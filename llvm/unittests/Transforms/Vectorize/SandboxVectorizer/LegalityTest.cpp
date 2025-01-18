@@ -19,6 +19,7 @@
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrMaps.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -111,7 +112,7 @@ define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg, float 
   auto *CmpSLT = cast<sandboxir::CmpInst>(&*It++);
   auto *CmpSGT = cast<sandboxir::CmpInst>(&*It++);
 
-  llvm::sandboxir::InstrMaps IMaps;
+  llvm::sandboxir::InstrMaps IMaps(Ctx);
   sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps);
   const auto &Result =
       Legality.canVectorize({St0, St1}, /*SkipScheduling=*/true);
@@ -230,7 +231,7 @@ define void @foo(ptr %ptr) {
   auto *St0 = cast<sandboxir::StoreInst>(&*It++);
   auto *St1 = cast<sandboxir::StoreInst>(&*It++);
 
-  llvm::sandboxir::InstrMaps IMaps;
+  llvm::sandboxir::InstrMaps IMaps(Ctx);
   sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps);
   {
     // Can vectorize St0,St1.
@@ -266,7 +267,7 @@ define void @foo() {
   };
 
   sandboxir::Context Ctx(C);
-  llvm::sandboxir::InstrMaps IMaps;
+  llvm::sandboxir::InstrMaps IMaps(Ctx);
   sandboxir::LegalityAnalysis Legality(*AA, *SE, DL, Ctx, IMaps);
   EXPECT_TRUE(
       Matches(Legality.createLegalityResult<sandboxir::Widen>(), "Widen"));
@@ -321,7 +322,7 @@ define void @foo(ptr %ptr) {
     sandboxir::CollectDescr CD(std::move(Descrs));
     EXPECT_TRUE(CD.getSingleInput());
     EXPECT_EQ(CD.getSingleInput()->first, VLd);
-    EXPECT_EQ(CD.getSingleInput()->second, false);
+    EXPECT_THAT(CD.getSingleInput()->second, testing::ElementsAre(0, 1));
     EXPECT_TRUE(CD.hasVectorInputs());
   }
   {
@@ -331,7 +332,7 @@ define void @foo(ptr %ptr) {
     sandboxir::CollectDescr CD(std::move(Descrs));
     EXPECT_TRUE(CD.getSingleInput());
     EXPECT_EQ(CD.getSingleInput()->first, VLd);
-    EXPECT_EQ(CD.getSingleInput()->second, true);
+    EXPECT_THAT(CD.getSingleInput()->second, testing::ElementsAre(1, 0));
     EXPECT_TRUE(CD.hasVectorInputs());
   }
   {
@@ -351,4 +352,96 @@ define void @foo(ptr %ptr) {
     EXPECT_FALSE(CD.getSingleInput());
     EXPECT_FALSE(CD.hasVectorInputs());
   }
+}
+
+TEST_F(LegalityTest, ShuffleMask) {
+  {
+    // Check SmallVector constructor.
+    SmallVector<int> Indices({0, 1, 2, 3});
+    sandboxir::ShuffleMask Mask(std::move(Indices));
+    EXPECT_THAT(Mask, testing::ElementsAre(0, 1, 2, 3));
+  }
+  {
+    // Check initializer_list constructor.
+    sandboxir::ShuffleMask Mask({0, 1, 2, 3});
+    EXPECT_THAT(Mask, testing::ElementsAre(0, 1, 2, 3));
+  }
+  {
+    // Check ArrayRef constructor.
+    sandboxir::ShuffleMask Mask(ArrayRef<int>({0, 1, 2, 3}));
+    EXPECT_THAT(Mask, testing::ElementsAre(0, 1, 2, 3));
+  }
+  {
+    // Check operator ArrayRef<int>().
+    sandboxir::ShuffleMask Mask({0, 1, 2, 3});
+    ArrayRef<int> Array = Mask;
+    EXPECT_THAT(Array, testing::ElementsAre(0, 1, 2, 3));
+  }
+  {
+    // Check getIdentity().
+    auto IdentityMask = sandboxir::ShuffleMask::getIdentity(4);
+    EXPECT_THAT(IdentityMask, testing::ElementsAre(0, 1, 2, 3));
+    EXPECT_TRUE(IdentityMask.isIdentity());
+  }
+  {
+    // Check isIdentity().
+    sandboxir::ShuffleMask Mask1({0, 1, 2, 3});
+    EXPECT_TRUE(Mask1.isIdentity());
+    sandboxir::ShuffleMask Mask2({1, 2, 3, 4});
+    EXPECT_FALSE(Mask2.isIdentity());
+  }
+  {
+    // Check operator==().
+    sandboxir::ShuffleMask Mask1({0, 1, 2, 3});
+    sandboxir::ShuffleMask Mask2({0, 1, 2, 3});
+    EXPECT_TRUE(Mask1 == Mask2);
+    EXPECT_FALSE(Mask1 != Mask2);
+  }
+  {
+    // Check operator!=().
+    sandboxir::ShuffleMask Mask1({0, 1, 2, 3});
+    sandboxir::ShuffleMask Mask2({0, 1, 2, 4});
+    EXPECT_TRUE(Mask1 != Mask2);
+    EXPECT_FALSE(Mask1 == Mask2);
+  }
+  {
+    // Check size().
+    sandboxir::ShuffleMask Mask({0, 1, 2, 3});
+    EXPECT_EQ(Mask.size(), 4u);
+  }
+  {
+    // Check operator[].
+    sandboxir::ShuffleMask Mask({0, 1, 2, 3});
+    for (auto [Idx, Elm] : enumerate(Mask)) {
+      EXPECT_EQ(Elm, Mask[Idx]);
+    }
+  }
+  {
+    // Check begin(), end().
+    sandboxir::ShuffleMask Mask({0, 1, 2, 3});
+    sandboxir::ShuffleMask::const_iterator Begin = Mask.begin();
+    sandboxir::ShuffleMask::const_iterator End = Mask.begin();
+    int Idx = 0;
+    for (auto It = Begin; It != End; ++It) {
+      EXPECT_EQ(*It, Mask[Idx++]);
+    }
+  }
+#ifndef NDEBUG
+  {
+    // Check print(OS).
+    sandboxir::ShuffleMask Mask({0, 1, 2, 3});
+    std::string Str;
+    raw_string_ostream OS(Str);
+    Mask.print(OS);
+    EXPECT_EQ(Str, "0,1,2,3");
+  }
+  {
+    // Check operator<<().
+    sandboxir::ShuffleMask Mask({0, 1, 2, 3});
+    std::string Str;
+    raw_string_ostream OS(Str);
+    OS << Mask;
+    EXPECT_EQ(Str, "0,1,2,3");
+  }
+#endif // NDEBUG
 }

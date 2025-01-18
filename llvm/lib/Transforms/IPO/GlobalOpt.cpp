@@ -2785,8 +2785,16 @@ static bool OptimizeNonTrivialIFuncs(
       } else {
         // We can't reason much about non-FMV callers. Just pick the highest
         // priority callee if it matches, otherwise bail.
-        if (I > 0 || !implies(CallerBits, CalleeBits))
-          continue;
+        // if (I > 0 || !implies(CallerBits, CalleeBits))
+        //
+        // FIXME: This is causing a regression in the llvm test suite,
+        // specifically a 'predres' version is unexpectedly trapping on
+        // GravitonG4. My explanation is that when the caller in not a
+        // versioned function, the compiler exclusively relies on the
+        // command line option, or target attribute to deduce whether a
+        // feature is available. However, there is no guarantee that in
+        // reality the host supports those implied features.
+        continue;
       }
       auto &Calls = CallSites[Caller];
       for (CallBase *CS : Calls)
