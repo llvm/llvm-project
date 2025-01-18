@@ -671,11 +671,32 @@ RemoveNoteDetail::updateData(ArrayRef<uint8_t> OldData,
 }
 
 static Error removeNotes(Object &Obj, endianness Endianness,
-                         ArrayRef<RemoveNoteInfo> NotesToRemove) {
+                         ArrayRef<RemoveNoteInfo> NotesToRemove,
+                         function_ref<Error(Error)> ErrorCallback) {
+  // TODO: Support note segments.
+  if (ErrorCallback) {
+    for (Segment &Seg : Obj.segments()) {
+      if (Seg.Type == PT_NOTE) {
+        if (Error E = ErrorCallback(createStringError(
+                errc::not_supported, "note segments are not supported")))
+          return E;
+        break;
+      }
+    }
+  }
   for (auto &Sec : Obj.sections()) {
-    // TODO: Support note sections in segments
-    if (Sec.Type != SHT_NOTE || Sec.ParentSegment || !Sec.hasContents())
+    if (Sec.Type != SHT_NOTE || !Sec.hasContents())
       continue;
+    // TODO: Support note sections in segments.
+    if (Sec.ParentSegment) {
+      if (ErrorCallback)
+        if (Error E = ErrorCallback(createStringError(
+                errc::not_supported,
+                "cannot remove note(s) from " + Sec.Name +
+                    ": sections in segments are not supported")))
+          return E;
+      continue;
+    }
     ArrayRef<uint8_t> OldData = Sec.getContents();
     size_t Align = std::max<size_t>(4, Sec.Align);
     // Note: notes for both 32-bit and 64-bit ELF files use 4-byte words in the
@@ -885,7 +906,8 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
                      : endianness::big;
 
   if (!ELFConfig.NotesToRemove.empty()) {
-    if (Error Err = removeNotes(Obj, E, ELFConfig.NotesToRemove))
+    if (Error Err =
+            removeNotes(Obj, E, ELFConfig.NotesToRemove, Config.ErrorCallback))
       return Err;
   }
 
