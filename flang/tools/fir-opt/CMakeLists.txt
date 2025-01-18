@@ -3,15 +3,10 @@ llvm_update_compile_flags(fir-opt)
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
 
-if(FLANG_INCLUDE_TESTS)
-  set(test_libs
-    FIRTestAnalysis
-    FIRTestOpenACCInterfaces
-    MLIRTestIR
-    )
-endif()
+add_library(fir-opt-common INTERFACE)
+target_link_libraries(fir-opt PRIVATE fir-opt-common)
 
-target_link_libraries(fir-opt PRIVATE
+target_link_libraries(fir-opt-common INTERFACE
   CUFAttrs
   CUFDialect
   FIRDialect
@@ -23,10 +18,9 @@ target_link_libraries(fir-opt PRIVATE
   FIROpenACCSupport
   FlangOpenMPTransforms
   FIRAnalysis
-  ${test_libs}
 )
 
-mlir_target_link_libraries(fir-opt PRIVATE
+mlir_target_link_libraries(fir-opt-common INTERFACE
   ${dialect_libs}
   ${extension_libs}
 
@@ -45,3 +39,15 @@ mlir_target_link_libraries(fir-opt PRIVATE
   MLIRVectorToLLVM
   MLIROptLib
 )
+
+if(FLANG_INCLUDE_TESTS)
+  add_flang_executable(fir-test-opt fir-opt.cpp)
+  llvm_update_compile_flags(fir-test-opt)
+  target_compile_definitions(fir-test-opt PRIVATE FIR_TEST_OPT)
+  target_link_libraries(fir-test-opt PRIVATE
+    fir-opt-common
+    FIRTestAnalysis
+    FIRTestOpenACCInterfaces
+    MLIRTestIR
+  )
+endif()
