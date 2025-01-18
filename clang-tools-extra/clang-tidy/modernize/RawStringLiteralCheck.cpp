@@ -9,8 +9,11 @@
 #include "RawStringLiteralCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
@@ -67,20 +70,6 @@ bool containsDelimiter(StringRef Bytes, const std::string &Delimiter) {
                         : (")" + Delimiter + R"(")")) != StringRef::npos;
 }
 
-std::string asRawStringLiteral(const StringLiteral *Literal,
-                               const std::string &DelimiterStem) {
-  const StringRef Bytes = Literal->getBytes();
-  std::string Delimiter;
-  for (int I = 0; containsDelimiter(Bytes, Delimiter); ++I) {
-    Delimiter = (I == 0) ? DelimiterStem : DelimiterStem + std::to_string(I);
-  }
-
-  if (Delimiter.empty())
-    return (R"(R"()" + Bytes + R"lit()")lit").str();
-
-  return (R"(R")" + Delimiter + "(" + Bytes + ")" + Delimiter + R"(")").str();
-}
-
 } // namespace
 
 RawStringLiteralCheck::RawStringLiteralCheck(StringRef Name,
@@ -120,43 +109,73 @@ void RawStringLiteralCheck::registerMatchers(MatchFinder *Finder) {
       stringLiteral(unless(hasParent(predefinedExpr()))).bind("lit"), this);
 }
 
+static std::optional<StringRef>
+createUserDefinedSuffix(const StringLiteral *Literal, const SourceManager &SM,
+                        const LangOptions &LangOpts) {
+  const CharSourceRange TokenRange =
+      CharSourceRange::getTokenRange(Literal->getSourceRange());
+  Token T;
+  if (Lexer::getRawToken(Literal->getBeginLoc(), T, SM, LangOpts))
+    return std::nullopt;
+  const CharSourceRange CharRange =
+      Lexer::makeFileCharRange(TokenRange, SM, LangOpts);
+  if (T.hasUDSuffix()) {
+    StringRef Text = Lexer::getSourceText(CharRange, SM, LangOpts);
+    const size_t UDSuffixPos = Text.find_last_of('"');
+    if (UDSuffixPos == StringRef::npos)
+      return std::nullopt;
+    return Text.slice(UDSuffixPos + 1, Text.size());
+  }
+  return std::nullopt;
+}
+
+static std::string createRawStringLiteral(const StringLiteral *Literal,
+                                          const std::string &DelimiterStem,
+                                          const SourceManager &SM,
+                                          const LangOptions &LangOpts) {
+  const StringRef Bytes = Literal->getBytes();
+  std::string Delimiter;
+  for (int I = 0; containsDelimiter(Bytes, Delimiter); ++I) {
+    Delimiter = (I == 0) ? DelimiterStem : DelimiterStem + std::to_string(I);
+  }
+
+  std::optional<StringRef> UserDefinedSuffix =
+      createUserDefinedSuffix(Literal, SM, LangOpts);
+
+  if (Delimiter.empty())
+    return (R"(R"()" + Bytes + R"lit()")lit" + UserDefinedSuffix.value_or(""))
+        .str();
+
+  return (R"(R")" + Delimiter + "(" + Bytes + ")" + Delimiter + R"(")" +
+          UserDefinedSuffix.value_or(""))
+      .str();
+}
+
+static bool compareStringLength(StringRef Replacement,
+                                const StringLiteral *Literal,
+                                const SourceManager &SM,
+                                const LangOptions &LangOpts) {
+  return Replacement.size() <=
+         Lexer::MeasureTokenLength(Literal->getBeginLoc(), SM, LangOpts);
+}
+
 void RawStringLiteralCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Literal = Result.Nodes.getNodeAs<StringLiteral>("lit");
   if (Literal->getBeginLoc().isMacroID())
     return;
-
-  if (containsEscapedCharacters(Result, Literal, DisallowedChars)) {
-    std::string Replacement = asRawStringLiteral(Literal, DelimiterStem);
-    if (ReplaceShorterLiterals ||
-        Replacement.length() <=
-            Lexer::MeasureTokenLength(Literal->getBeginLoc(),
-                                      *Result.SourceManager, getLangOpts()))
-      replaceWithRawStringLiteral(Result, Literal, Replacement);
-  }
-}
-
-void RawStringLiteralCheck::replaceWithRawStringLiteral(
-    const MatchFinder::MatchResult &Result, const StringLiteral *Literal,
-    std::string Replacement) {
-  DiagnosticBuilder Builder =
-      diag(Literal->getBeginLoc(),
-           "escaped string literal can be written as a raw string literal");
   const SourceManager &SM = *Result.SourceManager;
-  const CharSourceRange TokenRange =
-      CharSourceRange::getTokenRange(Literal->getSourceRange());
-  Token T;
-  if (Lexer::getRawToken(Literal->getBeginLoc(), T, SM, getLangOpts()))
-    return;
-  const CharSourceRange CharRange =
-      Lexer::makeFileCharRange(TokenRange, SM, getLangOpts());
-  if (T.hasUDSuffix()) {
-    const StringRef Text = Lexer::getSourceText(CharRange, SM, getLangOpts());
-    const size_t UDSuffixPos = Text.find_last_of('"');
-    if (UDSuffixPos == StringRef::npos)
-      return;
-    Replacement += Text.slice(UDSuffixPos + 1, Text.size());
+  const LangOptions &LangOpts = getLangOpts();
+  if (containsEscapedCharacters(Result, Literal, DisallowedChars)) {
+    const std::string Replacement =
+        createRawStringLiteral(Literal, DelimiterStem, SM, LangOpts);
+    if (ReplaceShorterLiterals ||
+        compareStringLength(Replacement, Literal, SM, LangOpts)) {
+      diag(Literal->getBeginLoc(),
+           "escaped string literal can be written as a raw string literal")
+          << FixItHint::CreateReplacement(Literal->getSourceRange(),
+                                          Replacement);
+    }
   }
-  Builder << FixItHint::CreateReplacement(CharRange, Replacement);
 }
 
 } // namespace clang::tidy::modernize
