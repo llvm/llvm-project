@@ -6151,7 +6151,7 @@
    <key>type</key><string>Argument with &apos;nonnull&apos; attribute passed null</string>
    <key>check_name</key><string>core.NonNullParamChecker</string>
    <!-- This hash is experimental and going to change! -->
-   <key>issue_hash_content_of_line_in_context</key><string>c0b359a043c633f1b8d1581f68743361</string>
+   <key>issue_hash_content_of_line_in_context</key><string>4c580a2a9cf15947fa485a0a9e625306</string>
   <key>issue_context_kind</key><string>function</string>
   <key>issue_context</key><string>RDar13295437</string>
   <key>issue_hash_function_offset</key><string>3</string>
