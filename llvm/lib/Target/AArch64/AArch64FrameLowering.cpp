@@ -3842,14 +3842,15 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   unsigned CSStackSize = 0;
   unsigned SVECSStackSize = 0;
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
   for (unsigned Reg : SavedRegs.set_bits()) {
-    auto RegSize = TRI->getRegSizeInBits(Reg, MRI) / 8;
+    auto *RC = TRI->getMinimalPhysRegClass(Reg);
+    assert(RC && "expected register class!");
+    auto SpillSize = TRI->getSpillSize(*RC);
     if (AArch64::PPRRegClass.contains(Reg) ||
         AArch64::ZPRRegClass.contains(Reg))
-      SVECSStackSize += RegSize;
+      SVECSStackSize += SpillSize;
     else
-      CSStackSize += RegSize;
+      CSStackSize += SpillSize;
   }
 
   // Increase the callee-saved stack size if the function has streaming mode
