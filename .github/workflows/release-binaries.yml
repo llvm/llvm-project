@@ -177,8 +177,7 @@ jobs:
   build-release-package:
     name: "Build Release Package"
     needs: prepare
-    if: >-
-      github.repository == 'llvm/llvm-project'
+    if: github.repository == 'llvm/llvm-project'
     runs-on: ${{ needs.prepare.outputs.build-runs-on }}
     steps:
 
@@ -344,16 +343,6 @@ jobs:
       uses: ./workflows/.github/workflows/release-binaries-setup-stage
       with:
         previous-artifact: build-release-package
-
-    # Need sccache installed, because some stage1 objects are being built for the tests.
-    # FIXME: This probably shouldn't be happening.
-    - name: Setup sccache
-      uses: hendrikmuhs/ccache-action@ca3acd2731eef11f1572ccb126356c2f9298d35e # v1.2.9
-      with:
-        # Default to 2G to workaround: https://github.com/hendrikmuhs/ccache-action/issues/174
-        max-size: 2G
-        key: sccache-${{ runner.os }}-${{ runner.arch }}-release
-        variant: sccache
 
     - name: Run Tests
       shell: bash
