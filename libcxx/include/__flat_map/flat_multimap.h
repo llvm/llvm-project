@@ -93,7 +93,7 @@ class flat_multimap {
   static_assert(!is_same_v<_MappedContainer, std::vector<bool>>, "vector<bool> is not a sequence container");
 
   template <bool _Const>
-  using __iterator = __key_value_iterator<flat_multimap, _KeyContainer, _MappedContainer, _Const>;
+  using __iterator = _LIBCPP_NODEBUG __key_value_iterator<flat_multimap, _KeyContainer, _MappedContainer, _Const>;
 
 public:
   // types
@@ -475,7 +475,7 @@ public:
       __key_iter    = ranges::upper_bound(__containers_.keys.begin(), __key_iter, __pair.first, __compare_);
       __mapped_iter = __corresponding_mapped_it(*this, __key_iter);
     } else {
-      _LIBCPP_ASSERT_INTERNAL(!__prev_bigger && __next_smaller, "this means that the multimap is not sorted");
+      _LIBCPP_ASSERT_INTERNAL(!__prev_larger && __next_smaller, "this means that the multimap is not sorted");
 
       // the hint position is more to the left than the key should have been.
       // we want to emplace the element to a position as left as possible
