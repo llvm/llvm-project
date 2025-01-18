@@ -285,7 +285,7 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
 /// Adds all attributes of the DIE at the top of the \c worklist to the
 /// \c attributes list. Specifcations and abstract origins are added
 /// to the \c worklist if the referenced DIE has not been seen before.
-static bool GetAttributes(llvm::SmallVector<DWARFDIE> &worklist,
+static bool GetAttributes(llvm::SmallVectorImpl<DWARFDIE> &worklist,
                           llvm::SmallSet<DWARFDebugInfoEntry const *, 3> &seen,
                           DWARFAttributes &attributes) {
   assert(!worklist.empty() && "Need at least one DIE to visit.");
