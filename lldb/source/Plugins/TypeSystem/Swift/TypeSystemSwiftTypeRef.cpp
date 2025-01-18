@@ -91,6 +91,19 @@ public:
     return imported_name.getBaseName().userFacingName().str();
   }
 
+  template <typename IntTy>
+  llvm::StringRef ProjectEnumCase(const clang::EnumDecl *decl, IntTy val) {
+    for (const auto *enumerator : decl->enumerators()) {
+      llvm::APSInt case_val = enumerator->getInitVal();
+      if ((case_val.isSigned() &&
+           llvm::APSInt::isSameValue(case_val, llvm::APSInt::get(val))) ||
+          (case_val.isUnsigned() &&
+           llvm::APSInt::isSameValue(case_val, llvm::APSInt::getUnsigned(val))))
+        return m_clang_importer->getEnumConstantName(enumerator).str();
+    }
+    return {};
+  }
+
 private:
   swift::CompilerInvocation m_compiler_invocation;
   swift::SourceManager m_source_manager;
@@ -2637,7 +2650,8 @@ constexpr ExecutionContextScope *g_no_exe_ctx = nullptr;
     return result;                                                             \
   } while (0)
 
-#define VALIDATE_AND_RETURN(IMPL, REFERENCE, TYPE, EXE_CTX, ARGS)              \
+#define VALIDATE_AND_RETURN_CUSTOM(IMPL, REFERENCE, TYPE, COMPARISON, EXE_CTX, \
+                                   ARGS)                                       \
   do {                                                                         \
     auto result = IMPL();                                                      \
     if (!ModuleList::GetGlobalModuleListProperties()                           \
@@ -2657,7 +2671,7 @@ constexpr ExecutionContextScope *g_no_exe_ctx = nullptr;
         return result;                                                         \
     bool equivalent =                                                          \
         !ReconstructType(TYPE) /* missing .swiftmodule */ ||                   \
-        (Equivalent(                                                           \
+        (COMPARISON(                                                           \
             result,                                                            \
             GetSwiftASTContext(GetSymbolContext(&_exe_ctx))->REFERENCE ARGS)); \
     if (!equivalent)                                                           \
@@ -2666,6 +2680,9 @@ constexpr ExecutionContextScope *g_no_exe_ctx = nullptr;
            "TypeSystemSwiftTypeRef diverges from SwiftASTContext");            \
     return result;                                                             \
   } while (0)
+
+#define VALIDATE_AND_RETURN(IMPL, REFERENCE, TYPE, EXE_CTX, ARGS)              \
+  VALIDATE_AND_RETURN_CUSTOM(IMPL, REFERENCE, TYPE, Equivalent, EXE_CTX, ARGS)
 
 #define VALIDATE_AND_RETURN_EXPECTED(IMPL, REFERENCE, TYPE, EXE_CTX, ARGS)     \
   do {                                                                         \
@@ -2706,7 +2723,10 @@ constexpr ExecutionContextScope *g_no_exe_ctx = nullptr;
 #else
 #define VALIDATE_AND_RETURN_STATIC(IMPL, REFERENCE)                            \
   return IMPL()
-#define VALIDATE_AND_RETURN(IMPL, REFERENCE, TYPE, EXE_CTX, ARGS) return IMPL();
+#define VALIDATE_AND_RETURN(IMPL, REFERENCE, TYPE, COMPARISON, EXE_CTX, ARGS)  \
+  return IMPL();
+#define VALIDATE_AND_RETURN_CUSTOM(IMPL, REFERENCE, TYPE, EXE_CTX, ARGS)       \
+  return IMPL();
 #define VALIDATE_AND_RETURN_EXPECTED(IMPL, REFERENCE, TYPE, EXE_CTX, ARGS)     \
   return IMPL();
 #endif
@@ -4730,18 +4750,41 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
       // In some instances, a swift `structure` wraps an objc enum. The enum
       // case needs to be handled, but structs are no-ops.
       auto resolved = ResolveTypeAlias(dem, node, flavor, true);
-      auto clang_type = std::get<CompilerType>(resolved);
-      if (!clang_type)
+      auto resolved_type = std::get<CompilerType>(resolved);
+      if (!resolved_type)
         return false;
 
       bool is_signed;
-      if (!clang_type.IsEnumerationType(is_signed))
+      if (!resolved_type.IsEnumerationType(is_signed))
         // The type is a clang struct, not an enum.
         return false;
 
-      // The type is an enum imported from clang. Try Swift type metadata first,
-      // and failing that fallback to the AST.
-      LLVM_FALLTHROUGH;
+      if (!resolved_type.GetTypeSystem().isa_and_nonnull<TypeSystemClang>())
+        return false;
+
+      // The type is an enum imported from clang.
+      auto qual_type = ClangUtil::GetQualType(resolved_type);
+      auto *enum_type =
+          llvm::dyn_cast_or_null<clang::EnumType>(qual_type.getTypePtrOrNull());
+      if (!enum_type)
+        return false;
+      auto *importer = GetNameImporter();
+      if (!importer)
+        return false;
+      if (!data_byte_size)
+        return false;
+      StringRef case_name;
+      if (is_signed) {
+        int64_t val = data.GetMaxS64(&data_offset, data_byte_size);
+        case_name = importer->ProjectEnumCase(enum_type->getDecl(), val);
+      } else {
+        uint64_t val = data.GetMaxU64(&data_offset, data_byte_size);
+        case_name = importer->ProjectEnumCase(enum_type->getDecl(), val);
+      }
+      if (case_name.empty())
+        return false;
+      s << case_name;
+      return true;
     }
     case Node::Kind::Enum:
     case Node::Kind::BoundGenericEnum: {
@@ -4761,18 +4804,6 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
             error = toString(case_name.takeError());
         }
 
-      // No result available from the runtime, fallback to the AST. This occurs
-      // for some Clang imported enums.
-      if (auto swift_ast_context =
-              GetSwiftASTContext(GetSymbolContext(exe_scope))) {
-        ExecutionContext exe_ctx;
-        exe_scope->CalculateExecutionContext(exe_ctx);
-        if (swift_ast_context->DumpTypeValue(
-                ReconstructType(type, &exe_ctx), s, format, data, data_offset,
-                data_byte_size, bitfield_bit_size, bitfield_bit_offset,
-                exe_scope, is_base_class))
-          return true;
-      }
       s << error;
       return false;
     }
@@ -4824,17 +4855,21 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
                       ConstString(((StreamString *)&s)->GetString())) &&
            "TypeSystemSwiftTypeRef diverges from SwiftASTContext");
   });
-
-  // SwiftASTContext fails here, details explained in RemoteASTImport.test
-  if (StringRef(AsMangledName(type)) == "$s15RemoteASTImport14FromMainModuleCD")
-    return impl();
-
 #endif
 
-  VALIDATE_AND_RETURN(impl, DumpTypeValue, type, exe_scope,
-                      (ReconstructType(type, exe_scope), ast_s, format, data,
-                       data_offset, data_byte_size, bitfield_bit_size,
-                       bitfield_bit_offset, exe_scope, is_base_class));
+  auto better_or_equal = [](bool a, bool b) -> bool {
+    if (a || a == b)
+      return true;
+
+    llvm::dbgs() << "TypeSystemSwiftTypeRef: " << a << " SwiftASTContext: " << b
+                 << "\n";
+    return false;
+  };
+  VALIDATE_AND_RETURN_CUSTOM(
+      impl, DumpTypeValue, type, better_or_equal, exe_scope,
+      (ReconstructType(type, exe_scope), ast_s, format, data, data_offset,
+       data_byte_size, bitfield_bit_size, bitfield_bit_offset, exe_scope,
+       is_base_class));
 }
 
 bool TypeSystemSwiftTypeRef::IsPointerOrReferenceType(
