@@ -1524,13 +1524,17 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine({ISD::ZERO_EXTEND, ISD::FP_TO_SINT, ISD::FP_TO_UINT,
                          ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT});
   if (Subtarget.hasVInstructions())
-    setTargetDAGCombine({ISD::FCOPYSIGN, ISD::MGATHER, ISD::MSCATTER,
-                         ISD::VP_GATHER, ISD::VP_SCATTER, ISD::SRA, ISD::SRL,
-                         ISD::SHL, ISD::STORE, ISD::SPLAT_VECTOR,
-                         ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS,
-                         ISD::EXPERIMENTAL_VP_REVERSE, ISD::MUL,
-                         ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM,
-                         ISD::INSERT_VECTOR_ELT, ISD::ABS, ISD::CTPOP,
+    setTargetDAGCombine({ISD::FCOPYSIGN,     ISD::MGATHER,
+                         ISD::MSCATTER,      ISD::VP_GATHER,
+                         ISD::VP_SCATTER,    ISD::SRA,
+                         ISD::SRL,           ISD::SHL,
+                         ISD::STORE,         ISD::SPLAT_VECTOR,
+                         ISD::BUILD_VECTOR,  ISD::CONCAT_VECTORS,
+                         ISD::VP_STORE,      ISD::EXPERIMENTAL_VP_REVERSE,
+                         ISD::MUL,           ISD::SDIV,
+                         ISD::UDIV,          ISD::SREM,
+                         ISD::UREM,          ISD::INSERT_VECTOR_ELT,
+                         ISD::ABS,           ISD::CTPOP,
                          ISD::VECTOR_SHUFFLE});
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
@@ -16294,6 +16298,65 @@ static SDValue performVP_REVERSECombine(SDNode *N, SelectionDAG &DAG,
   return Ret;
 }
 
+static SDValue performVP_STORECombine(SDNode *N, SelectionDAG &DAG,
+                                      const RISCVSubtarget &Subtarget) {
+  // Fold:
+  //    vp.store(vp.reverse(VAL), ADDR, MASK) -> vp.strided.store(VAL, NEW_ADDR,
+  //    -1, MASK)
+  auto *VPStore = cast<VPStoreSDNode>(N);
+
+  if (VPStore->getValue().getOpcode() != ISD::EXPERIMENTAL_VP_REVERSE)
+    return SDValue();
+
+  SDValue VPReverse = VPStore->getValue();
+  EVT ReverseVT = VPReverse->getValueType(0);
+
+  // We do not have a strided_store version for masks, and the evl of vp.reverse
+  // and vp.store should always be the same.
+  if (!ReverseVT.getVectorElementType().isByteSized() ||
+      VPStore->getVectorLength() != VPReverse.getOperand(2) ||
+      !VPReverse.hasOneUse())
+    return SDValue();
+
+  SDValue StoreMask = VPStore->getMask();
+  // If Mask is all ones, then load is unmasked and can be reversed.
+  if (!isOneOrOneSplat(StoreMask)) {
+    // If the mask is not all ones, we can reverse the store if the mask was
+    // also reversed by an unmasked vp.reverse with the same EVL.
+    if (StoreMask.getOpcode() != ISD::EXPERIMENTAL_VP_REVERSE ||
+        !isOneOrOneSplat(StoreMask.getOperand(1)) ||
+        StoreMask.getOperand(2) != VPStore->getVectorLength())
+      return SDValue();
+    StoreMask = StoreMask.getOperand(0);
+  }
+
+  // Base = StoreAddr + (NumElem - 1) * ElemWidthByte
+  SDLoc DL(N);
+  MVT XLenVT = Subtarget.getXLenVT();
+  SDValue NumElem = VPStore->getVectorLength();
+  uint64_t ElemWidthByte = VPReverse.getValueType().getScalarSizeInBits() / 8;
+
+  SDValue Temp1 = DAG.getNode(ISD::SUB, DL, XLenVT, NumElem,
+                              DAG.getConstant(1, DL, XLenVT));
+  SDValue Temp2 = DAG.getNode(ISD::MUL, DL, XLenVT, Temp1,
+                              DAG.getConstant(ElemWidthByte, DL, XLenVT));
+  SDValue Base =
+      DAG.getNode(ISD::ADD, DL, XLenVT, VPStore->getBasePtr(), Temp2);
+  SDValue Stride = DAG.getConstant(-ElemWidthByte, DL, XLenVT);
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachinePointerInfo PtrInfo(VPStore->getAddressSpace());
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      PtrInfo, VPStore->getMemOperand()->getFlags(),
+      LocationSize::beforeOrAfterPointer(), VPStore->getAlign());
+
+  return DAG.getStridedStoreVP(
+      VPStore->getChain(), DL, VPReverse.getOperand(0), Base,
+      VPStore->getOffset(), Stride, StoreMask, VPStore->getVectorLength(),
+      VPStore->getMemoryVT(), MMO, VPStore->getAddressingMode(),
+      VPStore->isTruncatingStore(), VPStore->isCompressingStore());
+}
+
 // Convert from one FMA opcode to another based on whether we are negating the
 // multiply result and/or the accumulator.
 // NOTE: Only supports RVV operations with VL.
@@ -18474,6 +18537,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   }
   case ISD::EXPERIMENTAL_VP_REVERSE:
     return performVP_REVERSECombine(N, DAG, Subtarget);
+  case ISD::VP_STORE:
+    return performVP_STORECombine(N, DAG, Subtarget);
   case ISD::BITCAST: {
     assert(Subtarget.useRVVForFixedLengthVectors());
     SDValue N0 = N->getOperand(0);
