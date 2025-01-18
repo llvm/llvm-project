@@ -20528,6 +20528,16 @@ Value *CodeGenFunction::EmitSPIRVBuiltinExpr(unsigned BuiltinID,
         /*ReturnType=*/X->getType()->getScalarType(), Intrinsic::spv_distance,
         ArrayRef<Value *>{X, Y}, nullptr, "spv.distance");
   }
+  case SPIRV::BI__builtin_spirv_length: {
+    Value *X = EmitScalarExpr(E->getArg(0));
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           "length operand must have a float representation");
+    assert(E->getArg(0)->getType()->isVectorType() &&
+           "length operand must be a vector");
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/X->getType()->getScalarType(), Intrinsic::spv_length,
+        ArrayRef<Value *>{X}, nullptr, "spv.length");
+  }
   }
   return nullptr;
 }
