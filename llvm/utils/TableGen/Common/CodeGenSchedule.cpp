@@ -1581,22 +1581,16 @@ bool PredTransitions::substituteVariants(const PredTransition &Trans) {
   // Visit each original write sequence.
   for (const auto &WriteSequence : Trans.WriteSequences) {
     // Push a new (empty) write sequence onto all partial Transitions.
-    for (std::vector<PredTransition>::iterator I = TransVec.begin() + StartIdx,
-                                               E = TransVec.end();
-         I != E; ++I) {
-      I->WriteSequences.emplace_back();
-    }
+    for (auto &PT : drop_begin(TransVec, StartIdx))
+      PT.WriteSequences.emplace_back();
     Subst |=
         substituteVariantOperand(WriteSequence, /*IsRead=*/false, StartIdx);
   }
   // Visit each original read sequence.
   for (const auto &ReadSequence : Trans.ReadSequences) {
     // Push a new (empty) read sequence onto all partial Transitions.
-    for (std::vector<PredTransition>::iterator I = TransVec.begin() + StartIdx,
-                                               E = TransVec.end();
-         I != E; ++I) {
-      I->ReadSequences.emplace_back();
-    }
+    for (auto &PT : drop_begin(TransVec, StartIdx))
+      PT.ReadSequences.emplace_back();
     Subst |= substituteVariantOperand(ReadSequence, /*IsRead=*/true, StartIdx);
   }
   return Subst;
