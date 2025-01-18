@@ -1100,9 +1100,9 @@ def err_lambda_capture_misplaced_ellipsis : Error<
 def err_lambda_capture_multiple_ellipses : Error<
   "multiple ellipses in pack capture">;
 def err_binding_multiple_ellipses : Error<
-  "multiple ellipses in structured binding declaration">;
+  "multiple packs in structured binding declaration">;
 def note_previous_ellipsis : Note<
-  "previous ellipsis specified here">;
+  "previous binding pack specified here">;
 def ext_cxx_binding_pack : ExtWarn<
   "structured binding pack is incompatible with C++ standards before C++2c">,
   InGroup<CXX26>;
