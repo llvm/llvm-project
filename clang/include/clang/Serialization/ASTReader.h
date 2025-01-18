@@ -552,6 +552,7 @@ private:
     uint64_t LexicalOffset;
     uint64_t VisibleOffset;
     uint64_t ModuleLocalOffset;
+    uint64_t TULocalOffset;
   };
 
   using DelayedNamespaceOffsetMapTy =
@@ -664,6 +665,9 @@ private:
   llvm::DenseMap<const DeclContext *,
                  serialization::reader::ModuleLocalLookupTable>
       ModuleLocalLookups;
+  llvm::DenseMap<const DeclContext *,
+                 serialization::reader::DeclContextLookupTable>
+      TULocalLookups;
 
   using SpecLookupTableTy =
       llvm::DenseMap<const Decl *,
@@ -694,6 +698,7 @@ private:
   llvm::DenseMap<GlobalDeclID, DeclContextVisibleUpdates> PendingVisibleUpdates;
   llvm::DenseMap<GlobalDeclID, DeclContextVisibleUpdates>
       PendingModuleLocalVisibleUpdates;
+  llvm::DenseMap<GlobalDeclID, DeclContextVisibleUpdates> TULocalUpdates;
 
   using SpecializationsUpdate = SmallVector<UpdateData, 1>;
   using SpecializationsUpdateMap =
@@ -728,11 +733,17 @@ private:
                                      llvm::BitstreamCursor &Cursor,
                                      uint64_t Offset, DeclContext *DC);
 
+  enum class VisibleDeclContextStorageKind {
+    GenerallyVisible,
+    ModuleLocalVisible,
+    TULocalVisible,
+  };
+
   /// Read the record that describes the visible contents of a DC.
   bool ReadVisibleDeclContextStorage(ModuleFile &M,
                                      llvm::BitstreamCursor &Cursor,
                                      uint64_t Offset, GlobalDeclID ID,
-                                     bool IsModuleLocal);
+                                     VisibleDeclContextStorageKind VisibleKind);
 
   bool ReadSpecializations(ModuleFile &M, llvm::BitstreamCursor &Cursor,
                            uint64_t Offset, Decl *D, bool IsPartial);
@@ -1165,6 +1176,10 @@ private:
   unsigned NumModuleLocalVisibleDeclContexts = 0,
            TotalModuleLocalVisibleDeclContexts = 0;
 
+  /// Number of TU Local decl contexts read/total
+  unsigned NumTULocalVisibleDeclContexts = 0,
+           TotalTULocalVisibleDeclContexts = 0;
+
   /// Total size of modules, in bits, currently loaded
   uint64_t TotalModulesSizeInBits = 0;
 
@@ -1497,6 +1512,9 @@ public:
 
   const serialization::reader::ModuleLocalLookupTable *
   getModuleLocalLookupTables(DeclContext *Primary) const;
+
+  const serialization::reader::DeclContextLookupTable *
+  getTULocalLookupTables(DeclContext *Primary) const;
 
   /// Get the loaded specializations lookup tables for \p D,
   /// if any.
