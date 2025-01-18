@@ -14,6 +14,7 @@
 #include "lldb/Host/Editline.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
@@ -85,7 +86,8 @@ bool IsOnlySpaces(const EditLineStringType &content) {
 }
 
 static size_t ColumnWidth(llvm::StringRef str) {
-  return llvm::sys::locale::columnWidth(str);
+  std::string stripped = ansi::StripAnsiTerminalCodes(str);
+  return llvm::sys::locale::columnWidth(stripped);
 }
 
 static int GetOperation(HistoryOperation op) {
