@@ -31,8 +31,7 @@ function(_get_common_test_compile_options output_var c_test flags)
     if(NOT LIBC_WNO_ERROR)
       list(APPEND compile_options "-Werror")
 
-      # Needed because all/most arguments become "unused" when compiling
-      # "libc/test/src/__support/fake_heap.s"
+      # TODO (https://github.com/llvm/llvm-project/issues/122367#issuecomment-2581374103)
       list(APPEND compile_options "-Wno-unused-command-line-argument")
 
       # Needed because of:
