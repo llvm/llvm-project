@@ -37,11 +37,13 @@ int main(int, char**) {
   {
     using C = std::flat_multimap<MoveOnly, MoveOnly>;
     static_assert(std::is_nothrow_default_constructible_v<C>);
+    C c;
   }
   {
     using C =
         std::flat_multimap<MoveOnly, MoveOnly, std::less<MoveOnly>, std::vector<MoveOnly, test_allocator<MoveOnly>>>;
     static_assert(std::is_nothrow_default_constructible_v<C>);
+    C c;
   }
 #endif // _LIBCPP_VERSION
   {

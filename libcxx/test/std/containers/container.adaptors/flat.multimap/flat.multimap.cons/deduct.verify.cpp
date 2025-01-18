@@ -14,9 +14,7 @@
 
 #include <flat_map>
 #include <functional>
-#include <memory>
 #include <utility>
-#include <vector>
 
 struct NotAnAllocator {
   friend bool operator<(NotAnAllocator, NotAnAllocator) { return false; }
@@ -26,44 +24,6 @@ using P  = std::pair<int, long>;
 using PC = std::pair<const int, long>;
 
 void test() {
-  {
-    // cannot deduce Key and T from just (KeyContainer), even if it's a container of pairs
-    std::vector<std::pair<int, int>> v;
-    std::flat_multimap s(v);
-    // expected-error-re@-1{{{{no viable constructor or deduction guide for deduction of template arguments of '.*flat_multimap'}}}}
-  }
-  {
-    // cannot deduce Key and T from just (KeyContainer, Allocator)
-    std::vector<int> v;
-    std::flat_multimap s(v, std::allocator<std::pair<const int, int>>());
-    // expected-error-re@-1{{{{no viable constructor or deduction guide for deduction of template arguments of '.*flat_multimap'}}}}
-  }
-  {
-    // cannot deduce Key and T from nothing
-    std::flat_multimap m;
-    // expected-error-re@-1{{{{no viable constructor or deduction guide for deduction of template arguments of '.*flat_multimap'}}}}
-  }
-  {
-    // cannot deduce Key and T from just (Compare)
-    std::flat_multimap m(std::less<int>{});
-    // expected-error-re@-1{{{{no viable constructor or deduction guide for deduction of template arguments of '.*flat_multimap'}}}}
-  }
-  {
-    // cannot deduce Key and T from just (Compare, Allocator)
-    std::flat_multimap m(std::less<int>{}, std::allocator<PC>{});
-    // expected-error-re@-1{{{{no viable constructor or deduction guide for deduction of template arguments of '.*flat_multimap'}}}}
-  }
-  {
-    // cannot deduce Key and T from just (Allocator)
-    std::flat_multimap m(std::allocator<PC>{});
-    // expected-error-re@-1{{{{no viable constructor or deduction guide for deduction of template arguments of '.*flat_multimap'}}}}
-  }
-  {
-    // cannot convert from some arbitrary unrelated type
-    NotAnAllocator a;
-    std::flat_multimap m(a);
-    // expected-error-re@-1{{{{no viable constructor or deduction guide for deduction of template arguments of '.*flat_multimap'}}}}
-  }
   {
     // cannot deduce that the inner braced things should be std::pair and not something else
     std::flat_multimap m{{1, 1L}, {2, 2L}, {3, 3L}};

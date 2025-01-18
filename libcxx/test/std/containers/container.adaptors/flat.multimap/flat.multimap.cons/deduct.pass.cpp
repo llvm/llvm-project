@@ -170,6 +170,25 @@ void test_iter_iter() {
     std::flat_multimap m(mo.cbegin(), mo.cend());
     ASSERT_SAME_TYPE(decltype(m), decltype(mo));
   }
+  {
+    std::pair<int, int> source[3] = {{1, 1}, {1, 1}, {3, 3}};
+    std::flat_multimap s          = {source, source + 3}; // flat_multimap(InputIterator, InputIterator)
+    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, int>);
+    assert(s.size() == 3);
+  }
+  {
+    std::pair<int, int> source[3] = {{1, 1}, {1, 1}, {3, 3}};
+    std::flat_multimap s{source, source + 3}; // flat_multimap(InputIterator, InputIterator)
+    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, int>);
+    assert(s.size() == 3);
+  }
+  {
+    std::pair<int, int> source[3] = {{1, 1}, {1, 2}, {3, 3}};
+    std::flat_multimap s{
+        std::sorted_equivalent, source, source + 3}; // flat_multimap(sorted_equivalent_t, InputIterator, InputIterator)
+    static_assert(std::is_same_v<decltype(s), std::flat_multimap<int, int>>);
+    assert(s.size() == 3);
+  }
 }
 
 void test_iter_iter_compare() {
@@ -227,6 +246,19 @@ void test_initializer_list() {
 
     ASSERT_SAME_TYPE(decltype(m), std::flat_multimap<int, long>);
     assert(std::ranges::equal(m, sorted_arr));
+  }
+  {
+    std::flat_multimap s = {std::make_pair(1, 'a')}; // flat_multimap(initializer_list<pair<int, char>>)
+    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, char>);
+    assert(s.size() == 1);
+  }
+  {
+    using M = std::flat_multimap<int, short>;
+    M m;
+    std::flat_multimap s = {std::make_pair(m, m)}; // flat_multimap(initializer_list<pair<M, M>>)
+    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<M, M>);
+    assert(s.size() == 1);
+    assert(s.find(m)->second == m);
   }
 }
 
@@ -306,39 +338,6 @@ int main(int, char**) {
   test_from_range_compare();
 
   AssociativeContainerDeductionGuidesSfinaeAway<std::flat_multimap, std::flat_multimap<int, short>>();
-  {
-    std::flat_multimap s = {std::make_pair(1, 'a')}; // flat_multimap(initializer_list<pair<int, char>>)
-    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, char>);
-    assert(s.size() == 1);
-  }
-  {
-    using M = std::flat_multimap<int, short>;
-    M m;
-    std::flat_multimap s = {std::make_pair(m, m)}; // flat_multimap(initializer_list<pair<M, M>>)
-    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<M, M>);
-    assert(s.size() == 1);
-    assert(s.find(m)->second == m);
-  }
-
-  {
-    std::pair<int, int> source[3] = {{1, 1}, {1, 1}, {3, 3}};
-    std::flat_multimap s          = {source, source + 3}; // flat_multimap(InputIterator, InputIterator)
-    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, int>);
-    assert(s.size() == 3);
-  }
-  {
-    std::pair<int, int> source[3] = {{1, 1}, {1, 1}, {3, 3}};
-    std::flat_multimap s{source, source + 3}; // flat_multimap(InputIterator, InputIterator)
-    ASSERT_SAME_TYPE(decltype(s), std::flat_multimap<int, int>);
-    assert(s.size() == 3);
-  }
-  {
-    std::pair<int, int> source[3] = {{1, 1}, {1, 2}, {3, 3}};
-    std::flat_multimap s{
-        std::sorted_equivalent, source, source + 3}; // flat_multimap(sorted_equivalent_t, InputIterator, InputIterator)
-    static_assert(std::is_same_v<decltype(s), std::flat_multimap<int, int>>);
-    assert(s.size() == 3);
-  }
 
   return 0;
 }

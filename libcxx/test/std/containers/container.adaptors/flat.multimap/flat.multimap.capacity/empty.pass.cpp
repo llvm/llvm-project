@@ -27,7 +27,9 @@
 
 template <class KeyContainer, class ValueContainer>
 void test() {
-  using M = std::flat_multimap<int, double, std::less<int>, KeyContainer, ValueContainer>;
+  using Key   = typename KeyContainer::value_type;
+  using Value = typename ValueContainer::value_type;
+  using M     = std::flat_multimap<Key, Value, std::less<int>, KeyContainer, ValueContainer>;
   M m;
   ASSERT_SAME_TYPE(decltype(m.empty()), bool);
   ASSERT_NOEXCEPT(m.empty());

@@ -132,7 +132,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI static constexpr bool __allocator_ctor_constraint =
       _And<uses_allocator<key_container_type, _Allocator>, uses_allocator<mapped_container_type, _Allocator>>::value;
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool __is_compare_transparent = __is_transparent_v<_Compare, _Compare>;
+  _LIBCPP_HIDE_FROM_ABI static constexpr bool __is_compare_transparent = __is_transparent_v<_Compare>;
 
 public:
   // [flat.map.cons], construct/copy/destroy
@@ -154,7 +154,7 @@ public:
 #  if _LIBCPP_HAS_EXCEPTIONS
   } catch (...) {
     __other.clear();
-    // gcc does not like the `throw` keyword in a conditional noexcept function
+    // gcc does not like the `throw` keyword in a conditionally noexcept function
     if constexpr (!(is_nothrow_move_constructible_v<_KeyContainer> &&
                     is_nothrow_move_constructible_v<_MappedContainer> && is_nothrow_move_constructible_v<_Compare>)) {
       throw;
@@ -519,16 +519,16 @@ public:
     return emplace_hint(__hint, std::move(__x));
   }
 
-  template <class _Pp>
-    requires is_constructible_v<pair<key_type, mapped_type>, _Pp>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(_Pp&& __x) {
-    return emplace(std::forward<_Pp>(__x));
+  template <class _PairLike>
+    requires is_constructible_v<pair<key_type, mapped_type>, _PairLike>
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(_PairLike&& __x) {
+    return emplace(std::forward<_PairLike>(__x));
   }
 
-  template <class _Pp>
-    requires is_constructible_v<pair<key_type, mapped_type>, _Pp>
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, _Pp&& __x) {
-    return emplace_hint(__hint, std::forward<_Pp>(__x));
+  template <class _PairLike>
+    requires is_constructible_v<pair<key_type, mapped_type>, _PairLike>
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __hint, _PairLike&& __x) {
+    return emplace_hint(__hint, std::forward<_PairLike>(__x));
   }
 
   template <class _InputIterator>
