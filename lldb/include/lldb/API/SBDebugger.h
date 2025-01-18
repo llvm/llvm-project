@@ -203,7 +203,7 @@ public:
   lldb::SBCommandInterpreter GetCommandInterpreter();
 
   void HandleCommand(const char *command);
-  
+
   void RequestInterrupt();
   void CancelInterruptRequest();
   bool InterruptRequested();
@@ -517,6 +517,7 @@ private:
   friend class SBPlatform;
   friend class SBTarget;
   friend class SBTrace;
+  friend class SBProgress;
 
   lldb::SBTarget FindTargetWithLLDBProcess(const lldb::ProcessSP &processSP);
 

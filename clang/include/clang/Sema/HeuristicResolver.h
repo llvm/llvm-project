@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_HEURISTICRESOLVER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_HEURISTICRESOLVER_H
+#ifndef LLVM_CLANG_SEMA_HEURISTICRESOLVER_H
+#define LLVM_CLANG_SEMA_HEURISTICRESOLVER_H
 
 #include "clang/AST/Decl.h"
 #include <vector>
@@ -23,8 +23,6 @@ class DependentScopeDeclRefExpr;
 class NamedDecl;
 class Type;
 class UnresolvedUsingValueDecl;
-
-namespace clangd {
 
 // This class handles heuristic resolution of declarations and types in template
 // code.
@@ -80,7 +78,6 @@ private:
   ASTContext &Ctx;
 };
 
-} // namespace clangd
 } // namespace clang
 
 #endif
