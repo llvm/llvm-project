@@ -1664,8 +1664,9 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
     bool HasElemKind =
         (Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_DESC) &&
         !(Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS);
-    bool HasElemType = (Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_DESC) &&
-                       (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS);
+    bool HasElemType =
+        (Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_DESC) &&
+        (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS);
     bool HasInitExprs =
         (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_INIT_EXPRS);
 

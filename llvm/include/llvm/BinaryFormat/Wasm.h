@@ -417,11 +417,7 @@ struct WasmDataSegment {
 
 // 3 different element segment modes are encodable. This class is currently
 // only used during decoding (see WasmElemSegment below).
-enum class ElemSegmentMode {
-  Active,
-  Passive,
-  Declarative
-};
+enum class ElemSegmentMode { Active, Passive, Declarative };
 
 // Represents a Wasm element segment, with some limitations compared the spec:
 // 1) Does not model passive or declarative segments (Segment will end up with
