@@ -2700,7 +2700,7 @@ void CallAnalyzer::findDeadBlocks(BasicBlock *CurrBB, BasicBlock *NextBB) {
     // known successor which is not the one under exam.
     if (DeadBlocks.count(Pred))
       return true;
-    auto *KnownSucc = KnownSuccessors[Pred];
+    BasicBlock *KnownSucc = KnownSuccessors[Pred];
     return KnownSucc && KnownSucc != Succ;
   };
 
