@@ -8455,20 +8455,17 @@ static bool IsInfOrNanFunction(StringRef calleeName, MathCheck Check) {
 }
 
 static bool IsInfinityFunction(const FunctionDecl *FDecl) {
-  if (FDecl->getName() != "infinity") {
+  if (FDecl->getName() != "infinity")
     return false;
-  }
 
   if (const CXXMethodDecl *MDecl = dyn_cast<CXXMethodDecl>(FDecl)) {
     const CXXRecordDecl *RDecl = MDecl->getParent();
-    if (RDecl->getName() != "numeric_limits") {
+    if (RDecl->getName() != "numeric_limits")
       return false;
-    }
 
     if (const NamespaceDecl *NSDecl =
-            dyn_cast<NamespaceDecl>(RDecl->getDeclContext())) {
+            dyn_cast<NamespaceDecl>(RDecl->getDeclContext()))
       return NSDecl->isStdNamespace();
-    }
   }
 
   return false;
@@ -8476,9 +8473,8 @@ static bool IsInfinityFunction(const FunctionDecl *FDecl) {
 
 void Sema::CheckInfNaNFunction(const CallExpr *Call,
                                const FunctionDecl *FDecl) {
-  if (!FDecl->getIdentifier()) {
+  if (!FDecl->getIdentifier())
     return;
-  }
 
   FPOptions FPO = Call->getFPFeaturesInEffect(getLangOpts());
   if (FPO.getNoHonorNaNs() &&
