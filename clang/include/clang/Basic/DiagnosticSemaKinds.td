@@ -709,10 +709,10 @@ def err_thread_unsupported : Error<
 // FIXME: Combine fallout warnings to just one warning.
 def warn_maybe_falloff_nonvoid_function : Warning<
   "non-void function does not return a value in all control paths">,
-  InGroup<ReturnType>;
+  InGroup<ReturnType>, DefaultError;
 def warn_falloff_nonvoid_function : Warning<
   "non-void function does not return a value">,
-  InGroup<ReturnType>;
+  InGroup<ReturnType>, DefaultError;
 def warn_const_attr_with_pure_attr : Warning<
   "'const' attribute imposes more restrictions; 'pure' attribute ignored">,
   InGroup<IgnoredAttributes>;
@@ -726,10 +726,10 @@ def err_falloff_nonvoid_block : Error<
   "non-void block does not return a value">;
 def warn_maybe_falloff_nonvoid_coroutine : Warning<
   "non-void coroutine does not return a value in all control paths">,
-  InGroup<ReturnType>;
+  InGroup<ReturnType>, DefaultError;
 def warn_falloff_nonvoid_coroutine : Warning<
   "non-void coroutine does not return a value">,
-  InGroup<ReturnType>;
+  InGroup<ReturnType>, DefaultError;
 def warn_suggest_noreturn_function : Warning<
   "%select{function|method}0 %1 could be declared with attribute 'noreturn'">,
   InGroup<MissingNoreturn>, DefaultIgnore;
@@ -8365,10 +8365,10 @@ let CategoryName = "Lambda Issue" in {
     "lambda declared 'noreturn' should not return">;
   def warn_maybe_falloff_nonvoid_lambda : Warning<
     "non-void lambda does not return a value in all control paths">,
-    InGroup<ReturnType>;
+    InGroup<ReturnType>, DefaultError;
   def warn_falloff_nonvoid_lambda : Warning<
     "non-void lambda does not return a value">,
-    InGroup<ReturnType>;
+    InGroup<ReturnType>, DefaultError;
   def err_access_lambda_capture : Error<
     // The ERRORs represent other special members that aren't constructors, in
     // hopes that someone will bother noticing and reporting if they appear
