@@ -458,6 +458,11 @@ public:
   /// and variables).
   const Address &GetAddress() const { return m_address; }
 
+  bool GetRangeContainingLoadAddress(lldb::addr_t load_addr, Target &target,
+                                     AddressRange &range) {
+    return m_block.GetRangeContainingLoadAddress(load_addr, target, range);
+  }
+
   lldb::LanguageType GetLanguage() const;
   /// Find the file and line number of the source location of the start of the
   /// function.  This will use the declaration if present and fall back on the
