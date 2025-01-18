@@ -1540,9 +1540,24 @@ StringTableSection::StringTableSection()
     : LinkEditSection(segment_names::linkEdit, section_names::stringTable) {}
 
 uint32_t StringTableSection::addString(StringRef str) {
+  // If deduplication is disabled, just add the string
+  if (!config->deduplicateSymbolStrings) {
+    uint32_t strx = size;
+    strings.push_back(str);
+    size += str.size() + 1; // +1 for null terminator
+    return strx;
+  }
+
+  // Deduplicate strings
+  llvm::CachedHashStringRef hashedStr(str);
+  auto it = stringMap.find(hashedStr);
+  if (it != stringMap.end())
+    return it->second;
+
   uint32_t strx = size;
-  strings.push_back(str); // TODO: consider deduplicating strings
-  size += str.size() + 1; // account for null terminator
+  stringMap[hashedStr] = strx;
+  strings.push_back(str);
+  size += str.size() + 1;
   return strx;
 }
 

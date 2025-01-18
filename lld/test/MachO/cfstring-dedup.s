@@ -7,6 +7,14 @@
 # RUN: %lld -dylib -framework CoreFoundation %t/foo1.o %t/foo2.o -o %t/foo
 # RUN: llvm-objdump --no-print-imm-hex --macho --rebase --bind --syms -d %t/foo | FileCheck %s --check-prefix=LITERALS
 
+# Check that string deduplication for symbol names is working
+# RUN: %lld -dylib -framework CoreFoundation %t/foo1.o %t/foo2.o -o %t/foo_no_dedup -no-deduplicate-symbol-strings
+# RUN: count1=$((`llvm-strings %t/foo | grep _named_cfstring | wc -l`))
+# RUN: test $count1 -eq 1
+# RUN: count2=$((`llvm-strings %t/foo_no_dedup | grep _named_cfstring | wc -l`))
+# RUN: test $count2 -eq 2
+
+
 # CHECK:       (__TEXT,__text) section
 # CHECK-NEXT:  _foo1:
 # CHECK-NEXT:  _foo2:

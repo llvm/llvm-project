@@ -256,6 +256,8 @@ struct Configuration {
   llvm::MachO::PlatformType platform() const {
     return platformInfo.target.Platform;
   }
+
+  bool deduplicateSymbolStrings = true;
 };
 
 extern std::unique_ptr<Configuration> config;
