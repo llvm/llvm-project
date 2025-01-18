@@ -76,8 +76,7 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   // Validate further transfer op semantics.
   SmallVector<int64_t> strides;
   int64_t offset;
-  if (failed(getStridesAndOffset(srcTy, strides, offset)) ||
-      strides.back() != 1)
+  if (failed(srcTy.getStridesAndOffset(strides, offset)) || strides.back() != 1)
     return rewriter.notifyMatchFailure(
         xferOp, "Buffer must be contiguous in the innermost dimension");
 
@@ -105,7 +104,7 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
                    xegpu::TensorDescType descType, TypedValue<MemRefType> src,
                    Operation::operand_range offsets) {
   MemRefType srcTy = src.getType();
-  auto [strides, offset] = getStridesAndOffset(srcTy);
+  auto [strides, offset] = srcTy.getStridesAndOffset();
 
   xegpu::CreateNdDescOp ndDesc;
   if (srcTy.hasStaticShape()) {
