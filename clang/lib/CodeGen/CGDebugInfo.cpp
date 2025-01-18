@@ -2016,28 +2016,19 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateInstanceMethodType(
   // First element is always return type. For 'void' functions it is NULL.
   Elts.push_back(Args[0]);
 
-  const bool HasExplicitObjectParameter = ThisPtr.isNull();
-
-  // "this" pointer is always first argument. For explicit "this"
-  // parameters, it will already be in Args[1].
-  if (!HasExplicitObjectParameter) {
+  // "this" pointer is always first argument.
+  // ThisPtr may be null if the member function has an explicit 'this'
+  // parameter.
+  if (!ThisPtr.isNull()) {
     llvm::DIType *ThisPtrType = getOrCreateType(ThisPtr, Unit);
     TypeCache[ThisPtr.getAsOpaquePtr()].reset(ThisPtrType);
-    ThisPtrType =
-        DBuilder.createObjectPointerType(ThisPtrType, /*Implicit=*/true);
+    ThisPtrType = DBuilder.createObjectPointerType(ThisPtrType);
     Elts.push_back(ThisPtrType);
   }
 
   // Copy rest of the arguments.
   for (unsigned i = 1, e = Args.size(); i != e; ++i)
     Elts.push_back(Args[i]);
-
-  // Attach FlagObjectPointer to the explicit "this" parameter.
-  if (HasExplicitObjectParameter) {
-    assert(Elts.size() >= 2 && Args.size() >= 2 &&
-           "Expected at least return type and object parameter.");
-    Elts[1] = DBuilder.createObjectPointerType(Args[1], /*Implicit=*/false);
-  }
 
   llvm::DITypeRefArray EltTypeArray = DBuilder.getOrCreateTypeArray(Elts);
 
@@ -5127,7 +5118,7 @@ llvm::DIType *CGDebugInfo::CreateSelfType(const QualType &QualTy,
   llvm::DIType *CachedTy = getTypeOrNull(QualTy);
   if (CachedTy)
     Ty = CachedTy;
-  return DBuilder.createObjectPointerType(Ty, /*Implicit=*/true);
+  return DBuilder.createObjectPointerType(Ty);
 }
 
 void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(

@@ -5,11 +5,12 @@
 // CHECK: !DIDerivedType(tag: DW_TAG_pointer_type
 // CHECK-SAME:           flags: DIFlagArtificial | DIFlagObjectPointer
 //
+// // FIXME: DIFlagObjectPointer not attached to the explicit object
+// // argument in the subprogram declaration.
 // CHECK: !DISubprogram(name: "explicit_this",
 //                      flags: DIFlagPrototyped
-//
-// CHECK: !DIDerivedType(tag: DW_TAG_rvalue_reference_type
-// CHECK-SAME:           flags: DIFlagObjectPointer)
+// CHECK-NOT: DIFlagObjectPointer
+// CHECK-NOT: DIFlagArtificial
 //
 // CHECK: !DILocalVariable(name: "this", arg: 1
 // CHECK-SAME:             flags: DIFlagArtificial | DIFlagObjectPointer
