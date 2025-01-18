@@ -124,8 +124,8 @@ int main(int, char**) {
     }
   }
   {
-    using M =
-        std::flat_multimap<ThrowingAssignment, int, ThrowingComparator, std::deque<ThrowingAssignment>, std::deque<int>>;
+    using M = std::
+        flat_multimap<ThrowingAssignment, int, ThrowingComparator, std::deque<ThrowingAssignment>, std::deque<int>>;
     for (int first_throw = 1; first_throw < 99; ++first_throw) {
       for (int second_throw = 1; second_throw < 99; ++second_throw) {
         g_counter                                = {0, 0, 0};

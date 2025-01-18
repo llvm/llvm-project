@@ -49,14 +49,14 @@ void test() {
 
   const VT v3(3, 3.5);
   r = m.insert(v3);
-  assert(r == m.begin()+ 2);
+  assert(r == m.begin() + 2);
   assert(m.size() == 3);
   assert(r->first == 3);
   assert(r->second == 3.5);
 
   const VT v4(3, 4.5);
   r = m.insert(v4);
-  assert(r == m.begin()+ 3);
+  assert(r == m.begin() + 3);
   assert(m.size() == 4);
   assert(r->first == 3);
   assert(r->second == 4.5);

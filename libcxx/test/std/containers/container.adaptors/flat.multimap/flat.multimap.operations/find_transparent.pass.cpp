@@ -88,7 +88,7 @@ int main(int, char**) {
   {
     bool transparent_used = false;
     TransparentComparator c(transparent_used);
-    std::flat_multimap<int, int, TransparentComparator> m(std::sorted_equivalent, {{1, 1}, {2, 2}, {3,3}, {3, 3}}, c);
+    std::flat_multimap<int, int, TransparentComparator> m(std::sorted_equivalent, {{1, 1}, {2, 2}, {3, 3}, {3, 3}}, c);
     assert(!transparent_used);
     auto it = m.find(Transparent<int>{3});
     assert(it != m.end());
