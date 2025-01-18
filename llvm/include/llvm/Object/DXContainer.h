@@ -22,6 +22,8 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
 #include <array>
+#include <cstdint>
+#include <sys/types.h>
 #include <variant>
 
 namespace llvm {
@@ -119,22 +121,17 @@ namespace DirectX {
 
 class RootSignature {
 private:
+  StringRef Data;
   uint32_t Version;
-  uint32_t NumParameters;
-  uint32_t RootParametersOffset;
-  uint32_t NumStaticSamplers;
-  uint32_t StaticSamplersOffset;
   uint32_t Flags;
 
 public:
-  RootSignature() {}
+  RootSignature(StringRef Data) : Data(Data) {}
 
-  Error parse(StringRef Data);
+  Error parse();
+
   uint32_t getVersion() const { return Version; }
-  uint32_t getNumParameters() const { return NumParameters; }
-  uint32_t getRootParametersOffset() const { return RootParametersOffset; }
-  uint32_t getNumStaticSamplers() const { return NumStaticSamplers; }
-  uint32_t getStaticSamplersOffset() const { return StaticSamplersOffset; }
+
   uint32_t getFlags() const { return Flags; }
 };
 
@@ -309,7 +306,7 @@ private:
   std::optional<uint64_t> ShaderFeatureFlags;
   std::optional<dxbc::ShaderHash> Hash;
   std::optional<DirectX::PSVRuntimeInfo> PSVInfo;
-  std::optional<dxbc::RootSignatureDesc> RootSignature;
+  std::optional<DirectX::RootSignature> RootSignature;
   DirectX::Signature InputSignature;
   DirectX::Signature OutputSignature;
   DirectX::Signature PatchConstantSignature;
@@ -406,7 +403,7 @@ public:
 
   std::optional<dxbc::ShaderHash> getShaderHash() const { return Hash; }
 
-  std::optional<dxbc::RootSignatureDesc> getRootSignature() const {
+  std::optional<DirectX::RootSignature> getRootSignature() const {
     return RootSignature;
   }
 
