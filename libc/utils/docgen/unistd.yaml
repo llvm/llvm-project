@@ -159,12 +159,6 @@ macros:
   _POSIX2_SYMLINKS:
     in-latest-posix: ""
 
-  "NULL":
-    in-latest-posix: ""
-  O_CLOEXEC:
-    in-latest-posix: ""
-  O_CLOFORK:
-    in-latest-posix: ""
   F_OK:
     in-latest-posix: ""
   R_OK:
@@ -209,48 +203,9 @@ macros:
   _CS_V8_ENV:
     in-latest-posix: ""
 
-  _CS_POSIX_V7_ILP32_OFF32_CFLAGS:
-    in-latest-posix: ""
-  _CS_POSIX_V7_ILP32_OFF32_LDFLAGS:
-    in-latest-posix: ""
-  _CS_POSIX_V7_ILP32_OFF32_LIBS:
-    in-latest-posix: ""
-  _CS_POSIX_V7_ILP32_OFFBIG_CFLAGS:
-    in-latest-posix: ""
-  _CS_POSIX_V7_ILP32_OFFBIG_LDFLAGS:
-    in-latest-posix: ""
-  _CS_POSIX_V7_ILP32_OFFBIG_LIBS:
-    in-latest-posix: ""
-  _CS_POSIX_V7_LP64_OFF64_CFLAGS:
-    in-latest-posix: ""
-  _CS_POSIX_V7_LP64_OFF64_LDFLAGS:
-    in-latest-posix: ""
-  _CS_POSIX_V7_LP64_OFF64_LIBS:
-    in-latest-posix: ""
-  _CS_POSIX_V7_LPBIG_OFFBIG_CFLAGS:
-    in-latest-posix: ""
-  _CS_POSIX_V7_LPBIG_OFFBIG_LDFLAGS:
-    in-latest-posix: ""
-  _CS_POSIX_V7_LPBIG_OFFBIG_LIBS:
-    in-latest-posix: ""
-  _CS_POSIX_V7_THREADS_CFLAGS:
-    in-latest-posix: ""
-  _CS_POSIX_V7_THREADS_LDFLAGS:
-    in-latest-posix: ""
-  _CS_POSIX_V7_WIDTH_RESTRICTED_ENVS:
-    in-latest-posix: ""
-  _CS_V7_ENV:
-    in-latest-posix: ""
-
-  SEEK_CUR:
-    in-latest-posix: ""
   SEEK_END:
     in-latest-posix: ""
   SEEK_SET:
-    in-latest-posix: ""
-  SEEK_HOLE:
-    in-latest-posix: ""
-  SEEK_DATA:
     in-latest-posix: ""
 
   F_LOCK:
@@ -584,11 +539,19 @@ functions:
     in-latest-posix: ""
   execvp:
     in-latest-posix: ""
+  faccessat:
+    in-latest-posix: ""
   fchdir:
     in-latest-posix: ""
   fchown:
     in-latest-posix: ""
+  fchownat:
+    in-latest-posix: ""
   fdatasync:
+    in-latest-posix: ""
+  fexecve:
+    in-latest-posix: ""
+  _Fork:
     in-latest-posix: ""
   fork:
     in-latest-posix: ""
@@ -596,7 +559,6 @@ functions:
     in-latest-posix: ""
   fsync:
     in-latest-posix: ""
-
   ftruncate:
     in-latest-posix: ""
   getcwd:
@@ -645,7 +607,6 @@ functions:
     in-latest-posix: ""
   linkat:
     in-latest-posix: ""
-
   lockf:
     in-latest-posix: ""
   lseek:
@@ -711,6 +672,8 @@ functions:
   tcsetpgrp:
     in-latest-posix: ""
   truncate:
+    in-latest-posix: ""
+  ttyname:
     in-latest-posix: ""
   ttyname_r:
     in-latest-posix: ""
