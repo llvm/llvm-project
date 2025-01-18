@@ -1221,12 +1221,31 @@ void CGNVCUDARuntime::createOffloadingEntries() {
              ? static_cast<int32_t>(llvm::offloading::OffloadGlobalNormalized)
              : 0);
     if (I.Flags.getKind() == DeviceVarFlags::Variable) {
-      llvm::offloading::emitOffloadingEntry(
-          M, I.Var, getDeviceSideName(I.D), VarSize,
-          (I.Flags.isManaged() ? llvm::offloading::OffloadGlobalManagedEntry
-                               : llvm::offloading::OffloadGlobalEntry) |
-              Flags,
-          /*Data=*/0, Section);
+      if (I.Flags.isManaged()) {
+        assert(I.Var->getName().ends_with(".managed") &&
+               "HIP managed variables not transformed");
+
+        // Create a struct to contain the two variables.
+        auto *ManagedVar = M.getNamedGlobal(
+            I.Var->getName().drop_back(StringRef(".managed").size()));
+        llvm::Constant *StructData[] = {ManagedVar, I.Var};
+        llvm::Constant *Initializer = llvm::ConstantStruct::get(
+            llvm::offloading::getManagedTy(M), StructData);
+        auto *Struct = new llvm::GlobalVariable(
+            M, llvm::offloading::getManagedTy(M),
+            /*IsConstant=*/true, llvm::GlobalValue::PrivateLinkage, Initializer,
+            I.Var->getName());
+
+        llvm::offloading::emitOffloadingEntry(
+            M, Struct, getDeviceSideName(I.D), VarSize,
+            llvm::offloading::OffloadGlobalManagedEntry | Flags,
+            /*Data=*/static_cast<uint32_t>(I.Var->getAlignment()), Section);
+      } else {
+        llvm::offloading::emitOffloadingEntry(
+            M, I.Var, getDeviceSideName(I.D), VarSize,
+            llvm::offloading::OffloadGlobalEntry | Flags,
+            /*Data=*/0, Section);
+      }
     } else if (I.Flags.getKind() == DeviceVarFlags::Surface) {
       llvm::offloading::emitOffloadingEntry(
           M, I.Var, getDeviceSideName(I.D), VarSize,
