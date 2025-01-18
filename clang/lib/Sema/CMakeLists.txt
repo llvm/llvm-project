@@ -26,6 +26,7 @@ add_clang_library(clangSema
   DynamicCountPointerAssignmentAnalysis.cpp
   DynamicCountPointerAssignmentAnalysisExported.cpp
   # TO_UPSTREAM(BoundsSafety) OFF
+  HeuristicResolver.cpp
   HLSLExternalSemaSource.cpp
   IdentifierResolver.cpp
   JumpDiagnostics.cpp

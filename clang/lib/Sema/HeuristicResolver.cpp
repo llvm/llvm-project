@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "HeuristicResolver.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclTemplate.h"
@@ -14,7 +14,6 @@
 #include "clang/AST/Type.h"
 
 namespace clang {
-namespace clangd {
 
 namespace {
 
@@ -466,5 +465,4 @@ const Type *HeuristicResolver::getPointeeType(const Type *T) const {
   return HeuristicResolverImpl(Ctx).getPointeeType(T);
 }
 
-} // namespace clangd
 } // namespace clang
