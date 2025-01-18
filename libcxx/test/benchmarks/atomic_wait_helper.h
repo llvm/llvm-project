@@ -13,8 +13,6 @@
 #include <chrono>
 #include <exception>
 #include <stop_token>
-#include <pthread.h>
-#include <sched.h>
 #include <thread>
 
 struct HighPrioTask {
