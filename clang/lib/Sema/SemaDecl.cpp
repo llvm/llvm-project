@@ -4216,7 +4216,7 @@ static bool mergeFunctionDeclTerminatedByAttribute(FunctionDecl *New,
       QualType NewFuncTy = Self.Context.getFunctionType(
           MergeRetTy, MergeParamTys, FT->getExtProtoInfo());
       New->setType(NewFuncTy);
-    } else if (auto *FT = New->getType()->getAs<FunctionNoProtoType>()) {
+    } else if (New->getType()->isFunctionNoProtoType()) {
       QualType NewFuncTy = Self.Context.getFunctionNoProtoType(MergeRetTy);
       New->setType(NewFuncTy);
     }
