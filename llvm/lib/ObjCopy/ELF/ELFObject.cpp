@@ -2154,27 +2154,25 @@ ELFWriter<ELFT>::ELFWriter(Object &Obj, raw_ostream &Buf, bool WSH,
     : Writer(Obj, Buf), WriteSectionHeaders(WSH && Obj.HadShdrs),
       OnlyKeepDebug(OnlyKeepDebug) {}
 
-Error Object::updateSectionData(std::vector<SecPtr>::iterator It,
-                                ArrayRef<uint8_t> Data) {
-  auto *OldSec = It->get();
-  if (!OldSec->hasContents())
+Error Object::updateSectionData(SecPtr &Sec, ArrayRef<uint8_t> Data) {
+  if (!Sec->hasContents())
     return createStringError(
         errc::invalid_argument,
         "section '%s' cannot be updated because it does not have contents",
-        OldSec->Name.c_str());
+        Sec->Name.c_str());
 
-  if (Data.size() > OldSec->Size && OldSec->ParentSegment)
+  if (Data.size() > Sec->Size && Sec->ParentSegment)
     return createStringError(errc::invalid_argument,
                              "cannot fit data of size %zu into section '%s' "
                              "with size %" PRIu64 " that is part of a segment",
-                             Data.size(), OldSec->Name.c_str(), OldSec->Size);
+                             Data.size(), Sec->Name.c_str(), Sec->Size);
 
-  if (!OldSec->ParentSegment) {
-    *It = std::make_unique<OwnedDataSection>(*OldSec, Data);
+  if (!Sec->ParentSegment) {
+    Sec = std::make_unique<OwnedDataSection>(*Sec, Data);
   } else {
     // The segment writer will be in charge of updating these contents.
-    OldSec->Size = Data.size();
-    UpdatedSections[OldSec] = Data;
+    Sec->Size = Data.size();
+    UpdatedSections[Sec.get()] = Data;
   }
 
   return Error::success();
@@ -2186,14 +2184,14 @@ Error Object::updateSection(StringRef Name, ArrayRef<uint8_t> Data) {
   if (It == Sections.end())
     return createStringError(errc::invalid_argument, "section '%s' not found",
                              Name.str().c_str());
-  return updateSectionData(It, Data);
+  return updateSectionData(*It, Data);
 }
 
 Error Object::updateSectionData(SectionBase &S, ArrayRef<uint8_t> Data) {
   auto It = llvm::find_if(Sections,
                           [&](const SecPtr &Sec) { return Sec.get() == &S; });
   assert(It != Sections.end() && "The section should belong to the object");
-  return updateSectionData(It, Data);
+  return updateSectionData(*It, Data);
 }
 
 Error Object::removeSections(

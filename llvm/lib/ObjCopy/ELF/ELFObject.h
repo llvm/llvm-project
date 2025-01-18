@@ -1168,8 +1168,7 @@ private:
     return Sec.Flags & ELF::SHF_ALLOC;
   };
 
-  Error updateSectionData(std::vector<SecPtr>::iterator SecIt,
-                          ArrayRef<uint8_t> Data);
+  Error updateSectionData(SecPtr &Sec, ArrayRef<uint8_t> Data);
 
 public:
   template <class T>
