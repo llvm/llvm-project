@@ -916,10 +916,10 @@ public:
                                    SmallVectorImpl<const SDNode *> &Worklist,
                                    unsigned int MaxSteps = 0,
                                    bool TopologicalPrune = false) {
-    SmallVector<const SDNode *, 8> DeferredNodes;
     if (Visited.count(N))
       return true;
 
+    SmallVector<const SDNode *, 8> DeferredNodes;
     // Node Id's are assigned in three places: As a topological
     // ordering (> 0), during legalization (results in values set to
     // 0), new nodes (set to -1). If N has a topolgical id then we
