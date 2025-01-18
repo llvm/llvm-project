@@ -1626,7 +1626,7 @@ void UnwrappedLineParser::parseStructuralElement(
         return;
       }
       if (FormatTok->is(tok::l_brace)) {
-        parseCXXExportBlock();
+        parseCppExportBlock();
         return;
       }
       if (FormatTok->is(Keywords.kw_import) && parseModuleImport())
@@ -3166,7 +3166,7 @@ void UnwrappedLineParser::parseNamespace() {
   // FIXME: Add error handling.
 }
 
-void UnwrappedLineParser::parseCXXExportBlock() {
+void UnwrappedLineParser::parseCppExportBlock() {
   parseNamespaceOrExportBlock(/*AddLevels=*/Style.ExportBlockIndentation ? 1
                                                                          : 0);
 }
