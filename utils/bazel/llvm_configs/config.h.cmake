@@ -177,9 +177,6 @@
 /* Define to 1 if you have the `sysconf' function. */
 #cmakedefine HAVE_SYSCONF ${HAVE_SYSCONF}
 
-/* Define to 1 if you have the <sys/ioctl.h> header file. */
-#cmakedefine HAVE_SYS_IOCTL_H ${HAVE_SYS_IOCTL_H}
-
 /* Define to 1 if you have the <sys/mman.h> header file. */
 #cmakedefine HAVE_SYS_MMAN_H ${HAVE_SYS_MMAN_H}
 
