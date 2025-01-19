@@ -55,11 +55,8 @@ add_object_library(
 )
 
 if(LIBC_TARGET_OS_IS_GPU)
-# TODO: fix this
 add_header_library(
   reader
-  # SRCS
-  #   reader.cpp
   HDRS
     reader.h
   DEPENDS
@@ -70,8 +67,6 @@ add_header_library(
 elseif( (TARGET libc.src.__support.File.file) OR (NOT LLVM_LIBC_FULL_BUILD)  )
 add_header_library(
   reader
-  # SRCS
-  #   reader.cpp
   HDRS
     reader.h
   DEPENDS
