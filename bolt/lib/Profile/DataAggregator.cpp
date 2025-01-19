@@ -544,25 +544,17 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   };
 
   if (BC.IsLinuxKernel) {
-    // Current MMap parsing logic does not work with linux kernel.
-    // MMap entries for linux kernel uses PERF_RECORD_MMAP
-    // format instead of typical PERF_RECORD_MMAP2 format.
-    // Since linux kernel address mapping is absolute (same as
-    // in the ELF file), we avoid parsing MMap in linux kernel mode.
-    // While generating optimized linux kernel binary, we may need
-    // to parse MMap entries.
-
     // In linux kernel mode, we analyze and optimize
     // all linux kernel binary instructions, irrespective
     // of whether they are due to system calls or due to
     // interrupts. Therefore, we cannot ignore interrupt
     // in Linux kernel mode.
     opts::IgnoreInterruptLBR = false;
-  } else {
-    prepareToParse("mmap events", MMapEventsPPI, ErrorCallback);
-    if (parseMMapEvents())
-      errs() << "PERF2BOLT: failed to parse mmap events\n";
   }
+
+  prepareToParse("mmap events", MMapEventsPPI, ErrorCallback);
+  if (parseMMapEvents())
+    errs() << "PERF2BOLT: failed to parse mmap events\n";
 
   prepareToParse("task events", TaskEventsPPI, ErrorCallback);
   if (parseTaskEvents())
@@ -1156,6 +1148,11 @@ ErrorOr<DataAggregator::PerfBranchSample> DataAggregator::parseBranchSample() {
   if (!BC->IsLinuxKernel && MMapInfoIter == BinaryMMapInfo.end()) {
     consumeRestOfLine();
     return make_error_code(errc::no_such_process);
+  }
+
+  if (BC->IsLinuxKernel) {
+    // "-1" is the pid for the Linux kernel
+    MMapInfoIter = BinaryMMapInfo.find(-1);
   }
 
   while (checkAndConsumeFS()) {
@@ -1993,7 +1990,8 @@ DataAggregator::parseMMapEvent() {
   }
   StringRef Line = ParsingBuf.substr(0, LineEnd);
 
-  size_t Pos = Line.find("PERF_RECORD_MMAP2");
+  // This would match both PERF_RECORD_MMAP and PERF_RECORD_MMAP2
+  size_t Pos = Line.find("PERF_RECORD_MMAP");
   if (Pos == StringRef::npos) {
     consumeRestOfLine();
     return std::make_pair(StringRef(), ParsedInfo);
@@ -2001,6 +1999,9 @@ DataAggregator::parseMMapEvent() {
 
   // Line:
   //   {<name> .* <sec>.<usec>: }PERF_RECORD_MMAP2 <pid>/<tid>: .* <file_name>
+  // Or:
+  //   {<name> .* <sec>.<usec>: }PERF_RECORD_MMAP <-1 | pid>/<tid>: .*
+  //   <file_name>
 
   const StringRef TimeStr =
       Line.substr(0, Pos).rsplit(':').first.rsplit(FieldSeparator).second;
@@ -2011,9 +2012,14 @@ DataAggregator::parseMMapEvent() {
 
   // Line:
   //   PERF_RECORD_MMAP2 <pid>/<tid>: [<hexbase>(<hexsize>) .*]: .* <file_name>
+  // Or:
+  //   PERF_RECORD_MMAP <-1 | pid>/<tid>: [<hexbase>(<hexsize>) .*]: .*
+  //   <file_name>
 
   StringRef FileName = Line.rsplit(FieldSeparator).second;
-  if (FileName.starts_with("//") || FileName.starts_with("[")) {
+  if (FileName == "[kernel.kallsyms]_text")
+    FileName = "[kernel.kallsyms]";
+  else if (FileName.starts_with("//") || FileName.starts_with("[")) {
     consumeRestOfLine();
     return std::make_pair(StringRef(), ParsedInfo);
   }
@@ -2040,8 +2046,11 @@ DataAggregator::parseMMapEvent() {
     return make_error_code(llvm::errc::io_error);
   }
 
-  const StringRef OffsetStr =
-      Line.split('@').second.ltrim().split(FieldSeparator).first;
+  const StringRef OffsetStr = Line.split('@')
+                                  .second.ltrim()
+                                  .split(FieldSeparator)
+                                  .first.split(']')
+                                  .first;
   if (OffsetStr.getAsInteger(0, ParsedInfo.Offset)) {
     reportError("expected mmaped page-aligned offset");
     Diag << "Found: " << OffsetStr << "in '" << Line << "'\n";
@@ -2065,7 +2074,8 @@ std::error_code DataAggregator::parseMMapEvents() {
       return EC;
 
     std::pair<StringRef, MMapInfo> FileMMapInfo = FileMMapInfoRes.get();
-    if (FileMMapInfo.second.PID == -1)
+    if (FileMMapInfo.first != "[kernel.kallsyms]" &&
+        FileMMapInfo.second.PID == -1)
       continue;
     if (FileMMapInfo.first == "(deleted)")
       continue;
@@ -2087,6 +2097,8 @@ std::error_code DataAggregator::parseMMapEvents() {
            << "\" for profile matching\n";
     NameToUse = BuildIDBinaryName;
   }
+  if (BC->IsLinuxKernel)
+    NameToUse = "[kernel.kallsyms]";
 
   auto Range = GlobalMMapInfo.equal_range(NameToUse);
   for (MMapInfo &MMapInfo : llvm::make_second_range(make_range(Range))) {
@@ -2135,7 +2147,7 @@ std::error_code DataAggregator::parseMMapEvents() {
     // Update mapping size.
     const uint64_t EndAddress = MMapInfo.MMapAddress + MMapInfo.Size;
     const uint64_t Size = EndAddress - BinaryMMapInfo[MMapInfo.PID].BaseAddress;
-    if (Size > BinaryMMapInfo[MMapInfo.PID].Size)
+    if (!BC->IsLinuxKernel && Size > BinaryMMapInfo[MMapInfo.PID].Size)
       BinaryMMapInfo[MMapInfo.PID].Size = Size;
   }
 
