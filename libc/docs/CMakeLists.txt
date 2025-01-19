@@ -37,8 +37,8 @@ if (SPHINX_FOUND)
       aio
       arpa/inet
       assert
-      ctype
       cpio
+      ctype
       errno
       fenv
       float
