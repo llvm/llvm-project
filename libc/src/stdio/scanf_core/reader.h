@@ -19,7 +19,11 @@
 
 namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
-namespace internal {
+// We use the name "reader_internal" over "internal" because
+// "internal" causes name lookups in files that include the current header to be ambigious
+// i.e. `internal::foo` in those files, will try to lookup in `LIBC_NAMESPACE::scanf_core::internal` over `LIBC_NAMESPACE::internal`
+// for e.g., `internal::ArgList` in `libc/src/stdio/scanf_core/scanf_main.h`
+namespace reader_internal {
 
 #if defined(LIBC_TARGET_ARCH_IS_GPU)
 // The GPU build provides FILE access through the host operating system's
@@ -62,7 +66,7 @@ LIBC_INLINE void ungetc(int c, void *f) {
 }
 #endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 
-} // namespace internal
+} // namespace reader_internal
 
 
 // This is intended to be either a raw string or a buffer syncronized with the
@@ -96,7 +100,7 @@ public:
       return output;
     }
     // This should reset the buffer if applicable.
-    return static_cast<char>(internal::getc(input_stream));
+    return static_cast<char>(reader_internal::getc(input_stream));
   }
 
   // This moves the input back by one character, placing c into the buffer if
@@ -111,7 +115,7 @@ public:
       --(rb->buff_cur);
       return;
     }
-    internal::ungetc(static_cast<int>(c), input_stream);
+    reader_internal::ungetc(static_cast<int>(c), input_stream);
   }
 
   LIBC_INLINE size_t chars_read() { return cur_chars_read; }
