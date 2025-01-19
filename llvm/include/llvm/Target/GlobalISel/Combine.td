@@ -306,11 +306,18 @@ def ptr_add_immed_chain : GICombineRule<
          [{ return Helper.matchPtrAddImmedChain(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.applyPtrAddImmedChain(*${d}, ${matchinfo}); }])>;
 
+def shift_result_matchdata : GIDefMatchData<"std::optional<int64_t>">;
 def shifts_too_big : GICombineRule<
-  (defs root:$root),
+  (defs root:$root, shift_result_matchdata:$matchinfo),
   (match (wip_match_opcode G_SHL, G_ASHR, G_LSHR):$root,
-         [{ return Helper.matchShiftsTooBig(*${root}); }]),
-  (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
+         [{ return Helper.matchShiftsTooBig(*${root}, ${matchinfo}); }]),
+  (apply [{
+    if (${matchinfo}) {
+      Helper.replaceInstWithConstant(*${root}, *${matchinfo});
+    } else {
+      Helper.replaceInstWithUndef(*${root});
+    }
+  }])>;
 
 // Fold shift (shift base x), y -> shift base, (x+y), if shifts are same
 def shift_immed_matchdata : GIDefMatchData<"RegisterImmPair">;

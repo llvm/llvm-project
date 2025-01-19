@@ -115,18 +115,13 @@ protected:
 
 public:
   CombinerHelper(GISelChangeObserver &Observer, MachineIRBuilder &B,
-                 bool IsPreLegalize,
-                 GISelKnownBits *KB = nullptr,
+                 bool IsPreLegalize, GISelKnownBits *KB = nullptr,
                  MachineDominatorTree *MDT = nullptr,
                  const LegalizerInfo *LI = nullptr);
 
-  GISelKnownBits *getKnownBits() const {
-    return KB;
-  }
+  GISelKnownBits *getKnownBits() const { return KB; }
 
-  MachineIRBuilder &getBuilder() const {
-    return Builder;
-  }
+  MachineIRBuilder &getBuilder() const { return Builder; }
 
   const TargetLowering &getTargetLowering() const;
 
@@ -150,8 +145,10 @@ public:
   /// is a legal integer constant type on the target.
   bool isConstantLegalOrBeforeLegalizer(const LLT Ty) const;
 
-  /// MachineRegisterInfo::replaceRegWith() and inform the observer of the changes
-  void replaceRegWith(MachineRegisterInfo &MRI, Register FromReg, Register ToReg) const;
+  /// MachineRegisterInfo::replaceRegWith() and inform the observer of the
+  /// changes
+  void replaceRegWith(MachineRegisterInfo &MRI, Register FromReg,
+                      Register ToReg) const;
 
   /// Replace a single register operand with a new register and inform the
   /// observer of the changes.
@@ -482,12 +479,12 @@ public:
   bool matchEqualDefs(const MachineOperand &MOP1,
                       const MachineOperand &MOP2) const;
 
-  /// Return true if \p MOP is defined by a G_CONSTANT or splat with a value equal to
-  /// \p C.
+  /// Return true if \p MOP is defined by a G_CONSTANT or splat with a value
+  /// equal to \p C.
   bool matchConstantOp(const MachineOperand &MOP, int64_t C) const;
 
-  /// Return true if \p MOP is defined by a G_FCONSTANT or splat with a value exactly
-  /// equal to \p C.
+  /// Return true if \p MOP is defined by a G_FCONSTANT or splat with a value
+  /// exactly equal to \p C.
   bool matchConstantFPOp(const MachineOperand &MOP, double C) const;
 
   /// @brief Checks if constant at \p ConstIdx is larger than \p MI 's bitwidth
@@ -841,7 +838,8 @@ public:
                                      BuildFnTy &MatchInfo) const;
 
   /// Match shifts greater or equal to the bitwidth of the operation.
-  bool matchShiftsTooBig(MachineInstr &MI) const;
+  bool matchShiftsTooBig(MachineInstr &MI,
+                         std::optional<int64_t> &MatchInfo) const;
 
   /// Match constant LHS ops that should be commuted.
   bool matchCommuteConstantToRHS(MachineInstr &MI) const;

@@ -35,6 +35,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DivisionByConstantInfo.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cmath>
@@ -6590,12 +6591,56 @@ bool CombinerHelper::matchRedundantBinOpInEquality(MachineInstr &MI,
   return CmpInst::isEquality(Pred) && Y.isValid();
 }
 
-bool CombinerHelper::matchShiftsTooBig(MachineInstr &MI) const {
+static std::optional<unsigned>
+getMaxUsefulShift(KnownBits ValueKB, unsigned Opcode,
+                  std::optional<int64_t> &Result) {
+  assert(Opcode == TargetOpcode::G_SHL || Opcode == TargetOpcode::G_LSHR ||
+         Opcode == TargetOpcode::G_ASHR && "Expect G_SHL, G_LSHR or G_ASHR.");
+  auto SignificantBits = 0;
+  switch (Opcode) {
+  case TargetOpcode::G_SHL:
+    SignificantBits = ValueKB.countMinTrailingZeros();
+    Result = 0;
+    break;
+  case TargetOpcode::G_LSHR:
+    Result = 0;
+    SignificantBits = ValueKB.countMinLeadingZeros();
+    break;
+  case TargetOpcode::G_ASHR:
+    if (ValueKB.isNonNegative()) {
+      SignificantBits = ValueKB.countMinLeadingZeros();
+      Result = 0;
+    } else if (ValueKB.isNegative()) {
+      SignificantBits = ValueKB.countMinLeadingOnes();
+      Result = -1;
+    } else {
+      // Cannot determine shift result.
+      Result = std::nullopt;
+      return false;
+    }
+    break;
+  default:
+    break;
+  }
+  return ValueKB.getBitWidth() - SignificantBits;
+}
+
+bool CombinerHelper::matchShiftsTooBig(
+    MachineInstr &MI, std::optional<int64_t> &MatchInfo) const {
+  Register ShiftVal = MI.getOperand(1).getReg();
   Register ShiftReg = MI.getOperand(2).getReg();
   LLT ResTy = MRI.getType(MI.getOperand(0).getReg());
   auto IsShiftTooBig = [&](const Constant *C) {
     auto *CI = dyn_cast<ConstantInt>(C);
-    return CI && CI->uge(ResTy.getScalarSizeInBits());
+    if (!CI)
+      return false;
+    if (CI->uge(ResTy.getScalarSizeInBits())) {
+      MatchInfo = std::nullopt;
+      return true;
+    }
+    auto OptMaxUsefulShift = getMaxUsefulShift(KB->getKnownBits(ShiftVal),
+                                               MI.getOpcode(), MatchInfo);
+    return OptMaxUsefulShift && CI->uge(*OptMaxUsefulShift);
   };
   return matchUnaryPredicate(MRI, ShiftReg, IsShiftTooBig);
 }
