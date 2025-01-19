@@ -12790,7 +12790,7 @@ void SelectionDAGBuilder::visitCallBrLandingPad(const CallInst &I) {
       // the OpInfo.ConstraintVT is legal on the target or not.
       for (Register &Reg : OpInfo.AssignedRegs.Regs) {
         Register OriginalDef = FollowCopyChain(MRI, InitialDef++);
-        if (Register::isPhysicalRegister(OriginalDef))
+        if (OriginalDef.isPhysical())
           FuncInfo.MBB->addLiveIn(OriginalDef);
         // Update the assigned registers to use the original defs.
         Reg = OriginalDef;
