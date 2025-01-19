@@ -316,8 +316,7 @@ define void @fptrunc_float_to_f16(ptr %val, ptr%ret) nounwind strictfp {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    movw %ax, (%rsi)
+; AVX-NEXT:    vpextrw $0, %xmm0, (%rsi)
 ; AVX-NEXT:    retq
 ;
 ; X86-LABEL: fptrunc_float_to_f16:
@@ -411,8 +410,7 @@ define void @fsqrt_f16(ptr %a) nounwind strictfp {
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    movw %ax, (%rdi)
+; AVX-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX-NEXT:    retq
 ;
 ; X86-LABEL: fsqrt_f16:

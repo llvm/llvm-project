@@ -53,8 +53,7 @@ define void @v_test_canonicalize__half(half addrspace(1)* %out) nounwind {
 ; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    movw %ax, (%rdi)
+; AVX512-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
 entry:
   %val = load half, half addrspace(1)* %out
