@@ -48054,6 +48054,18 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
                            DAG.getAllOnesConstant(DL, NotOp1.getValueType())));
       }
     }
+    // PTESTC(PCMPEQ(X,0),-1) == PTESTZ(X,X)
+    if (EFLAGS.getOpcode() == X86ISD::PTEST &&
+        ISD::isBuildVectorAllOnes(Op1.getNode())) {
+      SDValue BC0 = peekThroughBitcasts(Op0);
+      if (BC0.getOpcode() == X86ISD::PCMPEQ &&
+          ISD::isBuildVectorAllZeros(BC0.getOperand(1).getNode())) {
+        SDLoc DL(EFLAGS);
+        CC = (CC == X86::COND_B ? X86::COND_E : X86::COND_NE);
+        SDValue X = DAG.getBitcast(OpVT, BC0.getOperand(0));
+        return DAG.getNode(EFLAGS.getOpcode(), DL, VT, X, X);
+      }
+    }
   }
 
   if (CC == X86::COND_E || CC == X86::COND_NE) {
