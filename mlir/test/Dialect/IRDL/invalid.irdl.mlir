@@ -25,7 +25,7 @@ irdl.dialect @testd {
 irdl.dialect @testd {
   irdl.type @type {
     %0 = irdl.any
-    // expected-error@+1 {{name of parameter number 0 must contain only letters, digits and underscores}}
+    // expected-error@+1 {{name of parameter #0 must contain only letters, digits and underscores}}
     irdl.parameters(test$test: %0)
   }
 }
@@ -35,7 +35,7 @@ irdl.dialect @testd {
 irdl.dialect @testd {
   irdl.operation @op {
     %0 = irdl.any
-    // expected-error@+1 {{name of result number 0 must contain only letters, digits and underscores}}
+    // expected-error@+1 {{name of result #0 must contain only letters, digits and underscores}}
     irdl.results(test$test: %0)
   }
 }
@@ -45,7 +45,7 @@ irdl.dialect @testd {
 irdl.dialect @testd {
   irdl.operation @op {
     %0 = irdl.any
-    // expected-error@+1 {{name of operand number 0 must contain only letters, digits and underscores}}
+    // expected-error@+1 {{name of operand #0 must contain only letters, digits and underscores}}
     irdl.operands(test$test: %0)
   }
 }
@@ -55,7 +55,7 @@ irdl.dialect @testd {
 irdl.dialect @testd {
   irdl.type @type {
     %0 = irdl.any
-    // expected-error@+1 {{name of parameter number 2 is a duplicate of the name of parameter number 0}}
+    // expected-error@+1 {{name of parameter #2 is a duplicate of the name of parameter #0}}
     irdl.parameters(foo: %0, bar: %0, foo: %0)
   }
 }
@@ -65,7 +65,7 @@ irdl.dialect @testd {
 irdl.dialect @testd {
   irdl.operation @op {
     %0 = irdl.any
-    // expected-error@+1 {{name of result number 2 is a duplicate of the name of result number 0}}
+    // expected-error@+1 {{name of result #2 is a duplicate of the name of result #0}}
     irdl.results(foo: %0, bar: %0, foo: %0)
   }
 }
@@ -75,7 +75,7 @@ irdl.dialect @testd {
 irdl.dialect @testd {
   irdl.operation @op {
     %0 = irdl.any
-    // expected-error@+1 {{name of operand number 2 is a duplicate of the name of operand number 0}}
+    // expected-error@+1 {{name of operand #2 is a duplicate of the name of operand #0}}
     irdl.operands(foo: %0, bar: %0, foo: %0)
   }
 }

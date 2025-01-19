@@ -22,7 +22,7 @@ irdl.dialect @testRegionsOpMissingName {
 irdl.dialect @testRegionsOpWrongName {
     irdl.operation @op {
         %r1 = irdl.region
-        // expected-error @below {{name of region number 0 must contain only letters, digits and underscores}}
+        // expected-error @below {{name of region #0 must contain only letters, digits and underscores}}
         irdl.regions(test$test: %r1)
     }
 }
@@ -32,7 +32,7 @@ irdl.dialect @testRegionsOpWrongName {
 irdl.dialect @testRegionsDuplicateName {
     irdl.operation @op {
         %r1 = irdl.region
-        // expected-error @below {{name of region number 2 is a duplicate of the name of region number 0}}
+        // expected-error @below {{name of region #2 is a duplicate of the name of region #0}}
         irdl.regions(foo: %r1, bar: %r1, foo: %r1)
     }
 }

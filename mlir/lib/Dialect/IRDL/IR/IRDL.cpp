@@ -94,17 +94,19 @@ LogicalResult OperationOp::verifyRegions() {
     valueNames.emplace_back(kind, std::move(nameSet));
   };
 
-  getBody().walk([&](Operation *op) {
-    TypeSwitch<Operation *>(op)
+  for (Operation &op : getBody().getOps()) {
+    TypeSwitch<Operation *>(&op)
         .Case<OperandsOp>(
             [&](OperandsOp op) { insertNames("operands", op.getNames()); })
         .Case<ResultsOp>(
             [&](ResultsOp op) { insertNames("results", op.getNames()); })
         .Case<RegionsOp>(
             [&](RegionsOp op) { insertNames("regions", op.getNames()); });
-  });
+  }
 
   // Verify that no two operand, result or region share the same name.
+  // The absence of duplicates within each value kind is checked by the
+  // associated operation's verifier.
   for (size_t i : llvm::seq(valueNames.size())) {
     for (size_t j : llvm::seq(i + 1, valueNames.size())) {
       auto [lhs, lhsSet] = valueNames[i];
@@ -131,22 +133,22 @@ static LogicalResult verifyNames(Operation *op, StringRef kindName,
   DenseMap<StringRef, size_t> nameMap;
   for (auto [i, name] : llvm::enumerate(names)) {
     StringRef nameRef = llvm::cast<StringAttr>(name).getValue();
-    if (nameRef.size() == 0)
+    if (nameRef.empty())
       return op->emitOpError()
-             << "name of " << kindName << " number " << i << " is empty";
+             << "name of " << kindName << " #" << i << " is empty";
     if (!llvm::isAlpha(nameRef[0]) && nameRef[0] != '_')
       return op->emitOpError()
-             << "name of " << kindName << " number " << i
+             << "name of " << kindName << " #" << i
              << " must start with either a letter or an underscore";
     if (llvm::any_of(nameRef,
                      [](char c) { return !llvm::isAlnum(c) && c != '_'; }))
       return op->emitOpError()
-             << "name of " << kindName << " number " << i
+             << "name of " << kindName << " #" << i
              << " must contain only letters, digits and underscores";
     if (nameMap.contains(nameRef))
-      return op->emitOpError() << "name of " << kindName << " number " << i
+      return op->emitOpError() << "name of " << kindName << " #" << i
                                << " is a duplicate of the name of " << kindName
-                               << " number " << nameMap[nameRef];
+                               << " #" << nameMap[nameRef];
     nameMap.insert({nameRef, i});
   }
 
