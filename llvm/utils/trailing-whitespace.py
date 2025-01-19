@@ -96,6 +96,8 @@ def check_paths(paths, exclude, fix):
     seen = set()
     found_trailing = False
     for path in paths:
+        if os.path.abspath(path) in exclude:
+            continue
         for root, dirs, files in os.walk(path):
             dirs[:] = [d for d in dirs if os.path.abspath(os.path.join(root, d)) not in exclude]
             for file in files:
