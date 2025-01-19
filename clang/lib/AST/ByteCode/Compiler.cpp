@@ -4984,6 +4984,15 @@ bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS) {
       return false;
     if (!this->visitVarDecl(VD))
       return false;
+
+    // Register decomposition decl holding vars.
+    if (const auto *DD = dyn_cast<DecompositionDecl>(VD)) {
+      for (auto *BD : DD->bindings())
+        if (auto *KD = BD->getHoldingVar()) {
+          if (!this->visitVarDecl(KD))
+            return false;
+        }
+    }
   }
 
   return true;
