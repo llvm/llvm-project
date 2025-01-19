@@ -110,7 +110,9 @@ cpp::optional<time_t> mktime_internal(const tm *tm_out) {
   return seconds;
 }
 
+#ifdef LIBC_TARGET_OS_IS_LINUX
 extern char **environ;
+#endif
 
 static int64_t computeRemainingYears(int64_t daysPerYears,
                                      int64_t quotientYears,
