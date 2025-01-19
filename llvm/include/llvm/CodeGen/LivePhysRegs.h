@@ -93,7 +93,7 @@ public:
     assert(TRI && "LivePhysRegs is not initialized.");
     assert(Reg <= TRI->getNumRegs() && "Expected a physical register.");
     for (MCRegAliasIterator R(Reg, TRI, true); R.isValid(); ++R)
-      LiveRegs.erase(*R);
+      LiveRegs.erase((*R).id());
   }
 
   /// Removes physical registers clobbered by the regmask operand \p MO.
