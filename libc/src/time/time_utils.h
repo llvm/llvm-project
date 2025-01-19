@@ -194,8 +194,7 @@ LIBC_INLINE struct tm *localtime_internal(const time_t *timer, struct tm *buf) {
   }
 
 #ifdef LIBC_TARGET_OS_IS_LINUX
-  timezone::tzset *ptr = localtime_utils::get_localtime(buf);
-  (void)ptr;
+  // timezone::tzset *ptr = localtime_utils::get_localtime(buf);
   // buf->tm_hour += ptr->global_offset;
   // buf->tm_isdst = ptr->global_isdst;
 #endif
