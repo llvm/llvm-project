@@ -658,7 +658,7 @@ struct BuiltinDumpStructGenerator {
         Format += ": %zu ";
         QualType SizeT = S.Context.getSizeType();
         llvm::APInt BitWidth(S.Context.getIntWidth(SizeT),
-                             FD->getBitWidthValue(S.Context));
+                             FD->getBitWidthValue());
         Args.push_back(IntegerLiteral::Create(S.Context, BitWidth, SizeT, Loc));
       }
 
@@ -10027,7 +10027,7 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
                            Approximate);
 
   if (const auto *BitField = E->getSourceBitField())
-    return IntRange(BitField->getBitWidthValue(C),
+    return IntRange(BitField->getBitWidthValue(),
                     BitField->getType()->isUnsignedIntegerOrEnumerationType());
 
   if (GetExprType(E)->isVoidType())
@@ -10580,7 +10580,7 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
     return false;
 
   Expr *OriginalInit = Init->IgnoreParenImpCasts();
-  unsigned FieldWidth = Bitfield->getBitWidthValue(S.Context);
+  unsigned FieldWidth = Bitfield->getBitWidthValue();
 
   Expr::EvalResult Result;
   if (!OriginalInit->EvaluateAsInt(Result, S.Context,
@@ -14044,8 +14044,8 @@ static bool isLayoutCompatible(const ASTContext &C, const FieldDecl *Field1,
 
   if (Field1->isBitField()) {
     // Make sure that the bit-fields are the same length.
-    unsigned Bits1 = Field1->getBitWidthValue(C);
-    unsigned Bits2 = Field2->getBitWidthValue(C);
+    unsigned Bits1 = Field1->getBitWidthValue();
+    unsigned Bits2 = Field2->getBitWidthValue();
 
     if (Bits1 != Bits2)
       return false;

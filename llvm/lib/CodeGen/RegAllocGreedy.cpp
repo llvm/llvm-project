@@ -140,7 +140,7 @@ static cl::opt<bool> GreedyReverseLocalAssignment(
 static cl::opt<unsigned> SplitThresholdForRegWithHint(
     "split-threshold-for-reg-with-hint",
     cl::desc("The threshold for splitting a virtual register with a hint, in "
-             "percentate"),
+             "percentage"),
     cl::init(75), cl::Hidden);
 
 static RegisterRegAlloc greedyRegAlloc("greedy", "greedy register allocator",
@@ -2750,6 +2750,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   Bundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
   SpillPlacer = &getAnalysis<SpillPlacementWrapperLegacy>().getResult();
   DebugVars = &getAnalysis<LiveDebugVariablesWrapperLegacy>().getLDV();
+  auto &LSS = getAnalysis<LiveStacksWrapperLegacy>().getLS();
 
   initializeCSRCost();
 
@@ -2770,7 +2771,8 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
       getAnalysis<RegAllocPriorityAdvisorAnalysis>().getAdvisor(*MF, *this);
 
   VRAI = std::make_unique<VirtRegAuxInfo>(*MF, *LIS, *VRM, *Loops, *MBFI);
-  SpillerInstance.reset(createInlineSpiller(*this, *MF, *VRM, *VRAI));
+  SpillerInstance.reset(
+      createInlineSpiller({*LIS, LSS, *DomTree, *MBFI}, *MF, *VRM, *VRAI));
 
   VRAI->calculateSpillWeightsAndHints();
 

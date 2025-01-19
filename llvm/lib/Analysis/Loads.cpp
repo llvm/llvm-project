@@ -25,10 +25,11 @@
 
 using namespace llvm;
 
-static bool isAligned(const Value *Base, const APInt &Offset, Align Alignment,
+extern cl::opt<bool> UseDerefAtPointSemantics;
+
+static bool isAligned(const Value *Base, Align Alignment,
                       const DataLayout &DL) {
-  Align BA = Base->getPointerAlignment(DL);
-  return BA >= Alignment && Offset.isAligned(BA);
+  return Base->getPointerAlignment(DL) >= Alignment;
 }
 
 /// Test if V is always a pointer to allocated and suitably aligned memory for
@@ -118,8 +119,7 @@ static bool isDereferenceableAndAlignedPointer(
     // As we recursed through GEPs to get here, we've incrementally checked
     // that each step advanced by a multiple of the alignment. If our base is
     // properly aligned, then the original offset accessed must also be.
-    APInt Offset(DL.getTypeStoreSizeInBits(V->getType()), 0);
-    return isAligned(V, Offset, Alignment, DL);
+    return isAligned(V, Alignment, DL);
   }
 
   /// TODO refactor this function to be able to search independently for
@@ -154,8 +154,7 @@ static bool isDereferenceableAndAlignedPointer(
         // checked that each step advanced by a multiple of the alignment. If
         // our base is properly aligned, then the original offset accessed
         // must also be.
-        APInt Offset(DL.getTypeStoreSizeInBits(V->getType()), 0);
-        return isAligned(V, Offset, Alignment, DL);
+        return isAligned(V, Alignment, DL);
       }
     }
   }
@@ -171,11 +170,12 @@ static bool isDereferenceableAndAlignedPointer(
                                               Size, DL, CtxI, AC, DT, TLI,
                                               Visited, MaxDepth);
 
-  if (CtxI) {
+  if (CtxI && (!UseDerefAtPointSemantics || !V->canBeFreed())) {
     /// Look through assumes to see if both dereferencability and alignment can
-    /// be provent by an assume
+    /// be proven by an assume if needed.
     RetainedKnowledge AlignRK;
     RetainedKnowledge DerefRK;
+    bool IsAligned = V->getPointerAlignment(DL) >= Alignment;
     if (getKnowledgeForValue(
             V, {Attribute::Dereferenceable, Attribute::Alignment}, AC,
             [&](RetainedKnowledge RK, Instruction *Assume, auto) {
@@ -185,7 +185,8 @@ static bool isDereferenceableAndAlignedPointer(
                 AlignRK = std::max(AlignRK, RK);
               if (RK.AttrKind == Attribute::Dereferenceable)
                 DerefRK = std::max(DerefRK, RK);
-              if (AlignRK && DerefRK && AlignRK.ArgValue >= Alignment.value() &&
+              IsAligned |= AlignRK && AlignRK.ArgValue >= Alignment.value();
+              if (IsAligned && DerefRK &&
                   DerefRK.ArgValue >= Size.getZExtValue())
                 return true; // We have found what we needed so we stop looking
               return false;  // Other assumes may have better information. so

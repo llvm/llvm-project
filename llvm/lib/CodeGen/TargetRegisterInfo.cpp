@@ -556,8 +556,8 @@ TargetRegisterInfo::getRegSizeInBits(Register Reg,
 }
 
 bool TargetRegisterInfo::getCoveringSubRegIndexes(
-    const MachineRegisterInfo &MRI, const TargetRegisterClass *RC,
-    LaneBitmask LaneMask, SmallVectorImpl<unsigned> &NeededIndexes) const {
+    const TargetRegisterClass *RC, LaneBitmask LaneMask,
+    SmallVectorImpl<unsigned> &NeededIndexes) const {
   SmallVector<unsigned, 8> PossibleIndexes;
   unsigned BestIdx = 0;
   unsigned BestCover = 0;

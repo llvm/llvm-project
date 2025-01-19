@@ -564,6 +564,22 @@ void SectionChunk::getBaserels(std::vector<Baserel> *res) {
       continue;
     res->emplace_back(rva + rel.VirtualAddress, ty);
   }
+
+  // Insert a 64-bit relocation for CHPEMetadataPointer in the native load
+  // config of a hybrid ARM64X image. Its value will be set in prepareLoadConfig
+  // to match the value in the EC load config, which is expected to be
+  // a relocatable pointer to the __chpe_metadata symbol.
+  COFFLinkerContext &ctx = file->symtab.ctx;
+  if (ctx.hybridSymtab && ctx.symtab.loadConfigSym &&
+      ctx.symtab.loadConfigSym->getChunk() == this &&
+      ctx.hybridSymtab->loadConfigSym &&
+      ctx.symtab.loadConfigSize >=
+          offsetof(coff_load_configuration64, CHPEMetadataPointer) +
+              sizeof(coff_load_configuration64::CHPEMetadataPointer))
+    res->emplace_back(
+        ctx.symtab.loadConfigSym->getRVA() +
+            offsetof(coff_load_configuration64, CHPEMetadataPointer),
+        IMAGE_REL_BASED_DIR64);
 }
 
 // MinGW specific.
@@ -1150,6 +1166,10 @@ uint32_t ImportThunkChunkARM64EC::extendRanges() {
   return sizeof(arm64Thunk) - sizeof(uint32_t);
 }
 
+uint64_t Arm64XRelocVal::get() const {
+  return (sym ? sym->getRVA() : 0) + value;
+}
+
 size_t Arm64XDynamicRelocEntry::getSize() const {
   switch (type) {
   case IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE:
@@ -1158,6 +1178,7 @@ size_t Arm64XDynamicRelocEntry::getSize() const {
   case IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL:
     llvm_unreachable("unsupported type");
   }
+  llvm_unreachable("invalid type");
 }
 
 void Arm64XDynamicRelocEntry::writeTo(uint8_t *buf) const {
@@ -1169,13 +1190,13 @@ void Arm64XDynamicRelocEntry::writeTo(uint8_t *buf) const {
     *out |= ((bit_width(size) - 1) << 14); // Encode the size.
     switch (size) {
     case 2:
-      out[1] = value;
+      out[1] = value.get();
       break;
     case 4:
-      *reinterpret_cast<ulittle32_t *>(out + 1) = value;
+      *reinterpret_cast<ulittle32_t *>(out + 1) = value.get();
       break;
     case 8:
-      *reinterpret_cast<ulittle64_t *>(out + 1) = value;
+      *reinterpret_cast<ulittle64_t *>(out + 1) = value.get();
       break;
     default:
       llvm_unreachable("invalid size");

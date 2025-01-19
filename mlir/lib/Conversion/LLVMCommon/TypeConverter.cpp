@@ -294,13 +294,21 @@ Type LLVMTypeConverter::convertIntegerType(IntegerType type) const {
 }
 
 Type LLVMTypeConverter::convertFloatType(FloatType type) const {
+  // Valid LLVM float types are used directly.
+  if (LLVM::isCompatibleType(type))
+    return type;
+
+  // F4, F6, F8 types are converted to integer types with the same bit width.
   if (type.isFloat8E5M2() || type.isFloat8E4M3() || type.isFloat8E4M3FN() ||
       type.isFloat8E5M2FNUZ() || type.isFloat8E4M3FNUZ() ||
       type.isFloat8E4M3B11FNUZ() || type.isFloat8E3M4() ||
       type.isFloat4E2M1FN() || type.isFloat6E2M3FN() || type.isFloat6E3M2FN() ||
       type.isFloat8E8M0FNU())
     return IntegerType::get(&getContext(), type.getWidth());
-  return type;
+
+  // Other floating-point types: A custom type conversion rule must be
+  // specified by the user.
+  return Type();
 }
 
 // Convert a `ComplexType` to an LLVM type. The result is a complex number

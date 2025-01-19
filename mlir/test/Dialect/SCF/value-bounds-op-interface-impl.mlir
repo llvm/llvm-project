@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-affine-reify-value-bounds="reify-to-func-args" \
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(test-affine-reify-value-bounds{reify-to-func-args}))' \
 // RUN:     -verify-diagnostics -split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @scf_for(

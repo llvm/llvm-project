@@ -83,6 +83,12 @@ public:
   /// Returns the current value in this record, without advancing.
   uint64_t peekInt() { return Record[Idx]; }
 
+  /// Returns the next N values in this record, without advancing.
+  uint64_t peekInts(unsigned N) { return Record[Idx + N]; }
+
+  /// Skips the current value.
+  void skipInt() { Idx += 1; }
+
   /// Skips the specified number of values.
   void skipInts(unsigned N) { Idx += N; }
 
@@ -335,7 +341,12 @@ public:
   Attr *readAttr();
 
   /// Reads attributes from the current stream position, advancing Idx.
-  void readAttributes(AttrVec &Attrs);
+  /// For some attributes (where type depends on itself recursively), defer
+  /// reading the attribute until the type has been read.
+  void readAttributes(AttrVec &Attrs, Decl *D = nullptr);
+
+  /// Reads one attribute from the current stream position, advancing Idx.
+  Attr *readOrDeferAttrFor(Decl *D);
 
   /// Read an BTFTypeTagAttr object.
   BTFTypeTagAttr *readBTFTypeTagAttr() {
