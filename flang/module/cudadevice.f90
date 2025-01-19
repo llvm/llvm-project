@@ -92,5 +92,38 @@ implicit none
     end function
   end interface
   public :: __fadd_ru
-  
+
+interface
+  attributes(device) real*8 function atomicaddd(address, val)
+  real*8, intent(inout) :: address
+  real*8 :: val
+  end function
+end interface
+public :: atomicaddd
+
+
+!interface atomicadd
+!  attributes(device) pure integer function atomicaddi(address, val)
+!!dir$ ignore_tkr (rd) address, (d) val
+!  integer, intent(inout) :: address
+!  integer, value :: val
+!  end function
+!  attributes(device) pure real function atomicaddf(address, val)
+!!dir$ ignore_tkr (rd) address, (d) val
+!  real, intent(inout) :: address
+!  real, value :: val
+!  end function
+!  attributes(device) pure real*8 function atomicaddd(address, val)
+!!dir$ ignore_tkr (rd) address, (d) val
+!  real*8, intent(inout) :: address
+!  real*8, value :: val
+!  end function
+!  attributes(device) pure integer(8) function atomicaddul(address, val)
+!!dir$ ignore_tkr (rd) address, (dk) val
+!  integer(8), intent(inout) :: address
+!  integer(8), value :: val
+!  end function
+!end interface 
+!public :: atomicadd
+
 end module

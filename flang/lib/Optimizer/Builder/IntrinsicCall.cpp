@@ -147,6 +147,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"atan2pi", &I::genAtanpi},
     {"atand", &I::genAtand},
     {"atanpi", &I::genAtanpi},
+    {"atomicaddd", &I::genAtomicAdd, {}, /*isElemental=*/false},
     {"bessel_jn",
      &I::genBesselJn,
      {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
@@ -2572,6 +2573,15 @@ mlir::Value IntrinsicLibrary::genAtanpi(mlir::Type resultType,
       builder.createRealConstant(loc, mlir::Float64Type::get(context), inv_pi);
   mlir::Value factor = builder.createConvert(loc, resultType, dfactor);
   return builder.create<mlir::arith::MulFOp>(loc, atan, factor);
+}
+
+mlir::Value IntrinsicLibrary::genAtomicAdd(mlir::Type resultType,
+                                           llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  llvm::errs() << "In genAtomicAdd\n";
+  return builder.create<mlir::LLVM::AtomicRMWOp>(
+      loc, mlir::LLVM::AtomicBinOp::add, args[0], args[1],
+      mlir::LLVM::AtomicOrdering::seq_cst);
 }
 
 // ASSOCIATED
