@@ -15983,6 +15983,10 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
           << /*coroutine*/ 7;
       SKEPAttr->setInvalidAttr();
+    } else if (Body && isa<CXXTryStmt>(Body)) {
+      Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
+          << /*function defined with a function try block*/ 8;
+      SKEPAttr->setInvalidAttr();
     }
 
     if (Body && !FD->isTemplated() && !SKEPAttr->isInvalidAttr()) {
