@@ -4701,11 +4701,6 @@ class OutlinedFunctionDecl final
     : public Decl,
       public DeclContext,
       private llvm::TrailingObjects<OutlinedFunctionDecl, ImplicitParamDecl *> {
-protected:
-  size_t numTrailingObjects(OverloadToken<ImplicitParamDecl>) {
-    return NumParams;
-  }
-
 private:
   /// The number of parameters to the outlined function.
   unsigned NumParams;
@@ -4750,21 +4745,14 @@ public:
     getParams()[i] = P;
   }
 
-  // ArrayRef interface to parameters.
-  ArrayRef<ImplicitParamDecl *> parameters() const {
-    return {getParams(), getNumParams()};
+  // Range interface to parameters.
+  using parameter_const_iterator = const ImplicitParamDecl * const *;
+  using parameter_const_range = llvm::iterator_range<parameter_const_iterator>;
+  parameter_const_range parameters() const {
+    return {param_begin(), param_end()};
   }
-  MutableArrayRef<ImplicitParamDecl *> parameters() {
-    return {getParams(), getNumParams()};
-  }
-
-  using param_iterator = ImplicitParamDecl *const *;
-  using param_range = llvm::iterator_range<param_iterator>;
-
-  /// Retrieve an iterator pointing to the first parameter decl.
-  param_iterator param_begin() const { return getParams(); }
-  /// Retrieve an iterator one past the last parameter decl.
-  param_iterator param_end() const { return getParams() + NumParams; }
+  parameter_const_iterator param_begin() const { return getParams(); }
+  parameter_const_iterator param_end() const { return getParams() + NumParams; }
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }

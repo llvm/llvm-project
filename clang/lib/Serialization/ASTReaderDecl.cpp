@@ -1799,10 +1799,9 @@ void ASTDeclReader::VisitBlockDecl(BlockDecl *BD) {
 void ASTDeclReader::VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D) {
   // NumParams is deserialized by OutlinedFunctionDecl::CreateDeserialized().
   VisitDecl(D);
-  D->setNothrow(Record.readInt() != 0);
-  for (unsigned I = 0; I < D->NumParams; ++I) {
+  for (unsigned I = 0; I < D->NumParams; ++I)
     D->setParam(I, readDeclAs<ImplicitParamDecl>());
-  }
+  D->setNothrow(Record.readInt() != 0);
   D->setBody(cast_or_null<Stmt>(Record.readStmt()));
 }
 

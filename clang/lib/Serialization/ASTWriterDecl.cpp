@@ -1381,9 +1381,9 @@ void ASTDeclWriter::VisitBlockDecl(BlockDecl *D) {
 void ASTDeclWriter::VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D) {
   Record.push_back(D->getNumParams());
   VisitDecl(D);
-  Record.push_back(D->isNothrow() ? 1 : 0);
   for (unsigned I = 0; I < D->getNumParams(); ++I)
     Record.AddDeclRef(D->getParam(I));
+  Record.push_back(D->isNothrow() ? 1 : 0);
   Record.AddStmt(D->getBody());
   Code = serialization::DECL_OUTLINEDFUNCTION;
 }

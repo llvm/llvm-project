@@ -531,7 +531,7 @@ void ASTStmtReader::VisitCapturedStmt(CapturedStmt *S) {
 
 void ASTStmtReader::VisitSYCLKernelCallStmt(SYCLKernelCallStmt *S) {
   VisitStmt(S);
-  S->setOriginalStmt(Record.readSubStmt());
+  S->setOriginalStmt(cast<CompoundStmt>(Record.readSubStmt()));
   S->setOutlinedFunctionDecl(readDeclAs<OutlinedFunctionDecl>());
 }
 

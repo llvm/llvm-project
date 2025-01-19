@@ -44,16 +44,18 @@ private:
 
 public:
   /// Construct a SYCL kernel call statement.
-  SYCLKernelCallStmt(Stmt *OS, OutlinedFunctionDecl *OFD)
-      : Stmt(SYCLKernelCallStmtClass), OriginalStmt(OS), OFDecl(OFD) {}
+  SYCLKernelCallStmt(CompoundStmt *CS, OutlinedFunctionDecl *OFD)
+      : Stmt(SYCLKernelCallStmtClass), OriginalStmt(CS), OFDecl(OFD) {}
 
   /// Construct an empty SYCL kernel call statement.
   SYCLKernelCallStmt(EmptyShell Empty) : Stmt(SYCLKernelCallStmtClass, Empty) {}
 
   /// Retrieve the model statement.
-  Stmt *getOriginalStmt() { return OriginalStmt; }
-  const Stmt *getOriginalStmt() const { return OriginalStmt; }
-  void setOriginalStmt(Stmt *S) { OriginalStmt = S; }
+  CompoundStmt *getOriginalStmt() { return cast<CompoundStmt>(OriginalStmt); }
+  const CompoundStmt *getOriginalStmt() const {
+    return cast<CompoundStmt>(OriginalStmt);
+  }
+  void setOriginalStmt(CompoundStmt *CS) { OriginalStmt = CS; }
 
   /// Retrieve the outlined function declaration.
   OutlinedFunctionDecl *getOutlinedFunctionDecl() { return OFDecl; }

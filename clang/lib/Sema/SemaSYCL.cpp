@@ -412,7 +412,8 @@ private:
 
 } // unnamed namespace
 
-StmtResult SemaSYCL::BuildSYCLKernelCallStmt(FunctionDecl *FD, Stmt *Body) {
+StmtResult SemaSYCL::BuildSYCLKernelCallStmt(FunctionDecl *FD,
+                                             CompoundStmt *Body) {
   assert(!FD->isInvalidDecl());
   assert(!FD->isTemplated());
   assert(FD->hasPrototype());
