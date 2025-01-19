@@ -17,11 +17,6 @@ target_compile_options(
     -Wno-extra-semi
     -Wno-unused-command-line-argument
     -Wno-ctad-maybe-unsupported
-    # TODO: define this
-    -DSTDERR_FILENO=2
-    -DSNMALLOC_USE_PTHREAD_DESTRUCTORS
-    # include_directories does not propagate, use options instead
-    -include ${CMAKE_CURRENT_SOURCE_DIR}/override.h
     -isystem ${COMPILER_RESOURCE_DIR}/include
     -isystem ${LIBC_INCLUDE_DIR}
 )

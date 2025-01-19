@@ -26,6 +26,10 @@
 // We are building internally anyway, hence noexcept does not matter here
 #define __NOEXCEPT
 
+// TODO: define this in stdio.h
+#define STDERR_FILENO 2
+#define SNMALLOC_USE_THREAD_CLEANUP
+
 // Enforce internal errno implementation
 #include "hdr/errno_macros.h"
 #include "src/errno/libc_errno.h"
