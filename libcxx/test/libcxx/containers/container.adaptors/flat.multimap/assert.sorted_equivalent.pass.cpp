@@ -215,7 +215,7 @@ int main(int, char**) {
 
   TEST_LIBCPP_ASSERT_FAILURE(
       ([] {
-        std::vector keys{1, 1, 3};
+        std::vector keys{2, 1, 3};
         std::vector values{4, 5, 6};
         M m;
         m.replace(std::move(keys), std::move(values));
