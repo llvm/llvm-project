@@ -2687,7 +2687,7 @@ struct FormatStyle {
   ///    }                         }
   /// \endcode
   /// \version 20
-  bool ExportBlockIndentation;
+  bool IndentExportBlock;
 
   /// If ``true``, clang-format adds missing namespace end comments for
   /// namespaces and fixes invalid existing ones. This doesn't affect short
@@ -5267,7 +5267,7 @@ struct FormatStyle {
            EmptyLineBeforeAccessModifier == R.EmptyLineBeforeAccessModifier &&
            ExperimentalAutoDetectBinPacking ==
                R.ExperimentalAutoDetectBinPacking &&
-           ExportBlockIndentation == R.ExportBlockIndentation &&
+           IndentExportBlock == R.IndentExportBlock &&
            FixNamespaceComments == R.FixNamespaceComments &&
            ForEachMacros == R.ForEachMacros &&
            IncludeStyle.IncludeBlocks == R.IncludeStyle.IncludeBlocks &&
