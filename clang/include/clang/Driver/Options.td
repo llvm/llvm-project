@@ -3845,7 +3845,7 @@ def fno_openmp_assume_no_nested_parallelism : Flag<["-"], "fno-openmp-assume-no-
 } // let Flags = [NoArgumentUnused, HelpHidden]
 
 def fopenmp_offload_mandatory : Flag<["-"], "fopenmp-offload-mandatory">, Group<f_Group>,
-  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option]>,
+  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option, FlangOption]>,
   HelpText<"Do not create a host fallback if offloading to the device fails.">,
   MarshallingInfoFlag<LangOpts<"OpenMPOffloadMandatory">>;
 def fopenmp_force_usm : Flag<["-"], "fopenmp-force-usm">, Group<f_Group>,
