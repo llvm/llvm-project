@@ -424,7 +424,7 @@ Please refer to the [Undefined Behavior Manual](https://llvm.org/docs/UndefinedB
 
 
 class TrailingWhitespaceFormatter(FormatHelper):
-    name = "trailing-whitespace"
+    name = "trailing_whitespace"
     friendly_name = "Trailing whitespace formatter"
 
     @property
@@ -435,7 +435,7 @@ class TrailingWhitespaceFormatter(FormatHelper):
     def trailing_whitespace_path(self) -> str:
         if "TRAILING_WHITESPACE" in os.environ:
             return os.environ["TRAILING_WHITESPACE"]
-        return "llvm/utils/trailing-whitespace.py"
+        return "llvm/utils/trailing_whitespace.py"
 
     def has_tool(self) -> bool:
         return True
