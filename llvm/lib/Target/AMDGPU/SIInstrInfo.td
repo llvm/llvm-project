@@ -2058,18 +2058,6 @@ class getSrc0ModVOP3DPP <ValueType VT, ValueType DstVT, bit IsFake16 = 1> {
   Operand ret = !if(!and(!not(IsFake16), !eq(DstVT.Size, 16)), T16Dst, Normal);
 }
 
-// GFX11 only supports VGPR src1, but the restriction is done in AsmParser
-// and GCNDPPCombine.
-class getSrcModVOP3DPP<ValueType VT, bit IsFake16 = 1> {
-  Operand ret =
-      !if (VT.isFP,
-           !if (!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)),
-                FPT16VCSrcInputMods<IsFake16>, FP32VCSrcInputMods),
-           !if (!eq(VT.Value, i16.Value),
-                IntT16VCSrcInputMods<IsFake16>,
-                Int32VCSrcInputMods));
-}
-
 // Return type of input modifiers operand for specified input operand for VGPR
 // only operands (VOPD3 vsrc1 and vsrc2).
 class getSrcModVOP3V <ValueType VT> {

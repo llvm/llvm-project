@@ -540,7 +540,7 @@ void MachineRegisterInfo::freezeReservedRegs() {
 }
 
 bool MachineRegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
-  assert(Register::isPhysicalRegister(PhysReg));
+  assert(PhysReg.isPhysical());
 
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   if (TRI->isConstantPhysReg(PhysReg))
