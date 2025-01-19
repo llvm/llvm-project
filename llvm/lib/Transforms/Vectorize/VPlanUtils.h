@@ -45,8 +45,8 @@ inline bool isUniformAfterVectorization(const VPValue *VPV) {
   assert(Def && "Must have definition for value defined inside vector region");
   if (auto *Rep = dyn_cast<VPReplicateRecipe>(Def))
     return Rep->isUniform();
-  if (auto *GEP = dyn_cast<VPWidenGEPRecipe>(Def))
-    return all_of(GEP->operands(), isUniformAfterVectorization);
+  if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe>(Def))
+    return all_of(Def->operands(), isUniformAfterVectorization);
   if (auto *VPI = dyn_cast<VPInstruction>(Def))
     return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
            ((Instruction::isBinaryOp(VPI->getOpcode()) ||

@@ -543,11 +543,6 @@ public:
 protected:
   friend class LoopVectorizationPlanner;
 
-  /// Set up the values of the IVs correctly when exiting the vector loop.
-  virtual void fixupIVUsers(PHINode *OrigPhi, const InductionDescriptor &II,
-                            Value *VectorTripCount, BasicBlock *MiddleBlock,
-                            VPTransformState &State);
-
   /// Iteratively sink the scalarized operands of a predicated instruction into
   /// the block that was created for it.
   void sinkScalarOperands(Instruction *PredInst);
@@ -785,10 +780,6 @@ protected:
   BasicBlock *emitIterationCountCheck(BasicBlock *Bypass, bool ForEpilogue);
   void printDebugTracesAtStart() override;
   void printDebugTracesAtEnd() override;
-
-  void fixupIVUsers(PHINode *OrigPhi, const InductionDescriptor &II,
-                    Value *VectorTripCount, BasicBlock *MiddleBlock,
-                    VPTransformState &State) override {};
 };
 
 // A specialized derived class of inner loop vectorizer that performs
@@ -2782,97 +2773,6 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton(
   return LoopVectorPreHeader;
 }
 
-// Fix up external users of the induction variable. At this point, we are
-// in LCSSA form, with all external PHIs that use the IV having one input value,
-// coming from the remainder loop. We need those PHIs to also have a correct
-// value for the IV when arriving directly from the middle block.
-void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
-                                       const InductionDescriptor &II,
-                                       Value *VectorTripCount,
-                                       BasicBlock *MiddleBlock,
-                                       VPTransformState &State) {
-  // There are two kinds of external IV usages - those that use the value
-  // computed in the last iteration (the PHI) and those that use the penultimate
-  // value (the value that feeds into the phi from the loop latch).
-  // We allow both, but they, obviously, have different values.
-
-  DenseMap<Value *, Value *> MissingVals;
-
-  Value *EndValue = cast<PHINode>(OrigPhi->getIncomingValueForBlock(
-                                      OrigLoop->getLoopPreheader()))
-                        ->getIncomingValueForBlock(MiddleBlock);
-
-  // An external user of the last iteration's value should see the value that
-  // the remainder loop uses to initialize its own IV.
-  Value *PostInc = OrigPhi->getIncomingValueForBlock(OrigLoop->getLoopLatch());
-  for (User *U : PostInc->users()) {
-    Instruction *UI = cast<Instruction>(U);
-    if (!OrigLoop->contains(UI)) {
-      assert(isa<PHINode>(UI) && "Expected LCSSA form");
-      MissingVals[UI] = EndValue;
-    }
-  }
-
-  // An external user of the penultimate value need to see EndValue - Step.
-  // The simplest way to get this is to recompute it from the constituent SCEVs,
-  // that is Start + (Step * (CRD - 1)).
-  for (User *U : OrigPhi->users()) {
-    auto *UI = cast<Instruction>(U);
-    if (!OrigLoop->contains(UI)) {
-      assert(isa<PHINode>(UI) && "Expected LCSSA form");
-      IRBuilder<> B(MiddleBlock->getTerminator());
-
-      // Fast-math-flags propagate from the original induction instruction.
-      if (isa_and_nonnull<FPMathOperator>(II.getInductionBinOp()))
-        B.setFastMathFlags(II.getInductionBinOp()->getFastMathFlags());
-
-      VPValue *StepVPV = Plan.getSCEVExpansion(II.getStep());
-      assert(StepVPV && "step must have been expanded during VPlan execution");
-      Value *Step = StepVPV->isLiveIn() ? StepVPV->getLiveInIRValue()
-                                        : State.get(StepVPV, VPLane(0));
-      Value *Escape = nullptr;
-      if (EndValue->getType()->isIntegerTy())
-        Escape = B.CreateSub(EndValue, Step);
-      else if (EndValue->getType()->isPointerTy())
-        Escape = B.CreatePtrAdd(EndValue, B.CreateNeg(Step));
-      else {
-        assert(EndValue->getType()->isFloatingPointTy() &&
-               "Unexpected induction type");
-        Escape = B.CreateBinOp(II.getInductionBinOp()->getOpcode() ==
-                                       Instruction::FAdd
-                                   ? Instruction::FSub
-                                   : Instruction::FAdd,
-                               EndValue, Step);
-      }
-      Escape->setName("ind.escape");
-      MissingVals[UI] = Escape;
-    }
-  }
-
-  assert((MissingVals.empty() ||
-          all_of(MissingVals,
-                 [MiddleBlock, this](const std::pair<Value *, Value *> &P) {
-                   return all_of(
-                       predecessors(cast<Instruction>(P.first)->getParent()),
-                       [MiddleBlock, this](BasicBlock *Pred) {
-                         return Pred == MiddleBlock ||
-                                Pred == OrigLoop->getLoopLatch();
-                       });
-                 })) &&
-         "Expected escaping values from latch/middle.block only");
-
-  for (auto &I : MissingVals) {
-    PHINode *PHI = cast<PHINode>(I.first);
-    // One corner case we have to handle is two IVs "chasing" each-other,
-    // that is %IV2 = phi [...], [ %IV1, %latch ]
-    // In this case, if IV1 has an external use, we need to avoid adding both
-    // "last value of IV1" and "penultimate value of IV2". So, verify that we
-    // don't already have an incoming value for the middle block.
-    if (PHI->getBasicBlockIndex(MiddleBlock) == -1)
-      PHI->addIncoming(I.second, MiddleBlock);
-  }
-}
-
 namespace {
 
 struct CSEDenseMapInfo {
@@ -2998,24 +2898,6 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
   for (BasicBlock *Exit : ExitBlocks)
     for (PHINode &PN : Exit->phis())
       PSE.getSE()->forgetLcssaPhiWithNewPredecessor(OrigLoop, &PN);
-
-  if (Cost->requiresScalarEpilogue(VF.isVector())) {
-    // No edge from the middle block to the unique exit block has been inserted
-    // and there is nothing to fix from vector loop; phis should have incoming
-    // from scalar loop only.
-  } else {
-    // TODO: Check in VPlan to see if IV users need fixing instead of checking
-    // the cost model.
-
-    // If we inserted an edge from the middle block to the unique exit block,
-    // update uses outside the loop (phis) to account for the newly inserted
-    // edge.
-
-    // Fix-up external users of the induction variables.
-    for (const auto &Entry : Legal->getInductionVars())
-      fixupIVUsers(Entry.first, Entry.second,
-                   getOrCreateVectorTripCount(nullptr), LoopMiddleBlock, State);
-  }
 
   // Don't apply optimizations below when no vector region remains, as they all
   // require a vector loop at the moment.
@@ -9049,11 +8931,9 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, bool HasNUW,
 /// Create and return a ResumePhi for \p WideIV, unless it is truncated. If the
 /// induction recipe is not canonical, creates a VPDerivedIVRecipe to compute
 /// the end value of the induction.
-static VPValue *addResumePhiRecipeForInduction(VPWidenInductionRecipe *WideIV,
-                                               VPBuilder &VectorPHBuilder,
-                                               VPBuilder &ScalarPHBuilder,
-                                               VPTypeAnalysis &TypeInfo,
-                                               VPValue *VectorTC) {
+static VPInstruction *addResumePhiRecipeForInduction(
+    VPWidenInductionRecipe *WideIV, VPBuilder &VectorPHBuilder,
+    VPBuilder &ScalarPHBuilder, VPTypeAnalysis &TypeInfo, VPValue *VectorTC) {
   auto *WideIntOrFp = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
   // Truncated wide inductions resume from the last lane of their vector value
   // in the last vector iteration which is handled elsewhere.
@@ -9087,8 +8967,10 @@ static VPValue *addResumePhiRecipeForInduction(VPWidenInductionRecipe *WideIV,
 
 /// Create resume phis in the scalar preheader for first-order recurrences,
 /// reductions and inductions, and update the VPIRInstructions wrapping the
-/// original phis in the scalar header.
-static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan) {
+/// original phis in the scalar header. End values for inductions are added to
+/// \p IVEndValues.
+static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
+                                DenseMap<VPValue *, VPValue *> &IVEndValues) {
   VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
   auto *ScalarPH = Plan.getScalarPreheader();
   auto *MiddleVPBB = cast<VPBasicBlock>(ScalarPH->getSinglePredecessor());
@@ -9105,11 +8987,16 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan) {
     if (!ScalarPhiI)
       break;
 
+    // TODO: Extract final value from induction recipe initially, optimize to
+    // pre-computed end value together in optimizeInductionExitUsers.
     auto *VectorPhiR = cast<VPHeaderPHIRecipe>(Builder.getRecipe(ScalarPhiI));
     if (auto *WideIVR = dyn_cast<VPWidenInductionRecipe>(VectorPhiR)) {
-      if (VPValue *ResumePhi = addResumePhiRecipeForInduction(
+      if (VPInstruction *ResumePhi = addResumePhiRecipeForInduction(
               WideIVR, VectorPHBuilder, ScalarPHBuilder, TypeInfo,
               &Plan.getVectorTripCount())) {
+        assert(ResumePhi->getOpcode() == VPInstruction::ResumePhi &&
+               "Expected a ResumePhi");
+        IVEndValues[WideIVR] = ResumePhi->getOperand(0);
         ScalarPhiIRI->addOperand(ResumePhi);
         continue;
       }
@@ -9138,65 +9025,6 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan) {
         {ResumeFromVectorLoop, VectorPhiR->getStartValue()}, {}, Name);
     ScalarPhiIRI->addOperand(ResumePhiR);
   }
-}
-
-/// Return true if \p VPV is an optimizable IV or IV use. That is, if \p VPV is
-/// either an untruncated wide induction, or if it increments a wide induction
-/// by its step.
-static bool isOptimizableIVOrUse(VPValue *VPV) {
-  VPRecipeBase *Def = VPV->getDefiningRecipe();
-  if (!Def)
-    return false;
-  auto *WideIV = dyn_cast<VPWidenInductionRecipe>(Def);
-  if (WideIV) {
-    // VPV itself is a wide induction, separately compute the end value for exit
-    // users if it is not a truncated IV.
-    return isa<VPWidenPointerInductionRecipe>(WideIV) ||
-           !cast<VPWidenIntOrFpInductionRecipe>(WideIV)->getTruncInst();
-  }
-
-  // Check if VPV is an optimizable induction increment.
-  if (Def->getNumOperands() != 2)
-    return false;
-  WideIV = dyn_cast<VPWidenInductionRecipe>(Def->getOperand(0));
-  if (!WideIV)
-    WideIV = dyn_cast<VPWidenInductionRecipe>(Def->getOperand(1));
-  if (!WideIV)
-    return false;
-
-  using namespace VPlanPatternMatch;
-  auto &ID = WideIV->getInductionDescriptor();
-
-  // Check if VPV increments the induction by the induction step.
-  VPValue *IVStep = WideIV->getStepValue();
-  switch (ID.getInductionOpcode()) {
-  case Instruction::Add:
-    return match(VPV, m_c_Binary<Instruction::Add>(m_Specific(WideIV),
-                                                   m_Specific(IVStep)));
-  case Instruction::FAdd:
-    return match(VPV, m_c_Binary<Instruction::FAdd>(m_Specific(WideIV),
-                                                    m_Specific(IVStep)));
-  case Instruction::FSub:
-    return match(VPV, m_Binary<Instruction::FSub>(m_Specific(WideIV),
-                                                  m_Specific(IVStep)));
-  case Instruction::Sub: {
-    // IVStep will be the negated step of the subtraction. Check if Step == -1 *
-    // IVStep.
-    VPValue *Step;
-    if (!match(VPV, m_Binary<Instruction::Sub>(m_VPValue(), m_VPValue(Step))) ||
-        !Step->isLiveIn() || !IVStep->isLiveIn())
-      return false;
-    auto *StepCI = dyn_cast<ConstantInt>(Step->getLiveInIRValue());
-    auto *IVStepCI = dyn_cast<ConstantInt>(IVStep->getLiveInIRValue());
-    return StepCI && IVStepCI &&
-           StepCI->getValue() == (-1 * IVStepCI->getValue());
-  }
-  default:
-    return ID.getKind() == InductionDescriptor::IK_PtrInduction &&
-           match(VPV, m_GetElementPtr(m_Specific(WideIV),
-                                      m_Specific(WideIV->getStepValue())));
-  }
-  llvm_unreachable("should have been covered by switch above");
 }
 
 // Collect VPIRInstructions for phis in the exit blocks that are modeled
@@ -9228,12 +9056,6 @@ collectUsersInExitBlocks(Loop *OrigLoop, VPRecipeBuilder &Builder,
         }
         Value *IncomingValue = ExitPhi->getIncomingValueForBlock(ExitingBB);
         VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue);
-        // Exit values for inductions are computed and updated outside of VPlan
-        // and independent of induction recipes.
-        // TODO: Compute induction exit values in VPlan.
-        if (isOptimizableIVOrUse(V) &&
-            ExitVPBB->getSinglePredecessor() == MiddleVPBB)
-          continue;
         ExitUsersToFix.insert(ExitIRI);
         ExitIRI->addOperand(V);
       }
@@ -9253,6 +9075,7 @@ addUsersInExitBlocks(VPlan &Plan,
 
   auto *MiddleVPBB = Plan.getMiddleBlock();
   VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
 
   // Introduce extract for exiting values and update the VPIRInstructions
   // modeling the corresponding LCSSA phis.
@@ -9574,7 +9397,8 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
     VPlanTransforms::handleUncountableEarlyExit(
         *Plan, *PSE.getSE(), OrigLoop, UncountableExitingBlock, RecipeBuilder);
   }
-  addScalarResumePhis(RecipeBuilder, *Plan);
+  DenseMap<VPValue *, VPValue *> IVEndValues;
+  addScalarResumePhis(RecipeBuilder, *Plan, IVEndValues);
   SetVector<VPIRInstruction *> ExitUsersToFix =
       collectUsersInExitBlocks(OrigLoop, RecipeBuilder, *Plan);
   addExitUsersForFirstOrderRecurrences(*Plan, ExitUsersToFix);
@@ -9657,6 +9481,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
     VPlanTransforms::addActiveLaneMask(*Plan, ForControlFlow,
                                        WithoutRuntimeCheck);
   }
+  VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
@@ -9708,7 +9533,10 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
     auto *HeaderR = cast<VPHeaderPHIRecipe>(&R);
     RecipeBuilder.setRecipe(HeaderR->getUnderlyingInstr(), HeaderR);
   }
-  addScalarResumePhis(RecipeBuilder, *Plan);
+  DenseMap<VPValue *, VPValue *> IVEndValues;
+  // TODO: IVEndValues are not used yet in the native path, to optimize exit
+  // values.
+  addScalarResumePhis(RecipeBuilder, *Plan, IVEndValues);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
