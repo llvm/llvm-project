@@ -601,6 +601,7 @@ Bug Fixes to C++ Support
 - Fixed a crash when an immediate-invoked ``consteval`` lambda is used as an invalid initializer. (#GH185270)
 - Fixed an assertion failure when using a global destructor with a target with a non-default program address space. (#GH186484)
 
+<<<<<<< HEAD
 - Inherited constructors in ``dllexport`` classes are now exported for ABI-compatible cases, matching
   MSVC behavior. Constructors with variadic arguments or callee-cleanup parameters are not yet supported
   and produce a warning. (#GH162640)
