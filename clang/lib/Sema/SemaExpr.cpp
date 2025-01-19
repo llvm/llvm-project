@@ -2695,8 +2695,9 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
     if (II->hasMacroDefinition()) {
       MacroInfo *MI = PP.getMacroInfo(II);
       if (MI && MI->isFunctionLike()) {
-        Diag( R.getNameLoc() ,diag::err_undeclared_var_use) << II->getName();
-        Diag(MI->getDefinitionLoc(), diag::note_function_like_macro_requires_parens)
+        Diag(R.getNameLoc(), diag::err_undeclared_var_use) << II->getName();
+        Diag(MI->getDefinitionLoc(),
+             diag::note_function_like_macro_requires_parens)
             << II->getName();
         return true;
       }
@@ -2804,7 +2805,7 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
         << Name << computeDeclContext(SS, false) << NameRange;
     return true;
   }
-  
+
   // Give up, we can't recover.
   Diag(R.getNameLoc(), diagnostic) << Name << NameRange;
   return true;
