@@ -9,31 +9,16 @@
 #ifndef LLVM_LIBC_SRC_STDIO_SCANF_CORE_READER_H
 #define LLVM_LIBC_SRC_STDIO_SCANF_CORE_READER_H
 
-// has the macro subsitution failure
-// #ifdef LIBC_FULL_BUILD
 #include "src/__support/File/file.h"
-// #endif
-
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
 #include "src/__support/macros/config.h"
-#include <stddef.h>
-
-// includes stdio.h
 #include "hdr/types/FILE.h"
 
+#include <stddef.h>
 
-#if !defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
-
-
-#endif
 
 namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
-
-#ifdef LIBC_COPT_STDIO_USE_SYSTEM_FILE
-#endif
-
-
 namespace internal {
 
 #if defined(LIBC_TARGET_ARCH_IS_GPU)
