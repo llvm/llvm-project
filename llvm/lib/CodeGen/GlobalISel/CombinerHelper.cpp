@@ -6615,7 +6615,6 @@ getMaxUsefulShift(KnownBits ValueKB, unsigned Opcode,
     } else {
       // Cannot determine shift result.
       Result = std::nullopt;
-      return false;
     }
     break;
   default:
