@@ -27,6 +27,7 @@
 #include "time_constants.h"
 #include "src/errno/libc_errno.h"
 #include "src/time/time_constants.h"
+#include <time.h>
 
 #ifdef LIBC_TARGET_OS_IS_LINUX
 #include "src/time/linux/localtime_utils.h"
@@ -105,6 +106,8 @@ struct TimeConstants {
   static constexpr size_t TIMEZONE_SIZE = 128;
 };
 
+LIBC_INLINE volatile int file_usage;
+
 // Update the "tm" structure's year, month, etc. members from seconds.
 // "total_seconds" is the number of seconds since January 1st, 1970.
 extern int calculate_dst(struct tm *tm);
@@ -112,7 +115,6 @@ extern void set_dst(struct tm *tm);
 extern int64_t update_from_seconds(int64_t total_seconds, struct tm *tm, bool local);
 extern timezone::tzset *get_localtime(struct tm *tm);
 extern ErrorOr<File *> acquire_file(char *filename);
-LIBC_INLINE volatile int file_usage;
 extern void release_file(ErrorOr<File *> error_or_file);
 extern unsigned char is_dst(struct tm *tm);
 extern char *get_env_var(const char *var_name);
