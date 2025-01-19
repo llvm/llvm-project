@@ -117,7 +117,10 @@ extern timezone::tzset *get_localtime(struct tm *tm);
 extern ErrorOr<File *> acquire_file(char *filename);
 extern void release_file(ErrorOr<File *> error_or_file);
 extern unsigned char is_dst(struct tm *tm);
+
+#ifdef LIBC_TARGET_OS_IS_LINUX
 extern char *get_env_var(const char *var_name);
+#endif
 
 // TODO(michaelrj): move these functions to use ErrorOr instead of setting
 // errno. They always accompany a specific return value so we only need the one
