@@ -28,7 +28,6 @@ set(SNMALLOC_DEPS
   libc.include.errno
   libc.include.fcntl
   libc.include.limits
-  libc.include.pthread
   libc.include.stdio
   libc.include.stdint
   libc.include.stdlib
@@ -43,10 +42,7 @@ set(SNMALLOC_DEPS
   # symbols
   libc.src.errno.errno
   libc.src.fcntl.open
-  libc.src.pthread.pthread_key_create
-  libc.src.pthread.pthread_setspecific
   libc.src.stdlib.abort
-  libc.src.stdlib.atexit
   libc.src.string.memset
   libc.src.string.strlen
   libc.src.sys.mman.madvise
