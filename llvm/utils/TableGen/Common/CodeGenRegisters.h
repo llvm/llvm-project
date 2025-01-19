@@ -351,6 +351,7 @@ public:
   RegSizeInfoByHwMode RSI;
   int CopyCost;
   bool Allocatable;
+  const CodeGenRegisterClass *CrossCopyRC = nullptr;
   StringRef AltOrderSelect;
   uint8_t AllocationPriority;
   bool GlobalPriority;

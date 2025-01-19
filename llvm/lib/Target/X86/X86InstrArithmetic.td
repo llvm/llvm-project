@@ -64,16 +64,13 @@ class MulDivOpM<bits<8> o, Format f, string m, X86TypeInfo t,
      sched.ReadAfterFold, sched.ReadAfterFold];
 }
 
-multiclass Mul<bits<8> o, string m, Format RegMRM, Format MemMRM, SDPatternOperator node> {
+multiclass Mul<bits<8> o, string m, Format RegMRM, Format MemMRM> {
   // AL is really implied by AX, but the registers in Defs must match the
   // SDNode results (i8, i32).
   //
   // FIXME: Used for 8-bit mul, ignore result upper 8 bits.
-  // This probably ought to be moved to a def : Pat<> if the
-  // syntax can be accepted.
   let Defs = [AL, EFLAGS, AX], Uses = [AL] in
-    def 8r : MulDivOpR<o, RegMRM, m, Xi8, WriteIMul8,
-                       [(set AL, EFLAGS, (node AL, GR8:$src1))]>;
+    def 8r : MulDivOpR<o, RegMRM, m, Xi8, WriteIMul8, []>;
   let Defs = [AX, DX, EFLAGS], Uses = [AX] in
     def 16r : MulDivOpR<o, RegMRM, m, Xi16, WriteIMul16, []>, OpSize16;
   let Defs = [EAX, EDX, EFLAGS], Uses = [EAX] in
@@ -81,8 +78,7 @@ multiclass Mul<bits<8> o, string m, Format RegMRM, Format MemMRM, SDPatternOpera
   let Defs = [RAX, RDX, EFLAGS], Uses = [RAX] in
     def 64r : MulDivOpR<o, RegMRM, m, Xi64, WriteIMul64, []>;
   let Defs = [AL, EFLAGS, AX], Uses = [AL] in
-    def 8m : MulDivOpM<o, MemMRM, m, Xi8, WriteIMul8,
-                       [(set AL, EFLAGS, (node AL, (loadi8 addr:$src1)))]>;
+    def 8m : MulDivOpM<o, MemMRM, m, Xi8, WriteIMul8, []>;
   let Defs = [AX, DX, EFLAGS], Uses = [AX] in
     def 16m : MulDivOpM<o, MemMRM, m, Xi16, WriteIMul16, []>, OpSize16;
   let Defs = [EAX, EDX, EFLAGS], Uses = [EAX] in
@@ -127,8 +123,14 @@ multiclass Mul<bits<8> o, string m, Format RegMRM, Format MemMRM, SDPatternOpera
   }
 }
 
-defm MUL : Mul<0xF7, "mul", MRM4r, MRM4m, mul>;
-defm IMUL : Mul<0xF7, "imul", MRM5r, MRM5m, null_frag>;
+defm MUL : Mul<0xF7, "mul", MRM4r, MRM4m>;
+defm IMUL : Mul<0xF7, "imul", MRM5r, MRM5m>;
+
+// These nodes are selected by custom C++ code.
+let GISelShouldIgnore = true in {
+  def : Pat<(mul AL, i8:$src1), (MUL8r $src1)>;
+  def : Pat<(mul AL, (loadi8 addr:$src1)), (MUL8m addr:$src1)>;
+}
 
 multiclass Div<bits<8> o, string m, Format RegMRM, Format MemMRM> {
   defvar sched8 = !if(!eq(m, "div"), WriteDiv8, WriteIDiv8);
