@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdlib/malloc.h"
+#include "src/stdlib/snmalloc/override.h"
+
 #include "snmalloc/snmalloc.h"
 #include "src/__support/common.h"
+#include "src/stdlib/malloc.h"
 
 namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(void *, malloc, (size_t size)) {

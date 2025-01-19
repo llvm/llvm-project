@@ -326,6 +326,9 @@ add_entrypoint_object(
 if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
   if (NOT "${LLVM_LIBC_INCLUDE_SNMALLOC}" STREQUAL "")
     message(STATUS "Including snmalloc as the allocator, source directory: ${LLVM_LIBC_INCLUDE_SNMALLOC}")
+    if (NOT LLVM_LIBC_FULL_BUILD)
+      message(FATAL_ERROR "Snmalloc can only be included when fullbuild mode is enabled")
+    endif()
     add_subdirectory(snmalloc)
     add_entrypoint_object(
       malloc
@@ -595,6 +598,10 @@ add_header_library(
 )
 endif()
 
+if (NOT "${LLVM_LIBC_INCLUDE_SNMALLOC}" STREQUAL "")
+  set (libc_malloc_thread_cleanup_flag "-DLIBC_USE_MALLOC_THREAD_CLEANUP")
+endif()
+
 add_entrypoint_object(
   atexit
   SRCS
@@ -605,6 +612,8 @@ add_entrypoint_object(
     20 # For constinit
   DEPENDS
     .exit_handler
+  COMPILE_OPTIONS
+    ${libc_malloc_thread_cleanup_flag}
 )
 
 add_entrypoint_object(

@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdlib/realloc.h"
+#include "src/stdlib/snmalloc/override.h"
+
 #include "snmalloc/snmalloc.h"
 #include "src/__support/common.h"
+#include "src/stdlib/realloc.h"
 
 namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(void *, realloc, (void *ptr, size_t size)) {
