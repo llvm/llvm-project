@@ -7,16 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/time/gmtime_r.h"
-#include "src/time/localtime.h"
 #include "src/time/time_constants.h"
 #include "src/time/time_utils.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmMatcher.h"
-
-#ifdef LIBC_TARGET_OS_IS_LINUX
-#include "src/time/linux/localtime_utils.h"
-#include "src/time/linux/timezone.h"
-#endif
 
 // gmtime and gmtime_r share the same code and thus didn't repeat all the tests
 // from gmtime. Added couple of validation tests.
