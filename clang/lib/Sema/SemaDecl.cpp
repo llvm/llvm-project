@@ -2551,7 +2551,7 @@ void Sema::MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
       // Make the old tag definition visible.
       makeMergedDefinitionVisible(Hidden);
 
-      RetireNodesFromMergedDecl(S, NewTag);
+      CleanupMergedEnum(S, NewTag);
     }
   }
 
@@ -2628,7 +2628,7 @@ void Sema::MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
   notePreviousDefinition(Old, New->getLocation());
 }
 
-void Sema::RetireNodesFromMergedDecl(Scope *S, Decl *New) {
+void Sema::CleanupMergedEnum(Scope *S, Decl *New) {
   // If this was an unscoped enumeration, yank all of its enumerators
   // out of the scope.
   if (auto *ED = dyn_cast<EnumDecl>(New); ED && !ED->isScoped()) {
@@ -18068,7 +18068,7 @@ bool Sema::ActOnDuplicateDefinition(Scope *S, Decl *Prev,
 
   // Make the previous decl visible.
   makeMergedDefinitionVisible(SkipBody.Previous);
-  RetireNodesFromMergedDecl(S, SkipBody.New);
+  CleanupMergedEnum(S, SkipBody.New);
   return true;
 }
 

@@ -4034,11 +4034,11 @@ public:
   void MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
                             LookupResult &OldDecls);
 
-  /// RetireNodesFromMergedDecl - We have just merged the decl 'New' by making
-  /// another definition visible.
+  /// CleanupMergedEnum - We have just merged the decl 'New' by making another
+  /// definition visible.
   /// This method performs any necessary cleanup on the parser state to discard
   /// child nodes from newly parsed decl we are retiring.
-  void RetireNodesFromMergedDecl(Scope *S, Decl *New);
+  void CleanupMergedEnum(Scope *S, Decl *New);
 
   /// MergeFunctionDecl - We just parsed a function 'New' from
   /// declarator D which has the same name and scope as a previous
