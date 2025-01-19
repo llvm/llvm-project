@@ -253,6 +253,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase: {
+    if (DiscardResult)
+      return this->discard(SubExpr);
+
     if (!this->delegate(SubExpr))
       return false;
 
@@ -282,6 +285,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_BaseToDerived: {
+    if (DiscardResult)
+      return this->discard(SubExpr);
+
     if (!this->delegate(SubExpr))
       return false;
 
