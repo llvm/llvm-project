@@ -9,7 +9,8 @@ define <4 x float> @simple_select(<4 x float> %a, <4 x float> %b, <4 x i32> %c) 
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[B:%.*]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP2]], <2 x float> [[TMP3]], <2 x float> [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> <float poison, float poison, float 0.000000e+00, float 0.000000e+00>, <4 x float> [[TMP7]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x float> [[TMP6]]
 ;
   %c0 = extractelement <4 x i32> %c, i32 0
@@ -22,7 +23,7 @@ define <4 x float> @simple_select(<4 x float> %a, <4 x float> %b, <4 x i32> %c) 
   %cmp1 = icmp ne i32 %c1, 0
   %s0 = select i1 %cmp0, float %a0, float %b0
   %s1 = select i1 %cmp1, float %a1, float %b1
-  %ra = insertelement <4 x float> <float poison, float poison, float undef, float undef>, float %s0, i32 0
+  %ra = insertelement <4 x float> <float poison, float poison, float 0.0, float 0.0>, float %s0, i32 0
   %rb = insertelement <4 x float> %ra, float %s1, i32 1
   ret <4 x float> %rb
 }
