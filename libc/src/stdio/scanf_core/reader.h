@@ -9,20 +9,20 @@
 #ifndef LLVM_LIBC_SRC_STDIO_SCANF_CORE_READER_H
 #define LLVM_LIBC_SRC_STDIO_SCANF_CORE_READER_H
 
+#include "hdr/types/FILE.h"
 #include "src/__support/File/file.h"
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
 #include "src/__support/macros/config.h"
-#include "hdr/types/FILE.h"
 
 #include <stddef.h>
-
 
 namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
 // We use the name "reader_internal" over "internal" because
-// "internal" causes name lookups in files that include the current header to be ambigious
-// i.e. `internal::foo` in those files, will try to lookup in `LIBC_NAMESPACE::scanf_core::internal` over `LIBC_NAMESPACE::internal`
-// for e.g., `internal::ArgList` in `libc/src/stdio/scanf_core/scanf_main.h`
+// "internal" causes name lookups in files that include the current header to be
+// ambigious i.e. `internal::foo` in those files, will try to lookup in
+// `LIBC_NAMESPACE::scanf_core::internal` over `LIBC_NAMESPACE::internal` for
+// e.g., `internal::ArgList` in `libc/src/stdio/scanf_core/scanf_main.h`
 namespace reader_internal {
 
 #if defined(LIBC_TARGET_ARCH_IS_GPU)
@@ -67,7 +67,6 @@ LIBC_INLINE void ungetc(int c, void *f) {
 #endif // LIBC_COPT_STDIO_USE_SYSTEM_FILE
 
 } // namespace reader_internal
-
 
 // This is intended to be either a raw string or a buffer syncronized with the
 // file's internal buffer.

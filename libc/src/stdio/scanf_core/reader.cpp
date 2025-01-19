@@ -15,7 +15,6 @@
 // #include "hdr/types/FILE.h"
 // #include "src/__support/File/file.h"
 
-
 namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
 
