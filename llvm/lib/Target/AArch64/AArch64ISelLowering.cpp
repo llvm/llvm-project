@@ -25026,6 +25026,30 @@ static SDValue performCSELCombine(SDNode *N,
   if (SDValue Folded = foldCSELofCTTZ(N, DAG))
 		return Folded;
 
+  // CSEL a, b, cc, SUBS(x, y) -> CSEL a, b, swapped(cc), SUBS(y, x)
+  // if SUB(y, x) already exists and we can produce a swapped predicate for cc.
+  SDValue Cond = N->getOperand(3);
+  if (DCI.isAfterLegalizeDAG() && Cond.getOpcode() == AArch64ISD::SUBS &&
+      Cond.hasOneUse() && Cond->hasNUsesOfValue(0, 0) &&
+      DAG.doesNodeExist(ISD::SUB, N->getVTList(),
+                        {Cond.getOperand(1), Cond.getOperand(0)}) &&
+      !DAG.doesNodeExist(ISD::SUB, N->getVTList(),
+                         {Cond.getOperand(0), Cond.getOperand(1)}) &&
+      !isNullConstant(Cond.getOperand(1))) {
+    AArch64CC::CondCode OldCond =
+        static_cast<AArch64CC::CondCode>(N->getConstantOperandVal(2));
+    AArch64CC::CondCode NewCond = getSwappedCondition(OldCond);
+    if (NewCond != AArch64CC::AL) {
+      SDLoc DL(N);
+      SDValue Sub = DAG.getNode(AArch64ISD::SUBS, DL, Cond->getVTList(),
+                                Cond.getOperand(1), Cond.getOperand(0));
+      return DAG.getNode(AArch64ISD::CSEL, DL, N->getVTList(), N->getOperand(0),
+                         N->getOperand(1),
+                         DAG.getConstant(NewCond, DL, MVT::i32),
+                         Sub.getValue(1));
+    }
+  }
+
   return performCONDCombine(N, DCI, DAG, 2, 3);
 }
 
