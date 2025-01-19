@@ -107,7 +107,7 @@ LogicalResult OperationOp::verifyRegions() {
   // Verify that no two operand, result or region share the same name.
   for (size_t i : llvm::seq(valueNames.size())) {
     for (size_t j : llvm::seq(i + 1, valueNames.size())) {
-      auto &[lhs, lhsSet] = valueNames[i];
+      auto [lhs, lhsSet] = valueNames[i];
       auto &[rhs, rhsSet] = valueNames[j];
       llvm::set_intersect(lhsSet, rhsSet);
       if (!lhsSet.empty())

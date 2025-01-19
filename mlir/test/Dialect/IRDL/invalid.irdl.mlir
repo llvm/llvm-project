@@ -118,6 +118,19 @@ irdl.dialect @testd {
 // -----
 
 irdl.dialect @testd {
+  // expected-error@+1 {{contains a value named 'baz' for both its regions and results}}
+  irdl.operation @op {
+    %0 = irdl.any
+    %1 = irdl.region
+    irdl.regions(baz: %1)
+    irdl.operands(qux: %0)
+    irdl.results(baz: %0)
+  }
+}
+
+// -----
+
+irdl.dialect @testd {
   irdl.type @type {
     // expected-error@+1 {{symbol '@foo' not found}}
     %0 = irdl.base @foo
