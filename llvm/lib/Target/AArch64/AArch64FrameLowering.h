@@ -155,7 +155,7 @@ private:
                                    const StackOffset &OffsetFromDefCFA) const;
 
   bool shouldCombineCSRLocalStackBumpInEpilogue(MachineBasicBlock &MBB,
-                                                unsigned StackBumpBytes) const;
+                                                uint64_t StackBumpBytes) const;
   void emitCalleeSavedGPRLocations(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI) const;
   void emitCalleeSavedSVELocations(MachineBasicBlock &MBB,
