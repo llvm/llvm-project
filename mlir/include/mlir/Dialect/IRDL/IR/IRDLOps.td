@@ -304,7 +304,7 @@ def IRDL_AttributesOp : IRDL_Op<"attributes", [HasParent<"OperationOp">]> {
 
   let description = [{
     `irdl.attributes` defines the attributes of the `irdl.operation` parent
-    operation definition. Each attribute is named after an identifier.
+    operation definition.
 
     In the following example, `irdl.attributes` defines the attributes of the
     `attr_op` operation:
