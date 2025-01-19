@@ -2522,6 +2522,19 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
     DC = DC->getLookupParent();
   }
 
+  // Check whether a similar function-like macro exists and suggest it
+  if (IdentifierInfo *II = Name.getAsIdentifierInfo()) {
+    if (II->hasMacroDefinition()) {
+      MacroInfo *MI = PP.getMacroInfo(II);
+      if (MI && MI->isFunctionLike()) {
+        Diag( R.getNameLoc() ,diag::err_undeclared_var_use) << II->getName();
+        Diag(MI->getDefinitionLoc(), diag::note_function_like_macro_requires_parens)
+            << II->getName();
+        return true;
+      }
+    }
+  }
+
   // We didn't find anything, so try to correct for a typo.
   TypoCorrection Corrected;
   if (S && Out) {
@@ -2632,7 +2645,7 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
       << SS.getRange();
     return true;
   }
-
+  
   // Give up, we can't recover.
   Diag(R.getNameLoc(), diagnostic) << Name;
   return true;
