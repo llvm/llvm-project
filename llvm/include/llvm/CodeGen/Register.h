@@ -108,8 +108,7 @@ public:
   /// expected to have already validated that this Register is, indeed,
   /// physical.
   MCRegister asMCReg() const {
-    assert(Reg == MCRegister::NoRegister ||
-           MCRegister::isPhysicalRegister(Reg));
+    assert(!isValid() || isPhysical());
     return MCRegister(Reg);
   }
 
