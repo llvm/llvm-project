@@ -6108,7 +6108,7 @@ void LSRInstance::ImplementSolution(
   // chosen a non-optimal result for the actual schedule.  (And yes, this
   // scheduling decision does impact later codegen.)
   for (PHINode &PN : L->getHeader()->phis()) {
-    BinaryOperator *BO = nullptr;
+    Instruction *BO = nullptr;
     Value *Start = nullptr, *Step = nullptr;
     if (!matchSimpleRecurrence(&PN, BO, Start, Step))
       continue;

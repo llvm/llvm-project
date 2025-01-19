@@ -1489,7 +1489,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
   }
   case Instruction::PHI: {
     const PHINode *P = cast<PHINode>(I);
-    BinaryOperator *BO = nullptr;
+    Instruction *BO = nullptr;
     Value *R = nullptr, *L = nullptr;
     if (matchSimpleRecurrence(P, BO, R, L)) {
       // Handle the case of a simple two-predecessor recurrence PHI.
@@ -1553,6 +1553,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
       case Instruction::Sub:
       case Instruction::And:
       case Instruction::Or:
+      case Instruction::GetElementPtr:
       case Instruction::Mul: {
         // Change the context instruction to the "edge" that flows into the
         // phi. This is important because that is where the value is actually
@@ -1571,6 +1572,10 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
         // We need to take the minimum number of known bits
         KnownBits Known3(BitWidth);
+        if (BitWidth != getBitWidth(L->getType(), Q.DL)) {
+          assert(isa<GetElementPtrInst>(BO));
+          break;
+        }
         RecQ.CxtI = LInst;
         computeKnownBits(L, DemandedElts, Known3, Depth + 1, RecQ);
 
@@ -1578,7 +1583,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
                                        Known3.countMinTrailingZeros()));
 
         auto *OverflowOp = dyn_cast<OverflowingBinaryOperator>(BO);
-        if (!OverflowOp || !Q.IIQ.hasNoSignedWrap(OverflowOp))
+        if (!isa<GetElementPtrInst, OverflowingBinaryOperator>(BO))
+          break;
+        if ((isa<GetElementPtrInst>(BO) && !Q.IIQ.isInBounds(cast<GetElementPtrInst>(BO))) || (OverflowOp && !Q.IIQ.hasNoSignedWrap(OverflowOp)))
           break;
 
         switch (Opcode) {
@@ -1737,6 +1744,14 @@ static void computeKnownBitsFromOperator(const Operator *I,
           Known.resetAll();
       }
     }
+
+  // Aligned pointers have trailing zeros - refine Known.Zero set
+  if (isa<PointerType>(CB->getType())) {
+    Align Alignment = CB->getPointerAlignment(Q.DL);
+    Known.Zero.setLowBits(Log2(Alignment));
+  }
+
+
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
       switch (II->getIntrinsicID()) {
       default:
@@ -2270,7 +2285,7 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
 /// always a power of two (or zero).
 static bool isPowerOfTwoRecurrence(const PHINode *PN, bool OrZero,
                                    unsigned Depth, SimplifyQuery &Q) {
-  BinaryOperator *BO = nullptr;
+  Instruction *BO = nullptr;
   Value *Start = nullptr, *Step = nullptr;
   if (!matchSimpleRecurrence(PN, BO, Start, Step))
     return false;
@@ -2308,7 +2323,7 @@ static bool isPowerOfTwoRecurrence(const PHINode *PN, bool OrZero,
     // Divisor must be a power of two.
     // If OrZero is false, cannot guarantee induction variable is non-zero after
     // division, same for Shr, unless it is exact division.
-    return (OrZero || Q.IIQ.isExact(BO)) &&
+    return (OrZero || Q.IIQ.isExact(cast<BinaryOperator>(BO))) &&
            isKnownToBeAPowerOfTwo(Step, false, Depth, Q);
   case Instruction::Shl:
     return OrZero || Q.IIQ.hasNoUnsignedWrap(BO) || Q.IIQ.hasNoSignedWrap(BO);
@@ -2317,7 +2332,7 @@ static bool isPowerOfTwoRecurrence(const PHINode *PN, bool OrZero,
       return false;
     [[fallthrough]];
   case Instruction::LShr:
-    return OrZero || Q.IIQ.isExact(BO);
+    return OrZero || Q.IIQ.isExact(cast<BinaryOperator>(BO));
   default:
     return false;
   }
@@ -2727,7 +2742,7 @@ static bool rangeMetadataExcludesValue(const MDNode* Ranges, const APInt& Value)
 /// Try to detect a recurrence that monotonically increases/decreases from a
 /// non-zero starting value. These are common as induction variables.
 static bool isNonZeroRecurrence(const PHINode *PN) {
-  BinaryOperator *BO = nullptr;
+  Instruction *BO = nullptr;
   Value *Start = nullptr, *Step = nullptr;
   const APInt *StartC, *StepC;
   if (!matchSimpleRecurrence(PN, BO, Start, Step) ||
@@ -3560,9 +3575,9 @@ getInvertibleOperands(const Operator *Op1,
     // If PN1 and PN2 are both recurrences, can we prove the entire recurrences
     // are a single invertible function of the start values? Note that repeated
     // application of an invertible function is also invertible
-    BinaryOperator *BO1 = nullptr;
+    Instruction *BO1 = nullptr;
     Value *Start1 = nullptr, *Step1 = nullptr;
-    BinaryOperator *BO2 = nullptr;
+    Instruction *BO2 = nullptr;
     Value *Start2 = nullptr, *Step2 = nullptr;
     if (PN1->getParent() != PN2->getParent() ||
         !matchSimpleRecurrence(PN1, BO1, Start1, Step1) ||
@@ -9197,7 +9212,7 @@ llvm::canConvertToMinOrMaxIntrinsic(ArrayRef<Value *> VL) {
   return {Intrinsic::not_intrinsic, false};
 }
 
-bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
+bool llvm::matchSimpleRecurrence(const PHINode *P, Instruction *&BO,
                                  Value *&Start, Value *&Step) {
   // Handle the case of a simple two-predecessor recurrence PHI.
   // There's a lot more that could theoretically be done here, but
@@ -9208,7 +9223,7 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
   for (unsigned i = 0; i != 2; ++i) {
     Value *L = P->getIncomingValue(i);
     Value *R = P->getIncomingValue(!i);
-    auto *LU = dyn_cast<BinaryOperator>(L);
+    auto *LU = dyn_cast<Instruction>(L);
     if (!LU)
       continue;
     unsigned Opcode = LU->getOpcode();
@@ -9240,6 +9255,20 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
 
       break; // Match!
     }
+    case Instruction::GetElementPtr: {
+      if (LU->getNumOperands() != 2 || !cast<GetElementPtrInst>(L)->getSourceElementType()->isIntegerTy(8))
+        continue;
+
+      Value *LL = LU->getOperand(0);
+      Value *LR = LU->getOperand(1);
+      // Find a recurrence.
+      if (LL == P) {
+        // Found a match
+        L = LR;
+        break;
+      }
+      continue;
+    }
     };
 
     // We have matched a recurrence of the form:
@@ -9256,9 +9285,9 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
   return false;
 }
 
-bool llvm::matchSimpleRecurrence(const BinaryOperator *I, PHINode *&P,
+bool llvm::matchSimpleRecurrence(const Instruction *I, PHINode *&P,
                                  Value *&Start, Value *&Step) {
-  BinaryOperator *BO = nullptr;
+  Instruction *BO = nullptr;
   P = dyn_cast<PHINode>(I->getOperand(0));
   if (!P)
     P = dyn_cast<PHINode>(I->getOperand(1));
