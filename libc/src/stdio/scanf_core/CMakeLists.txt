@@ -67,7 +67,7 @@ add_header_library(
     libc.src.stdio.getc
     libc.src.stdio.ungetc
 )
-elseif(NOT (TARGET libc.src.__support.File.file)  )
+elseif( (TARGET libc.src.__support.File.file) OR (NOT LLVM_LIBC_FULL_BUILD)  )
 add_header_library(
   reader
   # SRCS
@@ -81,20 +81,6 @@ add_header_library(
   COMPILE_OPTIONS
     ${use_system_file}
 )
-elseif((LLVM_LIBC_FULL_BUILD))
-add_object_library(
-  reader
-  SRCS
-    reader.cpp
-  HDRS
-    reader.h
-  DEPENDS
-    libc.src.__support.macros.attributes
-    libc.src.__support.File.file
-    libc.hdr.types.FILE
-    # ${use_system_file}
-)
-
 endif()
 
 add_object_library(
