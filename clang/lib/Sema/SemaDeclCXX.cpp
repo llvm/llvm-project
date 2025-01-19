@@ -3316,7 +3316,7 @@ inline static bool HasAttribute(const QualType &T) {
   return false;
 }
 
-inline static bool IsUnusedPrivateField(FieldDecl *FD) {
+static bool IsUnusedPrivateField(const FieldDecl *FD) {
   if (FD->getAccess() == AS_private && FD->getDeclName()) {
     QualType FieldType = FD->getType();
     if (HasAttribute<WarnUnusedAttr>(FieldType))
