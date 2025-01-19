@@ -206,9 +206,9 @@ function(add_ocaml_library name)
     if( NOT (ext STREQUAL ".cmo" OR
              ext STREQUAL ".ml" OR
              ext STREQUAL CMAKE_C_OUTPUT_EXTENSION OR
-             ext STREQUAL CMAKE_SHARED_LIBRARY_SUFFIX) )
+             ext STREQUAL ".so") )
       list(APPEND install_files "${ocaml_output}")
-    elseif( ext STREQUAL CMAKE_SHARED_LIBRARY_SUFFIX)
+    elseif( ext STREQUAL ".so")
       list(APPEND install_shlibs "${ocaml_output}")
     endif()
   endforeach()
