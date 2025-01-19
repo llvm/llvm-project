@@ -134,6 +134,7 @@ void test_NE() {
 // CHECK: fix-it:"{{.*}}macro_with_initializer_list.cpp":{110:32-110:32}:")"
 
 #define INIT(var, init) Foo var = init; // expected-note 3{{defined here}}
+// expected-note@-1 2{{'INIT' exists, but as a function-like macro; perhaps, did you forget the parentheses?}}
 // Can't use an initializer list as a macro argument.  The commas in the list
 // will be interpretted as argument separaters and adding parenthesis will
 // make it no longer an initializer list.
@@ -159,12 +160,13 @@ void test() {
   // expected-note@-3 {{cannot use initializer list at the beginning of a macro argument}}
 }
 
-// CHECK: fix-it:"{{.*}}macro_with_initializer_list.cpp":{145:11-145:11}:"("
-// CHECK: fix-it:"{{.*}}macro_with_initializer_list.cpp":{145:23-145:23}:")"
+// CHECK: fix-it:"{{.*}}macro_with_initializer_list.cpp":{146:11-146:11}:"("
+// CHECK: fix-it:"{{.*}}macro_with_initializer_list.cpp":{146:23-146:23}:")"
 
 #define M(name,a,b,c,d,e,f,g,h,i,j,k,l) \
   Foo name = a + b + c + d + e + f + g + h + i + j + k + l;
 // expected-note@-2 2{{defined here}}
+// expected-note@-3 {{'M' exists, but as a function-like macro; perhaps, did you forget the parentheses?}}
 void test2() {
   M(F1, Foo(), Foo(), Foo(), Foo(), Foo(), Foo(),
         Foo(), Foo(), Foo(), Foo(), Foo(), Foo());
