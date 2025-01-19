@@ -87,6 +87,11 @@ flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
 Alina Sbirlea \
 asbirlea@google.com (email), [alinas](https://github.com/alinas) (GitHub)
 
+#### LoopInterchange
+
+Madhur Amilkanthwar \
+madhura@nvidia.com (email), [madhur13490](https://github.com/madhur13490) (GitHub)
+
 #### SandboxVectorizer
 
 Vasileios Porpodas \
