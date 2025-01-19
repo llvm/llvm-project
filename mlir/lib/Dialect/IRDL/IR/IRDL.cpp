@@ -84,10 +84,10 @@ LogicalResult DialectOp::verify() {
 LogicalResult OperationOp::verifyRegions() {
   // Stores pairs of value kinds and the list of names of values of this kind in
   // the operation.
-  SmallVector<std::tuple<StringRef, DenseSet<StringRef>>> valueNames;
+  SmallVector<std::tuple<StringRef, llvm::SmallDenseSet<StringRef>>> valueNames;
 
   auto insertNames = [&](StringRef kind, ArrayAttr names) {
-    DenseSet<StringRef> nameSet;
+    llvm::SmallDenseSet<StringRef> nameSet;
     nameSet.reserve(names.size());
     for (auto name : names)
       nameSet.insert(llvm::cast<StringAttr>(name).getValue());
