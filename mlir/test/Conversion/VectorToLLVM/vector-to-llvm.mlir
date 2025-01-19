@@ -1105,6 +1105,16 @@ func.func @shuffle_1D_index_direct(%arg0: vector<2xindex>, %arg1: vector<2xindex
 
 // -----
 
+func.func @shuffle_poison_mask(%arg0: vector<2xf32>, %arg1: vector<2xf32>) -> vector<4xf32> {
+  %1 = vector.shuffle %arg0, %arg1 [0, -1, 3, -1] : vector<2xf32>, vector<2xf32>
+  return %1 : vector<4xf32>
+}
+// CHECK-LABEL: @shuffle_poison_mask(
+//  CHECK-SAME:   %[[A:.*]]: vector<2xf32>, %[[B:.*]]: vector<2xf32>)
+//       CHECK:     %[[s:.*]] = llvm.shufflevector %[[A]], %[[B]] [0, -1, 3, -1] : vector<2xf32>
+
+// -----
+
 func.func @shuffle_1D(%arg0: vector<2xf32>, %arg1: vector<3xf32>) -> vector<5xf32> {
   %1 = vector.shuffle %arg0, %arg1 [4, 3, 2, 1, 0] : vector<2xf32>, vector<3xf32>
   return %1 : vector<5xf32>
