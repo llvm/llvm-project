@@ -38,10 +38,18 @@ function(add_ocaml_library name)
   set(ocaml_inputs)
 
   set(ocaml_outputs "${bin}/${name}.cma")
+  # Always use -custom when building in-tree
+  if( (NOT LLVM_OCAML_OUT_OF_TREE) OR LLVM_OCAML_CUSTOM )
+    set(ocaml_custom TRUE)
+  else()
+    set(ocaml_custom FALSE)
+  endif()
+
   if( ARG_C )
+    # ocamlmklib outputs .a and .so
     list(APPEND ocaml_outputs
          "${bin}/lib${name}.a")
-    if ( BUILD_SHARED_LIBS )
+    if ( NOT ocaml_custom )
       list(APPEND ocaml_outputs
            "${bin}/dll${name}.so")
     endif()
@@ -67,7 +75,7 @@ function(add_ocaml_library name)
     list(APPEND ocaml_flags ${dep_ocaml_flags})
   endforeach()
 
-  if( NOT BUILD_SHARED_LIBS )
+  if( ocaml_custom )
     list(APPEND ocaml_flags "-custom")
   endif()
 
