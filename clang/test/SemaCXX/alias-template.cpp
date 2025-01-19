@@ -65,7 +65,8 @@ namespace InFunctions {
   template<typename...T> struct S3 { // expected-note {{template parameter is declared here}}
     template<typename Z> using T = int; // expected-error {{declaration of 'T' shadows template parameter}}
   };
-  template<typename Z> using Z = Z;
+  template<typename Z> // expected-note {{template parameter is declared here}}
+  using Z = Z; // expected-error {{declaration of 'Z' shadows template parameter}}
 }
 
 namespace ClassNameRedecl {

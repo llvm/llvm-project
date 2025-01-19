@@ -13464,6 +13464,14 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
     }
     TemplateParameterList *TemplateParams = TemplateParamLists[0];
 
+    // Check shadowing of a template parameter name
+    for (NamedDecl *TP : TemplateParams->asArray()) {
+      if (NameInfo.getName() == TP->getDeclName()) {
+        DiagnoseTemplateParameterShadow(Name.StartLocation, TP);
+        return nullptr;
+      }
+    }
+
     // Check that we can declare a template here.
     if (CheckTemplateDeclScope(S, TemplateParams))
       return nullptr;
