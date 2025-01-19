@@ -47,12 +47,12 @@ public:
     SmallVector<Value, 1> castedOperands;
     for (Value operand : adaptor.getOperands())
       castedOperands.push_back(
-          ((const DerivedTy *)this)->maybeCast(operand, rewriter));
+          static_cast<const DerivedTy *>(this)->maybeCast(operand, rewriter));
 
     Type resultType = castedOperands.front().getType();
     Type funcType = getFunctionType(resultType, castedOperands);
     StringRef funcName =
-        ((const DerivedTy *)this)
+        static_cast<const DerivedTy *>(this)
             ->getFunctionName(
                 cast<LLVM::LLVMFunctionType>(funcType).getReturnType(), op);
     if (funcName.empty())
@@ -85,11 +85,13 @@ private:
     using LLVM::LLVMFuncOp;
 
     auto funcAttr = StringAttr::get(op->getContext(), funcName);
-    Operation *funcOp = SymbolTable::lookupNearestSymbolFrom(op, funcAttr);
+    auto funcOp = SymbolTable::lookupNearestSymbolFrom<LLVMFuncOp>(op, funcAttr);
     if (funcOp)
-      return cast<LLVMFuncOp>(*funcOp);
+      return funcOp;
 
-    mlir::OpBuilder b(op->getParentOfType<FunctionOpInterface>());
+    auto parentFunc = op->getParentOfType<FunctionOpInterface>();
+    assert(parentFunc && "expected there to be a parent function");
+    OpBuilder b(parentFunc);
     return b.create<LLVMFuncOp>(op->getLoc(), funcName, funcType);
   }
 };
