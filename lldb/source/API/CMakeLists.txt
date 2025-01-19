@@ -85,6 +85,7 @@ add_lldb_library(liblldb STATIC ${option_framework}
   SBModuleSpec.cpp
   SBPlatform.cpp
   SBProcess.cpp
+  SBProgress.cpp
   SBProcessInfo.cpp
   SBProcessInfoList.cpp
   SBQueue.cpp
