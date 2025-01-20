@@ -47,7 +47,7 @@ struct __copy_impl {
 
   template <class _InIter, class _OutIter>
   struct _CopySegment {
-    using _Traits = __segmented_iterator_traits<_InIter>;
+    using _Traits _LIBCPP_NODEBUG = __segmented_iterator_traits<_InIter>;
 
     _OutIter& __result_;
 

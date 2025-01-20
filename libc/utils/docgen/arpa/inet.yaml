@@ -1,18 +1,18 @@
 functions:
   htonl:
-    posix-definition: ''
+    in-latest-posix: ''
   htons:
-    posix-definition: ''
+    in-latest-posix: ''
   inet_addr:
-    posix-definition: ''
+    in-latest-posix: ''
   inet_ntoa:
-    posix-definition: ''
+    in-latest-posix: ''
   inet_ntop:
-    posix-definition: ''
+    in-latest-posix: ''
   inet_pton:
-    posix-definition: ''
+    in-latest-posix: ''
   ntohl:
-    posix-definition: ''
+    in-latest-posix: ''
   ntohs:
-    posix-definition: ''
+    in-latest-posix: ''
 

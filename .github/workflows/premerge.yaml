@@ -30,7 +30,15 @@ jobs:
           fetch-depth: 2
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2.14
+        with:
+          max-size: "2000M"
       - name: Build and Test
+        # Mark the job as a success even if the step fails so that people do
+        # not get notified while the new premerge pipeline is in an
+        # experimental state.
+        # TODO(boomanaiden154): Remove this once the pipeline is stable and we
+        # are ready for people to start recieving notifications.
+        continue-on-error: true
         run: |
           git config --global --add safe.directory '*'
 

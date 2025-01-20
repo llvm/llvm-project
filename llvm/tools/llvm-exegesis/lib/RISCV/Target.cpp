@@ -24,27 +24,27 @@
 namespace llvm {
 namespace exegesis {
 
+#include "RISCVGenExegesis.inc"
+
 namespace {
 
 // Stores constant value to a general-purpose (integer) register.
-static std::vector<MCInst> loadIntReg(const MCSubtargetInfo &STI, unsigned Reg,
-                                      const APInt &Value) {
+static std::vector<MCInst> loadIntReg(const MCSubtargetInfo &STI,
+                                      MCRegister Reg, const APInt &Value) {
   SmallVector<MCInst, 8> MCInstSeq;
-  std::vector<MCInst> MatIntInstrs;
   MCRegister DestReg = Reg;
 
   RISCVMatInt::generateMCInstSeq(Value.getSExtValue(), STI, DestReg, MCInstSeq);
-  MatIntInstrs.resize(MCInstSeq.size());
-  std::copy(MCInstSeq.begin(), MCInstSeq.end(), MatIntInstrs.begin());
 
+  std::vector<MCInst> MatIntInstrs(MCInstSeq.begin(), MCInstSeq.end());
   return MatIntInstrs;
 }
 
-const unsigned ScratchIntReg = RISCV::X30; // t5
+const MCPhysReg ScratchIntReg = RISCV::X30; // t5
 
 // Stores constant bits to a floating-point register.
 static std::vector<MCInst> loadFPRegBits(const MCSubtargetInfo &STI,
-                                         unsigned Reg, const APInt &Bits,
+                                         MCRegister Reg, const APInt &Bits,
                                          unsigned FmvOpcode) {
   std::vector<MCInst> Instrs = loadIntReg(STI, ScratchIntReg, Bits);
   Instrs.push_back(MCInstBuilder(FmvOpcode).addReg(Reg).addReg(ScratchIntReg));
@@ -57,7 +57,8 @@ static std::vector<MCInst> loadFPRegBits(const MCSubtargetInfo &STI,
 // and then do FCVT this is only reliable thing in 32-bit mode, otherwise we
 // need to use __floatsidf
 static std::vector<MCInst> loadFP64RegBits32(const MCSubtargetInfo &STI,
-                                             unsigned Reg, const APInt &Bits) {
+                                             MCRegister Reg,
+                                             const APInt &Bits) {
   double D = Bits.bitsToDouble();
   double IPart;
   double FPart = std::modf(D, &IPart);
@@ -82,7 +83,7 @@ static MCInst nop() {
       .addImm(0);
 }
 
-static bool isVectorRegList(unsigned Reg) {
+static bool isVectorRegList(MCRegister Reg) {
   return RISCV::VRM2RegClass.contains(Reg) ||
          RISCV::VRM4RegClass.contains(Reg) ||
          RISCV::VRM8RegClass.contains(Reg) ||
@@ -105,22 +106,26 @@ public:
 
   bool matchesArch(Triple::ArchType Arch) const override;
 
-  std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,
+  std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, MCRegister Reg,
                                const APInt &Value) const override;
 
-  unsigned getDefaultLoopCounterRegister(const Triple &) const override;
+  MCRegister getDefaultLoopCounterRegister(const Triple &) const override;
 
   void decrementLoopCounterAndJump(MachineBasicBlock &MBB,
                                    MachineBasicBlock &TargetMBB,
                                    const MCInstrInfo &MII,
-                                   unsigned LoopRegister) const override;
+                                   MCRegister LoopRegister) const override;
 
-  unsigned getScratchMemoryRegister(const Triple &TT) const override;
+  MCRegister getScratchMemoryRegister(const Triple &TT) const override;
 
-  void fillMemoryOperands(InstructionTemplate &IT, unsigned Reg,
+  void fillMemoryOperands(InstructionTemplate &IT, MCRegister Reg,
                           unsigned Offset) const override;
 
-  ArrayRef<unsigned> getUnavailableRegisters() const override;
+  ArrayRef<MCPhysReg> getUnavailableRegisters() const override;
+
+  bool allowAsBackToBack(const Instruction &Instr) const override {
+    return !Instr.Description.isPseudo();
+  }
 
   Error randomizeTargetMCOperand(const Instruction &Instr, const Variable &Var,
                                  MCOperand &AssignedValue,
@@ -132,15 +137,14 @@ public:
 };
 
 ExegesisRISCVTarget::ExegesisRISCVTarget()
-    : ExegesisTarget(ArrayRef<CpuAndPfmCounters>{},
-                     RISCV_MC::isOpcodeAvailable) {}
+    : ExegesisTarget(RISCVCpuPfmCounters, RISCV_MC::isOpcodeAvailable) {}
 
 bool ExegesisRISCVTarget::matchesArch(Triple::ArchType Arch) const {
   return Arch == Triple::riscv32 || Arch == Triple::riscv64;
 }
 
 std::vector<MCInst> ExegesisRISCVTarget::setRegTo(const MCSubtargetInfo &STI,
-                                                  unsigned Reg,
+                                                  MCRegister Reg,
                                                   const APInt &Value) const {
   if (RISCV::GPRRegClass.contains(Reg))
     return loadIntReg(STI, Reg, Value);
@@ -170,17 +174,17 @@ std::vector<MCInst> ExegesisRISCVTarget::setRegTo(const MCSubtargetInfo &STI,
   return {};
 }
 
-const unsigned DefaultLoopCounterReg = RISCV::X31; // t6
-const unsigned ScratchMemoryReg = RISCV::X10;      // a0
+const MCPhysReg DefaultLoopCounterReg = RISCV::X31; // t6
+const MCPhysReg ScratchMemoryReg = RISCV::X10;      // a0
 
-unsigned
+MCRegister
 ExegesisRISCVTarget::getDefaultLoopCounterRegister(const Triple &) const {
   return DefaultLoopCounterReg;
 }
 
 void ExegesisRISCVTarget::decrementLoopCounterAndJump(
     MachineBasicBlock &MBB, MachineBasicBlock &TargetMBB,
-    const MCInstrInfo &MII, unsigned LoopRegister) const {
+    const MCInstrInfo &MII, MCRegister LoopRegister) const {
   BuildMI(&MBB, DebugLoc(), MII.get(RISCV::ADDI))
       .addDef(LoopRegister)
       .addUse(LoopRegister)
@@ -191,12 +195,13 @@ void ExegesisRISCVTarget::decrementLoopCounterAndJump(
       .addMBB(&TargetMBB);
 }
 
-unsigned ExegesisRISCVTarget::getScratchMemoryRegister(const Triple &TT) const {
+MCRegister
+ExegesisRISCVTarget::getScratchMemoryRegister(const Triple &TT) const {
   return ScratchMemoryReg; // a0
 }
 
 void ExegesisRISCVTarget::fillMemoryOperands(InstructionTemplate &IT,
-                                             unsigned Reg,
+                                             MCRegister Reg,
                                              unsigned Offset) const {
   // TODO: for now we ignore Offset because have no way
   // to detect it in instruction.
@@ -214,10 +219,10 @@ void ExegesisRISCVTarget::fillMemoryOperands(InstructionTemplate &IT,
   IT.getValueFor(MemOp) = MCOperand::createReg(Reg);
 }
 
-const unsigned UnavailableRegisters[4] = {RISCV::X0, DefaultLoopCounterReg,
-                                          ScratchIntReg, ScratchMemoryReg};
+const MCPhysReg UnavailableRegisters[4] = {RISCV::X0, DefaultLoopCounterReg,
+                                           ScratchIntReg, ScratchMemoryReg};
 
-ArrayRef<unsigned> ExegesisRISCVTarget::getUnavailableRegisters() const {
+ArrayRef<MCPhysReg> ExegesisRISCVTarget::getUnavailableRegisters() const {
   return UnavailableRegisters;
 }
 

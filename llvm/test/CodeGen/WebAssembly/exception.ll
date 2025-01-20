@@ -1,7 +1,7 @@
-; RUN: llc < %s -asm-verbose=false -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -wasm-enable-exnref -verify-machineinstrs | FileCheck --implicit-check-not=ehgcr -allow-deprecated-dag-overlap %s
-; RUN: llc < %s -asm-verbose=false -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -wasm-enable-exnref -verify-machineinstrs -O0
-; RUN: llc < %s -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -wasm-enable-exnref
-; RUN: llc < %s -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -wasm-enable-exnref -filetype=obj
+; RUN: llc < %s -asm-verbose=false -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs | FileCheck --implicit-check-not=ehgcr -allow-deprecated-dag-overlap %s
+; RUN: llc < %s -asm-verbose=false -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs -O0
+; RUN: llc < %s -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling
+; RUN: llc < %s -wasm-enable-eh -wasm-use-legacy-eh=false -exception-model=wasm -mattr=+exception-handling -filetype=obj
 
 target triple = "wasm32-unknown-unknown"
 

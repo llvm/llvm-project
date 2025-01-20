@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDFS.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
@@ -547,12 +548,6 @@ void ScheduleDAGInstrs::addVRegUseDeps(SUnit *SU, unsigned OperIdx) {
   }
 }
 
-/// Returns true if MI is an instruction we are unable to reason about
-/// (like a call or something with unmodeled side effects).
-static inline bool isGlobalMemoryObject(MachineInstr *MI) {
-  return MI->isCall() || MI->hasUnmodeledSideEffects() ||
-         (MI->hasOrderedMemoryRef() && !MI->isDereferenceableInvariantLoad());
-}
 
 void ScheduleDAGInstrs::addChainDependency (SUnit *SUa, SUnit *SUb,
                                             unsigned Latency) {
@@ -899,8 +894,9 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
     // isLoadFromStackSLot are not usable after stack slots are lowered to
     // actual addresses).
 
+    const TargetInstrInfo *TII = ST.getInstrInfo();
     // This is a barrier event that acts as a pivotal node in the DAG.
-    if (isGlobalMemoryObject(&MI)) {
+    if (TII->isGlobalMemoryObject(&MI)) {
 
       // Become the barrier chain.
       if (BarrierChain)

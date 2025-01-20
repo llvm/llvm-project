@@ -1613,12 +1613,13 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
         if (gepArgs.size() != 1)
           fir::emitFatalError(loc,
                               "corrupted substring GEP in fir.embox/fir.rebox");
-        mlir::Type outterOffsetTy = gepArgs[0].get<mlir::Value>().getType();
+        mlir::Type outterOffsetTy =
+            llvm::cast<mlir::Value>(gepArgs[0]).getType();
         mlir::Value cast =
             this->integerCast(loc, rewriter, outterOffsetTy, *substringOffset);
 
         gepArgs[0] = rewriter.create<mlir::LLVM::AddOp>(
-            loc, outterOffsetTy, gepArgs[0].get<mlir::Value>(), cast);
+            loc, outterOffsetTy, llvm::cast<mlir::Value>(gepArgs[0]), cast);
       }
     }
     mlir::Type llvmPtrTy = ::getLlvmPtrType(resultTy.getContext());
@@ -1727,9 +1728,12 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
 static bool isDeviceAllocation(mlir::Value val) {
   if (auto loadOp = mlir::dyn_cast_or_null<fir::LoadOp>(val.getDefiningOp()))
     return isDeviceAllocation(loadOp.getMemref());
+  if (auto boxAddrOp =
+          mlir::dyn_cast_or_null<fir::BoxAddrOp>(val.getDefiningOp()))
+    return isDeviceAllocation(boxAddrOp.getVal());
   if (auto convertOp =
           mlir::dyn_cast_or_null<fir::ConvertOp>(val.getDefiningOp()))
-    val = convertOp.getValue();
+    return isDeviceAllocation(convertOp.getValue());
   if (auto callOp = mlir::dyn_cast_or_null<fir::CallOp>(val.getDefiningOp()))
     if (callOp.getCallee() &&
         (callOp.getCallee().value().getRootReference().getValue().starts_with(
@@ -3083,7 +3087,7 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
 private:
   static void addComdat(mlir::LLVM::GlobalOp &global,
                         mlir::ConversionPatternRewriter &rewriter,
-                        mlir::ModuleOp &module) {
+                        mlir::ModuleOp module) {
     const char *comdatName = "__llvm_comdat";
     mlir::LLVM::ComdatOp comdatOp =
         module.lookupSymbol<mlir::LLVM::ComdatOp>(comdatName);
@@ -3924,6 +3928,7 @@ public:
     mlir::arith::populateArithToLLVMConversionPatterns(typeConverter, pattern);
     mlir::cf::populateControlFlowToLLVMConversionPatterns(typeConverter,
                                                           pattern);
+    mlir::cf::populateAssertToLLVMConversionPattern(typeConverter, pattern);
     // Math operations that have not been converted yet must be converted
     // to Libm.
     if (!isAMDGCN)

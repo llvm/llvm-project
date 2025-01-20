@@ -122,6 +122,20 @@ static cl::opt<unsigned>
                         cl::desc("Max depth to recursively search for missing "
                                  "frames through tail calls."));
 
+// Optionally enable cloning of callsites involved with recursive cycles
+static cl::opt<bool> AllowRecursiveCallsites(
+    "memprof-allow-recursive-callsites", cl::init(false), cl::Hidden,
+    cl::desc("Allow cloning of callsites involved in recursive cycles"));
+
+// When disabled, try to detect and prevent cloning of recursive contexts.
+// This is only necessary until we support cloning through recursive cycles.
+// Leave on by default for now, as disabling requires a little bit of compile
+// time overhead and doesn't affect correctness, it will just inflate the cold
+// hinted bytes reporting a bit when -memprof-report-hinted-sizes is enabled.
+static cl::opt<bool> AllowRecursiveContexts(
+    "memprof-allow-recursive-contexts", cl::init(true), cl::Hidden,
+    cl::desc("Allow cloning of contexts through recursive cycles"));
+
 namespace llvm {
 cl::opt<bool> EnableMemProfContextDisambiguation(
     "enable-memprof-context-disambiguation", cl::init(false), cl::Hidden,
@@ -807,19 +821,31 @@ struct IndexCall : public PointerUnion<CallsiteInfo *, AllocInfo *> {
 
   IndexCall *operator->() { return this; }
 
-  PointerUnion<CallsiteInfo *, AllocInfo *> getBase() const { return *this; }
-
   void print(raw_ostream &OS) const {
-    if (auto *AI = llvm::dyn_cast_if_present<AllocInfo *>(getBase())) {
+    PointerUnion<CallsiteInfo *, AllocInfo *> Base = *this;
+    if (auto *AI = llvm::dyn_cast_if_present<AllocInfo *>(Base)) {
       OS << *AI;
     } else {
-      auto *CI = llvm::dyn_cast_if_present<CallsiteInfo *>(getBase());
+      auto *CI = llvm::dyn_cast_if_present<CallsiteInfo *>(Base);
       assert(CI);
       OS << *CI;
     }
   }
 };
+} // namespace
 
+namespace llvm {
+template <> struct simplify_type<IndexCall> {
+  using SimpleType = PointerUnion<CallsiteInfo *, AllocInfo *>;
+  static SimpleType getSimplifiedValue(IndexCall &Val) { return Val; }
+};
+template <> struct simplify_type<const IndexCall> {
+  using SimpleType = const PointerUnion<CallsiteInfo *, AllocInfo *>;
+  static SimpleType getSimplifiedValue(const IndexCall &Val) { return Val; }
+};
+} // namespace llvm
+
+namespace {
 /// CRTP derived class for graphs built from summary index (ThinLTO).
 class IndexCallsiteContextGraph
     : public CallsiteContextGraph<IndexCallsiteContextGraph, FunctionSummary,
@@ -1236,9 +1262,13 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::addStackNodesForMIB(
       StackEntryIdToContextNodeMap[StackId] = StackNode;
       StackNode->OrigStackOrAllocId = StackId;
     }
-    auto Ins = StackIdSet.insert(StackId);
-    if (!Ins.second)
-      StackNode->Recursive = true;
+    // Marking a node recursive will prevent its cloning completely, even for
+    // non-recursive contexts flowing through it.
+    if (!AllowRecursiveCallsites) {
+      auto Ins = StackIdSet.insert(StackId);
+      if (!Ins.second)
+        StackNode->Recursive = true;
+    }
     StackNode->AllocTypes |= (uint8_t)AllocType;
     PrevNode->addOrUpdateCallerEdge(StackNode, AllocType, LastContextId);
     PrevNode = StackNode;
@@ -1375,8 +1405,11 @@ static void checkNode(const ContextNode<DerivedCCG, FuncTy, CallTy> *Node,
       set_union(CallerEdgeContextIds, Edge->ContextIds);
     }
     // Node can have more context ids than callers if some contexts terminate at
-    // node and some are longer.
-    assert(NodeContextIds == CallerEdgeContextIds ||
+    // node and some are longer. If we are allowing recursive callsites but
+    // haven't disabled recursive contexts, this will be violated for
+    // incompletely cloned recursive cycles, so skip the checking in that case.
+    assert((AllowRecursiveCallsites && AllowRecursiveContexts) ||
+           NodeContextIds == CallerEdgeContextIds ||
            set_is_subset(CallerEdgeContextIds, NodeContextIds));
   }
   if (Node->CalleeEdges.size()) {
@@ -1856,9 +1889,9 @@ uint64_t ModuleCallsiteContextGraph::getLastStackId(Instruction *Call) {
 }
 
 uint64_t IndexCallsiteContextGraph::getLastStackId(IndexCall &Call) {
-  assert(isa<CallsiteInfo *>(Call.getBase()));
+  assert(isa<CallsiteInfo *>(Call));
   CallStack<CallsiteInfo, SmallVector<unsigned>::const_iterator>
-      CallsiteContext(dyn_cast_if_present<CallsiteInfo *>(Call.getBase()));
+      CallsiteContext(dyn_cast_if_present<CallsiteInfo *>(Call));
   // Need to convert index into stack id.
   return Index.getStackIdAtIndex(CallsiteContext.back());
 }
@@ -1890,10 +1923,10 @@ std::string IndexCallsiteContextGraph::getLabel(const FunctionSummary *Func,
                                                 unsigned CloneNo) const {
   auto VI = FSToVIMap.find(Func);
   assert(VI != FSToVIMap.end());
-  if (isa<AllocInfo *>(Call.getBase()))
+  if (isa<AllocInfo *>(Call))
     return (VI->second.name() + " -> alloc").str();
   else {
-    auto *Callsite = dyn_cast_if_present<CallsiteInfo *>(Call.getBase());
+    auto *Callsite = dyn_cast_if_present<CallsiteInfo *>(Call);
     return (VI->second.name() + " -> " +
             getMemProfFuncName(Callsite->Callee.name(),
                                Callsite->Clones[CloneNo]))
@@ -1912,9 +1945,9 @@ ModuleCallsiteContextGraph::getStackIdsWithContextNodesForCall(
 
 std::vector<uint64_t>
 IndexCallsiteContextGraph::getStackIdsWithContextNodesForCall(IndexCall &Call) {
-  assert(isa<CallsiteInfo *>(Call.getBase()));
+  assert(isa<CallsiteInfo *>(Call));
   CallStack<CallsiteInfo, SmallVector<unsigned>::const_iterator>
-      CallsiteContext(dyn_cast_if_present<CallsiteInfo *>(Call.getBase()));
+      CallsiteContext(dyn_cast_if_present<CallsiteInfo *>(Call));
   return getStackIdsWithContextNodes<CallsiteInfo,
                                      SmallVector<unsigned>::const_iterator>(
       CallsiteContext);
@@ -2675,8 +2708,7 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
 
 const FunctionSummary *
 IndexCallsiteContextGraph::getCalleeFunc(IndexCall &Call) {
-  ValueInfo Callee =
-      dyn_cast_if_present<CallsiteInfo *>(Call.getBase())->Callee;
+  ValueInfo Callee = dyn_cast_if_present<CallsiteInfo *>(Call)->Callee;
   if (Callee.getSummaryList().empty())
     return nullptr;
   return dyn_cast<FunctionSummary>(Callee.getSummaryList()[0]->getBaseObject());
@@ -2686,8 +2718,7 @@ bool IndexCallsiteContextGraph::calleeMatchesFunc(
     IndexCall &Call, const FunctionSummary *Func,
     const FunctionSummary *CallerFunc,
     std::vector<std::pair<IndexCall, FunctionSummary *>> &FoundCalleeChain) {
-  ValueInfo Callee =
-      dyn_cast_if_present<CallsiteInfo *>(Call.getBase())->Callee;
+  ValueInfo Callee = dyn_cast_if_present<CallsiteInfo *>(Call)->Callee;
   // If there is no summary list then this is a call to an externally defined
   // symbol.
   AliasSummary *Alias =
@@ -2730,10 +2761,8 @@ bool IndexCallsiteContextGraph::calleeMatchesFunc(
 }
 
 bool IndexCallsiteContextGraph::sameCallee(IndexCall &Call1, IndexCall &Call2) {
-  ValueInfo Callee1 =
-      dyn_cast_if_present<CallsiteInfo *>(Call1.getBase())->Callee;
-  ValueInfo Callee2 =
-      dyn_cast_if_present<CallsiteInfo *>(Call2.getBase())->Callee;
+  ValueInfo Callee1 = dyn_cast_if_present<CallsiteInfo *>(Call1)->Callee;
+  ValueInfo Callee2 = dyn_cast_if_present<CallsiteInfo *>(Call2)->Callee;
   return Callee1 == Callee2;
 }
 
@@ -3370,6 +3399,21 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
 
   assert(Node->AllocTypes != (uint8_t)AllocationType::None);
 
+  DenseSet<uint32_t> RecursiveContextIds;
+  // If we are allowing recursive callsites, but have also disabled recursive
+  // contexts, look for context ids that show up in multiple caller edges.
+  if (AllowRecursiveCallsites && !AllowRecursiveContexts) {
+    DenseSet<uint32_t> AllCallerContextIds;
+    for (auto &CE : Node->CallerEdges) {
+      // Resize to the largest set of caller context ids, since we know the
+      // final set will be at least that large.
+      AllCallerContextIds.reserve(CE->getContextIds().size());
+      for (auto Id : CE->getContextIds())
+        if (!AllCallerContextIds.insert(Id).second)
+          RecursiveContextIds.insert(Id);
+    }
+  }
+
   // Iterate until we find no more opportunities for disambiguating the alloc
   // types via cloning. In most cases this loop will terminate once the Node
   // has a single allocation type, in which case no more cloning is needed.
@@ -3394,6 +3438,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
     // allocation.
     auto CallerEdgeContextsForAlloc =
         set_intersection(CallerEdge->getContextIds(), AllocContextIds);
+    if (!RecursiveContextIds.empty())
+      CallerEdgeContextsForAlloc =
+          set_difference(CallerEdgeContextsForAlloc, RecursiveContextIds);
     if (CallerEdgeContextsForAlloc.empty()) {
       ++EI;
       continue;
@@ -3571,7 +3618,7 @@ IndexCallsiteContextGraph::cloneFunctionForCallsite(
   // Confirm this matches the CloneNo provided by the caller, which is based on
   // the number of function clones we have.
   assert(CloneNo ==
-         (Call.call().is<AllocInfo *>()
+         (isa<AllocInfo *>(Call.call())
               ? Call.call().dyn_cast<AllocInfo *>()->Versions.size()
               : Call.call().dyn_cast<CallsiteInfo *>()->Clones.size()));
   // Walk all the instructions in this function. Create a new version for

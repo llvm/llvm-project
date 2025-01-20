@@ -90,6 +90,10 @@ bool InitLink::emit(Compiler<Emitter> *Ctx, const Expr *E) const {
     if (!Ctx->emitConstUint32(Offset, E))
       return false;
     return Ctx->emitArrayElemPtrPopUint32(E);
+  case K_RVO:
+    return Ctx->emitRVOPtr(E);
+  case K_InitList:
+    return true;
   default:
     llvm_unreachable("Unhandled InitLink kind");
   }
@@ -249,6 +253,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase: {
+    if (DiscardResult)
+      return this->discard(SubExpr);
+
     if (!this->delegate(SubExpr))
       return false;
 
@@ -278,6 +285,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_BaseToDerived: {
+    if (DiscardResult)
+      return this->discard(SubExpr);
+
     if (!this->delegate(SubExpr))
       return false;
 
@@ -685,20 +695,18 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!this->visit(SubExpr))
       return false;
 
-    auto Sem = Ctx.getASTContext().getFixedPointSemantics(CE->getType());
-    uint32_t I;
-    std::memcpy(&I, &Sem, sizeof(Sem));
-    return this->emitCastIntegralFixedPoint(classifyPrim(SubExpr->getType()), I,
-                                            CE);
+    auto Sem =
+        Ctx.getASTContext().getFixedPointSemantics(CE->getType()).toOpaqueInt();
+    return this->emitCastIntegralFixedPoint(classifyPrim(SubExpr->getType()),
+                                            Sem, CE);
   }
   case CK_FloatingToFixedPoint: {
     if (!this->visit(SubExpr))
       return false;
 
-    auto Sem = Ctx.getASTContext().getFixedPointSemantics(CE->getType());
-    uint32_t I;
-    std::memcpy(&I, &Sem, sizeof(Sem));
-    return this->emitCastFloatingFixedPoint(I, CE);
+    auto Sem =
+        Ctx.getASTContext().getFixedPointSemantics(CE->getType()).toOpaqueInt();
+    return this->emitCastFloatingFixedPoint(Sem, CE);
   }
   case CK_FixedPointToFloating: {
     if (!this->visit(SubExpr))
@@ -714,10 +722,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_FixedPointCast: {
     if (!this->visit(SubExpr))
       return false;
-    auto Sem = Ctx.getASTContext().getFixedPointSemantics(CE->getType());
-    uint32_t I;
-    std::memcpy(&I, &Sem, sizeof(Sem));
-    return this->emitCastFixedPoint(I, CE);
+    auto Sem =
+        Ctx.getASTContext().getFixedPointSemantics(CE->getType()).toOpaqueInt();
+    return this->emitCastFixedPoint(Sem, CE);
   }
 
   case CK_ToVoid:
@@ -1518,28 +1525,29 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitFixedPointBinOp(const BinaryOperator *E) {
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
+  const ASTContext &ASTCtx = Ctx.getASTContext();
 
   assert(LHS->getType()->isFixedPointType() ||
          RHS->getType()->isFixedPointType());
 
-  auto LHSSema = Ctx.getASTContext().getFixedPointSemantics(LHS->getType());
-  auto RHSSema = Ctx.getASTContext().getFixedPointSemantics(RHS->getType());
+  auto LHSSema = ASTCtx.getFixedPointSemantics(LHS->getType());
+  auto LHSSemaInt = LHSSema.toOpaqueInt();
+  auto RHSSema = ASTCtx.getFixedPointSemantics(RHS->getType());
+  auto RHSSemaInt = RHSSema.toOpaqueInt();
 
   if (!this->visit(LHS))
     return false;
   if (!LHS->getType()->isFixedPointType()) {
-    uint32_t I;
-    std::memcpy(&I, &LHSSema, sizeof(llvm::FixedPointSemantics));
-    if (!this->emitCastIntegralFixedPoint(classifyPrim(LHS->getType()), I, E))
+    if (!this->emitCastIntegralFixedPoint(classifyPrim(LHS->getType()),
+                                          LHSSemaInt, E))
       return false;
   }
 
   if (!this->visit(RHS))
     return false;
   if (!RHS->getType()->isFixedPointType()) {
-    uint32_t I;
-    std::memcpy(&I, &RHSSema, sizeof(llvm::FixedPointSemantics));
-    if (!this->emitCastIntegralFixedPoint(classifyPrim(RHS->getType()), I, E))
+    if (!this->emitCastIntegralFixedPoint(classifyPrim(RHS->getType()),
+                                          RHSSemaInt, E))
       return false;
   }
 
@@ -1547,13 +1555,10 @@ bool Compiler<Emitter>::VisitFixedPointBinOp(const BinaryOperator *E) {
   auto ConvertResult = [&](bool R) -> bool {
     if (!R)
       return false;
-    auto ResultSema = Ctx.getASTContext().getFixedPointSemantics(E->getType());
-    auto CommonSema = LHSSema.getCommonSemantics(RHSSema);
-    if (ResultSema != CommonSema) {
-      uint32_t I;
-      std::memcpy(&I, &ResultSema, sizeof(ResultSema));
-      return this->emitCastFixedPoint(I, E);
-    }
+    auto ResultSema = ASTCtx.getFixedPointSemantics(E->getType()).toOpaqueInt();
+    auto CommonSema = LHSSema.getCommonSemantics(RHSSema).toOpaqueInt();
+    if (ResultSema != CommonSema)
+      return this->emitCastFixedPoint(ResultSema, E);
     return true;
   };
 
@@ -1717,6 +1722,8 @@ bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
                                       const Expr *ArrayFiller, const Expr *E) {
+  InitLinkScope<Emitter> ILS(this, InitLink::InitList());
+
   QualType QT = E->getType();
   if (const auto *AT = QT->getAs<AtomicType>())
     QT = AT->getValueType();
@@ -1754,6 +1761,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     auto initPrimitiveField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init, PrimType T) -> bool {
       InitStackScope<Emitter> ISS(this, isa<CXXDefaultInitExpr>(Init));
+      InitLinkScope<Emitter> ILS(this, InitLink::Field(FieldToInit->Offset));
       if (!this->visit(Init))
         return false;
 
@@ -1766,6 +1774,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
                                   const Expr *Init) -> bool {
       InitStackScope<Emitter> ISS(this, isa<CXXDefaultInitExpr>(Init));
       InitLinkScope<Emitter> ILS(this, InitLink::Field(FieldToInit->Offset));
+
       // Non-primitive case. Get a pointer to the field-to-initialize
       // on the stack and recurse into visitInitializer().
       if (!this->emitGetPtrField(FieldToInit->Offset, Init))
@@ -2058,7 +2067,7 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
       Size = CharUnits::One();
     else {
       if (ArgType->isDependentType() || !ArgType->isConstantSizeType())
-        return false;
+        return this->emitInvalid(E);
 
       if (Kind == UETT_SizeOf)
         Size = ASTCtx.getTypeSizeInChars(ArgType);
@@ -2131,6 +2140,16 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     unsigned Bits = ASTCtx.getOpenMPDefaultSimdAlign(E->getArgumentType());
 
     return this->emitConst(ASTCtx.toCharUnitsFromBits(Bits).getQuantity(), E);
+  }
+
+  if (Kind == UETT_PtrAuthTypeDiscriminator) {
+    if (E->getArgumentType()->isDependentType())
+      return this->emitInvalid(E);
+
+    return this->emitConst(
+        const_cast<ASTContext &>(ASTCtx).getPointerAuthTypeDiscriminator(
+            E->getArgumentType()),
+        E);
   }
 
   return false;
@@ -3427,6 +3446,38 @@ bool Compiler<Emitter>::VisitBlockExpr(const BlockExpr *E) {
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
+  const Type *TypeInfoType = E->getType().getTypePtr();
+
+  if (!E->isPotentiallyEvaluated()) {
+    if (DiscardResult)
+      return true;
+
+    if (E->isTypeOperand())
+      return this->emitGetTypeid(
+          E->getTypeOperand(Ctx.getASTContext()).getTypePtr(), TypeInfoType, E);
+    return this->emitGetTypeid(E->getExprOperand()->getType().getTypePtr(),
+                               TypeInfoType, E);
+  }
+
+  // Otherwise, we need to evaluate the expression operand.
+  assert(E->getExprOperand());
+  assert(E->getExprOperand()->isLValue());
+
+  if (!Ctx.getLangOpts().CPlusPlus20 && !this->emitDiagTypeid(E))
+    return false;
+
+  if (!this->visit(E->getExprOperand()))
+    return false;
+
+  if (!this->emitGetTypeidPtr(TypeInfoType, E))
+    return false;
+  if (DiscardResult)
+    return this->emitPopPtr(E);
+  return true;
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::VisitExpressionTraitExpr(const ExpressionTraitExpr *E) {
   assert(Ctx.getLangOpts().CPlusPlus);
   return this->emitConstBool(E->getValue(), E);
@@ -3780,6 +3831,7 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
 
     if (!this->emitGetPtrLocal(*LocalIndex, E))
       return false;
+    InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalIndex));
     return this->visitInitializer(E);
   }
 
@@ -4196,6 +4248,7 @@ bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
   // For us, that means everything we don't
   // have a PrimType for.
   if (std::optional<unsigned> LocalOffset = this->allocateLocal(E)) {
+    InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalOffset));
     if (!this->emitGetPtrLocal(*LocalOffset, E))
       return false;
 
@@ -4764,12 +4817,7 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) {
   SourceLocScope<Emitter> SLS(this, E);
 
-  const Expr *SubExpr = E->getExpr();
-  if (std::optional<PrimType> T = classify(E->getExpr()))
-    return this->visit(SubExpr);
-
-  assert(Initializing);
-  return this->visitInitializer(SubExpr);
+  return this->delegate(E->getExpr());
 }
 
 template <class Emitter>
@@ -4816,18 +4864,49 @@ bool Compiler<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
   // instance pointer of the current function frame, but e.g. to the declaration
   // currently being initialized. Here we emit the necessary instruction(s) for
   // this scenario.
-  if (!InitStackActive || !E->isImplicit())
+  if (!InitStackActive)
     return this->emitThis(E);
 
-  if (InitStackActive && !InitStack.empty()) {
+  if (!InitStack.empty()) {
+    // If our init stack is, for example:
+    // 0 Stack: 3 (decl)
+    // 1 Stack: 6 (init list)
+    // 2 Stack: 1 (field)
+    // 3 Stack: 6 (init list)
+    // 4 Stack: 1 (field)
+    //
+    // We want to find the LAST element in it that's an init list,
+    // which is marked with the K_InitList marker. The index right
+    // before that points to an init list. We need to find the
+    // elements before the K_InitList element that point to a base
+    // (e.g. a decl or This), optionally followed by field, elem, etc.
+    // In the example above, we want to emit elements [0..2].
     unsigned StartIndex = 0;
+    unsigned EndIndex = 0;
+    // Find the init list.
     for (StartIndex = InitStack.size() - 1; StartIndex > 0; --StartIndex) {
+      if (InitStack[StartIndex].Kind == InitLink::K_InitList ||
+          InitStack[StartIndex].Kind == InitLink::K_This) {
+        EndIndex = StartIndex;
+        --StartIndex;
+        break;
+      }
+    }
+
+    // Walk backwards to find the base.
+    for (; StartIndex > 0; --StartIndex) {
+      if (InitStack[StartIndex].Kind == InitLink::K_InitList)
+        continue;
+
       if (InitStack[StartIndex].Kind != InitLink::K_Field &&
           InitStack[StartIndex].Kind != InitLink::K_Elem)
         break;
     }
 
-    for (unsigned I = StartIndex, N = InitStack.size(); I != N; ++I) {
+    // Emit the instructions.
+    for (unsigned I = StartIndex; I != EndIndex; ++I) {
+      if (InitStack[I].Kind == InitLink::K_InitList)
+        continue;
       if (!InitStack[I].template emit<Emitter>(this, E))
         return false;
     }
@@ -4906,6 +4985,15 @@ bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS) {
       return false;
     if (!this->visitVarDecl(VD))
       return false;
+
+    // Register decomposition decl holding vars.
+    if (const auto *DD = dyn_cast<DecompositionDecl>(VD)) {
+      for (auto *BD : DD->bindings())
+        if (auto *KD = BD->getHoldingVar()) {
+          if (!this->visitVarDecl(KD))
+            return false;
+        }
+    }
   }
 
   return true;
@@ -4928,6 +5016,7 @@ bool Compiler<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
       if (!this->visit(RE))
         return false;
     } else {
+      InitLinkScope<Emitter> ILS(this, InitLink::RVO());
       // RVO - construct the value in the return location.
       if (!this->emitRVOPtr(RE))
         return false;
@@ -6115,48 +6204,67 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
       return revisit(VD);
   }
 
-  if (D != InitializingDecl) {
-    // Try to lazily visit (or emit dummy pointers for) declarations
-    // we haven't seen yet.
-    if (Ctx.getLangOpts().CPlusPlus) {
-      if (const auto *VD = dyn_cast<VarDecl>(D)) {
-        const auto typeShouldBeVisited = [&](QualType T) -> bool {
-          if (T.isConstant(Ctx.getASTContext()))
-            return true;
-          return T->isReferenceType();
-        };
+  // Avoid infinite recursion.
+  if (D == InitializingDecl)
+    return this->emitDummyPtr(D, E);
 
-        // DecompositionDecls are just proxies for us.
-        if (isa<DecompositionDecl>(VD))
-          return revisit(VD);
+  // Try to lazily visit (or emit dummy pointers for) declarations
+  // we haven't seen yet.
+  // For C.
+  if (!Ctx.getLangOpts().CPlusPlus) {
+    if (const auto *VD = dyn_cast<VarDecl>(D);
+        VD && VD->getAnyInitializer() &&
+        VD->getType().isConstant(Ctx.getASTContext()) && !VD->isWeak())
+      return revisit(VD);
+    return this->emitDummyPtr(D, E);
+  }
 
-        if ((VD->hasGlobalStorage() || VD->isStaticDataMember()) &&
-            typeShouldBeVisited(VD->getType()))
-          return revisit(VD);
+  // ... and C++.
+  const auto *VD = dyn_cast<VarDecl>(D);
+  if (!VD)
+    return this->emitDummyPtr(D, E);
 
-        // FIXME: The evaluateValue() check here is a little ridiculous, since
-        // it will ultimately call into Context::evaluateAsInitializer(). In
-        // other words, we're evaluating the initializer, just to know if we can
-        // evaluate the initializer.
-        if (VD->isLocalVarDecl() && typeShouldBeVisited(VD->getType()) &&
-            VD->getInit() && !VD->getInit()->isValueDependent()) {
+  const auto typeShouldBeVisited = [&](QualType T) -> bool {
+    if (T.isConstant(Ctx.getASTContext()))
+      return true;
+    return T->isReferenceType();
+  };
 
-          if (VD->evaluateValue())
-            return revisit(VD);
+  // DecompositionDecls are just proxies for us.
+  if (isa<DecompositionDecl>(VD))
+    return revisit(VD);
 
-          if (!D->getType()->isReferenceType())
-            return this->emitDummyPtr(D, E);
-
-          return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
-                                          /*InitializerFailed=*/true, E);
-        }
-      }
-    } else {
-      if (const auto *VD = dyn_cast<VarDecl>(D);
-          VD && VD->getAnyInitializer() &&
-          VD->getType().isConstant(Ctx.getASTContext()) && !VD->isWeak())
-        return revisit(VD);
+  if ((VD->hasGlobalStorage() || VD->isStaticDataMember()) &&
+      typeShouldBeVisited(VD->getType())) {
+    if (const Expr *Init = VD->getAnyInitializer();
+        Init && !Init->isValueDependent()) {
+      // Whether or not the evaluation is successul doesn't really matter
+      // here -- we will create a global variable in any case, and that
+      // will have the state of initializer evaluation attached.
+      APValue V;
+      SmallVector<PartialDiagnosticAt> Notes;
+      (void)Init->EvaluateAsInitializer(V, Ctx.getASTContext(), VD, Notes,
+                                        true);
+      return this->visitDeclRef(D, E);
     }
+    return revisit(VD);
+  }
+
+  // FIXME: The evaluateValue() check here is a little ridiculous, since
+  // it will ultimately call into Context::evaluateAsInitializer(). In
+  // other words, we're evaluating the initializer, just to know if we can
+  // evaluate the initializer.
+  if (VD->isLocalVarDecl() && typeShouldBeVisited(VD->getType()) &&
+      VD->getInit() && !VD->getInit()->isValueDependent()) {
+
+    if (VD->evaluateValue())
+      return revisit(VD);
+
+    if (!D->getType()->isReferenceType())
+      return this->emitDummyPtr(D, E);
+
+    return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
+                                    /*InitializerFailed=*/true, E);
   }
 
   return this->emitDummyPtr(D, E);

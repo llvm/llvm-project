@@ -384,7 +384,7 @@ public:
     return CPU != llvm::X86::CK_None;
   }
 
-  unsigned getFMVPriority(ArrayRef<StringRef> Features) const override;
+  uint64_t getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   bool setFPMath(StringRef Name) override;
 
@@ -532,6 +532,14 @@ public:
     IntPtrType = SignedLong;
     PtrDiffType = SignedLong;
   }
+};
+
+class LLVM_LIBRARY_VISIBILITY AppleMachOI386TargetInfo
+    : public AppleMachOTargetInfo<X86_32TargetInfo> {
+public:
+  AppleMachOI386TargetInfo(const llvm::Triple &Triple,
+                           const TargetOptions &Opts)
+      : AppleMachOTargetInfo<X86_32TargetInfo>(Triple, Opts) {}
 };
 
 class LLVM_LIBRARY_VISIBILITY DarwinI386TargetInfo

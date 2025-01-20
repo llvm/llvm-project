@@ -2531,29 +2531,6 @@ bool RISCVDAGToDAGISel::SelectAddrFrameIndex(SDValue Addr, SDValue &Base,
   return false;
 }
 
-// Select a frame index and an optional immediate offset from an ADD or OR.
-bool RISCVDAGToDAGISel::SelectFrameAddrRegImm(SDValue Addr, SDValue &Base,
-                                              SDValue &Offset) {
-  if (SelectAddrFrameIndex(Addr, Base, Offset))
-    return true;
-
-  if (!CurDAG->isBaseWithConstantOffset(Addr))
-    return false;
-
-  if (auto *FIN = dyn_cast<FrameIndexSDNode>(Addr.getOperand(0))) {
-    int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
-    if (isInt<12>(CVal)) {
-      Base = CurDAG->getTargetFrameIndex(FIN->getIndex(),
-                                         Subtarget->getXLenVT());
-      Offset = CurDAG->getSignedTargetConstant(CVal, SDLoc(Addr),
-                                               Subtarget->getXLenVT());
-      return true;
-    }
-  }
-
-  return false;
-}
-
 // Fold constant addresses.
 static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
                                const MVT VT, const RISCVSubtarget *Subtarget,
@@ -3239,17 +3216,18 @@ bool RISCVDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
 bool RISCVDAGToDAGISel::selectInvLogicImm(SDValue N, SDValue &Val) {
   if (!isa<ConstantSDNode>(N))
     return false;
-
   int64_t Imm = cast<ConstantSDNode>(N)->getSExtValue();
-  if ((Imm & 0xfff) != 0xfff || Imm == -1)
+
+  // For 32-bit signed constants, we can only substitute LUI+ADDI with LUI.
+  if (isInt<32>(Imm) && ((Imm & 0xfff) != 0xfff || Imm == -1))
     return false;
 
+  // Abandon this transform if the constant is needed elsewhere.
   for (const SDNode *U : N->users()) {
     if (!ISD::isBitwiseLogicOp(U->getOpcode()))
       return false;
   }
 
-  // For 32-bit signed constants we already know it's a win: LUI+ADDI vs LUI.
   // For 64-bit constants, the instruction sequences get complex,
   // so we select inverted only if it's cheaper.
   if (!isInt<32>(Imm)) {
@@ -3813,15 +3791,6 @@ static bool isImplicitDef(SDValue V) {
   return V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
 }
 
-static bool hasGPROut(unsigned Opc) {
-  switch (RISCV::getRVVMCOpcode(Opc)) {
-  case RISCV::VCPOP_M:
-  case RISCV::VFIRST_M:
-    return true;
-  }
-  return false;
-}
-
 // Optimize masked RVV pseudo instructions with a known all-ones mask to their
 // corresponding "unmasked" pseudo versions. The mask we're interested in will
 // take the form of a V0 physical register operand, with a glued
@@ -3840,19 +3809,22 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(MachineSDNode *N) {
   // everything else.  See the comment on RISCVMaskedPseudo for details.
   const unsigned Opc = I->UnmaskedPseudo;
   const MCInstrDesc &MCID = TII->get(Opc);
-  const bool UseTUPseudo = RISCVII::hasVecPolicyOp(MCID.TSFlags);
-#ifndef NDEBUG
+  const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MCID);
+
   const MCInstrDesc &MaskedMCID = TII->get(N->getMachineOpcode());
+  const bool MaskedHasPassthru = RISCVII::isFirstDefTiedToFirstUse(MaskedMCID);
+
   assert(RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags) ==
          RISCVII::hasVecPolicyOp(MCID.TSFlags) &&
          "Masked and unmasked pseudos are inconsistent");
-  const bool HasTiedDest = RISCVII::isFirstDefTiedToFirstUse(MCID);
-  assert(UseTUPseudo == HasTiedDest && "Unexpected pseudo structure");
-#endif
+  assert(RISCVII::hasVecPolicyOp(MCID.TSFlags) == HasPassthru &&
+         "Unexpected pseudo structure");
+  assert(!(HasPassthru && !MaskedHasPassthru) &&
+         "Unmasked pseudo has passthru but masked pseudo doesn't?");
 
   SmallVector<SDValue, 8> Ops;
-  // Skip the passthru operand at index 0 if !UseTUPseudo and no GPR out.
-  bool ShouldSkip = !UseTUPseudo && !hasGPROut(Opc);
+  // Skip the passthru operand at index 0 if the unmasked don't have one.
+  bool ShouldSkip = !HasPassthru && MaskedHasPassthru;
   for (unsigned I = ShouldSkip, E = N->getNumOperands(); I != E; I++) {
     // Skip the mask, and the Glue.
     SDValue Op = N->getOperand(I);

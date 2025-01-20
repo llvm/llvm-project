@@ -1044,6 +1044,18 @@ bool SelectOptimizeImpl::isConvertToBranchProfitableBase(
     return true;
   }
 
+  // If latch has a select group with several elements, it is usually profitable
+  // to convert it to branches. We let `optimizeSelectsInnerLoops` decide if
+  // conversion is profitable for innermost loops.
+  auto *BB = SI.getI()->getParent();
+  auto *L = LI->getLoopFor(BB);
+  if (L && !L->isInnermost() && L->getLoopLatch() == BB &&
+      ASI.Selects.size() >= 3) {
+    OR << "Converted to branch because select group in the latch block is big.";
+    EmitAndPrintRemark(ORE, OR);
+    return true;
+  }
+
   ORmiss << "Not profitable to convert to branch (base heuristic).";
   EmitAndPrintRemark(ORE, ORmiss);
   return false;

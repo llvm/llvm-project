@@ -26,6 +26,9 @@ namespace jitlink {
 class EHFrameEdgeFixer {
 public:
   /// Create an eh-frame edge fixer.
+  /// Adds edges for implicit relocations on platforms where these are used
+  /// (e.g. MachO/x86-64).
+  ///
   /// If a given edge-kind is not supported on the target architecture then
   /// Edge::Invalid should be used.
   EHFrameEdgeFixer(StringRef EHFrameSectionName, unsigned PointerSize,
