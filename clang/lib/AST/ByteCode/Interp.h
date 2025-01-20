@@ -3070,6 +3070,13 @@ inline IntegralAP<true> ReadArg<IntegralAP<true>>(InterpState &S,
   return I;
 }
 
+template <>
+inline FixedPoint ReadArg<FixedPoint>(InterpState &S, CodePtr &OpPC) {
+  FixedPoint FP = FixedPoint::deserialize(*OpPC);
+  OpPC += align(FP.bytesToSerialize());
+  return FP;
+}
+
 } // namespace interp
 } // namespace clang
 
