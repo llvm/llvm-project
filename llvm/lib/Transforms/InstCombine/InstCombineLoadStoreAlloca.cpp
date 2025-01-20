@@ -1060,6 +1060,10 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
         V1->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
         V2->setAlignment(Alignment);
         V2->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
+        // It is safe to copy any metadata that does not trigger UB. Copy any
+        // poison-generating metadata.
+        V1->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
+        V2->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
         return SelectInst::Create(SI->getCondition(), V1, V2);
       }
 

@@ -1524,13 +1524,18 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine({ISD::ZERO_EXTEND, ISD::FP_TO_SINT, ISD::FP_TO_UINT,
                          ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT});
   if (Subtarget.hasVInstructions())
-    setTargetDAGCombine({ISD::FCOPYSIGN, ISD::MGATHER, ISD::MSCATTER,
-                         ISD::VP_GATHER, ISD::VP_SCATTER, ISD::SRA, ISD::SRL,
-                         ISD::SHL, ISD::STORE, ISD::SPLAT_VECTOR,
-                         ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS,
-                         ISD::EXPERIMENTAL_VP_REVERSE, ISD::MUL,
-                         ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM,
-                         ISD::INSERT_VECTOR_ELT, ISD::ABS, ISD::CTPOP});
+    setTargetDAGCombine({ISD::FCOPYSIGN,     ISD::MGATHER,
+                         ISD::MSCATTER,      ISD::VP_GATHER,
+                         ISD::VP_SCATTER,    ISD::SRA,
+                         ISD::SRL,           ISD::SHL,
+                         ISD::STORE,         ISD::SPLAT_VECTOR,
+                         ISD::BUILD_VECTOR,  ISD::CONCAT_VECTORS,
+                         ISD::VP_STORE,      ISD::EXPERIMENTAL_VP_REVERSE,
+                         ISD::MUL,           ISD::SDIV,
+                         ISD::UDIV,          ISD::SREM,
+                         ISD::UREM,          ISD::INSERT_VECTOR_ELT,
+                         ISD::ABS,           ISD::CTPOP,
+                         ISD::VECTOR_SHUFFLE});
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
   if (Subtarget.useRVVForFixedLengthVectors())
@@ -5728,13 +5733,13 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 }
 
 bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
-  // Support splats for any type. These should type legalize well.
-  if (ShuffleVectorSDNode::isSplatMask(M.data(), VT))
-    return true;
-
   // Only support legal VTs for other shuffles for now.
   if (!isTypeLegal(VT))
     return false;
+
+  // Support splats for any type. These should type legalize well.
+  if (ShuffleVectorSDNode::isSplatMask(M.data(), VT))
+    return true;
 
   MVT SVT = VT.getSimpleVT();
 
@@ -16293,6 +16298,65 @@ static SDValue performVP_REVERSECombine(SDNode *N, SelectionDAG &DAG,
   return Ret;
 }
 
+static SDValue performVP_STORECombine(SDNode *N, SelectionDAG &DAG,
+                                      const RISCVSubtarget &Subtarget) {
+  // Fold:
+  //    vp.store(vp.reverse(VAL), ADDR, MASK) -> vp.strided.store(VAL, NEW_ADDR,
+  //    -1, MASK)
+  auto *VPStore = cast<VPStoreSDNode>(N);
+
+  if (VPStore->getValue().getOpcode() != ISD::EXPERIMENTAL_VP_REVERSE)
+    return SDValue();
+
+  SDValue VPReverse = VPStore->getValue();
+  EVT ReverseVT = VPReverse->getValueType(0);
+
+  // We do not have a strided_store version for masks, and the evl of vp.reverse
+  // and vp.store should always be the same.
+  if (!ReverseVT.getVectorElementType().isByteSized() ||
+      VPStore->getVectorLength() != VPReverse.getOperand(2) ||
+      !VPReverse.hasOneUse())
+    return SDValue();
+
+  SDValue StoreMask = VPStore->getMask();
+  // If Mask is all ones, then load is unmasked and can be reversed.
+  if (!isOneOrOneSplat(StoreMask)) {
+    // If the mask is not all ones, we can reverse the store if the mask was
+    // also reversed by an unmasked vp.reverse with the same EVL.
+    if (StoreMask.getOpcode() != ISD::EXPERIMENTAL_VP_REVERSE ||
+        !isOneOrOneSplat(StoreMask.getOperand(1)) ||
+        StoreMask.getOperand(2) != VPStore->getVectorLength())
+      return SDValue();
+    StoreMask = StoreMask.getOperand(0);
+  }
+
+  // Base = StoreAddr + (NumElem - 1) * ElemWidthByte
+  SDLoc DL(N);
+  MVT XLenVT = Subtarget.getXLenVT();
+  SDValue NumElem = VPStore->getVectorLength();
+  uint64_t ElemWidthByte = VPReverse.getValueType().getScalarSizeInBits() / 8;
+
+  SDValue Temp1 = DAG.getNode(ISD::SUB, DL, XLenVT, NumElem,
+                              DAG.getConstant(1, DL, XLenVT));
+  SDValue Temp2 = DAG.getNode(ISD::MUL, DL, XLenVT, Temp1,
+                              DAG.getConstant(ElemWidthByte, DL, XLenVT));
+  SDValue Base =
+      DAG.getNode(ISD::ADD, DL, XLenVT, VPStore->getBasePtr(), Temp2);
+  SDValue Stride = DAG.getConstant(-ElemWidthByte, DL, XLenVT);
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachinePointerInfo PtrInfo(VPStore->getAddressSpace());
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      PtrInfo, VPStore->getMemOperand()->getFlags(),
+      LocationSize::beforeOrAfterPointer(), VPStore->getAlign());
+
+  return DAG.getStridedStoreVP(
+      VPStore->getChain(), DL, VPReverse.getOperand(0), Base,
+      VPStore->getOffset(), Stride, StoreMask, VPStore->getVectorLength(),
+      VPStore->getMemoryVT(), MMO, VPStore->getAddressingMode(),
+      VPStore->isTruncatingStore(), VPStore->isCompressingStore());
+}
+
 // Convert from one FMA opcode to another based on whether we are negating the
 // multiply result and/or the accumulator.
 // NOTE: Only supports RVV operations with VL.
@@ -17075,6 +17139,37 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
 
   return DAG.getBitcast(VT.getSimpleVT(), StridedLoad);
 }
+
+/// Custom legalize <N x i128> or <N x i256> to <M x ELEN>.  This runs
+/// during the combine phase before type legalization, and relies on
+/// DAGCombine not undoing the transform if isShuffleMaskLegal returns false
+/// for the source mask.
+static SDValue performVECTOR_SHUFFLECombine(SDNode *N, SelectionDAG &DAG,
+                                            const RISCVSubtarget &Subtarget,
+                                            const RISCVTargetLowering &TLI) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  const unsigned ElementSize = VT.getScalarSizeInBits();
+  SDValue V1 = N->getOperand(0);
+  SDValue V2 = N->getOperand(1);
+  ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(N)->getMask();
+
+  if (TLI.isTypeLegal(VT) || ElementSize <= Subtarget.getELen() ||
+      !isPowerOf2_64(ElementSize) || VT.getVectorNumElements() % 2 != 0 ||
+      VT.isFloatingPoint() || TLI.isShuffleMaskLegal(Mask, VT))
+    return SDValue();
+
+  SmallVector<int, 8> NewMask;
+  narrowShuffleMaskElts(2, Mask, NewMask);
+
+  LLVMContext &C = *DAG.getContext();
+  EVT NewEltVT = EVT::getIntegerVT(C, ElementSize / 2);
+  EVT NewVT = EVT::getVectorVT(C, NewEltVT, VT.getVectorNumElements() * 2);
+  SDValue Res = DAG.getVectorShuffle(NewVT, DL, DAG.getBitcast(NewVT, V1),
+                                     DAG.getBitcast(NewVT, V2), NewMask);
+  return DAG.getBitcast(VT, Res);
+}
+
 
 static SDValue combineToVWMACC(SDNode *N, SelectionDAG &DAG,
                                const RISCVSubtarget &Subtarget) {
@@ -18305,6 +18400,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue V = performCONCAT_VECTORSCombine(N, DAG, Subtarget, *this))
       return V;
     break;
+  case ISD::VECTOR_SHUFFLE:
+    if (SDValue V = performVECTOR_SHUFFLECombine(N, DAG, Subtarget, *this))
+      return V;
+    break;
   case ISD::INSERT_VECTOR_ELT:
     if (SDValue V = performINSERT_VECTOR_ELTCombine(N, DAG, Subtarget, *this))
       return V;
@@ -18438,6 +18537,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   }
   case ISD::EXPERIMENTAL_VP_REVERSE:
     return performVP_REVERSECombine(N, DAG, Subtarget);
+  case ISD::VP_STORE:
+    return performVP_STORECombine(N, DAG, Subtarget);
   case ISD::BITCAST: {
     assert(Subtarget.useRVVForFixedLengthVectors());
     SDValue N0 = N->getOperand(0);
@@ -20508,7 +20609,8 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
 bool RISCVTargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
 

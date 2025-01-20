@@ -15,10 +15,10 @@ define void @test_amx(i8* %pointer, i8* %base, i32 %index, i64 %stride) {
 ; CHECK-NEXT:    tileloadd (%rsi,%rcx), %tmm0
 ; CHECK-NEXT:    tcvtrowd2ps %edx, %tmm0, %zmm0
 ; CHECK-NEXT:    tcvtrowd2ps $16, %tmm0, %zmm0
-; CHECK-NEXT:    tcvtrowps2pbf16h %edx, %tmm0, %zmm0
-; CHECK-NEXT:    tcvtrowps2pbf16h $16, %tmm0, %zmm0
-; CHECK-NEXT:    tcvtrowps2pbf16l %edx, %tmm0, %zmm0
-; CHECK-NEXT:    tcvtrowps2pbf16l $16, %tmm0, %zmm0
+; CHECK-NEXT:    tcvtrowps2bf16h %edx, %tmm0, %zmm0
+; CHECK-NEXT:    tcvtrowps2bf16h $16, %tmm0, %zmm0
+; CHECK-NEXT:    tcvtrowps2bf16l %edx, %tmm0, %zmm0
+; CHECK-NEXT:    tcvtrowps2bf16l $16, %tmm0, %zmm0
 ; CHECK-NEXT:    tcvtrowps2phh %edx, %tmm0, %zmm0
 ; CHECK-NEXT:    tcvtrowps2phh $16, %tmm0, %zmm0
 ; CHECK-NEXT:    tcvtrowps2phl %edx, %tmm0, %zmm0
@@ -33,10 +33,10 @@ define void @test_amx(i8* %pointer, i8* %base, i32 %index, i64 %stride) {
   %a = call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 8, i8* %base, i64 %stride)
   call <16 x float> @llvm.x86.tcvtrowd2ps.internal(i16 8, i16 8, x86_amx %a, i32 %index)
   call <16 x float> @llvm.x86.tcvtrowd2ps.internal(i16 8, i16 8, x86_amx %a, i32 16)
-  call <32 x bfloat> @llvm.x86.tcvtrowps2pbf16h.internal(i16 8, i16 8, x86_amx %a, i32 %index)
-  call <32 x bfloat> @llvm.x86.tcvtrowps2pbf16h.internal(i16 8, i16 8, x86_amx %a, i32 16)
-  call <32 x bfloat> @llvm.x86.tcvtrowps2pbf16l.internal(i16 8, i16 8, x86_amx %a, i32 %index)
-  call <32 x bfloat> @llvm.x86.tcvtrowps2pbf16l.internal(i16 8, i16 8, x86_amx %a, i32 16)
+  call <32 x bfloat> @llvm.x86.tcvtrowps2bf16h.internal(i16 8, i16 8, x86_amx %a, i32 %index)
+  call <32 x bfloat> @llvm.x86.tcvtrowps2bf16h.internal(i16 8, i16 8, x86_amx %a, i32 16)
+  call <32 x bfloat> @llvm.x86.tcvtrowps2bf16l.internal(i16 8, i16 8, x86_amx %a, i32 %index)
+  call <32 x bfloat> @llvm.x86.tcvtrowps2bf16l.internal(i16 8, i16 8, x86_amx %a, i32 16)
   call <32 x half> @llvm.x86.tcvtrowps2phh.internal(i16 8, i16 8, x86_amx %a, i32 %index)
   call <32 x half> @llvm.x86.tcvtrowps2phh.internal(i16 8, i16 8, x86_amx %a, i32 16)
   call <32 x half> @llvm.x86.tcvtrowps2phl.internal(i16 8, i16 8, x86_amx %a, i32 %index)
@@ -54,8 +54,8 @@ declare x86_amx @llvm.x86.tileloaddt164.internal(i16, i16, i8*, i64)
 declare void @llvm.x86.tilestored64.internal(i16, i16, i8*, i64, x86_amx)
 
 declare <16 x float> @llvm.x86.tcvtrowd2ps.internal(i16, i16, x86_amx, i32)
-declare <32 x bfloat> @llvm.x86.tcvtrowps2pbf16h.internal(i16, i16, x86_amx, i32)
-declare <32 x bfloat> @llvm.x86.tcvtrowps2pbf16l.internal(i16, i16, x86_amx, i32)
+declare <32 x bfloat> @llvm.x86.tcvtrowps2bf16h.internal(i16, i16, x86_amx, i32)
+declare <32 x bfloat> @llvm.x86.tcvtrowps2bf16l.internal(i16, i16, x86_amx, i32)
 declare <32 x half> @llvm.x86.tcvtrowps2phh.internal(i16, i16, x86_amx, i32)
 declare <32 x half> @llvm.x86.tcvtrowps2phl.internal(i16, i16, x86_amx, i32)
 declare <16 x i32> @llvm.x86.tilemovrow.internal(i16, i16, x86_amx, i32)

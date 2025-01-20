@@ -1104,8 +1104,7 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
 
     // A Variant SchedClass has no resources of its own.
     bool HasVariants = false;
-    for (const CodeGenSchedTransition &CGT :
-         make_range(SC.Transitions.begin(), SC.Transitions.end())) {
+    for (const CodeGenSchedTransition &CGT : SC.Transitions) {
       if (CGT.ProcIndex == ProcModel.Index) {
         HasVariants = true;
         break;
