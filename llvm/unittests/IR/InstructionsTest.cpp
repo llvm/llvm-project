@@ -220,11 +220,11 @@ TEST(InstructionsTest, CastInst) {
   Type *VScaleV4Int16Ty = ScalableVectorType::get(Int16Ty, 4);
   Type *VScaleV1Int16Ty = ScalableVectorType::get(Int16Ty, 1);
 
-  Type *Int32PtrTy = PointerType::get(Int32Ty, 0);
-  Type *Int64PtrTy = PointerType::get(Int64Ty, 0);
+  Type *Int32PtrTy = PointerType::get(C, 0);
+  Type *Int64PtrTy = PointerType::get(C, 0);
 
-  Type *Int32PtrAS1Ty = PointerType::get(Int32Ty, 1);
-  Type *Int64PtrAS1Ty = PointerType::get(Int64Ty, 1);
+  Type *Int32PtrAS1Ty = PointerType::get(C, 1);
+  Type *Int64PtrAS1Ty = PointerType::get(C, 1);
 
   Type *V2Int32PtrAS1Ty = FixedVectorType::get(Int32PtrAS1Ty, 2);
   Type *V2Int64PtrAS1Ty = FixedVectorType::get(Int64PtrAS1Ty, 2);
@@ -406,8 +406,8 @@ TEST(InstructionsTest, CastCAPI) {
   Type *FloatTy = Type::getFloatTy(C);
   Type *DoubleTy = Type::getDoubleTy(C);
 
-  Type *Int8PtrTy = PointerType::get(Int8Ty, 0);
-  Type *Int32PtrTy = PointerType::get(Int32Ty, 0);
+  Type *Int8PtrTy = PointerType::get(C, 0);
+  Type *Int32PtrTy = PointerType::get(C, 0);
 
   const Constant *C8 = Constant::getNullValue(Int8Ty);
   const Constant *C64 = Constant::getNullValue(Int64Ty);
@@ -448,7 +448,7 @@ TEST(InstructionsTest, CastCAPI) {
   EXPECT_EQ(LLVMTrunc, LLVMGetCastOpcode(wrap(CV64), true, wrap(V8x8Ty), true));
   EXPECT_EQ(LLVMSExt, LLVMGetCastOpcode(wrap(CV8), true, wrap(V8x64Ty), true));
 
-  Type *Int32PtrAS1Ty = PointerType::get(Int32Ty, 1);
+  Type *Int32PtrAS1Ty = PointerType::get(C, 1);
   Type *V2Int32PtrAS1Ty = FixedVectorType::get(Int32PtrAS1Ty, 2);
   Type *V2Int32PtrTy = FixedVectorType::get(Int32PtrTy, 2);
   const Constant *CV2ptr32 = Constant::getNullValue(V2Int32PtrTy);
@@ -463,8 +463,8 @@ TEST(InstructionsTest, VectorGep) {
   // Type Definitions
   Type *I8Ty = IntegerType::get(C, 8);
   Type *I32Ty = IntegerType::get(C, 32);
-  PointerType *Ptri8Ty = PointerType::get(I8Ty, 0);
-  PointerType *Ptri32Ty = PointerType::get(I32Ty, 0);
+  PointerType *Ptri8Ty = PointerType::get(C, 0);
+  PointerType *Ptri32Ty = PointerType::get(C, 0);
 
   VectorType *V2xi8PTy = FixedVectorType::get(Ptri8Ty, 2);
   VectorType *V2xi32PTy = FixedVectorType::get(Ptri32Ty, 2);

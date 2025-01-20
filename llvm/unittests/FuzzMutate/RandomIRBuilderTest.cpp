@@ -328,7 +328,7 @@ TEST(RandomIRBuilderTest, createStackMemory) {
       Int64Ty,
       DoubleTy,
       PointerType::get(Ctx, 0),
-      PointerType::get(Int32Ty, 0),
+      PointerType::get(Ctx, 0),
       VectorType::get(Int32Ty, 4, false),
       StructType::create({Int32Ty, DoubleTy, Int64Ty}),
       ArrayType::get(Int64Ty, 4),
