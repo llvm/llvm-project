@@ -3,8 +3,8 @@ add_mlir_library(MLIRArithTestPasses
   TestEmulateWideInt.cpp
 
   EXCLUDE_FROM_LIBMLIR
-)
-mlir_target_link_libraries(MLIRArithTestPasses PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIRArithDialect
   MLIRArithTransforms
   MLIRFuncDialect
