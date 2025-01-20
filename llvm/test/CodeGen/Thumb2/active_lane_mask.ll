@@ -277,10 +277,10 @@ define void @test_width2(ptr nocapture readnone %x, ptr nocapture %y, i8 zeroext
 ; CHECK-LABEL: test_width2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    beq .LBB5_3
-; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    popeq {r7, pc}
+; CHECK-NEXT:  .LBB5_1: @ %for.body.preheader
 ; CHECK-NEXT:    adds r0, r2, #1
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    bic r0, r0, #1
@@ -291,32 +291,24 @@ define void @test_width2(ptr nocapture readnone %x, ptr nocapture %y, i8 zeroext
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.64 r2
 ; CHECK-NEXT:    @ implicit-def: $q0
-; CHECK-NEXT:    subs r2, #2
-; CHECK-NEXT:    vmrs r3, p0
-; CHECK-NEXT:    and r0, r3, #1
-; CHECK-NEXT:    ubfx r3, r3, #8, #1
-; CHECK-NEXT:    rsb.w r12, r0, #0
-; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    rsbs r3, r3, #0
-; CHECK-NEXT:    bfi r0, r12, #0, #1
 ; CHECK-NEXT:    sub.w r12, r1, #8
-; CHECK-NEXT:    bfi r0, r3, #1, #1
-; CHECK-NEXT:    lsls r3, r0, #31
+; CHECK-NEXT:    vmrs r0, p0
+; CHECK-NEXT:    subs r2, #2
+; CHECK-NEXT:    ubfx r3, r0, #8, #1
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    orr.w r3, r0, r3, lsl #1
+; CHECK-NEXT:    lsls r0, r3, #31
 ; CHECK-NEXT:    itt ne
-; CHECK-NEXT:    ldrne.w r3, [r12]
-; CHECK-NEXT:    vmovne.32 q0[0], r3
-; CHECK-NEXT:    lsls r0, r0, #30
+; CHECK-NEXT:    ldrne.w r0, [r12]
+; CHECK-NEXT:    vmovne.32 q0[0], r0
+; CHECK-NEXT:    lsls r0, r3, #30
 ; CHECK-NEXT:    itt mi
 ; CHECK-NEXT:    ldrmi.w r0, [r12, #4]
 ; CHECK-NEXT:    vmovmi.32 q0[2], r0
-; CHECK-NEXT:    vmrs r3, p0
-; CHECK-NEXT:    and r0, r3, #1
-; CHECK-NEXT:    ubfx r3, r3, #8, #1
-; CHECK-NEXT:    rsb.w r12, r0, #0
-; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    rsbs r3, r3, #0
-; CHECK-NEXT:    bfi r0, r12, #0, #1
-; CHECK-NEXT:    bfi r0, r3, #1, #1
+; CHECK-NEXT:    vmrs r0, p0
+; CHECK-NEXT:    ubfx r3, r0, #8, #1
+; CHECK-NEXT:    and r0, r0, #1
+; CHECK-NEXT:    orr.w r0, r0, r3, lsl #1
 ; CHECK-NEXT:    lsls r3, r0, #31
 ; CHECK-NEXT:    itt ne
 ; CHECK-NEXT:    vmovne r3, s0
@@ -327,8 +319,7 @@ define void @test_width2(ptr nocapture readnone %x, ptr nocapture %y, i8 zeroext
 ; CHECK-NEXT:    strmi r0, [r1, #4]
 ; CHECK-NEXT:    adds r1, #8
 ; CHECK-NEXT:    le lr, .LBB5_2
-; CHECK-NEXT:  .LBB5_3: @ %for.cond.cleanup
-; CHECK-NEXT:    add sp, #4
+; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp9.not = icmp eq i8 %m, 0

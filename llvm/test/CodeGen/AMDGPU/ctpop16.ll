@@ -368,26 +368,26 @@ define amdgpu_kernel void @v_ctpop_v2i16(ptr addrspace(1) noalias %out, ptr addr
 ; EG-NEXT:    ALU 2, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
 ; EG-NEXT:    ALU 10, @11, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T6.X, 1
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    Fetch clause starting at 6:
-; EG-NEXT:     VTX_READ_32 T0.X, T0.X, 0, #1
+; EG-NEXT:      VTX_READ_32 T0.X, T0.X, 0, #1
 ; EG-NEXT:    ALU clause starting at 8:
-; EG-NEXT:     LSHL * T0.W, T0.X, literal.x,
+; EG-NEXT:      LSHL * T0.W, T0.X, literal.x,  
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; EG-NEXT:     ADD_INT * T0.X, KC0[2].Z, PV.W,
+; EG-NEXT:      ADD_INT * T0.X, KC0[2].Z, PV.W,  
 ; EG-NEXT:    ALU clause starting at 11:
-; EG-NEXT:     LSHR * T0.W, T0.X, literal.x,
+; EG-NEXT:      LSHR * T0.W, T0.X, literal.x,  
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     BCNT_INT T0.W, PV.W,
-; EG-NEXT:     AND_INT * T1.W, T0.X, literal.x,
+; EG-NEXT:      BCNT_INT   T0.W, PV.W,  
+; EG-NEXT:      AND_INT * T1.W, T0.X, literal.x,  
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     BCNT_INT T1.W, PS,
-; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
+; EG-NEXT:      BCNT_INT   T1.W, PS,  
+; EG-NEXT:      LSHL * T0.W, PV.W, literal.x,  
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     OR_INT T0.X, PV.W, PS,
-; EG-NEXT:     LSHR * T6.X, KC0[2].Y, literal.x,
+; EG-NEXT:      OR_INT   T0.X, PV.W, PS,  
+; EG-NEXT:      LSHR * T1.X, KC0[2].Y, literal.x,  
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr <2 x i16>, ptr addrspace(1) %in, i32 %tid
