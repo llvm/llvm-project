@@ -332,10 +332,10 @@ size_t WriteFile(int FD, const char *Buffer, size_t Size) {
 
   while (BytesWritten < Size) {
 #if defined(_WIN32) || defined(_WIN64)
-    size_t Ret =
+    ssize_t Ret =
         _write(FD, Buffer + BytesWritten, (unsigned int)(Size - BytesWritten));
 #else
-    size_t Ret = write(FD, Buffer + BytesWritten, Size - BytesWritten);
+    ssize_t Ret = write(FD, Buffer + BytesWritten, Size - BytesWritten);
 #endif
     if (Ret == 0) {
       break;

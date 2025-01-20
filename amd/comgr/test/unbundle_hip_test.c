@@ -135,7 +135,7 @@ int main(int Argc, char *Argv[]) {
     size_t BundleEntryIDsCount =
         sizeof(BundleEntryIDs) / sizeof(BundleEntryIDs[0]);
     Status = amd_comgr_action_info_set_bundle_entry_ids(ActionInfoUnbundle,
-                                                        BundleEntryIDs, 2);
+                                                        BundleEntryIDs, BundleEntryIDsCount);
 
     // Unbundle
     Status = amd_comgr_create_data_set(&DataSetUnbundled);
@@ -354,7 +354,7 @@ int main(int Argc, char *Argv[]) {
                                                              &BundleCount);
     checkError(Status, "amd_comgr_action_info_get_bundle_entry_id_count");
 
-    for (int I = 0; I < BundleCount; I++) {
+    for (size_t I = 0; I < BundleCount; I++) {
 
       size_t Size;
       Status = amd_comgr_action_info_get_bundle_entry_id(ActionInfoUnbundle, I,
