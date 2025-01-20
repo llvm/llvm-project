@@ -3,8 +3,8 @@ add_mlir_library(MLIRVectorTestPasses
   TestVectorTransforms.cpp
 
   EXCLUDE_FROM_LIBMLIR
-  )
-mlir_target_link_libraries(MLIRVectorTestPasses PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIRAffineDialect
   MLIRAnalysis
   MLIRArithDialect
