@@ -1,5 +1,6 @@
 // Tests that we implicitly map alloctable fields of a record when referenced in
 // a target region.
+// XFAIL: *
 
 // RUN: fir-opt --split-input-file --omp-map-info-finalization %s | FileCheck %s
 

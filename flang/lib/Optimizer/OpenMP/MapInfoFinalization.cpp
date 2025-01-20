@@ -240,22 +240,24 @@ class MapInfoFinalizationPass
   /// allowing `to` mappings, and `target update` not allowing both `to` and
   /// `from` simultaneously. We currently try to maintain the `implicit` flag
   /// where necessary, although it does not seem strictly required.
-
-unsigned long getDescriptorMapType(mlir::omp::MapInfoOp op,
+  unsigned long getDescriptorMapType(unsigned long mapTypeFlag,
                                      mlir::Operation *target) {
-    unsigned long mapType = op.getMapType().value_or(0);
     if (llvm::isa_and_nonnull<mlir::omp::TargetExitDataOp,
                               mlir::omp::TargetUpdateOp>(target))
-      return mapType;
- 
-    using MappingFlags = llvm::omp::OpenMPOffloadMappingFlags;
-    auto flags = MappingFlags::OMP_MAP_TO;
-    flags |= MappingFlags::OMP_MAP_ALWAYS;
-    flags |= MappingFlags(mapType) & MappingFlags::OMP_MAP_IMPLICIT;
-    if (fir::isTypeWithDescriptor(op.getVarType()))
-      flags |= MappingFlags::OMP_MAP_DESCRIPTOR;
- 
-    return llvm::to_underlying(flags);
+      return mapTypeFlag;
+
+    bool hasImplicitMap =
+        (llvm::omp::OpenMPOffloadMappingFlags(mapTypeFlag) &
+         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT) ==
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+
+    return llvm::to_underlying(
+        hasImplicitMap
+            ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
+                  llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT |
+                  llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS
+            : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
+                  llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS);
   }
 
   mlir::omp::MapInfoOp genDescriptorMemberMaps(mlir::omp::MapInfoOp op,
@@ -326,8 +328,9 @@ unsigned long getDescriptorMapType(mlir::omp::MapInfoOp op,
             mlir::TypeAttr::get(fir::unwrapRefType(descriptor.getType())),
             /*varPtrPtr=*/mlir::Value{}, newMembers, newMembersAttr,
             /*bounds=*/mlir::SmallVector<mlir::Value>{},
-            builder.getIntegerAttr(builder.getIntegerType(64, false),
-                                   getDescriptorMapType(op, target)),
+            builder.getIntegerAttr(
+                builder.getIntegerType(64, false),
+                getDescriptorMapType(op.getMapType().value_or(0), target)),
             op.getMapCaptureTypeAttr(), op.getNameAttr(),
             /*partial_map=*/builder.getBoolAttr(false));
     op.replaceAllUsesWith(newDescParentMapOp.getResult());
