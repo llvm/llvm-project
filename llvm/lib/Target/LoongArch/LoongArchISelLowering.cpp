@@ -468,11 +468,10 @@ SDValue LoongArchTargetLowering::lowerBITREVERSE(SDValue Op,
   for (unsigned int i = 0; i < NewEltNum; i++) {
     SDValue Op = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, NewSrc,
                              DAG.getConstant(i, DL, MVT::i64));
-    SDValue RevOp = DAG.getNode((ResTy == MVT::v16i8 || ResTy == MVT::v32i8)
-                                    ? LoongArchISD::BITREV_8B
-                                    : ISD::BITREVERSE,
-                                DL, MVT::i64, Op);
-    Ops.push_back(RevOp);
+    unsigned RevOp = (ResTy == MVT::v16i8 || ResTy == MVT::v32i8)
+                         ? (unsigned)LoongArchISD::BITREV_8B
+                         : (unsigned)ISD::BITREVERSE;
+    Ops.push_back(DAG.getNode(RevOp, DL, MVT::i64, Op));
   }
   SDValue Res =
       DAG.getNode(ISD::BITCAST, DL, ResTy, DAG.getBuildVector(NewVT, DL, Ops));
