@@ -192,15 +192,14 @@ void threads(atomic::OrderingTy Ordering);
 /// noinline is removed by the openmp-opt pass and helps to preserve the
 /// information till then.
 ///{
-#pragma omp begin assumes ext_aligned_barrier
 
 /// Synchronize all threads in a block, they are reaching the same instruction
 /// (hence all threads in the block are "aligned"). Also perform a fence before
 /// and after the barrier according to \p Ordering. Note that the
 /// fence might be part of the barrier if the target offers this.
-[[gnu::noinline]] void threadsAligned(atomic::OrderingTy Ordering);
+[[gnu::noinline, omp::assume("ompx_aligned_barrier")]] void
+threadsAligned(atomic::OrderingTy Ordering);
 
-#pragma omp end assumes
 ///}
 
 } // namespace synchronize
