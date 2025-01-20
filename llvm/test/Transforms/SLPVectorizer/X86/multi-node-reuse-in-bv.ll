@@ -8,7 +8,7 @@
 ; YAML-NEXT: Function:        test
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
-; YAML-NEXT:   - Cost:            '-38'
+; YAML-NEXT:   - Cost:            '-41'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '7'
 ; YAML-NEXT: ...
@@ -17,7 +17,7 @@ define i64 @test() {
 ; CHECK-LABEL: define i64 @test(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 undef, i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 0, i32 0, i32 0, i32 0>, i32 0, i32 6
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 undef, i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 0, i32 0, i32 1, i32 0>, i32 0, i32 6
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i32> @llvm.vector.insert.v32i32.v8i32(<32 x i32> [[TMP0]], <8 x i32> zeroinitializer, i64 8)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <32 x i32> @llvm.vector.insert.v32i32.v4i32(<32 x i32> [[TMP1]], <4 x i32> <i32 0, i32 0, i32 0, i32 1>, i64 24)
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub <32 x i32> zeroinitializer, [[TMP2]]
