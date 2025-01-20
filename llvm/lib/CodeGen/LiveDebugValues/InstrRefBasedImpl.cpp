@@ -283,7 +283,7 @@ public:
     if (Reg >= MTracker->NumRegs)
       return false;
     for (MCRegAliasIterator RAI(Reg, &TRI, true); RAI.isValid(); ++RAI)
-      if (CalleeSavedRegs.test(*RAI))
+      if (CalleeSavedRegs.test((*RAI).id()))
         return true;
     return false;
   };
@@ -1345,7 +1345,7 @@ bool InstrRefBasedLDV::isCalleeSaved(LocIdx L) const {
 }
 bool InstrRefBasedLDV::isCalleeSavedReg(Register R) const {
   for (MCRegAliasIterator RAI(R, TRI, true); RAI.isValid(); ++RAI)
-    if (CalleeSavedRegs.test(*RAI))
+    if (CalleeSavedRegs.test((*RAI).id()))
       return true;
   return false;
 }
@@ -1880,7 +1880,7 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
       // Remove ranges of all aliased registers.
       for (MCRegAliasIterator RAI(MO.getReg(), TRI, true); RAI.isValid(); ++RAI)
         // FIXME: Can we break out of this loop early if no insertion occurs?
-        DeadRegs.insert(*RAI);
+        DeadRegs.insert((*RAI).id());
     } else if (MO.isRegMask()) {
       RegMasks.push_back(MO.getRegMask());
       RegMaskPtrs.push_back(&MO);

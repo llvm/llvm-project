@@ -1114,9 +1114,12 @@ SPIRVGlobalRegistry::getSPIRVTypeForVReg(Register VReg,
   return nullptr;
 }
 
-SPIRVType *SPIRVGlobalRegistry::getResultType(Register VReg) {
-  MachineInstr *Instr = getVRegDef(CurMF->getRegInfo(), VReg);
-  return getSPIRVTypeForVReg(Instr->getOperand(1).getReg());
+SPIRVType *SPIRVGlobalRegistry::getResultType(Register VReg,
+                                              MachineFunction *MF) {
+  if (!MF)
+    MF = CurMF;
+  MachineInstr *Instr = getVRegDef(MF->getRegInfo(), VReg);
+  return getSPIRVTypeForVReg(Instr->getOperand(1).getReg(), MF);
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVType(

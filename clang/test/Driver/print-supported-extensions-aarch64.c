@@ -71,6 +71,8 @@
 // CHECK-NEXT:     sme-fa64            FEAT_SME_FA64                                          Enable the full A64 instruction set in streaming SVE mode
 // CHECK-NEXT:     sme-i16i64          FEAT_SME_I16I64                                        Enable Scalable Matrix Extension (SME) I16I64 instructions
 // CHECK-NEXT:     sme-lutv2           FEAT_SME_LUTv2                                         Enable Scalable Matrix Extension (SME) LUTv2 instructions
+// CHECK-NEXT:     sme-mop4            FEAT_SME_MOP4                                          Enable SME Quarter-tile outer product instructions
+// CHECK-NEXT:     sme-tmop            FEAT_SME_TMOP                                          Enable SME Structured sparsity outer product instructions
 // CHECK-NEXT:     sme2                FEAT_SME2                                              Enable Scalable Matrix Extension 2 (SME2) instructions
 // CHECK-NEXT:     sme2p1              FEAT_SME2p1                                            Enable Scalable Matrix Extension 2.1 instructions
 // CHECK-NEXT:     sme2p2              FEAT_SME2p2                                            Enable Armv9.6-A Scalable Matrix Extension 2.2 instructions

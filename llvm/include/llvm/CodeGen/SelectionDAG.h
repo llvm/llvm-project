@@ -287,13 +287,14 @@ class SelectionDAG {
   SDDbgInfo *DbgInfo;
 
   using CallSiteInfo = MachineFunction::CallSiteInfo;
+  using CalledGlobalInfo = MachineFunction::CalledGlobalInfo;
 
   struct NodeExtraInfo {
     CallSiteInfo CSInfo;
     MDNode *HeapAllocSite = nullptr;
     MDNode *PCSections = nullptr;
     MDNode *MMRA = nullptr;
-    std::pair<const GlobalValue *, unsigned> CalledGlobal{};
+    CalledGlobalInfo CalledGlobal{};
     bool NoMerge = false;
   };
   /// Out-of-line extra information for SDNodes.
@@ -2380,8 +2381,7 @@ public:
     SDEI[Node].CalledGlobal = {GV, OpFlags};
   }
   /// Return CalledGlobal associated with Node, or a nullopt if none exists.
-  std::optional<std::pair<const GlobalValue *, unsigned>>
-  getCalledGlobal(const SDNode *Node) {
+  std::optional<CalledGlobalInfo> getCalledGlobal(const SDNode *Node) {
     auto I = SDEI.find(Node);
     return I != SDEI.end()
                ? std::make_optional(std::move(I->second).CalledGlobal)

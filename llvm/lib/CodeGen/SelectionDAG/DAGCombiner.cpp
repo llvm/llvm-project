@@ -15770,7 +15770,7 @@ SDValue DAGCombiner::foldBitcastedFPLogic(SDNode *N, SelectionDAG &DAG,
   // FIXME: I don't think looking for bitcast intrinsically makes sense, but
   // removing this would require more changes.
   auto IsBitCastOrFree = [&TLI, FPOpcode](SDValue Op, EVT VT) {
-    if (Op.getOpcode() == ISD::BITCAST && Op.getOperand(0).getValueType() == VT)
+    if (sd_match(Op, m_BitCast(m_SpecificVT(VT))))
       return true;
 
     return FPOpcode == ISD::FABS ? TLI.isFAbsFree(VT) : TLI.isFNegFree(VT);
@@ -23807,6 +23807,13 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
   SmallVector<SDValue, 8> VecIn;
   VecIn.push_back(SDValue());
 
+  // If we have a single extract_element with a constant index, track the index
+  // value.
+  unsigned OneConstExtractIndex = ~0u;
+
+  // Count the number of extract_vector_elt sources (i.e. non-constant or undef)
+  unsigned NumExtracts = 0;
+
   for (unsigned i = 0; i != NumElems; ++i) {
     SDValue Op = N->getOperand(i);
 
@@ -23824,22 +23831,27 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
 
     // Not an undef or zero. If the input is something other than an
     // EXTRACT_VECTOR_ELT with an in-range constant index, bail out.
-    if (Op.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
-        !isa<ConstantSDNode>(Op.getOperand(1)))
+    if (Op.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
       return SDValue();
-    SDValue ExtractedFromVec = Op.getOperand(0);
 
+    SDValue ExtractedFromVec = Op.getOperand(0);
     if (ExtractedFromVec.getValueType().isScalableVector())
       return SDValue();
+    auto *ExtractIdx = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+    if (!ExtractIdx)
+      return SDValue();
 
-    const APInt &ExtractIdx = Op.getConstantOperandAPInt(1);
-    if (ExtractIdx.uge(ExtractedFromVec.getValueType().getVectorNumElements()))
+    if (ExtractIdx->getAsAPIntVal().uge(
+            ExtractedFromVec.getValueType().getVectorNumElements()))
       return SDValue();
 
     // All inputs must have the same element type as the output.
     if (VT.getVectorElementType() !=
         ExtractedFromVec.getValueType().getVectorElementType())
       return SDValue();
+
+    OneConstExtractIndex = ExtractIdx->getZExtValue();
+    ++NumExtracts;
 
     // Have we seen this input vector before?
     // The vectors are expected to be tiny (usually 1 or 2 elements), so using
@@ -23863,6 +23875,20 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
   // VecIn accordingly.
   bool DidSplitVec = false;
   if (VecIn.size() == 2) {
+    // If we only found a single constant indexed extract_vector_elt feeding the
+    // build_vector, do not produce a more complicated shuffle if the extract is
+    // cheap with other constant/undef elements. Skip broadcast patterns with
+    // multiple uses in the build_vector.
+
+    // TODO: This should be more aggressive about skipping the shuffle
+    // formation, particularly if VecIn[1].hasOneUse(), and regardless of the
+    // index.
+    if (NumExtracts == 1 &&
+        TLI.isOperationLegalOrCustom(ISD::EXTRACT_VECTOR_ELT, VT) &&
+        TLI.isTypeLegal(VT.getVectorElementType()) &&
+        TLI.isExtractVecEltCheap(VT, OneConstExtractIndex))
+      return SDValue();
+
     unsigned MaxIndex = 0;
     unsigned NearestPow2 = 0;
     SDValue Vec = VecIn.back();
@@ -26160,26 +26186,27 @@ static SDValue replaceShuffleOfInsert(ShuffleVectorSDNode *Shuf,
   // could be an operand of SCALAR_TO_VECTOR, BUILD_VECTOR, or a constant.
   assert(Mask[ShufOp0Index] >= 0 && Mask[ShufOp0Index] < (int)Mask.size() &&
          "Shuffle mask value must be from operand 0");
-  if (Op0.getOpcode() != ISD::INSERT_VECTOR_ELT)
-    return SDValue();
 
-  auto *InsIndexC = dyn_cast<ConstantSDNode>(Op0.getOperand(2));
-  if (!InsIndexC || InsIndexC->getSExtValue() != Mask[ShufOp0Index])
-    return SDValue();
+  SDValue Elt;
+  if (sd_match(Op0, m_InsertElt(m_Value(), m_Value(Elt),
+                                m_SpecificInt(Mask[ShufOp0Index])))) {
+    // There's an existing insertelement with constant insertion index, so we
+    // don't need to check the legality/profitability of a replacement operation
+    // that differs at most in the constant value. The target should be able to
+    // lower any of those in a similar way. If not, legalization will expand
+    // this to a scalar-to-vector plus shuffle.
+    //
+    // Note that the shuffle may move the scalar from the position that the
+    // insert element used. Therefore, our new insert element occurs at the
+    // shuffle's mask index value, not the insert's index value.
+    //
+    // shuffle (insertelt v1, x, C), v2, mask --> insertelt v2, x, C'
+    SDValue NewInsIndex = DAG.getVectorIdxConstant(ShufOp0Index, SDLoc(Shuf));
+    return DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(Shuf), Op0.getValueType(),
+                       Op1, Elt, NewInsIndex);
+  }
 
-  // There's an existing insertelement with constant insertion index, so we
-  // don't need to check the legality/profitability of a replacement operation
-  // that differs at most in the constant value. The target should be able to
-  // lower any of those in a similar way. If not, legalization will expand this
-  // to a scalar-to-vector plus shuffle.
-  //
-  // Note that the shuffle may move the scalar from the position that the insert
-  // element used. Therefore, our new insert element occurs at the shuffle's
-  // mask index value, not the insert's index value.
-  // shuffle (insertelt v1, x, C), v2, mask --> insertelt v2, x, C'
-  SDValue NewInsIndex = DAG.getVectorIdxConstant(ShufOp0Index, SDLoc(Shuf));
-  return DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(Shuf), Op0.getValueType(),
-                     Op1, Op0.getOperand(1), NewInsIndex);
+  return SDValue();
 }
 
 /// If we have a unary shuffle of a shuffle, see if it can be folded away
@@ -27525,22 +27552,26 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG,
   if ((Opcode == ISD::MULHS || Opcode == ISD::MULHU) && !TLI.isTypeLegal(EltVT))
     return SDValue();
 
+  if (N0.getOpcode() == ISD::BUILD_VECTOR && N0.getOpcode() == N1.getOpcode()) {
+    // All but one element should have an undef input, which will fold to a
+    // constant or undef. Avoid splatting which would over-define potentially
+    // undefined elements.
+
+    // bo (build_vec ..undef, X, undef...), (build_vec ..undef, Y, undef...) -->
+    //   build_vec ..undef, (bo X, Y), undef...
+    SmallVector<SDValue, 16> EltsX, EltsY, EltsResult;
+    DAG.ExtractVectorElements(Src0, EltsX);
+    DAG.ExtractVectorElements(Src1, EltsY);
+
+    for (auto [X, Y] : zip(EltsX, EltsY))
+      EltsResult.push_back(DAG.getNode(Opcode, DL, EltVT, X, Y, N->getFlags()));
+    return DAG.getBuildVector(VT, DL, EltsResult);
+  }
+
   SDValue IndexC = DAG.getVectorIdxConstant(Index0, DL);
   SDValue X = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Src0, IndexC);
   SDValue Y = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Src1, IndexC);
   SDValue ScalarBO = DAG.getNode(Opcode, DL, EltVT, X, Y, N->getFlags());
-
-  // If all lanes but 1 are undefined, no need to splat the scalar result.
-  // TODO: Keep track of undefs and use that info in the general case.
-  if (N0.getOpcode() == ISD::BUILD_VECTOR && N0.getOpcode() == N1.getOpcode() &&
-      count_if(N0->ops(), [](SDValue V) { return !V.isUndef(); }) == 1 &&
-      count_if(N1->ops(), [](SDValue V) { return !V.isUndef(); }) == 1) {
-    // bo (build_vec ..undef, X, undef...), (build_vec ..undef, Y, undef...) -->
-    // build_vec ..undef, (bo X, Y), undef...
-    SmallVector<SDValue, 8> Ops(VT.getVectorNumElements(), DAG.getUNDEF(EltVT));
-    Ops[Index0] = ScalarBO;
-    return DAG.getBuildVector(VT, DL, Ops);
-  }
 
   // bo (splat X, Index), (splat Y, Index) --> splat (bo X, Y), Index
   return DAG.getSplat(VT, DL, ScalarBO);

@@ -1343,7 +1343,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_FPRCVT,       AArch64::AEK_CMPBR,
       AArch64::AEK_LSUI,         AArch64::AEK_OCCMO,
       AArch64::AEK_PCDPHINT,     AArch64::AEK_POPS,
-      AArch64::AEK_SVEAES,       AArch64::AEK_SVEBITPERM,
+      AArch64::AEK_SVEAES,       AArch64::AEK_SME_MOP4,
+      AArch64::AEK_SME_TMOP,     AArch64::AEK_SVEBITPERM,
       AArch64::AEK_SSVE_BITPERM,
   };
 
@@ -1452,6 +1453,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+occmo"));
   EXPECT_TRUE(llvm::is_contained(Features, "+pcdphint"));
   EXPECT_TRUE(llvm::is_contained(Features, "+pops"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sme-mop4"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sme-tmop"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1611,6 +1614,8 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"occmo", "nooccmo", "+occmo", "-occmo"},
       {"pcdphint", "nopcdphint", "+pcdphint", "-pcdphint"},
       {"pops", "nopops", "+pops", "-pops"},
+      {"sme-mop4", "nosme-mop4", "+sme-mop4", "-sme-mop4"},
+      {"sme-tmop", "nosme-tmop", "+sme-tmop", "-sme-tmop"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {
@@ -2033,7 +2038,15 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV9_6A,
          {"sve2", "sve-aes", "nosve2-aes"},
          {"sve2"},
-         {"sve2-aes", "sve-aes"}}};
+         {"sve2-aes", "sve-aes"}},
+
+        // sme-tmop -> sme
+        {AArch64::ARMV8A, {"nosme2", "sme-tmop"}, {"sme2", "sme-tmop"}, {}},
+        {AArch64::ARMV8A, {"sme-tmop", "nosme2"}, {}, {"sme2", "sme-tmop"}},
+
+        // sme-mop4 -> sme
+        {AArch64::ARMV8A, {"nosme", "sme-mop4"}, {"sme", "sme-mop4"}, {}},
+        {AArch64::ARMV8A, {"sme-mop4", "nosme"}, {}, {"sme", "sme-mop4"}}};
 
 INSTANTIATE_TEST_SUITE_P(
     AArch64ExtensionDependenciesBaseArch,

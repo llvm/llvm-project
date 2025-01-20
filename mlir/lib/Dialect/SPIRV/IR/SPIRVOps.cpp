@@ -1699,6 +1699,33 @@ LogicalResult spirv::TransposeOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.MatrixTimesVector
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::MatrixTimesVectorOp::verify() {
+  auto matrixType = llvm::cast<spirv::MatrixType>(getMatrix().getType());
+  auto vectorType = llvm::cast<VectorType>(getVector().getType());
+  auto resultType = llvm::cast<VectorType>(getType());
+
+  if (matrixType.getNumColumns() != vectorType.getNumElements())
+    return emitOpError("matrix columns (")
+           << matrixType.getNumColumns() << ") must match vector operand size ("
+           << vectorType.getNumElements() << ")";
+
+  if (resultType.getNumElements() != matrixType.getNumRows())
+    return emitOpError("result size (")
+           << resultType.getNumElements() << ") must match the matrix rows ("
+           << matrixType.getNumRows() << ")";
+
+  auto matrixElementType = matrixType.getElementType();
+  if (matrixElementType != vectorType.getElementType() ||
+      matrixElementType != resultType.getElementType())
+    return emitOpError("matrix, vector, and result element types must match");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.MatrixTimesMatrix
 //===----------------------------------------------------------------------===//
 

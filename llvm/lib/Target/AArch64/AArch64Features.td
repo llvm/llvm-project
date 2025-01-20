@@ -570,6 +570,12 @@ def FeaturePoPS: ExtensionWithMArch<"pops", "PoPS", "FEAT_PoPS",
 def FeatureSSVE_BitPerm : ExtensionWithMArch<"ssve-bitperm", "SSVE_BitPerm", "FEAT_SSVE_BitPerm",
   "Enable Armv9.6-A SVE BitPerm support in streaming SVE mode", [FeatureSME2, FeatureSVEBitPerm]>;
 
+def FeatureSME_MOP4: ExtensionWithMArch<"sme-mop4", "SME_MOP4", "FEAT_SME_MOP4",
+  "Enable SME Quarter-tile outer product instructions", [FeatureSME2]>;
+
+def FeatureSME_TMOP: ExtensionWithMArch<"sme-tmop", "SME_TMOP", "FEAT_SME_TMOP",
+  "Enable SME Structured sparsity outer product instructions.", [FeatureSME2]>;
+
 //===----------------------------------------------------------------------===//
 //  Other Features
 //===----------------------------------------------------------------------===//
