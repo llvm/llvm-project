@@ -46,7 +46,7 @@ public:
                                          values.end().getCurrent()))) {}
   template <typename Arg, typename = std::enable_if_t<std::is_constructible<
                               ArrayRef<Type>, Arg>::value>>
-  TypeRange(Arg &&arg LLVM_LIFETIME_BOUND) 
+  TypeRange(Arg &&arg LLVM_LIFETIME_BOUND)
       : TypeRange(ArrayRef<Type>(std::forward<Arg>(arg))) {}
   TypeRange(std::initializer_list<Type> types LLVM_LIFETIME_BOUND)
       : TypeRange(ArrayRef<Type>(types)) {}
