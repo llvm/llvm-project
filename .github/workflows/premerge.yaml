@@ -18,6 +18,9 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-windows-${{ github.event.pull_request.number || github.sha }}
       cancel-in-progress: true
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@v4
