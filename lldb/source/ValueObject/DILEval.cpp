@@ -123,10 +123,8 @@ LookupIdentifier(const std::string &name,
     if (!reg_ctx)
       return nullptr;
 
-    if (const RegisterInfo *reg_info =
-        reg_ctx->GetRegisterInfoByName(reg_name))
-      value_sp =
-          ValueObjectRegister::Create(stack_frame, reg_ctx, reg_info);
+    if (const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName(reg_name))
+      value_sp = ValueObjectRegister::Create(stack_frame, reg_ctx, reg_info);
 
     if (value_sp)
       return IdentifierInfo::FromValue(*value_sp);
