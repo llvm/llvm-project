@@ -1924,7 +1924,6 @@ DataFlowSanitizer::getShadowOriginAddress(Value *Addr, Align InstAlignment,
     ShadowLong =
         IRB.CreateAdd(ShadowLong, ConstantInt::get(IntptrTy, ShadowBase));
   }
-  IntegerType *ShadowTy = IntegerType::get(*Ctx, ShadowWidthBits);
   Value *ShadowPtr = IRB.CreateIntToPtr(ShadowLong, PointerType::get(*Ctx, 0));
   Value *OriginPtr = nullptr;
   if (shouldTrackOrigins()) {
