@@ -22,7 +22,7 @@ target triple = "aarch64-none-unknown-elf"
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     SCALAR-PHI vp<%0> = phi ir<0>, vp<%index.next>
-; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%accum> = phi ir<0>, vp<%4> (VF scaled by 1/4)
+; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%accum> = phi ir<0>, ir<%add> (VF scaled by 1/4)
 ; CHECK-NEXT:     vp<%1> = SCALAR-STEPS vp<%0>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%gep.a> = getelementptr ir<%a>, vp<%1>
 ; CHECK-NEXT:     vp<%2> = vector-pointer ir<%gep.a>
@@ -33,7 +33,7 @@ target triple = "aarch64-none-unknown-elf"
 ; CHECK-NEXT:     WIDEN ir<%load.b> = load vp<%3>
 ; CHECK-NEXT:     WIDEN-CAST ir<%ext.b> = zext ir<%load.b> to i32
 ; CHECK-NEXT:     WIDEN ir<%mul> = mul ir<%ext.b>, ir<%ext.a>
-; CHECK-NEXT:     PARTIAL-REDUCE vp<%4> = add ir<%mul>, ir<%accum>
+; CHECK-NEXT:     PARTIAL-REDUCE ir<%add> = add ir<%mul>, ir<%accum>
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<%0>, ir<16>
 ; CHECK-NEXT:     EMIT branch-on-count vp<%index.next>, ir<1024>
 ; CHECK-NEXT:   No successors
@@ -41,19 +41,19 @@ target triple = "aarch64-none-unknown-elf"
 ; CHECK-NEXT: Successor(s): ir-bb<middle.block>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<middle.block>:
-; CHECK-NEXT:   EMIT vp<%6> = compute-reduction-result ir<%accum>, vp<%4>
-; CHECK-NEXT:   EMIT vp<%7> = extract-from-end vp<%6>, ir<1>
+; CHECK-NEXT:   EMIT vp<%5> = compute-reduction-result ir<%accum>, ir<%add>
+; CHECK-NEXT:   EMIT vp<%6> = extract-from-end vp<%5>, ir<1>
 ; CHECK-NEXT:   EMIT vp<%cmp.n> = icmp eq ir<1024>, ir<1024>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>:
-; CHECK-NEXT:   IR   %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<%7> from ir-bb<middle.block>)
+; CHECK-NEXT:   IR   %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<%6> from ir-bb<middle.block>)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<scalar.ph>:
 ; CHECK-NEXT:   EMIT vp<%vec.epilog.resume.val> = resume-phi ir<1024>, ir<0>
-; CHECK-NEXT:   EMIT vp<%bc.merge.rdx> = resume-phi vp<%6>, ir<0>
+; CHECK-NEXT:   EMIT vp<%bc.merge.rdx> = resume-phi vp<%5>, ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:
