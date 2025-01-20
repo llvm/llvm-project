@@ -57,7 +57,6 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
         command_result = lldb.SBCommandReturnObject()
         interp = self.dbg.GetCommandInterpreter()
 
-
         self.expect("settings set target.experimental.use-DIL true", substrs=[""])
         self.expect("frame variable 'globalVar'", substrs=["-559038737"])  # 0xDEADBEEF
         self.expect("frame variable 'globalPtr'", patterns=["0x[0-9]+"])
@@ -68,13 +67,13 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
         self.expect(
             "frame variable 'externGlobalVar'",
             error=True,
-            substrs=["use of undeclared identifier"]
+            substrs=["use of undeclared identifier"],
         )  # 0x00C0FFEE
         self.expect(
             "frame variable '::externGlobalVar'",
             error=True,
-            substrs=["use of undeclared identifier"]
-        ) # ["12648430"])
+            substrs=["use of undeclared identifier"],
+        )  # ["12648430"])
         self.expect("frame variable 'ns::globalVar'", substrs=["13"])
         self.expect("frame variable 'ns::globalPtr'", patterns=["0x[0-9]+"])
         self.expect("frame variable 'ns::globalRef'", substrs=["13"])
