@@ -17,6 +17,8 @@ Prerequisites
 ==================================
 - `cmake` (version 3.16 or later)
 - `ninja-build`
+-> run all cmake and ninja commands from build directory 
+
 - `g++` or another C++ compiler supporting C++17
 - `libgtest-dev` for Google Test
 --Install missing packages on Ubuntu:
@@ -43,6 +45,8 @@ Next you need to obtain the CMake build system and Ninja build tool.
 .. code-block:: console
 
       cd ~/clang-llvm
+      mkdir build
+      cd build
       git clone https://github.com/martine/ninja.git
       cd ninja
       git checkout release
