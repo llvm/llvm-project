@@ -33,5 +33,14 @@ jobs:
       - name: Build and Test
         continue-on-error: true
         run: |
-          echo test
+          modified_files=$(git diff --name-only HEAD~1...HEAD)
+          modified_dirs=$(echo "$modified_files" | cut -d'/' -f1 | sort -u)
+
+          echo $modified_files
+          echo $modified_dirs
+
+          . ./.ci/compute-projects.sh
+
+          all_projects="bolt clang clang-tools-extra compiler-rt cross-project-tests flang libc libclc lld lldb llvm mlir openmp polly pstl"
+          modified_projects="$(keep-modified-projects ${all_projects})"
 
