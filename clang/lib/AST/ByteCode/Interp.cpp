@@ -321,7 +321,7 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
     if (Ptr.isDynamic()) {
       S.FFDiag(Src, diag::note_constexpr_access_deleted_object) << AK;
-    } else {
+    } else if (!S.checkingPotentialConstantExpression()) {
       bool IsTemp = Ptr.isTemporary();
       S.FFDiag(Src, diag::note_constexpr_lifetime_ended, 1) << AK << !IsTemp;
 
