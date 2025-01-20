@@ -22120,7 +22120,10 @@ SDValue tryCombineToWideAdd(SDValue &Op0, SDValue &Op1, SDValue &Op2,
   EVT AccVT = Op0->getValueType(0);
   Op1 = Op1->getOperand(0);
   EVT Op1VT = Op1.getValueType();
+  // Makes Op2's value type match the value type of Op1 without its extend.
   Op2 = DAG.getAnyExtOrTrunc(Op2, DL, Op1VT);
+  // Make a MUL between Op1 and Op2 here so the MUL can be changed if possible
+  // (can be pruned or changed to a shift instruction for example).
   SDValue Input = DAG.getNode(ISD::MUL, DL, Op1VT, Op1, Op2);
 
   if (!AccVT.isScalableVector())
@@ -22133,6 +22136,7 @@ SDValue tryCombineToWideAdd(SDValue &Op0, SDValue &Op1, SDValue &Op2,
 
   unsigned NewOpcode = Op1Opcode == ISD::SIGN_EXTEND ? ISD::PARTIAL_REDUCE_SMLA
                                                      : ISD::PARTIAL_REDUCE_UMLA;
+  // Return a constant of 1s for Op2 so the MUL is not performed again.
   return DAG.getNode(NewOpcode, DL, AccVT, Op0, Input,
                      DAG.getConstant(1, DL, Op1VT));
 }
@@ -29389,11 +29393,19 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
                                                             : AArch64ISD::UDOT;
     return DAG.getNode(DotOpcode, DL, AccVT, Acc, Input1, Input2);
   }
+
+  SDValue MulInput = Input1;
+  // If Input2 is a splat vector of constant 1 then the MUL instruction is not
+  // needed. If it was created here it would not be automatically pruned.
+  if (Input2.getOpcode() != ISD::SPLAT_VECTOR || Input2.getNumOperands() == 0 ||
+      !isOneConstant(Input2.getOperand(0)))
+    MulInput = DAG.getNode(ISD::MUL, DL, InputVT, Input1, Input2);
+
   bool InputIsSigned = Opcode == ISD::PARTIAL_REDUCE_SMLA;
   unsigned BottomOpcode =
       InputIsSigned ? AArch64ISD::SADDWB : AArch64ISD::UADDWB;
   unsigned TopOpcode = InputIsSigned ? AArch64ISD::SADDWT : AArch64ISD::UADDWT;
-  auto BottomNode = DAG.getNode(BottomOpcode, DL, AccVT, Acc, Input1);
+  SDValue BottomNode = DAG.getNode(BottomOpcode, DL, AccVT, Acc, Input1);
   return DAG.getNode(TopOpcode, DL, AccVT, BottomNode, Input1);
 }
 
