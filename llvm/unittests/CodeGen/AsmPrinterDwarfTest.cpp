@@ -398,13 +398,13 @@ protected:
 
     auto *AP = TestPrinter->getAP();
     AP->addAsmPrinterHandler(std::make_unique<TestHandler>(*this));
-    LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(&AP->TM);
+    TargetMachine *TM = &AP->TM;
     legacy::PassManager PM;
-    PM.add(new MachineModuleInfoWrapperPass(LLVMTM));
+    PM.add(new MachineModuleInfoWrapperPass(TM));
     PM.add(TestPrinter->releaseAP()); // Takes ownership of destroying AP
     LLVMContext Context;
     std::unique_ptr<Module> M(new Module("TestModule", Context));
-    M->setDataLayout(LLVMTM->createDataLayout());
+    M->setDataLayout(TM->createDataLayout());
     PM.run(*M);
     // Now check that we can run it twice.
     AP->addAsmPrinterHandler(std::make_unique<TestHandler>(*this));
@@ -448,13 +448,13 @@ protected:
 
     auto *AP = TestPrinter->getAP();
     AP->addDebugHandler(std::make_unique<TestDebugHandler>(*this, AP));
-    LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(&AP->TM);
+    TargetMachine *TM = &AP->TM;
     legacy::PassManager PM;
-    PM.add(new MachineModuleInfoWrapperPass(LLVMTM));
+    PM.add(new MachineModuleInfoWrapperPass(TM));
     PM.add(TestPrinter->releaseAP()); // Takes ownership of destroying AP
     LLVMContext Context;
     std::unique_ptr<Module> M(new Module("TestModule", Context));
-    M->setDataLayout(LLVMTM->createDataLayout());
+    M->setDataLayout(TM->createDataLayout());
     PM.run(*M);
     // Now check that we can run it twice.
     AP->addDebugHandler(std::make_unique<TestDebugHandler>(*this, AP));

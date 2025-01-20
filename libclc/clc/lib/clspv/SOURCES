@@ -1,0 +1,5 @@
+../generic/math/clc_ceil.cl
+../generic/math/clc_fabs.cl
+../generic/math/clc_floor.cl
+../generic/math/clc_rint.cl
+../generic/math/clc_trunc.cl

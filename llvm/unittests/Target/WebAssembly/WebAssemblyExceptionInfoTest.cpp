@@ -22,7 +22,7 @@ using namespace llvm;
 
 namespace {
 
-std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
+std::unique_ptr<TargetMachine> createTargetMachine() {
   auto TT(Triple::normalize("wasm32-unknown-unknown"));
   std::string CPU;
   std::string FS;
@@ -35,9 +35,9 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
   const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
   assert(TheTarget);
 
-  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+  return std::unique_ptr<TargetMachine>(
       TheTarget->createTargetMachine(TT, CPU, FS, TargetOptions(), std::nullopt,
-                                     std::nullopt, CodeGenOptLevel::Default)));
+                                     std::nullopt, CodeGenOptLevel::Default));
 }
 
 std::unique_ptr<Module> parseMIR(LLVMContext &Context,
@@ -65,7 +65,7 @@ std::unique_ptr<Module> parseMIR(LLVMContext &Context,
 } // namespace
 
 TEST(WebAssemblyExceptionInfoTest, TEST0) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   ASSERT_TRUE(TM);
 
   StringRef MIRString = R"MIR(
@@ -167,8 +167,8 @@ body: |
   WebAssemblyExceptionInfo WEI;
   MachineDominatorTree MDT;
   MachineDominanceFrontier MDF;
-  MDT.calculate(*MF);
-  MDF.getBase().analyze(MDT.getBase());
+  MDT.recalculate(*MF);
+  MDF.getBase().analyze(MDT);
   WEI.recalculate(*MF, MDT, MDF);
 
   // Exception info structure:
@@ -227,7 +227,7 @@ body: |
 }
 
 TEST(WebAssemblyExceptionInfoTest, TEST1) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   ASSERT_TRUE(TM);
 
   StringRef MIRString = R"MIR(
@@ -341,8 +341,8 @@ body: |
   WebAssemblyExceptionInfo WEI;
   MachineDominatorTree MDT;
   MachineDominanceFrontier MDF;
-  MDT.calculate(*MF);
-  MDF.getBase().analyze(MDT.getBase());
+  MDT.recalculate(*MF);
+  MDF.getBase().analyze(MDT);
   WEI.recalculate(*MF, MDT, MDF);
 
   // Exception info structure:

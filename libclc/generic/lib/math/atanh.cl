@@ -21,9 +21,9 @@
  */
 
 #include <clc/clc.h>
+#include <clc/clcmacro.h>
 
 #include "math.h"
-#include "../clcmacro.h"
 
 _CLC_OVERLOAD _CLC_DEF float atanh(float x) {
     uint ux = as_uint(x);

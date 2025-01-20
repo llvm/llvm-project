@@ -485,14 +485,14 @@
 // PRMTD_FAST-NEXT:    [[A_REAL:%.*]] = load float, ptr [[A_REALP]], align 4
 // PRMTD_FAST-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
 // PRMTD_FAST-NEXT:    [[A_IMAG:%.*]] = load float, ptr [[A_IMAGP]], align 4
-// PRMTD_FAST-NEXT:    [[EXT:%.*]] = fpext float [[A_REAL]] to double
-// PRMTD_FAST-NEXT:    [[EXT1:%.*]] = fpext float [[A_IMAG]] to double
+// PRMTD_FAST-NEXT:    [[EXT:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[A_REAL]] to double
+// PRMTD_FAST-NEXT:    [[EXT1:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[A_IMAG]] to double
 // PRMTD_FAST-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 0
 // PRMTD_FAST-NEXT:    [[B_REAL:%.*]] = load float, ptr [[B_REALP]], align 4
 // PRMTD_FAST-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 1
 // PRMTD_FAST-NEXT:    [[B_IMAG:%.*]] = load float, ptr [[B_IMAGP]], align 4
-// PRMTD_FAST-NEXT:    [[EXT2:%.*]] = fpext float [[B_REAL]] to double
-// PRMTD_FAST-NEXT:    [[EXT3:%.*]] = fpext float [[B_IMAG]] to double
+// PRMTD_FAST-NEXT:    [[EXT2:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[B_REAL]] to double
+// PRMTD_FAST-NEXT:    [[EXT3:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[B_IMAG]] to double
 // PRMTD_FAST-NEXT:    [[TMP0:%.*]] = fmul reassoc nnan ninf nsz arcp afn double [[EXT]], [[EXT2]]
 // PRMTD_FAST-NEXT:    [[TMP1:%.*]] = fmul reassoc nnan ninf nsz arcp afn double [[EXT1]], [[EXT3]]
 // PRMTD_FAST-NEXT:    [[TMP2:%.*]] = fadd reassoc nnan ninf nsz arcp afn double [[TMP0]], [[TMP1]]
@@ -504,8 +504,8 @@
 // PRMTD_FAST-NEXT:    [[TMP8:%.*]] = fsub reassoc nnan ninf nsz arcp afn double [[TMP6]], [[TMP7]]
 // PRMTD_FAST-NEXT:    [[TMP9:%.*]] = fdiv reassoc nnan ninf nsz arcp afn double [[TMP2]], [[TMP5]]
 // PRMTD_FAST-NEXT:    [[TMP10:%.*]] = fdiv reassoc nnan ninf nsz arcp afn double [[TMP8]], [[TMP5]]
-// PRMTD_FAST-NEXT:    [[UNPROMOTION:%.*]] = fptrunc double [[TMP9]] to float
-// PRMTD_FAST-NEXT:    [[UNPROMOTION4:%.*]] = fptrunc double [[TMP10]] to float
+// PRMTD_FAST-NEXT:    [[UNPROMOTION:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn double [[TMP9]] to float
+// PRMTD_FAST-NEXT:    [[UNPROMOTION4:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn double [[TMP10]] to float
 // PRMTD_FAST-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 0
 // PRMTD_FAST-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 1
 // PRMTD_FAST-NEXT:    store float [[UNPROMOTION]], ptr [[RETVAL_REALP]], align 4
@@ -1264,24 +1264,24 @@ _Complex float mulf(_Complex float a, _Complex float b) {
 // AVRFP32-SAME: float noundef [[A_COERCE0:%.*]], float noundef [[A_COERCE1:%.*]], float noundef [[B_COERCE0:%.*]], float noundef [[B_COERCE1:%.*]]) addrspace(1) #[[ATTR0]] {
 // AVRFP32-NEXT:  entry:
 // AVRFP32-NEXT:    [[RETVAL:%.*]] = alloca { float, float }, align 1
-// AVRFP32-NEXT:    [[A:%.*]] = alloca { float, float }, align 4
-// AVRFP32-NEXT:    [[B:%.*]] = alloca { float, float }, align 4
+// AVRFP32-NEXT:    [[A:%.*]] = alloca { float, float }, align 1
+// AVRFP32-NEXT:    [[B:%.*]] = alloca { float, float }, align 1
 // AVRFP32-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
-// AVRFP32-NEXT:    store float [[A_COERCE0]], ptr [[TMP0]], align 4
+// AVRFP32-NEXT:    store float [[A_COERCE0]], ptr [[TMP0]], align 1
 // AVRFP32-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
-// AVRFP32-NEXT:    store float [[A_COERCE1]], ptr [[TMP1]], align 4
+// AVRFP32-NEXT:    store float [[A_COERCE1]], ptr [[TMP1]], align 1
 // AVRFP32-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 0
-// AVRFP32-NEXT:    store float [[B_COERCE0]], ptr [[TMP2]], align 4
+// AVRFP32-NEXT:    store float [[B_COERCE0]], ptr [[TMP2]], align 1
 // AVRFP32-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 1
-// AVRFP32-NEXT:    store float [[B_COERCE1]], ptr [[TMP3]], align 4
+// AVRFP32-NEXT:    store float [[B_COERCE1]], ptr [[TMP3]], align 1
 // AVRFP32-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
-// AVRFP32-NEXT:    [[A_REAL:%.*]] = load float, ptr [[A_REALP]], align 4
+// AVRFP32-NEXT:    [[A_REAL:%.*]] = load float, ptr [[A_REALP]], align 1
 // AVRFP32-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
-// AVRFP32-NEXT:    [[A_IMAG:%.*]] = load float, ptr [[A_IMAGP]], align 4
+// AVRFP32-NEXT:    [[A_IMAG:%.*]] = load float, ptr [[A_IMAGP]], align 1
 // AVRFP32-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 0
-// AVRFP32-NEXT:    [[B_REAL:%.*]] = load float, ptr [[B_REALP]], align 4
+// AVRFP32-NEXT:    [[B_REAL:%.*]] = load float, ptr [[B_REALP]], align 1
 // AVRFP32-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 1
-// AVRFP32-NEXT:    [[B_IMAG:%.*]] = load float, ptr [[B_IMAGP]], align 4
+// AVRFP32-NEXT:    [[B_IMAG:%.*]] = load float, ptr [[B_IMAGP]], align 1
 // AVRFP32-NEXT:    [[TMP4:%.*]] = call addrspace(1) float @llvm.fabs.f32(float [[B_REAL]])
 // AVRFP32-NEXT:    [[TMP5:%.*]] = call addrspace(1) float @llvm.fabs.f32(float [[B_IMAG]])
 // AVRFP32-NEXT:    [[ABS_CMP:%.*]] = fcmp ugt float [[TMP4]], [[TMP5]]
@@ -1321,24 +1321,24 @@ _Complex float mulf(_Complex float a, _Complex float b) {
 // AVRFP64-LABEL: define dso_local void @divd(
 // AVRFP64-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 1 [[AGG_RESULT:%.*]], double noundef [[A_COERCE0:%.*]], double noundef [[A_COERCE1:%.*]], double noundef [[B_COERCE0:%.*]], double noundef [[B_COERCE1:%.*]]) addrspace(1) #[[ATTR0]] {
 // AVRFP64-NEXT:  entry:
-// AVRFP64-NEXT:    [[A:%.*]] = alloca { double, double }, align 8
-// AVRFP64-NEXT:    [[B:%.*]] = alloca { double, double }, align 8
+// AVRFP64-NEXT:    [[A:%.*]] = alloca { double, double }, align 1
+// AVRFP64-NEXT:    [[B:%.*]] = alloca { double, double }, align 1
 // AVRFP64-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
-// AVRFP64-NEXT:    store double [[A_COERCE0]], ptr [[TMP0]], align 8
+// AVRFP64-NEXT:    store double [[A_COERCE0]], ptr [[TMP0]], align 1
 // AVRFP64-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
-// AVRFP64-NEXT:    store double [[A_COERCE1]], ptr [[TMP1]], align 8
+// AVRFP64-NEXT:    store double [[A_COERCE1]], ptr [[TMP1]], align 1
 // AVRFP64-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
-// AVRFP64-NEXT:    store double [[B_COERCE0]], ptr [[TMP2]], align 8
+// AVRFP64-NEXT:    store double [[B_COERCE0]], ptr [[TMP2]], align 1
 // AVRFP64-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
-// AVRFP64-NEXT:    store double [[B_COERCE1]], ptr [[TMP3]], align 8
+// AVRFP64-NEXT:    store double [[B_COERCE1]], ptr [[TMP3]], align 1
 // AVRFP64-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
-// AVRFP64-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
+// AVRFP64-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 1
 // AVRFP64-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
-// AVRFP64-NEXT:    [[A_IMAG:%.*]] = load double, ptr [[A_IMAGP]], align 8
+// AVRFP64-NEXT:    [[A_IMAG:%.*]] = load double, ptr [[A_IMAGP]], align 1
 // AVRFP64-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
-// AVRFP64-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
+// AVRFP64-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 1
 // AVRFP64-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
-// AVRFP64-NEXT:    [[B_IMAG:%.*]] = load double, ptr [[B_IMAGP]], align 8
+// AVRFP64-NEXT:    [[B_IMAG:%.*]] = load double, ptr [[B_IMAGP]], align 1
 // AVRFP64-NEXT:    [[TMP4:%.*]] = call addrspace(1) double @llvm.fabs.f64(double [[B_REAL]])
 // AVRFP64-NEXT:    [[TMP5:%.*]] = call addrspace(1) double @llvm.fabs.f64(double [[B_IMAG]])
 // AVRFP64-NEXT:    [[ABS_CMP:%.*]] = fcmp ugt double [[TMP4]], [[TMP5]]
@@ -1530,14 +1530,14 @@ _Complex float mulf(_Complex float a, _Complex float b) {
 // PRMTD_FAST-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
 // PRMTD_FAST-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
 // PRMTD_FAST-NEXT:    [[A_IMAG:%.*]] = load double, ptr [[A_IMAGP]], align 8
-// PRMTD_FAST-NEXT:    [[EXT:%.*]] = fpext double [[A_REAL]] to x86_fp80
-// PRMTD_FAST-NEXT:    [[EXT1:%.*]] = fpext double [[A_IMAG]] to x86_fp80
+// PRMTD_FAST-NEXT:    [[EXT:%.*]] = fpext reassoc nnan ninf nsz arcp afn double [[A_REAL]] to x86_fp80
+// PRMTD_FAST-NEXT:    [[EXT1:%.*]] = fpext reassoc nnan ninf nsz arcp afn double [[A_IMAG]] to x86_fp80
 // PRMTD_FAST-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
 // PRMTD_FAST-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
 // PRMTD_FAST-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
 // PRMTD_FAST-NEXT:    [[B_IMAG:%.*]] = load double, ptr [[B_IMAGP]], align 8
-// PRMTD_FAST-NEXT:    [[EXT2:%.*]] = fpext double [[B_REAL]] to x86_fp80
-// PRMTD_FAST-NEXT:    [[EXT3:%.*]] = fpext double [[B_IMAG]] to x86_fp80
+// PRMTD_FAST-NEXT:    [[EXT2:%.*]] = fpext reassoc nnan ninf nsz arcp afn double [[B_REAL]] to x86_fp80
+// PRMTD_FAST-NEXT:    [[EXT3:%.*]] = fpext reassoc nnan ninf nsz arcp afn double [[B_IMAG]] to x86_fp80
 // PRMTD_FAST-NEXT:    [[TMP4:%.*]] = fmul reassoc nnan ninf nsz arcp afn x86_fp80 [[EXT]], [[EXT2]]
 // PRMTD_FAST-NEXT:    [[TMP5:%.*]] = fmul reassoc nnan ninf nsz arcp afn x86_fp80 [[EXT1]], [[EXT3]]
 // PRMTD_FAST-NEXT:    [[TMP6:%.*]] = fadd reassoc nnan ninf nsz arcp afn x86_fp80 [[TMP4]], [[TMP5]]
@@ -1549,8 +1549,8 @@ _Complex float mulf(_Complex float a, _Complex float b) {
 // PRMTD_FAST-NEXT:    [[TMP12:%.*]] = fsub reassoc nnan ninf nsz arcp afn x86_fp80 [[TMP10]], [[TMP11]]
 // PRMTD_FAST-NEXT:    [[TMP13:%.*]] = fdiv reassoc nnan ninf nsz arcp afn x86_fp80 [[TMP6]], [[TMP9]]
 // PRMTD_FAST-NEXT:    [[TMP14:%.*]] = fdiv reassoc nnan ninf nsz arcp afn x86_fp80 [[TMP12]], [[TMP9]]
-// PRMTD_FAST-NEXT:    [[UNPROMOTION:%.*]] = fptrunc x86_fp80 [[TMP13]] to double
-// PRMTD_FAST-NEXT:    [[UNPROMOTION4:%.*]] = fptrunc x86_fp80 [[TMP14]] to double
+// PRMTD_FAST-NEXT:    [[UNPROMOTION:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn x86_fp80 [[TMP13]] to double
+// PRMTD_FAST-NEXT:    [[UNPROMOTION4:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn x86_fp80 [[TMP14]] to double
 // PRMTD_FAST-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 0
 // PRMTD_FAST-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[RETVAL]], i32 0, i32 1
 // PRMTD_FAST-NEXT:    store double [[UNPROMOTION]], ptr [[RETVAL_REALP]], align 8
@@ -1862,24 +1862,24 @@ _Complex double divd(_Complex double a, _Complex double b) {
 // AVRFP32-SAME: float noundef [[A_COERCE0:%.*]], float noundef [[A_COERCE1:%.*]], float noundef [[B_COERCE0:%.*]], float noundef [[B_COERCE1:%.*]]) addrspace(1) #[[ATTR0]] {
 // AVRFP32-NEXT:  entry:
 // AVRFP32-NEXT:    [[RETVAL:%.*]] = alloca { float, float }, align 1
-// AVRFP32-NEXT:    [[A:%.*]] = alloca { float, float }, align 4
-// AVRFP32-NEXT:    [[B:%.*]] = alloca { float, float }, align 4
+// AVRFP32-NEXT:    [[A:%.*]] = alloca { float, float }, align 1
+// AVRFP32-NEXT:    [[B:%.*]] = alloca { float, float }, align 1
 // AVRFP32-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
-// AVRFP32-NEXT:    store float [[A_COERCE0]], ptr [[TMP0]], align 4
+// AVRFP32-NEXT:    store float [[A_COERCE0]], ptr [[TMP0]], align 1
 // AVRFP32-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
-// AVRFP32-NEXT:    store float [[A_COERCE1]], ptr [[TMP1]], align 4
+// AVRFP32-NEXT:    store float [[A_COERCE1]], ptr [[TMP1]], align 1
 // AVRFP32-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 0
-// AVRFP32-NEXT:    store float [[B_COERCE0]], ptr [[TMP2]], align 4
+// AVRFP32-NEXT:    store float [[B_COERCE0]], ptr [[TMP2]], align 1
 // AVRFP32-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 1
-// AVRFP32-NEXT:    store float [[B_COERCE1]], ptr [[TMP3]], align 4
+// AVRFP32-NEXT:    store float [[B_COERCE1]], ptr [[TMP3]], align 1
 // AVRFP32-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
-// AVRFP32-NEXT:    [[A_REAL:%.*]] = load float, ptr [[A_REALP]], align 4
+// AVRFP32-NEXT:    [[A_REAL:%.*]] = load float, ptr [[A_REALP]], align 1
 // AVRFP32-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
-// AVRFP32-NEXT:    [[A_IMAG:%.*]] = load float, ptr [[A_IMAGP]], align 4
+// AVRFP32-NEXT:    [[A_IMAG:%.*]] = load float, ptr [[A_IMAGP]], align 1
 // AVRFP32-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 0
-// AVRFP32-NEXT:    [[B_REAL:%.*]] = load float, ptr [[B_REALP]], align 4
+// AVRFP32-NEXT:    [[B_REAL:%.*]] = load float, ptr [[B_REALP]], align 1
 // AVRFP32-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 1
-// AVRFP32-NEXT:    [[B_IMAG:%.*]] = load float, ptr [[B_IMAGP]], align 4
+// AVRFP32-NEXT:    [[B_IMAG:%.*]] = load float, ptr [[B_IMAGP]], align 1
 // AVRFP32-NEXT:    [[MUL_AC:%.*]] = fmul float [[A_REAL]], [[B_REAL]]
 // AVRFP32-NEXT:    [[MUL_BD:%.*]] = fmul float [[A_IMAG]], [[B_IMAG]]
 // AVRFP32-NEXT:    [[MUL_AD:%.*]] = fmul float [[A_REAL]], [[B_IMAG]]
@@ -1896,24 +1896,24 @@ _Complex double divd(_Complex double a, _Complex double b) {
 // AVRFP64-LABEL: define dso_local void @muld(
 // AVRFP64-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 1 [[AGG_RESULT:%.*]], double noundef [[A_COERCE0:%.*]], double noundef [[A_COERCE1:%.*]], double noundef [[B_COERCE0:%.*]], double noundef [[B_COERCE1:%.*]]) addrspace(1) #[[ATTR0]] {
 // AVRFP64-NEXT:  entry:
-// AVRFP64-NEXT:    [[A:%.*]] = alloca { double, double }, align 8
-// AVRFP64-NEXT:    [[B:%.*]] = alloca { double, double }, align 8
+// AVRFP64-NEXT:    [[A:%.*]] = alloca { double, double }, align 1
+// AVRFP64-NEXT:    [[B:%.*]] = alloca { double, double }, align 1
 // AVRFP64-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
-// AVRFP64-NEXT:    store double [[A_COERCE0]], ptr [[TMP0]], align 8
+// AVRFP64-NEXT:    store double [[A_COERCE0]], ptr [[TMP0]], align 1
 // AVRFP64-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
-// AVRFP64-NEXT:    store double [[A_COERCE1]], ptr [[TMP1]], align 8
+// AVRFP64-NEXT:    store double [[A_COERCE1]], ptr [[TMP1]], align 1
 // AVRFP64-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
-// AVRFP64-NEXT:    store double [[B_COERCE0]], ptr [[TMP2]], align 8
+// AVRFP64-NEXT:    store double [[B_COERCE0]], ptr [[TMP2]], align 1
 // AVRFP64-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
-// AVRFP64-NEXT:    store double [[B_COERCE1]], ptr [[TMP3]], align 8
+// AVRFP64-NEXT:    store double [[B_COERCE1]], ptr [[TMP3]], align 1
 // AVRFP64-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
-// AVRFP64-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
+// AVRFP64-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 1
 // AVRFP64-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 1
-// AVRFP64-NEXT:    [[A_IMAG:%.*]] = load double, ptr [[A_IMAGP]], align 8
+// AVRFP64-NEXT:    [[A_IMAG:%.*]] = load double, ptr [[A_IMAGP]], align 1
 // AVRFP64-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
-// AVRFP64-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
+// AVRFP64-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 1
 // AVRFP64-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 1
-// AVRFP64-NEXT:    [[B_IMAG:%.*]] = load double, ptr [[B_IMAGP]], align 8
+// AVRFP64-NEXT:    [[B_IMAG:%.*]] = load double, ptr [[B_IMAGP]], align 1
 // AVRFP64-NEXT:    [[MUL_AC:%.*]] = fmul double [[A_REAL]], [[B_REAL]]
 // AVRFP64-NEXT:    [[MUL_BD:%.*]] = fmul double [[A_IMAG]], [[B_IMAG]]
 // AVRFP64-NEXT:    [[MUL_AD:%.*]] = fmul double [[A_REAL]], [[B_IMAG]]
@@ -3697,8 +3697,8 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // BASIC_FAST-NEXT:    [[C_REAL:%.*]] = load float, ptr [[C_REALP]], align 4
 // BASIC_FAST-NEXT:    [[C_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[C]], i32 0, i32 1
 // BASIC_FAST-NEXT:    [[C_IMAG:%.*]] = load float, ptr [[C_IMAGP]], align 4
-// BASIC_FAST-NEXT:    [[CONV:%.*]] = fpext float [[C_REAL]] to x86_fp80
-// BASIC_FAST-NEXT:    [[CONV1:%.*]] = fpext float [[C_IMAG]] to x86_fp80
+// BASIC_FAST-NEXT:    [[CONV:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[C_REAL]] to x86_fp80
+// BASIC_FAST-NEXT:    [[CONV1:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[C_IMAG]] to x86_fp80
 // BASIC_FAST-NEXT:    [[TMP0:%.*]] = fmul reassoc nnan ninf nsz arcp afn x86_fp80 [[B_REAL]], [[CONV]]
 // BASIC_FAST-NEXT:    [[TMP1:%.*]] = fmul reassoc nnan ninf nsz arcp afn x86_fp80 [[B_IMAG]], [[CONV1]]
 // BASIC_FAST-NEXT:    [[TMP2:%.*]] = fadd reassoc nnan ninf nsz arcp afn x86_fp80 [[TMP0]], [[TMP1]]
@@ -3710,8 +3710,8 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // BASIC_FAST-NEXT:    [[TMP8:%.*]] = fsub reassoc nnan ninf nsz arcp afn x86_fp80 [[TMP6]], [[TMP7]]
 // BASIC_FAST-NEXT:    [[TMP9:%.*]] = fdiv reassoc nnan ninf nsz arcp afn x86_fp80 [[TMP2]], [[TMP5]]
 // BASIC_FAST-NEXT:    [[TMP10:%.*]] = fdiv reassoc nnan ninf nsz arcp afn x86_fp80 [[TMP8]], [[TMP5]]
-// BASIC_FAST-NEXT:    [[CONV2:%.*]] = fptrunc x86_fp80 [[TMP9]] to float
-// BASIC_FAST-NEXT:    [[CONV3:%.*]] = fptrunc x86_fp80 [[TMP10]] to float
+// BASIC_FAST-NEXT:    [[CONV2:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn x86_fp80 [[TMP9]] to float
+// BASIC_FAST-NEXT:    [[CONV3:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn x86_fp80 [[TMP10]] to float
 // BASIC_FAST-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
 // BASIC_FAST-NEXT:    [[A_REAL:%.*]] = load float, ptr [[A_REALP]], align 4
 // BASIC_FAST-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
@@ -3751,13 +3751,13 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // FULL_FAST-NEXT:    [[C_REAL:%.*]] = load float, ptr [[C_REALP]], align 4
 // FULL_FAST-NEXT:    [[C_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[C]], i32 0, i32 1
 // FULL_FAST-NEXT:    [[C_IMAG:%.*]] = load float, ptr [[C_IMAGP]], align 4
-// FULL_FAST-NEXT:    [[CONV:%.*]] = fpext float [[C_REAL]] to x86_fp80
-// FULL_FAST-NEXT:    [[CONV1:%.*]] = fpext float [[C_IMAG]] to x86_fp80
+// FULL_FAST-NEXT:    [[CONV:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[C_REAL]] to x86_fp80
+// FULL_FAST-NEXT:    [[CONV1:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[C_IMAG]] to x86_fp80
 // FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn nofpclass(nan inf) { x86_fp80, x86_fp80 } @__divxc3(x86_fp80 noundef nofpclass(nan inf) [[B_REAL]], x86_fp80 noundef nofpclass(nan inf) [[B_IMAG]], x86_fp80 noundef nofpclass(nan inf) [[CONV]], x86_fp80 noundef nofpclass(nan inf) [[CONV1]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[TMP0:%.*]] = extractvalue { x86_fp80, x86_fp80 } [[CALL]], 0
 // FULL_FAST-NEXT:    [[TMP1:%.*]] = extractvalue { x86_fp80, x86_fp80 } [[CALL]], 1
-// FULL_FAST-NEXT:    [[CONV2:%.*]] = fptrunc x86_fp80 [[TMP0]] to float
-// FULL_FAST-NEXT:    [[CONV3:%.*]] = fptrunc x86_fp80 [[TMP1]] to float
+// FULL_FAST-NEXT:    [[CONV2:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn x86_fp80 [[TMP0]] to float
+// FULL_FAST-NEXT:    [[CONV3:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn x86_fp80 [[TMP1]] to float
 // FULL_FAST-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
 // FULL_FAST-NEXT:    [[A_REAL:%.*]] = load float, ptr [[A_REALP]], align 4
 // FULL_FAST-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
@@ -3791,8 +3791,8 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // IMPRVD_FAST-NEXT:    [[C_REAL:%.*]] = load float, ptr [[C_REALP]], align 4
 // IMPRVD_FAST-NEXT:    [[C_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[C]], i32 0, i32 1
 // IMPRVD_FAST-NEXT:    [[C_IMAG:%.*]] = load float, ptr [[C_IMAGP]], align 4
-// IMPRVD_FAST-NEXT:    [[CONV:%.*]] = fpext float [[C_REAL]] to x86_fp80
-// IMPRVD_FAST-NEXT:    [[CONV1:%.*]] = fpext float [[C_IMAG]] to x86_fp80
+// IMPRVD_FAST-NEXT:    [[CONV:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[C_REAL]] to x86_fp80
+// IMPRVD_FAST-NEXT:    [[CONV1:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[C_IMAG]] to x86_fp80
 // IMPRVD_FAST-NEXT:    [[TMP0:%.*]] = call reassoc nnan ninf nsz arcp afn x86_fp80 @llvm.fabs.f80(x86_fp80 [[CONV]])
 // IMPRVD_FAST-NEXT:    [[TMP1:%.*]] = call reassoc nnan ninf nsz arcp afn x86_fp80 @llvm.fabs.f80(x86_fp80 [[CONV1]])
 // IMPRVD_FAST-NEXT:    [[ABS_CMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn ugt x86_fp80 [[TMP0]], [[TMP1]]
@@ -3822,8 +3822,8 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // IMPRVD_FAST:       complex_div:
 // IMPRVD_FAST-NEXT:    [[TMP20:%.*]] = phi reassoc nnan ninf nsz arcp afn x86_fp80 [ [[TMP7]], [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI]] ], [ [[TMP16]], [[ABS_RHSR_LESS_THAN_ABS_RHSI]] ]
 // IMPRVD_FAST-NEXT:    [[TMP21:%.*]] = phi reassoc nnan ninf nsz arcp afn x86_fp80 [ [[TMP10]], [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI]] ], [ [[TMP19]], [[ABS_RHSR_LESS_THAN_ABS_RHSI]] ]
-// IMPRVD_FAST-NEXT:    [[CONV2:%.*]] = fptrunc x86_fp80 [[TMP20]] to float
-// IMPRVD_FAST-NEXT:    [[CONV3:%.*]] = fptrunc x86_fp80 [[TMP21]] to float
+// IMPRVD_FAST-NEXT:    [[CONV2:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn x86_fp80 [[TMP20]] to float
+// IMPRVD_FAST-NEXT:    [[CONV3:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn x86_fp80 [[TMP21]] to float
 // IMPRVD_FAST-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
 // IMPRVD_FAST-NEXT:    [[A_REAL:%.*]] = load float, ptr [[A_REALP]], align 4
 // IMPRVD_FAST-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
@@ -3880,8 +3880,8 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // PRMTD_FAST-NEXT:    [[C_REAL:%.*]] = load float, ptr [[C_REALP]], align 4
 // PRMTD_FAST-NEXT:    [[C_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[C]], i32 0, i32 1
 // PRMTD_FAST-NEXT:    [[C_IMAG:%.*]] = load float, ptr [[C_IMAGP]], align 4
-// PRMTD_FAST-NEXT:    [[CONV:%.*]] = fpext float [[C_REAL]] to x86_fp80
-// PRMTD_FAST-NEXT:    [[CONV1:%.*]] = fpext float [[C_IMAG]] to x86_fp80
+// PRMTD_FAST-NEXT:    [[CONV:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[C_REAL]] to x86_fp80
+// PRMTD_FAST-NEXT:    [[CONV1:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[C_IMAG]] to x86_fp80
 // PRMTD_FAST-NEXT:    [[TMP0:%.*]] = call reassoc nnan ninf nsz arcp afn x86_fp80 @llvm.fabs.f80(x86_fp80 [[CONV]])
 // PRMTD_FAST-NEXT:    [[TMP1:%.*]] = call reassoc nnan ninf nsz arcp afn x86_fp80 @llvm.fabs.f80(x86_fp80 [[CONV1]])
 // PRMTD_FAST-NEXT:    [[ABS_CMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn ugt x86_fp80 [[TMP0]], [[TMP1]]
@@ -3911,16 +3911,16 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // PRMTD_FAST:       complex_div:
 // PRMTD_FAST-NEXT:    [[TMP20:%.*]] = phi reassoc nnan ninf nsz arcp afn x86_fp80 [ [[TMP7]], [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI]] ], [ [[TMP16]], [[ABS_RHSR_LESS_THAN_ABS_RHSI]] ]
 // PRMTD_FAST-NEXT:    [[TMP21:%.*]] = phi reassoc nnan ninf nsz arcp afn x86_fp80 [ [[TMP10]], [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI]] ], [ [[TMP19]], [[ABS_RHSR_LESS_THAN_ABS_RHSI]] ]
-// PRMTD_FAST-NEXT:    [[CONV2:%.*]] = fptrunc x86_fp80 [[TMP20]] to float
-// PRMTD_FAST-NEXT:    [[CONV3:%.*]] = fptrunc x86_fp80 [[TMP21]] to float
-// PRMTD_FAST-NEXT:    [[EXT:%.*]] = fpext float [[CONV2]] to double
-// PRMTD_FAST-NEXT:    [[EXT4:%.*]] = fpext float [[CONV3]] to double
+// PRMTD_FAST-NEXT:    [[CONV2:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn x86_fp80 [[TMP20]] to float
+// PRMTD_FAST-NEXT:    [[CONV3:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn x86_fp80 [[TMP21]] to float
+// PRMTD_FAST-NEXT:    [[EXT:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[CONV2]] to double
+// PRMTD_FAST-NEXT:    [[EXT4:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[CONV3]] to double
 // PRMTD_FAST-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
 // PRMTD_FAST-NEXT:    [[A_REAL:%.*]] = load float, ptr [[A_REALP]], align 4
 // PRMTD_FAST-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
 // PRMTD_FAST-NEXT:    [[A_IMAG:%.*]] = load float, ptr [[A_IMAGP]], align 4
-// PRMTD_FAST-NEXT:    [[EXT5:%.*]] = fpext float [[A_REAL]] to double
-// PRMTD_FAST-NEXT:    [[EXT6:%.*]] = fpext float [[A_IMAG]] to double
+// PRMTD_FAST-NEXT:    [[EXT5:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[A_REAL]] to double
+// PRMTD_FAST-NEXT:    [[EXT6:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[A_IMAG]] to double
 // PRMTD_FAST-NEXT:    [[TMP22:%.*]] = fmul reassoc nnan ninf nsz arcp afn double [[EXT]], [[EXT5]]
 // PRMTD_FAST-NEXT:    [[TMP23:%.*]] = fmul reassoc nnan ninf nsz arcp afn double [[EXT4]], [[EXT6]]
 // PRMTD_FAST-NEXT:    [[TMP24:%.*]] = fadd reassoc nnan ninf nsz arcp afn double [[TMP22]], [[TMP23]]
@@ -3932,8 +3932,8 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // PRMTD_FAST-NEXT:    [[TMP30:%.*]] = fsub reassoc nnan ninf nsz arcp afn double [[TMP28]], [[TMP29]]
 // PRMTD_FAST-NEXT:    [[TMP31:%.*]] = fdiv reassoc nnan ninf nsz arcp afn double [[TMP24]], [[TMP27]]
 // PRMTD_FAST-NEXT:    [[TMP32:%.*]] = fdiv reassoc nnan ninf nsz arcp afn double [[TMP30]], [[TMP27]]
-// PRMTD_FAST-NEXT:    [[UNPROMOTION:%.*]] = fptrunc double [[TMP31]] to float
-// PRMTD_FAST-NEXT:    [[UNPROMOTION7:%.*]] = fptrunc double [[TMP32]] to float
+// PRMTD_FAST-NEXT:    [[UNPROMOTION:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn double [[TMP31]] to float
+// PRMTD_FAST-NEXT:    [[UNPROMOTION7:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn double [[TMP32]] to float
 // PRMTD_FAST-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 0
 // PRMTD_FAST-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 1
 // PRMTD_FAST-NEXT:    store float [[UNPROMOTION]], ptr [[RETVAL_REALP]], align 4

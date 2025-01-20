@@ -24,10 +24,10 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; IC1-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP2]]
 ; IC1-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
 ; IC1-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[TMP3]], align 1
-; IC1-NEXT:    [[TMP7:%.*]] = icmp eq <2 x i8> [[WIDE_LOAD]], <i8 -12, i8 -12>
-; IC1-NEXT:    [[TMP4:%.*]] = icmp eq <2 x i8> [[WIDE_LOAD]], <i8 13, i8 13>
+; IC1-NEXT:    [[TMP7:%.*]] = icmp eq <2 x i8> [[WIDE_LOAD]], splat (i8 -12)
+; IC1-NEXT:    [[TMP4:%.*]] = icmp eq <2 x i8> [[WIDE_LOAD]], splat (i8 13)
 ; IC1-NEXT:    [[TMP11:%.*]] = or <2 x i1> [[TMP7]], [[TMP4]]
-; IC1-NEXT:    [[TMP10:%.*]] = xor <2 x i1> [[TMP11]], <i1 true, i1 true>
+; IC1-NEXT:    [[TMP10:%.*]] = xor <2 x i1> [[TMP11]], splat (i1 true)
 ; IC1-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
 ; IC1-NEXT:    br i1 [[TMP5]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; IC1:       [[PRED_STORE_IF]]:
@@ -124,14 +124,14 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; IC2-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 2
 ; IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[TMP5]], align 1
 ; IC2-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x i8>, ptr [[TMP6]], align 1
-; IC2-NEXT:    [[TMP13:%.*]] = icmp eq <2 x i8> [[WIDE_LOAD]], <i8 -12, i8 -12>
-; IC2-NEXT:    [[TMP14:%.*]] = icmp eq <2 x i8> [[WIDE_LOAD6]], <i8 -12, i8 -12>
-; IC2-NEXT:    [[TMP7:%.*]] = icmp eq <2 x i8> [[WIDE_LOAD]], <i8 13, i8 13>
-; IC2-NEXT:    [[TMP8:%.*]] = icmp eq <2 x i8> [[WIDE_LOAD6]], <i8 13, i8 13>
+; IC2-NEXT:    [[TMP13:%.*]] = icmp eq <2 x i8> [[WIDE_LOAD]], splat (i8 -12)
+; IC2-NEXT:    [[TMP14:%.*]] = icmp eq <2 x i8> [[WIDE_LOAD6]], splat (i8 -12)
+; IC2-NEXT:    [[TMP7:%.*]] = icmp eq <2 x i8> [[WIDE_LOAD]], splat (i8 13)
+; IC2-NEXT:    [[TMP8:%.*]] = icmp eq <2 x i8> [[WIDE_LOAD6]], splat (i8 13)
 ; IC2-NEXT:    [[TMP21:%.*]] = or <2 x i1> [[TMP13]], [[TMP7]]
 ; IC2-NEXT:    [[TMP22:%.*]] = or <2 x i1> [[TMP14]], [[TMP8]]
-; IC2-NEXT:    [[TMP19:%.*]] = xor <2 x i1> [[TMP21]], <i1 true, i1 true>
-; IC2-NEXT:    [[TMP20:%.*]] = xor <2 x i1> [[TMP22]], <i1 true, i1 true>
+; IC2-NEXT:    [[TMP19:%.*]] = xor <2 x i1> [[TMP21]], splat (i1 true)
+; IC2-NEXT:    [[TMP20:%.*]] = xor <2 x i1> [[TMP22]], splat (i1 true)
 ; IC2-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[TMP7]], i32 0
 ; IC2-NEXT:    br i1 [[TMP9]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; IC2:       [[PRED_STORE_IF]]:
@@ -340,13 +340,13 @@ define void @switch_to_header(ptr %start) {
 ; IC1-NEXT:  [[ENTRY:.*]]:
 ; IC1-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; IC1:       [[LOOP_HEADER]]:
-; IC1-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_HEADER_BACKEDGE:.*]] ]
+; IC1-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[IF_THEN1:.*]] ]
 ; IC1-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; IC1-NEXT:    switch i64 [[IV]], label %[[LOOP_LATCH:.*]] [
-; IC1-NEXT:      i64 120, label %[[LOOP_HEADER_BACKEDGE]]
+; IC1-NEXT:      i64 120, label %[[IF_THEN1]]
 ; IC1-NEXT:      i64 100, label %[[LOOP_LATCH]]
 ; IC1-NEXT:    ]
-; IC1:       [[LOOP_HEADER_BACKEDGE]]:
+; IC1:       [[IF_THEN1]]:
 ; IC1-NEXT:    br label %[[LOOP_HEADER]]
 ; IC1:       [[IF_THEN:.*:]]
 ; IC1-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[START]], i64 poison
@@ -354,7 +354,7 @@ define void @switch_to_header(ptr %start) {
 ; IC1-NEXT:    unreachable
 ; IC1:       [[LOOP_LATCH]]:
 ; IC1-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 100
-; IC1-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP_HEADER_BACKEDGE]]
+; IC1-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[IF_THEN1]]
 ; IC1:       [[EXIT]]:
 ; IC1-NEXT:    ret void
 ;
@@ -363,13 +363,13 @@ define void @switch_to_header(ptr %start) {
 ; IC2-NEXT:  [[ENTRY:.*]]:
 ; IC2-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; IC2:       [[LOOP_HEADER]]:
-; IC2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_HEADER_BACKEDGE:.*]] ]
+; IC2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[IF_THEN1:.*]] ]
 ; IC2-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; IC2-NEXT:    switch i64 [[IV]], label %[[LOOP_LATCH:.*]] [
-; IC2-NEXT:      i64 120, label %[[LOOP_HEADER_BACKEDGE]]
+; IC2-NEXT:      i64 120, label %[[IF_THEN1]]
 ; IC2-NEXT:      i64 100, label %[[LOOP_LATCH]]
 ; IC2-NEXT:    ]
-; IC2:       [[LOOP_HEADER_BACKEDGE]]:
+; IC2:       [[IF_THEN1]]:
 ; IC2-NEXT:    br label %[[LOOP_HEADER]]
 ; IC2:       [[IF_THEN:.*:]]
 ; IC2-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[START]], i64 poison
@@ -377,7 +377,7 @@ define void @switch_to_header(ptr %start) {
 ; IC2-NEXT:    unreachable
 ; IC2:       [[LOOP_LATCH]]:
 ; IC2-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 100
-; IC2-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP_HEADER_BACKEDGE]]
+; IC2-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[IF_THEN1]]
 ; IC2:       [[EXIT]]:
 ; IC2-NEXT:    ret void
 ;
@@ -417,7 +417,7 @@ define void @switch_all_to_default(ptr %start) {
 ; IC1-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; IC1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[START]], i64 [[TMP0]]
 ; IC1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
-; IC1-NEXT:    store <2 x i64> <i64 42, i64 42>, ptr [[TMP2]], align 1
+; IC1-NEXT:    store <2 x i64> splat (i64 42), ptr [[TMP2]], align 1
 ; IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; IC1-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; IC1-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -453,8 +453,8 @@ define void @switch_all_to_default(ptr %start) {
 ; IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[START]], i64 [[TMP0]]
 ; IC2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
 ; IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 2
-; IC2-NEXT:    store <2 x i64> <i64 42, i64 42>, ptr [[TMP4]], align 1
-; IC2-NEXT:    store <2 x i64> <i64 42, i64 42>, ptr [[TMP5]], align 1
+; IC2-NEXT:    store <2 x i64> splat (i64 42), ptr [[TMP4]], align 1
+; IC2-NEXT:    store <2 x i64> splat (i64 42), ptr [[TMP5]], align 1
 ; IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; IC2-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; IC2-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]

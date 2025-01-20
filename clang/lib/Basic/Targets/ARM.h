@@ -300,6 +300,17 @@ public:
                         MacroBuilder &Builder) const override;
 };
 
+class LLVM_LIBRARY_VISIBILITY AppleMachOARMTargetInfo
+    : public AppleMachOTargetInfo<ARMleTargetInfo> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override;
+
+public:
+  AppleMachOARMTargetInfo(const llvm::Triple &Triple,
+                          const TargetOptions &Opts);
+};
+
 class LLVM_LIBRARY_VISIBILITY DarwinARMTargetInfo
     : public DarwinTargetInfo<ARMleTargetInfo> {
 protected:
@@ -308,17 +319,6 @@ protected:
 
 public:
   DarwinARMTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
-};
-
-// 32-bit RenderScript is armv7 with width and align of 'long' set to 8-bytes
-class LLVM_LIBRARY_VISIBILITY RenderScript32TargetInfo
-    : public ARMleTargetInfo {
-public:
-  RenderScript32TargetInfo(const llvm::Triple &Triple,
-                           const TargetOptions &Opts);
-
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override;
 };
 
 } // namespace targets

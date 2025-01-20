@@ -271,16 +271,12 @@ private:
   ///                // LexicalDC == global namespace
   llvm::PointerUnion<DeclContext*, MultipleDC*> DeclCtx;
 
-  bool isInSemaDC() const { return DeclCtx.is<DeclContext*>(); }
-  bool isOutOfSemaDC() const { return DeclCtx.is<MultipleDC*>(); }
+  bool isInSemaDC() const { return isa<DeclContext *>(DeclCtx); }
+  bool isOutOfSemaDC() const { return isa<MultipleDC *>(DeclCtx); }
 
-  MultipleDC *getMultipleDC() const {
-    return DeclCtx.get<MultipleDC*>();
-  }
+  MultipleDC *getMultipleDC() const { return cast<MultipleDC *>(DeclCtx); }
 
-  DeclContext *getSemanticDC() const {
-    return DeclCtx.get<DeclContext*>();
-  }
+  DeclContext *getSemanticDC() const { return cast<DeclContext *>(DeclCtx); }
 
   /// Loc - The location of this decl.
   SourceLocation Loc;
@@ -686,6 +682,9 @@ public:
 
   /// Whether this declaration comes from a named module.
   bool isInNamedModule() const;
+
+  /// Whether this declaration comes from a header unit.
+  bool isFromHeaderUnit() const;
 
   /// Return true if this declaration has an attribute which acts as
   /// definition of the entity, such as 'alias' or 'ifunc'.
@@ -1337,7 +1336,7 @@ public:
       assert(Ptr && "dereferencing end() iterator");
       if (DeclListNode *CurNode = Ptr.dyn_cast<DeclListNode*>())
         return CurNode->D;
-      return Ptr.get<NamedDecl*>();
+      return cast<NamedDecl *>(Ptr);
     }
     void operator->() const { } // Unsupported.
     bool operator==(const iterator &X) const { return Ptr == X.Ptr; }

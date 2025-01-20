@@ -320,34 +320,37 @@ bool RISCVExpandPseudo::expandRV32ZdinxStore(MachineBasicBlock &MBB,
   Register Hi =
       TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_odd);
 
-  assert(MBBI->hasOneMemOperand() && "Expected mem operand");
-  MachineMemOperand *OldMMO = MBBI->memoperands().front();
-  MachineFunction *MF = MBB.getParent();
-  MachineMemOperand *MMOLo = MF->getMachineMemOperand(OldMMO, 0, 4);
-  MachineMemOperand *MMOHi = MF->getMachineMemOperand(OldMMO, 4, 4);
+  auto MIBLo = BuildMI(MBB, MBBI, DL, TII->get(RISCV::SW))
+                   .addReg(Lo, getKillRegState(MBBI->getOperand(0).isKill()))
+                   .addReg(MBBI->getOperand(1).getReg())
+                   .add(MBBI->getOperand(2));
 
-  BuildMI(MBB, MBBI, DL, TII->get(RISCV::SW))
-      .addReg(Lo, getKillRegState(MBBI->getOperand(0).isKill()))
-      .addReg(MBBI->getOperand(1).getReg())
-      .add(MBBI->getOperand(2))
-      .setMemRefs(MMOLo);
-
+  MachineInstrBuilder MIBHi;
   if (MBBI->getOperand(2).isGlobal() || MBBI->getOperand(2).isCPI()) {
     assert(MBBI->getOperand(2).getOffset() % 8 == 0);
     MBBI->getOperand(2).setOffset(MBBI->getOperand(2).getOffset() + 4);
-    BuildMI(MBB, MBBI, DL, TII->get(RISCV::SW))
-        .addReg(Hi, getKillRegState(MBBI->getOperand(0).isKill()))
-        .add(MBBI->getOperand(1))
-        .add(MBBI->getOperand(2))
-        .setMemRefs(MMOHi);
+    MIBHi = BuildMI(MBB, MBBI, DL, TII->get(RISCV::SW))
+                .addReg(Hi, getKillRegState(MBBI->getOperand(0).isKill()))
+                .add(MBBI->getOperand(1))
+                .add(MBBI->getOperand(2));
   } else {
     assert(isInt<12>(MBBI->getOperand(2).getImm() + 4));
-    BuildMI(MBB, MBBI, DL, TII->get(RISCV::SW))
-        .addReg(Hi, getKillRegState(MBBI->getOperand(0).isKill()))
-        .add(MBBI->getOperand(1))
-        .addImm(MBBI->getOperand(2).getImm() + 4)
-        .setMemRefs(MMOHi);
+    MIBHi = BuildMI(MBB, MBBI, DL, TII->get(RISCV::SW))
+                .addReg(Hi, getKillRegState(MBBI->getOperand(0).isKill()))
+                .add(MBBI->getOperand(1))
+                .addImm(MBBI->getOperand(2).getImm() + 4);
   }
+
+  if (!MBBI->memoperands_empty()) {
+    assert(MBBI->hasOneMemOperand() && "Expected mem operand");
+    MachineMemOperand *OldMMO = MBBI->memoperands().front();
+    MachineFunction *MF = MBB.getParent();
+    MachineMemOperand *MMOLo = MF->getMachineMemOperand(OldMMO, 0, 4);
+    MachineMemOperand *MMOHi = MF->getMachineMemOperand(OldMMO, 4, 4);
+    MIBLo.setMemRefs(MMOLo);
+    MIBHi.setMemRefs(MMOHi);
+  }
+
   MBBI->eraseFromParent();
   return true;
 }
@@ -364,46 +367,48 @@ bool RISCVExpandPseudo::expandRV32ZdinxLoad(MachineBasicBlock &MBB,
   Register Hi =
       TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_odd);
 
-  assert(MBBI->hasOneMemOperand() && "Expected mem operand");
-  MachineMemOperand *OldMMO = MBBI->memoperands().front();
-  MachineFunction *MF = MBB.getParent();
-  MachineMemOperand *MMOLo = MF->getMachineMemOperand(OldMMO, 0, 4);
-  MachineMemOperand *MMOHi = MF->getMachineMemOperand(OldMMO, 4, 4);
+  MachineInstrBuilder MIBLo, MIBHi;
 
   // If the register of operand 1 is equal to the Lo register, then swap the
   // order of loading the Lo and Hi statements.
   bool IsOp1EqualToLo = Lo == MBBI->getOperand(1).getReg();
   // Order: Lo, Hi
   if (!IsOp1EqualToLo) {
-    BuildMI(MBB, MBBI, DL, TII->get(RISCV::LW), Lo)
-        .addReg(MBBI->getOperand(1).getReg())
-        .add(MBBI->getOperand(2))
-        .setMemRefs(MMOLo);
+    MIBLo = BuildMI(MBB, MBBI, DL, TII->get(RISCV::LW), Lo)
+                .addReg(MBBI->getOperand(1).getReg())
+                .add(MBBI->getOperand(2));
   }
 
   if (MBBI->getOperand(2).isGlobal() || MBBI->getOperand(2).isCPI()) {
     auto Offset = MBBI->getOperand(2).getOffset();
     assert(Offset % 8 == 0);
     MBBI->getOperand(2).setOffset(Offset + 4);
-    BuildMI(MBB, MBBI, DL, TII->get(RISCV::LW), Hi)
-        .addReg(MBBI->getOperand(1).getReg())
-        .add(MBBI->getOperand(2))
-        .setMemRefs(MMOHi);
+    MIBHi = BuildMI(MBB, MBBI, DL, TII->get(RISCV::LW), Hi)
+                .addReg(MBBI->getOperand(1).getReg())
+                .add(MBBI->getOperand(2));
     MBBI->getOperand(2).setOffset(Offset);
   } else {
     assert(isInt<12>(MBBI->getOperand(2).getImm() + 4));
-    BuildMI(MBB, MBBI, DL, TII->get(RISCV::LW), Hi)
-        .addReg(MBBI->getOperand(1).getReg())
-        .addImm(MBBI->getOperand(2).getImm() + 4)
-        .setMemRefs(MMOHi);
+    MIBHi = BuildMI(MBB, MBBI, DL, TII->get(RISCV::LW), Hi)
+                .addReg(MBBI->getOperand(1).getReg())
+                .addImm(MBBI->getOperand(2).getImm() + 4);
   }
 
   // Order: Hi, Lo
   if (IsOp1EqualToLo) {
-    BuildMI(MBB, MBBI, DL, TII->get(RISCV::LW), Lo)
-        .addReg(MBBI->getOperand(1).getReg())
-        .add(MBBI->getOperand(2))
-        .setMemRefs(MMOLo);
+    MIBLo = BuildMI(MBB, MBBI, DL, TII->get(RISCV::LW), Lo)
+                .addReg(MBBI->getOperand(1).getReg())
+                .add(MBBI->getOperand(2));
+  }
+
+  if (!MBBI->memoperands_empty()) {
+    assert(MBBI->hasOneMemOperand() && "Expected mem operand");
+    MachineMemOperand *OldMMO = MBBI->memoperands().front();
+    MachineFunction *MF = MBB.getParent();
+    MachineMemOperand *MMOLo = MF->getMachineMemOperand(OldMMO, 0, 4);
+    MachineMemOperand *MMOHi = MF->getMachineMemOperand(OldMMO, 4, 4);
+    MIBLo.setMemRefs(MMOLo);
+    MIBHi.setMemRefs(MMOHi);
   }
 
   MBBI->eraseFromParent();

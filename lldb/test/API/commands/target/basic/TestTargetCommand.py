@@ -417,7 +417,7 @@ class targetCommandTestCase(TestBase):
         )
 
     # Write only files don't seem to be supported on Windows.
-    @skipIfWindows
+    @skipIf(hostoslist=["windows"])
     @no_debug_info_test
     def test_target_create_unreadable_core_file(self):
         tf = tempfile.NamedTemporaryFile()
@@ -440,7 +440,7 @@ class targetCommandTestCase(TestBase):
             ],
         )
 
-    @skipIfWindows
+    @skipIf(hostoslist=["windows"])
     @no_debug_info_test
     def test_target_create_invalid_core_file(self):
         invalid_core_path = os.path.join(self.getSourceDir(), "invalid_core_file")
@@ -451,7 +451,7 @@ class targetCommandTestCase(TestBase):
         )
 
     # Write only files don't seem to be supported on Windows.
-    @skipIfWindows
+    @skipIf(hostoslist=["windows"])
     @no_debug_info_test
     def test_target_create_unreadable_sym_file(self):
         tf = tempfile.NamedTemporaryFile()

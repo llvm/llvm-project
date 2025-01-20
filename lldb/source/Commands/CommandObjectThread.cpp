@@ -15,7 +15,6 @@
 #include "CommandObjectThreadUtil.h"
 #include "CommandObjectTrace.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
@@ -37,6 +36,7 @@
 #include "lldb/Target/Trace.h"
 #include "lldb/Target/TraceDumper.h"
 #include "lldb/Utility/State.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -489,11 +489,11 @@ protected:
         AddressRange range;
         SymbolContext sc = frame->GetSymbolContext(eSymbolContextEverything);
         if (m_options.m_end_line != LLDB_INVALID_LINE_NUMBER) {
-          Status error;
-          if (!sc.GetAddressRangeFromHereToEndLine(m_options.m_end_line, range,
-                                                   error)) {
-            result.AppendErrorWithFormat("invalid end-line option: %s.",
-                                         error.AsCString());
+          llvm::Error err =
+              sc.GetAddressRangeFromHereToEndLine(m_options.m_end_line, range);
+          if (err) {
+            result.AppendErrorWithFormatv("invalid end-line option: {0}.",
+                                          llvm::toString(std::move(err)));
             return;
           }
         } else if (m_options.m_end_line_is_block_end) {

@@ -71,12 +71,12 @@ Expected<std::string> python::As<std::string>(Expected<PythonObject> &&obj) {
 }
 
 static bool python_is_finalizing() {
-#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 13) || (PY_MAJOR_VERSION > 3)
+#if PY_VERSION_HEX >= 0x030d0000
   return Py_IsFinalizing();
-#elif PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 7
-  return _Py_Finalizing != nullptr;
-#else
+#elif PY_VERSION_HEX >= 0x03070000
   return _Py_IsFinalizing();
+#else
+  return _Py_Finalizing != nullptr;
 #endif
 }
 
@@ -810,7 +810,7 @@ bool PythonCallable::Check(PyObject *py_obj) {
   return PyCallable_Check(py_obj);
 }
 
-#if PY_MAJOR_VERSION >= 3 && PY_MINOR_VERSION >= 3
+#if PY_VERSION_HEX >= 0x03030000
 static const char get_arg_info_script[] = R"(
 from inspect import signature, Parameter, ismethod
 from collections import namedtuple
@@ -839,7 +839,7 @@ Expected<PythonCallable::ArgInfo> PythonCallable::GetArgInfo() const {
   if (!IsValid())
     return nullDeref();
 
-#if PY_MAJOR_VERSION >= 3 && PY_MINOR_VERSION >= 3
+#if PY_VERSION_HEX >= 0x03030000
 
   // no need to synchronize access to this global, we already have the GIL
   static PythonScript get_arg_info(get_arg_info_script);

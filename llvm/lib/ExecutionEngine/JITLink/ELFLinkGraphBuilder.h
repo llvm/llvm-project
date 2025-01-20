@@ -58,7 +58,8 @@ class ELFLinkGraphBuilder : public ELFLinkGraphBuilderBase {
   using ELFFile = object::ELFFile<ELFT>;
 
 public:
-  ELFLinkGraphBuilder(const object::ELFFile<ELFT> &Obj, Triple TT,
+  ELFLinkGraphBuilder(const object::ELFFile<ELFT> &Obj,
+                      std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
                       SubtargetFeatures Features, StringRef FileName,
                       LinkGraph::GetEdgeKindNameFunction GetEdgeKindName);
 
@@ -189,12 +190,13 @@ protected:
 
 template <typename ELFT>
 ELFLinkGraphBuilder<ELFT>::ELFLinkGraphBuilder(
-    const ELFFile &Obj, Triple TT, SubtargetFeatures Features,
-    StringRef FileName, LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
+    const ELFFile &Obj, std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
+    SubtargetFeatures Features, StringRef FileName,
+    LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
     : ELFLinkGraphBuilderBase(std::make_unique<LinkGraph>(
-          FileName.str(), Triple(std::move(TT)), std::move(Features),
-          ELFT::Is64Bits ? 8 : 4, llvm::endianness(ELFT::Endianness),
-          std::move(GetEdgeKindName))),
+          FileName.str(), std::move(SSP), Triple(std::move(TT)),
+          std::move(Features), ELFT::Is64Bits ? 8 : 4,
+          llvm::endianness(ELFT::Endianness), std::move(GetEdgeKindName))),
       Obj(Obj) {
   LLVM_DEBUG(
       { dbgs() << "Created ELFLinkGraphBuilder for \"" << FileName << "\""; });

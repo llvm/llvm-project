@@ -13,14 +13,11 @@
 #include "NVPTXRegisterInfo.h"
 #include "MCTargetDesc/NVPTXInstPrinter.h"
 #include "NVPTX.h"
-#include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/MC/MachineLocation.h"
 
 using namespace llvm;
 
@@ -176,6 +173,11 @@ void NVPTXRegisterInfo::addToDebugRegisterMap(
 int64_t NVPTXRegisterInfo::getDwarfRegNum(MCRegister RegNum, bool isEH) const {
   if (Register::isPhysicalRegister(RegNum)) {
     std::string name = NVPTXInstPrinter::getRegisterName(RegNum.id());
+    // In NVPTXFrameLowering.cpp, we do arrange for %Depot to be accessible from
+    // %SP. Using the %Depot register doesn't provide any debug info in
+    // cuda-gdb, but switching it to %SP does.
+    if (RegNum.id() == NVPTX::VRDepot)
+      name = "%SP";
     return encodeRegisterForDwarf(name);
   }
   uint64_t lookup = debugRegisterMap.lookup(RegNum.id());

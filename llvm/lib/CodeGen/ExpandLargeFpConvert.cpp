@@ -16,7 +16,6 @@
 
 #include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -356,7 +355,7 @@ static void expandIToFP(Instruction *IToFP) {
   Entry->getTerminator()->eraseFromParent();
 
   Function *CTLZ =
-      Intrinsic::getDeclaration(F->getParent(), Intrinsic::ctlz, IntTy);
+      Intrinsic::getOrInsertDeclaration(F->getParent(), Intrinsic::ctlz, IntTy);
   ConstantInt *True = Builder.getTrue();
 
   // entry:

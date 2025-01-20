@@ -1,4 +1,4 @@
-# RUN: llc %s -o - -run-pass=livedebugvalues -march=x86-64 \
+# RUN: llc %s -o - -run-pass=livedebugvalues -mtriple=x86_64 \
 # RUN:     -experimental-debug-variable-locations=true \
 # RUN: | FileCheck %s
 #
@@ -37,14 +37,14 @@
   %class._Tree_unchecked_const_iterator = type { %struct._Iterator_base0, ptr }
   %struct._Iterator_base0 = type { i32 }
 
-  define i32 @main({ i32, ptr } %call.i) !dbg !6 {
+  define i32 @main({ i32, ptr } %call.i, i1 %arg) !dbg !6 {
   entry:
     call void @llvm.dbg.value(metadata i32 2, metadata !10, metadata !DIExpression()), !dbg !12
     %call.i1 = call { i32, ptr } undef(ptr null)
     %0 = extractvalue { i32, ptr } %call.i, 1
     call void @llvm.dbg.value(metadata ptr %0, metadata !13, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg !15
     %call.i.i.i.i.i = call i8 undef(ptr null), !dbg !15
-    br i1 undef, label %_Z17do_insert_cv_testI5_TreeEvv.exit, label %if.then.i.i.i.i.i
+    br i1 %arg, label %_Z17do_insert_cv_testI5_TreeEvv.exit, label %if.then.i.i.i.i.i
 
   if.then.i.i.i.i.i:
     %call3.i.i.i.i.i = call ptr undef(ptr null)

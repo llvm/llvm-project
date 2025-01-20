@@ -110,9 +110,13 @@ define riscv_vector_cc void @local_stack_allocation_frame_pointer() "frame-point
 ; SPILL-O2-NEXT:    lbu a0, -1912(s0)
 ; SPILL-O2-NEXT:    sb a0, -1912(s0)
 ; SPILL-O2-NEXT:    addi sp, s0, -2032
+; SPILL-O2-NEXT:    .cfi_def_cfa sp, 2032
 ; SPILL-O2-NEXT:    lw ra, 2028(sp) # 4-byte Folded Reload
 ; SPILL-O2-NEXT:    lw s0, 2024(sp) # 4-byte Folded Reload
+; SPILL-O2-NEXT:    .cfi_restore ra
+; SPILL-O2-NEXT:    .cfi_restore s0
 ; SPILL-O2-NEXT:    addi sp, sp, 2032
+; SPILL-O2-NEXT:    .cfi_def_cfa_offset 0
 ; SPILL-O2-NEXT:    ret
   %va = alloca [2500 x i8], align 4
   %va_gep = getelementptr [2000 x i8], ptr %va, i64 0, i64 600

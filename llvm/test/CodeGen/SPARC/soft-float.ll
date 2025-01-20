@@ -1,4 +1,4 @@
-; RUN: llc -march=sparc -mattr=soft-float -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=sparc -mattr=soft-float -O0 < %s | FileCheck %s
 
 ; Arithmetic functions
 

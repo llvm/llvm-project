@@ -25,6 +25,7 @@ def rvv_vnot : PatFrag<(ops node:$in),
                        (xor node:$in, (riscv_vmset_vl (XLenVT srcvalue)))>;
 
 multiclass VPatUSLoadStoreSDNode<ValueType type,
+                                 RegisterClass regclass,
                                  int log2sew,
                                  LMULInfo vlmul,
                                  OutPatFrag avl,
@@ -37,7 +38,7 @@ multiclass VPatUSLoadStoreSDNode<ValueType type,
             (load_instr (type (IMPLICIT_DEF)), GPR:$rs1, avl,
                         log2sew, TA_MA)>;
   // Store
-  def : Pat<(store type:$rs2, (XLenVT GPR:$rs1)),
+  def : Pat<(store (type regclass:$rs2), (XLenVT GPR:$rs1)),
             (store_instr reg_class:$rs2, GPR:$rs1, avl, log2sew)>;
 }
 
@@ -49,7 +50,7 @@ multiclass VPatUSLoadStoreMaskSDNode<MTypeInfo m> {
             (load_instr (m.Mask (IMPLICIT_DEF)), GPR:$rs1, m.AVL,
                          m.Log2SEW, TA_MA)>;
   // Store
-  def : Pat<(store m.Mask:$rs2, GPR:$rs1),
+  def : Pat<(store (m.Mask VR:$rs2), GPR:$rs1),
             (store_instr VR:$rs2, GPR:$rs1, m.AVL, m.Log2SEW)>;
 }
 
@@ -884,7 +885,7 @@ multiclass VPatAVGADD_VV_VX_RM<SDNode vop, int vxrm, string suffix = ""> {
 foreach vti = AllVectors in
   let Predicates = !if(!eq(vti.Scalar, f16), [HasVInstructionsF16Minimal],
                        GetVTypePredicates<vti>.Predicates) in 
-  defm : VPatUSLoadStoreSDNode<vti.Vector, vti.Log2SEW, vti.LMul,
+  defm : VPatUSLoadStoreSDNode<vti.Vector, vti.RegClass, vti.Log2SEW, vti.LMul,
                                vti.AVL, vti.RegClass>;
 foreach mti = AllMasks in
   let Predicates = [HasVInstructions] in
@@ -1140,35 +1141,35 @@ defm : VPatAVGADD_VV_VX_RM<avgceilu, 0b00, suffix = "U">;
 foreach mti = AllMasks in {
   let Predicates = [HasVInstructions] in {
     def : Pat<(mti.Mask (and VR:$rs1, VR:$rs2)),
-              (!cast<Instruction>("PseudoVMAND_MM_"#mti.LMul.MX)
+              (!cast<Instruction>("PseudoVMAND_MM_"#mti.BX)
                    VR:$rs1, VR:$rs2, mti.AVL, mti.Log2SEW)>;
     def : Pat<(mti.Mask (or VR:$rs1, VR:$rs2)),
-              (!cast<Instruction>("PseudoVMOR_MM_"#mti.LMul.MX)
+              (!cast<Instruction>("PseudoVMOR_MM_"#mti.BX)
                    VR:$rs1, VR:$rs2, mti.AVL, mti.Log2SEW)>;
     def : Pat<(mti.Mask (xor VR:$rs1, VR:$rs2)),
-              (!cast<Instruction>("PseudoVMXOR_MM_"#mti.LMul.MX)
+              (!cast<Instruction>("PseudoVMXOR_MM_"#mti.BX)
                    VR:$rs1, VR:$rs2, mti.AVL, mti.Log2SEW)>;
 
     def : Pat<(mti.Mask (rvv_vnot (and VR:$rs1, VR:$rs2))),
-              (!cast<Instruction>("PseudoVMNAND_MM_"#mti.LMul.MX)
+              (!cast<Instruction>("PseudoVMNAND_MM_"#mti.BX)
                    VR:$rs1, VR:$rs2, mti.AVL, mti.Log2SEW)>;
     def : Pat<(mti.Mask (rvv_vnot (or VR:$rs1, VR:$rs2))),
-              (!cast<Instruction>("PseudoVMNOR_MM_"#mti.LMul.MX)
+              (!cast<Instruction>("PseudoVMNOR_MM_"#mti.BX)
                    VR:$rs1, VR:$rs2, mti.AVL, mti.Log2SEW)>;
     def : Pat<(mti.Mask (rvv_vnot (xor VR:$rs1, VR:$rs2))),
-              (!cast<Instruction>("PseudoVMXNOR_MM_"#mti.LMul.MX)
+              (!cast<Instruction>("PseudoVMXNOR_MM_"#mti.BX)
                    VR:$rs1, VR:$rs2, mti.AVL, mti.Log2SEW)>;
 
     def : Pat<(mti.Mask (and VR:$rs1, (rvv_vnot VR:$rs2))),
-              (!cast<Instruction>("PseudoVMANDN_MM_"#mti.LMul.MX)
+              (!cast<Instruction>("PseudoVMANDN_MM_"#mti.BX)
                    VR:$rs1, VR:$rs2, mti.AVL, mti.Log2SEW)>;
     def : Pat<(mti.Mask (or VR:$rs1, (rvv_vnot VR:$rs2))),
-              (!cast<Instruction>("PseudoVMORN_MM_"#mti.LMul.MX)
+              (!cast<Instruction>("PseudoVMORN_MM_"#mti.BX)
                    VR:$rs1, VR:$rs2, mti.AVL, mti.Log2SEW)>;
 
     // Handle rvv_vnot the same as the vmnot.m pseudoinstruction.
     def : Pat<(mti.Mask (rvv_vnot VR:$rs)),
-              (!cast<Instruction>("PseudoVMNAND_MM_"#mti.LMul.MX)
+              (!cast<Instruction>("PseudoVMNAND_MM_"#mti.BX)
                    VR:$rs, VR:$rs, mti.AVL, mti.Log2SEW)>;
   }
 }

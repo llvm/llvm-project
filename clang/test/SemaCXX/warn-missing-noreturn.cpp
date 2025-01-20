@@ -122,3 +122,25 @@ namespace PR10801 {
     thingy(b);
   }
 }
+
+namespace GH63009 {
+struct S1 {
+  [[noreturn]] S1();
+};
+
+struct S2 {
+  [[noreturn]] ~S2();
+};
+
+int foo();
+
+int test_1() {
+  S1 s1;
+  foo();
+}
+
+int test_2() {
+  S2 s2;
+  foo();
+}
+}

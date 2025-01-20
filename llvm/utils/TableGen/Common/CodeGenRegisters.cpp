@@ -399,17 +399,23 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
   // user already specified.
   for (unsigned i = 0, e = ExplicitSubRegs.size(); i != e; ++i) {
     CodeGenRegister *SR = ExplicitSubRegs[i];
-    if (!SR->CoveredBySubRegs || SR->ExplicitSubRegs.size() <= 1 ||
-        SR->Artificial)
+    if (!SR->CoveredBySubRegs || SR->Artificial)
       continue;
 
     // SR is composed of multiple sub-regs. Find their names in this register.
+    bool AnyArtificial = false;
     SmallVector<CodeGenSubRegIndex *, 8> Parts;
     for (unsigned j = 0, e = SR->ExplicitSubRegs.size(); j != e; ++j) {
       CodeGenSubRegIndex &I = *SR->ExplicitSubRegIndices[j];
-      if (!I.Artificial)
-        Parts.push_back(getSubRegIndex(SR->ExplicitSubRegs[j]));
+      if (I.Artificial) {
+        AnyArtificial = true;
+        break;
+      }
+      Parts.push_back(getSubRegIndex(SR->ExplicitSubRegs[j]));
     }
+
+    if (AnyArtificial)
+      continue;
 
     // Offer this as an existing spelling for the concatenation of Parts.
     CodeGenSubRegIndex &Idx = *ExplicitSubRegIndices[i];
@@ -630,7 +636,7 @@ struct TupleExpander : SetTheory::Expander {
     std::vector<const Record *> Indices =
         Def->getValueAsListOfDefs("SubRegIndices");
     unsigned Dim = Indices.size();
-    ListInit *SubRegs = Def->getValueAsListInit("SubRegs");
+    const ListInit *SubRegs = Def->getValueAsListInit("SubRegs");
     if (Dim != SubRegs->size())
       PrintFatalError(Def->getLoc(), "SubRegIndices and SubRegs size mismatch");
     if (Dim < 2)
@@ -649,7 +655,7 @@ struct TupleExpander : SetTheory::Expander {
       return;
 
     // Precompute some types.
-    Record *RegisterCl = Def->getRecords().getClass("Register");
+    const Record *RegisterCl = Def->getRecords().getClass("Register");
     const RecTy *RegisterRecTy = RecordRecTy::get(RegisterCl);
     std::vector<StringRef> RegNames =
         Def->getValueAsListOfStrings("RegAsmNames");
@@ -669,11 +675,11 @@ struct TupleExpander : SetTheory::Expander {
       }
 
       // Take the cost list of the first register in the tuple.
-      ListInit *CostList = Proto->getValueAsListInit("CostPerUse");
-      SmallVector<Init *, 2> CostPerUse;
+      const ListInit *CostList = Proto->getValueAsListInit("CostPerUse");
+      SmallVector<const Init *, 2> CostPerUse;
       CostPerUse.insert(CostPerUse.end(), CostList->begin(), CostList->end());
 
-      StringInit *AsmName = StringInit::get(RK, "");
+      const StringInit *AsmName = StringInit::get(RK, "");
       if (!RegNames.empty()) {
         if (RegNames.size() <= n)
           PrintFatalError(Def->getLoc(),
@@ -776,7 +782,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
 
   // Allocation order 0 is the full set. AltOrders provides others.
   const SetTheory::RecVec *Elements = RegBank.getSets().expand(R);
-  ListInit *AltOrders = R->getValueAsListInit("AltOrders");
+  const ListInit *AltOrders = R->getValueAsListInit("AltOrders");
   Orders.resize(1 + AltOrders->size());
 
   // Default allocation order always contains all registers.
@@ -808,7 +814,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
   Namespace = R->getValueAsString("Namespace");
 
   if (const RecordVal *RV = R->getValue("RegInfos"))
-    if (DefInit *DI = dyn_cast_or_null<DefInit>(RV->getValue()))
+    if (const DefInit *DI = dyn_cast_or_null<DefInit>(RV->getValue()))
       RSI = RegSizeInfoByHwMode(DI->getDef(), RegBank.getHwModes());
   unsigned Size = R->getValueAsInt("Size");
   assert((RSI.hasDefault() || Size != 0 || VTs[0].isSimple()) &&
@@ -831,9 +837,9 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
 
   GlobalPriority = R->getValueAsBit("GlobalPriority");
 
-  BitsInit *TSF = R->getValueAsBitsInit("TSFlags");
+  const BitsInit *TSF = R->getValueAsBitsInit("TSFlags");
   for (unsigned I = 0, E = TSF->getNumBits(); I != E; ++I) {
-    BitInit *Bit = cast<BitInit>(TSF->getBit(I));
+    const BitInit *Bit = cast<BitInit>(TSF->getBit(I));
     TSFlags |= uint8_t(Bit->getValue()) << I;
   }
 }
@@ -2294,10 +2300,8 @@ void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
     if (R->Artificial)
       continue;
     const CodeGenRegister::SubRegMap &SRM = R->getSubRegs();
-    for (auto I : SRM) {
-      if (!I.first->Artificial)
-        SRSets[I.first].push_back(R);
-    }
+    for (auto I : SRM)
+      SRSets[I.first].push_back(R);
   }
 
   for (auto I : SRSets)
@@ -2306,8 +2310,6 @@ void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
   // Find matching classes for all SRSets entries.  Iterate in SubRegIndex
   // numerical order to visit synthetic indices last.
   for (const auto &SubIdx : SubRegIndices) {
-    if (SubIdx.Artificial)
-      continue;
     SubReg2SetMap::const_iterator I = SRSets.find(&SubIdx);
     // Unsupported SubRegIndex. Skip it.
     if (I == SRSets.end())
@@ -2317,6 +2319,8 @@ void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
       RC->setSubClassWithSubReg(&SubIdx, RC);
       continue;
     }
+    if (SubIdx.Artificial)
+      continue;
     // This is a real subset.  See if we have a matching class.
     CodeGenRegisterClass *SubRC = getOrCreateSubClass(
         RC, &I->second, RC->getName() + "_with_" + I->first->getName());

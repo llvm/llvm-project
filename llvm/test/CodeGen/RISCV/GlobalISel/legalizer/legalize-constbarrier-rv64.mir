@@ -5,8 +5,9 @@ name:            constbarrier_i32
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: constbarrier_i32
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16368
-    ; CHECK-NEXT: [[CONSTANT_FOLD_BARRIER:%[0-9]+]]:_(s32) = G_CONSTANT_FOLD_BARRIER [[C]]
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16368
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[C]](s64)
+    ; CHECK-NEXT: [[CONSTANT_FOLD_BARRIER:%[0-9]+]]:_(s32) = G_CONSTANT_FOLD_BARRIER [[TRUNC]]
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[CONSTANT_FOLD_BARRIER]](s32)
     ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -37,8 +38,9 @@ name:            constbarrier_i16
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: constbarrier_i16
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2048
-    ; CHECK-NEXT: [[CONSTANT_FOLD_BARRIER:%[0-9]+]]:_(s32) = G_CONSTANT_FOLD_BARRIER [[C]]
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2048
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[C]](s64)
+    ; CHECK-NEXT: [[CONSTANT_FOLD_BARRIER:%[0-9]+]]:_(s32) = G_CONSTANT_FOLD_BARRIER [[TRUNC]]
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[CONSTANT_FOLD_BARRIER]](s32)
     ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -88,9 +90,8 @@ name:            constbarrier_nxv2i32
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: constbarrier_nxv2i32
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR [[C]](s64)
     ; CHECK-NEXT: [[CONSTANT_FOLD_BARRIER:%[0-9]+]]:_(<vscale x 2 x s32>) = G_CONSTANT_FOLD_BARRIER [[SPLAT_VECTOR]]
     ; CHECK-NEXT: $v8 = COPY [[CONSTANT_FOLD_BARRIER]](<vscale x 2 x s32>)
     ; CHECK-NEXT: PseudoRET implicit $v8

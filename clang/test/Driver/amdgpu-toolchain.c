@@ -32,3 +32,7 @@
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx906 -nogpulib \
 // RUN:   -r %s 2>&1 | FileCheck -check-prefixes=RELO %s
 // RELO-NOT: -shared
+
+// RUN: %clang -target amdgcn-amd-amdhsa -march=gfx90a -stdlib -startfiles \
+// RUN:   -nogpulib -nogpuinc -### %s 2>&1 | FileCheck -check-prefix=STARTUP %s
+// STARTUP: ld.lld{{.*}}"-lc" "-lm" "{{.*}}crt1.o"

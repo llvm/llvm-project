@@ -28,7 +28,6 @@
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -745,7 +744,6 @@ void emitDebugNamesHeader(raw_ostream &OS, bool IsLittleEndian,
   writeInteger(AbbrevSize, OS, IsLittleEndian);
   writeInteger(uint32_t(AugmentationString.size()), OS, IsLittleEndian);
   OS.write(AugmentationString.data(), AugmentationString.size());
-  return;
 }
 
 /// Emits the abbreviations for a DebugNames section.

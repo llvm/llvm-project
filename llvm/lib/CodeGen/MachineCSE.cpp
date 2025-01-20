@@ -957,9 +957,6 @@ PreservedAnalyses MachineCSEPass::run(MachineFunction &MF,
                                       MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(*this, MF);
 
-  if (MF.getFunction().hasOptNone())
-    return PreservedAnalyses::all();
-
   MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   MachineBlockFrequencyInfo &MBFI =
       MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);

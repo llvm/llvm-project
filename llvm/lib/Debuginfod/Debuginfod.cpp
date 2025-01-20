@@ -106,6 +106,14 @@ Expected<std::string> getDefaultDebuginfodCacheDirectory() {
   return std::string(CacheDirectory);
 }
 
+Expected<llvm::CachePruningPolicy> getDefaultDebuginfodCachePruningPolicy() {
+  Expected<CachePruningPolicy> PruningPolicyOrErr =
+      parseCachePruningPolicy(std::getenv("DEBUGINFOD_CACHE_POLICY"));
+  if (!PruningPolicyOrErr)
+    return PruningPolicyOrErr.takeError();
+  return *PruningPolicyOrErr;
+}
+
 std::chrono::milliseconds getDefaultDebuginfodTimeout() {
   long Timeout;
   const char *DebuginfodTimeoutEnv = std::getenv("DEBUGINFOD_TIMEOUT");
@@ -169,9 +177,15 @@ Expected<std::string> getCachedOrDownloadArtifact(StringRef UniqueKey,
     return CacheDirOrErr.takeError();
   CacheDir = *CacheDirOrErr;
 
-  return getCachedOrDownloadArtifact(UniqueKey, UrlPath, CacheDir,
-                                     getDefaultDebuginfodUrls(),
-                                     getDefaultDebuginfodTimeout());
+  Expected<llvm::CachePruningPolicy> PruningPolicyOrErr =
+      getDefaultDebuginfodCachePruningPolicy();
+  if (!PruningPolicyOrErr)
+    return PruningPolicyOrErr.takeError();
+  llvm::CachePruningPolicy PruningPolicy = *PruningPolicyOrErr;
+
+  return getCachedOrDownloadArtifact(
+      UniqueKey, UrlPath, CacheDir, getDefaultDebuginfodUrls(),
+      getDefaultDebuginfodTimeout(), PruningPolicy);
 }
 
 namespace {
@@ -250,7 +264,8 @@ static SmallVector<std::string, 0> getHeaders() {
 
 Expected<std::string> getCachedOrDownloadArtifact(
     StringRef UniqueKey, StringRef UrlPath, StringRef CacheDirectoryPath,
-    ArrayRef<StringRef> DebuginfodUrls, std::chrono::milliseconds Timeout) {
+    ArrayRef<StringRef> DebuginfodUrls, std::chrono::milliseconds Timeout,
+    llvm::CachePruningPolicy policy) {
   SmallString<64> AbsCachedArtifactPath;
   sys::path::append(AbsCachedArtifactPath, CacheDirectoryPath,
                     "llvmcache-" + UniqueKey);
@@ -304,11 +319,7 @@ Expected<std::string> getCachedOrDownloadArtifact(
         continue;
     }
 
-    Expected<CachePruningPolicy> PruningPolicyOrErr =
-        parseCachePruningPolicy(std::getenv("DEBUGINFOD_CACHE_POLICY"));
-    if (!PruningPolicyOrErr)
-      return PruningPolicyOrErr.takeError();
-    pruneCache(CacheDirectoryPath, *PruningPolicyOrErr);
+    pruneCache(CacheDirectoryPath, policy);
 
     // Return the path to the artifact on disk.
     return std::string(AbsCachedArtifactPath);

@@ -177,13 +177,13 @@ define void @test5(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sraw a0, a0, a1
 ; RV64I-NEXT:    lui a1, 349525
+; RV64I-NEXT:    lui a2, 209715
+; RV64I-NEXT:    lui a3, 61681
+; RV64I-NEXT:    lui a4, 4112
 ; RV64I-NEXT:    addiw s0, a1, 1365
-; RV64I-NEXT:    lui a1, 209715
-; RV64I-NEXT:    addiw s1, a1, 819
-; RV64I-NEXT:    lui a1, 61681
-; RV64I-NEXT:    addi s2, a1, -241
-; RV64I-NEXT:    lui a1, 4112
-; RV64I-NEXT:    addi s3, a1, 257
+; RV64I-NEXT:    addiw s1, a2, 819
+; RV64I-NEXT:    addi s2, a3, -241
+; RV64I-NEXT:    addi s3, a4, 257
 ; RV64I-NEXT:  .LBB4_1: # %bb2
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    call bar
@@ -324,19 +324,19 @@ define void @test7(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sraw a0, a0, a1
 ; RV64I-NEXT:    lui a1, 349525
+; RV64I-NEXT:    lui a2, 209715
+; RV64I-NEXT:    lui a3, 61681
+; RV64I-NEXT:    lui a4, 4112
 ; RV64I-NEXT:    addiw s0, a1, 1365
+; RV64I-NEXT:    addiw s1, a2, 819
+; RV64I-NEXT:    addiw s2, a3, -241
+; RV64I-NEXT:    addiw s3, a4, 257
 ; RV64I-NEXT:    slli a1, s0, 32
 ; RV64I-NEXT:    add s0, s0, a1
-; RV64I-NEXT:    lui a1, 209715
-; RV64I-NEXT:    addiw s1, a1, 819
 ; RV64I-NEXT:    slli a1, s1, 32
 ; RV64I-NEXT:    add s1, s1, a1
-; RV64I-NEXT:    lui a1, 61681
-; RV64I-NEXT:    addiw s2, a1, -241
 ; RV64I-NEXT:    slli a1, s2, 32
 ; RV64I-NEXT:    add s2, s2, a1
-; RV64I-NEXT:    lui a1, 4112
-; RV64I-NEXT:    addiw s3, a1, 257
 ; RV64I-NEXT:    slli a1, s3, 32
 ; RV64I-NEXT:    add s3, s3, a1
 ; RV64I-NEXT:  .LBB6_1: # %bb2
@@ -1032,82 +1032,86 @@ bb7:                                              ; preds = %bb2
 define signext i32 @bug(i32 signext %x) {
 ; CHECK-LABEL: bug:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    beqz a0, .LBB18_4
+; CHECK-NEXT:    beqz a0, .LBB18_5
 ; CHECK-NEXT:  # %bb.1: # %if.end
-; CHECK-NEXT:    srliw a2, a0, 16
-; CHECK-NEXT:    seqz a1, a2
-; CHECK-NEXT:    slli a1, a1, 4
-; CHECK-NEXT:    sllw a1, a0, a1
-; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    beqz a2, .LBB18_3
+; CHECK-NEXT:    srliw a1, a0, 16
+; CHECK-NEXT:    seqz a2, a1
+; CHECK-NEXT:    slli a2, a2, 4
+; CHECK-NEXT:    sllw a0, a0, a2
+; CHECK-NEXT:    beqz a1, .LBB18_3
 ; CHECK-NEXT:  # %bb.2: # %if.end
-; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:  .LBB18_3: # %if.end
-; CHECK-NEXT:    srliw a2, a1, 24
+; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    j .LBB18_4
+; CHECK-NEXT:  .LBB18_3:
+; CHECK-NEXT:    li a1, 16
+; CHECK-NEXT:  .LBB18_4: # %if.end
+; CHECK-NEXT:    srliw a2, a0, 24
 ; CHECK-NEXT:    seqz a2, a2
 ; CHECK-NEXT:    slli a3, a2, 3
-; CHECK-NEXT:    sllw a1, a1, a3
 ; CHECK-NEXT:    negw a2, a2
+; CHECK-NEXT:    sllw a0, a0, a3
 ; CHECK-NEXT:    andi a2, a2, -8
-; CHECK-NEXT:    add a0, a0, a2
-; CHECK-NEXT:    srliw a2, a1, 28
+; CHECK-NEXT:    add a1, a1, a2
+; CHECK-NEXT:    srliw a2, a0, 28
 ; CHECK-NEXT:    seqz a2, a2
 ; CHECK-NEXT:    slli a3, a2, 2
-; CHECK-NEXT:    sllw a1, a1, a3
 ; CHECK-NEXT:    negw a2, a2
+; CHECK-NEXT:    sllw a0, a0, a3
 ; CHECK-NEXT:    andi a2, a2, -4
-; CHECK-NEXT:    add a0, a0, a2
-; CHECK-NEXT:    srliw a2, a1, 30
+; CHECK-NEXT:    add a1, a1, a2
+; CHECK-NEXT:    srliw a2, a0, 30
 ; CHECK-NEXT:    seqz a2, a2
 ; CHECK-NEXT:    slli a3, a2, 1
-; CHECK-NEXT:    sllw a1, a1, a3
 ; CHECK-NEXT:    negw a2, a2
+; CHECK-NEXT:    sllw a0, a0, a3
 ; CHECK-NEXT:    andi a2, a2, -2
-; CHECK-NEXT:    add a0, a0, a2
-; CHECK-NEXT:    not a1, a1
-; CHECK-NEXT:    srli a1, a1, 31
-; CHECK-NEXT:    addw a0, a0, a1
-; CHECK-NEXT:  .LBB18_4: # %cleanup
+; CHECK-NEXT:    add a1, a1, a2
+; CHECK-NEXT:    not a0, a0
+; CHECK-NEXT:    srli a0, a0, 31
+; CHECK-NEXT:    addw a0, a1, a0
+; CHECK-NEXT:  .LBB18_5: # %cleanup
 ; CHECK-NEXT:    ret
 ;
 ; NOREMOVAL-LABEL: bug:
 ; NOREMOVAL:       # %bb.0: # %entry
-; NOREMOVAL-NEXT:    beqz a0, .LBB18_4
+; NOREMOVAL-NEXT:    beqz a0, .LBB18_5
 ; NOREMOVAL-NEXT:  # %bb.1: # %if.end
-; NOREMOVAL-NEXT:    srliw a2, a0, 16
-; NOREMOVAL-NEXT:    seqz a1, a2
-; NOREMOVAL-NEXT:    slli a1, a1, 4
-; NOREMOVAL-NEXT:    sllw a1, a0, a1
-; NOREMOVAL-NEXT:    li a0, 16
-; NOREMOVAL-NEXT:    beqz a2, .LBB18_3
+; NOREMOVAL-NEXT:    srliw a1, a0, 16
+; NOREMOVAL-NEXT:    seqz a2, a1
+; NOREMOVAL-NEXT:    slli a2, a2, 4
+; NOREMOVAL-NEXT:    sllw a0, a0, a2
+; NOREMOVAL-NEXT:    beqz a1, .LBB18_3
 ; NOREMOVAL-NEXT:  # %bb.2: # %if.end
-; NOREMOVAL-NEXT:    li a0, 32
-; NOREMOVAL-NEXT:  .LBB18_3: # %if.end
-; NOREMOVAL-NEXT:    srliw a2, a1, 24
+; NOREMOVAL-NEXT:    li a1, 32
+; NOREMOVAL-NEXT:    j .LBB18_4
+; NOREMOVAL-NEXT:  .LBB18_3:
+; NOREMOVAL-NEXT:    li a1, 16
+; NOREMOVAL-NEXT:  .LBB18_4: # %if.end
+; NOREMOVAL-NEXT:    srliw a2, a0, 24
 ; NOREMOVAL-NEXT:    seqz a2, a2
 ; NOREMOVAL-NEXT:    slli a3, a2, 3
-; NOREMOVAL-NEXT:    sllw a1, a1, a3
 ; NOREMOVAL-NEXT:    negw a2, a2
+; NOREMOVAL-NEXT:    sllw a0, a0, a3
 ; NOREMOVAL-NEXT:    andi a2, a2, -8
-; NOREMOVAL-NEXT:    add a0, a0, a2
-; NOREMOVAL-NEXT:    srliw a2, a1, 28
+; NOREMOVAL-NEXT:    add a1, a1, a2
+; NOREMOVAL-NEXT:    srliw a2, a0, 28
 ; NOREMOVAL-NEXT:    seqz a2, a2
 ; NOREMOVAL-NEXT:    slli a3, a2, 2
-; NOREMOVAL-NEXT:    sllw a1, a1, a3
 ; NOREMOVAL-NEXT:    negw a2, a2
+; NOREMOVAL-NEXT:    sllw a0, a0, a3
 ; NOREMOVAL-NEXT:    andi a2, a2, -4
-; NOREMOVAL-NEXT:    add a0, a0, a2
-; NOREMOVAL-NEXT:    srliw a2, a1, 30
+; NOREMOVAL-NEXT:    add a1, a1, a2
+; NOREMOVAL-NEXT:    srliw a2, a0, 30
 ; NOREMOVAL-NEXT:    seqz a2, a2
 ; NOREMOVAL-NEXT:    slli a3, a2, 1
-; NOREMOVAL-NEXT:    sllw a1, a1, a3
 ; NOREMOVAL-NEXT:    negw a2, a2
+; NOREMOVAL-NEXT:    sllw a0, a0, a3
 ; NOREMOVAL-NEXT:    andi a2, a2, -2
-; NOREMOVAL-NEXT:    add a0, a0, a2
-; NOREMOVAL-NEXT:    not a1, a1
-; NOREMOVAL-NEXT:    srli a1, a1, 31
-; NOREMOVAL-NEXT:    addw a0, a0, a1
-; NOREMOVAL-NEXT:  .LBB18_4: # %cleanup
+; NOREMOVAL-NEXT:    add a1, a1, a2
+; NOREMOVAL-NEXT:    not a0, a0
+; NOREMOVAL-NEXT:    srli a0, a0, 31
+; NOREMOVAL-NEXT:    addw a0, a1, a0
+; NOREMOVAL-NEXT:  .LBB18_5: # %cleanup
 ; NOREMOVAL-NEXT:    ret
 entry:
   %tobool.not = icmp eq i32 %x, 0

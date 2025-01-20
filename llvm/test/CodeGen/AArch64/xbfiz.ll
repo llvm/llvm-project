@@ -69,3 +69,19 @@ define i64 @lsl32_not_ubfiz64(i64 %v) {
   %and = and i64 %shl, 4294967295
   ret i64 %and
 }
+
+define i64 @lsl_zext_i8_i64(i8 %b) {
+; CHECK-LABEL: lsl_zext_i8_i64:
+; CHECK:    ubfiz x0, x0, #1, #8
+  %1 = zext i8 %b to i64
+  %2 = shl i64 %1, 1
+  ret i64 %2
+}
+
+define i64 @lsl_zext_i16_i64(i16 %b) {
+; CHECK-LABEL: lsl_zext_i16_i64:
+; CHECK:    ubfiz x0, x0, #1, #16
+  %1 = zext i16 %b to i64
+  %2 = shl i64 %1, 1
+  ret i64 %2
+}

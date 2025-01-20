@@ -100,6 +100,7 @@ static_library("Sema") {
     "SemaPPC.cpp",
     "SemaPseudoObject.cpp",
     "SemaRISCV.cpp",
+    "SemaSPIRV.cpp",
     "SemaSYCL.cpp",
     "SemaStmt.cpp",
     "SemaStmtAsm.cpp",

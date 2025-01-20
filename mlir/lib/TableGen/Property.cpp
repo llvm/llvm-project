@@ -14,6 +14,7 @@
 #include "mlir/TableGen/Property.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/Operator.h"
+#include "mlir/TableGen/Predicate.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace mlir;
@@ -68,8 +69,8 @@ Property::Property(StringRef summary, StringRef description,
                    StringRef writeToMlirBytecodeCall,
                    StringRef hashPropertyCall, StringRef defaultValue,
                    StringRef storageTypeValueOverride)
-    : summary(summary), description(description), storageType(storageType),
-      interfaceType(interfaceType),
+    : def(nullptr), summary(summary), description(description),
+      storageType(storageType), interfaceType(interfaceType),
       convertFromStorageCall(convertFromStorageCall),
       assignToStorageCall(assignToStorageCall),
       convertToAttributeCall(convertToAttributeCall),
@@ -89,6 +90,15 @@ StringRef Property::getPropertyDefName() const {
     return getBaseProperty().def->getName();
   }
   return def->getName();
+}
+
+Pred Property::getPredicate() const {
+  if (!def)
+    return Pred();
+  const llvm::RecordVal *maybePred = def->getValue("predicate");
+  if (!maybePred || !maybePred->getValue())
+    return Pred();
+  return Pred(maybePred->getValue());
 }
 
 Property Property::getBaseProperty() const {

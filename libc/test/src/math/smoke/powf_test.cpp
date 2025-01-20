@@ -190,4 +190,34 @@ TEST_F(LlvmLibcPowfTest, SpecialNumbers) {
                                   FE_UNDERFLOW);
     }
   }
+
+  EXPECT_FP_EQ(-0.0f, LIBC_NAMESPACE::powf(-0.015625f, 25.0f));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::powf(-0.015625f, 26.0f));
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcPowfTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_IS_NAN(LIBC_NAMESPACE::powf(-min_denormal, 0.5f));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::powf(2.0f, min_denormal));
+}
+
+TEST_F(LlvmLibcPowfTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::powf(-min_denormal, 0.5f));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::powf(2.0f, min_denormal));
+}
+
+TEST_F(LlvmLibcPowfTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::powf(-min_denormal, 0.5f));
+  EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::powf(2.0f, min_denormal));
+}
+
+#endif

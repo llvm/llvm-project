@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-math-to-rocdl -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -convert-math-to-rocdl -allow-unregistered-dialect -split-input-file | FileCheck %s
 
 module @test_module {
   // CHECK: llvm.func @__ocml_fmod_f16(f16, f16) -> f16
@@ -480,4 +480,18 @@ module @test_module {
     // CHECK-NEXT: llvm.fptrunc %{{.*}} : f32 to bf16
     func.return %resultf16, %resultf32, %resultf64, %resultbf16 : f16, f32, f64, bf16
   }
+}
+
+// -----
+
+// Math operation not inside function
+// Ensure it not crash
+
+module {
+  "test.some_op_with_region"() ({
+  ^bb0(%arg0: f64):
+    // CHECK: math.atan
+    %0 = math.atan %arg0 : f64
+    "test.possible_terminator"() : () -> ()
+  }) : () -> ()
 }

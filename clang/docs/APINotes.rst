@@ -172,10 +172,28 @@ declaration kind), all of which are optional:
   ::
 
     Tags:
+    - Name: OwnedStorage
+      SwiftImportAs: owned
+
+:SwiftRetainOp, SwiftReleaseOp:
+
+  Controls the lifetime operations of a class which uses custom reference
+  counting. The class must be annotated as a reference type using
+  ``SwiftImportAs: reference``. The values are either names of global functions,
+  each taking a single parameter of a pointer type, or ``immortal`` for a type
+  that is considered alive for the duration of the program.
+
+  ::
+
+    Tags:
     - Name: RefCountedStorage
       SwiftImportAs: reference
       SwiftReleaseOp: RCRelease
       SwiftRetainOp: RCRetain
+    - Name: ImmortalSingleton
+      SwiftImportAs: reference
+      SwiftReleaseOp: immortal
+      SwiftRetainOp: immortal
 
 :SwiftCopyable:
 

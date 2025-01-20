@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "JITLinkMocks.h"
+#include "JITLinkTestUtils.h"
 #include "llvm/ExecutionEngine/JITLink/MachO_x86_64.h"
 
 #include "llvm/Testing/Support/Error.h"
@@ -18,9 +18,10 @@ using namespace llvm::jitlink;
 
 TEST(MemoryManagerErrorTest, ErrorOnFirstAllocate) {
   // Check that we can get addresses for blocks, symbols, and edges.
-  auto G = std::make_unique<LinkGraph>("foo", Triple("x86_64-apple-darwin"), 8,
-                                       llvm::endianness::little,
-                                       getGenericEdgeKindName);
+  auto G = std::make_unique<LinkGraph>(
+      "foo", std::make_shared<orc::SymbolStringPool>(),
+      Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
+      getGenericEdgeKindName);
 
   ArrayRef<char> Content = "hello, world!";
   auto &Sec =

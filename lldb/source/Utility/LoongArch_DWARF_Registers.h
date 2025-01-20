@@ -47,22 +47,7 @@ enum {
   dwarf_gpr_r30,
   dwarf_gpr_r31 = 31,
 
-  dwarf_gpr_orig_a0,
-  dwarf_gpr_pc,
-  dwarf_gpr_badv,
-
-  dwarf_gpr_reserved0 = 35,
-  dwarf_gpr_reserved1,
-  dwarf_gpr_reserved2,
-  dwarf_gpr_reserved3,
-  dwarf_gpr_reserved4,
-  dwarf_gpr_reserved5,
-  dwarf_gpr_reserved6,
-  dwarf_gpr_reserved7,
-  dwarf_gpr_reserved8,
-  dwarf_gpr_reserved9,
-
-  dwarf_fpr_f0 = 45,
+  dwarf_fpr_f0 = 32,
   dwarf_fpr_f1,
   dwarf_fpr_f2,
   dwarf_fpr_f3,
@@ -93,7 +78,7 @@ enum {
   dwarf_fpr_f28,
   dwarf_fpr_f29,
   dwarf_fpr_f30,
-  dwarf_fpr_f31 = 76,
+  dwarf_fpr_f31 = 63,
 
   dwarf_fpr_fcc0,
   dwarf_fpr_fcc1,
@@ -170,6 +155,23 @@ enum {
   dwarf_fpr_fs5 = dwarf_fpr_f29,
   dwarf_fpr_fs6 = dwarf_fpr_f30,
   dwarf_fpr_fs7 = dwarf_fpr_f31,
+
+  // mock pc regnum
+  dwarf_gpr_pc = 57005,
+
+  // fake registers are only used to define `RegisterInfo`
+  dwarf_gpr_orig_a0,
+  dwarf_gpr_badv,
+  dwarf_gpr_reserved0,
+  dwarf_gpr_reserved1,
+  dwarf_gpr_reserved2,
+  dwarf_gpr_reserved3,
+  dwarf_gpr_reserved4,
+  dwarf_gpr_reserved5,
+  dwarf_gpr_reserved6,
+  dwarf_gpr_reserved7,
+  dwarf_gpr_reserved8,
+  dwarf_gpr_reserved9,
 };
 
 } // namespace loongarch_dwarf

@@ -159,7 +159,7 @@ public:
 
       // Some statements have custom mechanisms for dumping their children.
       if (isa<DeclStmt>(S) || isa<GenericSelectionExpr>(S) ||
-          isa<RequiresExpr>(S))
+          isa<RequiresExpr>(S) || isa<OpenACCWaitConstruct>(S))
         return;
 
       if (Traversal == TK_IgnoreUnlessSpelledInSource &&
@@ -800,6 +800,13 @@ public:
       Visit(A);
   }
 
+  void VisitLabelStmt(const LabelStmt *Node) {
+    if (Node->getDecl()->hasAttrs()) {
+      for (const auto *A : Node->getDecl()->getAttrs())
+        Visit(A);
+    }
+  }
+
   void VisitCXXCatchStmt(const CXXCatchStmt *Node) {
     Visit(Node->getExceptionDecl());
   }
@@ -814,6 +821,16 @@ public:
   }
 
   void VisitOpenACCConstructStmt(const OpenACCConstructStmt *Node) {
+    for (const auto *C : Node->clauses())
+      Visit(C);
+  }
+
+  void VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *Node) {
+    // Needs custom child checking to put clauses AFTER the children, which are
+    // the expressions in the 'wait' construct. Others likely need this as well,
+    // and might need to do the associated statement after it.
+    for (const Stmt *S : Node->children())
+      Visit(S);
     for (const auto *C : Node->clauses())
       Visit(C);
   }

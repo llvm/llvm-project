@@ -405,14 +405,13 @@ define <8 x i8> @interleaved_load_vf8_i8_stride4(ptr %ptr) nounwind {
 ; AVX512-NEXT:    vmovdqu (%rdi), %ymm0
 ; AVX512-NEXT:    vmovdqa 16(%rdi), %xmm1
 ; AVX512-NEXT:    vpmovsxbw {{.*#+}} xmm2 = [3,7,11,15,7,15,6,7]
-; AVX512-NEXT:    vpshufb %xmm2, %xmm1, %xmm3
+; AVX512-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vpshufb %xmm2, %xmm0, %xmm2
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX512-NEXT:    vpsrld $16, %xmm1, %xmm1
-; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm3
-; AVX512-NEXT:    vpackusdw %xmm1, %xmm3, %xmm1
-; AVX512-NEXT:    vpaddb %xmm1, %xmm2, %xmm1
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX512-NEXT:    vmovdqu (%rdi), %ymm2
+; AVX512-NEXT:    vpsrld $16, %ymm2, %ymm3
+; AVX512-NEXT:    vpmovdw %zmm3, %ymm3
+; AVX512-NEXT:    vpaddb %xmm3, %xmm1, %xmm1
 ; AVX512-NEXT:    vpmovdw %zmm2, %ymm2
 ; AVX512-NEXT:    vpsrlw $8, %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovwb %zmm0, %ymm0
@@ -1653,7 +1652,7 @@ define void @splat2_v4f64_load_store(ptr %s, ptr %d) nounwind {
 ; AVX512-LABEL: splat2_v4f64_load_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovups (%rdi), %ymm0
-; AVX512-NEXT:    vmovaps {{.*#+}} zmm1 = [0,0,1,1,2,2,3,3]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [0,0,1,1,2,2,3,3]
 ; AVX512-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    vmovups %zmm0, (%rsi)
 ; AVX512-NEXT:    vzeroupper
@@ -1690,7 +1689,7 @@ define void @splat2_v4i64_load_store(ptr %s, ptr %d) nounwind {
 ; AVX512-LABEL: splat2_v4i64_load_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovups (%rdi), %ymm0
-; AVX512-NEXT:    vmovaps {{.*#+}} zmm1 = [0,0,1,1,2,2,3,3]
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [0,0,1,1,2,2,3,3]
 ; AVX512-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    vmovups %zmm0, (%rsi)
 ; AVX512-NEXT:    vzeroupper

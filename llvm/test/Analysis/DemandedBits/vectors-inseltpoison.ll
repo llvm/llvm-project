@@ -3,7 +3,7 @@
 ; CHECK-DAG: DemandedBits: 0xff00 for   %x = or <2 x i32> %a, zeroinitializer
 ; CHECK-DAG: DemandedBits: 0xff00 for   %y = or <2 x i32> %b, zeroinitializer
 ; CHECK-DAG: DemandedBits: 0xff00 for   %z = or <2 x i32> %x, %y
-; CHECK-DAG: DemandedBits: 0xff for   %u = lshr <2 x i32> %z, <i32 8, i32 8>
+; CHECK-DAG: DemandedBits: 0xff for   %u = lshr <2 x i32> %z, splat (i32 8)
 ; CHECK-DAG: DemandedBits: 0xff for   %r = trunc <2 x i32> %u to <2 x i8>
 define <2 x i8> @test_basic(<2 x i32> %a, <2 x i32> %b) {
   %x = or <2 x i32> %a, zeroinitializer
@@ -61,8 +61,8 @@ define <3 x i32> @test_shufflevector(<2 x i32> %a, <2 x i32> %b) {
 ; Shifts with splat shift amounts
 
 ; CHECK-DAG: DemandedBits: 0xf for   %x = or <2 x i32> %a, zeroinitializer
-; CHECK-DAG: DemandedBits: 0xf0 for   %y = shl <2 x i32> %x, <i32 4, i32 4>
-; CHECK-DAG: DemandedBits: 0xffffffff for   %r = and <2 x i32> %y, <i32 240, i32 240>
+; CHECK-DAG: DemandedBits: 0xf0 for   %y = shl <2 x i32> %x, splat (i32 4)
+; CHECK-DAG: DemandedBits: 0xffffffff for   %r = and <2 x i32> %y, splat (i32 240)
 define <2 x i32> @test_shl(<2 x i32> %a) {
   %x = or <2 x i32> %a, zeroinitializer
   %y = shl <2 x i32> %x, <i32 4, i32 4>
@@ -71,8 +71,8 @@ define <2 x i32> @test_shl(<2 x i32> %a) {
 }
 
 ; CHECK-DAG: DemandedBits: 0xf00 for   %x = or <2 x i32> %a, zeroinitializer
-; CHECK-DAG: DemandedBits: 0xf0 for   %y = ashr <2 x i32> %x, <i32 4, i32 4>
-; CHECK-DAG: DemandedBits: 0xffffffff for   %r = and <2 x i32> %y, <i32 240, i32 240>
+; CHECK-DAG: DemandedBits: 0xf0 for   %y = ashr <2 x i32> %x, splat (i32 4)
+; CHECK-DAG: DemandedBits: 0xffffffff for   %r = and <2 x i32> %y, splat (i32 240)
 define <2 x i32> @test_ashr(<2 x i32> %a) {
   %x = or <2 x i32> %a, zeroinitializer
   %y = ashr <2 x i32> %x, <i32 4, i32 4>
@@ -81,8 +81,8 @@ define <2 x i32> @test_ashr(<2 x i32> %a) {
 }
 
 ; CHECK-DAG: DemandedBits: 0xf00 for   %x = or <2 x i32> %a, zeroinitializer
-; CHECK-DAG: DemandedBits: 0xf0 for   %y = lshr <2 x i32> %x, <i32 4, i32 4>
-; CHECK-DAG: DemandedBits: 0xffffffff for   %r = and <2 x i32> %y, <i32 240, i32 240>
+; CHECK-DAG: DemandedBits: 0xf0 for   %y = lshr <2 x i32> %x, splat (i32 4)
+; CHECK-DAG: DemandedBits: 0xffffffff for   %r = and <2 x i32> %y, splat (i32 240)
 define <2 x i32> @test_lshr(<2 x i32> %a) {
   %x = or <2 x i32> %a, zeroinitializer
   %y = lshr <2 x i32> %x, <i32 4, i32 4>
@@ -95,8 +95,8 @@ declare <2 x i32> @llvm.fshr.i32(<2 x i32>, <2 x i32>, <2 x i32>)
 
 ; CHECK-DAG: DemandedBits: 0xf for   %x = or <2 x i32> %a, zeroinitializer
 ; CHECK-DAG: DemandedBits: 0xf0000000 for   %y = or <2 x i32> %b, zeroinitializer
-; CHECK-DAG: DemandedBits: 0xff for   %z = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> <i32 4, i32 4>)
-; CHECK-DAG: DemandedBits: 0xffffffff for   %r = and <2 x i32> %z, <i32 255, i32 255>
+; CHECK-DAG: DemandedBits: 0xff for   %z = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> splat (i32 4))
+; CHECK-DAG: DemandedBits: 0xffffffff for   %r = and <2 x i32> %z, splat (i32 255)
 define <2 x i32> @test_fshl(<2 x i32> %a, <2 x i32> %b) {
   %x = or <2 x i32> %a, zeroinitializer
   %y = or <2 x i32> %b, zeroinitializer
@@ -107,8 +107,8 @@ define <2 x i32> @test_fshl(<2 x i32> %a, <2 x i32> %b) {
 
 ; CHECK-DAG: DemandedBits: 0xf for   %x = or <2 x i32> %a, zeroinitializer
 ; CHECK-DAG: DemandedBits: 0xf0000000 for   %y = or <2 x i32> %b, zeroinitializer
-; CHECK-DAG: DemandedBits: 0xff for   %z = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> <i32 28, i32 28>)
-; CHECK-DAG: DemandedBits: 0xffffffff for   %r = and <2 x i32> %z, <i32 255, i32 255>
+; CHECK-DAG: DemandedBits: 0xff for   %z = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> splat (i32 28))
+; CHECK-DAG: DemandedBits: 0xffffffff for   %r = and <2 x i32> %z, splat (i32 255)
 define <2 x i32> @test_fshr(<2 x i32> %a, <2 x i32> %b) {
   %x = or <2 x i32> %a, zeroinitializer
   %y = or <2 x i32> %b, zeroinitializer

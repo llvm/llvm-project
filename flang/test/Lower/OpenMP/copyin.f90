@@ -86,7 +86,7 @@ subroutine copyin_char_chararray()
 end
 
 ! CHECK-LABEL:   func.func @_QPcopyin_derived_type() {
-! CHECK:           %[[VAL_0:.*]] = fir.address_of(@_QFcopyin_derived_typeE.b.my_type.t_arr) : !fir.ref<!fir.array<2x1x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>
+! CHECK:           %[[VAL_0:.*]] = fir.address_of(@_QFcopyin_derived_typeE.b.my_type.t_arr) : !fir.ref<!fir.array<2x1x!fir.type<_QM__fortran_type_infoTvalue{{[<]?}}{genre:i8,__padding0:!fir.array<7xi8>,value:i64}{{[>]?}}>>>
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 2 : index
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
@@ -166,7 +166,6 @@ end
 ! CHECK:                 fir.call @_QPsub4(%[[VAL_9]]#1) fastmath<contract> : (!fir.ref<i32>) -> ()
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }
@@ -338,7 +337,6 @@ end subroutine
 ! CHECK:                 hlfir.assign %[[VAL_40]] to %[[VAL_31]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }

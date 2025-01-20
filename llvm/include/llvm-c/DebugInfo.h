@@ -138,6 +138,7 @@ typedef enum {
   LLVMDWARFSourceLanguageRuby,
   LLVMDWARFSourceLanguageMove,
   LLVMDWARFSourceLanguageHylo,
+  LLVMDWARFSourceLanguageMetal,
 
   // Vendor extensions:
   LLVMDWARFSourceLanguageMips_Assembler,
@@ -1414,6 +1415,52 @@ LLVMMetadataRef LLVMInstructionGetDebugLoc(LLVMValueRef Inst);
  * @see llvm::Instruction::setDebugLoc()
  */
 void LLVMInstructionSetDebugLoc(LLVMValueRef Inst, LLVMMetadataRef Loc);
+
+/**
+ * Create a new descriptor for a label
+ *
+ * \param Builder         The DIBuilder.
+ * \param Scope           The scope to create the label in.
+ * \param Name            Variable name.
+ * \param NameLen         Length of variable name.
+ * \param File            The file to create the label in.
+ * \param LineNo          Line Number.
+ * \param AlwaysPreserve  Preserve the label regardless of optimization.
+ *
+ * @see llvm::DIBuilder::createLabel()
+ */
+LLVMMetadataRef LLVMDIBuilderCreateLabel(
+    LLVMDIBuilderRef Builder,
+    LLVMMetadataRef Context, const char *Name, size_t NameLen,
+    LLVMMetadataRef File, unsigned LineNo, LLVMBool AlwaysPreserve);
+
+/**
+ * Insert a new llvm.dbg.label intrinsic call
+ *
+ * \param Builder         The DIBuilder.
+ * \param LabelInfo       The Label's debug info descriptor
+ * \param Location        The debug info location
+ * \param InsertBefore    Location for the new intrinsic.
+ *
+ * @see llvm::DIBuilder::insertLabel()
+ */
+LLVMDbgRecordRef LLVMDIBuilderInsertLabelBefore(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef LabelInfo,
+    LLVMMetadataRef Location, LLVMValueRef InsertBefore);
+
+/**
+ * Insert a new llvm.dbg.label intrinsic call
+ *
+ * \param Builder         The DIBuilder.
+ * \param LabelInfo       The Label's debug info descriptor
+ * \param Location        The debug info location
+ * \param InsertAtEnd     Location for the new intrinsic.
+ *
+ * @see llvm::DIBuilder::insertLabel()
+ */
+LLVMDbgRecordRef LLVMDIBuilderInsertLabelAtEnd(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef LabelInfo,
+    LLVMMetadataRef Location, LLVMBasicBlockRef InsertAtEnd);
 
 /**
  * Obtain the enumerated type of a Metadata instance.

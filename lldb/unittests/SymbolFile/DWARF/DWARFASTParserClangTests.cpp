@@ -598,3 +598,146 @@ TEST_F(DWARFASTParserClangTests, TestDefaultTemplateParamParsing) {
     }
   }
 }
+
+TEST_F(DWARFASTParserClangTests, TestUniqueDWARFASTTypeMap_CppInsertMapFind) {
+  // This tests the behaviour of UniqueDWARFASTTypeMap under
+  // following scenario:
+  // 1. DWARFASTParserClang parses a forward declaration and
+  // inserts it into the UniqueDWARFASTTypeMap.
+  // 2. We then MapDeclDIEToDefDIE which updates the map
+  // entry with the line number/file information of the definition.
+  // 3. Parse the definition DIE, which should return the previously
+  // parsed type from the UniqueDWARFASTTypeMap.
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_AARCH64
+DWARF:
+  debug_str:
+    - Foo
+
+  debug_line:      
+    - Version:         4
+      MinInstLength:   1
+      MaxOpsPerInst:   1
+      DefaultIsStmt:   1
+      LineBase:        0
+      LineRange:       0
+      Files:           
+        - Name:            main.cpp
+          DirIdx:          0
+          ModTime:         0
+          Length:          0
+
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x01
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x02
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_declaration
+              Form:            DW_FORM_flag_present
+        - Code:            0x03
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+
+  debug_info:
+    - Version:         5
+      UnitType:        DW_UT_compile
+      AddrSize:        8
+      Entries:
+# 0x0c: DW_TAG_compile_unit
+#         DW_AT_language [DW_FORM_data2]    (DW_LANG_C_plus_plus)
+#         DW_AT_stmt_list [DW_FORM_sec_offset]
+        - AbbrCode:        0x01
+          Values:
+            - Value:           0x04
+            - Value:           0x0000000000000000
+
+# 0x0d:   DW_TAG_structure_type
+#           DW_AT_name [DW_FORM_strp]       (\"Foo\")
+#           DW_AT_declaration [DW_FORM_flag_present] (true)
+        - AbbrCode:        0x02
+          Values:
+            - Value:           0x00
+
+# 0x0f:   DW_TAG_structure_type
+#           DW_AT_name [DW_FORM_strp]       (\"Foo\")
+#           DW_AT_decl_file [DW_FORM_data1] (main.cpp)
+#           DW_AT_decl_line [DW_FORM_data1] (3)
+        - AbbrCode:        0x03
+          Values:
+            - Value:           0x00
+            - Value:           0x01
+            - Value:           0x03
+
+        - AbbrCode:        0x00 # end of child tags of 0x0c
+...
+)";
+  YAMLModuleTester t(yamldata);
+
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
+  ASSERT_EQ(unit->GetDWARFLanguageType(), DW_LANG_C_plus_plus);
+  DWARFDIE cu_die(unit, cu_entry);
+
+  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
+  auto &ast_ctx = *holder->GetAST();
+  DWARFASTParserClangStub ast_parser(ast_ctx);
+
+  DWARFDIE decl_die;
+  DWARFDIE def_die;
+  for (auto const &die : cu_die.children()) {
+    if (die.Tag() != DW_TAG_structure_type)
+      continue;
+
+    if (die.GetAttributeValueAsOptionalUnsigned(llvm::dwarf::DW_AT_declaration))
+      decl_die = die;
+    else
+      def_die = die;
+  }
+
+  ASSERT_TRUE(decl_die.IsValid());
+  ASSERT_TRUE(def_die.IsValid());
+  ASSERT_NE(decl_die, def_die);
+
+  ParsedDWARFTypeAttributes attrs(def_die);
+  ASSERT_TRUE(attrs.decl.IsValid());
+
+  SymbolContext sc;
+  bool new_type = false;
+  lldb::TypeSP type_sp = ast_parser.ParseTypeFromDWARF(sc, decl_die, &new_type);
+  ASSERT_NE(type_sp, nullptr);
+
+  ast_parser.MapDeclDIEToDefDIE(decl_die, def_die);
+
+  lldb::TypeSP reparsed_type_sp =
+      ast_parser.ParseTypeFromDWARF(sc, def_die, &new_type);
+  ASSERT_NE(reparsed_type_sp, nullptr);
+
+  ASSERT_EQ(type_sp, reparsed_type_sp);
+}

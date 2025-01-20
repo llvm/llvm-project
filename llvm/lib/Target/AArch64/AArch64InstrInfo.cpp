@@ -12,7 +12,6 @@
 
 #include "AArch64InstrInfo.h"
 #include "AArch64ExpandImm.h"
-#include "AArch64FrameLowering.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64PointerAuth.h"
 #include "AArch64Subtarget.h"
@@ -106,6 +105,19 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   //        before the assembly printer.
   unsigned NumBytes = 0;
   const MCInstrDesc &Desc = MI.getDesc();
+
+  if (!MI.isBundle() && isTailCallReturnInst(MI)) {
+    NumBytes = Desc.getSize() ? Desc.getSize() : 4;
+
+    const auto *MFI = MF->getInfo<AArch64FunctionInfo>();
+    if (!MFI->shouldSignReturnAddress(MF))
+      return NumBytes;
+
+    const auto &STI = MF->getSubtarget<AArch64Subtarget>();
+    auto Method = STI.getAuthenticatedLRCheckMethod(*MF);
+    NumBytes += AArch64PAuth::getCheckerSizeInBytes(Method);
+    return NumBytes;
+  }
 
   // Size should be preferably set in
   // llvm/lib/Target/AArch64/AArch64InstrInfo.td (default case).
@@ -2543,6 +2555,14 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::ST4H_IMM:
   case AArch64::ST4W_IMM:
   case AArch64::STGPi:
+  case AArch64::STGPreIndex:
+  case AArch64::STZGPreIndex:
+  case AArch64::ST2GPreIndex:
+  case AArch64::STZ2GPreIndex:
+  case AArch64::STGPostIndex:
+  case AArch64::STZGPostIndex:
+  case AArch64::ST2GPostIndex:
+  case AArch64::STZ2GPostIndex:
   case AArch64::STNPDi:
   case AArch64::STNPQi:
   case AArch64::STNPSi:
@@ -2586,6 +2606,8 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::LDPWpre:
   case AArch64::LDPXpost:
   case AArch64::LDPXpre:
+  case AArch64::STGPpre:
+  case AArch64::STGPpost:
   case AArch64::STPDpost:
   case AArch64::STPDpre:
   case AArch64::STPQpost:
@@ -4155,7 +4177,11 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     break;
   case AArch64::LDG:
   case AArch64::STGi:
+  case AArch64::STGPreIndex:
+  case AArch64::STGPostIndex:
   case AArch64::STZGi:
+  case AArch64::STZGPreIndex:
+  case AArch64::STZGPostIndex:
     Scale = TypeSize::getFixed(16);
     Width = TypeSize::getFixed(16);
     MinOffset = -256;
@@ -4322,13 +4348,19 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     MaxOffset = 7;
     break;
   case AArch64::ST2Gi:
+  case AArch64::ST2GPreIndex:
+  case AArch64::ST2GPostIndex:
   case AArch64::STZ2Gi:
+  case AArch64::STZ2GPreIndex:
+  case AArch64::STZ2GPostIndex:
     Scale = TypeSize::getFixed(16);
     Width = TypeSize::getFixed(32);
     MinOffset = -256;
     MaxOffset = 255;
     break;
   case AArch64::STGPi:
+  case AArch64::STGPpost:
+  case AArch64::STGPpre:
     Scale = TypeSize::getFixed(16);
     Width = TypeSize::getFixed(16);
     MinOffset = -64;
@@ -7357,7 +7389,8 @@ genSubAdd2SubSub(MachineFunction &MF, MachineRegisterInfo &MRI,
   bool RegBIsKill = AddMI->getOperand(IdxOpd1).isKill();
   Register RegC = AddMI->getOperand(IdxOtherOpd).getReg();
   bool RegCIsKill = AddMI->getOperand(IdxOtherOpd).isKill();
-  Register NewVR = MRI.createVirtualRegister(MRI.getRegClass(RegA));
+  Register NewVR =
+      MRI.createVirtualRegister(MRI.getRegClass(Root.getOperand(2).getReg()));
 
   unsigned Opcode = Root.getOpcode();
   if (Opcode == AArch64::SUBSWrr)
@@ -9687,13 +9720,20 @@ void AArch64InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
 
   if (TRI.isGeneralPurposeRegister(MF, Reg)) {
     BuildMI(MBB, Iter, DL, get(AArch64::MOVZXi), Reg).addImm(0).addImm(0);
-  } else if (STI.hasSVE()) {
+  } else if (STI.isSVEorStreamingSVEAvailable()) {
     BuildMI(MBB, Iter, DL, get(AArch64::DUP_ZI_D), Reg)
       .addImm(0)
       .addImm(0);
-  } else {
+  } else if (STI.isNeonAvailable()) {
     BuildMI(MBB, Iter, DL, get(AArch64::MOVIv2d_ns), Reg)
       .addImm(0);
+  } else {
+    // This is a streaming-compatible function without SVE. We don't have full
+    // Neon (just FPRs), so we can at most use the first 64-bit sub-register.
+    // So given `movi v..` would be illegal use `fmov d..` instead.
+    assert(STI.hasNEON() && "Expected to have NEON.");
+    Register Reg64 = TRI.getSubReg(Reg, AArch64::dsub);
+    BuildMI(MBB, Iter, DL, get(AArch64::FMOVD0), Reg64);
   }
 }
 

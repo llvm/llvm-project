@@ -46,7 +46,7 @@ define void @foo() {
 
   public:
     TestPass(unsigned &BBCnt) : FunctionPass("test-pass"), BBCnt(BBCnt) {}
-    bool runOnFunction(Function &F) final {
+    bool runOnFunction(Function &F, const Analyses &A) final {
       for ([[maybe_unused]] auto &BB : F)
         ++BBCnt;
       return false;
@@ -59,7 +59,7 @@ define void @foo() {
   // Check classof().
   EXPECT_TRUE(llvm::isa<FunctionPass>(TPass));
   // Check runOnFunction();
-  TPass.runOnFunction(*F);
+  TPass.runOnFunction(*F, Analyses::emptyForTesting());
   EXPECT_EQ(BBCnt, 1u);
 #ifndef NDEBUG
   {
@@ -80,7 +80,7 @@ define void @foo() {
   class TestNamePass final : public FunctionPass {
   public:
     TestNamePass(llvm::StringRef Name) : FunctionPass(Name) {}
-    bool runOnFunction(Function &F) { return false; }
+    bool runOnFunction(Function &F, const Analyses &A) { return false; }
   };
   EXPECT_DEATH(TestNamePass("white space"), ".*whitespace.*");
   EXPECT_DEATH(TestNamePass("-dash"), ".*start with.*");
@@ -106,7 +106,7 @@ define i8 @foo(i8 %v0, i8 %v1) {
   public:
     TestPass(unsigned &InstCount)
         : RegionPass("test-pass"), InstCount(InstCount) {}
-    bool runOnRegion(Region &R) final {
+    bool runOnRegion(Region &R, const Analyses &A) final {
       for ([[maybe_unused]] auto &Inst : R) {
         ++InstCount;
       }
@@ -121,7 +121,7 @@ define i8 @foo(i8 %v0, i8 %v1) {
   llvm::SmallVector<std::unique_ptr<Region>> Regions =
       Region::createRegionsFromMD(*F);
   ASSERT_EQ(Regions.size(), 1u);
-  TPass.runOnRegion(*Regions[0]);
+  TPass.runOnRegion(*Regions[0], Analyses::emptyForTesting());
   EXPECT_EQ(InstCount, 2u);
 #ifndef NDEBUG
   {
@@ -142,7 +142,7 @@ define i8 @foo(i8 %v0, i8 %v1) {
   class TestNamePass final : public RegionPass {
   public:
     TestNamePass(llvm::StringRef Name) : RegionPass(Name) {}
-    bool runOnRegion(Region &F) { return false; }
+    bool runOnRegion(Region &F, const Analyses &A) { return false; }
   };
   EXPECT_DEATH(TestNamePass("white space"), ".*whitespace.*");
   EXPECT_DEATH(TestNamePass("-dash"), ".*start with.*");
@@ -161,7 +161,7 @@ define void @foo() {
 
   public:
     TestPass1(unsigned &BBCnt) : FunctionPass("test-pass1"), BBCnt(BBCnt) {}
-    bool runOnFunction(Function &F) final {
+    bool runOnFunction(Function &F, const Analyses &A) final {
       for ([[maybe_unused]] auto &BB : F)
         ++BBCnt;
       return false;
@@ -172,7 +172,7 @@ define void @foo() {
 
   public:
     TestPass2(unsigned &BBCnt) : FunctionPass("test-pass2"), BBCnt(BBCnt) {}
-    bool runOnFunction(Function &F) final {
+    bool runOnFunction(Function &F, const Analyses &A) final {
       for ([[maybe_unused]] auto &BB : F)
         ++BBCnt;
       return false;
@@ -180,14 +180,12 @@ define void @foo() {
   };
   unsigned BBCnt1 = 0;
   unsigned BBCnt2 = 0;
-  TestPass1 TPass1(BBCnt1);
-  TestPass2 TPass2(BBCnt2);
 
   FunctionPassManager FPM("test-fpm");
-  FPM.addPass(&TPass1);
-  FPM.addPass(&TPass2);
+  FPM.addPass(std::make_unique<TestPass1>(BBCnt1));
+  FPM.addPass(std::make_unique<TestPass2>(BBCnt2));
   // Check runOnFunction().
-  FPM.runOnFunction(*F);
+  FPM.runOnFunction(*F, Analyses::emptyForTesting());
   EXPECT_EQ(BBCnt1, 1u);
   EXPECT_EQ(BBCnt2, 1u);
 #ifndef NDEBUG
@@ -218,7 +216,7 @@ define i8 @foo(i8 %v0, i8 %v1) {
   public:
     TestPass1(unsigned &InstCount)
         : RegionPass("test-pass1"), InstCount(InstCount) {}
-    bool runOnRegion(Region &R) final {
+    bool runOnRegion(Region &R, const Analyses &A) final {
       for ([[maybe_unused]] auto &Inst : R)
         ++InstCount;
       return false;
@@ -230,7 +228,7 @@ define i8 @foo(i8 %v0, i8 %v1) {
   public:
     TestPass2(unsigned &InstCount)
         : RegionPass("test-pass2"), InstCount(InstCount) {}
-    bool runOnRegion(Region &R) final {
+    bool runOnRegion(Region &R, const Analyses &A) final {
       for ([[maybe_unused]] auto &Inst : R)
         ++InstCount;
       return false;
@@ -238,17 +236,15 @@ define i8 @foo(i8 %v0, i8 %v1) {
   };
   unsigned InstCount1 = 0;
   unsigned InstCount2 = 0;
-  TestPass1 TPass1(InstCount1);
-  TestPass2 TPass2(InstCount2);
 
   RegionPassManager RPM("test-rpm");
-  RPM.addPass(&TPass1);
-  RPM.addPass(&TPass2);
+  RPM.addPass(std::make_unique<TestPass1>(InstCount1));
+  RPM.addPass(std::make_unique<TestPass2>(InstCount2));
   // Check runOnRegion().
   llvm::SmallVector<std::unique_ptr<Region>> Regions =
       Region::createRegionsFromMD(*F);
   ASSERT_EQ(Regions.size(), 1u);
-  RPM.runOnRegion(*Regions[0]);
+  RPM.runOnRegion(*Regions[0], Analyses::emptyForTesting());
   EXPECT_EQ(InstCount1, 2u);
   EXPECT_EQ(InstCount2, 2u);
 #ifndef NDEBUG
@@ -260,62 +256,90 @@ define i8 @foo(i8 %v0, i8 %v1) {
 #endif // NDEBUG
 }
 
-TEST_F(PassTest, PassRegistry) {
-  class TestPass1 final : public FunctionPass {
-  public:
-    TestPass1() : FunctionPass("test-pass1") {}
-    bool runOnFunction(Function &F) final { return false; }
-  };
-  class TestPass2 final : public FunctionPass {
-  public:
-    TestPass2() : FunctionPass("test-pass2") {}
-    bool runOnFunction(Function &F) final { return false; }
-  };
-
-  PassRegistry Registry;
-  auto &TP1 = Registry.registerPass(std::make_unique<TestPass1>());
-  auto &TP2 = Registry.registerPass(std::make_unique<TestPass2>());
-
-  // Check getPassByName().
-  EXPECT_EQ(Registry.getPassByName("test-pass1"), &TP1);
-  EXPECT_EQ(Registry.getPassByName("test-pass2"), &TP2);
-
-#ifndef NDEBUG
-  // Check print().
-  std::string Buff;
-  llvm::raw_string_ostream SS(Buff);
-  Registry.print(SS);
-  EXPECT_EQ(Buff, "test-pass1\ntest-pass2\n");
-#endif // NDEBUG
+TEST_F(PassTest, SetPassPipeline) {
+  auto *F = parseFunction(R"IR(
+define void @f() {
+  ret void
 }
+)IR",
+                          "f");
+  class FooPass final : public FunctionPass {
+    std::string &Str;
+    std::string Args;
 
-TEST_F(PassTest, ParsePassPipeline) {
-  class TestPass1 final : public FunctionPass {
   public:
-    TestPass1() : FunctionPass("test-pass1") {}
-    bool runOnFunction(Function &F) final { return false; }
+    FooPass(std::string &Str, llvm::StringRef Args)
+        : FunctionPass("foo-pass"), Str(Str), Args(Args.str()) {}
+    bool runOnFunction(Function &F, const Analyses &A) final {
+      Str += "foo<" + Args + ">";
+      return false;
+    }
   };
-  class TestPass2 final : public FunctionPass {
+  class BarPass final : public FunctionPass {
+    std::string &Str;
+    std::string Args;
+
   public:
-    TestPass2() : FunctionPass("test-pass2") {}
-    bool runOnFunction(Function &F) final { return false; }
+    BarPass(std::string &Str, llvm::StringRef Args)
+        : FunctionPass("bar-pass"), Str(Str), Args(Args.str()) {}
+    bool runOnFunction(Function &F, const Analyses &A) final {
+      Str += "bar<" + Args + ">";
+      return false;
+    }
   };
 
-  PassRegistry Registry;
-  Registry.registerPass(std::make_unique<TestPass1>());
-  Registry.registerPass(std::make_unique<TestPass2>());
+  std::string Str;
+  auto CreatePass =
+      [&Str](llvm::StringRef Name,
+             llvm::StringRef Args) -> std::unique_ptr<FunctionPass> {
+    if (Name == "foo")
+      return std::make_unique<FooPass>(Str, Args);
+    if (Name == "bar")
+      return std::make_unique<BarPass>(Str, Args);
+    return nullptr;
+  };
 
-  [[maybe_unused]] auto &FPM =
-      Registry.parseAndCreatePassPipeline("test-pass1,test-pass2,test-pass1");
+  FunctionPassManager FPM("test-fpm");
+  FPM.setPassPipeline("foo<abc>,bar<nested1<nested2<nested3>>>,foo",
+                      CreatePass);
+  FPM.runOnFunction(*F, Analyses::emptyForTesting());
+  EXPECT_EQ(Str, "foo<abc>bar<nested1<nested2<nested3>>>foo<>");
+
+  // A second call to setPassPipeline will trigger an assertion in debug mode.
 #ifndef NDEBUG
-  std::string Buff;
-  llvm::raw_string_ostream SS(Buff);
-  FPM.print(SS);
-  EXPECT_EQ(Buff, "init-fpm(test-pass1,test-pass2,test-pass1)");
-#endif // NDEBUG
+  EXPECT_DEATH(FPM.setPassPipeline("bar,bar,foo", CreatePass),
+               "setPassPipeline called on a non-empty sandboxir::PassManager");
+#endif
 
-  EXPECT_DEATH(Registry.parseAndCreatePassPipeline("bad-pass-name"),
+  // Fresh PM for the death tests so they die from bad pipeline strings, rather
+  // than from multiple setPassPipeline calls.
+  FunctionPassManager FPM2("test-fpm");
+  // Bad/empty pass names.
+  EXPECT_DEATH(FPM2.setPassPipeline("bad-pass-name", CreatePass),
                ".*not registered.*");
-  EXPECT_DEATH(Registry.parseAndCreatePassPipeline(""), ".*not registered.*");
-  EXPECT_DEATH(Registry.parseAndCreatePassPipeline(","), ".*not registered.*");
+  EXPECT_DEATH(FPM2.setPassPipeline(",", CreatePass), ".*empty pass name.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("<>", CreatePass), ".*empty pass name.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("<>foo", CreatePass),
+               ".*empty pass name.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("foo,<>", CreatePass),
+               ".*empty pass name.*");
+
+  // Mismatched argument brackets.
+  EXPECT_DEATH(FPM2.setPassPipeline("foo<", CreatePass), ".*Missing '>'.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("foo<bar", CreatePass), ".*Missing '>'.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("foo<bar<>", CreatePass),
+               ".*Missing '>'.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("foo>", CreatePass), ".*Unexpected '>'.*");
+  EXPECT_DEATH(FPM2.setPassPipeline(">foo", CreatePass), ".*Unexpected '>'.*");
+  // Extra garbage between args and next delimiter/end-of-string.
+  EXPECT_DEATH(FPM2.setPassPipeline("foo<bar<>>>", CreatePass),
+               ".*Expected delimiter.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("bar<>foo", CreatePass),
+               ".*Expected delimiter.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("bar<>foo,baz", CreatePass),
+               ".*Expected delimiter.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("foo<args><more-args>", CreatePass),
+               ".*Expected delimiter.*");
+  EXPECT_DEATH(FPM2.setPassPipeline("foo<args>bar", CreatePass),
+               ".*Expected delimiter.*");
 }

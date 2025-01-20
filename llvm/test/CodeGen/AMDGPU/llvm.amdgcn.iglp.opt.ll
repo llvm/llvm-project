@@ -14,7 +14,7 @@ entry:
 define amdgpu_kernel void @test_iglp_opt_mfma_gemm(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) #0 {
 ; GCN-LABEL: test_iglp_opt_mfma_gemm:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x1ff80, v0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 2.0
@@ -152,7 +152,7 @@ entry:
 define amdgpu_kernel void @test_iglp_opt_rev_mfma_gemm(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) #0 {
 ; GCN-LABEL: test_iglp_opt_rev_mfma_gemm:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x1ff80, v0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 1.0
@@ -285,6 +285,41 @@ entry:
   ret void
 }
 
+define amdgpu_kernel void @test_iglp_opt_asm_sideeffect(ptr addrspace(3) noalias %in, ptr addrspace(3) noalias %out) #0 {
+; GCN-LABEL: test_iglp_opt_asm_sideeffect:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffc, v0
+; GCN-NEXT:    ; iglp_opt mask(0x00000000)
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_add_u32_e32 v1, s0, v0
+; GCN-NEXT:    ds_read_b32 v1, v1
+; GCN-NEXT:    v_add_u32_e32 v0, s1, v0
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    ds_write_b32 v0, v1
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ds_read_b32 v0, v2 offset:256
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    ds_write_b32 v1, v0 offset:256
+; GCN-NEXT:    s_endpgm
+entry:
+  %idx = call i32 @llvm.amdgcn.workitem.id.x()
+  %load.0.addr = getelementptr float, ptr addrspace(3) %in, i32 %idx
+  %load.0 = load float, ptr addrspace(3) %load.0.addr
+  %store.0.addr = getelementptr float, ptr addrspace(3) %out, i32 %idx
+  store float %load.0, ptr addrspace(3) %store.0.addr
+  call void asm sideeffect "", ""() #1
+  call void @llvm.amdgcn.iglp.opt(i32 0) #1
+  %load.1.addr = getelementptr float, ptr addrspace(3) %in, i32 64
+  %load.1 = load float, ptr addrspace(3) %load.1.addr
+  %store.1.addr = getelementptr float, ptr addrspace(3) %out, i32 64
+  store float %load.1, ptr addrspace(3) %store.1.addr
+  ret void
+}
 
 declare void @llvm.amdgcn.iglp.opt(i32) #1
 declare i32 @llvm.amdgcn.workitem.id.x() #1

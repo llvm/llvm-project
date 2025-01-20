@@ -34,19 +34,12 @@ entry:
 }
 
 define <8 x i32> @test3(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2, <4 x i32> %3) {
-; SSE-LABEL: @test3(
-; SSE-NEXT:  entry:
-; SSE-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[TMP0:%.*]], <4 x i32> [[TMP1:%.*]])
-; SSE-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[TMP2:%.*]], <4 x i32> [[TMP3:%.*]])
-; SSE-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; SSE-NEXT:    ret <8 x i32> [[TMP6]]
-;
-; AVX-LABEL: @test3(
-; AVX-NEXT:  entry:
-; AVX-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP0:%.*]], <4 x i32> [[TMP2:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; AVX-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP1:%.*]], <4 x i32> [[TMP3:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; AVX-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[TMP4]], <8 x i32> [[TMP5]])
-; AVX-NEXT:    ret <8 x i32> [[TMP6]]
+; CHECK-LABEL: @test3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP0:%.*]], <4 x i32> [[TMP2:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP1:%.*]], <4 x i32> [[TMP3:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[TMP4]], <8 x i32> [[TMP5]])
+; CHECK-NEXT:    ret <8 x i32> [[TMP6]]
 ;
 entry:
   %4 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %0, <4 x i32> %1)

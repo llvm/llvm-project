@@ -53,6 +53,17 @@ enum EMacro2 {
   // CHECK-FIXES: EMacro2_c = 3,
 };
 
+
+enum {
+  // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: initial values in enum '<unnamed>' are not consistent
+  // CHECK-MESSAGES-ENABLE: :[[@LINE-2]]:1: warning: initial values in enum '<unnamed>' are not consistent
+  EAnonymous_a = 1,
+  EAnonymous_b,
+  // CHECK-FIXES: EAnonymous_b = 2,
+  EAnonymous_c = 3,
+};
+
+
 enum EnumZeroFirstInitialValue {
   EnumZeroFirstInitialValue_0 = 0,
   // CHECK-MESSAGES-ENABLE: :[[@LINE-1]]:3: warning: zero initial value for the first enumerator in 'EnumZeroFirstInitialValue' can be disregarded
@@ -114,4 +125,3 @@ enum WithFwdDeclSequential : int {
   EFS2 = 4,
   // CHECK-FIXES-ENABLE: EFS2 ,
 };
-

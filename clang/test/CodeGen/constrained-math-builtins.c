@@ -57,6 +57,13 @@ __builtin_atan(f);        __builtin_atanf(f);       __builtin_atanl(f); __builti
 // CHECK: call x86_fp80 @llvm.experimental.constrained.atan.f80(x86_fp80 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // CHECK: call fp128 @llvm.experimental.constrained.atan.f128(fp128 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 
+__builtin_atan2(f,f);        __builtin_atan2f(f,f);       __builtin_atan2l(f,f); __builtin_atan2f128(f,f);
+
+// CHECK: call double @llvm.experimental.constrained.atan2.f64(double %{{.*}}, double %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call float @llvm.experimental.constrained.atan2.f32(float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call x86_fp80 @llvm.experimental.constrained.atan2.f80(x86_fp80 %{{.*}}, x86_fp80 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call fp128 @llvm.experimental.constrained.atan2.f128(fp128 %{{.*}}, fp128 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+
   __builtin_ceil(f);       __builtin_ceilf(f);      __builtin_ceill(f); __builtin_ceilf128(f);
 
 // CHECK: call double @llvm.experimental.constrained.ceil.f64(double %{{.*}}, metadata !"fpexcept.strict")

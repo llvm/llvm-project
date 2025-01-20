@@ -942,41 +942,6 @@ func.func @vector_splat_0d(%a: f32) -> vector<f32> {
   return %0 : vector<f32>
 }
 
-// CHECK-LABEL:   func @warp_execute_on_lane_0(
-func.func @warp_execute_on_lane_0(%laneid: index) {
-//  CHECK-NEXT:     vector.warp_execute_on_lane_0(%{{.*}})[32] {
-  vector.warp_execute_on_lane_0(%laneid)[32] {
-//  CHECK-NEXT:     }
-  }
-//  CHECK-NEXT:     return
-  return
-}
-
-// CHECK-LABEL: func.func @warp_execute_on_lane_0_2d
-func.func @warp_execute_on_lane_0_2d(%laneid: index) {
-  //  CHECK: vector.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<1x4xi32>)
-  %2 = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<1x4xi32>) {
-    %0 = arith.constant dense<2>: vector<4x32xi32>
-    // CHECK: vector.yield %{{.+}} : vector<4x32xi32>
-    vector.yield %0 : vector<4x32xi32>
-  }
-  return
-}
-
-// CHECK-LABEL:   func @warp_operand_result(
-func.func @warp_operand_result(%laneid: index, %v0 : vector<4xi32>) -> (vector<4xi32>) {
-//  CHECK-NEXT:     %{{.*}} = vector.warp_execute_on_lane_0(%{{.*}})[32] args(%{{.*}} : vector<4xi32>) -> (vector<4xi32>) {
-  %2 = vector.warp_execute_on_lane_0(%laneid)[32]
-  args(%v0 : vector<4xi32>) -> (vector<4xi32>) {
-   ^bb0(%arg0 : vector<128xi32>) :
-    %0 = arith.constant dense<2>: vector<128xi32>
-    %1 = arith.addi %arg0, %0 : vector<128xi32>
-//       CHECK:       vector.yield %{{.*}} : vector<128xi32>
-    vector.yield %1 : vector<128xi32>
-//  CHECK-NEXT:     }
-  }
-  return %2 : vector<4xi32>
-}
 
 // CHECK-LABEL: func @vector_mask
 func.func @vector_mask(%a: vector<8xi32>, %m0: vector<8xi1>) -> i32 {
@@ -1026,6 +991,20 @@ func.func @vector_mask_empty_return(%m0: vector<16xi1>, %arg0: vector<16xf32>) -
 //       CHECK:   vector.mask %{{.*}} { vector.yield {{.*}} : vector<16xf32> } : vector<16xi1> -> vector<16xf32>
   %0 = vector.mask %m0 { vector.yield %arg0 : vector<16xf32> } : vector<16xi1> -> vector<16xf32>
   return %0 : vector<16xf32>
+}
+
+// CHECK-LABEL: func @vector_mask_scalar_broadcast_transfer
+func.func @vector_mask_scalar_broadcast_transfer(%arg0: tensor<2x4xi32>,
+                                                 %idx0: index, %idx1: index,
+                                                 %m0: vector<1xi1>) -> vector<1x1x4xi32> {
+  %cst = arith.constant 0 : i32
+  // CHECK: vector.mask %{{.*}} { vector.transfer_read {{.*}} } : vector<1xi1> -> vector<1x1x4xi32>
+  %res = vector.mask %m0 {
+    %0 = vector.transfer_read %arg0[%idx0, %idx1], %cst {permutation_map = affine_map<(d0, d1) -> (0, 0, 0)>}
+      : tensor<2x4xi32>, vector<1x1x4xi32>
+    vector.yield %0 : vector<1x1x4xi32>
+  } : vector<1xi1> -> vector<1x1x4xi32>
+  return %res : vector<1x1x4xi32>
 }
 
 // CHECK-LABEL: func @vector_scalable_insert(

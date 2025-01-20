@@ -25,7 +25,7 @@ declare ptr @foo()
 ; CHECK-LABEL: 'test_sret'
 ; CHECK: %sret_gep{{.*}}(aligned)
 ; CHECK-NOT: %sret_gep_outside
-define void @test_sret(ptr sret(%struct.A) %result) {
+define void @test_sret(ptr sret(%struct.A) %result, i1 %arg) {
   %sret_gep = getelementptr inbounds %struct.A, ptr %result, i64 0, i32 1, i64 2
   load i8, ptr %sret_gep
 
@@ -287,10 +287,10 @@ define void @infer_noalias2(ptr dereferenceable(8) noalias readonly %p) nosync {
 
 ; Just check that we don't crash.
 ; CHECK-LABEL: 'opaque_type_crasher'
-define void @opaque_type_crasher(ptr dereferenceable(16) %a) {
+define void @opaque_type_crasher(ptr dereferenceable(16) %a, i1 %arg) {
 entry:
   %ptr8 = getelementptr inbounds i8, ptr %a, i32 8
-  br i1 undef, label %if.then, label %if.end
+  br i1 %arg, label %if.then, label %if.end
 
 if.then:
   %res = load i32, ptr %ptr8, align 4

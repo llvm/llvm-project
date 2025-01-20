@@ -165,16 +165,20 @@ struct RecordTypeStorage : public mlir::TypeStorage {
     setTypeList(typeList);
   }
 
+  bool isPacked() const { return packed; }
+  void pack(bool p) { packed = p; }
+
 protected:
   std::string name;
   bool finalized;
+  bool packed;
   std::vector<RecordType::TypePair> lens;
   std::vector<RecordType::TypePair> types;
 
 private:
   RecordTypeStorage() = delete;
   explicit RecordTypeStorage(llvm::StringRef name)
-      : name{name}, finalized{false} {}
+      : name{name}, finalized{false}, packed{false} {}
 };
 
 } // namespace detail
@@ -442,19 +446,35 @@ unsigned getBoxRank(mlir::Type boxTy) {
 /// Return the ISO_C_BINDING intrinsic module value of type \p ty.
 int getTypeCode(mlir::Type ty, const fir::KindMapping &kindMap) {
   if (mlir::IntegerType intTy = mlir::dyn_cast<mlir::IntegerType>(ty)) {
-    switch (intTy.getWidth()) {
-    case 8:
-      return CFI_type_int8_t;
-    case 16:
-      return CFI_type_int16_t;
-    case 32:
-      return CFI_type_int32_t;
-    case 64:
-      return CFI_type_int64_t;
-    case 128:
-      return CFI_type_int128_t;
+    if (intTy.isUnsigned()) {
+      switch (intTy.getWidth()) {
+      case 8:
+        return CFI_type_uint8_t;
+      case 16:
+        return CFI_type_uint16_t;
+      case 32:
+        return CFI_type_uint32_t;
+      case 64:
+        return CFI_type_uint64_t;
+      case 128:
+        return CFI_type_uint128_t;
+      }
+      llvm_unreachable("unsupported integer type");
+    } else {
+      switch (intTy.getWidth()) {
+      case 8:
+        return CFI_type_int8_t;
+      case 16:
+        return CFI_type_int16_t;
+      case 32:
+        return CFI_type_int32_t;
+      case 64:
+        return CFI_type_int64_t;
+      case 128:
+        return CFI_type_int128_t;
+      }
+      llvm_unreachable("unsupported integer type");
     }
-    llvm_unreachable("unsupported integer type");
   }
   if (fir::LogicalType logicalTy = mlir::dyn_cast<fir::LogicalType>(ty)) {
     switch (kindMap.getLogicalBitsize(logicalTy.getFKind())) {
@@ -805,6 +825,19 @@ void fir::IntegerType::print(mlir::AsmPrinter &printer) const {
 }
 
 //===----------------------------------------------------------------------===//
+// UnsignedType
+//===----------------------------------------------------------------------===//
+
+// `unsigned` `<` kind `>`
+mlir::Type fir::UnsignedType::parse(mlir::AsmParser &parser) {
+  return parseKindSingleton<fir::UnsignedType>(parser);
+}
+
+void fir::UnsignedType::print(mlir::AsmPrinter &printer) const {
+  printer << "<" << getFKind() << '>';
+}
+
+//===----------------------------------------------------------------------===//
 // LogicalType
 //===----------------------------------------------------------------------===//
 
@@ -843,9 +876,14 @@ llvm::LogicalResult fir::PointerType::verify(
 //===----------------------------------------------------------------------===//
 
 // Fortran derived type
+// unpacked:
 // `type` `<` name
 //           (`(` id `:` type (`,` id `:` type)* `)`)?
 //           (`{` id `:` type (`,` id `:` type)* `}`)? '>'
+// packed:
+// `type` `<` name
+//           (`(` id `:` type (`,` id `:` type)* `)`)?
+//           (`<{` id `:` type (`,` id `:` type)* `}>`)? '>'
 mlir::Type fir::RecordType::parse(mlir::AsmParser &parser) {
   llvm::StringRef name;
   if (parser.parseLess() || parser.parseKeyword(&name))
@@ -871,6 +909,10 @@ mlir::Type fir::RecordType::parse(mlir::AsmParser &parser) {
   }
 
   RecordType::TypeList typeList;
+  if (!parser.parseOptionalLess()) {
+    result.pack(true);
+  }
+
   if (!parser.parseOptionalLBrace()) {
     while (true) {
       llvm::StringRef field;
@@ -884,8 +926,10 @@ mlir::Type fir::RecordType::parse(mlir::AsmParser &parser) {
       if (parser.parseOptionalComma())
         break;
     }
-    if (parser.parseRBrace())
-      return {};
+    if (parser.parseOptionalGreater()) {
+      if (parser.parseRBrace())
+        return {};
+    }
   }
 
   if (parser.parseGreater())
@@ -912,6 +956,9 @@ void fir::RecordType::print(mlir::AsmPrinter &printer) const {
       printer << ')';
     }
     if (getTypeList().size()) {
+      if (isPacked()) {
+        printer << '<';
+      }
       char ch = '{';
       for (auto p : getTypeList()) {
         printer << ch << p.first << ':';
@@ -919,6 +966,9 @@ void fir::RecordType::print(mlir::AsmPrinter &printer) const {
         ch = ',';
       }
       printer << '}';
+      if (isPacked()) {
+        printer << '>';
+      }
     }
     recordTypeVisited.erase(uniqueKey());
   }
@@ -943,6 +993,10 @@ RecordType::TypeList fir::RecordType::getLenParamList() const {
 }
 
 bool fir::RecordType::isFinalized() const { return getImpl()->isFinalized(); }
+
+void fir::RecordType::pack(bool p) { getImpl()->pack(p); }
+
+bool fir::RecordType::isPacked() const { return getImpl()->isPacked(); }
 
 detail::RecordTypeStorage const *fir::RecordType::uniqueKey() const {
   return getImpl();

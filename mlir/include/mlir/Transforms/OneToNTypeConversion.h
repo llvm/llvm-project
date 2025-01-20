@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Note: The 1:N dialect conversion is deprecated and will be removed soon.
+// 1:N support has been added to the regular dialect conversion driver.
+//
 // This file provides utils for implementing (poor-man's) dialect conversion
 // passes with 1:N type conversions.
 //
@@ -32,49 +35,6 @@
 #include "llvm/ADT/SmallVector.h"
 
 namespace mlir {
-
-/// Extends `TypeConverter` with 1:N target materializations. Such
-/// materializations have to provide the "reverse" of 1:N type conversions,
-/// i.e., they need to materialize N values with target types into one value
-/// with a source type (which isn't possible in the base class currently).
-class OneToNTypeConverter : public TypeConverter {
-public:
-  /// Callback that expresses user-provided materialization logic from the given
-  /// value to N values of the given types. This is useful for expressing target
-  /// materializations for 1:N type conversions, which materialize one value in
-  /// a source type as N values in target types.
-  using OneToNMaterializationCallbackFn =
-      std::function<std::optional<SmallVector<Value>>(OpBuilder &, TypeRange,
-                                                      Value, Location)>;
-
-  /// Creates the mapping of the given range of original types to target types
-  /// of the conversion and stores that mapping in the given (signature)
-  /// conversion. This function simply calls
-  /// `TypeConverter::convertSignatureArgs` and exists here with a different
-  /// name to reflect the broader semantic.
-  LogicalResult computeTypeMapping(TypeRange types,
-                                   SignatureConversion &result) const {
-    return convertSignatureArgs(types, result);
-  }
-
-  /// Applies one of the user-provided 1:N target materializations. If several
-  /// exists, they are tried out in the reverse order in which they have been
-  /// added until the first one succeeds. If none succeeds, the functions
-  /// returns `std::nullopt`.
-  std::optional<SmallVector<Value>>
-  materializeTargetConversion(OpBuilder &builder, Location loc,
-                              TypeRange resultTypes, Value input) const;
-
-  /// Adds a 1:N target materialization to the converter. Such materializations
-  /// build IR that converts N values with target types into 1 value of the
-  /// source type.
-  void addTargetMaterialization(OneToNMaterializationCallbackFn &&callback) {
-    oneToNTargetMaterializations.emplace_back(std::move(callback));
-  }
-
-private:
-  SmallVector<OneToNMaterializationCallbackFn> oneToNTargetMaterializations;
-};
 
 /// Stores a 1:N mapping of types and provides several useful accessors. This
 /// class extends `SignatureConversion`, which already supports 1:N type
@@ -162,6 +122,8 @@ public:
   /// types must be the same as the result types of the op) and the new values
   /// (i.e., the converted types must be the same as the types of the new
   /// values).
+  /// FIXME: The 1:N dialect conversion is deprecated and will be removed soon.
+  /// Use replaceOpWithMultiple() instead.
   void replaceOp(Operation *op, ValueRange newValues,
                  const OneToNTypeMapping &resultMapping);
   using PatternRewriter::replaceOp;
@@ -294,14 +256,20 @@ public:
 /// or illegal types; the function simply applies the given patterns and does
 /// not fail if some ops or types remain unconverted (i.e., the conversion is
 /// only "partial").
+/// FIXME: The 1:N dialect conversion is deprecated and will be removed soon.
+/// 1:N support has been added to the regular dialect conversion driver.
+/// Use applyPartialConversion() instead.
 LogicalResult
-applyPartialOneToNConversion(Operation *op, OneToNTypeConverter &typeConverter,
+applyPartialOneToNConversion(Operation *op, TypeConverter &typeConverter,
                              const FrozenRewritePatternSet &patterns);
 
 /// Add a pattern to the given pattern list to convert the signature of a
 /// FunctionOpInterface op with the given type converter. This only supports
 /// ops which use FunctionType to represent their type. This is intended to be
 /// used with the 1:N dialect conversion.
+/// FIXME: The 1:N dialect conversion is deprecated and will be removed soon.
+/// 1:N support has been added to the regular dialect conversion driver.
+/// Use populateFunctionOpInterfaceTypeConversionPattern() instead.
 void populateOneToNFunctionOpInterfaceTypeConversionPattern(
     StringRef functionLikeOpName, const TypeConverter &converter,
     RewritePatternSet &patterns);

@@ -22,7 +22,7 @@ using StreamUngetc = void (*)(int, void *);
 // This is intended to be either a raw string or a buffer syncronized with the
 // file's internal buffer.
 struct ReadBuffer {
-  char *buffer;
+  const char *buffer;
   size_t buff_len;
   size_t buff_cur = 0;
 };
@@ -32,6 +32,7 @@ class Reader {
 
   void *input_stream = nullptr;
 
+  // TODO: Remove these unnecessary function pointers
   StreamGetc stream_getc = nullptr;
   StreamUngetc stream_ungetc = nullptr;
 

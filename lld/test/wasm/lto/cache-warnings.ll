@@ -35,7 +35,6 @@
 ; SIZE: warning: ThinLTO cache pruning happens since the total size of{{.*}}--thinlto-cache-policy
 ; WARN-NOT: warning: ThinLTO cache pruning happens{{.*}}--thinlto-cache-policy
 
-target datalayout = "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown-wasm"
 
 define void @globalfunc() #0 {

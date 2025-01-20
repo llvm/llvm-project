@@ -153,25 +153,6 @@ inline ParseResult parseDynamicIndexList(
   return parseDynamicIndexList(parser, values, integers, scalableVals,
                                valueTypes, delimiter);
 }
-inline ParseResult parseDynamicIndexList(
-    OpAsmParser &parser,
-    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    DenseI64ArrayAttr &integers, SmallVectorImpl<Type> &valueTypes,
-    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
-  DenseBoolArrayAttr scalableVals = {};
-  return parseDynamicIndexList(parser, values, integers, scalableVals,
-                               &valueTypes, delimiter);
-}
-inline ParseResult parseDynamicIndexList(
-    OpAsmParser &parser,
-    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    DenseI64ArrayAttr &integers, SmallVectorImpl<Type> &valueTypes,
-    DenseBoolArrayAttr &scalableVals,
-    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
-
-  return parseDynamicIndexList(parser, values, integers, scalableVals,
-                               &valueTypes, delimiter);
-}
 
 /// Verify that a the `values` has as many elements as the number of entries in
 /// `attr` for which `isDynamic` evaluates to true.

@@ -939,10 +939,10 @@ define i1 @extract_value_uadd_fail2(<2 x i8> %xx, <2 x i8> %yy, i32 %idx) {
 
 define i1 @extract_value_uadd_fail3(<2 x i8> %xx, <2 x i8> %yy) {
 ; CHECK-LABEL: @extract_value_uadd_fail3(
-; CHECK-NEXT:    [[X0:%.*]] = and <2 x i8> [[XX:%.*]], <i8 127, i8 127>
-; CHECK-NEXT:    [[Y0:%.*]] = and <2 x i8> [[YY:%.*]], <i8 127, i8 127>
-; CHECK-NEXT:    [[X:%.*]] = add nuw <2 x i8> [[X0]], <i8 1, i8 1>
-; CHECK-NEXT:    [[Y:%.*]] = add nuw <2 x i8> [[Y0]], <i8 1, i8 1>
+; CHECK-NEXT:    [[X0:%.*]] = and <2 x i8> [[XX:%.*]], splat (i8 127)
+; CHECK-NEXT:    [[Y0:%.*]] = and <2 x i8> [[YY:%.*]], splat (i8 127)
+; CHECK-NEXT:    [[X:%.*]] = add nuw <2 x i8> [[X0]], splat (i8 1)
+; CHECK-NEXT:    [[Y:%.*]] = add nuw <2 x i8> [[Y0]], splat (i8 1)
 ; CHECK-NEXT:    [[ADD_UOV:%.*]] = call { <2 x i8>, <2 x i1> } @llvm.uadd.with.overflow.v2i8(<2 x i8> [[X]], <2 x i8> [[Y]])
 ; CHECK-NEXT:    [[ADD:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[ADD_UOV]], 0
 ; CHECK-NEXT:    [[UOV:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[ADD_UOV]], 1
@@ -1334,7 +1334,7 @@ define i8 @nonzero_reduce_xor_vscale_even(<vscale x 2 x i8> %xx) {
 
 define i8 @nonzero_reduce_xor_vscale_odd_fail(<vscale x 3 x i8> %xx) {
 ; CHECK-LABEL: @nonzero_reduce_xor_vscale_odd_fail(
-; CHECK-NEXT:    [[X:%.*]] = or <vscale x 3 x i8> [[XX:%.*]], shufflevector (<vscale x 3 x i8> insertelement (<vscale x 3 x i8> poison, i8 1, i64 0), <vscale x 3 x i8> poison, <vscale x 3 x i32> zeroinitializer)
+; CHECK-NEXT:    [[X:%.*]] = or <vscale x 3 x i8> [[XX:%.*]], splat (i8 1)
 ; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.xor.nxv3i8(<vscale x 3 x i8> [[X]])
 ; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 1
 ; CHECK-NEXT:    ret i8 [[R]]
@@ -1349,7 +1349,7 @@ define i8 @nonzero_reduce_xor_vscale_odd_fail(<vscale x 3 x i8> %xx) {
 
 define i8 @nonzero_reduce_xor_vscale_even_fail(<vscale x 2 x i8> %xx) {
 ; CHECK-LABEL: @nonzero_reduce_xor_vscale_even_fail(
-; CHECK-NEXT:    [[X:%.*]] = or <vscale x 2 x i8> [[XX:%.*]], shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> poison, i8 1, i64 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[X:%.*]] = or <vscale x 2 x i8> [[XX:%.*]], splat (i8 1)
 ; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.xor.nxv2i8(<vscale x 2 x i8> [[X]])
 ; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 2
 ; CHECK-NEXT:    ret i8 [[R]]

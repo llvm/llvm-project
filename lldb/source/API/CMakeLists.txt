@@ -137,6 +137,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
     lldbSymbol
     lldbTarget
     lldbUtility
+    lldbValueObject
     lldbVersion
     ${LLDB_ALL_PLUGINS}
   LINK_COMPONENTS

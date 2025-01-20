@@ -2170,11 +2170,13 @@ public:
 class ParenExpr : public Expr {
   SourceLocation L, R;
   Stmt *Val;
+
 public:
   ParenExpr(SourceLocation l, SourceLocation r, Expr *val)
       : Expr(ParenExprClass, val->getType(), val->getValueKind(),
              val->getObjectKind()),
         L(l), R(r), Val(val) {
+    ParenExprBits.ProducedByFoldExpansion = false;
     setDependence(computeDependence(this));
   }
 
@@ -2205,6 +2207,13 @@ public:
   child_range children() { return child_range(&Val, &Val+1); }
   const_child_range children() const {
     return const_child_range(&Val, &Val + 1);
+  }
+
+  bool isProducedByFoldExpansion() const {
+    return ParenExprBits.ProducedByFoldExpansion != 0;
+  }
+  void setIsProducedByFoldExpansion(bool ProducedByFoldExpansion = true) {
+    ParenExprBits.ProducedByFoldExpansion = ProducedByFoldExpansion;
   }
 };
 
@@ -3172,12 +3181,14 @@ public:
   QualType getCallReturnType(const ASTContext &Ctx) const;
 
   /// Returns the WarnUnusedResultAttr that is either declared on the called
-  /// function, or its return type declaration.
-  const Attr *getUnusedResultAttr(const ASTContext &Ctx) const;
+  /// function, or its return type declaration, together with a NamedDecl that
+  /// refers to the declaration the attribute is attached onto.
+  std::pair<const NamedDecl *, const Attr *>
+  getUnusedResultAttr(const ASTContext &Ctx) const;
 
   /// Returns true if this call expression should warn on unused results.
   bool hasUnusedResultAttr(const ASTContext &Ctx) const {
-    return getUnusedResultAttr(Ctx) != nullptr;
+    return getUnusedResultAttr(Ctx).second != nullptr;
   }
 
   SourceLocation getRParenLoc() const { return RParenLoc; }
@@ -6404,9 +6415,9 @@ class BlockExpr : public Expr {
 protected:
   BlockDecl *TheBlock;
 public:
-  BlockExpr(BlockDecl *BD, QualType ty)
+  BlockExpr(BlockDecl *BD, QualType ty, bool ContainsUnexpandedParameterPack)
       : Expr(BlockExprClass, ty, VK_PRValue, OK_Ordinary), TheBlock(BD) {
-    setDependence(computeDependence(this));
+    setDependence(computeDependence(this, ContainsUnexpandedParameterPack));
   }
 
   /// Build an empty block expression.
@@ -6766,6 +6777,17 @@ public:
   bool isOpenCL() const {
     return getOp() >= AO__opencl_atomic_compare_exchange_strong &&
            getOp() <= AO__opencl_atomic_store;
+  }
+
+  bool isHIP() const {
+    return Op >= AO__hip_atomic_compare_exchange_strong &&
+           Op <= AO__hip_atomic_store;
+  }
+
+  /// Return true if atomics operations targeting allocations in private memory
+  /// are undefined.
+  bool threadPrivateMemoryAtomicsAreUndefined() const {
+    return isOpenCL() || isHIP();
   }
 
   SourceLocation getBuiltinLoc() const { return BuiltinLoc; }

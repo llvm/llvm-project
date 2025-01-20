@@ -128,27 +128,6 @@ BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
   }
 }
 
-/// Is the triple {arm,armeb,thumb,thumbeb}-none-none-{eabi,eabihf} ?
-static bool isARMBareMetal(const llvm::Triple &Triple) {
-  if (Triple.getArch() != llvm::Triple::arm &&
-      Triple.getArch() != llvm::Triple::thumb &&
-      Triple.getArch() != llvm::Triple::armeb &&
-      Triple.getArch() != llvm::Triple::thumbeb)
-    return false;
-
-  if (Triple.getVendor() != llvm::Triple::UnknownVendor)
-    return false;
-
-  if (Triple.getOS() != llvm::Triple::UnknownOS)
-    return false;
-
-  if (Triple.getEnvironment() != llvm::Triple::EABI &&
-      Triple.getEnvironment() != llvm::Triple::EABIHF)
-    return false;
-
-  return true;
-}
-
 /// Is the triple {aarch64.aarch64_be}-none-elf?
 static bool isAArch64BareMetal(const llvm::Triple &Triple) {
   if (Triple.getArch() != llvm::Triple::aarch64 &&
@@ -267,7 +246,7 @@ void BareMetal::findMultilibs(const Driver &D, const llvm::Triple &Triple,
 }
 
 bool BareMetal::handlesTarget(const llvm::Triple &Triple) {
-  return isARMBareMetal(Triple) || isAArch64BareMetal(Triple) ||
+  return arm::isARMEABIBareMetal(Triple) || isAArch64BareMetal(Triple) ||
          isRISCVBareMetal(Triple) || isPPCBareMetal(Triple);
 }
 
@@ -414,38 +393,6 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   }
 }
 
-void BareMetal::AddCXXStdlibLibArgs(const ArgList &Args,
-                                    ArgStringList &CmdArgs) const {
-  switch (GetCXXStdlibType(Args)) {
-  case ToolChain::CST_Libcxx:
-    CmdArgs.push_back("-lc++");
-    if (Args.hasArg(options::OPT_fexperimental_library))
-      CmdArgs.push_back("-lc++experimental");
-    CmdArgs.push_back("-lc++abi");
-    break;
-  case ToolChain::CST_Libstdcxx:
-    CmdArgs.push_back("-lstdc++");
-    CmdArgs.push_back("-lsupc++");
-    break;
-  }
-  CmdArgs.push_back("-lunwind");
-}
-
-void BareMetal::AddLinkRuntimeLib(const ArgList &Args,
-                                  ArgStringList &CmdArgs) const {
-  ToolChain::RuntimeLibType RLT = GetRuntimeLibType(Args);
-  switch (RLT) {
-  case ToolChain::RLT_CompilerRT: {
-    CmdArgs.push_back(getCompilerRTArgString(Args, "builtins"));
-    return;
-  }
-  case ToolChain::RLT_Libgcc:
-    CmdArgs.push_back("-lgcc");
-    return;
-  }
-  llvm_unreachable("Unhandled RuntimeLibType.");
-}
-
 void baremetal::StaticLibTool::ConstructJob(Compilation &C, const JobAction &JA,
                                             const InputInfo &Output,
                                             const InputInfoList &Inputs,
@@ -532,14 +479,21 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   for (const auto &LibPath : TC.getLibraryPaths())
     CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-L", LibPath)));
 
-  if (TC.ShouldLinkCXXStdlib(Args))
+  if (TC.ShouldLinkCXXStdlib(Args)) {
+    bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
+                               !Args.hasArg(options::OPT_static);
+    if (OnlyLibstdcxxStatic)
+      CmdArgs.push_back("-Bstatic");
     TC.AddCXXStdlibLibArgs(Args, CmdArgs);
+    if (OnlyLibstdcxxStatic)
+      CmdArgs.push_back("-Bdynamic");
+    CmdArgs.push_back("-lm");
+  }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    CmdArgs.push_back("-lc");
-    CmdArgs.push_back("-lm");
+    AddRunTimeLibs(TC, D, CmdArgs, Args);
 
-    TC.AddLinkRuntimeLib(Args, CmdArgs);
+    CmdArgs.push_back("-lc");
   }
 
   if (D.isUsingLTO()) {
@@ -561,7 +515,7 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // The R_ARM_TARGET2 relocation must be treated as R_ARM_REL32 on arm*-*-elf
   // and arm*-*-eabi (the default is R_ARM_GOT_PREL, used on arm*-*-linux and
   // arm*-*-*bsd).
-  if (isARMBareMetal(TC.getTriple()))
+  if (arm::isARMEABIBareMetal(TC.getTriple()))
     CmdArgs.push_back("--target2=rel");
 
   CmdArgs.push_back("-o");

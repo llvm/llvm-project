@@ -9,7 +9,6 @@
 //  This file implements semantic analysis member access expressions.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/AST/ASTLambda.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
@@ -20,7 +19,6 @@
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 
@@ -379,7 +377,7 @@ CheckExtVectorComponent(Sema &S, QualType baseType, ExprValueKind &VK,
   //
   // FIXME: This logic can be greatly simplified by splitting it along
   // halving/not halving and reworking the component checking.
-  const ExtVectorType *vecType = baseType->getAs<ExtVectorType>();
+  const ExtVectorType *vecType = baseType->castAs<ExtVectorType>();
 
   // The vector accessor can't exceed the number of elements.
   const char *compStr = CompName->getNameStart();
@@ -436,8 +434,11 @@ CheckExtVectorComponent(Sema &S, QualType baseType, ExprValueKind &VK,
   if (!HalvingSwizzle && *compStr) {
     // We didn't get to the end of the string. This means the component names
     // didn't come from the same set *or* we encountered an illegal name.
-    S.Diag(OpLoc, diag::err_ext_vector_component_name_illegal)
-      << StringRef(compStr, 1) << SourceRange(CompLoc);
+    size_t Offset = compStr - CompName->getNameStart() + 1;
+    char Fmt[3] = {'\'', *compStr, '\''};
+    S.Diag(OpLoc.getLocWithOffset(Offset),
+           diag::err_ext_vector_component_name_illegal)
+        << StringRef(Fmt, 3) << SourceRange(CompLoc);
     return QualType();
   }
 
@@ -1005,15 +1006,6 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
               : !isDependentScopeSpecifier(SS) || computeDeclContext(SS)) &&
          "dependent lookup context that isn't the current instantiation?");
 
-  // C++1z [expr.ref]p2:
-  //   For the first option (dot) the first expression shall be a glvalue [...]
-  if (!IsArrow && BaseExpr && BaseExpr->isPRValue()) {
-    ExprResult Converted = TemporaryMaterializationConversion(BaseExpr);
-    if (Converted.isInvalid())
-      return ExprError();
-    BaseExpr = Converted.get();
-  }
-
   const DeclarationNameInfo &MemberNameInfo = R.getLookupNameInfo();
   DeclarationName MemberName = MemberNameInfo.getName();
   SourceLocation MemberLoc = MemberNameInfo.getLoc();
@@ -1130,26 +1122,68 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     BaseExpr = BuildCXXThisExpr(Loc, BaseExprType, /*IsImplicit=*/true);
   }
 
+  // C++17 [expr.ref]p2, per CWG2813:
+  //   For the first option (dot), if the id-expression names a static member or
+  //   an enumerator, the first expression is a discarded-value expression; if
+  //   the id-expression names a non-static data member, the first expression
+  //   shall be a glvalue.
+  auto ConvertBaseExprToDiscardedValue = [&] {
+    assert(getLangOpts().CPlusPlus &&
+           "Static member / member enumerator outside of C++");
+    if (IsArrow)
+      return false;
+    ExprResult Converted = IgnoredValueConversions(BaseExpr);
+    if (Converted.isInvalid())
+      return true;
+    BaseExpr = Converted.get();
+    DiagnoseDiscardedExprMarkedNodiscard(BaseExpr);
+    return false;
+  };
+  auto ConvertBaseExprToGLValue = [&] {
+    if (IsArrow || !BaseExpr->isPRValue())
+      return false;
+    ExprResult Converted = TemporaryMaterializationConversion(BaseExpr);
+    if (Converted.isInvalid())
+      return true;
+    BaseExpr = Converted.get();
+    return false;
+  };
+
   // Check the use of this member.
   if (DiagnoseUseOfDecl(MemberDecl, MemberLoc))
     return ExprError();
 
-  if (FieldDecl *FD = dyn_cast<FieldDecl>(MemberDecl))
+  if (FieldDecl *FD = dyn_cast<FieldDecl>(MemberDecl)) {
+    if (ConvertBaseExprToGLValue())
+      return ExprError();
     return BuildFieldReferenceExpr(BaseExpr, IsArrow, OpLoc, SS, FD, FoundDecl,
                                    MemberNameInfo);
+  }
 
-  if (MSPropertyDecl *PD = dyn_cast<MSPropertyDecl>(MemberDecl))
+  if (MSPropertyDecl *PD = dyn_cast<MSPropertyDecl>(MemberDecl)) {
+    // No temporaries are materialized for property references yet.
+    // They might be materialized when this is transformed into a member call.
+    // Note that this is slightly different behaviour from MSVC which doesn't
+    // implement CWG2813 yet: MSVC might materialize an extra temporary if the
+    // getter or setter function is an explicit object member function.
     return BuildMSPropertyRefExpr(*this, BaseExpr, IsArrow, SS, PD,
                                   MemberNameInfo);
+  }
 
-  if (IndirectFieldDecl *FD = dyn_cast<IndirectFieldDecl>(MemberDecl))
+  if (IndirectFieldDecl *FD = dyn_cast<IndirectFieldDecl>(MemberDecl)) {
+    if (ConvertBaseExprToGLValue())
+      return ExprError();
     // We may have found a field within an anonymous union or struct
     // (C++ [class.union]).
     return BuildAnonymousStructUnionMemberReference(SS, MemberLoc, FD,
                                                     FoundDecl, BaseExpr,
                                                     OpLoc);
+  }
 
+  // Static data member
   if (VarDecl *Var = dyn_cast<VarDecl>(MemberDecl)) {
+    if (ConvertBaseExprToDiscardedValue())
+      return ExprError();
     return BuildMemberExpr(BaseExpr, IsArrow, OpLoc,
                            SS.getWithLocInContext(Context), TemplateKWLoc, Var,
                            FoundDecl, /*HadMultipleCandidates=*/false,
@@ -1163,7 +1197,13 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     if (MemberFn->isInstance()) {
       valueKind = VK_PRValue;
       type = Context.BoundMemberTy;
+      if (MemberFn->isImplicitObjectMemberFunction() &&
+          ConvertBaseExprToGLValue())
+        return ExprError();
     } else {
+      // Static member function
+      if (ConvertBaseExprToDiscardedValue())
+        return ExprError();
       valueKind = VK_LValue;
       type = MemberFn->getType();
     }
@@ -1176,6 +1216,8 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
   assert(!isa<FunctionDecl>(MemberDecl) && "member function not C++ method?");
 
   if (EnumConstantDecl *Enum = dyn_cast<EnumConstantDecl>(MemberDecl)) {
+    if (ConvertBaseExprToDiscardedValue())
+      return ExprError();
     return BuildMemberExpr(
         BaseExpr, IsArrow, OpLoc, SS.getWithLocInContext(Context),
         TemplateKWLoc, Enum, FoundDecl, /*HadMultipleCandidates=*/false,
@@ -1183,6 +1225,8 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
   }
 
   if (VarTemplateDecl *VarTempl = dyn_cast<VarTemplateDecl>(MemberDecl)) {
+    if (ConvertBaseExprToDiscardedValue())
+      return ExprError();
     if (!TemplateArgs) {
       diagnoseMissingTemplateArguments(
           SS, /*TemplateKeyword=*/TemplateKWLoc.isValid(), VarTempl, MemberLoc);
@@ -1876,8 +1920,16 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
           Context.getAttributedType(attr::NoDeref, MemberType, MemberType);
   }
 
-  auto *CurMethod = dyn_cast<CXXMethodDecl>(CurContext);
-  if (!(CurMethod && CurMethod->isDefaulted()))
+  auto isDefaultedSpecialMember = [this](const DeclContext *Ctx) {
+    auto *Method = dyn_cast<CXXMethodDecl>(CurContext);
+    if (!Method || !Method->isDefaulted())
+      return false;
+
+    return getDefaultedFunctionKind(Method).isSpecialMember();
+  };
+
+  // Implicit special members should not mark fields as used.
+  if (!isDefaultedSpecialMember(CurContext))
     UnusedPrivateFields.remove(Field);
 
   ExprResult Base = PerformObjectMemberConversion(BaseExpr, SS.getScopeRep(),

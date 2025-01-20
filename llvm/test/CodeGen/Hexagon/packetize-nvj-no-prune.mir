@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hexagon-packetizer %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-packetizer %s -o - | FileCheck %s
 
 # Make sure that the new-value jump is packetized with the producer. In this
 # case, the loads cold be packetized together (with updating the offset in

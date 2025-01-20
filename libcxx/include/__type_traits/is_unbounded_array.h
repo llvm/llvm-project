@@ -19,9 +19,9 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class>
-struct _LIBCPP_TEMPLATE_VIS __libcpp_is_unbounded_array : false_type {};
+inline const bool __is_unbounded_array_v = false;
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS __libcpp_is_unbounded_array<_Tp[]> : true_type {};
+inline const bool __is_unbounded_array_v<_Tp[]> = true;
 
 #if _LIBCPP_STD_VER >= 20
 

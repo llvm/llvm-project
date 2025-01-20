@@ -8,20 +8,18 @@
 
 #include "lldb/DataFormatters/TypeSummary.h"
 
-
-
-
+#include "FormatterBytecode.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -58,6 +56,8 @@ std::string TypeSummaryImpl::GetSummaryKindName() {
     return "python";
   case Kind::eInternal:
     return "c++";
+  case Kind::eBytecode:
+    return "bytecode";
   }
 }
 
@@ -230,3 +230,74 @@ std::string ScriptSummaryFormat::GetDescription() {
 }
 
 std::string ScriptSummaryFormat::GetName() { return m_script_formatter_name; }
+
+BytecodeSummaryFormat::BytecodeSummaryFormat(
+    const TypeSummaryImpl::Flags &flags,
+    std::unique_ptr<llvm::MemoryBuffer> bytecode)
+    : TypeSummaryImpl(Kind::eBytecode, flags), m_bytecode(std::move(bytecode)) {
+}
+
+bool BytecodeSummaryFormat::FormatObject(ValueObject *valobj,
+                                         std::string &retval,
+                                         const TypeSummaryOptions &options) {
+  if (!valobj)
+    return false;
+
+  TargetSP target_sp(valobj->GetTargetSP());
+
+  if (!target_sp) {
+    retval.assign("error: no target");
+    return false;
+  }
+
+  std::vector<FormatterBytecode::ControlStackElement> control(
+      {m_bytecode->getBuffer()});
+  FormatterBytecode::DataStack data({valobj->GetSP()});
+  llvm::Error error = FormatterBytecode::Interpret(
+      control, data, FormatterBytecode::sel_summary);
+  if (error) {
+    retval = llvm::toString(std::move(error));
+    return false;
+  }
+  if (!data.size()) {
+    retval = "empty stack";
+    return false;
+  }
+  auto &top = data.back();
+  retval = "";
+  llvm::raw_string_ostream os(retval);
+  if (auto s = std::get_if<std::string>(&top))
+    os << *s;
+  else if (auto u = std::get_if<uint64_t>(&top))
+    os << *u;
+  else if (auto i = std::get_if<int64_t>(&top))
+    os << *i;
+  else if (auto valobj = std::get_if<ValueObjectSP>(&top)) {
+    if (!valobj->get())
+      os << "empty object";
+    else
+      os << valobj->get()->GetValueAsCString();
+  } else if (auto type = std::get_if<CompilerType>(&top)) {
+    os << type->TypeDescription();
+  } else if (auto sel = std::get_if<FormatterBytecode::Selectors>(&top)) {
+    os << toString(*sel);
+  }
+  return true;
+}
+
+std::string BytecodeSummaryFormat::GetDescription() {
+  StreamString sstr;
+  sstr.Printf("%s%s%s%s%s%s%s\n  ", Cascades() ? "" : " (not cascading)",
+              !DoesPrintChildren(nullptr) ? "" : " (show children)",
+              !DoesPrintValue(nullptr) ? " (hide value)" : "",
+              IsOneLiner() ? " (one-line printout)" : "",
+              SkipsPointers() ? " (skip pointers)" : "",
+              SkipsReferences() ? " (skip references)" : "",
+              HideNames(nullptr) ? " (hide member names)" : "");
+  // FIXME: sstr.PutCString(disassembly);
+  return std::string(sstr.GetString());
+}
+
+std::string BytecodeSummaryFormat::GetName() {
+  return "LLDB bytecode formatter";
+}

@@ -54,7 +54,7 @@ class DILocation;
 class Function;
 class GISelChangeObserver;
 class GlobalValue;
-class LLVMTargetMachine;
+class TargetMachine;
 class MachineConstantPool;
 class MachineFrameInfo;
 class MachineFunction;
@@ -186,6 +186,7 @@ public:
     Selected,
     TiedOpsRewritten,
     FailsVerification,
+    FailedRegAlloc,
     TracksDebugUserValues,
     LastProperty = TracksDebugUserValues,
   };
@@ -256,7 +257,7 @@ struct LandingPadInfo {
 
 class LLVM_ABI MachineFunction {
   Function &F;
-  const LLVMTargetMachine &Target;
+  const TargetMachine &Target;
   const TargetSubtargetInfo *STI;
   MCContext &Ctx;
 
@@ -352,6 +353,11 @@ class LLVM_ABI MachineFunction {
   /// List of basic blocks that are the target of catchrets. Used to construct
   /// a table of valid targets for Windows EHCont Guard.
   std::vector<MCSymbol *> CatchretTargets;
+
+  /// Mapping of call instruction to the global value and target flags that it
+  /// calls, if applicable.
+  DenseMap<const MachineInstr *, std::pair<const GlobalValue *, unsigned>>
+      CalledGlobalsMap;
 
   /// \name Exception Handling
   /// \{
@@ -468,7 +474,6 @@ public:
     /// Callback before changing MCInstrDesc. This should not modify the MI
     /// directly.
     virtual void MF_HandleChangeDesc(MachineInstr &MI, const MCInstrDesc &TID) {
-      return;
     }
   };
 
@@ -634,7 +639,7 @@ public:
   /// for instructions that have a stack spill fused into them.
   const static unsigned int DebugOperandMemNumber;
 
-  MachineFunction(Function &F, const LLVMTargetMachine &Target,
+  MachineFunction(Function &F, const TargetMachine &Target,
                   const TargetSubtargetInfo &STI, MCContext &Ctx,
                   unsigned FunctionNum);
   MachineFunction(const MachineFunction &) = delete;
@@ -707,7 +712,7 @@ public:
   void assignBeginEndSections();
 
   /// getTarget - Return the target machine this machine code is compiled with
-  const LLVMTargetMachine &getTarget() const { return Target; }
+  const TargetMachine &getTarget() const { return Target; }
 
   /// getSubtarget - Return the subtarget for which this machine code is being
   /// compiled.
@@ -868,6 +873,10 @@ public:
   /// it are renumbered.
   void RenumberBlocks(MachineBasicBlock *MBBFrom = nullptr);
 
+  /// Return an estimate of the function's code size,
+  /// taking into account block and function alignment
+  int64_t estimateFunctionSizeInBytes();
+
   /// print - Print out the MachineFunction in a format suitable for debugging
   /// to the specified stream.
   void print(raw_ostream &OS, const SlotIndexes* = nullptr) const;
@@ -1007,7 +1016,7 @@ public:
   /// into \p MBB before \p InsertBefore.
   ///
   /// Note: Does not perform target specific adjustments; consider using
-  /// TargetInstrInfo::duplicate() intead.
+  /// TargetInstrInfo::duplicate() instead.
   MachineInstr &
   cloneMachineInstrBundle(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator InsertBefore,
@@ -1176,6 +1185,26 @@ public:
   /// EHCont Guard.
   void addCatchretTarget(MCSymbol *Target) {
     CatchretTargets.push_back(Target);
+  }
+
+  /// Tries to get the global and target flags for a call site, if the
+  /// instruction is a call to a global.
+  std::pair<const GlobalValue *, unsigned>
+  tryGetCalledGlobal(const MachineInstr *MI) const {
+    return CalledGlobalsMap.lookup(MI);
+  }
+
+  /// Notes the global and target flags for a call site.
+  void addCalledGlobal(const MachineInstr *MI,
+                       std::pair<const GlobalValue *, unsigned> Details) {
+    assert(MI && "MI must not be null");
+    assert(Details.first && "Global must not be null");
+    CalledGlobalsMap.insert({MI, Details});
+  }
+
+  /// Iterates over the full set of call sites and their associated globals.
+  auto getCalledGlobals() const {
+    return llvm::make_range(CalledGlobalsMap.begin(), CalledGlobalsMap.end());
   }
 
   /// \name Exception Handling

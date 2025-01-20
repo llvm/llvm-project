@@ -135,6 +135,20 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
       dummy.type.type().kind() == actualType.type().kind() &&
       !dummy.attrs.test(
           characteristics::DummyDataObject::Attr::DeducedFromActual)) {
+    bool actualIsAssumedRank{evaluate::IsAssumedRank(actual)};
+    if (actualIsAssumedRank &&
+        !dummy.type.attrs().test(
+            characteristics::TypeAndShape::Attr::AssumedRank)) {
+      if (!context.languageFeatures().IsEnabled(
+              common::LanguageFeature::AssumedRankPassedToNonAssumedRank)) {
+        messages.Say(
+            "Assumed-rank character array may not be associated with a dummy argument that is not assumed-rank"_err_en_US);
+      } else {
+        context.Warn(common::LanguageFeature::AssumedRankPassedToNonAssumedRank,
+            messages.at(),
+            "Assumed-rank character array should not be associated with a dummy argument that is not assumed-rank"_port_en_US);
+      }
+    }
     if (dummy.type.LEN() && actualType.LEN()) {
       evaluate::FoldingContext &foldingContext{context.foldingContext()};
       auto dummyLength{
@@ -148,7 +162,7 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
           if (auto dummySize{evaluate::ToInt64(evaluate::Fold(
                   foldingContext, evaluate::GetSize(dummy.type.shape())))}) {
             auto dummyChars{*dummySize * *dummyLength};
-            if (actualType.Rank() == 0) {
+            if (actualType.Rank() == 0 && !actualIsAssumedRank) {
               evaluate::DesignatorFolder folder{
                   context.foldingContext(), /*getLastComponent=*/true};
               if (auto actualOffset{folder.FoldDesignator(actual)}) {
@@ -265,7 +279,7 @@ static void ConvertIntegerActual(evaluate::Expr<evaluate::SomeType> &actual,
       if (!semanticsContext.IsEnabled(
               common::LanguageFeature::ActualIntegerConvertedToSmallerKind)) {
         messages.Say(
-            "Actual argument scalar expression of type INTEGER(%d) cannot beimplicitly converted to smaller dummy argument type INTEGER(%d)"_err_en_US,
+            "Actual argument scalar expression of type INTEGER(%d) cannot be implicitly converted to smaller dummy argument type INTEGER(%d)"_err_en_US,
             actualType.type().kind(), dummyType.type().kind());
       } else if (semanticsContext.ShouldWarn(common::LanguageFeature::
                          ActualIntegerConvertedToSmallerKind)) {
@@ -300,12 +314,15 @@ static void ConvertLogicalActual(evaluate::Expr<evaluate::SomeType> &actual,
 }
 
 static bool DefersSameTypeParameters(
-    const DerivedTypeSpec &actual, const DerivedTypeSpec &dummy) {
-  for (const auto &pair : actual.parameters()) {
-    const ParamValue &actualValue{pair.second};
-    const ParamValue *dummyValue{dummy.FindParameter(pair.first)};
-    if (!dummyValue || (actualValue.isDeferred() != dummyValue->isDeferred())) {
-      return false;
+    const DerivedTypeSpec *actual, const DerivedTypeSpec *dummy) {
+  if (actual && dummy) {
+    for (const auto &pair : actual->parameters()) {
+      const ParamValue &actualValue{pair.second};
+      const ParamValue *dummyValue{dummy->FindParameter(pair.first)};
+      if (!dummyValue ||
+          (actualValue.isDeferred() != dummyValue->isDeferred())) {
+        return false;
+      }
     }
   }
   return true;
@@ -370,9 +387,37 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   }
   bool dummyIsAssumedRank{dummy.type.attrs().test(
       characteristics::TypeAndShape::Attr::AssumedRank)};
+  bool actualIsAssumedSize{actualType.attrs().test(
+      characteristics::TypeAndShape::Attr::AssumedSize)};
+  bool actualIsAssumedRank{evaluate::IsAssumedRank(actual)};
+  bool actualIsPointer{evaluate::IsObjectPointer(actual)};
+  bool actualIsAllocatable{evaluate::IsAllocatableDesignator(actual)};
+  bool actualMayBeAssumedSize{actualIsAssumedSize ||
+      (actualIsAssumedRank && !actualIsPointer && !actualIsAllocatable)};
+  bool actualIsPolymorphic{actualType.type().IsPolymorphic()};
+  const auto *actualDerived{evaluate::GetDerivedTypeSpec(actualType.type())};
   if (typesCompatible) {
     if (isElemental) {
     } else if (dummyIsAssumedRank) {
+      if (actualMayBeAssumedSize && dummy.intent == common::Intent::Out) {
+        // An INTENT(OUT) dummy might be a no-op at run time
+        bool dummyHasSignificantIntentOut{actualIsPolymorphic ||
+            (actualDerived &&
+                (actualDerived->HasDefaultInitialization(
+                     /*ignoreAllocatable=*/false, /*ignorePointer=*/true) ||
+                    actualDerived->HasDestruction()))};
+        const char *actualDesc{
+            actualIsAssumedSize ? "Assumed-size" : "Assumed-rank"};
+        if (dummyHasSignificantIntentOut) {
+          messages.Say(
+              "%s actual argument may not be associated with INTENT(OUT) assumed-rank dummy argument requiring finalization, destruction, or initialization"_err_en_US,
+              actualDesc);
+        } else {
+          context.Warn(common::UsageWarning::Portability, messages.at(),
+              "%s actual argument should not be associated with INTENT(OUT) assumed-rank dummy argument"_port_en_US,
+              actualDesc);
+        }
+      }
     } else if (dummy.ignoreTKR.test(common::IgnoreTKR::Rank)) {
     } else if (dummyRank > 0 && !dummyIsAllocatableOrPointer &&
         !dummy.type.attrs().test(
@@ -401,11 +446,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         dummy.type.type().AsFortran());
   }
 
-  bool actualIsPolymorphic{actualType.type().IsPolymorphic()};
-  bool dummyIsPolymorphic{dummy.type.type().IsPolymorphic()};
   bool actualIsCoindexed{ExtractCoarrayRef(actual).has_value()};
-  bool actualIsAssumedSize{actualType.attrs().test(
-      characteristics::TypeAndShape::Attr::AssumedSize)};
   bool dummyIsAssumedSize{dummy.type.attrs().test(
       characteristics::TypeAndShape::Attr::AssumedSize)};
   bool dummyIsAsynchronous{
@@ -414,7 +455,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Volatile)};
   bool dummyIsValue{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Value)};
-
+  bool dummyIsPolymorphic{dummy.type.type().IsPolymorphic()};
   if (actualIsPolymorphic && dummyIsPolymorphic &&
       actualIsCoindexed) { // 15.5.2.4(2)
     messages.Say(
@@ -434,37 +475,36 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       actualFirstSymbol && actualFirstSymbol->attrs().test(Attr::ASYNCHRONOUS)};
   bool actualIsVolatile{
       actualFirstSymbol && actualFirstSymbol->attrs().test(Attr::VOLATILE)};
-  const auto *derived{evaluate::GetDerivedTypeSpec(actualType.type())};
-  if (derived && !derived->IsVectorType()) {
+  if (actualDerived && !actualDerived->IsVectorType()) {
     if (dummy.type.type().IsAssumedType()) {
-      if (!derived->parameters().empty()) { // 15.5.2.4(2)
+      if (!actualDerived->parameters().empty()) { // 15.5.2.4(2)
         messages.Say(
             "Actual argument associated with TYPE(*) %s may not have a parameterized derived type"_err_en_US,
             dummyName);
       }
       if (const Symbol *
-          tbp{FindImmediateComponent(*derived, [](const Symbol &symbol) {
+          tbp{FindImmediateComponent(*actualDerived, [](const Symbol &symbol) {
             return symbol.has<ProcBindingDetails>();
           })}) { // 15.5.2.4(2)
         evaluate::SayWithDeclaration(messages, *tbp,
             "Actual argument associated with TYPE(*) %s may not have type-bound procedure '%s'"_err_en_US,
             dummyName, tbp->name());
       }
-      auto finals{FinalsForDerivedTypeInstantiation(*derived)};
+      auto finals{FinalsForDerivedTypeInstantiation(*actualDerived)};
       if (!finals.empty()) { // 15.5.2.4(2)
         SourceName name{finals.front()->name()};
         if (auto *msg{messages.Say(
                 "Actual argument associated with TYPE(*) %s may not have derived type '%s' with FINAL subroutine '%s'"_err_en_US,
-                dummyName, derived->typeSymbol().name(), name)}) {
+                dummyName, actualDerived->typeSymbol().name(), name)}) {
           msg->Attach(name, "FINAL subroutine '%s' in derived type '%s'"_en_US,
-              name, derived->typeSymbol().name());
+              name, actualDerived->typeSymbol().name());
         }
       }
     }
     if (actualIsCoindexed) {
       if (dummy.intent != common::Intent::In && !dummyIsValue) {
-        if (auto bad{
-                FindAllocatableUltimateComponent(*derived)}) { // 15.5.2.4(6)
+        if (auto bad{FindAllocatableUltimateComponent(
+                *actualDerived)}) { // 15.5.2.4(6)
           evaluate::SayWithDeclaration(messages, *bad,
               "Coindexed actual argument with ALLOCATABLE ultimate component '%s' must be associated with a %s with VALUE or INTENT(IN) attributes"_err_en_US,
               bad.BuildResultDesignatorName(), dummyName);
@@ -484,7 +524,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       }
     }
     if (actualIsVolatile != dummyIsVolatile) { // 15.5.2.4(22)
-      if (auto bad{semantics::FindCoarrayUltimateComponent(*derived)}) {
+      if (auto bad{semantics::FindCoarrayUltimateComponent(*actualDerived)}) {
         evaluate::SayWithDeclaration(messages, *bad,
             "VOLATILE attribute must match for %s when actual argument has a coarray ultimate component '%s'"_err_en_US,
             dummyName, bad.BuildResultDesignatorName());
@@ -501,8 +541,6 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           ? actualLastSymbol->detailsIf<ObjectEntityDetails>()
           : nullptr};
   int actualRank{actualType.Rank()};
-  bool actualIsPointer{evaluate::IsObjectPointer(actual)};
-  bool actualIsAssumedRank{evaluate::IsAssumedRank(actual)};
   if (dummy.type.attrs().test(
           characteristics::TypeAndShape::Attr::AssumedShape)) {
     // 15.5.2.4(16)
@@ -578,7 +616,18 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             characteristics::DummyDataObject::Attr::DeducedFromActual)) {
       if (auto dummySize{evaluate::ToInt64(evaluate::Fold(
               foldingContext, evaluate::GetSize(dummy.type.shape())))}) {
-        if (actualRank == 0 && !actualIsAssumedRank) {
+        if (actualIsAssumedRank) {
+          if (!context.languageFeatures().IsEnabled(
+                  common::LanguageFeature::AssumedRankPassedToNonAssumedRank)) {
+            messages.Say(
+                "Assumed-rank array may not be associated with a dummy argument that is not assumed-rank"_err_en_US);
+          } else {
+            context.Warn(
+                common::LanguageFeature::AssumedRankPassedToNonAssumedRank,
+                messages.at(),
+                "Assumed-rank array should not be associated with a dummy argument that is not assumed-rank"_port_en_US);
+          }
+        } else if (actualRank == 0) {
           if (evaluate::IsArrayElement(actual)) {
             // Actual argument is a scalar array element
             evaluate::DesignatorFolder folder{
@@ -619,7 +668,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
               }
             }
           }
-        } else { // actualRank > 0 || actualIsAssumedRank
+        } else {
           if (auto actualSize{evaluate::ToInt64(evaluate::Fold(
                   foldingContext, evaluate::GetSize(actualType.shape())))};
               actualSize && *actualSize < *dummySize) {
@@ -641,7 +690,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     }
   }
   if (actualLastObject && actualLastObject->IsCoarray() &&
-      IsAllocatable(*actualLastSymbol) && dummy.intent == common::Intent::Out &&
+      dummy.attrs.test(characteristics::DummyDataObject::Attr::Allocatable) &&
+      dummy.intent == common::Intent::Out &&
       !(intrinsic &&
           evaluate::AcceptsIntentOutAllocatableCoarray(
               intrinsic->name))) { // C846
@@ -654,12 +704,14 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // Problems with polymorphism are caught in the callee's definition.
   if (scope) {
     std::optional<parser::MessageFixedText> undefinableMessage;
-    if (dummy.intent == common::Intent::Out) {
-      undefinableMessage =
-          "Actual argument associated with INTENT(OUT) %s is not definable"_err_en_US;
-    } else if (dummy.intent == common::Intent::InOut) {
+    DefinabilityFlags flags{DefinabilityFlag::PolymorphicOkInPure};
+    if (dummy.intent == common::Intent::InOut) {
+      flags.set(DefinabilityFlag::AllowEventLockOrNotifyType);
       undefinableMessage =
           "Actual argument associated with INTENT(IN OUT) %s is not definable"_err_en_US;
+    } else if (dummy.intent == common::Intent::Out) {
+      undefinableMessage =
+          "Actual argument associated with INTENT(OUT) %s is not definable"_err_en_US;
     } else if (context.ShouldWarn(common::LanguageFeature::
                        UndefinableAsynchronousOrVolatileActual)) {
       if (dummy.attrs.test(
@@ -673,7 +725,6 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       }
     }
     if (undefinableMessage) {
-      DefinabilityFlags flags{DefinabilityFlag::PolymorphicOkInPure};
       if (isElemental) { // 15.5.2.4(21)
         flags.set(DefinabilityFlag::VectorSubscriptIsOk);
       }
@@ -730,7 +781,6 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   }
 
   // 15.5.2.6 -- dummy is ALLOCATABLE
-  bool actualIsAllocatable{evaluate::IsAllocatableDesignator(actual)};
   bool dummyIsOptional{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Optional)};
   bool actualIsNull{evaluate::IsNullPointer(actual)};
@@ -851,10 +901,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         }
       }
       // 15.5.2.5(4)
-      const auto *derived{evaluate::GetDerivedTypeSpec(actualType.type())};
-      if ((derived &&
-              !DefersSameTypeParameters(*derived,
-                  *evaluate::GetDerivedTypeSpec(dummy.type.type()))) ||
+      const auto *dummyDerived{evaluate::GetDerivedTypeSpec(dummy.type.type())};
+      if (!DefersSameTypeParameters(actualDerived, dummyDerived) ||
           dummy.type.type().HasDeferredTypeParameter() !=
               actualType.type().HasDeferredTypeParameter()) {
         messages.Say(
@@ -955,8 +1003,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         actualDataAttr = common::CUDADataAttr::Device;
       }
     }
+    std::optional<std::string> warning;
     if (!common::AreCompatibleCUDADataAttrs(dummyDataAttr, actualDataAttr,
-            dummy.ignoreTKR,
+            dummy.ignoreTKR, &warning,
             /*allowUnifiedMatchingRule=*/true, &context.languageFeatures())) {
       auto toStr{[](std::optional<common::CUDADataAttr> x) {
         return x ? "ATTRIBUTES("s +
@@ -966,6 +1015,10 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       messages.Say(
           "%s has %s but its associated actual argument has %s"_err_en_US,
           dummyName, toStr(dummyDataAttr), toStr(actualDataAttr));
+    }
+    if (warning && context.ShouldWarn(common::UsageWarning::CUDAUsage)) {
+      messages.Say(common::UsageWarning::CUDAUsage, "%s"_warn_en_US,
+          std::move(*warning));
     }
   }
 
@@ -1571,8 +1624,8 @@ static void CheckImage_Index(evaluate::ActualArguments &arguments,
             evaluate::GetShape(arguments[1]->UnwrapExpr())}) {
       if (const auto *coarrayArgSymbol{UnwrapWholeSymbolOrComponentDataRef(
               arguments[0]->UnwrapExpr())}) {
-        const auto coarrayArgCorank = coarrayArgSymbol->Corank();
-        if (const auto subArrSize = evaluate::ToInt64(*subArrShape->front())) {
+        auto coarrayArgCorank{coarrayArgSymbol->Corank()};
+        if (auto subArrSize{evaluate::ToInt64(*subArrShape->front())}) {
           if (subArrSize != coarrayArgCorank) {
             messages.Say(arguments[1]->sourceLocation(),
                 "The size of 'SUB=' (%jd) for intrinsic 'image_index' must be equal to the corank of 'COARRAY=' (%d)"_err_en_US,

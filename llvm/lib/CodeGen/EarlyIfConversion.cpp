@@ -15,6 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -163,7 +164,8 @@ private:
   void rewritePHIOperands();
 
 public:
-  SSAIfConv(MachineFunction &MF) {
+  /// init - Initialize per-function data structures.
+  void init(MachineFunction &MF) {
     TII = MF.getSubtarget().getInstrInfo();
     TRI = MF.getSubtarget().getRegisterInfo();
     MRI = &MF.getRegInfo();
@@ -759,7 +761,7 @@ void SSAIfConv::convertIf(SmallVectorImpl<MachineBasicBlock *> &RemoveBlocks,
 //===----------------------------------------------------------------------===//
 
 namespace {
-class EarlyIfConverter : public MachineFunctionPass {
+class EarlyIfConverter {
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   MCSchedModel SchedModel;
@@ -768,40 +770,51 @@ class EarlyIfConverter : public MachineFunctionPass {
   MachineLoopInfo *Loops = nullptr;
   MachineTraceMetrics *Traces = nullptr;
   MachineTraceMetrics::Ensemble *MinInstr = nullptr;
+  SSAIfConv IfConv;
 
 public:
+  EarlyIfConverter(MachineDominatorTree &DT, MachineLoopInfo &LI,
+                   MachineTraceMetrics &MTM)
+      : DomTree(&DT), Loops(&LI), Traces(&MTM) {}
+  EarlyIfConverter() = delete;
+
+  bool run(MachineFunction &MF);
+
+private:
+  bool tryConvertIf(MachineBasicBlock *);
+  void invalidateTraces();
+  bool shouldConvertIf();
+};
+
+class EarlyIfConverterLegacy : public MachineFunctionPass {
+public:
   static char ID;
-  EarlyIfConverter() : MachineFunctionPass(ID) {}
+  EarlyIfConverterLegacy() : MachineFunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
   StringRef getPassName() const override { return "Early If-Conversion"; }
-
-private:
-  bool tryConvertIf(SSAIfConv &IfConv, MachineBasicBlock *);
-  void invalidateTraces(SSAIfConv &IfConv);
-  bool shouldConvertIf(SSAIfConv &IfConv);
 };
 } // end anonymous namespace
 
-char EarlyIfConverter::ID = 0;
-char &llvm::EarlyIfConverterID = EarlyIfConverter::ID;
+char EarlyIfConverterLegacy::ID = 0;
+char &llvm::EarlyIfConverterLegacyID = EarlyIfConverterLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(EarlyIfConverter, DEBUG_TYPE,
-                      "Early If Converter", false, false)
+INITIALIZE_PASS_BEGIN(EarlyIfConverterLegacy, DEBUG_TYPE, "Early If Converter",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineTraceMetrics)
-INITIALIZE_PASS_END(EarlyIfConverter, DEBUG_TYPE,
-                    "Early If Converter", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineTraceMetricsWrapperPass)
+INITIALIZE_PASS_END(EarlyIfConverterLegacy, DEBUG_TYPE, "Early If Converter",
+                    false, false)
 
-void EarlyIfConverter::getAnalysisUsage(AnalysisUsage &AU) const {
+void EarlyIfConverterLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
   AU.addPreserved<MachineLoopInfoWrapperPass>();
-  AU.addRequired<MachineTraceMetrics>();
-  AU.addPreserved<MachineTraceMetrics>();
+  AU.addRequired<MachineTraceMetricsWrapperPass>();
+  AU.addPreserved<MachineTraceMetricsWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -835,7 +848,7 @@ void updateLoops(MachineLoopInfo *Loops,
 } // namespace
 
 /// Invalidate MachineTraceMetrics before if-conversion.
-void EarlyIfConverter::invalidateTraces(SSAIfConv &IfConv) {
+void EarlyIfConverter::invalidateTraces() {
   Traces->verifyAnalysis();
   Traces->invalidate(IfConv.Head);
   Traces->invalidate(IfConv.Tail);
@@ -865,7 +878,7 @@ template <typename Remark> Remark &operator<<(Remark &R, Cycles C) {
 /// Apply cost model and heuristics to the if-conversion in IfConv.
 /// Return true if the conversion is a good idea.
 ///
-bool EarlyIfConverter::shouldConvertIf(SSAIfConv &IfConv) {
+bool EarlyIfConverter::shouldConvertIf() {
   // Stress testing mode disables all cost considerations.
   if (Stress)
     return true;
@@ -1058,11 +1071,11 @@ bool EarlyIfConverter::shouldConvertIf(SSAIfConv &IfConv) {
 
 /// Attempt repeated if-conversion on MBB, return true if successful.
 ///
-bool EarlyIfConverter::tryConvertIf(SSAIfConv &IfConv, MachineBasicBlock *MBB) {
+bool EarlyIfConverter::tryConvertIf(MachineBasicBlock *MBB) {
   bool Changed = false;
-  while (IfConv.canConvertIf(MBB) && shouldConvertIf(IfConv)) {
+  while (IfConv.canConvertIf(MBB) && shouldConvertIf()) {
     // If-convert MBB and update analyses.
-    invalidateTraces(IfConv);
+    invalidateTraces();
     SmallVector<MachineBasicBlock *, 4> RemoveBlocks;
     IfConv.convertIf(RemoveBlocks);
     Changed = true;
@@ -1074,11 +1087,9 @@ bool EarlyIfConverter::tryConvertIf(SSAIfConv &IfConv, MachineBasicBlock *MBB) {
   return Changed;
 }
 
-bool EarlyIfConverter::runOnMachineFunction(MachineFunction &MF) {
+bool EarlyIfConverter::run(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** EARLY IF-CONVERSION **********\n"
                     << "********** Function: " << MF.getName() << '\n');
-  if (skipFunction(MF.getFunction()))
-    return false;
 
   // Only run if conversion if the target wants it.
   const TargetSubtargetInfo &STI = MF.getSubtarget();
@@ -1089,23 +1100,52 @@ bool EarlyIfConverter::runOnMachineFunction(MachineFunction &MF) {
   TRI = STI.getRegisterInfo();
   SchedModel = STI.getSchedModel();
   MRI = &MF.getRegInfo();
-  DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  Traces = &getAnalysis<MachineTraceMetrics>();
   MinInstr = nullptr;
 
   bool Changed = false;
-  SSAIfConv IfConv(MF);
+  IfConv.init(MF);
 
   // Visit blocks in dominator tree post-order. The post-order enables nested
   // if-conversion in a single pass. The tryConvertIf() function may erase
   // blocks, but only blocks dominated by the head block. This makes it safe to
   // update the dominator tree while the post-order iterator is still active.
   for (auto *DomNode : post_order(DomTree))
-    if (tryConvertIf(IfConv, DomNode->getBlock()))
+    if (tryConvertIf(DomNode->getBlock()))
       Changed = true;
 
   return Changed;
+}
+
+PreservedAnalyses
+EarlyIfConverterPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  MachineLoopInfo &LI = MFAM.getResult<MachineLoopAnalysis>(MF);
+  MachineTraceMetrics &MTM = MFAM.getResult<MachineTraceMetricsAnalysis>(MF);
+
+  EarlyIfConverter Impl(MDT, LI, MTM);
+  bool Changed = Impl.run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserve<MachineDominatorTreeAnalysis>();
+  PA.preserve<MachineLoopAnalysis>();
+  PA.preserve<MachineTraceMetricsAnalysis>();
+  return PA;
+}
+
+bool EarlyIfConverterLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  MachineDominatorTree &MDT =
+      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MachineLoopInfo &LI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  MachineTraceMetrics &MTM =
+      getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
+
+  return EarlyIfConverter(MDT, LI, MTM).run(MF);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1121,6 +1161,7 @@ class EarlyIfPredicator : public MachineFunctionPass {
   MachineDominatorTree *DomTree = nullptr;
   MachineBranchProbabilityInfo *MBPI = nullptr;
   MachineLoopInfo *Loops = nullptr;
+  SSAIfConv IfConv;
 
 public:
   static char ID;
@@ -1130,8 +1171,8 @@ public:
   StringRef getPassName() const override { return "Early If-predicator"; }
 
 protected:
-  bool tryConvertIf(SSAIfConv &IfConv, MachineBasicBlock *);
-  bool shouldConvertIf(SSAIfConv &IfConv);
+  bool tryConvertIf(MachineBasicBlock *);
+  bool shouldConvertIf();
 };
 } // end anonymous namespace
 
@@ -1158,7 +1199,7 @@ void EarlyIfPredicator::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 /// Apply the target heuristic to decide if the transformation is profitable.
-bool EarlyIfPredicator::shouldConvertIf(SSAIfConv &IfConv) {
+bool EarlyIfPredicator::shouldConvertIf() {
   auto TrueProbability = MBPI->getEdgeProbability(IfConv.Head, IfConv.TBB);
   if (IfConv.isTriangle()) {
     MachineBasicBlock &IfBlock =
@@ -1198,14 +1239,12 @@ bool EarlyIfPredicator::shouldConvertIf(SSAIfConv &IfConv) {
 
 /// Attempt repeated if-conversion on MBB, return true if successful.
 ///
-bool EarlyIfPredicator::tryConvertIf(SSAIfConv &IfConv,
-                                     MachineBasicBlock *MBB) {
+bool EarlyIfPredicator::tryConvertIf(MachineBasicBlock *MBB) {
   bool Changed = false;
-  while (IfConv.canConvertIf(MBB, /*Predicate=*/true) &&
-         shouldConvertIf(IfConv)) {
+  while (IfConv.canConvertIf(MBB, /*Predicate*/ true) && shouldConvertIf()) {
     // If-convert MBB and update analyses.
     SmallVector<MachineBasicBlock *, 4> RemoveBlocks;
-    IfConv.convertIf(RemoveBlocks, /*Predicate=*/true);
+    IfConv.convertIf(RemoveBlocks, /*Predicate*/ true);
     Changed = true;
     updateDomTree(DomTree, IfConv, RemoveBlocks);
     for (MachineBasicBlock *MBB : RemoveBlocks)
@@ -1231,14 +1270,14 @@ bool EarlyIfPredicator::runOnMachineFunction(MachineFunction &MF) {
   MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
 
   bool Changed = false;
-  SSAIfConv IfConv(MF);
+  IfConv.init(MF);
 
   // Visit blocks in dominator tree post-order. The post-order enables nested
   // if-conversion in a single pass. The tryConvertIf() function may erase
   // blocks, but only blocks dominated by the head block. This makes it safe to
   // update the dominator tree while the post-order iterator is still active.
   for (auto *DomNode : post_order(DomTree))
-    if (tryConvertIf(IfConv, DomNode->getBlock()))
+    if (tryConvertIf(DomNode->getBlock()))
       Changed = true;
 
   return Changed;

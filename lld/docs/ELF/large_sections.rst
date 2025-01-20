@@ -29,7 +29,7 @@ to them.
 Large globals are placed in separate sections from small globals, and those
 sections have a "large" section flag, e.g. ``SHF_X86_64_LARGE`` for x86-64. The
 linker places large sections on the outer edges of the binary, making sure they
-do not affect affect the distance of small globals to text. The large versions
+do not affect the distance of small globals to text. The large versions
 of ``.rodata``, ``.bss``, and ``.data`` are ``.lrodata``, ``.lbss``, and
 ``.ldata``, and they are laid out as follows:
 

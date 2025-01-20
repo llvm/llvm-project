@@ -43,17 +43,14 @@ public:
 
   /// Generate .eh_frame_hdr from old and new .eh_frame sections.
   ///
-  /// Take FDEs from the \p NewEHFrame unless their initial_pc is listed
-  /// in \p FailedAddresses. All other entries are taken from the
+  /// Take FDEs from the \p NewEHFrame. All other entries are taken from the
   /// \p OldEHFrame.
   ///
   /// \p EHFrameHeaderAddress specifies location of .eh_frame_hdr,
   /// and is required for relative addressing used in the section.
-  std::vector<char>
-  generateEHFrameHeader(const DWARFDebugFrame &OldEHFrame,
-                        const DWARFDebugFrame &NewEHFrame,
-                        uint64_t EHFrameHeaderAddress,
-                        std::vector<uint64_t> &FailedAddresses) const;
+  std::vector<char> generateEHFrameHeader(const DWARFDebugFrame &OldEHFrame,
+                                          const DWARFDebugFrame &NewEHFrame,
+                                          uint64_t EHFrameHeaderAddress) const;
 
   using FDEsMap = std::map<uint64_t, const dwarf::FDE *>;
 

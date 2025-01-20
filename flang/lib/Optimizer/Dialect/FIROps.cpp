@@ -1313,7 +1313,8 @@ void fir::ConvertOp::getCanonicalizationPatterns(
   results.insert<ConvertConvertOptPattern, ConvertAscendingIndexOptPattern,
                  ConvertDescendingIndexOptPattern, RedundantConvertOptPattern,
                  CombineConvertOptPattern, CombineConvertTruncOptPattern,
-                 ForwardConstantConvertPattern>(context);
+                 ForwardConstantConvertPattern, ChainedPointerConvertsPattern>(
+      context);
 }
 
 mlir::OpFoldResult fir::ConvertOp::fold(FoldAdaptor adaptor) {
@@ -1359,7 +1360,7 @@ bool fir::ConvertOp::isPointerCompatible(mlir::Type ty) {
 static std::optional<mlir::Type> getVectorElementType(mlir::Type ty) {
   mlir::Type elemTy;
   if (mlir::isa<fir::VectorType>(ty))
-    elemTy = mlir::dyn_cast<fir::VectorType>(ty).getEleTy();
+    elemTy = mlir::dyn_cast<fir::VectorType>(ty).getElementType();
   else if (mlir::isa<mlir::VectorType>(ty))
     elemTy = mlir::dyn_cast<mlir::VectorType>(ty).getElementType();
   else
@@ -1410,6 +1411,15 @@ bool fir::ConvertOp::areVectorsCompatible(mlir::Type inTy, mlir::Type outTy) {
   return true;
 }
 
+static bool areRecordsCompatible(mlir::Type inTy, mlir::Type outTy) {
+  // Both records must have the same field types.
+  // Trust frontend semantics for in-depth checks, such as if both records
+  // have the BIND(C) attribute.
+  auto inRecTy = mlir::dyn_cast<fir::RecordType>(inTy);
+  auto outRecTy = mlir::dyn_cast<fir::RecordType>(outTy);
+  return inRecTy && outRecTy && inRecTy.getTypeList() == outRecTy.getTypeList();
+}
+
 bool fir::ConvertOp::canBeConverted(mlir::Type inType, mlir::Type outType) {
   if (inType == outType)
     return true;
@@ -1428,7 +1438,8 @@ bool fir::ConvertOp::canBeConverted(mlir::Type inType, mlir::Type outType) {
          (fir::isBoxedRecordType(inType) && fir::isPolymorphicType(outType)) ||
          (fir::isPolymorphicType(inType) && fir::isPolymorphicType(outType)) ||
          (fir::isPolymorphicType(inType) && mlir::isa<BoxType>(outType)) ||
-         areVectorsCompatible(inType, outType);
+         areVectorsCompatible(inType, outType) ||
+         areRecordsCompatible(inType, outType);
 }
 
 llvm::LogicalResult fir::ConvertOp::verify() {
@@ -1523,7 +1534,7 @@ llvm::LogicalResult fir::CoordinateOp::verify() {
     }
     if (dimension) {
       if (--dimension == 0)
-        eleTy = mlir::cast<fir::SequenceType>(eleTy).getEleTy();
+        eleTy = mlir::cast<fir::SequenceType>(eleTy).getElementType();
     } else {
       if (auto t = mlir::dyn_cast<mlir::TupleType>(eleTy)) {
         // FIXME: Generally, we don't know which field of the tuple is being
@@ -3807,7 +3818,7 @@ void fir::StoreOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
 //===----------------------------------------------------------------------===//
 
 inline fir::CharacterType::KindTy stringLitOpGetKind(fir::StringLitOp op) {
-  auto eleTy = mlir::cast<fir::SequenceType>(op.getType()).getEleTy();
+  auto eleTy = mlir::cast<fir::SequenceType>(op.getType()).getElementType();
   return mlir::cast<fir::CharacterType>(eleTy).getFKind();
 }
 

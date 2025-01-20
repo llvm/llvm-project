@@ -1140,6 +1140,21 @@ TLI_DEFINE_ENUM_INTERNAL(erfl)
 TLI_DEFINE_STRING_INTERNAL("erfl")
 TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl)
 
+/// double tgamma(double x);
+TLI_DEFINE_ENUM_INTERNAL(tgamma)
+TLI_DEFINE_STRING_INTERNAL("tgamma")
+TLI_DEFINE_SIG_INTERNAL(Dbl, Dbl)
+
+/// float tgammaf(float x);
+TLI_DEFINE_ENUM_INTERNAL(tgammaf)
+TLI_DEFINE_STRING_INTERNAL("tgammaf")
+TLI_DEFINE_SIG_INTERNAL(Flt, Flt)
+
+/// long double tgammal(long double x);
+TLI_DEFINE_ENUM_INTERNAL(tgammal)
+TLI_DEFINE_STRING_INTERNAL("tgammal")
+TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl)
+
 /// int execl(const char *path, const char *arg, ...);
 TLI_DEFINE_ENUM_INTERNAL(execl)
 TLI_DEFINE_STRING_INTERNAL("execl")
@@ -1656,6 +1671,21 @@ TLI_DEFINE_ENUM_INTERNAL(htons)
 TLI_DEFINE_STRING_INTERNAL("htons")
 TLI_DEFINE_SIG_INTERNAL(Int16, Int16)
 
+/// double hypot(double x, double y);
+TLI_DEFINE_ENUM_INTERNAL(hypot)
+TLI_DEFINE_STRING_INTERNAL("hypot")
+TLI_DEFINE_SIG_INTERNAL(Dbl, Dbl, Dbl)
+
+/// float hypotf(float x, float y);
+TLI_DEFINE_ENUM_INTERNAL(hypotf)
+TLI_DEFINE_STRING_INTERNAL("hypotf")
+TLI_DEFINE_SIG_INTERNAL(Flt, Flt, Flt)
+
+/// long double hypotl(long double x, long double y);
+TLI_DEFINE_ENUM_INTERNAL(hypotl)
+TLI_DEFINE_STRING_INTERNAL("hypotl")
+TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl, LDbl)
+
 /// int iprintf(const char *format, ...);
 TLI_DEFINE_ENUM_INTERNAL(iprintf)
 TLI_DEFINE_STRING_INTERNAL("iprintf")
@@ -1750,6 +1780,21 @@ TLI_DEFINE_SIG_INTERNAL(Flt, Flt)
 TLI_DEFINE_ENUM_INTERNAL(log2l)
 TLI_DEFINE_STRING_INTERNAL("log2l")
 TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl)
+
+/// int ilogb(double x);
+TLI_DEFINE_ENUM_INTERNAL(ilogb)
+TLI_DEFINE_STRING_INTERNAL("ilogb")
+TLI_DEFINE_SIG_INTERNAL(Int, Dbl)
+
+/// int ilogbf(float x);
+TLI_DEFINE_ENUM_INTERNAL(ilogbf)
+TLI_DEFINE_STRING_INTERNAL("ilogbf")
+TLI_DEFINE_SIG_INTERNAL(Int, Flt)
+
+/// int ilogbl(long double x);
+TLI_DEFINE_ENUM_INTERNAL(ilogbl)
+TLI_DEFINE_STRING_INTERNAL("ilogbl")
+TLI_DEFINE_SIG_INTERNAL(Int, LDbl)
 
 /// double logb(double x);
 TLI_DEFINE_ENUM_INTERNAL(logb)
@@ -2032,6 +2077,11 @@ TLI_DEFINE_ENUM_INTERNAL(reallocf)
 TLI_DEFINE_STRING_INTERNAL("reallocf")
 TLI_DEFINE_SIG_INTERNAL(Ptr, Ptr, SizeT)
 
+/// void *reallocarray(void *ptr, size_t nmemb, size_t size);
+TLI_DEFINE_ENUM_INTERNAL(reallocarray)
+TLI_DEFINE_STRING_INTERNAL("reallocarray")
+TLI_DEFINE_SIG_INTERNAL(Ptr, Ptr, SizeT, SizeT)
+
 /// char *realpath(const char *file_name, char *resolved_name);
 TLI_DEFINE_ENUM_INTERNAL(realpath)
 TLI_DEFINE_STRING_INTERNAL("realpath")
@@ -2146,6 +2196,36 @@ TLI_DEFINE_SIG_INTERNAL(Flt, Flt)
 TLI_DEFINE_ENUM_INTERNAL(roundl)
 TLI_DEFINE_STRING_INTERNAL("roundl")
 TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl)
+
+/// double scalbln(double arg, long exp);
+TLI_DEFINE_ENUM_INTERNAL(scalbln)
+TLI_DEFINE_STRING_INTERNAL("scalbln")
+TLI_DEFINE_SIG_INTERNAL(Dbl, Dbl, Long)
+
+/// float scalblnf(float arg, long exp);
+TLI_DEFINE_ENUM_INTERNAL(scalblnf)
+TLI_DEFINE_STRING_INTERNAL("scalblnf")
+TLI_DEFINE_SIG_INTERNAL(Flt, Flt, Long)
+
+/// long double scalblnl(long double arg, long exp);
+TLI_DEFINE_ENUM_INTERNAL(scalblnl)
+TLI_DEFINE_STRING_INTERNAL("scalblnl")
+TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl, Long)
+
+/// double scalbn(double arg, int exp);
+TLI_DEFINE_ENUM_INTERNAL(scalbn)
+TLI_DEFINE_STRING_INTERNAL("scalbn")
+TLI_DEFINE_SIG_INTERNAL(Dbl, Dbl, Int)
+
+/// float scalbnf(float arg, int exp);
+TLI_DEFINE_ENUM_INTERNAL(scalbnf)
+TLI_DEFINE_STRING_INTERNAL("scalbnf")
+TLI_DEFINE_SIG_INTERNAL(Flt, Flt, Int)
+
+/// long double scalbnl(long double arg, int exp);
+TLI_DEFINE_ENUM_INTERNAL(scalbnl)
+TLI_DEFINE_STRING_INTERNAL("scalbnl")
+TLI_DEFINE_SIG_INTERNAL(LDbl, LDbl, Int)
 
 /// int scanf(const char *restrict format, ... );
 TLI_DEFINE_ENUM_INTERNAL(scanf)

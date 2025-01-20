@@ -46,6 +46,18 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
   void resolveARMRelocation(const SectionEntry &Section, uint64_t Offset,
                             uint32_t Value, uint32_t Type, int32_t Addend);
 
+  void resolveLoongArch64Relocation(const SectionEntry &Section,
+                                    uint64_t Offset, uint64_t Value,
+                                    uint32_t Type, int64_t Addend);
+
+  bool resolveLoongArch64ShortBranch(unsigned SectionID,
+                                     relocation_iterator RelI,
+                                     const RelocationValueRef &Value);
+
+  void resolveLoongArch64Branch(unsigned SectionID,
+                                const RelocationValueRef &Value,
+                                relocation_iterator RelI, StubMap &Stubs);
+
   void resolvePPC32Relocation(const SectionEntry &Section, uint64_t Offset,
                               uint64_t Value, uint32_t Type, int64_t Addend);
 
@@ -71,6 +83,8 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
       return 16;
     else if (IsMipsN64ABI)
       return 32;
+    if (Arch == Triple::loongarch64)
+      return 20; // lu12i.w; ori; lu32i.d; lu52i.d; jr
     else if (Arch == Triple::ppc64 || Arch == Triple::ppc64le)
       return 44;
     else if (Arch == Triple::x86_64)

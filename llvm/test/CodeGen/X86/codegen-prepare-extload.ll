@@ -523,7 +523,7 @@ declare void @dummy(i64, i64, i64)
 define void @vectorPromotion() {
 ; OPTALL-LABEL: define void @vectorPromotion() {
 ; OPTALL-NEXT:  entry:
-; OPTALL-NEXT:    [[A:%.*]] = shl nuw nsw <2 x i32> zeroinitializer, <i32 8, i32 8>
+; OPTALL-NEXT:    [[A:%.*]] = shl nuw nsw <2 x i32> zeroinitializer, splat (i32 8)
 ; OPTALL-NEXT:    [[B:%.*]] = zext <2 x i32> [[A]] to <2 x i64>
 ; OPTALL-NEXT:    ret void
 ;

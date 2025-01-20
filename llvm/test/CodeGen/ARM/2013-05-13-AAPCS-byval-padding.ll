@@ -12,17 +12,11 @@ define void @check227(
 ; arg1 --> SP+188
 
 entry:
-
-;CHECK:  sub   sp, sp, #12
-;CHECK:  push  {r11, lr}
-;CHECK:  sub   sp, sp, #4
-;CHECK:  add   r0, sp, #12
-;CHECK:  stm   r0, {r1, r2, r3}
-;CHECK:  ldr   r0, [sp, #212]
-;CHECK:  bl    useInt
-;CHECK:  add   sp, sp, #4
-;CHECK:  pop   {r11, lr}
-;CHECK:  add   sp, sp, #12
+; CHECK: sub     sp, sp, #12
+; CHECK: stm     sp, {r1, r2, r3}
+; CHECK: ldr     r0, [sp, #200]
+; CHECK: add     sp, sp, #12
+; CHECK: b       useInt
 
   %0 = ptrtoint ptr %arg1 to i32
   tail call void @useInt(i32 %0)

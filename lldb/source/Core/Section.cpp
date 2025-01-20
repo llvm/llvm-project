@@ -147,10 +147,14 @@ const char *Section::GetTypeAsCString() const {
     return "dwarf-gnu-debugaltlink";
   case eSectionTypeCTF:
     return "ctf";
-  case eSectionTypeOther:
-    return "regular";
+  case eSectionTypeLLDBTypeSummaries:
+    return "lldb-type-summaries";
+  case eSectionTypeLLDBFormatters:
+    return "lldb-formatters";
   case eSectionTypeSwiftModules:
     return "swift-modules";
+  case eSectionTypeOther:
+    return "regular";
   }
   return "unknown";
 }
@@ -457,6 +461,8 @@ bool Section::ContainsOnlyDebugInfo() const {
   case eSectionTypeDWARFAppleObjC:
   case eSectionTypeDWARFGNUDebugAltLink:
   case eSectionTypeCTF:
+  case eSectionTypeLLDBTypeSummaries:
+  case eSectionTypeLLDBFormatters:
   case eSectionTypeSwiftModules:
     return true;
   }

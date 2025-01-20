@@ -15,7 +15,6 @@
 
 #include "src/errno/libc_errno.h"
 #include <linux/limits.h> // This is safe to include without any name pollution.
-#include <stdlib.h>
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
