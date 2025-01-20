@@ -96,6 +96,7 @@ public:
   }
   bool canUseExtension(SPIRV::Extension::Extension E) const;
   bool canUseExtInstSet(SPIRV::InstructionSet::InstructionSet E) const;
+  SPIRV::InstructionSet::InstructionSet getPreferredInstructionSet() const;
 
   SPIRVGlobalRegistry *getSPIRVGlobalRegistry() const { return GR.get(); }
 
