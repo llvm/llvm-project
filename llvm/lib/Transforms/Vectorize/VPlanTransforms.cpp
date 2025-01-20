@@ -19,6 +19,7 @@
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanUtils.h"
+#include "VPlanVerifier.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -1439,19 +1440,19 @@ void VPlanTransforms::truncateToMinimalBitwidths(
 }
 
 void VPlanTransforms::optimize(VPlan &Plan) {
-  removeRedundantCanonicalIVs(Plan);
-  removeRedundantInductionCasts(Plan);
+  runPass(removeRedundantCanonicalIVs, Plan);
+  runPass(removeRedundantInductionCasts, Plan);
 
   simplifyRecipes(Plan, Plan.getCanonicalIV()->getScalarType());
-  removeDeadRecipes(Plan);
-  legalizeAndOptimizeInductions(Plan);
-  removeRedundantExpandSCEVRecipes(Plan);
+  runPass(removeDeadRecipes, Plan);
+  runPass(legalizeAndOptimizeInductions, Plan);
+  runPass(removeRedundantExpandSCEVRecipes, Plan);
   simplifyRecipes(Plan, Plan.getCanonicalIV()->getScalarType());
-  removeDeadRecipes(Plan);
+  runPass(removeDeadRecipes, Plan);
 
-  createAndOptimizeReplicateRegions(Plan);
-  mergeBlocksIntoPredecessors(Plan);
-  licm(Plan);
+  runPass(createAndOptimizeReplicateRegions, Plan);
+  runPass(mergeBlocksIntoPredecessors, Plan);
+  runPass(licm, Plan);
 }
 
 // Add a VPActiveLaneMaskPHIRecipe and related recipes to \p Plan and replace
@@ -1871,7 +1872,8 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
 }
 
 void VPlanTransforms::dropPoisonGeneratingRecipes(
-    VPlan &Plan, function_ref<bool(BasicBlock *)> BlockNeedsPredication) {
+    VPlan &Plan,
+    const std::function<bool(BasicBlock *)> &BlockNeedsPredication) {
   // Collect recipes in the backward slice of `Root` that may generate a poison
   // value that is used after vectorization.
   SmallPtrSet<VPRecipeBase *, 16> Visited;
@@ -1971,7 +1973,7 @@ void VPlanTransforms::createInterleaveGroups(
     VPlan &Plan,
     const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
         &InterleaveGroups,
-    VPRecipeBuilder &RecipeBuilder, bool ScalarEpilogueAllowed) {
+    VPRecipeBuilder &RecipeBuilder, const bool &ScalarEpilogueAllowed) {
   if (InterleaveGroups.empty())
     return;
 
