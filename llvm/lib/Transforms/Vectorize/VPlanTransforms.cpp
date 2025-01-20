@@ -1713,6 +1713,29 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   VPTypeAnalysis TypeInfo(CanonicalIVType);
   LLVMContext &Ctx = CanonicalIVType->getContext();
   VPValue *AllOneMask = Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx));
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
+
+  // Create a scalar phi to track the previous EVL if fixed-order recurrence is
+  // contained.
+  bool ContainsFORs =
+      any_of(Header->phis(), IsaPred<VPFirstOrderRecurrencePHIRecipe>);
+  if (ContainsFORs) {
+    // TODO: Use VPInstruction::ExplicitVectorLength to get maximum EVL.
+    VPValue *MaxEVL = &Plan.getVF();
+    // Emit VPScalarCastRecipe in preheader if VF is not a 32 bits integer.
+    if (unsigned VFSize =
+            TypeInfo.inferScalarType(MaxEVL)->getScalarSizeInBits();
+        VFSize != 32) {
+      MaxEVL = new VPScalarCastRecipe(
+          VFSize > 32 ? Instruction::Trunc : Instruction::ZExt, MaxEVL,
+          Type::getInt32Ty(Ctx), DebugLoc());
+      VPBasicBlock *Preheader = LoopRegion->getPreheaderVPBB();
+      Preheader->appendRecipe(cast<VPScalarCastRecipe>(MaxEVL));
+    }
+    auto *PrevEVL = new VPScalarPHIRecipe(MaxEVL, &EVL, DebugLoc(), "prev.evl");
+    PrevEVL->insertBefore(*Header, Header->getFirstNonPhi());
+  }
 
   for (VPUser *U : to_vector(Plan.getVF().users())) {
     if (auto *R = dyn_cast<VPReverseVectorPointerRecipe>(U))
