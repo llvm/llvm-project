@@ -7652,7 +7652,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::unrollByUF(BestVPlan, BestUF,
                               OrigLoop->getHeader()->getContext());
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
-  VPlanTransforms::convertToConcreteRecipes(BestVPlan);
+  VPlanTransforms::simplifyRecipes(BestVPlan, Legal->getWidestInductionType());
+  VPlanTransforms::removeDeadRecipes(BestVPlan);
+  VPlanTransforms::convertToConcreteRecipes(BestVPlan, Legal->getWidestInductionType());
 
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, BestUF, LI, DT, ILV.Builder, &ILV,

@@ -4026,6 +4026,10 @@ public:
     UFs.insert(UF);
   }
 
+  unsigned hasSingleUF() const {
+    return UFs.size() == 1;
+  }
+
   /// Return a string with the name of the plan and the applicable VFs and UFs.
   std::string getName() const;
 
