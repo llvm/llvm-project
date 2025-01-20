@@ -211,20 +211,21 @@ private:
 // known, return that numeric value.
 int64_t SearchableTableEmitter::getNumericKey(const SearchIndex &Index,
                                               const Record *Rec) {
-  assert(Index.Fields.size() == 1);
+  const GenericField &Field = Index.Fields[0];
 
   // To be consistent with compareBy and primaryRepresentation elsewhere,
   // we check for IsInstruction before Enum-- these fields are not exclusive.
-  if (Index.Fields[0].IsInstruction) {
-    const Record *TheDef = Rec->getValueAsDef(Index.Fields[0].Name);
+  if (Field.IsInstruction) {
+    const Record *TheDef = Rec->getValueAsDef(Field.Name);
     return Target->getInstrIntValue(TheDef);
   }
-  if (Index.Fields[0].Enum) {
-    const Record *EnumEntry = Rec->getValueAsDef(Index.Fields[0].Name);
-    return Index.Fields[0].Enum->EntryMap[EnumEntry]->second;
+  if (Field.Enum) {
+    const Record *EnumEntry = Rec->getValueAsDef(Field.Name);
+    return Field.Enum->EntryMap[EnumEntry]->second;
   }
+  assert(isa<BitsRecTy>(Field.RecType) && "unexpected field type");
 
-  return getInt(Rec, Index.Fields[0].Name);
+  return getInt(Rec, Field.Name);
 }
 
 /// Less-than style comparison between \p LHS and \p RHS according to the
@@ -405,10 +406,9 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
     OS << "      (" << Field.Name << " > " << LastRepr << "))\n";
     OS << "    return nullptr;\n\n";
 
-    if (IsContiguous) {
+    if (IsContiguous && !Index.EarlyOut) {
       OS << "  auto Table = ArrayRef(" << IndexName << ");\n";
-      OS << "  size_t Idx = " << Index.Fields[0].Name << " - " << FirstRepr
-         << ";\n";
+      OS << "  size_t Idx = " << Field.Name << " - " << FirstRepr << ";\n";
       OS << "  return ";
       if (IsPrimary)
         OS << "&Table[Idx]";
