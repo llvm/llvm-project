@@ -583,6 +583,12 @@ MachOPlatform::MachOPlatform(
     return;
 
   // (5) Associate runtime support functions.
+  // TODO: Consider moving this above (4) to make runtime support functions
+  //       available to the bootstrap completion graph. We'd just need to be
+  //       sure that the runtime support functions are fully usable before any
+  //       bootstrap completion actions use them (e.g. the ORC runtime
+  //       macho_platform object would have to have been created and
+  //       initialized).
   if ((Err = associateRuntimeSupportFunctions()))
     return;
 }

@@ -37,11 +37,11 @@ const GCNTargetMachine &getTM(const GCNSubtarget *STI) {
 SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
                                              const GCNSubtarget *STI)
     : AMDGPUMachineFunction(F, *STI), Mode(F, *STI), GWSResourcePSV(getTM(STI)),
-      GlobalRegisterPSV(getTM(STI)), UserSGPRInfo(F, *STI), WorkGroupIDX(false),
-      WorkGroupIDY(false), WorkGroupIDZ(false), WorkGroupInfo(false),
-      LDSKernelId(false), PrivateSegmentWaveByteOffset(false),
-      WorkItemIDX(false), WorkItemIDY(false), WorkItemIDZ(false),
-      ImplicitArgPtr(false), GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0) {
+      UserSGPRInfo(F, *STI), WorkGroupIDX(false), WorkGroupIDY(false),
+      WorkGroupIDZ(false), WorkGroupInfo(false), LDSKernelId(false),
+      PrivateSegmentWaveByteOffset(false), WorkItemIDX(false),
+      WorkItemIDY(false), WorkItemIDZ(false), ImplicitArgPtr(false),
+      GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0) {
   const GCNSubtarget &ST = *static_cast<const GCNSubtarget *>(STI);
   FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(F);
   WavesPerEU = ST.getWavesPerEU(F);
@@ -715,7 +715,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       ArgInfo(convertArgumentInfo(MFI.getArgInfo(), TRI)),
       PSInputAddr(MFI.getPSInputAddr()), PSInputEnable(MFI.getPSInputEnable()),
       MaxMemoryClusterDWords(MFI.getMaxMemoryClusterDWords()),
-      Mode(MFI.getMode()) {
+      Mode(MFI.getMode()), HasInitWholeWave(MFI.hasInitWholeWave()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
     SpillPhysVGPRS.push_back(regToString(Reg, TRI));
 

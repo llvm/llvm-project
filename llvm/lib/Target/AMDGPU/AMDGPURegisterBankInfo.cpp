@@ -3305,20 +3305,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       applyDefaultMapping(OpdMapper);
       constrainOpWithReadfirstlane(B, MI, 8); // M0
       return;
-    case Intrinsic::amdgcn_s_mov_from_global:
-      applyDefaultMapping(OpdMapper);
-      constrainOpWithReadfirstlane(B, MI, 3); // M0
-      return;
-    case Intrinsic::amdgcn_s_mov_to_global:
-      applyDefaultMapping(OpdMapper);
-      constrainOpWithReadfirstlane(B, MI, 2); // source data
-      constrainOpWithReadfirstlane(B, MI, 3); // M0
-      return;
-    case Intrinsic::amdgcn_s_swap_to_global:
-      applyDefaultMapping(OpdMapper);
-      constrainOpWithReadfirstlane(B, MI, 3); // source data
-      constrainOpWithReadfirstlane(B, MI, 4); // M0
-      return;
     case Intrinsic::amdgcn_s_sleep_var:
       assert(OpdMapper.getVRegs(1).empty());
       constrainOpWithReadfirstlane(B, MI, 1);
@@ -5343,19 +5329,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
           getVGPROpMapping(MI.getOperand(5).getReg(), MRI, *TRI); // %data1
       break;
     }
-    case Intrinsic::amdgcn_s_mov_from_global:
-      OpdsMapping[0] = getSGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
-      OpdsMapping[3] = getSGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
-      break;
-    case Intrinsic::amdgcn_s_mov_to_global:
-      OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
-      OpdsMapping[3] = getSGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
-      break;
-    case Intrinsic::amdgcn_s_swap_to_global:
-      OpdsMapping[0] = getSGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
-      OpdsMapping[3] = getSGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
-      OpdsMapping[4] = getSGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
-      break;
     case Intrinsic::amdgcn_s_sleep_var:
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       break;

@@ -270,7 +270,6 @@ private:
   void SelectPOPSExitingWaveID(SDNode *N);
   void SelectDS_GWS(SDNode *N, unsigned IntrID);
   void SelectInterpP1F16(SDNode *N);
-  void SelectMoveGlobalSReg(SDNode *N);
   void SelectINTRINSIC_W_CHAIN(SDNode *N);
   void SelectINTRINSIC_WO_CHAIN(SDNode *N);
   void SelectINTRINSIC_VOID(SDNode *N);
