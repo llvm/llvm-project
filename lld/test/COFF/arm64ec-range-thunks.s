@@ -5,7 +5,7 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64-windows native-funcs.s -o funcs-aarch64.obj
 # RUN: llvm-mc -filetype=obj -triple=x86_64-windows space.s -o space-x86_64.obj
 # RUN: llvm-mc -filetype=obj -triple=aarch64-windows space.s -o space-aarch64.obj
-# RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64.obj
+# RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64.s -o loadconfig-arm64.obj
 # RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
 
 

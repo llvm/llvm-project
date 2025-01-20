@@ -764,7 +764,7 @@ struct __padding<0> {};
 template <class _CharT, class _Traits, class _Allocator>
 class basic_string {
 private:
-  using __default_allocator_type = allocator<_CharT>;
+  using __default_allocator_type _LIBCPP_NODEBUG = allocator<_CharT>;
 
 public:
   typedef basic_string __self;
@@ -798,7 +798,7 @@ public:
   // Therefore it's crucial to ensure the destructor is called.
   using __trivially_relocatable = void;
 #  else
-  using __trivially_relocatable = __conditional_t<
+  using __trivially_relocatable _LIBCPP_NODEBUG = __conditional_t<
       __libcpp_is_trivially_relocatable<allocator_type>::value && __libcpp_is_trivially_relocatable<pointer>::value,
       basic_string,
       void>;

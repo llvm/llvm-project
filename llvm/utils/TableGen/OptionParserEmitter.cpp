@@ -232,8 +232,7 @@ static void emitHelpTextsForVariants(
     assert(Visibilities.size() <= MaxVisibilityPerHelp &&
            "Too many visibilities to store in an "
            "OptTable::HelpTextsForVariants entry");
-    OS << "std::make_pair(std::array<unsigned, " << MaxVisibilityPerHelp
-       << ">{{";
+    OS << "{std::array<unsigned, " << MaxVisibilityPerHelp << ">{{";
 
     auto VisibilityEnd = Visibilities.cend();
     for (auto Visibility = Visibilities.cbegin(); Visibility != VisibilityEnd;
@@ -249,7 +248,7 @@ static void emitHelpTextsForVariants(
       writeCstring(OS, Help);
     else
       OS << "nullptr";
-    OS << ")";
+    OS << "}";
 
     if (std::next(VisibilityHelp) != VisibilityHelpEnd)
       OS << ", ";
@@ -516,8 +515,8 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       for (const Init *Visibility : Visibilities)
         VisibilityNames.push_back(Visibility->getAsUnquotedString());
 
-      HelpTextsForVariants.push_back(std::make_pair(
-          VisibilityNames, VisibilityHelp->getValueAsString("Text")));
+      HelpTextsForVariants.emplace_back(
+          VisibilityNames, VisibilityHelp->getValueAsString("Text"));
     }
     emitHelpTextsForVariants(OS, std::move(HelpTextsForVariants));
 

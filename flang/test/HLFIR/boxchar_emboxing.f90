@@ -22,7 +22,7 @@
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_10]] : (index) -> i64
 ! CHECK:           %[[VAL_14:.*]] = arith.constant false
 ! CHECK:           %[[VAL_15:.*]] = arith.constant false
-! CHECK:           %[[VAL_16:.*]] = fir.call @_FortranAStopStatementText(%[[VAL_12]], %[[VAL_13]], %[[VAL_14]], %[[VAL_15]]) fastmath<contract> : (!fir.ref<i8>, i64, i1, i1) -> none
+! CHECK:           fir.call @_FortranAStopStatementText(%[[VAL_12]], %[[VAL_13]], %[[VAL_14]], %[[VAL_15]]) fastmath<contract> : (!fir.ref<i8>, i64, i1, i1) -> ()
 ! CHECK:           fir.unreachable
 ! CHECK:         ^bb3:
 ! CHECK:           return
@@ -66,7 +66,7 @@ end subroutine test1
 ! CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_12]] : (index) -> i64
 ! CHECK:           %[[VAL_16:.*]] = arith.constant false
 ! CHECK:           %[[VAL_17:.*]] = arith.constant false
-! CHECK:           %[[VAL_18:.*]] = fir.call @_FortranAStopStatementText(%[[VAL_14]], %[[VAL_15]], %[[VAL_16]], %[[VAL_17]]) fastmath<contract> : (!fir.ref<i8>, i64, i1, i1) -> none
+! CHECK:           fir.call @_FortranAStopStatementText(%[[VAL_14]], %[[VAL_15]], %[[VAL_16]], %[[VAL_17]]) fastmath<contract> : (!fir.ref<i8>, i64, i1, i1) -> ()
 ! CHECK:           fir.unreachable
 ! CHECK:         ^bb3:
 ! CHECK:           return

@@ -91,28 +91,37 @@ if (FLANG_STANDALONE_BUILD)
 
   # If the user specifies a relative path to LLVM_DIR, the calls to include
   # LLVM modules fail. Append the absolute path to LLVM_DIR instead.
-  get_filename_component(LLVM_DIR_ABSOLUTE ${LLVM_DIR}
-    REALPATH BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
-  list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR_ABSOLUTE})
+  if (LLVM_DIR)
+    get_filename_component(LLVM_DIR_ABSOLUTE ${LLVM_DIR}
+      REALPATH BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
+    list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR_ABSOLUTE})
+  endif()
   # We need a pre-built/installed version of LLVM.
   find_package(LLVM REQUIRED HINTS "${LLVM_DIR_ABSOLUTE}")
+  if (NOT LLVM_DIR_ABSOLUTE)
+    # If the user did not specify a LLVM_DIR (and therefore LLVM_DIR_ABSOLUTE
+    # was not set), append the discovered path to CMAKE_MODULE_PATH.
+    list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR})
+  endif()
 
   # Users might specify a path to CLANG_DIR that's:
   #   * a full path, or
   #   * a path relative to the path of this script.
   # Append the absolute path to CLANG_DIR so that find_package works in both
   # cases.
-  get_filename_component(
-    CLANG_DIR_ABSOLUTE
-    ${CLANG_DIR}
-    REALPATH
-    BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
-  list(APPEND CMAKE_MODULE_PATH ${CLANG_DIR_ABSOLUTE})
+  if (CLANG_DIR)
+    get_filename_component(
+      CLANG_DIR_ABSOLUTE
+      ${CLANG_DIR}
+      REALPATH
+      BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
+    list(APPEND CMAKE_MODULE_PATH ${CLANG_DIR_ABSOLUTE})
 
-  # TODO: Remove when libclangDriver is lifted out of Clang
-  find_package(Clang REQUIRED PATHS "${CLANG_DIR_ABSOLUTE}" NO_DEFAULT_PATH)
-  if (NOT Clang_FOUND)
-    message(FATAL_ERROR "Failed to find Clang")
+    # TODO: Remove when libclangDriver is lifted out of Clang
+    find_package(Clang REQUIRED PATHS "${CLANG_DIR_ABSOLUTE}" NO_DEFAULT_PATH)
+  else()
+    find_package(Clang REQUIRED)
+    list(APPEND CMAKE_MODULE_PATH ${Clang_DIR})
   endif()
 
   # If LLVM links to zlib we need the imported targets so we can too.
@@ -134,10 +143,15 @@ if (FLANG_STANDALONE_BUILD)
   include(TableGen)
   # If the user specifies a relative path to MLIR_DIR, the calls to include
   # MLIR modules fail. Append the absolute path to MLIR_DIR instead.
-  get_filename_component(MLIR_DIR_ABSOLUTE ${MLIR_DIR}
-    REALPATH BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
-  list(APPEND CMAKE_MODULE_PATH ${MLIR_DIR_ABSOLUTE})
+  if (MLIR_DIR)
+    get_filename_component(MLIR_DIR_ABSOLUTE ${MLIR_DIR}
+      REALPATH BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
+    list(APPEND CMAKE_MODULE_PATH ${MLIR_DIR_ABSOLUTE})
+  endif()
   find_package(MLIR REQUIRED CONFIG HINTS ${MLIR_DIR_ABSOLUTE})
+  if (NOT MLIR_DIR_ABSOLUTE)
+    list(APPEND CMAKE_MODULE_PATH ${MLIR_DIR})
+  endif()
   # Use SYSTEM for the same reasons as for LLVM includes
   include_directories(SYSTEM ${MLIR_INCLUDE_DIRS})
   include(AddMLIR)

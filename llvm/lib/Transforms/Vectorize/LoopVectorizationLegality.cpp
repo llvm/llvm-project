@@ -778,6 +778,18 @@ static bool isTLIScalarize(const TargetLibraryInfo &TLI, const CallInst &CI) {
   return Scalarize;
 }
 
+/// Returns true if the call return type `Ty` can be widened by the loop
+/// vectorizer.
+static bool canWidenCallReturnType(Type *Ty) {
+  auto *StructTy = dyn_cast<StructType>(Ty);
+  // TODO: Remove the homogeneous types restriction. This is just an initial
+  // simplification. When we want to support things like the overflow intrinsics
+  // we will have to lift this restriction.
+  if (StructTy && !StructTy->containsHomogeneousTypes())
+    return false;
+  return canVectorizeTy(StructTy);
+}
+
 bool LoopVectorizationLegality::canVectorizeInstrs() {
   BasicBlock *Header = TheLoop->getHeader();
 
@@ -942,11 +954,29 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
       if (CI && !VFDatabase::getMappings(*CI).empty())
         VecCallVariantsFound = true;
 
+      auto CanWidenInstructionTy = [this](Instruction const &Inst) {
+        Type *InstTy = Inst.getType();
+        if (!isa<StructType>(InstTy))
+          return canVectorizeTy(InstTy);
+
+        // For now, we only recognize struct values returned from calls where
+        // all users are extractvalue as vectorizable. All element types of the
+        // struct must be types that can be widened.
+        if (isa<CallInst>(Inst) && canWidenCallReturnType(InstTy) &&
+            all_of(Inst.users(), IsaPred<ExtractValueInst>)) {
+          // TODO: Remove the `StructVecCallFound` flag once vectorizing calls
+          // with struct returns is supported.
+          StructVecCallFound = true;
+          return true;
+        }
+
+        return false;
+      };
+
       // Check that the instruction return type is vectorizable.
       // We can't vectorize casts from vector type to scalar type.
       // Also, we can't vectorize extractelement instructions.
-      if ((!VectorType::isValidElementType(I.getType()) &&
-           !I.getType()->isVoidTy()) ||
+      if (!CanWidenInstructionTy(I) ||
           (isa<CastInst>(I) &&
            !VectorType::isValidElementType(I.getOperand(0)->getType())) ||
           isa<ExtractElementInst>(I)) {
@@ -1784,14 +1814,23 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
 
   HasUncountableEarlyExit = false;
   if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount())) {
-    HasUncountableEarlyExit = true;
-    if (!isVectorizableEarlyExitLoop()) {
-      UncountableExitingBlocks.clear();
-      HasUncountableEarlyExit = false;
+    if (TheLoop->getExitingBlock()) {
+      reportVectorizationFailure("Cannot vectorize uncountable loop",
+                                 "UnsupportedUncountableLoop", ORE, TheLoop);
       if (DoExtraAnalysis)
         Result = false;
       else
         return false;
+    } else {
+      HasUncountableEarlyExit = true;
+      if (!isVectorizableEarlyExitLoop()) {
+        UncountableExitingBlocks.clear();
+        HasUncountableEarlyExit = false;
+        if (DoExtraAnalysis)
+          Result = false;
+        else
+          return false;
+      }
     }
   }
 

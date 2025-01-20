@@ -430,6 +430,21 @@ bool ISD::matchBinaryPredicate(
   return true;
 }
 
+ISD::NodeType ISD::getInverseMinMaxOpcode(unsigned MinMaxOpc) {
+  switch (MinMaxOpc) {
+  default:
+    llvm_unreachable("unrecognized opcode");
+  case ISD::UMIN:
+    return ISD::UMAX;
+  case ISD::UMAX:
+    return ISD::UMIN;
+  case ISD::SMIN:
+    return ISD::SMAX;
+  case ISD::SMAX:
+    return ISD::SMIN;
+  }
+}
+
 ISD::NodeType ISD::getVecReduceBaseOpcode(unsigned VecReduceOpcode) {
   switch (VecReduceOpcode) {
   default:
@@ -937,6 +952,12 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
     ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(N)->getMask();
     for (int M : Mask)
       ID.AddInteger(M);
+    break;
+  }
+  case ISD::ADDRSPACECAST: {
+    const AddrSpaceCastSDNode *ASC = cast<AddrSpaceCastSDNode>(N);
+    ID.AddInteger(ASC->getSrcAddressSpace());
+    ID.AddInteger(ASC->getDestAddressSpace());
     break;
   }
   case ISD::TargetBlockAddress:

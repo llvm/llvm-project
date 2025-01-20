@@ -1,6 +1,14 @@
 import os
 
-from clang.cindex import Config, CursorKind, RefQualifierKind, TranslationUnit, TypeKind
+from clang.cindex import (
+    Config,
+    CursorKind,
+    PrintingPolicy,
+    PrintingPolicyProperty,
+    RefQualifierKind,
+    TranslationUnit,
+    TypeKind,
+)
 
 if "CLANG_LIBRARY_PATH" in os.environ:
     Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
@@ -463,8 +471,11 @@ class A
             self.assertNotEqual(children[0].spelling, "typeanon")
             self.assertEqual(children[1].spelling, "typeanon")
             self.assertEqual(fields[0].kind, CursorKind.FIELD_DECL)
+            self.assertTrue(fields[0].is_anonymous())
+            self.assertFalse(fields[0].is_anonymous_record_decl())
             self.assertEqual(fields[1].kind, CursorKind.FIELD_DECL)
             self.assertTrue(fields[1].is_anonymous())
+            self.assertTrue(fields[1].is_anonymous_record_decl())
             self.assertEqual(teststruct.type.get_offset("typeanon"), f1)
             self.assertEqual(teststruct.type.get_offset("bariton"), bariton)
             self.assertEqual(teststruct.type.get_offset("foo"), foo)
@@ -514,3 +525,37 @@ class A
         # Variable without a template argument.
         cursor = get_cursor(tu, "bar")
         self.assertEqual(cursor.get_num_template_arguments(), -1)
+
+    def test_pretty(self):
+        tu = get_tu("struct X {}; X x;", lang="cpp")
+        f = get_cursor(tu, "x")
+
+        pp = PrintingPolicy.create(f)
+        self.assertEqual(f.type.get_canonical().pretty_printed(pp), "X")
+        pp.set_property(PrintingPolicyProperty.SuppressTagKeyword, False)
+        self.assertEqual(f.type.get_canonical().pretty_printed(pp), "struct X")
+
+    def test_base_classes(self):
+        source = """
+        class A { int a; };
+        class B { int b; };
+        class C { int c; };
+        template <typename T>
+        class Template : public A, public B, virtual C {
+        };
+        Template<int> instance;
+        int bar;
+        """
+        tu = get_tu(source, lang="cpp", flags=["--target=x86_64-linux-gnu"])
+        cursor = get_cursor(tu, "instance")
+        cursor_type = cursor.type
+        cursor_type_decl = cursor_type.get_declaration()
+        self.assertEqual(cursor.kind, CursorKind.VAR_DECL)
+        bases = list(cursor_type.get_bases())
+        self.assertEqual(len(bases), 3)
+        self.assertFalse(bases[0].is_virtual_base())
+        self.assertEqual(bases[0].get_base_offsetof(cursor_type_decl), 64)
+        self.assertFalse(bases[1].is_virtual_base())
+        self.assertEqual(bases[1].get_base_offsetof(cursor_type_decl), 96)
+        self.assertTrue(bases[2].is_virtual_base())
+        self.assertEqual(bases[2].get_base_offsetof(cursor_type_decl), 128)

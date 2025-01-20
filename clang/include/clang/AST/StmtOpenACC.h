@@ -672,5 +672,84 @@ public:
          SourceLocation End, ArrayRef<const OpenACCClause *> Clauses);
 };
 
+// This class represents a 'set' construct, which has just a clause list.
+class OpenACCSetConstruct final
+    : public OpenACCConstructStmt,
+      private llvm::TrailingObjects<OpenACCSetConstruct,
+                                    const OpenACCClause *> {
+  friend TrailingObjects;
+  OpenACCSetConstruct(unsigned NumClauses)
+      : OpenACCConstructStmt(OpenACCSetConstructClass,
+                             OpenACCDirectiveKind::Set, SourceLocation{},
+                             SourceLocation{}, SourceLocation{}) {
+    std::uninitialized_value_construct(
+        getTrailingObjects<const OpenACCClause *>(),
+        getTrailingObjects<const OpenACCClause *>() + NumClauses);
+    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
+                                  NumClauses));
+  }
+
+  OpenACCSetConstruct(SourceLocation Start, SourceLocation DirectiveLoc,
+                      SourceLocation End,
+                      ArrayRef<const OpenACCClause *> Clauses)
+      : OpenACCConstructStmt(OpenACCSetConstructClass,
+                             OpenACCDirectiveKind::Set, Start, DirectiveLoc,
+                             End) {
+    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
+                            getTrailingObjects<const OpenACCClause *>());
+    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
+                                  Clauses.size()));
+  }
+
+public:
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OpenACCSetConstructClass;
+  }
+  static OpenACCSetConstruct *CreateEmpty(const ASTContext &C,
+                                          unsigned NumClauses);
+  static OpenACCSetConstruct *Create(const ASTContext &C, SourceLocation Start,
+                                     SourceLocation DirectiveLoc,
+                                     SourceLocation End,
+                                     ArrayRef<const OpenACCClause *> Clauses);
+};
+// This class represents an 'update' construct, which has just a clause list.
+class OpenACCUpdateConstruct final
+    : public OpenACCConstructStmt,
+      private llvm::TrailingObjects<OpenACCUpdateConstruct,
+                                    const OpenACCClause *> {
+  friend TrailingObjects;
+  OpenACCUpdateConstruct(unsigned NumClauses)
+      : OpenACCConstructStmt(OpenACCUpdateConstructClass,
+                             OpenACCDirectiveKind::Update, SourceLocation{},
+                             SourceLocation{}, SourceLocation{}) {
+    std::uninitialized_value_construct(
+        getTrailingObjects<const OpenACCClause *>(),
+        getTrailingObjects<const OpenACCClause *>() + NumClauses);
+    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
+                                  NumClauses));
+  }
+
+  OpenACCUpdateConstruct(SourceLocation Start, SourceLocation DirectiveLoc,
+                         SourceLocation End,
+                         ArrayRef<const OpenACCClause *> Clauses)
+      : OpenACCConstructStmt(OpenACCUpdateConstructClass,
+                             OpenACCDirectiveKind::Update, Start, DirectiveLoc,
+                             End) {
+    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
+                            getTrailingObjects<const OpenACCClause *>());
+    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
+                                  Clauses.size()));
+  }
+
+public:
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OpenACCUpdateConstructClass;
+  }
+  static OpenACCUpdateConstruct *CreateEmpty(const ASTContext &C,
+                                             unsigned NumClauses);
+  static OpenACCUpdateConstruct *
+  Create(const ASTContext &C, SourceLocation Start, SourceLocation DirectiveLoc,
+         SourceLocation End, ArrayRef<const OpenACCClause *> Clauses);
+};
 } // namespace clang
 #endif // LLVM_CLANG_AST_STMTOPENACC_H

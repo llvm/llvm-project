@@ -347,3 +347,20 @@ template <> uint64_t CallStack<MDNode, MDNode::op_iterator>::back() const {
   return mdconst::dyn_extract<ConstantInt>(N->operands().back())
       ->getZExtValue();
 }
+
+MDNode *MDNode::getMergedMemProfMetadata(MDNode *A, MDNode *B) {
+  // TODO: Support more sophisticated merging, such as selecting the one with
+  // more bytes allocated, or implement support for carrying multiple allocation
+  // leaf contexts. For now, keep the first one.
+  if (A)
+    return A;
+  return B;
+}
+
+MDNode *MDNode::getMergedCallsiteMetadata(MDNode *A, MDNode *B) {
+  // TODO: Support more sophisticated merging, which will require support for
+  // carrying multiple contexts. For now, keep the first one.
+  if (A)
+    return A;
+  return B;
+}
