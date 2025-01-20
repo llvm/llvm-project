@@ -10354,7 +10354,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     SameNodesEstimated = false;
     if (!E2 && InVectors.size() == 1) {
       unsigned VF = E1.getVectorFactor();
-      if (Value *V1 = InVectors.front().dyn_cast<Value *>()) {
+      if (Value *V1 = dyn_cast_if_present<Value *>(InVectors.front())) {
         VF = std::max(VF,
                       cast<FixedVectorType>(V1->getType())->getNumElements());
       } else {
@@ -10370,7 +10370,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       auto P = InVectors.front();
       Cost += createShuffle(&E1, E2, Mask);
       unsigned VF = Mask.size();
-      if (Value *V1 = P.dyn_cast<Value *>()) {
+      if (Value *V1 = dyn_cast_if_present<Value *>(P)) {
         VF = std::max(VF,
                       getNumElements(V1->getType()));
       } else {
@@ -10435,7 +10435,8 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                 ArrayRef<int> Mask) {
     ShuffleCostBuilder Builder(TTI);
     SmallVector<int> CommonMask(Mask);
-    Value *V1 = P1.dyn_cast<Value *>(), *V2 = P2.dyn_cast<Value *>();
+    Value *V1 = dyn_cast_if_present<Value *>(P1);
+    Value *V2 = dyn_cast_if_present<Value *>(P2);
     unsigned CommonVF = Mask.size();
     InstructionCost ExtraCost = 0;
     auto GetNodeMinBWAffectedCost = [&](const TreeEntry &E,
@@ -10870,7 +10871,7 @@ public:
       transformMaskAfterShuffle(CommonMask, CommonMask);
       VF = std::max<unsigned>(VF, CommonMask.size());
     } else if (const auto *InTE =
-                   InVectors.front().dyn_cast<const TreeEntry *>()) {
+                   dyn_cast_if_present<const TreeEntry *>(InVectors.front())) {
       VF = std::max(VF, InTE->getVectorFactor());
     } else {
       VF = std::max(
