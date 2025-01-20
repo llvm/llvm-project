@@ -392,37 +392,32 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
     }
   }
 
-  if (IsContiguous) {
+  if (Index.EarlyOut || IsContiguous) {
     const GenericField &Field = Index.Fields[0];
     std::string FirstRepr = primaryRepresentation(
         Index.Loc, Field, IndexRows[0]->getValueInit(Field.Name));
     std::string LastRepr = primaryRepresentation(
         Index.Loc, Field, IndexRows.back()->getValueInit(Field.Name));
-    OS << "  if ((" << Field.Name << " < " << FirstRepr << ") ||\n";
-    OS << "      (" << Field.Name << " > " << LastRepr << "))\n";
-    OS << "    return nullptr;\n";
-    OS << "  auto Table = ArrayRef(" << IndexName << ");\n";
-    OS << "  size_t Idx = " << Index.Fields[0].Name << " - " << FirstRepr
-       << ";\n";
-    OS << "  return ";
-    if (IsPrimary)
-      OS << "&Table[Idx]";
+    if (getNumericKey(Index, IndexRows[0]) == 0)
+      OS << "  if (";
     else
-      OS << "&" << Table.Name << "[Table[Idx]._index]";
-    OS << ";\n";
-    OS << "}\n";
-    return;
-  }
-
-  if (Index.EarlyOut) {
-    const GenericField &Field = Index.Fields[0];
-    std::string FirstRepr = primaryRepresentation(
-        Index.Loc, Field, IndexRows[0]->getValueInit(Field.Name));
-    std::string LastRepr = primaryRepresentation(
-        Index.Loc, Field, IndexRows.back()->getValueInit(Field.Name));
-    OS << "  if ((" << Field.Name << " < " << FirstRepr << ") ||\n";
+      OS << "  if ((" << Field.Name << " < " << FirstRepr << ") ||\n";
     OS << "      (" << Field.Name << " > " << LastRepr << "))\n";
     OS << "    return nullptr;\n\n";
+
+    if (IsContiguous) {
+      OS << "  auto Table = ArrayRef(" << IndexName << ");\n";
+      OS << "  size_t Idx = " << Index.Fields[0].Name << " - " << FirstRepr
+         << ";\n";
+      OS << "  return ";
+      if (IsPrimary)
+        OS << "&Table[Idx]";
+      else
+        OS << "&" << Table.Name << "[Table[Idx]._index]";
+      OS << ";\n";
+      OS << "}\n";
+      return;
+    }
   }
 
   OS << "  struct KeyType {\n";
