@@ -407,10 +407,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   }
   if (CurrentState.BreakBeforeClosingParen && Current.is(tok::r_paren))
     return true;
-  if (CurrentState.BreakBeforeClosingAngle && Current.is(TT_TemplateCloser) &&
-      Style.BreakBeforeTemplateCloser == FormatStyle::BBTCS_BlockIndent) {
+  if (CurrentState.BreakBeforeClosingAngle && Current.is(TT_TemplateCloser))
     return true;
-  }
   if (Style.Language == FormatStyle::LK_ObjC &&
       Style.ObjCBreakBeforeNestedBlockParam &&
       Current.ObjCSelectorNameParts > 1 &&
@@ -1240,8 +1238,10 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
         Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent;
   }
 
-  if (PreviousNonComment && PreviousNonComment->is(tok::less))
-    CurrentState.BreakBeforeClosingAngle = true;
+  if (PreviousNonComment && PreviousNonComment->is(TT_TemplateOpener)) {
+    CurrentState.BreakBeforeClosingAngle =
+        Style.BreakBeforeTemplateCloser == FormatStyle::BBTCS_BlockIndent;
+  }
 
   if (CurrentState.AvoidBinPacking) {
     // If we are breaking after '(', '{', '<', or this is the break after a ':'
@@ -1379,9 +1379,8 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       State.Stack.size() > 1) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
   }
-  if (Current.is(TT_TemplateCloser) &&
-      Style.BreakBeforeTemplateCloser != FormatStyle::BBTCS_Never &&
-      State.Stack.size() > 1) {
+  if (Style.BreakBeforeTemplateCloser == FormatStyle::BBTCS_BlockIndent &&
+      Current.is(TT_TemplateCloser) && State.Stack.size() > 1) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
   }
   if (NextNonComment->is(TT_TemplateString) && NextNonComment->closesScope())

@@ -281,11 +281,7 @@ struct ParenState {
   /// was a newline after the beginning left paren.
   bool BreakBeforeClosingParen : 1;
 
-  /// Whether a newline needs to be inserted before the block's closing
-  /// angle < >.
-  ///
-  /// We only want to insert a newline before the closing angle if there also
-  /// was a newline after the beginning left angle.
+  /// Whether a newline needs to be inserted before a closing angle `>`.
   bool BreakBeforeClosingAngle : 1;
 
   /// Avoid bin packing, i.e. multiple parameters/elements on multiple
