@@ -14,11 +14,10 @@ define void @foo(ptr %a, ptr %b, ptr noalias %c, i64 %s) {
 ; CHECK-NEXT:  # %bb.2: # %body
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movl $1, (%rdx,%rax,4)
-; CHECK-NEXT:    movzbl (%rdi,%rax,4), %r8d
-; CHECK-NEXT:    movzbl (%rsi,%rax,4), %r9d
-; CHECK-NEXT:    andl %r8d, %r9d
-; CHECK-NEXT:    andl $1, %r9d
-; CHECK-NEXT:    movl %r9d, (%rdi,%rax,4)
+; CHECK-NEXT:    movl (%rdi,%rax,4), %r8d
+; CHECK-NEXT:    andl (%rsi,%rax,4), %r8d
+; CHECK-NEXT:    andl $1, %r8d
+; CHECK-NEXT:    movl %r8d, (%rdi,%rax,4)
 ; CHECK-NEXT:    incq %rax
 ; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    jmp .LBB0_1

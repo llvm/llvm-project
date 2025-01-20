@@ -1429,8 +1429,8 @@ bool TargetLowering::SimplifyDemandedBits(
       // Do not increment Depth here; that can cause an infinite loop.
       KnownBits LHSKnown = TLO.DAG.computeKnownBits(Op0, DemandedElts, Depth);
       // If the LHS already has zeros where RHSC does, this 'and' is dead.
-      if ((LHSKnown.Zero & DemandedBits) ==
-          (~RHSC->getAPIntValue() & DemandedBits))
+
+      if (DemandedBits.isSubsetOf(LHSKnown.Zero | RHSC->getAPIntValue()))
         return TLO.CombineTo(Op, Op0);
 
       // If any of the set bits in the RHS are known zero on the LHS, shrink

@@ -1814,7 +1814,7 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX2-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; AVX2-NEXT:    movl %ecx, %r13d
 ; AVX2-NEXT:    movl %edx, %r15d
-; AVX2-NEXT:    movl %esi, %ebx
+; AVX2-NEXT:    movl %esi, %r14d
 ; AVX2-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX2-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; AVX2-NEXT:    movl 360(%rbp), %eax
@@ -1932,8 +1932,8 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX2-NEXT:    vpinsrb $10, %r10d, %xmm6, %xmm6
 ; AVX2-NEXT:    movl 56(%rbp), %r11d
 ; AVX2-NEXT:    vpinsrb $11, %r11d, %xmm6, %xmm6
-; AVX2-NEXT:    movl 64(%rbp), %r14d
-; AVX2-NEXT:    vpinsrb $12, %r14d, %xmm6, %xmm6
+; AVX2-NEXT:    movl 64(%rbp), %ebx
+; AVX2-NEXT:    vpinsrb $12, %ebx, %xmm6, %xmm6
 ; AVX2-NEXT:    movl 72(%rbp), %r12d
 ; AVX2-NEXT:    vpinsrb $13, %r12d, %xmm6, %xmm6
 ; AVX2-NEXT:    movl 80(%rbp), %eax
@@ -1988,20 +1988,20 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    vpextrb $1, %xmm0, (%rsp,%rax)
-; AVX2-NEXT:    andl $1, %ebx
-; AVX2-NEXT:    addq %rax, %rbx
-; AVX2-NEXT:    vpextrb $2, %xmm0, (%rsp,%rbx)
+; AVX2-NEXT:    andl $1, %r14d
+; AVX2-NEXT:    addq %rax, %r14
+; AVX2-NEXT:    vpextrb $2, %xmm0, (%rsp,%r14)
 ; AVX2-NEXT:    andl $1, %r15d
-; AVX2-NEXT:    addq %rbx, %r15
+; AVX2-NEXT:    addq %r14, %r15
 ; AVX2-NEXT:    vpextrb $3, %xmm0, (%rsp,%r15)
 ; AVX2-NEXT:    andl $1, %r13d
 ; AVX2-NEXT:    addq %r15, %r13
 ; AVX2-NEXT:    vpextrb $4, %xmm0, (%rsp,%r13)
-; AVX2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addq %r13, %rcx
-; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addq %r13, %rax
 ; AVX2-NEXT:    vpextrb $5, %xmm0, (%rsp,%rax)
+; AVX2-NEXT:    movq %rax, %rcx
 ; AVX2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    addq %rcx, %rax
@@ -2035,16 +2035,16 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX2-NEXT:    # kill: def $r10d killed $r10d killed $r10 def $r10
 ; AVX2-NEXT:    andl $63, %r10d
 ; AVX2-NEXT:    vpextrb $11, %xmm0, (%rsp,%r10)
-; AVX2-NEXT:    andl $1, %r14d
-; AVX2-NEXT:    addq %r11, %r14
+; AVX2-NEXT:    andl $1, %ebx
+; AVX2-NEXT:    addq %r11, %rbx
 ; AVX2-NEXT:    # kill: def $r11d killed $r11d killed $r11 def $r11
 ; AVX2-NEXT:    andl $63, %r11d
 ; AVX2-NEXT:    vpextrb $12, %xmm0, (%rsp,%r11)
 ; AVX2-NEXT:    andl $1, %r12d
-; AVX2-NEXT:    addq %r14, %r12
-; AVX2-NEXT:    # kill: def $r14d killed $r14d killed $r14 def $r14
-; AVX2-NEXT:    andl $63, %r14d
-; AVX2-NEXT:    vpextrb $13, %xmm0, (%rsp,%r14)
+; AVX2-NEXT:    addq %rbx, %r12
+; AVX2-NEXT:    # kill: def $ebx killed $ebx killed $rbx def $rbx
+; AVX2-NEXT:    andl $63, %ebx
+; AVX2-NEXT:    vpextrb $13, %xmm0, (%rsp,%rbx)
 ; AVX2-NEXT:    movl 80(%rbp), %eax
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    addq %r12, %rax

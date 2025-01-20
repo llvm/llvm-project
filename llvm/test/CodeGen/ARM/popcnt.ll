@@ -311,10 +311,12 @@ define i32 @ctpop16(i16 %x) nounwind readnone {
 ; CHECK-NEXT:    and r2, r0, r1
 ; CHECK-NEXT:    and r0, r1, r0, lsr #2
 ; CHECK-NEXT:    add r0, r2, r0
+; CHECK-NEXT:    mov r1, #15
+; CHECK-NEXT:    orr r1, r1, #3840
 ; CHECK-NEXT:    add r0, r0, r0, lsr #4
-; CHECK-NEXT:    and r1, r0, #3840
-; CHECK-NEXT:    and r0, r0, #15
-; CHECK-NEXT:    add r0, r0, r1, lsr #8
+; CHECK-NEXT:    and r0, r0, r1
+; CHECK-NEXT:    add r0, r0, r0, lsr #8
+; CHECK-NEXT:    and r0, r0, #255
 ; CHECK-NEXT:    mov pc, lr
   %count = tail call i16 @llvm.ctpop.i16(i16 %x)
   %conv = zext i16 %count to i32

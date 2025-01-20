@@ -201,9 +201,10 @@ define i16 @test_ctpop_i16(i16 %a) nounwind {
 ; LA32-NEXT:    add.w $a0, $a2, $a0
 ; LA32-NEXT:    srli.w $a1, $a0, 4
 ; LA32-NEXT:    add.w $a0, $a0, $a1
-; LA32-NEXT:    bstrpick.w $a1, $a0, 11, 8
-; LA32-NEXT:    andi $a0, $a0, 15
+; LA32-NEXT:    andi $a0, $a0, 3855
+; LA32-NEXT:    srli.w $a1, $a0, 8
 ; LA32-NEXT:    add.w $a0, $a0, $a1
+; LA32-NEXT:    andi $a0, $a0, 31
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_ctpop_i16:
