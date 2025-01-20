@@ -959,7 +959,6 @@ protected:
         }
 
         LineEntry function_start;
-        uint32_t index_ptr = 0, end_ptr = UINT32_MAX;
         std::vector<addr_t> address_list;
 
         // Find the beginning & end index of the function, but first make
@@ -970,19 +969,22 @@ protected:
           return;
         }
 
-        AddressRange fun_addr_range = sc.function->GetAddressRange();
-        Address fun_start_addr = fun_addr_range.GetBaseAddress();
-        line_table->FindLineEntryByAddress(fun_start_addr, function_start,
-                                           &index_ptr);
 
-        Address fun_end_addr(fun_start_addr.GetSection(),
-                             fun_start_addr.GetOffset() +
-                                 fun_addr_range.GetByteSize());
+        uint32_t lowest_func_idx = UINT32_MAX;
+        uint32_t highest_func_idx = 0;
+        for (AddressRange range : sc.function->GetAddressRanges()) {
+          uint32_t idx;
+          LineEntry unused;
+          Address addr = range.GetBaseAddress();
+          if (line_table->FindLineEntryByAddress(addr, unused, &idx))
+            lowest_func_idx = std::min(lowest_func_idx, idx);
 
-        bool all_in_function = true;
+          addr.Slide(range.GetByteSize());
+          if (line_table->FindLineEntryByAddress(addr, unused, &idx))
+            highest_func_idx = std::max(highest_func_idx, idx);
+        }
 
-        line_table->FindLineEntryByAddress(fun_end_addr, function_start,
-                                           &end_ptr);
+        bool found_something = false;
 
         // Since not all source lines will contribute code, check if we are
         // setting the breakpoint on the exact line number or the nearest
@@ -991,14 +993,15 @@ protected:
         for (uint32_t line_number : line_numbers) {
           LineEntry line_entry;
           bool exact = false;
-          uint32_t start_idx_ptr = index_ptr;
-          start_idx_ptr = sc.comp_unit->FindLineEntry(
-              index_ptr, line_number, nullptr, exact, &line_entry);
-          if (start_idx_ptr != UINT32_MAX)
-            line_number = line_entry.line;
+          if (sc.comp_unit->FindLineEntry(0, line_number, nullptr, exact,
+                                          &line_entry) == UINT32_MAX)
+            continue;
+
+          found_something = true;
+          line_number = line_entry.line;
           exact = true;
-          start_idx_ptr = index_ptr;
-          while (start_idx_ptr <= end_ptr) {
+          uint32_t start_idx_ptr = lowest_func_idx;
+          while (start_idx_ptr <= highest_func_idx) {
             start_idx_ptr = sc.comp_unit->FindLineEntry(
                 start_idx_ptr, line_number, nullptr, exact, &line_entry);
             if (start_idx_ptr == UINT32_MAX)
@@ -1007,29 +1010,29 @@ protected:
             addr_t address =
                 line_entry.range.GetBaseAddress().GetLoadAddress(target);
             if (address != LLDB_INVALID_ADDRESS) {
-              if (fun_addr_range.ContainsLoadAddress(address, target))
+              AddressRange unused;
+              if (sc.function->GetRangeContainingLoadAddress(address, *target,
+                                                             unused))
                 address_list.push_back(address);
-              else
-                all_in_function = false;
             }
             start_idx_ptr++;
           }
         }
 
         for (lldb::addr_t address : m_options.m_until_addrs) {
-          if (fun_addr_range.ContainsLoadAddress(address, target))
+          AddressRange unused;
+          if (sc.function->GetRangeContainingLoadAddress(address, *target,
+                                                         unused))
             address_list.push_back(address);
-          else
-            all_in_function = false;
         }
 
         if (address_list.empty()) {
-          if (all_in_function)
-            result.AppendErrorWithFormat(
-                "No line entries matching until target.\n");
-          else
+          if (found_something)
             result.AppendErrorWithFormat(
                 "Until target outside of the current function.\n");
+          else
+            result.AppendErrorWithFormat(
+                "No line entries matching until target.\n");
 
           return;
         }
