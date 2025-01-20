@@ -29,13 +29,18 @@ looked for.  Let me give you an example:
 
 .. code-block:: c++
 
-  #include "clang/Tooling/Tooling.h"
+#include <gtest/gtest.h>  
+#include "clang/Tooling/Tooling.h"
 
   TEST(runToolOnCode, CanSyntaxCheckCode) {
     // runToolOnCode returns whether the action was correctly run over the
     // given code.
-    EXPECT_TRUE(runToolOnCode(std::make_unique<clang::SyntaxOnlyAction>(), "class X {};"));
+    EXPECT_TRUE(clang::tooling::runToolOnCode(std::make_unique<clang::SyntaxOnlyAction>(), "class X {};"));
   }
+int main(int argc, char **argv) {
+       ::testing::InitGoogleTest(&argc, argv);
+       return RUN_ALL_TESTS();
+   }
 
 Writing a standalone tool
 -------------------------
