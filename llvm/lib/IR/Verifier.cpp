@@ -135,6 +135,10 @@ static cl::opt<bool> VerifyNoAliasScopeDomination(
     cl::desc("Ensure that llvm.experimental.noalias.scope.decl for identical "
              "scopes are not dominating"));
 
+static cl::opt<bool>
+    VerifyAbortOnError("verifier-abort-on-error", cl::init(false),
+                       cl::desc("In the Verifier pass, abort on errors."));
+
 namespace llvm {
 
 struct VerifierSupport {
@@ -7739,16 +7743,22 @@ VerifierAnalysis::Result VerifierAnalysis::run(Function &F,
 
 PreservedAnalyses VerifierPass::run(Module &M, ModuleAnalysisManager &AM) {
   auto Res = AM.getResult<VerifierAnalysis>(M);
-  if (FatalErrors && (Res.IRBroken || Res.DebugInfoBroken))
-    report_fatal_error("Broken module found, compilation aborted!");
+  if (Res.IRBroken || Res.DebugInfoBroken) {
+    M.IsValid = false;
+    if (VerifyAbortOnError && FatalErrors)
+      report_fatal_error("Broken module found, compilation aborted!");
+  }
 
   return PreservedAnalyses::all();
 }
 
 PreservedAnalyses VerifierPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto res = AM.getResult<VerifierAnalysis>(F);
-  if (res.IRBroken && FatalErrors)
-    report_fatal_error("Broken function found, compilation aborted!");
+  if (res.IRBroken) {
+    F.getParent()->IsValid = false;
+    if (VerifyAbortOnError && FatalErrors)
+      report_fatal_error("Broken function found, compilation aborted!");
+  }
 
   return PreservedAnalyses::all();
 }
