@@ -2703,8 +2703,10 @@ void ASTDeclReader::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
   // TemplateParmPosition.
   D->setDepth(Record.readInt());
   D->setPosition(Record.readInt());
-  if (Record.readBool()) // PlaceholderTypeConstraintInitialized
-    D->setPlaceholderTypeConstraint(Record.readExpr());
+  if (D->hasPlaceholderTypeConstraint()) {
+    if (Record.readBool()) // PlaceholderTypeConstraintInitialized
+      D->setPlaceholderTypeConstraint(Record.readExpr());
+  }
   if (D->isExpandedParameterPack()) {
     auto TypesAndInfos =
         D->getTrailingObjects<std::pair<QualType, TypeSourceInfo *>>();

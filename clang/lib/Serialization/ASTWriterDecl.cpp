@@ -1993,11 +1993,14 @@ void ASTDeclWriter::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
   // TemplateParmPosition.
   Record.push_back(D->getDepth());
   Record.push_back(D->getPosition());
-  Expr *TypeConstraint = D->getPlaceholderTypeConstraint();
-  Record.push_back(/*PlaceholderTypeConstraintInitialized=*/TypeConstraint !=
-                   nullptr);
-  if (TypeConstraint)
-    Record.AddStmt(TypeConstraint);
+
+  if (D->hasPlaceholderTypeConstraint()) {
+    Expr *TypeConstraint = D->getPlaceholderTypeConstraint();
+    Record.push_back(/*PlaceholderTypeConstraintInitialized=*/TypeConstraint !=
+                     nullptr);
+    if (TypeConstraint)
+      Record.AddStmt(TypeConstraint);
+  }
 
   if (D->isExpandedParameterPack()) {
     for (unsigned I = 0, N = D->getNumExpansionTypes(); I != N; ++I) {
