@@ -275,12 +275,6 @@ void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
       bool ImplicitPseudoUse = false;
       SDep Dep;
       if (UseOpIdx < 0) {
-        // FIXME: UseOpIdx passed to computeOperandLatency below should be
-        //   non-negative. Currently a negative value is passed if UseOpIdx < 0
-        //   and ImplicitPseudoDef is false. This could be fixed by setting
-        //   ImplicitPseudoUse to true here (which is probably the right thing
-        //   to do), but this crashes Hexagon backend and causes many test
-        //   changes that need investigation.
         Dep = SDep(SU, SDep::Artificial);
       } else {
         // Set the hasPhysRegDefs only for physreg defs that have a use within
