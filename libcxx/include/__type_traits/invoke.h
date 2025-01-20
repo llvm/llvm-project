@@ -266,7 +266,7 @@ struct __invoke_result
     : enable_if<__is_invocable_v<_Func, _Args...>, typename __invokable_r<void, _Func, _Args...>::_Result> {};
 
 template <class _Func, class... _Args>
-using __invoke_result_t = typename __invoke_result<_Func, _Args...>::type;
+using __invoke_result_t _LIBCPP_NODEBUG = typename __invoke_result<_Func, _Args...>::type;
 
 template <class _Ret, class... _Args>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Ret __invoke_r(_Args&&... __args) {

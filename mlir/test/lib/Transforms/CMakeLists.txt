@@ -34,8 +34,8 @@ add_mlir_library(MLIRTestTransforms
 
   DEPENDS
   ${MLIRTestTransformsPDLDep}
-  )
-mlir_target_link_libraries(MLIRTestTransforms PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIRAnalysis
   MLIRFuncDialect
   MLIRInferIntRangeInterface

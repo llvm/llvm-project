@@ -10,8 +10,8 @@ add_mlir_library(MLIRTestPass
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Pass
-  )
-mlir_target_link_libraries(MLIRTestPass PUBLIC
+
+  LINK_LIBS PUBLIC
   ${conversion_libs}
   MLIRIR
   MLIRPass

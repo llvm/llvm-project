@@ -2,8 +2,8 @@ add_mlir_library(MLIRLoopLikeInterfaceTestPasses
   TestBlockInLoop.cpp
 
   EXCLUDE_FROM_LIBMLIR
-  )
-mlir_target_link_libraries(MLIRLoopLikeInterfaceTestPasses PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIRPass
   MLIRLoopLikeInterface
   MLIRFuncDialect
