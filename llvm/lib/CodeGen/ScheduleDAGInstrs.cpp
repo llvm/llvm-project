@@ -214,6 +214,14 @@ void ScheduleDAGInstrs::addSchedBarrierDeps() {
       unsigned OpIdx = MO.getOperandNo();
       Register Reg = MO.getReg();
       if (Reg.isPhysical()) {
+        // addPhysRegDataDeps uses the provided operand index to retrieve
+        // the operand use cycle from the scheduling model. If the operand
+        // is "fake" (e.g., an operand of a call instruction used to pass
+        // an argument to the called function.), the scheduling model may not
+        // have an entry for it. If this is the case, pass -1 as operand index,
+        // which will cause addPhysRegDataDeps to add an artificial dependency.
+        // FIXME: Using hasImplicitUseOfPhysReg here is inaccurate as it misses
+        //  aliases. When fixing, make sure to update addPhysRegDataDeps, too.
         bool IsRealUse = OpIdx < MIDesc.getNumOperands() ||
                          MIDesc.hasImplicitUseOfPhysReg(Reg);
         for (MCRegUnit Unit : TRI->regunits(Reg))
@@ -267,6 +275,9 @@ void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
       bool ImplicitPseudoUse = false;
       SDep Dep;
       if (UseOpIdx < 0) {
+        // FIXME: UseOpIdx can be passed to computeOperandLatency, which can
+        //   pass it to findUseIdx, which treats it as unsigned. If this is
+        //   the expected behavior, it should be commented.
         Dep = SDep(SU, SDep::Artificial);
       } else {
         // Set the hasPhysRegDefs only for physreg defs that have a use within
