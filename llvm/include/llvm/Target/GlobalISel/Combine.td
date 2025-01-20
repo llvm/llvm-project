@@ -306,16 +306,21 @@ def ptr_add_immed_chain : GICombineRule<
          [{ return Helper.matchPtrAddImmedChain(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.applyPtrAddImmedChain(*${d}, ${matchinfo}); }])>;
 
+def shift_const_op : GICombinePatFrag<
+  (outs root:$dst), (ins),
+  !foreach(op,
+           [G_SHL, G_ASHR, G_LSHR],
+           (pattern (G_CONSTANT $amt, $imm), (op $dst, $shifted, $amt)))>;
 def shift_result_matchdata : GIDefMatchData<"std::optional<int64_t>">;
 def shifts_too_big : GICombineRule<
   (defs root:$root, shift_result_matchdata:$matchinfo),
-  (match (wip_match_opcode G_SHL, G_ASHR, G_LSHR):$root,
-         [{ return Helper.matchShiftsTooBig(*${root}, ${matchinfo}); }]),
+  (match (shift_const_op $root):$mi,
+         [{ return Helper.matchShiftsTooBig(*${mi}, ${matchinfo}); }]),
   (apply [{
     if (${matchinfo}) {
-      Helper.replaceInstWithConstant(*${root}, *${matchinfo});
+      Helper.replaceInstWithConstant(*${mi}, *${matchinfo});
     } else {
-      Helper.replaceInstWithUndef(*${root});
+      Helper.replaceInstWithUndef(*${mi});
     }
   }])>;
 

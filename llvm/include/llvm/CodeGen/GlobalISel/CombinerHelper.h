@@ -841,7 +841,9 @@ public:
                                      BuildFnTy &MatchInfo) const;
 
   /// Match shifts greater or equal to the range (bitwidth of the operation, or
-  /// the source value).
+  /// the source value). When match, also return the minimum useless shift
+  /// amount that results in complete loss of the source value. if the optional
+  /// value is std::nullopt, then the shift result is undefined.
   bool matchShiftsTooBig(MachineInstr &MI,
                          std::optional<int64_t> &MatchInfo) const;
 
