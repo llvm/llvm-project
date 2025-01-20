@@ -1441,10 +1441,9 @@ define <vscale x 1 x i16> @vandn_vx_vp_imm16(<vscale x 1 x i16> %x, <vscale x 1 
 ;
 ; CHECK-ZVKB-LABEL: vandn_vx_vp_imm16:
 ; CHECK-ZVKB:       # %bb.0:
-; CHECK-ZVKB-NEXT:    lui a1, 8
-; CHECK-ZVKB-NEXT:    addi a1, a1, -1
+; CHECK-ZVKB-NEXT:    lui a1, 1048568
 ; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-ZVKB-NEXT:    vand.vx v8, v8, a1, v0.t
+; CHECK-ZVKB-NEXT:    vandn.vx v8, v8, a1, v0.t
 ; CHECK-ZVKB-NEXT:    ret
   %a = call <vscale x 1 x i16> @llvm.vp.and.nxv1i16(<vscale x 1 x i16> splat (i16 32767), <vscale x 1 x i16> %x, <vscale x 1 x i1> %mask, i32 %evl)
   ret <vscale x 1 x i16> %a
@@ -1461,10 +1460,9 @@ define <vscale x 1 x i16> @vandn_vx_vp_swapped_imm16(<vscale x 1 x i16> %x, <vsc
 ;
 ; CHECK-ZVKB-LABEL: vandn_vx_vp_swapped_imm16:
 ; CHECK-ZVKB:       # %bb.0:
-; CHECK-ZVKB-NEXT:    lui a1, 8
-; CHECK-ZVKB-NEXT:    addi a1, a1, -1
+; CHECK-ZVKB-NEXT:    lui a1, 1048568
 ; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-ZVKB-NEXT:    vand.vx v8, v8, a1, v0.t
+; CHECK-ZVKB-NEXT:    vandn.vx v8, v8, a1, v0.t
 ; CHECK-ZVKB-NEXT:    ret
   %a = call <vscale x 1 x i16> @llvm.vp.and.nxv1i16(<vscale x 1 x i16> %x, <vscale x 1 x i16> splat (i16 32767), <vscale x 1 x i1> %mask, i32 %evl)
   ret <vscale x 1 x i16> %a
@@ -1514,11 +1512,10 @@ define <vscale x 1 x i64> @vandn_vx_vp_imm64(<vscale x 1 x i64> %x, <vscale x 1 
 ;
 ; CHECK-ZVKB64-LABEL: vandn_vx_vp_imm64:
 ; CHECK-ZVKB64:       # %bb.0:
-; CHECK-ZVKB64-NEXT:    li a1, -1
-; CHECK-ZVKB64-NEXT:    slli a1, a1, 56
-; CHECK-ZVKB64-NEXT:    addi a1, a1, 255
+; CHECK-ZVKB64-NEXT:    lui a1, 1048560
+; CHECK-ZVKB64-NEXT:    srli a1, a1, 8
 ; CHECK-ZVKB64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-ZVKB64-NEXT:    vand.vx v8, v8, a1, v0.t
+; CHECK-ZVKB64-NEXT:    vandn.vx v8, v8, a1, v0.t
 ; CHECK-ZVKB64-NEXT:    ret
   %a = call <vscale x 1 x i64> @llvm.vp.and.nxv1i64(<vscale x 1 x i64> %x, <vscale x 1 x i64> splat (i64 -72057594037927681), <vscale x 1 x i1> %mask, i32 %evl)
   ret <vscale x 1 x i64> %a
