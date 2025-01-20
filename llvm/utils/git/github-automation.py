@@ -291,8 +291,7 @@ If you don't get any reports, no action is required from you. Your changes are w
 
 
 class CheckCommitAccess:
-    def __init__(
-        self, token: str, repo: str, pr_number: int, author: str):
+    def __init__(self, token: str, repo: str, pr_number: int, author: str):
         self.repo = github.Github(token).get_repo(repo)
         self.pr = self.repo.get_issue(pr_number).as_pull_request()
         self.author = author
