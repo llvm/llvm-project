@@ -835,18 +835,30 @@ public:
   Defined *target;
 };
 
+// ARM64X relocation value, potentially relative to a symbol.
+class Arm64XRelocVal {
+public:
+  Arm64XRelocVal(uint64_t value = 0) : value(value) {}
+  Arm64XRelocVal(Defined *sym, int32_t offset = 0) : sym(sym), value(offset) {}
+  uint64_t get() const;
+
+private:
+  Defined *sym = nullptr;
+  uint64_t value;
+};
+
 // ARM64X entry for dynamic relocations.
 class Arm64XDynamicRelocEntry {
 public:
   Arm64XDynamicRelocEntry(llvm::COFF::Arm64XFixupType type, uint8_t size,
-                          uint32_t offset, uint64_t value)
+                          uint32_t offset, Arm64XRelocVal value)
       : offset(offset), value(value), type(type), size(size) {}
 
   size_t getSize() const;
   void writeTo(uint8_t *buf) const;
 
   uint32_t offset;
-  uint64_t value;
+  Arm64XRelocVal value;
 
 private:
   llvm::COFF::Arm64XFixupType type;
@@ -862,7 +874,7 @@ public:
   void finalize();
 
   void add(llvm::COFF::Arm64XFixupType type, uint8_t size, uint32_t offset,
-           uint64_t value) {
+           Arm64XRelocVal value) {
     arm64xRelocs.emplace_back(type, size, offset, value);
   }
 

@@ -2985,13 +2985,11 @@ bool TargetLowering::SimplifyDemandedBits(
   if (!isTargetCanonicalConstantNode(Op) &&
       DemandedBits.isSubsetOf(Known.Zero | Known.One)) {
     // Avoid folding to a constant if any OpaqueConstant is involved.
-    const SDNode *N = Op.getNode();
-    for (SDNode *Op :
-         llvm::make_range(SDNodeIterator::begin(N), SDNodeIterator::end(N))) {
-      if (auto *C = dyn_cast<ConstantSDNode>(Op))
-        if (C->isOpaque())
-          return false;
-    }
+    if (llvm::any_of(Op->ops(), [](SDValue V) {
+          auto *C = dyn_cast<ConstantSDNode>(V);
+          return C && C->isOpaque();
+        }))
+      return false;
     if (VT.isInteger())
       return TLO.CombineTo(Op, TLO.DAG.getConstant(Known.One, dl, VT));
     if (VT.isFloatingPoint())
@@ -8435,7 +8433,6 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
     return false;
 
   SDLoc dl(SDValue(Node, 0));
-  EVT ShiftVT = getShiftAmountTy(SrcVT, DAG.getDataLayout());
 
   // Implementation of unsigned i64 to f64 following the algorithm in
   // __floatundidf in compiler_rt.  This implementation performs rounding
@@ -8448,7 +8445,7 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
       llvm::bit_cast<double>(UINT64_C(0x4530000000100000)), dl, DstVT);
   SDValue TwoP84 = DAG.getConstant(UINT64_C(0x4530000000000000), dl, SrcVT);
   SDValue LoMask = DAG.getConstant(UINT64_C(0x00000000FFFFFFFF), dl, SrcVT);
-  SDValue HiShift = DAG.getConstant(32, dl, ShiftVT);
+  SDValue HiShift = DAG.getShiftAmountConstant(32, SrcVT, dl);
 
   SDValue Lo = DAG.getNode(ISD::AND, dl, SrcVT, Src, LoMask);
   SDValue Hi = DAG.getNode(ISD::SRL, dl, SrcVT, Src, HiShift);

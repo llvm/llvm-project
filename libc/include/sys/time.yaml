@@ -1,0 +1,8 @@
+header: sys/time.h
+header_template: time.h.def
+standards: Linux
+macros: []
+types: []
+enums: []
+functions: []
+objects: []

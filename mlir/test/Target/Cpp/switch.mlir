@@ -1,5 +1,5 @@
-// RUN: mlir-translate -mlir-to-cpp %s | FileCheck %s -check-prefix=CPP-DEFAULT
-// RUN: mlir-translate -mlir-to-cpp -declare-variables-at-top %s | FileCheck %s -check-prefix=CPP-DECLTOP
+// RUN: mlir-translate -mlir-to-cpp %s | FileCheck --match-full-lines %s -check-prefix=CPP-DEFAULT
+// RUN: mlir-translate -mlir-to-cpp -declare-variables-at-top %s | FileCheck --match-full-lines %s -check-prefix=CPP-DECLTOP
 
 // CPP-DEFAULT-LABEL: void emitc_switch_ptrdiff_t() {
 // CPP-DEFAULT:         ptrdiff_t v1 = 1;

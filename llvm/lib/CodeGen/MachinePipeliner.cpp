@@ -3204,7 +3204,7 @@ bool SMSchedule::isValidSchedule(SwingSchedulerDAG *SSD) {
     for (auto &OE : SSD->getDDG()->getOutEdges(&SU)) {
       SUnit *Dst = OE.getDst();
       if (OE.isAssignedRegDep() && !Dst->isBoundaryNode())
-        if (Register::isPhysicalRegister(OE.getReg())) {
+        if (OE.getReg().isPhysical()) {
           if (stageScheduled(Dst) != StageDef)
             return false;
           if (InstrToCycle[Dst] <= CycleDef)

@@ -946,7 +946,7 @@ void Writer::appendECImportTables() {
 
   const uint32_t rdata = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ;
 
-  // IAT is always placed at the begining of .rdata section and its size
+  // IAT is always placed at the beginning of .rdata section and its size
   // is aligned to 4KB. Insert it here, after all merges all done.
   if (PartialSection *importAddresses = findPartialSection(".idata$5", rdata)) {
     if (!rdataSec->chunks.empty())
@@ -1077,7 +1077,7 @@ void Writer::createSections() {
   dtorsSec = createSection(".dtors", data | r | w);
 
   // Then bin chunks by name and output characteristics.
-  for (Chunk *c : ctx.symtab.getChunks()) {
+  for (Chunk *c : ctx.driver.getChunks()) {
     auto *sc = dyn_cast<SectionChunk>(c);
     if (sc && !sc->live) {
       if (ctx.config.verbose)
@@ -1748,7 +1748,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   pe->SizeOfImage = sizeOfImage;
   pe->SizeOfHeaders = sizeOfHeaders;
   if (!config->noEntry) {
-    Defined *entry = cast<Defined>(config->entry);
+    Defined *entry = cast<Defined>(ctx.symtab.entry);
     pe->AddressOfEntryPoint = entry->getRVA();
     // Pointer to thumb code must have the LSB set, so adjust it.
     if (config->machine == ARMNT)
@@ -2031,8 +2031,10 @@ void Writer::createGuardCFTables() {
   }
 
   // Mark the image entry as address-taken.
-  if (config->entry)
-    maybeAddAddressTakenFunction(addressTakenSyms, config->entry);
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    if (symtab.entry)
+      maybeAddAddressTakenFunction(addressTakenSyms, symtab.entry);
+  });
 
   // Mark exported symbols in executable sections as address-taken.
   for (Export &e : config->exports)
@@ -2217,7 +2219,7 @@ void Writer::createECChunks() {
 void Writer::createRuntimePseudoRelocs() {
   std::vector<RuntimePseudoReloc> rels;
 
-  for (Chunk *c : ctx.symtab.getChunks()) {
+  for (Chunk *c : ctx.driver.getChunks()) {
     auto *sc = dyn_cast<SectionChunk>(c);
     if (!sc || !sc->live)
       continue;
@@ -2560,6 +2562,8 @@ void Writer::addBaserelBlocks(std::vector<Baserel> &v) {
   const uint32_t mask = ~uint32_t(pageSize - 1);
   uint32_t page = v[0].rva & mask;
   size_t i = 0, j = 1;
+  llvm::sort(v,
+             [](const Baserel &x, const Baserel &y) { return x.rva < y.rva; });
   for (size_t e = v.size(); j < e; ++j) {
     uint32_t p = v[j].rva & mask;
     if (p == page)
@@ -2582,18 +2586,23 @@ void Writer::createDynamicRelocs() {
                          coffHeaderOffset + offsetof(coff_file_header, Machine),
                          AMD64);
 
-  // Clear the load config directory.
-  // FIXME: Use the hybrid load config value instead.
+  if (ctx.symtab.entry != ctx.hybridSymtab->entry)
+    ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                           peHeaderOffset +
+                               offsetof(pe32plus_header, AddressOfEntryPoint),
+                           cast_or_null<Defined>(ctx.hybridSymtab->entry));
+
+  // Set the hybrid load config to the EC load config.
   ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
                          dataDirOffset64 +
                              LOAD_CONFIG_TABLE * sizeof(data_directory) +
                              offsetof(data_directory, RelativeVirtualAddress),
-                         0);
+                         ctx.hybridSymtab->loadConfigSym);
   ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
                          dataDirOffset64 +
                              LOAD_CONFIG_TABLE * sizeof(data_directory) +
                              offsetof(data_directory, Size),
-                         0);
+                         ctx.hybridSymtab->loadConfigSize);
 }
 
 PartialSection *Writer::createPartialSection(StringRef name,

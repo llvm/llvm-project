@@ -1,4 +1,4 @@
-//===-- CUFOpConversion.cpp -----------------------------------------------===//
+//===-- CUFDeviceGlobal.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Common/Fortran.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
-#include "flang/Optimizer/Transforms/CUFCommon.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/allocatable.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"

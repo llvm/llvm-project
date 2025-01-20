@@ -717,6 +717,7 @@ public:
   bool isUImm6() const { return IsUImm<6>(); }
   bool isUImm7() const { return IsUImm<7>(); }
   bool isUImm8() const { return IsUImm<8>(); }
+  bool isUImm10() const { return IsUImm<10>(); }
   bool isUImm11() const { return IsUImm<11>(); }
   bool isUImm16() const { return IsUImm<16>(); }
   bool isUImm20() const { return IsUImm<20>(); }
@@ -1590,6 +1591,8 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 9), (1 << 9) - 16,
         "immediate must be a multiple of 16 bytes and non-zero in the range");
+  case Match_InvalidUImm10:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 10) - 1);
   case Match_InvalidUImm11:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 11) - 1);
   case Match_InvalidSImm12:
@@ -1915,6 +1918,8 @@ ParseStatus RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
         // Accept an immediate representing a named Sys Reg if it satisfies the
         // the required features.
         for (auto &Reg : Range) {
+          if (Reg.IsAltName || Reg.IsDeprecatedName)
+            continue;
           if (Reg.haveRequiredFeatures(STI->getFeatureBits()))
             return RISCVOperand::createSysReg(Reg.Name, S, Imm);
         }
@@ -1952,22 +1957,27 @@ ParseStatus RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
       return ParseStatus::Failure;
 
     const auto *SysReg = RISCVSysReg::lookupSysRegByName(Identifier);
-    if (!SysReg)
-      SysReg = RISCVSysReg::lookupSysRegByAltName(Identifier);
-    if (!SysReg)
-      if ((SysReg = RISCVSysReg::lookupSysRegByDeprecatedName(Identifier)))
-        Warning(S, "'" + Identifier + "' is a deprecated alias for '" +
-                       SysReg->Name + "'");
 
-    // Accept a named Sys Reg if the required features are present.
     if (SysReg) {
+      if (SysReg->IsDeprecatedName) {
+        // Lookup the undeprecated name.
+        auto Range = RISCVSysReg::lookupSysRegByEncoding(SysReg->Encoding);
+        for (auto &Reg : Range) {
+          if (Reg.IsAltName || Reg.IsDeprecatedName)
+            continue;
+          Warning(S, "'" + Identifier + "' is a deprecated alias for '" +
+                         Reg.Name + "'");
+        }
+      }
+
+      // Accept a named Sys Reg if the required features are present.
       const auto &FeatureBits = getSTI().getFeatureBits();
       if (!SysReg->haveRequiredFeatures(FeatureBits)) {
         const auto *Feature = llvm::find_if(RISCVFeatureKV, [&](auto Feature) {
           return SysReg->FeaturesRequired[Feature.Value];
         });
         auto ErrorMsg = std::string("system register '") + SysReg->Name + "' ";
-        if (SysReg->isRV32Only && FeatureBits[RISCV::Feature64Bit]) {
+        if (SysReg->IsRV32Only && FeatureBits[RISCV::Feature64Bit]) {
           ErrorMsg += "is RV32 only";
           if (Feature != std::end(RISCVFeatureKV))
             ErrorMsg += " and ";

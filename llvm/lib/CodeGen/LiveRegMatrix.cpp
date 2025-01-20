@@ -66,7 +66,7 @@ void LiveRegMatrix::init(MachineFunction &MF, LiveIntervals &pLIS,
   unsigned NumRegUnits = TRI->getNumRegUnits();
   if (NumRegUnits != Matrix.size())
     Queries.reset(new LiveIntervalUnion::Query[NumRegUnits]);
-  Matrix.init(LIUAlloc, NumRegUnits);
+  Matrix.init(*LIUAlloc, NumRegUnits);
 
   // Make sure no stale queries get reused.
   invalidateVirtRegs();
@@ -165,7 +165,8 @@ bool LiveRegMatrix::checkRegMaskInterference(const LiveInterval &VirtReg,
   // The BitVector is indexed by PhysReg, not register unit.
   // Regmask interference is more fine grained than regunits.
   // For example, a Win64 call can clobber %ymm8 yet preserve %xmm8.
-  return !RegMaskUsable.empty() && (!PhysReg || !RegMaskUsable.test(PhysReg));
+  return !RegMaskUsable.empty() &&
+         (!PhysReg || !RegMaskUsable.test(PhysReg.id()));
 }
 
 bool LiveRegMatrix::checkRegUnitInterference(const LiveInterval &VirtReg,

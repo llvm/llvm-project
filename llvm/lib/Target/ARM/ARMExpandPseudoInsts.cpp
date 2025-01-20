@@ -2300,10 +2300,9 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       for (unsigned i = 2, e = MBBI->getNumOperands(); i != e; ++i)
         NewMI->addOperand(MBBI->getOperand(i));
 
-
-      // Update call site info and delete the pseudo instruction TCRETURN.
-      if (MI.isCandidateForCallSiteEntry())
-        MI.getMF()->moveCallSiteInfo(&MI, &*NewMI);
+      // Update call info and delete the pseudo instruction TCRETURN.
+      if (MI.isCandidateForAdditionalCallInfo())
+        MI.getMF()->moveAdditionalCallInfo(&MI, &*NewMI);
       // Copy nomerge flag over to new instruction.
       if (MI.getFlag(MachineInstr::NoMerge))
         NewMI->setFlag(MachineInstr::NoMerge);
@@ -2414,8 +2413,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
       for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
         NewCall->addOperand(MO);
-      if (MI.isCandidateForCallSiteEntry())
-        MI.getMF()->moveCallSiteInfo(&MI, NewCall.getInstr());
+      if (MI.isCandidateForAdditionalCallInfo())
+        MI.getMF()->moveAdditionalCallInfo(&MI, NewCall.getInstr());
 
       CMSERestoreFPRegs(MBB, MBBI, DL, OriginalClearRegs); // restore FP registers
 
@@ -2652,9 +2651,9 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
       MIB.cloneMemRefs(MI);
       MIB.copyImplicitOps(MI);
-      // Update the call site info.
-      if (MI.isCandidateForCallSiteEntry())
-        MF->moveCallSiteInfo(&MI, &*MIB);
+      // Update the call info.
+      if (MI.isCandidateForAdditionalCallInfo())
+        MF->moveAdditionalCallInfo(&MI, &*MIB);
       MI.eraseFromParent();
       return true;
     }
@@ -3254,8 +3253,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       MIB.cloneMemRefs(MI);
       for (unsigned i = 0; i < MI.getNumOperands(); ++i)
         MIB.add(MI.getOperand(i));
-      if (MI.isCandidateForCallSiteEntry())
-        MF.moveCallSiteInfo(&MI, MIB.getInstr());
+      if (MI.isCandidateForAdditionalCallInfo())
+        MF.moveAdditionalCallInfo(&MI, MIB.getInstr());
       MIBundleBuilder Bundler(MBB, MI);
       Bundler.append(MIB);
       Bundler.append(BuildMI(MF, MI.getDebugLoc(), TII->get(ARM::t2BTI)));

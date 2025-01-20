@@ -2075,15 +2075,18 @@ public:
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
-  OMPClause *RebuildOMPAllocateClause(Expr *Allocate,
-                                      OpenMPAllocateClauseModifier ACModifier,
-                                      ArrayRef<Expr *> VarList,
-                                      SourceLocation StartLoc,
-                                      SourceLocation LParenLoc,
-                                      SourceLocation ColonLoc,
-                                      SourceLocation EndLoc) {
+  OMPClause *
+  RebuildOMPAllocateClause(Expr *Allocate, Expr *Alignment,
+                           OpenMPAllocateClauseModifier FirstModifier,
+                           SourceLocation FirstModifierLoc,
+                           OpenMPAllocateClauseModifier SecondModifier,
+                           SourceLocation SecondModifierLoc,
+                           ArrayRef<Expr *> VarList, SourceLocation StartLoc,
+                           SourceLocation LParenLoc, SourceLocation ColonLoc,
+                           SourceLocation EndLoc) {
     return getSema().OpenMP().ActOnOpenMPAllocateClause(
-        Allocate, ACModifier, VarList, StartLoc, LParenLoc, ColonLoc, EndLoc);
+        Allocate, Alignment, FirstModifier, FirstModifierLoc, SecondModifier,
+        SecondModifierLoc, VarList, StartLoc, LParenLoc, ColonLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'num_teams' clause.
@@ -4166,6 +4169,24 @@ public:
                                   ArrayRef<OpenACCClause *> Clauses) {
     return getSema().OpenACC().ActOnEndStmtDirective(
         OpenACCDirectiveKind::Shutdown, BeginLoc, DirLoc, SourceLocation{},
+        SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, {});
+  }
+
+  StmtResult RebuildOpenACCSetConstruct(SourceLocation BeginLoc,
+                                        SourceLocation DirLoc,
+                                        SourceLocation EndLoc,
+                                        ArrayRef<OpenACCClause *> Clauses) {
+    return getSema().OpenACC().ActOnEndStmtDirective(
+        OpenACCDirectiveKind::Set, BeginLoc, DirLoc, SourceLocation{},
+        SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, {});
+  }
+
+  StmtResult RebuildOpenACCUpdateConstruct(SourceLocation BeginLoc,
+                                           SourceLocation DirLoc,
+                                           SourceLocation EndLoc,
+                                           ArrayRef<OpenACCClause *> Clauses) {
+    return getSema().OpenACC().ActOnEndStmtDirective(
+        OpenACCDirectiveKind::Update, BeginLoc, DirLoc, SourceLocation{},
         SourceLocation{}, {}, SourceLocation{}, EndLoc, Clauses, {});
   }
 
@@ -11206,6 +11227,13 @@ TreeTransform<Derived>::TransformOMPAllocateClause(OMPAllocateClause *C) {
       return nullptr;
     Allocator = AllocatorRes.get();
   }
+  Expr *Alignment = C->getAlignment();
+  if (Alignment) {
+    ExprResult AlignmentRes = getDerived().TransformExpr(Alignment);
+    if (AlignmentRes.isInvalid())
+      return nullptr;
+    Alignment = AlignmentRes.get();
+  }
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
   for (auto *VE : C->varlist()) {
@@ -11215,7 +11243,9 @@ TreeTransform<Derived>::TransformOMPAllocateClause(OMPAllocateClause *C) {
     Vars.push_back(EVar.get());
   }
   return getDerived().RebuildOMPAllocateClause(
-      Allocator, C->getAllocatorModifier(), Vars, C->getBeginLoc(),
+      Allocator, Alignment, C->getFirstAllocateModifier(),
+      C->getFirstAllocateModifierLoc(), C->getSecondAllocateModifier(),
+      C->getSecondAllocateModifierLoc(), Vars, C->getBeginLoc(),
       C->getLParenLoc(), C->getColonLoc(), C->getEndLoc());
 }
 
@@ -11629,22 +11659,48 @@ template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitSelfClause(
     const OpenACCSelfClause &C) {
 
-  if (C.hasConditionExpr()) {
-    Expr *Cond = const_cast<Expr *>(C.getConditionExpr());
-    Sema::ConditionResult Res =
-        Self.TransformCondition(Cond->getExprLoc(), /*Var=*/nullptr, Cond,
-                                Sema::ConditionKind::Boolean);
+  // If this is an 'update' 'self' clause, this is actually a var list instead.
+  if (ParsedClause.getDirectiveKind() == OpenACCDirectiveKind::Update) {
+    llvm::SmallVector<Expr *> InstantiatedVarList;
+    for (Expr *CurVar : C.getVarList()) {
+      ExprResult Res = Self.TransformExpr(CurVar);
 
-    if (Res.isInvalid() || !Res.get().second)
-      return;
+      if (!Res.isUsable())
+        continue;
 
-    ParsedClause.setConditionDetails(Res.get().second);
+      Res = Self.getSema().OpenACC().ActOnVar(ParsedClause.getClauseKind(),
+                                              Res.get());
+
+      if (Res.isUsable())
+        InstantiatedVarList.push_back(Res.get());
+    }
+
+    ParsedClause.setVarListDetails(InstantiatedVarList,
+                                   /*IsReadOnly=*/false, /*IsZero=*/false);
+
+    NewClause = OpenACCSelfClause::Create(
+        Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+        ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+        ParsedClause.getEndLoc());
+  } else {
+
+    if (C.hasConditionExpr()) {
+      Expr *Cond = const_cast<Expr *>(C.getConditionExpr());
+      Sema::ConditionResult Res =
+          Self.TransformCondition(Cond->getExprLoc(), /*Var=*/nullptr, Cond,
+                                  Sema::ConditionKind::Boolean);
+
+      if (Res.isInvalid() || !Res.get().second)
+        return;
+
+      ParsedClause.setConditionDetails(Res.get().second);
+    }
+
+    NewClause = OpenACCSelfClause::Create(
+        Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+        ParsedClause.getLParenLoc(), ParsedClause.getConditionExpr(),
+        ParsedClause.getEndLoc());
   }
-
-  NewClause = OpenACCSelfClause::Create(
-      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
-      ParsedClause.getLParenLoc(), ParsedClause.getConditionExpr(),
-      ParsedClause.getEndLoc());
 }
 
 template <typename Derived>
@@ -11681,6 +11737,30 @@ void OpenACCClauseTransform<Derived>::VisitPrivateClause(
                                  /*IsReadOnly=*/false, /*IsZero=*/false);
 
   NewClause = OpenACCPrivateClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitHostClause(
+    const OpenACCHostClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+
+  NewClause = OpenACCHostClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitDeviceClause(
+    const OpenACCDeviceClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+
+  NewClause = OpenACCDeviceClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
       ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
       ParsedClause.getEndLoc());
@@ -11895,6 +11975,29 @@ void OpenACCClauseTransform<Derived>::VisitDeviceNumClause (
 
   ParsedClause.setIntExprDetails(Res.get());
   NewClause = OpenACCDeviceNumClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getIntExprs()[0],
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitDefaultAsyncClause(
+    const OpenACCDefaultAsyncClause &C) {
+  Expr *IntExpr = const_cast<Expr *>(C.getIntExpr());
+  assert(IntExpr && "default_async clause constructed with invalid int expr");
+
+  ExprResult Res = Self.TransformExpr(IntExpr);
+  if (!Res.isUsable())
+    return;
+
+  Res = Self.getSema().OpenACC().ActOnIntExpr(OpenACCDirectiveKind::Invalid,
+                                              C.getClauseKind(),
+                                              C.getBeginLoc(), Res.get());
+  if (!Res.isUsable())
+    return;
+
+  ParsedClause.setIntExprDetails(Res.get());
+  NewClause = OpenACCDefaultAsyncClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
       ParsedClause.getLParenLoc(), ParsedClause.getIntExprs()[0],
       ParsedClause.getEndLoc());
@@ -12419,6 +12522,39 @@ StmtResult TreeTransform<Derived>::TransformOpenACCShutdownConstruct(
     return StmtError();
 
   return getDerived().RebuildOpenACCShutdownConstruct(
+      C->getBeginLoc(), C->getDirectiveLoc(), C->getEndLoc(),
+      TransformedClauses);
+}
+template <typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformOpenACCSetConstruct(OpenACCSetConstruct *C) {
+  getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
+
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
+                                              C->clauses());
+  if (getSema().OpenACC().ActOnStartStmtDirective(
+          C->getDirectiveKind(), C->getBeginLoc(), TransformedClauses))
+    return StmtError();
+
+  return getDerived().RebuildOpenACCSetConstruct(
+      C->getBeginLoc(), C->getDirectiveLoc(), C->getEndLoc(),
+      TransformedClauses);
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOpenACCUpdateConstruct(
+    OpenACCUpdateConstruct *C) {
+  getSema().OpenACC().ActOnConstruct(C->getDirectiveKind(), C->getBeginLoc());
+
+  llvm::SmallVector<OpenACCClause *> TransformedClauses =
+      getDerived().TransformOpenACCClauseList(C->getDirectiveKind(),
+                                              C->clauses());
+  if (getSema().OpenACC().ActOnStartStmtDirective(
+          C->getDirectiveKind(), C->getBeginLoc(), TransformedClauses))
+    return StmtError();
+
+  return getDerived().RebuildOpenACCUpdateConstruct(
       C->getBeginLoc(), C->getDirectiveLoc(), C->getEndLoc(),
       TransformedClauses);
 }

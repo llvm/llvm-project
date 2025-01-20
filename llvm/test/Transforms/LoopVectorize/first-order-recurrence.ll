@@ -3707,13 +3707,8 @@ define i32 @recurence_uniform_load(ptr %src, ptr noalias %dst) {
 ; UNROLL-NO-IC:       vector.ph:
 ; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NO-IC:       vector.body:
-; UNROLL-NO-IC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; UNROLL-NO-IC-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 0>, [[VECTOR_PH]] ], [ [[BROADCAST_SPLAT:%.*]], [[VECTOR_BODY]] ]
 ; UNROLL-NO-IC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC:%.*]], align 4
-; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
-; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; UNROLL-NO-IC-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP38:![0-9]+]]
+; UNROLL-NO-IC-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; UNROLL-NO-IC:       middle.block:
 ; UNROLL-NO-IC-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-IC:       scalar.ph:
@@ -3726,7 +3721,7 @@ define i32 @recurence_uniform_load(ptr %src, ptr noalias %dst) {
 ; UNROLL-NO-IC-NEXT:    [[ADD]] = add i64 [[PHI]], 1
 ; UNROLL-NO-IC-NEXT:    [[LOAD]] = load i32, ptr [[SRC]], align 4
 ; UNROLL-NO-IC-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[PHI]], 1
-; UNROLL-NO-IC-NEXT:    br i1 [[ICMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP39:![0-9]+]]
+; UNROLL-NO-IC-NEXT:    br i1 [[ICMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP38:![0-9]+]]
 ; UNROLL-NO-IC:       exit:
 ; UNROLL-NO-IC-NEXT:    ret i32 0
 ;
@@ -3736,11 +3731,8 @@ define i32 @recurence_uniform_load(ptr %src, ptr noalias %dst) {
 ; UNROLL-NO-VF:       vector.ph:
 ; UNROLL-NO-VF-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NO-VF:       vector.body:
-; UNROLL-NO-VF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; UNROLL-NO-VF-NEXT:    [[VECTOR_RECUR:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP0:%.*]], [[VECTOR_BODY]] ]
-; UNROLL-NO-VF-NEXT:    [[TMP0]] = load i32, ptr [[SRC:%.*]], align 4
-; UNROLL-NO-VF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; UNROLL-NO-VF-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP38:![0-9]+]]
+; UNROLL-NO-VF-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC:%.*]], align 4
+; UNROLL-NO-VF-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; UNROLL-NO-VF:       middle.block:
 ; UNROLL-NO-VF-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NO-VF:       scalar.ph:
@@ -3753,7 +3745,7 @@ define i32 @recurence_uniform_load(ptr %src, ptr noalias %dst) {
 ; UNROLL-NO-VF-NEXT:    [[ADD]] = add i64 [[PHI]], 1
 ; UNROLL-NO-VF-NEXT:    [[LOAD]] = load i32, ptr [[SRC]], align 4
 ; UNROLL-NO-VF-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[PHI]], 1
-; UNROLL-NO-VF-NEXT:    br i1 [[ICMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP39:![0-9]+]]
+; UNROLL-NO-VF-NEXT:    br i1 [[ICMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP38:![0-9]+]]
 ; UNROLL-NO-VF:       exit:
 ; UNROLL-NO-VF-NEXT:    ret i32 0
 ;
@@ -3763,13 +3755,8 @@ define i32 @recurence_uniform_load(ptr %src, ptr noalias %dst) {
 ; SINK-AFTER:       vector.ph:
 ; SINK-AFTER-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SINK-AFTER:       vector.body:
-; SINK-AFTER-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; SINK-AFTER-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 0>, [[VECTOR_PH]] ], [ [[BROADCAST_SPLAT:%.*]], [[VECTOR_BODY]] ]
 ; SINK-AFTER-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC:%.*]], align 4
-; SINK-AFTER-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
-; SINK-AFTER-NEXT:    [[BROADCAST_SPLAT]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; SINK-AFTER-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; SINK-AFTER-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP38:![0-9]+]]
+; SINK-AFTER-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; SINK-AFTER:       middle.block:
 ; SINK-AFTER-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; SINK-AFTER:       scalar.ph:
@@ -3782,7 +3769,7 @@ define i32 @recurence_uniform_load(ptr %src, ptr noalias %dst) {
 ; SINK-AFTER-NEXT:    [[ADD]] = add i64 [[PHI]], 1
 ; SINK-AFTER-NEXT:    [[LOAD]] = load i32, ptr [[SRC]], align 4
 ; SINK-AFTER-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[PHI]], 1
-; SINK-AFTER-NEXT:    br i1 [[ICMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP39:![0-9]+]]
+; SINK-AFTER-NEXT:    br i1 [[ICMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP38:![0-9]+]]
 ; SINK-AFTER:       exit:
 ; SINK-AFTER-NEXT:    ret i32 0
 ;

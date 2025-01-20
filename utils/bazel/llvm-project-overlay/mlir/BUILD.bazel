@@ -4313,6 +4313,7 @@ cc_library(
         ":IndexToLLVM",
         ":IndexToSPIRV",
         ":LinalgToStandard",
+        ":MathToEmitC",
         ":MathToFuncs",
         ":MathToLLVM",
         ":MathToLibm",
@@ -5717,6 +5718,7 @@ cc_library(
         ":SCFDialect",
         ":SideEffectInterfaces",
         ":Support",
+        ":ValueBoundsOpInterface",
         "//llvm:Core",
         "//llvm:Support",
     ],
@@ -8391,6 +8393,7 @@ cc_library(
         ":ArithDialect",
         ":ConversionPassIncGen",
         ":EmitCDialect",
+        ":EmitCTransforms",
         ":IR",
         ":SCFDialect",
         ":TransformUtils",
@@ -8896,6 +8899,27 @@ cc_library(
         ":LLVMDialect",
         ":MathDialect",
         ":Pass",
+    ],
+)
+
+cc_library(
+    name = "MathToEmitC",
+    srcs = glob([
+        "lib/Conversion/MathToEmitC/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/MathToEmitC/*.h",
+    ]),
+    includes = [
+        "include",
+        "lib/Conversion/MathToEmitC",
+    ],
+    deps = [
+        ":ConversionPassIncGen",
+        ":EmitCDialect",
+        ":MathDialect",
+        ":Pass",
+        ":TransformUtils",
     ],
 )
 
@@ -10570,6 +10594,7 @@ cc_library(
         ":OpenACCTypeInterfacesIncGen",
         ":OpenACCTypesIncGen",
         ":SideEffectInterfaces",
+        ":Support",
         ":TransformUtils",
         "//llvm:Support",
     ],
@@ -12111,6 +12136,14 @@ gentbl_cc_library(
         (
             ["-gen-dialect-defs"],
             "include/mlir/Dialect/Tosa/IR/TosaOpsDialect.cpp.inc",
+        ),
+        (
+            ["-gen-typedef-decls"],
+            "include/mlir/Dialect/Tosa/IR/TosaOpsTypesBase.h.inc",
+        ),
+        (
+            ["-gen-typedef-defs"],
+            "include/mlir/Dialect/Tosa/IR/TosaOpsTypesBase.cpp.inc",
         ),
         (
             ["-gen-attrdef-decls"],

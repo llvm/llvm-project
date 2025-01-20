@@ -29,6 +29,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -217,6 +218,10 @@ void GPUDialect::initialize() {
   addInterfaces<GPUInlinerInterface>();
   declarePromisedInterface<bufferization::BufferDeallocationOpInterface,
                            TerminatorOp>();
+  declarePromisedInterfaces<
+      ValueBoundsOpInterface, ClusterDimOp, ClusterDimBlocksOp, ClusterIdOp,
+      ClusterBlockIdOp, BlockDimOp, BlockIdOp, GridDimOp, ThreadIdOp, LaneIdOp,
+      SubgroupIdOp, GlobalIdOp, NumSubgroupsOp, SubgroupSizeOp, LaunchOp>();
 }
 
 static std::string getSparseHandleKeyword(SparseHandleKind kind) {

@@ -31,95 +31,6 @@ namespace impl {
 /// NOTE: This function needs to be implemented by every target.
 uint32_t atomicInc(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
                    atomic::MemScopeTy MemScope);
-
-template <typename Ty>
-Ty atomicAdd(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __scoped_atomic_fetch_add(Address, Val, Ordering,
-                                   __MEMORY_SCOPE_DEVICE);
-}
-
-template <typename Ty>
-Ty atomicMul(Ty *Address, Ty V, atomic::OrderingTy Ordering) {
-  Ty TypedCurrentVal, TypedResultVal, TypedNewVal;
-  bool Success;
-  do {
-    TypedCurrentVal = atomic::load(Address, Ordering);
-    TypedNewVal = TypedCurrentVal * V;
-    Success = atomic::cas(Address, TypedCurrentVal, TypedNewVal, Ordering,
-                          atomic::relaxed);
-  } while (!Success);
-  return TypedResultVal;
-}
-
-template <typename Ty> Ty atomicLoad(Ty *Address, atomic::OrderingTy Ordering) {
-  return atomicAdd(Address, Ty(0), Ordering);
-}
-
-template <typename Ty>
-void atomicStore(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  __scoped_atomic_store_n(Address, Val, Ordering, __MEMORY_SCOPE_DEVICE);
-}
-
-template <typename Ty>
-bool atomicCAS(Ty *Address, Ty ExpectedV, Ty DesiredV,
-               atomic::OrderingTy OrderingSucc,
-               atomic::OrderingTy OrderingFail) {
-  return __scoped_atomic_compare_exchange(Address, &ExpectedV, &DesiredV, false,
-                                          OrderingSucc, OrderingFail,
-                                          __MEMORY_SCOPE_DEVICE);
-}
-
-template <typename Ty>
-Ty atomicMin(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __scoped_atomic_fetch_min(Address, Val, Ordering,
-                                   __MEMORY_SCOPE_DEVICE);
-}
-
-template <typename Ty>
-Ty atomicMax(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __scoped_atomic_fetch_max(Address, Val, Ordering,
-                                   __MEMORY_SCOPE_DEVICE);
-}
-
-// TODO: Implement this with __atomic_fetch_max and remove the duplication.
-template <typename Ty, typename STy, typename UTy>
-Ty atomicMinFP(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  if (Val >= 0)
-    return atomicMin((STy *)Address, utils::convertViaPun<STy>(Val), Ordering);
-  return atomicMax((UTy *)Address, utils::convertViaPun<UTy>(Val), Ordering);
-}
-
-template <typename Ty, typename STy, typename UTy>
-Ty atomicMaxFP(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  if (Val >= 0)
-    return atomicMax((STy *)Address, utils::convertViaPun<STy>(Val), Ordering);
-  return atomicMin((UTy *)Address, utils::convertViaPun<UTy>(Val), Ordering);
-}
-
-template <typename Ty>
-Ty atomicOr(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __scoped_atomic_fetch_or(Address, Val, Ordering,
-                                  __MEMORY_SCOPE_DEVICE);
-}
-
-template <typename Ty>
-Ty atomicAnd(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __scoped_atomic_fetch_and(Address, Val, Ordering,
-                                   __MEMORY_SCOPE_DEVICE);
-}
-
-template <typename Ty>
-Ty atomicXOr(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
-  return __scoped_atomic_fetch_xor(Address, Val, Ordering,
-                                   __MEMORY_SCOPE_DEVICE);
-}
-
-uint32_t atomicExchange(uint32_t *Address, uint32_t Val,
-                        atomic::OrderingTy Ordering) {
-  uint32_t R;
-  __scoped_atomic_exchange(Address, &Val, &R, Ordering, __MEMORY_SCOPE_DEVICE);
-  return R;
-}
 ///}
 
 // Forward declarations defined to be defined for AMDGCN and NVPTX.
@@ -279,8 +190,8 @@ void setCriticalLock(omp_lock_t *Lock) {
   uint64_t LowestActiveThread = utils::ffs(mapping::activemask()) - 1;
   if (mapping::getThreadIdInWarp() == LowestActiveThread) {
     fenceKernel(atomic::release);
-    while (!atomicCAS((uint32_t *)Lock, UNSET, SET, atomic::relaxed,
-                      atomic::relaxed)) {
+    while (
+        !cas((uint32_t *)Lock, UNSET, SET, atomic::relaxed, atomic::relaxed)) {
       __builtin_amdgcn_s_sleep(32);
     }
     fenceKernel(atomic::aquire);
@@ -341,7 +252,7 @@ void unsetLock(omp_lock_t *Lock) {
 }
 
 int testLock(omp_lock_t *Lock) {
-  return atomicAdd((uint32_t *)Lock, 0u, atomic::seq_cst);
+  return atomic::add((uint32_t *)Lock, 0u, atomic::seq_cst);
 }
 
 void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
@@ -350,8 +261,8 @@ void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
 
 void setLock(omp_lock_t *Lock) {
   // TODO: not sure spinning is a good idea here..
-  while (atomicCAS((uint32_t *)Lock, UNSET, SET, atomic::seq_cst,
-                   atomic::seq_cst) != UNSET) {
+  while (atomic::cas((uint32_t *)Lock, UNSET, SET, atomic::seq_cst,
+                     atomic::seq_cst) != UNSET) {
     int32_t start = __nvvm_read_ptx_sreg_clock();
     int32_t now;
     for (;;) {
@@ -393,82 +304,6 @@ void fence::team(atomic::OrderingTy Ordering) { impl::fenceTeam(Ordering); }
 void fence::kernel(atomic::OrderingTy Ordering) { impl::fenceKernel(Ordering); }
 
 void fence::system(atomic::OrderingTy Ordering) { impl::fenceSystem(Ordering); }
-
-#define ATOMIC_COMMON_OP(TY)                                                   \
-  TY atomic::add(TY *Addr, TY V, atomic::OrderingTy Ordering) {                \
-    return impl::atomicAdd(Addr, V, Ordering);                                 \
-  }                                                                            \
-  TY atomic::mul(TY *Addr, TY V, atomic::OrderingTy Ordering) {                \
-    return impl::atomicMul(Addr, V, Ordering);                                 \
-  }                                                                            \
-  TY atomic::load(TY *Addr, atomic::OrderingTy Ordering) {                     \
-    return impl::atomicLoad(Addr, Ordering);                                   \
-  }                                                                            \
-  bool atomic::cas(TY *Addr, TY ExpectedV, TY DesiredV,                        \
-                   atomic::OrderingTy OrderingSucc,                            \
-                   atomic::OrderingTy OrderingFail) {                          \
-    return impl::atomicCAS(Addr, ExpectedV, DesiredV, OrderingSucc,            \
-                           OrderingFail);                                      \
-  }
-
-#define ATOMIC_FP_ONLY_OP(TY, STY, UTY)                                        \
-  TY atomic::min(TY *Addr, TY V, atomic::OrderingTy Ordering) {                \
-    return impl::atomicMinFP<TY, STY, UTY>(Addr, V, Ordering);                 \
-  }                                                                            \
-  TY atomic::max(TY *Addr, TY V, atomic::OrderingTy Ordering) {                \
-    return impl::atomicMaxFP<TY, STY, UTY>(Addr, V, Ordering);                 \
-  }                                                                            \
-  void atomic::store(TY *Addr, TY V, atomic::OrderingTy Ordering) {            \
-    impl::atomicStore(reinterpret_cast<UTY *>(Addr),                           \
-                      utils::convertViaPun<UTY>(V), Ordering);                 \
-  }
-
-#define ATOMIC_INT_ONLY_OP(TY)                                                 \
-  TY atomic::min(TY *Addr, TY V, atomic::OrderingTy Ordering) {                \
-    return impl::atomicMin<TY>(Addr, V, Ordering);                             \
-  }                                                                            \
-  TY atomic::max(TY *Addr, TY V, atomic::OrderingTy Ordering) {                \
-    return impl::atomicMax<TY>(Addr, V, Ordering);                             \
-  }                                                                            \
-  TY atomic::bit_or(TY *Addr, TY V, atomic::OrderingTy Ordering) {             \
-    return impl::atomicOr(Addr, V, Ordering);                                  \
-  }                                                                            \
-  TY atomic::bit_and(TY *Addr, TY V, atomic::OrderingTy Ordering) {            \
-    return impl::atomicAnd(Addr, V, Ordering);                                 \
-  }                                                                            \
-  TY atomic::bit_xor(TY *Addr, TY V, atomic::OrderingTy Ordering) {            \
-    return impl::atomicXOr(Addr, V, Ordering);                                 \
-  }                                                                            \
-  void atomic::store(TY *Addr, TY V, atomic::OrderingTy Ordering) {            \
-    impl::atomicStore(Addr, V, Ordering);                                      \
-  }
-
-#define ATOMIC_FP_OP(TY, STY, UTY)                                             \
-  ATOMIC_FP_ONLY_OP(TY, STY, UTY)                                              \
-  ATOMIC_COMMON_OP(TY)
-
-#define ATOMIC_INT_OP(TY)                                                      \
-  ATOMIC_INT_ONLY_OP(TY)                                                       \
-  ATOMIC_COMMON_OP(TY)
-
-// This needs to be kept in sync with the header. Also the reason we don't use
-// templates here.
-ATOMIC_INT_OP(int8_t)
-ATOMIC_INT_OP(int16_t)
-ATOMIC_INT_OP(int32_t)
-ATOMIC_INT_OP(int64_t)
-ATOMIC_INT_OP(uint8_t)
-ATOMIC_INT_OP(uint16_t)
-ATOMIC_INT_OP(uint32_t)
-ATOMIC_INT_OP(uint64_t)
-ATOMIC_FP_OP(float, int32_t, uint32_t)
-ATOMIC_FP_OP(double, int64_t, uint64_t)
-
-#undef ATOMIC_INT_ONLY_OP
-#undef ATOMIC_FP_ONLY_OP
-#undef ATOMIC_COMMON_OP
-#undef ATOMIC_INT_OP
-#undef ATOMIC_FP_OP
 
 uint32_t atomic::inc(uint32_t *Addr, uint32_t V, atomic::OrderingTy Ordering,
                      atomic::MemScopeTy MemScope) {

@@ -97,37 +97,37 @@ entry:
   br label %for.body
 
 for.body:
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds %struct.xyzt, ptr %a, i64 %indvars.iv
-  %0 = load i32, ptr %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds %struct.xyzt, ptr %b, i64 %indvars.iv
-  %1 = load i32, ptr %arrayidx2, align 4
-  %add = add nsw i32 %1, %0
-  %arrayidx5 = getelementptr inbounds %struct.xyzt, ptr %dst, i64 %indvars.iv
-  store i32 %add, ptr %arrayidx5, align 4
-  %y = getelementptr inbounds nuw i8, ptr %arrayidx, i64 4
-  %2 = load i32, ptr %y, align 4
-  %y11 = getelementptr inbounds nuw i8, ptr %arrayidx2, i64 4
-  %3 = load i32, ptr %y11, align 4
-  %sub = sub nsw i32 %2, %3
-  %y14 = getelementptr inbounds nuw i8, ptr %arrayidx5, i64 4
-  store i32 %sub, ptr %y14, align 4
-  %z = getelementptr inbounds nuw i8, ptr %arrayidx, i64 8
-  %4 = load i32, ptr %z, align 4
-  %z19 = getelementptr inbounds nuw i8, ptr %arrayidx2, i64 8
-  %5 = load i32, ptr %z19, align 4
-  %shl = shl i32 %4, %5
-  %z22 = getelementptr inbounds nuw i8, ptr %arrayidx5, i64 8
-  store i32 %shl, ptr %z22, align 4
-  %t = getelementptr inbounds nuw i8, ptr %arrayidx, i64 12
-  %6 = load i32, ptr %t, align 4
-  %t27 = getelementptr inbounds nuw i8, ptr %arrayidx2, i64 12
-  %7 = load i32, ptr %t27, align 4
-  %shr = ashr i32 %6, %7
-  %t30 = getelementptr inbounds nuw i8, ptr %arrayidx5, i64 12
-  store i32 %shr, ptr %t30, align 4
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, 1024
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.a = getelementptr inbounds %struct.xyzt, ptr %a, i64 %iv
+  %a.0 = load i32, ptr %gep.a, align 4
+  %gep.b = getelementptr inbounds %struct.xyzt, ptr %b, i64 %iv
+  %b.0 = load i32, ptr %gep.b, align 4
+  %add = add nsw i32 %b.0, %a.0
+  %gep.dst = getelementptr inbounds %struct.xyzt, ptr %dst, i64 %iv
+  store i32 %add, ptr %gep.dst, align 4
+  %gep.a.1 = getelementptr inbounds nuw i8, ptr %gep.a, i64 4
+  %a.1 = load i32, ptr %gep.a.1, align 4
+  %gep.b.1 = getelementptr inbounds nuw i8, ptr %gep.b, i64 4
+  %b.1 = load i32, ptr %gep.b.1, align 4
+  %sub = sub nsw i32 %a.1, %b.1
+  %gep.dst.1 = getelementptr inbounds nuw i8, ptr %gep.dst, i64 4
+  store i32 %sub, ptr %gep.dst.1, align 4
+  %gep.a.2 = getelementptr inbounds nuw i8, ptr %gep.a, i64 8
+  %a.2 = load i32, ptr %gep.a.2, align 4
+  %gep.b.2 = getelementptr inbounds nuw i8, ptr %gep.b, i64 8
+  %b.2 = load i32, ptr %gep.b.2, align 4
+  %shl = shl i32 %a.2, %b.2
+  %gep.dst.2 = getelementptr inbounds nuw i8, ptr %gep.dst, i64 8
+  store i32 %shl, ptr %gep.dst.2, align 4
+  %gep.a.3 = getelementptr inbounds nuw i8, ptr %gep.a, i64 12
+  %a.3 = load i32, ptr %gep.a.3, align 4
+  %gep.b.3 = getelementptr inbounds nuw i8, ptr %gep.b, i64 12
+  %b.3 = load i32, ptr %gep.b.3, align 4
+  %shr = ashr i32 %a.3, %b.3
+  %gep.dst.3 = getelementptr inbounds nuw i8, ptr %gep.dst, i64 12
+  store i32 %shr, ptr %gep.dst.3, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.end, label %for.body
 
 for.end:

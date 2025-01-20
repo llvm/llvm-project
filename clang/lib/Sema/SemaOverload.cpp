@@ -516,7 +516,7 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
     if (const FieldDecl *BitField = Initializer->getSourceBitField()) {
       if (BitField->getBitWidth()->isValueDependent())
         DependentBitField = true;
-      else if (unsigned BitFieldWidth = BitField->getBitWidthValue(Ctx);
+      else if (unsigned BitFieldWidth = BitField->getBitWidthValue();
                BitFieldWidth < FromWidth) {
         if (CanRepresentAll(FromSigned, BitFieldWidth, ToSigned, ToWidth))
           return NK_Not_Narrowing;
@@ -1309,6 +1309,13 @@ Sema::CheckOverload(Scope *S, FunctionDecl *New, const LookupResult &Old,
   return Ovl_Overload;
 }
 
+template <typename AttrT> static bool hasExplicitAttr(const FunctionDecl *D) {
+  assert(D && "function decl should not be null");
+  if (auto *A = D->getAttr<AttrT>())
+    return !A->isImplicit();
+  return false;
+}
+
 static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
                                      FunctionDecl *Old,
                                      bool UseMemberUsingDeclRules,
@@ -1583,6 +1590,7 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
       return true;
   }
 
+  // At this point, it is known that the two functions have the same signature.
   if (SemaRef.getLangOpts().CUDA && ConsiderCudaAttrs) {
     // Don't allow overloading of destructors.  (In theory we could, but it
     // would be a giant change to clang.)
@@ -1595,8 +1603,19 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
 
         // Allow overloading of functions with same signature and different CUDA
         // target attributes.
-        if (NewTarget != OldTarget)
+        if (NewTarget != OldTarget) {
+          // Special case: non-constexpr function is allowed to override
+          // constexpr virtual function
+          if (OldMethod && NewMethod && OldMethod->isVirtual() &&
+              OldMethod->isConstexpr() && !NewMethod->isConstexpr() &&
+              !hasExplicitAttr<CUDAHostAttr>(Old) &&
+              !hasExplicitAttr<CUDADeviceAttr>(Old) &&
+              !hasExplicitAttr<CUDAHostAttr>(New) &&
+              !hasExplicitAttr<CUDADeviceAttr>(New)) {
+            return false;
+          }
           return true;
+        }
       }
     }
   }
@@ -6977,11 +6996,26 @@ void Sema::AddOverloadCandidate(
     /// have linkage. So that all entities of the same should share one
     /// linkage. But in clang, different entities of the same could have
     /// different linkage.
-    NamedDecl *ND = Function;
-    if (auto *SpecInfo = Function->getTemplateSpecializationInfo())
+    const NamedDecl *ND = Function;
+    bool IsImplicitlyInstantiated = false;
+    if (auto *SpecInfo = Function->getTemplateSpecializationInfo()) {
       ND = SpecInfo->getTemplate();
+      IsImplicitlyInstantiated = SpecInfo->getTemplateSpecializationKind() ==
+                                 TSK_ImplicitInstantiation;
+    }
 
-    if (ND->getFormalLinkage() == Linkage::Internal) {
+    /// Don't remove inline functions with internal linkage from the overload
+    /// set if they are declared in a GMF, in violation of C++ [basic.link]p17.
+    /// However:
+    /// - Inline functions with internal linkage are a common pattern in
+    ///   headers to avoid ODR issues.
+    /// - The global module is meant to be a transition mechanism for C and C++
+    ///   headers, and the current rules as written work against that goal.
+    const bool IsInlineFunctionInGMF =
+        Function->isFromGlobalModule() &&
+        (IsImplicitlyInstantiated || Function->isInlined());
+
+    if (ND->getFormalLinkage() == Linkage::Internal && !IsInlineFunctionInGMF) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_module_mismatched;
       return;

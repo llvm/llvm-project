@@ -1746,13 +1746,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     if (args.hasArg(OPT_call_graph_ordering_file))
       ErrAlways(ctx) << "--symbol-ordering-file and --call-graph-order-file "
                         "may not be used together";
-    if (std::optional<MemoryBufferRef> buffer =
-            readFile(ctx, arg->getValue())) {
+    if (auto buffer = readFile(ctx, arg->getValue()))
       ctx.arg.symbolOrderingFile = getSymbolOrderingFile(ctx, *buffer);
-      // Also need to disable CallGraphProfileSort to prevent
-      // LLD order symbols with CGProfile
-      ctx.arg.callGraphProfileSort = CGProfileSortKind::None;
-    }
   }
 
   assert(ctx.arg.versionDefinitions.empty());
@@ -3215,11 +3210,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Read the callgraph now that we know what was gced or icfed
   if (ctx.arg.callGraphProfileSort != CGProfileSortKind::None) {
-    if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file))
+    if (auto *arg = args.getLastArg(OPT_call_graph_ordering_file)) {
       if (std::optional<MemoryBufferRef> buffer =
               readFile(ctx, arg->getValue()))
         readCallGraph(ctx, *buffer);
-    readCallGraphsFromObjectFiles<ELFT>(ctx);
+    } else
+      readCallGraphsFromObjectFiles<ELFT>(ctx);
   }
 
   // Write the result to the file.
