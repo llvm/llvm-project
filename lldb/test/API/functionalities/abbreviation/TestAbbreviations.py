@@ -20,6 +20,10 @@ class AbbreviationsTestCase(TestBase):
         self.assertTrue(result.Succeeded())
         self.assertEqual("apropos script", result.GetOutput())
 
+        command_interpreter.ResolveCommand("e", result)
+        self.assertTrue(result.Succeeded())
+        self.assertEqual("expression", result.GetOutput())
+
         command_interpreter.ResolveCommand("h", result)
         self.assertTrue(result.Succeeded())
         self.assertEqual("help", result.GetOutput())

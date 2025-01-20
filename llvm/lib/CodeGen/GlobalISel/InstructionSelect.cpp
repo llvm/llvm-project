@@ -31,7 +31,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CodeGenCoverage.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Target/TargetMachine.h"
@@ -75,19 +74,25 @@ InstructionSelect::InstructionSelect(CodeGenOptLevel OL, char &PassID)
 /// a non-obvious limitation for selector implementers. Therefore, to allow
 /// deletion of arbitrary instructions, we detect this case and continue
 /// selection with the predecessor of the deleted instruction.
-class InstructionSelect::MIIteratorMaintainer
-    : public MachineFunction::Delegate {
+class InstructionSelect::MIIteratorMaintainer : public GISelChangeObserver {
 #ifndef NDEBUG
   SmallSetVector<const MachineInstr *, 32> CreatedInstrs;
 #endif
 public:
   MachineBasicBlock::reverse_iterator MII;
 
-  void MF_HandleInsertion(MachineInstr &MI) override {
+  void changingInstr(MachineInstr &MI) override {
+    llvm_unreachable("InstructionSelect does not track changed instructions!");
+  }
+  void changedInstr(MachineInstr &MI) override {
+    llvm_unreachable("InstructionSelect does not track changed instructions!");
+  }
+
+  void createdInstr(MachineInstr &MI) override {
     LLVM_DEBUG(dbgs() << "Creating:  " << MI; CreatedInstrs.insert(&MI));
   }
 
-  void MF_HandleRemoval(MachineInstr &MI) override {
+  void erasingInstr(MachineInstr &MI) override {
     LLVM_DEBUG(dbgs() << "Erasing:   " << MI; CreatedInstrs.remove(&MI));
     if (MII.getInstrIterator().getNodePtr() == &MI) {
       // If the iterator points to the MI that will be erased (i.e. the MI prior
@@ -190,8 +195,11 @@ bool InstructionSelect::selectMachineFunction(MachineFunction &MF) {
     // GISelChangeObserver, because we do not want notifications about changed
     // instructions. This prevents significant compile-time regressions from
     // e.g. constrainOperandRegClass().
+    GISelObserverWrapper AllObservers;
     MIIteratorMaintainer MIIMaintainer;
-    RAIIDelegateInstaller DelInstaller(MF, &MIIMaintainer);
+    AllObservers.addObserver(&MIIMaintainer);
+    RAIIDelegateInstaller DelInstaller(MF, &AllObservers);
+    ISel->AllObservers = &AllObservers;
 
     for (MachineBasicBlock *MBB : post_order(&MF)) {
       ISel->CurMBB = MBB;

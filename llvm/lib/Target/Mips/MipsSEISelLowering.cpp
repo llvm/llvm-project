@@ -38,7 +38,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -1244,6 +1243,11 @@ SDValue MipsSETargetLowering::lowerBITCAST(SDValue Op,
 
   // Bitcast double to i64.
   if (Src == MVT::f64 && Dest == MVT::i64) {
+    // Skip lower bitcast when operand0 has converted float results to integer
+    // which was done by function SoftenFloatResult.
+    if (getTypeAction(*DAG.getContext(), Op.getOperand(0).getValueType()) ==
+        TargetLowering::TypeSoftenFloat)
+      return SDValue();
     SDValue Lo =
         DAG.getNode(MipsISD::ExtractElementF64, DL, MVT::i32, Op.getOperand(0),
                     DAG.getConstant(0, DL, MVT::i32));

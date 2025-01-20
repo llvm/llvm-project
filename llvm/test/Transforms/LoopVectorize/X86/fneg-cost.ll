@@ -6,8 +6,8 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-apple-macosx10.8.0"
 
 ; CHECK: Found an estimated cost of 1 for VF 1 For instruction:   %neg = fneg float %{{.*}}
-; CHECK: Found an estimated cost of 1 for VF 2 For instruction:   %neg = fneg float %{{.*}}
-; CHECK: Found an estimated cost of 1 for VF 4 For instruction:   %neg = fneg float %{{.*}}
+; CHECK: Cost of 1 for VF 2: WIDEN ir<%neg> = fneg ir<%0>
+; CHECK: Cost of 1 for VF 4: WIDEN ir<%neg> = fneg ir<%0>
 define void @fneg_cost(ptr %a, i64 %n) {
 entry:
   br label %for.body

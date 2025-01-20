@@ -22,9 +22,9 @@
  */
 
 #include <clc/clc.h>
+#include <clc/clcmacro.h>
 
 #include "math.h"
-#include "../clcmacro.h"
 
 _CLC_OVERLOAD _CLC_DEF float tgamma(float x) {
     const float pi = 3.1415926535897932384626433832795f;

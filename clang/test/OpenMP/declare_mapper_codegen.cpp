@@ -86,19 +86,9 @@ public:
 
 #pragma omp declare mapper(id: C s) map(s.a, s.b[0:2])
 
-// CK0: define {{.*}}void [[MPRFUNC:@[.]omp_mapper[.].*C[.]id]](ptr{{.*}}, ptr{{.*}}, ptr{{.*}}, i64{{.*}}, i64{{.*}}, ptr{{.*}})
-// CK0: store ptr %{{[^,]+}}, ptr [[HANDLEADDR:%[^,]+]]
-// CK0: store ptr %{{[^,]+}}, ptr [[BPTRADDR:%[^,]+]]
-// CK0: store ptr %{{[^,]+}}, ptr [[VPTRADDR:%[^,]+]]
-// CK0: store i64 %{{[^,]+}}, ptr [[SIZEADDR:%[^,]+]]
-// CK0: store i64 %{{[^,]+}}, ptr [[TYPEADDR:%[^,]+]]
-// CK0-DAG: [[BYTESIZE:%.+]] = load i64, ptr [[SIZEADDR]]
+// CK0: define {{.*}}void [[MPRFUNC:@[.]omp_mapper[.].*C[.]id]](ptr noundef [[HANDLE:%.+]], ptr noundef [[BPTR:%.+]], ptr noundef [[BEGIN:%.+]], i64 noundef [[BYTESIZE:%.+]], i64 noundef [[TYPE:%.+]], ptr{{.*}})
 // CK0-64-DAG: [[SIZE:%.+]] = udiv exact i64 [[BYTESIZE]], 16
 // CK0-32-DAG: [[SIZE:%.+]] = udiv exact i64 [[BYTESIZE]], 8
-// CK0-DAG: [[TYPE:%.+]] = load i64, ptr [[TYPEADDR]]
-// CK0-DAG: [[HANDLE:%.+]] = load ptr, ptr [[HANDLEADDR]]
-// CK0-DAG: [[BPTR:%.+]] = load ptr, ptr [[BPTRADDR]]
-// CK0-DAG: [[BEGIN:%.+]] = load ptr, ptr [[VPTRADDR]]
 // CK0-DAG: [[ISARRAY:%.+]] = icmp sgt i64 [[SIZE]], 1
 // CK0-DAG: [[PTREND:%.+]] = getelementptr %class.C, ptr [[BEGIN]], i64 [[SIZE]]
 // CK0-DAG: [[PTRSNE:%.+]] = icmp ne ptr [[BPTR]], [[BEGIN]]
@@ -129,7 +119,7 @@ public:
 // CK0-DAG: [[BBEGIN:%.+]] = getelementptr inbounds nuw %class.C, ptr [[PTR]], i32 0, i32 1
 // CK0-DAG: [[BBEGIN2:%.+]] = getelementptr inbounds nuw %class.C, ptr [[PTR]], i32 0, i32 1
 // CK0-DAG: [[BARRBEGIN:%.+]] = load ptr, ptr [[BBEGIN2]]
-// CK0-DAG: [[BARRBEGINGEP:%.+]] = getelementptr inbounds double, ptr [[BARRBEGIN]], i[[sz:64|32]] 0
+// CK0-DAG: [[BARRBEGINGEP:%.+]] = getelementptr inbounds nuw double, ptr [[BARRBEGIN]], i[[sz:64|32]] 0
 // CK0-DAG: [[BEND:%.+]] = getelementptr ptr, ptr [[BBEGIN]], i32 1
 // CK0-DAG: [[ABEGINI:%.+]] = ptrtoint ptr [[ABEGIN]] to i64
 // CK0-DAG: [[BENDI:%.+]] = ptrtoint ptr [[BEND]] to i64
@@ -597,18 +587,8 @@ public:
 
 #pragma omp declare mapper(id: C<int> s) map(s.a)
 
-// CK1-LABEL: define {{.*}}void @.omp_mapper.{{.*}}C{{.*}}.id{{.*}}(ptr{{.*}}, ptr{{.*}}, ptr{{.*}}, i64{{.*}}, i64{{.*}}, ptr{{.*}})
-// CK1: store ptr %{{[^,]+}}, ptr [[HANDLEADDR:%[^,]+]]
-// CK1: store ptr %{{[^,]+}}, ptr [[BPTRADDR:%[^,]+]]
-// CK1: store ptr %{{[^,]+}}, ptr [[VPTRADDR:%[^,]+]]
-// CK1: store i64 %{{[^,]+}}, ptr [[SIZEADDR:%[^,]+]]
-// CK1: store i64 %{{[^,]+}}, ptr [[TYPEADDR:%[^,]+]]
-// CK1-DAG: [[BYTESIZE:%.+]] = load i64, ptr [[SIZEADDR]]
+// CK1:     define {{.*}}void @.omp_mapper.{{.*}}C{{.*}}.id{{.*}}(ptr noundef [[HANDLE:%.+]], ptr noundef [[BPTR:%.+]], ptr noundef [[BEGIN:%.+]], i64 noundef [[BYTESIZE:%.+]], i64 noundef [[TYPE:%.+]], ptr{{.*}})
 // CK1-DAG: [[SIZE:%.+]] = udiv exact i64 [[BYTESIZE]], 4
-// CK1-DAG: [[TYPE:%.+]] = load i64, ptr [[TYPEADDR]]
-// CK1-DAG: [[HANDLE:%.+]] = load ptr, ptr [[HANDLEADDR]]
-// CK1-DAG: [[BPTR:%.+]] = load ptr, ptr [[BPTRADDR]]
-// CK1-DAG: [[BEGIN:%.+]] = load ptr, ptr [[VPTRADDR]]
 // CK1-DAG: [[PTREND:%.+]] = getelementptr %class.C, ptr [[BEGIN]], i64 [[SIZE]]
 // CK1-DAG: [[ISARRAY:%.+]] = icmp sgt i64 [[SIZE]], 1
 // CK1-DAG: [[PTRSNE:%.+]] = icmp ne ptr [[BPTR]], [[BEGIN]]
@@ -717,18 +697,8 @@ public:
 
 // CK2: define {{.*}}void [[BMPRFUNC:@[.]omp_mapper[.].*B[.]default]](ptr{{.*}}, ptr{{.*}}, ptr{{.*}}, i64{{.*}}, i64{{.*}}, ptr{{.*}})
 
-// CK2-LABEL: define {{.*}}void @.omp_mapper.{{.*}}C{{.*}}.id(ptr{{.*}}, ptr{{.*}}, ptr{{.*}}, i64{{.*}}, i64{{.*}}, ptr{{.*}})
-// CK2: store ptr %{{[^,]+}}, ptr [[HANDLEADDR:%[^,]+]]
-// CK2: store ptr %{{[^,]+}}, ptr [[BPTRADDR:%[^,]+]]
-// CK2: store ptr %{{[^,]+}}, ptr [[VPTRADDR:%[^,]+]]
-// CK2: store i64 %{{[^,]+}}, ptr [[SIZEADDR:%[^,]+]]
-// CK2: store i64 %{{[^,]+}}, ptr [[TYPEADDR:%[^,]+]]
-// CK2-DAG: [[BYTESIZE:%.+]] = load i64, ptr [[SIZEADDR]]
+// CK2:     define {{.*}}void @.omp_mapper.{{.*}}C{{.*}}.id(ptr noundef [[HANDLE:%.+]], ptr noundef [[BPTR:%.+]], ptr noundef [[BEGIN:%.+]], i64 noundef [[BYTESIZE:%.+]], i64 noundef [[TYPE:%.+]], ptr{{.*}})
 // CK2-DAG: [[SIZE:%.+]] = udiv exact i64 [[BYTESIZE]], 16
-// CK2-DAG: [[TYPE:%.+]] = load i64, ptr [[TYPEADDR]]
-// CK2-DAG: [[HANDLE:%.+]] = load ptr, ptr [[HANDLEADDR]]
-// CK2-DAG: [[BPTR:%.+]] = load ptr, ptr [[BPTRADDR]]
-// CK2-DAG: [[BEGIN:%.+]] = load ptr, ptr [[VPTRADDR]]
 // CK2-DAG: [[PTREND:%.+]] = getelementptr %class.C, ptr [[BEGIN]], i64 [[SIZE]]
 // CK2-DAG: [[ISARRAY:%.+]] = icmp sgt i64 [[SIZE]], 1
 // CK2-DAG: [[PTRSNE:%.+]] = icmp ne ptr [[BPTR]], [[BEGIN]]
@@ -921,19 +891,9 @@ public:
 
 #pragma omp declare mapper(id: C s) map(s.a, s.b[0:2])
 
-// CK4: define {{.*}}void [[MPRFUNC:@[.]omp_mapper[.].*C[.]id]](ptr{{.*}}, ptr{{.*}}, ptr{{.*}}, i64{{.*}}, i64{{.*}}, ptr{{.*}})
-// CK4: store ptr %{{[^,]+}}, ptr [[HANDLEADDR:%[^,]+]]
-// CK4: store ptr %{{[^,]+}}, ptr [[BPTRADDR:%[^,]+]]
-// CK4: store ptr %{{[^,]+}}, ptr [[VPTRADDR:%[^,]+]]
-// CK4: store i64 %{{[^,]+}}, ptr [[SIZEADDR:%[^,]+]]
-// CK4: store i64 %{{[^,]+}}, ptr [[TYPEADDR:%[^,]+]]
-// CK4-DAG: [[BYTESIZE:%.+]] = load i64, ptr [[SIZEADDR]]
+// CK4: define {{.*}}void [[MPRFUNC:@[.]omp_mapper[.].*C[.]id]](ptr noundef [[HANDLE:%.+]], ptr noundef [[BPTR:%.+]], ptr noundef [[BEGIN:%.+]], i64 noundef [[BYTESIZE:%.+]], i64 noundef [[TYPE:%.+]], ptr{{.*}})
 // CK4-64-DAG: [[SIZE:%.+]] = udiv exact i64 [[BYTESIZE]], 16
 // CK4-32-DAG: [[SIZE:%.+]] = udiv exact i64 [[BYTESIZE]], 8
-// CK4-DAG: [[TYPE:%.+]] = load i64, ptr [[TYPEADDR]]
-// CK4-DAG: [[HANDLE:%.+]] = load ptr, ptr [[HANDLEADDR]]
-// CK4-DAG: [[BPTR:%.+]] = load ptr, ptr [[BPTRADDR]]
-// CK4-DAG: [[BEGIN:%.+]] = load ptr, ptr [[VPTRADDR]]
 // CK4-DAG: [[PTREND:%.+]] = getelementptr %class.C, ptr [[BEGIN]], i64 [[SIZE]]
 // CK4-DAG: [[ISARRAY:%.+]] = icmp sgt i64 [[SIZE]], 1
 // CK4-DAG: [[PTRSNE:%.+]] = icmp ne ptr [[BPTR]], [[BEGIN]]
@@ -965,7 +925,7 @@ public:
 // CK4-DAG: [[BBEGIN:%.+]] = getelementptr inbounds nuw %class.C, ptr [[PTR]], i32 0, i32 1
 // CK4-DAG: [[BBEGIN2:%.+]] = getelementptr inbounds nuw %class.C, ptr [[PTR]], i32 0, i32 1
 // CK4-DAG: [[BARRBEGIN:%.+]] = load ptr, ptr [[BBEGIN2]]
-// CK4-DAG: [[BARRBEGINGEP:%.+]] = getelementptr inbounds double, ptr [[BARRBEGIN]], i[[sz:64|32]] 0
+// CK4-DAG: [[BARRBEGINGEP:%.+]] = getelementptr inbounds nuw double, ptr [[BARRBEGIN]], i[[sz:64|32]] 0
 // CK4-DAG: [[BEND:%.+]] = getelementptr ptr, ptr [[BBEGIN]], i32 1
 // CK4-DAG: [[ABEGINI:%.+]] = ptrtoint ptr [[ABEGIN]] to i64
 // CK4-DAG: [[BENDI:%.+]] = ptrtoint ptr [[BEND]] to i64

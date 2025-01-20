@@ -21,6 +21,7 @@
  */
 
 #include <clc/clc.h>
+#include <clc/shared/clc_max.h>
 
 #include "math.h"
 #include "tables.h"
@@ -372,7 +373,7 @@ _CLC_DEF void __clc_remainder_piby2_large(double x, double *r, double *rr, int *
 
     long ux = as_long(x);
     int e = (int)(ux >> 52) -  1023;
-    int i = max(23, (e >> 3) + 17);
+    int i = __clc_max(23, (e >> 3) + 17);
     int j = 150 - i;
     int j16 = j & ~0xf;
     double fract_temp;

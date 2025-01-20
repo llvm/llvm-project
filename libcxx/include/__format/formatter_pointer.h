@@ -11,13 +11,13 @@
 #define _LIBCPP___FORMAT_FORMATTER_POINTER_H
 
 #include <__config>
+#include <__cstddef/nullptr_t.h>
 #include <__format/concepts.h>
 #include <__format/format_parse_context.h>
 #include <__format/formatter.h>
 #include <__format/formatter_integral.h>
 #include <__format/formatter_output.h>
 #include <__format/parser_std_format_spec.h>
-#include <cstddef>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -72,8 +72,8 @@ template <>
 inline constexpr bool enable_nonlocking_formatter_optimization<void*> = true;
 template <>
 inline constexpr bool enable_nonlocking_formatter_optimization<const void*> = true;
-#  endif //_LIBCPP_STD_VER >= 23
-#endif //_LIBCPP_STD_VER >= 20
+#  endif // _LIBCPP_STD_VER >= 23
+#endif   // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

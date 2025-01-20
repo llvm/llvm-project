@@ -11,7 +11,9 @@
 
 #include "Allocator.h"
 #include "Configuration.h"
-#include "Types.h"
+#include "DeviceTypes.h"
+#include "Shared/RPCOpcodes.h"
+#include "shared/rpc.h"
 
 #include "Debug.h"
 
@@ -37,15 +39,7 @@ double getWTick() {
 }
 
 double getWTime() {
-  uint64_t NumTicks = 0;
-  if constexpr (__has_builtin(__builtin_amdgcn_s_sendmsg_rtnl))
-    NumTicks = __builtin_amdgcn_s_sendmsg_rtnl(0x83);
-  else if constexpr (__has_builtin(__builtin_amdgcn_s_memrealtime))
-    NumTicks = __builtin_amdgcn_s_memrealtime();
-  else if constexpr (__has_builtin(__builtin_amdgcn_s_memtime))
-    NumTicks = __builtin_amdgcn_s_memtime();
-
-  return static_cast<double>(NumTicks) * getWTick();
+  return static_cast<double>(__builtin_readsteadycounter()) * getWTick();
 }
 
 #pragma omp end declare variant
@@ -110,6 +104,16 @@ void *indirectCallLookup(void *HstPtr) {
   return HstPtr;
 }
 
+/// The openmp client instance used to communicate with the server.
+/// FIXME: This is marked as 'retain' so that it is not removed via
+/// `-mlink-builtin-bitcode`
+#ifdef __NVPTX__
+[[gnu::visibility("protected"), gnu::weak,
+  gnu::retain]] rpc::Client Client asm("__llvm_rpc_client");
+#else
+[[gnu::visibility("protected"), gnu::weak]] rpc::Client Client asm("__llvm_rpc_client");
+#endif
+
 } // namespace impl
 } // namespace ompx
 
@@ -155,6 +159,20 @@ void omp_free(void *ptr, omp_allocator_handle_t allocator) {
   default:
     return;
   }
+}
+
+unsigned long long __llvm_omp_host_call(void *fn, void *data, size_t size) {
+  rpc::Client::Port Port = ompx::impl::Client.open<OFFLOAD_HOST_CALL>();
+  Port.send_n(data, size);
+  Port.send([=](rpc::Buffer *buffer, uint32_t) {
+    buffer->data[0] = reinterpret_cast<uintptr_t>(fn);
+  });
+  unsigned long long Ret;
+  Port.recv([&](rpc::Buffer *Buffer, uint32_t) {
+    Ret = static_cast<unsigned long long>(Buffer->data[0]);
+  });
+  Port.close();
+  return Ret;
 }
 }
 

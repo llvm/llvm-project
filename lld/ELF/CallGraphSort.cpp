@@ -88,11 +88,12 @@ struct Cluster {
 /// * Sort non-empty clusters by density
 class CallGraphSort {
 public:
-  CallGraphSort();
+  CallGraphSort(Ctx &);
 
   DenseMap<const InputSectionBase *, int> run();
 
 private:
+  Ctx &ctx;
   std::vector<Cluster> clusters;
   std::vector<const InputSectionBase *> sections;
 };
@@ -108,11 +109,11 @@ constexpr uint64_t MAX_CLUSTER_SIZE = 1024 * 1024;
 using SectionPair =
     std::pair<const InputSectionBase *, const InputSectionBase *>;
 
-// Take the edge list in Config->CallGraphProfile, resolve symbol names to
+// Take the edge list in ctx.arg.callGraphProfile, resolve symbol names to
 // Symbols, and generate a graph between InputSections with the provided
 // weights.
-CallGraphSort::CallGraphSort() {
-  MapVector<SectionPair, uint64_t> &profile = config->callGraphProfile;
+CallGraphSort::CallGraphSort(Ctx &ctx) : ctx(ctx) {
+  MapVector<SectionPair, uint64_t> &profile = ctx.arg.callGraphProfile;
   DenseMap<const InputSectionBase *, int> secToCluster;
 
   auto getOrCreateNode = [&](const InputSectionBase *isec) -> int {
@@ -234,7 +235,7 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
   });
 
   DenseMap<const InputSectionBase *, int> orderMap;
-  int curOrder = 1;
+  int curOrder = -clusters.size();
   for (int leader : sorted) {
     for (int i = leader;;) {
       orderMap[sections[i]] = curOrder++;
@@ -243,11 +244,12 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
         break;
     }
   }
-  if (!config->printSymbolOrder.empty()) {
+  if (!ctx.arg.printSymbolOrder.empty()) {
     std::error_code ec;
-    raw_fd_ostream os(config->printSymbolOrder, ec, sys::fs::OF_None);
+    raw_fd_ostream os(ctx.arg.printSymbolOrder, ec, sys::fs::OF_None);
     if (ec) {
-      error("cannot open " + config->printSymbolOrder + ": " + ec.message());
+      ErrAlways(ctx) << "cannot open " << ctx.arg.printSymbolOrder << ": "
+                     << ec.message();
       return orderMap;
     }
 
@@ -274,7 +276,8 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
 // Sort sections by the profile data using the Cache-Directed Sort algorithm.
 // The placement is done by optimizing the locality by co-locating frequently
 // executed code sections together.
-DenseMap<const InputSectionBase *, int> elf::computeCacheDirectedSortOrder() {
+static DenseMap<const InputSectionBase *, int>
+computeCacheDirectedSortOrder(Ctx &ctx) {
   SmallVector<uint64_t, 0> funcSizes;
   SmallVector<uint64_t, 0> funcCounts;
   SmallVector<codelayout::EdgeCount, 0> callCounts;
@@ -294,7 +297,7 @@ DenseMap<const InputSectionBase *, int> elf::computeCacheDirectedSortOrder() {
   };
 
   // Create the graph.
-  for (std::pair<SectionPair, uint64_t> &c : config->callGraphProfile) {
+  for (std::pair<SectionPair, uint64_t> &c : ctx.arg.callGraphProfile) {
     const InputSectionBase *fromSB = cast<InputSectionBase>(c.first.first);
     const InputSectionBase *toSB = cast<InputSectionBase>(c.first.second);
     // Ignore edges between input sections belonging to different sections.
@@ -325,7 +328,7 @@ DenseMap<const InputSectionBase *, int> elf::computeCacheDirectedSortOrder() {
 
   // Create the final order.
   DenseMap<const InputSectionBase *, int> orderMap;
-  int curOrder = 1;
+  int curOrder = -sortedSections.size();
   for (uint64_t secIdx : sortedSections)
     orderMap[sections[secIdx]] = curOrder++;
 
@@ -336,8 +339,9 @@ DenseMap<const InputSectionBase *, int> elf::computeCacheDirectedSortOrder() {
 //
 // This first builds a call graph based on the profile data then merges sections
 // according either to the C³ or Cache-Directed-Sort ordering algorithm.
-DenseMap<const InputSectionBase *, int> elf::computeCallGraphProfileOrder() {
-  if (config->callGraphProfileSort == CGProfileSortKind::Cdsort)
-    return computeCacheDirectedSortOrder();
-  return CallGraphSort().run();
+DenseMap<const InputSectionBase *, int>
+elf::computeCallGraphProfileOrder(Ctx &ctx) {
+  if (ctx.arg.callGraphProfileSort == CGProfileSortKind::Cdsort)
+    return computeCacheDirectedSortOrder(ctx);
+  return CallGraphSort(ctx).run();
 }

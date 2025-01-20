@@ -19,6 +19,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 
@@ -35,7 +36,9 @@ enum NVVMMemorySpace {
   /// Global memory space identifier.
   kGlobalMemorySpace = 1,
   /// Shared memory space identifier.
-  kSharedMemorySpace = 3
+  kSharedMemorySpace = 3,
+  /// Constant memory space identifier.
+  kConstantMemorySpace = 4
 };
 
 /// Return the element type and number of elements associated with a wmma matrix

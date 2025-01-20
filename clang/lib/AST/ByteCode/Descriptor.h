@@ -21,6 +21,7 @@ namespace clang {
 namespace interp {
 class Block;
 class Record;
+class SourceInfo;
 struct InitMap;
 struct Descriptor;
 enum PrimType : unsigned;
@@ -44,7 +45,7 @@ using BlockDtorFn = void (*)(Block *Storage, std::byte *FieldPtr,
 /// blocks are persisted: the move function copies all inline descriptors and
 /// non-trivial fields, as existing pointers might need to reference those
 /// descriptors. Data is not copied since it cannot be legally read.
-using BlockMoveFn = void (*)(Block *Storage, const std::byte *SrcFieldPtr,
+using BlockMoveFn = void (*)(Block *Storage, std::byte *SrcFieldPtr,
                              std::byte *DstFieldPtr,
                              const Descriptor *FieldDesc);
 
@@ -95,12 +96,16 @@ struct InlineDescriptor {
   /// Flag indicating if the field is mutable (if in a record).
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsFieldMutable : 1;
+  /// Flag indicating if the field is an element of a composite array.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsArrayElement : 1;
 
   const Descriptor *Desc;
 
   InlineDescriptor(const Descriptor *D)
       : Offset(sizeof(InlineDescriptor)), IsConst(false), IsInitialized(false),
-        IsBase(false), IsActive(false), IsFieldMutable(false), Desc(D) {}
+        IsBase(false), IsActive(false), IsFieldMutable(false),
+        IsArrayElement(false), Desc(D) {}
 
   void dump() const { dump(llvm::errs()); }
   void dump(llvm::raw_ostream &OS) const;
@@ -194,9 +199,10 @@ public:
   QualType getType() const;
   QualType getElemQualType() const;
   SourceLocation getLocation() const;
+  SourceInfo getLoc() const;
 
-  const Decl *asDecl() const { return Source.dyn_cast<const Decl *>(); }
-  const Expr *asExpr() const { return Source.dyn_cast<const Expr *>(); }
+  const Decl *asDecl() const { return dyn_cast<const Decl *>(Source); }
+  const Expr *asExpr() const { return dyn_cast<const Expr *>(Source); }
   const DeclTy &getSource() const { return Source; }
 
   const ValueDecl *asValueDecl() const {

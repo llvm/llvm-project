@@ -645,7 +645,7 @@ static std::string getInstName(Value *Val) {
   std::string Result;
   raw_string_ostream OS(Result);
   Val->printAsOperand(OS, false);
-  return OS.str();
+  return Result;
 }
 
 void BlockGenerator::generateBeginStmtTrace(ScopStmt &Stmt, LoopToScevMapT &LTS,
@@ -785,12 +785,6 @@ void BlockGenerator::generateScalarStores(
                   DT.dominates(cast<Instruction>(Address)->getParent(),
                                Builder.GetInsertBlock())) &&
                  "Domination violation");
-
-          // The new Val might have a different type than the old Val due to
-          // ScalarEvolution looking through bitcasts.
-          Address = Builder.CreateBitOrPointerCast(
-              Address, Val->getType()->getPointerTo(
-                           Address->getType()->getPointerAddressSpace()));
 
           Builder.CreateStore(Val, Address);
         });
@@ -1006,7 +1000,7 @@ BasicBlock *RegionGenerator::repairDominance(BasicBlock *BB,
   BasicBlock *BBCopyIDom = EndBlockMap.lookup(BBIDom);
 
   if (BBCopyIDom)
-    DT.changeImmediateDominator(BBCopy, BBCopyIDom);
+    GenDT->changeImmediateDominator(BBCopy, BBCopyIDom);
 
   return StartBlockMap.lookup(BBIDom);
 }
@@ -1075,8 +1069,8 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
   // Create a dedicated entry for the region where we can reload all demoted
   // inputs.
   BasicBlock *EntryBB = R->getEntry();
-  BasicBlock *EntryBBCopy = SplitBlock(Builder.GetInsertBlock(),
-                                       &*Builder.GetInsertPoint(), &DT, &LI);
+  BasicBlock *EntryBBCopy = SplitBlock(
+      Builder.GetInsertBlock(), &*Builder.GetInsertPoint(), GenDT, GenLI);
   EntryBBCopy->setName("polly.stmt." + EntryBB->getName() + ".entry");
   Builder.SetInsertPoint(&EntryBBCopy->front());
 
@@ -1142,7 +1136,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
 
   // Now create a new dedicated region exit block and add it to the region map.
   BasicBlock *ExitBBCopy = SplitBlock(Builder.GetInsertBlock(),
-                                      &*Builder.GetInsertPoint(), &DT, &LI);
+                                      &*Builder.GetInsertPoint(), GenDT, GenLI);
   ExitBBCopy->setName("polly.stmt." + R->getExit()->getName() + ".exit");
   StartBlockMap[R->getExit()] = ExitBBCopy;
   EndBlockMap[R->getExit()] = ExitBBCopy;
@@ -1151,7 +1145,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
   assert(ExitDomBBCopy &&
          "Common exit dominator must be within region; at least the entry node "
          "must match");
-  DT.changeImmediateDominator(ExitBBCopy, ExitDomBBCopy);
+  GenDT->changeImmediateDominator(ExitBBCopy, ExitDomBBCopy);
 
   // As the block generator doesn't handle control flow we need to add the
   // region control flow by hand after all blocks have been copied.

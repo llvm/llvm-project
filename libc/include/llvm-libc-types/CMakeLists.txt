@@ -3,6 +3,7 @@ add_header(size_t HDR size_t.h)
 add_header(ssize_t HDR ssize_t.h)
 add_header(__atfork_callback_t HDR __atfork_callback_t.h)
 add_header(__bsearchcompare_t HDR __bsearchcompare_t.h)
+add_header(__lsearchcompare_t HDR __lsearchcompare_t.h)
 add_header(__call_once_func_t HDR __call_once_func_t.h)
 add_header(__exec_argv_t HDR __exec_argv_t.h)
 add_header(__exec_envp_t HDR __exec_envp_t.h)
@@ -117,9 +118,10 @@ add_header(
 add_header(wint_t HDR wint_t.h)
 add_header(sa_family_t HDR sa_family_t.h)
 add_header(socklen_t HDR socklen_t.h)
-add_header(struct_sockaddr_un HDR struct_sockaddr_un.h)
-add_header(struct_sockaddr HDR struct_sockaddr.h)
-add_header(rpc_opcodes_t HDR rpc_opcodes_t.h)
+add_header(struct_sockaddr_un HDR struct_sockaddr_un.h DEPENDS .sa_family_t)
+add_header(struct_sockaddr HDR struct_sockaddr.h DEPENDS .sa_family_t)
+add_header(struct_iovec HDR struct_iovec.h DEPENDS .size_t)
+add_header(struct_msghdr HDR struct_msghdr.h DEPENDS .size_t .socklen_t .struct_iovec)
 add_header(ACTION HDR ACTION.h)
 add_header(ENTRY HDR ENTRY.h)
 add_header(struct_hsearch_data HDR struct_hsearch_data.h)
@@ -132,6 +134,14 @@ add_header(
   DEPENDS
     libc.include.llvm-libc-macros.float_macros
 )
+add_header(
+  cfloat128
+  HDR
+    cfloat128.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float_macros
+)
+add_header(cfloat16 HDR cfloat16.h)
 add_header(fsblkcnt_t HDR fsblkcnt_t.h)
 add_header(fsfilcnt_t HDR fsfilcnt_t.h)
 add_header(
@@ -142,3 +152,6 @@ DEPENDS
   .fsblkcnt_t
   .fsfilcnt_t
 )
+add_header(locale_t HDR locale_t.h)
+add_header(struct_lconv HDR struct_lconv.h)
+add_header(stdfix-types HDR stdfix-types.h)

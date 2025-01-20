@@ -2,14 +2,18 @@ include(ExternalProject)
 
 # llvm_ExternalProject_BuildCmd(out_var target)
 #   Utility function for constructing command lines for external project targets
-function(llvm_ExternalProject_BuildCmd out_var target bin_dir)
+function(llvm_ExternalProject_BuildCmd out_var target bin_dir stamp_dir)
   cmake_parse_arguments(ARG "" "CONFIGURATION" "" ${ARGN})
   if(NOT ARG_CONFIGURATION)
     set(ARG_CONFIGURATION "$<CONFIG>")
   endif()
   if (CMAKE_GENERATOR MATCHES "Make")
     # Use special command for Makefiles to support parallelism.
-    set(${out_var} "$(MAKE)" "-C" "${bin_dir}" "${target}" PARENT_SCOPE)
+    string(JOIN "@" make_cmd "$(MAKE)" "-C" "${bin_dir}" "${target}")
+    set(file_lock_script "${LLVM_CMAKE_DIR}/FileLock.cmake")
+    set(${out_var} ${CMAKE_COMMAND} "-DLOCK_FILE_PATH=${stamp_dir}/cmake.lock"
+                                    "-DCOMMAND=${make_cmd}"
+                                    "-P" "${file_lock_script}" PARENT_SCOPE)
   else()
     set(tool_args "${LLVM_EXTERNAL_PROJECT_BUILD_TOOL_ARGS}")
     if(NOT tool_args STREQUAL "")
@@ -155,6 +159,32 @@ function(llvm_ExternalProject_Add name source_dir)
   if (ARG_FOLDER)
     set_target_properties(${name}-clear PROPERTIES FOLDER "${ARG_FOLDER}")
   endif ()
+
+  set(DEFAULT_PASSTHROUGH_VARIABLES
+    LibEdit_INCLUDE_DIRS
+    LibEdit_LIBRARIES
+    ZLIB_INCLUDE_DIR
+    ZLIB_LIBRARY
+    zstd_INCLUDE_DIR
+    zstd_LIBRARY
+    LIBXML2_LIBRARY
+    LIBXML2_INCLUDE_DIR
+    CURL_INCLUDE_DIR
+    CURL_LIBRARY
+    HTTPLIB_INCLUDE_DIR
+    HTTPLIB_HEADER_PATH
+    Python3_EXECUTABLE
+    Python3_LIBRARIES
+    Python3_INCLUDE_DIRS
+    Python3_RPATH
+    )
+  foreach(variable ${DEFAULT_PASSTHROUGH_VARIABLES})
+    get_property(is_value_set CACHE ${variable} PROPERTY VALUE SET)
+    if(${is_value_set})
+      get_property(value CACHE ${variable} PROPERTY VALUE)
+      list(APPEND CMAKE_CACHE_DEFAULT_ARGS "-D${variable}:STRING=${value}")
+    endif()
+  endforeach()
 
   # Find all variables that start with a prefix and propagate them through
   get_cmake_property(variableNames VARIABLES)
@@ -363,6 +393,7 @@ function(llvm_ExternalProject_Add name source_dir)
                -DCMAKE_EXPORT_COMPILE_COMMANDS=1
                ${cmake_args}
                ${PASSTHROUGH_VARIABLES}
+    CMAKE_CACHE_DEFAULT_ARGS ${CMAKE_CACHE_DEFAULT_ARGS}
     INSTALL_COMMAND ""
     STEP_TARGETS configure build
     BUILD_ALWAYS 1
@@ -382,7 +413,7 @@ function(llvm_ExternalProject_Add name source_dir)
     set(force_deps DEPENDS ${TOOLCHAIN_BINS})
   endif()
 
-  llvm_ExternalProject_BuildCmd(run_clean clean ${BINARY_DIR})
+  llvm_ExternalProject_BuildCmd(run_clean clean ${BINARY_DIR} ${STAMP_DIR})
   ExternalProject_Add_Step(${name} clean
     COMMAND ${run_clean}
     COMMENT "Cleaning ${name}..."
@@ -422,7 +453,7 @@ function(llvm_ExternalProject_Add name source_dir)
     else()
       set(external_target "${target}")
     endif()
-    llvm_ExternalProject_BuildCmd(build_runtime_cmd ${external_target} ${BINARY_DIR})
+    llvm_ExternalProject_BuildCmd(build_runtime_cmd ${external_target} ${BINARY_DIR} ${STAMP_DIR})
     add_custom_target(${target}
       COMMAND ${build_runtime_cmd}
       DEPENDS ${name}-configure

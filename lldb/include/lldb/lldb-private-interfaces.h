@@ -9,7 +9,6 @@
 #ifndef LLDB_LLDB_PRIVATE_INTERFACES_H
 #define LLDB_LLDB_PRIVATE_INTERFACES_H
 
-#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -30,8 +29,9 @@ typedef lldb::ABISP (*ABICreateInstance)(lldb::ProcessSP process_sp,
                                          const ArchSpec &arch);
 typedef std::unique_ptr<Architecture> (*ArchitectureCreateInstance)(
     const ArchSpec &arch);
-typedef lldb::DisassemblerSP (*DisassemblerCreateInstance)(const ArchSpec &arch,
-                                                           const char *flavor);
+typedef lldb::DisassemblerSP (*DisassemblerCreateInstance)(
+    const ArchSpec &arch, const char *flavor, const char *cpu,
+    const char *features);
 typedef DynamicLoader *(*DynamicLoaderCreateInstance)(Process *process,
                                                       bool force);
 typedef lldb::JITLoaderSP (*JITLoaderCreateInstance)(Process *process,

@@ -5,7 +5,7 @@
 // CHECK-COMPILE-ACTIONS: 2: compiler, {1}, ir
 // CHECK-COMPILE-ACTIONS: 3: backend, {2}, lto-bc
 
-// RUN: %clang -ccc-print-phases %s -flto 2> %t
+// RUN: %clang -ccc-print-phases %if target={{.*-windows-msvc.*}} %{ -fuse-ld=lld %} -flto %s 2> %t
 // RUN: FileCheck -check-prefix=CHECK-COMPILELINK-ACTIONS < %t %s
 //
 // CHECK-COMPILELINK-ACTIONS: 0: input, "{{.*}}lto.c", c
@@ -114,3 +114,9 @@
 //
 // CHECK-GISEL:         "-plugin-opt=-global-isel=1"
 // CHECK-DISABLE-GISEL: "-plugin-opt=-global-isel=0"
+
+// -flto passes -time-passes when -ftime-report is passed
+// RUN: %clang --target=x86_64-unknown-linux-gnu -### %s -flto -ftime-report 2> %t
+// RUN: FileCheck --check-prefix=CHECK-TIME-REPORT < %t %s
+
+// CHECK-TIME-REPORT: "-plugin-opt=-time-passes"

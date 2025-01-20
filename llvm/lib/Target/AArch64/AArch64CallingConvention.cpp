@@ -17,7 +17,6 @@
 #include "AArch64Subtarget.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/IR/CallingConv.h"
 using namespace llvm;
 
 static const MCPhysReg XRegList[] = {AArch64::X0, AArch64::X1, AArch64::X2,
@@ -209,10 +208,11 @@ static bool CC_AArch64_Custom_Block(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
       State.AllocateReg(Reg);
   }
 
-  const Align StackAlign =
+  const MaybeAlign StackAlign =
       State.getMachineFunction().getDataLayout().getStackAlignment();
+  assert(StackAlign && "data layout string is missing stack alignment");
   const Align MemAlign = ArgFlags.getNonZeroMemAlign();
-  Align SlotAlign = std::min(MemAlign, StackAlign);
+  Align SlotAlign = std::min(MemAlign, *StackAlign);
   if (!Subtarget.isTargetDarwin())
     SlotAlign = std::max(SlotAlign, Align(8));
 

@@ -31,7 +31,7 @@ struct _OrImpl<true> {
 template <>
 struct _OrImpl<false> {
   template <class _Res, class...>
-  using _Result = _Res;
+  using _Result _LIBCPP_NODEBUG = _Res;
 };
 
 // _Or always performs lazy evaluation of its arguments.

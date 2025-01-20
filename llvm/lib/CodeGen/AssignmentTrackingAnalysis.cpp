@@ -230,9 +230,10 @@ void FunctionVarLocs::init(FunctionVarLocsBuilder &Builder) {
     for (const DbgVariableRecord &DVR : filterDbgVars(I->getDbgRecordRange())) {
       // Even though DVR defines a variable location, VarLocsBeforeInst can
       // still be empty if that VarLoc was redundant.
-      if (!Builder.VarLocsBeforeInst.count(&DVR))
+      auto It = Builder.VarLocsBeforeInst.find(&DVR);
+      if (It == Builder.VarLocsBeforeInst.end())
         continue;
-      for (const VarLocInfo &VarLoc : Builder.VarLocsBeforeInst[&DVR])
+      for (const VarLocInfo &VarLoc : It->second)
         VarLocRecords.emplace_back(VarLoc);
     }
     for (const VarLocInfo &VarLoc : P.second)
@@ -966,7 +967,7 @@ public:
         auto &Ctx = Fn.getContext();
 
         for (auto &FragMemLoc : FragMemLocs) {
-          DIExpression *Expr = DIExpression::get(Ctx, std::nullopt);
+          DIExpression *Expr = DIExpression::get(Ctx, {});
           if (FragMemLoc.SizeInBits !=
               *Aggregates[FragMemLoc.Var].first->getSizeInBits())
             Expr = *DIExpression::createFragmentExpression(
@@ -1051,10 +1052,10 @@ public:
       OS << ", s=";
       if (Source.isNull())
         OS << "null";
-      else if (isa<DbgAssignIntrinsic *>(Source))
-        OS << Source.get<DbgAssignIntrinsic *>();
+      else if (const auto *DAI = dyn_cast<DbgAssignIntrinsic *>(Source))
+        OS << DAI;
       else
-        OS << Source.get<DbgVariableRecord *>();
+        OS << cast<DbgVariableRecord *>(Source);
       OS << ")";
     }
 
@@ -1398,7 +1399,7 @@ ArrayRef<VariableID>
 AssignmentTrackingLowering::getContainedFragments(VariableID Var) const {
   auto R = VarContains.find(Var);
   if (R == VarContains.end())
-    return std::nullopt;
+    return {};
   return R->second;
 }
 
@@ -1638,7 +1639,7 @@ void AssignmentTrackingLowering::processUntaggedInstruction(
     //
     // DIExpression: Add fragment and offset.
     DebugVariable V = FnVarLocs->getVariable(Var);
-    DIExpression *DIE = DIExpression::get(I.getContext(), std::nullopt);
+    DIExpression *DIE = DIExpression::get(I.getContext(), {});
     if (auto Frag = V.getFragment()) {
       auto R = DIExpression::createFragmentExpression(DIE, Frag->OffsetInBits,
                                                       Frag->SizeInBits);
@@ -2419,7 +2420,7 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
         // built appropriately rather than always using an empty DIExpression.
         // The assert below is a reminder.
         assert(Simple);
-        VarLoc.Expr = DIExpression::get(Fn.getContext(), std::nullopt);
+        VarLoc.Expr = DIExpression::get(Fn.getContext(), {});
         DebugVariable Var = FnVarLocs->getVariable(VarLoc.VariableID);
         FnVarLocs->addSingleLocVar(Var, VarLoc.Expr, VarLoc.DL, VarLoc.Values);
         InsertedAnyIntrinsics = true;

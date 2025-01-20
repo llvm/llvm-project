@@ -1074,18 +1074,6 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
   Args.push_back(IRB.getInt32(0));
 
   uint32_t Aux = 0;
-  bool IsInvariant =
-      (isa<LoadInst>(I) && I->getMetadata(LLVMContext::MD_invariant_load));
-  bool IsNonTemporal = I->getMetadata(LLVMContext::MD_nontemporal);
-  // Atomic loads and stores need glc, atomic read-modify-write doesn't.
-  bool IsOneWayAtomic =
-      !isa<AtomicRMWInst>(I) && Order != AtomicOrdering::NotAtomic;
-  if (IsOneWayAtomic)
-    Aux |= AMDGPU::CPol::GLC;
-  if (IsNonTemporal && !IsInvariant)
-    Aux |= AMDGPU::CPol::SLC;
-  if (isa<LoadInst>(I) && ST->getGeneration() == AMDGPUSubtarget::GFX10)
-    Aux |= (Aux & AMDGPU::CPol::GLC ? AMDGPU::CPol::DLC : 0);
   if (IsVolatile)
     Aux |= AMDGPU::CPol::VOLATILE;
   Args.push_back(IRB.getInt32(Aux));
@@ -1154,6 +1142,9 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
       break;
     case AtomicRMWInst::BAD_BINOP:
       llvm_unreachable("Not sure how we got a bad binop");
+    case AtomicRMWInst::USubCond:
+    case AtomicRMWInst::USubSat:
+      break;
     }
   }
 
@@ -1253,7 +1244,8 @@ PtrParts SplitPtrStructs::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
   auto [Rsrc, Off] = getPtrParts(Ptr);
   const DataLayout &DL = GEP.getDataLayout();
-  bool InBounds = GEP.isInBounds();
+  bool IsNUW = GEP.hasNoUnsignedWrap();
+  bool IsNUSW = GEP.hasNoUnsignedSignedWrap();
 
   // In order to call emitGEPOffset() and thus not have to reimplement it,
   // we need the GEP result to have ptr addrspace(7) type.
@@ -1277,7 +1269,7 @@ PtrParts SplitPtrStructs::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     NewOff = OffAccum;
   } else {
     NewOff = IRB.CreateAdd(Off, OffAccum, "",
-                           /*hasNUW=*/InBounds && HasNonNegativeOff,
+                           /*hasNUW=*/IsNUW || (IsNUSW && HasNonNegativeOff),
                            /*hasNSW=*/false);
   }
   copyMetadata(NewOff, &GEP);
@@ -1682,14 +1674,6 @@ static Function *moveFunctionAdaptingType(Function *OldF, FunctionType *NewTy,
     }
   }
 
-  AttributeMask PtrOnlyAttrs;
-  for (auto K :
-       {Attribute::Dereferenceable, Attribute::DereferenceableOrNull,
-        Attribute::NoAlias, Attribute::NoCapture, Attribute::NoFree,
-        Attribute::NonNull, Attribute::NullPointerIsValid, Attribute::ReadNone,
-        Attribute::ReadOnly, Attribute::WriteOnly}) {
-    PtrOnlyAttrs.addAttribute(K);
-  }
   SmallVector<AttributeSet> ArgAttrs;
   AttributeList OldAttrs = OldF->getAttributes();
 
@@ -1705,12 +1689,16 @@ static Function *moveFunctionAdaptingType(Function *OldF, FunctionType *NewTy,
     AttributeSet ArgAttr = OldAttrs.getParamAttrs(I);
     // Intrinsics get their attributes fixed later.
     if (OldArgTy != NewArgTy && !IsIntrinsic)
-      ArgAttr = ArgAttr.removeAttributes(NewF->getContext(), PtrOnlyAttrs);
+      ArgAttr = ArgAttr.removeAttributes(
+          NewF->getContext(),
+          AttributeFuncs::typeIncompatible(NewArgTy, ArgAttr));
     ArgAttrs.push_back(ArgAttr);
   }
   AttributeSet RetAttrs = OldAttrs.getRetAttrs();
   if (OldF->getReturnType() != NewF->getReturnType() && !IsIntrinsic)
-    RetAttrs = RetAttrs.removeAttributes(NewF->getContext(), PtrOnlyAttrs);
+    RetAttrs = RetAttrs.removeAttributes(
+        NewF->getContext(),
+        AttributeFuncs::typeIncompatible(NewF->getReturnType(), RetAttrs));
   NewF->setAttributes(AttributeList::get(
       NewF->getContext(), OldAttrs.getFnAttrs(), RetAttrs, ArgAttrs));
   return NewF;

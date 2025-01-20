@@ -310,8 +310,9 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
     if (J != E &&
         // Don't print if it's obvious nothing extract could be merged anyway.
         std::next(J) != E) {
-      LLVM_DEBUG(errs() << "Couldn't merge this:\n"; Optn->print(errs(), 4);
-                 errs() << "into this:\n"; (*J)->print(errs(), 4);
+      LLVM_DEBUG(errs() << "Couldn't merge this:\n";
+                 Optn->print(errs(), indent(4)); errs() << "into this:\n";
+                 (*J)->print(errs(), indent(4));
                  (*std::next(J))->printOne(errs());
                  if (std::next(J, 2) != E)(*std::next(J, 2))->printOne(errs());
                  errs() << "\n");
@@ -425,7 +426,7 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
       CheckOpcodeMatcher *COM = cast<CheckOpcodeMatcher>(OptionsToMatch[i]);
       assert(Opcodes.insert(COM->getOpcode().getEnumName()).second &&
              "Duplicate opcodes not factored?");
-      Cases.push_back(std::pair(&COM->getOpcode(), COM->takeNext()));
+      Cases.emplace_back(&COM->getOpcode(), COM->takeNext());
       delete COM;
     }
 
@@ -462,7 +463,7 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
       }
 
       Entry = Cases.size() + 1;
-      Cases.push_back(std::pair(CTMTy, MatcherWithoutCTM));
+      Cases.emplace_back(CTMTy, MatcherWithoutCTM);
     }
 
     // Make sure we recursively factor any scopes we may have created.

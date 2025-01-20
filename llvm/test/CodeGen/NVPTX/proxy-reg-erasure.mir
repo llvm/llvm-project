@@ -1,0 +1,98 @@
+# RUN: llc %s --run-pass=nvptx-proxyreg-erasure -mtriple=nvptx64 -o - | FileCheck %s
+
+--- |
+  ; ModuleID = 'third-party/llvm-project/llvm/test/CodeGen/NVPTX/proxy-reg-erasure-mir.ll'
+  source_filename = "third-party/llvm-project/llvm/test/CodeGen/NVPTX/proxy-reg-erasure-mir.ll"
+  target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
+
+  declare <4 x i32> @callee_vec_i32()
+
+  define <4 x i32> @check_vec_i32() {
+    %ret = call <4 x i32> @callee_vec_i32()
+    ret <4 x i32> %ret
+  }
+
+...
+---
+name:            check_vec_i32
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: int32regs, preferred-register: '' }
+  - { id: 1, class: int32regs, preferred-register: '' }
+  - { id: 2, class: int32regs, preferred-register: '' }
+  - { id: 3, class: int32regs, preferred-register: '' }
+  - { id: 4, class: int32regs, preferred-register: '' }
+  - { id: 5, class: int32regs, preferred-register: '' }
+  - { id: 6, class: int32regs, preferred-register: '' }
+  - { id: 7, class: int32regs, preferred-register: '' }
+  - { id: 8, class: int32regs, preferred-register: '' }
+  - { id: 9, class: int32regs, preferred-register: '' }
+  - { id: 10, class: int32regs, preferred-register: '' }
+  - { id: 11, class: int32regs, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    %0:int32regs, %1:int32regs, %2:int32regs, %3:int32regs = LoadParamMemV4I32 0
+    ; CHECK-NOT: ProxyReg
+    %4:int32regs = ProxyRegI32 killed %0
+    %5:int32regs = ProxyRegI32 killed %1
+    %6:int32regs = ProxyRegI32 killed %2
+    %7:int32regs = ProxyRegI32 killed %3
+    ; CHECK: StoreRetvalV4I32 killed %0, killed %1, killed %2, killed %3
+    StoreRetvalV4I32 killed %4, killed %5, killed %6, killed %7, 0
+
+    %8:int32regs = LoadParamMemI32 0
+    ; CHECK-NOT: ProxyReg
+    %9:int32regs = ProxyRegI32 killed %8
+    %10:int32regs = ProxyRegI32 killed %9
+    %11:int32regs = ProxyRegI32 killed %10
+    ; CHECK: StoreRetvalI32 killed %8
+    StoreRetvalI32 killed %11, 0
+    Return
+
+...

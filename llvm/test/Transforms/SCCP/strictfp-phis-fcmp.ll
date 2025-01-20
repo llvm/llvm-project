@@ -19,7 +19,7 @@ if.true:
 
 end:
   %p = phi float [ 1.0, %entry ], [ 1.0, %if.true]
-  %c = call i1 @llvm.experimental.constrained.fcmp.i1.f32(float %p, float 1.0, metadata !"ueq", metadata !"fpexcept.ignore") #0
+  %c = call i1 @llvm.experimental.constrained.fcmp.f32(float %p, float 1.0, metadata !"ueq", metadata !"fpexcept.ignore") #0
 
   ret i1 %c
 }
@@ -42,7 +42,7 @@ if.true:
 
 end:
   %p = phi float [ 1.0, %entry ], [ 1.0, %if.true]
-  %c = call i1 @llvm.experimental.constrained.fcmp.i1.f32(float %p, float 1.0, metadata !"ueq", metadata !"fpexcept.maytrap") #0
+  %c = call i1 @llvm.experimental.constrained.fcmp.f32(float %p, float 1.0, metadata !"ueq", metadata !"fpexcept.maytrap") #0
 
   ret i1 %c
 }
@@ -66,7 +66,7 @@ if.true:
 
 end:
   %p = phi float [ 1.0, %entry ], [ 1.0, %if.true]
-  %c = call i1 @llvm.experimental.constrained.fcmp.i1.f32(float %p, float 1.0, metadata !"ueq", metadata !"fpexcept.strict") #0
+  %c = call i1 @llvm.experimental.constrained.fcmp.f32(float %p, float 1.0, metadata !"ueq", metadata !"fpexcept.strict") #0
 
   ret i1 %c
 }
@@ -91,7 +91,7 @@ if.true:
 
 end:
   %p = phi float [ 1.0, %entry ], [ 2.0, %if.true]
-  %c = call i1 @llvm.experimental.constrained.fcmp.i1.f32(float %p, float 1.0, metadata !"ueq", metadata !"fpexcept.ignore") #0
+  %c = call i1 @llvm.experimental.constrained.fcmp.f32(float %p, float 1.0, metadata !"ueq", metadata !"fpexcept.ignore") #0
   ret i1 %c
 }
 
@@ -115,7 +115,7 @@ if.true:
 
 end:
   %p = phi float [ 1.0, %entry ], [ 2.0, %if.true]
-  %c = call i1 @llvm.experimental.constrained.fcmp.i1.f32(float %p, float 1.0, metadata !"ueq", metadata !"fpexcept.maytrap") #0
+  %c = call i1 @llvm.experimental.constrained.fcmp.f32(float %p, float 1.0, metadata !"ueq", metadata !"fpexcept.maytrap") #0
   ret i1 %c
 }
 
@@ -139,7 +139,7 @@ if.true:
 
 end:
   %p = phi float [ 1.0, %entry ], [ 2.0, %if.true]
-  %c = call i1 @llvm.experimental.constrained.fcmp.i1.f32(float %p, float 1.0, metadata !"ueq", metadata !"fpexcept.strict") #0
+  %c = call i1 @llvm.experimental.constrained.fcmp.f32(float %p, float 1.0, metadata !"ueq", metadata !"fpexcept.strict") #0
   ret i1 %c
 }
 
@@ -163,7 +163,7 @@ if.true:
 
 end:
   %p = phi float [ 1.0, %entry ], [ %f, %if.true]
-  %c = call i1 @llvm.experimental.constrained.fcmp.i1.f32(float %p, float 1.0, metadata !"ueq", metadata !"fpexcept.ignore") #0
+  %c = call i1 @llvm.experimental.constrained.fcmp.f32(float %p, float 1.0, metadata !"ueq", metadata !"fpexcept.ignore") #0
   ret i1 %c
 }
 
@@ -187,7 +187,7 @@ if.true:
 
 end:
   %p = phi float [ 1.0, %entry ], [ %f, %if.true]
-  %c = call i1 @llvm.experimental.constrained.fcmp.i1.f32(float %p, float 1.0, metadata !"ueq", metadata !"fpexcept.maytrap") #0
+  %c = call i1 @llvm.experimental.constrained.fcmp.f32(float %p, float 1.0, metadata !"ueq", metadata !"fpexcept.maytrap") #0
   ret i1 %c
 }
 
@@ -211,7 +211,7 @@ if.true:
 
 end:
   %p = phi float [ 1.0, %entry ], [ %f, %if.true]
-  %c = call i1 @llvm.experimental.constrained.fcmp.i1.f32(float %p, float 1.0, metadata !"ueq", metadata !"fpexcept.strict") #0
+  %c = call i1 @llvm.experimental.constrained.fcmp.f32(float %p, float 1.0, metadata !"ueq", metadata !"fpexcept.strict") #0
   ret i1 %c
 }
 
@@ -236,7 +236,7 @@ dead:
 
 end:
   %p = phi float [ 1.0, %entry ], [ 1.0, %if.true], [ %f, %dead ]
-  %c = call i1 @llvm.experimental.constrained.fcmp.i1.f32(float %p, float 1.0, metadata !"une", metadata !"fpexcept.ignore") #0
+  %c = call i1 @llvm.experimental.constrained.fcmp.f32(float %p, float 1.0, metadata !"une", metadata !"fpexcept.ignore") #0
   ret i1 %c
 }
 
@@ -261,7 +261,7 @@ dead:
 
 end:
   %p = phi float [ 1.0, %entry ], [ 1.0, %if.true], [ %f, %dead ]
-  %c = call i1 @llvm.experimental.constrained.fcmp.i1.f32(float %p, float 1.0, metadata !"une", metadata !"fpexcept.maytrap") #0
+  %c = call i1 @llvm.experimental.constrained.fcmp.f32(float %p, float 1.0, metadata !"une", metadata !"fpexcept.maytrap") #0
   ret i1 %c
 }
 
@@ -288,11 +288,11 @@ dead:
 
 end:
   %p = phi float [ 1.0, %entry ], [ 1.0, %if.true], [ %f, %dead ]
-  %c = call i1 @llvm.experimental.constrained.fcmp.i1.f32(float %p, float 1.0, metadata !"une", metadata !"fpexcept.strict") #0
+  %c = call i1 @llvm.experimental.constrained.fcmp.f32(float %p, float 1.0, metadata !"une", metadata !"fpexcept.strict") #0
   ret i1 %c
 }
 
 attributes #0 = { strictfp }
 
-declare i1 @llvm.experimental.constrained.fcmp.i1.f32(float, float, metadata, metadata)
+declare i1 @llvm.experimental.constrained.fcmp.f32(float, float, metadata, metadata)
 

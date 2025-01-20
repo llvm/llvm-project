@@ -1,3 +1,6 @@
+#ifndef __CLC_CLC_H__
+#define __CLC_CLC_H__
+
 #ifndef cl_clang_storage_class_specifiers
 #error Implementation requires cl_clang_storage_class_specifiers extension!
 #endif
@@ -286,3 +289,5 @@
 #include <clc/image/image.h>
 
 #pragma OPENCL EXTENSION all : disable
+
+#endif // __CLC_CLC_H__

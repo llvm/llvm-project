@@ -21,7 +21,7 @@ define i1 @t0_basic(i8 %x, i8 %y) {
 
 define <2 x i1> @t1_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @t1_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[Y:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[Y:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    [[R:%.*]] = icmp ule <2 x i8> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;

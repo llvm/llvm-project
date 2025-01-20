@@ -117,7 +117,7 @@ function defdByNamelist()
 end
 
 character(4) function defdByWrite()
-  write(defdByWrite) 'abcd'
+  write(defdByWrite,*) 'abcd'
 end
 
 integer function defdBySize()
@@ -147,4 +147,9 @@ function defdByAssociate()
   associate(s => defdByAssociate)
     s = 1.
   end associate
+end
+
+function defdByElementArgToImplicit() result(r)
+  real r(1)
+  call define(r(1))
 end

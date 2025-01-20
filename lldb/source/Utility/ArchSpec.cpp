@@ -60,6 +60,8 @@ static const CoreDefinition g_core_definitions[] = {
      "armv6m"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7,
      "armv7"},
+    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7a,
+     "armv7a"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7l,
      "armv7l"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv7f,
@@ -102,6 +104,8 @@ static const CoreDefinition g_core_definitions[] = {
      ArchSpec::eCore_arm_arm64, "arm64"},
     {eByteOrderLittle, 8, 4, 4, llvm::Triple::aarch64,
      ArchSpec::eCore_arm_armv8, "armv8"},
+    {eByteOrderLittle, 8, 4, 4, llvm::Triple::aarch64,
+     ArchSpec::eCore_arm_armv8a, "armv8a"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv8l,
      "armv8l"},
     {eByteOrderLittle, 8, 4, 4, llvm::Triple::aarch64,
@@ -214,6 +218,9 @@ static const CoreDefinition g_core_definitions[] = {
      ArchSpec::eCore_x86_64_x86_64, "x86_64"},
     {eByteOrderLittle, 8, 1, 15, llvm::Triple::x86_64,
      ArchSpec::eCore_x86_64_x86_64h, "x86_64h"},
+    {eByteOrderLittle, 8, 1, 15, llvm::Triple::x86_64,
+     ArchSpec::eCore_x86_64_amd64, "amd64"},
+
     {eByteOrderLittle, 4, 4, 4, llvm::Triple::hexagon,
      ArchSpec::eCore_hexagon_generic, "hexagon"},
     {eByteOrderLittle, 4, 4, 4, llvm::Triple::hexagon,
@@ -1223,6 +1230,7 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
     break;
 
   case ArchSpec::eCore_x86_64_x86_64h:
+  case ArchSpec::eCore_x86_64_amd64:
     if (!enforce_exact_match) {
       try_inverse = false;
       if (core2 == ArchSpec::eCore_x86_64_x86_64)

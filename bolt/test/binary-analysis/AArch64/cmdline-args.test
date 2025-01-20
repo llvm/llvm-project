@@ -1,0 +1,33 @@
+# This file tests error messages produced on invalid command line arguments.
+# It also checks that help messages are generated as expected.
+
+# Verify that an error message is provided if an input file is missing or incorrect
+
+RUN: not llvm-bolt-binary-analysis 2>&1 | FileCheck -check-prefix=NOFILEARG %s
+NOFILEARG:       llvm-bolt-binary-analysis: Not enough positional command line arguments specified!
+NOFILEARG-NEXT:  Must specify at least 1 positional argument: See: {{.*}}llvm-bolt-binary-analysis --help
+
+RUN: not llvm-bolt-binary-analysis non-existing-file 2>&1 | FileCheck -check-prefix=NONEXISTINGFILEARG %s
+NONEXISTINGFILEARG:       llvm-bolt-binary-analysis: 'non-existing-file': No such file or directory.
+
+RUN: not llvm-bolt-binary-analysis %p/Inputs/dummy.txt 2>&1 | FileCheck -check-prefix=NOELFFILEARG %s
+NOELFFILEARG:       llvm-bolt-binary-analysis: '{{.*}}/Inputs/dummy.txt': The file was not recognized as a valid object file.
+
+RUN: %clang %cflags %p/../../Inputs/asm_foo.s %p/../../Inputs/asm_main.c -o %t.exe
+RUN: llvm-bolt-binary-analysis %t.exe 2>&1 | FileCheck -check-prefix=VALIDELFFILEARG --allow-empty %s
+# Check that there are no BOLT-WARNING or BOLT-ERROR output lines
+VALIDELFFILEARG:     BOLT-INFO:
+VALIDELFFILEARG-NOT: BOLT-WARNING:
+VALIDELFFILEARG-NOT: BOLT-ERROR:
+
+# Check --help output
+
+RUN: llvm-bolt-binary-analysis --help 2>&1 | FileCheck -check-prefix=HELP %s
+
+HELP:       OVERVIEW: BinaryAnalysis
+HELP-EMPTY:
+HELP-NEXT:  USAGE: llvm-bolt-binary-analysis [options] <executable>
+HELP-EMPTY:
+HELP-NEXT:  OPTIONS:
+HELP-EMPTY:
+HELP-NEXT:  Generic Options:

@@ -50,7 +50,7 @@ gpu.module @test_module_0 {
     %gDimZ = gpu.grid_dim z
 
 
-    // CHECK: = nvvm.read.ptx.sreg.laneid : i32
+    // CHECK: = nvvm.read.ptx.sreg.laneid range <i32, 0, 32> : i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
     %laneId = gpu.lane_id
 
@@ -610,6 +610,13 @@ gpu.module @test_module_29 {
     // CHECK-NEXT: %[[ALLOC:.*]] = llvm.alloca %[[O]] x !llvm.struct<()> : (i64) -> !llvm.ptr
     // CHECK-NEXT: llvm.call @vprintf(%[[FORMATSTART]], %[[ALLOC]]) : (!llvm.ptr, !llvm.ptr) -> i32
     gpu.printf "Hello, world\n"
+
+    // Make sure that the same global is reused.
+    // CHECK: %[[FORMATSTR2:.*]] = llvm.mlir.addressof @[[$PRINT_GLOBAL0]] : !llvm.ptr
+    // CHECK: %[[FORMATSTART2:.*]] = llvm.getelementptr %[[FORMATSTR2]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<14 x i8>
+    // CHECK: llvm.call @vprintf(%[[FORMATSTART2]], %{{.*}}) : (!llvm.ptr, !llvm.ptr) -> i32
+    gpu.printf "Hello, world\n"
+
     gpu.return
   }
 
@@ -626,7 +633,7 @@ gpu.module @test_module_29 {
     // CHECK-NEXT: %[[EL1:.*]] = llvm.getelementptr %[[ALLOC]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i32, f64)>
     // CHECK-NEXT: llvm.store %[[EXT]], %[[EL1]] : f64, !llvm.ptr
     // CHECK-NEXT: llvm.call @vprintf(%[[FORMATSTART]], %[[ALLOC]]) : (!llvm.ptr, !llvm.ptr) -> i32
-    gpu.printf "Hello: %d\n" %arg0, %arg1 : i32, f32
+    gpu.printf "Hello: %d\n", %arg0, %arg1 : i32, f32
     gpu.return
   }
 }
@@ -699,9 +706,21 @@ gpu.module @test_module_32 {
 }
 
 gpu.module @test_module_33 {
-// CHECK-LABEL: func @kernel_with_block_size()
-// CHECK: attributes {gpu.kernel, gpu.known_block_size = array<i32: 128, 1, 1>, nvvm.kernel, nvvm.maxntid = array<i32: 128, 1, 1>}
-  gpu.func @kernel_with_block_size() kernel attributes {known_block_size = array<i32: 128, 1, 1>} {
+// CHECK-LABEL: func @kernel_with_block_size(
+// CHECK: attributes {gpu.kernel, gpu.known_block_size = array<i32: 32, 4, 2>, nvvm.kernel, nvvm.maxntid = array<i32: 32, 4, 2>}
+  gpu.func @kernel_with_block_size(%arg0: !llvm.ptr) kernel attributes {known_block_size = array<i32: 32, 4, 2>} {
+    // CHECK: = nvvm.read.ptx.sreg.tid.x range <i32, 0, 32> : i32
+    %0 = gpu.thread_id x
+    // CHECK: = nvvm.read.ptx.sreg.tid.y range <i32, 0, 4> : i32
+    %1 = gpu.thread_id y
+    // CHECK: = nvvm.read.ptx.sreg.tid.z range <i32, 0, 2> : i32
+    %2 = gpu.thread_id z
+
+    // Fake usage to prevent dead code elimination
+    %3 = arith.addi %0, %1 : index
+    %4 = arith.addi %3, %2 : index
+    %5 = arith.index_cast %4 : index to i64
+    llvm.store %5, %arg0 : i64, !llvm.ptr
     gpu.return
   }
 }
@@ -914,6 +933,68 @@ gpu.module @test_module_48 {
     %result32Fast = math.exp %arg_f32 fastmath<ninf> : f32
     // CHECK: llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
     func.return %result32, %result64, %result32Fast : f32, f64, f32
+  }
+}
+
+gpu.module @test_module_49 {
+// CHECK-LABEL: func @explicit_id_bounds()
+  func.func @explicit_id_bounds() -> (index, index, index) {
+    // CHECK: = nvvm.read.ptx.sreg.tid.x range <i32, 0, 32> : i32
+    %0 = gpu.thread_id x upper_bound 32
+    // CHECK: = nvvm.read.ptx.sreg.ntid.x range <i32, 1, 33> : i32
+    %1 = gpu.block_dim x upper_bound 32
+    // CHECK: = nvvm.read.ptx.sreg.laneid range <i32, 0, 16> : i32
+    %2 = gpu.lane_id upper_bound 16
+
+    return %0, %1, %2 : index, index, index
+  }
+}
+
+gpu.module @test_module_50 {
+// CHECK-LABEL: func @kernel_with_grid_size(
+  gpu.func @kernel_with_grid_size(%arg0: !llvm.ptr) kernel attributes {known_grid_size = array<i32: 32, 4, 2>} {
+    // CHECK: = nvvm.read.ptx.sreg.ctaid.x range <i32, 0, 32> : i32
+    %0 = gpu.block_id x
+    // CHECK: = nvvm.read.ptx.sreg.ctaid.y range <i32, 0, 4> : i32
+    %1 = gpu.block_id y
+    // CHECK: = nvvm.read.ptx.sreg.ctaid.z range <i32, 0, 2> : i32
+    %2 = gpu.block_id z
+
+    // Fake usage to prevent dead code elimination
+    %3 = arith.addi %0, %1 : index
+    %4 = arith.addi %3, %2 : index
+    %5 = arith.index_cast %4 : index to i64
+    llvm.store %5, %arg0 : i64, !llvm.ptr
+    gpu.return
+  }
+}
+
+// CHECK-LABEL: gpu.module @test_module_51
+//       CHECK:   llvm.mlir.global internal constant @[[func_name:.*]]("(unknown)\00") {addr_space = 0 : i32}
+//       CHECK:   llvm.mlir.global internal constant @[[file_name:.*]]("{{.*}}gpu-to-nvvm.mlir{{.*}}") {addr_space = 0 : i32}
+//       CHECK:   llvm.mlir.global internal constant @[[message:.*]]("assert message\00") {addr_space = 0 : i32}
+//       CHECK:   llvm.func @__assertfail(!llvm.ptr, !llvm.ptr, i32, !llvm.ptr, i64) attributes {passthrough = ["noreturn"]}
+//       CHECK:   llvm.func @test_assert(%[[cond:.*]]: i1) attributes {gpu.kernel, nvvm.kernel} {
+//       CHECK:     llvm.cond_br %[[cond]], ^[[after_block:.*]], ^[[assert_block:.*]]
+//       CHECK:   ^[[assert_block]]:
+//       CHECK:     %[[message_ptr:.*]] = llvm.mlir.addressof @[[message]] : !llvm.ptr
+//       CHECK:     %[[message_start:.*]] = llvm.getelementptr %[[message_ptr]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<15 x i8>
+//       CHECK:     %[[file_ptr:.*]] = llvm.mlir.addressof @[[file_name]] : !llvm.ptr
+//       CHECK:     %[[file_start:.*]] = llvm.getelementptr %[[file_ptr]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<{{.*}} x i8>
+//       CHECK:     %[[func_ptr:.*]] = llvm.mlir.addressof @[[func_name]] : !llvm.ptr
+//       CHECK:     %[[func_start:.*]] = llvm.getelementptr %[[func_ptr]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<{{.*}} x i8>
+//       CHECK:     %[[line_num:.*]] = llvm.mlir.constant({{.*}} : i32) : i32
+//       CHECK:     %[[ptr:.*]] = llvm.mlir.constant(1 : i64) : i64
+//       CHECK:     llvm.call @__assertfail(%[[message_start]], %[[file_start]], %[[line_num]], %[[func_start]], %[[ptr]]) : (!llvm.ptr, !llvm.ptr, i32, !llvm.ptr, i64) -> ()
+//       CHECK:     llvm.br ^[[after_block]]
+//       CHECK:   ^[[after_block]]:
+//       CHECK:     llvm.return
+//       CHECK:   }
+
+gpu.module @test_module_51 {
+  gpu.func @test_assert(%arg0: i1) kernel {
+    cf.assert %arg0, "assert message"
+    gpu.return
   }
 }
 

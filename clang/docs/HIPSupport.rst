@@ -178,7 +178,7 @@ Predefined Macros
 
 Note that some architecture specific AMDGPU macros will have default values when
 used from the HIP host compilation. Other :doc:`AMDGPU macros <AMDGPUSupport>`
-like ``__AMDGCN_WAVEFRONT_SIZE__`` will default to 64 for example.
+like ``__AMDGCN_WAVEFRONT_SIZE__`` (deprecated) will default to 64 for example.
 
 Compilation Modes
 =================

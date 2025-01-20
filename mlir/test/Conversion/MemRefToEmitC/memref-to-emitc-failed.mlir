@@ -41,14 +41,30 @@ func.func @zero_rank() {
 
 // -----
 
+func.func @zero_dim_rank_1() {
+  // expected-error@+1 {{failed to legalize operation 'memref.alloca'}}
+  %0 = memref.alloca() : memref<0xf32>
+  return
+}
+
+// -----
+
+func.func @zero_dim_rank_3() {
+  // expected-error@+1 {{failed to legalize operation 'memref.alloca'}}
+  %0 = memref.alloca() : memref<2x0x4xf32>
+  return
+}
+
+// -----
+
 // expected-error@+1 {{failed to legalize operation 'memref.global'}}
 memref.global "nested" constant @nested_global : memref<3x7xf32>
 
 // -----
 
-func.func @unsupported_type_f16() {
+func.func @unsupported_type_f128() {
   // expected-error@+1 {{failed to legalize operation 'memref.alloca'}}
-  %0 = memref.alloca() : memref<4xf16>
+  %0 = memref.alloca() : memref<4xf128>
   return
 }
 

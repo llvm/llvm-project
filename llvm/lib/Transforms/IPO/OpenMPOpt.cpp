@@ -129,7 +129,7 @@ static cl::opt<bool> PrintModuleBeforeOptimizations(
 
 static cl::opt<bool> AlwaysInlineDeviceFunctions(
     "openmp-opt-inline-device",
-    cl::desc("Inline all applicible functions on the device."), cl::Hidden,
+    cl::desc("Inline all applicable functions on the device."), cl::Hidden,
     cl::init(false));
 
 static cl::opt<bool>
@@ -286,6 +286,19 @@ struct OMPInformationCache : public InformationCache {
         OpenMPPostLink(OpenMPPostLink) {
 
     OMPBuilder.Config.IsTargetDevice = isOpenMPDevice(OMPBuilder.M);
+    const Triple T(OMPBuilder.M.getTargetTriple());
+    switch (T.getArch()) {
+    case llvm::Triple::nvptx:
+    case llvm::Triple::nvptx64:
+    case llvm::Triple::amdgcn:
+      assert(OMPBuilder.Config.IsTargetDevice &&
+             "OpenMP AMDGPU/NVPTX is only prepared to deal with device code.");
+      OMPBuilder.Config.IsGPU = true;
+      break;
+    default:
+      OMPBuilder.Config.IsGPU = false;
+      break;
+    }
     OMPBuilder.initialize();
     initializeRuntimeFunctions(M);
     initializeInternalControlVars();
@@ -1080,6 +1093,7 @@ private:
       CGStartBB->getTerminator()->setSuccessor(0, StartBB);
       assert(EndBB != nullptr && "EndBB should not be null");
       EndBB->getTerminator()->setSuccessor(0, CGEndBB);
+      return Error::success();
     };
 
     auto PrivCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP, Value &,
@@ -1088,7 +1102,7 @@ private:
       return CodeGenIP;
     };
 
-    auto FiniCB = [&](InsertPointTy CodeGenIP) {};
+    auto FiniCB = [&](InsertPointTy CodeGenIP) { return Error::success(); };
 
     /// Create a sequential execution region within a merged parallel region,
     /// encapsulated in a master construct with a barrier for synchronization.
@@ -1119,8 +1133,9 @@ private:
         CGStartBB->getTerminator()->setSuccessor(0, SeqStartBB);
         assert(SeqEndBB != nullptr && "SeqEndBB should not be null");
         SeqEndBB->getTerminator()->setSuccessor(0, CGEndBB);
+        return Error::success();
       };
-      auto FiniCB = [&](InsertPointTy CodeGenIP) {};
+      auto FiniCB = [&](InsertPointTy CodeGenIP) { return Error::success(); };
 
       // Find outputs from the sequential region to outside users and
       // broadcast their values to them.
@@ -1163,10 +1178,10 @@ private:
 
       OpenMPIRBuilder::LocationDescription Loc(
           InsertPointTy(ParentBB, ParentBB->end()), DL);
-      InsertPointTy SeqAfterIP =
-          OMPInfoCache.OMPBuilder.createMaster(Loc, BodyGenCB, FiniCB);
-
-      OMPInfoCache.OMPBuilder.createBarrier(SeqAfterIP, OMPD_parallel);
+      OpenMPIRBuilder::InsertPointTy SeqAfterIP = cantFail(
+          OMPInfoCache.OMPBuilder.createMaster(Loc, BodyGenCB, FiniCB));
+      cantFail(
+          OMPInfoCache.OMPBuilder.createBarrier(SeqAfterIP, OMPD_parallel));
 
       BranchInst::Create(SeqAfterBB, SeqAfterIP.getBlock());
 
@@ -1238,9 +1253,10 @@ private:
           OriginalFn->getEntryBlock().getFirstInsertionPt());
       // Create the merged parallel region with default proc binding, to
       // avoid overriding binding settings, and without explicit cancellation.
-      InsertPointTy AfterIP = OMPInfoCache.OMPBuilder.createParallel(
-          Loc, AllocaIP, BodyGenCB, PrivCB, FiniCB, nullptr, nullptr,
-          OMP_PROC_BIND_default, /* IsCancellable */ false);
+      OpenMPIRBuilder::InsertPointTy AfterIP =
+          cantFail(OMPInfoCache.OMPBuilder.createParallel(
+              Loc, AllocaIP, BodyGenCB, PrivCB, FiniCB, nullptr, nullptr,
+              OMP_PROC_BIND_default, /* IsCancellable */ false));
       BranchInst::Create(AfterBB, AfterIP.getBlock());
 
       // Perform the actual outlining.
@@ -1277,10 +1293,10 @@ private:
         if (CI != MergableCIs.back()) {
           // TODO: Remove barrier if the merged parallel region includes the
           // 'nowait' clause.
-          OMPInfoCache.OMPBuilder.createBarrier(
+          cantFail(OMPInfoCache.OMPBuilder.createBarrier(
               InsertPointTy(NewCI->getParent(),
                             NewCI->getNextNode()->getIterator()),
-              OMPD_parallel);
+              OMPD_parallel));
         }
 
         CI->eraseFromParent();
@@ -1516,26 +1532,12 @@ private:
     // required an RPC server. If its users were all optimized out then we can
     // safely remove it.
     // TODO: This should be somewhere more common in the future.
-    if (GlobalVariable *GV = M.getNamedGlobal("__llvm_libc_rpc_client")) {
-      if (!GV->getType()->isPointerTy())
+    if (GlobalVariable *GV = M.getNamedGlobal("__llvm_rpc_client")) {
+      if (GV->getNumUses() >= 1)
         return false;
-
-      Constant *C = GV->getInitializer();
-      if (!C)
-        return false;
-
-      // Check to see if the only user of the RPC client is the external handle.
-      GlobalVariable *Client = dyn_cast<GlobalVariable>(C->stripPointerCasts());
-      if (!Client || Client->getNumUses() > 1 ||
-          Client->user_back() != GV->getInitializer())
-        return false;
-
-      Client->replaceAllUsesWith(PoisonValue::get(Client->getType()));
-      Client->eraseFromParent();
 
       GV->replaceAllUsesWith(PoisonValue::get(GV->getType()));
       GV->eraseFromParent();
-
       return true;
     }
     return false;
@@ -2351,8 +2353,8 @@ struct AAICVTrackerFunction : public AAICVTracker {
       /// TODO: Figure out a way to avoid adding entry in
       /// ICVReplacementValuesMap
       Instruction *Entry = &F->getEntryBlock().front();
-      if (HasChanged == ChangeStatus::CHANGED && !ValuesMap.count(Entry))
-        ValuesMap.insert(std::make_pair(Entry, nullptr));
+      if (HasChanged == ChangeStatus::CHANGED)
+        ValuesMap.try_emplace(Entry);
     }
 
     return HasChanged;
@@ -3523,8 +3525,8 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
           PoisonValue::get(Int8ArrTy), CB->getName() + "_shared", nullptr,
           GlobalValue::NotThreadLocal,
           static_cast<unsigned>(AddressSpace::Shared));
-      auto *NewBuffer =
-          ConstantExpr::getPointerCast(SharedMem, Int8Ty->getPointerTo());
+      auto *NewBuffer = ConstantExpr::getPointerCast(
+          SharedMem, PointerType::getUnqual(M->getContext()));
 
       auto Remark = [&](OptimizationRemark OR) {
         return OR << "Replaced globalized variable with "

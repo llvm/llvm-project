@@ -32,6 +32,7 @@ void CollectMainFileMacros::add(const Token &MacroNameTok, const MacroInfo *MI,
   if (Loc.isInvalid() || Loc.isMacroID())
     return;
 
+  assert(isInsideMainFile(Loc, SM));
   auto Name = MacroNameTok.getIdentifierInfo()->getName();
   Out.Names.insert(Name);
   size_t Start = SM.getFileOffset(Loc);

@@ -89,7 +89,8 @@ public:
     strides.resize(rank);
 
     Location loc = op.getLoc();
-    Value stride = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    Value stride = nullptr;
+    int64_t staticStride = 1;
     for (int i = rank - 1; i >= 0; --i) {
       Value size;
       // Load dynamic sizes from the shape input, use constants for static dims.
@@ -105,9 +106,22 @@ public:
         size = rewriter.create<arith::ConstantOp>(loc, sizeAttr);
         sizes[i] = sizeAttr;
       }
-      strides[i] = stride;
-      if (i > 0)
-        stride = rewriter.create<arith::MulIOp>(loc, stride, size);
+      if (stride)
+        strides[i] = stride;
+      else
+        strides[i] = rewriter.getIndexAttr(staticStride);
+
+      if (i > 0) {
+        if (stride) {
+          stride = rewriter.create<arith::MulIOp>(loc, stride, size);
+        } else if (op.getType().isDynamicDim(i)) {
+          stride = rewriter.create<arith::MulIOp>(
+              loc, rewriter.create<arith::ConstantIndexOp>(loc, staticStride),
+              size);
+        } else {
+          staticStride *= op.getType().getDimSize(i);
+        }
+      }
     }
     rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
         op, op.getType(), op.getSource(), /*offset=*/rewriter.getIndexAttr(0),

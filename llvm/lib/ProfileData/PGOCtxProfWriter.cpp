@@ -12,6 +12,11 @@
 
 #include "llvm/ProfileData/PGOCtxProfWriter.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
+#include "llvm/ProfileData/CtxInstrContextNode.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::ctx_profile;
@@ -45,7 +50,7 @@ PGOCtxProfileWriter::PGOCtxProfileWriter(
   }
   Writer.ExitBlock();
   Writer.EnterSubblock(PGOCtxProfileBlockIDs::ProfileMetadataBlockID, CodeLen);
-  const auto Version = VersionOverride ? *VersionOverride : CurrentVersion;
+  const auto Version = VersionOverride.value_or(CurrentVersion);
   Writer.EmitRecord(PGOCtxProfileRecords::Version,
                     SmallVector<unsigned, 1>({Version}));
 }
@@ -80,4 +85,82 @@ void PGOCtxProfileWriter::writeImpl(std::optional<uint32_t> CallerIndex,
 
 void PGOCtxProfileWriter::write(const ContextNode &RootNode) {
   writeImpl(std::nullopt, RootNode);
+}
+
+namespace {
+
+/// Representation of the context node suitable for yaml serialization /
+/// deserialization.
+struct SerializableCtxRepresentation {
+  ctx_profile::GUID Guid = 0;
+  std::vector<uint64_t> Counters;
+  std::vector<std::vector<SerializableCtxRepresentation>> Callsites;
+};
+
+ctx_profile::ContextNode *
+createNode(std::vector<std::unique_ptr<char[]>> &Nodes,
+           const std::vector<SerializableCtxRepresentation> &DCList);
+
+// Convert a DeserializableCtx into a ContextNode, potentially linking it to
+// its sibling (e.g. callee at same callsite) "Next".
+ctx_profile::ContextNode *
+createNode(std::vector<std::unique_ptr<char[]>> &Nodes,
+           const SerializableCtxRepresentation &DC,
+           ctx_profile::ContextNode *Next = nullptr) {
+  auto AllocSize = ctx_profile::ContextNode::getAllocSize(DC.Counters.size(),
+                                                          DC.Callsites.size());
+  auto *Mem = Nodes.emplace_back(std::make_unique<char[]>(AllocSize)).get();
+  std::memset(Mem, 0, AllocSize);
+  auto *Ret = new (Mem) ctx_profile::ContextNode(DC.Guid, DC.Counters.size(),
+                                                 DC.Callsites.size(), Next);
+  std::memcpy(Ret->counters(), DC.Counters.data(),
+              sizeof(uint64_t) * DC.Counters.size());
+  for (const auto &[I, DCList] : llvm::enumerate(DC.Callsites))
+    Ret->subContexts()[I] = createNode(Nodes, DCList);
+  return Ret;
+}
+
+// Convert a list of SerializableCtxRepresentation into a linked list of
+// ContextNodes.
+ctx_profile::ContextNode *
+createNode(std::vector<std::unique_ptr<char[]>> &Nodes,
+           const std::vector<SerializableCtxRepresentation> &DCList) {
+  ctx_profile::ContextNode *List = nullptr;
+  for (const auto &DC : DCList)
+    List = createNode(Nodes, DC, List);
+  return List;
+}
+} // namespace
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(SerializableCtxRepresentation)
+LLVM_YAML_IS_SEQUENCE_VECTOR(std::vector<SerializableCtxRepresentation>)
+template <> struct yaml::MappingTraits<SerializableCtxRepresentation> {
+  static void mapping(yaml::IO &IO, SerializableCtxRepresentation &SCR) {
+    IO.mapRequired("Guid", SCR.Guid);
+    IO.mapRequired("Counters", SCR.Counters);
+    IO.mapOptional("Callsites", SCR.Callsites);
+  }
+};
+
+Error llvm::createCtxProfFromYAML(StringRef Profile, raw_ostream &Out) {
+  yaml::Input In(Profile);
+  std::vector<SerializableCtxRepresentation> DCList;
+  In >> DCList;
+  if (In.error())
+    return createStringError(In.error(), "incorrect yaml content");
+  std::vector<std::unique_ptr<char[]>> Nodes;
+  std::error_code EC;
+  if (EC)
+    return createStringError(EC, "failed to open output");
+  PGOCtxProfileWriter Writer(Out);
+  for (const auto &DC : DCList) {
+    auto *TopList = createNode(Nodes, DC);
+    if (!TopList)
+      return createStringError(
+          "Unexpected error converting internal structure to ctx profile");
+    Writer.write(*TopList);
+  }
+  if (EC)
+    return createStringError(EC, "failed to write output");
+  return Error::success();
 }

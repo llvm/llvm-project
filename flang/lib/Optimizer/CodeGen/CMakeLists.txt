@@ -21,21 +21,25 @@ add_flang_library(FIRCodeGen
   FIRDialect
   FIRDialectSupport
   FIRSupport
-  MLIRComplexToLLVM
-  MLIRComplexToStandard
-  MLIRMathToFuncs
-  MLIRMathToLLVM
-  MLIRMathToLibm
-  MLIROpenMPToLLVM
-  MLIROpenACCDialect
-  MLIRBuiltinToLLVMIRTranslation
-  MLIRLLVMToLLVMIRTranslation
-  MLIRTargetLLVMIRExport
-  MLIRVectorToLLVM
 
   LINK_COMPONENTS
   AsmParser
   AsmPrinter
   Remarks
   TargetParser
+
+  MLIR_LIBS
+  MLIRComplexToLLVM
+  MLIRComplexToStandard
+  MLIRGPUDialect
+  MLIRMathToFuncs
+  MLIRMathToLLVM
+  MLIRMathToLibm
+  MLIRMathToROCDL
+  MLIROpenMPToLLVM
+  MLIROpenACCDialect
+  MLIRBuiltinToLLVMIRTranslation
+  MLIRLLVMToLLVMIRTranslation
+  MLIRTargetLLVMIRExport
+  MLIRVectorToLLVM
 )

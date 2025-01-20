@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
@@ -233,9 +234,10 @@ LogicalResult WMMAOp::verify() {
   Type sourceAElemType = sourceVectorAType.getElementType();
   Type destElemType = destVectorType.getElementType();
 
-  bool isDestFloat =
-      (destElemType.isF32() || destElemType.isF16() || destElemType.isBF16());
-  bool isSrcFloat = (sourceAElemType.isF16() || sourceAElemType.isBF16());
+  bool isDestFloat = isa<Float32Type, Float16Type, BFloat16Type>(destElemType);
+  bool isSrcFloat =
+      isa<Float16Type, BFloat16Type, Float8E4M3FNType, Float8E5M2Type>(
+          sourceAElemType);
 
   if (isDestFloat && !isSrcFloat) {
     return emitOpError("Expected float sources with float destination");
@@ -270,14 +272,14 @@ LogicalResult MFMAOp::verify() {
   }
 
   Type sourceBType = getSourceB().getType();
-  if (sourceElem.isFloat8E5M2FNUZ() || sourceElem.isFloat8E4M3FNUZ()) {
+  if (isa<Float8E5M2FNUZType, Float8E4M3FNUZType>(sourceElem)) {
     int64_t sourceBLen = 1;
     Type sourceBElem = sourceBType;
     if (auto sourceBVector = llvm::dyn_cast<VectorType>(sourceBType)) {
       sourceBLen = sourceBVector.getNumElements();
       sourceBElem = sourceBVector.getElementType();
     }
-    if (!sourceBElem.isFloat8E5M2FNUZ() && !sourceBElem.isFloat8E4M3FNUZ())
+    if (!isa<Float8E5M2FNUZType, Float8E4M3FNUZType>(sourceBElem))
       return emitOpError("expected both source operands to have f8 elements");
     if (sourceLen != sourceBLen)
       return emitOpError(
@@ -347,7 +349,7 @@ LogicalResult DPPOp::verify() {
       return emitOpError("quad_perm attribute must have exactly 4 elements");
     }
     for (auto elem : quadPermAttr.getAsRange<IntegerAttr>()) {
-      uint32_t num = elem.getInt();
+      int32_t num = elem.getInt();
       if (num < 0 || num > 3) {
         return emitOpError(
             "Each element of quad_perm must be in the range [0, 3]");

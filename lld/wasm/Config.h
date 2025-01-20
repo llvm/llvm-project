@@ -12,6 +12,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Support/CachePruning.h"
 #include <optional>
@@ -42,7 +43,8 @@ enum class BuildIdKind { None, Fast, Sha1, Hexstring, Uuid };
 // Most fields are direct mapping from the command line options
 // and such fields have the same name as the corresponding options.
 // Most fields are initialized by the driver.
-struct Configuration {
+struct Config {
+  bool allowMultipleDefinition;
   bool bsymbolic;
   bool checkFeatures;
   bool compressRelocations;
@@ -64,6 +66,7 @@ struct Configuration {
   bool importUndefined;
   std::optional<bool> is64;
   bool mergeDataSegments;
+  bool noinhibitExec;
   bool pie;
   bool printGcSections;
   bool relocatable;
@@ -76,6 +79,9 @@ struct Configuration {
   // Because dyamanic linking under Wasm is still experimental we default to
   // static linking
   bool isStatic = true;
+  bool thinLTOEmitImportsFiles;
+  bool thinLTOEmitIndexFiles;
+  bool thinLTOIndexOnly;
   bool trace;
   uint64_t globalBase;
   uint64_t initialHeap;
@@ -92,16 +98,22 @@ struct Configuration {
   unsigned ltoo;
   llvm::CodeGenOptLevel ltoCgo;
   unsigned optimize;
-  llvm::StringRef thinLTOJobs;
   bool ltoDebugPassManager;
   UnresolvedPolicy unresolvedSymbols;
   BuildIdKind buildId = BuildIdKind::None;
 
   llvm::StringRef entry;
+  llvm::StringRef ltoObjPath;
   llvm::StringRef mapFile;
   llvm::StringRef outputFile;
   llvm::StringRef soName;
   llvm::StringRef thinLTOCacheDir;
+  llvm::StringRef thinLTOJobs;
+  llvm::StringRef thinLTOIndexOnlyArg;
+  std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
+  llvm::StringRef thinLTOPrefixReplaceOld;
+  llvm::StringRef thinLTOPrefixReplaceNew;
+  llvm::StringRef thinLTOPrefixReplaceNativeObject;
   llvm::StringRef whyExtract;
 
   llvm::StringSet<> allowUndefinedSymbols;
@@ -114,15 +126,15 @@ struct Configuration {
   llvm::SmallVector<uint8_t, 0> buildIdVector;
 };
 
-// The only instance of Configuration struct.
-extern Configuration *config;
-
 // The Ctx object hold all other (non-configuration) global state.
 struct Ctx {
+  Config arg;
+
   llvm::SmallVector<ObjFile *, 0> objectFiles;
   llvm::SmallVector<StubFile *, 0> stubFiles;
   llvm::SmallVector<SharedFile *, 0> sharedFiles;
   llvm::SmallVector<BitcodeFile *, 0> bitcodeFiles;
+  llvm::SmallVector<BitcodeFile *, 0> lazyBitcodeFiles;
   llvm::SmallVector<InputFunction *, 0> syntheticFunctions;
   llvm::SmallVector<InputGlobal *, 0> syntheticGlobals;
   llvm::SmallVector<InputTable *, 0> syntheticTables;
@@ -143,10 +155,13 @@ struct Ctx {
                     0>
       whyExtractRecords;
 
+  Ctx();
   void reset();
 };
 
 extern Ctx ctx;
+
+void errorOrWarn(const llvm::Twine &msg);
 
 } // namespace lld::wasm
 

@@ -17,6 +17,7 @@
 #include "lldb/Interpreter/OptionValueDictionary.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
@@ -481,7 +482,7 @@ bool ObjectFilePECOFF::SetLoadAddress(Target &target, addr_t value,
         // that have SHF_ALLOC in their flag bits.
         SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
         if (section_sp && !section_sp->IsThreadSpecific()) {
-          if (target.GetSectionLoadList().SetSectionLoadAddress(
+          if (target.SetSectionLoadAddress(
                   section_sp, section_sp->GetFileAddress() + value))
             ++num_loaded_sections;
         }
@@ -1009,6 +1010,8 @@ SectionType ObjectFilePECOFF::GetSectionType(llvm::StringRef sect_name,
           // .eh_frame can be truncated to 8 chars.
           .Cases(".eh_frame", ".eh_fram", eSectionTypeEHFrame)
           .Case(".gosymtab", eSectionTypeGoSymtab)
+          .Case(".lldbsummaries", lldb::eSectionTypeLLDBTypeSummaries)
+          .Case(".lldbformatters", lldb::eSectionTypeLLDBFormatters)
           .Case("swiftast", eSectionTypeSwiftModules)
           .Default(eSectionTypeInvalid);
   if (section_type != eSectionTypeInvalid)

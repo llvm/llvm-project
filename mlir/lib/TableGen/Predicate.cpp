@@ -20,15 +20,18 @@
 
 using namespace mlir;
 using namespace tblgen;
+using llvm::Init;
+using llvm::Record;
+using llvm::SpecificBumpPtrAllocator;
 
 // Construct a Predicate from a record.
-Pred::Pred(const llvm::Record *record) : def(record) {
+Pred::Pred(const Record *record) : def(record) {
   assert(def->isSubClassOf("Pred") &&
          "must be a subclass of TableGen 'Pred' class");
 }
 
 // Construct a Predicate from an initializer.
-Pred::Pred(const llvm::Init *init) {
+Pred::Pred(const Init *init) {
   if (const auto *defInit = dyn_cast_or_null<llvm::DefInit>(init))
     def = defInit->getDef();
 }
@@ -48,12 +51,12 @@ bool Pred::isCombined() const {
 
 ArrayRef<SMLoc> Pred::getLoc() const { return def->getLoc(); }
 
-CPred::CPred(const llvm::Record *record) : Pred(record) {
+CPred::CPred(const Record *record) : Pred(record) {
   assert(def->isSubClassOf("CPred") &&
          "must be a subclass of Tablegen 'CPred' class");
 }
 
-CPred::CPred(const llvm::Init *init) : Pred(init) {
+CPred::CPred(const Init *init) : Pred(init) {
   assert((!def || def->isSubClassOf("CPred")) &&
          "must be a subclass of Tablegen 'CPred' class");
 }
@@ -64,22 +67,22 @@ std::string CPred::getConditionImpl() const {
   return std::string(def->getValueAsString("predExpr"));
 }
 
-CombinedPred::CombinedPred(const llvm::Record *record) : Pred(record) {
+CombinedPred::CombinedPred(const Record *record) : Pred(record) {
   assert(def->isSubClassOf("CombinedPred") &&
          "must be a subclass of Tablegen 'CombinedPred' class");
 }
 
-CombinedPred::CombinedPred(const llvm::Init *init) : Pred(init) {
+CombinedPred::CombinedPred(const Init *init) : Pred(init) {
   assert((!def || def->isSubClassOf("CombinedPred")) &&
          "must be a subclass of Tablegen 'CombinedPred' class");
 }
 
-const llvm::Record *CombinedPred::getCombinerDef() const {
+const Record *CombinedPred::getCombinerDef() const {
   assert(def->getValue("kind") && "CombinedPred must have a value 'kind'");
   return def->getValueAsDef("kind");
 }
 
-std::vector<llvm::Record *> CombinedPred::getChildren() const {
+std::vector<const Record *> CombinedPred::getChildren() const {
   assert(def->getValue("children") &&
          "CombinedPred must have a value 'children'");
   return def->getValueAsListOfDefs("children");
@@ -156,7 +159,7 @@ static void performSubstitutions(std::string &str,
 // All nodes are created within "allocator".
 static PredNode *
 buildPredicateTree(const Pred &root,
-                   llvm::SpecificBumpPtrAllocator<PredNode> &allocator,
+                   SpecificBumpPtrAllocator<PredNode> &allocator,
                    ArrayRef<Subst> substitutions) {
   auto *rootNode = allocator.Allocate();
   new (rootNode) PredNode;
@@ -232,6 +235,16 @@ propagateGroundTruth(PredNode *node,
     return node;
   }
 
+  if (node->kind == PredCombinerKind::And && node->children.empty()) {
+    node->kind = PredCombinerKind::True;
+    return node;
+  }
+
+  if (node->kind == PredCombinerKind::Or && node->children.empty()) {
+    node->kind = PredCombinerKind::False;
+    return node;
+  }
+
   // Otherwise, look at child nodes.
 
   // Move child nodes into some local variable so that they can be optimized
@@ -301,7 +314,7 @@ static std::string combineBinary(ArrayRef<std::string> children,
   for (unsigned i = 1; i < size; ++i) {
     os << ' ' << combiner << " (" << children[i] << ')';
   }
-  return os.str();
+  return str;
 }
 
 // Prepend negation to the only condition in the predicate expression list.
@@ -351,7 +364,7 @@ static std::string getCombinedCondition(const PredNode &root) {
 }
 
 std::string CombinedPred::getConditionImpl() const {
-  llvm::SpecificBumpPtrAllocator<PredNode> allocator;
+  SpecificBumpPtrAllocator<PredNode> allocator;
   auto *predicateTree = buildPredicateTree(*this, allocator, {});
   predicateTree =
       propagateGroundTruth(predicateTree,

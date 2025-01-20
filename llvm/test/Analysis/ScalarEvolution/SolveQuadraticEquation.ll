@@ -42,7 +42,7 @@ return:         ; preds = %bb5
 ; PR10383
 ; These next two used to crash.
 
-define void @test2(i1 %cmp, i64 %n) {
+define void @test2(i1 %cmp, i64 %n, i1 %arg) {
 ; CHECK-LABEL: 'test2'
 ; CHECK-NEXT:  Determining loop execution counts for: @test2
 ; CHECK-NEXT:  Loop %for.body2: Unpredictable backedge-taken count.
@@ -69,13 +69,13 @@ for.body2:
   %tmp114 = mul i64 %a0.08, %indvar
   %mul542 = mul i64 %tmp114, %tmp111
   %indvar.next = add i64 %indvar, 1
-  br i1 undef, label %end, label %for.body2
+  br i1 %arg, label %end, label %for.body2
 
 end:
   ret void
 }
 
-define i32 @test3() {
+define i32 @test3(i1 %arg) {
 ; CHECK-LABEL: 'test3'
 ; CHECK-NEXT:  Determining loop execution counts for: @test3
 ; CHECK-NEXT:  Loop %for.inc479: Unpredictable backedge-taken count.
@@ -83,7 +83,7 @@ define i32 @test3() {
 ; CHECK-NEXT:  Loop %for.inc479: Unpredictable symbolic max backedge-taken count.
 ;
 if.then466:
-  br i1 undef, label %for.cond539.preheader, label %for.inc479
+  br i1 %arg, label %for.cond539.preheader, label %for.inc479
 
 for.inc479:
   %a2.07 = phi i32 [ %add495, %for.inc479 ], [ 0, %if.then466 ]
@@ -93,7 +93,7 @@ for.inc479:
   %mul493 = mul i32 %mul491, %mul484
   %add495 = add nsw i32 %mul493, %a2.07
   %inc497 = add nsw i32 %j.36, 1
-  br i1 undef, label %for.cond539.preheader, label %for.inc479
+  br i1 %arg, label %for.cond539.preheader, label %for.inc479
 
 for.cond539.preheader:
   unreachable

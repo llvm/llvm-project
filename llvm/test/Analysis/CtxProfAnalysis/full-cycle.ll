@@ -8,7 +8,7 @@
 ; different counter values, and we expect resulting flat profile to be the sum
 ; (of values at the same index).
 ;
-; RUN: llvm-ctxprof-util fromJSON --input=%t/profile.json --output=%t/profile.ctxprofdata
+; RUN: llvm-ctxprof-util fromYAML --input=%t/profile.yaml --output=%t/profile.ctxprofdata
 ;
 ; RUN: opt -module-summary -passes='thinlto-pre-link<O2>' -use-ctx-profile=%t/profile.ctxprofdata -o %t/m1.bc %t/m1.ll
 ; RUN: opt -module-summary -passes='thinlto-pre-link<O2>' -use-ctx-profile=%t/profile.ctxprofdata -o %t/m2.bc %t/m2.ll
@@ -24,7 +24,7 @@
 ; RUN:  -r %t/m2.bc,f1 \
 ; RUN:  -r %t/m2.bc,f3 \
 ; RUN:  -r %t/m2.bc,entrypoint,plx
-; RUN: opt --passes='function-import,require<ctx-prof-analysis>,print<ctx-prof-analysis>' \
+; RUN: opt --passes='function-import,require<ctx-prof-analysis>,print<ctx-prof-analysis>' -ctx-profile-printer-level=everything \
 ; RUN:  -summary-file=%t/m2.bc.thinlto.bc -use-ctx-profile=%t/profile.ctxprofdata %t/m2.bc \
 ; RUN:  -S -o %t/m2.post.ll 2> %t/profile.txt
 ; RUN: diff %t/expected.txt %t/profile.txt
@@ -65,114 +65,46 @@ define void @entrypoint() {
   call void @f3()
   ret void
 }
-;--- profile.json
-[
-  {
-    "Callsites": [
-      [
-        {
-          "Callsites": [
-            [
-              {
-                "Counters": [
-                  10,
-                  7
-                ],
-                "Guid": 3087265239403591524
-              }
-            ]
-          ],
-          "Counters": [
-            7
-          ],
-          "Guid": 2072045998141807037
-        }
-      ],
-      [
-        {
-          "Callsites": [
-            [
-              {
-                "Counters": [
-                  1,
-                  2
-                ],
-                "Guid": 3087265239403591524
-              }
-            ]
-          ],
-          "Counters": [
-            2
-          ],
-          "Guid": 4197650231481825559
-        }
-      ]
-    ],
-    "Counters": [
-      1
-    ],
-    "Guid": 10507721908651011566
-  }
-]
+;--- profile.yaml
+- Guid: 10507721908651011566
+  Counters: [1]
+  Callsites:  -
+                - Guid:  2072045998141807037
+                  Counters: [7]
+                  Callsites:  -
+                                - Guid: 3087265239403591524
+                                  Counters: [10, 7]
+              -
+                - Guid: 4197650231481825559
+                  Counters: [2]
+                  Callsites:  -
+                                - Guid: 3087265239403591524
+                                  Counters: [1, 2]
 ;--- expected.txt
 Function Info:
-10507721908651011566 : entrypoint. MaxCounterID: 1. MaxCallsiteID: 2
+2072045998141807037 : f1. MaxCounterID: 1. MaxCallsiteID: 1
 3087265239403591524 : f2.llvm.0. MaxCounterID: 1. MaxCallsiteID: 0
 4197650231481825559 : f3. MaxCounterID: 1. MaxCallsiteID: 1
-2072045998141807037 : f1. MaxCounterID: 1. MaxCallsiteID: 1
+10507721908651011566 : entrypoint. MaxCounterID: 1. MaxCallsiteID: 2
 
 Current Profile:
-[
-  {
-    "Callsites": [
-      [
-        {
-          "Callsites": [
-            [
-              {
-                "Counters": [
-                  10,
-                  7
-                ],
-                "Guid": 3087265239403591524
-              }
-            ]
-          ],
-          "Counters": [
-            7
-          ],
-          "Guid": 2072045998141807037
-        }
-      ],
-      [
-        {
-          "Callsites": [
-            [
-              {
-                "Counters": [
-                  1,
-                  2
-                ],
-                "Guid": 3087265239403591524
-              }
-            ]
-          ],
-          "Counters": [
-            2
-          ],
-          "Guid": 4197650231481825559
-        }
-      ]
-    ],
-    "Counters": [
-      1
-    ],
-    "Guid": 10507721908651011566
-  }
-]
+
+- Guid:            10507721908651011566
+  Counters:        [ 1 ]
+  Callsites:
+    - - Guid:            2072045998141807037
+        Counters:        [ 7 ]
+        Callsites:
+          - - Guid:            3087265239403591524
+              Counters:        [ 10, 7 ]
+    - - Guid:            4197650231481825559
+        Counters:        [ 2 ]
+        Callsites:
+          - - Guid:            3087265239403591524
+              Counters:        [ 1, 2 ]
 
 Flat Profile:
-10507721908651011566 : 1 
+2072045998141807037 : 7 
 3087265239403591524 : 11 9 
 4197650231481825559 : 2 
-2072045998141807037 : 7 
+10507721908651011566 : 1 

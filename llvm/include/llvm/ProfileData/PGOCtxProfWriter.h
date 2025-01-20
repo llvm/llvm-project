@@ -81,5 +81,6 @@ public:
   static constexpr StringRef ContainerMagic = "CTXP";
 };
 
+Error createCtxProfFromYAML(StringRef Profile, raw_ostream &Out);
 } // namespace llvm
 #endif

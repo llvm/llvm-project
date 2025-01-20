@@ -46,6 +46,10 @@ sdkroot = None
 make_path = None
 
 # The overriden dwarf verison.
+# Don't use this to test the current compiler's
+# DWARF version, as this won't be set if the
+# version isn't overridden.
+# Use lldbplatformutils.getDwarfVersion() instead.
 dwarf_version = 0
 
 # Any overridden settings.
@@ -117,6 +121,9 @@ test_result = None
 # The names of all tests. Used to assert we don't have two tests with the
 # same base name.
 all_tests = set()
+
+# Path to LLVM tools to be used by tests.
+llvm_tools_dir = None
 
 # LLDB library directory.
 lldb_libs_dir = None

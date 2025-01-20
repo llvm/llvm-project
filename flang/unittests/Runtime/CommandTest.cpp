@@ -340,7 +340,7 @@ TEST_F(ZeroArguments, ECLValidCommandStatusSetSync) {
 }
 
 TEST_F(ZeroArguments, ECLGeneralErrorCommandErrorSync) {
-  OwningPtr<Descriptor> command{CharDescriptor("cat GeneralErrorCommand")};
+  OwningPtr<Descriptor> command{CharDescriptor(NOT_EXE)};
   bool wait{true};
   OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
   OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
@@ -348,12 +348,11 @@ TEST_F(ZeroArguments, ECLGeneralErrorCommandErrorSync) {
 
   RTNAME(ExecuteCommandLine)
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
-#ifdef _WIN32
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
+#if defined(_WIN32)
   CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 6);
   CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXXXXXXXX");
 #else
-  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
   CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 3);
   CheckDescriptorEqStr(cmdMsg.get(), "Command line execution failed");
 #endif

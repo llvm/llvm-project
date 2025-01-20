@@ -152,11 +152,11 @@ vector.body85:                                    ; preds = %vector.body85, %for
   %1 = getelementptr inbounds [512 x [4 x i32]], ptr @b, i16 0, i16 %0, i16 %j.165
   %2 = load i32, ptr %1, align 1
   %index.next87 = add nuw i16 %index86, 4
-  br i1 undef, label %middle.block80, label %vector.body85
+  br i1 true, label %middle.block80, label %vector.body85
 
 middle.block80:                                   ; preds = %vector.body85
   %inc66 = add nuw nsw i16 %j.165, 1
-  br i1 undef, label %for.inc68, label %for.cond37.preheader
+  br i1 true, label %for.inc68, label %for.cond37.preheader
 
 for.inc68:                                        ; preds = %middle.block80
   %inc69 = add nuw nsw i16 %i.166, 1

@@ -232,8 +232,8 @@ void IoChecker::Enter(const parser::Format &spec) {
               if (!IsVariable(*expr)) {
                 context_.Say(format.source,
                     "Assigned format label must be a scalar variable"_err_en_US);
-              } else if (context_.ShouldWarn(common::LanguageFeature::Assign)) {
-                context_.Say(format.source,
+              } else {
+                context_.Warn(common::LanguageFeature::Assign, format.source,
                     "Assigned format labels are deprecated"_port_en_US);
               }
               return;
@@ -245,11 +245,9 @@ void IoChecker::Enter(const parser::Format &spec) {
                     common::LanguageFeature::NonCharacterFormat)) {
               // Legacy extension: using non-character variables, typically
               // DATA-initialized with Hollerith, as format expressions.
-              if (context_.ShouldWarn(
-                      common::LanguageFeature::NonCharacterFormat)) {
-                context_.Say(format.source,
-                    "Non-character format expression is not standard"_port_en_US);
-              }
+              context_.Warn(common::LanguageFeature::NonCharacterFormat,
+                  format.source,
+                  "Non-character format expression is not standard"_port_en_US);
             } else if (!type ||
                 type->kind() !=
                     context_.defaultKinds().GetDefaultKind(type->category())) {
@@ -862,6 +860,8 @@ void IoChecker::Leave(const parser::WriteStmt &writeStmt) {
 
 void IoChecker::LeaveReadWrite() const {
   CheckForRequiredSpecifier(IoSpecKind::Unit); // C1211
+  CheckForRequiredSpecifier(flags_.test(Flag::InternalUnit),
+      "UNIT=internal-file", flags_.test(Flag::FmtOrNml), "FMT or NML");
   CheckForProhibitedSpecifier(IoSpecKind::Nml, IoSpecKind::Rec); // C1216
   CheckForProhibitedSpecifier(IoSpecKind::Nml, IoSpecKind::Fmt); // C1216
   CheckForProhibitedSpecifier(
@@ -936,11 +936,8 @@ void IoChecker::CheckStringValue(IoSpecKind specKind, const std::string &value,
   auto upper{Normalize(value)};
   if (specValues.at(specKind).count(upper) == 0) {
     if (specKind == IoSpecKind::Access && upper == "APPEND") {
-      if (context_.ShouldWarn(common::LanguageFeature::OpenAccessAppend)) {
-        context_.Say(source,
-            "ACCESS='%s' interpreted as POSITION='%s'"_port_en_US, value,
-            upper);
-      }
+      context_.Warn(common::LanguageFeature::OpenAccessAppend, source,
+          "ACCESS='%s' interpreted as POSITION='%s'"_port_en_US, value, upper);
     } else {
       context_.Say(source, "Invalid %s value '%s'"_err_en_US,
           parser::ToUpperCaseLetters(common::EnumToString(specKind)), value);
@@ -1170,6 +1167,12 @@ parser::Message *IoChecker::CheckForBadIoType(const evaluate::DynamicType &type,
         return &context_.Say(where,
             "Derived type '%s' in I/O may not be polymorphic unless using defined I/O"_err_en_US,
             derived.name());
+      }
+      if ((IsBuiltinDerivedType(&derived, "c_ptr") ||
+              IsBuiltinDerivedType(&derived, "c_devptr")) &&
+          !context_.ShouldWarn(common::LanguageFeature::PrintCptr)) {
+        // Bypass the check below for c_ptr and c_devptr.
+        return nullptr;
       }
       if (const Symbol *
           bad{FindInaccessibleComponent(which, derived, scope)}) {

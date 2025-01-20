@@ -20,9 +20,6 @@
 
 #include "NVPTX.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 using namespace llvm;
@@ -34,7 +31,6 @@ void initializeNVPTXProxyRegErasurePass(PassRegistry &);
 namespace {
 
 struct NVPTXProxyRegErasure : public MachineFunctionPass {
-public:
   static char ID;
   NVPTXProxyRegErasure() : MachineFunctionPass(ID) {
     initializeNVPTXProxyRegErasurePass(*PassRegistry::getPassRegistry());
@@ -49,22 +45,21 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     MachineFunctionPass::getAnalysisUsage(AU);
   }
-
-private:
-  void replaceMachineInstructionUsage(MachineFunction &MF, MachineInstr &MI);
-
-  void replaceRegisterUsage(MachineInstr &Instr, MachineOperand &From,
-                            MachineOperand &To);
 };
 
 } // namespace
 
 char NVPTXProxyRegErasure::ID = 0;
 
-INITIALIZE_PASS(NVPTXProxyRegErasure, "nvptx-proxyreg-erasure", "NVPTX ProxyReg Erasure", false, false)
+INITIALIZE_PASS(NVPTXProxyRegErasure, "nvptx-proxyreg-erasure",
+                "NVPTX ProxyReg Erasure", false, false)
 
 bool NVPTXProxyRegErasure::runOnMachineFunction(MachineFunction &MF) {
   SmallVector<MachineInstr *, 16> RemoveList;
+
+  // ProxyReg instructions forward a register as another: `%dst = mov.iN %src`.
+  // Bulk RAUW the `%dst` registers in two passes over the machine function.
+  DenseMap<Register, Register> RAUWBatch;
 
   for (auto &BB : MF) {
     for (auto &MI : BB) {
@@ -74,44 +69,46 @@ bool NVPTXProxyRegErasure::runOnMachineFunction(MachineFunction &MF) {
       case NVPTX::ProxyRegI32:
       case NVPTX::ProxyRegI64:
       case NVPTX::ProxyRegF32:
-      case NVPTX::ProxyRegF64:
-        replaceMachineInstructionUsage(MF, MI);
+      case NVPTX::ProxyRegF64: {
+        auto &InOp = *MI.uses().begin();
+        auto &OutOp = *MI.defs().begin();
+        assert(InOp.isReg() && "ProxyReg input should be a register.");
+        assert(OutOp.isReg() && "ProxyReg output should be a register.");
         RemoveList.push_back(&MI);
+        Register replacement = InOp.getReg();
+        // Check if the replacement itself has been replaced.
+        if (auto it = RAUWBatch.find(replacement); it != RAUWBatch.end())
+          replacement = it->second;
+        RAUWBatch.try_emplace(OutOp.getReg(), replacement);
         break;
+      }
       }
     }
   }
 
+  // If there were no proxy instructions, exit early.
+  if (RemoveList.empty())
+    return false;
+
+  // Erase the proxy instructions first.
   for (auto *MI : RemoveList) {
     MI->eraseFromParent();
   }
 
-  return !RemoveList.empty();
-}
-
-void NVPTXProxyRegErasure::replaceMachineInstructionUsage(MachineFunction &MF,
-                                                          MachineInstr &MI) {
-  auto &InOp = *MI.uses().begin();
-  auto &OutOp = *MI.defs().begin();
-
-  assert(InOp.isReg() && "ProxyReg input operand should be a register.");
-  assert(OutOp.isReg() && "ProxyReg output operand should be a register.");
-
+  // Now go replace the registers.
   for (auto &BB : MF) {
-    for (auto &I : BB) {
-      replaceRegisterUsage(I, OutOp, InOp);
+    for (auto &MI : BB) {
+      for (auto &Op : MI.uses()) {
+        if (!Op.isReg())
+          continue;
+        auto it = RAUWBatch.find(Op.getReg());
+        if (it != RAUWBatch.end())
+          Op.setReg(it->second);
+      }
     }
   }
-}
 
-void NVPTXProxyRegErasure::replaceRegisterUsage(MachineInstr &Instr,
-                                                MachineOperand &From,
-                                                MachineOperand &To) {
-  for (auto &Op : Instr.uses()) {
-    if (Op.isReg() && Op.getReg() == From.getReg()) {
-      Op.setReg(To.getReg());
-    }
-  }
+  return true;
 }
 
 MachineFunctionPass *llvm::createNVPTXProxyRegErasurePass() {

@@ -178,9 +178,9 @@ define i32 @abs_trailing_zeros_negative(i32 %x) {
 
 define <4 x i32> @abs_trailing_zeros_negative_vec(<4 x i32> %x) {
 ; CHECK-LABEL: @abs_trailing_zeros_negative_vec(
-; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[X:%.*]], <i32 -2, i32 -2, i32 -2, i32 -2>
+; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[X:%.*]], splat (i32 -2)
 ; CHECK-NEXT:    [[ABS:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[AND]], i1 false)
-; CHECK-NEXT:    [[AND2:%.*]] = and <4 x i32> [[ABS]], <i32 -4, i32 -4, i32 -4, i32 -4>
+; CHECK-NEXT:    [[AND2:%.*]] = and <4 x i32> [[ABS]], splat (i32 -4)
 ; CHECK-NEXT:    ret <4 x i32> [[AND2]]
 ;
   %and = and <4 x i32> %x, <i32 -2, i32 -2, i32 -2, i32 -2>
@@ -207,7 +207,7 @@ define i32 @abs_signbits(i30 %x) {
 define <4 x i32> @abs_signbits_vec(<4 x i30> %x) {
 ; CHECK-LABEL: @abs_signbits_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i30> @llvm.abs.v4i30(<4 x i30> [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[NARROW:%.*]] = add nuw <4 x i30> [[TMP1]], <i30 1, i30 1, i30 1, i30 1>
+; CHECK-NEXT:    [[NARROW:%.*]] = add nuw <4 x i30> [[TMP1]], splat (i30 1)
 ; CHECK-NEXT:    [[ADD:%.*]] = zext <4 x i30> [[NARROW]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[ADD]]
 ;
@@ -317,7 +317,7 @@ define i32 @zext_abs(i31 %x) {
 
 define <3 x i82> @lshr_abs(<3 x i82> %x) {
 ; CHECK-LABEL: @lshr_abs(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i82> [[X:%.*]], <i82 1, i82 1, i82 1>
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i82> [[X:%.*]], splat (i82 1)
 ; CHECK-NEXT:    ret <3 x i82> [[LSHR]]
 ;
   %lshr = lshr <3 x i82> %x, <i82 1, i82 1, i82 1>
@@ -497,7 +497,7 @@ define i32 @demand_low_bit(i32 %x) {
 
 define <3 x i82> @demand_low_bit_int_min_is_poison(<3 x i82> %x) {
 ; CHECK-LABEL: @demand_low_bit_int_min_is_poison(
-; CHECK-NEXT:    [[R:%.*]] = shl <3 x i82> [[X:%.*]], <i82 81, i82 81, i82 81>
+; CHECK-NEXT:    [[R:%.*]] = shl <3 x i82> [[X:%.*]], splat (i82 81)
 ; CHECK-NEXT:    ret <3 x i82> [[R]]
 ;
   %a = call <3 x i82> @llvm.abs.v3i82(<3 x i82> %x, i1 true)
@@ -530,9 +530,9 @@ define i32 @srem_by_2_int_min_is_poison(i32 %x) {
 
 define <3 x i82> @srem_by_2(<3 x i82> %x, ptr %p) {
 ; CHECK-LABEL: @srem_by_2(
-; CHECK-NEXT:    [[S:%.*]] = srem <3 x i82> [[X:%.*]], <i82 2, i82 2, i82 2>
+; CHECK-NEXT:    [[S:%.*]] = srem <3 x i82> [[X:%.*]], splat (i82 2)
 ; CHECK-NEXT:    store <3 x i82> [[S]], ptr [[P:%.*]], align 32
-; CHECK-NEXT:    [[R:%.*]] = and <3 x i82> [[X]], <i82 1, i82 1, i82 1>
+; CHECK-NEXT:    [[R:%.*]] = and <3 x i82> [[X]], splat (i82 1)
 ; CHECK-NEXT:    ret <3 x i82> [[R]]
 ;
   %s = srem <3 x i82> %x, <i82 2, i82 2, i82 2>

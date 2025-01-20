@@ -42,6 +42,10 @@ def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries">;
 
 def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries (default)">;
 
+defm allow_multiple_definition: B<"allow-multiple-definition",
+    "Allow multiple definitions",
+    "Do not allow multiple definitions (default)">;
+
 def build_id: F<"build-id">, HelpText<"Alias for --build-id=fast">;
 
 def build_id_eq: J<"build-id=">, HelpText<"Generate build ID note">,
@@ -104,6 +108,9 @@ def m: JoinedOrSeparate<["-"], "m">, HelpText<"Set target emulation">;
 defm mllvm: Eq<"mllvm", "Additional arguments to forward to LLVM's option processing">;
 
 defm Map: Eq<"Map", "Print a link map to the specified file">;
+
+def noinhibit_exec: F<"noinhibit-exec">,
+  HelpText<"Retain the executable output file whenever it is still usable">;
 
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
@@ -281,6 +288,7 @@ def: Flag<["-"], "S">, Alias<strip_debug>, HelpText<"Alias for --strip-debug">;
 def: Flag<["-"], "t">, Alias<trace>, HelpText<"Alias for --trace">;
 def: JoinedOrSeparate<["-"], "y">, Alias<trace_symbol>, HelpText<"Alias for --trace-symbol">;
 def: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
+def: Flag<["-"], "V">, Alias<v>, HelpText<"Alias for -v">;
 
 // LTO-related options.
 def lto_O: JJ<"lto-O">, MetaVarName<"<opt-level>">,
@@ -289,13 +297,20 @@ def lto_CGO: JJ<"lto-CGO">, MetaVarName<"<cgopt-level>">,
   HelpText<"Codegen optimization level for LTO">;
 def lto_partitions: JJ<"lto-partitions=">,
   HelpText<"Number of LTO codegen partitions">;
+def lto_obj_path_eq: JJ<"lto-obj-path=">;
 def disable_verify: F<"disable-verify">;
 def save_temps: F<"save-temps">, HelpText<"Save intermediate LTO compilation results">;
 def thinlto_cache_dir: JJ<"thinlto-cache-dir=">,
   HelpText<"Path to ThinLTO cached object file directory">;
 defm thinlto_cache_policy: EEq<"thinlto-cache-policy", "Pruning policy for the ThinLTO cache">;
+def thinlto_emit_index_files: FF<"thinlto-emit-index-files">;
+def thinlto_emit_imports_files: FF<"thinlto-emit-imports-files">;
+def thinlto_index_only: FF<"thinlto-index-only">;
+def thinlto_index_only_eq: JJ<"thinlto-index-only=">;
 def thinlto_jobs: JJ<"thinlto-jobs=">,
   HelpText<"Number of ThinLTO jobs. Default to --threads=">;
+def thinlto_object_suffix_replace_eq: JJ<"thinlto-object-suffix-replace=">;
+def thinlto_prefix_replace_eq: JJ<"thinlto-prefix-replace=">;
 def lto_debug_pass_manager: FF<"lto-debug-pass-manager">,
   HelpText<"Debug new pass manager">;
 

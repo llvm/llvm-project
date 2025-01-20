@@ -81,9 +81,13 @@ inline RT_API_ATTRS void DoTotalReduction(const Descriptor &x, int dim,
 template <TypeCategory CAT, int KIND, typename ACCUMULATOR>
 inline RT_API_ATTRS CppTypeFor<CAT, KIND> GetTotalReduction(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask,
-    ACCUMULATOR &&accumulator, const char *intrinsic) {
+    ACCUMULATOR &&accumulator, const char *intrinsic,
+    bool allowUnsignedForInteger = false) {
   Terminator terminator{source, line};
-  RUNTIME_CHECK(terminator, TypeCode(CAT, KIND) == x.type());
+  RUNTIME_CHECK(terminator,
+      TypeCode(CAT, KIND) == x.type() ||
+          (CAT == TypeCategory::Integer && allowUnsignedForInteger &&
+              TypeCode(TypeCategory::Unsigned, KIND) == x.type()));
   using CppType = CppTypeFor<CAT, KIND>;
   DoTotalReduction<CppType>(x, dim, mask, accumulator, intrinsic, terminator);
   if constexpr (std::is_void_v<CppType>) {
@@ -318,13 +322,13 @@ RT_VAR_GROUP_BEGIN
 
 // Use at least double precision for accumulators.
 // Don't use __float128, it doesn't work with abs() or sqrt() yet.
-static constexpr RT_CONST_VAR_ATTRS int Norm2LargestLDKind {
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
-  16
-#elif LDBL_MANT_DIG == 64
-  10
+static constexpr RT_CONST_VAR_ATTRS int Norm2LargestLDKind{
+#if HAS_LDBL128 || HAS_FLOAT128
+    16
+#elif HAS_FLOAT80
+    10
 #else
-  8
+    8
 #endif
 };
 

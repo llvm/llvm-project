@@ -144,6 +144,14 @@ enum : unsigned {
   WASM_OPCODE_I32_RMW_CMPXCHG = 0x48,
 };
 
+// Sub-opcodes for catch clauses in a try_table instruction
+enum : unsigned {
+  WASM_OPCODE_CATCH = 0x00,
+  WASM_OPCODE_CATCH_REF = 0x01,
+  WASM_OPCODE_CATCH_ALL = 0x02,
+  WASM_OPCODE_CATCH_ALL_REF = 0x03,
+};
+
 enum : unsigned {
   WASM_LIMITS_FLAG_NONE = 0x0,
   WASM_LIMITS_FLAG_HAS_MAX = 0x1,
@@ -162,12 +170,11 @@ enum : unsigned {
   WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER = 0x02, // if passive == 0
   WASM_ELEM_SEGMENT_HAS_INIT_EXPRS = 0x04,
 };
-const unsigned WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND = 0x3;
+const unsigned WASM_ELEM_SEGMENT_MASK_HAS_ELEM_DESC = 0x3;
 
 // Feature policy prefixes used in the custom "target_features" section
 enum : uint8_t {
   WASM_FEATURE_PREFIX_USED = '+',
-  WASM_FEATURE_PREFIX_REQUIRED = '=',
   WASM_FEATURE_PREFIX_DISALLOWED = '-',
 };
 
@@ -407,6 +414,10 @@ struct WasmDataSegment {
   uint32_t LinkingFlags;
   uint32_t Comdat; // from the "comdat info" section
 };
+
+// 3 different element segment modes are encodable. This class is currently
+// only used during decoding (see WasmElemSegment below).
+enum class ElemSegmentMode { Active, Passive, Declarative };
 
 // Represents a Wasm element segment, with some limitations compared the spec:
 // 1) Does not model passive or declarative segments (Segment will end up with

@@ -36,6 +36,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/CGData/CodeGenDataWriter.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
@@ -847,8 +848,14 @@ static ICFLevel getICFLevel(const ArgList &args) {
   auto icfLevel = StringSwitch<ICFLevel>(icfLevelStr)
                       .Cases("none", "", ICFLevel::none)
                       .Case("safe", ICFLevel::safe)
+                      .Case("safe_thunks", ICFLevel::safe_thunks)
                       .Case("all", ICFLevel::all)
                       .Default(ICFLevel::unknown);
+
+  if ((icfLevel == ICFLevel::safe_thunks) && (config->arch() != AK_arm64)) {
+    error("--icf=safe_thunks is only supported on arm64 targets");
+  }
+
   if (icfLevel == ICFLevel::unknown) {
     warn(Twine("unknown --icf=OPTION `") + icfLevelStr +
          "', defaulting to `none'");
@@ -943,7 +950,6 @@ static void parseClangOption(StringRef opt, const Twine &msg) {
   const char *argv[] = {"lld", opt.data()};
   if (cl::ParseCommandLineOptions(2, argv, "", &os))
     return;
-  os.flush();
   error(msg + ": " + StringRef(err).trim());
 }
 
@@ -1316,6 +1322,55 @@ static void gatherInputSections() {
   }
 }
 
+static void codegenDataGenerate() {
+  TimeTraceScope timeScope("Generating codegen data");
+
+  OutlinedHashTreeRecord globalOutlineRecord;
+  StableFunctionMapRecord globalMergeRecord;
+  for (ConcatInputSection *isec : inputSections) {
+    if (isec->getSegName() != segment_names::data)
+      continue;
+    if (isec->getName() == section_names::outlinedHashTree) {
+      // Read outlined hash tree from each section.
+      OutlinedHashTreeRecord localOutlineRecord;
+      // Use a pointer to allow modification by the function.
+      auto *data = isec->data.data();
+      localOutlineRecord.deserialize(data);
+
+      // Merge it to the global hash tree.
+      globalOutlineRecord.merge(localOutlineRecord);
+    }
+    if (isec->getName() == section_names::functionMap) {
+      // Read stable functions from each section.
+      StableFunctionMapRecord localMergeRecord;
+      // Use a pointer to allow modification by the function.
+      auto *data = isec->data.data();
+      localMergeRecord.deserialize(data);
+
+      // Merge it to the global function map.
+      globalMergeRecord.merge(localMergeRecord);
+    }
+  }
+
+  globalMergeRecord.finalize();
+
+  CodeGenDataWriter Writer;
+  if (!globalOutlineRecord.empty())
+    Writer.addRecord(globalOutlineRecord);
+  if (!globalMergeRecord.empty())
+    Writer.addRecord(globalMergeRecord);
+
+  std::error_code EC;
+  auto fileName = config->codegenDataGeneratePath;
+  assert(!fileName.empty());
+  raw_fd_ostream Output(fileName, EC, sys::fs::OF_None);
+  if (EC)
+    error("fail to create " + fileName + ": " + EC.message());
+
+  if (auto E = Writer.write(Output))
+    error("fail to write CGData: " + toString(std::move(E)));
+}
+
 static void foldIdenticalLiterals() {
   TimeTraceScope timeScope("Fold identical literals");
   // We always create a cStringSection, regardless of whether dedupLiterals is
@@ -1473,6 +1528,17 @@ static SmallVector<StringRef, 0> getRuntimePaths(opt::InputArgList &args) {
   return vals;
 }
 
+static SmallVector<StringRef, 0> getAllowableClients(opt::InputArgList &args) {
+  SmallVector<StringRef, 0> vals;
+  DenseSet<StringRef> seen;
+  for (const Arg *arg : args.filtered(OPT_allowable_client)) {
+    StringRef val = arg->getValue();
+    if (seen.insert(val).second)
+      vals.push_back(val);
+  }
+  return vals;
+}
+
 namespace lld {
 namespace macho {
 bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
@@ -1512,7 +1578,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   ctx->e.logName = args::getFilenameWithoutExe(argsArr[0]);
 
   MachOOptTable parser;
-  InputArgList args = parser.parse(argsArr.slice(1));
+  InputArgList args = parser.parse(*ctx, argsArr.slice(1));
 
   ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now "
                                  "(use --error-limit=0 to see all errors)";
@@ -1520,11 +1586,11 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   ctx->e.verbose = args.hasArg(OPT_verbose);
 
   if (args.hasArg(OPT_help_hidden)) {
-    parser.printHelp(argsArr[0], /*showHidden=*/true);
+    parser.printHelp(*ctx, argsArr[0], /*showHidden=*/true);
     return true;
   }
   if (args.hasArg(OPT_help)) {
-    parser.printHelp(argsArr[0], /*showHidden=*/false);
+    parser.printHelp(*ctx, argsArr[0], /*showHidden=*/false);
     return true;
   }
   if (args.hasArg(OPT_version)) {
@@ -1686,6 +1752,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     config->umbrella = arg->getValue();
   }
   config->ltoObjPath = args.getLastArgValue(OPT_object_path_lto);
+  config->ltoNewPmPasses = args.getLastArgValue(OPT_lto_newpm_passes);
   config->thinLTOCacheDir = args.getLastArgValue(OPT_cache_path_lto);
   config->thinLTOCachePolicy = getLTOCachePolicy(args);
   config->thinLTOEmitImportsFiles = args.hasArg(OPT_thinlto_emit_imports_files);
@@ -1716,6 +1783,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->warnDuplicateRpath =
       args.hasFlag(OPT_warn_duplicate_rpath, OPT_no_warn_duplicate_rpath, true);
   config->runtimePaths = getRuntimePaths(args);
+  config->allowableClients = getAllowableClients(args);
   config->allLoad = args.hasFlag(OPT_all_load, OPT_noall_load, false);
   config->archMultiple = args.hasArg(OPT_arch_multiple);
   config->applicationExtension = args.hasFlag(
@@ -1753,6 +1821,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     config->ignoreAutoLinkOptions.insert(arg->getValue());
   config->strictAutoLink = args.hasArg(OPT_strict_auto_link);
   config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
+  config->codegenDataGeneratePath =
+      args.getLastArgValue(OPT_codegen_data_generate_path);
   config->csProfileGenerate = args.hasArg(OPT_cs_profile_generate);
   config->csProfilePath = args.getLastArgValue(OPT_cs_profile_path);
   config->pgoWarnMismatch =
@@ -1768,19 +1838,47 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       if (const Arg *arg = args.getLastArgNoClaim(OPT_call_graph_profile_sort))
         error(firstArgStr + " is incompatible with " + arg->getSpelling());
   };
+  if (args.hasArg(OPT_irpgo_profile_sort) ||
+      args.hasArg(OPT_irpgo_profile_sort_eq))
+    warn("--irpgo-profile-sort is deprecated. Please use "
+         "--bp-startup-sort=function");
+  if (const Arg *arg = args.getLastArg(OPT_irpgo_profile))
+    config->irpgoProfilePath = arg->getValue();
+
   if (const Arg *arg = args.getLastArg(OPT_irpgo_profile_sort)) {
-    config->irpgoProfileSortProfilePath = arg->getValue();
+    config->irpgoProfilePath = arg->getValue();
+    config->bpStartupFunctionSort = true;
     IncompatWithCGSort(arg->getSpelling());
   }
-  if (const Arg *arg = args.getLastArg(OPT_compression_sort)) {
+  config->bpCompressionSortStartupFunctions =
+      args.hasFlag(OPT_bp_compression_sort_startup_functions,
+                   OPT_no_bp_compression_sort_startup_functions, false);
+  if (const Arg *arg = args.getLastArg(OPT_bp_startup_sort)) {
+    StringRef startupSortStr = arg->getValue();
+    if (startupSortStr == "function") {
+      config->bpStartupFunctionSort = true;
+    } else if (startupSortStr != "none") {
+      error("unknown value `" + startupSortStr + "` for " + arg->getSpelling());
+    }
+    if (startupSortStr != "none")
+      IncompatWithCGSort(arg->getSpelling());
+  }
+  if (!config->bpStartupFunctionSort &&
+      config->bpCompressionSortStartupFunctions)
+    error("--bp-compression-sort-startup-functions must be used with "
+          "--bp-startup-sort=function");
+  if (config->irpgoProfilePath.empty() && config->bpStartupFunctionSort)
+    error("--bp-startup-sort=function must be used with "
+          "--irpgo-profile");
+  if (const Arg *arg = args.getLastArg(OPT_bp_compression_sort)) {
     StringRef compressionSortStr = arg->getValue();
     if (compressionSortStr == "function") {
-      config->functionOrderForCompression = true;
+      config->bpFunctionOrderForCompression = true;
     } else if (compressionSortStr == "data") {
-      config->dataOrderForCompression = true;
+      config->bpDataOrderForCompression = true;
     } else if (compressionSortStr == "both") {
-      config->functionOrderForCompression = true;
-      config->dataOrderForCompression = true;
+      config->bpFunctionOrderForCompression = true;
+      config->bpDataOrderForCompression = true;
     } else if (compressionSortStr != "none") {
       error("unknown value `" + compressionSortStr + "` for " +
             arg->getSpelling());
@@ -1788,7 +1886,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     if (compressionSortStr != "none")
       IncompatWithCGSort(arg->getSpelling());
   }
-  config->verboseBpSectionOrderer = args.hasArg(OPT_verbose_bp_section_orderer);
+  config->bpVerboseSectionOrderer = args.hasArg(OPT_verbose_bp_section_orderer);
 
   for (const Arg *arg : args.filtered(OPT_alias)) {
     config->aliasedSymbols.push_back(
@@ -1816,6 +1914,15 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   } else if (config->outputType == MH_DYLIB) {
     config->installName = config->finalOutput;
   }
+
+  auto getClientName = [&]() {
+    StringRef cn = path::filename(config->finalOutput);
+    cn.consume_front("lib");
+    auto firstDotOrUnderscore = cn.find_first_of("._");
+    cn = cn.take_front(firstDotOrUnderscore);
+    return cn;
+  };
+  config->clientName = args.getLastArgValue(OPT_client_name, getClientName());
 
   if (args.hasArg(OPT_mark_dead_strippable_dylib)) {
     if (config->outputType != MH_DYLIB)
@@ -1882,9 +1989,21 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     StringRef segName = arg->getValue(0);
     uint32_t maxProt = parseProtection(arg->getValue(1));
     uint32_t initProt = parseProtection(arg->getValue(2));
-    if (maxProt != initProt && config->arch() != AK_i386)
-      error("invalid argument '" + arg->getAsString(args) +
-            "': max and init must be the same for non-i386 archs");
+
+    // FIXME: Check if this works on more platforms.
+    bool allowsDifferentInitAndMaxProt =
+        config->platform() == PLATFORM_MACOS ||
+        config->platform() == PLATFORM_MACCATALYST;
+    if (allowsDifferentInitAndMaxProt) {
+      if (initProt > maxProt)
+        error("invalid argument '" + arg->getAsString(args) +
+              "': init must not be more permissive than max");
+    } else {
+      if (maxProt != initProt && config->arch() != AK_i386)
+        error("invalid argument '" + arg->getAsString(args) +
+              "': max and init must be the same for non-macOS non-i386 archs");
+    }
+
     if (segName == segment_names::linkEdit)
       error("-segprot cannot be used to change __LINKEDIT's protections");
     config->segmentProtections.push_back({segName, maxProt, initProt});
@@ -1964,17 +2083,17 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       shouldAdhocSignByDefault(config->arch(), config->platform()));
 
   if (args.hasArg(OPT_v)) {
-    message(getLLDVersion(), lld::errs());
+    message(getLLDVersion(), ctx->e.errs());
     message(StringRef("Library search paths:") +
                 (config->librarySearchPaths.empty()
                      ? ""
                      : "\n\t" + join(config->librarySearchPaths, "\n\t")),
-            lld::errs());
+            ctx->e.errs());
     message(StringRef("Framework search paths:") +
                 (config->frameworkSearchPaths.empty()
                      ? ""
                      : "\n\t" + join(config->frameworkSearchPaths, "\n\t")),
-            lld::errs());
+            ctx->e.errs());
   }
 
   config->progName = argsArr[0];
@@ -2024,6 +2143,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       parseClangOption(arg->getValue(), arg->getSpelling());
       config->mllvmOpts.emplace_back(arg->getValue());
     }
+
+    config->passPlugins = args::getStrings(args, OPT_load_pass_plugins);
 
     createSyntheticSections();
     createSyntheticSymbols();
@@ -2078,6 +2199,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     }
 
     gatherInputSections();
+
+    if (!config->codegenDataGeneratePath.empty())
+      codegenDataGenerate();
+
     if (config->callGraphProfileSort)
       priorityBuilder.extractCallGraphProfile();
 
@@ -2104,7 +2229,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     // foldIdenticalLiterals before foldIdenticalSections.
     foldIdenticalLiterals();
     if (config->icfLevel != ICFLevel::none) {
-      if (config->icfLevel == ICFLevel::safe)
+      if (config->icfLevel == ICFLevel::safe ||
+          config->icfLevel == ICFLevel::safe_thunks)
         markAddrSigSymbols();
       foldIdenticalSections(/*onlyCfStrings=*/false);
     } else if (config->dedupStrings) {

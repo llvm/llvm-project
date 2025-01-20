@@ -65,7 +65,6 @@ public:
   /// Can this function use the red zone for local allocations.
   bool canUseRedZone(const MachineFunction &MF) const;
 
-  bool hasFP(const MachineFunction &MF) const override;
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
 
   bool assignCalleeSavedSpillSlots(MachineFunction &MF,
@@ -125,6 +124,9 @@ public:
   orderFrameObjects(const MachineFunction &MF,
                     SmallVectorImpl<int> &ObjectsToAllocate) const override;
 
+protected:
+  bool hasFPImpl(const MachineFunction &MF) const override;
+
 private:
   /// Returns true if a homogeneous prolog or epilog code can be emitted
   /// for the size optimization. If so, HOM_Prolog/HOM_Epilog pseudo
@@ -144,7 +146,7 @@ private:
                                       int &MinCSFrameIndex,
                                       int &MaxCSFrameIndex) const;
   bool shouldCombineCSRLocalStackBumpInEpilogue(MachineBasicBlock &MBB,
-                                                unsigned StackBumpBytes) const;
+                                                uint64_t StackBumpBytes) const;
   void emitCalleeSavedGPRLocations(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI) const;
   void emitCalleeSavedSVELocations(MachineBasicBlock &MBB,

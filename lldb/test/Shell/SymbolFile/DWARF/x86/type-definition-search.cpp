@@ -4,15 +4,20 @@
 
 // REQUIRES: lld
 
-// RUN: %clang --target=x86_64-pc-linux -c %s -o %t-a.o -g -gsimple-template-names -DFILE_A
-// RUN: %clang --target=x86_64-pc-linux -c %s -o %t-b.o -g -gsimple-template-names -DFILE_B
-// RUN: ld.lld %t-a.o %t-b.o -o %t
-// RUN: %lldb %t -o "target variable --ptr-depth 1 --show-types both_a both_b" -o exit | FileCheck %s
+// RUN: %clang --target=x86_64-pc-linux -c %s -o %t-n-a.o -g -gsimple-template-names -DFILE_A
+// RUN: %clang --target=x86_64-pc-linux -c %s -o %t-n-b.o -g -gsimple-template-names -DFILE_B
+// RUN: ld.lld %t-n-a.o %t-n-b.o -o %t-n
+// RUN: %lldb %t-n -o "target variable --ptr-depth 1 --show-types both_a both_b" -o exit | FileCheck %s
 
-// RUN: %clang --target=x86_64-pc-linux -c %s -o %t-a.o -g -fdebug-types-section -DFILE_A
-// RUN: %clang --target=x86_64-pc-linux -c %s -o %t-b.o -g -fdebug-types-section -DFILE_B
-// RUN: ld.lld %t-a.o %t-b.o -o %t
-// RUN: %lldb %t -o "target variable --ptr-depth 1 --show-types both_a both_b" -o exit | FileCheck %s
+// RUN: %clang --target=x86_64-pc-linux -c %s -o %t-t-a.o -g -fdebug-types-section -DFILE_A
+// RUN: %clang --target=x86_64-pc-linux -c %s -o %t-t-b.o -g -fdebug-types-section -DFILE_B
+// RUN: ld.lld %t-t-a.o %t-t-b.o -o %t-t
+// RUN: %lldb %t-t -o "target variable --ptr-depth 1 --show-types both_a both_b" -o exit | FileCheck %s
+
+// RUN: %clang --target=x86_64-pc-linux -c %s -o %t-tn-a.o -g -fdebug-types-section -gsimple-template-names -DFILE_A
+// RUN: %clang --target=x86_64-pc-linux -c %s -o %t-tn-b.o -g -fdebug-types-section -gsimple-template-names -DFILE_B
+// RUN: ld.lld %t-tn-a.o %t-tn-b.o -o %t-tn
+// RUN: %lldb %t-tn -o "target variable --ptr-depth 1 --show-types both_a both_b" -o exit | FileCheck %s
 
 // CHECK: (lldb) target variable
 // CHECK-NEXT: (ReferencesBoth<'A'>) both_a = {

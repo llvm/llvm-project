@@ -21,6 +21,7 @@
 #include "NVPTX.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -34,14 +35,11 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <algorithm>
-#include <sstream>
-#include <string>
 #define NVVM_REFLECT_FUNCTION "__nvvm_reflect"
 #define NVVM_REFLECT_OCL_FUNCTION "__nvvm_reflect_ocl"
 
@@ -222,7 +220,13 @@ bool NVVMReflect::runOnFunction(Function &F) {
   return runNVVMReflect(F, SmVersion);
 }
 
-NVVMReflectPass::NVVMReflectPass() : NVVMReflectPass(0) {}
+NVVMReflectPass::NVVMReflectPass() {
+  // Get the CPU string from the command line if not provided.
+  std::string MCPU = codegen::getMCPU();
+  StringRef SM = MCPU;
+  if (!SM.consume_front("sm_") || SM.consumeInteger(10, SmVersion))
+    SmVersion = 0;
+}
 
 PreservedAnalyses NVVMReflectPass::run(Function &F,
                                        FunctionAnalysisManager &AM) {

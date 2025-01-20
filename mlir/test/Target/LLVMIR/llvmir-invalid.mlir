@@ -188,7 +188,7 @@ llvm.func @sadd_overflow_intr_wrong_type(%arg0 : i32, %arg1 : f32) -> !llvm.stru
 
 llvm.func @assume_intr_wrong_type(%cond : i16) {
   // expected-error @below{{op operand #0 must be 1-bit signless integer, but got 'i16'}}
-  "llvm.intr.assume"(%cond) : (i16) -> ()
+  llvm.intr.assume %cond : i16
   llvm.return
 }
 
@@ -303,7 +303,7 @@ llvm.func @masked_scatter_intr_wrong_type_scalable(%vec : vector<[7]xf32>, %ptrs
 
 llvm.func @stepvector_intr_wrong_type() -> vector<7xf32> {
   // expected-error @below{{op result #0 must be LLVM dialect-compatible vector of signless integer, but got 'vector<7xf32>'}}
-  %0 = llvm.intr.experimental.stepvector : vector<7xf32>
+  %0 = llvm.intr.stepvector : vector<7xf32>
   llvm.return %0 : vector<7xf32>
 }
 

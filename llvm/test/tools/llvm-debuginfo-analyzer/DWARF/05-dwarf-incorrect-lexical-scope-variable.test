@@ -43,14 +43,14 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]             {CompileUnit} 'pr-43860.cpp'
 ; ONE-NEXT: [002]               {Producer} 'clang version 15.0.0 {{.*}}'
-; ONE-NEXT: [002]     2         {Function} extern not_inlined 'InlineFunction' -> 'int'
+; ONE-NEXT: [002]     2         {Function} extern inlined 'InlineFunction' -> 'int'
 ; ONE-NEXT: [003]                 {Block}
 ; ONE-NEXT: [004]     5             {Variable} 'Var_2' -> 'int'
 ; ONE-NEXT: [003]     2           {Parameter} 'Param' -> 'int'
 ; ONE-NEXT: [003]     3           {Variable} 'Var_1' -> 'int'
 ; ONE-NEXT: [002]    11         {Function} extern not_inlined 'test' -> 'int'
 ; ONE-NEXT: [003]    12           {Variable} 'A' -> 'int'
-; ONE-NEXT: [003]    14           {InlinedFunction} not_inlined 'InlineFunction' -> 'int'
+; ONE-NEXT: [003]    13           {InlinedFunction} inlined 'InlineFunction' -> 'int'
 ; ONE-NEXT: [004]                   {Block}
 ; ONE-NEXT: [005]                     {Variable} 'Var_2' -> 'int'
 ; ONE-NEXT: [004]                   {Parameter} 'Param' -> 'int'

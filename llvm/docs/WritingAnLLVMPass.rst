@@ -489,7 +489,7 @@ spanning the range from ``DominatorSet`` to ``BreakCriticalEdges``.  Requiring
 edges in the CFG when your pass has been run.
 
 Some analyses chain to other analyses to do their job.  For example, an
-`AliasAnalysis <AliasAnalysis>` implementation is required to :ref:`chain
+`AliasAnalysis <AliasAnalysis.html>`_ implementation is required to :ref:`chain
 <aliasanalysis-chaining>` to other alias analysis passes.  In cases where
 analyses chain, the ``addRequiredTransitive`` method should be used instead of
 the ``addRequired`` method.  This informs the ``PassManager`` that the

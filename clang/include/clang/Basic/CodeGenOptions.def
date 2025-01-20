@@ -37,6 +37,7 @@ VALUE_CODEGENOPT(Name, Bits, Default)
 
 CODEGENOPT(DisableIntegratedAS, 1, 0) ///< -no-integrated-as
 CODEGENOPT(Crel, 1, 0) ///< -Wa,--crel
+CODEGENOPT(ImplicitMapSyms, 1, 0) ///< -Wa,-mmapsyms=implicit
 CODEGENOPT(AsmVerbose        , 1, 0) ///< -dA, -fverbose-asm.
 CODEGENOPT(PreserveAsmComments, 1, 1) ///< -dA, -fno-preserve-as-comments.
 CODEGENOPT(AssumeSaneOperatorNew , 1, 1) ///< implicit __attribute__((malloc)) operator new
@@ -95,6 +96,7 @@ CODEGENOPT(EmulatedTLS       , 1, 0) ///< Set by default or -f[no-]emulated-tls.
 ENUM_CODEGENOPT(EmbedBitcode, EmbedBitcodeKind, 2, Embed_Off)
 /// Inline asm dialect, -masm=(att|intel)
 ENUM_CODEGENOPT(InlineAsmDialect, InlineAsmDialectKind, 1, IAD_ATT)
+CODEGENOPT(OutputAsmVariant, 2, 3) ///< Set the asm variant for output (3: unspecified).
 CODEGENOPT(ForbidGuardVariables , 1, 0) ///< Issue errors if C++ guard variables
                                         ///< are required.
 CODEGENOPT(FunctionSections  , 1, 0) ///< Set when -ffunction-sections is enabled.
@@ -109,6 +111,8 @@ CODEGENOPT(CFProtectionReturn , 1, 0) ///< if -fcf-protection is
                                       ///< set to full or return.
 CODEGENOPT(CFProtectionBranch , 1, 0) ///< if -fcf-protection is
                                       ///< set to full or branch.
+ENUM_CODEGENOPT(CFBranchLabelScheme, CFBranchLabelSchemeKind, 2,
+    CFBranchLabelSchemeKind::Default) ///< if -mcf-branch-label-scheme is set.
 CODEGENOPT(FunctionReturnThunks, 1, 0) ///< -mfunction-return={keep|thunk-extern}
 CODEGENOPT(IndirectBranchCSPrefix, 1, 0) ///< if -mindirect-branch-cs-prefix
                                          ///< is set.
@@ -132,6 +136,8 @@ CODEGENOPT(XRayIgnoreLoops , 1, 0)
 ///< Emit the XRay function index section.
 CODEGENOPT(XRayFunctionIndex , 1, 1)
 
+///< Set when -fxray-shared is enabled
+CODEGENOPT(XRayShared , 1, 0)
 
 ///< Set the minimum number of instructions in a function to determine selective
 ///< XRay instrumentation.
@@ -149,6 +155,7 @@ VALUE_CODEGENOPT(PatchableFunctionEntryOffset , 32, 0)
 CODEGENOPT(HotPatch, 1, 0) ///< Supports the Microsoft /HOTPATCH flag and
                            ///< generates a 'patchable-function' attribute.
 
+CODEGENOPT(TlsGuards , 1, 1) ///< Controls emission of tls guards via -fms-tls-guards
 CODEGENOPT(JMCInstrument, 1, 0) ///< Set when -fjmc is enabled.
 CODEGENOPT(InstrumentForProfiling , 1, 0) ///< Set when -pg is enabled.
 CODEGENOPT(CallFEntry , 1, 0) ///< Set when -mfentry is enabled.
@@ -235,7 +242,7 @@ ENUM_CODEGENOPT(StructReturnConvention, StructReturnConventionKind, 2, SRCK_Defa
 
 CODEGENOPT(RelaxAll          , 1, 0) ///< Relax all machine code instructions.
 CODEGENOPT(RelaxedAliasing   , 1, 0) ///< Set when -fno-strict-aliasing is enabled.
-CODEGENOPT(PointerTBAA, 1, 0)        ///< Whether or not to use distinct TBAA tags for pointers.
+CODEGENOPT(PointerTBAA       , 1, 1) ///< Whether or not to use distinct TBAA tags for pointers.
 CODEGENOPT(StructPathTBAA    , 1, 0) ///< Whether or not to use struct-path TBAA.
 CODEGENOPT(NewStructPathTBAA , 1, 0) ///< Whether or not to use enhanced struct-path TBAA.
 CODEGENOPT(SaveTempLabels    , 1, 0) ///< Save temporary labels.

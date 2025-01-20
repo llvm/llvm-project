@@ -2,8 +2,8 @@
 
 ! This test checks the lowering of atomic capture
 
-! RUN: bbc %openmp_flags -emit-hlfir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-hlfir %openmp_flags %s -o - | FileCheck %s
+! RUN: bbc %openmp_flags -fopenmp-version=50 -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=50 %s -o - | FileCheck %s
 
 
 program OmpAtomicCapture
@@ -22,7 +22,7 @@ program OmpAtomicCapture
 !CHECK: %[[TEMP:.*]] = arith.muli %[[VAL_Y_LOADED]], %[[ARG]] : i32
 !CHECK: omp.yield(%[[TEMP]] : i32)
 !CHECK: }
-!CHECK: omp.atomic.read %[[VAL_X_DECLARE]]#1 = %[[VAL_Y_DECLARE]]#1 : !fir.ref<i32>, i32
+!CHECK: omp.atomic.read %[[VAL_X_DECLARE]]#1 = %[[VAL_Y_DECLARE]]#1 : !fir.ref<i32>, !fir.ref<i32>, i32
 !CHECK: }
     !$omp atomic hint(omp_sync_hint_uncontended) capture
         y = x * y 
@@ -36,7 +36,7 @@ program OmpAtomicCapture
 !CHECK: %[[NO_REASSOC:.*]] = hlfir.no_reassoc %[[SUB]] : i32
 !CHECK: %[[ADD:.*]] = arith.addi  %[[VAL_20]], %[[NO_REASSOC]] : i32
 !CHECK: omp.atomic.capture hint(nonspeculative) memory_order(acquire) {
-!CHECK:   omp.atomic.read %[[VAL_X_DECLARE]]#1 = %[[VAL_Y_DECLARE]]#1 : !fir.ref<i32>, i32
+!CHECK:   omp.atomic.read %[[VAL_X_DECLARE]]#1 = %[[VAL_Y_DECLARE]]#1 : !fir.ref<i32>, !fir.ref<i32>, i32
 !CHECK:   omp.atomic.write %[[VAL_Y_DECLARE]]#1 = %[[ADD]] : !fir.ref<i32>, i32
 !CHECK: }
 !CHECK: return
@@ -88,7 +88,7 @@ subroutine pointers_in_atomic_capture()
 !CHECK: %[[TEMP:.*]] = arith.addi %[[ARG]], %[[VAL_B]] : i32
 !CHECK: omp.yield(%[[TEMP]] : i32)
 !CHECK: }
-!CHECK: omp.atomic.read %[[VAL_B_BOX_ADDR]] = %[[VAL_A_BOX_ADDR]] : !fir.ptr<i32>, i32
+!CHECK: omp.atomic.read %[[VAL_B_BOX_ADDR]] = %[[VAL_A_BOX_ADDR]] : !fir.ptr<i32>, !fir.ptr<i32>, i32
 !CHECK: }
 !CHECK: return
 !CHECK: }

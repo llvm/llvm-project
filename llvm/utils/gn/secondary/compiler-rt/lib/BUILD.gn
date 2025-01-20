@@ -4,22 +4,25 @@ group("lib") {
     "//compiler-rt/lib/builtins",
     "//compiler-rt/lib/cfi:ignorelist($host_toolchain)",
   ]
-  if (current_os == "linux") {
+  if (current_os == "linux" && current_cpu == "x64") {
     deps += [ "//compiler-rt/lib/msan" ]
   }
   if (current_os == "linux" || current_os == "android") {
     deps += [ "//compiler-rt/lib/ubsan_minimal" ]
   }
-  if (current_os != "win" && current_os != "baremetal") {
+  if (current_os == "android" && current_cpu == "arm64") {
+    deps += [ "//compiler-rt/lib/hwasan" ]
+  }
+  if (current_os != "baremetal") {
     deps += [
       "//compiler-rt/lib/asan",
-      "//compiler-rt/lib/ubsan",
+      "//compiler-rt/lib/profile",
     ]
+  }
+  if (current_os != "win" && current_os != "baremetal") {
+    deps += [ "//compiler-rt/lib/ubsan" ]
     if (current_cpu == "x64" || current_cpu == "arm64") {
       deps += [ "//compiler-rt/lib/tsan/rtl" ]
     }
-  }
-  if (current_os != "baremetal") {
-    deps += [ "//compiler-rt/lib/profile" ]
   }
 }

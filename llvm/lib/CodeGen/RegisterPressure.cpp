@@ -29,7 +29,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/LaneBitmask.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1060,18 +1059,12 @@ void RegPressureTracker::bumpUpwardPressure(const MachineInstr *MI) {
     LaneBitmask LiveBefore = (LiveAfter & ~DefLanes) | UseLanes;
 
     // There may be parts of the register that were dead before the
-    // instruction, but became live afterwards. Similarly, some parts
-    // may have been killed in this instruction.
+    // instruction, but became live afterwards.
     decreaseRegPressure(Reg, LiveAfter, LiveAfter & LiveBefore);
-    increaseRegPressure(Reg, LiveAfter, ~LiveAfter & LiveBefore);
   }
-  // Generate liveness for uses.
+  // Generate liveness for uses. Also handle any uses which overlap with defs.
   for (const RegisterMaskPair &P : RegOpers.Uses) {
     Register Reg = P.RegUnit;
-    // If this register was also in a def operand, we've handled it
-    // with defs.
-    if (getRegLanes(RegOpers.Defs, Reg).any())
-      continue;
     LaneBitmask LiveAfter = LiveRegs.contains(Reg);
     LaneBitmask LiveBefore = LiveAfter | P.LaneMask;
     increaseRegPressure(Reg, LiveAfter, LiveBefore);

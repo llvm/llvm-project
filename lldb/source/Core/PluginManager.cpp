@@ -206,10 +206,9 @@ public:
     if (!callback)
       return false;
     assert(!name.empty());
-    Instance instance =
-        Instance(name, description, callback, std::forward<Args>(args)...);
-    m_instances.push_back(instance);
-    return false;
+    m_instances.emplace_back(name, description, callback,
+                             std::forward<Args>(args)...);
+    return true;
   }
 
   bool UnregisterPlugin(typename Instance::CallbackType callback) {
@@ -705,12 +704,12 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
                                lldb_private::SaveCoreOptions &options) {
   Status error;
   if (!options.GetOutputFile()) {
-    error.SetErrorString("No output file specified");
+    error = Status::FromErrorString("No output file specified");
     return error;
   }
 
   if (!process_sp) {
-    error.SetErrorString("Invalid process");
+    error = Status::FromErrorString("Invalid process");
     return error;
   }
 
@@ -723,7 +722,7 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
     llvm::Expected<bool> ret =
         process_sp->SaveCore(options.GetOutputFile()->GetPath());
     if (!ret)
-      return Status(ret.takeError());
+      return Status::FromError(ret.takeError());
     if (ret.get())
       return Status();
   }
@@ -741,7 +740,7 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
   // Check to see if any of the object file plugins tried and failed to save.
   // If none ran, set the error message.
   if (error.Success())
-    error.SetErrorString(
+    error = Status::FromErrorString(
         "no ObjectFile plugins were able to save a core for this process");
   return error;
 }

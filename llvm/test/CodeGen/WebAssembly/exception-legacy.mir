@@ -1,0 +1,112 @@
+# RUN: llc -mtriple=wasm32-unknown-unknown -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling -run-pass wasm-late-eh-prepare -run-pass wasm-cfg-stackify %s -o - | FileCheck %s
+
+--- |
+  target triple = "wasm32-unknown-unknown"
+
+  declare i32 @__gxx_wasm_personality_v0(...)
+  declare void @foo()
+  define void @eh_label_test() personality ptr @__gxx_wasm_personality_v0 {
+    ret void
+  }
+  define void @unreachable_ehpad_test() personality ptr @__gxx_wasm_personality_v0 {
+    ret void
+  }
+  define void @empty_cleanuppad_test() personality ptr @__gxx_wasm_personality_v0 {
+    ret void
+  }
+...
+
+---
+# This tests 'try' and 'catch' instructions are correctly placed with respect to
+# EH_LABEL instructions.
+# CHECK-LABEL: name: eh_label_test
+name: eh_label_test
+liveins:
+  - { reg: '$arguments' }
+frameInfo:
+  hasCalls: true
+body: |
+  bb.0:
+    ; TRY should be before EH_LABEL wrappers of throwing calls
+    ; CHECK:      bb.0
+    ; CHECK:      TRY
+    ; CHECK-NEXT: EH_LABEL
+    ; CHECK-NEXT: CALL @foo
+    ; CHECK-NEXT: EH_LABEL
+    successors: %bb.1, %bb.2
+    EH_LABEL <mcsymbol .Ltmp0>
+    CALL @foo, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    EH_LABEL <mcsymbol .Ltmp1>
+    BR %bb.2, implicit-def dead $arguments
+
+  bb.1 (landing-pad):
+  ; predecessors: %bb.0
+    successors: %bb.2
+    ; CATCH_ALL_LEGACY should be after EH_LABELs in the beginning of an EH pad.
+    ; (Sometimes there are multiple EH_LABELs in an EH pad. This test tests
+    ; that.) GLOBAL_SET should follow right after that.
+    ; CHECK:      bb.1
+    ; CHECK:      EH_LABEL
+    ; CHECK:      EH_LABEL
+    ; CHECK-NEXT: CATCH_ALL_LEGACY
+    ; CHECK-NEXT: GLOBAL_SET_I32
+    EH_LABEL <mcsymbol .Ltmp2>
+    EH_LABEL <mcsymbol .Ltmp2>
+    CATCHRET %bb.2, %bb.1, implicit-def dead $arguments
+
+  bb.2:
+  ; predecessors: %bb.0, %bb.1
+    RETURN implicit-def dead $arguments
+...
+
+---
+# Unreachable EH pads should be removed by LateEHPrepare.
+# CHECK-LABEL: name: unreachable_ehpad_test
+name: unreachable_ehpad_test
+liveins:
+  - { reg: '$arguments' }
+body: |
+  ; CHECK: bb.0
+  bb.0:
+    successors: %bb.2
+    BR %bb.2, implicit-def dead $arguments
+
+  ; This EH pad is unreachable, so it should be removed by LateEHPrepare
+  ; CHECK-NOT: bb.1 (landing-pad)
+  bb.1 (landing-pad):
+    successors: %bb.2
+    EH_LABEL <mcsymbol .Ltmp2>
+    CATCHRET %bb.2, %bb.1, implicit-def dead $arguments
+
+  ; CHECK: bb.2
+  bb.2:
+  ; predecessors: %bb.0, %bb.1
+    RETURN implicit-def dead $arguments
+...
+
+---
+# Regression test for a bug that LateEHPrepare::addCatchAll didn't handle empty
+# cleanup pads. (It tried to get debug info from end() iterator.)
+name: empty_cleanuppad_test
+liveins:
+  - { reg: '$arguments' }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.3
+    EH_LABEL <mcsymbol .Ltmp0>
+    CALL @foo, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    EH_LABEL <mcsymbol .Ltmp1>
+    BR %bb.3, implicit-def dead $arguments
+
+  ;; Empty cleanuppad
+  bb.1 (landing-pad):
+    successors: %bb.2
+    EH_LABEL <mcsymbol .Ltmp2>
+
+  bb.2:
+    successors: %bb.3
+    CLEANUPRET %bb.1, implicit-def dead $arguments
+
+  bb.3:
+    RETURN implicit-def dead $arguments
+...

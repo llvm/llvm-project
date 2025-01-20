@@ -1,0 +1,95 @@
+## Check that BOLT handles correctly folding functions with --icf=safe that can be referenced by non-control flow instructions,
+## when binary is built with -fno-PIC/-fno-PIE.
+
+# REQUIRES: system-linux, asserts
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t1.o
+# RUN: %clang %cflags %t1.o -o %t.exe -Wl,-q -no-pie
+# RUN: llvm-bolt --no-threads %t.exe --icf -debug-only=bolt-icf -o %t.bolt 2>&1 | FileCheck --check-prefix=ICFCHECK %s
+# RUN: llvm-bolt --no-threads %t.exe --icf=safe -debug-only=bolt-icf -o %t.bolt 2>&1 | FileCheck --check-prefix=SAFEICFCHECK %s
+
+# ICFCHECK:      ICF iteration 1
+# ICFCHECK-NEXT: folding barAddFunc into fooAddFunc
+# ICFCHECK-NEXT: folding barMulFunc into fooMulFunc
+
+# SAFEICFCHECK:      skipping function with reference taken fooMulFunc
+# SAFEICFCHECK-NEXT: skipping function with reference taken barMulFunc
+# SAFEICFCHECK-NEXT: skipping function with reference taken barAddFunc
+# SAFEICFCHECK-NEXT: ICF iteration 1
+# SAFEICFCHECK-NEXT: ===---------
+
+## clang++ main.cpp -c -o -fno-PIC
+## Similar code gets generated for external reference function.
+## Other functions removed for brevity.
+## const static int (*const funcGlobalBarAdd)(int, int) = barAdd;
+## const int (*const funcGlobalBarMul)(int, int) = barMul;
+## int main(int argc, char **argv) {
+##   int temp = helper1(funcGlobalBarAdd, FooVar, BarVar)
+##   return temp;
+## }
+## Manually modified to remove "extra" assembly.
+	.globl	fooMulFunc
+	.type	fooMulFunc,@function
+fooMulFunc:
+	imull	-8(%rbp), %eax
+	retq
+	.size	fooMulFunc, .-fooMulFunc
+
+	.globl	barMulFunc
+	.type	barMulFunc,@function
+barMulFunc:
+	imull	-8(%rbp), %eax
+	retq
+	.size	barMulFunc, .-barMulFunc
+
+	.globl	fooAddFunc
+	.type	fooAddFunc,@function
+fooAddFunc:
+	addl	-8(%rbp), %eax
+	retq
+	.size	fooAddFunc, .-fooAddFunc
+
+	.globl	barAddFunc
+	.type	barAddFunc,@function
+barAddFunc:
+	addl	-8(%rbp), %eax
+	retq
+	.size	barAddFunc, .-barAddFunc
+
+	.globl	helperFunc
+	.type	helperFunc,@function
+helperFunc:
+	movabsq	$barAddFunc, %rax
+	cmpq	%rax, -16(%rbp)
+	retq
+	.size	helperFunc, .-helperFunc
+
+	.globl	main
+	.type	main,@function
+main:
+	movl	FooVar, %esi
+	movl	BarVar, %edx
+	movabsq	$barAddFunc, %rdi
+	callq	helperFunc
+	movabsq	$fooMulFunc, %rdi
+	movabsq	$barMulFunc, %rsi
+	retq
+	.size	main, .-main
+
+	.type	FooVar,@object
+	.data
+	.globl	FooVar
+FooVar:
+	.long	1
+	.size	FooVar, 4
+
+	.type	BarVar,@object
+	.globl	BarVar
+BarVar:
+	.long	2
+	.size	BarVar, 4
+
+	.type	.L.str,@object
+	.section	.rodata.str1.1,"aMS",@progbits,1
+.L.str:
+	.asciz	"val: %d\n"
+	.size	.L.str, 9

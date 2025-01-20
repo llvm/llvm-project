@@ -1,0 +1,36 @@
+; RUN: not spirv-sim --function=simple --wave=a --expects=2 -i %s 2>&1 | FileCheck %s --check-prefixes=CHECK-WAVE
+; RUN: not spirv-sim --function=simple --wave=1 --expects=a -i %s 2>&1 | FileCheck %s --check-prefixes=CHECK-EXPECT
+; RUN: not spirv-sim --function=simple --wave=1 --expects=1, -i %s 2>&1 | FileCheck %s --check-prefixes=CHECK-EXPECT
+; RUN: not spirv-sim --function=simple --wave=2 --expects=1 -i %s 2>&1 | FileCheck %s --check-prefixes=CHECK-SIZE
+; RUN: not spirv-sim --function=foo --wave=1 --expects=1 -i %s 2>&1 | FileCheck %s --check-prefixes=CHECK-NAME
+
+; CHECK-WAVE: Invalid format for --wave/-w flag.
+
+; CHECK-EXPECT: Invalid format for --expects/-e flag.
+
+; CHECK-SIZE: Wave size != expected result array size
+
+; CHECK-NAME:          'foo' function not found. Known functions are:
+; CHECK-NAME-NEXT:     - main
+; CHECK-NAME-NEXT:     - simple
+; CHECK-NANE-NOT-NEXT: -
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource HLSL 670
+               OpName %simple "simple"
+               OpName %main "main"
+        %int = OpTypeInt 32 1
+      %int_2 = OpConstant %int 2
+       %void = OpTypeVoid
+  %main_type = OpTypeFunction %void
+   %simple_type = OpTypeFunction %int
+       %main = OpFunction %void None %main_type
+      %entry = OpLabel
+               OpReturn
+               OpFunctionEnd
+     %simple = OpFunction %int None %simple_type
+          %1 = OpLabel
+               OpReturnValue %int_2
+               OpFunctionEnd

@@ -1024,7 +1024,7 @@ bool simplifyLoopIVs(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
                      LoopInfo *LI, const TargetTransformInfo *TTI,
                      SmallVectorImpl<WeakTrackingVH> &Dead) {
   SCEVExpander Rewriter(*SE, SE->getDataLayout(), "indvars");
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   Rewriter.setDebugType(DEBUG_TYPE);
 #endif
   bool Changed = false;
@@ -1103,10 +1103,8 @@ class WidenIV {
 
   void updatePostIncRangeInfo(Value *Def, Instruction *UseI, ConstantRange R) {
     DefUserPair Key(Def, UseI);
-    auto It = PostIncRangeInfos.find(Key);
-    if (It == PostIncRangeInfos.end())
-      PostIncRangeInfos.insert({Key, R});
-    else
+    auto [It, Inserted] = PostIncRangeInfos.try_emplace(Key, R);
+    if (!Inserted)
       It->second = R.intersectWith(It->second);
   }
 
@@ -1928,18 +1926,24 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU,
     if (!WideAddRec.first)
       return nullptr;
 
-    // Reuse the IV increment that SCEVExpander created. Recompute flags, unless
-    // the flags for both increments agree and it is safe to use the ones from
-    // the original inc. In that case, the new use of the wide increment won't
-    // be more poisonous.
-    bool NeedToRecomputeFlags =
-        !SCEVExpander::canReuseFlagsFromOriginalIVInc(OrigPhi, WidePhi,
-                                                      DU.NarrowUse, WideInc) ||
-        DU.NarrowUse->hasNoUnsignedWrap() != WideInc->hasNoUnsignedWrap() ||
-        DU.NarrowUse->hasNoSignedWrap() != WideInc->hasNoSignedWrap();
+    auto CanUseWideInc = [&]() {
+      if (!WideInc)
+        return false;
+      // Reuse the IV increment that SCEVExpander created. Recompute flags,
+      // unless the flags for both increments agree and it is safe to use the
+      // ones from the original inc. In that case, the new use of the wide
+      // increment won't be more poisonous.
+      bool NeedToRecomputeFlags =
+          !SCEVExpander::canReuseFlagsFromOriginalIVInc(
+              OrigPhi, WidePhi, DU.NarrowUse, WideInc) ||
+          DU.NarrowUse->hasNoUnsignedWrap() != WideInc->hasNoUnsignedWrap() ||
+          DU.NarrowUse->hasNoSignedWrap() != WideInc->hasNoSignedWrap();
+      return WideAddRec.first == WideIncExpr &&
+             Rewriter.hoistIVInc(WideInc, DU.NarrowUse, NeedToRecomputeFlags);
+    };
+
     Instruction *WideUse = nullptr;
-    if (WideAddRec.first == WideIncExpr &&
-        Rewriter.hoistIVInc(WideInc, DU.NarrowUse, NeedToRecomputeFlags))
+    if (CanUseWideInc())
       WideUse = WideInc;
     else {
       WideUse = cloneIVUser(DU, WideAddRec.first);
@@ -2160,16 +2164,14 @@ void WidenIV::calculatePostIncRange(Instruction *NarrowDef,
       !NarrowDefRHS->isNonNegative())
     return;
 
-  auto UpdateRangeFromCondition = [&] (Value *Condition,
-                                       bool TrueDest) {
-    CmpInst::Predicate Pred;
+  auto UpdateRangeFromCondition = [&](Value *Condition, bool TrueDest) {
+    CmpPredicate Pred;
     Value *CmpRHS;
     if (!match(Condition, m_ICmp(Pred, m_Specific(NarrowDefLHS),
                                  m_Value(CmpRHS))))
       return;
 
-    CmpInst::Predicate P =
-            TrueDest ? Pred : CmpInst::getInversePredicate(Pred);
+    CmpPredicate P = TrueDest ? Pred : ICmpInst::getInverseCmpPredicate(Pred);
 
     auto CmpRHSRange = SE->getSignedRange(SE->getSCEV(CmpRHS));
     auto CmpConstrainedLHSRange =

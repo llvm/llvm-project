@@ -247,14 +247,16 @@ class TargetRegisterClass;
       DOUBLE_SELECT_I64,
 
       // Load/Store Left/Right nodes.
-      LWL = ISD::FIRST_TARGET_MEMORY_OPCODE,
+      FIRST_MEMORY_OPCODE,
+      LWL = FIRST_MEMORY_OPCODE,
       LWR,
       SWL,
       SWR,
       LDL,
       LDR,
       SDL,
-      SDR
+      SDR,
+      LAST_MEMORY_OPCODE = SDR,
     };
 
   } // ene namespace MipsISD
@@ -364,6 +366,8 @@ class TargetRegisterClass;
     getExceptionSelectorRegister(const Constant *PersonalityFn) const override {
       return ABI.IsN64() ? Mips::A1_64 : Mips::A1;
     }
+
+    bool softPromoteHalfType() const override { return true; }
 
     bool isJumpTableRelative() const override {
       return getTargetMachine().isPositionIndependent();
@@ -550,6 +554,7 @@ class TargetRegisterClass;
                         bool HasExtractInsert) const;
     SDValue lowerFABS64(SDValue Op, SelectionDAG &DAG,
                         bool HasExtractInsert) const;
+    SDValue lowerFCANONICALIZE(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
@@ -610,7 +615,7 @@ class TargetRegisterClass;
     bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                         bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        LLVMContext &Context) const override;
+                        LLVMContext &Context, const Type *RetTy) const override;
 
     SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -620,7 +625,7 @@ class TargetRegisterClass;
     SDValue LowerInterruptReturn(SmallVectorImpl<SDValue> &RetOps,
                                  const SDLoc &DL, SelectionDAG &DAG) const;
 
-    bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const override;
+    bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const override;
 
     // Inline asm support
     ConstraintType getConstraintType(StringRef Constraint) const override;

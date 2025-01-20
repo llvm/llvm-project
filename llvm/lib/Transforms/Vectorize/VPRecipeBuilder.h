@@ -13,6 +13,7 @@
 #include "VPlan.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/IRBuilder.h"
 
 namespace llvm {
@@ -20,6 +21,27 @@ namespace llvm {
 class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 class TargetLibraryInfo;
+class TargetTransformInfo;
+struct HistogramInfo;
+
+/// A chain of instructions that form a partial reduction.
+/// Designed to match: reduction_bin_op (bin_op (extend (A), (extend (B))),
+/// accumulator).
+struct PartialReductionChain {
+  PartialReductionChain(Instruction *Reduction, Instruction *ExtendA,
+                        Instruction *ExtendB, Instruction *BinOp)
+      : Reduction(Reduction), ExtendA(ExtendA), ExtendB(ExtendB), BinOp(BinOp) {
+  }
+  /// The top-level binary operation that forms the reduction to a scalar
+  /// after the loop body.
+  Instruction *Reduction;
+  /// The extension of each of the inner binary operation's operands.
+  Instruction *ExtendA;
+  Instruction *ExtendB;
+
+  /// The binary operation using the extends that is then reduced.
+  Instruction *BinOp;
+};
 
 /// Helper class to create VPRecipies from IR instructions.
 class VPRecipeBuilder {
@@ -31,6 +53,9 @@ class VPRecipeBuilder {
 
   /// Target Library Info.
   const TargetLibraryInfo *TLI;
+
+  // Target Transform Info.
+  const TargetTransformInfo *TTI;
 
   /// The legality analysis.
   LoopVectorizationLegality *Legal;
@@ -60,6 +85,11 @@ class VPRecipeBuilder {
   /// to add the incoming value from the backedge after all recipes have been
   /// created.
   SmallVector<VPHeaderPHIRecipe *, 4> PhisToFix;
+
+  /// The set of reduction exit instructions that will be scaled to
+  /// a smaller VF via partial reductions, paired with the scaling factor.
+  DenseMap<const Instruction *, std::pair<PartialReductionChain, unsigned>>
+      ScaledReductionExitInstrs;
 
   /// Check if \p I can be widened at the start of \p Range and possibly
   /// decrease the range such that the returned value holds for the entire \p
@@ -91,9 +121,9 @@ class VPRecipeBuilder {
   VPBlendRecipe *tryToBlend(PHINode *Phi, ArrayRef<VPValue *> Operands);
 
   /// Handle call instructions. If \p CI can be widened for \p Range.Start,
-  /// return a new VPWidenCallRecipe. Range.End may be decreased to ensure same
-  /// decision from \p Range.Start to \p Range.End.
-  VPWidenCallRecipe *tryToWidenCall(CallInst *CI, ArrayRef<VPValue *> Operands,
+  /// return a new VPWidenCallRecipe or VPWidenIntrinsicRecipe. Range.End may be
+  /// decreased to ensure same decision from \p Range.Start to \p Range.End.
+  VPSingleDefRecipe *tryToWidenCall(CallInst *CI, ArrayRef<VPValue *> Operands,
                                     VFRange &Range);
 
   /// Check if \p I has an opcode that can be widened and return a VPWidenRecipe
@@ -102,19 +132,53 @@ class VPRecipeBuilder {
   VPWidenRecipe *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands,
                             VPBasicBlock *VPBB);
 
+  /// Makes Histogram count operations safe for vectorization, by emitting a
+  /// llvm.experimental.vector.histogram.add intrinsic in place of the
+  /// Load + Add|Sub + Store operations that perform the histogram in the
+  /// original scalar loop.
+  VPHistogramRecipe *tryToWidenHistogram(const HistogramInfo *HI,
+                                         ArrayRef<VPValue *> Operands);
+
+  /// Examines reduction operations to see if the target can use a cheaper
+  /// operation with a wider per-iteration input VF and narrower PHI VF.
+  /// Returns null if no scaled reduction was found, otherwise a pair with a
+  /// struct containing reduction information and the scaling factor between the
+  /// number of elements in the input and output.
+  std::optional<std::pair<PartialReductionChain, unsigned>>
+  getScaledReduction(PHINode *PHI, const RecurrenceDescriptor &Rdx,
+                     VFRange &Range);
+
 public:
   VPRecipeBuilder(VPlan &Plan, Loop *OrigLoop, const TargetLibraryInfo *TLI,
+                  const TargetTransformInfo *TTI,
                   LoopVectorizationLegality *Legal,
                   LoopVectorizationCostModel &CM,
                   PredicatedScalarEvolution &PSE, VPBuilder &Builder)
-      : Plan(Plan), OrigLoop(OrigLoop), TLI(TLI), Legal(Legal), CM(CM),
-        PSE(PSE), Builder(Builder) {}
+      : Plan(Plan), OrigLoop(OrigLoop), TLI(TLI), TTI(TTI), Legal(Legal),
+        CM(CM), PSE(PSE), Builder(Builder) {}
+
+  std::optional<std::pair<PartialReductionChain, unsigned>>
+  getScaledReductionForInstr(const Instruction *ExitInst) {
+    auto It = ScaledReductionExitInstrs.find(ExitInst);
+    return It == ScaledReductionExitInstrs.end()
+               ? std::nullopt
+               : std::make_optional(It->second);
+  }
+
+  /// Find all possible partial reductions in the loop and track all of those
+  /// that are valid so recipes can be formed later.
+  void collectScaledReductions(VFRange &Range);
 
   /// Create and return a widened recipe for \p I if one can be created within
   /// the given VF \p Range.
   VPRecipeBase *tryToCreateWidenRecipe(Instruction *Instr,
                                        ArrayRef<VPValue *> Operands,
                                        VFRange &Range, VPBasicBlock *VPBB);
+
+  /// Create and return a partial reduction recipe for a reduction instruction
+  /// along with binary operation and reduction phi operands.
+  VPRecipeBase *tryToCreatePartialReduction(Instruction *Reduction,
+                                            ArrayRef<VPValue *> Operands);
 
   /// Set the recipe created for given ingredient.
   void setRecipe(Instruction *I, VPRecipeBase *R) {
@@ -168,7 +232,7 @@ public:
   iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
   mapToVPValues(User::op_range Operands);
 
-  VPValue *getVPValueOrAddLiveIn(Value *V, VPlan &Plan) {
+  VPValue *getVPValueOrAddLiveIn(Value *V) {
     if (auto *I = dyn_cast<Instruction>(V)) {
       if (auto *R = Ingredient2Recipe.lookup(I))
         return R->getVPSingleValue();

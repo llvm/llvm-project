@@ -21,9 +21,9 @@
  */
 
 #include <clc/clc.h>
+#include <clc/clcmacro.h>
 
 #include "math.h"
-#include "../clcmacro.h"
 
 /*
  * ====================================================

@@ -407,7 +407,8 @@ bool LocalStackSlotImpl::insertFrameReferenceRegisters(MachineFunction &Fn) {
     if (BaseReg.isValid() &&
         lookupCandidateBaseReg(BaseReg, BaseOffset, FrameSizeAdjust,
                                LocalOffset, MI, TRI)) {
-      LLVM_DEBUG(dbgs() << "  Reusing base register " << BaseReg << "\n");
+      LLVM_DEBUG(dbgs() << "  Reusing base register " << printReg(BaseReg)
+                        << "\n");
       // We found a register to reuse.
       Offset = FrameSizeAdjust + LocalOffset - BaseOffset;
     } else {

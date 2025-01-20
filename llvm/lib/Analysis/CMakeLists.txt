@@ -79,6 +79,7 @@ add_llvm_component_library(LLVMAnalysis
   InstructionPrecedenceTracking.cpp
   InstructionSimplify.cpp
   InteractiveModelRunner.cpp
+  LastRunTrackingAnalysis.cpp
   LazyBranchProbabilityInfo.cpp
   LazyBlockFrequencyInfo.cpp
   LazyCallGraph.cpp
@@ -162,3 +163,9 @@ add_llvm_component_library(LLVMAnalysis
   Support
   TargetParser
   )
+
+include(CheckCXXSymbolExists)
+check_cxx_symbol_exists(logf128 math.h HAS_LOGF128)
+if(HAS_LOGF128)
+ target_compile_definitions(LLVMAnalysis PRIVATE HAS_LOGF128)
+endif()

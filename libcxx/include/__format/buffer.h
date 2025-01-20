@@ -37,7 +37,6 @@
 #include <__type_traits/conditional.h>
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
-#include <cstddef>
 #include <string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -323,7 +322,7 @@ struct _LIBCPP_TEMPLATE_VIS __back_insert_iterator_container<back_insert_iterato
 template <class _Container>
 class _LIBCPP_TEMPLATE_VIS __writer_container {
 public:
-  using _CharT = typename _Container::value_type;
+  using _CharT _LIBCPP_NODEBUG = typename _Container::value_type;
 
   _LIBCPP_HIDE_FROM_ABI explicit __writer_container(back_insert_iterator<_Container> __out_it)
       : __container_{__out_it.__get_container()} {}
@@ -341,7 +340,7 @@ private:
 /// Selects the type of the writer used for the output iterator.
 template <class _OutIt, class _CharT>
 class _LIBCPP_TEMPLATE_VIS __writer_selector {
-  using _Container = typename __back_insert_iterator_container<_OutIt>::type;
+  using _Container _LIBCPP_NODEBUG = typename __back_insert_iterator_container<_OutIt>::type;
 
 public:
   using type =
@@ -356,7 +355,7 @@ public:
 template <class _OutIt, __fmt_char_type _CharT>
   requires(output_iterator<_OutIt, const _CharT&>)
 class _LIBCPP_TEMPLATE_VIS __format_buffer {
-  using _Storage =
+  using _Storage _LIBCPP_NODEBUG =
       conditional_t<__enable_direct_output<_OutIt, _CharT>, __direct_storage<_CharT>, __internal_storage<_CharT>>;
 
 public:
@@ -409,7 +408,7 @@ private:
 template <class _OutIt, __fmt_char_type _CharT, bool>
   requires(output_iterator<_OutIt, const _CharT&>)
 struct _LIBCPP_TEMPLATE_VIS __format_to_n_buffer_base {
-  using _Size = iter_difference_t<_OutIt>;
+  using _Size _LIBCPP_NODEBUG = iter_difference_t<_OutIt>;
 
 public:
   _LIBCPP_HIDE_FROM_ABI explicit __format_to_n_buffer_base(_OutIt __out_it, _Size __max_size)
@@ -439,7 +438,7 @@ protected:
 template <class _OutIt, __fmt_char_type _CharT>
   requires(output_iterator<_OutIt, const _CharT&>)
 class _LIBCPP_TEMPLATE_VIS __format_to_n_buffer_base<_OutIt, _CharT, true> {
-  using _Size = iter_difference_t<_OutIt>;
+  using _Size _LIBCPP_NODEBUG = iter_difference_t<_OutIt>;
 
 public:
   _LIBCPP_HIDE_FROM_ABI explicit __format_to_n_buffer_base(_OutIt __out_it, _Size __max_size)
@@ -490,8 +489,8 @@ template <class _OutIt, __fmt_char_type _CharT>
   requires(output_iterator<_OutIt, const _CharT&>)
 struct _LIBCPP_TEMPLATE_VIS __format_to_n_buffer final
     : public __format_to_n_buffer_base< _OutIt, _CharT, __enable_direct_output<_OutIt, _CharT>> {
-  using _Base = __format_to_n_buffer_base<_OutIt, _CharT, __enable_direct_output<_OutIt, _CharT>>;
-  using _Size = iter_difference_t<_OutIt>;
+  using _Base _LIBCPP_NODEBUG = __format_to_n_buffer_base<_OutIt, _CharT, __enable_direct_output<_OutIt, _CharT>>;
+  using _Size _LIBCPP_NODEBUG = iter_difference_t<_OutIt>;
 
 public:
   _LIBCPP_HIDE_FROM_ABI explicit __format_to_n_buffer(_OutIt __out_it, _Size __max_size)
@@ -524,7 +523,7 @@ public:
 // would lead to a circular include with formatter for vector<bool>.
 template <__fmt_char_type _CharT>
 class _LIBCPP_TEMPLATE_VIS __retarget_buffer {
-  using _Alloc = allocator<_CharT>;
+  using _Alloc _LIBCPP_NODEBUG = allocator<_CharT>;
 
 public:
   using value_type = _CharT;
@@ -646,7 +645,7 @@ private:
 
 } // namespace __format
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

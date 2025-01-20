@@ -90,12 +90,21 @@ def note_constexpr_pointer_subtraction_not_same_array : Note<
 def note_constexpr_pointer_subtraction_zero_size : Note<
   "subtraction of pointers to type %0 of zero size">;
 def note_constexpr_pointer_comparison_unspecified : Note<
-  "comparison between '%0' and '%1' has unspecified value">;
+  "comparison between pointers to unrelated objects '%0' and '%1' has unspecified value">;
+def note_constexpr_pointer_arith_unspecified : Note<
+  "arithmetic involving unrelated objects '%0' and '%1' has unspecified value">;
 def note_constexpr_pointer_constant_comparison : Note<
   "comparison of numeric address '%0' with pointer '%1' can only be performed "
   "at runtime">;
 def note_constexpr_literal_comparison : Note<
-  "comparison of addresses of literals has unspecified value">;
+  "comparison of addresses of potentially overlapping literals has unspecified value">;
+def note_constexpr_literal_arith : Note<
+  "arithmetic on addresses of potentially overlapping literals has unspecified value">;
+def note_constexpr_repeated_literal_eval : Note<
+  "repeated evaluation of the same literal expression can produce different objects">;
+def note_constexpr_opaque_call_comparison : Note<
+  "comparison against opaque constant address '%0' can only be performed at "
+  "runtime">;
 def note_constexpr_pointer_weak_comparison : Note<
   "comparison against address of weak declaration '%0' can only be performed "
   "at runtime">;
@@ -148,8 +157,6 @@ def note_constexpr_var_init_weak : Note<
 def note_constexpr_typeid_polymorphic : Note<
   "typeid applied to expression of polymorphic type %0 is "
   "not allowed in a constant expression in C++ standards before C++20">;
-def note_constexpr_void_comparison : Note<
-  "comparison between unequal pointers to void has unspecified result">;
 def note_constexpr_temporary_here : Note<"temporary created here">;
 def note_constexpr_dynamic_alloc_here : Note<"heap allocation performed here">;
 def note_constexpr_conditional_never_const : Note<
@@ -169,14 +176,14 @@ def note_constexpr_this : Note<
 def access_kind : TextSubstitution<
   "%select{read of|read of|assignment to|increment of|decrement of|"
   "member call on|dynamic_cast of|typeid applied to|construction of|"
-  "destruction of}0">;
+  "destruction of|read of}0">;
 def access_kind_subobject : TextSubstitution<
   "%select{read of|read of|assignment to|increment of|decrement of|"
   "member call on|dynamic_cast of|typeid applied to|"
-  "construction of subobject of|destruction of}0">;
+  "construction of subobject of|destruction of|read of}0">;
 def access_kind_volatile : TextSubstitution<
   "%select{read of|read of|assignment to|increment of|decrement of|"
-  "<ERROR>|<ERROR>|<ERROR>|<ERROR>|<ERROR>}0">;
+  "<ERROR>|<ERROR>|<ERROR>|<ERROR>|<ERROR>|<ERROR>}0">;
 def note_constexpr_lifetime_ended : Note<
   "%sub{access_kind}0 %select{temporary|variable}1 whose "
   "%plural{8:storage duration|:lifetime}0 has ended">;
@@ -333,7 +340,8 @@ def note_constexpr_new : Note<
 def note_constexpr_new_non_replaceable : Note<
   "call to %select{placement|class-specific}0 %1">;
 def note_constexpr_new_placement : Note<
-  "this placement new expression is not yet supported in constant expressions">;
+  "this placement new expression is not supported in constant expressions "
+  "%select{|before C++2c}0">;
 def note_constexpr_placement_new_wrong_type : Note<
   "placement new would change type of storage from %0 to %1">;
 def note_constexpr_new_negative : Note<
@@ -388,6 +396,16 @@ def note_constexpr_assumption_failed : Note<
 def err_experimental_clang_interp_failed : Error<
   "the experimental clang interpreter failed to evaluate an expression">;
 
+def warn_attribute_needs_aggregate : Warning<
+  "%0 attribute is ignored in non-aggregate type %1">,
+  InGroup<IgnoredAttributes>;
+
+def warn_cxx20_compat_requires_explicit_init_non_aggregate : Warning<
+  "explicit initialization of field %1 will not be enforced in C++20 and later "
+  "because %2 has a user-declared constructor, making the type no longer an "
+  "aggregate">,
+  DefaultIgnore, InGroup<CXX20Compat>;
+
 def warn_integer_constant_overflow : Warning<
   "overflow in expression; result is %0 with type %1">,
   InGroup<DiagGroup<"integer-overflow">>;
@@ -407,6 +425,12 @@ def note_unimplemented_constexpr_lambda_feature_ast : Note<
 def warn_is_constant_evaluated_always_true_constexpr : Warning<
   "'%0' will always evaluate to 'true' in a manifestly constant-evaluated expression">,
   InGroup<DiagGroup<"constant-evaluated">>;
+
+def err_invalid_is_within_lifetime : Note<
+  "'%0' cannot be called with "
+  "%select{a null pointer|a one-past-the-end pointer|"
+  "a pointer to an object whose lifetime has not yet begun}1"
+>;
 
 // inline asm related.
 let CategoryName = "Inline Assembly Issue" in {
@@ -774,8 +798,8 @@ def err_module_odr_violation_field : Error<
   "%select{"
   "field %4|"
   "field %4 with type %5|"
-  "%select{non-|}5bitfield %4|"
-  "bitfield %4 with one width expression|"
+  "%select{non-|}5bit-field %4|"
+  "bit-field %4 with one width expression|"
   "%select{non-|}5mutable field %4|"
   "field %4 with %select{no|an}5 initializer|"
   "field %4 with an initializer"
@@ -785,8 +809,8 @@ def note_module_odr_violation_field : Note<
   "%select{"
   "field %3|"
   "field %3 with type %4|"
-  "%select{non-|}4bitfield %3|"
-  "bitfield %3 with different width expression|"
+  "%select{non-|}4bit-field %3|"
+  "bit-field %3 with different width expression|"
   "%select{non-|}4mutable field %3|"
   "field %3 with %select{no|an}4 initializer|"
   "field %3 with a different initializer"

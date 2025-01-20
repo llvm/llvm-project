@@ -665,8 +665,9 @@ InstrBuilder::getOrCreateInstrDesc(const MCInst &MCI,
   SchedClassID = *VariantSchedClassIDOrErr;
 
   auto VDKey = std::make_pair(hashMCInst(MCI), SchedClassID);
-  if (VariantDescriptors.contains(VDKey))
-    return *VariantDescriptors[VDKey];
+  auto It = VariantDescriptors.find(VDKey);
+  if (It != VariantDescriptors.end())
+    return *It->second;
 
   return createInstrDescImpl(MCI, IVec);
 }
@@ -799,7 +800,7 @@ InstrBuilder::createInstruction(const MCInst &MCI,
   unsigned WriteIndex = 0;
   Idx = 0U;
   for (const WriteDescriptor &WD : D.Writes) {
-    RegID = WD.isImplicitWrite() ? WD.RegisterID
+    RegID = WD.isImplicitWrite() ? MCRegister(WD.RegisterID)
                                  : MCI.getOperand(WD.OpIndex).getReg();
     // Check if this is a optional definition that references NoReg or a write
     // to a constant register.

@@ -58,7 +58,12 @@ def ROCDL_Dialect : Dialect {
      "::mlir::StringAttr":$flat_work_group_size,
      "::mlir::IntegerAttr":$max_flat_work_group_size,
      "::mlir::IntegerAttr":$waves_per_eu,
-     "::mlir::BoolAttr":$unsafe_fp_atomics
+     "::mlir::BoolAttr":$unsafe_fp_atomics,
+     // Correspond to LLVM metadata of the same name
+     "::mlir::UnitAttr":$last_use,
+     "::mlir::UnitAttr":$no_remote_memory,
+     "::mlir::UnitAttr":$no_fine_grained_memory,
+     "::mlir::UnitAttr":$ignore_denormal_mode
   );
 
   let useDefaultAttributePrinterParser = 1;
@@ -88,33 +93,47 @@ class ROCDL_IntrPure1Op<string mnemonic> :
 
 class ROCDL_IntrOp<string mnemonic, list<int> overloadedResults,
   list<int> overloadedOperands, list<Trait> traits, int numResults,
-  int requiresAccessGroup = 0, int requiresAliasAnalysis = 0> :
+  int requiresAccessGroup = 0, int requiresAliasAnalysis = 0, list<int> immArgPositions = [],
+  list<string> immArgAttrNames = []> :
   LLVM_IntrOpBase<ROCDL_Dialect,  mnemonic,
     "amdgcn_" # !subst(".", "_", mnemonic), overloadedResults,
     overloadedOperands, traits, numResults, requiresAccessGroup,
-    requiresAliasAnalysis>;
+    requiresAliasAnalysis, 0, 0, immArgPositions, immArgAttrNames>;
 
 //===----------------------------------------------------------------------===//
 // ROCDL special register op definitions
 //===----------------------------------------------------------------------===//
 
-class ROCDL_SpecialRegisterOp<string mnemonic,
-    list<Trait> traits = []> :
-  ROCDL_Op<mnemonic, !listconcat(traits, [Pure])>,
-  Results<(outs LLVM_Type:$res)>, Arguments<(ins)> {
-  string llvmBuilder = "$res = createIntrinsicCallWithRange(builder,"
-    # "llvm::Intrinsic::amdgcn_" # !subst(".","_", mnemonic)
-    # ", op->getAttrOfType<::mlir::DenseI32ArrayAttr>(\"range\"));";
-  let assemblyFormat = "attr-dict `:` type($res)";
+class ROCDL_SpecialIdRegisterOp<string mnemonic> :
+    ROCDL_IntrPure1Op<mnemonic>,
+    Arguments<(ins OptionalAttr<LLVM_ConstantRangeAttr>:$range)> {
+  string llvmBuilder = baseLlvmBuilder # setRangeRetAttrCode # baseLlvmBuilderCoda;
+  string mlirBuilder = baseMlirBuilder # importRangeRetAttrCode # baseMlirBuilderCoda;
+
+  let assemblyFormat = "(`range` $range^)? attr-dict `:` type($res)";
+
+    // Temporaly builder until Nvidia ops also support range attributes.
+  let builders = [
+    OpBuilder<(ins "Type":$resultType), [{
+      build($_builder, $_state, resultType, ::mlir::LLVM::ConstantRangeAttr{});
+    }]>
+  ];
 }
 
-class ROCDL_DeviceFunctionOp<string mnemonic, string device_function,
+class ROCDL_DimGetterFunctionOp<string mnemonic, string device_function,
                              int parameter, list<Trait> traits = []> :
   ROCDL_Op<mnemonic, !listconcat(traits, [Pure])>,
-  Results<(outs LLVM_Type:$res)>, Arguments<(ins)> {
-  string llvmBuilder = "$res = createDeviceFunctionCall(builder, \""
+  Results<(outs LLVM_Type:$res)>, Arguments<(ins OptionalAttr<LLVM_ConstantRangeAttr>:$range)> {
+  string llvmBuilder = "$res = createDimGetterFunctionCall(builder, op, \""
   # device_function # "\", " # parameter # ");";
-  let assemblyFormat = "attr-dict `:` type($res)";
+  let assemblyFormat = "(`range` $range^)? attr-dict `:` type($res)";
+
+  // Temporaly builder until Nvidia ops also support range attributes.
+  let builders = [
+    OpBuilder<(ins "Type":$resultType), [{
+      build($_builder, $_state, resultType, ::mlir::LLVM::ConstantRangeAttr{});
+    }]>
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -166,7 +185,7 @@ def ROCDL_BallotOp :
   let summary = "Vote across thread group";
 
   let description = [{
-      Ballot provides a bit mask containing the 1-bit predicate value from each lane. 
+      Ballot provides a bit mask containing the 1-bit predicate value from each lane.
       The nth bit of the result contains the 1 bit contributed by the nth warp lane.
   }];
 
@@ -178,36 +197,51 @@ def ROCDL_BallotOp :
   let assemblyFormat = "$pred attr-dict `:` type($res)";
 }
 
+def ROCDL_ReadlaneOp : ROCDL_IntrOp<"readlane", [], [0], [AllTypesMatch<["res", "src0"]>], 1>,
+  Arguments<(ins LLVM_Type:$src0,
+                 I32:$src1)> {
+  let results = (outs LLVM_Type:$res);
+  let summary = "Get the value in the specific lane.";
+
+  let description = [{
+    Get the value in lane `src1` from input `src0`.
+  }];
+
+  let assemblyFormat = [{
+    $src0 `,` $src1  attr-dict `:` `(` type($src0) `,` type($src1) `)` `->` type($res)
+   }];
+}
+
 //===----------------------------------------------------------------------===//
 // Thread index and Block index
 
-def ROCDL_ThreadIdXOp : ROCDL_SpecialRegisterOp<"workitem.id.x">;
-def ROCDL_ThreadIdYOp : ROCDL_SpecialRegisterOp<"workitem.id.y">;
-def ROCDL_ThreadIdZOp : ROCDL_SpecialRegisterOp<"workitem.id.z">;
+def ROCDL_ThreadIdXOp : ROCDL_SpecialIdRegisterOp<"workitem.id.x">;
+def ROCDL_ThreadIdYOp : ROCDL_SpecialIdRegisterOp<"workitem.id.y">;
+def ROCDL_ThreadIdZOp : ROCDL_SpecialIdRegisterOp<"workitem.id.z">;
 
-def ROCDL_BlockIdXOp : ROCDL_SpecialRegisterOp<"workgroup.id.x">;
-def ROCDL_BlockIdYOp : ROCDL_SpecialRegisterOp<"workgroup.id.y">;
-def ROCDL_BlockIdZOp : ROCDL_SpecialRegisterOp<"workgroup.id.z">;
+def ROCDL_BlockIdXOp : ROCDL_SpecialIdRegisterOp<"workgroup.id.x">;
+def ROCDL_BlockIdYOp : ROCDL_SpecialIdRegisterOp<"workgroup.id.y">;
+def ROCDL_BlockIdZOp : ROCDL_SpecialIdRegisterOp<"workgroup.id.z">;
 
 //===----------------------------------------------------------------------===//
 // Thread range and Block range
 
-def ROCDL_BlockDimXOp : ROCDL_DeviceFunctionOp<"workgroup.dim.x",
+def ROCDL_BlockDimXOp : ROCDL_DimGetterFunctionOp<"workgroup.dim.x",
                                                "__ockl_get_local_size", 0>;
 
-def ROCDL_BlockDimYOp : ROCDL_DeviceFunctionOp<"workgroup.dim.y",
+def ROCDL_BlockDimYOp : ROCDL_DimGetterFunctionOp<"workgroup.dim.y",
                                                "__ockl_get_local_size", 1>;
 
-def ROCDL_BlockDimZOp : ROCDL_DeviceFunctionOp<"workgroup.dim.z",
+def ROCDL_BlockDimZOp : ROCDL_DimGetterFunctionOp<"workgroup.dim.z",
                                                "__ockl_get_local_size", 2>;
 
-def ROCDL_GridDimXOp : ROCDL_DeviceFunctionOp<"grid.dim.x",
+def ROCDL_GridDimXOp : ROCDL_DimGetterFunctionOp<"grid.dim.x",
                                                "__ockl_get_num_groups", 0>;
 
-def ROCDL_GridDimYOp : ROCDL_DeviceFunctionOp<"grid.dim.y",
+def ROCDL_GridDimYOp : ROCDL_DimGetterFunctionOp<"grid.dim.y",
                                                "__ockl_get_num_groups", 1>;
 
-def ROCDL_GridDimZOp : ROCDL_DeviceFunctionOp<"grid.dim.z",
+def ROCDL_GridDimZOp : ROCDL_DimGetterFunctionOp<"grid.dim.z",
                                                "__ockl_get_num_groups", 2>;
 
 //===----------------------------------------------------------------------===//
@@ -242,6 +276,26 @@ def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
   let assemblyFormat = "attr-dict";
 }
 
+def ROCDL_BarrierSignalOp : ROCDL_IntrOp<"s.barrier.signal", [], [], [], 0, 0, 0, [0], ["id"]>,
+  Arguments<(ins I32Attr:$id)> {
+  let results = (outs);
+  let assemblyFormat = "$id attr-dict";
+}
+
+def ROCDL_BarrierWaitOp : ROCDL_IntrOp<"s.barrier.wait", [], [], [], 0, 0, 0, [0], ["id"]>,
+  Arguments<(ins I16Attr:$id)> {
+  let results = (outs);
+  let assemblyFormat = "$id attr-dict";
+  string llvmBuilder =
+    "createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_s_barrier_wait,builder.getInt16(op.getId()));";
+}
+
+def ROCDL_WaitDscntOp: ROCDL_IntrOp<"s.wait.dscnt", [], [], [], 0, 0, 0, [0], ["id"]>,
+  Arguments<(ins I16Attr:$id)> {
+  let results = (outs);
+  let assemblyFormat = "$id attr-dict";
+}
+
 def ROCDL_SetPrioOp : ROCDL_IntrOp<"s.setprio", [], [], [], 0>,
   Arguments<(ins I16Attr:$priority)> {
   let results = (outs);
@@ -258,6 +312,24 @@ def ROCDL_SchedBarrier : ROCDL_IntrOp<"sched.barrier", [], [], [], 0>,
     "createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_sched_barrier,builder.getInt32(op.getMask()));";
 }
 
+def ROCDL_SchedGroupBarrier : ROCDL_IntrOp<"sched.group.barrier", [], [], [], 0>,
+  Arguments<(ins I32Attr:$mask, I32Attr:$size, I32Attr:$groupId)> {
+  let results = (outs);
+  let assemblyFormat = "$mask `,` $size `,` $groupId attr-dict";
+  string llvmBuilder = [{
+    createIntrinsicCall(builder,
+      llvm::Intrinsic::amdgcn_sched_group_barrier,
+      {builder.getInt32(op.getMask()), builder.getInt32(op.getSize()), builder.getInt32(op.getGroupId())});
+  }];
+}
+
+def ROCDL_IglpOpt : ROCDL_IntrOp<"iglp.opt", [], [], [], 0>,
+  Arguments<(ins I32Attr:$variant)> {
+  let results = (outs);
+  let assemblyFormat = "$variant attr-dict";
+  string llvmBuilder =
+    "createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_iglp_opt,builder.getInt32(op.getVariant()));";
+}
 
 //===---------------------------------------------------------------------===//
 // Xdlops intrinsics
@@ -329,13 +401,16 @@ class ROCDL_Wmma_IntrOp<string mnemonic, list<int> overloadedOperands,
     "$args attr-dict `:` functional-type($args, $res)";
 }
 
-// Available on RDNA3
+// Available from gfx11
 def ROCDL_wmma_f32_16x16x16_f16 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.f16", [0]>;
 def ROCDL_wmma_f32_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf16", [0]>;
 def ROCDL_wmma_f16_16x16x16_f16 : ROCDL_Wmma_IntrOp<"wmma.f16.16x16x16.f16", [0]>;
 def ROCDL_wmma_bf16_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.bf16.16x16x16.bf16", [0]>;
 def ROCDL_wmma_i32_16x16x16_iu8 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu8", [1]>;
 def ROCDL_wmma_i32_16x16x16_iu4 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu4", [1]>;
+// Available from gfx12
+def ROCDL_wmma_f32_16x16x16_fp8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.fp8_fp8", [1]>;
+def ROCDL_wmma_f32_16x16x16_bf8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf8_bf8", [1]>;
 
 //===---------------------------------------------------------------------===//
 // Operations on raw buffer resources (stride of 0, bounds checks either off or in
@@ -580,6 +655,21 @@ def ROCDL_DPPUpdateOp : ROCDL_IntrOp<"update.dpp", [], [0],
 }
 
 //===---------------------------------------------------------------------===//
+// 16-bit float intrinsics
+//===---------------------------------------------------------------------===//
+def ROCDL_CvtPkRtz:
+    ROCDL_IntrOp<"cvt.pkrtz", [], [], [Pure], 1>,
+    Arguments<(ins F32:$srcA, F32:$srcB)> {
+  let summary = "Convert two f32 input into a vector<2xf16>";
+  let description = [{
+    Convert two f32 values into a packed vector<2xf16>.
+  }];
+  let assemblyFormat = [{
+    attr-dict $srcA `,` $srcB `:` type($res)
+  }];
+}
+
+//===---------------------------------------------------------------------===//
 // 8-bit float intrinsics
 //===---------------------------------------------------------------------===//
 def ROCDL_CvtF32Bf8Op :
@@ -662,7 +752,7 @@ def ROCDL_CvtSrFp8F32Op :
 // ROCDL target attribute.
 //===----------------------------------------------------------------------===//
 
-def ROCDL_TargettAttr :
+def ROCDL_TargetAttr :
     ROCDL_Attr<"ROCDLTarget", "target"> {
   let description = [{
     ROCDL target attribute for controlling compilation of AMDGPU targets. All

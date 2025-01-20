@@ -11,13 +11,12 @@
 #define _LIBCPP___FUNCTIONAL_BIND_H
 
 #include <__config>
-#include <__functional/invoke.h>
 #include <__functional/weak_result_type.h>
 #include <__fwd/functional.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_reference_wrapper.h>
 #include <__type_traits/is_void.h>
-#include <cstddef>
 #include <tuple>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -199,7 +198,7 @@ __apply_functor(_Fp& __f, _BoundArgs& __bound_args, __tuple_indices<_Indx...>, _
 template <class _Fp, class... _BoundArgs>
 class __bind : public __weak_result_type<__decay_t<_Fp> > {
 protected:
-  using _Fd = __decay_t<_Fp>;
+  using _Fd _LIBCPP_NODEBUG = __decay_t<_Fp>;
   typedef tuple<__decay_t<_BoundArgs>...> _Td;
 
 private:

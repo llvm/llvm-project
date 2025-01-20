@@ -13,6 +13,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/ComputeDependence.h"
 #include "clang/AST/DeclCXX.h"
@@ -24,7 +25,6 @@
 #include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
-#include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceManager.h"
@@ -196,8 +196,7 @@ bool Expr::isKnownToHaveBooleanValue(bool Semantic) const {
 
   if (const FieldDecl *FD = E->getSourceBitField())
     if (!Semantic && FD->getType()->isUnsignedIntegerType() &&
-        !FD->getBitWidth()->isValueDependent() &&
-        FD->getBitWidthValue(FD->getASTContext()) == 1)
+        !FD->getBitWidth()->isValueDependent() && FD->getBitWidthValue() == 1)
       return true;
 
   return false;
@@ -611,7 +610,7 @@ std::string SYCLUniqueStableNameExpr::ComputeName(ASTContext &Context,
   llvm::raw_string_ostream Out(Buffer);
   Ctx->mangleCanonicalTypeName(Ty, Out);
 
-  return Out.str();
+  return Buffer;
 }
 
 PredefinedExpr::PredefinedExpr(SourceLocation L, QualType FNTy,
@@ -775,7 +774,15 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     const FunctionDecl *Decl = FD;
     if (const FunctionDecl* Pattern = FD->getTemplateInstantiationPattern())
       Decl = Pattern;
-    const FunctionType *AFT = Decl->getType()->getAs<FunctionType>();
+
+    // Bail out if the type of the function has not been set yet.
+    // This can notably happen in the trailing return type of a lambda
+    // expression.
+    const Type *Ty = Decl->getType().getTypePtrOrNull();
+    if (!Ty)
+      return "";
+
+    const FunctionType *AFT = Ty->getAs<FunctionType>();
     const FunctionProtoType *FT = nullptr;
     if (FD->hasWrittenPrototype())
       FT = dyn_cast<FunctionProtoType>(AFT);
@@ -797,7 +804,6 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     FD->printQualifiedName(POut, Policy);
 
     if (IK == PredefinedIdentKind::Function) {
-      POut.flush();
       Out << Proto;
       return std::string(Name);
     }
@@ -879,14 +885,11 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
       }
     }
 
-    TOut.flush();
     if (!TemplateParams.empty()) {
       // remove the trailing comma and space
       TemplateParams.resize(TemplateParams.size() - 2);
       POut << " [" << TemplateParams << "]";
     }
-
-    POut.flush();
 
     // Print "auto" for all deduced return types. This includes C++1y return
     // type deduction and lambdas. For trailing return types resolve the
@@ -1474,6 +1477,7 @@ CallExpr::CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
   this->computeDependence();
 
   CallExprBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
+  CallExprBits.IsCoroElideSafe = false;
   if (hasStoredFPFeatures())
     setStoredFPFeatures(FPFeatures);
 }
@@ -1489,6 +1493,7 @@ CallExpr::CallExpr(StmtClass SC, unsigned NumPreArgs, unsigned NumArgs,
   assert((CallExprBits.OffsetToTrailingObjects == OffsetToTrailingObjects) &&
          "OffsetToTrailingObjects overflow!");
   CallExprBits.HasFPFeatures = HasFPFeatures;
+  CallExprBits.IsCoroElideSafe = false;
 }
 
 CallExpr *CallExpr::Create(const ASTContext &Ctx, Expr *Fn,
@@ -1617,33 +1622,43 @@ QualType CallExpr::getCallReturnType(const ASTContext &Ctx) const {
   return FnType->getReturnType();
 }
 
-const Attr *CallExpr::getUnusedResultAttr(const ASTContext &Ctx) const {
+std::pair<const NamedDecl *, const Attr *>
+CallExpr::getUnusedResultAttr(const ASTContext &Ctx) const {
+  // If the callee is marked nodiscard, return that attribute
+  if (const Decl *D = getCalleeDecl())
+    if (const auto *A = D->getAttr<WarnUnusedResultAttr>())
+      return {nullptr, A};
+
   // If the return type is a struct, union, or enum that is marked nodiscard,
   // then return the return type attribute.
   if (const TagDecl *TD = getCallReturnType(Ctx)->getAsTagDecl())
     if (const auto *A = TD->getAttr<WarnUnusedResultAttr>())
-      return A;
+      return {TD, A};
 
   for (const auto *TD = getCallReturnType(Ctx)->getAs<TypedefType>(); TD;
        TD = TD->desugar()->getAs<TypedefType>())
     if (const auto *A = TD->getDecl()->getAttr<WarnUnusedResultAttr>())
-      return A;
-
-  // Otherwise, see if the callee is marked nodiscard and return that attribute
-  // instead.
-  const Decl *D = getCalleeDecl();
-  return D ? D->getAttr<WarnUnusedResultAttr>() : nullptr;
+      return {TD->getDecl(), A};
+  return {nullptr, nullptr};
 }
 
 SourceLocation CallExpr::getBeginLoc() const {
   if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(this))
     return OCE->getBeginLoc();
 
+  if (const auto *Method =
+          dyn_cast_if_present<const CXXMethodDecl>(getCalleeDecl());
+      Method && Method->isExplicitObjectMemberFunction()) {
+    assert(getNumArgs() > 0 && getArg(0));
+    return getArg(0)->getBeginLoc();
+  }
+
   SourceLocation begin = getCallee()->getBeginLoc();
   if (begin.isInvalid() && getNumArgs() > 0 && getArg(0))
     begin = getArg(0)->getBeginLoc();
   return begin;
 }
+
 SourceLocation CallExpr::getEndLoc() const {
   if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(this))
     return OCE->getEndLoc();
@@ -1921,7 +1936,6 @@ bool CastExpr::CastConsistency() const {
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
-  case CK_HLSLVectorTruncation:
     assert(!getType()->isBooleanType() && "unheralded conversion to bool");
     goto CheckNoBasePath;
 
@@ -1942,6 +1956,7 @@ bool CastExpr::CastConsistency() const {
   case CK_BuiltinFnToFnPtr:
   case CK_FixedPointToBoolean:
   case CK_HLSLArrayRValue:
+  case CK_HLSLVectorTruncation:
   CheckNoBasePath:
     assert(path_empty() && "Cast kind should not have a base path!");
     break;
@@ -1990,7 +2005,7 @@ Expr *CastExpr::getSubExprAsWritten() {
       SubExpr = IgnoreExprNodes(cast<CXXConstructExpr>(SubExpr)->getArg(0),
                                 ignoreImplicitSemaNodes);
     } else if (E->getCastKind() == CK_UserDefinedConversion) {
-      assert((isa<CXXMemberCallExpr>(SubExpr) || isa<BlockExpr>(SubExpr)) &&
+      assert((isa<CallExpr, BlockExpr>(SubExpr)) &&
              "Unexpected SubExpr for CK_UserDefinedConversion.");
       if (auto *MCE = dyn_cast<CXXMemberCallExpr>(SubExpr))
         SubExpr = MCE->getImplicitObjectArgument();
@@ -2286,6 +2301,15 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
     Loc = getLocation();
     Context = getParentContext();
   }
+
+  // If we are currently parsing a lambda declarator, we might not have a fully
+  // formed call operator declaration yet, and we could not form a function name
+  // for it. Because we do not have access to Sema/function scopes here, we
+  // detect this case by relying on the fact such method doesn't yet have a
+  // type.
+  if (const auto *D = dyn_cast<CXXMethodDecl>(Context);
+      D && D->getFunctionTypeLoc().isNull() && isLambdaCallOperator(D))
+    Context = D->getParent()->getParent();
 
   PresumedLoc PLoc = Ctx.getSourceManager().getPresumedLoc(
       Ctx.getSourceManager().getExpansionRange(Loc).getEnd());
@@ -2973,6 +2997,9 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
   case ExprWithCleanupsClass:
     return cast<ExprWithCleanups>(this)->getSubExpr()
                ->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+  case OpaqueValueExprClass:
+    return cast<OpaqueValueExpr>(this)->getSourceExpr()->isUnusedResultAWarning(
+        WarnE, Loc, R1, R2, Ctx);
   }
 }
 
@@ -3631,6 +3658,8 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case RequiresExprClass:
   case SYCLUniqueStableNameExprClass:
   case PackIndexingExprClass:
+  case HLSLOutArgExprClass:
+  case OpenACCAsteriskSizeExprClass:
     // These never have a side-effect.
     return false;
 
@@ -4710,8 +4739,7 @@ DesignatedInitUpdateExpr::DesignatedInitUpdateExpr(const ASTContext &C,
            OK_Ordinary) {
   BaseAndUpdaterExprs[0] = baseExpr;
 
-  InitListExpr *ILE =
-      new (C) InitListExpr(C, lBraceLoc, std::nullopt, rBraceLoc);
+  InitListExpr *ILE = new (C) InitListExpr(C, lBraceLoc, {}, rBraceLoc);
   ILE->setType(baseExpr->getType());
   BaseAndUpdaterExprs[1] = ILE;
 
@@ -4806,6 +4834,26 @@ getOverflowPatternBinOp(const BinaryOperator *E) {
   return {};
 }
 
+/// Compute and set the OverflowPatternExclusion bit based on whether the
+/// BinaryOperator expression matches an overflow pattern being ignored by
+/// -fsanitize-undefined-ignore-overflow-pattern=add-signed-overflow-test or
+/// -fsanitize-undefined-ignore-overflow-pattern=add-unsigned-overflow-test
+static void computeOverflowPatternExclusion(const ASTContext &Ctx,
+                                            const BinaryOperator *E) {
+  std::optional<BinaryOperator *> Result = getOverflowPatternBinOp(E);
+  if (!Result.has_value())
+    return;
+  QualType AdditionResultType = Result.value()->getType();
+
+  if ((AdditionResultType->isSignedIntegerType() &&
+       Ctx.getLangOpts().isOverflowPatternExcluded(
+           LangOptions::OverflowPatternExclusionKind::AddSignedOverflowTest)) ||
+      (AdditionResultType->isUnsignedIntegerType() &&
+       Ctx.getLangOpts().isOverflowPatternExcluded(
+           LangOptions::OverflowPatternExclusionKind::AddUnsignedOverflowTest)))
+    Result.value()->setExcludedOverflowPattern(true);
+}
+
 BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
                                Opcode opc, QualType ResTy, ExprValueKind VK,
                                ExprObjectKind OK, SourceLocation opLoc,
@@ -4818,12 +4866,7 @@ BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
   BinaryOperatorBits.ExcludedOverflowPattern = false;
   SubExprs[LHS] = lhs;
   SubExprs[RHS] = rhs;
-  if (Ctx.getLangOpts().isOverflowPatternExcluded(
-          LangOptions::OverflowPatternExclusionKind::AddOverflowTest)) {
-    std::optional<BinaryOperator *> Result = getOverflowPatternBinOp(this);
-    if (Result.has_value())
-      Result.value()->BinaryOperatorBits.ExcludedOverflowPattern = true;
-  }
+  computeOverflowPatternExclusion(Ctx, this);
   BinaryOperatorBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
   if (hasStoredFPFeatures())
     setStoredFPFeatures(FPFeatures);
@@ -5372,4 +5415,25 @@ OMPIteratorExpr *OMPIteratorExpr::CreateEmpty(const ASTContext &Context,
           NumIterators * static_cast<int>(RangeLocOffset::Total), NumIterators),
       alignof(OMPIteratorExpr));
   return new (Mem) OMPIteratorExpr(EmptyShell(), NumIterators);
+}
+
+HLSLOutArgExpr *HLSLOutArgExpr::Create(const ASTContext &C, QualType Ty,
+                                       OpaqueValueExpr *Base,
+                                       OpaqueValueExpr *OpV, Expr *WB,
+                                       bool IsInOut) {
+  return new (C) HLSLOutArgExpr(Ty, Base, OpV, WB, IsInOut);
+}
+
+HLSLOutArgExpr *HLSLOutArgExpr::CreateEmpty(const ASTContext &C) {
+  return new (C) HLSLOutArgExpr(EmptyShell());
+}
+
+OpenACCAsteriskSizeExpr *OpenACCAsteriskSizeExpr::Create(const ASTContext &C,
+                                                         SourceLocation Loc) {
+  return new (C) OpenACCAsteriskSizeExpr(Loc, C.IntTy);
+}
+
+OpenACCAsteriskSizeExpr *
+OpenACCAsteriskSizeExpr::CreateEmpty(const ASTContext &C) {
+  return new (C) OpenACCAsteriskSizeExpr({}, C.IntTy);
 }

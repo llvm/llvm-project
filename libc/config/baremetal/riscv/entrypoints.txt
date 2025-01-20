@@ -27,10 +27,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.errno.errno
 
     # string.h entrypoints
-    libc.src.string.bcmp
-    libc.src.string.bcopy
-    libc.src.string.bzero
-    libc.src.string.index
     libc.src.string.memccpy
     libc.src.string.memchr
     libc.src.string.memcmp
@@ -41,10 +37,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.memrchr
     libc.src.string.memset
     libc.src.string.memset_explicit
-    libc.src.string.rindex
     libc.src.string.stpcpy
     libc.src.string.stpncpy
-    libc.src.string.strcasecmp
     libc.src.string.strcasestr
     libc.src.string.strcat
     libc.src.string.strchr
@@ -58,7 +52,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strlcat
     libc.src.string.strlcpy
     libc.src.string.strlen
-    libc.src.string.strncasecmp
     libc.src.string.strncat
     libc.src.string.strncmp
     libc.src.string.strncpy
@@ -71,6 +64,15 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strtok
     libc.src.string.strtok_r
     libc.src.string.strxfrm
+
+    # strings.h entrypoints
+    libc.src.strings.bcmp
+    libc.src.strings.bcopy
+    libc.src.strings.bzero
+    libc.src.strings.index
+    libc.src.strings.rindex
+    libc.src.strings.strcasecmp
+    libc.src.strings.strncasecmp
 
     # inttypes.h entrypoints
     libc.src.inttypes.imaxabs
@@ -178,7 +180,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.div
     libc.src.stdlib.exit
     libc.src.stdlib.free
-    libc.src.stdlib.freelist_malloc
     libc.src.stdlib.labs
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
@@ -199,10 +200,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     # time.h entrypoints
     libc.src.time.asctime
     libc.src.time.asctime_r
+    libc.src.time.ctime
+    libc.src.time.ctime_r
     libc.src.time.difftime
     libc.src.time.gmtime
     libc.src.time.gmtime_r
     libc.src.time.mktime
+    libc.src.time.timespec_get
 
     # internal entrypoints
     libc.startup.baremetal.init
@@ -448,6 +452,18 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.sqrtulr
     libc.src.stdfix.uhksqrtus
     libc.src.stdfix.uksqrtui
+    libc.src.stdfix.hrbits
+    libc.src.stdfix.uhrbits
+    libc.src.stdfix.rbits
+    libc.src.stdfix.urbits
+    libc.src.stdfix.lrbits
+    libc.src.stdfix.ulrbits
+    libc.src.stdfix.hkbits
+    libc.src.stdfix.uhkbits
+    libc.src.stdfix.kbits
+    libc.src.stdfix.ukbits
+    libc.src.stdfix.lkbits
+    libc.src.stdfix.ulkbits   
   )
 endif()
 

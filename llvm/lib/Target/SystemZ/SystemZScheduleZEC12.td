@@ -1284,6 +1284,7 @@ def : InstRW<[WLat30, MCD], (instregex "SAL$")>;
 // NOPs
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[WLat1, LSU, NormalGr], (instregex "NOP(R)?$")>;
+def : InstRW<[WLat1, LSU, NormalGr], (instregex "NOP(R)?(Opt)?$")>;
+def : InstRW<[WLat1, VBU, NormalGr], (instregex "J(G)?NOP$")>;
 }
 

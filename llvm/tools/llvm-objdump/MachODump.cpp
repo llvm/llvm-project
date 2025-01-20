@@ -7330,6 +7330,10 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   // comment causing different diffs with the 'C' disassembler library API.
   // IP->setCommentStream(CommentStream);
 
+  for (StringRef Opt : DisassemblerOptions)
+    if (!IP->applyTargetSpecificCLOption(Opt))
+      reportError(Filename, "unrecognized disassembler option: " + Opt);
+
   // Set up separate thumb disassembler if needed.
   std::unique_ptr<const MCRegisterInfo> ThumbMRI;
   std::unique_ptr<const MCAsmInfo> ThumbAsmInfo;

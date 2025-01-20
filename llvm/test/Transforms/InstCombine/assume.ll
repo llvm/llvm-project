@@ -34,6 +34,28 @@ define i32 @foo1(ptr %a) #0 {
   ret i32 %t0
 }
 
+define i32 @align_assume_trunc_cond(ptr %a) #0 {
+; DEFAULT-LABEL: @align_assume_trunc_cond(
+; DEFAULT-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
+; DEFAULT-NEXT:    [[PTRINT:%.*]] = ptrtoint ptr [[A]] to i64
+; DEFAULT-NEXT:    [[TRUNC:%.*]] = trunc i64 [[PTRINT]] to i1
+; DEFAULT-NEXT:    [[MASKCOND:%.*]] = xor i1 [[TRUNC]], true
+; DEFAULT-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
+; DEFAULT-NEXT:    ret i32 [[T0]]
+;
+; BUNDLES-LABEL: @align_assume_trunc_cond(
+; BUNDLES-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
+; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 2) ]
+; BUNDLES-NEXT:    ret i32 [[T0]]
+;
+  %t0 = load i32, ptr %a, align 4
+  %ptrint = ptrtoint ptr %a to i64
+  %trunc = trunc i64 %ptrint to i1
+  %maskcond = xor i1 %trunc, true
+  tail call void @llvm.assume(i1 %maskcond)
+  ret i32 %t0
+}
+
 ; Same check as in @foo1, but make sure it works if the assume is first too.
 
 define i32 @foo2(ptr %a) #0 {
@@ -485,7 +507,7 @@ define i1 @nonnull3B(ptr %a, i1 %control) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]]) [ "nonnull"(ptr [[LOAD]]) ]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ; CHECK:       not_taken:
-; CHECK-NEXT:    ret i1 [[CONTROL]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %load = load ptr, ptr %a
@@ -513,7 +535,7 @@ define i1 @nonnull3C(ptr %a, i1 %control) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ; CHECK:       not_taken:
-; CHECK-NEXT:    ret i1 [[CONTROL]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %load = load ptr, ptr %a
@@ -543,7 +565,7 @@ define i1 @nonnull3D(ptr %a, i1 %control) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ; CHECK:       not_taken:
-; CHECK-NEXT:    ret i1 [[CONTROL]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %load = load ptr, ptr %a
@@ -774,7 +796,7 @@ exit:
 
 define void @canonicalize_assume(ptr %0) {
 ; DEFAULT-LABEL: @canonicalize_assume(
-; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP0:%.*]], i64 8
+; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0:%.*]], i64 8
 ; DEFAULT-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP2]], i64 16) ]
 ; DEFAULT-NEXT:    ret void
 ;

@@ -1,5 +1,5 @@
-! Offloading test checking interaction of fixed size
-! arrays with enter, exit and target
+! Offloading test checking interaction of fixed size arrays with enter, exit
+! and target
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic

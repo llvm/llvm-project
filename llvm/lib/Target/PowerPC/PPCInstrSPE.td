@@ -114,7 +114,7 @@ class EVXForm_4<bits<8> xo, dag OOL, dag IOL, string asmstr,
 
 class EVXForm_D<bits<11> xo, dag OOL, dag IOL, string asmstr,
                InstrItinClass itin, list<dag> pattern> :
-               I<4, OOL, IOL, asmstr, itin> {
+               I<4, OOL, IOL, asmstr, itin>, MemriOp {
   bits<5> RT;
   bits<5> RA;
   bits<5> D;

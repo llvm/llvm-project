@@ -6,11 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This file is shared with libc++. You should also be careful when adding
+// dependencies to this file, since it needs to build for all libc++ targets.
+// -----------------------------------------------------------------------------
+
 #ifndef LLVM_LIBC_SRC___SUPPORT_STR_TO_INTEGER_H
 #define LLVM_LIBC_SRC___SUPPORT_STR_TO_INTEGER_H
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/CPP/type_traits/make_unsigned.h"
+#include "src/__support/big_int.h"
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/macros/config.h"
@@ -34,14 +42,6 @@ first_non_whitespace(const char *__restrict src,
   return src + src_cur;
 }
 
-LIBC_INLINE int b36_char_to_int(char input) {
-  if (isdigit(input))
-    return input - '0';
-  if (isalpha(input))
-    return (input | 32) + 10 - 'a';
-  return 0;
-}
-
 // checks if the next 3 characters of the string pointer are the start of a
 // hexadecimal number. Does not advance the string pointer.
 LIBC_INLINE bool
@@ -49,7 +49,7 @@ is_hex_start(const char *__restrict src,
              size_t src_len = cpp::numeric_limits<size_t>::max()) {
   if (src_len < 3)
     return false;
-  return *src == '0' && (*(src + 1) | 32) == 'x' && isalnum(*(src + 2)) &&
+  return *src == '0' && tolower(*(src + 1)) == 'x' && isalnum(*(src + 2)) &&
          b36_char_to_int(*(src + 2)) < 16;
 }
 
@@ -71,15 +71,18 @@ LIBC_INLINE int infer_base(const char *__restrict src, size_t src_len) {
   return 10;
 }
 
+// -----------------------------------------------------------------------------
+//                               **** WARNING ****
+// This interface is shared with libc++, if you change this interface you need
+// to update it in both libc and libc++.
+// -----------------------------------------------------------------------------
 // Takes a pointer to a string and the base to convert to. This function is used
 // as the backend for all of the string to int functions.
 template <class T>
 LIBC_INLINE StrToNumResult<T>
 strtointeger(const char *__restrict src, int base,
              const size_t src_len = cpp::numeric_limits<size_t>::max()) {
-  using ResultType = typename cpp::conditional_t<(cpp::is_same_v<T, UInt128> ||
-                                                  cpp::is_same_v<T, Int128>),
-                                                 UInt128, unsigned long long>;
+  using ResultType = make_integral_or_big_int_unsigned_t<T>;
 
   ResultType result = 0;
 
@@ -115,7 +118,8 @@ strtointeger(const char *__restrict src, int base,
                    : cpp::numeric_limits<T>::max();
   ResultType const abs_max =
       (is_positive ? cpp::numeric_limits<T>::max() : NEGATIVE_MAX);
-  ResultType const abs_max_div_by_base = abs_max / base;
+  ResultType const abs_max_div_by_base =
+      static_cast<ResultType>(abs_max / base);
 
   while (src_cur < src_len && isalnum(src[src_cur])) {
     int cur_digit = b36_char_to_int(src[src_cur]);
@@ -137,13 +141,13 @@ strtointeger(const char *__restrict src, int base,
       result = abs_max;
       error_val = ERANGE;
     } else {
-      result = result * base;
+      result = static_cast<ResultType>(result * base);
     }
     if (result > abs_max - cur_digit) {
       result = abs_max;
       error_val = ERANGE;
     } else {
-      result = result + cur_digit;
+      result = static_cast<ResultType>(result + cur_digit);
     }
   }
 
@@ -156,12 +160,7 @@ strtointeger(const char *__restrict src, int base,
       return {cpp::numeric_limits<T>::min(), str_len, error_val};
   }
 
-  return {
-      is_positive
-          ? static_cast<T>(result)
-          : static_cast<T>(
-                -static_cast<make_integral_or_big_int_unsigned_t<T>>(result)),
-      str_len, error_val};
+  return {static_cast<T>(is_positive ? result : -result), str_len, error_val};
 }
 
 } // namespace internal
