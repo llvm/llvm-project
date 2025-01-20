@@ -302,6 +302,9 @@ INTERCEPTOR(int, fpurge, FILE *stream) {
   __rtsan_notify_intercepted_call("fpurge");
   return REAL(fpurge)(stream);
 }
+#define RTSAN_MAYBE_INTERCEPT_FPURGE INTERCEPT_FUNCTION(fpurge)
+#else
+#define RTSAN_MAYBE_INTERCEPT_FPURGE
 #endif
 
 INTERCEPTOR(FILE *, fdopen, int fd, const char *mode) {
@@ -1031,6 +1034,16 @@ INTERCEPTOR(int, pipe, int pipefd[2]) {
   return REAL(pipe)(pipefd);
 }
 
+#if !SANITIZER_APPLE
+INTERCEPTOR(int, pipe2, int pipefd[2], int flags) {
+  __rtsan_notify_intercepted_call("pipe2");
+  return REAL(pipe2)(pipefd, flags);
+}
+#define RTSAN_MAYBE_INTERCEPT_PIPE2 INTERCEPT_FUNCTION(pipe2)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PIPE2
+#endif
+
 INTERCEPTOR(int, mkfifo, const char *pathname, mode_t mode) {
   __rtsan_notify_intercepted_call("mkfifo");
   return REAL(mkfifo)(pathname, mode);
@@ -1133,6 +1146,8 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(puts);
   INTERCEPT_FUNCTION(fputs);
   INTERCEPT_FUNCTION(fflush);
+  RTSAN_MAYBE_INTERCEPT_FPURGE;
+  RTSAN_MAYBE_INTERCEPT_PIPE2;
   INTERCEPT_FUNCTION(fdopen);
   INTERCEPT_FUNCTION(freopen);
   RTSAN_MAYBE_INTERCEPT_FOPENCOOKIE;

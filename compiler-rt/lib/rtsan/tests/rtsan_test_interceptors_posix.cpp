@@ -1349,6 +1349,15 @@ TEST(TestRtsanInterceptors, PipeDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+#if !SANITIZER_APPLE
+TEST(TestRtsanInterceptors, Pipe2DiesWhenRealtime) {
+  int fds[2];
+  auto Func = [&fds]() { pipe2(fds, O_CLOEXEC); };
+  ExpectRealtimeDeath(Func, "pipe2");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 TEST(TestRtsanInterceptors, SyscallDiesWhenRealtime) {
