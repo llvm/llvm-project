@@ -59,63 +59,53 @@ define void @test_amx(i8* %pointer, i8* %base, i64 %stride) {
   ret void
 }
 
-%struct.__tile1024i_str = type <{ i16, i16, [60 x i8], <256 x i32> }>
-
-define dso_local void @__tile_dpbf8ps(ptr nocapture noundef %dst, ptr nocapture noundef readonly byval(%struct.__tile1024i_str) align 64 %src1, ptr nocapture noundef readonly byval(%struct.__tile1024i_str) align 64 %src2) {
+; Function Attrs: nounwind
+define dso_local void @__tile_dpbf8ps(ptr %dst, ptr %src1, ptr %src2) #0 {
 ; CHECK-LABEL: __tile_dpbf8ps:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movq %rsp, %rbp
-; CHECK-NEXT:    .cfi_def_cfa_register %rbp
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    andq $-1024, %rsp # imm = 0xFC00
-; CHECK-NEXT:    subq $5120, %rsp # imm = 0x1400
-; CHECK-NEXT:    .cfi_offset %rbx, -24
+; CHECK-NEXT:    subq $4976, %rsp # imm = 0x1370
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovups %zmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $1, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movzwl 16(%rbp), %eax
+; CHECK-NEXT:    movzwl (%rsi), %eax
 ; CHECK-NEXT:    movb %al, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %al, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movswq 1106(%rbp), %rcx
+; CHECK-NEXT:    movswq 2(%rdx), %rcx
 ; CHECK-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movswq 18(%rbp), %rdx
-; CHECK-NEXT:    movw %dx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movzwl %dx, %esi
-; CHECK-NEXT:    movb %sil, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    shrl $2, %esi
-; CHECK-NEXT:    movb %sil, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movswq 2(%rsi), %r8
+; CHECK-NEXT:    movw %r8w, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movzwl %r8w, %r9d
+; CHECK-NEXT:    movb %r9b, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    shrl $2, %r9d
+; CHECK-NEXT:    movb %r9b, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    addq $64, %rdi
 ; CHECK-NEXT:    tileloadd (%rdi,%rcx), %tmm0
-; CHECK-NEXT:    leaq 80(%rbp), %r8
-; CHECK-NEXT:    tileloadd (%r8,%rdx), %tmm1
-; CHECK-NEXT:    leaq 1168(%rbp), %r8
-; CHECK-NEXT:    tileloadd (%r8,%rcx), %tmm2
-; CHECK-NEXT:    movabsq $64, %rbx
-; CHECK-NEXT:    tilestored %tmm0, 1024(%rsp,%rbx) # 1024-byte Folded Spill
-; CHECK-NEXT:    tileloadd 1024(%rsp,%rbx), %tmm3 # 1024-byte Folded Reload
+; CHECK-NEXT:    addq $64, %rsi
+; CHECK-NEXT:    tileloadd (%rsi,%r8), %tmm1
+; CHECK-NEXT:    addq $64, %rdx
+; CHECK-NEXT:    tileloadd (%rdx,%rcx), %tmm2
+; CHECK-NEXT:    movabsq $64, %rbp
+; CHECK-NEXT:    tilestored %tmm0, 896(%rsp,%rbp) # 1024-byte Folded Spill
+; CHECK-NEXT:    tileloadd 896(%rsp,%rbp), %tmm3 # 1024-byte Folded Reload
 ; CHECK-NEXT:    tdpbf8ps %tmm2, %tmm1, %tmm3
 ; CHECK-NEXT:    tilestored %tmm3, (%rdi,%rcx)
-; CHECK-NEXT:    tilestored %tmm0, 2048(%rsp,%rbx) # 1024-byte Folded Spill
-; CHECK-NEXT:    tileloadd 2048(%rsp,%rbx), %tmm3 # 1024-byte Folded Reload
+; CHECK-NEXT:    tilestored %tmm0, 1920(%rsp,%rbp) # 1024-byte Folded Spill
+; CHECK-NEXT:    tileloadd 1920(%rsp,%rbp), %tmm3 # 1024-byte Folded Reload
 ; CHECK-NEXT:    tdpbhf8ps %tmm2, %tmm1, %tmm3
 ; CHECK-NEXT:    tilestored %tmm3, (%rdi,%rcx)
-; CHECK-NEXT:    tilestored %tmm0, 3072(%rsp,%rbx) # 1024-byte Folded Spill
-; CHECK-NEXT:    tileloadd 3072(%rsp,%rbx), %tmm3 # 1024-byte Folded Reload
+; CHECK-NEXT:    tilestored %tmm0, 2944(%rsp,%rbp) # 1024-byte Folded Spill
+; CHECK-NEXT:    tileloadd 2944(%rsp,%rbp), %tmm3 # 1024-byte Folded Reload
 ; CHECK-NEXT:    tdphbf8ps %tmm2, %tmm1, %tmm3
 ; CHECK-NEXT:    tilestored %tmm3, (%rdi,%rcx)
 ; CHECK-NEXT:    tdphf8ps %tmm2, %tmm1, %tmm0
 ; CHECK-NEXT:    tilestored %tmm0, (%rdi,%rcx)
-; CHECK-NEXT:    leaq -8(%rbp), %rsp
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    addq $4976, %rsp # imm = 0x1370
 ; CHECK-NEXT:    popq %rbp
-; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    tilerelease
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -162,3 +152,6 @@ declare x86_amx @llvm.x86.tdpbf8ps.internal(i16, i16, i16, x86_amx, x86_amx, x86
 declare x86_amx @llvm.x86.tdpbhf8ps.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)
 declare x86_amx @llvm.x86.tdphbf8ps.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)
 declare x86_amx @llvm.x86.tdphf8ps.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)
+
+attributes #0 = { nounwind }
+
