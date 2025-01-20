@@ -13,7 +13,8 @@ RUN apt-get update && \
     ninja-build \
     python3 \
     git \
-    curl
+    curl \
+    zlib1g-dev
 
 RUN curl -O -L https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-$LLVM_VERSION.tar.gz && tar -xf llvmorg-$LLVM_VERSION.tar.gz
 
