@@ -228,18 +228,6 @@ func.func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
 func.func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
   affine.for %x = 0 to 7 {
     %y = arith.addi %x, %x : index
-    // expected-error@+1 {{operand cannot be used as a dimension id}}
-    affine.parallel (%i, %j) = (0, 0) to (%y, 100) step (10, 10) {
-    }
-  }
-  return
-}
-
-// -----
-
-func.func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
-  affine.for %x = 0 to 7 {
-    %y = arith.addi %x, %x : index
     // expected-error@+1 {{operand cannot be used as a symbol}}
     affine.parallel (%i, %j) = (0, 0) to (symbol(%y), 100) step (10, 10) {
     }

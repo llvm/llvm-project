@@ -409,3 +409,177 @@ func.func @arith_add_vaild_symbol_lower_bound(%arg : index) {
 // CHECK:   affine.for %[[VAL_3:.*]] = #[[$ATTR_0]](%[[VAL_2]]){{\[}}%[[VAL_0]]] to 7 {
 // CHECK:   }
 // CHECK: }
+
+// -----
+
+// CHECK-LABEL: func @affine_parallel
+
+func.func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
+  affine.for %x = 0 to 7 {
+    %y = arith.addi %x, %x : index
+    affine.parallel (%i, %j) = (0, 0) to (%y, 100) step (10, 10) {
+    }
+  }
+  return
+}
+
+// CHECK-NEXT: affine.for 
+// CHECK-SAME: %[[VAL_0:.*]] = 0 to 7 {
+// CHECK: %[[VAL_1:.*]] = arith.addi %[[VAL_0]], %[[VAL_0]] : index
+// CHECK:   affine.parallel (%{{.*}}, %{{.*}}) = (0, 0) to (%[[VAL_1]], 100) step (10, 10) {
+// CHECK:   }
+// CHECK: }
+
+// -----
+
+func.func @load_non_affine_index(%arg0 : index) {
+  %0 = memref.alloc() : memref<10xf32>
+  affine.for %i0 = 0 to 10 {
+    %1 = arith.muli %i0, %arg0 : index
+    %v = affine.load %0[%1] : memref<10xf32>
+  }
+  return
+}
+
+// CHECK-LABEL: func @load_non_affine_index
+// CHECK-SAME:  %[[VAL_0:.*]]: index) {
+// CHECK: %[[VAL_1:.*]] = memref.alloc() : memref<10xf32>
+// CHECK: affine.for %[[VAL_2:.*]] = 0 to 10 {
+// CHECK:   %[[VAL_3:.*]] = arith.muli %[[VAL_2]], %[[VAL_0]] : index
+// CHECK:   %{{.*}} = affine.load %[[VAL_1]]{{\[}}%[[VAL_3]]] : memref<10xf32>
+// CHECK: }
+
+// -----
+
+func.func @store_non_affine_index(%arg0 : index) {
+  %0 = memref.alloc() : memref<10xf32>
+  %1 = arith.constant 11.0 : f32
+  affine.for %i0 = 0 to 10 {
+    %2 = arith.muli %i0, %arg0 : index
+    affine.store %1, %0[%2] : memref<10xf32>
+  }
+  return
+}
+
+// CHECK-LABEL: func @store_non_affine_index
+// CHECK-SAME: %[[VAL_0:.*]]: index) {
+// CHECK: %[[VAL_1:.*]] = memref.alloc() : memref<10xf32>
+// CHECK: %[[VAL_2:.*]] = arith.constant 1.100000e+01 : f32
+// CHECK: affine.for %[[VAL_3:.*]] = 0 to 10 {
+// CHECK:   %[[VAL_4:.*]] = arith.muli %[[VAL_3]], %[[VAL_0]] : index
+// CHECK:    affine.store %[[VAL_2]], %[[VAL_1]]{{\[}}%[[VAL_4]]] : memref<10xf32>
+// CHECK: }
+
+// -----
+
+func.func @dma_start_non_affine_src_index(%arg0 : index) {
+  %0 = memref.alloc() : memref<100xf32>
+  %1 = memref.alloc() : memref<100xf32, 2>
+  %2 = memref.alloc() : memref<1xi32, 4>
+  %c0 = arith.constant 0 : index
+  %c64 = arith.constant 64 : index
+  affine.for %i0 = 0 to 10 {
+    %3 = arith.muli %i0, %arg0 : index
+    affine.dma_start %0[%3], %1[%i0], %2[%c0], %c64
+        : memref<100xf32>, memref<100xf32, 2>, memref<1xi32, 4>
+  }
+  return
+}
+
+// CHECK-LABEL: func @dma_start_non_affine_src_index
+// CHECK-SAME: %[[VAL_0:.*]]: index) {
+// CHECK: %[[VAL_1:.*]] = memref.alloc() : memref<100xf32>
+// CHECK: %[[VAL_2:.*]] = memref.alloc() : memref<100xf32, 2>
+// CHECK: %[[VAL_3:.*]] = memref.alloc() : memref<1xi32, 4>
+// CHECK: %[[VAL_4:.*]] = arith.constant 0 : index
+// CHECK: %[[VAL_5:.*]] = arith.constant 64 : index
+// CHECK: affine.for %[[VAL_6:.*]] = 0 to 10 {
+// CHECK:   %[[VAL_7:.*]] = arith.muli %[[VAL_6]], %[[VAL_0]] : index
+// CHECK:   affine.dma_start %[[VAL_1]]{{\[}}%[[VAL_7]]], %[[VAL_2]]{{\[}}%[[VAL_6]]], %[[VAL_3]]{{\[}}%[[VAL_4]]], %[[VAL_5]]
+// CHECK-SAME: : memref<100xf32>, memref<100xf32, 2>, memref<1xi32, 4>
+// CHECK: }
+
+// -----
+
+func.func @dma_start_non_affine_dst_index(%arg0 : index) {
+  %0 = memref.alloc() : memref<100xf32>
+  %1 = memref.alloc() : memref<100xf32, 2>
+  %2 = memref.alloc() : memref<1xi32, 4>
+  %c0 = arith.constant 0 : index
+  %c64 = arith.constant 64 : index
+  affine.for %i0 = 0 to 10 {
+    %3 = arith.muli %i0, %arg0 : index
+    affine.dma_start %0[%i0], %1[%3], %2[%c0], %c64
+        : memref<100xf32>, memref<100xf32, 2>, memref<1xi32, 4>
+  }
+  return
+}
+
+// CHECK-LABEL: func @dma_start_non_affine_dst_index
+// CHECK-SAME: %[[VAL_0:.*]]: index) {
+// CHECK: %[[VAL_1:.*]] = memref.alloc() : memref<100xf32>
+// CHECK: %[[VAL_2:.*]] = memref.alloc() : memref<100xf32, 2>
+// CHECK: %[[VAL_3:.*]] = memref.alloc() : memref<1xi32, 4>
+// CHECK: %[[VAL_4:.*]] = arith.constant 0 : index
+// CHECK: %[[VAL_5:.*]] = arith.constant 64 : index
+// CHECK: affine.for %[[VAL_6:.*]] = 0 to 10 {
+// CHECK: %[[VAL_7:.*]] = arith.muli %[[VAL_6]], %[[VAL_0]] : index
+// CHECK: affine.dma_start %[[VAL_1]]{{\[}}%[[VAL_6]]], %[[VAL_2]]{{\[}}%[[VAL_7]]], %[[VAL_3]]{{\[}}%[[VAL_4]]], %[[VAL_5]]
+// CHECK-SAME: : memref<100xf32>, memref<100xf32, 2>, memref<1xi32, 4>
+// CHECK: }
+
+// -----
+
+func.func @dma_start_non_affine_tag_index(%arg0 : index) {
+  %0 = memref.alloc() : memref<100xf32>
+  %1 = memref.alloc() : memref<100xf32, 2>
+  %2 = memref.alloc() : memref<1xi32, 4>
+  %c0 = arith.constant 0 : index
+  %c64 = arith.constant 64 : index
+  affine.for %i0 = 0 to 10 {
+    %3 = arith.muli %i0, %arg0 : index
+    affine.dma_start %0[%i0], %1[%arg0], %2[%3], %c64
+        : memref<100xf32>, memref<100xf32, 2>, memref<1xi32, 4>
+  }
+  return
+}
+
+// CHECK-LABEL: func @dma_start_non_affine_tag_index
+// CHECK-SAME: %[[VAL_0:.*]]: index) {
+// CHECK: %[[VAL_1:.*]] = memref.alloc() : memref<100xf32>
+// CHECK: %[[VAL_2:.*]] = memref.alloc() : memref<100xf32, 2>
+// CHECK: %[[VAL_3:.*]] = memref.alloc() : memref<1xi32, 4>
+// CHECK: %{{.*}} = arith.constant 0 : index
+// CHECK: %[[VAL_4:.*]] = arith.constant 64 : index
+// CHECK: affine.for %[[VAL_5:.*]] = 0 to 10 {
+// CHECK: %[[VAL_6:.*]] = arith.muli %[[VAL_5]], %[[VAL_0]] : index
+// CHECK: affine.dma_start %[[VAL_1]]{{\[}}%[[VAL_5]]], %[[VAL_2]]{{\[}}%[[VAL_0]]], %[[VAL_3]]{{\[}}%[[VAL_6]]], %[[VAL_4]]
+// CHECK-SAME: : memref<100xf32>, memref<100xf32, 2>, memref<1xi32, 4>
+// CHECK: }
+
+// -----
+
+func.func @dma_wait_non_affine_tag_index(%arg0 : index) {
+  %0 = memref.alloc() : memref<100xf32>
+  %1 = memref.alloc() : memref<100xf32, 2>
+  %2 = memref.alloc() : memref<1xi32, 4>
+  %c0 = arith.constant 0 : index
+  %c64 = arith.constant 64 : index
+  affine.for %i0 = 0 to 10 {
+    %3 = arith.muli %i0, %arg0 : index
+    affine.dma_wait %2[%3], %c64 : memref<1xi32, 4>
+  }
+  return
+}
+
+// CHECK-LABEL: func @dma_wait_non_affine_tag_index
+// CHECK-SAME: %[[VAL_0:.*]]: index) {
+// CHECK: %{{.*}} = memref.alloc() : memref<100xf32>
+// CHECK: %{{.*}} = memref.alloc() : memref<100xf32, 2>
+// CHECK: %[[VAL_1:.*]] = memref.alloc() : memref<1xi32, 4>
+// CHECK: %{{.*}} = arith.constant 0 : index
+// CHECK: %[[VAL_2:.*]] = arith.constant 64 : index
+// CHECK: affine.for %[[VAL_3:.*]] = 0 to 10 {
+// CHECK:   %[[VAL_4:.*]] = arith.muli %[[VAL_3]], %[[VAL_0]] : index
+// CHECK:   affine.dma_wait %[[VAL_1]]{{\[}}%[[VAL_4]]], %[[VAL_2]] : memref<1xi32, 4>
+// CHECK: }

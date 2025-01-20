@@ -83,8 +83,8 @@ location of the SSA use. Dimensions may be bound not only to anything that a
 symbol is bound to, but also to induction variables of enclosing
 [`affine.for`](#affinefor-mliraffineforop) and
 [`affine.parallel`](#affineparallel-mliraffineparallelop) operations, and the result
-of an [`affine.apply` operation](#affineapply-mliraffineapplyop) (which recursively
-may use other dimensions and symbols).
+of a `Pure` operation whose operands are valid dimensional identifiers.
+(which recursively may use other dimensions and symbols).
 
 ### Affine Expressions
 

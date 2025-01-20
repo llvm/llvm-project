@@ -274,7 +274,8 @@ Region *mlir::affine::getAffineScope(Operation *op) {
 // conditions:
 // *) It is valid as a symbol.
 // *) It is an induction variable.
-// *) It is the result of affine apply operation with dimension id arguments.
+// *) It is the result of a `Pure` operation whose operands with dimension id
+// *) arguments.
 bool mlir::affine::isValidDim(Value value) {
   // The value must be an index type.
   if (!value.getType().isIndex())
@@ -294,7 +295,8 @@ bool mlir::affine::isValidDim(Value value) {
 // conditions:
 // *) It is valid as a symbol.
 // *) It is an induction variable.
-// *) It is the result of an affine apply operation with dimension id operands.
+// *) It is the result of a `Pure` operation whose operands with dimension id
+// *) operands.
 bool mlir::affine::isValidDim(Value value, Region *region) {
   // The value must be an index type.
   if (!value.getType().isIndex())
@@ -304,20 +306,24 @@ bool mlir::affine::isValidDim(Value value, Region *region) {
   if (isValidSymbol(value, region))
     return true;
 
-  auto *op = value.getDefiningOp();
-  if (!op) {
+  auto *defOp = value.getDefiningOp();
+  if (!defOp) {
     // This value has to be a block argument for an affine.for or an
     // affine.parallel.
     auto *parentOp = llvm::cast<BlockArgument>(value).getOwner()->getParentOp();
     return isa<AffineForOp, AffineParallelOp>(parentOp);
   }
 
-  // Affine apply operation is ok if all of its operands are ok.
-  if (auto applyOp = dyn_cast<AffineApplyOp>(op))
-    return applyOp.isValidDim(region);
+  // `Pure` operation is ok if all of its operands are ok.
+  if (isPure(defOp) && llvm::all_of(defOp->getOperands(), [&](Value operand) {
+        return affine::isValidDim(operand, region);
+      })) {
+    return true;
+  }
+
   // The dim op is okay if its operand memref/tensor is defined at the top
   // level.
-  if (auto dimOp = dyn_cast<ShapedDimOpInterface>(op))
+  if (auto dimOp = dyn_cast<ShapedDimOpInterface>(defOp))
     return isTopLevelValue(dimOp.getShapedValue());
   return false;
 }
