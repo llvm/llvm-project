@@ -219,10 +219,8 @@ define void @func_non_entry_block_static_alloca_align4(ptr addrspace(1) %out, i3
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; MUBUF-NEXT:    s_mov_b32 s7, s33
-; MUBUF-NEXT:    s_mov_b32 s8, s34
 ; MUBUF-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; MUBUF-NEXT:    s_mov_b32 s33, s32
-; MUBUF-NEXT:    s_mov_b32 s34, s32
 ; MUBUF-NEXT:    s_addk_i32 s32, 0x400
 ; MUBUF-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; MUBUF-NEXT:    s_cbranch_execz .LBB2_3
@@ -249,7 +247,6 @@ define void @func_non_entry_block_static_alloca_align4(ptr addrspace(1) %out, i3
 ; MUBUF-NEXT:    s_add_i32 s32, s33, 0x400
 ; MUBUF-NEXT:    global_store_dword v[0:1], v0, off
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    s_mov_b32 s34, s8
 ; MUBUF-NEXT:    s_addk_i32 s32, 0xfc00
 ; MUBUF-NEXT:    s_mov_b32 s33, s7
 ; MUBUF-NEXT:    s_setpc_b64 s[30:31]
@@ -258,10 +255,8 @@ define void @func_non_entry_block_static_alloca_align4(ptr addrspace(1) %out, i3
 ; FLATSCR:       ; %bb.0: ; %entry
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; FLATSCR-NEXT:    s_mov_b32 s3, s33
-; FLATSCR-NEXT:    s_mov_b32 s4, s34
 ; FLATSCR-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; FLATSCR-NEXT:    s_mov_b32 s33, s32
-; FLATSCR-NEXT:    s_mov_b32 s34, s32
 ; FLATSCR-NEXT:    s_add_i32 s32, s32, 16
 ; FLATSCR-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; FLATSCR-NEXT:    s_cbranch_execz .LBB2_3
@@ -287,7 +282,6 @@ define void @func_non_entry_block_static_alloca_align4(ptr addrspace(1) %out, i3
 ; FLATSCR-NEXT:    s_add_i32 s32, s33, 16
 ; FLATSCR-NEXT:    global_store_dword v[0:1], v0, off
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    s_mov_b32 s34, s4
 ; FLATSCR-NEXT:    s_add_i32 s32, s32, -16
 ; FLATSCR-NEXT:    s_mov_b32 s33, s3
 ; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
