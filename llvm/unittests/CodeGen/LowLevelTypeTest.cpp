@@ -306,8 +306,7 @@ TEST(LowLevelTypeTest, Pointer) {
       // Test Type->LLT conversion.
       Type *IRTy = PointerType::get(C, AS);
       EXPECT_EQ(Ty, getLLTForType(*IRTy, DL));
-      Type *IRVTy =
-          VectorType::get(PointerType::get(C, AS), EC);
+      Type *IRVTy = VectorType::get(PointerType::get(C, AS), EC);
       EXPECT_EQ(VTy, getLLTForType(*IRVTy, DL));
     }
   }
