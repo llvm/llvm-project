@@ -70,7 +70,7 @@ static Instruction *simplifyX86MaskedLoad(IntrinsicInst &II, InstCombiner &IC) {
     // First, cast the x86 intrinsic scalar pointer to a vector pointer to match
     // the LLVM intrinsic definition for the pointer argument.
     unsigned AddrSpace = cast<PointerType>(Ptr->getType())->getAddressSpace();
-    PointerType *VecPtrTy = PointerType::get(II.getType(), AddrSpace);
+    PointerType *VecPtrTy = PointerType::get(II.getContext(), AddrSpace);
     Value *PtrCast = IC.Builder.CreateBitCast(Ptr, VecPtrTy, "castvec");
 
     // The pass-through vector for an x86 masked load is a zero vector.
@@ -105,7 +105,7 @@ static bool simplifyX86MaskedStore(IntrinsicInst &II, InstCombiner &IC) {
   // intrinsic to the LLVM intrinsic to allow target-independent optimizations.
   if (Value *BoolMask = getBoolVecFromMask(Mask, IC.getDataLayout())) {
     unsigned AddrSpace = cast<PointerType>(Ptr->getType())->getAddressSpace();
-    PointerType *VecPtrTy = PointerType::get(Vec->getType(), AddrSpace);
+    PointerType *VecPtrTy = PointerType::get(Vec->getContext(), AddrSpace);
     Value *PtrCast = IC.Builder.CreateBitCast(Ptr, VecPtrTy, "castvec");
 
     IC.Builder.CreateMaskedStore(Vec, PtrCast, Align(1), BoolMask);

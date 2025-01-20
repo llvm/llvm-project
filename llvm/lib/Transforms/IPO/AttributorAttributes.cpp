@@ -12344,7 +12344,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     Value *FP = CB->getCalledOperand();
     if (FP->getType()->getPointerAddressSpace())
-      FP = new AddrSpaceCastInst(FP, PointerType::get(FP->getType(), 0),
+      FP = new AddrSpaceCastInst(FP, PointerType::get(FP->getContext(), 0),
                                  FP->getName() + ".as0", CB->getIterator());
 
     bool CBIsVoid = CB->getType()->isVoidTy();

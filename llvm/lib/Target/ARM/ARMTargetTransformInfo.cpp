@@ -84,7 +84,7 @@ static Value *simplifyNeonVld1(const IntrinsicInst &II, unsigned MemAlign,
     return nullptr;
 
   auto *BCastInst = Builder.CreateBitCast(II.getArgOperand(0),
-                                          PointerType::get(II.getType(), 0));
+                                          PointerType::get(II.getContext(), 0));
   return Builder.CreateAlignedLoad(II.getType(), BCastInst, Align(Alignment));
 }
 

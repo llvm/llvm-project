@@ -286,7 +286,7 @@ protected:
   /// Pick a random pointer type.
   Type *pickPointerType() {
     Type *Ty = pickType();
-    return PointerType::get(Ty, 0);
+    return PointerType::get(Context, 0);
   }
 
   /// Pick a random vector type.
@@ -547,7 +547,7 @@ struct CastModifier: public Modifier {
     // Pointers:
     if (VTy->isPointerTy()) {
       if (!DestTy->isPointerTy())
-        DestTy = PointerType::get(DestTy, 0);
+        DestTy = PointerType::get(Context, 0);
       return PT->push_back(
           new BitCastInst(V, DestTy, "PC", BB->getTerminator()->getIterator()));
     }
