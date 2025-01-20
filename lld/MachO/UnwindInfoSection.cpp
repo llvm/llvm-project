@@ -239,7 +239,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
     // Since compact unwind sections aren't part of the inputSections vector,
     // they don't get canonicalized by scanRelocations(), so we have to do the
     // canonicalization here.
-    if (auto *referentIsec = r.referent.dyn_cast<InputSection *>())
+    if (auto *referentIsec = dyn_cast_if_present<InputSection *>(r.referent))
       r.referent = referentIsec->canonical();
 
     // Functions and LSDA entries always reside in the same object file as the
@@ -249,7 +249,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
     if (r.offset != cuLayout.personalityOffset)
       continue;
 
-    if (auto *s = r.referent.dyn_cast<Symbol *>()) {
+    if (auto *s = dyn_cast_if_present<Symbol *>(r.referent)) {
       // Personality functions are nearly always system-defined (e.g.,
       // ___gxx_personality_v0 for C++) and relocated as dylib symbols.  When an
       // application provides its own personality function, it might be
@@ -294,7 +294,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
       continue;
     }
 
-    if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {
+    if (auto *referentIsec = dyn_cast_if_present<InputSection *>(r.referent)) {
       assert(!isCoalescedWeak(referentIsec));
       // Personality functions can be referenced via section relocations
       // if they live in the same object file. Create placeholder synthetic

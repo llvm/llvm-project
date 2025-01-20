@@ -1162,7 +1162,8 @@ void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
         continue;
       }
       uint64_t add = r.addend;
-      if (auto *sym = cast_or_null<Defined>(r.referent.dyn_cast<Symbol *>())) {
+      if (auto *sym = cast_or_null<Defined>(
+              dyn_cast_if_present<Symbol *>(r.referent))) {
         // Check whether the symbol defined in this file is the prevailing one.
         // Skip if it is e.g. a weak def that didn't prevail.
         if (sym->getFile() != this) {
@@ -1172,8 +1173,8 @@ void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
         add += sym->value;
         referentIsec = cast<ConcatInputSection>(sym->isec());
       } else {
-        referentIsec =
-            cast<ConcatInputSection>(r.referent.dyn_cast<InputSection *>());
+        referentIsec = cast<ConcatInputSection>(
+            dyn_cast_if_present<InputSection *>(r.referent));
       }
       // Unwind info lives in __DATA, and finalization of __TEXT will occur
       // before finalization of __DATA. Moreover, the finalization of unwind
@@ -1339,8 +1340,8 @@ targetSymFromCanonicalSubtractor(const InputSection *isec,
   // Note: pcSym may *not* be exactly at the PC; there's usually a non-zero
   // addend.
   auto *pcSym = cast<Defined>(cast<macho::Symbol *>(subtrahend.referent));
-  Defined *target =
-      cast_or_null<Defined>(minuend.referent.dyn_cast<macho::Symbol *>());
+  Defined *target = cast_or_null<Defined>(
+      dyn_cast_if_present<macho::Symbol *>(minuend.referent));
   if (!pcSym) {
     auto *targetIsec =
         cast<ConcatInputSection>(cast<InputSection *>(minuend.referent));

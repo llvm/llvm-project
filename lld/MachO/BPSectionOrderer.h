@@ -132,7 +132,7 @@ private:
     if (isec)
       kind = uint64_t(isec->kind());
 
-    if (auto *sym = reloc.referent.dyn_cast<Symbol *>()) {
+    if (auto *sym = llvm::dyn_cast_if_present<Symbol *>(reloc.referent)) {
       kind = (kind << 8) | uint8_t(sym->kind());
       if (auto *d = llvm::dyn_cast<Defined>(sym))
         value = d->value;

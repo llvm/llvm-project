@@ -837,7 +837,7 @@ void ObjCSelRefsHelper::initialize() {
     // might be aggregated.
     assert(isec->relocs.size() == 1);
     auto Reloc = isec->relocs[0];
-    if (const auto *sym = Reloc.referent.dyn_cast<Symbol *>()) {
+    if (const auto *sym = dyn_cast_if_present<Symbol *>(Reloc.referent)) {
       if (const auto *d = dyn_cast<Defined>(sym)) {
         auto *cisec = cast<CStringInputSection>(d->isec());
         auto methname = cisec->getStringRefAtOffset(d->value);
@@ -1958,7 +1958,7 @@ void InitOffsetsSection::writeTo(uint8_t *buf) const {
   // FIXME: Add function specified by -init when that argument is implemented.
   for (ConcatInputSection *isec : sections) {
     for (const Reloc &rel : isec->relocs) {
-      const Symbol *referent = rel.referent.dyn_cast<Symbol *>();
+      const Symbol *referent = dyn_cast_if_present<Symbol *>(rel.referent);
       assert(referent && "section relocation should have been rejected");
       uint64_t offset = referent->getVA() - in.header->addr;
       // FIXME: Can we handle this gracefully?
@@ -1994,7 +1994,7 @@ void InitOffsetsSection::setUp() {
         error(isec->getLocation(rel.offset) +
               ": unexpected section relocation");
 
-      Symbol *sym = rel.referent.dyn_cast<Symbol *>();
+      Symbol *sym = dyn_cast_if_present<Symbol *>(rel.referent);
       if (auto *undefined = dyn_cast<Undefined>(sym))
         treatUndefinedSymbol(*undefined, isec, rel.offset);
       if (needsBinding(sym))
