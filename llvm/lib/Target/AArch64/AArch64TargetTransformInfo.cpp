@@ -3623,7 +3623,13 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     // so the cost can be cheaper (smull or umull).
     if (LT.second != MVT::v2i64 || isWideningInstruction(Ty, Opcode, Args))
       return LT.first;
-    return LT.first * 14;
+    return cast<VectorType>(Ty)->getElementCount().getKnownMinValue() *
+           (getArithmeticInstrCost(Opcode, Ty->getScalarType(), CostKind) +
+            getVectorInstrCost(Instruction::ExtractElement, Ty, CostKind, -1,
+                               nullptr, nullptr) *
+                2 +
+            getVectorInstrCost(Instruction::InsertElement, Ty, CostKind, -1,
+                               nullptr, nullptr));
   case ISD::ADD:
   case ISD::XOR:
   case ISD::OR:
