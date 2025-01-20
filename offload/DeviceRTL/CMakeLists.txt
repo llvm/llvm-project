@@ -100,6 +100,7 @@ set(bc_flags -c -foffload-lto -std=c++17 -fvisibility=hidden
              -nocudalib -nogpulib -nogpuinc -nostdlibinc
              -fopenmp -fopenmp-cuda-mode
              -Wno-unknown-cuda-version -Wno-openmp-target
+             -Wno-unknown-assumption  # TODO: Fix false-positive warning for ext_aligned_barrier
              -DOMPTARGET_DEVICE_RUNTIME
              -I${include_directory}
              -I${devicertl_base_directory}/../include
