@@ -17,13 +17,7 @@
 # RUN: %lld -arch arm64 -dead_strip -lSystem -U _extern_sym -map %t/thunk.map -o %t/thunk %t/input.o
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/thunk | FileCheck %s
 
-## Check that the thunks appear in the map file and that everything is sorted by address
-# Because of the `.space` instructions, there will end up being a lot of dead symbols in the 
-# linker map (linker map will be ~2.7GB). So to avoid the test trying to (slowly) match regex
-# across all the ~2.7GB of the linker map - generate a version of the linker map without dead symbols.
-# RUN: awk '/# Dead Stripped Symbols:/ {exit} {print}' %t/thunk.map > %t/thunk_no_dead_syms.map
-
-# RUN: FileCheck %s --input-file %t/thunk_no_dead_syms.map --check-prefix=MAP
+# RUN: FileCheck %s --input-file %t/thunk.map --check-prefix=MAP
  
 # MAP:      0x{{[[:xdigit:]]+}} {{.*}} _b
 # MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _c
@@ -339,7 +333,12 @@ _main:
   ret
 
 .section __TEXT,__cstring
-  .space 0x4000000
+  # The .space below has to be composed of non-zero characters. Otherwise, the
+  # linker will create a symbol for every '0' in the section, leading to
+  # dramatic memory usage and a huge linker map file
+  .space 0x4000000, 'A'
+  .byte 0
+
 
 .section __TEXT,__lcxx_override,regular,pure_instructions
 

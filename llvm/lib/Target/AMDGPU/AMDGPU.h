@@ -207,8 +207,8 @@ extern char &SILoadStoreOptimizerLegacyID;
 void initializeSIWholeQuadModePass(PassRegistry &);
 extern char &SIWholeQuadModeID;
 
-void initializeSILowerControlFlowPass(PassRegistry &);
-extern char &SILowerControlFlowID;
+void initializeSILowerControlFlowLegacyPass(PassRegistry &);
+extern char &SILowerControlFlowLegacyID;
 
 void initializeSIPreEmitPeepholePass(PassRegistry &);
 extern char &SIPreEmitPeepholeID;
@@ -380,7 +380,7 @@ extern char &AMDGPUAnnotateUniformValuesLegacyPassID;
 void initializeAMDGPUCodeGenPreparePass(PassRegistry&);
 extern char &AMDGPUCodeGenPrepareID;
 
-void initializeAMDGPURemoveIncompatibleFunctionsPass(PassRegistry &);
+void initializeAMDGPURemoveIncompatibleFunctionsLegacyPass(PassRegistry &);
 extern char &AMDGPURemoveIncompatibleFunctionsID;
 
 void initializeAMDGPULateCodeGenPrepareLegacyPass(PassRegistry &);
@@ -444,9 +444,9 @@ void initializeAMDGPUExternalAAWrapperPass(PassRegistry&);
 
 void initializeAMDGPUArgumentUsageInfoPass(PassRegistry &);
 
-ModulePass *createAMDGPUOpenCLEnqueuedBlockLoweringPass();
-void initializeAMDGPUOpenCLEnqueuedBlockLoweringPass(PassRegistry &);
-extern char &AMDGPUOpenCLEnqueuedBlockLoweringID;
+ModulePass *createAMDGPUOpenCLEnqueuedBlockLoweringLegacyPass();
+void initializeAMDGPUOpenCLEnqueuedBlockLoweringLegacyPass(PassRegistry &);
+extern char &AMDGPUOpenCLEnqueuedBlockLoweringLegacyID;
 
 void initializeGCNNSAReassignPass(PassRegistry &);
 extern char &GCNNSAReassignID;

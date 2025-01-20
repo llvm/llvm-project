@@ -31,6 +31,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include <cstddef>
 #include <iterator>
 #include <optional>
@@ -504,6 +505,7 @@ struct ReductionParseArgs {
       : vars(vars), types(types), byref(byref), syms(syms) {}
 };
 struct AllRegionParseArgs {
+  std::optional<MapParseArgs> hostEvalArgs;
   std::optional<ReductionParseArgs> inReductionArgs;
   std::optional<MapParseArgs> mapArgs;
   std::optional<PrivateParseArgs> privateArgs;
@@ -647,6 +649,11 @@ static ParseResult parseBlockArgRegion(OpAsmParser &parser, Region &region,
                                        AllRegionParseArgs args) {
   llvm::SmallVector<OpAsmParser::Argument> entryBlockArgs;
 
+  if (failed(parseBlockArgClause(parser, entryBlockArgs, "host_eval",
+                                 args.hostEvalArgs)))
+    return parser.emitError(parser.getCurrentLocation())
+           << "invalid `host_eval` format";
+
   if (failed(parseBlockArgClause(parser, entryBlockArgs, "in_reduction",
                                  args.inReductionArgs)))
     return parser.emitError(parser.getCurrentLocation())
@@ -685,8 +692,10 @@ static ParseResult parseBlockArgRegion(OpAsmParser &parser, Region &region,
   return parser.parseRegion(region, entryBlockArgs);
 }
 
-static ParseResult parseInReductionMapPrivateRegion(
+static ParseResult parseHostEvalInReductionMapPrivateRegion(
     OpAsmParser &parser, Region &region,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &hostEvalVars,
+    SmallVectorImpl<Type> &hostEvalTypes,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &inReductionVars,
     SmallVectorImpl<Type> &inReductionTypes,
     DenseBoolArrayAttr &inReductionByref, ArrayAttr &inReductionSyms,
@@ -696,6 +705,7 @@ static ParseResult parseInReductionMapPrivateRegion(
     llvm::SmallVectorImpl<Type> &privateTypes, ArrayAttr &privateSyms,
     DenseI64ArrayAttr &privateMaps) {
   AllRegionParseArgs args;
+  args.hostEvalArgs.emplace(hostEvalVars, hostEvalTypes);
   args.inReductionArgs.emplace(inReductionVars, inReductionTypes,
                                inReductionByref, inReductionSyms);
   args.mapArgs.emplace(mapVars, mapTypes);
@@ -812,6 +822,7 @@ struct ReductionPrintArgs {
       : vars(vars), types(types), byref(byref), syms(syms) {}
 };
 struct AllRegionPrintArgs {
+  std::optional<MapPrintArgs> hostEvalArgs;
   std::optional<ReductionPrintArgs> inReductionArgs;
   std::optional<MapPrintArgs> mapArgs;
   std::optional<PrivatePrintArgs> privateArgs;
@@ -902,6 +913,8 @@ static void printBlockArgRegion(OpAsmPrinter &p, Operation *op, Region &region,
   auto iface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(op);
   MLIRContext *ctx = op->getContext();
 
+  printBlockArgClause(p, ctx, "host_eval", iface.getHostEvalBlockArgs(),
+                      args.hostEvalArgs);
   printBlockArgClause(p, ctx, "in_reduction", iface.getInReductionBlockArgs(),
                       args.inReductionArgs);
   printBlockArgClause(p, ctx, "map_entries", iface.getMapBlockArgs(),
@@ -922,13 +935,15 @@ static void printBlockArgRegion(OpAsmPrinter &p, Operation *op, Region &region,
   p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
 
-static void printInReductionMapPrivateRegion(
-    OpAsmPrinter &p, Operation *op, Region &region, ValueRange inReductionVars,
+static void printHostEvalInReductionMapPrivateRegion(
+    OpAsmPrinter &p, Operation *op, Region &region, ValueRange hostEvalVars,
+    TypeRange hostEvalTypes, ValueRange inReductionVars,
     TypeRange inReductionTypes, DenseBoolArrayAttr inReductionByref,
     ArrayAttr inReductionSyms, ValueRange mapVars, TypeRange mapTypes,
     ValueRange privateVars, TypeRange privateTypes, ArrayAttr privateSyms,
     DenseI64ArrayAttr privateMaps) {
   AllRegionPrintArgs args;
+  args.hostEvalArgs.emplace(hostEvalVars, hostEvalTypes);
   args.inReductionArgs.emplace(inReductionVars, inReductionTypes,
                                inReductionByref, inReductionSyms);
   args.mapArgs.emplace(mapVars, mapTypes);
@@ -1711,11 +1726,12 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
   TargetOp::build(builder, state, /*allocate_vars=*/{}, /*allocator_vars=*/{},
                   clauses.bare, makeArrayAttr(ctx, clauses.dependKinds),
                   clauses.dependVars, clauses.device, clauses.hasDeviceAddrVars,
-                  clauses.ifExpr, /*in_reduction_vars=*/{},
-                  /*in_reduction_byref=*/nullptr, /*in_reduction_syms=*/nullptr,
-                  clauses.isDevicePtrVars, clauses.mapVars, clauses.nowait,
-                  clauses.privateVars, makeArrayAttr(ctx, clauses.privateSyms),
-                  clauses.threadLimit, /*private_maps=*/nullptr);
+                  clauses.hostEvalVars, clauses.ifExpr,
+                  /*in_reduction_vars=*/{}, /*in_reduction_byref=*/nullptr,
+                  /*in_reduction_syms=*/nullptr, clauses.isDevicePtrVars,
+                  clauses.mapVars, clauses.nowait, clauses.privateVars,
+                  makeArrayAttr(ctx, clauses.privateSyms), clauses.threadLimit,
+                  /*private_maps=*/nullptr);
 }
 
 LogicalResult TargetOp::verify() {
@@ -1731,6 +1747,189 @@ LogicalResult TargetOp::verify() {
     return verifyMapVars;
 
   return verifyPrivateVarsMapping(*this);
+}
+
+LogicalResult TargetOp::verifyRegions() {
+  auto teamsOps = getOps<TeamsOp>();
+  if (std::distance(teamsOps.begin(), teamsOps.end()) > 1)
+    return emitError("target containing multiple 'omp.teams' nested ops");
+
+  // Check that host_eval values are only used in legal ways.
+  llvm::omp::OMPTgtExecModeFlags execFlags = getKernelExecFlags();
+  for (Value hostEvalArg :
+       cast<BlockArgOpenMPOpInterface>(getOperation()).getHostEvalBlockArgs()) {
+    for (Operation *user : hostEvalArg.getUsers()) {
+      if (auto teamsOp = dyn_cast<TeamsOp>(user)) {
+        if (llvm::is_contained({teamsOp.getNumTeamsLower(),
+                                teamsOp.getNumTeamsUpper(),
+                                teamsOp.getThreadLimit()},
+                               hostEvalArg))
+          continue;
+
+        return emitOpError() << "host_eval argument only legal as 'num_teams' "
+                                "and 'thread_limit' in 'omp.teams'";
+      }
+      if (auto parallelOp = dyn_cast<ParallelOp>(user)) {
+        if (execFlags == llvm::omp::OMP_TGT_EXEC_MODE_SPMD &&
+            hostEvalArg == parallelOp.getNumThreads())
+          continue;
+
+        return emitOpError()
+               << "host_eval argument only legal as 'num_threads' in "
+                  "'omp.parallel' when representing target SPMD";
+      }
+      if (auto loopNestOp = dyn_cast<LoopNestOp>(user)) {
+        if (execFlags != llvm::omp::OMP_TGT_EXEC_MODE_GENERIC &&
+            (llvm::is_contained(loopNestOp.getLoopLowerBounds(), hostEvalArg) ||
+             llvm::is_contained(loopNestOp.getLoopUpperBounds(), hostEvalArg) ||
+             llvm::is_contained(loopNestOp.getLoopSteps(), hostEvalArg)))
+          continue;
+
+        return emitOpError() << "host_eval argument only legal as loop bounds "
+                                "and steps in 'omp.loop_nest' when "
+                                "representing target SPMD or Generic-SPMD";
+      }
+
+      return emitOpError() << "host_eval argument illegal use in '"
+                           << user->getName() << "' operation";
+    }
+  }
+  return success();
+}
+
+/// Only allow OpenMP terminators and non-OpenMP ops that have known memory
+/// effects, but don't include a memory write effect.
+static bool siblingAllowedInCapture(Operation *op) {
+  if (!op)
+    return false;
+
+  bool isOmpDialect =
+      op->getContext()->getLoadedDialect<omp::OpenMPDialect>() ==
+      op->getDialect();
+
+  if (isOmpDialect)
+    return op->hasTrait<OpTrait::IsTerminator>();
+
+  if (auto memOp = dyn_cast<MemoryEffectOpInterface>(op)) {
+    SmallVector<SideEffects::EffectInstance<MemoryEffects::Effect>, 4> effects;
+    memOp.getEffects(effects);
+    return !llvm::any_of(effects, [&](MemoryEffects::EffectInstance &effect) {
+      return isa<MemoryEffects::Write>(effect.getEffect()) &&
+             isa<SideEffects::AutomaticAllocationScopeResource>(
+                 effect.getResource());
+    });
+  }
+  return true;
+}
+
+Operation *TargetOp::getInnermostCapturedOmpOp() {
+  Dialect *ompDialect = (*this)->getDialect();
+  Operation *capturedOp = nullptr;
+  DominanceInfo domInfo;
+
+  // Process in pre-order to check operations from outermost to innermost,
+  // ensuring we only enter the region of an operation if it meets the criteria
+  // for being captured. We stop the exploration of nested operations as soon as
+  // we process a region holding no operations to be captured.
+  walk<WalkOrder::PreOrder>([&](Operation *op) {
+    if (op == *this)
+      return WalkResult::advance();
+
+    // Ignore operations of other dialects or omp operations with no regions,
+    // because these will only be checked if they are siblings of an omp
+    // operation that can potentially be captured.
+    bool isOmpDialect = op->getDialect() == ompDialect;
+    bool hasRegions = op->getNumRegions() > 0;
+    if (!isOmpDialect || !hasRegions)
+      return WalkResult::skip();
+
+    // This operation cannot be captured if it can be executed more than once
+    // (i.e. its block's successors can reach it) or if it's not guaranteed to
+    // be executed before all exits of the region (i.e. it doesn't dominate all
+    // blocks with no successors reachable from the entry block).
+    Region *parentRegion = op->getParentRegion();
+    Block *parentBlock = op->getBlock();
+
+    for (Block *successor : parentBlock->getSuccessors())
+      if (successor->isReachable(parentBlock))
+        return WalkResult::interrupt();
+
+    for (Block &block : *parentRegion)
+      if (domInfo.isReachableFromEntry(&block) && block.hasNoSuccessors() &&
+          !domInfo.dominates(parentBlock, &block))
+        return WalkResult::interrupt();
+
+    // Don't capture this op if it has a not-allowed sibling, and stop recursing
+    // into nested operations.
+    for (Operation &sibling : op->getParentRegion()->getOps())
+      if (&sibling != op && !siblingAllowedInCapture(&sibling))
+        return WalkResult::interrupt();
+
+    // Don't continue capturing nested operations if we reach an omp.loop_nest.
+    // Otherwise, process the contents of this operation.
+    capturedOp = op;
+    return llvm::isa<LoopNestOp>(op) ? WalkResult::interrupt()
+                                     : WalkResult::advance();
+  });
+
+  return capturedOp;
+}
+
+llvm::omp::OMPTgtExecModeFlags TargetOp::getKernelExecFlags() {
+  using namespace llvm::omp;
+
+  // Make sure this region is capturing a loop. Otherwise, it's a generic
+  // kernel.
+  Operation *capturedOp = getInnermostCapturedOmpOp();
+  if (!isa_and_present<LoopNestOp>(capturedOp))
+    return OMP_TGT_EXEC_MODE_GENERIC;
+
+  SmallVector<LoopWrapperInterface> wrappers;
+  cast<LoopNestOp>(capturedOp).gatherWrappers(wrappers);
+  assert(!wrappers.empty());
+
+  // Ignore optional SIMD leaf construct.
+  auto *innermostWrapper = wrappers.begin();
+  if (isa<SimdOp>(innermostWrapper))
+    innermostWrapper = std::next(innermostWrapper);
+
+  long numWrappers = std::distance(innermostWrapper, wrappers.end());
+
+  // Detect Generic-SPMD: target-teams-distribute[-simd].
+  if (numWrappers == 1) {
+    if (!isa<DistributeOp>(innermostWrapper))
+      return OMP_TGT_EXEC_MODE_GENERIC;
+
+    Operation *teamsOp = (*innermostWrapper)->getParentOp();
+    if (!isa_and_present<TeamsOp>(teamsOp))
+      return OMP_TGT_EXEC_MODE_GENERIC;
+
+    if (teamsOp->getParentOp() == *this)
+      return OMP_TGT_EXEC_MODE_GENERIC_SPMD;
+  }
+
+  // Detect SPMD: target-teams-distribute-parallel-wsloop[-simd].
+  if (numWrappers == 2) {
+    if (!isa<WsloopOp>(innermostWrapper))
+      return OMP_TGT_EXEC_MODE_GENERIC;
+
+    innermostWrapper = std::next(innermostWrapper);
+    if (!isa<DistributeOp>(innermostWrapper))
+      return OMP_TGT_EXEC_MODE_GENERIC;
+
+    Operation *parallelOp = (*innermostWrapper)->getParentOp();
+    if (!isa_and_present<ParallelOp>(parallelOp))
+      return OMP_TGT_EXEC_MODE_GENERIC;
+
+    Operation *teamsOp = parallelOp->getParentOp();
+    if (!isa_and_present<TeamsOp>(teamsOp))
+      return OMP_TGT_EXEC_MODE_GENERIC;
+
+    if (teamsOp->getParentOp() == *this)
+      return OMP_TGT_EXEC_MODE_SPMD;
+  }
+
+  return OMP_TGT_EXEC_MODE_GENERIC;
 }
 
 //===----------------------------------------------------------------------===//

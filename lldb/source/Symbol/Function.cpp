@@ -488,7 +488,7 @@ lldb::DisassemblerSP Function::GetInstructions(const ExecutionContext &exe_ctx,
   if (module_sp && exe_ctx.HasTargetScope()) {
     return Disassembler::DisassembleRange(
         module_sp->GetArchitecture(), nullptr, nullptr, nullptr, flavor,
-        exe_ctx.GetTargetRef(), GetAddressRange(), !prefer_file_cache);
+        exe_ctx.GetTargetRef(), GetAddressRanges(), !prefer_file_cache);
   }
   return lldb::DisassemblerSP();
 }

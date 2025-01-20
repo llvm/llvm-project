@@ -2075,15 +2075,18 @@ public:
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
-  OMPClause *RebuildOMPAllocateClause(Expr *Allocate,
-                                      OpenMPAllocateClauseModifier ACModifier,
-                                      ArrayRef<Expr *> VarList,
-                                      SourceLocation StartLoc,
-                                      SourceLocation LParenLoc,
-                                      SourceLocation ColonLoc,
-                                      SourceLocation EndLoc) {
+  OMPClause *
+  RebuildOMPAllocateClause(Expr *Allocate, Expr *Alignment,
+                           OpenMPAllocateClauseModifier FirstModifier,
+                           SourceLocation FirstModifierLoc,
+                           OpenMPAllocateClauseModifier SecondModifier,
+                           SourceLocation SecondModifierLoc,
+                           ArrayRef<Expr *> VarList, SourceLocation StartLoc,
+                           SourceLocation LParenLoc, SourceLocation ColonLoc,
+                           SourceLocation EndLoc) {
     return getSema().OpenMP().ActOnOpenMPAllocateClause(
-        Allocate, ACModifier, VarList, StartLoc, LParenLoc, ColonLoc, EndLoc);
+        Allocate, Alignment, FirstModifier, FirstModifierLoc, SecondModifier,
+        SecondModifierLoc, VarList, StartLoc, LParenLoc, ColonLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'num_teams' clause.
@@ -11224,6 +11227,13 @@ TreeTransform<Derived>::TransformOMPAllocateClause(OMPAllocateClause *C) {
       return nullptr;
     Allocator = AllocatorRes.get();
   }
+  Expr *Alignment = C->getAlignment();
+  if (Alignment) {
+    ExprResult AlignmentRes = getDerived().TransformExpr(Alignment);
+    if (AlignmentRes.isInvalid())
+      return nullptr;
+    Alignment = AlignmentRes.get();
+  }
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
   for (auto *VE : C->varlist()) {
@@ -11233,7 +11243,9 @@ TreeTransform<Derived>::TransformOMPAllocateClause(OMPAllocateClause *C) {
     Vars.push_back(EVar.get());
   }
   return getDerived().RebuildOMPAllocateClause(
-      Allocator, C->getAllocatorModifier(), Vars, C->getBeginLoc(),
+      Allocator, Alignment, C->getFirstAllocateModifier(),
+      C->getFirstAllocateModifierLoc(), C->getSecondAllocateModifier(),
+      C->getSecondAllocateModifierLoc(), Vars, C->getBeginLoc(),
       C->getLParenLoc(), C->getColonLoc(), C->getEndLoc());
 }
 

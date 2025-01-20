@@ -246,6 +246,11 @@ def : DC<"CIPAE",   0b100, 0b0111, 0b1110, 0b000>;
 def : DC<"CIGDPAE", 0b100, 0b0111, 0b1110, 0b111>;
 }
 
+let Requires = [{ {AArch64::FeatureRME} }] in {
+def : DC<"CIGDPAPA", 0b110, 0b0111, 0b1110, 0b101>;
+def : DC<"CIPAPA",   0b110, 0b0111, 0b1110, 0b001>;
+}
+
 let Requires = [{ {AArch64::FeatureOCCMO} }] in {
 // Outer cacheable CMO (FEAT_OCCMO)
 def : DC<"CIVAOC", 0b011, 0b0111, 0b1111, 0b000>;
