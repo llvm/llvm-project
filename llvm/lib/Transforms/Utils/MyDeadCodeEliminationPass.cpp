@@ -1,16 +1,64 @@
 #include "llvm/Transforms/Utils/MyDeadCodeEliminationPass.h"
+#include "llvm/Analysis/DominanceFrontier.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
+#include <fstream> // For CSV file handling
 #include <unordered_set>
-#include "llvm/Analysis/DominanceFrontier.h"
-#include "llvm/IR/Dominators.h"
 
+
+// Class to handle CSV file operations
+class MyDataSet {
+private:
+  std::ofstream outFile;
+
+public:
+  // Constructor opens the file and writes the header row
+  MyDataSet(const std::string &fileName) {
+    outFile.open(fileName);
+    if (outFile.is_open()) {
+      outFile << "Opcode,Number of Operands,Is Terminator,Is Volatile,Has "
+                 "Metadata,";
+      outFile << "Alignment,Instruction Size,Is PHI Node,Number of Users,Is "
+                 "Used in Loops,";
+      outFile << "Has Side Effects,Is Constant,Basic Block Predecessor "
+                 "Count,Basic Block Successor Count,";
+      outFile << "Instruction Position in Basic Block,Is Entry Block,Is "
+                 "Dominated by Entry,";
+      outFile << "Loop Nesting Depth,Function Argument Usage,Instruction "
+                 "Position in Function,";
+      outFile << "Function's Loop Count,Function Call Depth,Module Size,Is in "
+                 "Cold Path,Call Graph Features\n";
+    } else {
+      llvm::errs() << "Failed to open file: " << fileName << "\n";
+    }
+  }
+
+  // Method to write a single row
+  void WriteRow(const std::vector<std::string> &features) {
+    if (!outFile.is_open())
+      return;
+    for (size_t i = 0; i < features.size(); ++i) {
+      outFile << features[i];
+      if (i != features.size() - 1)
+        outFile << ",";
+    }
+    outFile << "\n";
+  }
+
+  // Destructor closes the file
+  ~MyDataSet() {
+    if (outFile.is_open()) {
+      outFile.close();
+    }
+  }
+};
 
 using namespace llvm;
 
@@ -18,15 +66,18 @@ PreservedAnalyses MyDeadCodeEliminationPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   errs() << "Starting MyDeadCodeEliminationPass\n";
 
-  analyzeInstructionsIteratively(F, AM);
+  // Create an instance of MyDataSet to manage the CSV file
+  MyDataSet dataSet("InstructionFeatures.csv");
+
+  analyzeInstructionsIteratively(F, AM, dataSet);
 
   return PreservedAnalyses::all();
 }
 
 void MyDeadCodeEliminationPass::analyzeInstructionsIteratively(
-    Function &F, FunctionAnalysisManager &AM) {
+    Function &F, FunctionAnalysisManager &AM, MyDataSet &dataSet) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
-  auto &DT = AM.getResult<DominatorTreeAnalysis>(F); // Retrieve DominatorTree
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   std::unordered_set<Instruction *> potentialDeadInstructions;
   bool foundNewDead;
 
@@ -46,16 +97,22 @@ void MyDeadCodeEliminationPass::analyzeInstructionsIteratively(
           foundNewDead = true;
         }
 
+        // Collect features and write to CSV
+        std::vector<std::string> features =
+            collectInstructionFeatures(I, BB, F, LI, DT);
+        dataSet.WriteRow(features);
+
         // Print all features for this instruction
         errs() << "------------------------------------------\n";
         errs() << "Instruction: " << I << "\n";
-        printInstructionFeatures(I, BB, F, LI, DT);
+        for (size_t i = 0; i < features.size(); ++i) {
+          errs() << (i + 1) << ". " << features[i] << "\n";
+        }
         errs() << "------------------------------------------\n";
       }
     }
   } while (foundNewDead);
 }
-
 
 bool MyDeadCodeEliminationPass::isInstructionDead(
     Instruction *Inst,
@@ -75,79 +132,63 @@ bool MyDeadCodeEliminationPass::isInstructionDead(
   return true;
 }
 
-void MyDeadCodeEliminationPass::printInstructionFeatures(const Instruction &I,
-                                                         const BasicBlock &BB,
-                                                         const Function &F,
-                                                         const LoopInfo &LI,
-                                                         const DominatorTree &DT) {
+std::vector<std::string> MyDeadCodeEliminationPass::collectInstructionFeatures(
+    const Instruction &I, const BasicBlock &BB, const Function &F,
+    const LoopInfo &LI, const DominatorTree &DT) {
+
+  std::vector<std::string> features;
+
   // Direct Features
-  errs() << "1. Opcode: " << I.getOpcodeName() << "\n";
-  errs() << "2. Number of Operands: " << I.getNumOperands() << "\n";
-  errs() << "3. Is Terminator: " << (I.isTerminator() ? "Yes" : "No") << "\n";
-  errs() << "4. Is Volatile: "
-         << (isa<LoadInst>(&I) || isa<StoreInst>(&I) ? "Yes" : "No") << "\n";
-  errs() << "5. Has Metadata: " << (I.hasMetadata() ? "Yes" : "No") << "\n";
+  features.push_back(I.getOpcodeName());
+  features.push_back(std::to_string(I.getNumOperands()));
+  features.push_back(I.isTerminator() ? "Yes" : "No");
+  features.push_back((isa<LoadInst>(&I) || isa<StoreInst>(&I)) ? "Yes" : "No");
+  features.push_back(I.hasMetadata() ? "Yes" : "No");
 
   if (isa<LoadInst>(&I)) {
     llvm::Align alignment = cast<LoadInst>(&I)->getAlign();
-    errs() << "6. Alignment: " << alignment.value() << "\n";
+    features.push_back(std::to_string(alignment.value()));
   } else if (isa<StoreInst>(&I)) {
     llvm::Align alignment = cast<StoreInst>(&I)->getAlign();
-    errs() << "6. Alignment: " << alignment.value() << "\n";
+    features.push_back(std::to_string(alignment.value()));
   } else {
-    errs() << "6. Alignment: Not applicable\n";
+    features.push_back("Not applicable");
   }
 
-  errs() << "7. Instruction Size: "
-         << (I.getType()->isSized()
-                 ? I.getModule()->getDataLayout().getTypeSizeInBits(I.getType())
-                 : 0)
-         << " bits\n";
-  errs() << "8. Is PHI Node: " << (isa<PHINode>(&I) ? "Yes" : "No") << "\n";
-  errs() << "9. Number of Users: " << I.getNumUses() << "\n";
-  errs() << "10. Is Used in Loops: "
-         << (LI.getLoopFor(I.getParent()) ? "Yes" : "No") << "\n";
-  errs() << "11. Has Side Effects: " << (I.mayHaveSideEffects() ? "Yes" : "No")
-         << "\n";
-  errs() << "12. Is Constant: " << (isa<Constant>(&I) ? "Yes" : "No") << "\n";
-
+  features.push_back(
+      I.getType()->isSized()
+          ? std::to_string(
+                I.getModule()->getDataLayout().getTypeSizeInBits(I.getType()))
+          : "0");
+  features.push_back(isa<PHINode>(&I) ? "Yes" : "No");
+  features.push_back(std::to_string(I.getNumUses()));
+  features.push_back(LI.getLoopFor(I.getParent()) ? "Yes" : "No");
+  features.push_back(I.mayHaveSideEffects() ? "Yes" : "No");
+  features.push_back(isa<Constant>(&I) ? "Yes" : "No");
 
   // Basic Block-Level Features
-  errs() << "13. Basic Block Predecessor Count: "
-         << std::distance(pred_begin(&BB), pred_end(&BB)) << "\n";
-  errs() << "14. Basic Block Successor Count: "
-         << std::distance(succ_begin(&BB), succ_end(&BB)) << "\n";
-  errs() << "15. Instruction Position in Basic Block: "
-         << getInstructionPosition(I, BB) << "\n";
-  errs() << "16. Is Entry Block: "
-         << (F.getEntryBlock().getName() == BB.getName() ? "Yes" : "No") << "\n";
-  // Assuming DT (DominatorTree) is available:
-  bool isDominated = DT.dominates(&F.getEntryBlock(), &BB);
-  errs() << "17. Is Dominated by Entry: " << (isDominated ? "Yes" : "No") << "\n";
-
-
-
-  /* errs() << "17. Is Dominated by Entry: "
-         << (F.getEntryBlock().getName() == BB.getName() ? "Yes" : "No")
-         << "\n";*/
-  errs() << "18. Loop Nesting Depth: " << (LI.getLoopDepth(&BB)) << "\n";
+  features.push_back(
+      std::to_string(std::distance(pred_begin(&BB), pred_end(&BB))));
+  features.push_back(
+      std::to_string(std::distance(succ_begin(&BB), succ_end(&BB))));
+  features.push_back(getInstructionPosition(I, BB));
+  features.push_back(F.getEntryBlock().getName() == BB.getName() ? "Yes"
+                                                                 : "No");
+  features.push_back(DT.dominates(&F.getEntryBlock(), &BB) ? "Yes" : "No");
+  features.push_back(std::to_string(LI.getLoopDepth(&BB)));
 
   // Function-Level Features
-  errs() << "19. Function Argument Usage: "
-         << (isUsingFunctionArguments(I, F) ? "Yes" : "No") << "\n";
-  errs() << "20. Instruction Position in Function: "
-         << getFunctionInstructionPosition(I, F) << "\n";
-  errs() << "21. Function's Loop Count: " << LI.getLoopsInPreorder().size()
-         << "\n";
-  errs() << "22. Function Call Depth: " << 0 /* Placeholder */ << "\n";
+  features.push_back(isUsingFunctionArguments(I, F) ? "Yes" : "No");
+  features.push_back(getFunctionInstructionPosition(I, F));
+  features.push_back(std::to_string(LI.getLoopsInPreorder().size()));
+  features.push_back("0"); // Placeholder for Function Call Depth
 
   // Module-Level Features
-  errs() << "23. Module Size: " << F.getParent()->size() << "\n";
-  errs() << "24. Is in Cold Path: "
-         << "Unknown" /* Placeholder */ << "\n";
-  errs() << "25. Call Graph Features: "
-         << "Unavailable"
-         << "\n";
+  features.push_back(std::to_string(F.getParent()->size()));
+  features.push_back("Unknown");     // Placeholder for Is in Cold Path
+  features.push_back("Unavailable"); // Placeholder for Call Graph Features
+
+  return features;
 }
 
 bool MyDeadCodeEliminationPass::isUsingFunctionArguments(const Instruction &I,

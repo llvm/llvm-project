@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_set>
 
+class MyDataSet;
 namespace llvm {
 
 class MyDeadCodeEliminationPass
@@ -56,6 +57,12 @@ private:
   void printInstructionFeatures(const Instruction &I, const BasicBlock &B,
                                 const Function &F, const LoopInfo &L,
                                 const DominatorTree &DT);
+  void analyzeInstructionsIteratively(Function &F, FunctionAnalysisManager &AM,
+                                      MyDataSet &dataSet);
+
+  std::vector<std::string> collectInstructionFeatures(const Instruction &I, const BasicBlock &BB,
+                                                      const Function &F, const LoopInfo &LI, 
+                                                      const DominatorTree &DT);
 };
 
 } // namespace llvm
