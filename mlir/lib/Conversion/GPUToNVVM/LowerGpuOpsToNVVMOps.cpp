@@ -451,7 +451,7 @@ static void populateIntOpPatterns(const LLVMTypeConverter &converter,
                                   RewritePatternSet &patterns,
                                   StringRef i32Func) {
   patterns.add<ScalarizeVectorOpLowering<OpTy>>(converter);
-  patterns.add<IntOpToFuncCallLowering<OpTy>>(converter, i32Func);
+  patterns.add<OpToFuncCallLowering<OpTy>>(converter, "", "", "", "", i32Func);
 }
 
 template <typename OpTy>
@@ -459,7 +459,7 @@ static void populateFloatIntOpPatterns(const LLVMTypeConverter &converter,
                                        RewritePatternSet &patterns,
                                        StringRef f32Func, StringRef f64Func) {
   patterns.add<ScalarizeVectorOpLowering<OpTy>>(converter);
-  patterns.add<FloatIntOpToFuncCallLowering<OpTy>>(converter, f32Func, f64Func);
+  patterns.add<OpToFuncCallLowering<OpTy>>(converter, f32Func, f64Func, "", "");
 }
 
 void mlir::populateGpuSubgroupReduceOpLoweringPattern(
