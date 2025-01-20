@@ -903,6 +903,14 @@ bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,
                                              const SPIRVType *ResType,
                                              MachineInstr &I,
                                              GL::GLSLExtInst GLInst) const {
+  if (!STI.canUseExtInstSet(
+          SPIRV::InstructionSet::InstructionSet::GLSL_std_450)) {
+    std::string DiagMsg;
+    raw_string_ostream OS(DiagMsg);
+    I.print(OS, true, false, false, false);
+    DiagMsg += " is only supported with the GLSL extended instruction set.\n";
+    report_fatal_error(DiagMsg.c_str(), false);
+  }
   return selectExtInst(ResVReg, ResType, I,
                        {{SPIRV::InstructionSet::GLSL_std_450, GLInst}});
 }
@@ -3032,15 +3040,6 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_normalize:
     return selectExtInst(ResVReg, ResType, I, CL::normalize, GL::Normalize);
   case Intrinsic::spv_reflect:
-    if (!STI.canUseExtInstSet(
-            SPIRV::InstructionSet::InstructionSet::GLSL_std_450)) {
-      std::string DiagMsg;
-      raw_string_ostream OS(DiagMsg);
-      I.print(OS);
-      DiagMsg = "Intrinsic selection not supported for this instruction set: " +
-                DiagMsg;
-      report_fatal_error(DiagMsg.c_str(), false);
-    }
     return selectExtInst(ResVReg, ResType, I, GL::Reflect);
   case Intrinsic::spv_rsqrt:
     return selectExtInst(ResVReg, ResType, I, CL::rsqrt, GL::InverseSqrt);
