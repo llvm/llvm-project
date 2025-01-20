@@ -161,6 +161,33 @@ TEST_P(BinaryContextTester, FlushPendingRelocJUMP26) {
       << "Wrong forward branch value\n";
 }
 
+// TODO: BOLT currently asserts when a relocation is out of range.
+TEST_P(BinaryContextTester, FlushOptionalOutOfRangePendingRelocCALL26) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  // This test checks that flushPendingRelocations skips flushing any optional
+  // pending relocations that cannot be encoded.
+
+  BinarySection &BS = BC->registerOrUpdateSection(
+      ".text", ELF::SHT_PROGBITS, ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
+  MCSymbol *RelSymbol = BC->getOrCreateGlobalSymbol(4, "Func");
+  ASSERT_TRUE(RelSymbol);
+  BS.addPendingRelocation(
+      Relocation{8, RelSymbol, ELF::R_AARCH64_CALL26, 0, 0});
+
+  SmallVector<char> Vect;
+  raw_svector_ostream OS(Vect);
+
+  // FIXME: bolt must be able to skip pending relocs that are out of range.
+  EXPECT_DEBUG_DEATH(
+      // Resolve relocation symbol to a high value so encoding will be out of
+      // range.
+      BS.flushPendingRelocations(OS,
+                                 [&](const MCSymbol *S) { return 0x800000F; }),
+      ".*only PC \\+/- 128MB is allowed for direct call");
+}
+
 #endif
 
 TEST_P(BinaryContextTester, BaseAddress) {
