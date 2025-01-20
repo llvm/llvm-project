@@ -473,7 +473,7 @@ Changes to LLDB
 
   New:
   ```
-  * thread #1: tid = 329384, 0x0000000000401262, name = 'a.out', stop reason = SIGSEGV: address not mapped to object (fault address: 0x0)
+  * thread #1: tid = 329384, 0x0000000000401262, name = 'a.out', stop reason = SIGSEGV: address not mapped to object (fault address=0x0)
 
   0x7f1e3193e0a7 <+23>:  ja     0x7f1e3193e100 ; <+112>
   ```
@@ -482,6 +482,23 @@ Changes to LLDB
   that port to the connection handler processes. This means that only 2 ports need
   to be opened in the firewall (one for the `lldb-server` platform, one for gdbserver connections).
   In addition, due to this work, `lldb-server` now works on Windows in the server mode.
+
+* The `frame diagnose` now works on ELF-based systems. After a crash, LLDB will
+  try to determine the likely cause of the signal, matching Darwin behavior.
+  (x86 only)
+
+  ```
+  * thread #1, name = 'a.out', stop reason = signal SIGSEGV: address not mapped to object (fault address=0x4)
+      frame #0: 0x00005555555551aa a.out`GetSum(f=0x0000555555558018) at main.c:21:37
+     18   }
+     19
+     20   int GetSum(struct Foo *f) {
+  -> 21     return SumTwoIntegers(f->a, f->b->d ? 0 : 1);
+     22   }
+     23
+     24   int main() {
+  Likely cause: f->b->d accessed 0x4
+  ```
 
 Changes to BOLT
 ---------------------------------
