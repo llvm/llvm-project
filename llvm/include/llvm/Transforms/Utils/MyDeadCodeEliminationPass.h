@@ -54,7 +54,8 @@ private:
   bool isUsingFunctionArguments(const Instruction &I, const Function &F);
 
   void printInstructionFeatures(const Instruction &I, const BasicBlock &B,
-                                const Function &F, const LoopInfo &L);
+                                const Function &F, const LoopInfo &L,
+                                const DominatorTree &DT);
 };
 
 } // namespace llvm

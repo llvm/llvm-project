@@ -1,13 +1,15 @@
-// MyDeadCodeEliminationPass.cpp
 #include "llvm/Transforms/Utils/MyDeadCodeEliminationPass.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
 #include <unordered_set>
-#include "llvm/IR/Module.h"
+#include "llvm/Analysis/DominanceFrontier.h"
+#include "llvm/IR/Dominators.h"
 
 
 using namespace llvm;
@@ -24,6 +26,7 @@ PreservedAnalyses MyDeadCodeEliminationPass::run(Function &F,
 void MyDeadCodeEliminationPass::analyzeInstructionsIteratively(
     Function &F, FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F); // Retrieve DominatorTree
   std::unordered_set<Instruction *> potentialDeadInstructions;
   bool foundNewDead;
 
@@ -46,12 +49,13 @@ void MyDeadCodeEliminationPass::analyzeInstructionsIteratively(
         // Print all features for this instruction
         errs() << "------------------------------------------\n";
         errs() << "Instruction: " << I << "\n";
-        printInstructionFeatures(I, BB, F, LI);
+        printInstructionFeatures(I, BB, F, LI, DT);
         errs() << "------------------------------------------\n";
       }
     }
   } while (foundNewDead);
 }
+
 
 bool MyDeadCodeEliminationPass::isInstructionDead(
     Instruction *Inst,
@@ -74,7 +78,8 @@ bool MyDeadCodeEliminationPass::isInstructionDead(
 void MyDeadCodeEliminationPass::printInstructionFeatures(const Instruction &I,
                                                          const BasicBlock &BB,
                                                          const Function &F,
-                                                         const LoopInfo &LI) {
+                                                         const LoopInfo &LI,
+                                                         const DominatorTree &DT) {
   // Direct Features
   errs() << "1. Opcode: " << I.getOpcodeName() << "\n";
   errs() << "2. Number of Operands: " << I.getNumOperands() << "\n";
@@ -93,14 +98,6 @@ void MyDeadCodeEliminationPass::printInstructionFeatures(const Instruction &I,
     errs() << "6. Alignment: Not applicable\n";
   }
 
-  
-  /* Alignment alignment = cast<LoadInst>(&I)->getAlign();
-  errs() << "6. Alignment: " << alignment.value() << "\n";*/
-  /* errs() << "6. Alignment: "
-         << (isa<LoadInst>(&I)
-                 ? cast<LoadInst>(&I)->getAlign().valueOrOne().value()
-                 : 0)
-         << "\n";*/
   errs() << "7. Instruction Size: "
          << (I.getType()->isSized()
                  ? I.getModule()->getDataLayout().getTypeSizeInBits(I.getType())
@@ -112,26 +109,44 @@ void MyDeadCodeEliminationPass::printInstructionFeatures(const Instruction &I,
          << (LI.getLoopFor(I.getParent()) ? "Yes" : "No") << "\n";
   errs() << "11. Has Side Effects: " << (I.mayHaveSideEffects() ? "Yes" : "No")
          << "\n";
+  errs() << "12. Is Constant: " << (isa<Constant>(&I) ? "Yes" : "No") << "\n";
+
 
   // Basic Block-Level Features
-  errs() << "12. Basic Block Predecessor Count: "
+  errs() << "13. Basic Block Predecessor Count: "
          << std::distance(pred_begin(&BB), pred_end(&BB)) << "\n";
-  errs() << "13. Basic Block Successor Count: "
+  errs() << "14. Basic Block Successor Count: "
          << std::distance(succ_begin(&BB), succ_end(&BB)) << "\n";
-  errs() << "14. Instruction Position in Basic Block: "
+  errs() << "15. Instruction Position in Basic Block: "
          << getInstructionPosition(I, BB) << "\n";
-  errs() << "15. Basic Block Size: " << BB.size() << "\n";
-  errs() << "16. Is Dominated by Entry: "
+  errs() << "16. Is Entry Block: "
+         << (F.getEntryBlock().getName() == BB.getName() ? "Yes" : "No") << "\n";
+  // Assuming DT (DominatorTree) is available:
+  bool isDominated = DT.dominates(&F.getEntryBlock(), &BB);
+  errs() << "17. Is Dominated by Entry: " << (isDominated ? "Yes" : "No") << "\n";
+
+
+
+  /* errs() << "17. Is Dominated by Entry: "
          << (F.getEntryBlock().getName() == BB.getName() ? "Yes" : "No")
-         << "\n";
-  errs() << "17. Loop Nesting Depth: " << (LI.getLoopDepth(&BB)) << "\n";
+         << "\n";*/
+  errs() << "18. Loop Nesting Depth: " << (LI.getLoopDepth(&BB)) << "\n";
 
   // Function-Level Features
-  errs() << "18. Function Argument Usage: "
+  errs() << "19. Function Argument Usage: "
          << (isUsingFunctionArguments(I, F) ? "Yes" : "No") << "\n";
-  errs() << "19. Instruction Position in Function: "
+  errs() << "20. Instruction Position in Function: "
          << getFunctionInstructionPosition(I, F) << "\n";
-  errs() << "20. Function's Loop Count: " << LI.getLoopsInPreorder().size()
+  errs() << "21. Function's Loop Count: " << LI.getLoopsInPreorder().size()
+         << "\n";
+  errs() << "22. Function Call Depth: " << 0 /* Placeholder */ << "\n";
+
+  // Module-Level Features
+  errs() << "23. Module Size: " << F.getParent()->size() << "\n";
+  errs() << "24. Is in Cold Path: "
+         << "Unknown" /* Placeholder */ << "\n";
+  errs() << "25. Call Graph Features: "
+         << "Unavailable"
          << "\n";
 }
 
