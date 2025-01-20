@@ -1571,9 +1571,10 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     } else {
       Record.push_back(0);
     }
-    // For lambdas inside canonical FunctionDecl remember the mapping.
+    // For lambdas inside template functions, remember the mapping to
+    // deserialize them together.
     if (auto FD = llvm::dyn_cast_or_null<FunctionDecl>(D->getDeclContext());
-        FD && FD->isCanonicalDecl()) {
+        FD && FD->isDependentContext() && FD->isThisDeclarationADefinition()) {
       Writer.RelatedDeclsMap[Writer.GetDeclRef(FD)].push_back(
           Writer.GetDeclRef(D));
     }
