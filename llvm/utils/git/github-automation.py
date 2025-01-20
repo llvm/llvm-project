@@ -290,6 +290,33 @@ If you don't get any reports, no action is required from you. Your changes are w
         return True
 
 
+class CheckCommitAccess:
+    def __init__(
+        self, token: str, repo: str, pr_number: int, author: str):
+        self.repo = github.Github(token).get_repo(repo)
+        self.pr = self.repo.get_issue(pr_number).as_pull_request()
+        self.author = author
+
+    def can_merge(self, user: str) -> bool:
+        try:
+            return self.repo.get_collaborator_permission(user) in ["admin", "write"]
+        # There is a UnknownObjectException for this scenario, but this method
+        # does not use it.
+        except github.GithubException as e:
+            # 404 means the author was not found in the collaborator list, so we
+            # know they don't have push permissions. Anything else is a real API
+            # issue, raise it so it is visible.
+            if e.status != 404:
+                raise e
+            return False
+
+    def run(self) -> bool:
+        if not self.can_merge(self.author):
+            self.pr.as_issue().add_to_labels("no-commit-access")
+
+        return True
+
+
 def setup_llvmbot_git(git_dir="."):
     """
     Configure the git repo in `git_dir` with the llvmbot account so
@@ -680,6 +707,10 @@ pr_buildbot_information_parser = subparsers.add_parser("pr-buildbot-information"
 pr_buildbot_information_parser.add_argument("--issue-number", type=int, required=True)
 pr_buildbot_information_parser.add_argument("--author", type=str, required=True)
 
+check_commit_access_parser = subparsers.add_parser("check-commit-access")
+check_commit_access_parser.add_argument("--issue-number", type=int, required=True)
+check_commit_access_parser.add_argument("--author", type=str, required=True)
+
 release_workflow_parser = subparsers.add_parser("release-workflow")
 release_workflow_parser.add_argument(
     "--llvm-project-dir",
@@ -751,6 +782,11 @@ elif args.command == "pr-buildbot-information":
         args.token, args.repo, args.issue_number, args.author
     )
     pr_buildbot_information.run()
+elif args.command == "check-commit-access":
+    check_commit_access = CheckCommitAccess(
+        args.token, args.repo, args.issue_number, args.author
+    )
+    check_commit_access.run()
 elif args.command == "release-workflow":
     release_workflow = ReleaseWorkflow(
         args.token,
