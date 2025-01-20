@@ -30,19 +30,21 @@ LookupStaticIdentifier(lldb::TargetSP target_sp,
   VariableList variable_list;
   ConstString name(name_ref);
   target_sp->GetImages().FindGlobalVariables(name, 1, variable_list);
-  if (!variable_list.Empty()) {
-    ExecutionContextScope *exe_scope = target_sp->GetProcessSP().get();
-    if (exe_scope == nullptr)
-      exe_scope = target_sp.get();
-    for (const lldb::VariableSP &var_sp : variable_list) {
-      lldb::ValueObjectSP valobj_sp(
-          ValueObjectVariable::Create(exe_scope, var_sp));
-      if (valobj_sp && valobj_sp->GetVariable() &&
-          (valobj_sp->GetVariable()->NameMatches(unqualified_name) ||
-           valobj_sp->GetVariable()->NameMatches(ConstString(name_ref))))
-        return valobj_sp;
-    }
+  if (variable_list.Empty())
+    return nullptr;
+
+  ExecutionContextScope *exe_scope = target_sp->GetProcessSP().get();
+  if (exe_scope == nullptr)
+    exe_scope = target_sp.get();
+  for (const lldb::VariableSP &var_sp : variable_list) {
+    lldb::ValueObjectSP valobj_sp(
+        ValueObjectVariable::Create(exe_scope, var_sp));
+    if (valobj_sp && valobj_sp->GetVariable() &&
+        (valobj_sp->GetVariable()->NameMatches(unqualified_name) ||
+         valobj_sp->GetVariable()->NameMatches(ConstString(name_ref))))
+      return valobj_sp;
   }
+
   return nullptr;
 }
 
@@ -110,18 +112,22 @@ LookupIdentifier(const std::string &name,
     const char *reg_name = name_ref.drop_front(1).data();
     Target *target = ctx_scope->CalculateTarget().get();
     Process *process = ctx_scope->CalculateProcess().get();
-    if (target && process) {
-      StackFrame *stack_frame = ctx_scope->CalculateStackFrame().get();
-      if (stack_frame) {
-        lldb::RegisterContextSP reg_ctx(stack_frame->GetRegisterContext());
-        if (reg_ctx) {
-          if (const RegisterInfo *reg_info =
-                  reg_ctx->GetRegisterInfoByName(reg_name))
-            value_sp =
-                ValueObjectRegister::Create(stack_frame, reg_ctx, reg_info);
-        }
-      }
-    }
+    if (!target || !process)
+      return nullptr;
+
+    StackFrame *stack_frame = ctx_scope->CalculateStackFrame().get();
+    if (!stack_frame)
+      return nullptr;
+
+    lldb::RegisterContextSP reg_ctx(stack_frame->GetRegisterContext());
+    if (!reg_ctx)
+      return nullptr;
+
+    if (const RegisterInfo *reg_info =
+        reg_ctx->GetRegisterInfoByName(reg_name))
+      value_sp =
+          ValueObjectRegister::Create(stack_frame, reg_ctx, reg_info);
+
     if (value_sp)
       return IdentifierInfo::FromValue(*value_sp);
 
@@ -211,7 +217,6 @@ LookupIdentifier(const std::string &name,
     }
   }
 
-  // Force static value, otherwise we can end up with the "real" type.
   if (value)
     return IdentifierInfo::FromValue(*value);
 
