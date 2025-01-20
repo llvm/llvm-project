@@ -9,7 +9,8 @@ primary_expression = id_expression
                    | "(" expression ")";
 
 id_expression = unqualified_id
-              | qualified_id ;
+              | qualified_id
+	      | register ;
 
 unqualified_id = identifier ;
 
@@ -17,6 +18,8 @@ qualified_id = ["::"] [nested_name_specifier] unqualified_id
              | ["::"] identifier ;
 
 identifier = ? C99 Identifier ? ;
+
+register = "$" ? Register name ? ;
 
 nested_name_specifier = type_name "::"
                       | namespace_name '::'
