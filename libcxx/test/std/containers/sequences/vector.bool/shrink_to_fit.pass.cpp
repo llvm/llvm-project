@@ -26,9 +26,11 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     using C = std::vector<bool>;
     C v(100);
     v.push_back(1);
+    C::size_type before_cap = v.capacity();
     v.clear();
     v.shrink_to_fit();
-    assert(v.capacity() == 0);
+    assert(v.capacity() <= before_cap);
+    LIBCPP_ASSERT(v.capacity() == 0); // libc++ honors the shrink_to_fit request as a QOI matter
     assert(v.size() == 0);
   }
   {
@@ -40,6 +42,11 @@ TEST_CONSTEXPR_CXX20 bool tests() {
     assert(v.capacity() >= 101);
     assert(v.capacity() <= before_cap);
     assert(v.size() == 101);
+    v.erase(v.begin() + 1, v.end());
+    v.shrink_to_fit();
+    assert(v.capacity() <= before_cap);
+    LIBCPP_ASSERT(v.capacity() == C(1).capacity()); // libc++ honors the shrink_to_fit request as a QOI matter.
+    assert(v.size() == 1);
   }
 
 #if defined(_LIBCPP_VERSION)
