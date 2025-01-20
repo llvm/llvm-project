@@ -8711,7 +8711,7 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
     PartialReductionChain Chain = Pair.first;
     if (ExtendIsOnlyUsedByPartialReductions(Chain.ExtendA) &&
         ExtendIsOnlyUsedByPartialReductions(Chain.ExtendB))
-      ScaledReductionExitInstrs.insert(std::make_pair(Chain.Reduction, Pair));
+      ScaledReductionMap.insert(std::make_pair(Chain.Reduction, Pair.second));
   }
 }
 
@@ -8803,9 +8803,8 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
              Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader()));
 
       // If the PHI is used by a partial reduction, set the scale factor.
-      std::optional<std::pair<PartialReductionChain, unsigned>> Pair =
-          getScaledReductionForInstr(RdxDesc.getLoopExitInstr());
-      unsigned ScaleFactor = Pair ? Pair->second : 1;
+      unsigned ScaleFactor =
+          getScalingForReduction(RdxDesc.getLoopExitInstr()).value_or(1);
       PhiRecipe = new VPReductionPHIRecipe(
           Phi, RdxDesc, *StartV, CM.isInLoopReduction(Phi),
           CM.useOrderedReductions(RdxDesc), ScaleFactor);
@@ -8840,7 +8839,7 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
   if (isa<LoadInst>(Instr) || isa<StoreInst>(Instr))
     return tryToWidenMemory(Instr, Operands, Range);
 
-  if (getScaledReductionForInstr(Instr))
+  if (getScalingForReduction(Instr))
     return tryToCreatePartialReduction(Instr, Operands);
 
   if (!shouldWiden(Instr, Range))
