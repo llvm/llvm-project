@@ -6,7 +6,7 @@ module {
   
     irdl.operation @any {
       %0 = irdl.any
-      irdl.results(%0)
+      irdl.results(in1: %0)
     }
   }
 }
