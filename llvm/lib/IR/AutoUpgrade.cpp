@@ -1875,9 +1875,6 @@ static Value *upgradeX86ConcatShift(IRBuilder<> &Builder, CallBase &CI,
 
 static Value *upgradeMaskedStore(IRBuilder<> &Builder, Value *Ptr, Value *Data,
                                  Value *Mask, bool Aligned) {
-  // Cast the pointer to the right type.
-  Ptr = Builder.CreateBitCast(Ptr,
-                              llvm::PointerType::getUnqual(Data->getType()));
   const Align Alignment =
       Aligned
           ? Align(Data->getType()->getPrimitiveSizeInBits().getFixedValue() / 8)
@@ -1897,8 +1894,6 @@ static Value *upgradeMaskedStore(IRBuilder<> &Builder, Value *Ptr, Value *Data,
 static Value *upgradeMaskedLoad(IRBuilder<> &Builder, Value *Ptr,
                                 Value *Passthru, Value *Mask, bool Aligned) {
   Type *ValTy = Passthru->getType();
-  // Cast the pointer to the right type.
-  Ptr = Builder.CreateBitCast(Ptr, llvm::PointerType::getUnqual(ValTy));
   const Align Alignment =
       Aligned
           ? Align(
@@ -2421,13 +2416,10 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 
     // Nontemporal (unaligned) store of the 0'th element of the float/double
     // vector.
-    Type *SrcEltTy = cast<VectorType>(Arg1->getType())->getElementType();
-    PointerType *EltPtrTy = PointerType::getUnqual(SrcEltTy);
-    Value *Addr = Builder.CreateBitCast(Arg0, EltPtrTy, "cast");
     Value *Extract =
         Builder.CreateExtractElement(Arg1, (uint64_t)0, "extractelement");
 
-    StoreInst *SI = Builder.CreateAlignedStore(Extract, Addr, Align(1));
+    StoreInst *SI = Builder.CreateAlignedStore(Extract, Arg0, Align(1));
     SI->setMetadata(LLVMContext::MD_nontemporal, Node);
   } else if (Name.starts_with("avx.movnt.") ||
              Name.starts_with("avx512.storent.")) {
@@ -2439,11 +2431,8 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     Value *Arg0 = CI->getArgOperand(0);
     Value *Arg1 = CI->getArgOperand(1);
 
-    // Convert the type of the pointer to a pointer to the stored type.
-    Value *BC = Builder.CreateBitCast(
-        Arg0, PointerType::getUnqual(Arg1->getType()), "cast");
     StoreInst *SI = Builder.CreateAlignedStore(
-        Arg1, BC,
+        Arg1, Arg0,
         Align(Arg1->getType()->getPrimitiveSizeInBits().getFixedValue() / 8));
     SI->setMetadata(LLVMContext::MD_nontemporal, Node);
   } else if (Name == "sse2.storel.dq") {
@@ -2453,17 +2442,12 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     auto *NewVecTy = FixedVectorType::get(Type::getInt64Ty(C), 2);
     Value *BC0 = Builder.CreateBitCast(Arg1, NewVecTy, "cast");
     Value *Elt = Builder.CreateExtractElement(BC0, (uint64_t)0);
-    Value *BC = Builder.CreateBitCast(
-        Arg0, PointerType::getUnqual(Elt->getType()), "cast");
-    Builder.CreateAlignedStore(Elt, BC, Align(1));
+    Builder.CreateAlignedStore(Elt, Arg0, Align(1));
   } else if (Name.starts_with("sse.storeu.") ||
              Name.starts_with("sse2.storeu.") ||
              Name.starts_with("avx.storeu.")) {
     Value *Arg0 = CI->getArgOperand(0);
     Value *Arg1 = CI->getArgOperand(1);
-
-    Arg0 = Builder.CreateBitCast(Arg0, PointerType::getUnqual(Arg1->getType()),
-                                 "cast");
     Builder.CreateAlignedStore(Arg1, Arg0, Align(1));
   } else if (Name == "avx512.mask.store.ss") {
     Value *Mask = Builder.CreateAnd(CI->getArgOperand(2), Builder.getInt8(1));
@@ -2813,31 +2797,21 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
                             CI->getArgOperand(2), Aligned);
   } else if (Name.starts_with("avx512.mask.expand.load.")) {
     auto *ResultTy = cast<FixedVectorType>(CI->getType());
-    Type *PtrTy = ResultTy->getElementType();
-
-    // Cast the pointer to element type.
-    Value *Ptr = Builder.CreateBitCast(CI->getOperand(0),
-                                       llvm::PointerType::getUnqual(PtrTy));
-
     Value *MaskVec = getX86MaskVec(Builder, CI->getArgOperand(2),
                                    ResultTy->getNumElements());
 
-    Rep = Builder.CreateIntrinsic(Intrinsic::masked_expandload, ResultTy,
-                                  {Ptr, MaskVec, CI->getOperand(1)});
+    Rep = Builder.CreateIntrinsic(
+        Intrinsic::masked_expandload, ResultTy,
+        {CI->getOperand(0), MaskVec, CI->getOperand(1)});
   } else if (Name.starts_with("avx512.mask.compress.store.")) {
     auto *ResultTy = cast<VectorType>(CI->getArgOperand(1)->getType());
-    Type *PtrTy = ResultTy->getElementType();
-
-    // Cast the pointer to element type.
-    Value *Ptr = Builder.CreateBitCast(CI->getOperand(0),
-                                       llvm::PointerType::getUnqual(PtrTy));
-
     Value *MaskVec =
         getX86MaskVec(Builder, CI->getArgOperand(2),
                       cast<FixedVectorType>(ResultTy)->getNumElements());
 
-    Rep = Builder.CreateIntrinsic(Intrinsic::masked_compressstore, ResultTy,
-                                  {CI->getArgOperand(1), Ptr, MaskVec});
+    Rep = Builder.CreateIntrinsic(
+        Intrinsic::masked_compressstore, ResultTy,
+        {CI->getArgOperand(1), CI->getArgOperand(0), MaskVec});
   } else if (Name.starts_with("avx512.mask.compress.") ||
              Name.starts_with("avx512.mask.expand.")) {
     auto *ResultTy = cast<FixedVectorType>(CI->getType());
@@ -2963,9 +2937,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     Type *EltTy = cast<VectorType>(CI->getType())->getElementType();
     unsigned NumSrcElts = 128 / EltTy->getPrimitiveSizeInBits();
     auto *VT = FixedVectorType::get(EltTy, NumSrcElts);
-    Value *Op = Builder.CreatePointerCast(CI->getArgOperand(0),
-                                          PointerType::getUnqual(VT));
-    Value *Load = Builder.CreateAlignedLoad(VT, Op, Align(1));
+    Value *Load = Builder.CreateAlignedLoad(VT, CI->getArgOperand(0), Align(1));
     if (NumSrcElts == 2)
       Rep = Builder.CreateShuffleVector(Load, ArrayRef<int>{0, 1, 0, 1});
     else
@@ -3687,13 +3659,8 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     MDNode *Node = MDNode::get(
         C, ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(C), 1)));
 
-    Value *Ptr = CI->getArgOperand(0);
-
-    // Convert the type of the pointer to a pointer to the stored type.
-    Value *BC = Builder.CreateBitCast(
-        Ptr, PointerType::getUnqual(CI->getType()), "cast");
     LoadInst *LI = Builder.CreateAlignedLoad(
-        CI->getType(), BC,
+        CI->getType(), CI->getArgOperand(0),
         Align(CI->getType()->getPrimitiveSizeInBits().getFixedValue() / 8));
     LI->setMetadata(LLVMContext::MD_nontemporal, Node);
     Rep = LI;
@@ -4045,10 +4012,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 
     // Extract the second result and store it.
     Value *Data = Builder.CreateExtractValue(NewCall, 1);
-    // Cast the pointer to the right type.
-    Value *Ptr = Builder.CreateBitCast(
-        CI->getArgOperand(3), llvm::PointerType::getUnqual(Data->getType()));
-    Builder.CreateAlignedStore(Data, Ptr, Align(1));
+    Builder.CreateAlignedStore(Data, CI->getArgOperand(3), Align(1));
     // Replace the original call result with the first result of the new call.
     Value *CF = Builder.CreateExtractValue(NewCall, 0);
 
@@ -4756,10 +4720,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     NewCall = Builder.CreateCall(NewFn);
     // Extract the second result and store it.
     Value *Data = Builder.CreateExtractValue(NewCall, 1);
-    // Cast the pointer to the right type.
-    Value *Ptr = Builder.CreateBitCast(CI->getArgOperand(0),
-                                 llvm::PointerType::getUnqual(Data->getType()));
-    Builder.CreateAlignedStore(Data, Ptr, Align(1));
+    Builder.CreateAlignedStore(Data, CI->getArgOperand(0), Align(1));
     // Replace the original call result with the first result of the new call.
     Value *TSC = Builder.CreateExtractValue(NewCall, 0);
 

@@ -302,6 +302,9 @@ INTERCEPTOR(int, fpurge, FILE *stream) {
   __rtsan_notify_intercepted_call("fpurge");
   return REAL(fpurge)(stream);
 }
+#define RTSAN_MAYBE_INTERCEPT_FPURGE INTERCEPT_FUNCTION(fpurge)
+#else
+#define RTSAN_MAYBE_INTERCEPT_FPURGE
 #endif
 
 INTERCEPTOR(FILE *, fdopen, int fd, const char *mode) {
@@ -840,6 +843,17 @@ INTERCEPTOR(int, getsockname, int socket, struct sockaddr *sa,
 #define RTSAN_MAYBE_INTERCEPT_GETSOCKNAME
 #endif
 
+#if SANITIZER_INTERCEPT_GETPEERNAME
+INTERCEPTOR(int, getpeername, int socket, struct sockaddr *sa,
+            socklen_t *salen) {
+  __rtsan_notify_intercepted_call("getpeername");
+  return REAL(getpeername)(socket, sa, salen);
+}
+#define RTSAN_MAYBE_INTERCEPT_GETPEERNAME INTERCEPT_FUNCTION(getpeername)
+#else
+#define RTSAN_MAYBE_INTERCEPT_GETPEERNAME
+#endif
+
 INTERCEPTOR(int, bind, int socket, const struct sockaddr *address,
             socklen_t address_len) {
   __rtsan_notify_intercepted_call("bind");
@@ -879,6 +893,17 @@ INTERCEPTOR(ssize_t, sendmsg, int socket, const struct msghdr *message,
   return REAL(sendmsg)(socket, message, flags);
 }
 
+#if SANITIZER_INTERCEPT_SENDMMSG
+INTERCEPTOR(int, sendmmsg, int socket, struct mmsghdr *message,
+            unsigned int len, int flags) {
+  __rtsan_notify_intercepted_call("sendmmsg");
+  return REAL(sendmmsg)(socket, message, len, flags);
+}
+#define RTSAN_MAYBE_INTERCEPT_SENDMMSG INTERCEPT_FUNCTION(sendmmsg)
+#else
+#define RTSAN_MAYBE_INTERCEPT_SENDMMSG
+#endif
+
 INTERCEPTOR(ssize_t, sendto, int socket, const void *buffer, size_t length,
             int flags, const struct sockaddr *dest_addr, socklen_t dest_len) {
   __rtsan_notify_intercepted_call("sendto");
@@ -900,6 +925,17 @@ INTERCEPTOR(ssize_t, recvmsg, int socket, struct msghdr *message, int flags) {
   __rtsan_notify_intercepted_call("recvmsg");
   return REAL(recvmsg)(socket, message, flags);
 }
+
+#if SANITIZER_INTERCEPT_RECVMMSG
+INTERCEPTOR(int, recvmmsg, int socket, struct mmsghdr *message,
+            unsigned int len, int flags, struct timespec *timeout) {
+  __rtsan_notify_intercepted_call("recvmmsg");
+  return REAL(recvmmsg)(socket, message, len, flags, timeout);
+}
+#define RTSAN_MAYBE_INTERCEPT_RECVMMSG INTERCEPT_FUNCTION(recvmmsg)
+#else
+#define RTSAN_MAYBE_INTERCEPT_RECVMMSG
+#endif
 
 INTERCEPTOR(int, shutdown, int socket, int how) {
   __rtsan_notify_intercepted_call("shutdown");
@@ -1031,6 +1067,16 @@ INTERCEPTOR(int, pipe, int pipefd[2]) {
   return REAL(pipe)(pipefd);
 }
 
+#if !SANITIZER_APPLE
+INTERCEPTOR(int, pipe2, int pipefd[2], int flags) {
+  __rtsan_notify_intercepted_call("pipe2");
+  return REAL(pipe2)(pipefd, flags);
+}
+#define RTSAN_MAYBE_INTERCEPT_PIPE2 INTERCEPT_FUNCTION(pipe2)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PIPE2
+#endif
+
 INTERCEPTOR(int, mkfifo, const char *pathname, mode_t mode) {
   __rtsan_notify_intercepted_call("mkfifo");
   return REAL(mkfifo)(pathname, mode);
@@ -1133,6 +1179,8 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(puts);
   INTERCEPT_FUNCTION(fputs);
   INTERCEPT_FUNCTION(fflush);
+  RTSAN_MAYBE_INTERCEPT_FPURGE;
+  RTSAN_MAYBE_INTERCEPT_PIPE2;
   INTERCEPT_FUNCTION(fdopen);
   INTERCEPT_FUNCTION(freopen);
   RTSAN_MAYBE_INTERCEPT_FOPENCOOKIE;
@@ -1194,13 +1242,16 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(recv);
   INTERCEPT_FUNCTION(recvfrom);
   INTERCEPT_FUNCTION(recvmsg);
+  RTSAN_MAYBE_INTERCEPT_RECVMMSG;
   INTERCEPT_FUNCTION(send);
   INTERCEPT_FUNCTION(sendmsg);
+  RTSAN_MAYBE_INTERCEPT_SENDMMSG;
   INTERCEPT_FUNCTION(sendto);
   INTERCEPT_FUNCTION(shutdown);
   INTERCEPT_FUNCTION(socket);
   RTSAN_MAYBE_INTERCEPT_ACCEPT4;
   RTSAN_MAYBE_INTERCEPT_GETSOCKNAME;
+  RTSAN_MAYBE_INTERCEPT_GETPEERNAME;
 
   RTSAN_MAYBE_INTERCEPT_SELECT;
   INTERCEPT_FUNCTION(pselect);
