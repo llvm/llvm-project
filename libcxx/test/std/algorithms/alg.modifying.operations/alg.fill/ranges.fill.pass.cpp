@@ -78,8 +78,12 @@ constexpr void test_iterators() {
   }
 }
 
-// The `ranges::{fill, fill_n}` algorithms require `vector<bool, Alloc>::iterator` to satisfy the
-// `std::indirectly_writable` concept when used with `vector<bool, Alloc>`, which is only met since C++23.
+// Make sure we behave properly with std::vector<bool> iterators with custom size types, see
+// https://github.com/llvm/llvm-project/pull/122410.
+//
+// The `ranges::{fill, fill_n}` algorithms require `vector<bool, Alloc>::iterator` to satisfy
+// the `std::indirectly_writable` concept when used with `vector<bool, Alloc>`, which is only
+// satisfied since C++23.
 #if TEST_STD_VER >= 23
 TEST_CONSTEXPR_CXX20 void test_bititer_with_custom_sized_types() {
   {

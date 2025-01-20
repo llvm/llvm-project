@@ -16,6 +16,8 @@
 
 #include "test_macros.h"
 
+// Allocator with a provided size_type and difference_type, used to test corner cases
+// like arithmetic on Allocator::size_type in generic code.
 template <typename T, typename Size = std::size_t, typename Difference = std::ptrdiff_t>
 class sized_allocator {
   template <typename U, typename Sz, typename Diff>

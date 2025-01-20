@@ -62,16 +62,16 @@ struct __size_difference_type_traits<_Cp, __void_t<typename _Cp::difference_type
 // This function is designed to operate correctly even for smaller integral types like `uint8_t`, `uint16_t`,
 // or `unsigned short`. Casting back to _StorageType is crucial to prevent undefined behavior that can arise
 // from integral promotions.
-// See https://github.com/llvm/llvm-project/pull/122410
+// See https://github.com/llvm/llvm-project/pull/122410.
 template <class _StoragePointer,
           __enable_if_t<is_unsigned<typename pointer_traits<_StoragePointer>::element_type>::value, int> >
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
-__fill_masked_range(_StoragePointer __word, unsigned __ctz, unsigned __clz, bool __fill_val) {
+__fill_masked_range(_StoragePointer __word, unsigned __clz, unsigned __ctz, bool __fill_val) {
   using _StorageType = typename pointer_traits<_StoragePointer>::element_type;
   _LIBCPP_ASSERT_VALID_INPUT_RANGE(
       __ctz + __clz < sizeof(_StorageType) * CHAR_BIT, "__fill_masked_range called with invalid range");
-  _StorageType __m = static_cast<_StorageType>(static_cast<_StorageType>(~static_cast<_StorageType>(0)) << __ctz) &
-                     static_cast<_StorageType>(static_cast<_StorageType>(~static_cast<_StorageType>(0)) >> __clz);
+  _StorageType __m = static_cast<_StorageType>(static_cast<_StorageType>(~static_cast<_StorageType>(0)) >> __clz) &
+                     static_cast<_StorageType>(static_cast<_StorageType>(~static_cast<_StorageType>(0)) << __ctz);
   if (__fill_val)
     *__word |= __m;
   else
