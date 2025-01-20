@@ -174,11 +174,19 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
     OS.pwrite(Patch.Bytes.data(), Patch.Bytes.size(),
               SectionFileOffset + Patch.Offset);
 
-  for (Relocation &Reloc : PendingRelocations) {
+  uint64_t SkippedPendingRelocations = 0;
+  for (auto &[Reloc, Optional] : PendingRelocations) {
     uint64_t Value = Reloc.Addend;
     if (Reloc.Symbol)
       Value += Resolver(Reloc.Symbol);
 
+    // Safely skip any pending relocation that cannot be encoded and was added
+    // as part of an optimization.
+    if (Optional && !Relocation::canEncodeValue(
+                        Reloc.Type, Value, SectionAddress + Reloc.Offset)) {
+      ++SkippedPendingRelocations;
+      continue;
+    }
     Value = Relocation::encodeValue(Reloc.Type, Value,
                                     SectionAddress + Reloc.Offset);
 
@@ -197,6 +205,10 @@ void BinarySection::flushPendingRelocations(raw_pwrite_stream &OS,
   }
 
   clearList(PendingRelocations);
+
+  if (SkippedPendingRelocations > 0)
+    LLVM_DEBUG(dbgs() << "BOLT-INFO: Skipped " << SkippedPendingRelocations
+                      << " pending relocations as they were out of range\n");
 }
 
 BinarySection::~BinarySection() { updateContents(nullptr, 0); }

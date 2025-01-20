@@ -1824,7 +1824,7 @@ bool BinaryFunction::scanExternalRefs() {
   // Add relocations unless disassembly failed for this function.
   if (!DisassemblyFailed)
     for (Relocation &Rel : FunctionRelocations)
-      getOriginSection()->addPendingRelocation(Rel);
+      getOriginSection()->addPendingRelocation(Rel, /*Optional*/ true);
 
   // Add patches grouping them together.
   if (!InstructionPatches.empty()) {
