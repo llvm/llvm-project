@@ -264,7 +264,7 @@ protected:
       if (V->getType()->isPointerTy())
         return V;
     }
-    return UndefValue::get(pickPointerType());
+    return UndefValue::get(PointerType::get(Context, 0));
   }
 
   /// Return a random value of any vector type.
@@ -281,12 +281,6 @@ protected:
   /// Pick a random type.
   Type *pickType() {
     return (getRandom() & 1) ? pickVectorType() : pickScalarType();
-  }
-
-  /// Pick a random pointer type.
-  Type *pickPointerType() {
-    Type *Ty = pickType();
-    return PointerType::get(Context, 0);
   }
 
   /// Pick a random vector type.
