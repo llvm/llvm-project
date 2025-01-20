@@ -1422,7 +1422,7 @@ hlfir::Entity hlfir::loadElementAt(mlir::Location loc,
                            getElementAt(loc, builder, entity, oneBasedIndices));
 }
 
-llvm::SmallVector<mlir::Value>
+llvm::SmallVector<mlir::Value, Fortran::common::maxRank>
 hlfir::genExtentsVector(mlir::Location loc, fir::FirOpBuilder &builder,
                         hlfir::Entity entity) {
   entity = hlfir::derefPointersAndAllocatables(loc, builder, entity);

@@ -1229,10 +1229,15 @@ void ImportFile::parse() {
   }
 }
 
-BitcodeFile::BitcodeFile(COFFLinkerContext &ctx, MemoryBufferRef mb,
-                         StringRef archiveName, uint64_t offsetInArchive,
-                         bool lazy)
-    : InputFile(ctx.symtab, BitcodeKind, mb, lazy) {
+BitcodeFile::BitcodeFile(SymbolTable &symtab, MemoryBufferRef mb,
+                         std::unique_ptr<lto::InputFile> &o, bool lazy)
+    : InputFile(symtab, BitcodeKind, mb, lazy) {
+  obj.swap(o);
+}
+
+BitcodeFile *BitcodeFile::create(COFFLinkerContext &ctx, MemoryBufferRef mb,
+                                 StringRef archiveName,
+                                 uint64_t offsetInArchive, bool lazy) {
   std::string path = mb.getBufferIdentifier().str();
   if (ctx.config.thinLTOIndexOnly)
     path = replaceThinLTOSuffix(mb.getBufferIdentifier(),
@@ -1252,7 +1257,9 @@ BitcodeFile::BitcodeFile(COFFLinkerContext &ctx, MemoryBufferRef mb,
                                                sys::path::filename(path) +
                                                utostr(offsetInArchive)));
 
-  obj = check(lto::InputFile::create(mbref));
+  std::unique_ptr<lto::InputFile> obj = check(lto::InputFile::create(mbref));
+  return make<BitcodeFile>(ctx.getSymtab(getMachineType(obj.get())), mb, obj,
+                           lazy);
 }
 
 BitcodeFile::~BitcodeFile() = default;
@@ -1329,7 +1336,7 @@ void BitcodeFile::parseLazy() {
     }
 }
 
-MachineTypes BitcodeFile::getMachineType() const {
+MachineTypes BitcodeFile::getMachineType(const llvm::lto::InputFile *obj) {
   Triple t(obj->getTargetTriple());
   switch (t.getArch()) {
   case Triple::x86_64:

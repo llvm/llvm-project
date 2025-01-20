@@ -281,28 +281,33 @@ bool InstCombinerImpl::shouldChangeType(Type *From, Type *To) const {
 // Return true, if No Signed Wrap should be maintained for I.
 // The No Signed Wrap flag can be kept if the operation "B (I.getOpcode) C",
 // where both B and C should be ConstantInts, results in a constant that does
-// not overflow. This function only handles the Add and Sub opcodes. For
+// not overflow. This function only handles the Add/Sub/Mul opcodes. For
 // all other opcodes, the function conservatively returns false.
 static bool maintainNoSignedWrap(BinaryOperator &I, Value *B, Value *C) {
   auto *OBO = dyn_cast<OverflowingBinaryOperator>(&I);
   if (!OBO || !OBO->hasNoSignedWrap())
     return false;
 
-  // We reason about Add and Sub Only.
-  Instruction::BinaryOps Opcode = I.getOpcode();
-  if (Opcode != Instruction::Add && Opcode != Instruction::Sub)
-    return false;
-
   const APInt *BVal, *CVal;
   if (!match(B, m_APInt(BVal)) || !match(C, m_APInt(CVal)))
     return false;
 
+  // We reason about Add/Sub/Mul Only.
   bool Overflow = false;
-  if (Opcode == Instruction::Add)
+  switch (I.getOpcode()) {
+  case Instruction::Add:
     (void)BVal->sadd_ov(*CVal, Overflow);
-  else
+    break;
+  case Instruction::Sub:
     (void)BVal->ssub_ov(*CVal, Overflow);
-
+    break;
+  case Instruction::Mul:
+    (void)BVal->smul_ov(*CVal, Overflow);
+    break;
+  default:
+    // Conservatively return false for other opcodes.
+    return false;
+  }
   return !Overflow;
 }
 
