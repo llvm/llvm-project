@@ -4661,7 +4661,7 @@ void LocalInstantiationScope::InstantiatedLocal(const Decl *D, Decl *Inst) {
     }
 #endif
     Stored = Inst;
-  } else if (DeclArgumentPack *Pack = Stored.dyn_cast<DeclArgumentPack *>()) {
+  } else if (DeclArgumentPack *Pack = dyn_cast<DeclArgumentPack *>(Stored)) {
     Pack->push_back(cast<VarDecl>(Inst));
   } else {
     assert(cast<Decl *>(Stored) == Inst && "Already instantiated this local");

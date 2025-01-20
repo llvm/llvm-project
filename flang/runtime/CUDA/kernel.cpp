@@ -48,13 +48,13 @@ void RTDEF(CUFLaunchKernel)(const void *kernel, intptr_t gridX, intptr_t gridY,
       maxBlocks = multiProcCount * maxBlocks;
     }
     if (maxBlocks > 0) {
-      if (gridDim.x > 0) {
+      if (gridX > 0) {
         maxBlocks = maxBlocks / gridDim.x;
       }
-      if (gridDim.y > 0) {
+      if (gridY > 0) {
         maxBlocks = maxBlocks / gridDim.y;
       }
-      if (gridDim.z > 0) {
+      if (gridZ > 0) {
         maxBlocks = maxBlocks / gridDim.z;
       }
       if (maxBlocks < 1) {
@@ -113,13 +113,13 @@ void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
       maxBlocks = multiProcCount * maxBlocks;
     }
     if (maxBlocks > 0) {
-      if (config.gridDim.x > 0) {
+      if (gridX > 0) {
         maxBlocks = maxBlocks / config.gridDim.x;
       }
-      if (config.gridDim.y > 0) {
+      if (gridY > 0) {
         maxBlocks = maxBlocks / config.gridDim.y;
       }
-      if (config.gridDim.z > 0) {
+      if (gridZ > 0) {
         maxBlocks = maxBlocks / config.gridDim.z;
       }
       if (maxBlocks < 1) {

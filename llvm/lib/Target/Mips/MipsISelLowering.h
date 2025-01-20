@@ -247,14 +247,16 @@ class TargetRegisterClass;
       DOUBLE_SELECT_I64,
 
       // Load/Store Left/Right nodes.
-      LWL = ISD::FIRST_TARGET_MEMORY_OPCODE,
+      FIRST_MEMORY_OPCODE,
+      LWL = FIRST_MEMORY_OPCODE,
       LWR,
       SWL,
       SWR,
       LDL,
       LDR,
       SDL,
-      SDR
+      SDR,
+      LAST_MEMORY_OPCODE = SDR,
     };
 
   } // ene namespace MipsISD
@@ -613,7 +615,7 @@ class TargetRegisterClass;
     bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                         bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        LLVMContext &Context) const override;
+                        LLVMContext &Context, const Type *RetTy) const override;
 
     SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,

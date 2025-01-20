@@ -489,7 +489,7 @@ struct IntRangeOptimizationsPass final
     GreedyRewriteConfig config;
     config.listener = &listener;
 
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
+    if (failed(applyPatternsGreedily(op, std::move(patterns), config)))
       signalPassFailure();
   }
 };
@@ -518,7 +518,7 @@ struct IntRangeNarrowingPass final
     config.useTopDownTraversal = false;
     config.listener = &listener;
 
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
+    if (failed(applyPatternsGreedily(op, std::move(patterns), config)))
       signalPassFailure();
   }
 };

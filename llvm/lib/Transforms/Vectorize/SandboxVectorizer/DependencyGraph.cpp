@@ -283,8 +283,6 @@ void DependencyGraph::createNewNodes(const Interval<Instruction> &NewInterval) {
     // Build the Mem node chain.
     if (auto *MemN = dyn_cast<MemDGNode>(N)) {
       MemN->setPrevNode(LastMemN);
-      if (LastMemN != nullptr)
-        LastMemN->setNextNode(MemN);
       LastMemN = MemN;
     }
   }
@@ -302,7 +300,6 @@ void DependencyGraph::createNewNodes(const Interval<Instruction> &NewInterval) {
            "Wrong order!");
     if (LinkTopN != nullptr && LinkBotN != nullptr) {
       LinkTopN->setNextNode(LinkBotN);
-      LinkBotN->setPrevNode(LinkTopN);
     }
 #ifndef NDEBUG
     // TODO: Remove this once we've done enough testing.
@@ -366,6 +363,44 @@ void DependencyGraph::notifyCreateInstr(Instruction *I) {
     if (auto *NextMemN = getMemDGNodeAfter(MemN, /*IncludingN=*/false)) {
       NextMemN->PrevMemN = MemN;
       MemN->NextMemN = NextMemN;
+    }
+  }
+}
+
+void DependencyGraph::notifyMoveInstr(Instruction *I, const BBIterator &To) {
+  // Early return if `I` doesn't actually move.
+  BasicBlock *BB = To.getNodeParent();
+  if (To != BB->end() && &*To == I->getNextNode())
+    return;
+
+  // Maintain the DAGInterval.
+  DAGInterval.notifyMoveInstr(I, To);
+
+  // TODO: Perhaps check if this is legal by checking the dependencies?
+
+  // Update the MemDGNode chain to reflect the instr movement if necessary.
+  DGNode *N = getNodeOrNull(I);
+  if (N == nullptr)
+    return;
+  MemDGNode *MemN = dyn_cast<MemDGNode>(N);
+  if (MemN == nullptr)
+    return;
+  // First detach it from the existing chain.
+  MemN->detachFromChain();
+  // Now insert it back into the chain at the new location.
+  if (To != BB->end()) {
+    DGNode *ToN = getNodeOrNull(&*To);
+    if (ToN != nullptr) {
+      MemN->setPrevNode(getMemDGNodeBefore(ToN, /*IncludingN=*/false));
+      MemN->setNextNode(getMemDGNodeAfter(ToN, /*IncludingN=*/true));
+    }
+  } else {
+    // MemN becomes the last instruction in the BB.
+    auto *TermN = getNodeOrNull(BB->getTerminator());
+    if (TermN != nullptr) {
+      MemN->setPrevNode(getMemDGNodeBefore(TermN, /*IncludingN=*/false));
+    } else {
+      // The terminator is outside the DAG interval so do nothing.
     }
   }
 }

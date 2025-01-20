@@ -1951,6 +1951,7 @@ TEST(InstructionsTest, CmpPredicate) {
   EXPECT_EQ(*CmpPredicate::getMatching(P1, P2), CmpInst::ICMP_SLE);
   EXPECT_EQ(CmpPredicate::getMatching(P1, P2)->hasSameSign(), false);
   EXPECT_EQ(CmpPredicate::getMatching(P1, P3), std::nullopt);
+  EXPECT_EQ(CmpPredicate::getMatching(P1, CmpInst::FCMP_ULE), std::nullopt);
   EXPECT_FALSE(Q0.hasSameSign());
   EXPECT_TRUE(Q1.hasSameSign());
   EXPECT_FALSE(Q2.hasSameSign());

@@ -94,8 +94,9 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 
 */
 
-#if 0
-#else // 0
+#if defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/wchar.h>
+#else
 #  include <__config>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -120,10 +121,6 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 
 #    include <__mbstate_t.h> // provide mbstate_t
 #    include <stddef.h>      // provide size_t
-
-#    if __has_include_next(<wchar.h>)
-#      include_next <wchar.h>
-#    endif
 
 // Determine whether we have const-correct overloads for wcschr and friends.
 #    if defined(_WCHAR_H_CPLUSPLUS_98_CONFORMANCE_)
@@ -205,6 +202,6 @@ size_t wcsnrtombs(
 } // extern "C"
 #      endif // __cplusplus && (_LIBCPP_MSVCRT || __MVS__)
 #    endif   // _LIBCPP_HAS_WIDE_CHARACTERS
-#  endif     // 0
+#  endif     // _LIBCPP_WCHAR_H
 
-#endif // _LIBCPP_WCHAR_H
+#endif // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)

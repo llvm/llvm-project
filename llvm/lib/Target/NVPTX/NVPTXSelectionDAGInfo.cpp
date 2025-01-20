@@ -7,7 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXSelectionDAGInfo.h"
+#include "NVPTXISelLowering.h"
 
 using namespace llvm;
 
 NVPTXSelectionDAGInfo::~NVPTXSelectionDAGInfo() = default;
+
+bool NVPTXSelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
+  return Opcode >= NVPTXISD::FIRST_MEMORY_OPCODE &&
+         Opcode <= NVPTXISD::LAST_MEMORY_OPCODE;
+}

@@ -7,7 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUSelectionDAGInfo.h"
+#include "AMDGPUISelLowering.h"
 
 using namespace llvm;
 
 AMDGPUSelectionDAGInfo::~AMDGPUSelectionDAGInfo() = default;
+
+bool AMDGPUSelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
+  return Opcode >= AMDGPUISD::FIRST_MEMORY_OPCODE &&
+         Opcode <= AMDGPUISD::LAST_MEMORY_OPCODE;
+}
