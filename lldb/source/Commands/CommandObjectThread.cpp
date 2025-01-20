@@ -978,7 +978,7 @@ protected:
           if (line_table->FindLineEntryByAddress(addr, unused, &idx))
             lowest_func_idx = std::min(lowest_func_idx, idx);
 
-          addr.Slide(range.GetByteSize());
+          addr.Slide(range.GetByteSize() - 1);
           if (line_table->FindLineEntryByAddress(addr, unused, &idx))
             highest_func_idx = std::max(highest_func_idx, idx);
         }
