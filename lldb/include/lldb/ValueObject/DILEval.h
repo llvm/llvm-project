@@ -69,18 +69,12 @@ public:
                  lldb::DynamicValueType use_dynamic,
                  std::shared_ptr<ExecutionContextScope> exe_ctx_scope);
 
-  llvm::Expected<lldb::ValueObjectSP> DILEval(const DILASTNode *tree,
-                                              lldb::TargetSP target_sp);
+  llvm::Expected<lldb::ValueObjectSP> DILEvalNode(const DILASTNode *node);
 
 private:
-  lldb::ValueObjectSP DILEvalNode(const DILASTNode *node);
-
-  bool Success() { return m_error.Success(); }
-
-  void SetError(ErrorCode error_code, std::string error, uint32_t loc);
-
-  void Visit(const ErrorNode *node) override;
-  void Visit(const IdentifierNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP> Visit(const ErrorNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP>
+  Visit(const IdentifierNode *node) override;
 
 private:
   // Used by the interpreter to create objects, perform casts, etc.
@@ -88,13 +82,9 @@ private:
 
   llvm::StringRef m_expr;
 
-  lldb::ValueObjectSP m_result;
-
   lldb::ValueObjectSP m_scope;
 
   lldb::DynamicValueType m_default_dynamic;
-
-  Status m_error;
 
   std::shared_ptr<ExecutionContextScope> m_exe_ctx_scope;
 };

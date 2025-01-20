@@ -42,7 +42,7 @@ public:
       : m_location(location), m_kind(kind) {}
   virtual ~DILASTNode() = default;
 
-  virtual void Accept(Visitor *v) const = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const = 0;
 
   uint32_t GetLocation() const { return m_location; }
   NodeKind GetKind() const { return m_kind; }
@@ -57,7 +57,7 @@ using DILASTNodeUP = std::unique_ptr<DILASTNode>;
 class ErrorNode : public DILASTNode {
 public:
   ErrorNode() : DILASTNode(0, NodeKind::eErrorNode) {}
-  void Accept(Visitor *v) const override;
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
   static bool classof(const DILASTNode *node) {
     return node->GetKind() == NodeKind::eErrorNode;
@@ -72,7 +72,7 @@ public:
       : DILASTNode(location, NodeKind::eIdentifierNode),
         m_name(std::move(name)), m_use_dynamic(use_dynamic) {}
 
-  void Accept(Visitor *v) const override;
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
   lldb::DynamicValueType GetUseDynamic() const { return m_use_dynamic; }
   std::string GetName() const { return m_name; }
@@ -93,8 +93,9 @@ private:
 class Visitor {
 public:
   virtual ~Visitor() = default;
-  virtual void Visit(const ErrorNode *node) = 0;
-  virtual void Visit(const IdentifierNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP> Visit(const ErrorNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const IdentifierNode *node) = 0;
 };
 
 } // namespace dil

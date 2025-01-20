@@ -12,9 +12,13 @@ namespace lldb_private {
 
 namespace dil {
 
-void ErrorNode::Accept(Visitor *v) const { v->Visit(this); }
+llvm::Expected<lldb::ValueObjectSP> ErrorNode::Accept(Visitor *v) const {
+  return v->Visit(this);
+}
 
-void IdentifierNode::Accept(Visitor *v) const { v->Visit(this); }
+llvm::Expected<lldb::ValueObjectSP> IdentifierNode::Accept(Visitor *v) const {
+  return v->Visit(this);
+}
 
 } // namespace dil
 

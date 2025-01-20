@@ -226,40 +226,23 @@ DILInterpreter::DILInterpreter(
       m_exe_ctx_scope(exe_ctx_scope) {}
 
 llvm::Expected<lldb::ValueObjectSP>
-DILInterpreter::DILEval(const DILASTNode *tree, lldb::TargetSP target_sp) {
-  m_error.Clear();
-  // Evaluate an AST.
-  DILEvalNode(tree);
-  // Check for errors.
-  if (m_error.Fail())
-    return m_error.ToError();
-
-  // Return the computed result.
-  return m_result;
-}
-
-lldb::ValueObjectSP DILInterpreter::DILEvalNode(const DILASTNode *node) {
+DILInterpreter::DILEvalNode(const DILASTNode *node) {
 
   // Traverse an AST pointed by the `node`.
-  node->Accept(this);
+  auto value_or_error = node->Accept(this);
 
-  // Return the computed value for convenience. The caller is responsible for
-  // checking if an error occured during the evaluation.
-  return m_result;
+  // Return the computed value or error.
+  return value_or_error;
 }
 
-void DILInterpreter::SetError(ErrorCode code, std::string error, uint32_t loc) {
-  assert(m_error.Success() && "interpreter can error only once");
-  m_error = Status((uint32_t)code, lldb::eErrorTypeGeneric,
-                   FormatDiagnostics(m_expr, error, loc));
-}
-
-void DILInterpreter::Visit(const ErrorNode *node) {
+llvm::Expected<lldb::ValueObjectSP>
+DILInterpreter::Visit(const ErrorNode *node) {
   // The AST is not valid.
-  m_result = lldb::ValueObjectSP();
+  return lldb::ValueObjectSP();
 }
 
-void DILInterpreter::Visit(const IdentifierNode *node) {
+llvm::Expected<lldb::ValueObjectSP>
+DILInterpreter::Visit(const IdentifierNode *node) {
   lldb::DynamicValueType use_dynamic = node->GetUseDynamic();
 
   std::unique_ptr<IdentifierInfo> identifier =
@@ -268,13 +251,11 @@ void DILInterpreter::Visit(const IdentifierNode *node) {
   if (!identifier) {
     std::string errMsg;
     std::string name = node->GetName();
-    if (name == "this")
-      errMsg = "invalid use of 'this' outside of a non-static member function";
-    else
-      errMsg = llvm::formatv("use of undeclared identifier '{0}'", name);
-    SetError(ErrorCode::kUndeclaredIdentifier, errMsg, node->GetLocation());
-    m_result = lldb::ValueObjectSP();
-    return;
+    errMsg = llvm::formatv("use of undeclared identifier '{0}'", name);
+    Status error = Status(
+        (uint32_t)ErrorCode::kUndeclaredIdentifier, lldb::eErrorTypeGeneric,
+        FormatDiagnostics(m_expr, errMsg, node->GetLocation()));
+    return error.ToError();
   }
   lldb::ValueObjectSP val;
   lldb::TargetSP target_sp;
@@ -284,11 +265,19 @@ void DILInterpreter::Visit(const IdentifierNode *node) {
          "Unrecognized identifier kind");
 
   val = identifier->GetValue();
+
+  if (val->GetCompilerType().IsReferenceType()) {
+    Status error;
+    val = val->Dereference(error);
+    if (error.Fail())
+      return error.ToError();
+  }
+
   target_sp = val->GetTargetSP();
   assert(target_sp && target_sp->IsValid() &&
          "identifier doesn't resolve to a valid value");
 
-  m_result = val;
+  return val;
 }
 
 } // namespace dil
