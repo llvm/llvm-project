@@ -3510,7 +3510,8 @@ void RewriteInstance::runBinaryAnalyses() {
     opts::GadgetScannersToRun.addValue(GSK::GS_ALL);
   for (GSK ScannerToRun : opts::GadgetScannersToRun) {
     if (ScannerToRun == GSK::GS_PACRET || ScannerToRun == GSK::GS_ALL)
-      Manager.registerPass(std::make_unique<NonPacProtectedRetAnalysis::Analysis>());
+      Manager.registerPass(
+          std::make_unique<NonPacProtectedRetAnalysis::Analysis>());
   }
 
   BC->logBOLTErrorsAndQuitOnFatal(Manager.runPasses());

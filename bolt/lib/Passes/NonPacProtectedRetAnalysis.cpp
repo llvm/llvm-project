@@ -278,8 +278,13 @@ protected:
 
     State Next = Cur;
     BitVector Written = BitVector(NumRegs, false);
-    // Assume a call can clobber all registers, as functions may not respect
-    // the AAPCS ABI rules...
+    // Assume a call can clobber all registers, including callee-saved
+    // registers. There's a good chance that callee-saved registers will be
+    // saved on the stack at some point during execution of the callee.
+    // Therefore they should also be considered as potentially modified by an
+    // attacker/written to.
+    // Also, not all functions may respect the AAPCS ABI rules about
+    // caller/callee-saved registers.
     if (BC.MIB->isCall(Point))
       Written.set();
     else

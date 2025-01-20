@@ -215,6 +215,10 @@ f_callclobbered_calleesaved:
         // does respect the AAPCS rules, so the scanner should assume x19 can
         // get overwritten, and report a gadget if the code does not properly
         // deal with that.
+        // Furthermore, there's a good chance that callee-saved registers have
+        // been saved on the stack at some point during execution of the callee,
+        // and so should be considered as potentially modified by an
+        // attacker/written to.
         ret x19
         .size f_callclobbered_calleesaved, .-f_callclobbered_calleesaved
 
