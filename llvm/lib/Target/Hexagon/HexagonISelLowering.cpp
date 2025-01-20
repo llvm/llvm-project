@@ -182,7 +182,7 @@ bool
 HexagonTargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs,
-    LLVMContext &Context) const {
+    LLVMContext &Context, const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
 
@@ -1860,13 +1860,6 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setLibcallName(RTLIB::SREM_I64, "__hexagon_moddi3");
   setLibcallName(RTLIB::UREM_I32, "__hexagon_umodsi3");
   setLibcallName(RTLIB::UREM_I64, "__hexagon_umoddi3");
-
-  setLibcallName(RTLIB::SINTTOFP_I128_F64, "__hexagon_floattidf");
-  setLibcallName(RTLIB::SINTTOFP_I128_F32, "__hexagon_floattisf");
-  setLibcallName(RTLIB::FPTOUINT_F32_I128, "__hexagon_fixunssfti");
-  setLibcallName(RTLIB::FPTOUINT_F64_I128, "__hexagon_fixunsdfti");
-  setLibcallName(RTLIB::FPTOSINT_F32_I128, "__hexagon_fixsfti");
-  setLibcallName(RTLIB::FPTOSINT_F64_I128, "__hexagon_fixdfti");
 
   // This is the only fast library function for sqrtd.
   if (FastMath)

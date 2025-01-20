@@ -89,6 +89,10 @@ public:
   unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
                                 unsigned DefaultCallPenalty) const;
 
+  uint64_t getFeatureMask(const Function &F) const;
+
+  bool isMultiversionedFunction(const Function &F) const;
+
   /// \name Scalar TTI Implementations
   /// @{
 
@@ -359,8 +363,8 @@ public:
   }
 
   InstructionCost
-  getPartialReductionCost(unsigned Opcode, Type *InputType, Type *AccumType,
-                          ElementCount VF,
+  getPartialReductionCost(unsigned Opcode, Type *InputTypeA, Type *InputTypeB,
+                          Type *AccumType, ElementCount VF,
                           TTI::PartialReductionExtendKind OpAExtend,
                           TTI::PartialReductionExtendKind OpBExtend,
                           std::optional<unsigned> BinOp) const {
@@ -371,7 +375,10 @@ public:
     if (Opcode != Instruction::Add)
       return Invalid;
 
-    EVT InputEVT = EVT::getEVT(InputType);
+    if (InputTypeA != InputTypeB)
+      return Invalid;
+
+    EVT InputEVT = EVT::getEVT(InputTypeA);
     EVT AccumEVT = EVT::getEVT(AccumType);
 
     if (VF.isScalable() && !ST->isSVEorStreamingSVEAvailable())
@@ -404,10 +411,14 @@ public:
     } else
       return Invalid;
 
-    if (OpAExtend == TTI::PR_None || OpBExtend == TTI::PR_None)
+    // AArch64 supports lowering mixed extensions to a usdot but only if the
+    // i8mm or sve/streaming features are available.
+    if (OpAExtend == TTI::PR_None || OpBExtend == TTI::PR_None ||
+        (OpAExtend != OpBExtend && !ST->hasMatMulInt8() &&
+         !ST->isSVEorStreamingSVEAvailable()))
       return Invalid;
 
-    if (!BinOp || (*BinOp) != Instruction::Mul)
+    if (!BinOp || *BinOp != Instruction::Mul)
       return Invalid;
 
     return Cost;
@@ -443,9 +454,7 @@ public:
     return TailFoldingStyle::DataWithoutLaneMask;
   }
 
-  bool preferFixedOverScalableIfEqualCost() const {
-    return ST->useFixedOverScalableIfEqualCost();
-  }
+  bool preferFixedOverScalableIfEqualCost() const;
 
   unsigned getEpilogueVectorizationMinVF() const;
 

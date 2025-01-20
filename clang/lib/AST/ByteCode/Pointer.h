@@ -49,7 +49,12 @@ struct IntPointer {
   IntPointer baseCast(const ASTContext &ASTCtx, unsigned BaseOffset) const;
 };
 
-enum class Storage { Block, Int, Fn };
+struct TypeidPointer {
+  const Type *TypePtr;
+  const Type *TypeInfoType;
+};
+
+enum class Storage { Block, Int, Fn, Typeid };
 
 /// A pointer to a memory block, live or dead.
 ///
@@ -106,6 +111,11 @@ public:
   Pointer(const Function *F, uint64_t Offset = 0)
       : Offset(Offset), StorageKind(Storage::Fn) {
     PointeeStorage.Fn = FunctionPointer(F);
+  }
+  Pointer(const Type *TypePtr, const Type *TypeInfoType, uint64_t Offset = 0)
+      : Offset(Offset), StorageKind(Storage::Typeid) {
+    PointeeStorage.Typeid.TypePtr = TypePtr;
+    PointeeStorage.Typeid.TypeInfoType = TypeInfoType;
   }
   Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
   ~Pointer();
@@ -263,6 +273,8 @@ public:
       return asBlockPointer().Pointee == nullptr;
     if (isFunctionPointer())
       return asFunctionPointer().isZero();
+    if (isTypeidPointer())
+      return false;
     assert(isIntegralPointer());
     return asIntPointer().Value == 0 && Offset == 0;
   }
@@ -284,7 +296,7 @@ public:
   const Descriptor *getDeclDesc() const {
     if (isIntegralPointer())
       return asIntPointer().Desc;
-    if (isFunctionPointer())
+    if (isFunctionPointer() || isTypeidPointer())
       return nullptr;
 
     assert(isBlockPointer());
@@ -337,6 +349,9 @@ public:
 
   /// Returns the type of the innermost field.
   QualType getType() const {
+    if (isTypeidPointer())
+      return QualType(PointeeStorage.Typeid.TypeInfoType, 0);
+
     if (inPrimitiveArray() && Offset != asBlockPointer().Base) {
       // Unfortunately, complex and vector types are not array types in clang,
       // but they are for us.
@@ -437,7 +452,7 @@ public:
   }
   /// Pointer points directly to a block.
   bool isRoot() const {
-    if (isZero() || isIntegralPointer())
+    if (isZero() || !isBlockPointer())
       return true;
     return (asBlockPointer().Base ==
                 asBlockPointer().Pointee->getDescriptor()->getMetadataSize() ||
@@ -467,6 +482,7 @@ public:
   bool isBlockPointer() const { return StorageKind == Storage::Block; }
   bool isIntegralPointer() const { return StorageKind == Storage::Int; }
   bool isFunctionPointer() const { return StorageKind == Storage::Fn; }
+  bool isTypeidPointer() const { return StorageKind == Storage::Typeid; }
 
   /// Returns the record descriptor of a class.
   const Record *getRecord() const { return getFieldDesc()->ElemRecord; }
@@ -605,7 +621,7 @@ public:
 
   /// Checks if the index is one past end.
   bool isOnePastEnd() const {
-    if (isIntegralPointer() || isFunctionPointer())
+    if (!isBlockPointer())
       return false;
 
     if (!asBlockPointer().Pointee)
@@ -746,6 +762,7 @@ private:
     BlockPointer BS;
     IntPointer Int;
     FunctionPointer Fn;
+    TypeidPointer Typeid;
   } PointeeStorage;
   Storage StorageKind = Storage::Int;
 };

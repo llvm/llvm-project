@@ -706,6 +706,8 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
       continue;
 
     // If Reg is live-in then update debug info to track its copy in a vreg.
+    if (!Reg.isPhysical())
+      continue;
     DenseMap<MCRegister, Register>::iterator LDI = LiveInMap.find(Reg);
     if (LDI != LiveInMap.end()) {
       assert(!hasFI && "There's no handling of frame pointer updating here yet "

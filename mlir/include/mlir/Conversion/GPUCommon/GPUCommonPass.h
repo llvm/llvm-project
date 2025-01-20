@@ -64,7 +64,8 @@ struct FunctionCallBuilder {
 /// populate converter for gpu types.
 void populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                          RewritePatternSet &patterns,
-                                         bool kernelBarePtrCallConv = false);
+                                         bool kernelBarePtrCallConv = false,
+                                         bool typeCheckKernelArgs = false);
 
 /// A function that maps a MemorySpace enum to a target-specific integer value.
 using MemorySpaceMapping = std::function<unsigned(gpu::AddressSpace)>;

@@ -22,7 +22,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class...>
-using __expand_to_true = true_type;
+using __expand_to_true _LIBCPP_NODEBUG = true_type;
 
 template <class... _Pred>
 __expand_to_true<__enable_if_t<_Pred::value>...> __and_helper(int);

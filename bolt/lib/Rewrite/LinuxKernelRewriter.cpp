@@ -21,6 +21,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/ErrorOr.h"
+#include <regex>
 
 #define DEBUG_TYPE "bolt-linux"
 
@@ -89,6 +91,34 @@ static cl::opt<bool>
 
 } // namespace opts
 
+/// Linux kernel version
+struct LKVersion {
+  LKVersion() {}
+  LKVersion(unsigned Major, unsigned Minor, unsigned Rev)
+      : Major(Major), Minor(Minor), Rev(Rev) {}
+
+  bool operator<(const LKVersion &Other) const {
+    return std::make_tuple(Major, Minor, Rev) <
+           std::make_tuple(Other.Major, Other.Minor, Other.Rev);
+  }
+
+  bool operator>(const LKVersion &Other) const { return Other < *this; }
+
+  bool operator<=(const LKVersion &Other) const { return !(*this > Other); }
+
+  bool operator>=(const LKVersion &Other) const { return !(*this < Other); }
+
+  bool operator==(const LKVersion &Other) const {
+    return Major == Other.Major && Minor == Other.Minor && Rev == Other.Rev;
+  }
+
+  bool operator!=(const LKVersion &Other) const { return !(*this == Other); }
+
+  unsigned Major{0};
+  unsigned Minor{0};
+  unsigned Rev{0};
+};
+
 /// Linux Kernel supports stack unwinding using ORC (oops rewind capability).
 /// ORC state at every IP can be described by the following data structure.
 struct ORCState {
@@ -148,6 +178,8 @@ public:
 };
 
 class LinuxKernelRewriter final : public MetadataRewriter {
+  LKVersion LinuxKernelVersion;
+
   /// Information required for updating metadata referencing an instruction.
   struct InstructionFixup {
     BinarySection &Section; // Section referencing the instruction.
@@ -249,6 +281,8 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   ErrorOr<BinarySection &> PCIFixupSection = std::errc::bad_address;
   static constexpr size_t PCI_FIXUP_ENTRY_SIZE = 16;
 
+  Error detectLinuxKernelVersion();
+
   /// Process linux kernel special sections and their relocations.
   void processLKSections();
 
@@ -314,6 +348,9 @@ public:
       : MetadataRewriter("linux-kernel-rewriter", BC) {}
 
   Error preCFGInitializer() override {
+    if (Error E = detectLinuxKernelVersion())
+      return E;
+
     processLKSections();
 
     if (Error E = processSMPLocks())
@@ -393,6 +430,28 @@ public:
     return Error::success();
   }
 };
+
+Error LinuxKernelRewriter::detectLinuxKernelVersion() {
+  if (BinaryData *BD = BC.getBinaryDataByName("linux_banner")) {
+    const BinarySection &Section = BD->getSection();
+    const std::string S =
+        Section.getContents().substr(BD->getOffset(), BD->getSize()).str();
+
+    const std::regex Re(R"---(Linux version ((\d+)\.(\d+)(\.(\d+))?))---");
+    std::smatch Match;
+    if (std::regex_search(S, Match, Re)) {
+      const unsigned Major = std::stoi(Match[2].str());
+      const unsigned Minor = std::stoi(Match[3].str());
+      const unsigned Rev = Match[5].matched ? std::stoi(Match[5].str()) : 0;
+      LinuxKernelVersion = LKVersion(Major, Minor, Rev);
+      BC.outs() << "BOLT-INFO: Linux kernel version is " << Match[1].str()
+                << "\n";
+      return Error::success();
+    }
+  }
+  return createStringError(errc::executable_format_error,
+                           "Linux kernel version is unknown");
+}
 
 void LinuxKernelRewriter::processLKSections() {
   processLKKSymtab();

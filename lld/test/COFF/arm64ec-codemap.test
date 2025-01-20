@@ -9,7 +9,7 @@ RUN: llvm-mc -filetype=obj -triple=arm64ec-windows data-sec2.s -o data-sec2.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows empty-sec.s -o arm64ec-empty-sec.obj
 RUN: llvm-mc -filetype=obj -triple=x86_64-windows x86_64-func-sym.s -o x86_64-func-sym.obj
 RUN: llvm-mc -filetype=obj -triple=x86_64-windows empty-sec.s -o x86_64-empty-sec.obj
-RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64.s -o loadconfig-arm64.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
 
 Link ARM64EC DLL and verify that the code is arranged as expected.

@@ -83,6 +83,7 @@ enum NodeType : unsigned {
   // Produces the full sequence of instructions for getting the thread pointer
   // offset of a variable into X0, using the TLSDesc model.
   TLSDESC_CALLSEQ,
+  TLSDESC_AUTH_CALLSEQ,
   ADRP,     // Page address of a TargetGlobalAddress operand.
   ADR,      // ADR
   ADDlow,   // Add the low 12 bits of a TargetGlobalAddress operand.
@@ -1102,7 +1103,7 @@ private:
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      LLVMContext &Context) const override;
+                      LLVMContext &Context, const Type *RetTy) const override;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,

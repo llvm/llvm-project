@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
 #include <cmath>
@@ -435,10 +436,9 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       unsigned NumOfDestRegs = NormalizedVF / LegalVT.getVectorNumElements();
       SmallVector<int> NormalizedMask(NormalizedVF, PoisonMaskElem);
       copy(Mask, NormalizedMask.begin());
-      unsigned PrevSrcReg = 0;
-      ArrayRef<int> PrevRegMask;
       InstructionCost Cost = 0;
       SmallBitVector ExtractedRegs(2 * NumOfSrcRegs);
+      int NumShuffles = 0;
       processShuffleMasks(
           NormalizedMask, NumOfSrcRegs, NumOfDestRegs, NumOfDestRegs, []() {},
           [&](ArrayRef<int> RegMask, unsigned SrcReg, unsigned DestReg) {
@@ -449,29 +449,16 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                      SingleOpTy);
               ExtractedRegs.set(SrcReg);
             }
+            ++NumShuffles;
             if (!ShuffleVectorInst::isIdentityMask(RegMask, RegMask.size())) {
-              // Check if the previous register can be just copied to the next
-              // one.
-              if (PrevRegMask.empty() || PrevSrcReg != SrcReg ||
-                  PrevRegMask != RegMask) {
-                Cost += getShuffleCost(TTI::SK_PermuteSingleSrc, SingleOpTy,
-                                       RegMask, CostKind, 0, nullptr);
-              } else {
-                // Just a copy of previous destination register.
-                Cost += TTI::TCC_Free;
-              }
+              Cost += getShuffleCost(TTI::SK_PermuteSingleSrc, SingleOpTy,
+                                     RegMask, CostKind, 0, nullptr);
               return;
             }
-            if (SrcReg != DestReg &&
-                any_of(RegMask, [](int I) { return I != PoisonMaskElem; })) {
-              // Just a copy of the source register.
-              Cost += TTI::TCC_Free;
-            }
-            PrevSrcReg = SrcReg;
-            PrevRegMask = RegMask;
-            ExtractedRegs.set(DestReg);
+            --NumShuffles;
           },
-          [&](ArrayRef<int> RegMask, unsigned Idx1, unsigned Idx2) {
+          [&](ArrayRef<int> RegMask, unsigned Idx1, unsigned Idx2,
+              bool NewReg) {
             if (ExtractedRegs.test(Idx1)) {
               Cost += getShuffleCost(TTI::SK_ExtractSubvector, Tp, {}, CostKind,
                                      (Idx1 % NumOfSrcRegs) *
@@ -488,8 +475,16 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
             }
             Cost += getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy, RegMask,
                                    CostKind, 0, nullptr);
+            NumShuffles += 2;
           });
-      return Cost;
+      // Note: check that we do not emit too many shuffles here to prevent code
+      // size explosion.
+      // TODO: investigate, if it can be improved by extra analysis of the masks
+      // to check if the code is more profitable.
+      if ((NumOfDestRegs > 2 &&
+           NumShuffles <= static_cast<int>(NumOfDestRegs)) ||
+          (NumOfDestRegs <= 2 && NumShuffles < 4))
+        return Cost;
     }
     switch (Kind) {
     default:
@@ -1137,21 +1132,66 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
-  case Intrinsic::fabs:
+  case Intrinsic::fabs: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (ST->hasVInstructions() && LT.second.isVector()) {
+      // lui a0, 8
+      // addi a0, a0, -1
+      // vsetvli a1, zero, e16, m1, ta, ma
+      // vand.vx v8, v8, a0
+      // f16 with zvfhmin and bf16 with zvfhbmin
+      if (LT.second.getVectorElementType() == MVT::bf16 ||
+          (LT.second.getVectorElementType() == MVT::f16 &&
+           !ST->hasVInstructionsF16()))
+        return LT.first * getRISCVInstructionCost(RISCV::VAND_VX, LT.second,
+                                                  CostKind) +
+               2;
+      else
+        return LT.first *
+               getRISCVInstructionCost(RISCV::VFSGNJX_VV, LT.second, CostKind);
+    }
+    break;
+  }
   case Intrinsic::sqrt: {
     auto LT = getTypeLegalizationCost(RetTy);
-    // TODO: add f16/bf16, bf16 with zvfbfmin && f16 with zvfhmin
     if (ST->hasVInstructions() && LT.second.isVector()) {
-      unsigned Op;
-      switch (ICA.getID()) {
-      case Intrinsic::fabs:
-        Op = RISCV::VFSGNJX_VV;
-        break;
-      case Intrinsic::sqrt:
-        Op = RISCV::VFSQRT_V;
-        break;
+      SmallVector<unsigned, 4> ConvOp;
+      SmallVector<unsigned, 2> FsqrtOp;
+      MVT ConvType = LT.second;
+      MVT FsqrtType = LT.second;
+      // f16 with zvfhmin and bf16 with zvfbfmin and the type of nxv32[b]f16
+      // will be spilt.
+      if (LT.second.getVectorElementType() == MVT::bf16) {
+        if (LT.second == MVT::nxv32bf16) {
+          ConvOp = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFWCVTBF16_F_F_V,
+                    RISCV::VFNCVTBF16_F_F_W, RISCV::VFNCVTBF16_F_F_W};
+          FsqrtOp = {RISCV::VFSQRT_V, RISCV::VFSQRT_V};
+          ConvType = MVT::nxv16f16;
+          FsqrtType = MVT::nxv16f32;
+        } else {
+          ConvOp = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFNCVTBF16_F_F_W};
+          FsqrtOp = {RISCV::VFSQRT_V};
+          FsqrtType = TLI->getTypeToPromoteTo(ISD::FSQRT, FsqrtType);
+        }
+      } else if (LT.second.getVectorElementType() == MVT::f16 &&
+                 !ST->hasVInstructionsF16()) {
+        if (LT.second == MVT::nxv32f16) {
+          ConvOp = {RISCV::VFWCVT_F_F_V, RISCV::VFWCVT_F_F_V,
+                    RISCV::VFNCVT_F_F_W, RISCV::VFNCVT_F_F_W};
+          FsqrtOp = {RISCV::VFSQRT_V, RISCV::VFSQRT_V};
+          ConvType = MVT::nxv16f16;
+          FsqrtType = MVT::nxv16f32;
+        } else {
+          ConvOp = {RISCV::VFWCVT_F_F_V, RISCV::VFNCVT_F_F_W};
+          FsqrtOp = {RISCV::VFSQRT_V};
+          FsqrtType = TLI->getTypeToPromoteTo(ISD::FSQRT, FsqrtType);
+        }
+      } else {
+        FsqrtOp = {RISCV::VFSQRT_V};
       }
-      return LT.first * getRISCVInstructionCost(Op, LT.second, CostKind);
+
+      return LT.first * (getRISCVInstructionCost(FsqrtOp, FsqrtType, CostKind) +
+                         getRISCVInstructionCost(ConvOp, ConvType, CostKind));
     }
     break;
   }
@@ -1638,19 +1678,35 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   Type *ElementTy = Ty->getElementType();
   if (ElementTy->isIntegerTy(1)) {
+    // Example sequences:
+    //   vfirst.m a0, v0
+    //   seqz a0, a0
+    if (LT.second == MVT::v1i1)
+      return getRISCVInstructionCost(RISCV::VFIRST_M, LT.second, CostKind) +
+             getCmpSelInstrCost(Instruction::ICmp, ElementTy, ElementTy,
+                                CmpInst::ICMP_EQ, CostKind);
+
     if (ISD == ISD::AND) {
       // Example sequences:
-      //   vsetvli a0, zero, e8, mf8, ta, ma
       //   vmand.mm v8, v9, v8 ; needed every time type is split
-      //   vmnot.m v8, v0
+      //   vmnot.m v8, v0      ; alias for vmnand
       //   vcpop.m a0, v8
       //   seqz a0, a0
-      return LT.first * getRISCVInstructionCost(RISCV::VMNAND_MM, LT.second,
-                                                CostKind) +
+
+      // See the discussion: https://github.com/llvm/llvm-project/pull/119160
+      // For LMUL <= 8, there is no splitting,
+      //   the sequences are vmnot, vcpop and seqz.
+      // When LMUL > 8 and split = 1,
+      //   the sequences are vmnand, vcpop and seqz.
+      // When LMUL > 8 and split > 1,
+      //   the sequences are (LT.first-2) * vmand, vmnand, vcpop and seqz.
+      return ((LT.first > 2) ? (LT.first - 2) : 0) *
+                 getRISCVInstructionCost(RISCV::VMAND_MM, LT.second, CostKind) +
+             getRISCVInstructionCost(RISCV::VMNAND_MM, LT.second, CostKind) +
              getRISCVInstructionCost(RISCV::VCPOP_M, LT.second, CostKind) +
              getCmpSelInstrCost(Instruction::ICmp, ElementTy, ElementTy,
                                 CmpInst::ICMP_EQ, CostKind);
-    } else if (ISD == ISD::XOR) {
+    } else if (ISD == ISD::XOR || ISD == ISD::ADD) {
       // Example sequences:
       //   vsetvli a0, zero, e8, mf8, ta, ma
       //   vmxor.mm v8, v0, v8 ; needed every time type is split
@@ -1660,13 +1716,14 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                  getRISCVInstructionCost(RISCV::VMXOR_MM, LT.second, CostKind) +
              getRISCVInstructionCost(RISCV::VCPOP_M, LT.second, CostKind) + 1;
     } else {
+      assert(ISD == ISD::OR);
       // Example sequences:
       //   vsetvli a0, zero, e8, mf8, ta, ma
-      //   vmxor.mm v8, v9, v8 ; needed every time type is split
+      //   vmor.mm v8, v9, v8 ; needed every time type is split
       //   vcpop.m a0, v0
       //   snez a0, a0
       return (LT.first - 1) *
-                 getRISCVInstructionCost(RISCV::VMXOR_MM, LT.second, CostKind) +
+                 getRISCVInstructionCost(RISCV::VMOR_MM, LT.second, CostKind) +
              getRISCVInstructionCost(RISCV::VCPOP_M, LT.second, CostKind) +
              getCmpSelInstrCost(Instruction::ICmp, ElementTy, ElementTy,
                                 CmpInst::ICMP_NE, CostKind);
@@ -1765,7 +1822,7 @@ InstructionCost RISCVTTIImpl::getStoreImmCost(Type *Ty,
     return 0;
 
   if (OpInfo.isUniform())
-    // vmv.x.i, vmv.v.x, or vfmv.v.f
+    // vmv.v.i, vmv.v.x, or vfmv.v.f
     // We ignore the cost of the scalar constant materialization to be consistent
     // with how we treat scalar constants themselves just above.
     return 1;
@@ -2431,6 +2488,15 @@ unsigned RISCVTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
   return std::max<unsigned>(1U, RegWidth.getFixedValue() / ElemWidth);
 }
 
+TTI::AddressingModeKind
+RISCVTTIImpl::getPreferredAddressingMode(const Loop *L,
+                                         ScalarEvolution *SE) const {
+  if (ST->hasVendorXCVmem() && !ST->is64Bit())
+    return TTI::AMK_PostIndexed;
+
+  return BasicTTIImplBase::getPreferredAddressingMode(L, SE);
+}
+
 bool RISCVTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                                  const TargetTransformInfo::LSRCost &C2) {
   // RISC-V specific here are "instruction number 1st priority".
@@ -2651,16 +2717,21 @@ RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;
   // TODO: Enable expansion when unaligned access is not supported after we fix
   // issues in ExpandMemcmp.
-  if (!(ST->enableUnalignedScalarMem() &&
-        (ST->hasStdExtZbb() || ST->hasStdExtZbkb() || IsZeroCmp)))
+  if (!ST->enableUnalignedScalarMem())
+    return Options;
+
+  if (!ST->hasStdExtZbb() && !ST->hasStdExtZbkb() && !IsZeroCmp)
     return Options;
 
   Options.AllowOverlappingLoads = true;
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
   Options.NumLoadsPerBlock = Options.MaxNumLoads;
-  if (ST->is64Bit())
+  if (ST->is64Bit()) {
     Options.LoadSizes = {8, 4, 2, 1};
-  else
+    Options.AllowedTailExpansions = {3, 5, 6};
+  } else {
     Options.LoadSizes = {4, 2, 1};
+    Options.AllowedTailExpansions = {3};
+  }
   return Options;
 }

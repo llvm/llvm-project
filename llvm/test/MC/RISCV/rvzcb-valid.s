@@ -1,19 +1,19 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+m,+zbb,+zba,+zcb -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+m,+zbb,+zba,+zcb -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+m,+zbb,+zba,+zcb < %s \
 # RUN:     | llvm-objdump --mattr=+m,+zbb,+zba,+zcb --no-print-imm-hex -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+m,+zbb,+zba,+zcb -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+m,+zbb,+zba,+zcb -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+m,+zbb,+zba,+zcb < %s \
 # RUN:     | llvm-objdump --mattr=+m,+zbb,+zba,zcb --no-print-imm-hex -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ %s
 #
 # RUN: not llvm-mc -triple riscv32 \
-# RUN:     -riscv-no-aliases -show-encoding < %s 2>&1 \
+# RUN:     -M no-aliases -show-encoding < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK-NO-EXT %s
 # RUN: not llvm-mc -triple riscv64 \
-# RUN:     -riscv-no-aliases -show-encoding < %s 2>&1 \
+# RUN:     -M no-aliases -show-encoding < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK-NO-EXT %s
 
 # CHECK-ASM-AND-OBJ: c.zext.b s0

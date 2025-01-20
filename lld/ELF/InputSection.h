@@ -33,7 +33,7 @@ class SyntheticSection;
 template <class ELFT> class ObjFile;
 class OutputSection;
 
-// Returned by InputSectionBase::relsOrRelas. At most one member is empty.
+// Returned by InputSectionBase::relsOrRelas. At least two members are empty.
 template <class ELFT> struct RelsOrRelas {
   Relocs<typename ELFT::Rel> rels;
   Relocs<typename ELFT::Rela> relas;
