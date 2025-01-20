@@ -293,7 +293,7 @@
 #ifdef __arm__
 #include "int_endianness.h"
 
-#if __YUGA_BIG_ENDIAN
+#if _YUGA_BIG_ENDIAN
 #define VMOV_TO_DOUBLE(dst, src0, src1) vmov dst, src1, src0 SEPARATOR
 #define VMOV_FROM_DOUBLE(dst0, dst1, src) vmov dst1, dst0, src SEPARATOR
 #else
