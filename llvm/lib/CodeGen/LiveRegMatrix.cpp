@@ -184,7 +184,7 @@ bool LiveRegMatrix::checkRegUnitInterference(const LiveInterval &VirtReg,
 }
 
 LiveIntervalUnion::Query &LiveRegMatrix::query(const LiveRange &LR,
-                                               MCRegister RegUnit) {
+                                               MCRegUnit RegUnit) {
   LiveIntervalUnion::Query &Q = Queries[RegUnit];
   Q.init(UserTag, LR, Matrix[RegUnit]);
   return Q;
@@ -206,7 +206,7 @@ LiveRegMatrix::checkInterference(const LiveInterval &VirtReg,
 
   // Check the matrix for virtual register interference.
   bool Interference = foreachUnit(TRI, VirtReg, PhysReg,
-                                  [&](MCRegister Unit, const LiveRange &LR) {
+                                  [&](MCRegUnit Unit, const LiveRange &LR) {
                                     return query(LR, Unit).checkInterference();
                                   });
   if (Interference)
