@@ -466,7 +466,7 @@
 ; RV32SUPM: .attribute 5, "rv32i2p1_supm1p0"
 ; RV32SMCTR: .attribute 5, "rv32i2p1_smctr1p0_sscsrind1p0"
 ; RV32SSCTR: .attribute 5, "rv32i2p1_sscsrind1p0_ssctr1p0"
-; RV32P: .attribute 5, "rv32i2p1_p1p0"
+; RV32P: .attribute 5, "rv32i2p1_p0p12"
 
 ; RV64M: .attribute 5, "rv64i2p1_m2p0_zmmul1p0"
 ; RV64ZMMUL: .attribute 5, "rv64i2p1_zmmul1p0"
