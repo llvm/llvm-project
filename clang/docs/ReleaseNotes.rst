@@ -798,6 +798,8 @@ Improvements to Clang's diagnostics
     }
 - Diagnose invalid declarators in the declaration of constructors and destructors (#GH121706).
 
+- Fix false positives warning for non-std functions with name `infinity` (#123231).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
