@@ -1241,6 +1241,8 @@ libclang
   of a class.
 - Added ``clang_getOffsetOfBase``, which allows computing the offset of a base
   class in a class's layout.
+- Added ``clang_visitCXXMethods``, which allows visiting the methods
+  of a class.
 
 Static Analyzer
 ---------------
@@ -1394,6 +1396,8 @@ Python Binding Changes
   allows visiting the base classes of a class.
 - Added ``Cursor.get_base_offsetof``, a binding for ``clang_getOffsetOfBase``,
   which allows computing the offset of a base class in a class's layout.
+- Added ``Type.get_methods``, a binding for ``clang_visitCXXMethods``, which
+  allows visiting the methods of a class.
 
 OpenMP Support
 --------------
