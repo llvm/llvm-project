@@ -3084,21 +3084,22 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
   SmallVector<int> Mask(NumDstElts, PoisonMaskElem);
 
   bool NeedExpOrNarrow = NumSrcElts != NumDstElts;
+  bool IsExtIdxInBounds = ExtIdx < NumDstElts;
   bool NeedDstSrcSwap = isa<PoisonValue>(DstVec) && !isa<UndefValue>(SrcVec);
   if (NeedDstSrcSwap) {
     SK = TargetTransformInfo::SK_PermuteSingleSrc;
-    if (!NeedExpOrNarrow)
-      Mask[InsIdx] = ExtIdx;
-    else
+    if (!IsExtIdxInBounds && NeedExpOrNarrow)
       Mask[InsIdx] = 0;
+    else
+      Mask[InsIdx] = ExtIdx;
     std::swap(DstVec, SrcVec);
   } else {
     SK = TargetTransformInfo::SK_PermuteTwoSrc;
     std::iota(Mask.begin(), Mask.end(), 0);
-    if (!NeedExpOrNarrow)
-      Mask[InsIdx] = ExtIdx + NumDstElts;
-    else
+    if (!IsExtIdxInBounds && NeedExpOrNarrow)
       Mask[InsIdx] = NumDstElts;
+    else
+      Mask[InsIdx] = ExtIdx + NumDstElts;
   }
 
   // Cost
@@ -3123,7 +3124,10 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
     // first element has an ExtIdx, so that the first element of the vector
     // being created is always the target to be extracted.
     ExtToVecMask.assign(NumDstElts, PoisonMaskElem);
-    ExtToVecMask[0] = ExtIdx;
+    if (IsExtIdxInBounds)
+      ExtToVecMask[ExtIdx] = ExtIdx;
+    else
+      ExtToVecMask[0] = ExtIdx;
     // Add cost for expanding or narrowing
     NewCost = TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
                                  DstVecTy, ExtToVecMask, CostKind);
