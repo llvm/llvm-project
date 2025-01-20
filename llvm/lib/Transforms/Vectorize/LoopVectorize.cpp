@@ -1438,11 +1438,11 @@ public:
     // Override forced styles if needed.
     // FIXME: use actual opcode/data type for analysis here.
     // FIXME: Investigate opportunity for fixed vector factor.
+    // FIXME: support fixed-order recurrences by fixing splice of non VFxUF
+    // penultimate EVL.
     bool EVLIsLegal =
         UserIC <= 1 && TTI.hasActiveVectorLength(0, nullptr, Align()) &&
-        !EnableVPlanNativePath &&
-        // FIXME: remove this once fixed-ordered recurrence is supported.
-        Legal->getFixedOrderRecurrences().empty();
+        !EnableVPlanNativePath && Legal->getFixedOrderRecurrences().empty();
     if (!EVLIsLegal) {
       // If for some reason EVL mode is unsupported, fallback to
       // DataWithoutLaneMask to try to vectorize the loop with folded tail
@@ -8711,7 +8711,7 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
     PartialReductionChain Chain = Pair.first;
     if (ExtendIsOnlyUsedByPartialReductions(Chain.ExtendA) &&
         ExtendIsOnlyUsedByPartialReductions(Chain.ExtendB))
-      ScaledReductionExitInstrs.insert(std::make_pair(Chain.Reduction, Pair));
+      ScaledReductionMap.insert(std::make_pair(Chain.Reduction, Pair.second));
   }
 }
 
@@ -8803,9 +8803,8 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
              Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader()));
 
       // If the PHI is used by a partial reduction, set the scale factor.
-      std::optional<std::pair<PartialReductionChain, unsigned>> Pair =
-          getScaledReductionForInstr(RdxDesc.getLoopExitInstr());
-      unsigned ScaleFactor = Pair ? Pair->second : 1;
+      unsigned ScaleFactor =
+          getScalingForReduction(RdxDesc.getLoopExitInstr()).value_or(1);
       PhiRecipe = new VPReductionPHIRecipe(
           Phi, RdxDesc, *StartV, CM.isInLoopReduction(Phi),
           CM.useOrderedReductions(RdxDesc), ScaleFactor);
@@ -8840,7 +8839,7 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
   if (isa<LoadInst>(Instr) || isa<StoreInst>(Instr))
     return tryToWidenMemory(Instr, Operands, Range);
 
-  if (getScaledReductionForInstr(Instr))
+  if (getScalingForReduction(Instr))
     return tryToCreatePartialReduction(Instr, Operands);
 
   if (!shouldWiden(Instr, Range))
