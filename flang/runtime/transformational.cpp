@@ -46,7 +46,7 @@ public:
           lb_[k++] = shiftDim.LowerBound();
           if (shiftDim.Extent() != source.GetDimension(j).Extent()) {
             terminator_.Crash("%s: on dimension %d, SHIFT= has extent %jd but "
-                              "SOURCE= has extent %jd",
+                              "ARRAY= has extent %jd",
                 which, k, static_cast<std::intmax_t>(shiftDim.Extent()),
                 static_cast<std::intmax_t>(source.GetDimension(j).Extent()));
           }
@@ -460,7 +460,7 @@ void RTDEF(Cshift)(Descriptor &result, const Descriptor &source,
   RUNTIME_CHECK(terminator, rank > 1);
   if (dim < 1 || dim > rank) {
     terminator.Crash(
-        "CSHIFT: DIM=%d must be >= 1 and <= SOURCE= rank %d", dim, rank);
+        "CSHIFT: DIM=%d must be >= 1 and <= ARRAY= rank %d", dim, rank);
   }
   ShiftControl shiftControl{shift, terminator, dim};
   shiftControl.Init(source, "CSHIFT");
@@ -527,7 +527,7 @@ void RTDEF(Eoshift)(Descriptor &result, const Descriptor &source,
   RUNTIME_CHECK(terminator, rank > 1);
   if (dim < 1 || dim > rank) {
     terminator.Crash(
-        "EOSHIFT: DIM=%d must be >= 1 and <= SOURCE= rank %d", dim, rank);
+        "EOSHIFT: DIM=%d must be >= 1 and <= ARRAY= rank %d", dim, rank);
   }
   std::size_t elementLen{
       AllocateResult(result, source, rank, extent, terminator, "EOSHIFT")};
@@ -538,7 +538,7 @@ void RTDEF(Eoshift)(Descriptor &result, const Descriptor &source,
     RUNTIME_CHECK(terminator, boundary->type() == source.type());
     if (boundary->ElementBytes() != elementLen) {
       terminator.Crash("EOSHIFT: BOUNDARY= has element byte length %zd, but "
-                       "SOURCE= has length %zd",
+                       "ARRAY= has length %zd",
           boundary->ElementBytes(), elementLen);
     }
     if (boundaryRank > 0) {
@@ -547,7 +547,7 @@ void RTDEF(Eoshift)(Descriptor &result, const Descriptor &source,
         if (j != dim - 1) {
           if (boundary->GetDimension(k).Extent() != extent[j]) {
             terminator.Crash("EOSHIFT: BOUNDARY= has extent %jd on dimension "
-                             "%d but must conform with extent %jd of SOURCE=",
+                             "%d but must conform with extent %jd of ARRAY=",
                 static_cast<std::intmax_t>(boundary->GetDimension(k).Extent()),
                 k + 1, static_cast<std::intmax_t>(extent[j]));
           }
@@ -611,7 +611,7 @@ void RTDEF(EoshiftVector)(Descriptor &result, const Descriptor &source,
     RUNTIME_CHECK(terminator, boundary->type() == source.type());
     if (boundary->ElementBytes() != elementLen) {
       terminator.Crash("EOSHIFT: BOUNDARY= has element byte length %zd but "
-                       "SOURCE= has length %zd",
+                       "ARRAY= has length %zd",
           boundary->ElementBytes(), elementLen);
     }
   }
@@ -658,7 +658,7 @@ void RTDEF(Pack)(Descriptor &result, const Descriptor &source,
     RUNTIME_CHECK(terminator, vector->rank() == 1);
     RUNTIME_CHECK(terminator, source.type() == vector->type());
     if (source.ElementBytes() != vector->ElementBytes()) {
-      terminator.Crash("PACK: SOURCE= has element byte length %zd, but VECTOR= "
+      terminator.Crash("PACK: ARRAY= has element byte length %zd, but VECTOR= "
                        "has length %zd",
           source.ElementBytes(), vector->ElementBytes());
     }

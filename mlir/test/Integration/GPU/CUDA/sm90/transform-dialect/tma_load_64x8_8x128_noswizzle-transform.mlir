@@ -96,8 +96,8 @@ func.func @main() {
     scf.if %10 {
       %11 = memref.load %out[%c45, %c7] : memref<64x8xf32, 3>
       %12 = memref.load %out_1[%c7, %c0] : memref<8x128xf32, 3>
-      gpu.printf "[GPU] TMA LOADED lhs[45][7] %f\0A" %11 : f32
-      gpu.printf "[GPU] TMA LOADED rhs[7][0] %f\0A" %12 : f32
+      gpu.printf "[GPU] TMA LOADED lhs[45][7] %f\0A", %11 : f32
+      gpu.printf "[GPU] TMA LOADED rhs[7][0] %f\0A", %12 : f32
     }
     gpu.terminator
   }

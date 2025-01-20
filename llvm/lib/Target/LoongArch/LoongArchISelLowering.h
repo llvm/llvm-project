@@ -44,6 +44,8 @@ enum NodeType : unsigned {
   ROTR_W,
 
   // unsigned 32-bit integer division
+  DIV_W,
+  MOD_W,
   DIV_WU,
   MOD_WU,
 
@@ -66,6 +68,7 @@ enum NodeType : unsigned {
   REVB_2H,
   REVB_2W,
   BITREV_4B,
+  BITREV_8B,
   BITREV_W,
 
   // Intrinsic operations start ============================================
@@ -129,6 +132,7 @@ enum NodeType : unsigned {
   VILVH,
   VSHUF4I,
   VREPLVEI,
+  VREPLGR2VR,
   XVPERMI,
 
   // Extended vector element extraction
@@ -191,6 +195,7 @@ public:
   bool hasAndNot(SDValue Y) const override;
   TargetLowering::AtomicExpansionKind
   shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+  void emitExpandAtomicRMW(AtomicRMWInst *AI) const override;
 
   Value *emitMaskedAtomicRMWIntrinsic(IRBuilderBase &Builder, AtomicRMWInst *AI,
                                       Value *AlignedAddr, Value *Incr,
@@ -269,7 +274,7 @@ public:
     return false;
   }
   bool shouldConsiderGEPOffsetSplit() const override { return true; }
-  bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const override;
+  bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const override;
   bool shouldExtendTypeInLibCall(EVT Type) const override;
 
   bool shouldAlignPointerArgs(CallInst *CI, unsigned &MinSize,
@@ -283,7 +288,7 @@ private:
                                    unsigned ValNo, MVT ValVT,
                                    CCValAssign::LocInfo LocInfo,
                                    ISD::ArgFlagsTy ArgFlags, CCState &State,
-                                   bool IsFixed, bool IsReg, Type *OrigTy);
+                                   bool IsFixed, bool IsRet, Type *OrigTy);
 
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
@@ -330,6 +335,7 @@ private:
   SDValue lowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBITREVERSE(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;

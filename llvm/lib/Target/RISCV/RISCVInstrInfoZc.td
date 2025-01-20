@@ -186,7 +186,7 @@ def C_ZEXT_B  : RVZcArith_r<0b11000 , "c.zext.b">,
                 Sched<[WriteIALU, ReadIALU]>;
 
 let Predicates = [HasStdExtZcb, HasStdExtZmmul] in
-def C_MUL     : CA_ALU<0b100111, 0b10, "c.mul", GPRC>,
+def C_MUL     : CA_ALU<0b100111, 0b10, "c.mul">,
                 Sched<[WriteIMul, ReadIMul, ReadIMul]>;
 
 let Predicates = [HasStdExtZcb] in {

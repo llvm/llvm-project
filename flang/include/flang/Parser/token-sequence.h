@@ -79,6 +79,7 @@ public:
   }
 
   std::size_t SkipBlanks(std::size_t) const;
+  std::optional<std::size_t> SkipBlanksBackwards(std::size_t) const;
 
   // True if anything remains in the sequence at & after the given offset
   // except blanks and line-ending C++ and Fortran free-form comments.

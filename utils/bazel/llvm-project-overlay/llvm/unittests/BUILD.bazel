@@ -334,6 +334,7 @@ cc_test(
     deps = [
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
+        "//llvm:Analysis",
         "//llvm:AsmParser",
         "//llvm:BinaryFormat",
         "//llvm:Core",
@@ -436,6 +437,7 @@ cc_test(
         "//llvm:Passes",
         "//llvm:Support",
         "//llvm:TargetParser",
+        "//llvm:TestingSupport",
         "//llvm:TransformUtils",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
@@ -696,7 +698,7 @@ cc_test(
     ],
     linkstatic = 1,
     tags = [
-        "local",  # Not compatible with the sandbox on MacOS
+        "no-sandbox",  # FileSystemTest.permissions not compatible with the sandbox on MacOS
     ],
     deps = [
         "//llvm:AllTargetsCodeGens",

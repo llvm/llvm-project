@@ -180,7 +180,7 @@ for.end16:                                        ; preds = %for.exit
 ; REMARK: Interchanged
 ; REMARK-NEXT: lcssa_05
 
-define void @lcssa_05(ptr %ptr) {
+define void @lcssa_05(ptr %ptr, i1 %arg) {
 entry:
   br label %outer.header
 
@@ -190,7 +190,7 @@ outer.header:                                     ; preds = %outer.inc, %entry
 
 for.body3:                                        ; preds = %bb3, %outer.header
   %iv.inner = phi i64 [ %iv.inner.next, %bb3 ], [ 1, %outer.header ]
-  br i1 undef, label %bb2, label %bb3
+  br i1 %arg, label %bb2, label %bb3
 
 bb2:                                              ; preds = %for.body3
   %arrayidx5 = getelementptr inbounds [100 x [100 x i32]], ptr @A, i64 0, i64 %iv.inner, i64 %iv.outer
@@ -225,13 +225,13 @@ for.end16:                                        ; preds = %for.exit
 ; REMARK: UnsupportedExitPHI
 ; REMARK-NEXT: lcssa_06
 
-define void @lcssa_06(ptr %ptr, ptr %ptr1) {
+define void @lcssa_06(ptr %ptr, ptr %ptr1, i1 %arg) {
 entry:
   br label %outer.header
 
 outer.header:                                     ; preds = %outer.inc, %entry
   %iv.outer = phi i64 [ 1, %entry ], [ %iv.outer.next, %outer.inc ]
-  br i1 undef, label %for.body3, label %outer.inc
+  br i1 %arg, label %for.body3, label %outer.inc
 
 for.body3:                                        ; preds = %for.body3, %outer.header
   %iv.inner = phi i64 [ %iv.inner.next, %for.body3 ], [ 1, %outer.header ]
@@ -305,13 +305,13 @@ for.end16:                                        ; preds = %for.exit
 ; is an lcssa phi node outside the loopnest.
 ; REMARK: Interchanged
 ; REMARK-NEXT: lcssa_08
-define i64 @lcssa_08(ptr %Arr) {
+define i64 @lcssa_08(ptr %Arr, i1 %arg) {
 entry:
   br label %for1.header
 
 for1.header:                                         ; preds = %for1.inc, %entry
   %indvars.iv23 = phi i64 [ 0, %entry ], [ %indvars.iv.next24, %for1.inc ]
-  br i1 undef, label %for2, label %for1.inc
+  br i1 %arg, label %for2, label %for1.inc
 
 for2:                                        ; preds = %for2, %for1.header
   %indvars.iv = phi i64 [ 0, %for1.header ], [ %indvars.iv.next.3, %for2 ]

@@ -42,7 +42,6 @@
 #include "llvm/Transforms/Utils/Instrumentation.h"
 #include <cassert>
 #include <cstdint>
-#include <memory>
 #include <set>
 #include <string>
 #include <unordered_map>

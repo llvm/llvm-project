@@ -306,6 +306,15 @@ template <> struct GraphTraits<VPlan *> {
   }
 };
 
+inline auto VPlan::getExitBlocks() {
+  VPBlockBase *ScalarHeader = getScalarHeader();
+  return make_filter_range(
+      VPBlockUtils::blocksOnly<VPIRBasicBlock>(
+          vp_depth_first_shallow(getVectorLoopRegion()->getSingleSuccessor())),
+      [ScalarHeader](VPIRBasicBlock *VPIRBB) {
+        return VPIRBB != ScalarHeader && VPIRBB->getNumSuccessors() == 0;
+      });
+}
 } // namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLANCFG_H

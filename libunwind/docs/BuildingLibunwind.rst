@@ -16,7 +16,7 @@ On Mac OS, the easiest way to get this library is to link with -lSystem.
 However if you want to build tip-of-trunk from here (getting the bleeding
 edge), read on.
 
-The basic steps needed to build libc++ are:
+The basic steps needed to build libunwind are:
 
 #. Checkout LLVM, libunwind, and related projects:
 
@@ -48,23 +48,6 @@ The basic steps needed to build libc++ are:
    select a safe place to install libunwind.
 
    * ``make install-unwind`` --- Will install the libraries and the headers
-
-
-It is sometimes beneficial to build outside of the LLVM tree. An out-of-tree
-build would look like this:
-
-.. code-block:: bash
-
-  $ cd where-you-want-libunwind-to-live
-  $ # Check out llvm, and libunwind
-  $ ``svn co https://llvm.org/svn/llvm-project/llvm/trunk llvm``
-  $ ``svn co https://llvm.org/svn/llvm-project/libunwind/trunk libunwind``
-  $ cd where-you-want-to-build
-  $ mkdir build && cd build
-  $ export CC=clang CXX=clang++
-  $ cmake -DLLVM_PATH=path/to/llvm \
-          path/to/libunwind
-  $ make
 
 
 .. _CMake Options:

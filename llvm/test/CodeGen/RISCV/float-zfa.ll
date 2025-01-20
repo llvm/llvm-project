@@ -198,6 +198,17 @@ define float @fround_s_5(float %a) nounwind {
 
 declare float @nearbyintf(float) nounwind readnone
 
+define float @fround_s_6(float %a) nounwind {
+; CHECK-LABEL: fround_s_6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fround.s fa0, fa0, rne
+; CHECK-NEXT:    ret
+  %call = tail call float @llvm.roundeven.f32(float %a) nounwind readnone
+  ret float %call
+}
+
+declare float @llvm.roundeven.f32(float) nounwind readnone
+
 
 define float @froundnx_s(float %a) nounwind {
 ; CHECK-LABEL: froundnx_s:
@@ -317,10 +328,10 @@ define float @select_loadfpimm(float %x) nounwind {
 ; CHECK-NEXT:    fmv.w.x fa5, zero
 ; CHECK-NEXT:    fle.s a0, fa5, fa0
 ; CHECK-NEXT:    fli.s fa0, 0.5
-; CHECK-NEXT:    bnez a0, .LBB30_2
+; CHECK-NEXT:    bnez a0, .LBB31_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    fneg.s fa0, fa0
-; CHECK-NEXT:  .LBB30_2: # %entry
+; CHECK-NEXT:  .LBB31_2: # %entry
 ; CHECK-NEXT:    ret
 entry:
   %cmp = fcmp ult float %x, 0.000000e+00

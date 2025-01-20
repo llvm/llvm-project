@@ -14,8 +14,8 @@
 #include <__charconv/chars_format.h>
 #include <__charconv/from_chars_result.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__system_error/errc.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

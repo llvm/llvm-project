@@ -1385,7 +1385,7 @@ LogicalResult SimpleAffineExprFlattener::visitModExpr(AffineBinaryOpExpr expr) {
     lhs[getLocalVarStartIndex() + numLocals - 1] = -rhsConst;
   } else {
     // Reuse the existing local id.
-    lhs[getLocalVarStartIndex() + loc] = -rhsConst;
+    lhs[getLocalVarStartIndex() + loc] -= rhsConst;
   }
   return success();
 }

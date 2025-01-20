@@ -31,6 +31,7 @@
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/program-tree.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
@@ -984,6 +985,7 @@ public:
   bool Pre(const parser::TypeDeclarationStmt &);
   void Post(const parser::TypeDeclarationStmt &);
   void Post(const parser::IntegerTypeSpec &);
+  void Post(const parser::UnsignedTypeSpec &);
   void Post(const parser::IntrinsicTypeSpec::Real &);
   void Post(const parser::IntrinsicTypeSpec::Complex &);
   void Post(const parser::IntrinsicTypeSpec::Logical &);
@@ -1468,6 +1470,11 @@ public:
     AddOmpSourceRange(x.source);
     return true;
   }
+
+  bool Pre(const parser::OpenMPDeclareMapperConstruct &);
+
+  bool Pre(const parser::OmpMapClause &);
+
   void Post(const parser::OmpBeginLoopDirective &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
@@ -1538,6 +1545,13 @@ public:
   void Post(const parser::OpenMPDeclarativeConstruct &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
+  bool Pre(const parser::OpenMPDepobjConstruct &x) {
+    AddOmpSourceRange(x.source);
+    return true;
+  }
+  void Post(const parser::OpenMPDepobjConstruct &x) {
+    messageHandler().set_currStmtSource(std::nullopt);
+  }
   bool Pre(const parser::OpenMPAtomicConstruct &x) {
     return common::visit(common::visitors{[&](const auto &u) -> bool {
       AddOmpSourceRange(u.source);
@@ -1596,6 +1610,64 @@ void OmpVisitor::Post(const parser::OpenMPBlockConstruct &x) {
   if (NeedsScope(x)) {
     PopScope();
   }
+}
+
+// This "manually" walks the tree of the construct, because we need
+// to resolve the type before the map clauses are processed - when
+// just following the natural flow, the map clauses gets processed before
+// the type has been fully processed.
+bool OmpVisitor::Pre(const parser::OpenMPDeclareMapperConstruct &x) {
+  AddOmpSourceRange(x.source);
+  BeginDeclTypeSpec();
+  const auto &spec{std::get<parser::OmpDeclareMapperSpecifier>(x.t)};
+  Symbol *mapperSym{nullptr};
+  if (const auto &mapperName{std::get<std::optional<parser::Name>>(spec.t)}) {
+    mapperSym =
+        &MakeSymbol(*mapperName, MiscDetails{MiscDetails::Kind::ConstructName});
+    mapperName->symbol = mapperSym;
+  } else {
+    const parser::CharBlock defaultName{"default", 7};
+    mapperSym = &MakeSymbol(
+        defaultName, Attrs{}, MiscDetails{MiscDetails::Kind::ConstructName});
+  }
+
+  PushScope(Scope::Kind::OtherConstruct, nullptr);
+  Walk(std::get<parser::TypeSpec>(spec.t));
+  const auto &varName{std::get<parser::ObjectName>(spec.t)};
+  DeclareObjectEntity(varName);
+
+  Walk(std::get<parser::OmpClauseList>(x.t));
+
+  EndDeclTypeSpec();
+  PopScope();
+  return false;
+}
+
+bool OmpVisitor::Pre(const parser::OmpMapClause &x) {
+  auto &mods{OmpGetModifiers(x)};
+  if (auto *mapper{OmpGetUniqueModifier<parser::OmpMapper>(mods)}) {
+    if (auto *symbol{FindSymbol(currScope(), mapper->v)}) {
+      // TODO: Do we need a specific flag or type here, to distinghuish against
+      // other ConstructName things? Leaving this for the full implementation
+      // of mapper lowering.
+      auto *misc{symbol->detailsIf<MiscDetails>()};
+      if (!misc || misc->kind() != MiscDetails::Kind::ConstructName)
+        context().Say(mapper->v.source,
+            "Name '%s' should be a mapper name"_err_en_US, mapper->v.source);
+      else
+        mapper->v.symbol = symbol;
+    } else {
+      mapper->v.symbol =
+          &MakeSymbol(mapper->v, MiscDetails{MiscDetails::Kind::ConstructName});
+      // TODO: When completing the implementation, we probably want to error if
+      // the symbol is not declared, but right now, testing that the TODO for
+      // OmpMapClause happens is obscured by the TODO for declare mapper, so
+      // leaving this out. Remove the above line once the declare mapper is
+      // implemented. context().Say(mapper->v.source, "'%s' not
+      // declared"_err_en_US, mapper->v.source);
+    }
+  }
+  return true;
 }
 
 // Walk the parse tree and resolve names to symbols.
@@ -3090,6 +3162,10 @@ ModuleVisitor::SymbolRename ModuleVisitor::AddUse(
 // Convert it to a UseError with this additional location.
 static bool ConvertToUseError(
     Symbol &symbol, const SourceName &location, const Scope &module) {
+  if (auto *ued{symbol.detailsIf<UseErrorDetails>()}) {
+    ued->add_occurrence(location, module);
+    return true;
+  }
   const auto *useDetails{symbol.detailsIf<UseDetails>()};
   if (!useDetails) {
     if (auto *genericDetails{symbol.detailsIf<GenericDetails>()}) {
@@ -3247,6 +3323,8 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
         combinedDerivedType = CreateLocalUseError();
       } else {
         ConvertToUseError(*localSymbol, location, *useModuleScope_);
+        localDerivedType = nullptr;
+        localGeneric = nullptr;
         combinedDerivedType = localSymbol;
       }
     }
@@ -3529,13 +3607,23 @@ Scope *ModuleVisitor::FindModule(const parser::Name &name,
   ModFileReader reader{context()};
   Scope *scope{
       reader.Read(name.source, isIntrinsic, ancestor, /*silent=*/false)};
-  if (!scope) {
-    return nullptr;
+  if (scope) {
+    if (DoesScopeContain(scope, currScope())) { // 14.2.2(1)
+      std::optional<SourceName> submoduleName;
+      if (const Scope * container{FindModuleOrSubmoduleContaining(currScope())};
+          container && container->IsSubmodule()) {
+        submoduleName = container->GetName();
+      }
+      if (submoduleName) {
+        Say(name.source,
+            "Module '%s' cannot USE itself from its own submodule '%s'"_err_en_US,
+            name.source, *submoduleName);
+      } else {
+        Say(name, "Module '%s' cannot USE itself"_err_en_US);
+      }
+    }
+    Resolve(name, scope->symbol());
   }
-  if (DoesScopeContain(scope, currScope())) { // 14.2.2(1)
-    Say(name, "Module '%s' cannot USE itself"_err_en_US);
-  }
-  Resolve(name, scope->symbol());
   return scope;
 }
 
@@ -3937,7 +4025,9 @@ bool SubprogramVisitor::Pre(const parser::PrefixSpec::Attributes &attrs) {
           *attrs == common::CUDASubprogramAttrs::Device) {
         const Scope &scope{currScope()};
         const Scope *mod{FindModuleContaining(scope)};
-        if (mod && mod->GetName().value() == "cudadevice") {
+        if (mod &&
+            (mod->GetName().value() == "cudadevice" ||
+                mod->GetName().value() == "__cuda_device")) {
           return false;
         }
         // Implicitly USE the cudadevice module by copying its symbols in the
@@ -4780,10 +4870,13 @@ void DeclarationVisitor::Post(const parser::EntityDecl &x) {
   } else if (attrs.test(Attr::PARAMETER)) { // C882, C883
     Say(name, "Missing initialization for parameter '%s'"_err_en_US);
   }
-  if (auto *scopeSymbol{currScope().symbol()})
-    if (auto *details{scopeSymbol->detailsIf<DerivedTypeDetails>()})
-      if (details->isDECStructure())
+  if (auto *scopeSymbol{currScope().symbol()}) {
+    if (auto *details{scopeSymbol->detailsIf<DerivedTypeDetails>()}) {
+      if (details->isDECStructure()) {
         details->add_component(symbol);
+      }
+    }
+  }
 }
 
 void DeclarationVisitor::Post(const parser::PointerDecl &x) {
@@ -5283,6 +5376,15 @@ Symbol &DeclarationVisitor::DeclareObjectEntity(
 void DeclarationVisitor::Post(const parser::IntegerTypeSpec &x) {
   if (!isVectorType_) {
     SetDeclTypeSpec(MakeNumericType(TypeCategory::Integer, x.v));
+  }
+}
+void DeclarationVisitor::Post(const parser::UnsignedTypeSpec &x) {
+  if (!isVectorType_) {
+    if (!context().IsEnabled(common::LanguageFeature::Unsigned) &&
+        !context().AnyFatalError()) {
+      context().Say("-funsigned is required to enable UNSIGNED type"_err_en_US);
+    }
+    SetDeclTypeSpec(MakeNumericType(TypeCategory::Unsigned, x.v));
   }
 }
 void DeclarationVisitor::Post(const parser::IntrinsicTypeSpec::Real &x) {
@@ -7591,6 +7693,7 @@ const DeclTypeSpec &ConstructVisitor::ToDeclTypeSpec(
   switch (type.category()) {
     SWITCH_COVERS_ALL_CASES
   case common::TypeCategory::Integer:
+  case common::TypeCategory::Unsigned:
   case common::TypeCategory::Real:
   case common::TypeCategory::Complex:
     return context().MakeNumericType(type.category(), type.kind());
@@ -7653,8 +7756,52 @@ public:
     --blockDepth_;
     PopScope();
   }
+  // Note declarations of local names in BLOCK constructs.
+  // Don't have to worry about INTENT(), VALUE, or OPTIONAL
+  // (pertinent only to dummy arguments), ASYNCHRONOUS/VOLATILE,
+  // or accessibility attributes,
   bool Pre(const parser::EntityDecl &x) {
     Hide(std::get<parser::ObjectName>(x.t));
+    return true;
+  }
+  bool Pre(const parser::ObjectDecl &x) {
+    Hide(std::get<parser::ObjectName>(x.t));
+    return true;
+  }
+  bool Pre(const parser::PointerDecl &x) {
+    Hide(std::get<parser::Name>(x.t));
+    return true;
+  }
+  bool Pre(const parser::BindEntity &x) {
+    Hide(std::get<parser::Name>(x.t));
+    return true;
+  }
+  bool Pre(const parser::ContiguousStmt &x) {
+    for (const parser::Name &name : x.v) {
+      Hide(name);
+    }
+    return true;
+  }
+  bool Pre(const parser::DimensionStmt::Declaration &x) {
+    Hide(std::get<parser::Name>(x.t));
+    return true;
+  }
+  bool Pre(const parser::ExternalStmt &x) {
+    for (const parser::Name &name : x.v) {
+      Hide(name);
+    }
+    return true;
+  }
+  bool Pre(const parser::IntrinsicStmt &x) {
+    for (const parser::Name &name : x.v) {
+      Hide(name);
+    }
+    return true;
+  }
+  bool Pre(const parser::CodimensionStmt &x) {
+    for (const parser::CodimensionDecl &decl : x.v) {
+      Hide(std::get<parser::Name>(decl.t));
+    }
     return true;
   }
   void Post(const parser::ImportStmt &x) {
@@ -8078,6 +8225,9 @@ bool DeclarationVisitor::CheckForHostAssociatedImplicit(
 }
 
 bool DeclarationVisitor::IsUplevelReference(const Symbol &symbol) {
+  if (symbol.owner().IsTopLevel()) {
+    return false;
+  }
   const Scope &symbolUnit{GetProgramUnitContaining(symbol)};
   if (symbolUnit == GetProgramUnitContaining(currScope())) {
     return false;
@@ -9367,6 +9517,7 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
       },
       node.stmt());
   Walk(node.spec());
+  bool inDeviceSubprogram = false;
   // If this is a function, convert result to an object. This is to prevent the
   // result from being converted later to a function symbol if it is called
   // inside the function.
@@ -9379,6 +9530,15 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
     if (auto *details{symbol->detailsIf<SubprogramDetails>()}) {
       if (details->isFunction()) {
         ConvertToObjectEntity(const_cast<Symbol &>(details->result()));
+      }
+      // Check the current procedure is a device procedure to apply implicit
+      // attribute at the end.
+      if (auto attrs{details->cudaSubprogramAttrs()}) {
+        if (*attrs == common::CUDASubprogramAttrs::Device ||
+            *attrs == common::CUDASubprogramAttrs::Global ||
+            *attrs == common::CUDASubprogramAttrs::Grid_Global) {
+          inDeviceSubprogram = true;
+        }
       }
     }
   }
@@ -9406,6 +9566,15 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
           symbol.GetType() ? Symbol::Flag::Function : Symbol::Flag::Subroutine);
     }
     ApplyImplicitRules(symbol);
+    // Apply CUDA implicit attributes if needed.
+    if (inDeviceSubprogram && symbol.has<ObjectEntityDetails>()) {
+      auto *object{symbol.detailsIf<ObjectEntityDetails>()};
+      if (!object->cudaDataAttr() && !IsValue(symbol) &&
+          (IsDummy(symbol) || object->IsArray())) {
+        // Implicitly set device attribute if none is set in device context.
+        object->set_cudaDataAttr(common::CUDADataAttr::Device);
+      }
+    }
   }
 }
 

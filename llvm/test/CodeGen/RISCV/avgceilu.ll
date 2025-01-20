@@ -132,8 +132,8 @@ define i32 @test_fixed_i32(i32 %a0, i32 %a1) nounwind {
 ; RV64I-LABEL: test_fixed_i32:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a1, 32
-; RV64I-NEXT:    srli a1, a1, 32
 ; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a1, a1, 32
 ; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    addi a0, a0, 1
@@ -158,8 +158,8 @@ define i32 @test_ext_i32(i32 %a0, i32 %a1) nounwind {
 ; RV64I-LABEL: test_ext_i32:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a1, 32
-; RV64I-NEXT:    srli a1, a1, 32
 ; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a1, a1, 32
 ; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    addi a0, a0, 1
@@ -179,13 +179,13 @@ define i64 @test_fixed_i64(i64 %a0, i64 %a1) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    or a4, a1, a3
 ; RV32I-NEXT:    xor a1, a1, a3
-; RV32I-NEXT:    srli a3, a1, 1
-; RV32I-NEXT:    sub a4, a4, a3
-; RV32I-NEXT:    slli a1, a1, 31
 ; RV32I-NEXT:    xor a3, a0, a2
-; RV32I-NEXT:    srli a3, a3, 1
-; RV32I-NEXT:    or a3, a3, a1
 ; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    srli a2, a1, 1
+; RV32I-NEXT:    slli a1, a1, 31
+; RV32I-NEXT:    srli a3, a3, 1
+; RV32I-NEXT:    sub a4, a4, a2
+; RV32I-NEXT:    or a3, a3, a1
 ; RV32I-NEXT:    sltu a1, a0, a3
 ; RV32I-NEXT:    sub a1, a4, a1
 ; RV32I-NEXT:    sub a0, a0, a3
@@ -210,13 +210,13 @@ define i64 @test_ext_i64(i64 %a0, i64 %a1) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    or a4, a1, a3
 ; RV32I-NEXT:    xor a1, a1, a3
-; RV32I-NEXT:    srli a3, a1, 1
-; RV32I-NEXT:    sub a4, a4, a3
-; RV32I-NEXT:    slli a1, a1, 31
 ; RV32I-NEXT:    xor a3, a0, a2
-; RV32I-NEXT:    srli a3, a3, 1
-; RV32I-NEXT:    or a3, a3, a1
 ; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    srli a2, a1, 1
+; RV32I-NEXT:    slli a1, a1, 31
+; RV32I-NEXT:    srli a3, a3, 1
+; RV32I-NEXT:    sub a4, a4, a2
+; RV32I-NEXT:    or a3, a3, a1
 ; RV32I-NEXT:    sltu a1, a0, a3
 ; RV32I-NEXT:    sub a1, a4, a1
 ; RV32I-NEXT:    sub a0, a0, a3

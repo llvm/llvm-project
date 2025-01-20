@@ -53,6 +53,7 @@ add_clang_library(clangAST
   DeclOpenMP.cpp
   DeclPrinter.cpp
   DeclTemplate.cpp
+  DynamicRecursiveASTVisitor.cpp
   ParentMapContext.cpp
   Expr.cpp
   ExprClassification.cpp
@@ -64,6 +65,7 @@ add_clang_library(clangAST
   ExternalASTSource.cpp
   FormatString.cpp
   InheritViz.cpp
+  ByteCode/BitcastBuffer.cpp
   ByteCode/ByteCodeEmitter.cpp
   ByteCode/Compiler.cpp
   ByteCode/Context.cpp
@@ -74,6 +76,7 @@ add_clang_library(clangAST
   ByteCode/Function.cpp
   ByteCode/FunctionPointer.cpp
   ByteCode/InterpBuiltin.cpp
+  ByteCode/InterpBuiltinBitCast.cpp
   ByteCode/Floating.cpp
   ByteCode/EvaluationResult.cpp
   ByteCode/DynamicAllocator.cpp

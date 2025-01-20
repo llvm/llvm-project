@@ -55,13 +55,14 @@ module m
   real, unified :: um
 
  contains
-  attributes(device) subroutine devsubr(n,da)
+  attributes(device) subroutine devsubr(n,da,rs)
     integer, intent(in) :: n
     real, device :: da(*) ! ok
     real, managed :: ma(n) ! ok
     !WARNING: Pointer 'dp' may not be associated in a device subprogram
     real, device, pointer :: dp
     real, constant :: rc ! ok
+    real, shared :: rs ! ok
     !ERROR: Object 'u' with ATTRIBUTES(UNIFIED) must be declared in a host subprogram
     real, unified :: u
   end subroutine

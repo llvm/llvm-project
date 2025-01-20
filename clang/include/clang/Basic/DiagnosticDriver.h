@@ -22,6 +22,19 @@ enum {
 #undef DIAG
   NUM_BUILTIN_DRIVER_DIAGNOSTICS
 };
+
+#define DIAG_ENUM(ENUM_NAME)                                                   \
+  namespace ENUM_NAME {                                                        \
+  enum {
+#define DIAG_ENUM_ITEM(IDX, NAME) NAME = IDX,
+#define DIAG_ENUM_END()                                                        \
+  }                                                                            \
+  ;                                                                            \
+  }
+#include "clang/Basic/DiagnosticDriverEnums.inc"
+#undef DIAG_ENUM_END
+#undef DIAG_ENUM_ITEM
+#undef DIAG_ENUM
 } // end namespace diag
 } // end namespace clang
 

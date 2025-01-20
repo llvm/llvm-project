@@ -339,12 +339,9 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
 
       const char *expr_prefix = nullptr;
       lldb::ValueObjectSP result_valobj_sp;
+      lldb::ExpressionResults execution_results = UserExpression::Evaluate(
+          exe_ctx, expr_options, code.c_str(), expr_prefix, result_valobj_sp);
       Status error;
-      lldb::ExpressionResults execution_results =
-          UserExpression::Evaluate(exe_ctx, expr_options, code.c_str(),
-                                   expr_prefix, result_valobj_sp, error,
-                                   nullptr); // fixed expression
-
       if (llvm::Error err = OnExpressionEvaluated(exe_ctx, code, expr_options,
                                                   execution_results,
                                                   result_valobj_sp, error)) {

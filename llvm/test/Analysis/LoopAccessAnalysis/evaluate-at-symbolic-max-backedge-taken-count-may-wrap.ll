@@ -105,7 +105,6 @@ define i32 @check_no_dep_via_bounds_compare_symbolic_max_btc_neg_1(ptr %P, i32 %
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {(8 + (8 * %y) + %P),+,8}<%loop> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;

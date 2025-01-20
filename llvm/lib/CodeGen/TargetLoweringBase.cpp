@@ -171,6 +171,8 @@ RTLIB::Libcall RTLIB::getFPROUND(EVT OpVT, EVT RetVT) {
       return FPROUND_F64_BF16;
     if (OpVT == MVT::f80)
       return FPROUND_F80_BF16;
+    if (OpVT == MVT::f128)
+      return FPROUND_F128_BF16;
   } else if (RetVT == MVT::f32) {
     if (OpVT == MVT::f64)
       return FPROUND_F64_F32;
@@ -1695,12 +1697,9 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
   }
 }
 
-/// getByValTypeAlignment - Return the desired alignment for ByVal aggregate
-/// function arguments in the caller parameter area.  This is the actual
-/// alignment, not its logarithm.
-uint64_t TargetLoweringBase::getByValTypeAlignment(Type *Ty,
-                                                   const DataLayout &DL) const {
-  return DL.getABITypeAlign(Ty).value();
+Align TargetLoweringBase::getByValTypeAlignment(Type *Ty,
+                                                const DataLayout &DL) const {
+  return DL.getABITypeAlign(Ty);
 }
 
 bool TargetLoweringBase::allowsMemoryAccessForAlignment(
@@ -1751,7 +1750,7 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
                                             const DataLayout &DL, LLT Ty,
                                             const MachineMemOperand &MMO,
                                             unsigned *Fast) const {
-  EVT VT = getApproximateEVTForLLT(Ty, DL, Context);
+  EVT VT = getApproximateEVTForLLT(Ty, Context);
   return allowsMemoryAccess(Context, DL, VT, MMO.getAddrSpace(), MMO.getAlign(),
                             MMO.getFlags(), Fast);
 }
@@ -1849,7 +1848,8 @@ TargetLoweringBase::getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
   auto UnsafeStackPtr =
       dyn_cast_or_null<GlobalVariable>(M->getNamedValue(UnsafeStackPtrVar));
 
-  Type *StackPtrTy = PointerType::getUnqual(M->getContext());
+  const DataLayout &DL = M->getDataLayout();
+  PointerType *StackPtrTy = DL.getAllocaPtrType(M->getContext());
 
   if (!UnsafeStackPtr) {
     auto TLSModel = UseTLS ?
@@ -1863,6 +1863,8 @@ TargetLoweringBase::getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
         UnsafeStackPtrVar, nullptr, TLSModel);
   } else {
     // The variable exists, check its type and attributes.
+    //
+    // FIXME: Move to IR verifier.
     if (UnsafeStackPtr->getValueType() != StackPtrTy)
       report_fatal_error(Twine(UnsafeStackPtrVar) + " must have void* type");
     if (UseTLS != UnsafeStackPtr->isThreadLocal())

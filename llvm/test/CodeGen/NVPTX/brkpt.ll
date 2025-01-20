@@ -1,4 +1,4 @@
-; RUN: llc -o - -march=nvptx64 %s | FileCheck %s
+; RUN: llc -o - -mtriple=nvptx64 %s | FileCheck %s
 
 ; CHECK-LABEL: .func breakpoint
 define void @breakpoint() {

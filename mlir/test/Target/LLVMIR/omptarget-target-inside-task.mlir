@@ -1,6 +1,6 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
-module attributes {omp.is_target_device = true, omp.is_gpu = true} {
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true, omp.is_gpu = true} {
   llvm.func @omp_target_region_() {
     %0 = llvm.mlir.constant(20 : i32) : i32
     %1 = llvm.mlir.constant(10 : i32) : i32
@@ -36,5 +36,5 @@ module attributes {omp.is_target_device = true, omp.is_gpu = true} {
   }
 }
 
-// CHECK: define weak_odr protected void @__omp_offloading_{{.*}}_{{.*}}_omp_target_region__l19
+// CHECK: define weak_odr protected amdgpu_kernel void @__omp_offloading_{{.*}}_{{.*}}_omp_target_region__l19
 // CHECK: ret void

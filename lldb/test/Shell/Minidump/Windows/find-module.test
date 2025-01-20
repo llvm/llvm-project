@@ -1,6 +1,8 @@
 Test that we correctly find a PE/COFF file in our executable search path, and
 use it when opening minidumps.
 
+XFAIL: system-windows && remote-linux
+
 RUN: yaml2obj %S/Inputs/find-module.exe.yaml -o %T/find-module.exe
 RUN: yaml2obj %S/Inputs/find-module.dmp.yaml -o %T/find-module.dmp
 RUN: %lldb -O "settings set target.exec-search-paths %T" \

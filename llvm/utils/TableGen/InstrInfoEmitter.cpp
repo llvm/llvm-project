@@ -259,8 +259,7 @@ void InstrInfoEmitter::initOperandMapData(
       StrUintMapIter I = Operands.find(Info.Name);
 
       if (I == Operands.end()) {
-        I = Operands.insert(Operands.begin(), std::pair<std::string, unsigned>(
-                                                  Info.Name, NumOperands++));
+        I = Operands.insert(Operands.begin(), {Info.Name, NumOperands++});
       }
       OpList[I->second] = Info.MIOperandNo;
     }

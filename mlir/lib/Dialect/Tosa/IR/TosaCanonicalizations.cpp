@@ -808,6 +808,8 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
 
 OpFoldResult ConstOp::fold(FoldAdaptor adaptor) { return getValueAttr(); }
 
+OpFoldResult ConstShapeOp::fold(FoldAdaptor adaptor) { return getValueAttr(); }
+
 #define REDUCE_FOLDER(OP)                                                      \
   OpFoldResult OP::fold(FoldAdaptor adaptor) {                                 \
     ShapedType inputTy = llvm::cast<ShapedType>(getInput().getType());         \
@@ -878,8 +880,9 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
 OpFoldResult PadOp::fold(FoldAdaptor adaptor) {
   // If the pad is all zeros we can fold this operation away.
   if (adaptor.getPadding() && getInput1().getType() == getType()) {
-    auto densePad = llvm::cast<DenseElementsAttr>(adaptor.getPadding());
-    if (densePad.isSplat() && densePad.getSplatValue<APInt>().isZero()) {
+    auto densePad = llvm::dyn_cast<DenseElementsAttr>(adaptor.getPadding());
+    if (densePad && densePad.isSplat() &&
+        densePad.getSplatValue<APInt>().isZero()) {
       return getInput1();
     }
   }
@@ -984,9 +987,20 @@ OpFoldResult tosa::SelectOp::fold(FoldAdaptor adaptor) {
 }
 
 OpFoldResult TileOp::fold(FoldAdaptor adaptor) {
-  bool allOnes = llvm::all_of(getMultiples(), [](int64_t v) { return v == 1; });
-  if (allOnes && getInput1().getType() == getType())
-    return getInput1();
+  if (getInput1().getType() == getType()) {
+    if (auto multiples = llvm::dyn_cast_if_present<DenseElementsAttr>(
+            adaptor.getMultiples())) {
+      if (multiples.isSplat() &&
+          multiples.getSplatValue<APInt>().getSExtValue() == 1)
+        return getInput1();
+      if (auto int_array_attr =
+              llvm::dyn_cast<DenseIntElementsAttr>(multiples)) {
+        if (llvm::all_of(int_array_attr.getValues<APInt>(),
+                         [](APInt v) { return v.getSExtValue() == 1; }))
+          return getInput1();
+      }
+    }
+  }
   return {};
 }
 
@@ -1000,10 +1014,6 @@ OpFoldResult TransposeOp::fold(FoldAdaptor adaptor) {
         input.getType().getElementType() == resultTy.getElementType())
       return input.reshape(resultTy);
   }
-
-  // Transpose does not change the input type.
-  if (getInput1().getType() != getType())
-    return {};
 
   // Transpose is not the identity transpose.
   SmallVector<int32_t> perms;

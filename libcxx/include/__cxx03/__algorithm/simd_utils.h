@@ -6,26 +6,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_SIMD_UTILS_H
-#define _LIBCPP___ALGORITHM_SIMD_UTILS_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_SIMD_UTILS_H
+#define _LIBCPP___CXX03___ALGORITHM_SIMD_UTILS_H
 
-#include <__algorithm/min.h>
-#include <__bit/bit_cast.h>
-#include <__bit/countl.h>
-#include <__bit/countr.h>
-#include <__config>
-#include <__type_traits/is_arithmetic.h>
-#include <__type_traits/is_same.h>
-#include <__utility/integer_sequence.h>
-#include <cstddef>
-#include <cstdint>
+#include <__cxx03/__algorithm/min.h>
+#include <__cxx03/__bit/bit_cast.h>
+#include <__cxx03/__bit/countl.h>
+#include <__cxx03/__bit/countr.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/is_arithmetic.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__utility/integer_sequence.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 // TODO: Find out how altivec changes things and allow vectorizations there too.
 #if _LIBCPP_STD_VER >= 14 && defined(_LIBCPP_CLANG_VER) && !defined(__ALTIVEC__)
@@ -161,4 +161,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_SIMD_UTILS_H
+#endif // _LIBCPP___CXX03___ALGORITHM_SIMD_UTILS_H

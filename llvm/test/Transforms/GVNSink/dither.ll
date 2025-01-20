@@ -7,12 +7,12 @@
 
 ; CHECK-LABEL: @hoge
 ; CHECK-NOT: bb18.gvnsink.split
-define void @hoge() {
+define void @hoge(i1 %arg) {
 bb:
-  br i1 undef, label %bb4, label %bb11
+  br i1 %arg, label %bb4, label %bb11
 
 bb4:                                              ; preds = %bb3
-  br i1 undef, label %bb6, label %bb8
+  br i1 %arg, label %bb6, label %bb8
 
 bb6:                                              ; preds = %bb5
   %tmp = zext i16 undef to i64
@@ -24,7 +24,7 @@ bb8:                                              ; preds = %bb5
   br label %bb18
 
 bb11:                                             ; preds = %bb10
-  br i1 undef, label %bb12, label %bb15
+  br i1 %arg, label %bb12, label %bb15
 
 bb12:                                             ; preds = %bb11
   %tmp13 = zext i16 undef to i64

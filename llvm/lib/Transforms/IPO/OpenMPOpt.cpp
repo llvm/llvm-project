@@ -129,7 +129,7 @@ static cl::opt<bool> PrintModuleBeforeOptimizations(
 
 static cl::opt<bool> AlwaysInlineDeviceFunctions(
     "openmp-opt-inline-device",
-    cl::desc("Inline all applicible functions on the device."), cl::Hidden,
+    cl::desc("Inline all applicable functions on the device."), cl::Hidden,
     cl::init(false));
 
 static cl::opt<bool>
@@ -1178,15 +1178,12 @@ private:
 
       OpenMPIRBuilder::LocationDescription Loc(
           InsertPointTy(ParentBB, ParentBB->end()), DL);
-      OpenMPIRBuilder::InsertPointOrErrorTy SeqAfterIP =
-          OMPInfoCache.OMPBuilder.createMaster(Loc, BodyGenCB, FiniCB);
-      assert(SeqAfterIP && "Unexpected error creating master");
+      OpenMPIRBuilder::InsertPointTy SeqAfterIP = cantFail(
+          OMPInfoCache.OMPBuilder.createMaster(Loc, BodyGenCB, FiniCB));
+      cantFail(
+          OMPInfoCache.OMPBuilder.createBarrier(SeqAfterIP, OMPD_parallel));
 
-      OpenMPIRBuilder::InsertPointOrErrorTy BarrierAfterIP =
-          OMPInfoCache.OMPBuilder.createBarrier(*SeqAfterIP, OMPD_parallel);
-      assert(BarrierAfterIP && "Unexpected error creating barrier");
-
-      BranchInst::Create(SeqAfterBB, SeqAfterIP->getBlock());
+      BranchInst::Create(SeqAfterBB, SeqAfterIP.getBlock());
 
       LLVM_DEBUG(dbgs() << TAG << "After sequential inlining " << *OuterFn
                         << "\n");
@@ -1256,12 +1253,11 @@ private:
           OriginalFn->getEntryBlock().getFirstInsertionPt());
       // Create the merged parallel region with default proc binding, to
       // avoid overriding binding settings, and without explicit cancellation.
-      OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
-          OMPInfoCache.OMPBuilder.createParallel(
+      OpenMPIRBuilder::InsertPointTy AfterIP =
+          cantFail(OMPInfoCache.OMPBuilder.createParallel(
               Loc, AllocaIP, BodyGenCB, PrivCB, FiniCB, nullptr, nullptr,
-              OMP_PROC_BIND_default, /* IsCancellable */ false);
-      assert(AfterIP && "Unexpected error creating parallel");
-      BranchInst::Create(AfterBB, AfterIP->getBlock());
+              OMP_PROC_BIND_default, /* IsCancellable */ false));
+      BranchInst::Create(AfterBB, AfterIP.getBlock());
 
       // Perform the actual outlining.
       OMPInfoCache.OMPBuilder.finalize(OriginalFn);
@@ -1297,12 +1293,10 @@ private:
         if (CI != MergableCIs.back()) {
           // TODO: Remove barrier if the merged parallel region includes the
           // 'nowait' clause.
-          OpenMPIRBuilder::InsertPointOrErrorTy AfterIP =
-              OMPInfoCache.OMPBuilder.createBarrier(
-                  InsertPointTy(NewCI->getParent(),
-                                NewCI->getNextNode()->getIterator()),
-                  OMPD_parallel);
-          assert(AfterIP && "Unexpected error creating barrier");
+          cantFail(OMPInfoCache.OMPBuilder.createBarrier(
+              InsertPointTy(NewCI->getParent(),
+                            NewCI->getNextNode()->getIterator()),
+              OMPD_parallel));
         }
 
         CI->eraseFromParent();
@@ -1538,26 +1532,12 @@ private:
     // required an RPC server. If its users were all optimized out then we can
     // safely remove it.
     // TODO: This should be somewhere more common in the future.
-    if (GlobalVariable *GV = M.getNamedGlobal("__llvm_libc_rpc_client")) {
-      if (!GV->getType()->isPointerTy())
+    if (GlobalVariable *GV = M.getNamedGlobal("__llvm_rpc_client")) {
+      if (GV->getNumUses() >= 1)
         return false;
-
-      Constant *C = GV->getInitializer();
-      if (!C)
-        return false;
-
-      // Check to see if the only user of the RPC client is the external handle.
-      GlobalVariable *Client = dyn_cast<GlobalVariable>(C->stripPointerCasts());
-      if (!Client || Client->getNumUses() > 1 ||
-          Client->user_back() != GV->getInitializer())
-        return false;
-
-      Client->replaceAllUsesWith(PoisonValue::get(Client->getType()));
-      Client->eraseFromParent();
 
       GV->replaceAllUsesWith(PoisonValue::get(GV->getType()));
       GV->eraseFromParent();
-
       return true;
     }
     return false;

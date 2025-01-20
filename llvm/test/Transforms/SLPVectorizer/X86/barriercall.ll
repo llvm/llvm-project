@@ -13,7 +13,7 @@ define i32 @foo(ptr nocapture %A, i32 %n) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw <4 x i32> [[SHUFFLE]], <i32 5, i32 9, i32 3, i32 10>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl <4 x i32> [[SHUFFLE]], <i32 5, i32 9, i32 3, i32 10>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP3]], <i32 9, i32 9, i32 9, i32 9>
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP3]], splat (i32 9)
 ; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    ret i32 undef
 ;

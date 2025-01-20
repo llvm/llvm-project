@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_ENABLE_IF_H
-#define _LIBCPP___TYPE_TRAITS_ENABLE_IF_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_ENABLE_IF_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_ENABLE_IF_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -34,4 +34,4 @@ using enable_if_t = typename enable_if<_Bp, _Tp>::type;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_ENABLE_IF_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_ENABLE_IF_H

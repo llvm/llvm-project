@@ -426,7 +426,7 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
       CheckOpcodeMatcher *COM = cast<CheckOpcodeMatcher>(OptionsToMatch[i]);
       assert(Opcodes.insert(COM->getOpcode().getEnumName()).second &&
              "Duplicate opcodes not factored?");
-      Cases.push_back(std::pair(&COM->getOpcode(), COM->takeNext()));
+      Cases.emplace_back(&COM->getOpcode(), COM->takeNext());
       delete COM;
     }
 
@@ -463,7 +463,7 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
       }
 
       Entry = Cases.size() + 1;
-      Cases.push_back(std::pair(CTMTy, MatcherWithoutCTM));
+      Cases.emplace_back(CTMTy, MatcherWithoutCTM);
     }
 
     // Make sure we recursively factor any scopes we may have created.

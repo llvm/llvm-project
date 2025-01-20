@@ -152,7 +152,7 @@ struct LinalgNamedOpConversionPass
     Operation *op = getOperation();
     RewritePatternSet patterns(op->getContext());
     populateLinalgNamedOpConversionPatterns(patterns);
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+    if (failed(applyPatternsGreedily(op, std::move(patterns))))
       return signalPassFailure();
   }
 };

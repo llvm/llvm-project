@@ -75,6 +75,7 @@ struct UnrollLoopOptions {
   bool UnrollRemainder;
   bool ForgetAllSCEV;
   const Instruction *Heart = nullptr;
+  unsigned SCEVExpansionBudget;
 };
 
 LoopUnrollResult UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
@@ -90,7 +91,7 @@ bool UnrollRuntimeLoopRemainder(
     bool UseEpilogRemainder, bool UnrollRemainder, bool ForgetAllSCEV,
     LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
     const TargetTransformInfo *TTI, bool PreserveLCSSA,
-    Loop **ResultLoop = nullptr);
+    unsigned SCEVExpansionBudget, Loop **ResultLoop = nullptr);
 
 LoopUnrollResult UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
                                   unsigned TripMultiple, bool UnrollRemainder,

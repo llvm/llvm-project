@@ -45,8 +45,8 @@ define i32 @strtol_hex() #0 {
 
 define i32 @strtol_endptr_not_null(ptr %pend) {
 ; CHECK-LABEL: @strtol_endptr_not_null(
-; CHECK-NEXT:    [[ENDP1:%.*]] = getelementptr inbounds i8, ptr [[PEND:%.*]], i64 8
-; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @.str, i64 2), ptr [[ENDP1]], align 8
+; CHECK-NEXT:    [[ENDP1:%.*]] = getelementptr inbounds nuw i8, ptr [[PEND:%.*]], i64 8
+; CHECK-NEXT:    store ptr getelementptr inbounds nuw (i8, ptr @.str, i64 2), ptr [[ENDP1]], align 8
 ; CHECK-NEXT:    ret i32 12
 ;
   %endp1 = getelementptr inbounds ptr, ptr %pend, i32 1
@@ -84,7 +84,7 @@ define i32 @strtol_not_const_str(ptr %s) #0 {
 
 define i32 @atoi_not_const_str(ptr %s) #0 {
 ; CHECK-LABEL: @atoi_not_const_str(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @atoi(ptr nocapture [[S:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @atoi(ptr [[S:%.*]])
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = call i32 @atoi(ptr %s) #4

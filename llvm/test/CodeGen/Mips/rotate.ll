@@ -1,8 +1,8 @@
-; RUN: llc -march=mips -mcpu=mips32r2 < %s | FileCheck %s
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mcpu=mips32r2 -mattr=+mips16 < %s | FileCheck %s -check-prefix=mips16
-; RUN: llc -march=mips -mcpu=mips32r3 -mattr=+micromips < %s | FileCheck %s \
+; RUN: llc -mtriple=mips -mcpu=mips32r2 < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel-linux-gnu -mcpu=mips32r2 -mattr=+mips16 < %s | FileCheck %s -check-prefix=mips16
+; RUN: llc -mtriple=mips -mcpu=mips32r3 -mattr=+micromips < %s | FileCheck %s \
 ; RUN:    -check-prefix=MM32
-; RUN: llc -march=mips -mcpu=mips32r6 -mattr=+micromips < %s | FileCheck %s \
+; RUN: llc -mtriple=mips -mcpu=mips32r6 -mattr=+micromips < %s | FileCheck %s \
 ; RUN:    -check-prefix=MM32
 
 ; CHECK:  rotrv $2, $4

@@ -88,10 +88,14 @@ def DLTI_DataLayoutSpecAttr :
 
     /// Returns the attribute associated with the key.
     FailureOr<Attribute> query(DataLayoutEntryKey key) {
-      return llvm::cast<mlir::DataLayoutSpecInterface>(*this).queryHelper(key);
+      return ::llvm::cast<mlir::DataLayoutSpecInterface>(*this).queryHelper(key);
     }
   }];
 }
+
+//===----------------------------------------------------------------------===//
+// MapAttr
+//===----------------------------------------------------------------------===//
 
 def DLTI_MapAttr : DLTIAttr<"Map", [DLTIQueryInterface]> {
   let summary = "A mapping of DLTI-information by way of key-value pairs";
@@ -106,18 +110,16 @@ def DLTI_MapAttr : DLTIAttr<"Map", [DLTIQueryInterface]> {
 
     Consider the following flat encoding of a single-key dictionary
     ```
-    #dlti.map<#dlti.dl_entry<"CPU::cache::L1::size_in_bytes", 65536 : i32>>
+    #dlti.map<"CPU::cache::L1::size_in_bytes" = 65536 : i32>>
     ```
     versus nested maps, which make it possible to obtain sub-dictionaries of
     related information (with the following example making use of other
     attributes that also implement the `DLTIQueryInterface`):
     ```
-    #dlti.target_system_spec<"CPU":
-      #dlti.target_device_spec<#dlti.dl_entry<"cache",
-        #dlti.map<#dlti.dl_entry<"L1",
-          #dlti.map<#dlti.dl_entry<"size_in_bytes", 65536 : i32>>>,
-                  #dlti.dl_entry<"L1d",
-          #dlti.map<#dlti.dl_entry<"size_in_bytes", 32768 : i32>>> >>>>
+    #dlti.target_system_spec<"CPU" =
+      #dlti.target_device_spec<"cache" =
+        #dlti.map<"L1" = #dlti.map<"size_in_bytes" = 65536 : i32>,
+                  "L1d" = #dlti.map<"size_in_bytes" = 32768 : i32> >>>
     ```
 
     With the flat encoding, the implied structure of the key is ignored, that is
@@ -132,14 +134,13 @@ def DLTI_MapAttr : DLTIAttr<"Map", [DLTIQueryInterface]> {
     `transform.dlti.query ["CPU","cache","L1","size_in_bytes"] at %op` gives
     back the first leaf value contained. To access the other leaf, we need to do
     `transform.dlti.query ["CPU","cache","L1d","size_in_bytes"] at %op`.
-    ```
    }];
   let parameters = (ins
     ArrayRefParameter<"DataLayoutEntryInterface", "">:$entries
   );
   let mnemonic = "map";
   let genVerifyDecl = 1;
-  let assemblyFormat = "`<` $entries `>`";
+  let hasCustomAssemblyFormat = 1;
   let extraClassDeclaration = [{
     /// Returns the attribute associated with the key.
     FailureOr<Attribute> query(DataLayoutEntryKey key) {
@@ -167,20 +168,23 @@ def DLTI_TargetSystemSpecAttr :
     ```
     dlti.target_system_spec =
      #dlti.target_system_spec<
-      "CPU": #dlti.target_device_spec<
-              #dlti.dl_entry<"dlti.L1_cache_size_in_bytes", 4096: ui32>>,
-      "GPU": #dlti.target_device_spec<
-              #dlti.dl_entry<"dlti.max_vector_op_width", 64 : ui32>>,
-      "XPU": #dlti.target_device_spec<
-              #dlti.dl_entry<"dlti.max_vector_op_width", 4096 : ui32>>>
+      "CPU" = #dlti.target_device_spec<
+        "L1_cache_size_in_bytes" = 4096: ui32>,
+      "GPU" = #dlti.target_device_spec<
+        "max_vector_op_width" = 64 : ui32>,
+      "XPU" = #dlti.target_device_spec<
+        "max_vector_op_width" = 4096 : ui32>>
     ```
+
+    The verifier checks that keys are strings and pointed to values implement
+    DLTI's TargetDeviceSpecInterface.
   }];
   let parameters = (ins
-    ArrayRefParameter<"DeviceIDTargetDeviceSpecPair", "">:$entries
+    ArrayRefParameter<"DataLayoutEntryInterface">:$entries
   );
   let mnemonic = "target_system_spec";
   let genVerifyDecl = 1;
-  let assemblyFormat = "`<` $entries `>`";
+  let hasCustomAssemblyFormat = 1;
   let extraClassDeclaration = [{
     /// Return the device specification that matches the given device ID
     std::optional<TargetDeviceSpecInterface>
@@ -189,7 +193,7 @@ def DLTI_TargetSystemSpecAttr :
 
     /// Returns the attribute associated with the key.
     FailureOr<Attribute> query(DataLayoutEntryKey key) const {
-      return llvm::cast<mlir::TargetSystemSpecInterface>(*this).queryHelper(key);
+      return ::llvm::cast<mlir::TargetSystemSpecInterface>(*this).queryHelper(key);
     }
   }];
   let extraClassDefinition = [{
@@ -197,8 +201,10 @@ def DLTI_TargetSystemSpecAttr :
     $cppClass::getDeviceSpecForDeviceID(
         TargetSystemSpecInterface::DeviceID deviceID) {
       for (const auto& entry : getEntries()) {
-        if (entry.first == deviceID)
-          return entry.second;
+        if (entry.getKey() == DataLayoutEntryKey(deviceID))
+          if (auto deviceSpec =
+              ::llvm::dyn_cast<TargetDeviceSpecInterface>(entry.getValue()))
+            return deviceSpec;
       }
       return std::nullopt;
     }
@@ -219,21 +225,20 @@ def DLTI_TargetDeviceSpecAttr :
 
     Example:
     ```
-    #dlti.target_device_spec<
-      #dlti.dl_entry<"dlti.max_vector_op_width", 64 : ui32>>
+    #dlti.target_device_spec<"max_vector_op_width" = 64 : ui32>
     ```
   }];
   let parameters = (ins
-    ArrayRefParameter<"DataLayoutEntryInterface", "">:$entries
+    ArrayRefParameter<"DataLayoutEntryInterface">:$entries
   );
   let mnemonic = "target_device_spec";
   let genVerifyDecl = 1;
-  let assemblyFormat = "`<` $entries `>`";
+  let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
     /// Returns the attribute associated with the key.
     FailureOr<Attribute> query(DataLayoutEntryKey key) const {
-      return llvm::cast<mlir::TargetDeviceSpecInterface>(*this).queryHelper(key);
+      return ::llvm::cast<mlir::TargetDeviceSpecInterface>(*this).queryHelper(key);
     }
   }];
 }

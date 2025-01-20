@@ -1,0 +1,2 @@
+-checks='-*,llvm-namespace-comment'
+--warnings-as-errors=llvm-namespace-comment

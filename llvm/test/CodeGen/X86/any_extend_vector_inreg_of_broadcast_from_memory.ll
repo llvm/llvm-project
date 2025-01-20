@@ -1337,10 +1337,9 @@ define void @vec256_i16_widen_to_i32_factor2_broadcast_to_v8i32_factor8(ptr %in.
 ;
 ; AVX512BW-LABEL: vec256_i16_widen_to_i32_factor2_broadcast_to_v8i32_factor8:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512BW-NEXT:    vpmovsxbw {{.*#+}} ymm1 = [0,17,0,19,0,21,0,23,0,25,0,27,0,29,0,31]
-; AVX512BW-NEXT:    vpermi2w 32(%rdi), %ymm0, %ymm1
-; AVX512BW-NEXT:    vpaddb (%rsi), %zmm1, %zmm0
+; AVX512BW-NEXT:    vpmovsxbw {{.*#+}} ymm0 = [0,17,0,19,0,21,0,23,0,25,0,27,0,29,0,31]
+; AVX512BW-NEXT:    vpermw (%rdi), %zmm0, %zmm0
+; AVX512BW-NEXT:    vpaddb (%rsi), %zmm0, %zmm0
 ; AVX512BW-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -1789,10 +1788,9 @@ define void @vec256_i64_widen_to_i128_factor2_broadcast_to_v2i128_factor2(ptr %i
 ;
 ; AVX512F-FAST-LABEL: vec256_i64_widen_to_i128_factor2_broadcast_to_v2i128_factor2:
 ; AVX512F-FAST:       # %bb.0:
-; AVX512F-FAST-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512F-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,5,0,7]
-; AVX512F-FAST-NEXT:    vpermi2q 32(%rdi), %ymm0, %ymm1
-; AVX512F-FAST-NEXT:    vpaddb (%rsi), %ymm1, %ymm0
+; AVX512F-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [0,5,0,7]
+; AVX512F-FAST-NEXT:    vpermq (%rdi), %zmm0, %zmm0
+; AVX512F-FAST-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
 ; AVX512F-FAST-NEXT:    vmovdqa %ymm0, (%rdx)
 ; AVX512F-FAST-NEXT:    vzeroupper
 ; AVX512F-FAST-NEXT:    retq
@@ -1808,10 +1806,9 @@ define void @vec256_i64_widen_to_i128_factor2_broadcast_to_v2i128_factor2(ptr %i
 ;
 ; AVX512DQ-FAST-LABEL: vec256_i64_widen_to_i128_factor2_broadcast_to_v2i128_factor2:
 ; AVX512DQ-FAST:       # %bb.0:
-; AVX512DQ-FAST-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512DQ-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,5,0,7]
-; AVX512DQ-FAST-NEXT:    vpermi2q 32(%rdi), %ymm0, %ymm1
-; AVX512DQ-FAST-NEXT:    vpaddb (%rsi), %ymm1, %ymm0
+; AVX512DQ-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [0,5,0,7]
+; AVX512DQ-FAST-NEXT:    vpermq (%rdi), %zmm0, %zmm0
+; AVX512DQ-FAST-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
 ; AVX512DQ-FAST-NEXT:    vmovdqa %ymm0, (%rdx)
 ; AVX512DQ-FAST-NEXT:    vzeroupper
 ; AVX512DQ-FAST-NEXT:    retq
@@ -1827,10 +1824,9 @@ define void @vec256_i64_widen_to_i128_factor2_broadcast_to_v2i128_factor2(ptr %i
 ;
 ; AVX512BW-FAST-LABEL: vec256_i64_widen_to_i128_factor2_broadcast_to_v2i128_factor2:
 ; AVX512BW-FAST:       # %bb.0:
-; AVX512BW-FAST-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX512BW-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,5,0,7]
-; AVX512BW-FAST-NEXT:    vpermi2q 32(%rdi), %ymm0, %ymm1
-; AVX512BW-FAST-NEXT:    vpaddb (%rsi), %zmm1, %zmm0
+; AVX512BW-FAST-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [0,5,0,7]
+; AVX512BW-FAST-NEXT:    vpermq (%rdi), %zmm0, %zmm0
+; AVX512BW-FAST-NEXT:    vpaddb (%rsi), %zmm0, %zmm0
 ; AVX512BW-FAST-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; AVX512BW-FAST-NEXT:    vzeroupper
 ; AVX512BW-FAST-NEXT:    retq

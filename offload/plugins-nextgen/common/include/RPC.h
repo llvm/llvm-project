@@ -61,7 +61,7 @@ public:
 
 private:
   /// Array from this device's identifier to its attached devices.
-  llvm::SmallVector<uintptr_t> Handles;
+  llvm::SmallVector<void *> Buffers;
 };
 
 } // namespace llvm::omp::target

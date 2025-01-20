@@ -7,26 +7,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_COMPLEX_H
-#define _LIBCPP_COMPLEX_H
+#ifndef _LIBCPP___CXX03_COMPLEX_H
+#define _LIBCPP___CXX03_COMPLEX_H
 
 /*
     complex.h synopsis
 
-#include <ccomplex>
+#include <__cxx03/ccomplex>
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 #ifdef __cplusplus
-#  include <ccomplex>
+#  include <__cxx03/ccomplex>
 #elif __has_include_next(<complex.h>)
 #  include_next <complex.h>
 #endif
 
-#endif // _LIBCPP_COMPLEX_H
+#endif // _LIBCPP___CXX03_COMPLEX_H

@@ -107,7 +107,7 @@ define void @test4_2(ptr %p) {
 define void @test5(ptr %p, ptr %q) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; FNATTRS-LABEL: define {{[^@]+}}@test5
-; FNATTRS-SAME: (ptr nocapture writeonly [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR4:[0-9]+]] {
+; FNATTRS-SAME: (ptr nocapture writeonly initializes((0, 8)) [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR4:[0-9]+]] {
 ; FNATTRS-NEXT:    store ptr [[Q]], ptr [[P]], align 8
 ; FNATTRS-NEXT:    ret void
 ;
@@ -132,7 +132,7 @@ declare void @test6_1()
 ; This is not a missed optz'n.
 define void @test6_2(ptr %p, ptr %q) {
 ; FNATTRS-LABEL: define {{[^@]+}}@test6_2
-; FNATTRS-SAME: (ptr nocapture writeonly [[P:%.*]], ptr [[Q:%.*]]) {
+; FNATTRS-SAME: (ptr nocapture writeonly initializes((0, 8)) [[P:%.*]], ptr [[Q:%.*]]) {
 ; FNATTRS-NEXT:    store ptr [[Q]], ptr [[P]], align 8
 ; FNATTRS-NEXT:    call void @test6_1()
 ; FNATTRS-NEXT:    ret void
@@ -759,6 +759,28 @@ define void @writable_readnone(ptr writable dereferenceable(4) %p) {
 ; ATTRIBUTOR-CGSCC-SAME: (ptr nocapture nofree nonnull readnone dereferenceable(4) [[P:%.*]]) #[[ATTR1]] {
 ; ATTRIBUTOR-CGSCC-NEXT:    ret void
 ;
+  ret void
+}
+
+declare void @byval_param(ptr byval(i32) %p)
+
+define void @call_byval_param(ptr %p) {
+; FNATTRS-LABEL: define {{[^@]+}}@call_byval_param
+; FNATTRS-SAME: (ptr nocapture readonly [[P:%.*]]) {
+; FNATTRS-NEXT:    call void @byval_param(ptr byval(i32) [[P]])
+; FNATTRS-NEXT:    ret void
+;
+; ATTRIBUTOR-LABEL: define {{[^@]+}}@call_byval_param
+; ATTRIBUTOR-SAME: (ptr nocapture readonly [[P:%.*]]) {
+; ATTRIBUTOR-NEXT:    call void @byval_param(ptr nocapture readonly byval(i32) [[P]])
+; ATTRIBUTOR-NEXT:    ret void
+;
+; ATTRIBUTOR-CGSCC-LABEL: define {{[^@]+}}@call_byval_param
+; ATTRIBUTOR-CGSCC-SAME: (ptr nocapture readonly [[P:%.*]]) {
+; ATTRIBUTOR-CGSCC-NEXT:    call void @byval_param(ptr nocapture readonly byval(i32) [[P]])
+; ATTRIBUTOR-CGSCC-NEXT:    ret void
+;
+  call void @byval_param(ptr byval(i32) %p)
   ret void
 }
 

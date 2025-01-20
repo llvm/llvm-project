@@ -411,8 +411,6 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
   return GetProcessAndStatInfo(pid, process_info, State, tracerpid);
 }
 
-Environment Host::GetEnvironment() { return Environment(environ); }
-
 Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
   return Status::FromErrorString("unimplemented");
 }

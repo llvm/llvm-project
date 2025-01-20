@@ -41,12 +41,12 @@ define i32 @reverse_induction_i64(i64 %startval, ptr %ptr) {
 ; CHECK-NEXT:    br i1 true, label %[[LOOPEND:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[STARTVAL]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i32 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[ADD_I7:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[ADD_I:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[INC4:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[BC_RESUME_VAL4]], %[[SCALAR_PH]] ], [ [[INC4:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[REDUX5:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[INC_REDUX:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ADD_I]] = add i64 [[ADD_I7]], -1
 ; CHECK-NEXT:    [[KIND__I:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i64 [[ADD_I]]
@@ -114,12 +114,12 @@ define i32 @reverse_induction_i128(i128 %startval, ptr %ptr) {
 ; CHECK-NEXT:    br i1 true, label %[[LOOPEND:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i128 [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[STARTVAL]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i32 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[ADD_I7:%.*]] = phi i128 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[ADD_I:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[INC4:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[BC_RESUME_VAL4]], %[[SCALAR_PH]] ], [ [[INC4:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[REDUX5:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[INC_REDUX:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ADD_I]] = add i128 [[ADD_I7]], -1
 ; CHECK-NEXT:    [[KIND__I:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i128 [[ADD_I]]
@@ -196,13 +196,13 @@ define i32 @reverse_induction_i16(i16 %startval, ptr %ptr) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
 ; CHECK-NEXT:    br i1 true, label %[[LOOPEND:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[STARTVAL]], %[[ENTRY]] ], [ [[STARTVAL]], %[[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[STARTVAL]], %[[VECTOR_SCEVCHECK]] ], [ [[STARTVAL]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i32 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP17]], %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[ADD_I7:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[ADD_I:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[INC4:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ [[BC_RESUME_VAL4]], %[[SCALAR_PH]] ], [ [[INC4:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[REDUX5:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[INC_REDUX:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ADD_I]] = add i16 [[ADD_I7]], -1
 ; CHECK-NEXT:    [[KIND__I:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i16 [[ADD_I]]
@@ -261,11 +261,11 @@ define void @reverse_forward_induction_i64_i8() {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i8> [[VEC_IND]], <i8 4, i8 4, i8 4, i8 4>
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i8> [[VEC_IND]], <i8 1, i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i8> [[STEP_ADD]], <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i8> [[VEC_IND]], splat (i8 1)
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i8> [[STEP_ADD]], splat (i8 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP3]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1024 x i32], ptr @a, i64 0, i64 [[TMP0]]
@@ -278,18 +278,18 @@ define void @reverse_forward_induction_i64_i8() {
 ; CHECK-NEXT:    [[REVERSE2:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    store <4 x i32> [[REVERSE2]], ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[STEP_ADD]], <i8 4, i8 4, i8 4, i8 4>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[STEP_ADD]], splat (i8 4)
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br i1 true, label %[[WHILE_END:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ -1, %[[MIDDLE_BLOCK]] ], [ 1023, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i8 [ 0, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i8 [ 0, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[WHILE_BODY:.*]]
 ; CHECK:       [[WHILE_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[WHILE_BODY]] ]
-; CHECK-NEXT:    [[FORWARD_INDUCTION_05:%.*]] = phi i8 [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[WHILE_BODY]] ]
+; CHECK-NEXT:    [[FORWARD_INDUCTION_05:%.*]] = phi i8 [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[WHILE_BODY]] ]
 ; CHECK-NEXT:    [[INC]] = add i8 [[FORWARD_INDUCTION_05]], 1
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[INC]] to i32
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1024 x i32], ptr @a, i64 0, i64 [[INDVARS_IV]]
@@ -330,11 +330,11 @@ define void @reverse_forward_induction_i64_i8_signed() {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 -127, i8 -126, i8 -125, i8 -124>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i8> [[VEC_IND]], <i8 4, i8 4, i8 4, i8 4>
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i8> [[VEC_IND]], <i8 1, i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i8> [[STEP_ADD]], <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i8> [[VEC_IND]], splat (i8 1)
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i8> [[STEP_ADD]], splat (i8 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext <4 x i8> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext <4 x i8> [[TMP3]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1024 x i32], ptr @a, i64 0, i64 [[TMP0]]
@@ -347,18 +347,18 @@ define void @reverse_forward_induction_i64_i8_signed() {
 ; CHECK-NEXT:    [[REVERSE2:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    store <4 x i32> [[REVERSE2]], ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[STEP_ADD]], <i8 4, i8 4, i8 4, i8 4>
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[STEP_ADD]], splat (i8 4)
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br i1 true, label %[[WHILE_END:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ -1, %[[MIDDLE_BLOCK]] ], [ 1023, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i8 [ -127, %[[MIDDLE_BLOCK]] ], [ -127, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i8 [ -127, %[[MIDDLE_BLOCK]] ], [ -127, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[WHILE_BODY:.*]]
 ; CHECK:       [[WHILE_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[WHILE_BODY]] ]
-; CHECK-NEXT:    [[FORWARD_INDUCTION_05:%.*]] = phi i8 [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[WHILE_BODY]] ]
+; CHECK-NEXT:    [[FORWARD_INDUCTION_05:%.*]] = phi i8 [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[WHILE_BODY]] ]
 ; CHECK-NEXT:    [[INC]] = add i8 [[FORWARD_INDUCTION_05]], 1
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[INC]] to i32
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1024 x i32], ptr @a, i64 0, i64 [[INDVARS_IV]]

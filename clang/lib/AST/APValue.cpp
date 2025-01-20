@@ -1087,10 +1087,6 @@ void APValue::MakeArray(unsigned InitElts, unsigned Size) {
   Kind = Array;
 }
 
-MutableArrayRef<APValue::LValuePathEntry>
-setLValueUninit(APValue::LValueBase B, const CharUnits &O, unsigned Size,
-                bool OnePastTheEnd, bool IsNullPtr);
-
 MutableArrayRef<const CXXRecordDecl *>
 APValue::setMemberPointerUninit(const ValueDecl *Member, bool IsDerivedMember,
                                 unsigned Size) {

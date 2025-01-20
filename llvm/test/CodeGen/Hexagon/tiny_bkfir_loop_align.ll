@@ -1,4 +1,4 @@
-; RUN: llc -O3 -mv67t -march=hexagon < %s | FileCheck %s
+; RUN: llc -O3 -mv67t -mtriple=hexagon < %s | FileCheck %s
 
 ; Test that the inner loop in the tiny core version of bkfir has the assembler
 ; directive "p2align 4".

@@ -16,15 +16,16 @@
 
 #include "llvm/Transforms/Coroutines/CoroAnnotationElide.h"
 
+#include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 
 #include <cassert>
 
@@ -92,61 +93,90 @@ static void processCall(CallBase *CB, Function *Caller, Function *NewCallee,
 
   NewCB->removeFnAttr(llvm::Attribute::CoroElideSafe);
   CB->replaceAllUsesWith(NewCB);
-  CB->eraseFromParent();
+
+  InlineFunctionInfo IFI;
+  InlineResult IR = InlineFunction(*NewCB, IFI);
+  if (IR.isSuccess()) {
+    CB->eraseFromParent();
+  } else {
+    NewCB->replaceAllUsesWith(CB);
+    NewCB->eraseFromParent();
+  }
 }
 
-PreservedAnalyses CoroAnnotationElidePass::run(Function &F,
-                                               FunctionAnalysisManager &FAM) {
+PreservedAnalyses CoroAnnotationElidePass::run(LazyCallGraph::SCC &C,
+                                               CGSCCAnalysisManager &AM,
+                                               LazyCallGraph &CG,
+                                               CGSCCUpdateResult &UR) {
   bool Changed = false;
+  CallGraphUpdater CGUpdater;
+  CGUpdater.initialize(CG, C, AM, UR);
 
-  Function *NewCallee =
-      F.getParent()->getFunction((F.getName() + ".noalloc").str());
+  auto &FAM =
+      AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
 
-  if (!NewCallee)
-    return PreservedAnalyses::all();
-
-  auto FramePtrArgPosition = NewCallee->arg_size() - 1;
-  auto FrameSize = NewCallee->getParamDereferenceableBytes(FramePtrArgPosition);
-  auto FrameAlign = NewCallee->getParamAlign(FramePtrArgPosition).valueOrOne();
-
-  SmallVector<CallBase *, 4> Users;
-  for (auto *U : F.users()) {
-    if (auto *CB = dyn_cast<CallBase>(U)) {
-      if (CB->getCalledFunction() == &F)
-        Users.push_back(CB);
-    }
-  }
-
-  auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-
-  for (auto *CB : Users) {
-    auto *Caller = CB->getFunction();
-    if (!Caller)
+  for (LazyCallGraph::Node &N : C) {
+    Function *Callee = &N.getFunction();
+    Function *NewCallee = Callee->getParent()->getFunction(
+        (Callee->getName() + ".noalloc").str());
+    if (!NewCallee)
       continue;
 
-    bool IsCallerPresplitCoroutine = Caller->isPresplitCoroutine();
-    bool HasAttr = CB->hasFnAttr(llvm::Attribute::CoroElideSafe);
-    if (IsCallerPresplitCoroutine && HasAttr) {
-      processCall(CB, Caller, NewCallee, FrameSize, FrameAlign);
+    SmallVector<CallBase *, 4> Users;
+    for (auto *U : Callee->users()) {
+      if (auto *CB = dyn_cast<CallBase>(U)) {
+        if (CB->getCalledFunction() == Callee)
+          Users.push_back(CB);
+      }
+    }
+    auto FramePtrArgPosition = NewCallee->arg_size() - 1;
+    auto FrameSize =
+        NewCallee->getParamDereferenceableBytes(FramePtrArgPosition);
+    auto FrameAlign =
+        NewCallee->getParamAlign(FramePtrArgPosition).valueOrOne();
 
-      ORE.emit([&]() {
-        return OptimizationRemark(DEBUG_TYPE, "CoroAnnotationElide", Caller)
-               << "'" << ore::NV("callee", F.getName()) << "' elided in '"
-               << ore::NV("caller", Caller->getName()) << "'";
-      });
+    auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(*Callee);
 
-      FAM.invalidate(*Caller, PreservedAnalyses::none());
-      Changed = true;
-    } else {
-      ORE.emit([&]() {
-        return OptimizationRemarkMissed(DEBUG_TYPE, "CoroAnnotationElide",
-                                        Caller)
-               << "'" << ore::NV("callee", F.getName()) << "' not elided in '"
-               << ore::NV("caller", Caller->getName()) << "' (caller_presplit="
-               << ore::NV("caller_presplit", IsCallerPresplitCoroutine)
-               << ", elide_safe_attr=" << ore::NV("elide_safe_attr", HasAttr)
-               << ")";
-      });
+    for (auto *CB : Users) {
+      auto *Caller = CB->getFunction();
+      if (!Caller)
+        continue;
+
+      bool IsCallerPresplitCoroutine = Caller->isPresplitCoroutine();
+      bool HasAttr = CB->hasFnAttr(llvm::Attribute::CoroElideSafe);
+      if (IsCallerPresplitCoroutine && HasAttr) {
+        auto *CallerN = CG.lookup(*Caller);
+        auto *CallerC = CallerN ? CG.lookupSCC(*CallerN) : nullptr;
+        // If CallerC is nullptr, it means LazyCallGraph hasn't visited Caller
+        // yet. Skip the call graph update.
+        auto ShouldUpdateCallGraph = !!CallerC;
+        processCall(CB, Caller, NewCallee, FrameSize, FrameAlign);
+
+        ORE.emit([&]() {
+          return OptimizationRemark(DEBUG_TYPE, "CoroAnnotationElide", Caller)
+                 << "'" << ore::NV("callee", Callee->getName())
+                 << "' elided in '" << ore::NV("caller", Caller->getName())
+                 << "'";
+        });
+
+        FAM.invalidate(*Caller, PreservedAnalyses::none());
+        Changed = true;
+        if (ShouldUpdateCallGraph)
+          updateCGAndAnalysisManagerForCGSCCPass(CG, *CallerC, *CallerN, AM, UR,
+                                                 FAM);
+
+      } else {
+        ORE.emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "CoroAnnotationElide",
+                                          Caller)
+                 << "'" << ore::NV("callee", Callee->getName())
+                 << "' not elided in '" << ore::NV("caller", Caller->getName())
+                 << "' (caller_presplit="
+                 << ore::NV("caller_presplit", IsCallerPresplitCoroutine)
+                 << ", elide_safe_attr=" << ore::NV("elide_safe_attr", HasAttr)
+                 << ")";
+        });
+      }
     }
   }
 

@@ -28,6 +28,16 @@ void incompat_sme_smc(svbool_t pg, void const *ptr) __arm_streaming_compatible _
   return __builtin_sme_svld1_hor_za128(0, 0, pg, ptr);
 }
 
+float incomp_sve_sm_fadda_sm(void) __arm_streaming {
+  // expected-error@+1 {{builtin can only be called from a non-streaming function}}
+  return svadda(svptrue_b32(), 0, svdup_f32(1));
+}
+
+float incomp_sve_sm_fadda_smc(void) __arm_streaming_compatible {
+  // expected-error@+1 {{builtin can only be called from a non-streaming function}}
+  return svadda(svptrue_b32(), 0, svdup_f32(1));
+}
+
 svuint32_t incompat_sve_sm(svbool_t pg, svuint32_t a, int16_t b) __arm_streaming {
   // expected-error@+1 {{builtin can only be called from a non-streaming function}}
   return __builtin_sve_svld1_gather_u32base_index_u32(pg, a, b);

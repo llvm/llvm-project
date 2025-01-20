@@ -22,6 +22,10 @@ libc_support_library(
         "//libc:__support_macros_properties_types",
         "//libc:__support_osutil_io",
         "//libc:__support_uint128",
+        "//libc:func_aligned_alloc",
+        "//libc:func_free",
+        "//libc:func_malloc",
+        "//libc:func_realloc",
     ],
 )
 
@@ -59,6 +63,10 @@ libc_support_library(
         "//libc:__support_stringutil",
         "//libc:__support_uint128",
         "//libc:errno",
+        "//libc:func_aligned_alloc",
+        "//libc:func_free",
+        "//libc:func_malloc",
+        "//libc:func_realloc",
         "//libc:llvm_libc_macros_stdfix_macros",
         "//llvm:Support",
     ],
@@ -113,6 +121,7 @@ libc_support_library(
         "//libc:__support_cpp_bitset",
         "//libc:__support_cpp_span",
         "//libc:__support_cpp_type_traits",
+        "//libc:__support_ctype_utils",
         "//libc:__support_macros_config",
     ],
 )

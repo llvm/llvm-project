@@ -163,8 +163,7 @@ define <4 x i1> @ins_fcmp_ext_ext(<4 x float> %a, <4 x i1> %b) {
 ; AVX-LABEL: @ins_fcmp_ext_ext(
 ; AVX-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 1, i32 poison>
 ; AVX-NEXT:    [[TMP1:%.*]] = fcmp ugt <4 x float> [[A]], [[SHIFT]]
-; AVX-NEXT:    [[A21:%.*]] = extractelement <4 x i1> [[TMP1]], i32 2
-; AVX-NEXT:    [[R:%.*]] = insertelement <4 x i1> [[B:%.*]], i1 [[A21]], i32 2
+; AVX-NEXT:    [[R:%.*]] = shufflevector <4 x i1> [[B:%.*]], <4 x i1> [[TMP1]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
 ; AVX-NEXT:    ret <4 x i1> [[R]]
 ;
   %a1 = extractelement <4 x float> %a, i32 1

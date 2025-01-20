@@ -8,7 +8,6 @@
 
 #include "clang/Driver/Distro.h"
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorOr.h"

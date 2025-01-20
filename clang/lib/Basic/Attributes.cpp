@@ -17,6 +17,9 @@
 #include "clang/Basic/ParsedAttrInfo.h"
 #include "clang/Basic/TargetInfo.h"
 
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSwitch.h"
+
 using namespace clang;
 
 static int hasAttributeImpl(AttributeCommonInfo::Syntax Syntax, StringRef Name,
@@ -153,12 +156,28 @@ std::string AttributeCommonInfo::getNormalizedFullName() const {
       normalizeName(getAttrName(), getScopeName(), getSyntax()));
 }
 
+static AttributeCommonInfo::Scope
+getScopeFromNormalizedScopeName(StringRef ScopeName) {
+  return llvm::StringSwitch<AttributeCommonInfo::Scope>(ScopeName)
+      .Case("", AttributeCommonInfo::Scope::NONE)
+      .Case("clang", AttributeCommonInfo::Scope::CLANG)
+      .Case("gnu", AttributeCommonInfo::Scope::GNU)
+      .Case("gsl", AttributeCommonInfo::Scope::GSL)
+      .Case("hlsl", AttributeCommonInfo::Scope::HLSL)
+      .Case("msvc", AttributeCommonInfo::Scope::MSVC)
+      .Case("omp", AttributeCommonInfo::Scope::OMP)
+      .Case("riscv", AttributeCommonInfo::Scope::RISCV);
+}
+
 unsigned AttributeCommonInfo::calculateAttributeSpellingListIndex() const {
   // Both variables will be used in tablegen generated
   // attribute spell list index matching code.
   auto Syntax = static_cast<AttributeCommonInfo::Syntax>(getSyntax());
-  StringRef Scope = normalizeAttrScopeName(getScopeName(), Syntax);
-  StringRef Name = normalizeAttrName(getAttrName(), Scope, Syntax);
+  StringRef ScopeName = normalizeAttrScopeName(getScopeName(), Syntax);
+  StringRef Name = normalizeAttrName(getAttrName(), ScopeName, Syntax);
+
+  AttributeCommonInfo::Scope ComputedScope =
+      getScopeFromNormalizedScopeName(ScopeName);
 
 #include "clang/Sema/AttrSpellingListIndex.inc"
 }

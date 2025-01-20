@@ -44,7 +44,7 @@ define <4 x i32> @vec_select_alternate_sign_bit_test(<4 x i32> %a, <4 x i32> %b)
 
 define <2 x i32> @is_negative_poison_elt(<2 x i32> %a) {
 ; CHECK-LABEL: @is_negative_poison_elt(
-; CHECK-NEXT:    [[A_LOBIT:%.*]] = ashr <2 x i32> [[A:%.*]], <i32 31, i32 31>
+; CHECK-NEXT:    [[A_LOBIT:%.*]] = ashr <2 x i32> [[A:%.*]], splat (i32 31)
 ; CHECK-NEXT:    ret <2 x i32> [[A_LOBIT]]
 ;
   %cmp = icmp slt <2 x i32> %a, <i32 0, i32 poison>

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-aa-sched-mi -enable-pipeliner < %s
+; RUN: llc -mtriple=hexagon -enable-aa-sched-mi -enable-pipeliner < %s
 ; REQUIRES: asserts
 
 ; Function Attrs: nounwind

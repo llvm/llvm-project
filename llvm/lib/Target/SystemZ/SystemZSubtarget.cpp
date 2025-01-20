@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZSubtarget.h"
-#include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Target/TargetMachine.h"

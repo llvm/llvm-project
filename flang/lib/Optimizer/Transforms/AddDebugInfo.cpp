@@ -121,9 +121,9 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
   // constant attribute of [hl]fir.declare/fircg.ext_declare operation that has
   // a dummy_scope operand).
   unsigned argNo = 0;
-  if (fir::isDummyArgument(declOp.getMemref())) {
-    auto arg = llvm::cast<mlir::BlockArgument>(declOp.getMemref());
-    argNo = arg.getArgNumber() + 1;
+  if (declOp.getDummyScope()) {
+    if (auto arg = llvm::dyn_cast<mlir::BlockArgument>(declOp.getMemref()))
+      argNo = arg.getArgNumber() + 1;
   }
 
   auto tyAttr = typeGen.convertType(fir::unwrapRefType(declOp.getType()),

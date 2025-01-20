@@ -11,10 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ARM.h"
 #include "ARMCallingConv.h"
+#include "ARM.h"
 #include "ARMSubtarget.h"
-#include "ARMRegisterInfo.h"
 using namespace llvm;
 
 // APCS f64 is in register pairs, possibly split to stack

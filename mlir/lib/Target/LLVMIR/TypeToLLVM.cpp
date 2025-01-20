@@ -67,6 +67,9 @@ public:
             .Case([this](LLVM::LLVMMetadataType) {
               return llvm::Type::getMetadataTy(context);
             })
+            .Case([this](LLVM::LLVMX86AMXType) {
+              return llvm::Type::getX86_AMXTy(context);
+            })
             .Case<LLVM::LLVMArrayType, IntegerType, LLVM::LLVMFunctionType,
                   LLVM::LLVMPointerType, LLVM::LLVMStructType,
                   LLVM::LLVMFixedVectorType, LLVM::LLVMScalableVectorType,

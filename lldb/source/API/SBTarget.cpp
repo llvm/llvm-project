@@ -220,6 +220,13 @@ SBStructuredData SBTarget::GetStatistics(SBStatisticsOptions options) {
   return data;
 }
 
+void SBTarget::ResetStatistics() {
+  LLDB_INSTRUMENT_VA(this);
+  TargetSP target_sp(GetSP());
+  if (target_sp)
+    DebuggerStats::ResetStatistics(target_sp->GetDebugger(), target_sp.get());
+}
+
 void SBTarget::SetCollectingStats(bool v) {
   LLDB_INSTRUMENT_VA(this, v);
 
@@ -2013,7 +2020,8 @@ lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress base_addr,
                                 error, force_live_memory, &load_addr);
       const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
       sb_instructions.SetDisassembler(Disassembler::DisassembleBytes(
-          target_sp->GetArchitecture(), nullptr, flavor_string, *addr_ptr,
+          target_sp->GetArchitecture(), nullptr, target_sp->GetDisassemblyCPU(),
+          target_sp->GetDisassemblyFeatures(), flavor_string, *addr_ptr,
           data.GetBytes(), bytes_read, count, data_from_file));
     }
   }
@@ -2038,8 +2046,9 @@ lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress start_addr,
       AddressRange range(start_load_addr, size);
       const bool force_live_memory = true;
       sb_instructions.SetDisassembler(Disassembler::DisassembleRange(
-          target_sp->GetArchitecture(), nullptr, flavor_string, *target_sp,
-          range, force_live_memory));
+          target_sp->GetArchitecture(), nullptr, flavor_string,
+          target_sp->GetDisassemblyCPU(), target_sp->GetDisassemblyFeatures(),
+          *target_sp, range, force_live_memory));
     }
   }
   return sb_instructions;
@@ -2071,8 +2080,9 @@ SBTarget::GetInstructionsWithFlavor(lldb::SBAddress base_addr,
     const bool data_from_file = true;
 
     sb_instructions.SetDisassembler(Disassembler::DisassembleBytes(
-        target_sp->GetArchitecture(), nullptr, flavor_string, addr, buf, size,
-        UINT32_MAX, data_from_file));
+        target_sp->GetArchitecture(), nullptr, flavor_string,
+        target_sp->GetDisassemblyCPU(), target_sp->GetDisassemblyFeatures(),
+        addr, buf, size, UINT32_MAX, data_from_file));
   }
 
   return sb_instructions;

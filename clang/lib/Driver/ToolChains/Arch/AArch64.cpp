@@ -135,14 +135,20 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
   return true;
 }
 
-static bool
-getAArch64ArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
-                               const ArgList &Args,
-                               llvm::AArch64::ExtensionSet &Extensions) {
+static bool getAArch64ArchFeaturesFromMcpu(
+    const Driver &D, StringRef Mcpu, const ArgList &Args,
+    llvm::AArch64::ExtensionSet &Extensions, std::vector<StringRef> &Features) {
   StringRef CPU;
   std::string McpuLowerCase = Mcpu.lower();
   if (!DecodeAArch64Mcpu(D, McpuLowerCase, CPU, Extensions))
     return false;
+
+  if (Mcpu == "native") {
+    llvm::StringMap<bool> HostFeatures = llvm::sys::getHostCPUFeatures();
+    for (auto &[Feature, Enabled] : HostFeatures) {
+      Features.push_back(Args.MakeArgString((Enabled ? "+" : "-") + Feature));
+    }
+  }
 
   return true;
 }
@@ -210,11 +216,11 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
     success =
         getAArch64ArchFeaturesFromMarch(D, A->getValue(), Args, Extensions);
   else if ((A = Args.getLastArg(options::OPT_mcpu_EQ)))
-    success =
-        getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Extensions);
+    success = getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Extensions,
+                                             Features);
   else if (isCPUDeterminedByTriple(Triple))
     success = getAArch64ArchFeaturesFromMcpu(
-        D, getAArch64TargetCPU(Args, Triple, A), Args, Extensions);
+        D, getAArch64TargetCPU(Args, Triple, A), Args, Extensions, Features);
   else
     // Default to 'A' profile if the architecture is not specified.
     success = getAArch64ArchFeaturesFromMarch(D, "armv8-a", Args, Extensions);

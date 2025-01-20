@@ -164,6 +164,9 @@ private:
 
   void preregisterSections();
 
+  /// run analyses requested in binary analysis mode.
+  void runBinaryAnalyses();
+
   /// Run optimizations that operate at the binary, or post-linker, level.
   void runOptimizationPasses();
 
@@ -555,14 +558,6 @@ private:
     ErrorOr<BinarySection &> ErrOrSection = BC->getUniqueSectionByName(Name);
     return ErrOrSection ? &ErrOrSection.get() : nullptr;
   }
-
-  /// Keep track of functions we fail to write in the binary. We need to avoid
-  /// rewriting CFI info for these functions.
-  std::vector<uint64_t> FailedAddresses;
-
-  /// Keep track of which functions didn't fit in their original space in the
-  /// last emission, so that we may either decide to split or not optimize them.
-  std::set<uint64_t> LargeFunctions;
 
   /// Section header string table.
   StringTableBuilder SHStrTab;

@@ -60,8 +60,7 @@ public:
         T->createTargetMachine("X86", "", "", Options, std::nullopt));
     if (!TM)
       GTEST_SKIP();
-    MMI = std::make_unique<MachineModuleInfo>(
-        static_cast<LLVMTargetMachine *>(TM.get()));
+    MMI = std::make_unique<MachineModuleInfo>(TM.get());
 
     PassBuilder PB(TM.get());
     PB.registerModuleAnalyses(MAM);

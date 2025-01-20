@@ -401,7 +401,7 @@ class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
   // an additional `LogicalResult verify()` declaration will be generated on the
   // operation class. The operation should implement this method and verify the
   // additional necessary invariants. This verifier shouldn't access any nested
-  // operations because those operations may ill-formed. Use the
+  // operations because those operations may be ill-formed. Use the
   // `hasRegionVerifier` below instead.
   bit hasVerifier = 0;
 

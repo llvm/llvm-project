@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COROUTINE_NOOP_COROUTINE_HANDLE_H
-#define _LIBCPP___COROUTINE_NOOP_COROUTINE_HANDLE_H
+#ifndef _LIBCPP___CXX03___COROUTINE_NOOP_COROUTINE_HANDLE_H
+#define _LIBCPP___CXX03___COROUTINE_NOOP_COROUTINE_HANDLE_H
 
-#include <__config>
-#include <__coroutine/coroutine_handle.h>
+#include <__cxx03/__config>
+#include <__cxx03/__coroutine/coroutine_handle.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -96,4 +96,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // __LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP___COROUTINE_NOOP_COROUTINE_HANDLE_H
+#endif // _LIBCPP___CXX03___COROUTINE_NOOP_COROUTINE_HANDLE_H

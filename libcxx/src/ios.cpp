@@ -116,7 +116,7 @@ locale ios_base::getloc() const {
 }
 
 // xalloc
-#if defined(_LIBCPP_HAS_C_ATOMIC_IMP) && !defined(_LIBCPP_HAS_NO_THREADS)
+#if _LIBCPP_HAS_C_ATOMIC_IMP && _LIBCPP_HAS_THREADS
 atomic<int> ios_base::__xindex_{0};
 #else
 int ios_base::__xindex_ = 0;

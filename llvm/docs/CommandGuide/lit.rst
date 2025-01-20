@@ -191,6 +191,10 @@ EXECUTION OPTIONS
 
  Write XUnit-compatible XML test reports to the specified file.
 
+.. option:: --report-failures-only
+
+ Only include unresolved, timed out, failed and unexpectedly passed tests in the report.
+
 .. option:: --resultdb-output RESULTDB_OUTPUT
 
  Write LuCI ResultDB compatible JSON to the specified file.

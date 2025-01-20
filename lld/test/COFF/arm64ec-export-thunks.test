@@ -70,7 +70,7 @@ EXP-CHPE-NEXT:  ]
 RUN: llvm-readobj --sections exports.dll | FileCheck --check-prefix=A64XRM %s
 
 A64XRM:      Name: .a64xrm (2E 61 36 34 78 72 6D 00)
-A64XRM-NEXT: VirtualSize: 0x10
+A64XRM-NEXT: VirtualSize: 0x18
 A64XRM-NEXT: VirtualAddress: 0x6000
 A64XRM-NEXT: RawDataSize: 512
 A64XRM-NEXT: PointerToRawData:
@@ -82,6 +82,11 @@ A64XRM-NEXT: Characteristics [ (0x40000040)
 A64XRM-NEXT:   IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
 A64XRM-NEXT:   IMAGE_SCN_MEM_READ (0x40000000)
 A64XRM-NEXT: ]
+
+RUN: llvm-readobj --hex-dump=.a64xrm exports.dll | FileCheck --check-prefix=A64XRM-DUMP %s
+
+A64XRM-DUMP:      0x180006000 00300000 00100000 10300000 00100000
+A64XRM-DUMP-NEXT: 0x180006010 00000000 00000000
 
 RUN: llvm-objdump -s --section=.test exports.dll | FileCheck --check-prefix=EXP-DATA %s
 EXP-DATA: 180007000 00300000 10300000
@@ -138,13 +143,13 @@ RUN: lld-link -out:data-func.dll -machine:arm64ec arm64ec-data-sym.obj loadconfi
 
 RUN: llvm-readobj --hex-dump=.test data-func.dll | FileCheck --check-prefix=DATAFUNC-TEST %s
 DATAFUNC-TEST:      Hex dump of section '.test':
-DATAFUNC-TEST-NEXT: 0x180003000 00000000                            ....
+DATAFUNC-TEST-NEXT: 0x180004000 00000000                            ....
 
 RUN: llvm-readobj --coff-exports --hex-dump=.test data-func.dll | FileCheck --check-prefix=DATAFUNC-EXP %s
 DATAFUNC-EXP:      Export {
 DATAFUNC-EXP-NEXT:   Ordinal: 1
 DATAFUNC-EXP-NEXT:   Name: data_sym
-DATAFUNC-EXP-NEXT:   RVA: 0x3000
+DATAFUNC-EXP-NEXT:   RVA: 0x4000
 DATAFUNC-EXP-NEXT: }
 
 

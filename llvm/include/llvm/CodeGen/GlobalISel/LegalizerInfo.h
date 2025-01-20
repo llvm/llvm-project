@@ -273,6 +273,11 @@ inline LegalityPredicate typeIsNot(unsigned TypeIdx, LLT Type) {
 LegalityPredicate
 typePairInSet(unsigned TypeIdx0, unsigned TypeIdx1,
               std::initializer_list<std::pair<LLT, LLT>> TypesInit);
+/// True iff the given types for the given tuple of type indexes is one of the
+/// specified type tuple.
+LegalityPredicate
+typeTupleInSet(unsigned TypeIdx0, unsigned TypeIdx1, unsigned Type2,
+               std::initializer_list<std::tuple<LLT, LLT, LLT>> TypesInit);
 /// True iff the given types for the given pair of type indexes is one of the
 /// specified type pairs.
 LegalityPredicate typePairAndMemDescInSet(
@@ -287,6 +292,9 @@ LegalityPredicate isPointer(unsigned TypeIdx);
 /// True iff the specified type index is a pointer with the specified address
 /// space.
 LegalityPredicate isPointer(unsigned TypeIdx, unsigned AddrSpace);
+/// True iff the specified type index is a vector of pointers (with any address
+/// space).
+LegalityPredicate isPointerVector(unsigned TypeIdx);
 
 /// True if the type index is a vector with element type \p EltTy
 LegalityPredicate elementTypeIs(unsigned TypeIdx, LLT EltTy);
@@ -504,6 +512,15 @@ class LegalizeRuleSet {
     using namespace LegalityPredicates;
     return actionIf(Action, typePairInSet(typeIdx(0), typeIdx(1), Types));
   }
+
+  LegalizeRuleSet &
+  actionFor(LegalizeAction Action,
+            std::initializer_list<std::tuple<LLT, LLT, LLT>> Types) {
+    using namespace LegalityPredicates;
+    return actionIf(Action,
+                    typeTupleInSet(typeIdx(0), typeIdx(1), typeIdx(2), Types));
+  }
+
   /// Use the given action when type indexes 0 and 1 is any type pair in the
   /// given list.
   /// Action should be an action that requires mutation.
@@ -611,6 +628,12 @@ public:
   }
   LegalizeRuleSet &legalFor(bool Pred,
                             std::initializer_list<std::pair<LLT, LLT>> Types) {
+    if (!Pred)
+      return *this;
+    return actionFor(LegalizeAction::Legal, Types);
+  }
+  LegalizeRuleSet &
+  legalFor(bool Pred, std::initializer_list<std::tuple<LLT, LLT, LLT>> Types) {
     if (!Pred)
       return *this;
     return actionFor(LegalizeAction::Legal, Types);
@@ -753,6 +776,11 @@ public:
     return actionIf(LegalizeAction::Libcall, Predicate);
   }
   LegalizeRuleSet &libcallFor(std::initializer_list<LLT> Types) {
+    return actionFor(LegalizeAction::Libcall, Types);
+  }
+  LegalizeRuleSet &libcallFor(bool Pred, std::initializer_list<LLT> Types) {
+    if (!Pred)
+      return *this;
     return actionFor(LegalizeAction::Libcall, Types);
   }
   LegalizeRuleSet &
@@ -1082,6 +1110,13 @@ public:
     return minScalar(TypeIdx, MinTy).maxScalar(TypeIdx, MaxTy);
   }
 
+  LegalizeRuleSet &clampScalar(bool Pred, unsigned TypeIdx, const LLT MinTy,
+                               const LLT MaxTy) {
+    if (!Pred)
+      return *this;
+    return clampScalar(TypeIdx, MinTy, MaxTy);
+  }
+
   /// Limit the range of scalar sizes to MinTy and MaxTy.
   LegalizeRuleSet &clampScalarOrElt(unsigned TypeIdx, const LLT MinTy,
                                     const LLT MaxTy) {
@@ -1091,7 +1126,8 @@ public:
   /// Widen the scalar to match the size of another.
   LegalizeRuleSet &minScalarSameAs(unsigned TypeIdx, unsigned LargeTypeIdx) {
     typeIdx(TypeIdx);
-    return widenScalarIf(
+    return actionIf(
+        LegalizeAction::WidenScalar,
         [=](const LegalityQuery &Query) {
           return Query.Types[LargeTypeIdx].getScalarSizeInBits() >
                  Query.Types[TypeIdx].getSizeInBits();
@@ -1102,7 +1138,8 @@ public:
   /// Narrow the scalar to match the size of another.
   LegalizeRuleSet &maxScalarSameAs(unsigned TypeIdx, unsigned NarrowTypeIdx) {
     typeIdx(TypeIdx);
-    return narrowScalarIf(
+    return actionIf(
+        LegalizeAction::NarrowScalar,
         [=](const LegalityQuery &Query) {
           return Query.Types[NarrowTypeIdx].getScalarSizeInBits() <
                  Query.Types[TypeIdx].getSizeInBits();

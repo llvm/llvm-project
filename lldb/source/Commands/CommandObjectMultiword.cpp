@@ -32,7 +32,7 @@ CommandObjectMultiword::GetSubcommandSPExact(llvm::StringRef sub_cmd) {
   if (m_subcommand_dict.empty())
     return {};
 
-  auto pos = m_subcommand_dict.find(std::string(sub_cmd));
+  auto pos = m_subcommand_dict.find(sub_cmd);
   if (pos == m_subcommand_dict.end())
     return {};
 
@@ -64,7 +64,7 @@ CommandObjectSP CommandObjectMultiword::GetSubcommandSP(llvm::StringRef sub_cmd,
     // function, since I now know I have an exact match...
 
     sub_cmd = matches->GetStringAtIndex(0);
-    pos = m_subcommand_dict.find(std::string(sub_cmd));
+    pos = m_subcommand_dict.find(sub_cmd);
     if (pos != m_subcommand_dict.end())
       return_cmd_sp = pos->second;
   }

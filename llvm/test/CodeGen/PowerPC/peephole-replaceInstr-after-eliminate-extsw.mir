@@ -458,6 +458,7 @@ constants:       []
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
+    liveins: $x2, $x3, $x4
     successors: %bb.2(0x80000000)
   
     %64:g8rc_and_g8rc_nox0 = LDtoc @shortArray, $x2 :: (load (s64) from got)
@@ -472,7 +473,7 @@ body:             |
     %71:g8rc = EXTSW_32_64 killed %68
     $x3 = COPY %70
     $x4 = COPY %71
-    BL8_NOP <mcsymbol .printf>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x2, implicit-def $r1, implicit-def $x3
+    BL8_NOP <mcsymbol .printf>, csr_ppc64_r2, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit-def $r1, implicit-def $x3
     ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
     %73:g8rc_and_g8rc_nox0 = LDtoc @globalShortValue, $x2 :: (load (s64) from got)
     %0:gprc = LHZ 0, killed %73 :: (dereferenceable load (s16) from @globalShortValue, !tbaa !3)
@@ -496,7 +497,8 @@ body:             |
     %6:g8rc_and_g8rc_nox0 = EXTSB8 killed %84
     %7:gprc = LHZ 6, %64 :: (dereferenceable load (s16) from `ptr getelementptr inbounds ([8 x i16], ptr @shortArray, i64 0, i64 3)`, !tbaa !3)
     %86:gprc_and_gprc_nor0 = LHA 4, %64 :: (dereferenceable load (s16) from `ptr getelementptr inbounds ([8 x i16], ptr @shortArray, i64 0, i64 2)`)
-    ; CHECK:  [[VIRREG1:%[0-9]+]]:gprc_and_gprc_nor0 = LHA 6, %64 :: (dereferenceable load (s16) from `ptr getelementptr inbounds ([8 x i16], ptr @shortArray, i64 0, i64 3)`, !tbaa !3) 
+    ; CHECK:       [[VIRREG162:%[0-9]+]]:g8rc = LHA8 6, %64
+    ; CHECK-NEXT:  [[VIRREG150:%[0-9]+]]:gprc_and_gprc_nor0 = COPY killed [[VIRREG162]].sub_32
     %87:crrc = CMPW %80, %86
     %88:gprc = ISEL %80, %86, %87.sub_lt
     %89:crrc = CMPLWI killed %88, 0
@@ -540,17 +542,24 @@ body:             |
     %126:crrc = CMPLD %11, %12
     B %bb.2
   
-  bb.1.for.cond.cleanup15:
+  bb.1.for.cond.cleanup15 (landing-pad):
+    liveins: $x2
     %150:gprc_and_gprc_nor0 = EXTSH %7
     %151:gprc_and_gprc_nor0 = EXTSH %0
 
-    ; CHECK:      [[VIRREG2:%[0-9]+]]:gprc_and_gprc_nor0 = EXTSH killed %0 
+    ; CHECK:      [[VIRREG159:%[0-9]+]]:g8rc = IMPLICIT_DEF
+    ; CHECK-NEXT: [[VIRREG160:%[0-9]+]]:g8rc = INSERT_SUBREG [[VIRREG159]], %0, %subreg.sub_32
+    ; CHECK-NEXT: [[VIRREG161:%[0-9]+]]:g8rc = EXTSH8 killed [[VIRREG160]]
+    ; CHECK-NEXT: %151:gprc_and_gprc_nor0 = COPY killed [[VIRREG161]].sub_32
+
     %152:crrc = CMPW %151, %150
     %153:gprc = ISEL %151, %150, %152.sub_lt
     %154:g8rc = EXTSW_32_64 killed %153
-    ; CHECK-NEXT: [[VIRREG3:%[0-9]+]]:crrc = CMPW [[VIRREG2]], [[VIRREG1]]
-    ; CHECK-NEXT: %153:gprc = ISEL killed [[VIRREG2]], killed [[VIRREG1]], killed [[VIRREG3]].sub_lt
-    ; CHECK-NOT: EXTSW_32_64
+    ; CHECK:      [[VIRREG165:%[0-9]+]]:g8rc = IMPLICIT_DEF
+    ; CHECK-NEXT: [[VIRREG166:%[0-9]+]]:g8rc = INSERT_SUBREG [[VIRREG165]], [[VIRREG150]], %subreg.sub_32
+    ; CHECK-NEXT: [[VIRREG167:%[0-9]+]]:g8rc = ISEL8 killed %164, killed [[VIRREG166]], %152.sub_lt
+    ; CHECK-NEXT: %{{[0-9]+}}:gprc = COPY killed [[VIRREG167]].sub_32
+    ; CHECK-NOT:  EXTSW_32_64
     %155:g8rc_and_g8rc_nox0 = LDtoc @computedResultUll, $x2 :: (load (s64) from got)
     STD %154, 0, killed %155 :: (store (s64) into @computedResultUll, !tbaa !7)
     ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
@@ -646,9 +655,10 @@ body:             |
     MTCTR8loop killed %139, implicit-def dead $ctr8
     B %bb.10
   
-  bb.8.for.cond21.for.cond.cleanup25_crit_edge:
+  bb.8.for.cond21.for.cond.cleanup25_crit_edge (landing-pad):
     successors: %bb.9(0x80000000)
-  
+    liveins: $x2
+
     %46:gprc = PHI %37, %bb.6, %60, %bb.10
     %47:gprc = PHI %38, %bb.6, %61, %bb.10
     %48:gprc = PHI %39, %bb.6, %62, %bb.10

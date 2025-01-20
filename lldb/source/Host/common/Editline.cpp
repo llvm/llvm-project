@@ -10,9 +10,8 @@
 #include <iomanip>
 #include <optional>
 
-#include "lldb/Host/Editline.h"
-
 #include "lldb/Host/ConnectionFileDescriptor.h"
+#include "lldb/Host/Editline.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/CompletionRequest.h"
@@ -23,6 +22,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/Timeout.h"
+#include "llvm/Support/ConvertUTF.h"
 
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Locale.h"
@@ -444,7 +444,9 @@ StringList Editline::GetInputAsStringList(int line_count) {
     if (line_count == 0)
       break;
 #if LLDB_EDITLINE_USE_WCHAR
-    lines.AppendString(m_utf8conv.to_bytes(line));
+    std::string buffer;
+    llvm::convertWideToUTF8(line, buffer);
+    lines.AppendString(buffer);
 #else
     lines.AppendString(line);
 #endif
@@ -636,7 +638,9 @@ unsigned char Editline::BreakLineCommand(int ch) {
     if (m_fix_indentation_callback) {
       StringList lines = GetInputAsStringList(m_current_line_index + 1);
 #if LLDB_EDITLINE_USE_WCHAR
-      lines.AppendString(m_utf8conv.to_bytes(new_line_fragment));
+      std::string buffer;
+      llvm::convertWideToUTF8(new_line_fragment, buffer);
+      lines.AppendString(buffer);
 #else
       lines.AppendString(new_line_fragment);
 #endif
@@ -684,8 +688,9 @@ unsigned char Editline::EndOrAddLineCommand(int ch) {
       m_input_lines.clear();
       for (unsigned index = 0; index < lines.GetSize(); index++) {
 #if LLDB_EDITLINE_USE_WCHAR
-        m_input_lines.insert(m_input_lines.end(),
-                             m_utf8conv.from_bytes(lines[index]));
+        std::wstring wbuffer;
+        llvm::ConvertUTF8toWide(lines[index], wbuffer);
+        m_input_lines.insert(m_input_lines.end(), wbuffer);
 #else
         m_input_lines.insert(m_input_lines.end(), lines[index]);
 #endif
@@ -869,7 +874,9 @@ unsigned char Editline::FixIndentationCommand(int ch) {
     currentLine = currentLine.erase(0, -indent_correction);
   }
 #if LLDB_EDITLINE_USE_WCHAR
-  m_input_lines[m_current_line_index] = m_utf8conv.from_bytes(currentLine);
+  std::wstring wbuffer;
+  llvm::ConvertUTF8toWide(currentLine, wbuffer);
+  m_input_lines[m_current_line_index] = wbuffer;
 #else
   m_input_lines[m_current_line_index] = currentLine;
 #endif
@@ -917,16 +924,105 @@ unsigned char Editline::BufferEndCommand(int ch) {
 
 /// Prints completions and their descriptions to the given file. Only the
 /// completions in the interval [start, end) are printed.
-static void
+static size_t
 PrintCompletion(FILE *output_file,
                 llvm::ArrayRef<CompletionResult::Completion> results,
-                size_t max_len) {
+                size_t max_completion_length, size_t max_length,
+                std::optional<size_t> max_height = std::nullopt) {
+  constexpr size_t ellipsis_length = 3;
+  constexpr size_t padding_length = 8;
+  constexpr size_t separator_length = 4;
+
+  const size_t description_col =
+      std::min(max_completion_length + padding_length, max_length);
+
+  size_t lines_printed = 0;
+  size_t results_printed = 0;
   for (const CompletionResult::Completion &c : results) {
-    fprintf(output_file, "\t%-*s", (int)max_len, c.GetCompletion().c_str());
-    if (!c.GetDescription().empty())
-      fprintf(output_file, " -- %s", c.GetDescription().c_str());
-    fprintf(output_file, "\n");
+    if (max_height && lines_printed >= *max_height)
+      break;
+
+    results_printed++;
+
+    if (c.GetCompletion().empty())
+      continue;
+
+    // Print the leading padding.
+    fprintf(output_file, "        ");
+
+    // Print the completion with trailing padding to the description column if
+    // that fits on the screen. Otherwise print whatever fits on the screen
+    // followed by ellipsis.
+    const size_t completion_length = c.GetCompletion().size();
+    if (padding_length + completion_length < max_length) {
+      fprintf(output_file, "%-*s",
+              static_cast<int>(description_col - padding_length),
+              c.GetCompletion().c_str());
+    } else {
+      // If the completion doesn't fit on the screen, print ellipsis and don't
+      // bother with the description.
+      fprintf(output_file, "%.*s...\n",
+              static_cast<int>(max_length - padding_length - ellipsis_length),
+              c.GetCompletion().c_str());
+      lines_printed++;
+      continue;
+    }
+
+    // If we don't have a description, or we don't have enough space left to
+    // print the separator followed by the ellipsis, we're done.
+    if (c.GetDescription().empty() ||
+        description_col + separator_length + ellipsis_length >= max_length) {
+      fprintf(output_file, "\n");
+      lines_printed++;
+      continue;
+    }
+
+    // Print the separator.
+    fprintf(output_file, " -- ");
+
+    // Descriptions can contain newlines. We want to print them below each
+    // other, aligned after the separator. For example, foo has a
+    // two-line description:
+    //
+    // foo   -- Something that fits on the line.
+    //          More information below.
+    //
+    // However, as soon as a line exceed the available screen width and
+    // print ellipsis, we don't print the next line. For example, foo has a
+    // three-line description:
+    //
+    // foo   -- Something that fits on the line.
+    //          Something much longer  that doesn't fit...
+    //
+    // Because we had to print ellipsis on line two, we don't print the
+    // third line.
+    bool first = true;
+    for (llvm::StringRef line : llvm::split(c.GetDescription(), '\n')) {
+      if (line.empty())
+        break;
+      if (max_height && lines_printed >= *max_height)
+        break;
+      if (!first)
+        fprintf(output_file, "%*s",
+                static_cast<int>(description_col + separator_length), "");
+
+      first = false;
+      const size_t position = description_col + separator_length;
+      const size_t description_length = line.size();
+      if (position + description_length < max_length) {
+        fprintf(output_file, "%.*s\n", static_cast<int>(description_length),
+                line.data());
+        lines_printed++;
+      } else {
+        fprintf(output_file, "%.*s...\n",
+                static_cast<int>(max_length - position - ellipsis_length),
+                line.data());
+        lines_printed++;
+        continue;
+      }
+    }
   }
+  return results_printed;
 }
 
 void Editline::DisplayCompletions(
@@ -935,7 +1031,11 @@ void Editline::DisplayCompletions(
 
   fprintf(editline.m_output_file,
           "\n" ANSI_CLEAR_BELOW "Available completions:\n");
-  const size_t page_size = 40;
+
+  /// Account for the current line, the line showing "Available completions"
+  /// before and the line saying "More" after.
+  const size_t page_size = editline.GetTerminalHeight() - 3;
+
   bool all = false;
 
   auto longest =
@@ -945,20 +1045,12 @@ void Editline::DisplayCompletions(
 
   const size_t max_len = longest->GetCompletion().size();
 
-  if (results.size() < page_size) {
-    PrintCompletion(editline.m_output_file, results, max_len);
-    return;
-  }
-
   size_t cur_pos = 0;
   while (cur_pos < results.size()) {
-    size_t remaining = results.size() - cur_pos;
-    size_t next_size = all ? remaining : std::min(page_size, remaining);
-
-    PrintCompletion(editline.m_output_file, results.slice(cur_pos, next_size),
-                    max_len);
-
-    cur_pos += next_size;
+    cur_pos +=
+        PrintCompletion(editline.m_output_file, results.slice(cur_pos), max_len,
+                        editline.GetTerminalWidth(),
+                        all ? std::nullopt : std::optional<size_t>(page_size));
 
     if (cur_pos >= results.size())
       break;
@@ -1443,6 +1535,13 @@ void Editline::ApplyTerminalSizeChange() {
     m_terminal_width = INT_MAX;
     m_current_line_rows = 1;
   }
+
+  int rows;
+  if (el_get(m_editline, EL_GETTC, "li", &rows, nullptr) == 0) {
+    m_terminal_height = rows;
+  } else {
+    m_terminal_height = INT_MAX;
+  }
 }
 
 const char *Editline::GetPrompt() { return m_set_prompt.c_str(); }
@@ -1502,7 +1601,7 @@ bool Editline::GetLine(std::string &line, bool &interrupted) {
     } else {
       m_history_sp->Enter(input);
 #if LLDB_EDITLINE_USE_WCHAR
-      line = m_utf8conv.to_bytes(SplitLines(input)[0]);
+      llvm::convertWideToUTF8(SplitLines(input)[0], line);
 #else
       line = SplitLines(input)[0];
 #endif
@@ -1574,25 +1673,22 @@ bool Editline::CompleteCharacter(char ch, EditLineGetCharType &out) {
   out = (unsigned char)ch;
   return true;
 #else
-  LLDB_DEPRECATED_WARNING_DISABLE
-  std::codecvt_utf8<wchar_t> cvt;
-  LLDB_DEPRECATED_WARNING_RESTORE
   llvm::SmallString<4> input;
   for (;;) {
-    const char *from_next;
-    wchar_t *to_next;
-    std::mbstate_t state = std::mbstate_t();
     input.push_back(ch);
-    switch (cvt.in(state, input.begin(), input.end(), from_next, &out, &out + 1,
-                   to_next)) {
-    case std::codecvt_base::ok:
+    auto *cur_ptr = reinterpret_cast<const llvm::UTF8 *>(input.begin());
+    auto *end_ptr = reinterpret_cast<const llvm::UTF8 *>(input.end());
+    llvm::UTF32 code_point = 0;
+    llvm::ConversionResult cr = llvm::convertUTF8Sequence(
+        &cur_ptr, end_ptr, &code_point, llvm::lenientConversion);
+    switch (cr) {
+    case llvm::conversionOK:
+      out = code_point;
       return out != (EditLineGetCharType)WEOF;
-
-    case std::codecvt_base::error:
-    case std::codecvt_base::noconv:
+    case llvm::targetExhausted:
+    case llvm::sourceIllegal:
       return false;
-
-    case std::codecvt_base::partial:
+    case llvm::sourceExhausted:
       lldb::ConnectionStatus status;
       size_t read_count = m_input_connection.Read(
           &ch, 1, std::chrono::seconds(0), status, nullptr);

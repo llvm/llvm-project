@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TUPLE_FIND_INDEX_H
-#define _LIBCPP___TUPLE_FIND_INDEX_H
+#ifndef _LIBCPP___CXX03___TUPLE_FIND_INDEX_H
+#define _LIBCPP___CXX03___TUPLE_FIND_INDEX_H
 
-#include <__config>
-#include <__type_traits/is_same.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -59,4 +59,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 14
 
-#endif // _LIBCPP___TUPLE_FIND_INDEX_H
+#endif // _LIBCPP___CXX03___TUPLE_FIND_INDEX_H

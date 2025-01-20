@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_NOTHROW_CONSTRUCTIBLE_H
-#define _LIBCPP___TYPE_TRAITS_IS_NOTHROW_CONSTRUCTIBLE_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_NOTHROW_CONSTRUCTIBLE_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_IS_NOTHROW_CONSTRUCTIBLE_H
 
-#include <__config>
-#include <__type_traits/add_lvalue_reference.h>
-#include <__type_traits/add_rvalue_reference.h>
-#include <__type_traits/integral_constant.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/add_lvalue_reference.h>
+#include <__cxx03/__type_traits/add_rvalue_reference.h>
+#include <__cxx03/__type_traits/integral_constant.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -58,4 +58,4 @@ inline constexpr bool is_nothrow_default_constructible_v = __is_nothrow_construc
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_NOTHROW_CONSTRUCTIBLE_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_NOTHROW_CONSTRUCTIBLE_H

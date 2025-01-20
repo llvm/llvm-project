@@ -8,9 +8,9 @@
 
 #include "MCTargetDesc/PPCMCExpr.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
+#include "PPCInstrInfo.h"
 #include "PPCTargetStreamer.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -97,7 +97,7 @@ namespace {
 struct PPCOperand;
 
 class PPCAsmParser : public MCTargetAsmParser {
-  bool IsPPC64;
+  const bool IsPPC64;
 
   void Warning(SMLoc L, const Twine &Msg) { getParser().Warning(L, Msg); }
 
@@ -142,10 +142,8 @@ class PPCAsmParser : public MCTargetAsmParser {
 public:
   PPCAsmParser(const MCSubtargetInfo &STI, MCAsmParser &,
                const MCInstrInfo &MII, const MCTargetOptions &Options)
-    : MCTargetAsmParser(Options, STI, MII) {
-    // Check for 64-bit vs. 32-bit pointer mode.
-    const Triple &TheTriple = STI.getTargetTriple();
-    IsPPC64 = TheTriple.isPPC64();
+      : MCTargetAsmParser(Options, STI, MII),
+        IsPPC64(STI.getTargetTriple().isPPC64()) {
     // Initialize the set of available features.
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }
@@ -184,6 +182,7 @@ struct PPCOperand : public MCParsedAsmOperand {
 
   struct ImmOp {
     int64_t Val;
+    bool IsMemOpBase;
   };
 
   struct ExprOp {
@@ -243,6 +242,9 @@ public:
 
   /// isPPC64 - True if this operand is for an instruction in 64-bit mode.
   bool isPPC64() const { return IsPPC64; }
+
+  /// isMemOpBase - True if this operand is the base of a memory operand.
+  bool isMemOpBase() const { return Kind == Immediate && Imm.IsMemOpBase; }
 
   int64_t getImm() const {
     assert(Kind == Immediate && "Invalid access!");
@@ -696,9 +698,11 @@ public:
   }
 
   static std::unique_ptr<PPCOperand> CreateImm(int64_t Val, SMLoc S, SMLoc E,
-                                               bool IsPPC64) {
+                                               bool IsPPC64,
+                                               bool IsMemOpBase = false) {
     auto Op = std::make_unique<PPCOperand>(Immediate);
     Op->Imm.Val = Val;
+    Op->Imm.IsMemOpBase = IsMemOpBase;
     Op->StartLoc = S;
     Op->EndLoc = E;
     Op->IsPPC64 = IsPPC64;
@@ -1252,14 +1256,29 @@ void PPCAsmParser::processInstruction(MCInst &Inst,
 static std::string PPCMnemonicSpellCheck(StringRef S, const FeatureBitset &FBS,
                                          unsigned VariantID = 0);
 
+// Check that the register+immediate memory operand is in the right position and
+// is expected by the instruction. Returns true if the memory operand syntax is
+// valid; otherwise, returns false.
+static bool validateMemOp(const OperandVector &Operands, bool isMemriOp) {
+  for (size_t idx = 0; idx < Operands.size(); ++idx) {
+    const PPCOperand &Op = static_cast<const PPCOperand &>(*Operands[idx]);
+    if (Op.isMemOpBase() != (idx == 3 && isMemriOp))
+      return false;
+  }
+  return true;
+}
+
 bool PPCAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                            OperandVector &Operands,
                                            MCStreamer &Out, uint64_t &ErrorInfo,
                                            bool MatchingInlineAsm) {
   MCInst Inst;
+  const PPCInstrInfo *TII = static_cast<const PPCInstrInfo *>(&MII);
 
   switch (MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm)) {
   case Match_Success:
+    if (!validateMemOp(Operands, TII->isMemriOp(Inst.getOpcode())))
+      return Error(IDLoc, "invalid operand for instruction");
     // Post-process instructions (typically extended mnemonics)
     processInstruction(Inst, Operands);
     Inst.setLoc(IDLoc);
@@ -1617,7 +1636,8 @@ bool PPCAsmParser::parseOperand(OperandVector &Operands) {
     E = Parser.getTok().getLoc();
     if (parseToken(AsmToken::RParen, "missing ')'"))
       return true;
-    Operands.push_back(PPCOperand::CreateImm(IntVal, S, E, isPPC64()));
+    Operands.push_back(
+        PPCOperand::CreateImm(IntVal, S, E, isPPC64(), /*IsMemOpBase=*/true));
   }
 
   return false;

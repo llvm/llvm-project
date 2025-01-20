@@ -1067,4 +1067,12 @@ TEST(LlvmLibcUIntClassTest, SignedOtherWordTypeCastTests) {
   ASSERT_TRUE(bigger_back_plus_a + bigger_back_minus_a == zero_96);
 }
 
+TEST(LlvmLibcUIntClassTest, MixedSignednessOtherWordTypeCastTests) {
+  using LL_UInt96 = BigInt<96, false, uint32_t>;
+  LL_UInt96 x = -123;
+  // ensure that -123 gets extended, even though the input type is signed while
+  // the BigInt is unsigned.
+  ASSERT_EQ(int64_t(x), int64_t(-123));
+}
+
 } // namespace LIBC_NAMESPACE_DECL

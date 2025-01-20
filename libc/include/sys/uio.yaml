@@ -1,0 +1,17 @@
+header: sys/uio.h
+header_template: uio.h.def
+macros: []
+types: 
+  - type_name: struct_iovec
+  - type_name: ssize_t
+enums: []
+objects: []
+functions:
+  - name: writev
+    standards:
+      - POSIX
+    return_type: ssize_t
+    arguments:
+      - type: int
+      - type: const struct iovec *
+      - type: int

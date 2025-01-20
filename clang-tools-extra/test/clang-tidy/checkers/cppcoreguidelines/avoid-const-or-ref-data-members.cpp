@@ -285,6 +285,28 @@ struct InheritBothFromNonCopyableAndNonMovable : NonCopyable, NonMovable
   int& x;  // OK, non copyable nor movable
 };
 
+template<class T> struct TemplateInheritFromNonCopyable : NonCopyable
+{
+  int& x;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: member 'x' of type 'int &' is a reference
+};
+
+template<class T> struct TemplateInheritFromNonMovable : NonMovable
+{
+  int& x;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: member 'x' of type 'int &' is a reference
+};
+
+template<class T> struct TemplateInheritFromNonCopyableNonMovable : NonCopyableNonMovable
+{
+  int& x;  // OK, non copyable nor movable
+};
+
+template<class T> struct TemplateInheritBothFromNonCopyableAndNonMovable : NonCopyable, NonMovable
+{
+  int& x;  // OK, non copyable nor movable
+};
+
 // Test composition
 struct ContainsNonCopyable
 {

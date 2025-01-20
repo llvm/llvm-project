@@ -81,6 +81,37 @@ define i8 @foo(i8 %v0, i8 %v1) {
 #endif
 }
 
+TEST_F(RegionTest, CallbackUpdates) {
+  parseIR(C, R"IR(
+define i8 @foo(i8 %v0, i8 %v1, ptr %ptr) {
+  %t0 = add i8 %v0, 1
+  %t1 = add i8 %t0, %v1
+  ret i8 %t0
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *Ptr = F->getArg(2);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *T0 = cast<sandboxir::Instruction>(&*It++);
+  auto *T1 = cast<sandboxir::Instruction>(&*It++);
+  auto *Ret = cast<sandboxir::Instruction>(&*It++);
+  sandboxir::Region Rgn(Ctx);
+  Rgn.add(T0);
+  Rgn.add(T1);
+
+  // Test creation.
+  auto *NewI = sandboxir::StoreInst::create(T0, Ptr, /*Align=*/std::nullopt,
+                                            Ret->getIterator(), Ctx);
+  EXPECT_THAT(Rgn.insts(), testing::ElementsAre(T0, T1, NewI));
+
+  // Test deletion.
+  T1->eraseFromParent();
+  EXPECT_THAT(Rgn.insts(), testing::ElementsAre(T0, NewI));
+}
+
 TEST_F(RegionTest, MetadataFromIR) {
   parseIR(C, R"IR(
 define i8 @foo(i8 %v0, i8 %v1) {

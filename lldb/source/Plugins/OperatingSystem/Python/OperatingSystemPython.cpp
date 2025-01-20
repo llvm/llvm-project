@@ -386,4 +386,12 @@ lldb::ThreadSP OperatingSystemPython::CreateThread(lldb::tid_t tid,
   return ThreadSP();
 }
 
+bool OperatingSystemPython::DoesPluginReportAllThreads() {
+  // If the python plugin has a "DoesPluginReportAllThreads" method, use it.
+  if (std::optional<bool> plugin_answer =
+          m_operating_system_interface_sp->DoesPluginReportAllThreads())
+    return *plugin_answer;
+  return m_process->GetOSPluginReportsAllThreads();
+}
+
 #endif // #if LLDB_ENABLE_PYTHON

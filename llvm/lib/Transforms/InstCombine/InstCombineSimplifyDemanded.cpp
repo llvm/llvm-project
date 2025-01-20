@@ -30,6 +30,12 @@ static cl::opt<bool>
                              "SimplifyDemandedBits() are consistent"),
                     cl::Hidden, cl::init(false));
 
+static cl::opt<unsigned> SimplifyDemandedVectorEltsDepthLimit(
+    "instcombine-simplify-vector-elts-depth",
+    cl::desc(
+        "Depth limit when simplifying vector instructions and their operands"),
+    cl::Hidden, cl::init(10));
+
 /// Check to see if the specified operand of the specified instruction is a
 /// constant integer. If so, check to see if there are any bits set in the
 /// constant that are not demanded. If so, shrink the constant and return true.
@@ -770,6 +776,15 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
             return InsertNewInstWith(Shl, I->getIterator());
           }
         }
+
+        const APInt *Factor;
+        if (match(I->getOperand(0),
+                  m_OneUse(m_Mul(m_Value(X), m_APInt(Factor)))) &&
+            Factor->countr_zero() >= ShiftAmt) {
+          BinaryOperator *Mul = BinaryOperator::CreateMul(
+              X, ConstantInt::get(X->getType(), Factor->lshr(ShiftAmt)));
+          return InsertNewInstWith(Mul, I->getIterator());
+        }
       }
 
       // Unsigned shift right.
@@ -991,7 +1006,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
             uint64_t MaskedGEPIndex = HighBitsGEPIndex | MaskedLowBitsGEPIndex;
 
             if (MaskedGEPIndex != GEPIndex) {
-              auto *GEP = cast<GetElementPtrInst>(II->getArgOperand(0));
+              auto *GEP = cast<GEPOperator>(II->getArgOperand(0));
               Builder.SetInsertPoint(I);
               Type *GEPIndexType =
                   DL.getIndexType(GEP->getPointerOperand()->getType());
@@ -1432,7 +1447,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
   }
 
   // Limit search depth.
-  if (Depth == 10)
+  if (Depth == SimplifyDemandedVectorEltsDepthLimit)
     return nullptr;
 
   if (!AllowMultipleUsers) {

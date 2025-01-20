@@ -6,24 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_DISCARD_BLOCK_ENGINE_H
-#define _LIBCPP___RANDOM_DISCARD_BLOCK_ENGINE_H
+#ifndef _LIBCPP___CXX03___RANDOM_DISCARD_BLOCK_ENGINE_H
+#define _LIBCPP___CXX03___RANDOM_DISCARD_BLOCK_ENGINE_H
 
-#include <__config>
-#include <__random/is_seed_sequence.h>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_convertible.h>
-#include <__utility/move.h>
-#include <cstddef>
-#include <iosfwd>
-#include <limits>
+#include <__cxx03/__config>
+#include <__cxx03/__random/is_seed_sequence.h>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/is_convertible.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/iosfwd>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -169,4 +169,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_DISCARD_BLOCK_ENGINE_H
+#endif // _LIBCPP___CXX03___RANDOM_DISCARD_BLOCK_ENGINE_H

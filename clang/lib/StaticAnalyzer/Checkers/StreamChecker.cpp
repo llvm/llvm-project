@@ -1977,7 +1977,7 @@ StreamChecker::ensureFseekWhenceCorrect(SVal WhenceVal, CheckerContext &C,
   if (!CI)
     return State;
 
-  int64_t X = CI->getValue().getSExtValue();
+  int64_t X = CI->getValue()->getSExtValue();
   if (X == SeekSetVal || X == SeekCurVal || X == SeekEndVal)
     return State;
 

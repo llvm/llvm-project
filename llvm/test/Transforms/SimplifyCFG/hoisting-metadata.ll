@@ -8,11 +8,7 @@ define i64 @hoist_load_with_matching_pointers_and_tbaa(i1 %c) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    call void @init(ptr [[TMP]])
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[TMP]], align 8
-; CHECK-NOT:       !tbaa
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[TMP]], align 8
-; CHECK-NOT:       !tbaa
-; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], i64 [[TMP0]], i64 [[TMP1]]
+; CHECK-NEXT:    [[P:%.*]] = load i64, ptr [[TMP]], align 8, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    ret i64 [[P]]
 ;
 entry:
@@ -74,11 +70,7 @@ define i64 @hoist_load_with_different_tbaa(i1 %c) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    call void @init(ptr [[TMP]])
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[TMP]], align 8
-; CHECK-NOT:       !tbaa
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[TMP]], align 8
-; CHECK-NOT:       !tbaa
-; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], i64 [[TMP0]], i64 [[TMP1]]
+; CHECK-NEXT:    [[P:%.*]] = load i64, ptr [[TMP]], align 8, !tbaa [[TBAA5:![0-9]+]]
 ; CHECK-NEXT:    ret i64 [[P]]
 ;
 entry:
@@ -135,3 +127,11 @@ exit:
 !3 = !{!"omnipotent char", !4, i64 0}
 !4 = !{!"Simple C++ TBAA"}
 !5 = !{!3, !3, i64 0}
+;.
+; CHECK: [[TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
+; CHECK: [[META1]] = !{!"p2 long long", [[META2:![0-9]+]], i64 0}
+; CHECK: [[META2]] = !{!"any pointer", [[META3:![0-9]+]], i64 0}
+; CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
+; CHECK: [[META4]] = !{!"Simple C++ TBAA"}
+; CHECK: [[TBAA5]] = !{[[META3]], [[META3]], i64 0}
+;.

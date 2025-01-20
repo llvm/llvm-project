@@ -353,6 +353,8 @@ struct MachineVerifier {
                        LaneBitmask LaneMask = LaneBitmask::getNone());
 
   void verifyStackFrame();
+  /// Check that the stack protector is the top-most object in the stack.
+  void verifyStackProtector();
 
   void verifySlotIndexes() const;
   void verifyProperties(const MachineFunction &MF);
@@ -369,7 +371,7 @@ struct MachineVerifierLegacyPass : public MachineFunctionPass {
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addUsedIfAvailable<LiveStacks>();
+    AU.addUsedIfAvailable<LiveStacksWrapperLegacy>();
     AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
     AU.addUsedIfAvailable<SlotIndexesWrapperPass>();
     AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
@@ -491,7 +493,8 @@ bool MachineVerifier::verify(const MachineFunction &MF) {
     auto *LVWrapper = PASS->getAnalysisIfAvailable<LiveVariablesWrapperPass>();
     if (!LiveInts)
       LiveVars = LVWrapper ? &LVWrapper->getLV() : nullptr;
-    LiveStks = PASS->getAnalysisIfAvailable<LiveStacks>();
+    auto *LSWrapper = PASS->getAnalysisIfAvailable<LiveStacksWrapperLegacy>();
+    LiveStks = LSWrapper ? &LSWrapper->getLS() : nullptr;
     auto *SIWrapper = PASS->getAnalysisIfAvailable<SlotIndexesWrapperPass>();
     Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
   }
@@ -708,8 +711,10 @@ void MachineVerifier::visitMachineFunctionBefore() {
   // Check that the register use lists are sane.
   MRI->verifyUseLists();
 
-  if (!MF->empty())
+  if (!MF->empty()) {
     verifyStackFrame();
+    verifyStackProtector();
+  }
 }
 
 void
@@ -1487,7 +1492,9 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     LLT SrcTy = MRI->getType(MI->getOperand(NumDsts).getReg());
     if (DstTy.isVector()) {
       // This case is the converse of G_CONCAT_VECTORS.
-      if (!SrcTy.isVector() || SrcTy.getScalarType() != DstTy.getScalarType() ||
+      if (!SrcTy.isVector() ||
+          (SrcTy.getScalarType() != DstTy.getScalarType() &&
+           !SrcTy.isPointerVector()) ||
           SrcTy.isScalableVector() != DstTy.isScalableVector() ||
           SrcTy.getSizeInBits() != NumDsts * DstTy.getSizeInBits())
         report("G_UNMERGE_VALUES source operand does not match vector "
@@ -1587,9 +1594,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   case TargetOpcode::G_UCMP: {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
-    LLT SrcTy2 = MRI->getType(MI->getOperand(2).getReg());
 
-    if (SrcTy.isPointerOrPointerVector() || SrcTy2.isPointerOrPointerVector()) {
+    if (SrcTy.isPointerOrPointerVector()) {
       report("Generic scmp/ucmp does not support pointers as operands", MI);
       break;
     }
@@ -1599,15 +1605,15 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
+    if (DstTy.getScalarSizeInBits() < 2) {
+      report("Result type must be at least 2 bits wide", MI);
+      break;
+    }
+
     if ((DstTy.isVector() != SrcTy.isVector()) ||
         (DstTy.isVector() &&
          DstTy.getElementCount() != SrcTy.getElementCount())) {
       report("Generic vector scmp/ucmp must preserve number of lanes", MI);
-      break;
-    }
-
-    if (SrcTy != SrcTy2) {
-      report("Generic scmp/ucmp must have same input types", MI);
       break;
     }
 
@@ -1725,6 +1731,36 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
     if (MI->getOperand(1).getCImm()->isZero()) {
       report("G_VSCALE immediate cannot be zero", MI);
+      break;
+    }
+    break;
+  }
+  case TargetOpcode::G_STEP_VECTOR: {
+    if (!MI->getOperand(1).isCImm()) {
+      report("operand must be cimm", MI);
+      break;
+    }
+
+    if (!MI->getOperand(1).getCImm()->getValue().isStrictlyPositive()) {
+      report("step must be > 0", MI);
+      break;
+    }
+
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    if (!DstTy.isScalableVector()) {
+      report("Destination type must be a scalable vector", MI);
+      break;
+    }
+
+    // <vscale x 2 x p0>
+    if (!DstTy.getElementType().isScalar()) {
+      report("Destination element type must be scalar", MI);
+      break;
+    }
+
+    if (MI->getOperand(1).getCImm()->getBitWidth() !=
+        DstTy.getElementType().getScalarSizeInBits()) {
+      report("step bitwidth differs from result type element bitwidth", MI);
       break;
     }
     break;
@@ -3001,7 +3037,11 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
             if (!MOP.getReg().isPhysical())
               continue;
 
-            if (llvm::is_contained(TRI->subregs(MOP.getReg()), Reg))
+            if (MOP.getReg() != Reg &&
+                all_of(TRI->regunits(Reg), [&](const MCRegUnit RegUnit) {
+                  return llvm::is_contained(TRI->regunits(MOP.getReg()),
+                                            RegUnit);
+                }))
               Bad = false;
           }
         }
@@ -3999,6 +4039,54 @@ void MachineVerifier::verifyStackFrame() {
         report("A return block ends with a FrameSetup.", MBB);
       if (BBState.ExitValue)
         report("A return block ends with a nonzero stack adjustment.", MBB);
+    }
+  }
+}
+
+void MachineVerifier::verifyStackProtector() {
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
+  if (!MFI.hasStackProtectorIndex())
+    return;
+  // Only applicable when the offsets of frame objects have been determined,
+  // which is indicated by a non-zero stack size.
+  if (!MFI.getStackSize())
+    return;
+  const TargetFrameLowering &TFI = *MF->getSubtarget().getFrameLowering();
+  bool StackGrowsDown =
+      TFI.getStackGrowthDirection() == TargetFrameLowering::StackGrowsDown;
+  unsigned FI = MFI.getStackProtectorIndex();
+  int64_t SPStart = MFI.getObjectOffset(FI);
+  int64_t SPEnd = SPStart + MFI.getObjectSize(FI);
+  for (unsigned I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
+    if (I == FI)
+      continue;
+    if (MFI.isDeadObjectIndex(I))
+      continue;
+    // FIXME: Skip non-default stack objects, as some targets may place them
+    // above the stack protector. This is a workaround for the fact that
+    // backends such as AArch64 may place SVE stack objects *above* the stack
+    // protector.
+    if (MFI.getStackID(I) != TargetStackID::Default)
+      continue;
+    // Skip variable-sized objects because they do not have a fixed offset.
+    if (MFI.isVariableSizedObjectIndex(I))
+      continue;
+    // FIXME: Skip spill slots which may be allocated above the stack protector.
+    // Ideally this would only skip callee-saved registers, but we don't have
+    // that information here. For example, spill-slots used for scavenging are
+    // not described in CalleeSavedInfo.
+    if (MFI.isSpillSlotObjectIndex(I))
+      continue;
+    int64_t ObjStart = MFI.getObjectOffset(I);
+    int64_t ObjEnd = ObjStart + MFI.getObjectSize(I);
+    if (SPStart < ObjEnd && ObjStart < SPEnd) {
+      report("Stack protector overlaps with another stack object", MF);
+      break;
+    }
+    if ((StackGrowsDown && SPStart <= ObjStart) ||
+        (!StackGrowsDown && SPStart >= ObjStart)) {
+      report("Stack protector is not the top-most object on the stack", MF);
+      break;
     }
   }
 }

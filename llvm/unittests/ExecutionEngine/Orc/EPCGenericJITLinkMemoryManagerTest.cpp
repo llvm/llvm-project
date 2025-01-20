@@ -114,10 +114,11 @@ TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {
   SAs.Deallocate = ExecutorAddr::fromPtr(&testDeallocate);
 
   auto MemMgr = std::make_unique<EPCGenericJITLinkMemoryManager>(*SelfEPC, SAs);
-
   StringRef Hello = "hello";
   auto SSA = jitlink::SimpleSegmentAlloc::Create(
-      *MemMgr, nullptr, {{MemProt::Read, {Hello.size(), Align(1)}}});
+      *MemMgr, std::make_shared<orc::SymbolStringPool>(),
+      Triple("x86_64-apple-darwin"), nullptr,
+      {{MemProt::Read, {Hello.size(), Align(1)}}});
   EXPECT_THAT_EXPECTED(SSA, Succeeded());
   auto SegInfo = SSA->getSegInfo(MemProt::Read);
   memcpy(SegInfo.WorkingMem.data(), Hello.data(), Hello.size());

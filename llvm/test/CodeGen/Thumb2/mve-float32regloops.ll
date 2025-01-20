@@ -1375,8 +1375,8 @@ define arm_aapcs_vfpcc void @arm_biquad_cascade_stereo_df2T_f32(ptr nocapture re
 ; CHECK-NEXT:    le lr, .LBB17_3
 ; CHECK-NEXT:  @ %bb.4: @ %bb75
 ; CHECK-NEXT:    @ in Loop: Header=BB17_2 Depth=1
+; CHECK-NEXT:    adds r3, #20
 ; CHECK-NEXT:    subs.w r12, r12, #1
-; CHECK-NEXT:    add.w r3, r3, #20
 ; CHECK-NEXT:    vstrb.8 q3, [r0], #16
 ; CHECK-NEXT:    mov r1, r2
 ; CHECK-NEXT:    bne .LBB17_2
@@ -1514,8 +1514,8 @@ define arm_aapcs_vfpcc void @fms(ptr nocapture readonly %pSrc1, ptr nocapture re
 ; CHECK-NEXT:    le lr, .LBB18_3
 ; CHECK-NEXT:  @ %bb.4: @ %while.end
 ; CHECK-NEXT:    @ in Loop: Header=BB18_2 Depth=1
+; CHECK-NEXT:    adds r2, #4
 ; CHECK-NEXT:    subs.w r12, r12, #1
-; CHECK-NEXT:    add.w r2, r2, #4
 ; CHECK-NEXT:    bne .LBB18_2
 ; CHECK-NEXT:  .LBB18_5: @ %do.end
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
@@ -1918,8 +1918,8 @@ define void @arm_biquad_cascade_df2T_f32(ptr nocapture readonly %S, ptr nocaptur
 ; CHECK-NEXT:    @ in Loop: Header=BB20_3 Depth=1
 ; CHECK-NEXT:    vstr s6, [r6, #4]
 ; CHECK-NEXT:    add.w r12, r12, #20
+; CHECK-NEXT:    adds r6, #8
 ; CHECK-NEXT:    subs r0, #1
-; CHECK-NEXT:    add.w r6, r6, #8
 ; CHECK-NEXT:    mov r1, r2
 ; CHECK-NEXT:    beq .LBB20_8
 ; CHECK-NEXT:  .LBB20_3: @ %do.body

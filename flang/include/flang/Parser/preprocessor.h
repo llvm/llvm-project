@@ -48,7 +48,8 @@ public:
 
   bool set_isDisabled(bool disable);
 
-  TokenSequence Apply(const std::vector<TokenSequence> &args, Prescanner &);
+  TokenSequence Apply(const std::vector<TokenSequence> &args, Prescanner &,
+      bool inIfExpression = false);
 
   void Print(llvm::raw_ostream &out, const char *macroName = "") const;
 
@@ -93,7 +94,8 @@ public:
   // behavior.
   std::optional<TokenSequence> MacroReplacement(const TokenSequence &,
       Prescanner &,
-      std::optional<std::size_t> *partialFunctionLikeMacro = nullptr);
+      std::optional<std::size_t> *partialFunctionLikeMacro = nullptr,
+      bool inIfExpression = false);
 
   // Implements a preprocessor directive.
   void Directive(const TokenSequence &, Prescanner &);
@@ -106,7 +108,8 @@ private:
 
   CharBlock SaveTokenAsName(const CharBlock &);
   TokenSequence ReplaceMacros(const TokenSequence &, Prescanner &,
-      std::optional<std::size_t> *partialFunctionLikeMacro = nullptr);
+      std::optional<std::size_t> *partialFunctionLikeMacro = nullptr,
+      bool inIfExpression = false);
   void SkipDisabledConditionalCode(
       const std::string &, IsElseActive, Prescanner &, ProvenanceRange);
   bool IsIfPredicateTrue(const TokenSequence &expr, std::size_t first,

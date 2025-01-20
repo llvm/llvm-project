@@ -12,7 +12,6 @@
 
 #include "llvm/Transforms/Scalar/JumpThreading.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -69,7 +68,6 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -593,7 +591,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
       // 'getPredicateOnEdge' method. This would be able to handle value
       // inequalities better, for example if the compare is "X < 4" and "X < 3"
       // is known true but "X < 4" itself is not available.
-      CmpInst::Predicate Pred;
+      CmpPredicate Pred;
       Value *Val;
       Constant *Cst;
       if (!PredCst && match(V, m_Cmp(Pred, m_Value(Val), m_Constant(Cst))))
@@ -2111,8 +2109,6 @@ void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
     for (DbgVariableRecord &DVR : filterDbgVars(DVRRange))
       RetargetDbgVariableRecordIfPossible(&DVR);
   }
-
-  return;
 }
 
 /// Attempt to thread through two successive basic blocks.
@@ -2748,7 +2744,7 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
 // Pred is a predecessor of BB with an unconditional branch to BB. SI is
 // a Select instruction in Pred. BB has other predecessors and SI is used in
 // a PHI node in BB. SI has no other use.
-// A new basic block, NewBB, is created and SI is converted to compare and 
+// A new basic block, NewBB, is created and SI is converted to compare and
 // conditional branch. SI is erased from parent.
 void JumpThreadingPass::unfoldSelectInstr(BasicBlock *Pred, BasicBlock *BB,
                                           SelectInst *SI, PHINode *SIUse,

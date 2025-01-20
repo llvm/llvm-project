@@ -100,7 +100,7 @@ define void @broken_phi() {
 ; GFX9-NEXT:  bb:
 ; GFX9-NEXT:    br label [[BB1:%.*]]
 ; GFX9:       bb1:
-; GFX9-NEXT:    [[I:%.*]] = phi <4 x i8> [ <i8 1, i8 1, i8 1, i8 1>, [[BB:%.*]] ], [ [[I8:%.*]], [[BB7:%.*]] ]
+; GFX9-NEXT:    [[I:%.*]] = phi <4 x i8> [ splat (i8 1), [[BB:%.*]] ], [ [[I8:%.*]], [[BB7:%.*]] ]
 ; GFX9-NEXT:    br i1 false, label [[BB3:%.*]], label [[BB2:%.*]]
 ; GFX9:       bb2:
 ; GFX9-NEXT:    br label [[BB3]]
@@ -118,7 +118,7 @@ define void @broken_phi() {
 ; GFX12-NEXT:  bb:
 ; GFX12-NEXT:    br label [[BB1:%.*]]
 ; GFX12:       bb1:
-; GFX12-NEXT:    [[I:%.*]] = phi <4 x i8> [ <i8 1, i8 1, i8 1, i8 1>, [[BB:%.*]] ], [ [[I8:%.*]], [[BB7:%.*]] ]
+; GFX12-NEXT:    [[I:%.*]] = phi <4 x i8> [ splat (i8 1), [[BB:%.*]] ], [ [[I8:%.*]], [[BB7:%.*]] ]
 ; GFX12-NEXT:    br i1 false, label [[BB3:%.*]], label [[BB2:%.*]]
 ; GFX12:       bb2:
 ; GFX12-NEXT:    br label [[BB3]]

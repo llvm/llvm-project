@@ -19,6 +19,7 @@
 #include "flang/Semantics/semantics.h"
 
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/OwningOpRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
 #include <memory>
@@ -215,8 +216,8 @@ protected:
   CodeGenAction(BackendActionTy act) : action{act} {};
   /// @name MLIR
   /// {
-  std::unique_ptr<mlir::ModuleOp> mlirModule;
   std::unique_ptr<mlir::MLIRContext> mlirCtx;
+  mlir::OwningOpRef<mlir::ModuleOp> mlirModule;
   /// }
 
   /// @name LLVM IR

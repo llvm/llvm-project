@@ -11,17 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsFrameLowering.h"
-#include "MCTargetDesc/MipsBaseInfo.h"
 #include "MipsInstrInfo.h"
-#include "MipsMachineFunction.h"
 #include "MipsTargetMachine.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/Function.h"
 #include "llvm/Target/TargetOptions.h"
 
 using namespace llvm;

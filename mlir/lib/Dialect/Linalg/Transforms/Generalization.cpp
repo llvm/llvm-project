@@ -89,7 +89,7 @@ struct LinalgGeneralizeNamedOpsPass
 void LinalgGeneralizeNamedOpsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   populateLinalgNamedOpsGeneralizationPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
 }
 
 void mlir::linalg::populateLinalgNamedOpsGeneralizationPatterns(

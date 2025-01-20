@@ -11,7 +11,7 @@ define void @cmpsel_i32(ptr noalias nocapture %a, ptr noalias nocapture readonly
 ; CHECK:       vector.body:
 ; CHECK:         [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr {{.*}}, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <vscale x 4 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = select <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 2, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 10, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = select <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i32> splat (i32 2), <vscale x 4 x i32> splat (i32 10)
 ; CHECK:         store <vscale x 4 x i32> [[TMP2]], ptr {{.*}}, align 4
 ;
 entry:
@@ -41,8 +41,8 @@ define void @cmpsel_f32(ptr noalias nocapture %a, ptr noalias nocapture readonly
 ; CHECK-NEXT:  entry:
 ; CHECK:       vector.body:
 ; CHECK:         [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr {{.*}}, align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt <vscale x 4 x float> [[WIDE_LOAD]], shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 3.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP2:%.*]] = select <vscale x 4 x i1> [[TMP1]], <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+01, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 2.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt <vscale x 4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00)
+; CHECK-NEXT:    [[TMP2:%.*]] = select <vscale x 4 x i1> [[TMP1]], <vscale x 4 x float> splat (float 1.000000e+01), <vscale x 4 x float> splat (float 2.000000e+00)
 ; CHECK:         store <vscale x 4 x float> [[TMP2]], ptr {{.*}}, align 4
 
 entry:

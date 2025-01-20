@@ -308,7 +308,6 @@ bool PatternParser::parseInstructionPatternMIFlags(InstructionPattern &IP,
           return false;
 
         FI.addUnsetFlag(R);
-        continue;
       }
 
       continue;

@@ -272,6 +272,11 @@ constexpr const char *regionAccessorTemplate = R"Py(
 
 constexpr const char *valueBuilderTemplate = R"Py(
 def {0}({2}) -> {4}:
+  return {1}({3}){5}
+)Py";
+
+constexpr const char *valueBuilderVariadicTemplate = R"Py(
+def {0}({2}) -> {4}:
   return _get_op_result_or_op_results({1}({3}))
 )Py";
 
@@ -623,7 +628,7 @@ static void populateBuilderArgs(const Operator &op,
       name = formatv("_gen_arg_{0}", i);
     name = sanitizeName(name);
     builderArgs.push_back(name);
-    if (!op.getArg(i).is<NamedAttribute *>())
+    if (!isa<NamedAttribute *>(op.getArg(i)))
       operandNames.push_back(name);
   }
 }
@@ -992,15 +997,29 @@ static void emitValueBuilder(const Operator &op,
         auto lhs = *llvm::split(arg, "=").begin();
         return (lhs + "=" + llvm::convertToSnakeFromCamelCase(lhs)).str();
       });
-  std::string nameWithoutDialect =
-      op.getOperationName().substr(op.getOperationName().find('.') + 1);
-  os << formatv(
-      valueBuilderTemplate, sanitizeName(nameWithoutDialect),
-      op.getCppClassName(), llvm::join(valueBuilderParams, ", "),
-      llvm::join(opBuilderArgs, ", "),
+  std::string nameWithoutDialect = sanitizeName(
+      op.getOperationName().substr(op.getOperationName().find('.') + 1));
+  std::string params = llvm::join(valueBuilderParams, ", ");
+  std::string args = llvm::join(opBuilderArgs, ", ");
+  const char *type =
       (op.getNumResults() > 1
            ? "_Sequence[_ods_ir.Value]"
-           : (op.getNumResults() > 0 ? "_ods_ir.Value" : "_ods_ir.Operation")));
+           : (op.getNumResults() > 0 ? "_ods_ir.Value" : "_ods_ir.Operation"));
+  if (op.getNumVariableLengthResults() > 0) {
+    os << formatv(valueBuilderVariadicTemplate, nameWithoutDialect,
+                  op.getCppClassName(), params, args, type);
+  } else {
+    const char *results;
+    if (op.getNumResults() == 0) {
+      results = "";
+    } else if (op.getNumResults() == 1) {
+      results = ".result";
+    } else {
+      results = ".results";
+    }
+    os << formatv(valueBuilderTemplate, nameWithoutDialect,
+                  op.getCppClassName(), params, args, type, results);
+  }
 }
 
 /// Emits bindings for a specific Op to the given output stream.

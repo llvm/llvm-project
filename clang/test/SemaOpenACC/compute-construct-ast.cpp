@@ -8,7 +8,6 @@
 #define PCH_HELPER
 
 void NormalFunc() {
-  // FIXME: Add a test once we have clauses for this.
   // CHECK-LABEL: NormalFunc
   // CHECK-NEXT: CompoundStmt
   // CHECK-NEXT: OpenACCComputeConstruct {{.*}}parallel
@@ -24,7 +23,6 @@ void NormalFunc() {
 #pragma acc parallel default(present)
     {}
   }
-  // FIXME: Add a test once we have clauses for this.
   // CHECK-NEXT: OpenACCComputeConstruct {{.*}}serial
   // CHECK-NEXT: CompoundStmt
 #pragma acc serial
@@ -36,7 +34,6 @@ void NormalFunc() {
 #pragma acc serial
     {}
   }
-  // FIXME: Add a test once we have clauses for this.
   // CHECK-NEXT: OpenACCComputeConstruct {{.*}}kernels
   // CHECK-NEXT: CompoundStmt
 #pragma acc kernels

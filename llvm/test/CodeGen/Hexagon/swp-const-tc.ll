@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -enable-pipeliner -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 -enable-pipeliner -verify-machineinstrs < %s | FileCheck %s
 
 ; If the trip count is a compile-time constant, then decrement it instead
 ; of computing a new LC0 value.

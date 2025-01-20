@@ -12,13 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ProfileData/PGOCtxProfReader.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/PGOCtxProfWriter.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/YAMLTraits.h"
+#include <iterator>
+#include <utility>
 
 using namespace llvm;
 
@@ -177,4 +179,87 @@ PGOCtxProfileReader::loadContexts() {
       return wrongValue("Duplicate roots");
   }
   return std::move(Ret);
+}
+
+namespace {
+// We want to pass `const` values PGOCtxProfContext references to the yaml
+// converter, and the regular yaml mapping APIs are designed to handle both
+// serialization and deserialization, which prevents using const for
+// serialization. Using an intermediate datastructure is overkill, both
+// space-wise and design complexity-wise. Instead, we use the lower-level APIs.
+void toYaml(yaml::Output &Out, const PGOCtxProfContext &Ctx);
+
+void toYaml(yaml::Output &Out,
+            const PGOCtxProfContext::CallTargetMapTy &CallTargets) {
+  Out.beginSequence();
+  size_t Index = 0;
+  void *SaveData = nullptr;
+  for (const auto &[_, Ctx] : CallTargets) {
+    Out.preflightElement(Index++, SaveData);
+    toYaml(Out, Ctx);
+    Out.postflightElement(nullptr);
+  }
+  Out.endSequence();
+}
+
+void toYaml(yaml::Output &Out,
+            const PGOCtxProfContext::CallsiteMapTy &Callsites) {
+  auto AllCS = ::llvm::make_first_range(Callsites);
+  auto MaxIt = ::llvm::max_element(AllCS);
+  assert(MaxIt != AllCS.end() && "We should have a max value because the "
+                                 "callsites collection is not empty.");
+  void *SaveData = nullptr;
+  Out.beginSequence();
+  for (auto I = 0U; I <= *MaxIt; ++I) {
+    Out.preflightElement(I, SaveData);
+    auto It = Callsites.find(I);
+    if (It == Callsites.end()) {
+      // This will produce a `[ ]` sequence, which is what we want here.
+      Out.beginFlowSequence();
+      Out.endFlowSequence();
+    } else {
+      toYaml(Out, It->second);
+    }
+    Out.postflightElement(nullptr);
+  }
+  Out.endSequence();
+}
+
+void toYaml(yaml::Output &Out, const PGOCtxProfContext &Ctx) {
+  yaml::EmptyContext Empty;
+  Out.beginMapping();
+  void *SaveInfo = nullptr;
+  bool UseDefault = false;
+  {
+    Out.preflightKey("Guid", /*Required=*/true, /*SameAsDefault=*/false,
+                     UseDefault, SaveInfo);
+    auto Guid = Ctx.guid();
+    yaml::yamlize(Out, Guid, true, Empty);
+    Out.postflightKey(nullptr);
+  }
+  {
+    Out.preflightKey("Counters", true, false, UseDefault, SaveInfo);
+    Out.beginFlowSequence();
+    for (size_t I = 0U, E = Ctx.counters().size(); I < E; ++I) {
+      Out.preflightFlowElement(I, SaveInfo);
+      uint64_t V = Ctx.counters()[I];
+      yaml::yamlize(Out, V, true, Empty);
+      Out.postflightFlowElement(SaveInfo);
+    }
+    Out.endFlowSequence();
+    Out.postflightKey(nullptr);
+  }
+  if (!Ctx.callsites().empty()) {
+    Out.preflightKey("Callsites", true, false, UseDefault, SaveInfo);
+    toYaml(Out, Ctx.callsites());
+    Out.postflightKey(nullptr);
+  }
+  Out.endMapping();
+}
+} // namespace
+
+void llvm::convertCtxProfToYaml(
+    raw_ostream &OS, const PGOCtxProfContext::CallTargetMapTy &Profiles) {
+  yaml::Output Out(OS);
+  toYaml(Out, Profiles);
 }

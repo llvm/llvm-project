@@ -131,11 +131,11 @@ public:
     else if constexpr (cpp::is_complex_type_same<T, _Complex long double>())
       return matchComplex<long double>();
 #ifdef LIBC_TYPES_HAS_CFLOAT16
-    else if constexpr (cpp::is_complex_type_same<T, cfloat16>)
+    else if constexpr (cpp::is_complex_type_same<T, cfloat16>())
       return matchComplex<float16>();
 #endif
 #ifdef LIBC_TYPES_HAS_CFLOAT128
-    else if constexpr (cpp::is_complex_type_same<T, cfloat128>)
+    else if constexpr (cpp::is_complex_type_same<T, cfloat128>())
       return matchComplex<float128>();
 #endif
   }
@@ -148,11 +148,11 @@ public:
     else if constexpr (cpp::is_complex_type_same<T, _Complex long double>())
       return explainErrorComplex<long double>();
 #ifdef LIBC_TYPES_HAS_CFLOAT16
-    else if constexpr (cpp::is_complex_type_same<T, cfloat16>)
+    else if constexpr (cpp::is_complex_type_same<T, cfloat16>())
       return explainErrorComplex<float16>();
 #endif
 #ifdef LIBC_TYPES_HAS_CFLOAT128
-    else if constexpr (cpp::is_complex_type_same<T, cfloat128>)
+    else if constexpr (cpp::is_complex_type_same<T, cfloat128>())
       return explainErrorComplex<float128>();
 #endif
   }
@@ -174,7 +174,8 @@ template <typename T> struct FPTest : public Test {
       LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();
   static constexpr T zero = FPBits::zero(Sign::POS).get_val();
   static constexpr T neg_zero = FPBits::zero(Sign::NEG).get_val();
-  static constexpr T aNaN = FPBits::quiet_nan().get_val();
+  static constexpr T aNaN = FPBits::quiet_nan(Sign::POS).get_val();
+  static constexpr T neg_aNaN = FPBits::quiet_nan(Sign::NEG).get_val();
   static constexpr T sNaN = FPBits::signaling_nan().get_val();
   static constexpr T inf = FPBits::inf(Sign::POS).get_val();
   static constexpr T neg_inf = FPBits::inf(Sign::NEG).get_val();
@@ -297,31 +298,35 @@ private:
 #define EXPECT_FP_EXCEPTION(expected)                                          \
   do {                                                                         \
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT) &           \
-                    ((expected) ? (expected) : FE_ALL_EXCEPT),                 \
-                (expected));                                                   \
+      EXPECT_EQ(                                                               \
+          LIBC_NAMESPACE::fputil::test_except(                                 \
+              static_cast<int>(FE_ALL_EXCEPT)) &                               \
+              ((expected) ? (expected) : static_cast<int>(FE_ALL_EXCEPT)),     \
+          (expected));                                                         \
     }                                                                          \
   } while (0)
 
 #define ASSERT_FP_EXCEPTION(expected)                                          \
   do {                                                                         \
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      ASSERT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT) &           \
-                    ((expected) ? (expected) : FE_ALL_EXCEPT),                 \
-                (expected));                                                   \
+      ASSERT_EQ(                                                               \
+          LIBC_NAMESPACE::fputil::test_except(                                 \
+              static_cast<int>(FE_ALL_EXCEPT)) &                               \
+              ((expected) ? (expected) : static_cast<int>(FE_ALL_EXCEPT)),     \
+          (expected));                                                         \
     }                                                                          \
   } while (0)
 
 #define EXPECT_FP_EQ_WITH_EXCEPTION(expected_val, actual_val, expected_except) \
   do {                                                                         \
-    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    LIBC_NAMESPACE::fputil::clear_except(static_cast<int>(FE_ALL_EXCEPT));     \
     EXPECT_FP_EQ(expected_val, actual_val);                                    \
     EXPECT_FP_EXCEPTION(expected_except);                                      \
   } while (0)
 
 #define EXPECT_FP_IS_NAN_WITH_EXCEPTION(actual_val, expected_except)           \
   do {                                                                         \
-    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    LIBC_NAMESPACE::fputil::clear_except(static_cast<int>(FE_ALL_EXCEPT));     \
     EXPECT_FP_IS_NAN(actual_val);                                              \
     EXPECT_FP_EXCEPTION(expected_except);                                      \
   } while (0)
@@ -374,7 +379,7 @@ private:
     using namespace LIBC_NAMESPACE::fputil::testing;                           \
     ForceRoundingMode __r((rounding_mode));                                    \
     if (__r.success) {                                                         \
-      LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                     \
+      LIBC_NAMESPACE::fputil::clear_except(static_cast<int>(FE_ALL_EXCEPT));   \
       EXPECT_FP_EQ((expected), (actual));                                      \
       EXPECT_FP_EXCEPTION(expected_except);                                    \
     }                                                                          \

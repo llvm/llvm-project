@@ -7,28 +7,28 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_POINTER_TRAITS_H
-#define _LIBCPP___MEMORY_POINTER_TRAITS_H
+#ifndef _LIBCPP___CXX03___MEMORY_POINTER_TRAITS_H
+#define _LIBCPP___CXX03___MEMORY_POINTER_TRAITS_H
 
-#include <__config>
-#include <__memory/addressof.h>
-#include <__type_traits/conditional.h>
-#include <__type_traits/conjunction.h>
-#include <__type_traits/decay.h>
-#include <__type_traits/is_class.h>
-#include <__type_traits/is_function.h>
-#include <__type_traits/is_void.h>
-#include <__type_traits/void_t.h>
-#include <__utility/declval.h>
-#include <__utility/forward.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__type_traits/conditional.h>
+#include <__cxx03/__type_traits/conjunction.h>
+#include <__cxx03/__type_traits/decay.h>
+#include <__cxx03/__type_traits/is_class.h>
+#include <__cxx03/__type_traits/is_function.h>
+#include <__cxx03/__type_traits/is_void.h>
+#include <__cxx03/__type_traits/void_t.h>
+#include <__cxx03/__utility/declval.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -304,4 +304,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MEMORY_POINTER_TRAITS_H
+#endif // _LIBCPP___CXX03___MEMORY_POINTER_TRAITS_H

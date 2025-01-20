@@ -58,7 +58,7 @@ define void @test2(i32 %a, i32 %b, i32 %c, i32 %d, ptr nocapture %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[B:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[C:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[D:%.*]], i64 3
-; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP3]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP3]], splat (i32 1)
 ; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[P:%.*]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    ret void
 ;
@@ -83,7 +83,7 @@ define void @test2_vec(i32 %0, i32 %1, i32 %2, i32 %3, ptr nocapture %4) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[TMP1:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[TMP2:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> [[TMP8]], i32 [[TMP3:%.*]], i64 3
-; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <4 x i32> [[TMP9]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <4 x i32> [[TMP9]], splat (i32 1)
 ; CHECK-NEXT:    store <4 x i32> [[TMP10]], ptr [[TMP4:%.*]], align 16, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    ret void
 ;

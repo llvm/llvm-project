@@ -254,7 +254,7 @@ public:
   /// isAllocated - Return true if the specified register (or an alias) is
   /// allocated.
   bool isAllocated(MCRegister Reg) const {
-    return UsedRegs[Reg / 32] & (1 << (Reg & 31));
+    return UsedRegs[Reg.id() / 32] & (1 << (Reg.id() & 31));
   }
 
   /// AnalyzeFormalArguments - Analyze an array of argument values,

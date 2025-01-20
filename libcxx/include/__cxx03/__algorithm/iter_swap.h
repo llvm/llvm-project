@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_ITER_SWAP_H
-#define _LIBCPP___ALGORITHM_ITER_SWAP_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_ITER_SWAP_H
+#define _LIBCPP___CXX03___ALGORITHM_ITER_SWAP_H
 
-#include <__config>
-#include <__utility/declval.h>
-#include <__utility/swap.h>
+#include <__cxx03/__config>
+#include <__cxx03/__utility/declval.h>
+#include <__cxx03/__utility/swap.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -28,4 +28,4 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void iter_swap(_Forwa
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_ITER_SWAP_H
+#endif // _LIBCPP___CXX03___ALGORITHM_ITER_SWAP_H

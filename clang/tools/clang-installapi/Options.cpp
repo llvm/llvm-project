@@ -31,41 +31,21 @@ namespace drv = clang::driver::options;
 namespace clang {
 namespace installapi {
 
-/// Create prefix string literals used in InstallAPIOpts.td.
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
-  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
-      NAME##_init, std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "InstallAPIOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
 
-static constexpr const llvm::StringLiteral PrefixTable_init[] =
-#define PREFIX_UNION(VALUES) VALUES
+#define OPTTABLE_PREFIXES_TABLE_CODE
 #include "InstallAPIOpts.inc"
-#undef PREFIX_UNION
-    ;
-static constexpr const ArrayRef<StringLiteral>
-    PrefixTable(PrefixTable_init, std::size(PrefixTable_init) - 1);
+#undef OPTTABLE_PREFIXES_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_UNION_CODE
+#include "InstallAPIOpts.inc"
+#undef OPTTABLE_PREFIXES_UNION_CODE
 
 /// Create table mapping all options defined in InstallAPIOpts.td.
 static constexpr OptTable::Info InfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
-               VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,     \
-               VALUES)                                                         \
-  {PREFIX,                                                                     \
-   NAME,                                                                       \
-   HELPTEXT,                                                                   \
-   HELPTEXTSFORVARIANTS,                                                       \
-   METAVAR,                                                                    \
-   OPT_##ID,                                                                   \
-   Option::KIND##Class,                                                        \
-   PARAM,                                                                      \
-   FLAGS,                                                                      \
-   VISIBILITY,                                                                 \
-   OPT_##GROUP,                                                                \
-   OPT_##ALIAS,                                                                \
-   ALIASARGS,                                                                  \
-   VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "InstallAPIOpts.inc"
 #undef OPTION
 };
@@ -75,7 +55,9 @@ namespace {
 /// \brief Create OptTable class for parsing actual command line arguments.
 class DriverOptTable : public opt::PrecomputedOptTable {
 public:
-  DriverOptTable() : PrecomputedOptTable(InfoTable, PrefixTable) {}
+  DriverOptTable()
+      : PrecomputedOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
+                            OptionPrefixesUnion) {}
 };
 
 } // end anonymous namespace.

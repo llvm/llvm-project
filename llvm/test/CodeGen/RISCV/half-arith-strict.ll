@@ -243,28 +243,28 @@ define half @fmsub_h(half %a, half %b, half %c) nounwind strictfp {
 ; CHECK-ZFHMIN:       # %bb.0:
 ; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa2
 ; CHECK-ZFHMIN-NEXT:    fmv.w.x fa4, zero
+; CHECK-ZFHMIN-NEXT:    lui a0, 1048568
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa1
 ; CHECK-ZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fmv.x.h a0, fa5
-; CHECK-ZFHMIN-NEXT:    lui a1, 1048568
-; CHECK-ZFHMIN-NEXT:    xor a0, a0, a1
+; CHECK-ZFHMIN-NEXT:    fmv.x.h a1, fa5
+; CHECK-ZFHMIN-NEXT:    xor a0, a1, a0
 ; CHECK-ZFHMIN-NEXT:    fmv.h.x fa5, a0
 ; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa1
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa0
-; CHECK-ZFHMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; CHECK-ZFHMIN-NEXT:    fmadd.s fa5, fa4, fa3, fa5
 ; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECK-ZFHMIN-NEXT:    ret
 ;
 ; CHECK-ZHINXMIN-LABEL: fmsub_h:
 ; CHECK-ZHINXMIN:       # %bb.0:
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-NEXT:    lui a3, 1048568
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; CHECK-ZHINXMIN-NEXT:    fadd.s a2, a2, zero
 ; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a2, a2
-; CHECK-ZHINXMIN-NEXT:    lui a3, 1048568
 ; CHECK-ZHINXMIN-NEXT:    xor a2, a2, a3
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; CHECK-ZHINXMIN-NEXT:    fmadd.s a0, a0, a1, a2
 ; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
@@ -295,17 +295,17 @@ define half @fnmadd_h(half %a, half %b, half %c) nounwind strictfp {
 ; CHECK-ZFHMIN:       # %bb.0:
 ; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECK-ZFHMIN-NEXT:    fmv.w.x fa4, zero
-; CHECK-ZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
 ; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa2
+; CHECK-ZFHMIN-NEXT:    lui a0, 1048568
+; CHECK-ZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECK-ZFHMIN-NEXT:    fadd.s fa4, fa3, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
 ; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa4, fa4
-; CHECK-ZFHMIN-NEXT:    fmv.x.h a0, fa5
-; CHECK-ZFHMIN-NEXT:    lui a1, 1048568
-; CHECK-ZFHMIN-NEXT:    xor a0, a0, a1
-; CHECK-ZFHMIN-NEXT:    fmv.h.x fa5, a0
-; CHECK-ZFHMIN-NEXT:    fmv.x.h a0, fa4
-; CHECK-ZFHMIN-NEXT:    xor a0, a0, a1
+; CHECK-ZFHMIN-NEXT:    fmv.x.h a1, fa5
+; CHECK-ZFHMIN-NEXT:    fmv.x.h a2, fa4
+; CHECK-ZFHMIN-NEXT:    xor a1, a1, a0
+; CHECK-ZFHMIN-NEXT:    xor a0, a2, a0
+; CHECK-ZFHMIN-NEXT:    fmv.h.x fa5, a1
 ; CHECK-ZFHMIN-NEXT:    fmv.h.x fa4, a0
 ; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa4
 ; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
@@ -317,12 +317,12 @@ define half @fnmadd_h(half %a, half %b, half %c) nounwind strictfp {
 ; CHECK-ZHINXMIN-LABEL: fnmadd_h:
 ; CHECK-ZHINXMIN:       # %bb.0:
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK-ZHINXMIN-NEXT:    fadd.s a0, a0, zero
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECK-ZHINXMIN-NEXT:    fadd.s a2, a2, zero
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a2, a2
 ; CHECK-ZHINXMIN-NEXT:    lui a3, 1048568
+; CHECK-ZHINXMIN-NEXT:    fadd.s a0, a0, zero
+; CHECK-ZHINXMIN-NEXT:    fadd.s a2, a2, zero
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a2, a2
 ; CHECK-ZHINXMIN-NEXT:    xor a0, a0, a3
 ; CHECK-ZHINXMIN-NEXT:    xor a2, a2, a3
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
@@ -359,17 +359,17 @@ define half @fnmadd_h_2(half %a, half %b, half %c) nounwind strictfp {
 ; CHECK-ZFHMIN:       # %bb.0:
 ; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa1
 ; CHECK-ZFHMIN-NEXT:    fmv.w.x fa4, zero
-; CHECK-ZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
 ; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa2
+; CHECK-ZFHMIN-NEXT:    lui a0, 1048568
+; CHECK-ZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECK-ZFHMIN-NEXT:    fadd.s fa4, fa3, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
 ; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa4, fa4
-; CHECK-ZFHMIN-NEXT:    fmv.x.h a0, fa5
-; CHECK-ZFHMIN-NEXT:    lui a1, 1048568
-; CHECK-ZFHMIN-NEXT:    xor a0, a0, a1
-; CHECK-ZFHMIN-NEXT:    fmv.h.x fa5, a0
-; CHECK-ZFHMIN-NEXT:    fmv.x.h a0, fa4
-; CHECK-ZFHMIN-NEXT:    xor a0, a0, a1
+; CHECK-ZFHMIN-NEXT:    fmv.x.h a1, fa5
+; CHECK-ZFHMIN-NEXT:    fmv.x.h a2, fa4
+; CHECK-ZFHMIN-NEXT:    xor a1, a1, a0
+; CHECK-ZFHMIN-NEXT:    xor a0, a2, a0
+; CHECK-ZFHMIN-NEXT:    fmv.h.x fa5, a1
 ; CHECK-ZFHMIN-NEXT:    fmv.h.x fa4, a0
 ; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa4
 ; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
@@ -381,12 +381,12 @@ define half @fnmadd_h_2(half %a, half %b, half %c) nounwind strictfp {
 ; CHECK-ZHINXMIN-LABEL: fnmadd_h_2:
 ; CHECK-ZHINXMIN:       # %bb.0:
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECK-ZHINXMIN-NEXT:    fadd.s a1, a1, zero
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a1, a1
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
-; CHECK-ZHINXMIN-NEXT:    fadd.s a2, a2, zero
-; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a2, a2
 ; CHECK-ZHINXMIN-NEXT:    lui a3, 1048568
+; CHECK-ZHINXMIN-NEXT:    fadd.s a1, a1, zero
+; CHECK-ZHINXMIN-NEXT:    fadd.s a2, a2, zero
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a1, a1
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a2, a2
 ; CHECK-ZHINXMIN-NEXT:    xor a1, a1, a3
 ; CHECK-ZHINXMIN-NEXT:    xor a2, a2, a3
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
@@ -421,28 +421,28 @@ define half @fnmsub_h(half %a, half %b, half %c) nounwind strictfp {
 ; CHECK-ZFHMIN:       # %bb.0:
 ; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECK-ZFHMIN-NEXT:    fmv.w.x fa4, zero
+; CHECK-ZFHMIN-NEXT:    lui a0, 1048568
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa2
 ; CHECK-ZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fmv.x.h a0, fa5
-; CHECK-ZFHMIN-NEXT:    lui a1, 1048568
-; CHECK-ZFHMIN-NEXT:    xor a0, a0, a1
+; CHECK-ZFHMIN-NEXT:    fmv.x.h a1, fa5
+; CHECK-ZFHMIN-NEXT:    xor a0, a1, a0
 ; CHECK-ZFHMIN-NEXT:    fmv.h.x fa5, a0
 ; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa2
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa1
-; CHECK-ZFHMIN-NEXT:    fmadd.s fa5, fa5, fa3, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa1
+; CHECK-ZFHMIN-NEXT:    fmadd.s fa5, fa5, fa4, fa3
 ; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECK-ZFHMIN-NEXT:    ret
 ;
 ; CHECK-ZHINXMIN-LABEL: fnmsub_h:
 ; CHECK-ZHINXMIN:       # %bb.0:
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-NEXT:    lui a3, 1048568
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
 ; CHECK-ZHINXMIN-NEXT:    fadd.s a0, a0, zero
 ; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
-; CHECK-ZHINXMIN-NEXT:    lui a3, 1048568
 ; CHECK-ZHINXMIN-NEXT:    xor a0, a0, a3
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
 ; CHECK-ZHINXMIN-NEXT:    fmadd.s a0, a0, a1, a2
 ; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
@@ -471,28 +471,28 @@ define half @fnmsub_h_2(half %a, half %b, half %c) nounwind strictfp {
 ; CHECK-ZFHMIN:       # %bb.0:
 ; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa1
 ; CHECK-ZFHMIN-NEXT:    fmv.w.x fa4, zero
+; CHECK-ZFHMIN-NEXT:    lui a0, 1048568
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa2
 ; CHECK-ZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fmv.x.h a0, fa5
-; CHECK-ZFHMIN-NEXT:    lui a1, 1048568
-; CHECK-ZFHMIN-NEXT:    xor a0, a0, a1
+; CHECK-ZFHMIN-NEXT:    fmv.x.h a1, fa5
+; CHECK-ZFHMIN-NEXT:    xor a0, a1, a0
 ; CHECK-ZFHMIN-NEXT:    fmv.h.x fa5, a0
 ; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa2
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa0
-; CHECK-ZFHMIN-NEXT:    fmadd.s fa5, fa3, fa5, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; CHECK-ZFHMIN-NEXT:    fmadd.s fa5, fa4, fa5, fa3
 ; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECK-ZFHMIN-NEXT:    ret
 ;
 ; CHECK-ZHINXMIN-LABEL: fnmsub_h_2:
 ; CHECK-ZHINXMIN:       # %bb.0:
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-NEXT:    lui a3, 1048568
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
 ; CHECK-ZHINXMIN-NEXT:    fadd.s a1, a1, zero
 ; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a1, a1
-; CHECK-ZHINXMIN-NEXT:    lui a3, 1048568
 ; CHECK-ZHINXMIN-NEXT:    xor a1, a1, a3
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
-; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
 ; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
 ; CHECK-ZHINXMIN-NEXT:    fmadd.s a0, a0, a1, a2
 ; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0

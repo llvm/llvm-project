@@ -395,6 +395,11 @@ public:
 
   /// Returns the uncountable early exiting block.
   BasicBlock *getUncountableEarlyExitingBlock() const {
+    if (!HasUncountableEarlyExit) {
+      assert(getUncountableExitingBlocks().empty() &&
+             "Expected no uncountable exiting blocks");
+      return nullptr;
+    }
     assert(getUncountableExitingBlocks().size() == 1 &&
            "Expected only a single uncountable exiting block");
     return getUncountableExitingBlocks()[0];
@@ -416,6 +421,10 @@ public:
   /// Returns true if there is at least one function call in the loop which
   /// has a vectorized variant available.
   bool hasVectorCallVariants() const { return VecCallVariantsFound; }
+
+  /// Returns true if there is at least one function call in the loop which
+  /// returns a struct type and needs to be vectorized.
+  bool hasStructVectorCall() const { return StructVecCallFound; }
 
   unsigned getNumStores() const { return LAI->getNumStores(); }
   unsigned getNumLoads() const { return LAI->getNumLoads(); }
@@ -638,6 +647,12 @@ private:
   /// (potentially) make a better decision on the maximum VF and enable
   /// the use of those function variants.
   bool VecCallVariantsFound = false;
+
+  /// If we find a call (to be vectorized) that returns a struct type, record
+  /// that so we can bail out until this is supported.
+  /// TODO: Remove this flag once vectorizing calls with struct returns is
+  /// supported.
+  bool StructVecCallFound = false;
 
   /// Indicates whether this loop has an uncountable early exit, i.e. an
   /// uncountable exiting block that is not the latch.

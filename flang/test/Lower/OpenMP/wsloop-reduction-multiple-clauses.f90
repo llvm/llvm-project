@@ -112,13 +112,12 @@ endprogram
 ! CHECK:             %[[VAL_11:.*]] = fir.embox %[[VAL_4]]#0(%[[VAL_3]]) : (!fir.ref<!fir.array<3x3xf64>>, !fir.shape<2>) -> !fir.box<!fir.array<3x3xf64>>
 ! CHECK:             %[[VAL_12:.*]] = fir.alloca !fir.box<!fir.array<3x3xf64>>
 ! CHECK:             fir.store %[[VAL_11]] to %[[VAL_12]] : !fir.ref<!fir.box<!fir.array<3x3xf64>>>
-! CHECK:             %[[VAL_13:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
-! CHECK:             %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_13]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_15:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_16:.*]] = arith.constant 10 : i32
 ! CHECK:             %[[VAL_17:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop reduction(@add_reduction_f64 %[[VAL_8]]#0 -> %[[VAL_18:.*]], byref @add_reduction_byref_box_3x3xf64 %[[VAL_12]] -> %[[VAL_19:.*]] : !fir.ref<f64>, !fir.ref<!fir.box<!fir.array<3x3xf64>>>) {
+! CHECK:             omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[VAL_13:.*]] : !fir.ref<i32>) reduction(@add_reduction_f64 %[[VAL_8]]#0 -> %[[VAL_18:.*]], byref @add_reduction_byref_box_3x3xf64 %[[VAL_12]] -> %[[VAL_19:.*]] : !fir.ref<f64>, !fir.ref<!fir.box<!fir.array<3x3xf64>>>) {
 ! CHECK:               omp.loop_nest (%[[VAL_20:.*]]) : i32 = (%[[VAL_15]]) to (%[[VAL_16]]) inclusive step (%[[VAL_17]]) {
+! CHECK:                 %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_13]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_18]] {uniq_name = "_QFEscalar"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
 ! CHECK:                 %[[VAL_22:.*]]:2 = hlfir.declare %[[VAL_19]] {uniq_name = "_QFEarray"} : (!fir.ref<!fir.box<!fir.array<3x3xf64>>>) -> (!fir.ref<!fir.box<!fir.array<3x3xf64>>>, !fir.ref<!fir.box<!fir.array<3x3xf64>>>)
 ! CHECK:                 fir.store %[[VAL_20]] to %[[VAL_14]]#1 : !fir.ref<i32>

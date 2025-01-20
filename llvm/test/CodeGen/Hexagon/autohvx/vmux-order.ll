@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Check for the correct order of vmux operands: the vcmp.eq sets predicate
 ; bits for 0s in the mask.

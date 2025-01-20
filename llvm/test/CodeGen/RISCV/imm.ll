@@ -888,8 +888,8 @@ define i64 @imm64_8() nounwind {
 ; RV32I-LABEL: imm64_8:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 633806
-; RV32I-NEXT:    addi a0, a0, -272
 ; RV32I-NEXT:    lui a1, 74565
+; RV32I-NEXT:    addi a0, a0, -272
 ; RV32I-NEXT:    addi a1, a1, 1656
 ; RV32I-NEXT:    ret
 ;
@@ -1190,8 +1190,8 @@ define i64 @imm_right_shifted_lui_1() nounwind {
 ; RV32I-LABEL: imm_right_shifted_lui_1:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 1048575
-; RV32I-NEXT:    addi a0, a0, 1
 ; RV32I-NEXT:    lui a1, 16
+; RV32I-NEXT:    addi a0, a0, 1
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    ret
 ;
@@ -1427,8 +1427,8 @@ define i64 @imm_end_2addi_1() nounwind {
 ; RV32I-LABEL: imm_end_2addi_1:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 1048575
-; RV32I-NEXT:    addi a0, a0, 2047
 ; RV32I-NEXT:    lui a1, 1048512
+; RV32I-NEXT:    addi a0, a0, 2047
 ; RV32I-NEXT:    addi a1, a1, 127
 ; RV32I-NEXT:    ret
 ;
@@ -2446,8 +2446,8 @@ define i64 @imm_neg_8798043653189() {
 ; RV32I-LABEL: imm_neg_8798043653189:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 572348
-; RV32I-NEXT:    addi a0, a0, -1093
 ; RV32I-NEXT:    lui a1, 1048575
+; RV32I-NEXT:    addi a0, a0, -1093
 ; RV32I-NEXT:    addi a1, a1, 2047
 ; RV32I-NEXT:    ret
 ;
@@ -2512,8 +2512,8 @@ define i64 @imm_9223372034904144827() {
 ; RV32I-LABEL: imm_9223372034904144827:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 572348
-; RV32I-NEXT:    addi a0, a0, -1093
 ; RV32I-NEXT:    lui a1, 524288
+; RV32I-NEXT:    addi a0, a0, -1093
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    ret
 ;
@@ -2578,8 +2578,8 @@ define i64 @imm_neg_9223354442718100411() {
 ; RV32I-LABEL: imm_neg_9223354442718100411:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 572348
-; RV32I-NEXT:    addi a0, a0, -1093
 ; RV32I-NEXT:    lui a1, 524287
+; RV32I-NEXT:    addi a0, a0, -1093
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    ret
 ;
@@ -2895,8 +2895,8 @@ define i64 @imm_12900924131259() {
 ; RV32I-LABEL: imm_12900924131259:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 765952
-; RV32I-NEXT:    addi a0, a0, 1979
 ; RV32I-NEXT:    lui a1, 1
+; RV32I-NEXT:    addi a0, a0, 1979
 ; RV32I-NEXT:    addi a1, a1, -1093
 ; RV32I-NEXT:    ret
 ;
@@ -3017,8 +3017,8 @@ define i64 @imm_12900936431479() {
 ; RV32I-LABEL: imm_12900936431479:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 768955
-; RV32I-NEXT:    addi a0, a0, 1911
 ; RV32I-NEXT:    lui a1, 1
+; RV32I-NEXT:    addi a0, a0, 1911
 ; RV32I-NEXT:    addi a1, a1, -1093
 ; RV32I-NEXT:    ret
 ;
@@ -3089,8 +3089,8 @@ define i64 @imm_12900918536874() {
 ; RV32I-LABEL: imm_12900918536874:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 764587
-; RV32I-NEXT:    addi a0, a0, -1366
 ; RV32I-NEXT:    lui a1, 1
+; RV32I-NEXT:    addi a0, a0, -1366
 ; RV32I-NEXT:    addi a1, a1, -1093
 ; RV32I-NEXT:    ret
 ;
@@ -3161,8 +3161,8 @@ define i64 @imm_12900925247761() {
 ; RV32I-LABEL: imm_12900925247761:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 766225
-; RV32I-NEXT:    addi a0, a0, 273
 ; RV32I-NEXT:    lui a1, 1
+; RV32I-NEXT:    addi a0, a0, 273
 ; RV32I-NEXT:    addi a1, a1, -1093
 ; RV32I-NEXT:    ret
 ;
@@ -4165,8 +4165,8 @@ define i64 @imm64_0xFF7FFFFF7FFFFFFE() {
 ; RV32I-LABEL: imm64_0xFF7FFFFF7FFFFFFE:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a0, 524288
-; RV32I-NEXT:    addi a0, a0, -1
 ; RV32I-NEXT:    lui a1, 1046528
+; RV32I-NEXT:    addi a0, a0, -1
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    ret
 ;

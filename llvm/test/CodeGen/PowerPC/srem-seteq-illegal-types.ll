@@ -46,7 +46,7 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; PPC-NEXT:    slwi 4, 3, 28
 ; PPC-NEXT:    srawi 4, 4, 28
 ; PPC-NEXT:    mulli 4, 4, 3
-; PPC-NEXT:    rlwinm 5, 4, 25, 31, 31
+; PPC-NEXT:    srwi 5, 4, 31
 ; PPC-NEXT:    srwi 4, 4, 4
 ; PPC-NEXT:    add 4, 4, 5
 ; PPC-NEXT:    mulli 4, 4, 6
@@ -65,7 +65,7 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; PPC64LE-NEXT:    srawi 4, 4, 28
 ; PPC64LE-NEXT:    slwi 5, 4, 1
 ; PPC64LE-NEXT:    add 4, 4, 5
-; PPC64LE-NEXT:    rlwinm 5, 4, 25, 31, 31
+; PPC64LE-NEXT:    srwi 5, 4, 31
 ; PPC64LE-NEXT:    srwi 4, 4, 4
 ; PPC64LE-NEXT:    add 4, 4, 5
 ; PPC64LE-NEXT:    mulli 4, 4, 6

@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXPERIMENTAL___SIMD_SIMD_MASK_H
-#define _LIBCPP_EXPERIMENTAL___SIMD_SIMD_MASK_H
+#ifndef _LIBCPP___CXX03_EXPERIMENTAL___SIMD_SIMD_MASK_H
+#define _LIBCPP___CXX03_EXPERIMENTAL___SIMD_SIMD_MASK_H
 
-#include <__type_traits/is_same.h>
-#include <cstddef>
-#include <experimental/__config>
-#include <experimental/__simd/declaration.h>
-#include <experimental/__simd/reference.h>
-#include <experimental/__simd/traits.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/experimental/__config>
+#include <__cxx03/experimental/__simd/declaration.h>
+#include <__cxx03/experimental/__simd/reference.h>
+#include <__cxx03/experimental/__simd/traits.h>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
 
@@ -87,4 +87,4 @@ using fixed_size_simd_mask = simd_mask<_Tp, simd_abi::fixed_size<_Np>>;
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL
 
 #endif // _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
-#endif // _LIBCPP_EXPERIMENTAL___SIMD_SIMD_MASK_H
+#endif // _LIBCPP___CXX03_EXPERIMENTAL___SIMD_SIMD_MASK_H

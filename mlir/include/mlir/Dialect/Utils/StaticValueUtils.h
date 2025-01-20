@@ -60,6 +60,25 @@ void dispatchIndexOpFoldResults(ArrayRef<OpFoldResult> ofrs,
                                 SmallVectorImpl<Value> &dynamicVec,
                                 SmallVectorImpl<int64_t> &staticVec);
 
+/// Given OpFoldResult representing dim size value (*), generates a pair of
+/// sizes:
+///   * 1st result, static value, contains an int64_t dim size that can be used
+///   to build ShapedType (ShapedType::kDynamic is used for truly dynamic dims),
+///   * 2nd result, dynamic value, contains OpFoldResult encapsulating the
+///   actual dim size (either original or updated input value).
+/// For input sizes for which it is possible to extract a constant Attribute,
+/// replaces the original size value with an integer attribute (unless it's
+/// already a constant Attribute). The 1st return value also becomes the actual
+/// integer size (as opposed ShapedType::kDynamic).
+///
+/// (*) This hook is usually used when, given input sizes as OpFoldResult,
+/// it's required to generate two vectors:
+///   * sizes as int64_t to generate a shape,
+///   * sizes as OpFoldResult for sizes-like attribute.
+/// Please update this comment if you identify other use cases.
+std::pair<int64_t, OpFoldResult>
+getSimplifiedOfrAndStaticSizePair(OpFoldResult ofr, Builder &b);
+
 /// Extract integer values from the assumed ArrayAttr of IntegerAttr.
 template <typename IntTy>
 SmallVector<IntTy> extractFromIntegerArrayAttr(Attribute attr) {

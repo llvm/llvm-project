@@ -5,9 +5,9 @@ define float @test_fmamix_constant_bus_violation_sss(i32 inreg %val.0, i32 inreg
 ; CHECK-LABEL: test_fmamix_constant_bus_violation_sss:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_lshr_b32 s4, s6, 16
-; CHECK-NEXT:    s_lshr_b32 s5, s7, 16
-; CHECK-NEXT:    s_lshr_b32 s6, s16, 16
+; CHECK-NEXT:    s_lshr_b32 s5, s17, 16
+; CHECK-NEXT:    s_lshr_b32 s6, s18, 16
+; CHECK-NEXT:    s_lshr_b32 s4, s16, 16
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s6
 ; CHECK-NEXT:    v_fma_mix_f32 v0, s4, v0, v1 op_sel_hi:[1,1,1]
@@ -32,8 +32,8 @@ define float @test_fmamix_constant_bus_violation_ssv(i32 inreg %val.0, i32 inreg
 ; CHECK-LABEL: test_fmamix_constant_bus_violation_ssv:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_lshr_b32 s5, s7, 16
-; CHECK-NEXT:    s_lshr_b32 s4, s6, 16
+; CHECK-NEXT:    s_lshr_b32 s5, s17, 16
+; CHECK-NEXT:    s_lshr_b32 s4, s16, 16
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s5
 ; CHECK-NEXT:    v_fma_mix_f32 v0, s4, v1, v0 op_sel:[0,0,1] op_sel_hi:[1,1,1]
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -57,8 +57,8 @@ define float @test_fmamix_constant_bus_violation_svs(i32 inreg %val.0, i32 %val.
 ; CHECK-LABEL: test_fmamix_constant_bus_violation_svs:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_lshr_b32 s5, s7, 16
-; CHECK-NEXT:    s_lshr_b32 s4, s6, 16
+; CHECK-NEXT:    s_lshr_b32 s5, s17, 16
+; CHECK-NEXT:    s_lshr_b32 s4, s16, 16
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s5
 ; CHECK-NEXT:    v_fma_mix_f32 v0, s4, v0, v1 op_sel:[0,1,0] op_sel_hi:[1,1,1]
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -82,8 +82,8 @@ define float @test_fmamix_constant_bus_violation_vss(i32 %val.0, i32 inreg %val.
 ; CHECK-LABEL: test_fmamix_constant_bus_violation_vss:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_lshr_b32 s5, s7, 16
-; CHECK-NEXT:    s_lshr_b32 s4, s6, 16
+; CHECK-NEXT:    s_lshr_b32 s5, s17, 16
+; CHECK-NEXT:    s_lshr_b32 s4, s16, 16
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s5
 ; CHECK-NEXT:    v_fma_mix_f32 v0, v0, s4, v1 op_sel:[1,0,0] op_sel_hi:[1,1,1]
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]

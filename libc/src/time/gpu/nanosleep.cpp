@@ -8,12 +8,11 @@
 
 #include "src/time/nanosleep.h"
 
+#include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "time_utils.h"
+#include "src/__support/time/gpu/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
-constexpr uint64_t TICKS_PER_SEC = 1000000000UL;
 
 LLVM_LIBC_FUNCTION(int, nanosleep,
                    (const struct timespec *req, struct timespec *rem)) {

@@ -14,5 +14,7 @@ unittest("CodeGenDataTests") {
   sources = [
     "OutlinedHashTreeRecordTest.cpp",
     "OutlinedHashTreeTest.cpp",
+    "StableFunctionMapRecordTest.cpp",
+    "StableFunctionMapTest.cpp",
   ]
 }

@@ -2,7 +2,7 @@
 # RUN: llvm-objdump -p %t | FileCheck %s
 
 # CHECK: Program Header:
-# CHECK-NEXT: {{ }}PROPERTY{{ }}
+# CHECK-NEXT: {{^}}PROPERTY{{ }}
 
 --- !ELF
 FileHeader:

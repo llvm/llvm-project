@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LIBCXX_DEBUG_STRICT_WEAK_ORDERING_CHECK
-#define _LIBCPP___LIBCXX_DEBUG_STRICT_WEAK_ORDERING_CHECK
+#ifndef _LIBCPP___CXX03___LIBCXX_DEBUG_STRICT_WEAK_ORDERING_CHECK
+#define _LIBCPP___CXX03___LIBCXX_DEBUG_STRICT_WEAK_ORDERING_CHECK
 
-#include <__config>
+#include <__cxx03/__config>
 
-#include <__algorithm/comp_ref_type.h>
-#include <__algorithm/is_sorted.h>
-#include <__assert>
-#include <__iterator/iterator_traits.h>
-#include <__type_traits/is_constant_evaluated.h>
+#include <__cxx03/__algorithm/comp_ref_type.h>
+#include <__cxx03/__algorithm/is_sorted.h>
+#include <__cxx03/__assert>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__type_traits/is_constant_evaluated.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -74,4 +74,4 @@ __check_strict_weak_ordering_sorted(_RandomAccessIterator __first, _RandomAccess
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___LIBCXX_DEBUG_STRICT_WEAK_ORDERING_CHECK
+#endif // _LIBCPP___CXX03___LIBCXX_DEBUG_STRICT_WEAK_ORDERING_CHECK

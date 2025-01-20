@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CSTDDEF
-#define _LIBCPP_CSTDDEF
+#ifndef _LIBCPP___CXX03_CSTDDEF
+#define _LIBCPP___CXX03_CSTDDEF
 
 /*
     cstddef synopsis
@@ -33,15 +33,15 @@ Types:
 
 */
 
-#include <__config>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_integral.h>
-#include <version>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_integral.h>
+#include <__cxx03/version>
 
-#include <stddef.h>
+#include <__cxx03/stddef.h>
 
-#ifndef _LIBCPP_STDDEF_H
+#ifndef _LIBCPP___CXX03_STDDEF_H
 #   error <cstddef> tried including <stddef.h> but didn't find libc++'s <stddef.h> header. \
           This usually means that your header search paths are not configured properly. \
           The header search paths should contain the C++ Standard Library headers before \
@@ -130,4 +130,4 @@ template <class _Integer, __enable_if_t<is_integral<_Integer>::value, int> = 0>
 
 #endif
 
-#endif // _LIBCPP_CSTDDEF
+#endif // _LIBCPP___CXX03_CSTDDEF

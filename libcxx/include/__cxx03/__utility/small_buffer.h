@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_SMALL_BUFFER_H
-#define _LIBCPP___UTILITY_SMALL_BUFFER_H
+#ifndef _LIBCPP___CXX03___UTILITY_SMALL_BUFFER_H
+#define _LIBCPP___CXX03___UTILITY_SMALL_BUFFER_H
 
-#include <__config>
-#include <__memory/construct_at.h>
-#include <__type_traits/decay.h>
-#include <__type_traits/is_trivially_constructible.h>
-#include <__type_traits/is_trivially_destructible.h>
-#include <__utility/exception_guard.h>
-#include <__utility/forward.h>
-#include <cstddef>
-#include <new>
+#include <__cxx03/__config>
+#include <__cxx03/__memory/construct_at.h>
+#include <__cxx03/__type_traits/decay.h>
+#include <__cxx03/__type_traits/is_trivially_constructible.h>
+#include <__cxx03/__type_traits/is_trivially_destructible.h>
+#include <__cxx03/__utility/exception_guard.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/new>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -96,4 +96,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 23
 
-#endif // _LIBCPP___UTILITY_SMALL_BUFFER_H
+#endif // _LIBCPP___CXX03___UTILITY_SMALL_BUFFER_H

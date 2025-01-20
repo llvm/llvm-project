@@ -56,6 +56,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
@@ -70,7 +71,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/raw_os_ostream.h"
 #include <optional>
 
 namespace clang {
@@ -95,8 +95,8 @@ enum FunctionDeclKind {
   OutOfLineDefinition
 };
 
-// A RootStmt is a statement that's fully selected including all it's children
-// and it's parent is unselected.
+// A RootStmt is a statement that's fully selected including all its children
+// and its parent is unselected.
 // Check if a node is a root statement.
 bool isRootStmt(const Node *N) {
   if (!N->ASTNode.get<Stmt>())
@@ -104,9 +104,12 @@ bool isRootStmt(const Node *N) {
   // Root statement cannot be partially selected.
   if (N->Selected == SelectionTree::Partial)
     return false;
-  // Only DeclStmt can be an unselected RootStmt since VarDecls claim the entire
-  // selection range in selectionTree.
-  if (N->Selected == SelectionTree::Unselected && !N->ASTNode.get<DeclStmt>())
+  // A DeclStmt can be an unselected RootStmt since VarDecls claim the entire
+  // selection range in selectionTree. Additionally, a CXXOperatorCallExpr of a
+  // binary operation can be unselected because its children claim the entire
+  // selection range in the selection tree (e.g. <<).
+  if (N->Selected == SelectionTree::Unselected && !N->ASTNode.get<DeclStmt>() &&
+      !N->ASTNode.get<CXXOperatorCallExpr>())
     return false;
   return true;
 }
@@ -913,8 +916,8 @@ Expected<Tweak::Effect> ExtractFunction::apply(const Selection &Inputs) {
 
       tooling::Replacements OtherEdit(
           createForwardDeclaration(*ExtractedFunc, SM));
-      if (auto PathAndEdit = Tweak::Effect::fileEdit(SM, SM.getFileID(*FwdLoc),
-                                                 OtherEdit))
+      if (auto PathAndEdit =
+              Tweak::Effect::fileEdit(SM, SM.getFileID(*FwdLoc), OtherEdit))
         MultiFileEffect->ApplyEdits.try_emplace(PathAndEdit->first,
                                                 PathAndEdit->second);
       else

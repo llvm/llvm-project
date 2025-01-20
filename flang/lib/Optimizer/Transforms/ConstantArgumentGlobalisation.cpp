@@ -173,8 +173,8 @@ public:
     config.strictMode = mlir::GreedyRewriteStrictness::ExistingOps;
 
     patterns.insert<CallOpRewriter>(context, *di);
-    if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
-            mod, std::move(patterns), config))) {
+    if (mlir::failed(
+            mlir::applyPatternsGreedily(mod, std::move(patterns), config))) {
       mlir::emitError(mod.getLoc(),
                       "error in constant globalisation optimization\n");
       signalPassFailure();

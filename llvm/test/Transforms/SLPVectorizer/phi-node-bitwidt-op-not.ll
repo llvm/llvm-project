@@ -10,7 +10,7 @@ define i32 @test(ptr %b, ptr %c, i32 %0, ptr %a, i1 %tobool3.not) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = ashr <4 x i32> [[TMP2]], <i32 16, i32 16, i32 16, i32 16>
+; CHECK-NEXT:    [[TMP3:%.*]] = ashr <4 x i32> [[TMP2]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt <4 x i32> [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i1> [[TMP4]] to <4 x i16>
 ; CHECK-NEXT:    br label [[BB3:%.*]]
@@ -22,8 +22,8 @@ define i32 @test(ptr %b, ptr %c, i32 %0, ptr %a, i1 %tobool3.not) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i1> poison, i1 [[TOBOOL3_NOT]], i32 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i1> [[TMP10]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP11]], <4 x i32> [[TMP7]], <4 x i32> [[TMP9]]
-; CHECK-NEXT:    [[TMP13:%.*]] = shl <4 x i32> [[TMP12]], <i32 16, i32 16, i32 16, i32 16>
-; CHECK-NEXT:    [[TMP14:%.*]] = ashr <4 x i32> [[TMP13]], <i32 16, i32 16, i32 16, i32 16>
+; CHECK-NEXT:    [[TMP13:%.*]] = shl <4 x i32> [[TMP12]], splat (i32 16)
+; CHECK-NEXT:    [[TMP14:%.*]] = ashr <4 x i32> [[TMP13]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP15:%.*]] = trunc <4 x i32> [[TMP14]] to <4 x i16>
 ; CHECK-NEXT:    br i1 true, label [[BB3]], label [[BB2]]
 ; CHECK:       bb3:

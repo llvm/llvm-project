@@ -9,7 +9,6 @@
 #ifndef LLDB_CORE_DWARF_H
 #define LLDB_CORE_DWARF_H
 
-#include "lldb/Utility/RangeMap.h"
 #include <cstdint>
 
 // Get the DWARF constant definitions from llvm
@@ -39,7 +38,5 @@ typedef uint64_t dw_offset_t; // Dwarf Debug Information Entry offset for any
 // #define DW_ADDR_none 0x0
 
 #define DW_EH_PE_MASK_ENCODING 0x0F
-
-typedef lldb_private::RangeVector<dw_addr_t, dw_addr_t, 2> DWARFRangeList;
 
 #endif // LLDB_CORE_DWARF_H

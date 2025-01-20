@@ -1315,7 +1315,7 @@
 # CHECK: bassm %r15, %r1
 0x0c 0xf1
 
-# CHECK: nop 0
+# CHECK: nop
 0x47 0x00 0x00 0x00
 
 # CHECK: nop 4095
@@ -6439,28 +6439,28 @@
 # CHECK: edmk 0(256,%r15), 0
 0xdf 0xff 0xf0 0x00 0x00 0x00
 
-# CHECK: eedtr %f0, %f9
+# CHECK: eedtr %r0, %f9
 0xb3 0xe5 0x00 0x09
 
-# CHECK: eedtr %f0, %f15
+# CHECK: eedtr %r0, %f15
 0xb3 0xe5 0x00 0x0f
 
-# CHECK: eedtr %f15, %f0
+# CHECK: eedtr %r15, %f0
 0xb3 0xe5 0x00 0xf0
 
-# CHECK: eedtr %f15, %f9
+# CHECK: eedtr %r15, %f9
 0xb3 0xe5 0x00 0xf9
 
-# CHECK: eextr %f0, %f8
+# CHECK: eextr %r0, %f8
 0xb3 0xed 0x00 0x08
 
-# CHECK: eextr %f0, %f13
+# CHECK: eextr %r0, %f13
 0xb3 0xed 0x00 0x0d
 
-# CHECK: eextr %f13, %f0
+# CHECK: eextr %r13, %f0
 0xb3 0xed 0x00 0xd0
 
-# CHECK: eextr %f13, %f9
+# CHECK: eextr %r13, %f9
 0xb3 0xed 0x00 0xd9
 
 # CHECK: efpc %r0
@@ -6556,16 +6556,16 @@
 # CHECK: esair %r15
 0xb9 0x9b 0x00 0xf0
 
-# CHECK: esdtr %f0, %f9
+# CHECK: esdtr %r0, %f9
 0xb3 0xe7 0x00 0x09
 
-# CHECK: esdtr %f0, %f15
+# CHECK: esdtr %r0, %f15
 0xb3 0xe7 0x00 0x0f
 
-# CHECK: esdtr %f15, %f0
+# CHECK: esdtr %r15, %f0
 0xb3 0xe7 0x00 0xf0
 
-# CHECK: esdtr %f15, %f9
+# CHECK: esdtr %r15, %f9
 0xb3 0xe7 0x00 0xf9
 
 # CHECK: esea %r0
@@ -6589,16 +6589,16 @@
 # CHECK: esta %r6, %r8
 0xb2 0x4a 0x00 0x68
 
-# CHECK: esxtr %f0, %f8
+# CHECK: esxtr %r0, %f8
 0xb3 0xef 0x00 0x08
 
-# CHECK: esxtr %f0, %f13
+# CHECK: esxtr %r0, %f13
 0xb3 0xef 0x00 0x0d
 
-# CHECK: esxtr %f13, %f0
+# CHECK: esxtr %r13, %f0
 0xb3 0xef 0x00 0xd0
 
-# CHECK: esxtr %f13, %f9
+# CHECK: esxtr %r13, %f9
 0xb3 0xef 0x00 0xd9
 
 # CHECK: etnd %r0
@@ -7000,40 +7000,40 @@
 # CHECK: idte %r4, %r5, %r6, 7
 0xb9 0x8e 0x57 0x46
 
-# CHECK: iedtr %f0, %f0, %f0
+# CHECK: iedtr %f0, %f0, %r0
 0xb3 0xf6 0x00 0x00
 
-# CHECK: iedtr %f0, %f0, %f15
+# CHECK: iedtr %f0, %f0, %r15
 0xb3 0xf6 0x00 0x0f
 
-# CHECK: iedtr %f0, %f15, %f0
+# CHECK: iedtr %f0, %f15, %r0
 0xb3 0xf6 0xf0 0x00
 
-# CHECK: iedtr %f15, %f0, %f0
+# CHECK: iedtr %f15, %f0, %r0
 0xb3 0xf6 0x00 0xf0
 
-# CHECK: iedtr %f1, %f2, %f3
+# CHECK: iedtr %f1, %f2, %r3
 0xb3 0xf6 0x20 0x13
 
-# CHECK: iedtr %f15, %f15, %f15
+# CHECK: iedtr %f15, %f15, %r15
 0xb3 0xf6 0xf0 0xff
 
-# CHECK: iextr %f0, %f0, %f0
+# CHECK: iextr %f0, %f0, %r0
 0xb3 0xfe 0x00 0x00
 
-# CHECK: iextr %f0, %f0, %f13
+# CHECK: iextr %f0, %f0, %r13
 0xb3 0xfe 0x00 0x0d
 
-# CHECK: iextr %f0, %f13, %f0
+# CHECK: iextr %f0, %f13, %r0
 0xb3 0xfe 0xd0 0x00
 
-# CHECK: iextr %f13, %f0, %f0
+# CHECK: iextr %f13, %f0, %r0
 0xb3 0xfe 0x00 0xd0
 
-# CHECK: iextr %f1, %f8, %f4
+# CHECK: iextr %f1, %f8, %r4
 0xb3 0xfe 0x80 0x14
 
-# CHECK: iextr %f13, %f13, %f13
+# CHECK: iextr %f13, %f13, %r13
 0xb3 0xfe 0xd0 0xdd
 
 # CHECK: iihf %r0, 0
@@ -14220,40 +14220,40 @@
 # CHECK: rrbm %r15, %r15
 0xb9 0xae 0x00 0xff
 
-# CHECK: rrdtr %f0, %f0, %f0, 0
+# CHECK: rrdtr %f0, %f0, %r0, 0
 0xb3 0xf7 0x00 0x00
 
-# CHECK: rrdtr %f0, %f0, %f0, 15
+# CHECK: rrdtr %f0, %f0, %r0, 15
 0xb3 0xf7 0x0f 0x00
 
-# CHECK: rrdtr %f0, %f0, %f15, 0
+# CHECK: rrdtr %f0, %f0, %r15, 0
 0xb3 0xf7 0x00 0x0f
 
-# CHECK: rrdtr %f0, %f15, %f0, 0
+# CHECK: rrdtr %f0, %f15, %r0, 0
 0xb3 0xf7 0xf0 0x00
 
-# CHECK: rrdtr %f4, %f5, %f6, 7
+# CHECK: rrdtr %f4, %f5, %r6, 7
 0xb3 0xf7 0x57 0x46
 
-# CHECK: rrdtr %f15, %f0, %f0, 0
+# CHECK: rrdtr %f15, %f0, %r0, 0
 0xb3 0xf7 0x00 0xf0
 
-# CHECK: rrxtr %f0, %f0, %f0, 0
+# CHECK: rrxtr %f0, %f0, %r0, 0
 0xb3 0xff 0x00 0x00
 
-# CHECK: rrxtr %f0, %f0, %f0, 15
+# CHECK: rrxtr %f0, %f0, %r0, 15
 0xb3 0xff 0x0f 0x00
 
-# CHECK: rrxtr %f0, %f0, %f13, 0
+# CHECK: rrxtr %f0, %f0, %r13, 0
 0xb3 0xff 0x00 0x0d
 
-# CHECK: rrxtr %f0, %f13, %f0, 0
+# CHECK: rrxtr %f0, %f13, %r0, 0
 0xb3 0xff 0xd0 0x00
 
-# CHECK: rrxtr %f8, %f8, %f8, 8
+# CHECK: rrxtr %f8, %f8, %r8, 8
 0xb3 0xff 0x88 0x88
 
-# CHECK: rrxtr %f13, %f0, %f0, 0
+# CHECK: rrxtr %f13, %f0, %r0, 0
 0xb3 0xff 0x00 0xd0
 
 # CHECK: rsch

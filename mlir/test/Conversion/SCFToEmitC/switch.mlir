@@ -1,7 +1,8 @@
 // RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-emitc %s | FileCheck %s
 
 // CHECK-LABEL:   func.func @switch_no_result(
-// CHECK-SAME:                                %[[VAL_0:.*]]: index) {
+// CHECK-SAME:                                %[[ARG_0:.*]]: index) {
+// CHECK:           %[[VAL_0:.*]] = builtin.unrealized_conversion_cast %[[ARG_0]] : index to !emitc.size_t
 // CHECK:           emitc.switch %[[VAL_0]]
 // CHECK:           case 2 {
 // CHECK:             %[[VAL_1:.*]] = arith.constant 10 : i32
@@ -33,7 +34,8 @@ func.func @switch_no_result(%arg0 : index) {
 }
 
 // CHECK-LABEL:   func.func @switch_one_result(
-// CHECK-SAME:                                 %[[VAL_0:.*]]: index) {
+// CHECK-SAME:                                 %[[ARG_0:.*]]: index) {
+// CHECK:           %[[VAL_0:.*]] = builtin.unrealized_conversion_cast %[[ARG_0]] : index to !emitc.size_t
 // CHECK:           %[[VAL_1:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
 // CHECK:           emitc.switch %[[VAL_0]]
 // CHECK:           case 2 {
@@ -70,7 +72,8 @@ func.func @switch_one_result(%arg0 : index) {
 }
 
 // CHECK-LABEL:   func.func @switch_two_results(
-// CHECK-SAME:                                  %[[VAL_0:.*]]: index) -> (i32, f32) {
+// CHECK-SAME:                                  %[[ARG_0:.*]]: index) -> (i32, f32) {
+// CHECK:           %[[VAL_0:.*]] = builtin.unrealized_conversion_cast %[[ARG_0]] : index to !emitc.size_t
 // CHECK:           %[[VAL_1:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
 // CHECK:           %[[VAL_2:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<f32>
 // CHECK:           emitc.switch %[[VAL_0]]

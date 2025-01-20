@@ -7,19 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHRONO_CONVERT_TO_TIMESPEC_H
-#define _LIBCPP___CHRONO_CONVERT_TO_TIMESPEC_H
+#ifndef _LIBCPP___CXX03___CHRONO_CONVERT_TO_TIMESPEC_H
+#define _LIBCPP___CXX03___CHRONO_CONVERT_TO_TIMESPEC_H
 
-#include <__chrono/duration.h>
-#include <__config>
-#include <limits>
+#include <__cxx03/__chrono/duration.h>
+#include <__cxx03/__config>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -48,4 +48,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CHRONO_CONVERT_TO_TIMESPEC_H
+#endif // _LIBCPP___CXX03___CHRONO_CONVERT_TO_TIMESPEC_H

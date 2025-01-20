@@ -18,9 +18,10 @@
 //
 // Preconditions: other.required_span_size() is representable as a value of type index_type
 
-#include <mdspan>
 #include <cassert>
+#include <cstddef>
 #include <limits>
+#include <mdspan>
 #include <span> // dynamic_extent
 #include <type_traits>
 

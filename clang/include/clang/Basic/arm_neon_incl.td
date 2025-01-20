@@ -218,6 +218,7 @@ def OP_UNAVAILABLE : Operation {
 // h: half-float
 // d: double
 // b: bfloat16
+// m: mfloat8
 //
 // Typespec modifiers
 // ------------------

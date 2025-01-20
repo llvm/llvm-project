@@ -60,7 +60,7 @@ void EmptyTensorToAllocTensor::runOnOperation() {
   Operation *op = getOperation();
   RewritePatternSet patterns(op->getContext());
   populateEmptyTensorToAllocTensorPattern(patterns);
-  if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+  if (failed(applyPatternsGreedily(op, std::move(patterns))))
     signalPassFailure();
 }
 

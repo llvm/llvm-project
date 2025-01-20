@@ -11,9 +11,14 @@
 ; CM: LV: Found uniform instruction:   %a = extractvalue { i64, i64 } %sv, 0
 ; CM: LV: Found uniform instruction:   %b = extractvalue { i64, i64 } %sv, 1
 
+; Ensure the extractvalue + add instructions are hoisted out
+; CM: vector.ph:
+; CM:  CLONE ir<%a> = extractvalue ir<%sv>
+; CM:  CLONE ir<%b> = extractvalue ir<%sv>
+; CM:  WIDEN ir<%add> = add ir<%a>, ir<%b>
+; CM:  Successor(s): vector loop
+
 ; CM: LV: Scalar loop costs: 5.
-; CM: LV: Found an estimated cost of 0 for VF 2 For instruction:   %a = extractvalue { i64, i64 } %sv, 0
-; CM-NEXT: LV: Found an estimated cost of 0 for VF 2 For instruction:   %b = extractvalue { i64, i64 } %sv, 1
 
 ; Check that the extractvalue operands are actually free in vector code.
 
@@ -58,12 +63,14 @@ exit:
 ; Similar to the test case above, but checks getVectorCallCost as well.
 declare float @powf(float, float) readnone nounwind
 
-; CM: LV: Found uniform instruction:   %a = extractvalue { float, float } %sv, 0
-; CM: LV: Found uniform instruction:   %b = extractvalue { float, float } %sv, 1
+; Ensure the extractvalue instructions are hoisted out
+; CM-LABEL: Checking a loop in 'test_getVectorCallCost'
+; CM: vector.ph:
+; CM:  CLONE ir<%a> = extractvalue ir<%sv>
+; CM:  CLONE ir<%b> = extractvalue ir<%sv>
+; CM:  Successor(s): vector loop
 
 ; CM: LV: Scalar loop costs: 14.
-; CM: LV: Found an estimated cost of 0 for VF 2 For instruction:   %a = extractvalue { float, float } %sv, 0
-; CM-NEXT: LV: Found an estimated cost of 0 for VF 2 For instruction:   %b = extractvalue { float, float } %sv, 1
 
 ; FORCED-LABEL: define void @test_getVectorCallCost
 

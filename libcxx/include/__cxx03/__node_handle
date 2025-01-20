@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NODE_HANDLE
-#define _LIBCPP___NODE_HANDLE
+#ifndef _LIBCPP___CXX03___NODE_HANDLE
+#define _LIBCPP___CXX03___NODE_HANDLE
 
 /*
 
@@ -58,18 +58,18 @@ public:
 
 */
 
-#include <__assert>
-#include <__config>
-#include <__memory/allocator_traits.h>
-#include <__memory/pointer_traits.h>
-#include <optional>
+#include <__cxx03/__assert>
+#include <__cxx03/__config>
+#include <__cxx03/__memory/allocator_traits.h>
+#include <__cxx03/__memory/pointer_traits.h>
+#include <__cxx03/optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -206,4 +206,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___NODE_HANDLE
+#endif // _LIBCPP___CXX03___NODE_HANDLE

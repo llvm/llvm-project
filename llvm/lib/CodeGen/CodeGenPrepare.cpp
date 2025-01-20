@@ -85,7 +85,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -153,7 +152,7 @@ static cl::opt<bool>
 
 static cl::opt<bool>
     EnableAndCmpSinking("enable-andcmp-sinking", cl::Hidden, cl::init(true),
-                        cl::desc("Enable sinkinig and/cmp into branches."));
+                        cl::desc("Enable sinking and/cmp into branches."));
 
 static cl::opt<bool> DisableStoreExtract(
     "disable-cgp-store-extract", cl::Hidden, cl::init(false),
@@ -1886,7 +1885,7 @@ static bool foldICmpWithDominatingICmp(CmpInst *Cmp,
     return false;
 
   Value *CmpOp0 = Cmp->getOperand(0), *CmpOp1 = Cmp->getOperand(1);
-  ICmpInst::Predicate DomPred;
+  CmpPredicate DomPred;
   if (!match(DomCond, m_ICmp(DomPred, m_Specific(CmpOp0), m_Specific(CmpOp1))))
     return false;
   if (DomPred != ICmpInst::ICMP_SGT && DomPred != ICmpInst::ICMP_SLT)
@@ -1981,17 +1980,36 @@ static bool foldFCmpToFPClassTest(CmpInst *Cmp, const TargetLowering &TLI,
   return true;
 }
 
-static bool isRemOfLoopIncrementWithLoopInvariant(Instruction *Rem,
-                                                  const LoopInfo *LI,
-                                                  Value *&RemAmtOut,
-                                                  PHINode *&LoopIncrPNOut) {
+static bool isRemOfLoopIncrementWithLoopInvariant(
+    Instruction *Rem, const LoopInfo *LI, Value *&RemAmtOut, Value *&AddInstOut,
+    Value *&AddOffsetOut, PHINode *&LoopIncrPNOut) {
   Value *Incr, *RemAmt;
   // NB: If RemAmt is a power of 2 it *should* have been transformed by now.
   if (!match(Rem, m_URem(m_Value(Incr), m_Value(RemAmt))))
     return false;
 
+  Value *AddInst, *AddOffset;
   // Find out loop increment PHI.
   auto *PN = dyn_cast<PHINode>(Incr);
+  if (PN != nullptr) {
+    AddInst = nullptr;
+    AddOffset = nullptr;
+  } else {
+    // Search through a NUW add on top of the loop increment.
+    Value *V0, *V1;
+    if (!match(Incr, m_NUWAdd(m_Value(V0), m_Value(V1))))
+      return false;
+
+    AddInst = Incr;
+    PN = dyn_cast<PHINode>(V0);
+    if (PN != nullptr) {
+      AddOffset = V1;
+    } else {
+      PN = dyn_cast<PHINode>(V1);
+      AddOffset = V0;
+    }
+  }
+
   if (!PN)
     return false;
 
@@ -2031,6 +2049,8 @@ static bool isRemOfLoopIncrementWithLoopInvariant(Instruction *Rem,
   // Set output variables.
   RemAmtOut = RemAmt;
   LoopIncrPNOut = PN;
+  AddInstOut = AddInst;
+  AddOffsetOut = AddOffset;
 
   return true;
 }
@@ -2045,15 +2065,14 @@ static bool isRemOfLoopIncrementWithLoopInvariant(Instruction *Rem,
 // Rem = (Start nuw+ IncrLoopInvariant) % RemAmtLoopInvariant;
 // for(i = Start; i < End; ++i, ++rem)
 //    Rem = rem == RemAmtLoopInvariant ? 0 : Rem;
-//
-// Currently only implemented for `IncrLoopInvariant` being zero.
 static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
                                     const LoopInfo *LI,
                                     SmallSet<BasicBlock *, 32> &FreshBBs,
                                     bool IsHuge) {
-  Value *RemAmt;
+  Value *AddOffset, *RemAmt, *AddInst;
   PHINode *LoopIncrPN;
-  if (!isRemOfLoopIncrementWithLoopInvariant(Rem, LI, RemAmt, LoopIncrPN))
+  if (!isRemOfLoopIncrementWithLoopInvariant(Rem, LI, RemAmt, AddInst,
+                                             AddOffset, LoopIncrPN))
     return false;
 
   // Only non-constant remainder as the extra IV is probably not profitable
@@ -2071,6 +2090,23 @@ static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
 
   Loop *L = LI->getLoopFor(LoopIncrPN->getParent());
   Value *Start = LoopIncrPN->getIncomingValueForBlock(L->getLoopPreheader());
+  // If we have add create initial value for remainder.
+  // The logic here is:
+  // (urem (add nuw Start, IncrLoopInvariant), RemAmtLoopInvariant
+  //
+  // Only proceed if the expression simplifies (otherwise we can't fully
+  // optimize out the urem).
+  if (AddInst) {
+    assert(AddOffset && "We found an add but missing values");
+    // Without dom-condition/assumption cache we aren't likely to get much out
+    // of a context instruction.
+    Start = simplifyAddInst(Start, AddOffset,
+                            match(AddInst, m_NSWAdd(m_Value(), m_Value())),
+                            /*IsNUW=*/true, *DL);
+    if (!Start)
+      return false;
+  }
+
   // If we can't fully optimize out the `rem`, skip this transform.
   Start = simplifyURemInst(Start, RemAmt, *DL);
   if (!Start)
@@ -2098,9 +2134,12 @@ static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
   FreshBBs.insert(LoopIncrPN->getParent());
   FreshBBs.insert(L->getLoopLatch());
   FreshBBs.insert(Rem->getParent());
-
+  if (AddInst)
+    FreshBBs.insert(cast<Instruction>(AddInst)->getParent());
   replaceAllUsesWith(Rem, NewRem, FreshBBs, IsHuge);
   Rem->eraseFromParent();
+  if (AddInst && AddInst->use_empty())
+    cast<Instruction>(AddInst)->eraseFromParent();
   return true;
 }
 
@@ -2116,7 +2155,7 @@ bool CodeGenPrepare::optimizeURem(Instruction *Rem) {
 static bool adjustIsPower2Test(CmpInst *Cmp, const TargetLowering &TLI,
                                const TargetTransformInfo &TTI,
                                const DataLayout &DL) {
-  ICmpInst::Predicate Pred;
+  CmpPredicate Pred;
   if (!match(Cmp, m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(), m_One())))
     return false;
   if (!ICmpInst::isEquality(Pred))
@@ -7099,6 +7138,7 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
   SmallVector<Instruction *, 8> WorkList;
   SmallPtrSet<Instruction *, 16> Visited;
   SmallVector<Instruction *, 8> AndsToMaybeRemove;
+  SmallVector<Instruction *, 8> DropFlags;
   for (auto *U : Load->users())
     WorkList.push_back(cast<Instruction>(U));
 
@@ -7146,6 +7186,7 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
         return false;
       uint64_t ShiftAmt = ShlC->getLimitedValue(BitWidth - 1);
       DemandBits.setLowBits(BitWidth - ShiftAmt);
+      DropFlags.push_back(I);
       break;
     }
 
@@ -7153,6 +7194,7 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
       EVT TruncVT = TLI->getValueType(*DL, I->getType());
       unsigned TruncBitWidth = TruncVT.getSizeInBits();
       DemandBits.setLowBits(TruncBitWidth);
+      DropFlags.push_back(I);
       break;
     }
 
@@ -7209,6 +7251,10 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
       And->eraseFromParent();
       ++NumAndUses;
     }
+
+  // NSW flags may not longer hold.
+  for (auto *Inst : DropFlags)
+    Inst->setHasNoSignedWrap(false);
 
   ++NumAndsAdded;
   return true;
@@ -7644,8 +7690,8 @@ bool CodeGenPrepare::tryToSinkFreeOperands(Instruction *I) {
     // sunk instruction uses, if it is part of a chain that has already been
     // sunk.
     Instruction *OldI = cast<Instruction>(U->getUser());
-    if (NewInstructions.count(OldI))
-      NewInstructions[OldI]->setOperand(U->getOperandNo(), NI);
+    if (auto It = NewInstructions.find(OldI); It != NewInstructions.end())
+      It->second->setOperand(U->getOperandNo(), NI);
     else
       U->set(NI);
     Changed = true;
@@ -7937,8 +7983,8 @@ class VectorPromoteHelper {
   /// \p UseSplat defines whether or not \p Val should be replicated
   /// across the whole vector.
   /// In other words, if UseSplat == true, we generate <Val, Val, ..., Val>,
-  /// otherwise we generate a vector with as many undef as possible:
-  /// <undef, ..., undef, Val, undef, ..., undef> where \p Val is only
+  /// otherwise we generate a vector with as many poison as possible:
+  /// <poison, ..., poison, Val, poison, ..., poison> where \p Val is only
   /// used at the index of the extract.
   Value *getConstantVector(Constant *Val, bool UseSplat) const {
     unsigned ExtractIdx = std::numeric_limits<unsigned>::max();
@@ -7958,12 +8004,12 @@ class VectorPromoteHelper {
 
     if (!EC.isScalable()) {
       SmallVector<Constant *, 4> ConstVec;
-      UndefValue *UndefVal = UndefValue::get(Val->getType());
+      PoisonValue *PoisonVal = PoisonValue::get(Val->getType());
       for (unsigned Idx = 0; Idx != EC.getKnownMinValue(); ++Idx) {
         if (Idx == ExtractIdx)
           ConstVec.push_back(Val);
         else
-          ConstVec.push_back(UndefVal);
+          ConstVec.push_back(PoisonVal);
       }
       return ConstantVector::get(ConstVec);
     } else

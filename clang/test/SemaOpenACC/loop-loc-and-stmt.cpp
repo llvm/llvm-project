@@ -34,7 +34,7 @@ struct S {
     {}
 
 #pragma acc loop
-    for(;;);
+    for(int i = 0; i < 6; ++i);
 
     int array[5];
 
@@ -66,7 +66,7 @@ void templ_func() {
   {}
 
 #pragma acc loop
-  for(T i;;);
+  for(T i = 0; i < 1; ++i);
 
   T array[5];
 

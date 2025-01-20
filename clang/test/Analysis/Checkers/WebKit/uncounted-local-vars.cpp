@@ -456,3 +456,12 @@ int TreeNode::recursiveWeight() {
 }
 
 } // namespace local_var_in_recursive_function
+
+namespace local_var_for_singleton {
+  RefCountable *singleton();
+  RefCountable *otherSingleton();
+  void foo() {
+    RefCountable* bar = singleton();
+    RefCountable* baz = otherSingleton();
+  }
+}

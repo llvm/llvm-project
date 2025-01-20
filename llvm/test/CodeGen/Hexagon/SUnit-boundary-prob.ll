@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 -mcpu=hexagonv60 -hexagon-initial-cfg-cleanup=0 --stats -o - 2>&1  < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 -mcpu=hexagonv60 -hexagon-initial-cfg-cleanup=0 --stats -o - 2>&1 < %s | FileCheck %s
 ; This was aborting while processing SUnits.
 ; REQUIRES: asserts
 

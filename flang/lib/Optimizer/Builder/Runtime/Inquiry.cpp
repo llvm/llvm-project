@@ -40,7 +40,7 @@ void fir::runtime::genLbound(fir::FirOpBuilder &builder, mlir::Location loc,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
   auto args = fir::runtime::createArguments(
       builder, loc, fTy, resultAddr, array, kind, sourceFile, sourceLine);
-  builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  builder.create<fir::CallOp>(loc, func, args);
 }
 
 /// Generate call to `Ubound` runtime routine.  Calls to UBOUND with a DIM
@@ -57,7 +57,7 @@ void fir::runtime::genUbound(fir::FirOpBuilder &builder, mlir::Location loc,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
   auto args = fir::runtime::createArguments(builder, loc, fTy, resultBox, array,
                                             kind, sourceFile, sourceLine);
-  builder.create<fir::CallOp>(loc, uboundFunc, args).getResult(0);
+  builder.create<fir::CallOp>(loc, uboundFunc, args);
 }
 
 /// Generate call to `Size` runtime routine. This routine is a version when
@@ -113,5 +113,5 @@ void fir::runtime::genShape(fir::FirOpBuilder &builder, mlir::Location loc,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
   auto args = fir::runtime::createArguments(
       builder, loc, fTy, resultAddr, array, kind, sourceFile, sourceLine);
-  builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  builder.create<fir::CallOp>(loc, func, args);
 }

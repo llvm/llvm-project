@@ -222,7 +222,8 @@ let Predicates = [HasVendorXSfvfwmaccqqq], DecoderNamespace = "XSfvfwmaccqqq",
   def VFWMACC_4x4x4 : CustomSiFiveVMACC<0b111100, OPFVV, "sf.vfwmacc.4x4x4">;
 }
 
-let Predicates = [HasVendorXSfvfnrclipxfqf], DecoderNamespace = "XSfvfnrclipxfqf" in {
+let Predicates = [HasVendorXSfvfnrclipxfqf], DecoderNamespace = "XSfvfnrclipxfqf",
+    Uses = [FRM] in {
   def VFNRCLIP_XU_F_QF : CustomSiFiveVFNRCLIP<0b100010, OPFVF, "sf.vfnrclip.xu.f.qf">;
   def VFNRCLIP_X_F_QF : CustomSiFiveVFNRCLIP<0b100011, OPFVF, "sf.vfnrclip.x.f.qf">;
 }
@@ -237,7 +238,6 @@ class VPseudoVC_X<Operand OpClass, DAGOperand RS1Class> :
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let hasSideEffects = 0;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 class VPseudoVC_XV<Operand OpClass, VReg RS2Class, DAGOperand RS1Class> :
@@ -250,7 +250,6 @@ class VPseudoVC_XV<Operand OpClass, VReg RS2Class, DAGOperand RS1Class> :
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let hasSideEffects = 0;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 class VPseudoVC_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
@@ -264,7 +263,6 @@ class VPseudoVC_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let hasSideEffects = 0;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 class VPseudoVC_V_X<Operand OpClass, VReg RDClass, DAGOperand RS1Class> :
@@ -277,7 +275,6 @@ class VPseudoVC_V_X<Operand OpClass, VReg RDClass, DAGOperand RS1Class> :
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let hasSideEffects = 0;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 class VPseudoVC_V_XV<Operand OpClass, VReg RDClass, VReg RS2Class,
@@ -291,7 +288,6 @@ class VPseudoVC_V_XV<Operand OpClass, VReg RDClass, VReg RS2Class,
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let hasSideEffects = 0;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 class VPseudoVC_V_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
@@ -306,7 +302,6 @@ class VPseudoVC_V_XVV<Operand OpClass, VReg RDClass, VReg RS2Class,
   let HasSEWOp = 1;
   let hasSideEffects = 0;
   let Constraints = "$rd = $rs3";
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 multiclass VPseudoVC_X<LMULInfo m, DAGOperand RS1Class,
@@ -405,7 +400,7 @@ multiclass VPseudoSiFiveVFWMACC<string Constraint = ""> {
 
 multiclass VPseudoSiFiveVFNRCLIP<string Constraint = "@earlyclobber $rd"> {
   foreach i = 0-4 in
-    let hasSideEffects = 0 in
+    let hasSideEffects = 0, hasPostISelHook = 1 in
       defm "Pseudo" # NAME : VPseudoBinaryRoundingMode<MxListW[i].vrclass,
                                                        MxListVF4[i].vrclass,
                                                        FPR32, MxListW[i],

@@ -28,8 +28,8 @@ using namespace llvm;
 namespace llvm {
 cl::opt<bool> ShouldPreserveAllAttributes(
     "assume-preserve-all", cl::init(false), cl::Hidden,
-    cl::desc("enable preservation of all attrbitues. even those that are "
-             "unlikely to be usefull"));
+    cl::desc("enable preservation of all attributes. even those that are "
+             "unlikely to be useful"));
 
 cl::opt<bool> EnableKnowledgeRetention(
     "enable-knowledge-retention", cl::init(false), cl::Hidden,
@@ -412,7 +412,7 @@ struct AssumeSimplify {
             CleanupToDo.insert(Assume);
             if (BOI.Begin != BOI.End) {
               Use *U = &Assume->op_begin()[BOI.Begin + ABA_WasOn];
-              U->set(UndefValue::get(U->get()->getType()));
+              U->set(PoisonValue::get(U->get()->getType()));
             }
             BOI.Tag = IgnoreTag;
           };

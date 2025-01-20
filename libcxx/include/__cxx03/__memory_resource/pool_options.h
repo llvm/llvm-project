@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_RESOURCE_POOL_OPTIONS_H
-#define _LIBCPP___MEMORY_RESOURCE_POOL_OPTIONS_H
+#ifndef _LIBCPP___CXX03___MEMORY_RESOURCE_POOL_OPTIONS_H
+#define _LIBCPP___CXX03___MEMORY_RESOURCE_POOL_OPTIONS_H
 
-#include <__config>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -35,4 +35,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___MEMORY_RESOURCE_POOL_OPTIONS_H
+#endif // _LIBCPP___CXX03___MEMORY_RESOURCE_POOL_OPTIONS_H

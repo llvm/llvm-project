@@ -41,7 +41,7 @@ class BaseABI {
 public:
   BaseABI(Function &F, coro::Shape &S,
           std::function<bool(Instruction &)> IsMaterializable)
-      : F(F), Shape(S), IsMaterializable(IsMaterializable) {}
+      : F(F), Shape(S), IsMaterializable(std::move(IsMaterializable)) {}
   virtual ~BaseABI() = default;
 
   // Initialize the coroutine ABI
@@ -67,7 +67,7 @@ class SwitchABI : public BaseABI {
 public:
   SwitchABI(Function &F, coro::Shape &S,
             std::function<bool(Instruction &)> IsMaterializable)
-      : BaseABI(F, S, IsMaterializable) {}
+      : BaseABI(F, S, std::move(IsMaterializable)) {}
 
   void init() override;
 
@@ -80,7 +80,7 @@ class AsyncABI : public BaseABI {
 public:
   AsyncABI(Function &F, coro::Shape &S,
            std::function<bool(Instruction &)> IsMaterializable)
-      : BaseABI(F, S, IsMaterializable) {}
+      : BaseABI(F, S, std::move(IsMaterializable)) {}
 
   void init() override;
 
@@ -93,7 +93,7 @@ class AnyRetconABI : public BaseABI {
 public:
   AnyRetconABI(Function &F, coro::Shape &S,
                std::function<bool(Instruction &)> IsMaterializable)
-      : BaseABI(F, S, IsMaterializable) {}
+      : BaseABI(F, S, std::move(IsMaterializable)) {}
 
   void init() override;
 

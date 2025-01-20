@@ -5,7 +5,7 @@
 define amdgpu_kernel void @test_get_doorbell(ptr addrspace(1) %out) {
 ; GFX11-SDAG-LABEL: test_get_doorbell:
 ; GFX11-SDAG:       ; %bb.0:
-; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_GET_DOORBELL)
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
@@ -14,7 +14,7 @@ define amdgpu_kernel void @test_get_doorbell(ptr addrspace(1) %out) {
 ;
 ; GFX11-GISEL-LABEL: test_get_doorbell:
 ; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-GISEL-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_GET_DOORBELL)
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
@@ -28,7 +28,7 @@ define amdgpu_kernel void @test_get_doorbell(ptr addrspace(1) %out) {
 define amdgpu_kernel void @test_get_ddid(ptr addrspace(1) %out) {
 ; GFX11-SDAG-LABEL: test_get_ddid:
 ; GFX11-SDAG:       ; %bb.0:
-; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_GET_DDID)
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
@@ -37,7 +37,7 @@ define amdgpu_kernel void @test_get_ddid(ptr addrspace(1) %out) {
 ;
 ; GFX11-GISEL-LABEL: test_get_ddid:
 ; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-GISEL-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_GET_DDID)
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
@@ -51,7 +51,7 @@ define amdgpu_kernel void @test_get_ddid(ptr addrspace(1) %out) {
 define amdgpu_kernel void @test_get_tma(ptr addrspace(1) %out) {
 ; GFX11-LABEL: test_get_tma:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    s_sendmsg_rtn_b64 s[2:3], sendmsg(MSG_RTN_GET_TMA)
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -66,7 +66,7 @@ define amdgpu_kernel void @test_get_tma(ptr addrspace(1) %out) {
 define amdgpu_kernel void @test_get_realtime(ptr addrspace(1) %out) {
 ; GFX11-LABEL: test_get_realtime:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    s_sendmsg_rtn_b64 s[2:3], sendmsg(MSG_RTN_GET_REALTIME)
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -81,7 +81,7 @@ define amdgpu_kernel void @test_get_realtime(ptr addrspace(1) %out) {
 define amdgpu_kernel void @test_savewave(ptr addrspace(1) %out) {
 ; GFX11-SDAG-LABEL: test_savewave:
 ; GFX11-SDAG:       ; %bb.0:
-; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_SAVE_WAVE)
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
@@ -90,7 +90,7 @@ define amdgpu_kernel void @test_savewave(ptr addrspace(1) %out) {
 ;
 ; GFX11-GISEL-LABEL: test_savewave:
 ; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-GISEL-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_SAVE_WAVE)
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
@@ -104,7 +104,7 @@ define amdgpu_kernel void @test_savewave(ptr addrspace(1) %out) {
 define amdgpu_kernel void @test_get_tba(ptr addrspace(1) %out) {
 ; GFX11-LABEL: test_get_tba:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    s_sendmsg_rtn_b64 s[2:3], sendmsg(MSG_RTN_GET_TBA)
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -119,7 +119,7 @@ define amdgpu_kernel void @test_get_tba(ptr addrspace(1) %out) {
 define amdgpu_kernel void @test_get_0_i32(ptr addrspace(1) %out) {
 ; GFX11-SDAG-LABEL: test_get_0_i32:
 ; GFX11-SDAG:       ; %bb.0:
-; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(0, 0, 0)
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
@@ -128,7 +128,7 @@ define amdgpu_kernel void @test_get_0_i32(ptr addrspace(1) %out) {
 ;
 ; GFX11-GISEL-LABEL: test_get_0_i32:
 ; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-GISEL-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(0, 0, 0)
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
@@ -142,7 +142,7 @@ define amdgpu_kernel void @test_get_0_i32(ptr addrspace(1) %out) {
 define amdgpu_kernel void @test_get_99999_i64(ptr addrspace(1) %out) {
 ; GFX11-LABEL: test_get_99999_i64:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    s_sendmsg_rtn_b64 s[2:3], 99999
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)

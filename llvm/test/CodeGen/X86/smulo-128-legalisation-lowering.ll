@@ -505,8 +505,8 @@ define zeroext i1 @smuloi256(i256 %v1, i256 %v2, ptr %res) {
 ; X64-NEXT:    addq %rax, %r9
 ; X64-NEXT:    adcq %rdx, %rsi
 ; X64-NEXT:    sarq $63, %r12
-; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax ## 8-byte Reload
-; X64-NEXT:    mulq %r12
+; X64-NEXT:    movq %r12, %rax
+; X64-NEXT:    mulq {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Folded Reload
 ; X64-NEXT:    movq %rdx, %rdi
 ; X64-NEXT:    movq %rax, %rcx
 ; X64-NEXT:    movq %rax, %r14

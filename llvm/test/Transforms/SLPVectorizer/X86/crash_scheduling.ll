@@ -15,7 +15,7 @@ define void @_foo(double %p1, double %p2, double %p3) #0 {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[MUL20]], 8.192000e+03
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[P2:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[P1:%.*]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP1]], <double 1.638400e+04, double 1.638400e+04>
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP1]], splat (double 1.638400e+04)
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[ADD]], i32 0
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:

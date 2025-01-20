@@ -4,27 +4,27 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-apple-darwin10.0.0"
 
 ; PR8955 - Rotating an outer loop that has a condbr for a latch block.
-define void @test1() nounwind ssp {
+define void @test1(i1 %arg) nounwind ssp {
 entry:
   br label %lbl_283
 
 lbl_283:                                          ; preds = %if.end, %entry
-  br i1 undef, label %if.else, label %if.then
+  br i1 %arg, label %if.else, label %if.then
 
 if.then:                                          ; preds = %lbl_283
-  br i1 undef, label %if.end, label %for.condthread-pre-split
+  br i1 %arg, label %if.end, label %for.condthread-pre-split
 
 for.condthread-pre-split:                         ; preds = %if.then
   br label %for.cond
 
 for.cond:                                         ; preds = %for.cond, %for.condthread-pre-split
-  br i1 undef, label %lbl_281, label %for.cond
+  br i1 %arg, label %lbl_281, label %for.cond
 
 lbl_281:                                          ; preds = %if.end, %for.cond
   br label %if.end
 
 if.end:                                           ; preds = %lbl_281, %if.then
-  br i1 undef, label %lbl_283, label %lbl_281
+  br i1 %arg, label %lbl_283, label %lbl_281
 
 if.else:                                          ; preds = %lbl_283
   ret void
@@ -140,12 +140,12 @@ bb17:		; preds = %bb15
 
 
 ; PR9523 - Non-canonical loop.
-define void @test7(ptr %P) nounwind {
+define void @test7(ptr %P, i1 %arg) nounwind {
 entry:
   indirectbr ptr %P, [label %"3", label %"5"]
 
 "3":                                              ; preds = %"4", %entry
-  br i1 undef, label %"5", label %"4"
+  br i1 %arg, label %"5", label %"4"
 
 "4":                                              ; preds = %"3"
   br label %"3"

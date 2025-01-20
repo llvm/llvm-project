@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LIBCXX_DEBUG_UTILS_SANITIZERS_H
-#define _LIBCPP___LIBCXX_DEBUG_UTILS_SANITIZERS_H
+#ifndef _LIBCPP___CXX03___LIBCXX_DEBUG_UTILS_SANITIZERS_H
+#define _LIBCPP___CXX03___LIBCXX_DEBUG_UTILS_SANITIZERS_H
 
-#include <__config>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_constant_evaluated.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_constant_evaluated.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -101,4 +101,4 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __annotate_contiguous_c
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___LIBCXX_DEBUG_UTILS_SANITIZERS_H
+#endif // _LIBCPP___CXX03___LIBCXX_DEBUG_UTILS_SANITIZERS_H

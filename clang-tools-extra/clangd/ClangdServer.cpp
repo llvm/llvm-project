@@ -215,7 +215,9 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                            const ThreadsafeFS &TFS, const Options &Opts,
                            Callbacks *Callbacks)
     : FeatureModules(Opts.FeatureModules), CDB(CDB), TFS(TFS),
-      DynamicIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
+      DynamicIdx(Opts.BuildDynamicSymbolIndex
+                     ? new FileIndex(Opts.EnableOutgoingCalls)
+                     : nullptr),
       ModulesManager(Opts.ModulesManager),
       ClangTidyProvider(Opts.ClangTidyProvider),
       UseDirtyHeaders(Opts.UseDirtyHeaders),
@@ -256,6 +258,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
         Callbacks->onBackgroundIndexProgress(S);
     };
     BGOpts.ContextProvider = Opts.ContextProvider;
+    BGOpts.SupportContainedRefs = Opts.EnableOutgoingCalls;
     BackgroundIdx = std::make_unique<BackgroundIndex>(
         TFS, CDB,
         BackgroundIndexStorage::createDiskBackedStorageFactory(
@@ -910,6 +913,15 @@ void ClangdServer::inlayHints(PathRef File, std::optional<Range> RestrictRange,
     CB(clangd::inlayHints(InpAST->AST, std::move(RestrictRange)));
   };
   WorkScheduler->runWithAST("InlayHints", File, std::move(Action), Transient);
+}
+
+void ClangdServer::outgoingCalls(
+    const CallHierarchyItem &Item,
+    Callback<std::vector<CallHierarchyOutgoingCall>> CB) {
+  WorkScheduler->run("Outgoing Calls", "",
+                     [CB = std::move(CB), Item, this]() mutable {
+                       CB(clangd::outgoingCalls(Item, Index));
+                     });
 }
 
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {

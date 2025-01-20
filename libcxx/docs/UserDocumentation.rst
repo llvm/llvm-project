@@ -156,6 +156,9 @@ C++17 Specific Configuration Macros
 **_LIBCPP_ENABLE_CXX17_REMOVED_RANDOM_SHUFFLE**:
   This macro is used to re-enable the `random_shuffle` algorithm.
 
+**_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION**:
+  This macro is used to re-enable `unary_function` and `binary_function`.
+
 **_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS**:
   This macro is used to re-enable `set_unexpected`, `get_unexpected`, and
   `unexpected`.

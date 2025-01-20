@@ -22,4 +22,9 @@
 // LIBC_TYPES_HAS_CFLOAT128 and 'cfloat128' type are provided by
 // "include/llvm-libc-types/cfloat128.h"
 
+#if defined(LIBC_TYPES_HAS_CFLOAT128) &&                                       \
+    !defined(LIBC_TYPES_CFLOAT128_IS_COMPLEX_LONG_DOUBLE)
+#define LIBC_TYPES_CFLOAT128_IS_NOT_COMPLEX_LONG_DOUBLE
+#endif
+
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_CTYPES_H

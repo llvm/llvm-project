@@ -124,15 +124,24 @@ bool LiveRangeShrink::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF) {
     if (MBB.empty())
       continue;
-    bool SawStore = false;
-    BuildInstOrderMap(MBB.begin(), IOM);
-    UseMap.clear();
 
-    for (MachineBasicBlock::iterator Next = MBB.begin(); Next != MBB.end();) {
-      MachineInstr &MI = *Next;
-      ++Next;
-      if (MI.isPHI() || MI.isDebugOrPseudoInstr())
+    MachineBasicBlock::iterator Next = MBB.begin();
+    if (MBB.isEHPad()) {
+      // Do not track PHIs in IOM when handling EHPads.
+      // Otherwise their uses may be hoisted outside a landingpad range.
+      Next = MBB.SkipPHIsLabelsAndDebug(Next);
+      if (Next == MBB.end())
         continue;
+    }
+
+    BuildInstOrderMap(Next, IOM);
+    Next = MBB.SkipPHIsLabelsAndDebug(Next);
+    UseMap.clear();
+    bool SawStore = false;
+
+    while (Next != MBB.end()) {
+      MachineInstr &MI = *Next;
+      Next = MBB.SkipPHIsLabelsAndDebug(++Next);
       if (MI.mayStore())
         SawStore = true;
 
@@ -237,7 +246,7 @@ bool LiveRangeShrink::runOnMachineFunction(MachineFunction &MF) {
         if (MI.getOperand(0).isReg())
           for (; EndIter != MBB.end() && EndIter->isDebugValue() &&
                  EndIter->hasDebugOperandForReg(MI.getOperand(0).getReg());
-               ++EndIter, ++Next)
+               ++EndIter)
             IOM[&*EndIter] = NewOrder;
         MBB.splice(I, &MBB, MI.getIterator(), EndIter);
       }

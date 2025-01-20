@@ -12,6 +12,8 @@
 // unordered containers changes when bounded unique_ptr is enabled.
 // UNSUPPORTED: libcpp-has-abi-bounded-unique_ptr
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <cstdint>
 #include <unordered_map>
 

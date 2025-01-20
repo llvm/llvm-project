@@ -33,7 +33,6 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -886,9 +885,8 @@ protected:
   AAPointerInfo::OffsetInfo ReturnedOffsets;
 
   /// See AAPointerInfo::forallInterferingAccesses.
-  bool forallInterferingAccesses(
-      AA::RangeTy Range,
-      function_ref<bool(const AAPointerInfo::Access &, bool)> CB) const {
+  template <typename F>
+  bool forallInterferingAccesses(AA::RangeTy Range, F CB) const {
     if (!isValidState() || !ReturnedOffsets.isUnassigned())
       return false;
 
@@ -907,10 +905,9 @@ protected:
   }
 
   /// See AAPointerInfo::forallInterferingAccesses.
-  bool forallInterferingAccesses(
-      Instruction &I,
-      function_ref<bool(const AAPointerInfo::Access &, bool)> CB,
-      AA::RangeTy &Range) const {
+  template <typename F>
+  bool forallInterferingAccesses(Instruction &I, F CB,
+                                 AA::RangeTy &Range) const {
     if (!isValidState() || !ReturnedOffsets.isUnassigned())
       return false;
 
@@ -1177,7 +1174,7 @@ struct AAPointerInfoImpl
     // TODO: Use reaching kernels from AAKernelInfo (or move it to
     // AAExecutionDomain) such that we allow scopes other than kernels as long
     // as the reaching kernels are disjoint.
-    bool InstInKernel = Scope.hasFnAttribute("kernel");
+    bool InstInKernel = A.getInfoCache().isKernel(Scope);
     bool ObjHasKernelLifetime = false;
     const bool UseDominanceReasoning =
         FindInterferingWrites && IsKnownNoRecurse;
@@ -1211,7 +1208,7 @@ struct AAPointerInfoImpl
       // If the alloca containing function is not recursive the alloca
       // must be dead in the callee.
       const Function *AIFn = AI->getFunction();
-      ObjHasKernelLifetime = AIFn->hasFnAttribute("kernel");
+      ObjHasKernelLifetime = A.getInfoCache().isKernel(*AIFn);
       bool IsKnownNoRecurse;
       if (AA::hasAssumedIRAttr<Attribute::NoRecurse>(
               A, this, IRPosition::function(*AIFn), DepClassTy::OPTIONAL,
@@ -1223,8 +1220,8 @@ struct AAPointerInfoImpl
       // as it is "dead" in the (unknown) callees.
       ObjHasKernelLifetime = HasKernelLifetime(GV, *GV->getParent());
       if (ObjHasKernelLifetime)
-        IsLiveInCalleeCB = [](const Function &Fn) {
-          return !Fn.hasFnAttribute("kernel");
+        IsLiveInCalleeCB = [&A](const Function &Fn) {
+          return !A.getInfoCache().isKernel(Fn);
         };
     }
 
@@ -1239,7 +1236,7 @@ struct AAPointerInfoImpl
       // If the object has kernel lifetime we can ignore accesses only reachable
       // by other kernels. For now we only skip accesses *in* other kernels.
       if (InstInKernel && ObjHasKernelLifetime && !AccInSameScope &&
-          AccScope->hasFnAttribute("kernel"))
+          A.getInfoCache().isKernel(*AccScope))
         return true;
 
       if (Exact && Acc.isMustAccess() && Acc.getRemoteInst() != &I) {
@@ -9241,12 +9238,12 @@ struct AAValueConstantRangeReturned
     : AAReturnedFromReturnedValues<AAValueConstantRange,
                                    AAValueConstantRangeImpl,
                                    AAValueConstantRangeImpl::StateType,
-                                   /* PropogateCallBaseContext */ true> {
+                                   /* PropagateCallBaseContext */ true> {
   using Base =
       AAReturnedFromReturnedValues<AAValueConstantRange,
                                    AAValueConstantRangeImpl,
                                    AAValueConstantRangeImpl::StateType,
-                                   /* PropogateCallBaseContext */ true>;
+                                   /* PropagateCallBaseContext */ true>;
   AAValueConstantRangeReturned(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 

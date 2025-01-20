@@ -34,7 +34,7 @@ define float @baz() {
 ; THRESHOLD-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
 ; THRESHOLD-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[TMP4]], i32 0
 ; THRESHOLD-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP5]], float [[CONV]], i32 1
-; THRESHOLD-NEXT:    [[TMP7:%.*]] = fmul fast <2 x float> [[TMP6]], <float 2.000000e+00, float 2.000000e+00>
+; THRESHOLD-NEXT:    [[TMP7:%.*]] = fmul fast <2 x float> [[TMP6]], splat (float 2.000000e+00)
 ; THRESHOLD-NEXT:    [[TMP8:%.*]] = extractelement <2 x float> [[TMP7]], i32 0
 ; THRESHOLD-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[TMP7]], i32 1
 ; THRESHOLD-NEXT:    [[OP_RDX:%.*]] = fadd fast float [[TMP8]], [[TMP9]]

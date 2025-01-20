@@ -18,7 +18,6 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 
 using namespace llvm;

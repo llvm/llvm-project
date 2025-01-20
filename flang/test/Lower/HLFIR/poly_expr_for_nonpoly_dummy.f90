@@ -17,12 +17,9 @@ subroutine test1(x)
   call callee(cshift(x, 1))
 end subroutine test1
 ! CHECK-LABEL:   func.func @_QPtest1(
-! CHECK:           %[[VAL_21:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = ".tmp.intrinsic_result"} : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, !fir.shift<1>) -> (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>)
-! CHECK:           %[[VAL_22:.*]] = arith.constant true
-! CHECK:           %[[VAL_23:.*]] = hlfir.as_expr %[[VAL_21]]#0 move %[[VAL_22]] : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, i1) -> !hlfir.expr<?x!fir.type<_QMtypesTt>?>
-! CHECK:           %[[VAL_24:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_25:.*]]:3 = fir.box_dims %[[VAL_21]]#0, %[[VAL_24]] : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, index) -> (index, index, index)
-! CHECK:           %[[VAL_26:.*]] = fir.shape %[[VAL_25]]#1 : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_4:.*]] = arith.constant 1 : i32
+! CHECK:           %[[VAL_23:.*]] = hlfir.cshift %{{.*}} %[[VAL_4]] : (!fir.class<!fir.array<?x!fir.type<_QMtypesTt>>>, i32) -> !hlfir.expr<?x!fir.type<_QMtypesTt>?>
+! CHECK:           %[[VAL_26:.*]] = hlfir.shape_of %[[VAL_23]] : (!hlfir.expr<?x!fir.type<_QMtypesTt>?>) -> !fir.shape<1>
 ! CHECK:           %[[VAL_27:.*]]:3 = hlfir.associate %[[VAL_23]](%[[VAL_26]]) {adapt.valuebyref} : (!hlfir.expr<?x!fir.type<_QMtypesTt>?>, !fir.shape<1>) -> (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, i1)
 ! CHECK:           %[[VAL_28:.*]] = fir.rebox %[[VAL_27]]#0 : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>) -> !fir.box<!fir.array<?x!fir.type<_QMtypesTt>>>
 ! CHECK:           %[[VAL_29:.*]]:2 = hlfir.copy_in %[[VAL_28]] to %[[TMP_BOX:.*]] : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>) -> (!fir.box<!fir.array<?x!fir.type<_QMtypesTt>>>, i1)

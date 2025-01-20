@@ -1395,9 +1395,9 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %arg1:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: %arg2:_(<4 x s32>) = COPY $q1
     ; CHECK-NEXT: %idx:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: %sv:_(<4 x s32>) = G_SHUFFLE_VECTOR %arg1(<4 x s32>), %arg2, shufflemask(3, 0, 0, 0)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %sv:_(<4 x s32>) = G_SHUFFLE_VECTOR %arg1(<4 x s32>), [[DEF]], shufflemask(3, 0, 0, 0)
     ; CHECK-NEXT: %freeze_sv:_(<4 x s32>) = G_FREEZE %sv
     ; CHECK-NEXT: %extract:_(s32) = G_EXTRACT_VECTOR_ELT %freeze_sv(<4 x s32>), %idx(s64)
     ; CHECK-NEXT: $w0 = COPY %extract(s32)
@@ -1422,9 +1422,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %elt:_(s32) = COPY $w0
     ; CHECK-NEXT: %arg1:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: %arg2:_(<4 x s32>) = COPY $q1
     ; CHECK-NEXT: %idx:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: %sv:_(<4 x s32>) = G_SHUFFLE_VECTOR %arg1(<4 x s32>), %arg2, shufflemask(3, 0, 0, 0)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %sv:_(<4 x s32>) = G_SHUFFLE_VECTOR %arg1(<4 x s32>), [[DEF]], shufflemask(3, 0, 0, 0)
     ; CHECK-NEXT: %freeze_sv:_(<4 x s32>) = G_FREEZE %sv
     ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s32) = G_FREEZE %elt
     ; CHECK-NEXT: %extract:_(<4 x s32>) = G_INSERT_VECTOR_ELT %freeze_sv, [[FREEZE]](s32), %idx(s64)

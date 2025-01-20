@@ -55,11 +55,12 @@ int convert_float(Reader *reader, const FormatSection &to_conv) {
 
   // Handle inf
 
-  if (to_lower(cur_char) == inf_string[0]) {
+  if (internal::tolower(cur_char) == inf_string[0]) {
     size_t inf_index = 0;
 
-    for (; inf_index < sizeof(inf_string) && out_str.length() < max_width &&
-           to_lower(cur_char) == inf_string[inf_index];
+    for (;
+         inf_index < (sizeof(inf_string) - 1) && out_str.length() < max_width &&
+         internal::tolower(cur_char) == inf_string[inf_index];
          ++inf_index) {
       if (!out_str.append(cur_char)) {
         return ALLOCATION_FAILURE;
@@ -78,11 +79,12 @@ int convert_float(Reader *reader, const FormatSection &to_conv) {
   static const char nan_string[] = "nan";
 
   // Handle nan
-  if (to_lower(cur_char) == nan_string[0]) {
+  if (internal::tolower(cur_char) == nan_string[0]) {
     size_t nan_index = 0;
 
-    for (; nan_index < sizeof(nan_string) && out_str.length() < max_width &&
-           to_lower(cur_char) == nan_string[nan_index];
+    for (;
+         nan_index < (sizeof(nan_string) - 1) && out_str.length() < max_width &&
+         internal::tolower(cur_char) == nan_string[nan_index];
          ++nan_index) {
       if (!out_str.append(cur_char)) {
         return ALLOCATION_FAILURE;
@@ -117,7 +119,7 @@ int convert_float(Reader *reader, const FormatSection &to_conv) {
     }
 
     // If that next character is an 'x' then this is a hexadecimal number.
-    if (to_lower(cur_char) == 'x') {
+    if (internal::tolower(cur_char) == 'x') {
       base = 16;
 
       if (!out_str.append(cur_char)) {
@@ -163,7 +165,7 @@ int convert_float(Reader *reader, const FormatSection &to_conv) {
 
   // Handle the exponent, which has an exponent mark, an optional sign, and
   // decimal digits.
-  if (to_lower(cur_char) == exponent_mark) {
+  if (internal::tolower(cur_char) == exponent_mark) {
     if (!out_str.append(cur_char)) {
       return ALLOCATION_FAILURE;
     }

@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_COMMON_REFERENCE_WITH_H
-#define _LIBCPP___CONCEPTS_COMMON_REFERENCE_WITH_H
+#ifndef _LIBCPP___CXX03___CONCEPTS_COMMON_REFERENCE_WITH_H
+#define _LIBCPP___CXX03___CONCEPTS_COMMON_REFERENCE_WITH_H
 
-#include <__concepts/convertible_to.h>
-#include <__concepts/same_as.h>
-#include <__config>
-#include <__type_traits/common_reference.h>
+#include <__cxx03/__concepts/convertible_to.h>
+#include <__cxx03/__concepts/same_as.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/common_reference.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -33,4 +33,4 @@ concept common_reference_with =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_COMMON_REFERENCE_WITH_H
+#endif // _LIBCPP___CXX03___CONCEPTS_COMMON_REFERENCE_WITH_H

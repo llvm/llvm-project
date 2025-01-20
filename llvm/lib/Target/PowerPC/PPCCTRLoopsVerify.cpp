@@ -33,10 +33,8 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
-#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/GenericDomTreeConstruction.h"
 #include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
 

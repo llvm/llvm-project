@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SEGMENTED_ITERATOR_H
-#define _LIBCPP___SEGMENTED_ITERATOR_H
+#ifndef _LIBCPP___CXX03___SEGMENTED_ITERATOR_H
+#define _LIBCPP___CXX03___SEGMENTED_ITERATOR_H
 
 // Segmented iterators are iterators over (not necessarily contiguous) sub-ranges.
 //
@@ -40,9 +40,9 @@
 // - static It Traits::__compose(__segment_iterator, __local_iterator)
 //   Returns the iterator composed of the segment iterator and local iterator.
 
-#include <__config>
-#include <__type_traits/integral_constant.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -76,4 +76,4 @@ using __is_segmented_iterator = __has_specialization<__segmented_iterator_traits
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___SEGMENTED_ITERATOR_H
+#endif // _LIBCPP___CXX03___SEGMENTED_ITERATOR_H

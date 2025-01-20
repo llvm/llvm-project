@@ -31,7 +31,7 @@ public:
   typedef llvm::function_ref<void(llvm::StringRef local_socket_id)>
       socket_id_callback_type;
 
-  ConnectionFileDescriptor(bool child_processes_inherit = false);
+  ConnectionFileDescriptor();
 
   ConnectionFileDescriptor(int fd, bool owns_fd);
 
@@ -64,9 +64,6 @@ public:
   bool InterruptRead() override;
 
   lldb::IOObjectSP GetReadObject() override { return m_io_sp; }
-
-  bool GetChildProcessesInherit() const;
-  void SetChildProcessesInherit(bool child_processes_inherit);
 
 protected:
   void OpenCommandPipe();
@@ -135,7 +132,6 @@ protected:
   std::atomic<bool> m_shutting_down; // This marks that we are shutting down so
                                      // if we get woken up from
   // BytesAvailable to disconnect, we won't try to read again.
-  bool m_child_processes_inherit;
 
   std::string m_uri;
 

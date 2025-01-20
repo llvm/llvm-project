@@ -3,7 +3,7 @@
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
 
-define i32 @hidden_diverge(i32 %n, i32 %a, i32 %b) {
+define ptx_kernel i32 @hidden_diverge(i32 %n, i32 %a, i32 %b) {
 ; CHECK-LABEL: for function 'hidden_diverge'
 entry:
   %tid = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
@@ -27,6 +27,3 @@ merge:
 }
 
 declare i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-
-!nvvm.annotations = !{!0}
-!0 = !{ptr @hidden_diverge, !"kernel", i32 1}

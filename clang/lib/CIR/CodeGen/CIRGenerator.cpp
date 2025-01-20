@@ -12,8 +12,11 @@
 
 #include "CIRGenModule.h"
 
+#include "mlir/IR/MLIRContext.h"
+
 #include "clang/AST/DeclGroup.h"
 #include "clang/CIR/CIRGenerator.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 using namespace cir;
 using namespace clang;
@@ -26,18 +29,23 @@ CIRGenerator::CIRGenerator(clang::DiagnosticsEngine &diags,
     : diags(diags), fs(std::move(vfs)), codeGenOpts{cgo} {}
 CIRGenerator::~CIRGenerator() = default;
 
-void CIRGenerator::Initialize(ASTContext &astCtx) {
+void CIRGenerator::Initialize(ASTContext &astContext) {
   using namespace llvm;
 
-  this->astCtx = &astCtx;
+  this->astContext = &astContext;
 
-  cgm = std::make_unique<CIRGenModule>(*mlirCtx, astCtx, codeGenOpts, diags);
+  mlirContext = std::make_unique<mlir::MLIRContext>();
+  mlirContext->loadDialect<cir::CIRDialect>();
+  cgm = std::make_unique<clang::CIRGen::CIRGenModule>(
+      *mlirContext.get(), astContext, codeGenOpts, diags);
 }
+
+mlir::ModuleOp CIRGenerator::getModule() const { return cgm->getModule(); }
 
 bool CIRGenerator::HandleTopLevelDecl(DeclGroupRef group) {
 
   for (Decl *decl : group)
-    cgm->buildTopLevelDecl(decl);
+    cgm->emitTopLevelDecl(decl);
 
   return true;
 }

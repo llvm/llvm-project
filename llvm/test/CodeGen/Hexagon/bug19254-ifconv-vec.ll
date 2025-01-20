@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O3 < %s | FileCheck %s
 ; we really just want to be sure this compilation does not abort.
 ; CHECK: vadd
 

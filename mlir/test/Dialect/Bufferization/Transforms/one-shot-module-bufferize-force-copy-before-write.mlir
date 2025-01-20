@@ -28,7 +28,7 @@ module {
   // CHECK_COPY:           memref.copy
 
   func.func @contains_to_memref_op(%arg0: tensor<?xf32> {bufferization.writable = true}, %arg1: index) -> vector<5xf32> {
-    %0 = bufferization.to_memref %arg0 : memref<?xf32>
+    %0 = bufferization.to_memref %arg0 : tensor<?xf32> to memref<?xf32>
     %cst = arith.constant 0.000000e+00 : f32
     %1 = vector.transfer_read %0[%arg1], %cst : memref<?xf32>, vector<5xf32>
     return %1 : vector<5xf32>

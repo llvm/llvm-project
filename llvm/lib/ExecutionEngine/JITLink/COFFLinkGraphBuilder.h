@@ -37,7 +37,8 @@ protected:
   using COFFSectionIndex = int32_t;
   using COFFSymbolIndex = int32_t;
 
-  COFFLinkGraphBuilder(const object::COFFObjectFile &Obj, Triple TT,
+  COFFLinkGraphBuilder(const object::COFFObjectFile &Obj,
+                       std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
                        SubtargetFeatures Features,
                        LinkGraph::GetEdgeKindNameFunction GetEdgeKindName);
 
@@ -76,6 +77,12 @@ protected:
         SecIndex >= static_cast<COFFSectionIndex>(GraphSymbols.size()))
       return nullptr;
     return GraphBlocks[SecIndex];
+  }
+
+  Symbol &addImageBaseSymbol(StringRef Name = "__ImageBase") {
+    auto &ImageBase = G->addExternalSymbol(G->intern(Name), 0, true);
+    ImageBase.setLive(true);
+    return ImageBase;
   }
 
   object::COFFObjectFile::section_iterator_range sections() const {
@@ -134,20 +141,21 @@ private:
 
   Section &getCommonSection();
 
-  Symbol *createExternalSymbol(COFFSymbolIndex SymIndex, StringRef SymbolName,
+  Symbol *createExternalSymbol(COFFSymbolIndex SymIndex,
+                               orc::SymbolStringPtr SymbolName,
                                object::COFFSymbolRef Symbol,
                                const object::coff_section *Section);
-  Expected<Symbol *> createAliasSymbol(StringRef SymbolName, Linkage L, Scope S,
-                                       Symbol &Target);
+  Expected<Symbol *> createAliasSymbol(orc::SymbolStringPtr SymbolName,
+                                       Linkage L, Scope S, Symbol &Target);
   Expected<Symbol *> createDefinedSymbol(COFFSymbolIndex SymIndex,
-                                         StringRef SymbolName,
+                                         orc::SymbolStringPtr SymbolName,
                                          object::COFFSymbolRef Symbol,
                                          const object::coff_section *Section);
   Expected<Symbol *> createCOMDATExportRequest(
       COFFSymbolIndex SymIndex, object::COFFSymbolRef Symbol,
       const object::coff_aux_section_definition *Definition);
   Expected<Symbol *> exportCOMDATSymbol(COFFSymbolIndex SymIndex,
-                                        StringRef SymbolName,
+                                        orc::SymbolStringPtr SymbolName,
                                         object::COFFSymbolRef Symbol);
 
   Error handleDirectiveSection(StringRef Str);
@@ -176,9 +184,9 @@ private:
   std::vector<Block *> GraphBlocks;
   std::vector<Symbol *> GraphSymbols;
 
-  DenseMap<StringRef, StringRef> AlternateNames;
-  DenseMap<StringRef, Symbol *> ExternalSymbols;
-  DenseMap<StringRef, Symbol *> DefinedSymbols;
+  DenseMap<orc::SymbolStringPtr, orc::SymbolStringPtr> AlternateNames;
+  DenseMap<orc::SymbolStringPtr, Symbol *> ExternalSymbols;
+  DenseMap<orc::SymbolStringPtr, Symbol *> DefinedSymbols;
 };
 
 template <typename RelocHandlerFunction>
@@ -213,6 +221,18 @@ Error COFFLinkGraphBuilder::forEachRelocation(const object::SectionRef &RelSec,
   LLVM_DEBUG(dbgs() << "\n");
   return Error::success();
 }
+
+class GetImageBaseSymbol {
+public:
+  GetImageBaseSymbol(StringRef ImageBaseName = "__ImageBase")
+      : ImageBaseName(ImageBaseName) {}
+  Symbol *operator()(LinkGraph &G);
+  void reset() { ImageBase = std::nullopt; }
+
+private:
+  StringRef ImageBaseName;
+  std::optional<Symbol *> ImageBase;
+};
 
 } // end namespace jitlink
 } // end namespace llvm

@@ -1,0 +1,138 @@
+REQUIRES: aarch64, x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows demangled-dll-main.s -o demangled-dll-main.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows mangled-dll-main.s -o mangled-dll-main.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows demangled-func.s -o demangled-func.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows mangled-func.s -o mangled-func.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows ref-demangled.s -o ref-demangled.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows demangled-entry-drectve.s -o demangled-entry-drectve.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows demangled-dll-main.s -o x64-dll-main.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows ref-demangled.s -o ref-x64.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
+
+RUN: llvm-lib -machine:arm64ec -out:func.lib mangled-func.obj
+RUN: llvm-lib -machine:arm64ec -out:dllmain.lib mangled-dll-main.obj
+
+Ensure that the linker recognizes the demangled version of _DllMainCRTStartup.
+RUN: lld-link -machine:arm64ec -dll -out:demangled-main.dll demangled-dll-main.obj loadconfig-arm64ec.obj
+RUN: llvm-objdump -d demangled-main.dll | FileCheck -check-prefix=DISASM %s
+
+DISASM:      0000000180001000 <.text>:
+DISASM-NEXT: 180001000: d65f03c0     ret
+DISASM-EMPTY:
+DISASM-NEXT: Disassembly of section .hexpthk:
+DISASM-EMPTY:
+DISASM:      180002000: 48 8b c4                     movq    %rsp, %rax
+DISASM-NEXT: 180002003: 48 89 58 20                  movq    %rbx, 0x20(%rax)
+DISASM-NEXT: 180002007: 55                           pushq   %rbp
+DISASM-NEXT: 180002008: 5d                           popq    %rbp
+DISASM-NEXT: 180002009: e9 f2 ef ff ff               jmp     0x180001000 <.text>
+DISASM-NEXT: 18000200e: cc                           int3
+DISASM-NEXT: 18000200f: cc                           int3
+
+Ensure that the linker recognizes the mangled version of #_DllMainCRTStartup.
+RUN: lld-link -machine:arm64ec -dll -out:mangled-dllmain.dll mangled-dll-main.obj loadconfig-arm64ec.obj
+RUN: llvm-objdump -d mangled-dllmain.dll | FileCheck -check-prefix=DISASM %s
+
+Verify that the linker recognizes the mangled version of _DllMainCRTStartup from an archive.
+RUN: lld-link -machine:arm64ec -dll -out:mangled-lib-dllmain.dll dllmain.lib loadconfig-arm64ec.obj
+RUN: llvm-objdump -d mangled-lib-dllmain.dll | FileCheck -check-prefix=DISASM %s
+
+Verify that the linker recognizes the demangled entry function.
+RUN: lld-link -machine:arm64ec -dll -out:demangled-entry.dll demangled-func.obj loadconfig-arm64ec.obj -entry:func
+RUN: llvm-objdump -d demangled-entry.dll | FileCheck -check-prefix=DISASM %s
+
+Verify that the linker recognizes the mangled entry function when it is referenced by its demangled name.
+RUN: lld-link -machine:arm64ec -dll -out:mangled-entry.dll mangled-func.obj loadconfig-arm64ec.obj -entry:func
+RUN: llvm-objdump -d mangled-entry.dll | FileCheck -check-prefix=DISASM %s
+
+Verify that the linker recognizes the mangled entry function when it is referenced by its demangled
+name in drectve section.
+RUN: lld-link -machine:arm64ec -dll -out:mangled-entry.dll mangled-func.obj loadconfig-arm64ec.obj demangled-entry-drectve.obj
+RUN: llvm-objdump -d mangled-entry.dll | FileCheck -check-prefix=DISASM %s
+
+Verify that the linker recognizes the mangled entry function from an archive.
+RUN: lld-link -machine:arm64ec -dll -out:mangled-lib-entry.dll func.lib loadconfig-arm64ec.obj -entry:func
+RUN: llvm-objdump -d mangled-lib-entry.dll | FileCheck -check-prefix=DISASM %s
+
+Verify that the linker recognizes the entry function when referenced by its mangled name.
+RUN: lld-link -machine:arm64ec -dll -out:mangled-entry2.dll mangled-func.obj loadconfig-arm64ec.obj "-entry:#func"
+RUN: llvm-objdump -d mangled-entry2.dll | FileCheck -check-prefix=DISASM %s
+
+Verify that the linker recognizes the demangled exported function.
+RUN: lld-link -machine:arm64ec -dll -out:demangled-export.dll demangled-func.obj \
+RUN:          loadconfig-arm64ec.obj -noentry -export:func
+RUN: llvm-objdump -d demangled-export.dll | FileCheck -check-prefix=DISASM %s
+
+Verify that the linker recognizes the mangled exported function when referenced by its demangled name.
+RUN: lld-link -machine:arm64ec -dll -out:mangled-export.dll mangled-func.obj \
+RUN:          loadconfig-arm64ec.obj -noentry -export:func
+RUN: llvm-objdump -d mangled-export.dll | FileCheck -check-prefix=DISASM %s
+
+Verify that the linker recognizes the mangled exported function when referenced by its mangled name.
+RUN: lld-link -machine:arm64ec -dll -out:mangled-export2.dll mangled-func.obj \
+RUN:          loadconfig-arm64ec.obj -noentry "-export:#func"
+RUN: llvm-objdump -d mangled-export2.dll | FileCheck -check-prefix=DISASM %s
+
+Verify that the linker recognizes the mangled exported function when referenced
+by its mangled name and creates a demangled alias for it.
+RUN: lld-link -machine:arm64ec -dll -noentry -out:demangled-export-ref.dll mangled-func.obj \
+RUN:          ref-demangled.obj loadconfig-arm64ec.obj "-export:#func"
+RUN: llvm-objdump -d demangled-export-ref.dll | FileCheck -check-prefix=DISASM %s
+
+Verify that an x86_64 object file can reference ARM64EC mangled functions without requiring an explicit alias.
+RUN: lld-link -machine:arm64ec -dll -noentry -out:x64-ref.dll mangled-func.obj ref-x64.obj loadconfig-arm64ec.obj
+RUN: llvm-objdump -d x64-ref.dll | FileCheck -check-prefix=DISASM2 %s
+
+Verify that an x86_64 object file can reference ARM64EC mangled functions provided by a library.
+RUN: lld-link -machine:arm64ec -dll -noentry -out:x64-lib-ref.dll func.lib ref-x64.obj loadconfig-arm64ec.obj
+RUN: llvm-objdump -d x64-lib-ref.dll | FileCheck -check-prefix=DISASM2 %s
+
+DISASM2:      0000000180001000 <.text>:
+DISASM2-NEXT: 180001000: d65f03c0     ret
+
+Verify that the linker emits appropriate errors for mismatched mangling.
+RUN: not lld-link -machine:arm64ec -dll -out:test.dll demangled-func.obj loadconfig-arm64ec.obj \
+RUN:              "-entry:#func" 2>&1 | FileCheck -check-prefix=FUNC-NOT-FOUND %s
+RUN: not lld-link -machine:arm64ec -dll -out:test.dll demangled-func.obj loadconfig-arm64ec.obj \
+RUN:              -noentry "-export:#func" 2>&1 | FileCheck -check-prefix=FUNC-NOT-FOUND %s
+FUNC-NOT-FOUND: undefined symbol: #func
+
+Verify that the linker recognizes the demangled x86_64 _DllMainCRTStartup.
+RUN: lld-link -machine:arm64ec -dll -out:test.dll x64-dll-main.obj loadconfig-arm64ec.obj
+RUN: llvm-objdump -d test.dll | FileCheck -check-prefix=DISASM-X64 %s
+DISASM-X64:      0000000180001000 <.text>:
+DISASM-X64-NEXT: 180001000: c3                           retq
+
+#--- demangled-dll-main.s
+    .text
+    .globl _DllMainCRTStartup
+_DllMainCRTStartup:
+    ret
+
+#--- mangled-dll-main.s
+    .text
+    .globl "#_DllMainCRTStartup"
+"#_DllMainCRTStartup":
+    ret
+
+#--- demangled-func.s
+    .text
+    .globl func
+func:
+    ret
+
+#--- mangled-func.s
+    .text
+    .globl "#func"
+"#func":
+    ret
+
+#--- ref-demangled.s
+    .data
+    .rva func
+
+#--- demangled-entry-drectve.s
+	.section .drectve,"rd"
+	.ascii " -entry:func"

@@ -7,31 +7,31 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FILESYSTEM_DIRECTORY_ENTRY_H
-#define _LIBCPP___FILESYSTEM_DIRECTORY_ENTRY_H
+#ifndef _LIBCPP___CXX03___FILESYSTEM_DIRECTORY_ENTRY_H
+#define _LIBCPP___CXX03___FILESYSTEM_DIRECTORY_ENTRY_H
 
-#include <__chrono/time_point.h>
-#include <__compare/ordering.h>
-#include <__config>
-#include <__filesystem/file_status.h>
-#include <__filesystem/file_time_type.h>
-#include <__filesystem/file_type.h>
-#include <__filesystem/filesystem_error.h>
-#include <__filesystem/operations.h>
-#include <__filesystem/path.h>
-#include <__filesystem/perms.h>
-#include <__system_error/errc.h>
-#include <__system_error/error_code.h>
-#include <__utility/move.h>
-#include <__utility/unreachable.h>
-#include <cstdint>
+#include <__cxx03/__chrono/time_point.h>
+#include <__cxx03/__compare/ordering.h>
+#include <__cxx03/__config>
+#include <__cxx03/__filesystem/file_status.h>
+#include <__cxx03/__filesystem/file_time_type.h>
+#include <__cxx03/__filesystem/file_type.h>
+#include <__cxx03/__filesystem/filesystem_error.h>
+#include <__cxx03/__filesystem/operations.h>
+#include <__cxx03/__filesystem/path.h>
+#include <__cxx03/__filesystem/perms.h>
+#include <__cxx03/__system_error/errc.h>
+#include <__cxx03/__system_error/error_code.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/__utility/unreachable.h>
+#include <__cxx03/cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 #if _LIBCPP_STD_VER >= 17 && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
 
@@ -432,4 +432,4 @@ _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FILESYSTEM_DIRECTORY_ENTRY_H
+#endif // _LIBCPP___CXX03___FILESYSTEM_DIRECTORY_ENTRY_H

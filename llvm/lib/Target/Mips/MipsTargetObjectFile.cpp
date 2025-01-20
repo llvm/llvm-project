@@ -7,12 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsTargetObjectFile.h"
+#include "MCTargetDesc/MipsMCExpr.h"
 #include "MipsSubtarget.h"
 #include "MipsTargetMachine.h"
-#include "MCTargetDesc/MipsMCExpr.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"

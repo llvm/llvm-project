@@ -6,11 +6,11 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_DEQUE_H
-#define _LIBCPP___FWD_DEQUE_H
+#ifndef _LIBCPP___CXX03___FWD_DEQUE_H
+#define _LIBCPP___CXX03___FWD_DEQUE_H
 
-#include <__config>
-#include <__fwd/memory.h>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/memory.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -23,4 +23,4 @@ class _LIBCPP_TEMPLATE_VIS deque;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_DEQUE_H
+#endif // _LIBCPP___CXX03___FWD_DEQUE_H

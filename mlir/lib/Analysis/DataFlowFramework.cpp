@@ -84,7 +84,7 @@ void LatticeAnchor::print(raw_ostream &os) const {
     return value.print(os, OpPrintingFlags().skipRegions());
   }
 
-  return get<ProgramPoint *>()->print(os);
+  return llvm::cast<ProgramPoint *>(*this)->print(os);
 }
 
 Location LatticeAnchor::getLoc() const {
@@ -93,7 +93,7 @@ Location LatticeAnchor::getLoc() const {
   if (auto value = llvm::dyn_cast<Value>(*this))
     return value.getLoc();
 
-  ProgramPoint *pp = get<ProgramPoint *>();
+  ProgramPoint *pp = llvm::cast<ProgramPoint *>(*this);
   if (!pp->isBlockStart())
     return pp->getPrevOp()->getLoc();
   return pp->getBlock()->getParent()->getLoc();

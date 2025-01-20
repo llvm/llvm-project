@@ -13,18 +13,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
-#include "Utils/AArch64BaseInfo.h"
 #include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
 using namespace llvm;

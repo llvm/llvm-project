@@ -1,4 +1,4 @@
-; REQUIRES: system-darwin
+; REQUIRES: x86_64-apple
 ; RUN: lli -jit-kind=orc-lazy %s
 ;
 ; Basic correctness testing for eh-frame processing and registration.

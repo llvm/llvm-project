@@ -358,6 +358,9 @@ bool Constant::containsUndefElement() const {
 }
 
 bool Constant::containsConstantExpression() const {
+  if (isa<ConstantInt>(this) || isa<ConstantFP>(this))
+    return false;
+
   if (auto *VTy = dyn_cast<FixedVectorType>(getType())) {
     for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i)
       if (isa<ConstantExpr>(getAggregateElement(i)))
@@ -439,6 +442,20 @@ Constant *Constant::getAggregateElement(unsigned Elt) const {
   if (const auto *CAZ = dyn_cast<ConstantAggregateZero>(this))
     return Elt < CAZ->getElementCount().getKnownMinValue()
                ? CAZ->getElementValue(Elt)
+               : nullptr;
+
+  if (const auto *CI = dyn_cast<ConstantInt>(this))
+    return Elt < cast<VectorType>(getType())
+                       ->getElementCount()
+                       .getKnownMinValue()
+               ? ConstantInt::get(getContext(), CI->getValue())
+               : nullptr;
+
+  if (const auto *CFP = dyn_cast<ConstantFP>(this))
+    return Elt < cast<VectorType>(getType())
+                       ->getElementCount()
+                       .getKnownMinValue()
+               ? ConstantFP::get(getContext(), CFP->getValue())
                : nullptr;
 
   // FIXME: getNumElements() will fail for non-fixed vector types.
@@ -1692,6 +1709,10 @@ Constant *Constant::getSplatValue(bool AllowPoison) const {
   assert(this->getType()->isVectorTy() && "Only valid for vectors!");
   if (isa<ConstantAggregateZero>(this))
     return getNullValue(cast<VectorType>(getType())->getElementType());
+  if (auto *CI = dyn_cast<ConstantInt>(this))
+    return ConstantInt::get(getContext(), CI->getValue());
+  if (auto *CFP = dyn_cast<ConstantFP>(this))
+    return ConstantFP::get(getContext(), CFP->getValue());
   if (const ConstantDataVector *CV = dyn_cast<ConstantDataVector>(this))
     return CV->getSplatValue();
   if (const ConstantVector *CV = dyn_cast<ConstantVector>(this))

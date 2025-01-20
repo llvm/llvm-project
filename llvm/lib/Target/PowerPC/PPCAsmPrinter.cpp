@@ -71,9 +71,9 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/PPCTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -2230,10 +2230,6 @@ void PPCLinuxAsmPrinter::emitFunctionBodyEnd() {
 
 void PPCAIXAsmPrinter::emitLinkage(const GlobalValue *GV,
                                    MCSymbol *GVSym) const {
-
-  assert(MAI->hasVisibilityOnlyWithLinkage() &&
-         "AIX's linkage directives take a visibility setting.");
-
   MCSymbolAttr LinkageAttr = MCSA_Invalid;
   switch (GV->getLinkage()) {
   case GlobalValue::ExternalLinkage:
@@ -3047,6 +3043,30 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
 bool PPCAIXAsmPrinter::doInitialization(Module &M) {
   const bool Result = PPCAsmPrinter::doInitialization(M);
 
+  // Emit the .machine directive on AIX.
+  const Triple &Target = TM.getTargetTriple();
+  XCOFF::CFileCpuId TargetCpuId = XCOFF::TCPU_INVALID;
+  // Walk through the "target-cpu" attribute of functions and use the newest
+  // level as the CPU of the module.
+  for (auto &F : M) {
+    XCOFF::CFileCpuId FunCpuId =
+        XCOFF::getCpuID(TM.getSubtargetImpl(F)->getCPU());
+    if (FunCpuId > TargetCpuId)
+      TargetCpuId = FunCpuId;
+  }
+  // If there is no "target-cpu" attribute within the functions, take the
+  // "-mcpu" value. If both are omitted, use getNormalizedPPCTargetCPU() to
+  // determine the default CPU.
+  if (!TargetCpuId) {
+    StringRef TargetCPU = TM.getTargetCPU();
+    TargetCpuId = XCOFF::getCpuID(
+        TargetCPU.empty() ? PPC::getNormalizedPPCTargetCPU(Target) : TargetCPU);
+  }
+
+  PPCTargetStreamer *TS =
+      static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
+  TS->emitMachine(XCOFF::getTCPUString(TargetCpuId));
+
   auto setCsectAlignment = [this](const GlobalObject *GO) {
     // Declarations have 0 alignment which is set by default.
     if (GO->isDeclarationForLinker())
@@ -3227,9 +3247,15 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
 bool PPCAIXAsmPrinter::doFinalization(Module &M) {
   // Do streamer related finalization for DWARF.
-  if (!MAI->usesDwarfFileAndLocDirectives() && hasDebugInfo())
-    OutStreamer->doFinalizationAtSectionEnd(
-        OutStreamer->getContext().getObjectFileInfo()->getTextSection());
+  if (hasDebugInfo()) {
+    // Emit section end. This is used to tell the debug line section where the
+    // end is for a text section if we don't use .loc to represent the debug
+    // line.
+    auto *Sec = OutContext.getObjectFileInfo()->getTextSection();
+    OutStreamer->switchSectionNoPrint(Sec);
+    MCSymbol *Sym = Sec->getEndSymbol(OutContext);
+    OutStreamer->emitLabel(Sym);
+  }
 
   for (MCSymbol *Sym : ExtSymSDNodeSymbols)
     OutStreamer->emitSymbolAttribute(Sym, MCSA_Extern);

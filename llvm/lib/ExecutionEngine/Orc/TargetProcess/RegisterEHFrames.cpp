@@ -9,14 +9,9 @@
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 
 #include "llvm/Config/config.h"
-#include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "orc"
 

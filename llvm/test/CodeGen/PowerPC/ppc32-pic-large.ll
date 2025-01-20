@@ -13,12 +13,31 @@ $bar1 = comdat any
 @bar2 = global i32 0, align 4, comdat($bar1)
 
 declare i32 @call_foo(i32, ...)
+declare i32 @call_strictfp() strictfp
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 
 define i32 @foo() {
 entry:
   %0 = load i32, ptr @bar, align 4
   %call = call i32 (i32, ...) @call_foo(i32 %0, i32 0, i32 1, i32 2, i32 4, i32 8, i32 16, i32 32, i32 64)
   ret i32 %0
+}
+
+define i32 @foo1() strictfp {
+entry:
+  %call = call i32 (i32, ...) @call_foo(i32 0)
+  ret i32 %call
+}
+
+define i32 @foo1_strictfp() strictfp {
+entry:
+  %call = call i32 () @call_strictfp()
+  ret i32 %call
+}
+
+define void @foo2(ptr %a) {
+  call void @llvm.memset.p0.i64(ptr align 1 %a, i8 1, i64 1000, i1 false)
+  ret void
 }
 
 define i32 @load() {
@@ -48,6 +67,31 @@ entry:
 ; LARGE-SECUREPLT:   addis 30, 30, .LTOC-.L0$pb@ha
 ; LARGE-SECUREPLT:   addi 30, 30, .LTOC-.L0$pb@l
 ; LARGE-SECUREPLT:   bl call_foo@PLT+32768
+
+; LARGE-SECUREPLT-LABEL: foo1:
+; LARGE-SECUREPLT:       .L1$pb:
+; LARGE-SECUREPLT-NEXT:    crxor 6, 6, 6
+; LARGE-SECUREPLT-NEXT:    mflr 30
+; LARGE-SECUREPLT-NEXT:    addis 30, 30, .LTOC-.L1$pb@ha
+; LARGE-SECUREPLT-NEXT:    addi 30, 30, .LTOC-.L1$pb@l
+; LARGE-SECUREPLT-NEXT:    li 3, 0
+; LARGE-SECUREPLT-NEXT:    bl call_foo@PLT+32768
+
+; LARGE-SECUREPLT-LABEL: foo1_strictfp:
+; LARGE-SECUREPLT:       .L2$pb:
+; LARGE-SECUREPLT-NEXT:    mflr 30
+; LARGE-SECUREPLT-NEXT:    addis 30, 30, .LTOC-.L2$pb@ha
+; LARGE-SECUREPLT-NEXT:    addi 30, 30, .LTOC-.L2$pb@l
+; LARGE-SECUREPLT-NEXT:    bl call_strictfp@PLT+32768
+
+; LARGE-SECUREPLT-LABEL: foo2:
+; LARGE-SECUREPLT:       .L3$pb:
+; LARGE-SECUREPLT:         mflr 30
+; LARGE-SECUREPLT-NEXT:    addis 30, 30, .LTOC-.L3$pb@ha
+; LARGE-SECUREPLT-NEXT:    addi 30, 30, .LTOC-.L3$pb@l
+; LARGE-SECUREPLT:         bl memset@PLT+32768
+
+; LARGE-SECUREPLT-LABEEL: load:
 
 ; LARGE:      .section .bss.bar1,"awG",@nobits,bar1,comdat
 ; LARGE:      bar1:

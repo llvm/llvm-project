@@ -7,8 +7,8 @@ define float @while_break(i32 %z, float %v, i32 %x, i32 %y) #0 {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[HEADER:.*]]
 ; CHECK:       [[HEADER]]:
-; CHECK-NEXT:    [[V_1:%.*]] = phi float [ [[V]], %[[ENTRY]] ], [ [[TMP7:%.*]], %[[FLOW2:.*]] ]
-; CHECK-NEXT:    [[IND:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[TMP6:%.*]], %[[FLOW2]] ]
+; CHECK-NEXT:    [[V_1:%.*]] = phi float [ [[V]], %[[ENTRY]] ], [ [[TMP8:%.*]], %[[FLOW2:.*]] ]
+; CHECK-NEXT:    [[IND:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[TMP5:%.*]], %[[FLOW2]] ]
 ; CHECK-NEXT:    [[CC:%.*]] = icmp sge i32 [[IND]], [[X]]
 ; CHECK-NEXT:    br i1 [[CC]], label %[[ELSE:.*]], label %[[FLOW:.*]]
 ; CHECK:       [[FLOW]]:
@@ -23,20 +23,17 @@ define float @while_break(i32 %z, float %v, i32 %x, i32 %y) #0 {
 ; CHECK-NEXT:    [[CC2]] = icmp slt i32 [[IND]], [[Y]]
 ; CHECK-NEXT:    br label %[[FLOW]]
 ; CHECK:       [[FLOW1]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi float [ undef, %[[IF]] ], [ [[TMP0]], %[[FLOW]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi float [ [[V_IF]], %[[IF]] ], [ [[TMP0]], %[[FLOW]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi i1 [ true, %[[IF]] ], [ [[TMP1]], %[[FLOW]] ]
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[LATCH:.*]], label %[[FLOW2]]
+; CHECK-NEXT:    [[TMP8]] = phi float [ [[V_IF]], %[[IF]] ], [ [[TMP0]], %[[FLOW]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ true, %[[IF]] ], [ [[TMP1]], %[[FLOW]] ]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[LATCH:.*]], label %[[FLOW2]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    [[IND_INC:%.*]] = add i32 [[IND]], 1
 ; CHECK-NEXT:    [[CC3:%.*]] = icmp slt i32 [[IND]], [[Z]]
 ; CHECK-NEXT:    br label %[[FLOW2]]
 ; CHECK:       [[FLOW2]]:
-; CHECK-NEXT:    [[TMP6]] = phi i32 [ [[IND_INC]], %[[LATCH]] ], [ undef, %[[FLOW1]] ]
-; CHECK-NEXT:    [[TMP7]] = phi float [ [[TMP4]], %[[LATCH]] ], [ undef, %[[FLOW1]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi float [ [[TMP4]], %[[LATCH]] ], [ [[TMP3]], %[[FLOW1]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = phi i1 [ [[CC3]], %[[LATCH]] ], [ true, %[[FLOW1]] ]
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[END:.*]], label %[[HEADER]]
+; CHECK-NEXT:    [[TMP5]] = phi i32 [ [[IND_INC]], %[[LATCH]] ], [ undef, %[[FLOW1]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi i1 [ [[CC3]], %[[LATCH]] ], [ true, %[[FLOW1]] ]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[END:.*]], label %[[HEADER]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret float [[TMP8]]
 ;
@@ -75,8 +72,8 @@ define float @while_break2(i32 %z, float %v, i32 %x, i32 %y) #0 {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[HEADER:.*]]
 ; CHECK:       [[HEADER]]:
-; CHECK-NEXT:    [[V_1:%.*]] = phi float [ [[V]], %[[ENTRY]] ], [ [[TMP7:%.*]], %[[FLOW2:.*]] ]
-; CHECK-NEXT:    [[IND:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[TMP6:%.*]], %[[FLOW2]] ]
+; CHECK-NEXT:    [[V_1:%.*]] = phi float [ [[V]], %[[ENTRY]] ], [ [[TMP8:%.*]], %[[FLOW2:.*]] ]
+; CHECK-NEXT:    [[IND:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[TMP5:%.*]], %[[FLOW2]] ]
 ; CHECK-NEXT:    [[CC:%.*]] = icmp sge i32 [[IND]], [[X]]
 ; CHECK-NEXT:    br i1 [[CC]], label %[[IF:.*]], label %[[FLOW:.*]]
 ; CHECK:       [[IF]]:
@@ -91,20 +88,17 @@ define float @while_break2(i32 %z, float %v, i32 %x, i32 %y) #0 {
 ; CHECK-NEXT:    [[CC2:%.*]] = icmp slt i32 [[IND]], [[Y]]
 ; CHECK-NEXT:    br label %[[FLOW1]]
 ; CHECK:       [[FLOW1]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi float [ [[V_1]], %[[ELSE]] ], [ undef, %[[FLOW]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi float [ [[V_1]], %[[ELSE]] ], [ [[TMP0]], %[[FLOW]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi i1 [ [[CC2]], %[[ELSE]] ], [ [[TMP1]], %[[FLOW]] ]
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[LATCH:.*]], label %[[FLOW2]]
+; CHECK-NEXT:    [[TMP8]] = phi float [ [[V_1]], %[[ELSE]] ], [ [[TMP0]], %[[FLOW]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ [[CC2]], %[[ELSE]] ], [ [[TMP1]], %[[FLOW]] ]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[LATCH:.*]], label %[[FLOW2]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    [[IND_INC:%.*]] = add i32 [[IND]], 1
 ; CHECK-NEXT:    [[CC3:%.*]] = icmp slt i32 [[IND]], [[Z]]
 ; CHECK-NEXT:    br label %[[FLOW2]]
 ; CHECK:       [[FLOW2]]:
-; CHECK-NEXT:    [[TMP6]] = phi i32 [ [[IND_INC]], %[[LATCH]] ], [ undef, %[[FLOW1]] ]
-; CHECK-NEXT:    [[TMP7]] = phi float [ [[TMP4]], %[[LATCH]] ], [ undef, %[[FLOW1]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi float [ [[TMP4]], %[[LATCH]] ], [ [[TMP3]], %[[FLOW1]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = phi i1 [ [[CC3]], %[[LATCH]] ], [ true, %[[FLOW1]] ]
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[END:.*]], label %[[HEADER]]
+; CHECK-NEXT:    [[TMP5]] = phi i32 [ [[IND_INC]], %[[LATCH]] ], [ undef, %[[FLOW1]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi i1 [ [[CC3]], %[[LATCH]] ], [ true, %[[FLOW1]] ]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[END:.*]], label %[[HEADER]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret float [[TMP8]]
 ;
@@ -143,9 +137,9 @@ define < 2 x float> @while_break_two_chains_of_phi(float %v, i32 %x, i32 %y, i32
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[HEADER:.*]]
 ; CHECK:       [[HEADER]]:
-; CHECK-NEXT:    [[V_1:%.*]] = phi float [ [[V]], %[[ENTRY]] ], [ [[TMP6:%.*]], %[[FLOW1:.*]] ]
-; CHECK-NEXT:    [[V_COPY:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[TMP5:%.*]], %[[FLOW1]] ]
-; CHECK-NEXT:    [[IND:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[TMP4:%.*]], %[[FLOW1]] ]
+; CHECK-NEXT:    [[V_1:%.*]] = phi float [ [[V]], %[[ENTRY]] ], [ [[TMP8:%.*]], %[[FLOW1:.*]] ]
+; CHECK-NEXT:    [[V_COPY:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[TMP7:%.*]], %[[FLOW1]] ]
+; CHECK-NEXT:    [[IND:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[TMP3:%.*]], %[[FLOW1]] ]
 ; CHECK-NEXT:    [[CC:%.*]] = icmp slt i32 [[IND]], [[X]]
 ; CHECK-NEXT:    [[CC_INV:%.*]] = xor i1 [[CC]], true
 ; CHECK-NEXT:    br i1 [[CC]], label %[[IF:.*]], label %[[FLOW:.*]]
@@ -156,23 +150,18 @@ define < 2 x float> @while_break_two_chains_of_phi(float %v, i32 %x, i32 %y, i32
 ; CHECK-NEXT:    [[CC2:%.*]] = icmp slt i32 [[IND]], [[Y]]
 ; CHECK-NEXT:    br label %[[FLOW]]
 ; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi float [ [[V_IF]], %[[IF]] ], [ undef, %[[HEADER]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi float [ [[V_IF]], %[[IF]] ], [ [[V_COPY]], %[[HEADER]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi float [ [[V_IF]], %[[IF]] ], [ [[V_1]], %[[HEADER]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ [[CC2]], %[[IF]] ], [ [[CC_INV]], %[[HEADER]] ]
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[LATCH:.*]], label %[[FLOW1]]
+; CHECK-NEXT:    [[TMP7]] = phi float [ [[V_IF]], %[[IF]] ], [ [[V_COPY]], %[[HEADER]] ]
+; CHECK-NEXT:    [[TMP8]] = phi float [ [[V_IF]], %[[IF]] ], [ [[V_1]], %[[HEADER]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ [[CC2]], %[[IF]] ], [ [[CC_INV]], %[[HEADER]] ]
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[LATCH:.*]], label %[[FLOW1]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    [[IND_INC:%.*]] = add i32 [[IND]], 1
 ; CHECK-NEXT:    [[CC3:%.*]] = icmp slt i32 [[IND]], [[Z]]
 ; CHECK-NEXT:    br label %[[FLOW1]]
 ; CHECK:       [[FLOW1]]:
-; CHECK-NEXT:    [[TMP4]] = phi i32 [ [[IND_INC]], %[[LATCH]] ], [ undef, %[[FLOW]] ]
-; CHECK-NEXT:    [[TMP5]] = phi float [ [[TMP1]], %[[LATCH]] ], [ undef, %[[FLOW]] ]
-; CHECK-NEXT:    [[TMP6]] = phi float [ [[TMP2]], %[[LATCH]] ], [ undef, %[[FLOW]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = phi float [ [[TMP1]], %[[LATCH]] ], [ [[TMP0]], %[[FLOW]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi float [ [[TMP2]], %[[LATCH]] ], [ [[TMP0]], %[[FLOW]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = phi i1 [ [[CC3]], %[[LATCH]] ], [ true, %[[FLOW]] ]
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[END:.*]], label %[[HEADER]]
+; CHECK-NEXT:    [[TMP3]] = phi i32 [ [[IND_INC]], %[[LATCH]] ], [ undef, %[[FLOW]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ [[CC3]], %[[LATCH]] ], [ true, %[[FLOW]] ]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[END:.*]], label %[[HEADER]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    [[PACKED0:%.*]] = insertelement <2 x float> poison, float [[TMP8]], i32 0
 ; CHECK-NEXT:    [[PACKED1:%.*]] = insertelement <2 x float> [[PACKED0]], float [[TMP7]], i32 1

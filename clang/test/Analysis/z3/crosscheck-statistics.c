@@ -28,6 +28,6 @@ int rejecting(int n, int x) {
 // CHECK-NEXT:  1 BugReporter         - Number of reports passed Z3
 // CHECK-NEXT:  1 BugReporter         - Number of reports refuted by Z3
 
-// CHECK:       1 Z3CrosscheckVisitor - Number of Z3 queries accepting a report
-// CHECK-NEXT:  1 Z3CrosscheckVisitor - Number of Z3 queries rejecting a report
-// CHECK-NEXT:  2 Z3CrosscheckVisitor - Number of Z3 queries done
+// CHECK:       1 Z3CrosscheckOracle - Number of Z3 queries accepting a report
+// CHECK-NEXT:  1 Z3CrosscheckOracle - Number of Z3 queries rejecting a report
+// CHECK-NEXT:  2 Z3CrosscheckOracle - Number of Z3 queries done

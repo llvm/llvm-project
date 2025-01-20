@@ -10,6 +10,7 @@
 #define LLVM_DEMANGLE_DEMANGLE_H
 
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -53,6 +54,9 @@ enum MSDemangleFlags {
 /// Flags controls various details of the demangled representation.
 char *microsoftDemangle(std::string_view mangled_name, size_t *n_read,
                         int *status, MSDemangleFlags Flags = MSDF_None);
+
+std::optional<size_t>
+getArm64ECInsertionPointInMangledName(std::string_view MangledName);
 
 // Demangles a Rust v0 mangled symbol.
 char *rustDemangle(std::string_view MangledName);

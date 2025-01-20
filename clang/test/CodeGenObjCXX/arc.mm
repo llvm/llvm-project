@@ -75,7 +75,7 @@ void test34(int cond) {
   // CHECK:      [[T0:%.*]] = load ptr, ptr [[ARG]]
   // CHECK-NEXT: store ptr [[T0]], ptr [[TEMP1]]
   // CHECK-NEXT: br label
-  // CHECK:      [[W0:%.*]] = phi ptr [ [[T0]], {{%.*}} ], [ undef, {{%.*}} ]
+  // CHECK:      [[W0:%.*]] = phi ptr [ [[T0]], {{%.*}} ], [ poison, {{%.*}} ]
   // CHECK:      call void @_Z11test34_sinkPU15__autoreleasingP11objc_object(ptr noundef [[T1]])
   // CHECK-NEXT: [[T0:%.*]] = icmp eq ptr [[ARG]], null
   // CHECK-NEXT: br i1 [[T0]],

@@ -31,7 +31,7 @@ define i16 @t1_otherbitwidth(i16 %x) {
 ; Basic positive vector tests
 define <2 x i8> @t2_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @t2_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 1)
 ; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i8> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;

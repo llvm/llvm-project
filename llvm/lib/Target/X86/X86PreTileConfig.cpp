@@ -118,16 +118,39 @@ class X86PreTileConfig : public MachineFunctionPass {
   bool isAMXInstruction(MachineInstr &MI) {
     if (MI.isPHI() || MI.isDebugInstr() || MI.getNumOperands() < 3)
       return false;
-    MachineOperand &MO = MI.getOperand(0);
-    // We can simply check if it is AMX instruction by its def.
-    // But we should exclude old API which uses physical registers.
-    if (MO.isReg() && MO.getReg().isVirtual() &&
-        MRI->getRegClass(MO.getReg())->getID() == X86::TILERegClassID) {
-      collectShapeInfo(MI);
+    switch (MI.getOpcode()) {
+    case X86::PTILESTOREDV:
+    case X86::PTCVTROWD2PSrreV:
+    case X86::PTCVTROWD2PSrriV:
+    case X86::PTCVTROWPS2BF16HrreV:
+    case X86::PTCVTROWPS2BF16HrriV:
+    case X86::PTCVTROWPS2BF16LrreV:
+    case X86::PTCVTROWPS2BF16LrriV:
+    case X86::PTCVTROWPS2PHHrreV:
+    case X86::PTCVTROWPS2PHHrriV:
+    case X86::PTCVTROWPS2PHLrreV:
+    case X86::PTCVTROWPS2PHLrriV:
+    case X86::PTILEMOVROWrreV:
+    case X86::PTILEMOVROWrriV:
       return true;
     }
-    // PTILESTOREDV is the only exception that doesn't def a AMX register.
-    return MI.getOpcode() == X86::PTILESTOREDV;
+
+    // We can simply check if it is AMX instruction by its def.
+    // But we should exclude old API which uses physical registers.
+    MachineOperand &MO = MI.getOperand(0);
+    if (!MO.isReg() || !MO.getReg().isVirtual())
+      return false;
+
+    unsigned Shapes = 0;
+    if (MRI->getRegClass(MO.getReg())->getID() == X86::TILERegClassID)
+      Shapes = 1;
+    if (MRI->getRegClass(MO.getReg())->getID() == X86::TILEPAIRRegClassID)
+      Shapes = 2;
+    if (!Shapes)
+      return false;
+
+    collectShapeInfo(MI, Shapes);
+    return true;
   }
 
   /// Check if it is an edge from loop bottom to loop head.
@@ -142,7 +165,7 @@ class X86PreTileConfig : public MachineFunctionPass {
   }
 
   /// Collect the shape def information for later use.
-  void collectShapeInfo(MachineInstr &MI);
+  void collectShapeInfo(MachineInstr &MI, unsigned Shapes);
 
   /// Try to hoist shapes definded below AMX instructions.
   bool hoistShapesInBB(MachineBasicBlock *MBB, SmallVectorImpl<MIRef> &Shapes) {
@@ -208,7 +231,7 @@ INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(X86PreTileConfig, "tilepreconfig",
                     "Tile Register Pre-configure", false, false)
 
-void X86PreTileConfig::collectShapeInfo(MachineInstr &MI) {
+void X86PreTileConfig::collectShapeInfo(MachineInstr &MI, unsigned Shapes) {
   auto RecordShape = [&](MachineInstr *MI, MachineBasicBlock *MBB) {
     MIRef MIR(MI, MBB);
     auto I = llvm::lower_bound(ShapeBBs[MBB], MIR);
@@ -216,8 +239,10 @@ void X86PreTileConfig::collectShapeInfo(MachineInstr &MI) {
       ShapeBBs[MBB].insert(I, MIR);
   };
 
-  SmallVector<Register, 8> WorkList(
-      {MI.getOperand(1).getReg(), MI.getOperand(2).getReg()});
+  // All shapes have same row in multi-tile operand.
+  SmallVector<Register, 8> WorkList;
+  for (unsigned I = 1; I < Shapes + 2; ++I)
+    WorkList.push_back(MI.getOperand(I).getReg());
   while (!WorkList.empty()) {
     Register R = WorkList.pop_back_val();
     MachineInstr *DefMI = MRI->getVRegDef(R);
@@ -225,6 +250,14 @@ void X86PreTileConfig::collectShapeInfo(MachineInstr &MI) {
     MachineBasicBlock *DefMBB = DefMI->getParent();
     if (DefMI->isMoveImmediate() || !DefVisited.insert(DefMI).second)
       continue;
+
+    // This happens when column = 0 in multi-tile operand.
+    if (DefMI->getOpcode() == X86::COPY) {
+      MachineInstr *MI = MRI->getVRegDef(DefMI->getOperand(1).getReg());
+      if (MI && MI->isMoveImmediate())
+        continue;
+    }
+
     if (DefMI->isPHI()) {
       for (unsigned I = 1; I < DefMI->getNumOperands(); I += 2)
         if (isLoopBackEdge(DefMBB, DefMI->getOperand(I + 1).getMBB()))

@@ -289,8 +289,8 @@ define void @va_aligned_stack_caller() nounwind {
 ; LA64-FPELIM-NEXT:    lu52i.d $a0, $a0, -328
 ; LA64-FPELIM-NEXT:    st.d $a0, $sp, 16
 ; LA64-FPELIM-NEXT:    st.d $zero, $sp, 88
-; LA64-FPELIM-NEXT:    st.d $zero, $sp, 80
-; LA64-FPELIM-NEXT:    st.d $zero, $sp, 72
+; LA64-FPELIM-NEXT:    vrepli.b $vr0, 0
+; LA64-FPELIM-NEXT:    vst $vr0, $sp, 72
 ; LA64-FPELIM-NEXT:    ori $a5, $zero, 1000
 ; LA64-FPELIM-NEXT:    ori $a0, $zero, 1
 ; LA64-FPELIM-NEXT:    ori $a1, $zero, 11
@@ -330,8 +330,8 @@ define void @va_aligned_stack_caller() nounwind {
 ; LA64-WITHFP-NEXT:    lu52i.d $a0, $a0, -328
 ; LA64-WITHFP-NEXT:    st.d $a0, $sp, 16
 ; LA64-WITHFP-NEXT:    st.d $zero, $fp, -24
-; LA64-WITHFP-NEXT:    st.d $zero, $fp, -32
-; LA64-WITHFP-NEXT:    st.d $zero, $fp, -40
+; LA64-WITHFP-NEXT:    vrepli.b $vr0, 0
+; LA64-WITHFP-NEXT:    vst $vr0, $fp, -40
 ; LA64-WITHFP-NEXT:    ori $a5, $zero, 1000
 ; LA64-WITHFP-NEXT:    ori $a0, $zero, 1
 ; LA64-WITHFP-NEXT:    ori $a1, $zero, 11

@@ -1,4 +1,4 @@
-; RUN: llc -march=bpfel -mattr=+alu32 < %s | FileCheck %s
+; RUN: llc -mtriple=bpfel -mattr=+alu32 < %s | FileCheck %s
 ; Source:
 ;   struct env_t {
 ;     unsigned data;

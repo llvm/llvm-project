@@ -7,23 +7,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_FOR_EACH_H
-#define _LIBCPP___ALGORITHM_FOR_EACH_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_FOR_EACH_H
+#define _LIBCPP___CXX03___ALGORITHM_FOR_EACH_H
 
-#include <__algorithm/for_each_segment.h>
-#include <__config>
-#include <__iterator/segmented_iterator.h>
-#include <__ranges/movable_box.h>
-#include <__type_traits/enable_if.h>
-#include <__utility/in_place.h>
-#include <__utility/move.h>
+#include <__cxx03/__algorithm/for_each_segment.h>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/segmented_iterator.h>
+#include <__cxx03/__ranges/movable_box.h>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__utility/in_place.h>
+#include <__cxx03/__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -54,4 +54,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_FOR_EACH_H
+#endif // _LIBCPP___CXX03___ALGORITHM_FOR_EACH_H

@@ -7,16 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_IOSTREAM
-#define _LIBCPP_IOSTREAM
+#ifndef _LIBCPP___CXX03_IOSTREAM
+#define _LIBCPP___CXX03_IOSTREAM
 
 /*
     iostream synopsis
 
-#include <ios>
-#include <istream>
-#include <ostream>
-#include <streambuf>
+#include <__cxx03/ios>
+#include <__cxx03/istream>
+#include <__cxx03/ostream>
+#include <__cxx03/streambuf>
 
 namespace std {
 
@@ -33,16 +33,16 @@ extern wostream wclog;
 
 */
 
-#include <__config>
-#include <version>
+#include <__cxx03/__config>
+#include <__cxx03/version>
 
 // standard-mandated includes
 
 // [iostream.syn]
-#include <ios>
-#include <istream>
-#include <ostream>
-#include <streambuf>
+#include <__cxx03/ios>
+#include <__cxx03/istream>
+#include <__cxx03/ostream>
+#include <__cxx03/streambuf>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -64,4 +64,4 @@ extern _LIBCPP_EXPORTED_FROM_ABI wostream wclog;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_IOSTREAM
+#endif // _LIBCPP___CXX03_IOSTREAM

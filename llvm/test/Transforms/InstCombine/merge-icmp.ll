@@ -38,7 +38,7 @@ define i1 @and_test1_logical(ptr %x) {
 define <2 x i1> @and_test1_vector(ptr %x) {
 ; CHECK-LABEL: @and_test1_vector(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load <2 x i16>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[OR:%.*]] = icmp eq <2 x i16> [[LOAD]], <i16 17791, i16 17791>
+; CHECK-NEXT:    [[OR:%.*]] = icmp eq <2 x i16> [[LOAD]], splat (i16 17791)
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %load = load <2 x i16>, ptr %x, align 4
@@ -83,7 +83,7 @@ define i1 @and_test2_logical(ptr %x) {
 define <2 x i1> @and_test2_vector(ptr %x) {
 ; CHECK-LABEL: @and_test2_vector(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load <2 x i16>, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[OR:%.*]] = icmp eq <2 x i16> [[LOAD]], <i16 32581, i16 32581>
+; CHECK-NEXT:    [[OR:%.*]] = icmp eq <2 x i16> [[LOAD]], splat (i16 32581)
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %load = load <2 x i16>, ptr %x, align 4
@@ -123,7 +123,7 @@ define i1 @or_basic_commuted(i16 %load) {
 
 define <2 x i1> @or_vector(<2 x i16> %load) {
 ; CHECK-LABEL: @or_vector(
-; CHECK-NEXT:    [[OR:%.*]] = icmp ne <2 x i16> [[LOAD:%.*]], <i16 17791, i16 17791>
+; CHECK-NEXT:    [[OR:%.*]] = icmp ne <2 x i16> [[LOAD:%.*]], splat (i16 17791)
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %trunc = trunc <2 x i16> %load to <2 x i8>

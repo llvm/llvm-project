@@ -133,13 +133,13 @@ TEST_F(ScalarEvolutionsTest, SimplifiedPHI) {
   BasicBlock *LoopBB = BasicBlock::Create(Context, "loop", F);
   BasicBlock *ExitBB = BasicBlock::Create(Context, "exit", F);
   BranchInst::Create(LoopBB, EntryBB);
-  BranchInst::Create(LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)),
+  BranchInst::Create(LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)),
                      LoopBB);
   ReturnInst::Create(Context, nullptr, ExitBB);
   auto *Ty = Type::getInt32Ty(Context);
   auto *PN = PHINode::Create(Ty, 2, "", LoopBB->begin());
   PN->addIncoming(Constant::getNullValue(Ty), EntryBB);
-  PN->addIncoming(UndefValue::get(Ty), LoopBB);
+  PN->addIncoming(PoisonValue::get(Ty), LoopBB);
   ScalarEvolution SE = buildSE(*F);
   const SCEV *S1 = SE.getSCEV(PN);
   const SCEV *S2 = SE.getSCEV(PN);
@@ -328,11 +328,11 @@ TEST_F(ScalarEvolutionsTest, CompareSCEVComplexity) {
   for (int i = 0; i < 8; i++) {
     PHINode *Phi = cast<PHINode>(&*II++);
     Phi->addIncoming(Acc[i], LoopBB);
-    Phi->addIncoming(UndefValue::get(Ty), EntryBB);
+    Phi->addIncoming(PoisonValue::get(Ty), EntryBB);
   }
 
   BasicBlock *ExitBB = BasicBlock::Create(Context, "bb2", F);
-  BranchInst::Create(LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)),
+  BranchInst::Create(LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)),
                      LoopBB);
 
   Acc[0] = BinaryOperator::CreateAdd(Acc[0], Acc[1], "", ExitBB);
@@ -491,7 +491,7 @@ TEST_F(ScalarEvolutionsTest, SCEVNormalization) {
       "  %iv1 = phi i32 [ %iv1.inc, %loop ], [ -2147483648, %loop.ph ] "
       "  %iv0.inc = add i32 %iv0, 1 "
       "  %iv1.inc = add i32 %iv1, 3 "
-      "  br i1 undef, label %for.end.loopexit, label %loop "
+      "  br i1 poison, label %for.end.loopexit, label %loop "
       " "
       "for.end.loopexit: "
       "  ret void "
@@ -503,19 +503,18 @@ TEST_F(ScalarEvolutionsTest, SCEVNormalization) {
       "  br label %loop_0 "
       " "
       "loop_0: "
-      "  br i1 undef, label %loop_0, label %loop_1 "
+      "  br i1 poison, label %loop_0, label %loop_1 "
       " "
       "loop_1: "
-      "  br i1 undef, label %loop_2, label %loop_1 "
+      "  br i1 poison, label %loop_2, label %loop_1 "
       " "
       " "
       "loop_2: "
-      "  br i1 undef, label %end, label %loop_2 "
+      "  br i1 poison, label %end, label %loop_2 "
       " "
       "end: "
       "  ret void "
-      "} "
-      ,
+      "} ",
       Err, C);
 
   assert(M && "Could not parse module?");
@@ -914,7 +913,7 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstants) {
      %1 = shl i64 %0, 32
      %2 = ashr exact i64 %1, 32
      %3 = add i64 %2, -9223372036854775808
-     br i1 undef, label %exit, label %loop
+     br i1 poison, label %exit, label %loop
     exit:
      ret void
    */
@@ -929,7 +928,7 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstants) {
       ConstantInt::get(Context, APInt(64, 0x8000000000000000U, true));
   auto *Int64_32 = ConstantInt::get(Context, APInt(64, 32));
   auto *Br = BranchInst::Create(
-      LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)), LoopBB);
+      LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)), LoopBB);
   auto *Phi =
       PHINode::Create(Type::getInt64Ty(Context), 2, "", Br->getIterator());
   auto *Shl = BinaryOperator::CreateShl(Phi, Int64_32, "", Br->getIterator());
@@ -973,7 +972,7 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstantAccum) {
      %2 = shl i32 %1, 16
      %3 = ashr exact i32 %2, 16
      %4 = add i32 %3, -2147483648
-     br i1 undef, label %exit, label %loop
+     br i1 poison, label %exit, label %loop
     exit:
      ret void
    */
@@ -987,7 +986,7 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstantAccum) {
   auto *MinInt32 = ConstantInt::get(Context, APInt(32, 0x80000000U));
   auto *Int32_16 = ConstantInt::get(Context, APInt(32, 16));
   auto *Br = BranchInst::Create(
-      LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)), LoopBB);
+      LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)), LoopBB);
   auto *Phi = PHINode::Create(Int32Ty, 2, "", Br->getIterator());
   auto *Shl = BinaryOperator::CreateShl(Phi, Int32_16, "", Br->getIterator());
   auto *AShr =

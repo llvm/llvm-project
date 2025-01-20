@@ -21,6 +21,7 @@ set(MODULES_WITHOUT_IMPLEMENTATION
   "__ppc_intrinsics"
   "mma"
   "__cuda_builtins"
+  "__cuda_device"
   "cudadevice"
   "ieee_arithmetic"
   "ieee_exceptions"
@@ -67,9 +68,12 @@ if (NOT CMAKE_CROSSCOMPILING)
     elseif(${filename} STREQUAL "__ppc_intrinsics" OR
            ${filename} STREQUAL "mma")
       set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__ppc_types.mod)
-    elseif(${filename} STREQUAL "cudadevice")
+    elseif(${filename} STREQUAL "__cuda_device")
       set(opts -fc1 -xcuda)
       set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__cuda_builtins.mod)
+    elseif(${filename} STREQUAL "cudadevice")
+      set(opts -fc1 -xcuda)
+      set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__cuda_device.mod)
     else()
       set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_builtins.mod)
       if(${filename} STREQUAL "iso_fortran_env")

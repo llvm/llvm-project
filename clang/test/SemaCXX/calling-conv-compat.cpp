@@ -183,31 +183,31 @@ typedef void (           C::*memb_c_default)();
 typedef void (__cdecl    C::*memb_c_cdecl)();
 typedef void (__thiscall C::*memb_c_thiscall)();
 
-// expected-note@+1 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((cdecl))' to 'memb_a_default' (aka 'void (NonVariadic::A::*)() __attribute__((thiscall))') for 1st argument}}
+// expected-note@+1 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((cdecl))' to 'memb_a_default' (aka 'void (A::*)() __attribute__((thiscall))') for 1st argument}}
 void cb_memb_a_default(memb_a_default ptr);
-// expected-note@+2 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((thiscall))' to 'memb_a_cdecl' (aka 'void (NonVariadic::A::*)() __attribute__((cdecl))') for 1st argument}}
-// expected-note@+1 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((thiscall))' to 'memb_a_cdecl' (aka 'void (NonVariadic::A::*)() __attribute__((cdecl))') for 1st argument}}
+// expected-note@+2 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((thiscall))' to 'memb_a_cdecl' (aka 'void (A::*)() __attribute__((cdecl))') for 1st argument}}
+// expected-note@+1 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((thiscall))' to 'memb_a_cdecl' (aka 'void (A::*)() __attribute__((cdecl))') for 1st argument}}
 void cb_memb_a_cdecl(memb_a_cdecl ptr);
-// expected-note@+1 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((cdecl))' to 'memb_a_thiscall' (aka 'void (NonVariadic::A::*)() __attribute__((thiscall))') for 1st argument}}
+// expected-note@+1 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((cdecl))' to 'memb_a_thiscall' (aka 'void (A::*)() __attribute__((thiscall))') for 1st argument}}
 void cb_memb_a_thiscall(memb_a_thiscall ptr);
-// expected-note@+1 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((cdecl))' to 'memb_b_default' (aka 'void (NonVariadic::B::*)() __attribute__((thiscall))') for 1st argument}}
+// expected-note@+1 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((cdecl))' to 'memb_b_default' (aka 'void (B::*)() __attribute__((thiscall))') for 1st argument}}
 void cb_memb_b_default(memb_b_default ptr);
-// expected-note@+2 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((thiscall))' to 'memb_b_cdecl' (aka 'void (NonVariadic::B::*)() __attribute__((cdecl))') for 1st argument}}
-// expected-note@+1 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((thiscall))' to 'memb_b_cdecl' (aka 'void (NonVariadic::B::*)() __attribute__((cdecl))') for 1st argument}}
+// expected-note@+2 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((thiscall))' to 'memb_b_cdecl' (aka 'void (B::*)() __attribute__((cdecl))') for 1st argument}}
+// expected-note@+1 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((thiscall))' to 'memb_b_cdecl' (aka 'void (B::*)() __attribute__((cdecl))') for 1st argument}}
 void cb_memb_b_cdecl(memb_b_cdecl ptr);
-// expected-note@+1 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((cdecl))' to 'memb_b_thiscall' (aka 'void (NonVariadic::B::*)() __attribute__((thiscall))') for 1st argument}}
+// expected-note@+1 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((cdecl))' to 'memb_b_thiscall' (aka 'void (B::*)() __attribute__((thiscall))') for 1st argument}}
 void cb_memb_b_thiscall(memb_b_thiscall ptr);
-// expected-note@+3 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((thiscall))' to 'memb_c_default' (aka 'void (NonVariadic::C::*)() __attribute__((thiscall))') for 1st argument}}
-// expected-note@+2 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((cdecl))' to 'memb_c_default' (aka 'void (NonVariadic::C::*)() __attribute__((thiscall))') for 1st argument}}
-// expected-note@+1 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((thiscall))' to 'memb_c_default' (aka 'void (NonVariadic::C::*)() __attribute__((thiscall))') for 1st argument}}
+// expected-note@+3 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((thiscall))' to 'memb_c_default' (aka 'void (C::*)() __attribute__((thiscall))') for 1st argument}}
+// expected-note@+2 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((cdecl))' to 'memb_c_default' (aka 'void (C::*)() __attribute__((thiscall))') for 1st argument}}
+// expected-note@+1 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((thiscall))' to 'memb_c_default' (aka 'void (C::*)() __attribute__((thiscall))') for 1st argument}}
 void cb_memb_c_default(memb_c_default ptr);
-// expected-note@+3 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((thiscall))' to 'memb_c_cdecl' (aka 'void (NonVariadic::C::*)() __attribute__((cdecl))') for 1st argument}}
-// expected-note@+2 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((cdecl))' to 'memb_c_cdecl' (aka 'void (NonVariadic::C::*)() __attribute__((cdecl))') for 1st argument}}
-// expected-note@+1 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((thiscall))' to 'memb_c_cdecl' (aka 'void (NonVariadic::C::*)() __attribute__((cdecl))') for 1st argument}}
+// expected-note@+3 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((thiscall))' to 'memb_c_cdecl' (aka 'void (C::*)() __attribute__((cdecl))') for 1st argument}}
+// expected-note@+2 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((cdecl))' to 'memb_c_cdecl' (aka 'void (C::*)() __attribute__((cdecl))') for 1st argument}}
+// expected-note@+1 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((thiscall))' to 'memb_c_cdecl' (aka 'void (C::*)() __attribute__((cdecl))') for 1st argument}}
 void cb_memb_c_cdecl(memb_c_cdecl ptr);
-// expected-note@+3 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((thiscall))' to 'memb_c_thiscall' (aka 'void (NonVariadic::C::*)() __attribute__((thiscall))') for 1st argument}}
-// expected-note@+2 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((cdecl))' to 'memb_c_thiscall' (aka 'void (NonVariadic::C::*)() __attribute__((thiscall))') for 1st argument}}
-// expected-note@+1 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((thiscall))' to 'memb_c_thiscall' (aka 'void (NonVariadic::C::*)() __attribute__((thiscall))') for 1st argument}}
+// expected-note@+3 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((thiscall))' to 'memb_c_thiscall' (aka 'void (C::*)() __attribute__((thiscall))') for 1st argument}}
+// expected-note@+2 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((cdecl))' to 'memb_c_thiscall' (aka 'void (C::*)() __attribute__((thiscall))') for 1st argument}}
+// expected-note@+1 {{candidate function not viable: no known conversion from 'void (NonVariadic::A::*)() __attribute__((thiscall))' to 'memb_c_thiscall' (aka 'void (C::*)() __attribute__((thiscall))') for 1st argument}}
 void cb_memb_c_thiscall(memb_c_thiscall ptr);
 
 void call_member() {
@@ -279,11 +279,11 @@ void cb_memb_a_default(memb_a_default ptr);
 void cb_memb_a_cdecl(memb_a_cdecl ptr);
 void cb_memb_b_default(memb_b_default ptr);
 void cb_memb_b_cdecl(memb_b_cdecl ptr);
-// expected-note@+2 {{candidate function not viable: no known conversion from 'void (Variadic::A::*)(int, ...)' to 'memb_c_default' (aka 'void (Variadic::C::*)(int, ...)') for 1st argument}}
-// expected-note@+1 {{candidate function not viable: no known conversion from 'void (Variadic::A::*)(int, ...) __attribute__((cdecl))' to 'memb_c_default' (aka 'void (Variadic::C::*)(int, ...)') for 1st argument}}
+// expected-note@+2 {{candidate function not viable: no known conversion from 'void (Variadic::A::*)(int, ...)' to 'memb_c_default' (aka 'void (C::*)(int, ...)') for 1st argument}}
+// expected-note@+1 {{candidate function not viable: no known conversion from 'void (Variadic::A::*)(int, ...) __attribute__((cdecl))' to 'memb_c_default' (aka 'void (C::*)(int, ...)') for 1st argument}}
 void cb_memb_c_default(memb_c_default ptr);
-// expected-note@+2 {{candidate function not viable: no known conversion from 'void (Variadic::A::*)(int, ...)' to 'memb_c_cdecl' (aka 'void (Variadic::C::*)(int, ...) __attribute__((cdecl))') for 1st argument}}
-// expected-note@+1 {{candidate function not viable: no known conversion from 'void (Variadic::A::*)(int, ...) __attribute__((cdecl))' to 'memb_c_cdecl' (aka 'void (Variadic::C::*)(int, ...) __attribute__((cdecl))') for 1st argument}}
+// expected-note@+2 {{candidate function not viable: no known conversion from 'void (Variadic::A::*)(int, ...)' to 'memb_c_cdecl' (aka 'void (C::*)(int, ...) __attribute__((cdecl))') for 1st argument}}
+// expected-note@+1 {{candidate function not viable: no known conversion from 'void (Variadic::A::*)(int, ...) __attribute__((cdecl))' to 'memb_c_cdecl' (aka 'void (C::*)(int, ...) __attribute__((cdecl))') for 1st argument}}
 void cb_memb_c_cdecl(memb_c_cdecl ptr);
 
 void call_member() {
@@ -330,7 +330,7 @@ mptr_t __stdcall return_mptr_std(short) {
 void (A::*(*return_fptr_std_mptr(char))(short))(int) {
   return return_mptr_std;
 #if !_M_X64
-  // expected-error@-2 {{cannot initialize return object of type 'void (MultiChunkDecls::A::*(*)(short))(int) __attribute__((thiscall))' with an lvalue of type 'mptr_t (short) __attribute__((stdcall))'}}
+  // expected-error@-2 {{cannot initialize return object of type 'void (A::*(*)(short))(int) __attribute__((thiscall))' with an lvalue of type 'mptr_t (short) __attribute__((stdcall))'}}
 #endif
 }
 

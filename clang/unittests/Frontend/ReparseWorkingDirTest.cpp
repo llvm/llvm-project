@@ -58,7 +58,7 @@ public:
     CI->getTargetOpts().Triple = "i386-unknown-linux-gnu";
 
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-        CompilerInstance::createDiagnostics(new DiagnosticOptions,
+        CompilerInstance::createDiagnostics(*VFS, new DiagnosticOptions,
                                             new DiagnosticConsumer));
 
     FileManager *FileMgr = new FileManager(CI->getFileSystemOpts(), VFS);

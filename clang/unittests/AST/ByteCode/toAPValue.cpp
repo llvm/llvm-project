@@ -22,7 +22,9 @@ TEST(ToAPValue, Pointers) {
       "constexpr S d = {{{true, false}, {false, true}, {false, false}}};\n"
       "constexpr const bool *b = &d.a[1].z;\n"
       "const void *p = (void*)12;\n"
-      "const void *nullp = (void*)0;\n";
+      "const void *nullp = (void*)0;\n"
+      "extern int earr[5][5];\n"
+      "constexpr const int *arrp = &earr[2][4];\n";
 
   auto AST = tooling::buildASTFromCodeWithArgs(
       Code, {"-fexperimental-new-constant-interpreter"});
@@ -86,6 +88,22 @@ TEST(ToAPValue, Pointers) {
     bool Success = A.toIntegralConstant(I, D->getType(), AST->getASTContext());
     ASSERT_TRUE(Success);
     ASSERT_EQ(I, 0);
+  }
+
+  // A multidimensional array.
+  {
+    const ValueDecl *D = getDecl("arrp");
+    ASSERT_NE(D, nullptr);
+    const Pointer &GP = getGlobalPtr("arrp").deref<Pointer>();
+    APValue A = GP.toAPValue(ASTCtx);
+    ASSERT_TRUE(A.isLValue());
+    ASSERT_TRUE(A.hasLValuePath());
+    ASSERT_EQ(A.getLValuePath().size(), 2u);
+    ASSERT_EQ(A.getLValuePath()[0].getAsArrayIndex(), 2u);
+    ASSERT_EQ(A.getLValuePath()[1].getAsArrayIndex(), 4u);
+    ASSERT_EQ(A.getLValueOffset().getQuantity(), 56u);
+    ASSERT_TRUE(
+        GP.atIndex(0).getFieldDesc()->getElemQualType()->isIntegerType());
   }
 }
 

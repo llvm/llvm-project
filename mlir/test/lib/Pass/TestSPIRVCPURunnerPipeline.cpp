@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implements a pipeline for use by mlir-spirv-cpu-runner tests.
+// Implements a pipeline for use by SPIR-V CPU Runner tests.
 //
 //===----------------------------------------------------------------------===//
 
@@ -40,7 +40,7 @@ void registerTestSPIRVCPURunnerPipeline() {
   PassPipelineRegistration<>(
       "test-spirv-cpu-runner-pipeline",
       "Runs a series of passes for lowering SPIR-V-dialect MLIR to "
-      "LLVM-dialect MLIR intended for mlir-spirv-cpu-runner.",
+      "LLVM-dialect MLIR intended for SPIR-V CPU Runner tests.",
       buildTestSPIRVCPURunnerPipeline);
 }
 } // namespace test

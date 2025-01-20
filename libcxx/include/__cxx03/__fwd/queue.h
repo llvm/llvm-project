@@ -6,13 +6,13 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_QUEUE_H
-#define _LIBCPP___FWD_QUEUE_H
+#ifndef _LIBCPP___CXX03___FWD_QUEUE_H
+#define _LIBCPP___CXX03___FWD_QUEUE_H
 
-#include <__config>
-#include <__functional/operations.h>
-#include <__fwd/deque.h>
-#include <__fwd/vector.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/operations.h>
+#include <__cxx03/__fwd/deque.h>
+#include <__cxx03/__fwd/vector.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -28,4 +28,4 @@ class _LIBCPP_TEMPLATE_VIS priority_queue;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_QUEUE_H
+#endif // _LIBCPP___CXX03___FWD_QUEUE_H

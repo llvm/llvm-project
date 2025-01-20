@@ -1576,6 +1576,22 @@ TEST(TypeHints, Aliased) {
   EXPECT_THAT(hintsOfKind(AST, InlayHintKind::Type), IsEmpty());
 }
 
+TEST(TypeHints, CallingConvention) {
+  // Check that we don't crash for lambdas without a FunctionTypeLoc
+  // https://github.com/clangd/clangd/issues/2223
+  std::string Code = R"cpp(
+    void test() {
+      []() __cdecl {};
+    }
+  )cpp";
+  TestTU TU = TestTU::withCode(Code);
+  TU.ExtraArgs.push_back("--target=x86_64-w64-mingw32");
+  TU.PredefineMacros = true; // for the __cdecl
+  auto AST = TU.build();
+
+  EXPECT_THAT(hintsOfKind(AST, InlayHintKind::Type), IsEmpty());
+}
+
 TEST(TypeHints, Decltype) {
   assertTypeHints(R"cpp(
     $a[[decltype(0)]] a;

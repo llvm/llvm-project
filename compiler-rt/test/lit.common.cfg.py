@@ -82,6 +82,8 @@ def push_dynamic_library_lookup_path(config, new_path):
         dynamic_library_lookup_var = "PATH"
     elif platform.system() == "Darwin":
         dynamic_library_lookup_var = "DYLD_LIBRARY_PATH"
+    elif platform.system() == "Haiku":
+        dynamic_library_lookup_var = "LIBRARY_PATH"
     else:
         dynamic_library_lookup_var = "LD_LIBRARY_PATH"
 
@@ -275,7 +277,6 @@ possibly_dangerous_env_vars = [
     "COMPILER_PATH",
     "RC_DEBUG_OPTIONS",
     "CINDEXTEST_PREAMBLE_FILE",
-    "LIBRARY_PATH",
     "CPATH",
     "C_INCLUDE_PATH",
     "CPLUS_INCLUDE_PATH",

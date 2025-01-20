@@ -36,12 +36,6 @@ using namespace lldb;
 using namespace lldb_private;
 
 static const RegisterInfo g_register_infos[] = {
-    //  NAME       ALT       SZ OFF ENCODING         FORMAT          EH_FRAME
-    //  DWARF               GENERIC                     PROCESS PLUGIN
-    //  LLDB NATIVE
-    //  ========== =======   == === =============    ============
-    //  ======================= =================== ===========================
-    //  ======================= ======================
     {"r0",
      nullptr,
      4,

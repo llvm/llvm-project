@@ -10,12 +10,11 @@ target_include_directories(omptarget.rtl.amdgpu PRIVATE
 
 if(hsa-runtime64_FOUND AND NOT "amdgpu" IN_LIST LIBOMPTARGET_DLOPEN_PLUGINS)
   message(STATUS "Building AMDGPU plugin linked against libhsa")
-  target_link_libraries(omptarget.rtl.amdgpu PRIVATE hsa-runtime64::hsa-runtime64 LLVMFrontendOffloading)
+  target_link_libraries(omptarget.rtl.amdgpu PRIVATE hsa-runtime64::hsa-runtime64)
 else()
   message(STATUS "Building AMDGPU plugin for dlopened libhsa")
   target_include_directories(omptarget.rtl.amdgpu PRIVATE dynamic_hsa)
   target_sources(omptarget.rtl.amdgpu PRIVATE dynamic_hsa/hsa.cpp)
-  target_link_libraries(omptarget.rtl.amdgpu PRIVATE LLVMFrontendOffloading)
 endif()
 
 # Configure testing for the AMDGPU plugin. We will build tests if we could a

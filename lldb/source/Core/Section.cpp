@@ -147,10 +147,14 @@ const char *Section::GetTypeAsCString() const {
     return "dwarf-gnu-debugaltlink";
   case eSectionTypeCTF:
     return "ctf";
-  case eSectionTypeOther:
-    return "regular";
+  case eSectionTypeLLDBTypeSummaries:
+    return "lldb-type-summaries";
+  case eSectionTypeLLDBFormatters:
+    return "lldb-formatters";
   case eSectionTypeSwiftModules:
     return "swift-modules";
+  case eSectionTypeOther:
+    return "regular";
   }
   return "unknown";
 }
@@ -234,7 +238,7 @@ addr_t Section::GetLoadBaseAddress(Target *target) const {
       load_base_addr += GetOffset();
   }
   if (load_base_addr == LLDB_INVALID_ADDRESS) {
-    load_base_addr = target->GetSectionLoadList().GetSectionLoadAddress(
+    load_base_addr = target->GetSectionLoadAddress(
         const_cast<Section *>(this)->shared_from_this());
   }
   return load_base_addr;
@@ -457,6 +461,8 @@ bool Section::ContainsOnlyDebugInfo() const {
   case eSectionTypeDWARFAppleObjC:
   case eSectionTypeDWARFGNUDebugAltLink:
   case eSectionTypeCTF:
+  case eSectionTypeLLDBTypeSummaries:
+  case eSectionTypeLLDBFormatters:
   case eSectionTypeSwiftModules:
     return true;
   }
@@ -637,8 +643,7 @@ bool SectionList::ContainsSection(user_id_t sect_id) const {
 
 void SectionList::Dump(llvm::raw_ostream &s, unsigned indent, Target *target,
                        bool show_header, uint32_t depth) const {
-  bool target_has_loaded_sections =
-      target && !target->GetSectionLoadList().IsEmpty();
+  bool target_has_loaded_sections = target && target->HasLoadedSections();
   if (show_header && !m_sections.empty()) {
     s.indent(indent);
     s << llvm::formatv(

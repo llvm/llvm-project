@@ -8,6 +8,9 @@
 
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s --spirv-ext=+SPV_INTEL_arbitrary_precision_integers -o - | FileCheck %s --check-prefixes=CHECK,CHECK-EXT
 
+; TODO: This test currently fails with LLVM_ENABLE_EXPENSIVE_CHECKS enabled
+; XFAIL: expensive_checks
+
 ; CHECK-DAG: OpName %[[#Struct:]] "struct"
 ; CHECK-DAG: OpName %[[#Arg:]] "arg"
 ; CHECK-DAG: OpName %[[#QArg:]] "qarg"

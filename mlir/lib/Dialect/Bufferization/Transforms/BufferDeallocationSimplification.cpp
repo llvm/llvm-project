@@ -470,8 +470,8 @@ struct BufferDeallocationSimplificationPass
     config.enableRegionSimplification = GreedySimplifyRegionLevel::Normal;
     populateDeallocOpCanonicalizationPatterns(patterns, &getContext());
 
-    if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns),
-                                            config)))
+    if (failed(
+            applyPatternsGreedily(getOperation(), std::move(patterns), config)))
       signalPassFailure();
   }
 };

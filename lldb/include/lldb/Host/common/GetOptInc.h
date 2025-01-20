@@ -11,11 +11,11 @@
 
 #include "lldb/lldb-defines.h"
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) || defined(_AIX)
 #define REPLACE_GETOPT
 #define REPLACE_GETOPT_LONG
 #endif
-#if defined(_MSC_VER) || defined(__NetBSD__)
+#if defined(_MSC_VER) || defined(__NetBSD__) || defined(_AIX)
 #define REPLACE_GETOPT_LONG_ONLY
 #endif
 

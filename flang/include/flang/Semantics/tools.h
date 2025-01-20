@@ -42,6 +42,7 @@ const Scope &GetProgramUnitOrBlockConstructContaining(const Scope &);
 const Scope &GetProgramUnitOrBlockConstructContaining(const Symbol &);
 
 const Scope *FindModuleContaining(const Scope &);
+const Scope *FindModuleOrSubmoduleContaining(const Scope &);
 const Scope *FindModuleFileContaining(const Scope &);
 const Scope *FindPureProcedureContaining(const Scope &);
 const Scope *FindOpenACCConstructContaining(const Scope *);
@@ -239,6 +240,8 @@ inline bool NeedCUDAAlloc(const Symbol &sym) {
 
 const Scope *FindCUDADeviceContext(const Scope *);
 std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *);
+
+bool IsAccessible(const Symbol &, const Scope &);
 
 // Return an error if a symbol is not accessible from a scope
 std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(

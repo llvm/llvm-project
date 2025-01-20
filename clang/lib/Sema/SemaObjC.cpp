@@ -1350,7 +1350,7 @@ bool SemaObjC::isObjCWritebackConversion(QualType FromType, QualType ToType,
 
   // Make sure that we have compatible qualifiers.
   FromQuals.setObjCLifetime(Qualifiers::OCL_Autoreleasing);
-  if (!ToQuals.compatiblyIncludes(FromQuals))
+  if (!ToQuals.compatiblyIncludes(FromQuals, getASTContext()))
     return false;
 
   // Remove qualifiers from the pointee type we're converting from; they

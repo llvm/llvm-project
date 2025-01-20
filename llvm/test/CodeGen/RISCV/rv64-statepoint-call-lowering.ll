@@ -25,7 +25,9 @@ define i1 @test_i1_return() gc "statepoint-example" {
 ; CHECK-NEXT:    call return_i1
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ; This is just checking that a i1 gets lowered normally when there's no extra
 ; state arguments to the statepoint
@@ -45,7 +47,9 @@ define i32 @test_i32_return() gc "statepoint-example" {
 ; CHECK-NEXT:    call return_i32
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 entry:
   %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i32 ()) @return_i32, i32 0, i32 0, i32 0, i32 0)
@@ -63,7 +67,9 @@ define ptr @test_i32ptr_return() gc "statepoint-example" {
 ; CHECK-NEXT:    call return_i32ptr
 ; CHECK-NEXT:  .Ltmp2:
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 entry:
   %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(ptr ()) @return_i32ptr, i32 0, i32 0, i32 0, i32 0)
@@ -81,7 +87,9 @@ define float @test_float_return() gc "statepoint-example" {
 ; CHECK-NEXT:    call return_float
 ; CHECK-NEXT:  .Ltmp3:
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 entry:
   %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(float ()) @return_float, i32 0, i32 0, i32 0, i32 0)
@@ -99,7 +107,9 @@ define %struct @test_struct_return() gc "statepoint-example" {
 ; CHECK-NEXT:    call return_struct
 ; CHECK-NEXT:  .Ltmp4:
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 entry:
   %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(%struct ()) @return_struct, i32 0, i32 0, i32 0, i32 0)
@@ -118,7 +128,9 @@ define i1 @test_relocate(ptr addrspace(1) %a) gc "statepoint-example" {
 ; CHECK-NEXT:    call return_i1
 ; CHECK-NEXT:  .Ltmp5:
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ; Check that an ununsed relocate has no code-generation impact
 entry:
@@ -140,7 +152,9 @@ define void @test_void_vararg() gc "statepoint-example" {
 ; CHECK-NEXT:    call varargf
 ; CHECK-NEXT:  .Ltmp6:
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ; Check a statepoint wrapping a *ptr returning vararg function works
 entry:
@@ -160,7 +174,9 @@ define i1 @test_i1_return_patchable() gc "statepoint-example" {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  .Ltmp7:
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ; A patchable variant of test_i1_return
 entry:
@@ -197,7 +213,10 @@ define i1 @test_cross_bb(ptr addrspace(1) %a, i1 %external_cond) gc "statepoint-
 ; CHECK-NEXT:  .LBB8_3: # %right
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    .cfi_restore s0
 ; CHECK-NEXT:    addi sp, sp, 32
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 entry:
   %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %a)]
@@ -237,7 +256,9 @@ define void @test_attributes(ptr byval(%struct2) %s) gc "statepoint-example" {
 ; CHECK-NEXT:    call consume_attributes
 ; CHECK-NEXT:  .Ltmp9:
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    addi sp, sp, 32
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 entry:
 ; Check that arguments with attributes are lowered correctly.

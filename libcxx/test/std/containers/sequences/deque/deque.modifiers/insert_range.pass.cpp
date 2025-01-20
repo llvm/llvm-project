@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// FIXME: This takes over an hour to compile, disable for now.
+// UNSUPPORTED: LIBCXX-AMDGPU-FIXME
+// UNSUPPORTED: LIBCXX-NVPTX-FIXME
+
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 

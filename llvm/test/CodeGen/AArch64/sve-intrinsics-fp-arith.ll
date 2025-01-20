@@ -300,37 +300,6 @@ define <vscale x 2 x double> @fdivr_d(<vscale x 2 x i1> %pg, <vscale x 2 x doubl
 }
 
 ;
-; FEXPA
-;
-
-define <vscale x 8 x half> @fexpa_h(<vscale x 8 x i16> %a) {
-; CHECK-LABEL: fexpa_h:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fexpa z0.h, z0.h
-; CHECK-NEXT:    ret
-  %out = call <vscale x 8 x half> @llvm.aarch64.sve.fexpa.x.nxv8f16(<vscale x 8 x i16> %a)
-  ret <vscale x 8 x half> %out
-}
-
-define <vscale x 4 x float> @fexpa_s(<vscale x 4 x i32> %a) {
-; CHECK-LABEL: fexpa_s:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fexpa z0.s, z0.s
-; CHECK-NEXT:    ret
-  %out = call <vscale x 4 x float> @llvm.aarch64.sve.fexpa.x.nxv4f32(<vscale x 4 x i32> %a)
-  ret <vscale x 4 x float> %out
-}
-
-define <vscale x 2 x double> @fexpa_d(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a) {
-; CHECK-LABEL: fexpa_d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fexpa z0.d, z0.d
-; CHECK-NEXT:    ret
-  %out = call <vscale x 2 x double> @llvm.aarch64.sve.fexpa.x.nxv2f64(<vscale x 2 x i64> %a)
-  ret <vscale x 2 x double> %out
-}
-
-;
 ; FMAD
 ;
 
@@ -1667,10 +1636,6 @@ declare <vscale x 2 x double> @llvm.aarch64.sve.fdiv.nxv2f64(<vscale x 2 x i1>, 
 declare <vscale x 8 x half> @llvm.aarch64.sve.fdivr.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>, <vscale x 8 x half>)
 declare <vscale x 4 x float> @llvm.aarch64.sve.fdivr.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>)
 declare <vscale x 2 x double> @llvm.aarch64.sve.fdivr.nxv2f64(<vscale x 2 x i1>, <vscale x 2 x double>, <vscale x 2 x double>)
-
-declare <vscale x 8 x half> @llvm.aarch64.sve.fexpa.x.nxv8f16(<vscale x 8 x i16>)
-declare <vscale x 4 x float> @llvm.aarch64.sve.fexpa.x.nxv4f32(<vscale x 4 x i32>)
-declare <vscale x 2 x double> @llvm.aarch64.sve.fexpa.x.nxv2f64(<vscale x 2 x i64>)
 
 declare <vscale x 8 x half> @llvm.aarch64.sve.fmad.nxv8f16(<vscale x 8 x i1>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>)
 declare <vscale x 4 x float> @llvm.aarch64.sve.fmad.nxv4f32(<vscale x 4 x i1>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>)

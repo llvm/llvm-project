@@ -35,11 +35,11 @@ module;
 #include <chrono>
 #include <cinttypes>
 #include <climits>
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 #  include <clocale>
 #endif
 #include <cmath>
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 #  include <codecvt>
 #endif
 #include <compare>
@@ -67,30 +67,30 @@ module;
 #include <flat_map>
 #include <format>
 #include <forward_list>
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 #  include <fstream>
 #endif
 #include <functional>
 #include <future>
 #include <initializer_list>
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 #  include <iomanip>
 #endif
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 #  include <ios>
 #endif
 #include <iosfwd>
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 #  include <iostream>
 #endif
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 #  include <istream>
 #endif
 #include <iterator>
 #include <latch>
 #include <limits>
 #include <list>
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 #  include <locale>
 #endif
 #include <map>
@@ -102,7 +102,7 @@ module;
 #include <numbers>
 #include <numeric>
 #include <optional>
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 #  include <ostream>
 #endif
 #include <print>
@@ -110,7 +110,7 @@ module;
 #include <random>
 #include <ranges>
 #include <ratio>
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 #  include <regex>
 #endif
 #include <scoped_allocator>
@@ -119,21 +119,21 @@ module;
 #include <shared_mutex>
 #include <source_location>
 #include <span>
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 #  include <sstream>
 #endif
 #include <stack>
 #include <stdexcept>
 #include <stop_token>
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 #  include <streambuf>
 #endif
 #include <string>
 #include <string_view>
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 #  include <strstream>
 #endif
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if _LIBCPP_HAS_LOCALIZATION
 #  include <syncstream>
 #endif
 #include <system_error>

@@ -57,6 +57,12 @@ def : Builtin {
   let Spellings = ["__builtin_08"];
 }
 
+def : Builtin {
+// CHECK: BUILTIN(__builtin_09, "V2yy", "")
+  let Prototype = "_Vector<2, __bf16>(__bf16)";
+  let Spellings = ["__builtin_09"];
+}
+
 #ifdef ERROR_EXPECTED_LANES
 def : Builtin {
 // ERROR_EXPECTED_LANES: :[[# @LINE + 1]]:7: error: Expected number of lanes after '_ExtVector<'
@@ -112,4 +118,3 @@ def : Builtin {
   let Spellings = ["__builtin_test_use_clang_extended_vectors"];
 }
 #endif
-

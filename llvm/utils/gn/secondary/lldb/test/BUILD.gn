@@ -83,7 +83,8 @@ write_lit_cfg("lit_api_site_cfg") {
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_INCLUDE_DIR=" + rebase_path("$root_out_dir/include"),
     "LLVM_USE_SANITIZER=",
-    "Lua_EXECUTABLE=",
+    "LUA_EXECUTABLE=",
+    "LLDB_LUA_CPATH=",
     "LLDB_FRAMEWORK_DIR=XXX_framework_dir",
     "CMAKE_CXX_COMPILER=c++",  # XXX use bin/clang++ instead?
     "HOST_OS=$host_os",  # XXX
@@ -150,7 +151,10 @@ write_lit_cfg("lit_unit_site_cfg") {
   # Fully-qualified instead of relative for LIT_SITE_CFG_IN_HEADER.
   input = "//lldb/test/Unit/lit.site.cfg.py.in"
   output = lldb_lit_unit_site_cfg_file
-  extra_values = [ "LLVM_BUILD_MODE=." ]
+  extra_values = [
+    "LLVM_BUILD_MODE=.",
+    "LLVM_USE_SANITIZER=",
+  ]
 }
 
 action("lit-lldb-init-quiet") {

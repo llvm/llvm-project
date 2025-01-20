@@ -894,6 +894,47 @@ func.func @math_f16(%arg0 : vector<4xf16>) -> vector<4xf16> {
   return %11 : vector<4xf16>
 }
 
+// CHECK-LABEL: @math_zero_rank
+func.func @math_zero_rank(%arg0 : vector<f16>) -> vector<f16> {
+
+  // CHECK-NOT: math.atan
+  %0 = "math.atan"(%arg0) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.atan2
+  %1 = "math.atan2"(%0, %arg0) : (vector<f16>, vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.tanh
+  %2 = "math.tanh"(%1) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.log
+  %3 = "math.log"(%2) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.log2
+  %4 = "math.log2"(%3) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.log1p
+  %5 = "math.log1p"(%4) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.erf
+  %6 = "math.erf"(%5) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.exp
+  %7 = "math.exp"(%6) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.expm1
+  %8 = "math.expm1"(%7) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.cbrt
+  %9 = "math.cbrt"(%8) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.sin
+  %10 = "math.sin"(%9) : (vector<f16>) -> vector<f16>
+
+  // CHECK-NOT: math.cos
+  %11 = "math.cos"(%10) : (vector<f16>) -> vector<f16>
+
+  return %11 : vector<f16>
+}
 
 // AVX2-LABEL: @rsqrt_f16
 func.func @rsqrt_f16(%arg0 : vector<2x8xf16>) -> vector<2x8xf16> {

@@ -20,6 +20,40 @@ public:
   int operator<=>(const SpaceShipDefaultCompare &) const = default;
 };
 
+class EqDefaultCompareOutOfClass {
+  int used; // no warning, the compiler generated AST for the comparison operator
+            // references the fields of the class, and this should be considered
+            // a use.
+            // This test case is needed because clang does not emit the body
+            // of the defaulted operator when it is defined in-class until it
+            // finds a call to it. `-Wunused-private-field` is suppressed in
+            // a different way in that case.
+  bool operator==(const EqDefaultCompareOutOfClass &) const;
+};
+
+bool EqDefaultCompareOutOfClass::operator==(const EqDefaultCompareOutOfClass &) const = default;
+
+class FriendEqDefaultCompareOutOfClass {
+  int used; // no warning, same reasoning just tested via a friend declaration.
+  friend bool operator==(const FriendEqDefaultCompareOutOfClass &, const FriendEqDefaultCompareOutOfClass &);
+};
+
+bool operator==(const FriendEqDefaultCompareOutOfClass &, const FriendEqDefaultCompareOutOfClass &) = default;
+
+class HasUnusedField {
+  int unused_; // expected-warning{{private field 'unused_' is not used}}
+};
+
+class FriendEqDefaultCompare {
+  int used;
+  friend auto operator==(FriendEqDefaultCompare, FriendEqDefaultCompare) -> bool = default;
+};
+
+class UnrelatedFriendEqDefaultCompare {
+  friend auto operator==(UnrelatedFriendEqDefaultCompare, UnrelatedFriendEqDefaultCompare) -> bool = default;
+  int operator<=>(const UnrelatedFriendEqDefaultCompare &) const = default;
+};
+
 #endif
 
 class NotFullyDefined {

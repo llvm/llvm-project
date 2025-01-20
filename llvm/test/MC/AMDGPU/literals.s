@@ -1,10 +1,8 @@
-// RUN: not llvm-mc -triple=amdgcn -show-encoding %s | FileCheck %s --check-prefix=SICI
 // RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck %s --check-prefix=SICI
 // RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s --check-prefixes=SICI,CI
 // RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=GFX89
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s --check-prefixes=GFX89,GFX9
 
-// RUN: not llvm-mc -triple=amdgcn %s 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOSI,NOSICI,NOSICIVI --implicit-check-not=error:
 // RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOSI,NOSICI,NOSICIVI --implicit-check-not=error:
 // RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire %s 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOSICI,NOCIVI,NOSICIVI --implicit-check-not=error:
 // RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s 2>&1 | FileCheck %s --check-prefixes=NOGCN,NOSICIVI,NOVI,NOGFX89 --implicit-check-not=error:

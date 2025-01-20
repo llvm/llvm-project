@@ -12,14 +12,14 @@
 // convert strings to some numeric type.
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SUPPORT_XLOCALE_STRTONUM_FALLBACK_H
-#define _LIBCPP___SUPPORT_XLOCALE_STRTONUM_FALLBACK_H
+#ifndef _LIBCPP___CXX03___SUPPORT_XLOCALE_STRTONUM_FALLBACK_H
+#define _LIBCPP___CXX03___SUPPORT_XLOCALE_STRTONUM_FALLBACK_H
 
-#include <__config>
-#include <stdlib.h>
+#include <__cxx03/__config>
+#include <__cxx03/stdlib.h>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-#  include <wchar.h>
+#  include <__cxx03/wchar.h>
 #endif
 
 inline _LIBCPP_HIDE_FROM_ABI float strtof_l(const char* __nptr, char** __endptr, locale_t) {
@@ -42,4 +42,4 @@ inline _LIBCPP_HIDE_FROM_ABI unsigned long long strtoull_l(const char* __nptr, c
   return ::strtoull(__nptr, __endptr, __base);
 }
 
-#endif // _LIBCPP___SUPPORT_XLOCALE_STRTONUM_FALLBACK_H
+#endif // _LIBCPP___CXX03___SUPPORT_XLOCALE_STRTONUM_FALLBACK_H

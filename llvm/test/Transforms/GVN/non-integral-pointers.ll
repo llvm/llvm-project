@@ -287,7 +287,7 @@ declare void @llvm.memcpy.p4.p0.i64(ptr addrspace(4) nocapture, ptr nocapture, i
 define ptr addrspace(4) @neg_store_clobber(ptr addrspace(4) %loc) {
 ; CHECK-LABEL: @neg_store_clobber(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <2 x i64> <i64 4, i64 4>, ptr addrspace(4) [[LOC:%.*]], align 16
+; CHECK-NEXT:    store <2 x i64> splat (i64 4), ptr addrspace(4) [[LOC:%.*]], align 16
 ; CHECK-NEXT:    [[LOC_OFF:%.*]] = getelementptr ptr addrspace(4), ptr addrspace(4) [[LOC]], i64 1
 ; CHECK-NEXT:    [[REF:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[LOC_OFF]], align 8
 ; CHECK-NEXT:    ret ptr addrspace(4) [[REF]]

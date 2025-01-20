@@ -7,29 +7,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NUMERIC_MIDPOINT_H
-#define _LIBCPP___NUMERIC_MIDPOINT_H
+#ifndef _LIBCPP___CXX03___NUMERIC_MIDPOINT_H
+#define _LIBCPP___CXX03___NUMERIC_MIDPOINT_H
 
-#include <__config>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_floating_point.h>
-#include <__type_traits/is_integral.h>
-#include <__type_traits/is_null_pointer.h>
-#include <__type_traits/is_object.h>
-#include <__type_traits/is_pointer.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/is_void.h>
-#include <__type_traits/make_unsigned.h>
-#include <__type_traits/remove_pointer.h>
-#include <cstddef>
-#include <limits>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/is_floating_point.h>
+#include <__cxx03/__type_traits/is_integral.h>
+#include <__cxx03/__type_traits/is_null_pointer.h>
+#include <__cxx03/__type_traits/is_object.h>
+#include <__cxx03/__type_traits/is_pointer.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/is_void.h>
+#include <__cxx03/__type_traits/make_unsigned.h>
+#include <__cxx03/__type_traits/remove_pointer.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -85,4 +85,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___NUMERIC_MIDPOINT_H
+#endif // _LIBCPP___CXX03___NUMERIC_MIDPOINT_H

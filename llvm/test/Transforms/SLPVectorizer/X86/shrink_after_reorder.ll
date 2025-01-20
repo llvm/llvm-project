@@ -8,7 +8,7 @@ define void @wombat(ptr %ptr, ptr %ptr1) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i32> [[TMP2]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i32> [[TMP2]], splat (i32 -1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt <4 x i32> [[TMP1]], undef
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> undef, <4 x i32> [[TMP4]]

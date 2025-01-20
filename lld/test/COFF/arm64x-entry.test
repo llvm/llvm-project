@@ -1,0 +1,92 @@
+REQUIRES: aarch64, x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows arm64ec-dllmain.s -o arm64ec-dllmain.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows arm64-dllmain.s -o arm64-dllmain.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows arm64ec-func.s -o arm64ec-func.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows arm64-func.s -o arm64-func.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows arm64-drectve.s -o arm64ec-drectve.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows arm64-drectve.s -o arm64-drectve.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64.s -o loadconfig-arm64.obj
+
+RUN: lld-link -machine:arm64x -dll -out:out.dll arm64ec-dllmain.obj arm64-dllmain.obj \
+RUN:          loadconfig-arm64.obj loadconfig-arm64ec.obj
+
+RUN: llvm-objdump -d out.dll | FileCheck --check-prefix=DISASM %s
+DISASM: Disassembly of section .text:
+DISASM-EMPTY:
+DISASM-NEXT: 0000000180001000 <.text>:
+DISASM-NEXT: 180001000: 52800020     mov     w0, #0x1                // =1
+DISASM-NEXT: 180001004: d65f03c0     ret
+DISASM-NEXT:                 ...
+DISASM-NEXT: 180002000: 52800040     mov     w0, #0x2                // =2
+DISASM-NEXT: 180002004: d65f03c0     ret
+DISASM-EMPTY:
+DISASM-NEXT: Disassembly of section .hexpthk:
+DISASM-EMPTY:
+DISASM-NEXT: 0000000180003000 <.hexpthk>:
+DISASM-NEXT: 180003000: 48 8b c4                     movq    %rsp, %rax
+DISASM-NEXT: 180003003: 48 89 58 20                  movq    %rbx, 0x20(%rax)
+DISASM-NEXT: 180003007: 55                           pushq   %rbp
+DISASM-NEXT: 180003008: 5d                           popq    %rbp
+DISASM-NEXT: 180003009: e9 f2 ef ff ff               jmp     0x180002000 <.text+0x1000>
+DISASM-NEXT: 18000300e: cc                           int3
+DISASM-NEXT: 18000300f: cc                           int3
+
+RUN: llvm-readobj --headers out.dll | FileCheck --check-prefix=READOBJ %s
+READOBJ: AddressOfEntryPoint: 0x1000
+READOBJ: HybridObject {
+READOBJ:   AddressOfEntryPoint: 0x3000
+READOBJ: }
+
+RUN: lld-link -machine:arm64x -dll -out:out2.dll arm64ec-func.obj arm64-func.obj \
+RUN:          arm64ec-drectve.obj loadconfig-arm64.obj loadconfig-arm64ec.obj
+RUN: llvm-objdump -d out2.dll | FileCheck --check-prefix=DISASM %s
+RUN: llvm-readobj --headers --coff-load-config out2.dll | FileCheck --check-prefix=READOBJ %s
+
+RUN: lld-link -machine:arm64x -dll -out:out3.dll arm64ec-func.obj arm64-func.obj \
+RUN:          arm64-drectve.obj loadconfig-arm64.obj loadconfig-arm64ec.obj
+RUN: llvm-objdump -d out3.dll | FileCheck --check-prefix=DISASM %s
+RUN: llvm-readobj --headers --coff-load-config out3.dll | FileCheck --check-prefix=READOBJ %s
+
+RUN: lld-link -machine:arm64x -dll -out:out4.dll arm64ec-func.obj arm64-func.obj \
+RUN:          loadconfig-arm64.obj loadconfig-arm64ec.obj -entry:func
+RUN: llvm-objdump -d out4.dll | FileCheck --check-prefix=DISASM %s
+RUN: llvm-readobj --headers --coff-load-config out4.dll | FileCheck --check-prefix=READOBJ %s
+
+#--- arm64-dllmain.s
+    .section .text,"xr",discard,_DllMainCRTStartup
+    .globl _DllMainCRTStartup
+    .p2align 2
+_DllMainCRTStartup:
+    mov w0, #1
+    ret
+
+#--- arm64ec-dllmain.s
+    .section .text,"xr",discard,_DllMainCRTStartup
+    .globl _DllMainCRTStartup
+    .p2align 2
+_DllMainCRTStartup:
+    mov w0, #2
+    ret
+
+#--- arm64-func.s
+    .section .text,"xr",discard,func
+    .globl func
+    .p2align 2
+func:
+    mov w0, #1
+    ret
+
+#--- arm64ec-func.s
+    .section .text,"xr",discard,func
+    .globl func
+    .p2align 2
+func:
+    mov w0, #2
+    ret
+
+#--- arm64-drectve.s
+.section .drectve
+    .ascii "-entry:func"

@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MATH_GAMMA_H
-#define _LIBCPP___MATH_GAMMA_H
+#ifndef _LIBCPP___CXX03___MATH_GAMMA_H
+#define _LIBCPP___CXX03___MATH_GAMMA_H
 
-#include <__config>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_integral.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/is_integral.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -59,4 +59,4 @@ inline _LIBCPP_HIDE_FROM_ABI double tgamma(_A1 __x) _NOEXCEPT {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MATH_GAMMA_H
+#endif // _LIBCPP___CXX03___MATH_GAMMA_H

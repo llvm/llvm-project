@@ -33,9 +33,9 @@ body:             |
     ; AVX512VL-LABEL: name: test_unmerge
     ; AVX512VL: [[DEF:%[0-9]+]]:vr256x = IMPLICIT_DEF
     ; AVX512VL-NEXT: [[COPY:%[0-9]+]]:vr128x = COPY [[DEF]].sub_xmm
-    ; AVX512VL-NEXT: [[VEXTRACTF32x4Z256rri:%[0-9]+]]:vr128x = VEXTRACTF32x4Z256rri [[DEF]], 1
+    ; AVX512VL-NEXT: [[VEXTRACTF32X4Z256rri:%[0-9]+]]:vr128x = VEXTRACTF32X4Z256rri [[DEF]], 1
     ; AVX512VL-NEXT: $xmm0 = COPY [[COPY]]
-    ; AVX512VL-NEXT: $xmm1 = COPY [[VEXTRACTF32x4Z256rri]]
+    ; AVX512VL-NEXT: $xmm1 = COPY [[VEXTRACTF32X4Z256rri]]
     ; AVX512VL-NEXT: RET 0, implicit $xmm0, implicit $xmm1
     %0(<8 x s32>) = IMPLICIT_DEF
     %1(<4 x s32>), %2(<4 x s32>) = G_UNMERGE_VALUES %0(<8 x s32>)

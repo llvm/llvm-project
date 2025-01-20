@@ -14,7 +14,7 @@ define i8 @add_i8(i8 %a, i8 %b) {
 ;
 ; RV64IM-LABEL: add_i8:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    addw a0, a0, a1
+; RV64IM-NEXT:    add a0, a0, a1
 ; RV64IM-NEXT:    ret
 entry:
   %0 = add i8 %a, %b
@@ -25,18 +25,18 @@ define i32 @add_i8_signext_i32(i8 %a, i8 %b) {
 ; RV32IM-LABEL: add_i8_signext_i32:
 ; RV32IM:       # %bb.0: # %entry
 ; RV32IM-NEXT:    slli a0, a0, 24
-; RV32IM-NEXT:    srai a0, a0, 24
 ; RV32IM-NEXT:    slli a1, a1, 24
+; RV32IM-NEXT:    srai a0, a0, 24
 ; RV32IM-NEXT:    srai a1, a1, 24
 ; RV32IM-NEXT:    add a0, a0, a1
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: add_i8_signext_i32:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    slli a0, a0, 24
-; RV64IM-NEXT:    sraiw a0, a0, 24
-; RV64IM-NEXT:    slli a1, a1, 24
-; RV64IM-NEXT:    sraiw a1, a1, 24
+; RV64IM-NEXT:    slli a0, a0, 56
+; RV64IM-NEXT:    slli a1, a1, 56
+; RV64IM-NEXT:    srai a0, a0, 56
+; RV64IM-NEXT:    srai a1, a1, 56
 ; RV64IM-NEXT:    addw a0, a0, a1
 ; RV64IM-NEXT:    ret
 entry:
@@ -168,7 +168,7 @@ define i32 @slli_i32(i32 %a) {
 ;
 ; RV64IM-LABEL: slli_i32:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    slliw a0, a0, 11
+; RV64IM-NEXT:    slli a0, a0, 11
 ; RV64IM-NEXT:    ret
 entry:
   %0 = shl i32 %a, 11
@@ -333,7 +333,7 @@ define i32 @mul_i32(i32 %a, i32 %b) {
 ;
 ; RV64IM-LABEL: mul_i32:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    mulw a0, a0, a1
+; RV64IM-NEXT:    mul a0, a0, a1
 ; RV64IM-NEXT:    ret
 entry:
   %0 = mul i32 %a, %b
@@ -457,19 +457,19 @@ entry:
 define i64 @subi_i64(i64 %a) {
 ; RV32IM-LABEL: subi_i64:
 ; RV32IM:       # %bb.0: # %entry
-; RV32IM-NEXT:    lui a2, 301
-; RV32IM-NEXT:    addi a3, a2, 1548
-; RV32IM-NEXT:    sub a2, a0, a3
-; RV32IM-NEXT:    sltu a0, a0, a3
-; RV32IM-NEXT:    sub a1, a1, a0
-; RV32IM-NEXT:    mv a0, a2
+; RV32IM-NEXT:    lui a2, 1048275
+; RV32IM-NEXT:    addi a2, a2, -1548
+; RV32IM-NEXT:    add a0, a0, a2
+; RV32IM-NEXT:    sltu a2, a0, a2
+; RV32IM-NEXT:    addi a1, a1, -1
+; RV32IM-NEXT:    add a1, a1, a2
 ; RV32IM-NEXT:    ret
 ;
 ; RV64IM-LABEL: subi_i64:
 ; RV64IM:       # %bb.0: # %entry
-; RV64IM-NEXT:    lui a1, 301
-; RV64IM-NEXT:    addiw a1, a1, 1548
-; RV64IM-NEXT:    sub a0, a0, a1
+; RV64IM-NEXT:    lui a1, 1048275
+; RV64IM-NEXT:    addiw a1, a1, -1548
+; RV64IM-NEXT:    add a0, a0, a1
 ; RV64IM-NEXT:    ret
 entry:
   %0 = sub i64 %a, 1234444

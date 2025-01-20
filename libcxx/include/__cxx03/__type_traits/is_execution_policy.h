@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_EXECUTION_POLICY_H
-#define _LIBCPP___TYPE_TRAITS_IS_EXECUTION_POLICY_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_EXECUTION_POLICY_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_IS_EXECUTION_POLICY_H
 
-#include <__config>
-#include <__type_traits/remove_cvref.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/remove_cvref.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -56,4 +56,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_EXECUTION_POLICY_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_EXECUTION_POLICY_H

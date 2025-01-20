@@ -1,0 +1,19 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("SYCLLinkOpts") {
+  args = [ "-gen-opt-parser-defs" ]
+}
+
+executable("clang-sycl-linker") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    ":SYCLLinkOpts",
+    "//clang/lib/Basic",
+    "//llvm/lib/BinaryFormat",
+    "//llvm/lib/Option",
+    "//llvm/lib/Object",
+    "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
+  ]
+  sources = [ "ClangSYCLLinker.cpp" ]
+}

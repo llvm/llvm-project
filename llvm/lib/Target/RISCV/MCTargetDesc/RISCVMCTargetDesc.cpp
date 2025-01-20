@@ -11,14 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVMCTargetDesc.h"
-#include "RISCVBaseInfo.h"
 #include "RISCVELFStreamer.h"
 #include "RISCVInstPrinter.h"
 #include "RISCVMCAsmInfo.h"
 #include "RISCVMCObjectFileInfo.h"
 #include "RISCVTargetStreamer.h"
 #include "TargetInfo/RISCVTargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc < %s -mtriple=avr | FileCheck %s
 
 @count = global i8 0
 @funcptr = global ptr addrspace(1) null

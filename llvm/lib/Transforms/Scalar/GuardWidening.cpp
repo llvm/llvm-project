@@ -52,7 +52,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -728,7 +727,7 @@ GuardWideningImpl::mergeChecks(SmallVectorImpl<Value *> &ChecksToHoist,
     // L >u C0 && L >u C1  ->  L >u max(C0, C1)
     ConstantInt *RHS0, *RHS1;
     Value *LHS;
-    ICmpInst::Predicate Pred0, Pred1;
+    CmpPredicate Pred0, Pred1;
     // TODO: Support searching for pairs to merge from both whole lists of
     // ChecksToHoist and ChecksToWiden.
     if (ChecksToWiden.size() == 1 && ChecksToHoist.size() == 1 &&

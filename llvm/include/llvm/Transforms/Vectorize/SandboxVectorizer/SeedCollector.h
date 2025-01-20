@@ -95,8 +95,8 @@ public:
   /// with a total size <= \p MaxVecRegBits, or an empty slice if the
   /// requirements cannot be met . If \p ForcePowOf2 is true, then the returned
   /// slice will have a total number of bits that is a power of 2.
-  MutableArrayRef<Instruction *>
-  getSlice(unsigned StartIdx, unsigned MaxVecRegBits, bool ForcePowOf2);
+  ArrayRef<Instruction *> getSlice(unsigned StartIdx, unsigned MaxVecRegBits,
+                                   bool ForcePowOf2);
 
   /// \Returns the number of seed elements in the bundle.
   std::size_t size() const { return Seeds.size(); }
@@ -223,6 +223,10 @@ public:
     /// Note that the bundles themselves may have additional ordering, created
     /// by the subclasses by insertAt. The bundles themselves may also have used
     /// instructions.
+
+    // TODO: Range_size counts fully used-bundles. Further, iterating over
+    // anything other than the Bundles in a SeedContainer includes used
+    // seeds. Rework the iterator logic to clean this up.
     iterator(BundleMapT &Map, BundleMapT::iterator MapIt, ValT *Vec, int VecIdx)
         : Map(&Map), MapIt(MapIt), Vec(Vec), VecIdx(VecIdx) {}
     value_type &operator*() {
@@ -288,7 +292,7 @@ class SeedCollector {
   SeedContainer StoreSeeds;
   SeedContainer LoadSeeds;
   Context &Ctx;
-
+  Context::CallbackID EraseCallbackID;
   /// \Returns the number of SeedBundle groups for all seed types.
   /// This is to be used for limiting compilation time.
   unsigned totalNumSeedGroups() const {

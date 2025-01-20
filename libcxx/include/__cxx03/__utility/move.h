@@ -7,21 +7,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_MOVE_H
-#define _LIBCPP___UTILITY_MOVE_H
+#ifndef _LIBCPP___CXX03___UTILITY_MOVE_H
+#define _LIBCPP___CXX03___UTILITY_MOVE_H
 
-#include <__config>
-#include <__type_traits/conditional.h>
-#include <__type_traits/is_constructible.h>
-#include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/remove_reference.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/conditional.h>
+#include <__cxx03/__type_traits/is_constructible.h>
+#include <__cxx03/__type_traits/is_nothrow_constructible.h>
+#include <__cxx03/__type_traits/remove_reference.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -46,4 +46,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___UTILITY_MOVE_H
+#endif // _LIBCPP___CXX03___UTILITY_MOVE_H

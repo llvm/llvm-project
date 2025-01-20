@@ -333,7 +333,7 @@ add_entrypoint_object(
     libc.src.pthread.pthread_attr_getstack
     libc.src.errno.errno
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
     -fno-omit-frame-pointer
 )
 

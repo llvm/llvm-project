@@ -35,8 +35,22 @@ define i32 @test_atomicrmw_or_0_global_one_as(ptr addrspace(1) %ptr) {
 define i32 @test_atomicrmw_or_0_flat_system(ptr %ptr) {
 ; CHECK-LABEL: define i32 @test_atomicrmw_or_0_flat_system(
 ; CHECK-SAME: ptr [[PTR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add ptr [[PTR]], i32 0 seq_cst, align 4
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR]])
+; CHECK-NEXT:    br i1 [[IS_PRIVATE]], label [[ATOMICRMW_PRIVATE:%.*]], label [[ATOMICRMW_GLOBAL:%.*]]
+; CHECK:       atomicrmw.private:
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
+; CHECK-NEXT:    [[LOADED_PRIVATE:%.*]] = load i32, ptr addrspace(5) [[TMP1]], align 4
+; CHECK-NEXT:    [[NEW:%.*]] = add i32 [[LOADED_PRIVATE]], 0
+; CHECK-NEXT:    store i32 [[NEW]], ptr addrspace(5) [[TMP1]], align 4
+; CHECK-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
+; CHECK:       atomicrmw.global:
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw add ptr [[PTR]], i32 0 seq_cst, align 4, !noalias.addrspace [[META1:![0-9]+]]
+; CHECK-NEXT:    br label [[ATOMICRMW_PHI]]
+; CHECK:       atomicrmw.phi:
+; CHECK-NEXT:    [[RES1:%.*]] = phi i32 [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP2]], [[ATOMICRMW_GLOBAL]] ]
+; CHECK-NEXT:    br label [[ATOMICRMW_END:%.*]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    ret i32 [[RES1]]
 ;
   %res = atomicrmw or ptr %ptr, i32 0 seq_cst
   ret i32 %res

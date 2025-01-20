@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <unordered_set>
-
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"

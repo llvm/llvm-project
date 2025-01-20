@@ -20,11 +20,11 @@
  * THE SOFTWARE.
  */
 
-#include <clc/clc.h>
 #include "config.h"
-#include "../clcmacro.h"
 #include "math.h"
 #include "math/clc_ldexp.h"
+#include <clc/clc.h>
+#include <clc/clcmacro.h>
 
 _CLC_DEFINE_BINARY_BUILTIN(float, ldexp, __clc_ldexp, float, int)
 

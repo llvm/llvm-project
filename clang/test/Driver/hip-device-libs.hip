@@ -157,11 +157,12 @@
 // Test default code object version.
 // RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
 // RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
-// RUN: 2>&1 | FileCheck %s --check-prefixes=ABI4
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ABI5
 
 // Test default code object version with old device library without abi_version_400.bc
 // RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
-// RUN:   --hip-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode-no-abi-ver   \
+// RUN:   -mcode-object-version=4 \
+// RUN:   --hip-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode-no-abi-ver \
 // RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=NOABI4
 
@@ -252,5 +253,5 @@
 // NOABI4-NOT: error:
 // NOABI4-NOT: "-mlink-builtin-bitcode" "{{.*}}oclc_abi_version_400.bc"
 // NOABI4-NOT: "-mlink-builtin-bitcode" "{{.*}}oclc_abi_version_500.bc"
-// NOABI5: error: cannot find ROCm device libraryfor ABI version 5; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library
-// NOABI6: error: cannot find ROCm device libraryfor ABI version 6; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library
+// NOABI5: error: cannot find ROCm device library for ABI version 5; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library
+// NOABI6: error: cannot find ROCm device library for ABI version 6; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library

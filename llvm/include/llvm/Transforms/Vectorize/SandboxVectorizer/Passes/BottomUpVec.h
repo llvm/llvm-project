@@ -18,17 +18,35 @@
 #include "llvm/SandboxIR/Pass.h"
 #include "llvm/SandboxIR/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrMaps.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
 
 namespace llvm::sandboxir {
 
 class BottomUpVec final : public FunctionPass {
   bool Change = false;
-  LegalityAnalysis Legality;
-  void vectorizeRec(ArrayRef<Value *> Bndl);
-  void tryVectorize(ArrayRef<Value *> Seeds);
+  std::unique_ptr<LegalityAnalysis> Legality;
+  DenseSet<Instruction *> DeadInstrCandidates;
+  /// Maps scalars to vectors.
+  std::unique_ptr<InstrMaps> IMaps;
 
-  // The PM containing the pipeline of region passes.
+  /// Creates and returns a vector instruction that replaces the instructions in
+  /// \p Bndl. \p Operands are the already vectorized operands.
+  Value *createVectorInstr(ArrayRef<Value *> Bndl, ArrayRef<Value *> Operands);
+  /// Erases all dead instructions from the dead instruction candidates
+  /// collected during vectorization.
+  void tryEraseDeadInstrs();
+  /// Creates a shuffle instruction that shuffles \p VecOp according to \p Mask.
+  Value *createShuffle(Value *VecOp, const ShuffleMask &Mask);
+  /// Packs all elements of \p ToPack into a vector and returns that vector.
+  Value *createPack(ArrayRef<Value *> ToPack);
+  void collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl);
+  /// Recursively try to vectorize \p Bndl and its operands.
+  Value *vectorizeRec(ArrayRef<Value *> Bndl, unsigned Depth);
+  /// Entry point for vectorization starting from \p Seeds.
+  bool tryVectorize(ArrayRef<Value *> Seeds);
+
+  /// The PM containing the pipeline of region passes.
   RegionPassManager RPM;
 
 public:

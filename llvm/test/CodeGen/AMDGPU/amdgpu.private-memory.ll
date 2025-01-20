@@ -364,9 +364,10 @@ entry:
 
 ; FUNC-LABEL: ptrtoint:
 ; SI-NOT: ds_write
+; SI: s_add_i32 [[S_ADD_OFFSET:s[0-9]+]], s{{[0-9]+}}, 5
 ; SI: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 offen
-; SI: v_add_{{[iu]}}32_e32 [[ADD_OFFSET:v[0-9]+]], vcc, 5,
-; SI: buffer_load_dword v{{[0-9]+}}, [[ADD_OFFSET:v[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0 offen ;
+; SI: v_mov_b32_e32 [[V_ADD_OFFSET:v[0-9]+]], [[S_ADD_OFFSET]]
+; SI: buffer_load_dword v{{[0-9]+}}, [[V_ADD_OFFSET:v[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0 offen ;
 define amdgpu_kernel void @ptrtoint(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
   %alloca = alloca [16 x i32], addrspace(5)
   %tmp0 = getelementptr [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %a
@@ -503,7 +504,7 @@ define amdgpu_kernel void @v2float_stack(ptr addrspace(1) %out, i32 %a) {
 }
 
 ; OPT-LABEL: @direct_alloca_read_0xi32(
-; OPT: store [0 x i32] undef, ptr addrspace(3)
+; OPT: store [0 x i32] poison, ptr addrspace(3)
 ; OPT: load [0 x i32], ptr addrspace(3)
 define amdgpu_kernel void @direct_alloca_read_0xi32(ptr addrspace(1) %out, i32 %index) {
 entry:

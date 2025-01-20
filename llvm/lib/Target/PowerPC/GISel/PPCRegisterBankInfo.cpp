@@ -16,7 +16,6 @@
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "ppc-reg-bank-info"
 

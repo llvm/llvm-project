@@ -31,6 +31,13 @@ using namespace mlir::linalg;
 FailureOr<Operation *> mlir::linalg::transposeMatmul(RewriterBase &rewriter,
                                                      linalg::MatmulOp matmulOp,
                                                      bool transposeLHS) {
+  // Check to not let go the matmul with extended semantic, through this
+  // transform.
+  if (matmulOp.hasUserDefinedMaps()) {
+    return rewriter.notifyMatchFailure(
+        matmulOp, "only matmul ops with non-extended semantics are supported");
+  }
+
   if (!bufferization::hasTensorSemantics(matmulOp))
     return rewriter.notifyMatchFailure(
         matmulOp, "only matmul ops with tensors are supported");

@@ -8,7 +8,7 @@
 
 #include "CrashHandlerFixture.h"
 #include "flang/Runtime/descriptor.h"
-#include "flang/Runtime/io-api.h"
+#include "flang/Runtime/io-api-consts.h"
 #include <algorithm>
 #include <array>
 #include <cstring>
@@ -23,7 +23,7 @@ TEST(IOApiTests, LogicalFormatTest) {
   char buffer[bufferSize];
 
   // Create format for all types and values to be written
-  const char *format{"(L,L3,I3,L2,L2,I3,L2,A3,L2,L,F4.1,L2)"};
+  const char *format{"(L0,L3,I3,L2,L2,I3,L2,A3,L2,L,F4.1,L2)"};
   auto cookie{IONAME(BeginInternalFormattedOutput)(
       buffer, bufferSize, format, std::strlen(format))};
 

@@ -83,8 +83,8 @@ static void collectAndReplaceInRegion(Op &op, bool hostToDevice) {
                   !std::is_same_v<Op, acc::DataOp> &&
                   !std::is_same_v<Op, acc::DeclareOp>) {
       collectPtrs(op.getReductionOperands(), values, hostToDevice);
-      collectPtrs(op.getGangPrivateOperands(), values, hostToDevice);
-      collectPtrs(op.getGangFirstPrivateOperands(), values, hostToDevice);
+      collectPtrs(op.getPrivateOperands(), values, hostToDevice);
+      collectPtrs(op.getFirstprivateOperands(), values, hostToDevice);
     }
   }
 

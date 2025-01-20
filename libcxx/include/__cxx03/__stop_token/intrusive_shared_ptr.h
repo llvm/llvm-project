@@ -7,23 +7,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___STOP_TOKEN_INTRUSIVE_SHARED_PTR_H
-#define _LIBCPP___STOP_TOKEN_INTRUSIVE_SHARED_PTR_H
+#ifndef _LIBCPP___CXX03___STOP_TOKEN_INTRUSIVE_SHARED_PTR_H
+#define _LIBCPP___CXX03___STOP_TOKEN_INTRUSIVE_SHARED_PTR_H
 
-#include <__atomic/atomic.h>
-#include <__atomic/memory_order.h>
-#include <__config>
-#include <__type_traits/is_reference.h>
-#include <__utility/move.h>
-#include <__utility/swap.h>
-#include <cstddef>
+#include <__cxx03/__atomic/atomic.h>
+#include <__cxx03/__atomic/memory_order.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/is_reference.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/__utility/swap.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -131,4 +131,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___STOP_TOKEN_INTRUSIVE_SHARED_PTR_H
+#endif // _LIBCPP___CXX03___STOP_TOKEN_INTRUSIVE_SHARED_PTR_H

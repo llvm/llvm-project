@@ -7,31 +7,31 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_WRITE_ESCAPED_H
-#define _LIBCPP___FORMAT_WRITE_ESCAPED_H
+#ifndef _LIBCPP___CXX03___FORMAT_WRITE_ESCAPED_H
+#define _LIBCPP___CXX03___FORMAT_WRITE_ESCAPED_H
 
-#include <__algorithm/ranges_copy.h>
-#include <__algorithm/ranges_for_each.h>
-#include <__charconv/to_chars_integral.h>
-#include <__charconv/to_chars_result.h>
-#include <__chrono/statically_widen.h>
-#include <__format/escaped_output_table.h>
-#include <__format/formatter_output.h>
-#include <__format/parser_std_format_spec.h>
-#include <__format/unicode.h>
-#include <__iterator/back_insert_iterator.h>
-#include <__memory/addressof.h>
-#include <__system_error/errc.h>
-#include <__type_traits/make_unsigned.h>
-#include <__utility/move.h>
-#include <string_view>
+#include <__cxx03/__algorithm/ranges_copy.h>
+#include <__cxx03/__algorithm/ranges_for_each.h>
+#include <__cxx03/__charconv/to_chars_integral.h>
+#include <__cxx03/__charconv/to_chars_result.h>
+#include <__cxx03/__chrono/statically_widen.h>
+#include <__cxx03/__format/escaped_output_table.h>
+#include <__cxx03/__format/formatter_output.h>
+#include <__cxx03/__format/parser_std_format_spec.h>
+#include <__cxx03/__format/unicode.h>
+#include <__cxx03/__iterator/back_insert_iterator.h>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__system_error/errc.h>
+#include <__cxx03/__type_traits/make_unsigned.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -239,4 +239,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FORMAT_WRITE_ESCAPED_H
+#endif // _LIBCPP___CXX03___FORMAT_WRITE_ESCAPED_H

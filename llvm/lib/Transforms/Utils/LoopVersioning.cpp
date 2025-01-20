@@ -26,6 +26,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
@@ -278,6 +279,9 @@ bool runImpl(LoopInfo *LI, LoopAccessInfoManager &LAIs, DominatorTree *DT,
     if (!LAI.hasConvergentOp() &&
         (LAI.getNumRuntimePointerChecks() ||
          !LAI.getPSE().getPredicate().isAlwaysTrue())) {
+      if (!L->isLCSSAForm(*DT))
+       formLCSSARecursively(*L, *DT, LI, SE);
+
       LoopVersioning LVer(LAI, LAI.getRuntimePointerChecking()->getChecks(), L,
                           LI, DT, SE);
       LVer.versionLoop();

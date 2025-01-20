@@ -33,6 +33,7 @@ protected:
     Buffer() = default;
     Buffer(Ctx &ctx, MemoryBufferRef mb);
   };
+  Ctx &ctx;
   // The current buffer and parent buffers due to INCLUDE.
   Buffer curBuf;
   SmallVector<Buffer, 0> buffers;

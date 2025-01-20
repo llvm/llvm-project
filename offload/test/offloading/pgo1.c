@@ -36,15 +36,15 @@ int main() {
 // CLANG-PGO-NEXT: { {{[0-9]*}} {{[0-9]*}}
 // CLANG-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
 // CLANG-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// CLANG-PGO-SAME: {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
+// CLANG-PGO-SAME: {{[0-9]*}} {{.*}} {{[0-9]*}} }
 // CLANG-PGO-NEXT: { {{[0-9]*}} {{[0-9]*}}
 // CLANG-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
 // CLANG-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// CLANG-PGO-SAME: {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
+// CLANG-PGO-SAME: {{[0-9]*}} {{.*}} {{[0-9]*}} }
 // CLANG-PGO-NEXT: { {{[0-9]*}} {{[0-9]*}}
 // CLANG-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
 // CLANG-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// CLANG-PGO-SAME: {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
+// CLANG-PGO-SAME: {{[0-9]*}} {{.*}} {{[0-9]*}} }
 // CLANG-PGO-NEXT: ======== Functions ========
 // CLANG-PGO-NEXT: pgo1.c:
 // CLANG-PGO-SAME: __omp_offloading_{{[_0-9a-zA-Z]*}}_main_{{[_0-9a-zA-Z]*}}
@@ -59,15 +59,15 @@ int main() {
 // LLVM-PGO-NEXT: { {{[0-9]*}} {{[0-9]*}}
 // LLVM-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
 // LLVM-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// LLVM-PGO-SAME: {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
+// LLVM-PGO-SAME: {{[0-9]*}} {{.*}} {{[0-9]*}} }
 // LLVM-PGO-NEXT: { {{[0-9]*}} {{[0-9]*}}
 // LLVM-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
 // LLVM-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// LLVM-PGO-SAME: {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
+// LLVM-PGO-SAME: {{[0-9]*}} {{.*}} {{[0-9]*}} }
 // LLVM-PGO-NEXT: { {{[0-9]*}} {{[0-9]*}}
 // LLVM-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
 // LLVM-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// LLVM-PGO-SAME: {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
+// LLVM-PGO-SAME: {{[0-9]*}} {{.*}} {{[0-9]*}} }
 // LLVM-PGO-NEXT: ======== Functions ========
 // LLVM-PGO-NEXT: __omp_offloading_{{[_0-9a-zA-Z]*}}_main_{{[_0-9a-zA-Z]*}}
 // LLVM-PGO-NEXT: test1

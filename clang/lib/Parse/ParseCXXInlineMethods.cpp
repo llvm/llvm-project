@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/DeclTemplate.h"
-#include "clang/Parse/ParseDiagnostic.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
@@ -722,8 +722,7 @@ void Parser::ParseLexedMemberInitializer(LateParsedMemberInitializer &MI) {
   ExprResult Init = ParseCXXMemberInitializer(MI.Field, /*IsFunction=*/false,
                                               EqualLoc);
 
-  Actions.ActOnFinishCXXInClassMemberInitializer(MI.Field, EqualLoc,
-                                                 Init.get());
+  Actions.ActOnFinishCXXInClassMemberInitializer(MI.Field, EqualLoc, Init);
 
   // The next token should be our artificial terminating EOF token.
   if (Tok.isNot(tok::eof)) {

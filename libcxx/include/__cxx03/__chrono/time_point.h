@@ -7,24 +7,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHRONO_TIME_POINT_H
-#define _LIBCPP___CHRONO_TIME_POINT_H
+#ifndef _LIBCPP___CXX03___CHRONO_TIME_POINT_H
+#define _LIBCPP___CXX03___CHRONO_TIME_POINT_H
 
-#include <__chrono/duration.h>
-#include <__compare/ordering.h>
-#include <__compare/three_way_comparable.h>
-#include <__config>
-#include <__type_traits/common_type.h>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_convertible.h>
-#include <limits>
+#include <__cxx03/__chrono/duration.h>
+#include <__cxx03/__compare/ordering.h>
+#include <__cxx03/__compare/three_way_comparable.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/common_type.h>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/is_convertible.h>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -217,4 +217,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CHRONO_TIME_POINT_H
+#endif // _LIBCPP___CXX03___CHRONO_TIME_POINT_H

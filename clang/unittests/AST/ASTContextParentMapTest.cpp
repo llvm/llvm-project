@@ -148,5 +148,54 @@ TEST(GetParents, FriendTypeLoc) {
               ElementsAre(DynTypedNode::create(FrA)));
 }
 
+TEST(GetParents, UserDefinedTupleLikeTypes) {
+  MatchVerifier<VarDecl> Verifier;
+  EXPECT_TRUE(Verifier.match(
+      R"(
+namespace std {
+
+using size_t = __typeof(sizeof(int));
+
+template <typename T>
+struct tuple_size;
+
+template <typename T>
+struct tuple_size<T&> : tuple_size<T>{};
+
+template <typename T>
+requires requires { tuple_size<T>::value; }
+struct tuple_size<const T> : tuple_size<T>{};
+
+
+template<size_t i, typename T>
+struct tuple_element;
+
+
+}  // namespace std
+
+struct Decomposable {};
+
+template<> struct std::tuple_size<Decomposable> {
+  static constexpr size_t value = 2;
+};
+
+template<std::size_t i> struct std::tuple_element<i, Decomposable> {
+  using type = int;
+};
+
+template<std::size_t i> struct std::tuple_element<i, const Decomposable> {
+  using type = const int;
+};
+
+template<std::size_t i>
+const int& get(const Decomposable& d);
+
+void F(const Decomposable& d) {
+    const auto& [x, y] = d;
+}
+)",
+      varDecl(hasName("x"), hasAncestor(decompositionDecl())), Lang_CXX20));
+}
+
 } // end namespace ast_matchers
 } // end namespace clang

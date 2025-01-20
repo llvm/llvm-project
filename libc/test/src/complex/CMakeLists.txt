@@ -1,0 +1,241 @@
+add_custom_target(libc-complex-unittests)
+
+add_libc_test(
+  conj_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    conj_test.cpp
+  DEPENDS
+    libc.src.complex.conj
+  LINK_LIBRARIES
+      LibcFPTestHelpers
+)
+
+add_libc_test(
+  conjf_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    conjf_test.cpp
+  DEPENDS
+    libc.src.complex.conjf
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  conjl_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    conjl_test.cpp
+  DEPENDS
+    libc.src.complex.conjl
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  conjf16_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    conjf16_test.cpp
+  DEPENDS
+    libc.src.complex.conjf16
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  conjf128_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    conjf128_test.cpp
+  DEPENDS
+    libc.src.complex.conjf128
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  cproj_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cproj_test.cpp
+  DEPENDS
+    libc.src.complex.cproj
+  LINK_LIBRARIES
+      LibcFPTestHelpers
+)
+
+add_libc_test(
+  cprojf_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cprojf_test.cpp
+  DEPENDS
+    libc.src.complex.cprojf
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  cprojl_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cprojl_test.cpp
+  DEPENDS
+    libc.src.complex.cprojl
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  cprojf16_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cprojf16_test.cpp
+  DEPENDS
+    libc.src.complex.cprojf16
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  cprojf128_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cprojf128_test.cpp
+  DEPENDS
+    libc.src.complex.cprojf128
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  creal_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    creal_test.cpp
+  DEPENDS
+    libc.src.complex.creal
+  LINK_LIBRARIES
+      LibcFPTestHelpers
+)
+
+add_libc_test(
+  crealf_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    crealf_test.cpp
+  DEPENDS
+    libc.src.complex.crealf
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  creall_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    creall_test.cpp
+  DEPENDS
+    libc.src.complex.creall
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  crealf16_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    crealf16_test.cpp
+  DEPENDS
+    libc.src.complex.crealf16
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  crealf128_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    crealf128_test.cpp
+  DEPENDS
+    libc.src.complex.crealf128
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  cimag_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cimag_test.cpp
+  DEPENDS
+    libc.src.complex.cimag
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  cimagf_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cimagf_test.cpp
+  DEPENDS
+    libc.src.complex.cimagf
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  cimagl_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cimagl_test.cpp
+  DEPENDS
+    libc.src.complex.cimagl
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  cimagf16_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cimagf16_test.cpp
+  DEPENDS
+    libc.src.complex.cimagf16
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)
+
+add_libc_test(
+  cimagf128_test
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cimagf128_test.cpp
+  DEPENDS
+    libc.src.complex.cimagf128
+  LINK_LIBRARIES
+    LibcFPTestHelpers
+)

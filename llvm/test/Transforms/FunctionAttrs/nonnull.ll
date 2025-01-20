@@ -148,14 +148,15 @@ define ptr @test5(i1 %c) {
 }
 
 ; Local analysis, but going through a self recursive phi
-define ptr @test6a() {
-; COMMON-LABEL: define nonnull ptr @test6a() {
+define ptr @test6a(i1 %arg) {
+; COMMON-LABEL: define nonnull ptr @test6a(
+; COMMON-SAME: i1 [[ARG:%.*]]) {
 ; COMMON-NEXT:  entry:
 ; COMMON-NEXT:    [[RET:%.*]] = call ptr @ret_nonnull()
 ; COMMON-NEXT:    br label [[LOOP:%.*]]
 ; COMMON:       loop:
 ; COMMON-NEXT:    [[PHI:%.*]] = phi ptr [ [[RET]], [[ENTRY:%.*]] ], [ [[PHI]], [[LOOP]] ]
-; COMMON-NEXT:    br i1 undef, label [[LOOP]], label [[EXIT:%.*]]
+; COMMON-NEXT:    br i1 [[ARG]], label [[LOOP]], label [[EXIT:%.*]]
 ; COMMON:       exit:
 ; COMMON-NEXT:    ret ptr [[PHI]]
 ;
@@ -164,7 +165,7 @@ entry:
   br label %loop
 loop:
   %phi = phi ptr [%ret, %entry], [%phi, %loop]
-  br i1 undef, label %loop, label %exit
+  br i1 %arg, label %loop, label %exit
 exit:
   ret ptr %phi
 }

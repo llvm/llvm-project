@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___BIT_BIT_WIDTH_H
-#define _LIBCPP___BIT_BIT_WIDTH_H
+#ifndef _LIBCPP___CXX03___BIT_BIT_WIDTH_H
+#define _LIBCPP___CXX03___BIT_BIT_WIDTH_H
 
-#include <__bit/bit_log2.h>
-#include <__concepts/arithmetic.h>
-#include <__config>
+#include <__cxx03/__bit/bit_log2.h>
+#include <__cxx03/__concepts/arithmetic.h>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -30,4 +30,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP___BIT_BIT_WIDTH_H
+#endif // _LIBCPP___CXX03___BIT_BIT_WIDTH_H

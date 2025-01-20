@@ -64,7 +64,7 @@ define i32 @getelementptr_4x32(ptr nocapture readonly %g, i32 %n, i32 %x, i32 %y
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i32> [[TMP4]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP5]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext nneg i32 [[TMP6]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[G:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[G:%.*]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[T6:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD1:%.*]] = add nsw i32 [[T6]], [[SUM_032]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP5]], i64 1
@@ -159,7 +159,7 @@ define i32 @getelementptr_2x32(ptr nocapture readonly %g, i32 %n, i32 %x, i32 %y
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i32> [[TMP2]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext nneg i32 [[TMP4]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[G:%.*]], i64 [[TMP5]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[G:%.*]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x i32>, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = sext i32 [[TMP7]] to i64

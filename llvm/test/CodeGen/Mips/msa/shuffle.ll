@@ -1,5 +1,5 @@
-; RUN: llc -march=mips -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
-; RUN: llc -march=mipsel -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
+; RUN: llc -mtriple=mips -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
 
 define void @vshf_v16i8_0(ptr %c, ptr %a, ptr %b) nounwind {
   ; CHECK-LABEL: vshf_v16i8_0:

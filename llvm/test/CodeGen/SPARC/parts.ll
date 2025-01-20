@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=sparcv9    | FileCheck %s
+; RUN: llc < %s -mtriple=sparcv9 | FileCheck %s
   
 ; CHECK-LABEL: test
 ; CHECK:        srl %i1, 0, %o2

@@ -21,9 +21,9 @@ define void @multiply_sub_add_2x3_3x2(ptr %a.ptr, ptr %b.ptr, ptr %c.ptr) {
 ; RM-NEXT:    store <3 x double> [[TMP0]], ptr [[A_PTR]], align 8
 ; RM-NEXT:    [[VEC_GEP7:%.*]] = getelementptr double, ptr [[A_PTR]], i64 3
 ; RM-NEXT:    store <3 x double> [[TMP1]], ptr [[VEC_GEP7]], align 8
-; RM-NEXT:    [[TMP2:%.*]] = fsub <2 x double> [[COL_LOAD2]], <double 1.000000e+00, double 1.000000e+00>
-; RM-NEXT:    [[TMP3:%.*]] = fsub <2 x double> [[COL_LOAD4]], <double 1.000000e+00, double 1.000000e+00>
-; RM-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[COL_LOAD6]], <double 1.000000e+00, double 1.000000e+00>
+; RM-NEXT:    [[TMP2:%.*]] = fsub <2 x double> [[COL_LOAD2]], splat (double 1.000000e+00)
+; RM-NEXT:    [[TMP3:%.*]] = fsub <2 x double> [[COL_LOAD4]], splat (double 1.000000e+00)
+; RM-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[COL_LOAD6]], splat (double 1.000000e+00)
 ; RM-NEXT:    store <2 x double> [[TMP2]], ptr [[B_PTR]], align 8
 ; RM-NEXT:    [[VEC_GEP8:%.*]] = getelementptr double, ptr [[B_PTR]], i64 2
 ; RM-NEXT:    store <2 x double> [[TMP3]], ptr [[VEC_GEP8]], align 8

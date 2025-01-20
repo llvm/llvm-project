@@ -44,7 +44,6 @@ void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializeStructurizeCFGLegacyPassPass(Registry);
   initializeSinkingLegacyPassPass(Registry);
   initializeTailCallElimPass(Registry);
-  initializeTLSVariableHoistLegacyPassPass(Registry);
   initializeSeparateConstOffsetFromGEPLegacyPassPass(Registry);
   initializeSpeculativeExecutionLegacyPassPass(Registry);
   initializeStraightLineStrengthReduceLegacyPassPass(Registry);

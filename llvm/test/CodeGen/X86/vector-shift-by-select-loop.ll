@@ -450,22 +450,22 @@ for.body.preheader40:
 
 vector.ph:
   %n.vec = and i64 %wide.trip.count, 4294967264
-  %broadcast.splatinsert20 = insertelement <8 x i32> undef, i32 %amt0, i32 0
-  %broadcast.splat21 = shufflevector <8 x i32> %broadcast.splatinsert20, <8 x i32> undef, <8 x i32> zeroinitializer
-  %broadcast.splatinsert22 = insertelement <8 x i32> undef, i32 %amt1, i32 0
-  %broadcast.splat23 = shufflevector <8 x i32> %broadcast.splatinsert22, <8 x i32> undef, <8 x i32> zeroinitializer
-  %broadcast.splatinsert24 = insertelement <8 x i32> undef, i32 %amt0, i32 0
-  %broadcast.splat25 = shufflevector <8 x i32> %broadcast.splatinsert24, <8 x i32> undef, <8 x i32> zeroinitializer
-  %broadcast.splatinsert26 = insertelement <8 x i32> undef, i32 %amt1, i32 0
-  %broadcast.splat27 = shufflevector <8 x i32> %broadcast.splatinsert26, <8 x i32> undef, <8 x i32> zeroinitializer
-  %broadcast.splatinsert28 = insertelement <8 x i32> undef, i32 %amt0, i32 0
-  %broadcast.splat29 = shufflevector <8 x i32> %broadcast.splatinsert28, <8 x i32> undef, <8 x i32> zeroinitializer
-  %broadcast.splatinsert30 = insertelement <8 x i32> undef, i32 %amt1, i32 0
-  %broadcast.splat31 = shufflevector <8 x i32> %broadcast.splatinsert30, <8 x i32> undef, <8 x i32> zeroinitializer
-  %broadcast.splatinsert32 = insertelement <8 x i32> undef, i32 %amt0, i32 0
-  %broadcast.splat33 = shufflevector <8 x i32> %broadcast.splatinsert32, <8 x i32> undef, <8 x i32> zeroinitializer
-  %broadcast.splatinsert34 = insertelement <8 x i32> undef, i32 %amt1, i32 0
-  %broadcast.splat35 = shufflevector <8 x i32> %broadcast.splatinsert34, <8 x i32> undef, <8 x i32> zeroinitializer
+  %broadcast.splatinsert20 = insertelement <8 x i32> poison, i32 %amt0, i32 0
+  %broadcast.splat21 = shufflevector <8 x i32> %broadcast.splatinsert20, <8 x i32> poison, <8 x i32> zeroinitializer
+  %broadcast.splatinsert22 = insertelement <8 x i32> poison, i32 %amt1, i32 0
+  %broadcast.splat23 = shufflevector <8 x i32> %broadcast.splatinsert22, <8 x i32> poison, <8 x i32> zeroinitializer
+  %broadcast.splatinsert24 = insertelement <8 x i32> poison, i32 %amt0, i32 0
+  %broadcast.splat25 = shufflevector <8 x i32> %broadcast.splatinsert24, <8 x i32> poison, <8 x i32> zeroinitializer
+  %broadcast.splatinsert26 = insertelement <8 x i32> poison, i32 %amt1, i32 0
+  %broadcast.splat27 = shufflevector <8 x i32> %broadcast.splatinsert26, <8 x i32> poison, <8 x i32> zeroinitializer
+  %broadcast.splatinsert28 = insertelement <8 x i32> poison, i32 %amt0, i32 0
+  %broadcast.splat29 = shufflevector <8 x i32> %broadcast.splatinsert28, <8 x i32> poison, <8 x i32> zeroinitializer
+  %broadcast.splatinsert30 = insertelement <8 x i32> poison, i32 %amt1, i32 0
+  %broadcast.splat31 = shufflevector <8 x i32> %broadcast.splatinsert30, <8 x i32> poison, <8 x i32> zeroinitializer
+  %broadcast.splatinsert32 = insertelement <8 x i32> poison, i32 %amt0, i32 0
+  %broadcast.splat33 = shufflevector <8 x i32> %broadcast.splatinsert32, <8 x i32> poison, <8 x i32> zeroinitializer
+  %broadcast.splatinsert34 = insertelement <8 x i32> poison, i32 %amt1, i32 0
+  %broadcast.splat35 = shufflevector <8 x i32> %broadcast.splatinsert34, <8 x i32> poison, <8 x i32> zeroinitializer
   br label %vector.body
 
 vector.body:
@@ -655,12 +655,12 @@ entry:
 
 vector.ph:
   %n.vec = and i64 %wide.trip.count, 4294967292
-  %splatinsert18 = insertelement <4 x i32> undef, i32 %amt0, i32 0
-  %splat1 = shufflevector <4 x i32> %splatinsert18, <4 x i32> undef, <4 x i32> zeroinitializer
-  %splatinsert20 = insertelement <4 x i32> undef, i32 %amt1, i32 0
-  %splat2 = shufflevector <4 x i32> %splatinsert20, <4 x i32> undef, <4 x i32> zeroinitializer
-  %splatinsert22 = insertelement <4 x i32> undef, i32 %x, i32 0
-  %splat3 = shufflevector <4 x i32> %splatinsert22, <4 x i32> undef, <4 x i32> zeroinitializer
+  %splatinsert18 = insertelement <4 x i32> poison, i32 %amt0, i32 0
+  %splat1 = shufflevector <4 x i32> %splatinsert18, <4 x i32> poison, <4 x i32> zeroinitializer
+  %splatinsert20 = insertelement <4 x i32> poison, i32 %amt1, i32 0
+  %splat2 = shufflevector <4 x i32> %splatinsert20, <4 x i32> poison, <4 x i32> zeroinitializer
+  %splatinsert22 = insertelement <4 x i32> poison, i32 %x, i32 0
+  %splat3 = shufflevector <4 x i32> %splatinsert22, <4 x i32> poison, <4 x i32> zeroinitializer
   br label %vector.body
 
 vector.body:

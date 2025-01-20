@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_SWAPPABLE_H
-#define _LIBCPP___TYPE_TRAITS_IS_SWAPPABLE_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_SWAPPABLE_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_IS_SWAPPABLE_H
 
-#include <__config>
-#include <__type_traits/add_lvalue_reference.h>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_assignable.h>
-#include <__type_traits/is_constructible.h>
-#include <__type_traits/is_nothrow_assignable.h>
-#include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/void_t.h>
-#include <__utility/declval.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/add_lvalue_reference.h>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/is_assignable.h>
+#include <__cxx03/__type_traits/is_constructible.h>
+#include <__cxx03/__type_traits/is_nothrow_assignable.h>
+#include <__cxx03/__type_traits/is_nothrow_constructible.h>
+#include <__cxx03/__type_traits/void_t.h>
+#include <__cxx03/__utility/declval.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -101,4 +101,4 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_swappable : bool_constant<is_nothrow_swap
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_SWAPPABLE_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_SWAPPABLE_H

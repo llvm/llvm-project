@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_LLJIT_H
 
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"

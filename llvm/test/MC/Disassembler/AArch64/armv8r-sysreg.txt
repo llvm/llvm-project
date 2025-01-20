@@ -286,8 +286,7 @@
 [0xbe,0x6f,0x1c,0xd5]
 [0x20,0xd0,0x1c,0xd5]
 
-// CHECK:	.text
-// CHECK-NEXT: 	mrs	x0, VSCTLR_EL2
+// CHECK:      	mrs	x0, VSCTLR_EL2
 // CHECK-NEXT: 	mrs	x0, MPUIR_EL1
 // CHECK-NEXT: 	mrs	x0, MPUIR_EL2
 // CHECK-NEXT: 	mrs	x0, PRENR_EL1

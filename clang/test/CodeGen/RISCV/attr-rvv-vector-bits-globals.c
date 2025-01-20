@@ -105,13 +105,13 @@ void write_global_bool32(vbool32_t v) { global_bool32 = v; }
 // CHECK-64-LABEL: @read_global_i64(
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[TMP0:%.*]] = load <1 x i64>, ptr @global_i64, align 8, !tbaa [[TBAA6]]
-// CHECK-64-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v1i64(<vscale x 1 x i64> undef, <1 x i64> [[TMP0]], i64 0)
+// CHECK-64-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v1i64(<vscale x 1 x i64> poison, <1 x i64> [[TMP0]], i64 0)
 // CHECK-64-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 // CHECK-256-LABEL: @read_global_i64(
 // CHECK-256-NEXT:  entry:
 // CHECK-256-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr @global_i64, align 8, !tbaa [[TBAA6]]
-// CHECK-256-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> undef, <4 x i64> [[TMP0]], i64 0)
+// CHECK-256-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> poison, <4 x i64> [[TMP0]], i64 0)
 // CHECK-256-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 vint64m1_t read_global_i64() { return global_i64; }
@@ -119,14 +119,14 @@ vint64m1_t read_global_i64() { return global_i64; }
 // CHECK-64-LABEL: @read_global_bool1(
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr @global_bool1, align 8, !tbaa [[TBAA6]]
-// CHECK-64-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v8i8(<vscale x 8 x i8> undef, <8 x i8> [[TMP0]], i64 0)
+// CHECK-64-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v8i8(<vscale x 8 x i8> poison, <8 x i8> [[TMP0]], i64 0)
 // CHECK-64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 8 x i8> [[CAST_SCALABLE]] to <vscale x 64 x i1>
 // CHECK-64-NEXT:    ret <vscale x 64 x i1> [[TMP1]]
 //
 // CHECK-256-LABEL: @read_global_bool1(
 // CHECK-256-NEXT:  entry:
 // CHECK-256-NEXT:    [[TMP0:%.*]] = load <32 x i8>, ptr @global_bool1, align 8, !tbaa [[TBAA6]]
-// CHECK-256-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> undef, <32 x i8> [[TMP0]], i64 0)
+// CHECK-256-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> poison, <32 x i8> [[TMP0]], i64 0)
 // CHECK-256-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 8 x i8> [[CAST_SCALABLE]] to <vscale x 64 x i1>
 // CHECK-256-NEXT:    ret <vscale x 64 x i1> [[TMP1]]
 //
@@ -135,14 +135,14 @@ vbool1_t read_global_bool1() { return global_bool1; }
 // CHECK-64-LABEL: @read_global_bool4(
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[TMP0:%.*]] = load <2 x i8>, ptr @global_bool4, align 2, !tbaa [[TBAA6]]
-// CHECK-64-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v2i8(<vscale x 2 x i8> undef, <2 x i8> [[TMP0]], i64 0)
+// CHECK-64-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v2i8(<vscale x 2 x i8> poison, <2 x i8> [[TMP0]], i64 0)
 // CHECK-64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 2 x i8> [[CAST_SCALABLE]] to <vscale x 16 x i1>
 // CHECK-64-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CHECK-256-LABEL: @read_global_bool4(
 // CHECK-256-NEXT:  entry:
 // CHECK-256-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr @global_bool4, align 8, !tbaa [[TBAA6]]
-// CHECK-256-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v8i8(<vscale x 2 x i8> undef, <8 x i8> [[TMP0]], i64 0)
+// CHECK-256-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v8i8(<vscale x 2 x i8> poison, <8 x i8> [[TMP0]], i64 0)
 // CHECK-256-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 2 x i8> [[CAST_SCALABLE]] to <vscale x 16 x i1>
 // CHECK-256-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //

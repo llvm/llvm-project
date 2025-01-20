@@ -206,7 +206,7 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   using FPBits = typename fputil::FPBits<long double>;
   using StorageType = typename FPBits::StorageType;
 
-  StorageType mantissa = init_num.mantissa;
+  UInt128 mantissa = init_num.mantissa;
   int32_t exp10 = init_num.exponent;
 
   // Exp10 Range
@@ -225,7 +225,8 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   }
 
   // Normalization
-  uint32_t clz = cpp::countl_zero<StorageType>(mantissa);
+  uint32_t clz = cpp::countl_zero(mantissa) -
+                 ((sizeof(UInt128) - sizeof(StorageType)) * CHAR_BIT);
   mantissa <<= clz;
 
   int32_t exp2 =
@@ -276,9 +277,8 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   // Shifting to 65 bits for 80 bit floats and 113 bits for 128 bit floats
   uint32_t msb =
       static_cast<uint32_t>(final_approx_upper >> (FPBits::STORAGE_LEN - 1));
-  StorageType final_mantissa =
-      final_approx_upper >>
-      (msb + FPBits::STORAGE_LEN - (FPBits::FRACTION_LEN + 3));
+  UInt128 final_mantissa = final_approx_upper >> (msb + FPBits::STORAGE_LEN -
+                                                  (FPBits::FRACTION_LEN + 3));
   exp2 -= static_cast<uint32_t>(1 ^ msb); // same as !msb
 
   if (round == RoundDirection::Nearest) {
@@ -315,7 +315,7 @@ eisel_lemire<long double>(ExpandedFloat<long double> init_num,
   }
 
   ExpandedFloat<long double> output;
-  output.mantissa = final_mantissa;
+  output.mantissa = static_cast<StorageType>(final_mantissa);
   output.exponent = exp2;
   return output;
 }
@@ -558,7 +558,7 @@ clinger_fast_path(ExpandedFloat<T> init_num,
 
   FPBits result;
   T float_mantissa;
-  if constexpr (cpp::is_same_v<StorageType, UInt<128>>) {
+  if constexpr (is_big_int_v<StorageType> || sizeof(T) > sizeof(uint64_t)) {
     float_mantissa =
         (static_cast<T>(uint64_t(mantissa >> 64)) * static_cast<T>(0x1.0p64)) +
         static_cast<T>(uint64_t(mantissa));
@@ -909,7 +909,7 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
       cpp::numeric_limits<StorageType>::max() / BASE;
   while (true) {
     if (isdigit(src[index])) {
-      uint32_t digit = src[index] - '0';
+      uint32_t digit = b36_char_to_int(src[index]);
       seen_digit = true;
 
       if (mantissa < bitstype_max_div_by_base) {

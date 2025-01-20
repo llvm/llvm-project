@@ -283,7 +283,7 @@ public:
     if (Reg >= MTracker->NumRegs)
       return false;
     for (MCRegAliasIterator RAI(Reg, &TRI, true); RAI.isValid(); ++RAI)
-      if (CalleeSavedRegs.test(*RAI))
+      if (CalleeSavedRegs.test((*RAI).id()))
         return true;
     return false;
   };
@@ -1345,7 +1345,7 @@ bool InstrRefBasedLDV::isCalleeSaved(LocIdx L) const {
 }
 bool InstrRefBasedLDV::isCalleeSavedReg(Register R) const {
   for (MCRegAliasIterator RAI(R, TRI, true); RAI.isValid(); ++RAI)
-    if (CalleeSavedRegs.test(*RAI))
+    if (CalleeSavedRegs.test((*RAI).id()))
       return true;
   return false;
 }
@@ -1880,7 +1880,7 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
       // Remove ranges of all aliased registers.
       for (MCRegAliasIterator RAI(MO.getReg(), TRI, true); RAI.isValid(); ++RAI)
         // FIXME: Can we break out of this loop early if no insertion occurs?
-        DeadRegs.insert(*RAI);
+        DeadRegs.insert((*RAI).id());
     } else if (MO.isRegMask()) {
       RegMasks.push_back(MO.getRegMask());
       RegMaskPtrs.push_back(&MO);
@@ -2782,7 +2782,7 @@ void InstrRefBasedLDV::BlockPHIPlacement(
   // Apply IDF calculator to the designated set of location defs, storing
   // required PHIs into PHIBlocks. Uses the dominator tree stored in the
   // InstrRefBasedLDV object.
-  IDFCalculatorBase<MachineBasicBlock, false> IDF(DomTree->getBase());
+  IDFCalculatorBase<MachineBasicBlock, false> IDF(*DomTree);
 
   IDF.setLiveInBlocks(AllBlocks);
   IDF.setDefiningBlocks(DefBlocks);
@@ -2927,7 +2927,7 @@ std::optional<ValueIDNum> InstrRefBasedLDV::pickOperandPHILoc(
     SmallVector<LocIdx, 4> NewCandidates;
     std::set_intersection(CandidateLocs.begin(), CandidateLocs.end(),
                           LocVec.begin(), LocVec.end(), std::inserter(NewCandidates, NewCandidates.begin()));
-    CandidateLocs = NewCandidates;
+    CandidateLocs = std::move(NewCandidates);
   }
   if (CandidateLocs.empty())
     return std::nullopt;

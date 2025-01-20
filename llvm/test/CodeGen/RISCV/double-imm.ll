@@ -24,8 +24,8 @@ define double @double_imm() nounwind {
 ; CHECKRV32ZDINX-LABEL: double_imm:
 ; CHECKRV32ZDINX:       # %bb.0:
 ; CHECKRV32ZDINX-NEXT:    lui a0, 345155
-; CHECKRV32ZDINX-NEXT:    addi a0, a0, -744
 ; CHECKRV32ZDINX-NEXT:    lui a1, 262290
+; CHECKRV32ZDINX-NEXT:    addi a0, a0, -744
 ; CHECKRV32ZDINX-NEXT:    addi a1, a1, 507
 ; CHECKRV32ZDINX-NEXT:    ret
 ;

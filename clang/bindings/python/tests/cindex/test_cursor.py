@@ -1,24 +1,25 @@
 import os
-from clang.cindex import Config
+
+from clang.cindex import (
+    AvailabilityKind,
+    BinaryOperator,
+    Config,
+    CursorKind,
+    PrintingPolicy,
+    PrintingPolicyProperty,
+    StorageClass,
+    TemplateArgumentKind,
+    TranslationUnit,
+    TypeKind,
+)
 
 if "CLANG_LIBRARY_PATH" in os.environ:
     Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
-import ctypes
 import gc
 import unittest
 
-from clang.cindex import AvailabilityKind
-from clang.cindex import CursorKind
-from clang.cindex import TemplateArgumentKind
-from clang.cindex import TranslationUnit
-from clang.cindex import TypeKind
-from clang.cindex import BinaryOperator
-from clang.cindex import StorageClass
-from .util import get_cursor
-from .util import get_cursors
-from .util import get_tu
-
+from .util import get_cursor, get_cursors, get_tu
 
 kInput = """\
 struct s0 {
@@ -170,7 +171,7 @@ class TestCursor(unittest.TestCase):
         self.assertIsInstance(cursor.translation_unit, TranslationUnit)
 
         # If the TU was destroyed, this should cause a segfault.
-        parent = cursor.semantic_parent
+        cursor.semantic_parent
 
     def test_canonical(self):
         source = "struct X; struct X; struct X { int member; };"
@@ -344,7 +345,7 @@ class TestCursor(unittest.TestCase):
         )
 
         self.assertEqual(len(copy_assignment_operators_cursors), 10)
-        self.assertTrue(len(non_copy_assignment_operators_cursors), 9)
+        self.assertEqual(len(non_copy_assignment_operators_cursors), 7)
 
         self.assertTrue(
             all(
@@ -982,3 +983,15 @@ int count(int a, int b){
     def test_from_cursor_result_null(self):
         tu = get_tu("")
         self.assertEqual(tu.cursor.semantic_parent, None)
+
+    def test_pretty_print(self):
+        tu = get_tu("struct X { int x; }; void f(bool x) { }", lang="cpp")
+        f = get_cursor(tu, "f")
+
+        self.assertEqual(f.displayname, "f(bool)")
+        pp = PrintingPolicy.create(f)
+        self.assertEqual(pp.get_property(PrintingPolicyProperty.Bool), True)
+        self.assertEqual(f.pretty_printed(pp), "void f(bool x) {\n}\n")
+        pp.set_property(PrintingPolicyProperty.Bool, False)
+        self.assertEqual(pp.get_property(PrintingPolicyProperty.Bool), False)
+        self.assertEqual(f.pretty_printed(pp), "void f(_Bool x) {\n}\n")
