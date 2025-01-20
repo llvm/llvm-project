@@ -44,3 +44,17 @@ jobs:
           all_projects="bolt clang clang-tools-extra compiler-rt cross-project-tests flang libc libclc lld lldb llvm mlir openmp polly pstl"
           modified_projects="$(keep-modified-projects ${all_projects})"
 
+          windows_projects_to_test=$(exclude-windows $(compute-projects-to-test 1 ${modified_projects}))
+          windows_check_targets=$(check-targets ${windows_projects_to_test} | sort | uniq)
+          windows_projects=$(add-dependencies ${windows_projects_to_test} | sort | uniq)
+
+          if [[ "${windows_projects}" == "" ]]; then
+            echo "No projects to build"
+            exit 0
+          fi
+
+          echo "Building projects: ${windows_projects}"
+          echo "Running project checks targets: ${windows_check_targets}"
+
+          .ci/monolithic-windows.sh "$(echo ${windows_projects} | tr ' ' ';')" "$(echo ${windows_check_targets})"
+
