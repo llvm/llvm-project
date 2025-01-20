@@ -324,6 +324,7 @@ std::vector<std::string> objdump::MAttrs;
 bool objdump::ShowRawInsn;
 bool objdump::LeadingAddr;
 static bool Offloading;
+static bool OffloadFatBin;
 static bool RawClangAST;
 bool objdump::Relocations;
 bool objdump::PrintImmHex;
@@ -3315,6 +3316,8 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
     D.printDynamicRelocations();
   if (SectionContents)
     printSectionContents(O);
+  if (OffloadFatBin)
+    dumpOffloadBundleFatBinary(*O, ArchName, Disassemble);
   if (Disassemble)
     disassembleObject(O, Relocations);
   if (UnwindInfo)
@@ -3521,6 +3524,7 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   DynamicRelocations = InputArgs.hasArg(OBJDUMP_dynamic_reloc);
   FaultMapSection = InputArgs.hasArg(OBJDUMP_fault_map_section);
   Offloading = InputArgs.hasArg(OBJDUMP_offloading);
+  OffloadFatBin = InputArgs.hasArg(OBJDUMP_offload_fatbin);
   FileHeaders = InputArgs.hasArg(OBJDUMP_file_headers);
   SectionContents = InputArgs.hasArg(OBJDUMP_full_contents);
   PrintLines = InputArgs.hasArg(OBJDUMP_line_numbers);
@@ -3732,6 +3736,7 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
       !DynamicRelocations && !FileHeaders && !PrivateHeaders && !RawClangAST &&
       !Relocations && !SectionHeaders && !SectionContents && !SymbolTable &&
       !DynamicSymbolTable && !UnwindInfo && !FaultMapSection && !Offloading &&
+      !OffloadFatBin &&
       !(MachOOpt &&
         (Bind || DataInCode || ChainedFixups || DyldInfo || DylibId ||
          DylibsUsed || ExportsTrie || FirstPrivateHeader ||
