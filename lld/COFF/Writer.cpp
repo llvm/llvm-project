@@ -204,7 +204,7 @@ struct ChunkRange {
 class Writer {
 public:
   Writer(COFFLinkerContext &c)
-      : buffer(c.e.outputBuffer), delayIdata(c), edata(c), ctx(c) {}
+      : buffer(c.e.outputBuffer), delayIdata(c), ctx(c) {}
   void run();
 
 private:
@@ -293,7 +293,6 @@ private:
   Chunk *iatStart = nullptr;
   uint64_t iatSize = 0;
   DelayLoadContents delayIdata;
-  EdataContents edata;
   bool setNoSEHCharacteristic = false;
   uint32_t tlsAlignment = 0;
 
@@ -1335,7 +1334,9 @@ void Writer::createExportTable() {
     if (ctx.config.hadExplicitExports)
       Warn(ctx) << "literal .edata sections override exports";
   } else if (!ctx.config.exports.empty()) {
-    for (Chunk *c : edata.chunks)
+    std::vector<Chunk *> edataChunks;
+    createEdataChunks(ctx, edataChunks);
+    for (Chunk *c : edataChunks)
       edataSec->addChunk(c);
   }
   if (!edataSec->chunks.empty()) {
