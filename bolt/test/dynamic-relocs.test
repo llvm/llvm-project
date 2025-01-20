@@ -1,0 +1,13 @@
+// This test checks that BOLT creates entry points for addresses
+// referenced by dynamic relocations.
+
+RUN: %clang %cflags %S/Inputs/indirect_goto.c -o %t.exe -Wl,-q
+RUN: llvm-bolt %t.exe -o %t.bolt --print-cfg | FileCheck %s
+
+// Check that bolt does not emit any error.
+CHECK-NOT: BOLT-ERROR
+
+// Check that BOLT registers extra entry points for dynamic relocations.
+CHECK: Binary Function "main" after building cfg {
+CHECK: IsMultiEntry: 1
+CHECK: Secondary Entry Points : {{.*}}
