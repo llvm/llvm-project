@@ -603,6 +603,7 @@ TEST_F(LexerTest, CharRangeOffByOne) {
 
 TEST_F(LexerTest, FindNextToken) {
   Lex("int abcd = 0;\n"
+      "// A comment.\n"
       "int xyz = abcd;\n");
   std::vector<std::string> GeneratedByNextToken;
   SourceLocation Loc =
@@ -617,6 +618,26 @@ TEST_F(LexerTest, FindNextToken) {
   }
   EXPECT_THAT(GeneratedByNextToken, ElementsAre("abcd", "=", "0", ";", "int",
                                                 "xyz", "=", "abcd", ";"));
+}
+
+TEST_F(LexerTest, FindNextTokenIncludingComments) {
+  Lex("int abcd = 0;\n"
+      "// A comment.\n"
+      "int xyz = abcd;\n");
+  std::vector<std::string> GeneratedByNextToken;
+  SourceLocation Loc =
+      SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID());
+  while (true) {
+    auto T = Lexer::findNextToken(Loc, SourceMgr, LangOpts, true);
+    ASSERT_TRUE(T);
+    if (T->is(tok::eof))
+      break;
+    GeneratedByNextToken.push_back(getSourceText(*T, *T));
+    Loc = T->getLocation();
+  }
+  EXPECT_THAT(GeneratedByNextToken,
+              ElementsAre("abcd", "=", "0", ";", "// A comment.", "int", "xyz",
+                          "=", "abcd", ";"));
 }
 
 TEST_F(LexerTest, CreatedFIDCountForPredefinedBuffer) {

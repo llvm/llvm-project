@@ -29,6 +29,7 @@ public:
     };
     std::optional<Runtime> Rt; // Trap if empty.
     bool Merge = false;
+    std::optional<int8_t> GuardKind; // `allow_ubsan_check` argument.
   };
 
   BoundsCheckingPass(Options Opts) : Opts(Opts) {}

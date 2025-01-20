@@ -1954,13 +1954,13 @@ let SVETargetGuard = "sve2,lut", SMETargetGuard = "sme2,lut" in {
   def SVLUTI4_B : SInst<"svluti4_lane[_{d}]", "dd[i", "cUc", MergeNone, "aarch64_sve_luti4_lane", [VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_1>]>;
   def SVLUTI4_H : SInst<"svluti4_lane[_{d}]", "dd[i", "sUsh", MergeNone, "aarch64_sve_luti4_lane", [VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_3>]>;
 
-  def SVLUTI4_x2 : SInst<"svluti4_lane[_{d}]_x2", "d2.d[i", "sUsh", MergeNone, "aarch64_sve_luti4_lane_x2", [VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_3>]>;
+  def SVLUTI4_x2 : SInst<"svluti4_lane[_{d}_x2]", "d2.d[i", "sUsh", MergeNone, "aarch64_sve_luti4_lane_x2", [VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_3>]>;
 }
 
 let SVETargetGuard = "sve2,lut,bf16", SMETargetGuard = "sme2,lut,bf16" in {
   def SVLUTI2_BF16 : SInst<"svluti2_lane[_{d}]", "dd[i", "b", MergeNone, "aarch64_sve_luti2_lane", [ VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_7>]>;
   def SVLUTI4_BF16 : SInst<"svluti4_lane[_{d}]", "dd[i", "b", MergeNone, "aarch64_sve_luti4_lane", [ VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_3>]>;
-  def SVLUTI4_BF16_x2 : SInst<"svluti4_lane[_{d}]_x2", "d2.d[i", "b", MergeNone, "aarch64_sve_luti4_lane_x2", [ VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_3>]>;
+  def SVLUTI4_BF16_x2 : SInst<"svluti4_lane[_{d}_x2]", "d2.d[i", "b", MergeNone, "aarch64_sve_luti4_lane_x2", [ VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_3>]>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1988,7 +1988,7 @@ def SVSM4E    : SInst<"svsm4e[_{d}]",    "ddd", "Ui", MergeNone, "aarch64_sve_sm
 def SVSM4EKEY : SInst<"svsm4ekey[_{d}]", "ddd", "Ui", MergeNone, "aarch64_sve_sm4ekey", [IsOverloadNone]>;
 }
 
-let SVETargetGuard = "sve2-bitperm", SMETargetGuard = InvalidMode in {
+let SVETargetGuard = "sve2,sve-bitperm", SMETargetGuard = InvalidMode in {
 def SVBDEP   : SInst<"svbdep[_{d}]",   "ddd", "UcUsUiUl", MergeNone, "aarch64_sve_bdep_x">;
 def SVBDEP_N : SInst<"svbdep[_n_{d}]", "dda", "UcUsUiUl", MergeNone, "aarch64_sve_bdep_x">;
 def SVBEXT   : SInst<"svbext[_{d}]",   "ddd", "UcUsUiUl", MergeNone, "aarch64_sve_bext_x">;

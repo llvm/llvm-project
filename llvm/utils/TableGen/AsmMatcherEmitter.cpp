@@ -1299,7 +1299,7 @@ void AsmMatcherInfo::buildRegisterClasses(
 
     if (!ContainingSet.empty()) {
       RegisterSets.insert(ContainingSet);
-      RegisterMap.insert(std::pair(CGR.TheDef, ContainingSet));
+      RegisterMap.try_emplace(CGR.TheDef, ContainingSet);
     }
   }
 
@@ -1320,7 +1320,7 @@ void AsmMatcherInfo::buildRegisterClasses(
     CI->DiagnosticType = "";
     CI->IsOptional = false;
     CI->DefaultMethod = ""; // unused
-    RegisterSetClasses.insert(std::pair(RS, CI));
+    RegisterSetClasses.try_emplace(RS, CI);
     ++Index;
   }
 
@@ -1362,7 +1362,7 @@ void AsmMatcherInfo::buildRegisterClasses(
     if (!CI->DiagnosticString.empty() && CI->DiagnosticType.empty())
       CI->DiagnosticType = RC.getName();
 
-    RegisterClassClasses.insert(std::pair(Def, CI));
+    RegisterClassClasses.try_emplace(Def, CI);
   }
 
   // Populate the map for individual registers.
@@ -2522,9 +2522,9 @@ static void emitValidateOperandClass(const CodeGenTarget &Target,
   for (auto &MatchClassName : Table)
     OS << "      " << MatchClassName << ",\n";
   OS << "    };\n\n";
-  OS << "    unsigned RegID = Operand.getReg().id();\n";
-  OS << "    MatchClassKind OpKind = MCRegister::isPhysicalRegister(RegID) ? "
-        "(MatchClassKind)Table[RegID] : InvalidMatchClass;\n";
+  OS << "    MCRegister Reg = Operand.getReg();\n";
+  OS << "    MatchClassKind OpKind = Reg.isPhysical() ? "
+        "(MatchClassKind)Table[Reg.id()] : InvalidMatchClass;\n";
   OS << "    return isSubclass(OpKind, Kind) ? "
      << "(unsigned)MCTargetAsmParser::Match_Success :\n                     "
      << "                 getDiagKindFromRegisterClass(Kind);\n  }\n\n";
@@ -2823,7 +2823,7 @@ emitMnemonicAliasVariant(raw_ostream &OS, const AsmMatcherInfo &Info,
 
     MatchCode += "return;";
 
-    Cases.push_back(std::pair(AliasEntry.first, MatchCode));
+    Cases.emplace_back(AliasEntry.first, MatchCode);
   }
   StringMatcher("Mnemonic", Cases, OS).Emit(Indent);
 }

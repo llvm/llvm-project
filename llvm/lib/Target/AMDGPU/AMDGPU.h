@@ -207,8 +207,8 @@ extern char &SILoadStoreOptimizerLegacyID;
 void initializeSIWholeQuadModePass(PassRegistry &);
 extern char &SIWholeQuadModeID;
 
-void initializeSILowerControlFlowPass(PassRegistry &);
-extern char &SILowerControlFlowID;
+void initializeSILowerControlFlowLegacyPass(PassRegistry &);
+extern char &SILowerControlFlowLegacyID;
 
 void initializeSIPreEmitPeepholePass(PassRegistry &);
 extern char &SIPreEmitPeepholeID;
@@ -216,8 +216,8 @@ extern char &SIPreEmitPeepholeID;
 void initializeSILateBranchLoweringPass(PassRegistry &);
 extern char &SILateBranchLoweringPassID;
 
-void initializeSIOptimizeExecMaskingPass(PassRegistry &);
-extern char &SIOptimizeExecMaskingID;
+void initializeSIOptimizeExecMaskingLegacyPass(PassRegistry &);
+extern char &SIOptimizeExecMaskingLegacyID;
 
 void initializeSIPreAllocateWWMRegsLegacyPass(PassRegistry &);
 extern char &SIPreAllocateWWMRegsLegacyID;

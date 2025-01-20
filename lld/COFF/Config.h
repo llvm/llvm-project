@@ -120,7 +120,6 @@ struct Configuration {
   size_t wordsize;
   bool verbose = false;
   WindowsSubsystem subsystem = llvm::COFF::IMAGE_SUBSYSTEM_UNKNOWN;
-  Symbol *entry = nullptr;
   bool noEntry = false;
   std::string outputFile;
   std::string importName;

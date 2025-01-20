@@ -19186,6 +19186,23 @@ static Intrinsic::ID getFirstBitHighIntrinsic(CGHLSLRuntime &RT, QualType QT) {
   return RT.getFirstBitUHighIntrinsic();
 }
 
+// Return wave active sum that corresponds to the QT scalar type
+static Intrinsic::ID getWaveActiveSumIntrinsic(llvm::Triple::ArchType Arch,
+                                               CGHLSLRuntime &RT, QualType QT) {
+  switch (Arch) {
+  case llvm::Triple::spirv:
+    return llvm::Intrinsic::spv_wave_reduce_sum;
+  case llvm::Triple::dxil: {
+    if (QT->isUnsignedIntegerType())
+      return llvm::Intrinsic::dx_wave_reduce_usum;
+    return llvm::Intrinsic::dx_wave_reduce_sum;
+  }
+  default:
+    llvm_unreachable("Intrinsic WaveActiveSum"
+                     " not supported by target architecture");
+  }
+}
+
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                             const CallExpr *E,
                                             ReturnValueSlot ReturnValue) {
@@ -19316,13 +19333,20 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         "hlsl.dot4add.u8packed");
   }
   case Builtin::BI__builtin_hlsl_elementwise_firstbithigh: {
-
     Value *X = EmitScalarExpr(E->getArg(0));
 
     return Builder.CreateIntrinsic(
         /*ReturnType=*/ConvertType(E->getType()),
         getFirstBitHighIntrinsic(CGM.getHLSLRuntime(), E->getArg(0)->getType()),
         ArrayRef<Value *>{X}, nullptr, "hlsl.firstbithigh");
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_firstbitlow: {
+    Value *X = EmitScalarExpr(E->getArg(0));
+
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/ConvertType(E->getType()),
+        CGM.getHLSLRuntime().getFirstBitLowIntrinsic(), ArrayRef<Value *>{X},
+        nullptr, "hlsl.firstbitlow");
   }
   case Builtin::BI__builtin_hlsl_lerp: {
     Value *X = EmitScalarExpr(E->getArg(0));
@@ -19490,6 +19514,23 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     return EmitRuntimeCall(
         Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID),
         ArrayRef{OpExpr});
+  }
+  case Builtin::BI__builtin_hlsl_wave_active_sum: {
+    // Due to the use of variadic arguments, explicitly retreive argument
+    Value *OpExpr = EmitScalarExpr(E->getArg(0));
+    llvm::FunctionType *FT = llvm::FunctionType::get(
+        OpExpr->getType(), ArrayRef{OpExpr->getType()}, false);
+    Intrinsic::ID IID = getWaveActiveSumIntrinsic(
+        getTarget().getTriple().getArch(), CGM.getHLSLRuntime(),
+        E->getArg(0)->getType());
+
+    // Get overloaded name
+    std::string Name =
+        Intrinsic::getName(IID, ArrayRef{OpExpr->getType()}, &CGM.getModule());
+    return EmitRuntimeCall(CGM.CreateRuntimeFunction(FT, Name, {},
+                                                     /*Local=*/false,
+                                                     /*AssumeConvergent=*/true),
+                           ArrayRef{OpExpr}, "hlsl.wave.active.sum");
   }
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
     // We don't define a SPIR-V intrinsic, instead it is a SPIR-V built-in
@@ -20487,6 +20528,16 @@ Value *CodeGenFunction::EmitSPIRVBuiltinExpr(unsigned BuiltinID,
         /*ReturnType=*/X->getType()->getScalarType(), Intrinsic::spv_distance,
         ArrayRef<Value *>{X, Y}, nullptr, "spv.distance");
   }
+  case SPIRV::BI__builtin_spirv_length: {
+    Value *X = EmitScalarExpr(E->getArg(0));
+    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
+           "length operand must have a float representation");
+    assert(E->getArg(0)->getType()->isVectorType() &&
+           "length operand must be a vector");
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/X->getType()->getScalarType(), Intrinsic::spv_length,
+        ArrayRef<Value *>{X}, nullptr, "spv.length");
+  }
   }
   return nullptr;
 }
@@ -20550,7 +20601,8 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
   case SystemZ::BI__builtin_s390_vclzb:
   case SystemZ::BI__builtin_s390_vclzh:
   case SystemZ::BI__builtin_s390_vclzf:
-  case SystemZ::BI__builtin_s390_vclzg: {
+  case SystemZ::BI__builtin_s390_vclzg:
+  case SystemZ::BI__builtin_s390_vclzq: {
     llvm::Type *ResultType = ConvertType(E->getType());
     Value *X = EmitScalarExpr(E->getArg(0));
     Value *Undef = ConstantInt::get(Builder.getInt1Ty(), false);
@@ -20561,7 +20613,8 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
   case SystemZ::BI__builtin_s390_vctzb:
   case SystemZ::BI__builtin_s390_vctzh:
   case SystemZ::BI__builtin_s390_vctzf:
-  case SystemZ::BI__builtin_s390_vctzg: {
+  case SystemZ::BI__builtin_s390_vctzg:
+  case SystemZ::BI__builtin_s390_vctzq: {
     llvm::Type *ResultType = ConvertType(E->getType());
     Value *X = EmitScalarExpr(E->getArg(0));
     Value *Undef = ConstantInt::get(Builder.getInt1Ty(), false);
@@ -20805,7 +20858,8 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
 
   case SystemZ::BI__builtin_s390_vlbrh:
   case SystemZ::BI__builtin_s390_vlbrf:
-  case SystemZ::BI__builtin_s390_vlbrg: {
+  case SystemZ::BI__builtin_s390_vlbrg:
+  case SystemZ::BI__builtin_s390_vlbrq: {
     llvm::Type *ResultType = ConvertType(E->getType());
     Value *X = EmitScalarExpr(E->getArg(0));
     Function *F = CGM.getIntrinsic(Intrinsic::bswap, ResultType);
@@ -20830,16 +20884,19 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
   INTRINSIC_WITH_CC(s390_vceqhs);
   INTRINSIC_WITH_CC(s390_vceqfs);
   INTRINSIC_WITH_CC(s390_vceqgs);
+  INTRINSIC_WITH_CC(s390_vceqqs);
 
   INTRINSIC_WITH_CC(s390_vchbs);
   INTRINSIC_WITH_CC(s390_vchhs);
   INTRINSIC_WITH_CC(s390_vchfs);
   INTRINSIC_WITH_CC(s390_vchgs);
+  INTRINSIC_WITH_CC(s390_vchqs);
 
   INTRINSIC_WITH_CC(s390_vchlbs);
   INTRINSIC_WITH_CC(s390_vchlhs);
   INTRINSIC_WITH_CC(s390_vchlfs);
   INTRINSIC_WITH_CC(s390_vchlgs);
+  INTRINSIC_WITH_CC(s390_vchlqs);
 
   INTRINSIC_WITH_CC(s390_vfaebs);
   INTRINSIC_WITH_CC(s390_vfaehs);
