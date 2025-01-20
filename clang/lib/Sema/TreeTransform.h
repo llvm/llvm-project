@@ -8669,7 +8669,7 @@ TreeTransform<Derived>::TransformDeclStmt(DeclStmt *S) {
             getSema()
                 .getASTContext()
                 .getTypeDeclType(TD)
-                .getCanonicalType()
+                .getSingleStepDesugaredType(getSema().getASTContext())
                 ->containsUnexpandedParameterPack();
 
       if (auto *VD = dyn_cast<VarDecl>(Transformed))
