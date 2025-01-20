@@ -74,7 +74,6 @@ class SPIRVEmitIntrinsics
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseMap<Instruction *, Type *> AggrConstTypes;
   DenseSet<Instruction *> AggrStores;
-  SPIRV::InstructionSet::InstructionSet InstrSet;
 
   // map of function declarations to <pointer arg index => element type>
   DenseMap<Function *, SmallVector<std::pair<unsigned, Type *>>> FDeclPtrTys;
@@ -896,8 +895,10 @@ bool SPIRVEmitIntrinsics::deduceOperandElementTypeCalledFunction(
       getOclOrSpirvBuiltinDemangledName(CalledF->getName());
   if (DemangledName.length() > 0 &&
       !StringRef(DemangledName).starts_with("llvm.")) {
-    auto [Grp, Opcode, ExtNo] =
-        SPIRV::mapBuiltinToOpcode(DemangledName, InstrSet);
+    auto [Grp, Opcode, ExtNo] = SPIRV::mapBuiltinToOpcode(
+        DemangledName, TM->getSubtarget<SPIRVSubtarget>(*CalledF).isOpenCLEnv()
+                           ? SPIRV::InstructionSet::OpenCL_std
+                           : SPIRV::InstructionSet::GLSL_std_450);
     if (Opcode == SPIRV::OpGroupAsyncCopy) {
       for (unsigned i = 0, PtrCnt = 0; i < CI->arg_size() && PtrCnt < 2; ++i) {
         Value *Op = CI->getArgOperand(i);
@@ -2316,10 +2317,6 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     return false;
 
   const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(Func);
-  GR = ST.getSPIRVGlobalRegistry();
-  InstrSet = ST.isOpenCLEnv() ? SPIRV::InstructionSet::OpenCL_std
-                              : SPIRV::InstructionSet::GLSL_std_450;
-
   if (!CurrF)
     HaveFunPtrs =
         ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
