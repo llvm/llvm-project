@@ -184,27 +184,14 @@ inline std::string StripAnsiTerminalCodes(llvm::StringRef str) {
     if (left == str && right.empty())
       break;
 
-    auto end = llvm::StringRef::npos;
-    for (size_t i = 0; i < right.size(); i++) {
-      char c = right[i];
-      if (c == 'm' || c == 'G') {
-        end = i;
-        break;
-      }
-      if (isdigit(c) || c == ';')
-        continue;
-
-      break;
-    }
-
-    // ANSI_ESC_END not found.
-    if (end != llvm::StringRef::npos) {
+    size_t end = right.find_first_not_of("0123456789;");
+    if (end < right.size() && (right[end] == 'm' || right[end] == 'G')) {
       str = right.substr(end + 1);
-      continue;
+    } else {
+      // ANSI_ESC_END not found.
+      stripped += ANSI_ESC_START;
+      str = right;
     }
-
-    stripped += ANSI_ESC_START;
-    str = right;
   }
   return stripped;
 }

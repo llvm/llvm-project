@@ -2,7 +2,6 @@
 Test that the lldb editline handling is configured correctly.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -75,9 +74,9 @@ class EditlineTest(PExpectTest):
         """Test that we can change the prompt color with a format string."""
         self.launch(use_colors=True)
         # Clear the prefix and suffix setting to simplify the output.
-        self.child.send('settings set prompt-ansi-prefix ""\n')
-        self.child.send('settings set prompt-ansi-suffix ""\n')
-        self.child.send('settings set prompt "${ansi.fg.red}(lldb)${ansi.normal} "\n')
+        self.expect('settings set prompt-ansi-prefix ""')
+        self.expect('settings set prompt-ansi-suffix ""')
+        self.expect('settings set prompt "${ansi.fg.red}(lldb)${ansi.normal} "')
         self.child.send("foo")
         # Make sure this change is reflected immediately. Check that the color
         # is set (31) and the cursor position (8) is correct.
