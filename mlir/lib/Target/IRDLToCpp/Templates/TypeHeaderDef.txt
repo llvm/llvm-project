@@ -1,10 +1,17 @@
 /*
 {0}: Dialect BaseTypeName
 {1}: Dialect CppName
+
+{2}: Namespace open
+{3}: Namespace close
 */
 
 R"(
+{2}
+
 bool {0}::classof(Type type) {{
   return llvm::isa<{1}>(type.getDialect());
 }
+
+{3}
 )"

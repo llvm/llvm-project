@@ -5,6 +5,7 @@
 3: Operand count
 4: Operand names
 5: Result count
+6: Result names
 
 6: open namespace
 7: close namespace
@@ -12,7 +13,7 @@
 */
 
 R"(
-{6}
+{7}
 
 namespace detail {
 class {1}GenericAdaptorBase {
@@ -96,12 +97,24 @@ public:
     return ::llvm::StringLiteral("{2}.{0}");
   }
 
-  ::llvm::ArrayRef getOperandNames() {
-    return {4};
+  static ::llvm::ArrayRef<::llvm::StringRef> getOperandNames() {
+    static ::llvm::StringRef operandNames[] = {4};
+    return operandNames;
   }
 
-  ::llvm::StringRef getOperandName(unsigned index) {{
+  static ::llvm::StringRef getOperandName(unsigned index) {{
+    assert(index < {3} && "invalid attribute index");
     return getOperandNames()[index];
+  }
+
+  static ::llvm::ArrayRef<::llvm::StringRef> getResultNames() {
+    static ::llvm::StringRef resultNames[] = {6};
+    return resultNames;
+  }
+
+  static ::llvm::StringRef getResultName(unsigned index) {{
+    assert(index < {5} && "invalid attribute index");
+    return getResultNames()[index];
   }
 
   std::pair<unsigned, unsigned> getODSOperandIndexAndLength(unsigned index) {
@@ -146,8 +159,8 @@ public:
 };
 
 
-{7}
+{8}
 
-MLIR_DECLARE_EXPLICIT_TYPE_ID({8}::{1})
+MLIR_DECLARE_EXPLICIT_TYPE_ID({9}::{1})
 
 )"
