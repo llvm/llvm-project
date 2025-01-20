@@ -485,7 +485,8 @@ Changes to LLDB
 
 * The `frame diagnose` now works on ELF-based systems. After a crash, LLDB will
   try to determine the likely cause of the signal, matching Darwin behavior.
-  (x86 only)
+  This feature requires using a new `lldb-server` version and (like Darwin) only
+  works on x86 binaries.
 
   ```
   * thread #1, name = 'a.out', stop reason = signal SIGSEGV: address not mapped to object (fault address=0x4)
