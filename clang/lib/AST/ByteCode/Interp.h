@@ -2693,6 +2693,10 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   const T &IntVal = S.Stk.pop<T>();
 
+  if (Desc)
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
+        << 2 << S.getLangOpts().CPlusPlus;
+
   S.Stk.push<Pointer>(static_cast<uint64_t>(IntVal), Desc);
   return true;
 }
