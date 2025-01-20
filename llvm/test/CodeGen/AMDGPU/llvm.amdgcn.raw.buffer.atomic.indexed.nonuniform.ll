@@ -82,7 +82,7 @@ define amdgpu_ps float @test3(i32 %rsrc, i32 %data, i32 %cmp, i32 %vindex, i32 %
 ; GFX13-SDAG-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX13-SDAG-NEXT:    s_movk_i32 s0, 0x1ffc
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX13-SDAG-NEXT:    v_mov_b64_e32 v[0:1], v[4:5]
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
 ; GFX13-SDAG-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], off, v2, null th:TH_ATOMIC_RETURN
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-SDAG-NEXT:    v_mov_b32_e32 v1, v5
@@ -102,7 +102,7 @@ define amdgpu_ps float @test3(i32 %rsrc, i32 %data, i32 %cmp, i32 %vindex, i32 %
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v7, v2
 ; GFX13-GISEL-NEXT:    s_movk_i32 s0, 0x1ffc
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-GISEL-NEXT:    v_mov_b64_e32 v[0:1], v[6:7]
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v0, v6 :: v_dual_mov_b32 v1, v7
 ; GFX13-GISEL-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], off, v4, null th:TH_ATOMIC_RETURN
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v1, v2
@@ -133,17 +133,17 @@ define amdgpu_ps float @test5(i32 %rsrc, i64 %data, i64 %cmp, i32 %vindex, i32 %
 ; GFX13-SDAG-NEXT:    v_dual_mov_b32 v7, v2 :: v_dual_mov_b32 v6, v1
 ; GFX13-SDAG-NEXT:    s_movk_i32 s0, 0x1ffc
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-SDAG-NEXT:    v_mov_b64_e32 v[12:13], v[8:9]
-; GFX13-SDAG-NEXT:    v_mov_b64_e32 v[10:11], v[6:7]
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v13, v9 :: v_dual_mov_b32 v12, v8
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v11, v7 :: v_dual_mov_b32 v10, v6
 ; GFX13-SDAG-NEXT:    buffer_atomic_cmpswap_b64 v[10:13], off, v0, null th:TH_ATOMIC_RETURN
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX13-SDAG-NEXT:    v_mov_b64_e32 v[12:13], v[8:9]
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v13, v9 :: v_dual_mov_b32 v12, v8
 ; GFX13-SDAG-NEXT:    buffer_atomic_cmpswap_b64 v[10:13], v5, v0, null offen th:TH_ATOMIC_RETURN
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX13-SDAG-NEXT:    v_mov_b64_e32 v[12:13], v[8:9]
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v13, v9 :: v_dual_mov_b32 v12, v8
 ; GFX13-SDAG-NEXT:    buffer_atomic_cmpswap_b64 v[10:13], v5, v0, null offen offset:44 th:TH_ATOMIC_RETURN
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX13-SDAG-NEXT:    v_mov_b64_e32 v[12:13], v[8:9]
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v13, v9 :: v_dual_mov_b32 v12, v8
 ; GFX13-SDAG-NEXT:    buffer_atomic_cmpswap_b64 v[10:13], off, v0, s0 offset:4 th:TH_ATOMIC_RETURN
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-SDAG-NEXT:    v_xor_b32_e32 v0, v10, v11
@@ -168,17 +168,17 @@ define amdgpu_ps float @test5(i32 %rsrc, i64 %data, i64 %cmp, i32 %vindex, i32 %
 ; GFX13-GISEL-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v2
 ; GFX13-GISEL-NEXT:    s_movk_i32 s0, 0x1ffc
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-GISEL-NEXT:    v_mov_b64_e32 v[12:13], v[8:9]
-; GFX13-GISEL-NEXT:    v_mov_b64_e32 v[10:11], v[6:7]
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v13, v9 :: v_dual_mov_b32 v12, v8
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v11, v7 :: v_dual_mov_b32 v10, v6
 ; GFX13-GISEL-NEXT:    buffer_atomic_cmpswap_b64 v[10:13], off, v0, null th:TH_ATOMIC_RETURN
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX13-GISEL-NEXT:    v_mov_b64_e32 v[12:13], v[8:9]
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v13, v9 :: v_dual_mov_b32 v12, v8
 ; GFX13-GISEL-NEXT:    buffer_atomic_cmpswap_b64 v[10:13], v5, v0, null offen th:TH_ATOMIC_RETURN
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX13-GISEL-NEXT:    v_mov_b64_e32 v[12:13], v[8:9]
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v13, v9 :: v_dual_mov_b32 v12, v8
 ; GFX13-GISEL-NEXT:    buffer_atomic_cmpswap_b64 v[10:13], v5, v0, null offen offset:44 th:TH_ATOMIC_RETURN
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX13-GISEL-NEXT:    v_mov_b64_e32 v[12:13], v[8:9]
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v13, v9 :: v_dual_mov_b32 v12, v8
 ; GFX13-GISEL-NEXT:    buffer_atomic_cmpswap_b64 v[10:13], off, v0, s0 offset:4 th:TH_ATOMIC_RETURN
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-GISEL-NEXT:    v_xor_b32_e32 v0, v10, v11

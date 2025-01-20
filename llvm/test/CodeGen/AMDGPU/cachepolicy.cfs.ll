@@ -184,7 +184,7 @@ define amdgpu_kernel void @flat_CFS128B(ptr %addr) {
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX13-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX13-NEXT:    flat_discard_b32 v[0:1] offset:32 cfs:CFS_128B
 ; GFX13-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(0) %addr, i32 4
@@ -197,7 +197,7 @@ define amdgpu_kernel void @flat_CFS64B(ptr %addr) {
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX13-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX13-NEXT:    flat_discard_b32 v[0:1] offset:32 cfs:CFS_64B
 ; GFX13-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(0) %addr, i32 4
@@ -210,7 +210,7 @@ define amdgpu_kernel void @vflat_CFS32B(ptr %addr) {
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX13-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX13-NEXT:    flat_discard_b32 v[0:1] offset:32 cfs:CFS_32B
 ; GFX13-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(0) %addr, i32 4

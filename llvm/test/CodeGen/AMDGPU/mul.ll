@@ -849,7 +849,7 @@ define amdgpu_kernel void @mul64_sext_c(ptr addrspace(1) %out, i32 %in) {
 ; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1300-NEXT:    s_mul_u64 s[4:5], s[2:3], 0x50
 ; GFX1300-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX1300-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
+; GFX1300-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
 ; GFX1300-NEXT:    s_mov_b32 s2, -1
 ; GFX1300-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], null
 ; GFX1300-NEXT:    s_endpgm
@@ -976,7 +976,7 @@ define amdgpu_kernel void @mul64_zext_c(ptr addrspace(1) %out, i32 %in) {
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_mul_u64 s[4:5], s[2:3], 0x50
 ; GFX1300-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX1300-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
+; GFX1300-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
 ; GFX1300-NEXT:    s_mov_b32 s2, -1
 ; GFX1300-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], null
 ; GFX1300-NEXT:    s_endpgm
@@ -2343,7 +2343,7 @@ define amdgpu_kernel void @s_mul_i64(ptr addrspace(1) %out, i64 %a, i64 %b) noun
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_mul_u64 s[4:5], s[2:3], s[4:5]
 ; GFX1300-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX1300-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
+; GFX1300-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
 ; GFX1300-NEXT:    s_mov_b32 s2, -1
 ; GFX1300-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], null
 ; GFX1300-NEXT:    s_endpgm
@@ -3195,7 +3195,7 @@ define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1300-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GFX1300-NEXT:    s_branch .LBB16_2
 ; GFX1300-NEXT:  .LBB16_4:
-; GFX1300-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
+; GFX1300-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
 ; GFX1300-NEXT:  .LBB16_5: ; %endif
 ; GFX1300-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1300-NEXT:    s_mov_b32 s2, -1

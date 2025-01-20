@@ -2169,7 +2169,7 @@ define amdgpu_ps float @sample_c_d_o_2darray_V1_tfe(<8 x i32> inreg %rsrc, <4 x 
 ; GFX13-NEXT:    v_dual_mov_b32 v8, v5 :: v_dual_mov_b32 v13, v12
 ; GFX13-NEXT:    v_dual_mov_b32 v7, v4 :: v_dual_mov_b32 v6, v3
 ; GFX13-NEXT:    v_dual_mov_b32 v3, v1 :: v_dual_mov_b32 v4, v0
-; GFX13-NEXT:    v_mov_b64_e32 v[0:1], v[12:13]
+; GFX13-NEXT:    v_dual_mov_b32 v0, v12 :: v_dual_mov_b32 v1, v13
 ; GFX13-NEXT:    image_sample_c_d_o v[0:1], [v4, v3, v2, v[6:11]], s[0:7], s[8:11] dmask:0x4 dim:SQ_RSRC_IMG_2D_ARRAY tfe
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    global_store_b32 v12, v1, s[12:13]

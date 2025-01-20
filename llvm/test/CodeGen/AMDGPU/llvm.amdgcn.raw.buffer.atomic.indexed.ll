@@ -76,7 +76,7 @@ main_body:
 define amdgpu_ps float @test3(i32 inreg %rsrc, i32 %data, i32 %cmp, i32 %vindex, i32 %voffset) {
 ; GFX13-LABEL: test3:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_mov_b64_e32 v[4:5], v[0:1]
+; GFX13-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v4, v0
 ; GFX13-NEXT:    s_movk_i32 s1, 0x1ffc
 ; GFX13-NEXT:    buffer_atomic_cmpswap_b32 v[4:5], off, s0, null th:TH_ATOMIC_RETURN
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
@@ -105,18 +105,18 @@ main_body:
 define amdgpu_ps float @test5(i32 inreg %rsrc, i64 %data, i64 %cmp, i32 %vindex, i32 %voffset) {
 ; GFX13-LABEL: test5:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_mov_b64_e32 v[8:9], v[2:3]
-; GFX13-NEXT:    v_mov_b64_e32 v[6:7], v[0:1]
+; GFX13-NEXT:    v_dual_mov_b32 v9, v3 :: v_dual_mov_b32 v8, v2
+; GFX13-NEXT:    v_dual_mov_b32 v7, v1 :: v_dual_mov_b32 v6, v0
 ; GFX13-NEXT:    s_movk_i32 s1, 0x1ffc
 ; GFX13-NEXT:    buffer_atomic_cmpswap_b64 v[6:9], off, s0, null th:TH_ATOMIC_RETURN
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_mov_b64_e32 v[8:9], v[2:3]
+; GFX13-NEXT:    v_dual_mov_b32 v9, v3 :: v_dual_mov_b32 v8, v2
 ; GFX13-NEXT:    buffer_atomic_cmpswap_b64 v[6:9], v4, s0, null offen th:TH_ATOMIC_RETURN
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_mov_b64_e32 v[8:9], v[2:3]
+; GFX13-NEXT:    v_dual_mov_b32 v9, v3 :: v_dual_mov_b32 v8, v2
 ; GFX13-NEXT:    buffer_atomic_cmpswap_b64 v[6:9], v4, s0, null offen offset:44 th:TH_ATOMIC_RETURN
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_mov_b64_e32 v[8:9], v[2:3]
+; GFX13-NEXT:    v_dual_mov_b32 v9, v3 :: v_dual_mov_b32 v8, v2
 ; GFX13-NEXT:    buffer_atomic_cmpswap_b64 v[6:9], off, s0, s1 offset:4 th:TH_ATOMIC_RETURN
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_xor_b32_e32 v0, v6, v7
