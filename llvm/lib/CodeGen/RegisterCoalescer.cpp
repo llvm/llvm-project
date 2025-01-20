@@ -1496,7 +1496,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
         // If lanemasks need to be tracked, compile the lanemask of the NewMI
         // implicit def operands to avoid subranges for the super-regs from
         // being removed by code later on in this function.
-        if (MRI->shouldTrackSubRegLiveness(DstReg))
+        if (MRI->shouldTrackSubRegLiveness(MO.getReg()))
           NewMIImplicitOpsMask |= MRI->getMaxLaneMaskForVReg(MO.getReg());
       }
     }
@@ -1979,12 +1979,6 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
           DstInt->createSubRangeFrom(Allocator, UnusedLanes, *DstInt);
           DefinedLanes |= UnusedLanes;
         }
-      } else if (DstIsPhys) {
-        // Ensure we have a computed liverange for all regunits,
-        // as this is required by the scheduler/regpressure tracker,
-        // see: https://github.com/llvm/llvm-project/issues/76416
-        for (MCRegUnit Unit : TRI->regunits(DstReg))
-          LIS->getRegUnit(Unit);
       }
 
       MachineInstrBuilder MIB(*MF, UseMI);
