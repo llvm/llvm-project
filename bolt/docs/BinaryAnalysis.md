@@ -65,7 +65,7 @@ examples.
 #### pac-ret analysis
 
 `pac-ret` protection is a security hardening scheme implemented in compilers
-such as gcc and clang, using the command line option
+such as GCC and Clang, using the command line option
 `-mbranch-protection=pac-ret`. This option is enabled by default on most widely
 used linux distributions.
 
@@ -78,7 +78,7 @@ in the upper bits of the pointer. This makes it substantially harder for
 attackers to divert control flow by overwriting a return address with a
 different value.
 
-The hardening scheme relies on compilers producing different code sequences when
+The hardening scheme relies on compilers producing appropriate code sequences when
 processing return addresses, especially when these are stored to and retrieved
 from memory.
 
@@ -86,24 +86,24 @@ The 'pac-ret' binary analysis can be invoked using the command line option
 `--scanners=pac-ret`. It makes `llvm-bolt-binary-analysis` scan through the
 provided binary, checking each function for the following security property:
 
-For each procedure and exception return instruction, the destination register
-must have one of the following properties:
-
-1. be immutable within the function, or
-2. the last write to the register must be by an authenticating instruction. This
-   includes combined authentication and return instructions such as `RETAA`.
+> For each procedure and exception return instruction, the destination register
+> must have one of the following properties:
+>
+> 1. be immutable within the function, or
+> 2. the last write to the register must be by an authenticating instruction. This
+>    includes combined authentication and return instructions such as `RETAA`.
 
 ##### Example 1
 
 For example, a typical non-pac-ret-protected function looks as follows:
 
 ```
-stp     x29, x30, [sp, #-0x10]!
-mov     x29, sp
-bl      g@PLT
-add     x0, x0, #0x3
-ldp     x29, x30, [sp], #0x10
-ret
+        stp     x29, x30, [sp, #-0x10]!
+        mov     x29, sp
+        bl      g@PLT
+        add     x0, x0, #0x3
+        ldp     x29, x30, [sp], #0x10
+        ret
 ```
 
 The return instruction `ret` implicitly uses register `x30` as the address to
@@ -135,8 +135,8 @@ instructions of a register follows:
 
 ```
         paciasp
-        stp     x29, x30, [sp, #-16]!
-        ldp     x29, x30, [sp], #16
+        stp     x29, x30, [sp, #-0x10]!
+        ldp     x29, x30, [sp], #0x10
         cbnz    x0, 1f
         autiasp
 1:
@@ -168,9 +168,9 @@ The following are current known cases of false positives:
    For example, the scanner currently produces a false negative for the following
    code sequence:
    ```
-   autiasp
-   mov     x16, x30
-   ret
+        autiasp
+        mov     x16, x30
+        ret     x16
    ```
 
 The folowing are current known cases of false negatives:

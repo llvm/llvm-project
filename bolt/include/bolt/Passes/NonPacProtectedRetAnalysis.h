@@ -65,8 +65,8 @@ raw_ostream &operator<<(raw_ostream &OS, const MCInstInBBReference &);
 
 struct MCInstInBFReference {
   BinaryFunction *BF;
-  uint32_t Offset;
-  MCInstInBFReference(BinaryFunction *BF, uint32_t Offset)
+  uint64_t Offset;
+  MCInstInBFReference(BinaryFunction *BF, uint64_t Offset)
       : BF(BF), Offset(Offset) {}
   MCInstInBFReference() : BF(nullptr) {}
   bool operator==(const MCInstInBFReference &RHS) const {
@@ -102,9 +102,9 @@ struct MCInstReference {
       : ParentKind(BasicBlockParent), U(BBRef) {}
   MCInstReference(MCInstInBFReference BFRef)
       : ParentKind(FunctionParent), U(BFRef) {}
-  MCInstReference(class BinaryBasicBlock *BB, int64_t BBIndex)
+  MCInstReference(BinaryBasicBlock *BB, int64_t BBIndex)
       : MCInstReference(MCInstInBBReference(BB, BBIndex)) {}
-  MCInstReference(class BinaryFunction *BF, uint32_t Offset)
+  MCInstReference(BinaryFunction *BF, uint32_t Offset)
       : MCInstReference(MCInstInBFReference(BF, Offset)) {}
 
   bool operator<(const MCInstReference &RHS) const {

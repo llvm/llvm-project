@@ -116,21 +116,21 @@ void GenDiag::print(raw_ostream &OS) const { OS << *this; }
 //    written by a non-authenticating instruction, the dataflow analysis will
 //    be run a second time. The first run will return which registers are used
 //    in the gadgets to be reported. This information is used in the second run
-//    to also track with instructions last wrote to those registers.
+//    to also track which instructions last wrote to those registers.
 
 struct State {
   /// A BitVector containing the registers that have been clobbered, and
   /// not authenticated.
   BitVector NonAutClobRegs;
   /// A vector of sets, only used in the second data flow run.
-  /// Each element in the vector represent one registers for which we
-  /// track the set of last instructions that wrote to this register.
-  /// For pac-ret analysis, the expectation is that almost all return
-  /// instructions only use register `X30`, and therefore, this vector
-  /// will probably have length 1 in the second run.
+  /// Each element in the vector represents one of the registers for which we
+  /// track the set of last instructions that wrote to this register. For
+  /// pac-ret analysis, the expectation is that almost all return instructions
+  /// only use register `X30`, and therefore, this vector will probably have
+  /// length 1 in the second run.
   std::vector<SmallPtrSet<const MCInst *, 4>> LastInstWritingReg;
   State() {}
-  State(uint16_t NumRegs, uint16_t NumRegsToTrack)
+  State(unsigned NumRegs, unsigned NumRegsToTrack)
       : NonAutClobRegs(NumRegs), LastInstWritingReg(NumRegsToTrack) {}
   State &operator|=(const State &StateIn) {
     NonAutClobRegs |= StateIn.NonAutClobRegs;
@@ -151,7 +151,7 @@ static void printLastInsts(
     const std::vector<SmallPtrSet<const MCInst *, 4>> &LastInstWritingReg) {
   OS << "Insts: ";
   for (unsigned I = 0; I < LastInstWritingReg.size(); ++I) {
-    auto Set = LastInstWritingReg[I];
+    auto &Set = LastInstWritingReg[I];
     OS << "[" << I << "](";
     for (const MCInst *MCInstP : Set)
       OS << MCInstP << " ";
@@ -161,8 +161,7 @@ static void printLastInsts(
 
 raw_ostream &operator<<(raw_ostream &OS, const State &S) {
   OS << "pacret-state<";
-  OS << "NonAutClobRegs: " << S.NonAutClobRegs;
-  OS << "Insts: ";
+  OS << "NonAutClobRegs: " << S.NonAutClobRegs << ", ";
   printLastInsts(OS, S.LastInstWritingReg);
   OS << ">";
   return OS;
@@ -210,7 +209,7 @@ public:
   virtual ~PacRetAnalysis() {}
 
 protected:
-  const uint16_t NumRegs;
+  const unsigned NumRegs;
   /// RegToTrackInstsFor is the set of registers for which the dataflow analysis
   /// must compute which the last set of instructions writing to it are.
   const std::vector<MCPhysReg> RegsToTrackInstsFor;
@@ -321,24 +320,23 @@ public:
                          const BitVector &DirtyRawRegs) const {
     if (!TrackingLastInsts)
       return {};
-    if (auto MaybeState = getStateAt(Ret)) {
-      const State &S = *MaybeState;
-      // Due to aliasing registers, multiple registers may have
-      // been tracked.
-      std::set<const MCInst *> LastWritingInsts;
-      for (MCPhysReg TrackedReg : DirtyRawRegs.set_bits()) {
-        for (const MCInst *LastInstWriting : lastWritingInsts(S, TrackedReg))
-          LastWritingInsts.insert(LastInstWriting);
-      }
-      std::vector<MCInstReference> Result;
-      for (const MCInst *LastInstWriting : LastWritingInsts) {
-        MCInstInBBReference Ref = MCInstInBBReference::get(LastInstWriting, BF);
-        assert(Ref.BB != nullptr && "Expected Inst to be found");
-        Result.push_back(MCInstReference(Ref));
-      }
-      return Result;
+    auto MaybeState = getStateAt(Ret);
+    if (!MaybeState)
+      llvm_unreachable("Expected State to be present");
+    const State &S = *MaybeState;
+    // Due to aliasing registers, multiple registers may have been tracked.
+    std::set<const MCInst *> LastWritingInsts;
+    for (MCPhysReg TrackedReg : DirtyRawRegs.set_bits()) {
+      for (const MCInst *Inst : lastWritingInsts(S, TrackedReg))
+        LastWritingInsts.insert(Inst);
     }
-    llvm_unreachable("Expected State to be present");
+    std::vector<MCInstReference> Result;
+    for (const MCInst *Inst : LastWritingInsts) {
+      MCInstInBBReference Ref = MCInstInBBReference::get(Inst, BF);
+      assert(Ref.BB != nullptr && "Expected Inst to be found");
+      Result.push_back(MCInstReference(Ref));
+    }
+    return Result;
   }
 };
 
@@ -426,6 +424,10 @@ void Analysis::runOnFunction(BinaryFunction &BF,
       PacRetAnalysis PRWIA(BF, AllocatorId, RegsToTrack);
       FAR = computeDfState(PRWIA, BF, AllocatorId);
     }
+
+    // `runOnFunction` is typically getting called from multiple threads in
+    // parallel. Therefore, use a lock to avoid data races when storing the
+    // result of the analysis in the `AnalysisResults` map.
     {
       std::lock_guard<std::mutex> Lock(AnalysisResultsMutex);
       AnalysisResults[&BF] = FAR;
