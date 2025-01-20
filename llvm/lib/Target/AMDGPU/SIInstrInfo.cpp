@@ -2750,8 +2750,8 @@ static MachineInstr *swapRegAndNonRegOperand(MachineInstr &MI,
 }
 
 static MachineInstr *swapImmOperands(MachineInstr &MI,
-                                             MachineOperand &NonRegOp1,
-                                             MachineOperand &NonRegOp2) {
+                                     MachineOperand &NonRegOp1,
+                                     MachineOperand &NonRegOp2) {
   unsigned TargetFlags = NonRegOp1.getTargetFlags();
   int64_t NonRegVal = NonRegOp1.getImm();
 
@@ -2762,9 +2762,9 @@ static MachineInstr *swapImmOperands(MachineInstr &MI,
   return &MI;
 }
 
-bool SIInstrInfo::isLegalToSwap(const MachineInstr &MI, 
-                                unsigned OpIdx0, const MachineOperand *MO0,
-                                unsigned OpIdx1, const MachineOperand *MO1) const {
+bool SIInstrInfo::isLegalToSwap(const MachineInstr &MI, unsigned OpIdx0,
+                                const MachineOperand *MO0, unsigned OpIdx1,
+                                const MachineOperand *MO1) const {
   const MCInstrDesc &InstDesc = MI.getDesc();
   const MCOperandInfo &OpInfo0 = InstDesc.operands()[OpIdx0];
   const MCOperandInfo &OpInfo1 = InstDesc.operands()[OpIdx1];
@@ -2772,7 +2772,7 @@ bool SIInstrInfo::isLegalToSwap(const MachineInstr &MI,
       OpInfo1.RegClass != -1 ? RI.getRegClass(OpInfo1.RegClass) : nullptr;
   const TargetRegisterClass *DefinedRC0 =
       OpInfo1.RegClass != -1 ? RI.getRegClass(OpInfo0.RegClass) : nullptr;
-  
+
   unsigned Opc = MI.getOpcode();
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
   if (Src0Idx == -1) {
@@ -2781,15 +2781,15 @@ bool SIInstrInfo::isLegalToSwap(const MachineInstr &MI,
   }
 
   // Swap doesn't breach constant bus or literal limits
-  // It may move literal to position other than src0, this is not allowed pre-gfx10
-  // However, most test cases need literals in Src0 for VOP
+  // It may move literal to position other than src0, this is not allowed
+  // pre-gfx10 However, most test cases need literals in Src0 for VOP
   // FIXME: After gfx9, literal can be in place other than Src0
-  if (isVALU(MI)){
-    if ((int)OpIdx0 == Src0Idx &&
-        !MO0->isReg() && !isInlineConstant(*MO0, OpInfo1))
+  if (isVALU(MI)) {
+    if ((int)OpIdx0 == Src0Idx && !MO0->isReg() &&
+        !isInlineConstant(*MO0, OpInfo1))
       return false;
-    if ((int)OpIdx1 == Src0Idx &&
-        !MO1->isReg() && !isInlineConstant(*MO1, OpInfo0))
+    if ((int)OpIdx1 == Src0Idx && !MO1->isReg() &&
+        !isInlineConstant(*MO1, OpInfo0))
       return false;
   }
 
@@ -2797,14 +2797,14 @@ bool SIInstrInfo::isLegalToSwap(const MachineInstr &MI,
     if (!DefinedRC1)
       return OpInfo1.OperandType == MCOI::OPERAND_UNKNOWN;
     return isLegalRegOperand(MI, OpIdx1, *MO0);
-  } 
+  }
   if (OpIdx0 != Src0Idx && MO1->isReg()) {
     if (!DefinedRC0)
       return OpInfo0.OperandType == MCOI::OPERAND_UNKNOWN;
     return isLegalRegOperand(MI, OpIdx0, *MO1);
   }
-  
-  // No need to check 64-bit literals since swapping does not bring new 
+
+  // No need to check 64-bit literals since swapping does not bring new
   // 64-bit literals into current instruction to fold to 32-bit
 
   return isImmOperandLegal(MI, OpIdx1, *MO0);
@@ -2837,8 +2837,8 @@ MachineInstr *SIInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   MachineInstr *CommutedMI = nullptr;
   if (Src0.isReg() && Src1.isReg()) {
     // Be sure to copy the source modifiers to the right place.
-    CommutedMI
-      = TargetInstrInfo::commuteInstructionImpl(MI, NewMI, Src0Idx, Src1Idx);
+    CommutedMI =
+        TargetInstrInfo::commuteInstructionImpl(MI, NewMI, Src0Idx, Src1Idx);
   } else if (Src0.isReg() && !Src1.isReg()) {
     CommutedMI = swapRegAndNonRegOperand(MI, Src0, Src1);
   } else if (!Src0.isReg() && Src1.isReg()) {
@@ -5877,8 +5877,7 @@ bool SIInstrInfo::isLegalRegOperand(const MachineRegisterInfo &MRI,
   return RC->hasSuperClassEq(DRC);
 }
 
-bool SIInstrInfo::isLegalRegOperand(const MachineInstr &MI,
-                                    unsigned OpIdx,
+bool SIInstrInfo::isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
                                     const MachineOperand &MO) const {
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   const MCOperandInfo OpInfo = MI.getDesc().operands()[OpIdx];
@@ -5891,34 +5890,32 @@ bool SIInstrInfo::isLegalRegOperand(const MachineInstr &MI,
   bool IsAGPR = RI.isAGPR(MRI, MO.getReg());
   if (IsAGPR && !ST.hasMAIInsts())
     return false;
-  if (IsAGPR &&
-    (!ST.hasGFX90AInsts() || !MRI.reservedRegsFrozen()) &&
-    (MI.mayLoad() || MI.mayStore() || isDS(Opc) || isMIMG(Opc)))
+  if (IsAGPR && (!ST.hasGFX90AInsts() || !MRI.reservedRegsFrozen()) &&
+      (MI.mayLoad() || MI.mayStore() || isDS(Opc) || isMIMG(Opc)))
     return false;
   // Atomics should have both vdst and vdata either vgpr or agpr.
   const int VDstIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst);
-  const int DataIdx = AMDGPU::getNamedOperandIdx(Opc,
-    isDS(Opc) ? AMDGPU::OpName::data0 : AMDGPU::OpName::vdata);
+  const int DataIdx = AMDGPU::getNamedOperandIdx(
+      Opc, isDS(Opc) ? AMDGPU::OpName::data0 : AMDGPU::OpName::vdata);
   if ((int)OpIdx == VDstIdx && DataIdx != -1 &&
-    MI.getOperand(DataIdx).isReg() &&
-    RI.isAGPR(MRI, MI.getOperand(DataIdx).getReg()) != IsAGPR)
+      MI.getOperand(DataIdx).isReg() &&
+      RI.isAGPR(MRI, MI.getOperand(DataIdx).getReg()) != IsAGPR)
     return false;
   if ((int)OpIdx == DataIdx) {
     if (VDstIdx != -1 &&
         RI.isAGPR(MRI, MI.getOperand(VDstIdx).getReg()) != IsAGPR)
-    return false;
+      return false;
     // DS instructions with 2 src operands also must have tied RC.
-    const int Data1Idx = AMDGPU::getNamedOperandIdx(Opc,
-                                                    AMDGPU::OpName::data1);
+    const int Data1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data1);
     if (Data1Idx != -1 && MI.getOperand(Data1Idx).isReg() &&
         RI.isAGPR(MRI, MI.getOperand(Data1Idx).getReg()) != IsAGPR)
-    return false;
+      return false;
   }
 
   // Check V_ACCVGPR_WRITE_B32_e64
   if (Opc == AMDGPU::V_ACCVGPR_WRITE_B32_e64 && !ST.hasGFX90AInsts() &&
-    (int)OpIdx == AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0) &&
-    RI.isSGPRReg(MRI, MO.getReg()))
+      (int)OpIdx == AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0) &&
+      RI.isSGPRReg(MRI, MO.getReg()))
     return false;
   return true;
 }

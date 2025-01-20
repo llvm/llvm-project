@@ -193,9 +193,9 @@ protected:
   bool swapSourceModifiers(MachineInstr &MI,
                            MachineOperand &Src0, unsigned Src0OpName,
                            MachineOperand &Src1, unsigned Src1OpName) const;
-  bool isLegalToSwap(const MachineInstr &MI, 
-                     unsigned fromIdx, const MachineOperand *fromMO,
-                     unsigned toIdx, const MachineOperand *toMO) const;
+  bool isLegalToSwap(const MachineInstr &MI, unsigned fromIdx,
+                     const MachineOperand *fromMO, unsigned toIdx,
+                     const MachineOperand *toMO) const;
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx0,
                                        unsigned OpIdx1) const override;
@@ -1225,8 +1225,7 @@ public:
   bool isLegalRegOperand(const MachineRegisterInfo &MRI,
                          const MCOperandInfo &OpInfo,
                          const MachineOperand &MO) const;
-  bool isLegalRegOperand(const MachineInstr &MI,
-                         unsigned OpIdx,
+  bool isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
                          const MachineOperand &MO) const;
   /// Legalize operands in \p MI by either commuting it or inserting a
   /// copy of src1.
