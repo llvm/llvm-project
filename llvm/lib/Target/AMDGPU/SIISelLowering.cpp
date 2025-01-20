@@ -15877,7 +15877,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
             RC = TRI->getAGPRClassForBitWidth(Width);
           if (RC) {
             Reg = TRI->getMatchingSuperReg(Reg, AMDGPU::sub0, RC);
-            if (!Reg ) {
+            if (!Reg) {
               // The register class does not contain the requested register,
               // e.g., because it is an SGPR pair that would violate alignment
               // requirements.
