@@ -221,7 +221,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
   // Preserve externally-visible symbols if the symbols defined by this
   // file can interpose other ELF file's symbols at runtime.
   for (Symbol *sym : ctx.symtab->getSymbols())
-    if (sym->includeInDynsym(ctx) && sym->partition == partition)
+    if (sym->isExported && sym->partition == partition)
       markSymbol(sym);
 
   // If this isn't the main partition, that's all that we need to preserve.

@@ -631,8 +631,8 @@ TEST(SerializeTests, emitTypedefs) {
 TEST(SerializeTests, emitFunctionTemplate) {
   EmittedInfoList Infos;
   // A template and a specialization.
-  ExtractInfosFromCode("template<typename T = int> void GetFoo(T);\n"
-                       "template<> void GetFoo<bool>(bool);",
+  ExtractInfosFromCode("template<typename T = int> bool GetFoo(T);\n"
+                       "template<> bool GetFoo<bool>(bool);",
                        2,
                        /*Public=*/false, Infos);
 
@@ -666,6 +666,8 @@ TEST(SerializeTests, emitFunctionTemplate) {
   ASSERT_EQ(1u, Func2.Template->Specialization->Params.size());
   EXPECT_EQ("bool", Func2.Template->Specialization->Params[0].Contents);
   EXPECT_EQ(Func1.USR, Func2.Template->Specialization->SpecializationOf);
+
+  EXPECT_EQ("bool", Func2.ReturnType.Type.Name);
 }
 
 TEST(SerializeTests, emitClassTemplate) {

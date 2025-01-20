@@ -144,25 +144,25 @@ define <2 x i64> @sabd_2d(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    vmov r0, r12, d0
+; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    mov r6, #0
-; CHECK-NEXT:    vmov r2, r3, d2
-; CHECK-NEXT:    vmov r1, lr, d1
-; CHECK-NEXT:    vmov r4, r5, d3
+; CHECK-NEXT:    vmov r2, r3, d3
+; CHECK-NEXT:    vmov r12, lr, d0
+; CHECK-NEXT:    vmov r4, r5, d2
 ; CHECK-NEXT:    vsub.i64 q8, q0, q1
 ; CHECK-NEXT:    subs r0, r2, r0
-; CHECK-NEXT:    sbcs r0, r3, r12
+; CHECK-NEXT:    sbcs r0, r3, r1
 ; CHECK-NEXT:    mov r0, #0
 ; CHECK-NEXT:    movwlt r0, #1
-; CHECK-NEXT:    subs r1, r4, r1
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mvnne r0, #0
+; CHECK-NEXT:    subs r1, r4, r12
 ; CHECK-NEXT:    sbcs r1, r5, lr
+; CHECK-NEXT:    vdup.32 d19, r0
 ; CHECK-NEXT:    movwlt r6, #1
 ; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    mvnne r6, #0
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    vdup.32 d19, r6
-; CHECK-NEXT:    mvnne r0, #0
-; CHECK-NEXT:    vdup.32 d18, r0
+; CHECK-NEXT:    vdup.32 d18, r6
 ; CHECK-NEXT:    veor q8, q8, q9
 ; CHECK-NEXT:    vsub.i64 q0, q9, q8
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}
@@ -475,25 +475,25 @@ define <2 x i64> @smaxmin_v2i64(<2 x i64> %0, <2 x i64> %1) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    vmov r0, r12, d0
+; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    mov r6, #0
-; CHECK-NEXT:    vmov r2, r3, d2
-; CHECK-NEXT:    vmov r1, lr, d1
-; CHECK-NEXT:    vmov r4, r5, d3
+; CHECK-NEXT:    vmov r2, r3, d3
+; CHECK-NEXT:    vmov r12, lr, d0
+; CHECK-NEXT:    vmov r4, r5, d2
 ; CHECK-NEXT:    vsub.i64 q8, q0, q1
 ; CHECK-NEXT:    subs r0, r2, r0
-; CHECK-NEXT:    sbcs r0, r3, r12
+; CHECK-NEXT:    sbcs r0, r3, r1
 ; CHECK-NEXT:    mov r0, #0
 ; CHECK-NEXT:    movwlt r0, #1
-; CHECK-NEXT:    subs r1, r4, r1
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mvnne r0, #0
+; CHECK-NEXT:    subs r1, r4, r12
 ; CHECK-NEXT:    sbcs r1, r5, lr
+; CHECK-NEXT:    vdup.32 d19, r0
 ; CHECK-NEXT:    movwlt r6, #1
 ; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    mvnne r6, #0
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    vdup.32 d19, r6
-; CHECK-NEXT:    mvnne r0, #0
-; CHECK-NEXT:    vdup.32 d18, r0
+; CHECK-NEXT:    vdup.32 d18, r6
 ; CHECK-NEXT:    veor q8, q8, q9
 ; CHECK-NEXT:    vsub.i64 q0, q9, q8
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}

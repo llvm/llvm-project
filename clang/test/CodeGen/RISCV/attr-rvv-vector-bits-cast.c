@@ -120,7 +120,7 @@ vbool32_t to_vbool32_t(fixed_bool32_t type) {
 // CHECK-LABEL: @to_vint32m1_t__from_gnu_int32m1_t(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TYPE:%.*]] = load <8 x i32>, ptr [[TMP0:%.*]], align 32, !tbaa [[TBAA8]]
-// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[TYPE]], i64 0)
+// CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> poison, <8 x i32> [[TYPE]], i64 0)
 // CHECK-NEXT:    ret <vscale x 2 x i32> [[CAST_SCALABLE]]
 //
 vint32m1_t to_vint32m1_t__from_gnu_int32m1_t(gnu_int32m1_t type) {

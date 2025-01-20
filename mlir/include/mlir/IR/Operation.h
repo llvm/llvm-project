@@ -322,6 +322,11 @@ public:
   void print(raw_ostream &os, AsmState &state);
   void dump();
 
+  // Dump pretty printed IR. This method is helpful for better readability if
+  // the Operation is not verified because it won't disable custom printers to
+  // fall back to the generic one.
+  LLVM_DUMP_METHOD void dumpPretty();
+
   //===--------------------------------------------------------------------===//
   // Operands
   //===--------------------------------------------------------------------===//

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___COMPARE_COMPARE_STRONG_ORDER_FALLBACK
-#define _LIBCPP___COMPARE_COMPARE_STRONG_ORDER_FALLBACK
+#ifndef _LIBCPP___CXX03___COMPARE_COMPARE_STRONG_ORDER_FALLBACK
+#define _LIBCPP___CXX03___COMPARE_COMPARE_STRONG_ORDER_FALLBACK
 
 #include <__cxx03/__compare/ordering.h>
 #include <__cxx03/__compare/strong_order.h>
@@ -70,4 +70,4 @@ inline constexpr auto compare_strong_order_fallback = __compare_strong_order_fal
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___COMPARE_COMPARE_STRONG_ORDER_FALLBACK
+#endif // _LIBCPP___CXX03___COMPARE_COMPARE_STRONG_ORDER_FALLBACK

@@ -366,16 +366,26 @@ private:
 
   struct DepDistanceStrideAndSizeInfo {
     const SCEV *Dist;
-    uint64_t StrideA;
-    uint64_t StrideB;
+
+    /// Strides could either be scaled (in bytes, taking the size of the
+    /// underlying type into account), or unscaled (in indexing units; unscaled
+    /// stride = scaled stride / size of underlying type). Here, strides are
+    /// unscaled.
+    uint64_t MaxStride;
+    std::optional<uint64_t> CommonStride;
+
+    bool ShouldRetryWithRuntimeCheck;
     uint64_t TypeByteSize;
     bool AIsWrite;
     bool BIsWrite;
 
-    DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t StrideA,
-                                 uint64_t StrideB, uint64_t TypeByteSize,
-                                 bool AIsWrite, bool BIsWrite)
-        : Dist(Dist), StrideA(StrideA), StrideB(StrideB),
+    DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t MaxStride,
+                                 std::optional<uint64_t> CommonStride,
+                                 bool ShouldRetryWithRuntimeCheck,
+                                 uint64_t TypeByteSize, bool AIsWrite,
+                                 bool BIsWrite)
+        : Dist(Dist), MaxStride(MaxStride), CommonStride(CommonStride),
+          ShouldRetryWithRuntimeCheck(ShouldRetryWithRuntimeCheck),
           TypeByteSize(TypeByteSize), AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
   };
 

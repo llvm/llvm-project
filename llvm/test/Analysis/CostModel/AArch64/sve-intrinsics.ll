@@ -638,10 +638,10 @@ define void @vector_splice() #0 {
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %splice_nxv4bf16 = call <vscale x 4 x bfloat> @llvm.vector.splice.nxv4bf16(<vscale x 4 x bfloat> zeroinitializer, <vscale x 4 x bfloat> zeroinitializer, i32 1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %splice_nxv8bf16 = call <vscale x 8 x bfloat> @llvm.vector.splice.nxv8bf16(<vscale x 8 x bfloat> zeroinitializer, <vscale x 8 x bfloat> zeroinitializer, i32 1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %splice_nxv16bf16 = call <vscale x 16 x bfloat> @llvm.vector.splice.nxv16bf16(<vscale x 16 x bfloat> zeroinitializer, <vscale x 16 x bfloat> zeroinitializer, i32 1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %splice_nxv16i1 = call <vscale x 16 x i1> @llvm.vector.splice.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %splice_nxv8i1 = call <vscale x 8 x i1> @llvm.vector.splice.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %splice_nxv4i1 = call <vscale x 4 x i1> @llvm.vector.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %splice_nxv2i1 = call <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv16i1 = call <vscale x 16 x i1> @llvm.vector.splice.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv8i1 = call <vscale x 8 x i1> @llvm.vector.splice.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv4i1 = call <vscale x 4 x i1> @llvm.vector.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv2i1 = call <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %splice_nxv16i8_neg = call <vscale x 16 x i8> @llvm.vector.splice.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %splice_nxv32i8_neg = call <vscale x 32 x i8> @llvm.vector.splice.nxv32i8(<vscale x 32 x i8> zeroinitializer, <vscale x 32 x i8> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Invalid cost for instruction: %splice_nxv1i16_neg = call <vscale x 1 x i16> @llvm.vector.splice.nxv1i16(<vscale x 1 x i16> zeroinitializer, <vscale x 1 x i16> zeroinitializer, i32 -1)
@@ -671,10 +671,10 @@ define void @vector_splice() #0 {
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %splice_nxv4bf16_neg = call <vscale x 4 x bfloat> @llvm.vector.splice.nxv4bf16(<vscale x 4 x bfloat> zeroinitializer, <vscale x 4 x bfloat> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %splice_nxv8bf16_neg = call <vscale x 8 x bfloat> @llvm.vector.splice.nxv8bf16(<vscale x 8 x bfloat> zeroinitializer, <vscale x 8 x bfloat> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %splice_nxv16bf16_neg = call <vscale x 16 x bfloat> @llvm.vector.splice.nxv16bf16(<vscale x 16 x bfloat> zeroinitializer, <vscale x 16 x bfloat> zeroinitializer, i32 -1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %splice_nxv16i1_neg = call <vscale x 16 x i1> @llvm.vector.splice.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 -1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %splice_nxv8i1_neg = call <vscale x 8 x i1> @llvm.vector.splice.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 -1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %splice_nxv4i1_neg = call <vscale x 4 x i1> @llvm.vector.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 -1)
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %splice_nxv2i1_neg = call <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 -1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %splice_nxv16i1_neg = call <vscale x 16 x i1> @llvm.vector.splice.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 -1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %splice_nxv8i1_neg = call <vscale x 8 x i1> @llvm.vector.splice.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 -1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %splice_nxv4i1_neg = call <vscale x 4 x i1> @llvm.vector.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 -1)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %splice_nxv2i1_neg = call <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Invalid cost for instruction: %splice_nxv1i1_neg = call <vscale x 1 x i1> @llvm.vector.splice.nxv1i1(<vscale x 1 x i1> zeroinitializer, <vscale x 1 x i1> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
@@ -702,10 +702,10 @@ define void @vector_splice() #0 {
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %splice_nxv4bf16 = call <vscale x 4 x bfloat> @llvm.vector.splice.nxv4bf16(<vscale x 4 x bfloat> zeroinitializer, <vscale x 4 x bfloat> zeroinitializer, i32 1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %splice_nxv8bf16 = call <vscale x 8 x bfloat> @llvm.vector.splice.nxv8bf16(<vscale x 8 x bfloat> zeroinitializer, <vscale x 8 x bfloat> zeroinitializer, i32 1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %splice_nxv16bf16 = call <vscale x 16 x bfloat> @llvm.vector.splice.nxv16bf16(<vscale x 16 x bfloat> zeroinitializer, <vscale x 16 x bfloat> zeroinitializer, i32 1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %splice_nxv16i1 = call <vscale x 16 x i1> @llvm.vector.splice.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %splice_nxv8i1 = call <vscale x 8 x i1> @llvm.vector.splice.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %splice_nxv4i1 = call <vscale x 4 x i1> @llvm.vector.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %splice_nxv2i1 = call <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv16i1 = call <vscale x 16 x i1> @llvm.vector.splice.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv8i1 = call <vscale x 8 x i1> @llvm.vector.splice.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv4i1 = call <vscale x 4 x i1> @llvm.vector.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv2i1 = call <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %splice_nxv16i8_neg = call <vscale x 16 x i8> @llvm.vector.splice.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %splice_nxv32i8_neg = call <vscale x 32 x i8> @llvm.vector.splice.nxv32i8(<vscale x 32 x i8> zeroinitializer, <vscale x 32 x i8> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Invalid cost for instruction: %splice_nxv1i16_neg = call <vscale x 1 x i16> @llvm.vector.splice.nxv1i16(<vscale x 1 x i16> zeroinitializer, <vscale x 1 x i16> zeroinitializer, i32 -1)
@@ -735,10 +735,10 @@ define void @vector_splice() #0 {
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %splice_nxv4bf16_neg = call <vscale x 4 x bfloat> @llvm.vector.splice.nxv4bf16(<vscale x 4 x bfloat> zeroinitializer, <vscale x 4 x bfloat> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %splice_nxv8bf16_neg = call <vscale x 8 x bfloat> @llvm.vector.splice.nxv8bf16(<vscale x 8 x bfloat> zeroinitializer, <vscale x 8 x bfloat> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %splice_nxv16bf16_neg = call <vscale x 16 x bfloat> @llvm.vector.splice.nxv16bf16(<vscale x 16 x bfloat> zeroinitializer, <vscale x 16 x bfloat> zeroinitializer, i32 -1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %splice_nxv16i1_neg = call <vscale x 16 x i1> @llvm.vector.splice.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 -1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %splice_nxv8i1_neg = call <vscale x 8 x i1> @llvm.vector.splice.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 -1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %splice_nxv4i1_neg = call <vscale x 4 x i1> @llvm.vector.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 -1)
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %splice_nxv2i1_neg = call <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 -1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %splice_nxv16i1_neg = call <vscale x 16 x i1> @llvm.vector.splice.nxv16i1(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i1> zeroinitializer, i32 -1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %splice_nxv8i1_neg = call <vscale x 8 x i1> @llvm.vector.splice.nxv8i1(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x i1> zeroinitializer, i32 -1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %splice_nxv4i1_neg = call <vscale x 4 x i1> @llvm.vector.splice.nxv4i1(<vscale x 4 x i1> zeroinitializer, <vscale x 4 x i1> zeroinitializer, i32 -1)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %splice_nxv2i1_neg = call <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Invalid cost for instruction: %splice_nxv1i1_neg = call <vscale x 1 x i1> @llvm.vector.splice.nxv1i1(<vscale x 1 x i1> zeroinitializer, <vscale x 1 x i1> zeroinitializer, i32 -1)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
@@ -1357,6 +1357,54 @@ define void @histogram_nxv4i64(<vscale x 4 x ptr> %buckets, <vscale x 4 x i1> %m
 ; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call void @llvm.experimental.vector.histogram.add.nxv4p0.i64(<vscale x 4 x ptr> %buckets, i64 1, <vscale x 4 x i1> %mask)
+  ret void
+}
+
+define void @match() #3 {
+; CHECK-VSCALE-1-LABEL: 'match'
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %match_nxv16i8_v16i8 = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> undef, <vscale x 16 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %match_nxv8i16_v8i16 = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> undef, <vscale x 8 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %match_nxv4i32_v4i32 = call <vscale x 4 x i1> @llvm.experimental.vector.match.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> undef, <vscale x 4 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %match_nxv2i64_v2i64 = call <vscale x 2 x i1> @llvm.experimental.vector.match.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> undef, <vscale x 2 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %match_v16i8_v16i8 = call <16 x i1> @llvm.experimental.vector.match.v16i8.v16i8(<16 x i8> undef, <16 x i8> undef, <16 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %match_v8i16_v8i16 = call <8 x i1> @llvm.experimental.vector.match.v8i16.v8i16(<8 x i16> undef, <8 x i16> undef, <8 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %match_v4i32_v4i32 = call <4 x i1> @llvm.experimental.vector.match.v4i32.v4i32(<4 x i32> undef, <4 x i32> undef, <4 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %match_v2i64_v2i64 = call <2 x i1> @llvm.experimental.vector.match.v2i64.v2i64(<2 x i64> undef, <2 x i64> undef, <2 x i1> undef)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-VSCALE-2-LABEL: 'match'
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %match_nxv16i8_v16i8 = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> undef, <vscale x 16 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %match_nxv8i16_v8i16 = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> undef, <vscale x 8 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %match_nxv4i32_v4i32 = call <vscale x 4 x i1> @llvm.experimental.vector.match.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> undef, <vscale x 4 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %match_nxv2i64_v2i64 = call <vscale x 2 x i1> @llvm.experimental.vector.match.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> undef, <vscale x 2 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %match_v16i8_v16i8 = call <16 x i1> @llvm.experimental.vector.match.v16i8.v16i8(<16 x i8> undef, <16 x i8> undef, <16 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %match_v8i16_v8i16 = call <8 x i1> @llvm.experimental.vector.match.v8i16.v8i16(<8 x i16> undef, <8 x i16> undef, <8 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %match_v4i32_v4i32 = call <4 x i1> @llvm.experimental.vector.match.v4i32.v4i32(<4 x i32> undef, <4 x i32> undef, <4 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %match_v2i64_v2i64 = call <2 x i1> @llvm.experimental.vector.match.v2i64.v2i64(<2 x i64> undef, <2 x i64> undef, <2 x i1> undef)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'match'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %match_nxv16i8_v16i8 = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> undef, <vscale x 16 x i1> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %match_nxv8i16_v8i16 = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> undef, <vscale x 8 x i1> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %match_nxv4i32_v4i32 = call <vscale x 4 x i1> @llvm.experimental.vector.match.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> undef, <vscale x 4 x i1> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %match_nxv2i64_v2i64 = call <vscale x 2 x i1> @llvm.experimental.vector.match.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> undef, <vscale x 2 x i1> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %match_v16i8_v16i8 = call <16 x i1> @llvm.experimental.vector.match.v16i8.v16i8(<16 x i8> undef, <16 x i8> undef, <16 x i1> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %match_v8i16_v8i16 = call <8 x i1> @llvm.experimental.vector.match.v8i16.v8i16(<8 x i16> undef, <8 x i16> undef, <8 x i1> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %match_v4i32_v4i32 = call <4 x i1> @llvm.experimental.vector.match.v4i32.v4i32(<4 x i32> undef, <4 x i32> undef, <4 x i1> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %match_v2i64_v2i64 = call <2 x i1> @llvm.experimental.vector.match.v2i64.v2i64(<2 x i64> undef, <2 x i64> undef, <2 x i1> undef)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+
+  %match_nxv16i8_v16i8 = call <vscale x 16 x i1> @llvm.experimental.vector.match.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> undef, <vscale x 16 x i1> undef)
+  %match_nxv8i16_v8i16 = call <vscale x 8 x i1> @llvm.experimental.vector.match.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> undef, <vscale x 8 x i1> undef)
+  %match_nxv4i32_v4i32 = call <vscale x 4 x i1> @llvm.experimental.vector.match.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> undef, <vscale x 4 x i1> undef)
+  %match_nxv2i64_v2i64 = call <vscale x 2 x i1> @llvm.experimental.vector.match.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> undef, <vscale x 2 x i1> undef)
+
+  %match_v16i8_v16i8 = call <16 x i1> @llvm.experimental.vector.match.v16i8.v16i8(<16 x i8> undef, <16 x i8> undef, <16 x i1> undef)
+  %match_v8i16_v8i16 = call <8 x i1> @llvm.experimental.vector.match.v8i16.v8i16(<8 x i16> undef, <8 x i16> undef, <8 x i1> undef)
+  %match_v4i32_v4i32 = call <4 x i1> @llvm.experimental.vector.match.v4i32.v4i32(<4 x i32> undef, <4 x i32> undef, <4 x i1> undef)
+  %match_v2i64_v2i64 = call <2 x i1> @llvm.experimental.vector.match.v2i64.v2i64(<2 x i64> undef, <2 x i64> undef, <2 x i1> undef)
+
   ret void
 }
 

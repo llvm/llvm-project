@@ -160,7 +160,7 @@ def FeatureSVE : ExtensionWithMArch<"sve", "SVE", "FEAT_SVE",
 
 let ArchExtKindSpelling = "AEK_I8MM" in
 def FeatureMatMulInt8 : ExtensionWithMArch<"i8mm", "MatMulInt8", "FEAT_I8MM",
-  "Enable Matrix Multiply Int8 Extension">;
+  "Enable Matrix Multiply Int8 Extension", [FeatureNEON]>;
 
 let ArchExtKindSpelling = "AEK_F32MM" in
 def FeatureMatMulFP32 : ExtensionWithMArch<"f32mm", "MatMulFP32", "FEAT_F32MM",
@@ -207,7 +207,7 @@ def FeatureLSE2 : Extension<"lse2", "LSE2", "FEAT_LSE2",
   "Enable Armv8.4-A Large System Extension 2 (LSE2) atomicity rules">;
 
 def FeatureFP16FML : ExtensionWithMArch<"fp16fml", "FP16FML", "FEAT_FHM",
-  "Enable FP16 FML instructions", [FeatureFullFP16]>;
+  "Enable FP16 FML instructions", [FeatureFullFP16, FeatureNEON]>;
 
 def FeatureDotProd : ExtensionWithMArch<"dotprod", "DotProd", "FEAT_DotProd",
   "Enable dot product support", [FeatureNEON]>;
@@ -247,7 +247,8 @@ def FeatureAltFPCmp : Extension<"altnzcv", "AlternativeNZCV", "FEAT_FlagM2",
 
 def FeatureFRInt3264 : Extension<"fptoint", "FRInt3264", "FEAT_FRINTTS",
   "Enable FRInt[32|64][Z|X] instructions that round a floating-point number to "
-  "an integer (in FP format) forcing it to fit into a 32- or 64-bit int">;
+  "an integer (in FP format) forcing it to fit into a 32- or 64-bit int",
+  [FeatureFPARMv8]>;
 
 def FeatureSB : ExtensionWithMArch<"sb", "SB", "FEAT_SB",
   "Enable Armv8.5-A Speculation Barrier">;
@@ -279,7 +280,7 @@ def FeatureMTE : ExtensionWithMArch<"mte", "MTE", "FEAT_MTE, FEAT_MTE2",
 //===----------------------------------------------------------------------===//
 
 def FeatureBF16 : ExtensionWithMArch<"bf16", "BF16", "FEAT_BF16",
-  "Enable BFloat16 Extension">;
+  "Enable BFloat16 Extension", [FeatureNEON]>;
 
 def FeatureAMVS : Extension<"amvs", "AMVS", "FEAT_AMUv1p1",
   "Enable Armv8.6-A Activity Monitors Virtualization support",
@@ -375,9 +376,11 @@ def FeatureSVE2SM4 : ExtensionWithMArch<"sve2-sm4", "SVE2SM4", "FEAT_SVE_SM4",
 def FeatureSVE2SHA3 : ExtensionWithMArch<"sve2-sha3", "SVE2SHA3", "FEAT_SVE_SHA3",
   "Enable SHA3 SVE2 instructions", [FeatureSVE2, FeatureSHA3]>;
 
-def FeatureSVE2BitPerm : ExtensionWithMArch<"sve2-bitperm", "SVE2BitPerm",
-  "FEAT_SVE_BitPerm",
-  "Enable bit permutation SVE2 instructions", [FeatureSVE2]>;
+def FeatureSVEBitPerm : ExtensionWithMArch<"sve-bitperm", "SVEBitPerm",
+  "FEAT_SVE_BitPerm",  "Enable bit permutation SVE2 instructions">;
+
+def FeatureAliasSVE2BitPerm : ExtensionWithMArch<"sve2-bitperm", "SVE2BitPerm",
+  "",  "Shorthand for +sve2+sve-bitperm", [FeatureSVE2, FeatureSVEBitPerm]>;
 
 def FeatureTRBE : Extension<"trbe", "TRBE", "FEAT_TRBE",
   "Enable Trace Buffer Extension">;
@@ -403,7 +406,7 @@ def FeatureRME : Extension<"rme", "RME", "FEAT_RME",
   "Enable Realm Management Extension">;
 
 def FeatureSME : ExtensionWithMArch<"sme", "SME", "FEAT_SME",
-  "Enable Scalable Matrix Extension (SME)", [FeatureBF16]>;
+  "Enable Scalable Matrix Extension (SME)", [FeatureBF16, FeatureFullFP16]>;
 
 def FeatureSMEF64F64 : ExtensionWithMArch<"sme-f64f64", "SMEF64F64", "FEAT_SME_F64F64",
   "Enable Scalable Matrix Extension (SME) F64F64 instructions", [FeatureSME]>;
@@ -485,16 +488,16 @@ def FeatureSSVE_FP8FMA : ExtensionWithMArch<"ssve-fp8fma", "SSVE_FP8FMA", "FEAT_
   "Enable SVE2 FP8 multiply-add instructions", [FeatureSME2, FeatureFP8]>;
 
 def FeatureFP8DOT4: ExtensionWithMArch<"fp8dot4", "FP8DOT4", "FEAT_FP8DOT4",
-  "Enable FP8 4-way dot instructions", [FeatureFP8FMA]>;
+  "Enable FP8 4-way dot instructions", [FeatureNEON, FeatureFP8]>;
 
 def FeatureFP8DOT2: ExtensionWithMArch<"fp8dot2", "FP8DOT2", "FEAT_FP8DOT2",
-  "Enable FP8 2-way dot instructions", [FeatureFP8DOT4]>;
+  "Enable FP8 2-way dot instructions", [FeatureNEON, FeatureFP8]>;
 
 def FeatureSSVE_FP8DOT4 : ExtensionWithMArch<"ssve-fp8dot4", "SSVE_FP8DOT4", "FEAT_SSVE_FP8DOT4",
-  "Enable SVE2 FP8 4-way dot product instructions", [FeatureSSVE_FP8FMA]>;
+  "Enable SVE2 FP8 4-way dot product instructions", [FeatureSME2, FeatureFP8]>;
 
 def FeatureSSVE_FP8DOT2 : ExtensionWithMArch<"ssve-fp8dot2", "SSVE_FP8DOT2", "FEAT_SSVE_FP8DOT2",
-  "Enable SVE2 FP8 2-way dot product instructions", [FeatureSSVE_FP8DOT4]>;
+  "Enable SVE2 FP8 2-way dot product instructions", [FeatureSME2, FeatureFP8]>;
 
 def FeatureSME_LUTv2 : ExtensionWithMArch<"sme-lutv2", "SME_LUTv2", "FEAT_SME_LUTv2",
   "Enable Scalable Matrix Extension (SME) LUTv2 instructions", [FeatureSME2]>;
@@ -503,7 +506,7 @@ def FeatureSMEF8F32 : ExtensionWithMArch<"sme-f8f32", "SMEF8F32", "FEAT_SME_F8F3
   "Enable Scalable Matrix Extension (SME) F8F32 instructions", [FeatureSME2, FeatureFP8]>;
 
 def FeatureSMEF8F16 : ExtensionWithMArch<"sme-f8f16", "SMEF8F16", "FEAT_SME_F8F16",
-  "Enable Scalable Matrix Extension (SME) F8F16 instructions", [FeatureSMEF8F32]>;
+  "Enable Scalable Matrix Extension (SME) F8F16 instructions", [FeatureSME2, FeatureFP8]>;
 
 def FeatureCPA : ExtensionWithMArch<"cpa", "CPA", "FEAT_CPA",
   "Enable Armv9.5-A Checked Pointer Arithmetic">;
@@ -563,6 +566,15 @@ def FeaturePCDPHINT: ExtensionWithMArch<"pcdphint", "PCDPHINT", "FEAT_PCDPHINT",
 
 def FeaturePoPS: ExtensionWithMArch<"pops", "PoPS", "FEAT_PoPS",
   "Enable Armv9.6-A Point Of Physical Storage (PoPS) DC instructions">;
+
+def FeatureSSVE_BitPerm : ExtensionWithMArch<"ssve-bitperm", "SSVE_BitPerm", "FEAT_SSVE_BitPerm",
+  "Enable Armv9.6-A SVE BitPerm support in streaming SVE mode", [FeatureSME2, FeatureSVEBitPerm]>;
+
+def FeatureSME_MOP4: ExtensionWithMArch<"sme-mop4", "SME_MOP4", "FEAT_SME_MOP4",
+  "Enable SME Quarter-tile outer product instructions", [FeatureSME2]>;
+
+def FeatureSME_TMOP: ExtensionWithMArch<"sme-tmop", "SME_TMOP", "FEAT_SME_TMOP",
+  "Enable SME Structured sparsity outer product instructions.", [FeatureSME2]>;
 
 //===----------------------------------------------------------------------===//
 //  Other Features
@@ -873,7 +885,7 @@ def HasV9_3aOps : Architecture64<9, 3, "a", "v9.3a",
 def HasV9_4aOps : Architecture64<9, 4, "a", "v9.4a",
   [HasV8_9aOps, HasV9_3aOps],
   !listconcat(HasV9_3aOps.DefaultExts, [FeatureSPECRES2, FeatureCSSC,
-    FeatureRASv2])>;
+    FeatureRASv2, FeatureSVE2p1])>;
 def HasV9_5aOps : Architecture64<9, 5, "a", "v9.5a",
   [HasV9_4aOps, FeatureCPA],
   !listconcat(HasV9_4aOps.DefaultExts, [FeatureCPA,  FeatureLUT, FeatureFAMINMAX])>;

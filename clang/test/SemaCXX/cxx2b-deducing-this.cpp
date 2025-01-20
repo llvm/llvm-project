@@ -437,6 +437,10 @@ namespace std {
   constexpr strong_ordering strong_ordering::equal = {0};
   constexpr strong_ordering strong_ordering::greater = {1};
   constexpr strong_ordering strong_ordering::less = {-1};
+
+  template<typename T> constexpr __remove_reference_t(T)&& move(T&& t) noexcept {
+    return static_cast<__remove_reference_t(T)&&>(t);
+  }
 }
 
 namespace operators_deduction {
@@ -965,6 +969,22 @@ void f();
 void a::f(this auto) {} // expected-error {{an explicit object parameter cannot appear in a non-member function}}
 }
 
+namespace GH100341 {
+struct X {
+    X() = default;
+    X(X&&) = default;
+    void operator()(this X);
+};
+
+void fail() {
+    X()();
+    [x = X{}](this auto) {}();
+}
+void pass() {
+    std::move(X())();
+    std::move([x = X{}](this auto) {})();
+}
+} // namespace GH100341
 struct R {
   void f(this auto &&self, int &&r_value_ref) {} // expected-note {{candidate function template not viable: expects an rvalue for 2nd argument}}
   void g(int &&r_value_ref) {

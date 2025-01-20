@@ -36,16 +36,33 @@ func.func @_QQmain() {
 // PASSES-NEXT:    (S) 0 num-dce'd - Number of operations DCE'd
 // PASSES-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
 // PASSES-NEXT: 'fir.global' Pipeline
+// PASSES-NEXT:    SimplifyHLFIRIntrinsics
 // PASSES-NEXT:    OptimizedBufferization
+// PASSES-NEXT:    InlineHLFIRAssign
 // PASSES-NEXT: 'func.func' Pipeline
+// PASSES-NEXT:    SimplifyHLFIRIntrinsics
 // PASSES-NEXT:    OptimizedBufferization
+// PASSES-NEXT:    InlineHLFIRAssign
 // PASSES-NEXT: 'omp.declare_reduction' Pipeline
+// PASSES-NEXT:    SimplifyHLFIRIntrinsics
 // PASSES-NEXT:    OptimizedBufferization
+// PASSES-NEXT:    InlineHLFIRAssign
 // PASSES-NEXT: 'omp.private' Pipeline
+// PASSES-NEXT:    SimplifyHLFIRIntrinsics
 // PASSES-NEXT:    OptimizedBufferization
+// PASSES-NEXT:    InlineHLFIRAssign
 // PASSES-NEXT:   LowerHLFIROrderedAssignments
 // PASSES-NEXT:   LowerHLFIRIntrinsics
 // PASSES-NEXT:   BufferizeHLFIR
+// PASSES-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+// PASSES-NEXT:   'fir.global' Pipeline
+// PASSES-NEXT:     InlineHLFIRAssign
+// PASSES-NEXT:   'func.func' Pipeline
+// PASSES-NEXT:     InlineHLFIRAssign
+// PASSES-NEXT:   'omp.declare_reduction' Pipeline
+// PASSES-NEXT:     InlineHLFIRAssign
+// PASSES-NEXT:   'omp.private' Pipeline
+// PASSES-NEXT:     InlineHLFIRAssign
 // PASSES-NEXT:   ConvertHLFIRtoFIR
 // PASSES-NEXT:   LowerWorkshare
 // PASSES-NEXT:   CSE
@@ -106,11 +123,17 @@ func.func @_QQmain() {
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 // PASSES-NEXT: BoxedProcedurePass
 
-// PASSES-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+// PASSES-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'gpu.module', 'omp.declare_reduction', 'omp.private']
 // PASSES-NEXT:  'fir.global' Pipeline
 // PASSES-NEXT:    AbstractResultOpt
 // PASSES-NEXT:  'func.func' Pipeline
 // PASSES-NEXT:    AbstractResultOpt
+// PASSES-NEXT:  'gpu.module' Pipeline
+// PASSES-NEXT:   Pipeline Collection : ['func.func', 'gpu.func'] 
+// PASSES-NEXT:   'func.func' Pipeline 
+// PASSES-NEXT:   AbstractResultOpt
+// PASSES-NEXT:   'gpu.func' Pipeline 
+// PASSES-NEXT:   AbstractResultOpt
 // PASSES-NEXT:  'omp.declare_reduction' Pipeline
 // PASSES-NEXT:    AbstractResultOpt
 // PASSES-NEXT:  'omp.private' Pipeline

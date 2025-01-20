@@ -209,7 +209,7 @@ void lld::coff::writeMapFile(COFFLinkerContext &ctx) {
   std::error_code ec;
   raw_fd_ostream os(ctx.config.mapFile, ec, sys::fs::OF_None);
   if (ec)
-    fatal("cannot open " + ctx.config.mapFile + ": " + ec.message());
+    Fatal(ctx) << "cannot open " << ctx.config.mapFile << ": " << ec.message();
 
   ScopedTimer t1(ctx.totalMapTimer);
 
@@ -301,7 +301,7 @@ void lld::coff::writeMapFile(COFFLinkerContext &ctx) {
   uint64_t entryAddress = 0;
 
   if (!ctx.config.noEntry) {
-    Defined *entry = dyn_cast_or_null<Defined>(ctx.config.entry);
+    Defined *entry = dyn_cast_or_null<Defined>(ctx.symtab.entry);
     if (entry) {
       Chunk *chunk = entry->getChunk();
       entrySecIndex = chunk->getOutputSectionIdx();

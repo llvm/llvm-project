@@ -21,6 +21,14 @@ add_flang_library(FIRCodeGen
   FIRDialect
   FIRDialectSupport
   FIRSupport
+
+  LINK_COMPONENTS
+  AsmParser
+  AsmPrinter
+  Remarks
+  TargetParser
+
+  MLIR_LIBS
   MLIRComplexToLLVM
   MLIRComplexToStandard
   MLIRGPUDialect
@@ -34,10 +42,4 @@ add_flang_library(FIRCodeGen
   MLIRLLVMToLLVMIRTranslation
   MLIRTargetLLVMIRExport
   MLIRVectorToLLVM
-
-  LINK_COMPONENTS
-  AsmParser
-  AsmPrinter
-  Remarks
-  TargetParser
 )

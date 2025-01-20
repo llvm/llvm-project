@@ -64,12 +64,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  constexpr llvm::StringLiteral NAME##_init[] = VALUE;                         \
-  constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                          \
-      NAME##_init, std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 const opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -79,7 +80,8 @@ const opt::OptTable::Info InfoTable[] = {
 
 class GSYMUtilOptTable : public llvm::opt::GenericOptTable {
 public:
-  GSYMUtilOptTable() : GenericOptTable(InfoTable) {
+  GSYMUtilOptTable()
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -96,7 +98,8 @@ static uint64_t SegmentSize;
 static bool Quiet;
 static std::vector<uint64_t> LookupAddresses;
 static bool LookupAddressesFromStdin;
-static bool StoreMergedFunctionInfo = false;
+static bool UseMergedFunctions = false;
+static bool LoadDwarfCallSites = false;
 static std::string CallSiteYamlPath;
 
 static void parseArgs(int argc, char **argv) {
@@ -178,7 +181,7 @@ static void parseArgs(int argc, char **argv) {
   }
 
   LookupAddressesFromStdin = Args.hasArg(OPT_addresses_from_stdin);
-  StoreMergedFunctionInfo = Args.hasArg(OPT_merged_functions);
+  UseMergedFunctions = Args.hasArg(OPT_merged_functions);
 
   if (Args.hasArg(OPT_callsites_yaml_file_EQ)) {
     CallSiteYamlPath = Args.getLastArgValue(OPT_callsites_yaml_file_EQ);
@@ -189,6 +192,8 @@ static void parseArgs(int argc, char **argv) {
       std::exit(1);
     }
   }
+
+  LoadDwarfCallSites = Args.hasArg(OPT_dwarf_callsites);
 }
 
 /// @}
@@ -363,7 +368,7 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
 
   // Make a DWARF transformer object and populate the ranges of the code
   // so we don't end up adding invalid functions to GSYM data.
-  DwarfTransformer DT(*DICtx, Gsym);
+  DwarfTransformer DT(*DICtx, Gsym, LoadDwarfCallSites);
   if (!TextRanges.empty())
     Gsym.SetValidTextRanges(TextRanges);
 
@@ -375,7 +380,7 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
   // functions in the first FunctionInfo with that address range. Do this right
   // after loading the DWARF data so we don't have to deal with functions from
   // the symbol table.
-  if (StoreMergedFunctionInfo)
+  if (UseMergedFunctions)
     Gsym.prepareMergedFunctions(Out);
 
   // Get the UUID and convert symbol table to GSYM.
@@ -503,24 +508,37 @@ static llvm::Error convertFileToGSYM(OutputAggregator &Out) {
 }
 
 static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
-  if (auto Result = Gsym.lookup(Addr)) {
-    // If verbose is enabled dump the full function info for the address.
-    if (Verbose) {
-      if (auto FI = Gsym.getFunctionInfo(Addr)) {
-        OS << "FunctionInfo for " << HEX64(Addr) << ":\n";
-        Gsym.dump(OS, *FI);
-        OS << "\nLookupResult for " << HEX64(Addr) << ":\n";
+  if (UseMergedFunctions) {
+    if (auto Results = Gsym.lookupAll(Addr)) {
+      OS << "Found " << Results->size() << " functions at address "
+         << HEX64(Addr) << ":\n";
+      for (size_t i = 0; i < Results->size(); ++i) {
+        OS << "   " << Results->at(i);
+
+        if (i != Results->size() - 1)
+          OS << "\n";
       }
     }
-    OS << Result.get();
-  } else {
+  } else { /* UseMergedFunctions == false */
+    if (auto Result = Gsym.lookup(Addr)) {
+      // If verbose is enabled dump the full function info for the address.
+      if (Verbose) {
+        if (auto FI = Gsym.getFunctionInfo(Addr)) {
+          OS << "FunctionInfo for " << HEX64(Addr) << ":\n";
+          Gsym.dump(OS, *FI);
+          OS << "\nLookupResult for " << HEX64(Addr) << ":\n";
+        }
+      }
+      OS << Result.get();
+    } else {
+      if (Verbose)
+        OS << "\nLookupResult for " << HEX64(Addr) << ":\n";
+      OS << HEX64(Addr) << ": ";
+      logAllUnhandledErrors(Result.takeError(), OS, "error: ");
+    }
     if (Verbose)
-      OS << "\nLookupResult for " << HEX64(Addr) << ":\n";
-    OS << HEX64(Addr) << ": ";
-    logAllUnhandledErrors(Result.takeError(), OS, "error: ");
+      OS << "\n";
   }
-  if (Verbose)
-    OS << "\n";
 }
 
 int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {

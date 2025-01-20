@@ -486,8 +486,8 @@ public:
       return Str;
     if (std::optional<std::string> Str = Visit(S->getLHS()))
       return (*Str + " " + BinaryOperator::getOpcodeStr(S->getOpcode()) + " " +
-              std::to_string(S->getRHS().getLimitedValue()) +
-              (S->getRHS().isUnsigned() ? "U" : ""))
+              std::to_string(S->getRHS()->getLimitedValue()) +
+              (S->getRHS()->isUnsigned() ? "U" : ""))
           .str();
     return std::nullopt;
   }

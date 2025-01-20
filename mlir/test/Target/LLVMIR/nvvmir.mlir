@@ -291,6 +291,18 @@ llvm.func @nvvm_mma_m16n8k16_f16_f16(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
   llvm.return %0 : !llvm.struct<(vector<2xf16>, vector<2xf16>)>
 }
 
+// CHECK-LABEL: @nvvm_mma_m16n8k16_bf16_bf16
+llvm.func @nvvm_mma_m16n8k16_bf16_bf16(%a0 : i32, %a1 : i32, %a2 : i32, %a3 : i32,
+                              %b0 : i32, %b1 : i32,
+                              %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32) -> !llvm.struct<(f32, f32, f32, f32)> {
+  // CHECK: call { float, float, float, float } @llvm.nvvm.mma.m16n8k16.row.col.bf16
+  %0 = nvvm.mma.sync A[%a0, %a1, %a2, %a3] B[%b0, %b1] C[%c0, %c1, %c2, %c3]
+    {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
+     multiplicandAPtxType = #nvvm.mma_type<bf16>, multiplicandBPtxType = #nvvm.mma_type<bf16>,
+     shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (i32, i32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
+  llvm.return %0 : !llvm.struct<(f32, f32, f32, f32)>
+}
+
 // f32 return type, f16 accumulate type
 // CHECK-LABEL: @nvvm_mma_m16n8k16_f32_f16
 llvm.func @nvvm_mma_m16n8k16_f32_f16(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
@@ -556,9 +568,7 @@ llvm.func @kernel_func() attributes {nvvm.kernel} {
   llvm.return
 }
 
-// CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
+// CHECK: ptx_kernel void @kernel_func
 
 // -----
 
@@ -566,9 +576,8 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 2
   llvm.return
 }
 
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
 // CHECK:     {ptr @kernel_func, !"maxntidx", i32 1}
 // CHECK:     {ptr @kernel_func, !"maxntidy", i32 23}
 // CHECK:     {ptr @kernel_func, !"maxntidz", i32 32}
@@ -578,9 +587,8 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = array<i32: 1, 2
   llvm.return
 }
 
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
 // CHECK:     {ptr @kernel_func, !"reqntidx", i32 1}
 // CHECK:     {ptr @kernel_func, !"reqntidy", i32 23}
 // CHECK:     {ptr @kernel_func, !"reqntidz", i32 32}
@@ -590,31 +598,28 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.cluster_dim = array<i32: 
   llvm.return
 }
 
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
 // CHECK:     {ptr @kernel_func, !"cluster_dim_x", i32 3}
 // CHECK:     {ptr @kernel_func, !"cluster_dim_y", i32 5}
 // CHECK:     {ptr @kernel_func, !"cluster_dim_z", i32 7}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
 // -----
 
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.cluster_max_blocks = 8} {
   llvm.return
 }
 
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
 // CHECK:     {ptr @kernel_func, !"cluster_max_blocks", i32 8}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
 // -----
 
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.minctasm = 16} {
   llvm.return
 }
 
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
 // CHECK:     {ptr @kernel_func, !"minctasm", i32 16}
 // -----
 
@@ -622,9 +627,8 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxnreg = 16} {
   llvm.return
 }
 
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
 // CHECK:     {ptr @kernel_func, !"maxnreg", i32 16}
 // -----
 
@@ -633,9 +637,8 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 2
   llvm.return
 }
 
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK:     !nvvm.annotations =
-// CHECK-NOT: {ptr @nvvm_special_regs, !"kernel", i32 1}
-// CHECK:     {ptr @kernel_func, !"kernel", i32 1}
 // CHECK:     {ptr @kernel_func, !"maxnreg", i32 32}
 // CHECK:     {ptr @kernel_func, !"maxntidx", i32 1}
 // CHECK:     {ptr @kernel_func, !"maxntidy", i32 23}
@@ -643,52 +646,19 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 2
 // CHECK:     {ptr @kernel_func, !"minctasm", i32 16}
 
 // -----
-
-llvm.func @kernel_func(%numberOfThreads : i32) {
-  // expected-error @below {{'nvvm.barrier' op barrier id is missing, it should be set between 0 to 15}}
-  nvvm.barrier number_of_threads = %numberOfThreads
-}
-
-// -----
-// expected-error @below {{'"nvvm.minctasm"' attribute must be integer constant}}
-llvm.func @kernel_func() attributes {nvvm.kernel,
-nvvm.minctasm = "foo"} {
-  llvm.return
-}
-
-
-// -----
-// expected-error @below {{'"nvvm.maxnreg"' attribute must be integer constant}}
-llvm.func @kernel_func() attributes {nvvm.kernel,
-nvvm.maxnreg = "boo"} {
-  llvm.return
-}
-// -----
-// expected-error @below {{'"nvvm.reqntid"' attribute must be integer array with maximum 3 index}}
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = array<i32: 3, 4, 5, 6>} {
-  llvm.return
-}
-
-// -----
-// expected-error @below {{'"nvvm.maxntid"' attribute must be integer array with maximum 3 index}}
-llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 3, 4, 5, 6>} {
-  llvm.return
-}
-
-// -----
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK: !nvvm.annotations =
 // CHECK: !1 = !{ptr @kernel_func, !"grid_constant", !2}
 // CHECK: !2 = !{i32 1}
-// CHECK: !3 = !{ptr @kernel_func, !"kernel", i32 1}
 llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}) attributes {nvvm.kernel} {
   llvm.return
 }
 
 // -----
+// CHECK: define ptx_kernel void @kernel_func
 // CHECK: !nvvm.annotations =
 // CHECK: !1 = !{ptr @kernel_func, !"grid_constant", !2}
 // CHECK: !2 = !{i32 1, i32 3}
-// CHECK: !3 = !{ptr @kernel_func, !"kernel", i32 1}
 llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}, %arg1: f32, %arg2: !llvm.ptr {llvm.byval = f32, nvvm.grid_constant}) attributes {nvvm.kernel} {
   llvm.return
 }
@@ -729,6 +699,16 @@ llvm.func @nvvm_fence_proxy_tensormap_generic_acquire(%addr : !llvm.ptr) {
   nvvm.fence.proxy.acquire #nvvm.mem_scope<sys> %addr, %c128
   llvm.return
 }
+// -----
+
+// CHECK-LABEL: @nvvm_exit
+llvm.func @nvvm_exit() {
+  // CHECK: call void @llvm.nvvm.exit()
+  nvvm.exit
+  llvm.return
+}
+
+
 
 // -----
 // CHECK-LABEL: @nvvm_breakpoint
@@ -739,63 +719,27 @@ llvm.func @nvvm_breakpoint() {
 }
 
 // -----
-
-// CHECK-LABEL: @tma_prefetch_1d
-llvm.func @tma_prefetch_1d(%tma_desc : !llvm.ptr, %d0 : i32, %ch : i64) {
-  // CHECK-LLVM: call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.1d(ptr %0, i32 %{{.*}}, i64 undef, i1 false)
-  // CHECK-LLVM: call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.1d(ptr %0, i32 %{{.*}}, i64 %{{.*}}, i1 true)
-  nvvm.cp.async.bulk.tensor.prefetch %tma_desc, box[%d0] : !llvm.ptr
-  nvvm.cp.async.bulk.tensor.prefetch %tma_desc, box[%d0] l2_cache_hint = %ch : !llvm.ptr
+// CHECK-LABEL: @nvvm_wgmma_fence_aligned
+llvm.func @nvvm_wgmma_fence_aligned() {
+  // CHECK: call void @llvm.nvvm.wgmma.fence.sync.aligned()
+  nvvm.wgmma.fence.aligned
   llvm.return
 }
 
-// CHECK-LABEL: @tma_prefetch_2d
-llvm.func @tma_prefetch_2d(%tma_desc : !llvm.ptr, %d0 : i32, %d1 : i32, %ch : i64) {
-  // CHECK-LLVM: call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.2d(ptr %0, i32 %{{.*}}, i32 %{{.*}}, i64 undef, i1 false)
-  // CHECK-LLVM: call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.2d(ptr %0, i32 %{{.*}}, i32 %{{.*}}, i64 %{{.*}}, i1 true)
-  nvvm.cp.async.bulk.tensor.prefetch %tma_desc, box[%d0, %d1] : !llvm.ptr
-  nvvm.cp.async.bulk.tensor.prefetch %tma_desc, box[%d0, %d1] l2_cache_hint = %ch : !llvm.ptr
+// -----
+// CHECK-LABEL: @nvvm_wgmma_commit_group_aligned
+llvm.func @nvvm_wgmma_commit_group_aligned() {
+  // CHECK: call void @llvm.nvvm.wgmma.commit_group.sync.aligned()
+  nvvm.wgmma.commit.group.sync.aligned
   llvm.return
 }
 
-// CHECK-LABEL: @tma_prefetch_3d
-llvm.func @tma_prefetch_3d(%tma_desc : !llvm.ptr, %d0 : i32, %d1 : i32, %d2 : i32, %off0 : i16, %ch : i64) {
-  // CHECK-LLVM: call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.3d(ptr %0, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i64 undef, i1 false)
-  // CHECK-LLVM: call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.3d(ptr %0, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i64 %{{.*}}, i1 true)
-  nvvm.cp.async.bulk.tensor.prefetch %tma_desc, box[%d0, %d1, %d2] : !llvm.ptr
-  nvvm.cp.async.bulk.tensor.prefetch %tma_desc, box[%d0, %d1, %d2] l2_cache_hint = %ch : !llvm.ptr
-
-  // CHECK-LLVM: call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.3d(ptr %0, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i16 %{{.*}}, i64 undef, i1 false)
-  // CHECK-LLVM: call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.3d(ptr %0, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i16 %{{.*}}, i64 %{{.*}}, i1 true)
-  nvvm.cp.async.bulk.tensor.prefetch %tma_desc, box[%d0, %d1, %d2] im2col[%off0] : !llvm.ptr
-  nvvm.cp.async.bulk.tensor.prefetch %tma_desc, box[%d0, %d1, %d2] im2col[%off0] l2_cache_hint = %ch : !llvm.ptr
-  llvm.return
-}
-
-// CHECK-LABEL: @tma_prefetch_4d
-llvm.func @tma_prefetch_4d(%tma_desc : !llvm.ptr, %d0 : i32, %d1 : i32, %d2 : i32, %d3 : i32, %off0 : i16, %off1 : i16, %ch : i64) {
-  // CHECK-LLVM: call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.4d(ptr %0, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i64 undef, i1 false)
-  // CHECK-LLVM: call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.4d(ptr %0, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i64 %{{.*}}, i1 true)
-  nvvm.cp.async.bulk.tensor.prefetch %tma_desc, box[%d0, %d1, %d2, %d3] : !llvm.ptr
-  nvvm.cp.async.bulk.tensor.prefetch %tma_desc, box[%d0, %d1, %d2, %d3] l2_cache_hint = %ch : !llvm.ptr
-
-  // CHECK-LLVM: call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.4d(ptr %0, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i16 %{{.*}}, i16 %{{.*}}, i64 undef, i1 false)
-  // CHECK-LLVM: call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.4d(ptr %0, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i16 %{{.*}}, i16 %{{.*}}, i64 %{{.*}}, i1 true)
-  nvvm.cp.async.bulk.tensor.prefetch %tma_desc, box[%d0, %d1, %d2, %d3] im2col[%off0, %off1] : !llvm.ptr
-  nvvm.cp.async.bulk.tensor.prefetch %tma_desc, box[%d0, %d1, %d2, %d3] im2col[%off0, %off1] l2_cache_hint = %ch : !llvm.ptr
-  llvm.return
-}
-
-// CHECK-LABEL: @tma_prefetch_5d
-llvm.func @tma_prefetch_5d(%tma_desc : !llvm.ptr, %d0 : i32, %d1 : i32, %d2 : i32, %d3 : i32, %d4 : i32, %off0 : i16, %off1 : i16, %off2 : i16, %ch : i64) {
-  // CHECK-LLVM: call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.5d(ptr %0, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i64 undef, i1 false)
-  // CHECK-LLVM: call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.5d(ptr %0, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i64 %{{.*}}, i1 true)
-  nvvm.cp.async.bulk.tensor.prefetch %tma_desc, box[%d0, %d1, %d2, %d3, %d4] : !llvm.ptr
-  nvvm.cp.async.bulk.tensor.prefetch %tma_desc, box[%d0, %d1, %d2, %d3, %d4] l2_cache_hint = %ch : !llvm.ptr
-
-  // CHECK-LLVM: call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.5d(ptr %0, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i16 %{{.*}}, i16 %{{.*}}, i16 %{{.*}}, i64 undef, i1 false)
-  // CHECK-LLVM: call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.5d(ptr %0, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i16 %{{.*}}, i16 %{{.*}}, i16 %{{.*}}, i64 %{{.*}}, i1 true)
-  nvvm.cp.async.bulk.tensor.prefetch %tma_desc, box[%d0, %d1, %d2, %d3, %d4] im2col[%off0, %off1, %off2] : !llvm.ptr
-  nvvm.cp.async.bulk.tensor.prefetch %tma_desc, box[%d0, %d1, %d2, %d3, %d4] im2col[%off0, %off1, %off2] l2_cache_hint = %ch : !llvm.ptr
+// -----
+// CHECK-LABEL: @nvvm_wgmma_wait_group_aligned
+llvm.func @nvvm_wgmma_wait_group_aligned() {
+  // CHECK: call void @llvm.nvvm.wgmma.wait_group.sync.aligned(i64 0)
+  nvvm.wgmma.wait.group.sync.aligned 0
+  // CHECK: call void @llvm.nvvm.wgmma.wait_group.sync.aligned(i64 20)
+  nvvm.wgmma.wait.group.sync.aligned 20
   llvm.return
 }

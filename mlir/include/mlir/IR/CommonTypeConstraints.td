@@ -24,22 +24,19 @@ include "mlir/IR/DialectBase.td"
 // Explicitly disallow 0-D vectors for now until we have good enough coverage.
 def IsVectorOfNonZeroRankTypePred : And<[CPred<"::llvm::isa<::mlir::VectorType>($_self)">,
                                          CPred<"::llvm::cast<::mlir::VectorType>($_self).getRank() > 0">]>;
-def IsFixedVectorOfNonZeroRankTypePred : And<[CPred<"::llvm::isa<::mlir::VectorType>($_self)">,
-                                              CPred<"::llvm::cast<::mlir::VectorType>($_self).getRank() > 0">,
-                                              CPred<"!::llvm::cast<VectorType>($_self).isScalable()">]>;
+def IsFixedVectorOfNonZeroRankTypePred : And<[CPred<"::llvm::isa<::mlir::FixedVectorType>($_self)">,
+                                              CPred<"::llvm::cast<::mlir::VectorType>($_self).getRank() > 0">]>;
 
 // Temporary vector type clone that allows gradual transition to 0-D vectors.
 // TODO: Remove this when all ops support 0-D vectors.
 def IsVectorOfAnyRankTypePred : CPred<"::llvm::isa<::mlir::VectorType>($_self)">;
 
 // Whether a type is a fixed-length VectorType.
-def IsFixedVectorOfAnyRankTypePred : CPred<[{::llvm::isa<::mlir::VectorType>($_self) &&
-                                  !::llvm::cast<VectorType>($_self).isScalable()}]>;
+def IsFixedVectorOfAnyRankTypePred : CPred<[{::llvm::isa<::mlir::FixedVectorType>($_self)}]>;
 
 // Whether a type is a scalable VectorType.
 def IsVectorTypeWithAnyDimScalablePred
-        : CPred<[{::llvm::isa<::mlir::VectorType>($_self) &&
-                  ::llvm::cast<VectorType>($_self).isScalable()}]>;
+        : CPred<[{::llvm::isa<::mlir::ScalableVectorType>($_self)}]>;
 
 // Whether a type is a scalable VectorType, with a single trailing scalable dimension.
 // Examples:
@@ -333,31 +330,31 @@ def F80 : F<80>;
 def F128 : F<128>;
 
 def BF16 : Type<CPred<"$_self.isBF16()">, "bfloat16 type">,
-           BuildableType<"$_builder.getBF16Type()">;
+           BuildableType<"$_builder.getType<BFloat16Type>()">;
 def TF32 : Type<CPred<"$_self.isTF32()">, "tf32 type">,
-           BuildableType<"$_builder.getTF32Type()">;
+           BuildableType<"$_builder.getType<FloatTF32Type>()">;
 def F8E4M3FN : Type<CPred<"$_self.isFloat8E4M3FN()">, "f8E4M3FN type">,
-               BuildableType<"$_builder.getFloat8E4M3FNType()">;
+               BuildableType<"$_builder.getType<Float8E4M3FNType>()">;
 def F8E5M2 : Type<CPred<"$_self.isFloat8E5M2()">, "f8E5M2 type">,
-             BuildableType<"$_builder.getFloat8E5M2Type()">;
+             BuildableType<"$_builder.getType<Float8E5M2Type>()">;
 def F8E4M3 : Type<CPred<"$_self.isFloat8E4M3()">, "f8E4M3 type">,
-             BuildableType<"$_builder.getFloat8E4M3Type()">;
+             BuildableType<"$_builder.getType<Float8E4M3Type>()">;
 def F8E4M3FNUZ : Type<CPred<"$_self.isFloat8E4M3FNUZ()">, "f8E4M3FNUZ type">,
-                 BuildableType<"$_builder.getFloat8E4M3FNUZType()">;
+                 BuildableType<"$_builder.getType<Float8E4M3FNUZType>()">;
 def F8E4M3B11FNUZ : Type<CPred<"$_self.isFloat8E4M3B11FNUZ()">, "f8E4M3B11FNUZ type">,
-                 BuildableType<"$_builder.getFloat8E4M3B11FNUZType()">;
+                 BuildableType<"$_builder.getType<Float8E4M3B11FNUZType>()">;
 def F8E5M2FNUZ : Type<CPred<"$_self.isFloat8E5M2FNUZ()">, "f8E5M2FNUZ type">,
-                 BuildableType<"$_builder.getFloat8E5M2FNUZType()">;
+                 BuildableType<"$_builder.getType<Float8E5M2FNUZType>()">;
 def F8E3M4 : Type<CPred<"$_self.isFloat8E3M4()">, "f8E3M4 type">,
-             BuildableType<"$_builder.getFloat8E3M4Type()">;
+             BuildableType<"$_builder.getType<Float8E3M4Type>()">;
 def F4E2M1FN : Type<CPred<"$_self.isFloat4E2M1FN()">, "f4E2M1FN type">,
-               BuildableType<"$_builder.getFloat4E2M1FNType()">;
+               BuildableType<"$_builder.getType<Float4E2M1FNType>()">;
 def F6E2M3FN : Type<CPred<"$_self.isFloat6E2M3FN()">, "f6E2M3FN type">,
-               BuildableType<"$_builder.getFloat6E2M3FNType()">;
+               BuildableType<"$_builder.getType<Float6E2M3FNType>()">;
 def F6E3M2FN : Type<CPred<"$_self.isFloat6E3M2FN()">, "f6E3M2FN type">,
-               BuildableType<"$_builder.getFloat6E3M2FNType()">;
+               BuildableType<"$_builder.getType<Float6E3M2FNType>()">;
 def F8E8M0FNU : Type<CPred<"$_self.isFloat8E8M0FNU()">, "f8E8M0FNU type">,
-                BuildableType<"$_builder.getFloat8E8M0FNUType()">;
+                BuildableType<"$_builder.getType<Float8E8M0FNUType>()">;
 
 def AnyComplex : Type<CPred<"::llvm::isa<::mlir::ComplexType>($_self)">,
                       "complex-type", "::mlir::ComplexType">;

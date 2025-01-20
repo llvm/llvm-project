@@ -1953,6 +1953,8 @@
 // CHECK_GNR_M32: #define __SSSE3__ 1
 // CHECK_GNR_M32: #define __TSXLDTRK__ 1
 // CHECK_GNR_M32: #define __UINTR__ 1
+// CHECK_GNR_M32-NOT: #define __USERMSR__ 1
+// CHECK_DMR_M32: #define __USERMSR__ 1
 // CHECK_GNR_M32: #define __VAES__ 1
 // CHECK_GNR_M32: #define __VPCLMULQDQ__ 1
 // CHECK_GNR_M32: #define __WAITPKG__ 1
@@ -2061,6 +2063,8 @@
 // CHECK_GNR_M64: #define __SSSE3__ 1
 // CHECK_GNR_M64: #define __TSXLDTRK__ 1
 // CHECK_GNR_M64: #define __UINTR__ 1
+// CHECK_GNR_M64-NOT: #define __USERMSR__ 1
+// CHECK_DMR_M64: #define __USERMSR__ 1
 // CHECK_GNR_M64: #define __VAES__ 1
 // CHECK_GNR_M64: #define __VPCLMULQDQ__ 1
 // CHECK_GNR_M64: #define __WAITPKG__ 1

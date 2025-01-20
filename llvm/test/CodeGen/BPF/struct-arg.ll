@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=bpfel | FileCheck %s
+; RUN: llc < %s -mtriple=bpfel | FileCheck %s
 ; Source:
 ;   struct t1 {
 ;     long a;
