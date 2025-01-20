@@ -1188,7 +1188,7 @@ enum AnalysisResult {
 // Analyze cases where a GSLPointer is initialized or assigned from a
 // temporary owner object.
 static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
-                                               Local L) {
+                                               Local L, LifetimeKind LK) {
   if (!pathOnlyHandlesGslPointer(Path))
     return NotGSLPointer;
 
@@ -1208,7 +1208,8 @@ static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
       //   auto p2 = Temp().owner; // Here p2 is dangling.
       if (const auto *FD = llvm::dyn_cast_or_null<FieldDecl>(E.D);
           FD && !FD->getType()->isReferenceType() &&
-          isRecordWithAttr<OwnerAttr>(FD->getType())) {
+          isRecordWithAttr<OwnerAttr>(FD->getType()) &&
+          LK != LK_MemInitializer) {
         return Report;
       }
       return Abandon;
@@ -1312,7 +1313,7 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
     auto *MTE = dyn_cast<MaterializeTemporaryExpr>(L);
 
     bool IsGslPtrValueFromGslTempOwner = true;
-    switch (analyzePathForGSLPointer(Path, L)) {
+    switch (analyzePathForGSLPointer(Path, L, LK)) {
     case Abandon:
       return false;
     case Skip:
@@ -1444,6 +1445,7 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
         auto *DRE = dyn_cast<DeclRefExpr>(L);
         // Suppress false positives for code like the one below:
         //   Ctor(unique_ptr<T> up) : pointer(up.get()), owner(move(up)) {}
+        // FIXME: move this logic to analyzePathForGSLPointer.
         if (DRE && isRecordWithAttr<OwnerAttr>(DRE->getType()))
           return false;
 

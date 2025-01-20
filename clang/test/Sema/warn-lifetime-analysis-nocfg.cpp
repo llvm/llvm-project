@@ -839,4 +839,16 @@ void test2() {
   const Bar& bar = foo.v.back(); // OK
 }
 
+struct Foo2 {
+   std::unique_ptr<Bar> bar;
+};
+
+struct Test {
+  Test(Foo2 foo) : bar(foo.bar.get()), // OK
+      storage(std::move(foo.bar)) {};
+
+  Bar* bar;
+  std::unique_ptr<Bar> storage;
+};
+
 } // namespace GH120543
