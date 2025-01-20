@@ -137,8 +137,8 @@ bool LiveIntervals::invalidate(
 
   // LiveIntervals holds pointers to these results, so check for their
   // invalidation.
-  return (Inv.invalidate<SlotIndexesAnalysis>(MF, PA) ||
-          Inv.invalidate<MachineDominatorTreeAnalysis>(MF, PA));
+  return Inv.invalidate<SlotIndexesAnalysis>(MF, PA) ||
+         Inv.invalidate<MachineDominatorTreeAnalysis>(MF, PA);
 }
 
 void LiveIntervals::clear() {
