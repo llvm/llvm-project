@@ -311,15 +311,13 @@ static void processSTIPredicate(STIPredicateFunction &Fn,
     ConstRecVec Classes = Def->getValueAsListOfDefs("Classes");
     for (const Record *EC : Classes) {
       const Record *Pred = EC->getValueAsDef("Predicate");
-      if (!Predicate2Index.contains(Pred))
-        Predicate2Index[Pred] = NumUniquePredicates++;
+      if (Predicate2Index.try_emplace(Pred, NumUniquePredicates).second)
+        ++NumUniquePredicates;
 
       ConstRecVec Opcodes = EC->getValueAsListOfDefs("Opcodes");
       for (const Record *Opcode : Opcodes) {
-        if (!Opcode2Index.contains(Opcode)) {
-          Opcode2Index[Opcode] = OpcodeMappings.size();
+        if (Opcode2Index.try_emplace(Opcode, OpcodeMappings.size()).second)
           OpcodeMappings.emplace_back(Opcode, OpcodeInfo());
-        }
       }
     }
   }
@@ -452,11 +450,9 @@ void CodeGenSchedModels::checkMCInstPredicates() const {
   for (const Record *TIIPred :
        Records.getAllDerivedDefinitions("TIIPredicate")) {
     StringRef Name = TIIPred->getValueAsString("FunctionName");
-    StringMap<const Record *>::const_iterator It = TIIPredicates.find(Name);
-    if (It == TIIPredicates.end()) {
-      TIIPredicates[Name] = TIIPred;
+    auto [It, Inserted] = TIIPredicates.try_emplace(Name, TIIPred);
+    if (Inserted)
       continue;
-    }
 
     PrintError(TIIPred->getLoc(),
                "TIIPredicate " + Name + " is multiply defined.");
