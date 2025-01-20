@@ -4,7 +4,7 @@
 #include "llvm/Pass.h"
 
 namespace llvm {
-ModulePass *createYkShadowStackPass();
+ModulePass *createYkShadowStackPass(uint64_t controlPointCount);
 } // namespace llvm
 
 #endif

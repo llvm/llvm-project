@@ -56,7 +56,7 @@ public:
     for (Function &F : M) {
       if (F.empty()) // skip declarations.
         continue;
-      if (F.getName().startswith(YK_CLONE_PREFIX)) // skip cloned functions
+      if (F.getName().startswith(YK_UNOPT_PREFIX)) // skip cloned functions
         continue;
 
       LivenessAnalysis LA(&F);

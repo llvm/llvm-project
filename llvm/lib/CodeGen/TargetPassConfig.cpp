@@ -1162,7 +1162,7 @@ bool TargetPassConfig::addISelPasses() {
   }
 
   if (YkShadowStack) {
-    addPass(createYkShadowStackPass());
+    addPass(createYkShadowStackPass(numberOfControlPoints));
   }
   // We insert the yk control point pass as late as possible. It has to run
   // before instruction selection (or the machine IR won't reflect our

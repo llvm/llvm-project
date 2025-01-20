@@ -118,9 +118,14 @@ class YkShadowStack : public ModulePass {
   Type *Int32Ty = nullptr;
   Type *PointerSizedIntTy = nullptr;
 
+private:
+  uint64_t controlPointCount;
+
 public:
   static char ID;
-  YkShadowStack() : ModulePass(ID) {
+
+  YkShadowStack(uint64_t controlPointCount)
+      : ModulePass(ID), controlPointCount(controlPointCount) {
     initializeYkShadowStackPass(*PassRegistry::getPassRegistry());
   }
 
@@ -271,6 +276,62 @@ public:
     }
   }
 
+  // Handle main() separatley, since it works slightly differently to other
+  // functions: it allocates the shadow stack
+  //
+  // For main clone: `__yk_unopt_main` we need to update the allocas
+  // while reusing the same shadow stack pointer as the original main.
+  //
+  // Note that since we assuming main() doesn't call main(), we can consider
+  // the shadow stack disused at the point main() returns. For this reason,
+  // there's no need to emit a shadow epilogue for main().
+  //
+  // YKFIXME: Investigate languages that don't have/use main as the first
+  // entry point.
+  void updateMainFunctions(DataLayout &DL, Module &M, GlobalVariable *SSGlobal,
+                           LLVMContext &Context) {
+    Function *Main = M.getFunction(MAIN);
+    if (Main == nullptr || Main->isDeclaration()) {
+      Context.emitError("Unable to add shadow stack: could not find definition "
+                        "of \"main\" function!");
+      return;
+    }
+
+    // Update the original main function.
+    std::map<AllocaInst *, size_t> MainAllocas;
+    std::vector<ReturnInst *> MainRets;
+    size_t SFrameSize = analyseFunction(*Main, DL, MainAllocas, MainRets);
+    CallInst *Malloc = insertMainPrologue(Main, SSGlobal, SFrameSize);
+    rewriteAllocas(DL, MainAllocas, Malloc);
+
+    // If we have two control points, we need to update the cloned main
+    // function as well.
+    if (controlPointCount == 2) {
+      Function *MainClone = M.getFunction(YK_UNOPT_MAIN);
+      if (MainClone == nullptr || MainClone->isDeclaration()) {
+        Context.emitError(
+            "Unable to add shadow stack: could not find definition "
+            "of \"__yk_unopt_main\" function!");
+        return;
+      }
+
+      std::map<AllocaInst *, size_t> MainCloneAllocas;
+      std::vector<ReturnInst *> MainCloneRets;
+      size_t SFrameSizeClone =
+          analyseFunction(*MainClone, DL, MainCloneAllocas, MainCloneRets);
+
+      // Insert a load of SSGlobal at the beginning of MainClone.
+      BasicBlock &EntryBB = MainClone->getEntryBlock();
+      Instruction *FirstNonPHI = EntryBB.getFirstNonPHI();
+      IRBuilder<> BuilderClone(FirstNonPHI);
+
+      // Load the current shadow stack pointer from the global variable.
+      LoadInst *LoadedSSPtr = BuilderClone.CreateLoad(Int8PtrTy, SSGlobal);
+      // Replace all allocas in MainClone with the loaded shadow stack pointer.
+      rewriteAllocas(DL, MainCloneAllocas, LoadedSSPtr);
+    }
+  }
+
   bool runOnModule(Module &M) override {
     LLVMContext &Context = M.getContext();
 
@@ -291,25 +352,7 @@ public:
     SSGlobal->setInitializer(
         ConstantPointerNull::get(cast<PointerType>(Int8PtrTy)));
 
-    // Handle main() separatley, since it works slightly differently to other
-    // functions: it allocates the shadow stack.
-    //
-    // Note that since we assuming main() doesn't call main(), we can consider
-    // the shadow stack disused at the point main() returns. For this reason,
-    // there's no need to emit a shadow epilogue for main().
-    //
-    // YKFIXME: Investigate languages that don't have/use main as the first
-    // entry point.
-    Function *Main = M.getFunction(MAIN);
-    if (Main == nullptr || Main->isDeclaration()) {
-      Context.emitError("Unable to add shadow stack: could not find definition "
-                        "of \"main\" function!");
-    }
-    std::map<AllocaInst *, size_t> MainAllocas;
-    std::vector<ReturnInst *> MainRets;
-    size_t SFrameSize = analyseFunction(*Main, DL, MainAllocas, MainRets);
-    CallInst *Malloc = insertMainPrologue(Main, SSGlobal, SFrameSize);
-    rewriteAllocas(DL, MainAllocas, Malloc);
+    updateMainFunctions(DL, M, SSGlobal, Context);
 
     // Instrument each remaining function with shadow stack code.
     for (Function &F : M) {
@@ -317,9 +360,8 @@ public:
         // skip declarations.
         continue;
       }
-
-      if (F.getName() == MAIN || F.getName().startswith(YK_CLONE_PREFIX)) {
-        // We've handled main already.
+      // skip already handled main and unopt functions
+      if (F.getName() == MAIN || F.getName() == YK_UNOPT_MAIN) {
         continue;
       }
 
@@ -349,4 +391,6 @@ public:
 char YkShadowStack::ID = 0;
 INITIALIZE_PASS(YkShadowStack, DEBUG_TYPE, "yk shadowstack", false, false)
 
-ModulePass *llvm::createYkShadowStackPass() { return new YkShadowStack(); }
+ModulePass *llvm::createYkShadowStackPass(uint64_t controlPointCount) {
+  return new YkShadowStack(controlPointCount);
+}
