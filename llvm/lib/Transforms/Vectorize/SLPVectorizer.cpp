@@ -4972,7 +4972,7 @@ static Value *createInsertVector(
     // the subvector length.
     const unsigned VecVF = getNumElements(Vec->getType());
     SmallVector<int> Mask(VecVF, PoisonMaskElem);
-    std::iota(Mask.begin(), std::next(Mask.begin(), Index), 0);
+    std::iota(Mask.begin(), Mask.end(), 0);
     for (unsigned I : seq<unsigned>(SubVecVF))
       Mask[I + Index] = I + VecVF;
     if (Generator) {
@@ -13976,11 +13976,12 @@ Value *BoUpSLP::gather(
     Instruction *InsElt;
     if (auto *VecTy = dyn_cast<FixedVectorType>(Scalar->getType())) {
       assert(SLPReVec && "FixedVectorType is not expected.");
-      Vec = InsElt = cast<Instruction>(createInsertVector(
-          Builder, Vec, Scalar, Pos * getNumElements(VecTy)));
-      auto *II = dyn_cast<IntrinsicInst>(InsElt);
+      Vec =
+          createInsertVector(Builder, Vec, Scalar, Pos * getNumElements(VecTy));
+      auto *II = dyn_cast<IntrinsicInst>(Vec);
       if (!II || II->getIntrinsicID() != Intrinsic::vector_insert)
         return Vec;
+      InsElt = II;
     } else {
       Vec = Builder.CreateInsertElement(Vec, Scalar, Builder.getInt32(Pos));
       InsElt = dyn_cast<InsertElementInst>(Vec);
