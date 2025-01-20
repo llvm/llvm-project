@@ -840,10 +840,8 @@ public:
   bool matchRedundantBinOpInEquality(MachineInstr &MI,
                                      BuildFnTy &MatchInfo) const;
 
-  /// Match shifts greater or equal to the range (bitwidth of the operation, or
-  /// the source value). When match, also return the minimum useless shift
-  /// amount that results in complete loss of the source value. if the optional
-  /// value is std::nullopt, then the shift result is undefined.
+  /// Match shifts greater or equal to the range (the bitwidth of the result
+  /// datatype, or the effective bitwidth of the source value).
   bool matchShiftsTooBig(MachineInstr &MI,
                          std::optional<int64_t> &MatchInfo) const;
 

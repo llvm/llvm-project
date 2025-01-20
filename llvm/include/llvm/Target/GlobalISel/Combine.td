@@ -310,7 +310,7 @@ def shift_const_op : GICombinePatFrag<
   (outs root:$dst), (ins),
   !foreach(op,
            [G_SHL, G_ASHR, G_LSHR],
-           (pattern (G_CONSTANT $amt, $imm), (op $dst, $shifted, $amt)))>;
+           (pattern (op $dst, $shifted, $amt)))>;
 def shift_result_matchdata : GIDefMatchData<"std::optional<int64_t>">;
 def shifts_too_big : GICombineRule<
   (defs root:$root, shift_result_matchdata:$matchinfo),
