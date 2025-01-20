@@ -528,8 +528,8 @@ bool SIRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   // For functions with dynamically sized stack objects, we need to reference
   // off the base pointer in the epilog to restore the stack frame.
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return (MFI.getNumFixedObjects() && shouldRealignStack(MF)) ||
-         (MFI.hasVarSizedObjects() && shouldRealignStack(MF));
+  return (MFI.getNumFixedObjects() || MFI.hasVarSizedObjects()) &&
+         shouldRealignStack(MF);
 }
 
 Register SIRegisterInfo::getBaseRegister() const { return AMDGPU::SGPR34; }
