@@ -963,7 +963,7 @@ Bug Fixes to C++ Support
 - Fixed a crash caused by the incorrect construction of template arguments for CTAD alias guides when type
   constraints are applied. (#GH122134)
 - Fixed canonicalization of pack indexing types - Clang did not always recognized identical pack indexing. (#GH123033)
-
+- Clang now permits the use of immediate-escalating expressions in ``constexpr`` if conditions. (#GH123524)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
