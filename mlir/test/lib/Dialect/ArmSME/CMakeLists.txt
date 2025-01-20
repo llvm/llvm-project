@@ -3,8 +3,8 @@ add_mlir_library(MLIRArmSMETestPasses
   TestLowerToArmSME.cpp
 
   EXCLUDE_FROM_LIBMLIR
-  )
-mlir_target_link_libraries(MLIRArmSMETestPasses PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIRArithToArmSME
   MLIRArmSMEToLLVM
   MLIRArmSMEToSCF

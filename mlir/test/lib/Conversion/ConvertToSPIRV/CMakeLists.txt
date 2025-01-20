@@ -4,8 +4,8 @@ add_mlir_library(MLIRTestConvertToSPIRV
   TestSPIRVVectorUnrolling.cpp
 
   EXCLUDE_FROM_LIBMLIR
-  )
-mlir_target_link_libraries(MLIRTestConvertToSPIRV PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIRArithDialect
   MLIRFuncDialect
   MLIRPass

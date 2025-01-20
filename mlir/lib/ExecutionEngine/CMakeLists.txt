@@ -88,9 +88,8 @@ add_mlir_library(MLIRExecutionEngine
   IPO
   Passes
   ${LLVM_JIT_LISTENER_LIB}
-  )
 
-mlir_target_link_libraries(MLIRExecutionEngine PUBLIC
+  LINK_LIBS PUBLIC
   MLIRBuiltinToLLVMIRTranslation
   MLIRExecutionEngineUtils
   MLIRLLVMDialect
@@ -137,10 +136,8 @@ add_mlir_library(MLIRJitRunner
   JITLink
 
   LINK_LIBS PUBLIC
-  MLIRExecutionEngine
-)
-mlir_target_link_libraries(MLIRJitRunner PUBLIC
   ${dialect_libs}
+  MLIRExecutionEngine
   MLIRFuncDialect
   MLIRFuncToLLVM
   MLIRIR
