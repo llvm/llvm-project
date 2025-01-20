@@ -2475,8 +2475,10 @@ void SPIRVEmitIntrinsics::parseFunDeclarations(Module &M) {
     if (DemangledName.empty())
       continue;
     // allow only OpGroupAsyncCopy use case at the moment
-    auto [Grp, Opcode, ExtNo] =
-        SPIRV::mapBuiltinToOpcode(DemangledName, InstrSet);
+    auto [Grp, Opcode, ExtNo] = SPIRV::mapBuiltinToOpcode(
+        DemangledName, TM->getSubtarget<SPIRVSubtarget>(F).isOpenCLEnv()
+                           ? SPIRV::InstructionSet::OpenCL_std
+                           : SPIRV::InstructionSet::GLSL_std_450);
     if (Opcode != SPIRV::OpGroupAsyncCopy)
       continue;
     // find pointer arguments
