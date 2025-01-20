@@ -117,7 +117,7 @@ static LogicalResult generateOperationInclude(irdl::OperationOp op,
     if (!operandOp)
       return "{}";
 
-    auto names = llvm::map_range(operandOp->getNames(), [](Attribute &attr) {
+    auto names = llvm::map_range(operandOp->getNames(), [](auto &attr) {
       return mlir::cast<StringAttr>(attr);
     });
 
