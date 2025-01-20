@@ -102,27 +102,37 @@ static LogicalResult generateOperationInclude(irdl::OperationOp op,
 
   auto &&block = op.getBody().getBlocks().front();
 
-  const unsigned operandCount = ([&block]() -> unsigned {
+  auto operandOp = ([&block]() -> std::optional<irdl::OperandsOp> {
     auto operands = block.getOps<irdl::OperandsOp>();
     if (operands.empty())
-      return 0;
-
-    // at most 1, guaranteed by verifiers
-    auto &&operand = *operands.begin();
-    return operand.getNumOperands();
+      return {};
+    return *operands.begin();
   })();
 
-  const unsigned resultCount = ([&block]() -> unsigned {
-    auto resultsOps = block.getOps<irdl::ResultsOp>();
+  auto resultsOp = *block.getOps<irdl::ResultsOp>().begin();
 
-    // exactly 1 resultOp, guaranteed by verifiers
-    auto &&resultsOp = *resultsOps.begin();
-    return resultsOp.getNumOperands();
+  const auto operandCount = operandOp ? operandOp->getNumOperands() : 0;
+
+  const auto operandNames = ([&operandOp]() -> std::string {
+    if (!operandOp)
+      return "{}";
+
+    auto names = llvm::map_range(operandOp->getNames(), [](auto &attr) {
+      return mlir::cast<StringAttr, Attribute>(attr);
+    });
+
+    std::string nameArray;
+    llvm::raw_string_ostream nameArrayStream(nameArray);
+    nameArrayStream << "{\"" << llvm::join(names, "\", \"") << "\"}";
+
+    return nameArray;
   })();
+
+  const unsigned resultCount = resultsOp.getNumOperands();
 
   output << llvm::formatv(
       opDeclTemplateText, opName, opCppName, usefulStrings.dialectName,
-      operandCount, resultCount, usefulStrings.namespaceOpen,
+      operandCount, operandNames, resultCount, usefulStrings.namespaceOpen,
       usefulStrings.namespaceClose, usefulStrings.namespacePath);
 
   return success();

@@ -3,15 +3,16 @@
 1: Operation CppName
 2: Dialect Name
 3: Operand count
-4: Result count
+4: Operand names
+5: Result count
 
-5: open namespace
-6: close namespace
-7: namespace path
+6: open namespace
+7: close namespace
+8: namespace path
 */
 
 R"(
-{5}
+{6}
 
 namespace detail {
 class {1}GenericAdaptorBase {
@@ -95,6 +96,14 @@ public:
     return ::llvm::StringLiteral("{2}.{0}");
   }
 
+  ::llvm::ArrayRef getOperandNames() {
+    return {4};
+  }
+
+  ::llvm::StringRef getOperandName(unsigned index) {{
+    return getOperandNames()[index];
+  }
+
   std::pair<unsigned, unsigned> getODSOperandIndexAndLength(unsigned index) {
     return {index, {3}};
   }
@@ -110,7 +119,7 @@ public:
 
   ::mlir::MutableOperandRange getArgsMutable();
   std::pair<unsigned, unsigned> getODSResultIndexAndLength(unsigned index) {
-    return {{index, {4}};
+    return {{index, {5}};
   }
 
   ::mlir::Operation::result_range getODSResults(unsigned index) {
@@ -137,8 +146,8 @@ public:
 };
 
 
-{6}
+{7}
 
-MLIR_DECLARE_EXPLICIT_TYPE_ID({7}::{1})
+MLIR_DECLARE_EXPLICIT_TYPE_ID({8}::{1})
 
 )"
