@@ -969,7 +969,6 @@ protected:
           return;
         }
 
-
         uint32_t lowest_func_idx = UINT32_MAX;
         uint32_t highest_func_idx = 0;
         for (AddressRange range : sc.function->GetAddressRanges()) {

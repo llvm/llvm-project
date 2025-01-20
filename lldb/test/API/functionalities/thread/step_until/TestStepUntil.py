@@ -103,9 +103,11 @@ class StepUntilTestCase(TestBase):
         """Test that we get an error if attempting to step outside the current
         function"""
         thread = self._common_setup(None, None)
-        self.expect(f"thread until {self.in_foo}",
-                    substrs=["Until target outside of the current function"],
-                             error=True)
+        self.expect(
+            f"thread until {self.in_foo}",
+            substrs=["Until target outside of the current function"],
+            error=True,
+        )
 
     @no_debug_info_test
     @skipIf(oslist=lldbplatformutil.getDarwinOSTriples() + ["windows"])
@@ -117,6 +119,8 @@ class StepUntilTestCase(TestBase):
         _, _, thread, _ = lldbutil.run_to_source_breakpoint(
             self, "At the start", lldb.SBFileSpec(self.main_source)
         )
-        self.expect(f"thread until {self.in_foo}",
-                    substrs=["Until target outside of the current function"],
-                             error=True)
+        self.expect(
+            f"thread until {self.in_foo}",
+            substrs=["Until target outside of the current function"],
+            error=True,
+        )
