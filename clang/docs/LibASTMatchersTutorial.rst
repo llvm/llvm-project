@@ -12,6 +12,19 @@ abstract syntax tree (AST). To this end, the reader is encouraged to
 skim the :doc:`Introduction to the Clang
 AST <IntroductionToTheClangAST>`
 
+==================================
+Prerequisites
+==================================
+- `cmake` (version 3.16 or later)
+- `ninja-build`
+- `g++` or another C++ compiler supporting C++17
+- `libgtest-dev` for Google Test
+--Install missing packages on Ubuntu:
+.. code-block:: bash
+
+   sudo apt install cmake ninja-build g++ libgtest-dev
+- cmake -G Ninja ../llvm-project/llvm -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra" -DCMAKE_BUILD_TYPE=Release -DLLVM_BUILD_TESTS=ON - DCMAKE_USE_OPENSSL=OFF
+
 Step 0: Obtaining Clang
 =======================
 
