@@ -7,16 +7,16 @@
 
 ! Test that the flag does not affect globals with default init
 
-module m2
+module zeroInitM2
   type val
     integer :: my_val = 1
   end type val
   type(val) :: v1
-end module m2
+end module zeroInitM2
 
-!CHECK:  fir.global @_QMm2Ev1 : !fir.type<_QMm2Tval{my_val:i32}> {
-!CHECK:    %[[V1:.*]] = fir.undefined !fir.type<_QMm2Tval{my_val:i32}>
+!CHECK:  fir.global @_QMzeroinitm2Ev1 : !fir.type<_QMzeroinitm2Tval{my_val:i32}> {
+!CHECK:    %[[V1:.*]] = fir.undefined !fir.type<_QMzeroinitm2Tval{my_val:i32}>
 !CHECK:    %[[ONE:.*]] = arith.constant 1 : i32
-!CHECK:    %[[V1_INIT:.*]] = fir.insert_value %[[V1]], %[[ONE]], ["my_val", !fir.type<_QMm2Tval{my_val:i32}>] : (!fir.type<_QMm2Tval{my_val:i32}>, i32) -> !fir.type<_QMm2Tval{my_val:i32}>
-!CHECK:    fir.has_value %[[V1_INIT]] : !fir.type<_QMm2Tval{my_val:i32}>
+!CHECK:    %[[V1_INIT:.*]] = fir.insert_value %[[V1]], %[[ONE]], ["my_val", !fir.type<_QMzeroinitm2Tval{my_val:i32}>] : (!fir.type<_QMzeroinitm2Tval{my_val:i32}>, i32) -> !fir.type<_QMzeroinitm2Tval{my_val:i32}>
+!CHECK:    fir.has_value %[[V1_INIT]] : !fir.type<_QMzeroinitm2Tval{my_val:i32}>
 !CHECK:  }
