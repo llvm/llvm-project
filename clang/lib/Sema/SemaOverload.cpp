@@ -723,10 +723,6 @@ namespace {
     unsigned CallArgIndex;
   };
 
-  struct DFIParamWithArgumentsAndSuppliedType : DFIArguments {
-    TemplateParameter Param;
-    TemplateArgument SuppliedType;
-  };
   // Structure used by DeductionFailureInfo to store information about
   // unsatisfied constraints.
   struct CNSInfo {
@@ -795,12 +791,10 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
     break;
   }
   case TemplateDeductionResult::InvalidExplicitArguments: {
-    DFIParamWithArgumentsAndSuppliedType *Saved =
-        new (Context) DFIParamWithArgumentsAndSuppliedType;
+    DFIParamWithArguments *Saved = new (Context) DFIParamWithArguments;
     Saved->Param = Info.Param;
     Saved->FirstArg = Info.FirstArg;
     Saved->SecondArg = Info.SecondArg;
-    Saved->SuppliedType = Info.SuppliedType;
     Result.Data = Saved;
     break;
   }
@@ -902,10 +896,8 @@ TemplateParameter DeductionFailureInfo::getTemplateParameter() {
   case TemplateDeductionResult::NonDependentConversionFailure:
   case TemplateDeductionResult::ConstraintsNotSatisfied:
     return TemplateParameter();
-  // case TemplateDeductionResult::InvalidExplicitArguments:
   case TemplateDeductionResult::Incomplete:
     return TemplateParameter::getFromOpaqueValue(Data);
-
   case TemplateDeductionResult::IncompletePack:
   case TemplateDeductionResult::Inconsistent:
   case TemplateDeductionResult::InvalidExplicitArguments:
@@ -937,7 +929,6 @@ TemplateArgumentList *DeductionFailureInfo::getTemplateArgumentList() {
   case TemplateDeductionResult::CUDATargetMismatch:
   case TemplateDeductionResult::NonDependentConversionFailure:
     return nullptr;
-
   case TemplateDeductionResult::DeducedMismatch:
   case TemplateDeductionResult::DeducedMismatchNested:
     return static_cast<DFIDeducedMismatchArgs*>(Data)->TemplateArgs;
@@ -957,16 +948,6 @@ TemplateArgumentList *DeductionFailureInfo::getTemplateArgumentList() {
   return nullptr;
 }
 
-const TemplateArgument *DeductionFailureInfo::getSuppliedType() {
-  switch (static_cast<TemplateDeductionResult>(Result)) {
-  case TemplateDeductionResult::InvalidExplicitArguments:
-    return &static_cast<DFIParamWithArgumentsAndSuppliedType *>(Data)
-                ->SuppliedType;
-  default:
-    return nullptr;
-  }
-}
-
 const TemplateArgument *DeductionFailureInfo::getFirstArg() {
   switch (static_cast<TemplateDeductionResult>(Result)) {
   case TemplateDeductionResult::Success:
@@ -975,14 +956,11 @@ const TemplateArgument *DeductionFailureInfo::getFirstArg() {
   case TemplateDeductionResult::Incomplete:
   case TemplateDeductionResult::TooManyArguments:
   case TemplateDeductionResult::TooFewArguments:
-  // case TemplateDeductionResult::InvalidExplicitArguments:
   case TemplateDeductionResult::SubstitutionFailure:
   case TemplateDeductionResult::CUDATargetMismatch:
   case TemplateDeductionResult::NonDependentConversionFailure:
   case TemplateDeductionResult::ConstraintsNotSatisfied:
     return nullptr;
-  // case TemplateDeductionResult::InvalidExplicitArguments: //move back up
-  // there^^
   case TemplateDeductionResult::IncompletePack:
   case TemplateDeductionResult::Inconsistent:
   case TemplateDeductionResult::InvalidExplicitArguments:
@@ -1010,13 +988,11 @@ const TemplateArgument *DeductionFailureInfo::getSecondArg() {
   case TemplateDeductionResult::IncompletePack:
   case TemplateDeductionResult::TooManyArguments:
   case TemplateDeductionResult::TooFewArguments:
-  // case TemplateDeductionResult::InvalidExplicitArguments:
   case TemplateDeductionResult::SubstitutionFailure:
   case TemplateDeductionResult::CUDATargetMismatch:
   case TemplateDeductionResult::NonDependentConversionFailure:
   case TemplateDeductionResult::ConstraintsNotSatisfied:
     return nullptr;
-
   case TemplateDeductionResult::Inconsistent:
   case TemplateDeductionResult::InvalidExplicitArguments:
   case TemplateDeductionResult::Underqualified:
@@ -11641,27 +11617,11 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
                                  unsigned NumArgs,
                                  bool TakingCandidateAddress) {
   TemplateParameter Param = DeductionFailure.getTemplateParameter();
-  int form;
   NamedDecl *ParamD;
-  TemplateTypeParmDecl *TTPD;
-  NonTypeTemplateParmDecl *NTTPD;
-  TemplateTemplateParmDecl *TTempPD;
-  if ((ParamD = Param.dyn_cast<TemplateTypeParmDecl *>())) {
-    llvm::dbgs() << "case 1" << '\n';
-    TTPD = cast<TemplateTypeParmDecl>(ParamD);
-    form = 1;
-  } else if ((ParamD = Param.dyn_cast<NonTypeTemplateParmDecl *>())) {
-    llvm::dbgs() << "case 2" << '\n';
-    NTTPD = cast<NonTypeTemplateParmDecl>(ParamD);
-    form = 2;
-  } else if ((ParamD = Param.dyn_cast<TemplateTemplateParmDecl *>())) {
-    llvm::dbgs() << "case 3" << '\n';
-    TTempPD = cast<TemplateTemplateParmDecl>(ParamD);
-    form = 3;
-  } else {
-    llvm::dbgs() << "case 0" << '\n';
-    form = 0;
-  }
+
+  (ParamD = Param.dyn_cast<TemplateTypeParmDecl *>()) ||
+      (ParamD = Param.dyn_cast<NonTypeTemplateParmDecl *>()) ||
+      (ParamD = Param.dyn_cast<TemplateTemplateParmDecl *>());
 
   switch (DeductionFailure.getResult()) {
   case TemplateDeductionResult::Success:
@@ -11769,50 +11729,30 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
 
     if (ParamD->getDeclName()) {
       TemplateArgument FirstArg = *DeductionFailure.getFirstArg();
-      std::string SecondArg = ParamD->getNameAsString();
-      TemplateArgument SuppliedType = *DeductionFailure.getSuppliedType();
-      // llvm::dbgs() << ParamD->getNameAsString() << '\n';
-      // llvm::dbgs() << ParamD->getDeclName().getAsString() << '\n';
-      // llvm::dbgs() << ParamD->getQualifiedNameAsString() << '\n';
-      // llvm::dbgs() << ParamD->getUnderlyingDecl()->getNameAsString() << '\n';
-      // llvm::dbgs() << NTTPD->getType() << '\n';
-      // llvm::dbgs() << '\n';
-      // FirstArg.dump();
-      // llvm::dbgs() << '\n';
-      // SuppliedType.dump();
-      // llvm::dbgs() << '\n';
-      // llvm::dbgs() << SecondArg << '\n';
-      switch (form) {
+      std::string ParamName = ParamD->getNameAsString();
+      TemplateArgument SecondArg = *DeductionFailure.getSecondArg();
 
-      // TemplateTypeParmDecl
-      case 1: {
-        // could not convert '42' from 'int' to TypeParam T
-        assert(TTPD);
-        TTPD->dump();
+      if (auto *TTPD = dyn_cast<TemplateTypeParmDecl>(ParamD)) {
         if (TTPD->wasDeclaredWithTypename())
           S.Diag(Templated->getLocation(),
                  diag::note_ovl_candidate_explicit_arg_mismatch_named_ttpd)
-              << ParamD->getDeclName() << FirstArg << SuppliedType << SecondArg
+              << ParamD->getDeclName() << FirstArg << SecondArg << ParamName
               << "type";
         else {
           // TODO write tests for type constrained classes
           if (auto *constraint = TTPD->getTypeConstraint())
             S.Diag(Templated->getLocation(),
                    diag::note_ovl_candidate_explicit_arg_mismatch_named_ttpd)
-                << ParamD->getDeclName() << FirstArg << SuppliedType
-                << SecondArg << "valid type-constrained class";
+                << ParamD->getDeclName() << FirstArg << SecondArg << ParamName
+                << "valid type-constrained class";
           else
             S.Diag(Templated->getLocation(),
                    diag::note_ovl_candidate_explicit_arg_mismatch_named_ttpd)
-                << ParamD->getDeclName() << FirstArg << SuppliedType
-                << SecondArg << "class";
+                << ParamD->getDeclName() << FirstArg << SecondArg << ParamName
+                << "class";
         }
-        break;
-      }
-      // NonTypeTemplateParmDecl
-      case 2: {
-        assert(NTTPD);
-        if (SuppliedType.isNull()) {
+      } else if (auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(ParamD)) {
+        if (SecondArg.isNull()) {
           // Expected constant of type 'int', got type 'int'
           S.Diag(Templated->getLocation(),
                  diag::note_ovl_candidate_explicit_arg_mismatch_named_nttpd_nsp)
@@ -11821,51 +11761,15 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
           // Could not convert A from B to C
           S.Diag(Templated->getLocation(),
                  diag::note_ovl_candidate_explicit_arg_mismatch_named_nttpd_sp)
-              << ParamD->getDeclName() << FirstArg << SuppliedType
+              << ParamD->getDeclName() << FirstArg << SecondArg
               << NTTPD->getType();
         }
-        break;
-      }
-      case 3: {
-        assert(TTempPD);
-        // FirstArg.dump();
-        // llvm::dbgs() << SecondArg << '\n' << SuppliedType.isNull() << '\n';
-        // llvm::dbgs() << TTempPD->getDefaultArgument().getTypeSourceInfo() <<
-        // '\n';
-
-        // expected a template of type 'template<class> class T', got
-        // 'template<class T1, class T2> struct InvalidTemplate'
-
+      } else if (auto *TTempPD = dyn_cast<TemplateTemplateParmDecl>(ParamD)) {
         S.Diag(Templated->getLocation(),
                diag::note_ovl_candidate_explicit_arg_mismatch_named)
             << ParamD->getDeclName();
-        break;
-      }
-      default:
+      } else
         llvm_unreachable("unexpected case");
-      }
-
-      // auto SecondArg = *DeductionFailure.getSecondArg();
-
-      // S.Diag(Templated->getLocation(),
-      //        diag::note_ovl_candidate_explicit_arg_mismatch_named)
-      //     << FirstArg << SuppliedType << SecondArg;
-      // if(SecondArg.isNull()){
-      //   S.Diag(Templated->getLocation(),
-      //        diag::note_ovl_candidate_explicit_arg_mismatch_named)
-      //     << FirstArg << SuppliedType << ParamD->getDeclName();
-      // }
-      // else if(SuppliedType.isNull()){
-      //   S.Diag(Templated->getLocation(),
-      //        diag::note_ovl_candidate_explicit_arg_mismatch_named)
-      //     << FirstArg << "SuppliedTypeNull" << SecondArg;
-      // }
-      // else{
-      //   S.Diag(Templated->getLocation(),
-      //        diag::note_ovl_candidate_explicit_arg_mismatch_named)
-      //     << FirstArg << SuppliedType << SecondArg;
-      // }
-
     } else {
       int index = 0;
       if (TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(ParamD))

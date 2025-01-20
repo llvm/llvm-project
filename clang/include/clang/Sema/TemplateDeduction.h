@@ -250,9 +250,6 @@ public:
   /// \brief The constraint satisfaction details resulting from the associated
   /// constraints satisfaction tests.
   ConstraintSatisfaction AssociatedConstraintsSatisfaction;
-
-  /// \brief Type supplied by user for deduction
-  TemplateArgument SuppliedType;
 };
 
 } // namespace sema
@@ -303,8 +300,6 @@ struct DeductionFailureInfo {
   TemplateDeductionResult getResult() const {
     return static_cast<TemplateDeductionResult>(Result);
   }
-
-  const TemplateArgument *getSuppliedType();
 };
 
 /// TemplateSpecCandidate - This is a generalization of OverloadCandidate

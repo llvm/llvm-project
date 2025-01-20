@@ -766,16 +766,6 @@ static TemplateParameter makeTemplateParameter(Decl *D) {
 
   return TemplateParameter(cast<TemplateTemplateParmDecl>(D));
 }
-// Helper function to make template argument
-static TemplateArgument makeTemplateArgument(Decl *D) {
-  if (NonTypeTemplateParmDecl *NTTP = dyn_cast<NonTypeTemplateParmDecl>(
-          D)) // I in template<int I, typename T>
-    return TemplateArgument(NTTP->getType());
-  // if (TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(D)) // T in
-  // template<int I, typename T>
-  //   return TemplateArgument(TTP);
-  return TemplateArgument();
-}
 
 /// A pack that we're currently deducing.
 struct clang::DeducedPack {
@@ -3586,37 +3576,13 @@ TemplateDeductionResult Sema::SubstituteExplicitTemplateArguments(
     if (Index >= TemplateParams->size())
       return TemplateDeductionResult::SubstitutionFailure;
 
-    /*
-
-      template<int I, typename T>  //TemplateParams
-      void get(const T&);
-
-      void test_get(void *ptr) {
-        get<int>(ptr);             //TemplateArgs
-      }
-    */
     Info.Param = makeTemplateParameter(TemplateParams->getParam(Index));
     Info.FirstArg = ExplicitTemplateArgs[Index].getArgument();
-    Info.SecondArg = makeTemplateArgument(TemplateParams->getParam(Index));
-    // FunctionTemplate->dump();
-    // Info.SuppliedType = makeTemplateArgument(TemplateParams->getParam(1));
-    // llvm::dbgs() << TemplateParams->getParam(1) << '\n' <<
-    // TemplateParams->getParam(1)->getNameAsString(); llvm::dbgs() <<
-    // TemplateParams->size() << ExplicitTemplateArgs.size() <<
-    // ParamTypes.size() << Deduced.size() << DeducedArgs.size() << "\n";
-
-    switch (ExplicitTemplateArgs[Index].getArgument().getKind()) {
-    case TemplateArgument::Expression:
-      Info.SuppliedType =
+    Info.SecondArg = TemplateArgument();
+    if (ExplicitTemplateArgs[Index].getArgument().getKind() ==
+        TemplateArgument::Expression)
+      Info.SecondArg =
           ExplicitTemplateArgs[Index].getSourceExpression()->getType();
-      break;
-    case TemplateArgument::Type:
-      Info.SuppliedType =
-          TemplateArgument(); // ExplicitTemplateArgs[Index].getArgument();
-      break;
-    default:
-      break;
-    }
 
     return TemplateDeductionResult::InvalidExplicitArguments;
   }
