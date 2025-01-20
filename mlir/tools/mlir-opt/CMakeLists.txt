@@ -91,8 +91,8 @@ add_mlir_library(MLIRMlirOptMain
   mlir-opt.cpp
 
   EXCLUDE_FROM_LIBMLIR
-  )
-mlir_target_link_libraries(MLIRMlirOptMain PUBLIC
+
+  LINK_LIBS PUBLIC
   ${LIBS}
   ${test_libs}
   )
