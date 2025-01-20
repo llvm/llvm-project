@@ -317,21 +317,12 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
   auto &Builder = State.Builder;
 
+  assert(getOpcode() == Instruction::Add &&
+         "Unhandled partial reduction opcode");
+
   Value *BinOpVal = State.get(getOperand(0));
   Value *PhiVal = State.get(getOperand(1));
   assert(PhiVal && BinOpVal && "Phi and Mul must be set");
-
-  auto Opcode = getOpcode();
-
-  // Currently we don't have a partial_reduce_sub intrinsic,
-  // so mimic the behaviour by negating the second operand
-  if (Opcode == Instruction::Sub) {
-    BinOpVal = Builder.CreateSub(Constant::getNullValue(BinOpVal->getType()),
-                                 BinOpVal);
-    Opcode = Instruction::Add;
-  }
-
-  assert(Opcode == Instruction::Add && "Unhandled partial reduction opcode");
 
   Type *RetTy = PhiVal->getType();
 
