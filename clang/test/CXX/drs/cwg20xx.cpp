@@ -99,7 +99,7 @@ static_assert(__is_same(decltype(a), decltype(b)));
 #endif
 } // namespace cwg2049
 
-namespace cwg2061 { // cwg2061: yes
+namespace cwg2061 { // cwg2061: 2.7
 #if __cplusplus >= 201103L
   namespace A {
     inline namespace b {

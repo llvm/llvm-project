@@ -367,12 +367,11 @@ public:
     if (!isSet())
       ValueOrInherited = InheritedFrom;
     else if ([[maybe_unused]] auto *D =
-                 ValueOrInherited.template dyn_cast<ParmDecl *>()) {
+                 dyn_cast<ParmDecl *>(ValueOrInherited)) {
       assert(C.isSameDefaultTemplateArgument(D, InheritedFrom));
       ValueOrInherited =
           new (allocateDefaultArgStorageChain(C)) Chain{InheritedFrom, get()};
-    } else if (auto *Inherited =
-                   ValueOrInherited.template dyn_cast<Chain *>()) {
+    } else if (auto *Inherited = dyn_cast<Chain *>(ValueOrInherited)) {
       assert(C.isSameDefaultTemplateArgument(Inherited->PrevDeclWithDefaultArg,
                                              InheritedFrom));
       Inherited->PrevDeclWithDefaultArg = InheritedFrom;

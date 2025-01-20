@@ -1,6 +1,7 @@
 # RUN: llvm-mc -triple=x86_64-apple-macosx10.9 -filetype=obj -o %t.o %s
-# RUN: llvm-jitlink -debug-only=orc -noexec -debugger-support %t.o 2>&1 | \
-# RUN:     FileCheck %s
+# RUN: llvm-jitlink -num-threads=0 -debug-only=orc -noexec -debugger-support \
+# RUN:              %t.o 2>&1 \
+# RUN:              | FileCheck %s
 #
 # REQUIRES: asserts && system-darwin
 #

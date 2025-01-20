@@ -355,7 +355,7 @@ namespace cwg1560 { // cwg1560: 3.5
   const X &x = true ? get() : throw 0;
 } // namespace cwg1560
 
-namespace cwg1563 { // cwg1563: yes
+namespace cwg1563 { // cwg1563: 3.1
 #if __cplusplus >= 201103L
   double bar(double) { return 0.0; }
   float bar(float) { return 0.0f; }

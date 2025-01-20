@@ -458,9 +458,8 @@ void Instruction::dropPoisonGeneratingFlags() {
 }
 
 bool Instruction::hasPoisonGeneratingMetadata() const {
-  return hasMetadata(LLVMContext::MD_range) ||
-         hasMetadata(LLVMContext::MD_nonnull) ||
-         hasMetadata(LLVMContext::MD_align);
+  return any_of(Metadata::PoisonGeneratingIDs,
+                [this](unsigned ID) { return hasMetadata(ID); });
 }
 
 bool Instruction::hasNonDebugLocLoopMetadata() const {
@@ -487,9 +486,8 @@ bool Instruction::hasNonDebugLocLoopMetadata() const {
 }
 
 void Instruction::dropPoisonGeneratingMetadata() {
-  eraseMetadata(LLVMContext::MD_range);
-  eraseMetadata(LLVMContext::MD_nonnull);
-  eraseMetadata(LLVMContext::MD_align);
+  for (unsigned ID : Metadata::PoisonGeneratingIDs)
+    eraseMetadata(ID);
 }
 
 bool Instruction::hasPoisonGeneratingReturnAttributes() const {

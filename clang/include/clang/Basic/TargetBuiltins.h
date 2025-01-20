@@ -119,6 +119,16 @@ namespace clang {
   };
   }
 
+  /// SPIRV builtins
+  namespace SPIRV {
+  enum {
+    LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
+#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+#include "clang/Basic/BuiltinsSPIRV.inc"
+    LastTSBuiltin
+  };
+  } // namespace SPIRV
+
   /// X86 builtins
   namespace X86 {
   enum {

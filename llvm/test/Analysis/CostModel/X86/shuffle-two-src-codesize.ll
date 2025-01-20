@@ -124,7 +124,7 @@ define void @test_vXf32(<2 x float> %src64, <4 x float> %src128, <8 x float> %sr
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64 = shufflevector <2 x float> %src64, <2 x float> %src64_1, <2 x i32> <i32 3, i32 0>
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V128 = shufflevector <4 x float> %src128, <4 x float> %src128_1, <4 x i32> <i32 3, i32 6, i32 1, i32 5>
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V256 = shufflevector <8 x float> %src256, <8 x float> %src256_1, <8 x i32> <i32 7, i32 6, i32 8, i32 4, i32 3, i32 2, i32 12, i32 0>
-; SSE42-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V512 = shufflevector <16 x float> %src512, <16 x float> %src512_1, <16 x i32> <i32 15, i32 17, i32 13, i32 20, i32 11, i32 10, i32 8, i32 8, i32 7, i32 22, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V512 = shufflevector <16 x float> %src512, <16 x float> %src512_1, <16 x i32> <i32 15, i32 17, i32 13, i32 20, i32 11, i32 10, i32 8, i32 8, i32 7, i32 22, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V1024 = shufflevector <32 x float> %src1024, <32 x float> %src1024_1, <32 x i32> <i32 31, i32 33, i32 20, i32 28, i32 27, i32 26, i32 25, i32 24, i32 23, i32 22, i32 21, i32 20, i32 19, i32 18, i32 17, i32 16, i32 15, i32 48, i32 13, i32 12, i32 11, i32 11, i32 9, i32 45, i32 7, i32 11, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;

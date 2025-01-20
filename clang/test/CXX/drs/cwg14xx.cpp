@@ -78,7 +78,7 @@ namespace cwg1432 { // cwg1432: 16
 #endif
 } // namespace cwg1432
 
-namespace cwg1443 { // cwg1443: yes
+namespace cwg1443 { // cwg1443: 2.7
 struct A {
   int i;
   A() { void foo(int=i); }

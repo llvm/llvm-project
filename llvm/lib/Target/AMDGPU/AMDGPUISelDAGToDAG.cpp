@@ -1926,7 +1926,8 @@ bool AMDGPUDAGToDAGISel::checkFlatScratchSVSSwizzleBug(
   KnownBits VKnown = CurDAG->computeKnownBits(VAddr);
   KnownBits SKnown =
       KnownBits::add(CurDAG->computeKnownBits(SAddr),
-                     KnownBits::makeConstant(APInt(32, ImmOffset)));
+                     KnownBits::makeConstant(APInt(32, ImmOffset,
+                                                   /*isSigned=*/true)));
   uint64_t VMax = VKnown.getMaxValue().getZExtValue();
   uint64_t SMax = SKnown.getMaxValue().getZExtValue();
   return (VMax & 3) + (SMax & 3) >= 4;
@@ -1997,7 +1998,7 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
   if (checkFlatScratchSVSSwizzleBug(VAddr, SAddr, ImmOffset))
     return false;
   SAddr = SelectSAddrFI(CurDAG, SAddr);
-  Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i32);
+  Offset = CurDAG->getSignedTargetConstant(ImmOffset, SDLoc(), MVT::i32);
   return true;
 }
 

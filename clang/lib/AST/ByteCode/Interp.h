@@ -1471,8 +1471,7 @@ bool InitThisBitField(InterpState &S, CodePtr OpPC, const Record::Field *F,
     return false;
   const Pointer &Field = This.atField(FieldOffset);
   const auto &Value = S.Stk.pop<T>();
-  Field.deref<T>() =
-      Value.truncate(F->Decl->getBitWidthValue(S.getASTContext()));
+  Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue());
   Field.initialize();
   return true;
 }
@@ -1495,8 +1494,7 @@ bool InitBitField(InterpState &S, CodePtr OpPC, const Record::Field *F) {
   assert(F->isBitField());
   const T &Value = S.Stk.pop<T>();
   const Pointer &Field = S.Stk.peek<Pointer>().atField(F->Offset);
-  Field.deref<T>() =
-      Value.truncate(F->Decl->getBitWidthValue(S.getASTContext()));
+  Field.deref<T>() = Value.truncate(F->Decl->getBitWidthValue());
   Field.activate();
   Field.initialize();
   return true;
@@ -1750,7 +1748,7 @@ bool StoreBitField(InterpState &S, CodePtr OpPC) {
   if (Ptr.canBeInitialized())
     Ptr.initialize();
   if (const auto *FD = Ptr.getField())
-    Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue(S.getASTContext()));
+    Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue());
   else
     Ptr.deref<T>() = Value;
   return true;
@@ -1765,7 +1763,7 @@ bool StoreBitFieldPop(InterpState &S, CodePtr OpPC) {
   if (Ptr.canBeInitialized())
     Ptr.initialize();
   if (const auto *FD = Ptr.getField())
-    Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue(S.getASTContext()));
+    Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue());
   else
     Ptr.deref<T>() = Value;
   return true;
@@ -2143,9 +2141,8 @@ inline bool CastFP(InterpState &S, CodePtr OpPC, const llvm::fltSemantics *Sem,
 }
 
 inline bool CastFixedPoint(InterpState &S, CodePtr OpPC, uint32_t FPS) {
-  FixedPointSemantics TargetSemantics(0, 0, false, false, false);
-  std::memcpy(&TargetSemantics, &FPS, sizeof(TargetSemantics));
-
+  FixedPointSemantics TargetSemantics =
+      FixedPointSemantics::getFromOpaqueInt(FPS);
   const auto &Source = S.Stk.pop<FixedPoint>();
 
   bool Overflow;
@@ -2273,8 +2270,7 @@ static inline bool CastIntegralFixedPoint(InterpState &S, CodePtr OpPC,
                                           uint32_t FPS) {
   const T &Int = S.Stk.pop<T>();
 
-  FixedPointSemantics Sem(0, 0, false, false, false);
-  std::memcpy(&Sem, &FPS, sizeof(Sem));
+  FixedPointSemantics Sem = FixedPointSemantics::getFromOpaqueInt(FPS);
 
   bool Overflow;
   FixedPoint Result = FixedPoint::from(Int.toAPSInt(), Sem, &Overflow);
@@ -2290,8 +2286,7 @@ static inline bool CastFloatingFixedPoint(InterpState &S, CodePtr OpPC,
                                           uint32_t FPS) {
   const auto &Float = S.Stk.pop<Floating>();
 
-  FixedPointSemantics Sem(0, 0, false, false, false);
-  std::memcpy(&Sem, &FPS, sizeof(Sem));
+  FixedPointSemantics Sem = FixedPointSemantics::getFromOpaqueInt(FPS);
 
   bool Overflow;
   FixedPoint Result = FixedPoint::from(Float.getAPFloat(), Sem, &Overflow);
@@ -3073,6 +3068,13 @@ inline IntegralAP<true> ReadArg<IntegralAP<true>>(InterpState &S,
   IntegralAP<true> I = IntegralAP<true>::deserialize(*OpPC);
   OpPC += align(I.bytesToSerialize());
   return I;
+}
+
+template <>
+inline FixedPoint ReadArg<FixedPoint>(InterpState &S, CodePtr &OpPC) {
+  FixedPoint FP = FixedPoint::deserialize(*OpPC);
+  OpPC += align(FP.bytesToSerialize());
+  return FP;
 }
 
 } // namespace interp

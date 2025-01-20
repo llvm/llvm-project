@@ -1,4 +1,5 @@
 header: stdfix.h
+header_template: stdfix.h.def
 macros: []
 types: 
   - type_name: stdfix-types

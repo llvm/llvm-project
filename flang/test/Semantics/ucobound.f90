@@ -11,6 +11,9 @@ program ucobound_tests
   logical non_integer, logical_coarray[3,*]
   logical, parameter :: const_non_integer = .true.
   integer, allocatable :: ucobounds(:)
+  real bounded[2:3,4:5,*]
+
+  integer(kind=merge(kind(1),-1,ucobound(bounded,1)==3.and.ucobound(bounded,2)==5)) test_ucobound
 
   !___ standard-conforming statement with no optional arguments present ___
   ucobounds = ucobound(scalar_coarray)
@@ -50,28 +53,28 @@ program ucobound_tests
 
   !___ non-conforming statements ___
 
-  !ERROR: DIM=0 dimension is out of range for coarray with corank 1
+  !ERROR: DIM=0 dimension must be positive
   n = ucobound(scalar_coarray, dim=0)
 
-  !ERROR: DIM=0 dimension is out of range for coarray with corank 3
+  !ERROR: DIM=0 dimension must be positive
   n = ucobound(coarray_corank3, dim=0)
 
-  !ERROR: DIM=-1 dimension is out of range for coarray with corank 1
+  !ERROR: DIM=-1 dimension must be positive
   n = ucobound(scalar_coarray, dim=-1)
 
-  !ERROR: DIM=2 dimension is out of range for coarray with corank 1
+  !ERROR: DIM=2 dimension is out of range for corank-1 coarray
   n = ucobound(array_coarray, dim=2)
 
-  !ERROR: DIM=2 dimension is out of range for coarray with corank 1
+  !ERROR: DIM=2 dimension is out of range for corank-1 coarray
   n = ucobound(array_coarray, 2)
 
-  !ERROR: DIM=4 dimension is out of range for coarray with corank 3
+  !ERROR: DIM=4 dimension is out of range for corank-3 coarray
   n = ucobound(coarray_corank3, dim=4)
 
-  !ERROR: DIM=4 dimension is out of range for coarray with corank 3
+  !ERROR: DIM=4 dimension is out of range for corank-3 coarray
   n = ucobound(dim=4, coarray=coarray_corank3)
 
-  !ERROR: DIM=5 dimension is out of range for coarray with corank 3
+  !ERROR: DIM=5 dimension is out of range for corank-3 coarray
   n = ucobound(coarray_corank3, const_out_of_range_dim)
 
   !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches scalar INTEGER(4) and rank 1 array of INTEGER(4)

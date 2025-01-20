@@ -2183,8 +2183,9 @@ static Op createComputeOp(
   mlir::Value ifCond;
   mlir::Value selfCond;
   llvm::SmallVector<mlir::Value> waitOperands, attachEntryOperands,
-      copyEntryOperands, copyoutEntryOperands, createEntryOperands,
-      dataClauseOperands, numGangs, numWorkers, vectorLength, async;
+      copyEntryOperands, copyinEntryOperands, copyoutEntryOperands,
+      createEntryOperands, dataClauseOperands, numGangs, numWorkers,
+      vectorLength, async;
   llvm::SmallVector<mlir::Attribute> numGangsDeviceTypes, numWorkersDeviceTypes,
       vectorLengthDeviceTypes, asyncDeviceTypes, asyncOnlyDeviceTypes,
       waitOperandsDeviceTypes, waitOnlyDeviceTypes;
@@ -2321,6 +2322,7 @@ static Op createComputeOp(
                                dataClauseOperands.end());
     } else if (const auto *copyinClause =
                    std::get_if<Fortran::parser::AccClause::Copyin>(&clause.u)) {
+      auto crtDataStart = dataClauseOperands.size();
       genDataOperandOperationsWithModifier<mlir::acc::CopyinOp,
                                            Fortran::parser::AccClause::Copyin>(
           copyinClause, converter, semanticsContext, stmtCtx,
@@ -2328,6 +2330,8 @@ static Op createComputeOp(
           dataClauseOperands, mlir::acc::DataClause::acc_copyin,
           mlir::acc::DataClause::acc_copyin_readonly, async, asyncDeviceTypes,
           asyncOnlyDeviceTypes);
+      copyinEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
+                                 dataClauseOperands.end());
     } else if (const auto *copyoutClause =
                    std::get_if<Fortran::parser::AccClause::Copyout>(
                        &clause.u)) {
@@ -2525,6 +2529,8 @@ static Op createComputeOp(
   // Create the exit operations after the region.
   genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
       builder, copyEntryOperands, /*structured=*/true);
+  genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::DeleteOp>(
+      builder, copyinEntryOperands, /*structured=*/true);
   genDataExitOperations<mlir::acc::CreateOp, mlir::acc::CopyoutOp>(
       builder, copyoutEntryOperands, /*structured=*/true);
   genDataExitOperations<mlir::acc::AttachOp, mlir::acc::DetachOp>(
@@ -2544,8 +2550,8 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
                          const Fortran::parser::AccClauseList &accClauseList) {
   mlir::Value ifCond;
   llvm::SmallVector<mlir::Value> attachEntryOperands, createEntryOperands,
-      copyEntryOperands, copyoutEntryOperands, dataClauseOperands, waitOperands,
-      async;
+      copyEntryOperands, copyinEntryOperands, copyoutEntryOperands,
+      dataClauseOperands, waitOperands, async;
   llvm::SmallVector<mlir::Attribute> asyncDeviceTypes, asyncOnlyDeviceTypes,
       waitOperandsDeviceTypes, waitOnlyDeviceTypes;
   llvm::SmallVector<int32_t> waitOperandsSegments;
@@ -2604,6 +2610,7 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
                                dataClauseOperands.end());
     } else if (const auto *copyinClause =
                    std::get_if<Fortran::parser::AccClause::Copyin>(&clause.u)) {
+      auto crtDataStart = dataClauseOperands.size();
       genDataOperandOperationsWithModifier<mlir::acc::CopyinOp,
                                            Fortran::parser::AccClause::Copyin>(
           copyinClause, converter, semanticsContext, stmtCtx,
@@ -2611,6 +2618,8 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
           dataClauseOperands, mlir::acc::DataClause::acc_copyin,
           mlir::acc::DataClause::acc_copyin_readonly, async, asyncDeviceTypes,
           asyncOnlyDeviceTypes);
+      copyinEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
+                                 dataClauseOperands.end());
     } else if (const auto *copyoutClause =
                    std::get_if<Fortran::parser::AccClause::Copyout>(
                        &clause.u)) {
@@ -2723,6 +2732,8 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
   // Create the exit operations after the region.
   genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
       builder, copyEntryOperands, /*structured=*/true);
+  genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::DeleteOp>(
+      builder, copyinEntryOperands, /*structured=*/true);
   genDataExitOperations<mlir::acc::CreateOp, mlir::acc::CopyoutOp>(
       builder, copyoutEntryOperands, /*structured=*/true);
   genDataExitOperations<mlir::acc::AttachOp, mlir::acc::DetachOp>(
@@ -3691,7 +3702,8 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
                      mlir::Location loc,
                      const Fortran::parser::AccClauseList &accClauseList) {
   llvm::SmallVector<mlir::Value> dataClauseOperands, copyEntryOperands,
-      createEntryOperands, copyoutEntryOperands, deviceResidentEntryOperands;
+      copyinEntryOperands, createEntryOperands, copyoutEntryOperands,
+      deviceResidentEntryOperands;
   Fortran::lower::StatementContext stmtCtx;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
@@ -3729,12 +3741,15 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
           /*structured=*/true, /*implicit=*/false);
     } else if (const auto *copyinClause =
                    std::get_if<Fortran::parser::AccClause::Copyin>(&clause.u)) {
+      auto crtDataStart = dataClauseOperands.size();
       genDeclareDataOperandOperationsWithModifier<mlir::acc::CopyinOp,
                                                   mlir::acc::DeleteOp>(
           copyinClause, converter, semanticsContext, stmtCtx,
           Fortran::parser::AccDataModifier::Modifier::ReadOnly,
           dataClauseOperands, mlir::acc::DataClause::acc_copyin,
           mlir::acc::DataClause::acc_copyin_readonly);
+      copyinEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
+                                 dataClauseOperands.end());
     } else if (const auto *copyoutClause =
                    std::get_if<Fortran::parser::AccClause::Copyout>(
                        &clause.u)) {
@@ -3801,12 +3816,14 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
   }
 
   openAccCtx.attachCleanup([&builder, loc, createEntryOperands,
-                            copyEntryOperands, copyoutEntryOperands,
-                            deviceResidentEntryOperands, declareToken]() {
+                            copyEntryOperands, copyinEntryOperands,
+                            copyoutEntryOperands, deviceResidentEntryOperands,
+                            declareToken]() {
     llvm::SmallVector<mlir::Value> operands;
     operands.append(createEntryOperands);
     operands.append(deviceResidentEntryOperands);
     operands.append(copyEntryOperands);
+    operands.append(copyinEntryOperands);
     operands.append(copyoutEntryOperands);
 
     mlir::func::FuncOp funcOp = builder.getFunction();
@@ -3825,6 +3842,8 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
         builder, deviceResidentEntryOperands, /*structured=*/true);
     genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
         builder, copyEntryOperands, /*structured=*/true);
+    genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::DeleteOp>(
+        builder, copyinEntryOperands, /*structured=*/true);
     genDataExitOperations<mlir::acc::CreateOp, mlir::acc::CopyoutOp>(
         builder, copyoutEntryOperands, /*structured=*/true);
   });
@@ -3848,7 +3867,7 @@ genDeclareInModule(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *copyinClause =
                    std::get_if<Fortran::parser::AccClause::Copyin>(&clause.u)) {
       genGlobalCtorsWithModifier<Fortran::parser::AccClause::Copyin,
-                                 mlir::acc::CopyinOp, mlir::acc::CopyinOp>(
+                                 mlir::acc::CopyinOp, mlir::acc::DeleteOp>(
           converter, modBuilder, copyinClause,
           Fortran::parser::AccDataModifier::Modifier::ReadOnly,
           mlir::acc::DataClause::acc_copyin,

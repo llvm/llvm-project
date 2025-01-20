@@ -66,7 +66,7 @@ namespace cwg2100 { // cwg2100: 12
   };
 } // namespace cwg2100
 
-namespace cwg2103 { // cwg2103: yes
+namespace cwg2103 { // cwg2103: 2.7
   void f() {
     int a;
     int &r = a; // #cwg2103-r
@@ -287,7 +287,7 @@ static_assert(!noexcept(typeid(*static_cast<D*>(nullptr))), "");
 #endif
 } // namespace cwg2191
 
-namespace cwg2180 { // cwg2180: yes
+namespace cwg2180 { // cwg2180: 3.0
   class A {
     A &operator=(const A &); // #cwg2180-A-copy
     A &operator=(A &&); // #cwg2180-A-move

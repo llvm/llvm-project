@@ -246,7 +246,7 @@ bool RISCVABIInfo::detectFPCCEligibleStructHelper(QualType Ty, CharUnits CurOff,
       uint64_t FieldOffInBits = Layout.getFieldOffset(FD->getFieldIndex());
       QualType QTy = FD->getType();
       if (FD->isBitField()) {
-        unsigned BitWidth = FD->getBitWidthValue(getContext());
+        unsigned BitWidth = FD->getBitWidthValue();
         // Allow a bitfield with a type greater than XLen as long as the
         // bitwidth is XLen or less.
         if (getContext().getTypeSize(QTy) > XLen && BitWidth <= XLen)

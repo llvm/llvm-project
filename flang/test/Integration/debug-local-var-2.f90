@@ -107,4 +107,4 @@ contains
   end function
 end program
 
-LINEONLY-NOT: DILocalVariable
+! LINEONLY-NOT: DILocalVariable
