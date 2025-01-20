@@ -457,7 +457,7 @@ public:
     return CountableExitingBlocks;
   }
 
-  /// Returns the loop edge with an uncountable exit, or std::nullopt if there
+  /// Returns the loop edge to an uncountable exit, or std::nullopt if there
   /// isn't a single such edge.
   std::optional<std::pair<BasicBlock *, BasicBlock *>>
   getUncountableEdge() const {
@@ -649,7 +649,7 @@ private:
   /// the exact backedge taken count is not computable.
   SmallVector<BasicBlock *, 4> CountableExitingBlocks;
 
-  /// Keep track of the loop edge with an uncountable exit, comprising a pair
+  /// Keep track of the loop edge to an uncountable exit, comprising a pair
   /// of (Exiting, Exit) blocks, if there is exactly one early exit.
   std::optional<std::pair<BasicBlock *, BasicBlock *>> UncountableEdge;
 };
