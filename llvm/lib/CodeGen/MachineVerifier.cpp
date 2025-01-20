@@ -353,6 +353,8 @@ struct MachineVerifier {
                        LaneBitmask LaneMask = LaneBitmask::getNone());
 
   void verifyStackFrame();
+  /// Check that the stack protector is the top-most object in the stack.
+  void verifyStackProtector();
 
   void verifySlotIndexes() const;
   void verifyProperties(const MachineFunction &MF);
@@ -709,8 +711,10 @@ void MachineVerifier::visitMachineFunctionBefore() {
   // Check that the register use lists are sane.
   MRI->verifyUseLists();
 
-  if (!MF->empty())
+  if (!MF->empty()) {
     verifyStackFrame();
+    verifyStackProtector();
+  }
 }
 
 void
@@ -4035,6 +4039,54 @@ void MachineVerifier::verifyStackFrame() {
         report("A return block ends with a FrameSetup.", MBB);
       if (BBState.ExitValue)
         report("A return block ends with a nonzero stack adjustment.", MBB);
+    }
+  }
+}
+
+void MachineVerifier::verifyStackProtector() {
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
+  if (!MFI.hasStackProtectorIndex())
+    return;
+  // Only applicable when the offsets of frame objects have been determined,
+  // which is indicated by a non-zero stack size.
+  if (!MFI.getStackSize())
+    return;
+  const TargetFrameLowering &TFI = *MF->getSubtarget().getFrameLowering();
+  bool StackGrowsDown =
+      TFI.getStackGrowthDirection() == TargetFrameLowering::StackGrowsDown;
+  unsigned FI = MFI.getStackProtectorIndex();
+  int64_t SPStart = MFI.getObjectOffset(FI);
+  int64_t SPEnd = SPStart + MFI.getObjectSize(FI);
+  for (unsigned I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
+    if (I == FI)
+      continue;
+    if (MFI.isDeadObjectIndex(I))
+      continue;
+    // FIXME: Skip non-default stack objects, as some targets may place them
+    // above the stack protector. This is a workaround for the fact that
+    // backends such as AArch64 may place SVE stack objects *above* the stack
+    // protector.
+    if (MFI.getStackID(I) != TargetStackID::Default)
+      continue;
+    // Skip variable-sized objects because they do not have a fixed offset.
+    if (MFI.isVariableSizedObjectIndex(I))
+      continue;
+    // FIXME: Skip spill slots which may be allocated above the stack protector.
+    // Ideally this would only skip callee-saved registers, but we don't have
+    // that information here. For example, spill-slots used for scavenging are
+    // not described in CalleeSavedInfo.
+    if (MFI.isSpillSlotObjectIndex(I))
+      continue;
+    int64_t ObjStart = MFI.getObjectOffset(I);
+    int64_t ObjEnd = ObjStart + MFI.getObjectSize(I);
+    if (SPStart < ObjEnd && ObjStart < SPEnd) {
+      report("Stack protector overlaps with another stack object", MF);
+      break;
+    }
+    if ((StackGrowsDown && SPStart <= ObjStart) ||
+        (!StackGrowsDown && SPStart >= ObjStart)) {
+      report("Stack protector is not the top-most object on the stack", MF);
+      break;
     }
   }
 }

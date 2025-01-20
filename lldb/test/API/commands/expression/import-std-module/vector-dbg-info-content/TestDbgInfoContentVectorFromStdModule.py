@@ -14,7 +14,6 @@ class TestDbgInfoContentVector(TestBase):
     @skipIf(compiler="clang", compiler_version=["<", "12.0"])
     @skipIf(macos_version=["<", "14.0"])
     @skipIfDarwin  # https://github.com/llvm/llvm-project/issues/106475
-    @skipIfLinux  # https://discourse.llvm.org/t/lldb-test-failures-on-linux/80095
     def test(self):
         self.build()
 
@@ -23,13 +22,6 @@ class TestDbgInfoContentVector(TestBase):
         )
 
         self.runCmd("settings set target.import-std-module true")
-
-        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(
-            [">", "16.0"]
-        ):
-            vector_type = "std::vector<Foo>"
-        else:
-            vector_type = "std::vector<Foo, std::allocator<Foo> >"
 
         size_type = "size_type"
         value_type = "value_type"
@@ -42,13 +34,14 @@ class TestDbgInfoContentVector(TestBase):
             ValueCheck(name="current"),
         ]
 
-        self.expect_expr(
-            "a",
-            result_type=vector_type,
-            result_children=[
-                ValueCheck(children=[ValueCheck(value="3")]),
-                ValueCheck(children=[ValueCheck(value="1")]),
-                ValueCheck(children=[ValueCheck(value="2")]),
+        self.expect(
+            "expr a",
+            patterns=[
+                """\(std::vector<Foo(, std::allocator<Foo> )*>\) \$0 = size=3 \{
+  \[0\] = \(a = 3\)
+  \[1\] = \(a = 1\)
+  \[2\] = \(a = 2\)
+\}"""
             ],
         )
 

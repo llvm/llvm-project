@@ -819,7 +819,10 @@ module std [system] {
     module sort_heap                              { header "__algorithm/sort_heap.h" }
     module sort                                   { header "__algorithm/sort.h" }
     module stable_partition                       { header "__algorithm/stable_partition.h" }
-    module stable_sort                            { header "__algorithm/stable_sort.h" }
+    module stable_sort {
+      header "__algorithm/stable_sort.h"
+      export std.memory.unique_temporary_buffer // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
+    }
     module swap_ranges                            { header "__algorithm/swap_ranges.h" }
     module three_way_comp_ref_type                { header "__algorithm/three_way_comp_ref_type.h" }
     module transform                              { header "__algorithm/transform.h" }

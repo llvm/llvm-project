@@ -138,6 +138,10 @@ public:
   void printAsOperand(raw_ostream &OS, ModuleSlotTracker &MST,
                       const Module *M = nullptr) const;
   /// @}
+
+  /// Metadata IDs that may generate poison.
+  constexpr static const unsigned PoisonGeneratingIDs[] = {
+      LLVMContext::MD_range, LLVMContext::MD_nonnull, LLVMContext::MD_align};
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).

@@ -9,6 +9,10 @@
 ! CUDA Fortran procedures available in device subprogram
 
 module cudadevice
+  use __cuda_device
+  use, intrinsic :: __fortran_builtins, only: dim3 => __builtin_dim3
+  use, intrinsic :: __fortran_builtins, only: c_devptr => __builtin_c_devptr
+  use, intrinsic :: __fortran_builtins, only: c_devloc => __builtin_c_devloc
 implicit none
 
   ! Set PRIVATE by default to explicitly only export what is meant
@@ -71,9 +75,11 @@ implicit none
   end interface
   public :: threadfence_system
 
+  ! Math API
+
   interface
     attributes(device) function __fadd_rd(x, y) bind(c, name='__nv_fadd_rd')
-      real, intent(in) :: x, y
+      real, intent(in), value :: x, y
       real :: __fadd_rd
     end function
   end interface
@@ -81,10 +87,10 @@ implicit none
 
   interface
     attributes(device) function __fadd_ru(x, y) bind(c, name='__nv_fadd_ru')
-      real, intent(in) :: x, y
+      real, intent(in), value :: x, y
       real :: __fadd_ru
     end function
   end interface
   public :: __fadd_ru
-
+  
 end module

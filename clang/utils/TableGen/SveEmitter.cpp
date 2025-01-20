@@ -295,7 +295,7 @@ private:
     const char *Suffix;
   };
 
-  static const std::array<ReinterpretTypeInfo, 12> Reinterprets;
+  static const std::array<ReinterpretTypeInfo, 13> Reinterprets;
 
   const RecordKeeper &Records;
   StringMap<uint64_t> EltTypes;
@@ -418,9 +418,10 @@ public:
                        SmallVectorImpl<std::unique_ptr<Intrinsic>> &Out);
 };
 
-const std::array<SVEEmitter::ReinterpretTypeInfo, 12> SVEEmitter::Reinterprets =
+const std::array<SVEEmitter::ReinterpretTypeInfo, 13> SVEEmitter::Reinterprets =
     {{{SVEType("c", 'd'), "s8"},
       {SVEType("Uc", 'd'), "u8"},
+      {SVEType("m", 'd'), "mf8"},
       {SVEType("s", 'd'), "s16"},
       {SVEType("Us", 'd'), "u16"},
       {SVEType("i", 'd'), "s32"},

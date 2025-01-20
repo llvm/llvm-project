@@ -30,16 +30,50 @@ namespace mlir {
 using namespace mlir;
 using namespace mlir::amdgpu;
 
+/// Convert an unsigned number `val` to i32.
+static Value convertUnsignedToI32(ConversionPatternRewriter &rewriter,
+                                  Location loc, Value val) {
+  IntegerType i32 = rewriter.getI32Type();
+  // Force check that `val` is of int type.
+  auto valTy = cast<IntegerType>(val.getType());
+  if (i32 == valTy)
+    return val;
+  return valTy.getWidth() > 32
+             ? Value(rewriter.create<LLVM::TruncOp>(loc, i32, val))
+             : Value(rewriter.create<LLVM::ZExtOp>(loc, i32, val));
+}
+
 static Value createI32Constant(ConversionPatternRewriter &rewriter,
                                Location loc, int32_t value) {
-  Type llvmI32 = rewriter.getI32Type();
-  return rewriter.create<LLVM::ConstantOp>(loc, llvmI32, value);
+  Type i32 = rewriter.getI32Type();
+  return rewriter.create<LLVM::ConstantOp>(loc, i32, value);
 }
 
 static Value createI1Constant(ConversionPatternRewriter &rewriter, Location loc,
                               bool value) {
   Type llvmI1 = rewriter.getI1Type();
   return rewriter.create<LLVM::ConstantOp>(loc, llvmI1, value);
+}
+
+/// Returns the linear index used to access an element in the memref.
+static Value getLinearIndexI32(ConversionPatternRewriter &rewriter,
+                               Location loc, MemRefDescriptor &memRefDescriptor,
+                               ValueRange indices, ArrayRef<int64_t> strides) {
+  IntegerType i32 = rewriter.getI32Type();
+  Value index;
+  for (auto [i, increment, stride] : llvm::enumerate(indices, strides)) {
+    if (stride != 1) { // Skip if stride is 1.
+      Value strideValue =
+          ShapedType::isDynamic(stride)
+              ? convertUnsignedToI32(rewriter, loc,
+                                     memRefDescriptor.stride(rewriter, loc, i))
+              : rewriter.create<LLVM::ConstantOp>(loc, i32, stride);
+      increment = rewriter.create<LLVM::MulOp>(loc, increment, strideValue);
+    }
+    index =
+        index ? rewriter.create<LLVM::AddOp>(loc, index, increment) : increment;
+  }
+  return index ? index : createI32Constant(rewriter, loc, 0);
 }
 
 namespace {
@@ -88,17 +122,12 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     Type llvmWantedDataType = this->typeConverter->convertType(wantedDataType);
 
     Type i32 = rewriter.getI32Type();
-    Type llvmI32 = this->typeConverter->convertType(i32);
-    Type llvmI16 = this->typeConverter->convertType(rewriter.getI16Type());
+    Type i16 = rewriter.getI16Type();
 
-    auto toI32 = [&](Value val) -> Value {
-      if (val.getType() == llvmI32)
-        return val;
-
-      return rewriter.create<LLVM::TruncOp>(loc, llvmI32, val);
-    };
-
-    int64_t elementByteWidth = memrefType.getElementTypeBitWidth() / 8;
+    // Get the type size in bytes.
+    DataLayout dataLayout = DataLayout::closest(gpuOp);
+    int64_t elementByteWidth =
+        dataLayout.getTypeSizeInBits(memrefType.getElementType()) / 8;
     Value byteWidthConst = createI32Constant(rewriter, loc, elementByteWidth);
 
     // If we want to load a vector<NxT> with total size <= 32
@@ -114,7 +143,8 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     }
     if (auto dataVector = dyn_cast<VectorType>(wantedDataType)) {
       uint32_t vecLen = dataVector.getNumElements();
-      uint32_t elemBits = dataVector.getElementTypeBitWidth();
+      uint32_t elemBits =
+          dataLayout.getTypeSizeInBits(dataVector.getElementType());
       uint32_t totalBits = elemBits * vecLen;
       bool usePackedFp16 =
           isa_and_present<RawBufferAtomicFaddOp>(*gpuOp) && vecLen == 2;
@@ -167,28 +197,36 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
 
     MemRefDescriptor memrefDescriptor(memref);
 
-    Value ptr = memrefDescriptor.alignedPtr(rewriter, loc);
+    Value ptr = memrefDescriptor.bufferPtr(
+        rewriter, loc, *this->getTypeConverter(), memrefType);
     // The stride value is always 0 for raw buffers. This also disables
     // swizling.
     Value stride = rewriter.create<LLVM::ConstantOp>(
-        loc, llvmI16, rewriter.getI16IntegerAttr(0));
+        loc, i16, rewriter.getI16IntegerAttr(0));
+    // Get the number of elements.
     Value numRecords;
-    if (memrefType.hasStaticShape() && memrefType.getLayout().isIdentity()) {
-      numRecords = createI32Constant(
-          rewriter, loc,
-          static_cast<int32_t>(memrefType.getNumElements() * elementByteWidth));
+    if (memrefType.hasStaticShape() &&
+        !llvm::any_of(strides, ShapedType::isDynamic)) {
+      int64_t size = memrefType.getRank() == 0 ? 1 : 0;
+      ArrayRef<int64_t> shape = memrefType.getShape();
+      for (uint32_t i = 0, e = memrefType.getRank(); i < e; ++i)
+        size = std::max(shape[i] * strides[i], size);
+      size = size * elementByteWidth;
+      assert(size < std::numeric_limits<uint32_t>::max() &&
+             "the memref buffer is too large");
+      numRecords = createI32Constant(rewriter, loc, static_cast<int32_t>(size));
     } else {
       Value maxIndex;
       for (uint32_t i = 0, e = memrefType.getRank(); i < e; ++i) {
-        Value size = toI32(memrefDescriptor.size(rewriter, loc, i));
-        Value stride = toI32(memrefDescriptor.stride(rewriter, loc, i));
-        stride = rewriter.create<LLVM::MulOp>(loc, stride, byteWidthConst);
+        Value size = memrefDescriptor.size(rewriter, loc, i);
+        Value stride = memrefDescriptor.stride(rewriter, loc, i);
         Value maxThisDim = rewriter.create<LLVM::MulOp>(loc, size, stride);
-        maxIndex = maxIndex ? rewriter.create<LLVM::MaximumOp>(loc, maxIndex,
-                                                               maxThisDim)
-                            : maxThisDim;
+        maxIndex =
+            maxIndex ? rewriter.create<LLVM::UMaxOp>(loc, maxIndex, maxThisDim)
+                     : maxThisDim;
       }
-      numRecords = maxIndex;
+      numRecords = rewriter.create<LLVM::MulOp>(
+          loc, convertUnsignedToI32(rewriter, loc, maxIndex), byteWidthConst);
     }
 
     // Flag word:
@@ -218,40 +256,23 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     args.push_back(resource);
 
     // Indexing (voffset)
-    Value voffset = createI32Constant(rewriter, loc, 0);
-    for (auto pair : llvm::enumerate(adaptor.getIndices())) {
-      size_t i = pair.index();
-      Value index = pair.value();
-      Value strideOp;
-      if (ShapedType::isDynamic(strides[i])) {
-        strideOp = rewriter.create<LLVM::MulOp>(
-            loc, toI32(memrefDescriptor.stride(rewriter, loc, i)),
-            byteWidthConst);
-      } else {
-        strideOp =
-            createI32Constant(rewriter, loc, strides[i] * elementByteWidth);
-      }
-      index = rewriter.create<LLVM::MulOp>(loc, index, strideOp);
-      voffset = rewriter.create<LLVM::AddOp>(loc, voffset, index);
-    }
-    if (adaptor.getIndexOffset()) {
-      int32_t indexOffset = *gpuOp.getIndexOffset() * elementByteWidth;
-      Value extraOffsetConst = createI32Constant(rewriter, loc, indexOffset);
+    Value voffset = getLinearIndexI32(rewriter, loc, memrefDescriptor,
+                                      adaptor.getIndices(), strides);
+    if (std::optional<int32_t> indexOffset = adaptor.getIndexOffset();
+        indexOffset && *indexOffset > 0) {
+      Value extraOffsetConst = createI32Constant(rewriter, loc, *indexOffset);
       voffset =
           voffset ? rewriter.create<LLVM::AddOp>(loc, voffset, extraOffsetConst)
                   : extraOffsetConst;
     }
+    voffset = rewriter.create<LLVM::MulOp>(loc, voffset, byteWidthConst);
     args.push_back(voffset);
 
+    // SGPR offset.
     Value sgprOffset = adaptor.getSgprOffset();
     if (!sgprOffset)
       sgprOffset = createI32Constant(rewriter, loc, 0);
-    if (ShapedType::isDynamic(offset))
-      sgprOffset = rewriter.create<LLVM::AddOp>(
-          loc, toI32(memrefDescriptor.offset(rewriter, loc)), sgprOffset);
-    else if (offset > 0)
-      sgprOffset = rewriter.create<LLVM::AddOp>(
-          loc, sgprOffset, createI32Constant(rewriter, loc, offset));
+    sgprOffset = rewriter.create<LLVM::MulOp>(loc, sgprOffset, byteWidthConst);
     args.push_back(sgprOffset);
 
     // bit 0: GLC = 0 (atomics drop value, less coherency)
