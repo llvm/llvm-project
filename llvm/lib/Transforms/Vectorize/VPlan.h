@@ -4026,6 +4026,9 @@ public:
     UFs.insert(UF);
   }
 
+  /// Returns true if the VPlan already has been unrolled, i.e. it has UF = 1.
+  unsigned isUnrolled() const { return UFs.size() == 1 && UFs.back() == 1; }
+
   /// Return a string with the name of the plan and the applicable VFs and UFs.
   std::string getName() const;
 
