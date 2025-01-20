@@ -1803,7 +1803,8 @@ namespace llvm {
     bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                         bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        LLVMContext &Context) const override;
+                        LLVMContext &Context,
+                        const Type *RetTy) const override;
 
     const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
     ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
