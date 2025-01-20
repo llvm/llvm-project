@@ -303,6 +303,14 @@ defvar BarrierMode_GroupMemoryBarrierWithGroupSync  = 9;
 defvar BarrierMode_AllMemoryBarrier                 = 10;
 defvar BarrierMode_AllMemoryBarrierWithGroupSync    = 11;
 
+defvar WaveOpKind_Sum     = 0;
+defvar WaveOpKind_Product = 1;
+defvar WaveOpKind_Min     = 2;
+defvar WaveOpKind_Max     = 3;
+
+defvar SignedOpKind_Signed   = 0;
+defvar SignedOpKind_Unsigned = 1;
+
 // Intrinsic arg selection
 class IntrinArgSelectType;
 def IntrinArgSelect_Index : IntrinArgSelectType;
@@ -340,7 +348,7 @@ class IntrinArgI32  <int value> : IntrinArgSelect<IntrinArgSelect_I32,   value>;
 //     IntrinSelect<int_dx_wave_active_usum,
 //       [ IntrinArgIndex<0>, IntrinArgI8<0>, IntrinArgI8<1> ]
 //     >,
-//     IntrinSelect<int_dx_wave_active_sum,
+//     IntrinSelect<int_dx_wave_reduce_sum,
 //       [ IntrinArgIndex<0>, IntrinArgI8<0>, IntrinArgI8<0> ]
 //     >,
 //   ]
@@ -989,6 +997,24 @@ def WaveActiveAnyTrue : DXILOp<113, waveAnyTrue> {
   let arguments = [Int1Ty];
   let result = Int1Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
+}
+
+def WaveActiveOp : DXILOp<119, waveActiveOp> {
+  let Doc = "returns the result of the operation across waves";
+  let intrinsics = [
+    IntrinSelect<
+        int_dx_wave_reduce_sum,
+        [ IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Sum>, IntrinArgI8<SignedOpKind_Signed> ]>,
+    IntrinSelect<
+        int_dx_wave_reduce_usum,
+        [ IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Sum>, IntrinArgI8<SignedOpKind_Unsigned> ]>,
+  ];
+
+  let arguments = [OverloadTy, Int8Ty, Int8Ty];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int16Ty, Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
 def WaveIsFirstLane :  DXILOp<110, waveIsFirstLane> {

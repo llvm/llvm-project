@@ -1689,6 +1689,28 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::x86_avx512_cvttsd2usi64:
     return !Call->isStrictFP();
 
+  // NVVM FMax intrinsics
+  case Intrinsic::nvvm_fmax_d:
+  case Intrinsic::nvvm_fmax_f:
+  case Intrinsic::nvvm_fmax_ftz_f:
+  case Intrinsic::nvvm_fmax_ftz_nan_f:
+  case Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax_ftz_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax_nan_f:
+  case Intrinsic::nvvm_fmax_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax_xorsign_abs_f:
+
+  // NVVM FMin intrinsics
+  case Intrinsic::nvvm_fmin_d:
+  case Intrinsic::nvvm_fmin_f:
+  case Intrinsic::nvvm_fmin_ftz_f:
+  case Intrinsic::nvvm_fmin_ftz_nan_f:
+  case Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin_ftz_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin_nan_f:
+  case Intrinsic::nvvm_fmin_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin_xorsign_abs_f:
+
   // NVVM float/double to int32/uint32 conversion intrinsics
   case Intrinsic::nvvm_f2i_rm:
   case Intrinsic::nvvm_f2i_rn:
@@ -2431,9 +2453,10 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       if (U.isNaN())
         return ConstantInt::get(Ty, 0);
 
-      APFloat::roundingMode RMode = nvvm::IntrinsicGetRoundingMode(IntrinsicID);
-      bool IsFTZ = nvvm::IntrinsicShouldFTZ(IntrinsicID);
-      bool IsSigned = nvvm::IntrinsicConvertsToSignedInteger(IntrinsicID);
+      APFloat::roundingMode RMode =
+          nvvm::GetFPToIntegerRoundingMode(IntrinsicID);
+      bool IsFTZ = nvvm::FPToIntegerIntrinsicShouldFTZ(IntrinsicID);
+      bool IsSigned = nvvm::FPToIntegerIntrinsicResultIsSigned(IntrinsicID);
 
       APSInt ResInt(Ty->getIntegerBitWidth(), !IsSigned);
       auto FloatToRound = IsFTZ ? FTZPreserveSign(U) : U;
@@ -2892,11 +2915,48 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     case Intrinsic::minnum:
     case Intrinsic::maximum:
     case Intrinsic::minimum:
+    case Intrinsic::nvvm_fmax_d:
+    case Intrinsic::nvvm_fmin_d:
       // If one argument is undef, return the other argument.
       if (IsOp0Undef)
         return Operands[1];
       if (IsOp1Undef)
         return Operands[0];
+      break;
+
+    case Intrinsic::nvvm_fmax_f:
+    case Intrinsic::nvvm_fmax_ftz_f:
+    case Intrinsic::nvvm_fmax_ftz_nan_f:
+    case Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_f:
+    case Intrinsic::nvvm_fmax_ftz_xorsign_abs_f:
+    case Intrinsic::nvvm_fmax_nan_f:
+    case Intrinsic::nvvm_fmax_nan_xorsign_abs_f:
+    case Intrinsic::nvvm_fmax_xorsign_abs_f:
+
+    case Intrinsic::nvvm_fmin_f:
+    case Intrinsic::nvvm_fmin_ftz_f:
+    case Intrinsic::nvvm_fmin_ftz_nan_f:
+    case Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_f:
+    case Intrinsic::nvvm_fmin_ftz_xorsign_abs_f:
+    case Intrinsic::nvvm_fmin_nan_f:
+    case Intrinsic::nvvm_fmin_nan_xorsign_abs_f:
+    case Intrinsic::nvvm_fmin_xorsign_abs_f:
+      // If one arg is undef, the other arg can be returned only if it is
+      // constant, as we may need to flush it to sign-preserving zero or
+      // canonicalize the NaN.
+      if (!IsOp0Undef && !IsOp1Undef)
+        break;
+      if (auto *Op = dyn_cast<ConstantFP>(Operands[IsOp0Undef ? 1 : 0])) {
+        if (Op->isNaN()) {
+          APInt NVCanonicalNaN(32, 0x7fffffff);
+          return ConstantFP::get(
+              Ty, APFloat(Ty->getFltSemantics(), NVCanonicalNaN));
+        }
+        if (nvvm::FMinFMaxShouldFTZ(IntrinsicID))
+          return ConstantFP::get(Ty, FTZPreserveSign(Op->getValueAPF()));
+        else
+          return Op;
+      }
       break;
     }
   }
@@ -2955,6 +3015,79 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         return ConstantFP::get(Ty->getContext(), minimum(Op1V, Op2V));
       case Intrinsic::maximum:
         return ConstantFP::get(Ty->getContext(), maximum(Op1V, Op2V));
+
+      case Intrinsic::nvvm_fmax_d:
+      case Intrinsic::nvvm_fmax_f:
+      case Intrinsic::nvvm_fmax_ftz_f:
+      case Intrinsic::nvvm_fmax_ftz_nan_f:
+      case Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_f:
+      case Intrinsic::nvvm_fmax_ftz_xorsign_abs_f:
+      case Intrinsic::nvvm_fmax_nan_f:
+      case Intrinsic::nvvm_fmax_nan_xorsign_abs_f:
+      case Intrinsic::nvvm_fmax_xorsign_abs_f:
+
+      case Intrinsic::nvvm_fmin_d:
+      case Intrinsic::nvvm_fmin_f:
+      case Intrinsic::nvvm_fmin_ftz_f:
+      case Intrinsic::nvvm_fmin_ftz_nan_f:
+      case Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_f:
+      case Intrinsic::nvvm_fmin_ftz_xorsign_abs_f:
+      case Intrinsic::nvvm_fmin_nan_f:
+      case Intrinsic::nvvm_fmin_nan_xorsign_abs_f:
+      case Intrinsic::nvvm_fmin_xorsign_abs_f: {
+
+        bool ShouldCanonicalizeNaNs = !(IntrinsicID == Intrinsic::nvvm_fmax_d ||
+                                        IntrinsicID == Intrinsic::nvvm_fmin_d);
+        bool IsFTZ = nvvm::FMinFMaxShouldFTZ(IntrinsicID);
+        bool IsNaNPropagating = nvvm::FMinFMaxPropagatesNaNs(IntrinsicID);
+        bool IsXorSignAbs = nvvm::FMinFMaxIsXorSignAbs(IntrinsicID);
+
+        APFloat A = IsFTZ ? FTZPreserveSign(Op1V) : Op1V;
+        APFloat B = IsFTZ ? FTZPreserveSign(Op2V) : Op2V;
+
+        bool XorSign = false;
+        if (IsXorSignAbs) {
+          XorSign = A.isNegative() ^ B.isNegative();
+          A = abs(A);
+          B = abs(B);
+        }
+
+        bool IsFMax = false;
+        switch (IntrinsicID) {
+        case Intrinsic::nvvm_fmax_d:
+        case Intrinsic::nvvm_fmax_f:
+        case Intrinsic::nvvm_fmax_ftz_f:
+        case Intrinsic::nvvm_fmax_ftz_nan_f:
+        case Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_f:
+        case Intrinsic::nvvm_fmax_ftz_xorsign_abs_f:
+        case Intrinsic::nvvm_fmax_nan_f:
+        case Intrinsic::nvvm_fmax_nan_xorsign_abs_f:
+        case Intrinsic::nvvm_fmax_xorsign_abs_f:
+          IsFMax = true;
+          break;
+        }
+        APFloat Res = IsFMax ? maximum(A, B) : minimum(A, B);
+
+        if (ShouldCanonicalizeNaNs) {
+          APFloat NVCanonicalNaN(Res.getSemantics(), APInt(32, 0x7fffffff));
+          if (A.isNaN() && B.isNaN())
+            return ConstantFP::get(Ty, NVCanonicalNaN);
+          else if (IsNaNPropagating && (A.isNaN() || B.isNaN()))
+            return ConstantFP::get(Ty, NVCanonicalNaN);
+        }
+
+        if (A.isNaN() && B.isNaN())
+          return Operands[1];
+        else if (A.isNaN())
+          Res = B;
+        else if (B.isNaN())
+          Res = A;
+
+        if (IsXorSignAbs && XorSign != Res.isNegative())
+          Res.changeSign();
+
+        return ConstantFP::get(Ty->getContext(), Res);
+      }
       }
 
       if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())

@@ -75,4 +75,22 @@ implicit none
   end interface
   public :: threadfence_system
 
+  ! Math API
+
+  interface
+    attributes(device) function __fadd_rd(x, y) bind(c, name='__nv_fadd_rd')
+      real, intent(in), value :: x, y
+      real :: __fadd_rd
+    end function
+  end interface
+  public :: __fadd_rd
+
+  interface
+    attributes(device) function __fadd_ru(x, y) bind(c, name='__nv_fadd_ru')
+      real, intent(in), value :: x, y
+      real :: __fadd_ru
+    end function
+  end interface
+  public :: __fadd_ru
+  
 end module

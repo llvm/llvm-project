@@ -28,6 +28,11 @@
 //
 // XFAIL: target=powerpc-{{.+}}-aix{{.*}}
 
+// By default, off_t is typically a 32-bit integer on ARMv7 Linux systems,
+// meaning it can represent file sizes up to 2GB (2^31 bytes) only.
+//
+// UNSUPPORTED: target=armv7-unknown-linux-gnueabihf
+
 #include <fstream>
 #include <iostream>
 #include <cassert>

@@ -209,7 +209,7 @@ struct ForcedNorm2DimReal16 {
       auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
       return mlir::FunctionType::get(
           ctx, {fir::ReferenceType::get(boxTy), boxTy, intTy, strTy, intTy},
-          mlir::NoneType::get(ctx));
+          {});
     };
   }
 };

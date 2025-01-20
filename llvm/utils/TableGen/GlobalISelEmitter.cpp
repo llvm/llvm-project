@@ -765,6 +765,18 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     InsnMatcher.addPredicate<InstructionOpcodeMatcher>(SrcGIOrNull);
   }
 
+  // Since there are no opcodes for atomic loads and stores comparing to
+  // SelectionDAG, we add CheckMMOIsNonAtomic predicate immediately after the
+  // opcode predicate to make a logical combination of them.
+  if (SrcGIEquivOrNull &&
+      SrcGIEquivOrNull->getValueAsBit("CheckMMOIsNonAtomic"))
+    InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>("NotAtomic");
+  else if (SrcGIEquivOrNull &&
+           SrcGIEquivOrNull->getValueAsBit("CheckMMOIsAtomic")) {
+    InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
+        "Unordered", AtomicOrderingMMOPredicateMatcher::AO_OrStronger);
+  }
+
   unsigned OpIdx = 0;
   for (const TypeSetByHwMode &VTy : Src.getExtTypes()) {
     // Results don't have a name unless they are the root node. The caller will
@@ -825,15 +837,6 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       return failedImport("Src pattern child has predicate (" +
                           explainPredicates(Src) + ")");
     }
-  }
-
-  if (SrcGIEquivOrNull &&
-      SrcGIEquivOrNull->getValueAsBit("CheckMMOIsNonAtomic"))
-    InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>("NotAtomic");
-  else if (SrcGIEquivOrNull &&
-           SrcGIEquivOrNull->getValueAsBit("CheckMMOIsAtomic")) {
-    InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
-        "Unordered", AtomicOrderingMMOPredicateMatcher::AO_OrStronger);
   }
 
   if (Src.isLeaf()) {

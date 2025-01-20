@@ -94,6 +94,9 @@ public:
 
   void enqueuePath(StringRef path, bool wholeArchive, bool lazy);
 
+  // Returns a list of chunks of selected symbols.
+  std::vector<Chunk *> getChunks() const;
+
   std::unique_ptr<llvm::TarWriter> tar; // for /linkrepro
 
   void pullArm64ECIcallHelper();

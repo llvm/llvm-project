@@ -14,6 +14,7 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -66,9 +67,6 @@ public:
   // doing stdcall fixups.
   void loadMinGWSymbols();
   bool handleMinGWAutomaticImport(Symbol *sym, StringRef name);
-
-  // Returns a list of chunks of selected symbols.
-  std::vector<Chunk *> getChunks() const;
 
   // Returns a symbol for a given name. Returns a nullptr if not found.
   Symbol *find(StringRef name) const;
@@ -143,6 +141,9 @@ public:
 
   bool isEC() const { return machine == ARM64EC; }
 
+  // An entry point symbol.
+  Symbol *entry = nullptr;
+
   // A list of chunks which to be added to .rdata.
   std::vector<Chunk *> localImportChunks;
 
@@ -154,6 +155,8 @@ public:
     for (auto &pair : symMap)
       callback(pair.second);
   }
+
+  std::vector<BitcodeFile *> bitcodeFileInstances;
 
   DefinedRegular *loadConfigSym = nullptr;
   uint32_t loadConfigSize = 0;
@@ -175,6 +178,11 @@ private:
   std::unique_ptr<BitcodeCompiler> lto;
   std::vector<std::pair<Symbol *, Symbol *>> entryThunks;
   llvm::DenseMap<Symbol *, Symbol *> exitThunks;
+
+  void
+  reportProblemSymbols(const llvm::SmallPtrSetImpl<Symbol *> &undefs,
+                       const llvm::DenseMap<Symbol *, Symbol *> *localImports,
+                       bool needBitcodeFiles);
 };
 
 std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex);

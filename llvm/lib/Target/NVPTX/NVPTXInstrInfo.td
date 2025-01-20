@@ -569,6 +569,18 @@ multiclass F2_Support_Half<string OpcStr, SDNode OpNode> {
 
 }
 
+// Variant where only .ftz.bf16 is supported.
+multiclass F2_Support_Half_BF<string OpcStr, SDNode OpNode> {
+   def bf16_ftz :  NVPTXInst<(outs Int16Regs:$dst), (ins Int16Regs:$a),
+                           OpcStr # ".ftz.bf16 \t$dst, $a;",
+                           [(set bf16:$dst, (OpNode bf16:$a))]>,
+                           Requires<[hasSM<90>, hasPTX<78>]>;
+   def bf16x2_ftz: NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$a),
+                           OpcStr # ".ftz.bf16x2 \t$dst, $a;",
+                           [(set v2bf16:$dst, (OpNode v2bf16:$a))]>,
+                           Requires<[hasSM<90>, hasPTX<78>]>;
+}
+
 //===----------------------------------------------------------------------===//
 // NVPTX Instructions.
 //===----------------------------------------------------------------------===//
@@ -1182,6 +1194,8 @@ defm FABS_H: F2_Support_Half<"abs", fabs>;
 defm FNEG_H: F2_Support_Half<"neg", fneg>;
 
 defm FSQRT : F2<"sqrt.rn", fsqrt>;
+
+defm FEXP2_H: F2_Support_Half_BF<"ex2.approx", fexp2>;
 
 //
 // F16 NEG

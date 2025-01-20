@@ -118,35 +118,6 @@ findMembersUsedInInitExpr(const CXXCtorInitializer *Initializer,
   return Results;
 }
 
-/// Returns the next token after `Loc` (including comment tokens).
-static std::optional<Token> getTokenAfter(SourceLocation Loc,
-                                          const SourceManager &SM,
-                                          const LangOptions &LangOpts) {
-  if (Loc.isMacroID()) {
-    return std::nullopt;
-  }
-  Loc = Lexer::getLocForEndOfToken(Loc, 0, SM, LangOpts);
-
-  // Break down the source location.
-  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
-
-  // Try to load the file buffer.
-  bool InvalidTemp = false;
-  StringRef File = SM.getBufferData(LocInfo.first, &InvalidTemp);
-  if (InvalidTemp)
-    return std::nullopt;
-
-  const char *TokenBegin = File.data() + LocInfo.second;
-
-  Lexer lexer(SM.getLocForStartOfFile(LocInfo.first), LangOpts, File.begin(),
-              TokenBegin, File.end());
-  lexer.SetCommentRetentionState(true);
-  // Find the token.
-  Token Tok;
-  lexer.LexFromRawLexer(Tok);
-  return Tok;
-}
-
 /// Returns the end of the trailing comments after `Loc`.
 static SourceLocation getEndOfTrailingComment(SourceLocation Loc,
                                               const SourceManager &SM,
@@ -154,11 +125,12 @@ static SourceLocation getEndOfTrailingComment(SourceLocation Loc,
   // We consider any following comment token that is indented more than the
   // first comment to be part of the trailing comment.
   const unsigned Column = SM.getPresumedColumnNumber(Loc);
-  std::optional<Token> Tok = getTokenAfter(Loc, SM, LangOpts);
+  std::optional<Token> Tok =
+      Lexer::findNextToken(Loc, SM, LangOpts, /*IncludeComments=*/true);
   while (Tok && Tok->is(tok::comment) &&
          SM.getPresumedColumnNumber(Tok->getLocation()) > Column) {
     Loc = Tok->getEndLoc();
-    Tok = getTokenAfter(Loc, SM, LangOpts);
+    Tok = Lexer::findNextToken(Loc, SM, LangOpts, /*IncludeComments=*/true);
   }
   return Loc;
 }
