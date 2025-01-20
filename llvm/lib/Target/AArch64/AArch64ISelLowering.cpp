@@ -2049,28 +2049,6 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
   return false;
 }
 
-bool AArch64TargetLowering::shouldExpandPartialReductionIntrinsic(
-    const IntrinsicInst *I) const {
-  if (I->getIntrinsicID() != Intrinsic::experimental_vector_partial_reduce_add)
-    return true;
-
-  EVT VT = EVT::getEVT(I->getType());
-  auto Input = I->getOperand(1);
-  EVT InputVT = EVT::getEVT(Input->getType());
-
-  if ((InputVT == MVT::nxv4i64 && VT == MVT::nxv2i64) ||
-      (InputVT == MVT::nxv8i32 && VT == MVT::nxv4i32) ||
-      (InputVT == MVT::nxv16i16 && VT == MVT::nxv8i16) ||
-      (InputVT == MVT::nxv16i64 && VT == MVT::nxv4i64) ||
-      (InputVT == MVT::nxv16i32 && VT == MVT::nxv4i32) ||
-      (InputVT == MVT::nxv8i64 && VT == MVT::nxv2i64) ||
-      (InputVT == MVT::v16i64 && VT == MVT::v4i64) ||
-      (InputVT == MVT::v16i32 && VT == MVT::v4i32) ||
-      (InputVT == MVT::v8i32 && VT == MVT::v2i32))
-    return false;
-  return true;
-}
-
 bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
   if (!Subtarget->isSVEorStreamingSVEAvailable())
     return true;
@@ -22037,9 +22015,9 @@ SDValue tryCombineToDotProduct(SDValue &Op0, SDValue &Op1, SDValue &Op2,
                                const AArch64Subtarget *Subtarget, SDLoc &DL) {
   bool Scalable = Op0->getValueType(0).isScalableVector();
   if (Scalable && !Subtarget->isSVEorStreamingSVEAvailable())
-    return DAG.expandPartialReduceAdd(DL, Op0, Op1, Op2);
+    return SDValue();
   if (!Scalable && (!Subtarget->isNeonAvailable() || !Subtarget->hasDotProd()))
-    return DAG.expandPartialReduceAdd(DL, Op0, Op1, Op2);
+    return SDValue();
 
   unsigned Op1Opcode = Op1->getOpcode();
   SDValue MulOpLHS, MulOpRHS;
@@ -22056,7 +22034,7 @@ SDValue tryCombineToDotProduct(SDValue &Op0, SDValue &Op1, SDValue &Op2,
     unsigned ExtMulOpRHSOpcode = ExtMulOpRHS->getOpcode();
     if (!ISD::isExtOpcode(ExtMulOpLHSOpcode) ||
         !ISD::isExtOpcode(ExtMulOpRHSOpcode))
-      return DAG.expandPartialReduceAdd(DL, Op0, Op1, Op2);
+      return SDValue();
 
     MulOpLHSIsSigned = ExtMulOpLHSOpcode == ISD::SIGN_EXTEND;
     MulOpRHSIsSigned = ExtMulOpRHSOpcode == ISD::SIGN_EXTEND;
@@ -22066,7 +22044,7 @@ SDValue tryCombineToDotProduct(SDValue &Op0, SDValue &Op1, SDValue &Op2,
     EVT MulOpLHSVT = MulOpLHS.getValueType();
 
     if (MulOpLHSVT != MulOpRHS.getValueType())
-      return DAG.expandPartialReduceAdd(DL, Op0, Op1, Op2);
+      return SDValue();
 
     Op2 = DAG.getAnyExtOrTrunc(Op2, DL, MulOpLHSVT);
     MulOpLHS = DAG.getNode(ISD::MUL, DL, MulOpLHSVT, MulOpLHS, Op2);
@@ -22092,12 +22070,12 @@ SDValue tryCombineToDotProduct(SDValue &Op0, SDValue &Op1, SDValue &Op2,
   unsigned DotOpcode = MulOpLHSIsSigned ? AArch64ISD::SDOT : AArch64ISD::UDOT;
   if (MulOpLHSIsSigned != MulOpRHSIsSigned) {
     if (!Subtarget->hasMatMulInt8())
-      return DAG.expandPartialReduceAdd(DL, Op0, Op1, Op2);
+      return SDValue();
 
     bool Scalable = ReducedVT.isScalableVT();
     // There's no nxv2i64 version of usdot
     if (Scalable && ReducedVT != MVT::nxv4i32 && ReducedVT != MVT::nxv4i64)
-      return DAG.expandPartialReduceAdd(DL, Op0, Op1, Op2);
+      return SDValue();
 
     if (!MulOpRHSIsSigned)
       std::swap(MulOpLHS, MulOpRHS);
@@ -22134,10 +22112,10 @@ SDValue tryCombineToWideAdd(SDValue &Op0, SDValue &Op1, SDValue &Op2,
                             SelectionDAG &DAG,
                             const AArch64Subtarget *Subtarget, SDLoc &DL) {
   if (!Subtarget->hasSVE2() && !Subtarget->isStreamingSVEAvailable())
-    return DAG.expandPartialReduceAdd(DL, Op0, Op1, Op2);
+    return SDValue();
   unsigned Op1Opcode = Op1->getOpcode();
   if (!ISD::isExtOpcode(Op1Opcode))
-    return DAG.expandPartialReduceAdd(DL, Op0, Op1, Op2);
+    return SDValue();
 
   EVT AccVT = Op0->getValueType(0);
   Op1 = Op1->getOperand(0);
@@ -22146,7 +22124,7 @@ SDValue tryCombineToWideAdd(SDValue &Op0, SDValue &Op1, SDValue &Op2,
   SDValue Input = DAG.getNode(ISD::MUL, DL, Op1VT, Op1, Op2);
 
   if (!AccVT.isScalableVector())
-    return DAG.expandPartialReduceAdd(DL, Op0, Op1, Op2);
+    return SDValue();
 
   if (!(Op1VT == MVT::nxv4i32 && AccVT == MVT::nxv2i64) &&
       !(Op1VT == MVT::nxv8i16 && AccVT == MVT::nxv4i32) &&
@@ -22177,7 +22155,10 @@ SDValue performPartialReduceAddCombine(SDNode *N, SelectionDAG &DAG,
     return Dot;
   if (auto WideAdd = tryCombineToWideAdd(Op0, Op1, Op2, DAG, Subtarget, DL))
     return WideAdd;
-  return SDValue();
+  // N->getOperand needs calling again because the Op variables may have been
+  // changed by the functions above
+  return DAG.expandPartialReduceAdd(DL, N->getOperand(0), N->getOperand(1),
+                                    N->getOperand(2));
 }
 
 static SDValue performIntrinsicCombine(SDNode *N,

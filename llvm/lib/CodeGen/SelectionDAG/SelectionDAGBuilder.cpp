@@ -8122,15 +8122,22 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Acc = getValue(I.getOperand(0));
     EVT AccVT = Acc.getValueType();
     SDValue Input = getValue(I.getOperand(1));
+    EVT InputVT = Input.getValueType();
 
-    if (!TLI.shouldExpandPartialReductionIntrinsic(cast<IntrinsicInst>(&I))) {
-      setValue(&I, DAG.getNode(ISD::PARTIAL_REDUCE_UMLA, dl, AccVT, Acc, Input,
-                               DAG.getConstant(1, dl, Input.getValueType())));
-      return;
-    }
-    setValue(&I,
-             DAG.expandPartialReduceAdd(
-                 dl, Acc, Input, DAG.getConstant(1, dl, Input.getValueType())));
+    assert(AccVT.getVectorElementType() == InputVT.getVectorElementType() &&
+           "Expected operands to have the same vector element type!");
+    assert(InputVT.getVectorElementCount().getKnownMinValue() %
+                   AccVT.getVectorElementCount().getKnownMinValue() ==
+               0 &&
+           "Expected the element count of the Input operand to be a positive "
+           "integer multiple of the element count of the Accumulator operand!");
+
+    // ISD::PARTIAL_REDUCE_UMLA is chosen arbitrarily and would function the
+    // same if ISD::PARTIAL_REDUCE_SMLA was used instead. It should be changed
+    // to its correct signedness when combining or expanding, according to
+    // extends being performed on Input.
+    setValue(&I, DAG.getNode(ISD::PARTIAL_REDUCE_UMLA, dl, AccVT, Acc, Input,
+                             DAG.getConstant(1, dl, InputVT)));
     return;
   }
   case Intrinsic::experimental_cttz_elts: {

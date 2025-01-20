@@ -1605,10 +1605,6 @@ public:
   SDValue getShiftAmountOperand(EVT LHSTy, SDValue Op);
 
   /// Expands PARTIAL_REDUCE_S/UMLA nodes.
-  /// \p Op1 Accumulator for where the result is stored for the partial
-  /// reduction operation.
-  /// \p Op2 Input for the partial reduction operation.
-  /// Expands PARTIAL_REDUCE_S/UMLA nodes.
   /// \p Acc Accumulator for where the result is stored for the partial
   /// reduction operation.
   /// \p Input1 First input for the partial reduction operation.
