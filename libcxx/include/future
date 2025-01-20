@@ -1840,7 +1840,7 @@ class _LIBCPP_HIDDEN __async_func {
   tuple<_Fp, _Args...> __f_;
 
 public:
-  using _Rp = __invoke_result_t<_Fp, _Args...>;
+  using _Rp _LIBCPP_NODEBUG = __invoke_result_t<_Fp, _Args...>;
 
   _LIBCPP_HIDE_FROM_ABI explicit __async_func(_Fp&& __f, _Args&&... __args)
       : __f_(std::move(__f), std::move(__args)...) {}
