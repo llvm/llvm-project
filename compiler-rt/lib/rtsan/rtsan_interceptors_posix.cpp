@@ -808,6 +808,30 @@ INTERCEPTOR(int, munmap, void *addr, size_t length) {
   return REAL(munmap)(addr, length);
 }
 
+INTERCEPTOR(int, madvise, void *addr, size_t length, int flag) {
+  __rtsan_notify_intercepted_call("madvise");
+  return REAL(madvise)(addr, length, flag);
+}
+
+INTERCEPTOR(int, mprotect, void *addr, size_t length, int prot) {
+  __rtsan_notify_intercepted_call("mprotect");
+  return REAL(mprotect)(addr, length, prot);
+}
+
+INTERCEPTOR(int, msync, void *addr, size_t length, int flag) {
+  __rtsan_notify_intercepted_call("msync");
+  return REAL(msync)(addr, length, flag);
+}
+
+#if SANITIZER_APPLE
+INTERCEPTOR(int, mincore, const void *addr, size_t length, char *vec) {
+#else
+INTERCEPTOR(int, mincore, void *addr, size_t length, unsigned char *vec) {
+#endif
+  __rtsan_notify_intercepted_call("mincore");
+  return REAL(mincore)(addr, length, vec);
+}
+
 INTERCEPTOR(int, shm_open, const char *name, int oflag, mode_t mode) {
   __rtsan_notify_intercepted_call("shm_open");
   return REAL(shm_open)(name, oflag, mode);
@@ -1148,6 +1172,10 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(mmap);
   RTSAN_MAYBE_INTERCEPT_MMAP64;
   INTERCEPT_FUNCTION(munmap);
+  INTERCEPT_FUNCTION(madvise);
+  INTERCEPT_FUNCTION(mprotect);
+  INTERCEPT_FUNCTION(msync);
+  INTERCEPT_FUNCTION(mincore);
   INTERCEPT_FUNCTION(shm_open);
   INTERCEPT_FUNCTION(shm_unlink);
   RTSAN_MAYBE_INTERCEPT_MEMALIGN;
