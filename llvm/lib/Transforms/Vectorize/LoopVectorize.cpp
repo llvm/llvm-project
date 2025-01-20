@@ -8848,6 +8848,9 @@ VPRecipeBuilder::getScaledReduction(Instruction *PHI, Instruction *RdxExitInstr,
 
   SmallVector<std::pair<PartialReductionChain, unsigned>> Chains;
 
+  // Try and get a scaled reduction from the first non-phi operand.
+  // If one is found, we use the discovered reduction instruction in
+  // place of the accumulator for costing.
   if (auto *OpInst = dyn_cast<Instruction>(Op)) {
     if (auto SR0 = getScaledReduction(PHI, OpInst, Range)) {
       Chains.append(*SR0);
@@ -8874,10 +8877,6 @@ VPRecipeBuilder::getScaledReduction(Instruction *PHI, Instruction *RdxExitInstr,
 
   Instruction *ExtA = cast<Instruction>(BinOp->getOperand(0));
   Instruction *ExtB = cast<Instruction>(BinOp->getOperand(1));
-
-  // Check that the extends extend from the same type.
-  if (A->getType() != B->getType())
-    return std::nullopt;
 
   TTI::PartialReductionExtendKind OpAExtend =
       TargetTransformInfo::getPartialReductionExtendKind(ExtA);
