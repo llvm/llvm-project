@@ -215,6 +215,15 @@ private:
 /// @name Constructors
 /// @{
 public:
+  /// Is this Module valid as determined by one of the verification passes
+  /// i.e. Lint, Verifier, TargetVerifier.
+  bool IsValid = true;
+
+  /// Is this Module using intrinsics to record the position of debugging
+  /// information, or non-intrinsic records? See IsNewDbgInfoFormat in
+  /// \ref BasicBlock.
+  bool IsNewDbgInfoFormat;
+
   /// Used when printing this module in the new debug info format; removes all
   /// declarations of debug intrinsics that are replaced by non-intrinsic
   /// records in the new format.
