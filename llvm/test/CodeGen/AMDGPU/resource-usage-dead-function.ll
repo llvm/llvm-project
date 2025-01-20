@@ -23,8 +23,8 @@ define internal fastcc void @unreachable() {
 
 ; GCN-NOT: .amdhsa_uses_dynamic_stack
 ; GCN-V5: .amdhsa_uses_dynamic_stack
-; ALL: .set .Lentry.private_seg_size, 0
-; ALL: .set .Lentry.has_dyn_sized_stack, 0
+; ALL: .set entry.private_seg_size, 0
+; ALL: .set entry.has_dyn_sized_stack, 0
 define amdgpu_kernel void @entry() {
 bb0:
   br i1 false, label %bb1, label %bb2

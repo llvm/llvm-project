@@ -7,9 +7,9 @@
 @alias0 = hidden alias void (), ptr @aliasee_default_vgpr64_sgpr102
 
 ; CHECK-LABEL: {{^}}kernel0:
-; CHECK:      .set kernel0.num_vgpr, max(41, aliasee_default_vgpr64_sgpr102.num_vgpr)
-; CHECK-NEXT: .set kernel0.num_agpr, max(0, aliasee_default_vgpr64_sgpr102.num_agpr)
-; CHECK-NEXT: .set kernel0.numbered_sgpr, max(33, aliasee_default_vgpr64_sgpr102.numbered_sgpr)
+; CHECK:      .set kernel0.num_vgpr, max(41, .Laliasee_default_vgpr64_sgpr102.num_vgpr)
+; CHECK-NEXT: .set kernel0.num_agpr, max(0, .Laliasee_default_vgpr64_sgpr102.num_agpr)
+; CHECK-NEXT: .set kernel0.numbered_sgpr, max(33, .Laliasee_default_vgpr64_sgpr102.numbered_sgpr)
 define amdgpu_kernel void @kernel0() #0 {
 bb:
   call void @alias0() #2
