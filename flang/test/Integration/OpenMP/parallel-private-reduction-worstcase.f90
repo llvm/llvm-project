@@ -101,7 +101,7 @@ end subroutine
 ! CHECK:       omp.region.after_alloca:
 ! CHECK-NEXT:    br label %omp.par.region
 
-! CHECK:       omp.par.region:                                   ; preds = %omp.region.cont14
+! CHECK:       omp.par.region:                                   ; preds = %omp.region.after_alloca
 ! CHECK-NEXT:    br label %omp.reduction.init
 
 ! CHECK:       omp.reduction.init:                               ; preds = %omp.par.region
@@ -234,7 +234,7 @@ end subroutine
 ! CHECK-NEXT:    call void @free(
 ! CHECK-NEXT:    br label %omp.reduction.cleanup43
 
-! CHECK:       omp.par.region28:                                 ; preds = %omp.par.region27
+! CHECK:       omp.par.region29:                                 ; preds = %omp.par.region28
 ! CHECK-NEXT:    call void @_FortranAStopStatement
 
 ! CHECK:       omp.reduction.neutral24:                          ; preds = %omp.reduction.neutral23

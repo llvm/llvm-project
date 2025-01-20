@@ -23,7 +23,6 @@
 ! RUN: cat %t/dir-flang-new/m.mod | FileCheck %s --check-prefix=DOUBLE8
 ! RUN: not %flang_fc1 -fsyntax-only -fdefault-double-8 %s  2>&1 | FileCheck %s --check-prefix=ERROR
 
-! NOOPTION: integer(4),parameter::real_kind=4_4
 ! TODO: Add checks when actual codegen is possible for this family
 
 !--------------------------
