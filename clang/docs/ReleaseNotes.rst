@@ -93,6 +93,11 @@ C++ Specific Potentially Breaking Changes
   few users and can be written as ``__is_same(__remove_cv(T), decltype(nullptr))``,
   which GCC supports as well.
 
+- The type trait builtin ``__is_referenceable`` has been deprecated, since it has
+  very few users and all the type traits that could benefit from it in the
+  standard library already have their own bespoke builtins. It will be removed in
+  Clang 21.
+
 - Clang will now correctly diagnose as ill-formed a constant expression where an
   enum without a fixed underlying type is set to a value outside the range of
   the enumeration's values.
@@ -310,7 +315,7 @@ C++23 Feature Support
 
 - Extend lifetime of temporaries in mem-default-init for P2718R0. Clang now fully
   supports `P2718R0 Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_.
-  
+
 - ``__cpp_explicit_this_parameter`` is now defined. (#GH82780)
 
 C++20 Feature Support
@@ -717,7 +722,7 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses dangling references for C++20's parenthesized aggregate initialization (#101957).
 
-- Fixed a bug where Clang would not emit ``-Wunused-private-field`` warnings when an unrelated class 
+- Fixed a bug where Clang would not emit ``-Wunused-private-field`` warnings when an unrelated class
   defined a defaulted comparison operator (#GH116270).
 
   .. code-block:: c++
@@ -937,7 +942,7 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure caused by invalid default argument substitutions in non-defining
   friend declarations. (#GH113324)
 - Fix a crash caused by incorrect argument position in merging deduced template arguments. (#GH113659)
-- Fixed a parser crash when using pack indexing as a nested name specifier. (#GH119072) 
+- Fixed a parser crash when using pack indexing as a nested name specifier. (#GH119072)
 - Fixed a null pointer dereference issue when heuristically computing ``sizeof...(pack)`` expressions. (#GH81436)
 - Fixed an assertion failure caused by mangled names with invalid identifiers. (#GH112205)
 - Fixed an incorrect lambda scope of generic lambdas that caused Clang to crash when computing potential lambda
