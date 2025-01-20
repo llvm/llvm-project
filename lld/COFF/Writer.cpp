@@ -2352,6 +2352,20 @@ void Writer::setECSymbols() {
       delayIatCopySym, "__hybrid_auxiliary_delayload_iat_copy",
       delayIdata.getAuxIatCopy().empty() ? nullptr
                                          : delayIdata.getAuxIatCopy().front());
+
+  if (ctx.hybridSymtab) {
+    // For the hybrid image, set the alternate entry point to the EC entry
+    // point. In the hybrid view, it is swapped to the native entry point
+    // using ARM64X relocations.
+    if (auto altEntrySym = cast_or_null<Defined>(ctx.hybridSymtab->entry)) {
+      // If the entry is an EC export thunk, use its target instead.
+      if (auto thunkChunk =
+              dyn_cast<ECExportThunkChunk>(altEntrySym->getChunk()))
+        altEntrySym = thunkChunk->target;
+      symtab->findUnderscore("__arm64x_native_entrypoint")
+          ->replaceKeepingName(altEntrySym, sizeof(SymbolUnion));
+    }
+  }
 }
 
 // Write section contents to a mmap'ed file.
@@ -2586,11 +2600,22 @@ void Writer::createDynamicRelocs() {
                          coffHeaderOffset + offsetof(coff_file_header, Machine),
                          AMD64);
 
-  if (ctx.symtab.entry != ctx.hybridSymtab->entry)
+  if (ctx.symtab.entry != ctx.hybridSymtab->entry) {
     ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
                            peHeaderOffset +
                                offsetof(pe32plus_header, AddressOfEntryPoint),
                            cast_or_null<Defined>(ctx.hybridSymtab->entry));
+
+    // Swap the alternate entry point in the CHPE metadata.
+    Symbol *s = ctx.hybridSymtab->findUnderscore("__chpe_metadata");
+    if (auto chpeSym = cast_or_null<DefinedRegular>(s))
+      ctx.dynamicRelocs->add(
+          IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+          Arm64XRelocVal(chpeSym, offsetof(chpe_metadata, AlternateEntryPoint)),
+          cast_or_null<Defined>(ctx.symtab.entry));
+    else
+      Warn(ctx) << "'__chpe_metadata' is missing for ARM64X target";
+  }
 
   // Set the hybrid load config to the EC load config.
   ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
