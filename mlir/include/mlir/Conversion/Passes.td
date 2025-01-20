@@ -517,6 +517,12 @@ def GpuToLLVMConversionPass : Pass<"gpu-to-llvm", "ModuleOp"> {
            /*default=*/"false",
              "Use bare pointers to pass memref arguments to kernels. "
              "The kernel must use the same setting for this option."
+          >,
+    Option<"typeCheckKernelArgs", "type-check-kernel-args", "bool",
+           /*default=*/"false",
+             "Require all kernel arguments to be memrefs of rank 1 and with a "
+             "32-bit element size. This is a temporary option that will be "
+             "removed; TODO(https://github.com/llvm/llvm-project/issues/73457)."
           >
   ];
 

@@ -773,7 +773,7 @@ void MachineInstr::eraseFromBundle() {
   getParent()->erase_instr(this);
 }
 
-bool MachineInstr::isCandidateForCallSiteEntry(QueryType Type) const {
+bool MachineInstr::isCandidateForAdditionalCallInfo(QueryType Type) const {
   if (!isCall(Type))
     return false;
   switch (getOpcode()) {
@@ -786,10 +786,10 @@ bool MachineInstr::isCandidateForCallSiteEntry(QueryType Type) const {
   return true;
 }
 
-bool MachineInstr::shouldUpdateCallSiteInfo() const {
+bool MachineInstr::shouldUpdateAdditionalCallInfo() const {
   if (isBundle())
-    return isCandidateForCallSiteEntry(MachineInstr::AnyInBundle);
-  return isCandidateForCallSiteEntry();
+    return isCandidateForAdditionalCallInfo(MachineInstr::AnyInBundle);
+  return isCandidateForAdditionalCallInfo();
 }
 
 unsigned MachineInstr::getNumExplicitOperands() const {

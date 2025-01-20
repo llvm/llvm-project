@@ -1612,11 +1612,11 @@ inline _Rp __packaged_task_function<_Rp(_ArgTypes...)>::operator()(_ArgTypes... 
 template <class _Rp, class... _ArgTypes>
 class _LIBCPP_TEMPLATE_VIS packaged_task<_Rp(_ArgTypes...)> {
 public:
-  typedef _Rp result_type; // extension
+  using result_type _LIBCPP_DEPRECATED = _Rp; // extension
 
 private:
-  __packaged_task_function<result_type(_ArgTypes...)> __f_;
-  promise<result_type> __p_;
+  __packaged_task_function<_Rp(_ArgTypes...)> __f_;
+  promise<_Rp> __p_;
 
 public:
   // construction and destruction
@@ -1653,7 +1653,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI bool valid() const _NOEXCEPT { return __p_.__state_ != nullptr; }
 
   // result retrieval
-  _LIBCPP_HIDE_FROM_ABI future<result_type> get_future() { return __p_.get_future(); }
+  _LIBCPP_HIDE_FROM_ABI future<_Rp> get_future() { return __p_.get_future(); }
 
   // execution
   _LIBCPP_HIDE_FROM_ABI void operator()(_ArgTypes... __args);
@@ -1700,17 +1700,17 @@ template <class _Rp, class... _ArgTypes>
 void packaged_task<_Rp(_ArgTypes...)>::reset() {
   if (!valid())
     __throw_future_error(future_errc::no_state);
-  __p_ = promise<result_type>();
+  __p_ = promise<_Rp>();
 }
 
 template <class... _ArgTypes>
 class _LIBCPP_TEMPLATE_VIS packaged_task<void(_ArgTypes...)> {
 public:
-  typedef void result_type; // extension
+  using result_type _LIBCPP_DEPRECATED = void; // extension
 
 private:
-  __packaged_task_function<result_type(_ArgTypes...)> __f_;
-  promise<result_type> __p_;
+  __packaged_task_function<void(_ArgTypes...)> __f_;
+  promise<void> __p_;
 
 public:
   // construction and destruction
@@ -1745,7 +1745,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI bool valid() const _NOEXCEPT { return __p_.__state_ != nullptr; }
 
   // result retrieval
-  _LIBCPP_HIDE_FROM_ABI future<result_type> get_future() { return __p_.get_future(); }
+  _LIBCPP_HIDE_FROM_ABI future<void> get_future() { return __p_.get_future(); }
 
   // execution
   _LIBCPP_HIDE_FROM_ABI void operator()(_ArgTypes... __args);
@@ -1804,7 +1804,7 @@ template <class... _ArgTypes>
 void packaged_task<void(_ArgTypes...)>::reset() {
   if (!valid())
     __throw_future_error(future_errc::no_state);
-  __p_ = promise<result_type>();
+  __p_ = promise<void>();
 }
 
 template <class _Rp, class... _ArgTypes>
