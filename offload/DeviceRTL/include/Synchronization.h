@@ -197,7 +197,7 @@ void threads(atomic::OrderingTy Ordering);
 /// (hence all threads in the block are "aligned"). Also perform a fence before
 /// and after the barrier according to \p Ordering. Note that the
 /// fence might be part of the barrier if the target offers this.
-[[gnu::noinline, omp::assume("ext_aligned_barrier")]] void
+[[gnu::noinline, omp::assume("ompx_aligned_barrier")]] void
 threadsAligned(atomic::OrderingTy Ordering);
 
 ///}
