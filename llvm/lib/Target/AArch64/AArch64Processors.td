@@ -229,6 +229,7 @@ def TuneX2 : SubtargetFeature<"cortex-x2", "ARMProcFamily", "CortexX2",
                                   FeatureALULSLFast,
                                   FeaturePostRAScheduler,
                                   FeatureEnableSelectOptimize,
+                                  FeatureUseFixedOverScalableIfEqualCost,
                                   FeaturePredictableSelectIsExpensive]>;
 
 def TuneX3 : SubtargetFeature<"cortex-x3", "ARMProcFamily", "CortexX3",
@@ -238,6 +239,7 @@ def TuneX3 : SubtargetFeature<"cortex-x3", "ARMProcFamily", "CortexX3",
                                FeatureFuseAES,
                                FeaturePostRAScheduler,
                                FeatureEnableSelectOptimize,
+                               FeatureUseFixedOverScalableIfEqualCost,
                                FeaturePredictableSelectIsExpensive]>;
 
 def TuneX4 : SubtargetFeature<"cortex-x4", "ARMProcFamily", "CortexX4",
@@ -247,6 +249,7 @@ def TuneX4 : SubtargetFeature<"cortex-x4", "ARMProcFamily", "CortexX4",
                                FeatureFuseAES,
                                FeaturePostRAScheduler,
                                FeatureEnableSelectOptimize,
+                               FeatureUseFixedOverScalableIfEqualCost,
                                FeaturePredictableSelectIsExpensive]>;
 
 def TuneX925 : SubtargetFeature<"cortex-x925", "ARMProcFamily",
@@ -256,6 +259,7 @@ def TuneX925 : SubtargetFeature<"cortex-x925", "ARMProcFamily",
                                 FeatureFuseAES,
                                 FeaturePostRAScheduler,
                                 FeatureEnableSelectOptimize,
+                                FeatureUseFixedOverScalableIfEqualCost,
                                 FeaturePredictableSelectIsExpensive]>;
 
 def TuneA64FX : SubtargetFeature<"a64fx", "ARMProcFamily", "A64FX",

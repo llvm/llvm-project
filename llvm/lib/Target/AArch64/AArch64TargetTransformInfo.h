@@ -367,62 +367,7 @@ public:
                           Type *AccumType, ElementCount VF,
                           TTI::PartialReductionExtendKind OpAExtend,
                           TTI::PartialReductionExtendKind OpBExtend,
-                          std::optional<unsigned> BinOp) const {
-
-    InstructionCost Invalid = InstructionCost::getInvalid();
-    InstructionCost Cost(TTI::TCC_Basic);
-
-    if (Opcode != Instruction::Add)
-      return Invalid;
-
-    if (InputTypeA != InputTypeB)
-      return Invalid;
-
-    EVT InputEVT = EVT::getEVT(InputTypeA);
-    EVT AccumEVT = EVT::getEVT(AccumType);
-
-    if (VF.isScalable() && !ST->isSVEorStreamingSVEAvailable())
-      return Invalid;
-    if (VF.isFixed() && (!ST->isNeonAvailable() || !ST->hasDotProd()))
-      return Invalid;
-
-    if (InputEVT == MVT::i8) {
-      switch (VF.getKnownMinValue()) {
-      default:
-        return Invalid;
-      case 8:
-        if (AccumEVT == MVT::i32)
-          Cost *= 2;
-        else if (AccumEVT != MVT::i64)
-          return Invalid;
-        break;
-      case 16:
-        if (AccumEVT == MVT::i64)
-          Cost *= 2;
-        else if (AccumEVT != MVT::i32)
-          return Invalid;
-        break;
-      }
-    } else if (InputEVT == MVT::i16) {
-      // FIXME: Allow i32 accumulator but increase cost, as we would extend
-      //        it to i64.
-      if (VF.getKnownMinValue() != 8 || AccumEVT != MVT::i64)
-        return Invalid;
-    } else
-      return Invalid;
-
-    // AArch64 supports lowering mixed extensions to a usdot but only if the
-    // i8mm or sve/streaming features are available.
-    if (OpAExtend == TTI::PR_None || OpBExtend == TTI::PR_None ||
-        (OpAExtend != OpBExtend && !ST->hasMatMulInt8() &&
-         !ST->isSVEorStreamingSVEAvailable()))
-      return Invalid;
-
-    if (!BinOp || *BinOp != Instruction::Mul)
-      return Invalid;
-
-    return Cost;
-  }
+                          std::optional<unsigned> BinOp) const;
 
   bool enableOrderedReductions() const { return true; }
 

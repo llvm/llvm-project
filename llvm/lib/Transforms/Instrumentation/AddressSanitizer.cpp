@@ -1035,7 +1035,8 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
                         RuntimeCallInserter &RTCI)
       : F(F), ASan(ASan), RTCI(RTCI),
         DIB(*F.getParent(), /*AllowUnresolved*/ false), C(ASan.C),
-        IntptrTy(ASan.IntptrTy), IntptrPtrTy(PointerType::get(IntptrTy, 0)),
+        IntptrTy(ASan.IntptrTy),
+        IntptrPtrTy(PointerType::get(IntptrTy->getContext(), 0)),
         Mapping(ASan.Mapping),
         PoisonStack(ClStack &&
                     !Triple(F.getParent()->getTargetTriple()).isAMDGPU()) {}
@@ -1882,7 +1883,7 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
 
   Type *ShadowTy =
       IntegerType::get(*C, std::max(8U, TypeStoreSize >> Mapping.Scale));
-  Type *ShadowPtrTy = PointerType::get(ShadowTy, 0);
+  Type *ShadowPtrTy = PointerType::get(*C, 0);
   Value *ShadowPtr = memToShadow(AddrLong, IRB);
   const uint64_t ShadowAlign =
       std::max<uint64_t>(Alignment.valueOrOne().value() >> Mapping.Scale, 1);

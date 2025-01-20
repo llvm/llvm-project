@@ -7817,9 +7817,8 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
 
   SDValue GOTAddr = buildPCRelGlobalAddress(DAG, GV, DL, 0, PtrVT,
                                             SIInstrInfo::MO_GOTPCREL32);
-
-  Type *Ty = PtrVT.getTypeForEVT(*DAG.getContext());
-  PointerType *PtrTy = PointerType::get(Ty, AMDGPUAS::CONSTANT_ADDRESS);
+  PointerType *PtrTy =
+      PointerType::get(*DAG.getContext(), AMDGPUAS::CONSTANT_ADDRESS);
   const DataLayout &DataLayout = DAG.getDataLayout();
   Align Alignment = DataLayout.getABITypeAlign(PtrTy);
   MachinePointerInfo PtrInfo =
@@ -15877,6 +15876,12 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
             RC = TRI->getAGPRClassForBitWidth(Width);
           if (RC) {
             Reg = TRI->getMatchingSuperReg(Reg, AMDGPU::sub0, RC);
+            if (!Reg) {
+              // The register class does not contain the requested register,
+              // e.g., because it is an SGPR pair that would violate alignment
+              // requirements.
+              return std::pair(0U, nullptr);
+            }
             return std::pair(Reg, RC);
           }
         }
