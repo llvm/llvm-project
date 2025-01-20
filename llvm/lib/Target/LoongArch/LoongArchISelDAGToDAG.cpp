@@ -245,8 +245,8 @@ bool LoongArchDAGToDAGISel::selectNonFIBaseAddr(SDValue Addr, SDValue &Base) {
   return true;
 }
 
-bool LoongArchDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
-                                             SDValue &Offset) {
+bool LoongArchDAGToDAGISel::SelectAddrRegImm12(SDValue Addr, SDValue &Base,
+                                               SDValue &Offset) {
   SDLoc DL(Addr);
   MVT VT = Addr.getSimpleValueType();
 

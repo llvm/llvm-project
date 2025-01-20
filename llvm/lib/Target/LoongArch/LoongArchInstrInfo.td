@@ -522,7 +522,7 @@ def HI16ForAddu16idAddiPair: SDNodeXForm<imm, [{
 def BaseAddr : ComplexPattern<iPTR, 1, "SelectBaseAddr">;
 def AddrConstant : ComplexPattern<iPTR, 2, "SelectAddrConstant">;
 def NonFIBaseAddr : ComplexPattern<iPTR, 1, "selectNonFIBaseAddr">;
-def AddrRegImm : ComplexPattern<iPTR, 2, "SelectAddrRegImm">;
+def AddrRegImm : ComplexPattern<iPTR, 2, "SelectAddrRegImm12">;
 
 def fma_nsz : PatFrag<(ops node:$fj, node:$fk, node:$fa),
                       (fma node:$fj, node:$fk, node:$fa), [{
