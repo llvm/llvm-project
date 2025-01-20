@@ -69,10 +69,6 @@ add_mlir_library(MLIRTestDialect
   MLIRTestOpsSyntaxIncGen
   MLIRTestOpsShardGen
   )
-
-# Since this library is excluded from libMLIR, link it to the dylib
-# to ensure that it can be used in flang without implicitly pulling in
-# static libraries.
 mlir_target_link_libraries(MLIRTestDialect PUBLIC
   MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces
