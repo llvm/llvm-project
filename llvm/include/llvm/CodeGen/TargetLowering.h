@@ -4781,7 +4781,7 @@ public:
   virtual bool CanLowerReturn(CallingConv::ID /*CallConv*/,
                               MachineFunction &/*MF*/, bool /*isVarArg*/,
                const SmallVectorImpl<ISD::OutputArg> &/*Outs*/,
-               LLVMContext &/*Context*/) const
+               LLVMContext &/*Context*/, const Type *RetTy) const
   {
     // Return true by default to get preexisting behavior.
     return true;
