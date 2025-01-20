@@ -1474,10 +1474,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
   case Entry::Type::TargetFile:
     if (exe_ctx) {
-      Target *target = exe_ctx->GetTargetPtr();
-      if (target) {
-        Module *exe_module = target->GetExecutableModulePointer();
-        if (exe_module) {
+      if (Target *target = exe_ctx->GetTargetPtr()) {
+        if (Module *exe_module = target->GetExecutableModulePointer()) {
           if (DumpFile(s, exe_module->GetFileSpec(), (FileKind)entry.number))
             return true;
         }
