@@ -742,7 +742,6 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
     AffineMapArrayAttr:$indexing_maps
   );
   let results = (outs Variadic<AnyShaped>:$result_tensors);
-  let regions = (region SizedRegion<1>:$combiner);
 
   let skipDefaultBuilders = 1;
   let builders = [
