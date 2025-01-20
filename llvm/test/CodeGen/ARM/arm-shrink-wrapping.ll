@@ -2017,8 +2017,8 @@ define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %t
 ; ARM-DISABLE-NEXT:    sub r4, sp, #24
 ; ARM-DISABLE-NEXT:    bfc r4, #0, #4
 ; ARM-DISABLE-NEXT:    mov sp, r4
-; ARM-DISABLE-NEXT:    tst r2, #1
 ; ARM-DISABLE-NEXT:    vst1.64 {d8, d9}, [r4:128]
+; ARM-DISABLE-NEXT:    tst r2, #1
 ; ARM-DISABLE-NEXT:    vstr d10, [r4, #16]
 ; ARM-DISABLE-NEXT:    beq LBB12_2
 ; ARM-DISABLE-NEXT:  @ %bb.1: @ %bb3
@@ -2123,8 +2123,8 @@ define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %t
 ; THUMB-DISABLE-NEXT:    sub.w r4, sp, #24
 ; THUMB-DISABLE-NEXT:    bfc r4, #0, #4
 ; THUMB-DISABLE-NEXT:    mov sp, r4
-; THUMB-DISABLE-NEXT:    lsls r1, r2, #31
 ; THUMB-DISABLE-NEXT:    vst1.64 {d8, d9}, [r4:128]
+; THUMB-DISABLE-NEXT:    lsls r1, r2, #31
 ; THUMB-DISABLE-NEXT:    vstr d10, [r4, #16]
 ; THUMB-DISABLE-NEXT:    beq LBB12_2
 ; THUMB-DISABLE-NEXT:  @ %bb.1: @ %bb3
