@@ -9508,8 +9508,6 @@ SDValue SITargetLowering::buildWorkitemIdWavegroupModeISel(SelectionDAG &DAG,
                                                            SDValue Op,
                                                            unsigned Dim) const {
   /* See buildWorkitemIdWavegroupModeGISel for desc */
-  assert(((Dim == 0) || (Dim == 1) || (Dim == 2)) &&
-         "Unknown value for Dim. Expected 0, 1, or 2");
   MachineFunction &MF = DAG.getMachineFunction();
   unsigned MaxIDX = Subtarget->getMaxWorkitemID(MF.getFunction(), 0);
   unsigned MaxIDY = Subtarget->getMaxWorkitemID(MF.getFunction(), 1);
@@ -9556,6 +9554,7 @@ SDValue SITargetLowering::buildWorkitemIdWavegroupModeISel(SelectionDAG &DAG,
   } else if (Dim == 2) {
     return DivY; // WorkitemIDY = (FlatWorkitemID / DimX) / DimY
   }
+  llvm_unreachable("Unknown value for Dim. Expected 0, 1, or 2");
 }
 
 SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
