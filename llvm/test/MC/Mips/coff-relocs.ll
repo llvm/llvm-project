@@ -22,6 +22,9 @@ define i32 @foo_var() {
 ; CHECK:      - VirtualAddress:  32
 ; CHECK:        SymbolName:      var
 ; CHECK:        Type:            IMAGE_REL_MIPS_REFHI
+; CHECK:      - VirtualAddress:  32
+; CHECK:        SymbolName:      .text
+; CHECK:        Type:            IMAGE_REL_MIPS_PAIR
 ; CHECK:      - VirtualAddress:  40
 ; CHECK:        SymbolName:      var
 ; CHECK:        Type:            IMAGE_REL_MIPS_REFLO
