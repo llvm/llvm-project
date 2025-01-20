@@ -425,7 +425,15 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveDependentMember(
     if (!RD->hasDefinition())
       return {};
     RD = RD->getDefinition();
-    return lookupDependentName(RD, Name, Filter);
+    return lookupDependentName(RD, Name, [&](const NamedDecl *ND) {
+      if (!Filter(ND))
+        return false;
+      if (const auto *MD = dyn_cast<CXXMethodDecl>(ND)) {
+        return MD->getMethodQualifiers().compatiblyIncludes(QT.getQualifiers(),
+                                                            Ctx);
+      }
+      return true;
+    });
   }
   return {};
 }
