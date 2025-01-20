@@ -28,10 +28,6 @@ add_mlir_library(MLIRTestIR
 
   EXCLUDE_FROM_LIBMLIR
   )
-
-# Since this library is excluded from libMLIR, link it to the dylib
-# to ensure that it can be used in flang without implicitly pulling in
-# static libraries.
 mlir_target_link_libraries(MLIRTestIR PUBLIC
   MLIRPass
   MLIRBytecodeReader
