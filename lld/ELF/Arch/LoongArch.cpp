@@ -134,6 +134,8 @@ static uint32_t extractBits(uint64_t v, uint32_t begin, uint32_t end) {
 
 static uint32_t getD5(uint64_t v) { return extractBits(v, 4, 0); }
 
+static uint32_t getJ5(uint64_t v) { return extractBits(v, 9, 5); }
+
 static uint32_t setD5k16(uint32_t insn, uint32_t imm) {
   uint32_t immLo = extractBits(imm, 15, 0);
   uint32_t immHi = extractBits(imm, 20, 16);
@@ -816,7 +818,11 @@ static void relaxPCHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
   // addi.w/d.
   // * The destination register of pcalau12i is guaranteed to be used only by
   // the immediately following instruction.
+  const uint32_t currInsn = read32le(sec.content().data() + rHi20.offset);
   const uint32_t nextInsn = read32le(sec.content().data() + rLo12.offset);
+  // Check if use the same register.
+  if (getD5(currInsn) != getJ5(nextInsn) || getJ5(nextInsn) != getD5(nextInsn))
+    return;
 
   sec.relaxAux->relocTypes[i] = R_LARCH_RELAX;
   sec.relaxAux->relocTypes[i + 2] = R_LARCH_PCREL20_S2;
