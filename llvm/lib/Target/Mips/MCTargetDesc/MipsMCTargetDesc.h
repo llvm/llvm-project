@@ -57,6 +57,8 @@ createMipsELFObjectWriter(const Triple &TT, bool IsN32);
 std::unique_ptr<MCObjectTargetWriter> createMipsWinCOFFObjectWriter();
 
 namespace MIPS_MC {
+void initLLVMToCVRegMapping(MCRegisterInfo *MRI);
+
 StringRef selectMipsCPU(const Triple &TT, StringRef CPU);
 }
 

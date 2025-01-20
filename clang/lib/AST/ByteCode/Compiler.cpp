@@ -253,6 +253,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase: {
+    if (DiscardResult)
+      return this->discard(SubExpr);
+
     if (!this->delegate(SubExpr))
       return false;
 
@@ -282,6 +285,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_BaseToDerived: {
+    if (DiscardResult)
+      return this->discard(SubExpr);
+
     if (!this->delegate(SubExpr))
       return false;
 
@@ -689,20 +695,18 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!this->visit(SubExpr))
       return false;
 
-    auto Sem = Ctx.getASTContext().getFixedPointSemantics(CE->getType());
-    uint32_t I;
-    std::memcpy(&I, &Sem, sizeof(Sem));
-    return this->emitCastIntegralFixedPoint(classifyPrim(SubExpr->getType()), I,
-                                            CE);
+    auto Sem =
+        Ctx.getASTContext().getFixedPointSemantics(CE->getType()).toOpaqueInt();
+    return this->emitCastIntegralFixedPoint(classifyPrim(SubExpr->getType()),
+                                            Sem, CE);
   }
   case CK_FloatingToFixedPoint: {
     if (!this->visit(SubExpr))
       return false;
 
-    auto Sem = Ctx.getASTContext().getFixedPointSemantics(CE->getType());
-    uint32_t I;
-    std::memcpy(&I, &Sem, sizeof(Sem));
-    return this->emitCastFloatingFixedPoint(I, CE);
+    auto Sem =
+        Ctx.getASTContext().getFixedPointSemantics(CE->getType()).toOpaqueInt();
+    return this->emitCastFloatingFixedPoint(Sem, CE);
   }
   case CK_FixedPointToFloating: {
     if (!this->visit(SubExpr))
@@ -718,10 +722,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_FixedPointCast: {
     if (!this->visit(SubExpr))
       return false;
-    auto Sem = Ctx.getASTContext().getFixedPointSemantics(CE->getType());
-    uint32_t I;
-    std::memcpy(&I, &Sem, sizeof(Sem));
-    return this->emitCastFixedPoint(I, CE);
+    auto Sem =
+        Ctx.getASTContext().getFixedPointSemantics(CE->getType()).toOpaqueInt();
+    return this->emitCastFixedPoint(Sem, CE);
   }
 
   case CK_ToVoid:
@@ -1522,28 +1525,29 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitFixedPointBinOp(const BinaryOperator *E) {
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
+  const ASTContext &ASTCtx = Ctx.getASTContext();
 
   assert(LHS->getType()->isFixedPointType() ||
          RHS->getType()->isFixedPointType());
 
-  auto LHSSema = Ctx.getASTContext().getFixedPointSemantics(LHS->getType());
-  auto RHSSema = Ctx.getASTContext().getFixedPointSemantics(RHS->getType());
+  auto LHSSema = ASTCtx.getFixedPointSemantics(LHS->getType());
+  auto LHSSemaInt = LHSSema.toOpaqueInt();
+  auto RHSSema = ASTCtx.getFixedPointSemantics(RHS->getType());
+  auto RHSSemaInt = RHSSema.toOpaqueInt();
 
   if (!this->visit(LHS))
     return false;
   if (!LHS->getType()->isFixedPointType()) {
-    uint32_t I;
-    std::memcpy(&I, &LHSSema, sizeof(llvm::FixedPointSemantics));
-    if (!this->emitCastIntegralFixedPoint(classifyPrim(LHS->getType()), I, E))
+    if (!this->emitCastIntegralFixedPoint(classifyPrim(LHS->getType()),
+                                          LHSSemaInt, E))
       return false;
   }
 
   if (!this->visit(RHS))
     return false;
   if (!RHS->getType()->isFixedPointType()) {
-    uint32_t I;
-    std::memcpy(&I, &RHSSema, sizeof(llvm::FixedPointSemantics));
-    if (!this->emitCastIntegralFixedPoint(classifyPrim(RHS->getType()), I, E))
+    if (!this->emitCastIntegralFixedPoint(classifyPrim(RHS->getType()),
+                                          RHSSemaInt, E))
       return false;
   }
 
@@ -1551,13 +1555,10 @@ bool Compiler<Emitter>::VisitFixedPointBinOp(const BinaryOperator *E) {
   auto ConvertResult = [&](bool R) -> bool {
     if (!R)
       return false;
-    auto ResultSema = Ctx.getASTContext().getFixedPointSemantics(E->getType());
-    auto CommonSema = LHSSema.getCommonSemantics(RHSSema);
-    if (ResultSema != CommonSema) {
-      uint32_t I;
-      std::memcpy(&I, &ResultSema, sizeof(ResultSema));
-      return this->emitCastFixedPoint(I, E);
-    }
+    auto ResultSema = ASTCtx.getFixedPointSemantics(E->getType()).toOpaqueInt();
+    auto CommonSema = LHSSema.getCommonSemantics(RHSSema).toOpaqueInt();
+    if (ResultSema != CommonSema)
+      return this->emitCastFixedPoint(ResultSema, E);
     return true;
   };
 
