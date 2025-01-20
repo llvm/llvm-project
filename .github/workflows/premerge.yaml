@@ -28,6 +28,8 @@ jobs:
           fetch-depth: 2
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2.14
+        with:
+          variant: "sccache"
       - name: Build and Test
         continue-on-error: true
         run: |
