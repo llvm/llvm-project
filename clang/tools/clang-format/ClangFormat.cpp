@@ -26,6 +26,12 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Process.h"
 #include <fstream>
+#include <iostream>
+#include <llvm/ADT/STLExtras.h>
+#include <llvm/ADT/StringRef.h>
+#include <llvm/Frontend/OpenMP/OMPConstants.h>
+#include <llvm/MC/MCAsmMacro.h>
+#include <sys/stat.h>
 
 using namespace llvm;
 using clang::tooling::Replacements;
@@ -214,6 +220,9 @@ static cl::opt<bool> ListIgnored("list-ignored",
                                  cl::desc("List ignored files."),
                                  cl::cat(ClangFormatCategory), cl::Hidden);
 
+static SmallVector<std::string> OnWords;
+static SmallVector<std::string> OffWords;
+
 namespace clang {
 namespace format {
 
@@ -277,6 +286,8 @@ static bool fillRanges(MemoryBuffer *Code,
     return false;
   }
 
+  
+
   if (Offsets.empty())
     Offsets.push_back(0);
   if (Offsets.size() != Lengths.size() &&
@@ -307,6 +318,139 @@ static bool fillRanges(MemoryBuffer *Code,
     unsigned Length = Sources.getFileOffset(End) - Offset;
     Ranges.push_back(tooling::Range(Offset, Length));
   }
+
+  std::cout << "Printing ranges " << "\n";
+  for (const auto& i : Ranges)
+  {
+    std::cout << i.getOffset() << " " << i.getOffset() + i.getLength() << "\n";
+  }
+
+  if (!OnWords.empty() && !OffWords.empty())
+  {
+    StringRef CodeRef = Code->getBuffer();
+    std::set<size_t> OnSet;
+    if (Ranges.empty()) 
+    {
+        OnSet.insert(0);
+    } else {
+        OnSet.insert(Ranges[0].getOffset());
+    }
+    std::set<size_t> OffSet;
+    std::cout << "OFF" << "\n";
+    if (Ranges.size() == 1 && Ranges[0].getOffset() == 0 && Ranges[0].getLength() == CodeRef.size())
+    {
+      Ranges.pop_back();
+    }
+    for (const auto& Word : OffWords)
+    {
+      std::cout << Word << "\n";
+      size_t TempOffset = CodeRef.find(Word);
+      while (TempOffset != StringRef::npos)
+      {
+        std::cout << "found offword at " << TempOffset << "\n";
+        if (TempOffset > *OnSet.begin())
+        {
+            OffSet.insert(TempOffset);
+        }
+        TempOffset = CodeRef.find(Word, TempOffset + 1);
+      }
+    }
+
+    std::cout << "ON" << "\n";
+    for (const auto& Word : OnWords)
+    {
+      std::cout << Word << "\n";
+      size_t TempOffset = CodeRef.find(Word);
+      while (TempOffset != StringRef::npos)
+      {
+        std::cout << "found onword at " << TempOffset << "\n";
+        OnSet.insert(TempOffset);
+        TempOffset = CodeRef.find(Word, TempOffset + 1);
+      }
+    }
+
+    std::cout << "Printing ranges " << "\n";
+    for (const auto& i : Ranges)
+    {
+        std::cout << i.getOffset() << " " << i.getOffset() + i.getLength() << "\n";
+    }
+
+    std::cout << "Entering while" << "\n";
+    while (!OnSet.empty())
+    {
+      size_t Offset = OnSet.extract(OnSet.begin()).value();
+      size_t Length;
+      if (!OffSet.empty())
+      { 
+        Length = OffSet.extract(OffSet.begin()).value() - Offset;
+      } 
+      else
+      {
+        Length = CodeRef.size() - Offset;
+      }
+
+      std::cout << Offset << " " << Offset + Length << std::endl;
+      // Could result in loss of data
+      tooling::Range NewRange = {static_cast<unsigned>(Offset), static_cast<unsigned>(Length)};
+      
+      /*bool inserted = false;
+      for (auto i = Ranges.begin(); i != Ranges.end(); ++i)
+      {
+        if (i->overlapsWith(NewRange))
+        {
+          std::cout << "Overlap erasure" << std::endl;
+          tooling::Range Temp(std::min(NewRange.getOffset(), i->getOffset()), std::max(NewRange.getLength(), i->getLength()));
+          std::cout << "Old range" << "\n";
+          std::cout << i->getOffset() << " " << i->getOffset() + i->getLength() << "\n";
+          std::cout << "New range before insert " << "\n";
+          std::cout << NewRange.getOffset() << " " << NewRange.getOffset() + NewRange.getLength() << "\n";
+          Ranges.erase(i);
+          Ranges.insert(i, Temp);
+          inserted = true;
+          std::cout << "After" << "\n";
+          std::cout << Temp.getOffset() << " " << Temp.getOffset() + Temp.getLength() << "\n"; 
+        }
+      }
+      if (!inserted)
+      {*/
+      Ranges.push_back(NewRange);
+      //}
+    }
+  }
+
+  std::sort(Ranges.begin(), Ranges.end(), [](const tooling::Range& a, const tooling::Range& b) {
+    return a.getOffset() + a.getLength() < b.getOffset() + b.getLength();
+  });
+
+  std::cout << "Printing ranges " << "\n";
+  for (const auto& i : Ranges)
+  {
+    std::cout << i.getOffset() << " " << i.getOffset() + i.getLength() << std::endl;;
+  }
+
+  auto start = Ranges.begin();
+  for (auto i = Ranges.begin()+1; i != Ranges.end(); ++i)
+  {
+    std::cout << "Loop" << "\n";
+    std::cout << &(*start) << "\n" << &(*i) << "\n";
+    if (start->getOffset() + start->getLength() >= i->getOffset())
+    {
+      std::cout << "Element erased\n";
+      tooling::Range Temp(std::min(start->getOffset(), i->getOffset()), std::max(start->getLength(), i->getLength()));
+      Ranges.erase(start, i+1);
+      start = Ranges.insert(start, Temp);
+      i = start;
+    } else {
+      ++start;
+    }
+  }
+
+  std::cout << "Printing ranges " << Ranges.size() << "\n";
+  for (const auto& i : Ranges)
+  {
+    std::cout << i.getOffset() << " " << i.getOffset() + i.getLength() << std::endl;;
+  }
+
   return false;
 }
 
@@ -646,6 +790,17 @@ static bool isIgnored(StringRef FilePath) {
 
   const auto Pathname{convert_to_slash(AbsPath)};
   for (const auto &Pat : Patterns) {
+
+    if (Pat.slice(0, 3).equals_insensitive("on:"))
+    {
+        OnWords.push_back(Pat.slice(3, Pat.size()).trim().str());
+        continue;
+    }
+    if (Pat.slice(0, 4).equals_insensitive("off:"))
+    {
+        OffWords.push_back(Pat.slice(4, Pat.size()).trim().str());
+        continue;
+    }
     const bool IsNegated = Pat[0] == '!';
     StringRef Pattern{Pat};
     if (IsNegated)
