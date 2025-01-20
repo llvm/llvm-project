@@ -456,7 +456,7 @@ let EmitPriority = 0 in {
 } // EmitPriority = 0
 } // Predicates = [HasVendorXqcilsm, IsRV32]
 
-let Predicates = [HasVendorXqcilsm, IsRV32] in {
+let Predicates = [HasVendorXqcilo, IsRV32] in {
 let EmitPriority = 0 in {
   def  : InstAlias<"qc.e.lb  $rd, (${rs1})",
                    (QC_E_LB  GPR:$rd, GPR:$rs1, 0)>;
@@ -475,4 +475,4 @@ let EmitPriority = 0 in {
   def  : InstAlias<"qc.e.sw  $rs2, (${rs1})",
                    (QC_E_SW GPR:$rs2, GPR:$rs1, 0)>;
 } // EmitPriority = 0
-} // Predicates = [HasVendorXqcilsm, IsRV32]
+} // Predicates = [HasVendorXqcilo, IsRV32]
