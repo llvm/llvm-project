@@ -18,6 +18,7 @@
 
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -1435,6 +1436,36 @@ NVVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
       })) {
     emitError() << "All the elements in the `link` array must be strings.";
     return failure();
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Requires minimum target SM trait helper functions
+//===----------------------------------------------------------------------===//
+llvm::SmallVector<NVVMCheckSMVersion> NVVM::getTargetSMVersions(Operation *op) {
+  llvm::SmallVector<NVVMCheckSMVersion> TargetSMVersions;
+  gpu::GPUModuleOp GPUModule = op->getParentOfType<gpu::GPUModuleOp>();
+  if (GPUModule && GPUModule->hasAttr("targets")) {
+    ArrayAttr Targets = dyn_cast<ArrayAttr>(GPUModule->getAttr("targets"));
+    for (auto Target : Targets) {
+      if (auto NVVMTarget = dyn_cast<NVVMTargetAttr>(Target))
+        TargetSMVersions.push_back(NVVMCheckSMVersion(NVVMTarget.getChip()));
+    }
+  }
+  return TargetSMVersions;
+}
+
+// Helper function to verify the minimum SM requirement of an NVVM Op
+LogicalResult NVVM::verifyOpSMRequirements(
+    Operation *op, llvm::SmallVector<NVVMCheckSMVersion> TargetSMVersions,
+    NVVMCheckSMVersion RequiredSMVersion) {
+  for (auto TargetSMVersion : TargetSMVersions) {
+    if (!RequiredSMVersion.isCompatible(TargetSMVersion)) {
+      op->emitOpError() << "is not supported on "
+                        << TargetSMVersion.getArchString();
+      return failure();
+    }
   }
   return success();
 }
