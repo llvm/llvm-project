@@ -2603,17 +2603,6 @@ void VPWidenLoadRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-/// Use all-true mask for reverse rather than actual mask, as it avoids a
-/// dependence w/o affecting the result.
-static Instruction *createReverseEVL(IRBuilderBase &Builder, Value *Operand,
-                                     Value *EVL, const Twine &Name) {
-  VectorType *ValTy = cast<VectorType>(Operand->getType());
-  Value *AllTrueMask =
-      Builder.CreateVectorSplat(ValTy->getElementCount(), Builder.getTrue());
-  return Builder.CreateIntrinsic(ValTy, Intrinsic::experimental_vp_reverse,
-                                 {Operand, AllTrueMask, EVL}, nullptr, Name);
-}
-
 void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   auto *LI = cast<LoadInst>(&Ingredient);
 
@@ -2630,8 +2619,6 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   Value *Mask = nullptr;
   if (VPValue *VPMask = getMask()) {
     Mask = State.get(VPMask);
-    if (isReverse())
-      Mask = createReverseEVL(Builder, Mask, EVL, "vp.reverse.mask");
   } else {
     Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
   }
@@ -2641,17 +2628,29 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
         Builder.CreateIntrinsic(DataTy, Intrinsic::vp_gather, {Addr, Mask, EVL},
                                 nullptr, "wide.masked.gather");
   } else {
-    VectorBuilder VBuilder(Builder);
-    VBuilder.setEVL(EVL).setMask(Mask);
-    NewLI = cast<CallInst>(VBuilder.createVectorInstruction(
-        Instruction::Load, DataTy, Addr, "vp.op.load"));
+    if (isReverse()) {
+      auto *EltTy = DataTy->getElementType();
+      auto *PtrTy = Addr->getType();
+      Value *Operands[] = {
+          Addr,
+          ConstantInt::getSigned(
+              Builder.getInt32Ty(),
+              -static_cast<int64_t>(EltTy->getScalarSizeInBits()) / 8),
+          Mask, EVL};
+      NewLI = Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_load,
+                                      {DataTy, PtrTy, Builder.getInt32Ty()},
+                                      Operands, nullptr, "vp.neg.strided.load");
+    } else {
+      VectorBuilder VBuilder(Builder);
+      VBuilder.setEVL(EVL).setMask(Mask);
+      NewLI = cast<CallInst>(VBuilder.createVectorInstruction(
+          Instruction::Load, DataTy, Addr, "vp.op.load"));
+    }
   }
   NewLI->addParamAttr(
       0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
   State.addMetadata(NewLI, LI);
   Instruction *Res = NewLI;
-  if (isReverse())
-    Res = createReverseEVL(Builder, Res, EVL, "vp.reverse");
   State.set(this, Res);
 }
 
@@ -2749,13 +2748,9 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   CallInst *NewSI = nullptr;
   Value *StoredVal = State.get(StoredValue);
   Value *EVL = State.get(getEVL(), VPLane(0));
-  if (isReverse())
-    StoredVal = createReverseEVL(Builder, StoredVal, EVL, "vp.reverse");
   Value *Mask = nullptr;
   if (VPValue *VPMask = getMask()) {
     Mask = State.get(VPMask);
-    if (isReverse())
-      Mask = createReverseEVL(Builder, Mask, EVL, "vp.reverse.mask");
   } else {
     Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
   }
@@ -2765,11 +2760,26 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
                                     Intrinsic::vp_scatter,
                                     {StoredVal, Addr, Mask, EVL});
   } else {
-    VectorBuilder VBuilder(Builder);
-    VBuilder.setEVL(EVL).setMask(Mask);
-    NewSI = cast<CallInst>(VBuilder.createVectorInstruction(
-        Instruction::Store, Type::getVoidTy(EVL->getContext()),
-        {StoredVal, Addr}));
+    if (isReverse()) {
+      Type *StoredValTy = StoredVal->getType();
+      auto *EltTy = cast<VectorType>(StoredValTy)->getElementType();
+      auto *PtrTy = Addr->getType();
+      Value *Operands[] = {
+          StoredVal, Addr,
+          ConstantInt::getSigned(
+              Builder.getInt32Ty(),
+              -static_cast<int64_t>(EltTy->getScalarSizeInBits()) / 8),
+          Mask, EVL};
+      NewSI = Builder.CreateIntrinsic(
+          Intrinsic::experimental_vp_strided_store,
+          {StoredValTy, PtrTy, Builder.getInt32Ty()}, Operands);
+    } else {
+      VectorBuilder VBuilder(Builder);
+      VBuilder.setEVL(EVL).setMask(Mask);
+      NewSI = cast<CallInst>(VBuilder.createVectorInstruction(
+          Instruction::Store, Type::getVoidTy(EVL->getContext()),
+          {StoredVal, Addr}));
+    }
   }
   NewSI->addParamAttr(
       1, Attribute::getWithAlignment(NewSI->getContext(), Alignment));
