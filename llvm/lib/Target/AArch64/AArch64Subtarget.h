@@ -85,7 +85,7 @@ protected:
 
   bool IsStreaming;
   bool IsStreamingCompatible;
-  unsigned StreamingHazardSize;
+  std::optional<unsigned> StreamingHazardSize;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
   unsigned VScaleForTuning = 1;
@@ -179,7 +179,12 @@ public:
 
   /// Returns the size of memory region that if accessed by both the CPU and
   /// the SME unit could result in a hazard. 0 = disabled.
-  unsigned getStreamingHazardSize() const { return StreamingHazardSize; }
+  unsigned getStreamingHazardSize() const {
+    // If StreamingHazardSize has been explicitly set to a value, use that.
+    // Otherwise, default to 1024 bytes when both SME and SVE are available,
+    // for all other configurations default to no streaming hazards.
+    return StreamingHazardSize.value_or(hasSME() && hasSVE() ? 1024 : 0);
+  }
 
   /// Returns true if the target has NEON and the function at runtime is known
   /// to have NEON enabled (e.g. the function is known not to be in streaming-SVE
