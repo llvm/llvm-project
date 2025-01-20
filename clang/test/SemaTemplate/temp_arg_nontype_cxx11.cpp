@@ -43,7 +43,7 @@ void TempFunc() {}
 
 void Useage() {
   //expected-error@+2 {{no matching function}}
-  //expected-note@-4 {{candidate template ignored: invalid explicitly-specified argument for template parameter 'b'}}
+  //expected-note@-4 {{candidate template ignored: invalid explicitly-specified argument for template parameter 'b': could not convert '-1' from 'int' to 'unsigned int'}}
   TempFunc<1, -1, 1>();
 }
 }

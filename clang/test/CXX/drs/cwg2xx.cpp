@@ -649,15 +649,15 @@ namespace cwg241 { // cwg241: 9
     A::g<3>(b);
     C::f<3>(b);
     // expected-error@-1 {{no matching function for call to 'f'}}
-    //   expected-note@#cwg241-C-f {{candidate template ignored: invalid explicitly-specified argument for template parameter 'T'}}
+    //   expected-note@#cwg241-C-f {{candidate template ignored: invalid explicitly-specified argument for template parameter 'T': could not convert '3' from 'int' to class 'T' (expected a class, but got '3')}}
     C::g<3>(b);
     // expected-error@-1 {{no matching function for call to 'g'}}
-    //   expected-note@#cwg241-C-g {{candidate template ignored: invalid explicitly-specified argument for template parameter 'T'}}
+    //   expected-note@#cwg241-C-g {{candidate template ignored: invalid explicitly-specified argument for template parameter 'T': could not convert '3' from 'int' to class 'T' (expected a class, but got '3')}}
     using C::f;
     using C::g;
     f<3>(b);
     // expected-error@-1 {{no matching function for call to 'f'}}
-    //   expected-note@#cwg241-C-f {{candidate template ignored: invalid explicitly-specified argument for template parameter 'T'}}
+    //   expected-note@#cwg241-C-f {{candidate template ignored: invalid explicitly-specified argument for template parameter 'T': could not convert '3' from 'int' to class 'T' (expected a class, but got '3')}}
     //   expected-note@#cwg241-A-f {{candidate function template not viable: requires 0 arguments, but 1 was provided}}
     g<3>(b);
   }
