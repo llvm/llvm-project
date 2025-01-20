@@ -67,15 +67,9 @@ static Instruction *simplifyX86MaskedLoad(IntrinsicInst &II, InstCombiner &IC) {
   // The mask is constant or extended from a bool vector. Convert this x86
   // intrinsic to the LLVM intrinsic to allow target-independent optimizations.
   if (Value *BoolMask = getBoolVecFromMask(Mask, IC.getDataLayout())) {
-    // First, cast the x86 intrinsic scalar pointer to a vector pointer to match
-    // the LLVM intrinsic definition for the pointer argument.
-    unsigned AddrSpace = cast<PointerType>(Ptr->getType())->getAddressSpace();
-    PointerType *VecPtrTy = PointerType::get(II.getContext(), AddrSpace);
-    Value *PtrCast = IC.Builder.CreateBitCast(Ptr, VecPtrTy, "castvec");
-
     // The pass-through vector for an x86 masked load is a zero vector.
     CallInst *NewMaskedLoad = IC.Builder.CreateMaskedLoad(
-        II.getType(), PtrCast, Align(1), BoolMask, ZeroVec);
+        II.getType(), Ptr, Align(1), BoolMask, ZeroVec);
     return IC.replaceInstUsesWith(II, NewMaskedLoad);
   }
 
