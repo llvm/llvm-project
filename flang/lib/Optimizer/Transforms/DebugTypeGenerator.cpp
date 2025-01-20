@@ -258,21 +258,6 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
       dataLocation, /*rank=*/nullptr, allocated, associated);
 }
 
-// If the type is a pointer or array type then gets its underlying type.
-static mlir::LLVM::DITypeAttr getUnderlyingType(mlir::LLVM::DITypeAttr Ty) {
-  if (auto ptrTy =
-          mlir::dyn_cast_if_present<mlir::LLVM::DIDerivedTypeAttr>(Ty)) {
-    if (ptrTy.getTag() == llvm::dwarf::DW_TAG_pointer_type)
-      Ty = getUnderlyingType(ptrTy.getBaseType());
-  }
-  if (auto comTy =
-          mlir::dyn_cast_if_present<mlir::LLVM::DICompositeTypeAttr>(Ty)) {
-    if (comTy.getTag() == llvm::dwarf::DW_TAG_array_type)
-      Ty = getUnderlyingType(comTy.getBaseType());
-  }
-  return Ty;
-}
-
 std::pair<std::uint64_t, unsigned short>
 DebugTypeGenerator::getFieldSizeAndAlign(mlir::Type fieldTy) {
   mlir::Type llvmTy;
