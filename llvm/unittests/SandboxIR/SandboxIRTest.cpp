@@ -5841,9 +5841,9 @@ define void @foo(i32 %i0, i32 %i1) {
     EXPECT_EQ(ICmp->getSignedPredicate(), LLVMICmp->getSignedPredicate());
     EXPECT_EQ(ICmp->getUnsignedPredicate(), LLVMICmp->getUnsignedPredicate());
   }
-  auto *NewCmp =
+  auto *NewCmp = cast<sandboxir::CmpInst>(
       sandboxir::CmpInst::create(llvm::CmpInst::ICMP_ULE, F.getArg(0),
-                                 F.getArg(1), BB->begin(), Ctx, "NewCmp");
+                                 F.getArg(1), BB->begin(), Ctx, "NewCmp"));
   EXPECT_EQ(NewCmp, &*BB->begin());
   EXPECT_EQ(NewCmp->getPredicate(), llvm::CmpInst::ICMP_ULE);
   EXPECT_EQ(NewCmp->getOperand(0), F.getArg(0));
@@ -5856,6 +5856,16 @@ define void @foo(i32 %i0, i32 %i1) {
   sandboxir::Type *RT =
       sandboxir::CmpInst::makeCmpResultType(F.getArg(0)->getType());
   EXPECT_TRUE(RT->isIntegerTy(1)); // Only one bit in a single comparison
+
+  {
+    // Check create() when operands are constant.
+    auto *Const42 =
+        sandboxir::ConstantInt::get(sandboxir::Type::getInt32Ty(Ctx), 42);
+    auto *NewConstCmp =
+        sandboxir::CmpInst::create(llvm::CmpInst::ICMP_ULE, Const42, Const42,
+                                   BB->begin(), Ctx, "NewConstCmp");
+    EXPECT_TRUE(isa<sandboxir::Constant>(NewConstCmp));
+  }
 }
 
 TEST_F(SandboxIRTest, FCmpInst) {
@@ -5906,8 +5916,8 @@ bb1:
   CopyFrom->setFastMathFlags(FastMathFlags::getFast());
 
   // create with default flags
-  auto *NewFCmp = sandboxir::CmpInst::create(
-      llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), It1, Ctx, "NewFCmp");
+  auto *NewFCmp = cast<sandboxir::CmpInst>(sandboxir::CmpInst::create(
+      llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), It1, Ctx, "NewFCmp"));
   EXPECT_EQ(NewFCmp->getPredicate(), llvm::CmpInst::FCMP_ONE);
   EXPECT_EQ(NewFCmp->getOperand(0), F.getArg(0));
   EXPECT_EQ(NewFCmp->getOperand(1), F.getArg(1));
@@ -5917,9 +5927,10 @@ bb1:
   FastMathFlags DefaultFMF = NewFCmp->getFastMathFlags();
   EXPECT_TRUE(CopyFrom->getFastMathFlags() != DefaultFMF);
   // create with copied flags
-  auto *NewFCmpFlags = sandboxir::CmpInst::createWithCopiedFlags(
-      llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), CopyFrom, It1, Ctx,
-      "NewFCmpFlags");
+  auto *NewFCmpFlags =
+      cast<sandboxir::CmpInst>(sandboxir::CmpInst::createWithCopiedFlags(
+          llvm::CmpInst::FCMP_ONE, F.getArg(0), F.getArg(1), CopyFrom, It1, Ctx,
+          "NewFCmpFlags"));
   EXPECT_FALSE(NewFCmpFlags->getFastMathFlags() !=
                CopyFrom->getFastMathFlags());
   EXPECT_EQ(NewFCmpFlags->getPredicate(), llvm::CmpInst::FCMP_ONE);
@@ -5928,6 +5939,16 @@ bb1:
 #ifndef NDEBUG
   EXPECT_EQ(NewFCmpFlags->getName(), "NewFCmpFlags");
 #endif // NDEBUG
+
+  {
+    // Check create() when operands are constant.
+    auto *Const42 =
+        sandboxir::ConstantFP::get(sandboxir::Type::getFloatTy(Ctx), 42.0);
+    auto *NewConstCmp =
+        sandboxir::CmpInst::create(llvm::CmpInst::FCMP_ULE, Const42, Const42,
+                                   BB->begin(), Ctx, "NewConstCmp");
+    EXPECT_TRUE(isa<sandboxir::Constant>(NewConstCmp));
+  }
 }
 
 TEST_F(SandboxIRTest, UnreachableInst) {

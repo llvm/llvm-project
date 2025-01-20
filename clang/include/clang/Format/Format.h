@@ -2711,6 +2711,19 @@ struct FormatStyle {
   /// \version 3.7
   bool ExperimentalAutoDetectBinPacking;
 
+  /// If ``true``, clang-format will indent the body of an ``export { ... }``
+  /// block. This doesn't affect the formatting of anything else related to
+  /// exported declarations.
+  /// \code
+  ///    true:                     false:
+  ///    export {          vs.     export {
+  ///      void foo();             void foo();
+  ///      void bar();             void bar();
+  ///    }                         }
+  /// \endcode
+  /// \version 20
+  bool ExportBlockIndentation;
+
   /// If ``true``, clang-format adds missing namespace end comments for
   /// namespaces and fixes invalid existing ones. This doesn't affect short
   /// namespaces, which are controlled by ``ShortNamespaceLines``.
@@ -5290,6 +5303,7 @@ struct FormatStyle {
            EmptyLineBeforeAccessModifier == R.EmptyLineBeforeAccessModifier &&
            ExperimentalAutoDetectBinPacking ==
                R.ExperimentalAutoDetectBinPacking &&
+           ExportBlockIndentation == R.ExportBlockIndentation &&
            FixNamespaceComments == R.FixNamespaceComments &&
            ForEachMacros == R.ForEachMacros &&
            IncludeStyle.IncludeBlocks == R.IncludeStyle.IncludeBlocks &&

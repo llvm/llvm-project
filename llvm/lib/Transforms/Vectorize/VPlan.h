@@ -686,11 +686,13 @@ struct VPCostContext {
   LLVMContext &LLVMCtx;
   LoopVectorizationCostModel &CM;
   SmallPtrSet<Instruction *, 8> SkipCostComputation;
+  TargetTransformInfo::TargetCostKind CostKind;
 
   VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
-                Type *CanIVTy, LoopVectorizationCostModel &CM)
+                Type *CanIVTy, LoopVectorizationCostModel &CM,
+                TargetTransformInfo::TargetCostKind CostKind)
       : TTI(TTI), TLI(TLI), Types(CanIVTy), LLVMCtx(CanIVTy->getContext()),
-        CM(CM) {}
+        CM(CM), CostKind(CostKind) {}
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.
@@ -1416,6 +1418,12 @@ public:
   }
 
   bool onlyFirstPartUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
+
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;

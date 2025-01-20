@@ -148,6 +148,7 @@ static bool startsNextOperand(const FormatToken &Current) {
 static bool mustBreakBinaryOperation(const FormatToken &Current,
                                      const FormatStyle &Style) {
   return Style.BreakBinaryOperations != FormatStyle::BBO_Never &&
+         Current.CanBreakBefore &&
          (Style.BreakBeforeBinaryOperators == FormatStyle::BOS_None
               ? startsNextOperand
               : isAlignableBinaryOperator)(Current);
