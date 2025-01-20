@@ -516,56 +516,75 @@ v_bfm_b32_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
 v_bfm_b32_e64_dpp v255, v255, v255 dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX12: v_bfm_b32_e64_dpp v255, v255, v255 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x00,0x1d,0xd7,0xe9,0xfe,0x03,0x00,0xff,0x00,0x00,0x00]
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s3 dpp8:[7,6,5,4,3,2,1,0]
-// W32: v_cndmask_b16_e64_dpp v5, v1, v2, s3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0x0e,0x00,0x01,0x77,0x39,0x05]
-// W64-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s3 dpp8:[7,6,5,4,3,2,1,0]
+// W32: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0x0e,0x00,0x01,0x77,0x39,0x05]
+// W64-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, s2, s3 dpp8:[7,6,5,4,3,2,1,0]
-// W32: v_cndmask_b16_e64_dpp v5, v1, s2, s3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0x0c,0x00,0x01,0x77,0x39,0x05]
-// W64-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, s2, s3 dpp8:[7,6,5,4,3,2,1,0]
+// W32: v_cndmask_b16_e64_dpp v5.l, v1.l, s2, s3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0x0c,0x00,0x01,0x77,0x39,0x05]
+// W64-ERR: :[[@LINE-2]]:39: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, 10, s3 dpp8:[7,6,5,4,3,2,1,0]
-// W32: v_cndmask_b16_e64_dpp v5, v1, 10, s3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x14,0x0d,0x00,0x01,0x77,0x39,0x05]
-// W64-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, 10, s3 dpp8:[7,6,5,4,3,2,1,0]
+// W32: v_cndmask_b16_e64_dpp v5.l, v1.l, 10, s3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x14,0x0d,0x00,0x01,0x77,0x39,0x05]
+// W64-ERR: :[[@LINE-2]]:39: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s105 dpp8:[7,6,5,4,3,2,1,0]
-// W32: v_cndmask_b16_e64_dpp v5, v1, v2, s105 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0xa6,0x01,0x01,0x77,0x39,0x05]
-// W64-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s105 dpp8:[7,6,5,4,3,2,1,0]
+// W32: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s105 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0xa6,0x01,0x01,0x77,0x39,0x05]
+// W64-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, vcc_hi dpp8:[7,6,5,4,3,2,1,0]
-// W32: v_cndmask_b16_e64_dpp v5, v1, v2, vcc_hi dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0xae,0x01,0x01,0x77,0x39,0x05]
-// W64-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, vcc_hi dpp8:[7,6,5,4,3,2,1,0]
+// W32: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, vcc_hi dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0xae,0x01,0x01,0x77,0x39,0x05]
+// W64-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, |v1|, -v2, vcc_lo dpp8:[7,6,5,4,3,2,1,0]
-// W32: v_cndmask_b16_e64_dpp v5, |v1|, -v2, vcc_lo dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x01,0x5d,0xd6,0xe9,0x04,0xaa,0x41,0x01,0x77,0x39,0x05]
-// W64-ERR: :[[@LINE-2]]:38: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, |v1.l|, -v2.l, vcc_lo dpp8:[7,6,5,4,3,2,1,0]
+// W32: v_cndmask_b16_e64_dpp v5.l, |v1.l|, -v2.l, vcc_lo dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x01,0x5d,0xd6,0xe9,0x04,0xaa,0x41,0x01,0x77,0x39,0x05]
+// W64-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, -v1, |v2|, ttmp15 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// W32: v_cndmask_b16_e64_dpp v5, -v1, |v2|, ttmp15 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x02,0x5d,0xd6,0xea,0x04,0xee,0x21,0x01,0x77,0x39,0x05]
-// W64-ERR: :[[@LINE-2]]:38: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.l|, ttmp15 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// W32: v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.l|, ttmp15 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x02,0x5d,0xd6,0xea,0x04,0xee,0x21,0x01,0x77,0x39,0x05]
+// W64-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] dpp8:[7,6,5,4,3,2,1,0]
-// W64: v_cndmask_b16_e64_dpp v5, v1, v2, s[6:7] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0x1a,0x00,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] dpp8:[7,6,5,4,3,2,1,0]
+// W64: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[6:7] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0x1a,0x00,0x01,0x77,0x39,0x05]
+// W32-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, v1, v2, s[104:105] dpp8:[7,6,5,4,3,2,1,0]
-// W64: v_cndmask_b16_e64_dpp v5, v1, v2, s[104:105] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0xa2,0x01,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[104:105] dpp8:[7,6,5,4,3,2,1,0]
+// W64: v_cndmask_b16_e64_dpp v5.l, v1.l, v2.l, s[104:105] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x5d,0xd6,0xe9,0x04,0xa2,0x01,0x01,0x77,0x39,0x05]
+// W32-ERR: :[[@LINE-2]]:41: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, |v1|, -v2, vcc dpp8:[7,6,5,4,3,2,1,0]
-// W64: v_cndmask_b16_e64_dpp v5, |v1|, -v2, vcc dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x01,0x5d,0xd6,0xe9,0x04,0xaa,0x41,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:38: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, |v1.l|, -v2.l, vcc dpp8:[7,6,5,4,3,2,1,0]
+// W64: v_cndmask_b16_e64_dpp v5.l, |v1.l|, -v2.l, vcc dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x01,0x5d,0xd6,0xe9,0x04,0xaa,0x41,0x01,0x77,0x39,0x05]
+// W32-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, -v1, |v2|, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1
-// W64: v_cndmask_b16_e64_dpp v5, -v1, |v2|, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x02,0x5d,0xd6,0xea,0x04,0xea,0x21,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:38: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.l|, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1
+// W64: v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.l|, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x02,0x5d,0xd6,0xea,0x04,0xea,0x21,0x01,0x77,0x39,0x05]
+// W32-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v5, -v1, |s2|, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1
-// W64: v_cndmask_b16_e64_dpp v5, -v1, |s2|, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x02,0x5d,0xd6,0xea,0x04,0xe8,0x21,0x01,0x77,0x39,0x05]
-// W32-ERR: :[[@LINE-2]]:38: error: invalid operand for instruction
+v_cndmask_b16_e64_dpp v5.l, -v1.l, |s2|, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1
+// W64: v_cndmask_b16_e64_dpp v5.l, -v1.l, |s2|, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x02,0x5d,0xd6,0xea,0x04,0xe8,0x21,0x01,0x77,0x39,0x05]
+// W32-ERR: :[[@LINE-2]]:42: error: invalid operand for instruction
 
-v_cndmask_b16_e64_dpp v255, -|v255|, -|v255|, null dpp8:[0,0,0,0,0,0,0,0] fi:0
-// GFX12: v_cndmask_b16_e64_dpp v255, -|v255|, -|v255|, null dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x03,0x5d,0xd6,0xe9,0xfe,0xf3,0x61,0xff,0x00,0x00,0x00]
+v_cndmask_b16_e64_dpp v255.l, -|v255.l|, -|v255.l|, null dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX12: v_cndmask_b16_e64_dpp v255.l, -|v255.l|, -|v255.l|, null dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x03,0x5d,0xd6,0xe9,0xfe,0xf3,0x61,0xff,0x00,0x00,0x00]
+
+v_cndmask_b16_e64_dpp v5.l, |v1.h|, -v2.l, vcc_hi dpp8:[7,6,5,4,3,2,1,0]
+// W32: v_cndmask_b16_e64_dpp v5.l, |v1.h|, -v2.l, vcc_hi dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x09,0x5d,0xd6,0xe9,0x04,0xae,0x41,0x01,0x77,0x39,0x05]
+// W64-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
+
+v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.h|, ttmp15 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// W32: v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.h|, ttmp15 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x12,0x5d,0xd6,0xea,0x04,0xee,0x21,0x01,0x77,0x39,0x05]
+// W64-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
+
+v_cndmask_b16_e64_dpp v5.l, |v1.h|, -v2.l, vcc dpp8:[7,6,5,4,3,2,1,0]
+// W64: v_cndmask_b16_e64_dpp v5.l, |v1.h|, -v2.l, vcc dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x09,0x5d,0xd6,0xe9,0x04,0xaa,0x41,0x01,0x77,0x39,0x05]
+// W32-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
+
+v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.h|, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1
+// W64: v_cndmask_b16_e64_dpp v5.l, -v1.l, |v2.h|, ttmp[14:15] dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x12,0x5d,0xd6,0xea,0x04,0xea,0x21,0x01,0x77,0x39,0x05]
+// W32-ERR: :[[@LINE-2]]:44: error: invalid operand for instruction
+
+v_cndmask_b16_e64_dpp v255.h, -|v255.l|, -|v255.l|, null dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX12: v_cndmask_b16_e64_dpp v255.h, -|v255.l|, -|v255.l|, null dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x43,0x5d,0xd6,0xe9,0xfe,0xf3,0x61,0xff,0x00,0x00,0x00]
 
 v_cubeid_f32_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: v_cubeid_f32_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x0c,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x77,0x39,0x05]
@@ -1878,47 +1897,86 @@ v_max_u16_e64_dpp v5.l, v1.l, v2.h dpp8:[7,6,5,4,3,2,1,0] fi:1
 v_max_u16_e64_dpp v255.h, v255.l, v255.l dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX12: v_max_u16_e64_dpp v255.h, v255.l, v255.l op_sel:[0,0,1] dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x40,0x09,0xd7,0xe9,0xfe,0x03,0x00,0xff,0x00,0x00,0x00]
 
-v_maxmin_num_f16_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_maxmin_num_f16_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6b,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x77,0x39,0x05]
+v_maxmin_num_f16_e64_dpp v5.l, v1.l, v2.l, v3.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, v1.l, v2.l, v3.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6b,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x77,0x39,0x05]
 
-v_maxmin_num_f16_e64_dpp v5, v1, s2, v3 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_maxmin_num_f16_e64_dpp v5, v1, s2, v3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6b,0xd6,0xe9,0x04,0x0c,0x04,0x01,0x77,0x39,0x05]
+v_maxmin_num_f16_e64_dpp v5.l, v1.l, s2, v3.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, v1.l, s2, v3.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6b,0xd6,0xe9,0x04,0x0c,0x04,0x01,0x77,0x39,0x05]
 
-v_maxmin_num_f16_e64_dpp v5, v1, 2.0, v3 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_maxmin_num_f16_e64_dpp v5, v1, 2.0, v3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6b,0xd6,0xe9,0xe8,0x0d,0x04,0x01,0x77,0x39,0x05]
+v_maxmin_num_f16_e64_dpp v5.l, v1.l, 2.0, v3.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, v1.l, 2.0, v3.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6b,0xd6,0xe9,0xe8,0x0d,0x04,0x01,0x77,0x39,0x05]
 
-v_maxmin_num_f16_e64_dpp v5, v1, v2, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_maxmin_num_f16_e64_dpp v5, v1, v2, v255 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6b,0xd6,0xe9,0x04,0xfe,0x07,0x01,0x77,0x39,0x05]
+v_maxmin_num_f16_e64_dpp v5.l, v1.l, v2.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, v1.l, v2.l, v255.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6b,0xd6,0xe9,0x04,0xfe,0x07,0x01,0x77,0x39,0x05]
 
-v_maxmin_num_f16_e64_dpp v5, v1, v2, s105 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_maxmin_num_f16_e64_dpp v5, v1, v2, s105 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6b,0xd6,0xe9,0x04,0xa6,0x01,0x01,0x77,0x39,0x05]
+v_maxmin_num_f16_e64_dpp v5.l, v1.l, v2.l, s105 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, v1.l, v2.l, s105 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6b,0xd6,0xe9,0x04,0xa6,0x01,0x01,0x77,0x39,0x05]
 
-v_maxmin_num_f16_e64_dpp v5, v1, v2, vcc_hi dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_maxmin_num_f16_e64_dpp v5, v1, v2, vcc_hi dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6b,0xd6,0xe9,0x04,0xae,0x01,0x01,0x77,0x39,0x05]
+v_maxmin_num_f16_e64_dpp v5.l, v1.l, v2.l, vcc_hi dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, v1.l, v2.l, vcc_hi dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6b,0xd6,0xe9,0x04,0xae,0x01,0x01,0x77,0x39,0x05]
 
-v_maxmin_num_f16_e64_dpp v5, v1, v2, vcc_lo dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_maxmin_num_f16_e64_dpp v5, v1, v2, vcc_lo dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6b,0xd6,0xe9,0x04,0xaa,0x01,0x01,0x77,0x39,0x05]
+v_maxmin_num_f16_e64_dpp v5.l, v1.l, v2.l, vcc_lo dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, v1.l, v2.l, vcc_lo dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6b,0xd6,0xe9,0x04,0xaa,0x01,0x01,0x77,0x39,0x05]
 
-v_maxmin_num_f16_e64_dpp v5, |v1|, v2, -ttmp15 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_maxmin_num_f16_e64_dpp v5, |v1|, v2, -ttmp15 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x01,0x6b,0xd6,0xe9,0x04,0xee,0x81,0x01,0x77,0x39,0x05]
+v_maxmin_num_f16_e64_dpp v5.l, |v1.l|, v2.l, -ttmp15 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, |v1.l|, v2.l, -ttmp15 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x01,0x6b,0xd6,0xe9,0x04,0xee,0x81,0x01,0x77,0x39,0x05]
 
-v_maxmin_num_f16_e64_dpp v5, v1, -|v2|, exec_hi dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_maxmin_num_f16_e64_dpp v5, v1, -|v2|, exec_hi dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x02,0x6b,0xd6,0xe9,0x04,0xfe,0x41,0x01,0x77,0x39,0x05]
+v_maxmin_num_f16_e64_dpp v5.l, v1.l, -|v2.l|, exec_hi dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, v1.l, -|v2.l|, exec_hi dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x02,0x6b,0xd6,0xe9,0x04,0xfe,0x41,0x01,0x77,0x39,0x05]
 
-v_maxmin_num_f16_e64_dpp v5, -v1, v2, |exec_lo| dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_maxmin_num_f16_e64_dpp v5, -v1, v2, |exec_lo| dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x04,0x6b,0xd6,0xe9,0x04,0xfa,0x21,0x01,0x77,0x39,0x05]
+v_maxmin_num_f16_e64_dpp v5.l, -v1.l, v2.l, |exec_lo| dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, -v1.l, v2.l, |exec_lo| dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x04,0x6b,0xd6,0xe9,0x04,0xfa,0x21,0x01,0x77,0x39,0x05]
 
-v_maxmin_num_f16_e64_dpp v5, -|v1|, -|v2|, null dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_maxmin_num_f16_e64_dpp v5, -|v1|, -|v2|, null dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x03,0x6b,0xd6,0xe9,0x04,0xf2,0x61,0x01,0x77,0x39,0x05]
+v_maxmin_num_f16_e64_dpp v5.l, -|v1.l|, -|v2.l|, null dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, -|v1.l|, -|v2.l|, null dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x03,0x6b,0xd6,0xe9,0x04,0xf2,0x61,0x01,0x77,0x39,0x05]
 
-v_maxmin_num_f16_e64_dpp v5, -|v1|, v2, -|-1| mul:2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_maxmin_num_f16_e64_dpp v5, -|v1|, v2, -|-1| mul:2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x05,0x6b,0xd6,0xe9,0x04,0x06,0xab,0x01,0x77,0x39,0x05]
+v_maxmin_num_f16_e64_dpp v5.l, -|v1.l|, v2.l, -|-1| mul:2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, -|v1.l|, v2.l, -|-1| mul:2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x05,0x6b,0xd6,0xe9,0x04,0x06,0xab,0x01,0x77,0x39,0x05]
 
-v_maxmin_num_f16_e64_dpp v5, v1, -|v2|, -|0.5| mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX12: v_maxmin_num_f16_e64_dpp v5, v1, -|v2|, -|0.5| mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x06,0x6b,0xd6,0xea,0x04,0xc2,0xd3,0x01,0x77,0x39,0x05]
+v_maxmin_num_f16_e64_dpp v5.l, v1.l, -|v2.l|, -|0.5| mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, v1.l, -|v2.l|, -|0.5| mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x06,0x6b,0xd6,0xea,0x04,0xc2,0xd3,0x01,0x77,0x39,0x05]
 
-v_maxmin_num_f16_e64_dpp v255, -|v255|, -|v255|, -|src_scc| clamp div:2 dpp8:[0,0,0,0,0,0,0,0]
-// GFX12: v_maxmin_num_f16_e64_dpp v255, -|v255|, -|v255|, -|src_scc| clamp div:2 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x87,0x6b,0xd6,0xe9,0xfe,0xf7,0xfb,0xff,0x00,0x00,0x00]
+v_maxmin_num_f16_e64_dpp v255.l, -|v255.l|, -|v255.l|, -|src_scc| clamp div:2 dpp8:[0,0,0,0,0,0,0,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v255.l, -|v255.l|, -|v255.l|, -|src_scc| clamp div:2 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x87,0x6b,0xd6,0xe9,0xfe,0xf7,0xfb,0xff,0x00,0x00,0x00]
+
+v_maxmin_num_f16_e64_dpp v5.l, v1.l, v2.l, s3 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, v1.l, v2.l, s3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6b,0xd6,0xe9,0x04,0x0e,0x00,0x01,0x77,0x39,0x05]
+
+v_maxmin_num_f16_e64_dpp v5.l, v1.l, v2.l, ttmp15 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, v1.l, v2.l, ttmp15 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6b,0xd6,0xe9,0x04,0xee,0x01,0x01,0x77,0x39,0x05]
+
+v_maxmin_num_f16_e64_dpp v5.l, v1.l, v2.l, -|m0| dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, v1.l, v2.l, -|m0| dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x04,0x6b,0xd6,0xe9,0x04,0xf6,0x81,0x01,0x77,0x39,0x05]
+
+v_maxmin_num_f16_e64_dpp v5.l, -|v1.l|, v2.l, -|exec_hi| dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, -|v1.l|, v2.l, -|exec_hi| dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x05,0x6b,0xd6,0xe9,0x04,0xfe,0xa1,0x01,0x77,0x39,0x05]
+
+v_maxmin_num_f16_e64_dpp v5.l, v1.l, -|v2.l|, -|exec_lo| dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, v1.l, -|v2.l|, -|exec_lo| dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x06,0x6b,0xd6,0xe9,0x04,0xfa,0xc1,0x01,0x77,0x39,0x05]
+
+v_maxmin_num_f16_e64_dpp v5.l, |v1.l|, -v2.l, null dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, |v1.l|, -v2.l, null dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x01,0x6b,0xd6,0xe9,0x04,0xf2,0x41,0x01,0x77,0x39,0x05]
+
+v_maxmin_num_f16_e64_dpp v5.l, -v1.l, |v2.l|, -1 mul:2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, -v1.l, |v2.l|, -1 mul:2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x02,0x6b,0xd6,0xe9,0x04,0x06,0x2b,0x01,0x77,0x39,0x05]
+
+v_maxmin_num_f16_e64_dpp v5.l, -|v1.l|, -|v2.l|, 0.5 mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, -|v1.l|, -|v2.l|, 0.5 mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x03,0x6b,0xd6,0xea,0x04,0xc2,0x73,0x01,0x77,0x39,0x05]
+
+v_maxmin_num_f16_e64_dpp v5.h, v1.h, v2.h, v3.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v5.h, v1.h, v2.h, v3.h op_sel:[1,1,1,1] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x78,0x6b,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x77,0x39,0x05]
+
+v_maxmin_num_f16_e64_dpp v5.l, v1.l, v2.l, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, v1.l, v2.l, v255.h op_sel:[0,0,1,0] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x20,0x6b,0xd6,0xe9,0x04,0xfe,0x07,0x01,0x77,0x39,0x05]
+
+v_maxmin_num_f16_e64_dpp v5.l, -v1.h, |v2.l|, -1 mul:2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, -v1.h, |v2.l|, -1 op_sel:[1,0,0,0] mul:2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x0a,0x6b,0xd6,0xe9,0x04,0x06,0x2b,0x01,0x77,0x39,0x05]
+
+v_maxmin_num_f16_e64_dpp v5.l, -|v1.l|, -|v2.h|, 0.5 mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX12: v_maxmin_num_f16_e64_dpp v5.l, -|v1.l|, -|v2.h|, 0.5 op_sel:[0,1,0,0] mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x13,0x6b,0xd6,0xea,0x04,0xc2,0x73,0x01,0x77,0x39,0x05]
+
+v_maxmin_num_f16_e64_dpp v255.h, -|v255.l|, -|v255.l|, -|src_scc| clamp div:2 dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX12: v_maxmin_num_f16_e64_dpp v255.h, -|v255.l|, -|v255.l|, -|src_scc| op_sel:[0,0,0,1] clamp div:2 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0xc7,0x6b,0xd6,0xe9,0xfe,0xf7,0xfb,0xff,0x00,0x00,0x00]
 
 v_maxmin_num_f32_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: v_maxmin_num_f32_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x69,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x77,0x39,0x05]
@@ -2673,47 +2731,86 @@ v_min_u16_e64_dpp v5.l, v1.l, v2.h dpp8:[7,6,5,4,3,2,1,0] fi:1
 v_min_u16_e64_dpp v255.h, v255.l, v255.l dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX12: v_min_u16_e64_dpp v255.h, v255.l, v255.l op_sel:[0,0,1] dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x40,0x0b,0xd7,0xe9,0xfe,0x03,0x00,0xff,0x00,0x00,0x00]
 
-v_minmax_num_f16_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_minmax_num_f16_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6a,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x77,0x39,0x05]
+v_minmax_num_f16_e64_dpp v5.l, v1.l, v2.l, v3.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, v1.l, v2.l, v3.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6a,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x77,0x39,0x05]
 
-v_minmax_num_f16_e64_dpp v5, v1, s2, v3 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_minmax_num_f16_e64_dpp v5, v1, s2, v3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6a,0xd6,0xe9,0x04,0x0c,0x04,0x01,0x77,0x39,0x05]
+v_minmax_num_f16_e64_dpp v5.l, v1.l, s2, v3.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, v1.l, s2, v3.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6a,0xd6,0xe9,0x04,0x0c,0x04,0x01,0x77,0x39,0x05]
 
-v_minmax_num_f16_e64_dpp v5, v1, 2.0, v3 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_minmax_num_f16_e64_dpp v5, v1, 2.0, v3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6a,0xd6,0xe9,0xe8,0x0d,0x04,0x01,0x77,0x39,0x05]
+v_minmax_num_f16_e64_dpp v5.l, v1.l, 2.0, v3.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, v1.l, 2.0, v3.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6a,0xd6,0xe9,0xe8,0x0d,0x04,0x01,0x77,0x39,0x05]
 
-v_minmax_num_f16_e64_dpp v5, v1, v2, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_minmax_num_f16_e64_dpp v5, v1, v2, v255 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6a,0xd6,0xe9,0x04,0xfe,0x07,0x01,0x77,0x39,0x05]
+v_minmax_num_f16_e64_dpp v5.l, v1.l, v2.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, v1.l, v2.l, v255.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6a,0xd6,0xe9,0x04,0xfe,0x07,0x01,0x77,0x39,0x05]
 
-v_minmax_num_f16_e64_dpp v5, v1, v2, s105 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_minmax_num_f16_e64_dpp v5, v1, v2, s105 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6a,0xd6,0xe9,0x04,0xa6,0x01,0x01,0x77,0x39,0x05]
+v_minmax_num_f16_e64_dpp v5.l, v1.l, v2.l, s105 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, v1.l, v2.l, s105 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6a,0xd6,0xe9,0x04,0xa6,0x01,0x01,0x77,0x39,0x05]
 
-v_minmax_num_f16_e64_dpp v5, v1, v2, vcc_hi dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_minmax_num_f16_e64_dpp v5, v1, v2, vcc_hi dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6a,0xd6,0xe9,0x04,0xae,0x01,0x01,0x77,0x39,0x05]
+v_minmax_num_f16_e64_dpp v5.l, v1.l, v2.l, vcc_hi dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, v1.l, v2.l, vcc_hi dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6a,0xd6,0xe9,0x04,0xae,0x01,0x01,0x77,0x39,0x05]
 
-v_minmax_num_f16_e64_dpp v5, v1, v2, vcc_lo dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_minmax_num_f16_e64_dpp v5, v1, v2, vcc_lo dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6a,0xd6,0xe9,0x04,0xaa,0x01,0x01,0x77,0x39,0x05]
+v_minmax_num_f16_e64_dpp v5.l, v1.l, v2.l, vcc_lo dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, v1.l, v2.l, vcc_lo dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6a,0xd6,0xe9,0x04,0xaa,0x01,0x01,0x77,0x39,0x05]
 
-v_minmax_num_f16_e64_dpp v5, |v1|, v2, -ttmp15 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_minmax_num_f16_e64_dpp v5, |v1|, v2, -ttmp15 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x01,0x6a,0xd6,0xe9,0x04,0xee,0x81,0x01,0x77,0x39,0x05]
+v_minmax_num_f16_e64_dpp v5.l, |v1.l|, v2.l, -ttmp15 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, |v1.l|, v2.l, -ttmp15 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x01,0x6a,0xd6,0xe9,0x04,0xee,0x81,0x01,0x77,0x39,0x05]
 
-v_minmax_num_f16_e64_dpp v5, v1, -|v2|, exec_hi dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_minmax_num_f16_e64_dpp v5, v1, -|v2|, exec_hi dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x02,0x6a,0xd6,0xe9,0x04,0xfe,0x41,0x01,0x77,0x39,0x05]
+v_minmax_num_f16_e64_dpp v5.l, v1.l, -|v2.l|, exec_hi dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, v1.l, -|v2.l|, exec_hi dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x02,0x6a,0xd6,0xe9,0x04,0xfe,0x41,0x01,0x77,0x39,0x05]
 
-v_minmax_num_f16_e64_dpp v5, -v1, v2, |exec_lo| dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_minmax_num_f16_e64_dpp v5, -v1, v2, |exec_lo| dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x04,0x6a,0xd6,0xe9,0x04,0xfa,0x21,0x01,0x77,0x39,0x05]
+v_minmax_num_f16_e64_dpp v5.l, -v1.l, v2.l, |exec_lo| dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, -v1.l, v2.l, |exec_lo| dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x04,0x6a,0xd6,0xe9,0x04,0xfa,0x21,0x01,0x77,0x39,0x05]
 
-v_minmax_num_f16_e64_dpp v5, -|v1|, -|v2|, null dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_minmax_num_f16_e64_dpp v5, -|v1|, -|v2|, null dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x03,0x6a,0xd6,0xe9,0x04,0xf2,0x61,0x01,0x77,0x39,0x05]
+v_minmax_num_f16_e64_dpp v5.l, -|v1.l|, -|v2.l|, null dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, -|v1.l|, -|v2.l|, null dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x03,0x6a,0xd6,0xe9,0x04,0xf2,0x61,0x01,0x77,0x39,0x05]
 
-v_minmax_num_f16_e64_dpp v5, -|v1|, v2, -|-1| mul:2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_minmax_num_f16_e64_dpp v5, -|v1|, v2, -|-1| mul:2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x05,0x6a,0xd6,0xe9,0x04,0x06,0xab,0x01,0x77,0x39,0x05]
+v_minmax_num_f16_e64_dpp v5.l, -|v1.l|, v2.l, -|-1| mul:2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, -|v1.l|, v2.l, -|-1| mul:2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x05,0x6a,0xd6,0xe9,0x04,0x06,0xab,0x01,0x77,0x39,0x05]
 
-v_minmax_num_f16_e64_dpp v5, v1, -|v2|, -|0.5| mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX12: v_minmax_num_f16_e64_dpp v5, v1, -|v2|, -|0.5| mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x06,0x6a,0xd6,0xea,0x04,0xc2,0xd3,0x01,0x77,0x39,0x05]
+v_minmax_num_f16_e64_dpp v5.l, v1.l, -|v2.l|, -|0.5| mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, v1.l, -|v2.l|, -|0.5| mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x06,0x6a,0xd6,0xea,0x04,0xc2,0xd3,0x01,0x77,0x39,0x05]
 
-v_minmax_num_f16_e64_dpp v255, -|v255|, -|v255|, -|src_scc| clamp div:2 dpp8:[0,0,0,0,0,0,0,0]
-// GFX12: v_minmax_num_f16_e64_dpp v255, -|v255|, -|v255|, -|src_scc| clamp div:2 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x87,0x6a,0xd6,0xe9,0xfe,0xf7,0xfb,0xff,0x00,0x00,0x00]
+v_minmax_num_f16_e64_dpp v255.l, -|v255.l|, -|v255.l|, -|src_scc| clamp div:2 dpp8:[0,0,0,0,0,0,0,0]
+// GFX12: v_minmax_num_f16_e64_dpp v255.l, -|v255.l|, -|v255.l|, -|src_scc| clamp div:2 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0x87,0x6a,0xd6,0xe9,0xfe,0xf7,0xfb,0xff,0x00,0x00,0x00]
+
+v_minmax_num_f16_e64_dpp v5.l, v1.l, v2.l, s3 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, v1.l, v2.l, s3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6a,0xd6,0xe9,0x04,0x0e,0x00,0x01,0x77,0x39,0x05]
+
+v_minmax_num_f16_e64_dpp v5.l, v1.l, v2.l, ttmp15 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, v1.l, v2.l, ttmp15 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x6a,0xd6,0xe9,0x04,0xee,0x01,0x01,0x77,0x39,0x05]
+
+v_minmax_num_f16_e64_dpp v5.l, v1.l, v2.l, -|m0| dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, v1.l, v2.l, -|m0| dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x04,0x6a,0xd6,0xe9,0x04,0xf6,0x81,0x01,0x77,0x39,0x05]
+
+v_minmax_num_f16_e64_dpp v5.l, -|v1.l|, v2.l, -|exec_hi| dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, -|v1.l|, v2.l, -|exec_hi| dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x05,0x6a,0xd6,0xe9,0x04,0xfe,0xa1,0x01,0x77,0x39,0x05]
+
+v_minmax_num_f16_e64_dpp v5.l, v1.l, -|v2.l|, -|exec_lo| dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, v1.l, -|v2.l|, -|exec_lo| dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x06,0x6a,0xd6,0xe9,0x04,0xfa,0xc1,0x01,0x77,0x39,0x05]
+
+v_minmax_num_f16_e64_dpp v5.l, |v1.l|, -v2.l, null dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, |v1.l|, -v2.l, null dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x01,0x6a,0xd6,0xe9,0x04,0xf2,0x41,0x01,0x77,0x39,0x05]
+
+v_minmax_num_f16_e64_dpp v5.l, -v1.l, |v2.l|, -1 mul:2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, -v1.l, |v2.l|, -1 mul:2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x02,0x6a,0xd6,0xe9,0x04,0x06,0x2b,0x01,0x77,0x39,0x05]
+
+v_minmax_num_f16_e64_dpp v5.l, -|v1.l|, -|v2.l|, 0.5 mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, -|v1.l|, -|v2.l|, 0.5 mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x03,0x6a,0xd6,0xea,0x04,0xc2,0x73,0x01,0x77,0x39,0x05]
+
+v_minmax_num_f16_e64_dpp v5.h, v1.h, v2.h, v3.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_minmax_num_f16_e64_dpp v5.h, v1.h, v2.h, v3.h op_sel:[1,1,1,1] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x78,0x6a,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x77,0x39,0x05]
+
+v_minmax_num_f16_e64_dpp v5.l, v1.l, v2.l, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, v1.l, v2.l, v255.h op_sel:[0,0,1,0] dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x20,0x6a,0xd6,0xe9,0x04,0xfe,0x07,0x01,0x77,0x39,0x05]
+
+v_minmax_num_f16_e64_dpp v5.l, -v1.h, |v2.l|, -1 mul:2 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, -v1.h, |v2.l|, -1 op_sel:[1,0,0,0] mul:2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x0a,0x6a,0xd6,0xe9,0x04,0x06,0x2b,0x01,0x77,0x39,0x05]
+
+v_minmax_num_f16_e64_dpp v5.l, -|v1.l|, -|v2.h|, 0.5 mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX12: v_minmax_num_f16_e64_dpp v5.l, -|v1.l|, -|v2.h|, 0.5 op_sel:[0,1,0,0] mul:4 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x13,0x6a,0xd6,0xea,0x04,0xc2,0x73,0x01,0x77,0x39,0x05]
+
+v_minmax_num_f16_e64_dpp v255.h, -|v255.l|, -|v255.l|, -|src_scc| clamp div:2 dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX12: v_minmax_num_f16_e64_dpp v255.h, -|v255.l|, -|v255.l|, -|src_scc| op_sel:[0,0,0,1] clamp div:2 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xff,0xc7,0x6a,0xd6,0xe9,0xfe,0xf7,0xfb,0xff,0x00,0x00,0x00]
 
 v_minmax_num_f32_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: v_minmax_num_f32_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x68,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x77,0x39,0x05]

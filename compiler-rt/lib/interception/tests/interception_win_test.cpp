@@ -801,8 +801,8 @@ const struct InstructionSizeData {
   size_t size;  // hold instruction size or 0 for failure,
                 // e.g. on control instructions
   u8 instr[16];
-  size_t rel_offset;  // filled just for instructions with two operands
-                      // and displacement length of four bytes.
+  size_t rel_offset;  // adjustment for RIP-relative addresses when copying
+                      // instructions during hooking via hotpatch or trampoline.
   const char *comment;
 } data[] = {
     // clang-format off
@@ -839,14 +839,19 @@ const struct InstructionSizeData {
     { 1, {0x90}, 0, "90 : nop"},
     { 1, {0xC3}, 0, "C3 : ret   (for small/empty function interception"},
     { 1, {0xCC}, 0, "CC : int 3  i.e. registering weak functions)"},
+    { 2, {0x31, 0xC0}, 0, "31 C0 : xor eax, eax"},
+    { 2, {0x31, 0xC9}, 0, "31 C9 : xor ecx, ecx"},
+    { 2, {0x31, 0xD2}, 0, "31 D2 : xor edx, edx"},
     { 2, {0x33, 0xC0}, 0, "33 C0 : xor eax, eax"},
     { 2, {0x33, 0xC9}, 0, "33 C9 : xor ecx, ecx"},
     { 2, {0x33, 0xD2}, 0, "33 D2 : xor edx, edx"},
     { 2, {0x6A, 0x71}, 0, "6A XX : push XX"},
+    { 2, {0x84, 0xC0}, 0, "84 C0 : test al,al"},
     { 2, {0x84, 0xC9}, 0, "84 C9 : test cl,cl"},
     { 2, {0x84, 0xD2}, 0, "84 D2 : test dl,dl"},
     { 2, {0x84, 0xDB}, 0, "84 DB : test bl,bl"},
     { 2, {0x89, 0xc8}, 0, "89 C8 : mov eax, ecx"},
+    { 2, {0x89, 0xD1}, 0, "89 D1 : mov ecx, edx"},
     { 2, {0x89, 0xE5}, 0, "89 E5 : mov ebp, esp"},
     { 2, {0x8A, 0x01}, 0, "8A 01 : mov al, byte ptr [ecx]"},
     { 2, {0x8B, 0xC1}, 0, "8B C1 : mov eax, ecx"},
@@ -858,6 +863,7 @@ const struct InstructionSizeData {
     { 5, {0x68, 0x71, 0x72, 0x73, 0x74}, 0, "68 XX XX XX XX : push imm32"},
     { 5, {0xb8, 0x71, 0x72, 0x73, 0x74}, 0, "b8 XX XX XX XX : mov eax, XX XX XX XX"},
     { 5, {0xB9, 0x71, 0x72, 0x73, 0x74}, 0, "b9 XX XX XX XX : mov ecx, XX XX XX XX"},
+    { 7, {0x8D, 0xA4, 0x24, 0x73, 0x74, 0x75, 0x76}, 0, "8D A4 24 XX XX XX XX : lea esp, [esp + XX XX XX XX]"},
 #if SANITIZER_WINDOWS_x64
     // sorted list
     { 2, {0x40, 0x50}, 0, "40 50 : push rax"},

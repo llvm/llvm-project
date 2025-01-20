@@ -1035,7 +1035,7 @@ class ConstantOp(_ods_ir.OpView):
     ...
 ```
 
-expects `value` to be a `TypedAttr` (e.g., `IntegerAttr` or `FloatAttr`). 
+expects `value` to be a `TypedAttr` (e.g., `IntegerAttr` or `FloatAttr`).
 Thus, a natural extension is a builder that accepts a MLIR type and a Python value and instantiates the appropriate `TypedAttr`:
 
 ```python
@@ -1181,9 +1181,49 @@ make the passes available along with the dialect.
 Dialect functionality other than IR objects or passes, such as helper functions,
 can be exposed to Python similarly to attributes and types. C API is expected to
 exist for this functionality, which can then be wrapped using pybind11 and
-`[include/mlir/Bindings/Python/PybindAdaptors.h](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/PybindAdaptors.h)`,
+[`include/mlir/Bindings/Python/PybindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/PybindAdaptors.h),
 or nanobind and
-`[include/mlir/Bindings/Python/NanobindAdaptors.h](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/NanobindAdaptors.h)`
+[`include/mlir/Bindings/Python/NanobindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/NanobindAdaptors.h)
 utilities to connect to the rest of Python API. The bindings can be located in a
 separate module or in the same module as attributes and types, and
 loaded along with the dialect.
+
+## Free-threading (No-GIL) support
+
+Free-threading or no-GIL support refers to CPython interpreter (>=3.13) with Global Interpreter Lock made optional. For details on the topic, please check [PEP-703](https://peps.python.org/pep-0703/) and this [Python free-threading guide](https://py-free-threading.github.io/).
+
+MLIR Python bindings are free-threading compatible with exceptions (discussed below) in the following sense: it is safe to work in multiple threads with **independent** contexts. Below we show an example code of safe usage:
+
+```python
+# python3.13t example.py
+import concurrent.futures
+
+import mlir.dialects.arith as arith
+from mlir.ir import Context, Location, Module, IntegerType, InsertionPoint
+
+
+def func(py_value):
+    with Context() as ctx:
+        module = Module.create(loc=Location.file("foo.txt", 0, 0))
+
+        dtype = IntegerType.get_signless(64)
+        with InsertionPoint(module.body), Location.name("a"):
+            arith.constant(dtype, py_value)
+
+    return module
+
+
+num_workers = 8
+with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+    futures = []
+    for i in range(num_workers):
+        futures.append(executor.submit(func, i))
+    assert len(list(f.result() for f in futures)) == num_workers
+```
+
+The exceptions to the free-threading compatibility:
+- IR printing is unsafe, e.g. when using `PassManager` with `PassManager.enable_ir_printing()` which calls thread-unsafe `llvm::raw_ostream`.
+- Usage of `Location.emit_error` is unsafe (due to thread-unsafe `llvm::raw_ostream`).
+- Usage of `Module.dump` is unsafe (due to thread-unsafe `llvm::raw_ostream`).
+- Usage of `mlir.dialects.transform.interpreter` is unsafe.
+- Usage of `mlir.dialects.gpu` and `gpu-module-to-binary` is unsafe.

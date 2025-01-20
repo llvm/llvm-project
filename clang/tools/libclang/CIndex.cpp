@@ -2839,8 +2839,13 @@ void OpenACCClauseEnqueue::VisitIfClause(const OpenACCIfClause &C) {
   Visitor.AddStmt(C.getConditionExpr());
 }
 void OpenACCClauseEnqueue::VisitSelfClause(const OpenACCSelfClause &C) {
-  if (C.hasConditionExpr())
-    Visitor.AddStmt(C.getConditionExpr());
+  if (C.isConditionExprClause()) {
+    if (C.hasConditionExpr())
+      Visitor.AddStmt(C.getConditionExpr());
+  } else {
+    for (Expr *Var : C.getVarList())
+      Visitor.AddStmt(Var);
+  }
 }
 void OpenACCClauseEnqueue::VisitNumWorkersClause(
     const OpenACCNumWorkersClause &C) {
@@ -2869,6 +2874,14 @@ void OpenACCClauseEnqueue::VisitTileClause(const OpenACCTileClause &C) {
 }
 
 void OpenACCClauseEnqueue::VisitPrivateClause(const OpenACCPrivateClause &C) {
+  VisitVarList(C);
+}
+
+void OpenACCClauseEnqueue::VisitHostClause(const OpenACCHostClause &C) {
+  VisitVarList(C);
+}
+
+void OpenACCClauseEnqueue::VisitDeviceClause(const OpenACCDeviceClause &C) {
   VisitVarList(C);
 }
 
@@ -6439,6 +6452,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OpenACCShutdownConstruct");
   case CXCursor_OpenACCSetConstruct:
     return cxstring::createRef("OpenACCSetConstruct");
+  case CXCursor_OpenACCUpdateConstruct:
+    return cxstring::createRef("OpenACCUpdateConstruct");
   }
 
   llvm_unreachable("Unhandled CXCursorKind");

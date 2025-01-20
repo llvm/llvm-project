@@ -1,3 +1,4 @@
+// REQUIRES: !(default-cxx-stdlib=libc++)
 // UNSUPPORTED: system-windows
 //   Windows is unsupported because we use the Unix path separator `/` in the test.
 
@@ -6,7 +7,8 @@
 // RUN: %clang -x c -target arm64-apple-none-macho -isysroot %S/Inputs/MacOSX15.1.sdk -### -c %s 2>&1 \
 // RUN: | FileCheck --check-prefixes=CC1,NO-CXX,ULI,CI,UI,NO-FW -DSDKROOT=%S/Inputs/MacOSX15.1.sdk %s
 
-// Unlike the Darwin driver, the MachO driver doesn't default to libc++
+// Unlike the Darwin driver, the MachO driver doesn't default to libc++, and unless
+// CLANG_DEFAULT_CXX_STDLIB is libc++ it won't add any search paths.
 // RUN: %clang -x c++ -target arm64-apple-none-macho -isysroot %S/Inputs/MacOSX15.1.sdk -### -c %s 2>&1 \
 // RUN: | FileCheck --check-prefixes=CC1,NO-CXX,ULI,CI,UI,NO-FW -DSDKROOT=%S/Inputs/MacOSX15.1.sdk %s
 
@@ -33,11 +35,12 @@
 // the cc1 arguments.
 
 // CC1: "-cc1"
-// NO-CXX-NOT: "-internal-isystem" "[[SDKROOT]]/usr/include/c++/v1"
-// CXX-SAME: "-internal-isystem" "[[SDKROOT]]/usr/include/c++/v1"
+// CC1: "-resource-dir" "[[RESOURCE_DIR:[^"]*]]"
+// NO-CXX-NOT: "-internal-isystem" "{{.*}}/include/c++/v1"
+// CXX-SAME: "-internal-isystem" "{{.*}}/include/c++/v1"
 // ULI-SAME: "-internal-isystem" "[[SDKROOT]]/usr/local/include"
 // EULI-SAME: "-isystem" "[[SDKROOT]]/embedded/usr/local/include"
-// CI-SAME: "-internal-isystem" "{{.*}}/clang/{{[[:digit:].]*}}/include"
+// CI-SAME: "-internal-isystem" "[[RESOURCE_DIR]]/include"
 // UI-SAME: "-internal-externc-isystem" "[[SDKROOT]]/usr/include"
 // EUI-SAME: "-internal-externc-isystem" "[[SDKROOT]]/embedded/usr/include"
 // NO-FW-NOT: "-internal-iframework"

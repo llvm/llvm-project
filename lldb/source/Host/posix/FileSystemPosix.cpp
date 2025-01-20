@@ -11,9 +11,6 @@
 // C includes
 #include <fcntl.h>
 #include <unistd.h>
-#if defined(__NetBSD__)
-#include <sys/statvfs.h>
-#endif
 
 // lldb Includes
 #include "lldb/Host/Host.h"

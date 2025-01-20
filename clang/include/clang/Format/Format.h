@@ -2298,7 +2298,7 @@ struct FormatStyle {
     BBO_RespectPrecedence
   };
 
-  /// The break constructor initializers style to use.
+  /// The break binary operations style to use.
   /// \version 20
   BreakBinaryOperationsStyle BreakBinaryOperations;
 
@@ -2510,6 +2510,7 @@ struct FormatStyle {
   /// lists.
   ///
   /// Important differences:
+  ///
   /// * No spaces inside the braced list.
   /// * No line break before the closing brace.
   /// * Indentation with the continuation indent, not with the block indent.
@@ -2674,6 +2675,19 @@ struct FormatStyle {
   /// \endnote
   /// \version 3.7
   bool ExperimentalAutoDetectBinPacking;
+
+  /// If ``true``, clang-format will indent the body of an ``export { ... }``
+  /// block. This doesn't affect the formatting of anything else related to
+  /// exported declarations.
+  /// \code
+  ///    true:                     false:
+  ///    export {          vs.     export {
+  ///      void foo();             void foo();
+  ///      void bar();             void bar();
+  ///    }                         }
+  /// \endcode
+  /// \version 20
+  bool ExportBlockIndentation;
 
   /// If ``true``, clang-format adds missing namespace end comments for
   /// namespaces and fixes invalid existing ones. This doesn't affect short
@@ -5253,6 +5267,7 @@ struct FormatStyle {
            EmptyLineBeforeAccessModifier == R.EmptyLineBeforeAccessModifier &&
            ExperimentalAutoDetectBinPacking ==
                R.ExperimentalAutoDetectBinPacking &&
+           ExportBlockIndentation == R.ExportBlockIndentation &&
            FixNamespaceComments == R.FixNamespaceComments &&
            ForEachMacros == R.ForEachMacros &&
            IncludeStyle.IncludeBlocks == R.IncludeStyle.IncludeBlocks &&

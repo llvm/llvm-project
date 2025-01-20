@@ -2795,7 +2795,7 @@ getSubobjectSizeInBits(const FieldDecl *Field, const ASTContext &Context,
     if (Field->isUnnamedBitField())
       return 0;
 
-    int64_t BitfieldSize = Field->getBitWidthValue(Context);
+    int64_t BitfieldSize = Field->getBitWidthValue();
     if (IsBitIntType) {
       if ((unsigned)BitfieldSize >
           cast<BitIntType>(Field->getType())->getNumBits())
@@ -5209,6 +5209,85 @@ QualType ASTContext::getEnumType(const EnumDecl *Decl) const {
   return QualType(newType, 0);
 }
 
+bool ASTContext::computeBestEnumTypes(bool IsPacked, unsigned NumNegativeBits,
+                                      unsigned NumPositiveBits,
+                                      QualType &BestType,
+                                      QualType &BestPromotionType) {
+  unsigned IntWidth = Target->getIntWidth();
+  unsigned CharWidth = Target->getCharWidth();
+  unsigned ShortWidth = Target->getShortWidth();
+  bool EnumTooLarge = false;
+  unsigned BestWidth;
+  if (NumNegativeBits) {
+    // If there is a negative value, figure out the smallest integer type (of
+    // int/long/longlong) that fits.
+    // If it's packed, check also if it fits a char or a short.
+    if (IsPacked && NumNegativeBits <= CharWidth &&
+        NumPositiveBits < CharWidth) {
+      BestType = SignedCharTy;
+      BestWidth = CharWidth;
+    } else if (IsPacked && NumNegativeBits <= ShortWidth &&
+               NumPositiveBits < ShortWidth) {
+      BestType = ShortTy;
+      BestWidth = ShortWidth;
+    } else if (NumNegativeBits <= IntWidth && NumPositiveBits < IntWidth) {
+      BestType = IntTy;
+      BestWidth = IntWidth;
+    } else {
+      BestWidth = Target->getLongWidth();
+
+      if (NumNegativeBits <= BestWidth && NumPositiveBits < BestWidth) {
+        BestType = LongTy;
+      } else {
+        BestWidth = Target->getLongLongWidth();
+
+        if (NumNegativeBits > BestWidth || NumPositiveBits >= BestWidth)
+          EnumTooLarge = true;
+        BestType = LongLongTy;
+      }
+    }
+    BestPromotionType = (BestWidth <= IntWidth ? IntTy : BestType);
+  } else {
+    // If there is no negative value, figure out the smallest type that fits
+    // all of the enumerator values.
+    // If it's packed, check also if it fits a char or a short.
+    if (IsPacked && NumPositiveBits <= CharWidth) {
+      BestType = UnsignedCharTy;
+      BestPromotionType = IntTy;
+      BestWidth = CharWidth;
+    } else if (IsPacked && NumPositiveBits <= ShortWidth) {
+      BestType = UnsignedShortTy;
+      BestPromotionType = IntTy;
+      BestWidth = ShortWidth;
+    } else if (NumPositiveBits <= IntWidth) {
+      BestType = UnsignedIntTy;
+      BestWidth = IntWidth;
+      BestPromotionType = (NumPositiveBits == BestWidth || !LangOpts.CPlusPlus)
+                              ? UnsignedIntTy
+                              : IntTy;
+    } else if (NumPositiveBits <= (BestWidth = Target->getLongWidth())) {
+      BestType = UnsignedLongTy;
+      BestPromotionType = (NumPositiveBits == BestWidth || !LangOpts.CPlusPlus)
+                              ? UnsignedLongTy
+                              : LongTy;
+    } else {
+      BestWidth = Target->getLongLongWidth();
+      if (NumPositiveBits > BestWidth) {
+        // This can happen with bit-precise integer types, but those are not
+        // allowed as the type for an enumerator per C23 6.7.2.2p4 and p12.
+        // FIXME: GCC uses __int128_t and __uint128_t for cases that fit within
+        // a 128-bit integer, we should consider doing the same.
+        EnumTooLarge = true;
+      }
+      BestType = UnsignedLongLongTy;
+      BestPromotionType = (NumPositiveBits == BestWidth || !LangOpts.CPlusPlus)
+                              ? UnsignedLongLongTy
+                              : LongLongTy;
+    }
+  }
+  return EnumTooLarge;
+}
+
 QualType ASTContext::getUnresolvedUsingType(
     const UnresolvedUsingTypenameDecl *Decl) const {
   if (Decl->TypeForDecl)
@@ -6248,7 +6327,8 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
     Canonical = getCanonicalType(Expansions[Index]);
   } else {
     llvm::FoldingSetNodeID ID;
-    PackIndexingType::Profile(ID, *this, Pattern, IndexExpr, FullySubstituted);
+    PackIndexingType::Profile(ID, *this, Pattern.getCanonicalType(), IndexExpr,
+                              FullySubstituted);
     void *InsertPos = nullptr;
     PackIndexingType *Canon =
         DependentPackIndexingTypes.FindNodeOrInsertPos(ID, InsertPos);
@@ -6256,8 +6336,9 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
       void *Mem = Allocate(
           PackIndexingType::totalSizeToAlloc<QualType>(Expansions.size()),
           TypeAlignment);
-      Canon = new (Mem) PackIndexingType(*this, QualType(), Pattern, IndexExpr,
-                                         FullySubstituted, Expansions);
+      Canon = new (Mem)
+          PackIndexingType(*this, QualType(), Pattern.getCanonicalType(),
+                           IndexExpr, FullySubstituted, Expansions);
       DependentPackIndexingTypes.InsertNode(Canon, InsertPos);
     }
     Canonical = QualType(Canon, 0);
@@ -7769,7 +7850,7 @@ QualType ASTContext::isPromotableBitField(Expr *E) const {
 
   QualType FT = Field->getType();
 
-  uint64_t BitWidth = Field->getBitWidthValue(*this);
+  uint64_t BitWidth = Field->getBitWidthValue();
   uint64_t IntSize = getTypeSize(IntTy);
   // C++ [conv.prom]p5:
   //   A prvalue for an integral bit-field can be converted to a prvalue of type
@@ -8797,7 +8878,7 @@ static void EncodeBitField(const ASTContext *Ctx, std::string& S,
       S += getObjCEncodingForPrimitiveType(Ctx, BT);
     }
   }
-  S += llvm::utostr(FD->getBitWidthValue(*Ctx));
+  S += llvm::utostr(FD->getBitWidthValue());
 }
 
 // Helper function for determining whether the encoded type string would include
@@ -9223,7 +9304,7 @@ void ASTContext::getObjCEncodingForStructureImpl(RecordDecl *RDecl,
   }
 
   for (FieldDecl *Field : RDecl->fields()) {
-    if (!Field->isZeroLengthBitField(*this) && Field->isZeroSize(*this))
+    if (!Field->isZeroLengthBitField() && Field->isZeroSize(*this))
       continue;
     uint64_t offs = layout.getFieldOffset(Field->getFieldIndex());
     FieldOrBaseOffsets.insert(FieldOrBaseOffsets.upper_bound(offs),
@@ -9320,7 +9401,7 @@ void ASTContext::getObjCEncodingForStructureImpl(RecordDecl *RDecl,
       if (field->isBitField()) {
         EncodeBitField(this, S, field->getType(), field);
 #ifndef NDEBUG
-        CurOffs += field->getBitWidthValue(*this);
+        CurOffs += field->getBitWidthValue();
 #endif
       } else {
         QualType qt = field->getType();
@@ -14500,6 +14581,19 @@ void ASTContext::registerSYCLEntryPointFunction(FunctionDecl *FD) {
   (void)IT;
   SYCLKernels.insert(
       std::make_pair(KernelNameType, BuildSYCLKernelInfo(KernelNameType, FD)));
+}
+
+const SYCLKernelInfo &ASTContext::getSYCLKernelInfo(QualType T) const {
+  CanQualType KernelNameType = getCanonicalType(T);
+  return SYCLKernels.at(KernelNameType);
+}
+
+const SYCLKernelInfo *ASTContext::findSYCLKernelInfo(QualType T) const {
+  CanQualType KernelNameType = getCanonicalType(T);
+  auto IT = SYCLKernels.find(KernelNameType);
+  if (IT != SYCLKernels.end())
+    return &IT->second;
+  return nullptr;
 }
 
 OMPTraitInfo &ASTContext::getNewOMPTraitInfo() {

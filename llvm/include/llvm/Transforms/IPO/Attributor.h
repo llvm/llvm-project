@@ -1287,6 +1287,12 @@ struct InformationCache {
     return AG.getAnalysis<TargetLibraryAnalysis>(F);
   }
 
+  /// Return true if \p F has the "kernel" function attribute
+  bool isKernel(const Function &F) {
+    FunctionInfo &FI = getFunctionInfo(F);
+    return FI.IsKernel;
+  }
+
   /// Return true if \p Arg is involved in a must-tail call, thus the argument
   /// of the caller or callee.
   bool isInvolvedInMustTailCall(const Argument &Arg) {
@@ -1361,6 +1367,9 @@ private:
 
     /// Function contains a `musttail` call.
     bool ContainsMustTailCall;
+
+    /// Function has the `"kernel"` attribute
+    bool IsKernel;
   };
 
   /// A map type from functions to informatio about it.
@@ -1478,7 +1487,7 @@ struct AttributorConfig {
   /// The name of the pass running the attributor, used to emit remarks.
   const char *PassName = nullptr;
 
-  using IPOAmendableCBTy = function_ref<bool(const Function &F)>;
+  using IPOAmendableCBTy = std::function<bool(const Function &F)>;
   IPOAmendableCBTy IPOAmendableCB;
 };
 

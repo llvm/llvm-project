@@ -1774,9 +1774,9 @@ InstructionCost X86TTIImpl::getShuffleCost(
               PrevSrcReg = SrcReg;
               PrevRegMask = RegMask;
             },
-            [this, SingleOpTy, CostKind, &Cost](ArrayRef<int> RegMask,
-                                                unsigned /*Unused*/,
-                                                unsigned /*Unused*/) {
+            [this, SingleOpTy, CostKind,
+             &Cost](ArrayRef<int> RegMask, unsigned /*Unused*/,
+                    unsigned /*Unused*/, bool /*Unused*/) {
               Cost += getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy, RegMask,
                                      CostKind, 0, nullptr);
             });
@@ -4804,9 +4804,12 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     MVT MScalarTy = LT.second.getScalarType();
     auto IsCheapPInsrPExtrInsertPS = [&]() {
       // Assume pinsr/pextr XMM <-> GPR is relatively cheap on all targets.
+      // Inserting f32 into index0 is just movss.
       // Also, assume insertps is relatively cheap on all >= SSE41 targets.
       return (MScalarTy == MVT::i16 && ST->hasSSE2()) ||
              (MScalarTy.isInteger() && ST->hasSSE41()) ||
+             (MScalarTy == MVT::f32 && ST->hasSSE1() && Index == 0 &&
+              Opcode == Instruction::InsertElement) ||
              (MScalarTy == MVT::f32 && ST->hasSSE41() &&
               Opcode == Instruction::InsertElement);
     };

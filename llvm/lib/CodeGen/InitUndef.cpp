@@ -161,7 +161,7 @@ bool InitUndef::handleSubReg(MachineFunction &MF, MachineInstr &MI,
     });
 
     SmallVector<unsigned> SubRegIndexNeedInsert;
-    TRI->getCoveringSubRegIndexes(*MRI, TargetRegClass, NeedDef,
+    TRI->getCoveringSubRegIndexes(TargetRegClass, NeedDef,
                                   SubRegIndexNeedInsert);
 
     // It's not possible to create the INIT_UNDEF when there is no register

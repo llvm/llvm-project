@@ -1,4 +1,5 @@
-header: sys-mman.h
+header: sys/mman.h
+header_template: mman.h.def
 macros: []
 types:
   - type_name: mode_t
