@@ -90,7 +90,7 @@ __OMP_ARRAY_TYPE(Int32Arr3, Int32, 3)
 __OMP_STRUCT_TYPE(Ident, ident_t, false, Int32, Int32, Int32, Int32, Int8Ptr)
 __OMP_STRUCT_TYPE(KernelArgs, __tgt_kernel_arguments, false, Int32, Int32, VoidPtrPtr,
 		  VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr,
-		  Int64, Int64, Int32Arr3Ty, Int32Arr3Ty, Int32)
+		  Int64, Int64, Int32Arr3Ty, Int32Arr3Ty, Int32, VoidPtr)
 __OMP_STRUCT_TYPE(AsyncInfo, __tgt_async_info, false, Int8Ptr)
 __OMP_STRUCT_TYPE(DependInfo, kmp_dep_info, false, SizeTy, SizeTy, Int8)
 __OMP_STRUCT_TYPE(Task, kmp_task_ompbuilder_t, false, VoidPtr, VoidPtr, Int32, VoidPtr, VoidPtr)

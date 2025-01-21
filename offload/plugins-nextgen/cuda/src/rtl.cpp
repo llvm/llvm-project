@@ -641,8 +641,11 @@ struct CUDADeviceTy : public GenericDeviceTy {
     }
 
     // Once the stream is synchronized, return it to stream pool and reset
-    // AsyncInfo. This is to make sure the synchronization only works for its
-    // own tasks.
+    // AsyncInfo if the queue is not persistent. This is to make sure the
+    // synchronization only works for its own tasks.
+    if (AsyncInfo.PersistentQueue)
+      return Plugin::success();
+
     AsyncInfo.Queue = nullptr;
     if (auto Err = CUDAStreamManager.returnResource(Stream))
       return Err;
@@ -775,9 +778,12 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (Res == CUDA_ERROR_NOT_READY)
       return Plugin::success();
 
-    // Once the stream is synchronized and the operations completed (or an error
-    // occurs), return it to stream pool and reset AsyncInfo. This is to make
-    // sure the synchronization only works for its own tasks.
+    // Once the stream is synchronized, return it to stream pool and reset
+    // AsyncInfo if the queue is not persistent. This is to make sure the
+    // synchronization only works for its own tasks.
+    if (AsyncInfo.PersistentQueue)
+      return Plugin::success();
+
     AsyncInfo.Queue = nullptr;
     if (auto Err = CUDAStreamManager.returnResource(Stream))
       return Err;

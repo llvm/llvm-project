@@ -49,7 +49,7 @@ int AsyncInfoTy::synchronize() {
     case SyncTy::BLOCKING:
       // If we have a queue we need to synchronize it now.
       Result = Device.synchronize(*this);
-      assert(AsyncInfo.Queue == nullptr &&
+      assert((AsyncInfo.PersistentQueue || !AsyncInfo.Queue) &&
              "The device plugin should have nulled the queue to indicate there "
              "are no outstanding actions!");
       break;

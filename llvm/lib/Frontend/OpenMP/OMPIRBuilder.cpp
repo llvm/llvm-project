@@ -528,6 +528,7 @@ void OpenMPIRBuilder::getKernelArgsVector(TargetKernelArgs &KernelArgs,
   constexpr const size_t MaxDim = 3;
   Value *ZeroArray = Constant::getNullValue(ArrayType::get(Int32Ty, MaxDim));
   Value *Flags = Builder.getInt64(KernelArgs.HasNoWait);
+  Value *AsyncInfoQueue = Constant::getNullValue(Builder.getPtrTy());
 
   assert(!KernelArgs.NumTeams.empty() && !KernelArgs.NumThreads.empty());
 
@@ -556,7 +557,8 @@ void OpenMPIRBuilder::getKernelArgsVector(TargetKernelArgs &KernelArgs,
                 Flags,
                 NumTeams3D,
                 NumThreads3D,
-                KernelArgs.DynCGGroupMem};
+                KernelArgs.DynCGGroupMem,
+                AsyncInfoQueue};
 }
 
 void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {

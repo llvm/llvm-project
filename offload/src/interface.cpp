@@ -16,6 +16,7 @@
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/omp.h"
 #include "PluginManager.h"
+#include "Shared/APITypes.h"
 #include "omptarget.h"
 #include "private.h"
 
@@ -357,7 +358,7 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  TargetAsyncInfoTy TargetAsyncInfo(*DeviceOrErr);
+  TargetAsyncInfoTy TargetAsyncInfo(*DeviceOrErr, KernelArgs->AsyncInfoQueue);
   AsyncInfoTy &AsyncInfo = TargetAsyncInfo;
   /// RAII to establish tool anchors before and after target region
   OMPT_IF_BUILT(InterfaceRAII TargetRAII(
@@ -554,4 +555,49 @@ EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
   // Delete the handle and unset it from the OpenMP task data.
   delete AsyncInfo;
   *AsyncHandle = nullptr;
+}
+
+EXTERN void *__tgt_target_get_default_async_info_queue(void *Loc,
+                                                       int64_t DeviceId) {
+  assert(PM && "Runtime not initialized");
+
+  static thread_local void **AsyncInfoQueue = nullptr;
+
+  if (!AsyncInfoQueue)
+    AsyncInfoQueue = reinterpret_cast<void **>(
+        calloc(PM->getNumDevices(), sizeof(AsyncInfoQueue[0])));
+
+  if (!AsyncInfoQueue[DeviceId]) {
+    auto DeviceOrErr = PM->getDevice(DeviceId);
+    if (!DeviceOrErr)
+      FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
+
+    __tgt_async_info *AsyncInfo = nullptr;
+    DeviceOrErr->RTL->init_async_info(DeviceId, &AsyncInfo);
+    AsyncInfoQueue[DeviceId] = AsyncInfo->Queue;
+  }
+
+  return AsyncInfoQueue[DeviceId];
+}
+
+EXTERN int __tgt_target_synchronize_async_info_queue(void *Loc,
+                                                     int64_t DeviceId,
+                                                     void *AsyncInfoQueue) {
+  assert(PM && "Runtime not initialized");
+
+  auto DeviceOrErr = PM->getDevice(DeviceId);
+  if (!DeviceOrErr)
+    FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
+  if (!AsyncInfoQueue)
+    AsyncInfoQueue = __tgt_target_get_default_async_info_queue(Loc, DeviceId);
+  AsyncInfoTy AsyncInfo(*DeviceOrErr, AsyncInfoQueue,
+                        AsyncInfoTy::SyncTy::BLOCKING);
+
+  if (AsyncInfo.synchronize())
+    FATAL_MESSAGE0(1, "Error while querying the async queue for completion.\n");
+  [[maybe_unused]] __tgt_async_info *ASI = AsyncInfo;
+  assert(ASI->Queue);
+  assert(ASI->Queue && ASI->PersistentQueue);
+
+  return 0;
 }

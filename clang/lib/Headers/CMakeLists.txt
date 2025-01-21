@@ -367,6 +367,7 @@ set(llvm_offload_wrapper_files
   llvm_offload_wrappers/__llvm_offload.h
   llvm_offload_wrappers/__llvm_offload_host.h
   llvm_offload_wrappers/__llvm_offload_device.h
+  llvm_offload_wrappers/cuda_runtime.h
 )
 
 set(llvm_libc_wrapper_files

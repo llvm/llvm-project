@@ -10,6 +10,7 @@
 // UNSUPPORTED: x86_64-unknown-linux-gnu
 // UNSUPPORTED: x86_64-unknown-linux-gnu-LTO
 
+#include <cuda_runtime.h>
 #include <stdio.h>
 
 extern "C" {
@@ -26,6 +27,7 @@ int main(int argc, char **argv) {
   printf("Ptr %p, *Ptr: %i\n", Ptr, *Ptr);
   // CHECK: Ptr [[Ptr:0x.*]], *Ptr: 7
   square<<<1, 1>>>(Ptr);
+  cudaDeviceSynchronize();
   printf("Ptr %p, *Ptr: %i\n", Ptr, *Ptr);
   // CHECK: Ptr [[Ptr]], *Ptr: 42
   llvm_omp_target_free_shared(Ptr, DevNo);

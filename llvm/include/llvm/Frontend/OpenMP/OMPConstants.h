@@ -72,7 +72,7 @@ enum class IdentFlag {
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
 // Version of the kernel argument format used by the omp runtime.
-#define OMP_KERNEL_ARG_VERSION 3
+#define OMP_KERNEL_ARG_VERSION 4
 
 // Minimum version of the compiler that generates a kernel dynamic pointer.
 #define OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR 3
