@@ -442,8 +442,9 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
 
     // Sort all of the interesting instructions in the block so that we don't
     // have to scan a large block just to find a few instructions.
-    std::sort(BlockUses.begin(), BlockUses.end(),
-              [](Instruction *A, Instruction *B) { return A->comesBefore(B); });
+    llvm::sort(
+        BlockUses.begin(), BlockUses.end(),
+        [](Instruction *A, Instruction *B) { return A->comesBefore(B); });
 
     // Otherwise, we have mixed loads and stores (or just a bunch of stores).
     // Since SSAUpdater is purely for cross-block values, we need to determine
@@ -528,11 +529,4 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
     instructionDeleted(User);
     User->eraseFromParent();
   }
-}
-
-bool
-LoadAndStorePromoter::isInstInList(Instruction *I,
-                                   const SmallVectorImpl<Instruction *> &Insts)
-                                   const {
-  return is_contained(Insts, I);
 }
