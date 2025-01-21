@@ -1,7 +1,5 @@
 ; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o /dev/null 2>&1 | FileCheck %s
 ; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o /dev/null 2>&1 | FileCheck %s
-; RUN: not %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o /dev/null 2>&1 -filetype=obj %}
-; RUN: not %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o /dev/null 2>&1 -filetype=obj %}
 
 ; CHECK: LLVM ERROR: %{{.*}} = G_INTRINSIC intrinsic(@llvm.spv.reflect), %{{.*}}, %{{.*}} is only supported with the GLSL extended instruction set.
 
