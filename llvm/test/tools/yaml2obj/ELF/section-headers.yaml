@@ -454,4 +454,3 @@ Sections:
 # LINK-NEXT:   [ 2] .ref.first PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] [[#%x,]]      1
 # LINK-NEXT:   [ 3] .ref.last  PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] [[#%x,]]      4
 # LINK-NEXT:   [ 4] .shstrtab
-
