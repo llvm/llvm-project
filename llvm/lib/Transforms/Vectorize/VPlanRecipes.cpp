@@ -2603,6 +2603,17 @@ void VPWidenLoadRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+/// Use all-true mask for reverse rather than actual mask, as it avoids a
+/// dependence w/o affecting the result.
+static Instruction *createReverseEVL(IRBuilderBase &Builder, Value *Operand,
+                                     Value *EVL, const Twine &Name) {
+  VectorType *ValTy = cast<VectorType>(Operand->getType());
+  Value *AllTrueMask =
+      Builder.CreateVectorSplat(ValTy->getElementCount(), Builder.getTrue());
+  return Builder.CreateIntrinsic(ValTy, Intrinsic::experimental_vp_reverse,
+                                 {Operand, AllTrueMask, EVL}, nullptr, Name);
+}
+
 void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   auto *LI = cast<LoadInst>(&Ingredient);
 
@@ -2610,6 +2621,7 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
   bool CreateGather = !isConsecutive();
+  bool UseStridedLoadStore = State.TTI->preferStridedLoadStore();
 
   auto &Builder = State.Builder;
   State.setDebugLocFrom(getDebugLoc());
@@ -2619,6 +2631,8 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   Value *Mask = nullptr;
   if (VPValue *VPMask = getMask()) {
     Mask = State.get(VPMask);
+    if (isReverse() && !UseStridedLoadStore)
+      Mask = createReverseEVL(Builder, Mask, EVL, "vp.reverse.mask");
   } else {
     Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
   }
@@ -2627,7 +2641,7 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
     NewLI =
         Builder.CreateIntrinsic(DataTy, Intrinsic::vp_gather, {Addr, Mask, EVL},
                                 nullptr, "wide.masked.gather");
-  } else if (isReverse()) {
+  } else if (isReverse() && UseStridedLoadStore) {
     auto *EltTy = DataTy->getElementType();
     auto *PtrTy = Addr->getType();
     Value *Operands[] = {
@@ -2648,6 +2662,8 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
       0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
   State.addMetadata(NewLI, LI);
   Instruction *Res = NewLI;
+  if (isReverse() && !UseStridedLoadStore)
+    Res = createReverseEVL(Builder, Res, EVL, "vp.reverse");
   State.set(this, Res);
 }
 
@@ -2738,6 +2754,7 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   VPValue *StoredValue = getStoredValue();
   bool CreateScatter = !isConsecutive();
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
+  bool UseStridedLoadStore = State.TTI->preferStridedLoadStore();
 
   auto &Builder = State.Builder;
   State.setDebugLocFrom(getDebugLoc());
@@ -2745,9 +2762,13 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   CallInst *NewSI = nullptr;
   Value *StoredVal = State.get(StoredValue);
   Value *EVL = State.get(getEVL(), VPLane(0));
+  if (isReverse() && !UseStridedLoadStore)
+    StoredVal = createReverseEVL(Builder, StoredVal, EVL, "vp.reverse");
   Value *Mask = nullptr;
   if (VPValue *VPMask = getMask()) {
     Mask = State.get(VPMask);
+    if (isReverse() && !UseStridedLoadStore)
+      Mask = createReverseEVL(Builder, Mask, EVL, "vp.reverse.mask");
   } else {
     Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
   }
@@ -2756,7 +2777,7 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
     NewSI = Builder.CreateIntrinsic(Type::getVoidTy(EVL->getContext()),
                                     Intrinsic::vp_scatter,
                                     {StoredVal, Addr, Mask, EVL});
-  } else if (isReverse()) {
+  } else if (isReverse() && UseStridedLoadStore) {
     Type *StoredValTy = StoredVal->getType();
     auto *EltTy = cast<VectorType>(StoredValTy)->getElementType();
     auto *PtrTy = Addr->getType();

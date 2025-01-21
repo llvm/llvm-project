@@ -118,6 +118,8 @@ public:
     return false;
   }
 
+  bool preferStridedLoadStore() const { return true; }
+
   InstructionCost getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
                                         Align Alignment, unsigned AddressSpace,
                                         TTI::TargetCostKind CostKind);
