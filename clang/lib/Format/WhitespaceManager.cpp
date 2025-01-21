@@ -284,8 +284,9 @@ void WhitespaceManager::calculateLineBreakInformation() {
 // moved to that column.
 template <typename F>
 static void
-AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
-                   unsigned Column, bool RightJustify, F &&Matches,
+AlignTokenSequence(const FormatStyle &Style, const LangOptions &LangOpts,
+                   unsigned Start, unsigned End, unsigned Column,
+                   bool RightJustify, F &&Matches,
                    SmallVector<WhitespaceManager::Change, 16> &Changes) {
   bool FoundMatchOnLine = false;
   int Shift = 0;
@@ -478,7 +479,7 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
       for (int Previous = i - 1;
            Previous >= 0 && Changes[Previous].Tok->is(TT_PointerOrReference);
            --Previous) {
-        assert(Changes[Previous].Tok->isPointerOrReference());
+        assert(Changes[Previous].Tok->isPointerOrReference(LangOpts));
         if (Changes[Previous].Tok->isNot(tok::star)) {
           if (ReferenceNotRightAligned)
             continue;
@@ -525,7 +526,8 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
 // When RightJustify and ACS.PadOperators are true, operators in each block to
 // be aligned will be padded on the left to the same length before aligning.
 template <typename F>
-static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
+static unsigned AlignTokens(const FormatStyle &Style,
+                            const LangOptions &LangOpts, F &&Matches,
                             SmallVector<WhitespaceManager::Change, 16> &Changes,
                             unsigned StartAt,
                             const FormatStyle::AlignConsecutiveStyle &ACS = {},
@@ -577,7 +579,7 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
   // containing any matching token to be aligned and located after such token.
   auto AlignCurrentSequence = [&] {
     if (StartOfSequence > 0 && StartOfSequence < EndOfSequence) {
-      AlignTokenSequence(Style, StartOfSequence, EndOfSequence,
+      AlignTokenSequence(Style, LangOpts, StartOfSequence, EndOfSequence,
                          WidthLeft + WidthAnchor, RightJustify, Matches,
                          Changes);
     }
@@ -627,7 +629,7 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
     } else if (CurrentChange.indentAndNestingLevel() > IndentAndNestingLevel) {
       // Call AlignTokens recursively, skipping over this scope block.
       unsigned StoppedAt =
-          AlignTokens(Style, Matches, Changes, i, ACS, RightJustify);
+          AlignTokens(Style, LangOpts, Matches, Changes, i, ACS, RightJustify);
       i = StoppedAt - 1;
       continue;
     }
@@ -828,7 +830,7 @@ void WhitespaceManager::alignConsecutiveAssignments() {
     return;
 
   AlignTokens(
-      Style,
+      Style, LangOpts,
       [&](const Change &C) {
         // Do not align on equal signs that are first on a line.
         if (C.NewlinesBefore > 0)
@@ -866,7 +868,7 @@ void WhitespaceManager::alignConsecutiveColons(
     return;
 
   AlignTokens(
-      Style,
+      Style, LangOpts,
       [&](Change const &C) {
         // Do not align on ':' that is first on a line.
         if (C.NewlinesBefore > 0)
@@ -1010,7 +1012,7 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
     return;
 
   AlignTokens(
-      Style,
+      Style, LangOpts,
       [&](Change const &C) {
         if (Style.AlignConsecutiveDeclarations.AlignFunctionPointers) {
           for (const auto *Prev = C.Tok->Previous; Prev; Prev = Prev->Previous)
@@ -1047,7 +1049,7 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
 void WhitespaceManager::alignChainedConditionals() {
   if (Style.BreakBeforeTernaryOperators) {
     AlignTokens(
-        Style,
+        Style, LangOpts,
         [](Change const &C) {
           // Align question operators and last colon
           return C.Tok->is(TT_ConditionalExpr) &&
@@ -1072,7 +1074,7 @@ void WhitespaceManager::alignChainedConditionals() {
       if (AlignWrappedOperand(C))
         C.StartOfTokenColumn -= 2;
     AlignTokens(
-        Style,
+        Style, LangOpts,
         [this](Change const &C) {
           // Align question operators if next operand is not wrapped, as
           // well as wrapped operands after question operator or last

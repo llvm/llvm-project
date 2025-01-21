@@ -737,7 +737,9 @@ public:
                     TT_LambdaArrow, TT_LeadingJavaAnnotation);
   }
 
-  bool isPointerOrReference() const {
+  bool isPointerOrReference(const LangOptions &LangOpts) const {
+    if (LangOpts.CPlusPlusCLI && is(tok::caret))
+      return true;
     return isOneOf(tok::star, tok::amp, tok::ampamp);
   }
 
