@@ -1232,12 +1232,13 @@ void DynamicRelocsChunk::finalize() {
 
 // Set the reloc value. The reloc entry must be allocated beforehand.
 void DynamicRelocsChunk::set(uint32_t rva, Arm64XRelocVal value) {
-  Arm64XDynamicRelocEntry &entry =
-      *llvm::find_if(arm64xRelocs, [rva](const Arm64XDynamicRelocEntry &e) {
+  auto entry =
+      llvm::find_if(arm64xRelocs, [rva](const Arm64XDynamicRelocEntry &e) {
         return e.offset.get() == rva;
       });
-  assert(!entry.value.get());
-  entry.value = value;
+  assert(entry != arm64xRelocs.end());
+  assert(!entry->value.get());
+  entry->value = value;
 }
 
 void DynamicRelocsChunk::writeTo(uint8_t *buf) const {
