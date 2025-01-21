@@ -215,8 +215,8 @@ LIBC_INLINE uint8_t extract_decimal_digit(T &value) {
   // all powers of 16 (larger than 1) are congruent to 6 mod 10, by induction:
   // 16 itself is, and 6^2=36 is also congruent to 6.
   Word acc_remainder = 0;
-  const Word HALFWORD_BITS = T::WORD_SIZE / 2;
-  const Word HALFWORD_MASK = ((Word(1) << HALFWORD_BITS) - 1);
+  constexpr Word HALFWORD_BITS = T::WORD_SIZE / 2;
+  constexpr Word HALFWORD_MASK = ((Word(1) << HALFWORD_BITS) - 1);
   // Sum both halves of all words except the low one.
   for (size_t i = 1; i < T::WORD_COUNT; i++) {
     acc_remainder += value.val[i] >> HALFWORD_BITS;
@@ -297,7 +297,7 @@ LIBC_INLINE uint8_t extract_decimal_digit(T &value) {
   // We do this entire procedure in a single in-place pass over the input
   // number, reading each word to make its product with C and then adding the
   // low word of the accumulator to it.
-  const Word C = (Word(0) - 1) / 5 * 4; // calculate 0xCCCC as 4/5 of 0xFFFF
+  constexpr Word C = Word(-1) / 5 * 4; // calculate 0xCCCC as 4/5 of 0xFFFF
   Word acc_lo = 0, acc_hi = 0; // accumulator of all the half-products so far
   Word carry_bit, carry_word = 0;
 
