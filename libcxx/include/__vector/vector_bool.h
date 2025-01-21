@@ -417,8 +417,6 @@ private:
     __guard.__complete();
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __alloc_and_copy(const vector& __v);
-
   template <class _Iterator, class _Sentinel>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __assign_with_sentinel(_Iterator __first, _Sentinel __last);
 
@@ -690,30 +688,27 @@ vector<bool, _Allocator>::vector(initializer_list<value_type> __il, const alloca
 
 #endif // _LIBCPP_CXX03_LANG
 
-// This function copies each storage word as a whole, which is substantially more efficient than copying
-// individual bits within each word
-template <class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void vector<bool, _Allocator>::__alloc_and_copy(const vector& __v) {
-  if (__v.__size_) {
-    __vallocate(__v.__size_);
-    std::copy(__v.__begin_, __v.__begin_ + __external_cap_to_internal(__v.__size_), __begin_);
-  }
-  __size_ = __v.__size_;
-}
-
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(const vector& __v)
     : __begin_(nullptr),
       __size_(0),
       __cap_(0),
       __alloc_(__storage_traits::select_on_container_copy_construction(__v.__alloc_)) {
-  __alloc_and_copy(__v);
+  if (__v.size() > 0) {
+    __vallocate(__v.size());
+    std::copy(__v.__begin_, __v.__begin_ + __external_cap_to_internal(__v.size()), __begin_);
+    __size_ = __v.size();
+  }
 }
 
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 vector<bool, _Allocator>::vector(const vector& __v, const allocator_type& __a)
     : __begin_(nullptr), __size_(0), __cap_(0), __alloc_(__a) {
-  __alloc_and_copy(__v);
+  if (__v.size() > 0) {
+    __vallocate(__v.size());
+    std::copy(__v.__begin_, __v.__begin_ + __external_cap_to_internal(__v.size()), __begin_);
+    __size_ = __v.size();
+  }
 }
 
 template <class _Allocator>
@@ -758,8 +753,10 @@ vector<bool, _Allocator>::vector(vector&& __v, const __type_identity_t<allocator
     this->__cap_   = __v.__cap_;
     __v.__begin_   = nullptr;
     __v.__cap_ = __v.__size_ = 0;
-  } else {
-    __alloc_and_copy(__v);
+  } else if (__v.size() > 0) {
+    __vallocate(__v.size());
+    std::copy(__v.__begin_, __v.__begin_ + __external_cap_to_internal(__v.size()), __begin_);
+    __size_ = __v.size();
   }
 }
 

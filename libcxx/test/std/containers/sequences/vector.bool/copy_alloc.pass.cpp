@@ -7,67 +7,77 @@
 //===----------------------------------------------------------------------===//
 
 // <vector>
+// vector<bool>
 
 // vector(const vector& v, const allocator_type& a);
 
-#include <vector>
 #include <cassert>
+#include <vector>
 
-#include "test_macros.h"
-#include "test_allocator.h"
 #include "min_allocator.h"
+#include "test_allocator.h"
+#include "test_macros.h"
 
-template <class C>
-TEST_CONSTEXPR_CXX20 void test(const C& x, const typename C::allocator_type& a)
-{
-    typename C::size_type s = x.size();
-    C c(x, a);
-    LIBCPP_ASSERT(c.__invariants());
-    assert(c.size() == s);
-    assert(c == x);
+template <class A>
+TEST_CONSTEXPR_CXX20 void test(const std::vector<bool, A>& x, const A& a) {
+  std::vector<bool, A> c(x, a);
+  LIBCPP_ASSERT(c.__invariants());
+  assert(c.size() == x.size());
+  assert(c == x);
+  assert(c.get_allocator() == a);
 }
 
-TEST_CONSTEXPR_CXX20 bool tests()
-{
-    {
-        bool a[] = {0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0};
-        bool* an = a + sizeof(a)/sizeof(a[0]);
-        test(std::vector<bool>(a, an), std::allocator<bool>());
-    }
-    {
-        std::vector<bool, test_allocator<bool> > l(3, true, test_allocator<bool>(5));
-        std::vector<bool, test_allocator<bool> > l2(l, test_allocator<bool>(3));
-        assert(l2 == l);
-        assert(l2.get_allocator() == test_allocator<bool>(3));
-    }
-    {
-        std::vector<bool, other_allocator<bool> > l(3, true, other_allocator<bool>(5));
-        std::vector<bool, other_allocator<bool> > l2(l, other_allocator<bool>(3));
-        assert(l2 == l);
-        assert(l2.get_allocator() == other_allocator<bool>(3));
-    }
-#if TEST_STD_VER >= 11
-    {
-        bool a[] = {0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0};
-        bool* an = a + sizeof(a)/sizeof(a[0]);
-        test(std::vector<bool, min_allocator<bool>>(a, an), min_allocator<bool>());
-    }
-    {
-        std::vector<bool, min_allocator<bool> > l(3, true, min_allocator<bool>());
-        std::vector<bool, min_allocator<bool> > l2(l, min_allocator<bool>());
-        assert(l2 == l);
-        assert(l2.get_allocator() == min_allocator<bool>());
-    }
-#endif
+TEST_CONSTEXPR_CXX20 bool tests() {
+  bool a05[5]  = {1, 0, 1, 0, 1};
+  bool a17[17] = {0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1};
+  bool a33[33] = {1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1};
+  bool a65[65] = {0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0};
+
+  { // Test with the default allocator
+    test(std::vector<bool>(a05, a05 + sizeof(a05) / sizeof(a05[0])), std::allocator<bool>());
+    test(std::vector<bool>(a17, a17 + sizeof(a17) / sizeof(a17[0])), std::allocator<bool>());
+    test(std::vector<bool>(a33, a33 + sizeof(a33) / sizeof(a33[0])), std::allocator<bool>());
+    test(std::vector<bool>(a65, a65 + sizeof(a65) / sizeof(a65[0])), std::allocator<bool>());
+    test(std::vector<bool>(257, true), std::allocator<bool>());
+  }
+
+  { // Test with test_allocator
+    using A = test_allocator<bool>;
+    using C = std::vector<bool, A>;
+    test(C(a05, a05 + sizeof(a05) / sizeof(a05[0]), A(5)), A(3));
+    test(C(a17, a17 + sizeof(a17) / sizeof(a17[0]), A(5)), A(3));
+    test(C(a33, a33 + sizeof(a33) / sizeof(a33[0]), A(5)), A(3));
+    test(C(a65, a65 + sizeof(a65) / sizeof(a65[0]), A(5)), A(3));
+    test(C(257, true, A(5)), A(3));
+  }
+
+  { // Test with other_allocator
+    using A = other_allocator<bool>;
+    using C = std::vector<bool, A>;
+    test(C(a05, a05 + sizeof(a05) / sizeof(a05[0]), A(5)), A(3));
+    test(C(a17, a17 + sizeof(a17) / sizeof(a17[0]), A(5)), A(3));
+    test(C(a33, a33 + sizeof(a33) / sizeof(a33[0]), A(5)), A(3));
+    test(C(a65, a65 + sizeof(a65) / sizeof(a65[0]), A(5)), A(3));
+    test(C(257, true, A(5)), A(3));
+  }
+
+  { // Test with min_allocator
+    using A = min_allocator<bool>;
+    using C = std::vector<bool, A>;
+    test(C(a05, a05 + sizeof(a05) / sizeof(a05[0]), A()), A());
+    test(C(a17, a17 + sizeof(a17) / sizeof(a17[0]), A()), A());
+    test(C(a33, a33 + sizeof(a33) / sizeof(a33[0]), A()), A());
+    test(C(a65, a65 + sizeof(a65) / sizeof(a65[0]), A()), A());
+    test(C(257, true, A()), A());
+  }
 
   return true;
 }
 
-int main(int, char**)
-{
-    tests();
-#if TEST_STD_VER > 17
-    static_assert(tests());
+int main(int, char**) {
+  tests();
+#if TEST_STD_VER >= 20
+  static_assert(tests());
 #endif
-    return 0;
+  return 0;
 }
