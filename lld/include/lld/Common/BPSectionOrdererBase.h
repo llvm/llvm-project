@@ -18,7 +18,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/xxhash.h"
 #include <memory>
 #include <optional>
 
@@ -54,14 +53,6 @@ public:
     auto [P0, S0] = Name.rsplit(".llvm.");
     auto [P1, S1] = P0.rsplit(".__uniq.");
     return P1;
-  }
-
-  static uint64_t getRelocHash(llvm::StringRef kind, uint64_t sectionIdx,
-                               uint64_t offset, uint64_t addend) {
-    return llvm::xxHash64((kind + ": " + llvm::Twine::utohexstr(sectionIdx) +
-                           " + " + llvm::Twine::utohexstr(offset) + " + " +
-                           llvm::Twine::utohexstr(addend))
-                              .str());
   }
 
   /// Reorders sections using balanced partitioning algorithm based on profile

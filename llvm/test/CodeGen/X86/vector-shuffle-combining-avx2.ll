@@ -946,10 +946,8 @@ define <2 x i64> @PR116815(<4 x i64> %v0, <4 x i64> %v1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpslld $16, %ymm1, %ymm1
 ; CHECK-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7],ymm0[8],ymm1[9],ymm0[10],ymm1[11],ymm0[12],ymm1[13],ymm0[14],ymm1[15]
+; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12,2,6,10,14,u,u,u,u,u,u,u,u,16,20,24,28,18,22,26,30,u,u,u,u,u,u,u,u]
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; CHECK-NEXT:    vmovq {{.*#+}} xmm2 = [0,4,8,12,2,6,10,14,0,0,0,0,0,0,0,0]
-; CHECK-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; CHECK-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}

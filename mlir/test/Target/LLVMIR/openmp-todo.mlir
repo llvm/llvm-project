@@ -247,10 +247,23 @@ llvm.func @target_has_device_addr(%x : !llvm.ptr) {
 
 // -----
 
-llvm.func @target_if(%x : i1) {
-  // expected-error@below {{not yet implemented: Unhandled clause if in omp.target operation}}
+llvm.func @target_host_eval(%x : i32) {
+  // expected-error@below {{not yet implemented: host evaluation of loop bounds in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target if(%x) {
+  omp.target host_eval(%x -> %lb, %x -> %ub, %x -> %step : i32, i32, i32) {
+    omp.teams {
+      omp.parallel {
+        omp.distribute {
+          omp.wsloop {
+            omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+              omp.yield
+            }
+          } {omp.composite}
+        } {omp.composite}
+        omp.terminator
+      } {omp.composite}
+      omp.terminator
+    }
     omp.terminator
   }
   llvm.return
@@ -308,17 +321,6 @@ llvm.func @target_firstprivate(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause firstprivate in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
   omp.target private(@x.privatizer %x -> %arg0 : !llvm.ptr) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @target_thread_limit(%x : i32) {
-  // expected-error@below {{not yet implemented: Unhandled clause thread_limit in omp.target operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target thread_limit(%x : i32) {
     omp.terminator
   }
   llvm.return
@@ -398,28 +400,6 @@ llvm.func @task_in_reduction(%x : !llvm.ptr) {
 
 // -----
 
-llvm.func @task_priority(%x : i32) {
-  // expected-error@below {{not yet implemented: Unhandled clause priority in omp.task operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.task}}
-  omp.task priority(%x : i32) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @task_untied() {
-  // expected-error@below {{not yet implemented: Unhandled clause untied in omp.task operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.task}}
-  omp.task untied {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @taskgroup_allocate(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.taskgroup operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.taskgroup}}
@@ -463,6 +443,19 @@ llvm.func @taskloop(%lb : i32, %ub : i32, %step : i32) {
   // expected-error@below {{not yet implemented: omp.taskloop}}
   // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
   omp.taskloop {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @taskloop_untied(%lb : i32, %ub : i32, %step : i32) {
+  // expected-error@below {{not yet implemented: omp.taskloop}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
+  omp.taskloop untied {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }

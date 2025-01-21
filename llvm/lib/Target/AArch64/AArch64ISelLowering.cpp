@@ -1140,8 +1140,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   setTargetDAGCombine(ISD::SCALAR_TO_VECTOR);
 
-  setTargetDAGCombine(ISD::SHL);
-
   // In case of strict alignment, avoid an excessive number of byte wide stores.
   MaxStoresPerMemsetOptSize = 8;
   MaxStoresPerMemset =
@@ -2373,8 +2371,9 @@ bool AArch64TargetLowering::targetShrinkDemandedConstant(
     return false;
 
   unsigned Size = VT.getSizeInBits();
-  assert((Size == 32 || Size == 64) &&
-         "i32 or i64 is expected after legalization.");
+
+  if (Size != 32 && Size != 64)
+    return false;
 
   // Exit early if we demand all bits.
   if (DemandedBits.popcount() == Size)
@@ -9450,12 +9449,14 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // If the callee is a GlobalAddress/ExternalSymbol node (quite common, every
   // direct call is) turn it into a TargetGlobalAddress/TargetExternalSymbol
   // node so that legalize doesn't hack it.
+  const GlobalValue *CalledGlobal = nullptr;
+  unsigned OpFlags = 0;
   if (auto *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
-    auto GV = G->getGlobal();
-    unsigned OpFlags =
-        Subtarget->classifyGlobalFunctionReference(GV, getTargetMachine());
+    CalledGlobal = G->getGlobal();
+    OpFlags = Subtarget->classifyGlobalFunctionReference(CalledGlobal,
+                                                         getTargetMachine());
     if (OpFlags & AArch64II::MO_GOT) {
-      Callee = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, OpFlags);
+      Callee = DAG.getTargetGlobalAddress(CalledGlobal, DL, PtrVT, 0, OpFlags);
       Callee = DAG.getNode(AArch64ISD::LOADgot, DL, PtrVT, Callee);
     } else {
       const GlobalValue *GV = G->getGlobal();
@@ -9575,6 +9576,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
     DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
+    if (CalledGlobal)
+      DAG.addCalledGlobal(Ret.getNode(), CalledGlobal, OpFlags);
     return Ret;
   }
 
@@ -9586,6 +9589,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
   InGlue = Chain.getValue(1);
   DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
+  if (CalledGlobal)
+    DAG.addCalledGlobal(Chain.getNode(), CalledGlobal, OpFlags);
 
   uint64_t CalleePopBytes =
       DoesCalleeRestoreStack(CallConv, TailCallOpt) ? alignTo(NumBytes, 16) : 0;
@@ -9697,7 +9702,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
 bool AArch64TargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   CCAssignFn *RetCC = CCAssignFnForReturn(CallConv);
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
@@ -24893,16 +24899,31 @@ static SDValue reassociateCSELOperandsForCSE(SDNode *N, SelectionDAG &DAG) {
   SDValue SubsNode = N->getOperand(3);
   if (SubsNode.getOpcode() != AArch64ISD::SUBS || !SubsNode.hasOneUse())
     return SDValue();
-  auto *CmpOpConst = dyn_cast<ConstantSDNode>(SubsNode.getOperand(1));
-  if (!CmpOpConst)
-    return SDValue();
 
+  SDValue CmpOpToMatch = SubsNode.getOperand(1);
   SDValue CmpOpOther = SubsNode.getOperand(0);
   EVT VT = N->getValueType(0);
 
+  unsigned ExpectedOpcode;
+  SDValue ExpectedOp;
+  SDValue SubsOp;
+  auto *CmpOpConst = dyn_cast<ConstantSDNode>(CmpOpToMatch);
+  if (CmpOpConst) {
+    ExpectedOpcode = ISD::ADD;
+    ExpectedOp =
+        DAG.getConstant(-CmpOpConst->getAPIntValue(), SDLoc(CmpOpConst),
+                        CmpOpConst->getValueType(0));
+    SubsOp = DAG.getConstant(CmpOpConst->getAPIntValue(), SDLoc(CmpOpConst),
+                             CmpOpConst->getValueType(0));
+  } else {
+    ExpectedOpcode = ISD::SUB;
+    ExpectedOp = CmpOpToMatch;
+    SubsOp = CmpOpToMatch;
+  }
+
   // Get the operand that can be reassociated with the SUBS instruction.
-  auto GetReassociationOp = [&](SDValue Op, APInt ExpectedConst) {
-    if (Op.getOpcode() != ISD::ADD)
+  auto GetReassociationOp = [&](SDValue Op, SDValue ExpectedOp) {
+    if (Op.getOpcode() != ExpectedOpcode)
       return SDValue();
     if (Op.getOperand(0).getOpcode() != ISD::ADD ||
         !Op.getOperand(0).hasOneUse())
@@ -24913,24 +24934,21 @@ static SDValue reassociateCSELOperandsForCSE(SDNode *N, SelectionDAG &DAG) {
       std::swap(X, Y);
     if (X != CmpOpOther)
       return SDValue();
-    auto *AddOpConst = dyn_cast<ConstantSDNode>(Op.getOperand(1));
-    if (!AddOpConst || AddOpConst->getAPIntValue() != ExpectedConst)
+    if (ExpectedOp != Op.getOperand(1))
       return SDValue();
     return Y;
   };
 
   // Try the reassociation using the given constant and condition code.
-  auto Fold = [&](APInt NewCmpConst, AArch64CC::CondCode NewCC) {
-    APInt ExpectedConst = -NewCmpConst;
-    SDValue TReassocOp = GetReassociationOp(N->getOperand(0), ExpectedConst);
-    SDValue FReassocOp = GetReassociationOp(N->getOperand(1), ExpectedConst);
+  auto Fold = [&](AArch64CC::CondCode NewCC, SDValue ExpectedOp,
+                  SDValue SubsOp) {
+    SDValue TReassocOp = GetReassociationOp(N->getOperand(0), ExpectedOp);
+    SDValue FReassocOp = GetReassociationOp(N->getOperand(1), ExpectedOp);
     if (!TReassocOp && !FReassocOp)
       return SDValue();
 
     SDValue NewCmp = DAG.getNode(AArch64ISD::SUBS, SDLoc(SubsNode),
-                                 DAG.getVTList(VT, MVT_CC), CmpOpOther,
-                                 DAG.getConstant(NewCmpConst, SDLoc(CmpOpConst),
-                                                 CmpOpConst->getValueType(0)));
+                                 DAG.getVTList(VT, MVT_CC), CmpOpOther, SubsOp);
 
     auto Reassociate = [&](SDValue ReassocOp, unsigned OpNum) {
       if (!ReassocOp)
@@ -24952,8 +24970,18 @@ static SDValue reassociateCSELOperandsForCSE(SDNode *N, SelectionDAG &DAG) {
 
   // First, try to eliminate the compare instruction by searching for a
   // subtraction with the same constant.
-  if (SDValue R = Fold(CmpOpConst->getAPIntValue(), CC))
+  if (SDValue R = Fold(CC, ExpectedOp, SubsOp))
     return R;
+
+  if (!CmpOpConst) {
+    // Try again with the operands of the SUBS instruction and the condition
+    // swapped. Due to canonicalization, this only helps for non-constant
+    // operands of the SUBS instruction.
+    std::swap(CmpOpToMatch, CmpOpOther);
+    if (SDValue R = Fold(getSwappedCondition(CC), CmpOpToMatch, CmpOpToMatch))
+      return R;
+    return SDValue();
+  }
 
   if ((CC == AArch64CC::EQ || CC == AArch64CC::NE) && !CmpOpConst->isZero())
     return SDValue();
@@ -24966,7 +24994,11 @@ static SDValue reassociateCSELOperandsForCSE(SDNode *N, SelectionDAG &DAG) {
   // them here but check for them nevertheless to be on the safe side.
   auto CheckedFold = [&](bool Check, APInt NewCmpConst,
                          AArch64CC::CondCode NewCC) {
-    return Check ? Fold(NewCmpConst, NewCC) : SDValue();
+    auto ExpectedOp = DAG.getConstant(-NewCmpConst, SDLoc(CmpOpConst),
+                                      CmpOpConst->getValueType(0));
+    auto SubsOp = DAG.getConstant(NewCmpConst, SDLoc(CmpOpConst),
+                                  CmpOpConst->getValueType(0));
+    return Check ? Fold(NewCC, ExpectedOp, SubsOp) : SDValue();
   };
   switch (CC) {
   case AArch64CC::EQ:
@@ -25020,6 +25052,30 @@ static SDValue performCSELCombine(SDNode *N,
   // CSEL cttz(X), 0, ne(X, 0) -> AND cttz bitwidth-1
   if (SDValue Folded = foldCSELofCTTZ(N, DAG))
 		return Folded;
+
+  // CSEL a, b, cc, SUBS(x, y) -> CSEL a, b, swapped(cc), SUBS(y, x)
+  // if SUB(y, x) already exists and we can produce a swapped predicate for cc.
+  SDValue Cond = N->getOperand(3);
+  if (DCI.isAfterLegalizeDAG() && Cond.getOpcode() == AArch64ISD::SUBS &&
+      Cond.hasOneUse() && Cond->hasNUsesOfValue(0, 0) &&
+      DAG.doesNodeExist(ISD::SUB, N->getVTList(),
+                        {Cond.getOperand(1), Cond.getOperand(0)}) &&
+      !DAG.doesNodeExist(ISD::SUB, N->getVTList(),
+                         {Cond.getOperand(0), Cond.getOperand(1)}) &&
+      !isNullConstant(Cond.getOperand(1))) {
+    AArch64CC::CondCode OldCond =
+        static_cast<AArch64CC::CondCode>(N->getConstantOperandVal(2));
+    AArch64CC::CondCode NewCond = getSwappedCondition(OldCond);
+    if (NewCond != AArch64CC::AL) {
+      SDLoc DL(N);
+      SDValue Sub = DAG.getNode(AArch64ISD::SUBS, DL, Cond->getVTList(),
+                                Cond.getOperand(1), Cond.getOperand(0));
+      return DAG.getNode(AArch64ISD::CSEL, DL, N->getVTList(), N->getOperand(0),
+                         N->getOperand(1),
+                         DAG.getConstant(NewCond, DL, MVT::i32),
+                         Sub.getValue(1));
+    }
+  }
 
   return performCONDCombine(N, DCI, DAG, 2, 3);
 }
@@ -26467,43 +26523,6 @@ performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   return NVCAST;
 }
 
-/// If the operand is a bitwise AND with a constant RHS, and the shift has a
-/// constant RHS and is the only use, we can pull it out of the shift, i.e.
-///
-///   (shl (and X, C1), C2) -> (and (shl X, C2), (shl C1, C2))
-///
-/// We prefer this canonical form to match existing isel patterns.
-static SDValue performSHLCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 SelectionDAG &DAG) {
-  if (DCI.isBeforeLegalizeOps())
-    return SDValue();
-
-  SDValue Op0 = N->getOperand(0);
-  if (Op0.getOpcode() != ISD::AND || !Op0.hasOneUse())
-    return SDValue();
-
-  SDValue C1 = Op0->getOperand(1);
-  SDValue C2 = N->getOperand(1);
-  if (!isa<ConstantSDNode>(C1) || !isa<ConstantSDNode>(C2))
-    return SDValue();
-
-  // Might be folded into shifted op, do not lower.
-  if (N->hasOneUse()) {
-    unsigned UseOpc = N->user_begin()->getOpcode();
-    if (UseOpc == ISD::ADD || UseOpc == ISD::SUB || UseOpc == ISD::SETCC ||
-        UseOpc == AArch64ISD::ADDS || UseOpc == AArch64ISD::SUBS)
-      return SDValue();
-  }
-
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-  SDValue X = Op0->getOperand(0);
-  SDValue NewRHS = DAG.getNode(ISD::SHL, DL, VT, C1, C2);
-  SDValue NewShift = DAG.getNode(ISD::SHL, DL, VT, X, C2);
-  return DAG.getNode(ISD::AND, DL, VT, NewShift, NewRHS);
-}
-
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -26849,8 +26868,6 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performCTLZCombine(N, DAG, Subtarget);
   case ISD::SCALAR_TO_VECTOR:
     return performScalarToVectorCombine(N, DCI, DAG);
-  case ISD::SHL:
-    return performSHLCombine(N, DCI, DAG);
   }
   return SDValue();
 }

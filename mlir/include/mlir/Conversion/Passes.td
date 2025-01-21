@@ -517,6 +517,14 @@ def GpuToLLVMConversionPass : Pass<"gpu-to-llvm", "ModuleOp"> {
            /*default=*/"false",
              "Use bare pointers to pass memref arguments to kernels. "
              "The kernel must use the same setting for this option."
+          >,
+    Option<"kernelIntersperseSizeCallConv", "intersperse-sizes-for-kernels", "bool",
+           /*default=*/"false",
+           "Inserts a size_t argument following each memref argument, "
+           "containing the static size in bytes of the buffer. Incompatible "
+           "arguments are rejected. This is intended for use by the Vulkan "
+           "runtime with the kernel bare pointer calling convention, to enable "
+           "dynamic binding of buffers as arguments without static type info."
           >
   ];
 
@@ -782,6 +790,28 @@ def ConvertMathToSPIRV : Pass<"convert-math-to-spirv"> {
   let summary = "Convert Math dialect to SPIR-V dialect";
   let constructor = "mlir::createConvertMathToSPIRVPass()";
   let dependentDialects = ["spirv::SPIRVDialect"];
+}
+
+//===----------------------------------------------------------------------===//
+// MathToEmitC
+//===----------------------------------------------------------------------===//
+
+def ConvertMathToEmitC  : Pass<"convert-math-to-emitc"> {
+  let summary = "Convert some Math operations to EmitC call_opaque operations";
+  let description = [{
+    This pass converts supported Math ops to `call_opaque` ops targeting libc/libm
+    functions. Unlike convert-math-to-funcs pass, converting to `call_opaque` ops
+    allows to overload the same function with different argument types.
+  }];
+  let dependentDialects = ["emitc::EmitCDialect"];
+  let options = [
+    Option<"languageTarget", "language-target", "::mlir::emitc::LanguageTarget",
+      /*default=*/"::mlir::emitc::LanguageTarget::c99", "Select the language standard target for callees (c99 or cpp11).",
+      [{::llvm::cl::values(
+            clEnumValN(::mlir::emitc::LanguageTarget::c99, "c99", "c99"),
+            clEnumValN(::mlir::emitc::LanguageTarget::cpp11, "cpp11", "cpp11")
+          )}]>
+  ];
 }
 
 //===----------------------------------------------------------------------===//

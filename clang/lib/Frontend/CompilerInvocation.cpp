@@ -3280,7 +3280,7 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
     }();
 
     GenerateArg(Consumer, Opt, It->Path);
-  };
+  }
 
   // Note: some paths that came from "[-iprefix=xx] -iwithprefixbefore=yy" may
   // have already been generated as "-I[xx]yy". If that's the case, their

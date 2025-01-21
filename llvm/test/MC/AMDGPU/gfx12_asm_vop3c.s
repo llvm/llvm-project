@@ -349,12 +349,12 @@ v_cmp_class_f64_e64 ttmp[14:15], -|src_scc|, src_scc
 v_cmp_class_f64_e64 null, 0xaf123456, 0xaf123456
 // GFX12: v_cmp_class_f64_e64 null, 0xaf123456, 0xaf123456 ; encoding: [0x7c,0x00,0x7f,0xd4,0xff,0xfe,0x01,0x00,0x56,0x34,0x12,0xaf]
 
-v_cmp_eq_f16_e64 s5, v1, v2
-// W32: v_cmp_eq_f16_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x02,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_eq_f16_e64 s5, v1.l, v2.l
+// W32: v_cmp_eq_f16_e64 s5, v1.l, v2.l         ; encoding: [0x05,0x00,0x02,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_eq_f16_e64 s5, v255, v255
-// W32: v_cmp_eq_f16_e64 s5, v255, v255         ; encoding: [0x05,0x00,0x02,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_eq_f16_e64 s5, v255.l, v255.l
+// W32: v_cmp_eq_f16_e64 s5, v255.l, v255.l     ; encoding: [0x05,0x00,0x02,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_eq_f16_e64 s5, s1, s2
@@ -405,13 +405,13 @@ v_cmp_eq_f16_e64 ttmp15, -src_scc, |vcc_lo|
 // W32: v_cmp_eq_f16_e64 ttmp15, -src_scc, |vcc_lo| ; encoding: [0x7b,0x02,0x02,0xd4,0xfd,0xd4,0x00,0x20]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_eq_f16_e64 s[10:11], v1, v2
-// W64: v_cmp_eq_f16_e64 s[10:11], v1, v2       ; encoding: [0x0a,0x00,0x02,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_eq_f16_e64 s10, v1.l, v2.l
+// W32: v_cmp_eq_f16_e64 s10, v1.l, v2.l        ; encoding: [0x0a,0x00,0x02,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_eq_f16_e64 s[10:11], v255, v255
-// W64: v_cmp_eq_f16_e64 s[10:11], v255, v255   ; encoding: [0x0a,0x00,0x02,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_eq_f16_e64 s10, v255.l, v255.l
+// W32: v_cmp_eq_f16_e64 s10, v255.l, v255.l    ; encoding: [0x0a,0x00,0x02,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_eq_f16_e64 s[10:11], s1, s2
 // W64: v_cmp_eq_f16_e64 s[10:11], s1, s2       ; encoding: [0x0a,0x00,0x02,0xd4,0x01,0x04,0x00,0x00]
@@ -463,6 +463,26 @@ v_cmp_eq_f16_e64 ttmp[14:15], -src_scc, |vcc_lo|
 
 v_cmp_eq_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp
 // GFX12: v_cmp_eq_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp ; encoding: [0x7c,0x83,0x02,0xd4,0xff,0xd6,0x00,0x60,0x0b,0xfe,0x00,0x00]
+
+v_cmp_eq_f16_e64 s5, v1.h, v2.l
+// W32: v_cmp_eq_f16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x02,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_eq_f16_e64 s5, v255.l, v255.h
+// W32: v_cmp_eq_f16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x02,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_eq_f16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_eq_f16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x02,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_eq_f16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_eq_f16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x02,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_eq_f16_e64 vcc_lo, 0.5, -m0
+// W32: v_cmp_eq_f16_e64 vcc_lo, 0.5, -m0       ; encoding: [0x6a,0x00,0x02,0xd4,0xf0,0xfa,0x00,0x40]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_eq_f32_e64 s5, v1, v2
 // W32: v_cmp_eq_f32_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x12,0xd4,0x01,0x05,0x02,0x00]
@@ -670,12 +690,12 @@ v_cmp_eq_f64_e64 ttmp[14:15], -|src_scc|, -|exec|
 v_cmp_eq_f64_e64 null, 0xaf123456, -|vcc| clamp
 // GFX12: v_cmp_eq_f64_e64 null, 0xaf123456, -|vcc| clamp ; encoding: [0x7c,0x82,0x22,0xd4,0xff,0xd4,0x00,0x40,0x56,0x34,0x12,0xaf]
 
-v_cmp_eq_i16_e64 s5, v1, v2
-// W32: v_cmp_eq_i16_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x32,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_eq_i16_e64 s5, v1.l, v2.l
+// W32: v_cmp_eq_i16_e64 s5, v1.l, v2.l         ; encoding: [0x05,0x00,0x32,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_eq_i16_e64 s5, v255, v255
-// W32: v_cmp_eq_i16_e64 s5, v255, v255         ; encoding: [0x05,0x00,0x32,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_eq_i16_e64 s5, v255.l, v255.l
+// W32: v_cmp_eq_i16_e64 s5, v255.l, v255.l     ; encoding: [0x05,0x00,0x32,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_eq_i16_e64 s5, s1, s2
@@ -726,13 +746,13 @@ v_cmp_eq_i16_e64 ttmp15, src_scc, vcc_lo
 // W32: v_cmp_eq_i16_e64 ttmp15, src_scc, vcc_lo ; encoding: [0x7b,0x00,0x32,0xd4,0xfd,0xd4,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_eq_i16_e64 s[10:11], v1, v2
-// W64: v_cmp_eq_i16_e64 s[10:11], v1, v2       ; encoding: [0x0a,0x00,0x32,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_eq_i16_e64 s10, v1.l, v2.l
+// W32: v_cmp_eq_i16_e64 s10, v1.l, v2.l        ; encoding: [0x0a,0x00,0x32,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_eq_i16_e64 s[10:11], v255, v255
-// W64: v_cmp_eq_i16_e64 s[10:11], v255, v255   ; encoding: [0x0a,0x00,0x32,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_eq_i16_e64 s10, v255.l, v255.l
+// W32: v_cmp_eq_i16_e64 s10, v255.l, v255.l    ; encoding: [0x0a,0x00,0x32,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_eq_i16_e64 s[10:11], s1, s2
 // W64: v_cmp_eq_i16_e64 s[10:11], s1, s2       ; encoding: [0x0a,0x00,0x32,0xd4,0x01,0x04,0x00,0x00]
@@ -784,6 +804,30 @@ v_cmp_eq_i16_e64 ttmp[14:15], src_scc, vcc_lo
 
 v_cmp_eq_i16_e64 null, 0xfe0b, vcc_hi
 // GFX12: v_cmp_eq_i16_e64 null, 0xfe0b, vcc_hi   ; encoding: [0x7c,0x00,0x32,0xd4,0xff,0xd6,0x00,0x00,0x0b,0xfe,0x00,0x00]
+
+v_cmp_eq_i16_e64 s5, v1.h, v2.l
+// W32: v_cmp_eq_i16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x32,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_eq_i16_e64 s5, v255.l, v255.h
+// W32: v_cmp_eq_i16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x32,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_eq_i16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_eq_i16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x32,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_eq_i16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_eq_i16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x32,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_eq_i16_e64 vcc_lo, 0x3800, m0
+// W32: v_cmp_eq_i16_e64 vcc_lo, 0x3800, m0     ; encoding: [0x6a,0x00,0x32,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_eq_i16_e64 vcc, 0x3800, m0
+// W64: v_cmp_eq_i16_e64 vcc, 0x3800, m0        ; encoding: [0x6a,0x00,0x32,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_eq_i32_e64 s5, v1, v2
 // W32: v_cmp_eq_i32_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x42,0xd4,0x01,0x05,0x02,0x00]
@@ -991,12 +1035,12 @@ v_cmp_eq_i64_e64 ttmp[14:15], src_scc, exec
 v_cmp_eq_i64_e64 null, 0xaf123456, vcc
 // GFX12: v_cmp_eq_i64_e64 null, 0xaf123456, vcc  ; encoding: [0x7c,0x00,0x52,0xd4,0xff,0xd4,0x00,0x00,0x56,0x34,0x12,0xaf]
 
-v_cmp_eq_u16_e64 s5, v1, v2
-// W32: v_cmp_eq_u16_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x3a,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_eq_u16_e64 s5, v1.l, v2.l
+// W32: v_cmp_eq_u16_e64 s5, v1.l, v2.l         ; encoding: [0x05,0x00,0x3a,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_eq_u16_e64 s5, v255, v255
-// W32: v_cmp_eq_u16_e64 s5, v255, v255         ; encoding: [0x05,0x00,0x3a,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_eq_u16_e64 s5, v255.l, v255.l
+// W32: v_cmp_eq_u16_e64 s5, v255.l, v255.l     ; encoding: [0x05,0x00,0x3a,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_eq_u16_e64 s5, s1, s2
@@ -1047,13 +1091,13 @@ v_cmp_eq_u16_e64 ttmp15, src_scc, vcc_lo
 // W32: v_cmp_eq_u16_e64 ttmp15, src_scc, vcc_lo ; encoding: [0x7b,0x00,0x3a,0xd4,0xfd,0xd4,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_eq_u16_e64 s[10:11], v1, v2
-// W64: v_cmp_eq_u16_e64 s[10:11], v1, v2       ; encoding: [0x0a,0x00,0x3a,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_eq_u16_e64 s10, v1.l, v2.l
+// W32: v_cmp_eq_u16_e64 s10, v1.l, v2.l        ; encoding: [0x0a,0x00,0x3a,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_eq_u16_e64 s[10:11], v255, v255
-// W64: v_cmp_eq_u16_e64 s[10:11], v255, v255   ; encoding: [0x0a,0x00,0x3a,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_eq_u16_e64 s10, v255.l, v255.l
+// W32: v_cmp_eq_u16_e64 s10, v255.l, v255.l    ; encoding: [0x0a,0x00,0x3a,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_eq_u16_e64 s[10:11], s1, s2
 // W64: v_cmp_eq_u16_e64 s[10:11], s1, s2       ; encoding: [0x0a,0x00,0x3a,0xd4,0x01,0x04,0x00,0x00]
@@ -1105,6 +1149,30 @@ v_cmp_eq_u16_e64 ttmp[14:15], src_scc, vcc_lo
 
 v_cmp_eq_u16_e64 null, 0xfe0b, vcc_hi
 // GFX12: v_cmp_eq_u16_e64 null, 0xfe0b, vcc_hi   ; encoding: [0x7c,0x00,0x3a,0xd4,0xff,0xd6,0x00,0x00,0x0b,0xfe,0x00,0x00]
+
+v_cmp_eq_u16_e64 s5, v1.h, v2.l
+// W32: v_cmp_eq_u16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x3a,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_eq_u16_e64 s5, v255.l, v255.h
+// W32: v_cmp_eq_u16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x3a,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_eq_u16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_eq_u16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x3a,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_eq_u16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_eq_u16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x3a,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_eq_u16_e64 vcc_lo, 0x3800, m0
+// W32: v_cmp_eq_u16_e64 vcc_lo, 0x3800, m0     ; encoding: [0x6a,0x00,0x3a,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_eq_u16_e64 vcc, 0x3800, m0
+// W64: v_cmp_eq_u16_e64 vcc, 0x3800, m0        ; encoding: [0x6a,0x00,0x3a,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_eq_u32_e64 s5, v1, v2
 // W32: v_cmp_eq_u32_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x4a,0xd4,0x01,0x05,0x02,0x00]
@@ -1312,12 +1380,12 @@ v_cmp_eq_u64_e64 ttmp[14:15], src_scc, exec
 v_cmp_eq_u64_e64 null, 0xaf123456, vcc
 // GFX12: v_cmp_eq_u64_e64 null, 0xaf123456, vcc  ; encoding: [0x7c,0x00,0x5a,0xd4,0xff,0xd4,0x00,0x00,0x56,0x34,0x12,0xaf]
 
-v_cmp_ge_f16_e64 s5, v1, v2
-// W32: v_cmp_ge_f16_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x06,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_ge_f16_e64 s5, v1.l, v2.l
+// W32: v_cmp_ge_f16_e64 s5, v1.l, v2.l         ; encoding: [0x05,0x00,0x06,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_ge_f16_e64 s5, v255, v255
-// W32: v_cmp_ge_f16_e64 s5, v255, v255         ; encoding: [0x05,0x00,0x06,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_ge_f16_e64 s5, v255.l, v255.l
+// W32: v_cmp_ge_f16_e64 s5, v255.l, v255.l     ; encoding: [0x05,0x00,0x06,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_ge_f16_e64 s5, s1, s2
@@ -1368,13 +1436,13 @@ v_cmp_ge_f16_e64 ttmp15, -src_scc, |vcc_lo|
 // W32: v_cmp_ge_f16_e64 ttmp15, -src_scc, |vcc_lo| ; encoding: [0x7b,0x02,0x06,0xd4,0xfd,0xd4,0x00,0x20]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_ge_f16_e64 s[10:11], v1, v2
-// W64: v_cmp_ge_f16_e64 s[10:11], v1, v2       ; encoding: [0x0a,0x00,0x06,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_ge_f16_e64 s10, v1.l, v2.l
+// W32: v_cmp_ge_f16_e64 s10, v1.l, v2.l        ; encoding: [0x0a,0x00,0x06,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_ge_f16_e64 s[10:11], v255, v255
-// W64: v_cmp_ge_f16_e64 s[10:11], v255, v255   ; encoding: [0x0a,0x00,0x06,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_ge_f16_e64 s10, v255.l, v255.l
+// W32: v_cmp_ge_f16_e64 s10, v255.l, v255.l    ; encoding: [0x0a,0x00,0x06,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_ge_f16_e64 s[10:11], s1, s2
 // W64: v_cmp_ge_f16_e64 s[10:11], s1, s2       ; encoding: [0x0a,0x00,0x06,0xd4,0x01,0x04,0x00,0x00]
@@ -1426,6 +1494,26 @@ v_cmp_ge_f16_e64 ttmp[14:15], -src_scc, |vcc_lo|
 
 v_cmp_ge_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp
 // GFX12: v_cmp_ge_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp ; encoding: [0x7c,0x83,0x06,0xd4,0xff,0xd6,0x00,0x60,0x0b,0xfe,0x00,0x00]
+
+v_cmp_ge_f16_e64 s5, v1.h, v2.l
+// W32: v_cmp_ge_f16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x06,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ge_f16_e64 s5, v255.l, v255.h
+// W32: v_cmp_ge_f16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x06,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ge_f16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_ge_f16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x06,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ge_f16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_ge_f16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x06,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ge_f16_e64 vcc_lo, 0.5, -m0
+// W32: v_cmp_ge_f16_e64 vcc_lo, 0.5, -m0       ; encoding: [0x6a,0x00,0x06,0xd4,0xf0,0xfa,0x00,0x40]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_ge_f32_e64 s5, v1, v2
 // W32: v_cmp_ge_f32_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x16,0xd4,0x01,0x05,0x02,0x00]
@@ -1633,12 +1721,12 @@ v_cmp_ge_f64_e64 ttmp[14:15], -|src_scc|, -|exec|
 v_cmp_ge_f64_e64 null, 0xaf123456, -|vcc| clamp
 // GFX12: v_cmp_ge_f64_e64 null, 0xaf123456, -|vcc| clamp ; encoding: [0x7c,0x82,0x26,0xd4,0xff,0xd4,0x00,0x40,0x56,0x34,0x12,0xaf]
 
-v_cmp_ge_i16_e64 s5, v1, v2
-// W32: v_cmp_ge_i16_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x36,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_ge_i16_e64 s5, v1.l, v2.l
+// W32: v_cmp_ge_i16_e64 s5, v1.l, v2.l         ; encoding: [0x05,0x00,0x36,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_ge_i16_e64 s5, v255, v255
-// W32: v_cmp_ge_i16_e64 s5, v255, v255         ; encoding: [0x05,0x00,0x36,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_ge_i16_e64 s5, v255.l, v255.l
+// W32: v_cmp_ge_i16_e64 s5, v255.l, v255.l     ; encoding: [0x05,0x00,0x36,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_ge_i16_e64 s5, s1, s2
@@ -1689,13 +1777,13 @@ v_cmp_ge_i16_e64 ttmp15, src_scc, vcc_lo
 // W32: v_cmp_ge_i16_e64 ttmp15, src_scc, vcc_lo ; encoding: [0x7b,0x00,0x36,0xd4,0xfd,0xd4,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_ge_i16_e64 s[10:11], v1, v2
-// W64: v_cmp_ge_i16_e64 s[10:11], v1, v2       ; encoding: [0x0a,0x00,0x36,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_ge_i16_e64 s10, v1.l, v2.l
+// W32: v_cmp_ge_i16_e64 s10, v1.l, v2.l        ; encoding: [0x0a,0x00,0x36,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_ge_i16_e64 s[10:11], v255, v255
-// W64: v_cmp_ge_i16_e64 s[10:11], v255, v255   ; encoding: [0x0a,0x00,0x36,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_ge_i16_e64 s10, v255.l, v255.l
+// W32: v_cmp_ge_i16_e64 s10, v255.l, v255.l    ; encoding: [0x0a,0x00,0x36,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_ge_i16_e64 s[10:11], s1, s2
 // W64: v_cmp_ge_i16_e64 s[10:11], s1, s2       ; encoding: [0x0a,0x00,0x36,0xd4,0x01,0x04,0x00,0x00]
@@ -1747,6 +1835,30 @@ v_cmp_ge_i16_e64 ttmp[14:15], src_scc, vcc_lo
 
 v_cmp_ge_i16_e64 null, 0xfe0b, vcc_hi
 // GFX12: v_cmp_ge_i16_e64 null, 0xfe0b, vcc_hi   ; encoding: [0x7c,0x00,0x36,0xd4,0xff,0xd6,0x00,0x00,0x0b,0xfe,0x00,0x00]
+
+v_cmp_ge_i16_e64 s5, v1.h, v2.l
+// W32: v_cmp_ge_i16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x36,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ge_i16_e64 s5, v255.l, v255.h
+// W32: v_cmp_ge_i16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x36,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ge_i16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_ge_i16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x36,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ge_i16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_ge_i16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x36,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ge_i16_e64 vcc_lo, 0x3800, m0
+// W32: v_cmp_ge_i16_e64 vcc_lo, 0x3800, m0     ; encoding: [0x6a,0x00,0x36,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ge_i16_e64 vcc, 0x3800, m0
+// W64: v_cmp_ge_i16_e64 vcc, 0x3800, m0        ; encoding: [0x6a,0x00,0x36,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_ge_i32_e64 s5, v1, v2
 // W32: v_cmp_ge_i32_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x46,0xd4,0x01,0x05,0x02,0x00]
@@ -1954,12 +2066,12 @@ v_cmp_ge_i64_e64 ttmp[14:15], src_scc, exec
 v_cmp_ge_i64_e64 null, 0xaf123456, vcc
 // GFX12: v_cmp_ge_i64_e64 null, 0xaf123456, vcc  ; encoding: [0x7c,0x00,0x56,0xd4,0xff,0xd4,0x00,0x00,0x56,0x34,0x12,0xaf]
 
-v_cmp_ge_u16_e64 s5, v1, v2
-// W32: v_cmp_ge_u16_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x3e,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_ge_u16_e64 s5, v1.l, v2.l
+// W32: v_cmp_ge_u16_e64 s5, v1.l, v2.l         ; encoding: [0x05,0x00,0x3e,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_ge_u16_e64 s5, v255, v255
-// W32: v_cmp_ge_u16_e64 s5, v255, v255         ; encoding: [0x05,0x00,0x3e,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_ge_u16_e64 s5, v255.l, v255.l
+// W32: v_cmp_ge_u16_e64 s5, v255.l, v255.l     ; encoding: [0x05,0x00,0x3e,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_ge_u16_e64 s5, s1, s2
@@ -2010,13 +2122,13 @@ v_cmp_ge_u16_e64 ttmp15, src_scc, vcc_lo
 // W32: v_cmp_ge_u16_e64 ttmp15, src_scc, vcc_lo ; encoding: [0x7b,0x00,0x3e,0xd4,0xfd,0xd4,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_ge_u16_e64 s[10:11], v1, v2
-// W64: v_cmp_ge_u16_e64 s[10:11], v1, v2       ; encoding: [0x0a,0x00,0x3e,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_ge_u16_e64 s10, v1.l, v2.l
+// W32: v_cmp_ge_u16_e64 s10, v1.l, v2.l        ; encoding: [0x0a,0x00,0x3e,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_ge_u16_e64 s[10:11], v255, v255
-// W64: v_cmp_ge_u16_e64 s[10:11], v255, v255   ; encoding: [0x0a,0x00,0x3e,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_ge_u16_e64 s10, v255.l, v255.l
+// W32: v_cmp_ge_u16_e64 s10, v255.l, v255.l    ; encoding: [0x0a,0x00,0x3e,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_ge_u16_e64 s[10:11], s1, s2
 // W64: v_cmp_ge_u16_e64 s[10:11], s1, s2       ; encoding: [0x0a,0x00,0x3e,0xd4,0x01,0x04,0x00,0x00]
@@ -2068,6 +2180,30 @@ v_cmp_ge_u16_e64 ttmp[14:15], src_scc, vcc_lo
 
 v_cmp_ge_u16_e64 null, 0xfe0b, vcc_hi
 // GFX12: v_cmp_ge_u16_e64 null, 0xfe0b, vcc_hi   ; encoding: [0x7c,0x00,0x3e,0xd4,0xff,0xd6,0x00,0x00,0x0b,0xfe,0x00,0x00]
+
+v_cmp_ge_u16_e64 s5, v1.h, v2.l
+// W32: v_cmp_ge_u16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x3e,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ge_u16_e64 s5, v255.l, v255.h
+// W32: v_cmp_ge_u16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x3e,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ge_u16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_ge_u16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x3e,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ge_u16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_ge_u16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x3e,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ge_u16_e64 vcc_lo, 0x3800, m0
+// W32: v_cmp_ge_u16_e64 vcc_lo, 0x3800, m0     ; encoding: [0x6a,0x00,0x3e,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ge_u16_e64 vcc, 0x3800, m0
+// W64: v_cmp_ge_u16_e64 vcc, 0x3800, m0        ; encoding: [0x6a,0x00,0x3e,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_ge_u32_e64 s5, v1, v2
 // W32: v_cmp_ge_u32_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x4e,0xd4,0x01,0x05,0x02,0x00]
@@ -2275,12 +2411,12 @@ v_cmp_ge_u64_e64 ttmp[14:15], src_scc, exec
 v_cmp_ge_u64_e64 null, 0xaf123456, vcc
 // GFX12: v_cmp_ge_u64_e64 null, 0xaf123456, vcc  ; encoding: [0x7c,0x00,0x5e,0xd4,0xff,0xd4,0x00,0x00,0x56,0x34,0x12,0xaf]
 
-v_cmp_gt_f16_e64 s5, v1, v2
-// W32: v_cmp_gt_f16_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x04,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_gt_f16_e64 s5, v1.l, v2.l
+// W32: v_cmp_gt_f16_e64 s5, v1.l, v2.l         ; encoding: [0x05,0x00,0x04,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_gt_f16_e64 s5, v255, v255
-// W32: v_cmp_gt_f16_e64 s5, v255, v255         ; encoding: [0x05,0x00,0x04,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_gt_f16_e64 s5, v255.l, v255.l
+// W32: v_cmp_gt_f16_e64 s5, v255.l, v255.l     ; encoding: [0x05,0x00,0x04,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_gt_f16_e64 s5, s1, s2
@@ -2331,13 +2467,13 @@ v_cmp_gt_f16_e64 ttmp15, -src_scc, |vcc_lo|
 // W32: v_cmp_gt_f16_e64 ttmp15, -src_scc, |vcc_lo| ; encoding: [0x7b,0x02,0x04,0xd4,0xfd,0xd4,0x00,0x20]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_gt_f16_e64 s[10:11], v1, v2
-// W64: v_cmp_gt_f16_e64 s[10:11], v1, v2       ; encoding: [0x0a,0x00,0x04,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_gt_f16_e64 s10, v1.l, v2.l
+// W32: v_cmp_gt_f16_e64 s10, v1.l, v2.l        ; encoding: [0x0a,0x00,0x04,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_gt_f16_e64 s[10:11], v255, v255
-// W64: v_cmp_gt_f16_e64 s[10:11], v255, v255   ; encoding: [0x0a,0x00,0x04,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_gt_f16_e64 s10, v255.l, v255.l
+// W32: v_cmp_gt_f16_e64 s10, v255.l, v255.l    ; encoding: [0x0a,0x00,0x04,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_gt_f16_e64 s[10:11], s1, s2
 // W64: v_cmp_gt_f16_e64 s[10:11], s1, s2       ; encoding: [0x0a,0x00,0x04,0xd4,0x01,0x04,0x00,0x00]
@@ -2389,6 +2525,26 @@ v_cmp_gt_f16_e64 ttmp[14:15], -src_scc, |vcc_lo|
 
 v_cmp_gt_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp
 // GFX12: v_cmp_gt_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp ; encoding: [0x7c,0x83,0x04,0xd4,0xff,0xd6,0x00,0x60,0x0b,0xfe,0x00,0x00]
+
+v_cmp_gt_f16_e64 s5, v1.h, v2.l
+// W32: v_cmp_gt_f16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x04,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_gt_f16_e64 s5, v255.l, v255.h
+// W32: v_cmp_gt_f16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x04,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_gt_f16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_gt_f16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x04,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_gt_f16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_gt_f16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x04,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_gt_f16_e64 vcc_lo, 0.5, -m0
+// W32: v_cmp_gt_f16_e64 vcc_lo, 0.5, -m0       ; encoding: [0x6a,0x00,0x04,0xd4,0xf0,0xfa,0x00,0x40]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_gt_f32_e64 s5, v1, v2
 // W32: v_cmp_gt_f32_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x14,0xd4,0x01,0x05,0x02,0x00]
@@ -2596,12 +2752,12 @@ v_cmp_gt_f64_e64 ttmp[14:15], -|src_scc|, -|exec|
 v_cmp_gt_f64_e64 null, 0xaf123456, -|vcc| clamp
 // GFX12: v_cmp_gt_f64_e64 null, 0xaf123456, -|vcc| clamp ; encoding: [0x7c,0x82,0x24,0xd4,0xff,0xd4,0x00,0x40,0x56,0x34,0x12,0xaf]
 
-v_cmp_gt_i16_e64 s5, v1, v2
-// W32: v_cmp_gt_i16_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x34,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_gt_i16_e64 s5, v1.l, v2.l
+// W32: v_cmp_gt_i16_e64 s5, v1.l, v2.l         ; encoding: [0x05,0x00,0x34,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_gt_i16_e64 s5, v255, v255
-// W32: v_cmp_gt_i16_e64 s5, v255, v255         ; encoding: [0x05,0x00,0x34,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_gt_i16_e64 s5, v255.l, v255.l
+// W32: v_cmp_gt_i16_e64 s5, v255.l, v255.l     ; encoding: [0x05,0x00,0x34,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_gt_i16_e64 s5, s1, s2
@@ -2652,13 +2808,13 @@ v_cmp_gt_i16_e64 ttmp15, src_scc, vcc_lo
 // W32: v_cmp_gt_i16_e64 ttmp15, src_scc, vcc_lo ; encoding: [0x7b,0x00,0x34,0xd4,0xfd,0xd4,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_gt_i16_e64 s[10:11], v1, v2
-// W64: v_cmp_gt_i16_e64 s[10:11], v1, v2       ; encoding: [0x0a,0x00,0x34,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_gt_i16_e64 s10, v1.l, v2.l
+// W32: v_cmp_gt_i16_e64 s10, v1.l, v2.l        ; encoding: [0x0a,0x00,0x34,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_gt_i16_e64 s[10:11], v255, v255
-// W64: v_cmp_gt_i16_e64 s[10:11], v255, v255   ; encoding: [0x0a,0x00,0x34,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_gt_i16_e64 s10, v255.l, v255.l
+// W32: v_cmp_gt_i16_e64 s10, v255.l, v255.l    ; encoding: [0x0a,0x00,0x34,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_gt_i16_e64 s[10:11], s1, s2
 // W64: v_cmp_gt_i16_e64 s[10:11], s1, s2       ; encoding: [0x0a,0x00,0x34,0xd4,0x01,0x04,0x00,0x00]
@@ -2710,6 +2866,30 @@ v_cmp_gt_i16_e64 ttmp[14:15], src_scc, vcc_lo
 
 v_cmp_gt_i16_e64 null, 0xfe0b, vcc_hi
 // GFX12: v_cmp_gt_i16_e64 null, 0xfe0b, vcc_hi   ; encoding: [0x7c,0x00,0x34,0xd4,0xff,0xd6,0x00,0x00,0x0b,0xfe,0x00,0x00]
+
+v_cmp_gt_i16_e64 s5, v1.h, v2.l
+// W32: v_cmp_gt_i16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x34,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_gt_i16_e64 s5, v255.l, v255.h
+// W32: v_cmp_gt_i16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x34,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_gt_i16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_gt_i16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x34,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_gt_i16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_gt_i16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x34,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_gt_i16_e64 vcc_lo, 0x3800, m0
+// W32: v_cmp_gt_i16_e64 vcc_lo, 0x3800, m0     ; encoding: [0x6a,0x00,0x34,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_gt_i16_e64 vcc, 0x3800, m0
+// W64: v_cmp_gt_i16_e64 vcc, 0x3800, m0        ; encoding: [0x6a,0x00,0x34,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_gt_i32_e64 s5, v1, v2
 // W32: v_cmp_gt_i32_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x44,0xd4,0x01,0x05,0x02,0x00]
@@ -2917,12 +3097,12 @@ v_cmp_gt_i64_e64 ttmp[14:15], src_scc, exec
 v_cmp_gt_i64_e64 null, 0xaf123456, vcc
 // GFX12: v_cmp_gt_i64_e64 null, 0xaf123456, vcc  ; encoding: [0x7c,0x00,0x54,0xd4,0xff,0xd4,0x00,0x00,0x56,0x34,0x12,0xaf]
 
-v_cmp_gt_u16_e64 s5, v1, v2
-// W32: v_cmp_gt_u16_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x3c,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_gt_u16_e64 s5, v1.l, v2.l
+// W32: v_cmp_gt_u16_e64 s5, v1.l, v2.l         ; encoding: [0x05,0x00,0x3c,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_gt_u16_e64 s5, v255, v255
-// W32: v_cmp_gt_u16_e64 s5, v255, v255         ; encoding: [0x05,0x00,0x3c,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_gt_u16_e64 s5, v255.l, v255.l
+// W32: v_cmp_gt_u16_e64 s5, v255.l, v255.l     ; encoding: [0x05,0x00,0x3c,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_gt_u16_e64 s5, s1, s2
@@ -2973,13 +3153,13 @@ v_cmp_gt_u16_e64 ttmp15, src_scc, vcc_lo
 // W32: v_cmp_gt_u16_e64 ttmp15, src_scc, vcc_lo ; encoding: [0x7b,0x00,0x3c,0xd4,0xfd,0xd4,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_gt_u16_e64 s[10:11], v1, v2
-// W64: v_cmp_gt_u16_e64 s[10:11], v1, v2       ; encoding: [0x0a,0x00,0x3c,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_gt_u16_e64 s10, v1.l, v2.l
+// W32: v_cmp_gt_u16_e64 s10, v1.l, v2.l        ; encoding: [0x0a,0x00,0x3c,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_gt_u16_e64 s[10:11], v255, v255
-// W64: v_cmp_gt_u16_e64 s[10:11], v255, v255   ; encoding: [0x0a,0x00,0x3c,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_gt_u16_e64 s10, v255.l, v255.l
+// W32: v_cmp_gt_u16_e64 s10, v255.l, v255.l    ; encoding: [0x0a,0x00,0x3c,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_gt_u16_e64 s[10:11], s1, s2
 // W64: v_cmp_gt_u16_e64 s[10:11], s1, s2       ; encoding: [0x0a,0x00,0x3c,0xd4,0x01,0x04,0x00,0x00]
@@ -3031,6 +3211,30 @@ v_cmp_gt_u16_e64 ttmp[14:15], src_scc, vcc_lo
 
 v_cmp_gt_u16_e64 null, 0xfe0b, vcc_hi
 // GFX12: v_cmp_gt_u16_e64 null, 0xfe0b, vcc_hi   ; encoding: [0x7c,0x00,0x3c,0xd4,0xff,0xd6,0x00,0x00,0x0b,0xfe,0x00,0x00]
+
+v_cmp_gt_u16_e64 s5, v1.h, v2.l
+// W32: v_cmp_gt_u16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x3c,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_gt_u16_e64 s5, v255.l, v255.h
+// W32: v_cmp_gt_u16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x3c,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_gt_u16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_gt_u16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x3c,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_gt_u16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_gt_u16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x3c,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_gt_u16_e64 vcc_lo, 0x3800, m0
+// W32: v_cmp_gt_u16_e64 vcc_lo, 0x3800, m0     ; encoding: [0x6a,0x00,0x3c,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_gt_u16_e64 vcc, 0x3800, m0
+// W64: v_cmp_gt_u16_e64 vcc, 0x3800, m0        ; encoding: [0x6a,0x00,0x3c,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_gt_u32_e64 s5, v1, v2
 // W32: v_cmp_gt_u32_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x4c,0xd4,0x01,0x05,0x02,0x00]
@@ -3238,12 +3442,12 @@ v_cmp_gt_u64_e64 ttmp[14:15], src_scc, exec
 v_cmp_gt_u64_e64 null, 0xaf123456, vcc
 // GFX12: v_cmp_gt_u64_e64 null, 0xaf123456, vcc  ; encoding: [0x7c,0x00,0x5c,0xd4,0xff,0xd4,0x00,0x00,0x56,0x34,0x12,0xaf]
 
-v_cmp_le_f16_e64 s5, v1, v2
-// W32: v_cmp_le_f16_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x03,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_le_f16_e64 s5, v1.l, v2.l
+// W32: v_cmp_le_f16_e64 s5, v1.l, v2.l         ; encoding: [0x05,0x00,0x03,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_le_f16_e64 s5, v255, v255
-// W32: v_cmp_le_f16_e64 s5, v255, v255         ; encoding: [0x05,0x00,0x03,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_le_f16_e64 s5, v255.l, v255.l
+// W32: v_cmp_le_f16_e64 s5, v255.l, v255.l     ; encoding: [0x05,0x00,0x03,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_le_f16_e64 s5, s1, s2
@@ -3294,13 +3498,13 @@ v_cmp_le_f16_e64 ttmp15, -src_scc, |vcc_lo|
 // W32: v_cmp_le_f16_e64 ttmp15, -src_scc, |vcc_lo| ; encoding: [0x7b,0x02,0x03,0xd4,0xfd,0xd4,0x00,0x20]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_le_f16_e64 s[10:11], v1, v2
-// W64: v_cmp_le_f16_e64 s[10:11], v1, v2       ; encoding: [0x0a,0x00,0x03,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_le_f16_e64 s10, v1.l, v2.l
+// W32: v_cmp_le_f16_e64 s10, v1.l, v2.l        ; encoding: [0x0a,0x00,0x03,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_le_f16_e64 s[10:11], v255, v255
-// W64: v_cmp_le_f16_e64 s[10:11], v255, v255   ; encoding: [0x0a,0x00,0x03,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_le_f16_e64 s10, v255.l, v255.l
+// W32: v_cmp_le_f16_e64 s10, v255.l, v255.l    ; encoding: [0x0a,0x00,0x03,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_le_f16_e64 s[10:11], s1, s2
 // W64: v_cmp_le_f16_e64 s[10:11], s1, s2       ; encoding: [0x0a,0x00,0x03,0xd4,0x01,0x04,0x00,0x00]
@@ -3352,6 +3556,26 @@ v_cmp_le_f16_e64 ttmp[14:15], -src_scc, |vcc_lo|
 
 v_cmp_le_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp
 // GFX12: v_cmp_le_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp ; encoding: [0x7c,0x83,0x03,0xd4,0xff,0xd6,0x00,0x60,0x0b,0xfe,0x00,0x00]
+
+v_cmp_le_f16_e64 s5, v1.h, v2.l
+// W32: v_cmp_le_f16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x03,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_le_f16_e64 s5, v255.l, v255.h
+// W32: v_cmp_le_f16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x03,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_le_f16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_le_f16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x03,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_le_f16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_le_f16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x03,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_le_f16_e64 vcc_lo, 0.5, -m0
+// W32: v_cmp_le_f16_e64 vcc_lo, 0.5, -m0       ; encoding: [0x6a,0x00,0x03,0xd4,0xf0,0xfa,0x00,0x40]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_le_f32_e64 s5, v1, v2
 // W32: v_cmp_le_f32_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x13,0xd4,0x01,0x05,0x02,0x00]
@@ -3559,12 +3783,12 @@ v_cmp_le_f64_e64 ttmp[14:15], -|src_scc|, -|exec|
 v_cmp_le_f64_e64 null, 0xaf123456, -|vcc| clamp
 // GFX12: v_cmp_le_f64_e64 null, 0xaf123456, -|vcc| clamp ; encoding: [0x7c,0x82,0x23,0xd4,0xff,0xd4,0x00,0x40,0x56,0x34,0x12,0xaf]
 
-v_cmp_le_i16_e64 s5, v1, v2
-// W32: v_cmp_le_i16_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x33,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_le_i16_e64 s5, v1.l, v2.l
+// W32: v_cmp_le_i16_e64 s5, v1.l, v2.l         ; encoding: [0x05,0x00,0x33,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_le_i16_e64 s5, v255, v255
-// W32: v_cmp_le_i16_e64 s5, v255, v255         ; encoding: [0x05,0x00,0x33,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_le_i16_e64 s5, v255.l, v255.l
+// W32: v_cmp_le_i16_e64 s5, v255.l, v255.l     ; encoding: [0x05,0x00,0x33,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_le_i16_e64 s5, s1, s2
@@ -3615,13 +3839,13 @@ v_cmp_le_i16_e64 ttmp15, src_scc, vcc_lo
 // W32: v_cmp_le_i16_e64 ttmp15, src_scc, vcc_lo ; encoding: [0x7b,0x00,0x33,0xd4,0xfd,0xd4,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_le_i16_e64 s[10:11], v1, v2
-// W64: v_cmp_le_i16_e64 s[10:11], v1, v2       ; encoding: [0x0a,0x00,0x33,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_le_i16_e64 s10, v1.l, v2.l
+// W32: v_cmp_le_i16_e64 s10, v1.l, v2.l        ; encoding: [0x0a,0x00,0x33,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_le_i16_e64 s[10:11], v255, v255
-// W64: v_cmp_le_i16_e64 s[10:11], v255, v255   ; encoding: [0x0a,0x00,0x33,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_le_i16_e64 s10, v255.l, v255.l
+// W32: v_cmp_le_i16_e64 s10, v255.l, v255.l    ; encoding: [0x0a,0x00,0x33,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_le_i16_e64 s[10:11], s1, s2
 // W64: v_cmp_le_i16_e64 s[10:11], s1, s2       ; encoding: [0x0a,0x00,0x33,0xd4,0x01,0x04,0x00,0x00]
@@ -3673,6 +3897,30 @@ v_cmp_le_i16_e64 ttmp[14:15], src_scc, vcc_lo
 
 v_cmp_le_i16_e64 null, 0xfe0b, vcc_hi
 // GFX12: v_cmp_le_i16_e64 null, 0xfe0b, vcc_hi   ; encoding: [0x7c,0x00,0x33,0xd4,0xff,0xd6,0x00,0x00,0x0b,0xfe,0x00,0x00]
+
+v_cmp_le_i16_e64 s5, v1.h, v2.l
+// W32: v_cmp_le_i16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x33,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_le_i16_e64 s5, v255.l, v255.h
+// W32: v_cmp_le_i16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x33,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_le_i16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_le_i16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x33,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_le_i16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_le_i16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x33,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_le_i16_e64 vcc_lo, 0x3800, m0
+// W32: v_cmp_le_i16_e64 vcc_lo, 0x3800, m0     ; encoding: [0x6a,0x00,0x33,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_le_i16_e64 vcc, 0x3800, m0
+// W64: v_cmp_le_i16_e64 vcc, 0x3800, m0        ; encoding: [0x6a,0x00,0x33,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_le_i32_e64 s5, v1, v2
 // W32: v_cmp_le_i32_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x43,0xd4,0x01,0x05,0x02,0x00]
@@ -3880,12 +4128,12 @@ v_cmp_le_i64_e64 ttmp[14:15], src_scc, exec
 v_cmp_le_i64_e64 null, 0xaf123456, vcc
 // GFX12: v_cmp_le_i64_e64 null, 0xaf123456, vcc  ; encoding: [0x7c,0x00,0x53,0xd4,0xff,0xd4,0x00,0x00,0x56,0x34,0x12,0xaf]
 
-v_cmp_le_u16_e64 s5, v1, v2
-// W32: v_cmp_le_u16_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x3b,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_le_u16_e64 s5, v1.l, v2.l
+// W32: v_cmp_le_u16_e64 s5, v1.l, v2.l         ; encoding: [0x05,0x00,0x3b,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_le_u16_e64 s5, v255, v255
-// W32: v_cmp_le_u16_e64 s5, v255, v255         ; encoding: [0x05,0x00,0x3b,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_le_u16_e64 s5, v255.l, v255.l
+// W32: v_cmp_le_u16_e64 s5, v255.l, v255.l     ; encoding: [0x05,0x00,0x3b,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_le_u16_e64 s5, s1, s2
@@ -3936,13 +4184,13 @@ v_cmp_le_u16_e64 ttmp15, src_scc, vcc_lo
 // W32: v_cmp_le_u16_e64 ttmp15, src_scc, vcc_lo ; encoding: [0x7b,0x00,0x3b,0xd4,0xfd,0xd4,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_le_u16_e64 s[10:11], v1, v2
-// W64: v_cmp_le_u16_e64 s[10:11], v1, v2       ; encoding: [0x0a,0x00,0x3b,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_le_u16_e64 s10, v1.l, v2.l
+// W32: v_cmp_le_u16_e64 s10, v1.l, v2.l        ; encoding: [0x0a,0x00,0x3b,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_le_u16_e64 s[10:11], v255, v255
-// W64: v_cmp_le_u16_e64 s[10:11], v255, v255   ; encoding: [0x0a,0x00,0x3b,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_le_u16_e64 s10, v255.l, v255.l
+// W32: v_cmp_le_u16_e64 s10, v255.l, v255.l    ; encoding: [0x0a,0x00,0x3b,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_le_u16_e64 s[10:11], s1, s2
 // W64: v_cmp_le_u16_e64 s[10:11], s1, s2       ; encoding: [0x0a,0x00,0x3b,0xd4,0x01,0x04,0x00,0x00]
@@ -3994,6 +4242,30 @@ v_cmp_le_u16_e64 ttmp[14:15], src_scc, vcc_lo
 
 v_cmp_le_u16_e64 null, 0xfe0b, vcc_hi
 // GFX12: v_cmp_le_u16_e64 null, 0xfe0b, vcc_hi   ; encoding: [0x7c,0x00,0x3b,0xd4,0xff,0xd6,0x00,0x00,0x0b,0xfe,0x00,0x00]
+
+v_cmp_le_u16_e64 s5, v1.h, v2.l
+// W32: v_cmp_le_u16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x3b,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_le_u16_e64 s5, v255.l, v255.h
+// W32: v_cmp_le_u16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x3b,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_le_u16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_le_u16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x3b,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_le_u16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_le_u16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x3b,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_le_u16_e64 vcc_lo, 0x3800, m0
+// W32: v_cmp_le_u16_e64 vcc_lo, 0x3800, m0     ; encoding: [0x6a,0x00,0x3b,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_le_u16_e64 vcc, 0x3800, m0
+// W64: v_cmp_le_u16_e64 vcc, 0x3800, m0        ; encoding: [0x6a,0x00,0x3b,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_le_u32_e64 s5, v1, v2
 // W32: v_cmp_le_u32_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x4b,0xd4,0x01,0x05,0x02,0x00]
@@ -4201,12 +4473,12 @@ v_cmp_le_u64_e64 ttmp[14:15], src_scc, exec
 v_cmp_le_u64_e64 null, 0xaf123456, vcc
 // GFX12: v_cmp_le_u64_e64 null, 0xaf123456, vcc  ; encoding: [0x7c,0x00,0x5b,0xd4,0xff,0xd4,0x00,0x00,0x56,0x34,0x12,0xaf]
 
-v_cmp_lg_f16_e64 s5, v1, v2
-// W32: v_cmp_lg_f16_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x05,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_lg_f16_e64 s5, v1.l, v2.l
+// W32: v_cmp_lg_f16_e64 s5, v1.l, v2.l         ; encoding: [0x05,0x00,0x05,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_lg_f16_e64 s5, v255, v255
-// W32: v_cmp_lg_f16_e64 s5, v255, v255         ; encoding: [0x05,0x00,0x05,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_lg_f16_e64 s5, v255.l, v255.l
+// W32: v_cmp_lg_f16_e64 s5, v255.l, v255.l     ; encoding: [0x05,0x00,0x05,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_lg_f16_e64 s5, s1, s2
@@ -4257,13 +4529,13 @@ v_cmp_lg_f16_e64 ttmp15, -src_scc, |vcc_lo|
 // W32: v_cmp_lg_f16_e64 ttmp15, -src_scc, |vcc_lo| ; encoding: [0x7b,0x02,0x05,0xd4,0xfd,0xd4,0x00,0x20]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_lg_f16_e64 s[10:11], v1, v2
-// W64: v_cmp_lg_f16_e64 s[10:11], v1, v2       ; encoding: [0x0a,0x00,0x05,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_lg_f16_e64 s10, v1.l, v2.l
+// W32: v_cmp_lg_f16_e64 s10, v1.l, v2.l        ; encoding: [0x0a,0x00,0x05,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_lg_f16_e64 s[10:11], v255, v255
-// W64: v_cmp_lg_f16_e64 s[10:11], v255, v255   ; encoding: [0x0a,0x00,0x05,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_lg_f16_e64 s10, v255.l, v255.l
+// W32: v_cmp_lg_f16_e64 s10, v255.l, v255.l    ; encoding: [0x0a,0x00,0x05,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_lg_f16_e64 s[10:11], s1, s2
 // W64: v_cmp_lg_f16_e64 s[10:11], s1, s2       ; encoding: [0x0a,0x00,0x05,0xd4,0x01,0x04,0x00,0x00]
@@ -4315,6 +4587,26 @@ v_cmp_lg_f16_e64 ttmp[14:15], -src_scc, |vcc_lo|
 
 v_cmp_lg_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp
 // GFX12: v_cmp_lg_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp ; encoding: [0x7c,0x83,0x05,0xd4,0xff,0xd6,0x00,0x60,0x0b,0xfe,0x00,0x00]
+
+v_cmp_lg_f16_e64 s5, v1.h, v2.l
+// W32: v_cmp_lg_f16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x05,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_lg_f16_e64 s5, v255.l, v255.h
+// W32: v_cmp_lg_f16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x05,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_lg_f16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_lg_f16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x05,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_lg_f16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_lg_f16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x05,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_lg_f16_e64 vcc_lo, 0.5, -m0
+// W32: v_cmp_lg_f16_e64 vcc_lo, 0.5, -m0       ; encoding: [0x6a,0x00,0x05,0xd4,0xf0,0xfa,0x00,0x40]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_lg_f32_e64 s5, v1, v2
 // W32: v_cmp_lg_f32_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x15,0xd4,0x01,0x05,0x02,0x00]
@@ -4522,12 +4814,12 @@ v_cmp_lg_f64_e64 ttmp[14:15], -|src_scc|, -|exec|
 v_cmp_lg_f64_e64 null, 0xaf123456, -|vcc| clamp
 // GFX12: v_cmp_lg_f64_e64 null, 0xaf123456, -|vcc| clamp ; encoding: [0x7c,0x82,0x25,0xd4,0xff,0xd4,0x00,0x40,0x56,0x34,0x12,0xaf]
 
-v_cmp_lt_f16_e64 s5, v1, v2
-// W32: v_cmp_lt_f16_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x01,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_lt_f16_e64 s5, v1.l, v2.l
+// W32: v_cmp_lt_f16_e64 s5, v1.l, v2.l         ; encoding: [0x05,0x00,0x01,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_lt_f16_e64 s5, v255, v255
-// W32: v_cmp_lt_f16_e64 s5, v255, v255         ; encoding: [0x05,0x00,0x01,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_lt_f16_e64 s5, v255.l, v255.l
+// W32: v_cmp_lt_f16_e64 s5, v255.l, v255.l     ; encoding: [0x05,0x00,0x01,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_lt_f16_e64 s5, s1, s2
@@ -4578,13 +4870,13 @@ v_cmp_lt_f16_e64 ttmp15, -src_scc, |vcc_lo|
 // W32: v_cmp_lt_f16_e64 ttmp15, -src_scc, |vcc_lo| ; encoding: [0x7b,0x02,0x01,0xd4,0xfd,0xd4,0x00,0x20]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_lt_f16_e64 s[10:11], v1, v2
-// W64: v_cmp_lt_f16_e64 s[10:11], v1, v2       ; encoding: [0x0a,0x00,0x01,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_lt_f16_e64 s10, v1.l, v2.l
+// W32: v_cmp_lt_f16_e64 s10, v1.l, v2.l        ; encoding: [0x0a,0x00,0x01,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_lt_f16_e64 s[10:11], v255, v255
-// W64: v_cmp_lt_f16_e64 s[10:11], v255, v255   ; encoding: [0x0a,0x00,0x01,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_lt_f16_e64 s10, v255.l, v255.l
+// W32: v_cmp_lt_f16_e64 s10, v255.l, v255.l    ; encoding: [0x0a,0x00,0x01,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_lt_f16_e64 s[10:11], s1, s2
 // W64: v_cmp_lt_f16_e64 s[10:11], s1, s2       ; encoding: [0x0a,0x00,0x01,0xd4,0x01,0x04,0x00,0x00]
@@ -4636,6 +4928,26 @@ v_cmp_lt_f16_e64 ttmp[14:15], -src_scc, |vcc_lo|
 
 v_cmp_lt_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp
 // GFX12: v_cmp_lt_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp ; encoding: [0x7c,0x83,0x01,0xd4,0xff,0xd6,0x00,0x60,0x0b,0xfe,0x00,0x00]
+
+v_cmp_lt_f16_e64 s5, v1.h, v2.l
+// W32: v_cmp_lt_f16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x01,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_lt_f16_e64 s5, v255.l, v255.h
+// W32: v_cmp_lt_f16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x01,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_lt_f16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_lt_f16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x01,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_lt_f16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_lt_f16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x01,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_lt_f16_e64 vcc_lo, 0.5, -m0
+// W32: v_cmp_lt_f16_e64 vcc_lo, 0.5, -m0       ; encoding: [0x6a,0x00,0x01,0xd4,0xf0,0xfa,0x00,0x40]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_lt_f32_e64 s5, v1, v2
 // W32: v_cmp_lt_f32_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x11,0xd4,0x01,0x05,0x02,0x00]
@@ -4843,12 +5155,12 @@ v_cmp_lt_f64_e64 ttmp[14:15], -|src_scc|, -|exec|
 v_cmp_lt_f64_e64 null, 0xaf123456, -|vcc| clamp
 // GFX12: v_cmp_lt_f64_e64 null, 0xaf123456, -|vcc| clamp ; encoding: [0x7c,0x82,0x21,0xd4,0xff,0xd4,0x00,0x40,0x56,0x34,0x12,0xaf]
 
-v_cmp_lt_i16_e64 s5, v1, v2
-// W32: v_cmp_lt_i16_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x31,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_lt_i16_e64 s5, v1.l, v2.l
+// W32: v_cmp_lt_i16_e64 s5, v1.l, v2.l         ; encoding: [0x05,0x00,0x31,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_lt_i16_e64 s5, v255, v255
-// W32: v_cmp_lt_i16_e64 s5, v255, v255         ; encoding: [0x05,0x00,0x31,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_lt_i16_e64 s5, v255.l, v255.l
+// W32: v_cmp_lt_i16_e64 s5, v255.l, v255.l     ; encoding: [0x05,0x00,0x31,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_lt_i16_e64 s5, s1, s2
@@ -4899,13 +5211,13 @@ v_cmp_lt_i16_e64 ttmp15, src_scc, vcc_lo
 // W32: v_cmp_lt_i16_e64 ttmp15, src_scc, vcc_lo ; encoding: [0x7b,0x00,0x31,0xd4,0xfd,0xd4,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_lt_i16_e64 s[10:11], v1, v2
-// W64: v_cmp_lt_i16_e64 s[10:11], v1, v2       ; encoding: [0x0a,0x00,0x31,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_lt_i16_e64 s10, v1.l, v2.l
+// W32: v_cmp_lt_i16_e64 s10, v1.l, v2.l        ; encoding: [0x0a,0x00,0x31,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_lt_i16_e64 s[10:11], v255, v255
-// W64: v_cmp_lt_i16_e64 s[10:11], v255, v255   ; encoding: [0x0a,0x00,0x31,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_lt_i16_e64 s10, v255.l, v255.l
+// W32: v_cmp_lt_i16_e64 s10, v255.l, v255.l    ; encoding: [0x0a,0x00,0x31,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_lt_i16_e64 s[10:11], s1, s2
 // W64: v_cmp_lt_i16_e64 s[10:11], s1, s2       ; encoding: [0x0a,0x00,0x31,0xd4,0x01,0x04,0x00,0x00]
@@ -4957,6 +5269,30 @@ v_cmp_lt_i16_e64 ttmp[14:15], src_scc, vcc_lo
 
 v_cmp_lt_i16_e64 null, 0xfe0b, vcc_hi
 // GFX12: v_cmp_lt_i16_e64 null, 0xfe0b, vcc_hi   ; encoding: [0x7c,0x00,0x31,0xd4,0xff,0xd6,0x00,0x00,0x0b,0xfe,0x00,0x00]
+
+v_cmp_lt_i16_e64 s5, v1.h, v2.l
+// W32: v_cmp_lt_i16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x31,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_lt_i16_e64 s5, v255.l, v255.h
+// W32: v_cmp_lt_i16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x31,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_lt_i16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_lt_i16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x31,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_lt_i16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_lt_i16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x31,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_lt_i16_e64 vcc_lo, 0x3800, m0
+// W32: v_cmp_lt_i16_e64 vcc_lo, 0x3800, m0     ; encoding: [0x6a,0x00,0x31,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_lt_i16_e64 vcc, 0x3800, m0
+// W64: v_cmp_lt_i16_e64 vcc, 0x3800, m0        ; encoding: [0x6a,0x00,0x31,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_lt_i32_e64 s5, v1, v2
 // W32: v_cmp_lt_i32_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x41,0xd4,0x01,0x05,0x02,0x00]
@@ -5164,12 +5500,12 @@ v_cmp_lt_i64_e64 ttmp[14:15], src_scc, exec
 v_cmp_lt_i64_e64 null, 0xaf123456, vcc
 // GFX12: v_cmp_lt_i64_e64 null, 0xaf123456, vcc  ; encoding: [0x7c,0x00,0x51,0xd4,0xff,0xd4,0x00,0x00,0x56,0x34,0x12,0xaf]
 
-v_cmp_lt_u16_e64 s5, v1, v2
-// W32: v_cmp_lt_u16_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x39,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_lt_u16_e64 s5, v1.l, v2.l
+// W32: v_cmp_lt_u16_e64 s5, v1.l, v2.l         ; encoding: [0x05,0x00,0x39,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_lt_u16_e64 s5, v255, v255
-// W32: v_cmp_lt_u16_e64 s5, v255, v255         ; encoding: [0x05,0x00,0x39,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_lt_u16_e64 s5, v255.l, v255.l
+// W32: v_cmp_lt_u16_e64 s5, v255.l, v255.l     ; encoding: [0x05,0x00,0x39,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_lt_u16_e64 s5, s1, s2
@@ -5220,13 +5556,13 @@ v_cmp_lt_u16_e64 ttmp15, src_scc, vcc_lo
 // W32: v_cmp_lt_u16_e64 ttmp15, src_scc, vcc_lo ; encoding: [0x7b,0x00,0x39,0xd4,0xfd,0xd4,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_lt_u16_e64 s[10:11], v1, v2
-// W64: v_cmp_lt_u16_e64 s[10:11], v1, v2       ; encoding: [0x0a,0x00,0x39,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_lt_u16_e64 s10, v1.l, v2.l
+// W32: v_cmp_lt_u16_e64 s10, v1.l, v2.l        ; encoding: [0x0a,0x00,0x39,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_lt_u16_e64 s[10:11], v255, v255
-// W64: v_cmp_lt_u16_e64 s[10:11], v255, v255   ; encoding: [0x0a,0x00,0x39,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_lt_u16_e64 s10, v255.l, v255.l
+// W32: v_cmp_lt_u16_e64 s10, v255.l, v255.l    ; encoding: [0x0a,0x00,0x39,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_lt_u16_e64 s[10:11], s1, s2
 // W64: v_cmp_lt_u16_e64 s[10:11], s1, s2       ; encoding: [0x0a,0x00,0x39,0xd4,0x01,0x04,0x00,0x00]
@@ -5278,6 +5614,30 @@ v_cmp_lt_u16_e64 ttmp[14:15], src_scc, vcc_lo
 
 v_cmp_lt_u16_e64 null, 0xfe0b, vcc_hi
 // GFX12: v_cmp_lt_u16_e64 null, 0xfe0b, vcc_hi   ; encoding: [0x7c,0x00,0x39,0xd4,0xff,0xd6,0x00,0x00,0x0b,0xfe,0x00,0x00]
+
+v_cmp_lt_u16_e64 s5, v1.h, v2.l
+// W32: v_cmp_lt_u16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x39,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_lt_u16_e64 s5, v255.l, v255.h
+// W32: v_cmp_lt_u16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x39,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_lt_u16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_lt_u16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x39,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_lt_u16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_lt_u16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x39,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_lt_u16_e64 vcc_lo, 0x3800, m0
+// W32: v_cmp_lt_u16_e64 vcc_lo, 0x3800, m0     ; encoding: [0x6a,0x00,0x39,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_lt_u16_e64 vcc, 0x3800, m0
+// W64: v_cmp_lt_u16_e64 vcc, 0x3800, m0        ; encoding: [0x6a,0x00,0x39,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_lt_u32_e64 s5, v1, v2
 // W32: v_cmp_lt_u32_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x49,0xd4,0x01,0x05,0x02,0x00]
@@ -5485,12 +5845,12 @@ v_cmp_lt_u64_e64 ttmp[14:15], src_scc, exec
 v_cmp_lt_u64_e64 null, 0xaf123456, vcc
 // GFX12: v_cmp_lt_u64_e64 null, 0xaf123456, vcc  ; encoding: [0x7c,0x00,0x59,0xd4,0xff,0xd4,0x00,0x00,0x56,0x34,0x12,0xaf]
 
-v_cmp_ne_i16_e64 s5, v1, v2
-// W32: v_cmp_ne_i16_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x35,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_ne_i16_e64 s5, v1.l, v2.l
+// W32: v_cmp_ne_i16_e64 s5, v1.l, v2.l         ; encoding: [0x05,0x00,0x35,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_ne_i16_e64 s5, v255, v255
-// W32: v_cmp_ne_i16_e64 s5, v255, v255         ; encoding: [0x05,0x00,0x35,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_ne_i16_e64 s5, v255.l, v255.l
+// W32: v_cmp_ne_i16_e64 s5, v255.l, v255.l     ; encoding: [0x05,0x00,0x35,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_ne_i16_e64 s5, s1, s2
@@ -5541,13 +5901,13 @@ v_cmp_ne_i16_e64 ttmp15, src_scc, vcc_lo
 // W32: v_cmp_ne_i16_e64 ttmp15, src_scc, vcc_lo ; encoding: [0x7b,0x00,0x35,0xd4,0xfd,0xd4,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_ne_i16_e64 s[10:11], v1, v2
-// W64: v_cmp_ne_i16_e64 s[10:11], v1, v2       ; encoding: [0x0a,0x00,0x35,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_ne_i16_e64 s10, v1.l, v2.l
+// W32: v_cmp_ne_i16_e64 s10, v1.l, v2.l        ; encoding: [0x0a,0x00,0x35,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_ne_i16_e64 s[10:11], v255, v255
-// W64: v_cmp_ne_i16_e64 s[10:11], v255, v255   ; encoding: [0x0a,0x00,0x35,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_ne_i16_e64 s10, v255.l, v255.l
+// W32: v_cmp_ne_i16_e64 s10, v255.l, v255.l    ; encoding: [0x0a,0x00,0x35,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_ne_i16_e64 s[10:11], s1, s2
 // W64: v_cmp_ne_i16_e64 s[10:11], s1, s2       ; encoding: [0x0a,0x00,0x35,0xd4,0x01,0x04,0x00,0x00]
@@ -5599,6 +5959,30 @@ v_cmp_ne_i16_e64 ttmp[14:15], src_scc, vcc_lo
 
 v_cmp_ne_i16_e64 null, 0xfe0b, vcc_hi
 // GFX12: v_cmp_ne_i16_e64 null, 0xfe0b, vcc_hi   ; encoding: [0x7c,0x00,0x35,0xd4,0xff,0xd6,0x00,0x00,0x0b,0xfe,0x00,0x00]
+
+v_cmp_ne_i16_e64 s5, v1.h, v2.l
+// W32: v_cmp_ne_i16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x35,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ne_i16_e64 s5, v255.l, v255.h
+// W32: v_cmp_ne_i16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x35,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ne_i16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_ne_i16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x35,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ne_i16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_ne_i16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x35,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ne_i16_e64 vcc_lo, 0x3800, m0
+// W32: v_cmp_ne_i16_e64 vcc_lo, 0x3800, m0     ; encoding: [0x6a,0x00,0x35,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ne_i16_e64 vcc, 0x3800, m0
+// W64: v_cmp_ne_i16_e64 vcc, 0x3800, m0        ; encoding: [0x6a,0x00,0x35,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_ne_i32_e64 s5, v1, v2
 // W32: v_cmp_ne_i32_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x45,0xd4,0x01,0x05,0x02,0x00]
@@ -5806,12 +6190,12 @@ v_cmp_ne_i64_e64 ttmp[14:15], src_scc, exec
 v_cmp_ne_i64_e64 null, 0xaf123456, vcc
 // GFX12: v_cmp_ne_i64_e64 null, 0xaf123456, vcc  ; encoding: [0x7c,0x00,0x55,0xd4,0xff,0xd4,0x00,0x00,0x56,0x34,0x12,0xaf]
 
-v_cmp_ne_u16_e64 s5, v1, v2
-// W32: v_cmp_ne_u16_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x3d,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_ne_u16_e64 s5, v1.l, v2.l
+// W32: v_cmp_ne_u16_e64 s5, v1.l, v2.l         ; encoding: [0x05,0x00,0x3d,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_ne_u16_e64 s5, v255, v255
-// W32: v_cmp_ne_u16_e64 s5, v255, v255         ; encoding: [0x05,0x00,0x3d,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_ne_u16_e64 s5, v255.l, v255.l
+// W32: v_cmp_ne_u16_e64 s5, v255.l, v255.l     ; encoding: [0x05,0x00,0x3d,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_ne_u16_e64 s5, s1, s2
@@ -5862,13 +6246,13 @@ v_cmp_ne_u16_e64 ttmp15, src_scc, vcc_lo
 // W32: v_cmp_ne_u16_e64 ttmp15, src_scc, vcc_lo ; encoding: [0x7b,0x00,0x3d,0xd4,0xfd,0xd4,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_ne_u16_e64 s[10:11], v1, v2
-// W64: v_cmp_ne_u16_e64 s[10:11], v1, v2       ; encoding: [0x0a,0x00,0x3d,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_ne_u16_e64 s10, v1.l, v2.l
+// W32: v_cmp_ne_u16_e64 s10, v1.l, v2.l        ; encoding: [0x0a,0x00,0x3d,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
-v_cmp_ne_u16_e64 s[10:11], v255, v255
-// W64: v_cmp_ne_u16_e64 s[10:11], v255, v255   ; encoding: [0x0a,0x00,0x3d,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+v_cmp_ne_u16_e64 s10, v255.l, v255.l
+// W32: v_cmp_ne_u16_e64 s10, v255.l, v255.l    ; encoding: [0x0a,0x00,0x3d,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_ne_u16_e64 s[10:11], s1, s2
 // W64: v_cmp_ne_u16_e64 s[10:11], s1, s2       ; encoding: [0x0a,0x00,0x3d,0xd4,0x01,0x04,0x00,0x00]
@@ -5920,6 +6304,30 @@ v_cmp_ne_u16_e64 ttmp[14:15], src_scc, vcc_lo
 
 v_cmp_ne_u16_e64 null, 0xfe0b, vcc_hi
 // GFX12: v_cmp_ne_u16_e64 null, 0xfe0b, vcc_hi   ; encoding: [0x7c,0x00,0x3d,0xd4,0xff,0xd6,0x00,0x00,0x0b,0xfe,0x00,0x00]
+
+v_cmp_ne_u16_e64 s5, v1.h, v2.l
+// W32: v_cmp_ne_u16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x3d,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ne_u16_e64 s5, v255.l, v255.h
+// W32: v_cmp_ne_u16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x3d,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ne_u16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_ne_u16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x3d,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ne_u16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_ne_u16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x3d,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ne_u16_e64 vcc_lo, 0x3800, m0
+// W32: v_cmp_ne_u16_e64 vcc_lo, 0x3800, m0     ; encoding: [0x6a,0x00,0x3d,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W64-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
+
+v_cmp_ne_u16_e64 vcc, 0x3800, m0
+// W64: v_cmp_ne_u16_e64 vcc, 0x3800, m0        ; encoding: [0x6a,0x00,0x3d,0xd4,0xff,0xfa,0x00,0x00,0x00,0x38,0x00,0x00]
+// W32-ERR: :[[@LINE-2]]:18: error: invalid operand for instruction
 
 v_cmp_ne_u32_e64 s5, v1, v2
 // W32: v_cmp_ne_u32_e64 s5, v1, v2             ; encoding: [0x05,0x00,0x4d,0xd4,0x01,0x05,0x02,0x00]
@@ -6127,12 +6535,12 @@ v_cmp_ne_u64_e64 ttmp[14:15], src_scc, exec
 v_cmp_ne_u64_e64 null, 0xaf123456, vcc
 // GFX12: v_cmp_ne_u64_e64 null, 0xaf123456, vcc  ; encoding: [0x7c,0x00,0x5d,0xd4,0xff,0xd4,0x00,0x00,0x56,0x34,0x12,0xaf]
 
-v_cmp_neq_f16_e64 s5, v1, v2
-// W32: v_cmp_neq_f16_e64 s5, v1, v2            ; encoding: [0x05,0x00,0x0d,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_neq_f16_e64 s5, v1.l, v2.l
+// W32: v_cmp_neq_f16_e64 s5, v1.l, v2.l        ; encoding: [0x05,0x00,0x0d,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
-v_cmp_neq_f16_e64 s5, v255, v255
-// W32: v_cmp_neq_f16_e64 s5, v255, v255        ; encoding: [0x05,0x00,0x0d,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_neq_f16_e64 s5, v255.l, v255.l
+// W32: v_cmp_neq_f16_e64 s5, v255.l, v255.l    ; encoding: [0x05,0x00,0x0d,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
 v_cmp_neq_f16_e64 s5, s1, s2
@@ -6183,13 +6591,13 @@ v_cmp_neq_f16_e64 ttmp15, -src_scc, |vcc_lo|
 // W32: v_cmp_neq_f16_e64 ttmp15, -src_scc, |vcc_lo| ; encoding: [0x7b,0x02,0x0d,0xd4,0xfd,0xd4,0x00,0x20]
 // W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
-v_cmp_neq_f16_e64 s[10:11], v1, v2
-// W64: v_cmp_neq_f16_e64 s[10:11], v1, v2      ; encoding: [0x0a,0x00,0x0d,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+v_cmp_neq_f16_e64 s10, v1.l, v2.l
+// W32: v_cmp_neq_f16_e64 s10, v1.l, v2.l       ; encoding: [0x0a,0x00,0x0d,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
-v_cmp_neq_f16_e64 s[10:11], v255, v255
-// W64: v_cmp_neq_f16_e64 s[10:11], v255, v255  ; encoding: [0x0a,0x00,0x0d,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+v_cmp_neq_f16_e64 s10, v255.l, v255.l
+// W32: v_cmp_neq_f16_e64 s10, v255.l, v255.l   ; encoding: [0x0a,0x00,0x0d,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
 v_cmp_neq_f16_e64 s[10:11], s1, s2
 // W64: v_cmp_neq_f16_e64 s[10:11], s1, s2      ; encoding: [0x0a,0x00,0x0d,0xd4,0x01,0x04,0x00,0x00]
@@ -6241,6 +6649,26 @@ v_cmp_neq_f16_e64 ttmp[14:15], -src_scc, |vcc_lo|
 
 v_cmp_neq_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp
 // GFX12: v_cmp_neq_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp ; encoding: [0x7c,0x83,0x0d,0xd4,0xff,0xd6,0x00,0x60,0x0b,0xfe,0x00,0x00]
+
+v_cmp_neq_f16_e64 s5, v1.h, v2.l
+// W32: v_cmp_neq_f16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x0d,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_neq_f16_e64 s5, v255.l, v255.h
+// W32: v_cmp_neq_f16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x0d,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_neq_f16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_neq_f16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x0d,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_neq_f16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_neq_f16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x0d,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_neq_f16_e64 vcc_lo, 0.5, -m0
+// W32: v_cmp_neq_f16_e64 vcc_lo, 0.5, -m0      ; encoding: [0x6a,0x00,0x0d,0xd4,0xf0,0xfa,0x00,0x40]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
 v_cmp_neq_f32_e64 s5, v1, v2
 // W32: v_cmp_neq_f32_e64 s5, v1, v2            ; encoding: [0x05,0x00,0x1d,0xd4,0x01,0x05,0x02,0x00]
@@ -6448,12 +6876,12 @@ v_cmp_neq_f64_e64 ttmp[14:15], -|src_scc|, -|exec|
 v_cmp_neq_f64_e64 null, 0xaf123456, -|vcc| clamp
 // GFX12: v_cmp_neq_f64_e64 null, 0xaf123456, -|vcc| clamp ; encoding: [0x7c,0x82,0x2d,0xd4,0xff,0xd4,0x00,0x40,0x56,0x34,0x12,0xaf]
 
-v_cmp_nge_f16_e64 s5, v1, v2
-// W32: v_cmp_nge_f16_e64 s5, v1, v2            ; encoding: [0x05,0x00,0x09,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_nge_f16_e64 s5, v1.l, v2.l
+// W32: v_cmp_nge_f16_e64 s5, v1.l, v2.l        ; encoding: [0x05,0x00,0x09,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
-v_cmp_nge_f16_e64 s5, v255, v255
-// W32: v_cmp_nge_f16_e64 s5, v255, v255        ; encoding: [0x05,0x00,0x09,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_nge_f16_e64 s5, v255.l, v255.l
+// W32: v_cmp_nge_f16_e64 s5, v255.l, v255.l    ; encoding: [0x05,0x00,0x09,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
 v_cmp_nge_f16_e64 s5, s1, s2
@@ -6504,13 +6932,13 @@ v_cmp_nge_f16_e64 ttmp15, -src_scc, |vcc_lo|
 // W32: v_cmp_nge_f16_e64 ttmp15, -src_scc, |vcc_lo| ; encoding: [0x7b,0x02,0x09,0xd4,0xfd,0xd4,0x00,0x20]
 // W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
-v_cmp_nge_f16_e64 s[10:11], v1, v2
-// W64: v_cmp_nge_f16_e64 s[10:11], v1, v2      ; encoding: [0x0a,0x00,0x09,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+v_cmp_nge_f16_e64 s10, v1.l, v2.l
+// W32: v_cmp_nge_f16_e64 s10, v1.l, v2.l       ; encoding: [0x0a,0x00,0x09,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
-v_cmp_nge_f16_e64 s[10:11], v255, v255
-// W64: v_cmp_nge_f16_e64 s[10:11], v255, v255  ; encoding: [0x0a,0x00,0x09,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+v_cmp_nge_f16_e64 s10, v255.l, v255.l
+// W32: v_cmp_nge_f16_e64 s10, v255.l, v255.l   ; encoding: [0x0a,0x00,0x09,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
 v_cmp_nge_f16_e64 s[10:11], s1, s2
 // W64: v_cmp_nge_f16_e64 s[10:11], s1, s2      ; encoding: [0x0a,0x00,0x09,0xd4,0x01,0x04,0x00,0x00]
@@ -6562,6 +6990,26 @@ v_cmp_nge_f16_e64 ttmp[14:15], -src_scc, |vcc_lo|
 
 v_cmp_nge_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp
 // GFX12: v_cmp_nge_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp ; encoding: [0x7c,0x83,0x09,0xd4,0xff,0xd6,0x00,0x60,0x0b,0xfe,0x00,0x00]
+
+v_cmp_nge_f16_e64 s5, v1.h, v2.l
+// W32: v_cmp_nge_f16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x09,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_nge_f16_e64 s5, v255.l, v255.h
+// W32: v_cmp_nge_f16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x09,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_nge_f16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_nge_f16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x09,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_nge_f16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_nge_f16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x09,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_nge_f16_e64 vcc_lo, 0.5, -m0
+// W32: v_cmp_nge_f16_e64 vcc_lo, 0.5, -m0      ; encoding: [0x6a,0x00,0x09,0xd4,0xf0,0xfa,0x00,0x40]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
 v_cmp_nge_f32_e64 s5, v1, v2
 // W32: v_cmp_nge_f32_e64 s5, v1, v2            ; encoding: [0x05,0x00,0x19,0xd4,0x01,0x05,0x02,0x00]
@@ -6769,12 +7217,12 @@ v_cmp_nge_f64_e64 ttmp[14:15], -|src_scc|, -|exec|
 v_cmp_nge_f64_e64 null, 0xaf123456, -|vcc| clamp
 // GFX12: v_cmp_nge_f64_e64 null, 0xaf123456, -|vcc| clamp ; encoding: [0x7c,0x82,0x29,0xd4,0xff,0xd4,0x00,0x40,0x56,0x34,0x12,0xaf]
 
-v_cmp_ngt_f16_e64 s5, v1, v2
-// W32: v_cmp_ngt_f16_e64 s5, v1, v2            ; encoding: [0x05,0x00,0x0b,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_ngt_f16_e64 s5, v1.l, v2.l
+// W32: v_cmp_ngt_f16_e64 s5, v1.l, v2.l        ; encoding: [0x05,0x00,0x0b,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
-v_cmp_ngt_f16_e64 s5, v255, v255
-// W32: v_cmp_ngt_f16_e64 s5, v255, v255        ; encoding: [0x05,0x00,0x0b,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_ngt_f16_e64 s5, v255.l, v255.l
+// W32: v_cmp_ngt_f16_e64 s5, v255.l, v255.l    ; encoding: [0x05,0x00,0x0b,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
 v_cmp_ngt_f16_e64 s5, s1, s2
@@ -6825,13 +7273,13 @@ v_cmp_ngt_f16_e64 ttmp15, -src_scc, |vcc_lo|
 // W32: v_cmp_ngt_f16_e64 ttmp15, -src_scc, |vcc_lo| ; encoding: [0x7b,0x02,0x0b,0xd4,0xfd,0xd4,0x00,0x20]
 // W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
-v_cmp_ngt_f16_e64 s[10:11], v1, v2
-// W64: v_cmp_ngt_f16_e64 s[10:11], v1, v2      ; encoding: [0x0a,0x00,0x0b,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+v_cmp_ngt_f16_e64 s10, v1.l, v2.l
+// W32: v_cmp_ngt_f16_e64 s10, v1.l, v2.l       ; encoding: [0x0a,0x00,0x0b,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
-v_cmp_ngt_f16_e64 s[10:11], v255, v255
-// W64: v_cmp_ngt_f16_e64 s[10:11], v255, v255  ; encoding: [0x0a,0x00,0x0b,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+v_cmp_ngt_f16_e64 s10, v255.l, v255.l
+// W32: v_cmp_ngt_f16_e64 s10, v255.l, v255.l   ; encoding: [0x0a,0x00,0x0b,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
 v_cmp_ngt_f16_e64 s[10:11], s1, s2
 // W64: v_cmp_ngt_f16_e64 s[10:11], s1, s2      ; encoding: [0x0a,0x00,0x0b,0xd4,0x01,0x04,0x00,0x00]
@@ -6883,6 +7331,26 @@ v_cmp_ngt_f16_e64 ttmp[14:15], -src_scc, |vcc_lo|
 
 v_cmp_ngt_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp
 // GFX12: v_cmp_ngt_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp ; encoding: [0x7c,0x83,0x0b,0xd4,0xff,0xd6,0x00,0x60,0x0b,0xfe,0x00,0x00]
+
+v_cmp_ngt_f16_e64 s5, v1.h, v2.l
+// W32: v_cmp_ngt_f16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x0b,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e64 s5, v255.l, v255.h
+// W32: v_cmp_ngt_f16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x0b,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_ngt_f16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x0b,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_ngt_f16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x0b,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e64 vcc_lo, 0.5, -m0
+// W32: v_cmp_ngt_f16_e64 vcc_lo, 0.5, -m0      ; encoding: [0x6a,0x00,0x0b,0xd4,0xf0,0xfa,0x00,0x40]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
 v_cmp_ngt_f32_e64 s5, v1, v2
 // W32: v_cmp_ngt_f32_e64 s5, v1, v2            ; encoding: [0x05,0x00,0x1b,0xd4,0x01,0x05,0x02,0x00]
@@ -7090,12 +7558,12 @@ v_cmp_ngt_f64_e64 ttmp[14:15], -|src_scc|, -|exec|
 v_cmp_ngt_f64_e64 null, 0xaf123456, -|vcc| clamp
 // GFX12: v_cmp_ngt_f64_e64 null, 0xaf123456, -|vcc| clamp ; encoding: [0x7c,0x82,0x2b,0xd4,0xff,0xd4,0x00,0x40,0x56,0x34,0x12,0xaf]
 
-v_cmp_nle_f16_e64 s5, v1, v2
-// W32: v_cmp_nle_f16_e64 s5, v1, v2            ; encoding: [0x05,0x00,0x0c,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_nle_f16_e64 s5, v1.l, v2.l
+// W32: v_cmp_nle_f16_e64 s5, v1.l, v2.l        ; encoding: [0x05,0x00,0x0c,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
-v_cmp_nle_f16_e64 s5, v255, v255
-// W32: v_cmp_nle_f16_e64 s5, v255, v255        ; encoding: [0x05,0x00,0x0c,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_nle_f16_e64 s5, v255.l, v255.l
+// W32: v_cmp_nle_f16_e64 s5, v255.l, v255.l    ; encoding: [0x05,0x00,0x0c,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
 v_cmp_nle_f16_e64 s5, s1, s2
@@ -7146,13 +7614,13 @@ v_cmp_nle_f16_e64 ttmp15, -src_scc, |vcc_lo|
 // W32: v_cmp_nle_f16_e64 ttmp15, -src_scc, |vcc_lo| ; encoding: [0x7b,0x02,0x0c,0xd4,0xfd,0xd4,0x00,0x20]
 // W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
-v_cmp_nle_f16_e64 s[10:11], v1, v2
-// W64: v_cmp_nle_f16_e64 s[10:11], v1, v2      ; encoding: [0x0a,0x00,0x0c,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+v_cmp_nle_f16_e64 s10, v1.l, v2.l
+// W32: v_cmp_nle_f16_e64 s10, v1.l, v2.l       ; encoding: [0x0a,0x00,0x0c,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
-v_cmp_nle_f16_e64 s[10:11], v255, v255
-// W64: v_cmp_nle_f16_e64 s[10:11], v255, v255  ; encoding: [0x0a,0x00,0x0c,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+v_cmp_nle_f16_e64 s10, v255.l, v255.l
+// W32: v_cmp_nle_f16_e64 s10, v255.l, v255.l   ; encoding: [0x0a,0x00,0x0c,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
 v_cmp_nle_f16_e64 s[10:11], s1, s2
 // W64: v_cmp_nle_f16_e64 s[10:11], s1, s2      ; encoding: [0x0a,0x00,0x0c,0xd4,0x01,0x04,0x00,0x00]
@@ -7204,6 +7672,26 @@ v_cmp_nle_f16_e64 ttmp[14:15], -src_scc, |vcc_lo|
 
 v_cmp_nle_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp
 // GFX12: v_cmp_nle_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp ; encoding: [0x7c,0x83,0x0c,0xd4,0xff,0xd6,0x00,0x60,0x0b,0xfe,0x00,0x00]
+
+v_cmp_nle_f16_e64 s5, v1.h, v2.l
+// W32: v_cmp_nle_f16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x0c,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_nle_f16_e64 s5, v255.l, v255.h
+// W32: v_cmp_nle_f16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x0c,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_nle_f16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_nle_f16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x0c,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_nle_f16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_nle_f16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x0c,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_nle_f16_e64 vcc_lo, 0.5, -m0
+// W32: v_cmp_nle_f16_e64 vcc_lo, 0.5, -m0      ; encoding: [0x6a,0x00,0x0c,0xd4,0xf0,0xfa,0x00,0x40]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
 v_cmp_nle_f32_e64 s5, v1, v2
 // W32: v_cmp_nle_f32_e64 s5, v1, v2            ; encoding: [0x05,0x00,0x1c,0xd4,0x01,0x05,0x02,0x00]
@@ -7411,12 +7899,12 @@ v_cmp_nle_f64_e64 ttmp[14:15], -|src_scc|, -|exec|
 v_cmp_nle_f64_e64 null, 0xaf123456, -|vcc| clamp
 // GFX12: v_cmp_nle_f64_e64 null, 0xaf123456, -|vcc| clamp ; encoding: [0x7c,0x82,0x2c,0xd4,0xff,0xd4,0x00,0x40,0x56,0x34,0x12,0xaf]
 
-v_cmp_nlg_f16_e64 s5, v1, v2
-// W32: v_cmp_nlg_f16_e64 s5, v1, v2            ; encoding: [0x05,0x00,0x0a,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_nlg_f16_e64 s5, v1.l, v2.l
+// W32: v_cmp_nlg_f16_e64 s5, v1.l, v2.l        ; encoding: [0x05,0x00,0x0a,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
-v_cmp_nlg_f16_e64 s5, v255, v255
-// W32: v_cmp_nlg_f16_e64 s5, v255, v255        ; encoding: [0x05,0x00,0x0a,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_nlg_f16_e64 s5, v255.l, v255.l
+// W32: v_cmp_nlg_f16_e64 s5, v255.l, v255.l    ; encoding: [0x05,0x00,0x0a,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
 v_cmp_nlg_f16_e64 s5, s1, s2
@@ -7467,13 +7955,13 @@ v_cmp_nlg_f16_e64 ttmp15, -src_scc, |vcc_lo|
 // W32: v_cmp_nlg_f16_e64 ttmp15, -src_scc, |vcc_lo| ; encoding: [0x7b,0x02,0x0a,0xd4,0xfd,0xd4,0x00,0x20]
 // W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
-v_cmp_nlg_f16_e64 s[10:11], v1, v2
-// W64: v_cmp_nlg_f16_e64 s[10:11], v1, v2      ; encoding: [0x0a,0x00,0x0a,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+v_cmp_nlg_f16_e64 s10, v1.l, v2.l
+// W32: v_cmp_nlg_f16_e64 s10, v1.l, v2.l       ; encoding: [0x0a,0x00,0x0a,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
-v_cmp_nlg_f16_e64 s[10:11], v255, v255
-// W64: v_cmp_nlg_f16_e64 s[10:11], v255, v255  ; encoding: [0x0a,0x00,0x0a,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+v_cmp_nlg_f16_e64 s10, v255.l, v255.l
+// W32: v_cmp_nlg_f16_e64 s10, v255.l, v255.l   ; encoding: [0x0a,0x00,0x0a,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
 v_cmp_nlg_f16_e64 s[10:11], s1, s2
 // W64: v_cmp_nlg_f16_e64 s[10:11], s1, s2      ; encoding: [0x0a,0x00,0x0a,0xd4,0x01,0x04,0x00,0x00]
@@ -7525,6 +8013,26 @@ v_cmp_nlg_f16_e64 ttmp[14:15], -src_scc, |vcc_lo|
 
 v_cmp_nlg_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp
 // GFX12: v_cmp_nlg_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp ; encoding: [0x7c,0x83,0x0a,0xd4,0xff,0xd6,0x00,0x60,0x0b,0xfe,0x00,0x00]
+
+v_cmp_nlg_f16_e64 s5, v1.h, v2.l
+// W32: v_cmp_nlg_f16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x0a,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e64 s5, v255.l, v255.h
+// W32: v_cmp_nlg_f16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x0a,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_nlg_f16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x0a,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_nlg_f16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x0a,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e64 vcc_lo, 0.5, -m0
+// W32: v_cmp_nlg_f16_e64 vcc_lo, 0.5, -m0      ; encoding: [0x6a,0x00,0x0a,0xd4,0xf0,0xfa,0x00,0x40]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
 v_cmp_nlg_f32_e64 s5, v1, v2
 // W32: v_cmp_nlg_f32_e64 s5, v1, v2            ; encoding: [0x05,0x00,0x1a,0xd4,0x01,0x05,0x02,0x00]
@@ -7732,12 +8240,12 @@ v_cmp_nlg_f64_e64 ttmp[14:15], -|src_scc|, -|exec|
 v_cmp_nlg_f64_e64 null, 0xaf123456, -|vcc| clamp
 // GFX12: v_cmp_nlg_f64_e64 null, 0xaf123456, -|vcc| clamp ; encoding: [0x7c,0x82,0x2a,0xd4,0xff,0xd4,0x00,0x40,0x56,0x34,0x12,0xaf]
 
-v_cmp_nlt_f16_e64 s5, v1, v2
-// W32: v_cmp_nlt_f16_e64 s5, v1, v2            ; encoding: [0x05,0x00,0x0e,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_nlt_f16_e64 s5, v1.l, v2.l
+// W32: v_cmp_nlt_f16_e64 s5, v1.l, v2.l        ; encoding: [0x05,0x00,0x0e,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e64 s5, v255, v255
-// W32: v_cmp_nlt_f16_e64 s5, v255, v255        ; encoding: [0x05,0x00,0x0e,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_nlt_f16_e64 s5, v255.l, v255.l
+// W32: v_cmp_nlt_f16_e64 s5, v255.l, v255.l    ; encoding: [0x05,0x00,0x0e,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
 v_cmp_nlt_f16_e64 s5, s1, s2
@@ -7788,13 +8296,13 @@ v_cmp_nlt_f16_e64 ttmp15, -src_scc, |vcc_lo|
 // W32: v_cmp_nlt_f16_e64 ttmp15, -src_scc, |vcc_lo| ; encoding: [0x7b,0x02,0x0e,0xd4,0xfd,0xd4,0x00,0x20]
 // W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e64 s[10:11], v1, v2
-// W64: v_cmp_nlt_f16_e64 s[10:11], v1, v2      ; encoding: [0x0a,0x00,0x0e,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+v_cmp_nlt_f16_e64 s10, v1.l, v2.l
+// W32: v_cmp_nlt_f16_e64 s10, v1.l, v2.l       ; encoding: [0x0a,0x00,0x0e,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e64 s[10:11], v255, v255
-// W64: v_cmp_nlt_f16_e64 s[10:11], v255, v255  ; encoding: [0x0a,0x00,0x0e,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+v_cmp_nlt_f16_e64 s10, v255.l, v255.l
+// W32: v_cmp_nlt_f16_e64 s10, v255.l, v255.l   ; encoding: [0x0a,0x00,0x0e,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
 v_cmp_nlt_f16_e64 s[10:11], s1, s2
 // W64: v_cmp_nlt_f16_e64 s[10:11], s1, s2      ; encoding: [0x0a,0x00,0x0e,0xd4,0x01,0x04,0x00,0x00]
@@ -7846,6 +8354,26 @@ v_cmp_nlt_f16_e64 ttmp[14:15], -src_scc, |vcc_lo|
 
 v_cmp_nlt_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp
 // GFX12: v_cmp_nlt_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp ; encoding: [0x7c,0x83,0x0e,0xd4,0xff,0xd6,0x00,0x60,0x0b,0xfe,0x00,0x00]
+
+v_cmp_nlt_f16_e64 s5, v1.h, v2.l
+// W32: v_cmp_nlt_f16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x0e,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e64 s5, v255.l, v255.h
+// W32: v_cmp_nlt_f16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x0e,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_nlt_f16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x0e,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_nlt_f16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x0e,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e64 vcc_lo, 0.5, -m0
+// W32: v_cmp_nlt_f16_e64 vcc_lo, 0.5, -m0      ; encoding: [0x6a,0x00,0x0e,0xd4,0xf0,0xfa,0x00,0x40]
+// W64-ERR: :[[@LINE-2]]:19: error: invalid operand for instruction
 
 v_cmp_nlt_f32_e64 s5, v1, v2
 // W32: v_cmp_nlt_f32_e64 s5, v1, v2            ; encoding: [0x05,0x00,0x1e,0xd4,0x01,0x05,0x02,0x00]
@@ -8053,12 +8581,12 @@ v_cmp_nlt_f64_e64 ttmp[14:15], -|src_scc|, -|exec|
 v_cmp_nlt_f64_e64 null, 0xaf123456, -|vcc| clamp
 // GFX12: v_cmp_nlt_f64_e64 null, 0xaf123456, -|vcc| clamp ; encoding: [0x7c,0x82,0x2e,0xd4,0xff,0xd4,0x00,0x40,0x56,0x34,0x12,0xaf]
 
-v_cmp_o_f16_e64 s5, v1, v2
-// W32: v_cmp_o_f16_e64 s5, v1, v2              ; encoding: [0x05,0x00,0x07,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_o_f16_e64 s5, v1.l, v2.l
+// W32: v_cmp_o_f16_e64 s5, v1.l, v2.l          ; encoding: [0x05,0x00,0x07,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
 
-v_cmp_o_f16_e64 s5, v255, v255
-// W32: v_cmp_o_f16_e64 s5, v255, v255          ; encoding: [0x05,0x00,0x07,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_o_f16_e64 s5, v255.l, v255.l
+// W32: v_cmp_o_f16_e64 s5, v255.l, v255.l      ; encoding: [0x05,0x00,0x07,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
 
 v_cmp_o_f16_e64 s5, s1, s2
@@ -8109,13 +8637,13 @@ v_cmp_o_f16_e64 ttmp15, -src_scc, |vcc_lo|
 // W32: v_cmp_o_f16_e64 ttmp15, -src_scc, |vcc_lo| ; encoding: [0x7b,0x02,0x07,0xd4,0xfd,0xd4,0x00,0x20]
 // W64-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
 
-v_cmp_o_f16_e64 s[10:11], v1, v2
-// W64: v_cmp_o_f16_e64 s[10:11], v1, v2        ; encoding: [0x0a,0x00,0x07,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
+v_cmp_o_f16_e64 s10, v1.l, v2.l
+// W32: v_cmp_o_f16_e64 s10, v1.l, v2.l         ; encoding: [0x0a,0x00,0x07,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
 
-v_cmp_o_f16_e64 s[10:11], v255, v255
-// W64: v_cmp_o_f16_e64 s[10:11], v255, v255    ; encoding: [0x0a,0x00,0x07,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
+v_cmp_o_f16_e64 s10, v255.l, v255.l
+// W32: v_cmp_o_f16_e64 s10, v255.l, v255.l     ; encoding: [0x0a,0x00,0x07,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
 
 v_cmp_o_f16_e64 s[10:11], s1, s2
 // W64: v_cmp_o_f16_e64 s[10:11], s1, s2        ; encoding: [0x0a,0x00,0x07,0xd4,0x01,0x04,0x00,0x00]
@@ -8167,6 +8695,26 @@ v_cmp_o_f16_e64 ttmp[14:15], -src_scc, |vcc_lo|
 
 v_cmp_o_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp
 // GFX12: v_cmp_o_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp ; encoding: [0x7c,0x83,0x07,0xd4,0xff,0xd6,0x00,0x60,0x0b,0xfe,0x00,0x00]
+
+v_cmp_o_f16_e64 s5, v1.h, v2.l
+// W32: v_cmp_o_f16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x07,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
+
+v_cmp_o_f16_e64 s5, v255.l, v255.h
+// W32: v_cmp_o_f16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x07,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
+
+v_cmp_o_f16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_o_f16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x07,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
+
+v_cmp_o_f16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_o_f16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x07,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
+
+v_cmp_o_f16_e64 vcc_lo, 0.5, -m0
+// W32: v_cmp_o_f16_e64 vcc_lo, 0.5, -m0        ; encoding: [0x6a,0x00,0x07,0xd4,0xf0,0xfa,0x00,0x40]
+// W64-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
 
 v_cmp_o_f32_e64 s5, v1, v2
 // W32: v_cmp_o_f32_e64 s5, v1, v2              ; encoding: [0x05,0x00,0x17,0xd4,0x01,0x05,0x02,0x00]
@@ -8374,12 +8922,12 @@ v_cmp_o_f64_e64 ttmp[14:15], -|src_scc|, -|exec|
 v_cmp_o_f64_e64 null, 0xaf123456, -|vcc| clamp
 // GFX12: v_cmp_o_f64_e64 null, 0xaf123456, -|vcc| clamp ; encoding: [0x7c,0x82,0x27,0xd4,0xff,0xd4,0x00,0x40,0x56,0x34,0x12,0xaf]
 
-v_cmp_u_f16_e64 s5, v1, v2
-// W32: v_cmp_u_f16_e64 s5, v1, v2              ; encoding: [0x05,0x00,0x08,0xd4,0x01,0x05,0x02,0x00]
+v_cmp_u_f16_e64 s5, v1.l, v2.l
+// W32: v_cmp_u_f16_e64 s5, v1.l, v2.l          ; encoding: [0x05,0x00,0x08,0xd4,0x01,0x05,0x02,0x00]
 // W64-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
 
-v_cmp_u_f16_e64 s5, v255, v255
-// W32: v_cmp_u_f16_e64 s5, v255, v255          ; encoding: [0x05,0x00,0x08,0xd4,0xff,0xff,0x03,0x00]
+v_cmp_u_f16_e64 s5, v255.l, v255.l
+// W32: v_cmp_u_f16_e64 s5, v255.l, v255.l      ; encoding: [0x05,0x00,0x08,0xd4,0xff,0xff,0x03,0x00]
 // W64-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
 
 v_cmp_u_f16_e64 s5, s1, s2
@@ -8430,13 +8978,13 @@ v_cmp_u_f16_e64 ttmp15, -src_scc, |vcc_lo|
 // W32: v_cmp_u_f16_e64 ttmp15, -src_scc, |vcc_lo| ; encoding: [0x7b,0x02,0x08,0xd4,0xfd,0xd4,0x00,0x20]
 // W64-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
 
-v_cmp_u_f16_e64 s[10:11], v1, v2
-// W64: v_cmp_u_f16_e64 s[10:11], v1, v2        ; encoding: [0x0a,0x00,0x08,0xd4,0x01,0x05,0x02,0x00]
-// W32-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
+v_cmp_u_f16_e64 s10, v1.l, v2.l
+// W32: v_cmp_u_f16_e64 s10, v1.l, v2.l         ; encoding: [0x0a,0x00,0x08,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
 
-v_cmp_u_f16_e64 s[10:11], v255, v255
-// W64: v_cmp_u_f16_e64 s[10:11], v255, v255    ; encoding: [0x0a,0x00,0x08,0xd4,0xff,0xff,0x03,0x00]
-// W32-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
+v_cmp_u_f16_e64 s10, v255.l, v255.l
+// W32: v_cmp_u_f16_e64 s10, v255.l, v255.l     ; encoding: [0x0a,0x00,0x08,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
 
 v_cmp_u_f16_e64 s[10:11], s1, s2
 // W64: v_cmp_u_f16_e64 s[10:11], s1, s2        ; encoding: [0x0a,0x00,0x08,0xd4,0x01,0x04,0x00,0x00]
@@ -8488,6 +9036,26 @@ v_cmp_u_f16_e64 ttmp[14:15], -src_scc, |vcc_lo|
 
 v_cmp_u_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp
 // GFX12: v_cmp_u_f16_e64 null, -|0xfe0b|, -|vcc_hi| clamp ; encoding: [0x7c,0x83,0x08,0xd4,0xff,0xd6,0x00,0x60,0x0b,0xfe,0x00,0x00]
+
+v_cmp_u_f16_e64 s5, v1.h, v2.l
+// W32: v_cmp_u_f16_e64 s5, v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x05,0x08,0x08,0xd4,0x01,0x05,0x02,0x00]
+// W64-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
+
+v_cmp_u_f16_e64 s5, v255.l, v255.h
+// W32: v_cmp_u_f16_e64 s5, v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x05,0x10,0x08,0xd4,0xff,0xff,0x03,0x00]
+// W64-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
+
+v_cmp_u_f16_e64 s[10:11], v1.h, v2.l
+// W64: v_cmp_u_f16_e64 s[10:11], v1.h, v2.l op_sel:[1,0,0] ; encoding: [0x0a,0x08,0x08,0xd4,0x01,0x05,0x02,0x00]
+// W32-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
+
+v_cmp_u_f16_e64 s[10:11], v255.l, v255.h
+// W64: v_cmp_u_f16_e64 s[10:11], v255.l, v255.h op_sel:[0,1,0] ; encoding: [0x0a,0x10,0x08,0xd4,0xff,0xff,0x03,0x00]
+// W32-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
+
+v_cmp_u_f16_e64 vcc_lo, 0.5, -m0
+// W32: v_cmp_u_f16_e64 vcc_lo, 0.5, -m0        ; encoding: [0x6a,0x00,0x08,0xd4,0xf0,0xfa,0x00,0x40]
+// W64-ERR: :[[@LINE-2]]:17: error: invalid operand for instruction
 
 v_cmp_u_f32_e64 s5, v1, v2
 // W32: v_cmp_u_f32_e64 s5, v1, v2              ; encoding: [0x05,0x00,0x18,0xd4,0x01,0x05,0x02,0x00]

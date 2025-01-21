@@ -44,6 +44,9 @@ static const CudaVersionMapEntry CudaNameVersionMap[] = {
     CUDA_ENTRY(12, 4),
     CUDA_ENTRY(12, 5),
     CUDA_ENTRY(12, 6),
+    CUDA_ENTRY(12, 7),
+    CUDA_ENTRY(12, 8),
+    CUDA_ENTRY(12, 9),
     {"", CudaVersion::NEW, llvm::VersionTuple(std::numeric_limits<int>::max())},
     {"unknown", CudaVersion::UNKNOWN, {}} // End of list tombstone.
 };
@@ -98,6 +101,7 @@ static const OffloadArchToStringMap arch_names[] = {
     SM(90),                          // Hopper
     SM(90a),                         // Hopper
     SM(100),                         // Blackwell
+    SM(100a),                        // Blackwell
     GFX(600),  // gfx600
     GFX(601),  // gfx601
     GFX(602),  // gfx602
@@ -227,8 +231,8 @@ CudaVersion MinVersionForOffloadArch(OffloadArch A) {
   case OffloadArch::SM_90a:
     return CudaVersion::CUDA_120;
   case OffloadArch::SM_100:
-    return CudaVersion::NEW; // TODO: use specific CUDA version once it's
-                             // public.
+  case OffloadArch::SM_100a:
+    return CudaVersion::CUDA_127;
   default:
     llvm_unreachable("invalid enum");
   }

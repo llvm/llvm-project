@@ -91,8 +91,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f80 = dense<128> : vector<2xi64>
     %16 = fir.convert %6 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>) -> !fir.ref<!fir.box<none>>
     %17 = fir.convert %c1 : (index) -> i64
     %18 = fir.convert %c16_i32 : (i32) -> i64
-    %19 = fir.call @_FortranAAllocatableSetBounds(%16, %c0_i32, %17, %18) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
-    %20 = fir.call @_FortranAAllocatableSetBounds(%16, %c1_i32, %17, %18) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+    fir.call @_FortranAAllocatableSetBounds(%16, %c0_i32, %17, %18) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
+    fir.call @_FortranAAllocatableSetBounds(%16, %c1_i32, %17, %18) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
     %21 = fir.address_of(@_QQclX64756D6D792E6D6C697200) : !fir.ref<!fir.char<1,11>>
     %c31_i32 = arith.constant 31 : i32
     %false = arith.constant false
@@ -102,7 +102,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f80 = dense<128> : vector<2xi64>
     %24 = fir.convert %21 : (!fir.ref<!fir.char<1,11>>) -> !fir.ref<i8>
     %25 = fir.call @_FortranACUFAllocatableAllocate(%23, %c-1_i64, %false, %22, %24, %c31_i32) : (!fir.ref<!fir.box<none>>, i64, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
     %26 = fir.convert %13 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
-    %27 = fir.call @_FortranAAllocatableSetBounds(%26, %c0_i32, %17, %18) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+    fir.call @_FortranAAllocatableSetBounds(%26, %c0_i32, %17, %18) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
     %28 = fir.address_of(@_QQclX64756D6D792E6D6C697200) : !fir.ref<!fir.char<1,11>>
     %c34_i32 = arith.constant 34 : i32
     %false_0 = arith.constant false
@@ -115,7 +115,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f80 = dense<128> : vector<2xi64>
     %34 = fircg.ext_rebox %33 : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>) -> !fir.box<!fir.array<?x?xf32>>
     return
   }
-  func.func private @_FortranAAllocatableSetBounds(!fir.ref<!fir.box<none>>, i32, i64, i64) -> none attributes {fir.runtime}
+  func.func private @_FortranAAllocatableSetBounds(!fir.ref<!fir.box<none>>, i32, i64, i64) -> () attributes {fir.runtime}
   fir.global linkonce @_QQclX64756D6D792E6D6C697200 constant : !fir.char<1,11> {
     %0 = fir.string_lit "dummy.mlir\00"(11) : !fir.char<1,11>
     fir.has_value %0 : !fir.char<1,11>
@@ -165,7 +165,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     fir.has_value %0 : !fir.char<1,8>
   }
   func.func private @_FortranACUFAllocDescriptor(i64, !fir.ref<i8>, i32) -> !fir.ref<!fir.box<none>> attributes {fir.runtime}
-  func.func private @_FortranACUFFreeDescriptor(!fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> none attributes {fir.runtime}
+  func.func private @_FortranACUFFreeDescriptor(!fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> () attributes {fir.runtime}
 }
 
 // CHECK-LABEL: llvm.func @_QQmain()
