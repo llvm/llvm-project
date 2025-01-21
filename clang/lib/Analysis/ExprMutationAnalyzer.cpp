@@ -779,7 +779,7 @@ ExprMutationAnalyzer::Analyzer::findPointeeToNonConst(const Expr *Exp) {
                            stmt(anyOf(AssignToNonConst, PassAsNonConstArg,
                                       CastToNonConst, CaptureNoConst))
                                .bind("stmt")),
-                       forEachDescendant(decl(InitToNonConst)))),
+                       forEachDescendant(InitToNonConst))),
             Stm, Context);
   return selectFirst<Stmt>("stmt", Matches);
 }
