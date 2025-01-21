@@ -531,6 +531,7 @@ void DWARFDebugLine::Sequence::reset() {
   FirstRowIndex = 0;
   LastRowIndex = 0;
   Empty = true;
+  StmtSeqOffset = UINT64_MAX;
 }
 
 DWARFDebugLine::LineTable::LineTable() { clear(); }
@@ -565,14 +566,16 @@ DWARFDebugLine::ParsingState::ParsingState(
   resetRowAndSequence();
 }
 
-void DWARFDebugLine::ParsingState::resetRowAndSequence() {
+void DWARFDebugLine::ParsingState::resetRowAndSequence(uint64_t Offset) {
   Row.reset(LineTable->Prologue.DefaultIsStmt);
   Sequence.reset();
+  if (Offset != UINT64_MAX) {
+    Sequence.SetSequenceOffset(Offset);
+  }
 }
 
-void DWARFDebugLine::ParsingState::appendRowToMatrix(uint64_t LineTableOffset) {
+void DWARFDebugLine::ParsingState::appendRowToMatrix() {
   unsigned RowNumber = LineTable->Rows.size();
-  Sequence.Offset = LineTableOffset;
   if (Sequence.Empty) {
     // Record the beginning of instruction sequence.
     Sequence.Empty = false;
@@ -849,7 +852,9 @@ Error DWARFDebugLine::LineTable::parse(
     *OS << '\n';
     Row::dumpTableHeader(*OS, /*Indent=*/Verbose ? 12 : 0);
   }
-  uint64_t LineTableSeqOffset = *OffsetPtr;
+  // *OffsetPtr points to the end of the prologue - i.e. the start of the first
+  // sequence. So initialize the first sequence offset accordingly.
+  State.Sequence.SetSequenceOffset(*OffsetPtr);
 
   bool TombstonedAddress = false;
   auto EmitRow = [&] {
@@ -860,7 +865,7 @@ Error DWARFDebugLine::LineTable::parse(
       }
       if (OS)
         State.Row.dump(*OS);
-      State.appendRowToMatrix(LineTableSeqOffset);
+      State.appendRowToMatrix();
     }
   };
   while (*OffsetPtr < EndOffset) {
@@ -915,10 +920,9 @@ Error DWARFDebugLine::LineTable::parse(
         // into this code path - if it were invalid, the default case would be
         // followed.
         EmitRow();
-        State.resetRowAndSequence();
         // Cursor now points to right after the end_sequence opcode - so points
         // to the start of the next sequence - if one exists.
-        LineTableSeqOffset = Cursor.tell();
+        State.resetRowAndSequence(Cursor.tell());
         break;
 
       case DW_LNE_set_address:
@@ -1419,7 +1423,7 @@ bool DWARFDebugLine::LineTable::lookupAddressRangeImpl(
 
     // Skip sequences that don't match our stmt_sequence offset if one was
     // provided
-    if (StmtSequenceOffset && CurSeq.Offset != *StmtSequenceOffset) {
+    if (StmtSequenceOffset && CurSeq.StmtSeqOffset != *StmtSequenceOffset) {
       ++SeqPos;
       continue;
     }

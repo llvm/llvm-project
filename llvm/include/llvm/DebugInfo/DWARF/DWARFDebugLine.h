@@ -210,7 +210,7 @@ public:
     bool Empty;
 
     /// The offset into the line table where this sequence begins
-    uint64_t Offset = 0;
+    uint64_t StmtSeqOffset = UINT64_MAX;
 
     void reset();
 
@@ -227,6 +227,8 @@ public:
       return SectionIndex == PC.SectionIndex &&
              (LowPC <= PC.Address && PC.Address < HighPC);
     }
+
+    void SetSequenceOffset(uint64_t Offset) { StmtSeqOffset = Offset; }
   };
 
   struct LineTable {
@@ -403,16 +405,8 @@ private:
     ParsingState(struct LineTable *LT, uint64_t TableOffset,
                  function_ref<void(Error)> ErrorHandler);
 
-    void resetRowAndSequence();
-
-    /// Append the current Row to the LineTable's matrix of rows and update the
-    /// current Sequence information.
-    ///
-    /// \param LineTableOffset - the offset into the line table where the
-    /// current sequence of rows begins. This offset is stored in the Sequence
-    /// to allow filtering rows based on their originating sequence when a
-    /// DW_AT_LLVM_stmt_sequence attribute is present.
-    void appendRowToMatrix(uint64_t LineTableOffset);
+    void resetRowAndSequence(uint64_t Offset = UINT64_MAX);
+    void appendRowToMatrix();
 
     struct AddrOpIndexDelta {
       uint64_t AddrOffset;
