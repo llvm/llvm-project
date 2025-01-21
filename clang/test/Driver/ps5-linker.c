@@ -180,7 +180,7 @@
 
 // RUN: rm -rf %t.dir && mkdir %t.dir
 // RUN: env SCE_PROSPERO_SDK_DIR=%t.dir %clang --target=x64_64-sie-ps5 %s -### -Luser 2>&1 | FileCheck --check-prefixes=CHECK-NO-TARGETLIB %s
-// RUN: env SCE_PROSPERO_SDK_DIR=.      %clang --target=x64_64-sie-ps5 %s -### -Luser --sysroot=%t.dir 2>&1 | FileCheck --check-prefixes=CHECK-NO-TARGETLIB %s
+// RUN: %clang --target=x64_64-sie-ps5 %s -### -Luser --sysroot=%t.dir 2>&1 | FileCheck --check-prefixes=CHECK-NO-TARGETLIB %s
 
 // CHECK-NO-TARGETLIB: {{ld(\.exe)?}}"
 // CHECK-NO-TARGETLIB-SAME: "-Luser"
@@ -190,7 +190,7 @@
 // RUN: mkdir -p %t.dir/myroot/target/lib
 // RUN: touch %t.dir/myroot/target/lib/crti.o
 // RUN: env SCE_PROSPERO_SDK_DIR=%t.dir/myroot %clang --target=x64_64-sie-ps5 %s -### -Luser 2>&1 | FileCheck --check-prefixes=CHECK-TARGETLIB %s
-// RUN: env SCE_PROSPERO_SDK_DIR=.             %clang --target=x64_64-sie-ps5 %s -### -Luser --sysroot=%t.dir/myroot 2>&1 | FileCheck --check-prefixes=CHECK-TARGETLIB %s
+// RUN: %clang --target=x64_64-sie-ps5 %s -### -Luser --sysroot=%t.dir/myroot 2>&1 | FileCheck --check-prefixes=CHECK-TARGETLIB %s
 
 // CHECK-TARGETLIB: {{ld(\.exe)?}}"
 // CHECK-TARGETLIB-SAME: "-Luser"
