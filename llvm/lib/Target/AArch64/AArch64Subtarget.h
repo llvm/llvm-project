@@ -180,10 +180,6 @@ public:
   /// Returns the size of memory region that if accessed by both the CPU and
   /// the SME unit could result in a hazard. 0 = disabled.
   unsigned getStreamingHazardSize() const {
-    // If StreamingHazardSize has been explicitly set to a value, use that.
-    // Otherwise, default to 1024 bytes when both SME and SVE are available
-    // (without FA64), for all other configurations default to no streaming
-    // hazards.
     return StreamingHazardSize.value_or(
         !hasSMEFA64() && hasSME() && hasSVE() ? 1024 : 0);
   }
