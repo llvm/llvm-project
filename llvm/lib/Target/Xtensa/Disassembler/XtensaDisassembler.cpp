@@ -14,6 +14,7 @@
 
 #include "MCTargetDesc/XtensaMCTargetDesc.h"
 #include "TargetInfo/XtensaTargetInfo.h"
+#include "XtensaUtils.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -73,22 +74,6 @@ static DecodeStatus DecodeARRegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
-// Verify SR
-bool checkRegister(unsigned RegNo, const MCDisassembler *Decoder) {
-  const FeatureBitset &FeatureBits =
-      Decoder->getSubtargetInfo().getFeatureBits();
-
-  switch (RegNo) {
-  case Xtensa::WINDOWBASE:
-  case Xtensa::WINDOWSTART:
-    return FeatureBits[Xtensa::FeatureWindowed];
-  default:
-    return false;
-  }
-
-  return true;
-}
-
 static const unsigned SRDecoderTable[] = {
     Xtensa::SAR, 3, Xtensa::WINDOWBASE, 72, Xtensa::WINDOWSTART, 73};
 
@@ -102,7 +87,7 @@ static DecodeStatus DecodeSRRegisterClass(MCInst &Inst, uint64_t RegNo,
     if (SRDecoderTable[i + 1] == RegNo) {
       unsigned Reg = SRDecoderTable[i];
 
-      if (!checkRegister(Reg, Decoder))
+      if (!checkRegister(Reg, Decoder->getSubtargetInfo().getFeatureBits()))
         return MCDisassembler::Fail;
 
       Inst.addOperand(MCOperand::createReg(Reg));

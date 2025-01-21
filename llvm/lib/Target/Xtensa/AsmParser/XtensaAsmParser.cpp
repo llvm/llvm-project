@@ -12,6 +12,7 @@
 #include "MCTargetDesc/XtensaMCTargetDesc.h"
 #include "MCTargetDesc/XtensaTargetStreamer.h"
 #include "TargetInfo/XtensaTargetInfo.h"
+#include "XtensaUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCContext.h"
@@ -73,7 +74,7 @@ class XtensaAsmParser : public MCTargetAsmParser {
                                SMLoc &EndLoc) override {
     return ParseStatus::NoMatch;
   }
-  bool checkRegister(MCRegister RegNo);
+
   ParseStatus parsePCRelTarget(OperandVector &Operands);
   bool parseLiteralDirective(SMLoc L);
 
@@ -627,7 +628,7 @@ ParseStatus XtensaAsmParser::parseRegister(OperandVector &Operands,
     return ParseStatus::NoMatch;
   }
 
-  if (!checkRegister(RegNo))
+  if (!checkRegister(RegNo, getSTI().getFeatureBits()))
     return ParseStatus::NoMatch;
 
   if (HadParens)
@@ -731,7 +732,7 @@ bool XtensaAsmParser::ParseInstructionWithSR(ParseInstructionInfo &Info,
     if (RegNo == 0)
       RegNo = MatchRegisterAltName(RegName);
 
-    if (!checkRegister(RegNo))
+    if (!checkRegister(RegNo, getSTI().getFeatureBits()))
       return Error(NameLoc, "invalid register name");
 
     // Parse operand
@@ -853,19 +854,6 @@ ParseStatus XtensaAsmParser::parseDirective(AsmToken DirectiveID) {
   }
 
   return ParseStatus::NoMatch;
-}
-
-// Verify Special Register
-bool XtensaAsmParser::checkRegister(MCRegister RegNo) {
-  switch (RegNo) {
-  case Xtensa::WINDOWBASE:
-  case Xtensa::WINDOWSTART:
-    return hasWindowed();
-  case Xtensa::NoRegister:
-    return false;
-  }
-
-  return true;
 }
 
 // Force static initialization.
