@@ -135,7 +135,8 @@ struct VPlanTransforms {
                                          BasicBlock *UncountableExitingBlock,
                                          VPRecipeBuilder &RecipeBuilder);
 
-  /// Lower abstract recipes to concrete ones, that can be codegen'd and replace loop regions with explicit CFG.
+  /// Lower abstract recipes to concrete ones, that can be codegen'd and replace
+  /// loop regions with explicit CFG.
   static void convertToConcreteRecipes(VPlan &Plan);
 
   /// If there's a single exit block, optimize its phi recipes that use exiting

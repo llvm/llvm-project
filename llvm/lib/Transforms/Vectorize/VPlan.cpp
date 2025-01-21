@@ -1013,38 +1013,38 @@ void VPlan::execute(VPTransformState *State) {
           cast<VPBasicBlock>(Header->getPredecessors()[1]);
       BasicBlock *VectorLatchBB = State->CFG.VPBB2IRBB[LatchVPBB];
 
-    if (isa<VPWidenInductionRecipe>(&R)) {
-      PHINode *Phi = nullptr;
-      if (isa<VPWidenIntOrFpInductionRecipe>(&R)) {
-        Phi = cast<PHINode>(State->get(R.getVPSingleValue()));
-      } else {
-        auto *WidenPhi = cast<VPWidenPointerInductionRecipe>(&R);
-        assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
-               "recipe generating only scalars should have been replaced");
-        auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi));
-        Phi = cast<PHINode>(GEP->getPointerOperand());
+      if (isa<VPWidenInductionRecipe>(&R)) {
+        PHINode *Phi = nullptr;
+        if (isa<VPWidenIntOrFpInductionRecipe>(&R)) {
+          Phi = cast<PHINode>(State->get(R.getVPSingleValue()));
+        } else {
+          auto *WidenPhi = cast<VPWidenPointerInductionRecipe>(&R);
+          assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
+                 "recipe generating only scalars should have been replaced");
+          auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi));
+          Phi = cast<PHINode>(GEP->getPointerOperand());
+        }
+
+        Phi->setIncomingBlock(1, VectorLatchBB);
+
+        // Move the last step to the end of the latch block. This ensures
+        // consistent placement of all induction updates.
+        Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
+        Inc->moveBefore(VectorLatchBB->getTerminator()->getPrevNode());
+
+        // Use the steps for the last part as backedge value for the induction.
+        if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
+          Inc->setOperand(0, State->get(IV->getLastUnrolledPartOperand()));
+        continue;
       }
 
-      Phi->setIncomingBlock(1, VectorLatchBB);
-
-      // Move the last step to the end of the latch block. This ensures
-      // consistent placement of all induction updates.
-      Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
-      Inc->moveBefore(VectorLatchBB->getTerminator()->getPrevNode());
-
-      // Use the steps for the last part as backedge value for the induction.
-      if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
-        Inc->setOperand(0, State->get(IV->getLastUnrolledPartOperand()));
-      continue;
-    }
-
-    auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
-    bool NeedsScalar = isa<VPScalarPHIRecipe>(PhiR) ||
-                       (isa<VPReductionPHIRecipe>(PhiR) &&
-                        cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
-    Value *Phi = State->get(PhiR, NeedsScalar);
-    Value *Val = State->get(PhiR->getBackedgeValue(), NeedsScalar);
-    cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
+      auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
+      bool NeedsScalar = isa<VPScalarPHIRecipe>(PhiR) ||
+                         (isa<VPReductionPHIRecipe>(PhiR) &&
+                          cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
+      Value *Phi = State->get(PhiR, NeedsScalar);
+      Value *Val = State->get(PhiR->getBackedgeValue(), NeedsScalar);
+      cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
     }
   }
 }
@@ -1411,7 +1411,6 @@ void VPlanIngredient::print(raw_ostream &O) const {
 }
 
 #endif
-
 
 bool VPValue::isDefinedOutsideLoopRegions() const {
   auto *DefR = getDefiningRecipe();
