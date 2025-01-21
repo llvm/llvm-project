@@ -317,7 +317,7 @@ define void @scalarize_ptrtoint(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP9]] to ptr
 ; CHECK-NEXT:    store ptr [[TMP11]], ptr %dst, align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP12]], label %middle.block, label %vector.body
 
 entry:
@@ -332,7 +332,7 @@ loop:
   %cast.2 = inttoptr i64 %add to ptr
   store ptr %cast.2, ptr %dst, align 8
   %iv.next = add i64 %iv, 1
-  %ec = icmp eq i64 %iv.next, 0
+  %ec = icmp eq i64 %iv.next, 1024
   br i1 %ec, label %exit, label %loop
 
 exit:

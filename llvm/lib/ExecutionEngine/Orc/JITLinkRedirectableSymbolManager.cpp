@@ -24,12 +24,9 @@ void JITLinkRedirectableSymbolManager::emitRedirectableSymbols(
     std::unique_ptr<MaterializationResponsibility> R, SymbolMap InitialDests) {
 
   auto &ES = ObjLinkingLayer.getExecutionSession();
-  Triple TT = ES.getTargetTriple();
-
   auto G = std::make_unique<jitlink::LinkGraph>(
       ("<indirect stubs graph #" + Twine(++StubGraphIdx) + ">").str(),
-      ES.getSymbolStringPool(), TT, TT.isArch64Bit() ? 8 : 4,
-      TT.isLittleEndian() ? endianness::little : endianness::big,
+      ES.getSymbolStringPool(), ES.getTargetTriple(), SubtargetFeatures(),
       jitlink::getGenericEdgeKindName);
   auto &PointerSection =
       G->createSection(StubPtrSectionName, MemProt::Write | MemProt::Read);

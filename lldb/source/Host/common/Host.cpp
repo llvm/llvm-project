@@ -114,6 +114,10 @@ void LogChannelSystem::Initialize() {
 void LogChannelSystem::Terminate() { g_system_log.Disable(); }
 
 #if !defined(__APPLE__) && !defined(_WIN32)
+extern "C" char **environ;
+
+Environment Host::GetEnvironment() { return Environment(environ); }
+
 static thread_result_t
 MonitorChildProcessThreadFunction(::pid_t pid,
                                   Host::MonitorChildProcessCallback callback);

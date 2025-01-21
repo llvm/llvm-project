@@ -82,7 +82,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasSVE2SHA3 = false;
   bool HasSVE2SM4 = false;
   bool HasSVEB16B16 = false;
-  bool HasSVE2BitPerm = false;
+  bool HasSVEBitPerm = false;
   bool HasMatmulFP64 = false;
   bool HasMatmulFP32 = false;
   bool HasLSE = false;
@@ -304,6 +304,20 @@ public:
 
 private:
   void setDataLayout() override;
+};
+
+void getAppleMachOAArch64Defines(MacroBuilder &Builder, const LangOptions &Opts,
+                                 const llvm::Triple &Triple);
+
+class LLVM_LIBRARY_VISIBILITY AppleMachOAArch64TargetInfo
+    : public AppleMachOTargetInfo<AArch64leTargetInfo> {
+public:
+  AppleMachOAArch64TargetInfo(const llvm::Triple &Triple,
+                              const TargetOptions &Opts);
+
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY DarwinAArch64TargetInfo

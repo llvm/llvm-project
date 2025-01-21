@@ -920,7 +920,7 @@ Chunk *DelayLoadContents::newThunkChunk(DefinedImportData *s,
   }
 }
 
-EdataContents::EdataContents(COFFLinkerContext &ctx) : ctx(ctx) {
+void createEdataChunks(COFFLinkerContext &ctx, std::vector<Chunk *> &chunks) {
   unsigned baseOrdinal = 1 << 16, maxOrdinal = 0;
   for (Export &e : ctx.config.exports) {
     baseOrdinal = std::min(baseOrdinal, (unsigned)e.ordinal);

@@ -4530,32 +4530,88 @@ static bool parseStepSize(Parser &P, SemaOpenMP::OpenMPVarListDataTy &Data,
 }
 
 /// Parse 'allocate' clause modifiers.
-///   If allocator-modifier exists, return an expression for it and set
-///   Data field noting modifier was specified.
-///
+///   If allocator-modifier exists, return an expression for it. For both
+///   allocator and align modifiers, set Data fields as appropriate.
 static ExprResult
 parseOpenMPAllocateClauseModifiers(Parser &P, OpenMPClauseKind Kind,
                                    SemaOpenMP::OpenMPVarListDataTy &Data) {
   const Token &Tok = P.getCurToken();
   Preprocessor &PP = P.getPreprocessor();
   ExprResult Tail;
-  auto Modifier = static_cast<OpenMPAllocateClauseModifier>(
+  ExprResult Val;
+  SourceLocation RLoc;
+  bool AllocatorSeen = false;
+  bool AlignSeen = false;
+  SourceLocation CurrentModifierLoc = Tok.getLocation();
+  auto CurrentModifier = static_cast<OpenMPAllocateClauseModifier>(
       getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok), P.getLangOpts()));
-  if (Modifier == OMPC_ALLOCATE_allocator) {
-    Data.AllocClauseModifier = Modifier;
+
+  // Modifiers did not exist before 5.1
+  if (P.getLangOpts().OpenMP < 51)
+    return P.ParseAssignmentExpression();
+
+  // An allocator-simple-modifier is exclusive and must appear alone. See
+  // OpenMP6.0 spec, pg. 313, L1 on Modifiers, as well as Table 5.1, pg. 50,
+  // description of "exclusive" property. If we don't recognized an explicit
+  // simple-/complex- modifier, assume we're looking at expression
+  // representing allocator and consider ourselves done.
+  if (CurrentModifier == OMPC_ALLOCATE_unknown)
+    return P.ParseAssignmentExpression();
+
+  do {
     P.ConsumeToken();
-    BalancedDelimiterTracker AllocateT(P, tok::l_paren,
-                                       tok::annot_pragma_openmp_end);
     if (Tok.is(tok::l_paren)) {
-      AllocateT.consumeOpen();
-      Tail = P.ParseAssignmentExpression();
-      AllocateT.consumeClose();
+      switch (CurrentModifier) {
+      case OMPC_ALLOCATE_allocator: {
+        if (AllocatorSeen) {
+          P.Diag(Tok, diag::err_omp_duplicate_modifier)
+              << getOpenMPSimpleClauseTypeName(OMPC_allocate, CurrentModifier)
+              << getOpenMPClauseName(Kind);
+        } else {
+          Data.AllocClauseModifiers.push_back(CurrentModifier);
+          Data.AllocClauseModifiersLoc.push_back(CurrentModifierLoc);
+        }
+        BalancedDelimiterTracker AllocateT(P, tok::l_paren,
+                                           tok::annot_pragma_openmp_end);
+        AllocateT.consumeOpen();
+        Tail = P.ParseAssignmentExpression();
+        AllocateT.consumeClose();
+        AllocatorSeen = true;
+        break;
+      }
+      case OMPC_ALLOCATE_align: {
+        if (AlignSeen) {
+          P.Diag(Tok, diag::err_omp_duplicate_modifier)
+              << getOpenMPSimpleClauseTypeName(OMPC_allocate, CurrentModifier)
+              << getOpenMPClauseName(Kind);
+        } else {
+          Data.AllocClauseModifiers.push_back(CurrentModifier);
+          Data.AllocClauseModifiersLoc.push_back(CurrentModifierLoc);
+        }
+        Val = P.ParseOpenMPParensExpr(getOpenMPClauseName(Kind), RLoc);
+        if (Val.isUsable())
+          Data.AllocateAlignment = Val.get();
+        AlignSeen = true;
+        break;
+      }
+      default:
+        llvm_unreachable("Unexpected allocate modifier");
+      }
     } else {
       P.Diag(Tok, diag::err_expected) << tok::l_paren;
     }
-  } else {
-    Tail = P.ParseAssignmentExpression();
-  }
+    if (Tok.isNot(tok::comma))
+      break;
+    P.ConsumeToken();
+    CurrentModifierLoc = Tok.getLocation();
+    CurrentModifier = static_cast<OpenMPAllocateClauseModifier>(
+        getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok), P.getLangOpts()));
+    // A modifier followed by a comma implies another modifier.
+    if (CurrentModifier == OMPC_ALLOCATE_unknown) {
+      P.Diag(Tok, diag::err_omp_expected_modifier) << getOpenMPClauseName(Kind);
+      break;
+    }
+  } while (!AllocatorSeen || !AlignSeen);
   return Tail;
 }
 
@@ -4832,7 +4888,8 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
   } else if (Kind == OMPC_allocate ||
              (Kind == OMPC_affinity && Tok.is(tok::identifier) &&
               PP.getSpelling(Tok) == "iterator")) {
-    // Handle optional allocator expression followed by colon delimiter.
+    // Handle optional allocator and align modifiers followed by colon
+    // delimiter.
     ColonProtectionRAIIObject ColonRAII(*this);
     TentativeParsingAction TPA(*this);
     // OpenMP 5.0, 2.10.1, task Construct.
@@ -4849,19 +4906,18 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     Tail = Actions.CorrectDelayedTyposInExpr(Tail);
     Tail = Actions.ActOnFinishFullExpr(Tail.get(), T.getOpenLocation(),
                                        /*DiscardedValue=*/false);
-    if (Tail.isUsable()) {
+    if (Tail.isUsable() || Data.AllocateAlignment) {
       if (Tok.is(tok::colon)) {
-        Data.DepModOrTailExpr = Tail.get();
+        Data.DepModOrTailExpr = Tail.isUsable() ? Tail.get() : nullptr;
         Data.ColonLoc = ConsumeToken();
         TPA.Commit();
       } else {
         // Colon not found, parse only list of variables.
         TPA.Revert();
-        if (Kind == OMPC_allocate &&
-            Data.AllocClauseModifier == OMPC_ALLOCATE_allocator) {
+        if (Kind == OMPC_allocate && Data.AllocClauseModifiers.size()) {
           SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end,
                     StopBeforeMatch);
-          Diag(Tok, diag::err_modifier_expected_colon) << "allocator";
+          Diag(Tok, diag::err_modifier_expected_colon) << "allocate clause";
         }
       }
     } else {

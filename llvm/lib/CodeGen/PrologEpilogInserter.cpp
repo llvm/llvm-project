@@ -1240,9 +1240,9 @@ void PEI::insertZeroCallUsedRegs(MachineFunction &MF) {
             continue;
 
           MCRegister Reg = MO.getReg();
-          if (AllocatableSet[Reg] && !MO.isImplicit() &&
+          if (AllocatableSet[Reg.id()] && !MO.isImplicit() &&
               (MO.isDef() || MO.isUse()))
-            UsedRegs.set(Reg);
+            UsedRegs.set(Reg.id());
         }
       }
 
@@ -1262,20 +1262,20 @@ void PEI::insertZeroCallUsedRegs(MachineFunction &MF) {
       continue;
 
     // Want only used registers.
-    if (OnlyUsed && !UsedRegs[Reg])
+    if (OnlyUsed && !UsedRegs[Reg.id()])
       continue;
 
     // Want only registers used for arguments.
     if (OnlyArg) {
       if (OnlyUsed) {
-        if (!LiveIns[Reg])
+        if (!LiveIns[Reg.id()])
           continue;
       } else if (!TRI.isArgumentRegister(MF, Reg)) {
         continue;
       }
     }
 
-    RegsToZero.set(Reg);
+    RegsToZero.set(Reg.id());
   }
 
   // Don't clear registers that are live when leaving the function.
@@ -1328,7 +1328,7 @@ void PEI::insertZeroCallUsedRegs(MachineFunction &MF) {
   for (const MCPhysReg *CSRegs = TRI.getCalleeSavedRegs(&MF);
        MCPhysReg CSReg = *CSRegs; ++CSRegs)
     for (MCRegister Reg : TRI.sub_and_superregs_inclusive(CSReg))
-      RegsToZero.reset(Reg);
+      RegsToZero.reset(Reg.id());
 
   const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
   for (MachineBasicBlock &MBB : MF)

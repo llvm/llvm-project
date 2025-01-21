@@ -1784,11 +1784,12 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
   for (auto &MO : MI.all_defs()) {
     if (!MO.getReg().isVirtual())
       continue;
-    if (!SeenDbgUsers.count(MO.getReg()))
+    auto It = SeenDbgUsers.find(MO.getReg());
+    if (It == SeenDbgUsers.end())
       continue;
 
     // Sink any users that don't pass any other DBG_VALUEs for this variable.
-    auto &Users = SeenDbgUsers[MO.getReg()];
+    auto &Users = It->second;
     for (auto &User : Users) {
       MachineInstr *DbgMI = User.getPointer();
       if (User.getInt()) {

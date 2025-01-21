@@ -15,9 +15,8 @@
 using namespace llvm;
 using namespace lld::macho;
 
-DenseMap<const InputSection *, size_t> lld::macho::runBalancedPartitioning(
-    size_t &highestAvailablePriority, StringRef profilePath,
-    bool forFunctionCompression, bool forDataCompression,
+DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
+    StringRef profilePath, bool forFunctionCompression, bool forDataCompression,
     bool compressionSortStartupFunctions, bool verbose) {
 
   SmallVector<std::unique_ptr<BPSectionBase>> sections;
@@ -34,10 +33,10 @@ DenseMap<const InputSection *, size_t> lld::macho::runBalancedPartitioning(
   }
 
   auto reorderedSections = BPSectionBase::reorderSectionsByBalancedPartitioning(
-      highestAvailablePriority, profilePath, forFunctionCompression,
-      forDataCompression, compressionSortStartupFunctions, verbose, sections);
+      profilePath, forFunctionCompression, forDataCompression,
+      compressionSortStartupFunctions, verbose, sections);
 
-  DenseMap<const InputSection *, size_t> result;
+  DenseMap<const InputSection *, int> result;
   for (const auto &[sec, priority] : reorderedSections) {
     if (auto *machoSection = dyn_cast<BPSectionMacho>(sec)) {
       result.try_emplace(

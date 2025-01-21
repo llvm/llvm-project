@@ -321,7 +321,7 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
     if (Ptr.isDynamic()) {
       S.FFDiag(Src, diag::note_constexpr_access_deleted_object) << AK;
-    } else {
+    } else if (!S.checkingPotentialConstantExpression()) {
       bool IsTemp = Ptr.isTemporary();
       S.FFDiag(Src, diag::note_constexpr_lifetime_ended, 1) << AK << !IsTemp;
 
@@ -416,9 +416,11 @@ bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                 AccessKinds AK) {
   if (!Ptr.isOnePastEnd())
     return true;
-  const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_access_past_end)
-      << AK << S.Current->getRange(OpPC);
+  if (S.getLangOpts().CPlusPlus) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_access_past_end)
+        << AK << S.Current->getRange(OpPC);
+  }
   return false;
 }
 
@@ -538,7 +540,7 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return true;
 
   if (const auto *VD = Ptr.getDeclDesc()->asVarDecl();
-      VD && VD->hasGlobalStorage()) {
+      VD && (VD->isConstexpr() || VD->hasGlobalStorage())) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     if (VD->getAnyInitializer()) {
       S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;

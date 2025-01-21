@@ -12,6 +12,13 @@ target triple = "dxil-pc-shadermodel6.7-library"
 ; CHECK-NEXT: ;
 ; CHECK-NEXT: ; Shader Flags for Module Functions
 
+;CHECK: ; Function top_level : 0x00000044
+define double @top_level() #0 {
+  %r = call double @test_uitofp_i64(i64 5)
+  ret double %r
+}
+
+
 ; CHECK: ; Function test_fdiv_double : 0x00000044
 define double @test_fdiv_double(double %a, double %b) #0 {
   %res = fdiv double %a, %b

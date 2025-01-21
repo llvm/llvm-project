@@ -323,43 +323,59 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
                                   StringMap<bool> &Features) {
   // XXX - What does the member GPU mean if device name string passed here?
   if (T.isSPIRV() && T.getOS() == Triple::OSType::AMDHSA) {
-    // AMDGCN SPIRV must support the union of all AMDGCN features.
-    Features["atomic-ds-pk-add-16-insts"] = true;
-    Features["atomic-flat-pk-add-16-insts"] = true;
+    // AMDGCN SPIRV must support the union of all AMDGCN features. This list
+    // should be kept in sorted order and updated whenever new features are
+    // added.
+    Features["16-bit-insts"] = true;
+    Features["ashr-pk-insts"] = true;
+    Features["atomic-buffer-pk-add-bf16-inst"] = true;
     Features["atomic-buffer-global-pk-add-f16-insts"] = true;
-    Features["atomic-global-pk-add-bf16-inst"] = true;
+    Features["atomic-ds-pk-add-16-insts"] = true;
     Features["atomic-fadd-rtn-insts"] = true;
+    Features["atomic-flat-pk-add-16-insts"] = true;
+    Features["atomic-global-pk-add-bf16-inst"] = true;
+    Features["bf8-cvt-scale-insts"] = true;
+    Features["bitop3-insts"] = true;
     Features["ci-insts"] = true;
+    Features["dl-insts"] = true;
     Features["dot1-insts"] = true;
     Features["dot2-insts"] = true;
     Features["dot3-insts"] = true;
     Features["dot4-insts"] = true;
     Features["dot5-insts"] = true;
+    Features["dot6-insts"] = true;
     Features["dot7-insts"] = true;
     Features["dot8-insts"] = true;
     Features["dot9-insts"] = true;
     Features["dot10-insts"] = true;
     Features["dot11-insts"] = true;
-    Features["dl-insts"] = true;
-    Features["16-bit-insts"] = true;
+    Features["dot12-insts"] = true;
+    Features["dot13-insts"] = true;
     Features["dpp"] = true;
+    Features["f16bf16-to-fp6bf6-cvt-scale-insts"] = true;
+    Features["f32-to-f16bf16-cvt-sr-insts"] = true;
+    Features["fp4-cvt-scale-insts"] = true;
+    Features["fp6bf6-cvt-scale-insts"] = true;
+    Features["fp8-insts"] = true;
+    Features["fp8-conversion-insts"] = true;
+    Features["fp8-cvt-scale-insts"] = true;
     Features["gfx8-insts"] = true;
     Features["gfx9-insts"] = true;
     Features["gfx90a-insts"] = true;
     Features["gfx940-insts"] = true;
+    Features["gfx950-insts"] = true;
     Features["gfx10-insts"] = true;
     Features["gfx10-3-insts"] = true;
     Features["gfx11-insts"] = true;
     Features["gfx12-insts"] = true;
+    Features["gws"] = true;
     Features["image-insts"] = true;
-    Features["fp8-conversion-insts"] = true;
     Features["s-memrealtime"] = true;
     Features["s-memtime-inst"] = true;
-    Features["gws"] = true;
-    Features["fp8-insts"] = true;
-    Features["fp8-conversion-insts"] = true;
-    Features["atomic-ds-pk-add-16-insts"] = true;
     Features["mai-insts"] = true;
+    Features["permlane16-swap"] = true;
+    Features["permlane32-swap"] = true;
+    Features["prng-inst"] = true;
     Features["wavefrontsize32"] = true;
     Features["wavefrontsize64"] = true;
   } else if (T.isAMDGCN()) {

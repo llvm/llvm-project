@@ -562,6 +562,11 @@ define void @initializes(ptr initializes((-4, 0), (4, 8)) %a) {
   ret void
 }
 
+; CHECK: define void @captures(ptr captures(address) %p)
+define void @captures(ptr captures(address) %p) {
+  ret void
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { memory(none) }

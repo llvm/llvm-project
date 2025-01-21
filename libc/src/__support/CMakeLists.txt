@@ -12,6 +12,7 @@ add_header_library(
     libc.src.__support.CPP.optional
     libc.src.__support.CPP.span
     libc.src.__support.CPP.type_traits
+    libc.src.__support.math_extras
 )
 
 add_object_library(

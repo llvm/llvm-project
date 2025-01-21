@@ -331,8 +331,14 @@ public:
   }
 
   Expr<SubscriptInteger> lower() const;
+  const Expr<SubscriptInteger> *GetLower() const {
+    return lower_.has_value() ? &lower_->value() : nullptr;
+  }
   Substring &set_lower(Expr<SubscriptInteger> &&);
   std::optional<Expr<SubscriptInteger>> upper() const;
+  const Expr<SubscriptInteger> *GetUpper() const {
+    return upper_.has_value() ? &upper_->value() : nullptr;
+  }
   Substring &set_upper(Expr<SubscriptInteger> &&);
   const Parent &parent() const { return parent_; }
   Parent &parent() { return parent_; }

@@ -658,7 +658,7 @@ struct BuiltinDumpStructGenerator {
         Format += ": %zu ";
         QualType SizeT = S.Context.getSizeType();
         llvm::APInt BitWidth(S.Context.getIntWidth(SizeT),
-                             FD->getBitWidthValue(S.Context));
+                             FD->getBitWidthValue());
         Args.push_back(IntegerLiteral::Create(S.Context, BitWidth, SizeT, Loc));
       }
 
@@ -8454,26 +8454,43 @@ static bool IsInfOrNanFunction(StringRef calleeName, MathCheck Check) {
   llvm_unreachable("unknown MathCheck");
 }
 
+static bool IsInfinityFunction(const FunctionDecl *FDecl) {
+  if (FDecl->getName() != "infinity")
+    return false;
+
+  if (const CXXMethodDecl *MDecl = dyn_cast<CXXMethodDecl>(FDecl)) {
+    const CXXRecordDecl *RDecl = MDecl->getParent();
+    if (RDecl->getName() != "numeric_limits")
+      return false;
+
+    if (const NamespaceDecl *NSDecl =
+            dyn_cast<NamespaceDecl>(RDecl->getDeclContext()))
+      return NSDecl->isStdNamespace();
+  }
+
+  return false;
+}
+
 void Sema::CheckInfNaNFunction(const CallExpr *Call,
                                const FunctionDecl *FDecl) {
+  if (!FDecl->getIdentifier())
+    return;
+
   FPOptions FPO = Call->getFPFeaturesInEffect(getLangOpts());
-  bool HasIdentifier = FDecl->getIdentifier() != nullptr;
-  bool IsNaNOrIsUnordered =
-      IsStdFunction(FDecl, "isnan") || IsStdFunction(FDecl, "isunordered");
-  bool IsSpecialNaN =
-      HasIdentifier && IsInfOrNanFunction(FDecl->getName(), MathCheck::NaN);
-  if ((IsNaNOrIsUnordered || IsSpecialNaN) && FPO.getNoHonorNaNs()) {
+  if (FPO.getNoHonorNaNs() &&
+      (IsStdFunction(FDecl, "isnan") || IsStdFunction(FDecl, "isunordered") ||
+       IsInfOrNanFunction(FDecl->getName(), MathCheck::NaN))) {
     Diag(Call->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
         << 1 << 0 << Call->getSourceRange();
-  } else {
-    bool IsInfOrIsFinite =
-        IsStdFunction(FDecl, "isinf") || IsStdFunction(FDecl, "isfinite");
-    bool IsInfinityOrIsSpecialInf =
-        HasIdentifier && ((FDecl->getName() == "infinity") ||
-                          IsInfOrNanFunction(FDecl->getName(), MathCheck::Inf));
-    if ((IsInfOrIsFinite || IsInfinityOrIsSpecialInf) && FPO.getNoHonorInfs())
-      Diag(Call->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
-          << 0 << 0 << Call->getSourceRange();
+    return;
+  }
+
+  if (FPO.getNoHonorInfs() &&
+      (IsStdFunction(FDecl, "isinf") || IsStdFunction(FDecl, "isfinite") ||
+       IsInfinityFunction(FDecl) ||
+       IsInfOrNanFunction(FDecl->getName(), MathCheck::Inf))) {
+    Diag(Call->getBeginLoc(), diag::warn_fp_nan_inf_when_disabled)
+        << 0 << 0 << Call->getSourceRange();
   }
 }
 
@@ -10027,7 +10044,7 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
                            Approximate);
 
   if (const auto *BitField = E->getSourceBitField())
-    return IntRange(BitField->getBitWidthValue(C),
+    return IntRange(BitField->getBitWidthValue(),
                     BitField->getType()->isUnsignedIntegerOrEnumerationType());
 
   if (GetExprType(E)->isVoidType())
@@ -10580,7 +10597,7 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
     return false;
 
   Expr *OriginalInit = Init->IgnoreParenImpCasts();
-  unsigned FieldWidth = Bitfield->getBitWidthValue(S.Context);
+  unsigned FieldWidth = Bitfield->getBitWidthValue();
 
   Expr::EvalResult Result;
   if (!OriginalInit->EvaluateAsInt(Result, S.Context,
@@ -14044,8 +14061,8 @@ static bool isLayoutCompatible(const ASTContext &C, const FieldDecl *Field1,
 
   if (Field1->isBitField()) {
     // Make sure that the bit-fields are the same length.
-    unsigned Bits1 = Field1->getBitWidthValue(C);
-    unsigned Bits2 = Field2->getBitWidthValue(C);
+    unsigned Bits1 = Field1->getBitWidthValue();
+    unsigned Bits2 = Field2->getBitWidthValue();
 
     if (Bits1 != Bits2)
       return false;

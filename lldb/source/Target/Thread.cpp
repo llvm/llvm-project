@@ -617,7 +617,7 @@ void Thread::WillStop() {
   current_plan->WillStop();
 }
 
-void Thread::SetupForResume() {
+bool Thread::SetupForResume() {
   if (GetResumeState() != eStateSuspended) {
     // First check whether this thread is going to "actually" resume at all.
     // For instance, if we're stepping from one level to the next of an
@@ -625,7 +625,7 @@ void Thread::SetupForResume() {
     // without actually running this thread.  In that case, for this thread we
     // shouldn't push a step over breakpoint plan or do that work.
     if (GetCurrentPlan()->IsVirtualStep())
-      return;
+      return false;
 
     // If we're at a breakpoint push the step-over breakpoint plan.  Do this
     // before telling the current plan it will resume, since we might change
@@ -663,11 +663,13 @@ void Thread::SetupForResume() {
               step_bp_plan->SetAutoContinue(true);
             }
             QueueThreadPlan(step_bp_plan_sp, false);
+            return true;
           }
         }
       }
     }
   }
+  return false;
 }
 
 bool Thread::ShouldResume(StateType resume_state) {

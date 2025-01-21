@@ -136,7 +136,7 @@ awareness of. For such changes, the following should be done:
 
 .. warning::
 
-  Phabricator is deprecated is available in read-only mode,
+  Phabricator is deprecated and is available in read-only mode,
   for new code contributions use :ref:`GitHub Pull Requests <github-reviews>`.
   This section contains old information that needs to be updated.
 

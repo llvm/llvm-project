@@ -16,11 +16,13 @@ add_flang_library(FIRTestAnalysis
   FIRSupport
   FIRTransforms
   FIRAnalysis
+  MLIRTestAnalysis
+
+  MLIR_LIBS
   ${dialect_libs}
   MLIRFuncDialect
   MLIRLLVMDialect
   MLIRAnalysis
-  MLIRTestAnalysis
   )
 
 target_include_directories(FIRTestAnalysis

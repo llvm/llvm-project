@@ -101,7 +101,7 @@ func.func @_QMmPfoo.fir(%arg0: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<
   %17 = fir.convert %0 : (!fir.ref<!fir.box<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>) -> !fir.ref<!fir.box<none>>
   %18 = fir.convert %15 : (!fir.box<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.box<none>
   %19 = fir.convert %16 : (!fir.ref<!fir.char<1,9>>) -> !fir.ref<i8>
-  %20 = fir.call @_FortranAAssign(%17, %18, %19, %c14_i32) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+  fir.call @_FortranAAssign(%17, %18, %19, %c14_i32) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
   %21 = fir.field_index next, !fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>
   %22 = fir.coordinate_of %5, %21 {test.ptr="xnext2.fir"}: (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
   %23 = fir.load %22 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>

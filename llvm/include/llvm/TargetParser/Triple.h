@@ -366,14 +366,26 @@ public:
   /// @name Normalization
   /// @{
 
+  /// Canonical form
+  enum class CanonicalForm {
+    ANY = 0,
+    THREE_IDENT = 3, // ARCHITECTURE-VENDOR-OPERATING_SYSTEM
+    FOUR_IDENT = 4,  // ARCHITECTURE-VENDOR-OPERATING_SYSTEM-ENVIRONMENT
+    FIVE_IDENT = 5,  // ARCHITECTURE-VENDOR-OPERATING_SYSTEM-ENVIRONMENT-FORMAT
+  };
+
   /// Turn an arbitrary machine specification into the canonical triple form (or
   /// something sensible that the Triple class understands if nothing better can
   /// reasonably be done).  In particular, it handles the common case in which
-  /// otherwise valid components are in the wrong order.
-  static std::string normalize(StringRef Str);
+  /// otherwise valid components are in the wrong order. \p Form is used to
+  /// specify the output canonical form.
+  static std::string normalize(StringRef Str,
+                               CanonicalForm Form = CanonicalForm::ANY);
 
   /// Return the normalized form of this triple's string.
-  std::string normalize() const { return normalize(Data); }
+  std::string normalize(CanonicalForm Form = CanonicalForm::ANY) const {
+    return normalize(Data, Form);
+  }
 
   /// @}
   /// @name Typed Component Access

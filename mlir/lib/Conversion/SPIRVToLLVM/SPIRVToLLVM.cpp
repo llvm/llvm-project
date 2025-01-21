@@ -1253,8 +1253,8 @@ public:
     Operation *symbolTable =
         op->template getParentWithTrait<OpTrait::SymbolTable>();
 
-    LLVM::LLVMFuncOp func = lookupOrCreateSPIRVFn(
-        symbolTable, funcName, paramTypes, retTy, !NonUniform);
+    LLVM::LLVMFuncOp func =
+        lookupOrCreateSPIRVFn(symbolTable, funcName, paramTypes, retTy);
 
     Location loc = op.getLoc();
     Value scope = rewriter.create<LLVM::ConstantOp>(

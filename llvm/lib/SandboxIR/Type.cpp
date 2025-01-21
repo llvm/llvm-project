@@ -46,8 +46,7 @@ void Type::dump() {
 #endif
 
 PointerType *PointerType::get(Type *ElementType, unsigned AddressSpace) {
-  return cast<PointerType>(ElementType->getContext().getType(
-      llvm::PointerType::get(ElementType->LLVMTy, AddressSpace)));
+  return get(ElementType->getContext(), AddressSpace);
 }
 
 PointerType *PointerType::get(Context &Ctx, unsigned AddressSpace) {

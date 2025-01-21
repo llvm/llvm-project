@@ -81,9 +81,9 @@ struct RematGraph {
           !Checker.isDefinitionAcrossSuspend(*D, FirstUse))
         continue;
 
-      if (Remats.count(D)) {
+      if (auto It = Remats.find(D); It != Remats.end()) {
         // Already have this in the graph
-        N->Operands.push_back(Remats[D].get());
+        N->Operands.push_back(It->second.get());
         continue;
       }
 

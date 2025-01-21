@@ -960,7 +960,7 @@ void Liveness::resetKills(MachineBasicBlock *B) {
         continue;
       bool IsLive = false;
       for (MCRegAliasIterator AR(R, &TRI, true); AR.isValid(); ++AR) {
-        if (!Live[*AR])
+        if (!Live[(*AR).id()])
           continue;
         IsLive = true;
         break;

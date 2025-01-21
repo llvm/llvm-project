@@ -269,10 +269,8 @@ struct IntrinsicLibrary {
   mlir::Value genIeeeCopySign(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genIeeeGetFlag(llvm::ArrayRef<fir::ExtendedValue>);
   void genIeeeGetHaltingMode(llvm::ArrayRef<fir::ExtendedValue>);
-  template <bool isGet>
-  void genIeeeGetOrSetModes(llvm::ArrayRef<fir::ExtendedValue>);
-  template <bool isGet>
-  void genIeeeGetOrSetStatus(llvm::ArrayRef<fir::ExtendedValue>);
+  template <bool isGet, bool isModes>
+  void genIeeeGetOrSetModesOrStatus(llvm::ArrayRef<fir::ExtendedValue>);
   void genIeeeGetRoundingMode(llvm::ArrayRef<fir::ExtendedValue>);
   void genIeeeGetUnderflowMode(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIeeeInt(mlir::Type, llvm::ArrayRef<mlir::Value>);

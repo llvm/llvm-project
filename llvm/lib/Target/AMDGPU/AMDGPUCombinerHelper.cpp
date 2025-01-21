@@ -197,7 +197,7 @@ static unsigned inverseMinMax(unsigned Opc) {
 }
 
 bool AMDGPUCombinerHelper::matchFoldableFneg(MachineInstr &MI,
-                                             MachineInstr *&MatchInfo) {
+                                             MachineInstr *&MatchInfo) const {
   Register Src = MI.getOperand(1).getReg();
   MatchInfo = MRI.getVRegDef(Src);
 
@@ -266,7 +266,7 @@ bool AMDGPUCombinerHelper::matchFoldableFneg(MachineInstr &MI,
 }
 
 void AMDGPUCombinerHelper::applyFoldableFneg(MachineInstr &MI,
-                                             MachineInstr *&MatchInfo) {
+                                             MachineInstr *&MatchInfo) const {
   // Transform:
   // %A = inst %Op1, ...
   // %B = fneg %A
@@ -425,7 +425,7 @@ static bool isFPExtFromF16OrConst(const MachineRegisterInfo &MRI,
 bool AMDGPUCombinerHelper::matchExpandPromotedF16FMed3(MachineInstr &MI,
                                                        Register Src0,
                                                        Register Src1,
-                                                       Register Src2) {
+                                                       Register Src2) const {
   assert(MI.getOpcode() == TargetOpcode::G_FPTRUNC);
   Register SrcReg = MI.getOperand(1).getReg();
   if (!MRI.hasOneNonDBGUse(SrcReg) || MRI.getType(SrcReg) != LLT::scalar(32))
@@ -438,7 +438,7 @@ bool AMDGPUCombinerHelper::matchExpandPromotedF16FMed3(MachineInstr &MI,
 void AMDGPUCombinerHelper::applyExpandPromotedF16FMed3(MachineInstr &MI,
                                                        Register Src0,
                                                        Register Src1,
-                                                       Register Src2) {
+                                                       Register Src2) const {
   // We expect fptrunc (fpext x) to fold out, and to constant fold any constant
   // sources.
   Src0 = Builder.buildFPTrunc(LLT::scalar(16), Src0).getReg(0);
@@ -455,7 +455,7 @@ void AMDGPUCombinerHelper::applyExpandPromotedF16FMed3(MachineInstr &MI,
 
 bool AMDGPUCombinerHelper::matchCombineFmulWithSelectToFldexp(
     MachineInstr &MI, MachineInstr &Sel,
-    std::function<void(MachineIRBuilder &)> &MatchInfo) {
+    std::function<void(MachineIRBuilder &)> &MatchInfo) const {
   assert(MI.getOpcode() == TargetOpcode::G_FMUL);
   assert(Sel.getOpcode() == TargetOpcode::G_SELECT);
   assert(MI.getOperand(2).getReg() == Sel.getOperand(0).getReg());

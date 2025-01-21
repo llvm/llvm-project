@@ -59,7 +59,7 @@ public:
 TEST_F(HLFIRToolsTest, testScalarRoundTrip) {
   auto &builder = getBuilder();
   mlir::Location loc = getLoc();
-  mlir::Type f32Type = mlir::FloatType::getF32(&context);
+  mlir::Type f32Type = mlir::Float32Type::get(&context);
   mlir::Type scalarf32Type = builder.getRefType(f32Type);
   mlir::Value scalarf32Addr = builder.create<fir::UndefOp>(loc, scalarf32Type);
   fir::ExtendedValue scalarf32{scalarf32Addr};
@@ -82,7 +82,7 @@ TEST_F(HLFIRToolsTest, testArrayRoundTrip) {
   llvm::SmallVector<mlir::Value> lbounds{
       createConstant(-1), createConstant(-2)};
 
-  mlir::Type f32Type = mlir::FloatType::getF32(&context);
+  mlir::Type f32Type = mlir::Float32Type::get(&context);
   mlir::Type seqf32Type = builder.getVarLenSeqTy(f32Type, 2);
   mlir::Type arrayf32Type = builder.getRefType(seqf32Type);
   mlir::Value arrayf32Addr = builder.create<fir::UndefOp>(loc, arrayf32Type);

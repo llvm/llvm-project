@@ -167,6 +167,7 @@ public:
           cs.emplace_back(t.first, t.second);
       }
       rec.finalize(ps, cs);
+      rec.pack(ty.isPacked());
       return rec;
     });
     addConversion([&](TypeDescType ty) {

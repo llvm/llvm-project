@@ -114,9 +114,9 @@ define i64 @parity_64(i64 %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov d0, x0
 ; CHECK-NEXT:    cnt v0.8b, v0.8b
-; CHECK-NEXT:    uaddlv h0, v0.8b
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    addv b0, v0.8b
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    and x0, x8, #0x1
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-CSSC-LABEL: parity_64:
@@ -136,9 +136,9 @@ define i128 @parity_128(i128 %x) {
 ; CHECK-NEXT:    mov v0.d[1], x1
 ; CHECK-NEXT:    mov x1, xzr
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
-; CHECK-NEXT:    uaddlv h0, v0.16b
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    addv b0, v0.16b
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    and x0, x8, #0x1
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-CSSC-LABEL: parity_128:
@@ -158,8 +158,8 @@ define i32 @parity_64_trunc(i64 %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov d0, x0
 ; CHECK-NEXT:    cnt v0.8b, v0.8b
-; CHECK-NEXT:    uaddlv h0, v0.8b
-; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    addv b0, v0.8b
+; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
 ;

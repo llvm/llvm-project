@@ -196,6 +196,7 @@
 // CHECK-NEXT:     xqcicm               0.2       'Xqcicm' (Qualcomm uC Conditional Move Extension)
 // CHECK-NEXT:     xqcics               0.2       'Xqcics' (Qualcomm uC Conditional Select Extension)
 // CHECK-NEXT:     xqcicsr              0.2       'Xqcicsr' (Qualcomm uC CSR Extension)
+// CHECK-NEXT:     xqciint              0.2       'Xqciint' (Qualcomm uC Interrupts Extension)
 // CHECK-NEXT:     xqcilsm              0.2       'Xqcilsm' (Qualcomm uC Load Store Multiple Extension)
 // CHECK-NEXT:     xqcisls              0.2       'Xqcisls' (Qualcomm uC Scaled Load Store Extension)
 // CHECK-EMPTY:

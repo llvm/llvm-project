@@ -99,7 +99,7 @@ set(bc_flags -c -foffload-lto -std=c++17 -fvisibility=hidden
               ${clang_opt_flags} --offload-device-only
              -nocudalib -nogpulib -nogpuinc -nostdlibinc
              -fopenmp -fopenmp-cuda-mode
-             -Wno-unknown-cuda-version
+             -Wno-unknown-cuda-version -Wno-openmp-target
              -DOMPTARGET_DEVICE_RUNTIME
              -I${include_directory}
              -I${devicertl_base_directory}/../include

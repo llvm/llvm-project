@@ -27,7 +27,7 @@ struct ForcedMaxvalReal10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(MaxvalReal10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF80(ctx);
+      auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -43,7 +43,7 @@ struct ForcedMaxvalReal16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(MaxvalReal16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF128(ctx);
+      auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -94,7 +94,7 @@ struct ForcedMinvalReal10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(MinvalReal10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF80(ctx);
+      auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -110,7 +110,7 @@ struct ForcedMinvalReal16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(MinvalReal16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF128(ctx);
+      auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -173,7 +173,7 @@ struct ForcedNorm2Real10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(Norm2_10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF80(ctx);
+      auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -188,7 +188,7 @@ struct ForcedNorm2Real16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(Norm2_16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF128(ctx);
+      auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -209,7 +209,7 @@ struct ForcedNorm2DimReal16 {
       auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
       return mlir::FunctionType::get(
           ctx, {fir::ReferenceType::get(boxTy), boxTy, intTy, strTy, intTy},
-          mlir::NoneType::get(ctx));
+          {});
     };
   }
 };
@@ -219,7 +219,7 @@ struct ForcedProductReal10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ProductReal10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF80(ctx);
+      auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -235,7 +235,7 @@ struct ForcedProductReal16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ProductReal16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF128(ctx);
+      auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -287,7 +287,7 @@ struct ForcedProductComplex10 {
       ExpandAndQuoteKey(RTNAME(CppProductComplex10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::ComplexType::get(mlir::FloatType::getF80(ctx));
+      auto ty = mlir::ComplexType::get(mlir::Float80Type::get(ctx));
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -305,7 +305,7 @@ struct ForcedProductComplex16 {
       ExpandAndQuoteKey(RTNAME(CppProductComplex16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::ComplexType::get(mlir::FloatType::getF128(ctx));
+      auto ty = mlir::ComplexType::get(mlir::Float128Type::get(ctx));
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -323,7 +323,7 @@ struct ForcedDotProductReal10 {
       ExpandAndQuoteKey(RTNAME(DotProductReal10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF80(ctx);
+      auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -339,7 +339,7 @@ struct ForcedDotProductReal16 {
       ExpandAndQuoteKey(RTNAME(DotProductReal16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF128(ctx);
+      auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -355,7 +355,7 @@ struct ForcedDotProductComplex10 {
       ExpandAndQuoteKey(RTNAME(CppDotProductComplex10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::ComplexType::get(mlir::FloatType::getF80(ctx));
+      auto ty = mlir::ComplexType::get(mlir::Float80Type::get(ctx));
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -373,7 +373,7 @@ struct ForcedDotProductComplex16 {
       ExpandAndQuoteKey(RTNAME(CppDotProductComplex16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::ComplexType::get(mlir::FloatType::getF128(ctx));
+      auto ty = mlir::ComplexType::get(mlir::Float128Type::get(ctx));
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -423,7 +423,7 @@ struct ForcedSumReal10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(SumReal10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF80(ctx);
+      auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -439,7 +439,7 @@ struct ForcedSumReal16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(SumReal16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF128(ctx);
+      auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -489,7 +489,7 @@ struct ForcedSumComplex10 {
       ExpandAndQuoteKey(RTNAME(CppSumComplex10));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::ComplexType::get(mlir::FloatType::getF80(ctx));
+      auto ty = mlir::ComplexType::get(mlir::Float80Type::get(ctx));
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -507,7 +507,7 @@ struct ForcedSumComplex16 {
       ExpandAndQuoteKey(RTNAME(CppSumComplex16));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::ComplexType::get(mlir::FloatType::getF128(ctx));
+      auto ty = mlir::ComplexType::get(mlir::Float128Type::get(ctx));
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
@@ -573,7 +573,7 @@ struct ForcedReduceReal10Ref {
       ExpandAndQuoteKey(RTNAME(ReduceReal10Ref));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF80(ctx);
+      auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
@@ -593,7 +593,7 @@ struct ForcedReduceReal10Value {
       ExpandAndQuoteKey(RTNAME(ReduceReal10Value));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF80(ctx);
+      auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
@@ -613,7 +613,7 @@ struct ForcedReduceReal16Ref {
       ExpandAndQuoteKey(RTNAME(ReduceReal16Ref));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF128(ctx);
+      auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
@@ -633,7 +633,7 @@ struct ForcedReduceReal16Value {
       ExpandAndQuoteKey(RTNAME(ReduceReal16Value));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF128(ctx);
+      auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
@@ -653,7 +653,7 @@ struct ForcedReduceReal10DimRef {
       ExpandAndQuoteKey(RTNAME(ReduceReal10DimRef));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF80(ctx);
+      auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
@@ -675,7 +675,7 @@ struct ForcedReduceReal10DimValue {
       ExpandAndQuoteKey(RTNAME(ReduceReal10DimValue));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF80(ctx);
+      auto ty = mlir::Float80Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
@@ -697,7 +697,7 @@ struct ForcedReduceReal16DimRef {
       ExpandAndQuoteKey(RTNAME(ReduceReal16DimRef));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF128(ctx);
+      auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
@@ -719,7 +719,7 @@ struct ForcedReduceReal16DimValue {
       ExpandAndQuoteKey(RTNAME(ReduceReal16DimValue));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::FloatType::getF128(ctx);
+      auto ty = mlir::Float128Type::get(ctx);
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
@@ -911,7 +911,7 @@ struct ForcedReduceComplex10Ref {
       ExpandAndQuoteKey(RTNAME(CppReduceComplex10Ref));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::ComplexType::get(mlir::FloatType::getF80(ctx));
+      auto ty = mlir::ComplexType::get(mlir::Float80Type::get(ctx));
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
@@ -932,7 +932,7 @@ struct ForcedReduceComplex10Value {
       ExpandAndQuoteKey(RTNAME(CppReduceComplex10Value));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::ComplexType::get(mlir::FloatType::getF80(ctx));
+      auto ty = mlir::ComplexType::get(mlir::Float80Type::get(ctx));
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
@@ -953,7 +953,7 @@ struct ForcedReduceComplex10DimRef {
       ExpandAndQuoteKey(RTNAME(CppReduceComplex10DimRef));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::ComplexType::get(mlir::FloatType::getF80(ctx));
+      auto ty = mlir::ComplexType::get(mlir::Float80Type::get(ctx));
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
@@ -975,7 +975,7 @@ struct ForcedReduceComplex10DimValue {
       ExpandAndQuoteKey(RTNAME(CppReduceComplex10DimValue));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::ComplexType::get(mlir::FloatType::getF80(ctx));
+      auto ty = mlir::ComplexType::get(mlir::Float80Type::get(ctx));
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
@@ -997,7 +997,7 @@ struct ForcedReduceComplex16Ref {
       ExpandAndQuoteKey(RTNAME(CppReduceComplex16Ref));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::ComplexType::get(mlir::FloatType::getF128(ctx));
+      auto ty = mlir::ComplexType::get(mlir::Float128Type::get(ctx));
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
@@ -1018,7 +1018,7 @@ struct ForcedReduceComplex16Value {
       ExpandAndQuoteKey(RTNAME(CppReduceComplex16Value));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::ComplexType::get(mlir::FloatType::getF128(ctx));
+      auto ty = mlir::ComplexType::get(mlir::Float128Type::get(ctx));
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
@@ -1039,7 +1039,7 @@ struct ForcedReduceComplex16DimRef {
       ExpandAndQuoteKey(RTNAME(CppReduceComplex16DimRef));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::ComplexType::get(mlir::FloatType::getF128(ctx));
+      auto ty = mlir::ComplexType::get(mlir::Float128Type::get(ctx));
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);
@@ -1061,7 +1061,7 @@ struct ForcedReduceComplex16DimValue {
       ExpandAndQuoteKey(RTNAME(CppReduceComplex16DimValue));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
-      auto ty = mlir::ComplexType::get(mlir::FloatType::getF128(ctx));
+      auto ty = mlir::ComplexType::get(mlir::Float128Type::get(ctx));
       auto boxTy =
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto refTy = fir::ReferenceType::get(ty);

@@ -596,6 +596,11 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
                                           COFF::IMAGE_SCN_MEM_READ);
   }
 
+  if (T.getArch() == Triple::aarch64) {
+    ImportCallSection =
+        Ctx->getCOFFSection(".impcall", COFF::IMAGE_SCN_LNK_INFO);
+  }
+
   // Debug info.
   COFFDebugSymbolsSection =
       Ctx->getCOFFSection(".debug$S", (COFF::IMAGE_SCN_MEM_DISCARDABLE |

@@ -175,6 +175,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUPerfHintAnalysis.cpp",
     "AMDGPUPostLegalizerCombiner.cpp",
     "AMDGPUPreLegalizerCombiner.cpp",
+    "AMDGPUPreloadKernArgProlog.cpp",
     "AMDGPUPrintfRuntimeBinding.cpp",
     "AMDGPUPromoteAlloca.cpp",
     "AMDGPUPromoteKernelArguments.cpp",

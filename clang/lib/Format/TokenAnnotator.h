@@ -154,6 +154,11 @@ public:
            startsWith(tok::kw_export, tok::kw_namespace);
   }
 
+  /// \c true if this line starts a C++ export block.
+  bool startsWithExportBlock() const {
+    return startsWith(tok::kw_export, tok::l_brace);
+  }
+
   FormatToken *getFirstNonComment() const {
     assert(First);
     return First->is(tok::comment) ? First->getNextNonComment() : First;

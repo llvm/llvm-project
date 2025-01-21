@@ -138,6 +138,8 @@ struct Opcode_match {
 
 inline Opcode_match m_Opc(unsigned Opcode) { return Opcode_match(Opcode); }
 
+inline Opcode_match m_Undef() { return Opcode_match(ISD::UNDEF); }
+
 template <unsigned NumUses, typename Pattern> struct NUses_match {
   Pattern P;
 
@@ -514,6 +516,12 @@ m_InsertElt(const T0_P &Vec, const T1_P &Val, const T2_P &Idx) {
                                             Idx);
 }
 
+template <typename LHS, typename RHS, typename IDX>
+inline TernaryOpc_match<LHS, RHS, IDX>
+m_InsertSubvector(const LHS &Base, const RHS &Sub, const IDX &Idx) {
+  return TernaryOpc_match<LHS, RHS, IDX>(ISD::INSERT_SUBVECTOR, Base, Sub, Idx);
+}
+
 // === Binary operations ===
 template <typename LHS_P, typename RHS_P, bool Commutable = false,
           bool ExcludeChain = false>
@@ -846,6 +854,12 @@ inline BinaryOpc_match<LHS, RHS> m_ExtractElt(const LHS &Vec, const RHS &Idx) {
   return BinaryOpc_match<LHS, RHS>(ISD::EXTRACT_VECTOR_ELT, Vec, Idx);
 }
 
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS> m_ExtractSubvector(const LHS &Vec,
+                                                    const RHS &Idx) {
+  return BinaryOpc_match<LHS, RHS>(ISD::EXTRACT_SUBVECTOR, Vec, Idx);
+}
+
 // === Unary operations ===
 template <typename Opnd_P, bool ExcludeChain = false> struct UnaryOpc_match {
   unsigned Opcode;
@@ -880,6 +894,10 @@ template <typename Opnd>
 inline UnaryOpc_match<Opnd, true> m_ChainedUnaryOp(unsigned Opc,
                                                    const Opnd &Op) {
   return UnaryOpc_match<Opnd, true>(Opc, Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_BitCast(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::BITCAST, Op);
 }
 
 template <typename Opnd>

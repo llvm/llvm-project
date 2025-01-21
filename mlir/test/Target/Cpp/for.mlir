@@ -1,5 +1,5 @@
-// RUN: mlir-translate -mlir-to-cpp %s | FileCheck %s -check-prefix=CPP-DEFAULT
-// RUN: mlir-translate -mlir-to-cpp -declare-variables-at-top %s | FileCheck %s -check-prefix=CPP-DECLTOP
+// RUN: mlir-translate -mlir-to-cpp %s | FileCheck --match-full-lines %s -check-prefix=CPP-DEFAULT
+// RUN: mlir-translate -mlir-to-cpp -declare-variables-at-top %s | FileCheck --match-full-lines %s -check-prefix=CPP-DECLTOP
 
 func.func @test_for(%arg0 : index, %arg1 : index, %arg2 : index) {
   %lb = emitc.expression : index {
@@ -160,5 +160,5 @@ func.func @test_for_yield_2() {
   return
 }
 // CPP-DEFAULT: void test_for_yield_2() {
-// CPP-DEFAULT: {{.*}}= M_PI
+// CPP-DEFAULT: {{.*}}= M_PI;
 // CPP-DEFAULT: for (size_t [[IN:.*]] = 0; [[IN]] < 10; [[IN]] += 1) {

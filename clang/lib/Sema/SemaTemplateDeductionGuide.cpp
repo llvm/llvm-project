@@ -996,7 +996,7 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
       F->getTemplateParameters()->size());
 
   // FIXME: DeduceTemplateArguments stops immediately at the first
-  // non-deducible template argument. However, this doesn't seem to casue
+  // non-deducible template argument. However, this doesn't seem to cause
   // issues for practice cases, we probably need to extend it to continue
   // performing deduction for rest of arguments to align with the C++
   // standard.
@@ -1053,6 +1053,42 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
     TransformedDeducedAliasArgs[AliasTemplateParamIdx] = NewTemplateArgument;
   }
   unsigned FirstUndeducedParamIdx = FPrimeTemplateParams.size();
+
+  // To form a deduction guide f' from f, we leverage clang's instantiation
+  // mechanism, we construct a template argument list where the template
+  // arguments refer to the newly-created template parameters of f', and
+  // then apply instantiation on this template argument list to instantiate
+  // f, this ensures all template parameter occurrences are updated
+  // correctly.
+  //
+  // The template argument list is formed, in order, from
+  //   1) For the template parameters of the alias, the corresponding deduced
+  //      template arguments
+  //   2) For the non-deduced template parameters of f. the
+  //      (rebuilt) template arguments corresponding.
+  //
+  // Note: the non-deduced template arguments of `f` might refer to arguments
+  // deduced in 1), as in a type constraint.
+  MultiLevelTemplateArgumentList Args;
+  Args.setKind(TemplateSubstitutionKind::Rewrite);
+  Args.addOuterTemplateArguments(TransformedDeducedAliasArgs);
+  for (unsigned Index = 0; Index < DeduceResults.size(); ++Index) {
+    const auto &D = DeduceResults[Index];
+    if (D.isNull()) {
+      // 2): Non-deduced template parameters would be substituted later.
+      continue;
+    }
+    TemplateArgumentLoc Input =
+        SemaRef.getTrivialTemplateArgumentLoc(D, QualType(), SourceLocation{});
+    TemplateArgumentLoc Output;
+    if (!SemaRef.SubstTemplateArgument(Input, Args, Output)) {
+      assert(TemplateArgsForBuildingFPrime[Index].isNull() &&
+             "InstantiatedArgs must be null before setting");
+      TemplateArgsForBuildingFPrime[Index] = Output.getArgument();
+    }
+  }
+
+  // Case 2)
   //   ...followed by the template parameters of f that were not deduced
   //   (including their default template arguments)
   for (unsigned FTemplateParamIdx : NonDeducedTemplateParamsInFIndex) {
@@ -1071,43 +1107,6 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
            "The argument must be null before setting");
     TemplateArgsForBuildingFPrime[FTemplateParamIdx] =
         Context.getInjectedTemplateArg(NewParam);
-  }
-
-  // To form a deduction guide f' from f, we leverage clang's instantiation
-  // mechanism, we construct a template argument list where the template
-  // arguments refer to the newly-created template parameters of f', and
-  // then apply instantiation on this template argument list to instantiate
-  // f, this ensures all template parameter occurrences are updated
-  // correctly.
-  //
-  // The template argument list is formed from the `DeducedArgs`, two parts:
-  //  1) appeared template parameters of alias: transfrom the deduced
-  //  template argument;
-  //  2) non-deduced template parameters of f: rebuild a
-  //  template argument;
-  //
-  // 2) has been built already (when rebuilding the new template
-  // parameters), we now perform 1).
-  MultiLevelTemplateArgumentList Args;
-  Args.setKind(TemplateSubstitutionKind::Rewrite);
-  Args.addOuterTemplateArguments(TransformedDeducedAliasArgs);
-  for (unsigned Index = 0; Index < DeduceResults.size(); ++Index) {
-    const auto &D = DeduceResults[Index];
-    if (D.isNull()) {
-      // 2): Non-deduced template parameter has been built already.
-      assert(!TemplateArgsForBuildingFPrime[Index].isNull() &&
-             "template arguments for non-deduced template parameters should "
-             "be been set!");
-      continue;
-    }
-    TemplateArgumentLoc Input =
-        SemaRef.getTrivialTemplateArgumentLoc(D, QualType(), SourceLocation{});
-    TemplateArgumentLoc Output;
-    if (!SemaRef.SubstTemplateArgument(Input, Args, Output)) {
-      assert(TemplateArgsForBuildingFPrime[Index].isNull() &&
-             "InstantiatedArgs must be null before setting");
-      TemplateArgsForBuildingFPrime[Index] = Output.getArgument();
-    }
   }
 
   auto *TemplateArgListForBuildingFPrime =

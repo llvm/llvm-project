@@ -364,10 +364,9 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
           // memory sections loaded. This allows you to use "target modules
           // load" to load your executable and any shared libraries, then
           // execute commands where you can look at types in data sections.
-          const SectionLoadList &target_sections = target->GetSectionLoadList();
-          if (!target_sections.IsEmpty()) {
+          if (target->HasLoadedSections()) {
             address = m_value.ULongLong(LLDB_INVALID_ADDRESS);
-            if (target_sections.ResolveLoadAddress(address, file_so_addr)) {
+            if (target->ResolveLoadAddress(address, file_so_addr)) {
               address_type = eAddressTypeLoad;
               data.SetByteOrder(target->GetArchitecture().GetByteOrder());
               data.SetAddressByteSize(

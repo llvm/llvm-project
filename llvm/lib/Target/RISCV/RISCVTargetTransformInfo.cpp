@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
 #include <cmath>
@@ -1035,21 +1036,66 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
-  case Intrinsic::fabs:
+  case Intrinsic::fabs: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (ST->hasVInstructions() && LT.second.isVector()) {
+      // lui a0, 8
+      // addi a0, a0, -1
+      // vsetvli a1, zero, e16, m1, ta, ma
+      // vand.vx v8, v8, a0
+      // f16 with zvfhmin and bf16 with zvfhbmin
+      if (LT.second.getVectorElementType() == MVT::bf16 ||
+          (LT.second.getVectorElementType() == MVT::f16 &&
+           !ST->hasVInstructionsF16()))
+        return LT.first * getRISCVInstructionCost(RISCV::VAND_VX, LT.second,
+                                                  CostKind) +
+               2;
+      else
+        return LT.first *
+               getRISCVInstructionCost(RISCV::VFSGNJX_VV, LT.second, CostKind);
+    }
+    break;
+  }
   case Intrinsic::sqrt: {
     auto LT = getTypeLegalizationCost(RetTy);
-    // TODO: add f16/bf16, bf16 with zvfbfmin && f16 with zvfhmin
     if (ST->hasVInstructions() && LT.second.isVector()) {
-      unsigned Op;
-      switch (ICA.getID()) {
-      case Intrinsic::fabs:
-        Op = RISCV::VFSGNJX_VV;
-        break;
-      case Intrinsic::sqrt:
-        Op = RISCV::VFSQRT_V;
-        break;
+      SmallVector<unsigned, 4> ConvOp;
+      SmallVector<unsigned, 2> FsqrtOp;
+      MVT ConvType = LT.second;
+      MVT FsqrtType = LT.second;
+      // f16 with zvfhmin and bf16 with zvfbfmin and the type of nxv32[b]f16
+      // will be spilt.
+      if (LT.second.getVectorElementType() == MVT::bf16) {
+        if (LT.second == MVT::nxv32bf16) {
+          ConvOp = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFWCVTBF16_F_F_V,
+                    RISCV::VFNCVTBF16_F_F_W, RISCV::VFNCVTBF16_F_F_W};
+          FsqrtOp = {RISCV::VFSQRT_V, RISCV::VFSQRT_V};
+          ConvType = MVT::nxv16f16;
+          FsqrtType = MVT::nxv16f32;
+        } else {
+          ConvOp = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFNCVTBF16_F_F_W};
+          FsqrtOp = {RISCV::VFSQRT_V};
+          FsqrtType = TLI->getTypeToPromoteTo(ISD::FSQRT, FsqrtType);
+        }
+      } else if (LT.second.getVectorElementType() == MVT::f16 &&
+                 !ST->hasVInstructionsF16()) {
+        if (LT.second == MVT::nxv32f16) {
+          ConvOp = {RISCV::VFWCVT_F_F_V, RISCV::VFWCVT_F_F_V,
+                    RISCV::VFNCVT_F_F_W, RISCV::VFNCVT_F_F_W};
+          FsqrtOp = {RISCV::VFSQRT_V, RISCV::VFSQRT_V};
+          ConvType = MVT::nxv16f16;
+          FsqrtType = MVT::nxv16f32;
+        } else {
+          ConvOp = {RISCV::VFWCVT_F_F_V, RISCV::VFNCVT_F_F_W};
+          FsqrtOp = {RISCV::VFSQRT_V};
+          FsqrtType = TLI->getTypeToPromoteTo(ISD::FSQRT, FsqrtType);
+        }
+      } else {
+        FsqrtOp = {RISCV::VFSQRT_V};
       }
-      return LT.first * getRISCVInstructionCost(Op, LT.second, CostKind);
+
+      return LT.first * (getRISCVInstructionCost(FsqrtOp, FsqrtType, CostKind) +
+                         getRISCVInstructionCost(ConvOp, ConvType, CostKind));
     }
     break;
   }
@@ -1536,19 +1582,35 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   Type *ElementTy = Ty->getElementType();
   if (ElementTy->isIntegerTy(1)) {
+    // Example sequences:
+    //   vfirst.m a0, v0
+    //   seqz a0, a0
+    if (LT.second == MVT::v1i1)
+      return getRISCVInstructionCost(RISCV::VFIRST_M, LT.second, CostKind) +
+             getCmpSelInstrCost(Instruction::ICmp, ElementTy, ElementTy,
+                                CmpInst::ICMP_EQ, CostKind);
+
     if (ISD == ISD::AND) {
       // Example sequences:
-      //   vsetvli a0, zero, e8, mf8, ta, ma
       //   vmand.mm v8, v9, v8 ; needed every time type is split
-      //   vmnot.m v8, v0
+      //   vmnot.m v8, v0      ; alias for vmnand
       //   vcpop.m a0, v8
       //   seqz a0, a0
-      return LT.first * getRISCVInstructionCost(RISCV::VMNAND_MM, LT.second,
-                                                CostKind) +
+
+      // See the discussion: https://github.com/llvm/llvm-project/pull/119160
+      // For LMUL <= 8, there is no splitting,
+      //   the sequences are vmnot, vcpop and seqz.
+      // When LMUL > 8 and split = 1,
+      //   the sequences are vmnand, vcpop and seqz.
+      // When LMUL > 8 and split > 1,
+      //   the sequences are (LT.first-2) * vmand, vmnand, vcpop and seqz.
+      return ((LT.first > 2) ? (LT.first - 2) : 0) *
+                 getRISCVInstructionCost(RISCV::VMAND_MM, LT.second, CostKind) +
+             getRISCVInstructionCost(RISCV::VMNAND_MM, LT.second, CostKind) +
              getRISCVInstructionCost(RISCV::VCPOP_M, LT.second, CostKind) +
              getCmpSelInstrCost(Instruction::ICmp, ElementTy, ElementTy,
                                 CmpInst::ICMP_EQ, CostKind);
-    } else if (ISD == ISD::XOR) {
+    } else if (ISD == ISD::XOR || ISD == ISD::ADD) {
       // Example sequences:
       //   vsetvli a0, zero, e8, mf8, ta, ma
       //   vmxor.mm v8, v0, v8 ; needed every time type is split
@@ -1558,13 +1620,14 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                  getRISCVInstructionCost(RISCV::VMXOR_MM, LT.second, CostKind) +
              getRISCVInstructionCost(RISCV::VCPOP_M, LT.second, CostKind) + 1;
     } else {
+      assert(ISD == ISD::OR);
       // Example sequences:
       //   vsetvli a0, zero, e8, mf8, ta, ma
-      //   vmxor.mm v8, v9, v8 ; needed every time type is split
+      //   vmor.mm v8, v9, v8 ; needed every time type is split
       //   vcpop.m a0, v0
       //   snez a0, a0
       return (LT.first - 1) *
-                 getRISCVInstructionCost(RISCV::VMXOR_MM, LT.second, CostKind) +
+                 getRISCVInstructionCost(RISCV::VMOR_MM, LT.second, CostKind) +
              getRISCVInstructionCost(RISCV::VCPOP_M, LT.second, CostKind) +
              getCmpSelInstrCost(Instruction::ICmp, ElementTy, ElementTy,
                                 CmpInst::ICMP_NE, CostKind);

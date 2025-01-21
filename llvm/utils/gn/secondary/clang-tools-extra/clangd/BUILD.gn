@@ -105,7 +105,6 @@ static_library("clangd") {
     "GlobalCompilationDatabase.cpp",
     "HeaderSourceSwitch.cpp",
     "Headers.cpp",
-    "HeuristicResolver.cpp",
     "Hover.cpp",
     "IncludeCleaner.cpp",
     "IncludeFixer.cpp",

@@ -118,6 +118,8 @@ public:
   }
   bool hasTargetName() const { return !TargetName.empty(); }
 
+  bool hasNativeBF16Support(int Opcode) const;
+
   // Get maximum value of required alignments among the supported data types.
   // From the PTX ISA doc, section 8.2.3:
   //  The memory consistency model relates operations executed on memory

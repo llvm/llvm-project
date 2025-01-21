@@ -101,6 +101,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # time.h entrypoints
     libc.src.time.time
     libc.src.time.clock_getres
+
+    # unistd.h entrypoints
+    libc.src.unistd.getentropy
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

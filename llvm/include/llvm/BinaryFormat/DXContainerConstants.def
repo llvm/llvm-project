@@ -58,7 +58,7 @@ SHADER_FEATURE_FLAG(31, 36, NextUnusedBit, "Next reserved shader flag bit (not a
 DXIL_MODULE_FLAG( 0,  DisableOptimizations,   "D3D11_1_SB_GLOBAL_FLAG_SKIP_OPTIMIZATION")
 DXIL_MODULE_FLAG( 1,  DisableMathRefactoring, "D3D10_SB_GLOBAL_FLAG_REFACTORING_ALLOWED")
 DXIL_MODULE_FLAG( 3,  ForceEarlyDepthStencil, "D3D11_SB_GLOBAL_FLAG_FORCE_EARLY_DEPTH_STENCIL")
-DXIL_MODULE_FLAG( 4,  EnableRawAndStructuredBuffers, "D3D11_SB_GLOBAL_FLAG_ENABLE_RAW_AND_STRUCTURED_BUFFERS")
+DXIL_MODULE_FLAG( 4,  EnableRawAndStructuredBuffers, "Raw and Structured buffers")
 DXIL_MODULE_FLAG( 5,  LowPrecisionPresent, "D3D11_1_SB_GLOBAL_FLAG_ENABLE_MINIMUM_PRECISION")
 DXIL_MODULE_FLAG( 8,  AllResourcesBound, "D3D12_SB_GLOBAL_FLAG_ALL_RESOURCES_BOUND")
 DXIL_MODULE_FLAG(23,  UseNativeLowPrecision, "Native 16bit types enabled")

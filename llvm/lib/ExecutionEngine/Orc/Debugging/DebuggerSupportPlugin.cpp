@@ -121,18 +121,14 @@ public:
 
     // Write MachO header and debug section load commands.
     Builder.Header.filetype = MachO::MH_OBJECT;
-    switch (G.getTargetTriple().getArch()) {
-    case Triple::x86_64:
-      Builder.Header.cputype = MachO::CPU_TYPE_X86_64;
-      Builder.Header.cpusubtype = MachO::CPU_SUBTYPE_X86_64_ALL;
-      break;
-    case Triple::aarch64:
-      Builder.Header.cputype = MachO::CPU_TYPE_ARM64;
-      Builder.Header.cpusubtype = MachO::CPU_SUBTYPE_ARM64_ALL;
-      break;
-    default:
-      llvm_unreachable("Unsupported architecture");
-    }
+    if (auto CPUType = MachO::getCPUType(G.getTargetTriple()))
+      Builder.Header.cputype = *CPUType;
+    else
+      return CPUType.takeError();
+    if (auto CPUSubType = MachO::getCPUSubType(G.getTargetTriple()))
+      Builder.Header.cpusubtype = *CPUSubType;
+    else
+      return CPUSubType.takeError();
 
     Seg = &Builder.addSegment("");
 

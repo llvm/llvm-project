@@ -106,8 +106,7 @@ void uses() {
   // expected-error@+1{{OpenACC 'detach' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) detach(Var)
   while(1);
-  // expected-error@+2{{OpenACC clause 'device' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'device' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) device(VarPtr)
   while(1);
   // expected-error@+2{{OpenACC clause 'deviceptr' may not follow a 'device_type' clause in a 'kernels' construct}}
@@ -122,8 +121,7 @@ void uses() {
   // expected-note@+1{{previous clause is here}}
 #pragma acc parallel device_type(*) firstprivate(Var)
   while(1);
-  // expected-error@+2{{OpenACC clause 'host' may not follow a 'device_type' clause in a 'kernels' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'host' clause is not valid on 'kernels' directive}}
 #pragma acc kernels device_type(*) host(Var)
   while(1);
   // expected-error@+2{{OpenACC clause 'link' may not follow a 'device_type' clause in a 'kernels' construct}}

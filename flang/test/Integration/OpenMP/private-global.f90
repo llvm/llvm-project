@@ -34,7 +34,7 @@ End Program
 ! CHECK :         %[[TABLE_BOX_VAL2:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[TABLE_BOX_ADDR]], align 8
 ! CHECK :         store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[TABLE_BOX_VAL2]], ptr %[[TABLE_BOX_ADDR2]], align 8
 ! CHECK:         call void @llvm.memcpy.p0.p0.i32(ptr %[[TABLE_BOX_ADDR2]], ptr %[[TABLE_BOX_ADDR]], i32 48, i1 false)
-! CHECK:         %[[VAL_26:.*]] = call {} @_FortranAAssign(ptr %[[TABLE_BOX_ADDR2]], ptr %[[BOXED_FIFTY]], ptr @{{.*}}, i32 9)
+! CHECK:         call void @_FortranAAssign(ptr %[[TABLE_BOX_ADDR2]], ptr %[[BOXED_FIFTY]], ptr @{{.*}}, i32 9)
 ! ...
 ! check that we use the private copy of table for table/=50
 ! CHECK:       omp.par.region3:

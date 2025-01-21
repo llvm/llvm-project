@@ -650,9 +650,9 @@ struct __enforce_unordered_container_requirements {
 
 template <class _Key, class _Hash, class _Equal>
 #ifndef _LIBCPP_CXX03_LANG
-_LIBCPP_DIAGNOSE_WARNING(!__invokable<_Equal const&, _Key const&, _Key const&>::value,
+_LIBCPP_DIAGNOSE_WARNING(!__is_invocable_v<_Equal const&, _Key const&, _Key const&>,
                          "the specified comparator type does not provide a viable const call operator")
-_LIBCPP_DIAGNOSE_WARNING(!__invokable<_Hash const&, _Key const&>::value,
+_LIBCPP_DIAGNOSE_WARNING(!__is_invocable_v<_Hash const&, _Key const&>,
                          "the specified hash functor does not provide a viable const call operator")
 #endif
     typename __enforce_unordered_container_requirements<_Key, _Hash, _Equal>::type

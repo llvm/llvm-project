@@ -18,7 +18,6 @@
 // UTC_ARGS: --enable
 
 #ifdef __arm__
-/// FIXME: UTC does not find this function, but can find all others.
 typedef __attribute__((neon_vector_type(8))) __INT8_TYPE__ int8x8_t;
 int8x8_t test_vaba_s8(int8x8_t a, int8x8_t b, int8x8_t c) {
   return a + b + c;

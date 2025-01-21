@@ -526,7 +526,7 @@ void MachineRegisterInfo::freezeReservedRegs() {
 }
 
 bool MachineRegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
-  assert(Register::isPhysicalRegister(PhysReg));
+  assert(PhysReg.isPhysical());
 
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   if (TRI->isConstantPhysReg(PhysReg))
@@ -584,7 +584,7 @@ static bool isNoReturnDef(const MachineOperand &MO) {
 
 bool MachineRegisterInfo::isPhysRegModified(MCRegister PhysReg,
                                             bool SkipNoReturnDef) const {
-  if (UsedPhysRegMask.test(PhysReg))
+  if (UsedPhysRegMask.test(PhysReg.id()))
     return true;
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   for (MCRegAliasIterator AI(PhysReg, TRI, true); AI.isValid(); ++AI) {
@@ -599,7 +599,7 @@ bool MachineRegisterInfo::isPhysRegModified(MCRegister PhysReg,
 
 bool MachineRegisterInfo::isPhysRegUsed(MCRegister PhysReg,
                                         bool SkipRegMaskTest) const {
-  if (!SkipRegMaskTest && UsedPhysRegMask.test(PhysReg))
+  if (!SkipRegMaskTest && UsedPhysRegMask.test(PhysReg.id()))
     return true;
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   for (MCRegAliasIterator AliasReg(PhysReg, TRI, true); AliasReg.isValid();

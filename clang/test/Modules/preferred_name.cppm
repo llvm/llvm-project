@@ -53,10 +53,16 @@ import A;
 export using ::foo_templ;
 
 //--- Use1.cpp
-import A;         // expected-warning@foo.h:8 {{attribute declaration must precede definition}}
-#include "foo.h"  // expected-note@foo.h:9 {{previous definition is here}}
-
+// expected-no-diagnostics
+import A;
+#include "foo.h"
 //--- Use2.cpp
 // expected-no-diagnostics
 #include "foo.h"
 import A;
+
+//--- Use3.cpp
+#include "foo.h"
+import A;
+foo test;
+int size = test.size(); // expected-error {{no member named 'size' in 'foo'}}

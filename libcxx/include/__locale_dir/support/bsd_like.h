@@ -94,6 +94,10 @@ inline _LIBCPP_HIDE_FROM_ABI size_t __strxfrm(char* __dest, const char* __src, s
 }
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
+inline _LIBCPP_HIDE_FROM_ABI int __iswctype(wint_t __c, wctype_t __type, __locale_t __loc) {
+  return ::iswctype_l(__c, __type, __loc);
+}
+
 inline _LIBCPP_HIDE_FROM_ABI int __iswspace(wint_t __c, __locale_t __loc) { return ::iswspace_l(__c, __loc); }
 
 inline _LIBCPP_HIDE_FROM_ABI int __iswprint(wint_t __c, __locale_t __loc) { return ::iswprint_l(__c, __loc); }

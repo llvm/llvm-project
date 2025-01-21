@@ -1245,11 +1245,22 @@ class VOPSelectPat <ValueType vt> : GCNPat <
   (vt (select i1:$src0, vt:$src1, vt:$src2)),
   (V_CNDMASK_B32_e64 0, VSrc_b32:$src2, 0, VSrc_b32:$src1, SSrc_i1:$src0)
 >;
+class VOPSelectPat_t16 <ValueType vt> : GCNPat <
+  (vt (select i1:$src0, vt:$src1, vt:$src2)),
+  (V_CNDMASK_B16_t16_e64 0, VSrcT_b16:$src2, 0, VSrcT_b16:$src1, SSrc_i1:$src0)
+>;
 
 def : VOPSelectModsPat <i32>;
 def : VOPSelectModsPat <f32>;
-def : VOPSelectPat <f16>;
-def : VOPSelectPat <i16>;
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in {
+  def : VOPSelectPat <f16>;
+  def : VOPSelectPat <i16>;
+} // End True16Predicate = p
+let True16Predicate = UseRealTrue16Insts in {
+  def : VOPSelectPat_t16 <f16>;
+  def : VOPSelectPat_t16 <i16>;
+} // End True16Predicate = UseRealTrue16Insts
 
 let AddedComplexity = 1 in {
 def : GCNPat <
@@ -3030,6 +3041,8 @@ def : GCNPat <
 
 // Magic number: 1 | (0 << 8) | (12 << 16) | (12 << 24)
 // The 12s emit 0s.
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in {
 def : GCNPat <
   (i16 (bswap i16:$a)),
   (V_PERM_B32_e64  (i32 0), VSrc_b32:$a, (S_MOV_B32 (i32 0x0c0c0001)))
@@ -3039,6 +3052,19 @@ def : GCNPat <
   (i32 (zext (bswap i16:$a))),
   (V_PERM_B32_e64  (i32 0), VSrc_b32:$a, (S_MOV_B32 (i32 0x0c0c0001)))
 >;
+}
+
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat <
+  (i16 (bswap i16:$a)),
+  (EXTRACT_SUBREG (V_PERM_B32_e64  (i32 0), (COPY VGPR_16:$a), (S_MOV_B32 (i32 0x0c0c0001))), lo16)
+>;
+
+def : GCNPat <
+  (i32 (zext (bswap i16:$a))),
+  (V_PERM_B32_e64  (i32 0), (COPY VGPR_16:$a), (S_MOV_B32 (i32 0x0c0c0001)))
+>;
+}
 
 // Magic number: 1 | (0 << 8) | (3 << 16) | (2 << 24)
 def : GCNPat <
@@ -3390,6 +3416,9 @@ let SubtargetPredicate = isGFX9Plus in {
 let True16Predicate = NotHasTrue16BitInsts in
   def : PackB32Pat<V_PACK_B32_F16_e64>;
 
+let True16Predicate = UseRealTrue16Insts in
+  def : PackB32Pat<V_PACK_B32_F16_t16_e64>;
+
 let True16Predicate = UseFakeTrue16Insts in
   def : PackB32Pat<V_PACK_B32_F16_fake16_e64>;
 } // End SubtargetPredicate = isGFX9Plus
@@ -3670,6 +3699,8 @@ defm : FPMed3Pat<f32, V_MED3_F32_e64>;
 let SubtargetPredicate = HasMed3_16 in {
 let True16Predicate = NotHasTrue16BitInsts in
 defm : FPMed3Pat<f16, V_MED3_F16_e64>;
+let True16Predicate = UseRealTrue16Insts in
+defm : FPMed3Pat<f16, V_MED3_F16_t16_e64>;
 let True16Predicate = UseFakeTrue16Insts in
 defm : FPMed3Pat<f16, V_MED3_F16_fake16_e64>;
 }

@@ -41,7 +41,7 @@ define <32 x i8> @ugt_1_v32i8(<32 x i8> %0) {
 ; AVX512VPOPCNTDQ-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX512VPOPCNTDQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VPOPCNTDQ-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
-; AVX512VPOPCNTDQ-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; AVX512VPOPCNTDQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512VPOPCNTDQ-NEXT:    retq
 ;
@@ -52,7 +52,7 @@ define <32 x i8> @ugt_1_v32i8(<32 x i8> %0) {
 ; AVX512VPOPCNTDQVL-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX512VPOPCNTDQVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
-; AVX512VPOPCNTDQVL-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpternlogq {{.*#+}} ymm0 = ~ymm0
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_1_v32i8:
@@ -1034,7 +1034,7 @@ define <16 x i16> @ugt_1_v16i16(<16 x i16> %0) {
 ; AVX512VPOPCNTDQ-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX512VPOPCNTDQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VPOPCNTDQ-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
-; AVX512VPOPCNTDQ-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; AVX512VPOPCNTDQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512VPOPCNTDQ-NEXT:    retq
 ;
@@ -1045,7 +1045,7 @@ define <16 x i16> @ugt_1_v16i16(<16 x i16> %0) {
 ; AVX512VPOPCNTDQVL-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX512VPOPCNTDQVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
-; AVX512VPOPCNTDQVL-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpternlogq {{.*#+}} ymm0 = ~ymm0
 ; AVX512VPOPCNTDQVL-NEXT:    retq
 ;
 ; BITALG_NOVLX-LABEL: ugt_1_v16i16:
@@ -3348,7 +3348,7 @@ define <8 x i32> @ugt_1_v8i32(<8 x i32> %0) {
 ; BITALG_NOVLX-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; BITALG_NOVLX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG_NOVLX-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
-; BITALG_NOVLX-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; BITALG_NOVLX-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; BITALG_NOVLX-NEXT:    retq
 ;
@@ -3359,7 +3359,7 @@ define <8 x i32> @ugt_1_v8i32(<8 x i32> %0) {
 ; BITALG-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
-; BITALG-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm0
+; BITALG-NEXT:    vpternlogq {{.*#+}} ymm0 = ~ymm0
 ; BITALG-NEXT:    retq
   %2 = tail call <8 x i32> @llvm.ctpop.v8i32(<8 x i32> %0)
   %3 = icmp ugt <8 x i32> %2, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
@@ -9423,7 +9423,7 @@ define <4 x i64> @ugt_1_v4i64(<4 x i64> %0) {
 ; BITALG_NOVLX-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; BITALG_NOVLX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG_NOVLX-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
-; BITALG_NOVLX-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; BITALG_NOVLX-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; BITALG_NOVLX-NEXT:    retq
 ;
@@ -9434,7 +9434,7 @@ define <4 x i64> @ugt_1_v4i64(<4 x i64> %0) {
 ; BITALG-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
-; BITALG-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm0
+; BITALG-NEXT:    vpternlogq {{.*#+}} ymm0 = ~ymm0
 ; BITALG-NEXT:    retq
   %2 = tail call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> %0)
   %3 = icmp ugt <4 x i64> %2, <i64 1, i64 1, i64 1, i64 1>

@@ -3031,128 +3031,67 @@ exit:
 }
 
 ; This loop has a backedge taken count of i32_max. We need to check for this
-; condition and branch directly to the scalar loop.
+; condition and can skip vectorizing.
 
-
-
-define i32 @max_i32_backedgetaken() nounwind readnone ssp uwtable {
+define i32 @max_i32_backedgetaken() {
 ; CHECK-LABEL: @max_i32_backedgetaken(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK:       vector.ph:
-; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
-; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ <i32 1, i32 -1>, [[VECTOR_PH]] ], [ [[TMP0:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0]] = and <2 x i32> [[VEC_PHI]], splat (i32 4)
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP1]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
-; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.and.v2i32(<2 x i32> [[TMP0]])
-; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP2]], [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[A_0_AND:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[B_0:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[A_0_AND:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[B_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[A_0_AND]] = and i32 [[A_0]], 4
 ; CHECK-NEXT:    [[B_NEXT]] = add i32 [[B_0]], -1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[B_NEXT]], 0
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP33:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[A_0_AND_LCSSA:%.*]] = phi i32 [ [[A_0_AND]], [[LOOP]] ], [ [[TMP2]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[A_0_AND_LCSSA:%.*]] = phi i32 [ [[A_0_AND]], [[LOOP]] ]
 ; CHECK-NEXT:    ret i32 [[A_0_AND_LCSSA]]
 ;
 ; IND-LABEL: @max_i32_backedgetaken(
 ; IND-NEXT:  entry:
-; IND-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; IND:       vector.ph:
-; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
-; IND:       vector.body:
-; IND-NEXT:    br i1 poison, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
-; IND:       middle.block:
-; IND-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
-; IND:       scalar.ph:
 ; IND-NEXT:    br label [[LOOP:%.*]]
 ; IND:       loop:
-; IND-NEXT:    [[B_0:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
+; IND-NEXT:    [[B_0:%.*]] = phi i32 [ 0, [[SCALAR_PH:%.*]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
 ; IND-NEXT:    [[B_NEXT]] = add i32 [[B_0]], -1
 ; IND-NEXT:    [[EC:%.*]] = icmp eq i32 [[B_NEXT]], 0
-; IND-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP33:![0-9]+]]
+; IND-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
 ; IND:       exit:
 ; IND-NEXT:    ret i32 0
 ;
 ; UNROLL-LABEL: @max_i32_backedgetaken(
 ; UNROLL-NEXT:  entry:
-; UNROLL-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; UNROLL:       vector.ph:
-; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
-; UNROLL:       vector.body:
-; UNROLL-NEXT:    br i1 poison, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
-; UNROLL:       middle.block:
-; UNROLL-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
-; UNROLL:       scalar.ph:
 ; UNROLL-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL:       loop:
-; UNROLL-NEXT:    [[B_0:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
+; UNROLL-NEXT:    [[B_0:%.*]] = phi i32 [ 0, [[SCALAR_PH:%.*]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
 ; UNROLL-NEXT:    [[B_NEXT]] = add i32 [[B_0]], -1
 ; UNROLL-NEXT:    [[EC:%.*]] = icmp eq i32 [[B_NEXT]], 0
-; UNROLL-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP33:![0-9]+]]
+; UNROLL-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
 ; UNROLL:       exit:
 ; UNROLL-NEXT:    ret i32 0
 ;
 ; UNROLL-NO-IC-LABEL: @max_i32_backedgetaken(
 ; UNROLL-NO-IC-NEXT:  entry:
-; UNROLL-NO-IC-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; UNROLL-NO-IC:       vector.ph:
-; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
-; UNROLL-NO-IC:       vector.body:
-; UNROLL-NO-IC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; UNROLL-NO-IC-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ <i32 1, i32 -1>, [[VECTOR_PH]] ], [ [[TMP0:%.*]], [[VECTOR_BODY]] ]
-; UNROLL-NO-IC-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x i32> [ splat (i32 -1), [[VECTOR_PH]] ], [ [[TMP1:%.*]], [[VECTOR_BODY]] ]
-; UNROLL-NO-IC-NEXT:    [[TMP0]] = and <2 x i32> [[VEC_PHI]], splat (i32 4)
-; UNROLL-NO-IC-NEXT:    [[TMP1]] = and <2 x i32> [[VEC_PHI1]], splat (i32 4)
-; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[INDEX_NEXT]], 0
-; UNROLL-NO-IC-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
-; UNROLL-NO-IC:       middle.block:
-; UNROLL-NO-IC-NEXT:    [[BIN_RDX:%.*]] = and <2 x i32> [[TMP1]], [[TMP0]]
-; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.and.v2i32(<2 x i32> [[BIN_RDX]])
-; UNROLL-NO-IC-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
-; UNROLL-NO-IC:       scalar.ph:
-; UNROLL-NO-IC-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP3]], [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ]
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL-NO-IC:       loop:
-; UNROLL-NO-IC-NEXT:    [[A_0:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[A_0_AND:%.*]], [[LOOP]] ]
-; UNROLL-NO-IC-NEXT:    [[B_0:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
+; UNROLL-NO-IC-NEXT:    [[A_0:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[A_0_AND:%.*]], [[LOOP]] ]
+; UNROLL-NO-IC-NEXT:    [[B_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
 ; UNROLL-NO-IC-NEXT:    [[A_0_AND]] = and i32 [[A_0]], 4
 ; UNROLL-NO-IC-NEXT:    [[B_NEXT]] = add i32 [[B_0]], -1
 ; UNROLL-NO-IC-NEXT:    [[EC:%.*]] = icmp eq i32 [[B_NEXT]], 0
-; UNROLL-NO-IC-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP33:![0-9]+]]
+; UNROLL-NO-IC-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
 ; UNROLL-NO-IC:       exit:
-; UNROLL-NO-IC-NEXT:    [[A_0_AND_LCSSA:%.*]] = phi i32 [ [[A_0_AND]], [[LOOP]] ], [ [[TMP3]], [[MIDDLE_BLOCK]] ]
+; UNROLL-NO-IC-NEXT:    [[A_0_AND_LCSSA:%.*]] = phi i32 [ [[A_0_AND]], [[LOOP]] ]
 ; UNROLL-NO-IC-NEXT:    ret i32 [[A_0_AND_LCSSA]]
 ;
 ; INTERLEAVE-LABEL: @max_i32_backedgetaken(
 ; INTERLEAVE-NEXT:  entry:
-; INTERLEAVE-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; INTERLEAVE:       vector.ph:
-; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
-; INTERLEAVE:       vector.body:
-; INTERLEAVE-NEXT:    br i1 poison, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
-; INTERLEAVE:       middle.block:
-; INTERLEAVE-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
-; INTERLEAVE:       scalar.ph:
 ; INTERLEAVE-NEXT:    br label [[LOOP:%.*]]
 ; INTERLEAVE:       loop:
-; INTERLEAVE-NEXT:    [[B_0:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
+; INTERLEAVE-NEXT:    [[B_0:%.*]] = phi i32 [ 0, [[SCALAR_PH:%.*]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
 ; INTERLEAVE-NEXT:    [[B_NEXT]] = add i32 [[B_0]], -1
 ; INTERLEAVE-NEXT:    [[EC:%.*]] = icmp eq i32 [[B_NEXT]], 0
-; INTERLEAVE-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP33:![0-9]+]]
+; INTERLEAVE-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
 ; INTERLEAVE:       exit:
 ; INTERLEAVE-NEXT:    ret i32 0
 ;

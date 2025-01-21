@@ -100,21 +100,21 @@ private:
 
   /// Transform an interleaved load into target specific intrinsics.
   bool lowerInterleavedLoad(LoadInst *LI,
-                            SmallVectorImpl<Instruction *> &DeadInsts);
+                            SmallSetVector<Instruction *, 32> &DeadInsts);
 
   /// Transform an interleaved store into target specific intrinsics.
   bool lowerInterleavedStore(StoreInst *SI,
-                             SmallVectorImpl<Instruction *> &DeadInsts);
+                             SmallSetVector<Instruction *, 32> &DeadInsts);
 
   /// Transform a load and a deinterleave intrinsic into target specific
   /// instructions.
   bool lowerDeinterleaveIntrinsic(IntrinsicInst *II,
-                                  SmallVectorImpl<Instruction *> &DeadInsts);
+                                  SmallSetVector<Instruction *, 32> &DeadInsts);
 
   /// Transform an interleave intrinsic and a store into target specific
   /// instructions.
   bool lowerInterleaveIntrinsic(IntrinsicInst *II,
-                                SmallVectorImpl<Instruction *> &DeadInsts);
+                                SmallSetVector<Instruction *, 32> &DeadInsts);
 
   /// Returns true if the uses of an interleaved load by the
   /// extractelement instructions in \p Extracts can be replaced by uses of the
@@ -249,7 +249,7 @@ static bool isReInterleaveMask(ShuffleVectorInst *SVI, unsigned &Factor,
 }
 
 bool InterleavedAccessImpl::lowerInterleavedLoad(
-    LoadInst *LI, SmallVectorImpl<Instruction *> &DeadInsts) {
+    LoadInst *LI, SmallSetVector<Instruction *, 32> &DeadInsts) {
   if (!LI->isSimple() || isa<ScalableVectorType>(LI->getType()))
     return false;
 
@@ -348,9 +348,9 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
     return !Extracts.empty() || BinOpShuffleChanged;
   }
 
-  append_range(DeadInsts, Shuffles);
+  DeadInsts.insert(Shuffles.begin(), Shuffles.end());
 
-  DeadInsts.push_back(LI);
+  DeadInsts.insert(LI);
   return true;
 }
 
@@ -453,7 +453,7 @@ bool InterleavedAccessImpl::tryReplaceExtracts(
 }
 
 bool InterleavedAccessImpl::lowerInterleavedStore(
-    StoreInst *SI, SmallVectorImpl<Instruction *> &DeadInsts) {
+    StoreInst *SI, SmallSetVector<Instruction *, 32> &DeadInsts) {
   if (!SI->isSimple())
     return false;
 
@@ -473,13 +473,13 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
     return false;
 
   // Already have a new target specific interleaved store. Erase the old store.
-  DeadInsts.push_back(SI);
-  DeadInsts.push_back(SVI);
+  DeadInsts.insert(SI);
+  DeadInsts.insert(SVI);
   return true;
 }
 
 bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
-    IntrinsicInst *DI, SmallVectorImpl<Instruction *> &DeadInsts) {
+    IntrinsicInst *DI, SmallSetVector<Instruction *, 32> &DeadInsts) {
   LoadInst *LI = dyn_cast<LoadInst>(DI->getOperand(0));
 
   if (!LI || !LI->hasOneUse() || !LI->isSimple())
@@ -488,17 +488,19 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
   LLVM_DEBUG(dbgs() << "IA: Found a deinterleave intrinsic: " << *DI << "\n");
 
   // Try and match this with target specific intrinsics.
-  if (!TLI->lowerDeinterleaveIntrinsicToLoad(DI, LI, DeadInsts))
+  SmallVector<Instruction *, 4> DeinterleaveDeadInsts;
+  if (!TLI->lowerDeinterleaveIntrinsicToLoad(DI, LI, DeinterleaveDeadInsts))
     return false;
 
+  DeadInsts.insert(DeinterleaveDeadInsts.begin(), DeinterleaveDeadInsts.end());
   // We now have a target-specific load, so delete the old one.
-  DeadInsts.push_back(DI);
-  DeadInsts.push_back(LI);
+  DeadInsts.insert(DI);
+  DeadInsts.insert(LI);
   return true;
 }
 
 bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
-    IntrinsicInst *II, SmallVectorImpl<Instruction *> &DeadInsts) {
+    IntrinsicInst *II, SmallSetVector<Instruction *, 32> &DeadInsts) {
   if (!II->hasOneUse())
     return false;
 
@@ -515,16 +517,15 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
     return false;
 
   // We now have a target-specific store, so delete the old one.
-  DeadInsts.push_back(SI);
-  DeadInsts.push_back(II);
-  DeadInsts.insert(DeadInsts.end(), InterleaveDeadInsts.begin(),
-                   InterleaveDeadInsts.end());
+  DeadInsts.insert(SI);
+  DeadInsts.insert(II);
+  DeadInsts.insert(InterleaveDeadInsts.begin(), InterleaveDeadInsts.end());
   return true;
 }
 
 bool InterleavedAccessImpl::runOnFunction(Function &F) {
   // Holds dead instructions that will be erased later.
-  SmallVector<Instruction *, 32> DeadInsts;
+  SmallSetVector<Instruction *, 32> DeadInsts;
   bool Changed = false;
 
   for (auto &I : instructions(F)) {

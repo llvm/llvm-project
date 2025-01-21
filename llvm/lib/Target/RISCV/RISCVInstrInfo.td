@@ -100,6 +100,11 @@ def riscv_add_tprel : SDNode<"RISCVISD::ADD_TPREL",
                                                   SDTCisSameAs<0, 3>,
                                                   SDTCisInt<0>]>>;
 
+def riscv_probed_alloca : SDNode<"RISCVISD::PROBED_ALLOCA",
+                                 SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
+                                                      SDTCisVT<0, i32>]>,
+                                 [SDNPHasChain, SDNPMayStore]>;
+
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
@@ -1423,6 +1428,15 @@ let hasSideEffects = 1, mayLoad = 1, mayStore = 1, isCodeGenOnly = 1 in {
 def PROBED_STACKALLOC : Pseudo<(outs GPR:$sp),
                                (ins GPR:$scratch),
                                []>,
+                               Sched<[]>;
+def PROBED_STACKALLOC_RVV : Pseudo<(outs GPR:$sp),
+                               (ins GPR:$scratch),
+                               []>,
+                               Sched<[]>;
+let usesCustomInserter = 1 in
+def PROBED_STACKALLOC_DYN : Pseudo<(outs GPR:$rd),
+                               (ins GPR:$scratch),
+                               [(set GPR:$rd, (riscv_probed_alloca GPR:$scratch))]>,
                                Sched<[]>;
 }
 

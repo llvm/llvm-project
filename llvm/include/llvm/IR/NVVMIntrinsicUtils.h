@@ -38,9 +38,8 @@ enum class TMAReductionOp : uint8_t {
   XOR = 7,
 };
 
-inline bool IntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
+inline bool FPToIntegerIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
-  // Float to i32 / i64 conversion intrinsics:
   case Intrinsic::nvvm_f2i_rm_ftz:
   case Intrinsic::nvvm_f2i_rn_ftz:
   case Intrinsic::nvvm_f2i_rp_ftz:
@@ -61,11 +60,53 @@ inline bool IntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
   case Intrinsic::nvvm_f2ull_rp_ftz:
   case Intrinsic::nvvm_f2ull_rz_ftz:
     return true;
+
+  case Intrinsic::nvvm_f2i_rm:
+  case Intrinsic::nvvm_f2i_rn:
+  case Intrinsic::nvvm_f2i_rp:
+  case Intrinsic::nvvm_f2i_rz:
+
+  case Intrinsic::nvvm_f2ui_rm:
+  case Intrinsic::nvvm_f2ui_rn:
+  case Intrinsic::nvvm_f2ui_rp:
+  case Intrinsic::nvvm_f2ui_rz:
+
+  case Intrinsic::nvvm_d2i_rm:
+  case Intrinsic::nvvm_d2i_rn:
+  case Intrinsic::nvvm_d2i_rp:
+  case Intrinsic::nvvm_d2i_rz:
+
+  case Intrinsic::nvvm_d2ui_rm:
+  case Intrinsic::nvvm_d2ui_rn:
+  case Intrinsic::nvvm_d2ui_rp:
+  case Intrinsic::nvvm_d2ui_rz:
+
+  case Intrinsic::nvvm_f2ll_rm:
+  case Intrinsic::nvvm_f2ll_rn:
+  case Intrinsic::nvvm_f2ll_rp:
+  case Intrinsic::nvvm_f2ll_rz:
+
+  case Intrinsic::nvvm_f2ull_rm:
+  case Intrinsic::nvvm_f2ull_rn:
+  case Intrinsic::nvvm_f2ull_rp:
+  case Intrinsic::nvvm_f2ull_rz:
+
+  case Intrinsic::nvvm_d2ll_rm:
+  case Intrinsic::nvvm_d2ll_rn:
+  case Intrinsic::nvvm_d2ll_rp:
+  case Intrinsic::nvvm_d2ll_rz:
+
+  case Intrinsic::nvvm_d2ull_rm:
+  case Intrinsic::nvvm_d2ull_rn:
+  case Intrinsic::nvvm_d2ull_rp:
+  case Intrinsic::nvvm_d2ull_rz:
+    return false;
   }
+  llvm_unreachable("Checking FTZ flag for invalid f2i/d2i intrinsic");
   return false;
 }
 
-inline bool IntrinsicConvertsToSignedInteger(Intrinsic::ID IntrinsicID) {
+inline bool FPToIntegerIntrinsicResultIsSigned(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
   // f2i
   case Intrinsic::nvvm_f2i_rm:
@@ -96,12 +137,44 @@ inline bool IntrinsicConvertsToSignedInteger(Intrinsic::ID IntrinsicID) {
   case Intrinsic::nvvm_d2ll_rp:
   case Intrinsic::nvvm_d2ll_rz:
     return true;
+
+  // f2ui
+  case Intrinsic::nvvm_f2ui_rm:
+  case Intrinsic::nvvm_f2ui_rm_ftz:
+  case Intrinsic::nvvm_f2ui_rn:
+  case Intrinsic::nvvm_f2ui_rn_ftz:
+  case Intrinsic::nvvm_f2ui_rp:
+  case Intrinsic::nvvm_f2ui_rp_ftz:
+  case Intrinsic::nvvm_f2ui_rz:
+  case Intrinsic::nvvm_f2ui_rz_ftz:
+  // d2ui
+  case Intrinsic::nvvm_d2ui_rm:
+  case Intrinsic::nvvm_d2ui_rn:
+  case Intrinsic::nvvm_d2ui_rp:
+  case Intrinsic::nvvm_d2ui_rz:
+  // f2ull
+  case Intrinsic::nvvm_f2ull_rm:
+  case Intrinsic::nvvm_f2ull_rm_ftz:
+  case Intrinsic::nvvm_f2ull_rn:
+  case Intrinsic::nvvm_f2ull_rn_ftz:
+  case Intrinsic::nvvm_f2ull_rp:
+  case Intrinsic::nvvm_f2ull_rp_ftz:
+  case Intrinsic::nvvm_f2ull_rz:
+  case Intrinsic::nvvm_f2ull_rz_ftz:
+  // d2ull
+  case Intrinsic::nvvm_d2ull_rm:
+  case Intrinsic::nvvm_d2ull_rn:
+  case Intrinsic::nvvm_d2ull_rp:
+  case Intrinsic::nvvm_d2ull_rz:
+    return false;
   }
+  llvm_unreachable(
+      "Checking invalid f2i/d2i intrinsic for signed int conversion");
   return false;
 }
 
 inline APFloat::roundingMode
-IntrinsicGetRoundingMode(Intrinsic::ID IntrinsicID) {
+GetFPToIntegerRoundingMode(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
   // RM:
   case Intrinsic::nvvm_f2i_rm:
@@ -167,8 +240,98 @@ IntrinsicGetRoundingMode(Intrinsic::ID IntrinsicID) {
   case Intrinsic::nvvm_d2ull_rz:
     return APFloat::rmTowardZero;
   }
-  llvm_unreachable("Invalid f2i/d2i rounding mode intrinsic");
+  llvm_unreachable("Checking rounding mode for invalid f2i/d2i intrinsic");
   return APFloat::roundingMode::Invalid;
+}
+
+inline bool FMinFMaxShouldFTZ(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_fmax_ftz_f:
+  case Intrinsic::nvvm_fmax_ftz_nan_f:
+  case Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax_ftz_xorsign_abs_f:
+
+  case Intrinsic::nvvm_fmin_ftz_f:
+  case Intrinsic::nvvm_fmin_ftz_nan_f:
+  case Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin_ftz_xorsign_abs_f:
+    return true;
+
+  case Intrinsic::nvvm_fmax_d:
+  case Intrinsic::nvvm_fmax_f:
+  case Intrinsic::nvvm_fmax_nan_f:
+  case Intrinsic::nvvm_fmax_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax_xorsign_abs_f:
+
+  case Intrinsic::nvvm_fmin_d:
+  case Intrinsic::nvvm_fmin_f:
+  case Intrinsic::nvvm_fmin_nan_f:
+  case Intrinsic::nvvm_fmin_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin_xorsign_abs_f:
+    return false;
+  }
+  llvm_unreachable("Checking FTZ flag for invalid fmin/fmax intrinsic");
+  return false;
+}
+
+inline bool FMinFMaxPropagatesNaNs(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_fmax_ftz_nan_f:
+  case Intrinsic::nvvm_fmax_nan_f:
+  case Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax_nan_xorsign_abs_f:
+
+  case Intrinsic::nvvm_fmin_ftz_nan_f:
+  case Intrinsic::nvvm_fmin_nan_f:
+  case Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin_nan_xorsign_abs_f:
+    return true;
+
+  case Intrinsic::nvvm_fmax_d:
+  case Intrinsic::nvvm_fmax_f:
+  case Intrinsic::nvvm_fmax_ftz_f:
+  case Intrinsic::nvvm_fmax_ftz_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax_xorsign_abs_f:
+
+  case Intrinsic::nvvm_fmin_d:
+  case Intrinsic::nvvm_fmin_f:
+  case Intrinsic::nvvm_fmin_ftz_f:
+  case Intrinsic::nvvm_fmin_ftz_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin_xorsign_abs_f:
+    return false;
+  }
+  llvm_unreachable("Checking NaN flag for invalid fmin/fmax intrinsic");
+  return false;
+}
+
+inline bool FMinFMaxIsXorSignAbs(Intrinsic::ID IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax_ftz_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmax_xorsign_abs_f:
+
+  case Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin_ftz_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin_nan_xorsign_abs_f:
+  case Intrinsic::nvvm_fmin_xorsign_abs_f:
+    return true;
+
+  case Intrinsic::nvvm_fmax_d:
+  case Intrinsic::nvvm_fmax_f:
+  case Intrinsic::nvvm_fmax_ftz_f:
+  case Intrinsic::nvvm_fmax_ftz_nan_f:
+  case Intrinsic::nvvm_fmax_nan_f:
+
+  case Intrinsic::nvvm_fmin_d:
+  case Intrinsic::nvvm_fmin_f:
+  case Intrinsic::nvvm_fmin_ftz_f:
+  case Intrinsic::nvvm_fmin_ftz_nan_f:
+  case Intrinsic::nvvm_fmin_nan_f:
+    return false;
+  }
+  llvm_unreachable("Checking XorSignAbs flag for invalid fmin/fmax intrinsic");
+  return false;
 }
 
 } // namespace nvvm

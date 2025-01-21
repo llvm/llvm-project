@@ -18,7 +18,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/xxhash.h"
 #include <memory>
 #include <optional>
 
@@ -56,21 +55,13 @@ public:
     return P1;
   }
 
-  static uint64_t getRelocHash(llvm::StringRef kind, uint64_t sectionIdx,
-                               uint64_t offset, uint64_t addend) {
-    return llvm::xxHash64((kind + ": " + llvm::Twine::utohexstr(sectionIdx) +
-                           " + " + llvm::Twine::utohexstr(offset) + " + " +
-                           llvm::Twine::utohexstr(addend))
-                              .str());
-  }
-
   /// Reorders sections using balanced partitioning algorithm based on profile
   /// data.
-  static llvm::DenseMap<const BPSectionBase *, size_t>
+  static llvm::DenseMap<const BPSectionBase *, int>
   reorderSectionsByBalancedPartitioning(
-      size_t &highestAvailablePriority, llvm::StringRef profilePath,
-      bool forFunctionCompression, bool forDataCompression,
-      bool compressionSortStartupFunctions, bool verbose,
+      llvm::StringRef profilePath, bool forFunctionCompression,
+      bool forDataCompression, bool compressionSortStartupFunctions,
+      bool verbose,
       llvm::SmallVector<std::unique_ptr<BPSectionBase>> &inputSections);
 };
 

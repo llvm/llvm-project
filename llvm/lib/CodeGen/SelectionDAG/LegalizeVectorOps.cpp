@@ -503,6 +503,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VECTOR_FIND_LAST_ACTIVE:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
     break;
@@ -737,7 +738,17 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
               .getVectorElementType()
               .isFloatingPoint() &&
           NVT.isVector() && NVT.getVectorElementType().isFloatingPoint())
-        Operands[j] = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(j));
+        if (ISD::isVPOpcode(Node->getOpcode())) {
+          unsigned EVLIdx =
+              *ISD::getVPExplicitVectorLengthIdx(Node->getOpcode());
+          unsigned MaskIdx = *ISD::getVPMaskIdx(Node->getOpcode());
+          Operands[j] =
+              DAG.getNode(ISD::VP_FP_EXTEND, dl, NVT, Node->getOperand(j),
+                          Node->getOperand(MaskIdx), Node->getOperand(EVLIdx));
+        } else {
+          Operands[j] =
+              DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(j));
+        }
       else
         Operands[j] = DAG.getNode(ISD::BITCAST, dl, NVT, Node->getOperand(j));
     else
@@ -750,8 +761,15 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   if ((VT.isFloatingPoint() && NVT.isFloatingPoint()) ||
       (VT.isVector() && VT.getVectorElementType().isFloatingPoint() &&
        NVT.isVector() && NVT.getVectorElementType().isFloatingPoint()))
-    Res = DAG.getNode(ISD::FP_ROUND, dl, VT, Res,
-                      DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
+    if (ISD::isVPOpcode(Node->getOpcode())) {
+      unsigned EVLIdx = *ISD::getVPExplicitVectorLengthIdx(Node->getOpcode());
+      unsigned MaskIdx = *ISD::getVPMaskIdx(Node->getOpcode());
+      Res = DAG.getNode(ISD::VP_FP_ROUND, dl, VT, Res,
+                        Node->getOperand(MaskIdx), Node->getOperand(EVLIdx));
+    } else {
+      Res = DAG.getNode(ISD::FP_ROUND, dl, VT, Res,
+                        DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
+    }
   else
     Res = DAG.getNode(ISD::BITCAST, dl, VT, Res);
 
@@ -1207,6 +1225,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   }
   case ISD::VECTOR_COMPRESS:
     Results.push_back(TLI.expandVECTOR_COMPRESS(Node, DAG));
+    return;
+  case ISD::VECTOR_FIND_LAST_ACTIVE:
+    Results.push_back(TLI.expandVectorFindLastActive(Node, DAG));
     return;
   case ISD::SCMP:
   case ISD::UCMP:

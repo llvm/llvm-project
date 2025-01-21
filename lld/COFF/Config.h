@@ -115,12 +115,12 @@ struct Configuration {
   enum ManifestKind { Default, SideBySide, Embed, No };
   bool is64() const { return llvm::COFF::is64Bit(machine); }
 
+  std::unique_ptr<MemoryBuffer> dosStub;
   llvm::COFF::MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN;
   bool machineInferred = false;
   size_t wordsize;
   bool verbose = false;
   WindowsSubsystem subsystem = llvm::COFF::IMAGE_SUBSYSTEM_UNKNOWN;
-  Symbol *entry = nullptr;
   bool noEntry = false;
   std::string outputFile;
   std::string importName;

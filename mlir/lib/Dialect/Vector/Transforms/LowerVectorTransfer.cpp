@@ -435,7 +435,7 @@ struct TransferReadToVectorLoadLowering
       return rewriter.notifyMatchFailure(read, "not a memref source");
 
     // Non-unit strides are handled by VectorToSCF.
-    if (!isLastMemrefDimUnitStride(memRefType))
+    if (!memRefType.isLastDimUnitStride())
       return rewriter.notifyMatchFailure(read, "!= 1 stride needs VectorToSCF");
 
     // If there is broadcasting involved then we first load the unbroadcasted
@@ -588,7 +588,7 @@ struct TransferWriteToVectorStoreLowering
       });
 
     // Non-unit strides are handled by VectorToSCF.
-    if (!isLastMemrefDimUnitStride(memRefType))
+    if (!memRefType.isLastDimUnitStride())
       return rewriter.notifyMatchFailure(write.getLoc(), [=](Diagnostic &diag) {
         diag << "most minor stride is not 1: " << write;
       });

@@ -621,8 +621,9 @@ func.func @test_slice_invalid_size() {
 
 func.func @test_tile_invalid_multiples() {
   %0 = tensor.empty() : tensor<4x31x31xf32>
-  // expected-error@+1 {{'tosa.tile' op expect 'multiples' array to have length 3 but got 0.}}
-  %1 = tosa.tile %0 {multiples = array<i64>} : (tensor<4x31x31xf32>) -> tensor<4x31x31xf32>
+  %cst = tosa.const_shape { value = dense<1> : tensor<1xindex> } : () -> !tosa.shape<1>
+  // expected-error@+1 {{'tosa.tile' op expect 'multiples' to have rank 3 but got 1.}}
+  %1 = tosa.tile %0, %cst: (tensor<4x31x31xf32>, !tosa.shape<1>) -> tensor<4x31x31xf32>
   return
 }
 
@@ -630,8 +631,9 @@ func.func @test_tile_invalid_multiples() {
 
 func.func @test_tile_invalid_multiples_value() {
   %0 = tensor.empty() : tensor<4x31xf32>
+  %multiples = tosa.const_shape { value = dense<[2, -2]> : tensor<2xindex> } : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.tile' op expect element of 'multiples' to be positive integer or -1.}}
-  %1 = tosa.tile %0 {multiples = array<i64: 2, -2>} : (tensor<4x31xf32>) -> tensor<4x31xf32>
+  %1 = tosa.tile %0, %multiples : (tensor<4x31xf32>, !tosa.shape<2>) -> tensor<4x31xf32>
   return
 }
 
@@ -639,8 +641,9 @@ func.func @test_tile_invalid_multiples_value() {
 
 func.func @test_tile_io_rank_mismatch() {
   %0 = tensor.empty() : tensor<4x31xf32>
+  %multiples = tosa.const_shape { value = dense<[2, 2]> : tensor<2xindex> } : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.tile' op expect same input and output tensor rank.}}
-  %1 = tosa.tile %0 {multiples = array<i64: 2, 2>} : (tensor<4x31xf32>) -> tensor<4x31x31xf32>
+  %1 = tosa.tile %0, %multiples : (tensor<4x31xf32>, !tosa.shape<2>) -> tensor<4x31x31xf32>
   return
 }
 
@@ -992,4 +995,26 @@ func.func @test_non_tosa_ops() {
   %0 = arith.constant 6 : index
   %2 = tensor.empty(%0) : tensor<?x27xi64>
   return
+}
+
+// -----
+
+// expected-error@+1 {{invalid rank (must be >= 0): -1}}
+func.func @test_shape_type(%arg0: !tosa.shape<-1>) -> !tosa.shape<-1> {
+  return %arg0 : !tosa.shape<-1>
+}
+
+// -----
+func.func @test_const_shape() -> !tosa.shape<4> {
+  // expected-error@+1 {{'tosa.const_shape' op attribute 'value' failed to satisfy constraint: index elements attribute}}
+  %cst = tosa.const_shape {value = dense<[1, 2, 3, 4]> : tensor<4xi32>} : () -> !tosa.shape<4>
+  return %cst : !tosa.shape<4>
+}
+
+// -----
+
+func.func @test_const_shape_value() -> !tosa.shape<5> {
+  // expected-error@+1 {{'tosa.const_shape' op expect number of elements in attribute value (4) to be equal to the rank (5) for the result shape type}}
+  %cst = tosa.const_shape {value = dense<[1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<5>
+  return %cst : !tosa.shape<5>
 }

@@ -106,3 +106,35 @@ llvm.func @tma_reduce_2d_im2col(%src : !llvm.ptr<3>, %tma_desc : !llvm.ptr, %d0 
   nvvm.cp.async.bulk.tensor.reduce %tma_desc, %src, box[%d0, %d1] {redKind = #nvvm.tma_redux_kind<and>, mode = #nvvm.tma_store_mode<im2col>}: !llvm.ptr, !llvm.ptr<3>
   llvm.return
 }
+
+// -----
+
+llvm.func @convert_float_to_tf32_rna_relu(%src : f32) -> i32 {
+  // expected-error @below {{Relu not supported with rna rounding mode.}}
+  %res = nvvm.cvt.float.to.tf32 %src {rnd = #nvvm.fp_rnd_mode<rna>, relu=true}
+  llvm.return %res : i32
+}
+
+// -----
+
+llvm.func @convert_float_to_tf32_rn_sf(%src : f32) -> i32 {
+  // expected-error @below {{Saturation mode not supported with rn/rz rounding modes.}}
+  %res = nvvm.cvt.float.to.tf32 %src {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<satfinite>}
+  llvm.return %res : i32
+}
+
+// -----
+
+llvm.func @convert_float_to_tf32_rz_sf(%src : f32) -> i32 {
+  // expected-error @below {{Saturation mode not supported with rn/rz rounding modes.}}
+  %res = nvvm.cvt.float.to.tf32 %src {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<satfinite>}
+  llvm.return %res : i32
+}
+
+// -----
+
+llvm.func @convert_float_to_tf32_no_rnd_mode(%src : f32) -> i32 {
+  // expected-error @below {{Only {rn,rz,rna} rounding modes supported for CvtFloatToTF32Op.}}
+  %res = nvvm.cvt.float.to.tf32 %src
+  llvm.return %res : i32
+}

@@ -1868,9 +1868,9 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
               LocalMIs.erase(MI);
               LocalMIs.erase(DefMI);
               LocalMIs.insert(FoldMI);
-              // Update the call site info.
-              if (MI->shouldUpdateCallSiteInfo())
-                MI->getMF()->moveCallSiteInfo(MI, FoldMI);
+              // Update the call info.
+              if (MI->shouldUpdateAdditionalCallInfo())
+                MI->getMF()->moveAdditionalCallInfo(MI, FoldMI);
               MI->eraseFromParent();
               DefMI->eraseFromParent();
               MRI->markUsesInDebugValueAsUndef(FoldedReg);

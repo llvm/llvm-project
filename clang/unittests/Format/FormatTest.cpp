@@ -5732,23 +5732,12 @@ TEST_F(FormatTest, HashInMacroDefinition) {
 
   verifyFormat("#define A void # ## #", getLLVMStyleWithColumns(22));
 
-#if 0
-  // FIXME: The correct format is:
   verifyFormat("{\n"
                "  {\n"
                "#define GEN_ID(_x) char *_x{#_x}\n"
                "    GEN_ID(one);\n"
                "  }\n"
                "}");
-#endif
-  verifyFormat("{\n"
-               "  {\n"
-               "#define GEN_ID(_x) \\\n"
-               "  char *_x { #_x }\n"
-               "    GEN_ID(one);\n"
-               "  }\n"
-               "}",
-               getGoogleStyle());
 }
 
 TEST_F(FormatTest, RespectWhitespaceInMacroDefinitions) {
@@ -9068,6 +9057,121 @@ TEST_F(FormatTest, AdaptiveOnePerLineFormatting) {
                "    aaaa  );\n"
                "aaa(aaaa,  aaaa,  aaaa);", // inconclusive
                Style);
+}
+
+TEST_F(FormatTest, ExportBlockIndentation) {
+  FormatStyle Style = getLLVMStyleWithColumns(80);
+  Style.ExportBlockIndentation = true;
+  verifyFormat("export {\n"
+               "  int x;\n"
+               "  int y;\n"
+               "}",
+               "export {\n"
+               "int x;\n"
+               "int y;\n"
+               "}",
+               Style);
+
+  Style.ExportBlockIndentation = false;
+  verifyFormat("export {\n"
+               "int x;\n"
+               "int y;\n"
+               "}",
+               "export {\n"
+               "  int x;\n"
+               "  int y;\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTest, ShortExportBlocks) {
+  FormatStyle Style = getLLVMStyleWithColumns(80);
+  Style.ExportBlockIndentation = false;
+
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Never;
+  verifyFormat("export {\n"
+               "}",
+               Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               "export\n"
+               "{\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export {\n"
+               "}",
+               "export {}", Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               "export { int x; }", Style);
+
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
+  verifyFormat("export {}",
+               "export {\n"
+               "}",
+               Style);
+
+  verifyFormat("export { int x; }",
+               "export {\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export { int x; }",
+               "export\n"
+               "{\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export {}",
+               "export {\n"
+               "}",
+               Style);
+
+  verifyFormat("export { int x; }",
+               "export {\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Empty;
+  verifyFormat("export {}",
+               "export {\n"
+               "}",
+               Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               "export\n"
+               "{\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export {}", Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               "export { int x; }", Style);
 }
 
 TEST_F(FormatTest, FormatsBuilderPattern) {
@@ -27987,6 +28091,11 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "    operand1 + operand2 - (operand3 + operand4);",
                Style);
 
+  // Check operator>> special case.
+  verifyFormat("std::cin >> longOperand_1 >> longOperand_2 >>\n"
+               "    longOperand_3_;",
+               Style);
+
   Style.BreakBinaryOperations = FormatStyle::BBO_OnePerLine;
 
   // Logical operations
@@ -28065,6 +28174,13 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "         operand6->member;",
                Style);
 
+  // Check operator>> special case.
+  verifyFormat("std::cin >>\n"
+               "    longOperand_1 >>\n"
+               "    longOperand_2 >>\n"
+               "    longOperand_3_;",
+               Style);
+
   Style.BreakBinaryOperations = FormatStyle::BBO_RespectPrecedence;
   verifyFormat("result = op1 + op2 * op3 - op4;", Style);
 
@@ -28088,6 +28204,13 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "                  byte_buffer[1] << 8 |\n"
                "                  byte_buffer[2] << 16 |\n"
                "                  byte_buffer[3] << 24;",
+               Style);
+
+  // Check operator>> special case.
+  verifyFormat("std::cin >>\n"
+               "    longOperand_1 >>\n"
+               "    longOperand_2 >>\n"
+               "    longOperand_3_;",
                Style);
 
   Style.BreakBinaryOperations = FormatStyle::BBO_OnePerLine;
@@ -28164,6 +28287,13 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "                  << 24;",
                Style);
 
+  // Check operator>> special case.
+  verifyFormat("std::cin\n"
+               "    >> longOperand_1\n"
+               "    >> longOperand_2\n"
+               "    >> longOperand_3_;",
+               Style);
+
   Style.BreakBinaryOperations = FormatStyle::BBO_RespectPrecedence;
   verifyFormat("result = op1 + op2 * op3 - op4;", Style);
 
@@ -28187,6 +28317,13 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "                  | byte_buffer[1] << 8\n"
                "                  | byte_buffer[2] << 16\n"
                "                  | byte_buffer[3] << 24;",
+               Style);
+
+  // Check operator>> special case.
+  verifyFormat("std::cin\n"
+               "    >> longOperand_1\n"
+               "    >> longOperand_2\n"
+               "    >> longOperand_3_;",
                Style);
 }
 

@@ -899,51 +899,66 @@ template <typename T> Expr<T> Folder<T>::RESHAPE(FunctionRef<T> &&funcRef) {
   std::optional<std::vector<ConstantSubscript>> shape{
       GetIntegerVector<ConstantSubscript>(args[1])};
   std::optional<std::vector<int>> order{GetIntegerVector<int>(args[3])};
-  if (!source || !shape || (args[2] && !pad) || (args[3] && !order)) {
-    return Expr<T>{std::move(funcRef)}; // Non-constant arguments
-  } else if (shape.value().size() > common::maxRank) {
-    context_.messages().Say(
-        "Size of 'shape=' argument must not be greater than %d"_err_en_US,
-        common::maxRank);
-  } else if (HasNegativeExtent(shape.value())) {
-    context_.messages().Say(
-        "'shape=' argument must not have a negative extent"_err_en_US);
-  } else {
-    std::optional<uint64_t> optResultElement{TotalElementCount(shape.value())};
-    if (!optResultElement) {
+  std::optional<uint64_t> optResultElement;
+  std::optional<std::vector<int>> dimOrder;
+  bool ok{true};
+  if (shape) {
+    if (shape->size() > common::maxRank) {
       context_.messages().Say(
-          "'shape=' argument has too many elements"_err_en_US);
+          "Size of 'shape=' argument (%zd) must not be greater than %d"_err_en_US,
+          shape->size(), common::maxRank);
+      ok = false;
+    } else if (HasNegativeExtent(*shape)) {
+      context_.messages().Say(
+          "'shape=' argument (%s) must not have a negative extent"_err_en_US,
+          DEREF(args[1]->UnwrapExpr()).AsFortran());
+      ok = false;
     } else {
-      int rank{GetRank(shape.value())};
-      uint64_t resultElements{*optResultElement};
-      std::optional<std::vector<int>> dimOrder;
-      if (order) {
-        dimOrder = ValidateDimensionOrder(rank, *order);
-      }
-      std::vector<int> *dimOrderPtr{dimOrder ? &dimOrder.value() : nullptr};
-      if (order && !dimOrder) {
+      optResultElement = TotalElementCount(*shape);
+      if (!optResultElement) {
         context_.messages().Say(
-            "Invalid 'order=' argument in RESHAPE"_err_en_US);
-      } else if (resultElements > source->size() && (!pad || pad->empty())) {
-        context_.messages().Say(
-            "Too few elements in 'source=' argument and 'pad=' "
-            "argument is not present or has null size"_err_en_US);
-      } else {
-        Constant<T> result{!source->empty() || !pad
-                ? source->Reshape(std::move(shape.value()))
-                : pad->Reshape(std::move(shape.value()))};
-        ConstantSubscripts subscripts{result.lbounds()};
-        auto copied{result.CopyFrom(*source,
-            std::min(static_cast<uint64_t>(source->size()), resultElements),
-            subscripts, dimOrderPtr)};
-        if (copied < resultElements) {
-          CHECK(pad);
-          copied += result.CopyFrom(
-              *pad, resultElements - copied, subscripts, dimOrderPtr);
-        }
-        CHECK(copied == resultElements);
-        return Expr<T>{std::move(result)};
+            "'shape=' argument (%s) specifies an array with too many elements"_err_en_US,
+            DEREF(args[1]->UnwrapExpr()).AsFortran());
+        ok = false;
       }
+    }
+    if (order) {
+      dimOrder = ValidateDimensionOrder(GetRank(*shape), *order);
+      if (!dimOrder) {
+        context_.messages().Say(
+            "Invalid 'order=' argument (%s) in RESHAPE"_err_en_US,
+            DEREF(args[3]->UnwrapExpr()).AsFortran());
+        ok = false;
+      }
+    }
+  }
+  if (!ok) {
+    // convert into an invalid intrinsic procedure call below
+  } else if (!source || !shape || (args[2] && !pad) || (args[3] && !order)) {
+    return Expr<T>{std::move(funcRef)}; // Non-constant arguments
+  } else {
+    uint64_t resultElements{*optResultElement};
+    std::vector<int> *dimOrderPtr{dimOrder ? &dimOrder.value() : nullptr};
+    if (resultElements > source->size() && (!pad || pad->empty())) {
+      context_.messages().Say(
+          "Too few elements in 'source=' argument and 'pad=' "
+          "argument is not present or has null size"_err_en_US);
+      ok = false;
+    } else {
+      Constant<T> result{!source->empty() || !pad
+              ? source->Reshape(std::move(shape.value()))
+              : pad->Reshape(std::move(shape.value()))};
+      ConstantSubscripts subscripts{result.lbounds()};
+      auto copied{result.CopyFrom(*source,
+          std::min(static_cast<uint64_t>(source->size()), resultElements),
+          subscripts, dimOrderPtr)};
+      if (copied < resultElements) {
+        CHECK(pad);
+        copied += result.CopyFrom(
+            *pad, resultElements - copied, subscripts, dimOrderPtr);
+      }
+      CHECK(copied == resultElements);
+      return Expr<T>{std::move(result)};
     }
   }
   // Invalid, prevent re-folding
@@ -1398,7 +1413,8 @@ AsFlatArrayConstructor(const Expr<SomeKind<CAT>> &expr) {
 template <typename T>
 std::optional<Expr<T>> FromArrayConstructor(
     FoldingContext &context, ArrayConstructor<T> &&values, const Shape &shape) {
-  if (auto constShape{AsConstantExtents(context, shape)}) {
+  if (auto constShape{AsConstantExtents(context, shape)};
+      constShape && !HasNegativeExtent(*constShape)) {
     Expr<T> result{Fold(context, Expr<T>{std::move(values)})};
     if (auto *constant{UnwrapConstantValue<T>(result)}) {
       // Elements and shape are both constant.
@@ -1643,8 +1659,12 @@ auto ApplyElementwise(FoldingContext &context,
     -> std::optional<Expr<RESULT>> {
   auto resultLength{ComputeResultLength(operation)};
   auto &leftExpr{operation.left()};
-  leftExpr = Fold(context, std::move(leftExpr));
   auto &rightExpr{operation.right()};
+  if (leftExpr.Rank() != rightExpr.Rank() && leftExpr.Rank() != 0 &&
+      rightExpr.Rank() != 0) {
+    return std::nullopt; // error recovery
+  }
+  leftExpr = Fold(context, std::move(leftExpr));
   rightExpr = Fold(context, std::move(rightExpr));
   if (leftExpr.Rank() > 0) {
     if (std::optional<Shape> leftShape{GetShape(context, leftExpr)}) {

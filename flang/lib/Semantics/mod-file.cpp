@@ -139,7 +139,7 @@ void ModFileWriter::Write(const Symbol &symbol) {
   const auto *ancestor{module.ancestor()};
   isSubmodule_ = ancestor != nullptr;
   auto ancestorName{ancestor ? ancestor->GetName().value().ToString() : ""s};
-  auto path{context_.moduleDirectory() + '/' +
+  std::string path{context_.moduleDirectory() + '/' +
       ModFileName(symbol.name(), ancestorName, context_.moduleFileSuffix())};
 
   UnorderedSymbolSet hermeticModules;
@@ -1392,7 +1392,8 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     // USE, NON_INTRINSIC global name isn't a module?
     fatalError = isIntrinsic.has_value();
   }
-  auto path{ModFileName(name, ancestorName, context_.moduleFileSuffix())};
+  std::string path{
+      ModFileName(name, ancestorName, context_.moduleFileSuffix())};
   parser::Parsing parsing{context_.allCookedSources()};
   parser::Options options;
   options.isModuleFile = true;
@@ -1468,7 +1469,7 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
       } else {
         for (auto &msg : parsing.messages().messages()) {
           std::string str{msg.ToString()};
-          Say(name, ancestorName,
+          Say("parse", name, ancestorName,
               parser::MessageFixedText{str.c_str(), str.size(), msg.severity()},
               path);
         }
@@ -1480,11 +1481,11 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   std::optional<ModuleCheckSumType> checkSum{
       VerifyHeader(sourceFile->content())};
   if (!checkSum) {
-    Say(name, ancestorName, "File has invalid checksum: %s"_err_en_US,
+    Say("use", name, ancestorName, "File has invalid checksum: %s"_err_en_US,
         sourceFile->path());
     return nullptr;
   } else if (requiredHash && *requiredHash != *checkSum) {
-    Say(name, ancestorName,
+    Say("use", name, ancestorName,
         "File is not the right module file for %s"_err_en_US,
         "'"s + name.ToString() + "': "s + sourceFile->path());
     return nullptr;
@@ -1494,7 +1495,7 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   std::optional<parser::Program> &parsedProgram{parsing.parseTree()};
   if (!parsing.messages().empty() || !parsing.consumedWholeFile() ||
       !parsedProgram) {
-    Say(name, ancestorName, "Module file is corrupt: %s"_err_en_US,
+    Say("parse", name, ancestorName, "Module file is corrupt: %s"_err_en_US,
         sourceFile->path());
     return nullptr;
   }
@@ -1572,10 +1573,10 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   }
 }
 
-parser::Message &ModFileReader::Say(SourceName name,
+parser::Message &ModFileReader::Say(const char *verb, SourceName name,
     const std::string &ancestor, parser::MessageFixedText &&msg,
     const std::string &arg) {
-  return context_.Say(name, "Cannot read module file for %s: %s"_err_en_US,
+  return context_.Say(name, "Cannot %s module file for %s: %s"_err_en_US, verb,
       parser::MessageFormattedText{ancestor.empty()
               ? "module '%s'"_en_US
               : "submodule '%s' of module '%s'"_en_US,

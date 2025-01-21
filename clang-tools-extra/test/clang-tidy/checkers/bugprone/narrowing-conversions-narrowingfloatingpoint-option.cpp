@@ -36,6 +36,15 @@ void narrow_double_to_float_not_ok(double d) {
   f = narrow_double_to_float_return();
 }
 
+float narrow_float16_to_float_return(_Float16 f) {
+  return f;
+}
+
+_Float16 narrow_float_to_float16_return(float f) {
+  return f;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: narrowing conversion from 'float' to '_Float16' [bugprone-narrowing-conversions]
+}
+
 void narrow_fp_constants() {
   float f;
   f = 0.5; // [dcl.init.list] 7.2 : in-range fp constant to narrower float is not a narrowing.

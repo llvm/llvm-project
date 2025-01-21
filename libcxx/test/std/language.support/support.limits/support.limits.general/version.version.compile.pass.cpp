@@ -156,6 +156,7 @@
     __cpp_lib_node_extract                                  201606L [C++17]
     __cpp_lib_nonmember_container_access                    201411L [C++17]
     __cpp_lib_not_fn                                        201603L [C++17]
+                                                            202306L [C++26]
     __cpp_lib_null_iterators                                201304L [C++14]
     __cpp_lib_optional                                      201606L [C++17]
                                                             202106L [C++20]
@@ -7405,8 +7406,8 @@
 # ifndef __cpp_lib_not_fn
 #   error "__cpp_lib_not_fn should be defined in c++26"
 # endif
-# if __cpp_lib_not_fn != 201603L
-#   error "__cpp_lib_not_fn should have the value 201603L in c++26"
+# if __cpp_lib_not_fn != 202306L
+#   error "__cpp_lib_not_fn should have the value 202306L in c++26"
 # endif
 
 # ifndef __cpp_lib_null_iterators

@@ -291,6 +291,8 @@ public:
 class PointerType : public Type {
 public:
   // TODO: add missing functions
+
+  // TODO: Remove non-opaque variant of sandboxir::PointerType::get
   static PointerType *get(Type *ElementType, unsigned AddressSpace);
   static PointerType *get(Context &Ctx, unsigned AddressSpace);
 

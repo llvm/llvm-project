@@ -20,5 +20,9 @@ target_link_libraries(FlangFrontendTests
   FortranSemantics
   FortranCommon
   FortranEvaluate
+)
+
+mlir_target_link_libraries(FlangFrontendTests
+  PRIVATE
   MLIRIR
 )

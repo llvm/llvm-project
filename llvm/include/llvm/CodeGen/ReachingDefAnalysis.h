@@ -177,24 +177,23 @@ public:
 
   /// Provides the instruction id of the closest reaching def instruction of
   /// Reg that reaches MI, relative to the begining of MI's basic block.
-  int getReachingDef(MachineInstr *MI, MCRegister Reg) const;
+  int getReachingDef(MachineInstr *MI, Register Reg) const;
 
   /// Return whether A and B use the same def of Reg.
-  bool hasSameReachingDef(MachineInstr *A, MachineInstr *B,
-                          MCRegister Reg) const;
+  bool hasSameReachingDef(MachineInstr *A, MachineInstr *B, Register Reg) const;
 
   /// Return whether the reaching def for MI also is live out of its parent
   /// block.
-  bool isReachingDefLiveOut(MachineInstr *MI, MCRegister Reg) const;
+  bool isReachingDefLiveOut(MachineInstr *MI, Register Reg) const;
 
   /// Return the local MI that produces the live out value for Reg, or
   /// nullptr for a non-live out or non-local def.
   MachineInstr *getLocalLiveOutMIDef(MachineBasicBlock *MBB,
-                                     MCRegister Reg) const;
+                                     Register Reg) const;
 
   /// If a single MachineInstr creates the reaching definition, then return it.
   /// Otherwise return null.
-  MachineInstr *getUniqueReachingMIDef(MachineInstr *MI, MCRegister Reg) const;
+  MachineInstr *getUniqueReachingMIDef(MachineInstr *MI, Register Reg) const;
 
   /// If a single MachineInstr creates the reaching definition, for MIs operand
   /// at Idx, then return it. Otherwise return null.
@@ -206,43 +205,42 @@ public:
 
   /// Provide whether the register has been defined in the same basic block as,
   /// and before, MI.
-  bool hasLocalDefBefore(MachineInstr *MI, MCRegister Reg) const;
+  bool hasLocalDefBefore(MachineInstr *MI, Register Reg) const;
 
   /// Return whether the given register is used after MI, whether it's a local
   /// use or a live out.
-  bool isRegUsedAfter(MachineInstr *MI, MCRegister Reg) const;
+  bool isRegUsedAfter(MachineInstr *MI, Register Reg) const;
 
   /// Return whether the given register is defined after MI.
-  bool isRegDefinedAfter(MachineInstr *MI, MCRegister Reg) const;
+  bool isRegDefinedAfter(MachineInstr *MI, Register Reg) const;
 
   /// Provides the clearance - the number of instructions since the closest
   /// reaching def instuction of Reg that reaches MI.
-  int getClearance(MachineInstr *MI, MCRegister Reg) const;
+  int getClearance(MachineInstr *MI, Register Reg) const;
 
   /// Provides the uses, in the same block as MI, of register that MI defines.
   /// This does not consider live-outs.
-  void getReachingLocalUses(MachineInstr *MI, MCRegister Reg,
+  void getReachingLocalUses(MachineInstr *MI, Register Reg,
                             InstSet &Uses) const;
 
   /// Search MBB for a definition of Reg and insert it into Defs. If no
   /// definition is found, recursively search the predecessor blocks for them.
-  void getLiveOuts(MachineBasicBlock *MBB, MCRegister Reg, InstSet &Defs,
+  void getLiveOuts(MachineBasicBlock *MBB, Register Reg, InstSet &Defs,
                    BlockSet &VisitedBBs) const;
-  void getLiveOuts(MachineBasicBlock *MBB, MCRegister Reg, InstSet &Defs) const;
+  void getLiveOuts(MachineBasicBlock *MBB, Register Reg, InstSet &Defs) const;
 
   /// For the given block, collect the instructions that use the live-in
   /// value of the provided register. Return whether the value is still
   /// live on exit.
-  bool getLiveInUses(MachineBasicBlock *MBB, MCRegister Reg,
-                     InstSet &Uses) const;
+  bool getLiveInUses(MachineBasicBlock *MBB, Register Reg, InstSet &Uses) const;
 
   /// Collect the users of the value stored in Reg, which is defined
   /// by MI.
-  void getGlobalUses(MachineInstr *MI, MCRegister Reg, InstSet &Uses) const;
+  void getGlobalUses(MachineInstr *MI, Register Reg, InstSet &Uses) const;
 
   /// Collect all possible definitions of the value stored in Reg, which is
   /// used by MI.
-  void getGlobalReachingDefs(MachineInstr *MI, MCRegister Reg,
+  void getGlobalReachingDefs(MachineInstr *MI, Register Reg,
                              InstSet &Defs) const;
 
   /// Return whether From can be moved forwards to just before To.
@@ -267,13 +265,12 @@ public:
 
   /// Return whether a MachineInstr could be inserted at MI and safely define
   /// the given register without affecting the program.
-  bool isSafeToDefRegAt(MachineInstr *MI, MCRegister Reg) const;
+  bool isSafeToDefRegAt(MachineInstr *MI, Register Reg) const;
 
   /// Return whether a MachineInstr could be inserted at MI and safely define
   /// the given register without affecting the program, ignoring any effects
   /// on the provided instructions.
-  bool isSafeToDefRegAt(MachineInstr *MI, MCRegister Reg,
-                        InstSet &Ignore) const;
+  bool isSafeToDefRegAt(MachineInstr *MI, Register Reg, InstSet &Ignore) const;
 
 private:
   /// Set up LiveRegs by merging predecessor live-out values.
@@ -308,7 +305,7 @@ private:
 
   /// Provides the instruction of the closest reaching def instruction of
   /// Reg that reaches MI, relative to the begining of MI's basic block.
-  MachineInstr *getReachingLocalMIDef(MachineInstr *MI, MCRegister Reg) const;
+  MachineInstr *getReachingLocalMIDef(MachineInstr *MI, Register Reg) const;
 };
 
 } // namespace llvm
