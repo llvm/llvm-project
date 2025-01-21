@@ -5221,7 +5221,7 @@ public:
 };
 
 /// Fold gathers with consecutive offsets [0, 1, 2, ...] into contiguous
-/// maskedload. Only 1D non-scalable vectors are supported for now.
+/// maskedload. Only 1D fixed vectors are supported for now.
 class FoldContiguousGather final : public OpRewritePattern<GatherOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
