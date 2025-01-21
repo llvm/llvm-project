@@ -1,6 +1,6 @@
 // Use --mlir-disable-threading so that the AA queries are serialized
 // as well as its diagnostic output.
-// RUN: fir-opt %s -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' -split-input-file --mlir-disable-threading 2>&1 | FileCheck %s
+// RUN: fir-test-opt %s -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' -split-input-file --mlir-disable-threading 2>&1 | FileCheck %s
 
 // Fortran code before simplification:
 // SUBROUTINE mysub(ns,ne)

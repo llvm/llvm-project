@@ -1,4 +1,4 @@
-// RUN: fir-opt %s -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' 2>&1 | FileCheck %s
+// RUN: fir-test-opt %s -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' 2>&1 | FileCheck %s
 
 // leslie3d case with two allocatable module variables
 // that cannot alias:

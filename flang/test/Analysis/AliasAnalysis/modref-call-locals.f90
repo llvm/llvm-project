@@ -1,5 +1,5 @@
 ! RUN: bbc -emit-hlfir %s -o - | %python %S/gen_mod_ref_test.py | \
-! RUN:  fir-opt -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis-modref))' \
+! RUN:  fir-test-opt -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis-modref))' \
 ! RUN:  --mlir-disable-threading -o /dev/null 2>&1 | FileCheck %s
 
 ! Test fir.call modref for local variables.

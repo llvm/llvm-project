@@ -1,4 +1,4 @@
-// RUN: fir-opt %s --test-side-effects --verify-diagnostics
+// RUN: fir-test-opt %s --test-side-effects --verify-diagnostics
 
 func.func @concat(%arg0: !fir.ref<!fir.char<1,10>>, %arg1: !fir.ref<!fir.char<1, 20>>) {
 // expected-remark@+1 {{operation has no memory effects}}

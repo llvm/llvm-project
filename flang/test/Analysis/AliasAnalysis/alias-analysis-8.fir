@@ -1,4 +1,4 @@
-// RUN: fir-opt %s -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' 2>&1 | FileCheck %s
+// RUN: fir-test-opt %s -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' 2>&1 | FileCheck %s
 
 // Exercise that a box reference does not alias with the address loaded from the box
 // module mm
