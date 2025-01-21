@@ -9059,9 +9059,9 @@ TEST_F(FormatTest, AdaptiveOnePerLineFormatting) {
                Style);
 }
 
-TEST_F(FormatTest, ExportBlockIndentation) {
+TEST_F(FormatTest, IndentExportBlock) {
   FormatStyle Style = getLLVMStyleWithColumns(80);
-  Style.ExportBlockIndentation = true;
+  Style.IndentExportBlock = true;
   verifyFormat("export {\n"
                "  int x;\n"
                "  int y;\n"
@@ -9072,7 +9072,7 @@ TEST_F(FormatTest, ExportBlockIndentation) {
                "}",
                Style);
 
-  Style.ExportBlockIndentation = false;
+  Style.IndentExportBlock = false;
   verifyFormat("export {\n"
                "int x;\n"
                "int y;\n"
@@ -9086,7 +9086,7 @@ TEST_F(FormatTest, ExportBlockIndentation) {
 
 TEST_F(FormatTest, ShortExportBlocks) {
   FormatStyle Style = getLLVMStyleWithColumns(80);
-  Style.ExportBlockIndentation = false;
+  Style.IndentExportBlock = false;
 
   Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Never;
   verifyFormat("export {\n"
