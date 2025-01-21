@@ -310,6 +310,11 @@ template <class ELFT> class ELFState {
                            ContiguousBlobAccumulator &CBA);
 
   void writeFill(ELFYAML::Fill &Fill, ContiguousBlobAccumulator &CBA);
+  void writeNoteChunk(ELFYAML::NoteChunk &NoteChunk,
+                      ContiguousBlobAccumulator &CBA);
+
+  uint64_t writeNotes(StringRef SecName, ArrayRef<ELFYAML::NoteEntry> Notes,
+                      uint64_t Align, ContiguousBlobAccumulator &CBA);
 
   ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH);
 
@@ -792,6 +797,13 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
       continue;
     }
 
+    if (ELFYAML::NoteChunk *S = dyn_cast<ELFYAML::NoteChunk>(D.get())) {
+      S->Offset = alignToOffset(CBA, S->NoteAlign, S->Offset);
+      writeNoteChunk(*S, CBA);
+      LocationCounter += S->Size;
+      continue;
+    }
+
     ELFYAML::Section *Sec = cast<ELFYAML::Section>(D.get());
     bool IsFirstUndefSection = Sec == Doc.getSections().front();
     if (IsFirstUndefSection && Sec->IsImplicit)
@@ -1157,6 +1169,11 @@ ELFState<ELFT>::getPhdrFragments(const ELFYAML::ProgramHeader &Phdr,
                      /*ShAddrAlign=*/1});
       continue;
     }
+    if (const auto *F = dyn_cast<ELFYAML::NoteChunk>(C)) {
+      Ret.push_back(
+          {*F->Offset, F->Size, llvm::ELF::SHT_PROGBITS, F->NoteAlign});
+      continue;
+    }
 
     const ELFYAML::Section *S = cast<ELFYAML::Section>(C);
     const Elf_Shdr &H = SHeaders[SN2I.get(S->Name)];
@@ -1229,7 +1246,7 @@ bool llvm::ELFYAML::shouldAllocateFileSpace(
     auto It = llvm::find_if(
         PH.Chunks, [&](ELFYAML::Chunk *C) { return C->Name == S.Name; });
     if (std::any_of(It, PH.Chunks.end(), [](ELFYAML::Chunk *C) {
-          return (isa<ELFYAML::Fill>(C) ||
+          return (!isa<ELFYAML::Section>(C) ||
                   cast<ELFYAML::Section>(C)->Type != ELF::SHT_NOBITS);
         }))
       return true;
@@ -1793,36 +1810,35 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
 }
 
 template <class ELFT>
-void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
-                                         const ELFYAML::NoteSection &Section,
-                                         ContiguousBlobAccumulator &CBA) {
-  if (!Section.Notes || Section.Notes->empty())
-    return;
+uint64_t ELFState<ELFT>::writeNotes(StringRef SecName,
+                                    ArrayRef<ELFYAML::NoteEntry> Notes,
+                                    uint64_t Align,
+                                    ContiguousBlobAccumulator &CBA) {
+  if (Notes.empty())
+    return 0;
 
-  unsigned Align;
-  switch (Section.AddressAlign) {
+  switch (Align) {
   case 0:
-  case 4:
     Align = 4;
-    break;
+    [[fallthrough]];
+  case 4:
   case 8:
-    Align = 8;
     break;
   default:
-    reportError(Section.Name + ": invalid alignment for a note section: 0x" +
-                Twine::utohexstr(Section.AddressAlign));
-    return;
+    reportError(SecName + ": invalid alignment for a note section: 0x" +
+                Twine::utohexstr(Align));
+    return 0;
   }
 
   if (CBA.getOffset() != alignTo(CBA.getOffset(), Align)) {
-    reportError(Section.Name + ": invalid offset of a note section: 0x" +
+    reportError(SecName + ": invalid offset of a note section: 0x" +
                 Twine::utohexstr(CBA.getOffset()) + ", should be aligned to " +
                 Twine(Align));
-    return;
+    return 0;
   }
 
   uint64_t Offset = CBA.tell();
-  for (const ELFYAML::NoteEntry &NE : *Section.Notes) {
+  for (const ELFYAML::NoteEntry &NE : Notes) {
     // Write name size.
     if (NE.Name.empty())
       CBA.write<uint32_t>(0, ELFT::Endianness);
@@ -1838,22 +1854,41 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     // Write type.
     CBA.write<uint32_t>(NE.Type, ELFT::Endianness);
 
-    // Write name, null terminator and padding.
+    // Write name and the null terminator.
     if (!NE.Name.empty()) {
       CBA.write(NE.Name.data(), NE.Name.size());
       CBA.write('\0');
     }
 
-    // Write description and padding.
+    // Write description, padding to the alignment.
     if (NE.Desc.binary_size() != 0) {
       CBA.padToAlignment(Align);
       CBA.writeAsBinary(NE.Desc);
     }
 
+    // Write the padding for the next entry.
     CBA.padToAlignment(Align);
   }
 
-  SHeader.sh_size = CBA.tell() - Offset;
+  return CBA.tell() - Offset;
+}
+
+template <class ELFT>
+void ELFState<ELFT>::writeNoteChunk(ELFYAML::NoteChunk &NoteChunk,
+                                    ContiguousBlobAccumulator &CBA) {
+  NoteChunk.Size =
+      writeNotes(NoteChunk.Name, NoteChunk.Notes, NoteChunk.NoteAlign, CBA);
+}
+
+template <class ELFT>
+void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
+                                         const ELFYAML::NoteSection &Section,
+                                         ContiguousBlobAccumulator &CBA) {
+  if (!Section.Notes)
+    return;
+
+  SHeader.sh_size =
+      writeNotes(Section.Name, *Section.Notes, Section.AddressAlign, CBA);
 }
 
 template <class ELFT>

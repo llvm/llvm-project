@@ -234,6 +234,7 @@ struct Chunk {
     SpecialChunksStart,
     Fill = SpecialChunksStart,
     SectionHeaderTable,
+    NoteChunk,
   };
 
   ChunkKind Kind;
@@ -338,6 +339,20 @@ struct SectionHeaderTable : Chunk {
   bool isDefault() const { return !Sections && !Excluded && !NoHeaders; }
 
   static constexpr StringRef TypeStr = "SectionHeaderTable";
+};
+
+struct NoteChunk : Chunk {
+  llvm::yaml::Hex64 NoteAlign;
+  std::vector<ELFYAML::NoteEntry> Notes;
+  uint64_t Size = 0;
+
+  NoteChunk() : Chunk(ChunkKind::NoteChunk, /*Implicit=*/false) {}
+
+  static bool classof(const Chunk *S) {
+    return S->Kind == ChunkKind::NoteChunk;
+  }
+
+  static constexpr StringRef TypeStr = "NoteChunk";
 };
 
 struct BBAddrMapSection : Section {

@@ -1525,6 +1525,13 @@ static void sectionHeaderTableMapping(IO &IO,
   IO.mapOptional("NoHeaders", SHT.NoHeaders);
 }
 
+static void noteChunkMapping(IO &IO, ELFYAML::NoteChunk &Chunk) {
+  IO.mapOptional("Name", Chunk.Name, StringRef());
+  IO.mapOptional("Offset", Chunk.Offset);
+  IO.mapOptional("NoteAlign", Chunk.NoteAlign, Hex64(4));
+  IO.mapRequired("Notes", Chunk.Notes);
+}
+
 static void sectionMapping(IO &IO, ELFYAML::LinkerOptionsSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapOptional("Options", Section.Options);
@@ -1618,6 +1625,13 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
 
     sectionHeaderTableMapping(
         IO, *cast<ELFYAML::SectionHeaderTable>(Section.get()));
+    return;
+  }
+
+  if (TypeStr == ELFYAML::NoteChunk::TypeStr) {
+    assert(!IO.outputting()); // We don't dump note chunks currently.
+    Section.reset(new ELFYAML::NoteChunk());
+    noteChunkMapping(IO, *cast<ELFYAML::NoteChunk>(Section.get()));
     return;
   }
 
@@ -1757,6 +1771,9 @@ std::string MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::validate(
       return "NoHeaders can't be used together with Offset/Sections/Excluded";
     return "";
   }
+
+  if (isa<ELFYAML::NoteChunk>(C.get()))
+    return "";
 
   const ELFYAML::Section &Sec = *cast<ELFYAML::Section>(C.get());
   if (Sec.Size && Sec.Content &&

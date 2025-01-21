@@ -1,0 +1,127 @@
+## Check that NoteChunks can generate note content for a segment without
+## creating note sections.
+
+# RUN: yaml2obj --docnum=1 -D ENDIANNESS=LSB -D ALIGN=4 %s -o %t1.lsb4
+# RUN: llvm-readelf --segments --sections --notes %t1.lsb4 | \
+# RUN:   FileCheck %s --check-prefix=TEST1 -D#SIZE0=24 -D#SIZE1=20 -D#SIZE2=20 -D#ALIGN=4
+
+# RUN: yaml2obj --docnum=1 -D ENDIANNESS=MSB -D ALIGN=8 %s -o %t1.msb8
+# RUN: llvm-readelf --segments --sections --notes %t1.msb8 | \
+# RUN:   FileCheck %s --check-prefix=TEST1 -D#SIZE0=32 -D#SIZE1=24 -D#SIZE2=24 -D#ALIGN=8
+
+# TEST1:      Section Headers:
+# TEST1-NEXT:  [Nr] Name      Type Address  Off              Size
+# TEST1-NEXT:  [ 0]           NULL
+# TEST1-NEXT:  [ 1] .note1    NOTE [[#%x,]] [[#%x,OFFSET1:]] [[#%.6x,SIZE1]]
+# TEST1-NEXT:  [ 2] .strtab
+# TEST1-NEXT:  [ 3] .shstrtab
+#
+# TEST1:      Program Headers:
+# TEST1-NEXT:  Type Offset                   VirtAddr  PhysAddr  FileSiz                      MemSiz                       Flg Align
+# TEST1-NEXT:  NOTE [[#%#.6x,OFFSET1-SIZE0]] [[#%#x,]] [[#%#x,]] [[#%#.6x,SIZE0+SIZE1+SIZE2]] [[#%#.6x,SIZE0+SIZE1+SIZE2]]     [[#%#x,ALIGN]]
+#
+# TEST1:      Section to Segment mapping:
+# TEST1-NEXT:  Segment Sections...
+# TEST1-NEXT:   00     .note1{{[ ]*$}}
+#
+# TEST1:      Displaying notes found at file offset [[#%#.8x,== OFFSET1-SIZE0]] with length [[#%#.8x,SIZE0+SIZE1+SIZE2]]:
+# TEST1-NEXT:   Owner                Data size 	Description
+# TEST1-NEXT:   ABCD                 0x00000002	NT_PRSTATUS
+# TEST1-NEXT:    description data: 01 02
+# TEST1-NEXT:   EFG                  0x00000002	NT_FPREGSET
+# TEST1-NEXT:    description data: 03 04
+# TEST1-NEXT:   XYZ                  0x00000002	NT_PRPSINFO
+# TEST1-NEXT:    description data: 05 06
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2[[ENDIANNESS]]
+  Type:  ET_CORE
+ProgramHeaders:
+  - Type:      PT_NOTE
+    FirstSec:  .note0
+    LastSec:   .note2
+Sections:
+  - Name:      .note0
+    Type:      NoteChunk
+    NoteAlign: [[ALIGN]]
+    Notes:
+      - Name: ABCD
+        Type: 0x1
+        Desc: 0102
+  - Name:         .note1
+    Type:         SHT_NOTE
+    AddressAlign: [[ALIGN]]
+    Notes:
+      - Name: EFG
+        Type: 0x2
+        Desc: 0304
+  - Name:      .note2
+    Type:      NoteChunk
+    NoteAlign: [[ALIGN]]
+    Notes:
+      - Name: XYZ
+        Type: 0x3
+        Desc: 0506
+
+## Check the default value for 'NoteAlign'
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readelf --segments %t2 | FileCheck %s --check-prefix=TEST2
+
+# TEST2:      Program Headers:
+# TEST2-NEXT:  Type {{.*}} Align{{$}}
+# TEST2-NEXT:  NOTE {{.*}} 0x4{{$}}
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_CORE
+ProgramHeaders:
+  - Type:      PT_NOTE
+    FirstSec:  .note0
+    LastSec:   .note0
+Sections:
+  - Name:      .note0
+    Type:      NoteChunk
+    Notes:
+      - Name: ABCD
+        Type: 0x1
+        Desc: 0102
+
+## Check that an incorrect alignment is reported.
+
+# RUN: not yaml2obj --docnum=3 %s 2>&1 | FileCheck %s --check-prefix=TEST3
+# TEST3: error: .note0: invalid alignment for a note section: 0x1
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:      .note0
+    Type:      NoteChunk
+    NoteAlign: 1
+    Notes:
+      - Type: 0x1
+
+## Check that an incorrect offset for generating notes is reported.
+
+# RUN: not yaml2obj --docnum=4 %s 2>&1 | FileCheck %s --check-prefix=TEST4
+# TEST4: error: .note: invalid offset of a note section: 0x504, should be aligned to 8
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:      .note
+    Type:      NoteChunk
+    Offset:    0x504
+    NoteAlign: 8
+    Notes:
+      - Type: 0x1
