@@ -10,4 +10,4 @@
 
 using namespace mlir;
 
-IRMover::IRMover(ModuleOp composite) : composite(composite) {}
+IRMover::IRMover(Operation *composite) : composite(composite) {}

@@ -26,7 +26,15 @@ public:
     LinkOnlyNeeded = (1 << 1),
   };
 
-  Linker(ModuleOp composite);
+  Linker(Operation *composite);
+
+  MLIRContext *getContext() { return mover.getContext(); }
+
+  LogicalResult
+  linkInModule(OwningOpRef<Operation *> src, unsigned flags = None,
+               std::function<void(Operation *, const StringSet<> &)>
+                   internalizeCallback = {});
+
 private:
   IRMover mover;
 };

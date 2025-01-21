@@ -15,9 +15,12 @@ namespace mlir {
 
 class IRMover {
 public:
-    IRMover(ModuleOp composite);
+  IRMover(Operation *composite);
+
+  MLIRContext *getContext() { return composite->getContext(); }
+
 private:
-    ModuleOp composite;
+  Operation *composite;
 };
 
 } // namespace mlir
