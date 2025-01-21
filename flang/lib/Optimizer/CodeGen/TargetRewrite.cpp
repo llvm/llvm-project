@@ -134,10 +134,18 @@ public:
     mod.walk([&](mlir::Operation *op) {
       if (auto call = mlir::dyn_cast<fir::CallOp>(op)) {
         if (!hasPortableSignature(call.getFunctionType(), op))
-          convertCallOp(call);
+          convertCallOp(call, call.getFunctionType());
       } else if (auto dispatch = mlir::dyn_cast<fir::DispatchOp>(op)) {
         if (!hasPortableSignature(dispatch.getFunctionType(), op))
-          convertCallOp(dispatch);
+          convertCallOp(dispatch, dispatch.getFunctionType());
+      } else if (auto gpuLaunchFunc =
+                     mlir::dyn_cast<mlir::gpu::LaunchFuncOp>(op)) {
+        llvm::SmallVector<mlir::Type> operandsTypes;
+        for (auto arg : gpuLaunchFunc.getKernelOperands())
+          operandsTypes.push_back(arg.getType());
+        auto fctTy = mlir::FunctionType::get(&context, operandsTypes, {});
+        if (!hasPortableSignature(fctTy, op))
+          convertCallOp(gpuLaunchFunc, fctTy);
       } else if (auto addr = mlir::dyn_cast<fir::AddrOfOp>(op)) {
         if (mlir::isa<mlir::FunctionType>(addr.getType()) &&
             !hasPortableSignature(addr.getType(), op))
@@ -357,8 +365,7 @@ public:
 
   // Convert fir.call and fir.dispatch Ops.
   template <typename A>
-  void convertCallOp(A callOp) {
-    auto fnTy = callOp.getFunctionType();
+  void convertCallOp(A callOp, mlir::FunctionType fnTy) {
     auto loc = callOp.getLoc();
     rewriter->setInsertionPoint(callOp);
     llvm::SmallVector<mlir::Type> newResTys;
@@ -376,7 +383,7 @@ public:
         newOpers.push_back(callOp.getOperand(0));
         dropFront = 1;
       }
-    } else {
+    } else if constexpr (std::is_same_v<std::decay_t<A>, fir::DispatchOp>) {
       dropFront = 1; // First operand is the polymorphic object.
     }
 
@@ -402,10 +409,14 @@ public:
 
     llvm::SmallVector<mlir::Type> trailingInTys;
     llvm::SmallVector<mlir::Value> trailingOpers;
+    llvm::SmallVector<mlir::Value> operands;
     unsigned passArgShift = 0;
+    if constexpr (std::is_same_v<std::decay_t<A>, mlir::gpu::LaunchFuncOp>)
+      operands = callOp.getKernelOperands();
+    else
+      operands = callOp.getOperands().drop_front(dropFront);
     for (auto e : llvm::enumerate(
-             llvm::zip(fnTy.getInputs().drop_front(dropFront),
-                       callOp.getOperands().drop_front(dropFront)))) {
+             llvm::zip(fnTy.getInputs().drop_front(dropFront), operands))) {
       mlir::Type ty = std::get<0>(e.value());
       mlir::Value oper = std::get<1>(e.value());
       unsigned index = e.index();
@@ -507,7 +518,19 @@ public:
     newOpers.insert(newOpers.end(), trailingOpers.begin(), trailingOpers.end());
 
     llvm::SmallVector<mlir::Value, 1> newCallResults;
-    if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
+    if constexpr (std::is_same_v<std::decay_t<A>, mlir::gpu::LaunchFuncOp>) {
+      auto newCall = rewriter->create<A>(
+          loc, callOp.getKernel(), callOp.getGridSizeOperandValues(),
+          callOp.getBlockSizeOperandValues(),
+          callOp.getDynamicSharedMemorySize(), newOpers);
+      if (callOp.getClusterSizeX())
+        newCall.getClusterSizeXMutable().assign(callOp.getClusterSizeX());
+      if (callOp.getClusterSizeY())
+        newCall.getClusterSizeYMutable().assign(callOp.getClusterSizeY());
+      if (callOp.getClusterSizeZ())
+        newCall.getClusterSizeZMutable().assign(callOp.getClusterSizeZ());
+      newCallResults.append(newCall.result_begin(), newCall.result_end());
+    } else if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
       fir::CallOp newCall;
       if (callOp.getCallee()) {
         newCall =

@@ -35,8 +35,9 @@ void templ() {
 #pragma acc parallel async
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'delete' not yet implemented, clause ignored}}
-#pragma acc exit data delete(I)
+
+  T t;
+#pragma acc exit data delete(t)
   ;
 }
 

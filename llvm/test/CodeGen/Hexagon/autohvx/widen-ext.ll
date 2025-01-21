@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-hvx-widen=32 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-hvx-widen=32 < %s | FileCheck %s
 
 ; v32i8 -> v32i16
 ; CHECK-LABEL: f0:

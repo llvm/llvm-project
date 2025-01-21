@@ -366,7 +366,7 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
 
           SmallVector<unsigned> KilledIndexes;
           bool Success = TRI->getCoveringSubRegIndexes(
-              *MRI, MRI->getRegClass(Reg), KilledMask, KilledIndexes);
+              MRI->getRegClass(Reg), KilledMask, KilledIndexes);
           (void)Success;
           assert(Success && "Failed to find subregister mask to cover lanes");
           for (unsigned SubReg : KilledIndexes) {

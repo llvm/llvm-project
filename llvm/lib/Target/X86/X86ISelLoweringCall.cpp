@@ -659,7 +659,8 @@ X86TargetLowering::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
 
 bool X86TargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC_X86);
@@ -944,7 +945,7 @@ bool X86TargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
     return false;
 
   SDValue TCChain = Chain;
-  SDNode *Copy = *N->use_begin();
+  SDNode *Copy = *N->user_begin();
   if (Copy->getOpcode() == ISD::CopyToReg) {
     // If the copy has a glue operand, we conservatively assume it isn't safe to
     // perform a tail call.
@@ -955,7 +956,7 @@ bool X86TargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
     return false;
 
   bool HasRet = false;
-  for (const SDNode *U : Copy->uses()) {
+  for (const SDNode *U : Copy->users()) {
     if (U->getOpcode() != X86ISD::RET_GLUE)
       return false;
     // If we are returning more than one value, we can definitely

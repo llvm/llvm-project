@@ -141,10 +141,9 @@ MCSymbol *TargetLoweringObjectFile::getCFIPersonalitySymbol(
   return TM.getSymbol(GV);
 }
 
-void TargetLoweringObjectFile::emitPersonalityValue(MCStreamer &Streamer,
-                                                    const DataLayout &,
-                                                    const MCSymbol *Sym) const {
-}
+void TargetLoweringObjectFile::emitPersonalityValue(
+    MCStreamer &Streamer, const DataLayout &, const MCSymbol *Sym,
+    const MachineModuleInfo *MMI) const {}
 
 void TargetLoweringObjectFile::emitCGProfileMetadata(MCStreamer &Streamer,
                                                      Module &M) const {

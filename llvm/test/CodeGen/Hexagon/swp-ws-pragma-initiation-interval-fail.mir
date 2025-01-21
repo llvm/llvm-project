@@ -1,4 +1,4 @@
-# RUN: llc  --march=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
+# RUN: llc --mtriple=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
 # RUN: -window-sched=force -filetype=null -verify-machineinstrs 2>&1 \
 # RUN: | FileCheck %s
 # REQUIRES: asserts

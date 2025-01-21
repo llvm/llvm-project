@@ -26,39 +26,35 @@
 using namespace clang;
 using namespace clang::targets;
 
-static constexpr int NumBuiltins =
-    clang::AArch64::LastTSBuiltin - Builtin::FirstTSBuiltin;
+static constexpr Builtin::Info BuiltinInfo[] = {
+#define BUILTIN(ID, TYPE, ATTRS)                                               \
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#include "clang/Basic/BuiltinsNEON.def"
 
-static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsNEON.def"
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#define BUILTIN(ID, TYPE, ATTRS)                                               \
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #include "clang/Basic/BuiltinsSVE.def"
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+
+#define BUILTIN(ID, TYPE, ATTRS)                                               \
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #include "clang/Basic/BuiltinsSME.def"
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_STR_TABLE
+
+#define BUILTIN(ID, TYPE, ATTRS)                                               \
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define LANGBUILTIN(ID, TYPE, ATTRS, LANG)                                     \
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, LANG},
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+#define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
 #include "clang/Basic/BuiltinsAArch64.def"
-    , {
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsNEON.def"
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsSVE.def"
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsSME.def"
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#define LANGBUILTIN CLANG_LANGBUILTIN_ENTRY
-#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsAArch64.def"
-      });
+};
 
 void AArch64TargetInfo::setArchFeatures() {
   if (*ArchInfo == llvm::AArch64::ARMV8R) {
@@ -425,7 +421,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 #define ARM_ACLE_VERSION(Y, Q, P) (100 * (Y) + 10 * (Q) + (P))
   Builder.defineMacro("__ARM_ACLE", Twine(ARM_ACLE_VERSION(2024, 2, 0)));
   Builder.defineMacro("__FUNCTION_MULTI_VERSIONING_SUPPORT_LEVEL",
-                      Twine(ARM_ACLE_VERSION(2024, 2, 0)));
+                      Twine(ARM_ACLE_VERSION(2024, 3, 0)));
 #undef ARM_ACLE_VERSION
   Builder.defineMacro("__ARM_ARCH",
                       std::to_string(ArchInfo->Version.getMajor()));
@@ -489,7 +485,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasSVE2 && HasSVEAES)
     Builder.defineMacro("__ARM_FEATURE_SVE2_AES", "1");
 
-  if (HasSVE2 && HasSVE2BitPerm)
+  if (HasSVE2 && HasSVEBitPerm)
     Builder.defineMacro("__ARM_FEATURE_SVE2_BITPERM", "1");
 
   if (HasSVE2 && HasSVE2SHA3)
@@ -701,9 +697,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 }
 
-std::pair<const char *, ArrayRef<Builtin::Info>>
-AArch64TargetInfo::getTargetBuiltinStorage() const {
-  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
+ArrayRef<Builtin::Info> AArch64TargetInfo::getTargetBuiltins() const {
+  return llvm::ArrayRef(BuiltinInfo, clang::AArch64::LastTSBuiltin -
+                                         Builtin::FirstTSBuiltin);
 }
 
 std::optional<std::pair<unsigned, unsigned>>
@@ -718,7 +714,7 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
   return std::nullopt;
 }
 
-unsigned AArch64TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
+uint64_t AArch64TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
   return llvm::AArch64::getFMVPriority(Features);
 }
 
@@ -773,7 +769,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("f64mm", FPU & SveMode && HasMatmulFP64)
       .Case("sve2", FPU & SveMode && HasSVE2)
       .Case("sve-aes", HasSVEAES)
-      .Case("sve2-bitperm", FPU & SveMode && HasSVE2BitPerm)
+      .Case("sve-bitperm", FPU & HasSVEBitPerm)
       .Case("sve2-sha3", FPU & SveMode && HasSVE2SHA3)
       .Case("sve2-sm4", FPU & SveMode && HasSVE2SM4)
       .Case("sve2p1", FPU & SveMode && HasSVE2p1)
@@ -885,12 +881,10 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     }
     if (Feature == "+sve-b16b16")
       HasSVEB16B16 = true;
-    if (Feature == "+sve2-bitperm") {
+    if (Feature == "+sve-bitperm") {
       FPU |= NeonMode;
-      FPU |= SveMode;
       HasFullFP16 = true;
-      HasSVE2 = true;
-      HasSVE2BitPerm = true;
+      HasSVEBitPerm = true;
     }
     if (Feature == "+f32mm") {
       FPU |= NeonMode;
@@ -1675,6 +1669,10 @@ MinGWARM64TargetInfo::MinGWARM64TargetInfo(const llvm::Triple &Triple,
   TheCXXABI.set(TargetCXXABI::GenericAArch64);
 }
 
+AppleMachOAArch64TargetInfo::AppleMachOAArch64TargetInfo(
+    const llvm::Triple &Triple, const TargetOptions &Opts)
+    : AppleMachOTargetInfo<AArch64leTargetInfo>(Triple, Opts) {}
+
 DarwinAArch64TargetInfo::DarwinAArch64TargetInfo(const llvm::Triple &Triple,
                                                  const TargetOptions &Opts)
     : DarwinTargetInfo<AArch64leTargetInfo>(Triple, Opts) {
@@ -1699,9 +1697,9 @@ DarwinAArch64TargetInfo::DarwinAArch64TargetInfo(const llvm::Triple &Triple,
     TheCXXABI.set(TargetCXXABI::AppleARM64);
 }
 
-void DarwinAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
-                                           const llvm::Triple &Triple,
-                                           MacroBuilder &Builder) const {
+void clang::targets::getAppleMachOAArch64Defines(MacroBuilder &Builder,
+                                                 const LangOptions &Opts,
+                                                 const llvm::Triple &Triple) {
   Builder.defineMacro("__AARCH64_SIMD__");
   if (Triple.isArch32Bit())
     Builder.defineMacro("__ARM64_ARCH_8_32__");
@@ -1714,7 +1712,20 @@ void DarwinAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
 
   if (Triple.isArm64e())
     Builder.defineMacro("__arm64e__", "1");
+}
 
+void AppleMachOAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
+                                               const llvm::Triple &Triple,
+                                               MacroBuilder &Builder) const {
+  getAppleMachOAArch64Defines(Builder, Opts, Triple);
+  AppleMachOTargetInfo<AArch64leTargetInfo>::getOSDefines(Opts, Triple,
+                                                          Builder);
+}
+
+void DarwinAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
+                                           const llvm::Triple &Triple,
+                                           MacroBuilder &Builder) const {
+  getAppleMachOAArch64Defines(Builder, Opts, Triple);
   DarwinTargetInfo<AArch64leTargetInfo>::getOSDefines(Opts, Triple, Builder);
 }
 

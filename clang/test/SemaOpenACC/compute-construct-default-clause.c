@@ -35,7 +35,6 @@ void SingleOnly() {
   #pragma acc loop default(none)
   for(int i = 5; i < 10;++i);
 
-  // expected-warning@+2{{OpenACC construct 'wait' not yet implemented}}
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'wait' directive}}
   #pragma acc wait default(none)
   while(0);

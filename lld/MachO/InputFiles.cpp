@@ -1291,7 +1291,7 @@ static CIE parseCIE(const InputSection *isec, const EhReader &reader,
     const auto *personalityReloc = isec->getRelocAt(personalityAddrOff);
     if (!personalityReloc)
       reader.failOn(off, "Failed to locate relocation for personality symbol");
-    cie.personalitySymbol = personalityReloc->referent.get<macho::Symbol *>();
+    cie.personalitySymbol = cast<macho::Symbol *>(personalityReloc->referent);
   }
   return cie;
 }
@@ -1338,12 +1338,12 @@ targetSymFromCanonicalSubtractor(const InputSection *isec,
   assert(target->hasAttr(minuend.type, RelocAttrBits::UNSIGNED));
   // Note: pcSym may *not* be exactly at the PC; there's usually a non-zero
   // addend.
-  auto *pcSym = cast<Defined>(subtrahend.referent.get<macho::Symbol *>());
+  auto *pcSym = cast<Defined>(cast<macho::Symbol *>(subtrahend.referent));
   Defined *target =
       cast_or_null<Defined>(minuend.referent.dyn_cast<macho::Symbol *>());
   if (!pcSym) {
     auto *targetIsec =
-        cast<ConcatInputSection>(minuend.referent.get<InputSection *>());
+        cast<ConcatInputSection>(cast<InputSection *>(minuend.referent));
     target = findSymbolAtOffset(targetIsec, minuend.addend);
   }
   if (Invert)

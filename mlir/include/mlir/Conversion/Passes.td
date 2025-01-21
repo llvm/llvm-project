@@ -61,7 +61,10 @@ def ConvertToSPIRVPass : Pass<"convert-to-spirv"> {
     "Run vector unrolling to convert vector types in function bodies">,
     Option<"convertGPUModules", "convert-gpu-modules", "bool",
     /*default=*/"false",
-    "Clone and convert GPU modules">
+    "Clone and convert GPU modules">,
+    Option<"nestInGPUModule", "nest-in-gpu-module", "bool",
+    /*default=*/"false",
+    "Put converted SPIR-V module inside the gpu.module instead of alongside it.">,
   ];
 }
 
@@ -460,10 +463,6 @@ def ConvertFuncToLLVMPass : Pass<"convert-func-to-llvm", "ModuleOp"> {
     1 value is returned, packed into an LLVM IR struct type. Function calls and
     returns are updated accordingly. Block argument types are updated to use
     LLVM IR types.
-
-    Note that until https://github.com/llvm/llvm-project/issues/70982 is resolved,
-    this pass includes patterns that lower `arith` and `cf` to LLVM. This is legacy
-    code due to when they were all converted in the same pass.
   }];
   let dependentDialects = ["LLVM::LLVMDialect"];
   let options = [
@@ -518,6 +517,12 @@ def GpuToLLVMConversionPass : Pass<"gpu-to-llvm", "ModuleOp"> {
            /*default=*/"false",
              "Use bare pointers to pass memref arguments to kernels. "
              "The kernel must use the same setting for this option."
+          >,
+    Option<"typeCheckKernelArgs", "type-check-kernel-args", "bool",
+           /*default=*/"false",
+             "Require all kernel arguments to be memrefs of rank 1 and with a "
+             "32-bit element size. This is a temporary option that will be "
+             "removed; TODO(https://github.com/llvm/llvm-project/issues/73457)."
           >
   ];
 
@@ -783,6 +788,28 @@ def ConvertMathToSPIRV : Pass<"convert-math-to-spirv"> {
   let summary = "Convert Math dialect to SPIR-V dialect";
   let constructor = "mlir::createConvertMathToSPIRVPass()";
   let dependentDialects = ["spirv::SPIRVDialect"];
+}
+
+//===----------------------------------------------------------------------===//
+// MathToEmitC
+//===----------------------------------------------------------------------===//
+
+def ConvertMathToEmitC  : Pass<"convert-math-to-emitc"> {
+  let summary = "Convert some Math operations to EmitC call_opaque operations";
+  let description = [{
+    This pass converts supported Math ops to `call_opaque` ops targeting libc/libm
+    functions. Unlike convert-math-to-funcs pass, converting to `call_opaque` ops
+    allows to overload the same function with different argument types.
+  }];
+  let dependentDialects = ["emitc::EmitCDialect"];
+  let options = [
+    Option<"languageTarget", "language-target", "::mlir::emitc::LanguageTarget",
+      /*default=*/"::mlir::emitc::LanguageTarget::c99", "Select the language standard target for callees (c99 or cpp11).",
+      [{::llvm::cl::values(
+            clEnumValN(::mlir::emitc::LanguageTarget::c99, "c99", "c99"),
+            clEnumValN(::mlir::emitc::LanguageTarget::cpp11, "cpp11", "cpp11")
+          )}]>
+  ];
 }
 
 //===----------------------------------------------------------------------===//

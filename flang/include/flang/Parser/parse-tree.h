@@ -657,6 +657,8 @@ struct KindSelector {
 // R705 integer-type-spec -> INTEGER [kind-selector]
 WRAPPER_CLASS(IntegerTypeSpec, std::optional<KindSelector>);
 
+WRAPPER_CLASS(UnsignedTypeSpec, std::optional<KindSelector>);
+
 // R723 char-length -> ( type-param-value ) | digit-string
 struct CharLength {
   UNION_CLASS_BOILERPLATE(CharLength);
@@ -694,7 +696,7 @@ struct CharSelector {
 //        integer-type-spec | REAL [kind-selector] | DOUBLE PRECISION |
 //        COMPLEX [kind-selector] | CHARACTER [char-selector] |
 //        LOGICAL [kind-selector]
-// Extensions: DOUBLE COMPLEX
+// Extensions: DOUBLE COMPLEX & UNSIGNED [kind-selector]
 struct IntrinsicTypeSpec {
   UNION_CLASS_BOILERPLATE(IntrinsicTypeSpec);
   struct Real {
@@ -719,13 +721,12 @@ struct IntrinsicTypeSpec {
     std::optional<KindSelector> kind;
   };
   EMPTY_CLASS(DoubleComplex);
-  std::variant<IntegerTypeSpec, Real, DoublePrecision, Complex, Character,
-      Logical, DoubleComplex>
+  std::variant<IntegerTypeSpec, UnsignedTypeSpec, Real, DoublePrecision,
+      Complex, Character, Logical, DoubleComplex>
       u;
 };
 
 // Extension: Vector type
-WRAPPER_CLASS(UnsignedTypeSpec, std::optional<KindSelector>);
 struct VectorElementType {
   UNION_CLASS_BOILERPLATE(VectorElementType);
   std::variant<IntegerTypeSpec, IntrinsicTypeSpec::Real, UnsignedTypeSpec> u;
@@ -800,6 +801,12 @@ struct SignedIntLiteralConstant {
 // R708 int-literal-constant -> digit-string [_ kind-param]
 struct IntLiteralConstant {
   TUPLE_CLASS_BOILERPLATE(IntLiteralConstant);
+  std::tuple<CharBlock, std::optional<KindParam>> t;
+};
+
+// extension: unsigned-literal-constant -> digit-string U [_ kind-param]
+struct UnsignedLiteralConstant {
+  TUPLE_CLASS_BOILERPLATE(UnsignedLiteralConstant);
   std::tuple<CharBlock, std::optional<KindParam>> t;
 };
 
@@ -894,7 +901,7 @@ struct LiteralConstant {
   UNION_CLASS_BOILERPLATE(LiteralConstant);
   std::variant<HollerithLiteralConstant, IntLiteralConstant,
       RealLiteralConstant, ComplexLiteralConstant, BOZLiteralConstant,
-      CharLiteralConstant, LogicalLiteralConstant>
+      CharLiteralConstant, LogicalLiteralConstant, UnsignedLiteralConstant>
       u;
 };
 
@@ -1481,9 +1488,10 @@ struct DataStmtConstant {
   UNION_CLASS_BOILERPLATE(DataStmtConstant);
   CharBlock source;
   mutable TypedExpr typedExpr;
-  std::variant<LiteralConstant, SignedIntLiteralConstant,
-      SignedRealLiteralConstant, SignedComplexLiteralConstant, NullInit,
-      common::Indirection<Designator>, StructureConstructor>
+  std::variant<common::Indirection<CharLiteralConstantSubstring>,
+      LiteralConstant, SignedIntLiteralConstant, SignedRealLiteralConstant,
+      SignedComplexLiteralConstant, NullInit, common::Indirection<Designator>,
+      StructureConstructor, UnsignedLiteralConstant>
       u;
 };
 
@@ -3445,6 +3453,9 @@ WRAPPER_CLASS(PauseStmt, std::optional<StopCode>);
 
 // --- Common definitions
 
+struct OmpClause;
+struct OmpClauseList;
+
 // 2.1 Directives or clauses may accept a list or extended-list.
 //     A list item is a variable, array section or common block name (enclosed
 //     in slashes). An extended list item is a list item or a procedure Name.
@@ -3465,6 +3476,150 @@ WRAPPER_CLASS(OmpObjectList, std::list<OmpObject>);
   }
 
 #define MODIFIERS() std::optional<std::list<Modifier>>
+
+inline namespace traits {
+// trait-property-name ->
+//    identifier | string-literal
+//
+// This is a bit of a problematic case. The spec says that a word in quotes,
+// and the same word without quotes are equivalent. We currently parse both
+// as a string, but it's likely just a temporary solution.
+//
+// The problem is that trait-property can be (among other things) a
+// trait-property-name or a trait-property-expression. A simple identifier
+// can be either, there is no reasonably simple way of telling them apart
+// in the parser. There is a similar issue with extensions. Some of that
+// disambiguation may need to be done in the "canonicalization" pass and
+// then some of those AST nodes would be rewritten into different ones.
+//
+struct OmpTraitPropertyName {
+  CharBlock source;
+  WRAPPER_CLASS_BOILERPLATE(OmpTraitPropertyName, std::string);
+};
+
+// trait-score ->
+//    SCORE(non-negative-const-integer-expression)
+struct OmpTraitScore {
+  CharBlock source;
+  WRAPPER_CLASS_BOILERPLATE(OmpTraitScore, ScalarIntExpr);
+};
+
+// trait-property-extension ->
+//    trait-property-name (trait-property-value, ...)
+// trait-property-value ->
+//    trait-property-name |
+//    scalar-integer-expression |
+//    trait-property-extension
+//
+// The grammar in OpenMP 5.2+ spec is ambiguous, the above is a different
+// version (but equivalent) that doesn't have ambiguities.
+// The ambiguity is in
+//   trait-property:
+//      trait-property-name          <- (a)
+//      trait-property-clause
+//      trait-property-expression    <- (b)
+//      trait-property-extension     <- this conflicts with (a) and (b)
+//   trait-property-extension:
+//      trait-property-name          <- conflict with (a)
+//      identifier(trait-property-extension[, trait-property-extension[, ...]])
+//      constant integer expression  <- conflict with (b)
+//
+struct OmpTraitPropertyExtension {
+  CharBlock source;
+  TUPLE_CLASS_BOILERPLATE(OmpTraitPropertyExtension);
+  struct ExtensionValue {
+    CharBlock source;
+    UNION_CLASS_BOILERPLATE(ExtensionValue);
+    std::variant<OmpTraitPropertyName, ScalarExpr,
+        common::Indirection<OmpTraitPropertyExtension>>
+        u;
+  };
+  using ExtensionList = std::list<ExtensionValue>;
+  std::tuple<OmpTraitPropertyName, ExtensionList> t;
+};
+
+// trait-property ->
+//    trait-property-name | OmpClause |
+//    trait-property-expression | trait-property-extension
+// trait-property-expression ->
+//    scalar-logical-expression | scalar-integer-expression
+//
+// The parser for a logical expression will accept an integer expression,
+// and if it's not logical, it will flag an error later. The same thing
+// will happen if the scalar integer expression sees a logical expresion.
+// To avoid this, parse all expressions as scalar expressions.
+struct OmpTraitProperty {
+  CharBlock source;
+  UNION_CLASS_BOILERPLATE(OmpTraitProperty);
+  std::variant<OmpTraitPropertyName, common::Indirection<OmpClause>,
+      ScalarExpr, // trait-property-expresion
+      OmpTraitPropertyExtension>
+      u;
+};
+
+// trait-selector-name ->
+//    KIND |              DT       // name-list (host, nohost, +/add-def-doc)
+//    ISA |               DT       // name-list (isa_name, ... /impl-defined)
+//    ARCH |              DT       // name-list (arch_name, ... /impl-defined)
+//    directive-name |    C        // no properties
+//    SIMD |              C        // clause-list (from declare_simd)
+//                                 // (at least simdlen, inbranch/notinbranch)
+//    DEVICE_NUM |        T        // device-number
+//    UID |               T        // unique-string-id /impl-defined
+//    VENDOR |            I        // name-list (vendor-id /add-def-doc)
+//    EXTENSION |         I        // name-list (ext_name /impl-defined)
+//    ATOMIC_DEFAULT_MEM_ORDER I | // value of admo
+//    REQUIRES |          I        // clause-list (from requires)
+//    CONDITION           U        // logical-expr
+//
+// Trait-set-selectors:
+//    [D]evice, [T]arget_device, [C]onstruct, [I]mplementation, [U]ser.
+struct OmpTraitSelectorName {
+  CharBlock source;
+  UNION_CLASS_BOILERPLATE(OmpTraitSelectorName);
+  ENUM_CLASS(Value, Arch, Atomic_Default_Mem_Order, Condition, Device_Num,
+      Extension, Isa, Kind, Requires, Simd, Uid, Vendor)
+  std::variant<Value, llvm::omp::Directive> u;
+};
+
+// trait-selector ->
+//    trait-selector-name |
+//    trait-selector-name ([trait-score:] trait-property, ...)
+struct OmpTraitSelector {
+  CharBlock source;
+  TUPLE_CLASS_BOILERPLATE(OmpTraitSelector);
+  struct Properties {
+    TUPLE_CLASS_BOILERPLATE(Properties);
+    std::tuple<std::optional<OmpTraitScore>, std::list<OmpTraitProperty>> t;
+  };
+  std::tuple<OmpTraitSelectorName, std::optional<Properties>> t;
+};
+
+// trait-set-selector-name ->
+//    CONSTRUCT | DEVICE | IMPLEMENTATION | USER |  // since 5.0
+//    TARGET_DEVICE                                 // since 5.1
+struct OmpTraitSetSelectorName {
+  CharBlock source;
+  ENUM_CLASS(Value, Construct, Device, Implementation, Target_Device, User)
+  WRAPPER_CLASS_BOILERPLATE(OmpTraitSetSelectorName, Value);
+};
+
+// trait-set-selector ->
+//    trait-set-selector-name = {trait-selector, ...}
+struct OmpTraitSetSelector {
+  CharBlock source;
+  TUPLE_CLASS_BOILERPLATE(OmpTraitSetSelector);
+  std::tuple<OmpTraitSetSelectorName, std::list<OmpTraitSelector>> t;
+};
+
+// context-selector-specification ->
+//    trait-set-selector, ...
+struct OmpContextSelectorSpecification { // Modifier
+  CharBlock source;
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpContextSelectorSpecification, std::list<OmpTraitSetSelector>);
+};
+} // namespace traits
 
 inline namespace modifier {
 // For uniformity, in all keyword modifiers the name of the type defined
@@ -3736,6 +3891,9 @@ struct OmpVariableCategory {
   ENUM_CLASS(Value, Aggregate, All, Allocatable, Pointer, Scalar)
   WRAPPER_CLASS_BOILERPLATE(OmpVariableCategory, Value);
 };
+
+// context-selector
+using OmpContextSelector = traits::OmpContextSelectorSpecification;
 } // namespace modifier
 
 // --- Clauses
@@ -3750,6 +3908,11 @@ struct OmpAffinityClause {
   TUPLE_CLASS_BOILERPLATE(OmpAffinityClause);
   MODIFIER_BOILERPLATE(OmpIterator);
   std::tuple<MODIFIERS(), OmpObjectList> t;
+};
+
+// Ref: 5.2: [174]
+struct OmpAlignClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpAlignClause, ScalarIntExpr);
 };
 
 // Ref: [4.5:72-81], [5.0:110-119], [5.1:134-143], [5.2:169-170]
@@ -3776,6 +3939,13 @@ struct OmpAllocateClause {
       OmpAllocatorComplexModifier);
   TUPLE_CLASS_BOILERPLATE(OmpAllocateClause);
   std::tuple<MODIFIERS(), OmpObjectList> t;
+};
+
+// Ref: [5.2:216-217 (sort of, as it's only mentioned in passing)
+// AT(compilation|execution)
+struct OmpAtClause {
+  ENUM_CLASS(ActionTime, Compilation, Execution);
+  WRAPPER_CLASS_BOILERPLATE(OmpAtClause, ActionTime);
 };
 
 // Ref: [5.0:60-63], [5.1:83-86], [5.2:210-213]
@@ -4028,6 +4198,13 @@ struct OmpMapClause {
   std::tuple<MODIFIERS(), OmpObjectList, /*CommaSeparated=*/bool> t;
 };
 
+// Ref: [5.2:217-218]
+// message-clause ->
+//    MESSAGE("message-text")
+struct OmpMessageClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpMessageClause, Expr);
+};
+
 // Ref: [4.5:87-91], [5.0:140-146], [5.1:166-171], [5.2:270]
 //
 // num-tasks-clause ->
@@ -4088,6 +4265,14 @@ struct OmpScheduleClause {
   ENUM_CLASS(Kind, Static, Dynamic, Guided, Auto, Runtime)
   MODIFIER_BOILERPLATE(OmpOrderingModifier, OmpChunkModifier);
   std::tuple<MODIFIERS(), Kind, std::optional<ScalarIntExpr>> t;
+};
+
+// REF: [5.2:217]
+// severity-clause ->
+//    SEVERITY(warning|fatal)
+struct OmpSeverityClause {
+  ENUM_CLASS(Severity, Fatal, Warning);
+  WRAPPER_CLASS_BOILERPLATE(OmpSeverityClause, Severity);
 };
 
 // Ref: [5.0:232-234], [5.1:264-266], [5.2:137]
@@ -4151,6 +4336,30 @@ struct OmpClauseList {
 };
 
 // --- Directives and constructs
+
+// Ref: [5.1:89-90], [5.2:216]
+//
+// nothing-directive ->
+//    NOTHING                                     // since 5.1
+struct OmpNothingDirective {
+  using EmptyTrait = std::true_type;
+  COPY_AND_ASSIGN_BOILERPLATE(OmpNothingDirective);
+  CharBlock source;
+};
+
+// Ref: OpenMP [5.2:216-218]
+// ERROR AT(compilation|execution) SEVERITY(fatal|warning) MESSAGE("msg-str)
+struct OmpErrorDirective {
+  TUPLE_CLASS_BOILERPLATE(OmpErrorDirective);
+  CharBlock source;
+  std::tuple<Verbatim, OmpClauseList> t;
+};
+
+struct OpenMPUtilityConstruct {
+  UNION_CLASS_BOILERPLATE(OpenMPUtilityConstruct);
+  CharBlock source;
+  std::variant<OmpErrorDirective, OmpNothingDirective> u;
+};
 
 // 2.7.2 SECTIONS
 // 2.11.2 PARALLEL SECTIONS
@@ -4288,7 +4497,7 @@ struct OpenMPDeclarativeConstruct {
   std::variant<OpenMPDeclarativeAllocate, OpenMPDeclareMapperConstruct,
       OpenMPDeclareReductionConstruct, OpenMPDeclareSimdConstruct,
       OpenMPDeclareTargetConstruct, OpenMPThreadprivate,
-      OpenMPRequiresConstruct>
+      OpenMPRequiresConstruct, OpenMPUtilityConstruct>
       u;
 };
 
@@ -4548,7 +4757,7 @@ struct OpenMPConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPConstruct);
   std::variant<OpenMPStandaloneConstruct, OpenMPSectionsConstruct,
       OpenMPSectionConstruct, OpenMPLoopConstruct, OpenMPBlockConstruct,
-      OpenMPAtomicConstruct, OpenMPDeclarativeAllocate,
+      OpenMPAtomicConstruct, OpenMPDeclarativeAllocate, OpenMPUtilityConstruct,
       OpenMPExecutableAllocate, OpenMPAllocatorsConstruct,
       OpenMPCriticalConstruct>
       u;

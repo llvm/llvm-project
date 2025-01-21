@@ -408,9 +408,17 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Copy:
     case OpenACCClauseKind::PCopy:
     case OpenACCClauseKind::PresentOrCopy:
+    case OpenACCClauseKind::Host:
     case OpenACCClauseKind::If:
+    case OpenACCClauseKind::IfPresent:
     case OpenACCClauseKind::Independent:
+    case OpenACCClauseKind::Detach:
+    case OpenACCClauseKind::Delete:
+    case OpenACCClauseKind::Device:
+    case OpenACCClauseKind::DeviceNum:
+    case OpenACCClauseKind::DefaultAsync:
     case OpenACCClauseKind::DevicePtr:
+    case OpenACCClauseKind::Finalize:
     case OpenACCClauseKind::FirstPrivate:
     case OpenACCClauseKind::NoCreate:
     case OpenACCClauseKind::NumGangs:
@@ -421,6 +429,7 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Seq:
     case OpenACCClauseKind::Tile:
     case OpenACCClauseKind::Worker:
+    case OpenACCClauseKind::UseDevice:
     case OpenACCClauseKind::Vector:
     case OpenACCClauseKind::VectorLength:
       // The condition expression will be printed as a part of the 'children',
@@ -2924,7 +2933,6 @@ void TextNodeDumper::VisitOpenACCConstructStmt(const OpenACCConstructStmt *S) {
   OS << " " << S->getDirectiveKind();
 }
 void TextNodeDumper::VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S) {
-
   if (S->isOrphanedLoopConstruct())
     OS << " <orphan>";
   else
@@ -2933,26 +2941,44 @@ void TextNodeDumper::VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S) {
 
 void TextNodeDumper::VisitOpenACCCombinedConstruct(
     const OpenACCCombinedConstruct *S) {
-  OS << " " << S->getDirectiveKind();
+  VisitOpenACCConstructStmt(S);
 }
 
 void TextNodeDumper::VisitOpenACCDataConstruct(const OpenACCDataConstruct *S) {
-  OS << " " << S->getDirectiveKind();
+  VisitOpenACCConstructStmt(S);
 }
 
 void TextNodeDumper::VisitOpenACCEnterDataConstruct(
     const OpenACCEnterDataConstruct *S) {
-  OS << " " << S->getDirectiveKind();
+  VisitOpenACCConstructStmt(S);
 }
 
 void TextNodeDumper::VisitOpenACCExitDataConstruct(
     const OpenACCExitDataConstruct *S) {
-  OS << " " << S->getDirectiveKind();
+  VisitOpenACCConstructStmt(S);
 }
 
 void TextNodeDumper::VisitOpenACCHostDataConstruct(
     const OpenACCHostDataConstruct *S) {
-  OS << " " << S->getDirectiveKind();
+  VisitOpenACCConstructStmt(S);
+}
+
+void TextNodeDumper::VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+void TextNodeDumper::VisitOpenACCInitConstruct(const OpenACCInitConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+void TextNodeDumper::VisitOpenACCShutdownConstruct(
+    const OpenACCShutdownConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+void TextNodeDumper::VisitOpenACCSetConstruct(const OpenACCSetConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+}
+void TextNodeDumper::VisitOpenACCUpdateConstruct(
+    const OpenACCUpdateConstruct *S) {
+  VisitOpenACCConstructStmt(S);
 }
 
 void TextNodeDumper::VisitEmbedExpr(const EmbedExpr *S) {

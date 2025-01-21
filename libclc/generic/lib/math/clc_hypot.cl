@@ -23,6 +23,7 @@
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
 #include <clc/integer/clc_abs.h>
+#include <clc/math/clc_mad.h>
 #include <clc/relational/clc_isnan.h>
 #include <clc/shared/clc_clamp.h>
 #include <math/clc_hypot.h>
@@ -48,7 +49,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_hypot(float x, float y) {
   float fi_exp = as_float((-xexp + EXPBIAS_SP32) << EXPSHIFTBITS_SP32);
   float fx = as_float(ux) * fi_exp;
   float fy = as_float(uy) * fi_exp;
-  retval = sqrt(mad(fx, fx, fy * fy)) * fx_exp;
+  retval = sqrt(__clc_mad(fx, fx, fy * fy)) * fx_exp;
 
   retval = ux > PINFBITPATT_SP32 | uy == 0 ? as_float(ux) : retval;
   retval = ux == PINFBITPATT_SP32 | uy == PINFBITPATT_SP32

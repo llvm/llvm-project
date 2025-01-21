@@ -489,7 +489,7 @@ define void @pr43371_pgso() !prof !14 {
 ; NPGSO:       [[MIDDLE_BLOCK]]:
 ; NPGSO-NEXT:    br i1 true, label %[[FOR_COND_CLEANUP28:.*]], label %[[SCALAR_PH]]
 ; NPGSO:       [[SCALAR_PH]]:
-; NPGSO-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 756, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; NPGSO-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 756, %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ENTRY]] ]
 ; NPGSO-NEXT:    br label %[[FOR_BODY29:.*]]
 ; NPGSO:       [[FOR_COND_CLEANUP28]]:
 ; NPGSO-NEXT:    unreachable
@@ -854,7 +854,7 @@ define void @stride1_pgso(ptr noalias %B, i32 %BStride) !prof !14 {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br i1 false, label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
@@ -888,7 +888,7 @@ define void @stride1_pgso(ptr noalias %B, i32 %BStride) !prof !14 {
 ; PGSO:       [[MIDDLE_BLOCK]]:
 ; PGSO-NEXT:    br i1 false, label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; PGSO:       [[SCALAR_PH]]:
-; PGSO-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; PGSO-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ENTRY]] ]
 ; PGSO-NEXT:    br label %[[FOR_BODY:.*]]
 ; PGSO:       [[FOR_BODY]]:
 ; PGSO-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
@@ -922,7 +922,7 @@ define void @stride1_pgso(ptr noalias %B, i32 %BStride) !prof !14 {
 ; NPGSO:       [[MIDDLE_BLOCK]]:
 ; NPGSO-NEXT:    br i1 false, label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; NPGSO:       [[SCALAR_PH]]:
-; NPGSO-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; NPGSO-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ENTRY]] ]
 ; NPGSO-NEXT:    br label %[[FOR_BODY:.*]]
 ; NPGSO:       [[FOR_BODY]]:
 ; NPGSO-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]

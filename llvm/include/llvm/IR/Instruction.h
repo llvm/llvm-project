@@ -367,6 +367,10 @@ public:
   /// Return true if this instruction has any metadata attached to it.
   bool hasMetadata() const { return DbgLoc || Value::hasMetadata(); }
 
+  // Return true if this instruction contains loop metadata other than
+  // a debug location
+  bool hasNonDebugLocLoopMetadata() const;
+
   /// Return true if this instruction has metadata attached to it other than a
   /// debug location.
   bool hasMetadataOtherThanDebugLoc() const { return Value::hasMetadata(); }

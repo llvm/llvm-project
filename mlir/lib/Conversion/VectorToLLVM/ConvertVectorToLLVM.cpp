@@ -91,7 +91,7 @@ LogicalResult getMemRefAlignment(const LLVMTypeConverter &typeConverter,
 // Check if the last stride is non-unit and has a valid memory space.
 static LogicalResult isMemRefTypeSupported(MemRefType memRefType,
                                            const LLVMTypeConverter &converter) {
-  if (!isLastMemrefDimUnitStride(memRefType))
+  if (!memRefType.isLastDimUnitStride())
     return failure();
   if (failed(converter.getMemRefAddressSpace(memRefType)))
     return failure();
@@ -124,7 +124,7 @@ static Value getAsLLVMValue(OpBuilder &builder, Location loc,
     return builder.create<LLVM::ConstantOp>(loc, intAttr).getResult();
   }
 
-  return foldResult.get<Value>();
+  return cast<Value>(foldResult);
 }
 
 namespace {
@@ -1374,7 +1374,7 @@ static std::optional<SmallVector<int64_t, 4>>
 computeContiguousStrides(MemRefType memRefType) {
   int64_t offset;
   SmallVector<int64_t, 4> strides;
-  if (failed(getStridesAndOffset(memRefType, strides, offset)))
+  if (failed(memRefType.getStridesAndOffset(strides, offset)))
     return std::nullopt;
   if (!strides.empty() && strides.back() != 1)
     return std::nullopt;
@@ -1475,16 +1475,17 @@ public:
 
 /// Conversion pattern for a `vector.create_mask` (1-D scalable vectors only).
 /// Non-scalable versions of this operation are handled in Vector Transforms.
-class VectorCreateMaskOpRewritePattern
-    : public OpRewritePattern<vector::CreateMaskOp> {
+class VectorCreateMaskOpConversion
+    : public OpConversionPattern<vector::CreateMaskOp> {
 public:
-  explicit VectorCreateMaskOpRewritePattern(MLIRContext *context,
-                                            bool enableIndexOpt)
-      : OpRewritePattern<vector::CreateMaskOp>(context),
+  explicit VectorCreateMaskOpConversion(MLIRContext *context,
+                                        bool enableIndexOpt)
+      : OpConversionPattern<vector::CreateMaskOp>(context),
         force32BitVectorIndices(enableIndexOpt) {}
 
-  LogicalResult matchAndRewrite(vector::CreateMaskOp op,
-                                PatternRewriter &rewriter) const override {
+  LogicalResult
+  matchAndRewrite(vector::CreateMaskOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
     auto dstType = op.getType();
     if (dstType.getRank() != 1 || !cast<VectorType>(dstType).isScalable())
       return failure();
@@ -1495,7 +1496,7 @@ public:
         loc, LLVM::getVectorType(idxType, dstType.getShape()[0],
                                  /*isScalable=*/true));
     auto bound = getValueOrCreateCastToIndexLike(rewriter, loc, idxType,
-                                                 op.getOperand(0));
+                                                 adaptor.getOperands()[0]);
     Value bounds = rewriter.create<SplatOp>(loc, indices.getType(), bound);
     Value comp = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
                                                 indices, bounds);
@@ -1896,16 +1897,19 @@ struct VectorScalableStepOpLowering
 
 } // namespace
 
+void mlir::vector::populateVectorRankReducingFMAPattern(
+    RewritePatternSet &patterns) {
+  patterns.add<VectorFMAOpNDRewritePattern>(patterns.getContext());
+}
+
 /// Populate the given list with patterns that convert from Vector to LLVM.
 void mlir::populateVectorToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
     bool reassociateFPReductions, bool force32BitVectorIndices) {
+  // This function populates only ConversionPatterns, not RewritePatterns.
   MLIRContext *ctx = converter.getDialect()->getContext();
-  patterns.add<VectorFMAOpNDRewritePattern>(ctx);
-  populateVectorInsertExtractStridedSliceTransforms(patterns);
-  populateVectorStepLoweringPatterns(patterns);
   patterns.add<VectorReductionOpConversion>(converter, reassociateFPReductions);
-  patterns.add<VectorCreateMaskOpRewritePattern>(ctx, force32BitVectorIndices);
+  patterns.add<VectorCreateMaskOpConversion>(ctx, force32BitVectorIndices);
   patterns.add<VectorBitCastOpConversion, VectorShuffleOpConversion,
                VectorExtractElementOpConversion, VectorExtractOpConversion,
                VectorFMAOp1DConversion, VectorInsertElementOpConversion,
@@ -1922,8 +1926,6 @@ void mlir::populateVectorToLLVMConversionPatterns(
                MaskedReductionOpConversion, VectorInterleaveOpLowering,
                VectorDeinterleaveOpLowering, VectorFromElementsLowering,
                VectorScalableStepOpLowering>(converter);
-  // Transfer ops with rank > 1 are handled by VectorToSCF.
-  populateVectorTransferLoweringPatterns(patterns, /*maxTransferRank=*/1);
 }
 
 void mlir::populateVectorToLLVMMatrixConversionPatterns(

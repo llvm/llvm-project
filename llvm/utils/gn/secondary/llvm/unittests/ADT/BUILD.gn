@@ -76,6 +76,7 @@ unittest("ADTTests") {
     "STLExtrasTest.cpp",
     "STLForwardCompatTest.cpp",
     "ScopeExitTest.cpp",
+    "ScopedHashTableTest.cpp",
     "SequenceTest.cpp",
     "SetOperationsTest.cpp",
     "SetVectorTest.cpp",

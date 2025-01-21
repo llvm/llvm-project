@@ -939,8 +939,9 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 
 // clang-format on
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/chrono>
+#else
 #  include <__config>
 
 #  include <__chrono/duration.h>
@@ -1019,6 +1020,6 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 #      include <ostream>
 #    endif
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_CHRONO

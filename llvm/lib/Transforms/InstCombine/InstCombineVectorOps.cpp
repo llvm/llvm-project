@@ -86,7 +86,7 @@ static bool cheapToScalarize(Value *V, Value *EI) {
     if (cheapToScalarize(V0, EI) || cheapToScalarize(V1, EI))
       return true;
 
-  CmpInst::Predicate UnusedPred;
+  CmpPredicate UnusedPred;
   if (match(V, m_OneUse(m_Cmp(UnusedPred, m_Value(V0), m_Value(V1)))))
     if (cheapToScalarize(V0, EI) || cheapToScalarize(V1, EI))
       return true;
@@ -486,7 +486,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   }
 
   Value *X, *Y;
-  CmpInst::Predicate Pred;
+  CmpPredicate Pred;
   if (match(SrcVec, m_Cmp(Pred, m_Value(X), m_Value(Y))) &&
       cheapToScalarize(SrcVec, Index)) {
     // extelt (cmp X, Y), Index --> cmp (extelt X, Index), (extelt Y, Index)

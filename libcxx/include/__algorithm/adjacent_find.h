@@ -11,10 +11,8 @@
 #define _LIBCPP___ALGORITHM_ADJACENT_FIND_H
 
 #include <__algorithm/comp.h>
-#include <__algorithm/iterator_operations.h>
 #include <__config>
 #include <__functional/identity.h>
-#include <__iterator/iterator_traits.h>
 #include <__type_traits/invoke.h>
 #include <__utility/move.h>
 

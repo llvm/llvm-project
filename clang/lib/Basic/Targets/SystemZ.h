@@ -99,8 +99,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  std::pair<const char *, ArrayRef<Builtin::Info>>
-  getTargetBuiltinStorage() const override;
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
   ArrayRef<const char *> getGCCRegNames() const override;
 
@@ -187,6 +186,10 @@ public:
       Features["vector-enhancements-2"] = true;
     if (ISARevision >= 14)
       Features["nnp-assist"] = true;
+    if (ISARevision >= 15) {
+      Features["miscellaneous-extensions-4"] = true;
+      Features["vector-enhancements-3"] = true;
+    }
     return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
   }
 

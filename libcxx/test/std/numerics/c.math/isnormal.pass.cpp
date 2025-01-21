@@ -11,6 +11,8 @@
 // We don't control the implementation on windows
 // UNSUPPORTED: windows
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <cassert>
 #include <cmath>
 #include <limits>

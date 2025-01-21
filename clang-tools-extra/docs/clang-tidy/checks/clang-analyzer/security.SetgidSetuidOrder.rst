@@ -1,4 +1,6 @@
 .. title:: clang-tidy - clang-analyzer-security.SetgidSetuidOrder
+.. meta::
+   :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#security-setgidsetuidorder-c
 
 clang-analyzer-security.SetgidSetuidOrder
 =========================================

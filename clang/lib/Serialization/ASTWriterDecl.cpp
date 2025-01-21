@@ -611,6 +611,7 @@ void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
   RecordDeclBits.addBit(D->hasNonTrivialToPrimitiveDefaultInitializeCUnion());
   RecordDeclBits.addBit(D->hasNonTrivialToPrimitiveDestructCUnion());
   RecordDeclBits.addBit(D->hasNonTrivialToPrimitiveCopyCUnion());
+  RecordDeclBits.addBit(D->hasUninitializedExplicitInitFields());
   RecordDeclBits.addBit(D->isParamDestroyedInCallee());
   RecordDeclBits.addBits(llvm::to_underlying(D->getArgPassingRestrictions()), 2);
   Record.push_back(RecordDeclBits);
@@ -796,6 +797,17 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
     } else {
       Record.push_back(0);
     }
+  }
+
+  if (D->getFriendObjectKind()) {
+    // For a function defined inline within a class template, we have to force
+    // the canonical definition to be the one inside the canonical definition of
+    // the template. Remember this relation to deserialize them together.
+    if (auto *RD = dyn_cast<CXXRecordDecl>(D->getLexicalParent()))
+      if (RD->isDependentContext() && RD->isThisDeclarationADefinition()) {
+        Writer.RelatedDeclsMap[Writer.GetDeclRef(RD)].push_back(
+            Writer.GetDeclRef(D));
+      }
   }
 
   Record.push_back(D->param_size());
@@ -1563,7 +1575,7 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     // For lambdas inside canonical FunctionDecl remember the mapping.
     if (auto FD = llvm::dyn_cast_or_null<FunctionDecl>(D->getDeclContext());
         FD && FD->isCanonicalDecl()) {
-      Writer.FunctionToLambdasMap[Writer.GetDeclRef(FD)].push_back(
+      Writer.RelatedDeclsMap[Writer.GetDeclRef(FD)].push_back(
           Writer.GetDeclRef(D));
     }
   } else {
@@ -1940,7 +1952,8 @@ void ASTDeclWriter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   Record.push_back(D->wasDeclaredWithTypename());
 
   const TypeConstraint *TC = D->getTypeConstraint();
-  assert((bool)TC == D->hasTypeConstraint());
+  if (D->hasTypeConstraint())
+    Record.push_back(/*TypeConstraintInitialized=*/TC != nullptr);
   if (TC) {
     auto *CR = TC->getConceptReference();
     Record.push_back(CR != nullptr);
@@ -1958,7 +1971,7 @@ void ASTDeclWriter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   if (OwnsDefaultArg)
     Record.AddTemplateArgumentLoc(D->getDefaultArgument());
 
-  if (!TC && !OwnsDefaultArg &&
+  if (!D->hasTypeConstraint() && !OwnsDefaultArg &&
       D->getDeclContext() == D->getLexicalDeclContext() &&
       !D->isInvalidDecl() && !D->hasAttrs() &&
       !D->isTopLevelDeclInObjCContainer() && !D->isImplicit() &&
@@ -2055,6 +2068,8 @@ void ASTDeclWriter::VisitDeclContext(DeclContext *DC) {
 
   uint64_t LexicalOffset = 0;
   uint64_t VisibleOffset = 0;
+  uint64_t ModuleLocalOffset = 0;
+  uint64_t TULocalOffset = 0;
 
   if (Writer.isGeneratingReducedBMI() && isa<NamespaceDecl>(DC) &&
       cast<NamespaceDecl>(DC)->isFromExplicitGlobalModule()) {
@@ -2065,12 +2080,15 @@ void ASTDeclWriter::VisitDeclContext(DeclContext *DC) {
   } else {
     LexicalOffset =
         Writer.WriteDeclContextLexicalBlock(Record.getASTContext(), DC);
-    VisibleOffset =
-        Writer.WriteDeclContextVisibleBlock(Record.getASTContext(), DC);
+    Writer.WriteDeclContextVisibleBlock(Record.getASTContext(), DC,
+                                        VisibleOffset, ModuleLocalOffset,
+                                        TULocalOffset);
   }
 
   Record.AddOffset(LexicalOffset);
   Record.AddOffset(VisibleOffset);
+  Record.AddOffset(ModuleLocalOffset);
+  Record.AddOffset(TULocalOffset);
 }
 
 const Decl *ASTWriter::getFirstLocalDecl(const Decl *D) {
@@ -2425,6 +2443,8 @@ void ASTWriter::WriteDeclAbbrevs() {
   // DC
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // LexicalOffset
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // VisibleOffset
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // ModuleLocalOffset
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // TULocalOffset
   DeclEnumAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   // Abbreviation for DECL_RECORD
@@ -2468,7 +2488,8 @@ void ASTWriter::WriteDeclAbbrevs() {
             // isNonTrivialToPrimitiveCopy, isNonTrivialToPrimitiveDestroy,
             // hasNonTrivialToPrimitiveDefaultInitializeCUnion,
             // hasNonTrivialToPrimitiveDestructCUnion,
-            // hasNonTrivialToPrimitiveCopyCUnion, isParamDestroyedInCallee,
+            // hasNonTrivialToPrimitiveCopyCUnion,
+            // hasUninitializedExplicitInitFields, isParamDestroyedInCallee,
             // getArgPassingRestrictions
   // ODRHash
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 26));
@@ -2476,6 +2497,8 @@ void ASTWriter::WriteDeclAbbrevs() {
   // DC
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // LexicalOffset
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // VisibleOffset
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // ModuleLocalOffset
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // TULocalOffset
   DeclRecordAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   // Abbreviation for DECL_PARM_VAR
@@ -2812,6 +2835,16 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_CONTEXT_VISIBLE));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
   DeclContextVisibleLookupAbbrev = Stream.EmitAbbrev(std::move(Abv));
+
+  Abv = std::make_shared<BitCodeAbbrev>();
+  Abv->Add(BitCodeAbbrevOp(serialization::DECL_CONTEXT_MODULE_LOCAL_VISIBLE));
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
+  DeclModuleLocalVisibleLookupAbbrev = Stream.EmitAbbrev(std::move(Abv));
+
+  Abv = std::make_shared<BitCodeAbbrev>();
+  Abv->Add(BitCodeAbbrevOp(serialization::DECL_CONTEXT_TU_LOCAL_VISIBLE));
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
+  DeclTULocalLookupAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   Abv = std::make_shared<BitCodeAbbrev>();
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_SPECIALIZATIONS));

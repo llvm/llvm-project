@@ -122,6 +122,20 @@ static cl::opt<unsigned>
                         cl::desc("Max depth to recursively search for missing "
                                  "frames through tail calls."));
 
+// Optionally enable cloning of callsites involved with recursive cycles
+static cl::opt<bool> AllowRecursiveCallsites(
+    "memprof-allow-recursive-callsites", cl::init(false), cl::Hidden,
+    cl::desc("Allow cloning of callsites involved in recursive cycles"));
+
+// When disabled, try to detect and prevent cloning of recursive contexts.
+// This is only necessary until we support cloning through recursive cycles.
+// Leave on by default for now, as disabling requires a little bit of compile
+// time overhead and doesn't affect correctness, it will just inflate the cold
+// hinted bytes reporting a bit when -memprof-report-hinted-sizes is enabled.
+static cl::opt<bool> AllowRecursiveContexts(
+    "memprof-allow-recursive-contexts", cl::init(true), cl::Hidden,
+    cl::desc("Allow cloning of contexts through recursive cycles"));
+
 namespace llvm {
 cl::opt<bool> EnableMemProfContextDisambiguation(
     "enable-memprof-context-disambiguation", cl::init(false), cl::Hidden,
@@ -140,6 +154,7 @@ cl::opt<bool> MemProfRequireDefinitionForPromotion(
 } // namespace llvm
 
 extern cl::opt<bool> MemProfReportHintedSizes;
+extern cl::opt<unsigned> MinClonedColdBytePercent;
 
 namespace {
 /// CRTP base for graphs built from either IR or ThinLTO summary index.
@@ -617,6 +632,11 @@ private:
     static_cast<DerivedCCG *>(this)->updateAllocationCall(Call, AllocType);
   }
 
+  /// Get the AllocationType assigned to the given allocation instruction clone.
+  AllocationType getAllocationCallType(const CallInfo &Call) const {
+    return static_cast<const DerivedCCG *>(this)->getAllocationCallType(Call);
+  }
+
   /// Update non-allocation call to invoke (possibly cloned) function
   /// CalleeFunc.
   void updateCall(CallInfo &CallerCall, FuncInfo CalleeFunc) {
@@ -711,7 +731,8 @@ private:
 
   /// Map from each contextID to the profiled full contexts and their total
   /// sizes (there may be more than one due to context trimming),
-  /// optionally populated when requested (via MemProfReportHintedSizes).
+  /// optionally populated when requested (via MemProfReportHintedSizes or
+  /// MinClonedColdBytePercent).
   DenseMap<uint32_t, std::vector<ContextTotalSize>> ContextIdToContextSizeInfos;
 
   /// Identifies the context node created for a stack id when adding the MIB
@@ -773,6 +794,7 @@ private:
   uint64_t getLastStackId(Instruction *Call);
   std::vector<uint64_t> getStackIdsWithContextNodesForCall(Instruction *Call);
   void updateAllocationCall(CallInfo &Call, AllocationType AllocType);
+  AllocationType getAllocationCallType(const CallInfo &Call) const;
   void updateCall(CallInfo &CallerCall, FuncInfo CalleeFunc);
   CallsiteContextGraph<ModuleCallsiteContextGraph, Function,
                        Instruction *>::FuncInfo
@@ -799,19 +821,31 @@ struct IndexCall : public PointerUnion<CallsiteInfo *, AllocInfo *> {
 
   IndexCall *operator->() { return this; }
 
-  PointerUnion<CallsiteInfo *, AllocInfo *> getBase() const { return *this; }
-
   void print(raw_ostream &OS) const {
-    if (auto *AI = llvm::dyn_cast_if_present<AllocInfo *>(getBase())) {
+    PointerUnion<CallsiteInfo *, AllocInfo *> Base = *this;
+    if (auto *AI = llvm::dyn_cast_if_present<AllocInfo *>(Base)) {
       OS << *AI;
     } else {
-      auto *CI = llvm::dyn_cast_if_present<CallsiteInfo *>(getBase());
+      auto *CI = llvm::dyn_cast_if_present<CallsiteInfo *>(Base);
       assert(CI);
       OS << *CI;
     }
   }
 };
+} // namespace
 
+namespace llvm {
+template <> struct simplify_type<IndexCall> {
+  using SimpleType = PointerUnion<CallsiteInfo *, AllocInfo *>;
+  static SimpleType getSimplifiedValue(IndexCall &Val) { return Val; }
+};
+template <> struct simplify_type<const IndexCall> {
+  using SimpleType = const PointerUnion<CallsiteInfo *, AllocInfo *>;
+  static SimpleType getSimplifiedValue(const IndexCall &Val) { return Val; }
+};
+} // namespace llvm
+
+namespace {
 /// CRTP derived class for graphs built from summary index (ThinLTO).
 class IndexCallsiteContextGraph
     : public CallsiteContextGraph<IndexCallsiteContextGraph, FunctionSummary,
@@ -852,6 +886,7 @@ private:
   uint64_t getLastStackId(IndexCall &Call);
   std::vector<uint64_t> getStackIdsWithContextNodesForCall(IndexCall &Call);
   void updateAllocationCall(CallInfo &Call, AllocationType AllocType);
+  AllocationType getAllocationCallType(const CallInfo &Call) const;
   void updateCall(CallInfo &CallerCall, FuncInfo CalleeFunc);
   CallsiteContextGraph<IndexCallsiteContextGraph, FunctionSummary,
                        IndexCall>::FuncInfo
@@ -895,21 +930,6 @@ struct DenseMapInfo<IndexCall>
 } // end namespace llvm
 
 namespace {
-
-struct FieldSeparator {
-  bool Skip = true;
-  const char *Sep;
-
-  FieldSeparator(const char *Sep = ", ") : Sep(Sep) {}
-};
-
-raw_ostream &operator<<(raw_ostream &OS, FieldSeparator &FS) {
-  if (FS.Skip) {
-    FS.Skip = false;
-    return OS;
-  }
-  return OS << FS.Sep;
-}
 
 // Map the uint8_t alloc types (which may contain NotCold|Cold) to the alloc
 // type we should actually use on the corresponding allocation.
@@ -1216,8 +1236,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::addStackNodesForMIB(
 
   ContextIdToAllocationType[++LastContextId] = AllocType;
 
-  if (MemProfReportHintedSizes) {
-    assert(!ContextSizeInfo.empty());
+  if (!ContextSizeInfo.empty()) {
     auto &Entry = ContextIdToContextSizeInfos[LastContextId];
     Entry.insert(Entry.begin(), ContextSizeInfo.begin(), ContextSizeInfo.end());
   }
@@ -1243,9 +1262,13 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::addStackNodesForMIB(
       StackEntryIdToContextNodeMap[StackId] = StackNode;
       StackNode->OrigStackOrAllocId = StackId;
     }
-    auto Ins = StackIdSet.insert(StackId);
-    if (!Ins.second)
-      StackNode->Recursive = true;
+    // Marking a node recursive will prevent its cloning completely, even for
+    // non-recursive contexts flowing through it.
+    if (!AllowRecursiveCallsites) {
+      auto Ins = StackIdSet.insert(StackId);
+      if (!Ins.second)
+        StackNode->Recursive = true;
+    }
     StackNode->AllocTypes |= (uint8_t)AllocType;
     PrevNode->addOrUpdateCallerEdge(StackNode, AllocType, LastContextId);
     PrevNode = StackNode;
@@ -1382,8 +1405,11 @@ static void checkNode(const ContextNode<DerivedCCG, FuncTy, CallTy> *Node,
       set_union(CallerEdgeContextIds, Edge->ContextIds);
     }
     // Node can have more context ids than callers if some contexts terminate at
-    // node and some are longer.
-    assert(NodeContextIds == CallerEdgeContextIds ||
+    // node and some are longer. If we are allowing recursive callsites but
+    // haven't disabled recursive contexts, this will be violated for
+    // incompletely cloned recursive cycles, so skip the checking in that case.
+    assert((AllowRecursiveCallsites && AllowRecursiveContexts) ||
+           NodeContextIds == CallerEdgeContextIds ||
            set_is_subset(CallerEdgeContextIds, NodeContextIds));
   }
   if (Node->CalleeEdges.size()) {
@@ -1863,9 +1889,9 @@ uint64_t ModuleCallsiteContextGraph::getLastStackId(Instruction *Call) {
 }
 
 uint64_t IndexCallsiteContextGraph::getLastStackId(IndexCall &Call) {
-  assert(isa<CallsiteInfo *>(Call.getBase()));
+  assert(isa<CallsiteInfo *>(Call));
   CallStack<CallsiteInfo, SmallVector<unsigned>::const_iterator>
-      CallsiteContext(dyn_cast_if_present<CallsiteInfo *>(Call.getBase()));
+      CallsiteContext(dyn_cast_if_present<CallsiteInfo *>(Call));
   // Need to convert index into stack id.
   return Index.getStackIdAtIndex(CallsiteContext.back());
 }
@@ -1897,10 +1923,10 @@ std::string IndexCallsiteContextGraph::getLabel(const FunctionSummary *Func,
                                                 unsigned CloneNo) const {
   auto VI = FSToVIMap.find(Func);
   assert(VI != FSToVIMap.end());
-  if (isa<AllocInfo *>(Call.getBase()))
+  if (isa<AllocInfo *>(Call))
     return (VI->second.name() + " -> alloc").str();
   else {
-    auto *Callsite = dyn_cast_if_present<CallsiteInfo *>(Call.getBase());
+    auto *Callsite = dyn_cast_if_present<CallsiteInfo *>(Call);
     return (VI->second.name() + " -> " +
             getMemProfFuncName(Callsite->Callee.name(),
                                Callsite->Clones[CloneNo]))
@@ -1919,9 +1945,9 @@ ModuleCallsiteContextGraph::getStackIdsWithContextNodesForCall(
 
 std::vector<uint64_t>
 IndexCallsiteContextGraph::getStackIdsWithContextNodesForCall(IndexCall &Call) {
-  assert(isa<CallsiteInfo *>(Call.getBase()));
+  assert(isa<CallsiteInfo *>(Call));
   CallStack<CallsiteInfo, SmallVector<unsigned>::const_iterator>
-      CallsiteContext(dyn_cast_if_present<CallsiteInfo *>(Call.getBase()));
+      CallsiteContext(dyn_cast_if_present<CallsiteInfo *>(Call));
   return getStackIdsWithContextNodes<CallsiteInfo,
                                      SmallVector<unsigned>::const_iterator>(
       CallsiteContext);
@@ -2058,14 +2084,15 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
           CallStack<MIBInfo, SmallVector<unsigned>::const_iterator>
               EmptyContext;
           unsigned I = 0;
-          assert(!MemProfReportHintedSizes ||
-                 AN.ContextSizeInfos.size() == AN.MIBs.size());
+          assert(
+              (!MemProfReportHintedSizes && MinClonedColdBytePercent >= 100) ||
+              AN.ContextSizeInfos.size() == AN.MIBs.size());
           // Now add all of the MIBs and their stack nodes.
           for (auto &MIB : AN.MIBs) {
             CallStack<MIBInfo, SmallVector<unsigned>::const_iterator>
                 StackContext(&MIB);
             std::vector<ContextTotalSize> ContextSizeInfo;
-            if (MemProfReportHintedSizes) {
+            if (!AN.ContextSizeInfos.empty()) {
               for (auto [FullStackId, TotalSize] : AN.ContextSizeInfos[I])
                 ContextSizeInfo.push_back({FullStackId, TotalSize});
             }
@@ -2681,8 +2708,7 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
 
 const FunctionSummary *
 IndexCallsiteContextGraph::getCalleeFunc(IndexCall &Call) {
-  ValueInfo Callee =
-      dyn_cast_if_present<CallsiteInfo *>(Call.getBase())->Callee;
+  ValueInfo Callee = dyn_cast_if_present<CallsiteInfo *>(Call)->Callee;
   if (Callee.getSummaryList().empty())
     return nullptr;
   return dyn_cast<FunctionSummary>(Callee.getSummaryList()[0]->getBaseObject());
@@ -2692,8 +2718,7 @@ bool IndexCallsiteContextGraph::calleeMatchesFunc(
     IndexCall &Call, const FunctionSummary *Func,
     const FunctionSummary *CallerFunc,
     std::vector<std::pair<IndexCall, FunctionSummary *>> &FoundCalleeChain) {
-  ValueInfo Callee =
-      dyn_cast_if_present<CallsiteInfo *>(Call.getBase())->Callee;
+  ValueInfo Callee = dyn_cast_if_present<CallsiteInfo *>(Call)->Callee;
   // If there is no summary list then this is a call to an externally defined
   // symbol.
   AliasSummary *Alias =
@@ -2736,10 +2761,8 @@ bool IndexCallsiteContextGraph::calleeMatchesFunc(
 }
 
 bool IndexCallsiteContextGraph::sameCallee(IndexCall &Call1, IndexCall &Call2) {
-  ValueInfo Callee1 =
-      dyn_cast_if_present<CallsiteInfo *>(Call1.getBase())->Callee;
-  ValueInfo Callee2 =
-      dyn_cast_if_present<CallsiteInfo *>(Call2.getBase())->Callee;
+  ValueInfo Callee1 = dyn_cast_if_present<CallsiteInfo *>(Call1)->Callee;
+  ValueInfo Callee2 = dyn_cast_if_present<CallsiteInfo *>(Call2)->Callee;
   return Callee1 == Callee2;
 }
 
@@ -2784,9 +2807,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::print(
     OS << "\t\t" << *Edge << "\n";
   if (!Clones.empty()) {
     OS << "\tClones: ";
-    FieldSeparator FS;
+    ListSeparator LS;
     for (auto *Clone : Clones)
-      OS << FS << Clone;
+      OS << LS << Clone;
     OS << "\n";
   } else if (CloneOf) {
     OS << "\tClone of " << CloneOf << "\n";
@@ -2840,6 +2863,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
     if (!Node->IsAllocation)
       continue;
     DenseSet<uint32_t> ContextIds = Node->getContextIds();
+    auto AllocTypeFromCall = getAllocationCallType(Node->Call);
     std::vector<uint32_t> SortedIds(ContextIds.begin(), ContextIds.end());
     std::sort(SortedIds.begin(), SortedIds.end());
     for (auto Id : SortedIds) {
@@ -2852,7 +2876,11 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
              << getAllocTypeString((uint8_t)TypeI->second)
              << " full allocation context " << Info.FullStackId
              << " with total size " << Info.TotalSize << " is "
-             << getAllocTypeString(Node->AllocTypes) << " after cloning\n";
+             << getAllocTypeString(Node->AllocTypes) << " after cloning";
+          if (allocTypeToUse(Node->AllocTypes) != AllocTypeFromCall)
+            OS << " marked " << getAllocTypeString((uint8_t)AllocTypeFromCall)
+               << " due to cold byte percent";
+          OS << "\n";
         }
       }
     }
@@ -3371,6 +3399,21 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
 
   assert(Node->AllocTypes != (uint8_t)AllocationType::None);
 
+  DenseSet<uint32_t> RecursiveContextIds;
+  // If we are allowing recursive callsites, but have also disabled recursive
+  // contexts, look for context ids that show up in multiple caller edges.
+  if (AllowRecursiveCallsites && !AllowRecursiveContexts) {
+    DenseSet<uint32_t> AllCallerContextIds;
+    for (auto &CE : Node->CallerEdges) {
+      // Resize to the largest set of caller context ids, since we know the
+      // final set will be at least that large.
+      AllCallerContextIds.reserve(CE->getContextIds().size());
+      for (auto Id : CE->getContextIds())
+        if (!AllCallerContextIds.insert(Id).second)
+          RecursiveContextIds.insert(Id);
+    }
+  }
+
   // Iterate until we find no more opportunities for disambiguating the alloc
   // types via cloning. In most cases this loop will terminate once the Node
   // has a single allocation type, in which case no more cloning is needed.
@@ -3384,10 +3427,20 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
     if (hasSingleAllocType(Node->AllocTypes) || Node->CallerEdges.size() <= 1)
       break;
 
+    // If the caller was not successfully matched to a call in the IR/summary,
+    // there is no point in trying to clone for it as we can't update that call.
+    if (!CallerEdge->Caller->hasCall()) {
+      ++EI;
+      continue;
+    }
+
     // Only need to process the ids along this edge pertaining to the given
     // allocation.
     auto CallerEdgeContextsForAlloc =
         set_intersection(CallerEdge->getContextIds(), AllocContextIds);
+    if (!RecursiveContextIds.empty())
+      CallerEdgeContextsForAlloc =
+          set_difference(CallerEdgeContextsForAlloc, RecursiveContextIds);
     if (CallerEdgeContextsForAlloc.empty()) {
       ++EI;
       continue;
@@ -3495,6 +3548,23 @@ void IndexCallsiteContextGraph::updateAllocationCall(CallInfo &Call,
   AI->Versions[Call.cloneNo()] = (uint8_t)AllocType;
 }
 
+AllocationType
+ModuleCallsiteContextGraph::getAllocationCallType(const CallInfo &Call) const {
+  const auto *CB = cast<CallBase>(Call.call());
+  if (!CB->getAttributes().hasFnAttr("memprof"))
+    return AllocationType::None;
+  return CB->getAttributes().getFnAttr("memprof").getValueAsString() == "cold"
+             ? AllocationType::Cold
+             : AllocationType::NotCold;
+}
+
+AllocationType
+IndexCallsiteContextGraph::getAllocationCallType(const CallInfo &Call) const {
+  const auto *AI = Call.call().dyn_cast<AllocInfo *>();
+  assert(AI->Versions.size() > Call.cloneNo());
+  return (AllocationType)AI->Versions[Call.cloneNo()];
+}
+
 void ModuleCallsiteContextGraph::updateCall(CallInfo &CallerCall,
                                             FuncInfo CalleeFunc) {
   if (CalleeFunc.cloneNo() > 0)
@@ -3548,7 +3618,7 @@ IndexCallsiteContextGraph::cloneFunctionForCallsite(
   // Confirm this matches the CloneNo provided by the caller, which is based on
   // the number of function clones we have.
   assert(CloneNo ==
-         (Call.call().is<AllocInfo *>()
+         (isa<AllocInfo *>(Call.call())
               ? Call.call().dyn_cast<AllocInfo *>()->Versions.size()
               : Call.call().dyn_cast<CallsiteInfo *>()->Clones.size()));
   // Walk all the instructions in this function. Create a new version for
@@ -4025,6 +4095,9 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
     }
   }
 
+  uint8_t BothTypes =
+      (uint8_t)AllocationType::Cold | (uint8_t)AllocationType::NotCold;
+
   auto UpdateCalls = [&](ContextNode *Node,
                          DenseSet<const ContextNode *> &Visited,
                          auto &&UpdateCalls) {
@@ -4044,7 +4117,31 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
       return;
 
     if (Node->IsAllocation) {
-      updateAllocationCall(Node->Call, allocTypeToUse(Node->AllocTypes));
+      auto AT = allocTypeToUse(Node->AllocTypes);
+      // If the allocation type is ambiguous, and more aggressive hinting
+      // has been enabled via the MinClonedColdBytePercent flag, see if this
+      // allocation should be hinted cold anyway because its fraction cold bytes
+      // allocated is at least the given threshold.
+      if (Node->AllocTypes == BothTypes && MinClonedColdBytePercent < 100 &&
+          !ContextIdToContextSizeInfos.empty()) {
+        uint64_t TotalCold = 0;
+        uint64_t Total = 0;
+        for (auto Id : Node->getContextIds()) {
+          auto TypeI = ContextIdToAllocationType.find(Id);
+          assert(TypeI != ContextIdToAllocationType.end());
+          auto CSI = ContextIdToContextSizeInfos.find(Id);
+          if (CSI != ContextIdToContextSizeInfos.end()) {
+            for (auto &Info : CSI->second) {
+              Total += Info.TotalSize;
+              if (TypeI->second == AllocationType::Cold)
+                TotalCold += Info.TotalSize;
+            }
+          }
+        }
+        if (TotalCold * 100 >= Total * MinClonedColdBytePercent)
+          AT = AllocationType::Cold;
+      }
+      updateAllocationCall(Node->Call, AT);
       assert(Node->MatchingCalls.empty());
       return;
     }
@@ -4427,7 +4524,11 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
           // will still be none type or should have gotten the default NotCold.
           // Skip that after calling clone helper since that does some sanity
           // checks that confirm we haven't decided yet that we need cloning.
-          if (AllocNode.Versions.size() == 1) {
+          // We might have a single version that is cold due to the
+          // MinClonedColdBytePercent heuristic, make sure we don't skip in that
+          // case.
+          if (AllocNode.Versions.size() == 1 &&
+              (AllocationType)AllocNode.Versions[0] != AllocationType::Cold) {
             assert((AllocationType)AllocNode.Versions[0] ==
                        AllocationType::NotCold ||
                    (AllocationType)AllocNode.Versions[0] ==
