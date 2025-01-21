@@ -36,6 +36,7 @@ jobs:
     # frequent small object writes.
     - name: Setup ccache
       uses: hendrikmuhs/ccache-action@v1.2
+      if: runner.arch == 'X64'
       with:
         max-size: 1G
         key: libc_fullbuild_${{ matrix.c_compiler }}
@@ -46,10 +47,16 @@ jobs:
     # - Debian has a multilib setup, so we need to symlink the asm directory.
     #   For more information, see https://wiki.debian.org/Multiarch/LibraryPathOverview
     - name: Prepare dependencies (Ubuntu)
+      shell: bash
       run: |
         sudo apt-get update
         sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev ninja-build linux-libc-dev
         sudo ln -sf /usr/include/$(uname -p)-linux-gnu/asm /usr/include/asm
+        if [[ $(uname -m) == 'aarch64' ]]; then
+          wget https://github.com/mozilla/sccache/releases/download/v0.9.1/sccache-v0.9.1-aarch64-unknown-linux-musl.tar.gz
+          tar xvaf sccache-v0.9.1-aarch64-unknown-linux-musl.tar.gz
+          sudo cp sccache-v0.9.1-aarch64-unknown-linux-musl/sccache /usr/bin
+        fi
 
     - name: Set reusable strings
       id: strings

@@ -51,6 +51,7 @@ jobs:
     # frequent small object writes.
     - name: Setup ccache
       uses: hendrikmuhs/ccache-action@v1
+      if: runner.arch == 'X64'
       with:
         max-size: 1G
         key: libc_overlay_build_${{ matrix.os }}_${{ matrix.compiler.c_compiler }}
@@ -62,6 +63,11 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev ninja-build
+        if [[ $(uname -m) == 'aarch64' ]]; then
+          wget https://github.com/mozilla/sccache/releases/download/v0.9.1/sccache-v0.9.1-aarch64-unknown-linux-musl.tar.gz
+          tar xvaf sccache-v0.9.1-aarch64-unknown-linux-musl.tar.gz
+          sudo cp sccache-v0.9.1-aarch64-unknown-linux-musl/sccache /usr/bin
+        fi
     
     # Chocolatey is shipped with Windows runners. Windows Server 2025 recommends WinGet.
     # Consider migrating to WinGet when Windows Server 2025 is available.
