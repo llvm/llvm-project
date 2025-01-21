@@ -927,7 +927,6 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
       OMPX_InitialNumEvents("LIBOMPTARGET_NUM_INITIAL_EVENTS", 1),
       OMPX_NumMultiDevices("LIBOMPTARGET_NUM_MULTI_DEVICES", 0),
       OMPX_EnableRuntimeAutotuning("OMPX_ENABLE_RUNTIME_AUTOTUNING", false),
-      OMPX_EnableCoarseAllocs("OMPX_ENABLE_COARSE_ALLOCS", false),
       DeviceId(DeviceId), GridValues(OMPGridValues),
       PeerAccesses(NumDevices, PeerAccessState::PENDING), PeerAccessesLock(),
       PinnedAllocs(*this), RPCServer(nullptr) {
@@ -2206,11 +2205,6 @@ void *GenericPluginTy::data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr,
       return nullptr;
     }
     assert(*AllocOrErr && "Null pointer upon successful allocation");
-
-    // Method has no effect when the CUDA Plugin is used.
-    // This method can only be called if HostPtr is not null.
-    if (HostPtr && Kind == TARGET_ALLOC_SHARED && getDevice(DeviceId).getUseCoarseGrain() )
-      set_coarse_grain_mem_region(DeviceId, HostPtr, Size);
 
     return *AllocOrErr;
   }();

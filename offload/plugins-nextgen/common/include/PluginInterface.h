@@ -1051,9 +1051,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return OMPX_MinThreadsForLowTripCount;
   }
 
-  virtual uint32_t getUseCoarseGrain() {
-    return OMPX_EnableCoarseAllocs;
-  }
   /// Whether or not to reuse blocks for high trip count loops.
   /// @see OMPX_ReuseBlocksForHighTripCount
   bool getReuseBlocksForHighTripCount() {
@@ -1211,9 +1208,6 @@ private:
 
   BoolEnvar OMPX_ReuseBlocksForHighTripCount =
       BoolEnvar("LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT", true);
-
-  /// Envar to enable coasre alocs.
-  BoolEnvar OMPX_EnableCoarseAllocs;
 
 protected:
   /// Environment variables defined by the LLVM OpenMP implementation

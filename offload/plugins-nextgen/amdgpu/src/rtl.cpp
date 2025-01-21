@@ -2924,6 +2924,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_ApuMaps("OMPX_APU_MAPS", false),
         OMPX_EnableGFX90ACoarseGrainUsmMaps(
             "OMPX_ENABLE_GFX90A_COARSE_GRAIN_USM_MAPS", false),
+        OMPX_EnableGFX90ACoarseGrainSharedAlloc(
+            "OMPX_ENABLE_GFX90A_COARSE_GRAIN_SHARED_ALLOC", false),
         OMPX_StrictSanityChecks("OMPX_STRICT_SANITY_CHECKS", false),
         OMPX_SyncCopyBack("LIBOMPTARGET_SYNC_COPY_BACK", true),
         OMPX_APUPrefaultMemcopy("LIBOMPTARGET_APU_PREFAULT_MEMCOPY", "true"),
@@ -4339,6 +4341,8 @@ private:
   /// - Coarse graining upon USM map on MI200 needs to be enabled.
   void specialBehaviorHandling() {
     EnableGFX90ACoarseGrainUsmMaps = OMPX_EnableGFX90ACoarseGrainUsmMaps;
+    EnableGFX90ACoarseGrainSharedAlloc =
+        OMPX_EnableGFX90ACoarseGrainSharedAlloc;
   }
 
   bool IsGfx90aCoarseGrainUsmMapEnabledImpl() override final {
@@ -4460,6 +4464,12 @@ private:
   /// OMPX_DISABLE_USM_MAPS
   BoolEnvar OMPX_EnableGFX90ACoarseGrainUsmMaps;
 
+  /// Value of OMPX_ENABLE_GFX90A_COARSE_GRAIN_SHARED_ALLOC.
+  /// Use on MI200 systems to enable coarse grain
+  /// allocation of TARGET_ALLOC_SHARED memory.
+  /// Default is fine grain allocation.
+  BoolEnvar OMPX_EnableGFX90ACoarseGrainSharedAlloc;
+
   /// Makes warnings turn into fatal errors
   BoolEnvar OMPX_StrictSanityChecks;
 
@@ -4548,6 +4558,10 @@ private:
   // is switched to coarse grain (and stay coarse grain) if a variable
   // residing on the page goes through implicit/explicit OpenMP map.
   bool EnableGFX90ACoarseGrainUsmMaps = false;
+
+  // Set by OMPX_ENABLE_GFX90A_COARSE_GRAIN_SHARED_ALLOC environment variable.
+  // If set, TARGET_ALLOC_SHARED is allocated on coarse grain memory on MI200
+  bool EnableGFX90ACoarseGrainSharedAlloc = false;
 
   /// True if in multi-device mode.
   bool IsMultiDeviceEnabled = false;
@@ -5244,6 +5258,11 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
   case TARGET_ALLOC_SHARED:
     MemoryPool = &HostDevice.getFineGrainedMemoryPool();
     break;
+  }
+
+  if (Kind == TARGET_ALLOC_SHARED && IsEquippedWithGFX90A &&
+      EnableGFX90ACoarseGrainSharedAlloc) {
+    MemoryPool = CoarseGrainedMemoryPools[0];
   }
 
   if (!MemoryPool) {
