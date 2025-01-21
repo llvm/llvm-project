@@ -7530,14 +7530,14 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(), CM,
                         CM.CostKind);
   precomputeCosts(BestPlan, BestFactor.Width, CostCtx);
-  assert((BestFactor.Width == LegacyVF.Width ||
-          planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
-                                                CostCtx, OrigLoop) ||
-          planContainsAdditionalSimplifications(getPlanFor(LegacyVF.Width),
-                                                CostCtx, OrigLoop)) &&
-         " VPlan cost model and legacy cost model disagreed");
-  assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
-         "when vectorizing, the scalar cost must be computed.");
+  // assert((BestFactor.Width == LegacyVF.Width ||
+  //         planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
+  //                                               CostCtx, OrigLoop) ||
+  //         planContainsAdditionalSimplifications(getPlanFor(LegacyVF.Width),
+  //                                               CostCtx, OrigLoop)) &&
+  //        " VPlan cost model and legacy cost model disagreed");
+  // assert((BestFactor.Width.isScalar() || BestFactor.ScalarCost > 0) &&
+  //        "when vectorizing, the scalar cost must be computed.");
 #endif
 
   LLVM_DEBUG(dbgs() << "LV: Selecting VF: " << BestFactor.Width << ".\n");

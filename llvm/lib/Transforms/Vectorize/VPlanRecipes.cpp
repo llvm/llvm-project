@@ -2689,6 +2689,13 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
   if (!Reverse)
     return Cost;
 
+  bool UseStridedLoadStore =
+      PreferStridedLoadStore || Ctx.TTI.preferStridedLoadStore();
+  if (UseStridedLoadStore)
+    return Ctx.TTI.getStridedMemoryOpCost(Ingredient.getOpcode(), Ty,
+                                          getAddr()->getUnderlyingValue(),
+                                          false, Alignment, Ctx.CostKind);
+
   return Cost + Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
                                        cast<VectorType>(Ty), {}, Ctx.CostKind,
                                        0);
@@ -2823,6 +2830,13 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
       Ingredient.getOpcode(), Ty, Alignment, AS, Ctx.CostKind);
   if (!Reverse)
     return Cost;
+
+  bool UseStridedLoadStore =
+      PreferStridedLoadStore || Ctx.TTI.preferStridedLoadStore();
+  if (UseStridedLoadStore)
+    return Ctx.TTI.getStridedMemoryOpCost(Ingredient.getOpcode(), Ty,
+                                          getAddr()->getUnderlyingValue(),
+                                          false, Alignment, Ctx.CostKind);
 
   return Cost + Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
                                        cast<VectorType>(Ty), {}, Ctx.CostKind,
