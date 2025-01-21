@@ -88,17 +88,16 @@ BlockFrequencyRatioThreshold("block-freq-ratio-threshold",
 
 enum class UseBFI { None, PGO, All };
 
-static cl::opt<UseBFI>
-DisableHoistingToHotterBlocks("disable-hoisting-to-hotter-blocks",
-                              cl::desc("Disable hoisting instructions to"
-                              " hotter blocks"),
-                              cl::init(UseBFI::PGO), cl::Hidden,
-                              cl::values(clEnumValN(UseBFI::None, "none",
-                              "disable the feature"),
-                              clEnumValN(UseBFI::PGO, "pgo",
-                              "enable the feature when using profile data"),
-                              clEnumValN(UseBFI::All, "all",
-                              "enable the feature with/wo profile data")));
+static cl::opt<UseBFI> DisableHoistingToHotterBlocks(
+    "disable-hoisting-to-hotter-blocks",
+    cl::desc("Disable hoisting instructions to"
+             " hotter blocks"),
+    cl::init(UseBFI::All), cl::Hidden,
+    cl::values(clEnumValN(UseBFI::None, "none", "disable the feature"),
+               clEnumValN(UseBFI::PGO, "pgo",
+                          "enable the feature when using profile data"),
+               clEnumValN(UseBFI::All, "all",
+                          "enable the feature with/wo profile data")));
 
 STATISTIC(NumHoisted,
           "Number of machine instructions hoisted out of loops");
