@@ -213,8 +213,7 @@ _mm512_maskz_cvts2ph_hf8(__mmask64 __U, __m512h __A, __m512h __B) {
       (__v64qi)(__m512i)_mm512_setzero_si512());
 }
 
-static __inline__ __m512h __DEFAULT_FN_ATTRS512
-_mm512_cvthf8(__m256i __A) {
+static __inline__ __m512h __DEFAULT_FN_ATTRS512 _mm512_cvthf8(__m256i __A) {
   return (__m512h)__builtin_ia32_vcvthf8_2ph512_mask(
       (__v32qi)__A, (__v32hf)(__m512h)_mm512_undefined_ph(), (__mmask32)-1);
 }
