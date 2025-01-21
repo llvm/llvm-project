@@ -3264,7 +3264,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           continue;
 
         KnownBits Known = computeKnownBits(RK.WasOn, 0, nullptr);
-        unsigned TZ = std::min(Known.countMinTrailingZeros(), 63);
+        unsigned TZ = std::min(Known.countMinTrailingZeros(), 63u);
         if ((1ULL << TZ) < RK.ArgValue)
           continue;
         auto *New = CallBase::removeOperandBundle(II, OBU.getTagID());
