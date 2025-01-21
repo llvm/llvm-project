@@ -1,7 +1,12 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 
-// RUN: %clang -fmodules -fmodules-cache-path=%t/modcache -fsyntax-only %t/source.m -Xclang -ast-dump-all 2>&1 | FileCheck %s
+
+// Expect no crash
+// RUN: %clang_cc1 -fmodules -fmodules-cache-path=%t/modcache -fmodule-map-file=%t/module.modulemap %t/source.m
+
+// Add -ast-dump-all to check that the AST nodes are merged correctly.
+// RUN: %clang_cc1 -fmodules -fmodules-cache-path=%t/modcache -fmodule-map-file=%t/module.modulemap %t/source.m -ast-dump-all 2>&1 | FileCheck %s
 
 
 //--- shared.h
