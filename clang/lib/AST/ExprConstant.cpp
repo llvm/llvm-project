@@ -1132,6 +1132,7 @@ namespace {
     struct StdAllocatorCaller {
       unsigned FrameIndex;
       QualType ElemType;
+      const Expr *Call;
       explicit operator bool() const { return FrameIndex != 0; };
     };
 
@@ -1155,7 +1156,7 @@ namespace {
         if (CTSD->isInStdNamespace() && ClassII &&
             ClassII->isStr("allocator") && TAL.size() >= 1 &&
             TAL[0].getKind() == TemplateArgument::Type)
-          return {Call->Index, TAL[0].getAsType()};
+          return {Call->Index, TAL[0].getAsType(), Call->CallExpr};
       }
 
       return {};
@@ -7033,7 +7034,7 @@ static bool HandleOperatorNewCall(EvalInfo &Info, const CallExpr *E,
 
   QualType AllocType = Info.Ctx.getConstantArrayType(
       ElemType, Size, nullptr, ArraySizeModifier::Normal, 0);
-  APValue *Val = Info.createHeapAlloc(E, AllocType, Result);
+  APValue *Val = Info.createHeapAlloc(Caller.Call, AllocType, Result);
   *Val = APValue(APValue::UninitArray(), 0, Size.getZExtValue());
   Result.addArray(Info, E, cast<ConstantArrayType>(AllocType));
   return true;
