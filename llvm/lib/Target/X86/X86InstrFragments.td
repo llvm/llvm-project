@@ -696,7 +696,7 @@ def def32 : PatLeaf<(i32 GR32:$src), [{
          N->getOpcode() != ISD::AssertZext &&
          N->getOpcode() != ISD::AssertAlign &&
          N->getOpcode() != ISD::FREEZE &&
-         !((N->getOpcode() == X86ISD::BSF|| N->getOpcode() == X86ISD::BSR) &&
+         !((N->getOpcode() == X86ISD::BSF || N->getOpcode() == X86ISD::BSR) &&
            (!N->getOperand(0).isUndef() && !isa<ConstantSDNode>(N->getOperand(0))));
 }]>;
 
