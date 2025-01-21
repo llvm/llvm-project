@@ -3263,9 +3263,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (!UO || isa<Argument>(UO))
           continue;
 
-        auto Known = computeKnownBits(RK.WasOn, 0, nullptr);
-        unsigned KnownAlign = 1 << Known.countMinTrailingZeros();
-        if (KnownAlign < RK.ArgValue)
+        KnownBits Known = computeKnownBits(RK.WasOn, 0, nullptr);
+        unsigned TZ = std::min(Known.countMinTrailingZeros(), 63);
+        if ((1ULL << TZ) < RK.ArgValue)
           continue;
         auto *New = CallBase::removeOperandBundle(II, OBU.getTagID());
         return New;
