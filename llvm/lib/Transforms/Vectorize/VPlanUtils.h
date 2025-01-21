@@ -41,15 +41,21 @@ inline bool isUniformAfterVectorization(const VPValue *VPV) {
   // vectorization inside a vector region.
   if (VPV->isDefinedOutsideLoopRegions())
     return true;
-  const VPRecipeBase *Def = VPV->getDefiningRecipe();
-  assert(Def && "Must have definition for value defined inside vector region");
-  if (auto *Rep = dyn_cast<VPReplicateRecipe>(Def))
+  if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV))
     return Rep->isUniform();
-  if (auto *GEP = dyn_cast<VPWidenGEPRecipe>(Def))
-    return all_of(GEP->operands(), isUniformAfterVectorization);
-  if (auto *VPI = dyn_cast<VPInstruction>(Def))
-    return VPI->isSingleScalar() || VPI->isVectorToScalar();
-  return false;
+  if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe>(VPV))
+    return all_of(VPV->getDefiningRecipe()->operands(),
+                  isUniformAfterVectorization);
+  if (auto *VPI = dyn_cast<VPInstruction>(VPV))
+    return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
+           ((Instruction::isBinaryOp(VPI->getOpcode()) ||
+             VPI->getOpcode() == VPInstruction::PtrAdd) &&
+            all_of(VPI->operands(), isUniformAfterVectorization));
+  if (auto *IV = dyn_cast<VPDerivedIVRecipe>(VPV))
+    return all_of(IV->operands(), isUniformAfterVectorization);
+
+  // VPExpandSCEVRecipes must be placed in the entry and are alway uniform.
+  return isa<VPExpandSCEVRecipe>(VPV);
 }
 
 /// Return true if \p V is a header mask in \p Plan.

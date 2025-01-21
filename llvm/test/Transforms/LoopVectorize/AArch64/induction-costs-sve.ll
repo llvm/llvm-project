@@ -760,7 +760,6 @@ define void @exit_cond_zext_iv(ptr %dst, i64 %N) {
 ; DEFAULT:       vector.scevcheck:
 ; DEFAULT-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 1)
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[UMAX]], -1
-; DEFAULT-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP0]] to i32
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = add i32 1, [[TMP2]]
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[TMP3]], 1
@@ -810,7 +809,6 @@ define void @exit_cond_zext_iv(ptr %dst, i64 %N) {
 ; PRED:       vector.scevcheck:
 ; PRED-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 1)
 ; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[UMAX]], -1
-; PRED-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
 ; PRED-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP0]] to i32
 ; PRED-NEXT:    [[TMP3:%.*]] = add i32 1, [[TMP2]]
 ; PRED-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[TMP3]], 1
@@ -821,8 +819,8 @@ define void @exit_cond_zext_iv(ptr %dst, i64 %N) {
 ; PRED-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX1]], 1
 ; PRED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 2
 ; PRED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; PRED-NEXT:    [[IND_END:%.*]] = trunc i64 [[N_VEC]] to i32
 ; PRED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[UMAX1]], 1
+; PRED-NEXT:    [[IND_END:%.*]] = trunc i64 [[N_VEC]] to i32
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <2 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT2]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; PRED-NEXT:    br label [[VECTOR_BODY:%.*]]

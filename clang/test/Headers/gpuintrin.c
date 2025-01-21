@@ -44,7 +44,7 @@
 // AMDGPU-NEXT:    call void @__gpu_exit() #[[ATTR8:[0-9]+]]
 // AMDGPU-NEXT:    unreachable
 //
-// NVPTX-LABEL: define protected void @foo(
+// NVPTX-LABEL: define protected ptx_kernel void @foo(
 // NVPTX-SAME: ) #[[ATTR0:[0-9]+]] {
 // NVPTX-NEXT:  [[ENTRY:.*:]]
 // NVPTX-NEXT:    [[CALL:%.*]] = call i32 @__gpu_num_blocks_x() #[[ATTR6:[0-9]+]]

@@ -54,6 +54,7 @@ include "RISCVSchedSiFiveP600.td"
 include "RISCVSchedSyntacoreSCR1.td"
 include "RISCVSchedSyntacoreSCR345.td"
 include "RISCVSchedSyntacoreSCR7.td"
+include "RISCVSchedTTAscalonD8.td"
 include "RISCVSchedXiangShanNanHu.td"
 
 //===----------------------------------------------------------------------===//
@@ -61,6 +62,12 @@ include "RISCVSchedXiangShanNanHu.td"
 //===----------------------------------------------------------------------===//
 
 include "RISCVProcessors.td"
+
+//===----------------------------------------------------------------------===//
+// Pfm Counters
+//===----------------------------------------------------------------------===//
+
+include "RISCVPfmCounters.td"
 
 //===----------------------------------------------------------------------===//
 // Define the RISC-V target.

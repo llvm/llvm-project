@@ -10,10 +10,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
-#include "llvm/DebugInfo/DWARF/DWARFTypePrinter.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Threading.h"
 
@@ -480,6 +478,13 @@ SymbolFileDWARF::~SymbolFileDWARF() = default;
 static ConstString GetDWARFMachOSegmentName() {
   static ConstString g_dwarf_section_name("__DWARF");
   return g_dwarf_section_name;
+}
+
+llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> &
+SymbolFileDWARF::GetDIEToType() {
+  if (SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile())
+    return debug_map_symfile->GetDIEToType();
+  return m_die_to_type;
 }
 
 llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> &
@@ -1594,6 +1599,8 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
   if (!dwarf_ast)
     return false;
   Type *type = GetDIEToType().lookup(decl_die.GetDIE());
+  assert(type);
+
   if (decl_die != def_die) {
     GetDIEToType()[def_die.GetDIE()] = type;
     DWARFASTParserClang *ast_parser =
@@ -2731,18 +2738,11 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
       // Copy our match's context and update the basename we are looking for
       // so we can use this only to compare the context correctly.
       m_index->GetTypesWithQuery(query_simple, [&](DWARFDIE die) {
-        // Check the language, but only if we have a language filter.
-        if (query.HasLanguage()) {
-          if (!query.LanguageMatches(GetLanguageFamily(*die.GetCU())))
-            return true; // Keep iterating over index types, language mismatch.
-        }
-
-        std::string qualified_name;
-        llvm::raw_string_ostream os(qualified_name);
-        llvm::DWARFTypePrinter<DWARFDIE> type_printer(os);
-        type_printer.appendQualifiedName(die);
-        TypeQuery die_query(qualified_name, e_exact_match);
-        if (query.ContextMatches(die_query.GetContextRef()))
+        std::vector<CompilerContext> qualified_context =
+            query.GetModuleSearch()
+                ? die.GetDeclContext(/*derive_template_names=*/true)
+                : die.GetTypeLookupContext(/*derive_template_names=*/true);
+        if (query.ContextMatches(qualified_context))
           if (Type *matching_type = ResolveType(die, true, true))
             results.InsertUnique(matching_type->shared_from_this());
         return !results.Done(query); // Keep iterating if we aren't done.
@@ -3414,7 +3414,10 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
       mangled = form_value.AsCString();
       break;
     case DW_AT_type:
-      type_die_form = form_value;
+      // DW_AT_type on declaration may be less accurate than
+      // that of definition, so don't overwrite it.
+      if (!type_die_form.IsValid())
+        type_die_form = form_value;
       break;
     case DW_AT_external:
       is_external = form_value.Boolean();

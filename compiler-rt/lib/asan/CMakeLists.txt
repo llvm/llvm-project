@@ -260,7 +260,6 @@ else()
       STATIC
       ARCHS ${ASAN_SUPPORTED_ARCH}
       OBJECT_LIBS RTAsan_cxx
-                  RTUbsan_cxx
       CFLAGS ${ASAN_CFLAGS}
       DEFS ${ASAN_COMMON_DEFINITIONS}
       PARENT_TARGET asan)

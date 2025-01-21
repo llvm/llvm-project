@@ -459,3 +459,22 @@ void test_va_arg(int n, ...) {
 // CHECK-DARWIN-NEXT:   call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %ap)
 // CHECK-DARWIN-NEXT:   ret void
 // CHECK-DARWIN-NEXT: }
+
+// Regression test for incorrect passing of SVE vector tuples
+// The whole `y` need to be passed indirectly.
+void test_tuple_reg_count(svfloat32_t x, svfloat32x2_t y) {
+  void test_tuple_reg_count_callee(svfloat32_t, svfloat32_t, svfloat32_t, svfloat32_t,
+                                   svfloat32_t, svfloat32_t, svfloat32_t, svfloat32x2_t);
+  test_tuple_reg_count_callee(x, x, x, x, x, x, x, y);
+}
+// CHECK-AAPCS: declare void @test_tuple_reg_count_callee(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, ptr noundef)
+// CHECK-DARWIN: declare void @test_tuple_reg_count_callee(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>)
+
+// Regression test for incorrect passing of SVE vector tuples
+// The whole `y` need to be passed indirectly.
+void test_tuple_reg_count_bool(svboolx4_t x, svboolx4_t y) {
+  void test_tuple_reg_count_bool_callee(svboolx4_t, svboolx4_t);
+  test_tuple_reg_count_bool_callee(x, y);
+}
+// CHECK-AAPCS:  declare void @test_tuple_reg_count_bool_callee(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, ptr noundef)
+// CHECK-DARWIN: declare void @test_tuple_reg_count_bool_callee(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>)

@@ -12,26 +12,26 @@ def Test_Dialect : Dialect {
 class NS_Op<string mnemonic, list<Trait> traits = []> :
     Op<Test_Dialect, mnemonic, traits>;
 
-def NonNegativeI64Property : ConfinedProperty<I64Property,
+def NonNegativeI64Prop : ConfinedProp<I64Prop,
   CPred<"$_self >= 0">, "non-negative int64_t">;
 
-class NonEmptyArray<Property p> : ConfinedProperty
-    <ArrayProperty<p>, Neg<CPred<"$_self.empty()">>,
+class NonEmptyArray<Property p> : ConfinedProp
+    <ArrayProp<p>, Neg<CPred<"$_self.empty()">>,
     "non-empty array of " # p.summary>;
 
 def OpWithPredicates : NS_Op<"op_with_predicates"> {
   let arguments = (ins
-    NonNegativeI64Property:$scalar,
-    OptionalProperty<NonNegativeI64Property>:$optional,
-    DefaultValuedProperty<NonNegativeI64Property, "0">:$defaulted,
-    ConfinedProperty<NonNegativeI64Property,
+    NonNegativeI64Prop:$scalar,
+    OptionalProp<NonNegativeI64Prop>:$optional,
+    DefaultValuedProp<NonNegativeI64Prop, "0">:$defaulted,
+    ConfinedProp<NonNegativeI64Prop,
       CPred<"$_self <= 5">, "between 0 and 5">:$moreConstrained,
-    ArrayProperty<NonNegativeI64Property>:$array,
-    NonEmptyArray<I64Property>:$non_empty_unconstrained,
-    NonEmptyArray<NonNegativeI64Property>:$non_empty_constrained,
+    ArrayProp<NonNegativeI64Prop>:$array,
+    NonEmptyArray<I64Prop>:$non_empty_unconstrained,
+    NonEmptyArray<NonNegativeI64Prop>:$non_empty_constrained,
     // Test applying predicates when the fromStorage() on the optional<> isn't trivial.
-    OptionalProperty<NonEmptyArray<NonNegativeI64Property>>:$non_empty_optional,
-    I64Property:$unconstrained
+    OptionalProp<NonEmptyArray<NonNegativeI64Prop>>:$non_empty_optional,
+    I64Prop:$unconstrained
   );
 }
 
