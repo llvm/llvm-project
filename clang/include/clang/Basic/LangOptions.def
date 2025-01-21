@@ -552,6 +552,8 @@ ENUM_LANGOPT(BoundsSafetyBringUpMissingChecks, BoundsSafetyNewChecksMask, 6, BS_
         "Bring up new -fbounds-safety run-time checks")
 /* TO_UPSTREAM(BoundsSafety) OFF*/
 
+LANGOPT(PreserveVec3Type, 1, 0, "Preserve 3-component vector type")
+
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT
 #undef BENIGN_LANGOPT
