@@ -169,26 +169,21 @@ mgpuLaunchKernel(void *vkKernel, size_t gridX, size_t gridY, size_t gridZ,
                  void ** /*extra*/, size_t paramsCount) {
   auto manager = static_cast<VulkanRuntimeManager *>(vkRuntimeManager);
 
-  // The non-bare-pointer memref ABI interacts badly with mgpuLaunchKernel's
-  // signature:
-  // - The memref descriptor struct gets split into several elements, each
-  //   passed as their own "param".
-  // - No metadata is provided as to the rank or element type/size of a memref.
-  //   Here we assume that all MemRefs have rank 1 and an element size of
-  //   4 bytes. This means each descriptor struct will have five members.
-  // TODO(https://github.com/llvm/llvm-project/issues/73457): Refactor the
-  //       ABI/API of mgpuLaunchKernel to use a different ABI for memrefs, so
-  //       that other memref types can also be used. This will allow migrating
-  //       the remaining tests and removal of mlir-vulkan-runner.
-  const size_t paramsPerMemRef = 5;
+  // GpuToLLVMConversionPass with the kernelBarePtrCallConv and
+  // kernelIntersperseSizeCallConv options will set up the params array like:
+  // { &memref_ptr0, &memref_size0, &memref_ptr1, &memref_size1, ... }
+  const size_t paramsPerMemRef = 2;
   if (paramsCount % paramsPerMemRef != 0) {
-    abort();
+    abort(); // This would indicate a serious calling convention mismatch.
   }
   const DescriptorSetIndex setIndex = 0;
   BindingIndex bindIndex = 0;
   for (size_t i = 0; i < paramsCount; i += paramsPerMemRef) {
-    auto memref = static_cast<MemRefDescriptor<uint32_t, 1> *>(params[i]);
-    bindMemRef<uint32_t, 1>(manager, setIndex, bindIndex, memref);
+    void *memrefBufferBasePtr = *static_cast<void **>(params[i + 0]);
+    size_t memrefBufferSize = *static_cast<size_t *>(params[i + 1]);
+    VulkanHostMemoryBuffer memBuffer{memrefBufferBasePtr,
+                                     static_cast<uint32_t>(memrefBufferSize)};
+    manager->setResourceData(setIndex, bindIndex, memBuffer);
     ++bindIndex;
   }
 
