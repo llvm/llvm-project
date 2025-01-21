@@ -1482,6 +1482,12 @@ public:
     setDependence(computeDependence(this, Context));
   }
 
+  /// Set type and compute and set dependence bits.
+  void setTypeFromBinding(QualType T, const ASTContext &Context) {
+    setType(T.getNonReferenceType());
+    setDependence(computeDependence(this, Context));
+  }
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == DeclRefExprClass;
   }

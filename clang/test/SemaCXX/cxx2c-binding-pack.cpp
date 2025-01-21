@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++26 %s -verify
-// expected-no-diagnostics
 
 template <typename T>
 struct type_ { };
@@ -8,9 +7,9 @@ template <typename ...T>
 auto sum(T... t) { return (t + ...); }
 
 struct my_struct {
-	int a;
-	int b;
-	int c;
+  int a;
+  int b;
+  int c;
   int d;
 };
 
@@ -74,6 +73,14 @@ void decompose_array() {
   int size = sizeof...(rest);
   T arr2[sizeof...(rest)] = {rest...};
   auto [...pack] = arr2;
+
+  // Array of size 1.
+  int arr1[1] = {1};
+  auto [a, ...b] = arr1;
+  static_assert(sizeof...(b) == 0);
+  auto [...c] = arr1;
+  static_assert(sizeof...(c) == 1);
+  auto [a1, ...b1, c1] = arr1; // expected-error{{decomposes into 1 element, but 3 names were provided}}
 }
 
 // Test case by Younan Zhang.
@@ -115,3 +122,57 @@ int main() {
   S<1, 2, 3, 4>::N<5, 6>().foo();
   decompose_bit_field<bit_fields>();
 }
+
+// P1061R10 Stuff
+namespace {
+struct C { int x, y, z; };
+
+template <class T>
+void now_i_know_my() {
+  auto [a, b, c] = C(); // OK, SB0 is a, SB1 is b, and SB2 is c
+  auto [d, ...e] = C(); // OK, SB0 is d, the pack e (v1) contains two structured bindings: SB1 and SB2
+  static_assert(sizeof...(e) == 2);
+  auto [...f, g] = C(); // OK, the pack f (v0) contains two structured bindings: SB0 and SB1, and SB2 is g
+  static_assert(sizeof...(e) == 2);
+  auto [h, i, j, ...k] = C(); // OK, the pack k is empty
+  static_assert(sizeof...(e) == 0);
+  auto [l, m, n, o, ...p] = C(); // expected-error{{{decomposes into 3 elements, but 5 names were provided}}}
+}
+}  // namespace
+
+namespace {
+auto g() -> int(&)[4];
+
+template <unsigned long N>
+void h(int (&arr)[N]) {
+  auto [a, ...b, c] = arr;  // a names the first element of the array,
+                            // b is a pack referring to the second and
+                            // third elements, and c names the fourth element
+  static_assert(sizeof...(b) == 2);
+ auto& [...e] = arr;        // e is a pack referring to the four elements of the array
+  static_assert(sizeof...(e) == 4);
+}
+
+void call_h() {
+ h(g());
+}
+}  // namespace
+
+namespace {
+struct D { };
+
+int g(...) { return 1; }
+
+template <typename T>
+constexpr int f() {
+  D arr[1];
+  auto [...e] = arr;
+  return g(e...);
+}
+
+constexpr int g(D) { return 2; }
+
+void other_main() {
+  static_assert(f<int>() == 2);
+}
+}  // namespace
