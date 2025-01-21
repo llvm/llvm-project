@@ -147,6 +147,11 @@ enum class PGOMapFeaturesEnum {
   BrProb,
   All,
 };
+
+enum class FuncAddrMapFeaturesEnum {
+  DynamicInstCount,
+};
+
 static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
     "pgo-analysis-map", cl::Hidden, cl::CommaSeparated,
     cl::values(
@@ -172,6 +177,13 @@ static cl::opt<bool> EmitJumpTableSizesSection(
     "emit-jump-table-sizes-section",
     cl::desc("Emit a section containing jump table addresses and sizes"),
     cl::Hidden, cl::init(false));
+
+static cl::bits<FuncAddrMapFeaturesEnum> FuncAddrMapFeatures(
+    "func-addr-map", cl::Hidden, cl::CommaSeparated,
+    cl::values(clEnumValN(FuncAddrMapFeaturesEnum::DynamicInstCount,
+                          "dyn-inst-count", "Dynamic instruction count")),
+    cl::desc("Emit features of function address map in SHT_LLVM_FUNC_ADDR_MAP "
+             "section"));
 
 // This isn't turned on by default, since several of the scheduling models are
 // not completely accurate, and we don't want to be misleading.
@@ -1390,6 +1402,14 @@ static uint32_t getBBAddrMapMetadata(const MachineBasicBlock &MBB) {
       .encode();
 }
 
+static llvm::object::FuncAddrMap::Features getFuncAddrMapFeature() {
+  return {FuncAddrMapFeatures.isSet(FuncAddrMapFeaturesEnum::DynamicInstCount)};
+}
+
+static bool isAnyFuncAddrMapFeature() {
+  return FuncAddrMapFeatures.getBits() != 0;
+}
+
 static llvm::object::BBAddrMap::Features
 getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
   // Ensure that the user has not passed in additional options while also
@@ -1422,6 +1442,39 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
   return {FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
           static_cast<bool>(BBAddrMapSkipEmitBBEntries)};
+}
+
+void AsmPrinter::emitFuncAddrMapSection(const MachineFunction &MF) {
+  if (!isAnyFuncAddrMapFeature())
+    return;
+
+  MCSection *FuncAddrMapSection =
+      getObjFileLowering().getFuncAddrMapSection(*MF.getSection());
+  assert(FuncAddrMapSection &&
+         ".llvm_func_addr_map section is not initialized.");
+  const MCSymbol *FunctionSymbol = getFunctionBegin();
+  OutStreamer->pushSection();
+  OutStreamer->switchSection(FuncAddrMapSection);
+  OutStreamer->AddComment("version");
+  uint8_t FuncAddrMapVersion =
+      OutStreamer->getContext().getFuncAddrMapVersion();
+  OutStreamer->emitInt8(FuncAddrMapVersion);
+  OutStreamer->AddComment("feature");
+  auto Features = getFuncAddrMapFeature();
+  OutStreamer->emitInt8(Features.encode());
+
+  OutStreamer->AddComment("function address");
+  OutStreamer->emitSymbolValue(FunctionSymbol, getPointerSize());
+  if (Features.DynamicInstCount) {
+    const MachineBlockFrequencyInfo *MBFI =
+        &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI();
+    uint64_t DynInstCount = 0;
+    for (const MachineBasicBlock &MBB : MF)
+      DynInstCount += MBFI->getBlockProfileCount(&MBB).value_or(0) * MBB.size();
+    OutStreamer->AddComment("Dynamic instruction count");
+    OutStreamer->emitULEB128IntValue(DynInstCount);
+  }
+  OutStreamer->popSection();
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
@@ -2119,6 +2172,8 @@ void AsmPrinter::emitFunctionBody() {
       MF->getContext().reportWarning(
           SMLoc(), "pgo-analysis-map is enabled for function " + MF->getName() +
                        " but it does not have labels");
+
+    emitFuncAddrMapSection(*MF);
   }
 
   // Emit sections containing instruction and function PCs.
@@ -2749,7 +2804,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
       F.hasFnAttribute("xray-instruction-threshold") ||
       needFuncLabels(MF, *this) || NeedsLocalForSize ||
       MF.getTarget().Options.EmitStackSizeSection ||
-      MF.getTarget().Options.BBAddrMap) {
+      MF.getTarget().Options.BBAddrMap || isAnyFuncAddrMapFeature()) {
     CurrentFnBegin = createTempSymbol("func_begin");
     if (NeedsLocalForSize)
       CurrentFnSymForSize = CurrentFnBegin;

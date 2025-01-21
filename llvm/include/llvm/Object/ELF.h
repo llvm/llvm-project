@@ -513,6 +513,10 @@ public:
   decodeBBAddrMap(const Elf_Shdr &Sec, const Elf_Shdr *RelaSec = nullptr,
                   std::vector<PGOAnalysisMap> *PGOAnalyses = nullptr) const;
 
+  Expected<std::vector<FuncAddrMap>>
+  decodeFuncAddrMap(const Elf_Shdr &Sec,
+                    const Elf_Shdr *RelaSec = nullptr) const;
+
   /// Returns a map from every section matching \p IsMatch to its relocation
   /// section, or \p nullptr if it has no relocation section. This function
   /// returns an error if any of the \p IsMatch calls fail or if it fails to
