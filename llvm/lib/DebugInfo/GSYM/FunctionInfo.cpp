@@ -301,6 +301,24 @@ FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
         InlineInfoData = InfoData;
         break;
 
+      case InfoType::CallSiteInfo:
+        if (auto CSIC = CallSiteInfoCollection::decode(InfoData)) {
+          // Find matching call site based on relative offset
+          for (const auto &CS : CSIC->CallSites) {
+            // Check if the call site matches the lookup address
+            if (CS.ReturnOffset == Addr - FuncAddr) {
+              // Get regex patterns
+              for (uint32_t RegexOffset : CS.MatchRegex) {
+                LR.CallSiteFuncRegex.push_back(GR.getString(RegexOffset));
+              }
+              break;
+            }
+          }
+        } else {
+          return CSIC.takeError();
+        }
+        break;
+
       default:
         break;
     }

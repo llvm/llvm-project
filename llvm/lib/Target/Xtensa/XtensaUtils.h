@@ -17,11 +17,17 @@
 #include "llvm/CodeGen/MachineInstr.h"
 
 namespace llvm {
+
+class FeatureBitset;
+
 // Check address offset for load/store instructions.
 // The offset should be multiple of scale.
 bool isValidAddrOffset(int Scale, int64_t OffsetVal);
 
 // Check address offset for load/store instructions.
 bool isValidAddrOffset(MachineInstr &MI, int64_t Offset);
+
+// Verify if it's correct to use a special register.
+bool checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits);
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_XTENSA_XTENSAUTILS_H

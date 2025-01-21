@@ -310,8 +310,9 @@ mlir::Value createParentSymAndGenIntermediateMaps(
   };
 
   // Generate the access to the original parent base address.
-  lower::AddrAndBoundsInfo parentBaseAddr = lower::getDataOperandBaseAddr(
-      converter, firOpBuilder, *objectList[0].sym(), clauseLocation);
+  fir::factory::AddrAndBoundsInfo parentBaseAddr =
+      lower::getDataOperandBaseAddr(converter, firOpBuilder,
+                                    *objectList[0].sym(), clauseLocation);
   mlir::Value curValue = parentBaseAddr.addr;
 
   // Iterate over all objects in the objectList, this should consist of all
@@ -560,7 +561,7 @@ void insertChildMapInfoIntoParent(
       // Create parent to emplace and bind members
       llvm::SmallVector<mlir::Value> bounds;
       std::stringstream asFortran;
-      lower::AddrAndBoundsInfo info =
+      fir::factory::AddrAndBoundsInfo info =
           lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
                                                 mlir::omp::MapBoundsType>(
               converter, firOpBuilder, semaCtx, converter.getFctCtx(),
