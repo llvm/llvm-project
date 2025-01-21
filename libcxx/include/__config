@@ -804,6 +804,14 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_WEAK __attribute__((__weak__))
 #  endif
 
+#  ifndef _LIBCPP_WEAK_IMPORT
+#    define _LIBCPP_WEAK_IMPORT __attribute__((weak_import))
+#  endif
+
+#  ifndef _LIBCPP_ALIAS
+#    define _LIBCPP_ALIAS(x) __attribute__((alias(x)))
+#  endif
+
 // Thread API
 // clang-format off
 #  if _LIBCPP_HAS_THREADS &&                                                                                           \

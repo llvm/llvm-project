@@ -13,10 +13,6 @@
 #include <__config>
 #include <cstdint>
 
-#if __has_feature(ptrauth_calls)
-#  include <ptrauth.h>
-#endif
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
@@ -66,14 +62,14 @@ _LIBCPP_END_NAMESPACE_STD
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
 #  define _LIBCPP_OVERRIDABLE_FUNCTION(symbol, type, name, arglist)                                                    \
-    [[clang::weak_import]] extern type symbol arglist __asm__("_" _LIBCPP_TOSTRING(symbol));                           \
+    _LIBCPP_WEAK_IMPORT extern type symbol arglist __asm__("_" _LIBCPP_TOSTRING(symbol));                              \
     _LIBCPP_BEGIN_NAMESPACE_STD                                                                                        \
     template <>                                                                                                        \
     inline bool __is_function_overridden<static_cast<type(*) arglist>(name)>() {                                       \
       return static_cast<type(*) arglist>(name) != symbol;                                                             \
     }                                                                                                                  \
     _LIBCPP_END_NAMESPACE_STD                                                                                          \
-    type name arglist
+    _LIBCPP_WEAK type name arglist
 
 #elif defined(_LIBCPP_OBJECT_FORMAT_ELF)
 
@@ -86,15 +82,14 @@ _LIBCPP_END_NAMESPACE_STD
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
 #  define _LIBCPP_OVERRIDABLE_FUNCTION(symbol, type, name, arglist)                                                    \
-    [[gnu::weak]] type name arglist;                                                                                   \
-    [[gnu::alias(_LIBCPP_TOSTRING(symbol))]] static type symbol arglist __asm__(".L." _LIBCPP_TOSTRING(symbol));       \
+    _LIBCPP_ALIAS(_LIBCPP_TOSTRING(symbol)) static type symbol arglist __asm__(".L." _LIBCPP_TOSTRING(symbol));        \
     _LIBCPP_BEGIN_NAMESPACE_STD                                                                                        \
     template <>                                                                                                        \
     inline bool __is_function_overridden<static_cast<type(*) arglist>(name)>() {                                       \
       return static_cast<type(*) arglist>(name) != symbol;                                                             \
     }                                                                                                                  \
     _LIBCPP_END_NAMESPACE_STD                                                                                          \
-    type name arglist
+    _LIBCPP_WEAK type name arglist
 
 #else
 
