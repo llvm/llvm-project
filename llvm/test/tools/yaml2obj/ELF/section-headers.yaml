@@ -455,15 +455,3 @@ Sections:
 # LINK-NEXT:   [ 3] .ref.last  PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] [[#%x,]]      4
 # LINK-NEXT:   [ 4] .shstrtab
 
-# RUN: not yaml2obj %s --docnum=15 -o %t15 2>&1 | FileCheck %s --check-prefix=UNKNOWN_SECTION
-
---- !ELF
-FileHeader:
-  Class: ELFCLASS64
-  Data:  ELFDATA2LSB
-  Type:  ET_REL
-Sections:
-  - Name: .foo
-    Type: FOO_SECTION
-
-# UNKNOWN_SECTION: error: invalid hex32 number

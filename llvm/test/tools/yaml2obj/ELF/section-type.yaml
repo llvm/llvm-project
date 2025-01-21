@@ -1,5 +1,5 @@
-# RUN: yaml2obj %s -o %t
-# RUN: llvm-readobj --sections %t | FileCheck %s
+# RUN: yaml2obj %s --docnum=1 -o %t1
+# RUN: llvm-readobj --sections %t1 | FileCheck %s
 
 # CHECK: Name: enum
 # CHECK: Type: SHT_PROGBITS
@@ -25,3 +25,31 @@ Sections:
     Type:  0xabcd
   - Name:  decimal
     Type:  1234
+
+
+# RUN: not yaml2obj %s --docnum=2 -o %t2 2>&1 | FileCheck %s --check-prefix=UNKNOWN-TYPE
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .foo
+    Type: FOO_SECTION
+
+# UNKNOWN-TYPE: error: invalid hex32 number
+
+
+# RUN: not yaml2obj %s --docnum=3 -o %t3 -DMACHINE=EM_NONE 2>&1 | FileCheck %s --check-prefix=UNKNOWN-SHT-TYPE
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .foo
+    Type: SHT_MIPS_ABIFLAGS
+
+# UNKNOWN-SHT-TYPE: error: invalid hex32 number
