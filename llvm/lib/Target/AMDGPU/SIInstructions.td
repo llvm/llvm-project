@@ -3049,61 +3049,40 @@ def : GCNPat <
 
 // FIXME: This should have been narrowed to i32 during legalization.
 // This pattern should also be skipped for GlobalISel
+class bswapi64ExtPat<Instruction inst, bit hasTrue16> {
+  dag pattern = (i64 (bswap i64:$a));
+  dag operand1 = (i32 (EXTRACT_SUBREG VReg_64:$a, sub1));
+  dag operand2 = (i32 (EXTRACT_SUBREG VReg_64:$a, sub0));
+  dag ALIGNBIT32_INST1 = !if(hasTrue16,
+                            (inst 0, operand1, 0, operand1, 0, (i32 24), 0, 0),
+                            (inst operand1, operand1, (i32 24)));
+  dag ALIGNBIT32_INST2 = !if(hasTrue16,
+                            (inst 0, operand1, 0, operand1, 0, (i32 8), 0, 0),
+                            (inst operand1, operand1, (i32 8)));
+  dag ALIGNBIT32_INST3 = !if(hasTrue16,
+                            (inst 0, operand2, 0, operand2, 0, (i32 24), 0, 0),
+                            (inst operand2, operand2, (i32 24)));
+  dag ALIGNBIT32_INST4 = !if(hasTrue16,
+                            (inst 0, operand2, 0, operand2, 0, (i32 8), 0, 0),
+                            (inst operand2, operand2, (i32 8)));
+  dag result = (REG_SEQUENCE VReg_64,
+               (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00ff00ff)),
+                               ALIGNBIT32_INST1,
+                               ALIGNBIT32_INST2),
+               sub0,
+               (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00ff00ff)),
+                               ALIGNBIT32_INST3,
+                               ALIGNBIT32_INST4),
+               sub1);
+}
+
 let True16Predicate = NotHasTrue16BitInsts in
-def : GCNPat <
-  (i64 (bswap i64:$a)),
-  (REG_SEQUENCE VReg_64,
-  (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00ff00ff)),
-             (V_ALIGNBIT_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
-                             (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
-                             (i32 24)),
-             (V_ALIGNBIT_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
-                             (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
-                             (i32 8))),
-  sub0,
-  (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00ff00ff)),
-             (V_ALIGNBIT_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
-                             (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
-                             (i32 24)),
-             (V_ALIGNBIT_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
-                             (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
-                             (i32 8))),
-  sub1)
->;
+def : GCNPat <bswapi64ExtPat<V_ALIGNBIT_B32_e64, 0>.pattern,
+              bswapi64ExtPat<V_ALIGNBIT_B32_e64, 0>.result>;
 
 let True16Predicate = UseFakeTrue16Insts in
-def : GCNPat <
-  (i64 (bswap i64:$a)),
-  (REG_SEQUENCE VReg_64,
-  (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00ff00ff)),
-             (V_ALIGNBIT_B32_fake16_e64 0, /* src0_modifiers */
-                                        (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
-                                        0, /* src1_modifiers */
-                                        (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
-                                        0, /* src2_modifiers */
-                                        (i32 24), /* clamp */ 0, /* op_sel */ 0),
-             (V_ALIGNBIT_B32_fake16_e64 0, /* src0_modifiers */
-                                        (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
-                                        0, /* src1_modifiers */
-                                        (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
-                                        0, /* src2_modifiers */
-                                        (i32 8), /* clamp */ 0, /* op_sel */ 0)),
-  sub0,
-  (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00ff00ff)),
-             (V_ALIGNBIT_B32_fake16_e64 0, /* src0_modifiers */
-                                        (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
-                                        0, /* src1_modifiers */
-                                        (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
-                                        0, /* src2_modifiers */
-                                        (i32 24), /* clamp */ 0, /* op_sel */ 0),
-             (V_ALIGNBIT_B32_fake16_e64 0, /* src0_modifiers */
-                                        (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
-                                        0, /* src1_modifiers */
-                                        (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
-                                        0, /* src2_modifiers */
-                                        (i32 8), /* clamp */ 0, /* op_sel */ 0)),
-  sub1)
->;
+def : GCNPat <bswapi64ExtPat<V_ALIGNBIT_B32_fake16_e64, 1>.pattern,
+              bswapi64ExtPat<V_ALIGNBIT_B32_fake16_e64, 1>.result>;
 
 // FIXME: The AddedComplexity should not be needed, but in GlobalISel
 // the BFI pattern ends up taking precedence without it.
