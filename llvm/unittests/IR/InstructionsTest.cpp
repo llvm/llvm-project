@@ -253,9 +253,8 @@ TEST(InstructionsTest, CastInst) {
             CastInst::getCastOpcode(v2ptr32, true, V2PtrAS1Ty, true));
 
   // Test mismatched number of elements for pointers
-  EXPECT_FALSE(CastInst::isBitCastable(V2PtrTy, V2PtrTy));
-  EXPECT_FALSE(CastInst::isBitCastable(V2PtrAS1Ty, V2PtrAS1Ty));
   EXPECT_FALSE(CastInst::isBitCastable(V2PtrAS1Ty, V4PtrAS1Ty));
+  EXPECT_FALSE(CastInst::isBitCastable(V4PtrAS1Ty, V2PtrAS1Ty));
   EXPECT_FALSE(CastInst::isBitCastable(PtrTy, V2PtrTy));
   EXPECT_FALSE(CastInst::isBitCastable(V2PtrTy, PtrTy));
 
