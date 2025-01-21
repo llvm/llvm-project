@@ -874,7 +874,8 @@ LLVMTypeRef LLVMArrayType2(LLVMTypeRef ElementType, uint64_t ElementCount) {
 }
 
 LLVMTypeRef LLVMPointerType(LLVMTypeRef ElementType, unsigned AddressSpace) {
-  return wrap(PointerType::get(unwrap(ElementType), AddressSpace));
+  return wrap(
+      PointerType::get(unwrap(ElementType)->getContext(), AddressSpace));
 }
 
 LLVMBool LLVMPointerTypeIsOpaque(LLVMTypeRef Ty) {
