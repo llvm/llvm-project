@@ -3306,7 +3306,7 @@ multiclass sve_fp_z2op_p_zd_d<bit U, string asm, string int_op, SDPatternOperato
   defm : SVE_1_Op_PassthruUndefZero_Pat<nxv2i64, ir_op, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _DtoD)>;
 }
 
-multiclass sve_fp_z2op_p_zd_c<bit U, string asm> {
+multiclass sve_fp_z2op_p_zd_c<bit U, string asm, string int_op, SDPatternOperator ir_op> {
   def _HtoH : sve_fp_z2op_p_zd<{ 0b011001, U }, asm, ZPR16, ZPR16>;
   def _StoH : sve_fp_z2op_p_zd<{ 0b011010, U }, asm, ZPR32, ZPR16>;
   def _StoS : sve_fp_z2op_p_zd<{ 0b101010, U }, asm, ZPR32, ZPR32>;
@@ -3314,6 +3314,15 @@ multiclass sve_fp_z2op_p_zd_c<bit U, string asm> {
   def _DtoS : sve_fp_z2op_p_zd<{ 0b111010, U }, asm, ZPR64, ZPR32>;
   def _DtoH : sve_fp_z2op_p_zd<{ 0b011011, U }, asm, ZPR64, ZPR16>;
   def _DtoD : sve_fp_z2op_p_zd<{ 0b111011, U }, asm, ZPR64, ZPR64>;
+
+  defm : SVE_3_Op_UndefZero_Pat<nxv4f32, !cast<SDPatternOperator>(int_op # _f32i64), nxv4f32, nxv2i1, nxv2i64, !cast<Instruction>(NAME # _DtoS)>;
+  defm : SVE_3_Op_UndefZero_Pat<nxv2f64, !cast<SDPatternOperator>(int_op # _f64i32), nxv2f64, nxv2i1, nxv4i32, !cast<Instruction>(NAME # _StoD)>;
+  defm : SVE_3_Op_UndefZero_Pat<nxv8f16, !cast<SDPatternOperator>(int_op # _f16i32), nxv8f16, nxv4i1, nxv4i32, !cast<Instruction>(NAME # _StoH)>;
+  defm : SVE_3_Op_UndefZero_Pat<nxv8f16, !cast<SDPatternOperator>(int_op # _f16i64), nxv8f16, nxv2i1, nxv2i64, !cast<Instruction>(NAME # _DtoH)>;
+
+  defm : SVE_1_Op_PassthruUndefZero_Pat<nxv8f16, ir_op, nxv8i1,nxv8i16, !cast<Instruction>(NAME # _HtoH)>;
+  defm : SVE_1_Op_PassthruUndefZero_Pat<nxv4f32, ir_op, nxv4i1,nxv4i32, !cast<Instruction>(NAME # _StoS)>;
+  defm : SVE_1_Op_PassthruUndefZero_Pat<nxv2f64, ir_op, nxv2i1,nxv2i64, !cast<Instruction>(NAME # _DtoD)>;
 }
 
 multiclass sve_fp_z2op_p_zd_d_flogb<string asm> {
@@ -4966,11 +4975,16 @@ multiclass sve_int_un_pred_arit_bitwise<bits<3> opc, string asm,
   defm : SVE_1_Op_PassthruUndef_Pat<nxv2i64, op, nxv2i1,  nxv2i64, !cast<Pseudo>(NAME # _D_UNDEF)>;
 }
 
-multiclass sve_int_un_pred_arit_bitwise_z<bits<3> opc, string asm> {
+multiclass sve_int_un_pred_arit_bitwise_z<bits<3> opc, string asm, SDPatternOperator op> {
   def _B : sve_int_un_pred_arit_z<0b00, { opc, 0b1 }, asm, ZPR8>;
   def _H : sve_int_un_pred_arit_z<0b01, { opc, 0b1 }, asm, ZPR16>;
   def _S : sve_int_un_pred_arit_z<0b10, { opc, 0b1 }, asm, ZPR32>;
   def _D : sve_int_un_pred_arit_z<0b11, { opc, 0b1 }, asm, ZPR64>;
+
+  defm : SVE_1_Op_PassthruUndefZero_Pat<nxv16i8, op, nxv16i1, nxv16i8, !cast<Instruction>(NAME # _B)>;
+  defm : SVE_1_Op_PassthruUndefZero_Pat<nxv8i16, op, nxv8i1,  nxv8i16, !cast<Instruction>(NAME # _H)>;
+  defm : SVE_1_Op_PassthruUndefZero_Pat<nxv4i32, op, nxv4i1,  nxv4i32, !cast<Instruction>(NAME # _S)>;
+  defm : SVE_1_Op_PassthruUndefZero_Pat<nxv2i64, op, nxv2i1,  nxv2i64, !cast<Instruction>(NAME # _D)>;
 }
 
 multiclass sve_int_un_pred_arit_bitwise_fp<bits<3> opc, string asm,

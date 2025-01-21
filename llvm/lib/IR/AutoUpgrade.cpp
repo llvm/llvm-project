@@ -45,6 +45,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstring>
+#include <numeric>
 
 using namespace llvm;
 
@@ -828,6 +829,13 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
           return true;
         }
       }
+
+      // Changed in 20.0: bfcvt/bfcvtn/bcvtn2 have been replaced with fptrunc.
+      if (Name.starts_with("bfcvt")) {
+        NewFn = nullptr;
+        return true;
+      }
+
       return false; // No other 'aarch64.neon.*'.
     }
     if (Name.consume_front("sve.")) {
@@ -4028,31 +4036,59 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 
 static Value *upgradeAArch64IntrinsicCall(StringRef Name, CallBase *CI,
                                           Function *F, IRBuilder<> &Builder) {
-  Intrinsic::ID NewID =
-      StringSwitch<Intrinsic::ID>(Name)
-          .Case("sve.fcvt.bf16f32", Intrinsic::aarch64_sve_fcvt_bf16f32_v2)
-          .Case("sve.fcvtnt.bf16f32", Intrinsic::aarch64_sve_fcvtnt_bf16f32_v2)
-          .Default(Intrinsic::not_intrinsic);
-  if (NewID == Intrinsic::not_intrinsic)
-    llvm_unreachable("Unhandled Intrinsic!");
+  if (Name.starts_with("neon.bfcvt")) {
+    if (Name.starts_with("neon.bfcvtn2")) {
+      SmallVector<int, 32> LoMask(4);
+      std::iota(LoMask.begin(), LoMask.end(), 0);
+      SmallVector<int, 32> ConcatMask(8);
+      std::iota(ConcatMask.begin(), ConcatMask.end(), 0);
+      Value *Inactive = Builder.CreateShuffleVector(CI->getOperand(0), LoMask);
+      Value *Trunc =
+          Builder.CreateFPTrunc(CI->getOperand(1), Inactive->getType());
+      return Builder.CreateShuffleVector(Inactive, Trunc, ConcatMask);
+    } else if (Name.starts_with("neon.bfcvtn")) {
+      SmallVector<int, 32> ConcatMask(8);
+      std::iota(ConcatMask.begin(), ConcatMask.end(), 0);
+      Type *V4BF16 =
+          FixedVectorType::get(Type::getBFloatTy(F->getContext()), 4);
+      Value *Trunc = Builder.CreateFPTrunc(CI->getOperand(0), V4BF16);
+      dbgs() << "Trunc: " << *Trunc << "\n";
+      return Builder.CreateShuffleVector(
+          Trunc, ConstantAggregateZero::get(V4BF16), ConcatMask);
+    } else {
+      return Builder.CreateFPTrunc(CI->getOperand(0),
+                                   Type::getBFloatTy(F->getContext()));
+    }
+  } else if (Name.starts_with("sve.fcvt")) {
+    Intrinsic::ID NewID =
+        StringSwitch<Intrinsic::ID>(Name)
+            .Case("sve.fcvt.bf16f32", Intrinsic::aarch64_sve_fcvt_bf16f32_v2)
+            .Case("sve.fcvtnt.bf16f32",
+                  Intrinsic::aarch64_sve_fcvtnt_bf16f32_v2)
+            .Default(Intrinsic::not_intrinsic);
+    if (NewID == Intrinsic::not_intrinsic)
+      llvm_unreachable("Unhandled Intrinsic!");
 
-  SmallVector<Value *, 3> Args(CI->args());
+    SmallVector<Value *, 3> Args(CI->args());
 
-  // The original intrinsics incorrectly used a predicate based on the smallest
-  // element type rather than the largest.
-  Type *BadPredTy = ScalableVectorType::get(Builder.getInt1Ty(), 8);
-  Type *GoodPredTy = ScalableVectorType::get(Builder.getInt1Ty(), 4);
+    // The original intrinsics incorrectly used a predicate based on the
+    // smallest element type rather than the largest.
+    Type *BadPredTy = ScalableVectorType::get(Builder.getInt1Ty(), 8);
+    Type *GoodPredTy = ScalableVectorType::get(Builder.getInt1Ty(), 4);
 
-  if (Args[1]->getType() != BadPredTy)
-    llvm_unreachable("Unexpected predicate type!");
+    if (Args[1]->getType() != BadPredTy)
+      llvm_unreachable("Unexpected predicate type!");
 
-  Args[1] = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool,
-                                    BadPredTy, Args[1]);
-  Args[1] = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool,
-                                    GoodPredTy, Args[1]);
+    Args[1] = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool,
+                                      BadPredTy, Args[1]);
+    Args[1] = Builder.CreateIntrinsic(
+        Intrinsic::aarch64_sve_convert_from_svbool, GoodPredTy, Args[1]);
 
-  return Builder.CreateIntrinsic(NewID, {}, Args, /*FMFSource=*/nullptr,
-                                 CI->getName());
+    return Builder.CreateIntrinsic(NewID, {}, Args, /*FMFSource=*/nullptr,
+                                   CI->getName());
+  }
+
+  llvm_unreachable("Unhandled Intrinsic!");
 }
 
 static Value *upgradeARMIntrinsicCall(StringRef Name, CallBase *CI, Function *F,
