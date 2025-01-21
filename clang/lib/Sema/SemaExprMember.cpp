@@ -581,9 +581,7 @@ Sema::ActOnDependentMemberExpr(Expr *BaseExpr, QualType BaseType,
     }
   }
 
-  assert(BaseType->isDependentType() ||
-         (BaseExpr && BaseExpr->isTypeDependent()) ||
-         NameInfo.getName().isDependentName() ||
+  assert(BaseType->isDependentType() || NameInfo.getName().isDependentName() ||
          isDependentScopeSpecifier(SS) ||
          (TemplateArgs && llvm::any_of(TemplateArgs->arguments(),
                                        [](const TemplateArgumentLoc &Arg) {
