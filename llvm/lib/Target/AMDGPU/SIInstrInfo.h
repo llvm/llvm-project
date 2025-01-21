@@ -1437,6 +1437,9 @@ public:
                                       int FrameIndex,
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
+  bool getRegSequenceLikeInputs(
+      const MachineInstr &MI, unsigned DefIdx,
+      SmallVectorImpl<RegSubRegPairAndIdx> &InputRegs) const override;
 
   unsigned getInstrLatency(const InstrItineraryData *ItinData,
                            const MachineInstr &MI,
