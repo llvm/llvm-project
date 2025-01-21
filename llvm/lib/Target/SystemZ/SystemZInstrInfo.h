@@ -232,6 +232,10 @@ public:
                                int &FrameIndex) const override;
   Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
+  Register isLoadFromStackSlotPostFE(const MachineInstr &MI,
+                                     int &FrameIndex) const override;
+  Register isStoreToStackSlotPostFE(const MachineInstr &MI,
+                                    int &FrameIndex) const override;
   bool isStackSlotCopy(const MachineInstr &MI, int &DestFrameIndex,
                        int &SrcFrameIndex) const override;
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
