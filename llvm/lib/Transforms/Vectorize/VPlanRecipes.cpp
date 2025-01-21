@@ -2627,25 +2627,22 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
     NewLI =
         Builder.CreateIntrinsic(DataTy, Intrinsic::vp_gather, {Addr, Mask, EVL},
                                 nullptr, "wide.masked.gather");
+  } else if (isReverse()) {
+    auto *EltTy = DataTy->getElementType();
+    auto *PtrTy = Addr->getType();
+    Value *Operands[] = {
+        Addr,
+        ConstantInt::getSigned(Builder.getInt32Ty(),
+                               -LI->getDataLayout().getTypeAllocSize(EltTy)),
+        Mask, EVL};
+    NewLI = Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_load,
+                                    {DataTy, PtrTy, Builder.getInt32Ty()},
+                                    Operands, nullptr, "vp.neg.strided.load");
   } else {
-    if (isReverse()) {
-      auto *EltTy = DataTy->getElementType();
-      auto *PtrTy = Addr->getType();
-      Value *Operands[] = {
-          Addr,
-          ConstantInt::getSigned(
-              Builder.getInt32Ty(),
-              -static_cast<int64_t>(EltTy->getScalarSizeInBits()) / 8),
-          Mask, EVL};
-      NewLI = Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_load,
-                                      {DataTy, PtrTy, Builder.getInt32Ty()},
-                                      Operands, nullptr, "vp.neg.strided.load");
-    } else {
-      VectorBuilder VBuilder(Builder);
-      VBuilder.setEVL(EVL).setMask(Mask);
-      NewLI = cast<CallInst>(VBuilder.createVectorInstruction(
-          Instruction::Load, DataTy, Addr, "vp.op.load"));
-    }
+    VectorBuilder VBuilder(Builder);
+    VBuilder.setEVL(EVL).setMask(Mask);
+    NewLI = cast<CallInst>(VBuilder.createVectorInstruction(
+        Instruction::Load, DataTy, Addr, "vp.op.load"));
   }
   NewLI->addParamAttr(
       0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
@@ -2759,27 +2756,24 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
     NewSI = Builder.CreateIntrinsic(Type::getVoidTy(EVL->getContext()),
                                     Intrinsic::vp_scatter,
                                     {StoredVal, Addr, Mask, EVL});
+  } else if (isReverse()) {
+    Type *StoredValTy = StoredVal->getType();
+    auto *EltTy = cast<VectorType>(StoredValTy)->getElementType();
+    auto *PtrTy = Addr->getType();
+    Value *Operands[] = {
+        StoredVal, Addr,
+        ConstantInt::getSigned(Builder.getInt32Ty(),
+                               -SI->getDataLayout().getTypeAllocSize(EltTy)),
+        Mask, EVL};
+    NewSI = Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_store,
+                                    {StoredValTy, PtrTy, Builder.getInt32Ty()},
+                                    Operands);
   } else {
-    if (isReverse()) {
-      Type *StoredValTy = StoredVal->getType();
-      auto *EltTy = cast<VectorType>(StoredValTy)->getElementType();
-      auto *PtrTy = Addr->getType();
-      Value *Operands[] = {
-          StoredVal, Addr,
-          ConstantInt::getSigned(
-              Builder.getInt32Ty(),
-              -static_cast<int64_t>(EltTy->getScalarSizeInBits()) / 8),
-          Mask, EVL};
-      NewSI = Builder.CreateIntrinsic(
-          Intrinsic::experimental_vp_strided_store,
-          {StoredValTy, PtrTy, Builder.getInt32Ty()}, Operands);
-    } else {
-      VectorBuilder VBuilder(Builder);
-      VBuilder.setEVL(EVL).setMask(Mask);
-      NewSI = cast<CallInst>(VBuilder.createVectorInstruction(
-          Instruction::Store, Type::getVoidTy(EVL->getContext()),
-          {StoredVal, Addr}));
-    }
+    VectorBuilder VBuilder(Builder);
+    VBuilder.setEVL(EVL).setMask(Mask);
+    NewSI = cast<CallInst>(VBuilder.createVectorInstruction(
+        Instruction::Store, Type::getVoidTy(EVL->getContext()),
+        {StoredVal, Addr}));
   }
   NewSI->addParamAttr(
       1, Attribute::getWithAlignment(NewSI->getContext(), Alignment));
