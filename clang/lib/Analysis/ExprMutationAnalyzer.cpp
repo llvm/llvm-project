@@ -125,6 +125,8 @@ class ExprPointeeResolve {
       return resolveExpr(PE->getSubExpr());
 
     if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
+      // only implicit cast needs to be treated as resolvable.
+      // explicit cast will be checked in `findPointeeToNonConst`
       const CastKind kind = ICE->getCastKind();
       if (kind == CK_LValueToRValue || kind == CK_DerivedToBase ||
           kind == CK_UncheckedDerivedToBase)
