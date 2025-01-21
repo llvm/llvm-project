@@ -490,6 +490,58 @@ TEST_CONSTEXPR inline bool operator!=(limited_allocator<T, N> const& LHS, limite
   return !(LHS == RHS);
 }
 
+// type erasure wrapper for limited_allocator<T, N>
+template <typename T>
+class limited_alloc_wrapper {
+public:
+  typedef T value_type;
+  typedef value_type* pointer;
+  typedef const value_type* const_pointer;
+  typedef value_type& reference;
+  typedef const value_type& const_reference;
+  typedef std::size_t size_type;
+  typedef std::ptrdiff_t difference_type;
+
+  template <typename Alloc>
+  limited_alloc_wrapper(Alloc&& a) : pimpl(std::make_shared<impl_type<Alloc> >(std::forward<Alloc>(a))) {}
+
+  limited_alloc_wrapper(const limited_alloc_wrapper& other) = default;
+
+  pointer allocate(std::size_t n) { return pimpl->allocate(n); }
+  void deallocate(pointer p, size_t n) { pimpl->deallocate(p, n); }
+  size_type max_size() const { return pimpl->max_size(); }
+
+private:
+  struct impl_base {
+    virtual pointer allocate(std::size_t n)      = 0;
+    virtual void deallocate(pointer p, size_t n) = 0;
+    virtual size_type max_size() const           = 0;
+    virtual ~impl_base() {}
+  };
+
+  std::shared_ptr<impl_base> pimpl;
+
+  template <typename Alloc>
+  struct impl_type : impl_base {
+    Alloc a;
+    impl_type(const Alloc& a_) : a(a_) {}
+
+    pointer allocate(std::size_t n) override { return a.allocate(n); }
+    void deallocate(pointer p, size_t n) override { a.deallocate(p, n); }
+    size_type max_size() const override { return a.max_size(); }
+  };
+
+  template <class S, class U>
+  friend bool operator==(const limited_alloc_wrapper<S>& lhs, const limited_alloc_wrapper<U>& rhs) {
+    return lhs.pimpl == rhs.pimpl;
+  }
+
+  template <class S, class U>
+  friend bool operator!=(const limited_alloc_wrapper<S>& lhs, const limited_alloc_wrapper<U>& rhs) {
+    return !(lhs == rhs);
+  }
+};
+
 // Track the "provenance" of this allocator instance: how many times was
 // select_on_container_copy_construction called in order to produce it?
 //

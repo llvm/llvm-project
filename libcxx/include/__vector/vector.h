@@ -1041,9 +1041,14 @@ vector<_Tp, _Allocator>::__assign_with_size(_ForwardIterator __first, _Sentinel 
       this->__destruct_at_end(__m);
     }
   } else {
+    __split_buffer<value_type, allocator_type&> __v(__recommend(__new_size), 0, __alloc_);
+    __v.__construct_at_end_with_size(__first, __new_size);
     __vdeallocate();
-    __vallocate(__recommend(__new_size));
-    __construct_at_end(__first, __last, __new_size);
+    this->__begin_ = __v.__begin_;
+    this->__end_   = __v.__end_;
+    this->__cap_   = __v.__cap_;
+    __v.__first_ = __v.__begin_ = __v.__end_ = __v.__cap_ = nullptr;
+    __annotate_new(__new_size);
   }
 }
 
@@ -1057,9 +1062,14 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::assign(size_type __n
     else
       this->__destruct_at_end(this->__begin_ + __n);
   } else {
+    __split_buffer<value_type, allocator_type&> __v(__recommend(__n), 0, __alloc_);
+    __v.__construct_at_end(__n, __u);
     __vdeallocate();
-    __vallocate(__recommend(static_cast<size_type>(__n)));
-    __construct_at_end(__n, __u);
+    this->__begin_ = __v.__begin_;
+    this->__end_   = __v.__end_;
+    this->__cap_   = __v.__cap_;
+    __v.__first_ = __v.__begin_ = __v.__end_ = __v.__cap_ = nullptr;
+    __annotate_new(__n);
   }
 }
 
