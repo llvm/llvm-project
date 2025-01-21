@@ -3575,7 +3575,6 @@ TemplateDeductionResult Sema::SubstituteExplicitTemplateArguments(
     unsigned Index = SugaredBuilder.size();
     if (Index >= TemplateParams->size())
       return TemplateDeductionResult::SubstitutionFailure;
-
     Info.Param = makeTemplateParameter(TemplateParams->getParam(Index));
     Info.FirstArg = ExplicitTemplateArgs[Index].getArgument();
     Info.SecondArg = TemplateArgument();

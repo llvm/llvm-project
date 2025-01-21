@@ -753,7 +753,6 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
     break;
 
   case TemplateDeductionResult::Incomplete:
-    // case TemplateDeductionResult::InvalidExplicitArguments:
     Result.Data = Info.Param.getOpaqueValue();
     break;
   case TemplateDeductionResult::DeducedMismatch:
@@ -780,7 +779,6 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
   case TemplateDeductionResult::IncompletePack:
     // FIXME: It's slightly wasteful to allocate two TemplateArguments for this.
   case TemplateDeductionResult::Inconsistent:
-
   case TemplateDeductionResult::Underqualified: {
     // FIXME: Should allocate from normal heap so that we can free this later.
     DFIParamWithArguments *Saved = new (Context) DFIParamWithArguments;
@@ -834,7 +832,6 @@ void DeductionFailureInfo::Destroy() {
   case TemplateDeductionResult::Incomplete:
   case TemplateDeductionResult::TooManyArguments:
   case TemplateDeductionResult::TooFewArguments:
-  // case TemplateDeductionResult::InvalidExplicitArguments:
   case TemplateDeductionResult::CUDATargetMismatch:
   case TemplateDeductionResult::NonDependentConversionFailure:
     break;
