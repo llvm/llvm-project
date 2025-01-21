@@ -1697,6 +1697,24 @@ TEST(ExprMutationAnalyzerTest, PointeeMutatedByMethod) {
     EXPECT_FALSE(isPointeeMutated(Results, AST.get()));
   }
 }
+TEST(ExprMutationAnalyzerTest, PointeeMutatedByOperatorOverload) {
+  {
+    const std::string Code = "struct A { int v; int operator++(); };"
+                             "void f() { A* x = nullptr; x->operator++(); }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code = "struct A { int v; int operator++() const; };"
+                             "void f() { A* x = nullptr; x->operator++(); }";
+    auto AST = buildASTFromCodeWithArgs(Code, {});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_FALSE(isPointeeMutated(Results, AST.get()));
+  }
+}
 
 TEST(ExprMutationAnalyzerTest, PointeeMutatedByInitToNonConst) {
   {
