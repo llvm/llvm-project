@@ -773,19 +773,12 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
     break;
   }
 
+  case TemplateDeductionResult::InvalidExplicitArguments:
   case TemplateDeductionResult::IncompletePack:
     // FIXME: It's slightly wasteful to allocate two TemplateArguments for this.
   case TemplateDeductionResult::Inconsistent:
   case TemplateDeductionResult::Underqualified: {
     // FIXME: Should allocate from normal heap so that we can free this later.
-    DFIParamWithArguments *Saved = new (Context) DFIParamWithArguments;
-    Saved->Param = Info.Param;
-    Saved->FirstArg = Info.FirstArg;
-    Saved->SecondArg = Info.SecondArg;
-    Result.Data = Saved;
-    break;
-  }
-  case TemplateDeductionResult::InvalidExplicitArguments: {
     DFIParamWithArguments *Saved = new (Context) DFIParamWithArguments;
     Saved->Param = Info.Param;
     Saved->FirstArg = Info.FirstArg;
