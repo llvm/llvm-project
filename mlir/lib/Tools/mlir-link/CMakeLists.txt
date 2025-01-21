@@ -7,5 +7,6 @@ add_mlir_library(MLIRLinkLib
   LINK_LIBS PUBLIC
   MLIRFunctionInterfaces
   MLIRIR
+  MLIRLinker
   MLIRParser
   )

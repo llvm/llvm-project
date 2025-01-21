@@ -12,6 +12,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/OwningOpRef.h"
+#include "mlir/Linker/Linker.h"
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -30,6 +31,13 @@ OwningOpRef<ModuleOp> makeCompositeModule(MLIRContext *context) {
   return composite;
 }
 
+static LogicalResult linkFiles(const char *argv0, MLIRContext &context,
+                              Linker &linker,
+                              const cl::list<std::string> &files,
+                              unsigned flags) {
+  return failure();
+}
+
 LogicalResult mlir::MlirLinkMain(int argc, char **argv,
                                  DialectRegistry &registry) {
   static cl::OptionCategory linkCategory("Link options");
@@ -41,6 +49,10 @@ LogicalResult mlir::MlirLinkMain(int argc, char **argv,
   static cl::opt<std::string> outputFilename(
       "o", cl::desc("Override output filename"), cl::init("-"),
       cl::value_desc("filename"), cl::cat(linkCategory));
+
+  static cl::opt<bool> onlyNeeded("only-needed",
+                                  cl::desc("Link only needed symbols"),
+                                  cl::cat(linkCategory));
 
   static cl::opt<bool> verbose(
       "v", cl::desc("Print information about actions taken"),
@@ -56,9 +68,17 @@ LogicalResult mlir::MlirLinkMain(int argc, char **argv,
 
   MLIRContext context(registry);
   auto composite = makeCompositeModule(&context);
+  Linker linker(*composite);
+
+  unsigned flags = Linker::Flags::None;
+  if (onlyNeeded)
+    flags |= Linker::Flags::LinkOnlyNeeded;
+
+  // First add all the regular input files
+  if (failed(linkFiles(argv[0], context, linker, inputFilenames, flags)))
+    return failure();
 
   std::string errorMessage;
-
   auto output = openOutputFile(outputFilename, &errorMessage);
   if (!output) {
     errs() << errorMessage;
