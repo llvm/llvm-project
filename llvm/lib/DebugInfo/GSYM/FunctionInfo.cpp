@@ -317,6 +317,7 @@ FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
         } else {
           return CSIC.takeError();
         }
+        break;
 
       default:
         break;
