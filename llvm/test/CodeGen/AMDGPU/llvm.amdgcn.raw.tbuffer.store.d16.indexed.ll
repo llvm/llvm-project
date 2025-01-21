@@ -42,7 +42,7 @@ define amdgpu_kernel void @tbuffer_store_d16_xyzw(i32 inreg %rsrc, <4 x half> %d
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c
 ; GFX13-NEXT:    s_load_b32 s2, s[4:5], 0x24
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX13-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX13-NEXT:    tbuffer_store_d16_format_xyzw v[0:1], off, s2, null format:[BUF_FMT_10_10_10_2_SNORM]
 ; GFX13-NEXT:    s_endpgm
 main_body:

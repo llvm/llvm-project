@@ -3704,7 +3704,7 @@ define amdgpu_kernel void @s_mul_u64_zext_with_sregs(ptr addrspace(1) %out, ptr 
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_mul_u64 s[2:3], s[2:3], 0x50
 ; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1300-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
+; GFX1300-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1300-NEXT:    s_endpgm
   %val = load i32, ptr addrspace(1) %in, align 4
@@ -3931,7 +3931,7 @@ define amdgpu_kernel void @s_mul_u64_sext_with_sregs(ptr addrspace(1) %out, ptr 
 ; GFX1300-NEXT:    s_ashr_i32 s3, s2, 31
 ; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1300-NEXT:    s_mul_u64 s[2:3], s[2:3], 0x50
-; GFX1300-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
+; GFX1300-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX1300-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1300-NEXT:    s_endpgm
   %val = load i32, ptr addrspace(1) %in, align 4

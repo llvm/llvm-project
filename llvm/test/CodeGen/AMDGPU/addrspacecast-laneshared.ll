@@ -28,7 +28,7 @@ define ptr @laneshared_to_flat(ptr addrspace(10) %ptr) {
 ; GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GISEL-NEXT:    s_wait_rtscnt 0x0
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
-; GISEL-NEXT:    v_mov_b64_e32 v[2:3], src_flat_scratch_base_lo
+; GISEL-NEXT:    v_dual_mov_b32 v2, src_flat_scratch_base_lo :: v_dual_mov_b32 v3, src_flat_scratch_base_hi
 ; GISEL-NEXT:    v_mbcnt_lo_u32_b32 v1, -1, 0
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v0, v2

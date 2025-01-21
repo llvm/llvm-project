@@ -75,13 +75,13 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %p
 ; GFX1300-GISEL:       ; %bb.0:
 ; GFX1300-GISEL-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX1300-GISEL-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
-; GFX1300-GISEL-NEXT:    v_mov_b64_e32 v[0:1], src_flat_scratch_base_lo
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v0, src_flat_scratch_base_lo
+; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v1, src_flat_scratch_base_hi
+; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1300-GISEL-NEXT:    v_mbcnt_hi_u32_b32 v2, -1, v2
 ; GFX1300-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 19, v2
 ; GFX1300-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-GISEL-NEXT:    s_cmp_lg_u32 s0, -1
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX1300-GISEL-NEXT:    v_add_co_u32 v0, vcc, s0, v0
 ; GFX1300-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
 ; GFX1300-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc, v2, v1, vcc
@@ -147,14 +147,15 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast_nonnull(ptr addrspa
 ; GFX1300-GISEL:       ; %bb.0:
 ; GFX1300-GISEL-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX1300-GISEL-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
-; GFX1300-GISEL-NEXT:    v_mov_b64_e32 v[0:1], src_flat_scratch_base_lo
+; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v0, src_flat_scratch_base_lo
+; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v1, src_flat_scratch_base_hi
 ; GFX1300-GISEL-NEXT:    v_mov_b32_e32 v3, 0
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1300-GISEL-NEXT:    v_mbcnt_hi_u32_b32 v2, -1, v2
 ; GFX1300-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 19, v2
 ; GFX1300-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1300-GISEL-NEXT:    v_add_co_u32 v0, vcc, s0, v0
+; GFX1300-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1300-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc, v2, v1, vcc
 ; GFX1300-GISEL-NEXT:    flat_store_b32 v[0:1], v3 scope:SCOPE_SYS
 ; GFX1300-GISEL-NEXT:    s_wait_storecnt 0x0

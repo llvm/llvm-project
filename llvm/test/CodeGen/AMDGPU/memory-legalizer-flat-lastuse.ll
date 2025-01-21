@@ -36,9 +36,11 @@ define amdgpu_kernel void @flat_last_use_load_0(ptr %in, ptr %out) {
 ; GFX13-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
+; GFX13-NEXT:    v_mov_b32_e32 v0, s2
+; GFX13-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX13-NEXT:    flat_load_b32 v2, v[0:1] th:TH_LOAD_LU
-; GFX13-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX13-NEXT:    v_mov_b32_e32 v0, s0
+; GFX13-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX13-NEXT:    s_endpgm
@@ -113,7 +115,8 @@ define amdgpu_kernel void @flat_last_use_load_1(ptr %in, ptr %out) {
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_add_nc_u64_e64 v[0:1], s[2:3], v[0:1]
 ; GFX13-NEXT:    flat_load_b32 v2, v[0:1] th:TH_LOAD_LU
-; GFX13-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX13-NEXT:    v_mov_b32_e32 v0, s0
+; GFX13-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX13-NEXT:    s_endpgm
@@ -159,12 +162,14 @@ define amdgpu_kernel void @flat_last_use_and_volatile_load(ptr %in, ptr %out) {
 ; GFX13-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
+; GFX13-NEXT:    v_mov_b32_e32 v0, s2
+; GFX13-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX13-NEXT:    flat_load_b32 v2, v[0:1] th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GFX13-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX13-NEXT:    v_mov_b32_e32 v0, s0
+; GFX13-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX13-NEXT:    s_wait_dscnt 0x0
 ; GFX13-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX13-NEXT:    s_endpgm
@@ -205,9 +210,11 @@ define amdgpu_kernel void @flat_last_use_and_nontemporal_load(ptr %in, ptr %out)
 ; GFX13-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
+; GFX13-NEXT:    v_mov_b32_e32 v0, s2
+; GFX13-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX13-NEXT:    flat_load_b32 v2, v[0:1] th:TH_LOAD_LU
-; GFX13-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX13-NEXT:    v_mov_b32_e32 v0, s0
+; GFX13-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX13-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX13-NEXT:    s_endpgm

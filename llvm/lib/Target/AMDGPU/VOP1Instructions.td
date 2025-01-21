@@ -249,7 +249,7 @@ def VOPProfile_MOV_B64 : VOPProfile <[i64, i64, untyped, untyped]>;
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOPProfile_MOV, null_frag, 0x8>;
 
-let SubtargetPredicate = isGFX940orGFX1250orGFX13Plus, SchedRW = [Write64Bit] in
+let SubtargetPredicate = isGFX940orGFX1250, SchedRW = [Write64Bit] in
 defm V_MOV_B64 : VOP1Inst <"v_mov_b64", VOPProfile_MOV_B64>;
 } // End isMoveImm = 1
 
@@ -1769,6 +1769,8 @@ class MovDPP8Pattern<Predicate Pred, Instruction Inst, ValueType vt> : GCNPat <
   let OtherPredicates = [Pred];
 }
 
+defm V_MOV_B64 : VOP1_Real_FULL <GFX1250Gen, 0x1d>;
+
 //===----------------------------------------------------------------------===//
 // GFX13
 //===----------------------------------------------------------------------===//
@@ -1782,8 +1784,6 @@ def : GCNPat <
 >;
 }
 } // End OtherPredicates = [isGFX13Only]
-
-defm V_MOV_B64 : VOP1_Real_FULL_gfx1250_gfx13 <0x1d>;
 
 foreach vt = Reg32Types.types in {
   def : MovDPP8Pattern<isGFX10Only, V_MOV_B32_dpp8_gfx10, vt>;
