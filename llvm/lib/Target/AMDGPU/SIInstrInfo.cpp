@@ -2775,10 +2775,6 @@ bool SIInstrInfo::isLegalToSwap(const MachineInstr &MI, unsigned OpIdx0,
 
   unsigned Opc = MI.getOpcode();
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
-  if (Src0Idx == -1) {
-    // VOPD V_DUAL_* instructions use different operand names.
-    Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0X);
-  }
 
   // Swap doesn't breach constant bus or literal limits
   // It may move literal to position other than src0, this is not allowed
