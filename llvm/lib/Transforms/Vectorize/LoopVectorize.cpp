@@ -340,6 +340,10 @@ static cl::opt<bool>
                            cl::desc("Prefer in-loop vector reductions, "
                                     "overriding the targets preference."));
 
+cl::opt<bool> PreferStridedLoadStore("prefer-strided-load-store",
+                                     cl::init(false), cl::Hidden,
+                                     cl::desc("Prefer strided load/store."));
+
 static cl::opt<bool> ForceOrderedReductions(
     "force-ordered-reductions", cl::init(false), cl::Hidden,
     cl::desc("Enable the vectorisation of loops with in-order (strict) "

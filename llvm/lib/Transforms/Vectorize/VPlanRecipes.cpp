@@ -44,6 +44,7 @@ namespace llvm {
 extern cl::opt<bool> EnableVPlanNativePath;
 }
 extern cl::opt<unsigned> ForceTargetInstructionCost;
+extern cl::opt<bool> PreferStridedLoadStore;
 
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
@@ -2621,7 +2622,8 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
   bool CreateGather = !isConsecutive();
-  bool UseStridedLoadStore = State.TTI->preferStridedLoadStore();
+  bool UseStridedLoadStore =
+      PreferStridedLoadStore || State.TTI->preferStridedLoadStore();
 
   auto &Builder = State.Builder;
   State.setDebugLocFrom(getDebugLoc());
@@ -2754,7 +2756,8 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   VPValue *StoredValue = getStoredValue();
   bool CreateScatter = !isConsecutive();
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
-  bool UseStridedLoadStore = State.TTI->preferStridedLoadStore();
+  bool UseStridedLoadStore =
+      PreferStridedLoadStore || State.TTI->preferStridedLoadStore();
 
   auto &Builder = State.Builder;
   State.setDebugLocFrom(getDebugLoc());
