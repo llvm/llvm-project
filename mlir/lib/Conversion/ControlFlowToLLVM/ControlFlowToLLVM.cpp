@@ -61,9 +61,11 @@ struct AssertOpLowering : public ConvertOpToLLVMPattern<cf::AssertOp> {
 
     // Failed block: Generate IR to print the message and call `abort`.
     Block *failureBlock = rewriter.createBlock(opBlock->getParent());
-    if (LLVM::createPrintStrCall(rewriter, loc, module, "assert_msg", op.getMsg(),
-                             *getTypeConverter(), /*addNewLine=*/false,
-                             /*runtimeFunctionName=*/"puts").failed()) {
+    if (LLVM::createPrintStrCall(rewriter, loc, module, "assert_msg",
+                                 op.getMsg(), *getTypeConverter(),
+                                 /*addNewLine=*/false,
+                                 /*runtimeFunctionName=*/"puts")
+            .failed()) {
       return failure();
     }
     if (abortOnFailedAssert) {

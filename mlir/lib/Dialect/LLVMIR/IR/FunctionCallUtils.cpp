@@ -180,14 +180,14 @@ mlir::LLVM::lookupOrCreatePrintNewlineFn(Operation *moduleOp) {
 FailureOr<LLVM::LLVMFuncOp>
 mlir::LLVM::lookupOrCreateMallocFn(Operation *moduleOp, Type indexType) {
   return lookupOrCreateReservedFn(moduleOp, kMalloc, indexType,
-                                        getVoidPtr(moduleOp->getContext()));
+                                  getVoidPtr(moduleOp->getContext()));
 }
 
 FailureOr<LLVM::LLVMFuncOp>
 mlir::LLVM::lookupOrCreateAlignedAllocFn(Operation *moduleOp, Type indexType) {
   return lookupOrCreateReservedFn(moduleOp, kAlignedAlloc,
-                                        {indexType, indexType},
-                                        getVoidPtr(moduleOp->getContext()));
+                                  {indexType, indexType},
+                                  getVoidPtr(moduleOp->getContext()));
 }
 
 FailureOr<LLVM::LLVMFuncOp>
@@ -200,15 +200,15 @@ mlir::LLVM::lookupOrCreateFreeFn(Operation *moduleOp) {
 FailureOr<LLVM::LLVMFuncOp>
 mlir::LLVM::lookupOrCreateGenericAllocFn(Operation *moduleOp, Type indexType) {
   return lookupOrCreateReservedFn(moduleOp, kGenericAlloc, indexType,
-                                        getVoidPtr(moduleOp->getContext()));
+                                  getVoidPtr(moduleOp->getContext()));
 }
 
 FailureOr<LLVM::LLVMFuncOp>
 mlir::LLVM::lookupOrCreateGenericAlignedAllocFn(Operation *moduleOp,
                                                 Type indexType) {
   return lookupOrCreateReservedFn(moduleOp, kGenericAlignedAlloc,
-                                        {indexType, indexType},
-                                        getVoidPtr(moduleOp->getContext()));
+                                  {indexType, indexType},
+                                  getVoidPtr(moduleOp->getContext()));
 }
 
 FailureOr<LLVM::LLVMFuncOp>

@@ -49,24 +49,26 @@ FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintOpenFn(Operation *moduleOp);
 FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintCloseFn(Operation *moduleOp);
 FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintCommaFn(Operation *moduleOp);
 FailureOr<LLVM::LLVMFuncOp> lookupOrCreatePrintNewlineFn(Operation *moduleOp);
-FailureOr<LLVM::LLVMFuncOp> lookupOrCreateMallocFn(Operation *moduleOp, Type indexType);
+FailureOr<LLVM::LLVMFuncOp> lookupOrCreateMallocFn(Operation *moduleOp,
+                                                   Type indexType);
 FailureOr<LLVM::LLVMFuncOp> lookupOrCreateAlignedAllocFn(Operation *moduleOp,
-                                              Type indexType);
+                                                         Type indexType);
 FailureOr<LLVM::LLVMFuncOp> lookupOrCreateFreeFn(Operation *moduleOp);
 FailureOr<LLVM::LLVMFuncOp> lookupOrCreateGenericAllocFn(Operation *moduleOp,
-                                              Type indexType);
-FailureOr<LLVM::LLVMFuncOp> lookupOrCreateGenericAlignedAllocFn(Operation *moduleOp,
-                                                     Type indexType);
+                                                         Type indexType);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreateGenericAlignedAllocFn(Operation *moduleOp, Type indexType);
 FailureOr<LLVM::LLVMFuncOp> lookupOrCreateGenericFreeFn(Operation *moduleOp);
-FailureOr<LLVM::LLVMFuncOp> lookupOrCreateMemRefCopyFn(Operation *moduleOp, Type indexType,
-                                            Type unrankedDescriptorType);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreateMemRefCopyFn(Operation *moduleOp, Type indexType,
+                           Type unrankedDescriptorType);
 
 /// Create a FuncOp with signature `resultType`(`paramTypes`)` and name `name`.
 /// Return a failure if the FuncOp found has unexpected signature.
-FailureOr<LLVM::LLVMFuncOp> lookupOrCreateFn(Operation *moduleOp, StringRef name,
-                                  ArrayRef<Type> paramTypes = {},
-                                  Type resultType = {}, bool isVarArg = false,
-                                  bool isReserved = false);
+FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreateFn(Operation *moduleOp, StringRef name,
+                 ArrayRef<Type> paramTypes = {}, Type resultType = {},
+                 bool isVarArg = false, bool isReserved = false);
 
 } // namespace LLVM
 } // namespace mlir
