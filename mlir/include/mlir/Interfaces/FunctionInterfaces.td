@@ -22,7 +22,7 @@ include "mlir/Interfaces/CallInterfaces.td"
 //===----------------------------------------------------------------------===//
 
 def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
-    Symbol, CallableOpInterface, ArgumentAttributesOpInterface
+    Symbol, CallableOpInterface
   ]> {
   let cppNamespace = "::mlir";
   let description = [{

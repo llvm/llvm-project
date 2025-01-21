@@ -193,13 +193,11 @@ static void handleArgumentImpl(InlinerInterface &interface, OpBuilder &builder,
   SmallVector<DictionaryAttr> argAttrs(
       callable.getCallableRegion()->getNumArguments(),
       builder.getDictionaryAttr({}));
-  if (auto argAttrsOpInterface =
-          dyn_cast<ArgumentAttributesOpInterface>(callable.getOperation()))
-    if (ArrayAttr arrayAttr = argAttrsOpInterface.getArgAttrsAttr()) {
-      assert(arrayAttr.size() == argAttrs.size());
-      for (auto [idx, attr] : llvm::enumerate(arrayAttr))
-        argAttrs[idx] = cast<DictionaryAttr>(attr);
-    }
+  if (ArrayAttr arrayAttr = callable.getArgAttrsAttr()) {
+    assert(arrayAttr.size() == argAttrs.size());
+    for (auto [idx, attr] : llvm::enumerate(arrayAttr))
+      argAttrs[idx] = cast<DictionaryAttr>(attr);
+  }
 
   // Run the argument attribute handler for the given argument and attribute.
   for (auto [blockArg, argAttr] :
@@ -220,13 +218,11 @@ static void handleResultImpl(InlinerInterface &interface, OpBuilder &builder,
   // Unpack the result attributes if there are any.
   SmallVector<DictionaryAttr> resAttrs(results.size(),
                                        builder.getDictionaryAttr({}));
-  if (auto argAttrsOpInterface =
-          dyn_cast<ArgumentAttributesOpInterface>(callable.getOperation()))
-    if (ArrayAttr arrayAttr = argAttrsOpInterface.getResAttrsAttr()) {
-      assert(arrayAttr.size() == resAttrs.size());
-      for (auto [idx, attr] : llvm::enumerate(arrayAttr))
-        resAttrs[idx] = cast<DictionaryAttr>(attr);
-    }
+  if (ArrayAttr arrayAttr = callable.getResAttrsAttr()) {
+    assert(arrayAttr.size() == resAttrs.size());
+    for (auto [idx, attr] : llvm::enumerate(arrayAttr))
+      resAttrs[idx] = cast<DictionaryAttr>(attr);
+  }
 
   // Run the result attribute handler for the given result and attribute.
   SmallVector<DictionaryAttr> resultAttributes;

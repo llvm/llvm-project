@@ -16,7 +16,6 @@
 #define MLIR_IR_FUNCTIONIMPLEMENTATION_H_
 
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/Interfaces/CallImplementation.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 
 namespace mlir {
@@ -75,9 +74,10 @@ void printFunctionOp(OpAsmPrinter &p, FunctionOpInterface op, bool isVariadic,
 inline void printFunctionSignature(OpAsmPrinter &p, FunctionOpInterface op,
                                    ArrayRef<Type> argTypes, bool isVariadic,
                                    ArrayRef<Type> resultTypes) {
-  call_interface_impl::printFunctionSignature(p, op, argTypes, isVariadic,
-                                              resultTypes, &op->getRegion(0),
-                                              /*printEmptyResult=*/false);
+  call_interface_impl::printFunctionSignature(
+      p, argTypes, op.getArgAttrsAttr(), isVariadic, resultTypes,
+      op.getResAttrsAttr(), &op->getRegion(0),
+      /*printEmptyResult=*/false);
 }
 
 /// Prints the list of function prefixed with the "attributes" keyword. The

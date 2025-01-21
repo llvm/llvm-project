@@ -20,13 +20,8 @@ include "mlir/IR/OpBase.td"
 
 /// Interface for operations with arguments attributes (both call-like
 /// and callable operations).
-def ArgumentAttributesOpInterface : OpInterface<"ArgumentAttributesOpInterface"> {
-  let description = [{
-    A call-like or callable operation that can hold attributes for its arguments
-    and results.
-  }];
-  let cppNamespace = "::mlir";
-  let methods = [
+def ArgumentAttributesMethods {
+  list<InterfaceMethod> methods = [
     InterfaceMethod<[{
         Get the array of argument attribute dictionaries. The method should
         return an array attribute containing only dictionary attributes equal in
@@ -78,7 +73,7 @@ def CallOpInterface : OpInterface<"CallOpInterface"> {
   }];
   let cppNamespace = "::mlir";
 
-  let methods = [
+  let methods = !listconcat(ArgumentAttributesMethods.methods, [
     InterfaceMethod<[{
         Returns the callee of this call-like operation. A `callee` is either a
         reference to a symbol, via SymbolRefAttr, or a reference to a defined
@@ -128,7 +123,7 @@ def CallOpInterface : OpInterface<"CallOpInterface"> {
         return ::mlir::call_interface_impl::resolveCallable($_op);
       }]
     >
-  ];
+  ]);
 }
 
 /// Interface for callable operations.
@@ -143,7 +138,7 @@ def CallableOpInterface : OpInterface<"CallableOpInterface"> {
   }];
   let cppNamespace = "::mlir";
 
-  let methods = [
+  let methods = !listconcat(ArgumentAttributesMethods.methods, [
     InterfaceMethod<[{
         Returns the region on the current operation that is callable. This may
         return null in the case of an external callable object, e.g. an external
@@ -160,7 +155,7 @@ def CallableOpInterface : OpInterface<"CallableOpInterface"> {
       allow for this method may be called on function declarations).
     }],
     "::llvm::ArrayRef<::mlir::Type>", "getResultTypes">,
-  ];
+  ]);
 }
 
 #endif // MLIR_INTERFACES_CALLINTERFACES
