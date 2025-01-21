@@ -121,6 +121,7 @@ jobs:
         echo "release-binary-basename=$release_binary_basename" >> $GITHUB_OUTPUT
         echo "release-binary-filename=$release_binary_basename.tar.xz" >> $GITHUB_OUTPUT
 
+        target="$RUNNER_OS-$RUNNER_ARCH"
         # The hendrikmuhs/ccache-action action does not support installing sccache
         # on arm64 Linux.
         if [ "$target" = "Linux-ARM64" ]; then
@@ -129,7 +130,7 @@ jobs:
           echo ccache=sccache >> $GITHUB_OUTPUT
         fi
 
-        target="$RUNNER_OS-$RUNNER_ARCH"
+        # Detect necessary CMake flags
         echo "enable-pgo=false" >> $GITHUB_OUTPUT
         target_cmake_flags="-DLLVM_RELEASE_ENABLE_PGO=OFF"
         # The macOS builds try to cross compile some libraries so we need to
@@ -155,7 +156,7 @@ jobs:
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         echo "build-flang=$build_flang" >> $GITHUB_OUTPUT
         case "${{ inputs.runs-on }}" in
-          ubuntu-22.04)
+          ubuntu-22.04*)
             build_runs_on="depot-${{ inputs.runs-on }}-16"
             test_runs_on=$build_runs_on
             ;;
