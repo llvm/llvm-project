@@ -13406,8 +13406,6 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
                                   SourceLocation UsingLoc, UnqualifiedId &Name,
                                   const ParsedAttributesView &AttrList,
                                   TypeResult Type, Decl *DeclFromDeclSpec) {
-  // Get the innermost enclosing declaration scope.
-  S = S->getDeclParent();
 
   if (Type.isInvalid())
     return nullptr;
@@ -13472,14 +13470,6 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
       Invalid = true;
     }
     TemplateParameterList *TemplateParams = TemplateParamLists[0];
-
-    // Check shadowing of a template parameter name
-    for (NamedDecl *TP : TemplateParams->asArray()) {
-      if (NameInfo.getName() == TP->getDeclName()) {
-        DiagnoseTemplateParameterShadow(Name.StartLocation, TP);
-        return nullptr;
-      }
-    }
 
     // Check that we can declare a template here.
     if (CheckTemplateDeclScope(S, TemplateParams))
