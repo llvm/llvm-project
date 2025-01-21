@@ -255,7 +255,7 @@ bool AMDGPUBundleIdxLdSt::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     for (auto &MI : MBB) {
-      Changed = bundleIdxLdSt(&MI);
+      Changed |= bundleIdxLdSt(&MI);
     }
   }
   return Changed;
