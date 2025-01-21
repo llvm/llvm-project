@@ -78,7 +78,6 @@ v1:0.sf=vadd(v0.bf,v0.bf)    // hvxv73, hvx-ieee-fp
 // ASM-NEXT: .attribute      8, 1    // Tag_zreg
 // ASM-NEXT: .attribute      9, 1    // Tag_audio
 // ASM-NEXT: .attribute      10, 1   // Tag_cabac
-// ASM-NEXT:        .text
 // ASM-EMPTY:
 // ASM-NEXT:        {
 // ASM-NEXT:                q0 &= vcmp.gt(v0.bf,v0.bf)

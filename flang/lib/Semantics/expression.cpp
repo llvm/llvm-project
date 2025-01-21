@@ -1506,9 +1506,9 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::CoindexedNamedObject &x) {
     if (cosubsOk && !reversed.empty()) {
       int numCosubscripts{static_cast<int>(cosubscripts.size())};
       const Symbol &symbol{reversed.front()};
-      if (numCosubscripts != symbol.Corank()) {
+      if (numCosubscripts != GetCorank(symbol)) {
         Say("'%s' has corank %d, but coindexed reference has %d cosubscripts"_err_en_US,
-            symbol.name(), symbol.Corank(), numCosubscripts);
+            symbol.name(), GetCorank(symbol), numCosubscripts);
       }
     }
     for (const auto &imageSelSpec :
@@ -2536,6 +2536,15 @@ static bool CheckCompatibleArgument(bool isElemental,
             return false;
           },
           [&](const characteristics::DummyProcedure &dummy) {
+            if ((dummy.attrs.test(
+                     characteristics::DummyProcedure::Attr::Optional) ||
+                    dummy.attrs.test(
+                        characteristics::DummyProcedure::Attr::Pointer)) &&
+                IsBareNullPointer(expr)) {
+              // NULL() is compatible with any dummy pointer
+              // or optional dummy procedure.
+              return true;
+            }
             if (!expr || !IsProcedurePointerTarget(*expr)) {
               return false;
             }

@@ -3,7 +3,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-n32-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK-LABEL: @hoge
-define void @hoge() {
+define void @hoge(i1 %arg) {
 bb:
   %tmp = sext i32 undef to i64
   %tmp3 = sub nsw i64 0, %tmp
@@ -21,7 +21,7 @@ bb7:                                              ; preds = %bb7, %bb4
   br i1 true, label %bb11, label %bb7
 
 bb11:                                             ; preds = %bb7
-  br i1 undef, label %bb20, label %bb12
+  br i1 %arg, label %bb20, label %bb12
 
 bb12:                                             ; preds = %bb11
   br label %bb13

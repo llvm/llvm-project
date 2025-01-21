@@ -2875,7 +2875,7 @@ static bool truncateBitfieldValue(EvalInfo &Info, const Expr *E,
 
   APSInt &Int = Value.getInt();
   unsigned OldBitWidth = Int.getBitWidth();
-  unsigned NewBitWidth = FD->getBitWidthValue(Info.Ctx);
+  unsigned NewBitWidth = FD->getBitWidthValue();
   if (NewBitWidth < OldBitWidth)
     Int = Int.trunc(NewBitWidth).extend(OldBitWidth);
   return true;
@@ -9858,7 +9858,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (Info.getLangOpts().CPlusPlus11)
       Info.CCEDiag(E, diag::note_constexpr_invalid_function)
           << /*isConstexpr*/ 0 << /*isConstructor*/ 0
-          << ("'" + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'").str();
+          << Info.Ctx.BuiltinInfo.getQuotedName(BuiltinOp);
     else
       Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
     [[fallthrough]];
@@ -9903,8 +9903,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     // FIXME: We can compare the bytes in the correct order.
     if (IsRawByte && !isOneByteCharacterType(CharTy)) {
       Info.FFDiag(E, diag::note_constexpr_memchr_unsupported)
-          << ("'" + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'").str()
-          << CharTy;
+          << Info.Ctx.BuiltinInfo.getQuotedName(BuiltinOp) << CharTy;
       return false;
     }
     // Figure out what value we're actually looking for (after converting to
@@ -9966,7 +9965,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (Info.getLangOpts().CPlusPlus11)
       Info.CCEDiag(E, diag::note_constexpr_invalid_function)
           << /*isConstexpr*/ 0 << /*isConstructor*/ 0
-          << ("'" + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'").str();
+          << Info.Ctx.BuiltinInfo.getQuotedName(BuiltinOp);
     else
       Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
     [[fallthrough]];
@@ -13241,7 +13240,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (Info.getLangOpts().CPlusPlus11)
       Info.CCEDiag(E, diag::note_constexpr_invalid_function)
           << /*isConstexpr*/ 0 << /*isConstructor*/ 0
-          << ("'" + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'").str();
+          << Info.Ctx.BuiltinInfo.getQuotedName(BuiltinOp);
     else
       Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
     [[fallthrough]];
@@ -13266,7 +13265,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (Info.getLangOpts().CPlusPlus11)
       Info.CCEDiag(E, diag::note_constexpr_invalid_function)
           << /*isConstexpr*/ 0 << /*isConstructor*/ 0
-          << ("'" + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'").str();
+          << Info.Ctx.BuiltinInfo.getQuotedName(BuiltinOp);
     else
       Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
     [[fallthrough]];
@@ -13321,8 +13320,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         !(isOneByteCharacterType(CharTy1) && isOneByteCharacterType(CharTy2))) {
       // FIXME: Consider using our bit_cast implementation to support this.
       Info.FFDiag(E, diag::note_constexpr_memcmp_unsupported)
-          << ("'" + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'").str()
-          << CharTy1 << CharTy2;
+          << Info.Ctx.BuiltinInfo.getQuotedName(BuiltinOp) << CharTy1
+          << CharTy2;
       return false;
     }
 
@@ -14589,8 +14588,24 @@ bool IntExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
         return Error(E);
       const Expr *LHSExpr = LHSValue.Base.dyn_cast<const Expr *>();
       const Expr *RHSExpr = RHSValue.Base.dyn_cast<const Expr *>();
+
+      auto DiagArith = [&](unsigned DiagID) {
+        std::string LHS = LHSValue.toString(Info.Ctx, E->getLHS()->getType());
+        std::string RHS = RHSValue.toString(Info.Ctx, E->getRHS()->getType());
+        Info.FFDiag(E, DiagID) << LHS << RHS;
+        if (LHSExpr && LHSExpr == RHSExpr)
+          Info.Note(LHSExpr->getExprLoc(),
+                    diag::note_constexpr_repeated_literal_eval)
+              << LHSExpr->getSourceRange();
+        return false;
+      };
+
       if (!LHSExpr || !RHSExpr)
-        return Error(E);
+        return DiagArith(diag::note_constexpr_pointer_arith_unspecified);
+
+      if (ArePotentiallyOverlappingStringLiterals(Info, LHSValue, RHSValue))
+        return DiagArith(diag::note_constexpr_literal_arith);
+
       const AddrLabelExpr *LHSAddrExpr = dyn_cast<AddrLabelExpr>(LHSExpr);
       const AddrLabelExpr *RHSAddrExpr = dyn_cast<AddrLabelExpr>(RHSExpr);
       if (!LHSAddrExpr || !RHSAddrExpr)

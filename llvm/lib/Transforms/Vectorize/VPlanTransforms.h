@@ -144,6 +144,13 @@ struct VPlanTransforms {
   /// recipies before codegen.
   static void convertToAbstractRecipes(VPlan &Plan, VPCostContext &Ctx,
                                        VFRange &Range);
+
+  /// If there's a single exit block, optimize its phi recipes that use exiting
+  /// IV values by feeding them precomputed end values instead, possibly taken
+  /// one step backwards.
+  static void
+  optimizeInductionExitUsers(VPlan &Plan,
+                             DenseMap<VPValue *, VPValue *> &EndValues);
 };
 
 } // namespace llvm

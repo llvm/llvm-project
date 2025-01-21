@@ -100,6 +100,11 @@ def riscv_add_tprel : SDNode<"RISCVISD::ADD_TPREL",
                                                   SDTCisSameAs<0, 3>,
                                                   SDTCisInt<0>]>>;
 
+def riscv_probed_alloca : SDNode<"RISCVISD::PROBED_ALLOCA",
+                                 SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
+                                                      SDTCisVT<0, i32>]>,
+                                 [SDNPHasChain, SDNPMayStore]>;
+
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
@@ -400,9 +405,6 @@ def uimm6gt32 : ImmLeaf<XLenVT, [{
 }]>;
 
 // Addressing modes.
-// Necessary because a frameindex can't be matched directly in a pattern.
-def FrameAddrRegImm : ComplexPattern<iPTR, 2, "SelectFrameAddrRegImm",
-                                     [frameindex, or, add]>;
 def AddrRegImm : ComplexPattern<iPTR, 2, "SelectAddrRegImm">;
 
 // Return the negation of an immediate value.
@@ -1401,8 +1403,19 @@ def PseudoAddTPRel : Pseudo<(outs GPR:$rd),
 
 /// FrameIndex calculations
 
-def : Pat<(FrameAddrRegImm (iPTR GPR:$rs1), simm12:$imm12),
-          (ADDI GPR:$rs1, simm12:$imm12)>;
+// Transforms frameindex -> tframeindex.
+def to_tframeindex : SDNodeXForm<frameindex, [{
+  return CurDAG->getTargetFrameIndex(N->getIndex(), N->getValueType(0));
+}]>;
+
+def : GICustomOperandRenderer<"renderFrameIndex">,
+      GISDNodeXFormEquiv<to_tframeindex>;
+
+def : Pat<(frameindex:$fi), (ADDI (iPTR (to_tframeindex $fi)), 0)>;
+
+def : Pat<(add_like frameindex:$fi, simm12:$offset),
+          (ADDI (iPTR (to_tframeindex $fi)), simm12:$offset)>;
+
 def GIAddrRegImm :
   GIComplexOperandMatcher<s32, "selectAddrRegImm">,
   GIComplexPatternEquiv<AddrRegImm>;
@@ -1415,6 +1428,15 @@ let hasSideEffects = 1, mayLoad = 1, mayStore = 1, isCodeGenOnly = 1 in {
 def PROBED_STACKALLOC : Pseudo<(outs GPR:$sp),
                                (ins GPR:$scratch),
                                []>,
+                               Sched<[]>;
+def PROBED_STACKALLOC_RVV : Pseudo<(outs GPR:$sp),
+                               (ins GPR:$scratch),
+                               []>,
+                               Sched<[]>;
+let usesCustomInserter = 1 in
+def PROBED_STACKALLOC_DYN : Pseudo<(outs GPR:$rd),
+                               (ins GPR:$scratch),
+                               [(set GPR:$rd, (riscv_probed_alloca GPR:$scratch))]>,
                                Sched<[]>;
 }
 
