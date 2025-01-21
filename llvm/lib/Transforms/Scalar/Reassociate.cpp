@@ -2180,7 +2180,7 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
   // is not further optimized, it is likely to be transformed back to a
   // short-circuited form for code gen, and the source order may have been
   // optimized for the most likely conditions. For vector boolean expressions,
-  // we should optimizing for ILP and not serializing the logical operations.
+  // we should be optimizing for ILP and not serializing the logical operations.
   if (I->getType()->isIntOrIntVectorTy(1))
     return;
 
