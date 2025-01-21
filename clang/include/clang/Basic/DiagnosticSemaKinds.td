@@ -5962,7 +5962,7 @@ def err_fold_expression_limit_exceeded: Error<
   "limit of %1">, DefaultFatal, NoSFINAE;
 
 def note_function_like_macro_requires_parens
-    : Note<"'%0' is defined here as a function-like macro; did you mean to write '%0(...)'">;
+    : Note<"'%0' is defined here as a function-like macro; did you mean '%0(...)'">;
 def err_unexpected_typedef : Error<
   "unexpected type name %0: expected expression">;
 def err_unexpected_namespace : Error<
