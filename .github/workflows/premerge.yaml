@@ -7,9 +7,6 @@ on:
   pull_request:
     paths:
       - .github/workflows/premerge.yaml
-  push:
-    branches:
-      - 'main'
 
 jobs:
   premerge-checks-linux:
