@@ -229,11 +229,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         result = todo("privatization");
     }
   };
-  auto checkReduction = [&todo](auto op, LogicalResult &result) {
-    if (!op.getReductionVars().empty() || op.getReductionByref() ||
-        op.getReductionSyms())
-      result = todo("reduction");
-  };
   auto checkTaskReduction = [&todo](auto op, LogicalResult &result) {
     if (!op.getTaskReductionVars().empty() || op.getTaskReductionByref() ||
         op.getTaskReductionSyms())
@@ -1844,7 +1839,7 @@ static bool teamsReductionContainedInDistribute(omp::TeamsOp teamsOp) {
   Operation *distOp = nullptr;
   for (auto ra : iface.getReductionBlockArgs())
     for (auto &use : ra.getUses()) {
-      auto useOp = use.getOwner();
+      auto *useOp = use.getOwner();
       auto currentDistOp = useOp->getParentOfType<omp::DistributeOp>();
       // Use is not inside a distribute op - return false
       if (!currentDistOp)
@@ -4689,7 +4684,7 @@ static std::optional<int64_t> extractConstInteger(Value value) {
   return std::nullopt;
 }
 
-static uint64_t getTypeByteSize(mlir::Type type, DataLayout dl) {
+static uint64_t getTypeByteSize(mlir::Type type, const DataLayout &dl) {
   uint64_t sizeInBits = dl.getTypeSizeInBits(type);
   uint64_t sizeInBytes = sizeInBits / 8;
   return sizeInBytes;
@@ -4706,10 +4701,6 @@ static uint64_t getReductionDataSize(OpTy &op) {
     return getTypeByteSize(reductionVarTy, dl);
   }
   return 0;
-}
-
-static uint64_t getTeamsReductionDataSize(mlir::omp::TeamsOp &teamsOp) {
-  return getReductionDataSize<mlir::omp::TeamsOp>(teamsOp);
 }
 
 /// Populate default `MinTeams`, `MaxTeams` and `MaxThreads` to their default
@@ -4809,7 +4800,7 @@ initTargetDefaultAttrs(omp::TargetOp targetOp,
   int32_t reductionDataSize = 0;
   if (isGPU && capturedOp) {
     if (auto teamsOp = castOrGetParentOfType<omp::TeamsOp>(capturedOp))
-      reductionDataSize = getTeamsReductionDataSize(teamsOp);
+      reductionDataSize = getReductionDataSize(teamsOp);
   }
 
   // Update kernel attrs structure for the `OpenMPIRBuilder` to use.

@@ -556,6 +556,7 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
     case OMPD_distribute_parallel_do:
     case OMPD_distribute_parallel_do_simd:
       cp.processNumThreads(stmtCtx, hostInfo.ops);
+      [[fallthrough]];
     case OMPD_distribute:
     case OMPD_distribute_simd:
       cp.processCollapse(loc, eval, hostInfo.ops, hostInfo.iv);
