@@ -1,14 +1,14 @@
-; REQUIRES: asserts
-; RUN: opt < %s -passes=loop-interchange -debug -disable-output 2>&1| FileCheck %s
+; RUN: opt < %s -passes=loop-interchange -pass-remarks-missed='loop-interchange' \
+; RUN:          -disable-output 2>&1 | FileCheck %s
+
+; RUN: opt < %s -passes=loop-interchange -pass-remarks-missed='loop-interchange' \
+; RUN:          -loop-interchange-max-loop-nest-depth=12 -disable-output 2>&1 | \
+; RUN:          FileCheck --allow-empty -check-prefix=CHECK-MAX %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-; For deep loop nest, delinearization should not be run.
-
-; CHECK-NOT: Delinearizing
-; CHECK-NOT: Strides:
-; CHECK-NOT: Terms:
-; CHECK: Unsupported depth of loop nest 11, the supported range is [2, 10].
+; CHECK: Unsupported depth of loop nest, the supported range is [2, 10].
+; CHECK-MAX-NOT: Unsupported depth of loop nest, the supported range is [2, 10].
 define void @big_loop_nest() {
 entry:
   br label %for1.header

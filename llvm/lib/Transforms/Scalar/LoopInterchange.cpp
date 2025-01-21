@@ -75,10 +75,14 @@ using CharMatrix = std::vector<std::vector<char>>;
 } // end anonymous namespace
 
 // Minimum loop depth supported.
-static const unsigned MinLoopNestDepth = 2;
+static cl::opt<unsigned int> MinLoopNestDepth(
+    "loop-interchange-min-loop-nest-depth", cl::init(2), cl::Hidden,
+    cl::desc("Minimum depth of loop nest considered for the transform"));
 
 // Maximum loop depth supported.
-static const unsigned MaxLoopNestDepth = 10;
+static cl::opt<unsigned int> MaxLoopNestDepth(
+    "loop-interchange-max-loop-nest-depth", cl::init(10), cl::Hidden,
+    cl::desc("Maximum depth of loop nest considered for the transform"));
 
 #ifndef NDEBUG
 static void printDepMatrix(CharMatrix &DepMatrix) {
