@@ -1956,15 +1956,28 @@ TEST(ExprMutationAnalyzerTest, PointeeMutatedByLambdaCaptureInit) {
 }
 
 TEST(ExprMutationAnalyzerTest, PointeeMutatedByPointerArithmeticAdd) {
-  const std::string Code = R"(
+  {
+    const std::string Code = R"(
       void f() {
         int* x;
         int* y = x + 1;
       })";
-  auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
-  auto Results =
-      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
-  EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+    auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_TRUE(isPointeeMutated(Results, AST.get()));
+  }
+  {
+    const std::string Code = R"(
+      void f() {
+        int* x;
+        x + 1;
+      })";
+    auto AST = buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+    auto Results =
+        match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+    EXPECT_FALSE(isPointeeMutated(Results, AST.get()));
+  }
 }
 
 TEST(ExprMutationAnalyzerTest, PointeeMutatedByPointerArithmeticSubElement) {
