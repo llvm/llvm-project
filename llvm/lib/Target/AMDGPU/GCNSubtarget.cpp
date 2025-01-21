@@ -411,7 +411,7 @@ GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
   auto [MinOcc, MaxOcc] = getOccupancyWithWorkGroupSizes(LDSSize, F);
   unsigned SGPROcc = getOccupancyWithNumSGPRs(NumSGPRs);
   unsigned VGPROcc = getOccupancyWithNumVGPRs(NumVGPRs);
-  
+
   // Maximum occupancy may be further limited by high SGPR/VGPR usage.
   MaxOcc = std::min(MaxOcc, std::min(SGPROcc, VGPROcc));
   return {std::min(MinOcc, MaxOcc), MaxOcc};
