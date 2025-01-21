@@ -204,11 +204,10 @@ atomic {
   omp.yield
 }
 llvm.func @scan_reduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: Unhandled clause reduction with modifier in omp.wsloop operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.wsloop}}
   omp.wsloop reduction(mod:inscan, @add_f32 %x -> %prv : !llvm.ptr) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      // expected-error@below {{not yet implemented: omp.scan operation}}
-      // expected-error@below {{LLVM Translation failed for operation: omp.scan}}
       omp.scan inclusive(%prv : !llvm.ptr)
       omp.yield
     }

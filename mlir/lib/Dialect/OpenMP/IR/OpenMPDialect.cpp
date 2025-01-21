@@ -835,9 +835,9 @@ struct ReductionPrintArgs {
   TypeRange types;
   DenseBoolArrayAttr byref;
   ArrayAttr syms;
-  ReductionModifierAttr *modifier;
+  ReductionModifierAttr modifier;
   ReductionPrintArgs(ValueRange vars, TypeRange types, DenseBoolArrayAttr byref,
-                     ArrayAttr syms, ReductionModifierAttr *mod = nullptr)
+                     ArrayAttr syms, ReductionModifierAttr mod = nullptr)
       : vars(vars), types(types), byref(byref), syms(syms), modifier(mod) {}
 };
 struct AllRegionPrintArgs {
@@ -857,14 +857,14 @@ static void printClauseWithRegionArgs(
     ValueRange argsSubrange, ValueRange operands, TypeRange types,
     ArrayAttr symbols = nullptr, DenseI64ArrayAttr mapIndices = nullptr,
     DenseBoolArrayAttr byref = nullptr,
-    ReductionModifierAttr *modifier = nullptr) {
+    ReductionModifierAttr modifier = nullptr) {
   if (argsSubrange.empty())
     return;
 
   p << clauseName << "(";
 
-  if (modifier && *modifier)
-    p << "mod: " << stringifyReductionModifier(modifier->getValue()) << ", ";
+  if (modifier)
+    p << "mod: " << stringifyReductionModifier(modifier.getValue()) << ", ";
 
   if (!symbols) {
     llvm::SmallVector<Attribute> values(operands.size(), nullptr);
@@ -998,7 +998,7 @@ static void printInReductionPrivateReductionRegion(
   args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
                            /*mapIndices=*/nullptr);
   args.reductionArgs.emplace(reductionVars, reductionTypes, reductionByref,
-                             reductionSyms, &reductionMod);
+                             reductionSyms, reductionMod);
   printBlockArgRegion(p, op, region, args);
 }
 
@@ -1021,7 +1021,7 @@ static void printPrivateReductionRegion(
   args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
                            /*mapIndices=*/nullptr);
   args.reductionArgs.emplace(reductionVars, reductionTypes, reductionByref,
-                             reductionSyms, &reductionMod);
+                             reductionSyms, reductionMod);
   printBlockArgRegion(p, op, region, args);
 }
 
@@ -3163,26 +3163,19 @@ void ScanOp::build(OpBuilder &builder, OperationState &state,
 }
 
 LogicalResult ScanOp::verify() {
-  if (hasExclusiveVars() && hasInclusiveVars()) {
+  if (hasExclusiveVars() == hasInclusiveVars())
     return emitError(
         "Exactly one of EXCLUSIVE or INCLUSIVE clause is expected");
-  }
-  if (mlir::omp::WsloopOp parentWsLoopOp =
-          (*this)->getParentOfType<mlir::omp::WsloopOp>()) {
+  if (WsloopOp parentWsLoopOp = (*this)->getParentOfType<WsloopOp>())
     if (parentWsLoopOp.getReductionModAttr() &&
         parentWsLoopOp.getReductionModAttr().getValue() ==
-            mlir::omp::ReductionModifier::inscan) {
+            mlir::omp::ReductionModifier::inscan)
       return success();
-    }
-  }
-  if (mlir::omp::SimdOp parentSimdOp =
-          (*this)->getParentOfType<mlir::omp::SimdOp>()) {
+  if (SimdOp parentSimdOp = (*this)->getParentOfType<SimdOp>())
     if (parentSimdOp.getReductionModAttr() &&
         parentSimdOp.getReductionModAttr().getValue() ==
-            mlir::omp::ReductionModifier::inscan) {
+            mlir::omp::ReductionModifier::inscan)
       return success();
-    }
-  }
   return emitError("SCAN directive needs to be enclosed within a parent "
                    "worksharing loop construct or SIMD construct with INSCAN "
                    "reduction modifier");
