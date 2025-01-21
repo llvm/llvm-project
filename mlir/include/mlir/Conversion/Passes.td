@@ -655,31 +655,6 @@ def ConvertGPUToSPIRV : Pass<"convert-gpu-to-spirv", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
-// GPUToVulkan
-//===----------------------------------------------------------------------===//
-
-def ConvertGpuLaunchFuncToVulkanLaunchFunc
-    : Pass<"convert-gpu-launch-to-vulkan-launch", "ModuleOp"> {
-  let summary = "Convert gpu.launch_func to vulkanLaunch external call";
-  let description = [{
-    This pass is only intended for the mlir-vulkan-runner.
-  }];
-  let constructor = "mlir::createConvertGpuLaunchFuncToVulkanLaunchFuncPass()";
-  let dependentDialects = ["spirv::SPIRVDialect"];
-}
-
-def ConvertVulkanLaunchFuncToVulkanCallsPass
-    : Pass<"launch-func-to-vulkan", "ModuleOp"> {
-  let summary = "Convert vulkanLaunch external call to Vulkan runtime external "
-                "calls";
-  let description = [{
-    This pass is only intended for the mlir-vulkan-runner.
-  }];
-
-  let dependentDialects = ["LLVM::LLVMDialect"];
-}
-
-//===----------------------------------------------------------------------===//
 // ConvertIndexToLLVMPass
 //===----------------------------------------------------------------------===//
 
