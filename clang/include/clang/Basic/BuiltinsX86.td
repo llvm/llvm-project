@@ -4936,15 +4936,15 @@ let Features = "avx10.2-512,sm4", Attributes = [NoThrow, RequiredVectorWidth<512
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def vminmaxnepbf16128 : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>, _Constant int)">;
+  def vminmaxbf16128 : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>, _Constant int)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def vminmaxnepbf16256 : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>, _Constant int)">;
+  def vminmaxbf16256 : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>, _Constant int)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def vminmaxnepbf16512 : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>, _Constant int)">;
+  def vminmaxbf16512 : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>, _Constant int)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
