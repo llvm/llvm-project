@@ -3579,7 +3579,7 @@ void ModuleCallsiteContextGraph::updateCall(CallInfo &CallerCall,
 
 void IndexCallsiteContextGraph::updateCall(CallInfo &CallerCall,
                                            FuncInfo CalleeFunc) {
-  auto *CI = dyn_cast<CallsiteInfo *>(CallerCall.call());
+  auto *CI = cast<CallsiteInfo *>(CallerCall.call());
   assert(CI &&
          "Caller cannot be an allocation which should not have profiled calls");
   assert(CI->Clones.size() > CallerCall.cloneNo());
