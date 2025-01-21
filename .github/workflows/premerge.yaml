@@ -30,6 +30,8 @@ jobs:
           fetch-depth: 2
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2.14
+        with:
+          max-size: "2000M"
       - name: Build and Test
         # Mark the job as a success even if the step fails so that people do
         # not get notified while the new premerge pipeline is in an
