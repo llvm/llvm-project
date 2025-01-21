@@ -2137,7 +2137,8 @@ bool SPIRVInstructionSelector::selectWaveActiveCountBits(
 
 bool SPIRVInstructionSelector::selectWaveReduceMax(Register ResVReg,
                                                    const SPIRVType *ResType,
-                                                   MachineInstr &I, bool IsUnsigned) const {
+                                                   MachineInstr &I,
+                                                   bool IsUnsigned) const {
   assert(I.getNumOperands() == 3);
   assert(I.getOperand(2).isReg());
   MachineBasicBlock &BB = *I.getParent();
@@ -2150,9 +2151,9 @@ bool SPIRVInstructionSelector::selectWaveReduceMax(Register ResVReg,
   SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
   // Retreive the operation to use based on input type
   bool IsFloatTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
-  auto IntegerOpcodeType = IsUnsigned ? SPIRV::OpGroupNonUniformUMax : SPIRV::OpGroupNonUniformSMax;
-  auto Opcode =
-      IsFloatTy ? SPIRV::OpGroupNonUniformFMax : IntegerOpcodeType;
+  auto IntegerOpcodeType =
+      IsUnsigned ? SPIRV::OpGroupNonUniformUMax : SPIRV::OpGroupNonUniformSMax;
+  auto Opcode = IsFloatTy ? SPIRV::OpGroupNonUniformFMax : IntegerOpcodeType;
   return BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
@@ -3116,9 +3117,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_wave_is_first_lane:
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformElect);
   case Intrinsic::spv_wave_reduce_umax:
-    return selectWaveReduceMax(ResVReg, ResType, I, /*IsUnsigned*/true);
+    return selectWaveReduceMax(ResVReg, ResType, I, /*IsUnsigned*/ true);
   case Intrinsic::spv_wave_reduce_max:
-    return selectWaveReduceMax(ResVReg, ResType, I, /*IsUnsigned*/false);
+    return selectWaveReduceMax(ResVReg, ResType, I, /*IsUnsigned*/ false);
   case Intrinsic::spv_wave_reduce_sum:
     return selectWaveReduceSum(ResVReg, ResType, I);
   case Intrinsic::spv_wave_readlane:
