@@ -2603,17 +2603,6 @@ void VPWidenLoadRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-/// Use all-true mask for reverse rather than actual mask, as it avoids a
-/// dependence w/o affecting the result.
-static Instruction *createReverseEVL(IRBuilderBase &Builder, Value *Operand,
-                                     Value *EVL, const Twine &Name) {
-  VectorType *ValTy = cast<VectorType>(Operand->getType());
-  Value *AllTrueMask =
-      Builder.CreateVectorSplat(ValTy->getElementCount(), Builder.getTrue());
-  return Builder.CreateIntrinsic(ValTy, Intrinsic::experimental_vp_reverse,
-                                 {Operand, AllTrueMask, EVL}, nullptr, Name);
-}
-
 void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   auto *LI = cast<LoadInst>(&Ingredient);
 
@@ -2676,10 +2665,9 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
       getLoadStoreAlignment(const_cast<Instruction *>(&Ingredient));
   unsigned AS =
       getLoadStoreAddressSpace(const_cast<Instruction *>(&Ingredient));
-  InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
-      Ingredient.getOpcode(), Ty, Alignment, AS, Ctx.CostKind);
   if (!Reverse)
-    return Cost;
+    return Ctx.TTI.getMaskedMemoryOpCost(Ingredient.getOpcode(), Ty, Alignment,
+                                         AS, Ctx.CostKind);
 
   return Ctx.TTI.getStridedMemoryOpCost(Ingredient.getOpcode(), Ty,
                                         getAddr()->getUnderlyingValue(), false,
@@ -2805,10 +2793,9 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
       getLoadStoreAlignment(const_cast<Instruction *>(&Ingredient));
   unsigned AS =
       getLoadStoreAddressSpace(const_cast<Instruction *>(&Ingredient));
-  InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
-      Ingredient.getOpcode(), Ty, Alignment, AS, Ctx.CostKind);
   if (!Reverse)
-    return Cost;
+    return Ctx.TTI.getMaskedMemoryOpCost(Ingredient.getOpcode(), Ty, Alignment,
+                                         AS, Ctx.CostKind);
 
   return Ctx.TTI.getStridedMemoryOpCost(Ingredient.getOpcode(), Ty,
                                         getAddr()->getUnderlyingValue(), false,
