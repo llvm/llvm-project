@@ -9052,8 +9052,12 @@ collectUsersInExitBlocks(Loop *OrigLoop, VPRecipeBuilder &Builder,
         }
         Value *IncomingValue = ExitPhi->getIncomingValueForBlock(ExitingBB);
         VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue);
-        ExitUsersToFix.insert(ExitIRI);
         ExitIRI->addOperand(V);
+        if (V->isLiveIn())
+          continue;
+        assert(V->getDefiningRecipe()->getParent()->getEnclosingLoopRegion() &&
+               "Only recipes defined inside a region should need fixing.");
+        ExitUsersToFix.insert(ExitIRI);
       }
     }
   }
@@ -9077,11 +9081,6 @@ addUsersInExitBlocks(VPlan &Plan,
   // modeling the corresponding LCSSA phis.
   for (VPIRInstruction *ExitIRI : ExitUsersToFix) {
     for (const auto &[Idx, Op] : enumerate(ExitIRI->operands())) {
-      // Pass live-in values used by exit phis directly through to their users
-      // in the exit block.
-      if (Op->isLiveIn())
-        continue;
-
       // Currently only live-ins can be used by exit values from blocks not
       // exiting via the vector latch through to the middle block.
       if (ExitIRI->getParent()->getSinglePredecessor() != MiddleVPBB)
