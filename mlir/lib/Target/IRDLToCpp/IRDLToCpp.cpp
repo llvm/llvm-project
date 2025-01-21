@@ -89,6 +89,8 @@ struct TypeStrings {
 struct OpStrings {
   StringRef opName;
   std::string opCppName;
+  llvm::SmallVector<std::string> opResultNames;
+  llvm::SmallVector<std::string> opOperandNames;
 };
 
 static std::string capitalize(StringRef str) {
@@ -103,10 +105,40 @@ static TypeStrings getStrings(irdl::TypeOp type) {
   return strings;
 }
 
-static OpStrings getStrings(irdl::OperationOp type) {
+static OpStrings getStrings(irdl::OperationOp op) {
+
+  auto &block = op.getBody().getBlocks().front();
+
+  auto operands = block.getOps<irdl::OperandsOp>();
+  auto operandOp =
+      operands.empty() ? std::optional<irdl::OperandsOp>{} : *operands.begin();
+
+  auto resultsOp = *block.getOps<irdl::ResultsOp>().begin();
+
+  constexpr auto getNames = [](auto op) {
+    auto names = llvm::map_range(
+        op.getNames(), [](auto &attr) { return mlir::cast<StringAttr>(attr); });
+    return names;
+  };
+
+  const auto operandCount = operandOp ? operandOp->getNumOperands() : 0;
+
+  const auto resultCount = resultsOp.getNumOperands();
+  const auto resultAttrArray = getNames(resultsOp);
+
   OpStrings strings;
-  strings.opName = type.getSymName();
+  strings.opName = op.getSymName();
   strings.opCppName = llvm::formatv("{0}Op", capitalize(strings.opName));
+  if (operandOp)
+    strings.opOperandNames = llvm::SmallVector<std::string>(
+        llvm::map_range(operandOp->getNames(), [](Attribute attr) {
+          return llvm::formatv("{0}", cast<StringAttr>(attr));
+        }));
+  strings.opResultNames = llvm::SmallVector<std::string>(
+      llvm::map_range(resultsOp.getNames(), [](Attribute attr) {
+        return llvm::formatv("{0}", cast<StringAttr>(attr));
+      }));
+
   return strings;
 }
 
@@ -120,9 +152,8 @@ generateTypedefList(mlir::Block &dialectBlock,
   return success();
 }
 
-static LogicalResult
-generateOpList(mlir::Block &dialectBlock,
-                    llvm::SmallVector<std::string> &typeNames) {
+static LogicalResult generateOpList(mlir::Block &dialectBlock,
+                                    llvm::SmallVector<std::string> &typeNames) {
   auto typeOps = dialectBlock.getOps<irdl::OperationOp>();
   auto range = llvm::map_range(
       typeOps, [](auto &&type) { return getStrings(type).opCppName; });
@@ -152,45 +183,41 @@ static LogicalResult generateOperationInclude(irdl::OperationOp op,
 
   const auto opStrings = getStrings(op);
 
-  auto &block = op.getBody().getBlocks().front();
-
-  auto operands = block.getOps<irdl::OperandsOp>();
-  auto operandOp = operands.empty() ? std::optional<irdl::OperandsOp>{} : *operands.begin();
-
-  auto resultsOp = *block.getOps<irdl::ResultsOp>().begin();
-
-  constexpr auto getNames = [](auto op)  {
-    auto names = llvm::map_range(
-        op.getNames(), [](auto &attr) { return mlir::cast<StringAttr>(attr); });
-    return names;
-  };
-
-  constexpr auto stringify = [](auto&& names) -> std::string {
+  constexpr auto stringify = [](auto &&names) -> std::string {
     std::string nameArray;
     llvm::raw_string_ostream nameArrayStream(nameArray);
     nameArrayStream << "{\"" << llvm::join(names, "\", \"") << "\"}";
 
     return nameArray;
-
   };
 
-  const auto operandCount = operandOp ? operandOp->getNumOperands() : 0;
-  const auto operandNames = operandOp ? stringify(getNames(*operandOp)) : "{}";
+  const auto operandCount = opStrings.opOperandNames.size();
+  const auto operandNames =
+      operandCount ? stringify(opStrings.opOperandNames) : "{}";
 
-  const auto resultCount = resultsOp.getNumOperands();
-  const auto resultAttrArray = getNames(resultsOp);
-  const auto resultNames = stringify(resultAttrArray);
+  const auto resultCount = opStrings.opResultNames.size();
+  const auto resultNames = stringify(opStrings.opResultNames);
 
-  const auto buildDeclaration = llvm::formatv(R"(static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, {0} {1} ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {{});)" 
-    , llvm::join(llvm::map_range(resultAttrArray, [](::mlir::StringAttr attr) -> std::string { return llvm::formatv("::mlir::Type {0}, ", attr); }), "")
-    , llvm::join(llvm::map_range(getNames(*operandOp), [](::mlir::StringAttr attr) -> std::string { return llvm::formatv("::mlir::Value {0}, ", attr); }), "")
-    );
+  const auto buildDeclaration = llvm::formatv(
+      R"(static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, {0} {1} ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {{});)",
+      llvm::join(llvm::map_range(opStrings.opResultNames,
+                                 [](StringRef name) -> std::string {
+                                   return llvm::formatv("::mlir::Type {0}, ",
+                                                        name);
+                                 }),
+                 ""),
+      llvm::join(llvm::map_range(opStrings.opOperandNames,
+                                 [](StringRef name) -> std::string {
+                                   return llvm::formatv("::mlir::Value {0}, ",
+                                                        name);
+                                 }),
+                 ""));
 
   output << llvm::formatv(
-      perOpDeclTemplateText, opStrings.opName, opStrings.opCppName, dialectStrings.dialectName,
-      operandCount, operandNames, resultCount, resultNames, buildDeclaration,
-      dialectStrings.namespaceOpen, dialectStrings.namespaceClose,
-      dialectStrings.namespacePath);
+      perOpDeclTemplateText, opStrings.opName, opStrings.opCppName,
+      dialectStrings.dialectName, operandCount, operandNames, resultCount,
+      resultNames, buildDeclaration, dialectStrings.namespaceOpen,
+      dialectStrings.namespaceClose, dialectStrings.namespacePath);
 
   return success();
 }
@@ -224,15 +251,17 @@ static LogicalResult generateInclude(irdl::DialectOp dialect,
   if (failed(generateOpList(dialectBlock, opNames)))
     return failure();
   const auto forwardDeclarations = llvm::formatv(
-    R"(
+      R"(
 {1}
 {0}
 {2}
     )",
-    llvm::join(llvm::map_range(opNames, [](llvm::StringRef name) -> std::string { return llvm::formatv("class {0};", name);}), "\n"),
-    dialectStrings.namespaceOpen,
-    dialectStrings.namespaceClose
-  );
+      llvm::join(llvm::map_range(opNames,
+                                 [](llvm::StringRef name) -> std::string {
+                                   return llvm::formatv("class {0};", name);
+                                 }),
+                 "\n"),
+      dialectStrings.namespaceOpen, dialectStrings.namespaceClose);
 
   output << forwardDeclarations;
   for (auto &&operationOp : operationOps) {
@@ -244,7 +273,6 @@ static LogicalResult generateInclude(irdl::DialectOp dialect,
 
   return success();
 }
-
 
 static LogicalResult generateLib(irdl::DialectOp dialect, raw_ostream &output,
                                  DialectStrings &dialectStrings) {
@@ -268,8 +296,13 @@ static LogicalResult generateLib(irdl::DialectOp dialect, raw_ostream &output,
   if (failed(generateTypedefList(dialectBlock, typeNames)))
     return failure();
 
-  const auto commaSeparatedTypeList = llvm::join(llvm::map_range(typeNames, [&dialectStrings](llvm::StringRef name) -> std::string
-  { return llvm::formatv("{0}::{1}", dialectStrings.namespacePath, name); }), ",\n");
+  const auto commaSeparatedTypeList = llvm::join(
+      llvm::map_range(typeNames,
+                      [&dialectStrings](llvm::StringRef name) -> std::string {
+                        return llvm::formatv(
+                            "{0}::{1}", dialectStrings.namespacePath, name);
+                      }),
+      ",\n");
 
   const auto generatedTypeParser = llvm::formatv(
       R"(static ::mlir::OptionalParseResult generatedTypeParser(::mlir::AsmParser &parser, ::llvm::StringRef *mnemonic, ::mlir::Type &value) {
@@ -310,75 +343,90 @@ static LogicalResult generateLib(irdl::DialectOp dialect, raw_ostream &output,
                                  }),
                  "\n"));
 
-  output << llvm::formatv(typeDefTemplateText, commaSeparatedTypeList,
-                          generatedTypeParser, generatedTypePrinter,
-                          dialectStrings.dialectCppName, dialectStrings.namespaceOpen, dialectStrings.namespaceClose);
-
+  output << llvm::formatv(
+      typeDefTemplateText, commaSeparatedTypeList, generatedTypeParser,
+      generatedTypePrinter, dialectStrings.dialectCppName,
+      dialectStrings.namespaceOpen, dialectStrings.namespaceClose);
 
   // get op list
   auto operations = dialectBlock.getOps<irdl::OperationOp>();
   llvm::SmallVector<std::string> opNames;
   if (failed(generateOpList(dialectBlock, opNames)))
     return failure();
-  const auto commaSeparatedOpList = llvm::join(llvm::map_range(opNames, [&dialectStrings](llvm::StringRef name) -> std::string
-  { return llvm::formatv("{0}::{1}", dialectStrings.namespacePath, name); }), ",\n");
+  const auto commaSeparatedOpList = llvm::join(
+      llvm::map_range(opNames,
+                      [&dialectStrings](llvm::StringRef name) -> std::string {
+                        return llvm::formatv(
+                            "{0}::{1}", dialectStrings.namespacePath, name);
+                      }),
+      ",\n");
 
-  const auto perOpDefinitions = llvm::join(llvm::map_range(operations, [&dialectStrings](irdl::OperationOp op) -> std::string {
-    auto opStrings = getStrings(op);
-    
-    auto &block = op.getBody().getBlocks().front();
+  const auto perOpDefinitions = llvm::join(
+      llvm::map_range(
+          operations,
+          [&dialectStrings](irdl::OperationOp op) -> std::string {
+            auto opStrings = getStrings(op);
 
-    auto operands = block.getOps<irdl::OperandsOp>();
-    auto operandOp = operands.empty() ? std::optional<irdl::OperandsOp>{} : *operands.begin();
+            constexpr auto stringify = [](auto &&names) -> std::string {
+              std::string nameArray;
+              llvm::raw_string_ostream nameArrayStream(nameArray);
+              nameArrayStream << "{\"" << llvm::join(names, "\", \"") << "\"}";
 
-    auto resultsOp = *block.getOps<irdl::ResultsOp>().begin();
+              return nameArray;
+            };
 
-    constexpr auto getNames = [](auto op)  {
-      auto names = llvm::map_range(
-          op.getNames(), [](auto &attr) { return mlir::cast<StringAttr>(attr); });
-      return names;
-    };
+            const auto operandCount = opStrings.opOperandNames.size();
+            const auto operandNames =
+                operandCount ? stringify(opStrings.opOperandNames) : "{}";
 
-    constexpr auto stringify = [](auto&& names) -> std::string {
-      std::string nameArray;
-      llvm::raw_string_ostream nameArrayStream(nameArray);
-      nameArrayStream << "{\"" << llvm::join(names, "\", \"") << "\"}";
+            const auto resultCount = opStrings.opResultNames.size();
+            const auto resultNames = stringify(opStrings.opResultNames);
 
-      return nameArray;
-
-    };
-
-    const auto operandCount = operandOp ? operandOp->getNumOperands() : 0;
-    const auto operandAttrArray = getNames(*operandOp);
-    const auto operandNames = operandOp ? stringify(getNames(*operandOp)) : "{}";
-
-    const auto resultCount = resultsOp.getNumOperands();
-    const auto resultAttrArray = getNames(resultsOp);
-    const auto resultNames = stringify(resultAttrArray);
-
-    const auto buildDefinition = llvm::formatv(R"(
+            const auto buildDefinition = llvm::formatv(
+                R"(
 static void {0}::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, {1} {2} ::llvm::ArrayRef<::mlir::NamedAttribute> attributes) {{
 {3}
 {4}
 }
-    )" 
-    , opStrings.opCppName
-    , llvm::join(llvm::map_range(resultAttrArray, [](::mlir::StringAttr attr) -> std::string { return llvm::formatv("::mlir::Type {0}, ", attr); }), "")
-    , llvm::join(llvm::map_range(operandAttrArray, [](::mlir::StringAttr attr) -> std::string { return llvm::formatv("::mlir::Value {0}, ", attr); }), "")
-    , llvm::join(llvm::map_range(operandAttrArray, [](::mlir::StringAttr attr) -> std::string {
-      return llvm::formatv("  odsBuilder.addOperands({0});", attr);
-    }), "\n")
-    , llvm::join(llvm::map_range(resultAttrArray, [](::mlir::StringAttr attr) -> std::string {
-      return llvm::formatv("  odsBuilder.addTypes({0});", attr);
-    }), "\n")
-    );
-    return llvm::formatv(perOpDefTemplateText, opStrings.opName, opStrings.opCppName, dialectStrings.dialectName,
-      operandCount, operandNames, resultCount, resultNames, buildDefinition,
-      dialectStrings.namespaceOpen, dialectStrings.namespaceClose,
-      dialectStrings.namespacePath);
-  }), "\n");
+    )",
+                opStrings.opCppName,
+                llvm::join(llvm::map_range(opStrings.opResultNames,
+                                           [](StringRef attr) -> std::string {
+                                             return llvm::formatv(
+                                                 "::mlir::Type {0}, ", attr);
+                                           }),
+                           ""),
+                llvm::join(llvm::map_range(opStrings.opOperandNames,
+                                           [](StringRef attr) -> std::string {
+                                             return llvm::formatv(
+                                                 "::mlir::Value {0}, ", attr);
+                                           }),
+                           ""),
+                llvm::join(llvm::map_range(
+                               opStrings.opOperandNames,
+                               [](StringRef attr) -> std::string {
+                                 return llvm::formatv(
+                                     "  odsBuilder.addOperands({0});", attr);
+                               }),
+                           "\n"),
+                llvm::join(llvm::map_range(opStrings.opResultNames,
+                                           [](StringRef attr) -> std::string {
+                                             return llvm::formatv(
+                                                 "  odsBuilder.addTypes({0});",
+                                                 attr);
+                                           }),
+                           "\n"));
+            return llvm::formatv(
+                perOpDefTemplateText, opStrings.opName, opStrings.opCppName,
+                dialectStrings.dialectName, operandCount, operandNames,
+                resultCount, resultNames, buildDefinition,
+                dialectStrings.namespaceOpen, dialectStrings.namespaceClose,
+                dialectStrings.namespacePath);
+          }),
+      "\n");
 
-  output << llvm::formatv(opDefTemplateText, commaSeparatedOpList, perOpDefinitions);
+  output << llvm::formatv(opDefTemplateText, commaSeparatedOpList,
+                          perOpDefinitions);
 
   output << "#endif // " << definitionMacroFlag << "\n";
   return success();
