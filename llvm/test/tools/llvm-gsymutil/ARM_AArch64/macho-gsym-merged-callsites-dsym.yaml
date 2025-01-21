@@ -1,5 +1,7 @@
 ## Test that reconstructs a dSYM file from YAML and generates a gsym from it. The gsym has callsite info and merged functions.
 
+# TODO: Add line numbers instead of ':{{.}}' below - after introducing accurate DIE-based lookups: https://github.com/llvm/llvm-project/pull/123391
+
 # RUN: split-file %s %t
 # RUN: yaml2obj %t/merged_callsites.dSYM.yaml -o %t/merged_callsites.dSYM
 
@@ -61,12 +63,12 @@
 
 # RUN: llvm-gsymutil %t/dwarf_call_sites_dSYM.gsym --merged-functions --address=0x000000010000035c --merged-functions-filter="function3_copy1" | FileCheck --check-prefix=CHECK-C3 %s
 # CHECK-C3:       Found 1 function at address 0x000000010000035c:
-# CHECK-C3-NEXT:     0x000000010000035c: function3_copy1 + 16 @ /tmp/tst{{[/\\]}}out/merged_funcs_test.cpp:28
+# CHECK-C3-NEXT:     0x000000010000035c: function3_copy1 + 16 @ /tmp/tst{{[/\\]}}out/merged_funcs_test.cpp:{{.}}
 # CHECK-C3-NEXT:        CallSites: function4_copy1
 
 # RUN: llvm-gsymutil %t/dwarf_call_sites_dSYM.gsym --merged-functions --address=0x0000000100000340 --merged-functions-filter="function4_copy1" | FileCheck --check-prefix=CHECK-C4 %s
 # CHECK-C4:       Found 1 function at address 0x0000000100000340:
-# CHECK-C4-NEXT:     0x0000000100000340: function4_copy1 + 8 @ /tmp/tst{{[/\\]}}out/merged_funcs_test.cpp:14
+# CHECK-C4-NEXT:     0x0000000100000340: function4_copy1 + 8 @ /tmp/tst{{[/\\]}}out/merged_funcs_test.cpp:{{.}}
 
 ### ----------------------------------------------------------------------------------------------------------------------------------
 ### Resolve the 2nd call stack - the 2nd and 3rd addresses are the same but they resolve to a different function because of the filter
@@ -78,12 +80,12 @@
 
 # RUN: llvm-gsymutil %t/dwarf_call_sites_dSYM.gsym --merged-functions --address=0x000000010000035c --merged-functions-filter="function3_copy2" | FileCheck --check-prefix=CHECK-C6 %s
 # CHECK-C6:       Found 1 function at address 0x000000010000035c:
-# CHECK-C6-NEXT:     0x000000010000035c: function3_copy2 + 16 @ /tmp/tst{{[/\\]}}out/merged_funcs_test.cpp:28
+# CHECK-C6-NEXT:     0x000000010000035c: function3_copy2 + 16 @ /tmp/tst{{[/\\]}}out/merged_funcs_test.cpp:{{.}}
 # CHECK-C6-NEXT:        CallSites: function4_copy2
 
 # RUN: llvm-gsymutil %t/dwarf_call_sites_dSYM.gsym --merged-functions --merged-functions-filter="function4_copy2" --address=0x0000000100000340 | FileCheck --check-prefix=CHECK-C7 %s
 # CHECK-C7:       Found 1 function at address 0x0000000100000340:
-# CHECK-C7-NEXT:     0x0000000100000340: function4_copy2 + 8 @ /tmp/tst{{[/\\]}}out/merged_funcs_test.cpp:14
+# CHECK-C7-NEXT:     0x0000000100000340: function4_copy2 + 8 @ /tmp/tst{{[/\\]}}out/merged_funcs_test.cpp:{{.}}
 
 
 #--- merged_funcs_test.cpp
