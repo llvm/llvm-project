@@ -7,6 +7,10 @@ set(LLVM_LINK_COMPONENTS
 add_mlir_upstream_c_api_library(MLIRCAPIExecutionEngine
   ExecutionEngine.cpp
 
+  LINK_COMPONENTS
+  OrcJit
+  Support
+
   LINK_LIBS PUBLIC
   MLIRBuiltinToLLVMIRTranslation
   MLIRExecutionEngine
