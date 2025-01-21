@@ -7279,13 +7279,13 @@ let TargetPrefix = "x86" in {
 }
 
 let TargetPrefix = "x86" in {
-def int_x86_avx10_vminmaxnepbf16128 : ClangBuiltin<"__builtin_ia32_vminmaxnepbf16128">,
+def int_x86_avx10_vminmaxbf16128 : ClangBuiltin<"__builtin_ia32_vminmaxbf16128">,
         DefaultAttrsIntrinsic<[llvm_v8bf16_ty], [llvm_v8bf16_ty, llvm_v8bf16_ty, llvm_i32_ty],
                   [IntrNoMem, ImmArg<ArgIndex<2>>]>;
-def int_x86_avx10_vminmaxnepbf16256 : ClangBuiltin<"__builtin_ia32_vminmaxnepbf16256">,
+def int_x86_avx10_vminmaxbf16256 : ClangBuiltin<"__builtin_ia32_vminmaxbf16256">,
         DefaultAttrsIntrinsic<[llvm_v16bf16_ty], [llvm_v16bf16_ty, llvm_v16bf16_ty, llvm_i32_ty],
                   [IntrNoMem, ImmArg<ArgIndex<2>>]>;
-def int_x86_avx10_vminmaxnepbf16512 : ClangBuiltin<"__builtin_ia32_vminmaxnepbf16512">,
+def int_x86_avx10_vminmaxbf16512 : ClangBuiltin<"__builtin_ia32_vminmaxbf16512">,
         DefaultAttrsIntrinsic<[llvm_v32bf16_ty], [llvm_v32bf16_ty, llvm_v32bf16_ty, llvm_i32_ty],
                   [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 def int_x86_avx10_vminmaxpd128 : ClangBuiltin<"__builtin_ia32_vminmaxpd128">,
