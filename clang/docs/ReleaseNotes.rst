@@ -825,6 +825,7 @@ Bug Fixes in This Version
 - No longer return ``false`` for ``noexcept`` expressions involving a
   ``delete`` which resolves to a destroying delete but the type of the object
   being deleted has a potentially throwing destructor (#GH118660).
+- Fixed a crash when merging named enumerations in modules (#GH114240).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
