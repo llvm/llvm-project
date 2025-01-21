@@ -242,7 +242,7 @@ private:
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void operator()() {
       if (__vec_.__begin_ != nullptr) {
-        __vec_.__clear();
+        __vec_.clear();
         __vec_.__annotate_delete();
         __alloc_traits::deallocate(__vec_.__alloc_, __vec_.__begin_, __vec_.capacity());
       }
@@ -525,7 +525,7 @@ public:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT {
     size_type __old_size = size();
-    __clear();
+    __base_destruct_at_end(this->__begin_);
     __annotate_shrink(__old_size);
   }
 
@@ -737,10 +737,6 @@ private:
     ++__tx.__pos_;
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __clear() _NOEXCEPT {
-    __base_destruct_at_end(this->__begin_);
-  }
-
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __base_destruct_at_end(pointer __new_last) _NOEXCEPT {
     pointer __soon_to_be_end = this->__end_;
     while (__new_last != __soon_to_be_end)
@@ -764,7 +760,7 @@ private:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const vector& __c, true_type) {
     if (this->__alloc_ != __c.__alloc_) {
-      __clear();
+      clear();
       __annotate_delete();
       __alloc_traits::deallocate(this->__alloc_, this->__begin_, capacity());
       this->__begin_ = this->__end_ = this->__cap_ = nullptr;

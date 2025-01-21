@@ -16,10 +16,16 @@
 
 namespace mlir {
 
-/// Rewriting that replace SourceOp with a CallOp to `f32Func` or `f64Func` or
-/// `f32ApproxFunc` or `f16Func` depending on the element type and the
-/// fastMathFlag of that Op. The function declaration is added in case it was
-/// not added before.
+namespace {
+/// Detection trait tor the `getFastmath` instance method.
+template <typename T>
+using has_get_fastmath_t = decltype(std::declval<T>().getFastmath());
+} // namespace
+
+/// Rewriting that replaces SourceOp with a CallOp to `f32Func` or `f64Func` or
+/// `f32ApproxFunc` or `f16Func` or `i32Type` depending on the element type and
+/// the fastMathFlag of that Op, if present. The function declaration is added
+/// in case it was not added before.
 ///
 /// If the input values are of bf16 type (or f16 type if f16Func is empty), the
 /// value is first casted to f32, the function called and then the result casted
@@ -39,14 +45,22 @@ namespace mlir {
 ///
 /// will be transformed into
 ///   llvm.call @__nv_fast_expf(%arg_f32) : (f32) -> f32
+///
+/// Final example with NVVM:
+///   %pow_f32 = math.fpowi %arg_f32, %arg_i32
+///
+/// will be transformed into
+///   llvm.call @__nv_powif(%arg_f32, %arg_i32) : (f32, i32) -> f32
 template <typename SourceOp>
 struct OpToFuncCallLowering : public ConvertOpToLLVMPattern<SourceOp> {
 public:
   explicit OpToFuncCallLowering(const LLVMTypeConverter &lowering,
                                 StringRef f32Func, StringRef f64Func,
-                                StringRef f32ApproxFunc, StringRef f16Func)
+                                StringRef f32ApproxFunc, StringRef f16Func,
+                                StringRef i32Func = "")
       : ConvertOpToLLVMPattern<SourceOp>(lowering), f32Func(f32Func),
-        f64Func(f64Func), f32ApproxFunc(f32ApproxFunc), f16Func(f16Func) {}
+        f64Func(f64Func), f32ApproxFunc(f32ApproxFunc), f16Func(f16Func),
+        i32Func(i32Func) {}
 
   LogicalResult
   matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
@@ -76,9 +90,8 @@ public:
 
     Type resultType = castedOperands.front().getType();
     Type funcType = getFunctionType(resultType, castedOperands);
-    StringRef funcName =
-        getFunctionName(cast<LLVM::LLVMFunctionType>(funcType).getReturnType(),
-                        op.getFastmath());
+    StringRef funcName = getFunctionName(
+        cast<LLVM::LLVMFunctionType>(funcType).getReturnType(), op);
     if (funcName.empty())
       return failure();
 
@@ -91,6 +104,8 @@ public:
       return success();
     }
 
+    assert(callOp.getResult().getType().isF32() &&
+           "only f32 types are supposed to be truncated back");
     Value truncated = rewriter.create<LLVM::FPTruncOp>(
         op->getLoc(), adaptor.getOperands().front().getType(),
         callOp.getResult());
@@ -98,7 +113,6 @@ public:
     return success();
   }
 
-private:
   Value maybeCast(Value operand, PatternRewriter &rewriter) const {
     Type type = operand.getType();
     if (!isa<Float16Type, BFloat16Type>(type))
@@ -117,38 +131,50 @@ private:
     return LLVM::LLVMFunctionType::get(resultType, operandTypes);
   }
 
-  StringRef getFunctionName(Type type, arith::FastMathFlags flag) const {
-    if (isa<Float16Type>(type))
-      return f16Func;
-    if (isa<Float32Type>(type)) {
-      if (((uint32_t)arith::FastMathFlags::afn & (uint32_t)flag) &&
-          !f32ApproxFunc.empty())
-        return f32ApproxFunc;
-      else
-        return f32Func;
-    }
-    if (isa<Float64Type>(type))
-      return f64Func;
-    return "";
-  }
-
   LLVM::LLVMFuncOp appendOrGetFuncOp(StringRef funcName, Type funcType,
                                      Operation *op) const {
     using LLVM::LLVMFuncOp;
 
     auto funcAttr = StringAttr::get(op->getContext(), funcName);
-    Operation *funcOp = SymbolTable::lookupNearestSymbolFrom(op, funcAttr);
+    auto funcOp =
+        SymbolTable::lookupNearestSymbolFrom<LLVMFuncOp>(op, funcAttr);
     if (funcOp)
-      return cast<LLVMFuncOp>(*funcOp);
+      return funcOp;
 
-    mlir::OpBuilder b(op->getParentOfType<FunctionOpInterface>());
+    auto parentFunc = op->getParentOfType<FunctionOpInterface>();
+    assert(parentFunc && "expected there to be a parent function");
+    OpBuilder b(parentFunc);
     return b.create<LLVMFuncOp>(op->getLoc(), funcName, funcType);
+  }
+
+  StringRef getFunctionName(Type type, SourceOp op) const {
+    bool useApprox = false;
+    if constexpr (llvm::is_detected<has_get_fastmath_t, SourceOp>::value) {
+      arith::FastMathFlags flag = op.getFastmath();
+      useApprox = ((uint32_t)arith::FastMathFlags::afn & (uint32_t)flag) &&
+                  !f32ApproxFunc.empty();
+    }
+
+    if (isa<Float16Type>(type))
+      return f16Func;
+    if (isa<Float32Type>(type)) {
+      if (useApprox)
+        return f32ApproxFunc;
+      return f32Func;
+    }
+    if (isa<Float64Type>(type))
+      return f64Func;
+
+    if (type.isInteger(32))
+      return i32Func;
+    return "";
   }
 
   const std::string f32Func;
   const std::string f64Func;
   const std::string f32ApproxFunc;
   const std::string f16Func;
+  const std::string i32Func;
 };
 
 } // namespace mlir

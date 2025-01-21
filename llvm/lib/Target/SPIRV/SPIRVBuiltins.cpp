@@ -535,15 +535,15 @@ extern Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
 static SPIRV::MemorySemantics::MemorySemantics
 getSPIRVMemSemantics(std::memory_order MemOrder) {
   switch (MemOrder) {
-  case std::memory_order::memory_order_relaxed:
+  case std::memory_order_relaxed:
     return SPIRV::MemorySemantics::None;
-  case std::memory_order::memory_order_acquire:
+  case std::memory_order_acquire:
     return SPIRV::MemorySemantics::Acquire;
-  case std::memory_order::memory_order_release:
+  case std::memory_order_release:
     return SPIRV::MemorySemantics::Release;
-  case std::memory_order::memory_order_acq_rel:
+  case std::memory_order_acq_rel:
     return SPIRV::MemorySemantics::AcquireRelease;
-  case std::memory_order::memory_order_seq_cst:
+  case std::memory_order_seq_cst:
     return SPIRV::MemorySemantics::SequentiallyConsistent;
   default:
     report_fatal_error("Unknown CL memory scope");

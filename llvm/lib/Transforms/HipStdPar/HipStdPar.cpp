@@ -279,10 +279,11 @@ HipStdParAllocationInterpositionPass::run(Module &M, ModuleAnalysisManager&) {
   for (auto &&F : M) {
     if (!F.hasName())
       continue;
-    if (!AllocReplacements.contains(F.getName()))
+    auto It = AllocReplacements.find(F.getName());
+    if (It == AllocReplacements.end())
       continue;
 
-    if (auto R = M.getFunction(AllocReplacements[F.getName()])) {
+    if (auto R = M.getFunction(It->second)) {
       F.replaceAllUsesWith(R);
     } else {
       std::string W;

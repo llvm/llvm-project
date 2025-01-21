@@ -83,7 +83,6 @@ jobs:
       matrix:
         runs-on:
           - ubuntu-22.04
-          - windows-2022
           - macos-13
           - macos-14
 

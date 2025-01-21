@@ -99,6 +99,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
 
+  setOperationAction(ISD::PREFETCH, MVT::Other, Legal);
+
   // Expand bitreverse.i16 with native-width bitrev and shift for now, before
   // we get to know which of sll and revb.2h is faster.
   setOperationAction(ISD::BITREVERSE, MVT::i8, Custom);
@@ -466,11 +468,10 @@ SDValue LoongArchTargetLowering::lowerBITREVERSE(SDValue Op,
   for (unsigned int i = 0; i < NewEltNum; i++) {
     SDValue Op = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, NewSrc,
                              DAG.getConstant(i, DL, MVT::i64));
-    SDValue RevOp = DAG.getNode((ResTy == MVT::v16i8 || ResTy == MVT::v32i8)
-                                    ? LoongArchISD::BITREV_8B
-                                    : ISD::BITREVERSE,
-                                DL, MVT::i64, Op);
-    Ops.push_back(RevOp);
+    unsigned RevOp = (ResTy == MVT::v16i8 || ResTy == MVT::v32i8)
+                         ? (unsigned)LoongArchISD::BITREV_8B
+                         : (unsigned)ISD::BITREVERSE;
+    Ops.push_back(DAG.getNode(RevOp, DL, MVT::i64, Op));
   }
   SDValue Res =
       DAG.getNode(ISD::BITCAST, DL, ResTy, DAG.getBuildVector(NewVT, DL, Ops));
@@ -5676,7 +5677,8 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
 bool LoongArchTargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   SmallVector<CCValAssign> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
 

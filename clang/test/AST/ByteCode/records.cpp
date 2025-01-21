@@ -1684,3 +1684,18 @@ namespace ExplicitThisInTemporary {
   constexpr bool g(B b) { return &b == b.p; }
   static_assert(g({}), "");
 }
+
+namespace IgnoredMemberExpr {
+  class A {
+  public:
+    int a;
+  };
+  class B : public A {
+  public:
+    constexpr int foo() {
+      a; // both-warning {{expression result unused}}
+      return 0;
+    }
+  };
+  static_assert(B{}.foo() == 0, "");
+}

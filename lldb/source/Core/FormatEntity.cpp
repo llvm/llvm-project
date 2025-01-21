@@ -162,7 +162,9 @@ constexpr Definition g_thread_child_entries[] = {
     Definition("completed-expression", EntryType::ThreadCompletedExpression)};
 
 constexpr Definition g_target_child_entries[] = {
-    Definition("arch", EntryType::TargetArch)};
+    Definition("arch", EntryType::TargetArch),
+    Entry::DefinitionWithChildren("file", EntryType::TargetFile,
+                                  g_file_child_entries)};
 
 #define _TO_STR2(_val) #_val
 #define _TO_STR(_val) _TO_STR2(_val)
@@ -322,6 +324,7 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(ScriptThread);
     ENUM_TO_CSTR(ThreadInfo);
     ENUM_TO_CSTR(TargetArch);
+    ENUM_TO_CSTR(TargetFile);
     ENUM_TO_CSTR(ScriptTarget);
     ENUM_TO_CSTR(ModuleFile);
     ENUM_TO_CSTR(File);
@@ -1464,6 +1467,17 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
         if (arch.IsValid()) {
           s.PutCString(arch.GetArchitectureName());
           return true;
+        }
+      }
+    }
+    return false;
+
+  case Entry::Type::TargetFile:
+    if (exe_ctx) {
+      if (Target *target = exe_ctx->GetTargetPtr()) {
+        if (Module *exe_module = target->GetExecutableModulePointer()) {
+          if (DumpFile(s, exe_module->GetFileSpec(), (FileKind)entry.number))
+            return true;
         }
       }
     }

@@ -20601,7 +20601,8 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
   case SystemZ::BI__builtin_s390_vclzb:
   case SystemZ::BI__builtin_s390_vclzh:
   case SystemZ::BI__builtin_s390_vclzf:
-  case SystemZ::BI__builtin_s390_vclzg: {
+  case SystemZ::BI__builtin_s390_vclzg:
+  case SystemZ::BI__builtin_s390_vclzq: {
     llvm::Type *ResultType = ConvertType(E->getType());
     Value *X = EmitScalarExpr(E->getArg(0));
     Value *Undef = ConstantInt::get(Builder.getInt1Ty(), false);
@@ -20612,7 +20613,8 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
   case SystemZ::BI__builtin_s390_vctzb:
   case SystemZ::BI__builtin_s390_vctzh:
   case SystemZ::BI__builtin_s390_vctzf:
-  case SystemZ::BI__builtin_s390_vctzg: {
+  case SystemZ::BI__builtin_s390_vctzg:
+  case SystemZ::BI__builtin_s390_vctzq: {
     llvm::Type *ResultType = ConvertType(E->getType());
     Value *X = EmitScalarExpr(E->getArg(0));
     Value *Undef = ConstantInt::get(Builder.getInt1Ty(), false);
@@ -20856,7 +20858,8 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
 
   case SystemZ::BI__builtin_s390_vlbrh:
   case SystemZ::BI__builtin_s390_vlbrf:
-  case SystemZ::BI__builtin_s390_vlbrg: {
+  case SystemZ::BI__builtin_s390_vlbrg:
+  case SystemZ::BI__builtin_s390_vlbrq: {
     llvm::Type *ResultType = ConvertType(E->getType());
     Value *X = EmitScalarExpr(E->getArg(0));
     Function *F = CGM.getIntrinsic(Intrinsic::bswap, ResultType);
@@ -20881,16 +20884,19 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
   INTRINSIC_WITH_CC(s390_vceqhs);
   INTRINSIC_WITH_CC(s390_vceqfs);
   INTRINSIC_WITH_CC(s390_vceqgs);
+  INTRINSIC_WITH_CC(s390_vceqqs);
 
   INTRINSIC_WITH_CC(s390_vchbs);
   INTRINSIC_WITH_CC(s390_vchhs);
   INTRINSIC_WITH_CC(s390_vchfs);
   INTRINSIC_WITH_CC(s390_vchgs);
+  INTRINSIC_WITH_CC(s390_vchqs);
 
   INTRINSIC_WITH_CC(s390_vchlbs);
   INTRINSIC_WITH_CC(s390_vchlhs);
   INTRINSIC_WITH_CC(s390_vchlfs);
   INTRINSIC_WITH_CC(s390_vchlgs);
+  INTRINSIC_WITH_CC(s390_vchlqs);
 
   INTRINSIC_WITH_CC(s390_vfaebs);
   INTRINSIC_WITH_CC(s390_vfaehs);

@@ -223,12 +223,11 @@ private:
     //
     // First, compute the cost of the individual memory operations.
     InstructionCost AddrExtractCost =
-        IsGatherScatter
-            ? getScalarizationOverhead(
-                  FixedVectorType::get(
-                      PointerType::get(VT->getElementType(), 0), VF),
-                  /*Insert=*/false, /*Extract=*/true, CostKind)
-            : 0;
+        IsGatherScatter ? getScalarizationOverhead(
+                              FixedVectorType::get(
+                                  PointerType::get(VT->getContext(), 0), VF),
+                              /*Insert=*/false, /*Extract=*/true, CostKind)
+                        : 0;
 
     // The cost of the scalar loads/stores.
     InstructionCost MemoryOpCost =

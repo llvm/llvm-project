@@ -306,8 +306,7 @@ static LogicalResult verifyConvOpModes(T op) {
   if (inputEType.isInteger(16) && !accType.isInteger(48))
     return op.emitOpError("accumulator type for i16 tensor is not i48");
 
-  if ((inputEType.isFloat8E5M2() || inputEType.isFloat8E4M3()) &&
-      !accType.isF16())
+  if (isa<Float8E5M2Type, Float8E4M3Type>(inputEType) && !accType.isF16())
     return op.emitOpError("accumulator type for f8 tensor is not f16");
 
   if (inputEType.isF16() && !(accType.isF16() || accType.isF32()))

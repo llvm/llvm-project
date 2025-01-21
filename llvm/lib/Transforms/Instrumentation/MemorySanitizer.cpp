@@ -6188,7 +6188,7 @@ struct VarArgI386Helper : public VarArgHelperBase {
       Type *RegSaveAreaPtrTy = PointerType::getUnqual(*MS.C);
       Value *RegSaveAreaPtrPtr =
           IRB.CreateIntToPtr(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
-                             PointerType::get(RegSaveAreaPtrTy, 0));
+                             PointerType::get(*MS.C, 0));
       Value *RegSaveAreaPtr =
           IRB.CreateLoad(RegSaveAreaPtrTy, RegSaveAreaPtrPtr);
       Value *RegSaveAreaShadowPtr, *RegSaveAreaOriginPtr;
@@ -6273,7 +6273,7 @@ struct VarArgGenericHelper : public VarArgHelperBase {
       Type *RegSaveAreaPtrTy = PointerType::getUnqual(*MS.C);
       Value *RegSaveAreaPtrPtr =
           IRB.CreateIntToPtr(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
-                             PointerType::get(RegSaveAreaPtrTy, 0));
+                             PointerType::get(*MS.C, 0));
       Value *RegSaveAreaPtr =
           IRB.CreateLoad(RegSaveAreaPtrTy, RegSaveAreaPtrPtr);
       Value *RegSaveAreaShadowPtr, *RegSaveAreaOriginPtr;

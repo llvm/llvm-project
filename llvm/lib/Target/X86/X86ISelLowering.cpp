@@ -29643,8 +29643,7 @@ SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) cons
     Entry.Node = StackPtr;
     InChain =
         DAG.getStore(InChain, dl, Op->getOperand(i), StackPtr, MPI, Align(16));
-    Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
-    Entry.Ty = PointerType::get(ArgTy,0);
+    Entry.Ty = PointerType::get(*DAG.getContext(), 0);
     Entry.IsSExt = false;
     Entry.IsZExt = false;
     Args.push_back(Entry);

@@ -184,6 +184,33 @@
     return BUILTIN(x);                                                         \
   }
 
+#define _CLC_DEFINE_TERNARY_BUILTIN(RET_TYPE, FUNCTION, BUILTIN, ARG1_TYPE,    \
+                                    ARG2_TYPE, ARG3_TYPE)                      \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE FUNCTION(ARG1_TYPE x, ARG2_TYPE y,           \
+                                           ARG3_TYPE z) {                      \
+    return BUILTIN(x, y, z);                                                   \
+  }                                                                            \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE##2 FUNCTION(ARG1_TYPE##2 x, ARG2_TYPE##2 y,  \
+                                              ARG3_TYPE##2 z) {                \
+    return BUILTIN(x, y, z);                                                   \
+  }                                                                            \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE##3 FUNCTION(ARG1_TYPE##3 x, ARG2_TYPE##3 y,  \
+                                              ARG3_TYPE##3 z) {                \
+    return BUILTIN(x, y, z);                                                   \
+  }                                                                            \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE##4 FUNCTION(ARG1_TYPE##4 x, ARG2_TYPE##4 y,  \
+                                              ARG3_TYPE##4 z) {                \
+    return BUILTIN(x, y, z);                                                   \
+  }                                                                            \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE##8 FUNCTION(ARG1_TYPE##8 x, ARG2_TYPE##8 y,  \
+                                              ARG3_TYPE##8 z) {                \
+    return BUILTIN(x, y, z);                                                   \
+  }                                                                            \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE##16 FUNCTION(                                \
+      ARG1_TYPE##16 x, ARG2_TYPE##16 y, ARG3_TYPE##16 z) {                     \
+    return BUILTIN(x, y, z);                                                   \
+  }
+
 #ifdef cl_khr_fp16
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable

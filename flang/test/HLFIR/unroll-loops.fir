@@ -3,6 +3,9 @@
 // RUN: %flang_fc1 -emit-llvm -O1 -fno-unroll-loops -mllvm -force-vector-width=2 -o- %s | FileCheck %s --check-prefixes=CHECK,NO-UNROLL
 // RUN: %flang_fc1 -emit-llvm -O1 -mllvm -force-vector-width=2 -o- %s | FileCheck %s --check-prefixes=CHECK,NO-UNROLL
 
+// FIXME: https://github.com/llvm/llvm-project/issues/123668
+// XFAIL: powerpc64-target-arch
+
 // CHECK-LABEL: @unroll
 // CHECK-SAME: (ptr nocapture writeonly %[[ARG0:.*]])
 func.func @unroll(%arg0: !fir.ref<!fir.array<1000 x index>> {fir.bindc_name = "a"}) {

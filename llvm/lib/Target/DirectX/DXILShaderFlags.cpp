@@ -64,11 +64,22 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     switch (II->getIntrinsicID()) {
     default:
       break;
+    case Intrinsic::dx_resource_handlefrombinding:
+      switch (DRTM[cast<TargetExtType>(II->getType())].getResourceKind()) {
+      case dxil::ResourceKind::StructuredBuffer:
+      case dxil::ResourceKind::RawBuffer:
+        CSF.EnableRawAndStructuredBuffers = true;
+        break;
+      default:
+        break;
+      }
+      break;
     case Intrinsic::dx_resource_load_typedbuffer: {
       dxil::ResourceTypeInfo &RTI =
           DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];
       if (RTI.isTyped())
         CSF.TypedUAVLoadAdditionalFormats |= RTI.getTyped().ElementCount > 1;
+      break;
     }
     }
   }

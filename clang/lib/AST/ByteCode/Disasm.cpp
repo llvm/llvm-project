@@ -62,6 +62,12 @@ inline IntegralAP<true> ReadArg<IntegralAP<true>>(Program &P, CodePtr &OpPC) {
   return I;
 }
 
+template <> inline FixedPoint ReadArg<FixedPoint>(Program &P, CodePtr &OpPC) {
+  FixedPoint I = FixedPoint::deserialize(*OpPC);
+  OpPC += align(I.bytesToSerialize());
+  return I;
+}
+
 LLVM_DUMP_METHOD void Function::dump() const { dump(llvm::errs()); }
 
 LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {

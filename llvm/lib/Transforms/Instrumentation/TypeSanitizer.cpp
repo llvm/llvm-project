@@ -598,7 +598,7 @@ bool TypeSanitizer::instrumentWithShadowUpdate(
 
   Value *ShadowDataInt = convertToShadowDataInt(IRB, Ptr, IntptrTy, PtrShift,
                                                 ShadowBase, AppMemMask);
-  Type *Int8PtrPtrTy = PointerType::get(IRB.getPtrTy(), 0);
+  Type *Int8PtrPtrTy = PointerType::get(IRB.getContext(), 0);
   Value *ShadowData =
       IRB.CreateIntToPtr(ShadowDataInt, Int8PtrPtrTy, "shadow.ptr");
 

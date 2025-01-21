@@ -1860,6 +1860,33 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return CastInst::Create(Instruction::ZExt, NarrowMaxMin, II->getType());
       }
     }
+    // If C is not 0:
+    //   umax(nuw_shl(x, C), x + 1) -> x == 0 ? 1 : nuw_shl(x, C)
+    // If C is not 0 or 1:
+    //   umax(nuw_mul(x, C), x + 1) -> x == 0 ? 1 : nuw_mul(x, C)
+    auto foldMaxMulShift = [&](Value *A, Value *B) -> Instruction * {
+      const APInt *C;
+      Value *X;
+      if (!match(A, m_NUWShl(m_Value(X), m_APInt(C))) &&
+          !(match(A, m_NUWMul(m_Value(X), m_APInt(C))) && !C->isOne()))
+        return nullptr;
+      if (C->isZero())
+        return nullptr;
+      if (!match(B, m_OneUse(m_Add(m_Specific(X), m_One()))))
+        return nullptr;
+
+      Value *Cmp = Builder.CreateICmpEQ(X, ConstantInt::get(X->getType(), 0));
+      Value *NewSelect =
+          Builder.CreateSelect(Cmp, ConstantInt::get(X->getType(), 1), A);
+      return replaceInstUsesWith(*II, NewSelect);
+    };
+
+    if (IID == Intrinsic::umax) {
+      if (Instruction *I = foldMaxMulShift(I0, I1))
+        return I;
+      if (Instruction *I = foldMaxMulShift(I1, I0))
+        return I;
+    }
     // If both operands of unsigned min/max are sign-extended, it is still ok
     // to narrow the operation.
     [[fallthrough]];
@@ -4179,13 +4206,14 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
     DenseMap<Value *, unsigned> Val2Idx;
     std::vector<Value *> NewLiveGc;
     for (Value *V : Bundle->Inputs) {
-      if (Val2Idx.count(V))
+      auto [It, Inserted] = Val2Idx.try_emplace(V);
+      if (!Inserted)
         continue;
       if (LiveGcValues.count(V)) {
-        Val2Idx[V] = NewLiveGc.size();
+        It->second = NewLiveGc.size();
         NewLiveGc.push_back(V);
       } else
-        Val2Idx[V] = NumOfGCLives;
+        It->second = NumOfGCLives;
     }
     // Update all gc.relocates
     for (const GCRelocateInst *Reloc : GCSP.getGCRelocates()) {
