@@ -77,20 +77,8 @@ private:
   COFFLinkerContext &ctx;
 };
 
-// Windows-specific.
-// EdataContents creates all chunks for the DLL export table.
-class EdataContents {
-public:
-  EdataContents(COFFLinkerContext &ctx);
-  std::vector<Chunk *> chunks;
-
-  uint64_t getRVA() { return chunks[0]->getRVA(); }
-  uint64_t getSize() {
-    return chunks.back()->getRVA() + chunks.back()->getSize() - getRVA();
-  }
-
-  COFFLinkerContext &ctx;
-};
+// Create all chunks for the DLL export table.
+void createEdataChunks(COFFLinkerContext &ctx, std::vector<Chunk *> &chunks);
 
 } // namespace lld::coff
 

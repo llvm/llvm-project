@@ -76,14 +76,8 @@ static unsigned char dosProgram[] = {
 };
 static_assert(sizeof(dosProgram) % 8 == 0,
               "DOSProgram size must be multiple of 8");
-
-static const int dosStubSize = sizeof(dos_header) + sizeof(dosProgram);
-static_assert(dosStubSize % 8 == 0, "DOSStub size must be multiple of 8");
-static const uint32_t coffHeaderOffset = dosStubSize + sizeof(PEMagic);
-static const uint32_t peHeaderOffset =
-    coffHeaderOffset + sizeof(coff_file_header);
-static const uint32_t dataDirOffset64 =
-    peHeaderOffset + sizeof(pe32plus_header);
+static_assert((sizeof(dos_header) + sizeof(dosProgram)) % 8 == 0,
+              "DOSStub size must be multiple of 8");
 
 static const int numberOfDataDirectory = 16;
 
@@ -210,10 +204,11 @@ struct ChunkRange {
 class Writer {
 public:
   Writer(COFFLinkerContext &c)
-      : buffer(c.e.outputBuffer), delayIdata(c), edata(c), ctx(c) {}
+      : buffer(c.e.outputBuffer), delayIdata(c), ctx(c) {}
   void run();
 
 private:
+  void calculateStubDependentSizes();
   void createSections();
   void createMiscChunks();
   void createImportTables();
@@ -298,7 +293,6 @@ private:
   Chunk *iatStart = nullptr;
   uint64_t iatSize = 0;
   DelayLoadContents delayIdata;
-  EdataContents edata;
   bool setNoSEHCharacteristic = false;
   uint32_t tlsAlignment = 0;
 
@@ -314,6 +308,11 @@ private:
   uint32_t pointerToSymbolTable = 0;
   uint64_t sizeOfImage;
   uint64_t sizeOfHeaders;
+
+  uint32_t dosStubSize;
+  uint32_t coffHeaderOffset;
+  uint32_t peHeaderOffset;
+  uint32_t dataDirOffset64;
 
   OutputSection *textSec;
   OutputSection *hexpthkSec;
@@ -728,10 +727,8 @@ void Writer::writePEChecksum() {
   uint32_t *buf = (uint32_t *)buffer->getBufferStart();
   uint32_t size = (uint32_t)(buffer->getBufferSize());
 
-  coff_file_header *coffHeader =
-      (coff_file_header *)((uint8_t *)buf + dosStubSize + sizeof(PEMagic));
-  pe32_header *peHeader =
-      (pe32_header *)((uint8_t *)coffHeader + sizeof(coff_file_header));
+  pe32_header *peHeader = (pe32_header *)((uint8_t *)buf + coffHeaderOffset +
+                                          sizeof(coff_file_header));
 
   uint64_t sum = 0;
   uint32_t count = size;
@@ -762,6 +759,7 @@ void Writer::run() {
     llvm::TimeTraceScope timeScope("Write PE");
     ScopedTimer t1(ctx.codeLayoutTimer);
 
+    calculateStubDependentSizes();
     if (ctx.config.machine == ARM64X)
       ctx.dynamicRelocs = make<DynamicRelocsChunk>();
     createImportTables();
@@ -1033,6 +1031,17 @@ void Writer::sortSections() {
   if (!ctx.config.order.empty())
     for (auto it : partialSections)
       sortBySectionOrder(it.second->chunks);
+}
+
+void Writer::calculateStubDependentSizes() {
+  if (ctx.config.dosStub)
+    dosStubSize = alignTo(ctx.config.dosStub->getBufferSize(), 8);
+  else
+    dosStubSize = sizeof(dos_header) + sizeof(dosProgram);
+
+  coffHeaderOffset = dosStubSize + sizeof(PEMagic);
+  peHeaderOffset = coffHeaderOffset + sizeof(coff_file_header);
+  dataDirOffset64 = peHeaderOffset + sizeof(pe32plus_header);
 }
 
 // Create output section objects and add them to OutputSections.
@@ -1325,7 +1334,9 @@ void Writer::createExportTable() {
     if (ctx.config.hadExplicitExports)
       Warn(ctx) << "literal .edata sections override exports";
   } else if (!ctx.config.exports.empty()) {
-    for (Chunk *c : edata.chunks)
+    std::vector<Chunk *> edataChunks;
+    createEdataChunks(ctx, edataChunks);
+    for (Chunk *c : edataChunks)
       edataSec->addChunk(c);
   }
   if (!edataSec->chunks.empty()) {
@@ -1668,21 +1679,37 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   // When run under Windows, the loader looks at AddressOfNewExeHeader and uses
   // the PE header instead.
   Configuration *config = &ctx.config;
+
   uint8_t *buf = buffer->getBufferStart();
   auto *dos = reinterpret_cast<dos_header *>(buf);
-  buf += sizeof(dos_header);
-  dos->Magic[0] = 'M';
-  dos->Magic[1] = 'Z';
-  dos->UsedBytesInTheLastPage = dosStubSize % 512;
-  dos->FileSizeInPages = divideCeil(dosStubSize, 512);
-  dos->HeaderSizeInParagraphs = sizeof(dos_header) / 16;
-
-  dos->AddressOfRelocationTable = sizeof(dos_header);
-  dos->AddressOfNewExeHeader = dosStubSize;
 
   // Write DOS program.
-  memcpy(buf, dosProgram, sizeof(dosProgram));
-  buf += sizeof(dosProgram);
+  if (config->dosStub) {
+    memcpy(buf, config->dosStub->getBufferStart(),
+           config->dosStub->getBufferSize());
+    // MS link.exe accepts an invalid `e_lfanew` (AddressOfNewExeHeader) and
+    // updates it automatically. Replicate the same behaviour.
+    dos->AddressOfNewExeHeader = alignTo(config->dosStub->getBufferSize(), 8);
+    // Unlike MS link.exe, LLD accepts non-8-byte-aligned stubs.
+    // In that case, we add zero paddings ourselves.
+    buf += alignTo(config->dosStub->getBufferSize(), 8);
+  } else {
+    buf += sizeof(dos_header);
+    dos->Magic[0] = 'M';
+    dos->Magic[1] = 'Z';
+    dos->UsedBytesInTheLastPage = dosStubSize % 512;
+    dos->FileSizeInPages = divideCeil(dosStubSize, 512);
+    dos->HeaderSizeInParagraphs = sizeof(dos_header) / 16;
+
+    dos->AddressOfRelocationTable = sizeof(dos_header);
+    dos->AddressOfNewExeHeader = dosStubSize;
+
+    memcpy(buf, dosProgram, sizeof(dosProgram));
+    buf += sizeof(dosProgram);
+  }
+
+  // Make sure DOS stub is aligned to 8 bytes at this point
+  assert((buf - buffer->getBufferStart()) % 8 == 0);
 
   // Write PE magic
   memcpy(buf, PEMagic, sizeof(PEMagic));
