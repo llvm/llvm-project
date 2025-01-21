@@ -919,14 +919,12 @@ let isAdd = 1 in {
 }
 
 let isReMaterializable = 1 in {
-let SubtargetPredicate = isGFX1250Plus in {
-let SchedRW = [Write64Bit] in {
+let SubtargetPredicate = isGFX1250Plus, SchedRW = [Write64Bit] in {
 defm V_ADD_U64 : VOP2Inst <"v_add_nc_u64", VOP_I64_I64_I64_ARITH>;
 defm V_SUB_U64 : VOP2Inst <"v_sub_nc_u64", VOP_I64_I64_I64_ARITH>;
-} // End SchedRW = [Write64Bit]
-let SchedRW = [WriteDouble] in
+} // End SubtargetPredicate = isGFX1250Plus, SchedRW = [Write64Bit]
+let SubtargetPredicate = isGFX125xOnly, SchedRW = [WriteDouble] in
 defm V_MUL_U64 : VOP2Inst <"v_mul_u64", VOP_I64_I64_I64, DivergentBinFrag<mul>>;
-} // End SubtargetPredicate = HasGFX1250Insts
 } // End isReMaterializable = 1
 
 } // End isCommutable = 1
@@ -1882,7 +1880,7 @@ defm V_FMAMK_F64 : VOP2Only_Real_MADK64_gfx1250_gfx13<0x23, 0x20>;
 defm V_FMAAK_F64 : VOP2Only_Real_MADK64_gfx1250_gfx13<0x24, 0x21>;
 defm V_ADD_U64 : VOP2_Real_FULL_gfx1250_gfx13<0x28, 0x23>;
 defm V_SUB_U64 : VOP2_Real_FULL_gfx1250_gfx13<0x29, 0x24>;
-defm V_MUL_U64 : VOP2_Real_NO_DPP_gfx1250_gfx13<0x2a, 0x15>;
+defm V_MUL_U64 : VOP2_Real_NO_DPP<GFX1250Gen, 0x2a>;
 
 //===----------------------------------------------------------------------===//
 // GFX11, GFX12, GFX13.

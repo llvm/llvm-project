@@ -294,3 +294,6 @@ v_mad_nc_i64_i32 v[2:3], v4, v7, s[5:6]
 
 v_mad_nc_u64_u32 v[2:3], v4, v7, s[5:6]
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_mul_u64 v[254:255], v[2:3], v[4:5]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

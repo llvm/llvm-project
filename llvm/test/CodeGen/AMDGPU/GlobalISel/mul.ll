@@ -757,7 +757,11 @@ define i64 @v_mul_i64(i64 %num, i64 %den) {
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
-; GFX1300-NEXT:    v_mul_u64_e32 v[0:1], v[0:1], v[2:3]
+; GFX1300-NEXT:    v_mul_hi_u32 v4, v0, v2
+; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1300-NEXT:    v_mad_u32 v3, v0, v3, v4
+; GFX1300-NEXT:    v_mul_lo_u32 v0, v0, v2
+; GFX1300-NEXT:    v_mad_u32 v1, v1, v2, v3
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
   %result = mul i64 %num, %den
   ret i64 %result
