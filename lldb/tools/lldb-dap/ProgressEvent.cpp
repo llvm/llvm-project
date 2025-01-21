@@ -117,9 +117,8 @@ json::Value ProgressEvent::ToJSON() const {
     body.try_emplace("cancellable", false);
   }
 
-  if (m_event_type == progressUpdate) {
+  if (m_event_type == progressUpdate)
     EmplaceSafeString(body, "message", m_message);
-  }
 
   std::string timestamp(llvm::formatv("{0:f9}", m_creation_time.count()));
   EmplaceSafeString(body, "timestamp", timestamp);
@@ -168,11 +167,10 @@ const ProgressEvent &ProgressEventManager::GetMostRecentEvent() const {
   return m_last_update_event ? *m_last_update_event : m_start_event;
 }
 
-void ProgressEventManager::Update(uint64_t progress_id, const char *message,
+void ProgressEventManager::Update(uint64_t progress_id, llvm::StringRef message,
                                   uint64_t completed, uint64_t total) {
-  if (std::optional<ProgressEvent> event =
-          ProgressEvent::Create(progress_id, StringRef(message), completed,
-                                total, &GetMostRecentEvent())) {
+  if (std::optional<ProgressEvent> event = ProgressEvent::Create(
+          progress_id, message, completed, total, &GetMostRecentEvent())) {
     if (event->GetEventType() == progressEnd)
       m_finished = true;
 
@@ -232,7 +230,7 @@ void ProgressEventReporter::Push(uint64_t progress_id, const char *message,
       m_unreported_start_events.push(event_manager);
     }
   } else {
-    it->second->Update(progress_id, message, completed, total);
+    it->second->Update(progress_id, StringRef(message), completed, total);
     if (it->second->Finished())
       m_event_managers.erase(it);
   }
