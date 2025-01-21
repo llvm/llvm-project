@@ -59,148 +59,148 @@ __m256h test_mm256_maskz_cvtx_round2ps_ph(__mmask8 __U, __m256 __A, __m256 __B) 
   return _mm256_maskz_cvtx_round2ps_ph(__U, __A, __B, _MM_FROUND_TO_ZERO | _MM_FROUND_NO_EXC);
 }
 
-__m128i test_mm_cvtbiasph_pbf8(__m128i __A, __m128h __B) {
-  // CHECK-LABEL: @test_mm_cvtbiasph_pbf8(
+__m128i test_mm_cvtbiasph_bf8(__m128i __A, __m128h __B) {
+  // CHECK-LABEL: @test_mm_cvtbiasph_bf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8128(
-  return _mm_cvtbiasph_pbf8(__A, __B);
+  return _mm_cvtbiasph_bf8(__A, __B);
 }
 
-__m128i test_mm_mask_cvtbiasph_pbf8(__m128i __W, __mmask8 __U, __m128i __A, __m128h __B) {
-  // CHECK-LABEL: @test_mm_mask_cvtbiasph_pbf8(
+__m128i test_mm_mask_cvtbiasph_bf8(__m128i __W, __mmask8 __U, __m128i __A, __m128h __B) {
+  // CHECK-LABEL: @test_mm_mask_cvtbiasph_bf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8128(
-  return _mm_mask_cvtbiasph_pbf8(__W, __U, __A, __B);
+  return _mm_mask_cvtbiasph_bf8(__W, __U, __A, __B);
 }
 
-__m128i test_mm_maskz_cvtbiasph_pbf8(__mmask8 __U, __m128i __A, __m128h __B) {
-  // CHECK-LABEL: @test_mm_maskz_cvtbiasph_pbf8(
+__m128i test_mm_maskz_cvtbiasph_bf8(__mmask8 __U, __m128i __A, __m128h __B) {
+  // CHECK-LABEL: @test_mm_maskz_cvtbiasph_bf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8128(
-  return _mm_maskz_cvtbiasph_pbf8(__U, __A, __B);
+  return _mm_maskz_cvtbiasph_bf8(__U, __A, __B);
 }
 
-__m128i test_mm256_cvtbiasph_pbf8(__m256i __A, __m256h __B) {
-  // CHECK-LABEL: @test_mm256_cvtbiasph_pbf8(
+__m128i test_mm256_cvtbiasph_bf8(__m256i __A, __m256h __B) {
+  // CHECK-LABEL: @test_mm256_cvtbiasph_bf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8256(
-  return _mm256_cvtbiasph_pbf8(__A, __B);
+  return _mm256_cvtbiasph_bf8(__A, __B);
 }
 
-__m128i test_mm256_mask_cvtbiasph_pbf8(__m128i __W, __mmask16 __U, __m256i __A, __m256h __B) {
-  // CHECK-LABEL: @test_mm256_mask_cvtbiasph_pbf8(
+__m128i test_mm256_mask_cvtbiasph_bf8(__m128i __W, __mmask16 __U, __m256i __A, __m256h __B) {
+  // CHECK-LABEL: @test_mm256_mask_cvtbiasph_bf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8256(
-  return _mm256_mask_cvtbiasph_pbf8(__W, __U, __A, __B);
+  return _mm256_mask_cvtbiasph_bf8(__W, __U, __A, __B);
 }
 
-__m128i test_mm256_maskz_cvtbiasph_pbf8(__mmask16 __U, __m256i __A, __m256h __B) {
-  // CHECK-LABEL: @test_mm256_maskz_cvtbiasph_pbf8(
+__m128i test_mm256_maskz_cvtbiasph_bf8(__mmask16 __U, __m256i __A, __m256h __B) {
+  // CHECK-LABEL: @test_mm256_maskz_cvtbiasph_bf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8256(
-  return _mm256_maskz_cvtbiasph_pbf8(__U, __A, __B);
+  return _mm256_maskz_cvtbiasph_bf8(__U, __A, __B);
 }
 
-__m128i test_mm_cvtbiassph_pbf8(__m128i __A, __m128h __B) {
-  // CHECK-LABEL: @test_mm_cvtbiassph_pbf8(
+__m128i test_mm_cvtbiassph_bf8(__m128i __A, __m128h __B) {
+  // CHECK-LABEL: @test_mm_cvtbiassph_bf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8s128(
-  return _mm_cvtbiassph_pbf8(__A, __B);
+  return _mm_cvtbiassph_bf8(__A, __B);
 }
 
-__m128i test_mm_mask_cvtbiassph_pbf8(__m128i __W, __mmask8 __U, __m128i __A, __m128h __B) {
-  // CHECK-LABEL: @test_mm_mask_cvtbiassph_pbf8(
+__m128i test_mm_mask_cvtbiassph_bf8(__m128i __W, __mmask8 __U, __m128i __A, __m128h __B) {
+  // CHECK-LABEL: @test_mm_mask_cvtbiassph_bf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8s128(
-  return _mm_mask_cvtbiassph_pbf8(__W, __U, __A, __B);
+  return _mm_mask_cvtbiassph_bf8(__W, __U, __A, __B);
 }
 
-__m128i test_mm_maskz_cvtbiassph_pbf8(__mmask8 __U, __m128i __A, __m128h __B) {
-  // CHECK-LABEL: @test_mm_maskz_cvtbiassph_pbf8(
+__m128i test_mm_maskz_cvtbiassph_bf8(__mmask8 __U, __m128i __A, __m128h __B) {
+  // CHECK-LABEL: @test_mm_maskz_cvtbiassph_bf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8s128(
-  return _mm_maskz_cvtbiassph_pbf8(__U, __A, __B);
+  return _mm_maskz_cvtbiassph_bf8(__U, __A, __B);
 }
 
-__m128i test_mm256_cvtbiassph_pbf8(__m256i __A, __m256h __B) {
-  // CHECK-LABEL: @test_mm256_cvtbiassph_pbf8(
+__m128i test_mm256_cvtbiassph_bf8(__m256i __A, __m256h __B) {
+  // CHECK-LABEL: @test_mm256_cvtbiassph_bf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8s256(
-  return _mm256_cvtbiassph_pbf8(__A, __B);
+  return _mm256_cvtbiassph_bf8(__A, __B);
 }
 
-__m128i test_mm256_mask_cvtbiassph_pbf8(__m128i __W, __mmask16 __U, __m256i __A, __m256h __B) {
-  // CHECK-LABEL: @test_mm256_mask_cvtbiassph_pbf8(
+__m128i test_mm256_mask_cvtbiassph_bf8(__m128i __W, __mmask16 __U, __m256i __A, __m256h __B) {
+  // CHECK-LABEL: @test_mm256_mask_cvtbiassph_bf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8s256(
-  return _mm256_mask_cvtbiassph_pbf8(__W, __U, __A, __B);
+  return _mm256_mask_cvtbiassph_bf8(__W, __U, __A, __B);
 }
 
-__m128i test_mm256_maskz_cvtbiassph_pbf8(__mmask16 __U, __m256i __A, __m256h __B) {
-  // CHECK-LABEL: @test_mm256_maskz_cvtbiassph_pbf8(
+__m128i test_mm256_maskz_cvtbiassph_bf8(__mmask16 __U, __m256i __A, __m256h __B) {
+  // CHECK-LABEL: @test_mm256_maskz_cvtbiassph_bf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2bf8s256(
-  return _mm256_maskz_cvtbiassph_pbf8(__U, __A, __B);
+  return _mm256_maskz_cvtbiassph_bf8(__U, __A, __B);
 }
 
-__m128i test_mm_cvtbiasph_phf8(__m128i __A, __m128h __B) {
-  // CHECK-LABEL: @test_mm_cvtbiasph_phf8(
+__m128i test_mm_cvtbiasph_hf8(__m128i __A, __m128h __B) {
+  // CHECK-LABEL: @test_mm_cvtbiasph_hf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2hf8128(
-  return _mm_cvtbiasph_phf8(__A, __B);
+  return _mm_cvtbiasph_hf8(__A, __B);
 }
 
-__m128i test_mm_mask_cvtbiasph_phf8(__m128i __W, __mmask8 __U, __m128i __A, __m128h __B) {
-  // CHECK-LABEL: @test_mm_mask_cvtbiasph_phf8(
+__m128i test_mm_mask_cvtbiasph_hf8(__m128i __W, __mmask8 __U, __m128i __A, __m128h __B) {
+  // CHECK-LABEL: @test_mm_mask_cvtbiasph_hf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2hf8128(
-  return _mm_mask_cvtbiasph_phf8(__W, __U, __A, __B);
+  return _mm_mask_cvtbiasph_hf8(__W, __U, __A, __B);
 }
 
-__m128i test_mm_maskz_cvtbiasph_phf8(__mmask8 __U, __m128i __A, __m128h __B) {
-  // CHECK-LABEL: @test_mm_maskz_cvtbiasph_phf8(
+__m128i test_mm_maskz_cvtbiasph_hf8(__mmask8 __U, __m128i __A, __m128h __B) {
+  // CHECK-LABEL: @test_mm_maskz_cvtbiasph_hf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2hf8128(
-  return _mm_maskz_cvtbiasph_phf8(__U, __A, __B);
+  return _mm_maskz_cvtbiasph_hf8(__U, __A, __B);
 }
 
-__m128i test_mm256_cvtbiasph_phf8(__m256i __A, __m256h __B) {
-  // CHECK-LABEL: @test_mm256_cvtbiasph_phf8(
+__m128i test_mm256_cvtbiasph_hf8(__m256i __A, __m256h __B) {
+  // CHECK-LABEL: @test_mm256_cvtbiasph_hf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2hf8256(
-  return _mm256_cvtbiasph_phf8(__A, __B);
+  return _mm256_cvtbiasph_hf8(__A, __B);
 }
 
-__m128i test_mm256_mask_cvtbiasph_phf8(__m128i __W, __mmask16 __U, __m256i __A, __m256h __B) {
-  // CHECK-LABEL: @test_mm256_mask_cvtbiasph_phf8(
+__m128i test_mm256_mask_cvtbiasph_hf8(__m128i __W, __mmask16 __U, __m256i __A, __m256h __B) {
+  // CHECK-LABEL: @test_mm256_mask_cvtbiasph_hf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2hf8256(
-  return _mm256_mask_cvtbiasph_phf8(__W, __U, __A, __B);
+  return _mm256_mask_cvtbiasph_hf8(__W, __U, __A, __B);
 }
 
-__m128i test_mm256_maskz_cvtbiasph_phf8(__mmask16 __U, __m256i __A, __m256h __B) {
-  // CHECK-LABEL: @test_mm256_maskz_cvtbiasph_phf8(
+__m128i test_mm256_maskz_cvtbiasph_hf8(__mmask16 __U, __m256i __A, __m256h __B) {
+  // CHECK-LABEL: @test_mm256_maskz_cvtbiasph_hf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2hf8256(
-  return _mm256_maskz_cvtbiasph_phf8(__U, __A, __B);
+  return _mm256_maskz_cvtbiasph_hf8(__U, __A, __B);
 }
 
-__m128i test_mm_cvtbiassph_phf8(__m128i __A, __m128h __B) {
-  // CHECK-LABEL: @test_mm_cvtbiassph_phf8(
+__m128i test_mm_cvtbiassph_hf8(__m128i __A, __m128h __B) {
+  // CHECK-LABEL: @test_mm_cvtbiassph_hf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2hf8s128(
-  return _mm_cvtbiassph_phf8(__A, __B);
+  return _mm_cvtbiassph_hf8(__A, __B);
 }
 
-__m128i test_mm_mask_cvtbiassph_phf8(__m128i __W, __mmask8 __U, __m128i __A, __m128h __B) {
-  // CHECK-LABEL: @test_mm_mask_cvtbiassph_phf8(
+__m128i test_mm_mask_cvtbiassph_hf8(__m128i __W, __mmask8 __U, __m128i __A, __m128h __B) {
+  // CHECK-LABEL: @test_mm_mask_cvtbiassph_hf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2hf8s128(
-  return _mm_mask_cvtbiassph_phf8(__W, __U, __A, __B);
+  return _mm_mask_cvtbiassph_hf8(__W, __U, __A, __B);
 }
 
-__m128i test_mm_maskz_cvtbiassph_phf8(__mmask8 __U, __m128i __A, __m128h __B) {
-  // CHECK-LABEL: @test_mm_maskz_cvtbiassph_phf8(
+__m128i test_mm_maskz_cvtbiassph_hf8(__mmask8 __U, __m128i __A, __m128h __B) {
+  // CHECK-LABEL: @test_mm_maskz_cvtbiassph_hf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2hf8s128(
-  return _mm_maskz_cvtbiassph_phf8(__U, __A, __B);
+  return _mm_maskz_cvtbiassph_hf8(__U, __A, __B);
 }
 
-__m128i test_mm256_cvtbiassph_phf8(__m256i __A, __m256h __B) {
-  // CHECK-LABEL: @test_mm256_cvtbiassph_phf8(
+__m128i test_mm256_cvtbiassph_hf8(__m256i __A, __m256h __B) {
+  // CHECK-LABEL: @test_mm256_cvtbiassph_hf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2hf8s256(
-  return _mm256_cvtbiassph_phf8(__A, __B);
+  return _mm256_cvtbiassph_hf8(__A, __B);
 }
 
-__m128i test_mm256_mask_cvtbiassph_phf8(__m128i __W, __mmask16 __U, __m256i __A, __m256h __B) {
-  // CHECK-LABEL: @test_mm256_mask_cvtbiassph_phf8(
+__m128i test_mm256_mask_cvtbiassph_hf8(__m128i __W, __mmask16 __U, __m256i __A, __m256h __B) {
+  // CHECK-LABEL: @test_mm256_mask_cvtbiassph_hf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2hf8s256(
-  return _mm256_mask_cvtbiassph_phf8(__W, __U, __A, __B);
+  return _mm256_mask_cvtbiassph_hf8(__W, __U, __A, __B);
 }
 
-__m128i test_mm256_maskz_cvtbiassph_phf8(__mmask16 __U, __m256i __A, __m256h __B) {
-  // CHECK-LABEL: @test_mm256_maskz_cvtbiassph_phf8(
+__m128i test_mm256_maskz_cvtbiassph_hf8(__mmask16 __U, __m256i __A, __m256h __B) {
+  // CHECK-LABEL: @test_mm256_maskz_cvtbiassph_hf8(
   // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasph2hf8s256(
-  return _mm256_maskz_cvtbiassph_phf8(__U, __A, __B);
+  return _mm256_maskz_cvtbiassph_hf8(__U, __A, __B);
 }
 
 __m128i test_mm_cvt2ph_bf8(__m128h __A, __m128h __B) {
@@ -559,54 +559,54 @@ __m128i test_mm256_maskz_cvtsph_hf8(__mmask16 __A, __m256h __B) {
   return _mm256_maskz_cvtsph_hf8(__A, __B);
 }
 
-__m256h test_mm256_cvtpbf8_ph(__m128i A) {
-  // CHECK-LABEL: @test_mm256_cvtpbf8_ph
+__m256h test_mm256_cvtbf8_ph(__m128i A) {
+  // CHECK-LABEL: @test_mm256_cvtbf8_ph
   // CHECK: sext <16 x i8> %{{.*}} to <16 x i16>
   // CHECK: @llvm.x86.avx2.pslli.w
   // CHECK: ret <16 x half> %{{.*}}
-  return _mm256_cvtpbf8_ph(A);
+  return _mm256_cvtbf8_ph(A);
 }
 
-__m256h test_mm256_mask_cvtpbf8_ph(__m256h S, __mmask16 M, __m128i A) {
-  // CHECK-LABEL: @test_mm256_mask_cvtpbf8_ph
+__m256h test_mm256_mask_cvtbf8_ph(__m256h S, __mmask16 M, __m128i A) {
+  // CHECK-LABEL: @test_mm256_mask_cvtbf8_ph
   // CHECK: sext <16 x i8> %{{.*}} to <16 x i16>
   // CHECK: @llvm.x86.avx2.pslli.w
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   // CHECK: ret <16 x half> %{{.*}}
-  return _mm256_mask_cvtpbf8_ph(S, M, A);
+  return _mm256_mask_cvtbf8_ph(S, M, A);
 }
 
-__m256h test_mm256_maskz_cvtpbf8_ph(__mmask16 M, __m128i A) {
-  // CHECK-LABEL: @test_mm256_maskz_cvtpbf8_ph
+__m256h test_mm256_maskz_cvtbf8_ph(__mmask16 M, __m128i A) {
+  // CHECK-LABEL: @test_mm256_maskz_cvtbf8_ph
   // CHECK: sext <16 x i8> %{{.*}} to <16 x i16>
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   // CHECK: @llvm.x86.avx2.pslli.w
   // CHECK: ret <16 x half> %{{.*}}
-  return _mm256_maskz_cvtpbf8_ph(M, A);
+  return _mm256_maskz_cvtbf8_ph(M, A);
 }
 
-__m128h test_mm_cvtpbf8_ph(__m128i A) {
-  // CHECK-LABEL: @test_mm_cvtpbf8_ph
+__m128h test_mm_cvtbf8_ph(__m128i A) {
+  // CHECK-LABEL: @test_mm_cvtbf8_ph
   // CHECK: sext <8 x i8> %{{.*}} to <8 x i16>
   // CHECK: @llvm.x86.sse2.pslli.w
   // CHECK: ret <8 x half> %{{.*}}
-  return _mm_cvtpbf8_ph(A);
+  return _mm_cvtbf8_ph(A);
 }
 
-__m128h test_mm_mask_cvtpbf8_ph(__m128h S, __mmask8 M, __m128i A) {
-  // CHECK-LABEL: @test_mm_mask_cvtpbf8_ph
+__m128h test_mm_mask_cvtbf8_ph(__m128h S, __mmask8 M, __m128i A) {
+  // CHECK-LABEL: @test_mm_mask_cvtbf8_ph
   // CHECK: sext <8 x i8> %{{.*}} to <8 x i16>
   // CHECK: @llvm.x86.sse2.pslli.w
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
   // CHECK: ret <8 x half> %{{.*}}
-  return _mm_mask_cvtpbf8_ph(S, M, A);
+  return _mm_mask_cvtbf8_ph(S, M, A);
 }
 
-__m128h test_mm_maskz_cvtpbf8_ph(__mmask8 M, __m128i A) {
-  // CHECK-LABEL: @test_mm_maskz_cvtpbf8_ph
+__m128h test_mm_maskz_cvtbf8_ph(__mmask8 M, __m128i A) {
+  // CHECK-LABEL: @test_mm_maskz_cvtbf8_ph
   // CHECK: sext <8 x i8> %{{.*}} to <8 x i16>
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
   // CHECK: @llvm.x86.sse2.pslli.w
   // CHECK: ret <8 x half> %{{.*}}
-  return _mm_maskz_cvtpbf8_ph(M, A);
+  return _mm_maskz_cvtbf8_ph(M, A);
 }
