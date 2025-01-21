@@ -376,6 +376,28 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
     mlir::Value loadedBox = builder.loadIfRef(loc, moldArg);
     hlfir::Entity source = hlfir::Entity{loadedBox};
 
+    // Special case for (possibly allocatable) arrays of polymorphic types
+    // e.g. !fir.class<!fir.heap<!fir.array<?x!fir.type<>>>>
+    if (source.isPolymorphic()) {
+      fir::ShapeShiftOp shape = getShapeShift(builder, loc, source);
+      mlir::Type arrayType = source.getElementOrSequenceType();
+      mlir::Value allocatedArray = builder.create<fir::AllocMemOp>(
+          loc, arrayType, /*typeparams=*/mlir::ValueRange{},
+          shape.getExtents());
+      mlir::Value firClass = builder.create<fir::EmboxOp>(
+          loc, source.getType(), allocatedArray, shape);
+      initializeIfDerivedTypeBox(
+          builder, loc, firClass, source, needsInitialization,
+          /*isFirstprivate=*/kind == DeclOperationKind::FirstPrivate);
+      builder.create<fir::StoreOp>(loc, firClass, allocatedPrivVarArg);
+      if (ifUnallocated)
+        builder.setInsertionPointAfter(ifUnallocated);
+      yield(allocatedPrivVarArg);
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      createCleanupRegion(converter, loc, argType, cleanupRegion, sym);
+      return;
+    }
+
     // Allocating on the heap in case the whole reduction is nested inside of a
     // loop
     // TODO: compare performance here to using allocas - this could be made to

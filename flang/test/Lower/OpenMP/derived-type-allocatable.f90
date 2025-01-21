@@ -13,6 +13,10 @@ module m1
 
 contains
 
+!CHECK-LABEL: omp.private {type = private} @_QMm1Ftest_class_allocatable_array
+!CHECK:       fir.call @_FortranAInitialize
+!CHECK:       omp.yield
+
 !CHECK-LABEL: omp.private {type = private} @_QMm1Ftest_class_allocatable
 !CHECK:       fir.call @_FortranAInitialize
 !CHECK:       omp.yield
@@ -131,6 +135,16 @@ contains
       integer :: i = 1
     end type
     class(needs_init), allocatable :: a
+
+    !$omp parallel private(a)
+    !$omp end parallel
+  end subroutine
+
+  subroutine test_class_allocatable_array()
+    type needs_init
+      integer :: i = 1
+    end type
+    class(needs_init), allocatable :: a(:)
 
     !$omp parallel private(a)
     !$omp end parallel
