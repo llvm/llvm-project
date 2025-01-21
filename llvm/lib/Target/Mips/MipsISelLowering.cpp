@@ -2146,6 +2146,14 @@ SDValue MipsTargetLowering::lowerGlobalAddress(SDValue Op,
   GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
   const GlobalValue *GV = N->getGlobal();
 
+  if (GV->hasDLLImportStorageClass()) {
+    assert(Subtarget.isTargetWindows() &&
+           "Windows is the only supported COFF target");
+    return getDllimportVariable(
+        N, SDLoc(N), Ty, DAG, DAG.getEntryNode(),
+        MachinePointerInfo::getGOT(DAG.getMachineFunction()));
+  }
+
   if (!isPositionIndependent()) {
     const MipsTargetObjectFile *TLOF =
         static_cast<const MipsTargetObjectFile *>(
@@ -3501,7 +3509,14 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
-    if (IsPIC) {
+    if (Subtarget.isTargetCOFF() &&
+        G->getGlobal()->hasDLLImportStorageClass()) {
+      assert(Subtarget.isTargetWindows() &&
+             "Windows is the only supported COFF target");
+      auto PtrInfo = MachinePointerInfo();
+      Callee = DAG.getLoad(Ty, DL, Chain,
+                           getDllimportSymbol(G, SDLoc(G), Ty, DAG), PtrInfo);
+    } else if (IsPIC) {
       const GlobalValue *Val = G->getGlobal();
       InternalLinkage = Val->hasInternalLinkage();
 

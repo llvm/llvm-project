@@ -129,7 +129,7 @@ static bool staticallyOutOfBounds(OpType op) {
     return false;
   int64_t offset;
   SmallVector<int64_t> strides;
-  if (failed(getStridesAndOffset(bufferType, strides, offset)))
+  if (failed(bufferType.getStridesAndOffset(strides, offset)))
     return false;
   int64_t result = offset + op.getIndexOffset().value_or(0);
   if (op.getSgprOffset()) {
