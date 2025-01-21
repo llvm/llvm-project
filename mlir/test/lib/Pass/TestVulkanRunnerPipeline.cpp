@@ -68,12 +68,11 @@ void buildTestVulkanRunnerPipeline(OpPassManager &passManager,
     passManager.addPass(createFinalizeMemRefToLLVMConversionPass());
     passManager.nest<func::FuncOp>().addPass(
         LLVM::createRequestCWrappersPass());
-    // vulkan-runtime-wrappers.cpp uses the non-bare-pointer calling convention,
-    // and the type check is needed to prevent accidental ABI mismatches.
+    // vulkan-runtime-wrappers.cpp requires these calling convention options.
     GpuToLLVMConversionPassOptions opt;
     opt.hostBarePtrCallConv = false;
-    opt.kernelBarePtrCallConv = false;
-    opt.typeCheckKernelArgs = true;
+    opt.kernelBarePtrCallConv = true;
+    opt.kernelIntersperseSizeCallConv = true;
     passManager.addPass(createGpuToLLVMConversionPass(opt));
   }
 }
