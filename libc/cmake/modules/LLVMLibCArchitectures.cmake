@@ -216,6 +216,27 @@ if (LIBC_TARGET_OS_IS_WINDOWS AND LLVM_LIBC_FULL_BUILD)
   message(FATAL_ERROR "Windows does not support full mode build.")
 endif ()
 
+if (LIBC_TARGET_OS_IS_LINUX)
+  if (NOT LLVM_LIBC_USE_HOST_KERNEL_HEADERS AND NOT LIBC_KERNEL_HEADERS STREQUAL "")
+    message(FATAL_ERROR "MUST specify either LIBC_KERNEL_HEADERS or LLVM_LIBC_USE_HOST_KERNEL_HEADERS")
+  endif()
+  if (LLVM_LIBC_USE_HOST_KERNEL_HEADERS AND NOT LIBC_KERNEL_HEADERS STREQUAL "")
+    message(FATAL_ERROR "LLVM_LIBC_USE_HOST_KERNEL_HEADERS and LIBC_USE_HOST_KERNEL_HEADERS are mutually exclusive")
+  endif()
+  if(LIBC_TARGET_TRIPLE AND LLVM_LIBC_USE_HOST_KERNEL_HEADERS)
+    # This is because the syscall numbers are frequently different between
+    # different target architectures. Code may compile, but you'll get spooky
+    # runtime failures.
+    message(FATAL_ERROR "LLVM_LIBC_USE_HOST_KERNEL_HEADERS should not be set when using LIBC_TARGET_TRIPLE, set LIBC_KERNEL_HEADERS instead")
+  endif()
+  if (NOT LIBC_KERNEL_HEADERS STREQUAL "" AND NOT IS_DIRECTORY LIBC_KERNEL_HEADERS)
+    message(FATAL_ERROR "LIBC_KERNEL_HEADERS should be a path to an existing directory")
+  endif()
+  if (LLVM_LIBC_USE_HOST_KERNEL_HEADERS)
+    set(LIBC_KERNEL_HEADERS "/usr/include" CACHE STRING "Path to Linux kernel headers" FORCE)
+  endif()
+endif()
+
 
 message(STATUS
         "Building libc for ${LIBC_TARGET_ARCHITECTURE} on ${LIBC_TARGET_OS} with

@@ -46,7 +46,11 @@ set(LIBC_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 set(LIBC_ENABLE_USE_BY_CLANG OFF CACHE BOOL "Whether or not to place libc in a build directory findable by a just built clang")
 
-set(LIBC_KERNEL_HEADERS "/usr/include" CACHE STRING "Path to Linux kernel headers")
+# LLVM_LIBC_USE_HOST_KERNEL_HEADERS is brittle, and frowned upon (prefer
+# setting LIBC_KERNEL_HEADERS), but is simpler from a hello world linux host
+# build.
+set(LLVM_LIBC_USE_HOST_KERNEL_HEADERS OFF CACHE BOOL "Add /usr/include to the header seach path")
+set(LIBC_KERNEL_HEADERS "" CACHE STRING "Path to Linux kernel headers")
 
 # Defining a global namespace to enclose all libc functions.
 set(default_namespace "__llvm_libc")
