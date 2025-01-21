@@ -28441,6 +28441,11 @@ TEST_F(FormatTest, ShortNamespacesOption) {
                "class bar;\n"
                "}",
                Style);
+  verifyFormat("namespace foo { class bar; }",
+               "namespace foo {\n"
+               "class bar;\n"
+               "}",
+               Style);
 
   verifyFormat("namespace foo\n"
                "{\n"
@@ -28448,6 +28453,11 @@ TEST_F(FormatTest, ShortNamespacesOption) {
                "{ // comment\n"
                "class baz;\n"
                "}\n"
+               "}\n",
+               Style);
+  verifyFormat("namespace foo // comment\n"
+               "{\n"
+               "class baz;\n"
                "}\n",
                Style);
 }
