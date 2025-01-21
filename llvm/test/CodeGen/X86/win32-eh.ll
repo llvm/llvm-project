@@ -73,12 +73,12 @@ catch:
 ; CHECK-NEXT: pushl %esi
 ; CHECK-NEXT: subl ${{[0-9]+}}, %esp
 ; CHECK-NEXT: movl %ebp, %eax
-; CHECK-NEXT: movl %esp, -36(%ebp)
-; CHECK-NEXT: movl $-2, -16(%ebp)
 ; CHECK-NEXT: movl $L__ehtable$use_except_handler4, %[[lsda:[^ ,]*]]
 ; CHECK-NEXT: movl ___security_cookie, %[[seccookie:[^ ,]*]]
 ; CHECK-NEXT: xorl %[[seccookie]], %[[lsda]]
 ; CHECK-NEXT: movl %[[lsda]], -20(%ebp)
+; CHECK-NEXT: movl %esp, -36(%ebp)
+; CHECK-NEXT: movl $-2, -16(%ebp)
 ; CHECK-NEXT: xorl %[[seccookie]], %[[tmp1:[^ ,]*]]
 ; CHECK-NEXT: movl %[[tmp1]], -40(%ebp)
 ; CHECK-NEXT: leal -28(%ebp), %[[node:[^ ,]*]]
@@ -130,12 +130,12 @@ catch:
 ; CHECK-NEXT: pushl %esi
 ; CHECK-NEXT: subl ${{[0-9]+}}, %esp
 ; CHECK-NEXT: movl %ebp, %[[ehguard:[^ ,]*]]
-; CHECK-NEXT: movl %esp, -36(%ebp)
-; CHECK-NEXT: movl $-2, -16(%ebp)
 ; CHECK-NEXT: movl $L__ehtable$use_except_handler4_ssp, %[[lsda:[^ ,]*]]
 ; CHECK-NEXT: movl ___security_cookie, %[[seccookie:[^ ,]*]]
 ; CHECK-NEXT: xorl %[[seccookie]], %[[lsda]]
 ; CHECK-NEXT: movl %[[lsda]], -20(%ebp)
+; CHECK-NEXT: movl %esp, -36(%ebp)
+; CHECK-NEXT: movl $-2, -16(%ebp)
 ; CHECK-NEXT: xorl %[[seccookie]], %[[ehguard]]
 ; CHECK-NEXT: movl %[[ehguard]], -40(%ebp)
 ; CHECK-NEXT: leal -28(%ebp), %[[node:[^ ,]*]]
@@ -146,7 +146,7 @@ catch:
 ; CHECK-NEXT: movl $0, -16(%ebp)
 ; CHECK-NEXT: calll _may_throw_or_crash
 ; CHECK: movl -28(%ebp), %[[next:[^ ,]*]]
-; CHECK-NEXT: movl %[[next]], %fs:0   
+; CHECK-NEXT: movl %[[next]], %fs:0
 ; CHECK: retl
 ; CHECK-NEXT: [[catch:[^ ,]*]]: # %catch{{$}}
 
@@ -156,7 +156,7 @@ catch:
 ; CHECK-LABEL: L__ehtable$use_except_handler4_ssp:
 ; CHECK-NEXT:  .long   -2
 ; CHECK-NEXT:  .long   0
-; CHECK-NEXT:  .long   -40  
+; CHECK-NEXT:  .long   -40
 ; CHECK-NEXT:  .long   0
 ; CHECK-NEXT:  .long   -2
 ; CHECK-NEXT:  .long   _catchall_filt

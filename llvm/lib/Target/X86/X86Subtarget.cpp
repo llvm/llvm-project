@@ -54,6 +54,8 @@ static cl::opt<bool>
 X86EarlyIfConv("x86-early-ifcvt", cl::Hidden,
                cl::desc("Enable early if-conversion on X86"));
 
+static cl::opt<bool> UseAA("x86-use-aa", cl::init(true),
+                           cl::desc("Enable the use of AA during codegen."));
 
 /// Classify a blockaddress reference for the current subtarget according to how
 /// we should reference it in a non-pcrel context.
@@ -319,6 +321,8 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   else if (Prefer256Bit)
     PreferVectorWidth = 256;
 }
+
+bool X86Subtarget::useAA() const { return UseAA; }
 
 X86Subtarget &X86Subtarget::initializeSubtargetDependencies(StringRef CPU,
                                                             StringRef TuneCPU,

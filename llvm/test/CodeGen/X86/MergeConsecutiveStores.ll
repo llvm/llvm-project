@@ -402,9 +402,9 @@ define void @merge_loads_i16(i32 %count, ptr noalias nocapture %q, ptr noalias n
 define void @no_merge_loads(i32 %count, ptr noalias nocapture %q, ptr noalias nocapture %p) nounwind uwtable noinline ssp {
 ; X86-BWON-LABEL: no_merge_loads:
 ; X86-BWON:       # %bb.0:
-; X86-BWON-NEXT:    pushl %ebx
+; X86-BWON-NEXT:    pushl %esi
 ; X86-BWON-NEXT:    .cfi_def_cfa_offset 8
-; X86-BWON-NEXT:    .cfi_offset %ebx, -8
+; X86-BWON-NEXT:    .cfi_offset %esi, -8
 ; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BWON-NEXT:    testl %eax, %eax
 ; X86-BWON-NEXT:    jle .LBB5_3
@@ -414,23 +414,21 @@ define void @no_merge_loads(i32 %count, ptr noalias nocapture %q, ptr noalias no
 ; X86-BWON-NEXT:    .p2align 4
 ; X86-BWON-NEXT:  .LBB5_2: # %a4
 ; X86-BWON-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-BWON-NEXT:    movzbl (%edx), %ebx
-; X86-BWON-NEXT:    movb %bl, (%ecx)
-; X86-BWON-NEXT:    movzbl 1(%edx), %ebx
-; X86-BWON-NEXT:    movb %bl, 1(%ecx)
+; X86-BWON-NEXT:    movzwl (%edx), %esi
+; X86-BWON-NEXT:    movw %si, (%ecx)
 ; X86-BWON-NEXT:    addl $8, %ecx
 ; X86-BWON-NEXT:    decl %eax
 ; X86-BWON-NEXT:    jne .LBB5_2
 ; X86-BWON-NEXT:  .LBB5_3: # %._crit_edge
-; X86-BWON-NEXT:    popl %ebx
+; X86-BWON-NEXT:    popl %esi
 ; X86-BWON-NEXT:    .cfi_def_cfa_offset 4
 ; X86-BWON-NEXT:    retl
 ;
 ; X86-BWOFF-LABEL: no_merge_loads:
 ; X86-BWOFF:       # %bb.0:
-; X86-BWOFF-NEXT:    pushl %ebx
+; X86-BWOFF-NEXT:    pushl %esi
 ; X86-BWOFF-NEXT:    .cfi_def_cfa_offset 8
-; X86-BWOFF-NEXT:    .cfi_offset %ebx, -8
+; X86-BWOFF-NEXT:    .cfi_offset %esi, -8
 ; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BWOFF-NEXT:    testl %eax, %eax
 ; X86-BWOFF-NEXT:    jle .LBB5_3
@@ -440,15 +438,13 @@ define void @no_merge_loads(i32 %count, ptr noalias nocapture %q, ptr noalias no
 ; X86-BWOFF-NEXT:    .p2align 4
 ; X86-BWOFF-NEXT:  .LBB5_2: # %a4
 ; X86-BWOFF-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-BWOFF-NEXT:    movb (%edx), %bl
-; X86-BWOFF-NEXT:    movb %bl, (%ecx)
-; X86-BWOFF-NEXT:    movb 1(%edx), %bl
-; X86-BWOFF-NEXT:    movb %bl, 1(%ecx)
+; X86-BWOFF-NEXT:    movw (%edx), %si
+; X86-BWOFF-NEXT:    movw %si, (%ecx)
 ; X86-BWOFF-NEXT:    addl $8, %ecx
 ; X86-BWOFF-NEXT:    decl %eax
 ; X86-BWOFF-NEXT:    jne .LBB5_2
 ; X86-BWOFF-NEXT:  .LBB5_3: # %._crit_edge
-; X86-BWOFF-NEXT:    popl %ebx
+; X86-BWOFF-NEXT:    popl %esi
 ; X86-BWOFF-NEXT:    .cfi_def_cfa_offset 4
 ; X86-BWOFF-NEXT:    retl
 ;
@@ -459,10 +455,8 @@ define void @no_merge_loads(i32 %count, ptr noalias nocapture %q, ptr noalias no
 ; X64-BWON-NEXT:    .p2align 4
 ; X64-BWON-NEXT:  .LBB5_1: # %a4
 ; X64-BWON-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-BWON-NEXT:    movzbl (%rsi), %eax
-; X64-BWON-NEXT:    movb %al, (%rdx)
-; X64-BWON-NEXT:    movzbl 1(%rsi), %eax
-; X64-BWON-NEXT:    movb %al, 1(%rdx)
+; X64-BWON-NEXT:    movzwl (%rsi), %eax
+; X64-BWON-NEXT:    movw %ax, (%rdx)
 ; X64-BWON-NEXT:    addq $8, %rdx
 ; X64-BWON-NEXT:    decl %edi
 ; X64-BWON-NEXT:    jne .LBB5_1
@@ -476,10 +470,8 @@ define void @no_merge_loads(i32 %count, ptr noalias nocapture %q, ptr noalias no
 ; X64-BWOFF-NEXT:    .p2align 4
 ; X64-BWOFF-NEXT:  .LBB5_1: # %a4
 ; X64-BWOFF-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-BWOFF-NEXT:    movb (%rsi), %al
-; X64-BWOFF-NEXT:    movb %al, (%rdx)
-; X64-BWOFF-NEXT:    movb 1(%rsi), %al
-; X64-BWOFF-NEXT:    movb %al, 1(%rdx)
+; X64-BWOFF-NEXT:    movw (%rsi), %ax
+; X64-BWOFF-NEXT:    movw %ax, (%rdx)
 ; X64-BWOFF-NEXT:    addq $8, %rdx
 ; X64-BWOFF-NEXT:    decl %edi
 ; X64-BWOFF-NEXT:    jne .LBB5_1
@@ -858,26 +850,26 @@ define void @MergeLoadStoreBaseIndexOffsetComplicated(ptr %a, ptr %b, ptr %c, i6
 ; X86-BWON-NEXT:    .cfi_offset %edi, -16
 ; X86-BWON-NEXT:    .cfi_offset %ebx, -12
 ; X86-BWON-NEXT:    .cfi_offset %ebp, -8
-; X86-BWON-NEXT:    xorl %eax, %eax
-; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-BWON-NEXT:    xorl %esi, %esi
 ; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-BWON-NEXT:    xorl %ebp, %ebp
 ; X86-BWON-NEXT:    .p2align 4
 ; X86-BWON-NEXT:  .LBB10_1: # =>This Inner Loop Header: Depth=1
 ; X86-BWON-NEXT:    movsbl (%edi), %ecx
-; X86-BWON-NEXT:    movzbl (%esi,%ecx), %edx
-; X86-BWON-NEXT:    movzbl 1(%esi,%ecx), %ecx
-; X86-BWON-NEXT:    movb %dl, (%ebx,%eax)
-; X86-BWON-NEXT:    movl %eax, %edx
-; X86-BWON-NEXT:    orl $1, %edx
-; X86-BWON-NEXT:    movb %cl, (%ebx,%edx)
+; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BWON-NEXT:    movzbl (%eax,%ecx), %edx
+; X86-BWON-NEXT:    movzbl 1(%eax,%ecx), %ecx
+; X86-BWON-NEXT:    movl %esi, %eax
+; X86-BWON-NEXT:    orl $1, %eax
+; X86-BWON-NEXT:    movb %cl, (%ebx,%eax)
+; X86-BWON-NEXT:    movb %dl, (%ebx,%esi)
 ; X86-BWON-NEXT:    incl %edi
-; X86-BWON-NEXT:    addl $2, %eax
+; X86-BWON-NEXT:    addl $2, %esi
 ; X86-BWON-NEXT:    adcl $0, %ebp
-; X86-BWON-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; X86-BWON-NEXT:    movl %ebp, %ecx
-; X86-BWON-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
+; X86-BWON-NEXT:    cmpl {{[0-9]+}}(%esp), %esi
+; X86-BWON-NEXT:    movl %ebp, %eax
+; X86-BWON-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
 ; X86-BWON-NEXT:    jl .LBB10_1
 ; X86-BWON-NEXT:  # %bb.2:
 ; X86-BWON-NEXT:    popl %esi
@@ -904,26 +896,26 @@ define void @MergeLoadStoreBaseIndexOffsetComplicated(ptr %a, ptr %b, ptr %c, i6
 ; X86-BWOFF-NEXT:    .cfi_offset %edi, -16
 ; X86-BWOFF-NEXT:    .cfi_offset %ebx, -12
 ; X86-BWOFF-NEXT:    .cfi_offset %ebp, -8
-; X86-BWOFF-NEXT:    xorl %eax, %eax
-; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-BWOFF-NEXT:    xorl %esi, %esi
 ; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-BWOFF-NEXT:    xorl %ebp, %ebp
 ; X86-BWOFF-NEXT:    .p2align 4
 ; X86-BWOFF-NEXT:  .LBB10_1: # =>This Inner Loop Header: Depth=1
 ; X86-BWOFF-NEXT:    movsbl (%edi), %ecx
-; X86-BWOFF-NEXT:    movb (%esi,%ecx), %dl
-; X86-BWOFF-NEXT:    movb 1(%esi,%ecx), %cl
-; X86-BWOFF-NEXT:    movb %dl, (%ebx,%eax)
-; X86-BWOFF-NEXT:    movl %eax, %edx
-; X86-BWOFF-NEXT:    orl $1, %edx
-; X86-BWOFF-NEXT:    movb %cl, (%ebx,%edx)
+; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BWOFF-NEXT:    movb (%eax,%ecx), %dl
+; X86-BWOFF-NEXT:    movb 1(%eax,%ecx), %cl
+; X86-BWOFF-NEXT:    movl %esi, %eax
+; X86-BWOFF-NEXT:    orl $1, %eax
+; X86-BWOFF-NEXT:    movb %cl, (%ebx,%eax)
+; X86-BWOFF-NEXT:    movb %dl, (%ebx,%esi)
 ; X86-BWOFF-NEXT:    incl %edi
-; X86-BWOFF-NEXT:    addl $2, %eax
+; X86-BWOFF-NEXT:    addl $2, %esi
 ; X86-BWOFF-NEXT:    adcl $0, %ebp
-; X86-BWOFF-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
-; X86-BWOFF-NEXT:    movl %ebp, %ecx
-; X86-BWOFF-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
+; X86-BWOFF-NEXT:    cmpl {{[0-9]+}}(%esp), %esi
+; X86-BWOFF-NEXT:    movl %ebp, %eax
+; X86-BWOFF-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
 ; X86-BWOFF-NEXT:    jl .LBB10_1
 ; X86-BWOFF-NEXT:  # %bb.2:
 ; X86-BWOFF-NEXT:    popl %esi

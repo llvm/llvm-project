@@ -171,11 +171,11 @@ declare void @llvm.memcpy.p0.p0.i32(ptr nocapture writeonly, ptr nocapture reado
 define x86_vectorcallcc void @test_mixed_7(ptr noalias sret(%struct.HVA5) %agg.result) {
 ; CHECK-LABEL: test_mixed_7@@0
 ; X64:         mov{{[ql]}}	%rcx, %rax
-; CHECK:       movaps	%xmm{{[0-9]}}, 64(%{{rcx|eax}})
-; CHECK:       movaps	%xmm{{[0-9]}}, 48(%{{rcx|eax}})
-; CHECK:       movaps	%xmm{{[0-9]}}, 32(%{{rcx|eax}})
-; CHECK:       movaps	%xmm{{[0-9]}}, 16(%{{rcx|eax}})
 ; CHECK:       movaps	%xmm{{[0-9]}}, (%{{rcx|eax}})
+; CHECK:       movaps	%xmm{{[0-9]}}, 16(%{{rcx|eax}})
+; CHECK:       movaps	%xmm{{[0-9]}}, 32(%{{rcx|eax}})
+; CHECK:       movaps	%xmm{{[0-9]}}, 48(%{{rcx|eax}})
+; CHECK:       movaps	%xmm{{[0-9]}}, 64(%{{rcx|eax}})
 ; CHECK:       ret{{[ql]}}
 entry:
   %a = alloca %struct.HVA5, align 16

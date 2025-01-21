@@ -34,7 +34,6 @@ define void @_GLOBAL__I__ZN5Pooma5pinfoE() nounwind  {
 ; CHECK-NEXT:    movl %eax, %esi
 ; CHECK-NEXT:    movl $0, (%esp)
 ; CHECK-NEXT:    calll __ZNSt8ios_baseC2Ev
-; CHECK-NEXT:    movl $0, 0
 ; CHECK-NEXT:    addl $12, %ebx
 ; CHECK-NEXT:    movl %ebx, (%esi)
 ; CHECK-NEXT:    movl L__ZTVSt15basic_streambufIcSt11char_traitsIcEE$non_lazy_ptr-L0$pb(%edi), %eax

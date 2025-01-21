@@ -1155,14 +1155,14 @@ define void @PR39464(ptr noalias nocapture sret(%struct.U192) %0, ptr nocapture 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    movq (%rsi), %rcx
+; CHECK-NEXT:    movq 8(%rsi), %rdi
 ; CHECK-NEXT:    addq (%rdx), %rcx
-; CHECK-NEXT:    movq %rcx, (%rdi)
-; CHECK-NEXT:    movq 8(%rsi), %rcx
-; CHECK-NEXT:    adcq 8(%rdx), %rcx
-; CHECK-NEXT:    movq %rcx, 8(%rdi)
+; CHECK-NEXT:    movq %rcx, (%rax)
+; CHECK-NEXT:    adcq 8(%rdx), %rdi
+; CHECK-NEXT:    movq %rdi, 8(%rax)
 ; CHECK-NEXT:    movq 16(%rsi), %rcx
 ; CHECK-NEXT:    adcq 16(%rdx), %rcx
-; CHECK-NEXT:    movq %rcx, 16(%rdi)
+; CHECK-NEXT:    movq %rcx, 16(%rax)
 ; CHECK-NEXT:    retq
   %4 = load i64, ptr %1, align 8
   %5 = load i64, ptr %2, align 8

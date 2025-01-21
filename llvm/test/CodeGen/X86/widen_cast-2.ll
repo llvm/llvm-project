@@ -22,9 +22,9 @@ define void @convert(ptr %dst, ptr %src) nounwind {
 ; CHECK-NEXT:    psubw %xmm0, %xmm2
 ; CHECK-NEXT:    psubw %xmm0, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, (%ecx,%eax)
-; CHECK-NEXT:    movd %xmm2, 16(%ecx,%eax)
-; CHECK-NEXT:    pextrd $1, %xmm2, 20(%ecx,%eax)
 ; CHECK-NEXT:    pextrd $2, %xmm2, 24(%ecx,%eax)
+; CHECK-NEXT:    pextrd $1, %xmm2, 20(%ecx,%eax)
+; CHECK-NEXT:    movd %xmm2, 16(%ecx,%eax)
 ; CHECK-NEXT:    incl (%esp)
 ; CHECK-NEXT:    cmpl $3, (%esp)
 ; CHECK-NEXT:    jle .LBB0_2

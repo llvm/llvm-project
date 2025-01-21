@@ -627,10 +627,9 @@ define void @merge_hole(i32 %x, ptr %p) {
 define void @merge_hole2(i32 %x, ptr %p) {
 ; CHECK-LABEL: merge_hole2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shrl $16, %eax
-; CHECK-NEXT:    movw %ax, 2(%rsi)
 ; CHECK-NEXT:    movb %dil, (%rsi)
+; CHECK-NEXT:    shrl $16, %edi
+; CHECK-NEXT:    movw %di, 2(%rsi)
 ; CHECK-NEXT:    retq
   %p2 = getelementptr inbounds i16, ptr %p, i64 1
   %sh = lshr i32 %x, 16

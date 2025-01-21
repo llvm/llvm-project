@@ -15,12 +15,12 @@ entry:
   ; X86-LABEL: func_cf_vector_x86
   ; X86: 	     movl 12(%ebp), %eax
   ; X86: 	     movl 8(%ebp), %ecx
-  ; X86: 	     movsd 24(%eax), %xmm4         # xmm4 = mem[0],zero
+  ; X86: 	     movsd 24(%eax), %xmm4                 # xmm4 = mem[0],zero
+  ; X86: 	     movsd 16(%eax), %xmm5                 # xmm5 = mem[0],zero
+  ; X86: 	     movsd (%eax), %xmm6                   # xmm6 = mem[0],zero
+  ; X86: 	     movsd 8(%eax), %xmm7                  # xmm7 = mem[0],zero
   ; X86: 	     movsd %xmm4, 24(%esp)
-  ; X86: 	     movsd 16(%eax), %xmm5         # xmm5 = mem[0],zero
   ; X86: 	     movsd %xmm5, 16(%esp)
-  ; X86: 	     movsd (%eax), %xmm6           # xmm6 = mem[0],zero
-  ; X86: 	     movsd 8(%eax), %xmm7          # xmm7 = mem[0],zero
   ; X86: 	     movsd %xmm7, 8(%esp)
   ; X86: 	     movsd %xmm6, (%esp)
   ; X86: 	     calll *___guard_check_icall_fptr
@@ -29,6 +29,7 @@ entry:
   ; X86: 	     movaps %xmm5, %xmm2
   ; X86: 	     movaps %xmm4, %xmm3
   ; X86: 	     calll  *%ecx
+
 }
 attributes #0 = { "target-cpu"="pentium4" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" }
 

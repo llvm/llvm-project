@@ -843,18 +843,17 @@ define linkonce void @_ZN21HNodeTranslateRotate36setVelERK9CDSVectorIdLi1EN3CDS1
 ; CHECK-NEXT:    fmul %st, %st(0)
 ; CHECK-NEXT:    fadd %st, %st(5)
 ; CHECK-NEXT:    fsubr %st, %st(5)
-; CHECK-NEXT:    fxch %st(4)
-; CHECK-NEXT:    fmull -8
 ; CHECK-NEXT:    fxch %st(5)
 ; CHECK-NEXT:    fstl 8
-; CHECK-NEXT:    fxch %st(2)
-; CHECK-NEXT:    fsubp %st, %st(5)
 ; CHECK-NEXT:    fxch %st(4)
+; CHECK-NEXT:    fmull -8
+; CHECK-NEXT:    fsubrp %st, %st(2)
+; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:    fsubp %st, %st(2)
 ; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fadd %st(2), %st
-; CHECK-NEXT:    faddp %st, %st(2)
-; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:    fadd %st(3), %st
+; CHECK-NEXT:    faddp %st, %st(3)
+; CHECK-NEXT:    fxch %st(2)
 ; CHECK-NEXT:    fstl 16
 ; CHECK-NEXT:    fxch %st(2)
 ; CHECK-NEXT:    fadd %st, %st(0)
