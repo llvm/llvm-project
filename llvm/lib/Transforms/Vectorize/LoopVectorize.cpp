@@ -7356,8 +7356,6 @@ bool VPCostContext::skipCostComputation(Instruction *UI, bool IsVector) const {
          SkipCostComputation.contains(UI);
 }
 
-bool VPCostContext::foldTailWithEVL() const { return CM.foldTailWithEVL(); }
-
 InstructionCost
 LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
                                           VPCostContext &CostCtx) const {
@@ -9319,8 +9317,12 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
 
   // Transform recipes to abstract recipes if it is beneficial and clamp
   // the range.
-  VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(), CM);
-  VPlanTransforms::convertToAbstractRecipes(*Plan, CostCtx, Range);
+  // TODO: Enable following transform when the EVL-version of extended-reduction
+  // and mulacc-reduction are implemented.
+  if (!CM.foldTailWithEVL()) {
+    VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(), CM);
+    VPlanTransforms::convertToAbstractRecipes(*Plan, CostCtx, Range);
+  }
 
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a

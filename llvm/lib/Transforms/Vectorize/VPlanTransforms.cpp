@@ -1867,16 +1867,15 @@ static void expandVPExtendedReduction(VPExtendedReductionRecipe *ExtRed) {
   if (ExtRed->isZExt())
     Ext = new VPWidenCastRecipe(ExtRed->getExtOpcode(), ExtRed->getVecOp(),
                                 ExtRed->getResultType(), ExtRed->isNonNeg(),
-                                ExtRed->getExtDebugLoc());
+                                ExtRed->getDebugLoc());
   else
     Ext = new VPWidenCastRecipe(ExtRed->getExtOpcode(), ExtRed->getVecOp(),
-                                ExtRed->getResultType(),
-                                ExtRed->getExtDebugLoc());
+                                ExtRed->getResultType(), ExtRed->getDebugLoc());
 
   // Generate VPreductionRecipe.
   auto *Red = new VPReductionRecipe(
       ExtRed->getRecurrenceDescriptor(), ExtRed->getChainOp(), Ext,
-      ExtRed->getCondOp(), ExtRed->isOrdered(), ExtRed->getRedDebugLoc());
+      ExtRed->getCondOp(), ExtRed->isOrdered(), ExtRed->getDebugLoc());
   Ext->insertBefore(ExtRed);
   Red->insertBefore(ExtRed);
   ExtRed->replaceAllUsesWith(Red);
@@ -1898,10 +1897,10 @@ expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
     if (MulAcc->isZExt())
       Op0 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp0(),
                                   RedTy, MulAcc->isNonNeg(),
-                                  MulAcc->getExt0DebugLoc());
+                                  MulAcc->getDebugLoc());
     else
       Op0 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp0(),
-                                  RedTy, MulAcc->getExt0DebugLoc());
+                                  RedTy, MulAcc->getDebugLoc());
     Op0->getDefiningRecipe()->insertBefore(MulAcc);
     // Prevent reduce.add(mul(ext(A), ext(A))) generate duplicate
     // VPWidenCastRecipe.
@@ -1911,14 +1910,14 @@ expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
       if (MulAcc->isZExt())
         Op1 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp1(),
                                     RedTy, MulAcc->isNonNeg(),
-                                    MulAcc->getExt1DebugLoc());
+                                    MulAcc->getDebugLoc());
       else
         Op1 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp1(),
-                                    RedTy, MulAcc->getExt1DebugLoc());
+                                    RedTy, MulAcc->getDebugLoc());
       Op1->getDefiningRecipe()->insertBefore(MulAcc);
     }
-    // No extends in this MulAccRecipe.
   } else {
+    // No extends in this MulAccRecipe.
     Op0 = MulAcc->getVecOp0();
     Op1 = MulAcc->getVecOp1();
   }
@@ -1928,13 +1927,13 @@ expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
   auto *Mul = new VPWidenRecipe(
       Instruction::Mul, make_range(MulOps.begin(), MulOps.end()),
       MulAcc->hasNoUnsignedWrap(), MulAcc->hasNoSignedWrap(),
-      MulAcc->getMulDebugLoc());
+      MulAcc->getDebugLoc());
   Mul->insertBefore(MulAcc);
 
   // Generate VPReductionRecipe.
   auto *Red = new VPReductionRecipe(
       MulAcc->getRecurrenceDescriptor(), MulAcc->getChainOp(), Mul,
-      MulAcc->getCondOp(), MulAcc->isOrdered(), MulAcc->getRedDebugLoc());
+      MulAcc->getCondOp(), MulAcc->isOrdered(), MulAcc->getDebugLoc());
   Red->insertBefore(MulAcc);
 
   MulAcc->replaceAllUsesWith(Red);
@@ -2166,11 +2165,6 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
 static void tryToCreateAbstractReductionRecipe(VPReductionRecipe *Red,
                                                VPCostContext &Ctx,
                                                VFRange &Range) {
-  // TODO: Remove EVL check when we support EVL version of
-  // VPExtendedReductionRecipe and VPMulAccumulateReductionRecipe.
-  if (Ctx.foldTailWithEVL())
-    return;
-
   VPReductionRecipe *AbstractR = nullptr;
 
   if (auto *MulAcc = tryToMatchAndCreateMulAccumulateReduction(Red, Ctx, Range))
