@@ -11725,7 +11725,6 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
 
   case TemplateDeductionResult::InvalidExplicitArguments: {
     assert(ParamD && "no parameter found for invalid explicit arguments");
-
     if (ParamD->getDeclName()) {
       TemplateArgument FirstArg = *DeductionFailure.getFirstArg();
       std::string ParamName = ParamD->getNameAsString();
