@@ -1900,12 +1900,12 @@ vectorizeUnPackOpPrecondition(tensor::UnPackOp unpackOp,
   return success();
 }
 
-/// Need to check if the inner-tiles are static/constant.
 static LogicalResult
 vectorizeInsertSliceOpPrecondition(tensor::InsertSliceOp sliceOp,
                                    ArrayRef<int64_t> inputVectorSizes) {
 
-  // TODO: Move pre-conditions from the vectorization logic
+  // TODO: Move pre-conditions from the vectorization logic, i.e.
+  // vectorizeAsInsertSliceOp.
   return success();
 }
 
