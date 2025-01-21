@@ -1569,6 +1569,9 @@ public:
   void EmitOMPDeclareMapper(const OMPDeclareMapperDecl *D,
                             CodeGenFunction *CGF = nullptr);
 
+  // Emit code for the OpenACC Declare declaration.
+  void EmitOpenACCDeclare(const OpenACCDeclareDecl *D, CodeGenFunction *CGF);
+
   /// Emit a code for requires directive.
   /// \param D Requires declaration
   void EmitOMPRequiresDecl(const OMPRequiresDecl *D);

@@ -2905,6 +2905,13 @@ void OpenACCClauseEnqueue::VisitNoCreateClause(const OpenACCNoCreateClause &C) {
 void OpenACCClauseEnqueue::VisitCopyClause(const OpenACCCopyClause &C) {
   VisitVarList(C);
 }
+void OpenACCClauseEnqueue::VisitLinkClause(const OpenACCLinkClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitDeviceResidentClause(
+    const OpenACCDeviceResidentClause &C) {
+  VisitVarList(C);
+}
 void OpenACCClauseEnqueue::VisitCopyInClause(const OpenACCCopyInClause &C) {
   VisitVarList(C);
 }
@@ -7249,6 +7256,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::LifetimeExtendedTemporary:
   case Decl::RequiresExprBody:
   case Decl::UnresolvedUsingIfExists:
+  case Decl::OpenACCDeclare:
     return C;
 
   // Declaration kinds that don't make any sense here, but are
