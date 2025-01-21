@@ -30,7 +30,7 @@ jobs:
           #   cpp_compiler: g++
     steps:
     - uses: actions/checkout@v4
-    
+
     # Libc's build is relatively small comparing with other components of LLVM.
     # A fresh fullbuild takes about 190MiB of uncompressed disk space, which can
     # be compressed into ~40MiB. Limiting the cache size to 1G should be enough.
@@ -43,7 +43,7 @@ jobs:
         max-size: 1G
         key: libc_fullbuild_${{ matrix.c_compiler }}
         variant: ${{ matrix.ccache-variant }}
-    
+
     # Notice:
     # - MPFR is required by some of the mathlib tests.
     # - Debian has a multilib setup, so we need to symlink the asm directory.
@@ -60,7 +60,7 @@ jobs:
       run: |
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
         echo "build-install-dir=${{ github.workspace }}/install" >> "$GITHUB_OUTPUT"
-    
+
     # Configure libc fullbuild with scudo.
     # Use MinSizeRel to reduce the size of the build.
     - name: Configure CMake
@@ -74,6 +74,7 @@ jobs:
         -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }}
         -DLLVM_ENABLE_RUNTIMES="libc;compiler-rt"
         -DLLVM_LIBC_FULL_BUILD=ON
+        -DLLVM_LIBC_USE_HOST_KERNEL_HEADERS=ON
         -DLLVM_LIBC_INCLUDE_SCUDO=ON
         -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON
         -DCOMPILER_RT_BUILD_GWP_ASAN=OFF
@@ -83,14 +84,14 @@ jobs:
 
     - name: Build
       run: >
-        cmake 
-        --build ${{ steps.strings.outputs.build-output-dir }} 
+        cmake
+        --build ${{ steps.strings.outputs.build-output-dir }}
         --parallel
         --target install
 
     - name: Test
       run: >
-        cmake 
-        --build ${{ steps.strings.outputs.build-output-dir }} 
+        cmake
+        --build ${{ steps.strings.outputs.build-output-dir }}
         --parallel
         --target check-libc
