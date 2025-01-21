@@ -4207,7 +4207,6 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
       // If device info is available then region has already been generated
       if (info.DevicePtrInfoMap.empty()) {
         builder.restoreIP(codeGenIP);
-
         // For device pass, if use_device_ptr(addr) mappings were present,
         // we need to link them here before codegen.
         if (ompBuilder->Config.IsTargetDevice.value_or(false)) {
@@ -5039,7 +5038,6 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
       return exitBlock.takeError();
 
     builder.SetInsertPoint(*exitBlock);
-
     if (!privateCleanupRegions.empty()) {
       if (failed(inlineOmpRegionCleanup(
               privateCleanupRegions, llvmPrivateVars, moduleTranslation,
@@ -5281,6 +5279,7 @@ static bool isTargetDeviceOp(Operation *op) {
 static LogicalResult
 convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
                              LLVM::ModuleTranslation &moduleTranslation) {
+
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
   return llvm::TypeSwitch<Operation *, LogicalResult>(op)
@@ -5404,19 +5403,6 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
       .Default([&](Operation *inst) {
         return inst->emitError() << "not yet implemented: " << inst->getName();
       });
-}
-
-template <typename FirstOpType, typename... RestOpTypes>
-bool matchOpNest(Operation *op, FirstOpType &firstOp, RestOpTypes &...restOps) {
-  if ((firstOp = mlir::dyn_cast<FirstOpType>(op))) {
-    if constexpr (sizeof...(RestOpTypes) == 0) {
-      return true;
-    } else {
-      Block &innerBlock = getContainedBlock(firstOp);
-      return matchOpScanNest(innerBlock, restOps...);
-    }
-  }
-  return false;
 }
 
 static LogicalResult

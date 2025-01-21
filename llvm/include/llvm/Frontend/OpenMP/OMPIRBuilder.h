@@ -2917,6 +2917,7 @@ public:
                                          Function *OutlinedFunction,
                                          StringRef EntryFnName,
                                          StringRef EntryFnIDName);
+
   /// Type of BodyGen to use for region codegen
   ///
   /// Priv: If device pointer privatization is required, emit the body of the

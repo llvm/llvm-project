@@ -153,7 +153,6 @@ static const omp::GV &getGridValue(const Triple &T, Function *Kernel) {
   if (T.isAMDGPU()) {
     StringRef Features =
         Kernel->getFnAttribute("target-features").getValueAsString();
-
     if (Features.count("+wavefrontsize64"))
       return omp::getAMDGPUGridValues<64>();
     return omp::getAMDGPUGridValues<32>();
@@ -1295,6 +1294,7 @@ static void targetParallelCallback(
   CallInst *CI = cast<CallInst>(OutlinedFn.user_back());
   assert(CI && "Expected call instruction to outlined function");
   CI->getParent()->setName("omp_parallel");
+
   Builder.SetInsertPoint(CI);
   Type *PtrTy = OMPIRBuilder->VoidPtr;
   Value *NullPtrValue = Constant::getNullValue(PtrTy);
@@ -4450,7 +4450,6 @@ OpenMPIRBuilder::applyStaticChunkedWorkshareLoop(DebugLoc DL,
       IsLastChunk, CountUntilOrigTripCount, ChunkRange, "omp_chunk.tripcount");
   Value *BackcastedChunkTC =
       Builder.CreateTrunc(ChunkTripCount, IVTy, "omp_chunk.tripcount.trunc");
-
   CLI->setTripCount(BackcastedChunkTC);
 
   // Update all uses of the induction variable except the one in the condition
@@ -6937,44 +6936,6 @@ FunctionCallee OpenMPIRBuilder::createDispatchDeinitFunction() {
   return getOrCreateRuntimeFunction(M, omp::OMPRTL___kmpc_dispatch_deinit);
 }
 
-static void emitUsed(StringRef Name, std::vector<llvm::WeakTrackingVH> &List,
-                     Type *Int8PtrTy, Module &M) {
-  if (List.empty())
-    return;
-
-  // Convert List to what ConstantArray needs.
-  SmallVector<Constant *, 8> UsedArray;
-  UsedArray.resize(List.size());
-  for (unsigned i = 0, e = List.size(); i != e; ++i) {
-    UsedArray[i] = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-        cast<Constant>(&*List[i]), Int8PtrTy);
-  }
-
-  if (UsedArray.empty())
-    return;
-  ArrayType *ATy = ArrayType::get(Int8PtrTy, UsedArray.size());
-
-  auto *GV =
-      new GlobalVariable(M, ATy, false, llvm::GlobalValue::AppendingLinkage,
-                         llvm::ConstantArray::get(ATy, UsedArray), Name);
-
-  GV->setSection("llvm.metadata");
-}
-
-static void
-emitExecutionMode(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
-                  StringRef FunctionName, omp::OMPTgtExecModeFlags ExecFlags,
-                  std::vector<llvm::WeakTrackingVH> &LLVMCompilerUsed) {
-  auto Int8Ty = Type::getInt8Ty(Builder.getContext());
-  auto *GVMode =
-      new llvm::GlobalVariable(OMPBuilder.M, Int8Ty, /*isConstant=*/true,
-                               llvm::GlobalValue::WeakAnyLinkage,
-                               llvm::ConstantInt::get(Int8Ty, ExecFlags),
-                               Twine(FunctionName, "_exec_mode"));
-  GVMode->setVisibility(llvm::GlobalVariable::ProtectedVisibility);
-  LLVMCompilerUsed.emplace_back(GVMode);
-}
-
 static Value *removeASCastIfPresent(Value *V) {
   if (Operator::getOpcode(V) == Instruction::AddrSpaceCast)
     return cast<Operator>(V)->getOperand(0);
@@ -7678,6 +7639,7 @@ emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
                                           Result, Clause)
                    : Clause;
     };
+
     // If a multi-dimensional THREAD_LIMIT is set, it is the OMPX_BARE case, so
     // the NUM_THREADS clause is overriden by THREAD_LIMIT.
     SmallVector<Value *, 3> NumThreadsC;

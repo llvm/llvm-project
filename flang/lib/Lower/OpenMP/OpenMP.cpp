@@ -1102,7 +1102,6 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
     firOpBuilder.createBlock(&op.getRegion(0));
     return {};
   }();
-
   // Mark the earliest insertion point.
   mlir::Operation *marker = insertMarker(firOpBuilder);
 
@@ -1858,7 +1857,6 @@ static mlir::omp::LoopNestOp genLoopNestOp(
         std::pair<mlir::omp::BlockArgOpenMPOpInterface, const EntryBlockArgs &>>
         wrapperArgs,
     llvm::omp::Directive directive, DataSharingProcessor &dsp) {
-
   auto ivCallback = [&](mlir::Operation *op) {
     genLoopVars(op, converter, loc, iv, wrapperArgs);
     return llvm::SmallVector<const semantics::Symbol *>(iv);
@@ -1867,15 +1865,13 @@ static mlir::omp::LoopNestOp genLoopNestOp(
   auto *nestedEval =
       getCollapsedLoopEval(eval, getCollapseValue(item->clauses));
 
-  auto loopNestOp = genOpWithBody<mlir::omp::LoopNestOp>(
+  return genOpWithBody<mlir::omp::LoopNestOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, *nestedEval,
                         directive)
           .setClauses(&item->clauses)
           .setDataSharingProcessor(&dsp)
           .setGenRegionEntryCb(ivCallback),
       queue, item, clauseOps);
-
-  return loopNestOp;
 }
 
 static void genLoopOp(lower::AbstractConverter &converter,
@@ -2202,69 +2198,69 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     if (!converter.getSymbolAddress(sym))
       return;
 
-    if (llvm::is_contained(mapSyms, &sym))
-      return;
+    if (!llvm::is_contained(mapSyms, &sym)) {
+      if (const auto *details =
+              sym.template detailsIf<semantics::HostAssocDetails>())
+        converter.copySymbolBinding(details->symbol(), sym);
+      std::stringstream name;
+      fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(sym);
+      name << sym.name().ToString();
 
-    if (const auto *details =
-            sym.template detailsIf<semantics::HostAssocDetails>())
-      converter.copySymbolBinding(details->symbol(), sym);
-    std::stringstream name;
-    fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(sym);
-    name << sym.name().ToString();
+      lower::AddrAndBoundsInfo info = getDataOperandBaseAddr(
+          converter, firOpBuilder, sym, converter.getCurrentLocation());
+      llvm::SmallVector<mlir::Value> bounds =
+          lower::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
+                                      mlir::omp::MapBoundsType>(
+              firOpBuilder, info, dataExv,
+              semantics::IsAssumedSizeArray(sym.GetUltimate()),
+              converter.getCurrentLocation());
 
-    lower::AddrAndBoundsInfo info = getDataOperandBaseAddr(
-        converter, firOpBuilder, sym, converter.getCurrentLocation());
-    llvm::SmallVector<mlir::Value> bounds =
-        lower::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
-                                    mlir::omp::MapBoundsType>(
-            firOpBuilder, info, dataExv,
-            semantics::IsAssumedSizeArray(sym.GetUltimate()),
-            converter.getCurrentLocation());
+      llvm::omp::OpenMPOffloadMappingFlags mapFlag =
+          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+      mlir::omp::VariableCaptureKind captureKind =
+          mlir::omp::VariableCaptureKind::ByRef;
 
-    llvm::omp::OpenMPOffloadMappingFlags mapFlag =
-        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
-    mlir::omp::VariableCaptureKind captureKind =
-        mlir::omp::VariableCaptureKind::ByRef;
+      mlir::Value baseOp = info.rawInput;
+      mlir::Type eleType = baseOp.getType();
+      if (auto refType = mlir::dyn_cast<fir::ReferenceType>(baseOp.getType()))
+        eleType = refType.getElementType();
 
-    mlir::Value baseOp = info.rawInput;
-    mlir::Type eleType = baseOp.getType();
-    if (auto refType = mlir::dyn_cast<fir::ReferenceType>(baseOp.getType()))
-      eleType = refType.getElementType();
-
-    // If a variable is specified in declare target link and if device
-    // type is not specified as `nohost`, it needs to be mapped tofrom
-    mlir::ModuleOp mod = firOpBuilder.getModule();
-    mlir::Operation *op = mod.lookupSymbol(converter.mangleName(sym));
-    auto declareTargetOp =
-        llvm::dyn_cast_if_present<mlir::omp::DeclareTargetInterface>(op);
-    if (declareTargetOp && declareTargetOp.isDeclareTarget()) {
-      if (declareTargetOp.getDeclareTargetCaptureClause() ==
-              mlir::omp::DeclareTargetCaptureClause::link &&
-          declareTargetOp.getDeclareTargetDeviceType() !=
-              mlir::omp::DeclareTargetDeviceType::nohost) {
+      // If a variable is specified in declare target link and if device
+      // type is not specified as `nohost`, it needs to be mapped tofrom
+      mlir::ModuleOp mod = firOpBuilder.getModule();
+      mlir::Operation *op = mod.lookupSymbol(converter.mangleName(sym));
+      auto declareTargetOp =
+          llvm::dyn_cast_if_present<mlir::omp::DeclareTargetInterface>(op);
+      if (declareTargetOp && declareTargetOp.isDeclareTarget()) {
+        if (declareTargetOp.getDeclareTargetCaptureClause() ==
+                mlir::omp::DeclareTargetCaptureClause::link &&
+            declareTargetOp.getDeclareTargetDeviceType() !=
+                mlir::omp::DeclareTargetDeviceType::nohost) {
+          mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
+          mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+        }
+      } else if (fir::isa_trivial(eleType) || fir::isa_char(eleType)) {
+        captureKind = mlir::omp::VariableCaptureKind::ByCopy;
+      } else if (!fir::isa_builtin_cptr_type(eleType)) {
         mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
         mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
       }
-    } else if (fir::isa_trivial(eleType) || fir::isa_char(eleType)) {
-      captureKind = mlir::omp::VariableCaptureKind::ByCopy;
-    } else if (!fir::isa_builtin_cptr_type(eleType)) {
-      mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
-      mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
-    }
-    auto location = mlir::NameLoc::get(
-        mlir::StringAttr::get(firOpBuilder.getContext(), sym.name().ToString()),
-        baseOp.getLoc());
-    mlir::Value mapOp = createMapInfoOp(
-        firOpBuilder, location, baseOp, /*varPtrPtr=*/mlir::Value{}, name.str(),
-        bounds, /*members=*/{},
-        /*membersIndex=*/mlir::ArrayAttr{},
-        static_cast<
-            std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-            mapFlag),
-        captureKind, baseOp.getType());
+      auto location =
+          mlir::NameLoc::get(mlir::StringAttr::get(firOpBuilder.getContext(),
+                                                   sym.name().ToString()),
+                             baseOp.getLoc());
+      mlir::Value mapOp = createMapInfoOp(
+          firOpBuilder, location, baseOp, /*varPtrPtr=*/mlir::Value{},
+          name.str(), bounds, /*members=*/{},
+          /*membersIndex=*/mlir::ArrayAttr{},
+          static_cast<
+              std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+              mapFlag),
+          captureKind, baseOp.getType());
 
-    clauseOps.mapVars.push_back(mapOp);
-    mapSyms.push_back(&sym);
+      clauseOps.mapVars.push_back(mapOp);
+      mapSyms.push_back(&sym);
+    }
   };
   lower::pft::visitAllSymbols(eval, captureImplicitMap);
 
@@ -2272,6 +2268,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   llvm::SmallVector<mlir::Value> mapBaseValues;
   extractMappedBaseValues(clauseOps.mapVars, mapBaseValues);
+
   EntryBlockArgs args;
   args.hostEvalVars = clauseOps.hostEvalVars;
   // TODO: Add in_reduction syms and vars.
@@ -2471,14 +2468,12 @@ genTeamsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     return llvm::to_vector(args.getSyms());
   };
 
-  auto teamsOp = genOpWithBody<mlir::omp::TeamsOp>(
+  return genOpWithBody<mlir::omp::TeamsOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_teams)
           .setClauses(&item->clauses)
           .setGenRegionEntryCb(genRegionEntryCB),
       queue, item, clauseOps);
-
-  return teamsOp;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2528,6 +2523,7 @@ static void genStandaloneDo(lower::AbstractConverter &converter,
                             const ConstructQueue &queue,
                             ConstructQueue::const_iterator item) {
   lower::StatementContext stmtCtx;
+
   mlir::omp::WsloopOperands wsloopClauseOps;
   llvm::SmallVector<const semantics::Symbol *> wsloopReductionSyms;
   genWsloopClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
@@ -3449,7 +3445,6 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   ConstructQueue queue{
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
                           eval, source, directive, clauses)};
-
   genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
                  queue.begin());
 }
@@ -3475,7 +3470,6 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       std::get<parser::OmpSectionBlocks>(sectionsConstruct.t);
   clauses.append(makeClauses(
       std::get<parser::OmpClauseList>(endSectionsDirective.t), semaCtx));
-
   mlir::Location currentLocation = converter.getCurrentLocation();
 
   llvm::omp::Directive directive =

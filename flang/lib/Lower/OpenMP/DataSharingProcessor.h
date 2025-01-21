@@ -88,7 +88,6 @@ private:
   bool useDelayedPrivatization;
   bool callsInitClone = false;
   lower::SymMap &symTable;
-
   OMPConstructSymbolVisitor visitor;
   bool privatizationDone = false;
 

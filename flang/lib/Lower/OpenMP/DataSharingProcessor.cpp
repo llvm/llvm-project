@@ -573,6 +573,7 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
     clauseOps->privateSyms.push_back(mlir::SymbolRefAttr::get(privatizerOp));
     clauseOps->privateVars.push_back(hsb.getAddr());
   }
+
   symToPrivatizer[sym] = privatizerOp;
 }
 
