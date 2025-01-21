@@ -3542,7 +3542,7 @@ void ModuleCallsiteContextGraph::updateAllocationCall(
 
 void IndexCallsiteContextGraph::updateAllocationCall(CallInfo &Call,
                                                      AllocationType AllocType) {
-  auto *AI = Call.call().dyn_cast<AllocInfo *>();
+  auto *AI = dyn_cast<AllocInfo *>(Call.call());
   assert(AI);
   assert(AI->Versions.size() > Call.cloneNo());
   AI->Versions[Call.cloneNo()] = (uint8_t)AllocType;
@@ -3560,7 +3560,7 @@ ModuleCallsiteContextGraph::getAllocationCallType(const CallInfo &Call) const {
 
 AllocationType
 IndexCallsiteContextGraph::getAllocationCallType(const CallInfo &Call) const {
-  const auto *AI = Call.call().dyn_cast<AllocInfo *>();
+  const auto *AI = dyn_cast<AllocInfo *>(Call.call());
   assert(AI->Versions.size() > Call.cloneNo());
   return (AllocationType)AI->Versions[Call.cloneNo()];
 }
@@ -3579,7 +3579,7 @@ void ModuleCallsiteContextGraph::updateCall(CallInfo &CallerCall,
 
 void IndexCallsiteContextGraph::updateCall(CallInfo &CallerCall,
                                            FuncInfo CalleeFunc) {
-  auto *CI = CallerCall.call().dyn_cast<CallsiteInfo *>();
+  auto *CI = dyn_cast<CallsiteInfo *>(CallerCall.call());
   assert(CI &&
          "Caller cannot be an allocation which should not have profiled calls");
   assert(CI->Clones.size() > CallerCall.cloneNo());
@@ -3630,13 +3630,13 @@ IndexCallsiteContextGraph::cloneFunctionForCallsite(
   for (auto &Inst : CallsWithMetadataInFunc) {
     // This map always has the initial version in it.
     assert(Inst.cloneNo() == 0);
-    if (auto *AI = Inst.call().dyn_cast<AllocInfo *>()) {
+    if (auto *AI = dyn_cast<AllocInfo *>(Inst.call())) {
       assert(AI->Versions.size() == CloneNo);
       // We assign the allocation type later (in updateAllocationCall), just add
       // an entry for it here.
       AI->Versions.push_back(0);
     } else {
-      auto *CI = Inst.call().dyn_cast<CallsiteInfo *>();
+      auto *CI = cast<CallsiteInfo *>(Inst.call());
       assert(CI && CI->Clones.size() == CloneNo);
       // We assign the clone number later (in updateCall), just add an entry for
       // it here.
