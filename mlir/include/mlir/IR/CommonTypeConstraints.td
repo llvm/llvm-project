@@ -820,7 +820,7 @@ class StaticShapeMemRefOf<list<Type> allowedTypes> :
 def AnyStaticShapeMemRef : StaticShapeMemRefOf<[AnyType]>;
 
 // For a MemRefType, verify that it has strides.
-def HasStridesPred : CPred<[{ isStrided(::llvm::cast<::mlir::MemRefType>($_self)) }]>;
+def HasStridesPred : CPred<[{ ::llvm::cast<::mlir::MemRefType>($_self).isStrided() }]>;
 
 class StridedMemRefOf<list<Type> allowedTypes> :
     ConfinedType<MemRefOf<allowedTypes>, [HasStridesPred],
