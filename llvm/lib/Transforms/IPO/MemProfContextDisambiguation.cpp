@@ -3542,7 +3542,7 @@ void ModuleCallsiteContextGraph::updateAllocationCall(
 
 void IndexCallsiteContextGraph::updateAllocationCall(CallInfo &Call,
                                                      AllocationType AllocType) {
-  auto *AI = dyn_cast<AllocInfo *>(Call.call());
+  auto *AI = cast<AllocInfo *>(Call.call());
   assert(AI);
   assert(AI->Versions.size() > Call.cloneNo());
   AI->Versions[Call.cloneNo()] = (uint8_t)AllocType;
