@@ -69,7 +69,7 @@ public:
     }
 };
 
-} // namespace )
+} // namespace std
 }
 
 #define INFINITY ((float)(1e+300 * 1e+300))
@@ -91,6 +91,7 @@ public:
     }
 };
 
+namespace nonstd {
 template <class _Ty>
 class numeric_limits {
 public:
@@ -114,6 +115,8 @@ public:
         return __builtin_huge_val();
     }
 };
+
+} // namespace nonstd
 
 double infinity() { return 0; }
 
@@ -246,16 +249,22 @@ int compareit(float a, float b) {
 // no-inf-warning@+1 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
   double y = i * std::numeric_limits<double>::infinity();
 
-  y = i * numeric_limits<double>::infinity(); // expected-no-diagnostics
+  y = i * nonstd::numeric_limits<double>::infinity(); // expected-no-diagnostics
 
 // no-inf-no-nan-warning@+2 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
 // no-inf-warning@+1 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
   j = std::numeric_limits<float>::infinity();
 
-  j = numeric_limits<float>::infinity(); // expected-no-diagnostics
+  j = nonstd::numeric_limits<float>::infinity(); // expected-no-diagnostics
 
   y = infinity(); // expected-no-diagnostics
 
+  {
+    using namespace std;
+    // no-inf-no-nan-warning@+2 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
+    // no-inf-warning@+1 {{use of infinity is undefined behavior due to the currently enabled floating-point options}}
+    double d = numeric_limits<double>::infinity();
+  }
   return 0;
 
 }
