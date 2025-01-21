@@ -1163,6 +1163,8 @@ added as a vendored dependency.
 
 LLVM source code lives for a long time and is edited by many people, the best
 way to track contributions is through revision control history.
+See the `Attribution of Changes`_ section for more information about attributing
+changes to authors other than the committer.
 
 Relicensing
 -----------
