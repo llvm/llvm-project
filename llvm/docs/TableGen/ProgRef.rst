@@ -363,7 +363,16 @@ Simple values
 The :token:`SimpleValue` has a number of forms.
 
 .. productionlist::
-   SimpleValue: `TokInteger` | `TokString`+ | `TokCode`
+   SimpleValue: `SimpleValue1`
+              :| `SimpleValue2`
+              :| `SimpleValue3`
+              :| `SimpleValue4`
+              :| `SimpleValue5`
+              :| `SimpleValue6`
+              :| `SimpleValue7`
+              :| `SimpleValue8`
+              :| `SimpleValue9`
+   SimpleValue1: `TokInteger` | `TokString`+ | `TokCode`
 
 A value can be an integer literal, a string literal, or a code literal.
 Multiple adjacent string literals are concatenated as in C/C++; the simple
