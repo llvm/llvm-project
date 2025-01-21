@@ -800,6 +800,8 @@ Improvements to Clang's diagnostics
 
 - Fix false positives warning for non-std functions with name `infinity` (#123231).
 
+- Clang now emits a ``-Wignored-qualifiers`` diagnostic when a base class includes cv-qualifiers (#GH55474).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
