@@ -1,18 +1,18 @@
-// Make sure that unsigned extended multiplication produces expected results
+// Make sure that signed extended multiplication produces expected results
 // with and without expansion to primitive mul/add ops for WebGPU.
 
-// RUN: mlir-opt %s -test-vulkan-runner-pipeline=to-llvm \
+// RUN: mlir-opt %s -test-vulkan-runner-pipeline \
 // RUN:   | mlir-cpu-runner - \
-// RUN:     --shared-libs=%vulkan-runtime-wrappers,%mlir_runner_utils \
+// RUN:     --shared-libs=%mlir_vulkan_runtime,%mlir_runner_utils \
 // RUN:     --entry-point-result=void | FileCheck %s
 
-// RUN: mlir-opt %s -test-vulkan-runner-pipeline="spirv-webgpu-prepare to-llvm" \
+// RUN: mlir-opt %s -test-vulkan-runner-pipeline=spirv-webgpu-prepare \
 // RUN:   | mlir-cpu-runner - \
-// RUN:     --shared-libs=%vulkan-runtime-wrappers,%mlir_runner_utils \
+// RUN:     --shared-libs=%mlir_vulkan_runtime,%mlir_runner_utils \
 // RUN:     --entry-point-result=void | FileCheck %s
 
-// CHECK: [0, 1, -2,  1, 1048560, -87620295, -131071, -49]
-// CHECK: [0, 0,  1, -2,       0,     65534, -131070,   6]
+// CHECK: [0, 1, -2,  1, 1048560, -87620295, -131071,  560969770]
+// CHECK: [0, 0, -1,  0,       0,        -1,       0, -499807318]
 module attributes {
   gpu.container_module,
   spirv.target_env = #spirv.target_env<
@@ -24,7 +24,7 @@ module attributes {
       %0 = gpu.block_id x
       %lhs = memref.load %arg0[%0] : memref<8xi32>
       %rhs = memref.load %arg1[%0] : memref<8xi32>
-      %low, %hi = arith.mului_extended %lhs, %rhs : i32
+      %low, %hi = arith.mulsi_extended %lhs, %rhs : i32
       memref.store %low, %arg2[%0] : memref<8xi32>
       memref.store %hi, %arg3[%0] : memref<8xi32>
       gpu.return
@@ -49,8 +49,8 @@ module attributes {
     %idx_8 = arith.constant 8 : index
 
     // Initialize input buffers.
-    %lhs_vals = arith.constant dense<[0, 1, -1,  -1,  65535,  65535, -65535,  7]> : vector<8xi32>
-    %rhs_vals = arith.constant dense<[0, 1,  2,  -1,     16,  -1337, -65535, -7]> : vector<8xi32>
+    %lhs_vals = arith.constant dense<[0, 1, -1,  -1,  65535,  65535, -65535,  2088183954]> : vector<8xi32>
+    %rhs_vals = arith.constant dense<[0, 1,  2,  -1,     16,  -1337, -65535, -1028001427]> : vector<8xi32>
     vector.store %lhs_vals, %buf0[%idx_0] : memref<8xi32>, vector<8xi32>
     vector.store %rhs_vals, %buf1[%idx_0] : memref<8xi32>, vector<8xi32>
 
