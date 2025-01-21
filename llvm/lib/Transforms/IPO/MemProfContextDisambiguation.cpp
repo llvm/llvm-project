@@ -3560,7 +3560,7 @@ ModuleCallsiteContextGraph::getAllocationCallType(const CallInfo &Call) const {
 
 AllocationType
 IndexCallsiteContextGraph::getAllocationCallType(const CallInfo &Call) const {
-  const auto *AI = dyn_cast<AllocInfo *>(Call.call());
+  const auto *AI = cast<AllocInfo *>(Call.call());
   assert(AI->Versions.size() > Call.cloneNo());
   return (AllocationType)AI->Versions[Call.cloneNo()];
 }
