@@ -1343,6 +1343,11 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
     return 1;
   }
 
+  // LoongArch support IE to LE optimization in non-extreme code model.
+  bool execOptimizeInLoongArch =
+      ctx.arg.emachine == EM_LOONGARCH &&
+      (type == R_LARCH_TLS_IE_PC_HI20 || type == R_LARCH_TLS_IE_PC_LO12);
+
   // ARM, Hexagon, LoongArch and RISC-V do not support GD/LD to IE/LE
   // optimizations.
   // RISC-V supports TLSDESC to IE/LE optimizations.
@@ -1350,7 +1355,8 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
   // optimization as well.
   bool execOptimize =
       !ctx.arg.shared && ctx.arg.emachine != EM_ARM &&
-      ctx.arg.emachine != EM_HEXAGON && ctx.arg.emachine != EM_LOONGARCH &&
+      ctx.arg.emachine != EM_HEXAGON &&
+      (ctx.arg.emachine != EM_LOONGARCH || execOptimizeInLoongArch) &&
       !(isRISCV && expr != R_TLSDESC_PC && expr != R_TLSDESC_CALL) &&
       !sec->file->ppc64DisableTLSRelax;
 
@@ -1441,6 +1447,15 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
       else
         sec->addReloc({expr, type, offset, addend, &sym});
     }
+    return 1;
+  }
+
+  // LoongArch TLS GD/LD relocs reuse the RE_LOONGARCH_GOT, in which
+  // NEEDS_TLSIE shouldn't set. So we check independently.
+  if (ctx.arg.emachine == EM_LOONGARCH && expr == RE_LOONGARCH_GOT &&
+      execOptimize && isLocalInExecutable) {
+    ctx.hasTlsIe.store(true, std::memory_order_relaxed);
+    sec->addReloc({R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
     return 1;
   }
 
