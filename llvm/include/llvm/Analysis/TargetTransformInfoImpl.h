@@ -745,6 +745,13 @@ public:
     return 1;
   }
 
+  InstructionCost getInsertExtractValueCost(unsigned Opcode, Type *AggType,
+                                            TTI::TargetCostKind CostKind,
+                                            ArrayRef<unsigned> Indices,
+                                            Value *AggDef) const {
+    return 0;
+  }
+
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                   unsigned AddressSpace,
                                   TTI::TargetCostKind CostKind,

@@ -1473,6 +1473,15 @@ public:
                                      TTI::TargetCostKind CostKind,
                                      unsigned Index = -1) const;
 
+  /// \return The expected of aggregate inserts and extracts. Use an empty
+  /// ArrayRef to indicate that there is no information on the indices. This is
+  /// used when the instruction is not available; a typical use case is to
+  /// provision the cost of vectorization/scalarization in vectorizer passes.
+  InstructionCost getInsertExtractValueCost(unsigned Opcode, Type *AggType,
+                                            TTI::TargetCostKind CostKind,
+                                            ArrayRef<unsigned> Indices,
+                                            Value *AggDef = nullptr) const;
+
   /// \return The cost of replication shuffle of \p VF elements typed \p EltTy
   /// \p ReplicationFactor times.
   ///
@@ -2224,6 +2233,11 @@ public:
                             TTI::TargetCostKind CostKind) = 0;
 
   virtual InstructionCost
+  getInsertExtractValueCost(unsigned Opcode, Type *AggType,
+                            TTI::TargetCostKind CostKind,
+                            ArrayRef<unsigned> Indices, Value *AggDef) = 0;
+
+  virtual InstructionCost
   getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                   unsigned AddressSpace, TTI::TargetCostKind CostKind,
                   OperandValueInfo OpInfo, const Instruction *I) = 0;
@@ -2949,6 +2963,13 @@ public:
                             TTI::TargetCostKind CostKind) override {
     return Impl.getReplicationShuffleCost(EltTy, ReplicationFactor, VF,
                                           DemandedDstElts, CostKind);
+  }
+  InstructionCost getInsertExtractValueCost(unsigned Opcode, Type *AggType,
+                                            TTI::TargetCostKind CostKind,
+                                            ArrayRef<unsigned> Indices,
+                                            Value *AggDef) override {
+    return Impl.getInsertExtractValueCost(Opcode, AggType, CostKind, Indices,
+                                          AggDef);
   }
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                   unsigned AddressSpace,

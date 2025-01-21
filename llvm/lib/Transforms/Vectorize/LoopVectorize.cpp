@@ -3646,13 +3646,13 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
         }
       }
 
-      // ExtractValue instructions must be uniform, because the operands are
-      // known to be loop-invariant.
       if (auto *EVI = dyn_cast<ExtractValueInst>(&I)) {
         if (IsOutOfScope(EVI->getAggregateOperand())) {
           AddToWorklistIfAllowed(EVI);
           continue;
         }
+        // Only ExtractValue instructions where the aggregate value comes from a
+        // call are allowed to be non-uniform.
         assert(isa<CallInst>(EVI->getAggregateOperand()) &&
                "Expected aggregate value to be call return value");
       }

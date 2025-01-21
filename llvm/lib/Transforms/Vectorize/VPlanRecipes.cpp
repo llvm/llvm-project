@@ -1544,8 +1544,14 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
     return Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy,
                                           Ctx.CostKind);
   }
-  case Instruction::ExtractValue:
-    return 0;
+  case Instruction::ExtractValue: {
+    assert(getNumOperands() == 2 && "expected single level extractvalue");
+    Type *VectorizedTy = toVectorizedTy(Ctx.Types.inferScalarType(this), VF);
+    auto *CI = cast<ConstantInt>(getOperand(1)->getLiveInIRValue());
+    return Ctx.TTI.getInsertExtractValueCost(
+        Instruction::ExtractValue, VectorizedTy, Ctx.CostKind,
+        static_cast<unsigned>(CI->getZExtValue()));
+  }
   case Instruction::ICmp:
   case Instruction::FCmp: {
     Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
