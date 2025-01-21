@@ -465,14 +465,14 @@ void AggExprEmitter::emitArrayInit(Address DestPtr, cir::ArrayType AType,
 
   // Emit the explicit initializers.
   for (uint64_t i = 0; i != NumInitElements; ++i) {
-    if (i == 1)
+    if (i > 0)
       one = CGF.getBuilder().getConstInt(
-          loc, mlir::cast<cir::IntType>(CGF.PtrDiffTy), 1);
+          loc, mlir::cast<cir::IntType>(CGF.PtrDiffTy), i);
 
     // Advance to the next element.
     if (i > 0) {
       element = CGF.getBuilder().create<cir::PtrStrideOp>(
-          loc, cirElementPtrType, element, one);
+          loc, cirElementPtrType, begin, one);
 
       // Tell the cleanup that it needs to destroy up to this
       // element.  TODO: some of these stores can be trivially
