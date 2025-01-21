@@ -262,8 +262,8 @@ extern char &SIPreEmitPeepholeID;
 void initializeSILateBranchLoweringPass(PassRegistry &);
 extern char &SILateBranchLoweringPassID;
 
-void initializeSIOptimizeExecMaskingPass(PassRegistry &);
-extern char &SIOptimizeExecMaskingID;
+void initializeSIOptimizeExecMaskingLegacyPass(PassRegistry &);
+extern char &SIOptimizeExecMaskingLegacyID;
 
 void initializeSIInsertWaterfallPass(PassRegistry &);
 extern char &SIInsertWaterfallID;

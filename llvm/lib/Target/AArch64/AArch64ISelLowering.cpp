@@ -1140,8 +1140,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   setTargetDAGCombine(ISD::SCALAR_TO_VECTOR);
 
-  setTargetDAGCombine(ISD::SHL);
-
   // In case of strict alignment, avoid an excessive number of byte wide stores.
   MaxStoresPerMemsetOptSize = 8;
   MaxStoresPerMemset =
@@ -2373,8 +2371,9 @@ bool AArch64TargetLowering::targetShrinkDemandedConstant(
     return false;
 
   unsigned Size = VT.getSizeInBits();
-  assert((Size == 32 || Size == 64) &&
-         "i32 or i64 is expected after legalization.");
+
+  if (Size != 32 && Size != 64)
+    return false;
 
   // Exit early if we demand all bits.
   if (DemandedBits.popcount() == Size)
@@ -9703,7 +9702,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
 bool AArch64TargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   CCAssignFn *RetCC = CCAssignFnForReturn(CallConv);
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
@@ -25027,6 +25027,30 @@ static SDValue performCSELCombine(SDNode *N,
   if (SDValue Folded = foldCSELofCTTZ(N, DAG))
 		return Folded;
 
+  // CSEL a, b, cc, SUBS(x, y) -> CSEL a, b, swapped(cc), SUBS(y, x)
+  // if SUB(y, x) already exists and we can produce a swapped predicate for cc.
+  SDValue Cond = N->getOperand(3);
+  if (DCI.isAfterLegalizeDAG() && Cond.getOpcode() == AArch64ISD::SUBS &&
+      Cond.hasOneUse() && Cond->hasNUsesOfValue(0, 0) &&
+      DAG.doesNodeExist(ISD::SUB, N->getVTList(),
+                        {Cond.getOperand(1), Cond.getOperand(0)}) &&
+      !DAG.doesNodeExist(ISD::SUB, N->getVTList(),
+                         {Cond.getOperand(0), Cond.getOperand(1)}) &&
+      !isNullConstant(Cond.getOperand(1))) {
+    AArch64CC::CondCode OldCond =
+        static_cast<AArch64CC::CondCode>(N->getConstantOperandVal(2));
+    AArch64CC::CondCode NewCond = getSwappedCondition(OldCond);
+    if (NewCond != AArch64CC::AL) {
+      SDLoc DL(N);
+      SDValue Sub = DAG.getNode(AArch64ISD::SUBS, DL, Cond->getVTList(),
+                                Cond.getOperand(1), Cond.getOperand(0));
+      return DAG.getNode(AArch64ISD::CSEL, DL, N->getVTList(), N->getOperand(0),
+                         N->getOperand(1),
+                         DAG.getConstant(NewCond, DL, MVT::i32),
+                         Sub.getValue(1));
+    }
+  }
+
   return performCONDCombine(N, DCI, DAG, 2, 3);
 }
 
@@ -26473,43 +26497,6 @@ performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   return NVCAST;
 }
 
-/// If the operand is a bitwise AND with a constant RHS, and the shift has a
-/// constant RHS and is the only use, we can pull it out of the shift, i.e.
-///
-///   (shl (and X, C1), C2) -> (and (shl X, C2), (shl C1, C2))
-///
-/// We prefer this canonical form to match existing isel patterns.
-static SDValue performSHLCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 SelectionDAG &DAG) {
-  if (DCI.isBeforeLegalizeOps())
-    return SDValue();
-
-  SDValue Op0 = N->getOperand(0);
-  if (Op0.getOpcode() != ISD::AND || !Op0.hasOneUse())
-    return SDValue();
-
-  SDValue C1 = Op0->getOperand(1);
-  SDValue C2 = N->getOperand(1);
-  if (!isa<ConstantSDNode>(C1) || !isa<ConstantSDNode>(C2))
-    return SDValue();
-
-  // Might be folded into shifted op, do not lower.
-  if (N->hasOneUse()) {
-    unsigned UseOpc = N->user_begin()->getOpcode();
-    if (UseOpc == ISD::ADD || UseOpc == ISD::SUB || UseOpc == ISD::SETCC ||
-        UseOpc == AArch64ISD::ADDS || UseOpc == AArch64ISD::SUBS)
-      return SDValue();
-  }
-
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-  SDValue X = Op0->getOperand(0);
-  SDValue NewRHS = DAG.getNode(ISD::SHL, DL, VT, C1, C2);
-  SDValue NewShift = DAG.getNode(ISD::SHL, DL, VT, X, C2);
-  return DAG.getNode(ISD::AND, DL, VT, NewShift, NewRHS);
-}
-
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -26855,8 +26842,6 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performCTLZCombine(N, DAG, Subtarget);
   case ISD::SCALAR_TO_VECTOR:
     return performScalarToVectorCombine(N, DCI, DAG);
-  case ISD::SHL:
-    return performSHLCombine(N, DCI, DAG);
   }
   return SDValue();
 }

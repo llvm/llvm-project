@@ -191,8 +191,6 @@ public:
     ImmTyWaitEXP,
     ImmTyWaitVAVDst,
     ImmTyWaitVMVSrc,
-    ImmTyGlobalSReg32,
-    ImmTyGlobalSReg64,
 #if LLPC_BUILD_NPI
 #else /* LLPC_BUILD_NPI */
     ImmTyByteSel,
@@ -488,8 +486,6 @@ public:
   bool isNegLo() const { return isImmTy(ImmTyNegLo); }
   bool isNegHi() const { return isImmTy(ImmTyNegHi); }
   bool isBitOp3() const { return isImmTy(ImmTyBitOp3) && isUInt<8>(getImm()); }
-  bool isGlobalSReg32() const { return isImmTy(ImmTyGlobalSReg32); }
-  bool isGlobalSReg64() const { return isImmTy(ImmTyGlobalSReg64); }
 
   bool isRegOrImm() const {
     return isReg() || isImm();
@@ -1335,12 +1331,6 @@ public:
     case ImmTyWaitEXP: OS << "WaitEXP"; break;
     case ImmTyWaitVAVDst: OS << "WaitVAVDst"; break;
     case ImmTyWaitVMVSrc: OS << "WaitVMVSrc"; break;
-    case ImmTyGlobalSReg32:
-      OS << "GlobalSReg32";
-      break;
-    case ImmTyGlobalSReg64:
-      OS << "GlobalSReg64";
-      break;
 #if LLPC_BUILD_NPI
 #else /* LLPC_BUILD_NPI */
     case ImmTyByteSel: OS << "ByteSel" ; break;
@@ -1907,11 +1897,6 @@ public:
   ParseStatus parseRegWithFPInputMods(OperandVector &Operands);
   ParseStatus parseRegWithIntInputMods(OperandVector &Operands);
   ParseStatus parseVReg32OrOff(OperandVector &Operands);
-  ParseStatus parseGlobalRegImm(OperandVector &Operands,
-                                AMDGPUOperand::ImmTy ImmTy,
-                                unsigned ExpectedWidth);
-  ParseStatus parseGlobalSReg32(OperandVector &Operands);
-  ParseStatus parseGlobalSReg64(OperandVector &Operands);
   ParseStatus tryParseIndexKey(OperandVector &Operands,
                                AMDGPUOperand::ImmTy ImmTy);
   ParseStatus parseIndexKey8bit(OperandVector &Operands);
@@ -3945,60 +3930,6 @@ ParseStatus AMDGPUAsmParser::parseVReg32OrOff(OperandVector &Operands) {
   }
 
   return ParseStatus::Failure;
-}
-
-ParseStatus AMDGPUAsmParser::parseGlobalRegImm(OperandVector &Operands,
-                                               AMDGPUOperand::ImmTy ImmTy,
-                                               unsigned ExpectedWidth) {
-  if (!isRegister())
-    return ParseStatus::NoMatch;
-
-  auto Loc = getLoc();
-  RegisterKind RegKind;
-  MCRegister Reg;
-  unsigned RegNum;
-  unsigned RegWidth;
-  if (!ParseAMDGPURegister(RegKind, Reg, RegNum, RegWidth))
-    return ParseStatus::Failure;
-
-  // Map VCC to its underlying SGPR alias.
-  if (RegKind == IS_SPECIAL) {
-#if LLPC_BUILD_NPI
-    if (Reg.id() == AMDGPU::VCC) {
-#else /* LLPC_BUILD_NPI */
-    if (Reg == AMDGPU::VCC) {
-#endif /* LLPC_BUILD_NPI */
-      RegKind = IS_SGPR;
-      RegNum = 106;
-      RegWidth = ExpectedWidth;
-#if LLPC_BUILD_NPI
-    } else if (Reg.id() == AMDGPU::VCC_LO || Reg.id() == AMDGPU::VCC_HI) {
-#else /* LLPC_BUILD_NPI */
-    } else if (Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI) {
-#endif /* LLPC_BUILD_NPI */
-      RegKind = IS_SGPR;
-      RegNum = Reg == AMDGPU::VCC_LO ? 106 : 107;
-      RegWidth = 32;
-    }
-  }
-
-  if (RegKind != IS_SGPR)
-    return Error(Loc, "expected an SGPR or vcc/vcc_lo/vcc_hi");
-
-  if (RegWidth != ExpectedWidth)
-    return Error(Loc,
-                 Twine("expected a ") + Twine(ExpectedWidth) + "-bit register");
-
-  Operands.push_back(AMDGPUOperand::CreateImm(this, RegNum, Loc, ImmTy));
-  return ParseStatus::Success;
-}
-
-ParseStatus AMDGPUAsmParser::parseGlobalSReg32(OperandVector &Operands) {
-  return parseGlobalRegImm(Operands, AMDGPUOperand::ImmTyGlobalSReg32, 32);
-}
-
-ParseStatus AMDGPUAsmParser::parseGlobalSReg64(OperandVector &Operands) {
-  return parseGlobalRegImm(Operands, AMDGPUOperand::ImmTyGlobalSReg64, 64);
 }
 
 unsigned AMDGPUAsmParser::checkTargetMatchPredicate(MCInst &Inst) {

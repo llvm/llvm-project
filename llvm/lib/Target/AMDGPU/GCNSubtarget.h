@@ -296,6 +296,7 @@ protected:
   bool HasVNBREncoding = false;
   bool HasSWC = false;
   bool HasIndexedResources = false;
+  bool HasSGPRVMEM = false;
 #endif /* LLPC_BUILD_NPI */
 
   bool RequiresCOV6 = false;
@@ -1530,6 +1531,8 @@ public:
 
 #if LLPC_BUILD_NPI
   bool hasIndexedResources() const { return HasIndexedResources; }
+
+  bool hasSGPRVMEM() const { return HasSGPRVMEM; }
 
 #endif /* LLPC_BUILD_NPI */
   /// \returns true if the target supports using software to avoid hazards

@@ -7170,25 +7170,9 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return CreatedBB;
   }
 
-  // Legalize SI_INIT_M0, S_MOV_TO_GLOBAL, S_SWAP_TO_GLOBAL
-  if (MI.getOpcode() == AMDGPU::SI_INIT_M0 ||
-      MI.getOpcode() == AMDGPU::S_MOV_TO_GLOBAL_B32 ||
-      MI.getOpcode() == AMDGPU::S_MOV_TO_GLOBAL_B64 ||
-      MI.getOpcode() == AMDGPU::S_SWAP_TO_GLOBAL_B32) {
-    unsigned SrcIdx;
-    switch (MI.getOpcode()) {
-    case AMDGPU::SI_INIT_M0:
-      SrcIdx = 0;
-      break;
-    case AMDGPU::S_MOV_TO_GLOBAL_B32:
-    case AMDGPU::S_MOV_TO_GLOBAL_B64:
-      SrcIdx = 1;
-      break;
-    case AMDGPU::S_SWAP_TO_GLOBAL_B32:
-      SrcIdx = 2;
-      break;
-    }
-    MachineOperand &Src = MI.getOperand(SrcIdx);
+  // Legalize SI_INIT_M0
+  if (MI.getOpcode() == AMDGPU::SI_INIT_M0) {
+    MachineOperand &Src = MI.getOperand(0);
     if (Src.isReg() && RI.hasVectorRegisters(MRI.getRegClass(Src.getReg())))
       Src.setReg(readlaneVGPRToSGPR(Src.getReg(), MI, MRI));
     return CreatedBB;

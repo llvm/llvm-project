@@ -738,6 +738,10 @@ enum ASTRecordTypes {
   CXX_ADDED_TEMPLATE_SPECIALIZATION = 74,
 
   CXX_ADDED_TEMPLATE_PARTIAL_SPECIALIZATION = 75,
+
+  UPDATE_MODULE_LOCAL_VISIBLE = 76,
+
+  UPDATE_TU_LOCAL_VISIBLE = 77,
 };
 
 /// Record types used within a source manager block.
@@ -1337,6 +1341,14 @@ enum DeclCode {
   /// IDs. This data is used when performing qualified name lookup
   /// into a DeclContext via DeclContext::lookup.
   DECL_CONTEXT_VISIBLE,
+
+  /// A record containing the set of declarations that are
+  /// only visible from DeclContext in the same module.
+  DECL_CONTEXT_MODULE_LOCAL_VISIBLE,
+
+  /// A record that stores the set of declarations that are only visible
+  /// to the TU.
+  DECL_CONTEXT_TU_LOCAL_VISIBLE,
 
   /// A LabelDecl record.
   DECL_LABEL,

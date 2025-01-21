@@ -375,46 +375,6 @@ def S_MOVRELD_B32 : SOP1_32_movreld <"s_movreld_b32">;
 def S_MOVRELD_B64 : SOP1_64_movreld <"s_movreld_b64">;
 } // End Uses = [M0]
 
-// Move from/to global registers.
-//
-// Global register operands are represented as constant operands in Machine IR
-// because they do not interact with regular registers in any way (e.g. for
-// code generation purposes).
-//
-// The instructions are modeled as accessing "memory" (load / store). Think of
-// the global register operands as part of the address of this memory access.
-let SubtargetPredicate = isGFX12Plus, maybeAtomic = 1, Uses = [M0] in {
-
-let mayLoad = 1 in {
-def S_MOV_FROM_GLOBAL_B32 : SOP1_Pseudo <"s_mov_from_global_b32",
-    (outs SReg_32:$sdst), (ins GlobalSReg32:$src0), "$sdst, $src0",
-    [(set i32:$sdst, (int_amdgcn_s_mov_from_global timm:$src0, M0))]>;
-def S_MOV_FROM_GLOBAL_B64 : SOP1_Pseudo <"s_mov_from_global_b64",
-    (outs SReg_64:$sdst), (ins GlobalSReg64:$src0), "$sdst, $src0",
-    [(set i64:$sdst, (int_amdgcn_s_mov_from_global timm:$src0, M0))]>;
-} // End mayLoad = 1
-
-let mayStore = 1 in {
-def S_MOV_TO_GLOBAL_B32 : SOP1_Pseudo <"s_mov_to_global_b32", (outs),
-    (ins GlobalSReg32:$sdst, SSrc_b32:$src0), "$sdst, $src0",
-    [(int_amdgcn_s_mov_to_global timm:$sdst, i32:$src0, M0)]>;
-def S_MOV_TO_GLOBAL_B64 : SOP1_Pseudo <"s_mov_to_global_b64", (outs),
-    (ins GlobalSReg64:$sdst, SSrc_b64:$src0), "$sdst, $src0",
-    [(int_amdgcn_s_mov_to_global timm:$sdst, i64:$src0, M0)]>;
-} // End mayStore = 1
-
-def S_SWAP_TO_GLOBAL_B32 : SOP1_Pseudo <"s_swap_to_global_b32",
-    (outs SReg_32:$src0), (ins GlobalSReg32:$sdst, SReg_32:$src0_tie),
-    "$sdst, $src0",
-    [(set i32:$src0, (int_amdgcn_s_swap_to_global timm:$sdst,
-                                                  i32:$src0_tie, M0))]> {
-  let mayLoad = 1;
-  let mayStore = 1;
-  let Constraints = "$src0_tie = $src0";
-  let DisableEncoding = "$src0_tie";
-}
-} // End SubtargetPredicate = isGFX12Plus, maybeAtomic = 1, Uses = [M0]
-
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9 in {
 def S_CBRANCH_JOIN : SOP1_0_32R <"s_cbranch_join">;
 } // End SubtargetPredicate = isGFX6GFX7GFX8GFX9
@@ -2352,18 +2312,7 @@ defm S_MOVRELD_B32                : SOP1_Real_gfx11_gfx12<0x042>;
 defm S_MOVRELD_B64                : SOP1_Real_gfx11_gfx12<0x043>;
 defm S_MOVRELSD_2_B32             : SOP1_Real_gfx11_gfx12<0x044>;
 #ifdef LLPC_BUILD_NPI
-defm S_MOV_FROM_GLOBAL_B32        : SOP1_Real_gfx12_gfx13<0x05b>;
-defm S_MOV_FROM_GLOBAL_B64        : SOP1_Real_gfx12_gfx13<0x05c>;
-defm S_MOV_TO_GLOBAL_B32          : SOP1_Real_gfx12_gfx13<0x05d>;
-defm S_MOV_TO_GLOBAL_B64          : SOP1_Real_gfx12_gfx13<0x05e>;
-defm S_SWAP_TO_GLOBAL_B32         : SOP1_Real_gfx12_gfx13<0x05f>;
 let OtherPredicates = [isNotGFX1250Plus] in {
-#else /* LLPC_BUILD_NPI */
-defm S_MOV_FROM_GLOBAL_B32        : SOP1_Real_gfx12<0x05b>;
-defm S_MOV_FROM_GLOBAL_B64        : SOP1_Real_gfx12<0x05c>;
-defm S_MOV_TO_GLOBAL_B32          : SOP1_Real_gfx12<0x05d>;
-defm S_MOV_TO_GLOBAL_B64          : SOP1_Real_gfx12<0x05e>;
-defm S_SWAP_TO_GLOBAL_B32         : SOP1_Real_gfx12<0x05f>;
 #endif /* LLPC_BUILD_NPI */
 defm S_GETPC_B64                  : SOP1_Real_gfx11_gfx12<0x047>;
 defm S_SETPC_B64                  : SOP1_Real_gfx11_gfx12<0x048>;

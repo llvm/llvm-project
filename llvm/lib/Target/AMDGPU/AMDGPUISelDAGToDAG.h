@@ -344,7 +344,6 @@ private:
 #if LLPC_BUILD_NPI
   void SelectCvtTensor(SDNode *N, unsigned IntrID);
 #endif /* LLPC_BUILD_NPI */
-  void SelectMoveGlobalSReg(SDNode *N);
   void SelectINTRINSIC_W_CHAIN(SDNode *N);
   void SelectINTRINSIC_WO_CHAIN(SDNode *N);
   void SelectINTRINSIC_VOID(SDNode *N);
