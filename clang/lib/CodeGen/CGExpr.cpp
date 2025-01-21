@@ -2012,7 +2012,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
       Address Cast = Addr.withElementType(NewVecTy);
       llvm::Value *V = Builder.CreateLoad(Cast, Volatile, "loadVecN");
       unsigned OldNumElements = VTy->getNumElements();
-      SmallVector<int, 4> Mask(OldNumElements);
+      SmallVector<int, 16> Mask(OldNumElements);
       std::iota(Mask.begin(), Mask.end(), 0);
       V = Builder.CreateShuffleVector(V, Mask, "extractVec");
       return EmitFromMemory(V, Ty);
