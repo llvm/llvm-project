@@ -2353,7 +2353,13 @@ RValue CodeGenFunction::EmitLoadOfExtVectorElementLValue(LValue LV) {
   if (!ExprVT) {
     unsigned InIdx = getAccessedFieldNo(0, Elts);
     llvm::Value *Elt = llvm::ConstantInt::get(SizeTy, InIdx);
-    return RValue::get(Builder.CreateExtractElement(Vec, Elt));
+
+    llvm::Value *Element = Builder.CreateExtractElement(Vec, Elt);
+
+    if (getLangOpts().HLSL && LV.getType()->isBooleanType())
+      Element = Builder.CreateTrunc(Element, ConvertType(LV.getType()));
+
+    return RValue::get(Element);
   }
 
   // Always use shuffle vector to try to retain the original program structure
@@ -2364,6 +2370,10 @@ RValue CodeGenFunction::EmitLoadOfExtVectorElementLValue(LValue LV) {
     Mask.push_back(getAccessedFieldNo(i, Elts));
 
   Vec = Builder.CreateShuffleVector(Vec, Mask);
+
+  if (getLangOpts().HLSL && LV.getType()->isExtVectorBoolType())
+    Vec = EmitFromMemory(Vec, LV.getType());
+
   return RValue::get(Vec);
 }
 
