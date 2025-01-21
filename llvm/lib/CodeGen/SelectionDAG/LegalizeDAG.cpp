@@ -3405,10 +3405,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(ExpandInsertToVectorThroughStack(SDValue(Node, 0)));
     break;
   case ISD::CONCAT_VECTORS:
-    if (EVT ElementValueType =
-            Node->getOperand(0).getValueType().getVectorElementType();
-        TLI.isOperationLegalOrCustom(ISD::EXTRACT_VECTOR_ELT,
-                                     ElementValueType)) {
+    if (!TLI.isOperationExpand(ISD::EXTRACT_VECTOR_ELT, Node->getOperand(0).getValueType())) {
       Results.push_back(ExpandConcatVectors(Node));
     } else {
       Results.push_back(ExpandVectorBuildThroughStack(Node));
