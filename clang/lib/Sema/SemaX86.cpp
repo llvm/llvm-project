@@ -1045,9 +1045,9 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_vpshrdw128:
   case X86::BI__builtin_ia32_vpshrdw256:
   case X86::BI__builtin_ia32_vpshrdw512:
-  case X86::BI__builtin_ia32_vminmaxnepbf16128:
-  case X86::BI__builtin_ia32_vminmaxnepbf16256:
-  case X86::BI__builtin_ia32_vminmaxnepbf16512:
+  case X86::BI__builtin_ia32_vminmaxbf16128:
+  case X86::BI__builtin_ia32_vminmaxbf16256:
+  case X86::BI__builtin_ia32_vminmaxbf16512:
   case X86::BI__builtin_ia32_vminmaxpd128_mask:
   case X86::BI__builtin_ia32_vminmaxpd256_round_mask:
   case X86::BI__builtin_ia32_vminmaxph128_mask:
