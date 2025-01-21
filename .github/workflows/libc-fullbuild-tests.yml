@@ -68,8 +68,8 @@ jobs:
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_BUILD_TYPE=MinSizeRel
-        -DCMAKE_C_COMPILER_LAUNCHER=sccache
-        -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+        -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache-variant }}
+        -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache-variant }}
         -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }}
         -DLLVM_ENABLE_RUNTIMES="libc;compiler-rt"
         -DLLVM_LIBC_FULL_BUILD=ON
