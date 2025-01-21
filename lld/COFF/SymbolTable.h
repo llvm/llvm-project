@@ -155,6 +155,9 @@ public:
   llvm::DenseSet<StringRef> directivesExports;
   bool hadExplicitExports;
 
+  Chunk *edataStart = nullptr;
+  Chunk *edataEnd = nullptr;
+
   void fixupExports();
   void assignExportOrdinals();
 
