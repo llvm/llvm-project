@@ -182,7 +182,7 @@ extern char &SIShrinkInstructionsLegacyID;
 void initializeSIFixSGPRCopiesLegacyPass(PassRegistry &);
 extern char &SIFixSGPRCopiesLegacyID;
 
-void initializeSIFixVGPRCopiesPass(PassRegistry &);
+void initializeSIFixVGPRCopiesLegacyPass(PassRegistry &);
 extern char &SIFixVGPRCopiesID;
 
 void initializeSILowerWWMCopiesPass(PassRegistry &);
