@@ -14,5 +14,6 @@ struct A {
 @end
 @implementation AGy
 - (unsigned) ver {
+    return 0;
 }
 @end
