@@ -1374,10 +1374,13 @@ def : MnemonicAlias<"ds_load_tr_b128", "ds_load_tr16_b128">, Requires<[isGFX1250
 // GFX13.
 //===----------------------------------------------------------------------===//
 
-defm DS_STORE_SGPR_B32   : DS_Real_gfx13<0x080>;
-defm DS_ADD_SGPR_U32     : DS_Real_gfx13<0x081>;
-defm DS_LOAD_SGPR_B32    : DS_Real_gfx13<0x0ad>;
-defm DS_ADD_SGPR_RTN_U32 : DS_Real_gfx13<0x0ae>;
+// TODO-GFX13: Hide under predicate for now.
+let AssemblerPredicate = HasSGPRVMEM in {
+  defm DS_STORE_SGPR_B32   : DS_Real_gfx13<0x080>;
+  defm DS_ADD_SGPR_U32     : DS_Real_gfx13<0x081>;
+  defm DS_LOAD_SGPR_B32    : DS_Real_gfx13<0x0ad>;
+  defm DS_ADD_SGPR_RTN_U32 : DS_Real_gfx13<0x0ae>;
+}
 
 //===----------------------------------------------------------------------===//
 // GFX11.

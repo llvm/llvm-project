@@ -395,8 +395,6 @@ def : AlwaysUniform<int_amdgcn_readlane>;
 def : AlwaysUniform<int_amdgcn_icmp>;
 def : AlwaysUniform<int_amdgcn_fcmp>;
 def : AlwaysUniform<int_amdgcn_ballot>;
-def : AlwaysUniform<int_amdgcn_s_mov_from_global>;
-def : AlwaysUniform<int_amdgcn_s_swap_to_global>;
 def : AlwaysUniform<int_amdgcn_if_break>;
 def : AlwaysUniform<int_amdgcn_waterfall_readfirstlane>;
 def : AlwaysUniform<int_amdgcn_waterfall_begin>;

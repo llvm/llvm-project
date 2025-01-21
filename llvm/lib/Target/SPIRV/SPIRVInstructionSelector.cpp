@@ -301,8 +301,9 @@ private:
 
   bool selectReadImageIntrinsic(Register &ResVReg, const SPIRVType *ResType,
                                 MachineInstr &I) const;
-
   bool selectImageWriteIntrinsic(MachineInstr &I) const;
+  bool selectResourceGetPointer(Register &ResVReg, const SPIRVType *ResType,
+                                MachineInstr &I) const;
 
   // Utilities
   std::pair<Register, bool>
@@ -332,10 +333,15 @@ private:
   SPIRVType *widenTypeToVec4(const SPIRVType *Type, MachineInstr &I) const;
   bool extractSubvector(Register &ResVReg, const SPIRVType *ResType,
                         Register &ReadReg, MachineInstr &InsertionPoint) const;
+  bool generateImageRead(Register &ResVReg, const SPIRVType *ResType,
+                         Register ImageReg, Register IdxReg, DebugLoc Loc,
+                         MachineInstr &Pos) const;
   bool BuildCOPY(Register DestReg, Register SrcReg, MachineInstr &I) const;
   bool loadVec3BuiltinInputID(SPIRV::BuiltIn::BuiltIn BuiltInValue,
                               Register ResVReg, const SPIRVType *ResType,
                               MachineInstr &I) const;
+  bool loadHandleBeforePosition(Register &HandleReg, const SPIRVType *ResType,
+                                GIntrinsic &HandleDef, MachineInstr &Pos) const;
 };
 
 } // end anonymous namespace
@@ -1043,6 +1049,25 @@ bool SPIRVInstructionSelector::selectLoad(Register ResVReg,
                                           MachineInstr &I) const {
   unsigned OpOffset = isa<GIntrinsic>(I) ? 1 : 0;
   Register Ptr = I.getOperand(1 + OpOffset).getReg();
+
+  auto *PtrDef = getVRegDef(*MRI, Ptr);
+  auto *IntPtrDef = dyn_cast<GIntrinsic>(PtrDef);
+  if (IntPtrDef &&
+      IntPtrDef->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
+    Register ImageReg = IntPtrDef->getOperand(2).getReg();
+    Register NewImageReg =
+        MRI->createVirtualRegister(MRI->getRegClass(ImageReg));
+    auto *ImageDef = cast<GIntrinsic>(getVRegDef(*MRI, ImageReg));
+    if (!loadHandleBeforePosition(NewImageReg, GR.getSPIRVTypeForVReg(ImageReg),
+                                  *ImageDef, I)) {
+      return false;
+    }
+
+    Register IdxReg = IntPtrDef->getOperand(3).getReg();
+    return generateImageRead(ResVReg, ResType, NewImageReg, IdxReg,
+                             I.getDebugLoc(), I);
+  }
+
   auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
                  .addDef(ResVReg)
                  .addUse(GR.getSPIRVTypeID(ResType))
@@ -1062,6 +1087,29 @@ bool SPIRVInstructionSelector::selectStore(MachineInstr &I) const {
   unsigned OpOffset = isa<GIntrinsic>(I) ? 1 : 0;
   Register StoreVal = I.getOperand(0 + OpOffset).getReg();
   Register Ptr = I.getOperand(1 + OpOffset).getReg();
+
+  auto *PtrDef = getVRegDef(*MRI, Ptr);
+  auto *IntPtrDef = dyn_cast<GIntrinsic>(PtrDef);
+  if (IntPtrDef &&
+      IntPtrDef->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
+    Register ImageReg = IntPtrDef->getOperand(2).getReg();
+    Register NewImageReg =
+        MRI->createVirtualRegister(MRI->getRegClass(ImageReg));
+    auto *ImageDef = cast<GIntrinsic>(getVRegDef(*MRI, ImageReg));
+    if (!loadHandleBeforePosition(NewImageReg, GR.getSPIRVTypeForVReg(ImageReg),
+                                  *ImageDef, I)) {
+      return false;
+    }
+
+    Register IdxReg = IntPtrDef->getOperand(3).getReg();
+    return BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                   TII.get(SPIRV::OpImageWrite))
+        .addUse(NewImageReg)
+        .addUse(IdxReg)
+        .addUse(StoreVal)
+        .constrainAllUses(TII, TRI, RBI);
+  }
+
   MachineBasicBlock &BB = *I.getParent();
   auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpStore))
                  .addUse(Ptr)
@@ -3066,6 +3114,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_resource_load_typedbuffer: {
     return selectReadImageIntrinsic(ResVReg, ResType, I);
   }
+  case Intrinsic::spv_resource_getpointer: {
+    return selectResourceGetPointer(ResVReg, ResType, I);
+  }
   case Intrinsic::spv_discard: {
     return selectDiscard(ResVReg, ResType, I);
   }
@@ -3083,27 +3134,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
 bool SPIRVInstructionSelector::selectHandleFromBinding(Register &ResVReg,
                                                        const SPIRVType *ResType,
                                                        MachineInstr &I) const {
-
-  uint32_t Set = foldImm(I.getOperand(2), MRI);
-  uint32_t Binding = foldImm(I.getOperand(3), MRI);
-  uint32_t ArraySize = foldImm(I.getOperand(4), MRI);
-  Register IndexReg = I.getOperand(5).getReg();
-  bool IsNonUniform = ArraySize > 1 && foldImm(I.getOperand(6), MRI);
-
-  MachineIRBuilder MIRBuilder(I);
-  Register VarReg = buildPointerToResource(ResType, Set, Binding, ArraySize,
-                                           IndexReg, IsNonUniform, MIRBuilder);
-
-  if (IsNonUniform)
-    buildOpDecorate(ResVReg, I, TII, SPIRV::Decoration::NonUniformEXT, {});
-
-  // TODO: For now we assume the resource is an image, which needs to be
-  // loaded to get the handle. That will not be true for storage buffers.
-  return BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(VarReg)
-      .constrainAllUses(TII, TRI, RBI);
+  return true;
 }
 
 bool SPIRVInstructionSelector::selectReadImageIntrinsic(
@@ -3116,34 +3147,49 @@ bool SPIRVInstructionSelector::selectReadImageIntrinsic(
   // We will do that when we can, but for now trying to move forward with other
   // issues.
   Register ImageReg = I.getOperand(2).getReg();
-  assert(MRI->getVRegDef(ImageReg)->getParent() == I.getParent() &&
-         "The image must be loaded in the same basic block as its use.");
+  auto *ImageDef = cast<GIntrinsic>(getVRegDef(*MRI, ImageReg));
+  Register NewImageReg = MRI->createVirtualRegister(MRI->getRegClass(ImageReg));
+  if (!loadHandleBeforePosition(NewImageReg, GR.getSPIRVTypeForVReg(ImageReg),
+                                *ImageDef, I)) {
+    return false;
+  }
 
+  Register IdxReg = I.getOperand(3).getReg();
+  DebugLoc Loc = I.getDebugLoc();
+  MachineInstr &Pos = I;
+
+  return generateImageRead(ResVReg, ResType, NewImageReg, IdxReg, Loc, Pos);
+}
+
+bool SPIRVInstructionSelector::generateImageRead(Register &ResVReg,
+                                                 const SPIRVType *ResType,
+                                                 Register ImageReg,
+                                                 Register IdxReg, DebugLoc Loc,
+                                                 MachineInstr &Pos) const {
   uint64_t ResultSize = GR.getScalarOrVectorComponentCount(ResType);
   if (ResultSize == 4) {
-    return BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                   TII.get(SPIRV::OpImageRead))
+    return BuildMI(*Pos.getParent(), Pos, Loc, TII.get(SPIRV::OpImageRead))
         .addDef(ResVReg)
         .addUse(GR.getSPIRVTypeID(ResType))
         .addUse(ImageReg)
-        .addUse(I.getOperand(3).getReg())
+        .addUse(IdxReg)
         .constrainAllUses(TII, TRI, RBI);
   }
 
-  SPIRVType *ReadType = widenTypeToVec4(ResType, I);
+  SPIRVType *ReadType = widenTypeToVec4(ResType, Pos);
   Register ReadReg = MRI->createVirtualRegister(GR.getRegClass(ReadType));
   bool Succeed =
-      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpImageRead))
+      BuildMI(*Pos.getParent(), Pos, Loc, TII.get(SPIRV::OpImageRead))
           .addDef(ReadReg)
           .addUse(GR.getSPIRVTypeID(ReadType))
           .addUse(ImageReg)
-          .addUse(I.getOperand(3).getReg())
+          .addUse(IdxReg)
           .constrainAllUses(TII, TRI, RBI);
   if (!Succeed)
     return false;
 
   if (ResultSize == 1) {
-    return BuildMI(*I.getParent(), I, I.getDebugLoc(),
+    return BuildMI(*Pos.getParent(), Pos, Loc,
                    TII.get(SPIRV::OpCompositeExtract))
         .addDef(ResVReg)
         .addUse(GR.getSPIRVTypeID(ResType))
@@ -3151,7 +3197,25 @@ bool SPIRVInstructionSelector::selectReadImageIntrinsic(
         .addImm(0)
         .constrainAllUses(TII, TRI, RBI);
   }
-  return extractSubvector(ResVReg, ResType, ReadReg, I);
+  return extractSubvector(ResVReg, ResType, ReadReg, Pos);
+}
+
+bool SPIRVInstructionSelector::selectResourceGetPointer(
+    Register &ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
+#ifdef ASSERT
+  // For now, the operand is an image. This will change once we start handling
+  // more resource types.
+  Register ResourcePtr = I.getOperand(2).getReg();
+  SPIRVType *RegType = GR.getResultType(ResourcePtr);
+  assert(RegType->getOpcode() == SPIRV::OpTypeImage &&
+         "Can only handle texel buffers for now.");
+#endif
+
+  // For texel buffers, the index into the image is part of the OpImageRead or
+  // OpImageWrite instructions. So we will do nothing in this case. This
+  // intrinsic will be combined with the load or store when selecting the load
+  // or store.
+  return true;
 }
 
 bool SPIRVInstructionSelector::extractSubvector(
@@ -3203,15 +3267,20 @@ bool SPIRVInstructionSelector::selectImageWriteIntrinsic(
   // We will do that when we can, but for now trying to move forward with other
   // issues.
   Register ImageReg = I.getOperand(1).getReg();
-  assert(MRI->getVRegDef(ImageReg)->getParent() == I.getParent() &&
-         "The image must be loaded in the same basic block as its use.");
+  auto *ImageDef = cast<GIntrinsic>(getVRegDef(*MRI, ImageReg));
+  Register NewImageReg = MRI->createVirtualRegister(MRI->getRegClass(ImageReg));
+  if (!loadHandleBeforePosition(NewImageReg, GR.getSPIRVTypeForVReg(ImageReg),
+                                *ImageDef, I)) {
+    return false;
+  }
+
   Register CoordinateReg = I.getOperand(2).getReg();
   Register DataReg = I.getOperand(3).getReg();
   assert(GR.getResultType(DataReg)->getOpcode() == SPIRV::OpTypeVector);
   assert(GR.getScalarOrVectorComponentCount(GR.getResultType(DataReg)) == 4);
   return BuildMI(*I.getParent(), I, I.getDebugLoc(),
                  TII.get(SPIRV::OpImageWrite))
-      .addUse(ImageReg)
+      .addUse(NewImageReg)
       .addUse(CoordinateReg)
       .addUse(DataReg)
       .constrainAllUses(TII, TRI, RBI);
@@ -3876,6 +3945,36 @@ SPIRVType *SPIRVInstructionSelector::widenTypeToVec4(const SPIRVType *Type,
   Register ScalarTypeReg = Type->getOperand(1).getReg();
   const SPIRVType *ScalarType = GR.getSPIRVTypeForVReg(ScalarTypeReg);
   return GR.getOrCreateSPIRVVectorType(ScalarType, 4, MIRBuilder);
+}
+
+bool SPIRVInstructionSelector::loadHandleBeforePosition(
+    Register &HandleReg, const SPIRVType *ResType, GIntrinsic &HandleDef,
+    MachineInstr &Pos) const {
+
+  assert(HandleDef.getIntrinsicID() ==
+         Intrinsic::spv_resource_handlefrombinding);
+  uint32_t Set = foldImm(HandleDef.getOperand(2), MRI);
+  uint32_t Binding = foldImm(HandleDef.getOperand(3), MRI);
+  uint32_t ArraySize = foldImm(HandleDef.getOperand(4), MRI);
+  Register IndexReg = HandleDef.getOperand(5).getReg();
+  bool IsNonUniform = ArraySize > 1 && foldImm(HandleDef.getOperand(6), MRI);
+
+  MachineIRBuilder MIRBuilder(HandleDef);
+  Register VarReg = buildPointerToResource(ResType, Set, Binding, ArraySize,
+                                           IndexReg, IsNonUniform, MIRBuilder);
+
+  if (IsNonUniform)
+    buildOpDecorate(HandleReg, HandleDef, TII, SPIRV::Decoration::NonUniformEXT,
+                    {});
+
+  // TODO: For now we assume the resource is an image, which needs to be
+  // loaded to get the handle. That will not be true for storage buffers.
+  return BuildMI(*Pos.getParent(), Pos, HandleDef.getDebugLoc(),
+                 TII.get(SPIRV::OpLoad))
+      .addDef(HandleReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(VarReg)
+      .constrainAllUses(TII, TRI, RBI);
 }
 
 namespace llvm {

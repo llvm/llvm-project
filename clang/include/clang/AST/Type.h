@@ -8841,13 +8841,16 @@ void FixedPointValueToString(SmallVectorImpl<char> &Str, llvm::APSInt Val,
                              unsigned Scale);
 
 inline FunctionEffectsRef FunctionEffectsRef::get(QualType QT) {
+  const Type *TypePtr = QT.getTypePtr();
   while (true) {
-    QualType Pointee = QT->getPointeeType();
-    if (Pointee.isNull())
+    if (QualType Pointee = TypePtr->getPointeeType(); !Pointee.isNull())
+      TypePtr = Pointee.getTypePtr();
+    else if (TypePtr->isArrayType())
+      TypePtr = TypePtr->getBaseElementTypeUnsafe();
+    else
       break;
-    QT = Pointee;
   }
-  if (const auto *FPT = QT->getAs<FunctionProtoType>())
+  if (const auto *FPT = TypePtr->getAs<FunctionProtoType>())
     return FPT->getFunctionEffects();
   return {};
 }

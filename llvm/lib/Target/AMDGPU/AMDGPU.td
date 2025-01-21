@@ -1399,6 +1399,12 @@ def FeatureGloballyAddressableScratch : SubtargetFeature<
   "FLAT instructions can access scratch memory for any thread in any wave"
 >;
 
+def FeatureSGPRVMEM : SubtargetFeature< "sgpr-vmem",
+  "HasSGPRVMEM",
+  "true",
+  "Shader Load/Store/Atomics of SGPRs through VMEM"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -2971,6 +2977,9 @@ def HasSWC : Predicate<"Subtarget->hasSWC()">,
 
 def HasIndexedResources : Predicate<"Subtarget->hasIndexedResources()">,
   AssemblerPredicate<(all_of FeatureIndexedResources)>;
+
+def HasSGPRVMEM : Predicate<"Subtarget->hasSGPRVMEM()">,
+  AssemblerPredicate<(all_of FeatureSGPRVMEM)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"
