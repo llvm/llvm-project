@@ -2938,7 +2938,7 @@ define amdgpu_ps float @test_strict_wqm_within_wqm_with_kill(<8 x i32> inreg %rs
 ; GFX9-W64-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-W64-NEXT:    image_sample v0, v0, s[0:7], s[8:11] dmask:0x1
-; GFX9-W64-NEXT:    s_xor_b64 s[0:1], vcc, exec
+; GFX9-W64-NEXT:    s_andn2_b64 s[0:1], exec, vcc
 ; GFX9-W64-NEXT:    s_andn2_b64 s[12:13], s[12:13], s[0:1]
 ; GFX9-W64-NEXT:    s_cbranch_scc0 .LBB51_2
 ; GFX9-W64-NEXT:  ; %bb.1: ; %main_body
@@ -2973,7 +2973,7 @@ define amdgpu_ps float @test_strict_wqm_within_wqm_with_kill(<8 x i32> inreg %rs
 ; GFX10-W32-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    image_sample v0, v0, s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_1D
-; GFX10-W32-NEXT:    s_xor_b32 s0, vcc_lo, exec_lo
+; GFX10-W32-NEXT:    s_andn2_b32 s0, exec_lo, vcc_lo
 ; GFX10-W32-NEXT:    s_andn2_b32 s12, s12, s0
 ; GFX10-W32-NEXT:    s_cbranch_scc0 .LBB51_2
 ; GFX10-W32-NEXT:  ; %bb.1: ; %main_body

@@ -299,12 +299,10 @@ size_t SymbolFileBreakpad::ParseBlocksRecursive(Function &func) {
   // "INLINE 0 ...", the current level is 0 and its parent block is the
   // function block at index 0.
   std::vector<Block *> blocks;
-  Block &block = func.GetBlock(false);
-  block.AddRange(Block::Range(0, func.GetAddressRange().GetByteSize()));
-  blocks.push_back(&block);
+  blocks.push_back(&func.GetBlock(false));
 
   size_t blocks_added = 0;
-  addr_t func_base = func.GetAddressRange().GetBaseAddress().GetOffset();
+  addr_t func_base = func.GetAddress().GetOffset();
   CompUnitData &data = m_cu_data->GetEntryRef(comp_unit->GetID()).data;
   LineIterator It(*m_objfile_sp, Record::Func, data.bookmark),
       End(*m_objfile_sp);
@@ -398,7 +396,7 @@ SymbolFileBreakpad::ResolveSymbolContext(const Address &so_addr,
         Block &block = func_sp->GetBlock(true);
         sc.block = block.FindInnermostBlockByOffset(
             so_addr.GetFileAddress() -
-            sc.function->GetAddressRange().GetBaseAddress().GetFileAddress());
+            sc.function->GetAddress().GetFileAddress());
         if (sc.block)
           result |= eSymbolContextBlock;
       }

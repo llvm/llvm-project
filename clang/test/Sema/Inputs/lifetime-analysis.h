@@ -128,6 +128,11 @@ struct reference_wrapper {
 template<typename T>
 reference_wrapper<T> ref(T& t) noexcept;
 
+template <typename T>
+struct [[gsl::Pointer]] iterator {
+  T& operator*() const;
+};
+
 struct false_type {
     static constexpr bool value = false;
     constexpr operator bool() const noexcept { return value; }

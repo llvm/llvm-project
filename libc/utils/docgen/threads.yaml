@@ -1,0 +1,88 @@
+functions:
+  call_once:
+    c-definition: 7.28.2.1
+    in-latest-posix: ''
+  cnd_broadcast:
+    c-definition: 7.28.3.1
+    in-latest-posix: ''
+  cnd_destroy:
+    c-definition: 7.28.3.2
+    in-latest-posix: ''
+  cnd_init:
+    c-definition: 7.28.3.3
+    in-latest-posix: ''
+  cnd_signal:
+    c-definition: 7.28.3.4
+    in-latest-posix: ''
+  cnd_timedwait:
+    c-definition: 7.28.3.5
+    in-latest-posix: ''
+  cnd_wait:
+    c-definition: 7.28.3.6
+    in-latest-posix: ''
+  mtx_destroy:
+    c-definition: 7.28.4.2
+    in-latest-posix: ''
+  mtx_init:
+    c-definition: 7.28.4.3
+    in-latest-posix: ''
+  mtx_lock:
+    c-definition: 7.28.4.4
+    in-latest-posix: ''
+  mtx_timedlock:
+    c-definition: 7.28.4.5
+    in-latest-posix: ''
+  mtx_trylock:
+    c-definition: 7.28.4.6
+    in-latest-posix: ''
+  mtx_unlock:
+    c-definition: 7.28.4.7
+    in-latest-posix: ''
+  thrd_create:
+    c-definition: 7.28.5.1
+    in-latest-posix: ''
+  thrd_current:
+    c-definition: 7.28.5.2
+    in-latest-posix: ''
+  thrd_detach:
+    c-definition: 7.28.5.3
+    in-latest-posix: ''
+  thrd_equal:
+    c-definition: 7.28.5.4
+    in-latest-posix: ''
+  thrd_exit:
+    c-definition: 7.28.5.5
+    in-latest-posix: ''
+  thrd_join:
+    c-definition: 7.28.5.6
+    in-latest-posix: ''
+  thrd_sleep:
+    c-definition: 7.28.5.7
+    in-latest-posix: ''
+  thrd_yield:
+    c-definition: 7.28.5.8
+    in-latest-posix: ''
+  tss_create:
+    c-definition: 7.28.6.1
+    in-latest-posix: ''
+  tss_delete:
+    c-definition: 7.28.6.2
+    in-latest-posix: ''
+  tss_get:
+    c-definition: 7.28.6.3
+    in-latest-posix: ''
+  tss_set:
+    c-definition: 7.28.6.4
+    in-latest-posix: ''
+macros:
+  ONCE_FLAG_INIT:
+    c-definition: 7.28.1
+    in-latest-posix: ''
+  TSS_DTOR_ITERATIONS:
+    c-definition: 7.28.1
+    in-latest-posix: ''
+  __STDC_NO_THREADS__:
+    c-definition: 7.28.1
+  thread_local:
+    in-latest-posix: ''
+

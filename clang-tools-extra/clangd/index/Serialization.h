@@ -83,7 +83,8 @@ std::string toYAML(const Ref &);
 // Build an in-memory static index from an index file.
 // The size should be relatively small, so data can be managed in memory.
 std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef Filename,
-                                       SymbolOrigin Origin, bool UseDex = true);
+                                       SymbolOrigin Origin, bool UseDex,
+                                       bool SupportContainedRefs);
 
 } // namespace clangd
 } // namespace clang

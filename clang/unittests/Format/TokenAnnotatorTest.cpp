@@ -370,6 +370,21 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   ASSERT_EQ(Tokens.size(), 18u) << Tokens;
   EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_CastRParen);
   EXPECT_TOKEN(Tokens[11], tok::star, TT_BinaryOperator);
+
+  Tokens = annotate("template <typename T>\n"
+                    "concept C = requires(T a, T b) { a && b; };");
+  ASSERT_EQ(Tokens.size(), 24u) << Tokens;
+  EXPECT_TOKEN(Tokens[16], tok::l_brace, TT_RequiresExpressionLBrace);
+  EXPECT_TOKEN(Tokens[18], tok::ampamp, TT_BinaryOperator);
+
+  Tokens = annotate("template <typename T, typename V>\n"
+                    "concept CheckMultiplicableBy = requires(T a, V b) {\n"
+                    "  { a * b } -> std::same_as<T>;\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 36u) << Tokens;
+  EXPECT_TOKEN(Tokens[19], tok::l_brace, TT_RequiresExpressionLBrace);
+  EXPECT_TOKEN(Tokens[20], tok::l_brace, TT_CompoundRequirementLBrace);
+  EXPECT_TOKEN(Tokens[22], tok::star, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
@@ -2277,6 +2292,13 @@ TEST_F(TokenAnnotatorTest, UnderstandsTrailingReturnArrow) {
   ASSERT_EQ(Tokens.size(), 21u) << Tokens;
   EXPECT_TOKEN(Tokens[13], tok::arrow, TT_Unknown);
 
+  Tokens = annotate("Class<Type>{foo}->func(arg);");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_Unknown); // Not FunctionLBrace
+  EXPECT_BRACE_KIND(Tokens[4], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[6], BK_BracedInit);
+  EXPECT_TOKEN(Tokens[7], tok::arrow, TT_Unknown);
+
   auto Style = getLLVMStyle();
   Style.StatementAttributeLikeMacros.push_back("emit");
   Tokens = annotate("emit foo()->bar;", Style);
@@ -2616,6 +2638,40 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
                     "endmodule");
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_VerilogMultiLineListLParen);
+
+  // Escaped identifiers.
+  Tokens = Annotate(R"(\busa+index)");
+  ASSERT_EQ(Tokens.size(), 2u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
+  Tokens = Annotate(R"(\busa+index ;)");
+  ASSERT_EQ(Tokens.size(), 3u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
+  EXPECT_EQ(Tokens[0]->TokenText, R"(\busa+index)");
+  EXPECT_TOKEN(Tokens[1], tok::semi, TT_Unknown);
+  Tokens = Annotate(R"(\busa+index
+;)");
+  ASSERT_EQ(Tokens.size(), 3u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
+  EXPECT_TOKEN(Tokens[1], tok::semi, TT_Unknown);
+  // The escaped identifier can be broken by an escaped newline. The result is
+  // still 1 identifier.
+  Tokens = Annotate(R"(\busa+index\
++
+;)");
+  ASSERT_EQ(Tokens.size(), 3u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
+  EXPECT_EQ(Tokens[0]->TokenText, R"(\busa+index\
++)");
+  EXPECT_TOKEN(Tokens[1], tok::semi, TT_Unknown);
+  // An escaped newline should not be treated as an escaped identifier.
+  Tokens = Annotate("\\\n");
+  ASSERT_EQ(Tokens.size(), 1u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::eof, TT_Unknown);
+  // Macros.
+  Tokens = Annotate("`define x x``x");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::hash, TT_Unknown);
+  EXPECT_TOKEN(Tokens[4], tok::hashhash, TT_Unknown);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
@@ -3346,6 +3402,38 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_BRACE_KIND(Tokens[11], BK_BracedInit);
   EXPECT_BRACE_KIND(Tokens[13], BK_Block);
 
+  Tokens = annotate("{\n"
+                    "  {\n"
+                    "#define GEN_ID(_x) char *_x{#_x}\n"
+                    "    GEN_ID(one);\n"
+                    "  }\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 23u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_brace, TT_BlockLBrace);
+  EXPECT_BRACE_KIND(Tokens[0], BK_Block);
+  EXPECT_TOKEN(Tokens[1], tok::l_brace, TT_BlockLBrace);
+  EXPECT_BRACE_KIND(Tokens[1], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[11], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[14], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[20], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[21], BK_Block);
+
+  Tokens = annotate("{\n"
+                    "#define FOO \\\n"
+                    "  { \\\n"
+                    "    case bar: { \\\n"
+                    "      break; \\\n"
+                    "    } \\\n"
+                    "  }\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_BlockLBrace);
+  EXPECT_BRACE_KIND(Tokens[4], BK_Block);
+  EXPECT_TOKEN(Tokens[7], tok::colon, TT_CaseLabelColon);
+  EXPECT_BRACE_KIND(Tokens[8], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[11], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[12], BK_Block);
+
   Tokens = annotate("a = class extends goog.a {};",
                     getGoogleStyle(FormatStyle::LK_JavaScript));
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
@@ -3589,11 +3677,31 @@ TEST_F(TokenAnnotatorTest, TemplateInstantiation) {
   EXPECT_TOKEN(Tokens[18], tok::greater, TT_TemplateCloser);
 }
 
+TEST_F(TokenAnnotatorTest, VariableTemplate) {
+  auto Style = getLLVMStyle();
+  Style.VariableTemplates.push_back("a");
+
+  auto Tokens = annotate("auto t3 = (a<int>) + b;", Style);
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::identifier, TT_VariableTemplate);
+  EXPECT_TOKEN(Tokens[5], tok::less, TT_TemplateOpener);
+  EXPECT_TOKEN(Tokens[7], tok::greater, TT_TemplateCloser);
+  EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_Unknown); // Not TT_CastRParen
+  EXPECT_TOKEN(Tokens[9], tok::plus, TT_BinaryOperator);
+}
+
 TEST_F(TokenAnnotatorTest, SwitchInMacroArgument) {
   auto Tokens = annotate("FOOBAR(switch);\n"
                          "void f() {}");
   ASSERT_EQ(Tokens.size(), 12u) << Tokens;
   EXPECT_TOKEN(Tokens[9], tok::l_brace, TT_FunctionLBrace);
+}
+
+TEST_F(TokenAnnotatorTest, AfterPPDirective) {
+  auto Tokens = annotate("#error -- My error message");
+
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::minusminus, TT_AfterPPDirective);
 }
 
 } // namespace

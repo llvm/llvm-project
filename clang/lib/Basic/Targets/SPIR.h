@@ -38,16 +38,15 @@ static const unsigned SPIRDefIsPrivMap[] = {
     0, // cuda_constant
     0, // cuda_shared
     // SYCL address space values for this map are dummy
-    0,  // sycl_global
-    0,  // sycl_global_device
-    0,  // sycl_global_host
-    0,  // sycl_local
-    0,  // sycl_private
-    0,  // ptr32_sptr
-    0,  // ptr32_uptr
-    0,  // ptr64
-    0,  // hlsl_groupshared
-    10, // hlsl_private
+    0, // sycl_global
+    0, // sycl_global_device
+    0, // sycl_global_host
+    0, // sycl_local
+    0, // sycl_private
+    0, // ptr32_sptr
+    0, // ptr32_uptr
+    0, // ptr64
+    0, // hlsl_groupshared
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -70,18 +69,17 @@ static const unsigned SPIRDefIsGenMap[] = {
     // cuda_constant pointer can be casted to default/"flat" pointer, but in
     // SPIR-V casts between constant and generic pointers are not allowed. For
     // this reason cuda_constant is mapped to SPIR-V CrossWorkgroup.
-    1,  // cuda_constant
-    3,  // cuda_shared
-    1,  // sycl_global
-    5,  // sycl_global_device
-    6,  // sycl_global_host
-    3,  // sycl_local
-    0,  // sycl_private
-    0,  // ptr32_sptr
-    0,  // ptr32_uptr
-    0,  // ptr64
-    0,  // hlsl_groupshared
-    10, // hlsl_private
+    1, // cuda_constant
+    3, // cuda_shared
+    1, // sycl_global
+    5, // sycl_global_device
+    6, // sycl_global_host
+    3, // sycl_local
+    0, // sycl_private
+    0, // ptr32_sptr
+    0, // ptr32_uptr
+    0, // ptr64
+    0, // hlsl_groupshared
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -315,7 +313,7 @@ public:
     resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
                     "v256:256-v512:512-v1024:1024-n8:16:32:64-G1");
   }
-
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 };

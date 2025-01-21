@@ -24,7 +24,7 @@ func.func @test_poly_expr_without_associate() {
 // CHECK:           %[[VAL_9:.*]] = arith.constant 0 : i32
 // CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_4]]#1 : (!fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>) -> !fir.box<none>
-// CHECK:           %[[VAL_12:.*]] = fir.call @_FortranAAllocatableApplyMold(%[[VAL_10]], %[[VAL_11]], %[[VAL_9]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32) -> none
+// CHECK:           fir.call @_FortranAAllocatableApplyMold(%[[VAL_10]], %[[VAL_11]], %[[VAL_9]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32) -> ()
 // CHECK:           hlfir.assign %[[VAL_4]]#0 to %[[VAL_8]]#0 realloc temporary_lhs : !fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>, !fir.ref<!fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>>
 // CHECK:           %[[VAL_8B:.*]] = fir.load %[[VAL_8]]#0
 // CHECK:           %[[VAL_13:.*]] = fir.undefined tuple<!fir.class<!fir.heap<!fir.type<_QFtestTt{c:i32}>>>, i1>
@@ -47,7 +47,7 @@ func.func @test_poly_expr_with_associate(%arg1: !fir.class<!fir.array<3x!fir.typ
   %8 = fir.shape %7#1 : (index) -> !fir.shape<1>
   %9:3 = hlfir.associate %6(%8) {uniq_name = ".tmp.assign"} : (!hlfir.expr<?x!fir.type<_QMtest_typeTt1{i:i32}>?>, !fir.shape<1>) -> (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>>, !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>>, i1)
   %10 = fir.convert %0 : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>>>) -> !fir.box<none>
-  %11 = fir.call @_FortranADestroy(%10) fastmath<contract> : (!fir.box<none>) -> none
+  fir.call @_FortranADestroy(%10) fastmath<contract> : (!fir.box<none>) -> ()
   %c3 = arith.constant 3 : index
   %12 = fir.shape %c3 : (index) -> !fir.shape<1>
   %c1 = arith.constant 1 : index
@@ -79,7 +79,7 @@ func.func @test_poly_expr_with_associate(%arg1: !fir.class<!fir.array<3x!fir.typ
 // CHECK:           %[[VAL_15:.*]] = arith.constant 1 : i32
 // CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_5]] : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>>) -> !fir.box<none>
-// CHECK:           %[[VAL_18:.*]] = fir.call @_FortranAAllocatableApplyMold(%[[VAL_16]], %[[VAL_17]], %[[VAL_15]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32) -> none
+// CHECK:           fir.call @_FortranAAllocatableApplyMold(%[[VAL_16]], %[[VAL_17]], %[[VAL_15]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32) -> ()
 // CHECK:           hlfir.assign %[[VAL_5]] to %[[VAL_14]]#0 realloc temporary_lhs : !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>>>
 // CHECK:           %[[VAL_14B:.*]] = fir.load %[[VAL_14]]#0
 // CHECK:           %[[VAL_19:.*]] = fir.undefined tuple<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>>, i1>
@@ -89,7 +89,7 @@ func.func @test_poly_expr_with_associate(%arg1: !fir.class<!fir.array<3x!fir.typ
 // CHECK:           %[[VAL_23:.*]]:3 = fir.box_dims %[[VAL_5]], %[[VAL_22]] : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>>, index) -> (index, index, index)
 // CHECK:           %[[VAL_24:.*]] = fir.shape %[[VAL_23]]#1 : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_27:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtest_typeTt1{i:i32}>>>>>) -> !fir.box<none>
-// CHECK:           %[[VAL_28:.*]] = fir.call @_FortranADestroy(%[[VAL_27]]) fastmath<contract> : (!fir.box<none>) -> none
+// CHECK:           fir.call @_FortranADestroy(%[[VAL_27]]) fastmath<contract> : (!fir.box<none>) -> ()
 // CHECK:           %[[VAL_29:.*]] = arith.constant 3 : index
 // CHECK:           %[[VAL_30:.*]] = fir.shape %[[VAL_29]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_31:.*]] = arith.constant 1 : index

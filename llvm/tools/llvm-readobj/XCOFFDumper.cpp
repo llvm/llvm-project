@@ -723,7 +723,12 @@ const EnumEntry<XCOFF::CFileLangId> CFileLangIdClass[] = {
 const EnumEntry<XCOFF::CFileCpuId> CFileCpuIdClass[] = {
 #define ECase(X)                                                               \
   { #X, XCOFF::X }
-    ECase(TCPU_PPC64), ECase(TCPU_COM), ECase(TCPU_970)
+    ECase(TCPU_INVALID), ECase(TCPU_PPC),  ECase(TCPU_PPC64), ECase(TCPU_COM),
+    ECase(TCPU_PWR),     ECase(TCPU_ANY),  ECase(TCPU_601),   ECase(TCPU_603),
+    ECase(TCPU_604),     ECase(TCPU_620),  ECase(TCPU_A35),   ECase(TCPU_970),
+    ECase(TCPU_PWR5),    ECase(TCPU_PWR6), ECase(TCPU_PWR5X), ECase(TCPU_PWR6E),
+    ECase(TCPU_PWR7),    ECase(TCPU_PWR8), ECase(TCPU_PWR9),  ECase(TCPU_PWR10),
+    ECase(TCPU_PWRX)
 #undef ECase
 };
 

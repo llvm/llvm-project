@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_MIN_H
-#define _LIBCPP___ALGORITHM_RANGES_MIN_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_RANGES_MIN_H
+#define _LIBCPP___CXX03___ALGORITHM_RANGES_MIN_H
 
 #include <__cxx03/__algorithm/ranges_min_element.h>
 #include <__cxx03/__assert>
@@ -92,4 +92,4 @@ _LIBCPP_POP_MACROS
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP___ALGORITHM_RANGES_MIN_H
+#endif // _LIBCPP___CXX03___ALGORITHM_RANGES_MIN_H

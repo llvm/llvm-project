@@ -46,6 +46,8 @@ class Module {
 public:
   Module(llvm::StringRef Name, bool Problem);
   ~Module();
+  Module(const Module &other) = delete;
+  Module &operator=(const Module &other) = delete;
   bool output(llvm::raw_fd_ostream &OS, int Indent);
   Module *findSubModule(llvm::StringRef SubName);
 

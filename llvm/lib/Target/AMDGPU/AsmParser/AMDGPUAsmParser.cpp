@@ -1920,9 +1920,6 @@ public:
   ParseStatus parseEndpgm(OperandVector &Operands);
 
   ParseStatus parseVOPD(OperandVector &Operands);
-
-  ParseStatus parseBitOp3(OperandVector &Operands);
-  AMDGPUOperand::Ptr defaultBitOp3() const;
 };
 
 } // end anonymous namespace
@@ -9763,10 +9760,14 @@ unsigned AMDGPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
   case MCK_SReg_64:
   case MCK_SReg_64_XEXEC:
     // Null is defined as a 32-bit register but
-    // it should also be enabled with 64-bit operands.
-    // The following code enables it for SReg_64 operands
+    // it should also be enabled with 64-bit operands or larger.
+    // The following code enables it for SReg_64 and larger operands
     // used as source and destination. Remaining source
     // operands are handled in isInlinableImm.
+  case MCK_SReg_96:
+  case MCK_SReg_128:
+  case MCK_SReg_256:
+  case MCK_SReg_512:
     return Operand.isNull() ? Match_Success : Match_InvalidOperand;
   default:
     return Match_InvalidOperand;
@@ -9795,20 +9796,6 @@ ParseStatus AMDGPUAsmParser::parseEndpgm(OperandVector &Operands) {
 }
 
 bool AMDGPUOperand::isEndpgm() const { return isImmTy(ImmTyEndpgm); }
-
-//===----------------------------------------------------------------------===//
-// BITOP3
-//===----------------------------------------------------------------------===//
-
-ParseStatus AMDGPUAsmParser::parseBitOp3(OperandVector &Operands) {
-  ParseStatus Res =
-      parseIntWithPrefix("bitop3", Operands, AMDGPUOperand::ImmTyBitOp3);
-  return Res;
-}
-
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultBitOp3() const {
-  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyBitOp3);
-}
 
 //===----------------------------------------------------------------------===//
 // Split Barrier

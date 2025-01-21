@@ -3043,6 +3043,10 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
            << (R.getValueAsBit("InheritEvenIfAlreadyPresent") ? "true"
                                                               : "false");
       }
+      if (R.getValueAsBit("DeferDeserialization")) {
+        OS << ", "
+           << "/*DeferDeserialization=*/true";
+      }
       OS << ")\n";
 
       for (auto const &ai : Args) {
@@ -3183,7 +3187,6 @@ void clang::EmitClangAttrClass(const RecordKeeper &Records, raw_ostream &OS) {
 
   OS << "#ifndef LLVM_CLANG_ATTR_CLASSES_INC\n";
   OS << "#define LLVM_CLANG_ATTR_CLASSES_INC\n";
-  OS << "#include \"clang/Support/Compiler.h\"\n\n";
 
   emitAttributes(Records, OS, true);
 
@@ -5178,6 +5181,9 @@ GetAttributeHeadingAndSpellings(const Record &Documentation,
 
 static void WriteDocumentation(const RecordKeeper &Records,
                                const DocumentationData &Doc, raw_ostream &OS) {
+  if (StringRef Label = Doc.Documentation->getValueAsString("Label");
+      !Label.empty())
+    OS << ".. _" << Label << ":\n\n";
   OS << Doc.Heading << "\n" << std::string(Doc.Heading.length(), '-') << "\n";
 
   // List what spelling syntaxes the attribute supports.

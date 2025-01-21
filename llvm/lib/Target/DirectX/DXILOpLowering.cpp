@@ -10,8 +10,11 @@
 #include "DXILConstants.h"
 #include "DXILIntrinsicExpansion.h"
 #include "DXILOpBuilder.h"
+#include "DXILResourceAnalysis.h"
+#include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -77,11 +80,13 @@ namespace {
 class OpLowerer {
   Module &M;
   DXILOpBuilder OpBuilder;
-  DXILResourceMap &DRM;
+  DXILBindingMap &DBM;
+  DXILResourceTypeMap &DRTM;
   SmallVector<CallInst *> CleanupCasts;
 
 public:
-  OpLowerer(Module &M, DXILResourceMap &DRM) : M(M), OpBuilder(M), DRM(DRM) {}
+  OpLowerer(Module &M, DXILBindingMap &DBM, DXILResourceTypeMap &DRTM)
+      : M(M), OpBuilder(M), DBM(DBM), DRTM(DRTM) {}
 
   /// Replace every call to \c F using \c ReplaceCall, and then erase \c F. If
   /// there is an error replacing a call, we emit a diagnostic and return true.
@@ -186,7 +191,7 @@ public:
   /// or defs, and by the end all of the casts will be redundant.
   Value *createTmpHandleCast(Value *V, Type *Ty) {
     CallInst *Cast = OpBuilder.getIRB().CreateIntrinsic(
-        Intrinsic::dx_cast_handle, {Ty, V->getType()}, {V});
+        Intrinsic::dx_resource_casthandle, {Ty, V->getType()}, {V});
     CleanupCasts.push_back(Cast);
     return Cast;
   }
@@ -211,7 +216,7 @@ public:
       // Otherwise, we're the second handle in a pair. Forward the arguments and
       // remove the (second) cast.
       CallInst *Def = cast<CallInst>(Cast->getOperand(0));
-      assert(Def->getIntrinsicID() == Intrinsic::dx_cast_handle &&
+      assert(Def->getIntrinsicID() == Intrinsic::dx_resource_casthandle &&
              "Unbalanced pair of temporary handle casts");
       Cast->replaceAllUsesWith(Def->getOperand(0));
       Cast->eraseFromParent();
@@ -257,10 +262,12 @@ public:
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
-      auto *It = DRM.find(CI);
-      assert(It != DRM.end() && "Resource not in map?");
-      dxil::ResourceInfo &RI = *It;
+      auto *It = DBM.find(CI);
+      assert(It != DBM.end() && "Resource not in map?");
+      dxil::ResourceBindingInfo &RI = *It;
+
       const auto &Binding = RI.getBinding();
+      dxil::ResourceClass RC = DRTM[RI.getHandleTy()].getResourceClass();
 
       Value *IndexOp = CI->getArgOperand(3);
       if (Binding.LowerBound != 0)
@@ -268,7 +275,7 @@ public:
                                 ConstantInt::get(Int32Ty, Binding.LowerBound));
 
       std::array<Value *, 4> Args{
-          ConstantInt::get(Int8Ty, llvm::to_underlying(RI.getResourceClass())),
+          ConstantInt::get(Int8Ty, llvm::to_underlying(RC)),
           ConstantInt::get(Int32Ty, Binding.RecordID), IndexOp,
           CI->getArgOperand(4)};
       Expected<CallInst *> OpCall =
@@ -293,18 +300,21 @@ public:
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
-      auto *It = DRM.find(CI);
-      assert(It != DRM.end() && "Resource not in map?");
-      dxil::ResourceInfo &RI = *It;
+      auto *It = DBM.find(CI);
+      assert(It != DBM.end() && "Resource not in map?");
+      dxil::ResourceBindingInfo &RI = *It;
 
       const auto &Binding = RI.getBinding();
+      dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
+      dxil::ResourceClass RC = RTI.getResourceClass();
 
       Value *IndexOp = CI->getArgOperand(3);
       if (Binding.LowerBound != 0)
         IndexOp = IRB.CreateAdd(IndexOp,
                                 ConstantInt::get(Int32Ty, Binding.LowerBound));
 
-      std::pair<uint32_t, uint32_t> Props = RI.getAnnotateProps();
+      std::pair<uint32_t, uint32_t> Props =
+          RI.getAnnotateProps(*F.getParent(), RTI);
 
       // For `CreateHandleFromBinding` we need the upper bound rather than the
       // size, so we need to be careful about the difference for "unbounded".
@@ -312,8 +322,8 @@ public:
       uint32_t UpperBound = Binding.Size == Unbounded
                                 ? Unbounded
                                 : Binding.LowerBound + Binding.Size - 1;
-      Constant *ResBind = OpBuilder.getResBind(
-          Binding.LowerBound, UpperBound, Binding.Space, RI.getResourceClass());
+      Constant *ResBind = OpBuilder.getResBind(Binding.LowerBound, UpperBound,
+                                               Binding.Space, RC);
       std::array<Value *, 3> BindArgs{ResBind, IndexOp, CI->getArgOperand(4)};
       Expected<CallInst *> OpBind = OpBuilder.tryCreateOp(
           OpCode::CreateHandleFromBinding, BindArgs, CI->getName());
@@ -339,8 +349,9 @@ public:
     });
   }
 
-  /// Lower `dx.handle.fromBinding` intrinsics depending on the shader model and
-  /// taking into account binding information from DXILResourceAnalysis.
+  /// Lower `dx.resource.handlefrombinding` intrinsics depending on the shader
+  /// model and taking into account binding information from
+  /// DXILResourceBindingAnalysis.
   bool lowerHandleFromBinding(Function &F) {
     Triple TT(Triple(M.getTargetTriple()));
     if (TT.getDXILVersion() < VersionTuple(1, 6))
@@ -404,8 +415,16 @@ public:
         }
       }
 
-      OldResult = cast<Instruction>(
-          IRB.CreateExtractValue(Op, 0, OldResult->getName()));
+      if (OldResult->use_empty()) {
+        // Only the check bit was used, so we're done here.
+        OldResult->eraseFromParent();
+        return Error::success();
+      }
+
+      assert(OldResult->hasOneUse() &&
+             isa<ExtractValueInst>(*OldResult->user_begin()) &&
+             "Expected only use to be extract of first element");
+      OldResult = cast<Instruction>(*OldResult->user_begin());
       OldTy = ST->getElementType(0);
     }
 
@@ -523,6 +542,48 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerRawBufferLoad(Function &F) {
+    Triple TT(Triple(M.getTargetTriple()));
+    VersionTuple DXILVersion = TT.getDXILVersion();
+    const DataLayout &DL = F.getDataLayout();
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int8Ty = IRB.getInt8Ty();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Type *OldTy = cast<StructType>(CI->getType())->getElementType(0);
+      Type *ScalarTy = OldTy->getScalarType();
+      Type *NewRetTy = OpBuilder.getResRetType(ScalarTy);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Index0 = CI->getArgOperand(1);
+      Value *Index1 = CI->getArgOperand(2);
+      uint64_t NumElements =
+          DL.getTypeSizeInBits(OldTy) / DL.getTypeSizeInBits(ScalarTy);
+      Value *Mask = ConstantInt::get(Int8Ty, ~(~0U << NumElements));
+      Value *Align =
+          ConstantInt::get(Int32Ty, DL.getPrefTypeAlign(ScalarTy).value());
+
+      Expected<CallInst *> OpCall =
+          DXILVersion >= VersionTuple(1, 2)
+              ? OpBuilder.tryCreateOp(OpCode::RawBufferLoad,
+                                      {Handle, Index0, Index1, Mask, Align},
+                                      CI->getName(), NewRetTy)
+              : OpBuilder.tryCreateOp(OpCode::BufferLoad,
+                                      {Handle, Index0, Index1}, CI->getName(),
+                                      NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = replaceResRetUses(CI, *OpCall, /*HasCheckBit=*/true))
+        return E;
+
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerUpdateCounter(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
@@ -547,7 +608,18 @@ public:
     });
   }
 
-  [[nodiscard]] bool lowerTypedBufferStore(Function &F) {
+  [[nodiscard]] bool lowerGetPointer(Function &F) {
+    // These should have already been handled in DXILResourceAccess, so we can
+    // just clean up the dead prototype.
+    assert(F.user_empty() && "getpointer operations should have been removed");
+    F.eraseFromParent();
+    return false;
+  }
+
+  [[nodiscard]] bool lowerBufferStore(Function &F, bool IsRaw) {
+    Triple TT(Triple(M.getTargetTriple()));
+    VersionTuple DXILVersion = TT.getDXILVersion();
+    const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
     Type *Int32Ty = IRB.getInt32Ty();
@@ -558,33 +630,81 @@ public:
       Value *Handle =
           createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
       Value *Index0 = CI->getArgOperand(1);
-      Value *Index1 = UndefValue::get(Int32Ty);
-      // For typed stores, the mask must always cover all four elements.
-      Constant *Mask = ConstantInt::get(Int8Ty, 0xF);
+      Value *Index1 = IsRaw ? CI->getArgOperand(2) : UndefValue::get(Int32Ty);
 
-      Value *Data = CI->getArgOperand(2);
-      auto *DataTy = dyn_cast<FixedVectorType>(Data->getType());
-      if (!DataTy || DataTy->getNumElements() != 4)
+      Value *Data = CI->getArgOperand(IsRaw ? 3 : 2);
+      Type *DataTy = Data->getType();
+      Type *ScalarTy = DataTy->getScalarType();
+
+      uint64_t NumElements =
+          DL.getTypeSizeInBits(DataTy) / DL.getTypeSizeInBits(ScalarTy);
+      Value *Mask = ConstantInt::get(Int8Ty, ~(~0U << NumElements));
+
+      // TODO: check that we only have vector or scalar...
+      if (!IsRaw && NumElements != 4)
         return make_error<StringError>(
             "typedBufferStore data must be a vector of 4 elements",
             inconvertibleErrorCode());
-      Value *Data0 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 0));
-      Value *Data1 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 1));
-      Value *Data2 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 2));
-      Value *Data3 =
-          IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, 3));
+      else if (NumElements > 4)
+        return make_error<StringError>(
+            "rawBufferStore data must have at most 4 elements",
+            inconvertibleErrorCode());
 
-      std::array<Value *, 8> Args{Handle, Index0, Index1, Data0,
-                                  Data1,  Data2,  Data3,  Mask};
+      std::array<Value *, 4> DataElements{nullptr, nullptr, nullptr, nullptr};
+      if (DataTy == ScalarTy)
+        DataElements[0] = Data;
+      else {
+        // Since we're post-scalarizer, if we see a vector here it's likely
+        // constructed solely for the argument of the store. Just use the scalar
+        // values from before they're inserted into the temporary.
+        auto *IEI = dyn_cast<InsertElementInst>(Data);
+        while (IEI) {
+          auto *IndexOp = dyn_cast<ConstantInt>(IEI->getOperand(2));
+          if (!IndexOp)
+            break;
+          size_t IndexVal = IndexOp->getZExtValue();
+          assert(IndexVal < 4 && "Too many elements for buffer store");
+          DataElements[IndexVal] = IEI->getOperand(1);
+          IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
+        }
+      }
+
+      // If for some reason we weren't able to forward the arguments from the
+      // scalarizer artifact, then we may need to actually extract elements from
+      // the vector.
+      for (int I = 0, E = NumElements; I < E; ++I)
+        if (DataElements[I] == nullptr)
+          DataElements[I] =
+              IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, I));
+      // For any elements beyond the length of the vector, fill up with undef.
+      for (int I = NumElements, E = 4; I < E; ++I)
+        if (DataElements[I] == nullptr)
+          DataElements[I] = UndefValue::get(ScalarTy);
+
+      dxil::OpCode Op = OpCode::BufferStore;
+      SmallVector<Value *, 9> Args{
+          Handle,          Index0,          Index1,          DataElements[0],
+          DataElements[1], DataElements[2], DataElements[3], Mask};
+      if (IsRaw && DXILVersion >= VersionTuple(1, 2)) {
+        Op = OpCode::RawBufferStore;
+        // RawBufferStore requires the alignment
+        Args.push_back(
+            ConstantInt::get(Int32Ty, DL.getPrefTypeAlign(ScalarTy).value()));
+      }
       Expected<CallInst *> OpCall =
-          OpBuilder.tryCreateOp(OpCode::BufferStore, Args, CI->getName());
+          OpBuilder.tryCreateOp(Op, Args, CI->getName());
       if (Error E = OpCall.takeError())
         return E;
 
       CI->eraseFromParent();
+      // Clean up any leftover `insertelement`s
+      auto *IEI = dyn_cast<InsertElementInst>(Data);
+      while (IEI && IEI->use_empty()) {
+        InsertElementInst *Tmp = IEI;
+        IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
+        Tmp->eraseFromParent();
+      }
+
       return Error::success();
     });
   }
@@ -673,19 +793,25 @@ public:
         F, OpCode, ArrayRef<IntrinArgSelect>{__VA_ARGS__});                    \
     break;
 #include "DXILOperation.inc"
-      case Intrinsic::dx_handle_fromBinding:
+      case Intrinsic::dx_resource_handlefrombinding:
         HasErrors |= lowerHandleFromBinding(F);
         break;
-      case Intrinsic::dx_typedBufferLoad:
-        HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/false);
+      case Intrinsic::dx_resource_getpointer:
+        HasErrors |= lowerGetPointer(F);
         break;
-      case Intrinsic::dx_typedBufferLoad_checkbit:
+      case Intrinsic::dx_resource_load_typedbuffer:
         HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/true);
         break;
-      case Intrinsic::dx_typedBufferStore:
-        HasErrors |= lowerTypedBufferStore(F);
+      case Intrinsic::dx_resource_store_typedbuffer:
+        HasErrors |= lowerBufferStore(F, /*IsRaw=*/false);
         break;
-      case Intrinsic::dx_bufferUpdateCounter:
+      case Intrinsic::dx_resource_load_rawbuffer:
+        HasErrors |= lowerRawBufferLoad(F);
+        break;
+      case Intrinsic::dx_resource_store_rawbuffer:
+        HasErrors |= lowerBufferStore(F, /*IsRaw=*/true);
+        break;
+      case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);
         break;
       // TODO: this can be removed when
@@ -713,13 +839,16 @@ public:
 } // namespace
 
 PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &MAM) {
-  DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
+  DXILBindingMap &DBM = MAM.getResult<DXILResourceBindingAnalysis>(M);
+  DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
 
-  bool MadeChanges = OpLowerer(M, DRM).lowerIntrinsics();
+  bool MadeChanges = OpLowerer(M, DBM, DRTM).lowerIntrinsics();
   if (!MadeChanges)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
-  PA.preserve<DXILResourceAnalysis>();
+  PA.preserve<DXILResourceBindingAnalysis>();
+  PA.preserve<DXILMetadataAnalysis>();
+  PA.preserve<ShaderFlagsAnalysis>();
   return PA;
 }
 
@@ -727,18 +856,24 @@ namespace {
 class DXILOpLoweringLegacy : public ModulePass {
 public:
   bool runOnModule(Module &M) override {
-    DXILResourceMap &DRM =
-        getAnalysis<DXILResourceWrapperPass>().getResourceMap();
+    DXILBindingMap &DBM =
+        getAnalysis<DXILResourceBindingWrapperPass>().getBindingMap();
+    DXILResourceTypeMap &DRTM =
+        getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
 
-    return OpLowerer(M, DRM).lowerIntrinsics();
+    return OpLowerer(M, DBM, DRTM).lowerIntrinsics();
   }
   StringRef getPassName() const override { return "DXIL Op Lowering"; }
   DXILOpLoweringLegacy() : ModulePass(ID) {}
 
   static char ID; // Pass identification.
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
-    AU.addRequired<DXILResourceWrapperPass>();
-    AU.addPreserved<DXILResourceWrapperPass>();
+    AU.addRequired<DXILResourceTypeWrapperPass>();
+    AU.addRequired<DXILResourceBindingWrapperPass>();
+    AU.addPreserved<DXILResourceBindingWrapperPass>();
+    AU.addPreserved<DXILResourceMDWrapper>();
+    AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
+    AU.addPreserved<ShaderFlagsAnalysisWrapper>();
   }
 };
 char DXILOpLoweringLegacy::ID = 0;
@@ -746,7 +881,8 @@ char DXILOpLoweringLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(DXILOpLoweringLegacy, DEBUG_TYPE, "DXIL Op Lowering",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceBindingWrapperPass)
 INITIALIZE_PASS_END(DXILOpLoweringLegacy, DEBUG_TYPE, "DXIL Op Lowering", false,
                     false)
 

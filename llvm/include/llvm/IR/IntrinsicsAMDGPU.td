@@ -284,12 +284,6 @@ def int_amdgcn_s_barrier_join : ClangBuiltin<"__builtin_amdgcn_s_barrier_join">,
   Intrinsic<[], [local_ptr_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
                                 IntrNoCallback, IntrNoFree]>;
 
-// void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3) %barrier)
-// The %barrier argument must be uniform, otherwise behavior is undefined.
-def int_amdgcn_s_wakeup_barrier : ClangBuiltin<"__builtin_amdgcn_s_wakeup_barrier">,
-  Intrinsic<[], [local_ptr_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
-                                IntrNoCallback, IntrNoFree]>;
-
 // void @llvm.amdgcn.s.barrier.wait(i16 %barrierType)
 def int_amdgcn_s_barrier_wait : ClangBuiltin<"__builtin_amdgcn_s_barrier_wait">,
   Intrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrConvergent,
@@ -774,7 +768,7 @@ def int_amdgcn_prng_b32 : DefaultAttrsIntrinsic<
 
 def int_amdgcn_bitop3 :
   DefaultAttrsIntrinsic<[llvm_anyint_ty],
-                        [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, llvm_i8_ty],
+                        [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
                         [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]>;
 
 } // TargetPrefix = "amdgcn"
@@ -882,6 +876,8 @@ class AMDGPUSampleVariant<string ucmod, string lcmod, list<AMDGPUArg> extra_addr
   // Name of the {lod} or {clamp} argument that is appended to the coordinates,
   // if any.
   string LodOrClamp = "";
+
+  bit UsesWQM = false;
 }
 
 // AMDGPUSampleVariants: all variants supported by IMAGE_SAMPLE
@@ -911,8 +907,9 @@ defset list<AMDGPUSampleVariant> AMDGPUSampleVariants = {
   }
 
   defset list<AMDGPUSampleVariant> AMDGPUSampleVariantsNoGradients = {
+    let UsesWQM = true in
     defm AMDGPUSample : AMDGPUSampleHelper_Clamp<"", "", []>;
-    let Bias = true in
+    let Bias = true, UsesWQM = true in
     defm AMDGPUSample : AMDGPUSampleHelper_Clamp<
         "_B", "_b", [AMDGPUArg<llvm_anyfloat_ty, "bias">]>;
     let LodOrClamp = "lod" in
@@ -1178,7 +1175,8 @@ defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimIntrinsics = {
     foreach dim = AMDGPUDims.NoMsaa in {
       def !strconcat(NAME, "_", dim.Name) : AMDGPUImageDimIntrinsic<
           AMDGPUDimSampleProfile<opmod, dim, sample>,
-          !if(NoMem, [IntrNoMem], [IntrReadMem]),
+          !listconcat(!if(NoMem, [IntrNoMem], [IntrReadMem]),
+                      !if(sample.UsesWQM, [IntrConvergent], [])),
           !if(NoMem, [], [SDNPMemOperand])>;
     }
   }
@@ -1194,7 +1192,8 @@ defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimIntrinsics = {
     foreach dim = AMDGPUDims.NoMsaa in {
       def !strconcat(NAME, "_", dim.Name, "_nortn") : AMDGPUImageDimIntrinsic<
           AMDGPUDimSampleNoReturnProfile<opmod, dim, sample>,
-          [IntrWillReturn], [SDNPMemOperand]>;
+          !listconcat([IntrWillReturn], !if(sample.UsesWQM, [IntrConvergent], [])),
+          [SDNPMemOperand]>;
     }
   }
   foreach sample = AMDGPUSampleVariants in {

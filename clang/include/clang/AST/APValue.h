@@ -157,11 +157,9 @@ public:
 
     void Profile(llvm::FoldingSetNodeID &ID) const;
 
-    template <class T>
-    bool is() const { return Ptr.is<T>(); }
+    template <class T> bool is() const { return isa<T>(Ptr); }
 
-    template <class T>
-    T get() const { return Ptr.get<T>(); }
+    template <class T> T get() const { return cast<T>(Ptr); }
 
     template <class T>
     T dyn_cast() const { return Ptr.dyn_cast<T>(); }

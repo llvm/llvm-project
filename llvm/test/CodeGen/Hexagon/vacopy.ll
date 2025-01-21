@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv62 -mtriple=hexagon-unknown-linux-musl < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv62 -mtriple=hexagon-unknown-linux-musl < %s | FileCheck %s
 ; CHECK-LABEL: PrintInts:
 ; CHECK-DAG: memw{{.*}} = r{{[0-9]+}}
 ; CHECK-DAG: memw{{.*}} = r{{[0-9]+}}

@@ -21,11 +21,10 @@
 @PrivInternal = internal addrspace(10) global i32 456
 
 define spir_kernel void @Foo() {
-; CHECK: %[[#]] = OpLoad %[[#]] %[[#PTR]] Aligned 8
+  ; CHECK: %[[#]] = OpLoad %[[#]] %[[#PTR]] Aligned 8
   %l = load ptr addrspace(1), ptr addrspace(1) @Ptr, align 8
-; CHECK: OpCopyMemorySized %[[#]] %[[#INIT]] %[[#]] Aligned 4
+  ; CHECK: OpCopyMemorySized %[[#]] %[[#INIT]] %[[#]] Aligned 4
   call void @llvm.memcpy.p1.p2.i64(ptr addrspace(1) align 4 %l, ptr addrspace(2) align 1 @Init, i64 4, i1 false)
-
   ret void
 }
 

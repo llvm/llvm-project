@@ -44,7 +44,12 @@ public:
 
   bool Success() const;
 
+  /// Get the error code.
   uint32_t GetError() const;
+
+  /// Get the error in machine-readable form. Particularly useful for
+  /// compiler diagnostics.
+  SBStructuredData GetErrorData() const;
 
   lldb::ErrorType GetType() const;
 

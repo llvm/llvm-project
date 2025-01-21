@@ -1,5 +1,5 @@
-# RUN: llc -march=x86-64 -run-pass machineverifier -o - %s | FileCheck %s
-# RUN: llc -march=x86-64 --passes='machine-function(verify)' -o - %s | FileCheck %s
+# RUN: llc -run-pass machineverifier -o - %s | FileCheck %s
+# RUN: llc --passes='machine-function(verify)' -o - %s | FileCheck %s
 # Simple round-trip test for DBG_VALUE_LIST.
 # CHECK: [[VAR_C:![0-9]+]] = !DILocalVariable(name: "c"
 # CHECK: DBG_VALUE_LIST [[VAR_C]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value), $edi, $esi, debug-location

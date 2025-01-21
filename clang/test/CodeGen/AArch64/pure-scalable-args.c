@@ -417,7 +417,7 @@ void test_va_arg(int n, ...) {
 // CHECK-AAPCS-EMPTY:
 // CHECK-AAPCS-NEXT: vaarg.on_stack:                                   ; preds = %vaarg.maybe_reg, %entry
 // CHECK-AAPCS-NEXT:   %stack = load ptr, ptr %ap, align 8
-// CHECK-AAPCS-NEXT:   %new_stack = getelementptr inbounds i8, ptr %stack, i64 8
+// CHECK-AAPCS-NEXT:   %new_stack = getelementptr inbounds nuw i8, ptr %stack, i64 8
 // CHECK-AAPCS-NEXT:   store ptr %new_stack, ptr %ap, align 8
 // CHECK-AAPCS-NEXT:   br label %vaarg.end
 // CHECK-AAPCS-EMPTY:
@@ -428,7 +428,7 @@ void test_va_arg(int n, ...) {
 // CHECK-AAPCS-NEXT:   %vaarg.addr = load ptr, ptr %vaargs.addr, align 8
 
 // CHECK-AAPCS-NEXT:   %v.sroa.0.0.copyload = load <2 x i8>, ptr %vaarg.addr, align 16
-// CHECK-AAPCS-NEXT:   %v.sroa.43.0.vaarg.addr.sroa_idx = getelementptr inbounds i8, ptr %vaarg.addr, i64 48
+// CHECK-AAPCS-NEXT:   %v.sroa.43.0.vaarg.addr.sroa_idx = getelementptr inbounds nuw i8, ptr %vaarg.addr, i64 48
 // CHECK-AAPCS-NEXT:   %v.sroa.43.0.copyload = load <4 x float>, ptr %v.sroa.43.0.vaarg.addr.sroa_idx, align 16
 // CHECK-AAPCS-NEXT:   call void @llvm.va_end.p0(ptr nonnull %ap)
 // CHECK-AAPCS-NEXT:   %cast.scalable = call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v2i8(<vscale x 2 x i8> poison, <2 x i8> %v.sroa.0.0.copyload, i64 0)
@@ -445,11 +445,11 @@ void test_va_arg(int n, ...) {
 // CHECK-DARWIN-NEXT:   call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %ap)
 // CHECK-DARWIN-NEXT:   call void @llvm.va_start.p0(ptr nonnull %ap)
 // CHECK-DARWIN-NEXT:   %argp.cur = load ptr, ptr %ap, align 8
-// CHECK-DARWIN-NEXT:   %argp.next = getelementptr inbounds i8, ptr %argp.cur, i64 8
+// CHECK-DARWIN-NEXT:   %argp.next = getelementptr inbounds nuw i8, ptr %argp.cur, i64 8
 // CHECK-DARWIN-NEXT:   store ptr %argp.next, ptr %ap, align 8
 // CHECK-DARWIN-NEXT:   %0 = load ptr, ptr %argp.cur, align 8
 // CHECK-DARWIN-NEXT:   %v.sroa.0.0.copyload = load <2 x i8>, ptr %0, align 16
-// CHECK-DARWIN-NEXT:   %v.sroa.43.0..sroa_idx = getelementptr inbounds i8, ptr %0, i64 48
+// CHECK-DARWIN-NEXT:   %v.sroa.43.0..sroa_idx = getelementptr inbounds nuw i8, ptr %0, i64 48
 // CHECK-DARWIN-NEXT:   %v.sroa.43.0.copyload = load <4 x float>, ptr %v.sroa.43.0..sroa_idx, align 16
 // CHECK-DARWIN-NEXT:   call void @llvm.va_end.p0(ptr nonnull %ap)
 // CHECK-DARWIN-NEXT:   %cast.scalable = call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v2i8(<vscale x 2 x i8> poison, <2 x i8> %v.sroa.0.0.copyload, i64 0)
@@ -459,3 +459,22 @@ void test_va_arg(int n, ...) {
 // CHECK-DARWIN-NEXT:   call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %ap)
 // CHECK-DARWIN-NEXT:   ret void
 // CHECK-DARWIN-NEXT: }
+
+// Regression test for incorrect passing of SVE vector tuples
+// The whole `y` need to be passed indirectly.
+void test_tuple_reg_count(svfloat32_t x, svfloat32x2_t y) {
+  void test_tuple_reg_count_callee(svfloat32_t, svfloat32_t, svfloat32_t, svfloat32_t,
+                                   svfloat32_t, svfloat32_t, svfloat32_t, svfloat32x2_t);
+  test_tuple_reg_count_callee(x, x, x, x, x, x, x, y);
+}
+// CHECK-AAPCS: declare void @test_tuple_reg_count_callee(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, ptr noundef)
+// CHECK-DARWIN: declare void @test_tuple_reg_count_callee(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>)
+
+// Regression test for incorrect passing of SVE vector tuples
+// The whole `y` need to be passed indirectly.
+void test_tuple_reg_count_bool(svboolx4_t x, svboolx4_t y) {
+  void test_tuple_reg_count_bool_callee(svboolx4_t, svboolx4_t);
+  test_tuple_reg_count_bool_callee(x, y);
+}
+// CHECK-AAPCS:  declare void @test_tuple_reg_count_bool_callee(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, ptr noundef)
+// CHECK-DARWIN: declare void @test_tuple_reg_count_bool_callee(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>)

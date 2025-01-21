@@ -1438,6 +1438,16 @@ let TargetPrefix = "nvvm" in {
 
   def int_nvvm_f2tf32_rna : ClangBuiltin<"__nvvm_f2tf32_rna">,
       Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f2tf32_rna_satfinite : ClangBuiltin<"__nvvm_f2tf32_rna_satfinite">,
+      Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f2tf32_rn : ClangBuiltin<"__nvvm_f2tf32_rn">,
+      Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f2tf32_rn_relu : ClangBuiltin<"__nvvm_f2tf32_rn_relu">,
+      Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f2tf32_rz : ClangBuiltin<"__nvvm_f2tf32_rz">,
+      Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f2tf32_rz_relu : ClangBuiltin<"__nvvm_f2tf32_rz_relu">,
+      Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
 
   def int_nvvm_ff_to_e4m3x2_rn : ClangBuiltin<"__nvvm_ff_to_e4m3x2_rn">,
       Intrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
@@ -4806,6 +4816,21 @@ def int_nvvm_redux_sync_or : ClangBuiltin<"__nvvm_redux_sync_or">,
             [IntrConvergent, IntrInaccessibleMemOnly, IntrNoCallback]>;
 
 //
+// WGMMA fence instructions
+//
+// wgmma.fence.sync.aligned;
+def int_nvvm_wgmma_fence_sync_aligned 
+  : Intrinsic<[], [], [IntrConvergent]>;
+
+// wgmma.commit_group.sync.aligned;
+def int_nvvm_wgmma_commit_group_sync_aligned
+  : Intrinsic<[], [], [IntrConvergent], "llvm.nvvm.wgmma.commit_group.sync.aligned">;
+
+// wgmma.wait_group.sync.aligned N;
+def int_nvvm_wgmma_wait_group_sync_aligned
+  : Intrinsic<[], [llvm_i64_ty], [IntrConvergent, ImmArg<ArgIndex<0>>], "llvm.nvvm.wgmma.wait_group.sync.aligned">;
+
+//
 // WMMA instructions
 //
 // WMMA.LOAD
@@ -4964,5 +4989,48 @@ foreach dim = [1, 2, 3, 4, 5] in {
     }
   }
 }
+
+// Intrinsics for Bulk Copy using TMA (non-tensor)
+// From Global to Shared Cluster
+def int_nvvm_cp_async_bulk_global_to_shared_cluster
+  : DefaultAttrsIntrinsic<[],
+      [llvm_shared_ptr_ty, // dst_smem_ptr
+       llvm_shared_ptr_ty, // mbarrier_ptr
+       llvm_global_ptr_ty, // src_gmem_ptr
+       llvm_i32_ty,        // copy_size
+       llvm_i16_ty,        // cta_mask
+       llvm_i64_ty,        // cache_hint
+       llvm_i1_ty,         // Flag for cta_mask
+       llvm_i1_ty],        // Flag for cache_hint
+      [IntrConvergent, IntrArgMemOnly,
+       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+       NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+       NoCapture<ArgIndex<2>>, ImmArg<ArgIndex<6>>,
+       ImmArg<ArgIndex<7>>]>;
+
+// From Shared CTA to Shared Cluster
+def int_nvvm_cp_async_bulk_shared_cta_to_cluster
+  : DefaultAttrsIntrinsic<[],
+      [llvm_shared_ptr_ty, // dst_smem_ptr
+       llvm_shared_ptr_ty, // mbarrier_ptr
+       llvm_shared_ptr_ty, // src_smem_ptr
+       llvm_i32_ty],       // copy_size
+      [IntrConvergent, IntrArgMemOnly,
+       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+       NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+       NoCapture<ArgIndex<2>>]>;
+
+// From Shared CTA to Global memory
+def int_nvvm_cp_async_bulk_shared_cta_to_global
+  : DefaultAttrsIntrinsic<[],
+      [llvm_global_ptr_ty, // dst_gmem_ptr
+       llvm_shared_ptr_ty, // src_smem_ptr
+       llvm_i32_ty,        // copy_size
+       llvm_i64_ty,        // cache_hint
+       llvm_i1_ty],        // Flag for cache_hint
+      [IntrConvergent, IntrArgMemOnly,
+       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+       NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+       ImmArg<ArgIndex<4>>]>;
 
 } // let TargetPrefix = "nvvm"

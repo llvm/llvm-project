@@ -107,15 +107,15 @@ std::optional<Type> recordToType(MLIRContext *ctx, const Record &predRec) {
     auto width = predRec.getValueAsInt("bitwidth");
     switch (width) {
     case 16:
-      return FloatType::getF16(ctx);
+      return Float16Type::get(ctx);
     case 32:
-      return FloatType::getF32(ctx);
+      return Float32Type::get(ctx);
     case 64:
-      return FloatType::getF64(ctx);
+      return Float64Type::get(ctx);
     case 80:
-      return FloatType::getF80(ctx);
+      return Float80Type::get(ctx);
     case 128:
-      return FloatType::getF128(ctx);
+      return Float128Type::get(ctx);
     }
   }
 
@@ -124,39 +124,39 @@ std::optional<Type> recordToType(MLIRContext *ctx, const Record &predRec) {
   }
 
   if (predRec.getName() == "BF16") {
-    return FloatType::getBF16(ctx);
+    return BFloat16Type::get(ctx);
   }
 
   if (predRec.getName() == "TF32") {
-    return FloatType::getTF32(ctx);
+    return FloatTF32Type::get(ctx);
   }
 
   if (predRec.getName() == "F8E4M3FN") {
-    return FloatType::getFloat8E4M3FN(ctx);
+    return Float8E4M3FNType::get(ctx);
   }
 
   if (predRec.getName() == "F8E5M2") {
-    return FloatType::getFloat8E5M2(ctx);
+    return Float8E5M2Type::get(ctx);
   }
 
   if (predRec.getName() == "F8E4M3") {
-    return FloatType::getFloat8E4M3(ctx);
+    return Float8E4M3Type::get(ctx);
   }
 
   if (predRec.getName() == "F8E4M3FNUZ") {
-    return FloatType::getFloat8E4M3FNUZ(ctx);
+    return Float8E4M3FNUZType::get(ctx);
   }
 
   if (predRec.getName() == "F8E4M3B11FNUZ") {
-    return FloatType::getFloat8E4M3B11FNUZ(ctx);
+    return Float8E4M3B11FNUZType::get(ctx);
   }
 
   if (predRec.getName() == "F8E5M2FNUZ") {
-    return FloatType::getFloat8E5M2FNUZ(ctx);
+    return Float8E5M2FNUZType::get(ctx);
   }
 
   if (predRec.getName() == "F8E3M4") {
-    return FloatType::getFloat8E3M4(ctx);
+    return Float8E3M4Type::get(ctx);
   }
 
   if (predRec.isSubClassOf("Complex")) {

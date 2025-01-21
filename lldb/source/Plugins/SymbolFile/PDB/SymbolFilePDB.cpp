@@ -402,44 +402,32 @@ static size_t ParseFunctionBlocksForPDBSymbol(
   assert(pdb_symbol && parent_block);
 
   size_t num_added = 0;
-  switch (pdb_symbol->getSymTag()) {
-  case PDB_SymType::Block:
-  case PDB_SymType::Function: {
-    Block *block = nullptr;
+
+  if (!is_top_parent) {
+    // Ranges for the top block were parsed together with the function.
+    if (pdb_symbol->getSymTag() != PDB_SymType::Block)
+      return num_added;
+
     auto &raw_sym = pdb_symbol->getRawSymbol();
-    if (auto *pdb_func = llvm::dyn_cast<PDBSymbolFunc>(pdb_symbol)) {
-      if (pdb_func->hasNoInlineAttribute())
-        break;
-      if (is_top_parent)
-        block = parent_block;
-      else
-        break;
-    } else if (llvm::isa<PDBSymbolBlock>(pdb_symbol)) {
-      auto uid = pdb_symbol->getSymIndexId();
-      if (parent_block->FindBlockByID(uid))
-        break;
-      if (raw_sym.getVirtualAddress() < func_file_vm_addr)
-        break;
+    assert(llvm::isa<PDBSymbolBlock>(pdb_symbol));
+    auto uid = pdb_symbol->getSymIndexId();
+    if (parent_block->FindBlockByID(uid))
+      return num_added;
+    if (raw_sym.getVirtualAddress() < func_file_vm_addr)
+      return num_added;
 
-      block = parent_block->CreateChild(pdb_symbol->getSymIndexId()).get();
-    } else
-      llvm_unreachable("Unexpected PDB symbol!");
-
+    Block *block = parent_block->CreateChild(pdb_symbol->getSymIndexId()).get();
     block->AddRange(Block::Range(
         raw_sym.getVirtualAddress() - func_file_vm_addr, raw_sym.getLength()));
     block->FinalizeRanges();
-    ++num_added;
+  }
+  auto results_up = pdb_symbol->findAllChildren();
+  if (!results_up)
+    return num_added;
 
-    auto results_up = pdb_symbol->findAllChildren();
-    if (!results_up)
-      break;
-    while (auto symbol_up = results_up->getNext()) {
-      num_added += ParseFunctionBlocksForPDBSymbol(
-          func_file_vm_addr, symbol_up.get(), block, false);
-    }
-  } break;
-  default:
-    break;
+  while (auto symbol_up = results_up->getNext()) {
+    num_added += ParseFunctionBlocksForPDBSymbol(
+        func_file_vm_addr, symbol_up.get(), parent_block, false);
   }
   return num_added;
 }
