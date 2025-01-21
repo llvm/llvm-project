@@ -21,7 +21,7 @@ body: |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[S_MOV_B32_]], %bb.0, %6, %bb.3
-  ; CHECK-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64_xexec = SI_IF [[V_CMP_EQ_U32_e64_]], %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64_xexec = SI_IF [[V_CMP_EQ_U32_e64_]], 0, %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -53,7 +53,7 @@ body: |
 
   bb.2:
     %6:vgpr_32 = PHI %4:sreg_32, %bb.1, %11:vgpr_32, %bb.4
-    %8:sreg_64_xexec = SI_IF %5:sreg_64_xexec, %bb.3, implicit-def $exec, implicit-def $scc, implicit $exec
+    %8:sreg_64_xexec = SI_IF %5:sreg_64_xexec, 0, %bb.3, implicit-def $exec, implicit-def $scc, implicit $exec
     S_BRANCH %bb.4
 
   bb.3:

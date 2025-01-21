@@ -14,6 +14,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/BranchProbability.h"
@@ -21,6 +22,8 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "si-pre-emit-peephole"
+
+STATISTIC(NumCBranchExeczElim, "Number of s_cbranch_execz eliminated.");
 
 namespace {
 
@@ -404,6 +407,7 @@ bool SIPreEmitPeephole::removeExeczBranch(MachineInstr &MI,
     return false;
 
   LLVM_DEBUG(dbgs() << "Removing the execz branch: " << MI);
+  ++NumCBranchExeczElim;
   MI.eraseFromParent();
   SrcMBB.removeSuccessor(TrueMBB);
 

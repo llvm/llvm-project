@@ -595,7 +595,7 @@ body: |
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY3]]
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[ICMP]](s1)
-  ; CHECK-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[COPY4]](s1), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[COPY4]](s1), 0, %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -620,7 +620,7 @@ body: |
     %4:sgpr(s32) = G_CONSTANT i32 0
     %9:vcc(s1) = G_ICMP intpred(eq), %0(s32), %4
     %5:sreg_32_xm0_xexec(s1) = COPY %9(s1)
-    %6:sreg_32_xm0_xexec(s32) = SI_IF %5(s1), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+    %6:sreg_32_xm0_xexec(s32) = SI_IF %5(s1), 0, %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
     G_BR %bb.1
 
   bb.1:
@@ -760,7 +760,7 @@ body: |
   ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32(s1) = S_AND_B32 $exec_lo, [[AMDGPU_COPY_VCC_SCC]](s1), implicit-def $scc
   ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32(s1) = S_OR_B32 [[S_ANDN2_B32_]](s1), [[S_AND_B32_]](s1), implicit-def $scc
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:sreg_32(s1) = COPY [[S_OR_B32_]](s1)
-  ; CHECK-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[COPY9]](s1), %bb.3, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[COPY9]](s1), 0, %bb.3, implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -778,7 +778,7 @@ body: |
   ; CHECK-NEXT:   [[C7:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
   ; CHECK-NEXT:   [[AMDGPU_COPY_VCC_SCC1:%[0-9]+]]:sreg_32(s1) = G_AMDGPU_COPY_VCC_SCC [[C7]](s32)
   ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:sreg_32(s1) = COPY [[AMDGPU_COPY_VCC_SCC1]](s1)
-  ; CHECK-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[COPY13]](s1), %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[COPY13]](s1), 0, %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK-NEXT:   G_BR %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
@@ -872,7 +872,7 @@ body: |
     %30:sreg_32(s1) = S_AND_B32 $exec_lo, %28(s1), implicit-def $scc
     %31:sreg_32(s1) = S_OR_B32 %29(s1), %30(s1), implicit-def $scc
     %32:sreg_32(s1) = COPY %31(s1)
-    %33:sreg_32_xm0_xexec(s32) = SI_IF %26(s1), %bb.3, implicit-def $exec, implicit-def $scc, implicit $exec
+    %33:sreg_32_xm0_xexec(s32) = SI_IF %26(s1), 0, %bb.3, implicit-def $exec, implicit-def $scc, implicit $exec
     G_BR %bb.2
 
   bb.2:
@@ -888,7 +888,7 @@ body: |
     %41:sgpr(s1) = G_CONSTANT i1 true
     %42:sreg_32(s1) = COPY %41(s1)
     %43:sreg_32(s1) = COPY %42(s1)
-    %44:sreg_32_xm0_xexec(s32) = SI_IF %40(s1), %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
+    %44:sreg_32_xm0_xexec(s32) = SI_IF %40(s1), 0, %bb.5, implicit-def $exec, implicit-def $scc, implicit $exec
     G_BR %bb.4
 
   bb.3:

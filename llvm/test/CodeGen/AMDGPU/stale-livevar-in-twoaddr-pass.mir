@@ -31,7 +31,7 @@ body:             |
     %5:vgpr_32 = V_MAC_F32_e32 0, %1, %0, implicit $mode, implicit $exec
     %7:vgpr_32 = V_CVT_I32_F32_e32 %5, implicit $mode, implicit $exec
     %8:sreg_64 = V_CMP_NE_U32_e64 1, %7, implicit $exec
-    %6:sreg_64 = SI_IF %8, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %6:sreg_64 = SI_IF %8, 0, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.1
 
 ...

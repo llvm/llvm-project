@@ -19,7 +19,7 @@ body:             |
     %0:vgpr_32 = COPY killed $vgpr0
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %2:sreg_64_xexec = V_CMP_EQ_U32_e64 0, killed %0, implicit $exec
-    %3:sreg_64_xexec = SI_IF %2, %bb.1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    %3:sreg_64_xexec = SI_IF %2, 0, %bb.1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.3
 
   bb.1:
@@ -36,7 +36,7 @@ body:             |
     %10:vgpr_32 = PHI %9, %bb.2, %7, %bb.3, %1, %bb.0
     GLOBAL_STORE_DWORD undef %11:vreg_64, %10, 0, 0, implicit $exec :: (volatile store (s32), addrspace 1)
     %7:vgpr_32 = COPY killed %10
-    %5:sreg_64_xexec = SI_IF %2, %bb.1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    %5:sreg_64_xexec = SI_IF %2, 0, %bb.1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.3
 
 ...

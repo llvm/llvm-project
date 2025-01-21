@@ -10,7 +10,7 @@ body:             |
     %0:sreg_64 = S_MOV_B64 0
     %8:vreg_1 = IMPLICIT_DEF
     %10:sreg_64 = IMPLICIT_DEF
-    %11:sreg_64 = SI_IF %10, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %11:sreg_64 = SI_IF %10, 0, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:

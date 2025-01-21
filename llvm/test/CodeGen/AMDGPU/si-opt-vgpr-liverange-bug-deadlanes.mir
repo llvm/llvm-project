@@ -36,7 +36,7 @@ body:             |
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN killed [[COPY]], undef %5:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s32))
   ; CHECK-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_NE_U32_e64 0, [[BUFFER_LOAD_DWORD_OFFEN]], implicit $exec
-  ; CHECK-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64 = SI_IF killed [[V_CMP_NE_U32_e64_]], %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64 = SI_IF killed [[V_CMP_NE_U32_e64_]], 0, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -49,7 +49,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:vreg_128 = PHI undef %10:vreg_128, %bb.0, [[REG_SEQUENCE]], %bb.1
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI [[BUFFER_LOAD_DWORD_OFFEN]], %bb.0, undef %15:vgpr_32, %bb.1
-  ; CHECK-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_64 = SI_ELSE killed [[SI_IF]], %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_64 = SI_ELSE killed [[SI_IF]], 0, %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
@@ -70,7 +70,7 @@ body:             |
     %2:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %3:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN %1, undef %6:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s32))
     %4:sreg_64 = V_CMP_NE_U32_e64 0, %3, implicit $exec
-    %8:sreg_64 = SI_IF killed %4, %bb.6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %8:sreg_64 = SI_IF killed %4, 0, %bb.6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.5
 
   bb.5:
@@ -82,7 +82,7 @@ body:             |
     successors: %bb.7(0x40000000), %bb.8(0x40000000)
 
     %10:vreg_128 = PHI undef %156:vreg_128, %bb.0, %9, %bb.5
-    %11:sreg_64 = SI_ELSE killed %8, %bb.8, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %11:sreg_64 = SI_ELSE killed %8, 0, %bb.8, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.7
 
   bb.7:

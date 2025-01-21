@@ -37,7 +37,7 @@ body: |
   ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[DEF2]]
   ; GFX10-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[PHI3]], $exec_lo, implicit-def $scc
   ; GFX10-NEXT:   [[S_OR_B32_1:%[0-9]+]]:sreg_32 = S_OR_B32 [[PHI2]], $exec_lo, implicit-def $scc
-  ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32 = SI_IF killed [[V_CMP_LT_I32_e64_]], %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32 = SI_IF killed [[V_CMP_LT_I32_e64_]], 0, %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.4
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.3:
@@ -104,7 +104,7 @@ body: |
     %36:vgpr_32 = COPY %26
     %39:sreg_32 = S_OR_B32 %42, $exec_lo, implicit-def $scc
     %45:sreg_32 = S_OR_B32 %48, $exec_lo, implicit-def $scc
-    %4:sreg_32 = SI_IF killed %27, %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %4:sreg_32 = SI_IF killed %27, 0, %bb.5, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.4
 
   bb.3:

@@ -16,14 +16,14 @@ entry:
 
 ; CHECK: for function 'test_if':
 ; CHECK: DIVERGENT: %cond = icmp eq i32 %arg0, 0
-; CHECK-NEXT: DIVERGENT: %if = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %cond)
+; CHECK-NEXT: DIVERGENT: %if = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %cond, i1 false)
 ; CHECK-NEXT: DIVERGENT: %if.bool = extractvalue { i1, i64 } %if, 0
 ; CHECK-NOT: DIVERGENT
 ; CHECK: DIVERGENT: %if.bool.ext = zext i1 %if.bool to i32
 define void @test_if(i32 %arg0) {
 entry:
   %cond = icmp eq i32 %arg0, 0
-  %if = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %cond)
+  %if = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %cond, i1 false)
   %if.bool = extractvalue { i1, i64 } %if, 0
   %if.mask = extractvalue { i1, i64 } %if, 1
   %if.bool.ext = zext i1 %if.bool to i32
@@ -35,14 +35,14 @@ entry:
 ; The result should still be treated as divergent, even with a uniform source.
 ; CHECK: for function 'test_if_uniform':
 ; CHECK-NOT: DIVERGENT
-; CHECK: DIVERGENT: %if = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %cond)
+; CHECK: DIVERGENT: %if = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %cond, i1 false)
 ; CHECK-NEXT: DIVERGENT: %if.bool = extractvalue { i1, i64 } %if, 0
 ; CHECK-NOT: DIVERGENT
 ; CHECK: DIVERGENT: %if.bool.ext = zext i1 %if.bool to i32
 define amdgpu_ps void @test_if_uniform(i32 inreg %arg0) {
 entry:
   %cond = icmp eq i32 %arg0, 0
-  %if = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %cond)
+  %if = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %cond, i1 false)
   %if.bool = extractvalue { i1, i64 } %if, 0
   %if.mask = extractvalue { i1, i64 } %if, 1
   %if.bool.ext = zext i1 %if.bool to i32
@@ -62,12 +62,12 @@ entry:
 }
 
 ; CHECK: for function 'test_else':
-; CHECK: DIVERGENT: %else = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 %mask)
+; CHECK: DIVERGENT: %else = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 %mask, i1 false)
 ; CHECK: DIVERGENT:       %else.bool = extractvalue { i1, i64 } %else, 0
 ; CHECK: {{^[ \t]+}}%else.mask = extractvalue { i1, i64 } %else, 1
 define amdgpu_ps void @test_else(i64 inreg %mask) {
 entry:
-  %else = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 %mask)
+  %else = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 %mask, i1 false)
   %else.bool = extractvalue { i1, i64 } %else, 0
   %else.mask = extractvalue { i1, i64 } %else, 1
   %else.bool.ext = zext i1 %else.bool to i32
@@ -78,13 +78,13 @@ entry:
 
 ; This case is probably always broken
 ; CHECK: for function 'test_else_divergent_mask':
-; CHECK: DIVERGENT: %if = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 %mask)
+; CHECK: DIVERGENT: %if = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 %mask, i1 false)
 ; CHECK-NEXT: DIVERGENT: %if.bool = extractvalue { i1, i64 } %if, 0
 ; CHECK-NOT: DIVERGENT
 ; CHECK: DIVERGENT: %if.bool.ext = zext i1 %if.bool to i32
 define void @test_else_divergent_mask(i64 %mask) {
 entry:
-  %if = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 %mask)
+  %if = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 %mask, i1 false)
   %if.bool = extractvalue { i1, i64 } %if, 0
   %if.mask = extractvalue { i1, i64 } %if, 1
   %if.bool.ext = zext i1 %if.bool to i32
@@ -93,8 +93,8 @@ entry:
   ret void
 }
 
-declare { i1, i64 } @llvm.amdgcn.if.i64(i1) #0
-declare { i1, i64 } @llvm.amdgcn.else.i64.i64(i64) #0
+declare { i1, i64 } @llvm.amdgcn.if.i64(i1, i1) #0
+declare { i1, i64 } @llvm.amdgcn.else.i64.i64(i64, i1) #0
 declare i64 @llvm.amdgcn.if.break.i64.i64(i1, i64) #1
 declare i1 @llvm.amdgcn.loop.i64(i64) #1
 

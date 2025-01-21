@@ -80,10 +80,10 @@
   declare align 4 ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #1
 
   ; Function Attrs: convergent nocallback nofree nounwind willreturn
-  declare { i1, i64 } @llvm.amdgcn.if.i64(i1) #2
+  declare { i1, i64 } @llvm.amdgcn.if.i64(i1, i1) #2
 
   ; Function Attrs: convergent nocallback nofree nounwind willreturn
-  declare { i1, i64 } @llvm.amdgcn.else.i64.i64(i64) #2
+  declare { i1, i64 } @llvm.amdgcn.else.i64.i64(i64, i1) #2
 
   ; Function Attrs: convergent nocallback nofree nounwind willreturn memory(none)
   declare i64 @llvm.amdgcn.if.break.i64(i1, i64) #3

@@ -14,7 +14,7 @@
     %ptr = load volatile ptr addrspace(1), ptr addrspace(1) %tid.gep
     %xor = xor i32 %tid, 1
     %cmp = icmp ne i32 %xor, 0
-    %1 = call { i1, i64 } @llvm.amdgcn.if(i1 %cmp)
+    %1 = call { i1, i64 } @llvm.amdgcn.if(i1 %cmp, i1 0)
     %2 = extractvalue { i1, i64 } %1, 0
     %3 = extractvalue { i1, i64 } %1, 1
     br i1 %2, label %atomic, label %exit
@@ -29,7 +29,7 @@
     ret void
   }
 
-  declare { i1, i64 } @llvm.amdgcn.if(i1)
+  declare { i1, i64 } @llvm.amdgcn.if(i1, i1)
 
   declare void @llvm.amdgcn.end.cf(i64)
 

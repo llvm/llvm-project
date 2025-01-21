@@ -276,7 +276,7 @@ body: |
   ; GFX10-NEXT:   [[PHI7:%[0-9]+]]:_(s32) = G_PHI [[INT]](s32), %bb.5
   ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:sreg_32_xm0_xexec(s1) = COPY [[S_OR_B32_2]](s1)
   ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[PHI7]](s32)
-  ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[COPY14]](s1), %bb.4, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s32) = SI_IF [[COPY14]](s1), 0, %bb.4, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX10-NEXT:   G_BR %bb.2
   bb.0:
     successors: %bb.1(0x80000000)
@@ -353,6 +353,6 @@ body: |
     %37:sreg_32_xm0_xexec(s1) = G_PHI %35(s1), %bb.5
     %38:_(s32) = G_PHI %13(s32), %bb.5
     G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %38(s32)
-    %34:sreg_32_xm0_xexec(s32) = SI_IF %37(s1), %bb.4, implicit-def $exec, implicit-def $scc, implicit $exec
+    %34:sreg_32_xm0_xexec(s32) = SI_IF %37(s1), 0, %bb.4, implicit-def $exec, implicit-def $scc, implicit $exec
     G_BR %bb.2
 ...

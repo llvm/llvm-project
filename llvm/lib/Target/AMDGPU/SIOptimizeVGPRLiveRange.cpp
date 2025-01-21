@@ -184,7 +184,7 @@ MachineBasicBlock *
 SIOptimizeVGPRLiveRange::getElseTarget(MachineBasicBlock *MBB) const {
   for (auto &BR : MBB->terminators()) {
     if (BR.getOpcode() == AMDGPU::SI_ELSE)
-      return BR.getOperand(2).getMBB();
+      return BR.getOperand(3).getMBB();
   }
   return nullptr;
 }
@@ -682,7 +682,7 @@ bool SIOptimizeVGPRLiveRange::run(MachineFunction &MF) {
     for (auto &MI : MBB.terminators()) {
       // Detect the if-else blocks
       if (MI.getOpcode() == AMDGPU::SI_IF) {
-        MachineBasicBlock *IfTarget = MI.getOperand(2).getMBB();
+        MachineBasicBlock *IfTarget = MI.getOperand(3).getMBB();
         auto *Endif = getElseTarget(IfTarget);
         if (!Endif)
           continue;
