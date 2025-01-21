@@ -115,7 +115,8 @@ static void createStoreIntrinsic(IntrinsicInst *II, StoreInst *SI,
   case dxil::ResourceKind::TextureCubeArray:
   case dxil::ResourceKind::FeedbackTexture2D:
   case dxil::ResourceKind::FeedbackTexture2DArray:
-    // TODO: handle these
+    report_fatal_error("DXIL Load not implemented yet",
+                       /*gen_crash_diag=*/false);
     return;
   case dxil::ResourceKind::CBuffer:
   case dxil::ResourceKind::Sampler:
