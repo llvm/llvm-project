@@ -453,10 +453,6 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
     Value *StoredValue = nullptr;
     for (Instruction *I : BlockUses) {
       if (LoadInst *L = dyn_cast<LoadInst>(I)) {
-        // If this is a load from an unrelated pointer, ignore it.
-        if (!isInstInList(L, Insts))
-          continue;
-
         // If we haven't seen a store yet, this is a live in use, otherwise
         // use the stored value.
         if (StoredValue) {
@@ -470,9 +466,6 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
       }
 
       if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
-        // If this is a store to an unrelated pointer, ignore it.
-        if (!isInstInList(SI, Insts))
-          continue;
         updateDebugInfo(SI);
 
         // Remember that this is the active value in the block.
@@ -480,8 +473,6 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
       } else if (auto *AI = dyn_cast<AllocaInst>(I)) {
         // Check if this an alloca, in which case we treat it as a store of
         // getValueToUseForAlloca.
-        if (!isInstInList(AI, Insts))
-          continue;
         StoredValue = getValueToUseForAlloca(AI);
       }
     }
