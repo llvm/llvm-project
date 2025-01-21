@@ -67,10 +67,6 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
           "Null pointer argument requires an explicit interface"_err_en_US);
     } else if (auto named{evaluate::ExtractNamedEntity(*expr)}) {
       const Symbol &symbol{named->GetLastSymbol()};
-      if (symbol.Corank() > 0) {
-        messages.Say(
-            "Coarray argument requires an explicit interface"_err_en_US);
-      }
       if (evaluate::IsAssumedRank(symbol)) {
         messages.Say(
             "Assumed rank argument requires an explicit interface"_err_en_US);
