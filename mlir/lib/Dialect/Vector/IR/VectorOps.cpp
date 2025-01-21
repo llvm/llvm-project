@@ -4974,7 +4974,7 @@ static LogicalResult verifyLoadStoreMemRefLayout(Operation *op,
       (vecTy.getRank() == 0 || vecTy.getNumElements() == 1))
     return success();
 
-  if (!isLastMemrefDimUnitStride(memRefTy))
+  if (!memRefTy.isLastDimUnitStride())
     return op->emitOpError("most minor memref dim must have unit stride");
   return success();
 }
@@ -5789,7 +5789,7 @@ void TypeCastOp::build(OpBuilder &builder, OperationState &result,
 }
 
 LogicalResult TypeCastOp::verify() {
-  MemRefType canonicalType = canonicalizeStridedLayout(getMemRefType());
+  MemRefType canonicalType = getMemRefType().canonicalizeStridedLayout();
   if (!canonicalType.getLayout().isIdentity())
     return emitOpError("expects operand to be a memref with identity layout");
   if (!getResultMemRefType().getLayout().isIdentity())

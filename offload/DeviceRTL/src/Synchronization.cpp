@@ -82,12 +82,16 @@ uint32_t atomicInc(uint32_t *A, uint32_t V, atomic::OrderingTy Ordering,
 
 #define ScopeSwitch(ORDER)                                                     \
   switch (MemScope) {                                                          \
-  case atomic::MemScopeTy::all:                                                \
+  case atomic::MemScopeTy::system:                                             \
     return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "");                     \
   case atomic::MemScopeTy::device:                                             \
     return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "agent");                \
-  case atomic::MemScopeTy::cgroup:                                             \
+  case atomic::MemScopeTy::workgroup:                                          \
     return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "workgroup");            \
+  case atomic::MemScopeTy::wavefront:                                          \
+    return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "wavefront");            \
+  case atomic::MemScopeTy::single:                                             \
+    return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "singlethread");         \
   }
 
 #define Case(ORDER)                                                            \
@@ -166,7 +170,7 @@ void fenceTeam(atomic::OrderingTy Ordering) {
 }
 
 void fenceKernel(atomic::OrderingTy Ordering) {
-  return __scoped_atomic_thread_fence(Ordering, atomic::device_);
+  return __scoped_atomic_thread_fence(Ordering, atomic::device);
 }
 
 void fenceSystem(atomic::OrderingTy Ordering) {
@@ -197,7 +201,7 @@ void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
 void setLock(omp_lock_t *Lock) {
   uint64_t lowestActiveThread = utils::ffs(mapping::activemask()) - 1;
   if (mapping::getThreadIdInWarp() == lowestActiveThread) {
-    while (atomic::cas((uint32_t *)Lock, UNSET, SET, atomic::seq_cst, atomic::seq_cst, atomic::ScopeTy::system) != UNSET) {
+    while (atomic::cas((uint32_t *)Lock, UNSET, SET, atomic::seq_cst, atomic::seq_cst, atomic::MemScopeTy::system) != UNSET) {
       __builtin_amdgcn_s_sleep(0);
     }
   }
