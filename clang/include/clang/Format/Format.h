@@ -2819,6 +2819,19 @@ struct FormatStyle {
   /// \version 10
   bool IndentGotoLabels;
 
+  /// If ``true``, clang-format will indent the body of an ``export { ... }``
+  /// block. This doesn't affect the formatting of anything else related to
+  /// exported declarations.
+  /// \code
+  ///    true:                     false:
+  ///    export {          vs.     export {
+  ///      void foo();             void foo();
+  ///      void bar();             void bar();
+  ///    }                         }
+  /// \endcode
+  /// \version 20
+  bool IndentExportBlock;
+
   /// Indents extern blocks
   enum IndentExternBlockStyle : int8_t {
     /// Backwards compatible with AfterExternBlock's indenting.
@@ -5266,6 +5279,7 @@ struct FormatStyle {
            IndentAccessModifiers == R.IndentAccessModifiers &&
            IndentCaseBlocks == R.IndentCaseBlocks &&
            IndentCaseLabels == R.IndentCaseLabels &&
+           IndentExportBlock == R.IndentExportBlock &&
            IndentExternBlock == R.IndentExternBlock &&
            IndentGotoLabels == R.IndentGotoLabels &&
            IndentPPDirectives == R.IndentPPDirectives &&

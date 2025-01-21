@@ -31,7 +31,7 @@ TEST(RTBuilderTest, ComplexRuntimeInterface) {
   auto c99_cacosf_funcTy = mlir::cast<mlir::FunctionType>(c99_cacosf_signature);
   EXPECT_EQ(c99_cacosf_funcTy.getNumInputs(), 1u);
   EXPECT_EQ(c99_cacosf_funcTy.getNumResults(), 1u);
-  auto cplx_ty = mlir::ComplexType::get(mlir::FloatType::getF32(&ctx));
+  auto cplx_ty = mlir::ComplexType::get(mlir::Float32Type::get(&ctx));
   EXPECT_EQ(c99_cacosf_funcTy.getInput(0), cplx_ty);
   EXPECT_EQ(c99_cacosf_funcTy.getResult(0), cplx_ty);
 }

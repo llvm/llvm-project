@@ -270,7 +270,8 @@ void processShuffleMasks(
     ArrayRef<int> Mask, unsigned NumOfSrcRegs, unsigned NumOfDestRegs,
     unsigned NumOfUsedRegs, function_ref<void()> NoInputAction,
     function_ref<void(ArrayRef<int>, unsigned, unsigned)> SingleInputAction,
-    function_ref<void(ArrayRef<int>, unsigned, unsigned)> ManyInputsAction);
+    function_ref<void(ArrayRef<int>, unsigned, unsigned, bool)>
+        ManyInputsAction);
 
 /// Compute the demanded elements mask of horizontal binary operations. A
 /// horizontal operation combines two adjacent elements in a vector operand.

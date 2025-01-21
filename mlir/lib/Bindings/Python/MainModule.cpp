@@ -30,12 +30,8 @@ NB_MODULE(_mlir, m) {
       .def_prop_rw("dialect_search_modules",
                    &PyGlobals::getDialectSearchPrefixes,
                    &PyGlobals::setDialectSearchPrefixes)
-      .def(
-          "append_dialect_search_prefix",
-          [](PyGlobals &self, std::string moduleName) {
-            self.getDialectSearchPrefixes().push_back(std::move(moduleName));
-          },
-          "module_name"_a)
+      .def("append_dialect_search_prefix", &PyGlobals::addDialectSearchPrefix,
+           "module_name"_a)
       .def(
           "_check_dialect_module_loaded",
           [](PyGlobals &self, const std::string &dialectNamespace) {
@@ -76,7 +72,6 @@ NB_MODULE(_mlir, m) {
                   nanobind::cast<std::string>(opClass.attr("OPERATION_NAME"));
               PyGlobals::get().registerOperationImpl(operationName, opClass,
                                                      replace);
-
               // Dict-stuff the new opClass by name onto the dialect class.
               nb::object opClassName = opClass.attr("__name__");
               dialectClass.attr(opClassName) = opClass;

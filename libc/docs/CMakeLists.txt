@@ -45,6 +45,7 @@ if (SPHINX_FOUND)
       locale
       net/if
       netinet/in
+      pthread
       setjmp
       signal
       stdbit
@@ -53,6 +54,11 @@ if (SPHINX_FOUND)
       string
       strings
       sys/mman
+      sys/resource
+      sys/stat
+      sys/time
+      sys/wait
+      termios
       threads
       uchar
       wchar

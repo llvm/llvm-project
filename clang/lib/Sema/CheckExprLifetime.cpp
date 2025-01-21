@@ -525,7 +525,20 @@ static bool isNormalAssignmentOperator(const FunctionDecl *FD) {
   return false;
 }
 
+static const FunctionDecl *
+getDeclWithMergedLifetimeBoundAttrs(const FunctionDecl *FD) {
+  return FD != nullptr ? FD->getMostRecentDecl() : nullptr;
+}
+
+static const CXXMethodDecl *
+getDeclWithMergedLifetimeBoundAttrs(const CXXMethodDecl *CMD) {
+  const FunctionDecl *FD = CMD;
+  return cast_if_present<CXXMethodDecl>(
+      getDeclWithMergedLifetimeBoundAttrs(FD));
+}
+
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
+  FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   const TypeSourceInfo *TSI = FD->getTypeSourceInfo();
   if (!TSI)
     return false;
@@ -647,9 +660,9 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
     }
   }
 
-  for (unsigned I = 0,
-                N = std::min<unsigned>(Callee->getNumParams(), Args.size());
-       I != N; ++I) {
+  const FunctionDecl *CanonCallee = getDeclWithMergedLifetimeBoundAttrs(Callee);
+  unsigned NP = std::min(Callee->getNumParams(), CanonCallee->getNumParams());
+  for (unsigned I = 0, N = std::min<unsigned>(NP, Args.size()); I != N; ++I) {
     Expr *Arg = Args[I];
     RevertToOldSizeRAII RAII(Path);
     if (auto *DAE = dyn_cast<CXXDefaultArgExpr>(Arg)) {
@@ -657,11 +670,12 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
           {IndirectLocalPathEntry::DefaultArg, DAE, DAE->getParam()});
       Arg = DAE->getExpr();
     }
-    if (CheckCoroCall || Callee->getParamDecl(I)->hasAttr<LifetimeBoundAttr>())
-      VisitLifetimeBoundArg(Callee->getParamDecl(I), Arg);
+    if (CheckCoroCall ||
+        CanonCallee->getParamDecl(I)->hasAttr<LifetimeBoundAttr>())
+      VisitLifetimeBoundArg(CanonCallee->getParamDecl(I), Arg);
     else if (const auto *CaptureAttr =
-                 Callee->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>();
-             CaptureAttr && isa<CXXConstructorDecl>(Callee) &&
+                 CanonCallee->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>();
+             CaptureAttr && isa<CXXConstructorDecl>(CanonCallee) &&
              llvm::any_of(CaptureAttr->params(), [](int ArgIdx) {
                return ArgIdx == LifetimeCaptureByAttr::THIS;
              }))
@@ -678,11 +692,11 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
       // `lifetimebound` and shares the same code path. This implies the emitted
       // diagnostics will be emitted under `-Wdangling`, not
       // `-Wdangling-capture`.
-      VisitLifetimeBoundArg(Callee->getParamDecl(I), Arg);
+      VisitLifetimeBoundArg(CanonCallee->getParamDecl(I), Arg);
     else if (EnableGSLAnalysis && I == 0) {
       // Perform GSL analysis for the first argument
-      if (shouldTrackFirstArgument(Callee)) {
-        VisitGSLPointerArg(Callee, Arg);
+      if (shouldTrackFirstArgument(CanonCallee)) {
+        VisitGSLPointerArg(CanonCallee, Arg);
       } else if (auto *Ctor = dyn_cast<CXXConstructExpr>(Call);
                  Ctor && shouldTrackFirstArgumentForConstructor(Ctor)) {
         VisitGSLPointerArg(Ctor->getConstructor(), Arg);
@@ -1245,7 +1259,8 @@ static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
   return Report;
 }
 
-static bool isAssignmentOperatorLifetimeBound(CXXMethodDecl *CMD) {
+static bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD) {
+  CMD = getDeclWithMergedLifetimeBoundAttrs(CMD);
   return CMD && isNormalAssignmentOperator(CMD) && CMD->param_size() == 1 &&
          CMD->getParamDecl(0)->hasAttr<LifetimeBoundAttr>();
 }

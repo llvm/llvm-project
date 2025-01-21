@@ -177,7 +177,7 @@ extern char &SIShrinkInstructionsLegacyID;
 void initializeSIFixSGPRCopiesLegacyPass(PassRegistry &);
 extern char &SIFixSGPRCopiesLegacyID;
 
-void initializeSIFixVGPRCopiesPass(PassRegistry &);
+void initializeSIFixVGPRCopiesLegacyPass(PassRegistry &);
 extern char &SIFixVGPRCopiesID;
 
 void initializeSILowerWWMCopiesPass(PassRegistry &);
@@ -207,8 +207,8 @@ extern char &SILoadStoreOptimizerLegacyID;
 void initializeSIWholeQuadModePass(PassRegistry &);
 extern char &SIWholeQuadModeID;
 
-void initializeSILowerControlFlowPass(PassRegistry &);
-extern char &SILowerControlFlowID;
+void initializeSILowerControlFlowLegacyPass(PassRegistry &);
+extern char &SILowerControlFlowLegacyID;
 
 void initializeSIPreEmitPeepholePass(PassRegistry &);
 extern char &SIPreEmitPeepholeID;
@@ -216,8 +216,8 @@ extern char &SIPreEmitPeepholeID;
 void initializeSILateBranchLoweringPass(PassRegistry &);
 extern char &SILateBranchLoweringPassID;
 
-void initializeSIOptimizeExecMaskingPass(PassRegistry &);
-extern char &SIOptimizeExecMaskingID;
+void initializeSIOptimizeExecMaskingLegacyPass(PassRegistry &);
+extern char &SIOptimizeExecMaskingLegacyID;
 
 void initializeSIPreAllocateWWMRegsLegacyPass(PassRegistry &);
 extern char &SIPreAllocateWWMRegsLegacyID;
@@ -444,9 +444,9 @@ void initializeAMDGPUExternalAAWrapperPass(PassRegistry&);
 
 void initializeAMDGPUArgumentUsageInfoPass(PassRegistry &);
 
-ModulePass *createAMDGPUOpenCLEnqueuedBlockLoweringPass();
-void initializeAMDGPUOpenCLEnqueuedBlockLoweringPass(PassRegistry &);
-extern char &AMDGPUOpenCLEnqueuedBlockLoweringID;
+ModulePass *createAMDGPUOpenCLEnqueuedBlockLoweringLegacyPass();
+void initializeAMDGPUOpenCLEnqueuedBlockLoweringLegacyPass(PassRegistry &);
+extern char &AMDGPUOpenCLEnqueuedBlockLoweringLegacyID;
 
 void initializeGCNNSAReassignPass(PassRegistry &);
 extern char &GCNNSAReassignID;

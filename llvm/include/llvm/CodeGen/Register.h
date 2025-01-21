@@ -21,7 +21,7 @@ class Register {
 
 public:
   constexpr Register(unsigned Val = 0) : Reg(Val) {}
-  constexpr Register(MCRegister Val) : Reg(Val) {}
+  constexpr Register(MCRegister Val) : Reg(Val.id()) {}
 
   // Register numbers can represent physical registers, virtual registers, and
   // sometimes stack slots. The unsigned values are divided into these ranges:
@@ -108,8 +108,7 @@ public:
   /// expected to have already validated that this Register is, indeed,
   /// physical.
   MCRegister asMCReg() const {
-    assert(Reg == MCRegister::NoRegister ||
-           MCRegister::isPhysicalRegister(Reg));
+    assert(!isValid() || isPhysical());
     return MCRegister(Reg);
   }
 

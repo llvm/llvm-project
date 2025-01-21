@@ -48,6 +48,9 @@
 // RUN:     --target=x86_64-linux-gnu 2>&1 \
 // RUN:   | FileCheck libcxx-no-shared-lib.cpp
 
+// Testing with libstdc++
+// RUN: touch %t/Inputs/usr/lib/x86_64-linux-gnu/libstdc++.so
+// RUN: touch %t/Inputs/usr/lib/x86_64-linux-gnu/libstdc++.modules.json
 // RUN: %clang -print-library-module-manifest-path \
 // RUN:     -stdlib=libstdc++ \
 // RUN:     -resource-dir=%t/Inputs/usr/lib/x86_64-linux-gnu \
@@ -74,4 +77,4 @@
 
 //--- libstdcxx.cpp
 
-// CHECK: <NOT PRESENT>
+// CHECK: {{.*}}libstdc++.modules.json
