@@ -137,7 +137,6 @@ endif()
 add_subdirectory(BLAKE3)
 
 add_llvm_component_library(LLVMSupport
-  AArch64BuildAttributes.cpp
   ABIBreak.cpp
   AMDGPUMetadata.cpp
   APFixedPoint.cpp
@@ -145,6 +144,7 @@ add_llvm_component_library(LLVMSupport
   APInt.cpp
   APSInt.cpp
   ARMBuildAttrs.cpp
+  AArch64BuildAttributes.cpp
   ARMAttributeParser.cpp
   ARMWinEH.cpp
   Allocator.cpp
