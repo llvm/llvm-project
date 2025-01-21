@@ -968,6 +968,16 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
       TypeInfo.inferScalarType(R.getOperand(1)) ==
           TypeInfo.inferScalarType(R.getVPSingleValue()))
     return R.getVPSingleValue()->replaceAllUsesWith(R.getOperand(1));
+
+  if (match(&R, m_VPInstruction<VPInstruction::WideIVStep>(
+                    m_VPValue(X), m_SpecificInt(1), m_VPValue(Y)))) {
+    if (TypeInfo.inferScalarType(X) != TypeInfo.inferScalarType(Y)) {
+      X = new VPWidenCastRecipe(Instruction::Trunc, X,
+                                TypeInfo.inferScalarType(Y));
+      X->getDefiningRecipe()->insertBefore(&R);
+    }
+    R.getVPSingleValue()->replaceAllUsesWith(X);
+  }
 }
 
 /// Try to simplify the recipes in \p Plan. Use \p CanonicalIVTy as type for all
@@ -2050,9 +2060,10 @@ void VPlanTransforms::createInterleaveGroups(
   }
 }
 
-void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
-  Type *CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
-  VPTypeAnalysis TypeInfo(CanonicalIVType);
+void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
+                                               Type *CanonicalIVTy) {
+  using namespace llvm::VPlanPatternMatch;
+  VPTypeAnalysis TypeInfo(CanonicalIVTy);
 
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
@@ -2070,42 +2081,44 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         continue;
       }
 
-      auto *VPI = dyn_cast<VPInstruction>(&R);
-      if (VPI && VPI->getOpcode() == VPInstruction::WideIVStep) {
-        VPBuilder Builder(VPI->getParent(), VPI->getIterator());
-        VPValue *VectorStep = VPI->getOperand(0);
-        Type *IVTy = TypeInfo.inferScalarType(VPI->getOperand(2));
-        if (TypeInfo.inferScalarType(VectorStep) != IVTy) {
-          Instruction::CastOps CastOp = IVTy->isFloatingPointTy()
-                                            ? Instruction::UIToFP
-                                            : Instruction::Trunc;
-          VectorStep = Builder.createWidenCast(CastOp, VectorStep, IVTy);
-        }
-
-        VPValue *ScalarStep = VPI->getOperand(1);
-        auto *ConstStep =
-            ScalarStep->isLiveIn()
-                ? dyn_cast<ConstantInt>(ScalarStep->getLiveInIRValue())
-                : nullptr;
-        if (!ConstStep || ConstStep->getValue() != 1) {
-          if (TypeInfo.inferScalarType(ScalarStep) != IVTy) {
-            ScalarStep =
-                Builder.createWidenCast(Instruction::Trunc, ScalarStep, IVTy);
-          }
-
-          std::optional<FastMathFlags> FMFs;
-          if (IVTy->isFloatingPointTy())
-            FMFs = VPI->getFastMathFlags();
-
-          unsigned MulOpc =
-              IVTy->isFloatingPointTy() ? Instruction::FMul : Instruction::Mul;
-          VPInstruction *Mul = Builder.createNaryOp(
-              MulOpc, {VectorStep, ScalarStep}, FMFs, R.getDebugLoc());
-          VectorStep = Mul;
-        }
-        VPI->replaceAllUsesWith(VectorStep);
-        VPI->eraseFromParent();
+      VPValue *VectorStep;
+      VPValue *ScalarStep;
+      VPValue *IVTyOp;
+      if (!match(&R, m_VPInstruction<VPInstruction::WideIVStep>(
+                         m_VPValue(VectorStep), m_VPValue(ScalarStep),
+                         m_VPValue(IVTyOp))))
+        continue;
+      auto *VPI = cast<VPInstruction>(&R);
+      VPBuilder Builder(VPI->getParent(), VPI->getIterator());
+      Type *IVTy = TypeInfo.inferScalarType(IVTyOp);
+      if (TypeInfo.inferScalarType(VectorStep) != IVTy) {
+        Instruction::CastOps CastOp = IVTy->isFloatingPointTy()
+                                          ? Instruction::UIToFP
+                                          : Instruction::Trunc;
+        VectorStep = Builder.createWidenCast(CastOp, VectorStep, IVTy);
       }
+
+      auto *ConstStep =
+          ScalarStep->isLiveIn()
+              ? dyn_cast<ConstantInt>(ScalarStep->getLiveInIRValue())
+              : nullptr;
+      assert(!ConstStep || ConstStep->getValue() != 1);
+      if (TypeInfo.inferScalarType(ScalarStep) != IVTy) {
+        ScalarStep =
+            Builder.createWidenCast(Instruction::Trunc, ScalarStep, IVTy);
+      }
+
+      std::optional<FastMathFlags> FMFs;
+      if (IVTy->isFloatingPointTy())
+        FMFs = VPI->getFastMathFlags();
+
+      unsigned MulOpc =
+          IVTy->isFloatingPointTy() ? Instruction::FMul : Instruction::Mul;
+      VPInstruction *Mul = Builder.createNaryOp(
+          MulOpc, {VectorStep, ScalarStep}, FMFs, R.getDebugLoc());
+      VectorStep = Mul;
+      VPI->replaceAllUsesWith(VectorStep);
+      VPI->eraseFromParent();
     }
   }
 }
