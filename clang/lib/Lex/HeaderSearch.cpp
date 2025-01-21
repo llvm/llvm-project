@@ -128,6 +128,35 @@ void HeaderSearch::AddSearchPath(const DirectoryLookup &dir, bool isAngled) {
   SystemDirIdx++;
 }
 
+bool HeaderSearch::AddExternalDirectoryPrefix(StringRef Path) {
+  // Canonicalize the file path while preserving a trailing path separator.
+  bool HasTrailingPathSep = llvm::sys::path::is_separator(Path.back());
+  SmallString<256> RealPath;
+  if (llvm::sys::fs::real_path(Path, RealPath)) {
+    // Canonicalization was not successful. If the final path component does
+    // not have a trailing path separator, remove it, try again, and then
+    // restore the path component. If that fails (e.g., the previous path
+    // component also doesn't match an existing directory entry), then skip
+    // this path as it can't possibly match a prefix of any existing file.
+    if (HasTrailingPathSep)
+      return false;
+    SmallString<16> FileName = llvm::sys::path::filename(Path);
+    if (FileName.empty() || llvm::sys::path::is_separator(FileName[0]))
+      return false;
+    SmallString<256> ParentDir = Path;
+    llvm::sys::path::remove_filename(ParentDir);
+    if (llvm::sys::fs::real_path(ParentDir, RealPath))
+      return false;
+    if (!llvm::sys::path::is_separator(RealPath.back()))
+      RealPath += llvm::sys::path::get_separator();
+    RealPath += FileName;
+  }
+  if (HasTrailingPathSep && !llvm::sys::path::is_separator(RealPath.back()))
+    RealPath += llvm::sys::path::get_separator();
+  ExternalDirectoryPrefixes.insert(RealPath);
+  return true;
+}
+
 std::vector<bool> HeaderSearch::computeUserEntryUsage() const {
   std::vector<bool> UserEntryUsage(HSOpts->UserEntries.size());
   for (unsigned I = 0, E = SearchDirsUsage.size(); I < E; ++I) {
@@ -1114,6 +1143,42 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
         HFI.DirInfo = SystemHeaderPrefixes[j-1].second ? SrcMgr::C_System
                                                        : SrcMgr::C_User;
         break;
+      }
+    }
+
+    // If the file is not already recognized as a system header, check if it
+    // was included in angle brackets and whether the file characteristic
+    // should be promoted.
+    if (HFI.DirInfo == SrcMgr::C_User && isAngled &&
+        HSOpts->AngleBracketsImpliesSystemHeader)
+      HFI.DirInfo = SrcMgr::C_System;
+
+    // If the file is not already recognized as a system header, check if it
+    // matches an external directory prefix and override the file characteristic
+    // accordingly.
+    if (HFI.DirInfo == SrcMgr::C_User && !ExternalDirectoryPrefixes.empty()) {
+      // An external directory prefix is not required to match an existing
+      // directory on disk; the final path component may match the start of
+      // multiple file or directory entries. A string comparison is therefore
+      // required to determine if a prefix matches. External directory prefixes
+      // are canonicalized using llvm::sys::fs::real_path() so the header
+      // file path must be likewise canonicalized. If canonicalization fails,
+      // assume no prefix match.
+      SmallString<256> RealPath;
+      if (!llvm::sys::fs::real_path(File->getName(), RealPath)) {
+        for (const auto &ExtDir : ExternalDirectoryPrefixes) {
+          // llvm::sys::path::replace_path_prefix() is used to test for a prefix
+          // match since it will handle case insensitivity and alternate path
+          // separator matching. Note that this operation is destructive to
+          // RealPath if the prefix matches.
+          if (llvm::sys::path::replace_path_prefix(RealPath, ExtDir.getKey(),
+                                                   "")) {
+            // The external directory prefix is a match; override the file
+            // characteristic and break out of the loop.
+            HFI.DirInfo = SrcMgr::C_System;
+            break;
+          }
+        }
       }
     }
 
