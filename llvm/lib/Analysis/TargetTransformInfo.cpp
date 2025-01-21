@@ -1374,10 +1374,6 @@ bool TargetTransformInfo::preferEpilogueVectorization() const {
   return TTIImpl->preferEpilogueVectorization();
 }
 
-bool TargetTransformInfo::preferStridedLoadStore() const {
-  return TTIImpl->preferStridedLoadStore();
-}
-
 TargetTransformInfo::VPLegalization
 TargetTransformInfo::getVPLegalizationStrategy(const VPIntrinsic &VPI) const {
   return TTIImpl->getVPLegalizationStrategy(VPI);

@@ -1003,8 +1003,6 @@ public:
     return true;
   }
 
-  bool preferStridedLoadStore() const { return false; }
-
   bool shouldExpandReduction(const IntrinsicInst *II) const { return true; }
 
   TTI::ReductionShuffle

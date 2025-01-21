@@ -1776,10 +1776,6 @@ public:
   /// otherwise scalar epilogue loop.
   bool preferEpilogueVectorization() const;
 
-  /// Return true if the loop vectorizer prefer strided load/store when
-  /// vectorizing reversed load/store.
-  bool preferStridedLoadStore() const;
-
   /// \returns True if the target wants to expand the given reduction intrinsic
   /// into a shuffle sequence.
   bool shouldExpandReduction(const IntrinsicInst *II) const;
@@ -2305,7 +2301,6 @@ public:
   virtual bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
                                                ReductionFlags) const = 0;
   virtual bool preferEpilogueVectorization() const = 0;
-  virtual bool preferStridedLoadStore() const = 0;
 
   virtual bool shouldExpandReduction(const IntrinsicInst *II) const = 0;
   virtual ReductionShuffle
@@ -3108,10 +3103,6 @@ public:
   }
   bool preferEpilogueVectorization() const override {
     return Impl.preferEpilogueVectorization();
-  }
-
-  bool preferStridedLoadStore() const override {
-    return Impl.preferStridedLoadStore();
   }
 
   bool shouldExpandReduction(const IntrinsicInst *II) const override {
