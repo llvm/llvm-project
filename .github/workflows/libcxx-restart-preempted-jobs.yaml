@@ -93,7 +93,7 @@ jobs:
               })
 
               // For temporary debugging purposes to see the structure of the annotations.
-              console.print(annotations);
+              console.log(annotations);
 
               has_failed_job = false;
               saved_failure_message = null;
