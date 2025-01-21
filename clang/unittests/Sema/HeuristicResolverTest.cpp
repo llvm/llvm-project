@@ -135,6 +135,26 @@ TEST(HeuristicResolver, MemberExpr_SmartPointer) {
       cxxMethodDecl(hasName("foo")).bind("output"));
 }
 
+TEST(HeuristicResolver, MemberExpr_SmartPointer_Qualified) {
+  std::string Code = R"cpp(
+    template <typename> struct Waldo {
+      void find();
+      void find() const;
+    };
+    template <typename T> struct unique_ptr {
+      T* operator->();
+    };
+    template <typename T>
+    void test(unique_ptr<const Waldo<T>>& w) {
+      w->find();
+    }
+  )cpp";
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("find")).bind("input"),
+      cxxMethodDecl(hasName("find"), isConst()).bind("output"));
+}
+
 TEST(HeuristicResolver, MemberExpr_Chained) {
   std::string Code = R"cpp(
     struct A { void foo() {} };
