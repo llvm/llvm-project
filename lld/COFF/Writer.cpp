@@ -2392,6 +2392,13 @@ void Writer::setECSymbols() {
       symtab->findUnderscore("__arm64x_native_entrypoint")
           ->replaceKeepingName(altEntrySym, sizeof(SymbolUnion));
     }
+
+    if (hybridPdata.first)
+      ctx.dynamicRelocs->set(
+          dataDirOffset64 + EXCEPTION_TABLE * sizeof(data_directory) +
+              offsetof(data_directory, Size),
+          hybridPdata.last->getRVA() - hybridPdata.first->getRVA() +
+              hybridPdata.last->getSize());
   }
 }
 
@@ -2642,6 +2649,19 @@ void Writer::createDynamicRelocs() {
           cast_or_null<Defined>(ctx.symtab.entry));
     else
       Warn(ctx) << "'__chpe_metadata' is missing for ARM64X target";
+  }
+
+  if (pdata.first != hybridPdata.first) {
+    ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                           dataDirOffset64 +
+                               EXCEPTION_TABLE * sizeof(data_directory) +
+                               offsetof(data_directory, RelativeVirtualAddress),
+                           hybridPdata.first);
+    // The Size value is assigned after addresses are finalized.
+    ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                           dataDirOffset64 +
+                               EXCEPTION_TABLE * sizeof(data_directory) +
+                               offsetof(data_directory, Size));
   }
 
   // Set the hybrid load config to the EC load config.
