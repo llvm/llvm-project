@@ -17,6 +17,7 @@ import os
 import re
 import requests
 import sys
+import textwrap
 import time
 from typing import List, Optional
 
@@ -257,9 +258,9 @@ class CommitRequestGreeter:
     def run(self) -> bool:
         # Post greeter comment:
         comment = f"""
-@{self.issue.user.login} thank you for apply for commit access.  Please  review the project's [code review policy](https://llvm.org/docs/CodeReview.html).
-"""
-        self.issue.create_comment(comment)
+            @{self.issue.user.login} thank you for apply for commit access.  Please  review the project's [code review policy](https://llvm.org/docs/CodeReview.html).
+        """
+        self.issue.create_comment(textwrap.dedent(comment))
 
         # Post activity summary:
         total_prs = 0
@@ -293,11 +294,12 @@ class CommitRequestGreeter:
                 continue
 
         comment = f"""
-### Activity Summary:
-* [{total_prs} Pull Requests](https://github.com/llvm/llvm-project/pulls/{self.issue.user.login}) ({merged_prs} merged)
-* Top 3 Committers: {get_user_values_str(get_top_values(merged_by))}
-* Top 3 Reviewers: {get_user_values_str(get_top_values(reviewed_by))}"""
-        self.issue.create_comment(comment)
+            ### Activity Summary:
+            * [{total_prs} Pull Requests](https://github.com/llvm/llvm-project/pulls/{self.issue.user.login}) ({merged_prs} merged)
+            * Top 3 Committers: {get_user_values_str(get_top_values(merged_by))}
+            * Top 3 Reviewers: {get_user_values_str(get_top_values(reviewed_by))}
+        """
+        self.issue.create_comment(textwrap.dedent(comment))
 
 
 class PRBuildbotInformation:
