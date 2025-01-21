@@ -141,13 +141,13 @@ bool StaticDataSplitter::splitJumpTables(MachineFunction &MF) {
 
     for (size_t JTI = 0; JTI < MJTI->getJumpTables().size(); JTI++) {
       auto Hotness = MJTI->getJumpTables()[JTI].Hotness;
-      if (Hotness == MachineFunctionDataHotness::Hot)
-        NumHotJumpTables++;
-      else {
+      if (Hotness == MachineFunctionDataHotness::Hot) {
+        ++NumHotJumpTables;
+      } else {
         assert(Hotness == MachineFunctionDataHotness::Cold &&
                "A jump table is either hot or cold when profile information is "
                "available.");
-        NumColdJumpTables++;
+        ++NumColdJumpTables;
       }
     }
   });

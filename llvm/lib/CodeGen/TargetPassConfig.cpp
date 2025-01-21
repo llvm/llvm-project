@@ -266,7 +266,7 @@ static cl::opt<bool>
 static cl::opt<bool>
     SplitStaticData("split-static-data", cl::Hidden, cl::init(false),
                     cl::desc("Split static data sections into hot and cold "
-                             "section ones using profile information"));
+                             "sections using profile information"));
 
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
