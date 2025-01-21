@@ -11,12 +11,16 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - c_compiler: clang
+          - os: ubuntu-24.04
+            c_compiler: clang
+            cpp_compiler: clang++
+          - os: ubuntu-24.04-arm
+            c_compiler: clang
             cpp_compiler: clang++
           # TODO: add back gcc build when it is fixed
           # - c_compiler: gcc

@@ -22,7 +22,15 @@ jobs:
             compiler:
               c_compiler: clang
               cpp_compiler: clang++
+          - os: ubuntu-24.04-arm
+            compiler:
+              c_compiler: clang
+              cpp_compiler: clang++
           - os: windows-2022
+            compiler:
+              c_compiler: clang-cl
+              cpp_compiler: clang-cl
+          - os: windows-2025
             compiler:
               c_compiler: clang-cl
               cpp_compiler: clang-cl
