@@ -221,7 +221,7 @@ struct __copy_impl {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<__bit_iterator<_Cp, _IsConst>, __bit_iterator<_Cp, false> >
   operator()(__bit_iterator<_Cp, _IsConst> __first,
              __bit_iterator<_Cp, _IsConst> __last,
-             __bit_iterator<_Cp, false> __result) {
+             __bit_iterator<_Cp, false> __result) const {
     if (__first.__ctz_ == __result.__ctz_)
       return std::make_pair(__last, std::__copy_aligned(__first, __last, __result));
     return std::make_pair(__last, std::__copy_unaligned(__first, __last, __result));

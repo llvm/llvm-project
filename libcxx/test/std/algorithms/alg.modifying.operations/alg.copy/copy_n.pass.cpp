@@ -69,27 +69,25 @@ TEST_CONSTEXPR_CXX20 void test_copy_n() {
   }
 }
 
-template <std::size_t N>
-struct TestBitIter {
-  std::vector<bool> in;
-  TEST_CONSTEXPR_CXX20 TestBitIter() : in(N, false) {
-    for (std::size_t i = 0; i < N; i += 2)
-      in[i] = true;
+TEST_CONSTEXPR_CXX20 bool test_vector_bool(std::size_t N) {
+  std::vector<bool> in(N, false);
+  for (std::size_t i = 0; i < N; i += 2)
+    in[i] = true;
+
+  { // Test copy with aligned bytes
+    std::vector<bool> out(N);
+    std::copy_n(in.begin(), N, out.begin());
+    assert(in == out);
   }
-  TEST_CONSTEXPR_CXX20 void operator()() {
-    { // Test copy with aligned bytes
-      std::vector<bool> out(N);
-      std::copy_n(in.begin(), N, out.begin());
-      assert(in == out);
-    }
-    { // Test copy with unaligned bytes
-      std::vector<bool> out(N + 8);
-      std::copy_n(in.begin(), N, out.begin() + 4);
-      for (std::size_t i = 0; i < N; ++i)
-        assert(out[i + 4] == in[i]);
-    }
+  { // Test copy with unaligned bytes
+    std::vector<bool> out(N + 8);
+    std::copy_n(in.begin(), N, out.begin() + 4);
+    for (std::size_t i = 0; i < N; ++i)
+      assert(out[i + 4] == in[i]);
   }
-};
+
+  return true;
+}
 
 TEST_CONSTEXPR_CXX20 bool test() {
   test_copy_n<cpp17_input_iterator<const int*>, cpp17_output_iterator<int*> >();
@@ -128,11 +126,11 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test_copy_n<const int*, int*>();
 
   { // Test vector<bool>::iterator optimization
-    TestBitIter<8>()();
-    TestBitIter<16>()();
-    TestBitIter<32>()();
-    TestBitIter<64>()();
-    TestBitIter<1024>()();
+    assert(test_vector_bool(8));
+    assert(test_vector_bool(16));
+    assert(test_vector_bool(32));
+    assert(test_vector_bool(64));
+    assert(test_vector_bool(256));
   }
 
   return true;

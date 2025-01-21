@@ -12,7 +12,7 @@
 #include <benchmark/benchmark.h>
 #include <vector>
 
-static void bm_ranges_copy(benchmark::State& state, bool aligned) {
+static void bm_ranges_copy_vb(benchmark::State& state, bool aligned) {
   auto n = state.range();
   std::vector<bool> in(n, true);
   std::vector<bool> out(aligned ? n : n + 8);
@@ -24,7 +24,7 @@ static void bm_ranges_copy(benchmark::State& state, bool aligned) {
   }
 }
 
-static void bm_ranges_copy_n(benchmark::State& state, bool aligned) {
+static void bm_ranges_copy_n_vb(benchmark::State& state, bool aligned) {
   auto n = state.range();
   std::vector<bool> in(n, true);
   std::vector<bool> out(aligned ? n : n + 8);
@@ -37,7 +37,7 @@ static void bm_ranges_copy_n(benchmark::State& state, bool aligned) {
   }
 }
 
-static void bm_copy(benchmark::State& state, bool aligned) {
+static void bm_copy_vb(benchmark::State& state, bool aligned) {
   auto n = state.range();
   std::vector<bool> in(n, true);
   std::vector<bool> out(aligned ? n : n + 8);
@@ -51,7 +51,7 @@ static void bm_copy(benchmark::State& state, bool aligned) {
   }
 }
 
-static void bm_copy_n(benchmark::State& state, bool aligned) {
+static void bm_copy_n_vb(benchmark::State& state, bool aligned) {
   auto n = state.range();
   std::vector<bool> in(n, true);
   std::vector<bool> out(aligned ? n : n + 8);
@@ -64,26 +64,26 @@ static void bm_copy_n(benchmark::State& state, bool aligned) {
   }
 }
 
-static void bm_ranges_copy_aligned(benchmark::State& state) { bm_ranges_copy(state, true); }
-static void bm_ranges_copy_unaligned(benchmark::State& state) { bm_ranges_copy(state, false); }
-static void bm_ranges_copy_n_aligned(benchmark::State& state) { bm_ranges_copy_n(state, true); }
-static void bm_ranges_copy_n_unaligned(benchmark::State& state) { bm_ranges_copy_n(state, false); }
+static void bm_ranges_copy_vb_aligned(benchmark::State& state) { bm_ranges_copy_vb(state, true); }
+static void bm_ranges_copy_vb_unaligned(benchmark::State& state) { bm_ranges_copy_vb(state, false); }
+static void bm_ranges_copy_n_vb_aligned(benchmark::State& state) { bm_ranges_copy_n_vb(state, true); }
+static void bm_ranges_copy_n_vb_unaligned(benchmark::State& state) { bm_ranges_copy_n_vb(state, false); }
 
-static void bm_copy_aligned(benchmark::State& state) { bm_copy(state, true); }
-static void bm_copy_unaligned(benchmark::State& state) { bm_copy(state, false); }
-static void bm_copy_n_aligned(benchmark::State& state) { bm_copy_n(state, true); }
-static void bm_copy_n_unaligned(benchmark::State& state) { bm_copy_n(state, false); }
+static void bm_copy_vb_aligned(benchmark::State& state) { bm_copy_vb(state, true); }
+static void bm_copy_vb_unaligned(benchmark::State& state) { bm_copy_vb(state, false); }
+static void bm_copy_n_vb_aligned(benchmark::State& state) { bm_copy_n_vb(state, true); }
+static void bm_copy_n_vb_unaligned(benchmark::State& state) { bm_copy_n_vb(state, false); }
 
 // Test std::ranges::copy for vector<bool>::iterator
-BENCHMARK(bm_ranges_copy_aligned)->Range(8, 1 << 16)->DenseRange(102400, 204800, 4096);
-BENCHMARK(bm_ranges_copy_n_aligned)->Range(8, 1 << 20);
-BENCHMARK(bm_ranges_copy_unaligned)->Range(8, 1 << 20);
-BENCHMARK(bm_ranges_copy_n_unaligned)->Range(8, 1 << 20);
+BENCHMARK(bm_ranges_copy_vb_aligned)->Range(8, 1 << 16)->DenseRange(102400, 204800, 4096);
+BENCHMARK(bm_ranges_copy_n_vb_aligned)->Range(8, 1 << 20);
+BENCHMARK(bm_ranges_copy_vb_unaligned)->Range(8, 1 << 20);
+BENCHMARK(bm_ranges_copy_n_vb_unaligned)->Range(8, 1 << 20);
 
 // Test std::copy for vector<bool>::iterator
-BENCHMARK(bm_copy_aligned)->Range(8, 1 << 20);
-BENCHMARK(bm_copy_n_aligned)->Range(8, 1 << 20);
-BENCHMARK(bm_copy_unaligned)->Range(8, 1 << 20);
-BENCHMARK(bm_copy_n_unaligned)->Range(8, 1 << 20);
+BENCHMARK(bm_copy_vb_aligned)->Range(8, 1 << 20);
+BENCHMARK(bm_copy_n_vb_aligned)->Range(8, 1 << 20);
+BENCHMARK(bm_copy_vb_unaligned)->Range(8, 1 << 20);
+BENCHMARK(bm_copy_n_vb_unaligned)->Range(8, 1 << 20);
 
 BENCHMARK_MAIN();
