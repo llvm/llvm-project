@@ -1,0 +1,31 @@
+functions:
+  cpio_open:
+    in-latest-posix: ''
+  cpio_create:
+    in-latest-posix: ''
+  cpio_read:
+    in-latest-posix: ''
+  cpio_write:
+    in-latest-posix: ''
+  cpio_close:
+    in-latest-posix: ''
+macros:
+  CPIO_ACCESS:
+    in-latest-posix: ''
+  CPIO_CREATE:
+    in-latest-posix: ''
+  CPIO_EXTRACT:
+    in-latest-posix: ''
+  CPIO_LINK:
+    in-latest-posix: ''
+  CPIO_RENAME:
+    in-latest-posix: ''
+  CPIO_SYMLINK:
+    in-latest-posix: ''
+  CPIO_DELETE:
+    in-latest-posix: ''
+  CPIO_TRUNCATE:
+    in-latest-posix: ''
+  CPIO_UNLINK:
+    in-latest-posix: ''
+

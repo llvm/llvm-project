@@ -8,6 +8,7 @@ Implementation Status
    arpa/inet
    assert
    complex
+   cpio
    ctype
    errno
    fenv
