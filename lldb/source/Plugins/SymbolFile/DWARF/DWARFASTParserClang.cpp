@@ -3084,7 +3084,6 @@ size_t DWARFASTParserClang::ParseChildParameters(
     const dw_tag_t tag = die.Tag();
     switch (tag) {
     case DW_TAG_formal_parameter: {
-      arg_idx++;
       const char *name = die.GetName();
       DWARFDIE param_type_die = die.GetAttributeValueAsReferenceDIE(DW_AT_type);
 
@@ -3120,6 +3119,8 @@ size_t DWARFASTParserClang::ParseChildParameters(
 
         m_ast.SetMetadataAsUserID(param_var_decl, die.GetID());
       }
+
+      arg_idx++;
     } break;
 
     case DW_TAG_unspecified_parameters:
