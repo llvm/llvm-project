@@ -270,7 +270,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::TaskOp op) {
         checkAllocate(op, result);
         checkInReduction(op, result);
-        checkUntied(op, result);
       })
       .Case([&](omp::TaskgroupOp op) {
         checkAllocate(op, result);
@@ -282,6 +281,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::TaskloopOp op) {
         // TODO: Add other clauses check
+        checkUntied(op, result);
         checkPriority(op, result);
       })
       .Case([&](omp::WsloopOp op) {
