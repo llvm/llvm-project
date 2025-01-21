@@ -150,6 +150,14 @@ public:
   // A list of EC EXP+ symbols.
   std::vector<Symbol *> expSymbols;
 
+  // A list of DLL exports.
+  std::vector<Export> exports;
+  llvm::DenseSet<StringRef> directivesExports;
+  bool hadExplicitExports;
+
+  void fixupExports();
+  void assignExportOrdinals();
+
   // Iterates symbols in non-determinstic hash table order.
   template <typename T> void forEachSymbol(T callback) {
     for (auto &pair : symMap)
