@@ -1588,7 +1588,7 @@ static bool isInteger(StringRef Val) {
 
 void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     IO &IO, std::unique_ptr<ELFYAML::Chunk> &Section) {
-  ELFYAML::ELF_SHT Type;
+  ELFYAML::ELF_SHT Type = ELF::SHT_NULL;
   StringRef TypeStr;
   if (IO.outputting()) {
     if (auto *S = dyn_cast<ELFYAML::Section>(Section.get()))
@@ -1599,8 +1599,6 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     // When the Type string does not have a "SHT_" prefix, we know it is not a
     // description of a regular ELF output section.
     TypeStr = getStringValue(IO, "Type");
-    // To for fallback to `default` in switch below on error.
-    Type = ELF::SHT_NULL;
     if (TypeStr.starts_with("SHT_") || isInteger(TypeStr))
       IO.mapRequired("Type", Type);
   }
