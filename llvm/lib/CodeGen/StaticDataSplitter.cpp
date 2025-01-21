@@ -115,7 +115,7 @@ bool StaticDataSplitter::splitJumpTablesWithProfiles(
         if (PSI->isColdBlock(&MBB, MBFI))
           Hotness = MachineFunctionDataHotness::Cold;
 
-        if (MF.getJumpTableInfo()->updateJumpTableEntryHotness(JTI, Hotness))
+        if (MJTI.updateJumpTableEntryHotness(JTI, Hotness))
           ++NumChangedJumpTables;
       }
     }

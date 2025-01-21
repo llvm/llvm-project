@@ -14,8 +14,8 @@
 ; STAT-DAG: 2 static-data-splitter - Number of hot jump tables seen
 ; STAT-DAG: 1 static-data-splitter - Number of jump tables with unknown hotness
 
-; In function @foo, the 2 switch instructions to jt0.* and jt2.* get lowered to hot jump tables,
-; and the 2 switch instructions to jt1.* and jt3.* get lowered to cold jump tables.
+; In function @foo, the 2 switch instructions to jt0.* and jt1.* get lowered to hot jump tables,
+; and the 2 switch instructions to jt2.* and jt3.* get lowered to cold jump tables.
 
 ; @func_without_profile doesn't have profiles. It's jump table hotness is unknown.
 
@@ -53,9 +53,9 @@ jt0.default:
 
 jt0.epilog:
   %zero = icmp eq i32 %num, 0
-  br i1 %zero, label %hot, label %cold, !prof !15
+  br i1 %zero, label %cold, label %hot, !prof !15
 
-hot:
+cold:
  %c2 = call i32 @transform(i32 %num)
   switch i32 %c2, label %jt2.default [
     i32 1, label %jt2.bb1
@@ -78,7 +78,7 @@ jt2.epilog:
   %c2cmp = icmp ne i32 %c2, 0
   br i1 %c2cmp, label %return, label %jt3.prologue, !prof !16
 
-cold:
+hot:
   %c1 = call i32 @compute(i32 %num)
   switch i32 %c1, label %jt1.default [
     i32 1, label %jt1.bb1
