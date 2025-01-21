@@ -24,7 +24,3 @@ Ron and Vigneshwar
 revert: breaks rocBLAS build
 d57230c7 [AMDGPU][MC] Disallow op_sel in some VOP3P dot instructions (#100485)
 ---
-revert : spirv build breaks 
-10fdd09c3bda [clang][DebugInfo] Emit DW_AT_object_pointer on function declarations with explicit `this` (#122928)
-Ron and Alex
----
