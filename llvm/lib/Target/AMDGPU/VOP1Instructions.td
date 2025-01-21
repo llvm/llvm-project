@@ -261,7 +261,7 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOPProfile_MOV, null_frag, 0x8>;
 
 #ifdef LLPC_BUILD_NPI
-let SubtargetPredicate = isGFX940orGFX1250orGFX13Plus, SchedRW = [Write64Bit] in
+let SubtargetPredicate = isGFX940orGFX1250, SchedRW = [Write64Bit] in
 defm V_MOV_B64 : VOP1Inst <"v_mov_b64", VOPProfile_MOV_B64>;
 #else /* LLPC_BUILD_NPI */
 let SubtargetPredicate = isGFX940Plus, SchedRW = [Write64Bit] in
@@ -2069,6 +2069,8 @@ class MovDPP8Pattern<Predicate Pred, Instruction Inst, ValueType vt> : GCNPat <
 }
 #ifdef LLPC_BUILD_NPI
 
+defm V_MOV_B64 : VOP1_Real_FULL <GFX1250Gen, 0x1d>;
+
 //===----------------------------------------------------------------------===//
 // GFX13
 //===----------------------------------------------------------------------===//
@@ -2082,8 +2084,6 @@ def : GCNPat <
 >;
 }
 } // End OtherPredicates = [isGFX13Only]
-
-defm V_MOV_B64 : VOP1_Real_FULL_gfx1250_gfx13 <0x1d>;
 #endif /* LLPC_BUILD_NPI */
 
 foreach vt = Reg32Types.types in {
