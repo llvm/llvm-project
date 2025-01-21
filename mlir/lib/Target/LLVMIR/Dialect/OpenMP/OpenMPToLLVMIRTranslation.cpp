@@ -625,16 +625,14 @@ static void getSinkableAllocas(LLVM::ModuleTranslation &moduleTranslation,
 
 // TODO: Make this a top-level conversion function (i.e. part of the switch
 // statement in `convertHostOrTargetOperation`) independent from parent
-// worksharing operations and update `convertOmpWsloop` to rely on this rather
-// than replicating the same logic.
+// worksharing operations.
 static std::optional<
     std::tuple<llvm::OpenMPIRBuilder::LocationDescription,
                llvm::IRBuilderBase::InsertPoint, llvm::CanonicalLoopInfo *>>
-convertLoopNestHelper(Operation &opInst, llvm::IRBuilderBase &builder,
+convertLoopNestHelper(omp::LoopNestOp loopOp, llvm::IRBuilderBase &builder,
                       LLVM::ModuleTranslation &moduleTranslation,
                       StringRef blockName) {
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-  auto loopOp = cast<omp::LoopNestOp>(opInst);
 
   // Set up the source location value for OpenMP runtime.
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
@@ -643,8 +641,6 @@ convertLoopNestHelper(Operation &opInst, llvm::IRBuilderBase &builder,
   getSinkableAllocas(moduleTranslation, loopOp.getRegion(), allocasToSink);
 
   // Generator of the canonical loop body.
-  // TODO: support error propagation in OpenMPIRBuilder and use it instead of
-  // relying on captured variables.
   SmallVector<llvm::CanonicalLoopInfo *> loopInfos;
   SmallVector<llvm::OpenMPIRBuilder::InsertPointTy> bodyInsertPoints;
   auto bodyGen = [&](llvm::OpenMPIRBuilder::InsertPointTy ip,
@@ -668,11 +664,14 @@ convertLoopNestHelper(Operation &opInst, llvm::IRBuilderBase &builder,
       unsigned size = alloca->getAllocatedType()->getPrimitiveSizeInBits() / 8;
       builder.CreateLifetimeStart(alloca, builder.getInt64(size));
     }
+
     llvm::Expected<llvm::BasicBlock *> cont = convertOmpOpRegions(
         loopOp.getRegion(), blockName, builder, moduleTranslation);
     if (!cont)
       return cont.takeError();
+
     builder.SetInsertPoint(*cont, (*cont)->begin());
+
     for (auto *alloca : allocasToSink) {
       unsigned size = alloca->getAllocatedType()->getPrimitiveSizeInBits() / 8;
       builder.CreateLifetimeEnd(alloca, builder.getInt64(size));
@@ -706,7 +705,7 @@ convertLoopNestHelper(Operation &opInst, llvm::IRBuilderBase &builder,
     llvm::Expected<llvm::CanonicalLoopInfo *> loopResult =
         ompBuilder->createCanonicalLoop(
             loc, bodyGen, lowerBound, upperBound, step,
-            /*IsSigned=*/true, /*InclusiveStop=*/true, computeIP);
+            /*IsSigned=*/true, loopOp.getLoopInclusive(), computeIP);
 
     if (failed(handleError(loopResult, *loopOp)))
       return std::nullopt;
@@ -2121,90 +2120,13 @@ static LogicalResult generateOMPWorkshareLoop(
     std::optional<omp::ScheduleModifier> &scheduleMod, bool loopNeedsBarier,
     llvm::omp::WorksharingLoopType workshareLoopType) {
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-  // Set up the source location value for OpenMP runtime.
-  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
 
-  SetVector<llvm::AllocaInst *> allocasToSink;
-  getSinkableAllocas(moduleTranslation, loopOp.getRegion(), allocasToSink);
+  auto loopNestConversionResult = convertLoopNestHelper(
+      loopOp, builder, moduleTranslation, "omp.wsloop.region");
+  if (!loopNestConversionResult)
+    return failure();
 
-  // Generator of the canonical loop body.
-  SmallVector<llvm::CanonicalLoopInfo *> loopInfos;
-  SmallVector<llvm::OpenMPIRBuilder::InsertPointTy> bodyInsertPoints;
-  auto bodyGen = [&](llvm::OpenMPIRBuilder::InsertPointTy ip,
-                     llvm::Value *iv) -> llvm::Error {
-    // Make sure further conversions know about the induction variable.
-    moduleTranslation.mapValue(
-        loopOp.getRegion().front().getArgument(loopInfos.size()), iv);
-
-    // Capture the body insertion point for use in nested loops. BodyIP of the
-    // CanonicalLoopInfo always points to the beginning of the entry block of
-    // the body.
-    bodyInsertPoints.push_back(ip);
-
-    if (loopInfos.size() != loopOp.getNumLoops() - 1)
-      return llvm::Error::success();
-
-    // Convert the body of the loop, adding lifetime markers to allocations that
-    // can be sunk into the new block.
-    builder.restoreIP(ip);
-    for (auto *alloca : allocasToSink) {
-      unsigned size = alloca->getAllocatedType()->getPrimitiveSizeInBits() / 8;
-      builder.CreateLifetimeStart(alloca, builder.getInt64(size));
-    }
-
-    llvm::Expected<llvm::BasicBlock *> cont = convertOmpOpRegions(
-        loopOp.getRegion(), "omp.wsloop.region", builder, moduleTranslation);
-    if (!cont)
-      return cont.takeError();
-
-    builder.SetInsertPoint(*cont, (*cont)->begin());
-
-    for (auto *alloca : allocasToSink) {
-      unsigned size = alloca->getAllocatedType()->getPrimitiveSizeInBits() / 8;
-      builder.CreateLifetimeEnd(alloca, builder.getInt64(size));
-    }
-    return llvm::Error::success();
-  };
-
-  // Delegate actual loop construction to the OpenMP IRBuilder.
-  // TODO: this currently assumes omp.loop_nest is semantically similar to SCF
-  // loop, i.e. it has a positive step, uses signed integer semantics.
-  // Reconsider this code when the nested loop operation clearly supports more
-  // cases.
-  for (unsigned i = 0, e = loopOp.getNumLoops(); i < e; ++i) {
-    llvm::Value *lowerBound =
-        moduleTranslation.lookupValue(loopOp.getLoopLowerBounds()[i]);
-    llvm::Value *upperBound =
-        moduleTranslation.lookupValue(loopOp.getLoopUpperBounds()[i]);
-    llvm::Value *step = moduleTranslation.lookupValue(loopOp.getLoopSteps()[i]);
-
-    // Make sure loop trip count are emitted in the preheader of the outermost
-    // loop at the latest so that they are all available for the new collapsed
-    // loop will be created below.
-    llvm::OpenMPIRBuilder::LocationDescription loc = ompLoc;
-    llvm::OpenMPIRBuilder::InsertPointTy computeIP = ompLoc.IP;
-    if (i != 0) {
-      loc = llvm::OpenMPIRBuilder::LocationDescription(bodyInsertPoints.back());
-      computeIP = loopInfos.front()->getPreheaderIP();
-    }
-
-    llvm::Expected<llvm::CanonicalLoopInfo *> loopResult =
-        ompBuilder->createCanonicalLoop(
-            loc, bodyGen, lowerBound, upperBound, step,
-            /*IsSigned=*/true, loopOp.getLoopInclusive(), computeIP);
-
-    if (failed(handleError(loopResult, *loopOp)))
-      return failure();
-
-    loopInfos.push_back(*loopResult);
-  }
-
-  // Collapse loops. Store the insertion point because LoopInfos may get
-  // invalidated.
-  llvm::IRBuilderBase::InsertPoint afterIP = loopInfos.front()->getAfterIP();
-  llvm::CanonicalLoopInfo *loopInfo =
-      ompBuilder->collapseLoops(ompLoc.DL, loopInfos, {});
-
+  auto [ompLoc, afterIP, loopInfo] = *loopNestConversionResult;
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
 
@@ -2597,7 +2519,7 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   auto loopNestConversionResult = convertLoopNestHelper(
-      *loopOp, builder, moduleTranslation, "omp.simd.region");
+      loopOp, builder, moduleTranslation, "omp.simd.region");
   if (!loopNestConversionResult)
     return failure();
 
@@ -4302,7 +4224,7 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
       // TODO: Unify host and target lowering for standalone DISTRIBUTE
       if (!isGPU) {
         auto loopNestConversionResult = convertLoopNestHelper(
-            *loopOp, builder, moduleTranslation, "omp.distribute.region");
+            loopOp, builder, moduleTranslation, "omp.distribute.region");
         if (!loopNestConversionResult)
           return llvm::make_error<PreviouslyReportedError>();
 
