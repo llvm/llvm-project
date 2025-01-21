@@ -1195,21 +1195,33 @@ PyOperation::~PyOperation() {
   }
 }
 
+namespace {
+
+// Constructs a new object of type T in-place on the Python heap, returning a
+// PyObjectRef to it, loosely analogous to std::make_shared<T>().
+template <typename T, class... Args>
+PyObjectRef<T> makeObjectRef(Args &&...args) {
+  nb::handle type = nb::type<T>();
+  nb::object instance = nb::inst_alloc(type);
+  T *ptr = nb::inst_ptr<T>(instance);
+  new (ptr) T(std::forward<Args>(args)...);
+  nb::inst_mark_ready(instance);
+  return PyObjectRef<T>(ptr, std::move(instance));
+}
+
+} // namespace
+
 PyOperationRef PyOperation::createInstance(PyMlirContextRef contextRef,
                                            MlirOperation operation,
                                            nb::object parentKeepAlive) {
   // Create.
-  PyOperation *unownedOperation =
-      new PyOperation(std::move(contextRef), operation);
-  // Note that the default return value policy on cast is automatic_reference,
-  // which does not take ownership (delete will not be called).
-  // Just be explicit.
-  nb::object pyRef = nb::cast(unownedOperation, nb::rv_policy::take_ownership);
-  unownedOperation->handle = pyRef;
+  PyOperationRef unownedOperation =
+      makeObjectRef<PyOperation>(std::move(contextRef), operation);
+  unownedOperation->handle = unownedOperation.getObject();
   if (parentKeepAlive) {
     unownedOperation->parentKeepAlive = std::move(parentKeepAlive);
   }
-  return PyOperationRef(unownedOperation, std::move(pyRef));
+  return unownedOperation;
 }
 
 PyOperationRef PyOperation::forOperation(PyMlirContextRef contextRef,
