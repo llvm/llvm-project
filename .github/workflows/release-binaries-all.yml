@@ -83,7 +83,7 @@ jobs:
       matrix:
         runs-on:
           - ubuntu-22.04
-          - depot-ubuntu-22.04-arm-small
+          - ubuntu-22.04-arm
           - macos-13
           - macos-14
 

@@ -18,7 +18,7 @@ on:
         type: choice
         options:
           - ubuntu-22.04
-          - depot-ubuntu-22.04-arm-small
+          - ubuntu-22.04-arm
           - macos-13
           - macos-14
 
@@ -336,7 +336,6 @@ jobs:
       - prepare
       - build-release-package
     if: >-
-      always() &&
       github.repository == 'llvm/llvm-project'
     runs-on: ${{ needs.prepare.outputs.test-runs-on }}
     steps:
