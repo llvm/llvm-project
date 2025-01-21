@@ -15998,7 +15998,7 @@ ExprResult Sema::BuildOverloadedArrowExpr(Expr *Base, SourceLocation OpLoc,
   //
   // then we should build a dependent class member access expression.
   if (R.wasNotFoundInCurrentInstantiation() ||
-      (Base->isTypeDependent() && !R.empty())) {
+      (Base->getType()->isDependentType() && !R.empty())) {
     IsDependent = true;
     return Base;
   }
