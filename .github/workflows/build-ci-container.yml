@@ -23,7 +23,9 @@ jobs:
     runs-on: depot-ubuntu-22.04-16
     outputs:
       container-name: ${{ steps.vars.outputs.container-name }}
+      container-name-agent: ${{ steps.vars.outputs.container-name-agent }}
       container-name-tag: ${{ steps.vars.outputs.container-name-tag }}
+      container-name-agent-tag: ${{ steps.vars.outputs.container-name-agent-tag }}
       container-filename: ${{ steps.vars.outputs.container-filename }}
     steps:
       - name: Checkout LLVM
@@ -90,6 +92,6 @@ jobs:
           podman push ${{ needs.build-ci-container.outputs.container-name-tag }}
           podman push ${{ needs.build-ci-container.outputs.container-name }}:latest
 
-          podman tag ${{ needs.build-ci-container.outpus.container-name-agent-tag }} ${{ needs.build-ci-container.outputs.container-name-agent }}:latest
+          podman tag ${{ needs.build-ci-container.outputs.container-name-agent-tag }} ${{ needs.build-ci-container.outputs.container-name-agent }}:latest
           podman push ${{ needs.build-ci-container.outputs.container-name-agent-tag }}
           podman push ${{ needs.build-ci-container.outputs.container-name-agent }}:latest

@@ -64,12 +64,16 @@ uint32_t atomicInc(uint32_t *A, uint32_t V, atomic::OrderingTy Ordering,
 
 #define ScopeSwitch(ORDER)                                                     \
   switch (MemScope) {                                                          \
-  case atomic::MemScopeTy::all:                                                \
+  case atomic::MemScopeTy::system:                                             \
     return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "");                     \
   case atomic::MemScopeTy::device:                                             \
     return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "agent");                \
-  case atomic::MemScopeTy::cgroup:                                             \
+  case atomic::MemScopeTy::workgroup:                                          \
     return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "workgroup");            \
+  case atomic::MemScopeTy::wavefront:                                          \
+    return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "wavefront");            \
+  case atomic::MemScopeTy::single:                                             \
+    return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "singlethread");         \
   }
 
 #define Case(ORDER)                                                            \
@@ -148,7 +152,7 @@ void fenceTeam(atomic::OrderingTy Ordering) {
 }
 
 void fenceKernel(atomic::OrderingTy Ordering) {
-  return __scoped_atomic_thread_fence(Ordering, atomic::device_);
+  return __scoped_atomic_thread_fence(Ordering, atomic::device);
 }
 
 void fenceSystem(atomic::OrderingTy Ordering) {
