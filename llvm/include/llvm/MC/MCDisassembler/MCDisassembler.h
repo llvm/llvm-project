@@ -34,14 +34,12 @@ struct SymbolInfoTy {
   uint8_t Type;
   // Used by ELF to describe a mapping symbol that is usually not displayed.
   bool IsMappingSymbol;
-  bool IsDummy = false;
 
 private:
   bool IsXCOFF;
   bool HasType;
 
 public:
-  SymbolInfoTy() = default;
   SymbolInfoTy(std::optional<XCOFF::StorageMappingClass> Smc, uint64_t Addr,
                StringRef Name, std::optional<uint32_t> Idx, bool Label)
       : Addr(Addr), Name(Name), XCOFFSymInfo{Smc, Idx, Label}, Type(0),

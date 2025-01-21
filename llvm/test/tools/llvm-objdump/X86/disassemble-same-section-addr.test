@@ -5,33 +5,33 @@
 ## to reproduce the original failure.
 
 ## Two empty sections, one with symbol in, one without.
-# RUN: yaml2obj %s --docnum=1 -o %t1 -D SIZE1=0 -D SIZE2=0 -D SECTION=.second -D INDEX=SHN_ABS -D VALUE=0x5
+# RUN: yaml2obj %s --docnum=1 -o %t1 -D SIZE1=0 -D SIZE2=0 -D SECTION=.second -D INDEX=SHN_ABS
 # RUN: llvm-objdump -d %t1 | FileCheck %s --check-prefix=TARGET
-# RUN: yaml2obj %s --docnum=1 -o %t2 -D SIZE1=0 -D SIZE2=0 -D SECTION=.first -D INDEX=SHN_ABS -D VALUE=0x5
+# RUN: yaml2obj %s --docnum=1 -o %t2 -D SIZE1=0 -D SIZE2=0 -D SECTION=.first -D INDEX=SHN_ABS
 # RUN: llvm-objdump -d %t2 | FileCheck %s --check-prefix=TARGET
 
 ## Two sections, one empty with symbol, other non-empty, without symbol.
-# RUN: yaml2obj %s --docnum=1 -o %t3 -D SIZE1=1 -D SIZE2=0 -D SECTION=.second -D INDEX=SHN_ABS -D VALUE=0x5
+# RUN: yaml2obj %s --docnum=1 -o %t3 -D SIZE1=1 -D SIZE2=0 -D SECTION=.second -D INDEX=SHN_ABS
 # RUN: llvm-objdump -d %t3 | FileCheck %s --check-prefix=TARGET
-# RUN: yaml2obj %s --docnum=1 -o %t4 -D SIZE1=0 -D SIZE2=1 -D SECTION=.first -D INDEX=SHN_ABS -D VALUE=0x5
+# RUN: yaml2obj %s --docnum=1 -o %t4 -D SIZE1=0 -D SIZE2=1 -D SECTION=.first -D INDEX=SHN_ABS
 # RUN: llvm-objdump -d %t4 | FileCheck %s --check-prefix=TARGET
 
-## Fall back to absolute symbols before dummy symbols if no symbols in candidate sections.
-# RUN: yaml2obj %s --docnum=1 -o %t5 -D SIZE1=1 -D SIZE2=0 -D SECTION=.caller -D INDEX=SHN_ABS -D VALUE=0x6
+## Fall back to absolute symbol if no symbol found in candidate sections.
+# RUN: yaml2obj %s --docnum=1 -o %t5 -D SIZE1=1 -D SIZE2=0 -D SECTION=.caller -D INDEX=SHN_ABS
 # RUN: llvm-objdump -d %t5 | FileCheck %s --check-prefix=ABSOLUTE
 
 ## Show that other symbols with reserved st_shndx values are treated as absolute
-# RUN: yaml2obj %s --docnum=1 -o %t6 -D SIZE1=1 -D SIZE2=0 -D SECTION=.caller -D INDEX=SHN_LOPROC -D VALUE=0x6
+## symbols.
+# RUN: yaml2obj %s --docnum=1 -o %t6 -D SIZE1=1 -D SIZE2=0 -D SECTION=.caller -D INDEX=SHN_LOPROC
 # RUN: llvm-objdump -d %t6 | FileCheck %s --check-prefix=ABSOLUTE
 
-## Print dummy symbol if available and if no symbol in section/absolute symbol found.
+## Print no target if no symbol in section/absolute symbol found.
 # RUN: llvm-objcopy %t5 %t7 -N other
-# RUN: llvm-objdump -d %t7 | FileCheck %s --check-prefix=DUMMY
+# RUN: llvm-objdump -d %t7 | FileCheck %s --check-prefix=FAIL
 
 # TARGET:   callq 0x5 <target>
 # ABSOLUTE: callq 0x5 <other+0x5>
 # FAIL:     callq 0x5{{$}}
-# DUMMY:    callq 0x5 <.caller+0x5>
 
 --- !ELF
 FileHeader:
@@ -58,7 +58,7 @@ Sections:
 Symbols:
   - Name:    target
     Section: [[SECTION]]
-    Value:   [[VALUE]]
+    Value:   0x5
   - Name:    other
     Index:   [[INDEX]]
     Value:   0x0
@@ -108,42 +108,6 @@ Sections:
 Symbols:
   - Name:    first
     Section: .first
-    Value:   [[SYMVAL1]]
-  - Name:    second
-    Section: .second
-    Value:   [[SYMVAL2]]
-
-## Fall back to symbols in earlier sections if no symbols in target section
-# RUN: yaml2obj %s --docnum=2 -o %t12 -D SIZE1=2 -D SIZE2=0 -D SYMVAL1=0x1 -D SYMVAL2=0x5 -D SYMSEC1=.caller
-# RUN: llvm-objdump -d %t12 | FileCheck %s --check-prefix=PREVSECSYM
-
-# PREVSECSYM: callq 0x5 <first+0x4>
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
-Sections:
-  - Name:    .caller
-    Type:    SHT_PROGBITS
-    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
-    Address: 0x0
-  - Name:    .first
-    Type:    SHT_PROGBITS
-    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
-    Address: 0x3
-    Content: e800000000 ## Call instruction to next address.
-    Size:    [[SIZE1]]
-  - Name:    .second
-    Type:    SHT_PROGBITS
-    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
-    Address: 0x5
-    Size:    [[SIZE2]]
-Symbols:
-  - Name:    first
-    Section: [[SYMSEC1]]
     Value:   [[SYMVAL1]]
   - Name:    second
     Section: .second

@@ -61,7 +61,6 @@
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/OffloadBinary.h"
-#include "llvm/Object/SymbolicFile.h"
 #include "llvm/Object/Wasm.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -86,7 +85,6 @@
 #include <cctype>
 #include <cstring>
 #include <optional>
-#include <queue>
 #include <set>
 #include <system_error>
 #include <unordered_map>
@@ -1438,15 +1436,11 @@ SymbolInfoTy objdump::createSymbolInfo(const ObjectFile &Obj,
 static SymbolInfoTy createDummySymbolInfo(const ObjectFile &Obj,
                                           const uint64_t Addr, StringRef &Name,
                                           uint8_t Type) {
-  SymbolInfoTy Ret;
   if (Obj.isXCOFF() && (SymbolDescription || TracebackTable))
-    Ret = SymbolInfoTy(std::nullopt, Addr, Name, std::nullopt, false);
-  else if (Obj.isWasm())
-    Ret = SymbolInfoTy(Addr, Name, wasm::WASM_SYMBOL_TYPE_SECTION);
-  else
-    Ret = SymbolInfoTy(Addr, Name, Type);
-  Ret.IsDummy = true;
-  return Ret;
+    return SymbolInfoTy(std::nullopt, Addr, Name, std::nullopt, false);
+  if (Obj.isWasm())
+    return SymbolInfoTy(Addr, Name, wasm::WASM_SYMBOL_TYPE_SECTION);
+  return SymbolInfoTy(Addr, Name, Type);
 }
 
 static void collectBBAddrMapLabels(
@@ -2372,10 +2366,11 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                 while (It != SectionAddresses.begin()) {
                   --It;
                   if (It->first != TargetSecAddr) {
-                    if (!FoundSymbols)
+                    if (!FoundSymbols) {
                       TargetSecAddr = It->first;
-                    else
+                    } else {
                       break;
+                    }
                   }
                   TargetSectionSymbols.push_back(&AllSymbols[It->second]);
                   if (!AllSymbols[It->second].empty())
@@ -2392,7 +2387,6 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
               // using the nearest preceding absolute symbol (if any), if there
               // are no other valid symbols.
               const SymbolInfoTy *TargetSym = nullptr;
-              std::queue<const SymbolInfoTy *> DummySymbols;
               for (const SectionSymbolsTy *TargetSymbols :
                    TargetSectionSymbols) {
                 auto It = llvm::partition_point(
@@ -2400,10 +2394,6 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                     [=](const SymbolInfoTy &O) { return O.Addr <= Target; });
                 while (It != TargetSymbols->begin()) {
                   --It;
-                  if (It->IsDummy) {
-                    DummySymbols.push(&(*It));
-                    continue;
-                  }
                   // Skip mapping symbols to avoid possible ambiguity as they
                   // do not allow uniquely identifying the target address.
                   if (!It->IsMappingSymbol) {
@@ -2413,12 +2403,6 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                 }
                 if (TargetSym)
                   break;
-              }
-              while (!DummySymbols.empty() && !TargetSym) {
-                const SymbolInfoTy *Sym = DummySymbols.front();
-                if (!Sym->IsMappingSymbol)
-                  TargetSym = Sym;
-                DummySymbols.pop();
               }
 
               // Branch and instruction targets are printed just after the instructions.

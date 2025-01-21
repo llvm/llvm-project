@@ -58,7 +58,7 @@ Symbols:
 # REL:      Disassembly of section .text1:
 # REL-EMPTY:
 # REL-NEXT: 0000000000000000 <.text1>:
-# REL-NEXT:        0: e8 00 00 00 00                callq   0x5 <sym3+0x5>
+# REL-NEXT:        0: e8 00 00 00 00                callq   0x5 <.text1+0x5>
 # REL-EMPTY:
 # REL-NEXT: Disassembly of section .text2:
 # REL-EMPTY:
@@ -68,7 +68,7 @@ Symbols:
 # REL-NEXT: Disassembly of section .text3:
 # REL-EMPTY:
 # REL-NEXT: 0000000000000000 <.text3>:
-# REL-NEXT:        0: e8 00 00 00 00                callq   0x5 <sym3+0x5>
+# REL-NEXT:        0: e8 00 00 00 00                callq   0x5 <.text3+0x5>
 
 --- !ELF
 FileHeader:
