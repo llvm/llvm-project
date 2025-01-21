@@ -10,6 +10,9 @@
 ;; The hazard size can still be overridden/disabled when +sme,+sve is set.
 ; RUN: llc < %s -mtriple=aarch64 -mattr=+sme -mattr=+sve -aarch64-stack-hazard-size=0 | FileCheck %s --check-prefix=CHECK0
 
+;; When +sme-fa64 is set alongside +sme,+sve the default hazard size should be 0.
+; RUN: llc < %s -mtriple=aarch64 -mattr=+sme-fa64 -mattr=+sme -mattr=+sve | FileCheck %s --check-prefix=CHECK0
+
 ;; When +sme is set (without +sve) the default hazard size should be 0.
 ; RUN: llc < %s -mtriple=aarch64 -mattr=+sme | FileCheck %s --check-prefix=CHECK0
 
