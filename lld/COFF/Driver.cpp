@@ -2298,6 +2298,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     config->noSEH = args.hasArg(OPT_noseh);
   }
 
+  // Handle /stub
+  if (auto *arg = args.getLastArg(OPT_stub))
+    parseDosStub(arg->getValue());
+
   // Handle /functionpadmin
   for (auto *arg : args.filtered(OPT_functionpadmin, OPT_functionpadmin_opt))
     parseFunctionPadMin(arg);
