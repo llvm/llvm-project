@@ -37,10 +37,14 @@ struct has_difference_type : std::false_type {};
 template <typename T>
 struct has_difference_type<T, myvoid_t<typename T::difference_type> > : std::true_type {};
 
-template <class A, bool IntegralOrFloating, bool Pointer>
+template <class T,
+          bool IntegralOrFloating =
+              (std::is_integral<T>::value && !std::is_same<T, bool>::value) || std::is_floating_point<T>::value,
+          bool Pointer = std::is_pointer<T>::value>
 struct test_atomic {
   test_atomic() {
-    static_assert(!IntegralOrFloating || !Pointer, "");
+    static_assert(!IntegralOrFloating && !Pointer, "");
+    using A = std::atomic<T>;
     A a;
     (void)a;
 #if TEST_STD_VER >= 17
@@ -50,9 +54,10 @@ struct test_atomic {
   }
 };
 
-template <class A>
-struct test_atomic<A, true, false> {
+template <class T>
+struct test_atomic<T, true, false> {
   test_atomic() {
+    using A = std::atomic<T>;
     A a;
     (void)a;
 #if TEST_STD_VER >= 17
@@ -62,9 +67,10 @@ struct test_atomic<A, true, false> {
   }
 };
 
-template <class A>
-struct test_atomic<A, false, true> {
+template <class T>
+struct test_atomic<T, false, true> {
   test_atomic() {
+    using A = std::atomic<T>;
     A a;
     (void)a;
 #if TEST_STD_VER >= 17
@@ -80,12 +86,7 @@ void test() {
 #if TEST_STD_VER >= 17
   static_assert((std::is_same_v<typename A::value_type, T>), "");
 #endif
-  enum {
-    IntegralOrFloating =
-        (std::is_integral<T>::value && !std::is_same<T, bool>::value) || std::is_floating_point<T>::value
-  };
-  enum { Pointer = std::is_pointer<T>::value };
-  test_atomic<A, IntegralOrFloating, Pointer>();
+  test_atomic<T>();
 }
 
 struct TriviallyCopyable {
