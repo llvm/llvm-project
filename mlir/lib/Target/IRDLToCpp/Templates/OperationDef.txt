@@ -1,18 +1,21 @@
 /*
-0: Operation Name
-1: Operation CppName
-2: Dialect Name
-3: Operand count
-4: Operand names
-5: Result count
-6: Result names
-
-6: open namespace
-7: close namespace
-8: namespace path
+{0}: Comma-separated op list
+{2}: Per-op definitions
 */
 
 R"(
+#ifdef GET_OP_LIST
+#undef GET_OP_LIST
+
+{0}
+
+#endif  // GET_OP_LIST
 
 
+#ifdef GET_OP_CLASSES
+#undef GET_OP_CLASSES
+
+{1}
+
+#endif // GET_OP_CLASSES
 )"

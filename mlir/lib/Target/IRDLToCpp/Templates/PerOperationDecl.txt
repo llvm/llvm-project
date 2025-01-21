@@ -6,14 +6,15 @@
 4: Operand names
 5: Result count
 6: Result names
+7: Build declarations
 
-6: open namespace
-7: close namespace
-8: namespace path
+8: open namespace
+9: close namespace
+10: namespace path
 */
 
 R"(
-{7}
+{8}
 
 namespace detail {
 class {1}GenericAdaptorBase {
@@ -145,22 +146,19 @@ public:
     return ::llvm::cast<::mlir::TypedValue<::mlir::irdl::AttributeType>>(*getODSResults(0).begin());
   }
 
-  static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::Type output, ::mlir::ValueRange args);
-  static void build(::mlir::OpBuilder &, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {{});
-  static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {{});
+  {7}
+  static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {{});
+  
   ::llvm::LogicalResult verifyInvariantsImpl();
   ::llvm::LogicalResult verifyInvariants();
-  std::unique_ptr<::mlir::irdl::Constraint> getVerifier(::mlir::ArrayRef<Value> valueToConstr, ::mlir::DenseMap<::mlir::irdl::TypeOp,
-          std::unique_ptr<::mlir::DynamicTypeDefinition>> const&types, ::mlir::DenseMap<::mlir::irdl::AttributeOp,
-          std::unique_ptr<::mlir::DynamicAttrDefinition>> const&attrs);
   static ::mlir::ParseResult parse(::mlir::OpAsmParser &parser, ::mlir::OperationState &result);
   void print(::mlir::OpAsmPrinter &_odsPrinter);
 public:
 };
 
 
-{8}
+{9}
 
-MLIR_DECLARE_EXPLICIT_TYPE_ID({9}::{1})
+MLIR_DECLARE_EXPLICIT_TYPE_ID({10}::{1})
 
 )"

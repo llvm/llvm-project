@@ -1,0 +1,56 @@
+/*
+0: Operation Name
+1: Operation CppName
+2: Dialect Name
+3: Operand count
+4: Operand names
+5: Result count
+6: Result names
+7: Build definitions
+
+8: open namespace
+9: close namespace
+10: namespace path
+*/
+
+R"(
+
+//===----------------------------------------------------------------------===//
+// {10}::{1} definitions
+//===----------------------------------------------------------------------===//
+
+{8}
+
+::llvm::LogicalResult {1}::verifyInvariantsImpl() {{
+  return ::mlir::success();
+}
+
+::llvm::LogicalResult {1}::verifyInvariants() {{
+  return verifyInvariantsImpl();
+}
+
+::mlir::ParseResult {1}::parse(::mlir::OpAsmParser &parser, ::mlir::OperationState &result) {{
+  assert(false && "not implemented");
+  return ::mlir::failure();
+}
+
+{7}
+
+void {1}::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes) {{
+  assert(operands.size() == {3});
+  assert(resultTypes.size() == {5});
+  odsBuilder.addOperands(operands);
+  odsBuilder.addAttributes(attributes);
+  odsBuilder.addTypes(resultTypes);
+}
+
+
+
+void {1}::print(::mlir::OpAsmPrinter &_odsPrinter) {{
+  assert(false && "not implemented");
+}
+
+{9}
+
+MLIR_DEFINE_EXPLICIT_TYPE_ID({10}::{1})
+)"
