@@ -1792,7 +1792,7 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
       IVSize != 32) {
     OpVPEVL = new VPScalarCastRecipe(
         IVSize < 32 ? Instruction::Trunc : Instruction::ZExt, OpVPEVL,
-        CanonicalIVPHI->getScalarType(), CanonicalIVIncrement->getDebugLoc());
+        CanonicalIVPHI->getScalarType(), CanonicalIVPHI->getDebugLoc());
     OpVPEVL->insertBefore(LatchBranch);
   }
   // TODO: Set flags when introducing the increment here.
