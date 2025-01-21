@@ -14194,7 +14194,7 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
   /// Smart shuffle instruction emission, walks through shuffles trees and
   /// tries to find the best matching vector for the actual shuffle
   /// instruction.
-  Value *createShuffle(Value *V1, Value *V2, ArrayRef<int> Mask) {
+  Value *createShuffle(Value *V1, Value *V2, ArrayRef<int> Mask) const {
     assert(V1 && "Expected at least one vector value.");
     ShuffleIRBuilder ShuffleBuilder(Builder, R.GatherShuffleExtractSeq,
                                     R.CSEBlocks, *R.DL);
@@ -14214,7 +14214,7 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
   /// Cast value \p V to the vector type with the same number of elements, but
   /// the base type \p ScalarTy.
   Value *castToScalarTyElem(Value *V,
-                            std::optional<bool> IsSigned = std::nullopt) {
+                            std::optional<bool> IsSigned = std::nullopt) const {
     auto *VecTy = cast<VectorType>(V->getType());
     assert(getNumElements(VecTy) % getNumElements(ScalarTy) == 0);
     if (VecTy->getElementType() == ScalarTy->getScalarType())
@@ -14231,7 +14231,7 @@ public:
   /// Adjusts extractelements after reusing them.
   Value *adjustExtracts(const TreeEntry *E, MutableArrayRef<int> Mask,
                         ArrayRef<std::optional<TTI::ShuffleKind>> ShuffleKinds,
-                        unsigned NumParts, bool &UseVecBaseAsInput) {
+                        unsigned NumParts, bool &UseVecBaseAsInput) const {
     UseVecBaseAsInput = false;
     SmallPtrSet<Value *, 4> UniqueBases;
     Value *VecBase = nullptr;
@@ -14509,13 +14509,13 @@ public:
     add(V1, NewMask);
   }
   Value *gather(ArrayRef<Value *> VL, unsigned MaskVF = 0,
-                Value *Root = nullptr) {
+                Value *Root = nullptr) const {
     return R.gather(VL, Root, ScalarTy,
                     [&](Value *V1, Value *V2, ArrayRef<int> Mask) {
                       return createShuffle(V1, V2, Mask);
                     });
   }
-  Value *createFreeze(Value *V) { return Builder.CreateFreeze(V); }
+  Value *createFreeze(Value *V) const { return Builder.CreateFreeze(V); }
   /// Finalize emission of the shuffles.
   /// \param Action the action (if any) to be performed before final applying of
   /// the \p ExtMask mask.
