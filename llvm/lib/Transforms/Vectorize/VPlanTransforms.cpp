@@ -2057,7 +2057,6 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
     R->removeRegion();
     // Add explicit backedge.
     VPBlockUtils::connectBlocks(Latch, Header);
-    delete R;
   }
 
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
