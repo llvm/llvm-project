@@ -1,4 +1,4 @@
-; REQUIRES: x86_64-linux
+; REQUIRES: target={{x86_64-.*-(linux|windows).*}}
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile-mismatch.prof -report-profile-staleness -persist-profile-staleness -S 2>%t -o %t.ll
 ; RUN: FileCheck %s --input-file %t
 ; RUN: FileCheck %s --input-file %t.ll -check-prefix=CHECK-MD
@@ -61,7 +61,7 @@
 
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
+target triple = "x86_64-unknown--"
 
 @x = dso_local global i32 0, align 4, !dbg !0
 

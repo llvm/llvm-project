@@ -23,6 +23,7 @@
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCLabel.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionDXContainer.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -722,6 +723,13 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
   Iter->second = Result;
   auto *F = allocInitialFragment(*Result);
   Begin->setFragment(F);
+  // Normally the comdat symbol is function begin label and will be set a
+  // fragment in emitLabel. It is not hold for a pseudo_probe_desc comdat
+  // symbol, so we need to set its fragment here.
+  if (COMDATSymbol && !COMDATSymbol->getFragment() &&
+      Section == MOFI->getPseudoProbeDescSection("")->getName()) {
+    COMDATSymbol->setFragment(F);
+  }
   return Result;
 }
 

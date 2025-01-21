@@ -1,4 +1,4 @@
-; REQUIRES: x86_64-linux
+; REQUIRES: target={{x86_64-.*-(linux|windows).*}}
 ; RUN: opt < %s -passes='pseudo-probe,jump-threading' -S -o %t
 ; RUN: FileCheck %s < %t --check-prefix=JT
 ; RUN: llc  -function-sections <%t -filetype=asm | FileCheck %s --check-prefix=ASM

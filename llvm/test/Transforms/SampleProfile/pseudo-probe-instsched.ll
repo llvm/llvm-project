@@ -1,4 +1,4 @@
-; REQUIRES: x86_64-linux
+; REQUIRES: target={{x86_64-.*-(linux|windows).*}}
 ; RUN: llc < %s -mcpu=generic -mtriple=x86_64-- -O3 | FileCheck %s
 
 define float @foo(float %x) #0 {

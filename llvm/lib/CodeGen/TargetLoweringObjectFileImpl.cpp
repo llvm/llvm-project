@@ -335,28 +335,7 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
     }
   }
 
-  if (NamedMDNode *FuncInfo = M.getNamedMetadata(PseudoProbeDescMetadataName)) {
-    // Emit a descriptor for every function including functions that have an
-    // available external linkage. We may not want this for imported functions
-    // that has code in another thinLTO module but we don't have a good way to
-    // tell them apart from inline functions defined in header files. Therefore
-    // we put each descriptor in a separate comdat section and rely on the
-    // linker to deduplicate.
-    for (const auto *Operand : FuncInfo->operands()) {
-      const auto *MD = cast<MDNode>(Operand);
-      auto *GUID = mdconst::dyn_extract<ConstantInt>(MD->getOperand(0));
-      auto *Hash = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1));
-      auto *Name = cast<MDString>(MD->getOperand(2));
-      auto *S = C.getObjectFileInfo()->getPseudoProbeDescSection(
-          TM->getFunctionSections() ? Name->getString() : StringRef());
-
-      Streamer.switchSection(S);
-      Streamer.emitInt64(GUID->getZExtValue());
-      Streamer.emitInt64(Hash->getZExtValue());
-      Streamer.emitULEB128IntValue(Name->getString().size());
-      Streamer.emitBytes(Name->getString());
-    }
-  }
+  emitPseudoProbeDescMetadata(Streamer, M);
 
   if (NamedMDNode *LLVMStats = M.getNamedMetadata("llvm.stats")) {
     // Emit the metadata for llvm statistics into .llvm_stats section, which is
@@ -1864,6 +1843,7 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
   }
 
   emitCGProfileMetadata(Streamer, M);
+  emitPseudoProbeDescMetadata(Streamer, M);
 }
 
 void TargetLoweringObjectFileCOFF::emitLinkerDirectives(

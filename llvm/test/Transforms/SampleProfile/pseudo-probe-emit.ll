@@ -1,17 +1,28 @@
-; REQUIRES: x86_64-linux
+; REQUIRES: target={{x86_64-.*-(linux|windows).*}}
 ; RUN: opt < %s -passes=pseudo-probe -function-sections -S -o %t
 ; RUN: FileCheck %s < %t --check-prefix=CHECK-IL
 ; RUN: llc %t -stop-after=pseudo-probe-inserter -o - | FileCheck %s --check-prefix=CHECK-MIR
-; RUN: llc %t -function-sections -filetype=asm -o %t1
-; RUN: FileCheck %s < %t1 --check-prefix=CHECK-ASM
-; RUN: llc %t -function-sections -filetype=obj -o %t2
-; RUN: llvm-readelf -S -g %t2 | FileCheck %s --check-prefix=CHECK-SEC
-; RUN: llvm-mc %t1 -filetype=obj -o %t3
-; RUN: llvm-readelf -S -g %t3 | FileCheck %s --check-prefix=CHECK-SEC
+; For ELF.
+; RUN: llc %t -function-sections -mtriple=x86_64--linux -filetype=asm -o %t1
+; RUN: FileCheck %s < %t1 --check-prefixes=CHECK-ASM,CHECK-ASM-ELF
+; RUN: llc %t -function-sections -mtriple=x86_64--linux -filetype=obj -o %t2
+; RUN: llvm-readelf -S -g %t2 | FileCheck %s --check-prefix=CHECK-SEC-ELF
+; RUN: llvm-mc %t1 -triple=x86_64--linux -filetype=obj -o %t3
+; RUN: llvm-readelf -S -g %t3 | FileCheck %s --check-prefix=CHECK-SEC-ELF
 
-; RUN: llc %t -function-sections -unique-section-names=0 -filetype=obj -o %t4
-; RUN: llvm-readelf -S %t4 | FileCheck %s --check-prefix=CHECK-SEC2
+; RUN: llc %t -function-sections -mtriple=x86_64--linux -unique-section-names=0 -filetype=obj -o %t4
+; RUN: llvm-readelf -S %t4 | FileCheck %s --check-prefix=CHECK-SEC2-ELF
 
+; For COFF.
+; RUN: llc %t -function-sections -mtriple=x86_64--windows -filetype=asm -o %t1
+; RUN: FileCheck %s < %t1 --check-prefixes=CHECK-ASM,CHECK-ASM-COFF
+; RUN: llc %t -function-sections -mtriple=x86_64--windows -filetype=obj -o %t2
+; RUN: llvm-readobj -Ss %t2 | FileCheck %s --check-prefix=CHECK-SEC-COFF
+; RUN: llvm-mc %t1 -triple=x86_64--windows -filetype=obj -o %t3
+; RUN: llvm-readobj -Ss %t3 | FileCheck %s --check-prefix=CHECK-SEC-COFF
+
+; RUN: llc %t -function-sections -mtriple=x86_64--windows -unique-section-names=0 -filetype=obj -o %t4
+; RUN: llvm-readobj -Ss %t4 | FileCheck %s --check-prefix=CHECK-SEC-COFF
 ;; Check the generation of pseudoprobe intrinsic call.
 
 @a = dso_local global i32 0, align 4
@@ -93,54 +104,162 @@ entry:
 ; CHECK-IL: ![[#SCOPE1]] = !DILexicalBlockFile(scope: ![[#]], file: ![[#]], discriminator: 455082015)
 
 ; Check the generation of .pseudo_probe_desc section
-; CHECK-ASM: .section .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo,comdat
-; CHECK-ASM-NEXT: .quad [[#GUID]]
-; CHECK-ASM-NEXT: .quad [[#HASH:]]
-; CHECK-ASM-NEXT: .byte  3
-; CHECK-ASM-NEXT: .ascii	"foo"
-; CHECK-ASM-NEXT: .section  .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo2,comdat
-; CHECK-ASM-NEXT: .quad [[#GUID2]]
-; CHECK-ASM-NEXT: .quad [[#HASH2:]]
-; CHECK-ASM-NEXT: .byte 4
-; CHECK-ASM-NEXT: .ascii	"foo2"
+; CHECK-ASM-ELF: .section .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo,comdat
+; CHECK-ASM-ELF-NEXT: .quad [[#GUID]]
+; CHECK-ASM-ELF-NEXT: .quad [[#HASH:]]
+; CHECK-ASM-ELF-NEXT: .byte  3
+; CHECK-ASM-ELF-NEXT: .ascii	"foo"
+; CHECK-ASM-ELF-NEXT: .section  .pseudo_probe_desc,"G",@progbits,.pseudo_probe_desc_foo2,comdat
+; CHECK-ASM-ELF-NEXT: .quad [[#GUID2]]
+; CHECK-ASM-ELF-NEXT: .quad [[#HASH2:]]
+; CHECK-ASM-ELF-NEXT: .byte 4
+; CHECK-ASM-ELF-NEXT: .ascii	"foo2"
+; CHECK-ASM-COFF: .section	.pseudo_probe_desc,"drD",discard,.pseudo_probe_desc_foo
+; CHECK-ASM-COFF-NEXT: .quad	[[#GUID]]
+; CHECK-ASM-COFF-NEXT: .quad	[[#HASH:]]
+; CHECK-ASM-COFF-NEXT: .byte	3
+; CHECK-ASM-COFF-NEXT: .ascii	"foo"
+; CHECK-ASM-COFF-NEXT: .section	.pseudo_probe_desc,"drD",discard,.pseudo_probe_desc_foo2
+; CHECK-ASM-COFF-NEXT: .quad	[[#GUID2]]
+; CHECK-ASM-COFF-NEXT: .quad	[[#HASH2:]]
+; CHECK-ASM-COFF-NEXT: .byte	4
+; CHECK-ASM-COFF-NEXT: .ascii	"foo2"
 
-; CHECK-SEC:       [Nr] Name               Type     {{.*}} ES Flg Lk Inf Al
-; CHECK-SEC:       [ 3] .text.foo          PROGBITS {{.*}} 00  AX  0   0 16
-; CHECK-SEC:       [ 5] .text.foo2         PROGBITS {{.*}} 00  AX  0   0 16
-; CHECK-SEC:       [ 8] .text.foo3         PROGBITS {{.*}} 00  AXG 0   0 16
-; CHECK-SEC-COUNT-3:    .pseudo_probe_desc PROGBITS
-; CHECK-SEC:            .pseudo_probe      PROGBITS {{.*}} 00   L  3   0  1
-; CHECK-SEC-NEXT:       .pseudo_probe      PROGBITS {{.*}} 00   L  5   0  1
-; CHECK-SEC-NEXT:       .pseudo_probe      PROGBITS {{.*}} 00   LG 8   0  1
-; CHECK-SEC-NOT:   .rela.pseudo_probe
+; CHECK-SEC-ELF:       [Nr] Name               Type     {{.*}} ES Flg Lk Inf Al
+; CHECK-SEC-ELF:       [ 3] .text.foo          PROGBITS {{.*}} 00  AX  0   0 16
+; CHECK-SEC-ELF:       [ 5] .text.foo2         PROGBITS {{.*}} 00  AX  0   0 16
+; CHECK-SEC-ELF:       [ 8] .text.foo3         PROGBITS {{.*}} 00  AXG 0   0 16
+; CHECK-SEC-ELF-COUNT-3:    .pseudo_probe_desc PROGBITS
+; CHECK-SEC-ELF:            .pseudo_probe      PROGBITS {{.*}} 00   L  3   0  1
+; CHECK-SEC-ELF-NEXT:       .pseudo_probe      PROGBITS {{.*}} 00   L  5   0  1
+; CHECK-SEC-ELF-NEXT:       .pseudo_probe      PROGBITS {{.*}} 00   LG 8   0  1
+; CHECK-SEC-ELF-NOT:   .rela.pseudo_probe
 
-; CHECK-SEC:       COMDAT group section [    7] `.group' [foo3] contains 2 sections:
-; CHECK-SEC-NEXT:     [Index]    Name
-; CHECK-SEC-NEXT:     [    8]   .text.foo3
-; CHECK-SEC-NEXT:     [   21]   .pseudo_probe
-; CHECK-SEC-EMPTY:
-; CHECK-SEC-NEXT:  COMDAT group section [   10] `.group' [.pseudo_probe_desc_foo] contains 1 sections:
-; CHECK-SEC-NEXT:     [Index]    Name
-; CHECK-SEC-NEXT:     [   11]   .pseudo_probe_desc
-; CHECK-SEC-EMPTY:
-; CHECK-SEC-NEXT:  COMDAT group section [   12] `.group' [.pseudo_probe_desc_foo2] contains 1 sections:
-; CHECK-SEC-NEXT:     [Index]    Name
-; CHECK-SEC-NEXT:     [   13]   .pseudo_probe_desc
-; CHECK-SEC-EMPTY:
-; CHECK-SEC-NEXT:  COMDAT group section [   14] `.group' [.pseudo_probe_desc_foo3] contains 1 sections:
-; CHECK-SEC-NEXT:     [Index]    Name
-; CHECK-SEC-NEXT:     [   15]   .pseudo_probe_desc
+; CHECK-SEC-ELF:       COMDAT group section [    7] `.group' [foo3] contains 2 sections:
+; CHECK-SEC-ELF-NEXT:     [Index]    Name
+; CHECK-SEC-ELF-NEXT:     [    8]   .text.foo3
+; CHECK-SEC-ELF-NEXT:     [   21]   .pseudo_probe
+; CHECK-SEC-ELF-EMPTY:
+; CHECK-SEC-ELF-NEXT:  COMDAT group section [   10] `.group' [.pseudo_probe_desc_foo] contains 1 sections:
+; CHECK-SEC-ELF-NEXT:     [Index]    Name
+; CHECK-SEC-ELF-NEXT:     [   11]   .pseudo_probe_desc
+; CHECK-SEC-ELF-EMPTY:
+; CHECK-SEC-ELF-NEXT:  COMDAT group section [   12] `.group' [.pseudo_probe_desc_foo2] contains 1 sections:
+; CHECK-SEC-ELF-NEXT:     [Index]    Name
+; CHECK-SEC-ELF-NEXT:     [   13]   .pseudo_probe_desc
+; CHECK-SEC-ELF-EMPTY:
+; CHECK-SEC-ELF-NEXT:  COMDAT group section [   14] `.group' [.pseudo_probe_desc_foo3] contains 1 sections:
+; CHECK-SEC-ELF-NEXT:     [Index]    Name
+; CHECK-SEC-ELF-NEXT:     [   15]   .pseudo_probe_desc
 
+; CHECK-SEC2-ELF:      [Nr] Name               Type     {{.*}} ES Flg Lk Inf Al
+; CHECK-SEC2-ELF:      [ 3] .text              PROGBITS {{.*}} 00  AX  0   0 16
+; CHECK-SEC2-ELF:      [ 5] .text              PROGBITS {{.*}} 00  AX  0   0 16
+; CHECK-SEC2-ELF:      [ 8] .text              PROGBITS {{.*}} 00  AXG 0   0 16
+; CHECK-SEC2-ELF-COUNT-3:   .pseudo_probe_desc PROGBITS
+; CHECK-SEC2-ELF:           .pseudo_probe      PROGBITS {{.*}} 00   L  3   0  1
+; CHECK-SEC2-ELF-NEXT:      .pseudo_probe      PROGBITS {{.*}} 00   L  5   0  1
+; CHECK-SEC2-ELF-NEXT:      .pseudo_probe      PROGBITS {{.*}} 00   LG 8   0  1
+; CHECK-SEC2-ELF-NOT:  .rela.pseudo_probe
 
-; CHECK-SEC2:      [Nr] Name               Type     {{.*}} ES Flg Lk Inf Al
-; CHECK-SEC2:      [ 3] .text              PROGBITS {{.*}} 00  AX  0   0 16
-; CHECK-SEC2:      [ 5] .text              PROGBITS {{.*}} 00  AX  0   0 16
-; CHECK-SEC2:      [ 8] .text              PROGBITS {{.*}} 00  AXG 0   0 16
-; CHECK-SEC2-COUNT-3:   .pseudo_probe_desc PROGBITS
-; CHECK-SEC2:           .pseudo_probe      PROGBITS {{.*}} 00   L  3   0  1
-; CHECK-SEC2-NEXT:      .pseudo_probe      PROGBITS {{.*}} 00   L  5   0  1
-; CHECK-SEC2-NEXT:      .pseudo_probe      PROGBITS {{.*}} 00   LG 8   0  1
-; CHECK-SEC2-NOT:  .rela.pseudo_probe
+; CHECK-SEC-COFF-COUNT-4: Section {
+; CHECK-SEC-COFF-NEXT:      Number: 4
+; CHECK-SEC-COFF-NEXT:      Name: .text (2E 74 65 78 74 00 00 00)
+; CHECK-SEC-COFF:         Section {
+; CHECK-SEC-COFF-NEXT:      Number: 5
+; CHECK-SEC-COFF-NEXT:      Name: .text (2E 74 65 78 74 00 00 00)
+; CHECK-SEC-COFF:         Section {
+; CHECK-SEC-COFF-NEXT:      Number: 6
+; CHECK-SEC-COFF-NEXT:      Name: .text (2E 74 65 78 74 00 00 00)
+; CHECK-SEC-COFF:         Section {
+; CHECK-SEC-COFF-NEXT:      Number: 7
+; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe_desc (2F 34 31 00 00 00 00 00)
+; CHECK-SEC-COFF:           Characteristics [ (0x42101040)
+; CHECK-SEC-COFF:             IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_LNK_COMDAT (0x1000)
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_READ (0x40000000)
+; CHECK-SEC-COFF:         Section {
+; CHECK-SEC-COFF-NEXT:      Number: 8
+; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe_desc (2F 34 31 00 00 00 00 00)
+; CHECK-SEC-COFF:           Characteristics [ (0x42101040)
+; CHECK-SEC-COFF:             IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_LNK_COMDAT (0x1000)
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_READ (0x40000000)
+; CHECK-SEC-COFF:         Section {
+; CHECK-SEC-COFF-NEXT:      Number: 9
+; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe_desc (2F 34 31 00 00 00 00 00)
+; CHECK-SEC-COFF:           Characteristics [ (0x42101040)
+; CHECK-SEC-COFF:             IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_LNK_COMDAT (0x1000)
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_READ (0x40000000)
+; CHECK-SEC-COFF-COUNT-3: Section {
+; CHECK-SEC-COFF-NEXT:      Number: 12
+; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe (2F 32 37 00 00 00 00 00)
+; CHECK-SEC-COFF:           Characteristics [ (0x42101040)
+; CHECK-SEC-COFF:             IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_LNK_COMDAT (0x1000)
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_READ (0x40000000)
+; CHECK-SEC-COFF:         Section {
+; CHECK-SEC-COFF-NEXT:      Number: 13
+; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe (2F 32 37 00 00 00 00 00)
+; CHECK-SEC-COFF:           Characteristics [ (0x42101040)
+; CHECK-SEC-COFF:             IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_LNK_COMDAT (0x1000)
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_READ (0x40000000)
+; CHECK-SEC-COFF:         Section {
+; CHECK-SEC-COFF-NEXT:      Number: 14
+; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe (2F 32 37 00 00 00 00 00)
+; CHECK-SEC-COFF:           Characteristics [ (0x42101040)
+; CHECK-SEC-COFF:             IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_LNK_COMDAT (0x1000)
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+; CHECK-SEC-COFF-NEXT:        IMAGE_SCN_MEM_READ (0x40000000)
+; COMDAT symbols
+; CHECK-SEC-COFF-COUNT-5: Symbol {
+; CHECK-SEC-COFF-NEXT:      Name: foo
+; CHECK-SEC-COFF:           Section: .text (4)
+; CHECK-SEC-COFF-COUNT-2: Symbol {
+; CHECK-SEC-COFF-NEXT:      Name: foo2
+; CHECK-SEC-COFF:           Section: .text (5)
+; CHECK-SEC-COFF-COUNT-3: Symbol {
+; CHECK-SEC-COFF-NEXT:      Name: foo3
+; CHECK-SEC-COFF:           Section: .text (6)
+; CHECK-SEC-COFF-COUNT-2: Symbol {
+; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe_desc_foo
+; CHECK-SEC-COFF:           Section: .pseudo_probe_desc (7)
+; CHECK-SEC-COFF:           StorageClass: Static (0x3)
+; CHECK-SEC-COFF-COUNT-2: Symbol {
+; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe_desc_foo2
+; CHECK-SEC-COFF:           Section: .pseudo_probe_desc (8)
+; CHECK-SEC-COFF:           StorageClass: Static (0x3)
+; CHECK-SEC-COFF-COUNT-2: Symbol {
+; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe_desc_foo3
+; CHECK-SEC-COFF:           Section: .pseudo_probe_desc (9)
+; CHECK-SEC-COFF:           StorageClass: Static (0x3)
+; Section symbols
+; CHECK-SEC-COFF-COUNT-2: Symbol {
+; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe
+; CHECK-SEC-COFF:           Section: .pseudo_probe (12)
+; CHECK-SEC-COFF:           AuxSectionDef {
+; CHECK-SEC-COFF:             Selection: Associative (0x5)
+; CHECK-SEC-COFF-NEXT:        AssocSection: .text (4)
+; CHECK-SEC-COFF:         Symbol {
+; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe
+; CHECK-SEC-COFF:           Section: .pseudo_probe (13)
+; CHECK-SEC-COFF:           AuxSectionDef {
+; CHECK-SEC-COFF:             Selection: Associative (0x5)
+; CHECK-SEC-COFF-NEXT:        AssocSection: .text (5)
+; CHECK-SEC-COFF:         Symbol {
+; CHECK-SEC-COFF-NEXT:      Name: .pseudo_probe
+; CHECK-SEC-COFF:           Section: .pseudo_probe (14)
+; CHECK-SEC-COFF:           AuxSectionDef {
+; CHECK-SEC-COFF:             Selection: Associative (0x5)
+; CHECK-SEC-COFF-NEXT:        AssocSection: .text (6)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10}

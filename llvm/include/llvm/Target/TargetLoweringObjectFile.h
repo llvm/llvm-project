@@ -91,6 +91,9 @@ public:
   /// Emit Call Graph Profile metadata.
   void emitCGProfileMetadata(MCStreamer &Streamer, Module &M) const;
 
+  /// Emit pseudo_probe_desc metadata.
+  void emitPseudoProbeDescMetadata(MCStreamer &Streamer, Module &M) const;
+
   /// Get the module-level metadata that the platform cares about.
   virtual void getModuleMetadata(Module &M) {}
 

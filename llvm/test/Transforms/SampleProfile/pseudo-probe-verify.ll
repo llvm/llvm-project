@@ -1,4 +1,4 @@
-; REQUIRES: x86_64-linux
+; REQUIRES: target={{x86_64-.*-(linux|windows).*}}
 ; RUN: opt < %s -passes='pseudo-probe,loop-unroll-full' -verify-pseudo-probe -S -o %t 2>&1 | FileCheck %s --check-prefix=VERIFY
 ; RUN: FileCheck %s < %t
 
