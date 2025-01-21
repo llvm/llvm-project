@@ -1385,7 +1385,7 @@ uint64_t DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
   uint64_t NumTraces{0};
   // LBRs are stored in reverse execution order. NextLBR refers to the next
   // executed branch record.
-  const LBREntry *NextLBR{nullptr};
+  const LBREntry *NextLBR = nullptr;
   uint32_t NumEntry = 0;
   for (const LBREntry &LBR : Sample.LBR) {
     ++NumEntry;
