@@ -518,13 +518,15 @@ Warning flags
   + ``-Wthread-safety-reference``: Checks when guarded variables are passed by reference.
 
 * ``-Wthread-safety-addressof``: Warn when the address of guarded variables is
-  obtained (``&var``). Since obtaining the address of a variable doesn't
-  necessarily imply a read or write, the warning is off by default. In
-  codebases that prefer passing pointers rather than references (for C++
-  codebases), or passing pointers is ubiquitous (for C codebases), enabling
-  this warning will result in fewer false negatives; for example, where the
-  manipulation of common data structures is done via functions that take
-  pointers to instances of the data structure.
+  obtained (``&var``). Since obtaining the address of a variable does *not
+  necessarily imply a read or write*, the warning is off by default to avoid
+  false positives. In codebases that prefer passing pointers rather than
+  references (for C++ codebases), or passing pointers is ubiquitous (for C
+  codebases), enabling this warning will result in fewer false negatives; for
+  example, where the manipulation of common data structures is done via
+  functions that take pointers to instances of the data structure. Note,
+  however, that the analysis does not track pointers, and false positives *and*
+  negatives are still possible.
 
 :ref:`negative` are an experimental feature, which are enabled with:
 
