@@ -43,83 +43,37 @@ define dso_local void @pr76416() {
 ; CHECK-NEXT:    movl %edx, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    jmp .LBB0_4
 entry:
-  %i = alloca i32, align 4
-  store i32 0, ptr %i, align 4
+  %alloca = alloca i32, align 4
+  store i32 0, ptr %alloca, align 4
   br label %for.cond
 
 for.cond:                                         ; preds = %for.body, %entry
-  %0 = load i32, ptr %i, align 4
-  %cmp = icmp slt i32 %0, 4
+  %load.from.alloca.0 = load i32, ptr %alloca, align 4
+  %cmp = icmp slt i32 %load.from.alloca.0, 4
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
   call void asm sideeffect "", "{ax},~{dirflag},~{fpsr},~{flags}"(i8 0) nounwind
-  %1 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %1, 1
-  store i32 %inc, ptr %i, align 4
+  %load.from.alloca.1 = load i32, ptr %alloca, align 4
+  %inc = add nsw i32 %load.from.alloca.1, 1
+  store i32 %inc, ptr %alloca, align 4
   br label %for.cond
 
 for.end:                                          ; preds = %for.cond
-  store i32 0, ptr %i, align 4
+  store i32 0, ptr %alloca, align 4
   br label %for.cond1
 
 for.cond1:                                        ; preds = %for.cond1, %for.end
   call void asm sideeffect "", "N{dx},~{dirflag},~{fpsr},~{flags}"(i32 poison) nounwind
-  %2 = load ptr, ptr @load_p, align 8
-  %regs = getelementptr inbounds { [4 x i8] }, ptr %2, i32 0, i32 0
-  %3 = load i32, ptr %i, align 4
-  %idxprom = sext i32 %3 to i64
+  %load.from.load_p = load ptr, ptr @load_p, align 8
+  %regs = getelementptr inbounds { [4 x i8] }, ptr %load.from.load_p, i32 0, i32 0
+  %load.from.alloca.2 = load i32, ptr %alloca, align 4
+  %idxprom = sext i32 %load.from.alloca.2 to i64
   %arrayidx = getelementptr inbounds [4 x i8], ptr %regs, i64 0, i64 %idxprom
-  %4 = load i8, ptr %arrayidx, align 1
-  store i8 %4, ptr @load_data, align 1
-  %5 = load i32, ptr %i, align 4
-  %inc5 = add nsw i32 %5, 1
-  store i32 %inc5, ptr %i, align 4
+  %load.with.gep.ptr = load i8, ptr %arrayidx, align 1
+  store i8 %load.with.gep.ptr, ptr @load_data, align 1
+  %load.from.alloca.3 = load i32, ptr %alloca, align 4
+  %inc2 = add nsw i32 %load.from.alloca.3, 1
+  store i32 %inc2, ptr %alloca, align 4
   br label %for.cond1
 }
-
-;
-; Related reproducer as reported on https://github.com/llvm/llvm-project/commit/0e46b49de43349f8cbb2a7d4c6badef6d16e31ae#commitcomment-136147998
-;
-
-define void @f(i1 %cmp.not.i.i.i) {
-; CHECK-LABEL: f:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    movl 0, %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    sarl %cl, %eax
-; CHECK-NEXT:    movl $1, %edx
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    shrl %cl, %edx
-; CHECK-NEXT:    imull %eax, %edx
-; CHECK-NEXT:    movslq %edx, %rsi
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    callq *%rax
-entry:
-  br label %for.cond10.preheader
-
-trap:                                             ; preds = %for.body13
-  unreachable
-
-for.cond10.preheader:                             ; preds = %while.cond.i.i.i, %entry
-  %indvars.iv = phi i64 [ 0, %entry ], [ 1, %while.cond.i.i.i ]
-  %0 = trunc i64 %indvars.iv to i32
-  br label %for.body13
-
-for.body13:                                       ; preds = %for.cond10.preheader
-  %1 = load i32, ptr null, align 4
-  %shr = ashr i32 %1, %0
-  %shr15 = ashr i32 1, %0
-  %mul16 = mul i32 %shr15, %shr
-  %conv = sext i32 %mul16 to i64
-  call void null(ptr null, i64 %conv, ptr null)
-  br i1 false, label %while.cond.i.i.i, label %trap
-
-while.cond.i.i.i:                                 ; preds = %while.cond.i.i.i, %for.body13
-  br i1 %cmp.not.i.i.i, label %for.cond10.preheader, label %while.cond.i.i.i
-}
-
