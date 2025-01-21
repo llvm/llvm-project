@@ -12812,6 +12812,7 @@ def err_acc_duplicate_clause_disallowed
             "directive">;
 def note_acc_previous_clause_here : Note<"previous clause is here">;
 def note_acc_previous_expr_here : Note<"previous expression is here">;
+def note_acc_previous_reference : Note<"previous reference is here">;
 def err_acc_branch_in_out_compute_construct
     : Error<"invalid %select{branch|return|throw}0 %select{out of|into}1 "
             "OpenACC Compute/Combined Construct">;
@@ -12844,9 +12845,9 @@ def err_acc_not_a_var_ref
     : Error<"OpenACC variable is not a valid variable name, sub-array, array "
             "element,%select{| member of a composite variable,}0 or composite "
             "variable member">;
-def err_acc_not_a_var_ref_use_device
-    : Error<"OpenACC variable in 'use_device' clause is not a valid variable "
-            "name or array name">;
+def err_acc_not_a_var_ref_use_device_declare
+    : Error<"OpenACC variable %select{in 'use_device' clause|on 'declare' "
+            "construct}0 is not a valid variable name or array name">;
 def err_acc_typecheck_subarray_value
     : Error<"OpenACC sub-array subscripted value is not an array or pointer">;
 def err_acc_subarray_function_type
@@ -13014,6 +13015,23 @@ def note_acc_atomic_mismatch_compound_operand
            "side of assignment|<not possible>|on left hand side of compound "
            "assignment|on left hand side of assignment}0('%1') from the first "
            "statement">;
+def err_acc_declare_required_clauses
+    : Error<"no valid clauses specified in OpenACC 'declare' directive">;
+def err_acc_declare_clause_at_global
+    : Error<"OpenACC '%0' clause on a 'declare' directive is not allowed at "
+            "global or namespace scope">;
+def err_acc_link_not_extern
+    : Error<"variable referenced by 'link' clause not in global or namespace "
+            "scope must be marked 'extern'">;
+def err_acc_declare_extern
+    : Error<"'extern' variable may not be referenced by '%0' clause on an "
+            "OpenACC 'declare' directive">;
+def err_acc_declare_same_scope
+    : Error<"variable appearing in '%0' clause of OpenACC 'declare' directive "
+            "must be in the same scope as the directive">;
+def err_acc_multiple_references
+    : Error<"variable referenced in '%0' clause of OpenACC 'declare' directive "
+            "was already referenced">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;

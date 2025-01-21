@@ -417,9 +417,11 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Device:
     case OpenACCClauseKind::DeviceNum:
     case OpenACCClauseKind::DefaultAsync:
+    case OpenACCClauseKind::DeviceResident:
     case OpenACCClauseKind::DevicePtr:
     case OpenACCClauseKind::Finalize:
     case OpenACCClauseKind::FirstPrivate:
+    case OpenACCClauseKind::Link:
     case OpenACCClauseKind::NoCreate:
     case OpenACCClauseKind::NumGangs:
     case OpenACCClauseKind::NumWorkers:
@@ -3059,6 +3061,17 @@ void TextNodeDumper::VisitOpenACCAtomicConstruct(
     const OpenACCAtomicConstruct *S) {
   VisitOpenACCConstructStmt(S);
   OS << ' ' << S->getAtomicKind();
+}
+
+void TextNodeDumper::VisitOpenACCDeclareDecl(const OpenACCDeclareDecl *D) {
+  OS << " " << D->getDirectiveKind();
+
+  for (const OpenACCClause *C : D->clauses())
+    AddChild([=] {
+      Visit(C);
+      for (const Stmt *S : C->children())
+        AddChild([=] { Visit(S); });
+    });
 }
 
 void TextNodeDumper::VisitEmbedExpr(const EmbedExpr *S) {
