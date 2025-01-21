@@ -68,6 +68,7 @@
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/X86TargetParser.h"
+#include <numeric>
 #include <optional>
 #include <utility>
 
