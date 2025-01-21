@@ -1387,7 +1387,8 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
   // optimization as well.
   bool execOptimize =
       !ctx.arg.shared && ctx.arg.emachine != EM_ARM &&
-      ctx.arg.emachine != EM_HEXAGON && execOptimizeInLoongArch &&
+      ctx.arg.emachine != EM_HEXAGON &&
+      (ctx.arg.emachine != EM_LOONGARCH || execOptimizeInLoongArch) &&
       !(isRISCV && expr != R_TLSDESC_PC && expr != R_TLSDESC_CALL) &&
       !sec->file->ppc64DisableTLSRelax;
 
