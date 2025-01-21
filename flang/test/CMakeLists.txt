@@ -65,6 +65,7 @@ set(FLANG_TEST_DEPENDS
   not
   module_files
   fir-opt
+  fir-test-opt
   tco
   bbc
   llvm-dis
