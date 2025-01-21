@@ -51,6 +51,7 @@
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_pointer.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/type_identity.h>
@@ -241,7 +242,7 @@ private:
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void operator()() {
       if (__vec_.__begin_ != nullptr) {
-        __vec_.__clear();
+        __vec_.clear();
         __vec_.__annotate_delete();
         __alloc_traits::deallocate(__vec_.__alloc_, __vec_.__begin_, __vec_.capacity());
       }
@@ -341,13 +342,17 @@ public:
   //
   // Iterators
   //
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT { return __make_iter(this->__begin_); }
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT {
-    return __make_iter(this->__begin_);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT {
+    return __make_iter(__add_alignment_assumption(this->__begin_));
   }
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator end() _NOEXCEPT { return __make_iter(this->__end_); }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT {
+    return __make_iter(__add_alignment_assumption(this->__begin_));
+  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator end() _NOEXCEPT {
+    return __make_iter(__add_alignment_assumption(this->__end_));
+  }
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_iterator end() const _NOEXCEPT {
-    return __make_iter(this->__end_);
+    return __make_iter(__add_alignment_assumption(this->__end_));
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI reverse_iterator rbegin() _NOEXCEPT {
@@ -520,7 +525,7 @@ public:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT {
     size_type __old_size = size();
-    __clear();
+    __base_destruct_at_end(this->__begin_);
     __annotate_shrink(__old_size);
   }
 
@@ -732,10 +737,6 @@ private:
     ++__tx.__pos_;
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __clear() _NOEXCEPT {
-    __base_destruct_at_end(this->__begin_);
-  }
-
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __base_destruct_at_end(pointer __new_last) _NOEXCEPT {
     pointer __soon_to_be_end = this->__end_;
     while (__new_last != __soon_to_be_end)
@@ -759,7 +760,7 @@ private:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const vector& __c, true_type) {
     if (this->__alloc_ != __c.__alloc_) {
-      __clear();
+      clear();
       __annotate_delete();
       __alloc_traits::deallocate(this->__alloc_, this->__begin_, capacity());
       this->__begin_ = this->__end_ = this->__cap_ = nullptr;
@@ -775,6 +776,17 @@ private:
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(vector&, false_type) _NOEXCEPT {}
+
+  static _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __add_alignment_assumption(pointer __p) _NOEXCEPT {
+#ifndef _LIBCPP_CXX03_LANG
+    if constexpr (is_pointer<pointer>::value) {
+      if (!__libcpp_is_constant_evaluated()) {
+        return static_cast<pointer>(__builtin_assume_aligned(__p, alignof(decltype(*__p))));
+      }
+    }
+#endif
+    return __p;
+  }
 };
 
 #if _LIBCPP_STD_VER >= 17

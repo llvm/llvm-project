@@ -836,6 +836,10 @@ public:
     return isFromASTFile() ? getImportedOwningModule() : getLocalOwningModule();
   }
 
+  /// Get the top level owning named module that owns this declaration if any.
+  /// \returns nullptr if the declaration is not owned by a named module.
+  Module *getTopLevelOwningNamedModule() const;
+
   /// Get the module that owns this declaration for linkage purposes.
   /// There only ever is such a standard C++ module.
   Module *getOwningModuleForLinkage() const;
@@ -2722,6 +2726,9 @@ public:
                    bool Deserialize = false) const;
 
 private:
+  lookup_result lookupImpl(DeclarationName Name,
+                           const DeclContext *OriginalLookupDC) const;
+
   /// Whether this declaration context has had externally visible
   /// storage added since the last lookup. In this case, \c LookupPtr's
   /// invariant may not hold and needs to be fixed before we perform

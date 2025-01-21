@@ -1417,6 +1417,132 @@ TEST(TripleTest, Normalization) {
 
   EXPECT_EQ("x86_64-unknown-linux-gnu", Triple::normalize("x86_64-gnu-linux"));
 
+  EXPECT_EQ("a-unknown-unknown",
+            Triple::normalize("a", Triple::CanonicalForm::THREE_IDENT));
+  EXPECT_EQ("a-b-unknown",
+            Triple::normalize("a-b", Triple::CanonicalForm::THREE_IDENT));
+  EXPECT_EQ("a-b-c",
+            Triple::normalize("a-b-c", Triple::CanonicalForm::THREE_IDENT));
+  EXPECT_EQ("a-b-c",
+            Triple::normalize("a-b-c-d", Triple::CanonicalForm::THREE_IDENT));
+  EXPECT_EQ("a-b-c",
+            Triple::normalize("a-b-c-d-e", Triple::CanonicalForm::THREE_IDENT));
+
+  EXPECT_EQ("a-unknown-unknown-unknown",
+            Triple::normalize("a", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-b-unknown-unknown",
+            Triple::normalize("a-b", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-b-c-unknown",
+            Triple::normalize("a-b-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-b-c-d",
+            Triple::normalize("a-b-c-d", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-b-c-d",
+            Triple::normalize("a-b-c-d-e", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("a-unknown-unknown-unknown-unknown",
+            Triple::normalize("a", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-b-unknown-unknown-unknown",
+            Triple::normalize("a-b", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-b-c-unknown-unknown",
+            Triple::normalize("a-b-c", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-b-c-d-unknown",
+            Triple::normalize("a-b-c-d", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-b-c-d-e",
+            Triple::normalize("a-b-c-d-e", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("i386-b-c-unknown",
+            Triple::normalize("i386-b-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("i386-b-c-unknown-unknown",
+            Triple::normalize("i386-b-c", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("i386-a-c-unknown",
+            Triple::normalize("a-i386-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("i386-a-c-unknown-unknown",
+            Triple::normalize("a-i386-c", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("i386-a-b-unknown",
+            Triple::normalize("a-b-i386", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("i386-a-b-c",
+            Triple::normalize("a-b-c-i386", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("a-pc-c-unknown",
+            Triple::normalize("a-pc-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("unknown-pc-b-c",
+            Triple::normalize("pc-b-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-pc-b-unknown",
+            Triple::normalize("a-b-pc", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-pc-b-c",
+            Triple::normalize("a-b-c-pc", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("a-b-linux-unknown",
+            Triple::normalize("a-b-linux", Triple::CanonicalForm::FOUR_IDENT));
+  // We lose `-c` here as expected.
+  EXPECT_EQ("unknown-unknown-linux-b",
+            Triple::normalize("linux-b-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("a-unknown-linux-c",
+            Triple::normalize("a-linux-c", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("i386-pc-a-unknown",
+            Triple::normalize("a-pc-i386", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("i386-pc-unknown-unknown",
+            Triple::normalize("-pc-i386", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("unknown-pc-linux-c",
+            Triple::normalize("linux-pc-c", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("unknown-pc-linux-unknown",
+            Triple::normalize("linux-pc-", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("i386-unknown-unknown-unknown",
+            Triple::normalize("i386", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("unknown-pc-unknown-unknown",
+            Triple::normalize("pc", Triple::CanonicalForm::FOUR_IDENT));
+  EXPECT_EQ("unknown-unknown-linux-unknown",
+            Triple::normalize("linux", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ(
+      "x86_64-unknown-linux-gnu",
+      Triple::normalize("x86_64-gnu-linux", Triple::CanonicalForm::FOUR_IDENT));
+
+  EXPECT_EQ("i386-a-b-unknown-unknown",
+            Triple::normalize("a-b-i386", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("i386-a-b-c-unknown",
+            Triple::normalize("a-b-c-i386", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("a-pc-c-unknown-unknown",
+            Triple::normalize("a-pc-c", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-pc-b-c-unknown",
+            Triple::normalize("pc-b-c", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-pc-b-unknown-unknown",
+            Triple::normalize("a-b-pc", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-pc-b-c-unknown",
+            Triple::normalize("a-b-c-pc", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("a-b-linux-unknown-unknown",
+            Triple::normalize("a-b-linux", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-unknown-linux-b-c",
+            Triple::normalize("linux-b-c", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("a-unknown-linux-c-unknown",
+            Triple::normalize("a-linux-c", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("i386-pc-a-unknown-unknown",
+            Triple::normalize("a-pc-i386", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("i386-pc-unknown-unknown-unknown",
+            Triple::normalize("-pc-i386", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-pc-linux-c-unknown",
+            Triple::normalize("linux-pc-c", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-pc-linux-unknown-unknown",
+            Triple::normalize("linux-pc-", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ("i386-unknown-unknown-unknown-unknown",
+            Triple::normalize("i386", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-pc-unknown-unknown-unknown",
+            Triple::normalize("pc", Triple::CanonicalForm::FIVE_IDENT));
+  EXPECT_EQ("unknown-unknown-linux-unknown-unknown",
+            Triple::normalize("linux", Triple::CanonicalForm::FIVE_IDENT));
+
+  EXPECT_EQ(
+      "x86_64-unknown-linux-gnu-unknown",
+      Triple::normalize("x86_64-gnu-linux", Triple::CanonicalForm::FIVE_IDENT));
+
   // Check that normalizing a permutated set of valid components returns a
   // triple with the unpermuted components.
   //

@@ -1320,7 +1320,7 @@ parseBoundsCheckingOptions(StringRef Params) {
       StringRef ParamEQ;
       StringRef Val;
       std::tie(ParamEQ, Val) = ParamName.split('=');
-      int8_t Id = 0;
+      int8_t Id;
       if (ParamEQ == "guard" && !Val.getAsInteger(0, Id)) {
         Options.GuardKind = Id;
       } else {

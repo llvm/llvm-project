@@ -1032,7 +1032,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
           static_assert(SanitizerKind::SO_LocalBounds <=
                             std::numeric_limits<
                                 decltype(Options.GuardKind)::value_type>::max(),
-                        "Update type of llvm.allow.ubsan.check.");
+                        "Update type of llvm.allow.ubsan.check to represent "
+                        "SanitizerKind::SO_LocalBounds.");
           Options.GuardKind = SanitizerKind::SO_LocalBounds;
         }
         Options.Merge =

@@ -104,6 +104,8 @@ AST_MATCHER_P(Stmt, canResolveToExpr, const Stmt *, Inner) {
 AST_MATCHER_P(InitListExpr, hasAnyInit, ast_matchers::internal::Matcher<Expr>,
               InnerMatcher) {
   for (const Expr *Arg : Node.inits()) {
+    if (Arg == nullptr)
+      continue;
     ast_matchers::internal::BoundNodesTreeBuilder Result(*Builder);
     if (InnerMatcher.matches(*Arg, Finder, &Result)) {
       *Builder = std::move(Result);
