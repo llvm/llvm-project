@@ -8369,7 +8369,6 @@ bool DeclarationVisitor::FindAndMarkDeclareTargetSymbol(
         // Search preceding scopes until we find a matching symbol or run out
         // of scopes to search, we skip the current scope as it's already been
         // designated as implicit here.
-        Symbol *symbol = nullptr;
         for (auto *scope = &currScope().parent();; scope = &scope->parent()) {
           if (Symbol * symbol{scope->FindSymbol(name.source)}) {
             if (symbol->test(Symbol::Flag::Subroutine) ||
