@@ -490,6 +490,7 @@ set(LLVM_ALL_TARGETS
   PowerPC
   RISCV
   Sparc
+  SPIRV
   SystemZ
   VE
   WebAssembly
@@ -502,7 +503,6 @@ set(LLVM_ALL_EXPERIMENTAL_TARGETS
   CSKY
   DirectX
   M68k
-  SPIRV
   Xtensa
 )
 
