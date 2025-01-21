@@ -889,8 +889,10 @@ TemplateParameter DeductionFailureInfo::getTemplateParameter() {
   case TemplateDeductionResult::NonDependentConversionFailure:
   case TemplateDeductionResult::ConstraintsNotSatisfied:
     return TemplateParameter();
+
   case TemplateDeductionResult::Incomplete:
     return TemplateParameter::getFromOpaqueValue(Data);
+
   case TemplateDeductionResult::IncompletePack:
   case TemplateDeductionResult::Inconsistent:
   case TemplateDeductionResult::InvalidExplicitArguments:
@@ -922,6 +924,7 @@ TemplateArgumentList *DeductionFailureInfo::getTemplateArgumentList() {
   case TemplateDeductionResult::CUDATargetMismatch:
   case TemplateDeductionResult::NonDependentConversionFailure:
     return nullptr;
+
   case TemplateDeductionResult::DeducedMismatch:
   case TemplateDeductionResult::DeducedMismatchNested:
     return static_cast<DFIDeducedMismatchArgs*>(Data)->TemplateArgs;
@@ -954,6 +957,7 @@ const TemplateArgument *DeductionFailureInfo::getFirstArg() {
   case TemplateDeductionResult::NonDependentConversionFailure:
   case TemplateDeductionResult::ConstraintsNotSatisfied:
     return nullptr;
+
   case TemplateDeductionResult::IncompletePack:
   case TemplateDeductionResult::Inconsistent:
   case TemplateDeductionResult::InvalidExplicitArguments:
@@ -986,6 +990,7 @@ const TemplateArgument *DeductionFailureInfo::getSecondArg() {
   case TemplateDeductionResult::NonDependentConversionFailure:
   case TemplateDeductionResult::ConstraintsNotSatisfied:
     return nullptr;
+
   case TemplateDeductionResult::Inconsistent:
   case TemplateDeductionResult::InvalidExplicitArguments:
   case TemplateDeductionResult::Underqualified:
