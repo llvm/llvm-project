@@ -351,7 +351,7 @@ def F4E2M1FN : Type<CPred<"::llvm::isa<::mlir::Float4E2M1FNType>($_self)">, "f4E
                BuildableType<"$_builder.getType<Float4E2M1FNType>()">;
 def F6E2M3FN : Type<CPred<"::llvm::isa<::mlir::Float6E2M3FNType>($_self)">, "f6E2M3FN type">,
                BuildableType<"$_builder.getType<Float6E2M3FNType>()">;
-def F6E3M2FN : Type<CPred<"::llvm::isa<::mlir::Float6E3M2FNType($_self)">, "f6E3M2FN type">,
+def F6E3M2FN : Type<CPred<"::llvm::isa<::mlir::Float6E3M2FNType>($_self)">, "f6E3M2FN type">,
                BuildableType<"$_builder.getType<Float6E3M2FNType>()">;
 def F8E8M0FNU : Type<CPred<"::llvm::isa<::mlir::Float8E8M0FNUType>($_self)">, "f8E8M0FNU type">,
                 BuildableType<"$_builder.getType<Float8E8M0FNUType>()">;
