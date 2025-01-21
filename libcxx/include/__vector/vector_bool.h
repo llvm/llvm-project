@@ -859,11 +859,13 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::reserve(size_type _
 
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::shrink_to_fit() _NOEXCEPT {
-  if (__external_cap_to_internal(size()) > __cap_) {
+  if (__external_cap_to_internal(size()) < __cap_) {
 #if _LIBCPP_HAS_EXCEPTIONS
     try {
 #endif // _LIBCPP_HAS_EXCEPTIONS
-      vector(*this, allocator_type(__alloc_)).swap(*this);
+      vector __v(*this, allocator_type(__alloc_));
+      if (__v.__cap_ < __cap_)
+        __v.swap(*this);
 #if _LIBCPP_HAS_EXCEPTIONS
     } catch (...) {
     }
