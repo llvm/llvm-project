@@ -46,19 +46,19 @@ define <8 x half> @test_2(i1 %arg) {
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX13-NEXT:    s_mov_b32 s0, 0
-; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX13-NEXT:    s_mov_b32 s1, s0
 ; GFX13-NEXT:    s_mov_b32 s2, s0
 ; GFX13-NEXT:    s_mov_b32 s3, s0
+; GFX13-NEXT:    v_dual_mov_b32 v9, s3 :: v_dual_bitop2_b32 v0, 1, v0 bitop3:0x40
+; GFX13-NEXT:    v_dual_mov_b32 v8, s2 :: v_dual_mov_b32 v7, s1
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX13-NEXT:    s_mov_b32 s1, s0
-; GFX13-NEXT:    v_mov_b64_e32 v[8:9], s[2:3]
-; GFX13-NEXT:    v_mov_b64_e32 v[6:7], s[0:1]
 ; GFX13-NEXT:    v_cndmask_b32_e64 v0, 0, 0x3c003c00, vcc_lo
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v2, v0
-; GFX13-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v0
+; GFX13-NEXT:    v_dual_mov_b32 v6, s0 :: v_dual_mov_b32 v1, v0
+; GFX13-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v3, v0
+; GFX13-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX13-NEXT:    v_convolve_f16_f16 v[0:3], v[6:9], v[0:4], v[6:9], v[6:9], v[6:9]
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 bb:

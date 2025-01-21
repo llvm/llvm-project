@@ -1185,7 +1185,7 @@ public:
 
   bool hasMadF16() const;
 
-  bool hasMovB64() const { return GFX940Insts || GFX1250Insts; }
+  bool hasMovB64() const { return GFX940Insts || (GFX1250Insts && !GFX13Insts); }
 
   bool hasLshlAddB64() const { return GFX940Insts || GFX1250Insts; }
 

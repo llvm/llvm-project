@@ -2301,8 +2301,8 @@ define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask3(<8 x i32> inreg %rsrc, ptr a
 ; GFX13-NEXT:    v_dual_mov_b32 v4, v0 :: v_dual_mov_b32 v6, 0
 ; GFX13-NEXT:    v_dual_mov_b32 v7, v6 :: v_dual_mov_b32 v8, v6
 ; GFX13-NEXT:    v_mov_b32_e32 v9, v6
-; GFX13-NEXT:    v_mov_b64_e32 v[0:1], v[6:7]
-; GFX13-NEXT:    v_mov_b64_e32 v[2:3], v[8:9]
+; GFX13-NEXT:    v_dual_mov_b32 v0, v6 :: v_dual_mov_b32 v1, v7
+; GFX13-NEXT:    v_dual_mov_b32 v2, v8 :: v_dual_mov_b32 v3, v9
 ; GFX13-NEXT:    image_load v[0:3], v4, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_1D tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    global_store_b32 v6, v3, s[8:9]
@@ -2499,7 +2499,7 @@ define amdgpu_ps <4 x float> @load_1d_tfe_V4_dmask1(<8 x i32> inreg %rsrc, ptr a
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v4, 0
 ; GFX13-NEXT:    v_mov_b32_e32 v5, v4
-; GFX13-NEXT:    v_mov_b64_e32 v[0:1], v[4:5]
+; GFX13-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
 ; GFX13-NEXT:    image_load v[0:1], v2, s[0:7] dmask:0x8 dim:SQ_RSRC_IMG_1D tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    global_store_b32 v4, v1, s[8:9]
@@ -2598,7 +2598,7 @@ define amdgpu_ps <2 x float> @load_1d_tfe_V2_dmask1(<8 x i32> inreg %rsrc, ptr a
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v4, 0
 ; GFX13-NEXT:    v_mov_b32_e32 v5, v4
-; GFX13-NEXT:    v_mov_b64_e32 v[0:1], v[4:5]
+; GFX13-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
 ; GFX13-NEXT:    image_load v[0:1], v2, s[0:7] dmask:0x8 dim:SQ_RSRC_IMG_1D tfe
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    global_store_b32 v4, v1, s[8:9]

@@ -39,7 +39,8 @@ define amdgpu_kernel void @tbuffer_store_d16_xyz(i32 %rsrc, <4 x half> %data, i3
 ; GFX13-PACKED-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-PACKED-SDAG-NEXT:    s_and_b64 s[0:1], s[0:1], 0xffffffffffff
 ; GFX13-PACKED-SDAG-NEXT:    v_mov_b32_e32 v2, s2
-; GFX13-PACKED-SDAG-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX13-PACKED-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; GFX13-PACKED-SDAG-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX13-PACKED-SDAG-NEXT:    tbuffer_store_d16_format_xyz v[0:1], v2, s3, null format:[BUF_FMT_10_10_10_2_SNORM] idxen
 ; GFX13-PACKED-SDAG-NEXT:    s_endpgm
 ;
@@ -51,7 +52,8 @@ define amdgpu_kernel void @tbuffer_store_d16_xyz(i32 %rsrc, <4 x half> %data, i3
 ; GFX13-PACKED-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-PACKED-GISEL-NEXT:    s_pack_lh_b32_b16 s0, s0, s0
 ; GFX13-PACKED-GISEL-NEXT:    v_mov_b32_e32 v2, s2
-; GFX13-PACKED-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX13-PACKED-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX13-PACKED-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX13-PACKED-GISEL-NEXT:    tbuffer_store_d16_format_xyzw v[0:1], v2, s3, null format:[BUF_FMT_10_10_10_2_SNORM] idxen
 ; GFX13-PACKED-GISEL-NEXT:    s_endpgm
 main_body:
@@ -67,7 +69,8 @@ define amdgpu_kernel void @tbuffer_store_d16_xyzw(i32 %rsrc, <4 x half> %data, i
 ; GFX13-PACKED-NEXT:    s_load_b96 s[0:2], s[4:5], 0x8
 ; GFX13-PACKED-NEXT:    s_load_b32 s3, s[4:5], 0x0
 ; GFX13-PACKED-NEXT:    s_wait_kmcnt 0x0
-; GFX13-PACKED-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX13-PACKED-NEXT:    v_mov_b32_e32 v0, s0
+; GFX13-PACKED-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX13-PACKED-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX13-PACKED-NEXT:    tbuffer_store_d16_format_xyzw v[0:1], v2, s3, null format:[BUF_FMT_10_10_10_2_SNORM] idxen
 ; GFX13-PACKED-NEXT:    s_endpgm
