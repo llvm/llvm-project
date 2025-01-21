@@ -296,7 +296,7 @@ public:
   /// Construct a GsymCreator object.
   ///
   /// \param Quiet Whether to suppress warning messages
-  /// \param InputHasMergedFunctions Weather the input might contain merged
+  /// \param InputHasMergedFunctions Whether the input might contain merged
   /// functions - functions with identical address ranges.
   GsymCreator(bool Quiet = false, bool InputHasMergedFunctions = false);
 
