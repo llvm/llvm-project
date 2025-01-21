@@ -183,9 +183,9 @@ AArch64TargetStreamer::getActiveAtributesSubsection() {
 }
 
 std::unique_ptr<MCELFStreamer::AttributeSubSection>
-AArch64TargetStreamer::getActiveSubsectionByName(StringRef name) {
+AArch64TargetStreamer::getAtributesSubsectionByName(StringRef Name) {
   for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
-    if (name == SubSection.VendorName) {
+    if (Name == SubSection.VendorName) {
       return std::make_unique<MCELFStreamer::AttributeSubSection>(SubSection);
     }
   }

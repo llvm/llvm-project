@@ -42,6 +42,7 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/AArch64BuildAttributes.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -7839,12 +7840,8 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
     return true;
   }
 
-  bool SubsectionExists = true;
-  std::unique_ptr<MCELFStreamer::AttributeSubSection> ExistingSubsection =
-      getTargetStreamer().getActiveSubsectionByName(SubsectionName);
-  if (nullptr == ExistingSubsection) {
-    SubsectionExists = false;
-  }
+  std::unique_ptr<MCELFStreamer::AttributeSubSection> SubsectionExists =
+      getTargetStreamer().getAtributesSubsectionByName(SubsectionName);
 
   // Consume the first parameter (optionality parameter)
   AArch64BuildAttributes::SubsectionOptional IsOptional;
@@ -7859,12 +7856,14 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
       return true;
     }
     if (SubsectionExists) {
-      if (IsOptional != ExistingSubsection->IsOptional) {
+      if (IsOptional != SubsectionExists->IsOptional) {
         Error(Parser.getTok().getLoc(),
               "optionality mismatch! subsection '" + SubsectionName +
                   "' already exists with optionality defined as '" +
-                  Twine(ExistingSubsection->IsOptional) + "' and not '" +
-                  Twine(IsOptional) + "' (0: required, 1: optional)");
+                  AArch64BuildAttributes::getOptionalStr(
+                      SubsectionExists->IsOptional) +
+                  "' and not '" +
+                  AArch64BuildAttributes::getOptionalStr(IsOptional) + "'");
         return true;
       }
     }
@@ -7906,12 +7905,14 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
       return true;
     }
     if (SubsectionExists) {
-      if (Type != ExistingSubsection->ParameterType) {
+      if (Type != SubsectionExists->ParameterType) {
         Error(Parser.getTok().getLoc(),
               "type mismatch! subsection '" + SubsectionName +
                   "' already exists with type defined as '" +
-                  Twine(ExistingSubsection->ParameterType) + "' and not '" +
-                  Twine(Type) + "' (0: uleb128, 1: ntbs)");
+                  AArch64BuildAttributes::getTypeStr(
+                      SubsectionExists->ParameterType) +
+                  "' and not '" + AArch64BuildAttributes::getTypeStr(Type) +
+                  "'");
         return true;
       }
     }
