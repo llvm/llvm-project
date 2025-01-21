@@ -413,6 +413,36 @@ def ROCDL_wmma_f32_16x16x16_fp8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.fp8_fp8",
 def ROCDL_wmma_f32_16x16x16_bf8 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf8_bf8", [1]>;
 
 //===---------------------------------------------------------------------===//
+// LDS transpose intrinsics (available in GFX950)
+
+def ROCDLGlobalBuffer : LLVM_PointerInAddressSpace<1>;
+def ROCDLBufferLDS : LLVM_PointerInAddressSpace<3>;
+
+class ROCDL_LDS_Read_Tr_IntrOp<string mnemonic> :
+  ROCDL_IntrOp<mnemonic, [1], [], [], 1>,
+  Arguments<(ins Arg<ROCDLBufferLDS, "", [MemRead]>:$ptr)>{
+  let assemblyFormat = "$ptr attr-dict `:` type($ptr) `->` type($res)";
+}
+
+def ROCDL_ds_read_tr4_b64 : ROCDL_LDS_Read_Tr_IntrOp<"ds.read.tr4.b64">;
+def ROCDL_ds_read_tr8_b64 : ROCDL_LDS_Read_Tr_IntrOp<"ds.read.tr8.b64">;
+def ROCDL_ds_read_tr6_b96 : ROCDL_LDS_Read_Tr_IntrOp<"ds.read.tr6.b96">;
+def ROCDL_ds_read_tr16_b64 : ROCDL_LDS_Read_Tr_IntrOp<"ds.read.tr16.b64">;
+
+//===---------------------------------------------------------------------===//
+// Global load to LDS intrinsic (available in GFX950)
+
+def ROCDL_GlobalLoadLDSOp :
+  ROCDL_IntrOp<"global.load.lds", [], [], [], 0>,
+  Arguments<(ins Arg<ROCDLGlobalBuffer, "", [MemRead]>:$globalPtr,
+                 Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
+                 I32:$size,
+                 I32:$offset,
+                 I32:$aux)> {
+  let assemblyFormat = "operands attr-dict";
+}
+
+//===---------------------------------------------------------------------===//
 // Operations on raw buffer resources (stride of 0, bounds checks either off or in
 // raw buffer mode).
 //===---------------------------------------------------------------------===//
