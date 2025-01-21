@@ -118,3 +118,37 @@ define i64 @sroa_fn3(ptr %0) {
   %l.fn3 = load i64, ptr %0, align 1
   ret i64 %l.fn3
 }
+
+declare ptr @get_aligned()
+declare i1 @cond()
+
+define void @align_from_call_and_assumption() {
+; CHECK-LABEL: define void @align_from_call_and_assumption() local_unnamed_addr {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[BASE:%.*]] = tail call align 128 ptr @get_aligned()
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[BASE]], i64 128) ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BASE]], %[[ENTRY]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    store i64 0, ptr [[PTR_IV]], align 128
+; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr i8, ptr [[PTR_IV]], i64 128
+; CHECK-NEXT:    [[C:%.*]] = tail call i1 @cond()
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %base = tail call align 128 ptr @get_aligned()
+  call void @llvm.assume(i1 true) [ "align"(ptr %base, i64 128) ]
+  br label %loop
+
+loop:
+  %ptr.iv = phi ptr [ %base, %entry ], [ %ptr.iv.next, %loop ]
+  store i64 0, ptr %ptr.iv, align 8
+  %ptr.iv.next = getelementptr i8, ptr %ptr.iv, i64 128
+  %c = call i1 @cond()
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
