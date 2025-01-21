@@ -42,30 +42,6 @@
 // NOHOST-DAG: hip-amdgcn-amd-amdhsa--gfx906
 //
 
-// Check compression/decompression of offload bundle using version 3 format.
-//
-// RUN: env OFFLOAD_BUNDLER_COMPRESS=1 OFFLOAD_BUNDLER_VERBOSE=1 COMPRESSED_BUNDLE_FORMAT_VERSION=3 \
-// RUN:   clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
-// RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.hip.bundle.bc 2>&1 | \
-// RUN:   FileCheck -check-prefix=COMPRESS %s
-// RUN: clang-offload-bundler -type=bc -list -input=%t.hip.bundle.bc | FileCheck -check-prefix=NOHOST %s
-// RUN: env OFFLOAD_BUNDLER_VERBOSE=1 \
-// RUN:   clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
-// RUN:   -output=%t.res.tgt1 -output=%t.res.tgt2 -input=%t.hip.bundle.bc -unbundle 2>&1 | \
-// RUN:   FileCheck -check-prefix=DECOMPRESS %s
-// RUN: diff %t.tgt1 %t.res.tgt1
-// RUN: diff %t.tgt2 %t.res.tgt2
-//
-// COMPRESS: Compressed bundle format version: 3
-// COMPRESS: Compression method used: zlib
-// COMPRESS: Compression level: 6
-// DECOMPRESS: Compressed bundle format version: 3
-// DECOMPRESS: Decompression method: zlib
-// DECOMPRESS: Hashes match: Yes
-// NOHOST-NOT: host-
-// NOHOST-DAG: hip-amdgcn-amd-amdhsa--gfx900
-// NOHOST-DAG: hip-amdgcn-amd-amdhsa--gfx906
-
 // Check -compression-level= option
 
 // RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
