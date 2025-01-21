@@ -122,7 +122,10 @@ public:
       return O == RHS.O;
     }
 
-    const StringRef &operator*() const { return (S = (*Table)[O]); }
+    const StringRef &operator*() const {
+      S = (*Table)[O];
+      return S;
+    }
 
     Iterator &operator++() {
       O = O.value() + (*Table)[O].size() + 1;
