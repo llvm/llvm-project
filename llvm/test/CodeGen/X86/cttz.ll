@@ -324,11 +324,8 @@ define i32 @cttz_i32_zero_test(i32 %n) {
 ;
 ; X64-LABEL: cttz_i32_zero_test:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    movabsq $4294967296, %rax # imm = 0x100000000
-; X64-NEXT:    orq %rdi, %rax
-; X64-NEXT:    rep bsfq %rax, %rax
-; X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    rep bsfl %edi, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-CLZ-LABEL: cttz_i32_zero_test:
@@ -686,10 +683,8 @@ define i64 @cttz_i32_sext(i32 %x) {
 ;
 ; X64-LABEL: cttz_i32_sext:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    movabsq $4294967296, %rax # imm = 0x100000000
-; X64-NEXT:    orq %rdi, %rax
-; X64-NEXT:    rep bsfq %rax, %rax
+; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    rep bsfl %edi, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-CLZ-LABEL: cttz_i32_sext:
@@ -743,10 +738,8 @@ define i64 @cttz_i32_zext(i32 %x) {
 ;
 ; X64-LABEL: cttz_i32_zext:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    movabsq $4294967296, %rax # imm = 0x100000000
-; X64-NEXT:    orq %rdi, %rax
-; X64-NEXT:    rep bsfq %rax, %rax
+; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    rep bsfl %edi, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-CLZ-LABEL: cttz_i32_zext:
