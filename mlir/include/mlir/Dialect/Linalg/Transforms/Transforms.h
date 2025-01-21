@@ -701,7 +701,7 @@ FailureOr<GenericOp> interchangeGenericOp(RewriterBase &rewriter,
 
 /// Create a GenericOp from the given named operation `linalgOp` and replace
 /// the given `linalgOp`.
-/// Return failure if `namedOp` is a GenericOp or misses a region builder.
+/// Return failure if `linalgOp` is a GenericOp or misses a region builder.
 FailureOr<GenericOp> generalizeNamedOp(RewriterBase &rewriter,
                                        LinalgOp linalgOp);
 
