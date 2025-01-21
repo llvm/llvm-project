@@ -29215,7 +29215,7 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
            "Should not custom lower when pmulld is available!");
 
     // Extract the odd parts.
-    static const int UnpackMask[] = { 1, -1, 3, -1 };
+    static const int UnpackMask[] = {1, 1, 3, 3};
     SDValue Aodds = DAG.getVectorShuffle(VT, dl, A, A, UnpackMask);
     SDValue Bodds = DAG.getVectorShuffle(VT, dl, B, B, UnpackMask);
 
@@ -31253,7 +31253,7 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   // to v2i64 results at a time. The upper 32-bits contain the wrapped bits
   // that can then be OR'd with the lower 32-bits.
   assert(VT == MVT::v4i32 && "Only v4i32 vector rotate expected");
-  static const int OddMask[] = {1, -1, 3, -1};
+  static const int OddMask[] = {1, 1, 3, 3};
   SDValue R13 = DAG.getVectorShuffle(VT, DL, R, R, OddMask);
   SDValue Scale13 = DAG.getVectorShuffle(VT, DL, Scale, Scale, OddMask);
 

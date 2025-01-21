@@ -639,22 +639,22 @@ public:
 
 class AddressTableChunk : public NonSectionChunk {
 public:
-  explicit AddressTableChunk(COFFLinkerContext &ctx, size_t baseOrdinal,
+  explicit AddressTableChunk(SymbolTable &symtab, size_t baseOrdinal,
                              size_t maxOrdinal)
       : baseOrdinal(baseOrdinal), size((maxOrdinal - baseOrdinal) + 1),
-        ctx(ctx) {}
+        symtab(symtab) {}
   size_t getSize() const override { return size * 4; }
 
   void writeTo(uint8_t *buf) const override {
     memset(buf, 0, getSize());
 
-    for (const Export &e : ctx.config.exports) {
+    for (const Export &e : symtab.exports) {
       assert(e.ordinal >= baseOrdinal && "Export symbol has invalid ordinal");
       // Subtract the OrdinalBase to get the index.
       uint8_t *p = buf + (e.ordinal - baseOrdinal) * 4;
       uint32_t bit = 0;
       // Pointer to thumb code must have the LSB set, so adjust it.
-      if (ctx.config.machine == ARMNT && !e.data)
+      if (symtab.machine == ARMNT && !e.data)
         bit = 1;
       if (e.forwardChunk) {
         write32le(p, e.forwardChunk->getRVA() | bit);
@@ -669,7 +669,7 @@ public:
 private:
   size_t baseOrdinal;
   size_t size;
-  const COFFLinkerContext &ctx;
+  const SymbolTable &symtab;
 };
 
 class NamePointersChunk : public NonSectionChunk {
@@ -690,13 +690,13 @@ private:
 
 class ExportOrdinalChunk : public NonSectionChunk {
 public:
-  explicit ExportOrdinalChunk(const COFFLinkerContext &ctx, size_t baseOrdinal,
+  explicit ExportOrdinalChunk(const SymbolTable &symtab, size_t baseOrdinal,
                               size_t tableSize)
-      : baseOrdinal(baseOrdinal), size(tableSize), ctx(ctx) {}
+      : baseOrdinal(baseOrdinal), size(tableSize), symtab(symtab) {}
   size_t getSize() const override { return size * 2; }
 
   void writeTo(uint8_t *buf) const override {
-    for (const Export &e : ctx.config.exports) {
+    for (const Export &e : symtab.exports) {
       if (e.noname)
         continue;
       assert(e.ordinal >= baseOrdinal && "Export symbol has invalid ordinal");
@@ -709,7 +709,7 @@ public:
 private:
   size_t baseOrdinal;
   size_t size;
-  const COFFLinkerContext &ctx;
+  const SymbolTable &symtab;
 };
 
 } // anonymous namespace
@@ -920,9 +920,9 @@ Chunk *DelayLoadContents::newThunkChunk(DefinedImportData *s,
   }
 }
 
-void createEdataChunks(COFFLinkerContext &ctx, std::vector<Chunk *> &chunks) {
+void createEdataChunks(SymbolTable &symtab, std::vector<Chunk *> &chunks) {
   unsigned baseOrdinal = 1 << 16, maxOrdinal = 0;
-  for (Export &e : ctx.config.exports) {
+  for (Export &e : symtab.exports) {
     baseOrdinal = std::min(baseOrdinal, (unsigned)e.ordinal);
     maxOrdinal = std::max(maxOrdinal, (unsigned)e.ordinal);
   }
@@ -930,15 +930,16 @@ void createEdataChunks(COFFLinkerContext &ctx, std::vector<Chunk *> &chunks) {
   // https://learn.microsoft.com/en-us/cpp/build/reference/export-exports-a-function?view=msvc-170
   assert(baseOrdinal >= 1);
 
-  auto *dllName = make<StringChunk>(sys::path::filename(ctx.config.outputFile));
-  auto *addressTab = make<AddressTableChunk>(ctx, baseOrdinal, maxOrdinal);
+  auto *dllName =
+      make<StringChunk>(sys::path::filename(symtab.ctx.config.outputFile));
+  auto *addressTab = make<AddressTableChunk>(symtab, baseOrdinal, maxOrdinal);
   std::vector<Chunk *> names;
-  for (Export &e : ctx.config.exports)
+  for (Export &e : symtab.exports)
     if (!e.noname)
       names.push_back(make<StringChunk>(e.exportName));
 
   std::vector<Chunk *> forwards;
-  for (Export &e : ctx.config.exports) {
+  for (Export &e : symtab.exports) {
     if (e.forwardTo.empty())
       continue;
     e.forwardChunk = make<StringChunk>(e.forwardTo);
@@ -946,7 +947,8 @@ void createEdataChunks(COFFLinkerContext &ctx, std::vector<Chunk *> &chunks) {
   }
 
   auto *nameTab = make<NamePointersChunk>(names);
-  auto *ordinalTab = make<ExportOrdinalChunk>(ctx, baseOrdinal, names.size());
+  auto *ordinalTab =
+      make<ExportOrdinalChunk>(symtab, baseOrdinal, names.size());
   auto *dir =
       make<ExportDirectoryChunk>(baseOrdinal, maxOrdinal, names.size(), dllName,
                                  addressTab, nameTab, ordinalTab);

@@ -894,7 +894,7 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
   regsLive.clear();
   if (MRI->tracksLiveness()) {
     for (const auto &LI : MBB->liveins()) {
-      if (!Register::isPhysicalRegister(LI.PhysReg)) {
+      if (!LI.PhysReg.isPhysical()) {
         report("MBB live-in list contains non-physical register", MBB);
         continue;
       }
@@ -3448,7 +3448,7 @@ void MachineVerifier::visitMachineFunctionAfter() {
   if (MRI->tracksLiveness())
     for (const auto &MBB : *MF)
       for (MachineBasicBlock::RegisterMaskPair P : MBB.liveins()) {
-        MCPhysReg LiveInReg = P.PhysReg;
+        MCRegister LiveInReg = P.PhysReg;
         bool hasAliases = MCRegAliasIterator(LiveInReg, TRI, false).isValid();
         if (hasAliases || isAllocatable(LiveInReg) || isReserved(LiveInReg))
           continue;

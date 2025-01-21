@@ -221,9 +221,8 @@ define <8 x bfloat> @s_to_h(<8 x float> %a) {
 ;
 ; CHECK-BF16-LABEL: s_to_h:
 ; CHECK-BF16:       // %bb.0:
-; CHECK-BF16-NEXT:    bfcvtn v1.4h, v1.4s
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-BF16-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-BF16-NEXT:    bfcvtn2 v0.8h, v1.4s
 ; CHECK-BF16-NEXT:    ret
   %1 = fptrunc <8 x float> %a to <8 x bfloat>
   ret <8 x bfloat> %1
@@ -257,13 +256,12 @@ define <8 x bfloat> @d_to_h(<8 x double> %a) {
 ;
 ; CHECK-BF16-LABEL: d_to_h:
 ; CHECK-BF16:       // %bb.0:
-; CHECK-BF16-NEXT:    fcvtxn v2.2s, v2.2d
 ; CHECK-BF16-NEXT:    fcvtxn v0.2s, v0.2d
-; CHECK-BF16-NEXT:    fcvtxn2 v2.4s, v3.2d
+; CHECK-BF16-NEXT:    fcvtxn v2.2s, v2.2d
 ; CHECK-BF16-NEXT:    fcvtxn2 v0.4s, v1.2d
-; CHECK-BF16-NEXT:    bfcvtn v1.4h, v2.4s
+; CHECK-BF16-NEXT:    fcvtxn2 v2.4s, v3.2d
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-BF16-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-BF16-NEXT:    bfcvtn2 v0.8h, v2.4s
 ; CHECK-BF16-NEXT:    ret
   %1 = fptrunc <8 x double> %a to <8 x bfloat>
   ret <8 x bfloat> %1
@@ -334,7 +332,6 @@ define <4 x bfloat> @sitofp_v4i8(<4 x i8> %a) #0 {
 ; CHECK-BF16-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-BF16-NEXT:    scvtf v0.4s, v0.4s
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-BF16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-BF16-NEXT:    ret
   %1 = sitofp <4 x i8> %a to <4 x bfloat>
   ret <4 x bfloat> %1
@@ -363,13 +360,12 @@ define <8 x bfloat> @sitofp_v8i8(<8 x i8> %a) #0 {
 ; CHECK-BF16-LABEL: sitofp_v8i8:
 ; CHECK-BF16:       // %bb.0:
 ; CHECK-BF16-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-BF16-NEXT:    sshll2 v1.4s, v0.8h, #0
-; CHECK-BF16-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-BF16-NEXT:    sshll v1.4s, v0.4h, #0
+; CHECK-BF16-NEXT:    sshll2 v2.4s, v0.8h, #0
 ; CHECK-BF16-NEXT:    scvtf v1.4s, v1.4s
-; CHECK-BF16-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-BF16-NEXT:    bfcvtn v1.4h, v1.4s
-; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-BF16-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-BF16-NEXT:    bfcvtn v0.4h, v1.4s
+; CHECK-BF16-NEXT:    scvtf v1.4s, v2.4s
+; CHECK-BF16-NEXT:    bfcvtn2 v0.8h, v1.4s
 ; CHECK-BF16-NEXT:    ret
   %1 = sitofp <8 x i8> %a to <8 x bfloat>
   ret <8 x bfloat> %1
@@ -412,20 +408,18 @@ define <16 x bfloat> @sitofp_v16i8(<16 x i8> %a) #0 {
 ; CHECK-BF16:       // %bb.0:
 ; CHECK-BF16-NEXT:    sshll2 v1.8h, v0.16b, #0
 ; CHECK-BF16-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-BF16-NEXT:    sshll2 v2.4s, v1.8h, #0
-; CHECK-BF16-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-BF16-NEXT:    sshll2 v3.4s, v0.8h, #0
-; CHECK-BF16-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-BF16-NEXT:    sshll v2.4s, v1.4h, #0
+; CHECK-BF16-NEXT:    sshll v3.4s, v0.4h, #0
+; CHECK-BF16-NEXT:    sshll2 v4.4s, v1.8h, #0
+; CHECK-BF16-NEXT:    sshll2 v5.4s, v0.8h, #0
 ; CHECK-BF16-NEXT:    scvtf v2.4s, v2.4s
-; CHECK-BF16-NEXT:    scvtf v1.4s, v1.4s
 ; CHECK-BF16-NEXT:    scvtf v3.4s, v3.4s
-; CHECK-BF16-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-BF16-NEXT:    bfcvtn v2.4h, v2.4s
-; CHECK-BF16-NEXT:    bfcvtn v1.4h, v1.4s
-; CHECK-BF16-NEXT:    bfcvtn v3.4h, v3.4s
-; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-BF16-NEXT:    mov v1.d[1], v2.d[0]
-; CHECK-BF16-NEXT:    mov v0.d[1], v3.d[0]
+; CHECK-BF16-NEXT:    bfcvtn v1.4h, v2.4s
+; CHECK-BF16-NEXT:    scvtf v2.4s, v4.4s
+; CHECK-BF16-NEXT:    bfcvtn v0.4h, v3.4s
+; CHECK-BF16-NEXT:    scvtf v3.4s, v5.4s
+; CHECK-BF16-NEXT:    bfcvtn2 v1.8h, v2.4s
+; CHECK-BF16-NEXT:    bfcvtn2 v0.8h, v3.4s
 ; CHECK-BF16-NEXT:    ret
   %1 = sitofp <16 x i8> %a to <16 x bfloat>
   ret <16 x bfloat> %1
@@ -452,13 +446,12 @@ define <8 x bfloat> @sitofp_i16(<8 x i16> %a) #0 {
 ;
 ; CHECK-BF16-LABEL: sitofp_i16:
 ; CHECK-BF16:       // %bb.0:
-; CHECK-BF16-NEXT:    sshll2 v1.4s, v0.8h, #0
-; CHECK-BF16-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-BF16-NEXT:    sshll v1.4s, v0.4h, #0
+; CHECK-BF16-NEXT:    sshll2 v2.4s, v0.8h, #0
 ; CHECK-BF16-NEXT:    scvtf v1.4s, v1.4s
-; CHECK-BF16-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-BF16-NEXT:    bfcvtn v1.4h, v1.4s
-; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-BF16-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-BF16-NEXT:    bfcvtn v0.4h, v1.4s
+; CHECK-BF16-NEXT:    scvtf v1.4s, v2.4s
+; CHECK-BF16-NEXT:    bfcvtn2 v0.8h, v1.4s
 ; CHECK-BF16-NEXT:    ret
   %1 = sitofp <8 x i16> %a to <8 x bfloat>
   ret <8 x bfloat> %1
@@ -483,11 +476,10 @@ define <8 x bfloat> @sitofp_i32(<8 x i32> %a) #0 {
 ;
 ; CHECK-BF16-LABEL: sitofp_i32:
 ; CHECK-BF16:       // %bb.0:
-; CHECK-BF16-NEXT:    scvtf v1.4s, v1.4s
 ; CHECK-BF16-NEXT:    scvtf v0.4s, v0.4s
-; CHECK-BF16-NEXT:    bfcvtn v1.4h, v1.4s
+; CHECK-BF16-NEXT:    scvtf v1.4s, v1.4s
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-BF16-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-BF16-NEXT:    bfcvtn2 v0.8h, v1.4s
 ; CHECK-BF16-NEXT:    ret
   %1 = sitofp <8 x i32> %a to <8 x bfloat>
   ret <8 x bfloat> %1
@@ -526,17 +518,16 @@ define <8 x bfloat> @sitofp_i64(<8 x i64> %a) #0 {
 ;
 ; CHECK-BF16-LABEL: sitofp_i64:
 ; CHECK-BF16:       // %bb.0:
-; CHECK-BF16-NEXT:    scvtf v2.2d, v2.2d
 ; CHECK-BF16-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-BF16-NEXT:    scvtf v3.2d, v3.2d
+; CHECK-BF16-NEXT:    scvtf v2.2d, v2.2d
 ; CHECK-BF16-NEXT:    scvtf v1.2d, v1.2d
-; CHECK-BF16-NEXT:    fcvtn v2.2s, v2.2d
+; CHECK-BF16-NEXT:    scvtf v3.2d, v3.2d
 ; CHECK-BF16-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-BF16-NEXT:    fcvtn2 v2.4s, v3.2d
+; CHECK-BF16-NEXT:    fcvtn v2.2s, v2.2d
 ; CHECK-BF16-NEXT:    fcvtn2 v0.4s, v1.2d
-; CHECK-BF16-NEXT:    bfcvtn v1.4h, v2.4s
+; CHECK-BF16-NEXT:    fcvtn2 v2.4s, v3.2d
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-BF16-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-BF16-NEXT:    bfcvtn2 v0.8h, v2.4s
 ; CHECK-BF16-NEXT:    ret
   %1 = sitofp <8 x i64> %a to <8 x bfloat>
   ret <8 x bfloat> %1
@@ -562,7 +553,6 @@ define <4 x bfloat> @uitofp_v4i8(<4 x i8> %a) #0 {
 ; CHECK-BF16-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-BF16-NEXT:    ucvtf v0.4s, v0.4s
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-BF16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-BF16-NEXT:    ret
   %1 = uitofp <4 x i8> %a to <4 x bfloat>
   ret <4 x bfloat> %1
@@ -591,13 +581,12 @@ define <8 x bfloat> @uitofp_v8i8(<8 x i8> %a) #0 {
 ; CHECK-BF16-LABEL: uitofp_v8i8:
 ; CHECK-BF16:       // %bb.0:
 ; CHECK-BF16-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-BF16-NEXT:    ushll2 v1.4s, v0.8h, #0
-; CHECK-BF16-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-BF16-NEXT:    ushll v1.4s, v0.4h, #0
+; CHECK-BF16-NEXT:    ushll2 v2.4s, v0.8h, #0
 ; CHECK-BF16-NEXT:    ucvtf v1.4s, v1.4s
-; CHECK-BF16-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-BF16-NEXT:    bfcvtn v1.4h, v1.4s
-; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-BF16-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-BF16-NEXT:    bfcvtn v0.4h, v1.4s
+; CHECK-BF16-NEXT:    ucvtf v1.4s, v2.4s
+; CHECK-BF16-NEXT:    bfcvtn2 v0.8h, v1.4s
 ; CHECK-BF16-NEXT:    ret
   %1 = uitofp <8 x i8> %a to <8 x bfloat>
   ret <8 x bfloat> %1
@@ -640,20 +629,18 @@ define <16 x bfloat> @uitofp_v16i8(<16 x i8> %a) #0 {
 ; CHECK-BF16:       // %bb.0:
 ; CHECK-BF16-NEXT:    ushll2 v1.8h, v0.16b, #0
 ; CHECK-BF16-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-BF16-NEXT:    ushll2 v2.4s, v1.8h, #0
-; CHECK-BF16-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-BF16-NEXT:    ushll2 v3.4s, v0.8h, #0
-; CHECK-BF16-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-BF16-NEXT:    ushll v2.4s, v1.4h, #0
+; CHECK-BF16-NEXT:    ushll v3.4s, v0.4h, #0
+; CHECK-BF16-NEXT:    ushll2 v4.4s, v1.8h, #0
+; CHECK-BF16-NEXT:    ushll2 v5.4s, v0.8h, #0
 ; CHECK-BF16-NEXT:    ucvtf v2.4s, v2.4s
-; CHECK-BF16-NEXT:    ucvtf v1.4s, v1.4s
 ; CHECK-BF16-NEXT:    ucvtf v3.4s, v3.4s
-; CHECK-BF16-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-BF16-NEXT:    bfcvtn v2.4h, v2.4s
-; CHECK-BF16-NEXT:    bfcvtn v1.4h, v1.4s
-; CHECK-BF16-NEXT:    bfcvtn v3.4h, v3.4s
-; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-BF16-NEXT:    mov v1.d[1], v2.d[0]
-; CHECK-BF16-NEXT:    mov v0.d[1], v3.d[0]
+; CHECK-BF16-NEXT:    bfcvtn v1.4h, v2.4s
+; CHECK-BF16-NEXT:    ucvtf v2.4s, v4.4s
+; CHECK-BF16-NEXT:    bfcvtn v0.4h, v3.4s
+; CHECK-BF16-NEXT:    ucvtf v3.4s, v5.4s
+; CHECK-BF16-NEXT:    bfcvtn2 v1.8h, v2.4s
+; CHECK-BF16-NEXT:    bfcvtn2 v0.8h, v3.4s
 ; CHECK-BF16-NEXT:    ret
   %1 = uitofp <16 x i8> %a to <16 x bfloat>
   ret <16 x bfloat> %1
@@ -681,13 +668,12 @@ define <8 x bfloat> @uitofp_i16(<8 x i16> %a) #0 {
 ;
 ; CHECK-BF16-LABEL: uitofp_i16:
 ; CHECK-BF16:       // %bb.0:
-; CHECK-BF16-NEXT:    ushll2 v1.4s, v0.8h, #0
-; CHECK-BF16-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-BF16-NEXT:    ushll v1.4s, v0.4h, #0
+; CHECK-BF16-NEXT:    ushll2 v2.4s, v0.8h, #0
 ; CHECK-BF16-NEXT:    ucvtf v1.4s, v1.4s
-; CHECK-BF16-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-BF16-NEXT:    bfcvtn v1.4h, v1.4s
-; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-BF16-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-BF16-NEXT:    bfcvtn v0.4h, v1.4s
+; CHECK-BF16-NEXT:    ucvtf v1.4s, v2.4s
+; CHECK-BF16-NEXT:    bfcvtn2 v0.8h, v1.4s
 ; CHECK-BF16-NEXT:    ret
   %1 = uitofp <8 x i16> %a to <8 x bfloat>
   ret <8 x bfloat> %1
@@ -713,11 +699,10 @@ define <8 x bfloat> @uitofp_i32(<8 x i32> %a) #0 {
 ;
 ; CHECK-BF16-LABEL: uitofp_i32:
 ; CHECK-BF16:       // %bb.0:
-; CHECK-BF16-NEXT:    ucvtf v1.4s, v1.4s
 ; CHECK-BF16-NEXT:    ucvtf v0.4s, v0.4s
-; CHECK-BF16-NEXT:    bfcvtn v1.4h, v1.4s
+; CHECK-BF16-NEXT:    ucvtf v1.4s, v1.4s
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-BF16-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-BF16-NEXT:    bfcvtn2 v0.8h, v1.4s
 ; CHECK-BF16-NEXT:    ret
   %1 = uitofp <8 x i32> %a to <8 x bfloat>
   ret <8 x bfloat> %1
@@ -756,17 +741,16 @@ define <8 x bfloat> @uitofp_i64(<8 x i64> %a) #0 {
 ;
 ; CHECK-BF16-LABEL: uitofp_i64:
 ; CHECK-BF16:       // %bb.0:
-; CHECK-BF16-NEXT:    ucvtf v2.2d, v2.2d
 ; CHECK-BF16-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-BF16-NEXT:    ucvtf v3.2d, v3.2d
+; CHECK-BF16-NEXT:    ucvtf v2.2d, v2.2d
 ; CHECK-BF16-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-BF16-NEXT:    fcvtn v2.2s, v2.2d
+; CHECK-BF16-NEXT:    ucvtf v3.2d, v3.2d
 ; CHECK-BF16-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-BF16-NEXT:    fcvtn2 v2.4s, v3.2d
+; CHECK-BF16-NEXT:    fcvtn v2.2s, v2.2d
 ; CHECK-BF16-NEXT:    fcvtn2 v0.4s, v1.2d
-; CHECK-BF16-NEXT:    bfcvtn v1.4h, v2.4s
+; CHECK-BF16-NEXT:    fcvtn2 v2.4s, v3.2d
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
-; CHECK-BF16-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-BF16-NEXT:    bfcvtn2 v0.8h, v2.4s
 ; CHECK-BF16-NEXT:    ret
   %1 = uitofp <8 x i64> %a to <8 x bfloat>
   ret <8 x bfloat> %1

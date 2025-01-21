@@ -927,8 +927,13 @@ INTERCEPTOR(ssize_t, recvmsg, int socket, struct msghdr *message, int flags) {
 }
 
 #if SANITIZER_INTERCEPT_RECVMMSG
+#if defined(__GLIBC_MINOR__) && __GLIBC_MINOR__ < 21
+INTERCEPTOR(int, recvmmsg, int socket, struct mmsghdr *message,
+            unsigned int len, int flags, const struct timespec *timeout) {
+#else
 INTERCEPTOR(int, recvmmsg, int socket, struct mmsghdr *message,
             unsigned int len, int flags, struct timespec *timeout) {
+#endif
   __rtsan_notify_intercepted_call("recvmmsg");
   return REAL(recvmmsg)(socket, message, len, flags, timeout);
 }

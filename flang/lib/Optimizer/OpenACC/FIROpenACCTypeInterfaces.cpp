@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/OpenACC/FIROpenACCTypeInterfaces.h"
-#include "flang/Lower/DirectivesCommon.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/DirectivesCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -180,10 +180,10 @@ OpenACCMappableModel<fir::SequenceType>::generateAccBounds(
       }
       // TODO: Handle Fortran optional.
       const mlir::Value isPresent;
-      Fortran::lower::AddrAndBoundsInfo info(box, boxRef, isPresent,
-                                             box.getType());
-      return Fortran::lower::genBoundsOpsFromBox<mlir::acc::DataBoundsOp,
-                                                 mlir::acc::DataBoundsType>(
+      fir::factory::AddrAndBoundsInfo info(box, boxRef, isPresent,
+                                           box.getType());
+      return fir::factory::genBoundsOpsFromBox<mlir::acc::DataBoundsOp,
+                                               mlir::acc::DataBoundsType>(
           firBuilder, loc, exv, info);
     }
     assert(false && "array with unknown dimension expected to have descriptor");
@@ -200,8 +200,8 @@ OpenACCMappableModel<fir::SequenceType>::generateAccBounds(
   auto res = hlfir::translateToExtendedValue(loc, firBuilder,
                                              hlfir::Entity(valToCheck));
   fir::ExtendedValue exv = res.first;
-  return Fortran::lower::genBaseBoundsOps<mlir::acc::DataBoundsOp,
-                                          mlir::acc::DataBoundsType>(
+  return fir::factory::genBaseBoundsOps<mlir::acc::DataBoundsOp,
+                                        mlir::acc::DataBoundsType>(
       firBuilder, loc, exv,
       /*isAssumedSize=*/isAssumedSize);
 }

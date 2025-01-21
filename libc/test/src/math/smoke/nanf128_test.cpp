@@ -28,7 +28,7 @@ public:
     auto actual_fp = FPBits128(result);
     auto expected_fp = FPBits128(bits);
     EXPECT_EQ(actual_fp.uintval(), expected_fp.uintval());
-  };
+  }
 };
 
 TEST_F(LlvmLibcNanf128Test, NCharSeq) {

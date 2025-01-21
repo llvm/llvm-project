@@ -447,8 +447,8 @@ multiclass avx10_minmax_scalar<string OpStr, X86VectorVTInfo _, SDNode OpNode,
 
 
 let mayRaiseFPException = 0 in
-defm VMINMAXNEPBF16 : avx10_minmax_packed<"vminmaxnepbf16", avx512vl_bf16_info, X86vminmax>,
-                      AVX512XDIi8Base, EVEX_CD8<16, CD8VF>, TA;
+defm VMINMAXBF16 : avx10_minmax_packed<"vminmaxbf16", avx512vl_bf16_info, X86vminmax>,
+                   AVX512XDIi8Base, EVEX_CD8<16, CD8VF>, TA;
 
 defm VMINMAXPD : avx10_minmax_packed<"vminmaxpd", avx512vl_f64_info, X86vminmax>,
                  avx10_minmax_packed_sae<"vminmaxpd", avx512vl_f64_info, X86vminmaxSae>,

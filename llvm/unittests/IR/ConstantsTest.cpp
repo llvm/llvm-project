@@ -315,7 +315,7 @@ TEST(ConstantsTest, GEPReplaceWithConstant) {
   std::unique_ptr<Module> M(new Module("MyModule", Context));
 
   Type *IntTy = Type::getInt32Ty(Context);
-  Type *PtrTy = PointerType::get(IntTy, 0);
+  Type *PtrTy = PointerType::get(Context, 0);
   auto *C1 = ConstantInt::get(IntTy, 1);
   auto *Placeholder = new GlobalVariable(
       *M, IntTy, false, GlobalValue::ExternalWeakLinkage, nullptr);
@@ -342,7 +342,7 @@ TEST(ConstantsTest, AliasCAPI) {
       parseAssemblyString("@g = global i32 42", Error, Context);
   GlobalVariable *G = M->getGlobalVariable("g");
   Type *I16Ty = Type::getInt16Ty(Context);
-  Type *I16PTy = PointerType::get(I16Ty, 0);
+  Type *I16PTy = PointerType::get(Context, 0);
   Constant *Aliasee = ConstantExpr::getBitCast(G, I16PTy);
   LLVMValueRef AliasRef =
       LLVMAddAlias2(wrap(M.get()), wrap(I16Ty), 0, wrap(Aliasee), "a");
@@ -421,7 +421,7 @@ TEST(ConstantsTest, BitcastToGEP) {
 
   auto *G =
       new GlobalVariable(*M, S, false, GlobalValue::ExternalLinkage, nullptr);
-  auto *PtrTy = PointerType::get(i32, 0);
+  auto *PtrTy = PointerType::get(Context, 0);
   auto *C = ConstantExpr::getBitCast(G, PtrTy);
   /* With opaque pointers, no cast is necessary. */
   EXPECT_EQ(C, G);

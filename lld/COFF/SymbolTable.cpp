@@ -1118,6 +1118,141 @@ void SymbolTable::addUndefinedGlob(StringRef arg) {
     addGCRoot(sym->getName());
 }
 
+// Convert stdcall/fastcall style symbols into unsuffixed symbols,
+// with or without a leading underscore. (MinGW specific.)
+static StringRef killAt(StringRef sym, bool prefix) {
+  if (sym.empty())
+    return sym;
+  // Strip any trailing stdcall suffix
+  sym = sym.substr(0, sym.find('@', 1));
+  if (!sym.starts_with("@")) {
+    if (prefix && !sym.starts_with("_"))
+      return saver().save("_" + sym);
+    return sym;
+  }
+  // For fastcall, remove the leading @ and replace it with an
+  // underscore, if prefixes are used.
+  sym = sym.substr(1);
+  if (prefix)
+    sym = saver().save("_" + sym);
+  return sym;
+}
+
+static StringRef exportSourceName(ExportSource s) {
+  switch (s) {
+  case ExportSource::Directives:
+    return "source file (directives)";
+  case ExportSource::Export:
+    return "/export";
+  case ExportSource::ModuleDefinition:
+    return "/def";
+  default:
+    llvm_unreachable("unknown ExportSource");
+  }
+}
+
+// Performs error checking on all /export arguments.
+// It also sets ordinals.
+void SymbolTable::fixupExports() {
+  llvm::TimeTraceScope timeScope("Fixup exports");
+  // Symbol ordinals must be unique.
+  std::set<uint16_t> ords;
+  for (Export &e : exports) {
+    if (e.ordinal == 0)
+      continue;
+    if (!ords.insert(e.ordinal).second)
+      Fatal(ctx) << "duplicate export ordinal: " << e.name;
+  }
+
+  for (Export &e : exports) {
+    if (!e.exportAs.empty()) {
+      e.exportName = e.exportAs;
+      continue;
+    }
+
+    StringRef sym =
+        !e.forwardTo.empty() || e.extName.empty() ? e.name : e.extName;
+    if (machine == I386 && sym.starts_with("_")) {
+      // In MSVC mode, a fully decorated stdcall function is exported
+      // as-is with the leading underscore (with type IMPORT_NAME).
+      // In MinGW mode, a decorated stdcall function gets the underscore
+      // removed, just like normal cdecl functions.
+      if (ctx.config.mingw || !sym.contains('@')) {
+        e.exportName = sym.substr(1);
+        continue;
+      }
+    }
+    if (isEC() && !e.data && !e.constant) {
+      if (std::optional<std::string> demangledName =
+              getArm64ECDemangledFunctionName(sym)) {
+        e.exportName = saver().save(*demangledName);
+        continue;
+      }
+    }
+    e.exportName = sym;
+  }
+
+  if (ctx.config.killAt && machine == I386) {
+    for (Export &e : exports) {
+      e.name = killAt(e.name, true);
+      e.exportName = killAt(e.exportName, false);
+      e.extName = killAt(e.extName, true);
+      e.symbolName = killAt(e.symbolName, true);
+    }
+  }
+
+  // Uniquefy by name.
+  DenseMap<StringRef, std::pair<Export *, unsigned>> map(exports.size());
+  std::vector<Export> v;
+  for (Export &e : exports) {
+    auto pair = map.insert(std::make_pair(e.exportName, std::make_pair(&e, 0)));
+    bool inserted = pair.second;
+    if (inserted) {
+      pair.first->second.second = v.size();
+      v.push_back(e);
+      continue;
+    }
+    Export *existing = pair.first->second.first;
+    if (e == *existing || e.name != existing->name)
+      continue;
+    // If the existing export comes from .OBJ directives, we are allowed to
+    // overwrite it with /DEF: or /EXPORT without any warning, as MSVC link.exe
+    // does.
+    if (existing->source == ExportSource::Directives) {
+      *existing = e;
+      v[pair.first->second.second] = e;
+      continue;
+    }
+    if (existing->source == e.source) {
+      Warn(ctx) << "duplicate " << exportSourceName(existing->source)
+                << " option: " << e.name;
+    } else {
+      Warn(ctx) << "duplicate export: " << e.name << " first seen in "
+                << exportSourceName(existing->source) << ", now in "
+                << exportSourceName(e.source);
+    }
+  }
+  exports = std::move(v);
+
+  // Sort by name.
+  llvm::sort(exports, [](const Export &a, const Export &b) {
+    return a.exportName < b.exportName;
+  });
+}
+
+void SymbolTable::assignExportOrdinals() {
+  // Assign unique ordinals if default (= 0).
+  uint32_t max = 0;
+  for (Export &e : exports)
+    max = std::max(max, (uint32_t)e.ordinal);
+  for (Export &e : exports)
+    if (e.ordinal == 0)
+      e.ordinal = ++max;
+  if (max > std::numeric_limits<uint16_t>::max())
+    Fatal(ctx) << "too many exported symbols (got " << max << ", max "
+               << Twine(std::numeric_limits<uint16_t>::max()) << ")";
+}
+
 Symbol *SymbolTable::addUndefined(StringRef name) {
   return addUndefined(name, nullptr, false);
 }

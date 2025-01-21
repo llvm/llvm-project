@@ -284,8 +284,11 @@ koachan@protonmail.com (email), [koachan](https://github.com/koachan) (GitHub)
 
 #### SPIRV backend
 
-Ilia Diachkov \
-ilia.diachkov@gmail.com (email), [iliya-diyachkov](https://github.com/iliya-diyachkov) (GitHub)
+Vyacheslav Levytskyy \
+vyacheslav.levytskyy@intel.com, vyacheslav.levytskyy@gmail.com (email), [VyacheslavLevytskyy](https://github.com/VyacheslavLevytskyy) (GitHub)
+
+Nathan Gauër \
+brioche@google.com (email), [Keenuts](https://github.com/Keenuts) (GitHub)
 
 #### SystemZ backend
 

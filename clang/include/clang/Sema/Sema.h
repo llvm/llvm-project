@@ -13841,6 +13841,13 @@ private:
       LocalInstantiationScope &Scope,
       const MultiLevelTemplateArgumentList &TemplateArgs);
 
+  /// Introduce the instantiated captures of the lambda into the local
+  /// instantiation scope.
+  bool addInstantiatedCapturesToScope(
+      FunctionDecl *Function, const FunctionDecl *PatternDecl,
+      LocalInstantiationScope &Scope,
+      const MultiLevelTemplateArgumentList &TemplateArgs);
+
   int ParsingClassDepth = 0;
 
   class SavePendingParsedClassStateRAII {
@@ -14521,16 +14528,9 @@ private:
   // The current stack of constraint satisfactions, so we can exit-early.
   llvm::SmallVector<SatisfactionStackEntryTy, 10> SatisfactionStack;
 
-  /// Introduce the instantiated captures of the lambda into the local
-  /// instantiation scope.
-  bool addInstantiatedCapturesToScope(
-      FunctionDecl *Function, const FunctionDecl *PatternDecl,
-      LocalInstantiationScope &Scope,
-      const MultiLevelTemplateArgumentList &TemplateArgs);
-
-  /// Used by SetupConstraintCheckingTemplateArgumentsAndScope to recursively(in
-  /// the case of lambdas) set up the LocalInstantiationScope of the current
-  /// function.
+  /// Used by SetupConstraintCheckingTemplateArgumentsAndScope to set up the
+  /// LocalInstantiationScope of the current non-lambda function. For lambdas,
+  /// use LambdaScopeForCallOperatorInstantiationRAII.
   bool
   SetupConstraintScope(FunctionDecl *FD,
                        std::optional<ArrayRef<TemplateArgument>> TemplateArgs,

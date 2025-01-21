@@ -3127,7 +3127,6 @@ size_t DWARFASTParserClang::ParseChildParameters(
         }
       }
 
-      bool skip = false;
       if (is_artificial) {
         // In order to determine if a C++ member function is "const" we
         // have to look at the const-ness of "this"...
@@ -3150,10 +3149,7 @@ size_t DWARFASTParserClang::ParseChildParameters(
             }
           }
         }
-        skip = true;
-      }
-
-      if (!skip) {
+      } else {
         Type *type = die.ResolveTypeUID(param_type_die_form.Reference());
         if (type) {
           function_param_types.push_back(type->GetForwardCompilerType());

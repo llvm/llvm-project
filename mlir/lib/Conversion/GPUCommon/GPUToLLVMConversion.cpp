@@ -428,10 +428,10 @@ class LegalizeLaunchFuncOpPattern
 public:
   LegalizeLaunchFuncOpPattern(const LLVMTypeConverter &typeConverter,
                               bool kernelBarePtrCallConv,
-                              bool typeCheckKernelArgs)
+                              bool kernelIntersperseSizeCallConv)
       : ConvertOpToGpuRuntimeCallPattern<gpu::LaunchFuncOp>(typeConverter),
         kernelBarePtrCallConv(kernelBarePtrCallConv),
-        typeCheckKernelArgs(typeCheckKernelArgs) {}
+        kernelIntersperseSizeCallConv(kernelIntersperseSizeCallConv) {}
 
 private:
   LogicalResult
@@ -439,7 +439,7 @@ private:
                   ConversionPatternRewriter &rewriter) const override;
 
   bool kernelBarePtrCallConv;
-  bool typeCheckKernelArgs;
+  bool kernelIntersperseSizeCallConv;
 };
 
 /// A rewrite pattern to convert gpu.memcpy operations into a GPU runtime
@@ -566,8 +566,9 @@ void GpuToLLVMConversionPass::runOnOperation() {
   populateFinalizeMemRefToLLVMConversionPatterns(converter, patterns);
   populateAsyncStructuralTypeConversionsAndLegality(converter, patterns,
                                                     target);
-  populateGpuToLLVMConversionPatterns(
-      converter, patterns, kernelBarePtrCallConv, typeCheckKernelArgs);
+  populateGpuToLLVMConversionPatterns(converter, patterns,
+                                      kernelBarePtrCallConv,
+                                      kernelIntersperseSizeCallConv);
 
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
@@ -970,33 +971,55 @@ LogicalResult LegalizeLaunchFuncOpPattern::matchAndRewrite(
   else if (launchOp.getAsyncToken())
     stream = streamCreateCallBuilder.create(loc, rewriter, {}).getResult();
 
-  if (typeCheckKernelArgs) {
-    // The current non-bare-pointer ABI is a bad fit for `mgpuLaunchKernel`,
-    // which takes an untyped list of arguments. The type check here prevents
-    // accidentally violating the assumption made in vulkan-runtime-wrappers.cpp
-    // and creating a unchecked runtime ABI mismatch.
-    // TODO(https://github.com/llvm/llvm-project/issues/73457): Change the ABI
-    // here to remove the need for this type check.
-    for (Value arg : launchOp.getKernelOperands()) {
-      if (auto memrefTy = dyn_cast<MemRefType>(arg.getType())) {
-        if (memrefTy.getRank() != 1 ||
-            memrefTy.getElementTypeBitWidth() != 32) {
-          return rewriter.notifyMatchFailure(
-              launchOp, "Operand to launch op is not a rank-1 memref with "
-                        "32-bit element type.");
-        }
-      } else {
-        return rewriter.notifyMatchFailure(
-            launchOp, "Operand to launch op is not a memref.");
-      }
-    }
-  }
   // Lower the kernel operands to match kernel parameters.
   // Note: If `useBarePtrCallConv` is set in the type converter's options,
   // the value of `kernelBarePtrCallConv` will be ignored.
-  SmallVector<Value, 4> arguments = getTypeConverter()->promoteOperands(
-      loc, launchOp.getKernelOperands(), adaptor.getKernelOperands(), rewriter,
+  OperandRange origArguments = launchOp.getKernelOperands();
+  SmallVector<Value, 8> llvmArguments = getTypeConverter()->promoteOperands(
+      loc, origArguments, adaptor.getKernelOperands(), rewriter,
       /*useBarePtrCallConv=*/kernelBarePtrCallConv);
+  SmallVector<Value, 8> llvmArgumentsWithSizes;
+
+  // Intersperse size information if requested.
+  if (kernelIntersperseSizeCallConv) {
+    if (origArguments.size() != llvmArguments.size()) {
+      // This shouldn't happen if the bare-pointer calling convention is used.
+      return rewriter.notifyMatchFailure(
+          launchOp,
+          "Cannot add sizes to arguments with one-to-many LLVM IR expansion.");
+    }
+
+    llvmArgumentsWithSizes.reserve(llvmArguments.size() * 2);
+    for (auto [llvmArg, origArg] : zip_equal(llvmArguments, origArguments)) {
+      auto memrefTy = dyn_cast<MemRefType>(origArg.getType());
+      if (!memrefTy) {
+        return rewriter.notifyMatchFailure(
+            launchOp, "Operand to launch op is not a memref.");
+      }
+
+      if (!memrefTy.hasStaticShape() ||
+          !memrefTy.getElementType().isIntOrFloat()) {
+        return rewriter.notifyMatchFailure(
+            launchOp, "Operand to launch op is not a memref with a static "
+                      "shape and an integer or float element type.");
+      }
+
+      unsigned bitwidth = memrefTy.getElementTypeBitWidth();
+      if (bitwidth % 8 != 0) {
+        return rewriter.notifyMatchFailure(
+            launchOp, "Operand to launch op is not a memref with a "
+                      "byte-aligned element type.");
+      }
+
+      uint64_t staticSize = static_cast<uint64_t>(bitwidth / 8) *
+                            static_cast<uint64_t>(memrefTy.getNumElements());
+
+      Value sizeArg = rewriter.create<LLVM::ConstantOp>(
+          loc, getIndexType(), rewriter.getIndexAttr(staticSize));
+      llvmArgumentsWithSizes.push_back(llvmArg); // Presumably a bare pointer.
+      llvmArgumentsWithSizes.push_back(sizeArg);
+    }
+  }
 
   std::optional<gpu::KernelDim3> clusterSize = std::nullopt;
   if (launchOp.hasClusterSize()) {
@@ -1010,7 +1033,9 @@ LogicalResult LegalizeLaunchFuncOpPattern::matchAndRewrite(
                       adaptor.getGridSizeZ()},
       gpu::KernelDim3{adaptor.getBlockSizeX(), adaptor.getBlockSizeY(),
                       adaptor.getBlockSizeZ()},
-      adaptor.getDynamicSharedMemorySize(), arguments, stream, clusterSize);
+      adaptor.getDynamicSharedMemorySize(),
+      llvmArgumentsWithSizes.empty() ? llvmArguments : llvmArgumentsWithSizes,
+      stream, clusterSize);
   if (launchOp.getAsyncToken())
     rewriter.replaceOp(launchOp, {stream});
   else
@@ -1760,10 +1785,9 @@ LogicalResult ConvertCreateBsrOpToGpuRuntimeCallPattern::matchAndRewrite(
   return success();
 }
 
-void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                               RewritePatternSet &patterns,
-                                               bool kernelBarePtrCallConv,
-                                               bool typeCheckKernelArgs) {
+void mlir::populateGpuToLLVMConversionPatterns(
+    LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    bool kernelBarePtrCallConv, bool kernelIntersperseSizeCallConv) {
   addOpaquePointerConversion<gpu::AsyncTokenType>(converter);
   addOpaquePointerConversion<gpu::SparseDnTensorHandleType>(converter);
   addOpaquePointerConversion<gpu::SparseSpMatHandleType>(converter);
@@ -1801,7 +1825,7 @@ void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
                ConvertSpMatGetSizeOpToGpuRuntimeCallPattern,
                ConvertSetCsrPointersOpToGpuRuntimeCallPattern>(converter);
   patterns.add<LegalizeLaunchFuncOpPattern>(converter, kernelBarePtrCallConv,
-                                            typeCheckKernelArgs);
+                                            kernelIntersperseSizeCallConv);
 }
 
 //===----------------------------------------------------------------------===//

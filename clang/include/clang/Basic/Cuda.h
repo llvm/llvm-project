@@ -44,9 +44,12 @@ enum class CudaVersion {
   CUDA_124,
   CUDA_125,
   CUDA_126,
+  CUDA_127,
+  CUDA_128,
+  CUDA_129,
   FULLY_SUPPORTED = CUDA_123,
   PARTIALLY_SUPPORTED =
-      CUDA_126, // Partially supported. Proceed with a warning.
+      CUDA_129, // Partially supported. Proceed with a warning.
   NEW = 10000,  // Too new. Issue a warning, but allow using it.
 };
 const char *CudaVersionToString(CudaVersion V);
@@ -80,6 +83,7 @@ enum class OffloadArch {
   SM_90,
   SM_90a,
   SM_100,
+  SM_100a,
   GFX600,
   GFX601,
   GFX602,

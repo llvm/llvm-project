@@ -3946,21 +3946,6 @@ the configuration (without a prefix: ``Auto``).
    This is an experimental flag, that might go away or be renamed. Do
    not use this in config files, etc. Use at your own risk.
 
-.. _ExportBlockIndentation:
-
-**ExportBlockIndentation** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <ExportBlockIndentation>`
-  If ``true``, clang-format will indent the body of an ``export { ... }``
-  block. This doesn't affect the formatting of anything else related to
-  exported declarations.
-
-  .. code-block:: c++
-
-     true:                     false:
-     export {          vs.     export {
-       void foo();             void foo();
-       void bar();             void bar();
-     }                         }
-
 .. _FixNamespaceComments:
 
 **FixNamespaceComments** (``Boolean``) :versionbadge:`clang-format 5` :ref:`¶ <FixNamespaceComments>`
@@ -4227,6 +4212,21 @@ the configuration (without a prefix: ``Auto``).
      default:                                 default:
        plop();                                  plop();
      }                                      }
+
+.. _IndentExportBlock:
+
+**IndentExportBlock** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <IndentExportBlock>`
+  If ``true``, clang-format will indent the body of an ``export { ... }``
+  block. This doesn't affect the formatting of anything else related to
+  exported declarations.
+
+  .. code-block:: c++
+
+     true:                     false:
+     export {          vs.     export {
+       void foo();             void foo();
+       void bar();             void bar();
+     }                         }
 
 .. _IndentExternBlock:
 

@@ -3517,41 +3517,54 @@ static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
                                   const RISCVSubtarget &Subtarget) {
   if (SplatVal.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
     return SDValue();
-  SDValue Vec = SplatVal.getOperand(0);
+  SDValue Src = SplatVal.getOperand(0);
   // Don't perform this optimization for i1 vectors, or if the element types are
   // different
   // FIXME: Support i1 vectors, maybe by promoting to i8?
   MVT EltTy = VT.getVectorElementType();
-  if (EltTy == MVT::i1 ||
-      EltTy != Vec.getSimpleValueType().getVectorElementType())
+  MVT SrcVT = Src.getSimpleValueType();
+  if (EltTy == MVT::i1 || EltTy != SrcVT.getVectorElementType())
     return SDValue();
   SDValue Idx = SplatVal.getOperand(1);
   // The index must be a legal type.
   if (Idx.getValueType() != Subtarget.getXLenVT())
     return SDValue();
 
-  // Check that Index lies within VT
-  // TODO: Can we check if the Index is constant and known in-bounds?
-  if (!TypeSize::isKnownLE(Vec.getValueSizeInBits(), VT.getSizeInBits()))
-    return SDValue();
+  // Check that we know Idx lies within VT
+  if (!TypeSize::isKnownLE(SrcVT.getSizeInBits(), VT.getSizeInBits())) {
+    auto *CIdx = dyn_cast<ConstantSDNode>(Idx);
+    if (!CIdx || CIdx->getZExtValue() >= VT.getVectorMinNumElements())
+      return SDValue();
+  }
 
+  // Convert fixed length vectors to scalable
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector())
     ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
 
-  Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT,
-                    DAG.getUNDEF(ContainerVT), Vec,
-                    DAG.getVectorIdxConstant(0, DL));
+  MVT SrcContainerVT = SrcVT;
+  if (SrcVT.isFixedLengthVector()) {
+    SrcContainerVT = getContainerForFixedLengthVector(DAG, SrcVT, Subtarget);
+    Src = convertToScalableVector(SrcContainerVT, Src, DAG, Subtarget);
+  }
 
+  // Put Vec in a VT sized vector
+  if (SrcContainerVT.getVectorMinNumElements() <
+      ContainerVT.getVectorMinNumElements())
+    Src = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT,
+                      DAG.getUNDEF(ContainerVT), Src,
+                      DAG.getVectorIdxConstant(0, DL));
+  else
+    Src = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ContainerVT, Src,
+                      DAG.getVectorIdxConstant(0, DL));
+
+  // We checked that Idx fits inside VT earlier
   auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
-
-  SDValue Gather = DAG.getNode(RISCVISD::VRGATHER_VX_VL, DL, ContainerVT, Vec,
+  SDValue Gather = DAG.getNode(RISCVISD::VRGATHER_VX_VL, DL, ContainerVT, Src,
                                Idx, DAG.getUNDEF(ContainerVT), Mask, VL);
-
-  if (!VT.isFixedLengthVector())
-    return Gather;
-
-  return convertFromScalableVector(VT, Gather, DAG, Subtarget);
+  if (VT.isFixedLengthVector())
+    Gather = convertFromScalableVector(VT, Gather, DAG, Subtarget);
+  return Gather;
 }
 
 /// Try and optimize BUILD_VECTORs with "dominant values" - these are values

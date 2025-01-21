@@ -28,23 +28,17 @@ enum OrderingTy {
   seq_cst = __ATOMIC_SEQ_CST,
 };
 
-enum ScopeTy {
+enum MemScopeTy {
   system = __MEMORY_SCOPE_SYSTEM,
-  device_ = __MEMORY_SCOPE_DEVICE,
+  device = __MEMORY_SCOPE_DEVICE,
   workgroup = __MEMORY_SCOPE_WRKGRP,
   wavefront = __MEMORY_SCOPE_WVFRNT,
   single = __MEMORY_SCOPE_SINGLE,
 };
 
-enum MemScopeTy {
-  all,    // All threads on all devices
-  device, // All threads on the device
-  cgroup  // All threads in the contention group, e.g. the team
-};
-
 /// Atomically increment \p *Addr and wrap at \p V with \p Ordering semantics.
 uint32_t inc(uint32_t *Addr, uint32_t V, OrderingTy Ordering,
-             MemScopeTy MemScope = MemScopeTy::all);
+             MemScopeTy MemScope = MemScopeTy::device);
 
 /// Atomically perform <op> on \p V and \p *Addr with \p Ordering semantics. The
 /// result is stored in \p *Addr;
@@ -52,120 +46,127 @@ uint32_t inc(uint32_t *Addr, uint32_t V, OrderingTy Ordering,
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
 bool cas(Ty *Address, V ExpectedV, V DesiredV, atomic::OrderingTy OrderingSucc,
-         atomic::OrderingTy OrderingFail) {
+         atomic::OrderingTy OrderingFail,
+         MemScopeTy MemScope = MemScopeTy::device) {
   return __scoped_atomic_compare_exchange(Address, &ExpectedV, &DesiredV, false,
-                                          OrderingSucc, OrderingFail,
-                                          __MEMORY_SCOPE_DEVICE);
+                                          OrderingSucc, OrderingFail, MemScope);
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
-V add(Ty *Address, V Val, atomic::OrderingTy Ordering) {
-  return __scoped_atomic_fetch_add(Address, Val, Ordering,
-                                   __MEMORY_SCOPE_DEVICE);
+V add(Ty *Address, V Val, atomic::OrderingTy Ordering,
+      MemScopeTy MemScope = MemScopeTy::device) {
+  return __scoped_atomic_fetch_add(Address, Val, Ordering, MemScope);
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
-V load(Ty *Address, atomic::OrderingTy Ordering) {
-  return __scoped_atomic_load_n(Address, Ordering, __MEMORY_SCOPE_DEVICE);
+V load(Ty *Address, atomic::OrderingTy Ordering,
+       MemScopeTy MemScope = MemScopeTy::device) {
+  return __scoped_atomic_load_n(Address, Ordering, MemScope);
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
-void store(Ty *Address, V Val, atomic::OrderingTy Ordering) {
-  __scoped_atomic_store_n(Address, Val, Ordering, __MEMORY_SCOPE_DEVICE);
+void store(Ty *Address, V Val, atomic::OrderingTy Ordering,
+           MemScopeTy MemScope = MemScopeTy::device) {
+  __scoped_atomic_store_n(Address, Val, Ordering, MemScope);
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
-V mul(Ty *Address, V Val, atomic::OrderingTy Ordering) {
+V mul(Ty *Address, V Val, atomic::OrderingTy Ordering,
+      MemScopeTy MemScope = MemScopeTy::device) {
   Ty TypedCurrentVal, TypedResultVal, TypedNewVal;
   bool Success;
   do {
     TypedCurrentVal = atomic::load(Address, Ordering);
     TypedNewVal = TypedCurrentVal * Val;
     Success = atomic::cas(Address, TypedCurrentVal, TypedNewVal, Ordering,
-                          atomic::relaxed);
+                          atomic::relaxed, MemScope);
   } while (!Success);
   return TypedResultVal;
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
 utils::enable_if_t<!utils::is_floating_point_v<V>, V>
-max(Ty *Address, V Val, atomic::OrderingTy Ordering) {
-  return __scoped_atomic_fetch_max(Address, Val, Ordering,
-                                   __MEMORY_SCOPE_DEVICE);
+max(Ty *Address, V Val, atomic::OrderingTy Ordering,
+    MemScopeTy MemScope = MemScopeTy::device) {
+  return __scoped_atomic_fetch_max(Address, Val, Ordering, MemScope);
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
 utils::enable_if_t<utils::is_same_v<V, float>, V>
-max(Ty *Address, V Val, atomic::OrderingTy Ordering) {
+max(Ty *Address, V Val, atomic::OrderingTy Ordering,
+    MemScopeTy MemScope = MemScopeTy::device) {
   if (Val >= 0)
-    return utils::bitCast<float>(
-        max((int32_t *)Address, utils::bitCast<int32_t>(Val), Ordering));
-  return utils::bitCast<float>(
-      min((uint32_t *)Address, utils::bitCast<uint32_t>(Val), Ordering));
+    return utils::bitCast<float>(max(
+        (int32_t *)Address, utils::bitCast<int32_t>(Val), Ordering, MemScope));
+  return utils::bitCast<float>(min(
+      (uint32_t *)Address, utils::bitCast<uint32_t>(Val), Ordering, MemScope));
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
 utils::enable_if_t<utils::is_same_v<V, double>, V>
-max(Ty *Address, V Val, atomic::OrderingTy Ordering) {
+max(Ty *Address, V Val, atomic::OrderingTy Ordering,
+    MemScopeTy MemScope = MemScopeTy::device) {
   if (Val >= 0)
-    return utils::bitCast<double>(
-        max((int64_t *)Address, utils::bitCast<int64_t>(Val), Ordering));
-  return utils::bitCast<double>(
-      min((uint64_t *)Address, utils::bitCast<uint64_t>(Val), Ordering));
+    return utils::bitCast<double>(max(
+        (int64_t *)Address, utils::bitCast<int64_t>(Val), Ordering, MemScope));
+  return utils::bitCast<double>(min(
+      (uint64_t *)Address, utils::bitCast<uint64_t>(Val), Ordering, MemScope));
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
 utils::enable_if_t<!utils::is_floating_point_v<V>, V>
-min(Ty *Address, V Val, atomic::OrderingTy Ordering) {
-  return __scoped_atomic_fetch_min(Address, Val, Ordering,
-                                   __MEMORY_SCOPE_DEVICE);
+min(Ty *Address, V Val, atomic::OrderingTy Ordering,
+    MemScopeTy MemScope = MemScopeTy::device) {
+  return __scoped_atomic_fetch_min(Address, Val, Ordering, MemScope);
 }
 
 // TODO: Implement this with __atomic_fetch_max and remove the duplication.
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
 utils::enable_if_t<utils::is_same_v<V, float>, V>
-min(Ty *Address, V Val, atomic::OrderingTy Ordering) {
+min(Ty *Address, V Val, atomic::OrderingTy Ordering,
+    MemScopeTy MemScope = MemScopeTy::device) {
   if (Val >= 0)
-    return utils::bitCast<float>(
-        min((int32_t *)Address, utils::bitCast<int32_t>(Val), Ordering));
-  return utils::bitCast<float>(
-      max((uint32_t *)Address, utils::bitCast<uint32_t>(Val), Ordering));
+    return utils::bitCast<float>(min(
+        (int32_t *)Address, utils::bitCast<int32_t>(Val), Ordering, MemScope));
+  return utils::bitCast<float>(max(
+      (uint32_t *)Address, utils::bitCast<uint32_t>(Val), Ordering, MemScope));
 }
 
 // TODO: Implement this with __atomic_fetch_max and remove the duplication.
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
 utils::enable_if_t<utils::is_same_v<V, double>, V>
-min(Ty *Address, utils::remove_addrspace_t<Ty> Val,
-    atomic::OrderingTy Ordering) {
+min(Ty *Address, utils::remove_addrspace_t<Ty> Val, atomic::OrderingTy Ordering,
+    MemScopeTy MemScope = MemScopeTy::device) {
   if (Val >= 0)
-    return utils::bitCast<double>(
-        min((int64_t *)Address, utils::bitCast<int64_t>(Val), Ordering));
-  return utils::bitCast<double>(
-      max((uint64_t *)Address, utils::bitCast<uint64_t>(Val), Ordering));
+    return utils::bitCast<double>(min(
+        (int64_t *)Address, utils::bitCast<int64_t>(Val), Ordering, MemScope));
+  return utils::bitCast<double>(max(
+      (uint64_t *)Address, utils::bitCast<uint64_t>(Val), Ordering, MemScope));
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
-V bit_or(Ty *Address, V Val, atomic::OrderingTy Ordering) {
-  return __scoped_atomic_fetch_or(Address, Val, Ordering,
-                                  __MEMORY_SCOPE_DEVICE);
+V bit_or(Ty *Address, V Val, atomic::OrderingTy Ordering,
+         MemScopeTy MemScope = MemScopeTy::device) {
+  return __scoped_atomic_fetch_or(Address, Val, Ordering, MemScope);
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
-V bit_and(Ty *Address, V Val, atomic::OrderingTy Ordering) {
-  return __scoped_atomic_fetch_and(Address, Val, Ordering,
-                                   __MEMORY_SCOPE_DEVICE);
+V bit_and(Ty *Address, V Val, atomic::OrderingTy Ordering,
+          MemScopeTy MemScope = MemScopeTy::device) {
+  return __scoped_atomic_fetch_and(Address, Val, Ordering, MemScope);
 }
 
 template <typename Ty, typename V = utils::remove_addrspace_t<Ty>>
-V bit_xor(Ty *Address, V Val, atomic::OrderingTy Ordering) {
-  return __scoped_atomic_fetch_xor(Address, Val, Ordering,
-                                   __MEMORY_SCOPE_DEVICE);
+V bit_xor(Ty *Address, V Val, atomic::OrderingTy Ordering,
+          MemScopeTy MemScope = MemScopeTy::device) {
+  return __scoped_atomic_fetch_xor(Address, Val, Ordering, MemScope);
 }
 
-static inline uint32_t atomicExchange(uint32_t *Address, uint32_t Val,
-                                      atomic::OrderingTy Ordering) {
+static inline uint32_t
+atomicExchange(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
+               MemScopeTy MemScope = MemScopeTy::device) {
   uint32_t R;
-  __scoped_atomic_exchange(Address, &Val, &R, Ordering, __MEMORY_SCOPE_DEVICE);
+  __scoped_atomic_exchange(Address, &Val, &R, Ordering, MemScope);
   return R;
 }
 

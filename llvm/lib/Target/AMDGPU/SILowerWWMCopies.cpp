@@ -43,6 +43,9 @@ public:
   StringRef getPassName() const override { return "SI Lower WWM Copies"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
+    AU.addUsedIfAvailable<SlotIndexesWrapperPass>();
+    AU.addUsedIfAvailable<VirtRegMapWrapperLegacy>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }

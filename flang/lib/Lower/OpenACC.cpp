@@ -352,7 +352,7 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
     Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
         [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
-    Fortran::lower::AddrAndBoundsInfo info =
+    fir::factory::AddrAndBoundsInfo info =
         Fortran::lower::gatherDataOperandAddrAndBounds<
             mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
             converter, builder, semanticsContext, stmtCtx, symbol, designator,
@@ -392,7 +392,7 @@ static void genDeclareDataOperandOperations(
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
     Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
         [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
-    Fortran::lower::AddrAndBoundsInfo info =
+    fir::factory::AddrAndBoundsInfo info =
         Fortran::lower::gatherDataOperandAddrAndBounds<
             mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
             converter, builder, semanticsContext, stmtCtx, symbol, designator,
@@ -855,7 +855,7 @@ genPrivatizations(const Fortran::parser::AccObjectList &objectList,
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
     Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
         [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
-    Fortran::lower::AddrAndBoundsInfo info =
+    fir::factory::AddrAndBoundsInfo info =
         Fortran::lower::gatherDataOperandAddrAndBounds<
             mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
             converter, builder, semanticsContext, stmtCtx, symbol, designator,
@@ -1436,7 +1436,7 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
     Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
         [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
-    Fortran::lower::AddrAndBoundsInfo info =
+    fir::factory::AddrAndBoundsInfo info =
         Fortran::lower::gatherDataOperandAddrAndBounds<
             mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
             converter, builder, semanticsContext, stmtCtx, symbol, designator,

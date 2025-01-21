@@ -66,13 +66,13 @@ public:
   // Try to heuristically resolve a dependent nested name specifier
   // to the type it likely denotes. Note that *dependent* name specifiers always
   // denote types, not namespaces.
-  const Type *
+  QualType
   resolveNestedNameSpecifierToType(const NestedNameSpecifier *NNS) const;
 
   // Given the type T of a dependent expression that appears of the LHS of a
   // "->", heuristically find a corresponding pointee type in whose scope we
   // could look up the name appearing on the RHS.
-  const Type *getPointeeType(const Type *T) const;
+  const QualType getPointeeType(QualType T) const;
 
 private:
   ASTContext &Ctx;

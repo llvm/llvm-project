@@ -611,8 +611,7 @@ static Register buildMemSemanticsReg(Register SemanticsRegister,
     Semantics =
         getSPIRVMemSemantics(Order) |
         getMemSemanticsForStorageClass(GR->getPointerStorageClass(PtrRegister));
-
-    if (Order == Semantics) {
+    if (static_cast<unsigned>(Order) == Semantics) {
       MRI->setRegClass(SemanticsRegister, &SPIRV::iIDRegClass);
       return SemanticsRegister;
     }
@@ -757,9 +756,9 @@ static bool buildAtomicCompareExchangeInst(
         static_cast<std::memory_order>(getIConstVal(Call->Arguments[4], MRI));
     MemSemEqual = getSPIRVMemSemantics(MemOrdEq) | MemSemStorage;
     MemSemUnequal = getSPIRVMemSemantics(MemOrdNeq) | MemSemStorage;
-    if (MemOrdEq == MemSemEqual)
+    if (static_cast<unsigned>(MemOrdEq) == MemSemEqual)
       MemSemEqualReg = Call->Arguments[3];
-    if (MemOrdNeq == MemSemEqual)
+    if (static_cast<unsigned>(MemOrdNeq) == MemSemEqual)
       MemSemUnequalReg = Call->Arguments[4];
   }
   if (!MemSemEqualReg.isValid())

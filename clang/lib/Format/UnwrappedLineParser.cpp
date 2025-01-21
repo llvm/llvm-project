@@ -3167,8 +3167,7 @@ void UnwrappedLineParser::parseNamespace() {
 }
 
 void UnwrappedLineParser::parseCppExportBlock() {
-  parseNamespaceOrExportBlock(/*AddLevels=*/Style.ExportBlockIndentation ? 1
-                                                                         : 0);
+  parseNamespaceOrExportBlock(/*AddLevels=*/Style.IndentExportBlock ? 1 : 0);
 }
 
 void UnwrappedLineParser::parseNew() {

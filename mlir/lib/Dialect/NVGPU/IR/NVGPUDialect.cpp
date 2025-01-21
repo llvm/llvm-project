@@ -70,9 +70,9 @@ LogicalResult DeviceAsyncCopyOp::verify() {
   auto srcMemref = llvm::cast<MemRefType>(getSrc().getType());
   auto dstMemref = llvm::cast<MemRefType>(getDst().getType());
 
-  if (!isLastMemrefDimUnitStride(srcMemref))
+  if (!srcMemref.isLastDimUnitStride())
     return emitError("source memref most minor dim must have unit stride");
-  if (!isLastMemrefDimUnitStride(dstMemref))
+  if (!dstMemref.isLastDimUnitStride())
     return emitError("destination memref most minor dim must have unit stride");
   if (!NVGPUDialect::hasSharedMemoryAddressSpace(dstMemref))
     return emitError()

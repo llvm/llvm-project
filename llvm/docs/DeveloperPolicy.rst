@@ -1154,6 +1154,18 @@ acceptable for their contributions.  We feel that a high burden for relicensing
 is good for the project, because contributors do not have to fear that their
 code will be used in a way with which they disagree.
 
+Embedded Copyright or 'Contributed by' Statements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The LLVM project does not accept contributions that include in-source copyright
+notices except where such notices are part of a larger external project being
+added as a vendored dependency.
+
+LLVM source code lives for a long time and is edited by many people, the best
+way to track contributions is through revision control history.
+See the `Attribution of Changes`_ section for more information about attributing
+changes to authors other than the committer.
+
 Relicensing
 -----------
 

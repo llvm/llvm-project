@@ -1903,7 +1903,7 @@ LogicalResult SubgroupMmaLoadMatrixOp::verify() {
   auto operand = resMatrixType.getOperand();
   auto srcMemrefType = llvm::cast<MemRefType>(srcType);
 
-  if (!isLastMemrefDimUnitStride(srcMemrefType))
+  if (!srcMemrefType.isLastDimUnitStride())
     return emitError(
         "expected source memref most minor dim must have unit stride");
 
@@ -1923,7 +1923,7 @@ LogicalResult SubgroupMmaStoreMatrixOp::verify() {
   auto srcMatrixType = llvm::cast<gpu::MMAMatrixType>(srcType);
   auto dstMemrefType = llvm::cast<MemRefType>(dstType);
 
-  if (!isLastMemrefDimUnitStride(dstMemrefType))
+  if (!dstMemrefType.isLastDimUnitStride())
     return emitError(
         "expected destination memref most minor dim must have unit stride");
 

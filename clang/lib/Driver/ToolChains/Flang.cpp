@@ -155,8 +155,10 @@ void Flang::addCodegenOptions(const ArgList &Args,
                    options::OPT_flang_deprecated_no_hlfir,
                    options::OPT_fno_ppc_native_vec_elem_order,
                    options::OPT_fppc_native_vec_elem_order,
-                   options::OPT_ftime_report, options::OPT_ftime_report_EQ,
-                   options::OPT_funroll_loops, options::OPT_fno_unroll_loops});
+                   options::OPT_finit_global_zero,
+                   options::OPT_fno_init_global_zero, options::OPT_ftime_report,
+                   options::OPT_ftime_report_EQ, options::OPT_funroll_loops,
+                   options::OPT_fno_unroll_loops});
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {

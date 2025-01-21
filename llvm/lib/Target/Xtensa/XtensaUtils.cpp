@@ -56,4 +56,17 @@ bool isValidAddrOffset(MachineInstr &MI, int64_t Offset) {
   return isValidAddrOffset(Scale, Offset);
 }
 
+// Verify Special Register
+bool checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits) {
+  switch (RegNo) {
+  case Xtensa::WINDOWBASE:
+  case Xtensa::WINDOWSTART:
+    return FeatureBits[Xtensa::FeatureWindowed];
+  case Xtensa::NoRegister:
+    return false;
+  }
+
+  return true;
+}
+
 } // namespace llvm

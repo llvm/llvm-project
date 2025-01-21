@@ -176,6 +176,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(IndentAccessModifiers);
   CHECK_PARSE_BOOL(IndentCaseBlocks);
   CHECK_PARSE_BOOL(IndentCaseLabels);
+  CHECK_PARSE_BOOL(IndentExportBlock);
   CHECK_PARSE_BOOL(IndentGotoLabels);
   CHECK_PARSE_BOOL(IndentRequiresClause);
   CHECK_PARSE_BOOL_FIELD(IndentRequiresClause, "IndentRequires");

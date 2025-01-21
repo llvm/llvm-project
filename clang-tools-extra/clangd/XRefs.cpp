@@ -2034,9 +2034,10 @@ static void unwrapFindType(
 
   // For smart pointer types, add the underlying type
   if (H)
-    if (const auto* PointeeType = H->getPointeeType(T.getNonReferenceType().getTypePtr())) {
-        unwrapFindType(QualType(PointeeType, 0), H, Out);
-        return Out.push_back(T);
+    if (auto PointeeType = H->getPointeeType(T.getNonReferenceType());
+        !PointeeType.isNull()) {
+      unwrapFindType(PointeeType, H, Out);
+      return Out.push_back(T);
     }
 
   return Out.push_back(T);

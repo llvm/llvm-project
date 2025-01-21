@@ -899,25 +899,40 @@ class VOPC_Class_Profile<list<SchedReadWrite> sched, ValueType src0VT, ValueType
 
 multiclass VOPC_Class_Profile_t16<list<SchedReadWrite> sched> {
   def NAME : VOPC_Class_Profile<sched, f16>;
-  def _t16 : VOPC_Class_Profile<sched, f16, i16> {
+  def _t16 : VOPC_Class_Profile_Base<sched, f16, f16> {
     let IsTrue16 = 1;
     let IsRealTrue16 = 1;
-    let Src1RC32 = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
-    let Src1RC64 = VSrc_b32;
-    let Src0DPP = getVregSrcForVT<Src0VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
-    let Src1DPP = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
-    let Src2DPP = getVregSrcForVT<Src2VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
-    let Src0ModDPP = getSrcModDPP_t16<Src0VT>.ret;
-    let Src1ModDPP = getSrcModDPP_t16<Src1VT>.ret;
-    let Src2ModDPP = getSrcModDPP_t16<Src2VT>.ret;
+    let HasOpSel = 1;
+    let HasModifiers = 1; // All instructions at least have OpSel
+    let DstRC = getVALUDstForVT<DstVT, 1 /*IsTrue16*/, 0 /*IsVOP3Encoding*/>.ret;
+    let Src0RC32 = getVOPSrc0ForVT<Src0VT, 1/*IsTrue16*/, 0/*IsFake16*/>.ret;
+    let Src1RC32 = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 0/*IsFake16*/>.ret;
+    let Src0DPP = getVregSrcForVT<Src0VT, 1/*IsTrue16*/, 0/*IsFake16*/>.ret;
+    let Src1DPP = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 0/*IsFake16*/>.ret;
+    let Src2DPP = getVregSrcForVT<Src2VT, 1/*IsTrue16*/, 0/*IsFake16*/>.ret;
+    let Src0ModDPP = getSrcModDPP_t16<Src0VT, 0/*IsFake16*/>.ret;
+    let Src1ModDPP = getSrcModDPP_t16<Src1VT, 0/*IsFake16*/>.ret;
+    let Src2ModDPP = getSrcModDPP_t16<Src2VT, 0/*IsFake16*/>.ret;
+    let Src0VOP3DPP = VGPRSrc_16;
+    let Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT, 0/*IsFake16*/>.ret;
+    let Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT, 0/*IsFake16*/>.ret;
+
+    let DstRC64 = getVALUDstForVT<DstVT, 1/*IsTrue16*/, 1/*IsVOP3Encoding*/>.ret;
+    let Src0RC64 = getVOP3SrcForVT<Src0VT, 1/*IsTrue16*/>.ret;
+    let Src1RC64 = getVOP3SrcForVT<Src1VT, 1/*IsTrue16*/>.ret;
+    let Src2RC64 = getVOP3SrcForVT<Src2VT, 1/*IsTrue16*/>.ret;
+    let Src0Mod = getSrc0Mod<Src0VT, DstVT, 1/*IsTrue16*/, 0/*IsFake16*/>.ret;
+    let Src1Mod = getSrcMod<Src1VT, 1/*IsTrue16*/, 0/*IsFake16*/>.ret;
+    let Src2Mod = getSrcMod<Src2VT, 1/*IsTrue16*/, 0/*IsFake16*/>.ret;
+    let Src0ModVOP3DPP = getSrc0ModVOP3DPP<Src0VT, DstVT, 0/*IsFake16*/>.ret;
+    let Src1ModVOP3DPP = getSrcModVOP3DPP<Src1VT, 0/*IsFake16*/>.ret;
+    let Src2ModVOP3DPP = getSrcModVOP3DPP<Src2VT, 0/*IsFake16*/>.ret;
   }
   def _fake16 : VOPC_Class_Profile_Base<sched, f16, f16> {
     let IsTrue16 = 1;
     let DstRC = getVALUDstForVT_fake16<DstVT>.ret;
-    let DstRC64 = getVALUDstForVT<DstVT>.ret;
     let Src0RC32 = getVOPSrc0ForVT<Src0VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
     let Src1RC32 = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
-    let Src1RC64 = VSrc_b32;
     let Src0DPP = getVregSrcForVT<Src0VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
     let Src1DPP = getVregSrcForVT<Src1VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
     let Src2DPP = getVregSrcForVT<Src2VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
@@ -927,6 +942,14 @@ multiclass VOPC_Class_Profile_t16<list<SchedReadWrite> sched> {
     let Src0VOP3DPP = VGPRSrc_32;
     let Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT, 1/*IsFake16*/>.ret;
     let Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT, 1/*IsFake16*/>.ret;
+
+    let DstRC64 = getVALUDstForVT<DstVT>.ret;
+    let Src0RC64 = getVOP3SrcForVT<Src0VT, 0/*IsTrue16*/>.ret;
+    let Src1RC64 = getVOP3SrcForVT<Src1VT, 0/*IsTrue16*/>.ret;
+    let Src2RC64 = getVOP3SrcForVT<Src2VT, 0/*IsTrue16*/>.ret;
+    let Src0Mod = getSrc0Mod<Src0VT, DstVT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
+    let Src1Mod = getSrcMod<Src1VT, 0/*IsTrue16*/, 1/*IsFake16*/>.ret;
+    let Src2Mod = getSrcMod<Src2VT, 0/*IsTrue16*/, 1/*IsFake16*/>.ret;
     let Src0ModVOP3DPP = getSrc0ModVOP3DPP<Src0VT, DstVT, 1/*IsFake16*/>.ret;
     let Src1ModVOP3DPP = getSrcModVOP3DPP<Src1VT, 1/*IsFake16*/>.ret;
     let Src2ModVOP3DPP = getSrcModVOP3DPP<Src2VT, 1/*IsFake16*/>.ret;
@@ -1838,22 +1861,22 @@ multiclass VOPCX_Real_t16_and_fake16_gfx11_gfx12<bits<9> op, string asm_name,
   defm _fake16: VOPCX_Real_t16_gfx11_gfx12<op, asm_name, OpName#"_fake16", pseudo_mnemonic>;
 }
 
-defm V_CMP_F_F16_fake16      : VOPC_Real_t16_gfx11<0x000, "v_cmp_f_f16">;
+defm V_CMP_F_F16             : VOPC_Real_t16_and_fake16_gfx11<0x000, "v_cmp_f_f16">;
 defm V_CMP_LT_F16            : VOPC_Real_t16_and_fake16_gfx11_gfx12<0x001, "v_cmp_lt_f16">;
-defm V_CMP_EQ_F16_fake16     : VOPC_Real_t16_gfx11_gfx12<0x002, "v_cmp_eq_f16">;
-defm V_CMP_LE_F16_fake16     : VOPC_Real_t16_gfx11_gfx12<0x003, "v_cmp_le_f16">;
-defm V_CMP_GT_F16_fake16     : VOPC_Real_t16_gfx11_gfx12<0x004, "v_cmp_gt_f16">;
-defm V_CMP_LG_F16_fake16     : VOPC_Real_t16_gfx11_gfx12<0x005, "v_cmp_lg_f16">;
-defm V_CMP_GE_F16_fake16     : VOPC_Real_t16_gfx11_gfx12<0x006, "v_cmp_ge_f16">;
-defm V_CMP_O_F16_fake16      : VOPC_Real_t16_gfx11_gfx12<0x007, "v_cmp_o_f16">;
-defm V_CMP_U_F16_fake16      : VOPC_Real_t16_gfx11_gfx12<0x008, "v_cmp_u_f16">;
-defm V_CMP_NGE_F16_fake16    : VOPC_Real_t16_gfx11_gfx12<0x009, "v_cmp_nge_f16">;
-defm V_CMP_NLG_F16_fake16    : VOPC_Real_t16_gfx11_gfx12<0x00a, "v_cmp_nlg_f16">;
-defm V_CMP_NGT_F16_fake16    : VOPC_Real_t16_gfx11_gfx12<0x00b, "v_cmp_ngt_f16">;
-defm V_CMP_NLE_F16_fake16    : VOPC_Real_t16_gfx11_gfx12<0x00c, "v_cmp_nle_f16">;
-defm V_CMP_NEQ_F16_fake16    : VOPC_Real_t16_gfx11_gfx12<0x00d, "v_cmp_neq_f16">;
-defm V_CMP_NLT_F16_fake16    : VOPC_Real_t16_gfx11_gfx12<0x00e, "v_cmp_nlt_f16">;
-defm V_CMP_T_F16_fake16      : VOPC_Real_t16_gfx11<0x00f, "v_cmp_t_f16", "V_CMP_TRU_F16_fake16", "v_cmp_tru_f16">;
+defm V_CMP_EQ_F16            : VOPC_Real_t16_and_fake16_gfx11_gfx12<0x002, "v_cmp_eq_f16">;
+defm V_CMP_LE_F16            : VOPC_Real_t16_and_fake16_gfx11_gfx12<0x003, "v_cmp_le_f16">;
+defm V_CMP_GT_F16            : VOPC_Real_t16_and_fake16_gfx11_gfx12<0x004, "v_cmp_gt_f16">;
+defm V_CMP_LG_F16            : VOPC_Real_t16_and_fake16_gfx11_gfx12<0x005, "v_cmp_lg_f16">;
+defm V_CMP_GE_F16            : VOPC_Real_t16_and_fake16_gfx11_gfx12<0x006, "v_cmp_ge_f16">;
+defm V_CMP_O_F16             : VOPC_Real_t16_and_fake16_gfx11_gfx12<0x007, "v_cmp_o_f16">;
+defm V_CMP_U_F16             : VOPC_Real_t16_and_fake16_gfx11_gfx12<0x008, "v_cmp_u_f16">;
+defm V_CMP_NGE_F16           : VOPC_Real_t16_and_fake16_gfx11_gfx12<0x009, "v_cmp_nge_f16">;
+defm V_CMP_NLG_F16           : VOPC_Real_t16_and_fake16_gfx11_gfx12<0x00a, "v_cmp_nlg_f16">;
+defm V_CMP_NGT_F16           : VOPC_Real_t16_and_fake16_gfx11_gfx12<0x00b, "v_cmp_ngt_f16">;
+defm V_CMP_NLE_F16           : VOPC_Real_t16_and_fake16_gfx11_gfx12<0x00c, "v_cmp_nle_f16">;
+defm V_CMP_NEQ_F16           : VOPC_Real_t16_and_fake16_gfx11_gfx12<0x00d, "v_cmp_neq_f16">;
+defm V_CMP_NLT_F16           : VOPC_Real_t16_and_fake16_gfx11_gfx12<0x00e, "v_cmp_nlt_f16">;
+defm V_CMP_T_F16             : VOPC_Real_t16_and_fake16_gfx11<0x00f, "v_cmp_t_f16", "V_CMP_TRU_F16", "v_cmp_tru_f16">;
 
 defm V_CMP_F_F32      : VOPC_Real_gfx11<0x010>;
 defm V_CMP_LT_F32     : VOPC_Real_gfx11_gfx12<0x011>;
@@ -1920,7 +1943,7 @@ defm V_CMP_NE_U64     : VOPC_Real_gfx11_gfx12<0x05d>;
 defm V_CMP_GE_U64     : VOPC_Real_gfx11_gfx12<0x05e>;
 defm V_CMP_T_U64      : VOPC_Real_gfx11<0x05f>;
 
-defm V_CMP_CLASS_F16_fake16 : VOPC_Real_t16_gfx11_gfx12<0x07d, "v_cmp_class_f16">;
+defm V_CMP_CLASS_F16     : VOPC_Real_t16_and_fake16_gfx11_gfx12<0x07d, "v_cmp_class_f16">;
 defm V_CMP_CLASS_F32     : VOPC_Real_gfx11_gfx12<0x07e>;
 defm V_CMP_CLASS_F64     : VOPC_Real_gfx11_gfx12<0x07f>;
 

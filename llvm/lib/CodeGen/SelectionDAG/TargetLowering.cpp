@@ -10959,12 +10959,9 @@ void TargetLowering::forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl,
     // The high part is obtained by SRA'ing all but one of the bits of low
     // part.
     unsigned LoSize = VT.getFixedSizeInBits();
-    HiLHS = DAG.getNode(
-        ISD::SRA, dl, VT, LHS,
-        DAG.getConstant(LoSize - 1, dl, getPointerTy(DAG.getDataLayout())));
-    HiRHS = DAG.getNode(
-        ISD::SRA, dl, VT, RHS,
-        DAG.getConstant(LoSize - 1, dl, getPointerTy(DAG.getDataLayout())));
+    SDValue Shift = DAG.getShiftAmountConstant(LoSize - 1, VT, dl);
+    HiLHS = DAG.getNode(ISD::SRA, dl, VT, LHS, Shift);
+    HiRHS = DAG.getNode(ISD::SRA, dl, VT, RHS, Shift);
   } else {
     HiLHS = DAG.getConstant(0, dl, VT);
     HiRHS = DAG.getConstant(0, dl, VT);

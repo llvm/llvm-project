@@ -3503,6 +3503,34 @@ uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) {
     encodeTypeForFunctionPointerAuth(*this, Out, T);
   } else {
     T = T.getUnqualifiedType();
+    // Calls to member function pointers don't need to worry about
+    // language interop or the laxness of the C type compatibility rules.
+    // We just mangle the member pointer type directly, which is
+    // implicitly much stricter about type matching. However, we do
+    // strip any top-level exception specification before this mangling.
+    // C++23 requires calls to work when the function type is convertible
+    // to the pointer type by a function pointer conversion, which can
+    // change the exception specification. This does not technically
+    // require the exception specification to not affect representation,
+    // because the function pointer conversion is still always a direct
+    // value conversion and therefore an opportunity to resign the
+    // pointer. (This is in contrast to e.g. qualification conversions,
+    // which can be applied in nested pointer positions, effectively
+    // requiring qualified and unqualified representations to match.)
+    // However, it is pragmatic to ignore exception specifications
+    // because it allows a certain amount of `noexcept` mismatching
+    // to not become a visible ODR problem. This also leaves some
+    // room for the committee to add laxness to function pointer
+    // conversions in future standards.
+    if (auto *MPT = T->getAs<MemberPointerType>())
+      if (MPT->isMemberFunctionPointer()) {
+        QualType PointeeType = MPT->getPointeeType();
+        if (PointeeType->castAs<FunctionProtoType>()->getExceptionSpecType() !=
+            EST_None) {
+          QualType FT = getFunctionTypeWithExceptionSpec(PointeeType, EST_None);
+          T = getMemberPointerType(FT, MPT->getClass());
+        }
+      }
     std::unique_ptr<MangleContext> MC(createMangleContext());
     MC->mangleCanonicalTypeName(T, Out);
   }

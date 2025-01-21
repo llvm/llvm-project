@@ -13,9 +13,11 @@
 
 #include "omptarget.h"
 
+#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
+
 #include <cstdint>
 #include <cstdlib>
 
@@ -91,11 +93,11 @@ int main(int argc, char **argv) {
   void *BAllocStart = reinterpret_cast<void *>(
       JsonKernelInfo->getAsObject()->getInteger("BumpAllocVAStart").value());
 
-  __tgt_offload_entry KernelEntry = {nullptr, nullptr, 0, 0, 0};
+  llvm::offloading::EntryTy KernelEntry = {nullptr, nullptr, 0, 0, 0};
   std::string KernelEntryName = KernelFunc.value().str();
-  KernelEntry.name = const_cast<char *>(KernelEntryName.c_str());
+  KernelEntry.SymbolName = const_cast<char *>(KernelEntryName.c_str());
   // Anything non-zero works to uniquely identify the kernel.
-  KernelEntry.addr = (void *)0x1;
+  KernelEntry.Address = (void *)0x1;
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> ImageMB =
       MemoryBuffer::getFile(KernelEntryName + ".image", /*isText=*/false,
@@ -164,7 +166,7 @@ int main(int argc, char **argv) {
   }
 
   __tgt_target_kernel_replay(
-      /*Loc=*/nullptr, DeviceId, KernelEntry.addr, (char *)recored_data,
+      /*Loc=*/nullptr, DeviceId, KernelEntry.Address, (char *)recored_data,
       DeviceMemoryMB.get()->getBufferSize(), TgtArgs.data(),
       TgtArgOffsets.data(), NumArgs.value(), NumTeams, NumThreads,
       LoopTripCount.value());

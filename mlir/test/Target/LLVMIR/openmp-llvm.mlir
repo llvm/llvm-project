@@ -3171,6 +3171,18 @@ module attributes {omp.is_target_device = true} {
 
 // -----
 
+llvm.func @omp_task_untied() {
+  // The third argument is 0: which signifies the untied task
+  // CHECK: {{.*}} = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 %{{.*}}, i32 0,
+  // CHECK-SAME:     i64 40, i64 0, ptr @{{.*}})
+  omp.task untied {
+        omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
 // Third argument is 5: essentially (4 || 1)
 // signifying this task is TIED and MERGEABLE
 
