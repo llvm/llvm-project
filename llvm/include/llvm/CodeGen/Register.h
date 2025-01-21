@@ -160,6 +160,37 @@ template <> struct DenseMapInfo<Register> {
   }
 };
 
+/// Wrapper class representing a virtual register or register unit.
+class RegisterUnit {
+  unsigned RegUnit;
+
+public:
+  constexpr explicit RegisterUnit(MCRegUnit Unit) : RegUnit(Unit) {
+    assert(!Register::isVirtualRegister(RegUnit));
+  }
+  constexpr explicit RegisterUnit(Register Reg) : RegUnit(Reg.id()) {
+    assert(Reg.isVirtual());
+  }
+
+  constexpr bool isVirtual() const {
+    return Register::isVirtualRegister(RegUnit);
+  }
+
+  constexpr MCRegUnit asMCRegUnit() const {
+    assert(!isVirtual() && "Not a register unit");
+    return RegUnit;
+  }
+
+  constexpr Register asVirtualReg() const {
+    assert(isVirtual() && "Not a virtual register");
+    return Register(RegUnit);
+  }
+
+  constexpr bool operator==(const RegisterUnit &Other) const {
+    return RegUnit == Other.RegUnit;
+  }
+};
+
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_REGISTER_H
