@@ -2152,7 +2152,7 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
       auto *NewVecTy =
           CGM.getABIInfo().getOptimalVectorMemoryType(VecTy, getLangOpts());
       if (!ClangVecTy->isExtVectorBoolType() && VecTy != NewVecTy) {
-        SmallVector<int, 4> Mask(NewVecTy->getNumElements(), -1);
+        SmallVector<int, 16> Mask(NewVecTy->getNumElements(), -1);
         std::iota(Mask.begin(), Mask.begin() + VecTy->getNumElements(), 0);
         Value = Builder.CreateShuffleVector(Value, Mask, "extractVec");
         SrcTy = NewVecTy;
