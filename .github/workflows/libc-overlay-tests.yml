@@ -19,22 +19,27 @@ jobs:
         include:
           # TODO: add linux gcc when it is fixed
           - os: ubuntu-24.04
+            ccache-variant: sccache
             compiler:
               c_compiler: clang
               cpp_compiler: clang++
           - os: ubuntu-24.04-arm
+            ccache-variant: ccache
             compiler:
               c_compiler: clang
               cpp_compiler: clang++
           - os: windows-2022
+            ccache-variant: sccache
             compiler:
               c_compiler: clang-cl
               cpp_compiler: clang-cl
           - os: windows-2025
+            ccache-variant: sccache
             compiler:
               c_compiler: clang-cl
               cpp_compiler: clang-cl
           - os: macos-14
+            ccache-variant: sccache
             compiler:
               c_compiler: clang
               cpp_compiler: clang++
@@ -51,11 +56,10 @@ jobs:
     # frequent small object writes.
     - name: Setup ccache
       uses: hendrikmuhs/ccache-action@v1
-      if: runner.arch == 'X64'
       with:
         max-size: 1G
         key: libc_overlay_build_${{ matrix.os }}_${{ matrix.compiler.c_compiler }}
-        variant: sccache
+        variant: ${{ matrix.ccache-variant }}
     
     # MPFR is required by some of the mathlib tests.
     - name: Prepare dependencies (Ubuntu)
@@ -63,11 +67,6 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev ninja-build
-        if [[ $(uname -m) == 'aarch64' ]]; then
-          wget https://github.com/mozilla/sccache/releases/download/v0.9.1/sccache-v0.9.1-aarch64-unknown-linux-musl.tar.gz
-          tar xvaf sccache-v0.9.1-aarch64-unknown-linux-musl.tar.gz
-          sudo cp sccache-v0.9.1-aarch64-unknown-linux-musl/sccache /usr/bin
-        fi
     
     # Chocolatey is shipped with Windows runners. Windows Server 2025 recommends WinGet.
     # Consider migrating to WinGet when Windows Server 2025 is available.
