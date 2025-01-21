@@ -147,7 +147,7 @@ class GsymCreator {
   bool IsSegment = false;
   bool Finalized = false;
   bool Quiet;
-  // Specifies weather the input might contain merged functions
+  // Specifies whether the input might contain merged functions
   bool InputHasMergedFunctions;
 
   /// Get the first function start address.
