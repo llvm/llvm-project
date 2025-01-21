@@ -1987,8 +1987,8 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
     // Boolean vectors use `iN` as storage type.
     if (ClangVecTy->isExtVectorBoolType()) {
       if (getLangOpts().HLSL) {
-	llvm::Value *Value = Builder.CreateLoad(Addr, Volatile, "load_boolvec");
-	return EmitFromMemory(Value, Ty);
+        llvm::Value *Value = Builder.CreateLoad(Addr, Volatile, "load_boolvec");
+        return EmitFromMemory(Value, Ty);
       }
       llvm::Type *ValTy = ConvertType(Ty);
       unsigned ValNumElems =
@@ -2090,7 +2090,7 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
     const auto *RawIntTy = Value->getType();
     if (getLangOpts().HLSL)
       return Builder.CreateTrunc(Value, ConvertType(Ty), "loadedv");
-	
+
     // Bitcast iP --> <P x i1>.
     auto *PaddedVecTy = llvm::FixedVectorType::get(
         Builder.getInt1Ty(), RawIntTy->getPrimitiveSizeInBits());
@@ -2429,9 +2429,10 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
                                             Dst.isVolatileQualified());
       llvm::Type *OldVecTy = Vec->getType();
       if (getLangOpts().HLSL && Dst.getType()->isExtVectorBoolType())
-        
-	Vec = Builder.CreateTrunc(Vec, ConvertType(Dst.getType()), "truncboolv");
-      
+
+        Vec =
+            Builder.CreateTrunc(Vec, ConvertType(Dst.getType()), "truncboolv");
+
       auto *IRStoreTy = dyn_cast<llvm::IntegerType>(Vec->getType());
       if (IRStoreTy) {
         auto *IRVecTy = llvm::FixedVectorType::get(
@@ -2447,8 +2448,8 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
       }
 
       if (getLangOpts().HLSL && Dst.getType()->isExtVectorBoolType())
-	Vec = Builder.CreateZExt(Vec, OldVecTy);
-      
+        Vec = Builder.CreateZExt(Vec, OldVecTy);
+
       Builder.CreateStore(Vec, Dst.getVectorAddress(),
                           Dst.isVolatileQualified());
       return;
