@@ -3505,23 +3505,53 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   default:
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
                                          Op2Info);
+  case ISD::SREM:
   case ISD::SDIV:
-    if (Op2Info.isConstant() && Op2Info.isUniform() && Op2Info.isPowerOf2()) {
-      // On AArch64, scalar signed division by constants power-of-two are
-      // normally expanded to the sequence ADD + CMP + SELECT + SRA.
-      // The OperandValue properties many not be same as that of previous
-      // operation; conservatively assume OP_None.
-      InstructionCost Cost = getArithmeticInstrCost(
-          Instruction::Add, Ty, CostKind,
-          Op1Info.getNoProps(), Op2Info.getNoProps());
-      Cost += getArithmeticInstrCost(Instruction::Sub, Ty, CostKind,
-                                     Op1Info.getNoProps(), Op2Info.getNoProps());
-      Cost += getArithmeticInstrCost(
-          Instruction::Select, Ty, CostKind,
-          Op1Info.getNoProps(), Op2Info.getNoProps());
-      Cost += getArithmeticInstrCost(Instruction::AShr, Ty, CostKind,
-                                     Op1Info.getNoProps(), Op2Info.getNoProps());
-      return Cost;
+    /*
+    For sdiv, typical sequence of instructions as per the type and divisor
+    property is as follows:
+    Scalar power-of-2: cmp + csel + asr
+    Vector power-of-2: usra + sshr
+
+    Scalar non-power-2: smulh/smull + asr/lsr + add/sub + asr + add
+    Vector non-power-2:
+      a) <2 x i64>: 2 * (smulh + asr + add)   --> This yeilds scalarized form.
+      b) <4 x i32>: smull2 + smull + uzp2 + add + sshr + usra
+
+    SVE versions should have more or less the same cost because sometimes they
+    yeild native sdiv instructions, which should have less cost or the same
+    sequence of neon instructions.
+
+    For srem, typical sequence of instructions as per the type and divisor
+    property is as follows:
+    Scalar version: <set of sdiv instructions> + msub
+    Vector version: <set of sdiv instructions> + 2-msub/mls
+    */
+    if (Op2Info.isConstant()) {
+      InstructionCost AsrCost =
+          getArithmeticInstrCost(Instruction::AShr, Ty, CostKind,
+                                 Op1Info.getNoProps(), Op2Info.getNoProps());
+      InstructionCost AddCost =
+          getArithmeticInstrCost(Instruction::Add, Ty, CostKind,
+                                 Op1Info.getNoProps(), Op2Info.getNoProps());
+      InstructionCost MulCost =
+          getArithmeticInstrCost(Instruction::Mul, Ty, CostKind,
+                                 Op1Info.getNoProps(), Op2Info.getNoProps());
+
+      bool HasSMUL = !Op2Info.isPowerOf2();
+      unsigned NumOfSMUL = HasSMUL ? (LT.second.isVector() ? 2 : 1) : 0;
+      bool HasExtraAsr =
+          (LT.second.isVector() || LT.second == MVT::i32) && HasSMUL;
+
+      InstructionCost CommonCost = AsrCost + AddCost;
+      // We typicall get 1 msub for scalar and 2-msub/1-mls for the vector form.
+      // Typically, the cost of msub is same and mls is twice as costly as
+      // add/sub/mul.
+      InstructionCost MlsOrMSubCost = (LT.second.isVector() ? 2 : 1) * MulCost;
+      InstructionCost DivCost =
+          CommonCost + (MulCost * NumOfSMUL) /* SMULH/SMULH */ +
+          (AsrCost * HasExtraAsr); // Coming with second SMULH
+      return DivCost + (ISD == ISD::SREM ? MlsOrMSubCost : 0);
     }
     [[fallthrough]];
   case ISD::UDIV: {
