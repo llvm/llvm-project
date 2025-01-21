@@ -9027,10 +9027,7 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
 }
 
 // Collect VPIRInstructions for phis in the exit blocks that are modeled
-// in VPlan and add the exiting VPValue as operand. Some exiting values are not
-// modeled explicitly yet and won't be included. Those are un-truncated
-// VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe and induction
-// increments.
+// in VPlan and add the exiting VPValue as operand.
 static SetVector<VPIRInstruction *>
 collectUsersInExitBlocks(Loop *OrigLoop, VPRecipeBuilder &Builder,
                          VPlan &Plan) {

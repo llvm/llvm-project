@@ -3110,7 +3110,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   } else {
     // Only moving a subset of Edge's ids.
     if (CallerEdgeI)
-      ++CallerEdgeI;
+      ++(*CallerEdgeI);
     // Compute the alloc type of the subset of ids being moved.
     auto CallerEdgeAllocType = computeAllocType(ContextIdsToMove);
     if (ExistingEdgeToNewCallee) {

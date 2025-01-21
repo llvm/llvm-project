@@ -197,7 +197,7 @@ tools = [
 ]
 
 if config.enable_vulkan_runner:
-    tools.extend([add_runtime("vulkan-runtime-wrappers")])
+    tools.extend([add_runtime("mlir_vulkan_runtime")])
 
 if config.enable_rocm_runner:
     tools.extend([add_runtime("mlir_rocm_runtime")])

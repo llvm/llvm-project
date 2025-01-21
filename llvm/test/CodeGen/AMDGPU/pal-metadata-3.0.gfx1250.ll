@@ -53,7 +53,7 @@
 ; CHECK-NEXT:      .cs:
 ; CHECK-NEXT:        .checksum_value: 0x9444d7d0
 ; CHECK-NEXT:        .debug_mode:     false
-; CHECK-NEXT:        .entry_point:    _amdgpu_cs_main
+; CHECK-NEXT:        .entry_point_symbol:    _amdgpu_cs_main
 ; CHECK-NEXT:        .excp_en:        0
 ; CHECK-NEXT:        .float_mode:     0xc0
 ; GFX11-NEXT:        .ieee_mode:      false
@@ -109,7 +109,7 @@
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK-NEXT:      .gs:
 ; CHECK-NEXT:        .debug_mode:     false
-; CHECK-NEXT:        .entry_point:    gs_shader
+; CHECK-NEXT:        .entry_point_symbol:    gs_shader
 ; CHECK-NEXT:      .lds_size:       0x400
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
@@ -119,7 +119,7 @@
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK-NEXT:      .hs:
 ; CHECK-NEXT:        .debug_mode:     false
-; CHECK-NEXT:        .entry_point:    hs_shader
+; CHECK-NEXT:        .entry_point_symbol:    hs_shader
 ; CHECK-NEXT:        .lds_size:       0x1000
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
@@ -129,7 +129,7 @@
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK-NEXT:      .ps:
 ; CHECK-NEXT:        .debug_mode:     false
-; CHECK-NEXT:        .entry_point:    ps_shader
+; CHECK-NEXT:        .entry_point_symbol:    ps_shader
 ; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
