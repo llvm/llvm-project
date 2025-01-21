@@ -9254,7 +9254,7 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, Instruction *&BO,
     switch (Opcode) {
     default:
       continue;
-    // TODO: Expand list -- xor, gep, uadd.sat etc.
+    // TODO: Expand list -- xor, uadd.sat etc.
     case Instruction::LShr:
     case Instruction::AShr:
     case Instruction::Shl:
@@ -9279,12 +9279,11 @@ bool llvm::matchSimpleRecurrence(const PHINode *P, Instruction *&BO,
       break; // Match!
     }
     case Instruction::GetElementPtr: {
-      if (LU->getNumOperands() != 2 ||
-          !cast<GetElementPtrInst>(L)->getSourceElementType()->isIntegerTy(8))
+      Value *LL;
+      Value *LR;
+      if (!match(L, m_PtrAdd(m_Value(LL), m_Value(LR))))
         continue;
 
-      Value *LL = LU->getOperand(0);
-      Value *LR = LU->getOperand(1);
       // Find a recurrence.
       if (LL == P) {
         // Found a match
