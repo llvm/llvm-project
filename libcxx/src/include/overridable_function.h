@@ -62,6 +62,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
 #  define _LIBCPP_OVERRIDABLE_FUNCTION(symbol, type, name, arglist)                                                    \
+    _LIBCPP_WEAK type name arglist;                                                                                    \
     _LIBCPP_WEAK_IMPORT extern type symbol arglist __asm__("_" _LIBCPP_TOSTRING(symbol));                              \
     _LIBCPP_BEGIN_NAMESPACE_STD                                                                                        \
     template <>                                                                                                        \
@@ -69,7 +70,7 @@ _LIBCPP_END_NAMESPACE_STD
       return static_cast<type(*) arglist>(name) != symbol;                                                             \
     }                                                                                                                  \
     _LIBCPP_END_NAMESPACE_STD                                                                                          \
-    _LIBCPP_WEAK type name arglist
+    type name arglist
 
 #elif defined(_LIBCPP_OBJECT_FORMAT_ELF)
 
@@ -82,6 +83,7 @@ _LIBCPP_END_NAMESPACE_STD
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
 #  define _LIBCPP_OVERRIDABLE_FUNCTION(symbol, type, name, arglist)                                                    \
+    _LIBCPP_WEAK type name arglist;                                                                                    \
     _LIBCPP_ALIAS(_LIBCPP_TOSTRING(symbol)) static type symbol arglist __asm__(".L." _LIBCPP_TOSTRING(symbol));        \
     _LIBCPP_BEGIN_NAMESPACE_STD                                                                                        \
     template <>                                                                                                        \
@@ -89,7 +91,7 @@ _LIBCPP_END_NAMESPACE_STD
       return static_cast<type(*) arglist>(name) != symbol;                                                             \
     }                                                                                                                  \
     _LIBCPP_END_NAMESPACE_STD                                                                                          \
-    _LIBCPP_WEAK type name arglist
+    type name arglist
 
 #else
 
