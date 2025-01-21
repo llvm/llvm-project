@@ -133,8 +133,8 @@ void test_NE() {
 // CHECK: fix-it:"{{.*}}macro_with_initializer_list.cpp":{110:9-110:9}:"("
 // CHECK: fix-it:"{{.*}}macro_with_initializer_list.cpp":{110:32-110:32}:")"
 
-#define INIT(var, init) Foo var = init; // expected-note 3{{defined here}}
-// expected-note@-1 2{{'INIT' exists, but as a function-like macro; perhaps, did you forget the parentheses?}}
+#define INIT(var, init) Foo var = init; // expected-note 3{{macro 'INIT' defined here}}
+// expected-note@-1 2{{'INIT' is defined here as a function-like macro; did you mean to write 'INIT(...)'}}
 // Can't use an initializer list as a macro argument.  The commas in the list
 // will be interpretted as argument separaters and adding parenthesis will
 // make it no longer an initializer list.
@@ -166,7 +166,7 @@ void test() {
 #define M(name,a,b,c,d,e,f,g,h,i,j,k,l) \
   Foo name = a + b + c + d + e + f + g + h + i + j + k + l;
 // expected-note@-2 2{{defined here}}
-// expected-note@-3 {{'M' exists, but as a function-like macro; perhaps, did you forget the parentheses?}}
+// expected-note@-3 {{'M' is defined here as a function-like macro; did you mean to write 'M(...)'}}
 void test2() {
   M(F1, Foo(), Foo(), Foo(), Foo(), Foo(), Foo(),
         Foo(), Foo(), Foo(), Foo(), Foo(), Foo());
@@ -181,4 +181,12 @@ void test2() {
   // expected-error@-2 {{too many arguments provided}}
   // expected-error@-3 {{use of undeclared identifier}}
   // expected-note@-4 {{cannot use initializer list at the beginning of a macro argument}}
+}
+
+#define LIM() 10 
+// expected-note@-1 {{'LIM' is defined here as a function-like macro; did you mean to write 'LIM(...)'}}
+
+void test3() {
+  int iter = LIM;
+  // expected-error@-1 {{use of undeclared identifier LIM}}
 }
