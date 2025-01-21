@@ -14510,7 +14510,7 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
                                   Body, OriginalInits))
     return StmtError();
 
-  // Delay tiling to when template is completely instantiated.
+  // Delay striping to when template is completely instantiated.
   if (SemaRef.CurContext->isDependentContext())
     return OMPStripeDirective::Create(Context, StartLoc, EndLoc, Clauses,
                                       NumLoops, AStmt, nullptr, nullptr);
@@ -14544,7 +14544,7 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
     DeclRefExpr *IterVarRef = cast<DeclRefExpr>(LoopHelper.IterationVarRef);
     QualType CntTy = IterVarRef->getType();
 
-    // Iteration variable for the floor (i.e. outer) loop.
+    // Iteration variable for the stripe (i.e. outer) loop.
     {
       std::string FloorCntName =
           (Twine(".floor_") + llvm::utostr(I) + ".iv." + OrigVarName).str();
@@ -14684,10 +14684,10 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
     //   Original_counter_update;
     // }
     // \endcode
-    // FIXME: If the innermost body is an loop itself, inserting these
+    // FIXME: If the innermost body is a loop itself, inserting these
     // statements stops it being recognized  as a perfectly nested loop (e.g.
-    // for applying tiling again). If this is the case, sink the expressions
-    // further into the inner loop.
+    // for applying another loop transformation). If this is the case, sink the
+    // expressions further into the inner loop.
     SmallVector<Stmt *, 4> BodyParts;
     BodyParts.append(LoopHelper.Updates.begin(), LoopHelper.Updates.end());
     if (auto *SourceCXXFor = dyn_cast<CXXForRangeStmt>(LoopStmt))
@@ -14701,14 +14701,14 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
                 LoopHelper.Init->getBeginLoc(), LoopHelper.Inc->getEndLoc());
   }
 
-  // Create floor loops from the inside to the outside.
+  // Create grid loops from the inside to the outside.
   for (int I = NumLoops - 1; I >= 0; --I) {
     auto &LoopHelper = LoopHelpers[I];
     Expr *NumIterations = LoopHelper.NumIterations;
     DeclRefExpr *OrigCntVar = cast<DeclRefExpr>(LoopHelper.Counters[0]);
     QualType IVTy = NumIterations->getType();
 
-    // For init-statement: auto .floor.iv = 0
+    // For init-statement: auto .grid.iv = 0
     SemaRef.AddInitializerToDecl(
         FloorIndVars[I],
         SemaRef.ActOnIntegerConstant(LoopHelper.Init->getExprLoc(), 0).get(),
