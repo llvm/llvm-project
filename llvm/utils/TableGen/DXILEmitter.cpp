@@ -181,9 +181,8 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   Recs = R->getValueAsListOfDefs("properties");
 
   // Get property records
-  for (const Record *CR : Recs) {
+  for (const Record *CR : Recs)
     PropRecs.push_back(CR);
-  }
 
   // Get the operation class
   OpClass = R->getValueAsDef("OpClass")->getName();
@@ -371,7 +370,8 @@ static void emitDXILAttributes(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#endif\n\n";
 }
 
-// Determine which function attributes are set for a dxil version
+// Helper function to determine if the given Attr is defined in the vector
+// Attrs, by comparing the names
 static bool attrIsDefined(std::vector<const Record *> Attrs,
                           const Record *Attr) {
   for (auto CurAttr : Attrs)
@@ -384,6 +384,13 @@ static bool attrIsDefined(std::vector<const Record *> Attrs,
 static void emitDXILOpAttributes(const RecordKeeper &Records,
                                  ArrayRef<DXILOperationDesc> Ops,
                                  raw_ostream &OS) {
+  // A DXIL op can have multiple function attributes that are specific to a
+  // specific DXIL version and higher. AttrRecs models this by grouping the
+  // attributes by the versions. So we will output a macro for each version
+  // number with a table of bools in the following format:
+  //
+  //     OpName, VersionMajor, VersionMinor, FnAttr1, FnAttr2, ...
+  // Eg)    Abs,            1,            0,    true,   false, ...
   OS << "#ifdef DXIL_OP_ATTRIBUTES\n";
   for (const auto &Op : Ops) {
     for (const auto *Rec : Op.AttrRecs) {
@@ -393,7 +400,11 @@ static void emitDXILOpAttributes(const RecordKeeper &Records,
           Rec->getValueAsDef("dxil_version")->getValueAsInt("Minor");
       OS << "DXIL_OP_ATTRIBUTES(dxil::OpCode::" << Op.OpName << ", ";
       OS << std::to_string(Major) << ", " << std::to_string(Minor);
+      // These Attrs are the ones set for above DXIL version
       auto Attrs = Rec->getValueAsListOfDefs("fn_attrs");
+      // We will then iteratre through all possible attributes and mark the
+      // present ones as 'true' and all the others as 'false' to create the
+      // boolean table, eg) true, false, false, false
       for (const Record *Attr :
            Records.getAllDerivedDefinitions("DXILAttribute")) {
         std::string HasAttr = ", false";
@@ -408,7 +419,7 @@ static void emitDXILOpAttributes(const RecordKeeper &Records,
   OS << "#endif\n\n";
 }
 
-/// Emit a list of DXIL op properties and their query functions
+/// Emit a list of DXIL op properties
 static void emitDXILProperties(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef DXIL_PROPERTY\n";
   for (const Record *Prop : Records.getAllDerivedDefinitions("DXILProperty"))

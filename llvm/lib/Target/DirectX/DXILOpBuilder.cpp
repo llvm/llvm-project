@@ -361,6 +361,8 @@ static std::optional<size_t> getPropIndex(ArrayRef<T> PropList,
   return std::nullopt;
 }
 
+// Helper function to pack an OpCode and VersionTuple into a uint64_t for use
+// in a switch statement
 constexpr static uint64_t computeSwitchEnum(dxil::OpCode OpCode,
                                             uint16_t VersionMajor,
                                             uint16_t VersionMinor) {
@@ -368,8 +370,11 @@ constexpr static uint64_t computeSwitchEnum(dxil::OpCode OpCode,
   return (OpCodePack << 32) | (VersionMajor << 16) | VersionMinor;
 }
 
+// Retreive all the set attributes for a DXIL OpCode given the targeted
+// DXILVersion
 static dxil::Attributes getDXILAttributes(dxil::OpCode OpCode,
                                           VersionTuple DXILVersion) {
+  // Instantiate all versions to iterate through
   SmallVector<Version> Versions = {
 #define DXIL_VERSION(MAJOR, MINOR) {MAJOR, MINOR},
 #include "DXILOperation.inc"
@@ -379,6 +384,9 @@ static dxil::Attributes getDXILAttributes(dxil::OpCode OpCode,
   for (auto Version : Versions) {
     if (DXILVersion < VersionTuple(Version.Major, Version.Minor))
       continue;
+
+    // Switch through and match an OpCode with the specific version and set the
+    // corresponding flag(s) if available
     switch (computeSwitchEnum(OpCode, Version.Major, Version.Minor)) {
 #define DXIL_OP_ATTRIBUTES(OpCode, VersionMajor, VersionMinor, ...)            \
   case computeSwitchEnum(OpCode, VersionMajor, VersionMinor): {                \
@@ -392,6 +400,8 @@ static dxil::Attributes getDXILAttributes(dxil::OpCode OpCode,
   return Attributes;
 }
 
+// Retreive the set of DXIL Attributes given the version and map them to an
+// llvm function attribute that is set onto the instruction
 static void setDXILAttributes(CallInst *CI, dxil::OpCode OpCode,
                               VersionTuple DXILVersion) {
   dxil::Attributes Attributes = getDXILAttributes(OpCode, DXILVersion);

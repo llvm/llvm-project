@@ -270,8 +270,8 @@ def removed : DXILShaderStage;
 // DXIL Op attributes
 
 // A function attribute denotes that there is a corresponding LLVM function
-// attribute that will be set when building the DXIL op. The mapping for
-// non-trivial cases is defined by setDXILAttribute in DXILOpBuilder.cpp
+// attribute that will be set when building the DXIL op. The mapping is defined
+// by setDXILAttributes in DXILOpBuilder.cpp
 class DXILAttribute;
 
 def ReadNone : DXILAttribute;
@@ -279,9 +279,9 @@ def ReadOnly : DXILAttribute;
 def NoDuplicate : DXILAttribute;
 def NoReturn : DXILAttribute;
 
-// A property is simply used to mark a DXIL op belongs to a sub-group of
-// DXIL ops, and it is used to query if a particular holds this property.
-// This is used for static analysis of DXIL ops.
+// A property is simply used to mark that a DXIL op belongs to a sub-group of
+// DXIL ops, and it is used to query if a particular op holds this property.
+// This is used for the static analysis of DXIL ops.
 class DXILProperty;
 
 def IsBarrier : DXILProperty;
@@ -797,6 +797,9 @@ def CreateHandle : DXILOp<57, createHandle> {
   let arguments = [Int8Ty, Int32Ty, Int32Ty, Int1Ty];
   let result = HandleTy;
   let stages = [Stages<DXIL1_0, [all_stages]>, Stages<DXIL1_6, [removed]>];
+  // NOTE: The ReadOnly attribute was set for consistency with DXC. However, it
+  // seems like ReadNone may more appropiately describe it. So noted to
+  // consider a change in the future
   let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
 }
 
