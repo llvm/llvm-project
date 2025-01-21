@@ -27,6 +27,7 @@ module {
   cir.global external @alpha = #cir.const_array<[#cir.int<97> : !s8i, #cir.int<98> : !s8i, #cir.int<99> : !s8i, #cir.int<0> : !s8i]> : !cir.array<!s8i x 4>
   cir.global "private" constant internal @".str" = #cir.const_array<"example\00" : !cir.array<!s8i x 8>> : !cir.array<!s8i x 8> {alignment = 1 : i64}
   cir.global external @s = #cir.global_view<@".str"> : !cir.ptr<!s8i>
+  cir.global external @s_addr = #cir.global_view<@".str"> : !u64i
   // MLIR: llvm.mlir.global internal constant @".str"("example\00")
   // MLIR-SAME: {addr_space = 0 : i32, alignment = 1 : i64}
   // MLIR: llvm.mlir.global external @s() {addr_space = 0 : i32} : !llvm.ptr {
@@ -34,8 +35,14 @@ module {
   // MLIR:   %1 = llvm.bitcast %0 : !llvm.ptr to !llvm.ptr
   // MLIR:   llvm.return %1 : !llvm.ptr
   // MLIR: }
+  // MLIR: llvm.mlir.global external @s_addr() {addr_space = 0 : i32} : i64 {
+  // MLIR:   %0 = llvm.mlir.addressof @".str" : !llvm.ptr
+  // MLIR:   %1 = llvm.ptrtoint %0 : !llvm.ptr to i64
+  // MLIR:   llvm.return %1 : i64
+  // MLIR: }
   // LLVM: @.str = internal constant [8 x i8] c"example\00"
   // LLVM: @s = global ptr @.str
+  // LLVM: @s_addr = global i64 ptrtoint (ptr @.str to i64)
   cir.global external @aPtr = #cir.global_view<@a> : !cir.ptr<!s32i>
   // MLIR: llvm.mlir.global external @aPtr() {addr_space = 0 : i32} : !llvm.ptr {
   // MLIR:   %0 = llvm.mlir.addressof @a : !llvm.ptr
@@ -197,5 +204,18 @@ module {
     cir.return
   }
   // MLIR:  %0 = llvm.mlir.addressof @zero_array
+
+  cir.func @global_view_as_integer() -> !u64i {
+    %0 = cir.const #cir.global_view<@".str"> : !u64i
+    cir.return %0 : !u64i
+  }
+  // MLIR-LABEL: @global_view_as_integer
+  // MLIR-NEXT:    %0 = llvm.mlir.addressof @".str" : !llvm.ptr
+  // MLIR-NEXT:    %1 = llvm.ptrtoint %0 : !llvm.ptr to i64
+  // MLIR-NEXT:    llvm.return %1 : i64
+  // MLIR-NEXT:  }
+  // LLVM-LABEL: @global_view_as_integer
+  // LLVM-NEXT:    ret i64 ptrtoint (ptr @.str to i64)
+  // LLVM-NEXT:  }
 
 }

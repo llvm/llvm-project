@@ -698,17 +698,25 @@ lowerCirAttrAsValue(mlir::Operation *parentOp, cir::GlobalViewAttr globalAttr,
                                                 indices, true);
   }
 
-  auto ptrTy = mlir::dyn_cast<cir::PointerType>(globalAttr.getType());
-  assert(ptrTy && "Expecting pointer type in GlobalViewAttr");
-  auto llvmEltTy =
-      convertTypeForMemory(*converter, dataLayout, ptrTy.getPointee());
+  if (auto intTy = mlir::dyn_cast<cir::IntType>(globalAttr.getType())) {
+    auto llvmDstTy = converter->convertType(globalAttr.getType());
+    return rewriter.create<mlir::LLVM::PtrToIntOp>(parentOp->getLoc(),
+                                                   llvmDstTy, addrOp);
+  }
 
-  if (llvmEltTy == sourceType)
-    return addrOp;
+  if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(globalAttr.getType())) {
+    auto llvmEltTy =
+        convertTypeForMemory(*converter, dataLayout, ptrTy.getPointee());
 
-  auto llvmDstTy = converter->convertType(globalAttr.getType());
-  return rewriter.create<mlir::LLVM::BitcastOp>(parentOp->getLoc(), llvmDstTy,
-                                                addrOp);
+    if (llvmEltTy == sourceType)
+      return addrOp;
+
+    auto llvmDstTy = converter->convertType(globalAttr.getType());
+    return rewriter.create<mlir::LLVM::BitcastOp>(parentOp->getLoc(), llvmDstTy,
+                                                  addrOp);
+  }
+
+  llvm_unreachable("Expecting pointer or integer type for GlobalViewAttr");
 }
 
 /// Switches on the type of attribute and calls the appropriate conversion.
@@ -1752,6 +1760,14 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     attr = rewriter.getIntegerAttr(typeConverter->convertType(op.getType()),
                                    value);
   } else if (mlir::isa<cir::IntType>(op.getType())) {
+    // Lower GlobalAddrAttr to llvm.mlir.addressof + llvm.mlir.ptrtoint
+    if (auto ga = mlir::dyn_cast<cir::GlobalViewAttr>(op.getValue())) {
+      auto newOp =
+          lowerCirAttrAsValue(op, ga, rewriter, getTypeConverter(), dataLayout);
+      rewriter.replaceOp(op, newOp);
+      return mlir::success();
+    }
+
     attr = rewriter.getIntegerAttr(
         typeConverter->convertType(op.getType()),
         mlir::cast<cir::IntAttr>(op.getValue()).getValue());

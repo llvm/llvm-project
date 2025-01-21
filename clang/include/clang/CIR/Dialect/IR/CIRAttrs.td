@@ -607,11 +607,16 @@ def GlobalViewAttr : CIR_Attr<"GlobalView", "global_view", [TypedAttrInterface]>
     for `!cir.ptr`, an offset is applied. The first index is relative to the
     original symbol type, not the produced one.
 
+    The result type of this attribute may be an integer type. In such a case,
+    the pointer to the referenced global is casted to an integer and this
+    attribute represents the casted result.
+
     Example:
 
     ```
       cir.global external @s = @".str2": !cir.ptr<i8>
       cir.global external @x = #cir.global_view<@s> : !cir.ptr<i8>
+      cir.global external @s_addr = #cir.global_view<@s> : !s64i
 
       cir.global external @rgb = #cir.const_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 3>>
       cir.global external @elt_ptr = #cir.global_view<@rgb, [1]> : !cir.ptr<i8>
