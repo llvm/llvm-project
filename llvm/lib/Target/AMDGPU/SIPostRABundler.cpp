@@ -47,7 +47,8 @@ public:
 
 class SIPostRABundler {
 public:
-  bool run(MachineFunction &MF); 
+  bool run(MachineFunction &MF);
+
 private:
   const SIRegisterInfo *TRI;
 
@@ -67,7 +68,8 @@ constexpr uint64_t MemFlags = SIInstrFlags::MTBUF | SIInstrFlags::MUBUF |
 
 } // End anonymous namespace.
 
-INITIALIZE_PASS(SIPostRABundlerLegacy, DEBUG_TYPE, "SI post-RA bundler", false, false)
+INITIALIZE_PASS(SIPostRABundlerLegacy, DEBUG_TYPE, "SI post-RA bundler", false,
+                false)
 
 char SIPostRABundlerLegacy::ID = 0;
 
@@ -132,7 +134,8 @@ bool SIPostRABundlerLegacy::runOnMachineFunction(MachineFunction &MF) {
   return SIPostRABundler().run(MF);
 }
 
-PreservedAnalyses SIPostRABundlerPass::run(MachineFunction &MF, MachineFunctionAnalysisManager &) {
+PreservedAnalyses SIPostRABundlerPass::run(MachineFunction &MF,
+                                           MachineFunctionAnalysisManager &) {
   SIPostRABundler().run(MF);
   return PreservedAnalyses::all();
 }
