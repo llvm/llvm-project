@@ -54,7 +54,7 @@ static bool isPossibleIndirectCallTarget(const Function *F) {
         continue;
       }
       if (const auto *Call = dyn_cast<CallBase>(FnUser)) {
-        if ((!Call->isCallee(&U) || U != F) &&
+        if ((!Call->isCallee(&U) || U.get() != F) &&
             !Call->getFunction()->getName().ends_with("$exit_thunk")) {
           // Passing a function pointer to a call may lead to an indirect
           // call. As an exception, ignore ARM64EC exit thunks.
