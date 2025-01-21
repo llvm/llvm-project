@@ -103,12 +103,11 @@ define i64 @test_3() #0 {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ undef, [[BB1]] ], [ undef, [[BB2:%.*]] ]
-; CHECK-NEXT:    [[VAL4:%.*]] = phi i32 [ undef, [[BB1]] ], [ undef, [[BB2]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x i32> [ undef, [[BB1]] ], [ poison, [[BB2:%.*]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <28 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1>
+; CHECK-NEXT:    [[VAL4:%.*]] = extractelement <28 x i32> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <32 x i32> poison, i32 [[VAL4]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i32> [[TMP0]], <32 x i32> poison, <32 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <24 x i32> poison, i32 [[VAL4]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <24 x i32> [[TMP2]], <24 x i32> poison, <24 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v32i32(<32 x i32> [[TMP1]], i64 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v32i32(<32 x i32> [[TMP1]], i64 4)
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v32i32(<32 x i32> [[TMP1]], i64 8)
@@ -124,24 +123,22 @@ define i64 @test_3() #0 {
 ; CHECK-NEXT:    [[RDX_OP4:%.*]] = mul <4 x i32> [[RDX_OP3]], [[TMP9]]
 ; CHECK-NEXT:    [[RDX_OP5:%.*]] = mul <4 x i32> [[RDX_OP4]], [[TMP10]]
 ; CHECK-NEXT:    [[RDX_OP6:%.*]] = mul <4 x i32> [[RDX_OP5]], [[TMP11]]
-; CHECK-NEXT:    [[TMP12:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v24i32(<24 x i32> [[TMP3]], i64 0)
-; CHECK-NEXT:    [[TMP13:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v24i32(<24 x i32> [[TMP3]], i64 4)
-; CHECK-NEXT:    [[TMP14:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v24i32(<24 x i32> [[TMP3]], i64 8)
-; CHECK-NEXT:    [[TMP15:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v24i32(<24 x i32> [[TMP3]], i64 12)
-; CHECK-NEXT:    [[TMP16:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v24i32(<24 x i32> [[TMP3]], i64 16)
-; CHECK-NEXT:    [[TMP17:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v24i32(<24 x i32> [[TMP3]], i64 20)
+; CHECK-NEXT:    [[TMP12:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v28i32(<28 x i32> [[TMP3]], i64 0)
+; CHECK-NEXT:    [[TMP13:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v28i32(<28 x i32> [[TMP3]], i64 4)
+; CHECK-NEXT:    [[TMP14:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v28i32(<28 x i32> [[TMP3]], i64 8)
+; CHECK-NEXT:    [[TMP15:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v28i32(<28 x i32> [[TMP3]], i64 12)
+; CHECK-NEXT:    [[TMP16:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v28i32(<28 x i32> [[TMP3]], i64 16)
+; CHECK-NEXT:    [[TMP20:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v28i32(<28 x i32> [[TMP3]], i64 20)
+; CHECK-NEXT:    [[TMP19:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v28i32(<28 x i32> [[TMP3]], i64 24)
 ; CHECK-NEXT:    [[RDX_OP7:%.*]] = mul <4 x i32> [[RDX_OP6]], [[TMP12]]
 ; CHECK-NEXT:    [[RDX_OP8:%.*]] = mul <4 x i32> [[RDX_OP7]], [[TMP13]]
 ; CHECK-NEXT:    [[RDX_OP9:%.*]] = mul <4 x i32> [[RDX_OP8]], [[TMP14]]
 ; CHECK-NEXT:    [[RDX_OP10:%.*]] = mul <4 x i32> [[RDX_OP9]], [[TMP15]]
 ; CHECK-NEXT:    [[RDX_OP11:%.*]] = mul <4 x i32> [[RDX_OP10]], [[TMP16]]
-; CHECK-NEXT:    [[RDX_OP12:%.*]] = mul <4 x i32> [[RDX_OP11]], [[TMP17]]
+; CHECK-NEXT:    [[RDX_OP13:%.*]] = mul <4 x i32> [[RDX_OP11]], [[TMP20]]
+; CHECK-NEXT:    [[RDX_OP12:%.*]] = mul <4 x i32> [[RDX_OP13]], [[TMP19]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[RDX_OP12]])
-; CHECK-NEXT:    [[OP_RDX23:%.*]] = mul i32 [[TMP18]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX24:%.*]] = mul i32 [[VAL4]], [[VAL4]]
-; CHECK-NEXT:    [[OP_RDX26:%.*]] = mul i32 [[OP_RDX23]], [[OP_RDX24]]
-; CHECK-NEXT:    [[OP_RDX27:%.*]] = mul i32 [[OP_RDX26]], [[VAL]]
-; CHECK-NEXT:    [[VAL64:%.*]] = add i32 undef, [[OP_RDX27]]
+; CHECK-NEXT:    [[VAL64:%.*]] = add i32 undef, [[TMP18]]
 ; CHECK-NEXT:    [[VAL65:%.*]] = sext i32 [[VAL64]] to i64
 ; CHECK-NEXT:    ret i64 [[VAL65]]
 ;

@@ -4277,8 +4277,8 @@ let Predicates = [HasSVE2p2_or_SME2p2] in {
   defm FCVTZS_ZPzZ : sve_fp_z2op_p_zd_d<0b0, "fcvtzs", "int_aarch64_sve_fcvtzs", AArch64fcvtzs_mt>;
   defm FCVTZU_ZPzZ : sve_fp_z2op_p_zd_d<0b1, "fcvtzu", "int_aarch64_sve_fcvtzu", AArch64fcvtzu_mt>;
   // Integer convert to floating-point, zeroing predicate
-  defm SCVTF_ZPzZ  : sve_fp_z2op_p_zd_c<0b0, "scvtf">;
-  defm UCVTF_ZPzZ  : sve_fp_z2op_p_zd_c<0b1, "ucvtf">;
+  defm SCVTF_ZPzZ  : sve_fp_z2op_p_zd_c<0b0, "scvtf", "int_aarch64_sve_scvtf", AArch64scvtf_mt>;
+  defm UCVTF_ZPzZ  : sve_fp_z2op_p_zd_c<0b1, "ucvtf", "int_aarch64_sve_ucvtf", AArch64ucvtf_mt>;
   // Signed integer base 2 logarithm of fp value, zeroing predicate
   defm FLOGB_ZPzZ : sve_fp_z2op_p_zd_d_flogb<"flogb">;
 
@@ -4314,11 +4314,11 @@ let Predicates = [HasSVE2p2_or_SME2p2] in {
   defm FSQRT_ZPZz  : sve_fp_z2op_p_zd_hsd<0b01101, "fsqrt">;
 
   // SVE2p2 integer unary arithmetic (bitwise), zeroing predicate
-  defm CLS_ZPzZ  : sve_int_un_pred_arit_bitwise_z<0b000, "cls">;
-  defm CLZ_ZPzZ  : sve_int_un_pred_arit_bitwise_z<0b001, "clz">;
-  defm CNT_ZPzZ  : sve_int_un_pred_arit_bitwise_z<0b010, "cnt">;
-  defm CNOT_ZPzZ : sve_int_un_pred_arit_bitwise_z<0b011, "cnot">;
-  defm NOT_ZPzZ  : sve_int_un_pred_arit_bitwise_z<0b110, "not">;
+  defm CLS_ZPzZ  : sve_int_un_pred_arit_bitwise_z<0b000,  "cls", AArch64cls_mt>;
+  defm CLZ_ZPzZ  : sve_int_un_pred_arit_bitwise_z<0b001,  "clz", AArch64clz_mt>;
+  defm CNT_ZPzZ  : sve_int_un_pred_arit_bitwise_z<0b010,  "cnt", AArch64cnt_mt>;
+  defm CNOT_ZPzZ : sve_int_un_pred_arit_bitwise_z<0b011, "cnot", AArch64cnot_mt>;
+  defm NOT_ZPzZ  : sve_int_un_pred_arit_bitwise_z<0b110,  "not", AArch64not_mt>;
 
   // floating point
   defm FABS_ZPzZ : sve_int_un_pred_arit_bitwise_fp_z<0b100, "fabs", AArch64fabs_mt>;
