@@ -1099,7 +1099,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   if (CodeGenOpts.LinkBitcodePostopt)
     MPM.addPass(LinkInModulesPass(BC));
 
-  if (LangOpts.HLSL) {
+  if (LangOpts.HLSL && !CodeGenOpts.DisableLLVMPasses) {
     // HLSL legalization passes
     MPM.addPass(HLSLFinalizeLinkage());
     MPM.addPass(GlobalOptPass());
