@@ -1,9 +1,9 @@
 // RUN: rm -fR %t
 // RUN: split-file %s %t
 // RUN: cd %t
-// RUN: %clang_cc1 -verify -std=c++20 -xc++ -emit-module module.cppmap -fmodule-name=mock_resolver -o mock_resolver.pcm
-// RUN: %clang_cc1 -verify -std=c++20 -xc++ -emit-module module.cppmap -fmodule-name=sql_internal -o sql_internal.pcm
-// RUN: %clang_cc1 -verify -std=c++20 -xc++ -fmodule-file=mock_resolver.pcm -fmodule-file=sql_internal.pcm main.cc -o main.o
+// RUN: %clang_cc1 -verify -std=c++20 -Werror=uninitialized -xc++ -emit-module module.cppmap -fmodule-name=mock_resolver -o mock_resolver.pcm
+// RUN: %clang_cc1 -verify -std=c++20 -Werror=uninitialized -xc++ -emit-module module.cppmap -fmodule-name=sql_internal -o sql_internal.pcm
+// RUN: %clang_cc1 -verify -std=c++20 -Werror=uninitialized -xc++ -fmodule-file=mock_resolver.pcm -fmodule-file=sql_internal.pcm main.cc -o main.o
 
 //--- module.cppmap
 module "mock_resolver" {

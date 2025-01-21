@@ -799,9 +799,9 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   }
 
   if (D->getFriendObjectKind()) {
-    // For a function defined inline within a class template, we have to force
-    // the canonical definition to be the one inside the canonical definition of
-    // the template. Remember this relation to deserialize them together.
+    // For a friend function defined inline within a class template, we have to
+    // force the definition to be the one inside the definition of the template
+    // class. Remember this relation to deserialize them together.
     if (auto *RD = dyn_cast<CXXRecordDecl>(D->getLexicalParent()))
       if (RD->isDependentContext() && RD->isThisDeclarationADefinition()) {
         Writer.RelatedDeclsMap[Writer.GetDeclRef(RD)].push_back(
