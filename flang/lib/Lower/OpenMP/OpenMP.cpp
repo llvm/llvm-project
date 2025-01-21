@@ -1346,11 +1346,12 @@ static void genBodyOfTargetOp(
             firOpBuilder.createTemporary(val.getLoc(), val.getType());
         firOpBuilder.createStoreWithConvert(copyVal.getLoc(), val, copyVal);
 
-        lower::AddrAndBoundsInfo info = lower::getDataOperandBaseAddr(
-            firOpBuilder, val, /*isOptional=*/false, val.getLoc());
+        fir::factory::AddrAndBoundsInfo info =
+            fir::factory::getDataOperandBaseAddr(
+                firOpBuilder, val, /*isOptional=*/false, val.getLoc());
         llvm::SmallVector<mlir::Value> bounds =
-            Fortran::lower::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
-                                                 mlir::omp::MapBoundsType>(
+            fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
+                                               mlir::omp::MapBoundsType>(
                 firOpBuilder, info,
                 hlfir::translateToExtendedValue(val.getLoc(), firOpBuilder,
                                                 hlfir::Entity{val})
@@ -2188,11 +2189,12 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(sym);
       name << sym.name().ToString();
 
-      lower::AddrAndBoundsInfo info = getDataOperandBaseAddr(
-          converter, firOpBuilder, sym, converter.getCurrentLocation());
+      fir::factory::AddrAndBoundsInfo info =
+          Fortran::lower::getDataOperandBaseAddr(
+              converter, firOpBuilder, sym, converter.getCurrentLocation());
       llvm::SmallVector<mlir::Value> bounds =
-          lower::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
-                                      mlir::omp::MapBoundsType>(
+          fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
+                                             mlir::omp::MapBoundsType>(
               firOpBuilder, info, dataExv,
               semantics::IsAssumedSizeArray(sym.GetUltimate()),
               converter.getCurrentLocation());
