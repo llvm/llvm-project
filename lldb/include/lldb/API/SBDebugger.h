@@ -48,6 +48,10 @@ public:
       eBroadcastBitError = lldb::DebuggerBroadcastBit::eBroadcastBitError,
       eBroadcastBitProgressCategory =
           lldb::DebuggerBroadcastBit::eBroadcastBitProgressCategory,
+      eBroadcastBitExternalProgress =
+          lldb::DebuggerBroadcastBit::eBroadcastBitExternalProgress,
+      eBroadcastBitExternalProgressCategory =
+          lldb::DebuggerBroadcastBit::eBroadcastBitExternalProgressCategory,
   };
   SBDebugger();
 
