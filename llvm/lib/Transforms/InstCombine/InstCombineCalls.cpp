@@ -3255,24 +3255,18 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (!RK || RK.AttrKind != Attribute::Alignment ||
             !isPowerOf2_64(RK.ArgValue))
           continue;
-        auto *C = dyn_cast<Constant>(RK.WasOn);
-        if (C && C->isNullValue()) {
-        } else {
-          Value *UO = getUnderlyingObject(RK.WasOn);
-          if (!UO || isa<Argument>(UO))
-            continue;
 
-          // Try to get the instruction before the assumption to use as
-          // context.
-          Instruction *CtxI = nullptr;
-          if (CtxI && II->getParent()->begin() != II->getIterator())
-            CtxI = II->getPrevNode();
+        // Don't try to remove align assumptions for pointers derived from
+        // arguments. We might lose information if the function gets inline and
+        // the align argument attribute disappears.
+        Value *UO = getUnderlyingObject(RK.WasOn);
+        if (!UO || isa<Argument>(UO))
+          continue;
 
-          auto Known = computeKnownBits(RK.WasOn, 1, CtxI);
-          unsigned KnownAlign = 1 << Known.countMinTrailingZeros();
-          if (KnownAlign < RK.ArgValue)
-            continue;
-        }
+        auto Known = computeKnownBits(RK.WasOn, 0, nullptr);
+        unsigned KnownAlign = 1 << Known.countMinTrailingZeros();
+        if (KnownAlign < RK.ArgValue)
+          continue;
         auto *New = CallBase::removeOperandBundle(II, OBU.getTagID());
         return New;
       }
