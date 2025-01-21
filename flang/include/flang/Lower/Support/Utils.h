@@ -551,8 +551,8 @@ public:
            isEqual(x.upper(), y.upper()) && isEqual(x.stride(), y.stride());
   }
   template <typename A>
-  static bool isEqual(const Fortran::evaluate::ArrayConstructorValue<A> &x,
-                      const Fortran::evaluate::ArrayConstructorValue<A> &y) {
+  static bool isEqual(const Fortran::evaluate::ArrayConstructorValues<A> &x,
+                      const Fortran::evaluate::ArrayConstructorValues<A> &y) {
     using Expr = Fortran::evaluate::Expr<A>;
     using ImpliedDo = Fortran::evaluate::ImpliedDo<A>;
     for (const auto &[xValue, yValue] : llvm::zip(x, y)) {
@@ -579,7 +579,9 @@ public:
     if constexpr (A::category == Fortran::common::TypeCategory::Character) {
       checkCharacterType = x.LEN() == y.LEN();
     }
-    return isEqual(x, y) && x.GetType() == y.GetType() && checkCharacterType;
+    using Base = Fortran::evaluate::ArrayConstructorValues<A>;
+    return isEqual((Base) x, (Base) y) &&
+           (x.GetType() == y.GetType() && checkCharacterType);
   }
   static bool isEqual(const Fortran::evaluate::ImpliedDoIndex &x,
                       const Fortran::evaluate::ImpliedDoIndex &y) {
