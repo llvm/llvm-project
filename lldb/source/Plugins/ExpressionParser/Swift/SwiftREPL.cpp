@@ -188,15 +188,11 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
                                     // breakpoint above, it better
                                     // say it is internal
 
-  lldb_private::ProcessLaunchInfo launch_info;
+  lldb_private::ProcessLaunchInfo launch_info =
+      target_sp->GetProcessLaunchInfo();
+
+  // FIXME: Why is this necessary? Document or change once we know the answer.
   llvm::StringRef target_settings_argv0 = target_sp->GetArg0();
-
-  if (target_sp->GetDisableASLR())
-    launch_info.GetFlags().Set(eLaunchFlagDisableASLR);
-
-  if (target_sp->GetDisableSTDIO())
-    launch_info.GetFlags().Set(eLaunchFlagDisableSTDIO);
-
   if (!target_settings_argv0.empty()) {
     launch_info.GetArguments().AppendArgument(target_settings_argv0);
     launch_info.SetExecutableFile(exe_module_sp->GetPlatformFileSpec(), false);
@@ -204,7 +200,6 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
     launch_info.SetExecutableFile(exe_module_sp->GetPlatformFileSpec(), true);
   }
 
-  launch_info.GetEnvironment() = target_sp->GetTargetEnvironment();
   debugger.SetAsyncExecution(false);
   err = target_sp->Launch(launch_info, nullptr);
   debugger.SetAsyncExecution(true);
