@@ -1582,6 +1582,8 @@ void ThinLTOCodeGenerator::run() {
   // First, we need to remember whether the caller requests buffer API or file
   // API based on if the SavedObjectsDirectoryPath was set or not.
   bool UseBufferAPI = SavedObjectsDirectoryPath.empty();
+  if (SavedObjectsDirectoryPath.empty())
+    SavedObjectsDirectoryPath = RemoteServiceTempsDir;
   std::string TempDirectory;
   if (CacheOptions.Type == CachingOptions::CacheType::RemoteService &&
       SavedObjectsDirectoryPath.empty()) {
