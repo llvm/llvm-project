@@ -76,13 +76,13 @@ class EditlineTest(PExpectTest):
         # Clear the prefix and suffix setting to simplify the output.
         self.expect('settings set prompt-ansi-prefix ""')
         self.expect('settings set prompt-ansi-suffix ""')
-        self.expect('settings set prompt "${ansi.fg.red}(lldb)${ansi.normal} "')
+        self.expect('settings set prompt "${ansi.fg.red}(lldb) ${ansi.normal}"')
         self.child.send("foo")
         # Make sure this change is reflected immediately. Check that the color
         # is set (31) and the cursor position (8) is correct.
         # Prompt: (lldb) _
         # Column: 1....6.8
-        self.child.expect(re.escape("\x1b[31m(lldb)\x1b[0m foo"))
+        self.child.expect(re.escape("\x1b[31m(lldb) \x1b[0m\x1b[8Gfoo"))
 
     @skipIfAsan
     @skipIfEditlineSupportMissing

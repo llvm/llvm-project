@@ -612,7 +612,7 @@ int Editline::GetCharacter(EditLineGetCharType *c) {
 }
 
 const char *Editline::Prompt() {
-  if (!m_prompt_ansi_prefix.empty() || !m_prompt_ansi_suffix.empty())
+  if (m_color)
     m_needs_prompt_repaint = true;
   return m_current_prompt.c_str();
 }
@@ -1473,11 +1473,11 @@ Editline *Editline::InstanceFor(EditLine *editline) {
 }
 
 Editline::Editline(const char *editline_name, FILE *input_file,
-                   FILE *output_file, FILE *error_file,
+                   FILE *output_file, FILE *error_file, bool color,
                    std::recursive_mutex &output_mutex)
     : m_editor_status(EditorStatus::Complete), m_input_file(input_file),
       m_output_file(output_file), m_error_file(error_file),
-      m_input_connection(fileno(input_file), false),
+      m_input_connection(fileno(input_file), false), m_color(color),
       m_output_mutex(output_mutex) {
   // Get a shared history instance
   m_editor_name = (editline_name == nullptr) ? "lldb-tmp" : editline_name;
