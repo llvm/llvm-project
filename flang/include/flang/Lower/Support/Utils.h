@@ -580,7 +580,7 @@ public:
       checkCharacterType = x.LEN() == y.LEN();
     }
     using Base = Fortran::evaluate::ArrayConstructorValues<A>;
-    return isEqual((Base) x, (Base) y) &&
+    return isEqual((Base)x, (Base)y) &&
            (x.GetType() == y.GetType() && checkCharacterType);
   }
   static bool isEqual(const Fortran::evaluate::ImpliedDoIndex &x,
