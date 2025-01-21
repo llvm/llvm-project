@@ -906,11 +906,11 @@ public:
 
   bool lowerDeinterleaveIntrinsicToLoad(
       IntrinsicInst *II, LoadInst *LI,
-      SmallVectorImpl<Instruction *> &DeadInsts) const override;
+      ArrayRef<Value *> DeinterleaveValues) const override;
 
   bool lowerInterleaveIntrinsicToStore(
       IntrinsicInst *II, StoreInst *SI,
-      SmallVectorImpl<Instruction *> &DeadInsts) const override;
+      ArrayRef<Value *> InterleaveValues) const override;
 
   bool supportKCFIBundles() const override { return true; }
 

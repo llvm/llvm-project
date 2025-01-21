@@ -715,11 +715,11 @@ public:
 
   bool lowerDeinterleaveIntrinsicToLoad(
       IntrinsicInst *DI, LoadInst *LI,
-      SmallVectorImpl<Instruction *> &DeadInsts) const override;
+      ArrayRef<Value *> DeinterleaveValues) const override;
 
   bool lowerInterleaveIntrinsicToStore(
       IntrinsicInst *II, StoreInst *SI,
-      SmallVectorImpl<Instruction *> &DeadInsts) const override;
+      ArrayRef<Value *> InterleaveValues) const override;
 
   bool isLegalAddImmediate(int64_t) const override;
   bool isLegalAddScalableImmediate(int64_t) const override;

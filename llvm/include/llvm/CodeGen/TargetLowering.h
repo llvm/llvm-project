@@ -3157,12 +3157,11 @@ public:
   /// llvm.vector.deinterleave2
   ///
   /// \p DI is the deinterleave intrinsic.
-  /// \p LI is the accompanying load instruction
-  /// \p DeadInsts is a reference to a vector that keeps track of dead
-  /// instruction during transformations.
-  virtual bool lowerDeinterleaveIntrinsicToLoad(
-      IntrinsicInst *DI, LoadInst *LI,
-      SmallVectorImpl<Instruction *> &DeadInsts) const {
+  /// \p LI is the accompanying load instruction.
+  /// \p DeinterleaveValues contains the deinterleaved values.
+  virtual bool
+  lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *DI, LoadInst *LI,
+                                   ArrayRef<Value *> DeinterleaveValues) const {
     return false;
   }
 
@@ -3172,11 +3171,10 @@ public:
   ///
   /// \p II is the interleave intrinsic.
   /// \p SI is the accompanying store instruction
-  /// \p DeadInsts is a reference to a vector that keeps track of dead
-  /// instruction during transformations.
-  virtual bool lowerInterleaveIntrinsicToStore(
-      IntrinsicInst *II, StoreInst *SI,
-      SmallVectorImpl<Instruction *> &DeadInsts) const {
+  /// \p InterleaveValues contains the interleaved values.
+  virtual bool
+  lowerInterleaveIntrinsicToStore(IntrinsicInst *II, StoreInst *SI,
+                                  ArrayRef<Value *> InterleaveValues) const {
     return false;
   }
 
