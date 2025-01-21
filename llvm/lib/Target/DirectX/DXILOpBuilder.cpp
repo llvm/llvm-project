@@ -54,7 +54,7 @@ struct OpStage {
 
 struct OpAttribute {
   Version DXILVersion;
-  uint32_t ValidAttrs;
+  llvm::SmallVector<Attribute::AttrKind> ValidAttrs;
 };
 
 static const char *getOverloadTypeName(OverloadKind Kind) {
@@ -466,14 +466,6 @@ Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
   OpArgs.append(Args.begin(), Args.end());
 
   return IRB.CreateCall(DXILFn, OpArgs, Name);
-}
-
-CallInst *DXILOpBuilder::createOp(dxil::OpCode OpCode, ArrayRef<Value *> Args,
-                                  const Twine &Name, Type *RetTy) {
-  Expected<CallInst *> Result = tryCreateOp(OpCode, Args, Name, RetTy);
-  if (Error E = Result.takeError())
-    llvm_unreachable("Invalid arguments for operation");
-  return *Result;
 }
 
 StructType *DXILOpBuilder::getResRetType(Type *ElementTy) {

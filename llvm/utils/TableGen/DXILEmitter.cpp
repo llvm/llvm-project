@@ -320,38 +320,39 @@ static std::string getStageMaskString(ArrayRef<const Record *> Recs) {
 /// \return std::string string representation of stages mask string
 ///         predicated by DXIL Version. E.g.,
 //          {{{1, 0}, Mask1}, {{1, 2}, Mask2}, ...}
-static std::string getAttributeMaskString(ArrayRef<const Record *> Recs) {
-  std::string MaskString = "";
+static std::string getAttributeListString(ArrayRef<const Record *> Recs) {
+  std::string ListString = "";
   std::string Prefix = "";
-  MaskString.append("{");
+  ListString.append("{");
 
   for (const auto *Rec : Recs) {
     unsigned Major = Rec->getValueAsDef("dxil_version")->getValueAsInt("Major");
     unsigned Minor = Rec->getValueAsDef("dxil_version")->getValueAsInt("Minor");
-    MaskString.append(Prefix)
+    ListString.append(Prefix)
         .append("{{")
         .append(std::to_string(Major))
         .append(", ")
-        .append(std::to_string(Minor).append("}, "));
+        .append(std::to_string(Minor).append("}, {"));
 
-    std::string PipePrefix = "";
+    std::string CommaPrefix = "";
     auto Attrs = Rec->getValueAsListOfDefs("op_attrs");
     if (Attrs.empty()) {
-      MaskString.append("Attribute::None");
+      ListString.append("Attribute::None");
     } else {
       for (const auto *Attr : Attrs) {
-        MaskString.append(PipePrefix)
+        ListString.append(CommaPrefix)
             .append("Attribute::")
             .append(Attr->getName());
-        PipePrefix = " | ";
+        CommaPrefix = ", ";
       }
+      ListString.append("}"); // End attribute.
     }
 
-    MaskString.append("}");
+    ListString.append("}"); // End Rec.
     Prefix = ", ";
   }
-  MaskString.append("}");
-  return MaskString;
+  ListString.append("}"); // End List.;
+  return ListString;
 }
 
 /// Emit a mapping of DXIL opcode to opname
@@ -479,7 +480,7 @@ static void emitDXILOperationTable(ArrayRef<DXILOperationDesc> Ops,
        << OpClassStrings.get(Op.OpClass.data()) << ", "
        << getOverloadMaskString(Op.OverloadRecs) << ", "
        << getStageMaskString(Op.StageRecs) << ", "
-       << getAttributeMaskString(Op.AttrRecs) << ", " << Op.OverloadParamIndex
+       << getAttributeListString(Op.AttrRecs) << ", " << Op.OverloadParamIndex
        << " }";
     Prefix = ",\n";
   }
