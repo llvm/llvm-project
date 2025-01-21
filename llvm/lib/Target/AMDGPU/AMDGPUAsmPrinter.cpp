@@ -357,13 +357,13 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
 }
 
 void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
-  bool isLocal = F.hasLocalLinkage();
   if (F.isDeclaration() || !AMDGPU::isModuleEntryFunctionCC(F.getCallingConv()))
     return;
 
   using RIK = MCResourceInfo::ResourceInfoKind;
   const GCNSubtarget &STM = TM.getSubtarget<GCNSubtarget>(F);
   MCSymbol *FnSym = TM.getSymbol(&F);
+  bool IsLocal = F.hasLocalLinkage();
 
   auto TryGetMCExprValue = [](const MCExpr *Value, uint64_t &Res) -> bool {
     int64_t Val;
@@ -377,7 +377,7 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
   const uint64_t MaxScratchPerWorkitem =
       STM.getMaxWaveScratchSize() / STM.getWavefrontSize();
   MCSymbol *ScratchSizeSymbol = RI.getSymbol(
-      FnSym->getName(), RIK::RIK_PrivateSegSize, OutContext, isLocal);
+      FnSym->getName(), RIK::RIK_PrivateSegSize, OutContext, IsLocal);
   uint64_t ScratchSize;
   if (ScratchSizeSymbol->isVariable() &&
       TryGetMCExprValue(ScratchSizeSymbol->getVariableValue(), ScratchSize) &&
@@ -390,7 +390,7 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
   // Validate addressable scalar registers (i.e., prior to added implicit
   // SGPRs).
   MCSymbol *NumSGPRSymbol =
-      RI.getSymbol(FnSym->getName(), RIK::RIK_NumSGPR, OutContext, isLocal);
+      RI.getSymbol(FnSym->getName(), RIK::RIK_NumSGPR, OutContext, IsLocal);
   if (STM.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
       !STM.hasSGPRInitBug()) {
     unsigned MaxAddressableNumSGPRs = STM.getAddressableNumSGPRs();
@@ -407,9 +407,9 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
   }
 
   MCSymbol *VCCUsedSymbol =
-      RI.getSymbol(FnSym->getName(), RIK::RIK_UsesVCC, OutContext, isLocal);
+      RI.getSymbol(FnSym->getName(), RIK::RIK_UsesVCC, OutContext, IsLocal);
   MCSymbol *FlatUsedSymbol = RI.getSymbol(
-      FnSym->getName(), RIK::RIK_UsesFlatScratch, OutContext, isLocal);
+      FnSym->getName(), RIK::RIK_UsesFlatScratch, OutContext, IsLocal);
   uint64_t VCCUsed, FlatUsed, NumSgpr;
 
   if (NumSGPRSymbol->isVariable() && VCCUsedSymbol->isVariable() &&
@@ -436,9 +436,9 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
     }
 
     MCSymbol *NumVgprSymbol =
-        RI.getSymbol(FnSym->getName(), RIK::RIK_NumVGPR, OutContext, isLocal);
+        RI.getSymbol(FnSym->getName(), RIK::RIK_NumVGPR, OutContext, IsLocal);
     MCSymbol *NumAgprSymbol =
-        RI.getSymbol(FnSym->getName(), RIK::RIK_NumAGPR, OutContext, isLocal);
+        RI.getSymbol(FnSym->getName(), RIK::RIK_NumAGPR, OutContext, IsLocal);
     uint64_t NumVgpr, NumAgpr;
 
     MachineModuleInfo &MMI =
@@ -656,7 +656,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   MCContext &Context = getObjFileLowering().getContext();
-  bool isLocal = MF.getFunction().hasLocalLinkage();
+  bool IsLocal = MF.getFunction().hasLocalLinkage();
   // FIXME: This should be an explicit check for Mesa.
   if (!STM.isAmdHsaOS() && !STM.isAmdPalOS()) {
     MCSectionELF *ConfigSection =
@@ -703,23 +703,23 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     using RIK = MCResourceInfo::ResourceInfoKind;
     getTargetStreamer()->EmitMCResourceInfo(
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumVGPR, OutContext,
-                     isLocal),
+                     IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumAGPR, OutContext,
-                     isLocal),
+                     IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumSGPR, OutContext,
-                     isLocal),
+                     IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_PrivateSegSize,
-                     OutContext, isLocal),
+                     OutContext, IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_UsesVCC, OutContext,
-                     isLocal),
+                     IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_UsesFlatScratch,
-                     OutContext, isLocal),
+                     OutContext, IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_HasDynSizedStack,
-                     OutContext, isLocal),
+                     OutContext, IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_HasRecursion, OutContext,
-                     isLocal),
+                     IsLocal),
         RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_HasIndirectCall,
-                     OutContext, isLocal));
+                     OutContext, IsLocal));
   }
 
   if (isVerbose()) {
@@ -733,11 +733,11 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
       emitCommonFunctionComments(
           RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumVGPR, OutContext,
-                       isLocal)
+                       IsLocal)
               ->getVariableValue(),
           STM.hasMAIInsts()
               ? RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_NumAGPR,
-                             OutContext, isLocal)
+                             OutContext, IsLocal)
                     ->getVariableValue()
               : nullptr,
           RI.createTotalNumVGPRs(MF, Ctx),
@@ -746,7 +746,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
               MF.getSubtarget<GCNSubtarget>().getTargetID().isXnackOnOrAny(),
               Ctx),
           RI.getSymbol(CurrentFnSym->getName(), RIK::RIK_PrivateSegSize,
-                       OutContext, isLocal)
+                       OutContext, IsLocal)
               ->getVariableValue(),
           getFunctionCodeSize(MF), MFI);
       return false;
@@ -935,7 +935,7 @@ static const MCExpr *computeAccumOffset(const MCExpr *NumVGPR, MCContext &Ctx) {
 void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                                         const MachineFunction &MF) {
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
-  bool isLocal = MF.getFunction().hasLocalLinkage();
+  bool IsLocal = MF.getFunction().hasLocalLinkage();
   MCContext &Ctx = MF.getContext();
 
   auto CreateExpr = [&Ctx](int64_t Value) {
@@ -954,7 +954,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   auto GetSymRefExpr =
       [&](MCResourceInfo::ResourceInfoKind RIK) -> const MCExpr * {
     MCSymbol *Sym =
-        RI.getSymbol(CurrentFnSym->getName(), RIK, OutContext, isLocal);
+        RI.getSymbol(CurrentFnSym->getName(), RIK, OutContext, IsLocal);
     return MCSymbolRefExpr::create(Sym, Ctx);
   };
 
