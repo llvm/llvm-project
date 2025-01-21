@@ -104,6 +104,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # unistd.h entrypoints
     libc.src.unistd.getentropy
+    libc.src.unistd.rmdir
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
