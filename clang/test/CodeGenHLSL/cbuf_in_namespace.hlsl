@@ -1,11 +1,13 @@
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   dxil-pc-shadermodel6.3-library %s \
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s \
+// RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
+
+// RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan-library %s \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
 // Make sure cbuffer inside namespace works.
 
-// CHECK: @_ZN2n02n11aE = external addrspace(2) global float, align 4
-// CHECK: @_ZN2n01bE = external addrspace(2) global float, align 4
+// CHECK: @_ZN2n02n11aE = external addrspace(2) externally_initialized global float, align 4
+// CHECK: @_ZN2n01bE = external addrspace(2) externally_initialized global float, align 4
 
 // CHECK: @[[CB:.+]] = external constant { float }
 // CHECK: @[[TB:.+]] = external constant { float }

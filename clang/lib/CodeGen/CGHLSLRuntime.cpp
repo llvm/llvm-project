@@ -128,6 +128,7 @@ void CGHLSLRuntime::addConstant(VarDecl *D, Buffer &CB) {
   }
 
   auto *GV = cast<GlobalVariable>(CGM.GetAddrOfGlobalVar(D));
+  GV->setExternallyInitialized(true);
   // Add debug info for constVal.
   if (CGDebugInfo *DI = CGM.getModuleDebugInfo())
     if (CGM.getCodeGenOpts().getDebugInfo() >=

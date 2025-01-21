@@ -1,11 +1,13 @@
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   dxil-pc-shadermodel6.3-library %s \
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
-// CHECK: @a = external addrspace(2) global float, align 4
-// CHECK: @b = external addrspace(2) global double, align 8
-// CHECK: @c = external addrspace(2) global float, align 4
-// CHECK: @d = external addrspace(2) global double, align 8
+// RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan-library %s \
+// RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
+
+// CHECK: @a = external addrspace(2) externally_initialized global float, align 4
+// CHECK: @b = external addrspace(2) externally_initialized global double, align 8
+// CHECK: @c = external addrspace(2) externally_initialized global float, align 4
+// CHECK: @d = external addrspace(2) externally_initialized global double, align 8
 
 // CHECK: @[[CB:.+]] = external constant { float, double }
 cbuffer A : register(b0, space2) {

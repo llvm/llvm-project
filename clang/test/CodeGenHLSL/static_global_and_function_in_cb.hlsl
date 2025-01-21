@@ -1,8 +1,11 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
+// RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan-library %s \
+// RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
+
 cbuffer A {
-  // CHECK: @a = external addrspace(2) global float, align 4
+  // CHECK: @a = external addrspace(2) externally_initialized global float, align 4
   float a;
   // CHECK: @_ZL1b = internal global float 3.000000e+00, align 4
   static float b = 3;
