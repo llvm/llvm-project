@@ -715,14 +715,12 @@ namespace {
   struct DFIParamWithArguments : DFIArguments {
     TemplateParameter Param;
   };
-
   // Structure used by DeductionFailureInfo to store template argument
   // information and the index of the problematic call argument.
   struct DFIDeducedMismatchArgs : DFIArguments {
     TemplateArgumentList *TemplateArgs;
     unsigned CallArgIndex;
   };
-
   // Structure used by DeductionFailureInfo to store information about
   // unsatisfied constraints.
   struct CNSInfo {
@@ -738,10 +736,8 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
                                 TemplateDeductionResult TDK,
                                 TemplateDeductionInfo &Info) {
   DeductionFailureInfo Result;
-
   Result.Result = static_cast<unsigned>(TDK);
   Result.HasDiagnostic = false;
-
   switch (TDK) {
   case TemplateDeductionResult::Invalid:
   case TemplateDeductionResult::InstantiationDepth:
