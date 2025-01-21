@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -test-vulkan-runner-pipeline=to-llvm \
+// RUN: mlir-opt %s -test-vulkan-runner-pipeline \
 // RUN:   | mlir-cpu-runner - \
-// RUN:     --shared-libs=%vulkan-runtime-wrappers,%mlir_runner_utils \
+// RUN:     --shared-libs=%mlir_vulkan_runtime,%mlir_runner_utils \
 // RUN:     --entry-point-result=void | FileCheck %s
 
 // CHECK: [0, 2]
