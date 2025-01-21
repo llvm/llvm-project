@@ -136,7 +136,7 @@ int main(void) {
 
 #ifdef CHECK_ADDRESSOF
   set_value(&a_, 0); // expected-warning{{calling function 'set_value' requires holding mutex 'foo_.mu_' exclusively}} \
-                        expected-warning{{obtaining address of variable 'a_' requires holding mutex 'foo_.mu_'}}
+                        expected-warning{{taking address of variable 'a_' requires holding mutex 'foo_.mu_'}}
 #else
   set_value(&a_, 0); // expected-warning{{calling function 'set_value' requires holding mutex 'foo_.mu_' exclusively}}
 #endif
@@ -187,7 +187,7 @@ int main(void) {
   late_parsing.a_value_defined_before = 1; // expected-warning{{writing variable 'a_value_defined_before' requires holding mutex 'a_mutex_defined_late' exclusively}}
   late_parsing.a_ptr_defined_before = 0;
 # ifdef CHECK_ADDRESSOF
-  (void)&late_parsing.a_value_defined_before; // expected-warning{{obtaining address of variable 'a_value_defined_before' requires holding mutex 'a_mutex_defined_late'}}
+  (void)&late_parsing.a_value_defined_before; // expected-warning{{taking address of variable 'a_value_defined_before' requires holding mutex 'a_mutex_defined_late'}}
 # else
   (void)&late_parsing.a_value_defined_before; // no warning
 # endif

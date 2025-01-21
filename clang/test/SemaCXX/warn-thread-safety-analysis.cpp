@@ -4953,8 +4953,8 @@ public:
     --data_;              // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}}
     data_--;              // expected-warning {{writing variable 'data_' requires holding mutex 'mu_' exclusively}}
 #ifdef CHECK_ADDRESSOF
-    (void)&data_;         // expected-warning {{obtaining address of variable 'data_' requires holding mutex 'mu_'}}
-    (void)&datap1_;       // expected-warning {{obtaining address of variable 'datap1_' requires holding mutex 'mu_'}}
+    (void)&data_;         // expected-warning {{taking address of variable 'data_' requires holding mutex 'mu_'}}
+    (void)&datap1_;       // expected-warning {{taking address of variable 'datap1_' requires holding mutex 'mu_'}}
 #else
     (void)&data_;         // no warning
     (void)&datap1_;       // no warning
@@ -5903,7 +5903,7 @@ class Foo {
 
   void ptr_test() {
 #ifdef CHECK_ADDRESSOF
-    int *b = &a;           // expected-warning {{obtaining address of variable 'a' requires holding mutex 'mu'}}
+    int *b = &a;           // expected-warning {{taking address of variable 'a' requires holding mutex 'mu'}}
 #else
     int *b = &a;           // no warning
 #endif
@@ -6126,7 +6126,7 @@ class Return {
   
   Foo *returns_ptr() {
 #ifdef CHECK_ADDRESSOF
-    return &foo;              // expected-warning {{obtaining address of variable 'foo' requires holding mutex 'mu'}}
+    return &foo;              // expected-warning {{taking address of variable 'foo' requires holding mutex 'mu'}}
 #else
     return &foo;              // no warning
 #endif

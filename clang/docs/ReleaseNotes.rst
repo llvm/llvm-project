@@ -789,7 +789,7 @@ Improvements to Clang's diagnostics
     }
 
 - The :doc:`ThreadSafetyAnalysis` now supports ``-Wthread-safety-addressof``,
-  which enables warning if the address of guarded variables is obtained.
+  which enables warning on taking the address of guarded variables.
 
 Improvements to Clang's time-trace
 ----------------------------------

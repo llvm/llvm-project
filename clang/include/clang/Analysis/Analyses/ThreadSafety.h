@@ -55,7 +55,7 @@ enum ProtectedOperationKind {
   /// Returning a pt-guarded variable by reference.
   POK_PtReturnByRef,
 
-  /// Obtaining address of a variable (e.g. &x).
+  /// Taking address of a variable (e.g. &x).
   POK_AddressOf,
 };
 
