@@ -1,4 +1,4 @@
-// Check that we can export the global function map.
+// Check that we can symbolize functions
 //
 
 // RUN: split-file %s %t
@@ -15,11 +15,13 @@
 
 #include <cstdio>
 
-bool called = false;
-
 void test_handler(int32_t fid, XRayEntryType type) {
   printf("called: %d, type=%d\n", fid, static_cast<int32_t>(type));
-  called = true;
+  XRaySymbolInfo SymInfo;
+  int status = __xray_symbolize(fid, &SymInfo);
+  if (!status)
+    return;
+  printf("function name: %s\n", SymInfo.function);
 }
 
 [[clang::xray_always_instrument]] void instrumented_in_executable() {
@@ -37,16 +39,15 @@ int main() {
   // CHECK-NEXT: called: {{.*}}, type=0
   // CHECK-NEXT: instrumented_in_executable called
   // CHECK-NEXT: called: {{.*}}, type=1
+  // CHECK-NEXT: function name: instrumented_in_executable
   instrumented_in_dso();
   // CHECK-NEXT: called: {{.*}}, type=0
   // CHECK-NEXT: instrumented_in_dso called
   // CHECK-NEXT: called: {{.*}}, type=1
+  // CHECK-NEXT: function name: instrumented_in_dso
   status = __xray_unpatch();
   printf("patching status: %d\n", static_cast<int32_t>(status));
   // CHECK-NEXT: patching status: 1
-  // FIXME
-//  auto map = __xray_export_function_map();
-//  printf("Entry: %d -> %x\n", map->FunctionId, map->Addr);
 }
 
 //--- testlib.cpp

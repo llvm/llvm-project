@@ -34,10 +34,7 @@ struct XRaySymbolInfo {
   int64_t Line;
 };
 
-extern int __xray_symbolize(int32_t PackedId, XRaySymbolInfo* SymInfo);
-
-//extern FunctionMapEntry* __xray_export_function_map();
-
+extern int __xray_symbolize(int32_t, XRaySymbolInfo*);
 
 /// Synchronize this with AsmPrinter::SledKind in LLVM.
 enum XRayEntryType {

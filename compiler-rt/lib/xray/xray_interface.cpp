@@ -539,7 +539,7 @@ bool Symbolize(int32_t PackedId, AddressInfo* AI) {
 //  printf("Symbol Info: function %s from module %s in %s:%d\n", SymStack->info.function, SymStack->info.module, SymStack->info.file, SymStack->info.line);
 
   // XRay does not support inlined function instrumentation.
-  // Therefor we only look at the first function stack entry.
+  // Therefore, we only look at the first function stack entry.
   *AI = SymStack->info;
 
   return true;
@@ -606,54 +606,6 @@ uint16_t __xray_register_event_type(
   }
   return h->type_id;
 }
-
-//FunctionMapEntry* __xray_export_function_map() {
-//  if (!atomic_load(&XRayInitialized, memory_order_acquire))
-//    return {};
-//
-//  SpinMutexLock Guard(&XRayInstrMapMutex);
-//
-//  // No atomic load necessary since we have acquired the mutex
-//  uint32_t NumObjects = atomic_load(&XRayNumObjects, memory_order_acquire);
-//
-//  FunctionMapEntry* FMap = new FunctionMapEntry;
-//  FMap->Next = nullptr;
-//
-//  Symbolizer* Sym = Symbolizer::GetOrInit();
-//  Sym->RefreshModules();
-//
-//
-//  printf("Objects: %d\n", NumObjects);
-//
-//
-//  FunctionMapEntry* LastEntry = FMap;
-//  for (int Obj = 0; Obj < NumObjects; Obj++) {
-//    auto& SledMap = XRayInstrMaps[Obj];
-//    printf("Functions (%d): %d\n", Obj, SledMap.Functions);
-//    for (int F = 1; F <= SledMap.Functions; F++) {
-//      const XRaySledEntry *Sled =
-//          SledMap.SledsIndex ? SledMap.SledsIndex[F - 1].fromPCRelative()
-//                              : findFunctionSleds(F, SledMap).Begin;
-//      auto Addr = Sled->function();
-//      auto PackedId = __xray_pack_id(F, Obj);
-//
-//
-//      DataInfo DI;
-//      Sym->SymbolizeData(Addr, &DI);
-//
-//      printf("Adding Entry: %d -> %x\n", PackedId, Addr);
-//      printf("Symbol Info: function %s from module %s in %s:%s\n", DI.name, DI.module, DI.file, DI.line);
-//
-//      LastEntry->FunctionId = PackedId;
-//      LastEntry->Addr = Addr;
-//      LastEntry->Next = new FunctionMapEntry;
-//      LastEntry = LastEntry->Next;
-//      LastEntry->Next = nullptr;
-//    }
-//  }
-//
-//  return FMap;
-//}
 
 int __xray_symbolize(int32_t PackedId, XRaySymbolInfo* SymInfo) {
   if (!SymInfo) {
