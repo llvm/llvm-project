@@ -7274,10 +7274,10 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
       B.setInsertPt(B.getMBB(), BrCond->getIterator());
       if (IntrID == Intrinsic::amdgcn_if) {
         B.buildInstr(AMDGPU::SI_IF)
-          .addDef(Def)
-          .addUse(Use)
-          .addImm(LikelyVarying)
-          .addMBB(UncondBrTarget);
+            .addDef(Def)
+            .addUse(Use)
+            .addImm(LikelyVarying)
+            .addMBB(UncondBrTarget);
       } else {
         B.buildInstr(AMDGPU::SI_ELSE)
             .addDef(Def)
