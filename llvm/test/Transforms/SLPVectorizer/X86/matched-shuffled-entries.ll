@@ -26,8 +26,7 @@ define i32 @bar() local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP12:%.*]] = lshr <16 x i32> [[TMP11]], splat (i32 15)
 ; CHECK-NEXT:    [[TMP13:%.*]] = and <16 x i32> [[TMP12]], splat (i32 65537)
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul nuw <16 x i32> [[TMP13]], splat (i32 65535)
-; CHECK-NEXT:    [[TMP19:%.*]] = call <16 x i32> @llvm.vector.insert.v16i32.v8i32(<16 x i32> poison, <8 x i32> [[TMP6]], i64 0)
-; CHECK-NEXT:    [[TMP20:%.*]] = call <16 x i32> @llvm.vector.insert.v16i32.v8i32(<16 x i32> [[TMP19]], <8 x i32> [[TMP10]], i64 8)
+; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <8 x i32> [[TMP6]], <8 x i32> [[TMP10]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP15:%.*]] = add <16 x i32> [[TMP14]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = xor <16 x i32> [[TMP15]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP16]])

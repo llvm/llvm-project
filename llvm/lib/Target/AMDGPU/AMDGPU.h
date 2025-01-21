@@ -177,7 +177,7 @@ extern char &SIShrinkInstructionsLegacyID;
 void initializeSIFixSGPRCopiesLegacyPass(PassRegistry &);
 extern char &SIFixSGPRCopiesLegacyID;
 
-void initializeSIFixVGPRCopiesPass(PassRegistry &);
+void initializeSIFixVGPRCopiesLegacyPass(PassRegistry &);
 extern char &SIFixVGPRCopiesID;
 
 void initializeSILowerWWMCopiesPass(PassRegistry &);
@@ -216,8 +216,8 @@ extern char &SIPreEmitPeepholeID;
 void initializeSILateBranchLoweringPass(PassRegistry &);
 extern char &SILateBranchLoweringPassID;
 
-void initializeSIOptimizeExecMaskingPass(PassRegistry &);
-extern char &SIOptimizeExecMaskingID;
+void initializeSIOptimizeExecMaskingLegacyPass(PassRegistry &);
+extern char &SIOptimizeExecMaskingLegacyID;
 
 void initializeSIPreAllocateWWMRegsLegacyPass(PassRegistry &);
 extern char &SIPreAllocateWWMRegsLegacyID;
