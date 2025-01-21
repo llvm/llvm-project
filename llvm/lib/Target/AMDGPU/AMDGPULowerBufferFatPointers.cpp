@@ -640,6 +640,8 @@ class LegalizeBufferContentTypesVisitor
     uint64_t Index = 0;
     uint64_t Length = 0;
     VecSlice() = delete;
+    // Needed for some Clangs
+    VecSlice(uint64_t Index, uint64_t Length) : Index(Index), Length(Length) {}
   };
   /// Return the [index, length] pairs into which `T` needs to be cut to form
   /// legal buffer load or store operations. Clears `Slices`. Creates an empty

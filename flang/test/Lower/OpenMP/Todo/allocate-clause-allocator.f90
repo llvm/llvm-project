@@ -4,7 +4,8 @@
 ! CHECK: not yet implemented: Unhandled clause allocate in omp.parallel
 ! CHECK: LLVM Translation failed for operation: omp.parallel
 program p
-  use omp_lib
+  !use omp_lib
+  integer(8),parameter::omp_default_mem_alloc=1_8
   integer :: x
   integer :: a
   integer :: i
