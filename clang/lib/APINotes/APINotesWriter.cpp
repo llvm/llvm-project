@@ -1093,6 +1093,7 @@ unsigned getFunctionInfoSize(const FunctionInfo &FI) {
   for (const auto &P : FI.Params)
     size += getParamInfoSize(P);
   size += sizeof(uint16_t) + FI.ResultType.size();
+  size += sizeof(uint16_t) + FI.SwiftReturnOwnership.size();
   return size;
 }
 
@@ -1118,6 +1119,9 @@ void emitFunctionInfo(raw_ostream &OS, const FunctionInfo &FI) {
 
   writer.write<uint16_t>(FI.ResultType.size());
   writer.write(ArrayRef<char>{FI.ResultType.data(), FI.ResultType.size()});
+  writer.write<uint16_t>(FI.SwiftReturnOwnership.size());
+  writer.write(ArrayRef<char>{FI.SwiftReturnOwnership.data(),
+                              FI.SwiftReturnOwnership.size()});
 }
 
 /// Used to serialize the on-disk global function table.

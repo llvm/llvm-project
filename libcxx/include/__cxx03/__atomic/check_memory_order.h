@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_CHECK_MEMORY_ORDER_H
-#define _LIBCPP___ATOMIC_CHECK_MEMORY_ORDER_H
+#ifndef _LIBCPP___CXX03___ATOMIC_CHECK_MEMORY_ORDER_H
+#define _LIBCPP___CXX03___ATOMIC_CHECK_MEMORY_ORDER_H
 
 #include <__cxx03/__config>
 
@@ -31,4 +31,4 @@
   _LIBCPP_DIAGNOSE_WARNING(__m == memory_order_release || __m == memory_order_acq_rel,                                 \
                            "memory order argument to atomic operation is invalid")
 
-#endif // _LIBCPP___ATOMIC_CHECK_MEMORY_ORDER_H
+#endif // _LIBCPP___CXX03___ATOMIC_CHECK_MEMORY_ORDER_H

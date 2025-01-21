@@ -29,6 +29,11 @@ const char PointerJumpStubContent[12] = {
     0x00, 0x02, 0x1f, (char)0xd6u  // BR  x16
 };
 
+const char ReentryTrampolineContent[8] = {
+    (char)0xfd, 0x7b, (char)0xbf, (char)0xa9, // STP x30, [sp, #-8]
+    0x00,       0x00, 0x00,       (char)0x94  // BL
+};
+
 const char *getEdgeKindName(Edge::Kind R) {
   switch (R) {
   case Pointer64:
@@ -195,6 +200,26 @@ static Error writeStoreRegSeq(AppendFtor &Append, unsigned DstLocReg,
   Instr |= SrcReg << SrcRegIndex;
 
   return Append(Instr);
+}
+
+void GOTTableManager::registerExistingEntries() {
+  for (auto *EntrySym : GOTSection->symbols()) {
+    assert(EntrySym->getBlock().edges_size() == 1 &&
+           "GOT block edge count != 1");
+    registerPreExistingEntry(EntrySym->getBlock().edges().begin()->getTarget(),
+                             *EntrySym);
+  }
+}
+
+void PLTTableManager::registerExistingEntries() {
+  for (auto *EntrySym : StubsSection->symbols()) {
+    assert(EntrySym->getBlock().edges_size() == 2 &&
+           "PLT block edge count != 2");
+    auto &GOTSym = EntrySym->getBlock().edges().begin()->getTarget();
+    assert(GOTSym.getBlock().edges_size() == 1 && "GOT block edge count != 1");
+    registerPreExistingEntry(GOTSym.getBlock().edges().begin()->getTarget(),
+                             *EntrySym);
+  }
 }
 
 const char *getPointerSigningFunctionSectionName() { return "$__ptrauth_sign"; }

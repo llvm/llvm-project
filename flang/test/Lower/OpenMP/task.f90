@@ -144,6 +144,18 @@ subroutine task_depend_multi_task()
   x = x + 12
   !CHECK: omp.terminator
   !$omp end task
+  !CHECK: omp.task depend(taskdependmutexinoutset -> %{{.+}} : !fir.ref<i32>)
+  !$omp task depend(mutexinoutset : x)
+  !CHECK: arith.subi
+  x = x - 12
+  !CHECK: omp.terminator
+  !$omp end task
+    !CHECK: omp.task depend(taskdependinoutset -> %{{.+}} : !fir.ref<i32>)
+  !$omp task depend(inoutset : x)
+  !CHECK: arith.subi
+  x = x - 12
+  !CHECK: omp.terminator
+  !$omp end task
 end subroutine task_depend_multi_task
 
 !===============================================================================
@@ -234,3 +246,11 @@ subroutine task_multiple_clauses()
   !CHECK: omp.terminator
   !$omp end task
 end subroutine task_multiple_clauses
+
+subroutine task_mergeable()
+!CHECK: omp.task mergeable {
+!CHECK: omp.terminator
+!CHECK: }
+ !$omp task mergeable
+ !$omp end task
+end subroutine

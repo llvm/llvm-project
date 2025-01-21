@@ -60,11 +60,17 @@ static bool canParameterizeCallOperand(const CallBase *CI, unsigned OpIdx) {
     if (Name.starts_with("__dtrace"))
       return false;
   }
-  if (isCalleeOperand(CI, OpIdx) &&
-      CI->getOperandBundle(LLVMContext::OB_ptrauth).has_value()) {
+  if (isCalleeOperand(CI, OpIdx)) {
     // The operand is the callee and it has already been signed. Ignore this
     // because we cannot add another ptrauth bundle to the call instruction.
-    return false;
+    if (CI->getOperandBundle(LLVMContext::OB_ptrauth).has_value())
+      return false;
+  } else {
+    // The target of the arc-attached call must be a constant and cannot be
+    // parameterized.
+    if (CI->isOperandBundleOfType(LLVMContext::OB_clang_arc_attachedcall,
+                                  OpIdx))
+      return false;
   }
   return true;
 }
@@ -154,7 +160,7 @@ static Value *createCast(IRBuilder<> &Builder, Value *V, Type *DestTy) {
     auto *DestAT = dyn_cast<ArrayType>(DestTy);
     assert(DestAT);
     assert(SrcAT->getNumElements() == DestAT->getNumElements());
-    Value *Result = UndefValue::get(DestTy);
+    Value *Result = PoisonValue::get(DestTy);
     for (unsigned int I = 0, E = SrcAT->getNumElements(); I < E; ++I) {
       Value *Element =
           createCast(Builder, Builder.CreateExtractValue(V, ArrayRef(I)),
@@ -405,12 +411,13 @@ static ParamLocsVecTy computeParamInfo(
   }
 
   ParamLocsVecTy ParamLocsVec;
-  for (auto &[HashSeq, Locs] : HashSeqToLocs) {
+  for (auto &[HashSeq, Locs] : HashSeqToLocs)
     ParamLocsVec.push_back(std::move(Locs));
-    llvm::sort(ParamLocsVec, [&](const ParamLocs &L, const ParamLocs &R) {
-      return L[0] < R[0];
-    });
-  }
+
+  llvm::sort(ParamLocsVec, [&](const ParamLocs &L, const ParamLocs &R) {
+    return L[0] < R[0];
+  });
+
   return ParamLocsVec;
 }
 

@@ -21,24 +21,22 @@ namespace RISCV {
 
 enum CPUKind : unsigned {
 #define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_SCALAR_UNALIGN,                   \
-             FAST_VECTOR_UNALIGN)                                              \
+             FAST_VECTOR_UNALIGN, MVENDORID, MARCHID, MIMPID)                  \
   CK_##ENUM,
 #define TUNE_PROC(ENUM, NAME) CK_##ENUM,
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
 };
 
-struct CPUInfo {
-  StringLiteral Name;
-  StringLiteral DefaultMarch;
-  bool FastScalarUnalignedAccess;
-  bool FastVectorUnalignedAccess;
-  bool is64Bit() const { return DefaultMarch.starts_with("rv64"); }
-};
-
 constexpr CPUInfo RISCVCPUInfo[] = {
 #define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_SCALAR_UNALIGN,                   \
-             FAST_VECTOR_UNALIGN)                                              \
-  {NAME, DEFAULT_MARCH, FAST_SCALAR_UNALIGN, FAST_VECTOR_UNALIGN},
+             FAST_VECTOR_UNALIGN, MVENDORID, MARCHID, MIMPID)                  \
+  {                                                                            \
+      NAME,                                                                    \
+      DEFAULT_MARCH,                                                           \
+      FAST_SCALAR_UNALIGN,                                                     \
+      FAST_VECTOR_UNALIGN,                                                     \
+      {MVENDORID, MARCHID, MIMPID},                                            \
+  },
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
 };
 
@@ -57,6 +55,18 @@ bool hasFastScalarUnalignedAccess(StringRef CPU) {
 bool hasFastVectorUnalignedAccess(StringRef CPU) {
   const CPUInfo *Info = getCPUInfoByName(CPU);
   return Info && Info->FastVectorUnalignedAccess;
+}
+
+bool hasValidCPUModel(StringRef CPU) {
+  const CPUModel Model = getCPUModel(CPU);
+  return Model.MVendorID != 0 && Model.MArchID != 0 && Model.MImpID != 0;
+}
+
+CPUModel getCPUModel(StringRef CPU) {
+  const CPUInfo *Info = getCPUInfoByName(CPU);
+  if (!Info)
+    return {0, 0, 0};
+  return Info->Model;
 }
 
 bool parseCPU(StringRef CPU, bool IsRV64) {

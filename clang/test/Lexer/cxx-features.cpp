@@ -81,7 +81,7 @@
 #error "wrong value for __cpp_named_character_escapes"
 #endif
 
-#if check(explicit_this_parameter, 0, 0, 0, 0, 0, 0, 0)
+#if check(explicit_this_parameter, 0, 0, 0, 0, 0, 202110L, 202110L)
 #error "wrong value for __cpp_explicit_this_parameter"
 #endif
 

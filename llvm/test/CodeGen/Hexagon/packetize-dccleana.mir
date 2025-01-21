@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass=hexagon-packetizer -o - %s | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass=hexagon-packetizer -o - %s | FileCheck %s
 
 # Make sure that the load is not packetized together with the dccleana.
 # CHECK-NOT: BUNDLE

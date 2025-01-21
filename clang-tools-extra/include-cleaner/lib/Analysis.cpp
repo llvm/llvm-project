@@ -85,8 +85,9 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
   const auto MainFile = *SM.getFileEntryRefForID(SM.getMainFileID());
   llvm::DenseSet<const Include *> Used;
   llvm::StringMap<Header> Missing;
+  constexpr auto DefaultHeaderFilter = [](llvm::StringRef) { return false; };
   if (!HeaderFilter)
-    HeaderFilter = [](llvm::StringRef) { return false; };
+    HeaderFilter = DefaultHeaderFilter;
   OptionalDirectoryEntryRef ResourceDir =
       PP.getHeaderSearchInfo().getModuleMap().getBuiltinDir();
   walkUsed(ASTRoots, MacroRefs, PI, PP,

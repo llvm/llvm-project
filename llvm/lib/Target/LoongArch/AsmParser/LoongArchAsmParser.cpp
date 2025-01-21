@@ -669,13 +669,33 @@ static bool matchRegisterNameHelper(MCRegister &RegNo, StringRef Name) {
 
 bool LoongArchAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                        SMLoc &EndLoc) {
-  return Error(getLoc(), "invalid register number");
+  if (!tryParseRegister(Reg, StartLoc, EndLoc).isSuccess())
+    return Error(getLoc(), "invalid register name");
+
+  if (!LoongArchMCRegisterClasses[LoongArch::GPRRegClassID].contains(Reg) &&
+      !LoongArchMCRegisterClasses[LoongArch::FPR32RegClassID].contains(Reg))
+    return Error(getLoc(), "invalid register name");
+
+  return false;
 }
 
 ParseStatus LoongArchAsmParser::tryParseRegister(MCRegister &Reg,
                                                  SMLoc &StartLoc,
                                                  SMLoc &EndLoc) {
-  llvm_unreachable("Unimplemented function.");
+  const AsmToken &Tok = getParser().getTok();
+  StartLoc = Tok.getLoc();
+  EndLoc = Tok.getEndLoc();
+
+  parseOptionalToken(AsmToken::Dollar);
+  if (getLexer().getKind() != AsmToken::Identifier)
+    return ParseStatus::NoMatch;
+
+  StringRef Name = Tok.getIdentifier();
+  if (matchRegisterNameHelper(Reg, Name))
+    return ParseStatus::NoMatch;
+
+  getParser().Lex(); // Eat identifier token.
+  return ParseStatus::Success;
 }
 
 bool LoongArchAsmParser::classifySymbolRef(const MCExpr *Expr,
@@ -989,7 +1009,8 @@ void LoongArchAsmParser::emitLoadAddressPcrel(MCInst &Inst, SMLoc IDLoc,
   Insts.push_back(
       LoongArchAsmParser::Inst(ADDI, LoongArchMCExpr::VK_LoongArch_PCALA_LO12));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out, true);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
+                /*RelaxHint=*/true);
 }
 
 void LoongArchAsmParser::emitLoadAddressPcrelLarge(MCInst &Inst, SMLoc IDLoc,
@@ -1063,7 +1084,8 @@ void LoongArchAsmParser::emitLoadAddressGot(MCInst &Inst, SMLoc IDLoc,
   Insts.push_back(
       LoongArchAsmParser::Inst(LD, LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out, true);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
+                /*RelaxHint=*/true);
 }
 
 void LoongArchAsmParser::emitLoadAddressGotLarge(MCInst &Inst, SMLoc IDLoc,
@@ -1156,7 +1178,8 @@ void LoongArchAsmParser::emitLoadAddressTLSIE(MCInst &Inst, SMLoc IDLoc,
   Insts.push_back(LoongArchAsmParser::Inst(
       LD, LoongArchMCExpr::VK_LoongArch_TLS_IE_PC_LO12));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
+                /*RelaxHint=*/true);
 }
 
 void LoongArchAsmParser::emitLoadAddressTLSIELarge(MCInst &Inst, SMLoc IDLoc,
@@ -1228,7 +1251,8 @@ void LoongArchAsmParser::emitLoadAddressTLSLD(MCInst &Inst, SMLoc IDLoc,
   Insts.push_back(LoongArchAsmParser::Inst(
       ADDI, LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
+                /*RelaxHint=*/true);
 }
 
 void LoongArchAsmParser::emitLoadAddressTLSLDLarge(MCInst &Inst, SMLoc IDLoc,
@@ -1300,7 +1324,8 @@ void LoongArchAsmParser::emitLoadAddressTLSGD(MCInst &Inst, SMLoc IDLoc,
   Insts.push_back(LoongArchAsmParser::Inst(
       ADDI, LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
+                /*RelaxHint=*/true);
 }
 
 void LoongArchAsmParser::emitLoadAddressTLSGDLarge(MCInst &Inst, SMLoc IDLoc,
@@ -1389,7 +1414,8 @@ void LoongArchAsmParser::emitLoadAddressTLSDesc(MCInst &Inst, SMLoc IDLoc,
   Insts.push_back(LoongArchAsmParser::Inst(
       LoongArch::JIRL, LoongArchMCExpr::VK_LoongArch_TLS_DESC_CALL));
 
-  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out);
+  emitLAInstSeq(DestReg, DestReg, Symbol, Insts, IDLoc, Out,
+                /*RelaxHint=*/true);
 }
 
 void LoongArchAsmParser::emitLoadAddressTLSDescLarge(MCInst &Inst, SMLoc IDLoc,
@@ -1480,8 +1506,9 @@ void LoongArchAsmParser::emitFuncCall36(MCInst &Inst, SMLoc IDLoc,
       IsTailCall ? Inst.getOperand(0).getReg() : MCRegister(LoongArch::R1);
   const MCExpr *Sym =
       IsTailCall ? Inst.getOperand(1).getExpr() : Inst.getOperand(0).getExpr();
-  const LoongArchMCExpr *LE = LoongArchMCExpr::create(
-      Sym, llvm::LoongArchMCExpr::VK_LoongArch_CALL36, getContext());
+  const LoongArchMCExpr *LE =
+      LoongArchMCExpr::create(Sym, llvm::LoongArchMCExpr::VK_LoongArch_CALL36,
+                              getContext(), /*RelaxHint=*/true);
 
   Out.emitInstruction(
       MCInstBuilder(LoongArch::PCADDU18I).addReg(ScratchReg).addExpr(LE),

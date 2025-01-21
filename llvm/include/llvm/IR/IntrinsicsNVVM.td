@@ -635,6 +635,25 @@ class CP_ASYNC_BULK_TENSOR_PREFETCH_INTR<int dim, string mode> {
         ImmArg<ArgIndex<FlagsStartIdx>>];
 }
 
+class CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, string mode, string op> {
+  string Suffix = op # "_" # mode # "_" # dim # "d";
+  string Name = "int_nvvm_cp_async_bulk_tensor_reduce_" # Suffix;
+
+  list<LLVMType> TensorDimsTy = !listsplat(llvm_i32_ty, dim);
+  list<LLVMType> ArgsTy = !listconcat(
+                          [llvm_shared_ptr_ty,  // src_smem_ptr
+                           llvm_ptr_ty],        // tensormap_ptr
+                           TensorDimsTy,        // actual tensor dims
+                          [llvm_i64_ty,         // cache_hint
+                           llvm_i1_ty]          // Flag for cache_hint
+                          );
+  int FlagsStartIdx = !add(dim, 3);
+  list<IntrinsicProperty> IntrProp = [IntrConvergent,
+        ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+        ImmArg<ArgIndex<FlagsStartIdx>>];
+}
+
 let TargetPrefix = "nvvm" in {
   def int_nvvm_prmt : ClangBuiltin<"__nvvm_prmt">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
@@ -818,6 +837,13 @@ let TargetPrefix = "nvvm" in {
         [IntrNoMem]>;
   def int_nvvm_div_rp_d : ClangBuiltin<"__nvvm_div_rp_d">,
       DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty],
+        [IntrNoMem]>;
+
+  def int_nvvm_div_full : ClangBuiltin<"__nvvm_div_full">,
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
+        [IntrNoMem]>;
+  def int_nvvm_div_full_ftz : ClangBuiltin<"__nvvm_div_full_ftz">,
+      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
         [IntrNoMem]>;
 
 //
@@ -1411,6 +1437,16 @@ let TargetPrefix = "nvvm" in {
        Intrinsic<[llvm_bfloat_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
 
   def int_nvvm_f2tf32_rna : ClangBuiltin<"__nvvm_f2tf32_rna">,
+      Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f2tf32_rna_satfinite : ClangBuiltin<"__nvvm_f2tf32_rna_satfinite">,
+      Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f2tf32_rn : ClangBuiltin<"__nvvm_f2tf32_rn">,
+      Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f2tf32_rn_relu : ClangBuiltin<"__nvvm_f2tf32_rn_relu">,
+      Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f2tf32_rz : ClangBuiltin<"__nvvm_f2tf32_rz">,
+      Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
+  def int_nvvm_f2tf32_rz_relu : ClangBuiltin<"__nvvm_f2tf32_rz_relu">,
       Intrinsic<[llvm_i32_ty], [llvm_float_ty], [IntrNoMem, IntrNoCallback]>;
 
   def int_nvvm_ff_to_e4m3x2_rn : ClangBuiltin<"__nvvm_ff_to_e4m3x2_rn">,
@@ -4780,6 +4816,21 @@ def int_nvvm_redux_sync_or : ClangBuiltin<"__nvvm_redux_sync_or">,
             [IntrConvergent, IntrInaccessibleMemOnly, IntrNoCallback]>;
 
 //
+// WGMMA fence instructions
+//
+// wgmma.fence.sync.aligned;
+def int_nvvm_wgmma_fence_sync_aligned 
+  : Intrinsic<[], [], [IntrConvergent]>;
+
+// wgmma.commit_group.sync.aligned;
+def int_nvvm_wgmma_commit_group_sync_aligned
+  : Intrinsic<[], [], [IntrConvergent], "llvm.nvvm.wgmma.commit_group.sync.aligned">;
+
+// wgmma.wait_group.sync.aligned N;
+def int_nvvm_wgmma_wait_group_sync_aligned
+  : Intrinsic<[], [llvm_i64_ty], [IntrConvergent, ImmArg<ArgIndex<0>>], "llvm.nvvm.wgmma.wait_group.sync.aligned">;
+
+//
 // WMMA instructions
 //
 // WMMA.LOAD
@@ -4928,5 +4979,58 @@ foreach dim = [1, 2, 3, 4, 5] in {
       def prefetch.Name : DefaultAttrsIntrinsic<[], prefetch.ArgsTy, prefetch.IntrProp>;
   }
 }
+
+// Intrinsics for TMA Copy with reduction
+foreach dim = [1, 2, 3, 4, 5] in {
+  foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
+    foreach red_op = ["add", "min", "max", "inc", "dec", "and", "or", "xor"] in {
+      foreach reduce = [CP_ASYNC_BULK_TENSOR_REDUCE_INTR<dim, mode, red_op>] in
+        def reduce.Name : DefaultAttrsIntrinsic<[], reduce.ArgsTy, reduce.IntrProp>;
+    }
+  }
+}
+
+// Intrinsics for Bulk Copy using TMA (non-tensor)
+// From Global to Shared Cluster
+def int_nvvm_cp_async_bulk_global_to_shared_cluster
+  : DefaultAttrsIntrinsic<[],
+      [llvm_shared_ptr_ty, // dst_smem_ptr
+       llvm_shared_ptr_ty, // mbarrier_ptr
+       llvm_global_ptr_ty, // src_gmem_ptr
+       llvm_i32_ty,        // copy_size
+       llvm_i16_ty,        // cta_mask
+       llvm_i64_ty,        // cache_hint
+       llvm_i1_ty,         // Flag for cta_mask
+       llvm_i1_ty],        // Flag for cache_hint
+      [IntrConvergent, IntrArgMemOnly,
+       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+       NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+       NoCapture<ArgIndex<2>>, ImmArg<ArgIndex<6>>,
+       ImmArg<ArgIndex<7>>]>;
+
+// From Shared CTA to Shared Cluster
+def int_nvvm_cp_async_bulk_shared_cta_to_cluster
+  : DefaultAttrsIntrinsic<[],
+      [llvm_shared_ptr_ty, // dst_smem_ptr
+       llvm_shared_ptr_ty, // mbarrier_ptr
+       llvm_shared_ptr_ty, // src_smem_ptr
+       llvm_i32_ty],       // copy_size
+      [IntrConvergent, IntrArgMemOnly,
+       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
+       NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+       NoCapture<ArgIndex<2>>]>;
+
+// From Shared CTA to Global memory
+def int_nvvm_cp_async_bulk_shared_cta_to_global
+  : DefaultAttrsIntrinsic<[],
+      [llvm_global_ptr_ty, // dst_gmem_ptr
+       llvm_shared_ptr_ty, // src_smem_ptr
+       llvm_i32_ty,        // copy_size
+       llvm_i64_ty,        // cache_hint
+       llvm_i1_ty],        // Flag for cache_hint
+      [IntrConvergent, IntrArgMemOnly,
+       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+       NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
+       ImmArg<ArgIndex<4>>]>;
 
 } // let TargetPrefix = "nvvm"

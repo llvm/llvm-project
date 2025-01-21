@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_REGULAR_H
-#define _LIBCPP___CONCEPTS_REGULAR_H
+#ifndef _LIBCPP___CXX03___CONCEPTS_REGULAR_H
+#define _LIBCPP___CXX03___CONCEPTS_REGULAR_H
 
 #include <__cxx03/__concepts/equality_comparable.h>
 #include <__cxx03/__concepts/semiregular.h>
@@ -30,4 +30,4 @@ concept regular = semiregular<_Tp> && equality_comparable<_Tp>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_REGULAR_H
+#endif // _LIBCPP___CXX03___CONCEPTS_REGULAR_H

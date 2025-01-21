@@ -112,6 +112,27 @@ enum FloatingRank {
   Ibm128Rank
 };
 
+template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
+  static FoldingSetNodeID getEmptyKey() { return FoldingSetNodeID{}; }
+
+  static FoldingSetNodeID getTombstoneKey() {
+    FoldingSetNodeID id;
+    for (size_t i = 0; i < sizeof(id) / sizeof(unsigned); ++i) {
+      id.AddInteger(std::numeric_limits<unsigned>::max());
+    }
+    return id;
+  }
+
+  static unsigned getHashValue(const FoldingSetNodeID &Val) {
+    return Val.ComputeHash();
+  }
+
+  static bool isEqual(const FoldingSetNodeID &LHS,
+                      const FoldingSetNodeID &RHS) {
+    return LHS == RHS;
+  }
+};
+
 /// \returns The locations that are relevant when searching for Doc comments
 /// related to \p D.
 static SmallVector<SourceLocation, 2>
@@ -374,10 +395,10 @@ static const Decl &adjustDeclToTemplate(const Decl &D) {
       llvm::PointerUnion<ClassTemplateDecl *,
                          ClassTemplatePartialSpecializationDecl *>
           PU = CTSD->getSpecializedTemplateOrPartial();
-      return PU.is<ClassTemplateDecl *>()
-                 ? *static_cast<const Decl *>(PU.get<ClassTemplateDecl *>())
+      return isa<ClassTemplateDecl *>(PU)
+                 ? *static_cast<const Decl *>(cast<ClassTemplateDecl *>(PU))
                  : *static_cast<const Decl *>(
-                       PU.get<ClassTemplatePartialSpecializationDecl *>());
+                       cast<ClassTemplatePartialSpecializationDecl *>(PU));
     }
 
     // Class is instantiated from a member definition of a class template?
@@ -899,7 +920,7 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       FunctionProtoTypes(this_(), FunctionProtoTypesLog2InitSize),
       DependentTypeOfExprTypes(this_()), DependentDecltypeTypes(this_()),
       TemplateSpecializationTypes(this_()),
-      DependentTemplateSpecializationTypes(this_()), AutoTypes(this_()),
+      DependentTemplateSpecializationTypes(this_()),
       DependentBitIntTypes(this_()), SubstTemplateTemplateParmPacks(this_()),
       DeducedTemplates(this_()), ArrayParameterTypes(this_()),
       CanonTemplateTemplateParms(this_()), SourceMgr(SM), LangOpts(LOpts),
@@ -2774,7 +2795,7 @@ getSubobjectSizeInBits(const FieldDecl *Field, const ASTContext &Context,
     if (Field->isUnnamedBitField())
       return 0;
 
-    int64_t BitfieldSize = Field->getBitWidthValue(Context);
+    int64_t BitfieldSize = Field->getBitWidthValue();
     if (IsBitIntType) {
       if ((unsigned)BitfieldSize >
           cast<BitIntType>(Field->getType())->getNumBits())
@@ -3558,7 +3579,7 @@ ASTContext::adjustType(QualType Orig,
                        llvm::function_ref<QualType(QualType)> Adjust) const {
   switch (Orig->getTypeClass()) {
   case Type::Attributed: {
-    const auto *AT = dyn_cast<AttributedType>(Orig);
+    const auto *AT = cast<AttributedType>(Orig);
     return getAttributedType(AT->getAttrKind(),
                              adjustType(AT->getModifiedType(), Adjust),
                              adjustType(AT->getEquivalentType(), Adjust),
@@ -5188,6 +5209,85 @@ QualType ASTContext::getEnumType(const EnumDecl *Decl) const {
   return QualType(newType, 0);
 }
 
+bool ASTContext::computeBestEnumTypes(bool IsPacked, unsigned NumNegativeBits,
+                                      unsigned NumPositiveBits,
+                                      QualType &BestType,
+                                      QualType &BestPromotionType) {
+  unsigned IntWidth = Target->getIntWidth();
+  unsigned CharWidth = Target->getCharWidth();
+  unsigned ShortWidth = Target->getShortWidth();
+  bool EnumTooLarge = false;
+  unsigned BestWidth;
+  if (NumNegativeBits) {
+    // If there is a negative value, figure out the smallest integer type (of
+    // int/long/longlong) that fits.
+    // If it's packed, check also if it fits a char or a short.
+    if (IsPacked && NumNegativeBits <= CharWidth &&
+        NumPositiveBits < CharWidth) {
+      BestType = SignedCharTy;
+      BestWidth = CharWidth;
+    } else if (IsPacked && NumNegativeBits <= ShortWidth &&
+               NumPositiveBits < ShortWidth) {
+      BestType = ShortTy;
+      BestWidth = ShortWidth;
+    } else if (NumNegativeBits <= IntWidth && NumPositiveBits < IntWidth) {
+      BestType = IntTy;
+      BestWidth = IntWidth;
+    } else {
+      BestWidth = Target->getLongWidth();
+
+      if (NumNegativeBits <= BestWidth && NumPositiveBits < BestWidth) {
+        BestType = LongTy;
+      } else {
+        BestWidth = Target->getLongLongWidth();
+
+        if (NumNegativeBits > BestWidth || NumPositiveBits >= BestWidth)
+          EnumTooLarge = true;
+        BestType = LongLongTy;
+      }
+    }
+    BestPromotionType = (BestWidth <= IntWidth ? IntTy : BestType);
+  } else {
+    // If there is no negative value, figure out the smallest type that fits
+    // all of the enumerator values.
+    // If it's packed, check also if it fits a char or a short.
+    if (IsPacked && NumPositiveBits <= CharWidth) {
+      BestType = UnsignedCharTy;
+      BestPromotionType = IntTy;
+      BestWidth = CharWidth;
+    } else if (IsPacked && NumPositiveBits <= ShortWidth) {
+      BestType = UnsignedShortTy;
+      BestPromotionType = IntTy;
+      BestWidth = ShortWidth;
+    } else if (NumPositiveBits <= IntWidth) {
+      BestType = UnsignedIntTy;
+      BestWidth = IntWidth;
+      BestPromotionType = (NumPositiveBits == BestWidth || !LangOpts.CPlusPlus)
+                              ? UnsignedIntTy
+                              : IntTy;
+    } else if (NumPositiveBits <= (BestWidth = Target->getLongWidth())) {
+      BestType = UnsignedLongTy;
+      BestPromotionType = (NumPositiveBits == BestWidth || !LangOpts.CPlusPlus)
+                              ? UnsignedLongTy
+                              : LongTy;
+    } else {
+      BestWidth = Target->getLongLongWidth();
+      if (NumPositiveBits > BestWidth) {
+        // This can happen with bit-precise integer types, but those are not
+        // allowed as the type for an enumerator per C23 6.7.2.2p4 and p12.
+        // FIXME: GCC uses __int128_t and __uint128_t for cases that fit within
+        // a 128-bit integer, we should consider doing the same.
+        EnumTooLarge = true;
+      }
+      BestType = UnsignedLongLongTy;
+      BestPromotionType = (NumPositiveBits == BestWidth || !LangOpts.CPlusPlus)
+                              ? UnsignedLongLongTy
+                              : LongLongTy;
+    }
+  }
+  return EnumTooLarge;
+}
+
 QualType ASTContext::getUnresolvedUsingType(
     const UnresolvedUsingTypenameDecl *Decl) const {
   if (Decl->TypeForDecl)
@@ -6223,13 +6323,12 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
                                          ArrayRef<QualType> Expansions,
                                          int Index) const {
   QualType Canonical;
-  bool ExpandsToEmptyPack = FullySubstituted && Expansions.empty();
   if (FullySubstituted && Index != -1) {
     Canonical = getCanonicalType(Expansions[Index]);
   } else {
     llvm::FoldingSetNodeID ID;
-    PackIndexingType::Profile(ID, *this, Pattern, IndexExpr,
-                              ExpandsToEmptyPack);
+    PackIndexingType::Profile(ID, *this, Pattern.getCanonicalType(), IndexExpr,
+                              FullySubstituted);
     void *InsertPos = nullptr;
     PackIndexingType *Canon =
         DependentPackIndexingTypes.FindNodeOrInsertPos(ID, InsertPos);
@@ -6237,8 +6336,9 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
       void *Mem = Allocate(
           PackIndexingType::totalSizeToAlloc<QualType>(Expansions.size()),
           TypeAlignment);
-      Canon = new (Mem) PackIndexingType(*this, QualType(), Pattern, IndexExpr,
-                                         ExpandsToEmptyPack, Expansions);
+      Canon = new (Mem)
+          PackIndexingType(*this, QualType(), Pattern.getCanonicalType(),
+                           IndexExpr, FullySubstituted, Expansions);
       DependentPackIndexingTypes.InsertNode(Canon, InsertPos);
     }
     Canonical = QualType(Canon, 0);
@@ -6248,7 +6348,7 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
       Allocate(PackIndexingType::totalSizeToAlloc<QualType>(Expansions.size()),
                TypeAlignment);
   auto *T = new (Mem) PackIndexingType(*this, Canonical, Pattern, IndexExpr,
-                                       ExpandsToEmptyPack, Expansions);
+                                       FullySubstituted, Expansions);
   Types.push_back(T);
   return QualType(T, 0);
 }
@@ -6296,12 +6396,14 @@ QualType ASTContext::getAutoTypeInternal(
     return getAutoDeductType();
 
   // Look in the folding set for an existing type.
-  void *InsertPos = nullptr;
   llvm::FoldingSetNodeID ID;
-  AutoType::Profile(ID, *this, DeducedType, Keyword, IsDependent,
-                    TypeConstraintConcept, TypeConstraintArgs);
-  if (AutoType *AT = AutoTypes.FindNodeOrInsertPos(ID, InsertPos))
-    return QualType(AT, 0);
+  bool IsDeducedDependent =
+      !DeducedType.isNull() && DeducedType->isDependentType();
+  AutoType::Profile(ID, *this, DeducedType, Keyword,
+                    IsDependent || IsDeducedDependent, TypeConstraintConcept,
+                    TypeConstraintArgs);
+  if (auto const AT_iter = AutoTypes.find(ID); AT_iter != AutoTypes.end())
+    return QualType(AT_iter->getSecond(), 0);
 
   QualType Canon;
   if (!IsCanon) {
@@ -6316,10 +6418,6 @@ QualType ASTContext::getAutoTypeInternal(
         Canon =
             getAutoTypeInternal(QualType(), Keyword, IsDependent, IsPack,
                                 CanonicalConcept, CanonicalConceptArgs, true);
-        // Find the insert position again.
-        [[maybe_unused]] auto *Nothing =
-            AutoTypes.FindNodeOrInsertPos(ID, InsertPos);
-        assert(!Nothing && "canonical type broken");
       }
     }
   }
@@ -6333,8 +6431,13 @@ QualType ASTContext::getAutoTypeInternal(
                    : TypeDependence::None) |
           (IsPack ? TypeDependence::UnexpandedPack : TypeDependence::None),
       Canon, TypeConstraintConcept, TypeConstraintArgs);
+#ifndef NDEBUG
+  llvm::FoldingSetNodeID InsertedID;
+  AT->Profile(InsertedID, *this);
+  assert(InsertedID == ID && "ID does not match");
+#endif
   Types.push_back(AT);
-  AutoTypes.InsertNode(AT, InsertPos);
+  AutoTypes.try_emplace(ID, AT);
   return QualType(AT, 0);
 }
 
@@ -6354,7 +6457,7 @@ ASTContext::getAutoType(QualType DeducedType, AutoTypeKeyword Keyword,
 }
 
 QualType ASTContext::getUnconstrainedType(QualType T) const {
-  QualType CanonT = T.getCanonicalType();
+  QualType CanonT = T.getNonPackExpansionType().getCanonicalType();
 
   // Remove a type-constraint from a top-level auto or decltype(auto).
   if (auto *AT = CanonT->getAs<AutoType>()) {
@@ -7747,7 +7850,7 @@ QualType ASTContext::isPromotableBitField(Expr *E) const {
 
   QualType FT = Field->getType();
 
-  uint64_t BitWidth = Field->getBitWidthValue(*this);
+  uint64_t BitWidth = Field->getBitWidthValue();
   uint64_t IntSize = getTypeSize(IntTy);
   // C++ [conv.prom]p5:
   //   A prvalue for an integral bit-field can be converted to a prvalue of type
@@ -8775,7 +8878,7 @@ static void EncodeBitField(const ASTContext *Ctx, std::string& S,
       S += getObjCEncodingForPrimitiveType(Ctx, BT);
     }
   }
-  S += llvm::utostr(FD->getBitWidthValue(*Ctx));
+  S += llvm::utostr(FD->getBitWidthValue());
 }
 
 // Helper function for determining whether the encoded type string would include
@@ -9201,7 +9304,7 @@ void ASTContext::getObjCEncodingForStructureImpl(RecordDecl *RDecl,
   }
 
   for (FieldDecl *Field : RDecl->fields()) {
-    if (!Field->isZeroLengthBitField(*this) && Field->isZeroSize(*this))
+    if (!Field->isZeroLengthBitField() && Field->isZeroSize(*this))
       continue;
     uint64_t offs = layout.getFieldOffset(Field->getFieldIndex());
     FieldOrBaseOffsets.insert(FieldOrBaseOffsets.upper_bound(offs),
@@ -9298,7 +9401,7 @@ void ASTContext::getObjCEncodingForStructureImpl(RecordDecl *RDecl,
       if (field->isBitField()) {
         EncodeBitField(this, S, field->getType(), field);
 #ifndef NDEBUG
-        CurOffs += field->getBitWidthValue(*this);
+        CurOffs += field->getBitWidthValue();
 #endif
       } else {
         QualType qt = field->getType();
@@ -9729,6 +9832,43 @@ static TypedefDecl *CreateHexagonBuiltinVaListDecl(const ASTContext *Context) {
   return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
 }
 
+static TypedefDecl *
+CreateXtensaABIBuiltinVaListDecl(const ASTContext *Context) {
+  // typedef struct __va_list_tag {
+  RecordDecl *VaListTagDecl = Context->buildImplicitRecord("__va_list_tag");
+
+  VaListTagDecl->startDefinition();
+
+  // int* __va_stk;
+  // int* __va_reg;
+  // int __va_ndx;
+  constexpr size_t NumFields = 3;
+  QualType FieldTypes[NumFields] = {Context->getPointerType(Context->IntTy),
+                                    Context->getPointerType(Context->IntTy),
+                                    Context->IntTy};
+  const char *FieldNames[NumFields] = {"__va_stk", "__va_reg", "__va_ndx"};
+
+  // Create fields
+  for (unsigned i = 0; i < NumFields; ++i) {
+    FieldDecl *Field = FieldDecl::Create(
+        *Context, VaListTagDecl, SourceLocation(), SourceLocation(),
+        &Context->Idents.get(FieldNames[i]), FieldTypes[i], /*TInfo=*/nullptr,
+        /*BitWidth=*/nullptr,
+        /*Mutable=*/false, ICIS_NoInit);
+    Field->setAccess(AS_public);
+    VaListTagDecl->addDecl(Field);
+  }
+  VaListTagDecl->completeDefinition();
+  Context->VaListTagDecl = VaListTagDecl;
+  QualType VaListTagType = Context->getRecordType(VaListTagDecl);
+
+  // } __va_list_tag;
+  TypedefDecl *VaListTagTypedefDecl =
+      Context->buildImplicitTypedef(VaListTagType, "__builtin_va_list");
+
+  return VaListTagTypedefDecl;
+}
+
 static TypedefDecl *CreateVaListDecl(const ASTContext *Context,
                                      TargetInfo::BuiltinVaListKind Kind) {
   switch (Kind) {
@@ -9750,6 +9890,8 @@ static TypedefDecl *CreateVaListDecl(const ASTContext *Context,
     return CreateSystemZBuiltinVaListDecl(Context);
   case TargetInfo::HexagonBuiltinVaList:
     return CreateHexagonBuiltinVaListDecl(Context);
+  case TargetInfo::XtensaABIBuiltinVaList:
+    return CreateXtensaABIBuiltinVaListDecl(Context);
   }
 
   llvm_unreachable("Unhandled __builtin_va_list type kind");
@@ -14296,7 +14438,7 @@ QualType ASTContext::getCorrespondingSignedFixedPointType(QualType Ty) const {
 // corresponding backend features (which may contain duplicates).
 static std::vector<std::string> getFMVBackendFeaturesFor(
     const llvm::SmallVectorImpl<StringRef> &FMVFeatStrings) {
-  std::vector<std::string> BackendFeats{{"+fmv"}};
+  std::vector<std::string> BackendFeats;
   llvm::AArch64::ExtensionSet FeatureBits;
   for (StringRef F : FMVFeatStrings)
     if (auto FMVExt = llvm::AArch64::parseFMVExtension(F))
@@ -14439,6 +14581,19 @@ void ASTContext::registerSYCLEntryPointFunction(FunctionDecl *FD) {
   (void)IT;
   SYCLKernels.insert(
       std::make_pair(KernelNameType, BuildSYCLKernelInfo(KernelNameType, FD)));
+}
+
+const SYCLKernelInfo &ASTContext::getSYCLKernelInfo(QualType T) const {
+  CanQualType KernelNameType = getCanonicalType(T);
+  return SYCLKernels.at(KernelNameType);
+}
+
+const SYCLKernelInfo *ASTContext::findSYCLKernelInfo(QualType T) const {
+  CanQualType KernelNameType = getCanonicalType(T);
+  auto IT = SYCLKernels.find(KernelNameType);
+  if (IT != SYCLKernels.end())
+    return &IT->second;
+  return nullptr;
 }
 
 OMPTraitInfo &ASTContext::getNewOMPTraitInfo() {

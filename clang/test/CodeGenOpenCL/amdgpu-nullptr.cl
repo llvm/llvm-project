@@ -513,9 +513,9 @@ typedef struct {
 
 // CHECK-LABEL: test_memset_private
 // CHECK: call void @llvm.memset.p5.i64(ptr addrspace(5) noundef align 8 {{.*}}, i8 0, i64 32, i1 false)
-// CHECK: [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(5) %ptr, i32 32
+// CHECK: [[GEP:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) %ptr, i32 32
 // CHECK: store ptr addrspace(5) addrspacecast (ptr null to ptr addrspace(5)), ptr addrspace(5) [[GEP]]
-// CHECK: [[GEP1:%.*]] = getelementptr inbounds i8, ptr addrspace(5) {{.*}}, i32 36
+// CHECK: [[GEP1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) {{.*}}, i32 36
 // CHECK: store i32 0, ptr addrspace(5) [[GEP1]], align 4
 void test_memset_private(private StructTy3 *ptr) {
   StructTy3 S3 = {0, 0, 0, 0, 0};

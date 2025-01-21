@@ -88,7 +88,7 @@ protected:
   unsigned StreamingHazardSize;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
-  unsigned VScaleForTuning = 2;
+  unsigned VScaleForTuning = 1;
   TailFoldingOpts DefaultSVETFOpts = TailFoldingOpts::Disabled;
 
   bool EnableSubregLiveness;

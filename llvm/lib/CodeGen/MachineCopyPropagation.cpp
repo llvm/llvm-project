@@ -117,7 +117,32 @@ class CopyTracker {
 
   DenseMap<MCRegUnit, CopyInfo> Copies;
 
+  // Memoised sets of register units which are preserved by each register mask,
+  // needed to efficiently remove copies which are invalidated by call
+  // instructions.
+  DenseMap<const uint32_t *, BitVector> RegMaskToPreservedRegUnits;
+
 public:
+  /// Get the set of register units which are preserved by RegMaskOp.
+  BitVector &getPreservedRegUnits(const MachineOperand &RegMaskOp,
+                                  const TargetRegisterInfo &TRI) {
+    const uint32_t *RegMask = RegMaskOp.getRegMask();
+    auto Existing = RegMaskToPreservedRegUnits.find(RegMask);
+    if (Existing != RegMaskToPreservedRegUnits.end()) {
+      return Existing->second;
+    } else {
+      BitVector &PreservedRegUnits = RegMaskToPreservedRegUnits[RegMask];
+
+      PreservedRegUnits.resize(TRI.getNumRegUnits());
+      for (unsigned SafeReg = 0, E = TRI.getNumRegs(); SafeReg < E; ++SafeReg)
+        if (!RegMaskOp.clobbersPhysReg(SafeReg))
+          for (auto SafeUnit : TRI.regunits(SafeReg))
+            PreservedRegUnits.set(SafeUnit);
+
+      return PreservedRegUnits;
+    }
+  }
+
   /// Mark all of the given registers and their subregisters as unavailable for
   /// copying.
   void markRegsUnavailable(ArrayRef<MCRegister> Regs,
@@ -164,64 +189,70 @@ public:
       Copies.erase(Unit);
   }
 
-  /// Clobber a single register, removing it from the tracker's copy maps.
-  void clobberRegister(MCRegister Reg, const TargetRegisterInfo &TRI,
-                       const TargetInstrInfo &TII, bool UseCopyInstr) {
-    for (MCRegUnit Unit : TRI.regunits(Reg)) {
-      auto I = Copies.find(Unit);
-      if (I != Copies.end()) {
-        // When we clobber the source of a copy, we need to clobber everything
-        // it defined.
-        markRegsUnavailable(I->second.DefRegs, TRI);
-        // When we clobber the destination of a copy, we need to clobber the
-        // whole register it defined.
-        if (MachineInstr *MI = I->second.MI) {
-          std::optional<DestSourcePair> CopyOperands =
-              isCopyInstr(*MI, TII, UseCopyInstr);
+  /// Clobber a single register unit, removing it from the tracker's copy maps.
+  void clobberRegUnit(MCRegUnit Unit, const TargetRegisterInfo &TRI,
+                      const TargetInstrInfo &TII, bool UseCopyInstr) {
+    auto I = Copies.find(Unit);
+    if (I != Copies.end()) {
+      // When we clobber the source of a copy, we need to clobber everything
+      // it defined.
+      markRegsUnavailable(I->second.DefRegs, TRI);
+      // When we clobber the destination of a copy, we need to clobber the
+      // whole register it defined.
+      if (MachineInstr *MI = I->second.MI) {
+        std::optional<DestSourcePair> CopyOperands =
+            isCopyInstr(*MI, TII, UseCopyInstr);
 
-          MCRegister Def = CopyOperands->Destination->getReg().asMCReg();
-          MCRegister Src = CopyOperands->Source->getReg().asMCReg();
+        MCRegister Def = CopyOperands->Destination->getReg().asMCReg();
+        MCRegister Src = CopyOperands->Source->getReg().asMCReg();
 
-          markRegsUnavailable(Def, TRI);
+        markRegsUnavailable(Def, TRI);
 
-          // Since we clobber the destination of a copy, the semantic of Src's
-          // "DefRegs" to contain Def is no longer effectual. We will also need
-          // to remove the record from the copy maps that indicates Src defined
-          // Def. Failing to do so might cause the target to miss some
-          // opportunities to further eliminate redundant copy instructions.
-          // Consider the following sequence during the
-          // ForwardCopyPropagateBlock procedure:
-          // L1: r0 = COPY r9     <- TrackMI
-          // L2: r0 = COPY r8     <- TrackMI (Remove r9 defined r0 from tracker)
-          // L3: use r0           <- Remove L2 from MaybeDeadCopies
-          // L4: early-clobber r9 <- Clobber r9 (L2 is still valid in tracker)
-          // L5: r0 = COPY r8     <- Remove NopCopy
-          for (MCRegUnit SrcUnit : TRI.regunits(Src)) {
-            auto SrcCopy = Copies.find(SrcUnit);
-            if (SrcCopy != Copies.end() && SrcCopy->second.LastSeenUseInCopy) {
-              // If SrcCopy defines multiple values, we only need
-              // to erase the record for Def in DefRegs.
-              for (auto itr = SrcCopy->second.DefRegs.begin();
-                   itr != SrcCopy->second.DefRegs.end(); itr++) {
-                if (*itr == Def) {
-                  SrcCopy->second.DefRegs.erase(itr);
-                  // If DefReg becomes empty after removal, we can remove the
-                  // SrcCopy from the tracker's copy maps. We only remove those
-                  // entries solely record the Def is defined by Src. If an
-                  // entry also contains the definition record of other Def'
-                  // registers, it cannot be cleared.
-                  if (SrcCopy->second.DefRegs.empty() && !SrcCopy->second.MI) {
-                    Copies.erase(SrcCopy);
-                  }
-                  break;
+        // Since we clobber the destination of a copy, the semantic of Src's
+        // "DefRegs" to contain Def is no longer effectual. We will also need
+        // to remove the record from the copy maps that indicates Src defined
+        // Def. Failing to do so might cause the target to miss some
+        // opportunities to further eliminate redundant copy instructions.
+        // Consider the following sequence during the
+        // ForwardCopyPropagateBlock procedure:
+        // L1: r0 = COPY r9     <- TrackMI
+        // L2: r0 = COPY r8     <- TrackMI (Remove r9 defined r0 from tracker)
+        // L3: use r0           <- Remove L2 from MaybeDeadCopies
+        // L4: early-clobber r9 <- Clobber r9 (L2 is still valid in tracker)
+        // L5: r0 = COPY r8     <- Remove NopCopy
+        for (MCRegUnit SrcUnit : TRI.regunits(Src)) {
+          auto SrcCopy = Copies.find(SrcUnit);
+          if (SrcCopy != Copies.end() && SrcCopy->second.LastSeenUseInCopy) {
+            // If SrcCopy defines multiple values, we only need
+            // to erase the record for Def in DefRegs.
+            for (auto itr = SrcCopy->second.DefRegs.begin();
+                 itr != SrcCopy->second.DefRegs.end(); itr++) {
+              if (*itr == Def) {
+                SrcCopy->second.DefRegs.erase(itr);
+                // If DefReg becomes empty after removal, we can remove the
+                // SrcCopy from the tracker's copy maps. We only remove those
+                // entries solely record the Def is defined by Src. If an
+                // entry also contains the definition record of other Def'
+                // registers, it cannot be cleared.
+                if (SrcCopy->second.DefRegs.empty() && !SrcCopy->second.MI) {
+                  Copies.erase(SrcCopy);
                 }
+                break;
               }
             }
           }
         }
-        // Now we can erase the copy.
-        Copies.erase(I);
       }
+      // Now we can erase the copy.
+      Copies.erase(I);
+    }
+  }
+
+  /// Clobber a single register, removing it from the tracker's copy maps.
+  void clobberRegister(MCRegister Reg, const TargetRegisterInfo &TRI,
+                       const TargetInstrInfo &TII, bool UseCopyInstr) {
+    for (MCRegUnit Unit : TRI.regunits(Reg)) {
+      clobberRegUnit(Unit, TRI, TII, UseCopyInstr);
     }
   }
 
@@ -960,6 +991,9 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
     // a large set of registers.  Treat clobbered registers the same way as
     // defined registers.
     if (RegMask) {
+      BitVector &PreservedRegUnits =
+          Tracker.getPreservedRegUnits(*RegMask, *TRI);
+
       // Erase any MaybeDeadCopies whose destination register is clobbered.
       for (SmallSetVector<MachineInstr *, 8>::iterator DI =
                MaybeDeadCopies.begin();
@@ -978,9 +1012,11 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
         LLVM_DEBUG(dbgs() << "MCP: Removing copy due to regmask clobbering: ";
                    MaybeDead->dump());
 
-        // Make sure we invalidate any entries in the copy maps before erasing
-        // the instruction.
-        Tracker.clobberRegister(Reg, *TRI, *TII, UseCopyInstr);
+        // Invalidate all entries in the copy map which are not preserved by
+        // this register mask.
+        for (unsigned RegUnit : TRI->regunits(Reg))
+          if (!PreservedRegUnits.test(RegUnit))
+            Tracker.clobberRegUnit(RegUnit, *TRI, *TII, UseCopyInstr);
 
         // erase() will return the next valid iterator pointing to the next
         // element after the erased one.

@@ -1545,7 +1545,7 @@ def Zn4WriteSCALErr: SchedWriteRes<[Zn4FPFMisc23]> {
   let NumMicroOps = 2;
 }
 def : InstRW<[Zn4WriteSCALErr], (instregex
-        "V(SCALEF|REDUCE)(S|P)(S|D)(Z?|Z128?|Z256?)(rr|rrb|rrkz|rrik|rrikz|rri)(_Int?|_Intkz?)",
+        "V(SCALEF|REDUCE)(S|P)(S|D)(Z?|Z128?|Z256?)(rr|rrb|rrkz|rrik|rrikz|rri)(_Int?)",
         "(V?)REDUCE(PD|PS|SD|SS)(Z?|Z128?)(rri|rrikz|rrib)"
 	)>;
 
@@ -1585,7 +1585,7 @@ def : InstRW<[Zn4WriteSHIFTrr], (instregex
         "(V?)P(ROL|ROR)(D|Q|VD|VQ)(Z?|Z128?|Z256?)(rr|rrk|rrkz)",
         "(V?)P(ROL|ROR)(D|Q|VD|VQ)(Z256?)(ri|rik|rikz)",
         "(V?)P(ROL|ROR)(D|Q)(Z?|Z128?)(ri|rik|rikz)",
-	"VPSHUFBITQMBZ128rr", "VFMSUB231SSZr_Intkz"
+	"VPSHUFBITQMBZ128rr", "VFMSUB231SSZrkz_Int"
 	)>;
 
 def Zn4WriteSHIFTri: SchedWriteRes<[Zn4FPFMisc01]> {
@@ -1646,28 +1646,26 @@ def Zn4MOVS: SchedWriteRes<[Zn4FPFMisc12]> {
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4MOVS], (instregex
-        "(V?)PMOV(SX|ZX)(BD|BQ|BW|WD|WQ|DQ)(Z128?|Z256?)(rr|rrk|rrkz)",
-        "(V?)PMOV(SX|QD|UZ|ZX)(BD|BQ|BW?)(Y|Z128?)(rr|rrk|rrkz)",
-        "(V?)PMOV(SX|US|ZX)(DQ|WD|QW|WQ?)(Y|Z128?)(rr|rrk|rrkz)",
-        "VPMOV(DB|DW|QB|QD|QW|SDB|SDW|SQB|SQD|SQW|SWB|USDB|USDW|USQB|USQD|USWB|WB)(Z128?|Z256?)(rr|rrk|rrkz)"
+        "(V?)PMOV(SX|ZX)(BD|BQ|BW|WD|WQ|DQ)(Y?|Z128?|Z256?)(rr|rrk|rrkz)",
+        "(V?)PMOV(S?|US?)(DB|DW|QB|QD|QW|WB)(Z128|Z256)(rr|rrk|rrkz)"
 	)>;
 
 def Zn4MOVSZ: SchedWriteRes<[Zn4FPFMisc12]> {
   let Latency = 4;
-  let ReleaseAtCycles = [4];
+  let ReleaseAtCycles = [2];
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4MOVSZ], (instregex
-        "(V?)PMOV(SX|ZX)(BD|BQ|BW|WD|WQ|DQ)(Z?)(rr|rrk|rrkz)"
+        "(V?)PMOV(SX|ZX)(BD|BQ|BW|WD|WQ|DQ)Z(rr|rrk|rrkz)"
 	)>;
 
 def Zn4MOVSrr: SchedWriteRes<[Zn4FPFMisc12]> {
   let Latency = 5;
-  let ReleaseAtCycles = [5];
+  let ReleaseAtCycles = [2];
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4MOVSrr], (instregex
-        "(V?)PMOV(DB|QB|QW|SDB|SQB|SQW|USDB|USQB|USQW)(Z?)(rr|rrk|rrkz)"
+        "(V?)PMOV(S?|US?)(DB|DW|QB|QD|QW|WB)Z(rr|rrk|rrkz)"
 	)>;
 
 

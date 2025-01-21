@@ -42,63 +42,29 @@ public:
   using Iterator = InstrProfIterator<GuidMemProfRecordPair, MemProfReader>;
   Iterator end() { return Iterator(); }
   Iterator begin() {
-    Iter = FunctionProfileData.begin();
+    Iter = MemProfData.Records.begin();
     return Iterator(this);
   }
 
-  // Return a const reference to the internal Id to Frame mappings.
-  LLVM_DEPRECATED("Use takeMemProfData instead", "takeMemProfData")
-  const llvm::DenseMap<FrameId, Frame> &getFrameMapping() const {
-    return IdToFrame;
-  }
-
-  // Return a const reference to the internal Id to call stacks.
-  LLVM_DEPRECATED("Use takeMemProfData instead", "takeMemProfData")
-  const llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> &
-  getCallStacks() const {
-    return CSIdToCallStack;
-  }
-
-  // Return a const reference to the internal function profile data.
-  LLVM_DEPRECATED("Use takeMemProfData instead", "takeMemProfData")
-  const llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> &
-  getProfileData() const {
-    return FunctionProfileData;
-  }
-
-  // Take the complete profile data.
-  IndexedMemProfData takeMemProfData() {
-    // TODO: Once we replace the three member variables, namely IdToFrame,
-    // CSIdToCallStack, and FunctionProfileData, with MemProfData, replace the
-    // following code with just "return std::move(MemProfData);".
-    IndexedMemProfData MemProfData;
-    // Copy key-value pairs because IdToFrame uses DenseMap, whereas
-    // IndexedMemProfData::Frames uses MapVector.
-    for (const auto &[FrameId, F] : IdToFrame)
-      MemProfData.Frames.try_emplace(FrameId, F);
-    // Copy key-value pairs because CSIdToCallStack uses DenseMap, whereas
-    // IndexedMemProfData::CallStacks uses MapVector.
-    for (const auto &[CSId, CS] : CSIdToCallStack)
-      MemProfData.CallStacks.try_emplace(CSId, CS);
-    MemProfData.Records = FunctionProfileData;
-    return MemProfData;
-  }
+  // Take the complete profile data.  Once this function is invoked,
+  // MemProfReader no longer owns the MemProf profile.
+  IndexedMemProfData takeMemProfData() { return std::move(MemProfData); }
 
   virtual Error
   readNextRecord(GuidMemProfRecordPair &GuidRecord,
                  std::function<const Frame(const FrameId)> Callback = nullptr) {
-    if (FunctionProfileData.empty())
+    if (MemProfData.Records.empty())
       return make_error<InstrProfError>(instrprof_error::empty_raw_profile);
 
-    if (Iter == FunctionProfileData.end())
+    if (Iter == MemProfData.Records.end())
       return make_error<InstrProfError>(instrprof_error::eof);
 
     if (Callback == nullptr)
       Callback =
           std::bind(&MemProfReader::idToFrame, this, std::placeholders::_1);
 
-    CallStackIdConverter<decltype(CSIdToCallStack)> CSIdConv(CSIdToCallStack,
-                                                             Callback);
+    CallStackIdConverter<decltype(MemProfData.CallStacks)> CSIdConv(
+        MemProfData.CallStacks, Callback);
 
     const IndexedMemProfRecord &IndexedRecord = Iter->second;
     GuidRecord = {
@@ -116,47 +82,19 @@ public:
   MemProfReader() = default;
   virtual ~MemProfReader() = default;
 
-  // Initialize the MemProfReader with the frame mappings and profile contents.
-  LLVM_DEPRECATED("Construct MemProfReader with IndexedMemProfData",
-                  "MemProfReader")
-  MemProfReader(
-      llvm::DenseMap<FrameId, Frame> FrameIdMap,
-      llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> ProfData);
-
-  // Initialize the MemProfReader with the frame mappings, call stack mappings,
-  // and profile contents.
-  LLVM_DEPRECATED("Construct MemProfReader with IndexedMemProfData",
-                  "MemProfReader")
-  MemProfReader(
-      llvm::DenseMap<FrameId, Frame> FrameIdMap,
-      llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> CSIdMap,
-      llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> ProfData)
-      : IdToFrame(std::move(FrameIdMap)), CSIdToCallStack(std::move(CSIdMap)),
-        FunctionProfileData(std::move(ProfData)) {}
-
   // Initialize the MemProfReader with the given MemProf profile.
-  MemProfReader(IndexedMemProfData MemProfData) {
-    for (const auto &[FrameId, F] : MemProfData.Frames)
-      IdToFrame.try_emplace(FrameId, F);
-    for (const auto &[CSId, CS] : MemProfData.CallStacks)
-      CSIdToCallStack.try_emplace(CSId, CS);
-    FunctionProfileData = std::move(MemProfData.Records);
-  }
+  MemProfReader(IndexedMemProfData &&MemProfData)
+      : MemProfData(std::move(MemProfData)) {}
 
 protected:
   // A helper method to extract the frame from the IdToFrame map.
   const Frame &idToFrame(const FrameId Id) const {
-    auto It = IdToFrame.find(Id);
-    assert(It != IdToFrame.end() && "Id not found in map.");
-    return It->getSecond();
+    auto It = MemProfData.Frames.find(Id);
+    assert(It != MemProfData.Frames.end() && "Id not found in map.");
+    return It->second;
   }
-  // A mapping from FrameId (a hash of the contents) to the frame.
-  llvm::DenseMap<FrameId, Frame> IdToFrame;
-  // A mapping from CallStackId to the call stack.
-  llvm::DenseMap<CallStackId, llvm::SmallVector<FrameId>> CSIdToCallStack;
-  // A mapping from function GUID, hash of the canonical function symbol to the
-  // memprof profile data for that function, i.e allocation and callsite info.
-  llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> FunctionProfileData;
+  // A complete pacakge of the MemProf profile.
+  IndexedMemProfData MemProfData;
   // An iterator to the internal function profile data structure.
   llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord>::iterator Iter;
 };
@@ -270,6 +208,26 @@ private:
   bool KeepSymbolName = false;
   // A mapping of the hash to symbol name, only used if KeepSymbolName is true.
   llvm::DenseMap<uint64_t, std::string> GuidToSymbolName;
+};
+
+class YAMLMemProfReader final : public MemProfReader {
+public:
+  YAMLMemProfReader() = default;
+
+  // Return true if the \p DataBuffer starts with "---" indicating it is a YAML
+  // file.
+  static bool hasFormat(const MemoryBuffer &DataBuffer);
+  // Wrapper around hasFormat above, reading the file instead of the memory
+  // buffer.
+  static bool hasFormat(const StringRef Path);
+
+  // Create a YAMLMemProfReader after sanity checking the contents of the file
+  // at \p Path or the \p Buffer.
+  static Expected<std::unique_ptr<YAMLMemProfReader>> create(const Twine &Path);
+  static Expected<std::unique_ptr<YAMLMemProfReader>>
+  create(std::unique_ptr<MemoryBuffer> Buffer);
+
+  void parse(StringRef YAMLData);
 };
 } // namespace memprof
 } // namespace llvm

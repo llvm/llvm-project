@@ -91,10 +91,10 @@ define <8 x i32> @vector_interleave_v8i32_v4i32(<4 x i32> %a, <4 x i32> %b) {
 define <4 x i64> @vector_interleave_v4i64_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: vector_interleave_v4i64_v2i64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v9
 ; CHECK-NEXT:    lui a0, 12304
 ; CHECK-NEXT:    addi a0, a0, 512
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 2
 ; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
@@ -106,10 +106,10 @@ define <4 x i64> @vector_interleave_v4i64_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ;
 ; ZVBB-LABEL: vector_interleave_v4i64_v2i64:
 ; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; ZVBB-NEXT:    vmv1r.v v10, v9
 ; ZVBB-NEXT:    lui a0, 12304
 ; ZVBB-NEXT:    addi a0, a0, 512
-; ZVBB-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; ZVBB-NEXT:    vslideup.vi v8, v10, 2
 ; ZVBB-NEXT:    vmv.s.x v10, a0
 ; ZVBB-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
@@ -239,10 +239,10 @@ define <8 x float> @vector_interleave_v8f32_v4f32(<4 x float> %a, <4 x float> %b
 define <4 x double> @vector_interleave_v4f64_v2f64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: vector_interleave_v4f64_v2f64:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v9
 ; CHECK-NEXT:    lui a0, 12304
 ; CHECK-NEXT:    addi a0, a0, 512
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 2
 ; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
@@ -254,10 +254,10 @@ define <4 x double> @vector_interleave_v4f64_v2f64(<2 x double> %a, <2 x double>
 ;
 ; ZVBB-LABEL: vector_interleave_v4f64_v2f64:
 ; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; ZVBB-NEXT:    vmv1r.v v10, v9
 ; ZVBB-NEXT:    lui a0, 12304
 ; ZVBB-NEXT:    addi a0, a0, 512
-; ZVBB-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; ZVBB-NEXT:    vslideup.vi v8, v10, 2
 ; ZVBB-NEXT:    vmv.s.x v10, a0
 ; ZVBB-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma

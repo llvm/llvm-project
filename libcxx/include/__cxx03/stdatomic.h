@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STDATOMIC_H
-#define _LIBCPP_STDATOMIC_H
+#ifndef _LIBCPP___CXX03_STDATOMIC_H
+#define _LIBCPP___CXX03_STDATOMIC_H
 
 /*
     stdatomic.h synopsis
@@ -232,4 +232,4 @@ using std::atomic_thread_fence _LIBCPP_USING_IF_EXISTS;
 
 #endif // defined(__cplusplus) && _LIBCPP_STD_VER >= 23
 
-#endif // _LIBCPP_STDATOMIC_H
+#endif // _LIBCPP___CXX03_STDATOMIC_H

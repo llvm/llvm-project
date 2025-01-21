@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_COPY_IF_H
-#define _LIBCPP___ALGORITHM_COPY_IF_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_COPY_IF_H
+#define _LIBCPP___CXX03___ALGORITHM_COPY_IF_H
 
 #include <__cxx03/__config>
 
@@ -31,4 +31,4 @@ copy_if(_InputIterator __first, _InputIterator __last, _OutputIterator __result,
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_COPY_IF_H
+#endif // _LIBCPP___CXX03___ALGORITHM_COPY_IF_H

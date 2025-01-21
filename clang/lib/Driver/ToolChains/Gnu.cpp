@@ -3058,7 +3058,8 @@ bool Generic_GCC::GCCInstallationDetector::ScanGentooGccConfig(
 Generic_GCC::Generic_GCC(const Driver &D, const llvm::Triple &Triple,
                          const ArgList &Args)
     : ToolChain(D, Triple, Args), GCCInstallation(D),
-      CudaInstallation(D, Triple, Args), RocmInstallation(D, Triple, Args) {
+      CudaInstallation(D, Triple, Args), RocmInstallation(D, Triple, Args),
+      SYCLInstallation(D, Triple, Args) {
   getProgramPaths().push_back(getDriver().Dir);
 }
 
@@ -3272,6 +3273,11 @@ void Generic_GCC::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
     addLibStdCxxIncludePaths(DriverArgs, CC1Args);
     break;
   }
+}
+
+void Generic_GCC::addSYCLIncludeArgs(const ArgList &DriverArgs,
+                                     ArgStringList &CC1Args) const {
+  SYCLInstallation->addSYCLIncludeArgs(DriverArgs, CC1Args);
 }
 
 void

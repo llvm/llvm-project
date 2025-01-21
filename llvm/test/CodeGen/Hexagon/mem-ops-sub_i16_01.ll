@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=hexagon < %s | FileCheck %s
 ; Test that we do not exceed #u5 in memops.
 ; CHECK-NOT: memh(r2+#0) -= #32
 

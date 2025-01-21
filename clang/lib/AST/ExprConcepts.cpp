@@ -94,8 +94,7 @@ ConceptSpecializationExpr::Create(const ASTContext &C, ConceptReference *Loc,
 const TypeConstraint *
 concepts::ExprRequirement::ReturnTypeRequirement::getTypeConstraint() const {
   assert(isTypeConstraint());
-  auto TPL =
-      TypeConstraintInfo.getPointer().get<TemplateParameterList *>();
+  auto TPL = cast<TemplateParameterList *>(TypeConstraintInfo.getPointer());
   return cast<TemplateTypeParmDecl>(TPL->getParam(0))
       ->getTypeConstraint();
 }

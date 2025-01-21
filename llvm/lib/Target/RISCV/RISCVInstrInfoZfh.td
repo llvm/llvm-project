@@ -291,7 +291,8 @@ def : Pat<(riscv_fclass (f16 FPR16:$rs1)), (FCLASS_H $rs1)>;
 
 def : PatFprFpr<fcopysign, FSGNJ_H, FPR16, f16>;
 def : PatFprFpr<riscv_fsgnjx, FSGNJX_H, FPR16, f16>;
-def : Pat<(f16 (fcopysign FPR16:$rs1, (f16 (fneg FPR16:$rs2)))), (FSGNJN_H $rs1, $rs2)>;
+def : Pat<(f16 (fcopysign FPR16:$rs1, (f16 (fneg FPR16:$rs2)))),
+          (FSGNJN_H FPR16:$rs1, FPR16:$rs2)>;
 def : Pat<(f16 (fcopysign FPR16:$rs1, FPR32:$rs2)),
           (FSGNJ_H $rs1, (f16 (FCVT_H_S $rs2, FRM_DYN)))>;
 
@@ -334,7 +335,8 @@ def : Pat<(riscv_fclass FPR16INX:$rs1), (FCLASS_H_INX $rs1)>;
 
 def : PatFprFpr<fcopysign, FSGNJ_H_INX, FPR16INX, f16>;
 def : PatFprFpr<riscv_fsgnjx, FSGNJX_H_INX, FPR16INX, f16>;
-def : Pat<(fcopysign FPR16INX:$rs1, (fneg FPR16INX:$rs2)), (FSGNJN_H_INX $rs1, $rs2)>;
+def : Pat<(fcopysign FPR16INX:$rs1, (fneg FPR16INX:$rs2)),
+          (FSGNJN_H_INX FPR16INX:$rs1, FPR16INX:$rs2)>;
 def : Pat<(fcopysign FPR16INX:$rs1, FPR32INX:$rs2),
           (FSGNJ_H_INX $rs1, (FCVT_H_S_INX $rs2, FRM_DYN))>;
 

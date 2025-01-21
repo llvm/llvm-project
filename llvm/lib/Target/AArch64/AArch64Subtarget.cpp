@@ -195,6 +195,9 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MaxPrefetchIterationsAhead = 4;
     VScaleForTuning = 4;
     break;
+  case MONAKA:
+    VScaleForTuning = 2;
+    break;
   case AppleA7:
   case AppleA10:
   case AppleA11:

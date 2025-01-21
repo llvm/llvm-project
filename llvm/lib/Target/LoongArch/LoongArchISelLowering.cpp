@@ -141,7 +141,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
     setOperationAction(ISD::BSWAP, MVT::i32, Custom);
-    setOperationAction({ISD::UDIV, ISD::UREM}, MVT::i32, Custom);
+    setOperationAction({ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM}, MVT::i32,
+                       Custom);
     setOperationAction(ISD::LROUND, MVT::i32, Custom);
   }
 
@@ -269,6 +270,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
           {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
           Expand);
     }
+    for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
+      setOperationAction(ISD::BITREVERSE, VT, Custom);
     for (MVT VT : {MVT::v8i16, MVT::v4i32, MVT::v2i64})
       setOperationAction(ISD::BSWAP, VT, Legal);
     for (MVT VT : {MVT::v4i32, MVT::v2i64}) {
@@ -323,6 +326,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
           {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
           Expand);
     }
+    for (MVT VT : {MVT::v32i8, MVT::v16i16, MVT::v8i32})
+      setOperationAction(ISD::BITREVERSE, VT, Custom);
     for (MVT VT : {MVT::v16i16, MVT::v8i32, MVT::v4i64})
       setOperationAction(ISD::BSWAP, VT, Legal);
     for (MVT VT : {MVT::v8i32, MVT::v4i32, MVT::v4i64}) {
@@ -371,6 +376,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setPrefFunctionAlignment(Subtarget.getPrefFunctionAlignment());
   setPrefLoopAlignment(Subtarget.getPrefLoopAlignment());
   setMaxBytesForAlignment(Subtarget.getMaxBytesForAlignment());
+
+  // cmpxchg sizes down to 8 bits become legal if LAMCAS is available.
+  if (Subtarget.hasLAMCAS())
+    setMinCmpXchgSizeInBits(8);
 }
 
 bool LoongArchTargetLowering::isOffsetFoldingLegal(
@@ -435,8 +444,54 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerBUILD_VECTOR(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return lowerVECTOR_SHUFFLE(Op, DAG);
+  case ISD::BITREVERSE:
+    return lowerBITREVERSE(Op, DAG);
   }
   return SDValue();
+}
+
+SDValue LoongArchTargetLowering::lowerBITREVERSE(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  EVT ResTy = Op->getValueType(0);
+  SDValue Src = Op->getOperand(0);
+  SDLoc DL(Op);
+
+  EVT NewVT = ResTy.is128BitVector() ? MVT::v2i64 : MVT::v4i64;
+  unsigned int OrigEltNum = ResTy.getVectorNumElements();
+  unsigned int NewEltNum = NewVT.getVectorNumElements();
+
+  SDValue NewSrc = DAG.getNode(ISD::BITCAST, DL, NewVT, Src);
+
+  SmallVector<SDValue, 8> Ops;
+  for (unsigned int i = 0; i < NewEltNum; i++) {
+    SDValue Op = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, NewSrc,
+                             DAG.getConstant(i, DL, MVT::i64));
+    SDValue RevOp = DAG.getNode((ResTy == MVT::v16i8 || ResTy == MVT::v32i8)
+                                    ? LoongArchISD::BITREV_8B
+                                    : ISD::BITREVERSE,
+                                DL, MVT::i64, Op);
+    Ops.push_back(RevOp);
+  }
+  SDValue Res =
+      DAG.getNode(ISD::BITCAST, DL, ResTy, DAG.getBuildVector(NewVT, DL, Ops));
+
+  switch (ResTy.getSimpleVT().SimpleTy) {
+  default:
+    return SDValue();
+  case MVT::v16i8:
+  case MVT::v32i8:
+    return Res;
+  case MVT::v8i16:
+  case MVT::v16i16:
+  case MVT::v4i32:
+  case MVT::v8i32: {
+    SmallVector<int, 32> Mask;
+    for (unsigned int i = 0; i < NewEltNum; i++)
+      for (int j = OrigEltNum / NewEltNum - 1; j >= 0; j--)
+        Mask.push_back(j + (OrigEltNum / NewEltNum) * i);
+    return DAG.getVectorShuffle(ResTy, DL, Res, DAG.getUNDEF(ResTy), Mask);
+  }
+  }
 }
 
 /// Determine whether a range fits a regular pattern of values.
@@ -1533,7 +1588,7 @@ SDValue LoongArchTargetLowering::lowerFRAMEADDR(SDValue Op,
   while (Depth--) {
     int Offset = -(GRLenInBytes * 2);
     SDValue Ptr = DAG.getNode(ISD::ADD, DL, VT, FrameAddr,
-                              DAG.getIntPtrConstant(Offset, DL));
+                              DAG.getSignedConstant(Offset, DL, VT));
     FrameAddr =
         DAG.getLoad(VT, DL, DAG.getEntryNode(), Ptr, MachinePointerInfo());
   }
@@ -1664,16 +1719,19 @@ SDValue LoongArchTargetLowering::lowerFP_TO_SINT(SDValue Op,
                                                  SelectionDAG &DAG) const {
 
   SDLoc DL(Op);
+  SDValue Op0 = Op.getOperand(0);
+
+  if (Op0.getValueType() == MVT::f16)
+    Op0 = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op0);
 
   if (Op.getValueSizeInBits() > 32 && Subtarget.hasBasicF() &&
       !Subtarget.hasBasicD()) {
-    SDValue Dst =
-        DAG.getNode(LoongArchISD::FTINT, DL, MVT::f32, Op.getOperand(0));
+    SDValue Dst = DAG.getNode(LoongArchISD::FTINT, DL, MVT::f32, Op0);
     return DAG.getNode(LoongArchISD::MOVFR2GR_S_LA64, DL, MVT::i64, Dst);
   }
 
   EVT FPTy = EVT::getFloatingPointVT(Op.getValueSizeInBits());
-  SDValue Trunc = DAG.getNode(LoongArchISD::FTINT, DL, FPTy, Op.getOperand(0));
+  SDValue Trunc = DAG.getNode(LoongArchISD::FTINT, DL, FPTy, Op0);
   return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Trunc);
 }
 
@@ -1808,9 +1866,17 @@ SDValue LoongArchTargetLowering::getStaticTLSAddr(GlobalAddressSDNode *N,
   // PseudoLA_*_LARGE nodes.
   SDValue Tmp = DAG.getConstant(0, DL, Ty);
   SDValue Addr = DAG.getTargetGlobalAddress(N->getGlobal(), DL, Ty, 0, 0);
-  SDValue Offset = Large
+
+  // Only IE needs an extra argument for large code model.
+  SDValue Offset = Opc == LoongArch::PseudoLA_TLS_IE_LARGE
                        ? SDValue(DAG.getMachineNode(Opc, DL, Ty, Tmp, Addr), 0)
                        : SDValue(DAG.getMachineNode(Opc, DL, Ty, Addr), 0);
+
+  // If it is LE for normal/medium code model, the add tp operation will occur
+  // during the pseudo-instruction expansion.
+  if (Opc == LoongArch::PseudoLA_TLS_LE && !Large)
+    return Offset;
+
   if (UseGOT) {
     // Mark the load instruction as invariant to enable hoisting in MachineLICM.
     MachineFunction &MF = DAG.getMachineFunction();
@@ -1931,7 +1997,7 @@ LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
     //
     // This node doesn't need an extra argument for the large code model.
     return getStaticTLSAddr(N, DAG, LoongArch::PseudoLA_TLS_LE,
-                            /*UseGOT=*/false);
+                            /*UseGOT=*/false, Large);
   }
 
   return getTLSDescAddr(N, DAG,
@@ -2548,7 +2614,8 @@ SDValue LoongArchTargetLowering::lowerShiftLeftParts(SDValue Op,
 
   SDValue Zero = DAG.getConstant(0, DL, VT);
   SDValue One = DAG.getConstant(1, DL, VT);
-  SDValue MinusGRLen = DAG.getConstant(-(int)Subtarget.getGRLen(), DL, VT);
+  SDValue MinusGRLen =
+      DAG.getSignedConstant(-(int)Subtarget.getGRLen(), DL, VT);
   SDValue GRLenMinus1 = DAG.getConstant(Subtarget.getGRLen() - 1, DL, VT);
   SDValue ShamtMinusGRLen = DAG.getNode(ISD::ADD, DL, VT, Shamt, MinusGRLen);
   SDValue GRLenMinus1Shamt = DAG.getNode(ISD::XOR, DL, VT, Shamt, GRLenMinus1);
@@ -2599,7 +2666,8 @@ SDValue LoongArchTargetLowering::lowerShiftRightParts(SDValue Op,
 
   SDValue Zero = DAG.getConstant(0, DL, VT);
   SDValue One = DAG.getConstant(1, DL, VT);
-  SDValue MinusGRLen = DAG.getConstant(-(int)Subtarget.getGRLen(), DL, VT);
+  SDValue MinusGRLen =
+      DAG.getSignedConstant(-(int)Subtarget.getGRLen(), DL, VT);
   SDValue GRLenMinus1 = DAG.getConstant(Subtarget.getGRLen() - 1, DL, VT);
   SDValue ShamtMinusGRLen = DAG.getNode(ISD::ADD, DL, VT, Shamt, MinusGRLen);
   SDValue GRLenMinus1Shamt = DAG.getNode(ISD::XOR, DL, VT, Shamt, GRLenMinus1);
@@ -2629,8 +2697,12 @@ static LoongArchISD::NodeType getLoongArchWOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
     llvm_unreachable("Unexpected opcode");
+  case ISD::SDIV:
+    return LoongArchISD::DIV_W;
   case ISD::UDIV:
     return LoongArchISD::DIV_WU;
+  case ISD::SREM:
+    return LoongArchISD::MOD_W;
   case ISD::UREM:
     return LoongArchISD::MOD_WU;
   case ISD::SHL:
@@ -2827,11 +2899,16 @@ void LoongArchTargetLowering::ReplaceNodeResults(
            "Unexpected custom legalisation");
     Results.push_back(customLegalizeToWOpWithSExt(N, DAG));
     break;
+  case ISD::SDIV:
   case ISD::UDIV:
+  case ISD::SREM:
   case ISD::UREM:
     assert(VT == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
-    Results.push_back(customLegalizeToWOp(N, DAG, 2, ISD::SIGN_EXTEND));
+    Results.push_back(customLegalizeToWOp(N, DAG, 2,
+                                          Subtarget.hasDiv32() && VT == MVT::i32
+                                              ? ISD::ANY_EXTEND
+                                              : ISD::SIGN_EXTEND));
     break;
   case ISD::SHL:
   case ISD::SRA:
@@ -2856,6 +2933,8 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     EVT FVT = EVT::getFloatingPointVT(N->getValueSizeInBits(0));
     if (getTypeAction(*DAG.getContext(), Src.getValueType()) !=
         TargetLowering::TypeSoftenFloat) {
+      if (Src.getValueType() == MVT::f16)
+        Src = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Src);
       SDValue Dst = DAG.getNode(LoongArchISD::FTINT, DL, FVT, Src);
       Results.push_back(DAG.getNode(ISD::BITCAST, DL, VT, Dst));
       return;
@@ -4664,10 +4743,13 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(REVB_2H)
     NODE_NAME_CASE(REVB_2W)
     NODE_NAME_CASE(BITREV_4B)
+    NODE_NAME_CASE(BITREV_8B)
     NODE_NAME_CASE(BITREV_W)
     NODE_NAME_CASE(ROTR_W)
     NODE_NAME_CASE(ROTL_W)
+    NODE_NAME_CASE(DIV_W)
     NODE_NAME_CASE(DIV_WU)
+    NODE_NAME_CASE(MOD_W)
     NODE_NAME_CASE(MOD_WU)
     NODE_NAME_CASE(CLZ_W)
     NODE_NAME_CASE(CTZ_W)
@@ -5266,7 +5348,7 @@ bool LoongArchTargetLowering::isUsedByReturnOnly(SDNode *N,
   if (!N->hasNUsesOfValue(1, 0))
     return false;
 
-  SDNode *Copy = *N->use_begin();
+  SDNode *Copy = *N->user_begin();
   if (Copy->getOpcode() != ISD::CopyToReg)
     return false;
 
@@ -5277,7 +5359,7 @@ bool LoongArchTargetLowering::isUsedByReturnOnly(SDNode *N,
 
   // The copy must be used by a LoongArchISD::RET, and nothing else.
   bool HasRet = false;
-  for (SDNode *Node : Copy->uses()) {
+  for (SDNode *Node : Copy->users()) {
     if (Node->getOpcode() != LoongArchISD::RET)
       return false;
     HasRet = true;
@@ -5742,6 +5824,62 @@ bool LoongArchTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   }
 }
 
+// When -mlamcas is enabled, MinCmpXchgSizeInBits will be set to 8,
+// atomicrmw and/or/xor operations with operands less than 32 bits cannot be
+// expanded to am{and/or/xor}[_db].w through AtomicExpandPass. To prevent
+// regression, we need to implement it manually.
+void LoongArchTargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
+  AtomicRMWInst::BinOp Op = AI->getOperation();
+
+  assert((Op == AtomicRMWInst::Or || Op == AtomicRMWInst::Xor ||
+          Op == AtomicRMWInst::And) &&
+         "Unable to expand");
+  unsigned MinWordSize = 4;
+
+  IRBuilder<> Builder(AI);
+  LLVMContext &Ctx = Builder.getContext();
+  const DataLayout &DL = AI->getDataLayout();
+  Type *ValueType = AI->getType();
+  Type *WordType = Type::getIntNTy(Ctx, MinWordSize * 8);
+
+  Value *Addr = AI->getPointerOperand();
+  PointerType *PtrTy = cast<PointerType>(Addr->getType());
+  IntegerType *IntTy = DL.getIndexType(Ctx, PtrTy->getAddressSpace());
+
+  Value *AlignedAddr = Builder.CreateIntrinsic(
+      Intrinsic::ptrmask, {PtrTy, IntTy},
+      {Addr, ConstantInt::get(IntTy, ~(uint64_t)(MinWordSize - 1))}, nullptr,
+      "AlignedAddr");
+
+  Value *AddrInt = Builder.CreatePtrToInt(Addr, IntTy);
+  Value *PtrLSB = Builder.CreateAnd(AddrInt, MinWordSize - 1, "PtrLSB");
+  Value *ShiftAmt = Builder.CreateShl(PtrLSB, 3);
+  ShiftAmt = Builder.CreateTrunc(ShiftAmt, WordType, "ShiftAmt");
+  Value *Mask = Builder.CreateShl(
+      ConstantInt::get(WordType,
+                       (1 << (DL.getTypeStoreSize(ValueType) * 8)) - 1),
+      ShiftAmt, "Mask");
+  Value *Inv_Mask = Builder.CreateNot(Mask, "Inv_Mask");
+  Value *ValOperand_Shifted =
+      Builder.CreateShl(Builder.CreateZExt(AI->getValOperand(), WordType),
+                        ShiftAmt, "ValOperand_Shifted");
+  Value *NewOperand;
+  if (Op == AtomicRMWInst::And)
+    NewOperand = Builder.CreateOr(ValOperand_Shifted, Inv_Mask, "AndOperand");
+  else
+    NewOperand = ValOperand_Shifted;
+
+  AtomicRMWInst *NewAI =
+      Builder.CreateAtomicRMW(Op, AlignedAddr, NewOperand, Align(MinWordSize),
+                              AI->getOrdering(), AI->getSyncScopeID());
+
+  Value *Shift = Builder.CreateLShr(NewAI, ShiftAmt, "shifted");
+  Value *Trunc = Builder.CreateTrunc(Shift, ValueType, "extracted");
+  Value *FinalOldResult = Builder.CreateBitCast(Trunc, ValueType);
+  AI->replaceAllUsesWith(FinalOldResult);
+  AI->eraseFromParent();
+}
+
 TargetLowering::AtomicExpansionKind
 LoongArchTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // TODO: Add more AtomicRMWInst that needs to be extended.
@@ -5763,6 +5901,15 @@ LoongArchTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   }
 
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
+  if (Subtarget.hasLAMCAS()) {
+    if (Size < 32 && (AI->getOperation() == AtomicRMWInst::And ||
+                      AI->getOperation() == AtomicRMWInst::Or ||
+                      AI->getOperation() == AtomicRMWInst::Xor))
+      return AtomicExpansionKind::Expand;
+    if (AI->getOperation() == AtomicRMWInst::Nand || Size < 32)
+      return AtomicExpansionKind::CmpXChg;
+  }
+
   if (Size == 8 || Size == 16)
     return AtomicExpansionKind::MaskedIntrinsic;
   return AtomicExpansionKind::None;
@@ -5817,6 +5964,10 @@ getIntrinsicForMaskedAtomicRMWBinOp(unsigned GRLen,
 TargetLowering::AtomicExpansionKind
 LoongArchTargetLowering::shouldExpandAtomicCmpXchgInIR(
     AtomicCmpXchgInst *CI) const {
+
+  if (Subtarget.hasLAMCAS())
+    return AtomicExpansionKind::None;
+
   unsigned Size = CI->getCompareOperand()->getType()->getPrimitiveSizeInBits();
   if (Size == 8 || Size == 16)
     return AtomicExpansionKind::MaskedIntrinsic;
@@ -6123,8 +6274,8 @@ void LoongArchTargetLowering::LowerAsmOperandForConstraint(
       if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
         uint64_t CVal = C->getSExtValue();
         if (isInt<16>(CVal))
-          Ops.push_back(
-              DAG.getTargetConstant(CVal, SDLoc(Op), Subtarget.getGRLenVT()));
+          Ops.push_back(DAG.getSignedTargetConstant(CVal, SDLoc(Op),
+                                                    Subtarget.getGRLenVT()));
       }
       return;
     case 'I':
@@ -6132,8 +6283,8 @@ void LoongArchTargetLowering::LowerAsmOperandForConstraint(
       if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
         uint64_t CVal = C->getSExtValue();
         if (isInt<12>(CVal))
-          Ops.push_back(
-              DAG.getTargetConstant(CVal, SDLoc(Op), Subtarget.getGRLenVT()));
+          Ops.push_back(DAG.getSignedTargetConstant(CVal, SDLoc(Op),
+                                                    Subtarget.getGRLenVT()));
       }
       return;
     case 'J':
@@ -6312,13 +6463,13 @@ bool LoongArchTargetLowering::hasAndNotCompare(SDValue Y) const {
 }
 
 ISD::NodeType LoongArchTargetLowering::getExtendForAtomicCmpSwapArg() const {
-  // TODO: LAMCAS will use amcas{_DB,}.[bhwd] which does not require extension.
-  return ISD::SIGN_EXTEND;
+  // LAMCAS will use amcas[_DB].{b/h/w/d} which does not require extension.
+  return Subtarget.hasLAMCAS() ? ISD::ANY_EXTEND : ISD::SIGN_EXTEND;
 }
 
 bool LoongArchTargetLowering::shouldSignExtendTypeInLibCall(
-    EVT Type, bool IsSigned) const {
-  if (Subtarget.is64Bit() && Type == MVT::i32)
+    Type *Ty, bool IsSigned) const {
+  if (Subtarget.is64Bit() && Ty->isIntegerTy(32))
     return true;
 
   return IsSigned;

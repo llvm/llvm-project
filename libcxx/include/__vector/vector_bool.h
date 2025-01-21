@@ -115,7 +115,7 @@ private:
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static size_type
   __external_cap_to_internal(size_type __n) _NOEXCEPT {
-    return (__n - 1) / __bits_per_word + 1;
+    return __n > 0 ? (__n - 1) / __bits_per_word + 1 : size_type(0);
   }
 
 public:
@@ -275,17 +275,33 @@ public:
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reverse_iterator crend() const _NOEXCEPT { return rend(); }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference operator[](size_type __n) { return __make_ref(__n); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference operator[](size_type __n) const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference operator[](size_type __n) {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n < size(), "vector<bool>::operator[] index out of bounds");
     return __make_ref(__n);
   }
-  _LIBCPP_HIDE_FROM_ABI reference at(size_type __n);
-  _LIBCPP_HIDE_FROM_ABI const_reference at(size_type __n) const;
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference operator[](size_type __n) const {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n < size(), "vector<bool>::operator[] index out of bounds");
+    return __make_ref(__n);
+  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference at(size_type __n);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference at(size_type __n) const;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference front() { return __make_ref(0); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference front() const { return __make_ref(0); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference back() { return __make_ref(__size_ - 1); }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference back() const { return __make_ref(__size_ - 1); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference front() {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "vector<bool>::front() called on an empty vector");
+    return __make_ref(0);
+  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference front() const {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "vector<bool>::front() called on an empty vector");
+    return __make_ref(0);
+  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference back() {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "vector<bool>::back() called on an empty vector");
+    return __make_ref(__size_ - 1);
+  }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference back() const {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "vector<bool>::back() called on an empty vector");
+    return __make_ref(__size_ - 1);
+  }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void push_back(const value_type& __x);
 #if _LIBCPP_STD_VER >= 14
@@ -310,7 +326,10 @@ public:
   }
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void pop_back() { --__size_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void pop_back() {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "vector<bool>::pop_back called on an empty vector");
+    --__size_;
+  }
 
 #if _LIBCPP_STD_VER >= 14
   template <class... _Args>
@@ -390,18 +409,12 @@ private:
   template <class _InputIterator, class _Sentinel>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
   __init_with_sentinel(_InputIterator __first, _Sentinel __last) {
-#if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
-      for (; __first != __last; ++__first)
-        push_back(*__first);
-#if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
-      if (__begin_ != nullptr)
-        __storage_traits::deallocate(__alloc_, __begin_, __cap_);
-      throw;
-    }
-#endif // _LIBCPP_HAS_EXCEPTIONS
+    auto __guard = std::__make_exception_guard(__destroy_vector(*this));
+
+    for (; __first != __last; ++__first)
+      push_back(*__first);
+
+    __guard.__complete();
   }
 
   template <class _Iterator, class _Sentinel>
@@ -448,7 +461,6 @@ private:
   template <class _InputIterator, class _Sentinel>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
   __construct_at_end(_InputIterator __first, _Sentinel __last, size_type __n);
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __append(size_type __n, const_reference __x);
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference __make_ref(size_type __pos) _NOEXCEPT {
     return reference(__begin_ + __pos / __bits_per_word, __storage_type(1) << __pos % __bits_per_word);
   }
@@ -860,14 +872,15 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::shrink_to_fit() _NO
 }
 
 template <class _Allocator>
-typename vector<bool, _Allocator>::reference vector<bool, _Allocator>::at(size_type __n) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<bool, _Allocator>::reference vector<bool, _Allocator>::at(size_type __n) {
   if (__n >= size())
     this->__throw_out_of_range();
   return (*this)[__n];
 }
 
 template <class _Allocator>
-typename vector<bool, _Allocator>::const_reference vector<bool, _Allocator>::at(size_type __n) const {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<bool, _Allocator>::const_reference
+vector<bool, _Allocator>::at(size_type __n) const {
   if (__n >= size())
     this->__throw_out_of_range();
   return (*this)[__n];
@@ -1001,6 +1014,8 @@ vector<bool, _Allocator>::__insert_with_size(
 template <class _Allocator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<bool, _Allocator>::iterator
 vector<bool, _Allocator>::erase(const_iterator __position) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+      __position != end(), "vector<bool>::erase(iterator) called with a non-dereferenceable iterator");
   iterator __r = __const_iterator_cast(__position);
   std::copy(__position + 1, this->cend(), __r);
   --__size_;
@@ -1010,6 +1025,8 @@ vector<bool, _Allocator>::erase(const_iterator __position) {
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<bool, _Allocator>::iterator
 vector<bool, _Allocator>::erase(const_iterator __first, const_iterator __last) {
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+      __first <= __last, "vector<bool>::erase(iterator, iterator) called with an invalid range");
   iterator __r        = __const_iterator_cast(__first);
   difference_type __d = __last - __first;
   std::copy(__last, this->cend(), __r);
@@ -1055,18 +1072,11 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::resize(size_type __
 
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::flip() _NOEXCEPT {
-  // do middle whole words
-  size_type __n         = __size_;
+  // Flip each storage word entirely, including the last potentially partial word.
+  // The unused bits in the last word are safe to flip as they won't be accessed.
   __storage_pointer __p = __begin_;
-  for (; __n >= __bits_per_word; ++__p, __n -= __bits_per_word)
+  for (size_type __n = __external_cap_to_internal(size()); __n != 0; ++__p, --__n)
     *__p = ~*__p;
-  // do last partial word
-  if (__n > 0) {
-    __storage_type __m = ~__storage_type(0) >> (__bits_per_word - __n);
-    __storage_type __b = *__p & __m;
-    *__p &= ~__m;
-    *__p |= ~__b & __m;
-  }
 }
 
 template <class _Allocator>

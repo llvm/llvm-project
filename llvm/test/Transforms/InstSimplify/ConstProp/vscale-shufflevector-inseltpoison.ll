@@ -18,7 +18,7 @@ target triple = "aarch64"
 
 define <vscale x 8 x i1> @vscale_version() {
 ; CHECK-LABEL: define <vscale x 8 x i1> @vscale_version() {
-; CHECK-NEXT:    ret <vscale x 8 x i1> shufflevector (<vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i32 0), <vscale x 8 x i1> undef, <vscale x 8 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 8 x i1> splat (i1 true)
 ;
   %splatter = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
   %foo = shufflevector <vscale x 8 x i1> %splatter, <vscale x 8 x i1> undef, <vscale x 8 x i32> zeroinitializer

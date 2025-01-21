@@ -187,7 +187,7 @@ define <2 x float> @pow_sitofp_v2f32_const_base_2__flags(<2 x i32> %x) {
 define <vscale x 4 x float> @pow_sitofp_nxv4f32_const_base_2(<vscale x 4 x i32> %x) {
 ; CHECK-LABEL: define <vscale x 4 x float> @pow_sitofp_nxv4f32_const_base_2(
 ; CHECK-SAME: <vscale x 4 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[EXP2:%.*]] = tail call <vscale x 4 x float> @llvm.ldexp.nxv4f32.nxv4i32(<vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32> [[X]])
+; CHECK-NEXT:    [[EXP2:%.*]] = tail call <vscale x 4 x float> @llvm.ldexp.nxv4f32.nxv4i32(<vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x i32> [[X]])
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[EXP2]]
 ;
   %itofp = sitofp <vscale x 4 x i32> %x to <vscale x 4 x float>

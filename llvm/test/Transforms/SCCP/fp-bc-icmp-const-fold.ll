@@ -2,18 +2,18 @@
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux"
 
-define void @test(i32 signext %n) {
+define void @test(i32 signext %n, i1 %arg) {
 
 ; CHECK-LABEL: @test
 
 entry:
-  br i1 undef, label %if.then, label %if.end
+  br i1 %arg, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
   ret void
 
 if.end:                                           ; preds = %entry
-  br i1 undef, label %if.then2, label %if.end4
+  br i1 %arg, label %if.then2, label %if.end4
 
 if.then2:                                         ; preds = %if.end
   unreachable
@@ -36,10 +36,10 @@ if.else14:                                        ; preds = %if.end4
 
 do.body:                                          ; preds = %do.body, %if.else14
   %scale.0 = phi ppc_fp128 [ 0xM3FF00000000000000000000000000000, %if.else14 ], [ %scale.0, %do.body ]
-  br i1 undef, label %do.body, label %if.then33
+  br i1 %arg, label %do.body, label %if.then33
 
 if.then33:                                        ; preds = %do.body
-  br i1 undef, label %_ZN5boost4math4signIgEEiRKT_.exit30, label %cond.false.i28
+  br i1 %arg, label %_ZN5boost4math4signIgEEiRKT_.exit30, label %cond.false.i28
 
 cond.false.i28:                                   ; preds = %if.then33
   %0 = bitcast ppc_fp128 %scale.0 to i128

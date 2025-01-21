@@ -740,3 +740,8 @@ __externref_t externref_null() {
   // WEBASSEMBLY: tail call ptr addrspace(10) @llvm.wasm.ref.null.extern()
   // WEBASSEMBLY-NEXT: ret
 }
+
+void *tp (void) {
+  return __builtin_thread_pointer ();
+  // WEBASSEMBLY: call {{.*}} @llvm.thread.pointer()
+}

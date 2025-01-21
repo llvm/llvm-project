@@ -181,7 +181,7 @@ public:
 
   ExecutorProcessControl(std::shared_ptr<SymbolStringPool> SSP,
                          std::unique_ptr<TaskDispatcher> D)
-    : SSP(std::move(SSP)), D(std::move(D)) {}
+      : SSP(std::move(SSP)), D(std::move(D)) {}
 
   virtual ~ExecutorProcessControl();
 

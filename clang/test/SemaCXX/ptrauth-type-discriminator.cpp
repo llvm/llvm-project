@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios -std=c++17 -Wno-vla -fsyntax-only -verify -fptrauth-intrinsics %s
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c++17 -Wno-vla -fsyntax-only -verify -fptrauth-intrinsics %s
 
+// RUN: %clang_cc1 -triple arm64-apple-ios -std=c++17 -Wno-vla -fsyntax-only -verify -fptrauth-intrinsics -fexperimental-new-constant-interpreter %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c++17 -Wno-vla -fsyntax-only -verify -fptrauth-intrinsics -fexperimental-new-constant-interpreter %s
+
 // RUN: not %clang_cc1 -triple arm64-apple-ios -std=c++17 -Wno-vla -fsyntax-only %s 2>&1 | FileCheck %s
 // CHECK: this target does not support pointer authentication
 

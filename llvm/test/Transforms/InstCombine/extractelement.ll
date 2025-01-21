@@ -4,6 +4,11 @@
 ; RUN: opt < %s -passes=instcombine -S -data-layout="E-n64" | FileCheck %s --check-prefixes=ANY,ANYBE,BE64
 ; RUN: opt < %s -passes=instcombine -S -data-layout="E-n128" | FileCheck %s --check-prefixes=ANY,ANYBE,BE128
 
+; RUN: opt < %s -passes=instcombine -S -data-layout="e-n64" -use-constant-fp-for-fixed-length-splat -use-constant-int-for-fixed-length-splat | FileCheck %s --check-prefixes=ANY,ANYLE,LE64
+; RUN: opt < %s -passes=instcombine -S -data-layout="e-n128" -use-constant-fp-for-fixed-length-splat -use-constant-int-for-fixed-length-splat | FileCheck %s --check-prefixes=ANY,ANYLE,LE128
+; RUN: opt < %s -passes=instcombine -S -data-layout="E-n64" -use-constant-fp-for-fixed-length-splat -use-constant-int-for-fixed-length-splat | FileCheck %s --check-prefixes=ANY,ANYBE,BE64
+; RUN: opt < %s -passes=instcombine -S -data-layout="E-n128" -use-constant-fp-for-fixed-length-splat -use-constant-int-for-fixed-length-splat | FileCheck %s --check-prefixes=ANY,ANYBE,BE128
+
 define i32 @extractelement_out_of_range(<2 x i32> %x) {
 ; ANY-LABEL: @extractelement_out_of_range(
 ; ANY-NEXT:    ret i32 poison

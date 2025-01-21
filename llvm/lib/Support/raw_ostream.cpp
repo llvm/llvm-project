@@ -13,6 +13,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/AutoConvert.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Duration.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -29,9 +30,7 @@
 #include <sys/stat.h>
 
 // <fcntl.h> may provide O_BINARY.
-#if defined(HAVE_FCNTL_H)
 # include <fcntl.h>
-#endif
 
 #if defined(HAVE_UNISTD_H)
 # include <unistd.h>

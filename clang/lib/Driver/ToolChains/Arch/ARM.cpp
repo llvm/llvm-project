@@ -52,6 +52,26 @@ bool arm::isARMAProfile(const llvm::Triple &Triple) {
   return llvm::ARM::parseArchProfile(Arch) == llvm::ARM::ProfileKind::A;
 }
 
+/// Is the triple {arm,armeb,thumb,thumbeb}-none-none-{eabi,eabihf} ?
+bool arm::isARMEABIBareMetal(const llvm::Triple &Triple) {
+  auto arch = Triple.getArch();
+  if (arch != llvm::Triple::arm && arch != llvm::Triple::thumb &&
+      arch != llvm::Triple::armeb && arch != llvm::Triple::thumbeb)
+    return false;
+
+  if (Triple.getVendor() != llvm::Triple::UnknownVendor)
+    return false;
+
+  if (Triple.getOS() != llvm::Triple::UnknownOS)
+    return false;
+
+  if (Triple.getEnvironment() != llvm::Triple::EABI &&
+      Triple.getEnvironment() != llvm::Triple::EABIHF)
+    return false;
+
+  return true;
+}
+
 // Get Arch/CPU from args.
 void arm::getARMArchCPUFromArgs(const ArgList &Args, llvm::StringRef &Arch,
                                 llvm::StringRef &CPU, bool FromAs) {
@@ -627,7 +647,7 @@ llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
     (void)getARMFPUFeatures(D, WaFPU->first, Args, WaFPU->second, Features);
   } else if (FPUArg) {
     FPUKind = getARMFPUFeatures(D, FPUArg, Args, FPUArg->getValue(), Features);
-  } else if (Triple.isAndroid() && getARMSubArchVersionNumber(Triple) >= 7) {
+  } else if (Triple.isAndroid() && getARMSubArchVersionNumber(Triple) == 7) {
     const char *AndroidFPU = "neon";
     FPUKind = llvm::ARM::parseFPU(AndroidFPU);
     if (!llvm::ARM::getFPUFeatures(FPUKind, Features))
@@ -639,11 +659,19 @@ llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
         CPUArgFPUKind != llvm::ARM::FK_INVALID ? CPUArgFPUKind : ArchArgFPUKind;
     (void)llvm::ARM::getFPUFeatures(FPUKind, Features);
   } else {
+    bool Generic = true;
     if (!ForAS) {
       std::string CPU = arm::getARMTargetCPU(CPUName, ArchName, Triple);
+      if (CPU != "generic")
+        Generic = false;
       llvm::ARM::ArchKind ArchKind =
           arm::getLLVMArchKindForARM(CPU, ArchName, Triple);
       FPUKind = llvm::ARM::getDefaultFPU(CPU, ArchKind);
+      (void)llvm::ARM::getFPUFeatures(FPUKind, Features);
+    }
+    if (Generic && (Triple.isOSWindows() || Triple.isOSDarwin()) &&
+        getARMSubArchVersionNumber(Triple) >= 7) {
+      FPUKind = llvm::ARM::parseFPU("neon");
       (void)llvm::ARM::getFPUFeatures(FPUKind, Features);
     }
   }

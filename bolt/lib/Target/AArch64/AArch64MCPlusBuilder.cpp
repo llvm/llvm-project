@@ -133,6 +133,36 @@ class AArch64MCPlusBuilder : public MCPlusBuilder {
 public:
   using MCPlusBuilder::MCPlusBuilder;
 
+  MCPhysReg getStackPointer() const override { return AArch64::SP; }
+
+  bool isPush(const MCInst &Inst) const override { return false; }
+
+  bool isPop(const MCInst &Inst) const override { return false; }
+
+  void createCall(MCInst &Inst, const MCSymbol *Target,
+                  MCContext *Ctx) override {
+    createDirectCall(Inst, Target, Ctx, false);
+  }
+
+  bool convertTailCallToCall(MCInst &Inst) override {
+    int NewOpcode;
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case AArch64::B:
+      NewOpcode = AArch64::BL;
+      break;
+    case AArch64::BR:
+      NewOpcode = AArch64::BLR;
+      break;
+    }
+
+    Inst.setOpcode(NewOpcode);
+    removeAnnotation(Inst, MCPlus::MCAnnotation::kTailCall);
+    clearOffset(Inst);
+    return true;
+  }
+
   bool equals(const MCTargetExpr &A, const MCTargetExpr &B,
               CompFuncTy Comp) const override {
     const auto &AArch64ExprA = cast<AArch64MCExpr>(A);
@@ -1449,6 +1479,8 @@ public:
     case ELF::R_AARCH64_TLSDESC_LD64_LO12:
     case ELF::R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
     case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
+    case ELF::R_AARCH64_TLSLE_MOVW_TPREL_G0:
+    case ELF::R_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
     case ELF::R_AARCH64_MOVW_UABS_G0:
     case ELF::R_AARCH64_MOVW_UABS_G0_NC:
     case ELF::R_AARCH64_MOVW_UABS_G1:
@@ -1790,6 +1822,11 @@ public:
   }
 
   uint16_t getMinFunctionAlignment() const override { return 4; }
+
+  std::optional<uint32_t>
+  getInstructionSize(const MCInst &Inst) const override {
+    return 4;
+  }
 };
 
 } // end anonymous namespace

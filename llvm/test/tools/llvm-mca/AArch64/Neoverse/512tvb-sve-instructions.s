@@ -21,22 +21,25 @@ abs	z0.b, p0/m, z0.b
 # CHECK-NEXT: [0.1] - V1UnitB
 # CHECK-NEXT: [1.0] - V1UnitD
 # CHECK-NEXT: [1.1] - V1UnitD
-# CHECK-NEXT: [2]   - V1UnitL2
-# CHECK-NEXT: [3.0] - V1UnitL01
-# CHECK-NEXT: [3.1] - V1UnitL01
-# CHECK-NEXT: [4]   - V1UnitM0
-# CHECK-NEXT: [5]   - V1UnitM1
-# CHECK-NEXT: [6.0] - V1UnitS
-# CHECK-NEXT: [6.1] - V1UnitS
-# CHECK-NEXT: [7]   - V1UnitV0
-# CHECK-NEXT: [8]   - V1UnitV1
-# CHECK-NEXT: [9]   - V1UnitV2
-# CHECK-NEXT: [10]  - V1UnitV3
+# CHECK-NEXT: [2.0] - V1UnitFlg
+# CHECK-NEXT: [2.1] - V1UnitFlg
+# CHECK-NEXT: [2.2] - V1UnitFlg
+# CHECK-NEXT: [3]   - V1UnitL2
+# CHECK-NEXT: [4.0] - V1UnitL01
+# CHECK-NEXT: [4.1] - V1UnitL01
+# CHECK-NEXT: [5]   - V1UnitM0
+# CHECK-NEXT: [6]   - V1UnitM1
+# CHECK-NEXT: [7.0] - V1UnitS
+# CHECK-NEXT: [7.1] - V1UnitS
+# CHECK-NEXT: [8]   - V1UnitV0
+# CHECK-NEXT: [9]   - V1UnitV1
+# CHECK-NEXT: [10]  - V1UnitV2
+# CHECK-NEXT: [11]  - V1UnitV3
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]    [9]    [10]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6.0]  [6.1]  [7]    [8]    [9]    [10]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     abs	z0.b, p0/m, z0.b
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     abs	z0.b, p0/m, z0.b

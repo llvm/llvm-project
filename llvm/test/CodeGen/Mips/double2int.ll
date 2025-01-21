@@ -1,5 +1,5 @@
-; RUN: llc -march=mips -mcpu=mips32 < %s | FileCheck %s
-; RUN: llc -march=mips -mcpu=mips32r6 < %s | FileCheck %s
+; RUN: llc -mtriple=mips -mcpu=mips32 < %s | FileCheck %s
+; RUN: llc -mtriple=mips -mcpu=mips32r6 < %s | FileCheck %s
 
 define i32 @f1(double %d) nounwind readnone {
 entry:

@@ -650,8 +650,8 @@ void SemaSwift::handleNewType(Decl *D, const ParsedAttr &AL) {
   }
 
   if (!isa<TypedefNameDecl>(D)) {
-    Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type_str)
-        << AL << AL.isRegularKeywordAttribute() << "typedefs";
+    Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type)
+        << AL << AL.isRegularKeywordAttribute() << ExpectedTypedef;
     return;
   }
 

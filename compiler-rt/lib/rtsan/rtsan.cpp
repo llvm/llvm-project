@@ -55,11 +55,7 @@ static void OnViolation(const BufferedStackTrace &stack,
   StackDepotHandle handle = StackDepotPut_WithHandle(stack);
 
   const bool is_stack_novel = handle.use_count() == 0;
-
-  // Marked UNLIKELY as if user is runing with halt_on_error=false
-  // we expect a high number of duplicate stacks. We are willing
-  // To pay for the first insertion.
-  if (UNLIKELY(is_stack_novel)) {
+  if (is_stack_novel || !flags().suppress_equal_stacks) {
     IncrementUniqueErrorCount();
 
     {
@@ -87,6 +83,9 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_init() {
 
   SanitizerToolName = "RealtimeSanitizer";
   InitializeFlags();
+
+  InitializePlatformEarly();
+
   InitializeInterceptors();
 
   InitializeSuppressions();

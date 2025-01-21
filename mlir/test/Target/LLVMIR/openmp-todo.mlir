@@ -127,18 +127,6 @@ llvm.func @sections_private(%x : !llvm.ptr) {
   llvm.return
 }
 
-// -----
-
-llvm.func @simd_aligned(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause aligned in omp.simd operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.simd}}
-  omp.simd aligned(%x : !llvm.ptr -> 32) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
 
 // -----
 
@@ -159,25 +147,6 @@ llvm.func @simd_nontemporal(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause nontemporal in omp.simd operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.simd}}
   omp.simd nontemporal(%x : !llvm.ptr) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
-
-// -----
-
-omp.private {type = private} @x.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i32) : i32
-  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
-  omp.yield(%1 : !llvm.ptr)
-}
-llvm.func @simd_private(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause privatization in omp.simd operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.simd}}
-  omp.simd private(@x.privatizer %x -> %arg0 : !llvm.ptr) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -278,10 +247,23 @@ llvm.func @target_has_device_addr(%x : !llvm.ptr) {
 
 // -----
 
-llvm.func @target_if(%x : i1) {
-  // expected-error@below {{not yet implemented: Unhandled clause if in omp.target operation}}
+llvm.func @target_host_eval(%x : i32) {
+  // expected-error@below {{not yet implemented: host evaluation of loop bounds in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target if(%x) {
+  omp.target host_eval(%x -> %lb, %x -> %ub, %x -> %step : i32, i32, i32) {
+    omp.teams {
+      omp.parallel {
+        omp.distribute {
+          omp.wsloop {
+            omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+              omp.yield
+            }
+          } {omp.composite}
+        } {omp.composite}
+        omp.terminator
+      } {omp.composite}
+      omp.terminator
+    }
     omp.terminator
   }
   llvm.return
@@ -339,35 +321,6 @@ llvm.func @target_firstprivate(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause firstprivate in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
   omp.target private(@x.privatizer %x -> %arg0 : !llvm.ptr) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
-omp.private {type = private} @x.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  omp.yield(%arg0 : !llvm.ptr)
-} dealloc {
-^bb0(%arg0: !llvm.ptr):
-  omp.yield
-}
-llvm.func @target_struct_privatization(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: privatization of structures in omp.target operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target private(@x.privatizer %x -> %arg0 : !llvm.ptr) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @target_thread_limit(%x : i32) {
-  // expected-error@below {{not yet implemented: Unhandled clause thread_limit in omp.target operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target thread_limit(%x : i32) {
     omp.terminator
   }
   llvm.return
@@ -440,28 +393,6 @@ llvm.func @task_in_reduction(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause in_reduction in omp.task operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.task}}
   omp.task in_reduction(@add_f32 %x -> %prv : !llvm.ptr) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @task_mergeable() {
-  // expected-error@below {{not yet implemented: Unhandled clause mergeable in omp.task operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.task}}
-  omp.task mergeable {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @task_priority(%x : i32) {
-  // expected-error@below {{not yet implemented: Unhandled clause priority in omp.task operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.task}}
-  omp.task priority(%x : i32) {
     omp.terminator
   }
   llvm.return
@@ -640,25 +571,6 @@ llvm.func @wsloop_order(%lb : i32, %ub : i32, %step : i32) {
   // expected-error@below {{not yet implemented: Unhandled clause order in omp.wsloop operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.wsloop}}
   omp.wsloop order(concurrent) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
-
-// -----
-
-omp.private {type = private} @x.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i32) : i32
-  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
-  omp.yield(%1 : !llvm.ptr)
-}
-llvm.func @wsloop_private(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause privatization in omp.wsloop operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.wsloop}}
-  omp.wsloop private(@x.privatizer %x -> %arg0 : !llvm.ptr) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }

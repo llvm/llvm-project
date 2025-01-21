@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner -verify-machineinstrs < %s
+; RUN: llc -mtriple=hexagon -enable-pipeliner -verify-machineinstrs < %s
 ; REQUIRES: asserts
 
 ; This test fails in the machine verifier because the verifier thinks the
