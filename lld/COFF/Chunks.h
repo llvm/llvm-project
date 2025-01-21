@@ -851,13 +851,13 @@ private:
 class Arm64XDynamicRelocEntry {
 public:
   Arm64XDynamicRelocEntry(llvm::COFF::Arm64XFixupType type, uint8_t size,
-                          uint32_t offset, Arm64XRelocVal value)
+                          Arm64XRelocVal offset, Arm64XRelocVal value)
       : offset(offset), value(value), type(type), size(size) {}
 
   size_t getSize() const;
   void writeTo(uint8_t *buf) const;
 
-  uint32_t offset;
+  Arm64XRelocVal offset;
   Arm64XRelocVal value;
 
 private:
@@ -873,8 +873,8 @@ public:
   void writeTo(uint8_t *buf) const override;
   void finalize();
 
-  void add(llvm::COFF::Arm64XFixupType type, uint8_t size, uint32_t offset,
-           Arm64XRelocVal value) {
+  void add(llvm::COFF::Arm64XFixupType type, uint8_t size,
+           Arm64XRelocVal offset, Arm64XRelocVal value) {
     arm64xRelocs.emplace_back(type, size, offset, value);
   }
 

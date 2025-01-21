@@ -849,7 +849,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       StructValues.insert(output);
     } else
       ParamTy.push_back(
-          PointerType::get(output->getType(), DL.getAllocaAddrSpace()));
+          PointerType::get(output->getContext(), DL.getAllocaAddrSpace()));
   }
 
   assert(
@@ -863,7 +863,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
   if (!AggParamTy.empty()) {
     StructTy = StructType::get(M->getContext(), AggParamTy);
     ParamTy.push_back(PointerType::get(
-        StructTy, ArgsInZeroAddressSpace ? 0 : DL.getAllocaAddrSpace()));
+        M->getContext(), ArgsInZeroAddressSpace ? 0 : DL.getAllocaAddrSpace()));
   }
 
   Type *RetTy = getSwitchType();
