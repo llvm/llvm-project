@@ -182,7 +182,6 @@ private:
   std::list<std::function<void()>> taskQueue;
   std::vector<MemoryBufferRef> resources;
 
-  llvm::DenseSet<StringRef> directivesExports;
   llvm::DenseSet<StringRef> excludedSymbols;
 
   COFFLinkerContext &ctx;
@@ -218,6 +217,9 @@ private:
   void parseSection(StringRef);
   void parseAligncomm(StringRef);
 
+  // Parses a MS-DOS stub file
+  void parseDosStub(StringRef path);
+
   // Parses a string in the form of "[:<integer>]"
   void parseFunctionPadMin(llvm::opt::Arg *a);
 
@@ -246,8 +248,6 @@ private:
 
   // Used for dllexported symbols.
   Export parseExport(StringRef arg);
-  void fixupExports();
-  void assignExportOrdinals();
 
   // Parses a string in the form of "key=value" and check
   // if value matches previous values for the key.

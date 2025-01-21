@@ -7,9 +7,6 @@ on:
   pull_request:
     paths:
       - .github/workflows/premerge.yaml
-  push:
-    branches:
-      - 'main'
 
 jobs:
   premerge-checks-linux:
@@ -18,11 +15,6 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
       cancel-in-progress: true
-    container:
-      image: ghcr.io/llvm/ci-ubuntu-22.04:latest
-    defaults:
-      run:
-        shell: bash
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@v4

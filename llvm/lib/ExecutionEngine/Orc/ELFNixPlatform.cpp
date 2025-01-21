@@ -10,6 +10,7 @@
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
+#include "llvm/ExecutionEngine/JITLink/loongarch.h"
 #include "llvm/ExecutionEngine/JITLink/ppc64.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
@@ -149,6 +150,9 @@ public:
       break;
     case Triple::ppc64le:
       EdgeKind = jitlink::ppc64::Pointer64;
+      break;
+    case Triple::loongarch64:
+      EdgeKind = jitlink::loongarch::Pointer64;
       break;
     default:
       llvm_unreachable("Unrecognized architecture");
@@ -363,6 +367,7 @@ bool ELFNixPlatform::supportedTarget(const Triple &TT) {
   // FIXME: jitlink for ppc64 hasn't been well tested, leave it unsupported
   // right now.
   case Triple::ppc64le:
+  case Triple::loongarch64:
     return true;
   default:
     return false;

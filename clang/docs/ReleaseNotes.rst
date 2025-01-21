@@ -660,6 +660,8 @@ Improvements to Clang's diagnostics
 
 - Don't emit bogus dangling diagnostics when ``[[gsl::Owner]]`` and `[[clang::lifetimebound]]` are used together (#GH108272).
 
+- Don't emit bogus dignostic about an undefined behavior on ``reinterpret_cast<T>`` for non-instantiated template functions without sufficient knowledge whether it can actually lead to undefined behavior for ``T`` (#GH109430).
+
 - The ``-Wreturn-stack-address`` warning now also warns about addresses of
   local variables passed to function calls using the ``[[clang::musttail]]``
   attribute.
@@ -796,6 +798,10 @@ Improvements to Clang's diagnostics
     }
 - Diagnose invalid declarators in the declaration of constructors and destructors (#GH121706).
 
+- Fix false positives warning for non-std functions with name `infinity` (#123231).
+
+- Clang now emits a ``-Wignored-qualifiers`` diagnostic when a base class includes cv-qualifiers (#GH55474).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -860,7 +866,7 @@ Bug Fixes to C++ Support
   module imports in those situations. (#GH60336)
 - Fix init-capture packs having a size of one before being instantiated. (#GH63677)
 - Clang now preserves the unexpanded flag in a lambda transform used for pack expansion. (#GH56852), (#GH85667),
-  (#GH99877).
+  (#GH99877), (#GH122417).
 - Fixed a bug when diagnosing ambiguous explicit specializations of constrained member functions.
 - Fixed an assertion failure when selecting a function from an overload set that includes a
   specialization of a conversion function template.
@@ -961,6 +967,7 @@ Bug Fixes to C++ Support
 - Fixed a crash caused by the incorrect construction of template arguments for CTAD alias guides when type
   constraints are applied. (#GH122134)
 - Fixed canonicalization of pack indexing types - Clang did not always recognized identical pack indexing. (#GH123033)
+- Fixed a nested lambda substitution issue for constraint evaluation. (#GH123441)
 
 
 Bug Fixes to AST Handling
@@ -1129,6 +1136,7 @@ RISC-V Support
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a bug about overriding a constexpr pure-virtual member function with a non-constexpr virtual member function which causes compilation failure when including standard C++ header `format`.
+- Added initial support for version 3 of the compressed offload bundle format, which uses 64-bit fields for Total File Size and Uncompressed Binary Size. This enables support for files larger than 4GB. The support is currently experimental and can be enabled by setting the environment variable `COMPRESSED_BUNDLE_FORMAT_VERSION=3`.
 
 CUDA Support
 ^^^^^^^^^^^^
@@ -1229,7 +1237,7 @@ clang-format
 - Adds ``VariableTemplates`` option.
 - Adds support for bash globstar in ``.clang-format-ignore``.
 - Adds ``WrapNamespaceBodyWithEmptyLines`` option.
-- Adds the ``ExportBlockIndentation`` option.
+- Adds the ``IndentExportBlock`` option.
 
 libclang
 --------

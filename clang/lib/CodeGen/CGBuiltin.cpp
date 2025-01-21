@@ -68,6 +68,7 @@
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/X86TargetParser.h"
+#include <numeric>
 #include <optional>
 #include <utility>
 
@@ -7307,7 +7308,6 @@ static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
 };
 
 static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
-  NEONMAP1(__a64_vcvtq_low_bf16_f32, aarch64_neon_bfcvtn, 0),
   NEONMAP0(splat_lane_v),
   NEONMAP0(splat_laneq_v),
   NEONMAP0(splatq_lane_v),
@@ -7407,7 +7407,8 @@ static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP0(vcvtq_f16_s16),
   NEONMAP0(vcvtq_f16_u16),
   NEONMAP0(vcvtq_f32_v),
-  NEONMAP1(vcvtq_high_bf16_f32, aarch64_neon_bfcvtn2, 0),
+  NEONMAP0(vcvtq_high_bf16_f32),
+  NEONMAP0(vcvtq_low_bf16_f32),
   NEONMAP1(vcvtq_n_f16_s16, aarch64_neon_vcvtfxs2fp, 0),
   NEONMAP1(vcvtq_n_f16_u16, aarch64_neon_vcvtfxu2fp, 0),
   NEONMAP2(vcvtq_n_f32_v, aarch64_neon_vcvtfxu2fp, aarch64_neon_vcvtfxs2fp, 0),
@@ -7616,7 +7617,7 @@ static const ARMVectorIntrinsicInfo AArch64SISDIntrinsicMap[] = {
   NEONMAP1(vcvtd_n_u64_f64, aarch64_neon_vcvtfp2fxu, AddRetType | Add1ArgType),
   NEONMAP1(vcvtd_s64_f64, aarch64_neon_fcvtzs, AddRetType | Add1ArgType),
   NEONMAP1(vcvtd_u64_f64, aarch64_neon_fcvtzu, AddRetType | Add1ArgType),
-  NEONMAP1(vcvth_bf16_f32, aarch64_neon_bfcvt, 0),
+  NEONMAP0(vcvth_bf16_f32),
   NEONMAP1(vcvtmd_s64_f64, aarch64_neon_fcvtms, AddRetType | Add1ArgType),
   NEONMAP1(vcvtmd_u64_f64, aarch64_neon_fcvtmu, AddRetType | Add1ArgType),
   NEONMAP1(vcvtms_s32_f32, aarch64_neon_fcvtms, AddRetType | Add1ArgType),
@@ -12083,6 +12084,12 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return ConstantInt::get(Builder.getInt32Ty(), 0);
   }
 
+  if (BuiltinID == NEON::BI__builtin_neon_vcvth_bf16_f32)
+    return Builder.CreateFPTrunc(
+        Builder.CreateBitCast(EmitScalarExpr(E->getArg(0)),
+                              Builder.getFloatTy()),
+        Builder.getBFloatTy());
+
   // Handle MSVC intrinsics before argument evaluation to prevent double
   // evaluation.
   if (std::optional<MSVCIntrin> MsvcIntId =
@@ -12807,6 +12814,35 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vduph_laneq_f16: {
     return Builder.CreateExtractElement(Ops[0], EmitScalarExpr(E->getArg(1)),
                                         "vgetq_lane");
+  }
+  case NEON::BI__builtin_neon_vcvt_bf16_f32: {
+    llvm::Type *V4F32 = FixedVectorType::get(Builder.getFloatTy(), 4);
+    llvm::Type *V4BF16 = FixedVectorType::get(Builder.getBFloatTy(), 4);
+    return Builder.CreateFPTrunc(Builder.CreateBitCast(Ops[0], V4F32), V4BF16);
+  }
+  case NEON::BI__builtin_neon_vcvtq_low_bf16_f32: {
+    SmallVector<int, 16> ConcatMask(8);
+    std::iota(ConcatMask.begin(), ConcatMask.end(), 0);
+    llvm::Type *V4F32 = FixedVectorType::get(Builder.getFloatTy(), 4);
+    llvm::Type *V4BF16 = FixedVectorType::get(Builder.getBFloatTy(), 4);
+    llvm::Value *Trunc =
+        Builder.CreateFPTrunc(Builder.CreateBitCast(Ops[0], V4F32), V4BF16);
+    return Builder.CreateShuffleVector(
+        Trunc, ConstantAggregateZero::get(V4BF16), ConcatMask);
+  }
+  case NEON::BI__builtin_neon_vcvtq_high_bf16_f32: {
+    SmallVector<int, 16> ConcatMask(8);
+    std::iota(ConcatMask.begin(), ConcatMask.end(), 0);
+    SmallVector<int, 16> LoMask(4);
+    std::iota(LoMask.begin(), LoMask.end(), 0);
+    llvm::Type *V4F32 = FixedVectorType::get(Builder.getFloatTy(), 4);
+    llvm::Type *V4BF16 = FixedVectorType::get(Builder.getBFloatTy(), 4);
+    llvm::Type *V8BF16 = FixedVectorType::get(Builder.getBFloatTy(), 8);
+    llvm::Value *Inactive = Builder.CreateShuffleVector(
+        Builder.CreateBitCast(Ops[0], V8BF16), LoMask);
+    llvm::Value *Trunc =
+        Builder.CreateFPTrunc(Builder.CreateBitCast(Ops[1], V4F32), V4BF16);
+    return Builder.CreateShuffleVector(Inactive, Trunc, ConcatMask);
   }
 
   case clang::AArch64::BI_InterlockedAdd:
@@ -20601,7 +20637,8 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
   case SystemZ::BI__builtin_s390_vclzb:
   case SystemZ::BI__builtin_s390_vclzh:
   case SystemZ::BI__builtin_s390_vclzf:
-  case SystemZ::BI__builtin_s390_vclzg: {
+  case SystemZ::BI__builtin_s390_vclzg:
+  case SystemZ::BI__builtin_s390_vclzq: {
     llvm::Type *ResultType = ConvertType(E->getType());
     Value *X = EmitScalarExpr(E->getArg(0));
     Value *Undef = ConstantInt::get(Builder.getInt1Ty(), false);
@@ -20612,7 +20649,8 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
   case SystemZ::BI__builtin_s390_vctzb:
   case SystemZ::BI__builtin_s390_vctzh:
   case SystemZ::BI__builtin_s390_vctzf:
-  case SystemZ::BI__builtin_s390_vctzg: {
+  case SystemZ::BI__builtin_s390_vctzg:
+  case SystemZ::BI__builtin_s390_vctzq: {
     llvm::Type *ResultType = ConvertType(E->getType());
     Value *X = EmitScalarExpr(E->getArg(0));
     Value *Undef = ConstantInt::get(Builder.getInt1Ty(), false);
@@ -20856,7 +20894,8 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
 
   case SystemZ::BI__builtin_s390_vlbrh:
   case SystemZ::BI__builtin_s390_vlbrf:
-  case SystemZ::BI__builtin_s390_vlbrg: {
+  case SystemZ::BI__builtin_s390_vlbrg:
+  case SystemZ::BI__builtin_s390_vlbrq: {
     llvm::Type *ResultType = ConvertType(E->getType());
     Value *X = EmitScalarExpr(E->getArg(0));
     Function *F = CGM.getIntrinsic(Intrinsic::bswap, ResultType);
@@ -20881,16 +20920,19 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
   INTRINSIC_WITH_CC(s390_vceqhs);
   INTRINSIC_WITH_CC(s390_vceqfs);
   INTRINSIC_WITH_CC(s390_vceqgs);
+  INTRINSIC_WITH_CC(s390_vceqqs);
 
   INTRINSIC_WITH_CC(s390_vchbs);
   INTRINSIC_WITH_CC(s390_vchhs);
   INTRINSIC_WITH_CC(s390_vchfs);
   INTRINSIC_WITH_CC(s390_vchgs);
+  INTRINSIC_WITH_CC(s390_vchqs);
 
   INTRINSIC_WITH_CC(s390_vchlbs);
   INTRINSIC_WITH_CC(s390_vchlhs);
   INTRINSIC_WITH_CC(s390_vchlfs);
   INTRINSIC_WITH_CC(s390_vchlgs);
+  INTRINSIC_WITH_CC(s390_vchlqs);
 
   INTRINSIC_WITH_CC(s390_vfaebs);
   INTRINSIC_WITH_CC(s390_vfaehs);
