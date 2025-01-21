@@ -25,12 +25,8 @@
 using namespace ContainerBenchmarks;
 
 BENCHMARK_CAPTURE(BM_CopyConstruct, vector_bool, std::vector<bool>{})->Arg(5140480);
-BENCHMARK_CAPTURE(BM_MoveConstruct, vector_bool, std::vector<bool>{})->Arg(5140480);
 BENCHMARK_CAPTURE(
     BM_CopyConstruct_Alloc, vector_bool, std::vector<bool, test_allocator<bool>>(), test_allocator<bool>(3))
-    ->Arg(5140480);
-BENCHMARK_CAPTURE(
-    BM_MoveConstruct_Alloc, vector_bool, std::vector<bool, test_allocator<bool>>(), test_allocator<bool>(3))
     ->Arg(5140480);
 
 BENCHMARK_MAIN();
