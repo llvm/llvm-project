@@ -573,8 +573,8 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           // from the type.  TODO: That case occurs in our test suite
           // (alias-analysis-2.fir), but does flang currently generate such
           // code?
-          if (isPointerReference(ty))
-            attributes.set(Attribute::Pointer);
+          //if (isPointerReference(ty))
+          //  attributes.set(Attribute::Pointer);
           breakFromLoop = true;
         })
         .Case<fir::ConvertOp>([&](auto op) {
