@@ -7,9 +7,6 @@ on:
   pull_request:
     paths:
       - .github/workflows/premerge.yaml
-  push:
-    branches:
-      - 'main'
 
 jobs:
   premerge-checks-linux:
@@ -18,11 +15,6 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
       cancel-in-progress: true
-    container:
-      image: ghcr.io/llvm/ci-ubuntu-22.04:latest
-    defaults:
-      run:
-        shell: bash
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@v4
@@ -30,6 +22,8 @@ jobs:
           fetch-depth: 2
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2.14
+        with:
+          max-size: "2000M"
       - name: Build and Test
         # Mark the job as a success even if the step fails so that people do
         # not get notified while the new premerge pipeline is in an
