@@ -268,7 +268,9 @@ public:
   void constructContainingTypeDIEs();
 
   /// Construct function argument DIEs.
-  void constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args);
+  ///
+  /// \returns DIE of the object pointer if one exists. Nullptr otherwise.
+  DIE *constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args);
 
   /// Create a DIE with the given Tag, add the DIE to its parent, and
   /// call insertDIE if MD is not null.

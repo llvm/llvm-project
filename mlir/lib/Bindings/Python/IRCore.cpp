@@ -677,29 +677,44 @@ size_t PyMlirContext::getLiveCount() {
   return getLiveContexts().size();
 }
 
-size_t PyMlirContext::getLiveOperationCount() { return liveOperations.size(); }
+size_t PyMlirContext::getLiveOperationCount() {
+  nb::ft_lock_guard lock(liveOperationsMutex);
+  return liveOperations.size();
+}
 
 std::vector<PyOperation *> PyMlirContext::getLiveOperationObjects() {
   std::vector<PyOperation *> liveObjects;
+  nb::ft_lock_guard lock(liveOperationsMutex);
   for (auto &entry : liveOperations)
     liveObjects.push_back(entry.second.second);
   return liveObjects;
 }
 
 size_t PyMlirContext::clearLiveOperations() {
-  for (auto &op : liveOperations)
+
+  LiveOperationMap operations;
+  {
+    nb::ft_lock_guard lock(liveOperationsMutex);
+    std::swap(operations, liveOperations);
+  }
+  for (auto &op : operations)
     op.second.second->setInvalid();
-  size_t numInvalidated = liveOperations.size();
-  liveOperations.clear();
+  size_t numInvalidated = operations.size();
   return numInvalidated;
 }
 
 void PyMlirContext::clearOperation(MlirOperation op) {
-  auto it = liveOperations.find(op.ptr);
-  if (it != liveOperations.end()) {
-    it->second.second->setInvalid();
+  PyOperation *py_op;
+  {
+    nb::ft_lock_guard lock(liveOperationsMutex);
+    auto it = liveOperations.find(op.ptr);
+    if (it == liveOperations.end()) {
+      return;
+    }
+    py_op = it->second.second;
     liveOperations.erase(it);
   }
+  py_op->setInvalid();
 }
 
 void PyMlirContext::clearOperationsInside(PyOperationBase &op) {
@@ -1183,7 +1198,6 @@ PyOperation::~PyOperation() {
 PyOperationRef PyOperation::createInstance(PyMlirContextRef contextRef,
                                            MlirOperation operation,
                                            nb::object parentKeepAlive) {
-  auto &liveOperations = contextRef->liveOperations;
   // Create.
   PyOperation *unownedOperation =
       new PyOperation(std::move(contextRef), operation);
@@ -1195,19 +1209,22 @@ PyOperationRef PyOperation::createInstance(PyMlirContextRef contextRef,
   if (parentKeepAlive) {
     unownedOperation->parentKeepAlive = std::move(parentKeepAlive);
   }
-  liveOperations[operation.ptr] = std::make_pair(pyRef, unownedOperation);
   return PyOperationRef(unownedOperation, std::move(pyRef));
 }
 
 PyOperationRef PyOperation::forOperation(PyMlirContextRef contextRef,
                                          MlirOperation operation,
                                          nb::object parentKeepAlive) {
+  nb::ft_lock_guard lock(contextRef->liveOperationsMutex);
   auto &liveOperations = contextRef->liveOperations;
   auto it = liveOperations.find(operation.ptr);
   if (it == liveOperations.end()) {
     // Create.
-    return createInstance(std::move(contextRef), operation,
-                          std::move(parentKeepAlive));
+    PyOperationRef result = createInstance(std::move(contextRef), operation,
+                                           std::move(parentKeepAlive));
+    liveOperations[operation.ptr] =
+        std::make_pair(result.getObject(), result.get());
+    return result;
   }
   // Use existing.
   PyOperation *existing = it->second.second;
@@ -1218,13 +1235,15 @@ PyOperationRef PyOperation::forOperation(PyMlirContextRef contextRef,
 PyOperationRef PyOperation::createDetached(PyMlirContextRef contextRef,
                                            MlirOperation operation,
                                            nb::object parentKeepAlive) {
+  nb::ft_lock_guard lock(contextRef->liveOperationsMutex);
   auto &liveOperations = contextRef->liveOperations;
   assert(liveOperations.count(operation.ptr) == 0 &&
          "cannot create detached operation that already exists");
   (void)liveOperations;
-
   PyOperationRef created = createInstance(std::move(contextRef), operation,
                                           std::move(parentKeepAlive));
+  liveOperations[operation.ptr] =
+      std::make_pair(created.getObject(), created.get());
   created->attached = false;
   return created;
 }

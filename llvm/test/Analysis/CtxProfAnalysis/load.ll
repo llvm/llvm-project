@@ -40,31 +40,14 @@ Function Info:
 12074870348631550642 : another_entrypoint_no_callees. MaxCounterID: 1. MaxCallsiteID: 0
 
 Current Profile:
-[
-  {
-    "Callsites": [
-      [
-        {
-          "Counters": [
-            6,
-            7
-          ],
-          "Guid": 728453322856651412
-        }
-      ]
-    ],
-    "Counters": [
-      1
-    ],
-    "Guid": 11872291593386833696
-  },
-  {
-    "Counters": [
-      5
-    ],
-    "Guid": 12074870348631550642
-  }
-]
+
+- Guid:            11872291593386833696
+  Counters:        [ 1 ]
+  Callsites:
+    - - Guid:            728453322856651412
+        Counters:        [ 6, 7 ]
+- Guid:            12074870348631550642
+  Counters:        [ 5 ]
 
 Flat Profile:
 728453322856651412 : 6 7 

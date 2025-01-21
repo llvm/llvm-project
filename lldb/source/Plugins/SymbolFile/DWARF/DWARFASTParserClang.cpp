@@ -377,7 +377,12 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
       break;
 
     case DW_AT_object_pointer:
-      object_pointer = form_value.Reference();
+      // GetAttributes follows DW_AT_specification.
+      // DW_TAG_subprogram definitions and declarations may both
+      // have a DW_AT_object_pointer. Don't overwrite the one
+      // we parsed for the definition with the one from the declaration.
+      if (!object_pointer.IsValid())
+        object_pointer = form_value.Reference();
       break;
 
     case DW_AT_signature:
@@ -3122,7 +3127,6 @@ size_t DWARFASTParserClang::ParseChildParameters(
         }
       }
 
-      bool skip = false;
       if (is_artificial) {
         // In order to determine if a C++ member function is "const" we
         // have to look at the const-ness of "this"...
@@ -3145,10 +3149,7 @@ size_t DWARFASTParserClang::ParseChildParameters(
             }
           }
         }
-        skip = true;
-      }
-
-      if (!skip) {
+      } else {
         Type *type = die.ResolveTypeUID(param_type_die_form.Reference());
         if (type) {
           function_param_types.push_back(type->GetForwardCompilerType());

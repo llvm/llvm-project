@@ -126,6 +126,19 @@ define i1 @sgt_implies_ge_via_assume(i32 %i, i32 %j) {
   ret i1 %i.ge.j
 }
 
+define i1 @sgt_implies_false_le_via_assume(i32 %i, i32 %j) {
+; CHECK-LABEL: define i1 @sgt_implies_false_le_via_assume(
+; CHECK-SAME: i32 [[I:%.*]], i32 [[J:%.*]]) {
+; CHECK-NEXT:    [[I_SGT_J:%.*]] = icmp sgt i32 [[I]], [[J]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[I_SGT_J]])
+; CHECK-NEXT:    ret i1 false
+;
+  %i.sgt.j = icmp sgt i32 %i, %j
+  call void @llvm.assume(i1 %i.sgt.j)
+  %i.le.j = icmp samesign ule i32 %i, %j
+  ret i1 %i.le.j
+}
+
 define i32 @gt_implies_sge_dominating(i32 %a, i32 %len) {
 ; CHECK-LABEL: define i32 @gt_implies_sge_dominating(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[LEN:%.*]]) {
@@ -144,6 +157,30 @@ entry:
 taken:
   %a.sge.len = icmp sge i32 %a, %len
   %res = select i1 %a.sge.len, i32 30, i32 0
+  ret i32 %res
+
+end:
+  ret i32 -1
+}
+
+define i32 @gt_implies_false_sle_dominating(i32 %a, i32 %len) {
+; CHECK-LABEL: define i32 @gt_implies_false_sle_dominating(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[LEN:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A_GT_LEN:%.*]] = icmp samesign ugt i32 [[A]], [[LEN]]
+; CHECK-NEXT:    br i1 [[A_GT_LEN]], label %[[TAKEN:.*]], label %[[END:.*]]
+; CHECK:       [[TAKEN]]:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       [[END]]:
+; CHECK-NEXT:    ret i32 -1
+;
+entry:
+  %a.gt.len = icmp samesign ugt i32 %a, %len
+  br i1 %a.gt.len, label %taken, label %end
+
+taken:
+  %a.sle.len = icmp sle i32 %a, %len
+  %res = select i1 %a.sle.len, i32 30, i32 0
   ret i32 %res
 
 end:

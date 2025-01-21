@@ -46,17 +46,20 @@
 #include "llvm/Support/xxhash.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
 
+#include <numeric>
 #include <optional>
 #include <string>
 
 using namespace clang;
 using namespace CodeGen;
 
+namespace clang {
 // TODO: Introduce frontend options to enabled per sanitizers, similar to
 // `fsanitize-trap`.
-static llvm::cl::opt<bool> ClSanitizeGuardChecks(
+llvm::cl::opt<bool> ClSanitizeGuardChecks(
     "ubsan-guard-checks", llvm::cl::Optional,
     llvm::cl::desc("Guard UBSAN checks with `llvm.allow.ubsan.check()`."));
+} // namespace clang
 
 //===--------------------------------------------------------------------===//
 //                        Defines for metadata
@@ -2000,20 +2003,19 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
       return EmitFromMemory(V, Ty);
     }
 
-    // Handle vectors of size 3 like size 4 for better performance.
-    const llvm::Type *EltTy = Addr.getElementType();
-    const auto *VTy = cast<llvm::FixedVectorType>(EltTy);
+    // Handles vectors of sizes that are likely to be expanded to a larger size
+    // to optimize performance.
+    auto *VTy = cast<llvm::FixedVectorType>(Addr.getElementType());
+    auto *NewVecTy =
+        CGM.getABIInfo().getOptimalVectorMemoryType(VTy, getLangOpts());
 
-    if (!CGM.getCodeGenOpts().PreserveVec3Type && VTy->getNumElements() == 3) {
-
-      llvm::VectorType *vec4Ty =
-          llvm::FixedVectorType::get(VTy->getElementType(), 4);
-      Address Cast = Addr.withElementType(vec4Ty);
-      // Now load value.
-      llvm::Value *V = Builder.CreateLoad(Cast, Volatile, "loadVec4");
-
-      // Shuffle vector to get vec3.
-      V = Builder.CreateShuffleVector(V, ArrayRef<int>{0, 1, 2}, "extractVec");
+    if (VTy != NewVecTy) {
+      Address Cast = Addr.withElementType(NewVecTy);
+      llvm::Value *V = Builder.CreateLoad(Cast, Volatile, "loadVecN");
+      unsigned OldNumElements = VTy->getNumElements();
+      SmallVector<int, 16> Mask(OldNumElements);
+      std::iota(Mask.begin(), Mask.end(), 0);
+      V = Builder.CreateShuffleVector(V, Mask, "extractVec");
       return EmitFromMemory(V, Ty);
     }
   }
@@ -2143,21 +2145,21 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
       Addr = Addr.withPointer(Builder.CreateThreadLocalAddress(GV),
                               NotKnownNonNull);
 
+  // Handles vectors of sizes that are likely to be expanded to a larger size
+  // to optimize performance.
   llvm::Type *SrcTy = Value->getType();
   if (const auto *ClangVecTy = Ty->getAs<VectorType>()) {
-    auto *VecTy = dyn_cast<llvm::FixedVectorType>(SrcTy);
-    if (!CGM.getCodeGenOpts().PreserveVec3Type) {
-      // Handle vec3 special.
-      if (VecTy && !ClangVecTy->isExtVectorBoolType() &&
-          cast<llvm::FixedVectorType>(VecTy)->getNumElements() == 3) {
-        // Our source is a vec3, do a shuffle vector to make it a vec4.
-        Value = Builder.CreateShuffleVector(Value, ArrayRef<int>{0, 1, 2, -1},
-                                            "extractVec");
-        SrcTy = llvm::FixedVectorType::get(VecTy->getElementType(), 4);
+    if (auto *VecTy = dyn_cast<llvm::FixedVectorType>(SrcTy)) {
+      auto *NewVecTy =
+          CGM.getABIInfo().getOptimalVectorMemoryType(VecTy, getLangOpts());
+      if (!ClangVecTy->isExtVectorBoolType() && VecTy != NewVecTy) {
+        SmallVector<int, 16> Mask(NewVecTy->getNumElements(), -1);
+        std::iota(Mask.begin(), Mask.begin() + VecTy->getNumElements(), 0);
+        Value = Builder.CreateShuffleVector(Value, Mask, "extractVec");
+        SrcTy = NewVecTy;
       }
-      if (Addr.getElementType() != SrcTy) {
+      if (Addr.getElementType() != SrcTy)
         Addr = Addr.withElementType(SrcTy);
-      }
     }
   }
 
@@ -3605,18 +3607,15 @@ void CodeGenFunction::EmitCheck(
   llvm::Value *RecoverableCond = nullptr;
   llvm::Value *TrapCond = nullptr;
   bool NoMerge = false;
-  for (int i = 0, n = Checked.size(); i < n; ++i) {
-    llvm::Value *Check = Checked[i].first;
+  for (auto &[Check, Ord] : Checked) {
     // -fsanitize-trap= overrides -fsanitize-recover=.
-    llvm::Value *&Cond =
-        CGM.getCodeGenOpts().SanitizeTrap.has(Checked[i].second)
-            ? TrapCond
-            : CGM.getCodeGenOpts().SanitizeRecover.has(Checked[i].second)
-                  ? RecoverableCond
-                  : FatalCond;
+    llvm::Value *&Cond = CGM.getCodeGenOpts().SanitizeTrap.has(Ord) ? TrapCond
+                         : CGM.getCodeGenOpts().SanitizeRecover.has(Ord)
+                             ? RecoverableCond
+                             : FatalCond;
     Cond = Cond ? Builder.CreateAnd(Cond, Check) : Check;
 
-    if (!CGM.getCodeGenOpts().SanitizeMergeHandlers.has(Checked[i].second))
+    if (!CGM.getCodeGenOpts().SanitizeMergeHandlers.has(Ord))
       NoMerge = true;
   }
 

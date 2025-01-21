@@ -12,11 +12,9 @@
 #include "Standalone-c/Dialects.h"
 #include "mlir/Bindings/Python/PybindAdaptors.h"
 
-namespace py = pybind11;
-
 using namespace mlir::python::adaptors;
 
-PYBIND11_MODULE(_standaloneDialectsPybind11, m, py::mod_gil_not_used()) {
+PYBIND11_MODULE(_standaloneDialectsPybind11, m) {
   //===--------------------------------------------------------------------===//
   // standalone dialect
   //===--------------------------------------------------------------------===//
