@@ -2800,7 +2800,7 @@ TreePattern::TreePattern(const Record *TheRec, TreePatternNodePtr Pat,
   Trees.push_back(Pat);
 }
 
-TreePattern::TreePattern(Record *TheRec,
+TreePattern::TreePattern(const Record *TheRec,
                          const std::vector<TreePatternNodePtr> &Pats,
                          bool isInput, CodeGenDAGPatterns &cdp)
     : TheRecord(TheRec), CDP(cdp), isInputPattern(isInput), HasError(false),
@@ -3748,7 +3748,7 @@ static void getInstructionsInTree(const TreePatternNode &Tree,
 
 /// Get all the instructions in all trees in a pattern.
 static void getInstructionsInPattern(const TreePattern &Pat,
-                                     SmallVectorImpl<Record *> &Instrs) {
+                                     SmallVectorImpl<const Record *> &Instrs) {
   for (const auto &Tree : Pat.getTrees())
     getInstructionsInTree(*Tree, Instrs);
 }
@@ -4395,7 +4395,7 @@ void CodeGenDAGPatterns::ParseOnePattern(
       AddPatternToMatch(&Pattern,
                         PatternToMatch(TheDef, Preds, InTree,
                                        ExpandedOutPattern, InstImpResults,
-                                       Complexity, TheDef->getID()), ShouldIgnore);
+                                       Complexity, TheDef->getID(), ShouldIgnore));
   }
 }
 

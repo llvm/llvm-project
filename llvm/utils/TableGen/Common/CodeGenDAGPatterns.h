@@ -929,7 +929,7 @@ public:
   TreePattern(const Record *TheRec, TreePatternNodePtr Pat, bool isInput,
               CodeGenDAGPatterns &ise);
   /// Construct from multiple patterns
-  TreePattern(Record *TheRec, const std::vector<TreePatternNodePtr> &Pat,
+  TreePattern(const Record *TheRec, const std::vector<TreePatternNodePtr> &Pat,
               bool isInput, CodeGenDAGPatterns &ise);
 
   /// Return a new copy of the TreePattern, with cloned Trees.
