@@ -1,3 +1,5 @@
+! -fopenacc unsupported on AMD downstream
+! UNSUPPORTED: true
 ! RUN: %flang -E -fopenmp -fopenacc %s 2>&1 | FileCheck --strict-whitespace %s
 ! CHECK:       {{^}}!$OMP   parallel default(shared) private(super_very_long_name_for_the_va&
 ! CHECK-NEXT:  {{^}}!$OMP&riable)

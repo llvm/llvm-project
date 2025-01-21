@@ -1,3 +1,5 @@
+// -fopenacc unsupported on AMD downstream
+// UNSUPPORTED: true
 // RUN: %clang_cc1 -fopenacc -Wno-openacc-deprecated-clause-alias -ast-print %s -o - | FileCheck %s
 
 struct SomeStruct{};

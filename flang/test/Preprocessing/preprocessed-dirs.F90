@@ -1,3 +1,5 @@
+! -fopenacc unsupported on AMD downstream
+! UNSUPPORTED: true
 ! RUN: %flang_fc1 -E -fopenacc %s 2>&1 | FileCheck %s
 !CHECK: subroutine r4(x) Z real :: x Z !$acc routine Z print *, x Z end
 #define SUB(s, t) subroutine s(x) Z\

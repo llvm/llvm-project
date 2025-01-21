@@ -1,3 +1,5 @@
+! -fopenacc unsupported on AMD downstream
+! UNSUPPORTED: true
 ! RUN: %python %S/test_errors.py %s %flang_fc1 -fopenacc
 module m
   real, device :: a(4,8)
