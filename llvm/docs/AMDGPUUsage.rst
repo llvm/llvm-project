@@ -5234,6 +5234,9 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      GFX10-GFX12 (wavefront size 32)
                                                        - max_vgpr 1..256
                                                        - max(0, ceil(vgprs_used / 8) - 1)
+                                                     GFX125X (wavefront size 32)
+                                                       - max_vgpr 1..1024
+                                                       - max(0, ceil(vgprs_used / 16) - 1)
 
                                                      Where vgprs_used is defined
                                                      as the highest VGPR number
