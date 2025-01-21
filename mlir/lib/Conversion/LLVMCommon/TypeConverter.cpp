@@ -485,7 +485,7 @@ LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) const {
 SmallVector<Type, 5>
 LLVMTypeConverter::getMemRefDescriptorFields(MemRefType type,
                                              bool unpackAggregates) const {
-  if (!isStrided(type)) {
+  if (!type.isStrided()) {
     emitError(
         UnknownLoc::get(type.getContext()),
         "conversion to strided form failed either due to non-strided layout "
@@ -603,7 +603,7 @@ bool LLVMTypeConverter::canConvertToBarePtr(BaseMemRefType type) {
 
   int64_t offset = 0;
   SmallVector<int64_t, 4> strides;
-  if (failed(getStridesAndOffset(memrefTy, strides, offset)))
+  if (failed(memrefTy.getStridesAndOffset(strides, offset)))
     return false;
 
   for (int64_t stride : strides)
