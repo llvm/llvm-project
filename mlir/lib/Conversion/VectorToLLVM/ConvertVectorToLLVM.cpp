@@ -1546,24 +1546,32 @@ public:
 
     auto punct = printOp.getPunctuation();
     if (auto stringLiteral = printOp.getStringLiteral()) {
-      LLVM::createPrintStrCall(rewriter, loc, parent, "vector_print_str",
-                               *stringLiteral, *getTypeConverter(),
-                               /*addNewline=*/false);
+      if (LLVM::createPrintStrCall(rewriter, loc, parent, "vector_print_str",
+                                   *stringLiteral, *getTypeConverter(),
+                                   /*addNewline=*/false)
+              .failed()) {
+        return failure();
+      }
     } else if (punct != PrintPunctuation::NoPunctuation) {
-      emitCall(rewriter, printOp->getLoc(), [&] {
-        switch (punct) {
-        case PrintPunctuation::Close:
-          return LLVM::lookupOrCreatePrintCloseFn(parent);
-        case PrintPunctuation::Open:
-          return LLVM::lookupOrCreatePrintOpenFn(parent);
-        case PrintPunctuation::Comma:
-          return LLVM::lookupOrCreatePrintCommaFn(parent);
-        case PrintPunctuation::NewLine:
-          return LLVM::lookupOrCreatePrintNewlineFn(parent);
-        default:
-          llvm_unreachable("unexpected punctuation");
-        }
-      }());
+      if (auto op = [&] -> FailureOr<LLVM::LLVMFuncOp> {
+            switch (punct) {
+            case PrintPunctuation::Close:
+              return LLVM::lookupOrCreatePrintCloseFn(parent);
+            case PrintPunctuation::Open:
+              return LLVM::lookupOrCreatePrintOpenFn(parent);
+            case PrintPunctuation::Comma:
+              return LLVM::lookupOrCreatePrintCommaFn(parent);
+            case PrintPunctuation::NewLine:
+              return LLVM::lookupOrCreatePrintNewlineFn(parent);
+            default:
+              llvm_unreachable("unexpected punctuation");
+            }
+          }();
+          succeeded(op))
+        emitCall(rewriter, printOp->getLoc(), op.value());
+      else {
+        return failure();
+      }
     }
 
     rewriter.eraseOp(printOp);
@@ -1588,7 +1596,7 @@ private:
 
     // Make sure element type has runtime support.
     PrintConversion conversion = PrintConversion::None;
-    Operation *printer;
+    FailureOr<Operation *> printer;
     if (printType.isF32()) {
       printer = LLVM::lookupOrCreatePrintF32Fn(parent);
     } else if (printType.isF64()) {
@@ -1631,6 +1639,8 @@ private:
     } else {
       return failure();
     }
+    if (failed(printer))
+      return failure();
 
     switch (conversion) {
     case PrintConversion::ZeroExt64:
@@ -1648,7 +1658,7 @@ private:
     case PrintConversion::None:
       break;
     }
-    emitCall(rewriter, loc, printer, value);
+    emitCall(rewriter, loc, printer.value(), value);
     return success();
   }
 

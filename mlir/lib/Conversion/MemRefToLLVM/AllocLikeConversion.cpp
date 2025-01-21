@@ -15,7 +15,7 @@
 using namespace mlir;
 
 namespace {
-LLVM::LLVMFuncOp getNotalignedAllocFn(const LLVMTypeConverter *typeConverter,
+FailureOr<LLVM::LLVMFuncOp> getNotalignedAllocFn(const LLVMTypeConverter *typeConverter,
                                       Operation *module, Type indexType) {
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
   if (useGenericFn)
@@ -24,7 +24,7 @@ LLVM::LLVMFuncOp getNotalignedAllocFn(const LLVMTypeConverter *typeConverter,
   return LLVM::lookupOrCreateMallocFn(module, indexType);
 }
 
-LLVM::LLVMFuncOp getAlignedAllocFn(const LLVMTypeConverter *typeConverter,
+FailureOr<LLVM::LLVMFuncOp> getAlignedAllocFn(const LLVMTypeConverter *typeConverter,
                                    Operation *module, Type indexType) {
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
 
@@ -80,10 +80,11 @@ std::tuple<Value, Value> AllocationOpLLVMLowering::allocateBufferManuallyAlign(
         << " to integer address space "
            "failed. Consider adding memory space conversions.";
   }
-  LLVM::LLVMFuncOp allocFuncOp = getNotalignedAllocFn(
+  FailureOr<LLVM::LLVMFuncOp> allocFuncOp = getNotalignedAllocFn(
       getTypeConverter(), op->getParentWithTrait<OpTrait::SymbolTable>(),
       getIndexType());
-  auto results = rewriter.create<LLVM::CallOp>(loc, allocFuncOp, sizeBytes);
+  if (failed(allocFuncOp)) return std::make_tuple(Value(), Value());
+  auto results = rewriter.create<LLVM::CallOp>(loc, allocFuncOp.value(), sizeBytes);
 
   Value allocatedPtr =
       castAllocFuncResult(rewriter, loc, results.getResult(), memRefType,
@@ -146,11 +147,12 @@ Value AllocationOpLLVMLowering::allocateBufferAutoAlign(
     sizeBytes = createAligned(rewriter, loc, sizeBytes, allocAlignment);
 
   Type elementPtrType = this->getElementPtrType(memRefType);
-  LLVM::LLVMFuncOp allocFuncOp = getAlignedAllocFn(
+  FailureOr<LLVM::LLVMFuncOp> allocFuncOp = getAlignedAllocFn(
       getTypeConverter(), op->getParentWithTrait<OpTrait::SymbolTable>(),
       getIndexType());
+  if (failed(allocFuncOp)) return Value();
   auto results = rewriter.create<LLVM::CallOp>(
-      loc, allocFuncOp, ValueRange({allocAlignment, sizeBytes}));
+      loc, allocFuncOp.value(), ValueRange({allocAlignment, sizeBytes}));
 
   return castAllocFuncResult(rewriter, loc, results.getResult(), memRefType,
                              elementPtrType, *getTypeConverter());
