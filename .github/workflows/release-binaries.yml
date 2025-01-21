@@ -237,6 +237,8 @@ jobs:
     - name: Configure
       id: build
       shell: bash
+      env:
+        CCACHE_BIN: ${{ needs.prepare.outputs.ccache }}
       run: |
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
@@ -245,8 +247,8 @@ jobs:
             -C clang/cmake/caches/Release.cmake \
             -DBOOTSTRAP_LLVM_PARALLEL_LINK_JOBS=1 \
             -DBOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}" \
-            -DCMAKE_C_COMPILER_LAUNCHER=sccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+            -DCMAKE_C_COMPILER_LAUNCHER=$CCACHE_BIN \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=$CCACHE_BIN
     - name: Build
       shell: bash
       run: |
