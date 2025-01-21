@@ -121,9 +121,6 @@ jobs:
         echo "release-binary-basename=$release_binary_basename" >> $GITHUB_OUTPUT
         echo "release-binary-filename=$release_binary_basename.tar.xz" >> $GITHUB_OUTPUT
 
-        # Detect necessary CMake flags
-        target="${{ runner.os }}-${{ runner.arch }}"
-
         # The hendrikmuhs/ccache-action action does not support installing sccache
         # on arm64 Linux.
         if [ "$target" = "Linux-ARM64" ]; then
