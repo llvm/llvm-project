@@ -371,7 +371,7 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
     EverChanged |= Changed;
   } while (Changed);
 
-  // Jump threading may have introduced redundant debug values into BB which
+  // Jump threading may have introduced redundant debug values into F which
   // should be removed.
   if (EverChanged)
     for (auto &BB : *F) {

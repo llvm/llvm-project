@@ -92,6 +92,12 @@ exit:                                             ; preds = %bb.f4, %bb.f3, %bb.
   ret void, !dbg !29
 }
 
+; Test for the cloning of dbg.values on elided instructions -- down one path
+; being threaded, the `and` in the function below is optimised away, but its
+; debug-info should still be preserved.
+; Similarly, the call to f1 gets cloned, its dbg.value should be cloned too.
+; Duplicated debug value in land.end.thr_comm is removed by
+; RemoveRedundantDbgInstrs pass at the end.
 define void @test16(i1 %c, i1 %c2, i1 %c3, i1 %c4) nounwind ssp !dbg !30 {
 ; CHECK-LABEL: define void @test16(i1
 entry:
