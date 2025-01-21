@@ -3110,15 +3110,15 @@ size_t DWARFASTParserClang::ParseChildParameters(
           }
         }
       } else if (Type *type = die.ResolveTypeUID(param_type_die)) {
-          function_param_types.push_back(type->GetForwardCompilerType());
+        function_param_types.push_back(type->GetForwardCompilerType());
 
-          clang::ParmVarDecl *param_var_decl = m_ast.CreateParameterDeclaration(
-              containing_decl_ctx, GetOwningClangModule(die), name,
-              type->GetForwardCompilerType(), clang::StorageClass::SC_None);
-          assert(param_var_decl);
-          function_param_decls.push_back(param_var_decl);
+        clang::ParmVarDecl *param_var_decl = m_ast.CreateParameterDeclaration(
+            containing_decl_ctx, GetOwningClangModule(die), name,
+            type->GetForwardCompilerType(), clang::StorageClass::SC_None);
+        assert(param_var_decl);
+        function_param_decls.push_back(param_var_decl);
 
-          m_ast.SetMetadataAsUserID(param_var_decl, die.GetID());
+        m_ast.SetMetadataAsUserID(param_var_decl, die.GetID());
       }
     } break;
 
