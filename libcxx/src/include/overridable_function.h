@@ -42,12 +42,11 @@
 // -------------------
 //
 // Let's say we want to check whether a weak function `f` has been overridden by the user.
-// The general mechanism works by defining an internal symbol `.L.f` and a weak alias `f`
-// via the _LIBCPP_OVERRIDABLE_FUNCTION macro.
-//
-// Then, when comes the time to check whether the function has been overridden, we take
-// the address of the function `f` and we check whether it is different from `.L.f`.
-// If so it means the function was overriden by the user.
+// The general mechanism works by defining an internal symbol and a weak alias `f` via the
+// _LIBCPP_OVERRIDABLE_FUNCTION macro. Then, when comes the time to check whether the
+// function has been overridden, we take the address of the internal symbol and the weak
+// alias `f` and check whether they're different. If so it means the function was overriden
+// by the user.
 //
 // Important note
 // --------------
@@ -67,17 +66,14 @@ _LIBCPP_END_NAMESPACE_STD
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
 #  define _LIBCPP_OVERRIDABLE_FUNCTION(symbol, type, name, arglist)                                                    \
-    [[gnu::used]] static type symbol arglist __asm__("_" _LIBCPP_TOSTRING(symbol));                                    \
-    __asm__(".globl _" _LIBCPP_TOSTRING(symbol));                                                                      \
-    __asm__(".weak_definition _" _LIBCPP_TOSTRING(symbol));                                                            \
-    [[clang::weak_import]] extern type name arglist;                                                                   \
+    [[clang::weak_import]] extern type symbol arglist __asm__("_" _LIBCPP_TOSTRING(symbol));                           \
     _LIBCPP_BEGIN_NAMESPACE_STD                                                                                        \
     template <>                                                                                                        \
     inline bool __is_function_overridden<static_cast<type(*) arglist>(name)>() {                                       \
       return static_cast<type(*) arglist>(name) != symbol;                                                             \
     }                                                                                                                  \
     _LIBCPP_END_NAMESPACE_STD                                                                                          \
-    static type symbol arglist
+    type name arglist
 
 #elif defined(_LIBCPP_OBJECT_FORMAT_ELF)
 
