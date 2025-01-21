@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implements a pipeline for use by mlir-vulkan-runner tests.
+// Implements a pipeline for use by Vulkan runner tests.
 //
 //===----------------------------------------------------------------------===//
 
@@ -33,9 +33,6 @@ struct VulkanRunnerPipelineOptions
   Option<bool> spirvWebGPUPrepare{
       *this, "spirv-webgpu-prepare",
       llvm::cl::desc("Run MLIR transforms used when targetting WebGPU")};
-  Option<bool> toLlvm{*this, "to-llvm",
-                      llvm::cl::desc("Run MLIR transforms to lower host code "
-                                     "to LLVM, intended for mlir-cpu-runner")};
 };
 
 void buildTestVulkanRunnerPipeline(OpPassManager &passManager,
@@ -64,17 +61,14 @@ void buildTestVulkanRunnerPipeline(OpPassManager &passManager,
 
   passManager.addPass(createGpuModuleToBinaryPass());
 
-  if (options.toLlvm) {
-    passManager.addPass(createFinalizeMemRefToLLVMConversionPass());
-    passManager.nest<func::FuncOp>().addPass(
-        LLVM::createRequestCWrappersPass());
-    // vulkan-runtime-wrappers.cpp requires these calling convention options.
-    GpuToLLVMConversionPassOptions opt;
-    opt.hostBarePtrCallConv = false;
-    opt.kernelBarePtrCallConv = true;
-    opt.kernelIntersperseSizeCallConv = true;
-    passManager.addPass(createGpuToLLVMConversionPass(opt));
-  }
+  passManager.addPass(createFinalizeMemRefToLLVMConversionPass());
+  passManager.nest<func::FuncOp>().addPass(LLVM::createRequestCWrappersPass());
+  // VulkanRuntimeWrappers.cpp requires these calling convention options.
+  GpuToLLVMConversionPassOptions opt;
+  opt.hostBarePtrCallConv = false;
+  opt.kernelBarePtrCallConv = true;
+  opt.kernelIntersperseSizeCallConv = true;
+  passManager.addPass(createGpuToLLVMConversionPass(opt));
 }
 
 } // namespace
@@ -83,8 +77,9 @@ namespace mlir::test {
 void registerTestVulkanRunnerPipeline() {
   PassPipelineRegistration<VulkanRunnerPipelineOptions>(
       "test-vulkan-runner-pipeline",
-      "Runs a series of passes for lowering GPU-dialect MLIR to "
-      "SPIR-V-dialect MLIR intended for mlir-vulkan-runner or mlir-cpu-runner.",
+      "Runs a series of passes intended for Vulkan runner tests. Lowers GPU "
+      "dialect to LLVM dialect for the host and to serialized Vulkan SPIR-V "
+      "for the device.",
       buildTestVulkanRunnerPipeline);
 }
 } // namespace mlir::test

@@ -206,7 +206,7 @@ endif()
 
 if(MLIR_ENABLE_VULKAN_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS
-    mlir-vulkan-runner
+    mlir_vulkan_runtime
   )
 endif()
 
