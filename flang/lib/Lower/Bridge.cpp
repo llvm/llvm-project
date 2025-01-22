@@ -1312,8 +1312,7 @@ private:
           })
           .end();
     } else if (isAllocatable &&
-               (flags.test(
-                   Fortran::semantics::Symbol::Flag::OmpFirstPrivate))) {
+               flags.test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate)) {
       // For firstprivate allocatable variables, RHS must be copied
       // only when LHS is allocated.
       hlfir::Entity temp =

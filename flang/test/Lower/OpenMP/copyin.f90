@@ -394,8 +394,8 @@ end subroutine
 ! CHECK:             %[[VAL_7:.*]] = fir.box_addr %[[VAL_6]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
 ! CHECK:             %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.heap<!fir.array<?xi32>>) -> i64
 ! CHECK:             %[[C0_I64:.*]] = arith.constant 0 : i64
-! CHECK:             %[[VAL_9:.*]] = arith.cmpi ne, %[[VAL_8]], %[[C0:.*]]_i64 : i64
-! CHECK:             fir.if %9 {
+! CHECK:             %[[VAL_9:.*]] = arith.cmpi ne, %[[VAL_8]], %[[C0_I64]] : i64
+! CHECK:             fir.if %[[VAL_9]] {
 ! CHECK:               %[[VAL_10:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:             hlfir.assign %[[VAL_10]] to %[[VAL_5]]#0 realloc : !fir.box<!fir.heap<!fir.array<?xi32>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:             } else {
