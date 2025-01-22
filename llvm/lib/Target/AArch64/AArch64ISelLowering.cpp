@@ -17465,14 +17465,16 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
 }
 
 bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
-    IntrinsicInst *DI, LoadInst *LI,
-    ArrayRef<Value *> DeinterleavedValues) const {
+    LoadInst *LI, ArrayRef<Value *> DeinterleavedValues) const {
   unsigned Factor = DeinterleavedValues.size();
-  assert((Factor == 2 || Factor == 4) &&
-         "Currently supported Factor is 2 or 4 only");
+  if (Factor != 2 && Factor != 4) {
+    LLVM_DEBUG(dbgs() << "Matching ld2 and ld4 patterns failed\n");
+    return false;
+  }
+
   VectorType *VTy = cast<VectorType>(DeinterleavedValues[0]->getType());
 
-  const DataLayout &DL = DI->getModule()->getDataLayout();
+  const DataLayout &DL = LI->getModule()->getDataLayout();
   bool UseScalable;
   if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
     return false;
@@ -17488,7 +17490,7 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
                       VTy->getElementCount().divideCoefficientBy(NumLoads));
 
   Type *PtrTy = LI->getPointerOperandType();
-  Function *LdNFunc = getStructuredLoadFunction(DI->getModule(), Factor,
+  Function *LdNFunc = getStructuredLoadFunction(LI->getModule(), Factor,
                                                 UseScalable, LdTy, PtrTy);
 
   IRBuilder<> Builder(LI);
@@ -17537,13 +17539,15 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
 }
 
 bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
-    IntrinsicInst *II, StoreInst *SI,
-    ArrayRef<Value *> InterleavedValues) const {
+    StoreInst *SI, ArrayRef<Value *> InterleavedValues) const {
   unsigned Factor = InterleavedValues.size();
-  assert((Factor == 2 || Factor == 4) &&
-         "Currently supported Factor is 2 or 4 only");
+  if (Factor != 2 && Factor != 4) {
+    LLVM_DEBUG(dbgs() << "Matching st2 and st4 patterns failed\n");
+    return false;
+  }
+
   VectorType *VTy = cast<VectorType>(InterleavedValues[0]->getType());
-  const DataLayout &DL = II->getModule()->getDataLayout();
+  const DataLayout &DL = SI->getModule()->getDataLayout();
 
   bool UseScalable;
   if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))

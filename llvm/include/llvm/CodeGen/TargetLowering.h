@@ -3160,7 +3160,7 @@ public:
   /// \p LI is the accompanying load instruction.
   /// \p DeinterleaveValues contains the deinterleaved values.
   virtual bool
-  lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *DI, LoadInst *LI,
+  lowerDeinterleaveIntrinsicToLoad(LoadInst *LI,
                                    ArrayRef<Value *> DeinterleaveValues) const {
     return false;
   }
@@ -3173,7 +3173,7 @@ public:
   /// \p SI is the accompanying store instruction
   /// \p InterleaveValues contains the interleaved values.
   virtual bool
-  lowerInterleaveIntrinsicToStore(IntrinsicInst *II, StoreInst *SI,
+  lowerInterleaveIntrinsicToStore(StoreInst *SI,
                                   ArrayRef<Value *> InterleaveValues) const {
     return false;
   }

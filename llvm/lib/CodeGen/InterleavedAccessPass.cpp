@@ -493,26 +493,22 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
 //  hooks (e.g. lowerDeinterleaveIntrinsicToLoad) expect ABCD, so we need
 //  to reorder them by interleaving these values.
 static void interleaveLeafValues(MutableArrayRef<Value *> SubLeaves) {
-  int NumLeaves = SubLeaves.size();
+  unsigned NumLeaves = SubLeaves.size();
   if (NumLeaves == 2)
     return;
 
   assert(isPowerOf2_32(NumLeaves) && NumLeaves > 1);
 
-  const int HalfLeaves = NumLeaves / 2;
+  const unsigned HalfLeaves = NumLeaves / 2;
   // Visit the sub-trees.
   interleaveLeafValues(SubLeaves.take_front(HalfLeaves));
   interleaveLeafValues(SubLeaves.drop_front(HalfLeaves));
 
   SmallVector<Value *, 8> Buffer;
-  // The step is alternating between +half and -half+1. We exit the
-  // loop right before the last element because given the fact that
-  // SubLeaves always has an even number of elements, the last element
-  // will never be moved and the last to be visited. This simplifies
-  // the exit condition.
-  for (int i = 0; i < NumLeaves - 1;
-       (i < HalfLeaves) ? i += HalfLeaves : i += (1 - HalfLeaves))
-    Buffer.push_back(SubLeaves[i]);
+  //    a0 a1 a2 a3 b0 b1 b2 b3
+  // -> a0 b0 a1 b1 a2 b2 a3 b3
+  for (unsigned i = 0U; i < NumLeaves; ++i)
+    Buffer.push_back(SubLeaves[i / 2 + (i % 2 ? HalfLeaves : 0)]);
 
   llvm::copy(Buffer, SubLeaves.begin());
 }
@@ -520,8 +516,7 @@ static void interleaveLeafValues(MutableArrayRef<Value *> SubLeaves) {
 static bool
 getVectorInterleaveFactor(IntrinsicInst *II, SmallVectorImpl<Value *> &Operands,
                           SmallVectorImpl<Instruction *> &DeadInsts) {
-  if (II->getIntrinsicID() != Intrinsic::vector_interleave2)
-    return false;
+  assert(II->getIntrinsicID() == Intrinsic::vector_interleave2);
 
   // Visit with BFS
   SmallVector<IntrinsicInst *, 8> Queue;
@@ -564,9 +559,9 @@ static bool
 getVectorDeinterleaveFactor(IntrinsicInst *II,
                             SmallVectorImpl<Value *> &Results,
                             SmallVectorImpl<Instruction *> &DeadInsts) {
+  assert(II->getIntrinsicID() == Intrinsic::vector_deinterleave2);
   using namespace PatternMatch;
-  if (II->getIntrinsicID() != Intrinsic::vector_deinterleave2 ||
-      !II->hasNUses(2))
+  if (!II->hasNUses(2))
     return false;
 
   // Visit with BFS
@@ -652,7 +647,7 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
                     << " with factor = " << DeinterleaveValues.size() << "\n");
 
   // Try and match this with target specific intrinsics.
-  if (!TLI->lowerDeinterleaveIntrinsicToLoad(DI, LI, DeinterleaveValues))
+  if (!TLI->lowerDeinterleaveIntrinsicToLoad(LI, DeinterleaveValues))
     return false;
 
   DeadInsts.insert(DeinterleaveDeadInsts.begin(), DeinterleaveDeadInsts.end());
@@ -680,7 +675,7 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
                     << " with factor = " << InterleaveValues.size() << "\n");
 
   // Try and match this with target specific intrinsics.
-  if (!TLI->lowerInterleaveIntrinsicToStore(II, SI, InterleaveValues))
+  if (!TLI->lowerInterleaveIntrinsicToStore(SI, InterleaveValues))
     return false;
 
   // We now have a target-specific store, so delete the old one.

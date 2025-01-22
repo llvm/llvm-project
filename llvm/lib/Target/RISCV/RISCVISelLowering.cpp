@@ -22386,8 +22386,7 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
 }
 
 bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
-    IntrinsicInst *DI, LoadInst *LI,
-    ArrayRef<Value *> DeinterleaveValues) const {
+    LoadInst *LI, ArrayRef<Value *> DeinterleaveValues) const {
   unsigned Factor = DeinterleaveValues.size();
   if (Factor > 8)
     return false;
@@ -22456,8 +22455,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
 }
 
 bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
-    IntrinsicInst *II, StoreInst *SI,
-    ArrayRef<Value *> InterleaveValues) const {
+    StoreInst *SI, ArrayRef<Value *> InterleaveValues) const {
   unsigned Factor = InterleaveValues.size();
   if (Factor > 8)
     return false;
