@@ -156,8 +156,8 @@ private:
   const TargetMachine &TM;
 };
 
-void initializeAMDGPUReserveWWMRegsPass(PassRegistry &);
-extern char &AMDGPUReserveWWMRegsID;
+void initializeAMDGPUReserveWWMRegsLegacyPass(PassRegistry &);
+extern char &AMDGPUReserveWWMRegsLegacyID;
 
 void initializeAMDGPURewriteOutArgumentsPass(PassRegistry &);
 extern char &AMDGPURewriteOutArgumentsID;
