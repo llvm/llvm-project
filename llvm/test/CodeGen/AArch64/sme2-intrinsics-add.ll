@@ -247,12 +247,9 @@ define void @multi_vector_add_za_vg1x2_f64_tuple(i64 %stride, ptr %ptr) {
 ; CHECK-NEXT:    add x9, x1, x0
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    ld1d { z16.d, z24.d }, pn8/z, [x1]
-; CHECK-NEXT:    ld1d { z0.d, z1.d }, pn8/z, [x9]
-; CHECK-NEXT:    mov z2.d, z16.d
-; CHECK-NEXT:    mov z3.d, z0.d
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    fadd za.d[w8, 0, vgx2], { z2.d, z3.d }
-; CHECK-NEXT:    fadd za.d[w8, 0, vgx2], { z0.d, z1.d }
+; CHECK-NEXT:    ld1d { z17.d, z25.d }, pn8/z, [x9]
+; CHECK-NEXT:    fadd za.d[w8, 0, vgx2], { z16.d, z17.d }
+; CHECK-NEXT:    fadd za.d[w8, 0, vgx2], { z24.d, z25.d }
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
@@ -324,52 +321,20 @@ define void @multi_vector_add_za_vg1x4_f32(i32 %slice, <vscale x 4 x float> %zn0
 define void @multi_vector_add_za_vg1x4_f32_tuple(i64 %stride, ptr %ptr) {
 ; CHECK-LABEL: multi_vector_add_za_vg1x4_f32_tuple:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    stp d15, d14, [sp, #-64]! // 16-byte Folded Spill
-; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    .cfi_offset b8, -8
-; CHECK-NEXT:    .cfi_offset b9, -16
-; CHECK-NEXT:    .cfi_offset b10, -24
-; CHECK-NEXT:    .cfi_offset b11, -32
-; CHECK-NEXT:    .cfi_offset b12, -40
-; CHECK-NEXT:    .cfi_offset b13, -48
-; CHECK-NEXT:    .cfi_offset b14, -56
-; CHECK-NEXT:    .cfi_offset b15, -64
+; CHECK-NEXT:    lsl x9, x0, #1
+; CHECK-NEXT:    add x10, x1, x0
 ; CHECK-NEXT:    ptrue pn8.b
-; CHECK-NEXT:    add x9, x1, x0
-; CHECK-NEXT:    lsl x10, x0, #1
-; CHECK-NEXT:    ld1w { z17.s, z21.s, z25.s, z29.s }, pn8/z, [x1]
-; CHECK-NEXT:    ld1w { z16.s, z20.s, z24.s, z28.s }, pn8/z, [x9]
+; CHECK-NEXT:    ld1w { z16.s, z20.s, z24.s, z28.s }, pn8/z, [x1]
+; CHECK-NEXT:    ld1w { z17.s, z21.s, z25.s, z29.s }, pn8/z, [x10]
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    add x11, x1, x10
-; CHECK-NEXT:    add x9, x9, x10
-; CHECK-NEXT:    ld1w { z8.s - z11.s }, pn8/z, [x11]
-; CHECK-NEXT:    mov z4.d, z17.d
-; CHECK-NEXT:    mov z5.d, z16.d
-; CHECK-NEXT:    ld1w { z16.s - z19.s }, pn8/z, [x9]
-; CHECK-NEXT:    mov z0.d, z21.d
-; CHECK-NEXT:    mov z1.d, z20.d
-; CHECK-NEXT:    mov z12.d, z25.d
-; CHECK-NEXT:    mov z6.d, z8.d
-; CHECK-NEXT:    mov z2.d, z9.d
-; CHECK-NEXT:    mov z13.d, z24.d
-; CHECK-NEXT:    mov z7.d, z16.d
-; CHECK-NEXT:    mov z3.d, z17.d
-; CHECK-NEXT:    mov z14.d, z10.d
-; CHECK-NEXT:    mov z15.d, z18.d
-; CHECK-NEXT:    mov z16.d, z29.d
-; CHECK-NEXT:    mov z17.d, z28.d
-; CHECK-NEXT:    mov z18.d, z11.d
-; CHECK-NEXT:    fadd za.s[w8, 0, vgx4], { z4.s - z7.s }
-; CHECK-NEXT:    fadd za.s[w8, 0, vgx4], { z0.s - z3.s }
-; CHECK-NEXT:    fadd za.s[w8, 0, vgx4], { z12.s - z15.s }
+; CHECK-NEXT:    add x11, x1, x9
+; CHECK-NEXT:    add x9, x10, x9
+; CHECK-NEXT:    ld1w { z18.s, z22.s, z26.s, z30.s }, pn8/z, [x11]
+; CHECK-NEXT:    ld1w { z19.s, z23.s, z27.s, z31.s }, pn8/z, [x9]
 ; CHECK-NEXT:    fadd za.s[w8, 0, vgx4], { z16.s - z19.s }
-; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d15, d14, [sp], #64 // 16-byte Folded Reload
+; CHECK-NEXT:    fadd za.s[w8, 0, vgx4], { z20.s - z23.s }
+; CHECK-NEXT:    fadd za.s[w8, 0, vgx4], { z24.s - z27.s }
+; CHECK-NEXT:    fadd za.s[w8, 0, vgx4], { z28.s - z31.s }
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()

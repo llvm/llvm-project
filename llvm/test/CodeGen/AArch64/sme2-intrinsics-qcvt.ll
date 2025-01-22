@@ -72,34 +72,31 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4d, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 16 - 48 * VG
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4e, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 16 - 56 * VG
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 16 - 64 * VG
+; CHECK-NEXT:    lsl x8, x0, #1
+; CHECK-NEXT:    add x9, x1, x0
 ; CHECK-NEXT:    ptrue pn8.b
-; CHECK-NEXT:    lsl x9, x0, #1
-; CHECK-NEXT:    add x8, x1, x0
-; CHECK-NEXT:    ld1d { z0.d - z3.d }, pn8/z, [x1]
-; CHECK-NEXT:    ld1d { z4.d - z7.d }, pn8/z, [x8]
-; CHECK-NEXT:    add x10, x1, x9
-; CHECK-NEXT:    add x8, x8, x9
-; CHECK-NEXT:    ld1d { z12.d - z15.d }, pn8/z, [x10]
-; CHECK-NEXT:    ld1d { z16.d - z19.d }, pn8/z, [x8]
+; CHECK-NEXT:    ld1d { z0.d, z4.d, z8.d, z12.d }, pn8/z, [x1]
+; CHECK-NEXT:    ld1d { z1.d, z5.d, z9.d, z13.d }, pn8/z, [x9]
+; CHECK-NEXT:    add x10, x1, x8
+; CHECK-NEXT:    add x8, x9, x8
+; CHECK-NEXT:    ld1d { z2.d, z6.d, z10.d, z14.d }, pn8/z, [x10]
+; CHECK-NEXT:    ld1d { z3.d, z7.d, z11.d, z15.d }, pn8/z, [x8]
 ; CHECK-NEXT:    mov z24.d, z0.d
-; CHECK-NEXT:    mov z28.d, z1.d
-; CHECK-NEXT:    mov z8.d, z2.d
-; CHECK-NEXT:    mov z25.d, z4.d
+; CHECK-NEXT:    mov z25.d, z1.d
+; CHECK-NEXT:    mov z28.d, z4.d
 ; CHECK-NEXT:    mov z29.d, z5.d
-; CHECK-NEXT:    mov z9.d, z6.d
-; CHECK-NEXT:    mov z26.d, z12.d
-; CHECK-NEXT:    mov z30.d, z13.d
-; CHECK-NEXT:    mov z10.d, z14.d
-; CHECK-NEXT:    mov z27.d, z16.d
-; CHECK-NEXT:    mov z31.d, z17.d
-; CHECK-NEXT:    mov z11.d, z18.d
-; CHECK-NEXT:    mov z16.d, z3.d
-; CHECK-NEXT:    mov z17.d, z7.d
-; CHECK-NEXT:    mov z18.d, z15.d
+; CHECK-NEXT:    mov z16.d, z8.d
+; CHECK-NEXT:    mov z17.d, z9.d
+; CHECK-NEXT:    mov z26.d, z2.d
+; CHECK-NEXT:    mov z27.d, z3.d
+; CHECK-NEXT:    mov z30.d, z6.d
+; CHECK-NEXT:    mov z31.d, z7.d
+; CHECK-NEXT:    mov z18.d, z10.d
+; CHECK-NEXT:    mov z19.d, z11.d
 ; CHECK-NEXT:    sqcvt z0.h, { z24.d - z27.d }
 ; CHECK-NEXT:    sqcvt z1.h, { z28.d - z31.d }
-; CHECK-NEXT:    sqcvt z2.h, { z8.d - z11.d }
-; CHECK-NEXT:    sqcvt z3.h, { z16.d - z19.d }
+; CHECK-NEXT:    sqcvt z2.h, { z16.d - z19.d }
+; CHECK-NEXT:    sqcvt z3.h, { z12.d - z15.d }
 ; CHECK-NEXT:    ldr z19, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z18, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z17, [sp, #3, mul vl] // 16-byte Folded Reload

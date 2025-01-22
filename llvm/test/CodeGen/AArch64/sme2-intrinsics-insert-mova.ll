@@ -26,12 +26,9 @@ define void @za_write_vg2_horiz_b_tuple(i64 %stride, ptr %ptr) {
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    mov w12, wzr
 ; CHECK-NEXT:    ld1b { z16.b, z24.b }, pn8/z, [x1]
-; CHECK-NEXT:    ld1b { z0.b, z1.b }, pn8/z, [x1, x0]
-; CHECK-NEXT:    mov z2.d, z16.d
-; CHECK-NEXT:    mov z3.d, z0.d
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov za0h.b[w12, 0:1], { z2.b, z3.b }
-; CHECK-NEXT:    mov za0h.b[w12, 0:1], { z0.b, z1.b }
+; CHECK-NEXT:    ld1b { z17.b, z25.b }, pn8/z, [x1, x0]
+; CHECK-NEXT:    mov za0h.b[w12, 0:1], { z16.b, z17.b }
+; CHECK-NEXT:    mov za0h.b[w12, 0:1], { z24.b, z25.b }
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
@@ -427,52 +424,20 @@ define void @za_write_vg4_vert_f64(i32 %slice, <vscale x 2 x double> %zn1, <vsca
 define void @za_write_vg4_vert_f64_tuple(i64 %stride, ptr %ptr) {
 ; CHECK-LABEL: za_write_vg4_vert_f64_tuple:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    stp d15, d14, [sp, #-64]! // 16-byte Folded Spill
-; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    .cfi_offset b8, -8
-; CHECK-NEXT:    .cfi_offset b9, -16
-; CHECK-NEXT:    .cfi_offset b10, -24
-; CHECK-NEXT:    .cfi_offset b11, -32
-; CHECK-NEXT:    .cfi_offset b12, -40
-; CHECK-NEXT:    .cfi_offset b13, -48
-; CHECK-NEXT:    .cfi_offset b14, -56
-; CHECK-NEXT:    .cfi_offset b15, -64
+; CHECK-NEXT:    lsl x8, x0, #1
+; CHECK-NEXT:    add x9, x1, x0
 ; CHECK-NEXT:    ptrue pn8.b
-; CHECK-NEXT:    add x8, x1, x0
-; CHECK-NEXT:    lsl x9, x0, #1
-; CHECK-NEXT:    ld1d { z17.d, z21.d, z25.d, z29.d }, pn8/z, [x1]
-; CHECK-NEXT:    ld1d { z16.d, z20.d, z24.d, z28.d }, pn8/z, [x8]
+; CHECK-NEXT:    ld1d { z16.d, z20.d, z24.d, z28.d }, pn8/z, [x1]
+; CHECK-NEXT:    ld1d { z17.d, z21.d, z25.d, z29.d }, pn8/z, [x9]
 ; CHECK-NEXT:    mov w12, wzr
-; CHECK-NEXT:    add x10, x1, x9
-; CHECK-NEXT:    add x8, x8, x9
-; CHECK-NEXT:    ld1d { z8.d - z11.d }, pn8/z, [x10]
-; CHECK-NEXT:    mov z4.d, z17.d
-; CHECK-NEXT:    mov z5.d, z16.d
-; CHECK-NEXT:    ld1d { z16.d - z19.d }, pn8/z, [x8]
-; CHECK-NEXT:    mov z0.d, z21.d
-; CHECK-NEXT:    mov z1.d, z20.d
-; CHECK-NEXT:    mov z12.d, z25.d
-; CHECK-NEXT:    mov z6.d, z8.d
-; CHECK-NEXT:    mov z2.d, z9.d
-; CHECK-NEXT:    mov z13.d, z24.d
-; CHECK-NEXT:    mov z7.d, z16.d
-; CHECK-NEXT:    mov z3.d, z17.d
-; CHECK-NEXT:    mov z14.d, z10.d
-; CHECK-NEXT:    mov z15.d, z18.d
-; CHECK-NEXT:    mov z16.d, z29.d
-; CHECK-NEXT:    mov z17.d, z28.d
-; CHECK-NEXT:    mov z18.d, z11.d
-; CHECK-NEXT:    mov za0v.d[w12, 0:3], { z4.d - z7.d }
-; CHECK-NEXT:    mov za0v.d[w12, 0:3], { z0.d - z3.d }
-; CHECK-NEXT:    mov za0v.d[w12, 0:3], { z12.d - z15.d }
+; CHECK-NEXT:    add x10, x1, x8
+; CHECK-NEXT:    add x8, x9, x8
+; CHECK-NEXT:    ld1d { z18.d, z22.d, z26.d, z30.d }, pn8/z, [x10]
+; CHECK-NEXT:    ld1d { z19.d, z23.d, z27.d, z31.d }, pn8/z, [x8]
 ; CHECK-NEXT:    mov za0v.d[w12, 0:3], { z16.d - z19.d }
-; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d15, d14, [sp], #64 // 16-byte Folded Reload
+; CHECK-NEXT:    mov za0v.d[w12, 0:3], { z20.d - z23.d }
+; CHECK-NEXT:    mov za0v.d[w12, 0:3], { z24.d - z27.d }
+; CHECK-NEXT:    mov za0v.d[w12, 0:3], { z28.d - z31.d }
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
@@ -531,12 +496,9 @@ define void @za_write_vg1x2_b_tuple(i64 %stride, ptr %ptr) {
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    ld1b { z16.b, z24.b }, pn8/z, [x1]
-; CHECK-NEXT:    ld1b { z0.b, z1.b }, pn8/z, [x1, x0]
-; CHECK-NEXT:    mov z2.d, z16.d
-; CHECK-NEXT:    mov z3.d, z0.d
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov za.d[w8, 0, vgx2], { z2.d, z3.d }
-; CHECK-NEXT:    mov za.d[w8, 0, vgx2], { z0.d, z1.d }
+; CHECK-NEXT:    ld1b { z17.b, z25.b }, pn8/z, [x1, x0]
+; CHECK-NEXT:    mov za.d[w8, 0, vgx2], { z16.d, z17.d }
+; CHECK-NEXT:    mov za.d[w8, 0, vgx2], { z24.d, z25.d }
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
@@ -754,52 +716,20 @@ define void @za_write_vg1x4_f64(i32 %slice, <vscale x 2 x double> %za1, <vscale 
 define void @za_write_vg1x4_f64_tuple(i64 %stride, ptr %ptr) {
 ; CHECK-LABEL: za_write_vg1x4_f64_tuple:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    stp d15, d14, [sp, #-64]! // 16-byte Folded Spill
-; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    .cfi_offset b8, -8
-; CHECK-NEXT:    .cfi_offset b9, -16
-; CHECK-NEXT:    .cfi_offset b10, -24
-; CHECK-NEXT:    .cfi_offset b11, -32
-; CHECK-NEXT:    .cfi_offset b12, -40
-; CHECK-NEXT:    .cfi_offset b13, -48
-; CHECK-NEXT:    .cfi_offset b14, -56
-; CHECK-NEXT:    .cfi_offset b15, -64
+; CHECK-NEXT:    lsl x9, x0, #1
+; CHECK-NEXT:    add x10, x1, x0
 ; CHECK-NEXT:    ptrue pn8.b
-; CHECK-NEXT:    add x9, x1, x0
-; CHECK-NEXT:    lsl x10, x0, #1
-; CHECK-NEXT:    ld1d { z17.d, z21.d, z25.d, z29.d }, pn8/z, [x1]
-; CHECK-NEXT:    ld1d { z16.d, z20.d, z24.d, z28.d }, pn8/z, [x9]
+; CHECK-NEXT:    ld1d { z16.d, z20.d, z24.d, z28.d }, pn8/z, [x1]
+; CHECK-NEXT:    ld1d { z17.d, z21.d, z25.d, z29.d }, pn8/z, [x10]
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    add x11, x1, x10
-; CHECK-NEXT:    add x9, x9, x10
-; CHECK-NEXT:    ld1d { z8.d - z11.d }, pn8/z, [x11]
-; CHECK-NEXT:    mov z4.d, z17.d
-; CHECK-NEXT:    mov z5.d, z16.d
-; CHECK-NEXT:    ld1d { z16.d - z19.d }, pn8/z, [x9]
-; CHECK-NEXT:    mov z0.d, z21.d
-; CHECK-NEXT:    mov z1.d, z20.d
-; CHECK-NEXT:    mov z12.d, z25.d
-; CHECK-NEXT:    mov z6.d, z8.d
-; CHECK-NEXT:    mov z2.d, z9.d
-; CHECK-NEXT:    mov z13.d, z24.d
-; CHECK-NEXT:    mov z7.d, z16.d
-; CHECK-NEXT:    mov z3.d, z17.d
-; CHECK-NEXT:    mov z14.d, z10.d
-; CHECK-NEXT:    mov z15.d, z18.d
-; CHECK-NEXT:    mov z16.d, z29.d
-; CHECK-NEXT:    mov z17.d, z28.d
-; CHECK-NEXT:    mov z18.d, z11.d
-; CHECK-NEXT:    mov za.d[w8, 0, vgx4], { z4.d - z7.d }
-; CHECK-NEXT:    mov za.d[w8, 0, vgx4], { z0.d - z3.d }
-; CHECK-NEXT:    mov za.d[w8, 0, vgx4], { z12.d - z15.d }
+; CHECK-NEXT:    add x11, x1, x9
+; CHECK-NEXT:    add x9, x10, x9
+; CHECK-NEXT:    ld1d { z18.d, z22.d, z26.d, z30.d }, pn8/z, [x11]
+; CHECK-NEXT:    ld1d { z19.d, z23.d, z27.d, z31.d }, pn8/z, [x9]
 ; CHECK-NEXT:    mov za.d[w8, 0, vgx4], { z16.d - z19.d }
-; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d15, d14, [sp], #64 // 16-byte Folded Reload
+; CHECK-NEXT:    mov za.d[w8, 0, vgx4], { z20.d - z23.d }
+; CHECK-NEXT:    mov za.d[w8, 0, vgx4], { z24.d - z27.d }
+; CHECK-NEXT:    mov za.d[w8, 0, vgx4], { z28.d - z31.d }
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
