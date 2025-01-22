@@ -420,9 +420,12 @@ private:
   template <class _Iterator, class _Sentinel>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __assign_with_sentinel(_Iterator __first, _Sentinel __last);
 
-  template <class _ForwardIterator, class _Sentinel>
+  // The `_Iterator` in `*_with_size` functions can be input-only only if called from `*_range` (since C++23).
+  // Otherwise, `_Iterator` is a forward iterator.
+
+  template <class _Iterator, class _Sentinel>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-  __assign_with_size(_ForwardIterator __first, _Sentinel __last, difference_type __ns);
+  __assign_with_size(_Iterator __first, _Sentinel __last, difference_type __ns);
 
   template <class _InputIterator, class _Sentinel>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator
@@ -578,7 +581,7 @@ vector<bool, _Allocator>::__construct_at_end(_InputIterator __first, _Sentinel _
     else
       this->__begin_[(this->__size_ - 1) / __bits_per_word] = __storage_type(0);
   }
-  std::__copy(__first, __last, __make_iter(__old_size));
+  std::__copy(std::move(__first), std::move(__last), __make_iter(__old_size));
 }
 
 template <class _Allocator>
@@ -828,9 +831,9 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::assign(_ForwardIter
 }
 
 template <class _Allocator>
-template <class _ForwardIterator, class _Sentinel>
+template <class _Iterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-vector<bool, _Allocator>::__assign_with_size(_ForwardIterator __first, _Sentinel __last, difference_type __ns) {
+vector<bool, _Allocator>::__assign_with_size(_Iterator __first, _Sentinel __last, difference_type __ns) {
   _LIBCPP_ASSERT_VALID_INPUT_RANGE(__ns >= 0, "invalid range specified");
 
   clear();
@@ -841,7 +844,7 @@ vector<bool, _Allocator>::__assign_with_size(_ForwardIterator __first, _Sentinel
       __vdeallocate();
       __vallocate(__n);
     }
-    __construct_at_end(__first, __last, __n);
+    __construct_at_end(std::move(__first), std::move(__last), __n);
   }
 }
 
@@ -859,11 +862,13 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::reserve(size_type _
 
 template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::shrink_to_fit() _NOEXCEPT {
-  if (__external_cap_to_internal(size()) > __cap_) {
+  if (__external_cap_to_internal(size()) < __cap_) {
 #if _LIBCPP_HAS_EXCEPTIONS
     try {
 #endif // _LIBCPP_HAS_EXCEPTIONS
-      vector(*this, allocator_type(__alloc_)).swap(*this);
+      vector __v(*this, allocator_type(__alloc_));
+      if (__v.__cap_ < __cap_)
+        __v.swap(*this);
 #if _LIBCPP_HAS_EXCEPTIONS
     } catch (...) {
     }
@@ -986,10 +991,10 @@ vector<bool, _Allocator>::insert(const_iterator __position, _ForwardIterator __f
 }
 
 template <class _Allocator>
-template <class _ForwardIterator, class _Sentinel>
+template <class _Iterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector<bool, _Allocator>::iterator
 vector<bool, _Allocator>::__insert_with_size(
-    const_iterator __position, _ForwardIterator __first, _Sentinel __last, difference_type __n_signed) {
+    const_iterator __position, _Iterator __first, _Sentinel __last, difference_type __n_signed) {
   _LIBCPP_ASSERT_VALID_INPUT_RANGE(__n_signed >= 0, "invalid range specified");
   const size_type __n = static_cast<size_type>(__n_signed);
   iterator __r;
@@ -1007,7 +1012,7 @@ vector<bool, _Allocator>::__insert_with_size(
     std::copy_backward(__position, cend(), __v.end());
     swap(__v);
   }
-  std::__copy(__first, __last, __r);
+  std::__copy(std::move(__first), std::move(__last), __r);
   return __r;
 }
 
