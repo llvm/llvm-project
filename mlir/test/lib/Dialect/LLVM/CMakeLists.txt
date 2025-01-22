@@ -4,8 +4,8 @@ add_mlir_library(MLIRLLVMTestPasses
   TestPatterns.cpp
 
   EXCLUDE_FROM_LIBMLIR
-  )
-mlir_target_link_libraries(MLIRLLVMTestPasses PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIRAffineToStandard
   MLIRFuncDialect
   MLIRFuncToLLVM
