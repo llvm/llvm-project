@@ -150,7 +150,11 @@ LogicalResult mlir::MlirLinkMain(int argc, char **argv,
   context.allowUnregisteredDialects(allowUnregisteredDialects);
 
   auto composite = makeCompositeModule(context);
-  Linker linker(*composite);
+  if (!isa<LinkableModuleOpInterface>(composite->getOperation())) {
+    return composite->emitError("expected a LinkableModuleOpInterface");
+  }
+
+  Linker linker(cast<LinkableModuleOpInterface>(composite->getOperation()));
 
   unsigned flags = Linker::Flags::None;
   if (onlyNeeded)

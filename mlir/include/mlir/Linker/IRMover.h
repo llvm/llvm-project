@@ -11,16 +11,19 @@
 
 #include "mlir/IR/BuiltinOps.h"
 
+#include "mlir/Interfaces/LinkageInterfaces.h"
+
 namespace mlir {
 
 class IRMover {
 public:
   IRMover(Operation *composite);
 
+  LinkableModuleOpInterface getComposite() { return composite; }
   MLIRContext *getContext() { return composite->getContext(); }
 
 private:
-  Operation *composite;
+  LinkableModuleOpInterface composite;
 };
 
 } // namespace mlir
