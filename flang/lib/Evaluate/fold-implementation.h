@@ -1263,6 +1263,12 @@ public:
   explicit ArrayConstructorFolder(FoldingContext &c) : context_{c} {}
 
   Expr<T> FoldArray(ArrayConstructor<T> &&array) {
+    if constexpr (T::category == TypeCategory::Character) {
+      if (const auto *len{array.LEN()}) {
+        charLength_ = ToInt64(Fold(context_, common::Clone(*len)));
+        knownCharLength_ = charLength_.has_value();
+      }
+    }
     // Calls FoldArray(const ArrayConstructorValues<T> &) below
     if (FoldArray(array)) {
       auto n{static_cast<ConstantSubscript>(elements_.size())};
@@ -1270,12 +1276,9 @@ public:
         return Expr<T>{Constant<T>{array.GetType().GetDerivedTypeSpec(),
             std::move(elements_), ConstantSubscripts{n}}};
       } else if constexpr (T::category == TypeCategory::Character) {
-        if (const auto *len{array.LEN()}) {
-          auto length{Fold(context_, common::Clone(*len))};
-          if (std::optional<ConstantSubscript> lengthValue{ToInt64(length)}) {
-            return Expr<T>{Constant<T>{
-                *lengthValue, std::move(elements_), ConstantSubscripts{n}}};
-          }
+        if (charLength_) {
+          return Expr<T>{Constant<T>{
+              *charLength_, std::move(elements_), ConstantSubscripts{n}}};
         }
       } else {
         return Expr<T>{
@@ -1295,6 +1298,11 @@ private:
         do {
           elements_.emplace_back(c->At(index));
         } while (c->IncrementSubscripts(index));
+      }
+      if constexpr (T::category == TypeCategory::Character) {
+        if (!knownCharLength_) {
+          charLength_ = std::max(c->LEN(), charLength_.value_or(-1));
+        }
       }
       return true;
     } else {
@@ -1345,6 +1353,8 @@ private:
 
   FoldingContext &context_;
   std::vector<Scalar<T>> elements_;
+  std::optional<ConstantSubscript> charLength_;
+  bool knownCharLength_{false};
 };
 
 template <typename T>
