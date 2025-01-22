@@ -35,18 +35,28 @@ struct F : A {
 
 typedef float EmptyArrayTypedef[10][0];
 
-// CHECK: HLSLBufferDecl {{.*}} line:41:9 cbuffer CB
+struct OneFloat {
+  float a;
+};
+
+struct TwoFloats {
+  float a;
+  float b;
+};
+
+// CHECK: HLSLBufferDecl {{.*}} line:50:9 cbuffer CB
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
 // CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB {
   // CHECK: VarDecl {{.*}} col:9 used a1 'float'
   float a1;
-  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.CB definition
+  // CHECK: CXXRecordDecl {{.*}} implicit referenced class __layout_CB definition
   // CHECK: FieldDecl {{.*}} a1 'float'
 }
+_Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(OneFloat, __layout_CB), "");
 
 // Check that buffer layout struct does not include resources or empty types 
-// CHECK: HLSLBufferDecl {{.*}} line:52:9 cbuffer CB
+// CHECK: HLSLBufferDecl {{.*}} line:62:9 cbuffer CB
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
 // CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB {
@@ -60,13 +70,14 @@ cbuffer CB {
   float d2[0];
   // CHECK: VarDecl {{.*}} col:9 e2 'float'
   float e2;
-  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.CB.1 definition
+  // CHECK: CXXRecordDecl {{.*}} implicit referenced class __layout_CB_1 definition
   // CHECK: FieldDecl {{.*}} a2 'float'
   // CHECK-NEXT: FieldDecl {{.*}} e2 'float'
 }
+_Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(TwoFloats, __layout_CB_1), "");
 
 // Check that layout struct is created for B and the empty struct C is removed
-// CHECK: HLSLBufferDecl {{.*}} line:72:9 cbuffer CB
+// CHECK: HLSLBufferDecl {{.*}} line:83:9 cbuffer CB
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
 // CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB {
@@ -76,30 +87,35 @@ cbuffer CB {
   B s2;
   // CHECK: VarDecl {{.*}} col:12 s3 'CTypedef':'C
   CTypedef s3;
-  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.B definition
+  // CHECK: CXXRecordDecl {{.*}} implicit referenced class __layout_B definition
   // CHECK: FieldDecl {{.*}} a 'float'
-  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.CB.2 definition
+  // CHECK: CXXRecordDecl {{.*}} implicit referenced class __layout_CB_2 definition
   // CHECK: FieldDecl {{.*}} s1 'A'
-  // CHECK: FieldDecl {{.*}} s2 '__layout.B'
+  // CHECK: FieldDecl {{.*}} s2 '__layout_B'
 }
+_Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(OneFloat, __layout_B), "");
+_Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(TwoFloats, __layout_CB_2), "");
 
 // check that layout struct is created for D because of its base struct
-// CHECK: HLSLBufferDecl {{.*}} line:90:9 cbuffer CB
+// CHECK: HLSLBufferDecl {{.*}} line:103:9 cbuffer CB
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
 // CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB {
   // CHECK: VarDecl {{.*}} s4 'D'
   D s4;
-  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.D definition
+  // CHECK: CXXRecordDecl {{.*}} implicit referenced class __layout_D definition
+  // CHECK: public '__layout_B'
   // CHECK: FieldDecl {{.*}} b 'float'
-  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.CB.3 definition
-  // CHECK: FieldDecl {{.*}} s4 '__layout.D'
+  // CHECK: CXXRecordDecl {{.*}} implicit referenced class __layout_CB_3 definition
+  // CHECK: FieldDecl {{.*}} s4 '__layout_D'
 }
+_Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(TwoFloats, __layout_D), "");
+_Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(TwoFloats, __layout_CB_3), "");
 
 // check that layout struct is created for E because because its base struct
 // is empty and should be eliminated, and BTypedef should reuse the previously
-// defined '__layout.B' 
-// CHECK: HLSLBufferDecl {{.*}} line:105:9 cbuffer CB
+// defined '__layout_B' 
+// CHECK: HLSLBufferDecl {{.*}} line:121:9 cbuffer CB
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
 // CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB {
@@ -107,16 +123,18 @@ cbuffer CB {
   E s5;
   // CHECK: VarDecl {{.*}} s6 'BTypedef':'B'
   BTypedef s6;
-  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.E definition
+  // CHECK: CXXRecordDecl {{.*}} implicit referenced class __layout_E definition
   // CHECK: FieldDecl {{.*}} c 'float'
-  // CHECK-NOT: CXXRecordDecl {{.*}} implicit class __layout.B definition
-  // CHECK: CXXRecordDecl {{.*}}  implicit class __layout.CB.4 definition
-  // CHECK: FieldDecl {{.*}} s5 '__layout.E'
-  // CHECK: FieldDecl {{.*}} s6 '__layout.B'
+  // CHECK-NOT: CXXRecordDecl {{.*}} class __layout_B definition
+  // CHECK: CXXRecordDecl {{.*}}  implicit referenced class __layout_CB_4 definition
+  // CHECK: FieldDecl {{.*}} s5 '__layout_E'
+  // CHECK: FieldDecl {{.*}} s6 '__layout_B'
 }
+_Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(OneFloat, __layout_E), "");
+_Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(TwoFloats, __layout_CB_4), "");
 
 // check that this produces empty layout struct
-// CHECK: HLSLBufferDecl {{.*}} line:122:9 cbuffer CB
+// CHECK: HLSLBufferDecl {{.*}} line:140:9 cbuffer CB
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
 // CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB {
@@ -130,25 +148,27 @@ cbuffer CB {
   RWBuffer<float> Buf;
   // CHECK: VarDecl {{.*}} ea 'EmptyArrayTypedef':'float[10][0]'
   EmptyArrayTypedef ea;
-  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.CB.5 definition
+  // CHECK: CXXRecordDecl {{.*}} implicit class __layout_CB_5 definition
   // CHECK-NOT: FieldDecl
 }
 
 // check host layout struct with compatible base struct
-// CHECK: HLSLBufferDecl {{.*}} line:141:9 cbuffer CB
+// CHECK: HLSLBufferDecl {{.*}} line:159:9 cbuffer CB
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
 // CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB {
   // CHECK: VarDecl {{.*}} s8 'F'
   F s8;
-  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.F definition
+  // CHECK: CXXRecordDecl {{.*}} implicit referenced class __layout_F definition
   // CHECK: public 'A'
-  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.CB.6 definition
-  // CHECK: FieldDecl {{.*}} s8 '__layout.F'
+  // CHECK: CXXRecordDecl {{.*}} implicit referenced class __layout_CB_6 definition
+  // CHECK: FieldDecl {{.*}} s8 '__layout_F'
 }
+_Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(OneFloat, __layout_F), "");
+_Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(OneFloat, __layout_CB_6), "");
 
 // anonymous structs
-// CHECK: HLSLBufferDecl {{.*}} line:154:9 cbuffer CB
+// CHECK: HLSLBufferDecl {{.*}} line:174:9 cbuffer CB
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
 // CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB {
@@ -161,23 +181,26 @@ cbuffer CB {
     // CHECK: FieldDecl {{.*}} f 'RWBuffer<float>':'hlsl::RWBuffer<float>'
     RWBuffer<float> f;
   } s9;
-  // CHECK: VarDecl {{.*}} s9 'struct (unnamed struct at {{.*}}cbuffer.hlsl:156:3
+  // CHECK: VarDecl {{.*}} s9 'struct (unnamed struct at {{.*}}cbuffer.hlsl:176:3
   // CHECK: CXXRecordDecl {{.*}} struct definition
   struct {
-    // CHECK: FieldDecl {{.*}} g 'int'
-    int g;
+    // CHECK: FieldDecl {{.*}} g 'float'
+    float g;
     // CHECK: FieldDecl {{.*}} f 'RWBuffer<float>':'hlsl::RWBuffer<float>'
     RWBuffer<float> f;
   } s10;
-  // CHECK: VarDecl {{.*}} s10 'struct (unnamed struct at {{.*}}cbuffer.hlsl:166:3
-  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.anon definition
+  // CHECK: VarDecl {{.*}} s10 'struct (unnamed struct at {{.*}}cbuffer.hlsl:186:3
+  // CHECK: CXXRecordDecl {{.*}} implicit referenced class __layout_anon definition
   // CHECK: FieldDecl {{.*}} e 'float'
-  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.anon.1 definition
-  // CHECK: FieldDecl {{.*}} g 'int'
-  // CHECK: CXXRecordDecl {{.*}} implicit class __layout.CB.7 definition
-  // CHECK: FieldDecl {{.*}} s9 '__layout.anon'
-  // CHECK: FieldDecl {{.*}} s10 '__layout.anon.1'
+  // CHECK: CXXRecordDecl {{.*}} implicit referenced class __layout_anon_1 definition
+  // CHECK: FieldDecl {{.*}} g 'float'
+  // CHECK: CXXRecordDecl {{.*}} implicit referenced class __layout_CB_7 definition
+  // CHECK: FieldDecl {{.*}} s9 '__layout_anon'
+  // CHECK: FieldDecl {{.*}} s10 '__layout_anon_1'
 }
+_Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(OneFloat, __layout_anon), "");
+_Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(OneFloat, __layout_anon_1), "");
+_Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(TwoFloats, __layout_CB_7), "");
 
 // Add uses for the constant buffer declarations so they are not optimized away
 export float foo() {

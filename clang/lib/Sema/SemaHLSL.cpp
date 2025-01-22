@@ -265,29 +265,31 @@ static bool isZeroSizedArray(const ConstantArrayType *CAT) {
   return CAT != nullptr;
 }
 
-// Returns true if the struct can be used inside HLSL Buffer which means
-// that it does not contain intangible types, empty structs, zero-sized arrays,
-// and the same is true for its base or embedded structs.
-bool isStructHLSLBufferCompatible(const CXXRecordDecl *RD) {
-  if (RD->getTypeForDecl()->isHLSLIntangibleType() ||
-      (RD->field_empty() && RD->getNumBases() == 0))
-    return false;
+// Returns true if the struct contains at least one element that prevents it
+// from being included inside HLSL Buffer as is, such as an intangible type,
+// empty struct, or zero-sized array. If it does, a new implicit layout struct
+// needs to be created for HLSL Buffer use that will exclude these unwanted
+// declarations (see createHostLayoutStruct function).
+static bool requiresImplicitBufferLayoutStructure(const CXXRecordDecl *RD) {
+  if (RD->getTypeForDecl()->isHLSLIntangibleType() || RD->isEmpty())
+    return true;
   // check fields
   for (const FieldDecl *Field : RD->fields()) {
     QualType Ty = Field->getType();
     if (Ty->isRecordType()) {
-      if (!isStructHLSLBufferCompatible(Ty->getAsCXXRecordDecl()))
-        return false;
+      if (requiresImplicitBufferLayoutStructure(Ty->getAsCXXRecordDecl()))
+        return true;
     } else if (Ty->isConstantArrayType()) {
       if (isZeroSizedArray(cast<ConstantArrayType>(Ty)))
-        return false;
+        return true;
     }
   }
   // check bases
   for (const CXXBaseSpecifier &Base : RD->bases())
-    if (!isStructHLSLBufferCompatible(Base.getType()->getAsCXXRecordDecl()))
-      return false;
-  return true;
+    if (requiresImplicitBufferLayoutStructure(
+            Base.getType()->getAsCXXRecordDecl()))
+      return true;
+  return false;
 }
 
 static CXXRecordDecl *findRecordDecl(Sema &S, IdentifierInfo *II,
@@ -318,7 +320,7 @@ static IdentifierInfo *getHostLayoutStructName(Sema &S,
     MustBeUnique = true;
   }
 
-  std::string Name = "__layout." + NameBase;
+  std::string Name = "__layout_" + NameBase;
   IdentifierInfo *II = &AST.Idents.get(Name, tok::TokenKind::identifier);
   if (!MustBeUnique)
     return II;
@@ -326,7 +328,7 @@ static IdentifierInfo *getHostLayoutStructName(Sema &S,
   unsigned suffix = 0;
   while (true) {
     if (suffix != 0)
-      II = &AST.Idents.get((llvm::Twine(Name) + "." + Twine(suffix)).str(),
+      II = &AST.Idents.get((llvm::Twine(Name) + "_" + Twine(suffix)).str(),
                            tok::TokenKind::identifier);
     if (!findRecordDecl(S, II, DC))
       return II;
@@ -354,7 +356,7 @@ static FieldDecl *createFieldForHostLayoutStruct(Sema &S, const Type *Ty,
     if (isResourceRecordType(Ty))
       return nullptr;
     CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
-    if (!isStructHLSLBufferCompatible(RD)) {
+    if (requiresImplicitBufferLayoutStructure(RD)) {
       RD = createHostLayoutStruct(S, RD, BufDecl);
       if (!RD)
         return nullptr;
@@ -383,7 +385,7 @@ static FieldDecl *createFieldForHostLayoutStruct(Sema &S, const Type *Ty,
 // Returns nullptr if the resulting layout struct would be empty.
 static CXXRecordDecl *createHostLayoutStruct(Sema &S, CXXRecordDecl *StructDecl,
                                              HLSLBufferDecl *BufDecl) {
-  assert(!isStructHLSLBufferCompatible(StructDecl) &&
+  assert(requiresImplicitBufferLayoutStructure(StructDecl) &&
          "struct is already HLSL buffer compatible");
 
   ASTContext &AST = S.getASTContext();
@@ -406,7 +408,7 @@ static CXXRecordDecl *createHostLayoutStruct(Sema &S, CXXRecordDecl *StructDecl,
     assert(NumBases == 1 && "HLSL supports only one base type");
     CXXBaseSpecifier Base = *StructDecl->bases_begin();
     CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
-    if (!isStructHLSLBufferCompatible(BaseDecl)) {
+    if (requiresImplicitBufferLayoutStructure(BaseDecl)) {
       BaseDecl = createHostLayoutStruct(S, BaseDecl, BufDecl);
       if (BaseDecl) {
         TypeSourceInfo *TSI = AST.getTrivialTypeSourceInfo(

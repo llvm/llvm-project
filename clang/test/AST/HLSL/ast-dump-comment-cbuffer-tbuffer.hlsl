@@ -45,7 +45,7 @@ tbuffer B {
 // AST-NEXT: TextComment {{.*}} Text=" CBuffer decl."
 // AST-NEXT: VarDecl {{.*}} a 'float'
 // AST-NEXT: VarDecl {{.*}} b 'int'
-// AST-NEXT: CXXRecordDecl {{.*}} implicit class __layout.A definition
+// AST-NEXT: CXXRecordDecl {{.*}} implicit class __layout_A definition
 // AST: FieldDecl {{.*}} a 'float'
 // AST-NEXT: FieldDecl {{.*}} b 'int'
 
@@ -57,6 +57,6 @@ tbuffer B {
 // AST-NEXT: TextComment {{.*}} Text=" TBuffer decl."
 // AST-NEXT: VarDecl {{.*}} c 'float'
 // AST-NEXT: VarDecl {{.*}} d 'int'
-// AST-NEXT: CXXRecordDecl {{.*}} implicit class __layout.B definition
+// AST-NEXT: CXXRecordDecl {{.*}} implicit class __layout_B definition
 // AST: FieldDecl {{.*}} c 'float'
 // AST-NEXT: FieldDecl {{.*}} d 'int'
