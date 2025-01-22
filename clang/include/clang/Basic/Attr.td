@@ -5026,3 +5026,11 @@ def Atomic : StmtAttr {
   let Documentation = [AtomicDocs];
   let StrictEnumParameters = 1;
 }
+
+def OpenACCRoutineAnnot : InheritableAttr {
+  // This attribute is used to mark that a function is targetted by a `routine`
+  // directive, so it dones't have a spelling and is always implicit.
+  let Spellings = [];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [InternalOnly];
+}

@@ -12821,8 +12821,9 @@ def err_wasm_builtin_arg_must_be_integer_type : Error <
   "%ordinal0 argument must be an integer">;
 
 // OpenACC diagnostics.
-def warn_acc_construct_unimplemented
-    : Warning<"OpenACC construct '%0' not yet implemented, pragma ignored">,
+def warn_acc_routine_unimplemented
+    : Warning<"OpenACC construct 'routine' with implicit function not yet "
+              "implemented, pragma ignored">,
       InGroup<SourceUsesOpenACC>;
 def warn_acc_clause_unimplemented
     : Warning<"OpenACC clause '%0' not yet implemented, clause ignored">,
@@ -13060,6 +13061,13 @@ def err_acc_declare_same_scope
 def err_acc_multiple_references
     : Error<"variable referenced in '%0' clause of OpenACC 'declare' directive "
             "was already referenced">;
+def err_acc_routine_not_func
+    : Error<"OpenACC routine name '%0' does not name a function">;
+def err_acc_routine_overload_set
+    : Error<"OpenACC routine name '%0' names a set of overloads">;
+def err_acc_magic_static_in_routine
+    : Error<"function static variables are not permitted in functions to which "
+            "an OpenACC 'routine' directive applies">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
