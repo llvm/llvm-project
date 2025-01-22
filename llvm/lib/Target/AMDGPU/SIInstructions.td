@@ -1063,6 +1063,7 @@ def : GCNPat <
   (SI_KILL_I1_PSEUDO SCSrc_i1:$src, -1)
 >;
 
+let SubtargetPredicate = NotHasSALUFloatInsts in
 def : GCNPat <
   (int_amdgcn_kill (i1 (setcc f32:$src, InlineImmFP32:$imm, cond:$cond))),
   (SI_KILL_F32_COND_IMM_PSEUDO VSrc_b32:$src, (bitcast_fpimm_to_i32 $imm), (cond_as_i32imm $cond))
