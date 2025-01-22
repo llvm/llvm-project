@@ -929,7 +929,8 @@ def ProcessorFeatures {
                                     FeatureComplxNum, FeatureCRC, FeatureJS,
                                     FeatureLSE, FeaturePAuth, FeatureFPAC,
                                     FeatureRAS, FeatureRCPC, FeatureRDM,
-                                    FeatureDotProd, FeatureMatMulInt8];
+                                    FeatureDotProd, FeatureMatMulInt8,
+                                    FeatureSPE_EEF];
   list<SubtargetFeature> ExynosM3 = [HasV8_0aOps, FeatureCRC, FeatureSHA2, FeatureAES,
                                      FeaturePerfMon, FeatureNEON, FeatureFPARMv8];
   list<SubtargetFeature> ExynosM4 = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureDotProd,

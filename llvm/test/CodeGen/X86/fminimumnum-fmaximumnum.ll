@@ -2647,7 +2647,7 @@ define <4 x bfloat> @test_fmaximumnum_v4bf16(<4 x bfloat> %x, <4 x bfloat> %y) n
 ;
 ; AVX10_2-LABEL: test_fmaximumnum_v4bf16:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vminmaxnepbf16 $17, %xmm1, %xmm0, %xmm0
+; AVX10_2-NEXT:    vminmaxbf16 $17, %xmm1, %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximumnum_v4bf16:
