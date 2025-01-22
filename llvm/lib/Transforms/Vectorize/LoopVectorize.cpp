@@ -7447,8 +7447,10 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       if (isa<VPPartialReductionRecipe>(&R))
         return true;
 
-      // The legacy cost model will under estimate the cost of BranchOnCount if exit condition were explicit contructed in the vplan.
-      if (VPInstruction *VPI = dyn_cast<VPInstruction>(&R); VPI && VPI->getOpcode() == VPInstruction::BranchOnCount)
+      // The legacy cost model will under estimate the cost of BranchOnCount if
+      // exit condition were explicit contructed in the vplan.
+      if (VPInstruction *VPI = dyn_cast<VPInstruction>(&R);
+          VPI && VPI->getOpcode() == VPInstruction::BranchOnCount)
         return true;
 
       if (Instruction *UI = GetInstructionForCost(&R))

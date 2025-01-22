@@ -744,7 +744,6 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
         Instruction::Or, cast<VectorType>(VecTy), std::nullopt, Ctx.CostKind);
   }
   case VPInstruction::BranchOnCount: {
-    if (getUnderlyingValue())
     // BranchOnCount will genearte icmp_eq + br instructions and the
     // cost of branch will be calculated in VPRegionBlock.
     // If the vector loop only executed once, ignore the cost of the cmp.
