@@ -42,8 +42,9 @@ namespace {
 
 // Mimic limited number of command line flags from llc to provide a better
 // user experience when passing options into the translate API call.
-static cl::opt<char> SpvOptLevel(" O", cl::Hidden, cl::Prefix, cl::init('0'));
-static cl::opt<std::string> SpvTargetTriple(" mtriple", cl::Hidden,
+static cl::opt<char> SpvOptLevel("spv_O", cl::Hidden, cl::Prefix,
+                                 cl::init('0'));
+static cl::opt<std::string> SpvTargetTriple("spv_mtriple", cl::Hidden,
                                             cl::init(""));
 
 // Utility to accept options in a command line style.
