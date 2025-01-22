@@ -55311,40 +55311,28 @@ static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
     return SDValue();
 
   SDValue Load = Op0.getOperand(1);
-  if (Load.getOpcode() != ISD::LOAD)
+  EVT LoadVT = Load.getSimpleValueType();
+
+  APInt UndefElts;
+  SmallVector<APInt, 32> EltBits;
+  if (!getTargetConstantBitsFromNode(Load, LoadVT.getScalarSizeInBits(),
+                                     UndefElts, EltBits,
+                                     /*AllowWholeUndefs*/ true,
+                                     /*AllowPartialUndefs*/ false) ||
+      UndefElts[0] || !EltBits[0].isPowerOf2())
     return SDValue();
 
-  SDValue Wrapper = Load.getOperand(1);
-  if (Wrapper.getOpcode() != X86ISD::Wrapper)
-    return SDValue();
-
-  const auto *TargetConstPool =
-      dyn_cast<ConstantPoolSDNode>(Wrapper.getOperand(0));
-  if (!TargetConstPool)
-    return SDValue();
-
-  const auto *ConstVec = TargetConstPool->getConstVal();
-  const auto *ConstVecType = dyn_cast<FixedVectorType>(ConstVec->getType());
-  if (!ConstVecType)
-    return SDValue();
-
-  const auto *First = ConstVec->getAggregateElement(0U);
-  if (llvm::isa<UndefValue>(First) || !First->getUniqueInteger().isPowerOf2())
-    return SDValue();
-
-  unsigned N = First->getUniqueInteger().logBase2();
-
-  for (unsigned I = 1, E = ConstVecType->getNumElements(); I < E; ++I) {
-    const auto *Element = ConstVec->getAggregateElement(I);
-    if (llvm::isa<llvm::UndefValue>(Element)) {
-      for (unsigned J = I + 1; J != E; ++J) {
-        if (!llvm::isa<llvm::UndefValue>(ConstVec->getAggregateElement(J)))
+  unsigned N = EltBits[0].logBase2();
+  unsigned Len = UndefElts.getBitWidth();
+  for (unsigned I = 1; I != Len; ++I) {
+    if (UndefElts[I]) {
+      for (unsigned J = I + 1; J != Len; ++J)
+        if (!UndefElts[J])
           return SDValue();
-      }
       break;
     }
 
-    if (Element->getUniqueInteger() != 1 << (I + N))
+    if (EltBits[I] != 1 << (N + I))
       return SDValue();
   }
 
@@ -55352,7 +55340,6 @@ static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
                             ? Broadcast.getOperand(0)
                             : Broadcast.getOperand(1);
   MVT BroadcastOpVT = BroadcastOp.getSimpleValueType();
-  unsigned Len = VT.getVectorNumElements();
   SDValue Masked = BroadcastOp;
   if (N != 0) {
     unsigned Mask = (1ULL << Len) - 1;
