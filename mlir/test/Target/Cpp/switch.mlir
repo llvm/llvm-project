@@ -885,19 +885,18 @@ func.func @emitc_switch_ui64() {
 
 // CPP-DEFAULT-LABEL: void emitc_switch_expression() {
 // CPP-DEFAULT:         int64_t v1 = 42;
-// CPP-DEFAULT:         int64_t v2 = 24;
-// CPP-DEFAULT:         switch ((v1 + v2) * v2) {
+// CPP-DEFAULT:         switch (-v1) {
 // CPP-DEFAULT:         case 2: {
-// CPP-DEFAULT:           int32_t v3 = func_b();
+// CPP-DEFAULT:           int32_t v2 = func_b();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         case 5: {
-// CPP-DEFAULT:           int32_t v4 = func_a();
+// CPP-DEFAULT:           int32_t v3 = func_a();
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         default: {
-// CPP-DEFAULT:           float v5 = 4.200000000e+01f;
-// CPP-DEFAULT:           func2(v5);
+// CPP-DEFAULT:           float v4 = 4.200000000e+01f;
+// CPP-DEFAULT:           func2(v4);
 // CPP-DEFAULT:           break;
 // CPP-DEFAULT:         }
 // CPP-DEFAULT:         }
@@ -906,24 +905,22 @@ func.func @emitc_switch_ui64() {
 
 // CPP-DECLTOP-LABEL: void emitc_switch_expression() {
 // CPP-DECLTOP:         int64_t v1;
-// CPP-DECLTOP:         int64_t v2;
-// CPP-DECLTOP:         float v3;
+// CPP-DECLTOP:         float v2;
+// CPP-DECLTOP:         int32_t v3;
 // CPP-DECLTOP:         int32_t v4;
-// CPP-DECLTOP:         int32_t v5;
 // CPP-DECLTOP:         v1 = 42;
-// CPP-DECLTOP:         v2 = 24;
-// CPP-DECLTOP:         switch ((v1 + v2) * v2) {
+// CPP-DECLTOP:         switch (-v1) {
 // CPP-DECLTOP:         case 2: {
-// CPP-DECLTOP:           v4 = func_b();
+// CPP-DECLTOP:           v3 = func_b();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         case 5: {
-// CPP-DECLTOP:           v5 = func_a();
+// CPP-DECLTOP:           v4 = func_a();
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         default: {
-// CPP-DECLTOP:           v3 = 4.200000000e+01f;
-// CPP-DECLTOP:           func2(v3);
+// CPP-DECLTOP:           v2 = 4.200000000e+01f;
+// CPP-DECLTOP:           func2(v2);
 // CPP-DECLTOP:           break;
 // CPP-DECLTOP:         }
 // CPP-DECLTOP:         }
@@ -932,12 +929,10 @@ func.func @emitc_switch_ui64() {
 
 func.func @emitc_switch_expression() {
   %x = "emitc.constant"(){value = 42 : i64} : () -> i64
-  %y = "emitc.constant"(){value = 24 : i64} : () -> i64
 
   %0 = emitc.expression : i64 {
-    %a = emitc.add %x, %y : (i64, i64) -> i64
-    %b = emitc.mul %a, %y : (i64, i64) -> i64
-    emitc.yield %b : i64
+    %a = emitc.unary_minus %x : (i64) -> i64
+    emitc.yield %a : i64
   }
 
   emitc.switch %0 : i64
