@@ -483,7 +483,7 @@ Changes to LLDB
   to be opened in the firewall (one for the `lldb-server` platform, one for gdbserver connections).
   In addition, due to this work, `lldb-server` now works on Windows in the server mode.
 
-* LLDB now supports optionally enabled/disabled register sets (particularly FPR) for RISC-V 64. The situation might take place for RISC-V builds having no FP-registers, like RV64IMAC or RV64IMACV. The change is applied to native debugging or core-file usage. EmulateInstruction is out of scope of the change, so its behavior remains the same using the maximum set of registers.
+* LLDB now supports optionally enabled/disabled register sets (particularly floating point registers) for RISC-V 64. This happens for targets like RV64IMAC or RV64IMACV, that have no floating point registers. The change is applied to native debugging and core-file usage.
 
 Changes to BOLT
 ---------------------------------
