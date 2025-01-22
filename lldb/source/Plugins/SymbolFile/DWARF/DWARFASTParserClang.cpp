@@ -198,7 +198,7 @@ GetCXXObjectParameter(const DWARFDIE &subprogram,
   // specification DIEs, so we can't rely upon the name being in
   // the formal parameter DIE...
   if (char const *name = object_pointer.GetName();
-      name && ::strcmp(name, "this") == 0)
+      name && ::strcmp(name, "this") != 0)
     return {};
 
   return object_pointer;
