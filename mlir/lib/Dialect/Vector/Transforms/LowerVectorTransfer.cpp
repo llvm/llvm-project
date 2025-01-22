@@ -492,60 +492,6 @@ struct TransferReadToVectorLoadLowering
   std::optional<unsigned> maxTransferRank;
 };
 
-/// Replace a 0-d vector.load with a memref.load + vector.broadcast.
-// TODO: we shouldn't cross the vector/scalar domains just for this
-// but atm we lack the infra to avoid it. Possible solutions include:
-// - go directly to LLVM + bitcast
-// - introduce a bitcast op and likely a new pointer dialect
-// - let memref.load/store additionally support the 0-d vector case
-// There are still deeper data layout issues lingering even in this
-// trivial case (for architectures for which this matters).
-struct VectorLoadToMemrefLoadLowering
-    : public OpRewritePattern<vector::LoadOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(vector::LoadOp loadOp,
-                                PatternRewriter &rewriter) const override {
-    auto vecType = loadOp.getVectorType();
-    if (vecType.getNumElements() != 1)
-      return rewriter.notifyMatchFailure(loadOp, "not a single element vector");
-
-    auto memrefLoad = rewriter.create<memref::LoadOp>(
-        loadOp.getLoc(), loadOp.getBase(), loadOp.getIndices());
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(loadOp, vecType,
-                                                     memrefLoad);
-    return success();
-  }
-};
-
-/// Replace a 0-d vector.store with a vector.extractelement + memref.store.
-struct VectorStoreToMemrefStoreLowering
-    : public OpRewritePattern<vector::StoreOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(vector::StoreOp storeOp,
-                                PatternRewriter &rewriter) const override {
-    auto vecType = storeOp.getVectorType();
-    if (vecType.getNumElements() != 1)
-      return rewriter.notifyMatchFailure(storeOp, "not single element vector");
-
-    Value extracted;
-    if (vecType.getRank() == 0) {
-      // TODO: Unifiy once ExtractOp supports 0-d vectors.
-      extracted = rewriter.create<vector::ExtractElementOp>(
-          storeOp.getLoc(), storeOp.getValueToStore());
-    } else {
-      SmallVector<int64_t> indices(vecType.getRank(), 0);
-      extracted = rewriter.create<vector::ExtractOp>(
-          storeOp.getLoc(), storeOp.getValueToStore(), indices);
-    }
-
-    rewriter.replaceOpWithNewOp<memref::StoreOp>(
-        storeOp, extracted, storeOp.getBase(), storeOp.getIndices());
-    return success();
-  }
-};
-
 /// Progressive lowering of transfer_write. This pattern supports lowering of
 /// `vector.transfer_write` to `vector.store` if all of the following hold:
 /// - Stride of most minor memref dimension must be 1.
@@ -645,7 +591,4 @@ void mlir::vector::populateVectorTransferLoweringPatterns(
   patterns.add<TransferReadToVectorLoadLowering,
                TransferWriteToVectorStoreLowering>(patterns.getContext(),
                                                    maxTransferRank, benefit);
-  patterns
-      .add<VectorLoadToMemrefLoadLowering, VectorStoreToMemrefStoreLowering>(
-          patterns.getContext(), benefit);
 }
