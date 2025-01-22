@@ -16,13 +16,15 @@
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/StringMap.h"
 
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
+
 namespace mlir {
-namespace LLVM::comdat {
-class ComdatAttr;
-} // namespace LLVM::comdat
+namespace link {
 
 using SelectionKind = LLVM::comdat::ComdatAttr;
+using Linkage = LLVM::Linkage;
 
+} // namespace link
 } // namespace mlir
 
 /// Include the generated interface declarations.

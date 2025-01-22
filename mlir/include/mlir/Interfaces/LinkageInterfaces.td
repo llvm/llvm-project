@@ -25,4 +25,18 @@ def LinkableModuleOpInterface : OpInterface<"LinkableModuleOpInterface"> {
   let cppNamespace = "::mlir";
 }
 
+def GlobalValueLinkageOpInterface : OpInterface<"GlobalValueLinkageOpInterface"> {
+  let description = [{ WIP }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/        "Returns the linkage of the operation",
+      /*returnType=*/  "::mlir::link::Linkage",
+      /*methodName=*/  "getLinkage",
+      /*args=*/        (ins)
+    >
+  ];
+}
+
 #endif // MLIR_INTERFACES_LINKAGEINTERFACES
