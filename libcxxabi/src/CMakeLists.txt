@@ -69,7 +69,8 @@ endif()
 
 if (NOT APPLE) # On Apple platforms, we always use -nostdlib++ so we don't need to re-add other libraries
   if (LIBCXXABI_ENABLE_THREADS)
-    add_library_flags_if(LIBCXXABI_HAS_PTHREAD_LIB pthread)
+    set(LIBCXXABI_PTHREAD_LIB_NAME "pthread" CACHE STRING "")
+    add_library_flags_if(LIBCXXABI_HAS_PTHREAD_LIB ${LIBCXXABI_PTHREAD_LIB_NAME})
   endif()
 
   add_library_flags_if(LIBCXXABI_HAS_C_LIB c)
