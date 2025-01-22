@@ -271,6 +271,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setCondCodeAction(
           {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
           Expand);
+      setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Custom);
     }
     for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
       setOperationAction(ISD::BITREVERSE, VT, Custom);
@@ -289,6 +290,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setCondCodeAction({ISD::SETGE, ISD::SETGT, ISD::SETOGE, ISD::SETOGT,
                          ISD::SETUGE, ISD::SETUGT},
                         VT, Expand);
+      setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Legal);
     }
     setOperationAction(ISD::CTPOP, GRLenVT, Legal);
     setOperationAction(ISD::FCEIL, {MVT::f32, MVT::f64}, Legal);
@@ -327,6 +329,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setCondCodeAction(
           {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
           Expand);
+      setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Custom);
     }
     for (MVT VT : {MVT::v32i8, MVT::v16i16, MVT::v8i32})
       setOperationAction(ISD::BITREVERSE, VT, Custom);
@@ -345,6 +348,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setCondCodeAction({ISD::SETGE, ISD::SETGT, ISD::SETOGE, ISD::SETOGT,
                          ISD::SETUGE, ISD::SETUGT},
                         VT, Expand);
+      setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Legal);
     }
   }
 
@@ -448,8 +452,23 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::BITREVERSE:
     return lowerBITREVERSE(Op, DAG);
+  case ISD::SCALAR_TO_VECTOR:
+    return lowerSCALAR_TO_VECTOR(Op, DAG);
   }
   return SDValue();
+}
+
+SDValue
+LoongArchTargetLowering::lowerSCALAR_TO_VECTOR(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT OpVT = Op.getSimpleValueType();
+
+  SDValue Vector = DAG.getUNDEF(OpVT);
+  SDValue Val = Op.getOperand(0);
+  SDValue Idx = DAG.getConstant(0, DL, Subtarget.getGRLenVT());
+
+  return DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, OpVT, Vector, Val, Idx);
 }
 
 SDValue LoongArchTargetLowering::lowerBITREVERSE(SDValue Op,

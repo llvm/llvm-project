@@ -384,3 +384,20 @@ void Foo() {
 // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:382:5 %s -o - | FileCheck -check-prefix=CHECK-DEREF-DEPENDENT %s
 // CHECK-DEREF-DEPENDENT: [#void#]Add()
 }
+
+namespace dependent_smart_pointer {
+template <typename T>
+struct smart_pointer {
+  T* operator->();
+};
+
+template <typename T>
+struct node {
+  smart_pointer<node<T>> next;
+  void foo() {
+    next->next;
+    // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:398:11 %s -o - | FileCheck -check-prefix=CHECK-DEPENDENT-SMARTPTR %s
+    // CHECK-DEPENDENT-SMARTPTR: [#smart_pointer<node<T>>#]next
+  }
+};
+}
