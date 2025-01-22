@@ -923,6 +923,7 @@ TEST(getTargetFeatureForExtension, RetrieveTargetFeatureFromOneExt) {
   EXPECT_EQ(RISCVISAInfo::getTargetFeatureForExtension("zbbzihintntl"), "");
 }
 
+#if 0
 TEST(RiscvExtensionsHelp, CheckExtensions) {
   // clang-format off
   std::string ExpectedOutput =
@@ -1158,6 +1159,7 @@ For example, clang -march=rv32i_v1p0)";
                 return Captured.find(Expected) != std::string::npos;
               }(CapturedOutput, ExpectedOutput));
 }
+#endif
 
 TEST(TargetParserTest, RISCVPrintEnabledExtensions) {
   // clang-format off

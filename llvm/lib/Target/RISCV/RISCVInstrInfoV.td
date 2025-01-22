@@ -1814,5 +1814,18 @@ let Predicates = [HasVInstructionsI64, IsRV64] in {
   }
 } // Predicates = [HasVInstructionsI64, IsRV64]
 
+
+// The experimental zvzip extension.  Note these opcodes are very likely to
+// change!
+let Predicates = [HasStdExtZvzip], hasSideEffects = 0, mayLoad = 0,
+  mayStore = 0, isCodeGenOnly = 0, Inst<6-0> = OPC_CUSTOM_2.Value in {
+defm VZIPEVEN_V : VALU_IV_V<"vzipeven", 0b001100>;
+defm VZIPODD_V : VALU_IV_V<"vzipodd", 0b011100>;
+defm VZIP2A_V : VALU_IV_V<"vzip2a", 0b000100>;
+defm VZIP2B_V : VALU_IV_V<"vzip2b", 0b010100>;
+defm VUNZIP2A_V : VALU_IV_V<"vunzip2a", 0b001000>;
+defm VUNZIP2B_V : VALU_IV_V<"vunzip2b", 0b011000>;
+}
+
 include "RISCVInstrInfoZvfbf.td"
 include "RISCVInstrInfoVPseudos.td"
