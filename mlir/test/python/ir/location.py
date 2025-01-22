@@ -57,7 +57,7 @@ def testFileLineCol():
     # CHECK: file range str: loc("foo.txt":123:56 to :100)
     print("file range str:", str(range))
     # CHECK: file range repr: loc("foo.txt":123:56 to :100)
-    print("file range repr:", repr(range))    
+    print("file range repr:", repr(range))
 
 
 run(testFileLineCol)
