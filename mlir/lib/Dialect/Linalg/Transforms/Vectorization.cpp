@@ -83,6 +83,14 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
                          ArrayRef<int64_t> inputVectorSizes,
                          SmallVectorImpl<Value> &newResults);
 
+/// Returns the effective Pad value for the input op, provided it's a scalar.
+///
+/// Many Ops exhibit pad-like behaviour, but this isn't always explicit. If
+/// this Op performs padding, retrieve the padding value provided that it's
+/// a scalar and static/fixed for all the padded values. Returns an empty value
+/// otherwise.
+static Value getStaticPadVal(Operation *op);
+
 /// Return the unique instance of OpType in `block` if it is indeed unique.
 /// Return null if none or more than 1 instances exist.
 template <typename OpType>
@@ -1904,8 +1912,31 @@ static LogicalResult
 vectorizeInsertSliceOpPrecondition(tensor::InsertSliceOp sliceOp,
                                    ArrayRef<int64_t> inputVectorSizes) {
 
-  // TODO: Move pre-conditions from the vectorization logic, i.e.
-  // vectorizeAsInsertSliceOp.
+  TypedValue<RankedTensorType> source = sliceOp.getSource();
+  auto sourceType = source.getType();
+  if (!VectorType::isValidElementType(sourceType.getElementType()))
+    return failure();
+
+  // Get the pad value.
+  // TransferReadOp (which is used to vectorize InsertSliceOp, requires a scalar
+  // padding value. Note that:
+  //    * for in-bounds access, the value is actually irrelevant.
+  // There are 2 cases in which xfer.read accesses are known to be in-bounds:
+  //  1. The source shape is static (output vector sizes would be based on
+  //     the source shape and hence all memory accesses would be in-bounds),
+  //  2. Masking is used (output vector sizes would be user-provided, in which
+  //     case it is assumed that all memory accesses are in-bounds). This
+  //     remains a TODO.
+  //
+  // When the value is not known and not needed, use 0. Otherwise, bail out.
+  Value padValue = getStaticPadVal(sliceOp);
+  bool isOutOfBoundsRead =
+      !sourceType.hasStaticShape() && inputVectorSizes.empty();
+
+  if (!padValue && isOutOfBoundsRead) {
+    LDBG("Failed to get a pad value for out-of-bounds read access\n");
+    return failure();
+  }
   return success();
 }
 
@@ -2216,7 +2247,6 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
                                       ArrayRef<bool> inputScalableVecDims,
                                       bool vectorizeNDExtract,
                                       bool flatten1DDepthwiseConv) {
-  rewriter.getInsertionPoint();
   LDBG("Attempting to vectorize:\n" << *op << "\n");
   LDBG("Input vector sizes: ");
   LLVM_DEBUG(llvm::interleaveComma(inputVectorSizes, llvm::dbgs()));
@@ -2583,6 +2613,9 @@ struct PadOpVectorizationWithTransferWritePattern
 /// this Op performs padding, retrieve the padding value provided that it's
 /// a scalar and static/fixed for all the padded values. Returns an empty value
 /// otherwise.
+///
+/// TODO: This is used twice (when checking vectorization pre-conditions and
+/// when vectorizing). Cache results instead of re-running.
 static Value getStaticPadVal(Operation *op) {
   if (!op)
     return {};
@@ -2636,30 +2669,9 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
 
   TypedValue<RankedTensorType> source = sliceOp.getSource();
   auto sourceType = source.getType();
-  if (!VectorType::isValidElementType(sourceType.getElementType()))
-    return failure();
-
   auto resultType = sliceOp.getResultType();
 
-  // 1. Get the pad value.
-  // TransferReadOp requires a scalar padding value. Note that:
-  //    * for in-bounds access, the value is actually irrelevant.
-  // There are 2 cases in which xfer.read accesses are known to be in-bounds:
-  //  1. The source shape is static (output vector sizes would be based on
-  //     the source shape and hence all memory accesses would be in-bounds),
-  //  2. Masking is used (output vector sizes would be user-provided, in which
-  //     case it is assumed that all memory accesses are in-bounds). This
-  //     remains a TODO.
-  //
-  // When the value is not known and not needed, use 0. Otherwise, bail out.
   Value padValue = getStaticPadVal(sliceOp);
-  bool isOutOfBoundsRead =
-      !sourceType.hasStaticShape() && inputVectorSizes.empty();
-
-  if (!padValue && isOutOfBoundsRead) {
-    LDBG("Failed to get a pad value for out-of-bounds read access\n");
-    return failure();
-  }
 
   if (!padValue) {
     auto elemType = sourceType.getElementType();
@@ -2672,7 +2684,7 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
   SmallVector<bool> readInBounds;
   SmallVector<bool> writeInBounds;
   size_t rankDiff = resultType.getRank() - sourceType.getRank();
-  for (unsigned i = 0; i < sourceType.getRank(); ++i) {
+  for (int64_t i = 0, end = sourceType.getRank(); i < end; ++i) {
     if (!inputVectorSizes.empty()) {
       vecShape.push_back(inputVectorSizes[i]);
       readInBounds.push_back(false);
