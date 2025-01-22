@@ -165,15 +165,12 @@ static bool TagIsRecordType(dw_tag_t tag) {
 /// parameter exists for the given \c subprogram.
 static DWARFDIE
 GetCXXObjectParameter(const DWARFDIE &subprogram,
-                      clang::DeclContext const &containing_decl_ctx) {
+                      const clang::DeclContext &containing_decl_ctx) {
   assert(subprogram.Tag() == DW_TAG_subprogram ||
          subprogram.Tag() == DW_TAG_inlined_subroutine ||
          subprogram.Tag() == DW_TAG_subroutine_type);
 
   if (!DeclKindIsCXXClass(containing_decl_ctx.getDeclKind()))
-    return {};
-
-  if (!subprogram.HasChildren())
     return {};
 
   // FIXME: if subprogram has a explicit DW_AT_object_pointer, use it.
@@ -197,7 +194,7 @@ GetCXXObjectParameter(const DWARFDIE &subprogram,
   // Often times compilers omit the "this" name for the
   // specification DIEs, so we can't rely upon the name being in
   // the formal parameter DIE...
-  if (char const *name = object_pointer.GetName();
+  if (const char *name = object_pointer.GetName();
       name && ::strcmp(name, "this") != 0)
     return {};
 
@@ -207,8 +204,8 @@ GetCXXObjectParameter(const DWARFDIE &subprogram,
 /// In order to determine the CV-qualifiers for a C++ class
 /// method in DWARF, we have to look at the CV-qualifiers of
 /// the object parameter's type.
-static unsigned GetCXXMethodCVQuals(DWARFDIE const &subprogram,
-                                    DWARFDIE const &object_parameter) {
+static unsigned GetCXXMethodCVQuals(const DWARFDIE &subprogram,
+                                    const DWARFDIE &object_parameter) {
   if (!subprogram || !object_parameter)
     return 0;
 
