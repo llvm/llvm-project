@@ -1216,6 +1216,8 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R))
       RecurrencePhis.push_back(FOR);
 
+  VPValue *MinusOneVPV = Plan.getOrAddLiveIn(
+      ConstantInt::getSigned(Plan.getCanonicalIV()->getScalarType(), -1));
   for (VPFirstOrderRecurrencePHIRecipe *FOR : RecurrencePhis) {
     SmallPtrSet<VPFirstOrderRecurrencePHIRecipe *, 4> SeenPhis;
     VPRecipeBase *Previous = FOR->getBackedgeValue()->getDefiningRecipe();
@@ -1240,10 +1242,9 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     else
       LoopBuilder.setInsertPoint(InsertBlock,
                                  std::next(Previous->getIterator()));
-
     auto *RecurSplice = cast<VPInstruction>(
         LoopBuilder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
-                                 {FOR, FOR->getBackedgeValue()}));
+                                 {FOR, FOR->getBackedgeValue(), MinusOneVPV}));
 
     FOR->replaceAllUsesWith(RecurSplice);
     // Set the first operand of RecurSplice to FOR again, after replacing

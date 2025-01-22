@@ -102,6 +102,37 @@ inline specific_intval<1> m_False() { return specific_intval<1>(APInt(64, 0)); }
 
 inline specific_intval<1> m_True() { return specific_intval<1>(APInt(64, 1)); }
 
+/// Match an integer value or a vector where all elements satisfy a specified
+/// predicate. The predicate is provided via a user-defined struct. The
+/// user-defined predicate must provide a method:
+///   bool isValue(const APInt &);
+template <typename Predicate> struct specific_intval_pred : public Predicate {
+  bool match(VPValue *VPV) const {
+    if (!VPV->isLiveIn())
+      return false;
+    Value *V = VPV->getLiveInIRValue();
+    if (!V)
+      return false;
+    const auto *CI = dyn_cast<ConstantInt>(V);
+    if (!CI && V->getType()->isVectorTy())
+      if (const auto *C = dyn_cast<Constant>(V))
+        CI = dyn_cast_or_null<ConstantInt>(
+            C->getSplatValue(/*AllowPoison=*/false));
+    if (!CI)
+      return false;
+
+    return this->isValue(CI->getValue());
+  }
+};
+
+struct is_all_ones {
+  bool isValue(const APInt &C) const { return C.isAllOnes(); }
+};
+
+inline specific_intval_pred<is_all_ones> m_AllOnes() {
+  return specific_intval_pred<is_all_ones>();
+}
+
 /// Matching combinators
 template <typename LTy, typename RTy> struct match_combine_or {
   LTy L;
@@ -249,6 +280,32 @@ template <unsigned Opcode, typename Op0_t, typename Op1_t>
 inline BinaryVPInstruction_match<Op0_t, Op1_t, Opcode>
 m_VPInstruction(const Op0_t &Op0, const Op1_t &Op1) {
   return BinaryVPInstruction_match<Op0_t, Op1_t, Opcode>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t, typename Op2_t, unsigned Opcode,
+          typename... RecipeTys>
+using TernaryRecipe_match =
+    Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t>, Opcode, /*Commutative*/ false,
+                 RecipeTys...>;
+
+template <typename Op0_t, typename Op1_t, typename Op2_t, unsigned Opcode>
+using TernaryVPInstruction_match =
+    TernaryRecipe_match<Op0_t, Op1_t, Op2_t, Opcode, VPInstruction>;
+
+template <unsigned Opcode, typename Op0_t, typename Op1_t, typename Op2_t>
+inline TernaryVPInstruction_match<Op0_t, Op1_t, Op2_t, Opcode>
+m_VPInstruction(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return TernaryVPInstruction_match<Op0_t, Op1_t, Op2_t, Opcode>(
+      {Op0, Op1, Op2});
+}
+
+template <typename Op0_t, typename Op1_t>
+inline TernaryVPInstruction_match<Op0_t, Op1_t,
+                                  specific_intval_pred<is_all_ones>,
+                                  VPInstruction::FirstOrderRecurrenceSplice>
+m_FirstOrderRecurrenceSplice(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_VPInstruction<VPInstruction::FirstOrderRecurrenceSplice>(
+      Op0, Op1, m_AllOnes());
 }
 
 template <typename Op0_t>

@@ -72,6 +72,10 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::ExplicitVectorLength:
     return Type::getIntNTy(Ctx, 32);
   case VPInstruction::FirstOrderRecurrenceSplice:
+    assert(inferScalarType(R->getOperand(0)) ==
+               inferScalarType(R->getOperand(1)) &&
+           "different types inferred for different operands");
+    return inferScalarType(R->getOperand(0));
   case VPInstruction::Not:
   case VPInstruction::ResumePhi:
   case VPInstruction::CalculateTripCountMinusVF:

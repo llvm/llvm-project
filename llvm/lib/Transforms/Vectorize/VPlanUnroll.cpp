@@ -288,8 +288,7 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     addRecipeForPart(&R, Copy, Part);
 
     VPValue *Op;
-    if (match(&R, m_VPInstruction<VPInstruction::FirstOrderRecurrenceSplice>(
-                      m_VPValue(), m_VPValue(Op)))) {
+    if (match(&R, m_FirstOrderRecurrenceSplice(m_VPValue(), m_VPValue(Op)))) {
       Copy->setOperand(0, getValueForPart(Op, Part - 1));
       Copy->setOperand(1, getValueForPart(Op, Part));
       continue;
@@ -306,6 +305,7 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
         Phi->setOperand(1, Copy->getVPSingleValue());
       }
     }
+
     remapOperands(Copy, Part);
 
     // Add operand indicating the part to generate code for, to recipes still
