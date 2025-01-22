@@ -1282,6 +1282,28 @@ TEST(TestRtsanInterceptors, GetpeernameOnASocketDiesWhenRealtime) {
 }
 #endif
 
+#if SANITIZER_INTERCEPT_GETSOCKOPT
+TEST(TestRtsanInterceptors, GetsockoptOnASocketDiesWhenRealtime) {
+  int val = 0;
+  socklen_t len = static_cast<socklen_t>(sizeof(val));
+  auto Func = [&val, &len]() {
+    getsockopt(0, SOL_SOCKET, SO_REUSEADDR, &val, &len);
+  };
+  ExpectRealtimeDeath(Func, "getsockopt");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, SetsockoptOnASocketDiesWhenRealtime) {
+  int val = 0;
+  socklen_t len = static_cast<socklen_t>(sizeof(val));
+  auto Func = [&val, &len]() {
+    setsockopt(0, SOL_SOCKET, SO_REUSEADDR, &val, len);
+  };
+  ExpectRealtimeDeath(Func, "setsockopt");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 /*
     I/O Multiplexing
 */
