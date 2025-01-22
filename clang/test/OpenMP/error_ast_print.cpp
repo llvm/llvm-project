@@ -9,6 +9,7 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=51 -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -fopenmp-version=51 -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp-simd -std=c++11 -fopenmp-version=51 -include-pch %t -verify %s -ast-print | FileCheck %s
+
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=60 -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -fopenmp-version=60 -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp-simd -std=c++11 -fopenmp-version=60 -include-pch %t -verify %s -ast-print | FileCheck %s
