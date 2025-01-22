@@ -343,9 +343,13 @@ static LogicalResult generateLib(irdl::DialectOp dialect, raw_ostream &output,
                                  }),
                  "\n"));
 
+  const auto typeIdDefinitions = llvm::join(llvm::map_range(typeNames, [&](StringRef name) -> std::string {
+    return llvm::formatv("MLIR_DEFINE_EXPLICIT_TYPE_ID({1}::{0})", name, dialectStrings.namespacePath);
+  }), "\n");
+
   output << llvm::formatv(
       typeDefTemplateText, commaSeparatedTypeList, generatedTypeParser,
-      generatedTypePrinter, dialectStrings.dialectCppName,
+      generatedTypePrinter, dialectStrings.dialectCppName, typeIdDefinitions,
       dialectStrings.namespaceOpen, dialectStrings.namespaceClose);
 
   // get op list

@@ -3,8 +3,9 @@
 {1}: TypeParser function
 {2}: TypePrinter function
 {3}: Dialect CppName
-{4}: Namespace open
-{5}: Namespace close
+{4}: TypeID Defines
+{5}: Namespace open
+{6}: Namespace close
 */
 
 R"(
@@ -20,6 +21,9 @@ R"(
 #undef GET_TYPEDEF_CLASSES
 
 {4}
+
+{5}
+
 {1}
 
 {2}
@@ -45,6 +49,6 @@ void {3}::printType(::mlir::Type type,
   
 }
 
-{5}
+{6}
 #endif // GET_TYPEDEF_CLASSES
 )"
