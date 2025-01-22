@@ -624,7 +624,33 @@ static bool EvaluateDirectiveSubExpr(PPValue &LHS, unsigned MinPrec,
 
     // Consume the operator, remembering the operator's location for reporting.
     SourceLocation OpLoc = PeekTok.getLocation();
-    PP.LexNonComment(PeekTok);
+
+    if (!RHSIsLive && (Operator == tok::ampamp || Operator == tok::pipepipe)) {
+      unsigned ThisPrec = PeekPrec;
+      while (true) {
+        PP.LexUnexpandedNonComment(PeekTok);
+        if (PeekTok.is(tok::l_paren)) {
+          unsigned NestParen = 1;
+          while (true) {
+            PP.LexUnexpandedNonComment(PeekTok);
+            if (PeekTok.is(tok::l_paren))
+              NestParen++;
+            else if (PeekTok.is(tok::r_paren))
+              NestParen--;
+            if (NestParen == 0)
+              break;
+          }
+          PP.LexUnexpandedNonComment(PeekTok);
+        }
+        PeekPrec = getPrecedence(PeekTok.getKind());
+        if (PeekPrec <= ThisPrec) {
+          LHS.setEnd(PeekTok.getEndLoc());
+          break;
+        }
+      }
+      continue;
+    } else
+      PP.LexNonComment(PeekTok);
 
     PPValue RHS(LHS.getBitWidth());
     // Parse the RHS of the operator.

@@ -258,7 +258,7 @@ void dr252(void) {
 void dr258(void) {
   /* We get the diagnostic twice because the argument is used twice in the
    * expansion. */
-#define repeat(x) x && x
+#define repeat(x) x || x
 #if repeat(defined fred) /* expected-warning 2 {{macro expansion producing 'defined' has undefined behavior}} */
 #endif
 

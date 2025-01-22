@@ -23,7 +23,7 @@ template<int N> __attribute__((host, device)) int templatify(int x) {
 __attribute__((device)) const int GlobalConst = __AMDGCN_WAVEFRONT_SIZE__; // expected-warning {{macro '__AMDGCN_WAVEFRONT_SIZE__' has been marked as deprecated}}
 constexpr int GlobalConstExpr = __AMDGCN_WAVEFRONT_SIZE__; // expected-warning {{macro '__AMDGCN_WAVEFRONT_SIZE__' has been marked as deprecated}}
 
-#if defined(__HIP_DEVICE_COMPILE__) && (__AMDGCN_WAVEFRONT_SIZE__ == 64) // expected-warning {{macro '__AMDGCN_WAVEFRONT_SIZE__' has been marked as deprecated}}
+#if (__AMDGCN_WAVEFRONT_SIZE__ == 64) && defined(__HIP_DEVICE_COMPILE__) // expected-warning {{macro '__AMDGCN_WAVEFRONT_SIZE__' has been marked as deprecated}}
 int foo(void);
 #endif
 
