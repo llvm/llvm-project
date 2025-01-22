@@ -1381,6 +1381,9 @@ public:
                                                  unsigned NumSGPRs = 0,
                                                  unsigned NumVGPRs = 0) const;
 
+  /// Returns the LDS's allocation granularity in bytes.
+  unsigned getLDSAllocGranularity() const;
+
   /// \returns true if the flat_scratch register should be initialized with the
   /// pointer to the wave's scratch memory rather than a size and offset.
   bool flatScratchIsPointer() const {

@@ -1344,7 +1344,7 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
   }
 
   unsigned MaxOccupancy =
-      ST.getOccupancyWithWorkGroupSizes(CurrentLocalMemUsage, F).second;
+      ST.getOccupancyWithWorkGroupSizes(CurrentLocalMemUsage, F, TM).second;
 
   // Restrict local memory usage so that we don't drastically reduce occupancy,
   // unless it is already significantly reduced.
