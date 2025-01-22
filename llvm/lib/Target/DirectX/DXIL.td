@@ -405,6 +405,8 @@ class DXILOp<int opcode, DXILOpClass opclass> {
 }
 
 // Concrete definitions of DXIL Operations
+//
+// This are sorted by ascending value of the DXIL Opcodes
 
 def Abs : DXILOp<6, unary> {
   let Doc = "Returns the absolute value of the input.";
@@ -855,6 +857,20 @@ def CheckAccessFullyMapped : DXILOp<71, checkAccessFullyMapped> {
   let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
 }
 
+def Barrier : DXILOp<80, barrier> {
+  let Doc = "inserts a memory barrier in the shader";
+  let intrinsics = [
+    IntrinSelect<int_dx_group_memory_barrier_with_group_sync,
+                 [IntrinArgI32<BarrierMode_GroupMemoryBarrierWithGroupSync>]>,
+  ];
+
+  let arguments = [Int32Ty];
+  let result = VoidTy;
+  let stages = [Stages<DXIL1_0, [compute, library]>];
+  let attributes = [Attributes<DXIL1_0, []>];
+  let properties = [IsBarrier];
+}
+
 def Discard : DXILOp<82, discard> {
   let Doc = "discard the current pixel";
   let intrinsics = [IntrinSelect<int_dx_discard>];
@@ -919,6 +935,89 @@ def SplitDouble : DXILOp<102, splitDouble> {
   let overloads = [Overloads<DXIL1_0, [DoubleTy]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def WaveIsFirstLane : DXILOp<110, waveIsFirstLane> {
+  let Doc = "returns 1 for the first lane in the wave";
+  let intrinsics = [IntrinSelect<int_dx_wave_is_first_lane>];
+  let arguments = [];
+  let result = Int1Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let properties = [IsWave];
+}
+
+def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
+  let Doc = "returns the index of the current lane in the wave";
+  let intrinsics = [IntrinSelect<int_dx_wave_getlaneindex>];
+  let arguments = [];
+  let result = Int32Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
+  let properties = [IsWave];
+}
+
+def WaveActiveAnyTrue : DXILOp<113, waveAnyTrue> {
+  let Doc = "returns true if the expression is true in any of the active lanes "
+            "in the current wave";
+  let intrinsics = [IntrinSelect<int_dx_wave_any>];
+  let arguments = [Int1Ty];
+  let result = Int1Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let properties = [IsWave];
+}
+
+def WaveActiveAllTrue : DXILOp<114, waveAllTrue> {
+  let Doc = "returns true if the expression is true in all of the active lanes "
+            "in the current wave";
+  let intrinsics = [IntrinSelect<int_dx_wave_all>];
+  let arguments = [Int1Ty];
+  let result = Int1Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let properties = [IsWave];
+}
+
+def WaveReadLaneAt : DXILOp<117, waveReadLaneAt> {
+  let Doc = "returns the value from the specified lane";
+  let intrinsics = [IntrinSelect<int_dx_wave_readlane>];
+  let arguments = [OverloadTy, Int32Ty];
+  let result = OverloadTy;
+  let overloads = [Overloads<
+      DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int1Ty, Int16Ty, Int32Ty, Int64Ty]>];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let properties = [IsWave];
+}
+
+def WaveActiveOp : DXILOp<119, waveActiveOp> {
+  let Doc = "returns the result of the operation across waves";
+  let intrinsics = [
+    IntrinSelect<int_dx_wave_reduce_sum,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Sum>,
+                   IntrinArgI8<SignedOpKind_Signed>
+                 ]>,
+    IntrinSelect<int_dx_wave_reduce_usum,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Sum>,
+                   IntrinArgI8<SignedOpKind_Unsigned>
+                 ]>,
+  ];
+
+  let arguments = [OverloadTy, Int8Ty, Int8Ty];
+  let result = OverloadTy;
+  let overloads = [
+    Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int16Ty, Int32Ty, Int64Ty]>
+  ];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
+def WaveAllBitCount : DXILOp<135, waveAllOp> {
+  let Doc = "returns the count of bits set to 1 across the wave";
+  let intrinsics = [IntrinSelect<int_dx_wave_active_countbits>];
+  let arguments = [Int1Ty];
+  let result = Int32Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let properties = [IsWave];
 }
 
 def RawBufferLoad : DXILOp<139, rawBufferLoad> {
@@ -992,101 +1091,4 @@ def CreateHandleFromBinding : DXILOp<217, createHandleFromBinding> {
   let result = HandleTy;
   let stages = [Stages<DXIL1_6, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
-}
-
-def WaveActiveAllTrue : DXILOp<114, waveAllTrue> {
-  let Doc = "returns true if the expression is true in all of the active lanes "
-            "in the current wave";
-  let intrinsics = [IntrinSelect<int_dx_wave_all>];
-  let arguments = [Int1Ty];
-  let result = Int1Ty;
-  let stages = [Stages<DXIL1_0, [all_stages]>];
-  let properties = [IsWave];
-}
-
-def WaveActiveAnyTrue : DXILOp<113, waveAnyTrue> {
-  let Doc = "returns true if the expression is true in any of the active lanes "
-            "in the current wave";
-  let intrinsics = [IntrinSelect<int_dx_wave_any>];
-  let arguments = [Int1Ty];
-  let result = Int1Ty;
-  let stages = [Stages<DXIL1_0, [all_stages]>];
-  let properties = [IsWave];
-}
-
-def WaveActiveOp : DXILOp<119, waveActiveOp> {
-  let Doc = "returns the result of the operation across waves";
-  let intrinsics = [
-    IntrinSelect<int_dx_wave_reduce_sum,
-                 [
-                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Sum>,
-                   IntrinArgI8<SignedOpKind_Signed>
-                 ]>,
-    IntrinSelect<int_dx_wave_reduce_usum,
-                 [
-                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Sum>,
-                   IntrinArgI8<SignedOpKind_Unsigned>
-                 ]>,
-  ];
-
-  let arguments = [OverloadTy, Int8Ty, Int8Ty];
-  let result = OverloadTy;
-  let overloads = [
-    Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int16Ty, Int32Ty, Int64Ty]>
-  ];
-  let stages = [Stages<DXIL1_0, [all_stages]>];
-  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
-}
-
-def WaveIsFirstLane : DXILOp<110, waveIsFirstLane> {
-  let Doc = "returns 1 for the first lane in the wave";
-  let intrinsics = [IntrinSelect<int_dx_wave_is_first_lane>];
-  let arguments = [];
-  let result = Int1Ty;
-  let stages = [Stages<DXIL1_0, [all_stages]>];
-  let properties = [IsWave];
-}
-
-def WaveReadLaneAt : DXILOp<117, waveReadLaneAt> {
-  let Doc = "returns the value from the specified lane";
-  let intrinsics = [IntrinSelect<int_dx_wave_readlane>];
-  let arguments = [OverloadTy, Int32Ty];
-  let result = OverloadTy;
-  let overloads = [Overloads<
-      DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int1Ty, Int16Ty, Int32Ty, Int64Ty]>];
-  let stages = [Stages<DXIL1_0, [all_stages]>];
-  let properties = [IsWave];
-}
-
-def WaveGetLaneIndex : DXILOp<111, waveGetLaneIndex> {
-  let Doc = "returns the index of the current lane in the wave";
-  let intrinsics = [IntrinSelect<int_dx_wave_getlaneindex>];
-  let arguments = [];
-  let result = Int32Ty;
-  let stages = [Stages<DXIL1_0, [all_stages]>];
-  let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
-  let properties = [IsWave];
-}
-
-def WaveAllBitCount : DXILOp<135, waveAllOp> {
-  let Doc = "returns the count of bits set to 1 across the wave";
-  let intrinsics = [IntrinSelect<int_dx_wave_active_countbits>];
-  let arguments = [Int1Ty];
-  let result = Int32Ty;
-  let stages = [Stages<DXIL1_0, [all_stages]>];
-  let properties = [IsWave];
-}
-
-def Barrier : DXILOp<80, barrier> {
-  let Doc = "inserts a memory barrier in the shader";
-  let intrinsics = [
-    IntrinSelect<int_dx_group_memory_barrier_with_group_sync,
-                 [IntrinArgI32<BarrierMode_GroupMemoryBarrierWithGroupSync>]>,
-  ];
-
-  let arguments = [Int32Ty];
-  let result = VoidTy;
-  let stages = [Stages<DXIL1_0, [compute, library]>];
-  let attributes = [Attributes<DXIL1_0, []>];
-  let properties = [IsBarrier];
 }
