@@ -46,8 +46,8 @@ Address compiler diagnostics
 ============================
 
 Once you pass ``-fbounds-safety`` to compiler a C file, you will see some new
-compiler warnings and errors, which will lead you to adopt the feature and
-to remove unsafeness in the code. Consider the following example:
+compiler warnings and errors, which guide adoption of ``-fbounds-safety``.
+Consider the following example:
 
 .. code-block:: c
 
@@ -59,8 +59,9 @@ to remove unsafeness in the code. Consider the following example:
    }
 
 The parameter ``int *p`` doesn't have a bounds annotation, so the compiler will
-complain about the code indexing into it (``p[i]``). To address the diagnostics,
-you should add a bounds annotation on ``int *p`` so that the compiler can reason
+complain about the code indexing into it (``p[i]``) as it assumes that ``p`` is
+pointing to a single ``int`` object or null. To address the diagnostics, you
+should add a bounds annotation on ``int *p`` so that the compiler can reason
 about the safety of the array subscript. In the following example, ``p`` is now
 ``int *__counted_by(n)``, so the compiler will allow the array subscript with
 additional run-time checks as necessary.
@@ -74,11 +75,13 @@ additional run-time checks as necessary.
          p[i] = 0; // ok; `p` is now has a type with bounds annotation.
    }
 
-Run unit tests to fix new run-time traps
+Run test suites to fix new run-time traps
 ========================================
 
 Adopting ``-fbounds-safety`` may cause your program to trap if it violates
-bounds safety or it has incorrect adoption.
+bounds safety or it has incorrect adoption. Thus, it is necessary to perform
+run-time testing of your program to gain confidence that it won't trap at
+run time.
 
 Repeat the process for each remaining file
 ==========================================
