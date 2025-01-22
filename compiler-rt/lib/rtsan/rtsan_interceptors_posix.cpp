@@ -813,6 +813,11 @@ INTERCEPTOR(int, madvise, void *addr, size_t length, int flag) {
   return REAL(madvise)(addr, length, flag);
 }
 
+INTERCEPTOR(int, posix_madvise, void *addr, size_t length, int flag) {
+  __rtsan_notify_intercepted_call("posix_madvise");
+  return REAL(posix_madvise)(addr, length, flag);
+}
+
 INTERCEPTOR(int, mprotect, void *addr, size_t length, int prot) {
   __rtsan_notify_intercepted_call("mprotect");
   return REAL(mprotect)(addr, length, prot);
@@ -1173,6 +1178,7 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_MMAP64;
   INTERCEPT_FUNCTION(munmap);
   INTERCEPT_FUNCTION(madvise);
+  INTERCEPT_FUNCTION(posix_madvise);
   INTERCEPT_FUNCTION(mprotect);
   INTERCEPT_FUNCTION(msync);
   INTERCEPT_FUNCTION(mincore);
