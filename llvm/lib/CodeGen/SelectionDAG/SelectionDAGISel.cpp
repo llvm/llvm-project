@@ -581,7 +581,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
 
   ISEL_DUMP(dbgs() << "\n\n\n=== " << FuncName << '\n');
 
-  SDB->init(GFI, CurrentBatchAA(), AC, LibInfo);
+  SDB->init(GFI, getBatchAA(), AC, LibInfo);
 
   MF->setHasInlineAsm(false);
 
@@ -955,7 +955,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   {
     NamedRegionTimer T("combine1", "DAG Combining 1", GroupName,
                        GroupDescription, TimePassesIsEnabled);
-    CurDAG->Combine(BeforeLegalizeTypes, CurrentBatchAA(), OptLevel);
+    CurDAG->Combine(BeforeLegalizeTypes, getBatchAA(), OptLevel);
   }
 
   ISEL_DUMP(dbgs() << "\nOptimized lowered selection DAG: "
@@ -1001,7 +1001,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     {
       NamedRegionTimer T("combine_lt", "DAG Combining after legalize types",
                          GroupName, GroupDescription, TimePassesIsEnabled);
-      CurDAG->Combine(AfterLegalizeTypes, CurrentBatchAA(), OptLevel);
+      CurDAG->Combine(AfterLegalizeTypes, getBatchAA(), OptLevel);
     }
 
     ISEL_DUMP(dbgs() << "\nOptimized type-legalized selection DAG: "
@@ -1055,7 +1055,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     {
       NamedRegionTimer T("combine_lv", "DAG Combining after legalize vectors",
                          GroupName, GroupDescription, TimePassesIsEnabled);
-      CurDAG->Combine(AfterLegalizeVectorOps, CurrentBatchAA(), OptLevel);
+      CurDAG->Combine(AfterLegalizeVectorOps, getBatchAA(), OptLevel);
     }
 
     ISEL_DUMP(dbgs() << "\nOptimized vector-legalized selection DAG: "
@@ -1095,7 +1095,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   {
     NamedRegionTimer T("combine2", "DAG Combining 2", GroupName,
                        GroupDescription, TimePassesIsEnabled);
-    CurDAG->Combine(AfterLegalizeDAG, CurrentBatchAA(), OptLevel);
+    CurDAG->Combine(AfterLegalizeDAG, getBatchAA(), OptLevel);
   }
 
   ISEL_DUMP(dbgs() << "\nOptimized legalized selection DAG: "

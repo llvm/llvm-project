@@ -203,7 +203,7 @@ namespace llvm {
     class Value2SUsMap;
 
     /// Returns a (possibly null) pointer to the current BatchAAResults.
-    BatchAAResults *CurrentAAForDep() const {
+    BatchAAResults *getAAForDep() const {
       if (AAForDep.has_value())
         return &AAForDep.value();
       return nullptr;

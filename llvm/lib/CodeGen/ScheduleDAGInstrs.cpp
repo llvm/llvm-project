@@ -551,7 +551,7 @@ void ScheduleDAGInstrs::addVRegUseDeps(SUnit *SU, unsigned OperIdx) {
 
 void ScheduleDAGInstrs::addChainDependency (SUnit *SUa, SUnit *SUb,
                                             unsigned Latency) {
-  if (SUa->getInstr()->mayAlias(CurrentAAForDep(), *SUb->getInstr(), UseTBAA)) {
+  if (SUa->getInstr()->mayAlias(getAAForDep(), *SUb->getInstr(), UseTBAA)) {
     SDep Dep(SUa, SDep::MayAliasMem);
     Dep.setLatency(Latency);
     SUb->addPred(Dep);

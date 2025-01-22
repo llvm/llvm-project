@@ -83,7 +83,7 @@ public:
   virtual ~SelectionDAGISel();
 
   /// Returns a (possibly null) pointer to the current BatchAAResults.
-  BatchAAResults *CurrentBatchAA() const {
+  BatchAAResults *getBatchAA() const {
     if (BatchAA.has_value())
       return &BatchAA.value();
     return nullptr;
