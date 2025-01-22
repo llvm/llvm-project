@@ -1323,7 +1323,9 @@ static unsigned handleAArch64PAuthTlsRelocation(InputSectionBase *sec,
 unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
                                                 uint64_t offset, Symbol &sym,
                                                 int64_t addend) {
-  if (ctx.arg.emachine == EM_AARCH64)
+  bool isAArch64 = ctx.arg.emachine == EM_AARCH64;
+
+  if (isAArch64)
     if (unsigned processed = handleAArch64PAuthTlsRelocation(
             sec, expr, type, offset, sym, addend))
       return processed;
@@ -1362,10 +1364,10 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
     // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference a label. Do not
     // set NEEDS_TLSDESC on the label.
     if (expr != R_TLSDESC_CALL) {
-      if (!isRISCV || type == R_RISCV_TLSDESC_HI20)
-        sym.setFlags(
-            NEEDS_TLSDESC |
-            (ctx.arg.emachine == EM_AARCH64 ? NEEDS_TLSDESC_NONAUTH : 0));
+      if (isAArch64)
+        sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_NONAUTH);
+      else if (!isRISCV || type == R_RISCV_TLSDESC_HI20)
+        sym.setFlags(NEEDS_TLSDESC);
       sec->addReloc({expr, type, offset, addend, &sym});
     }
     return 1;
