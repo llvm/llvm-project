@@ -661,6 +661,7 @@ static ParseResult parseBlockArgClause(
   }
   return success();
 }
+
 static ParseResult parseBlockArgRegion(OpAsmParser &parser, Region &region,
                                        AllRegionParseArgs args) {
   llvm::SmallVector<OpAsmParser::Argument> entryBlockArgs;
@@ -3166,16 +3167,18 @@ LogicalResult ScanOp::verify() {
   if (hasExclusiveVars() == hasInclusiveVars())
     return emitError(
         "Exactly one of EXCLUSIVE or INCLUSIVE clause is expected");
-  if (WsloopOp parentWsLoopOp = (*this)->getParentOfType<WsloopOp>())
+  if (WsloopOp parentWsLoopOp = (*this)->getParentOfType<WsloopOp>()) {
     if (parentWsLoopOp.getReductionModAttr() &&
         parentWsLoopOp.getReductionModAttr().getValue() ==
-            mlir::omp::ReductionModifier::inscan)
+            ReductionModifier::inscan)
       return success();
-  if (SimdOp parentSimdOp = (*this)->getParentOfType<SimdOp>())
+  }
+  if (SimdOp parentSimdOp = (*this)->getParentOfType<SimdOp>()) {
     if (parentSimdOp.getReductionModAttr() &&
         parentSimdOp.getReductionModAttr().getValue() ==
-            mlir::omp::ReductionModifier::inscan)
+            ReductionModifier::inscan)
       return success();
+  }
   return emitError("SCAN directive needs to be enclosed within a parent "
                    "worksharing loop construct or SIMD construct with INSCAN "
                    "reduction modifier");
