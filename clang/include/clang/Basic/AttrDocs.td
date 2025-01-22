@@ -7784,7 +7784,14 @@ and https://microsoft.github.io/hlsl-specs/proposals/0013-wave-size-range.html
 }
 
 def HLSLRootSignatureDocs : Documentation {
-  let Category = DocCatUndocumented;
+  let Category = DocCatFunction;
+  let Content = [{
+The ``RootSignature`` attribute applies to HLSL entry functions to define what
+types of resources are bound to the graphics pipeline.
+
+For details about the use and specification of Root Signatures please see here:
+https://learn.microsoft.com/en-us/windows/win32/direct3d12/root-signatures
+  }];
 }
 
 def NumThreadsDocs : Documentation {
