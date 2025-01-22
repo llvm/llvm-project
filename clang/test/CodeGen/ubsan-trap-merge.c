@@ -6,16 +6,20 @@
 // N.B. although the clang driver defaults to -fsanitize-merge=undefined,
 // clang_cc1 defaults to non-merge. (This is similar to -fsanitize-recover, for
 // which the default is also applied at the driver level only.)
+//
+// FIXME: -fno-split-cold-code` is required because swift clang enables `HotColdSplittingPass` by default which
+// causes a divergence in IR from upstream (rdar://143354376).
+//
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 %s -o - -fsanitize-trap=signed-integer-overflow | FileCheck %s --check-prefixes=TRAP-NOMERGE
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 %s -o -                                         | FileCheck %s --check-prefixes=HANDLER-NOMERGE
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 %s -o - -fno-split-cold-code                    | FileCheck %s --check-prefixes=HANDLER-NOMERGE
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 %s -o - -fsanitize-minimal-runtime              | FileCheck %s --check-prefixes=MINRT-NOMERGE
 //
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 -fno-sanitize-merge=signed-integer-overflow  %s -o - -fsanitize-trap=signed-integer-overflow | FileCheck %s --check-prefixes=TRAP-NOMERGE
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 -fno-sanitize-merge=signed-integer-overflow  %s -o -                                         | FileCheck %s --check-prefixes=HANDLER-NOMERGE
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 -fno-sanitize-merge=signed-integer-overflow  %s -o - -fno-split-cold-code                    | FileCheck %s --check-prefixes=HANDLER-NOMERGE
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 -fno-sanitize-merge=signed-integer-overflow  %s -o - -fsanitize-minimal-runtime              | FileCheck %s --check-prefixes=MINRT-NOMERGE
 //
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 -fsanitize-merge=signed-integer-overflow %s -o - -fsanitize-trap=signed-integer-overflow | FileCheck %s --check-prefixes=TRAP-MERGE
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 -fsanitize-merge=signed-integer-overflow %s -o -                                         | FileCheck %s --check-prefixes=HANDLER-MERGE
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 -fsanitize-merge=signed-integer-overflow %s -o -  -fno-split-cold-code                   | FileCheck %s --check-prefixes=HANDLER-MERGE
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 -fsanitize-merge=signed-integer-overflow %s -o - -fsanitize-minimal-runtime              | FileCheck %s --check-prefixes=MINRT-MERGE
 //
 // REQUIRES: x86-registered-target
