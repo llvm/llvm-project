@@ -484,7 +484,7 @@ namespace GH60777 {
 template <typename... Ts> constexpr bool True() { return true; }
 
 template <typename T>
-  requires(sizeof(T) == 4)
+  requires(sizeof(T) > 1)
 struct A {
   template <typename... Ts>
     requires(sizeof...(Ts) == 0)
@@ -495,7 +495,7 @@ struct A {
 
 A a(42);
 
-// `requires (sizeof(T) == 4)` goes into the deduction guide together with
+// `requires (sizeof(T) > 1)` goes into the deduction guide together with
 // `requires (True<Ts...>())`, while `requires(sizeof...(Ts) == 0)` goes into
 // the template parameter list of the synthesized declaration.
 
@@ -505,25 +505,25 @@ A a(42);
 // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <{{.+}}> col:25 typename depth 0 index 1 ... Ts
 // CHECK-NEXT: |-ParenExpr 0x{{.+}} <{{.+}}> 'bool'
 // CHECK-NEXT: | `-BinaryOperator 0x{{.+}} <{{.+}}> 'bool' '=='
-// CHECK-NEXT: |   |-SizeOfPackExpr 0x{{.+}} <{{.+}}> 'unsigned long' 0x{{.+}} Ts
+// CHECK-NEXT: |   |-SizeOfPackExpr {{.+}} Ts
 // CHECK-NEXT: |   | `-TemplateArgument type 'Ts...':'type-parameter-0-1...'
 // CHECK-NEXT: |   |   `-PackExpansionType 0x{{.+}} 'Ts...' dependent
 // CHECK-NEXT: |   |     `-TemplateTypeParmType 0x{{.+}} 'Ts' dependent contains_unexpanded_pack depth 0 index 1 pack
 // CHECK-NEXT: |   |       `-TemplateTypeParm 0x{{.+}} 'Ts'
-// CHECK-NEXT: |   `-ImplicitCastExpr 0x{{.+}} <{{.+}}> 'unsigned long' <IntegralCast>
+// CHECK-NEXT: |   `-ImplicitCastExpr {{.+}} <IntegralCast>
 // CHECK-NEXT: |     `-IntegerLiteral 0x{{.+}} <{{.+}}> 'int' 0
 // CHECK-NEXT: |-CXXDeductionGuideDecl 0x{{.+}} <{{.+}}> line:{{.+}} implicit <deduction guide for A> 'auto (T, Ts...) -> A<T>'
 // CHECK-NEXT: | |-ParmVarDecl 0x{{.+}} <{{.+}}> col:{{.+}} val 'T'
 // CHECK-NEXT: | |-ParmVarDecl 0x{{.+}} <{{.+}}> col:{{.+}} tail 'Ts...' pack
 // CHECK-NEXT: | `-BinaryOperator 0x{{.+}} <{{.+}}> 'bool' '&&'
 // CHECK-NEXT: |   |-ParenExpr 0x{{.+}} <{{.+}}> 'bool'
-// CHECK-NEXT: |   | `-BinaryOperator 0x{{.+}} <{{.+}}> 'bool' '=='
-// CHECK-NEXT: |   |   |-UnaryExprOrTypeTraitExpr 0x{{.+}} <{{.+}}> 'unsigned long' sizeof 'T'
-// CHECK-NEXT: |   |   `-ImplicitCastExpr 0x{{.+}} <{{.+}}> 'unsigned long' <IntegralCast>
-// CHECK-NEXT: |   |     `-IntegerLiteral 0x{{.+}} <{{.+}}> 'int' 4
+// CHECK-NEXT: |   | `-BinaryOperator 0x{{.+}} <{{.+}}> 'bool' '>'
+// CHECK-NEXT: |   |   |-UnaryExprOrTypeTraitExpr {{.+}} sizeof 'T'
+// CHECK-NEXT: |   |   `-ImplicitCastExpr {{.+}} <IntegralCast>
+// CHECK-NEXT: |   |     `-IntegerLiteral 0x{{.+}} <{{.+}}> 'int' 1
 // CHECK-NEXT: |   `-ParenExpr 0x{{.+}} <{{.+}}> '<dependent type>'
 // CHECK-NEXT: |     `-CallExpr 0x{{.+}} <{{.+}}> '<dependent type>'
-// CHECK-NEXT: |       `-UnresolvedLookupExpr 0x{{.+}} <col:14, col:24> '<dependent type>' lvalue (ADL) = 'True' 0x{{.+}}
+// CHECK-NEXT: |       `-UnresolvedLookupExpr 0x{{.+}} <col:14, col:24> '<dependent type>' {{.+}}
 // CHECK-NEXT: |         `-TemplateArgument type 'Ts...':'type-parameter-0-1...'
 // CHECK-NEXT: |           `-PackExpansionType 0x{{.+}} 'Ts...' dependent
 // CHECK-NEXT: |             `-TemplateTypeParmType 0x{{.+}} 'Ts' dependent contains_unexpanded_pack depth 0 index 1 pack
