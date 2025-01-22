@@ -1372,7 +1372,7 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
       BaseType = Ptr->getPointeeType();
     else if (BaseType->isFunctionType())
       goto fail;
-    else if (BaseType->isDependentType())
+    else if (BaseExpr.get()->isTypeDependent())
       BaseType = S.Context.DependentTy;
     else if (BaseType->isRecordType()) {
       // Recover from arrow accesses to records, e.g.:
