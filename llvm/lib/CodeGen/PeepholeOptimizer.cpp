@@ -2019,11 +2019,6 @@ ValueTrackerResult ValueTracker::getNextSourceFromInsertSubreg() {
     // I.e., this may be turned into an assert.
     return ValueTrackerResult();
 
-  if (!TII)
-    // We could handle the REG_SEQUENCE here, but we do not want to
-    // duplicate the code from the generic TII.
-    return ValueTrackerResult();
-
   RegSubRegPair BaseReg;
   RegSubRegPairAndIdx InsertedReg;
   if (!TII->getInsertSubregInputs(*Def, DefIdx, BaseReg, InsertedReg))
@@ -2071,11 +2066,6 @@ ValueTrackerResult ValueTracker::getNextSourceFromExtractSubreg() {
   // Bail if we have to compose sub registers.
   // Indeed, if DefSubReg != 0, we would have to compose it with sub0.
   if (DefSubReg)
-    return ValueTrackerResult();
-
-  if (!TII)
-    // We could handle the EXTRACT_SUBREG here, but we do not want to
-    // duplicate the code from the generic TII.
     return ValueTrackerResult();
 
   RegSubRegPairAndIdx ExtractSubregInputReg;
