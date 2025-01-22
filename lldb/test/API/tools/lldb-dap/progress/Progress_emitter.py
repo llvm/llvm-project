@@ -60,7 +60,6 @@ class ProgressTesterCommand:
         self.help_string = self.parser.format_help()
 
     def __call__(self, debugger, command, exe_ctx, result):
-
         command_args = shlex.split(command)
         try:
             (cmd_options, args) = self.parser.parse_args(command_args)
