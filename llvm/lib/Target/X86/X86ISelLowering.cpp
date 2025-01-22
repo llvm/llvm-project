@@ -334,10 +334,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
     }
     setOperationAction(ISD::FCANONICALIZE, MVT::f32, Custom);
+    setOperationAction(ISD::FCANONICALIZE, MVT::f64, Custom);
     if (Subtarget.is64Bit()) {
       setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Custom);
       setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Custom);
-      setOperationAction(ISD::FCANONICALIZE, MVT::f64, Custom);
     }
   }
   if (Subtarget.hasAVX10_2()) {
@@ -29058,7 +29058,8 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
   SDValue IsNaN =
       DAG.getSetCC(DL, SetCCType, NewX, NewX, IsNum ? ISD::SETO : ISD::SETUO);
 
-  return DAG.getSelect(DL, VT, IsNaN, NewX, MinMax);
+  MinMax = DAG.getSelect(DL, VT, IsNaN, NewX, MinMax);
+  return DAG.getNode(ISD::FCANONICALIZE, DL, VT, MinMax);
 }
 
 static SDValue LowerABD(SDValue Op, const X86Subtarget &Subtarget,
