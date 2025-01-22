@@ -198,6 +198,22 @@ LogicalResult CreateNdDescOp::verify() {
       tdescMemorySpace == static_cast<unsigned>(MemorySpace::SLM))
     return emitOpError("SLM is not supported for 2D Block TensorDesc.\n");
 
+  if (auto attr = getType().getSGMapAttr()) {
+    auto wiLayout = attr.getWiLayout();
+    auto wiData = attr.getWiData();
+    if (wiData[0] < 1 || wiData[1] < 1 || (wiData[0] > 1 && wiData[1] > 1))
+      return emitOpError() << "`wi_data` values must be >=1 and can only be >1 "
+                              "along one dimension."
+                           << "\n";
+    auto tdescShape = getType().getShape();
+    for (size_t i = 0; i < tdescShape.size(); i++) {
+      if (tdescShape[i] % wiLayout[i])
+        return emitOpError() << "Work-items must uniformly divide a tile "
+                                "(tdescShape[i] % wiLayout[i] == 0)"
+                             << "\n";
+    }
+  }
+
   return success();
 }
 
@@ -249,6 +265,13 @@ LogicalResult LoadNdOp::verify() {
   auto array_len = tdescTy.getArrayLength();
   auto tdescShape = getShapeOf(tdescTy);
   auto valueShape = getShapeOf(valueTy);
+
+  if (auto attr = getTensorDescType().getSGMapAttr()) {
+    auto wiLayout = attr.getWiLayout();
+    for (size_t i = 0; i < tdescShape.size(); i++) {
+      tdescShape[i] /= wiLayout[i];
+    }
+  }
 
   if (getTranspose()) {
     auto trans = getTranspose().value();
