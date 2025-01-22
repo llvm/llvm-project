@@ -7,18 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXPERIMENTAL___SIMD_VEC_EXT_H
-#define _LIBCPP_EXPERIMENTAL___SIMD_VEC_EXT_H
+#ifndef _LIBCPP___CXX03_EXPERIMENTAL___SIMD_VEC_EXT_H
+#define _LIBCPP___CXX03_EXPERIMENTAL___SIMD_VEC_EXT_H
 
-#include <__assert>
-#include <__bit/bit_ceil.h>
-#include <__utility/forward.h>
-#include <__utility/integer_sequence.h>
-#include <cstddef>
-#include <experimental/__config>
-#include <experimental/__simd/declaration.h>
-#include <experimental/__simd/traits.h>
-#include <experimental/__simd/utility.h>
+#include <__cxx03/__assert>
+#include <__cxx03/__bit/bit_ceil.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/integer_sequence.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/experimental/__config>
+#include <__cxx03/experimental/__simd/declaration.h>
+#include <__cxx03/experimental/__simd/traits.h>
+#include <__cxx03/experimental/__simd/utility.h>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
 
@@ -116,4 +116,4 @@ struct __mask_operations<_Tp, simd_abi::__vec_ext<_Np>> {
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL
 
 #endif // _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
-#endif // _LIBCPP_EXPERIMENTAL___SIMD_VEC_EXT_H
+#endif // _LIBCPP___CXX03_EXPERIMENTAL___SIMD_VEC_EXT_H

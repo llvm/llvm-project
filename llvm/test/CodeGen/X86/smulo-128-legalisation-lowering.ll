@@ -101,11 +101,10 @@ define zeroext i1 @smuloi128(i128 %v1, i128 %v2, ptr %res) {
 ; X86-NEXT:    movl %edx, %ecx
 ; X86-NEXT:    movl %eax, %ebx
 ; X86-NEXT:    addl %esi, %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    adcl $0, %ecx
 ; X86-NEXT:    movl %edi, %eax
-; X86-NEXT:    mull %esi
-; X86-NEXT:    movl %esi, %ebp
+; X86-NEXT:    mull %ebp
 ; X86-NEXT:    movl %edx, %edi
 ; X86-NEXT:    movl %eax, %esi
 ; X86-NEXT:    addl %ebx, %esi
@@ -506,8 +505,8 @@ define zeroext i1 @smuloi256(i256 %v1, i256 %v2, ptr %res) {
 ; X64-NEXT:    addq %rax, %r9
 ; X64-NEXT:    adcq %rdx, %rsi
 ; X64-NEXT:    sarq $63, %r12
-; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax ## 8-byte Reload
-; X64-NEXT:    mulq %r12
+; X64-NEXT:    movq %r12, %rax
+; X64-NEXT:    mulq {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Folded Reload
 ; X64-NEXT:    movq %rdx, %rdi
 ; X64-NEXT:    movq %rax, %rcx
 ; X64-NEXT:    movq %rax, %r14

@@ -357,7 +357,7 @@ define void @broken_phi() {
 ; GFX906-NEXT:  bb:
 ; GFX906-NEXT:    br label [[BB1:%.*]]
 ; GFX906:       bb1:
-; GFX906-NEXT:    [[I:%.*]] = phi <4 x i8> [ <i8 1, i8 1, i8 1, i8 1>, [[BB:%.*]] ], [ [[I8:%.*]], [[BB7:%.*]] ]
+; GFX906-NEXT:    [[I:%.*]] = phi <4 x i8> [ splat (i8 1), [[BB:%.*]] ], [ [[I8:%.*]], [[BB7:%.*]] ]
 ; GFX906-NEXT:    br i1 false, label [[BB3:%.*]], label [[BB2:%.*]]
 ; GFX906:       bb2:
 ; GFX906-NEXT:    br label [[BB3]]
@@ -432,7 +432,7 @@ define amdgpu_kernel void @deletedPHI(i32 %in0, i1 %cmp, <10 x i8> %invec0) {
 ; GFX906-NEXT:    br label [[BB_1:%.*]]
 ; GFX906:       bb.1:
 ; GFX906-NEXT:    [[PHI0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[BB_11:%.*]] ]
-; GFX906-NEXT:    [[PHI1:%.*]] = phi <10 x i8> [ <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, [[ENTRY]] ], [ [[VEC1:%.*]], [[BB_11]] ]
+; GFX906-NEXT:    [[PHI1:%.*]] = phi <10 x i8> [ splat (i8 1), [[ENTRY]] ], [ [[VEC1:%.*]], [[BB_11]] ]
 ; GFX906-NEXT:    br i1 [[CMP]], label [[BB_3:%.*]], label [[BB_2:%.*]]
 ; GFX906:       bb.2:
 ; GFX906-NEXT:    br label [[BB_3]]
@@ -514,7 +514,7 @@ define amdgpu_kernel void @multiple_unwind(i1 %cmp, <10 x i8> %invec) {
 ; GFX906-NEXT:  entry:
 ; GFX906-NEXT:    br label [[BB_1:%.*]]
 ; GFX906:       bb.1:
-; GFX906-NEXT:    [[PHI0:%.*]] = phi <10 x i8> [ <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, [[ENTRY:%.*]] ], [ [[PHI3:%.*]], [[BB_8:%.*]] ]
+; GFX906-NEXT:    [[PHI0:%.*]] = phi <10 x i8> [ splat (i8 1), [[ENTRY:%.*]] ], [ [[PHI3:%.*]], [[BB_8:%.*]] ]
 ; GFX906-NEXT:    br i1 [[CMP]], label [[BB_3:%.*]], label [[BB_2:%.*]]
 ; GFX906:       bb.2:
 ; GFX906-NEXT:    br label [[BB_3]]

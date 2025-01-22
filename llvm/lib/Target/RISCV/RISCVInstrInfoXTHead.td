@@ -270,7 +270,7 @@ def TH_REVW : THRev_r<0b10010, 0b00, "th.revw">;
 
 let Predicates = [HasVendorXTHeadBs], DecoderNamespace = "XTHeadBs",
     IsSignExtendingOpW = 1 in
-def TH_TST : RVBShift_ri<0b10001, 0b001, OPC_CUSTOM_0, "th.tst">,
+def TH_TST : THShift_ri<0b10001, 0b001, "th.tst">,
              Sched<[WriteSingleBitImm, ReadSingleBitImm]>;
 
 let Predicates = [HasVendorXTHeadCondMov] in {
@@ -536,27 +536,23 @@ multiclass VPatTernaryVMAQA_VV_VX<string intrinsic, string instruction,
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasVendorXTHeadBa] in {
-def : Pat<(add (XLenVT GPR:$rs1), (shl GPR:$rs2, uimm2:$uimm2)),
+def : Pat<(add_like_non_imm12 (shl GPR:$rs2, uimm2:$uimm2), (XLenVT GPR:$rs1)),
           (TH_ADDSL GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
-def : Pat<(XLenVT (riscv_shl_add GPR:$rs1, uimm2:$uimm2, GPR:$rs2)),
-          (TH_ADDSL GPR:$rs2, GPR:$rs1, uimm2:$uimm2)>;
+def : Pat<(XLenVT (riscv_shl_add GPR:$rs2, uimm2:$uimm2, GPR:$rs1)),
+          (TH_ADDSL GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 
 // Reuse complex patterns from StdExtZba
-def : Pat<(add_non_imm12 sh1add_op:$rs1, (XLenVT GPR:$rs2)),
-          (TH_ADDSL GPR:$rs2, sh1add_op:$rs1, 1)>;
-def : Pat<(add_non_imm12 sh2add_op:$rs1, (XLenVT GPR:$rs2)),
-          (TH_ADDSL GPR:$rs2, sh2add_op:$rs1, 2)>;
-def : Pat<(add_non_imm12 sh3add_op:$rs1, (XLenVT GPR:$rs2)),
-          (TH_ADDSL GPR:$rs2, sh3add_op:$rs1, 3)>;
+def : Pat<(add_like_non_imm12 sh1add_op:$rs2, (XLenVT GPR:$rs1)),
+          (TH_ADDSL GPR:$rs1, sh1add_op:$rs2, 1)>;
+def : Pat<(add_like_non_imm12 sh2add_op:$rs2, (XLenVT GPR:$rs1)),
+          (TH_ADDSL GPR:$rs1, sh2add_op:$rs2, 2)>;
+def : Pat<(add_like_non_imm12 sh3add_op:$rs2, (XLenVT GPR:$rs1)),
+          (TH_ADDSL GPR:$rs1, sh3add_op:$rs2, 3)>;
 
-def : Pat<(add (XLenVT GPR:$r), CSImm12MulBy4:$i),
-          (TH_ADDSL GPR:$r, (XLenVT (ADDI (XLenVT X0), (SimmShiftRightBy2XForm CSImm12MulBy4:$i))), 2)>;
-def : Pat<(add (XLenVT GPR:$r), CSImm12MulBy8:$i),
-          (TH_ADDSL GPR:$r, (XLenVT (ADDI (XLenVT X0), (SimmShiftRightBy3XForm CSImm12MulBy8:$i))), 3)>;
-
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 200)),
-          (SLLI (XLenVT (TH_ADDSL (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 2)),
-                                  (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 2)), 2)), 3)>;
+def : Pat<(add_like (XLenVT GPR:$r), CSImm12MulBy4:$i),
+          (TH_ADDSL GPR:$r, (XLenVT (ADDI (XLenVT X0), CSImm12MulBy4:$i)), 2)>;
+def : Pat<(add_like (XLenVT GPR:$r), CSImm12MulBy8:$i),
+          (TH_ADDSL GPR:$r, (XLenVT (ADDI (XLenVT X0), CSImm12MulBy8:$i)), 3)>;
 } // Predicates = [HasVendorXTHeadBa]
 
 let Predicates = [HasVendorXTHeadBb] in {
@@ -769,7 +765,9 @@ defm : LdIdxPat<zextloadi16, TH_LRHU>;
 
 defm : StIdxPat<truncstorei8, TH_SRB, GPR>;
 defm : StIdxPat<truncstorei16, TH_SRH, GPR>;
+}
 
+let Predicates = [HasVendorXTHeadMemIdx, IsRV32] in {
 defm : LdIdxPat<load, TH_LRW, i32>;
 defm : StIdxPat<store, TH_SRW, GPR, i32>;
 }

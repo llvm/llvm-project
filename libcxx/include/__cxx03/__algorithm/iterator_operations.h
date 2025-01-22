@@ -6,36 +6,36 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_ITERATOR_OPERATIONS_H
-#define _LIBCPP___ALGORITHM_ITERATOR_OPERATIONS_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_ITERATOR_OPERATIONS_H
+#define _LIBCPP___CXX03___ALGORITHM_ITERATOR_OPERATIONS_H
 
-#include <__algorithm/iter_swap.h>
-#include <__algorithm/ranges_iterator_concept.h>
-#include <__assert>
-#include <__config>
-#include <__iterator/advance.h>
-#include <__iterator/distance.h>
-#include <__iterator/incrementable_traits.h>
-#include <__iterator/iter_move.h>
-#include <__iterator/iter_swap.h>
-#include <__iterator/iterator_traits.h>
-#include <__iterator/next.h>
-#include <__iterator/prev.h>
-#include <__iterator/readable_traits.h>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_reference.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/remove_cvref.h>
-#include <__utility/declval.h>
-#include <__utility/forward.h>
-#include <__utility/move.h>
+#include <__cxx03/__algorithm/iter_swap.h>
+#include <__cxx03/__algorithm/ranges_iterator_concept.h>
+#include <__cxx03/__assert>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/advance.h>
+#include <__cxx03/__iterator/distance.h>
+#include <__cxx03/__iterator/incrementable_traits.h>
+#include <__cxx03/__iterator/iter_move.h>
+#include <__cxx03/__iterator/iter_swap.h>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__iterator/next.h>
+#include <__cxx03/__iterator/prev.h>
+#include <__cxx03/__iterator/readable_traits.h>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/is_reference.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/remove_cvref.h>
+#include <__cxx03/__utility/declval.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -220,4 +220,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_ITERATOR_OPERATIONS_H
+#endif // _LIBCPP___CXX03___ALGORITHM_ITERATOR_OPERATIONS_H

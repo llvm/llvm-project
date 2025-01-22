@@ -10,10 +10,10 @@
 #ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_LIBCXXATOMIC_H
 #define LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_LIBCXXATOMIC_H
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 namespace lldb_private {
 namespace formatters {

@@ -17,7 +17,6 @@
 #include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyAsmPrinter.h"
-#include "WebAssemblyISelLowering.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/AsmPrinter.h"

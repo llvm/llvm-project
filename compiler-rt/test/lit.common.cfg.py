@@ -82,6 +82,8 @@ def push_dynamic_library_lookup_path(config, new_path):
         dynamic_library_lookup_var = "PATH"
     elif platform.system() == "Darwin":
         dynamic_library_lookup_var = "DYLD_LIBRARY_PATH"
+    elif platform.system() == "Haiku":
+        dynamic_library_lookup_var = "LIBRARY_PATH"
     else:
         dynamic_library_lookup_var = "LD_LIBRARY_PATH"
 
@@ -161,18 +163,26 @@ config.available_features.add(compiler_id)
 
 # When LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=on, the initial value of
 # config.compiler_rt_libdir (COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR) has the
-# triple as the trailing path component. The value is incorrect for -m32/-m64.
-# Adjust config.compiler_rt accordingly.
+# host triple as the trailing path component. The value is incorrect for 32-bit
+# tests on 64-bit hosts and vice versa. Adjust config.compiler_rt_libdir
+# accordingly.
 if config.enable_per_target_runtime_dir:
-    if "-m32" in shlex.split(config.target_cflags):
+    if config.target_arch == "i386":
         config.compiler_rt_libdir = re.sub(
             r"/x86_64(?=-[^/]+$)", "/i386", config.compiler_rt_libdir
         )
-    elif "-m64" in shlex.split(config.target_cflags):
+    elif config.target_arch == "x86_64":
         config.compiler_rt_libdir = re.sub(
             r"/i386(?=-[^/]+$)", "/x86_64", config.compiler_rt_libdir
         )
-
+    if config.target_arch == "sparc":
+        config.compiler_rt_libdir = re.sub(
+            r"/sparcv9(?=-[^/]+$)", "/sparc", config.compiler_rt_libdir
+        )
+    elif config.target_arch == "sparcv9":
+        config.compiler_rt_libdir = re.sub(
+            r"/sparc(?=-[^/]+$)", "/sparcv9", config.compiler_rt_libdir
+        )
 
 # Check if the test compiler resource dir matches the local build directory
 # (which happens with -DLLVM_ENABLE_PROJECTS=clang;compiler-rt) or if we are
@@ -267,7 +277,6 @@ possibly_dangerous_env_vars = [
     "COMPILER_PATH",
     "RC_DEBUG_OPTIONS",
     "CINDEXTEST_PREAMBLE_FILE",
-    "LIBRARY_PATH",
     "CPATH",
     "C_INCLUDE_PATH",
     "CPLUS_INCLUDE_PATH",
@@ -985,7 +994,11 @@ if config.host_os == "Darwin":
 # default configs for the test runs. In particular, anything hardening
 # related is likely to cause issues with sanitizer tests, because it may
 # preempt something we're looking to trap (e.g. _FORTIFY_SOURCE vs our ASAN).
-config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
+#
+# Only set this if we know we can still build for the target while disabling
+# default configs.
+if config.has_no_default_config_flag:
+    config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
 
 if config.has_compiler_rt_libatomic:
   base_lib = os.path.join(config.compiler_rt_libdir, "libclang_rt.atomic%s.so"

@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TUPLE_IGNORE_H
-#define _LIBCPP___TUPLE_IGNORE_H
+#ifndef _LIBCPP___CXX03___TUPLE_IGNORE_H
+#define _LIBCPP___CXX03___TUPLE_IGNORE_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -36,4 +36,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_CXX03_LANG
 
-#endif // _LIBCPP___TUPLE_IGNORE_H
+#endif // _LIBCPP___CXX03___TUPLE_IGNORE_H

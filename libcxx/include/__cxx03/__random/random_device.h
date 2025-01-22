@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_RANDOM_DEVICE_H
-#define _LIBCPP___RANDOM_RANDOM_DEVICE_H
+#ifndef _LIBCPP___CXX03___RANDOM_RANDOM_DEVICE_H
+#define _LIBCPP___CXX03___RANDOM_RANDOM_DEVICE_H
 
-#include <__config>
-#include <string>
+#include <__cxx03/__config>
+#include <__cxx03/string>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -78,4 +78,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_RANDOM_DEVICE_H
+#endif // _LIBCPP___CXX03___RANDOM_RANDOM_DEVICE_H

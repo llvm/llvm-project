@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_INTEGER_SEQUENCE_H
-#define _LIBCPP___UTILITY_INTEGER_SEQUENCE_H
+#ifndef _LIBCPP___CXX03___UTILITY_INTEGER_SEQUENCE_H
+#define _LIBCPP___CXX03___UTILITY_INTEGER_SEQUENCE_H
 
-#include <__config>
-#include <__type_traits/is_integral.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/is_integral.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -87,4 +87,4 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __for_each_index_sequence(index_sequence<_I
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_INTEGER_SEQUENCE_H
+#endif // _LIBCPP___CXX03___UTILITY_INTEGER_SEQUENCE_H

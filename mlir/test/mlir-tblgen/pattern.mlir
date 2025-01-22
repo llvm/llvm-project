@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-patterns -mlir-print-debuginfo -mlir-print-local-scope %s | FileCheck %s
+// RUN: mlir-opt -test-greedy-patterns -mlir-print-debuginfo -mlir-print-local-scope %s | FileCheck %s
 
 // CHECK-LABEL: verifyFusedLocs
 func.func @verifyFusedLocs(%arg0 : i32) -> i32 {

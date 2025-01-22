@@ -52,6 +52,12 @@ const Scope *FindModuleContaining(const Scope &start) {
       start, [](const Scope &scope) { return scope.IsModule(); });
 }
 
+const Scope *FindModuleOrSubmoduleContaining(const Scope &start) {
+  return FindScopeContaining(start, [](const Scope &scope) {
+    return scope.IsModule() || scope.IsSubmodule();
+  });
+}
+
 const Scope *FindModuleFileContaining(const Scope &start) {
   return FindScopeContaining(
       start, [](const Scope &scope) { return scope.IsModuleFile(); });
@@ -143,7 +149,9 @@ Tristate IsDefinedAssignment(
     return Tristate::Yes;
   } else if (lhsCat != TypeCategory::Derived) {
     return ToTristate(lhsCat != rhsCat &&
-        (!IsNumericTypeCategory(lhsCat) || !IsNumericTypeCategory(rhsCat)));
+        (!IsNumericTypeCategory(lhsCat) || !IsNumericTypeCategory(rhsCat) ||
+            lhsCat == TypeCategory::Unsigned ||
+            rhsCat == TypeCategory::Unsigned));
   } else if (MightBeSameDerivedType(lhsType, rhsType)) {
     return Tristate::Maybe; // TYPE(t) = TYPE(t) can be defined or intrinsic
   } else {
@@ -159,7 +167,9 @@ bool IsIntrinsicRelational(common::RelationalOperator opr,
   } else {
     auto cat0{type0.category()};
     auto cat1{type1.category()};
-    if (IsNumericTypeCategory(cat0) && IsNumericTypeCategory(cat1)) {
+    if (cat0 == TypeCategory::Unsigned || cat1 == TypeCategory::Unsigned) {
+      return cat0 == cat1;
+    } else if (IsNumericTypeCategory(cat0) && IsNumericTypeCategory(cat1)) {
       // numeric types: EQ/NE always ok, others ok for non-complex
       return opr == common::RelationalOperator::EQ ||
           opr == common::RelationalOperator::NE ||
@@ -540,9 +550,7 @@ const Symbol *FindOverriddenBinding(
           if (const Symbol *
               overridden{parentScope->FindComponent(symbol.name())}) {
             // 7.5.7.3 p1: only accessible bindings are overridden
-            if (!overridden->attrs().test(Attr::PRIVATE) ||
-                FindModuleContaining(overridden->owner()) ==
-                    FindModuleContaining(symbol.owner())) {
+            if (IsAccessible(*overridden, symbol.owner())) {
               return overridden;
             } else if (overridden->attrs().test(Attr::DEFERRED)) {
               isInaccessibleDeferred = true;
@@ -688,7 +696,7 @@ bool IsInitialized(const Symbol &symbol, bool ignoreDataStatements,
   } else if (IsNamedConstant(symbol)) {
     return false;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-    if (!object->isDummy() && object->type()) {
+    if ((!object->isDummy() || IsIntentOut(symbol)) && object->type()) {
       if (const auto *derived{object->type()->AsDerived()}) {
         return derived->HasDefaultInitialization(
             ignoreAllocatable, ignorePointer);
@@ -705,7 +713,7 @@ bool IsDestructible(const Symbol &symbol, const Symbol *derivedTypeSymbol) {
       IsPointer(symbol)) {
     return false;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-    if (!object->isDummy() && object->type()) {
+    if ((!object->isDummy() || IsIntentOut(symbol)) && object->type()) {
       if (const auto *derived{object->type()->AsDerived()}) {
         return &derived->typeSymbol() != derivedTypeSymbol &&
             derived->HasDestruction();
@@ -1116,23 +1124,31 @@ std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *symbol) {
   return object ? object->cudaDataAttr() : std::nullopt;
 }
 
+bool IsAccessible(const Symbol &original, const Scope &scope) {
+  const Symbol &ultimate{original.GetUltimate()};
+  if (ultimate.attrs().test(Attr::PRIVATE)) {
+    const Scope *module{FindModuleContaining(ultimate.owner())};
+    return !module || module->Contains(scope);
+  } else {
+    return true;
+  }
+}
+
 std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
     const Scope &scope, const Symbol &symbol) {
-  if (symbol.attrs().test(Attr::PRIVATE)) {
-    if (FindModuleFileContaining(scope)) {
-      // Don't enforce component accessibility checks in module files;
-      // there may be forward-substituted named constants of derived type
-      // whose structure constructors reference private components.
-    } else if (const Scope *
-        moduleScope{FindModuleContaining(symbol.owner())}) {
-      if (!moduleScope->Contains(scope)) {
-        return parser::MessageFormattedText{
-            "PRIVATE name '%s' is only accessible within module '%s'"_err_en_US,
-            symbol.name(), moduleScope->GetName().value()};
-      }
-    }
+  if (IsAccessible(symbol, scope)) {
+    return std::nullopt;
+  } else if (FindModuleFileContaining(scope)) {
+    // Don't enforce component accessibility checks in module files;
+    // there may be forward-substituted named constants of derived type
+    // whose structure constructors reference private components.
+    return std::nullopt;
+  } else {
+    return parser::MessageFormattedText{
+        "PRIVATE name '%s' is only accessible within module '%s'"_err_en_US,
+        symbol.name(),
+        DEREF(FindModuleContaining(symbol.owner())).GetName().value()};
   }
-  return std::nullopt;
 }
 
 SymbolVector OrderParameterNames(const Symbol &typeSymbol) {
@@ -1580,7 +1596,8 @@ const std::optional<parser::Name> &MaybeGetNodeName(
 
 std::optional<ArraySpec> ToArraySpec(
     evaluate::FoldingContext &context, const evaluate::Shape &shape) {
-  if (auto extents{evaluate::AsConstantExtents(context, shape)}) {
+  if (auto extents{evaluate::AsConstantExtents(context, shape)};
+      extents && !evaluate::HasNegativeExtent(*extents)) {
     ArraySpec result;
     for (const auto &extent : *extents) {
       result.emplace_back(ShapeSpec::MakeExplicit(Bound{extent}));
@@ -1649,7 +1666,40 @@ bool HasDefinedIo(common::DefinedIo which, const DerivedTypeSpec &derived,
       }
     }
   }
-  return false;
+  // Check for inherited defined I/O
+  const auto *parentType{derived.typeSymbol().GetParentTypeSpec()};
+  return parentType && HasDefinedIo(which, *parentType, scope);
+}
+
+template <typename E>
+std::forward_list<std::string> GetOperatorNames(
+    const SemanticsContext &context, E opr) {
+  std::forward_list<std::string> result;
+  for (const char *name : context.languageFeatures().GetNames(opr)) {
+    result.emplace_front("operator("s + name + ')');
+  }
+  return result;
+}
+
+std::forward_list<std::string> GetAllNames(
+    const SemanticsContext &context, const SourceName &name) {
+  std::string str{name.ToString()};
+  if (!name.empty() && name.end()[-1] == ')' &&
+      name.ToString().rfind("operator(", 0) == 0) {
+    for (int i{0}; i != common::LogicalOperator_enumSize; ++i) {
+      auto names{GetOperatorNames(context, common::LogicalOperator{i})};
+      if (llvm::is_contained(names, str)) {
+        return names;
+      }
+    }
+    for (int i{0}; i != common::RelationalOperator_enumSize; ++i) {
+      auto names{GetOperatorNames(context, common::RelationalOperator{i})};
+      if (llvm::is_contained(names, str)) {
+        return names;
+      }
+    }
+  }
+  return {str};
 }
 
 void WarnOnDeferredLengthCharacterScalar(SemanticsContext &context,

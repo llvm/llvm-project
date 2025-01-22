@@ -6,52 +6,52 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef _LIBCPP___EXPECTED_EXPECTED_H
-#define _LIBCPP___EXPECTED_EXPECTED_H
+#ifndef _LIBCPP___CXX03___EXPECTED_EXPECTED_H
+#define _LIBCPP___CXX03___EXPECTED_EXPECTED_H
 
-#include <__assert>
-#include <__config>
-#include <__expected/bad_expected_access.h>
-#include <__expected/unexpect.h>
-#include <__expected/unexpected.h>
-#include <__functional/invoke.h>
-#include <__memory/addressof.h>
-#include <__memory/construct_at.h>
-#include <__type_traits/conjunction.h>
-#include <__type_traits/disjunction.h>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_assignable.h>
-#include <__type_traits/is_constructible.h>
-#include <__type_traits/is_convertible.h>
-#include <__type_traits/is_function.h>
-#include <__type_traits/is_nothrow_assignable.h>
-#include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_reference.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/is_swappable.h>
-#include <__type_traits/is_trivially_constructible.h>
-#include <__type_traits/is_trivially_destructible.h>
-#include <__type_traits/is_trivially_relocatable.h>
-#include <__type_traits/is_void.h>
-#include <__type_traits/lazy.h>
-#include <__type_traits/negation.h>
-#include <__type_traits/remove_cv.h>
-#include <__type_traits/remove_cvref.h>
-#include <__utility/as_const.h>
-#include <__utility/exception_guard.h>
-#include <__utility/forward.h>
-#include <__utility/in_place.h>
-#include <__utility/move.h>
-#include <__utility/swap.h>
-#include <__verbose_abort>
-#include <initializer_list>
+#include <__cxx03/__assert>
+#include <__cxx03/__config>
+#include <__cxx03/__expected/bad_expected_access.h>
+#include <__cxx03/__expected/unexpect.h>
+#include <__cxx03/__expected/unexpected.h>
+#include <__cxx03/__functional/invoke.h>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__memory/construct_at.h>
+#include <__cxx03/__type_traits/conjunction.h>
+#include <__cxx03/__type_traits/disjunction.h>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_assignable.h>
+#include <__cxx03/__type_traits/is_constructible.h>
+#include <__cxx03/__type_traits/is_convertible.h>
+#include <__cxx03/__type_traits/is_function.h>
+#include <__cxx03/__type_traits/is_nothrow_assignable.h>
+#include <__cxx03/__type_traits/is_nothrow_constructible.h>
+#include <__cxx03/__type_traits/is_reference.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/is_swappable.h>
+#include <__cxx03/__type_traits/is_trivially_constructible.h>
+#include <__cxx03/__type_traits/is_trivially_destructible.h>
+#include <__cxx03/__type_traits/is_trivially_relocatable.h>
+#include <__cxx03/__type_traits/is_void.h>
+#include <__cxx03/__type_traits/lazy.h>
+#include <__cxx03/__type_traits/negation.h>
+#include <__cxx03/__type_traits/remove_cv.h>
+#include <__cxx03/__type_traits/remove_cvref.h>
+#include <__cxx03/__utility/as_const.h>
+#include <__cxx03/__utility/exception_guard.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/in_place.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/__utility/swap.h>
+#include <__cxx03/__verbose_abort>
+#include <__cxx03/initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 #if _LIBCPP_STD_VER >= 23
 
@@ -503,25 +503,24 @@ public:
 
 private:
   template <class _Up, class _OtherErr, class _UfQual, class _OtherErrQual>
-  using __can_convert =
-      _And< is_constructible<_Tp, _UfQual>,
-            is_constructible<_Err, _OtherErrQual>,
-            _If<_Not<is_same<remove_cv_t<_Tp>, bool>>::value,
-                _And< 
-                      _Not<_And<is_same<_Tp, _Up>, is_same<_Err, _OtherErr>>>, // use the copy constructor instead, see #92676
-                      _Not<is_constructible<_Tp, expected<_Up, _OtherErr>&>>,
-                      _Not<is_constructible<_Tp, expected<_Up, _OtherErr>>>,
-                      _Not<is_constructible<_Tp, const expected<_Up, _OtherErr>&>>,
-                      _Not<is_constructible<_Tp, const expected<_Up, _OtherErr>>>,
-                      _Not<is_convertible<expected<_Up, _OtherErr>&, _Tp>>,
-                      _Not<is_convertible<expected<_Up, _OtherErr>&&, _Tp>>,
-                      _Not<is_convertible<const expected<_Up, _OtherErr>&, _Tp>>,
-                      _Not<is_convertible<const expected<_Up, _OtherErr>&&, _Tp>>>,
-                true_type>,
-            _Not<is_constructible<unexpected<_Err>, expected<_Up, _OtherErr>&>>,
-            _Not<is_constructible<unexpected<_Err>, expected<_Up, _OtherErr>>>,
-            _Not<is_constructible<unexpected<_Err>, const expected<_Up, _OtherErr>&>>,
-            _Not<is_constructible<unexpected<_Err>, const expected<_Up, _OtherErr>>> >;
+  using __can_convert = _And<
+      is_constructible<_Tp, _UfQual>,
+      is_constructible<_Err, _OtherErrQual>,
+      _If<_Not<is_same<remove_cv_t<_Tp>, bool>>::value,
+          _And< _Not<_And<is_same<_Tp, _Up>, is_same<_Err, _OtherErr>>>, // use the copy constructor instead, see #92676
+                _Not<is_constructible<_Tp, expected<_Up, _OtherErr>&>>,
+                _Not<is_constructible<_Tp, expected<_Up, _OtherErr>>>,
+                _Not<is_constructible<_Tp, const expected<_Up, _OtherErr>&>>,
+                _Not<is_constructible<_Tp, const expected<_Up, _OtherErr>>>,
+                _Not<is_convertible<expected<_Up, _OtherErr>&, _Tp>>,
+                _Not<is_convertible<expected<_Up, _OtherErr>&&, _Tp>>,
+                _Not<is_convertible<const expected<_Up, _OtherErr>&, _Tp>>,
+                _Not<is_convertible<const expected<_Up, _OtherErr>&&, _Tp>>>,
+          true_type>,
+      _Not<is_constructible<unexpected<_Err>, expected<_Up, _OtherErr>&>>,
+      _Not<is_constructible<unexpected<_Err>, expected<_Up, _OtherErr>>>,
+      _Not<is_constructible<unexpected<_Err>, const expected<_Up, _OtherErr>&>>,
+      _Not<is_constructible<unexpected<_Err>, const expected<_Up, _OtherErr>>> >;
 
   template <class _Func, class... _Args>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit expected(
@@ -1872,4 +1871,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___EXPECTED_EXPECTED_H
+#endif // _LIBCPP___CXX03___EXPECTED_EXPECTED_H

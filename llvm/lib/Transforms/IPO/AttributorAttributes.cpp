@@ -33,7 +33,6 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -886,9 +885,8 @@ protected:
   AAPointerInfo::OffsetInfo ReturnedOffsets;
 
   /// See AAPointerInfo::forallInterferingAccesses.
-  bool forallInterferingAccesses(
-      AA::RangeTy Range,
-      function_ref<bool(const AAPointerInfo::Access &, bool)> CB) const {
+  template <typename F>
+  bool forallInterferingAccesses(AA::RangeTy Range, F CB) const {
     if (!isValidState() || !ReturnedOffsets.isUnassigned())
       return false;
 
@@ -907,10 +905,9 @@ protected:
   }
 
   /// See AAPointerInfo::forallInterferingAccesses.
-  bool forallInterferingAccesses(
-      Instruction &I,
-      function_ref<bool(const AAPointerInfo::Access &, bool)> CB,
-      AA::RangeTy &Range) const {
+  template <typename F>
+  bool forallInterferingAccesses(Instruction &I, F CB,
+                                 AA::RangeTy &Range) const {
     if (!isValidState() || !ReturnedOffsets.isUnassigned())
       return false;
 
@@ -1177,7 +1174,7 @@ struct AAPointerInfoImpl
     // TODO: Use reaching kernels from AAKernelInfo (or move it to
     // AAExecutionDomain) such that we allow scopes other than kernels as long
     // as the reaching kernels are disjoint.
-    bool InstInKernel = Scope.hasFnAttribute("kernel");
+    bool InstInKernel = A.getInfoCache().isKernel(Scope);
     bool ObjHasKernelLifetime = false;
     const bool UseDominanceReasoning =
         FindInterferingWrites && IsKnownNoRecurse;
@@ -1211,7 +1208,7 @@ struct AAPointerInfoImpl
       // If the alloca containing function is not recursive the alloca
       // must be dead in the callee.
       const Function *AIFn = AI->getFunction();
-      ObjHasKernelLifetime = AIFn->hasFnAttribute("kernel");
+      ObjHasKernelLifetime = A.getInfoCache().isKernel(*AIFn);
       bool IsKnownNoRecurse;
       if (AA::hasAssumedIRAttr<Attribute::NoRecurse>(
               A, this, IRPosition::function(*AIFn), DepClassTy::OPTIONAL,
@@ -1223,8 +1220,8 @@ struct AAPointerInfoImpl
       // as it is "dead" in the (unknown) callees.
       ObjHasKernelLifetime = HasKernelLifetime(GV, *GV->getParent());
       if (ObjHasKernelLifetime)
-        IsLiveInCalleeCB = [](const Function &Fn) {
-          return !Fn.hasFnAttribute("kernel");
+        IsLiveInCalleeCB = [&A](const Function &Fn) {
+          return !A.getInfoCache().isKernel(Fn);
         };
     }
 
@@ -1239,7 +1236,7 @@ struct AAPointerInfoImpl
       // If the object has kernel lifetime we can ignore accesses only reachable
       // by other kernels. For now we only skip accesses *in* other kernels.
       if (InstInKernel && ObjHasKernelLifetime && !AccInSameScope &&
-          AccScope->hasFnAttribute("kernel"))
+          A.getInfoCache().isKernel(*AccScope))
         return true;
 
       if (Exact && Acc.isMustAccess() && Acc.getRemoteInst() != &I) {
@@ -9241,12 +9238,12 @@ struct AAValueConstantRangeReturned
     : AAReturnedFromReturnedValues<AAValueConstantRange,
                                    AAValueConstantRangeImpl,
                                    AAValueConstantRangeImpl::StateType,
-                                   /* PropogateCallBaseContext */ true> {
+                                   /* PropagateCallBaseContext */ true> {
   using Base =
       AAReturnedFromReturnedValues<AAValueConstantRange,
                                    AAValueConstantRangeImpl,
                                    AAValueConstantRangeImpl::StateType,
-                                   /* PropogateCallBaseContext */ true>;
+                                   /* PropagateCallBaseContext */ true>;
   AAValueConstantRangeReturned(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 
@@ -12347,7 +12344,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     Value *FP = CB->getCalledOperand();
     if (FP->getType()->getPointerAddressSpace())
-      FP = new AddrSpaceCastInst(FP, PointerType::get(FP->getType(), 0),
+      FP = new AddrSpaceCastInst(FP, PointerType::get(FP->getContext(), 0),
                                  FP->getName() + ".as0", CB->getIterator());
 
     bool CBIsVoid = CB->getType()->isVoidTy();
@@ -12583,16 +12580,36 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
+    unsigned FlatAS = A.getInfoCache().getFlatAddressSpace().value();
     uint32_t OldAddressSpace = AssumedAddressSpace;
-    auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(getIRPosition(), this,
-                                                        DepClassTy::REQUIRED);
-    auto Pred = [&](Value &Obj) {
+
+    auto CheckAddressSpace = [&](Value &Obj) {
       if (isa<UndefValue>(&Obj))
         return true;
+      // If an argument in flat address space only has addrspace cast uses, and
+      // those casts are same, then we take the dst addrspace.
+      if (auto *Arg = dyn_cast<Argument>(&Obj)) {
+        if (Arg->getType()->getPointerAddressSpace() == FlatAS) {
+          unsigned CastAddrSpace = FlatAS;
+          for (auto *U : Arg->users()) {
+            auto *ASCI = dyn_cast<AddrSpaceCastInst>(U);
+            if (!ASCI)
+              return takeAddressSpace(Obj.getType()->getPointerAddressSpace());
+            if (CastAddrSpace != FlatAS &&
+                CastAddrSpace != ASCI->getDestAddressSpace())
+              return false;
+            CastAddrSpace = ASCI->getDestAddressSpace();
+          }
+          if (CastAddrSpace != FlatAS)
+            return takeAddressSpace(CastAddrSpace);
+        }
+      }
       return takeAddressSpace(Obj.getType()->getPointerAddressSpace());
     };
 
-    if (!AUO->forallUnderlyingObjects(Pred))
+    auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(getIRPosition(), this,
+                                                        DepClassTy::REQUIRED);
+    if (!AUO->forallUnderlyingObjects(CheckAddressSpace))
       return indicatePessimisticFixpoint();
 
     return OldAddressSpace == AssumedAddressSpace ? ChangeStatus::UNCHANGED
@@ -12601,17 +12618,21 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
 
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
-    if (getAddressSpace() == InvalidAddressSpace ||
-        getAddressSpace() == getAssociatedType()->getPointerAddressSpace())
+    unsigned NewAS = getAddressSpace();
+
+    if (NewAS == InvalidAddressSpace ||
+        NewAS == getAssociatedType()->getPointerAddressSpace())
       return ChangeStatus::UNCHANGED;
 
+    unsigned FlatAS = A.getInfoCache().getFlatAddressSpace().value();
+
     Value *AssociatedValue = &getAssociatedValue();
-    Value *OriginalValue = peelAddrspacecast(AssociatedValue);
+    Value *OriginalValue = peelAddrspacecast(AssociatedValue, FlatAS);
 
     PointerType *NewPtrTy =
-        PointerType::get(getAssociatedType()->getContext(), getAddressSpace());
+        PointerType::get(getAssociatedType()->getContext(), NewAS);
     bool UseOriginalValue =
-        OriginalValue->getType()->getPointerAddressSpace() == getAddressSpace();
+        OriginalValue->getType()->getPointerAddressSpace() == NewAS;
 
     bool Changed = false;
 
@@ -12671,12 +12692,19 @@ private:
     return AssumedAddressSpace == AS;
   }
 
-  static Value *peelAddrspacecast(Value *V) {
-    if (auto *I = dyn_cast<AddrSpaceCastInst>(V))
-      return peelAddrspacecast(I->getPointerOperand());
+  static Value *peelAddrspacecast(Value *V, unsigned FlatAS) {
+    if (auto *I = dyn_cast<AddrSpaceCastInst>(V)) {
+      assert(I->getSrcAddressSpace() != FlatAS &&
+             "there should not be flat AS -> non-flat AS");
+      return I->getPointerOperand();
+    }
     if (auto *C = dyn_cast<ConstantExpr>(V))
-      if (C->getOpcode() == Instruction::AddrSpaceCast)
-        return peelAddrspacecast(C->getOperand(0));
+      if (C->getOpcode() == Instruction::AddrSpaceCast) {
+        assert(C->getOperand(0)->getType()->getPointerAddressSpace() !=
+                   FlatAS &&
+               "there should not be flat AS -> non-flat AS X");
+        return C->getOperand(0);
+      }
     return V;
   }
 };

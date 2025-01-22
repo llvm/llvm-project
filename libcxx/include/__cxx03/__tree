@@ -7,45 +7,45 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TREE
-#define _LIBCPP___TREE
+#ifndef _LIBCPP___CXX03___TREE
+#define _LIBCPP___CXX03___TREE
 
-#include <__algorithm/min.h>
-#include <__assert>
-#include <__config>
-#include <__functional/invoke.h>
-#include <__iterator/distance.h>
-#include <__iterator/iterator_traits.h>
-#include <__iterator/next.h>
-#include <__memory/addressof.h>
-#include <__memory/allocator_traits.h>
-#include <__memory/compressed_pair.h>
-#include <__memory/pointer_traits.h>
-#include <__memory/swap_allocator.h>
-#include <__memory/unique_ptr.h>
-#include <__type_traits/can_extract_key.h>
-#include <__type_traits/conditional.h>
-#include <__type_traits/is_const.h>
-#include <__type_traits/is_constructible.h>
-#include <__type_traits/is_nothrow_assignable.h>
-#include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_pointer.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/is_swappable.h>
-#include <__type_traits/remove_const_ref.h>
-#include <__type_traits/remove_cvref.h>
-#include <__utility/forward.h>
-#include <__utility/move.h>
-#include <__utility/pair.h>
-#include <__utility/swap.h>
-#include <limits>
+#include <__cxx03/__algorithm/min.h>
+#include <__cxx03/__assert>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/invoke.h>
+#include <__cxx03/__iterator/distance.h>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__iterator/next.h>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__memory/allocator_traits.h>
+#include <__cxx03/__memory/compressed_pair.h>
+#include <__cxx03/__memory/pointer_traits.h>
+#include <__cxx03/__memory/swap_allocator.h>
+#include <__cxx03/__memory/unique_ptr.h>
+#include <__cxx03/__type_traits/can_extract_key.h>
+#include <__cxx03/__type_traits/conditional.h>
+#include <__cxx03/__type_traits/is_const.h>
+#include <__cxx03/__type_traits/is_constructible.h>
+#include <__cxx03/__type_traits/is_nothrow_assignable.h>
+#include <__cxx03/__type_traits/is_nothrow_constructible.h>
+#include <__cxx03/__type_traits/is_pointer.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/is_swappable.h>
+#include <__cxx03/__type_traits/remove_const_ref.h>
+#include <__cxx03/__type_traits/remove_cvref.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/__utility/pair.h>
+#include <__cxx03/__utility/swap.h>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -2296,4 +2296,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___TREE
+#endif // _LIBCPP___CXX03___TREE

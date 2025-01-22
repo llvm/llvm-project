@@ -596,12 +596,11 @@ struct BubbleDownVectorBitCastForExtract
     unsigned expandRatio =
         castDstType.getNumElements() / castSrcType.getNumElements();
 
-    auto getFirstIntValue = [](ArrayRef<OpFoldResult> values) -> uint64_t {
-      assert(values[0].is<Attribute>() && "Unexpected non-constant index");
-      return cast<IntegerAttr>(values[0].get<Attribute>()).getInt();
-    };
-
-    uint64_t index = getFirstIntValue(extractOp.getMixedPosition());
+    // Get the first element of the mixed position as integer.
+    auto mixedPos = extractOp.getMixedPosition();
+    if (mixedPos.size() > 0 && !isa<Attribute>(mixedPos[0]))
+      return failure();
+    uint64_t index = cast<IntegerAttr>(cast<Attribute>(mixedPos[0])).getInt();
 
     // Get the single scalar (as a vector) in the source value that packs the
     // desired scalar. E.g. extract vector<1xf32> from vector<4xf32>
@@ -1244,7 +1243,7 @@ static FailureOr<size_t>
 getTransferFoldableInnerUnitDims(MemRefType srcType, VectorType vectorType) {
   SmallVector<int64_t> srcStrides;
   int64_t srcOffset;
-  if (failed(getStridesAndOffset(srcType, srcStrides, srcOffset)))
+  if (failed(srcType.getStridesAndOffset(srcStrides, srcOffset)))
     return failure();
 
   auto isUnitDim = [](VectorType type, int dim) {

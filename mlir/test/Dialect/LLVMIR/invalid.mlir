@@ -91,14 +91,14 @@ func.func @alloca_non_integer_alignment() {
 // -----
 
 func.func @gep_missing_input_result_type(%pos : i64, %base : !llvm.ptr) {
-  // expected-error@+1 {{2 operands present, but expected 0}}
+  // expected-error@+1 {{number of operands and types do not match: got 2 operands and 0 types}}
   llvm.getelementptr %base[%pos] : () -> (), i64
 }
 
 // -----
 
 func.func @gep_missing_input_type(%pos : i64, %base : !llvm.ptr) {
-  // expected-error@+1 {{2 operands present, but expected 0}}
+  // expected-error@+1 {{number of operands and types do not match: got 2 operands and 0 types}}
   llvm.getelementptr %base[%pos] : () -> (!llvm.ptr), i64
 }
 
@@ -638,6 +638,21 @@ func.func @atomicrmw_mismatched_operands(%f32_ptr : !llvm.ptr, %f32 : f32) {
 func.func @atomicrmw_expected_float(%i32_ptr : !llvm.ptr, %i32 : i32) {
   // expected-error@+1 {{expected LLVM IR floating point type}}
   %0 = llvm.atomicrmw fadd %i32_ptr, %i32 unordered : !llvm.ptr, i32
+  llvm.return
+}
+
+// -----
+
+func.func @atomicrmw_scalable_vector(%ptr : !llvm.ptr, %f32_vec : vector<[2]xf32>) {
+  // expected-error@+1 {{'val' must be floating point LLVM type or LLVM pointer type or signless integer or LLVM dialect-compatible fixed-length vector type}}
+  %0 = llvm.atomicrmw fadd %ptr, %f32_vec unordered : !llvm.ptr, vector<[2]xf32>
+  llvm.return
+}
+// -----
+
+func.func @atomicrmw_vector_expected_float(%ptr : !llvm.ptr, %i32_vec : vector<3xi32>) {
+  // expected-error@+1 {{expected LLVM IR floating point type for vector element}}
+  %0 = llvm.atomicrmw fadd %ptr, %i32_vec unordered : !llvm.ptr, vector<3xi32>
   llvm.return
 }
 

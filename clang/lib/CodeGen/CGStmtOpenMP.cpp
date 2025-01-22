@@ -501,7 +501,7 @@ static llvm::Function *emitOutlinedFunctionPrologue(
   FunctionDecl *DebugFunctionDecl = nullptr;
   if (!FO.UIntPtrCastRequired) {
     FunctionProtoType::ExtProtoInfo EPI;
-    QualType FunctionTy = Ctx.getFunctionType(Ctx.VoidTy, std::nullopt, EPI);
+    QualType FunctionTy = Ctx.getFunctionType(Ctx.VoidTy, {}, EPI);
     DebugFunctionDecl = FunctionDecl::Create(
         Ctx, Ctx.getTranslationUnitDecl(), FO.S->getBeginLoc(),
         SourceLocation(), DeclarationName(), FunctionTy,
@@ -1809,6 +1809,7 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
     // thus calls destructors etc.
     auto FiniCB = [this](InsertPointTy IP) {
       OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
+      return llvm::Error::success();
     };
 
     // Privatization callback that performs appropriate action for
@@ -1831,15 +1832,17 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
                                InsertPointTy CodeGenIP) {
       OMPBuilderCBHelpers::EmitOMPOutlinedRegionBody(
           *this, ParallelRegionBodyStmt, AllocaIP, CodeGenIP, "parallel");
+      return llvm::Error::success();
     };
 
     CGCapturedStmtInfo CGSI(*CS, CR_OpenMP);
     CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(*this, &CGSI);
     llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
         AllocaInsertPt->getParent(), AllocaInsertPt->getIterator());
-    Builder.restoreIP(
+    llvm::OpenMPIRBuilder::InsertPointTy AfterIP = cantFail(
         OMPBuilder.createParallel(Builder, AllocaIP, BodyGenCB, PrivCB, FiniCB,
                                   IfCond, NumThreads, ProcBind, S.hasCancel()));
+    Builder.restoreIP(AfterIP);
     return;
   }
 
@@ -2128,9 +2131,11 @@ void CodeGenFunction::EmitOMPCanonicalLoop(const OMPCanonicalLoop *S) {
 
     RunCleanupsScope BodyScope(*this);
     EmitStmt(BodyStmt);
+    return llvm::Error::success();
   };
+
   llvm::CanonicalLoopInfo *CL =
-      OMPBuilder.createCanonicalLoop(Builder, BodyGen, DistVal);
+      cantFail(OMPBuilder.createCanonicalLoop(Builder, BodyGen, DistVal));
 
   // Finish up the loop.
   Builder.restoreIP(CL->getAfterIP());
@@ -4016,11 +4021,11 @@ static void emitOMPForDirective(const OMPLoopDirective &S, CodeGenFunction &CGF,
           CGM.getOpenMPRuntime().getOMPBuilder();
       llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
           CGF.AllocaInsertPt->getParent(), CGF.AllocaInsertPt->getIterator());
-      OMPBuilder.applyWorkshareLoop(
+      cantFail(OMPBuilder.applyWorkshareLoop(
           CGF.Builder.getCurrentDebugLocation(), CLI, AllocaIP, NeedsBarrier,
           SchedKind, ChunkSize, /*HasSimdModifier=*/false,
           /*HasMonotonicModifier=*/false, /*HasNonmonotonicModifier=*/false,
-          /*HasOrderedClause=*/false);
+          /*HasOrderedClause=*/false));
       return;
     }
 
@@ -4257,6 +4262,7 @@ void CodeGenFunction::EmitOMPSectionsDirective(const OMPSectionsDirective &S) {
 
     auto FiniCB = [this](InsertPointTy IP) {
       OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
+      return llvm::Error::success();
     };
 
     const CapturedStmt *ICS = S.getInnermostCapturedStmt();
@@ -4269,6 +4275,7 @@ void CodeGenFunction::EmitOMPSectionsDirective(const OMPSectionsDirective &S) {
                                          InsertPointTy CodeGenIP) {
           OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
               *this, SubStmt, AllocaIP, CodeGenIP, "section");
+          return llvm::Error::success();
         };
         SectionCBVector.push_back(SectionCB);
       }
@@ -4277,6 +4284,7 @@ void CodeGenFunction::EmitOMPSectionsDirective(const OMPSectionsDirective &S) {
                                             InsertPointTy CodeGenIP) {
         OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
             *this, CapturedStmt, AllocaIP, CodeGenIP, "section");
+        return llvm::Error::success();
       };
       SectionCBVector.push_back(SectionCB);
     }
@@ -4298,9 +4306,11 @@ void CodeGenFunction::EmitOMPSectionsDirective(const OMPSectionsDirective &S) {
     CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(*this, &CGSI);
     llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
         AllocaInsertPt->getParent(), AllocaInsertPt->getIterator());
-    Builder.restoreIP(OMPBuilder.createSections(
-        Builder, AllocaIP, SectionCBVector, PrivCB, FiniCB, S.hasCancel(),
-        S.getSingleClause<OMPNowaitClause>()));
+    llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
+        cantFail(OMPBuilder.createSections(
+            Builder, AllocaIP, SectionCBVector, PrivCB, FiniCB, S.hasCancel(),
+            S.getSingleClause<OMPNowaitClause>()));
+    Builder.restoreIP(AfterIP);
     return;
   }
   {
@@ -4326,17 +4336,21 @@ void CodeGenFunction::EmitOMPSectionDirective(const OMPSectionDirective &S) {
     const Stmt *SectionRegionBodyStmt = S.getAssociatedStmt();
     auto FiniCB = [this](InsertPointTy IP) {
       OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
+      return llvm::Error::success();
     };
 
     auto BodyGenCB = [SectionRegionBodyStmt, this](InsertPointTy AllocaIP,
                                                    InsertPointTy CodeGenIP) {
       OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
           *this, SectionRegionBodyStmt, AllocaIP, CodeGenIP, "section");
+      return llvm::Error::success();
     };
 
     LexicalScope Scope(*this, S.getSourceRange());
     EmitStopPoint(&S);
-    Builder.restoreIP(OMPBuilder.createSection(Builder, BodyGenCB, FiniCB));
+    llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
+        cantFail(OMPBuilder.createSection(Builder, BodyGenCB, FiniCB));
+    Builder.restoreIP(AfterIP);
 
     return;
   }
@@ -4407,17 +4421,21 @@ void CodeGenFunction::EmitOMPMasterDirective(const OMPMasterDirective &S) {
 
     auto FiniCB = [this](InsertPointTy IP) {
       OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
+      return llvm::Error::success();
     };
 
     auto BodyGenCB = [MasterRegionBodyStmt, this](InsertPointTy AllocaIP,
                                                   InsertPointTy CodeGenIP) {
       OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
           *this, MasterRegionBodyStmt, AllocaIP, CodeGenIP, "master");
+      return llvm::Error::success();
     };
 
     LexicalScope Scope(*this, S.getSourceRange());
     EmitStopPoint(&S);
-    Builder.restoreIP(OMPBuilder.createMaster(Builder, BodyGenCB, FiniCB));
+    llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
+        cantFail(OMPBuilder.createMaster(Builder, BodyGenCB, FiniCB));
+    Builder.restoreIP(AfterIP);
 
     return;
   }
@@ -4453,18 +4471,21 @@ void CodeGenFunction::EmitOMPMaskedDirective(const OMPMaskedDirective &S) {
 
     auto FiniCB = [this](InsertPointTy IP) {
       OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
+      return llvm::Error::success();
     };
 
     auto BodyGenCB = [MaskedRegionBodyStmt, this](InsertPointTy AllocaIP,
                                                   InsertPointTy CodeGenIP) {
       OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
           *this, MaskedRegionBodyStmt, AllocaIP, CodeGenIP, "masked");
+      return llvm::Error::success();
     };
 
     LexicalScope Scope(*this, S.getSourceRange());
     EmitStopPoint(&S);
-    Builder.restoreIP(
+    llvm::OpenMPIRBuilder::InsertPointTy AfterIP = cantFail(
         OMPBuilder.createMasked(Builder, BodyGenCB, FiniCB, FilterVal));
+    Builder.restoreIP(AfterIP);
 
     return;
   }
@@ -4493,19 +4514,23 @@ void CodeGenFunction::EmitOMPCriticalDirective(const OMPCriticalDirective &S) {
 
     auto FiniCB = [this](InsertPointTy IP) {
       OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
+      return llvm::Error::success();
     };
 
     auto BodyGenCB = [CriticalRegionBodyStmt, this](InsertPointTy AllocaIP,
                                                     InsertPointTy CodeGenIP) {
       OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
           *this, CriticalRegionBodyStmt, AllocaIP, CodeGenIP, "critical");
+      return llvm::Error::success();
     };
 
     LexicalScope Scope(*this, S.getSourceRange());
     EmitStopPoint(&S);
-    Builder.restoreIP(OMPBuilder.createCritical(
-        Builder, BodyGenCB, FiniCB, S.getDirectiveName().getAsString(),
-        HintInst));
+    llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
+        cantFail(OMPBuilder.createCritical(Builder, BodyGenCB, FiniCB,
+                                           S.getDirectiveName().getAsString(),
+                                           HintInst));
+    Builder.restoreIP(AfterIP);
 
     return;
   }
@@ -5464,11 +5489,14 @@ void CodeGenFunction::EmitOMPTaskgroupDirective(
                                InsertPointTy CodeGenIP) {
       Builder.restoreIP(CodeGenIP);
       EmitStmt(S.getInnermostCapturedStmt()->getCapturedStmt());
+      return llvm::Error::success();
     };
     CodeGenFunction::CGCapturedStmtInfo CapStmtInfo;
     if (!CapturedStmtInfo)
       CapturedStmtInfo = &CapStmtInfo;
-    Builder.restoreIP(OMPBuilder.createTaskgroup(Builder, AllocaIP, BodyGenCB));
+    llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
+        cantFail(OMPBuilder.createTaskgroup(Builder, AllocaIP, BodyGenCB));
+    Builder.restoreIP(AfterIP);
     return;
   }
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
@@ -5509,7 +5537,7 @@ void CodeGenFunction::EmitOMPFlushDirective(const OMPFlushDirective &S) {
         if (const auto *FlushClause = S.getSingleClause<OMPFlushClause>())
           return llvm::ArrayRef(FlushClause->varlist_begin(),
                                 FlushClause->varlist_end());
-        return std::nullopt;
+        return {};
       }(),
       S.getBeginLoc(), AO);
 }
@@ -5518,12 +5546,14 @@ void CodeGenFunction::EmitOMPDepobjDirective(const OMPDepobjDirective &S) {
   const auto *DO = S.getSingleClause<OMPDepobjClause>();
   LValue DOLVal = EmitLValue(DO->getDepobj());
   if (const auto *DC = S.getSingleClause<OMPDependClause>()) {
-    OMPTaskDataTy::DependData Dependencies(DC->getDependencyKind(),
-                                           DC->getModifier());
-    Dependencies.DepExprs.append(DC->varlist_begin(), DC->varlist_end());
-    Address DepAddr = CGM.getOpenMPRuntime().emitDepobjDependClause(
-        *this, Dependencies, DC->getBeginLoc());
-    EmitStoreOfScalar(DepAddr.emitRawPointer(*this), DOLVal);
+    // Build list and emit dependences
+    OMPTaskDataTy Data;
+    buildDependences(S, Data);
+    for (auto &Dep : Data.Dependences) {
+      Address DepAddr = CGM.getOpenMPRuntime().emitDepobjDependClause(
+          *this, Dep, DC->getBeginLoc());
+      EmitStoreOfScalar(DepAddr.emitRawPointer(*this), DOLVal);
+    }
     return;
   }
   if (const auto *DC = S.getSingleClause<OMPDestroyClause>()) {
@@ -6041,6 +6071,7 @@ void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
 
       auto FiniCB = [this](InsertPointTy IP) {
         OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
+        return llvm::Error::success();
       };
 
       auto BodyGenCB = [&S, C, this](InsertPointTy AllocaIP,
@@ -6064,11 +6095,13 @@ void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
           OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
               *this, CS->getCapturedStmt(), AllocaIP, CodeGenIP, "ordered");
         }
+        return llvm::Error::success();
       };
 
       OMPLexicalScope Scope(*this, S, OMPD_unknown);
-      Builder.restoreIP(
+      llvm::OpenMPIRBuilder::InsertPointTy AfterIP = cantFail(
           OMPBuilder.createOrderedThreadsSimd(Builder, BodyGenCB, FiniCB, !C));
+      Builder.restoreIP(AfterIP);
     }
     return;
   }
@@ -6199,7 +6232,7 @@ static void emitOMPAtomicReadExpr(CodeGenFunction &CGF, llvm::AtomicOrdering AO,
   case llvm::AtomicOrdering::Acquire:
   case llvm::AtomicOrdering::AcquireRelease:
   case llvm::AtomicOrdering::SequentiallyConsistent:
-    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, std::nullopt, Loc,
+    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, {}, Loc,
                                          llvm::AtomicOrdering::Acquire);
     break;
   case llvm::AtomicOrdering::Monotonic:
@@ -6228,7 +6261,7 @@ static void emitOMPAtomicWriteExpr(CodeGenFunction &CGF,
   case llvm::AtomicOrdering::Release:
   case llvm::AtomicOrdering::AcquireRelease:
   case llvm::AtomicOrdering::SequentiallyConsistent:
-    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, std::nullopt, Loc,
+    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, {}, Loc,
                                          llvm::AtomicOrdering::Release);
     break;
   case llvm::AtomicOrdering::Acquire:
@@ -6418,7 +6451,7 @@ static void emitOMPAtomicUpdateExpr(CodeGenFunction &CGF,
   case llvm::AtomicOrdering::Release:
   case llvm::AtomicOrdering::AcquireRelease:
   case llvm::AtomicOrdering::SequentiallyConsistent:
-    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, std::nullopt, Loc,
+    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, {}, Loc,
                                          llvm::AtomicOrdering::Release);
     break;
   case llvm::AtomicOrdering::Acquire:
@@ -6533,17 +6566,17 @@ static void emitOMPAtomicCaptureExpr(CodeGenFunction &CGF,
     // operation is also an acquire flush.
     switch (AO) {
     case llvm::AtomicOrdering::Release:
-      CGF.CGM.getOpenMPRuntime().emitFlush(CGF, std::nullopt, Loc,
+      CGF.CGM.getOpenMPRuntime().emitFlush(CGF, {}, Loc,
                                            llvm::AtomicOrdering::Release);
       break;
     case llvm::AtomicOrdering::Acquire:
-      CGF.CGM.getOpenMPRuntime().emitFlush(CGF, std::nullopt, Loc,
+      CGF.CGM.getOpenMPRuntime().emitFlush(CGF, {}, Loc,
                                            llvm::AtomicOrdering::Acquire);
       break;
     case llvm::AtomicOrdering::AcquireRelease:
     case llvm::AtomicOrdering::SequentiallyConsistent:
       CGF.CGM.getOpenMPRuntime().emitFlush(
-          CGF, std::nullopt, Loc, llvm::AtomicOrdering::AcquireRelease);
+          CGF, {}, Loc, llvm::AtomicOrdering::AcquireRelease);
       break;
     case llvm::AtomicOrdering::Monotonic:
       break;
@@ -7344,8 +7377,9 @@ void CodeGenFunction::EmitOMPCancelDirective(const OMPCancelDirective &S) {
       if (IfCond)
         IfCondition = EmitScalarExpr(IfCond,
                                      /*IgnoreResultAssign=*/true);
-      return Builder.restoreIP(
+      llvm::OpenMPIRBuilder::InsertPointTy AfterIP = cantFail(
           OMPBuilder.createCancel(Builder, IfCondition, S.getCancelRegion()));
+      return Builder.restoreIP(AfterIP);
     }
   }
 
@@ -7785,10 +7819,14 @@ void CodeGenFunction::EmitOMPTaskLoopBasedDirective(const OMPLoopDirective &S) {
     // grainsize clause
     Data.Schedule.setInt(/*IntVal=*/false);
     Data.Schedule.setPointer(EmitScalarExpr(Clause->getGrainsize()));
+    Data.HasModifier =
+        (Clause->getModifier() == OMPC_GRAINSIZE_strict) ? true : false;
   } else if (const auto *Clause = S.getSingleClause<OMPNumTasksClause>()) {
     // num_tasks clause
     Data.Schedule.setInt(/*IntVal=*/true);
     Data.Schedule.setPointer(EmitScalarExpr(Clause->getNumTasks()));
+    Data.HasModifier =
+        (Clause->getModifier() == OMPC_NUMTASKS_strict) ? true : false;
   }
 
   auto &&BodyGen = [CS, &S](CodeGenFunction &CGF, PrePostActionTy &) {
@@ -7944,6 +7982,18 @@ void CodeGenFunction::EmitOMPMasterTaskLoopDirective(
   CGM.getOpenMPRuntime().emitMasterRegion(*this, CodeGen, S.getBeginLoc());
 }
 
+void CodeGenFunction::EmitOMPMaskedTaskLoopDirective(
+    const OMPMaskedTaskLoopDirective &S) {
+  auto &&CodeGen = [this, &S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    Action.Enter(CGF);
+    EmitOMPTaskLoopBasedDirective(S);
+  };
+  auto LPCRegion =
+      CGOpenMPRuntime::LastprivateConditionalRAII::disable(*this, S);
+  OMPLexicalScope Scope(*this, S, std::nullopt, /*EmitPreInitStmt=*/false);
+  CGM.getOpenMPRuntime().emitMaskedRegion(*this, CodeGen, S.getBeginLoc());
+}
+
 void CodeGenFunction::EmitOMPMasterTaskLoopSimdDirective(
     const OMPMasterTaskLoopSimdDirective &S) {
   auto &&CodeGen = [this, &S](CodeGenFunction &CGF, PrePostActionTy &Action) {
@@ -7954,6 +8004,18 @@ void CodeGenFunction::EmitOMPMasterTaskLoopSimdDirective(
       CGOpenMPRuntime::LastprivateConditionalRAII::disable(*this, S);
   OMPLexicalScope Scope(*this, S);
   CGM.getOpenMPRuntime().emitMasterRegion(*this, CodeGen, S.getBeginLoc());
+}
+
+void CodeGenFunction::EmitOMPMaskedTaskLoopSimdDirective(
+    const OMPMaskedTaskLoopSimdDirective &S) {
+  auto &&CodeGen = [this, &S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    Action.Enter(CGF);
+    EmitOMPTaskLoopBasedDirective(S);
+  };
+  auto LPCRegion =
+      CGOpenMPRuntime::LastprivateConditionalRAII::disable(*this, S);
+  OMPLexicalScope Scope(*this, S);
+  CGM.getOpenMPRuntime().emitMaskedRegion(*this, CodeGen, S.getBeginLoc());
 }
 
 void CodeGenFunction::EmitOMPParallelMasterTaskLoopDirective(
@@ -7974,6 +8036,24 @@ void CodeGenFunction::EmitOMPParallelMasterTaskLoopDirective(
                                  emitEmptyBoundParameters);
 }
 
+void CodeGenFunction::EmitOMPParallelMaskedTaskLoopDirective(
+    const OMPParallelMaskedTaskLoopDirective &S) {
+  auto &&CodeGen = [this, &S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    auto &&TaskLoopCodeGen = [&S](CodeGenFunction &CGF,
+                                  PrePostActionTy &Action) {
+      Action.Enter(CGF);
+      CGF.EmitOMPTaskLoopBasedDirective(S);
+    };
+    OMPLexicalScope Scope(CGF, S, OMPD_parallel, /*EmitPreInitStmt=*/false);
+    CGM.getOpenMPRuntime().emitMaskedRegion(CGF, TaskLoopCodeGen,
+                                            S.getBeginLoc());
+  };
+  auto LPCRegion =
+      CGOpenMPRuntime::LastprivateConditionalRAII::disable(*this, S);
+  emitCommonOMPParallelDirective(*this, S, OMPD_masked_taskloop, CodeGen,
+                                 emitEmptyBoundParameters);
+}
+
 void CodeGenFunction::EmitOMPParallelMasterTaskLoopSimdDirective(
     const OMPParallelMasterTaskLoopSimdDirective &S) {
   auto &&CodeGen = [this, &S](CodeGenFunction &CGF, PrePostActionTy &Action) {
@@ -7989,6 +8069,24 @@ void CodeGenFunction::EmitOMPParallelMasterTaskLoopSimdDirective(
   auto LPCRegion =
       CGOpenMPRuntime::LastprivateConditionalRAII::disable(*this, S);
   emitCommonOMPParallelDirective(*this, S, OMPD_master_taskloop_simd, CodeGen,
+                                 emitEmptyBoundParameters);
+}
+
+void CodeGenFunction::EmitOMPParallelMaskedTaskLoopSimdDirective(
+    const OMPParallelMaskedTaskLoopSimdDirective &S) {
+  auto &&CodeGen = [this, &S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    auto &&TaskLoopCodeGen = [&S](CodeGenFunction &CGF,
+                                  PrePostActionTy &Action) {
+      Action.Enter(CGF);
+      CGF.EmitOMPTaskLoopBasedDirective(S);
+    };
+    OMPLexicalScope Scope(CGF, S, OMPD_parallel, /*EmitPreInitStmt=*/false);
+    CGM.getOpenMPRuntime().emitMaskedRegion(CGF, TaskLoopCodeGen,
+                                            S.getBeginLoc());
+  };
+  auto LPCRegion =
+      CGOpenMPRuntime::LastprivateConditionalRAII::disable(*this, S);
+  emitCommonOMPParallelDirective(*this, S, OMPD_masked_taskloop_simd, CodeGen,
                                  emitEmptyBoundParameters);
 }
 

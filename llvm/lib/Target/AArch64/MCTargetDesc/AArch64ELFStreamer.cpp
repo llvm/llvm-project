@@ -15,7 +15,6 @@
 #include "AArch64ELFStreamer.h"
 #include "AArch64MCTargetDesc.h"
 #include "AArch64TargetStreamer.h"
-#include "AArch64WinCOFFStreamer.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -37,7 +36,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 

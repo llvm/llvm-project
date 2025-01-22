@@ -28,6 +28,7 @@
 #include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -486,6 +487,12 @@ MemoryEffects Attribute::getMemoryEffects() const {
   return MemoryEffects::createFromIntValue(pImpl->getValueAsInt());
 }
 
+CaptureInfo Attribute::getCaptureInfo() const {
+  assert(hasAttribute(Attribute::Captures) &&
+         "Can only call getCaptureInfo() on captures attribute");
+  return CaptureInfo::createFromIntValue(pImpl->getValueAsInt());
+}
+
 FPClassTest Attribute::getNoFPClass() const {
   assert(hasAttribute(Attribute::NoFPClass) &&
          "Can only call getNoFPClass() on nofpclass attribute");
@@ -646,6 +653,13 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     return Result;
   }
 
+  if (hasAttribute(Attribute::Captures)) {
+    std::string Result;
+    raw_string_ostream OS(Result);
+    OS << getCaptureInfo();
+    return Result;
+  }
+
   if (hasAttribute(Attribute::NoFPClass)) {
     std::string Result = "nofpclass";
     raw_string_ostream OS(Result);
@@ -771,11 +785,11 @@ bool Attribute::canUseAsRetAttr(AttrKind Kind) {
 
 static bool hasIntersectProperty(Attribute::AttrKind Kind,
                                  AttributeProperty Prop) {
-  assert(Prop == AttributeProperty::IntersectPreserve ||
-         Prop == AttributeProperty::IntersectAnd ||
-         Prop == AttributeProperty::IntersectMin ||
-         Prop == AttributeProperty::IntersectCustom &&
-             "Unknown intersect property");
+  assert((Prop == AttributeProperty::IntersectPreserve ||
+          Prop == AttributeProperty::IntersectAnd ||
+          Prop == AttributeProperty::IntersectMin ||
+          Prop == AttributeProperty::IntersectCustom) &&
+         "Unknown intersect property");
   return (getAttributeProperties(Kind) &
           AttributeProperty::IntersectPropertyMask) == Prop;
 }
@@ -1049,6 +1063,10 @@ AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
         Intersected.addMemoryAttr(Attr0.getMemoryEffects() |
                                   Attr1.getMemoryEffects());
         break;
+      case Attribute::Captures:
+        Intersected.addCapturesAttr(Attr0.getCaptureInfo() |
+                                    Attr1.getCaptureInfo());
+        break;
       case Attribute::NoFPClass:
         Intersected.addNoFPClassAttr(Attr0.getNoFPClass() &
                                      Attr1.getNoFPClass());
@@ -1167,6 +1185,10 @@ AllocFnKind AttributeSet::getAllocKind() const {
 
 MemoryEffects AttributeSet::getMemoryEffects() const {
   return SetNode ? SetNode->getMemoryEffects() : MemoryEffects::unknown();
+}
+
+CaptureInfo AttributeSet::getCaptureInfo() const {
+  return SetNode ? SetNode->getCaptureInfo() : CaptureInfo::all();
 }
 
 FPClassTest AttributeSet::getNoFPClass() const {
@@ -1355,6 +1377,12 @@ MemoryEffects AttributeSetNode::getMemoryEffects() const {
   if (auto A = findEnumAttribute(Attribute::Memory))
     return A->getMemoryEffects();
   return MemoryEffects::unknown();
+}
+
+CaptureInfo AttributeSetNode::getCaptureInfo() const {
+  if (auto A = findEnumAttribute(Attribute::Captures))
+    return A->getCaptureInfo();
+  return CaptureInfo::all();
 }
 
 FPClassTest AttributeSetNode::getNoFPClass() const {
@@ -1799,12 +1827,10 @@ AttributeList::intersectWith(LLVMContext &C, AttributeList Other) const {
   if (*this == Other)
     return *this;
 
-  // At least for now, only intersect lists with same number of params.
-  if (getNumAttrSets() != Other.getNumAttrSets())
-    return std::nullopt;
-
   SmallVector<std::pair<unsigned, AttributeSet>> IntersectedAttrs;
-  for (unsigned Idx : indexes()) {
+  auto IndexIt =
+      index_iterator(std::max(getNumAttrSets(), Other.getNumAttrSets()));
+  for (unsigned Idx : IndexIt) {
     auto IntersectedAS =
         getAttributes(Idx).intersectWith(C, Other.getAttributes(Idx));
     // If any index fails to intersect, fail.
@@ -1930,6 +1956,14 @@ uint64_t AttributeList::getRetDereferenceableOrNullBytes() const {
 uint64_t
 AttributeList::getParamDereferenceableOrNullBytes(unsigned Index) const {
   return getParamAttrs(Index).getDereferenceableOrNullBytes();
+}
+
+std::optional<ConstantRange>
+AttributeList::getParamRange(unsigned ArgNo) const {
+  auto RangeAttr = getParamAttrs(ArgNo).getAttribute(Attribute::Range);
+  if (RangeAttr.isValid())
+    return RangeAttr.getRange();
+  return std::nullopt;
 }
 
 FPClassTest AttributeList::getRetNoFPClass() const {
@@ -2183,6 +2217,10 @@ AttrBuilder &AttrBuilder::addMemoryAttr(MemoryEffects ME) {
   return addRawIntAttr(Attribute::Memory, ME.toIntValue());
 }
 
+AttrBuilder &AttrBuilder::addCapturesAttr(CaptureInfo CI) {
+  return addRawIntAttr(Attribute::Captures, CI.toIntValue());
+}
+
 AttrBuilder &AttrBuilder::addNoFPClassAttr(FPClassTest Mask) {
   if (Mask == fcNone)
     return *this;
@@ -2278,6 +2316,13 @@ Attribute AttrBuilder::getAttribute(StringRef A) const {
   return {};
 }
 
+std::optional<ConstantRange> AttrBuilder::getRange() const {
+  const Attribute RangeAttr = getAttribute(Attribute::Range);
+  if (RangeAttr.isValid())
+    return RangeAttr.getRange();
+  return std::nullopt;
+}
+
 bool AttrBuilder::contains(Attribute::AttrKind A) const {
   return getAttribute(A).isValid();
 }
@@ -2296,16 +2341,12 @@ bool AttrBuilder::operator==(const AttrBuilder &B) const {
 
 /// Returns true if this is a type legal for the 'nofpclass' attribute. This
 /// follows the same type rules as FPMathOperator.
-///
-/// TODO: Consider relaxing to any FP type struct fields.
 bool AttributeFuncs::isNoFPClassCompatibleType(Type *Ty) {
-  while (ArrayType *ArrTy = dyn_cast<ArrayType>(Ty))
-    Ty = ArrTy->getElementType();
-  return Ty->isFPOrFPVectorTy();
+  return FPMathOperator::isSupportedFloatingPointType(Ty);
 }
 
 /// Which attributes cannot be applied to a type.
-AttributeMask AttributeFuncs::typeIncompatible(Type *Ty,
+AttributeMask AttributeFuncs::typeIncompatible(Type *Ty, AttributeSet AS,
                                                AttributeSafetyKind ASK) {
   AttributeMask Incompatible;
 
@@ -2321,6 +2362,11 @@ AttributeMask AttributeFuncs::typeIncompatible(Type *Ty,
     // Attributes that only apply to integers or vector of integers.
     if (ASK & ASK_SAFE_TO_DROP)
       Incompatible.addAttribute(Attribute::Range);
+  } else {
+    Attribute RangeAttr = AS.getAttribute(Attribute::Range);
+    if (RangeAttr.isValid() &&
+        RangeAttr.getRange().getBitWidth() != Ty->getScalarSizeInBits())
+      Incompatible.addAttribute(Attribute::Range);
   }
 
   if (!Ty->isPointerTy()) {
@@ -2335,7 +2381,8 @@ AttributeMask AttributeFuncs::typeIncompatible(Type *Ty,
           .addAttribute(Attribute::DereferenceableOrNull)
           .addAttribute(Attribute::Writable)
           .addAttribute(Attribute::DeadOnUnwind)
-          .addAttribute(Attribute::Initializes);
+          .addAttribute(Attribute::Initializes)
+          .addAttribute(Attribute::Captures);
     if (ASK & ASK_UNSAFE_TO_DROP)
       Incompatible.addAttribute(Attribute::Nest)
           .addAttribute(Attribute::SwiftError)

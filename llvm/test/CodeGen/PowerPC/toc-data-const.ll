@@ -1,11 +1,11 @@
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck %s --check-prefix CHECK
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff < %s | FileCheck %s --check-prefix CHECK
+; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck %s --check-prefix CHECK
+; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff < %s | FileCheck %s --check-prefix CHECK
 
-; RUN: llc -filetype=obj -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s -o %t32.o
+; RUN: llc -filetype=obj  -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s -o %t32.o
 ; RUN: llvm-readobj %t32.o --syms --relocs | FileCheck %s -D#NFA=2 --check-prefix=OBJ32
 ; RUN: llvm-objdump %t32.o -dr | FileCheck %s --check-prefix=DIS32
 
-; RUN: llc -filetype=obj -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs < %s -o %t64.o
+; RUN: llc -filetype=obj -mcpu=ppc64 -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs < %s -o %t64.o
 ; RUN: llvm-readobj %t64.o --syms --relocs | FileCheck %s -D#NFA=2 --check-prefix=OBJ64
 ; RUN: llvm-objdump %t64.o -dr | FileCheck %s --check-prefix=DIS64
 

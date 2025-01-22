@@ -366,8 +366,8 @@ void SIWholeQuadMode::markDefs(const MachineInstr &UseMI, LiveRange &LR,
 
       // Find next predecessor to process
       unsigned Idx = NextPredIdx;
-      auto PI = MBB->pred_begin() + Idx;
-      auto PE = MBB->pred_end();
+      const auto *PI = MBB->pred_begin() + Idx;
+      const auto *PE = MBB->pred_end();
       for (; PI != PE && !NextValue; ++PI, ++Idx) {
         if (const VNInfo *VN = LR.getVNInfoBefore(LIS->getMBBEndIdx(*PI))) {
           if (!Visited.count(VisitKey(VN, DefinedLanes)))
@@ -786,7 +786,7 @@ MachineBasicBlock *SIWholeQuadMode::splitBlock(MachineBasicBlock *BB,
     }
     DTUpdates.push_back({DomTreeT::Insert, BB, SplitBB});
     if (MDT)
-      MDT->getBase().applyUpdates(DTUpdates);
+      MDT->applyUpdates(DTUpdates);
     if (PDT)
       PDT->applyUpdates(DTUpdates);
 
@@ -960,7 +960,7 @@ MachineInstr *SIWholeQuadMode::lowerKillI1(MachineBasicBlock &MBB,
       // so exec mask needs to be factored in.
       TmpReg = MRI->createVirtualRegister(TRI->getBoolRC());
       ComputeKilledMaskMI =
-          BuildMI(MBB, MI, DL, TII->get(XorOpc), TmpReg).add(Op).addReg(Exec);
+          BuildMI(MBB, MI, DL, TII->get(AndN2Opc), TmpReg).addReg(Exec).add(Op);
       MaskUpdateMI = BuildMI(MBB, MI, DL, TII->get(AndN2Opc), LiveMaskReg)
                          .addReg(LiveMaskReg)
                          .addReg(TmpReg);
@@ -1036,7 +1036,7 @@ MachineInstr *SIWholeQuadMode::lowerKillI1(MachineBasicBlock &MBB,
 // This can only happen once all the live mask registers have been created
 // and the execute state (WQM/StrictWWM/Exact) of instructions is known.
 void SIWholeQuadMode::lowerBlock(MachineBasicBlock &MBB) {
-  auto BII = Blocks.find(&MBB);
+  auto *BII = Blocks.find(&MBB);
   if (BII == Blocks.end())
     return;
 
@@ -1261,7 +1261,7 @@ void SIWholeQuadMode::fromStrictMode(MachineBasicBlock &MBB,
 }
 
 void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
-  auto BII = Blocks.find(&MBB);
+  auto *BII = Blocks.find(&MBB);
   if (BII == Blocks.end())
     return;
 
@@ -1305,7 +1305,7 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
   // Record initial state is block information.
   BI.InitialState = State;
 
-  for (;;) {
+  for (unsigned Idx = 0;; ++Idx) {
     MachineBasicBlock::iterator Next = II;
     char Needs = StateExact | StateWQM; // Strict mode is disabled by default.
     char OutNeeds = 0;
@@ -1315,6 +1315,10 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
 
     if (FirstStrict == IE)
       FirstStrict = II;
+
+    // Adjust needs if this is first instruction of WQM requiring shader.
+    if (IsEntry && Idx == 0 && (BI.InNeeds & StateWQM))
+      Needs = StateWQM;
 
     // First, figure out the allowed states (Needs) based on the propagated
     // flags.
@@ -1801,6 +1805,9 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
     lowerKillInstrs(true);
     Changed = true;
   } else {
+    // Mark entry for WQM if required.
+    if (GlobalFlags & StateWQM)
+      Blocks[&Entry].InNeeds |= StateWQM;
     // Wave mode switching requires full lowering pass.
     for (auto BII : Blocks)
       processBlock(*BII.first, BII.first == &Entry);

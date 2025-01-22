@@ -9,8 +9,6 @@ set(LIBS
   FIRDialectSupport
   FIRSupport
   HLFIRDialect
-  ${dialect_libs}
-  ${extension_libs}
   LLVMTargetParser
 )
 
@@ -25,6 +23,7 @@ add_flang_unittest(FlangOptimizerTests
   Builder/Runtime/CommandTest.cpp
   Builder/Runtime/CharacterTest.cpp
   Builder/Runtime/DerivedTest.cpp
+  Builder/Runtime/IntrinsicsTest.cpp
   Builder/Runtime/NumericTest.cpp
   Builder/Runtime/RaggedTest.cpp
   Builder/Runtime/ReductionTest.cpp
@@ -46,3 +45,8 @@ DEPENDS
 target_link_libraries(FlangOptimizerTests
   PRIVATE
   ${LIBS})
+mlir_target_link_libraries(FlangOptimizerTests
+  PRIVATE
+  ${dialect_libs}
+  ${extension_libs}
+  )

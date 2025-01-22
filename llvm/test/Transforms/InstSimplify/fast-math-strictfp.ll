@@ -80,7 +80,7 @@ define float @fadd_unary_fnegx(float %x) #0 {
 
 define <2 x float> @fadd_binary_fnegx_commute_vec(<2 x float> %x) #0 {
 ; CHECK-LABEL: @fadd_binary_fnegx_commute_vec(
-; CHECK-NEXT:    [[NEGX:%.*]] = call <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float> <float -0.000000e+00, float -0.000000e+00>, <2 x float> [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    [[NEGX:%.*]] = call <2 x float> @llvm.experimental.constrained.fsub.v2f32(<2 x float> splat (float -0.000000e+00), <2 x float> [[X:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
 ; CHECK-NEXT:    [[R:%.*]] = call nnan <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> [[X]], <2 x float> [[NEGX]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
@@ -415,7 +415,7 @@ define double @frem_negzero_by_x(double %x) #0 {
 
 define <2 x double> @frem_negzero_by_x_vec_poison(<2 x double> %x) #0 {
 ; CHECK-LABEL: @frem_negzero_by_x_vec_poison(
-; CHECK-NEXT:    ret <2 x double> <double -0.000000e+00, double -0.000000e+00>
+; CHECK-NEXT:    ret <2 x double> splat (double -0.000000e+00)
 ;
   %r = call nnan <2 x double> @llvm.experimental.constrained.frem.v2f64(<2 x double> <double poison, double -0.0>, <2 x double> %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret <2 x double> %r

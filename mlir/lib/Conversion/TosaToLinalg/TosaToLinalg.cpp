@@ -78,16 +78,6 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   if (isa<tosa::SubOp>(op) && isa<IntegerType>(elementTy))
     return rewriter.create<arith::SubIOp>(loc, resultTypes, args);
 
-  // tosa::MulOp
-  if (isa<tosa::MulOp>(op) && isa<FloatType>(elementTy)) {
-    if (dyn_cast<tosa::MulOp>(op).getShift() != 0) {
-      (void)rewriter.notifyMatchFailure(op,
-                                        "Cannot have shift value for float");
-      return nullptr;
-    }
-    return rewriter.create<arith::MulFOp>(loc, resultTypes, args);
-  }
-
   // tosa::IntDivOp
   if (isa<tosa::IntDivOp>(op) && isa<IntegerType>(elementTy))
     return rewriter.create<arith::DivSIOp>(loc, resultTypes, args);
@@ -98,6 +88,10 @@ static Value createLinalgBodyCalculationForElementwiseOp(
         rewriter.create<arith::ConstantOp>(loc, FloatAttr::get(elementTy, 1));
     return rewriter.create<arith::DivFOp>(loc, resultTypes, one, args[0]);
   }
+
+  // tosa::MulOp
+  if (isa<tosa::MulOp>(op) && isa<FloatType>(elementTy))
+    return rewriter.create<arith::MulFOp>(loc, resultTypes, args);
 
   if (isa<tosa::MulOp>(op) && isa<IntegerType>(elementTy)) {
     Value a = args[0];
@@ -561,9 +555,10 @@ static Value createLinalgBodyCalculationForElementwiseOp(
       auto intMaxPlusOneFP = rewriter.create<arith::ConstantOp>(
           loc, rewriter.getFloatAttr(
                    getElementTypeOrSelf(srcTy),
-                   APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
-                           .getSExtValue() +
-                       1));
+                   static_cast<double>(
+                       APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
+                           .getSExtValue()) +
+                       1.0f));
 
       auto intMax = rewriter.create<arith::ConstantOp>(
           loc, rewriter.getIntegerAttr(
@@ -605,30 +600,33 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 static Value expandRank(PatternRewriter &rewriter, Location loc, Value tensor,
                         int64_t rank) {
   // No need to expand if we are already at the desired rank
-  auto shapedType = dyn_cast<ShapedType>(tensor.getType());
-  assert(shapedType && shapedType.hasRank() && "expected a ranked shaped type");
-  int64_t numExtraDims = rank - shapedType.getRank();
+  auto tensorType = dyn_cast<RankedTensorType>(tensor.getType());
+  assert(tensorType && "expected a ranked tensor type");
+  int64_t tensorRank = tensorType.getRank();
+  int64_t numExtraDims = rank - tensorRank;
   assert(numExtraDims >= 0 && "cannot expand tensor to a lower rank");
   if (!numExtraDims)
     return tensor;
 
   // Compute reassociation indices
-  SmallVector<SmallVector<int64_t, 2>> reassociationIndices(
-      shapedType.getRank());
+  SmallVector<ReassociationIndices> reassociationIndices(tensorRank);
   int64_t index = 0;
-  for (index = 0; index <= numExtraDims; index++)
-    reassociationIndices[0].push_back(index);
-  for (size_t position = 1; position < reassociationIndices.size(); position++)
-    reassociationIndices[position].push_back(index++);
+  if (tensorRank != 0) {
+    for (index = 0; index <= numExtraDims; index++)
+      reassociationIndices[0].push_back(index);
+    for (size_t position = 1; position < reassociationIndices.size();
+         position++)
+      reassociationIndices[position].push_back(index++);
+  }
 
   // Compute result type
   SmallVector<int64_t> resultShape;
   for (index = 0; index < numExtraDims; index++)
     resultShape.push_back(1);
-  for (auto size : shapedType.getShape())
+  for (auto size : tensorType.getShape())
     resultShape.push_back(size);
   auto resultType =
-      RankedTensorType::get(resultShape, shapedType.getElementType());
+      RankedTensorType::get(resultShape, tensorType.getElementType());
 
   // Emit 'tensor.expand_shape' op
   return rewriter.create<tensor::ExpandShapeOp>(loc, resultType, tensor,
@@ -706,9 +704,9 @@ computeTargetSize(PatternRewriter &rewriter, Location loc, IndexPool &indexPool,
 
   // Filter operands with dynamic dimension
   auto operandsWithDynamicDim =
-      llvm::to_vector(llvm::make_filter_range(operands, [&](Value operand) {
+      llvm::filter_to_vector(operands, [&](Value operand) {
         return cast<RankedTensorType>(operand.getType()).isDynamicDim(dim);
-      }));
+      });
 
   // If no operand has a dynamic dimension, it means all sizes were 1
   if (operandsWithDynamicDim.empty())
@@ -884,8 +882,14 @@ emitElementwiseComputation(ConversionPatternRewriter &rewriter, Location loc,
     auto shape = cast<ShapedType>(operand.getType()).getShape();
     SmallVector<AffineExpr> affineExprs;
     for (auto it : llvm::enumerate(shape)) {
-      auto affineExpr = it.value() == 1 ? rewriter.getAffineConstantExpr(0)
-                                        : rewriter.getAffineDimExpr(it.index());
+      // Prefer producting identity maps whenever possible (i.e. no broadcasting
+      // needed) because some transforms (like reshape folding)
+      // do not support affine constant exprs.
+      bool requiresBroadcast =
+          (it.value() == 1 && resultType.getDimSize(it.index()) != 1);
+      auto affineExpr = requiresBroadcast
+                            ? rewriter.getAffineConstantExpr(0)
+                            : rewriter.getAffineDimExpr(it.index());
       affineExprs.push_back(affineExpr);
     }
     return AffineMap::get(rank, 0, affineExprs, rewriter.getContext());
@@ -1158,6 +1162,9 @@ public:
       return rewriter.notifyMatchFailure(
           op, "tosa.rescale requires scale32 for double_round to be true");
 
+    if (!isa<IntegerType>(inputTy.getElementType()))
+      return rewriter.notifyMatchFailure(op, "only support integer type");
+
     SmallVector<Value> dynDims;
     for (int i = 0; i < outputTy.getRank(); i++) {
       if (outputTy.isDynamicDim(i)) {
@@ -1263,14 +1270,7 @@ public:
           Value shift = shiftConstant ? shiftConstant : blockArgs[shiftArg];
 
           if (valueTy.getIntOrFloatBitWidth() < 32) {
-            if (valueTy.isUnsignedInteger()) {
-              value = nestedBuilder
-                          .create<UnrealizedConversionCastOp>(
-                              nestedLoc,
-                              nestedBuilder.getIntegerType(
-                                  valueTy.getIntOrFloatBitWidth()),
-                              value)
-                          .getResult(0);
+            if (op.getInputUnsigned()) {
               value = nestedBuilder.create<arith::ExtUIOp>(
                   nestedLoc, nestedBuilder.getI32Type(), value);
             } else {
@@ -1299,7 +1299,7 @@ public:
           int32_t intMax = APInt::getSignedMaxValue(outBitWidth).getSExtValue();
 
           // Unsigned integers have a difference output value.
-          if (outIntType.isUnsignedInteger()) {
+          if (op.getOutputUnsigned()) {
             intMin = 0;
             intMax = APInt::getMaxValue(outBitWidth).getZExtValue();
           }
@@ -1316,13 +1316,6 @@ public:
             value = nestedBuilder.create<arith::TruncIOp>(
                 nestedLoc, rewriter.getIntegerType(outIntType.getWidth()),
                 value);
-
-            if (outIntType.isUnsignedInteger()) {
-              value = nestedBuilder
-                          .create<UnrealizedConversionCastOp>(nestedLoc,
-                                                              outIntType, value)
-                          .getResult(0);
-            }
           }
 
           nestedBuilder.create<linalg::YieldOp>(loc, value);
@@ -1899,7 +1892,9 @@ struct TileConverter : public OpConversionPattern<tosa::TileOp> {
     auto elementTy = inputTy.getElementType();
     int64_t rank = inputTy.getRank();
 
-    ArrayRef<int64_t> multiples = op.getMultiples();
+    SmallVector<int64_t> multiples;
+    if (failed(op.getConstantMultiples(multiples)))
+      return failure();
 
     // Broadcast the newly added dimensions to their appropriate multiple.
     SmallVector<int64_t, 2> genericShape;
@@ -2588,7 +2583,7 @@ struct FFT2dConverter final : OpRewritePattern<FFT2dOp> {
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgConversionPatterns(
-    TypeConverter &converter, RewritePatternSet *patterns) {
+    const TypeConverter &converter, RewritePatternSet *patterns) {
 
   // We have multiple resize coverters to handle degenerate cases.
   patterns->add<GenericResizeConverter>(patterns->getContext(),

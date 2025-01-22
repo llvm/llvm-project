@@ -28,6 +28,7 @@
 #include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Parser/Parser.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/ThreadPool.h"
 
 #include <cstddef>
@@ -736,6 +737,7 @@ static mlir::WalkResult unwrap(MlirWalkResult result) {
   case MlirWalkResultSkip:
     return mlir::WalkResult::skip();
   }
+  llvm_unreachable("unknown result in WalkResult::unwrap");
 }
 
 void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
@@ -1006,6 +1008,20 @@ MlirOpOperand mlirValueGetFirstUse(MlirValue value) {
 
 void mlirValueReplaceAllUsesOfWith(MlirValue oldValue, MlirValue newValue) {
   unwrap(oldValue).replaceAllUsesWith(unwrap(newValue));
+}
+
+void mlirValueReplaceAllUsesExcept(MlirValue oldValue, MlirValue newValue,
+                                   intptr_t numExceptions,
+                                   MlirOperation *exceptions) {
+  Value oldValueCpp = unwrap(oldValue);
+  Value newValueCpp = unwrap(newValue);
+
+  llvm::SmallPtrSet<mlir::Operation *, 4> exceptionSet;
+  for (intptr_t i = 0; i < numExceptions; ++i) {
+    exceptionSet.insert(unwrap(exceptions[i]));
+  }
+
+  oldValueCpp.replaceAllUsesExcept(newValueCpp, exceptionSet);
 }
 
 //===----------------------------------------------------------------------===//

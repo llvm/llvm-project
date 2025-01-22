@@ -54,7 +54,7 @@ TEST(Bytecode, MultiModuleWithResource) {
   constexpr size_t kAlignment = 0x20;
   size_t bufferSize = buffer.size();
   buffer.reserve(bufferSize + kAlignment - 1);
-  size_t pad = ~(uintptr_t)buffer.data() + 1 & kAlignment - 1;
+  size_t pad = (~(uintptr_t)buffer.data() + 1) & (kAlignment - 1);
   buffer.insert(0, pad, ' ');
   StringRef alignedBuffer(buffer.data() + pad, bufferSize);
 
@@ -69,8 +69,8 @@ TEST(Bytecode, MultiModuleWithResource) {
     GTEST_SKIP();
 
   // Try to see if we have a valid resource in the parsed module.
-  auto checkResourceAttribute = [&](Operation *op) {
-    Attribute attr = roundTripModule->getDiscardableAttr("bytecode.test");
+  auto checkResourceAttribute = [](Operation *parsedModule) {
+    Attribute attr = parsedModule->getDiscardableAttr("bytecode.test");
     ASSERT_TRUE(attr);
     auto denseResourceAttr = dyn_cast<DenseI32ResourceElementsAttr>(attr);
     ASSERT_TRUE(denseResourceAttr);

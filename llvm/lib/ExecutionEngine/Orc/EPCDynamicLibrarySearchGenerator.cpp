@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
+
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/Support/Error.h"
 
@@ -19,7 +21,8 @@ Expected<std::unique_ptr<EPCDynamicLibrarySearchGenerator>>
 EPCDynamicLibrarySearchGenerator::Load(
     ExecutionSession &ES, const char *LibraryPath, SymbolPredicate Allow,
     AddAbsoluteSymbolsFn AddAbsoluteSymbols) {
-  auto Handle = ES.getExecutorProcessControl().loadDylib(LibraryPath);
+  auto Handle =
+      ES.getExecutorProcessControl().getDylibMgr().loadDylib(LibraryPath);
   if (!Handle)
     return Handle.takeError();
 
@@ -48,10 +51,11 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
     LookupSymbols.add(KV.first, SymbolLookupFlags::WeaklyReferencedSymbol);
   }
 
-  ExecutorProcessControl::LookupRequest Request(H, LookupSymbols);
+  DylibManager::LookupRequest Request(H, LookupSymbols);
   // Copy-capture LookupSymbols, since LookupRequest keeps a reference.
-  EPC.lookupSymbolsAsync(Request, [this, &JD, LS = std::move(LS),
-                                   LookupSymbols](auto Result) mutable {
+  EPC.getDylibMgr().lookupSymbolsAsync(Request, [this, &JD, LS = std::move(LS),
+                                                 LookupSymbols](
+                                                    auto Result) mutable {
     if (!Result) {
       LLVM_DEBUG({
         dbgs() << "EPCDynamicLibrarySearchGenerator lookup failed due to error";

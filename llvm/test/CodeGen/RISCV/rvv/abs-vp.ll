@@ -567,6 +567,7 @@ define <vscale x 16 x i64> @vp_abs_nxv16i64(<vscale x 16 x i64> %va, <vscale x 1
 ; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
@@ -575,12 +576,11 @@ define <vscale x 16 x i64> @vp_abs_nxv16i64(<vscale x 16 x i64> %va, <vscale x 1
 ; CHECK-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 3
-; CHECK-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    sub a3, a0, a1
 ; CHECK-NEXT:    vslidedown.vx v0, v0, a2
-; CHECK-NEXT:    sub a2, a0, a1
-; CHECK-NEXT:    sltu a3, a0, a2
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a2, a3, a2
+; CHECK-NEXT:    sltu a2, a0, a3
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    and a2, a2, a3
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-NEXT:    vrsub.vi v8, v16, 0, v0.t
 ; CHECK-NEXT:    vmax.vv v8, v16, v8, v0.t
@@ -603,7 +603,9 @@ define <vscale x 16 x i64> @vp_abs_nxv16i64(<vscale x 16 x i64> %va, <vscale x 1
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %v = call <vscale x 16 x i64> @llvm.vp.abs.nxv16i64(<vscale x 16 x i64> %va, i1 false, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x i64> %v

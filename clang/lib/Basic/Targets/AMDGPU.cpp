@@ -260,9 +260,9 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
 void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
   TargetInfo::adjust(Diags, Opts);
   // ToDo: There are still a few places using default address space as private
-  // address space in OpenCL, which needs to be cleaned up, then Opts.OpenCL
-  // can be removed from the following line.
-  setAddressSpaceMap(/*DefaultIsPrivate=*/Opts.OpenCL ||
+  // address space in OpenCL, which needs to be cleaned up, then the references
+  // to OpenCL can be removed from the following line.
+  setAddressSpaceMap((Opts.OpenCL && !Opts.OpenCLGenericAddressSpace) ||
                      !isAMDGCN(getTriple()));
 }
 
@@ -337,9 +337,12 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (hasFastFMA())
     Builder.defineMacro("FP_FAST_FMA");
 
-  Builder.defineMacro("__AMDGCN_WAVEFRONT_SIZE__", Twine(WavefrontSize));
-  // ToDo: deprecate this macro for naming consistency.
-  Builder.defineMacro("__AMDGCN_WAVEFRONT_SIZE", Twine(WavefrontSize));
+  Builder.defineMacro("__AMDGCN_WAVEFRONT_SIZE__", Twine(WavefrontSize),
+                      "compile-time-constant access to the wavefront size will "
+                      "be removed in a future release");
+  Builder.defineMacro("__AMDGCN_WAVEFRONT_SIZE", Twine(WavefrontSize),
+                      "compile-time-constant access to the wavefront size will "
+                      "be removed in a future release");
   Builder.defineMacro("__AMDGCN_CUMODE__", Twine(CUMode));
 }
 

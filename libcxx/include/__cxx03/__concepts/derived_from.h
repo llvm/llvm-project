@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONCEPTS_DERIVED_FROM_H
-#define _LIBCPP___CONCEPTS_DERIVED_FROM_H
+#ifndef _LIBCPP___CXX03___CONCEPTS_DERIVED_FROM_H
+#define _LIBCPP___CXX03___CONCEPTS_DERIVED_FROM_H
 
-#include <__config>
-#include <__type_traits/is_base_of.h>
-#include <__type_traits/is_convertible.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/is_base_of.h>
+#include <__cxx03/__type_traits/is_convertible.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -30,4 +30,4 @@ concept derived_from = is_base_of_v<_Bp, _Dp> && is_convertible_v<const volatile
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CONCEPTS_DERIVED_FROM_H
+#endif // _LIBCPP___CXX03___CONCEPTS_DERIVED_FROM_H

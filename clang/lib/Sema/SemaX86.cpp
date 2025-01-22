@@ -629,8 +629,24 @@ bool SemaX86::CheckBuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall) {
     return false;
   case X86::BI__builtin_ia32_tileloadd64:
   case X86::BI__builtin_ia32_tileloaddt164:
+  case X86::BI__builtin_ia32_tileloaddrs64:
+  case X86::BI__builtin_ia32_tileloaddrst164:
   case X86::BI__builtin_ia32_tilestored64:
   case X86::BI__builtin_ia32_tilezero:
+  case X86::BI__builtin_ia32_t2rpntlvwz0:
+  case X86::BI__builtin_ia32_t2rpntlvwz0t1:
+  case X86::BI__builtin_ia32_t2rpntlvwz1:
+  case X86::BI__builtin_ia32_t2rpntlvwz1t1:
+  case X86::BI__builtin_ia32_t2rpntlvwz0rst1:
+  case X86::BI__builtin_ia32_t2rpntlvwz1rs:
+  case X86::BI__builtin_ia32_t2rpntlvwz1rst1:
+  case X86::BI__builtin_ia32_t2rpntlvwz0rs:
+  case X86::BI__builtin_ia32_tcvtrowps2bf16h:
+  case X86::BI__builtin_ia32_tcvtrowps2bf16l:
+  case X86::BI__builtin_ia32_tcvtrowps2phh:
+  case X86::BI__builtin_ia32_tcvtrowps2phl:
+  case X86::BI__builtin_ia32_tcvtrowd2ps:
+  case X86::BI__builtin_ia32_tilemovrow:
     return CheckBuiltinTileArgumentsRange(TheCall, 0);
   case X86::BI__builtin_ia32_tdpbssd:
   case X86::BI__builtin_ia32_tdpbsud:
@@ -640,7 +656,21 @@ bool SemaX86::CheckBuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_tdpfp16ps:
   case X86::BI__builtin_ia32_tcmmimfp16ps:
   case X86::BI__builtin_ia32_tcmmrlfp16ps:
+  case X86::BI__builtin_ia32_tdpbf8ps:
+  case X86::BI__builtin_ia32_tdpbhf8ps:
+  case X86::BI__builtin_ia32_tdphbf8ps:
+  case X86::BI__builtin_ia32_tdphf8ps:
+  case X86::BI__builtin_ia32_ttdpbf16ps:
+  case X86::BI__builtin_ia32_ttdpfp16ps:
+  case X86::BI__builtin_ia32_ttcmmimfp16ps:
+  case X86::BI__builtin_ia32_ttcmmrlfp16ps:
+  case X86::BI__builtin_ia32_tconjtcmmimfp16ps:
+  case X86::BI__builtin_ia32_tmmultf32ps:
+  case X86::BI__builtin_ia32_ttmmultf32ps:
     return CheckBuiltinTileRangeAndDuplicate(TheCall, {0, 1, 2});
+  case X86::BI__builtin_ia32_ttransposed:
+  case X86::BI__builtin_ia32_tconjtfp16:
+    return CheckBuiltinTileArgumentsRange(TheCall, {0, 1});
   }
 }
 static bool isX86_32Builtin(unsigned BuiltinID) {
@@ -1015,9 +1045,9 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_vpshrdw128:
   case X86::BI__builtin_ia32_vpshrdw256:
   case X86::BI__builtin_ia32_vpshrdw512:
-  case X86::BI__builtin_ia32_vminmaxnepbf16128:
-  case X86::BI__builtin_ia32_vminmaxnepbf16256:
-  case X86::BI__builtin_ia32_vminmaxnepbf16512:
+  case X86::BI__builtin_ia32_vminmaxbf16128:
+  case X86::BI__builtin_ia32_vminmaxbf16256:
+  case X86::BI__builtin_ia32_vminmaxbf16512:
   case X86::BI__builtin_ia32_vminmaxpd128_mask:
   case X86::BI__builtin_ia32_vminmaxpd256_round_mask:
   case X86::BI__builtin_ia32_vminmaxph128_mask:

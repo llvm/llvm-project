@@ -335,6 +335,11 @@ public:
 
   bool hasArmWideBranch(bool Thumb) const;
 
+  bool isProfitableToSinkOperands(Instruction *I,
+                                  SmallVectorImpl<Use *> &Ops) const;
+
+  unsigned getNumBytesToPadGlobalArray(unsigned Size, Type *ArrayType) const;
+
   /// @}
 };
 

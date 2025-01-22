@@ -24,6 +24,7 @@
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -59,6 +60,8 @@ protected:
   unsigned IsLateParsed : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned InheritEvenIfAlreadyPresent : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned DeferDeserialization : 1;
 
   void *operator new(size_t bytes) noexcept {
     llvm_unreachable("Attrs cannot be allocated with regular 'new'.");
@@ -79,10 +82,11 @@ public:
 
 protected:
   Attr(ASTContext &Context, const AttributeCommonInfo &CommonInfo,
-       attr::Kind AK, bool IsLateParsed)
+       attr::Kind AK, bool IsLateParsed, bool DeferDeserialization = false)
       : AttributeCommonInfo(CommonInfo), AttrKind(AK), Inherited(false),
         IsPackExpansion(false), Implicit(false), IsLateParsed(IsLateParsed),
-        InheritEvenIfAlreadyPresent(false) {}
+        InheritEvenIfAlreadyPresent(false),
+        DeferDeserialization(DeferDeserialization) {}
 
 public:
   attr::Kind getKind() const { return static_cast<attr::Kind>(AttrKind); }
@@ -103,6 +107,8 @@ public:
 
   void setPackExpansion(bool PE) { IsPackExpansion = PE; }
   bool isPackExpansion() const { return IsPackExpansion; }
+
+  bool shouldDeferDeserialization() const { return DeferDeserialization; }
 
   // Clone this attribute.
   Attr *clone(ASTContext &C) const;
@@ -145,8 +151,9 @@ class InheritableAttr : public Attr {
 protected:
   InheritableAttr(ASTContext &Context, const AttributeCommonInfo &CommonInfo,
                   attr::Kind AK, bool IsLateParsed,
-                  bool InheritEvenIfAlreadyPresent)
-      : Attr(Context, CommonInfo, AK, IsLateParsed) {
+                  bool InheritEvenIfAlreadyPresent,
+                  bool DeferDeserialization = false)
+      : Attr(Context, CommonInfo, AK, IsLateParsed, DeferDeserialization) {
     this->InheritEvenIfAlreadyPresent = InheritEvenIfAlreadyPresent;
   }
 
@@ -194,6 +201,23 @@ public:
   static bool classof(const Attr *A) {
     return A->getKind() >= attr::FirstInheritableParamAttr &&
            A->getKind() <= attr::LastInheritableParamAttr;
+  }
+};
+
+class InheritableParamOrStmtAttr : public InheritableParamAttr {
+protected:
+  InheritableParamOrStmtAttr(ASTContext &Context,
+                             const AttributeCommonInfo &CommonInfo,
+                             attr::Kind AK, bool IsLateParsed,
+                             bool InheritEvenIfAlreadyPresent)
+      : InheritableParamAttr(Context, CommonInfo, AK, IsLateParsed,
+                             InheritEvenIfAlreadyPresent) {}
+
+public:
+  // Implement isa/cast/dyncast/etc.
+  static bool classof(const Attr *A) {
+    return A->getKind() >= attr::FirstInheritableParamOrStmtAttr &&
+           A->getKind() <= attr::LastInheritableParamOrStmtAttr;
   }
 };
 

@@ -232,6 +232,43 @@ SYMBOL(ssize, std::, <string_view>)
 SYMBOL(ssize, std::, <unordered_map>)
 SYMBOL(ssize, std::, <unordered_set>)
 SYMBOL(ssize, std::, <vector>)
+// C++ [range.access.general]: ... the customization point objects
+// in [range.access] are available when the header <iterator> is included.
+// (see https://eel.is/c++draft/range.access#general)
+SYMBOL(begin, std::ranges::, <ranges>)
+SYMBOL(begin, std::ranges::, <iterator>)
+SYMBOL(end, std::ranges::, <ranges>)
+SYMBOL(end, std::ranges::, <iterator>)
+SYMBOL(cbegin, std::ranges::, <ranges>)
+SYMBOL(cbegin, std::ranges::, <iterator>)
+SYMBOL(cend, std::ranges::, <ranges>)
+SYMBOL(cend, std::ranges::, <iterator>)
+SYMBOL(rbegin, std::ranges::, <ranges>)
+SYMBOL(rbegin, std::ranges::, <iterator>)
+SYMBOL(rend, std::ranges::, <ranges>)
+SYMBOL(rend, std::ranges::, <iterator>)
+SYMBOL(crbegin, std::ranges::, <ranges>)
+SYMBOL(crbegin, std::ranges::, <iterator>)
+SYMBOL(crend, std::ranges::, <ranges>)
+SYMBOL(crend, std::ranges::, <iterator>)
+SYMBOL(size, std::ranges::, <ranges>)
+SYMBOL(size, std::ranges::, <iterator>)
+SYMBOL(ssize, std::ranges::, <ranges>)
+SYMBOL(ssize, std::ranges::, <iterator>)
+SYMBOL(empty, std::ranges::, <ranges>)
+SYMBOL(empty, std::ranges::, <iterator>)
+SYMBOL(data, std::ranges::, <ranges>)
+SYMBOL(data, std::ranges::, <iterator>)
+SYMBOL(cdata, std::ranges::, <ranges>)
+SYMBOL(cdata, std::ranges::, <iterator>)
+// https://eel.is/c++draft/tuple.general#2:
+// In addition to being available via inclusion of the <tuple> header,
+// ignore ... is available when <utility> ... is included.
+SYMBOL(ignore, std::, <tuple>)
+SYMBOL(ignore, std::, <utility>)
+
+// Ignore specializations
+SYMBOL(hash, std::, <functional>)
 
 // Add headers for generic integer-type abs.
 // Ignore other variants (std::complex, std::valarray, std::intmax_t)
@@ -352,20 +389,20 @@ SYMBOL(get, std::, /*no headers*/)
 // providing the type.
 SYMBOL(make_error_code, std::, /*no headers*/)
 SYMBOL(make_error_condition, std::, /*no headers*/)
-
-// cppreference symbol index page was missing these symbols.
-// Remove them when the cppreference offline archive catches up.
-SYMBOL(index_sequence, std::, <utility>)
-SYMBOL(index_sequence_for, std::, <utility>)
-SYMBOL(make_index_sequence, std::, <utility>)
-SYMBOL(make_integer_sequence, std::, <utility>)
+// Similar to std::get, has variants for multiple containers
+// (vector, deque, list, etc.)
+SYMBOL(erase, std::, /*no headers*/)
+SYMBOL(erase_if, std::, /*no headers*/)
 
 // Symbols missing from the generated symbol map as reported by users.
 // Remove when the generator starts producing them.
-SYMBOL(make_any, std::, <any>)
-SYMBOL(any_cast, std::, <any>)
 SYMBOL(div, std::, <cstdlib>)
 SYMBOL(abort, std::, <cstdlib>)
+
+SYMBOL(binary_search, std::ranges::, <algorithm>)
+SYMBOL(equal_range, std::ranges::, <algorithm>)
+SYMBOL(lower_bound, std::ranges::, <algorithm>)
+SYMBOL(upper_bound, std::ranges::, <algorithm>)
 
 // These are C symbols that are not under std namespace.
 SYMBOL(localtime_r, None, <ctime>)

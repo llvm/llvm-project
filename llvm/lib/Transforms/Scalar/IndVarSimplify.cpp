@@ -55,8 +55,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
@@ -66,7 +64,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -598,8 +595,8 @@ bool IndVarSimplify::simplifyAndExtend(Loop *L,
                                        LoopInfo *LI) {
   SmallVector<WideIVInfo, 8> WideIVs;
 
-  auto *GuardDecl = L->getBlocks()[0]->getModule()->getFunction(
-          Intrinsic::getName(Intrinsic::experimental_guard));
+  auto *GuardDecl = Intrinsic::getDeclarationIfExists(
+      L->getBlocks()[0]->getModule(), Intrinsic::experimental_guard);
   bool HasGuards = GuardDecl && !GuardDecl->use_empty();
 
   SmallVector<PHINode *, 8> LoopPhis;
@@ -1533,6 +1530,8 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
           L->getLoopPreheader()->getTerminator()->getIterator());
       ICmp->setOperand(Swapped ? 1 : 0, LHSOp);
       ICmp->setOperand(Swapped ? 0 : 1, NewRHS);
+      // Samesign flag cannot be preserved after narrowing the compare.
+      ICmp->setSameSign(false);
       if (LHS->use_empty())
         DeadInsts.push_back(LHS);
     };
@@ -1920,7 +1919,7 @@ bool IndVarSimplify::run(Loop *L) {
 
   // Create a rewriter object which we'll use to transform the code with.
   SCEVExpander Rewriter(*SE, DL, "indvars");
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   Rewriter.setDebugType(DEBUG_TYPE);
 #endif
 

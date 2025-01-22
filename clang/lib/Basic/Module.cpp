@@ -34,8 +34,9 @@
 
 using namespace clang;
 
-Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
-               bool IsFramework, bool IsExplicit, unsigned VisibilityID)
+Module::Module(ModuleConstructorTag, StringRef Name,
+               SourceLocation DefinitionLoc, Module *Parent, bool IsFramework,
+               bool IsExplicit, unsigned VisibilityID)
     : Name(Name), DefinitionLoc(DefinitionLoc), Parent(Parent),
       VisibilityID(VisibilityID), IsUnimportable(false),
       HasIncompatibleModuleFile(false), IsAvailable(true),
@@ -53,16 +54,11 @@ Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
     NoUndeclaredIncludes = Parent->NoUndeclaredIncludes;
     ModuleMapIsPrivate = Parent->ModuleMapIsPrivate;
 
-    Parent->SubModuleIndex[Name] = Parent->SubModules.size();
     Parent->SubModules.push_back(this);
   }
 }
 
-Module::~Module() {
-  for (auto *Submodule : SubModules) {
-    delete Submodule;
-  }
-}
+Module::~Module() = default;
 
 static bool isPlatformEnvironment(const TargetInfo &Target, StringRef Feature) {
   StringRef Platform = Target.getPlatformName();
@@ -354,26 +350,14 @@ void Module::markUnavailable(bool Unimportable) {
 }
 
 Module *Module::findSubmodule(StringRef Name) const {
-  llvm::StringMap<unsigned>::const_iterator Pos = SubModuleIndex.find(Name);
-  if (Pos == SubModuleIndex.end())
-    return nullptr;
+  // Add new submodules into the index.
+  for (unsigned I = SubModuleIndex.size(), E = SubModules.size(); I != E; ++I)
+    SubModuleIndex[SubModules[I]->Name] = I;
 
-  return SubModules[Pos->getValue()];
-}
+  if (auto It = SubModuleIndex.find(Name); It != SubModuleIndex.end())
+    return SubModules[It->second];
 
-Module *Module::findOrInferSubmodule(StringRef Name) {
-  llvm::StringMap<unsigned>::const_iterator Pos = SubModuleIndex.find(Name);
-  if (Pos != SubModuleIndex.end())
-    return SubModules[Pos->getValue()];
-  if (!InferSubmodules)
-    return nullptr;
-  Module *Result = new Module(Name, SourceLocation(), this, false, InferExplicitSubmodules, 0);
-  Result->InferExplicitSubmodules = InferExplicitSubmodules;
-  Result->InferSubmodules = InferSubmodules;
-  Result->InferExportWildcard = InferExportWildcard;
-  if (Result->InferExportWildcard)
-    Result->Exports.push_back(Module::ExportDecl(nullptr, true));
-  return Result;
+  return nullptr;
 }
 
 Module *Module::getGlobalModuleFragment() const {
@@ -546,7 +530,7 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
 
   for (auto &K : Kinds) {
     assert(&K == &Kinds[K.Kind] && "kinds in wrong order");
-    for (auto &H : Headers[K.Kind]) {
+    for (auto &H : getHeaders(K.Kind)) {
       OS.indent(Indent + 2);
       OS << K.Prefix << "header \"";
       OS.write_escaped(H.NameAsWritten);

@@ -7,42 +7,42 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_UNINITIALIZED_ALGORITHMS_H
-#define _LIBCPP___MEMORY_UNINITIALIZED_ALGORITHMS_H
+#ifndef _LIBCPP___CXX03___MEMORY_UNINITIALIZED_ALGORITHMS_H
+#define _LIBCPP___CXX03___MEMORY_UNINITIALIZED_ALGORITHMS_H
 
-#include <__algorithm/copy.h>
-#include <__algorithm/move.h>
-#include <__algorithm/unwrap_iter.h>
-#include <__algorithm/unwrap_range.h>
-#include <__config>
-#include <__iterator/iterator_traits.h>
-#include <__iterator/reverse_iterator.h>
-#include <__memory/addressof.h>
-#include <__memory/allocator_traits.h>
-#include <__memory/construct_at.h>
-#include <__memory/pointer_traits.h>
-#include <__memory/voidify.h>
-#include <__type_traits/extent.h>
-#include <__type_traits/is_array.h>
-#include <__type_traits/is_constant_evaluated.h>
-#include <__type_traits/is_trivially_assignable.h>
-#include <__type_traits/is_trivially_constructible.h>
-#include <__type_traits/is_trivially_relocatable.h>
-#include <__type_traits/is_unbounded_array.h>
-#include <__type_traits/negation.h>
-#include <__type_traits/remove_const.h>
-#include <__type_traits/remove_extent.h>
-#include <__utility/exception_guard.h>
-#include <__utility/move.h>
-#include <__utility/pair.h>
-#include <new>
+#include <__cxx03/__algorithm/copy.h>
+#include <__cxx03/__algorithm/move.h>
+#include <__cxx03/__algorithm/unwrap_iter.h>
+#include <__cxx03/__algorithm/unwrap_range.h>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__iterator/reverse_iterator.h>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__memory/allocator_traits.h>
+#include <__cxx03/__memory/construct_at.h>
+#include <__cxx03/__memory/pointer_traits.h>
+#include <__cxx03/__memory/voidify.h>
+#include <__cxx03/__type_traits/extent.h>
+#include <__cxx03/__type_traits/is_array.h>
+#include <__cxx03/__type_traits/is_constant_evaluated.h>
+#include <__cxx03/__type_traits/is_trivially_assignable.h>
+#include <__cxx03/__type_traits/is_trivially_constructible.h>
+#include <__cxx03/__type_traits/is_trivially_relocatable.h>
+#include <__cxx03/__type_traits/is_unbounded_array.h>
+#include <__cxx03/__type_traits/negation.h>
+#include <__cxx03/__type_traits/remove_const.h>
+#include <__cxx03/__type_traits/remove_extent.h>
+#include <__cxx03/__utility/exception_guard.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/__utility/pair.h>
+#include <__cxx03/new>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -650,4 +650,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MEMORY_UNINITIALIZED_ALGORITHMS_H
+#endif // _LIBCPP___CXX03___MEMORY_UNINITIALIZED_ALGORITHMS_H

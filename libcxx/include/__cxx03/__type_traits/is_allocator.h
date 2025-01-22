@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_IS_ALLOCATOR_H
-#define _LIBCPP___TYPE_IS_ALLOCATOR_H
+#ifndef _LIBCPP___CXX03___TYPE_IS_ALLOCATOR_H
+#define _LIBCPP___CXX03___TYPE_IS_ALLOCATOR_H
 
-#include <__config>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/void_t.h>
-#include <__utility/declval.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/void_t.h>
+#include <__cxx03/__utility/declval.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -31,4 +31,4 @@ struct __is_allocator<_Alloc,
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_IS_ALLOCATOR_H
+#endif // _LIBCPP___CXX03___TYPE_IS_ALLOCATOR_H

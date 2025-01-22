@@ -1,5 +1,3 @@
-# UNSUPPORTED: lldb-repro
-#
 # Test that the SBAddress properties throw an exception when used outside of
 # the interactive script interpreter.
 #

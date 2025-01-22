@@ -148,7 +148,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -282,7 +281,7 @@ static void convertToParamAS(Use *OldUse, Value *Param, bool HasCvtaParam,
           [](Value *Addr, Instruction *OriginalUser) -> Value * {
         PointerType *ReturnTy =
             PointerType::get(OriginalUser->getContext(), ADDRESS_SPACE_GENERIC);
-        Function *CvtToGen = Intrinsic::getDeclaration(
+        Function *CvtToGen = Intrinsic::getOrInsertDeclaration(
             OriginalUser->getModule(), Intrinsic::nvvm_ptr_param_to_gen,
             {ReturnTy, PointerType::get(OriginalUser->getContext(),
                                         ADDRESS_SPACE_PARAM)});
@@ -435,6 +434,9 @@ static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
         continue;
       }
 
+      if (isa<MemTransferInst>(CurUser))
+        continue;
+
       // supported for grid_constant
       if (IsGridConstant &&
           (isa<CallInst>(CurUser) || isa<StoreInst>(CurUser) ||
@@ -540,12 +542,40 @@ struct ArgUseChecker : PtrUseVisitor<ArgUseChecker> {
       PI.setAborted(&II);
   }
 }; // struct ArgUseChecker
+
+void copyByValParam(Function &F, Argument &Arg) {
+  LLVM_DEBUG(dbgs() << "Creating a local copy of " << Arg << "\n");
+  // Otherwise we have to create a temporary copy.
+  BasicBlock::iterator FirstInst = F.getEntryBlock().begin();
+  Type *StructType = Arg.getParamByValType();
+  const DataLayout &DL = F.getDataLayout();
+  AllocaInst *AllocA = new AllocaInst(StructType, DL.getAllocaAddrSpace(),
+                                      Arg.getName(), FirstInst);
+  // Set the alignment to alignment of the byval parameter. This is because,
+  // later load/stores assume that alignment, and we are going to replace
+  // the use of the byval parameter with this alloca instruction.
+  AllocA->setAlignment(F.getParamAlign(Arg.getArgNo())
+                           .value_or(DL.getPrefTypeAlign(StructType)));
+  Arg.replaceAllUsesWith(AllocA);
+
+  Value *ArgInParam = new AddrSpaceCastInst(
+      &Arg, PointerType::get(Arg.getContext(), ADDRESS_SPACE_PARAM),
+      Arg.getName(), FirstInst);
+  // Be sure to propagate alignment to this load; LLVM doesn't know that NVPTX
+  // addrspacecast preserves alignment.  Since params are constant, this load
+  // is definitely not volatile.
+  const auto ArgSize = *AllocA->getAllocationSize(DL);
+  IRBuilder<> IRB(&*FirstInst);
+  IRB.CreateMemCpy(AllocA, AllocA->getAlign(), ArgInParam, AllocA->getAlign(),
+                   ArgSize);
+}
 } // namespace
 
 void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
                                       Argument *Arg) {
   Function *Func = Arg->getParent();
-  bool HasCvtaParam = TM.getSubtargetImpl(*Func)->hasCvtaParam();
+  bool HasCvtaParam =
+      TM.getSubtargetImpl(*Func)->hasCvtaParam() && isKernelFunction(*Func);
   bool IsGridConstant = HasCvtaParam && isParamGridConstant(*Arg);
   const DataLayout &DL = Func->getDataLayout();
   BasicBlock::iterator FirstInst = Func->getEntryBlock().begin();
@@ -554,7 +584,7 @@ void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
 
   ArgUseChecker AUC(DL, IsGridConstant);
   ArgUseChecker::PtrInfo PI = AUC.visitArgPtr(*Arg);
-  bool ArgUseIsReadOnly  = !(PI.isEscaped() || PI.isAborted());
+  bool ArgUseIsReadOnly = !(PI.isEscaped() || PI.isAborted());
   // Easy case, accessing parameter directly is fine.
   if (ArgUseIsReadOnly && AUC.Conditionals.empty()) {
     // Convert all loads and intermediate operations to use parameter AS and
@@ -564,8 +594,8 @@ void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
       UsesToUpdate.push_back(&U);
 
     Value *ArgInParamAS = new AddrSpaceCastInst(
-        Arg, PointerType::get(StructType, ADDRESS_SPACE_PARAM), Arg->getName(),
-        FirstInst);
+        Arg, PointerType::get(StructType->getContext(), ADDRESS_SPACE_PARAM),
+        Arg->getName(), FirstInst);
     for (Use *U : UsesToUpdate)
       convertToParamAS(U, ArgInParamAS, HasCvtaParam, IsGridConstant);
     LLVM_DEBUG(dbgs() << "No need to copy or cast " << *Arg << "\n");
@@ -583,7 +613,6 @@ void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
   // However, we're still not allowed to write to it. If the user specified
   // `__grid_constant__` for the argument, we'll consider escaped pointer as
   // read-only.
-  unsigned AS = DL.getAllocaAddrSpace();
   if (HasCvtaParam && (ArgUseIsReadOnly || IsGridConstant)) {
     LLVM_DEBUG(dbgs() << "Using non-copy pointer to " << *Arg << "\n");
     // Replace all argument pointer uses (which might include a device function
@@ -608,29 +637,8 @@ void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
 
     // Do not replace Arg in the cast to param space
     CastToParam->setOperand(0, Arg);
-  } else {
-    LLVM_DEBUG(dbgs() << "Creating a local copy of " << *Arg << "\n");
-    // Otherwise we have to create a temporary copy.
-    AllocaInst *AllocA =
-        new AllocaInst(StructType, AS, Arg->getName(), FirstInst);
-    // Set the alignment to alignment of the byval parameter. This is because,
-    // later load/stores assume that alignment, and we are going to replace
-    // the use of the byval parameter with this alloca instruction.
-    AllocA->setAlignment(Func->getParamAlign(Arg->getArgNo())
-                             .value_or(DL.getPrefTypeAlign(StructType)));
-    Arg->replaceAllUsesWith(AllocA);
-
-    Value *ArgInParam = new AddrSpaceCastInst(
-        Arg, PointerType::get(Arg->getContext(), ADDRESS_SPACE_PARAM),
-        Arg->getName(), FirstInst);
-    // Be sure to propagate alignment to this load; LLVM doesn't know that NVPTX
-    // addrspacecast preserves alignment.  Since params are constant, this load
-    // is definitely not volatile.
-    LoadInst *LI =
-        new LoadInst(StructType, ArgInParam, Arg->getName(),
-                     /*isVolatile=*/false, AllocA->getAlign(), FirstInst);
-    new StoreInst(LI, AllocA, FirstInst);
-  }
+  } else
+    copyByValParam(*Func, *Arg);
 }
 
 void NVPTXLowerArgs::markPointerAsGlobal(Value *Ptr) {
@@ -730,3 +738,22 @@ bool NVPTXLowerArgs::runOnFunction(Function &F) {
 }
 
 FunctionPass *llvm::createNVPTXLowerArgsPass() { return new NVPTXLowerArgs(); }
+
+static bool copyFunctionByValArgs(Function &F) {
+  LLVM_DEBUG(dbgs() << "Creating a copy of byval args of " << F.getName()
+                    << "\n");
+  bool Changed = false;
+  for (Argument &Arg : F.args())
+    if (Arg.getType()->isPointerTy() && Arg.hasByValAttr() &&
+        !(isParamGridConstant(Arg) && isKernelFunction(F))) {
+      copyByValParam(F, Arg);
+      Changed = true;
+    }
+  return Changed;
+}
+
+PreservedAnalyses NVPTXCopyByValArgsPass::run(Function &F,
+                                              FunctionAnalysisManager &AM) {
+  return copyFunctionByValArgs(F) ? PreservedAnalyses::none()
+                                  : PreservedAnalyses::all();
+}

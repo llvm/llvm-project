@@ -18,7 +18,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/AbstractCallSite.h"
 #include "llvm/IR/Argument.h"
@@ -351,8 +350,16 @@ bool Argument::hasAttribute(Attribute::AttrKind Kind) const {
   return getParent()->hasParamAttribute(getArgNo(), Kind);
 }
 
+bool Argument::hasAttribute(StringRef Kind) const {
+  return getParent()->hasParamAttribute(getArgNo(), Kind);
+}
+
 Attribute Argument::getAttribute(Attribute::AttrKind Kind) const {
   return getParent()->getParamAttribute(getArgNo(), Kind);
+}
+
+AttributeSet Argument::getAttributes() const {
+  return getParent()->getAttributes().getParamAttrs(getArgNo());
 }
 
 //===----------------------------------------------------------------------===//
@@ -735,6 +742,10 @@ bool Function::hasRetAttribute(Attribute::AttrKind Kind) const {
 
 bool Function::hasParamAttribute(unsigned ArgNo,
                                  Attribute::AttrKind Kind) const {
+  return AttributeSets.hasParamAttr(ArgNo, Kind);
+}
+
+bool Function::hasParamAttribute(unsigned ArgNo, StringRef Kind) const {
   return AttributeSets.hasParamAttr(ArgNo, Kind);
 }
 

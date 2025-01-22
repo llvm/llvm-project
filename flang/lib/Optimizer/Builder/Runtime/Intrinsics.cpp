@@ -38,8 +38,7 @@ struct ForcedRandomNumberReal16 {
       auto strTy = fir::runtime::getModel<const char *>()(ctx);
       auto intTy = fir::runtime::getModel<int>()(ctx);
       ;
-      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy},
-                                     mlir::NoneType::get(ctx));
+      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy}, {});
     };
   }
 };
@@ -127,6 +126,22 @@ void fir::runtime::genFree(fir::FirOpBuilder &builder, mlir::Location loc,
 
   builder.create<fir::CallOp>(loc, runtimeFunc,
                               builder.createConvert(loc, intPtrTy, ptr));
+}
+
+mlir::Value fir::runtime::genGetGID(fir::FirOpBuilder &builder,
+                                    mlir::Location loc) {
+  auto runtimeFunc =
+      fir::runtime::getRuntimeFunc<mkRTKey(GetGID)>(loc, builder);
+
+  return builder.create<fir::CallOp>(loc, runtimeFunc).getResult(0);
+}
+
+mlir::Value fir::runtime::genGetUID(fir::FirOpBuilder &builder,
+                                    mlir::Location loc) {
+  auto runtimeFunc =
+      fir::runtime::getRuntimeFunc<mkRTKey(GetUID)>(loc, builder);
+
+  return builder.create<fir::CallOp>(loc, runtimeFunc).getResult(0);
 }
 
 mlir::Value fir::runtime::genMalloc(fir::FirOpBuilder &builder,

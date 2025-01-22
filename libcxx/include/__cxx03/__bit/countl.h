@@ -9,21 +9,21 @@
 // TODO: __builtin_clzg is available since Clang 19 and GCC 14. When support for older versions is dropped, we can
 //  refactor this code to exclusively use __builtin_clzg.
 
-#ifndef _LIBCPP___BIT_COUNTL_H
-#define _LIBCPP___BIT_COUNTL_H
+#ifndef _LIBCPP___CXX03___BIT_COUNTL_H
+#define _LIBCPP___CXX03___BIT_COUNTL_H
 
-#include <__bit/rotate.h>
-#include <__concepts/arithmetic.h>
-#include <__config>
-#include <__type_traits/is_unsigned_integer.h>
-#include <limits>
+#include <__cxx03/__bit/rotate.h>
+#include <__cxx03/__concepts/arithmetic.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/is_unsigned_integer.h>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -110,4 +110,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___BIT_COUNTL_H
+#endif // _LIBCPP___CXX03___BIT_COUNTL_H

@@ -292,7 +292,7 @@ using ConvertIndexBoolConstant =
 //===----------------------------------------------------------------------===//
 
 void index::populateIndexToLLVMConversionPatterns(
-    LLVMTypeConverter &typeConverter, RewritePatternSet &patterns) {
+    const LLVMTypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns.insert<
       // clang-format off
       ConvertIndexAdd,

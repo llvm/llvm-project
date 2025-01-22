@@ -1035,7 +1035,8 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
                         RuntimeCallInserter &RTCI)
       : F(F), ASan(ASan), RTCI(RTCI),
         DIB(*F.getParent(), /*AllowUnresolved*/ false), C(ASan.C),
-        IntptrTy(ASan.IntptrTy), IntptrPtrTy(PointerType::get(IntptrTy, 0)),
+        IntptrTy(ASan.IntptrTy),
+        IntptrPtrTy(PointerType::get(IntptrTy->getContext(), 0)),
         Mapping(ASan.Mapping),
         PoisonStack(ClStack &&
                     !Triple(F.getParent()->getTargetTriple()).isAMDGPU()) {}
@@ -1109,11 +1110,8 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
     // alloca. We have a special @llvm.get.dynamic.area.offset intrinsic for
     // this purpose.
     if (!isa<ReturnInst>(InstBefore)) {
-      Function *DynamicAreaOffsetFunc = Intrinsic::getDeclaration(
-          InstBefore->getModule(), Intrinsic::get_dynamic_area_offset,
-          {IntptrTy});
-
-      Value *DynamicAreaOffset = IRB.CreateCall(DynamicAreaOffsetFunc, {});
+      Value *DynamicAreaOffset = IRB.CreateIntrinsic(
+          Intrinsic::get_dynamic_area_offset, {IntptrTy}, {});
 
       DynamicAreaPtr = IRB.CreateAdd(IRB.CreatePtrToInt(SavedStack, IntptrTy),
                                      DynamicAreaOffset);
@@ -1865,11 +1863,9 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
 
   if (UseCalls && ClOptimizeCallbacks) {
     const ASanAccessInfo AccessInfo(IsWrite, CompileKernel, AccessSizeIndex);
-    Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-    IRB.CreateCall(
-        Intrinsic::getDeclaration(M, Intrinsic::asan_check_memaccess),
-        {IRB.CreatePointerCast(Addr, PtrTy),
-         ConstantInt::get(Int32Ty, AccessInfo.Packed)});
+    IRB.CreateIntrinsic(Intrinsic::asan_check_memaccess, {},
+                        {IRB.CreatePointerCast(Addr, PtrTy),
+                         ConstantInt::get(Int32Ty, AccessInfo.Packed)});
     return;
   }
 
@@ -1887,7 +1883,7 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
 
   Type *ShadowTy =
       IntegerType::get(*C, std::max(8U, TypeStoreSize >> Mapping.Scale));
-  Type *ShadowPtrTy = PointerType::get(ShadowTy, 0);
+  Type *ShadowPtrTy = PointerType::get(*C, 0);
   Value *ShadowPtr = memToShadow(AddrLong, IRB);
   const uint64_t ShadowAlign =
       std::max<uint64_t>(Alignment.valueOrOne().value() >> Mapping.Scale, 1);

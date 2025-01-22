@@ -1,3 +1,4 @@
+XFAIL: target={{.*haiku.*}}
 RUN: rm -rf %t && split-file %s %t && cd %t
 RUN: %clang_pgogen -fprofile-update=atomic -fPIC foo.c -c -Xclang -fprofile-instrument-path="default_foo_%m.profraw"
 RUN: %clang_pgogen -fprofile-update=atomic -fPIC foo2.c -c -Xclang -fprofile-instrument-path="default_foo2_%m.profraw"

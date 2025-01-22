@@ -7,28 +7,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// TODO: Remove when [[blocking]] is implemented.
-extern "C" void __rtsan_notify_blocking_call(const char *function_name);
-
-void custom_blocking_function() {
-  // TODO: When [[blocking]] is implemented, don't call this directly.
-  __rtsan_notify_blocking_call(__func__);
+void custom_blocking_function() [[clang::blocking]] {
+  printf("In blocking function\n");
 }
 
-void safe_call() {
-  // TODO: When [[blocking]] is implemented, don't call this directly.
-  __rtsan_notify_blocking_call(__func__);
-}
-
-void process() [[clang::nonblocking]] { custom_blocking_function(); }
+void realtime_function() [[clang::nonblocking]] { custom_blocking_function(); }
+void nonrealtime_function() { custom_blocking_function(); }
 
 int main() {
-  safe_call(); // This shouldn't die, because it isn't in nonblocking context.
-  process();
+  nonrealtime_function();
+  realtime_function();
   return 0;
-  // CHECK-NOT: {{.*safe_call*}}
-  // CHECK: ==ERROR: RealtimeSanitizer: blocking-call
-  // CHECK-NEXT: Call to blocking function `custom_blocking_function` in real-time context!
-  // CHECK-NEXT: {{.*custom_blocking_function*}}
-  // CHECK-NEXT: {{.*process*}}
 }
+
+// CHECK: ==ERROR: RealtimeSanitizer: blocking-call
+// CHECK-NEXT: Call to blocking function `custom_blocking_function()` in real-time context!
+// CHECK-NEXT: {{.*custom_blocking_function*}}
+// CHECK-NEXT: {{.*realtime_function*}}
+
+// should only occur once
+// CHECK-NOT: ==ERROR: RealtimeSanitizer: blocking-call

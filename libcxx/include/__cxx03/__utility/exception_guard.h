@@ -6,21 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_TRANSACTION_H
-#define _LIBCPP___UTILITY_TRANSACTION_H
+#ifndef _LIBCPP___CXX03___UTILITY_TRANSACTION_H
+#define _LIBCPP___CXX03___UTILITY_TRANSACTION_H
 
-#include <__assert>
-#include <__config>
-#include <__type_traits/is_nothrow_constructible.h>
-#include <__utility/exchange.h>
-#include <__utility/move.h>
+#include <__cxx03/__assert>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/is_nothrow_constructible.h>
+#include <__cxx03/__utility/exchange.h>
+#include <__cxx03/__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -141,4 +141,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___UTILITY_TRANSACTION_H
+#endif // _LIBCPP___CXX03___UTILITY_TRANSACTION_H

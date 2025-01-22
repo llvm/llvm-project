@@ -25,7 +25,6 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <iterator>
 #include <tuple>
@@ -442,15 +441,21 @@ bool LiveRangeCalc::isJointlyDominated(const MachineBasicBlock *MBB,
   for (SlotIndex I : Defs)
     DefBlocks.set(Indexes.getMBBFromIndex(I)->getNumber());
 
+  unsigned EntryNum = MF.front().getNumber();
   SetVector<unsigned> PredQueue;
   PredQueue.insert(MBB->getNumber());
   for (unsigned i = 0; i != PredQueue.size(); ++i) {
     unsigned BN = PredQueue[i];
     if (DefBlocks[BN])
-      return true;
+      continue;
+    if (BN == EntryNum) {
+      // We found a path from MBB back to the entry block without hitting any of
+      // the def blocks.
+      return false;
+    }
     const MachineBasicBlock *B = MF.getBlockNumbered(BN);
     for (const MachineBasicBlock *P : B->predecessors())
       PredQueue.insert(P->getNumber());
   }
-  return false;
+  return true;
 }

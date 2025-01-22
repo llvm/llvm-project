@@ -14,8 +14,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Expression/UtilityFunction.h"
@@ -48,6 +46,8 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 #include "lldb/lldb-enumerations.h"
 
 #include "AppleObjCClassDescriptorV2.h"
@@ -3278,7 +3278,7 @@ bool AppleObjCRuntimeV2::NonPointerISACache::EvaluateNonPointerISA(
       }
 
       // If the index is still out of range then this isn't a pointer.
-      if (index > m_indexed_isa_cache.size())
+      if (index >= m_indexed_isa_cache.size())
         return false;
 
       LLDB_LOGF(log, "AOCRT::NPI Evaluate(ret_isa = 0x%" PRIx64 ")",
@@ -3396,6 +3396,14 @@ std::optional<uint64_t> AppleObjCRuntimeV2::GetSharedCacheImageHeaderVersion() {
     return m_shared_cache_image_headers_up->GetVersion();
 
   return std::nullopt;
+}
+
+StructuredData::ObjectSP
+AppleObjCRuntimeV2::GetLanguageSpecificData(SymbolContext sc) {
+  auto dict_up = std::make_unique<StructuredData::Dictionary>();
+  dict_up->AddItem("Objective-C runtime version",
+                   std::make_unique<StructuredData::UnsignedInteger>(2));
+  return dict_up;
 }
 
 #pragma mark Frame recognizers

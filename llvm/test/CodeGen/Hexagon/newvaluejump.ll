@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; Check that we generate new value jump.
 
 ; CHECK: if (cmp.eq(r{{[0-9]+}}.new,#0)) jump{{.}}

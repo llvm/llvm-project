@@ -39,10 +39,18 @@ private:
                                            mlir::LLVM::DIFileAttr fileAttr,
                                            mlir::LLVM::DIScopeAttr scope,
                                            fir::cg::XDeclareOp declOp);
+  mlir::LLVM::DITypeAttr convertTupleType(mlir::TupleType Ty,
+                                          mlir::LLVM::DIFileAttr fileAttr,
+                                          mlir::LLVM::DIScopeAttr scope,
+                                          fir::cg::XDeclareOp declOp);
   mlir::LLVM::DITypeAttr convertSequenceType(fir::SequenceType seqTy,
                                              mlir::LLVM::DIFileAttr fileAttr,
                                              mlir::LLVM::DIScopeAttr scope,
                                              fir::cg::XDeclareOp declOp);
+  mlir::LLVM::DITypeAttr convertVectorType(fir::VectorType vecTy,
+                                           mlir::LLVM::DIFileAttr fileAttr,
+                                           mlir::LLVM::DIScopeAttr scope,
+                                           fir::cg::XDeclareOp declOp);
 
   /// The 'genAllocated' is true when we want to generate 'allocated' field
   /// in the DICompositeType. It is needed for the allocatable arrays.
@@ -64,6 +72,13 @@ private:
                                                 fir::cg::XDeclareOp declOp,
                                                 bool genAllocated,
                                                 bool genAssociated);
+  mlir::LLVM::DILocalVariableAttr
+  generateArtificialVariable(mlir::MLIRContext *context, mlir::Value Val,
+                             mlir::LLVM::DIFileAttr fileAttr,
+                             mlir::LLVM::DIScopeAttr scope,
+                             fir::cg::XDeclareOp declOp);
+  std::pair<std::uint64_t, unsigned short>
+  getFieldSizeAndAlign(mlir::Type fieldTy);
 
   mlir::ModuleOp module;
   mlir::SymbolTable *symbolTable;
@@ -74,6 +89,8 @@ private:
   std::uint64_t dimsOffset;
   std::uint64_t ptrSize;
   std::uint64_t lenOffset;
+  std::uint64_t rankOffset;
+  std::uint64_t rankSize;
   llvm::DenseMap<mlir::Type, mlir::LLVM::DITypeAttr> typeCache;
 };
 

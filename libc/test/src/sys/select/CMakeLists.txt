@@ -8,8 +8,8 @@ add_libc_unittest(
   SRCS
     select_ui_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.unistd
+    libc.src.errno.errno 
     libc.src.sys.select.select
     libc.src.unistd.read
 )
@@ -21,8 +21,8 @@ add_libc_unittest(
   SRCS
     select_failure_test.cpp
   DEPENDS
-    libc.include.errno
     libc.include.unistd
+    libc.src.errno.errno 
     libc.src.sys.select.select
     libc.src.unistd.read
     libc.test.UnitTest.ErrnoSetterMatcher

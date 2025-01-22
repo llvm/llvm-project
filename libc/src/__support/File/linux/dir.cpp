@@ -12,7 +12,7 @@
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 
-#include <fcntl.h>       // For open flags
+#include "hdr/fcntl_macros.h" // For open flags
 #include <sys/syscall.h> // For syscall numbers
 
 namespace LIBC_NAMESPACE_DECL {

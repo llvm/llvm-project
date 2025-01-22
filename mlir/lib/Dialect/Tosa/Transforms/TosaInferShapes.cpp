@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Propogate shapes forward along TOSA operations to resolve dynamic shape
+// Propagate shapes forward along TOSA operations to resolve dynamic shape
 // operations.
 //
 //===----------------------------------------------------------------------===//

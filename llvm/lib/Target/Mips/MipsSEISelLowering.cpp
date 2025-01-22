@@ -38,7 +38,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -2737,7 +2736,7 @@ static SDValue lowerVECTOR_SHUFFLE_ILVOD(SDValue Op, EVT ResTy,
   else
     return SDValue();
 
-  return DAG.getNode(MipsISD::ILVOD, SDLoc(Op), ResTy, Wt, Ws);
+  return DAG.getNode(MipsISD::ILVOD, SDLoc(Op), ResTy, Ws, Wt);
 }
 
 // Lower VECTOR_SHUFFLE into ILVR (if possible).

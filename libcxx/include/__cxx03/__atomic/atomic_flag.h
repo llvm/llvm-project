@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_ATOMIC_FLAG_H
-#define _LIBCPP___ATOMIC_ATOMIC_FLAG_H
+#ifndef _LIBCPP___CXX03___ATOMIC_ATOMIC_FLAG_H
+#define _LIBCPP___CXX03___ATOMIC_ATOMIC_FLAG_H
 
-#include <__atomic/atomic_sync.h>
-#include <__atomic/contention_t.h>
-#include <__atomic/cxx_atomic_impl.h>
-#include <__atomic/memory_order.h>
-#include <__chrono/duration.h>
-#include <__config>
-#include <__memory/addressof.h>
-#include <__thread/support.h>
-#include <cstdint>
+#include <__cxx03/__atomic/atomic_sync.h>
+#include <__cxx03/__atomic/contention_t.h>
+#include <__cxx03/__atomic/cxx_atomic_impl.h>
+#include <__cxx03/__atomic/memory_order.h>
+#include <__cxx03/__chrono/duration.h>
+#include <__cxx03/__config>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__thread/support.h>
+#include <__cxx03/cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -186,4 +186,4 @@ atomic_flag_notify_all(atomic_flag* __o) _NOEXCEPT {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_ATOMIC_FLAG_H
+#endif // _LIBCPP___CXX03___ATOMIC_ATOMIC_FLAG_H

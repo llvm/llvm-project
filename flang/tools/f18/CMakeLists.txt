@@ -21,6 +21,7 @@ set(MODULES_WITHOUT_IMPLEMENTATION
   "__ppc_intrinsics"
   "mma"
   "__cuda_builtins"
+  "__cuda_device"
   "cudadevice"
   "ieee_arithmetic"
   "ieee_exceptions"
@@ -55,7 +56,7 @@ endif()
 set(module_objects "")
 
 # Create module files directly from the top-level module source directory.
-# If CMAKE_CROSSCOMPILING, then the newly built flang-new executable was
+# If CMAKE_CROSSCOMPILING, then the newly built flang executable was
 # cross compiled, and thus can't be executed on the build system and thus
 # can't be used for generating module files.
 if (NOT CMAKE_CROSSCOMPILING)
@@ -67,9 +68,12 @@ if (NOT CMAKE_CROSSCOMPILING)
     elseif(${filename} STREQUAL "__ppc_intrinsics" OR
            ${filename} STREQUAL "mma")
       set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__ppc_types.mod)
-    elseif(${filename} STREQUAL "cudadevice")
+    elseif(${filename} STREQUAL "__cuda_device")
       set(opts -fc1 -xcuda)
       set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__cuda_builtins.mod)
+    elseif(${filename} STREQUAL "cudadevice")
+      set(opts -fc1 -xcuda)
+      set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__cuda_device.mod)
     else()
       set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_builtins.mod)
       if(${filename} STREQUAL "iso_fortran_env")
@@ -115,9 +119,9 @@ if (NOT CMAKE_CROSSCOMPILING)
     # TODO: We may need to flag this with conditional, in case Flang is built w/o OpenMP support
     add_custom_command(OUTPUT ${base}.mod ${object_output}
       COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
-      COMMAND flang-new ${opts} ${decls} -cpp ${compile_with} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
+      COMMAND flang ${opts} ${decls} -cpp ${compile_with} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
         ${FLANG_SOURCE_DIR}/module/${filename}.f90
-      DEPENDS flang-new ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${FLANG_SOURCE_DIR}/module/__fortran_builtins.f90 ${depends}
+      DEPENDS flang ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${FLANG_SOURCE_DIR}/module/__fortran_builtins.f90 ${depends}
     )
     list(APPEND MODULE_FILES ${base}.mod)
     install(FILES ${base}.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
@@ -142,9 +146,9 @@ if (NOT CMAKE_CROSSCOMPILING)
     set(base ${FLANG_INTRINSIC_MODULES_DIR}/omp_lib)
     add_custom_command(OUTPUT ${base}.mod ${base}_kinds.mod
       COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
-      COMMAND flang-new -cpp -fsyntax-only ${opts} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
+      COMMAND flang -cpp -fsyntax-only ${opts} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
         ${CMAKE_BINARY_DIR}/projects/openmp/runtime/src/omp_lib.F90
-      DEPENDS flang-new ${FLANG_INTRINSIC_MODULES_DIR}/iso_c_binding.mod ${CMAKE_BINARY_DIR}/projects/openmp/runtime/src/omp_lib.F90 ${depends}
+      DEPENDS flang ${FLANG_INTRINSIC_MODULES_DIR}/iso_c_binding.mod ${CMAKE_BINARY_DIR}/projects/openmp/runtime/src/omp_lib.F90 ${depends}
     )
     add_custom_command(OUTPUT ${base}.f18.mod
       DEPENDS ${base}.mod

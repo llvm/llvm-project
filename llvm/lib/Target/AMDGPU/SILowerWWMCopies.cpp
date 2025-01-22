@@ -43,6 +43,9 @@ public:
   StringRef getPassName() const override { return "SI Lower WWM Copies"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
+    AU.addUsedIfAvailable<SlotIndexesWrapperPass>();
+    AU.addUsedIfAvailable<VirtRegMapWrapperLegacy>();
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -64,7 +67,7 @@ private:
 INITIALIZE_PASS_BEGIN(SILowerWWMCopies, DEBUG_TYPE, "SI Lower WWM Copies",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
+INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
 INITIALIZE_PASS_END(SILowerWWMCopies, DEBUG_TYPE, "SI Lower WWM Copies", false,
                     false)
 
@@ -105,7 +108,8 @@ bool SILowerWWMCopies::runOnMachineFunction(MachineFunction &MF) {
   LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
   auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();
   Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
-  VRM = getAnalysisIfAvailable<VirtRegMap>();
+  auto *VRMWrapper = getAnalysisIfAvailable<VirtRegMapWrapperLegacy>();
+  VRM = VRMWrapper ? &VRMWrapper->getVRM() : nullptr;
   TRI = ST.getRegisterInfo();
   MRI = &MF.getRegInfo();
 

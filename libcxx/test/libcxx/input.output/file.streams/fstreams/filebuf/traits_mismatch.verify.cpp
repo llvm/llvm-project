@@ -15,6 +15,8 @@
 
 // UNSUPPORTED: no-wide-characters
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <fstream>
 
 std::basic_filebuf<char, std::char_traits<wchar_t> > f;

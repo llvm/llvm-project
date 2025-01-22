@@ -38,7 +38,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include <algorithm>
 #include <cassert>
 #include <iterator>
 #include <utility>
@@ -586,13 +585,11 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   // duplicate only one, because one branch instruction can be eliminated to
   // compensate for the duplication.
   unsigned MaxDuplicateCount;
-  bool OptForSize = MF->getFunction().hasOptSize() ||
-                    llvm::shouldOptimizeForSize(&TailBB, PSI, MBFI);
   if (TailDupSize == 0)
     MaxDuplicateCount = TailDuplicateSize;
   else
     MaxDuplicateCount = TailDupSize;
-  if (OptForSize)
+  if (llvm::shouldOptimizeForSize(&TailBB, PSI, MBFI))
     MaxDuplicateCount = 1;
 
   // If the block to be duplicated ends in an unanalyzable fallthrough, don't
@@ -1071,10 +1068,10 @@ void TailDuplicator::removeDeadBlock(
   LLVM_DEBUG(dbgs() << "\nRemoving MBB: " << *MBB);
 
   MachineFunction *MF = MBB->getParent();
-  // Update the call site info.
+  // Update the call info.
   for (const MachineInstr &MI : *MBB)
-    if (MI.shouldUpdateCallSiteInfo())
-      MF->eraseCallSiteInfo(&MI);
+    if (MI.shouldUpdateAdditionalCallInfo())
+      MF->eraseAdditionalCallInfo(&MI);
 
   if (RemovalCallback)
     (*RemovalCallback)(MBB);

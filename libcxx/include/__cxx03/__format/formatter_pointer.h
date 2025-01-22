@@ -7,18 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMATTER_POINTER_H
-#define _LIBCPP___FORMAT_FORMATTER_POINTER_H
+#ifndef _LIBCPP___CXX03___FORMAT_FORMATTER_POINTER_H
+#define _LIBCPP___CXX03___FORMAT_FORMATTER_POINTER_H
 
-#include <__config>
-#include <__format/concepts.h>
-#include <__format/format_parse_context.h>
-#include <__format/formatter.h>
-#include <__format/formatter_integral.h>
-#include <__format/formatter_output.h>
-#include <__format/parser_std_format_spec.h>
-#include <cstddef>
-#include <cstdint>
+#include <__cxx03/__config>
+#include <__cxx03/__format/concepts.h>
+#include <__cxx03/__format/format_parse_context.h>
+#include <__cxx03/__format/formatter.h>
+#include <__cxx03/__format/formatter_integral.h>
+#include <__cxx03/__format/formatter_output.h>
+#include <__cxx03/__format/parser_std_format_spec.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -69,4 +69,4 @@ struct _LIBCPP_TEMPLATE_VIS formatter<const void*, _CharT> : public __formatter_
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_FORMATTER_POINTER_H
+#endif // _LIBCPP___CXX03___FORMAT_FORMATTER_POINTER_H

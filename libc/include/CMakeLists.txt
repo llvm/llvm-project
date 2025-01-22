@@ -17,31 +17,21 @@ add_header(
     __llvm-libc-common.h
 )
 
-macro(add_header_macro TARGET_NAME YAML_FILE DEF_FILE GEN_HDR DEPENDS)
-  if (LIBC_USE_NEW_HEADER_GEN)
-    add_gen_header2(
-      ${TARGET_NAME}
-      YAML_FILE ${YAML_FILE}
-      DEF_FILE ${DEF_FILE}
-      GEN_HDR ${GEN_HDR}
-      ${DEPENDS}
-      ${ARGN}
-    )
-  else()
-    add_gen_header(
-      ${TARGET_NAME}
-      DEF_FILE ${DEF_FILE}
-      GEN_HDR ${GEN_HDR}
-      ${DEPENDS}
-      ${ARGN}
-    )
-  endif()
+# TODO: Can we simplify this macro expansion?
+# https://github.com/llvm/llvm-project/issues/117254
+macro(add_header_macro TARGET_NAME YAML_FILE GEN_HDR DEPENDS)
+  add_gen_header(
+    ${TARGET_NAME}
+    YAML_FILE ${YAML_FILE}
+    GEN_HDR ${GEN_HDR}
+    ${DEPENDS}
+    ${ARGN}
+  )
 endmacro()
 
 add_header_macro(
   ctype
-  ../libc/newhdrgen/yaml/ctype.yaml
-  ctype.h.def
+  ../libc/include/ctype.yaml
   ctype.h
   DEPENDS
     .llvm_libc_common_h
@@ -50,8 +40,7 @@ add_header_macro(
 
 add_header_macro(
   dirent
-  ../libc/newhdrgen/yaml/dirent.yaml
-  dirent.h.def
+  ../libc/include/dirent.yaml
   dirent.h
   DEPENDS
     .llvm_libc_common_h
@@ -62,8 +51,7 @@ add_header_macro(
 
 add_header_macro(
   fcntl
-  ../libc/newhdrgen/yaml/fcntl.yaml
-  fcntl.h.def
+  ../libc/include/fcntl.yaml
   fcntl.h
   DEPENDS
     .llvm-libc-macros.fcntl_macros
@@ -78,8 +66,7 @@ add_header_macro(
 
 add_header_macro(
   dlfcn
-  ../libc/newhdrgen/yaml/dlfcn.yaml
-  dlfcn.h.def
+  ../libc/include/dlfcn.yaml
   dlfcn.h
   DEPENDS
     .llvm-libc-macros.dlfcn_macros
@@ -88,8 +75,7 @@ add_header_macro(
 
 add_header_macro(
   features
-  ../libc/newhdrgen/yaml/features.yaml
-  features.h.def
+  ../libc/include/features.yaml
   features.h
   DEPENDS
     .llvm_libc_common_h
@@ -98,8 +84,7 @@ add_header_macro(
 
 add_header_macro(
   fenv
-  ../libc/newhdrgen/yaml/fenv.yaml
-  fenv.h.def
+  ../libc/include/fenv.yaml
   fenv.h
   DEPENDS
     .llvm_libc_common_h
@@ -110,8 +95,7 @@ add_header_macro(
 
 add_header_macro(
   inttypes
-  ../libc/newhdrgen/yaml/inttypes.yaml
-  inttypes.h.def
+  ../libc/include/inttypes.yaml
   inttypes.h
   DEPENDS
     .llvm_libc_common_h
@@ -121,8 +105,7 @@ add_header_macro(
 
 add_header_macro(
   float
-  ../libc/newhdrgen/yaml/float.yaml
-  float.h.def
+  ../libc/include/float.yaml
   float.h
   DEPENDS
     .llvm-libc-macros.float_macros
@@ -130,8 +113,7 @@ add_header_macro(
 
 add_header_macro(
   stdint
-  ../libc/newhdrgen/yaml/stdint.yaml
-  stdint.h.def
+  ../libc/include/stdint.yaml
   stdint.h
   DEPENDS
     .llvm-libc-macros.stdint_macros
@@ -139,17 +121,24 @@ add_header_macro(
 
 add_header_macro(
   limits
-  ../libc/newhdrgen/yaml/limits.yaml
-  limits.h.def
+  ../libc/include/limits.yaml
   limits.h
   DEPENDS
     .llvm-libc-macros.limits_macros
 )
 
 add_header_macro(
+  malloc
+  ../libc/include/malloc.yaml
+  malloc.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.malloc_macros
+)
+
+add_header_macro(
   math
-  ../libc/newhdrgen/yaml/math.yaml
-  math.h.def
+  ../libc/include/math.yaml
   math.h
   DEPENDS
     .llvm_libc_common_h
@@ -163,11 +152,11 @@ add_header_macro(
 
 add_header_macro(
   stdfix
-  ../libc/newhdrgen/yaml/stdfix.yaml
-  stdfix.h.def
+  ../libc/include/stdfix.yaml
   stdfix.h
   DEPENDS
     .llvm-libc-macros.stdfix_macros
+    .llvm-libc-types.stdfix-types
 )
 
 # TODO: This should be conditional on POSIX networking being included.
@@ -175,8 +164,7 @@ file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/arpa)
 
 add_header_macro(
   arpa_inet
-  ../libc/newhdrgen/yaml/arpa/inet.yaml
-  arpa/inet.h.def
+  ../libc/include/arpa/inet.yaml
   arpa/inet.h
   DEPENDS
     .llvm_libc_common_h
@@ -184,8 +172,7 @@ add_header_macro(
 
 add_header_macro(
   assert
-  ../libc/newhdrgen/yaml/assert.yaml
-  assert.h.def
+  ../libc/include/assert.yaml
   assert.h
   DEPENDS
     .llvm_libc_common_h
@@ -193,9 +180,17 @@ add_header_macro(
 )
 
 add_header_macro(
+  complex
+  ../libc/include/complex.yaml
+  complex.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.complex_macros
+)
+
+add_header_macro(
   setjmp
-  ../libc/newhdrgen/yaml/setjmp.yaml
-  setjmp.h.def
+  ../libc/include/setjmp.yaml
   setjmp.h
   DEPENDS
     .llvm_libc_common_h
@@ -204,8 +199,7 @@ add_header_macro(
 
 add_header_macro(
   string
-  ../libc/newhdrgen/yaml/string.yaml
-  string.h.def
+  ../libc/include/string.yaml
   string.h
   DEPENDS
     .llvm_libc_common_h
@@ -215,8 +209,7 @@ add_header_macro(
 
 add_header_macro(
   strings
-  ../libc/newhdrgen/yaml/strings.yaml
-  strings.h.def
+  ../libc/include/strings.yaml
   strings.h
   DEPENDS
     .llvm_libc_common_h
@@ -225,8 +218,7 @@ add_header_macro(
 
 add_header_macro(
   search
-  ../libc/newhdrgen/yaml/search.yaml
-  search.h.def
+  ../libc/include/search.yaml
   search.h
   DEPENDS
     .llvm_libc_common_h
@@ -234,12 +226,12 @@ add_header_macro(
     .llvm-libc-types.ENTRY
     .llvm-libc-types.struct_hsearch_data
     .llvm-libc-types.size_t
+    .llvm-libc-types.__lsearchcompare_t
 )
 
 add_header_macro(
   time
-  ../libc/newhdrgen/yaml/time.yaml
-  time.h.def
+  ../libc/include/time.yaml
   time.h
   DEPENDS
     .llvm_libc_common_h
@@ -254,8 +246,7 @@ add_header_macro(
 
 add_header_macro(
   threads
-  ../libc/newhdrgen/yaml/threads.yaml
-  threads.h.def
+  ../libc/include/threads.yaml
   threads.h
   DEPENDS
     .llvm_libc_common_h
@@ -271,8 +262,7 @@ add_header_macro(
 
 add_header_macro(
   errno
-  ../libc/newhdrgen/yaml/errno.yaml
-  errno.h.def
+  ../libc/include/errno.yaml
   errno.h
   DEPENDS
     .llvm-libc-macros.generic_error_number_macros
@@ -281,8 +271,7 @@ add_header_macro(
 
 add_header_macro(
   signal
-  ../libc/newhdrgen/yaml/signal.yaml
-  signal.h.def
+  ../libc/include/signal.yaml
   signal.h
   DEPENDS
     .llvm-libc-macros.signal_macros
@@ -297,8 +286,7 @@ add_header_macro(
 
 add_header_macro(
   stdbit
-  ../libc/newhdrgen/yaml/stdbit.yaml
-  stdbit.h.def
+  ../libc/include/stdbit.yaml
   stdbit.h
   DEPENDS
     .llvm_libc_common_h
@@ -307,8 +295,7 @@ add_header_macro(
 
 add_header_macro(
   stdckdint
-  ../libc/newhdrgen/yaml/stdckdint.yaml
-  stdckdint.h.def
+  ../libc/include/stdckdint.yaml
   stdckdint.h
   DEPENDS
     .llvm_libc_common_h
@@ -317,8 +304,7 @@ add_header_macro(
 
 add_header_macro(
   stdio
-  ../libc/newhdrgen/yaml/stdio.yaml
-  stdio.h.def
+  ../libc/include/stdio.yaml
   stdio.h
   DEPENDS
     .llvm-libc-macros.file_seek_macros
@@ -333,8 +319,7 @@ add_header_macro(
 
 add_header_macro(
   stdlib
-  ../libc/newhdrgen/yaml/stdlib.yaml
-  stdlib.h.def
+  ../libc/include/stdlib.yaml
   stdlib.h
   DEPENDS
     .llvm_libc_common_h
@@ -352,8 +337,7 @@ add_header_macro(
 
 add_header_macro(
   unistd
-  ../libc/newhdrgen/yaml/unistd.yaml
-  unistd.h.def
+  ../libc/include/unistd.yaml
   unistd.h
   DEPENDS
     .llvm_libc_common_h
@@ -371,11 +355,10 @@ add_header_macro(
 
 add_header_macro(
   pthread
-  ../libc/newhdrgen/yaml/pthread.yaml
-  pthread.h.def
+  ../libc/include/pthread.yaml
   pthread.h
   DEPENDS
-    .llvm_libc_common_h
+    .llvm-libc-macros.pthread_macros
     .llvm-libc-types.__atfork_callback_t
     .llvm-libc-types.__pthread_once_func_t
     .llvm-libc-types.__pthread_start_t
@@ -390,12 +373,12 @@ add_header_macro(
     .llvm-libc-types.pthread_rwlockattr_t
     .llvm-libc-types.pthread_spinlock_t
     .llvm-libc-types.pthread_t
+    .llvm_libc_common_h
 )
 
 add_header_macro(
   sched
-  ../libc/newhdrgen/yaml/sched.yaml
-  sched.h.def
+  ../libc/include/sched.yaml
   sched.h
   DEPENDS
     .llvm_libc_common_h
@@ -411,8 +394,7 @@ add_header_macro(
 
 add_header_macro(
   spawn
-  ../libc/newhdrgen/yaml/spawn.yaml
-  spawn.h.def
+  ../libc/include/spawn.yaml
   spawn.h
   DEPENDS
     .llvm_libc_common_h
@@ -424,8 +406,7 @@ add_header_macro(
 
 add_header_macro(
   link
-  ../libc/newhdrgen/yaml/link.yaml
-  link.h.def
+  ../libc/include/link.yaml
   link.h
   DEPENDS
     .llvm_libc_common_h
@@ -434,8 +415,7 @@ add_header_macro(
 
 add_header_macro(
   elf
-  ../libc/newhdrgen/yaml/elf.yaml
-  elf.h.def
+  ../libc/include/elf.yaml
   elf.h
   DEPENDS
     .llvm-libc-macros.elf_macros
@@ -448,8 +428,7 @@ file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/sys)
 
 add_header_macro(
   sys_auxv
-  ../libc/newhdrgen/yaml/sys/auxv.yaml
-  sys/auxv.h.def
+  ../libc/include/sys/auxv.yaml
   sys/auxv.h
   DEPENDS
     .llvm_libc_common_h
@@ -458,8 +437,7 @@ add_header_macro(
 
 add_header_macro(
   sys_epoll
-  ../libc/newhdrgen/yaml/sys/epoll.yaml
-  sys/epoll.h.def
+  ../libc/include/sys/epoll.yaml
   sys/epoll.h
   DEPENDS
     .llvm_libc_common_h
@@ -471,8 +449,7 @@ add_header_macro(
 
 add_header_macro(
   sys_ioctl
-  ../libc/newhdrgen/yaml/sys/ioctl.yaml
-  sys/ioctl.h.def
+  ../libc/include/sys/ioctl.yaml
   sys/ioctl.h
   DEPENDS
     .llvm_libc_common_h
@@ -481,8 +458,7 @@ add_header_macro(
 
 add_header_macro(
   sys_mman
-  ../libc/newhdrgen/yaml/sys/mman.yaml
-  sys/mman.h.def
+  ../libc/include/sys/mman.yaml
   sys/mman.h
   DEPENDS
     .llvm_libc_common_h
@@ -494,8 +470,7 @@ add_header_macro(
 
 add_header_macro(
   sys_prctl
-  ../libc/newhdrgen/yaml/sys/prctl.yaml
-  sys/prctl.h.def
+  ../libc/include/sys/prctl.yaml
   sys/prctl.h
   DEPENDS
     .llvm_libc_common_h
@@ -511,8 +486,7 @@ add_header(
 
 add_header_macro(
   sys_random
-  ../libc/newhdrgen/yaml/sys/random.yaml
-  sys/random.h.def
+  ../libc/include/sys/random.yaml
   sys/random.h
   DEPENDS
     .llvm_libc_common_h
@@ -523,8 +497,7 @@ add_header_macro(
 
 add_header_macro(
   sys_resource
-  ../libc/newhdrgen/yaml/sys/resource.yaml
-  sys/resource.h.def
+  ../libc/include/sys/resource.yaml
   sys/resource.h
   DEPENDS
     .llvm_libc_common_h
@@ -535,8 +508,7 @@ add_header_macro(
 
 add_header_macro(
   sys_stat
-  ../libc/newhdrgen/yaml/sys/stat.yaml
-  sys/stat.h.def
+  ../libc/include/sys/stat.yaml
   sys/stat.h
   DEPENDS
     .llvm_libc_common_h
@@ -557,8 +529,7 @@ add_header_macro(
 
 add_header_macro(
   sys_select
-  ../libc/newhdrgen/yaml/sys/select.yaml
-  sys/select.h.def
+  ../libc/include/sys/select.yaml
   sys/select.h
   DEPENDS
     .llvm_libc_common_h
@@ -573,8 +544,7 @@ add_header_macro(
 
 add_header_macro(
   sys_sendfile
-  ../libc/newhdrgen/yaml/sys/sendfile.yaml
-  sys/sendfile.h.def
+  ../libc/include/sys/sendfile.yaml
   sys/sendfile.h
   DEPENDS
     .llvm_libc_common_h
@@ -585,8 +555,7 @@ add_header_macro(
 
 add_header_macro(
   sys_socket
-  ../libc/newhdrgen/yaml/sys/socket.yaml
-  sys/socket.h.def
+  ../libc/include/sys/socket.yaml
   sys/socket.h
   DEPENDS
     .llvm_libc_common_h
@@ -601,8 +570,7 @@ add_header_macro(
 
 add_header_macro(
   sys_statvfs
-  ../libc/newhdrgen/yaml/sys/statvfs.yaml
-  sys/statvfs.h.def
+  ../libc/include/sys/statvfs.yaml
   sys/statvfs.h
   DEPENDS
     .llvm_libc_common_h
@@ -611,16 +579,14 @@ add_header_macro(
 
 add_header_macro(
   sys_syscall
-  ../libc/newhdrgen/yaml/sys/syscall.yaml
-  sys/syscall.h.def
+  ../libc/include/sys/syscall.yaml
   sys/syscall.h
   DEPENDS
 )
 
 add_header_macro(
   sys_time
-  ../libc/newhdrgen/yaml/sys/time.yaml
-  sys/time.h.def
+  ../libc/include/sys/time.yaml
   sys/time.h
   DEPENDS
     .llvm_libc_common_h
@@ -630,8 +596,7 @@ add_header_macro(
 
 add_header_macro(
   sys_types
-  ../libc/newhdrgen/yaml/sys/types.yaml
-  sys/types.h.def
+  ../libc/include/sys/types.yaml
   sys/types.h
   DEPENDS
     .llvm_libc_common_h
@@ -660,8 +625,7 @@ add_header_macro(
 
 add_header_macro(
   sys_utsname
-  ../libc/newhdrgen/yaml/sys/utsname.yaml
-  sys/utsname.h.def
+  ../libc/include/sys/utsname.yaml
   sys/utsname.h
   DEPENDS
     .llvm_libc_common_h
@@ -669,9 +633,18 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_uio
+  ../libc/include/sys/uio.yaml
+  sys/uio.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_iovec
+    .llvm-libc-types.ssize_t
+)
+
+add_header_macro(
   sys_wait
-  ../libc/newhdrgen/yaml/sys/wait.yaml
-  sys/wait.h.def
+  ../libc/include/sys/wait.yaml
   sys/wait.h
   DEPENDS
     .llvm_libc_common_h
@@ -683,8 +656,7 @@ add_header_macro(
 
 add_header_macro(
   termios
-  ../libc/newhdrgen/yaml/termios.yaml
-  termios.h.def
+  ../libc/include/termios.yaml
   termios.h
   DEPENDS
     .llvm_libc_common_h
@@ -698,8 +670,7 @@ add_header_macro(
 
 add_header_macro(
   uchar
-  ../libc/newhdrgen/yaml/uchar.yaml
-  uchar.h.def
+  ../libc/include/uchar.yaml
   uchar.h
   DEPENDS
     .llvm_libc_common_h
@@ -711,8 +682,7 @@ add_header_macro(
 
 add_header_macro(
   wchar
-  ../libc/newhdrgen/yaml/wchar.yaml
-  wchar.h.def
+  ../libc/include/wchar.yaml
   wchar.h
   DEPENDS
     .llvm_libc_common_h
@@ -725,8 +695,7 @@ add_header_macro(
 
 add_header_macro(
   locale
-  ../libc/newhdrgen/yaml/locale.yaml
-  locale.h.def
+  ../libc/include/locale.yaml
   locale.h
   DEPENDS
     .llvm_libc_common_h
@@ -734,20 +703,6 @@ add_header_macro(
     .llvm-libc-types.locale_t
     .llvm-libc-types.struct_lconv
 )
-
-if(LIBC_TARGET_OS_IS_GPU)
-  file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/gpu)
-
-  add_header_macro(
-    gpu_rpc
-    ../libc/newhdrgen/yaml/gpu/rpc.yaml
-    gpu/rpc.h.def
-    gpu/rpc.h
-    DEPENDS
-      .llvm_libc_common_h
-      .llvm-libc-types.rpc_opcodes_t
-  )
-endif()
 
 if(NOT LLVM_LIBC_FULL_BUILD)
   # We don't install headers in non-fullbuild mode.

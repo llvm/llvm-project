@@ -17,7 +17,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -29,6 +28,7 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "Utility/ARM64_DWARF_Registers.h"
 

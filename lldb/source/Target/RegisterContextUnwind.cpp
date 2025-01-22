@@ -1402,7 +1402,7 @@ RegisterContextUnwind::SavedLocationForRegister(
       // it's still live in the actual register. Handle this specially.
 
       if (!have_unwindplan_regloc && return_address_reg.IsValid() &&
-          BehavesLikeZerothFrame()) {
+          IsFrameZero()) {
         if (return_address_reg.GetAsKind(eRegisterKindLLDB) !=
             LLDB_INVALID_REGNUM) {
           lldb_private::UnwindLLDB::ConcreteRegisterLocation new_regloc;
@@ -2087,6 +2087,12 @@ bool RegisterContextUnwind::ReadFrameAddress(
     }
     UnwindLogMsg("No suitable CFA found");
     break;
+  }
+  case UnwindPlan::Row::FAValue::isConstant: {
+    address = fa.GetConstant();
+    address = m_thread.GetProcess()->FixDataAddress(address);
+    UnwindLogMsg("CFA value set by constant is 0x%" PRIx64, address);
+    return true;
   }
   default:
     return false;

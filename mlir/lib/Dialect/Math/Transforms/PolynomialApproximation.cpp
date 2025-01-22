@@ -43,20 +43,17 @@ using namespace mlir::vector;
 struct VectorShape {
   ArrayRef<int64_t> sizes;
   ArrayRef<bool> scalableFlags;
-
-  bool empty() const { return sizes.empty(); }
 };
 
-// Returns vector shape if the type is a vector. Returns an empty shape if it is
-// not a vector.
-static VectorShape vectorShape(Type type) {
-  auto vectorType = dyn_cast<VectorType>(type);
-  return vectorType
-             ? VectorShape{vectorType.getShape(), vectorType.getScalableDims()}
-             : VectorShape{};
+// Returns vector shape if the type is a vector, otherwise return nullopt.
+static std::optional<VectorShape> vectorShape(Type type) {
+  if (auto vectorType = dyn_cast<VectorType>(type)) {
+    return VectorShape{vectorType.getShape(), vectorType.getScalableDims()};
+  }
+  return std::nullopt;
 }
 
-static VectorShape vectorShape(Value value) {
+static std::optional<VectorShape> vectorShape(Value value) {
   return vectorShape(value.getType());
 }
 
@@ -65,19 +62,18 @@ static VectorShape vectorShape(Value value) {
 //----------------------------------------------------------------------------//
 
 // Broadcasts scalar type into vector type (iff shape is non-scalar).
-static Type broadcast(Type type, VectorShape shape) {
+static Type broadcast(Type type, std::optional<VectorShape> shape) {
   assert(!isa<VectorType>(type) && "must be scalar type");
-  return !shape.empty()
-             ? VectorType::get(shape.sizes, type, shape.scalableFlags)
-             : type;
+  return shape ? VectorType::get(shape->sizes, type, shape->scalableFlags)
+               : type;
 }
 
 // Broadcasts scalar value into vector (iff shape is non-scalar).
 static Value broadcast(ImplicitLocOpBuilder &builder, Value value,
-                       VectorShape shape) {
+                       std::optional<VectorShape> shape) {
   assert(!isa<VectorType>(value.getType()) && "must be scalar value");
   auto type = broadcast(value.getType(), shape);
-  return !shape.empty() ? builder.create<BroadcastOp>(type, value) : value;
+  return shape ? builder.create<BroadcastOp>(type, value) : value;
 }
 
 //----------------------------------------------------------------------------//
@@ -227,7 +223,7 @@ static Value clamp(ImplicitLocOpBuilder &builder, Value value, Value lowerBound,
 static std::pair<Value, Value> frexp(ImplicitLocOpBuilder &builder, Value arg,
                                      bool isPositive = false) {
   assert(getElementTypeOrSelf(arg).isF32() && "arg must be f32 type");
-  VectorShape shape = vectorShape(arg);
+  std::optional<VectorShape> shape = vectorShape(arg);
 
   auto bcast = [&](Value value) -> Value {
     return broadcast(builder, value, shape);
@@ -267,7 +263,7 @@ static std::pair<Value, Value> frexp(ImplicitLocOpBuilder &builder, Value arg,
 // Computes exp2 for an i32 argument.
 static Value exp2I32(ImplicitLocOpBuilder &builder, Value arg) {
   assert(getElementTypeOrSelf(arg).isInteger(32) && "arg must be i32 type");
-  VectorShape shape = vectorShape(arg);
+  std::optional<VectorShape> shape = vectorShape(arg);
 
   auto bcast = [&](Value value) -> Value {
     return broadcast(builder, value, shape);
@@ -293,7 +289,7 @@ Value makePolynomialCalculation(ImplicitLocOpBuilder &builder,
   Type elementType = getElementTypeOrSelf(x);
   assert((elementType.isF32() || elementType.isF16()) &&
          "x must be f32 or f16 type");
-  VectorShape shape = vectorShape(x);
+  std::optional<VectorShape> shape = vectorShape(x);
 
   if (coeffs.empty())
     return broadcast(builder, floatCst(builder, 0.0f, elementType), shape);
@@ -391,7 +387,7 @@ AtanApproximation::matchAndRewrite(math::AtanOp op,
   if (!getElementTypeOrSelf(operand).isF32())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
-  VectorShape shape = vectorShape(op.getOperand());
+  std::optional<VectorShape> shape = vectorShape(op.getOperand());
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   Value abs = builder.create<math::AbsFOp>(operand);
@@ -490,7 +486,7 @@ Atan2Approximation::matchAndRewrite(math::Atan2Op op,
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
-  VectorShape shape = vectorShape(op.getResult());
+  std::optional<VectorShape> shape = vectorShape(op.getResult());
 
   // Compute atan in the valid range.
   auto div = builder.create<arith::DivFOp>(y, x);
@@ -556,7 +552,7 @@ TanhApproximation::matchAndRewrite(math::TanhOp op,
   if (!getElementTypeOrSelf(op.getOperand()).isF32())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
-  VectorShape shape = vectorShape(op.getOperand());
+  std::optional<VectorShape> shape = vectorShape(op.getOperand());
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   auto bcast = [&](Value value) -> Value {
@@ -644,7 +640,7 @@ LogApproximationBase<Op>::logMatchAndRewrite(Op op, PatternRewriter &rewriter,
   if (!getElementTypeOrSelf(op.getOperand()).isF32())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
-  VectorShape shape = vectorShape(op.getOperand());
+  std::optional<VectorShape> shape = vectorShape(op.getOperand());
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   auto bcast = [&](Value value) -> Value {
@@ -791,7 +787,7 @@ Log1pApproximation::matchAndRewrite(math::Log1pOp op,
   if (!getElementTypeOrSelf(op.getOperand()).isF32())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
-  VectorShape shape = vectorShape(op.getOperand());
+  std::optional<VectorShape> shape = vectorShape(op.getOperand());
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   auto bcast = [&](Value value) -> Value {
@@ -846,7 +842,7 @@ AsinPolynomialApproximation::matchAndRewrite(math::AsinOp op,
   if (!(elementType.isF32() || elementType.isF16()))
     return rewriter.notifyMatchFailure(op,
                                        "only f32 and f16 type is supported.");
-  VectorShape shape = vectorShape(operand);
+  std::optional<VectorShape> shape = vectorShape(operand);
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   auto bcast = [&](Value value) -> Value {
@@ -941,7 +937,7 @@ AcosPolynomialApproximation::matchAndRewrite(math::AcosOp op,
   if (!(elementType.isF32() || elementType.isF16()))
     return rewriter.notifyMatchFailure(op,
                                        "only f32 and f16 type is supported.");
-  VectorShape shape = vectorShape(operand);
+  std::optional<VectorShape> shape = vectorShape(operand);
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   auto bcast = [&](Value value) -> Value {
@@ -1019,7 +1015,7 @@ ErfPolynomialApproximation::matchAndRewrite(math::ErfOp op,
   if (!(elementType.isF32() || elementType.isF16()))
     return rewriter.notifyMatchFailure(op,
                                        "only f32 and f16 type is supported.");
-  VectorShape shape = vectorShape(operand);
+  std::optional<VectorShape> shape = vectorShape(operand);
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   auto bcast = [&](Value value) -> Value {
@@ -1128,8 +1124,9 @@ ErfPolynomialApproximation::matchAndRewrite(math::ErfOp op,
 
 namespace {
 
-Value clampWithNormals(ImplicitLocOpBuilder &builder, const VectorShape shape,
-                       Value value, float lowerBound, float upperBound) {
+Value clampWithNormals(ImplicitLocOpBuilder &builder,
+                       const std::optional<VectorShape> shape, Value value,
+                       float lowerBound, float upperBound) {
   assert(!std::isnan(lowerBound));
   assert(!std::isnan(upperBound));
 
@@ -1320,7 +1317,7 @@ ExpM1Approximation::matchAndRewrite(math::ExpM1Op op,
   if (!getElementTypeOrSelf(op.getOperand()).isF32())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
-  VectorShape shape = vectorShape(op.getOperand());
+  std::optional<VectorShape> shape = vectorShape(op.getOperand());
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   auto bcast = [&](Value value) -> Value {
@@ -1390,7 +1387,7 @@ LogicalResult SinAndCosApproximation<isSine, OpTy>::matchAndRewrite(
   if (!getElementTypeOrSelf(op.getOperand()).isF32())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
-  VectorShape shape = vectorShape(op.getOperand());
+  std::optional<VectorShape> shape = vectorShape(op.getOperand());
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   auto bcast = [&](Value value) -> Value {
@@ -1517,7 +1514,7 @@ CbrtApproximation::matchAndRewrite(math::CbrtOp op,
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
-  VectorShape shape = vectorShape(operand);
+  std::optional<VectorShape> shape = vectorShape(operand);
 
   Type floatTy = getElementTypeOrSelf(operand.getType());
   Type intTy = b.getIntegerType(floatTy.getIntOrFloatBitWidth());
@@ -1606,10 +1603,10 @@ RsqrtApproximation::matchAndRewrite(math::RsqrtOp op,
   if (!getElementTypeOrSelf(op.getOperand()).isF32())
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
-  VectorShape shape = vectorShape(op.getOperand());
+  std::optional<VectorShape> shape = vectorShape(op.getOperand());
 
   // Only support already-vectorized rsqrt's.
-  if (shape.empty() || shape.sizes.back() % 8 != 0)
+  if (!shape || shape->sizes.empty() || shape->sizes.back() % 8 != 0)
     return rewriter.notifyMatchFailure(op, "unsupported operand type");
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);

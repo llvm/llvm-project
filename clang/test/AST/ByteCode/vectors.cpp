@@ -37,6 +37,7 @@ static_assert(arr4[1][0] == 0, "");
 static_assert(arr4[1][0] == 0, "");
 static_assert(arr4[1][0] == 0, "");
 
+constexpr VI4 B = __extension__(A);
 
 /// From constant-expression-cxx11.cpp
 namespace Vector {
@@ -55,10 +56,9 @@ namespace Vector {
   static_assert(__builtin_vectorelements(v2) == (32 / sizeof(double)), "");
 }
 
-/// FIXME: We need to support BitCasts between vector types.
 namespace {
   typedef float __attribute__((vector_size(16))) VI42;
-  constexpr VI42 A2 = A; // expected-error {{must be initialized by a constant expression}}
+  constexpr VI42 A2 = A;
 }
 
 namespace BoolToSignedIntegralCast{
@@ -125,3 +125,21 @@ constexpr int a2() {
 }
 
 static_assert(a2() == 0);
+
+namespace {
+  /// convertvector expr with a per-element floating-point cast
+
+  typedef float __m128 __attribute__((__vector_size__(16), __aligned__(16)));
+  typedef double __m128d __attribute__((__vector_size__(16), __aligned__(16)));
+  typedef float __v4sf __attribute__((__vector_size__(16)));
+  typedef double __v2df __attribute__((__vector_size__(16)));
+
+  static inline constexpr __m128d
+  _mm_cvtps_pd(__m128 __a) {
+    return __builtin_convertvector(__builtin_shufflevector(__a, __a, 0, 1), __v2df);
+  }
+
+  constexpr __m128 kf1 {-1.0f,+2.0f,-3.0f,+4.0f};
+  constexpr __m128d v_mm_cvtps_pd = _mm_cvtps_pd(kf1);
+  static_assert(v_mm_cvtps_pd[0] == -1.0 && v_mm_cvtps_pd[1] == +2.0);
+}

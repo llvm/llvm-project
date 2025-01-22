@@ -27,7 +27,7 @@ define void @loop_invariant_select(ptr noalias nocapture %out, i1 %select, doubl
 ; CHECK:       for2.header1:
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, [[VECTOR_BODY]] ], [ [[TMP2:%.*]], [[FOR2_HEADER1]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[SELECT:%.*]], <4 x double> [[BROADCAST_SPLAT]], <4 x double> [[BROADCAST_SPLAT3]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> [[TMP1]], <4 x ptr> [[TMP0]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> [[TMP1]], <4 x ptr> [[TMP0]], i32 8, <4 x i1> splat (i1 true))
 entry:
   br label %for1.header
 
@@ -73,7 +73,7 @@ define void @outer_loop_dependant_select(ptr noalias nocapture %out, double %a, 
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, [[VECTOR_BODY]] ], [ [[TMP3:%.*]], [[FOR2_HEADER1]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i64> [[VEC_IND]] to <4 x i1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x double> [[BROADCAST_SPLAT]], <4 x double> [[BROADCAST_SPLAT3]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> [[TMP2]], <4 x ptr> [[TMP0]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> [[TMP2]], <4 x ptr> [[TMP0]], i32 8, <4 x i1> splat (i1 true))
 entry:
   br label %for1.header
 
@@ -120,7 +120,7 @@ define void @inner_loop_dependant_select(ptr noalias nocapture %out, double %a, 
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, [[VECTOR_BODY]] ], [ [[TMP3:%.*]], [[FOR2_HEADER1]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i64> [[VEC_PHI]] to <4 x i1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x double> [[BROADCAST_SPLAT]], <4 x double> [[BROADCAST_SPLAT3]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> [[TMP2]], <4 x ptr> [[TMP0]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> [[TMP2]], <4 x ptr> [[TMP0]], i32 8, <4 x i1> splat (i1 true))
 entry:
   br label %for1.header
 
@@ -168,7 +168,7 @@ define void @outer_and_inner_loop_dependant_select(ptr noalias nocapture %out, d
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw <4 x i64> [[VEC_IND]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i64> [[TMP1]] to <4 x i1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x double> [[BROADCAST_SPLAT]], <4 x double> [[BROADCAST_SPLAT3]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> [[TMP3]], <4 x ptr> [[TMP0]], i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> [[TMP3]], <4 x ptr> [[TMP0]], i32 8, <4 x i1> splat (i1 true))
 entry:
   br label %for1.header
 

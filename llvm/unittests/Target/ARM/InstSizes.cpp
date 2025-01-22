@@ -18,7 +18,7 @@ namespace {
 /// TODO: Some of this might be useful for other architectures as well - extract
 ///       the platform-independent parts somewhere they can be reused.
 void runChecks(
-    LLVMTargetMachine *TM, const ARMBaseInstrInfo *II,
+    TargetMachine *TM, const ARMBaseInstrInfo *II,
     const StringRef InputIRSnippet, const StringRef InputMIRSnippet,
     unsigned Expected,
     std::function<void(const ARMBaseInstrInfo &, MachineFunction &, unsigned &)>
@@ -82,9 +82,9 @@ TEST(InstSizes, PseudoInst) {
   }
 
   TargetOptions Options;
-  auto TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+  auto TM = std::unique_ptr<TargetMachine>(
       T->createTargetMachine(TT, "generic", "", Options, std::nullopt,
-                             std::nullopt, CodeGenOptLevel::Default)));
+                             std::nullopt, CodeGenOptLevel::Default));
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);

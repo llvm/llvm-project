@@ -22,6 +22,7 @@
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMPass.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
+#include "mlir/Conversion/GPUCommon/GPUToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
@@ -31,10 +32,12 @@
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
@@ -424,9 +427,11 @@ class LegalizeLaunchFuncOpPattern
     : public ConvertOpToGpuRuntimeCallPattern<gpu::LaunchFuncOp> {
 public:
   LegalizeLaunchFuncOpPattern(const LLVMTypeConverter &typeConverter,
-                              bool kernelBarePtrCallConv)
+                              bool kernelBarePtrCallConv,
+                              bool typeCheckKernelArgs)
       : ConvertOpToGpuRuntimeCallPattern<gpu::LaunchFuncOp>(typeConverter),
-        kernelBarePtrCallConv(kernelBarePtrCallConv) {}
+        kernelBarePtrCallConv(kernelBarePtrCallConv),
+        typeCheckKernelArgs(typeCheckKernelArgs) {}
 
 private:
   LogicalResult
@@ -434,6 +439,7 @@ private:
                   ConversionPatternRewriter &rewriter) const override;
 
   bool kernelBarePtrCallConv;
+  bool typeCheckKernelArgs;
 };
 
 /// A rewrite pattern to convert gpu.memcpy operations into a GPU runtime
@@ -521,6 +527,17 @@ DECLARE_CONVERT_OP_TO_GPU_RUNTIME_CALL_PATTERN(SetCsrPointersOp)
 
 void GpuToLLVMConversionPass::runOnOperation() {
   MLIRContext *context = &getContext();
+
+  // Perform progressive lowering of vector transfer operations.
+  {
+    RewritePatternSet patterns(&getContext());
+    // Vector transfer ops with rank > 1 should be lowered with VectorToSCF.
+    vector::populateVectorTransferLoweringPatterns(patterns,
+                                                   /*maxTransferRank=*/1);
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
+      return signalPassFailure();
+  }
+
   LowerToLLVMOptions options(context);
   options.useBarePtrCallConv = hostBarePtrCallConv;
   RewritePatternSet patterns(context);
@@ -549,8 +566,8 @@ void GpuToLLVMConversionPass::runOnOperation() {
   populateFinalizeMemRefToLLVMConversionPatterns(converter, patterns);
   populateAsyncStructuralTypeConversionsAndLegality(converter, patterns,
                                                     target);
-  populateGpuToLLVMConversionPatterns(converter, patterns,
-                                      kernelBarePtrCallConv);
+  populateGpuToLLVMConversionPatterns(
+      converter, patterns, kernelBarePtrCallConv, typeCheckKernelArgs);
 
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
@@ -952,6 +969,28 @@ LogicalResult LegalizeLaunchFuncOpPattern::matchAndRewrite(
   // stream must be created to pass to subsequent operations.
   else if (launchOp.getAsyncToken())
     stream = streamCreateCallBuilder.create(loc, rewriter, {}).getResult();
+
+  if (typeCheckKernelArgs) {
+    // The current non-bare-pointer ABI is a bad fit for `mgpuLaunchKernel`,
+    // which takes an untyped list of arguments. The type check here prevents
+    // accidentally violating the assumption made in vulkan-runtime-wrappers.cpp
+    // and creating a unchecked runtime ABI mismatch.
+    // TODO(https://github.com/llvm/llvm-project/issues/73457): Change the ABI
+    // here to remove the need for this type check.
+    for (Value arg : launchOp.getKernelOperands()) {
+      if (auto memrefTy = dyn_cast<MemRefType>(arg.getType())) {
+        if (memrefTy.getRank() != 1 ||
+            memrefTy.getElementTypeBitWidth() != 32) {
+          return rewriter.notifyMatchFailure(
+              launchOp, "Operand to launch op is not a rank-1 memref with "
+                        "32-bit element type.");
+        }
+      } else {
+        return rewriter.notifyMatchFailure(
+            launchOp, "Operand to launch op is not a memref.");
+      }
+    }
+  }
   // Lower the kernel operands to match kernel parameters.
   // Note: If `useBarePtrCallConv` is set in the type converter's options,
   // the value of `kernelBarePtrCallConv` will be ignored.
@@ -1723,7 +1762,8 @@ LogicalResult ConvertCreateBsrOpToGpuRuntimeCallPattern::matchAndRewrite(
 
 void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                RewritePatternSet &patterns,
-                                               bool kernelBarePtrCallConv) {
+                                               bool kernelBarePtrCallConv,
+                                               bool typeCheckKernelArgs) {
   addOpaquePointerConversion<gpu::AsyncTokenType>(converter);
   addOpaquePointerConversion<gpu::SparseDnTensorHandleType>(converter);
   addOpaquePointerConversion<gpu::SparseSpMatHandleType>(converter);
@@ -1760,5 +1800,37 @@ void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
                ConvertSpGEMMCopyOpToGpuRuntimeCallPattern,
                ConvertSpMatGetSizeOpToGpuRuntimeCallPattern,
                ConvertSetCsrPointersOpToGpuRuntimeCallPattern>(converter);
-  patterns.add<LegalizeLaunchFuncOpPattern>(converter, kernelBarePtrCallConv);
+  patterns.add<LegalizeLaunchFuncOpPattern>(converter, kernelBarePtrCallConv,
+                                            typeCheckKernelArgs);
+}
+
+//===----------------------------------------------------------------------===//
+// GPUModuleOp convert to LLVM op interface
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct GPUModuleOpConvertToLLVMInterface
+    : public ConvertToLLVMOpInterface::ExternalModel<
+          GPUModuleOpConvertToLLVMInterface, gpu::GPUModuleOp> {
+  /// Get the conversion patterns from the target attribute.
+  void getConvertToLLVMConversionAttrs(
+      Operation *op, SmallVectorImpl<ConvertToLLVMAttrInterface> &attrs) const;
+};
+} // namespace
+
+void GPUModuleOpConvertToLLVMInterface::getConvertToLLVMConversionAttrs(
+    Operation *op, SmallVectorImpl<ConvertToLLVMAttrInterface> &attrs) const {
+  auto module = cast<gpu::GPUModuleOp>(op);
+  ArrayAttr targetsAttr = module.getTargetsAttr();
+  // Fail if there are no target attributes or there is more than one target.
+  if (!targetsAttr || targetsAttr.size() != 1)
+    return;
+  if (auto patternAttr = dyn_cast<ConvertToLLVMAttrInterface>(targetsAttr[0]))
+    attrs.push_back(patternAttr);
+}
+
+void mlir::gpu::registerConvertGpuToLLVMInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, gpu::GPUDialect *dialect) {
+    gpu::GPUModuleOp::attachInterface<GPUModuleOpConvertToLLVMInterface>(*ctx);
+  });
 }

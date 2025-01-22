@@ -7,45 +7,45 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_BUFFER_H
-#define _LIBCPP___FORMAT_BUFFER_H
+#ifndef _LIBCPP___CXX03___FORMAT_BUFFER_H
+#define _LIBCPP___CXX03___FORMAT_BUFFER_H
 
-#include <__algorithm/copy_n.h>
-#include <__algorithm/fill_n.h>
-#include <__algorithm/max.h>
-#include <__algorithm/min.h>
-#include <__algorithm/ranges_copy_n.h>
-#include <__algorithm/transform.h>
-#include <__algorithm/unwrap_iter.h>
-#include <__concepts/same_as.h>
-#include <__config>
-#include <__format/concepts.h>
-#include <__format/enable_insertable.h>
-#include <__format/format_to_n_result.h>
-#include <__iterator/back_insert_iterator.h>
-#include <__iterator/concepts.h>
-#include <__iterator/incrementable_traits.h>
-#include <__iterator/iterator_traits.h>
-#include <__iterator/wrap_iter.h>
-#include <__memory/addressof.h>
-#include <__memory/allocate_at_least.h>
-#include <__memory/allocator_traits.h>
-#include <__memory/construct_at.h>
-#include <__memory/ranges_construct_at.h>
-#include <__memory/uninitialized_algorithms.h>
-#include <__type_traits/add_pointer.h>
-#include <__type_traits/conditional.h>
-#include <__utility/exception_guard.h>
-#include <__utility/move.h>
-#include <cstddef>
-#include <string_view>
+#include <__cxx03/__algorithm/copy_n.h>
+#include <__cxx03/__algorithm/fill_n.h>
+#include <__cxx03/__algorithm/max.h>
+#include <__cxx03/__algorithm/min.h>
+#include <__cxx03/__algorithm/ranges_copy_n.h>
+#include <__cxx03/__algorithm/transform.h>
+#include <__cxx03/__algorithm/unwrap_iter.h>
+#include <__cxx03/__concepts/same_as.h>
+#include <__cxx03/__config>
+#include <__cxx03/__format/concepts.h>
+#include <__cxx03/__format/enable_insertable.h>
+#include <__cxx03/__format/format_to_n_result.h>
+#include <__cxx03/__iterator/back_insert_iterator.h>
+#include <__cxx03/__iterator/concepts.h>
+#include <__cxx03/__iterator/incrementable_traits.h>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__iterator/wrap_iter.h>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__memory/allocate_at_least.h>
+#include <__cxx03/__memory/allocator_traits.h>
+#include <__cxx03/__memory/construct_at.h>
+#include <__cxx03/__memory/ranges_construct_at.h>
+#include <__cxx03/__memory/uninitialized_algorithms.h>
+#include <__cxx03/__type_traits/add_pointer.h>
+#include <__cxx03/__type_traits/conditional.h>
+#include <__cxx03/__utility/exception_guard.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -652,4 +652,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FORMAT_BUFFER_H
+#endif // _LIBCPP___CXX03___FORMAT_BUFFER_H

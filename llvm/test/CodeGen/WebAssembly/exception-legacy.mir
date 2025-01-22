@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=wasm32-unknown-unknown -exception-model=wasm -mattr=+exception-handling -run-pass wasm-late-eh-prepare -run-pass wasm-cfg-stackify %s -o - | FileCheck %s
+# RUN: llc -mtriple=wasm32-unknown-unknown -wasm-use-legacy-eh -exception-model=wasm -mattr=+exception-handling -run-pass wasm-late-eh-prepare -run-pass wasm-cfg-stackify %s -o - | FileCheck %s
 
 --- |
   target triple = "wasm32-unknown-unknown"
@@ -105,7 +105,7 @@ body: |
 
   bb.2:
     successors: %bb.3
-    CLEANUPRET implicit-def dead $arguments
+    CLEANUPRET %bb.1, implicit-def dead $arguments
 
   bb.3:
     RETURN implicit-def dead $arguments

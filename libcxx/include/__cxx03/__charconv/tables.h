@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHARCONV_TABLES
-#define _LIBCPP___CHARCONV_TABLES
+#ifndef _LIBCPP___CXX03___CHARCONV_TABLES
+#define _LIBCPP___CXX03___CHARCONV_TABLES
 
-#include <__config>
-#include <cstdint>
+#include <__cxx03/__config>
+#include <__cxx03/cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -160,4 +160,4 @@ inline constexpr char __digits_base_10[200] = {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CHARCONV_TABLES
+#endif // _LIBCPP___CXX03___CHARCONV_TABLES

@@ -516,7 +516,7 @@ concept something_interesting = requires {
 };
 
 template <class T>
-struct X {
+struct X { // #defined-here
       void foo() requires requires { requires is_not_same_v<T, int>; };
       void bar(decltype(requires { requires is_not_same_v<T, int>; }));
 };
@@ -524,7 +524,8 @@ struct X {
 template <class T>
 void X<T>::foo() requires requires { requires something_interesting<T>; } {}
 // expected-error@-1{{definition of 'foo' does not match any declaration}}
-// expected-note@*{{}}
+// expected-note@#defined-here{{defined here}}
+// expected-note@-8{{member declaration nearly matches}}
 
 template <class T>
 void X<T>::foo() requires requires { requires is_not_same_v<T, int>; } {} // ok
@@ -532,6 +533,7 @@ void X<T>::foo() requires requires { requires is_not_same_v<T, int>; } {} // ok
 template <class T>
 void X<T>::bar(decltype(requires { requires something_interesting<T>; })) {}
 // expected-error@-1{{definition of 'bar' does not match any declaration}}
+// expected-note@#defined-here{{defined here}}
 
 template <class T>
 void X<T>::bar(decltype(requires { requires is_not_same_v<T, int>; })) {}
@@ -700,3 +702,38 @@ class TTP;
 C v;
 
 } // namespace GH93099
+
+namespace GH115098 {
+
+template <typename... Ts> struct c {
+  template <typename T>
+    requires(sizeof...(Ts) > 0)
+  friend bool operator==(c, c);
+};
+
+template <typename... Ts> struct d {
+  template <typename T>
+    requires(sizeof...(Ts) > 0)
+  friend bool operator==(d, d);
+};
+
+template struct c<int>;
+template struct d<int, int>;
+
+} // namespace GH115098
+
+namespace GH114685 {
+
+template <typename T> struct ptr {
+  template <typename U>
+  friend ptr<U> make_item(auto &&args)
+    requires(sizeof(args) > 1);
+};
+
+template <typename U>
+ptr<U> make_item(auto &&args)
+  requires(sizeof(args) > 1) {}
+
+ptr<char> p;
+
+} // namespace GH114685

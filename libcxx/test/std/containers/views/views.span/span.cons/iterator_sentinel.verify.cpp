@@ -15,8 +15,9 @@
 //   If Extent is not equal to dynamic_extent, then last - first shall be equal to Extent.
 //
 
-#include <span>
+#include <cstddef>
 #include <iterator>
+#include <span>
 
 template<class T, std::size_t Extent>
 std::span<T, Extent> createImplicitSpan(T* first, T* last) {

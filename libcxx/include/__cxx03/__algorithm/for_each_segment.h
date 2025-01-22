@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_FOR_EACH_SEGMENT_H
-#define _LIBCPP___ALGORITHM_FOR_EACH_SEGMENT_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_FOR_EACH_SEGMENT_H
+#define _LIBCPP___CXX03___ALGORITHM_FOR_EACH_SEGMENT_H
 
-#include <__config>
-#include <__iterator/segmented_iterator.h>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/segmented_iterator.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -50,4 +50,4 @@ __for_each_segment(_SegmentedIterator __first, _SegmentedIterator __last, _Funct
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_FOR_EACH_SEGMENT_H
+#endif // _LIBCPP___CXX03___ALGORITHM_FOR_EACH_SEGMENT_H

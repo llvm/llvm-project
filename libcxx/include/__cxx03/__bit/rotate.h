@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___BIT_ROTATE_H
-#define _LIBCPP___BIT_ROTATE_H
+#ifndef _LIBCPP___CXX03___BIT_ROTATE_H
+#define _LIBCPP___CXX03___BIT_ROTATE_H
 
-#include <__concepts/arithmetic.h>
-#include <__config>
-#include <__type_traits/is_unsigned_integer.h>
-#include <limits>
+#include <__cxx03/__concepts/arithmetic.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/is_unsigned_integer.h>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -69,4 +69,4 @@ template <__libcpp_unsigned_integer _Tp>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___BIT_ROTATE_H
+#endif // _LIBCPP___CXX03___BIT_ROTATE_H

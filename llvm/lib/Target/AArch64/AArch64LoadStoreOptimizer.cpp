@@ -37,7 +37,6 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -734,7 +733,7 @@ static bool isPromotableLoadFromStore(MachineInstr &MI) {
   }
 }
 
-static bool isMergeableLdStUpdate(MachineInstr &MI) {
+static bool isMergeableLdStUpdate(MachineInstr &MI, AArch64FunctionInfo &AFI) {
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
   default:
@@ -784,6 +783,15 @@ static bool isMergeableLdStUpdate(MachineInstr &MI) {
   case AArch64::STPXi:
     // Make sure this is a reg+imm (as opposed to an address reloc).
     if (!AArch64InstrInfo::getLdStOffsetOp(MI).isImm())
+      return false;
+
+    // When using stack tagging, simple sp+imm loads and stores are not
+    // tag-checked, but pre- and post-indexed versions of them are, so we can't
+    // replace the former with the latter. This transformation would be valid
+    // if the load/store accesses an untagged stack slot, but we don't have
+    // that information available after frame indices have been eliminated.
+    if (AFI.isMTETagged() &&
+        AArch64InstrInfo::getLdStBaseOp(MI).getReg() == AArch64::SP)
       return false;
 
     return true;
@@ -1541,7 +1549,10 @@ static bool canRenameMOP(const MachineOperand &MOP,
     // Note that this relies on the structure of the AArch64 register file. In
     // particular, a subregister cannot be written without overwriting the
     // whole register.
-    if (RegClass->HasDisjunctSubRegs) {
+    if (RegClass->HasDisjunctSubRegs && RegClass->CoveredBySubRegs &&
+        (TRI->getSubRegisterClass(RegClass, AArch64::dsub0) ||
+         TRI->getSubRegisterClass(RegClass, AArch64::qsub0) ||
+         TRI->getSubRegisterClass(RegClass, AArch64::zsub0))) {
       LLVM_DEBUG(
           dbgs()
           << "  Cannot rename operands with multiple disjunct subregisters ("
@@ -2770,6 +2781,7 @@ bool AArch64LoadStoreOpt::tryToMergeIndexLdSt(MachineBasicBlock::iterator &MBBI,
 
 bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
                                         bool EnableNarrowZeroStOpt) {
+  AArch64FunctionInfo &AFI = *MBB.getParent()->getInfo<AArch64FunctionInfo>();
 
   bool Modified = false;
   // Four tranformations to do here:
@@ -2840,7 +2852,7 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
   //        ldr x0, [x2], #4
   for (MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
        MBBI != E;) {
-    if (isMergeableLdStUpdate(*MBBI) && tryToMergeLdStUpdate(MBBI))
+    if (isMergeableLdStUpdate(*MBBI, AFI) && tryToMergeLdStUpdate(MBBI))
       Modified = true;
     else
       ++MBBI;

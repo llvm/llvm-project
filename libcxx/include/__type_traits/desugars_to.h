@@ -25,6 +25,12 @@ struct __equal_tag {};
 // syntactically, the operation is equivalent to calling `a + b`
 struct __plus_tag {};
 
+// syntactically, the operation is equivalent to calling `a < b`
+struct __less_tag {};
+
+// syntactically, the operation is equivalent to calling `a > b`
+struct __greater_tag {};
+
 // syntactically, the operation is equivalent to calling `a < b`, and these expressions
 // have to be true for any `a` and `b`:
 // - `(a < b) == (b > a)`

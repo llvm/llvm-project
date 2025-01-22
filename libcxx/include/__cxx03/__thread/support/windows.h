@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___THREAD_SUPPORT_WINDOWS_H
-#define _LIBCPP___THREAD_SUPPORT_WINDOWS_H
+#ifndef _LIBCPP___CXX03___THREAD_SUPPORT_WINDOWS_H
+#define _LIBCPP___CXX03___THREAD_SUPPORT_WINDOWS_H
 
-#include <__chrono/duration.h>
-#include <__config>
-#include <ctime>
+#include <__cxx03/__chrono/duration.h>
+#include <__cxx03/__config>
+#include <__cxx03/ctime>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #  pragma GCC system_header
@@ -130,4 +130,4 @@ _LIBCPP_EXPORTED_FROM_ABI int __libcpp_tls_set(__libcpp_tls_key __key, void* __p
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___THREAD_SUPPORT_WINDOWS_H
+#endif // _LIBCPP___CXX03___THREAD_SUPPORT_WINDOWS_H

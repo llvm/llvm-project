@@ -6,12 +6,12 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: norecurse nounwind uwtable
-define void @ehF() #0 {
+define void @ehF(i1 %arg) #0 {
 entry:
-  br i1 undef, label %if.then.i, label %hup.exit
+  br i1 %arg, label %if.then.i, label %hup.exit
 
 if.then.i:                                        ; preds = %entry
-  br i1 undef, label %for.body.lr.ph.i, label %hup.exit
+  br i1 %arg, label %for.body.lr.ph.i, label %hup.exit
 
 for.body.lr.ph.i:                                 ; preds = %if.then.i
   br label %for.body.i

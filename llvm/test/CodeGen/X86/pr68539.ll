@@ -4,7 +4,7 @@
 define i32 @main(i1 %arg) {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jmp .LBB0_1

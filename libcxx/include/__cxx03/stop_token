@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STOP_TOKEN
-#define _LIBCPP_STOP_TOKEN
+#ifndef _LIBCPP___CXX03_STOP_TOKEN
+#define _LIBCPP___CXX03_STOP_TOKEN
 
 /*
 
@@ -31,17 +31,17 @@ namespace std {
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 
 #  if _LIBCPP_STD_VER >= 20
-#    include <__stop_token/stop_callback.h>
-#    include <__stop_token/stop_source.h>
-#    include <__stop_token/stop_token.h>
+#    include <__cxx03/__stop_token/stop_callback.h>
+#    include <__cxx03/__stop_token/stop_source.h>
+#    include <__cxx03/__stop_token/stop_token.h>
 #  endif
 
-#  include <version>
+#  include <__cxx03/version>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -50,7 +50,7 @@ namespace std {
 #endif // !defined(_LIBCPP_HAS_NO_THREADS)
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <iosfwd>
+#  include <__cxx03/iosfwd>
 #endif
 
-#endif // _LIBCPP_STOP_TOKEN
+#endif // _LIBCPP___CXX03_STOP_TOKEN

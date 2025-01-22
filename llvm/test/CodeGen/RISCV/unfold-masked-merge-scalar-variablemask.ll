@@ -208,10 +208,10 @@ define i64 @in64(i64 %x, i64 %y, i64 %mask) {
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    andn a2, a2, a4
 ; RV32ZBB-NEXT:    and a0, a0, a4
-; RV32ZBB-NEXT:    or a0, a0, a2
-; RV32ZBB-NEXT:    andn a2, a3, a5
+; RV32ZBB-NEXT:    andn a3, a3, a5
 ; RV32ZBB-NEXT:    and a1, a1, a5
-; RV32ZBB-NEXT:    or a1, a1, a2
+; RV32ZBB-NEXT:    or a0, a0, a2
+; RV32ZBB-NEXT:    or a1, a1, a3
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: in64:

@@ -6,12 +6,12 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_PAIR_H
-#define _LIBCPP___FWD_PAIR_H
+#ifndef _LIBCPP___CXX03___FWD_PAIR_H
+#define _LIBCPP___CXX03___FWD_PAIR_H
 
-#include <__config>
-#include <__fwd/tuple.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/tuple.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -42,4 +42,4 @@ get(const pair<_T1, _T2>&&) _NOEXCEPT;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_PAIR_H
+#endif // _LIBCPP___CXX03___FWD_PAIR_H

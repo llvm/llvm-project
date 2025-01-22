@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_EMPTY_H
-#define _LIBCPP___ITERATOR_EMPTY_H
+#ifndef _LIBCPP___CXX03___ITERATOR_EMPTY_H
+#define _LIBCPP___CXX03___ITERATOR_EMPTY_H
 
-#include <__config>
-#include <cstddef>
-#include <initializer_list>
+#include <__cxx03/__config>
+#include <__cxx03/cstddef>
+#include <__cxx03/initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -42,4 +42,4 @@ template <class _Ep>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_EMPTY_H
+#endif // _LIBCPP___CXX03___ITERATOR_EMPTY_H

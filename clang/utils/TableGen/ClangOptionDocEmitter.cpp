@@ -1,4 +1,4 @@
-//===- ClangOptionDocEmitter.cpp - Documentation for command line flags ---===//
+//===-- ClangOptionDocEmitter.cpp - Documentation for command line flags --===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,11 +9,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "TableGenBackends.h"
-#include "llvm/TableGen/Error.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cctype>
@@ -181,7 +180,7 @@ const unsigned UnlimitedArgs = unsigned(-1);
 
 // Get the number of arguments expected for an option, or -1 if any number of
 // arguments are accepted.
-unsigned getNumArgsForKind(Record *OptionKind, const Record *Option) {
+unsigned getNumArgsForKind(const Record *OptionKind, const Record *Option) {
   return StringSwitch<unsigned>(OptionKind->getName())
     .Cases("KIND_JOINED", "KIND_JOINED_OR_SEPARATE", "KIND_SEPARATE", 1)
     .Cases("KIND_REMAINING_ARGS", "KIND_REMAINING_ARGS_JOINED",
@@ -367,13 +366,13 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
   for (const Record *VisibilityHelp :
        R->getValueAsListOfDefs("HelpTextsForVariants")) {
     // This is a list of visibilities.
-    ArrayRef<Init *> Visibilities =
+    ArrayRef<const Init *> Visibilities =
         VisibilityHelp->getValueAsListInit("Visibilities")->getValues();
 
     // See if any of the program's visibilities are in the list.
     for (StringRef DocInfoMask :
          DocInfo->getValueAsListOfStrings("VisibilityMask")) {
-      for (Init *Visibility : Visibilities) {
+      for (const Init *Visibility : Visibilities) {
         if (Visibility->getAsUnquotedString() == DocInfoMask) {
           // Use the first one we find.
           Description = escapeRST(VisibilityHelp->getValueAsString("Text"));
