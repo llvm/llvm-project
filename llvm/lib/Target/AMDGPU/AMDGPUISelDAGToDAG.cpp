@@ -547,6 +547,11 @@ void AMDGPUDAGToDAGISel::SelectVectorShuffle(SDNode *N) {
     unsigned Src1OpSel =
         Src1SubReg == AMDGPU::sub1 ? SISrcMods::OP_SEL_0 : SISrcMods::NONE;
 
+    // Enable op_sel_hi to avoid printing it. This should have no effect on the
+    // result.
+    Src0OpSel |= SISrcMods::OP_SEL_1;
+    Src1OpSel |= SISrcMods::OP_SEL_1;
+
     SDValue Src0OpSelVal = CurDAG->getTargetConstant(Src0OpSel, DL, MVT::i32);
     SDValue Src1OpSelVal = CurDAG->getTargetConstant(Src1OpSel, DL, MVT::i32);
     SDValue ZeroMods = CurDAG->getTargetConstant(0, DL, MVT::i32);
