@@ -1068,6 +1068,13 @@ public:
   /// Dump the state of the information that tracks resource usage.
   void dumpReservedCycles() const;
   void dumpScheduledState() const;
+
+  void bumpCycleUntilReleaseSUFromPending(SUnit *SU) {
+    while (!Pending.empty() && llvm::find(Pending, SU) != Pending.end()) {
+      bumpCycle(CurrCycle + 1);
+      releasePending();
+    }
+  }
 };
 
 /// Base class for GenericScheduler. This class maintains information about
@@ -1261,6 +1268,8 @@ public:
     Bot.releaseNode(SU, SU->BotReadyCycle, false);
     BotCand.SU = nullptr;
   }
+
+  void bumpCycleUntilReleaseSUFromPending(bool IsTop);
 
   void registerRoots() override;
 

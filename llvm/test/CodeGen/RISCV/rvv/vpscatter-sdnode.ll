@@ -2274,13 +2274,13 @@ define void @vpscatter_nxv16f64(<vscale x 16 x double> %val, <vscale x 16 x ptr>
 ; RV64-NEXT:    slli a3, a1, 3
 ; RV64-NEXT:    add a3, a0, a3
 ; RV64-NEXT:    vl8re64.v v16, (a3)
+; RV64-NEXT:    mv a3, a2
 ; RV64-NEXT:    vl8re64.v v24, (a0)
-; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    bltu a2, a1, .LBB108_2
 ; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    mv a3, a1
 ; RV64-NEXT:  .LBB108_2:
-; RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v24, v0.t
 ; RV64-NEXT:    sub a0, a2, a1
 ; RV64-NEXT:    srli a1, a1, 3

@@ -954,3 +954,36 @@ bool RISCVRegisterInfo::getRegAllocationHints(
 
   return BaseImplRetVal;
 }
+
+bool RISCVRegisterInfo::needReleasePendingQueue(
+    MachineFunction &MF, ArrayRef<unsigned> MaxSetPressure) const {
+  for (unsigned Idx = 0; Idx < MaxSetPressure.size(); Idx++) {
+    // Consider only the RVV Register, as RVV spilling/reloading has higher
+    // potential costs than hazards.
+    if (!StringRef(getRegPressureSetName(Idx)).starts_with("VM") &&
+        !StringRef(getRegPressureSetName(Idx)).starts_with("VRM8NoV0"))
+      continue;
+    const unsigned RVVRegPressureThreshold = 7;
+    if (MaxSetPressure[Idx] + RVVRegPressureThreshold >
+        getRegPressureSetLimit(MF, Idx)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool RISCVRegisterInfo::needReleaseSUFromPendingQueue(
+    MachineFunction &MF, ArrayRef<unsigned> PSetID,
+    ArrayRef<int> UnitInc) const {
+  const int UnitIncRVVRegPressureThreshold = -3;
+  for (unsigned Idx = 0; Idx < PSetID.size(); Idx++) {
+    // Consider only the RVV Register, as RVV spilling/reloading has higher
+    // potential costs than hazards.
+    if (!StringRef(getRegPressureSetName(PSetID[Idx])).starts_with("VM") &&
+        !StringRef(getRegPressureSetName(Idx)).starts_with("VRM8NoV0"))
+      continue;
+    if (UnitInc[Idx] < UnitIncRVVRegPressureThreshold)
+      return true;
+  }
+  return false;
+}

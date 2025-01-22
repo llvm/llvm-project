@@ -99,8 +99,8 @@ define <64 x float> @vfwadd_v64f16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    vle16.v v0, (a1)
 ; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vle16.v v0, (a1)
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v16, v8, a0
 ; CHECK-NEXT:    vslidedown.vx v8, v0, a0

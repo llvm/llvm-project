@@ -1233,6 +1233,18 @@ public:
   getVRegFlagsOfReg(Register Reg, const MachineFunction &MF) const {
     return {};
   }
+
+  virtual bool
+  needReleasePendingQueue(MachineFunction &MF,
+                          ArrayRef<unsigned> MaxSetPressure) const {
+    return false;
+  }
+
+  virtual bool needReleaseSUFromPendingQueue(MachineFunction &MF,
+                                             ArrayRef<unsigned> PSetID,
+                                             ArrayRef<int> UnitInc) const {
+    return false;
+  }
 };
 
 //===----------------------------------------------------------------------===//

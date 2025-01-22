@@ -636,16 +636,16 @@ define <33 x double> @strided_load_v33f64(ptr %ptr, i64 %stride, <33 x i1> %mask
 ; CHECK-RV32-NEXT:    add a5, a1, a5
 ; CHECK-RV32-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
 ; CHECK-RV32-NEXT:    vlse64.v v24, (a5), a2, v0.t
+; CHECK-RV32-NEXT:    addi a3, a0, 128
+; CHECK-RV32-NEXT:    addi a5, a0, 256
 ; CHECK-RV32-NEXT:    vmv1r.v v0, v8
 ; CHECK-RV32-NEXT:    vsetvli zero, a4, e64, m8, ta, ma
 ; CHECK-RV32-NEXT:    vlse64.v v8, (a1), a2, v0.t
-; CHECK-RV32-NEXT:    addi a1, a0, 128
-; CHECK-RV32-NEXT:    addi a2, a0, 256
 ; CHECK-RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-RV32-NEXT:    vse64.v v8, (a0)
-; CHECK-RV32-NEXT:    vse64.v v24, (a1)
+; CHECK-RV32-NEXT:    vse64.v v24, (a3)
 ; CHECK-RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-RV32-NEXT:    vse64.v v16, (a2)
+; CHECK-RV32-NEXT:    vse64.v v16, (a5)
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: strided_load_v33f64:
@@ -687,16 +687,16 @@ define <33 x double> @strided_load_v33f64(ptr %ptr, i64 %stride, <33 x i1> %mask
 ; CHECK-RV64-NEXT:    add a5, a1, a5
 ; CHECK-RV64-NEXT:    vsetvli zero, a4, e64, m8, ta, ma
 ; CHECK-RV64-NEXT:    vlse64.v v24, (a5), a2, v0.t
+; CHECK-RV64-NEXT:    addi a4, a0, 128
+; CHECK-RV64-NEXT:    addi a5, a0, 256
 ; CHECK-RV64-NEXT:    vmv1r.v v0, v8
 ; CHECK-RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
 ; CHECK-RV64-NEXT:    vlse64.v v8, (a1), a2, v0.t
-; CHECK-RV64-NEXT:    addi a1, a0, 128
-; CHECK-RV64-NEXT:    addi a2, a0, 256
 ; CHECK-RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-RV64-NEXT:    vse64.v v8, (a0)
-; CHECK-RV64-NEXT:    vse64.v v24, (a1)
+; CHECK-RV64-NEXT:    vse64.v v24, (a4)
 ; CHECK-RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-RV64-NEXT:    vse64.v v16, (a2)
+; CHECK-RV64-NEXT:    vse64.v v16, (a5)
 ; CHECK-RV64-NEXT:    ret
   %v = call <33 x double> @llvm.experimental.vp.strided.load.v33f64.p0.i64(ptr %ptr, i64 %stride, <33 x i1> %mask, i32 %evl)
   ret <33 x double> %v

@@ -257,8 +257,8 @@ define <128 x i16> @vwsubu_v128i16(ptr %x, ptr %y) nounwind {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    vle8.v v0, (a1)
 ; CHECK-NEXT:    li a0, 64
+; CHECK-NEXT:    vle8.v v0, (a1)
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v16, v8, a0
 ; CHECK-NEXT:    vslidedown.vx v8, v0, a0
@@ -302,8 +302,8 @@ define <64 x i32> @vwsubu_v64i32(ptr %x, ptr %y) nounwind {
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    vle16.v v0, (a1)
 ; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vle16.v v0, (a1)
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v16, v8, a0
 ; CHECK-NEXT:    vslidedown.vx v8, v0, a0

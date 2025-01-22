@@ -1778,16 +1778,16 @@ define void @vpscatter_v32f64(<32 x double> %val, <32 x ptr> %ptrs, <32 x i1> %m
 ; RV64-NEXT:    addi a1, sp, 16
 ; RV64-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
 ; RV64-NEXT:    addi a1, a0, 128
+; RV64-NEXT:    li a3, 16
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vle64.v v16, (a1)
+; RV64-NEXT:    mv a1, a2
 ; RV64-NEXT:    vle64.v v24, (a0)
-; RV64-NEXT:    li a1, 16
-; RV64-NEXT:    mv a0, a2
-; RV64-NEXT:    bltu a2, a1, .LBB83_2
+; RV64-NEXT:    bltu a2, a3, .LBB83_2
 ; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    li a0, 16
+; RV64-NEXT:    li a1, 16
 ; RV64-NEXT:  .LBB83_2:
-; RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v24, v0.t
 ; RV64-NEXT:    addi a0, a2, -16
 ; RV64-NEXT:    sltu a1, a2, a0
