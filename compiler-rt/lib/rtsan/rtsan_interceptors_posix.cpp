@@ -41,6 +41,10 @@ void OSSpinLockLock(volatile OSSpinLock *__lock);
 #include <malloc.h>
 #endif
 
+#if SANITIZER_INTERCEPT_PTRACE
+#include <sys/ptrace.h>
+#endif
+
 #include <fcntl.h>
 #include <poll.h>
 #include <pthread.h>
@@ -1319,6 +1323,39 @@ INTERCEPTOR(ssize_t, process_vm_writev, pid_t pid,
 #define RTSAN_MAYBE_INTERCEPT_PROCESS_VM_WRITEV
 #endif
 
+#if SANITIZER_INTERCEPT_PTRACE
+#if SANITIZER_MUSL
+INTERCEPTOR(long, ptrace, int request, ...) {
+#else
+INTERCEPTOR(long, ptrace, enum __ptrace_request request, ...) {
+#endif
+  __rtsan_notify_intercepted_call("ptrace");
+  va_list args;
+
+  // A handful of ptrace requests need an additional argument on Linux/sparc
+  // (e.g. PTRACE_READDATA) but we only intercept the standard calls at the
+  // moment. We might need to rework all if rtsan is supported on BSD,
+  // interfaces differ vastly, data is read in word size on Linux vs large
+  // chunks on freebsd and so on ...
+  va_start(args, request);
+  pid_t pid = va_arg(args, pid_t);
+
+  // addr and data types depend on the request, either of these are ignored in
+  // some cases too. using intptr_t to be able to hold accepted ptrace types.
+  using arg_type = intptr_t;
+  static_assert(sizeof(arg_type) >= sizeof(struct ptrace_seekinfo_args *));
+  static_assert(sizeof(arg_type) >= sizeof(int));
+  arg_type addr = va_arg(args, arg_type);
+  arg_type priv = va_arg(args, arg_type);
+  va_end(args);
+
+  return REAL(ptrace)(request, pid, addr, priv);
+}
+#define RTSAN_MAYBE_INTERCEPT_PTRACE INTERCEPT_FUNCTION(ptrace)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PTRACE
+#endif
+
 // TODO: the `wait` family of functions is an oddity. In testing, if you
 // intercept them, Darwin seemingly ignores them, and linux never returns from
 // the test. Revisit this in the future, but hopefully intercepting fork/exec is
@@ -1520,6 +1557,7 @@ void __rtsan::InitializeInterceptors() {
 
   RTSAN_MAYBE_INTERCEPT_PROCESS_VM_READV;
   RTSAN_MAYBE_INTERCEPT_PROCESS_VM_WRITEV;
+  RTSAN_MAYBE_INTERCEPT_PTRACE;
 
   INTERCEPT_FUNCTION(syscall);
 }
