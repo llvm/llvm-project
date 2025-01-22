@@ -3,6 +3,7 @@ tablegen(LLVM COFFOptions.inc -gen-opt-parser-defs)
 add_public_tablegen_target(JITLinkTableGen)
 
 add_llvm_component_library(LLVMJITLink
+  CompactUnwindSupport.cpp
   DWARFRecordSectionSplitter.cpp
   EHFrameSupport.cpp
   JITLink.cpp
