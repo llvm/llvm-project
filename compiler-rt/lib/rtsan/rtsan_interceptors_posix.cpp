@@ -1328,7 +1328,7 @@ INTERCEPTOR(ssize_t, process_vm_writev, pid_t pid,
 INTERCEPTOR(long, ptrace, int request, ...) {
 #else
 INTERCEPTOR(long, ptrace, enum __ptrace_request request, ...) {
-#endif
+#endif // SANITIZER_MUSL
   __rtsan_notify_intercepted_call("ptrace");
   va_list args;
 

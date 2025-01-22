@@ -46,6 +46,9 @@
 #if SANITIZER_LINUX
 #include <sys/inotify.h>
 #endif
+#if SANITIZER_INTERCEPT_PTRACE
+#include <sys/ptrace.h>
+#endif
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/socket.h>
@@ -777,6 +780,14 @@ TEST(TestRtsanInterceptors, ProcessVmWritevDiesWhenRealtime) {
   iovec rmt{&stack, sizeof(stack)};
   auto Func = [&lcl, &rmt]() { process_vm_writev(0, &lcl, 1, &rmt, 1, 0); };
   ExpectRealtimeDeath(Func, "process_vm_writev");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
+#if SANITIZER_INTERCEPT_PTRACE
+TEST(TestRtsanInterceptors, PtraceWhenRealtime) {
+  auto Func = []() { ptrace(PTRACE_PEEKUSER, -1, 0, nullptr); };
+  ExpectRealtimeDeath(Func, "ptrace");
   ExpectNonRealtimeSurvival(Func);
 }
 #endif
