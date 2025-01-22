@@ -3079,6 +3079,23 @@ void TextNodeDumper::VisitOpenACCDeclareDecl(const OpenACCDeclareDecl *D) {
         AddChild([=] { Visit(S); });
     });
 }
+void TextNodeDumper::VisitOpenACCRoutineDecl(const OpenACCRoutineDecl *D) {
+  OS << " " << D->getDirectiveKind();
+
+  if (D->hasNameSpecified()) {
+    OS << " name_specified";
+    dumpSourceRange(SourceRange{D->getLParenLoc(), D->getRParenLoc()});
+  }
+
+  AddChild([=] { Visit(D->getFunctionReference()); });
+
+  for (const OpenACCClause *C : D->clauses())
+    AddChild([=] {
+      Visit(C);
+      for (const Stmt *S : C->children())
+        AddChild([=] { Visit(S); });
+    });
+}
 
 void TextNodeDumper::VisitEmbedExpr(const EmbedExpr *S) {
   AddChild("begin", [=] { OS << S->getStartingElementPos(); });
