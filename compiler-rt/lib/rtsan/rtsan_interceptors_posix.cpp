@@ -933,7 +933,7 @@ INTERCEPTOR(int, recvmmsg, int socket, struct mmsghdr *message,
 #else
 INTERCEPTOR(int, recvmmsg, int socket, struct mmsghdr *message,
             unsigned int len, int flags, struct timespec *timeout) {
-#endif
+#endif // defined(__GLIBC_MINOR) && __GLIBC_MINOR__ < 21
   __rtsan_notify_intercepted_call("recvmmsg");
   return REAL(recvmmsg)(socket, message, len, flags, timeout);
 }
@@ -1097,6 +1097,30 @@ INTERCEPTOR(int, execve, const char *filename, char *const argv[],
   __rtsan_notify_intercepted_call("execve");
   return REAL(execve)(filename, argv, envp);
 }
+
+#if SANITIZER_INTERCEPT_PROCESS_VM_READV
+INTERCEPTOR(ssize_t, process_vm_readv, const struct iovec *local_iov,
+            unsigned long liovcnt, const struct iovec *remote_iov,
+            unsigned long riovcnt, unsigned long flags) {
+  __rtsan_notify_intercepted_call("process_vm_readv");
+  return REAL(process_vm_readv)(local_iov, liovcnt, remote_iov, riovcnt, flags);
+}
+
+INTERCEPTOR(ssize_t, process_vm_writev, const struct iovec *local_iov,
+            unsigned long liovcnt, const struct iovec *remote_iov,
+            unsigned long riovcnt, unsigned long flags) {
+  __rtsan_notify_intercepted_call("process_vm_writev");
+  return REAL(process_vm_writev)(local_iov, liovcnt, remote_iov, riovcnt,
+                                 flags);
+}
+#define RTSAN_MAYBE_INTERCEPT_PROCESS_VM_READV                                 \
+  INTERCEPT_FUNCTION(process_vm_readv)
+#define RTSAN_MAYBE_INTERCEPT_PROCESS_VM_WRITEV                                \
+  INTERCEPT_FUNCTION(process_vm_writev)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PROCESS_VM_READV
+#define RTSAN_MAYBE_INTERCEPT_PROCESS_VM_WRITEV
+#endif
 
 // TODO: the `wait` family of functions is an oddity. In testing, if you
 // intercept them, Darwin seemingly ignores them, and linux never returns from
@@ -1276,6 +1300,9 @@ void __rtsan::InitializeInterceptors() {
 
   INTERCEPT_FUNCTION(fork);
   INTERCEPT_FUNCTION(execve);
+
+  RTSAN_MAYBE_INTERCEPT_PROCESS_VM_READV;
+  RTSAN_MAYBE_INTERCEPT_PROCESS_VM_WRITEV;
 
   INTERCEPT_FUNCTION(syscall);
 }
