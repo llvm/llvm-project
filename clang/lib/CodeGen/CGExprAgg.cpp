@@ -501,30 +501,28 @@ static void EmitHLSLScalarFlatCast(CodeGenFunction &CGF, Address DestVal,
   // ^^ Flattened accesses to DestVal we want to store into
   CGF.FlattenAccessAndType(DestVal, DestTy, StoreGEPList, DestTypes);
 
-  if (const VectorType *VT = SrcTy->getAs<VectorType>()) {
-    SrcTy = VT->getElementType();
-    assert(StoreGEPList.size() <= VT->getNumElements() &&
-           "Cannot perform HLSL flat cast when vector source \
-           object has less elements than flattened destination \
-           object.");
-    for (unsigned i = 0; i < StoreGEPList.size(); i++) {
-      llvm::Value *Load =
-          CGF.Builder.CreateExtractElement(SrcVal, i, "vec.load");
-      llvm::Value *Cast =
-          CGF.EmitScalarConversion(Load, SrcTy, DestTypes[i], Loc);
+  assert(SrcTy->isVectorType() && "HLSL Flat cast doesn't handle splatting.");
+  const VectorType *VT = SrcTy->getAs<VectorType>();
+  SrcTy = VT->getElementType();
+  assert(StoreGEPList.size() <= VT->getNumElements() &&
+         "Cannot perform HLSL flat cast when vector source \
+         object has less elements than flattened destination \
+         object.");
+  for (unsigned i = 0; i < StoreGEPList.size(); i++) {
+    llvm::Value *Load = CGF.Builder.CreateExtractElement(SrcVal, i, "vec.load");
+    llvm::Value *Cast =
+        CGF.EmitScalarConversion(Load, SrcTy, DestTypes[i], Loc);
 
-      // store back
-      llvm::Value *Idx = StoreGEPList[i].second;
-      if (Idx) {
-        llvm::Value *V =
-            CGF.Builder.CreateLoad(StoreGEPList[i].first, "load.for.insert");
-        Cast = CGF.Builder.CreateInsertElement(V, Cast, Idx);
-      }
-      CGF.Builder.CreateStore(Cast, StoreGEPList[i].first);
+    // store back
+    llvm::Value *Idx = StoreGEPList[i].second;
+    if (Idx) {
+      llvm::Value *V =
+          CGF.Builder.CreateLoad(StoreGEPList[i].first, "load.for.insert");
+      Cast = CGF.Builder.CreateInsertElement(V, Cast, Idx);
     }
-    return;
+    CGF.Builder.CreateStore(Cast, StoreGEPList[i].first);
   }
-  llvm_unreachable("HLSL Flat cast doesn't handle splatting.");
+  return;
 }
 
 // emit a flat cast where the RHS is an aggregate

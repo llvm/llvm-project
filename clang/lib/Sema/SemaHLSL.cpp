@@ -2477,7 +2477,7 @@ bool SemaHLSL::CanPerformScalarCast(QualType SrcTy, QualType DestTy) {
 }
 
 // Can we perform an HLSL Flattened cast?
-// TODO: update this code when matrices are added
+// TODO: update this code when matrices are added; see issue #88060
 bool SemaHLSL::CanPerformAggregateCast(Expr *Src, QualType DestTy) {
 
   // Don't handle casts where LHS and RHS are any combination of scalar/vector
@@ -2500,10 +2500,19 @@ bool SemaHLSL::CanPerformAggregateCast(Expr *Src, QualType DestTy) {
   if (SrcTypes.size() < DestTypes.size())
     return false;
 
-  for (unsigned i = 0; i < DestTypes.size() && i < SrcTypes.size(); i++) {
-    if (!CanPerformScalarCast(SrcTypes[i], DestTypes[i])) {
+  unsigned I;
+  for (I = 0; I < DestTypes.size() && I < SrcTypes.size(); I++) {
+    if (SrcTypes[I]->isUnionType() || DestTypes[I]->isUnionType())
+      return false;
+    if (!CanPerformScalarCast(SrcTypes[I], DestTypes[I])) {
       return false;
     }
+  }
+
+  // check the rest of the source type for unions.
+  for (; I < SrcTypes.size(); I++) {
+    if (SrcTypes[I]->isUnionType())
+      return false;
   }
   return true;
 }

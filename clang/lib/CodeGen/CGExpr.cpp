@@ -6385,23 +6385,15 @@ void CodeGenFunction::FlattenAccessAndType(
     assert(!isa<MatrixType>(T) && "Matrix types not yet supported in HLSL");
     if (const auto *CAT = dyn_cast<ConstantArrayType>(T)) {
       uint64_t Size = CAT->getZExtSize();
-      for (int64_t i = Size - 1; i > -1; i--) {
+      for (int64_t I = Size - 1; I > -1; I--) {
         llvm::SmallVector<llvm::Value *, 4> IdxListCopy = IdxList;
-        IdxListCopy.push_back(llvm::ConstantInt::get(IdxTy, i));
+        IdxListCopy.push_back(llvm::ConstantInt::get(IdxTy, I));
         WorkList.insert(WorkList.end(), {CAT->getElementType(), IdxListCopy});
       }
     } else if (const auto *RT = dyn_cast<RecordType>(T)) {
       const RecordDecl *Record = RT->getDecl();
-      if (Record->isUnion()) {
-        IdxList.push_back(llvm::ConstantInt::get(IdxTy, 0));
-        llvm::Type *LLVMT = ConvertTypeForMem(T);
-        CharUnits Align = getContext().getTypeAlignInChars(T);
-        Address GEP =
-            Builder.CreateInBoundsGEP(Addr, IdxList, LLVMT, Align, "union.gep");
-        AccessList.push_back({GEP, NULL});
-        FlatTypes.push_back(T);
-        continue;
-      }
+      assert(!Record->isUnion() && "Union types not supported in flat cast.");
+
       const CXXRecordDecl *CXXD = dyn_cast<CXXRecordDecl>(Record);
 
       llvm::SmallVector<QualType, 16> FieldTypes;

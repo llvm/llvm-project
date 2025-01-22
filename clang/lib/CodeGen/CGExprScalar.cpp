@@ -2792,11 +2792,10 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     SourceLocation Loc = CE->getExprLoc();
     QualType SrcTy = E->getType();
 
-    if (RV.isAggregate()) { // RHS is an aggregate
-      Address SrcVal = RV.getAggregateAddress();
-      return EmitHLSLAggregateFlatCast(CGF, SrcVal, SrcTy, DestTy, Loc);
-    }
-    llvm_unreachable("Not a valid HLSL Flat Cast.");
+    assert(RV.isAggregate() && "Not a valid HLSL Flat Cast.");
+    // RHS is an aggregate
+    Address SrcVal = RV.getAggregateAddress();
+    return EmitHLSLAggregateFlatCast(CGF, SrcVal, SrcTy, DestTy, Loc);
   }
   } // end of switch
 
