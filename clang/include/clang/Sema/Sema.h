@@ -10608,8 +10608,9 @@ public:
   /// BuildOverloadedArrowExpr - Build a call to an overloaded @c operator->
   ///  (if one exists), where @c Base is an expression of class type and
   /// @c Member is the name of the member we're trying to find.
-  ExprResult BuildOverloadedArrowExpr(Expr *Base, SourceLocation OpLoc,
-                                      bool *NoArrowOperatorFound);
+  ExprResult BuildOverloadedArrowExpr(Scope *S, Expr *Base,
+                                      SourceLocation OpLoc,
+                                      bool *NoArrowOperatorFound = nullptr);
 
   ExprResult BuildCXXMemberCallExpr(Expr *Exp, NamedDecl *FoundDecl,
                                     CXXConversionDecl *Method,
