@@ -15962,10 +15962,9 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   return CheckForImmediateInvocation(MaybeBindToTemporary(TheCall), Method);
 }
 
-ExprResult
-Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
-                               bool *NoArrowOperatorFound) {
-  assert(Base->getType()->isRecordType() &&
+ExprResult Sema::BuildOverloadedArrowExpr(Expr *Base, SourceLocation OpLoc,
+                                          bool *NoArrowOperatorFound) {
+  assert(Base->getType()->getAsRecordDecl() &&
          "left-hand side must have class type");
 
   if (checkPlaceholderForOverload(*this, Base))
@@ -15988,8 +15987,19 @@ Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
     return ExprError();
 
   LookupResult R(*this, OpName, OpLoc, LookupOrdinaryName);
-  LookupQualifiedName(R, Base->getType()->castAs<RecordType>()->getDecl());
+  LookupParsedName(R, /*S=*/nullptr, /*SS=*/nullptr, Base->getType());
   R.suppressAccessDiagnostics();
+
+  if (Base->getType()->isDependentType() &&
+      (!R.empty() || R.wasNotFoundInCurrentInstantiation())) {
+    DeclarationNameInfo OpNameInfo(OpName, OpLoc);
+    ExprResult Fn = CreateUnresolvedLookupExpr(
+        /*NamingClass=*/nullptr, /*NNSLoc=*/NestedNameSpecifierLoc(),
+        OpNameInfo, R.asUnresolvedSet(), /*PerformADL=*/false);
+    return CXXOperatorCallExpr::Create(Context, OO_Arrow, Fn.get(), Base,
+                                       Context.DependentTy, VK_PRValue, OpLoc,
+                                       CurFPFeatureOverrides());
+  }
 
   for (LookupResult::iterator Oper = R.begin(), OperEnd = R.end();
        Oper != OperEnd; ++Oper) {
