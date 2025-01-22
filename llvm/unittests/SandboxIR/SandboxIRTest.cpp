@@ -5150,8 +5150,8 @@ define void @foo(i32 %arg, float %farg, double %darg, ptr %ptr) {
   auto *Ti16 = sandboxir::Type::getInt16Ty(Ctx);
   auto *Tdouble = sandboxir::Type::getDoubleTy(Ctx);
   auto *Tfloat = sandboxir::Type::getFloatTy(Ctx);
-  auto *Tptr = sandboxir::PointerType::get(Tfloat, 0);
-  auto *Tptr1 = sandboxir::PointerType::get(Tfloat, 1);
+  auto *Tptr = sandboxir::PointerType::get(Ctx, 0);
+  auto *Tptr1 = sandboxir::PointerType::get(Ctx, 1);
 
   // Check classof(), getOpcode(), getSrcTy(), getDstTy()
   auto *ZExt = cast<sandboxir::CastInst>(&*It++);
