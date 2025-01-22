@@ -791,7 +791,7 @@ void StubHelperSection::writeTo(uint8_t *buf) const {
 
 void StubHelperSection::setUp() {
   Symbol *binder = symtab->addUndefined("dyld_stub_binder", /*file=*/nullptr,
-                                       /*isWeakRef=*/false);
+                                        /*isWeakRef=*/false);
   if (auto *undefined = dyn_cast<Undefined>(binder))
     treatUndefinedSymbol(*undefined,
                          "lazy binding (normally in libSystem.dylib)");
@@ -1182,7 +1182,7 @@ void SymtabSection::emitObjectFileStab(ObjFile *file) {
   StabsEntry stab(N_OSO);
   stab.sect = target->cpuSubtype;
   SmallString<261> path(!file->archiveName.empty() ? file->archiveName
-                                                  : file->getName());
+                                                   : file->getName());
   std::error_code ec = sys::fs::make_absolute(path);
   if (ec)
     fatal("failed to get absolute path for " + path);
@@ -1548,9 +1548,9 @@ uint32_t StringTableSection::addString(StringRef str) {
     if (!inserted)
       return it->second;
   }
-  
+
   strings.push_back(str);
-  size += str.size() + 1; // +1 for null terminator
+  size += str.size() + 1; // account for null terminator
   return strx;
 }
 
