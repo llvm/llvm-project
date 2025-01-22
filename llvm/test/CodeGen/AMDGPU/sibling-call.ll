@@ -355,13 +355,13 @@ declare hidden void @void_fastcc_byval_and_stack_passed(ptr addrspace(5) byval([
 ; GCN-DAG: buffer_store_dword [[NINE]], off, s[0:3], s32 offset:12{{$}}
 ; GCN-DAG: buffer_store_dword v0, off, s[0:3], s32 offset:16
 
-; GCN: v_mov_b32_e32 v0, 0
-; GCN: v_mov_b32_e32 v30, 0
-
 ; GCN: s_getpc_b64 [[TARGET_ADDR:s\[[0-9]+:[0-9]+\]]]
 ; GCN-NEXT: s_add_u32
 ; GCN-NEXT: s_addc_u32
+; GCN: v_mov_b32_e32 v0, 0
+; GCN: v_mov_b32_e32 v30, 0
 ; GCN-NEXT: s_setpc_b64 [[TARGET_ADDR]]
+
 define fastcc void @sibling_call_byval_and_stack_passed(i32 %stack.out.arg, [64 x i32]) #1 {
 entry:
   %alloca = alloca [3 x i32], align 16, addrspace(5)

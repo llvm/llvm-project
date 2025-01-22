@@ -290,6 +290,9 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS1-NEXT:  ; %bb.31: ; %bb7.i.i
 ; GLOBALNESS1-NEXT:    s_add_u32 s8, s38, 40
 ; GLOBALNESS1-NEXT:    s_addc_u32 s9, s39, 0
+; GLOBALNESS1-NEXT:    s_getpc_b64 s[16:17]
+; GLOBALNESS1-NEXT:    s_add_u32 s16, s16, widget@rel32@lo+4
+; GLOBALNESS1-NEXT:    s_addc_u32 s17, s17, widget@rel32@hi+12
 ; GLOBALNESS1-NEXT:    s_mov_b64 s[4:5], s[40:41]
 ; GLOBALNESS1-NEXT:    s_mov_b64 s[6:7], s[36:37]
 ; GLOBALNESS1-NEXT:    s_mov_b64 s[10:11], s[34:35]
@@ -297,9 +300,6 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS1-NEXT:    s_mov_b32 s13, s71
 ; GLOBALNESS1-NEXT:    s_mov_b32 s14, s70
 ; GLOBALNESS1-NEXT:    v_mov_b32_e32 v31, v41
-; GLOBALNESS1-NEXT:    s_getpc_b64 s[16:17]
-; GLOBALNESS1-NEXT:    s_add_u32 s16, s16, widget@rel32@lo+4
-; GLOBALNESS1-NEXT:    s_addc_u32 s17, s17, widget@rel32@hi+12
 ; GLOBALNESS1-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GLOBALNESS1-NEXT:    s_mov_b64 s[4:5], 0
 ; GLOBALNESS1-NEXT:  .LBB1_32: ; %Flow
@@ -308,6 +308,9 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS1-NEXT:  ; %bb.33: ; %bb11.i.i
 ; GLOBALNESS1-NEXT:    s_add_u32 s8, s38, 40
 ; GLOBALNESS1-NEXT:    s_addc_u32 s9, s39, 0
+; GLOBALNESS1-NEXT:    s_getpc_b64 s[16:17]
+; GLOBALNESS1-NEXT:    s_add_u32 s16, s16, widget@rel32@lo+4
+; GLOBALNESS1-NEXT:    s_addc_u32 s17, s17, widget@rel32@hi+12
 ; GLOBALNESS1-NEXT:    s_mov_b64 s[4:5], s[40:41]
 ; GLOBALNESS1-NEXT:    s_mov_b64 s[6:7], s[36:37]
 ; GLOBALNESS1-NEXT:    s_mov_b64 s[10:11], s[34:35]
@@ -315,9 +318,6 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS1-NEXT:    s_mov_b32 s13, s71
 ; GLOBALNESS1-NEXT:    s_mov_b32 s14, s70
 ; GLOBALNESS1-NEXT:    v_mov_b32_e32 v31, v41
-; GLOBALNESS1-NEXT:    s_getpc_b64 s[16:17]
-; GLOBALNESS1-NEXT:    s_add_u32 s16, s16, widget@rel32@lo+4
-; GLOBALNESS1-NEXT:    s_addc_u32 s17, s17, widget@rel32@hi+12
 ; GLOBALNESS1-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GLOBALNESS1-NEXT:  .LBB1_34: ; %UnifiedUnreachableBlock
 ;
@@ -582,6 +582,9 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS0-NEXT:  ; %bb.31: ; %bb7.i.i
 ; GLOBALNESS0-NEXT:    s_add_u32 s8, s38, 40
 ; GLOBALNESS0-NEXT:    s_addc_u32 s9, s39, 0
+; GLOBALNESS0-NEXT:    s_getpc_b64 s[16:17]
+; GLOBALNESS0-NEXT:    s_add_u32 s16, s16, widget@rel32@lo+4
+; GLOBALNESS0-NEXT:    s_addc_u32 s17, s17, widget@rel32@hi+12
 ; GLOBALNESS0-NEXT:    s_mov_b64 s[4:5], s[40:41]
 ; GLOBALNESS0-NEXT:    s_mov_b64 s[6:7], s[36:37]
 ; GLOBALNESS0-NEXT:    s_mov_b64 s[10:11], s[34:35]
@@ -589,9 +592,6 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS0-NEXT:    s_mov_b32 s13, s69
 ; GLOBALNESS0-NEXT:    s_mov_b32 s14, s68
 ; GLOBALNESS0-NEXT:    v_mov_b32_e32 v31, v41
-; GLOBALNESS0-NEXT:    s_getpc_b64 s[16:17]
-; GLOBALNESS0-NEXT:    s_add_u32 s16, s16, widget@rel32@lo+4
-; GLOBALNESS0-NEXT:    s_addc_u32 s17, s17, widget@rel32@hi+12
 ; GLOBALNESS0-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GLOBALNESS0-NEXT:    s_mov_b64 s[4:5], 0
 ; GLOBALNESS0-NEXT:  .LBB1_32: ; %Flow
@@ -600,6 +600,9 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS0-NEXT:  ; %bb.33: ; %bb11.i.i
 ; GLOBALNESS0-NEXT:    s_add_u32 s8, s38, 40
 ; GLOBALNESS0-NEXT:    s_addc_u32 s9, s39, 0
+; GLOBALNESS0-NEXT:    s_getpc_b64 s[16:17]
+; GLOBALNESS0-NEXT:    s_add_u32 s16, s16, widget@rel32@lo+4
+; GLOBALNESS0-NEXT:    s_addc_u32 s17, s17, widget@rel32@hi+12
 ; GLOBALNESS0-NEXT:    s_mov_b64 s[4:5], s[40:41]
 ; GLOBALNESS0-NEXT:    s_mov_b64 s[6:7], s[36:37]
 ; GLOBALNESS0-NEXT:    s_mov_b64 s[10:11], s[34:35]
@@ -607,9 +610,6 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %arg1.global, i1 %tmp3.i.i, i
 ; GLOBALNESS0-NEXT:    s_mov_b32 s13, s69
 ; GLOBALNESS0-NEXT:    s_mov_b32 s14, s68
 ; GLOBALNESS0-NEXT:    v_mov_b32_e32 v31, v41
-; GLOBALNESS0-NEXT:    s_getpc_b64 s[16:17]
-; GLOBALNESS0-NEXT:    s_add_u32 s16, s16, widget@rel32@lo+4
-; GLOBALNESS0-NEXT:    s_addc_u32 s17, s17, widget@rel32@hi+12
 ; GLOBALNESS0-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GLOBALNESS0-NEXT:  .LBB1_34: ; %UnifiedUnreachableBlock
 bb:
