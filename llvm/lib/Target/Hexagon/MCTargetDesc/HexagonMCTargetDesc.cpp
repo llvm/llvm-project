@@ -737,14 +737,12 @@ public:
 
   uint32_t getValueFromMask(uint32_t Instruction, uint32_t Mask) const {
     uint32_t Result = 0;
-    size_t Off = 0;
-    for (uint32_t Bit = 0; Bit != sizeof(uint32_t) * CHAR_BIT; ++Bit) {
-      const uint8_t ValBit = (Instruction >> Bit) & 1;
-      const bool MaskBit = (Mask >> Bit) & 1;
-      if (MaskBit) {
-        Result |= (ValBit << Off);
-        ++Off;
-      }
+    uint32_t Offset = 0;
+    while (Mask) {
+      if (Instruction & (Mask & -Mask))
+        Result |= (1 << Offset);
+      Mask &= (Mask - 1);
+      ++Offset;
     }
     return Result;
   }
