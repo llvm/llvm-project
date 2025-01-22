@@ -14,6 +14,7 @@
 
 #include "LegalizeTypes.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -934,11 +935,16 @@ SDValue DAGTypeLegalizer::LowerBitcastInRegister(SDNode *N) const {
     EVT PackVT = EVT::getIntegerVT(*DAG.getContext(), ElemBits * NumElems);
     SDValue Packed = DAG.getConstant(0, DL, PackVT);
 
+    EVT IdxTy = TLI.getVectorIdxTy(DAG.getDataLayout());
+
     for (unsigned I = 0; I < NumElems; ++I) {
       unsigned ElementIndex = IsBigEndian ? (NumElems - 1 - I) : I;
-      SDValue Elem =
-          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ElemVT, N->getOperand(0),
-                      DAG.getIntPtrConstant(ElementIndex, DL));
+
+      SDValue Index = DAG.getConstant(ElementIndex, DL, IdxTy);
+
+      SDValue Elem = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ElemVT,
+                                 N->getOperand(0), Index);
+      
       SDValue ExtElem = DAG.getNode(ISD::ZERO_EXTEND, DL, PackVT, Elem);
       SDValue ShiftAmount =
           DAG.getShiftAmountConstant(ElemBits * I, PackVT, DL);
@@ -949,8 +955,9 @@ SDValue DAGTypeLegalizer::LowerBitcastInRegister(SDNode *N) const {
     }
 
     return DAG.getBitcast(ToVT, Packed);
+  }
 
-  } else if (FromVT.isScalarInteger() && ToVT.isVector()) {
+  if (FromVT.isScalarInteger() && ToVT.isVector()) {
 
     EVT ElemVT = ToVT.getVectorElementType();
     unsigned NumElems = ToVT.getVectorNumElements();
@@ -960,20 +967,20 @@ SDValue DAGTypeLegalizer::LowerBitcastInRegister(SDNode *N) const {
     assert(PackedBits >= ElemBits * NumElems &&
            "Vector does not have enough bits to unpack scalar type.");
 
-    SmallVector<SDValue, 8> Elements;
-    Elements.reserve(NumElems);
+    SmallVector<SDValue, 8> Elements(NumElems);
+
+    EVT ShiftTy = TLI.getShiftAmountTy(FromVT, DAG.getDataLayout());
 
     for (unsigned I = 0; I < NumElems; ++I) {
       unsigned ElementIndex = IsBigEndian ? (NumElems - 1 - I) : I;
       unsigned ShiftAmountVal = ElemBits * ElementIndex;
 
-      SDValue ShiftAmount =
-          DAG.getShiftAmountConstant(ShiftAmountVal, FromVT, DL);
+      SDValue ShiftAmount = DAG.getConstant(ShiftAmountVal, DL, ShiftTy);
       SDValue Shifted =
           DAG.getNode(ISD::SRL, DL, FromVT, N->getOperand(0), ShiftAmount);
       SDValue Element = DAG.getNode(ISD::TRUNCATE, DL, ElemVT, Shifted);
-      Elements.push_back(Element);
-    }
+      Elements[I] = Element;
+    } 
 
     return DAG.getBuildVector(ToVT, DL, Elements);
   }
