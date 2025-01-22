@@ -5,6 +5,8 @@ RUN: llvm-mc -filetype=obj -triple=arm64ec-windows arm64ec-func.s -o arm64ec-fun
 RUN: llvm-mc -filetype=obj -triple=aarch64-windows arm64-func.s -o arm64-func.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows func-drectve.s -o arm64ec-drectve.obj
 RUN: llvm-mc -filetype=obj -triple=aarch64-windows func-drectve.s -o arm64-drectve.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows edata.s -o arm64-edata.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows edata.s -o arm64ec-edata.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
 RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64.s -o loadconfig-arm64.obj
 
@@ -36,6 +38,15 @@ RUN: llvm-readobj --headers --coff-exports out-cmd.dll | FileCheck --check-prefi
 EXPORTS-EC:      ExportTableRVA: 0x0
 EXPORTS-EC-NEXT: ExportTableSize: 0x0
 EXPORTS-EC-NOT:  Name: func
+EXPORTS-EC:      HybridObject {
+EXPORTS-EC:        ExportTableRVA: 0x3{{.*}}
+EXPORTS-EC-NEXT:   ExportTableSize: 0x4{{.*}}
+EXPORTS-EC:        Export {
+EXPORTS-EC-NEXT:     Ordinal: 1
+EXPORTS-EC-NEXT:     Name: func
+EXPORTS-EC-NEXT:     RVA: 0x2000
+EXPORTS-EC-NEXT:   }
+EXPORTS-EC-NEXT: }
 
 # Export using the EC .drectve section.
 
@@ -43,6 +54,30 @@ RUN: lld-link -machine:arm64x -dll -out:out-drectve-ec.dll arm64ec-func.obj arm6
 RUN:          loadconfig-arm64.obj loadconfig-arm64ec.obj arm64ec-drectve.obj -noentry
 RUN: llvm-objdump -d out-drectve-ec.dll | FileCheck --check-prefix=DISASM-EC %s
 RUN: llvm-readobj --headers --coff-exports out-drectve-ec.dll | FileCheck --check-prefix=EXPORTS-EC %s
+
+# Export using the EC .edata section.
+
+RUN: lld-link -machine:arm64x -dll -out:out-edata-ec.dll arm64ec-func.obj arm64-func.obj \
+RUN:          loadconfig-arm64.obj loadconfig-arm64ec.obj arm64ec-edata.obj -noentry
+
+RUN: llvm-objdump -d out-edata-ec.dll | FileCheck --check-prefix=DISASM-EDATA-EC %s
+DISASM-EDATA-EC:      0000000180001000 <.text>:
+DISASM-EDATA-EC-NEXT: 180001000: 52800040     mov     w0, #0x2                // =2
+DISASM-EDATA-EC-NEXT: 180001004: d65f03c0     ret
+
+RUN: llvm-readobj --headers --coff-exports out-edata-ec.dll | FileCheck --check-prefix=EXPORTS-EDATA-EC %s
+EXPORTS-EDATA-EC:      ExportTableRVA: 0x0
+EXPORTS-EDATA-EC-NEXT: ExportTableSize: 0x0
+EXPORTS-EDATA-EC-NOT:  Name: func
+EXPORTS-EDATA-EC:      HybridObject {
+EXPORTS-EDATA-EC:        ExportTableRVA: 0x2{{.*}}
+EXPORTS-EDATA-EC-NEXT:   ExportTableSize: 0x4{{.*}}
+EXPORTS-EDATA-EC:        Export {
+EXPORTS-EDATA-EC-NEXT:     Ordinal: 1
+EXPORTS-EDATA-EC-NEXT:     Name: func
+EXPORTS-EDATA-EC-NEXT:     RVA: 0x1000
+EXPORTS-EDATA-EC-NEXT:   }
+EXPORTS-EDATA-EC-NEXT: }
 
 # Export using the native .drectve section.
 
@@ -64,6 +99,17 @@ EXPORTS-NATIVE-NEXT:   Ordinal: 1
 EXPORTS-NATIVE-NEXT:   Name: func
 EXPORTS-NATIVE-NEXT:   RVA: 0x1000
 EXPORTS-NATIVE-NEXT: }
+EXPORTS-NATIVE:      HybridObject {
+EXPORTS-NATIVE:        ExportTableRVA: 0x0
+EXPORTS-NATIVE-NEXT:   ExportTableSize: 0x0
+EXPORTS-NATIVE-NOT:    Name: func
+
+# Export using the native .edata section.
+
+RUN: lld-link -machine:arm64x -dll -out:out-edata.dll arm64ec-func.obj arm64-func.obj \
+RUN:          loadconfig-arm64.obj loadconfig-arm64ec.obj arm64-edata.obj -noentry
+RUN: llvm-objdump -d out-edata.dll | FileCheck --check-prefix=DISASM-NATIVE %s
+RUN: llvm-readobj --headers --coff-exports out-edata.dll | FileCheck --check-prefix=EXPORTS-NATIVE %s
 
 # Export using both the native and EC .drectve sections.
 
@@ -99,6 +145,37 @@ EXPORTS-BOTH-NEXT:   Ordinal: 1
 EXPORTS-BOTH-NEXT:   Name: func
 EXPORTS-BOTH-NEXT:   RVA: 0x1000
 EXPORTS-BOTH-NEXT: }
+EXPORTS-BOTH:      HybridObject {
+EXPORTS-BOTH:        ExportTableRVA: 0x4{{.*}}
+EXPORTS-BOTH-NEXT:   ExportTableSize: 0x4{{.*}}
+EXPORTS-BOTH:        Export {
+EXPORTS-BOTH-NEXT:     Ordinal: 1
+EXPORTS-BOTH-NEXT:     Name: func
+EXPORTS-BOTH-NEXT:     RVA: 0x3000
+EXPORTS-BOTH-NEXT:   }
+EXPORTS-BOTH-NEXT: }
+
+# Export using both the native and EC .edata sections.
+
+RUN: lld-link -machine:arm64x -dll -out:out-edata-both.dll arm64ec-func.obj arm64-func.obj \
+RUN:          loadconfig-arm64.obj loadconfig-arm64ec.obj arm64-edata.obj arm64ec-edata.obj -noentry
+RUN: llvm-readobj --headers --coff-exports out-edata-both.dll | FileCheck --check-prefix=EXPORTS-EDATA-BOTH %s
+EXPORTS-EDATA-BOTH:      ExportTableRVA: 0x3{{.*}}
+EXPORTS-EDATA-BOTH-NEXT: ExportTableSize: 0x4{{.*}}
+EXPORTS-EDATA-BOTH:      Export {
+EXPORTS-EDATA-BOTH-NEXT:   Ordinal: 1
+EXPORTS-EDATA-BOTH-NEXT:   Name: func
+EXPORTS-EDATA-BOTH-NEXT:   RVA: 0x1000
+EXPORTS-EDATA-BOTH-NEXT: }
+EXPORTS-EDATA-BOTH:      HybridObject {
+EXPORTS-EDATA-BOTH:        ExportTableRVA: 0x3{{.*}}
+EXPORTS-EDATA-BOTH-NEXT:   ExportTableSize: 0x4{{.*}}
+EXPORTS-EDATA-BOTH:        Export {
+EXPORTS-EDATA-BOTH-NEXT:     Ordinal: 1
+EXPORTS-EDATA-BOTH-NEXT:     Name: func
+EXPORTS-EDATA-BOTH-NEXT:     RVA: 0x2000
+EXPORTS-EDATA-BOTH-NEXT:   }
+EXPORTS-EDATA-BOTH-NEXT: }
 
 #--- arm64-func.s
     .section .text,"xr",discard,func
@@ -119,3 +196,34 @@ func:
 #--- func-drectve.s
 .section .drectve
     .ascii "-export:func"
+
+#--- edata.s
+    .section .edata, "dr"
+    .align 4
+exports:
+    .long 0           // ExportFlags
+    .long 0           // TimeDateStamp
+    .long 0           // MajorVersion + MinorVersion
+    .rva name         // NameRVA
+    .long 1           // OrdinalBase
+    .long 1           // AddressTableEntries
+    .long 1           // NumberOfNamePointers
+    .rva functions    // ExportAddressTableRVA
+    .rva names        // NamePointerRVA
+    .rva nameordinals // OrdinalTableRVA
+
+names:
+    .rva funcname_func
+
+nameordinals:
+    .short 0
+
+functions:
+    .rva func
+    .long 0
+
+funcname_func:
+    .asciz "func"
+
+name:
+    .asciz "out-edata.dll"

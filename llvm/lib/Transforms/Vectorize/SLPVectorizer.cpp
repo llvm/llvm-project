@@ -8500,10 +8500,10 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         TreeEntry *SE = getTreeEntry(VL.front());
         if (!SE)
           return nullptr;
-        if (SE->isSame(VL))
+        if (SE->getVectorFactor() == VL.size() && SE->isSame(VL))
           return SE;
         for (TreeEntry *SE : MultiNodeScalars.lookup(VL.front())) {
-          if (SE->isSame(VL))
+          if (SE->getVectorFactor() == VL.size() && SE->isSame(VL))
             return SE;
         }
         return nullptr;
@@ -15785,6 +15785,37 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       LLVM_DEBUG(dbgs() << "SLP: Diamond merged for node " << E->Idx << ".\n";
                  E->dump());
       return E->VectorizedValue;
+    }
+    auto GetOperandSignedness = [&](const TreeEntry *OpE) {
+      bool IsSigned = false;
+      auto It = MinBWs.find(OpE);
+      if (It != MinBWs.end())
+        IsSigned = It->second.second;
+      else
+        IsSigned = any_of(OpE->Scalars, [&](Value *R) {
+          if (isa<PoisonValue>(V))
+            return false;
+          return !isKnownNonNegative(R, SimplifyQuery(*DL));
+        });
+      return IsSigned;
+    };
+    if (cast<VectorType>(Op1->getType())->getElementType() != ScalarTy) {
+      assert(ScalarTy->isIntegerTy() && "Expected item in MinBWs.");
+      Op1 = Builder.CreateIntCast(
+          Op1,
+          getWidenedType(
+              ScalarTy,
+              cast<FixedVectorType>(Op1->getType())->getNumElements()),
+          GetOperandSignedness(&OpTE1));
+    }
+    if (cast<VectorType>(Op2->getType())->getElementType() != ScalarTy) {
+      assert(ScalarTy->isIntegerTy() && "Expected item in MinBWs.");
+      Op2 = Builder.CreateIntCast(
+          Op2,
+          getWidenedType(
+              ScalarTy,
+              cast<FixedVectorType>(Op2->getType())->getNumElements()),
+          GetOperandSignedness(&OpTE2));
     }
     if (E->ReorderIndices.empty()) {
       SmallVector<int> Mask(E->getVectorFactor(), PoisonMaskElem);
