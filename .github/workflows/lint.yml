@@ -1,0 +1,15 @@
+name: lint
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  lint_python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/ruff-action@v3
+        with:  # Ignore all ruff rules except Python Syntax Errors
+          args: "check --ignore=ALL"
