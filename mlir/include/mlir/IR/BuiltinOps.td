@@ -20,6 +20,7 @@ include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
+include "mlir/Interfaces/LinkageInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // Base class for Builtin dialect ops.
@@ -32,7 +33,7 @@ class Builtin_Op<string mnemonic, list<Trait> traits = []> :
 
 def ModuleOp : Builtin_Op<"module", [
     AffineScope, IsolatedFromAbove, NoRegionArguments, SymbolTable, Symbol,
-    OpAsmOpInterface
+    OpAsmOpInterface, LinkableModuleOpInterface
   ] # GraphRegionNoTerminator.traits> {
   let summary = "A top level container operation";
   let description = [{
@@ -87,6 +88,11 @@ def ModuleOp : Builtin_Op<"module", [
     static ::llvm::StringRef getDefaultDialect() {
       return "builtin";
     }
+
+    //===------------------------------------------------------------------===//
+    // LinkableModuleOpInterface Methods
+    //===------------------------------------------------------------------===//
+
   }];
   let hasVerifier = 1;
 
