@@ -6731,6 +6731,13 @@ ASTNodeImporter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   if (Error Err = importInto(TemplatedFD, D->getTemplatedDecl()))
     return std::move(Err);
 
+  // Fail if TemplatedFD is already part of a template.
+  // The structural equivalence check should have been found this template.
+  // If not, there is AST incompatibility that can be caused by previous import
+  // errors.
+  if (TemplatedFD->getDescribedTemplate())
+    return make_error<ASTImportError>(ASTImportError::NameConflict);
+
   // At creation of the template the template parameters are "adopted"
   // (DeclContext is changed). After this possible change the lookup table
   // must be updated.
