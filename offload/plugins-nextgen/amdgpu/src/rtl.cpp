@@ -4337,6 +4337,42 @@ private:
     return Plugin::success();
   }
 
+  bool checkIfCoarseGrainMemoryNearOrAbove64GB() {
+    for (AMDGPUMemoryPoolTy *Pool : AllMemoryPools) {
+      if (Pool->isGlobal() && Pool->isCoarseGrained()) {
+	uint64_t Value;
+        hsa_status_t Status =
+            Pool->getAttrRaw(HSA_AMD_MEMORY_POOL_INFO_SIZE, Value);
+        if (Status != HSA_STATUS_SUCCESS) continue;
+	constexpr uint64_t Almost64Gig = 0xFF0000000;
+	if (Value >= Almost64Gig) return true;
+      }
+    }
+    return false; // CoarseGrain pool w/ 64GB or more capacity not found
+  }
+
+  size_t getMemoryManagerSizeThreshold() override {
+    // TODO: check performance on lower memory capacity GPU
+    // for lowering the threshold from 64GB.
+    if (checkIfCoarseGrainMemoryNearOrAbove64GB()) {
+      // Set GenericDeviceTy::MemoryManager's Threshold to ~2GB,
+      // used if not set by LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD
+      // ENV var. This MemoryManager is used for
+      // omp_target_alloc(), OpenMP (non-usm) map clause, etc.
+      //
+      // TODO 1: Fine tune to lower the threshold closer to 1GB.
+      // TODO 2: HSA-level memory manager on the user-side such that
+      // memory management is shared with HIP and OpenCL.
+      //
+      // If this value needs to go above UINT_MAX, consider
+      // adding sizeof(size_t) check to avoid unpleasant truncation
+      // surprises where size_t is still 32bit.
+      constexpr size_t Almost2Gig = 2000000000u;
+      return Almost2Gig;
+    }
+    return 0;
+  }
+
   /// Determines if
   /// - Coarse graining upon USM map on MI200 needs to be enabled.
   void specialBehaviorHandling() {
