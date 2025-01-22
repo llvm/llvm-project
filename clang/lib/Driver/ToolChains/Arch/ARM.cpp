@@ -647,7 +647,7 @@ llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
     (void)getARMFPUFeatures(D, WaFPU->first, Args, WaFPU->second, Features);
   } else if (FPUArg) {
     FPUKind = getARMFPUFeatures(D, FPUArg, Args, FPUArg->getValue(), Features);
-  } else if (Triple.isAndroid() && getARMSubArchVersionNumber(Triple) >= 7) {
+  } else if (Triple.isAndroid() && getARMSubArchVersionNumber(Triple) == 7) {
     const char *AndroidFPU = "neon";
     FPUKind = llvm::ARM::parseFPU(AndroidFPU);
     if (!llvm::ARM::getFPUFeatures(FPUKind, Features))
@@ -659,11 +659,19 @@ llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
         CPUArgFPUKind != llvm::ARM::FK_INVALID ? CPUArgFPUKind : ArchArgFPUKind;
     (void)llvm::ARM::getFPUFeatures(FPUKind, Features);
   } else {
+    bool Generic = true;
     if (!ForAS) {
       std::string CPU = arm::getARMTargetCPU(CPUName, ArchName, Triple);
+      if (CPU != "generic")
+        Generic = false;
       llvm::ARM::ArchKind ArchKind =
           arm::getLLVMArchKindForARM(CPU, ArchName, Triple);
       FPUKind = llvm::ARM::getDefaultFPU(CPU, ArchKind);
+      (void)llvm::ARM::getFPUFeatures(FPUKind, Features);
+    }
+    if (Generic && (Triple.isOSWindows() || Triple.isOSDarwin()) &&
+        getARMSubArchVersionNumber(Triple) >= 7) {
+      FPUKind = llvm::ARM::parseFPU("neon");
       (void)llvm::ARM::getFPUFeatures(FPUKind, Features);
     }
   }

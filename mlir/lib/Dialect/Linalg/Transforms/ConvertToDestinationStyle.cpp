@@ -553,7 +553,7 @@ Value linalg::bufferizeToAllocation(
     Value alloc = createAllocationForTensor(
         rewriter, op->getLoc(), operand->get(), options, memorySpace);
     allocs.push_back(alloc);
-    if (!state.findDefinitions(operand->get()).empty()) {
+    if (!state.findDefinitions(operand).empty()) {
       // Initialize buffer with a copy of the operand data. Not needed if the
       // tensor is uninitialized.
       createMemcpy(rewriter, op->getLoc(), operand->get(), alloc, options);

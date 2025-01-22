@@ -1,0 +1,14 @@
+header: sys/utsname.h
+header_template: utsname.h.def
+macros: []
+types:
+  - type_name: struct_utsname
+enums: []
+objects: []
+functions:
+  - name: uname
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: struct utsname *

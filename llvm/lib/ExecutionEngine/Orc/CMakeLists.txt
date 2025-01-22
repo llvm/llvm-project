@@ -15,6 +15,7 @@ add_llvm_component_library(LLVMOrcJIT
   Core.cpp
   DebugObjectManagerPlugin.cpp
   DebugUtils.cpp
+  EHFrameRegistrationPlugin.cpp
   EPCDynamicLibrarySearchGenerator.cpp
   EPCDebugObjectRegistrar.cpp
   EPCEHFrameRegistrar.cpp

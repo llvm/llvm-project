@@ -106,7 +106,7 @@ def find_real_python_interpreter():
     if sys.prefix != sys.base_prefix:
         copied_python = os.path.join(sys.prefix, "bin", "copied-python")
     else:
-        copied_python = os.path.join(config.lldb_build_directory, "copied-python")
+        copied_python = os.path.join(config.mlir_obj_root, "copied-python")
 
     # Avoid doing any work if we already copied the binary.
     if os.path.isfile(copied_python):
@@ -197,7 +197,7 @@ tools = [
 ]
 
 if config.enable_vulkan_runner:
-    tools.extend([add_runtime("vulkan-runtime-wrappers")])
+    tools.extend([add_runtime("mlir_vulkan_runtime")])
 
 if config.enable_rocm_runner:
     tools.extend([add_runtime("mlir_rocm_runtime")])

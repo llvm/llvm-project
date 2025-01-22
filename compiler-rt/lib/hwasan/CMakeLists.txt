@@ -188,7 +188,6 @@ function(add_hwasan_runtimes arch use_aliases)
     STATIC
     ARCHS ${arch}
     OBJECT_LIBS RTHwasan_cxx
-                RTUbsan_cxx
     CFLAGS ${hwasan_rtl_flags}
     PARENT_TARGET hwasan)
 

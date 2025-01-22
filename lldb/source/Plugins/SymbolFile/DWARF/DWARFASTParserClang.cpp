@@ -377,7 +377,12 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
       break;
 
     case DW_AT_object_pointer:
-      object_pointer = form_value.Reference();
+      // GetAttributes follows DW_AT_specification.
+      // DW_TAG_subprogram definitions and declarations may both
+      // have a DW_AT_object_pointer. Don't overwrite the one
+      // we parsed for the definition with the one from the declaration.
+      if (!object_pointer.IsValid())
+        object_pointer = form_value.Reference();
       break;
 
     case DW_AT_signature:
@@ -1222,11 +1227,9 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
   }
 
   if (die.HasChildren()) {
-    bool skip_artificial = true;
-    ParseChildParameters(containing_decl_ctx, die, skip_artificial, is_static,
-                         is_variadic, has_template_params,
-                         function_param_types, function_param_decls,
-                         type_quals);
+    ParseChildParameters(containing_decl_ctx, die, is_static, is_variadic,
+                         has_template_params, function_param_types,
+                         function_param_decls, type_quals);
   }
 
   bool ignore_containing_context = false;
@@ -2325,7 +2328,7 @@ DWARFASTParserClang::ConstructDemangledNameFromDWARF(const DWARFDIE &die) {
 
   clang::DeclContext *containing_decl_ctx =
       GetClangDeclContextContainingDIE(die, nullptr);
-  ParseChildParameters(containing_decl_ctx, die, true, is_static, is_variadic,
+  ParseChildParameters(containing_decl_ctx, die, is_static, is_variadic,
                        has_template_params, param_types, param_decls,
                        type_quals);
   sstr << "(";
@@ -3069,8 +3072,8 @@ bool DWARFASTParserClang::ParseChildMembers(
 
 size_t DWARFASTParserClang::ParseChildParameters(
     clang::DeclContext *containing_decl_ctx, const DWARFDIE &parent_die,
-    bool skip_artificial, bool &is_static, bool &is_variadic,
-    bool &has_template_params, std::vector<CompilerType> &function_param_types,
+    bool &is_static, bool &is_variadic, bool &has_template_params,
+    std::vector<CompilerType> &function_param_types,
     std::vector<clang::ParmVarDecl *> &function_param_decls,
     unsigned &type_quals) {
   if (!parent_die)
@@ -3081,51 +3084,10 @@ size_t DWARFASTParserClang::ParseChildParameters(
     const dw_tag_t tag = die.Tag();
     switch (tag) {
     case DW_TAG_formal_parameter: {
-      DWARFAttributes attributes = die.GetAttributes();
-      if (attributes.Size() == 0) {
-        arg_idx++;
-        break;
-      }
+      const char *name = die.GetName();
+      DWARFDIE param_type_die = die.GetAttributeValueAsReferenceDIE(DW_AT_type);
 
-      const char *name = nullptr;
-      DWARFFormValue param_type_die_form;
-      bool is_artificial = false;
-      // one of None, Auto, Register, Extern, Static, PrivateExtern
-
-      clang::StorageClass storage = clang::SC_None;
-      uint32_t i;
-      for (i = 0; i < attributes.Size(); ++i) {
-        const dw_attr_t attr = attributes.AttributeAtIndex(i);
-        DWARFFormValue form_value;
-        if (attributes.ExtractFormValueAtIndex(i, form_value)) {
-          switch (attr) {
-          case DW_AT_name:
-            name = form_value.AsCString();
-            break;
-          case DW_AT_type:
-            param_type_die_form = form_value;
-            break;
-          case DW_AT_artificial:
-            is_artificial = form_value.Boolean();
-            break;
-          case DW_AT_location:
-          case DW_AT_const_value:
-          case DW_AT_default_value:
-          case DW_AT_description:
-          case DW_AT_endianity:
-          case DW_AT_is_optional:
-          case DW_AT_segment:
-          case DW_AT_variable_parameter:
-          default:
-          case DW_AT_abstract_origin:
-          case DW_AT_sibling:
-            break;
-          }
-        }
-      }
-
-      bool skip = false;
-      if (skip_artificial && is_artificial) {
+      if (die.GetAttributeValueAsUnsigned(DW_AT_artificial, 0)) {
         // In order to determine if a C++ member function is "const" we
         // have to look at the const-ness of "this"...
         if (arg_idx == 0 &&
@@ -3134,8 +3096,7 @@ size_t DWARFASTParserClang::ParseChildParameters(
             // specification DIEs, so we can't rely upon the name being in
             // the formal parameter DIE...
             (name == nullptr || ::strcmp(name, "this") == 0)) {
-          Type *this_type = die.ResolveTypeUID(param_type_die_form.Reference());
-          if (this_type) {
+          if (Type *this_type = die.ResolveTypeUID(param_type_die)) {
             uint32_t encoding_mask = this_type->GetEncodingMask();
             if (encoding_mask & Type::eEncodingIsPointerUID) {
               is_static = false;
@@ -3147,23 +3108,18 @@ size_t DWARFASTParserClang::ParseChildParameters(
             }
           }
         }
-        skip = true;
+      } else if (Type *type = die.ResolveTypeUID(param_type_die)) {
+        function_param_types.push_back(type->GetForwardCompilerType());
+
+        clang::ParmVarDecl *param_var_decl = m_ast.CreateParameterDeclaration(
+            containing_decl_ctx, GetOwningClangModule(die), name,
+            type->GetForwardCompilerType(), clang::StorageClass::SC_None);
+        assert(param_var_decl);
+        function_param_decls.push_back(param_var_decl);
+
+        m_ast.SetMetadataAsUserID(param_var_decl, die.GetID());
       }
 
-      if (!skip) {
-        Type *type = die.ResolveTypeUID(param_type_die_form.Reference());
-        if (type) {
-          function_param_types.push_back(type->GetForwardCompilerType());
-
-          clang::ParmVarDecl *param_var_decl = m_ast.CreateParameterDeclaration(
-              containing_decl_ctx, GetOwningClangModule(die), name,
-              type->GetForwardCompilerType(), storage);
-          assert(param_var_decl);
-          function_param_decls.push_back(param_var_decl);
-
-          m_ast.SetMetadataAsUserID(param_var_decl, die.GetID());
-        }
-      }
       arg_idx++;
     } break;
 

@@ -488,6 +488,18 @@ add_libc_test(
     libc.src.stdio.fflush
 )
 
+add_libc_test(
+  getentropy_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    getentropy_test.cpp
+  DEPENDS
+    libc.src.unistd.getentropy
+    libc.src.errno.errno
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
 if(LLVM_LIBC_FULL_BUILD)
   add_libc_test(
     _exit_test

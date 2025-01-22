@@ -2523,8 +2523,16 @@ OpFoldResult BroadcastOp::fold(FoldAdaptor adaptor) {
   if (!adaptor.getSource())
     return {};
   auto vectorType = getResultVectorType();
-  if (llvm::isa<IntegerAttr, FloatAttr>(adaptor.getSource()))
-    return DenseElementsAttr::get(vectorType, adaptor.getSource());
+  if (auto attr = llvm::dyn_cast<IntegerAttr>(adaptor.getSource())) {
+    if (vectorType.getElementType() != attr.getType())
+      return {};
+    return DenseElementsAttr::get(vectorType, attr);
+  }
+  if (auto attr = llvm::dyn_cast<FloatAttr>(adaptor.getSource())) {
+    if (vectorType.getElementType() != attr.getType())
+      return {};
+    return DenseElementsAttr::get(vectorType, attr);
+  }
   if (auto attr = llvm::dyn_cast<SplatElementsAttr>(adaptor.getSource()))
     return DenseElementsAttr::get(vectorType, attr.getSplatValue<Attribute>());
   return {};
@@ -2592,7 +2600,7 @@ LogicalResult ShuffleOp::verify() {
   int64_t indexSize = (v1Type.getRank() == 0 ? 1 : v1Type.getDimSize(0)) +
                       (v2Type.getRank() == 0 ? 1 : v2Type.getDimSize(0));
   for (auto [idx, maskPos] : llvm::enumerate(mask)) {
-    if (maskPos < 0 || maskPos >= indexSize)
+    if (maskPos != kMaskPoisonValue && (maskPos < 0 || maskPos >= indexSize))
       return emitOpError("mask index #") << (idx + 1) << " out of range";
   }
   return success();
@@ -4966,7 +4974,7 @@ static LogicalResult verifyLoadStoreMemRefLayout(Operation *op,
       (vecTy.getRank() == 0 || vecTy.getNumElements() == 1))
     return success();
 
-  if (!isLastMemrefDimUnitStride(memRefTy))
+  if (!memRefTy.isLastDimUnitStride())
     return op->emitOpError("most minor memref dim must have unit stride");
   return success();
 }
@@ -5781,7 +5789,7 @@ void TypeCastOp::build(OpBuilder &builder, OperationState &result,
 }
 
 LogicalResult TypeCastOp::verify() {
-  MemRefType canonicalType = canonicalizeStridedLayout(getMemRefType());
+  MemRefType canonicalType = getMemRefType().canonicalizeStridedLayout();
   if (!canonicalType.getLayout().isIdentity())
     return emitOpError("expects operand to be a memref with identity layout");
   if (!getResultMemRefType().getLayout().isIdentity())
