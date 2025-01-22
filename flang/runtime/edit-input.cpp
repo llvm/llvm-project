@@ -130,7 +130,7 @@ static RT_API_ATTRS bool EditBOZInput(
     shift = shift - 8; // misaligned octal
   }
   while (digits > 0) {
-    char32_t ch{*io.NextInField(remaining, edit)};
+    char32_t ch{io.NextInField(remaining, edit).value_or(' ')};
     int digit{0};
     if (ch == ' ' || ch == '\t') {
       if (edit.modes.editingFlags & blankZero) {

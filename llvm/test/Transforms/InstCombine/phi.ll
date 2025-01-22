@@ -2828,13 +2828,13 @@ define i1 @test_zext_icmp_eq_0(i1 %a, i1 %b, i32 %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[A:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[B_EXT:%.*]] = zext i1 [[B:%.*]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[B:%.*]], true
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[C:%.*]], 0
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[B_EXT]], [[IF]] ], [ [[C:%.*]], [[ELSE]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[PHI]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ [[TMP0]], [[IF]] ], [ [[TMP1]], [[ELSE]] ]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
@@ -2916,10 +2916,9 @@ define i1 @test_zext_icmp_eq_0_loop(i1 %c, i1 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[EXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[X:%.*]] = icmp eq i32 [[PHI]], 0
+; CHECK-NEXT:    [[X:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[TMP0:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[Y:%.*]] = and i1 [[X]], [[B:%.*]]
-; CHECK-NEXT:    [[EXT]] = zext i1 [[Y]] to i32
+; CHECK-NEXT:    [[TMP0]] = xor i1 [[Y]], true
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 [[X]]

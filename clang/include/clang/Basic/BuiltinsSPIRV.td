@@ -8,8 +8,14 @@
 
 include "clang/Basic/BuiltinsBase.td"
 
-def HLSLDistance : Builtin {
+def SPIRVDistance : Builtin {
   let Spellings = ["__builtin_spirv_distance"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def SPIRVLength : Builtin {
+  let Spellings = ["__builtin_spirv_length"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

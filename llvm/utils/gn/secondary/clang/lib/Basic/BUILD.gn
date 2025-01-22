@@ -26,6 +26,7 @@ static_library("Basic") {
     "//clang/include/clang/Basic:Builtins",
     "//clang/include/clang/Basic:BuiltinsBPF",
     "//clang/include/clang/Basic:BuiltinsRISCV",
+    "//clang/include/clang/Basic:BuiltinsSPIRV",
     "//clang/include/clang/Basic:BuiltinsX86",
     "//clang/include/clang/Basic:BuiltinsX86_64",
     "//clang/include/clang/Basic:DiagnosticGroups",

@@ -12,7 +12,7 @@
 #include "test/UnitTest/ExecuteFunction.h"
 #include "test/UnitTest/TestLogger.h"
 
-#include <cassert>
+#include <assert.h>
 
 namespace {
 constexpr unsigned TIMEOUT_MS = 10000;

@@ -115,7 +115,7 @@ libc_support_library(
     hdrs = ["SortingTest.h"],
     deps = [
         "//libc:__support_macros_config",
-        "//libc:qsort_util",
+        "//libc:qsort",
         "//libc/test/UnitTest:LibcUnitTest",
     ],
 )

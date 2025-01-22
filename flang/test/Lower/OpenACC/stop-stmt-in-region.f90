@@ -8,7 +8,7 @@
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_1:.*]] = arith.constant false
 ! CHECK:           %[[VAL_2:.*]] = arith.constant false
-! CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAStopStatement(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {{.*}} : (i32, i1, i1) -> none
+! CHECK:           fir.call @_FortranAStopStatement(%[[VAL_0]], %[[VAL_1]], %[[VAL_2]]) {{.*}} : (i32, i1, i1) -> ()
 ! CHECK:           acc.yield
 ! CHECK:         }
 ! CHECK:         return
@@ -26,7 +26,7 @@ end
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_2:.*]] = arith.constant false
 ! CHECK:           %[[VAL_3:.*]] = arith.constant false
-! CHECK:           %[[VAL_4:.*]] = fir.call @_FortranAStopStatement(%[[VAL_1]], %[[VAL_2]], %[[VAL_3]]) {{.*}} : (i32, i1, i1) -> none
+! CHECK:           fir.call @_FortranAStopStatement(%[[VAL_1]], %[[VAL_2]], %[[VAL_3]]) {{.*}} : (i32, i1, i1) -> ()
 ! CHECK:           acc.yield
 ! CHECK:         }
 ! CHECK:         return

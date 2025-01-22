@@ -128,7 +128,7 @@ static cl::opt<bool, true>
 
 static cl::opt<bool> UseLIRCodeSizeHeurs(
     "use-lir-code-size-heurs",
-    cl::desc("Use loop idiom recognition code size heuristics when compiling"
+    cl::desc("Use loop idiom recognition code size heuristics when compiling "
              "with -Os/-Oz"),
     cl::init(true), cl::Hidden);
 

@@ -1274,9 +1274,7 @@ static void initOption(AnalyzerOptions::ConfigTable &Config,
     Diags->Report(diag::err_analyzer_config_invalid_input)
         << Name << "a positive";
 
-  auto Default = PositiveAnalyzerOption::create(DefaultVal);
-  assert(Default.has_value());
-  OptionField = Default.value();
+  OptionField = DefaultVal;
 }
 
 static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,
@@ -1453,6 +1451,18 @@ static SmallVector<StringRef, 4> serializeSanitizerKinds(SanitizerSet S) {
   SmallVector<StringRef, 4> Values;
   serializeSanitizerSet(S, Values);
   return Values;
+}
+
+static SanitizerMaskCutoffs
+parseSanitizerWeightedKinds(StringRef FlagName,
+                            const std::vector<std::string> &Sanitizers,
+                            DiagnosticsEngine &Diags) {
+  SanitizerMaskCutoffs Cutoffs;
+  for (const auto &Sanitizer : Sanitizers) {
+    if (!parseSanitizerWeightedValue(Sanitizer, /*AllowGroups=*/false, Cutoffs))
+      Diags.Report(diag::err_drv_invalid_value) << FlagName << Sanitizer;
+  }
+  return Cutoffs;
 }
 
 static void parseXRayInstrumentationBundle(StringRef FlagName, StringRef Bundle,
@@ -1814,6 +1824,11 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   for (StringRef Sanitizer :
        serializeSanitizerKinds(Opts.SanitizeMergeHandlers))
     GenerateArg(Consumer, OPT_fsanitize_merge_handlers_EQ, Sanitizer);
+
+  SmallVector<std::string, 4> Values;
+  serializeSanitizerMaskCutoffs(Opts.SanitizeSkipHotCutoffs, Values);
+  for (std::string Sanitizer : Values)
+    GenerateArg(Consumer, OPT_fsanitize_skip_hot_cutoff_EQ, Sanitizer);
 
   if (!Opts.EmitVersionIdentMetadata)
     GenerateArg(Consumer, OPT_Qn);
@@ -2294,6 +2309,11 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   parseSanitizerKinds("-fsanitize-merge=",
                       Args.getAllArgValues(OPT_fsanitize_merge_handlers_EQ),
                       Diags, Opts.SanitizeMergeHandlers);
+
+  // Parse -fsanitize-skip-hot-cutoff= arguments.
+  Opts.SanitizeSkipHotCutoffs = parseSanitizerWeightedKinds(
+      "-fsanitize-skip-hot-cutoff=",
+      Args.getAllArgValues(OPT_fsanitize_skip_hot_cutoff_EQ), Diags);
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 
@@ -3260,7 +3280,7 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
     }();
 
     GenerateArg(Consumer, Opt, It->Path);
-  };
+  }
 
   // Note: some paths that came from "[-iprefix=xx] -iwithprefixbefore=yy" may
   // have already been generated as "-I[xx]yy". If that's the case, their
