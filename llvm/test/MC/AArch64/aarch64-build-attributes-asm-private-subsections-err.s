@@ -7,7 +7,7 @@
 // ERR-NEXT: .aeabi_subsection private_subsection, required, uleb128
 
 .aeabi_subsection private_subsection, optional, ntbs
-// ERR: error: type mismatch! subsection 'private_subsection' already exists with type defined as '0' and not '1' (0: uleb128, 1: ntbs)
+// ERR: error: type mismatch! subsection 'private_subsection' already exists with type defined as 'uleb128' and not 'ntbs'
 // ERR-NEXT: .aeabi_subsection private_subsection, optional, ntbs
 
 .aeabi_subsection private_subsection_1, optional, ntbs
