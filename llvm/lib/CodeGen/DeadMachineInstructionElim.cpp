@@ -104,7 +104,7 @@ bool DeadMachineInstructionElimImpl::eliminateDeadMI(MachineFunction &MF) {
     // liveness as we go.
     for (MachineInstr &MI : make_early_inc_range(reverse(*MBB))) {
       // If the instruction is dead, delete it!
-      if (MI.isDead(MRI, &LivePhysRegs)) {
+      if (MI.isDead(*MRI, &LivePhysRegs)) {
         LLVM_DEBUG(dbgs() << "DeadMachineInstructionElim: DELETING: " << MI);
         // It is possible that some DBG_VALUE instructions refer to this
         // instruction. They will be deleted in the live debug variable
