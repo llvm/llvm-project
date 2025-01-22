@@ -81,8 +81,15 @@ static bool isWriteHintOrNone(const CachePolicyAttr &attr) {
 //   each dimension.
 static bool isArgShapesValid(ArrayRef<int64_t> descShape,
                              ArrayRef<int64_t> valShape, SGMapAttr sgMap) {
-  if (descShape == valShape)
-    return true;
+  if (descShape == valShape) {
+    if (!sgMap)
+      return true;
+
+    // this can be relaxed if necessary by supporting non-2d shapes distribution
+    // until the constraints are defined this lives here instead of the tensor
+    // descriptor type.
+    return valShape.size() == sgMap.getWiLayout().size();
+  }
 
   if (!sgMap)
     return false;
