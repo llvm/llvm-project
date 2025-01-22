@@ -2810,7 +2810,7 @@ TreePattern::TreePattern(const Record *TheRec,
 
 TreePattern TreePattern::clone() const {
   TreePattern New = *this;
-  for(TreePatternNodePtr& Tree : New.Trees)
+  for (TreePatternNodePtr &Tree : New.Trees)
     Tree = Tree->clone();
   return New;
 }
@@ -2827,7 +2827,6 @@ bool TreePattern::hasProperTypeByHwMode() const {
   return llvm::any_of(getTrees(),
                       [](auto &T) { return T->hasProperTypeByHwMode(); });
 }
-
 
 void TreePattern::ComputeNamedNodes() {
   for (TreePatternNodePtr &Tree : Trees)
@@ -4392,10 +4391,10 @@ void CodeGenDAGPatterns::ParseOnePattern(
   // tree which has possible types.
   for (const auto &InTree : Pattern.getTrees()) {
     if (InTree->hasPossibleType())
-      AddPatternToMatch(&Pattern,
-                        PatternToMatch(TheDef, Preds, InTree,
-                                       ExpandedOutPattern, InstImpResults,
-                                       Complexity, TheDef->getID(), ShouldIgnore));
+      AddPatternToMatch(
+          &Pattern, PatternToMatch(TheDef, Preds, InTree, ExpandedOutPattern,
+                                   InstImpResults, Complexity, TheDef->getID(),
+                                   ShouldIgnore));
   }
 }
 
@@ -4464,9 +4463,9 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
         return;
 
     PatternsToMatch.emplace_back(P.getSrcRecord(), P.getPredicates(),
-                                 std::move(NewSrc), NewDst,
-                                 P.getDstRegs(), P.getAddedComplexity(),
-                                 getNewUID(), P.getGISelShouldIgnore(), Check);
+                                 std::move(NewSrc), NewDst, P.getDstRegs(),
+                                 P.getAddedComplexity(), getNewUID(),
+                                 P.getGISelShouldIgnore(), Check);
   };
 
   for (PatternToMatch &P : Copy) {
