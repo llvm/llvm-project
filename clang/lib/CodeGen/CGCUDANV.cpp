@@ -1237,7 +1237,7 @@ void CGNVCUDARuntime::createOffloadingEntries() {
             /*IsConstant=*/true, llvm::GlobalValue::PrivateLinkage, Initializer,
             I.Var->getName(), /*InsertBefore=*/nullptr,
             llvm::GlobalVariable::NotThreadLocal,
-            CGM.getContext().getTargetAddressSpace(LangAS::Default));
+            M.getDataLayout().getDefaultGlobalsAddressSpace());
 
         llvm::offloading::emitOffloadingEntry(
             M, Struct, getDeviceSideName(I.D), VarSize,
