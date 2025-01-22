@@ -70,7 +70,7 @@ class PrintObjTestCase(TestBase):
         # issue our 'po lock_me' command.
 
         for frame in other_thread.frames:
-           if frame.name == "main":
+            if frame.name == "main":
                 other_thread.selected_frame = frame
                 if self.TraceOn():
                     print("selected frame:" + lldbutil.get_description(frame))
