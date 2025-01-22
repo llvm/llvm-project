@@ -7205,6 +7205,8 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
 
   bool ModulesCodegen =
       !D->isDependentType() &&
+      D->getTemplateSpecializationKind() !=
+          TSK_ExplicitInstantiationDeclaration &&
       (Writer->getLangOpts().ModulesDebugInfo || D->isInNamedModule());
   Record->push_back(ModulesCodegen);
   if (ModulesCodegen)
