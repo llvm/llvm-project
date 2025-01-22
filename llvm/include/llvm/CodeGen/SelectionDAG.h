@@ -1837,7 +1837,7 @@ public:
   /// chain to the token factor. This ensures that the new memory node will have
   /// the same relative memory dependency position as the old load. Returns the
   /// new merged load chain.
-  SDValue makeEquivalentMemoryOrdering(LoadSDNode *OldLoad, SDValue NewMemOp);
+  SDValue makeEquivalentMemoryOrdering(MemSDNode *OldLoad, SDValue NewMemOp);
 
   /// Topological-sort the AllNodes list and a
   /// assign a unique node id for each node in the DAG based on their
@@ -2262,6 +2262,8 @@ public:
   /// 'Bytes' bytes from a location that is 'Dist' units away from the
   /// location that the 'Base' load is loading from.
   bool areNonVolatileConsecutiveLoads(LoadSDNode *LD, LoadSDNode *Base,
+                                      unsigned Bytes, int Dist) const;
+  bool areNonVolatileConsecutiveLoads(AtomicSDNode *LD, AtomicSDNode *Base,
                                       unsigned Bytes, int Dist) const;
 
   /// Infer alignment of a load / store address. Return std::nullopt if it

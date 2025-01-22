@@ -194,8 +194,8 @@ bool BaseIndexOffset::contains(const SelectionDAG &DAG, int64_t BitSize,
   return false;
 }
 
-/// Parses tree in Ptr for base, index, offset addresses.
-static BaseIndexOffset matchLSNode(const LSBaseSDNode *N,
+template <typename T>
+static BaseIndexOffset matchSDNode(const T *N,
                                    const SelectionDAG &DAG) {
   SDValue Ptr = N->getBasePtr();
 
@@ -206,16 +206,18 @@ static BaseIndexOffset matchLSNode(const LSBaseSDNode *N,
   bool IsIndexSignExt = false;
 
   // pre-inc/pre-dec ops are components of EA.
-  if (N->getAddressingMode() == ISD::PRE_INC) {
-    if (auto *C = dyn_cast<ConstantSDNode>(N->getOffset()))
-      Offset += C->getSExtValue();
-    else // If unknown, give up now.
-      return BaseIndexOffset(SDValue(), SDValue(), 0, false);
-  } else if (N->getAddressingMode() == ISD::PRE_DEC) {
-    if (auto *C = dyn_cast<ConstantSDNode>(N->getOffset()))
-      Offset -= C->getSExtValue();
-    else // If unknown, give up now.
-      return BaseIndexOffset(SDValue(), SDValue(), 0, false);
+  if constexpr (std::is_same_v<T, LSBaseSDNode>) {
+    if (N->getAddressingMode() == ISD::PRE_INC) {
+      if (auto *C = dyn_cast<ConstantSDNode>(N->getOffset()))
+        Offset += C->getSExtValue();
+      else // If unknown, give up now.
+        return BaseIndexOffset(SDValue(), SDValue(), 0, false);
+    } else if (N->getAddressingMode() == ISD::PRE_DEC) {
+      if (auto *C = dyn_cast<ConstantSDNode>(N->getOffset()))
+        Offset -= C->getSExtValue();
+      else // If unknown, give up now.
+        return BaseIndexOffset(SDValue(), SDValue(), 0, false);
+    }
   }
 
   // Consume constant adds & ors with appropriate masking.
@@ -300,8 +302,10 @@ static BaseIndexOffset matchLSNode(const LSBaseSDNode *N,
 
 BaseIndexOffset BaseIndexOffset::match(const SDNode *N,
                                        const SelectionDAG &DAG) {
+  if (const auto *AN = dyn_cast<AtomicSDNode>(N))
+    return matchSDNode(AN, DAG);
   if (const auto *LS0 = dyn_cast<LSBaseSDNode>(N))
-    return matchLSNode(LS0, DAG);
+    return matchSDNode(LS0, DAG);
   if (const auto *LN = dyn_cast<LifetimeSDNode>(N)) {
     if (LN->hasOffset())
       return BaseIndexOffset(LN->getOperand(1), SDValue(), LN->getOffset(),

@@ -1152,6 +1152,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     SplitVecRes_STEP_VECTOR(N, Lo, Hi);
     break;
   case ISD::SIGN_EXTEND_INREG: SplitVecRes_InregOp(N, Lo, Hi); break;
+  case ISD::ATOMIC_LOAD:
+    SplitVecRes_ATOMIC_LOAD(cast<AtomicSDNode>(N));
+    break;
   case ISD::LOAD:
     SplitVecRes_LOAD(cast<LoadSDNode>(N), Lo, Hi);
     break;
@@ -1393,6 +1396,34 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   // If Lo/Hi is null, the sub-method took care of registering results etc.
   if (Lo.getNode())
     SetSplitVector(SDValue(N, ResNo), Lo, Hi);
+}
+
+void DAGTypeLegalizer::SplitVecRes_ATOMIC_LOAD(AtomicSDNode *LD) {
+  SDLoc dl(LD);
+
+  EVT MemoryVT = LD->getMemoryVT();
+  unsigned NumElts = MemoryVT.getVectorMinNumElements();
+
+  EVT IntMemoryVT = EVT::getVectorVT(*DAG.getContext(), MVT::i16, NumElts);
+  EVT ElemVT = EVT::getVectorVT(*DAG.getContext(),
+                                MemoryVT.getVectorElementType(), 1);
+
+  // Create a single atomic to load all the elements at once.
+  SDValue Atomic = DAG.getAtomic(ISD::ATOMIC_LOAD, dl, IntMemoryVT, IntMemoryVT,
+                                 LD->getChain(), LD->getBasePtr(),
+                                 LD->getMemOperand());
+
+  // Instead of splitting, put all the elements back into a vector.
+  SmallVector<SDValue, 4> Ops;
+  for (unsigned i = 0; i < NumElts; ++i) {
+    SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i16, Atomic,
+                              DAG.getVectorIdxConstant(i, dl));
+    Elt = DAG.getBitcast(ElemVT, Elt);
+    Ops.push_back(Elt);
+  }
+  SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, dl, MemoryVT, Ops);
+
+  ReplaceValueWith(SDValue(LD, 0), Concat);
 }
 
 void DAGTypeLegalizer::IncrementPointer(MemSDNode *N, EVT MemVT,

@@ -7071,14 +7071,23 @@ static SDValue LowerAsSplatVectorLoad(SDValue SrcOp, MVT VT, const SDLoc &dl,
 }
 
 // Recurse to find a LoadSDNode source and the accumulated ByteOffest.
-static bool findEltLoadSrc(SDValue Elt, LoadSDNode *&Ld, int64_t &ByteOffset) {
-  if (ISD::isNON_EXTLoad(Elt.getNode())) {
-    auto *BaseLd = cast<LoadSDNode>(Elt);
-    if (!BaseLd->isSimple())
-      return false;
-    Ld = BaseLd;
-    ByteOffset = 0;
-    return true;
+template <typename T>
+static bool findEltLoadSrc(SDValue Elt, T *&Ld, int64_t &ByteOffset) {
+  if constexpr (std::is_same_v<T, AtomicSDNode>) {
+    if (auto *BaseLd = dyn_cast<AtomicSDNode>(Elt)) {
+      Ld = BaseLd;
+      ByteOffset = 0;
+      return true;
+    }
+  } else if constexpr (std::is_same_v<T, LoadSDNode>) {
+    if (ISD::isNON_EXTLoad(Elt.getNode())) {
+      auto *BaseLd = cast<LoadSDNode>(Elt);
+      if (!BaseLd->isSimple())
+        return false;
+      Ld = BaseLd;
+      ByteOffset = 0;
+      return true;
+    }
   }
 
   switch (Elt.getOpcode()) {
@@ -7118,6 +7127,7 @@ static bool findEltLoadSrc(SDValue Elt, LoadSDNode *&Ld, int64_t &ByteOffset) {
 /// a build_vector or insert_subvector whose loaded operands are 'Elts'.
 ///
 /// Example: <load i32 *a, load i32 *a+4, zero, undef> -> zextload a
+template <typename T>
 static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
                                         const SDLoc &DL, SelectionDAG &DAG,
                                         const X86Subtarget &Subtarget,
@@ -7132,7 +7142,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   APInt ZeroMask = APInt::getZero(NumElems);
   APInt UndefMask = APInt::getZero(NumElems);
 
-  SmallVector<LoadSDNode*, 8> Loads(NumElems, nullptr);
+  SmallVector<T*, 8> Loads(NumElems, nullptr);
   SmallVector<int64_t, 8> ByteOffsets(NumElems, 0);
 
   // For each element in the initializer, see if we've found a load, zero or an
@@ -7182,7 +7192,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   EVT EltBaseVT = EltBase.getValueType();
   assert(EltBaseVT.getSizeInBits() == EltBaseVT.getStoreSizeInBits() &&
          "Register/Memory size mismatch");
-  LoadSDNode *LDBase = Loads[FirstLoadedElt];
+  T *LDBase = Loads[FirstLoadedElt];
   assert(LDBase && "Did not find base load for merging consecutive loads");
   unsigned BaseSizeInBits = EltBaseVT.getStoreSizeInBits();
   unsigned BaseSizeInBytes = BaseSizeInBits / 8;
@@ -7196,8 +7206,8 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
 
   // Check to see if the element's load is consecutive to the base load
   // or offset from a previous (already checked) load.
-  auto CheckConsecutiveLoad = [&](LoadSDNode *Base, int EltIdx) {
-    LoadSDNode *Ld = Loads[EltIdx];
+  auto CheckConsecutiveLoad = [&](T *Base, int EltIdx) {
+    T *Ld = Loads[EltIdx];
     int64_t ByteOffset = ByteOffsets[EltIdx];
     if (ByteOffset && (ByteOffset % BaseSizeInBytes) == 0) {
       int64_t BaseIdx = EltIdx - (ByteOffset / BaseSizeInBytes);
@@ -7225,7 +7235,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
     }
   }
 
-  auto CreateLoad = [&DAG, &DL, &Loads](EVT VT, LoadSDNode *LDBase) {
+  auto CreateLoad = [&DAG, &DL, &Loads](EVT VT, T *LDBase) {
     auto MMOFlags = LDBase->getMemOperand()->getFlags();
     assert(LDBase->isSimple() &&
            "Cannot merge volatile or atomic loads.");
@@ -7295,7 +7305,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
       EVT HalfVT =
           EVT::getVectorVT(*DAG.getContext(), VT.getScalarType(), HalfNumElems);
       SDValue HalfLD =
-          EltsFromConsecutiveLoads(HalfVT, Elts.drop_back(HalfNumElems), DL,
+          EltsFromConsecutiveLoads<T>(HalfVT, Elts.drop_back(HalfNumElems), DL,
                                    DAG, Subtarget, IsAfterLegalize);
       if (HalfLD)
         return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT),
@@ -7372,7 +7382,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
           EVT::getVectorVT(*DAG.getContext(), RepeatVT.getScalarType(),
                            VT.getSizeInBits() / ScalarSize);
       if (TLI.isTypeLegal(BroadcastVT)) {
-        if (SDValue RepeatLoad = EltsFromConsecutiveLoads(
+        if (SDValue RepeatLoad = EltsFromConsecutiveLoads<T>(
                 RepeatVT, RepeatedLoads, DL, DAG, Subtarget, IsAfterLegalize)) {
           SDValue Broadcast = RepeatLoad;
           if (RepeatSize > ScalarSize) {
@@ -7413,7 +7423,7 @@ static SDValue combineToConsecutiveLoads(EVT VT, SDValue Op, const SDLoc &DL,
     return SDValue();
   }
   assert(Elts.size() == VT.getVectorNumElements());
-  return EltsFromConsecutiveLoads(VT, Elts, DL, DAG, Subtarget,
+  return EltsFromConsecutiveLoads<LoadSDNode>(VT, Elts, DL, DAG, Subtarget,
                                   IsAfterLegalize);
 }
 
@@ -9268,8 +9278,12 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   {
     SmallVector<SDValue, 64> Ops(Op->op_begin(), Op->op_begin() + NumElems);
     if (SDValue LD =
-            EltsFromConsecutiveLoads(VT, Ops, dl, DAG, Subtarget, false))
+            EltsFromConsecutiveLoads<LoadSDNode>(VT, Ops, dl, DAG, Subtarget, false)) {
       return LD;
+    } else if (SDValue LD =
+            EltsFromConsecutiveLoads<AtomicSDNode>(VT, Ops, dl, DAG, Subtarget, false)) {
+      return LD;
+    }
   }
 
   // If this is a splat of pairs of 32-bit elements, we can use a narrower
@@ -58007,7 +58021,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                                 *FirstLd->getMemOperand(), &Fast) &&
         Fast) {
       if (SDValue Ld =
-              EltsFromConsecutiveLoads(VT, Ops, DL, DAG, Subtarget, false))
+              EltsFromConsecutiveLoads<LoadSDNode>(VT, Ops, DL, DAG, Subtarget, false))
         return Ld;
     }
   }

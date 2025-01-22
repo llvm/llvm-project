@@ -5218,7 +5218,11 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
     L = DAG.getPtrExtOrTrunc(L, dl, VT);
 
   setValue(&I, L);
-  DAG.setRoot(OutChain);
+
+  if (VT.isVector())
+    DAG.setRoot(InChain);
+  else
+    DAG.setRoot(OutChain);
 }
 
 void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
