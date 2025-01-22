@@ -791,7 +791,7 @@ void StubHelperSection::writeTo(uint8_t *buf) const {
 
 void StubHelperSection::setUp() {
   Symbol *binder = symtab->addUndefined("dyld_stub_binder", /*file=*/nullptr,
-                                        /*isWeakRef=*/false);
+                                       /*isWeakRef=*/false);
   if (auto *undefined = dyn_cast<Undefined>(binder))
     treatUndefinedSymbol(*undefined,
                          "lazy binding (normally in libSystem.dylib)");
@@ -1182,7 +1182,7 @@ void SymtabSection::emitObjectFileStab(ObjFile *file) {
   StabsEntry stab(N_OSO);
   stab.sect = target->cpuSubtype;
   SmallString<261> path(!file->archiveName.empty() ? file->archiveName
-                                                   : file->getName());
+                                                  : file->getName());
   std::error_code ec = sys::fs::make_absolute(path);
   if (ec)
     fatal("failed to get absolute path for " + path);
@@ -1540,24 +1540,17 @@ StringTableSection::StringTableSection()
     : LinkEditSection(segment_names::linkEdit, section_names::stringTable) {}
 
 uint32_t StringTableSection::addString(StringRef str) {
-  // If deduplication is disabled, just add the string
-  if (!config->deduplicateSymbolStrings) {
-    uint32_t strx = size;
-    strings.push_back(str);
-    size += str.size() + 1; // +1 for null terminator
-    return strx;
-  }
-
-  // Deduplicate strings
-  llvm::CachedHashStringRef hashedStr(str);
-  auto it = stringMap.find(hashedStr);
-  if (it != stringMap.end())
-    return it->second;
-
   uint32_t strx = size;
-  stringMap[hashedStr] = strx;
+  if (config->deduplicateSymbolStrings) {
+    // Deduplicate strings
+    llvm::CachedHashStringRef hashedStr(str);
+    auto [it, inserted] = stringMap.try_emplace(hashedStr, strx);
+    if (!inserted)
+      return it->second;
+  }
+  
   strings.push_back(str);
-  size += str.size() + 1;
+  size += str.size() + 1; // +1 for null terminator
   return strx;
 }
 

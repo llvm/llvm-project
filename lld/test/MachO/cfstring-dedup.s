@@ -9,10 +9,13 @@
 
 # Check that string deduplication for symbol names is working
 # RUN: %lld -dylib -framework CoreFoundation %t/foo1.o %t/foo2.o -o %t/foo_no_dedup -no-deduplicate-symbol-strings
-# RUN: count1=$((`llvm-strings %t/foo | grep _named_cfstring | wc -l`))
-# RUN: test $count1 -eq 1
-# RUN: count2=$((`llvm-strings %t/foo_no_dedup | grep _named_cfstring | wc -l`))
-# RUN: test $count2 -eq 2
+# RUN: llvm-strings %t/foo | FileCheck %s --check-prefix=CHECK-DEDUP
+# RUN: llvm-strings %t/foo_no_dedup | FileCheck %s --check-prefix=CHECK-NO-DEDUP
+# CHECK-DEDUP: _named_cfstring
+# CHECK-DEDUP-NOT: _named_cfstring
+# CHECK-NO-DEDUP: _named_cfstring
+# CHECK-NO-DEDUP: _named_cfstring
+# CHECK-NO-DEDUP-NOT: _named_cfstring
 
 
 # CHECK:       (__TEXT,__text) section
