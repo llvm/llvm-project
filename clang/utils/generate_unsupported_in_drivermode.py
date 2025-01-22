@@ -333,12 +333,6 @@ def get_visibility(option, filtered_visibility):
     find_groups(group_sequence, options_json, option)
     if len(group_sequence) > 0:
         for group_name in group_sequence:
-            # For clang_ignored_f_Group & f_Group see description in Options.td
-            # "Temporary groups for clang options which we know we don't support,
-            # but don't want to verbosely warn the user about."
-            # if group_name == "clang_ignored_f_Group" or group_name == "f_Group":
-            #     should_skip = True
-            #     break
             for visibility in options_json[group_name]["Visibility"]:
                 filtered_visibility.append(visibility["def"])
     if should_skip:
