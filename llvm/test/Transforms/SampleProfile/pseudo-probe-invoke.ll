@@ -1,9 +1,6 @@
 ; REQUIRES: target={{x86_64-.*-(linux|windows).*}}
 ; RUN: opt < %s -passes=pseudo-probe -S -o - | FileCheck %s
 
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown--"
-
 $__clang_call_terminate = comdat any
 
 @x = dso_local global i32 0, align 4, !dbg !0
