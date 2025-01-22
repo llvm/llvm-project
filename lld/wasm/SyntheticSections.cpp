@@ -612,7 +612,7 @@ void ElemSection::writeBody() {
   uint32_t tableIndex = ctx.arg.tableBase;
   for (const FunctionSymbol *sym : indirectFunctions) {
     if (sym != nullptr) {
-        assert(sym->getTableIndex() == tableIndex);
+      assert(sym->getTableIndex() == tableIndex);
     }
     (void) tableIndex;
     writeUleb128(os, sym ? sym->getFunctionIndex() : 0, "function index");
