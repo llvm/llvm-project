@@ -909,7 +909,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   // If the offset can not be encoded into the store instruction, we also have
   // to save LR here.
   // If we are using ROP Protection we need to save the LR here as we cannot
-  // move the hasst instruction past the point where we get the stack frame.
+  // move the hashst instruction past the point where we get the stack frame.
   if (MustSaveLR && !HasFastMFLR &&
       (HasSTUX || !isInt<16>(FrameSize + LROffset) || HasROPProtect))
     SaveLR(LROffset);
