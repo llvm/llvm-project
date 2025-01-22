@@ -47,6 +47,12 @@ for adding a new subsection. -->
   same semantics. The normalizer makes it easier to spot semantic differences
   when diffing two modules which have undergone different passes.
 
+* The SPIR-V backend is now an official LLVM target, providing OpenCL and SYCL
+  conformance and establishing a foundation for broader applicability to other
+  APIs, including Vulkan, GLSL, and HLSL. This backend aims to offer a unified
+  approach for diverse compute and graphics workloads, providing a robust
+  alternative to the Khronos SPIR-V LLVM Translator.
+
 * ...
 
 <!-- If you would like to document a larger change, then you can add a
@@ -482,8 +488,11 @@ Changes to LLDB
   that port to the connection handler processes. This means that only 2 ports need
   to be opened in the firewall (one for the `lldb-server` platform, one for gdbserver connections).
   In addition, due to this work, `lldb-server` now works on Windows in the server mode.
+  
+* LLDB now supports execution of user expressions for non-trivial cases for RISC-V targets, like function calls, when some code needs to be executed on the target.
 
-* LLDB now supports optionally enabled/disabled register sets (particularly floating point registers) for RISC-V 64. This happens for targets like `RV64IMAC` or `RV64IMACV`, that have no floating point registers. The change is applied to native debugging and core-file usage.
+* LLDB now supports optionally enabled/disabled register sets (particularly floating point registers) for RISC-V 64. This happens for targets like `RV64IMAC` or `RV64IMACV`,
+  that have no floating point registers. The change is applied to native debugging and core-file usage.
 
 Changes to BOLT
 ---------------------------------
