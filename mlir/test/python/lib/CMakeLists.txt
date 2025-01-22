@@ -12,8 +12,8 @@ add_mlir_library(MLIRPythonTestDialect
 
   DEPENDS
   MLIRPythonTestIncGen
-)
-mlir_target_link_libraries(MLIRPythonTestDialect PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRSupport

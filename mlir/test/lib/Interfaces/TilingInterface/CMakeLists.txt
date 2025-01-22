@@ -10,8 +10,8 @@ add_mlir_library(MLIRTilingInterfaceTestPasses
   MLIRTestTilingInterfaceTransformOpsIncGen
 
   EXCLUDE_FROM_LIBMLIR
-  )
-mlir_target_link_libraries(MLIRTilingInterfaceTestPasses PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIRAffineDialect
   MLIRArithDialect
   MLIRIndexDialect
