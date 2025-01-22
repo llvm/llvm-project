@@ -211,10 +211,8 @@ bool MCPlusBuilder::isRAUnsigned(const MCInst &Inst) const {
 }
 
 bool MCPlusBuilder::isRAStateUnknown(const MCInst &Inst) const {
-  if (isRAUnsigned(Inst) || isRASigned(Inst) || isRASigning(Inst) ||
-      isAuthenticating(Inst))
-    return false;
-  return true;
+  return !(isRAUnsigned(Inst) || isRASigned(Inst) || isRASigning(Inst) ||
+           isAuthenticating(Inst));
 }
 
 std::optional<MCLandingPad> MCPlusBuilder::getEHInfo(const MCInst &Inst) const {
