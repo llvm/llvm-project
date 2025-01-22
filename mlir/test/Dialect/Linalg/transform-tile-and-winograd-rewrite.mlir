@@ -379,10 +379,9 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-// CHECK: #[[$MAP0:.+]] = affine_map<(d0) -> (d0 * 4)>
-// CHECK: #[[$MAP1:.+]] = affine_map<(d0, d1) -> ()>
-// CHECK: #[[$MAP2:.+]] = affine_map<(d0, d1) -> (d0, d1)>
-// CHECK-LABEL: func.func @conv2d_mx1_rx1
+// CHECK: #[[$MAP:.+]] = affine_map<(d0, d1) -> ()>
+// CHECK: #[[$MAP1:.+]] = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK-LABEL: func.func @conv2d_mx1_rx1_2
 // CHECK-SAME:  (%[[ARG0:.*]]: tensor<2x6x2x5xf32>, %[[ARG1:.*]]: tensor<2x3x1x5xf32>, %[[ARG2:.*]]: tensor<2x4x2x2xf32>) -> tensor<2x4x2x2xf32> {
 // CHECK:   %[[CST:.*]] = arith.constant 3.200000e+01 : f32
 // CHECK:  %[[CST_0:.*]] = arith.constant dense<{{.*}}> : tensor<4x6xf32>
@@ -405,8 +404,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK:     scf.yield %[[S7]]
 // CHECK:   %[[S2:.*]] = tensor.empty() : tensor<6x1x1x2x2x5xf32>
 // CHECK:   %[[S3:.*]] = scf.for %[[ARG3:.*]] = %[[C0]] to %[[C2]] step %[[C1]] iter_args(%[[ARG4:.*]] = %[[S2]])
-// CHECK:     %[[S8:.*]] = affine.apply #[[$MAP0]](%[[ARG3]])
-// CHECK:     %[[EXTRACTED_SLICE:.*]] = tensor.extract_slice %[[ARG0]][0, 0, %8, 0] [2, 6, 1, 5] [1, 1, 1, 1]
+// CHECK:     %[[EXTRACTED_SLICE:.*]] = tensor.extract_slice %[[ARG0]][0, 0, %[[ARG3]], 0] [2, 6, 1, 5] [1, 1, 1, 1]
 // CHECK:     %[[EXTRACTED_SLICE_5:.*]] = tensor.extract_slice %[[ARG4]][0, 0, 0, %[[ARG3]], 0, 0] [6, 1, 1, 1, 2, 5] [1, 1, 1, 1, 1, 1]
 // CHECK:     %[[S9:.*]] = scf.for %[[ARG5:.*]] = %[[C0]] to %[[C2]] step %[[C1]] iter_args(%[[ARG6:.*]] = %[[EXTRACTED_SLICE_5]])
 // CHECK:     %[[S10:.*]] = scf.for %[[ARG7:.*]] = %[[C0]] to %[[C5]] step %[[C1]] iter_args(%[[ARG8:.*]] = %[[ARG6]])
@@ -427,7 +425,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK:   %[[EXPANDED:.*]] = tensor.expand_shape %[[S6]] {{\[}}[0, 1], [2, 3, 4], [5]] output_shape [6, 1, 1, 2, 2, 2]
 // CHECK:   %[[S7:.*]] = scf.for %[[ARG3:.*]] = %[[C0]] to %[[C2]] step %[[C1]] iter_args(%[[ARG4:.*]] = %[[ARG2]])
 // CHECK:     %[[EXTRACTED_SLICE:.*]] = tensor.extract_slice %[[EXPANDED]][0, 0, 0, %[[ARG3]], 0, 0] [6, 1, 1, 1, 2, 2] [1, 1, 1, 1, 1, 1]
-// CHECK:     %[[EXTRACTED_SLICE_5:.*]] = tensor.extract_slice %[[ARG4]][0, 0, 0, 0] [2, 4, 1, 2] [1, 1, 1, 1]
+// CHECK:     %[[EXTRACTED_SLICE_5:.*]] = tensor.extract_slice %[[ARG4]][0, 0, %[[ARG3]], 0] [2, 4, 1, 2] [1, 1, 1, 1]
 // CHECK:     %[[S8:.*]] = scf.for %[[ARG5:.*]] = %[[C0]] to %[[C2]] step %[[C1]] iter_args(%[[ARG6:.*]] = %[[EXTRACTED_SLICE_5]])
 // CHECK:       %[[S9:.*]] = scf.for %[[ARG7:.*]] = %[[C0]] to %[[C2]] step %[[C1]] iter_args(%[[ARG8:.*]] = %[[ARG6]])
 // CHECK:       %[[EXTRACTED_SLICE_6:.*]] = tensor.extract_slice %[[EXTRACTED_SLICE]][0, 0, 0, 0, %[[ARG5]], %[[ARG7]]] [6, 1, 1, 1, 1, 1] [1, 1, 1, 1, 1, 1]
@@ -435,7 +433,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK:       %[[S10:.*]] = tensor.empty() : tensor<4x1xf32>
 // CHECK:       %[[S11:.*]] = linalg.fill ins(%[[CST_3]] : f32) outs(%[[S10]] : tensor<4x1xf32>) -> tensor<4x1xf32>
 // CHECK:       %[[S12:.*]] = linalg.matmul ins(%[[CST_0]], %[[EXTRACTED_SLICE_6]] : tensor<4x6xf32>, tensor<6x1xf32>) outs(%[[S11]] : tensor<4x1xf32>) -> tensor<4x1xf32>
-// CHECK:       %[[S13:.*]] = linalg.generic {indexing_maps = [#[[$MAP1]], #[[$MAP2]], #[[$MAP2]]], iterator_types = ["parallel", "parallel"]} ins(%[[CST]], %[[S12]] : f32, tensor<4x1xf32>) outs(%[[EXTRACTED_SLICE_7]] : tensor<4x1xf32>) {
+// CHECK:       %[[S13:.*]] = linalg.generic {indexing_maps = [#[[$MAP]], #[[$MAP1]], #[[$MAP1]]], iterator_types = ["parallel", "parallel"]} ins(%[[CST]], %[[S12]] : f32, tensor<4x1xf32>) outs(%[[EXTRACTED_SLICE_7]] : tensor<4x1xf32>) {
 // CHECK:       ^bb0(%[[IN1:.*]]: f32, %[[IN2:.*]]: f32, %[[OUT:.*]]: f32):
 // CHECK:          %[[VAL_57:.*]] = arith.mulf %[[IN1]], %[[IN2]] : f32
 // CHECK:          %[[VAL_58:.*]] = arith.addf %[[VAL_57]], %[[OUT]] : f32
@@ -444,6 +442,6 @@ module attributes {transform.with_named_sequence} {
 // CHECK:       %[[INSERTED_SLICE_8:.*]] = tensor.insert_slice %[[S13]] into %[[ARG8]][%[[ARG5]], 0, 0, %[[ARG7]]] [1, 4, 1, 1] [1, 1, 1, 1]
 // CHECK:       scf.yield %[[INSERTED_SLICE_8]]
 // CHECK:     scf.yield %[[S9]]
-// CHECK:     %[[INSERTED_SLICE:.*]] = tensor.insert_slice %[[S8]] into %[[ARG4]][0, 0, 0, 0] [2, 4, 1, 2] [1, 1, 1, 1]
+// CHECK:     %[[INSERTED_SLICE:.*]] = tensor.insert_slice %[[S8]] into %[[ARG4]][0, 0, %[[ARG3]], 0] [2, 4, 1, 2] [1, 1, 1, 1]
 // CHECK:     scf.yield %[[INSERTED_SLICE]]
 // CHECK:   return %[[S7]]
