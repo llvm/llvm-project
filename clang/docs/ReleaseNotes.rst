@@ -968,7 +968,7 @@ Bug Fixes to C++ Support
   constraints are applied. (#GH122134)
 - Fixed canonicalization of pack indexing types - Clang did not always recognized identical pack indexing. (#GH123033)
 - Fixed a nested lambda substitution issue for constraint evaluation. (#GH123441)
-
+- Fixed various false diagnostics related to the use of immediate functions. (#GH123472)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1123,6 +1123,8 @@ Windows Support
   Clang now follows the MSVC behavior in this scenario.
   When `-fms-compatibility-version=18.00` or prior is set on the command line this Microsoft extension is still
   allowed as VS2013 and prior allow it.
+
+- Clang now supports the ``#pragma clang section`` directive for COFF targets.
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
