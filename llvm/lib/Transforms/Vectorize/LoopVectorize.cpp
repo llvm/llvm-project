@@ -9031,7 +9031,6 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
 static SetVector<VPIRInstruction *>
 collectUsersInExitBlocks(Loop *OrigLoop, VPRecipeBuilder &Builder,
                          VPlan &Plan) {
-  auto *MiddleVPBB = Plan.getMiddleBlock();
   SetVector<VPIRInstruction *> ExitUsersToFix;
   for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
     for (VPRecipeBase &R : *ExitVPBB) {
@@ -9041,37 +9040,33 @@ collectUsersInExitBlocks(Loop *OrigLoop, VPRecipeBuilder &Builder,
       auto *ExitPhi = dyn_cast<PHINode>(&ExitIRI->getInstruction());
       if (!ExitPhi)
         break;
-      for (VPBlockBase *PredVPBB : ExitVPBB->getPredecessors()) {
-        BasicBlock *ExitingBB = OrigLoop->getLoopLatch();
-        if (PredVPBB != MiddleVPBB) {
-          SmallVector<BasicBlock *> ExitingBlocks;
-          OrigLoop->getExitingBlocks(ExitingBlocks);
-          assert(ExitingBlocks.size() == 2 && "only support 2 exiting blocks");
-          ExitingBB = ExitingBB == ExitingBlocks[0] ? ExitingBlocks[1]
-                                                    : ExitingBlocks[0];
-        }
-        Value *IncomingValue = ExitPhi->getIncomingValueForBlock(ExitingBB);
-        VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue);
-        ExitIRI->addOperand(V);
-        if (V->isLiveIn())
-          continue;
-        assert(V->getDefiningRecipe()->getParent()->getEnclosingLoopRegion() &&
-               "Only recipes defined inside a region should need fixing.");
-        ExitUsersToFix.insert(ExitIRI);
+      if (ExitVPBB->getSinglePredecessor() != Plan.getMiddleBlock()) {
+        assert(ExitIRI->getNumOperands() ==
+                   ExitVPBB->getPredecessors().size() &&
+               "early-exit must update exit values on construction");
+        continue;
       }
+      BasicBlock *ExitingBB = OrigLoop->getLoopLatch();
+      Value *IncomingValue = ExitPhi->getIncomingValueForBlock(ExitingBB);
+      VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue);
+      ExitIRI->addOperand(V);
+      if (V->isLiveIn())
+        continue;
+      assert(V->getDefiningRecipe()->getParent()->getEnclosingLoopRegion() &&
+             "Only recipes defined inside a region should need fixing.");
+      ExitUsersToFix.insert(ExitIRI);
     }
   }
   return ExitUsersToFix;
 }
 
 // Add exit values to \p Plan. Extracts are added for each entry in \p
-// ExitUsersToFix if needed and their operands are updated. Returns true if all
-// exit users can be handled, otherwise return false.
-static bool
+// ExitUsersToFix if needed and their operands are updated.
+static void
 addUsersInExitBlocks(VPlan &Plan,
                      const SetVector<VPIRInstruction *> &ExitUsersToFix) {
   if (ExitUsersToFix.empty())
-    return true;
+    return;
 
   auto *MiddleVPBB = Plan.getMiddleBlock();
   VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
@@ -9081,11 +9076,9 @@ addUsersInExitBlocks(VPlan &Plan,
   // modeling the corresponding LCSSA phis.
   for (VPIRInstruction *ExitIRI : ExitUsersToFix) {
     for (const auto &[Idx, Op] : enumerate(ExitIRI->operands())) {
-      // Currently only live-ins can be used by exit values from blocks not
-      // exiting via the vector latch through to the middle block.
-      if (ExitIRI->getParent()->getSinglePredecessor() != MiddleVPBB)
-        return false;
-
+      assert(ExitIRI->getParent()->getSinglePredecessor() == MiddleVPBB &&
+             "exit values from early exits must be fixed when branch to "
+             "early-exit is added");
       LLVMContext &Ctx = ExitIRI->getInstruction().getContext();
       VPValue *Ext = B.createNaryOp(VPInstruction::ExtractFromEnd,
                                     {Op, Plan.getOrAddLiveIn(ConstantInt::get(
@@ -9093,7 +9086,6 @@ addUsersInExitBlocks(VPlan &Plan,
       ExitIRI->setOperand(Idx, Ext);
     }
   }
-  return true;
 }
 
 /// Handle users in the exit block for first order reductions in the original
@@ -9389,20 +9381,21 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
 
   if (auto *UncountableExitingBlock =
           Legal->getUncountableEarlyExitingBlock()) {
-    VPlanTransforms::handleUncountableEarlyExit(
-        *Plan, *PSE.getSE(), OrigLoop, UncountableExitingBlock, RecipeBuilder);
+    if (!VPlanTransforms::handleUncountableEarlyExit(
+            *Plan, *PSE.getSE(), OrigLoop, UncountableExitingBlock,
+            RecipeBuilder)) {
+      reportVectorizationFailure(
+          "Some exit values in loop with uncountable exit not supported yet",
+          "UncountableEarlyExitLoopsUnsupportedExitValue", ORE, OrigLoop);
+      return nullptr;
+    }
   }
   DenseMap<VPValue *, VPValue *> IVEndValues;
   addScalarResumePhis(RecipeBuilder, *Plan, IVEndValues);
   SetVector<VPIRInstruction *> ExitUsersToFix =
       collectUsersInExitBlocks(OrigLoop, RecipeBuilder, *Plan);
   addExitUsersForFirstOrderRecurrences(*Plan, ExitUsersToFix);
-  if (!addUsersInExitBlocks(*Plan, ExitUsersToFix)) {
-    reportVectorizationFailure(
-        "Some exit values in loop with uncountable exit not supported yet",
-        "UncountableEarlyExitLoopsUnsupportedExitValue", ORE, OrigLoop);
-    return nullptr;
-  }
+  addUsersInExitBlocks(*Plan, ExitUsersToFix);
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
