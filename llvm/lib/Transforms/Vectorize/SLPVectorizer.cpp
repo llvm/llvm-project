@@ -9480,6 +9480,15 @@ protected:
       return Builder.createShuffleVector(V1, NewMask);
     return Builder.createIdentity(V1);
   }
+
+  /// Transforms mask \p CommonMask per given \p Mask to make proper set after
+  /// shuffle emission.
+  static void transformMaskAfterShuffle(MutableArrayRef<int> CommonMask,
+                                        ArrayRef<int> Mask) {
+    for (unsigned I : seq<unsigned>(CommonMask.size()))
+      if (Mask[I] != PoisonMaskElem)
+        CommonMask[I] = I;
+  }
 };
 } // namespace
 
@@ -10309,14 +10318,6 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     }
     return Cost;
   }
-  /// Transforms mask \p CommonMask per given \p Mask to make proper set after
-  /// shuffle emission.
-  static void transformMaskAfterShuffle(MutableArrayRef<int> CommonMask,
-                                        ArrayRef<int> Mask) {
-    for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
-      if (Mask[Idx] != PoisonMaskElem)
-        CommonMask[Idx] = Idx;
-  }
   /// Adds the cost of reshuffling \p E1 and \p E2 (if present), using given
   /// mask \p Mask, register number \p Part, that includes \p SliceSize
   /// elements.
@@ -10939,9 +10940,7 @@ public:
         Cost += createShuffle(Vec, InVectors.back(), CommonMask);
       else
         Cost += createShuffle(Vec, nullptr, CommonMask);
-      for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
-        if (CommonMask[Idx] != PoisonMaskElem)
-          CommonMask[Idx] = Idx;
+      transformMaskAfterShuffle(CommonMask, CommonMask);
       assert(VF > 0 &&
              "Expected vector length for the final value before action.");
       Value *V = cast<Value *>(Vec);
@@ -10954,9 +10953,7 @@ public:
         Cost += createShuffle(Vec, InVectors.back(), CommonMask);
       else
         Cost += createShuffle(Vec, nullptr, CommonMask);
-      for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
-        if (CommonMask[Idx] != PoisonMaskElem)
-          CommonMask[Idx] = Idx;
+      transformMaskAfterShuffle(CommonMask, CommonMask);
       // Add subvectors permutation cost.
       if (!SubVectorsMask.empty()) {
         assert(SubVectorsMask.size() <= CommonMask.size() &&
@@ -14202,15 +14199,6 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
                                                        ShuffleBuilder);
   }
 
-  /// Transforms mask \p CommonMask per given \p Mask to make proper set after
-  /// shuffle emission.
-  static void transformMaskAfterShuffle(MutableArrayRef<int> CommonMask,
-                                        ArrayRef<int> Mask) {
-    for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
-      if (Mask[Idx] != PoisonMaskElem)
-        CommonMask[Idx] = Idx;
-  }
-
   /// Cast value \p V to the vector type with the same number of elements, but
   /// the base type \p ScalarTy.
   Value *castToScalarTyElem(Value *V,
@@ -14541,9 +14529,7 @@ public:
       } else {
         Vec = createShuffle(Vec, nullptr, CommonMask);
       }
-      for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
-        if (CommonMask[Idx] != PoisonMaskElem)
-          CommonMask[Idx] = Idx;
+      transformMaskAfterShuffle(CommonMask, CommonMask);
       assert(VF > 0 &&
              "Expected vector length for the final value before action.");
       unsigned VecVF = cast<FixedVectorType>(Vec->getType())->getNumElements();
@@ -14563,9 +14549,7 @@ public:
       } else {
         Vec = createShuffle(Vec, nullptr, CommonMask);
       }
-      for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
-        if (CommonMask[Idx] != PoisonMaskElem)
-          CommonMask[Idx] = Idx;
+      transformMaskAfterShuffle(CommonMask, CommonMask);
       auto CreateSubVectors = [&](Value *Vec,
                                   SmallVectorImpl<int> &CommonMask) {
         for (auto [E, Idx] : SubVectors) {
@@ -14606,10 +14590,7 @@ public:
         Value *InsertVec =
             CreateSubVectors(PoisonValue::get(Vec->getType()), CommonMask);
         Vec = createShuffle(InsertVec, Vec, SVMask);
-        for (unsigned I : seq<unsigned>(CommonMask.size())) {
-          if (SVMask[I] != PoisonMaskElem)
-            CommonMask[I] = I;
-        }
+        transformMaskAfterShuffle(CommonMask, SVMask);
       }
       InVectors.front() = Vec;
     }
