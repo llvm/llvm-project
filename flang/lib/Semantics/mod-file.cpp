@@ -1780,8 +1780,8 @@ bool SubprogramSymbolCollector::NeedImport(
     return found->has<UseDetails>() && found->owner() != scope_;
   } else {
     // "found" can be null in the case of a use-associated derived type's
-    // parent type
-    CHECK(symbol.has<DerivedTypeDetails>());
+    // parent type, and also in the case of an object (like a dummy argument)
+    // used to define a length or bound of a nested interface.
     return false;
   }
 }
