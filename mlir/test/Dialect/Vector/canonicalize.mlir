@@ -152,6 +152,17 @@ func.func @extract_vector_poison_idx(%a: vector<4x5xf32>) -> vector<5xf32> {
 
 // -----
 
+// CHECK-LABEL: @extract_multiple_poison_idx
+func.func @extract_multiple_poison_idx(%a: vector<4x5x8xf32>)
+    -> vector<8xf32> {
+  //  CHECK-NOT: vector.extract
+  // CHECK-NEXT: ub.poison : vector<8xf32>
+  %0 = vector.extract %a[-1, -1] : vector<8xf32> from vector<4x5x8xf32>
+  return %0 : vector<8xf32>
+}
+
+// -----
+
 // CHECK-LABEL: extract_from_create_mask_dynamic_position_all_false
 //  CHECK-SAME: %[[DIM0:.*]]: index, %[[INDEX:.*]]: index
 func.func @extract_from_create_mask_dynamic_position_all_false(%dim0: index, %index: index) -> vector<6xi1> {
@@ -2829,6 +2840,17 @@ func.func @insert_vector_poison_idx(%a: vector<4x5xf32>, %b: vector<5xf32>)
   // CHECK-NEXT: ub.poison : vector<4x5xf32>
   %0 = vector.insert %b, %a[-1] : vector<5xf32> into vector<4x5xf32>
   return %0 : vector<4x5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @insert_multiple_poison_idx
+func.func @insert_multiple_poison_idx(%a: vector<4x5x8xf32>, %b: vector<8xf32>)
+    -> vector<4x5x8xf32> {
+  //  CHECK-NOT: vector.insert
+  // CHECK-NEXT: ub.poison : vector<4x5x8xf32>
+  %0 = vector.insert %b, %a[-1, -1] : vector<8xf32> into vector<4x5x8xf32>
+  return %0 : vector<4x5x8xf32>
 }
 
 // -----

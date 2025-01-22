@@ -690,9 +690,10 @@ def Vector_ExtractOp :
     Takes an n-D vector and a k-D position and extracts the (n-k)-D vector at
     the proper position. Degenerates to an element type if n-k is zero.
 
-    Dynamic indices must be greater or equal to zero and less than the size of
-    the corresponding dimension. The result is undefined if any index is
-    out-of-bounds.
+    Static and dynamic indices must be greater or equal to zero and less than
+    the size of the corresponding dimension. The result is undefined if any
+    index is out-of-bounds. The value `-1` represents a poison index, which
+    specifies that the extracted element is poison.
 
     Example:
 
@@ -702,6 +703,7 @@ def Vector_ExtractOp :
     %3 = vector.extract %1[]: vector<f32> from vector<f32>
     %4 = vector.extract %0[%a, %b, %c]: f32 from vector<4x8x16xf32>
     %5 = vector.extract %0[2, %b]: vector<16xf32> from vector<4x8x16xf32>
+    %6 = vector.extract %10[-1, %c]: f32 from vector<4x16xf32>
     ```
   }];
 
@@ -880,9 +882,10 @@ def Vector_InsertOp :
     and inserts the n-D source into the (n+k)-D destination at the proper
     position. Degenerates to a scalar or a 0-d vector source type when n = 0.
 
-    Dynamic indices must be greater or equal to zero and less than the size of
-    the corresponding dimension. The result is undefined if any index is
-    out-of-bounds.
+    Static and dynamic indices must be greater or equal to zero and less than
+    the size of the corresponding dimension. The result is undefined if any
+    index is out-of-bounds. The value `-1` represents a poison index, which
+    specifies that the resulting vector is poison.
 
     Example:
 
@@ -892,6 +895,7 @@ def Vector_InsertOp :
     %8 = vector.insert %6, %7[] : f32 into vector<f32>
     %11 = vector.insert %9, %10[%a, %b, %c] : vector<f32> into vector<4x8x16xf32>
     %12 = vector.insert %4, %10[2, %b] : vector<16xf32> into vector<4x8x16xf32>
+    %13 = vector.insert %20, %1[-1, %c] : f32 into vector<4x16xf32>
     ```
   }];
 

@@ -1368,7 +1368,7 @@ LogicalResult vector::ExtractOp::verify() {
         return emitOpError("expected position attribute #")
                << (idx + 1)
                << " to be a non-negative integer smaller than the "
-                  "corresponding vector dimension";
+                  "corresponding vector dimension or poison (-1)";
       }
     }
   }
@@ -2264,11 +2264,7 @@ LogicalResult foldExtractFromFromElements(ExtractOp extractOp,
 template <typename OpTy>
 LogicalResult foldPoisonIndexInsertExtractOp(OpTy op,
                                              PatternRewriter &rewriter) {
-  auto hasPoisonIndex = [](int64_t index) {
-    return index == OpTy::kPoisonIndex;
-  };
-
-  if (llvm::none_of(op.getStaticPosition(), hasPoisonIndex))
+  if (!llvm::is_contained(op.getStaticPosition(), OpTy::kPoisonIndex))
     return failure();
 
   rewriter.replaceOpWithNewOp<ub::PoisonOp>(op, op.getResult().getType());

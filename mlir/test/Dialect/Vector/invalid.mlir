@@ -186,7 +186,7 @@ func.func @extract_0d(%arg0: vector<f32>) {
 // -----
 
 func.func @extract_position_overflow(%arg0: vector<4x8x16xf32>) {
-  // expected-error@+1 {{expected position attribute #3 to be a non-negative integer smaller than the corresponding vector dimension}}
+  // expected-error@+1 {{expected position attribute #3 to be a non-negative integer smaller than the corresponding vector dimension or poison (-1)}}
   %1 = vector.extract %arg0[0, 0, -5] : f32 from vector<4x8x16xf32>
 }
 
