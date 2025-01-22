@@ -13,16 +13,16 @@
 #define __CLC_U_GENTYPE __CLC_XCONCAT(ushort, __CLC_VECSIZE)
 #endif
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_select(__CLC_GENTYPE x,
-                                                  __CLC_GENTYPE y,
-                                                  __CLC_S_GENTYPE z) {
-  return z ? y : x;
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_SELECT_FN(__CLC_GENTYPE x,
+                                                     __CLC_GENTYPE y,
+                                                     __CLC_S_GENTYPE z) {
+  __CLC_SELECT_DEF(x, y, z);
 }
 
-_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_select(__CLC_GENTYPE x,
-                                                  __CLC_GENTYPE y,
-                                                  __CLC_U_GENTYPE z) {
-  return z ? y : x;
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_SELECT_FN(__CLC_GENTYPE x,
+                                                     __CLC_GENTYPE y,
+                                                     __CLC_U_GENTYPE z) {
+  __CLC_SELECT_DEF(x, y, z);
 }
 
 #ifdef __CLC_FPSIZE
