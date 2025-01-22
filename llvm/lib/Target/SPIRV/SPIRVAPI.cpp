@@ -53,10 +53,8 @@ void parseSPIRVCommandLineOptions(const std::vector<std::string> &Options,
   static constexpr const char *Origin = "SPIRVTranslateModule";
   if (!Options.empty()) {
     std::vector<const char *> Argv(1, Origin);
-    for (const auto &Arg : Options) {
+    for (const auto &Arg : Options)
       Argv.push_back(Arg.c_str());
-      dbgs() << Arg << " ...\n";
-    }
     cl::ParseCommandLineOptions(Argv.size(), Argv.data(), Origin, Errs);
   }
 }
