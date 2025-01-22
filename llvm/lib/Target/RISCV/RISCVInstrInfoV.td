@@ -1829,3 +1829,46 @@ defm VUNZIP2B_V : VALU_IV_V<"vunzip2b", 0b011000>;
 
 include "RISCVInstrInfoZvfbf.td"
 include "RISCVInstrInfoVPseudos.td"
+
+
+// These are modeled after the int binop VL nodes
+def riscv_vzipeven_vl : SDNode<"RISCVISD::VZIPEVEN_VL", SDT_RISCVIntBinOp_VL>;
+def riscv_vzipodd_vl : SDNode<"RISCVISD::VZIPODD_VL", SDT_RISCVIntBinOp_VL>;
+def riscv_vzip2a_vl : SDNode<"RISCVISD::VZIP2A_VL", SDT_RISCVIntBinOp_VL>;
+def riscv_vunzip2a_vl : SDNode<"RISCVISD::VUNZIP2A_VL", SDT_RISCVIntBinOp_VL>;
+def riscv_vunzip2b_vl : SDNode<"RISCVISD::VUNZIP2B_VL", SDT_RISCVIntBinOp_VL>;
+
+multiclass VPseudoVALU_VV<bit Commutable = 0> {
+  foreach m = MxList in {
+    defvar mx = m.MX;
+    defm "" : VPseudoBinaryV_VV<m, Commutable=Commutable>,
+            SchedBinary<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV", mx,
+                        forcePassthruRead=true>;
+  }
+}
+
+multiclass VPatBinaryVL_VV<SDPatternOperator vop, string instruction_name,
+                              list<VTypeInfo> vtilist = AllIntegerVectors,
+                              bit isSEWAware = 0> {
+  foreach vti = vtilist in
+    let Predicates = GetVTypePredicates<vti>.Predicates in
+      def : VPatBinaryVL_V<vop, instruction_name, "VV",
+                           vti.Vector, vti.Vector, vti.Vector, vti.Mask,
+                           vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
+                           vti.RegClass, isSEWAware>;
+}
+
+let Predicates = [HasStdExtZvzip], mayLoad = 0, mayStore = 0,
+    hasSideEffects = 0 in {
+defm PseudoVZIPEVEN   : VPseudoVALU_VV;
+defm PseudoVZIPODD   : VPseudoVALU_VV;
+defm PseudoVZIP2A   : VPseudoVALU_VV;
+defm PseudoVUNZIP2A   : VPseudoVALU_VV;
+defm PseudoVUNZIP2B   : VPseudoVALU_VV;
+}
+
+defm : VPatBinaryVL_VV<riscv_vzipeven_vl, "PseudoVZIPEVEN">;
+defm : VPatBinaryVL_VV<riscv_vzipodd_vl, "PseudoVZIPODD">;
+defm : VPatBinaryVL_VV<riscv_vzip2a_vl, "PseudoVZIP2A">;
+defm : VPatBinaryVL_VV<riscv_vunzip2a_vl, "PseudoVUNZIP2A">;
+defm : VPatBinaryVL_VV<riscv_vunzip2b_vl, "PseudoVUNZIP2B">;
