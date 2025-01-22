@@ -26,9 +26,10 @@ Sections:
   - Name:  decimal
     Type:  1234
 
-## Check that we can handle unknown chunk types.
+## Check that we can handle unknown section and chunk types.
 
-# RUN: not yaml2obj %s --docnum=2 -o %t2 2>&1 | FileCheck %s --check-prefix=UNKNOWN-TYPE
+# RUN: not yaml2obj %s --docnum=2 -DSECTION_TYPE=UNKNOWN_TYPE     -o %t2 2>&1 | FileCheck %s --check-prefix=UNKNOWN-TYPE
+# RUN: not yaml2obj %s --docnum=2 -DSECTION_TYPE=SHT_UNKNOWN_TYPE -o %t2 2>&1 | FileCheck %s --check-prefix=UNKNOWN-TYPE
 
 --- !ELF
 FileHeader:
@@ -37,20 +38,6 @@ FileHeader:
   Type:  ET_REL
 Sections:
   - Name: .foo
-    Type: UNKNOWN_TYPE
+    Type: [[SECTION_TYPE]]
 
 # UNKNOWN-TYPE: error: invalid hex32 number
-
-## Check that we can handle unknown section types.
-
-# RUN: not yaml2obj %s --docnum=3 -o %t3 2>&1 | FileCheck %s --check-prefix=UNKNOWN-TYPE
-
---- !ELF
-FileHeader:
-  Class: ELFCLASS64
-  Data:  ELFDATA2LSB
-  Type:  ET_REL
-Sections:
-  - Name: .foo
-    Type: SHT_UNKNOWN_TYPE
-
