@@ -55480,13 +55480,12 @@ static SDValue combineAVX512SetCCToKMOV(EVT VT, SDValue Op0, ISD::CondCode CC,
   unsigned Len = UndefElts.getBitWidth();
   for (unsigned I = 1; I != Len; ++I) {
     if (UndefElts[I]) {
-      for (unsigned J = I + 1; J != Len; ++J)
-        if (!UndefElts[J])
-          return SDValue();
+      if (!UndefElts.lshr(I + 1).isAllOnes())
+        return SDValue();
       break;
     }
 
-    if (EltBits[I] != 1 << (N + I))
+    if (EltBits[I] != 1ULL << (N + I))
       return SDValue();
   }
 
