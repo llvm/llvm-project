@@ -800,6 +800,8 @@ Improvements to Clang's diagnostics
 
 - Fix false positives warning for non-std functions with name `infinity` (#123231).
 
+- Clang now emits a ``-Wignored-qualifiers`` diagnostic when a base class includes cv-qualifiers (#GH55474).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -1121,6 +1123,8 @@ Windows Support
   Clang now follows the MSVC behavior in this scenario.
   When `-fms-compatibility-version=18.00` or prior is set on the command line this Microsoft extension is still
   allowed as VS2013 and prior allow it.
+
+- Clang now supports the ``#pragma clang section`` directive for COFF targets.
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^

@@ -1126,7 +1126,7 @@ public:
     return MutableArrayRef<char>(AllocatedBuffer, SourceStr.size() + 1);
   }
 
-  /// Create a section with the given name, protection flags, and alignment.
+  /// Create a section with the given name, protection flags.
   Section &createSection(StringRef Name, orc::MemProt Prot) {
     assert(!Sections.count(Name) && "Duplicate section name");
     std::unique_ptr<Section> Sec(new Section(Name, Prot, Sections.size()));
