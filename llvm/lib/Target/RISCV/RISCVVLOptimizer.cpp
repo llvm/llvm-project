@@ -1308,55 +1308,15 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) {
   unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
   MachineOperand &VLOp = MI.getOperand(VLOpNum);
 
-    unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
-    MachineOperand &VLOp = MI.getOperand(VLOpNum);
+  if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
+    LLVM_DEBUG(dbgs() << "    Abort due to CommonVL not <= VLOp.\n");
+    return false;
+  }
 
-    if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
-      LLVM_DEBUG(dbgs() << "    Abort due to CommonVL not <= VLOp.\n");
-      continue;
-    }
-
-    if (CommonVL->isIdenticalTo(VLOp)) {
-      LLVM_DEBUG(
-          dbgs()
-          << "    Abort due to CommonVL == VLOp, no point in reducing.\n");
-      continue;
-    }
-
-    if (CommonVL->isImm()) {
-      LLVM_DEBUG(dbgs() << "  Reduce VL from " << VLOp << " to "
-                        << CommonVL->getImm() << " for " << MI << "\n");
-      VLOp.ChangeToImmediate(CommonVL->getImm());
-    } else {
-      const MachineInstr *VLMI = MRI->getVRegDef(CommonVL->getReg());
-      if (!MDT->dominates(VLMI, &MI))
-        continue;
-      LLVM_DEBUG(
-          dbgs() << "  Reduce VL from " << VLOp << " to "
-                 << printReg(CommonVL->getReg(), MRI->getTargetRegisterInfo())
-                 << " for " << MI << "\n");
-
-      // All our checks passed. We can reduce VL.
-      VLOp.ChangeToRegister(CommonVL->getReg(), false);
-    }
-
-    MadeChange = true;
-
-    // Now add all inputs to this instruction to the worklist.
-    for (auto &Op : MI.operands()) {
-      if (!Op.isReg() || !Op.isUse() || !Op.getReg().isVirtual())
-        continue;
-
-      if (!isVectorRegClass(Op.getReg(), MRI))
-        continue;
-
-      MachineInstr *DefMI = MRI->getVRegDef(Op.getReg());
-
-      if (!isCandidate(*DefMI))
-        continue;
-
-      Worklist.insert(DefMI);
-    }
+  if (CommonVL->isIdenticalTo(VLOp)) {
+    LLVM_DEBUG(
+        dbgs() << "    Abort due to CommonVL == VLOp, no point in reducing.\n");
+    return false;
   }
 
   if (CommonVL->isImm()) {
