@@ -82,9 +82,9 @@ public:
 #endif /* LLPC_BUILD_NPI */
 
   MCSymbol *getSymbol(StringRef FuncName, ResourceInfoKind RIK,
-                      MCContext &OutContext);
+                      MCContext &OutContext, bool IsLocal);
   const MCExpr *getSymRefExpr(StringRef FuncName, ResourceInfoKind RIK,
-                              MCContext &Ctx);
+                              MCContext &Ctx, bool IsLocal);
 
   void reset();
 

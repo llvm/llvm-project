@@ -105,15 +105,15 @@ def DIV_FIXUP_F32_PROF : VOP3_Profile<VOP_F32_F32_F32_F32> {
   let HasExtVOP3DPP = 0;
 #ifdef LLPC_BUILD_NPI
   let HasExt64BitDPP = 1;
-}
-def VOP_I64_I64_I64_DPP : VOP3_Profile<VOP_I64_I64_I64>;
-def VOP_I32_I32_I64_DPP : VOP3_Profile<VOPProfile<[i64, i32, i32, i64]>> {
-  let HasClamp = 1;
 #else /* LLPC_BUILD_NPI */
   let HasExtDPP = 0;
 #endif /* LLPC_BUILD_NPI */
 }
 #ifdef LLPC_BUILD_NPI
+def VOP_I64_I64_I64_DPP : VOP3_Profile<VOP_I64_I64_I64>;
+def VOP_I32_I32_I64_DPP : VOP3_Profile<VOPProfile<[i64, i32, i32, i64]>> {
+  let HasClamp = 1;
+}
 } // End HasExt64BitDPP = 1;
 #endif /* LLPC_BUILD_NPI */
 
@@ -223,10 +223,13 @@ defm V_FMA_F32 : VOP3Inst <"v_fma_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, any_f
 defm V_LERP_U8 : VOP3Inst <"v_lerp_u8", VOP3_Profile<VOP_I32_I32_I32_I32>, int_amdgcn_lerp>;
 
 #ifdef LLPC_BUILD_NPI
-let SubtargetPredicate = isGFX1250Plus, SchedRW = [WriteIntMul] in {
+let SchedRW = [WriteIntMul] in {
+let SubtargetPredicate = isGFX1250Plus in
 defm V_MAD_U32 : VOP3Inst <"v_mad_u32", V_MAD_U32_PROF>;
+let SubtargetPredicate = isGFX125xOnly in {
 defm V_MAD_NC_U64_U32 : VOP3Inst <"v_mad_nc_u64_u32", VOP_I32_I32_I64_DPP>;
 defm V_MAD_NC_I64_I32 : VOP3Inst <"v_mad_nc_i64_i32", VOP_I32_I32_I64_DPP>;
+}
 }
 
 #endif /* LLPC_BUILD_NPI */
@@ -452,7 +455,9 @@ let isCommutable = 1, SchedRW = [WriteIntMul, WriteSALU] in {
 let FPDPRounding = 1 in {
   let Predicates = [Has16BitInsts, isGFX8Only] in {
     defm V_DIV_FIXUP_F16 : VOP3Inst <"v_div_fixup_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, AMDGPUdiv_fixup>;
-    defm V_FMA_F16 : VOP3Inst <"v_fma_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, any_fma>;
+    let isCommutable = 1 in {
+      defm V_FMA_F16 : VOP3Inst <"v_fma_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, any_fma>;
+    } // End isCommutable = 1
   } // End Predicates = [Has16BitInsts, isGFX8Only]
 
   let SubtargetPredicate = isGFX9Plus in {
@@ -765,8 +770,10 @@ let SubtargetPredicate = HasAddMinMaxInsts, isCommutable = 1, isReMaterializable
 defm V_ADD_I16 : VOP3Inst_t16 <"v_add_i16", VOP_I16_I16_I16>;
 defm V_SUB_I16 : VOP3Inst_t16 <"v_sub_i16", VOP_I16_I16_I16>;
 
-defm V_MAD_U32_U16 : VOP3Inst <"v_mad_u32_u16", VOP3_Profile<VOP_I32_I16_I16_I32, VOP3_OPSEL>>;
-defm V_MAD_I32_I16 : VOP3Inst <"v_mad_i32_i16", VOP3_Profile<VOP_I32_I16_I16_I32, VOP3_OPSEL>>;
+let isCommutable = 1 in {
+  defm V_MAD_U32_U16 : VOP3Inst <"v_mad_u32_u16", VOP3_Profile<VOP_I32_I16_I16_I32, VOP3_OPSEL>>;
+  defm V_MAD_I32_I16 : VOP3Inst <"v_mad_i32_i16", VOP3_Profile<VOP_I32_I16_I16_I32, VOP3_OPSEL>>;
+} // End isCommutable = 1
 
 defm V_CVT_PKNORM_I16_F16 : VOP3Inst_t16 <"v_cvt_pknorm_i16_f16", VOP_B32_F16_F16>;
 defm V_CVT_PKNORM_U16_F16 : VOP3Inst_t16 <"v_cvt_pknorm_u16_f16", VOP_B32_F16_F16>;
@@ -1479,8 +1486,9 @@ let SubtargetPredicate = isGFX10Plus in {
     def : PermlanePat<int_amdgcn_permlane16, V_PERMLANE16_B32_e64, vt>;
     def : PermlanePat<int_amdgcn_permlanex16, V_PERMLANEX16_B32_e64, vt>;
   }
-
-  defm V_ADD_NC_U16 : VOP3Inst_t16 <"v_add_nc_u16", VOP_I16_I16_I16, add>;
+  let isCommutable = 1 in {
+    defm V_ADD_NC_U16 : VOP3Inst_t16 <"v_add_nc_u16", VOP_I16_I16_I16, add>;
+  } // End isCommutable = 1
   defm V_SUB_NC_U16 : VOP3Inst_t16 <"v_sub_nc_u16", VOP_I16_I16_I16, sub>;
 
 } // End SubtargetPredicate = isGFX10Plus
@@ -2062,8 +2070,8 @@ defm V_BITOP3_B16         : VOP3_Real_BITOP3_gfx1250_gfx13<0x233>;
 defm V_BITOP3_B32         : VOP3_Real_BITOP3_gfx1250_gfx13<0x234>;
 
 defm V_MAD_U32 : VOP3Only_Realtriple_gfx1250_gfx13<0x235>;
-defm V_MAD_NC_U64_U32 : VOP3Only_Realtriple_gfx1250_NO_DPP_gfx13<0x2fa>;
-defm V_MAD_NC_I64_I32 : VOP3Only_Realtriple_gfx1250_NO_DPP_gfx13<0x2fb>;
+defm V_MAD_NC_U64_U32 : VOP3Only_Realtriple_gfx1250<0x2fa>;
+defm V_MAD_NC_I64_I32 : VOP3Only_Realtriple_gfx1250<0x2fb>;
 defm V_MIN_U64 : VOP3Only_Realtriple_gfx1250_gfx13<0x318, 0x326>;
 defm V_MAX_U64 : VOP3Only_Realtriple_gfx1250_gfx13<0x319, 0x327>;
 defm V_MIN_I64 : VOP3Only_Realtriple_gfx1250_gfx13<0x31a, 0x328>;

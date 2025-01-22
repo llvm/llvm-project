@@ -23,6 +23,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-private-object-vgprs"
 
+static cl::opt<unsigned>
+    RegChunkSizeInDWords("private-object-reg-chunk-size", cl::Hidden,
+                         cl::desc("Number of 32-bit VGPRs per register chunk "
+                                  "for promoted private objects"),
+                         cl::init(1));
+
 namespace {
 
 class AMDGPUPrivateObjectVGPRs : public MachineFunctionPass {
@@ -84,8 +90,8 @@ static const MDNode *getPromotedPrivateObject(const MachineInstr &MI) {
   return Obj;
 }
 
-static void getObjectRegs(const MDNode *Obj, MCPhysReg &BaseReg,
-                          unsigned &NumRegs) {
+static void getObjectRegs(const MDNode *Obj, SmallVectorImpl<MCPhysReg> &Regs,
+                          const SIRegisterInfo &TRI) {
   unsigned Offset =
       cast<ConstantInt>(
           cast<ConstantAsMetadata>(Obj->getOperand(0))->getValue())
@@ -95,36 +101,54 @@ static void getObjectRegs(const MDNode *Obj, MCPhysReg &BaseReg,
                       ->getZExtValue();
 
   assert(Offset % 4 == 0 && Size % 4 == 0);
-  BaseReg = AMDGPU::VGPR0 + Offset / 4;
-  NumRegs = Size / 4;
+  unsigned RegWidth = RegChunkSizeInDWords * 32;
+  const TargetRegisterClass *BaseRegRC =
+      TRI.getAnyVGPRClassForBitWidth(RegWidth);
+  if (!BaseRegRC)
+    report_fatal_error("Invalid VGPR width " + Twine(RegWidth));
+  unsigned BaseRegIdx = Offset / 4;
+  MCPhysReg BaseReg = BaseRegRC->getRegister(BaseRegIdx);
+  unsigned NumRegs = Size / (RegChunkSizeInDWords * 4);
+  for (unsigned I : seq(NumRegs))
+    Regs.push_back(BaseReg + I * RegChunkSizeInDWords);
+
+  if (unsigned LastChunkSize = Size % (RegChunkSizeInDWords * 4)) {
+    unsigned LastRegWidth = LastChunkSize * 8;
+    const TargetRegisterClass *LastRegRC =
+        TRI.getAnyVGPRClassForBitWidth(LastRegWidth);
+    if (!LastRegRC)
+      report_fatal_error("Invalid VGPR width " + Twine(LastRegWidth));
+    unsigned LastRegIdx = BaseRegIdx + RegChunkSizeInDWords * NumRegs;
+    Regs.push_back(LastRegRC->getRegister(LastRegIdx));
+  }
 }
 
+using RegVector = SmallVector<MCPhysReg, 50>;
+
 static void insertObjectDef(MachineInstr &MI, const MDNode *Obj,
-                            const SIInstrInfo &TII) {
-  MCPhysReg BaseReg;
-  unsigned NumRegs;
-  getObjectRegs(Obj, BaseReg, NumRegs);
+                            const SIInstrInfo &TII, const SIRegisterInfo &TRI) {
+  RegVector Regs;
+  getObjectRegs(Obj, Regs, TRI);
 
   MachineBasicBlock::instr_iterator DefPt = MI.getIterator();
   while (DefPt->isBundledWithPred())
     --DefPt;
 
-  for (unsigned I : seq(NumRegs)) {
-    MCPhysReg Reg = BaseReg + I;
+  for (MCPhysReg Reg : Regs) {
     BuildMI(*MI.getParent(), DefPt, DebugLoc(),
             TII.get(TargetOpcode::IMPLICIT_DEF), Reg);
   }
 }
 
-static void addUseDefOperands(MachineInstr &MI, const MDNode *Obj) {
+static void addUseDefOperands(MachineInstr &MI, const MDNode *Obj,
+                              const SIRegisterInfo &TRI) {
   assert(MI.getOpcode() == AMDGPU::V_LOAD_IDX ||
          MI.getOpcode() == AMDGPU::V_STORE_IDX);
 
-  MCPhysReg BaseReg;
-  unsigned NumRegs;
-  getObjectRegs(Obj, BaseReg, NumRegs);
+  RegVector Regs;
+  getObjectRegs(Obj, Regs, TRI);
 
-  for (unsigned I : seq(NumRegs)) {
+  for (MCPhysReg Reg : Regs) {
     // In general case, we don't know which VGPRs are read or written, so
     // we conservatively assume V_LOAD_IDX pseudos load all of them and
     // V_STORE_IDX store only some of them, meaning V_STORE_IDX have to
@@ -132,7 +156,6 @@ static void addUseDefOperands(MachineInstr &MI, const MDNode *Obj) {
     // TODO: In cases with constant GEPs where we can realiably determine
     // the accessed VGPRs we don't need to add defs/uses for all registers
     // and V_STORE_IDX don't need to have implicit uses.
-    MCPhysReg Reg = BaseReg + I;
     MI.addOperand(
         MachineOperand::CreateReg(Reg, /*isDef=*/false, /*isImp=*/true));
 
@@ -143,15 +166,13 @@ static void addUseDefOperands(MachineInstr &MI, const MDNode *Obj) {
   }
 }
 
-static void addLiveInRegs(MachineBasicBlock &MBB, const MDNode *Obj) {
-  MCPhysReg BaseReg;
-  unsigned NumRegs;
-  getObjectRegs(Obj, BaseReg, NumRegs);
+static void addLiveInRegs(MachineBasicBlock &MBB, const MDNode *Obj,
+                          const SIRegisterInfo &TRI) {
+  RegVector Regs;
+  getObjectRegs(Obj, Regs, TRI);
 
-  for (unsigned I : seq(NumRegs)) {
-    MCPhysReg Reg = BaseReg + I;
+  for (MCPhysReg Reg : Regs)
     MBB.addLiveIn(Reg);
-  }
 }
 
 bool AMDGPUPrivateObjectVGPRs::runOnMachineFunction(MachineFunction &MF) {
@@ -244,18 +265,19 @@ bool AMDGPUPrivateObjectVGPRs::runOnMachineFunction(MachineFunction &MF) {
   // referred to within that block, we insert a definition for that
   // object just before the first terminator of the block.
   const SIInstrInfo &TII = *ST.getInstrInfo();
+  const SIRegisterInfo &TRI = *ST.getRegisterInfo();
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     SmallVector<const MDNode *, 4> LiveObjs = LiveIns[&MBB];
     for (const MDNode *Obj : LiveObjs)
-      addLiveInRegs(MBB, Obj);
+      addLiveInRegs(MBB, Obj, TRI);
 
     for (MachineInstr &MI : MBB.instrs()) {
       if (const MDNode *Obj = getPromotedPrivateObject(MI)) {
-        addUseDefOperands(MI, Obj);
+        addUseDefOperands(MI, Obj, TRI);
         if (!is_contained(LiveObjs, Obj)) {
           LiveObjs.push_back(Obj);
-          insertObjectDef(MI, Obj, TII);
+          insertObjectDef(MI, Obj, TII, TRI);
         }
         Changed = true;
       }
@@ -265,7 +287,7 @@ bool AMDGPUPrivateObjectVGPRs::runOnMachineFunction(MachineFunction &MF) {
       for (const MDNode *Obj : LiveIns[Succ]) {
         if (!is_contained(LiveObjs, Obj)) {
           LiveObjs.push_back(Obj);
-          insertObjectDef(*MBB.getFirstTerminator(), Obj, TII);
+          insertObjectDef(*MBB.getFirstTerminator(), Obj, TII, TRI);
           Changed = true;
         }
       }

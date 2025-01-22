@@ -3056,6 +3056,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_128_STAGINGRegClassID:
 #endif /* LLPC_BUILD_NPI */
   case AMDGPU::AV_128_Align2RegClassID:
+  case AMDGPU::SReg_128_XNULLRegClassID:
 #if LLPC_BUILD_NPI
   case AMDGPU::AV_128_STAGING_Align2RegClassID:
   case AMDGPU::VReg_128_Lo256_Align2RegClassID:
@@ -3137,6 +3138,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::AV_256_STAGINGRegClassID:
 #endif /* LLPC_BUILD_NPI */
   case AMDGPU::AV_256_Align2RegClassID:
+  case AMDGPU::SReg_256_XNULLRegClassID:
 #if LLPC_BUILD_NPI
   case AMDGPU::AV_256_STAGING_Align2RegClassID:
   case AMDGPU::VReg_256_Lo256_Align2RegClassID:

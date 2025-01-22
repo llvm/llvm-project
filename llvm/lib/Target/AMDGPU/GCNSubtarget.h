@@ -1255,14 +1255,14 @@ public:
   bool hasMovB64() const { return GFX940Insts || (GFX1250Insts && !GFX13Insts); }
 
   bool hasLshlAddB64() const { return GFX940Insts || GFX1250Insts; }
+
+  // Scalar and global loads support scale_offset bit.
+  bool hasScaleOffset() const { return GFX1250Insts; }
 #else /* LLPC_BUILD_NPI */
   bool hasMovB64() const { return GFX940Insts; }
 #endif /* LLPC_BUILD_NPI */
 
 #if LLPC_BUILD_NPI
-  // Scalar and global loads support scale_offset bit.
-  bool hasScaleOffset() const { return GFX1250Insts; }
-
   bool hasFlatGVSMode() const { return FlatGVSMode; }
 
   // FLAT GLOBAL VOffset is signed
@@ -1632,11 +1632,11 @@ public:
   bool hasAddU64SubU64() const { return GFX1250Insts; }
 
   // \returns true if the target has V_MUL_U64/V_MUL_I64 instructions.
-  bool hasVectorMulU64() const { return GFX1250Insts; }
+  bool hasVectorMulU64() const { return GFX1250Insts && !GFX13Insts; }
 
   // \returns true if the target has V_MAD_NC_U64_U32/V_MAD_NC_I64_I32
   // instructions.
-  bool hasMadU64U32NoCarry() const { return GFX1250Insts; }
+  bool hasMadU64U32NoCarry() const { return GFX1250Insts && !GFX13Insts; }
 
   // \returns true if the target has V_{MIN|MAX}_{I|U}64 instructions.
   bool hasIntMinMax64() const { return GFX1250Insts; }
@@ -1659,6 +1659,12 @@ public:
   // of sign-extending. Note that GFX1250 has not only fixed the bug but also
   // extended VA to 57 bits.
   bool hasGetPCZeroExtension() const { return GFX12Insts && !GFX1250Insts; }
+
+  // \returns true if the target needs to create a prolog for backward
+  // compatibility when preloading kernel arguments.
+  bool needsKernArgPreloadProlog() const {
+    return hasKernargPreload() && !GFX1250Insts;
+  }
 
   /// \returns true if the target supports Wavegroups.
   bool hasWavegroups() const { return GFX13Insts; }

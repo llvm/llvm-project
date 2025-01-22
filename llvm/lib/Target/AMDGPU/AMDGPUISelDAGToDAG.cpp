@@ -1098,22 +1098,40 @@ void AMDGPUDAGToDAGISel::SelectMAD_64_32(SDNode *N) {
 void AMDGPUDAGToDAGISel::SelectMUL_LOHI(SDNode *N) {
   SDLoc SL(N);
   bool Signed = N->getOpcode() == ISD::SMUL_LOHI;
+#if LLPC_BUILD_NPI
+  SDVTList VTList;
+#endif /* LLPC_BUILD_NPI */
   unsigned Opc;
+#if LLPC_BUILD_NPI
+  if (Subtarget->hasMadU64U32NoCarry()) {
+    VTList = CurDAG->getVTList(MVT::i64);
+    Opc = Signed ? AMDGPU::V_MAD_NC_I64_I32_e64 : AMDGPU::V_MAD_NC_U64_U32_e64;
+  } else {
+    VTList = CurDAG->getVTList(MVT::i64, MVT::i1);
+    if (Subtarget->hasMADIntraFwdBug()) {
+      Opc = Signed ? AMDGPU::V_MAD_I64_I32_gfx11_e64
+                   : AMDGPU::V_MAD_U64_U32_gfx11_e64;
+    } else {
+      Opc = Signed ? AMDGPU::V_MAD_I64_I32_e64 : AMDGPU::V_MAD_U64_U32_e64;
+    }
+  }
+#else /* LLPC_BUILD_NPI */
   if (Subtarget->hasMADIntraFwdBug())
     Opc = Signed ? AMDGPU::V_MAD_I64_I32_gfx11_e64
                  : AMDGPU::V_MAD_U64_U32_gfx11_e64;
-#if LLPC_BUILD_NPI
-  else if (Subtarget->hasMadU64U32NoCarry())
-    Opc = Signed ? AMDGPU::V_MAD_NC_I64_I32_e64 : AMDGPU::V_MAD_NC_U64_U32_e64;
-#endif /* LLPC_BUILD_NPI */
   else
     Opc = Signed ? AMDGPU::V_MAD_I64_I32_e64 : AMDGPU::V_MAD_U64_U32_e64;
+#endif /* LLPC_BUILD_NPI */
 
   SDValue Zero = CurDAG->getTargetConstant(0, SL, MVT::i64);
   SDValue Clamp = CurDAG->getTargetConstant(0, SL, MVT::i1);
   SDValue Ops[] = {N->getOperand(0), N->getOperand(1), Zero, Clamp};
+#if LLPC_BUILD_NPI
+  SDNode *Mad = CurDAG->getMachineNode(Opc, SL, VTList, Ops);
+#else /* LLPC_BUILD_NPI */
   SDNode *Mad = CurDAG->getMachineNode(
       Opc, SL, CurDAG->getVTList(MVT::i64, MVT::i1), Ops);
+#endif /* LLPC_BUILD_NPI */
   if (!SDValue(N, 0).use_empty()) {
     SDValue Sub0 = CurDAG->getTargetConstant(AMDGPU::sub0, SL, MVT::i32);
     SDNode *Lo = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, SL,
@@ -4628,6 +4646,9 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
   if ((Mods & SISrcMods::ABS) == 0) {
     unsigned ModsTmp;
     SelectVOP3ModsImpl(Src, Src, ModsTmp);
+
+    if ((ModsTmp & SISrcMods::NEG) != 0)
+      Mods ^= SISrcMods::NEG;
 #else /* LLPC_BUILD_NPI */
       if ((ModsTmp & SISrcMods::ABS) != 0)
         Mods |= SISrcMods::ABS;
@@ -4635,8 +4656,9 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
 #endif /* LLPC_BUILD_NPI */
 
 #if LLPC_BUILD_NPI
-    if ((ModsTmp & SISrcMods::NEG) != 0)
-      Mods ^= SISrcMods::NEG;
+    if ((ModsTmp & SISrcMods::ABS) != 0)
+      Mods |= SISrcMods::ABS;
+  }
 #else /* LLPC_BUILD_NPI */
     // op_sel/op_sel_hi decide the source type and source.
     // If the source's op_sel_hi is set, it indicates to do a conversion from fp16.
@@ -4645,9 +4667,10 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
 #endif /* LLPC_BUILD_NPI */
 
 #if LLPC_BUILD_NPI
-    if ((ModsTmp & SISrcMods::ABS) != 0)
-      Mods |= SISrcMods::ABS;
-  }
+  // op_sel/op_sel_hi decide the source type and source.
+  // If the source's op_sel_hi is set, it indicates to do a conversion from
+  // fp16. If the sources's op_sel is set, it picks the high half of the source
+  // register.
 #else /* LLPC_BUILD_NPI */
     Mods |= SISrcMods::OP_SEL_1;
     if (isExtractHiElt(Src, Src)) {
@@ -4655,21 +4678,16 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
 #endif /* LLPC_BUILD_NPI */
 
 #if LLPC_BUILD_NPI
-  // op_sel/op_sel_hi decide the source type and source.
-  // If the source's op_sel_hi is set, it indicates to do a conversion from
-  // fp16. If the sources's op_sel is set, it picks the high half of the source
-  // register.
+  Mods |= SISrcMods::OP_SEL_1;
+  if (IsExtractHigh ||
+      (Src.getValueSizeInBits() == 16 && isExtractHiElt(Src, Src))) {
+    Mods |= SISrcMods::OP_SEL_0;
 #else /* LLPC_BUILD_NPI */
       // TODO: Should we try to look for neg/abs here?
     }
 #endif /* LLPC_BUILD_NPI */
 
 #if LLPC_BUILD_NPI
-  Mods |= SISrcMods::OP_SEL_1;
-  if (IsExtractHigh ||
-      (Src.getValueSizeInBits() == 16 && isExtractHiElt(Src, Src))) {
-    Mods |= SISrcMods::OP_SEL_0;
-
     // TODO: Should we try to look for neg/abs here?
 #else /* LLPC_BUILD_NPI */
     return true;
