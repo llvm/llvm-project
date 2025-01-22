@@ -61,7 +61,7 @@ static_assert(__builtin_strcmp(b, "<=>") == 0);
 // CXX20: preprocess8: <=>=
 
 #define ID(x) x
-[[some_vendor::some_attribute( // expected-warning {{unknown attribute 'some_attribute' ignored}}
+[[some_vendor::some_attribute( // expected-warning {{unknown attribute namespace 'some_vendor'; attribute 'some_vendor::some_attribute' ignored}}
 preprocess1: ID(<)ID(=>),
 preprocess2: ID(<=)ID(>),
 preprocess3: ID(<)ID(=)ID(>),

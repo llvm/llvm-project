@@ -1115,8 +1115,8 @@ defm cx_fortran_rules: BoolOptionWithoutMarshalling<"f", "cx-fortran-rules",
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Range reduction is disabled "
   "for complex arithmetic operations">>;
 
-def Wunknown_attribute_namespace_EQ : CommaJoined<["-"], "Wunknown-attribute-namespace=">,
-  Group<W_value_Group>, Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
+def Wunknown_attribute_namespaces_EQ : CommaJoined<["-"], "Wunknown-attribute-namespaces=">,
+  Flags<[HelpHidden]>, Group<W_value_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Specify a comma-separated list of allowed unknown attribute namespaces">,
   MarshallingInfoStringVector<DiagnosticOpts<"UnknownAttributeNamespaces">>;
 

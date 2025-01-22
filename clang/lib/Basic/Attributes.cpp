@@ -167,7 +167,7 @@ getScopeFromNormalizedScopeName(StringRef ScopeName) {
       .Case("msvc", AttributeCommonInfo::Scope::MSVC)
       .Case("omp", AttributeCommonInfo::Scope::OMP)
       .Case("riscv", AttributeCommonInfo::Scope::RISCV)
-      .Default(AttributeCommonInfo::Scope::NONE);
+      .Default(AttributeCommonInfo::Scope::UNKNOWN);
 }
 
 unsigned AttributeCommonInfo::calculateAttributeSpellingListIndex() const {
@@ -183,7 +183,8 @@ unsigned AttributeCommonInfo::calculateAttributeSpellingListIndex() const {
 #include "clang/Sema/AttrSpellingListIndex.inc"
 }
 
-bool AttributeCommonInfo::isKnownScopeName() const {
-  return getScopeFromNormalizedScopeName(normalizeAttrScopeName(
-             getScopeName(), getSyntax())) != AttributeCommonInfo::Scope::NONE;
+bool AttributeCommonInfo::isUnknownScopeName() const {
+  return getScopeFromNormalizedScopeName(
+             normalizeAttrScopeName(getScopeName(), getSyntax())) ==
+         AttributeCommonInfo::Scope::UNKNOWN;
 }

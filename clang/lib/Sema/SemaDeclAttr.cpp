@@ -6545,20 +6545,27 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   if (AL.getKind() == ParsedAttr::UnknownAttribute ||
       !AL.existsInTarget(S.Context.getTargetInfo())) {
 
-    unsigned DiagID = diag::warn_unknown_attribute_ignored;
-    if (AL.isRegularKeywordAttribute())
-      DiagID = diag::err_keyword_not_supported_on_target;
-    else if (AL.isDeclspecAttribute())
-      DiagID = diag::warn_unhandled_ms_attribute_ignored;
-    else if (AL.hasScope() && !AL.isKnownScopeName()) {
+    if (AL.isUnknownScopeName()) {
       const std::vector<std::string> UnknownAttributeNamespaces =
           S.getDiagnostics().getDiagnosticOptions().UnknownAttributeNamespaces;
+
       if (llvm::is_contained(UnknownAttributeNamespaces,
                              AL.getScopeName()->getName()))
         return;
-    }
 
-    S.Diag(AL.getLoc(), DiagID) << AL << AL.getRange();
+      SourceLocation BeginLoc = AL.getScopeLoc();
+      SourceLocation EndLoc = AL.getRange().getEnd();
+      S.Diag(BeginLoc, diag::warn_unknown_attribute_namespace)
+          << AL.getScopeName()->getName() << AL.getAttrName()->getName()
+          << SourceRange(BeginLoc, EndLoc);
+    } else {
+      S.Diag(AL.getLoc(), AL.isRegularKeywordAttribute()
+                              ? diag::err_keyword_not_supported_on_target
+                          : AL.isDeclspecAttribute()
+                              ? diag::warn_unhandled_ms_attribute_ignored
+                              : diag::warn_unknown_attribute_ignored)
+          << AL << AL.getRange();
+    }
     return;
   }
 
