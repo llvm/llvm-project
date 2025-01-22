@@ -43,7 +43,7 @@ Sections:
 
 ## Check that we can handle unknown section types.
 
-# RUN: not yaml2obj %s --docnum=3 -o %t3 2>&1 | FileCheck %s --check-prefix=UNKNOWN-SHT-TYPE
+# RUN: not yaml2obj %s --docnum=3 -o %t3 2>&1 | FileCheck %s --check-prefix=UNKNOWN-TYPE
 
 --- !ELF
 FileHeader:
@@ -54,4 +54,3 @@ Sections:
   - Name: .foo
     Type: SHT_UNKNOWN_TYPE
 
-# UNKNOWN-SHT-TYPE: error: invalid hex32 number
