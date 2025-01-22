@@ -2060,9 +2060,21 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     I->replaceAllUsesWith(V);
   } else if (HasResult) {
     Value *V;
-    if (UseSizedLibcall)
-      V = Builder.CreateBitOrPointerCast(Result, I->getType());
-    else {
+    if (UseSizedLibcall) {
+      // Add bitcasts from Result's scalar type to I's <n x ptr> vector type
+      if (I->getType()->getScalarType()->isPointerTy() &&
+          I->getType()->isVectorTy() && !Result->getType()->isVectorTy()) {
+        unsigned AS = cast<PointerType>(
+            I->getType()->getScalarType())->getAddressSpace();
+        ElementCount EC = cast<VectorType>(I->getType())->getElementCount();
+        Value *BC = Builder.CreateBitCast(Result, VectorType::get(
+            IntegerType::get(Ctx, DL.getPointerSizeInBits(AS)), EC));
+        Value *IntToPtr = Builder.CreateIntToPtr(BC, VectorType::get(
+            PointerType::get(Ctx, AS), EC));
+        V = Builder.CreateBitOrPointerCast(IntToPtr, I->getType());
+      } else
+        V = Builder.CreateBitOrPointerCast(Result, I->getType());
+    } else {
       V = Builder.CreateAlignedLoad(I->getType(), AllocaResult,
                                     AllocaAlignment);
       Builder.CreateLifetimeEnd(AllocaResult, SizeVal64);

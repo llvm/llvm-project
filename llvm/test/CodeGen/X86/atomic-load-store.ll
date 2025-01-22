@@ -371,6 +371,21 @@ define <2 x i32> @atomic_vec2_i32(ptr %x) nounwind {
   ret <2 x i32> %ret
 }
 
+define <2 x ptr> @atomic_vec2_ptr_align(ptr %x) nounwind {
+; CHECK-LABEL: atomic_vec2_ptr_align:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    movl $2, %esi
+; CHECK-NEXT:    callq ___atomic_load_16
+; CHECK-NEXT:    movq %rdx, %xmm1
+; CHECK-NEXT:    movq %rax, %xmm0
+; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    retq
+  %ret = load atomic <2 x ptr>, ptr %x acquire, align 16
+  ret <2 x ptr> %ret
+}
+
 define <4 x i8> @atomic_vec4_i8(ptr %x) nounwind {
 ; CHECK3-LABEL: atomic_vec4_i8:
 ; CHECK3:       ## %bb.0:
@@ -392,6 +407,21 @@ define <4 x i16> @atomic_vec4_i16(ptr %x) nounwind {
 ; CHECK-NEXT:    retq
   %ret = load atomic <4 x i16>, ptr %x acquire, align 8
   ret <4 x i16> %ret
+}
+
+define <4 x ptr addrspace(270)> @atomic_vec4_ptr270(ptr %x) nounwind {
+; CHECK-LABEL: atomic_vec4_ptr270:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    movl $2, %esi
+; CHECK-NEXT:    callq ___atomic_load_16
+; CHECK-NEXT:    movq %rdx, %xmm1
+; CHECK-NEXT:    movq %rax, %xmm0
+; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    retq
+  %ret = load atomic <4 x ptr addrspace(270)>, ptr %x acquire, align 16
+  ret <4 x ptr addrspace(270)> %ret
 }
 
 define <4 x half> @atomic_vec4_half(ptr %x) nounwind {

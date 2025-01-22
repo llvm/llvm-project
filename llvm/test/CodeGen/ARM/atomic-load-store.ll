@@ -983,3 +983,54 @@ define void @store_atomic_f64__seq_cst(ptr %ptr, double %val1) {
   store atomic double %val1, ptr %ptr seq_cst, align 8
   ret void
 }
+
+define <1 x ptr> @atomic_vec1_ptr(ptr %x) #0 {
+; ARM-LABEL: atomic_vec1_ptr:
+; ARM:       @ %bb.0:
+; ARM-NEXT:    ldr r0, [r0]
+; ARM-NEXT:    dmb ish
+; ARM-NEXT:    bx lr
+;
+; ARMOPTNONE-LABEL: atomic_vec1_ptr:
+; ARMOPTNONE:       @ %bb.0:
+; ARMOPTNONE-NEXT:    ldr r0, [r0]
+; ARMOPTNONE-NEXT:    dmb ish
+; ARMOPTNONE-NEXT:    bx lr
+;
+; THUMBTWO-LABEL: atomic_vec1_ptr:
+; THUMBTWO:       @ %bb.0:
+; THUMBTWO-NEXT:    ldr r0, [r0]
+; THUMBTWO-NEXT:    dmb ish
+; THUMBTWO-NEXT:    bx lr
+;
+; THUMBONE-LABEL: atomic_vec1_ptr:
+; THUMBONE:       @ %bb.0:
+; THUMBONE-NEXT:    push {r7, lr}
+; THUMBONE-NEXT:    movs r1, #0
+; THUMBONE-NEXT:    mov r2, r1
+; THUMBONE-NEXT:    bl __sync_val_compare_and_swap_4
+; THUMBONE-NEXT:    pop {r7, pc}
+;
+; ARMV4-LABEL: atomic_vec1_ptr:
+; ARMV4:       @ %bb.0:
+; ARMV4-NEXT:    push {r11, lr}
+; ARMV4-NEXT:    mov r1, #2
+; ARMV4-NEXT:    bl __atomic_load_4
+; ARMV4-NEXT:    pop {r11, lr}
+; ARMV4-NEXT:    mov pc, lr
+;
+; ARMV6-LABEL: atomic_vec1_ptr:
+; ARMV6:       @ %bb.0:
+; ARMV6-NEXT:    mov r1, #0
+; ARMV6-NEXT:    mcr p15, #0, r1, c7, c10, #5
+; ARMV6-NEXT:    ldr r0, [r0]
+; ARMV6-NEXT:    bx lr
+;
+; THUMBM-LABEL: atomic_vec1_ptr:
+; THUMBM:       @ %bb.0:
+; THUMBM-NEXT:    ldr r0, [r0]
+; THUMBM-NEXT:    dmb sy
+; THUMBM-NEXT:    bx lr
+  %ret = load atomic <1 x ptr>, ptr %x acquire, align 4
+  ret <1 x ptr> %ret
+}
