@@ -648,6 +648,7 @@ bool LoongArchExpandAtomicPseudo::expandAtomicCmpXchg128(
 
   // .loophead:
   //   ll.d res_lo, (addr)
+  //   dbar acquire
   //   ld.d res_hi, (addr), 8
   //   bne dest_lo, cmpval_lo, tail
   //   bne dest_hi, cmpval_hi, tail
