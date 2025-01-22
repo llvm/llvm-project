@@ -551,6 +551,7 @@ static void createResourceInitFn(CodeGenModule &CGM, const VarDecl *VD,
       llvm::FunctionType::get(CGM.VoidTy, false),
       llvm::GlobalValue::InternalLinkage,
       ("_init_resource_" + VD->getName()).str(), CGM.getModule());
+  InitResFunc->addFnAttr(llvm::Attribute::AlwaysInline);
 
   llvm::BasicBlock *EntryBB =
       llvm::BasicBlock::Create(Ctx, "entry", InitResFunc);
