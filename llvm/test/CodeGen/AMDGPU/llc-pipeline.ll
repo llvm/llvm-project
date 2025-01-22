@@ -224,6 +224,9 @@
 ; GCN-O1-NEXT:      Block Frequency Analysis
 ; GCN-O1-NEXT:      Constant Hoisting
 ; GCN-O1-NEXT:      Replace intrinsics with calls to vector library
+; GCN-O1-NEXT:      Lazy Branch Probability Analysis
+; GCN-O1-NEXT:      Lazy Block Frequency Analysis
+; GCN-O1-NEXT:      Optimization Remark Emitter
 ; GCN-O1-NEXT:      Partially inline calls to library functions
 ; GCN-O1-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; GCN-O1-NEXT:      Scalarize Masked Memory Intrinsics
@@ -518,6 +521,9 @@
 ; GCN-O1-OPTS-NEXT:      Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:      Constant Hoisting
 ; GCN-O1-OPTS-NEXT:      Replace intrinsics with calls to vector library
+; GCN-O1-OPTS-NEXT:      Lazy Branch Probability Analysis
+; GCN-O1-OPTS-NEXT:      Lazy Block Frequency Analysis
+; GCN-O1-OPTS-NEXT:      Optimization Remark Emitter
 ; GCN-O1-OPTS-NEXT:      Partially inline calls to library functions
 ; GCN-O1-OPTS-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; GCN-O1-OPTS-NEXT:      Scalarize Masked Memory Intrinsics
@@ -831,6 +837,9 @@
 ; GCN-O2-NEXT:      Block Frequency Analysis
 ; GCN-O2-NEXT:      Constant Hoisting
 ; GCN-O2-NEXT:      Replace intrinsics with calls to vector library
+; GCN-O2-NEXT:      Lazy Branch Probability Analysis
+; GCN-O2-NEXT:      Lazy Block Frequency Analysis
+; GCN-O2-NEXT:      Optimization Remark Emitter
 ; GCN-O2-NEXT:      Partially inline calls to library functions
 ; GCN-O2-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; GCN-O2-NEXT:      Scalarize Masked Memory Intrinsics
@@ -1152,6 +1161,9 @@
 ; GCN-O3-NEXT:      Block Frequency Analysis
 ; GCN-O3-NEXT:      Constant Hoisting
 ; GCN-O3-NEXT:      Replace intrinsics with calls to vector library
+; GCN-O3-NEXT:      Lazy Branch Probability Analysis
+; GCN-O3-NEXT:      Lazy Block Frequency Analysis
+; GCN-O3-NEXT:      Optimization Remark Emitter
 ; GCN-O3-NEXT:      Partially inline calls to library functions
 ; GCN-O3-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; GCN-O3-NEXT:      Scalarize Masked Memory Intrinsics

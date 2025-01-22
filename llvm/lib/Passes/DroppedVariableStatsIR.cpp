@@ -15,7 +15,8 @@
 
 using namespace llvm;
 
-void DroppedVariableStatsIR::runOnFunction(const Function *F, bool Before) {
+void DroppedVariableStatsIR::runOnFunction(StringRef PassID, const Function *F,
+                                           bool Before) {
   auto &DebugVariables = DebugVariablesStack.back()[F];
   auto FuncName = F->getName();
   Func = F;
@@ -32,9 +33,11 @@ void DroppedVariableStatsIR::calculateDroppedVarStatsOnFunction(
                                 PassLevel, Func);
 }
 
-void DroppedVariableStatsIR::runOnModule(const Module *M, bool Before) {
-  for (auto &F : *M)
-    runOnFunction(&F, Before);
+void DroppedVariableStatsIR::runOnModule(StringRef PassID, const Module *M,
+                                         bool Before) {
+  for (auto &F : *M) {
+    runOnFunction(PassID, &F, Before);
+  }
 }
 
 void DroppedVariableStatsIR::calculateDroppedVarStatsOnModule(
@@ -51,7 +54,7 @@ void DroppedVariableStatsIR::registerCallbacks(
     return;
 
   PIC.registerBeforeNonSkippedPassCallback(
-      [this](StringRef P, Any IR) { return runBeforePass(IR); });
+      [this](StringRef P, Any IR) { return runBeforePass(P, IR); });
   PIC.registerAfterPassCallback(
       [this](StringRef P, Any IR, const PreservedAnalyses &PA) {
         return runAfterPass(P, IR);

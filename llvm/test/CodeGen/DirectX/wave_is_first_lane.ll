@@ -7,6 +7,8 @@ entry:
   ret void
 }
 
+; CHECK-NOT: attributes {{.*}} memory(none)
+
 declare i1 @llvm.dx.wave.is.first.lane() #1
 
 attributes #0 = { convergent norecurse "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }

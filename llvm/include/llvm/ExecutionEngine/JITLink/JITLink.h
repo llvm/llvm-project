@@ -754,6 +754,10 @@ public:
   /// Returns the ordinal for this section.
   SectionOrdinal getOrdinal() const { return SecOrdinal; }
 
+  /// Set the ordinal for this section. Ordinals are used to order the layout
+  /// of sections with the same permissions.
+  void setOrdinal(SectionOrdinal SecOrdinal) { this->SecOrdinal = SecOrdinal; }
+
   /// Returns true if this section is empty (contains no blocks or symbols).
   bool empty() const { return Blocks.empty(); }
 
@@ -1126,7 +1130,7 @@ public:
     return MutableArrayRef<char>(AllocatedBuffer, SourceStr.size() + 1);
   }
 
-  /// Create a section with the given name, protection flags, and alignment.
+  /// Create a section with the given name, protection flags.
   Section &createSection(StringRef Name, orc::MemProt Prot) {
     assert(!Sections.count(Name) && "Duplicate section name");
     std::unique_ptr<Section> Sec(new Section(Name, Prot, Sections.size()));

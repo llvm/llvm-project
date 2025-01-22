@@ -383,8 +383,8 @@ public:
   }
 
   bool isCommon() const {
-    return isExternal() && getSectionNumber() == COFF::IMAGE_SYM_UNDEFINED &&
-           getValue() != 0;
+    return (isExternal() || isSection()) &&
+           getSectionNumber() == COFF::IMAGE_SYM_UNDEFINED && getValue() != 0;
   }
 
   bool isUndefined() const {
@@ -393,7 +393,8 @@ public:
   }
 
   bool isEmptySectionDeclaration() const {
-    return isSection() && getSectionNumber() == COFF::IMAGE_SYM_UNDEFINED;
+    return isSection() && getSectionNumber() == COFF::IMAGE_SYM_UNDEFINED &&
+           getValue() == 0;
   }
 
   bool isWeakExternal() const {

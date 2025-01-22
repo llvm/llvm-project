@@ -299,6 +299,13 @@ HipStdParAllocationInterpositionPass::run(Module &M, ModuleAnalysisManager&) {
     }
   }
 
+  if (auto F = M.getFunction("__hipstdpar_hidden_malloc")) {
+    auto LibcMalloc = M.getOrInsertFunction(
+        "__libc_malloc", F->getFunctionType(), F->getAttributes());
+    F->replaceAllUsesWith(LibcMalloc.getCallee());
+
+    eraseFromModule(*F);
+  }
   if (auto F = M.getFunction("__hipstdpar_hidden_free")) {
     auto LibcFree = M.getOrInsertFunction("__libc_free", F->getFunctionType(),
                                           F->getAttributes());

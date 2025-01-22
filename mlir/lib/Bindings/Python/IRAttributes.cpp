@@ -845,7 +845,7 @@ public:
       }
       shapedType = *explicitType;
     } else {
-      SmallVector<int64_t> shape{static_cast<int64_t>(numAttributes)};
+      SmallVector<int64_t> shape = {static_cast<int64_t>(numAttributes)};
       shapedType = mlirRankedTensorTypeGet(
           shape.size(), shape.data(),
           mlirAttributeGetType(pyTryCast<PyAttribute>(attributes[0])),

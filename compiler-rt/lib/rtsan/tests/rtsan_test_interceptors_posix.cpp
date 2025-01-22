@@ -657,6 +657,28 @@ TEST(TestRtsanInterceptors, UmaskDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+#if SANITIZER_INTERCEPT_PROCESS_VM_READV
+TEST(TestRtsanInterceptors, ProcessVmReadvDiesWhenRealtime) {
+  char stack[1024];
+  int p;
+  iovec lcl{&stack, sizeof(stack)};
+  iovec rmt{&p, sizeof(p)};
+  auto Func = [&lcl, &rmt]() { process_vm_readv(0, &lcl, 1, &rmt, 1, 0); };
+  ExpectRealtimeDeath(Func, "process_vm_readv");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, ProcessVmWritevDiesWhenRealtime) {
+  char stack[1024];
+  int p;
+  iovec lcl{&p, sizeof(p)};
+  iovec rmt{&stack, sizeof(stack)};
+  auto Func = [&lcl, &rmt]() { process_vm_writev(0, &lcl, 1, &rmt, 1, 0); };
+  ExpectRealtimeDeath(Func, "process_vm_writev");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 class RtsanDirectoryTest : public ::testing::Test {
 protected:
   void SetUp() override {
