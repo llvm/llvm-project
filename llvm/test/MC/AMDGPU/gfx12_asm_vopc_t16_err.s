@@ -2,128 +2,251 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64,+real-true16 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12 --implicit-check-not=error %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -mattr=+wavefrontsize64,+real-true16 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12 --implicit-check-not=error %s
 
-v_cmp_class_f16_e32 vcc, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_class_f16_e32 vcc, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
-
-v_cmp_class_f16_e32 vcc, v1, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
-
-v_cmp_class_f16_e32 vcc, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_class_f16_e32 vcc, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:37: error: invalid operand for instruction
-
-v_cmp_class_f16_e32 vcc, v127, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:37: error: invalid operand for instruction
-
-v_cmp_class_f16_e32 vcc, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_class_f16_e32 vcc, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
-
-v_cmp_class_f16_e32 vcc, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
-
-v_cmp_class_f16_e32 vcc, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_class_f16_e32 vcc, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_class_f16_e32 vcc_lo, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_class_f16_e32 vcc_lo, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:40: error: invalid operand for instruction
-
-v_cmp_class_f16_e32 vcc_lo, v127, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:40: error: invalid operand for instruction
-
-v_cmp_class_f16_e32 vcc_lo, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_class_f16_e32 vcc_lo, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:38: error: invalid operand for instruction
-
-v_cmp_class_f16_e32 vcc_lo, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:38: error: invalid operand for instruction
-
-v_cmp_class_f16_e32 vcc_lo, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_class_f16_e32 vcc_lo, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_eq_f16_e32 vcc, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_eq_f16_e32 vcc, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_class_f16_e32 vcc, v1.h, v255.h
 // GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
 
-v_cmp_eq_f16_e32 vcc, v1, v255 quad_perm:[3,2,1,0]
+v_cmp_class_f16_e32 vcc, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
 
-v_cmp_eq_f16_e32 vcc, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_class_f16_e32 vcc, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
 
-v_cmp_eq_f16_e32 vcc, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_class_f16_e32 vcc, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_class_f16_e32 vcc, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_class_f16_e32 vcc, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_class_f16_e32 vcc, v127.h, v255.h
 // GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_eq_f16_e32 vcc, v127, v255 quad_perm:[3,2,1,0]
+v_cmp_class_f16_e32 vcc, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_eq_f16_e32 vcc, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_class_f16_e32 vcc, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_eq_f16_e32 vcc, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+v_cmp_class_f16_e32 vcc, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_eq_f16_e32 vcc, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+v_cmp_class_f16_e32 vcc, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_eq_f16_e32 vcc, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_class_f16_e32 vcc, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_eq_f16_e32 vcc, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_class_f16_e32 vcc, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_eq_f16_e32 vcc_lo, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_class_f16_e32 vcc, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_eq_f16_e32 vcc_lo, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+v_cmp_class_f16_e32 vcc, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_eq_f16_e32 vcc_lo, v1, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+v_cmp_class_f16_e32 vcc, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_eq_f16_e32 vcc_lo, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_class_f16_e32 vcc, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_eq_f16_e32 vcc_lo, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_class_f16_e32 vcc, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
+
+v_cmp_class_f16_e32 vcc, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
+
+v_cmp_class_f16_e32 vcc, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
+
+v_cmp_class_f16_e32 vcc, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
+
+v_cmp_class_f16_e32 vcc, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
+
+v_cmp_class_f16_e32 vcc_lo, v127.h, v255.h
 // GFX12: :[[@LINE-1]]:37: error: invalid operand for instruction
 
-v_cmp_eq_f16_e32 vcc_lo, v127, v255 quad_perm:[3,2,1,0]
+v_cmp_class_f16_e32 vcc_lo, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: :[[@LINE-1]]:37: error: invalid operand for instruction
 
-v_cmp_eq_f16_e32 vcc_lo, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_class_f16_e32 vcc_lo, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:37: error: invalid operand for instruction
 
-v_cmp_eq_f16_e32 vcc_lo, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+v_cmp_class_f16_e32 vcc_lo, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:37: error: invalid operand for instruction
 
-v_cmp_eq_f16_e32 vcc_lo, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+v_cmp_class_f16_e32 vcc_lo, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:37: error: invalid operand for instruction
 
-v_cmp_eq_f16_e32 vcc_lo, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_class_f16_e32 vcc_lo, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:37: error: invalid operand for instruction
 
-v_cmp_eq_f16_e32 vcc_lo, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_class_f16_e32 vcc_lo, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_class_f16_e32 vcc_lo, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_class_f16_e32 vcc_lo, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_class_f16_e32 vcc_lo, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_class_f16_e32 vcc_lo, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_class_f16_e32 vcc_lo, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_class_f16_e32 vcc_lo, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:37: error: invalid operand for instruction
+
+v_cmp_class_f16_e32 vcc_lo, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:37: error: invalid operand for instruction
+
+v_cmp_class_f16_e32 vcc_lo, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:37: error: invalid operand for instruction
+
+v_cmp_class_f16_e32 vcc_lo, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:37: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc, v1.h, v255.h
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc, v127.h, v255.h
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc_lo, v1.h, v255.h
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc_lo, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc_lo, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc_lo, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc_lo, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc_lo, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc_lo, v127.h, v255.h
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc_lo, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc_lo, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc_lo, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc_lo, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc_lo, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc_lo, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc_lo, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc_lo, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc_lo, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc_lo, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc_lo, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc_lo, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc_lo, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc_lo, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
+
+v_cmp_eq_f16_e32 vcc_lo, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
 v_cmp_eq_i16_e32 vcc, v1.h, v255.h
 // GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
@@ -389,71 +512,137 @@ v_cmp_eq_u16_e32 vcc_lo, vcc_lo, v255.h
 v_cmp_eq_u16_e32 vcc_lo, vcc_lo, v255.l
 // GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_ge_f16_e32 vcc, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_ge_f16_e32 vcc, v1.h, v255.h
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
 
-v_cmp_ge_f16_e32 vcc, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_ge_f16_e32 vcc, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc, v127.h, v255.h
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc_lo, v1.h, v255.h
 // GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
 
-v_cmp_ge_f16_e32 vcc, v1, v255 quad_perm:[3,2,1,0]
+v_cmp_ge_f16_e32 vcc_lo, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
 
-v_cmp_ge_f16_e32 vcc, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_ge_f16_e32 vcc_lo, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
 
-v_cmp_ge_f16_e32 vcc, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_ge_f16_e32 vcc_lo, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc_lo, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc_lo, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_ge_f16_e32 vcc_lo, v127.h, v255.h
 // GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_ge_f16_e32 vcc, v127, v255 quad_perm:[3,2,1,0]
+v_cmp_ge_f16_e32 vcc_lo, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_ge_f16_e32 vcc, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_ge_f16_e32 vcc_lo, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_ge_f16_e32 vcc, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+v_cmp_ge_f16_e32 vcc_lo, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_ge_f16_e32 vcc, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+v_cmp_ge_f16_e32 vcc_lo, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_ge_f16_e32 vcc, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_ge_f16_e32 vcc_lo, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_ge_f16_e32 vcc, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_ge_f16_e32 vcc_lo, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_ge_f16_e32 vcc_lo, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_ge_f16_e32 vcc_lo, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_ge_f16_e32 vcc_lo, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+v_cmp_ge_f16_e32 vcc_lo, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_ge_f16_e32 vcc_lo, v1, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+v_cmp_ge_f16_e32 vcc_lo, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_ge_f16_e32 vcc_lo, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_ge_f16_e32 vcc_lo, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_ge_f16_e32 vcc_lo, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:37: error: invalid operand for instruction
+v_cmp_ge_f16_e32 vcc_lo, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_ge_f16_e32 vcc_lo, v127, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:37: error: invalid operand for instruction
+v_cmp_ge_f16_e32 vcc_lo, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_ge_f16_e32 vcc_lo, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_ge_f16_e32 vcc_lo, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_ge_f16_e32 vcc_lo, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+v_cmp_ge_f16_e32 vcc_lo, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_ge_f16_e32 vcc_lo, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
-
-v_cmp_ge_f16_e32 vcc_lo, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_ge_f16_e32 vcc_lo, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_ge_f16_e32 vcc_lo, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
 v_cmp_ge_i16_e32 vcc, v1.h, v255.h
 // GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
@@ -719,71 +908,137 @@ v_cmp_ge_u16_e32 vcc_lo, vcc_lo, v255.h
 v_cmp_ge_u16_e32 vcc_lo, vcc_lo, v255.l
 // GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_gt_f16_e32 vcc, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_gt_f16_e32 vcc, v1.h, v255.h
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
 
-v_cmp_gt_f16_e32 vcc, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_gt_f16_e32 vcc, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc, v127.h, v255.h
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc_lo, v1.h, v255.h
 // GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
 
-v_cmp_gt_f16_e32 vcc, v1, v255 quad_perm:[3,2,1,0]
+v_cmp_gt_f16_e32 vcc_lo, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
 
-v_cmp_gt_f16_e32 vcc, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_gt_f16_e32 vcc_lo, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
 
-v_cmp_gt_f16_e32 vcc, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_gt_f16_e32 vcc_lo, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc_lo, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc_lo, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_gt_f16_e32 vcc_lo, v127.h, v255.h
 // GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_gt_f16_e32 vcc, v127, v255 quad_perm:[3,2,1,0]
+v_cmp_gt_f16_e32 vcc_lo, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_gt_f16_e32 vcc, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_gt_f16_e32 vcc_lo, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_gt_f16_e32 vcc, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+v_cmp_gt_f16_e32 vcc_lo, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_gt_f16_e32 vcc, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+v_cmp_gt_f16_e32 vcc_lo, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_gt_f16_e32 vcc, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_gt_f16_e32 vcc_lo, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_gt_f16_e32 vcc, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_gt_f16_e32 vcc_lo, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_gt_f16_e32 vcc_lo, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_gt_f16_e32 vcc_lo, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_gt_f16_e32 vcc_lo, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+v_cmp_gt_f16_e32 vcc_lo, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_gt_f16_e32 vcc_lo, v1, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+v_cmp_gt_f16_e32 vcc_lo, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_gt_f16_e32 vcc_lo, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_gt_f16_e32 vcc_lo, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_gt_f16_e32 vcc_lo, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:37: error: invalid operand for instruction
+v_cmp_gt_f16_e32 vcc_lo, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_gt_f16_e32 vcc_lo, v127, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:37: error: invalid operand for instruction
+v_cmp_gt_f16_e32 vcc_lo, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_gt_f16_e32 vcc_lo, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_gt_f16_e32 vcc_lo, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_gt_f16_e32 vcc_lo, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+v_cmp_gt_f16_e32 vcc_lo, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_gt_f16_e32 vcc_lo, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
-
-v_cmp_gt_f16_e32 vcc_lo, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_gt_f16_e32 vcc_lo, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_gt_f16_e32 vcc_lo, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
 v_cmp_gt_i16_e32 vcc, v1.h, v255.h
 // GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
@@ -1049,71 +1304,137 @@ v_cmp_gt_u16_e32 vcc_lo, vcc_lo, v255.h
 v_cmp_gt_u16_e32 vcc_lo, vcc_lo, v255.l
 // GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_le_f16_e32 vcc, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_le_f16_e32 vcc, v1.h, v255.h
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
 
-v_cmp_le_f16_e32 vcc, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_le_f16_e32 vcc, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc, v127.h, v255.h
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc_lo, v1.h, v255.h
 // GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
 
-v_cmp_le_f16_e32 vcc, v1, v255 quad_perm:[3,2,1,0]
+v_cmp_le_f16_e32 vcc_lo, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
 
-v_cmp_le_f16_e32 vcc, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_le_f16_e32 vcc_lo, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
 
-v_cmp_le_f16_e32 vcc, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_le_f16_e32 vcc_lo, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc_lo, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc_lo, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_le_f16_e32 vcc_lo, v127.h, v255.h
 // GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_le_f16_e32 vcc, v127, v255 quad_perm:[3,2,1,0]
+v_cmp_le_f16_e32 vcc_lo, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_le_f16_e32 vcc, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_le_f16_e32 vcc_lo, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_le_f16_e32 vcc, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+v_cmp_le_f16_e32 vcc_lo, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_le_f16_e32 vcc, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+v_cmp_le_f16_e32 vcc_lo, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_le_f16_e32 vcc, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_le_f16_e32 vcc_lo, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_le_f16_e32 vcc, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_le_f16_e32 vcc_lo, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_le_f16_e32 vcc_lo, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_le_f16_e32 vcc_lo, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_le_f16_e32 vcc_lo, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+v_cmp_le_f16_e32 vcc_lo, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_le_f16_e32 vcc_lo, v1, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+v_cmp_le_f16_e32 vcc_lo, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_le_f16_e32 vcc_lo, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_le_f16_e32 vcc_lo, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_le_f16_e32 vcc_lo, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:37: error: invalid operand for instruction
+v_cmp_le_f16_e32 vcc_lo, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_le_f16_e32 vcc_lo, v127, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:37: error: invalid operand for instruction
+v_cmp_le_f16_e32 vcc_lo, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_le_f16_e32 vcc_lo, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_le_f16_e32 vcc_lo, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_le_f16_e32 vcc_lo, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+v_cmp_le_f16_e32 vcc_lo, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_le_f16_e32 vcc_lo, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
-
-v_cmp_le_f16_e32 vcc_lo, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_le_f16_e32 vcc_lo, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_le_f16_e32 vcc_lo, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
 v_cmp_le_i16_e32 vcc, v1.h, v255.h
 // GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
@@ -1379,71 +1700,137 @@ v_cmp_le_u16_e32 vcc_lo, vcc_lo, v255.h
 v_cmp_le_u16_e32 vcc_lo, vcc_lo, v255.l
 // GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_lg_f16_e32 vcc, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_lg_f16_e32 vcc, v1.h, v255.h
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
 
-v_cmp_lg_f16_e32 vcc, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_lg_f16_e32 vcc, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc, v127.h, v255.h
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc_lo, v1.h, v255.h
 // GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
 
-v_cmp_lg_f16_e32 vcc, v1, v255 quad_perm:[3,2,1,0]
+v_cmp_lg_f16_e32 vcc_lo, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
 
-v_cmp_lg_f16_e32 vcc, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_lg_f16_e32 vcc_lo, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
 
-v_cmp_lg_f16_e32 vcc, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_lg_f16_e32 vcc_lo, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc_lo, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc_lo, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_lg_f16_e32 vcc_lo, v127.h, v255.h
 // GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_lg_f16_e32 vcc, v127, v255 quad_perm:[3,2,1,0]
+v_cmp_lg_f16_e32 vcc_lo, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_lg_f16_e32 vcc, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_lg_f16_e32 vcc_lo, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_lg_f16_e32 vcc, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+v_cmp_lg_f16_e32 vcc_lo, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_lg_f16_e32 vcc, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+v_cmp_lg_f16_e32 vcc_lo, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_lg_f16_e32 vcc, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_lg_f16_e32 vcc_lo, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_lg_f16_e32 vcc, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_lg_f16_e32 vcc_lo, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_lg_f16_e32 vcc_lo, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_lg_f16_e32 vcc_lo, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_lg_f16_e32 vcc_lo, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+v_cmp_lg_f16_e32 vcc_lo, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_lg_f16_e32 vcc_lo, v1, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+v_cmp_lg_f16_e32 vcc_lo, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_lg_f16_e32 vcc_lo, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_lg_f16_e32 vcc_lo, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_lg_f16_e32 vcc_lo, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:37: error: invalid operand for instruction
+v_cmp_lg_f16_e32 vcc_lo, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmp_lg_f16_e32 vcc_lo, v127, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:37: error: invalid operand for instruction
+v_cmp_lg_f16_e32 vcc_lo, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_lg_f16_e32 vcc_lo, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_lg_f16_e32 vcc_lo, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_lg_f16_e32 vcc_lo, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+v_cmp_lg_f16_e32 vcc_lo, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_lg_f16_e32 vcc_lo, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
-
-v_cmp_lg_f16_e32 vcc_lo, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_lg_f16_e32 vcc_lo, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_lg_f16_e32 vcc_lo, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
 v_cmp_lt_f16_e32 vcc, v1.h, v255.h
 // GFX12: :[[@LINE-1]]:29: error: invalid operand for instruction
@@ -2105,530 +2492,1058 @@ v_cmp_ne_u16_e32 vcc_lo, vcc_lo, v255.h
 v_cmp_ne_u16_e32 vcc_lo, vcc_lo, v255.l
 // GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
 
-v_cmp_neq_f16_e32 vcc, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_neq_f16_e32 vcc, v1.h, v255.h
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
 
-v_cmp_neq_f16_e32 vcc, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_neq_f16_e32 vcc, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc, v127.h, v255.h
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc_lo, v1.h, v255.h
 // GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_neq_f16_e32 vcc, v1, v255 quad_perm:[3,2,1,0]
+v_cmp_neq_f16_e32 vcc_lo, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_neq_f16_e32 vcc, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_neq_f16_e32 vcc_lo, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_neq_f16_e32 vcc, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_neq_f16_e32 vcc_lo, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc_lo, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc_lo, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_neq_f16_e32 vcc_lo, v127.h, v255.h
 // GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
 
-v_cmp_neq_f16_e32 vcc, v127, v255 quad_perm:[3,2,1,0]
+v_cmp_neq_f16_e32 vcc_lo, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
 
-v_cmp_neq_f16_e32 vcc, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_neq_f16_e32 vcc, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
-
-v_cmp_neq_f16_e32 vcc, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
-
-v_cmp_neq_f16_e32 vcc, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_neq_f16_e32 vcc, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_neq_f16_e32 vcc_lo, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_neq_f16_e32 vcc_lo, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
-
-v_cmp_neq_f16_e32 vcc_lo, v1, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
-
-v_cmp_neq_f16_e32 vcc_lo, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_neq_f16_e32 vcc_lo, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:38: error: invalid operand for instruction
-
-v_cmp_neq_f16_e32 vcc_lo, v127, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:38: error: invalid operand for instruction
-
-v_cmp_neq_f16_e32 vcc_lo, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_neq_f16_e32 vcc_lo, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
-
-v_cmp_neq_f16_e32 vcc_lo, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
-
-v_cmp_neq_f16_e32 vcc_lo, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_neq_f16_e32 vcc_lo, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nge_f16_e32 vcc, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nge_f16_e32 vcc, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
-
-v_cmp_nge_f16_e32 vcc, v1, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
-
-v_cmp_nge_f16_e32 vcc, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nge_f16_e32 vcc, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_neq_f16_e32 vcc_lo, v127.h, v255.h quad_perm:[3,2,1,0]
 // GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
 
-v_cmp_nge_f16_e32 vcc, v127, v255 quad_perm:[3,2,1,0]
+v_cmp_neq_f16_e32 vcc_lo, v127.l, v255.l
 // GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
 
-v_cmp_nge_f16_e32 vcc, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nge_f16_e32 vcc, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
-
-v_cmp_nge_f16_e32 vcc, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
-
-v_cmp_nge_f16_e32 vcc, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nge_f16_e32 vcc, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nge_f16_e32 vcc_lo, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nge_f16_e32 vcc_lo, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
-
-v_cmp_nge_f16_e32 vcc_lo, v1, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
-
-v_cmp_nge_f16_e32 vcc_lo, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nge_f16_e32 vcc_lo, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:38: error: invalid operand for instruction
-
-v_cmp_nge_f16_e32 vcc_lo, v127, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:38: error: invalid operand for instruction
-
-v_cmp_nge_f16_e32 vcc_lo, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nge_f16_e32 vcc_lo, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
-
-v_cmp_nge_f16_e32 vcc_lo, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
-
-v_cmp_nge_f16_e32 vcc_lo, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nge_f16_e32 vcc_lo, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_ngt_f16_e32 vcc, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_ngt_f16_e32 vcc, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
-
-v_cmp_ngt_f16_e32 vcc, v1, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
-
-v_cmp_ngt_f16_e32 vcc, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_ngt_f16_e32 vcc, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_neq_f16_e32 vcc_lo, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
 
-v_cmp_ngt_f16_e32 vcc, v127, v255 quad_perm:[3,2,1,0]
+v_cmp_neq_f16_e32 vcc_lo, v127.l, v255.l quad_perm:[3,2,1,0]
 // GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
 
-v_cmp_ngt_f16_e32 vcc, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_neq_f16_e32 vcc_lo, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
 
-v_cmp_ngt_f16_e32 vcc, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+v_cmp_neq_f16_e32 vcc_lo, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
 
-v_cmp_ngt_f16_e32 vcc, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+v_cmp_neq_f16_e32 vcc_lo, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
 
-v_cmp_ngt_f16_e32 vcc, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_neq_f16_e32 vcc_lo, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
 
-v_cmp_ngt_f16_e32 vcc, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_neq_f16_e32 vcc_lo, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
 
-v_cmp_ngt_f16_e32 vcc_lo, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_neq_f16_e32 vcc_lo, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
 
-v_cmp_ngt_f16_e32 vcc_lo, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
-
-v_cmp_ngt_f16_e32 vcc_lo, v1, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
-
-v_cmp_ngt_f16_e32 vcc_lo, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_ngt_f16_e32 vcc_lo, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:38: error: invalid operand for instruction
-
-v_cmp_ngt_f16_e32 vcc_lo, v127, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:38: error: invalid operand for instruction
-
-v_cmp_ngt_f16_e32 vcc_lo, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_ngt_f16_e32 vcc_lo, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
-
-v_cmp_ngt_f16_e32 vcc_lo, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
-
-v_cmp_ngt_f16_e32 vcc_lo, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_ngt_f16_e32 vcc_lo, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nle_f16_e32 vcc, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nle_f16_e32 vcc, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
-
-v_cmp_nle_f16_e32 vcc, v1, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
-
-v_cmp_nle_f16_e32 vcc, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nle_f16_e32 vcc, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_neq_f16_e32 vcc_lo, vcc_hi, v255.h
 // GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
 
-v_cmp_nle_f16_e32 vcc, v127, v255 quad_perm:[3,2,1,0]
+v_cmp_neq_f16_e32 vcc_lo, vcc_hi, v255.l
 // GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
 
-v_cmp_nle_f16_e32 vcc, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nle_f16_e32 vcc, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
-
-v_cmp_nle_f16_e32 vcc, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
-
-v_cmp_nle_f16_e32 vcc, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nle_f16_e32 vcc, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nle_f16_e32 vcc_lo, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nle_f16_e32 vcc_lo, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
-
-v_cmp_nle_f16_e32 vcc_lo, v1, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
-
-v_cmp_nle_f16_e32 vcc_lo, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nle_f16_e32 vcc_lo, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:38: error: invalid operand for instruction
-
-v_cmp_nle_f16_e32 vcc_lo, v127, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:38: error: invalid operand for instruction
-
-v_cmp_nle_f16_e32 vcc_lo, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nle_f16_e32 vcc_lo, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
-
-v_cmp_nle_f16_e32 vcc_lo, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
-
-v_cmp_nle_f16_e32 vcc_lo, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nle_f16_e32 vcc_lo, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nlg_f16_e32 vcc, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nlg_f16_e32 vcc, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
-
-v_cmp_nlg_f16_e32 vcc, v1, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
-
-v_cmp_nlg_f16_e32 vcc, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nlg_f16_e32 vcc, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_neq_f16_e32 vcc_lo, vcc_lo, v255.h
 // GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
 
-v_cmp_nlg_f16_e32 vcc, v127, v255 quad_perm:[3,2,1,0]
+v_cmp_neq_f16_e32 vcc_lo, vcc_lo, v255.l
 // GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
 
-v_cmp_nlg_f16_e32 vcc, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_nge_f16_e32 vcc, v1.h, v255.h
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
 
-v_cmp_nlg_f16_e32 vcc, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_nge_f16_e32 vcc, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc, v127.h, v255.h
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc_lo, v1.h, v255.h
 // GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_nlg_f16_e32 vcc, v128, v2 quad_perm:[3,2,1,0]
+v_cmp_nge_f16_e32 vcc_lo, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_nlg_f16_e32 vcc, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nlg_f16_e32 vcc, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nlg_f16_e32 vcc_lo, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nlg_f16_e32 vcc_lo, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
-
-v_cmp_nlg_f16_e32 vcc_lo, v1, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
-
-v_cmp_nlg_f16_e32 vcc_lo, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nlg_f16_e32 vcc_lo, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:38: error: invalid operand for instruction
-
-v_cmp_nlg_f16_e32 vcc_lo, v127, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:38: error: invalid operand for instruction
-
-v_cmp_nlg_f16_e32 vcc_lo, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nlg_f16_e32 vcc_lo, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
-
-v_cmp_nlg_f16_e32 vcc_lo, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
-
-v_cmp_nlg_f16_e32 vcc_lo, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nlg_f16_e32 vcc_lo, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nlt_f16_e32 vcc, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_nlt_f16_e32 vcc, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_nge_f16_e32 vcc_lo, v1.h, v255.h quad_perm:[3,2,1,0]
 // GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e32 vcc, v1, v255 quad_perm:[3,2,1,0]
+v_cmp_nge_f16_e32 vcc_lo, v1.l, v255.l
 // GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e32 vcc, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_nge_f16_e32 vcc_lo, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e32 vcc, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_nge_f16_e32 vcc_lo, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc_lo, v127.h, v255.h
 // GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e32 vcc, v127, v255 quad_perm:[3,2,1,0]
+v_cmp_nge_f16_e32 vcc_lo, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e32 vcc, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_nge_f16_e32 vcc_lo, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e32 vcc, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_nge_f16_e32 vcc_lo, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc_lo, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc_lo, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc_lo, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc_lo, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc_lo, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc_lo, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc_lo, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc_lo, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc_lo, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc_lo, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc_lo, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nge_f16_e32 vcc_lo, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc, v1.h, v255.h
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc, v127.h, v255.h
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc_lo, v1.h, v255.h
 // GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e32 vcc, v128, v2 quad_perm:[3,2,1,0]
+v_cmp_ngt_f16_e32 vcc_lo, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e32 vcc, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_ngt_f16_e32 vcc_lo, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e32 vcc, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_ngt_f16_e32 vcc_lo, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e32 vcc_lo, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_ngt_f16_e32 vcc_lo, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e32 vcc_lo, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
+v_cmp_ngt_f16_e32 vcc_lo, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e32 vcc_lo, v1, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
+v_cmp_ngt_f16_e32 vcc_lo, v127.h, v255.h
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e32 vcc_lo, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_ngt_f16_e32 vcc_lo, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e32 vcc_lo, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:38: error: invalid operand for instruction
+v_cmp_ngt_f16_e32 vcc_lo, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e32 vcc_lo, v127, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:38: error: invalid operand for instruction
+v_cmp_ngt_f16_e32 vcc_lo, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e32 vcc_lo, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_ngt_f16_e32 vcc_lo, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e32 vcc_lo, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
+v_cmp_ngt_f16_e32 vcc_lo, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e32 vcc_lo, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
+v_cmp_ngt_f16_e32 vcc_lo, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e32 vcc_lo, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_ngt_f16_e32 vcc_lo, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
 
-v_cmp_nlt_f16_e32 vcc_lo, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_ngt_f16_e32 vcc_lo, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
 
-v_cmp_o_f16_e32 vcc, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_ngt_f16_e32 vcc_lo, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
 
-v_cmp_o_f16_e32 vcc, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_ngt_f16_e32 vcc_lo, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc_lo, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc_lo, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc_lo, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc_lo, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_ngt_f16_e32 vcc_lo, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc, v1.h, v255.h
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc, v127.h, v255.h
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc_lo, v1.h, v255.h
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc_lo, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc_lo, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc_lo, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc_lo, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc_lo, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc_lo, v127.h, v255.h
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc_lo, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc_lo, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc_lo, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc_lo, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc_lo, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc_lo, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc_lo, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc_lo, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc_lo, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc_lo, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc_lo, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc_lo, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc_lo, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc_lo, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nle_f16_e32 vcc_lo, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc, v1.h, v255.h
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc, v127.h, v255.h
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc_lo, v1.h, v255.h
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc_lo, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc_lo, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc_lo, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc_lo, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc_lo, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc_lo, v127.h, v255.h
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc_lo, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc_lo, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc_lo, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc_lo, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc_lo, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc_lo, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc_lo, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc_lo, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc_lo, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc_lo, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc_lo, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc_lo, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc_lo, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc_lo, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nlg_f16_e32 vcc_lo, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc, v1.h, v255.h
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc, v127.h, v255.h
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:32: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc_lo, v1.h, v255.h
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc_lo, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc_lo, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc_lo, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc_lo, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc_lo, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc_lo, v127.h, v255.h
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc_lo, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc_lo, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc_lo, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc_lo, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc_lo, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc_lo, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc_lo, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc_lo, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc_lo, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc_lo, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc_lo, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:27: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc_lo, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc_lo, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc_lo, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_nlt_f16_e32 vcc_lo, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:35: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc, v1.h, v255.h
+// GFX12: :[[@LINE-1]]:28: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:28: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:28: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:28: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:28: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:28: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc, v127.h, v255.h
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc_lo, v1.h, v255.h
 // GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
 
-v_cmp_o_f16_e32 vcc, v1, v255 quad_perm:[3,2,1,0]
+v_cmp_o_f16_e32 vcc_lo, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
 
-v_cmp_o_f16_e32 vcc, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_o_f16_e32 vcc_lo, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
 
-v_cmp_o_f16_e32 vcc, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_o_f16_e32 vcc_lo, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc_lo, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc_lo, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc_lo, v127.h, v255.h
 // GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_o_f16_e32 vcc, v127, v255 quad_perm:[3,2,1,0]
+v_cmp_o_f16_e32 vcc_lo, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_o_f16_e32 vcc, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_o_f16_e32 vcc, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
-
-v_cmp_o_f16_e32 vcc, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
-
-v_cmp_o_f16_e32 vcc, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_o_f16_e32 vcc, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_o_f16_e32 vcc_lo, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_o_f16_e32 vcc_lo, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
-
-v_cmp_o_f16_e32 vcc_lo, v1, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
-
-v_cmp_o_f16_e32 vcc_lo, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_o_f16_e32 vcc_lo, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
-
-v_cmp_o_f16_e32 vcc_lo, v127, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
-
-v_cmp_o_f16_e32 vcc_lo, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_o_f16_e32 vcc_lo, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
-
-v_cmp_o_f16_e32 vcc_lo, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
-
-v_cmp_o_f16_e32 vcc_lo, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_o_f16_e32 vcc_lo, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_u_f16_e32 vcc, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_u_f16_e32 vcc, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
-
-v_cmp_u_f16_e32 vcc, v1, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
-
-v_cmp_u_f16_e32 vcc, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-
-v_cmp_u_f16_e32 vcc, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_o_f16_e32 vcc_lo, v127.h, v255.h quad_perm:[3,2,1,0]
 // GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_u_f16_e32 vcc, v127, v255 quad_perm:[3,2,1,0]
+v_cmp_o_f16_e32 vcc_lo, v127.l, v255.l
 // GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_u_f16_e32 vcc, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_o_f16_e32 vcc_lo, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_u_f16_e32 vcc, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
+v_cmp_o_f16_e32 vcc_lo, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc_lo, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:25: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc_lo, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:25: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc_lo, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:25: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc_lo, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:25: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc_lo, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:25: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc_lo, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:25: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc_lo, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc_lo, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc_lo, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_o_f16_e32 vcc_lo, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc, v1.h, v255.h
+// GFX12: :[[@LINE-1]]:28: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:28: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:28: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:28: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:28: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:28: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc, v127.h, v255.h
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:30: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc_lo, v1.h, v255.h
 // GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
 
-v_cmp_u_f16_e32 vcc, v128, v2 quad_perm:[3,2,1,0]
+v_cmp_u_f16_e32 vcc_lo, v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
 
-v_cmp_u_f16_e32 vcc, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_u_f16_e32 vcc_lo, v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
 
-v_cmp_u_f16_e32 vcc, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_u_f16_e32 vcc_lo, v1.l, v255.l
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
 
-v_cmp_u_f16_e32 vcc_lo, v1, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_u_f16_e32 vcc_lo, v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
 
-v_cmp_u_f16_e32 vcc_lo, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
+v_cmp_u_f16_e32 vcc_lo, v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:31: error: invalid operand for instruction
 
-v_cmp_u_f16_e32 vcc_lo, v1, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
+v_cmp_u_f16_e32 vcc_lo, v127.h, v255.h
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_u_f16_e32 vcc_lo, v127, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_u_f16_e32 vcc_lo, v127.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_u_f16_e32 vcc_lo, v127, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
+v_cmp_u_f16_e32 vcc_lo, v127.h, v255.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_u_f16_e32 vcc_lo, v127, v255 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:36: error: invalid operand for instruction
+v_cmp_u_f16_e32 vcc_lo, v127.l, v255.l
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_u_f16_e32 vcc_lo, v128, v2
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_u_f16_e32 vcc_lo, v127.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_u_f16_e32 vcc_lo, v128, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
+v_cmp_u_f16_e32 vcc_lo, v127.l, v255.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
 
-v_cmp_u_f16_e32 vcc_lo, v128, v2 quad_perm:[3,2,1,0]
-// GFX12: :[[@LINE-1]]:34: error: invalid operand for instruction
+v_cmp_u_f16_e32 vcc_lo, v128.h, v2.h
+// GFX12: :[[@LINE-1]]:25: error: invalid operand for instruction
 
-v_cmp_u_f16_e32 vcc_lo, vcc_hi, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_u_f16_e32 vcc_lo, v128.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:25: error: invalid operand for instruction
 
-v_cmp_u_f16_e32 vcc_lo, vcc_lo, v255
-// GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmp_u_f16_e32 vcc_lo, v128.h, v2.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:25: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc_lo, v128.l, v2.l
+// GFX12: :[[@LINE-1]]:25: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc_lo, v128.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:25: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc_lo, v128.l, v2.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:25: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc_lo, vcc_hi, v255.h
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc_lo, vcc_hi, v255.l
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc_lo, vcc_lo, v255.h
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction
+
+v_cmp_u_f16_e32 vcc_lo, vcc_lo, v255.l
+// GFX12: :[[@LINE-1]]:33: error: invalid operand for instruction

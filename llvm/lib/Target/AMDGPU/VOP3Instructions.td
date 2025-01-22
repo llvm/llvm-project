@@ -177,10 +177,13 @@ defm V_MAD_U32_U24 : VOP3Inst <"v_mad_u32_u24", VOP3_Profile<VOP_I32_I32_I32_I32
 defm V_FMA_F32 : VOP3Inst <"v_fma_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, any_fma>, VOPD_Component<0x13, "v_fma_f32">;
 defm V_LERP_U8 : VOP3Inst <"v_lerp_u8", VOP3_Profile<VOP_I32_I32_I32_I32>, int_amdgcn_lerp>;
 
-let SubtargetPredicate = isGFX1250Plus, SchedRW = [WriteIntMul] in {
+let SchedRW = [WriteIntMul] in {
+let SubtargetPredicate = isGFX1250Plus in
 defm V_MAD_U32 : VOP3Inst <"v_mad_u32", V_MAD_U32_PROF>;
+let SubtargetPredicate = isGFX125xOnly in {
 defm V_MAD_NC_U64_U32 : VOP3Inst <"v_mad_nc_u64_u32", VOP_I32_I32_I64_DPP>;
 defm V_MAD_NC_I64_I32 : VOP3Inst <"v_mad_nc_i64_i32", VOP_I32_I32_I64_DPP>;
+}
 }
 
 let SchedRW = [WriteDoubleAdd] in {
@@ -1922,8 +1925,8 @@ defm V_BITOP3_B16         : VOP3_Real_BITOP3_gfx1250_gfx13<0x233>;
 defm V_BITOP3_B32         : VOP3_Real_BITOP3_gfx1250_gfx13<0x234>;
 
 defm V_MAD_U32 : VOP3Only_Realtriple_gfx1250_gfx13<0x235>;
-defm V_MAD_NC_U64_U32 : VOP3Only_Realtriple_gfx1250_NO_DPP_gfx13<0x2fa>;
-defm V_MAD_NC_I64_I32 : VOP3Only_Realtriple_gfx1250_NO_DPP_gfx13<0x2fb>;
+defm V_MAD_NC_U64_U32 : VOP3Only_Realtriple_gfx1250<0x2fa>;
+defm V_MAD_NC_I64_I32 : VOP3Only_Realtriple_gfx1250<0x2fb>;
 defm V_MIN_U64 : VOP3Only_Realtriple_gfx1250_gfx13<0x318, 0x326>;
 defm V_MAX_U64 : VOP3Only_Realtriple_gfx1250_gfx13<0x319, 0x327>;
 defm V_MIN_I64 : VOP3Only_Realtriple_gfx1250_gfx13<0x31a, 0x328>;

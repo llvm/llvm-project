@@ -5,46 +5,46 @@
 
 #include <immintrin.h>
 
-__m128bh test_mm_minmaxne_pbh(__m128bh __A, __m128bh __B) {
-  // CHECK-LABEL: @test_mm_minmaxne_pbh(
-  // CHECK: call <8 x bfloat> @llvm.x86.avx10.vminmaxnepbf16128(
-  return _mm_minmaxne_pbh(__A, __B, 127);
+__m128bh test_mm_minmax_pbh(__m128bh __A, __m128bh __B) {
+  // CHECK-LABEL: @test_mm_minmax_pbh(
+  // CHECK: call <8 x bfloat> @llvm.x86.avx10.vminmaxbf16128(
+  return _mm_minmax_pbh(__A, __B, 127);
 }
 
-__m128bh test_mm_mask_minmaxne_pbh(__m128bh __A, __mmask8 __B, __m128bh __C, __m128bh __D) {
-  // CHECK-LABEL: @test_mm_mask_minmaxne_pbh(
-  // CHECK: call <8 x bfloat> @llvm.x86.avx10.vminmaxnepbf16128(
+__m128bh test_mm_mask_minmax_pbh(__m128bh __A, __mmask8 __B, __m128bh __C, __m128bh __D) {
+  // CHECK-LABEL: @test_mm_mask_minmax_pbh(
+  // CHECK: call <8 x bfloat> @llvm.x86.avx10.vminmaxbf16128(
   // CHECK: select <8 x i1> %{{.*}}, <8 x bfloat> %{{.*}}, <8 x bfloat> %{{.*}}
-  return _mm_mask_minmaxne_pbh(__A, __B, __C, __D, 127);
+  return _mm_mask_minmax_pbh(__A, __B, __C, __D, 127);
 }
 
-__m128bh test_mm_maskz_minmaxne_pbh(__mmask8 __A, __m128bh __B, __m128bh __C) {
-  // CHECK-LABEL: @test_mm_maskz_minmaxne_pbh(
-  // CHECK: call <8 x bfloat> @llvm.x86.avx10.vminmaxnepbf16128(
+__m128bh test_mm_maskz_minmax_pbh(__mmask8 __A, __m128bh __B, __m128bh __C) {
+  // CHECK-LABEL: @test_mm_maskz_minmax_pbh(
+  // CHECK: call <8 x bfloat> @llvm.x86.avx10.vminmaxbf16128(
   // CHECK: zeroinitializer
   // CHECK: select <8 x i1> %{{.*}}, <8 x bfloat> %{{.*}}, <8 x bfloat> %{{.*}}
-  return _mm_maskz_minmaxne_pbh(__A, __B, __C, 127);
+  return _mm_maskz_minmax_pbh(__A, __B, __C, 127);
 }
 
-__m256bh test_mm256_minmaxne_pbh(__m256bh __A, __m256bh __B) {
-  // CHECK-LABEL: @test_mm256_minmaxne_pbh(
-  // CHECK: call <16 x bfloat> @llvm.x86.avx10.vminmaxnepbf16256(
-  return _mm256_minmaxne_pbh(__A, __B, 127);
+__m256bh test_mm256_minmax_pbh(__m256bh __A, __m256bh __B) {
+  // CHECK-LABEL: @test_mm256_minmax_pbh(
+  // CHECK: call <16 x bfloat> @llvm.x86.avx10.vminmaxbf16256(
+  return _mm256_minmax_pbh(__A, __B, 127);
 }
 
-__m256bh test_mm256_mask_minmaxne_pbh(__m256bh __A, __mmask16 __B, __m256bh __C, __m256bh __D) {
-  // CHECK-LABEL: @test_mm256_mask_minmaxne_pbh(
-  // CHECK: call <16 x bfloat> @llvm.x86.avx10.vminmaxnepbf16256(
+__m256bh test_mm256_mask_minmax_pbh(__m256bh __A, __mmask16 __B, __m256bh __C, __m256bh __D) {
+  // CHECK-LABEL: @test_mm256_mask_minmax_pbh(
+  // CHECK: call <16 x bfloat> @llvm.x86.avx10.vminmaxbf16256(
   // CHECK: select <16 x i1> %{{.*}}, <16 x bfloat> %{{.*}}, <16 x bfloat> %{{.*}}
-  return _mm256_mask_minmaxne_pbh(__A, __B, __C, __D, 127);
+  return _mm256_mask_minmax_pbh(__A, __B, __C, __D, 127);
 }
 
-__m256bh test_mm256_maskz_minmaxne_pbh(__mmask16 __A, __m256bh __B, __m256bh __C) {
-  // CHECK-LABEL: @test_mm256_maskz_minmaxne_pbh(
-  // CHECK: call <16 x bfloat> @llvm.x86.avx10.vminmaxnepbf16256(
+__m256bh test_mm256_maskz_minmax_pbh(__mmask16 __A, __m256bh __B, __m256bh __C) {
+  // CHECK-LABEL: @test_mm256_maskz_minmax_pbh(
+  // CHECK: call <16 x bfloat> @llvm.x86.avx10.vminmaxbf16256(
   // CHECK: zeroinitializer
   // CHECK: select <16 x i1> %{{.*}}, <16 x bfloat> %{{.*}}, <16 x bfloat> %{{.*}}
-  return _mm256_maskz_minmaxne_pbh(__A, __B, __C, 127);
+  return _mm256_maskz_minmax_pbh(__A, __B, __C, 127);
 }
 
 __m128d test_mm_minmax_pd(__m128d __A, __m128d __B) {

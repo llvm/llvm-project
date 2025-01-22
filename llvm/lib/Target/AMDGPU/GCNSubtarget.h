@@ -1547,11 +1547,11 @@ public:
   bool hasAddU64SubU64() const { return GFX1250Insts; }
 
   // \returns true if the target has V_MUL_U64/V_MUL_I64 instructions.
-  bool hasVectorMulU64() const { return GFX1250Insts; }
+  bool hasVectorMulU64() const { return GFX1250Insts && !GFX13Insts; }
 
   // \returns true if the target has V_MAD_NC_U64_U32/V_MAD_NC_I64_I32
   // instructions.
-  bool hasMadU64U32NoCarry() const { return GFX1250Insts; }
+  bool hasMadU64U32NoCarry() const { return GFX1250Insts && !GFX13Insts; }
 
   // \returns true if the target has V_{MIN|MAX}_{I|U}64 instructions.
   bool hasIntMinMax64() const { return GFX1250Insts; }

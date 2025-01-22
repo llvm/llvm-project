@@ -149,46 +149,6 @@ v_mad_co_u64_u32 v[4:5], s2, v2, v6, v[8:9] quad_perm:[3,2,1,0]
 // GFX13-NEXT:{{^}}v_mad_co_u64_u32 v[4:5], s2, v2, v6, v[8:9] quad_perm:[3,2,1,0]
 // GFX13-NEXT:{{^}}                                            ^
 
-v_mad_nc_i64_i32 v[2:3], v4, v5, 1 row_share:0 row_mask:0xf bank_mask:0xf
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_mad_nc_i64_i32 v[2:3], v4, v5, 1 row_share:0 row_mask:0xf bank_mask:0xf
-// GFX13-NEXT:{{^}}                                   ^
-
-v_mad_nc_i64_i32 v[2:3], v4, v7, v[8:9] row_share:3 fi:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_mad_nc_i64_i32 v[2:3], v4, v7, v[8:9] row_share:3 fi:1
-// GFX13-NEXT:{{^}}                                        ^
-
-v_mad_nc_i64_i32 v[4:5], v2, v5, v[6:7] dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_mad_nc_i64_i32 v[4:5], v2, v5, v[6:7] dpp8:[7,6,5,4,3,2,1,0]
-// GFX13-NEXT:{{^}}                                        ^
-
-v_mad_nc_i64_i32 v[4:5], v2, v5, v[6:7] quad_perm:[3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_mad_nc_i64_i32 v[4:5], v2, v5, v[6:7] quad_perm:[3,2,1,0]
-// GFX13-NEXT:{{^}}                                        ^
-
-v_mad_nc_u64_u32 v[2:3], v4, v5, 1 row_share:0 row_mask:0xf bank_mask:0xf
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_mad_nc_u64_u32 v[2:3], v4, v5, 1 row_share:0 row_mask:0xf bank_mask:0xf
-// GFX13-NEXT:{{^}}                                   ^
-
-v_mad_nc_u64_u32 v[2:3], v4, v7, v[8:9] row_share:3 fi:1
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_mad_nc_u64_u32 v[2:3], v4, v7, v[8:9] row_share:3 fi:1
-// GFX13-NEXT:{{^}}                                        ^
-
-v_mad_nc_u64_u32 v[4:5], v2, v5, v[6:7] dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_mad_nc_u64_u32 v[4:5], v2, v5, v[6:7] dpp8:[7,6,5,4,3,2,1,0]
-// GFX13-NEXT:{{^}}                                        ^
-
-v_mad_nc_u64_u32 v[4:5], v2, v5, v[6:7] quad_perm:[3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_mad_nc_u64_u32 v[4:5], v2, v5, v[6:7] quad_perm:[3,2,1,0]
-// GFX13-NEXT:{{^}}                                        ^
-
 v_mad_u32 v2, v4, v7, v8 dpp8:[7,6,5,4,3,2,1,0]
 // GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 // GFX13-NEXT:{{^}}v_mad_u32 v2, v4, v7, v8 dpp8:[7,6,5,4,3,2,1,0]

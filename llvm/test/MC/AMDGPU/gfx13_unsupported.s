@@ -288,3 +288,12 @@ image_bvh8_intersect_ray v[0:9], [v[0:1], v[11:12], v[3:5], v[6:8], v9], s[0:3]
 
 v_mov_b64_e32 v[4:5], v[2:3]
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_mad_nc_i64_i32 v[2:3], v4, v7, s[5:6]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_mad_nc_u64_u32 v[2:3], v4, v7, s[5:6]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_mul_u64 v[254:255], v[2:3], v[4:5]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
