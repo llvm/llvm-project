@@ -21,6 +21,16 @@
 namespace llvm {
 namespace offloading {
 
+/// This is the record of an object that just be registered with the offloading
+/// runtime.
+struct EntryTy {
+  void *Address;
+  char *SymbolName;
+  size_t Size;
+  int32_t Flags;
+  int32_t Data;
+};
+
 /// Offloading entry flags for CUDA / HIP. The first three bits indicate the
 /// type of entry while the others are a bit field for additional information.
 enum OffloadEntryKindFlag : uint32_t {
@@ -47,15 +57,6 @@ StructType *getEntryTy(Module &M);
 
 /// Create an offloading section struct used to register this global at
 /// runtime.
-///
-/// Type struct __tgt_offload_entry {
-///   void    *addr;      // Pointer to the offload entry info.
-///                       // (function or global)
-///   char    *name;      // Name of the function or global.
-///   size_t  size;       // Size of the entry info (0 if it a function).
-///   int32_t flags;
-///   int32_t data;
-/// };
 ///
 /// \param M The module to be used
 /// \param Addr The pointer to the global being registered.
