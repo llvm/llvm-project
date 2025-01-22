@@ -550,20 +550,15 @@ defm CP_ASYNC_BULK_CTA_TO_CLUSTER_SHARED32 : CP_ASYNC_BULK_CTA_TO_CLUSTER<Int32R
 //------------------------------
 // Bulk Copy Prefetch Functions
 //------------------------------
-multiclass CP_ASYNC_BULK_PREFETCH_INTR {
-  defvar prefetch = "cp.async.bulk.prefetch.L2.global";
-  def NAME: NVPTXInst<(outs),
-            (ins Int64Regs:$src, Int32Regs:$size),
-            !strconcat(prefetch, " [$src], $size;"), []>,
-            Requires<[hasPTX<80>, hasSM<90>]>;
-  def NAME # _CH: NVPTXInst<(outs),
-                  (ins Int64Regs:$src, Int32Regs:$size, Int64Regs:$ch),
-                  !strconcat(prefetch, ".L2::cache_hint [$src], $size, $ch;"), []>,
-                  Requires<[hasPTX<80>, hasSM<90>]>;
-}
+def CP_ASYNC_BULK_PREFETCH : NVPTXInst<(outs),
+                             (ins Int64Regs:$src, Int32Regs:$size),
+                             "cp.async.bulk.prefetch.L2.global [$src], $size;", []>,
+                             Requires<[hasPTX<80>, hasSM<90>]>;
 
-defm CP_ASYNC_BULK_PREFETCH : CP_ASYNC_BULK_PREFETCH_INTR;
-
+def CP_ASYNC_BULK_PREFETCH_CH : NVPTXInst<(outs),
+                                (ins Int64Regs:$src, Int32Regs:$size, Int64Regs:$ch),
+                                "cp.async.bulk.prefetch.L2.global.L2::cache_hint [$src], $size, $ch;", []>,
+                                Requires<[hasPTX<80>, hasSM<90>]>;
 //-------------------------------------
 // TMA Async Bulk Tensor Copy Functions
 //-------------------------------------

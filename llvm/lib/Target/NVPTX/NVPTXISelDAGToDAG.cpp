@@ -3118,11 +3118,9 @@ void NVPTXDAGToDAGISel::SelectCpAsyncBulkPrefetchL2(SDNode *N) {
   SmallVector<SDValue, 4> Ops(N->ops().slice(2, NumArgs));
   Ops.push_back(N->getOperand(0)); // Chain operand
   
-  unsigned Opcode;
-  if (IsCacheHint)
-    Opcode = NVPTX::CP_ASYNC_BULK_PREFETCH_CH;
-  else
-    Opcode = NVPTX::CP_ASYNC_BULK_PREFETCH;
+  unsigned Opcode = IsCacheHint 
+  ?  NVPTX::CP_ASYNC_BULK_PREFETCH_CH
+  :  NVPTX::CP_ASYNC_BULK_PREFETCH;
   ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
 }
 
