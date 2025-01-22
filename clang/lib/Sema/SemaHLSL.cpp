@@ -46,6 +46,9 @@
 using namespace clang;
 using RegisterType = HLSLResourceBindingAttr::RegisterType;
 
+static CXXRecordDecl *createHostLayoutStruct(Sema &S, CXXRecordDecl *StructDecl,
+                                             HLSLBufferDecl *BufDecl);
+
 static RegisterType getRegisterType(ResourceClass RC) {
   switch (RC) {
   case ResourceClass::SRV:
@@ -296,7 +299,7 @@ static CXXRecordDecl *findRecordDecl(Sema &S, IdentifierInfo *II,
                                      DeclContext *DC) {
   DeclarationNameInfo NameInfo =
       DeclarationNameInfo(DeclarationName(II), SourceLocation());
-  LookupResult R(S, NameInfo, Sema::LookupOrdinaryName);
+  LookupResult R(S, NameInfo, Sema::LookupTagName);
   S.LookupName(R, S.getScopeForContext(DC));
   if (R.isSingleResult())
     return R.getAsSingle<CXXRecordDecl>();
@@ -311,16 +314,16 @@ static IdentifierInfo *getHostLayoutStructName(Sema &S,
                                                bool MustBeUnique,
                                                DeclContext *DC) {
   ASTContext &AST = S.getASTContext();
-  std::string NameBase;
+  StringRef NameBase;
   if (NameBaseII) {
-    NameBase = NameBaseII->getName().str();
+    NameBase = NameBaseII->getName();
   } else {
     // anonymous struct
     NameBase = "anon";
     MustBeUnique = true;
   }
 
-  std::string Name = "__layout_" + NameBase;
+  std::string Name = ("__layout_" + NameBase).str();
   IdentifierInfo *II = &AST.Idents.get(Name, tok::TokenKind::identifier);
   if (!MustBeUnique)
     return II;
@@ -328,7 +331,7 @@ static IdentifierInfo *getHostLayoutStructName(Sema &S,
   unsigned suffix = 0;
   while (true) {
     if (suffix != 0)
-      II = &AST.Idents.get((llvm::Twine(Name) + "_" + Twine(suffix)).str(),
+      II = &AST.Idents.get((Name + "_" + Twine(suffix)).str(),
                            tok::TokenKind::identifier);
     if (!findRecordDecl(S, II, DC))
       return II;
@@ -342,9 +345,6 @@ static IdentifierInfo *getHostLayoutStructName(Sema &S,
 static bool isResourceRecordType(const Type *Ty) {
   return HLSLAttributedResourceType::findHandleTypeOnResource(Ty) != nullptr;
 }
-
-static CXXRecordDecl *createHostLayoutStruct(Sema &S, CXXRecordDecl *StructDecl,
-                                             HLSLBufferDecl *BufDecl);
 
 // Creates a field declaration of given name and type for HLSL buffer layout
 // struct. Returns nullptr if the type cannot be use in HLSL Buffer layout.
@@ -362,10 +362,11 @@ static FieldDecl *createFieldForHostLayoutStruct(Sema &S, const Type *Ty,
         return nullptr;
       Ty = RD->getTypeForDecl();
     }
-  } else if (Ty->isConstantArrayType()) {
-    if (isZeroSizedArray(cast<ConstantArrayType>(Ty)))
-      return nullptr;
   }
+  if (Ty->isConstantArrayType() &&
+      isZeroSizedArray(cast<ConstantArrayType>(Ty)))
+    return nullptr;
+
   QualType QT = QualType(Ty, 0);
   ASTContext &AST = S.getASTContext();
   TypeSourceInfo *TSI = AST.getTrivialTypeSourceInfo(QT, SourceLocation());
