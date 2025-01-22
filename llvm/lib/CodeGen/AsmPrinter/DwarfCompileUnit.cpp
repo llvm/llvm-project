@@ -76,6 +76,7 @@ static dwarf::Tag GetCompileUnitType(UnitKind Kind, DwarfDebug *DW) {
   return dwarf::DW_TAG_compile_unit;
 }
 
+// Translate NVVM IR address space code to DWARF correspondent value
 static unsigned translateToNVVMDWARFAddrSpace(unsigned AddrSpace) {
   switch (AddrSpace) {
   case NVPTXAS::ADDRESS_SPACE_GENERIC:
