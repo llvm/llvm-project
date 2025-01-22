@@ -7436,7 +7436,7 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
 
       // The VPlan-based cost model may calculate the cost of strided load/store
       // which can't be modeled in the legacy cost model.
-      if (isa<VPWidenLoadEVLRecipe>(&R) || isa<VPWidenStoreEVLRecipe>(&R))
+      if (isa<VPWidenLoadEVLRecipe, VPWidenStoreEVLRecipe>(&R))
         if (cast<VPWidenMemoryRecipe>(&R)->isReverse())
           return true;
 

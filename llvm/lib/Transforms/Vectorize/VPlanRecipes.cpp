@@ -2636,7 +2636,7 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
         Mask, EVL};
     NewLI = Builder.CreateIntrinsic(Intrinsic::experimental_vp_strided_load,
                                     {DataTy, PtrTy, Builder.getInt32Ty()},
-                                    Operands, nullptr, "vp.neg.strided.load");
+                                    Operands, nullptr, "vp.reverse.load");
   } else {
     VectorBuilder VBuilder(Builder);
     VBuilder.setEVL(EVL).setMask(Mask);
