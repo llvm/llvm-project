@@ -50,6 +50,9 @@ static const char kContextGetCallSiteLocationDocstring[] =
 static const char kContextGetFileLocationDocstring[] =
     R"(Gets a Location representing a file, line and column)";
 
+static const char kContextGetFileRangeDocstring[] =
+    R"(Gets a Location representing a file, line and column range)";
+
 static const char kContextGetFusedLocationDocstring[] =
     R"(Gets a Location representing a fused location with optional metadata)";
 
@@ -2917,6 +2920,18 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("filename"), nb::arg("line"), nb::arg("col"),
           nb::arg("context").none() = nb::none(),
           kContextGetFileLocationDocstring)
+      .def_static(
+          "file",
+          [](std::string filename, int startLine, int startCol, int endLine,
+             int endCol, DefaultingPyMlirContext context) {
+            return PyLocation(context->getRef(),
+                              mlirLocationFileLineColRangeGet(
+                                  context->get(), toMlirStringRef(filename),
+                                  startLine, startCol, endLine, endCol));
+          },
+          nb::arg("filename"), nb::arg("start_line"), nb::arg("start_col"),
+          nb::arg("end_line"), nb::arg("end_col"),
+          nb::arg("context").none() = nb::none(), kContextGetFileRangeDocstring)
       .def_static(
           "fused",
           [](const std::vector<PyLocation> &pyLocations,
