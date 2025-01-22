@@ -115,12 +115,24 @@ void decompose_bit_field() {
   int d = x...[3];
 }
 
+template <typename T>
+void lambda_capture() {
+  auto [...x] = T{};
+  [=] { (void)sum(x...); }();
+  [&] { (void)sum(x...); }();
+  [x...] { (void)sum(x...); }();
+  [&x...] { (void)sum(x...); }();
+}
+
 int main() {
   decompose_array<int>();
   decompose_tuple<fake_tuple>();
   decompose_struct<my_struct>();
   S<1, 2, 3, 4>::N<5, 6>().foo();
   decompose_bit_field<bit_fields>();
+  lambda_capture<int[5]>();
+  lambda_capture<fake_tuple>();
+  lambda_capture<my_struct>();
 }
 
 // P1061R10 Stuff

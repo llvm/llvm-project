@@ -15298,12 +15298,11 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
         // The transform has determined that we should perform an expansion;
         // transform and capture each of the arguments.
         // expansion of the pattern. Do so.
-        auto *Pack = cast<VarDecl>(C->getCapturedVar());
+        auto *Pack = cast<ValueDecl>(C->getCapturedVar());
         for (unsigned I = 0; I != *NumExpansions; ++I) {
           Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(getSema(), I);
-          VarDecl *CapturedVar
-            = cast_or_null<VarDecl>(getDerived().TransformDecl(C->getLocation(),
-                                                               Pack));
+          ValueDecl *CapturedVar = cast_if_present<ValueDecl>(
+              getDerived().TransformDecl(C->getLocation(), Pack));
           if (!CapturedVar) {
             Invalid = true;
             continue;
