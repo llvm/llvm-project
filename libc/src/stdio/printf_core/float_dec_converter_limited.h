@@ -57,10 +57,6 @@
 #include "src/stdio/printf_core/float_inf_nan_converter.h"
 #include "src/stdio/printf_core/writer.h"
 
-#include <inttypes.h>
-#include <stddef.h>
-#include <string.h>
-
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
@@ -140,7 +136,7 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
       output.exponent = -precision - 1;
     } else {
       // In E mode, generate a string containing the expected number of 0s.
-      memset(output.digits, '0', precision);
+      __builtin_memset(output.digits, '0', precision);
       output.ndigits = precision;
       output.exponent = 0;
     }
@@ -252,7 +248,7 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
       // digit that we already calculated.
       DigitsOutput output;
       output.ndigits = view.size();
-      memcpy(output.digits, view.data(), output.ndigits);
+      __builtin_memcpy(output.digits, view.data(), output.ndigits);
       output.exponent = log10_input;
       return output;
     } else {
@@ -270,7 +266,7 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
       // the exponent of the first digit by adding view.size().
       DigitsOutput output;
       output.ndigits = view.size();
-      memcpy(output.digits, view.data(), output.ndigits);
+      __builtin_memcpy(output.digits, view.data(), output.ndigits);
       output.exponent = int(view.size()) - precision - 1;
       return output;
     }
@@ -453,7 +449,7 @@ LIBC_INLINE int convert_float_inner(Writer *writer,
     cpp::string_view expview = expcvt.view();
     expbuf[0] = (to_conv.conv_name & 32) | 'E';
     explen = expview.size() + 1;
-    memcpy(expbuf + 1, expview.data(), expview.size());
+    __builtin_memcpy(expbuf + 1, expview.data(), expview.size());
   }
 
   // Now we know enough to work out the length of the unpadded output:
@@ -488,7 +484,7 @@ LIBC_INLINE int convert_float_inner(Writer *writer,
 
   // Sign, if any
   if (sign_char)
-    RET_IF_RESULT_NEGATIVE(writer->write(sign_char, 1));
+    RET_IF_RESULT_NEGATIVE(writer->write(sign_char));
 
   // Zero padding, if any
   if (padding == Padding::Zero)
@@ -498,15 +494,15 @@ LIBC_INLINE int convert_float_inner(Writer *writer,
   for (int pos = start; pos < limit; ++pos) {
     if (pos >= 0 && pos < int(output.ndigits)) {
       // Fetch a digit from the buffer
-      RET_IF_RESULT_NEGATIVE(writer->write(output.digits[pos], 1));
+      RET_IF_RESULT_NEGATIVE(writer->write(output.digits[pos]));
     } else {
       // This digit is outside the buffer, so write a zero
-      RET_IF_RESULT_NEGATIVE(writer->write('0', 1));
+      RET_IF_RESULT_NEGATIVE(writer->write('0'));
     }
 
     // Show the decimal point, if this is the digit it comes after
     if (show_point && pos == pointpos)
-      RET_IF_RESULT_NEGATIVE(writer->write(DECIMAL_POINT, 1));
+      RET_IF_RESULT_NEGATIVE(writer->write(DECIMAL_POINT));
   }
 
   // Exponent
