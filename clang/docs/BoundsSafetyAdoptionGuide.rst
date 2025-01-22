@@ -76,7 +76,7 @@ additional run-time checks as necessary.
    }
 
 Run test suites to fix new run-time traps
-========================================
+=========================================
 
 Adopting ``-fbounds-safety`` may cause your program to trap if it violates
 bounds safety or it has incorrect adoption. Thus, it is necessary to perform
