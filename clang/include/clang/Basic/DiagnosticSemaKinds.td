@@ -4877,11 +4877,11 @@ def note_ovl_candidate_explicit_arg_mismatch_named_ttpd : Note<
     "candidate template ignored: invalid explicitly-specified argument "
     "for template parameter %0: "
     "could not convert '%1' from %2 to %4 '%3' (expected a %4, but got '%1')">;
-def note_ovl_candidate_explicit_arg_mismatch_named_nttpd_sp : Note<
+def note_ovl_candidate_explicit_arg_mismatch_named_nttpd_b : Note<
     "candidate template ignored: invalid explicitly-specified argument "
     "for template parameter %0: "
     "could not convert '%1' from %2 to %3">;
-def note_ovl_candidate_explicit_arg_mismatch_named_nttpd_nsp : Note<
+def note_ovl_candidate_explicit_arg_mismatch_named_nttpd_a : Note<
     "candidate template ignored: invalid explicitly-specified argument "
     "for template parameter %0: "
     "expected constant of type %1 got type %2">;

@@ -11728,12 +11728,8 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
               << ParamD->getDeclName() << FirstArg << SecondArg << ParamName
               << "type";
         else {
-          // TODO write tests for type constrained classes
-          if (auto *constraint = TTPD->getTypeConstraint())
-            S.Diag(Templated->getLocation(),
-                   diag::note_ovl_candidate_explicit_arg_mismatch_named_ttpd)
-                << ParamD->getDeclName() << FirstArg << SecondArg << ParamName
-                << "valid type-constrained class";
+          if (TTPD->getTypeConstraint())
+            llvm_unreachable("ill-formed program");
           else
             S.Diag(Templated->getLocation(),
                    diag::note_ovl_candidate_explicit_arg_mismatch_named_ttpd)
@@ -11744,16 +11740,17 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
         if (SecondArg.isNull()) {
           // Expected constant of type 'int', got type 'int'
           S.Diag(Templated->getLocation(),
-                 diag::note_ovl_candidate_explicit_arg_mismatch_named_nttpd_nsp)
+                 diag::note_ovl_candidate_explicit_arg_mismatch_named_nttpd_a)
               << ParamD->getDeclName() << FirstArg << NTTPD->getType();
         } else {
           // Could not convert A from B to C
           S.Diag(Templated->getLocation(),
-                 diag::note_ovl_candidate_explicit_arg_mismatch_named_nttpd_sp)
+                 diag::note_ovl_candidate_explicit_arg_mismatch_named_nttpd_b)
               << ParamD->getDeclName() << FirstArg << SecondArg
               << NTTPD->getType();
         }
       } else if (auto *TTempPD = dyn_cast<TemplateTemplateParmDecl>(ParamD)) {
+        TTempPD->dump();
         S.Diag(Templated->getLocation(),
                diag::note_ovl_candidate_explicit_arg_mismatch_named)
             << ParamD->getDeclName();
