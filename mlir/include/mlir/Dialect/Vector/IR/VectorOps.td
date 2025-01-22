@@ -434,10 +434,9 @@ def Vector_ShuffleOp
     The shuffle operation constructs a permutation (or duplication) of elements
     from two input vectors, returning a vector with the same element type as
     the input and a length that is the same as the shuffle mask. The two input
-    vectors must have the same element type, same rank , and trailing dimension
-    sizes and shuffles their values in the
-    leading dimension (which may differ in size) according to the given mask.
-    The legality rules are:
+    vectors must have the same element type, same rank, and trailing dimension
+    sizes and shuffles their values in the leading dimension (which may differ
+    in size) according to the given mask. The legality rules are:
     * the two operands must have the same element type as the result
       - Either, the two operands and the result must have the same
         rank and trailing dimension sizes, viz. given two k-D operands
@@ -448,7 +447,9 @@ def Vector_ShuffleOp
     * the mask length equals the leading dimension size of the result
     * numbering the input vector indices left to right across the operands, all
       mask values must be within range, viz. given two k-D operands v1 and v2
-      above, all mask values are in the range [0,s_1+t_1)
+      above, all mask values are in the range [0,s_1+t_1). The value `-1`
+      represents a poison mask value, which specifies that the selected element
+      is poison.
 
     Note, scalable vectors are not supported.
 
@@ -463,10 +464,15 @@ def Vector_ShuffleOp
                : vector<2xf32>, vector<2xf32>       ; yields vector<4xf32>
     %3 = vector.shuffle %a, %b[0, 1]
                : vector<f32>, vector<f32>           ; yields vector<2xf32>
+    %4 = vector.shuffle %a, %b[0, 4, -1, -1, -1, -1]
+               : vector<4xf32>, vector<4xf32>       ; yields vector<6xf32>
     ```
   }];
 
   let extraClassDeclaration = [{
+    // Integer to represent a poison value in a vector shuffle mask.
+    static constexpr int64_t kMaskPoisonValue = -1;
+
     VectorType getV1VectorType() {
       return ::llvm::cast<VectorType>(getV1().getType());
     }
@@ -700,6 +706,8 @@ def Vector_ExtractOp :
     %4 = vector.extract %0[%a, %b, %c]: f32 from vector<4x8x16xf32>
     %5 = vector.extract %0[2, %b]: vector<16xf32> from vector<4x8x16xf32>
     ```
+
+    TODO: Implement support for poison indices.
   }];
 
   let arguments = (ins
@@ -890,6 +898,8 @@ def Vector_InsertOp :
     %11 = vector.insert %9, %10[%a, %b, %c] : vector<f32> into vector<4x8x16xf32>
     %12 = vector.insert %4, %10[2, %b] : vector<16xf32> into vector<4x8x16xf32>
     ```
+
+    TODO: Implement support for poison indices.
   }];
 
   let arguments = (ins
@@ -980,6 +990,8 @@ def Vector_ScalableInsertOp :
     ```mlir
     %2 = vector.scalable.insert %0, %1[5] : vector<4xf32> into vector<[16]xf32>
     ```
+
+    TODO: Implement support for poison indices.
   }];
 
   let assemblyFormat = [{
@@ -1031,6 +1043,8 @@ def Vector_ScalableExtractOp :
     ```mlir
     %1 = vector.scalable.extract %0[5] : vector<4xf32> from vector<[16]xf32>
     ```
+
+    TODO: Implement support for poison indices.
   }];
 
   let assemblyFormat = [{
@@ -1075,6 +1089,8 @@ def Vector_InsertStridedSliceOp :
         {offsets = [0, 0, 2], strides = [1, 1]}:
       vector<2x4xf32> into vector<16x4x8xf32>
     ```
+
+    TODO: Implement support for poison indices.
   }];
 
   let assemblyFormat = [{
@@ -1220,6 +1236,8 @@ def Vector_ExtractStridedSliceOp :
     %1 = vector.extract_strided_slice %0[0:2:1][2:4:1]
       vector<4x8x16xf32> to vector<2x4x16xf32>
     ```
+
+    TODO: Implement support for poison indices.
   }];
   let builders = [
     OpBuilder<(ins "Value":$source, "ArrayRef<int64_t>":$offsets,

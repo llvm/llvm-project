@@ -211,6 +211,10 @@ static MlirStringRef toMlirStringRef(const std::string &s) {
   return mlirStringRefCreate(s.data(), s.size());
 }
 
+static MlirStringRef toMlirStringRef(std::string_view s) {
+  return mlirStringRefCreate(s.data(), s.size());
+}
+
 static MlirStringRef toMlirStringRef(const nb::bytes &s) {
   return mlirStringRefCreate(static_cast<const char *>(s.data()), s.size());
 }
@@ -1195,21 +1199,33 @@ PyOperation::~PyOperation() {
   }
 }
 
+namespace {
+
+// Constructs a new object of type T in-place on the Python heap, returning a
+// PyObjectRef to it, loosely analogous to std::make_shared<T>().
+template <typename T, class... Args>
+PyObjectRef<T> makeObjectRef(Args &&...args) {
+  nb::handle type = nb::type<T>();
+  nb::object instance = nb::inst_alloc(type);
+  T *ptr = nb::inst_ptr<T>(instance);
+  new (ptr) T(std::forward<Args>(args)...);
+  nb::inst_mark_ready(instance);
+  return PyObjectRef<T>(ptr, std::move(instance));
+}
+
+} // namespace
+
 PyOperationRef PyOperation::createInstance(PyMlirContextRef contextRef,
                                            MlirOperation operation,
                                            nb::object parentKeepAlive) {
   // Create.
-  PyOperation *unownedOperation =
-      new PyOperation(std::move(contextRef), operation);
-  // Note that the default return value policy on cast is automatic_reference,
-  // which does not take ownership (delete will not be called).
-  // Just be explicit.
-  nb::object pyRef = nb::cast(unownedOperation, nb::rv_policy::take_ownership);
-  unownedOperation->handle = pyRef;
+  PyOperationRef unownedOperation =
+      makeObjectRef<PyOperation>(std::move(contextRef), operation);
+  unownedOperation->handle = unownedOperation.getObject();
   if (parentKeepAlive) {
     unownedOperation->parentKeepAlive = std::move(parentKeepAlive);
   }
-  return PyOperationRef(unownedOperation, std::move(pyRef));
+  return unownedOperation;
 }
 
 PyOperationRef PyOperation::forOperation(PyMlirContextRef contextRef,
@@ -1460,7 +1476,7 @@ static void maybeInsertOperation(PyOperationRef &op,
   }
 }
 
-nb::object PyOperation::create(const std::string &name,
+nb::object PyOperation::create(std::string_view name,
                                std::optional<std::vector<PyType *>> results,
                                std::optional<std::vector<PyValue *>> operands,
                                std::optional<nb::dict> attributes,
@@ -1506,7 +1522,7 @@ nb::object PyOperation::create(const std::string &name,
       } catch (nb::cast_error &err) {
         std::string msg = "Invalid attribute key (not a string) when "
                           "attempting to create the operation \"" +
-                          name + "\" (" + err.what() + ")";
+                          std::string(name) + "\" (" + err.what() + ")";
         throw nb::type_error(msg.c_str());
       }
       try {
@@ -1516,13 +1532,14 @@ nb::object PyOperation::create(const std::string &name,
       } catch (nb::cast_error &err) {
         std::string msg = "Invalid attribute value for the key \"" + key +
                           "\" when attempting to create the operation \"" +
-                          name + "\" (" + err.what() + ")";
+                          std::string(name) + "\" (" + err.what() + ")";
         throw nb::type_error(msg.c_str());
       } catch (std::runtime_error &) {
         // This exception seems thrown when the value is "None".
         std::string msg =
             "Found an invalid (`None`?) attribute value for the key \"" + key +
-            "\" when attempting to create the operation \"" + name + "\"";
+            "\" when attempting to create the operation \"" +
+            std::string(name) + "\"";
         throw std::runtime_error(msg);
       }
     }
@@ -1714,27 +1731,25 @@ static void populateResultTypes(StringRef name, nb::list resultTypeList,
 }
 
 nb::object PyOpView::buildGeneric(
-    const nb::object &cls, std::optional<nb::list> resultTypeList,
-    nb::list operandList, std::optional<nb::dict> attributes,
+    std::string_view name, std::tuple<int, bool> opRegionSpec,
+    nb::object operandSegmentSpecObj, nb::object resultSegmentSpecObj,
+    std::optional<nb::list> resultTypeList, nb::list operandList,
+    std::optional<nb::dict> attributes,
     std::optional<std::vector<PyBlock *>> successors,
     std::optional<int> regions, DefaultingPyLocation location,
     const nb::object &maybeIp) {
   PyMlirContextRef context = location->getContext();
+
   // Class level operation construction metadata.
-  std::string name = nb::cast<std::string>(cls.attr("OPERATION_NAME"));
   // Operand and result segment specs are either none, which does no
   // variadic unpacking, or a list of ints with segment sizes, where each
   // element is either a positive number (typically 1 for a scalar) or -1 to
   // indicate that it is derived from the length of the same-indexed operand
   // or result (implying that it is a list at that position).
-  nb::object operandSegmentSpecObj = cls.attr("_ODS_OPERAND_SEGMENTS");
-  nb::object resultSegmentSpecObj = cls.attr("_ODS_RESULT_SEGMENTS");
-
   std::vector<int32_t> operandSegmentLengths;
   std::vector<int32_t> resultSegmentLengths;
 
   // Validate/determine region count.
-  auto opRegionSpec = nb::cast<std::tuple<int, bool>>(cls.attr("_ODS_REGIONS"));
   int opMinRegionCount = std::get<0>(opRegionSpec);
   bool opHasNoVariadicRegions = std::get<1>(opRegionSpec);
   if (!regions) {
@@ -3236,6 +3251,33 @@ void mlir::python::populateIRCore(nb::module_ &m) {
   auto opViewClass =
       nb::class_<PyOpView, PyOperationBase>(m, "OpView")
           .def(nb::init<nb::object>(), nb::arg("operation"))
+          .def(
+              "__init__",
+              [](PyOpView *self, std::string_view name,
+                 std::tuple<int, bool> opRegionSpec,
+                 nb::object operandSegmentSpecObj,
+                 nb::object resultSegmentSpecObj,
+                 std::optional<nb::list> resultTypeList, nb::list operandList,
+                 std::optional<nb::dict> attributes,
+                 std::optional<std::vector<PyBlock *>> successors,
+                 std::optional<int> regions, DefaultingPyLocation location,
+                 const nb::object &maybeIp) {
+                new (self) PyOpView(PyOpView::buildGeneric(
+                    name, opRegionSpec, operandSegmentSpecObj,
+                    resultSegmentSpecObj, resultTypeList, operandList,
+                    attributes, successors, regions, location, maybeIp));
+              },
+              nb::arg("name"), nb::arg("opRegionSpec"),
+              nb::arg("operandSegmentSpecObj").none() = nb::none(),
+              nb::arg("resultSegmentSpecObj").none() = nb::none(),
+              nb::arg("results").none() = nb::none(),
+              nb::arg("operands").none() = nb::none(),
+              nb::arg("attributes").none() = nb::none(),
+              nb::arg("successors").none() = nb::none(),
+              nb::arg("regions").none() = nb::none(),
+              nb::arg("loc").none() = nb::none(),
+              nb::arg("ip").none() = nb::none())
+
           .def_prop_ro("operation", &PyOpView::getOperationObject)
           .def_prop_ro("opview", [](nb::object self) { return self; })
           .def(
@@ -3250,9 +3292,26 @@ void mlir::python::populateIRCore(nb::module_ &m) {
   opViewClass.attr("_ODS_REGIONS") = nb::make_tuple(0, true);
   opViewClass.attr("_ODS_OPERAND_SEGMENTS") = nb::none();
   opViewClass.attr("_ODS_RESULT_SEGMENTS") = nb::none();
+  // It is faster to pass the operation_name, ods_regions, and
+  // ods_operand_segments/ods_result_segments as arguments to the constructor,
+  // rather than to access them as attributes.
   opViewClass.attr("build_generic") = classmethod(
-      &PyOpView::buildGeneric, nb::arg("cls"),
-      nb::arg("results").none() = nb::none(),
+      [](nb::handle cls, std::optional<nb::list> resultTypeList,
+         nb::list operandList, std::optional<nb::dict> attributes,
+         std::optional<std::vector<PyBlock *>> successors,
+         std::optional<int> regions, DefaultingPyLocation location,
+         const nb::object &maybeIp) {
+        std::string name = nb::cast<std::string>(cls.attr("OPERATION_NAME"));
+        std::tuple<int, bool> opRegionSpec =
+            nb::cast<std::tuple<int, bool>>(cls.attr("_ODS_REGIONS"));
+        nb::object operandSegmentSpec = cls.attr("_ODS_OPERAND_SEGMENTS");
+        nb::object resultSegmentSpec = cls.attr("_ODS_RESULT_SEGMENTS");
+        return PyOpView::buildGeneric(name, opRegionSpec, operandSegmentSpec,
+                                      resultSegmentSpec, resultTypeList,
+                                      operandList, attributes, successors,
+                                      regions, location, maybeIp);
+      },
+      nb::arg("cls"), nb::arg("results").none() = nb::none(),
       nb::arg("operands").none() = nb::none(),
       nb::arg("attributes").none() = nb::none(),
       nb::arg("successors").none() = nb::none(),

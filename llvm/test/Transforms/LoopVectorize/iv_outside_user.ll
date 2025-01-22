@@ -860,6 +860,126 @@ exit:
   ret float %add
 }
 
+define float @fp_postinc_use_fadd_ops_swapped(float %init, ptr noalias nocapture %A, i64 %N, float %fpinc) {
+; VEC-LABEL: define float @fp_postinc_use_fadd_ops_swapped(
+; VEC-SAME: float [[INIT:%.*]], ptr noalias nocapture [[A:%.*]], i64 [[N:%.*]], float [[FPINC:%.*]]) {
+; VEC-NEXT:  [[ENTRY:.*]]:
+; VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
+; VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VEC:       [[VECTOR_PH]]:
+; VEC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; VEC-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
+; VEC-NEXT:    [[TMP0:%.*]] = fmul fast float [[FPINC]], [[DOTCAST]]
+; VEC-NEXT:    [[TMP1:%.*]] = fadd fast float [[INIT]], [[TMP0]]
+; VEC-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[INIT]], i64 0
+; VEC-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x float> [[DOTSPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
+; VEC-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <2 x float> poison, float [[FPINC]], i64 0
+; VEC-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <2 x float> [[DOTSPLATINSERT1]], <2 x float> poison, <2 x i32> zeroinitializer
+; VEC-NEXT:    [[TMP2:%.*]] = fmul fast <2 x float> <float 0.000000e+00, float 1.000000e+00>, [[DOTSPLAT2]]
+; VEC-NEXT:    [[INDUCTION:%.*]] = fadd fast <2 x float> [[DOTSPLAT]], [[TMP2]]
+; VEC-NEXT:    [[TMP3:%.*]] = fmul fast float [[FPINC]], 2.000000e+00
+; VEC-NEXT:    [[DOTSPLATINSERT3:%.*]] = insertelement <2 x float> poison, float [[TMP3]], i64 0
+; VEC-NEXT:    [[DOTSPLAT4:%.*]] = shufflevector <2 x float> [[DOTSPLATINSERT3]], <2 x float> poison, <2 x i32> zeroinitializer
+; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VEC:       [[VECTOR_BODY]]:
+; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VEC-NEXT:    [[VEC_IND:%.*]] = phi <2 x float> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VEC-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
+; VEC-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP4]]
+; VEC-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i32 0
+; VEC-NEXT:    store <2 x float> [[VEC_IND]], ptr [[TMP6]], align 4
+; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; VEC-NEXT:    [[VEC_IND_NEXT]] = fadd fast <2 x float> [[VEC_IND]], [[DOTSPLAT4]]
+; VEC-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; VEC-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
+; VEC:       [[MIDDLE_BLOCK]]:
+; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; VEC-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; VEC:       [[SCALAR_PH]]:
+; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; VEC-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi float [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
+; VEC-NEXT:    br label %[[LOOP:.*]]
+; VEC:       [[LOOP]]:
+; VEC-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; VEC-NEXT:    [[FP_IV:%.*]] = phi float [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP]] ]
+; VEC-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
+; VEC-NEXT:    store float [[FP_IV]], ptr [[GEP_A]], align 4
+; VEC-NEXT:    [[ADD]] = fadd fast float [[FPINC]], [[FP_IV]]
+; VEC-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; VEC-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; VEC-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], {{!llvm.loop ![0-9]+}}
+; VEC:       [[EXIT]]:
+; VEC-NEXT:    [[ADD_LCSSA:%.*]] = phi float [ [[ADD]], %[[LOOP]] ], [ [[TMP1]], %[[MIDDLE_BLOCK]] ]
+; VEC-NEXT:    ret float [[ADD_LCSSA]]
+;
+; INTERLEAVE-LABEL: define float @fp_postinc_use_fadd_ops_swapped(
+; INTERLEAVE-SAME: float [[INIT:%.*]], ptr noalias nocapture [[A:%.*]], i64 [[N:%.*]], float [[FPINC:%.*]]) {
+; INTERLEAVE-NEXT:  [[ENTRY:.*]]:
+; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
+; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; INTERLEAVE:       [[VECTOR_PH]]:
+; INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; INTERLEAVE-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
+; INTERLEAVE-NEXT:    [[TMP0:%.*]] = fmul fast float [[FPINC]], [[DOTCAST]]
+; INTERLEAVE-NEXT:    [[TMP1:%.*]] = fadd fast float [[INIT]], [[TMP0]]
+; INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
+; INTERLEAVE:       [[VECTOR_BODY]]:
+; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; INTERLEAVE-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0
+; INTERLEAVE-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 1
+; INTERLEAVE-NEXT:    [[DOTCAST1:%.*]] = sitofp i64 [[INDEX]] to float
+; INTERLEAVE-NEXT:    [[TMP4:%.*]] = fmul fast float [[FPINC]], [[DOTCAST1]]
+; INTERLEAVE-NEXT:    [[OFFSET_IDX:%.*]] = fadd fast float [[INIT]], [[TMP4]]
+; INTERLEAVE-NEXT:    [[TMP5:%.*]] = fmul fast float 0.000000e+00, [[FPINC]]
+; INTERLEAVE-NEXT:    [[TMP6:%.*]] = fadd fast float [[OFFSET_IDX]], [[TMP5]]
+; INTERLEAVE-NEXT:    [[TMP7:%.*]] = fmul fast float 1.000000e+00, [[FPINC]]
+; INTERLEAVE-NEXT:    [[TMP8:%.*]] = fadd fast float [[OFFSET_IDX]], [[TMP7]]
+; INTERLEAVE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP2]]
+; INTERLEAVE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP3]]
+; INTERLEAVE-NEXT:    store float [[TMP6]], ptr [[TMP9]], align 4
+; INTERLEAVE-NEXT:    store float [[TMP8]], ptr [[TMP10]], align 4
+; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; INTERLEAVE-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; INTERLEAVE-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
+; INTERLEAVE:       [[MIDDLE_BLOCK]]:
+; INTERLEAVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; INTERLEAVE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; INTERLEAVE:       [[SCALAR_PH]]:
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi float [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
+; INTERLEAVE-NEXT:    br label %[[LOOP:.*]]
+; INTERLEAVE:       [[LOOP]]:
+; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; INTERLEAVE-NEXT:    [[FP_IV:%.*]] = phi float [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP]] ]
+; INTERLEAVE-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
+; INTERLEAVE-NEXT:    store float [[FP_IV]], ptr [[GEP_A]], align 4
+; INTERLEAVE-NEXT:    [[ADD]] = fadd fast float [[FPINC]], [[FP_IV]]
+; INTERLEAVE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; INTERLEAVE-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; INTERLEAVE-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], {{!llvm.loop ![0-9]+}}
+; INTERLEAVE:       [[EXIT]]:
+; INTERLEAVE-NEXT:    [[ADD_LCSSA:%.*]] = phi float [ [[ADD]], %[[LOOP]] ], [ [[TMP1]], %[[MIDDLE_BLOCK]] ]
+; INTERLEAVE-NEXT:    ret float [[ADD_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %fp.iv = phi float [ %init, %entry ], [ %add, %loop ]
+  %gep.A = getelementptr inbounds float, ptr %A, i64 %iv
+  store float %fp.iv, ptr %gep.A, align 4
+  %add = fadd fast float %fpinc, %fp.iv
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret float %add
+}
+
 define float @fp_postinc_use_fsub(float %init, ptr noalias nocapture %A, i64 %N, float %fpinc) {
 ; VEC-LABEL: define float @fp_postinc_use_fsub(
 ; VEC-SAME: float [[INIT:%.*]], ptr noalias nocapture [[A:%.*]], i64 [[N:%.*]], float [[FPINC:%.*]]) {
