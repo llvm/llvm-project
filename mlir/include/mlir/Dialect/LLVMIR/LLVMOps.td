@@ -22,6 +22,7 @@ include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/LinkageInterfaces.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
@@ -1493,7 +1494,8 @@ def LLVM_ComdatOp : LLVM_Op<"comdat", [NoTerminator, NoRegionArguments, SymbolTa
 }
 
 def LLVM_LLVMFuncOp : LLVM_Op<"func", [
-    AutomaticAllocationScope, IsolatedFromAbove, FunctionOpInterface
+    AutomaticAllocationScope, IsolatedFromAbove, FunctionOpInterface,
+    GlobalValueLinkageOpInterface
   ]> {
   let summary = "LLVM dialect function.";
 
@@ -1621,6 +1623,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
 
     /// Returns true if the `optimize_none` attribute is set, false otherwise.
     bool isOptimizeNone() { return bool(getOptimizeNoneAttr()); }
+
   }];
 
   let hasCustomAssemblyFormat = 1;
