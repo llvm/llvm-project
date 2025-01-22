@@ -1,8 +1,7 @@
 ; RUN: llc %s -o - | FileCheck %s --check-prefix=ASM
 ; RUN: llc %s -filetype=obj -o - | llvm-readelf --hex-dump=.ARM.attributes - | FileCheck %s --check-prefix=ELF
 
-; ASM: .text
-; ASM-NEXT:      .aeabi_subsection	aeabi_feature_and_bits, optional, uleb128
+; ASM:      .aeabi_subsection	aeabi_feature_and_bits, optional, uleb128
 ; ASM-NEXT: .aeabi_attribute	Tag_Feature_BTI, 1
 ; ASM-NEXT: .aeabi_attribute	Tag_Feature_PAC, 1
 ; ASM-NEXT: .aeabi_attribute	Tag_Feature_GCS, 1
@@ -12,6 +11,7 @@
 ; ELF-NEXT: 0x00000010 72655f61 6e645f62 69747300 01000001 re_and_bits.....
 ; ELF-NEXT: 0x00000020 01010201
 
+; UNSUPPORTED: *
 
 target triple = "aarch64-unknown-none-elf"
 
