@@ -200,13 +200,14 @@ public:
   ///    The User resume state for this thread.
   lldb::StateType GetResumeState() const { return m_resume_state; }
 
-  // This function is called to determine whether the thread needs to
-  // step over a breakpoint and if so, push a step-over-breakpoint thread
-  // plan.
+  /// This function is called on all the threads before "ShouldResume" and
+  /// "WillResume" in case a thread needs to change its state before the
+  /// ThreadList polls all the threads to figure out which ones actually will
+  /// get to run and how.
   ///
   /// \return
   ///    True if we pushed a ThreadPlanStepOverBreakpoint
-  bool SetupToStepOverBreakpointIfNeeded(lldb::RunDirection direction);
+  bool SetupForResume();
 
   // Do not override this function, it is for thread plan logic only
   bool ShouldResume(lldb::StateType resume_state);
