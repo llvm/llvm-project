@@ -2059,25 +2059,25 @@ TEST_F(DebugLineBasicFixture, LookupAddressRangeWithStmtSequenceOffset) {
   dwarfgen::CompileUnit &CU = Gen->addCompileUnit();
   dwarfgen::DIE CUDie = CU.getUnitDIE();
 
-  CUDie.addAttribute(DW_AT_name, DW_FORM_strp, "/tmp/main.c");
+  CUDie.addAttribute(DW_AT_name, DW_FORM_string, "/tmp/main.c");
   CUDie.addAttribute(DW_AT_language, DW_FORM_data2, DW_LANG_C);
 
   dwarfgen::DIE SD1 = CUDie.addChild(DW_TAG_subprogram);
-  SD1.addAttribute(DW_AT_name, DW_FORM_strp, "sub1");
+  SD1.addAttribute(DW_AT_name, DW_FORM_string, "sub1");
   SD1.addAttribute(DW_AT_low_pc, DW_FORM_addr, 0x1000U);
   SD1.addAttribute(DW_AT_high_pc, DW_FORM_addr, 0x1032U);
   // DW_AT_LLVM_stmt_sequence points to the first sequence
   SD1.addAttribute(DW_AT_LLVM_stmt_sequence, DW_FORM_sec_offset, 0x2e);
 
   dwarfgen::DIE SD2 = CUDie.addChild(DW_TAG_subprogram);
-  SD2.addAttribute(DW_AT_name, DW_FORM_strp, "sub2");
+  SD2.addAttribute(DW_AT_name, DW_FORM_string, "sub2");
   SD2.addAttribute(DW_AT_low_pc, DW_FORM_addr, 0x1000U);
   SD2.addAttribute(DW_AT_high_pc, DW_FORM_addr, 0x1032U);
   // DW_AT_LLVM_stmt_sequence points to the second sequence
   SD2.addAttribute(DW_AT_LLVM_stmt_sequence, DW_FORM_sec_offset, 0x42);
 
   dwarfgen::DIE SD3 = CUDie.addChild(DW_TAG_subprogram);
-  SD3.addAttribute(DW_AT_name, DW_FORM_strp, "sub3");
+  SD3.addAttribute(DW_AT_name, DW_FORM_string, "sub3");
   SD3.addAttribute(DW_AT_low_pc, DW_FORM_addr, 0x1000U);
   SD3.addAttribute(DW_AT_high_pc, DW_FORM_addr, 0x1032U);
   // Invalid DW_AT_LLVM_stmt_sequence
@@ -2153,7 +2153,7 @@ TEST_F(DebugLineBasicFixture, LookupAddressRangeWithStmtSequenceOffset) {
         &Sub1Die);
     EXPECT_TRUE(Found);
     ASSERT_EQ(Rows.size(), 1u);
-    EXPECT_EQ(Rows[0], 0);
+    EXPECT_EQ(Rows[0], 0U);
 
     // Look up using Sub2Die, which has a valid DW_AT_LLVM_stmt_sequence and
     // should return row 3
@@ -2163,7 +2163,7 @@ TEST_F(DebugLineBasicFixture, LookupAddressRangeWithStmtSequenceOffset) {
         &Sub2Die);
     EXPECT_TRUE(Found);
     ASSERT_EQ(Rows.size(), 1u);
-    EXPECT_EQ(Rows[0], 3);
+    EXPECT_EQ(Rows[0], 3u);
   }
 }
 } // end anonymous namespace
