@@ -963,7 +963,7 @@ bool isConvertibleToSDWA(MachineInstr &MI,
   // Check if this is already an SDWA instruction
   unsigned Opc = MI.getOpcode();
   if (TII->isSDWA(Opc))
-    return true;
+    return false;
 
   // Check if this instruction has opcode that supports SDWA
   if (AMDGPU::getSDWAOp(Opc) == -1)
