@@ -1124,6 +1124,8 @@ Windows Support
   When `-fms-compatibility-version=18.00` or prior is set on the command line this Microsoft extension is still
   allowed as VS2013 and prior allow it.
 
+- Clang now supports the ``#pragma clang section`` directive for COFF targets.
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
