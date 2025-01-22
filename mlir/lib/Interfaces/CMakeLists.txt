@@ -21,6 +21,7 @@ set(LLVM_OPTIONAL_SOURCES
   ValueBoundsOpInterface.cpp
   VectorInterfaces.cpp
   ViewLikeInterface.cpp
+  UnrollScopeInterface.cpp
   )
 
 function(add_mlir_interface_library name)
@@ -46,6 +47,7 @@ add_mlir_interface_library(CopyOpInterface)
 add_mlir_interface_library(DataLayoutInterfaces)
 add_mlir_interface_library(DerivedAttributeOpInterface)
 add_mlir_interface_library(DestinationStyleOpInterface)
+add_mlir_interface_library(UnrollScopeInterface)
 
 add_mlir_library(MLIRFunctionInterfaces
   FunctionInterfaces.cpp

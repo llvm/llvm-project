@@ -240,6 +240,46 @@ func.func @loop_nest_unroll_full() {
   return
 } // UNROLL-FULL }
 
+
+// UNROLL-FULL-LABEL: func @gpu_launch_unroll
+
+func.func @gpu_launch_unroll() {
+  %c1 = arith.constant 1 : index
+  gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %c1, %arg7 = %c1, %arg8 = %c1) threads(%arg3, %arg4, %arg5) in (%arg9 = %c1, %arg10 = %c1, %arg11 = %c1) {
+    %cst = arith.constant dense<0.000000e+00> : vector<2x4x2x2xf16>
+    %0 = affine.for %arg12 = 0 to 2 iter_args(%arg13 = %cst) -> (vector<2x4x2x2xf16>) {
+      %1 = affine.for %arg14 = 0 to 4 iter_args(%arg15 = %arg13) -> (vector<2x4x2x2xf16>) {
+        %cst_0 = arith.constant dense<0.000000e+00> : vector<2x2xf16>
+        %2 = vector.insert %cst_0, %arg13 [%arg12, %arg14] : vector<2x2xf16> into vector<2x4x2x2xf16>
+        affine.yield %2 : vector<2x4x2x2xf16>
+      }
+      affine.yield %1 : vector<2x4x2x2xf16>
+    }
+    gpu.terminator
+  }
+  return
+}
+
+// UNROLL-FULL:           %[[VAL_0:.*]] = arith.constant 1 : index
+// UNROLL-FULL:           gpu.launch blocks(%[[VAL_1:.*]], %[[VAL_2:.*]], %[[VAL_3:.*]]) in (%[[VAL_4:.*]] = %[[VAL_0]], %[[VAL_5:.*]] = %[[VAL_0]], %[[VAL_6:.*]] = %[[VAL_0]]) threads(%[[VAL_7:.*]], %[[VAL_8:.*]], %[[VAL_9:.*]]) in (%[[VAL_10:.*]] = %[[VAL_0]], %[[VAL_11:.*]] = %[[VAL_0]], %[[VAL_12:.*]] = %[[VAL_0]]) {
+// UNROLL-FULL:             %[[VAL_13:.*]] = arith.constant 0 : index
+// UNROLL-FULL:             %[[VAL_14:.*]] = arith.constant dense<0.000000e+00> : vector<2x4x2x2xf16>
+// UNROLL-FULL:             %[[VAL_15:.*]] = affine.for %[[VAL_16:.*]] = 0 to 2 iter_args(%[[VAL_17:.*]] = %[[VAL_14]]) -> (vector<2x4x2x2xf16>) {
+// UNROLL-FULL:               %[[VAL_18:.*]] = arith.constant dense<0.000000e+00> : vector<2x2xf16>
+// UNROLL-FULL:               %[[VAL_19:.*]] = vector.insert %[[VAL_18]], %[[VAL_17]] {{\[}}%[[VAL_16]], %[[VAL_13]]] : vector<2x2xf16> into vector<2x4x2x2xf16>
+// UNROLL-FULL:               %[[VAL_20:.*]] = affine.apply [[$MAP0]](%[[VAL_13]])
+// UNROLL-FULL:               %[[VAL_21:.*]] = arith.constant dense<0.000000e+00> : vector<2x2xf16>
+// UNROLL-FULL:               %[[VAL_22:.*]] = vector.insert %[[VAL_21]], %[[VAL_17]] {{\[}}%[[VAL_16]], %[[VAL_20]]] : vector<2x2xf16> into vector<2x4x2x2xf16>
+// UNROLL-FULL:               %[[VAL_23:.*]] = affine.apply [[$MAP1]](%[[VAL_13]])
+// UNROLL-FULL:               %[[VAL_24:.*]] = arith.constant dense<0.000000e+00> : vector<2x2xf16>
+// UNROLL-FULL:               %[[VAL_25:.*]] = vector.insert %[[VAL_24]], %[[VAL_17]] {{\[}}%[[VAL_16]], %[[VAL_23]]] : vector<2x2xf16> into vector<2x4x2x2xf16>
+// UNROLL-FULL:               %[[VAL_26:.*]] = affine.apply [[$MAP2]](%[[VAL_13]])
+// UNROLL-FULL:               %[[VAL_27:.*]] = arith.constant dense<0.000000e+00> : vector<2x2xf16>
+// UNROLL-FULL:               %[[VAL_28:.*]] = vector.insert %[[VAL_27]], %[[VAL_17]] {{\[}}%[[VAL_16]], %[[VAL_26]]] : vector<2x2xf16> into vector<2x4x2x2xf16>
+// UNROLL-FULL:               affine.yield %[[VAL_28]] : vector<2x4x2x2xf16>
+// UNROLL-FULL:             }
+// UNROLL-FULL:             gpu.terminator
+
 // SHORT-LABEL: func @loop_nest_outer_unroll() {
 func.func @loop_nest_outer_unroll() {
   // SHORT:      affine.for %arg0 = 0 to 4 {

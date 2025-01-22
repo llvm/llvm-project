@@ -21,6 +21,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/IntegerSet.h"
+#include "mlir/Interfaces/UnrollScopeInterface.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -129,10 +130,10 @@ LogicalResult mlir::affine::promoteIfSingleIteration(AffineForOp forOp) {
   auto *parentBlock = forOp->getBlock();
   if (!iv.use_empty()) {
     if (forOp.hasConstantLowerBound()) {
-      auto func = forOp->getParentOfType<FunctionOpInterface>();
+      auto unrollScope = forOp->getParentOfType<UnrollScopeInterface>();
       OpBuilder builder(forOp->getContext());
-      if (func)
-        builder.setInsertionPointToStart(&func.getFunctionBody().front());
+      if (unrollScope)
+        builder.setInsertionPointToStart(&unrollScope.getUnrollBody().front());
       else
         builder.setInsertionPoint(forOp);
       auto constOp = builder.create<arith::ConstantIndexOp>(
