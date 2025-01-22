@@ -1453,7 +1453,17 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
     // label, so TLSDESC=>IE will be categorized as R_RELAX_TLS_GD_TO_LE. We fix
     // the categorization in RISCV::relocateAllosec->
     if (sym.isPreemptible) {
-      sym.setFlags(NEEDS_TLSGD_TO_IE);
+      // In LoongArch, TLSDESC code sequences share relocations
+      // R_LARCH_TLS_DESC_PC_HI20 and R_LARCH_TLS_DESC_PC_LO12 in
+      // normal/medium/extreme code model. Since the extreme code model cannot
+      // be optimized to IE/LE, the flag NEEDS_TLSGD_TO_IE added previously
+      // needs to be cleared.
+      // In extreme code model, R_LARCH_TLS_DESC64_LO20 and
+      // R_LARCH_TLS_DESC64_HI12 will set NEEDS_TLSDESC flag.
+      if (ctx.arg.emachine == EM_LOONGARCH && sym.hasFlag(NEEDS_TLSDESC))
+        sym.clearFlags(NEEDS_TLSGD_TO_IE);
+      else
+        sym.setFlags(NEEDS_TLSGD_TO_IE);
       sec->addReloc({ctx.target->adjustTlsExpr(type, R_RELAX_TLS_GD_TO_IE),
                      type, offset, addend, &sym});
     } else {
