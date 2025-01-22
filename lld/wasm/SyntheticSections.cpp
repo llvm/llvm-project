@@ -569,8 +569,9 @@ void ElemSection::addEntry(FunctionSymbol *sym) {
   sym->setTableIndex(ctx.arg.tableBase + indirectFunctions.size());
   indirectFunctions.emplace_back(sym);
 
+  // Pad with null function pointers if alignment is requesting.
   if (ctx.arg.functionPointerAlignment > 1) {
-    for (uint32_t i=0; i<ctx.arg.functionPointerAlignment-1; i++) {
+    while ((ctx.arg.tableBase + indirectFunctions.size()) % ctx.arg.functionPointerAlignment) {
       indirectFunctions.push_back(nullptr);
     }
   }
@@ -610,15 +611,11 @@ void ElemSection::writeBody() {
   writeUleb128(os, indirectFunctions.size(), "elem count");
   uint32_t tableIndex = ctx.arg.tableBase;
   for (const FunctionSymbol *sym : indirectFunctions) {
-    if (sym == nullptr) {
-      (void) tableIndex;
-      writeUleb128(os, 0, "function index");
-      ++tableIndex;
-      continue;
+    if (sym != nullptr) {
+        assert(sym->getTableIndex() == tableIndex);
     }
-    assert(sym->getTableIndex() == tableIndex);
     (void) tableIndex;
-    writeUleb128(os, sym->getFunctionIndex(), "function index");
+    writeUleb128(os, sym ? sym->getFunctionIndex() : 0, "function index");
     ++tableIndex;
   }
 }

@@ -636,7 +636,8 @@ static void readConfigs(opt::InputArgList &args) {
   LLVM_DEBUG(errorHandler().verbose = true);
 
   ctx.arg.tableBase = args::getInteger(args, OPT_table_base, 0);
-  ctx.arg.functionPointerAlignment = args::getInteger(args, OPT_function_pointer_alignment, 0);
+  ctx.arg.functionPointerAlignment =
+      args::getInteger(args, OPT_function_pointer_alignment, 0);
   ctx.arg.globalBase = args::getInteger(args, OPT_global_base, 0);
   ctx.arg.initialHeap = args::getInteger(args, OPT_initial_heap, 0);
   ctx.arg.initialMemory = args::getInteger(args, OPT_initial_memory, 0);
