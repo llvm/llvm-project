@@ -347,7 +347,7 @@ define void @pr122913() {
 ; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is i1 false
 ; CHECK-NEXT:  Loop %header: Trip multiple is 1
 entry:
-  br label %header
+  br i1 1, label %bb, label %header
 
 bb:
   br i1 1, label %exit, label %header
