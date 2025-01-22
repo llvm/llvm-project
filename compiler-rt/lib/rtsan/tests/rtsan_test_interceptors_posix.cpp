@@ -238,6 +238,7 @@ private:
   int fd = -1;
 };
 
+#if !SANITIZER_APPLE
 TEST_F(RtsanOpenedMmapTest, MadviseDiesWhenRealtime) {
   auto Func = [this]() { madvise(GetAddr(), GetSize(), MADV_NORMAL); };
   ExpectRealtimeDeath(Func, "madvise");
@@ -245,10 +246,13 @@ TEST_F(RtsanOpenedMmapTest, MadviseDiesWhenRealtime) {
 }
 
 TEST_F(RtsanOpenedMmapTest, PosixMadviseDiesWhenRealtime) {
-  auto Func = [this]() { posix_madvise(GetAddr(), GetSize(), MADV_NORMAL); };
+  auto Func = [this]() {
+    posix_madvise(GetAddr(), GetSize(), POSIX_MADV_NORMAL);
+  };
   ExpectRealtimeDeath(Func, "posix_madvise");
   ExpectNonRealtimeSurvival(Func);
 }
+#endif
 
 TEST_F(RtsanOpenedMmapTest, MprotectDiesWhenRealtime) {
   auto Func = [this]() { mprotect(GetAddr(), GetSize(), PROT_READ); };
