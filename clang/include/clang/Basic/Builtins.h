@@ -74,7 +74,6 @@ struct Info {
   const char *Features;
   HeaderDesc Header;
   LanguageID Langs;
-  bool operator==(const Info &Other) const;
 };
 
 /// Holds information about both target-independent and
@@ -268,10 +267,6 @@ public:
   /// Return real builtin ID (i.e. ID it would have during compilation
   /// for AuxTarget).
   unsigned getAuxBuiltinID(unsigned ID) const { return ID - TSRecords.size(); }
-
-  // Return true if the AuxBuiltin ID represents a target-specific builtin that
-  // is always unsupported on the default target.
-  bool isAuxBuiltinIDAlwaysUnsupportedOnDefaultTarget(unsigned ID) const;
 
   /// Returns true if this is a libc/libm function without the '__builtin_'
   /// prefix.

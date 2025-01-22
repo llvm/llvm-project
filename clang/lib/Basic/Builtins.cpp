@@ -41,14 +41,6 @@ static constexpr Builtin::Info BuiltinInfo[] = {
 #include "clang/Basic/Builtins.inc"
 };
 
-bool Builtin::Info::operator==(const Builtin::Info &Other) const {
-  auto StrCompare = [](StringRef A, StringRef B) { return A == B; };
-  return Name == Other.Name && StrCompare(Type, Other.Type) &&
-         StrCompare(Attributes, Other.Attributes) &&
-         StrCompare(Features, Other.Features) && Header.ID == Other.Header.ID &&
-         Langs == Other.Langs;
-}
-
 const Builtin::Info &Builtin::Context::getRecord(unsigned ID) const {
   if (ID < Builtin::FirstTSBuiltin)
     return BuiltinInfo[ID];
@@ -189,17 +181,6 @@ unsigned Builtin::Context::getRequiredVectorWidth(unsigned ID) const {
   unsigned Width = ::strtol(WidthPos, &EndPos, 10);
   assert(*EndPos == ':' && "Vector width specific must end with a ':'");
   return Width;
-}
-
-bool Builtin::Context::isAuxBuiltinIDAlwaysUnsupportedOnDefaultTarget(
-    unsigned ID) const {
-  assert(isAuxBuiltinID(ID) && "Expected aux target builtin ID");
-  const auto &Record = getRecord(ID);
-  for (const auto &MainTargetBuiltin : TSRecords)
-    if (Record == MainTargetBuiltin)
-      return false;
-
-  return true;
 }
 
 bool Builtin::Context::isLike(unsigned ID, unsigned &FormatIdx,
