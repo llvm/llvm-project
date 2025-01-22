@@ -282,7 +282,7 @@ static Constant *getMemSetPattern16Value(MemSetPatternInst *Inst,
     return C;
 
   // Otherwise, we'll use an array of the constants.
-  unsigned ArraySize = 16 / Size;
+  uint64_t ArraySize = 16 / Size;
   ArrayType *AT = ArrayType::get(V->getType(), ArraySize);
   return ConstantArray::get(AT, std::vector<Constant *>(ArraySize, C));
 }
