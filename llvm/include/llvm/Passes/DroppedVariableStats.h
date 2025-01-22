@@ -96,6 +96,8 @@ protected:
     DenseSet<VarID> &DebugVariablesBeforeSet =
         DbgVariables.DebugVariablesBefore;
     DenseSet<VarID> &DebugVariablesAfterSet = DbgVariables.DebugVariablesAfter;
+    if (InlinedAts.back().find(FuncName) == InlinedAts.back().end())
+      return;
     DenseMap<VarID, DILocation *> &InlinedAtsMap = InlinedAts.back()[FuncName];
     // Find an Instruction that shares the same scope as the dropped #dbg_value
     // or has a scope that is the child of the scope of the #dbg_value, and has
