@@ -1334,6 +1334,10 @@ def FeatureRelax
     : SubtargetFeature<"relax", "EnableLinkerRelax", "true",
                        "Enable Linker relaxation.">;
 
+def FeatureDisableAsmCompression
+    : SubtargetFeature<"disable-asm-compression", "EnableAsmCompression", "false",
+                       "Disable Automatic Assembly Compression.">;
+
 foreach i = {1-31} in
   def FeatureReserveX#i :
       SubtargetFeature<"reserve-x"#i, "UserReservedRegister[RISCV::X"#i#"]",

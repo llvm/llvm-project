@@ -254,7 +254,9 @@ void RISCVAsmPrinter::LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
 bool RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst,
                                      const MCSubtargetInfo &SubtargetInfo) {
   MCInst CInst;
-  bool Res = RISCVRVC::compress(CInst, Inst, SubtargetInfo);
+  bool Res = false;
+  if (!SubtargetInfo.hasFeature(RISCV::FeatureDisableAsmCompression))
+    Res = RISCVRVC::compress(CInst, Inst, SubtargetInfo);
   if (Res)
     ++RISCVNumInstrsCompressed;
   S.emitInstruction(Res ? CInst : Inst, SubtargetInfo);

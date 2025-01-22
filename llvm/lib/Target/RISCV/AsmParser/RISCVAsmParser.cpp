@@ -3067,6 +3067,8 @@ bool RISCVAsmParser::parseDirectiveOption() {
 
     getTargetStreamer().emitDirectiveOptionRVC();
     setFeatureBits(RISCV::FeatureStdExtC, "c");
+    clearFeatureBits(RISCV::FeatureDisableAsmCompression,
+                     "disable-asm-compression");
     return false;
   }
 
@@ -3077,6 +3079,28 @@ bool RISCVAsmParser::parseDirectiveOption() {
     getTargetStreamer().emitDirectiveOptionNoRVC();
     clearFeatureBits(RISCV::FeatureStdExtC, "c");
     clearFeatureBits(RISCV::FeatureStdExtZca, "zca");
+    setFeatureBits(RISCV::FeatureDisableAsmCompression,
+                   "disable-asm-compression");
+    return false;
+  }
+
+  if (Option == "autocompress") {
+    if (Parser.parseEOL())
+      return true;
+
+    getTargetStreamer().emitDirectiveOptionAutoCompress();
+    clearFeatureBits(RISCV::FeatureDisableAsmCompression,
+                     "disable-asm-compression");
+    return false;
+  }
+
+  if (Option == "noautocompress") {
+    if (Parser.parseEOL())
+      return true;
+
+    getTargetStreamer().emitDirectiveOptionNoAutoCompress();
+    setFeatureBits(RISCV::FeatureDisableAsmCompression,
+                   "disable-asm-compression");
     return false;
   }
 
@@ -3329,7 +3353,9 @@ bool RISCVAsmParser::parseDirectiveVariantCC() {
 
 void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
   MCInst CInst;
-  bool Res = RISCVRVC::compress(CInst, Inst, getSTI());
+  bool Res = false;
+  if (!getSTI().hasFeature(RISCV::FeatureDisableAsmCompression))
+    Res = RISCVRVC::compress(CInst, Inst, getSTI());
   if (Res)
     ++RISCVNumInstrsCompressed;
   S.emitInstruction((Res ? CInst : Inst), getSTI());

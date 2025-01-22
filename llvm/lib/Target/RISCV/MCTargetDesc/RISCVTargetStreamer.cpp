@@ -39,6 +39,8 @@ void RISCVTargetStreamer::emitDirectiveOptionPIC() {}
 void RISCVTargetStreamer::emitDirectiveOptionNoPIC() {}
 void RISCVTargetStreamer::emitDirectiveOptionRVC() {}
 void RISCVTargetStreamer::emitDirectiveOptionNoRVC() {}
+void RISCVTargetStreamer::emitDirectiveOptionAutoCompress() {}
+void RISCVTargetStreamer::emitDirectiveOptionNoAutoCompress() {}
 void RISCVTargetStreamer::emitDirectiveOptionRelax() {}
 void RISCVTargetStreamer::emitDirectiveOptionNoRelax() {}
 void RISCVTargetStreamer::emitDirectiveOptionArch(
@@ -120,6 +122,14 @@ void RISCVTargetAsmStreamer::emitDirectiveOptionRVC() {
 
 void RISCVTargetAsmStreamer::emitDirectiveOptionNoRVC() {
   OS << "\t.option\tnorvc\n";
+}
+
+void RISCVTargetAsmStreamer::emitDirectiveOptionAutoCompress() {
+  OS << "\t.option\tautocompress\n";
+}
+
+void RISCVTargetAsmStreamer::emitDirectiveOptionNoAutoCompress() {
+  OS << "\t.option\tnoautocompress\n";
 }
 
 void RISCVTargetAsmStreamer::emitDirectiveOptionRelax() {
