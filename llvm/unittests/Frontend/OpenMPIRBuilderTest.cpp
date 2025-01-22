@@ -3087,8 +3087,7 @@ TEST_F(OpenMPIRBuilderTest, CriticalDirective) {
   EXPECT_EQ(CriticalEndCI->arg_size(), 3U);
   EXPECT_TRUE(isa<GlobalVariable>(CriticalEndCI->getArgOperand(0)));
   EXPECT_EQ(CriticalEndCI->getArgOperand(1), CriticalEntryCI->getArgOperand(1));
-  PointerType *CriticalNamePtrTy =
-      PointerType::getUnqual(ArrayType::get(Type::getInt32Ty(Ctx), 8));
+  PointerType *CriticalNamePtrTy = PointerType::getUnqual(Ctx);
   EXPECT_EQ(CriticalEndCI->getArgOperand(2), CriticalEntryCI->getArgOperand(2));
   GlobalVariable *GV =
       dyn_cast<GlobalVariable>(CriticalEndCI->getArgOperand(2));
