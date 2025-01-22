@@ -91,4 +91,4 @@ public:
 
 } // end namespace clang
 
-#endif
+#endif // LLVM_CLANG_AST_STMTSYCL_H
