@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Process.h"
+#include "llvm/Config/config.h" // for HAVE_SETENV
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"

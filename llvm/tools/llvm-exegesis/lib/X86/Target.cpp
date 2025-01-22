@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 #include "../Target.h"
-
 #include "../Error.h"
 #include "../MmapUtils.h"
 #include "../ParallelSnippetGenerator.h"
@@ -20,16 +19,17 @@
 #include "X86RegisterInfo.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/Config/config.h" // for HAVE_LIBPFM, LIBPFM_HAS_FIELD_CYCLES
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TargetParser/Host.h"
-
 #include <memory>
 #include <string>
 #include <vector>
+
 #if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
 #include <immintrin.h>
 #include <intrin.h>
