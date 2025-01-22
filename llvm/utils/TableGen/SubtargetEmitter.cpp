@@ -1308,23 +1308,30 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
       }
       ConstRecVec ValidWrites =
           ReadAdvance->getValueAsListOfDefs("ValidWrites");
-      IdxVec WriteIDs;
+      std::vector<int64_t> CycleTunables =
+          ReadAdvance->getValueAsListOfInts("CycleTunables");
+      std::vector<std::pair<unsigned, int>> WriteIDs;
+      if (!CycleTunables.empty() && CycleTunables.size() > ValidWrites.size())
+        PrintFatalError(ReadAdvance->getLoc(),
+                        "If specified, CycleTunables must have at most the "
+                        "same number of elements of ValidWrites.\n");
+      CycleTunables.resize(ValidWrites.size(), 0);
       if (ValidWrites.empty())
-        WriteIDs.push_back(0);
+        WriteIDs.push_back(std::make_pair(0, 0));
       else {
-        for (const Record *VW : ValidWrites) {
+        for (const auto [VW, CT] : zip_equal(ValidWrites, CycleTunables)) {
           unsigned WriteID = SchedModels.getSchedRWIdx(VW, /*IsRead=*/false);
           assert(WriteID != 0 &&
                  "Expected a valid SchedRW in the list of ValidWrites");
-          WriteIDs.push_back(WriteID);
+          WriteIDs.push_back(std::make_pair(WriteID, CT));
         }
       }
       llvm::sort(WriteIDs);
-      for (unsigned W : WriteIDs) {
+      for (const auto &[W, T] : WriteIDs) {
         MCReadAdvanceEntry RAEntry;
         RAEntry.UseIdx = UseIdx;
         RAEntry.WriteResourceID = W;
-        RAEntry.Cycles = ReadAdvance->getValueAsInt("Cycles");
+        RAEntry.Cycles = ReadAdvance->getValueAsInt("Cycles") + T;
         ReadAdvanceEntries.push_back(RAEntry);
       }
     }

@@ -21,7 +21,9 @@ def Read_D : SchedRead;
 
 // CHECK: extern const llvm::MCReadAdvanceEntry MyTargetReadAdvanceTable[] = {
 // CHECK-NEXT:  {0,  0,  0}, // Invalid
-// CHECK-NEXT:  {0,  3,  2} // #1
+// CHECK-NEXT:  {0,  1,  1}, // #1
+// CHECK-NEXT:  {0,  2,  3}, // #2
+// CHECK-NEXT:  {0,  3,  2} // #3
 // CHECK-NEXT: }; // MyTargetReadAdvanceTable
 
 let SchedModel = SchedModel_A in {
@@ -33,7 +35,7 @@ let SchedModel = SchedModel_A in {
   def : InstRW<[Write_B], (instrs Inst_B)>;
   def : InstRW<[Write_C, Read_D], (instrs Inst_C)>;
 
-  def : ReadAdvance<Read_D, 2, [Write_C]>;
+  def : ReadAdvance<Read_D, 2, [Write_A, Write_B, Write_C], [-1, 1]>;
 }
 
 def ProcessorA: ProcessorModel<"ProcessorA", SchedModel_A, []>;
