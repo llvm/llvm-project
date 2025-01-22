@@ -287,7 +287,7 @@ C++23 Feature Support
 
 - Extend lifetime of temporaries in mem-default-init for P2718R0. Clang now fully
   supports `P2718R0 Lifetime extension in range-based for loops <https://wg21.link/P2718R0>`_.
-  
+
 - ``__cpp_explicit_this_parameter`` is now defined. (#GH82780)
 
 C++20 Feature Support
@@ -688,7 +688,7 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses dangling references for C++20's parenthesized aggregate initialization (#101957).
 
-- Fixed a bug where Clang would not emit ``-Wunused-private-field`` warnings when an unrelated class 
+- Fixed a bug where Clang would not emit ``-Wunused-private-field`` warnings when an unrelated class
   defined a defaulted comparison operator (#GH116270).
 
   .. code-block:: c++
@@ -907,7 +907,7 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure caused by invalid default argument substitutions in non-defining
   friend declarations. (#GH113324)
 - Fix a crash caused by incorrect argument position in merging deduced template arguments. (#GH113659)
-- Fixed a parser crash when using pack indexing as a nested name specifier. (#GH119072) 
+- Fixed a parser crash when using pack indexing as a nested name specifier. (#GH119072)
 - Fixed a null pointer dereference issue when heuristically computing ``sizeof...(pack)`` expressions. (#GH81436)
 - Fixed an assertion failure caused by mangled names with invalid identifiers. (#GH112205)
 - Fixed an incorrect lambda scope of generic lambdas that caused Clang to crash when computing potential lambda
@@ -922,6 +922,8 @@ Bug Fixes to C++ Support
   (`LWG3929 <https://wg21.link/LWG3929>`__.) (#GH121278)
 - Clang now identifies unexpanded parameter packs within the type constraint on a non-type template parameter. (#GH88866)
 - Fixed an issue while resolving type of expression indexing into a pack of values of non-dependent type (#GH121242)
+- Fixed assertions or false compiler diagnostics in the case of C++ modules for
+  lambda functions or inline friend functions defined inside templates (#GH122493).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
