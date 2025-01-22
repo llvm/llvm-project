@@ -705,8 +705,9 @@ public:
   /// Clones this operation.
   nanobind::object clone(const nanobind::object &ip);
 
-private:
   PyOperation(PyMlirContextRef contextRef, MlirOperation operation);
+
+private:
   static PyOperationRef createInstance(PyMlirContextRef contextRef,
                                        MlirOperation operation,
                                        nanobind::object parentKeepAlive);
