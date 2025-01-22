@@ -15,6 +15,8 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/ObjectYAML/ELFYAML.h"
+#include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -371,5 +373,88 @@ Error llvm::offloading::amdgpu::getAMDGPUMetaDataFromImage(
         return Err;
     }
   }
+  return Error::success();
+}
+Error offloading::intel::containerizeOpenMPSPIRVImage(
+    std::unique_ptr<MemoryBuffer> &Img) {
+  constexpr char INTEL_ONEOMP_OFFLOAD_VERSION[] = "1.0";
+  constexpr int NT_INTEL_ONEOMP_OFFLOAD_VERSION = 1;
+  constexpr int NT_INTEL_ONEOMP_OFFLOAD_IMAGE_COUNT = 2;
+  constexpr int NT_INTEL_ONEOMP_OFFLOAD_IMAGE_AUX = 3;
+
+  // Start creating notes for the ELF container.
+  std::vector<ELFYAML::NoteEntry> Notes;
+  std::string Version = toHex(INTEL_ONEOMP_OFFLOAD_VERSION);
+  Notes.emplace_back(ELFYAML::NoteEntry{"INTELONEOMPOFFLOAD",
+                                        yaml::BinaryRef(Version),
+                                        NT_INTEL_ONEOMP_OFFLOAD_VERSION});
+
+  // The AuxInfo string will hold auxiliary information for the image.
+  // ELFYAML::NoteEntry structures will hold references to the
+  // string, so we have to make sure the string is valid.
+  std::string AuxInfo;
+
+  // TODO: Pass compile/link opts
+  StringRef CompileOpts = "";
+  StringRef LinkOpts = "";
+
+  unsigned ImageFmt = 1; // SPIR-V format
+
+  AuxInfo = toHex((Twine(0) + Twine('\0') + Twine(ImageFmt) + Twine('\0') +
+                   CompileOpts + Twine('\0') + LinkOpts)
+                      .str());
+  Notes.emplace_back(ELFYAML::NoteEntry{"INTELONEOMPOFFLOAD",
+                                        yaml::BinaryRef(AuxInfo),
+                                        NT_INTEL_ONEOMP_OFFLOAD_IMAGE_AUX});
+
+  std::string ImgCount = toHex(Twine(1).str()); // always one image per ELF
+  Notes.emplace_back(ELFYAML::NoteEntry{"INTELONEOMPOFFLOAD",
+                                        yaml::BinaryRef(ImgCount),
+                                        NT_INTEL_ONEOMP_OFFLOAD_IMAGE_COUNT});
+
+  std::string YamlFile;
+  llvm::raw_string_ostream YamlFileStream(YamlFile);
+
+  // Write YAML template file.
+  {
+    // We use 64-bit little-endian ELF currently.
+    ELFYAML::FileHeader Header{};
+    Header.Class = ELF::ELFCLASS64;
+    Header.Data = ELF::ELFDATA2LSB;
+    Header.Type = ELF::ET_DYN;
+    // Use an existing Intel machine type as there is not one specifically for
+    // Intel GPUs.
+    Header.Machine = ELF::EM_IA_64;
+
+    // Create a section with notes.
+    ELFYAML::NoteSection Section{};
+    Section.Type = ELF::SHT_NOTE;
+    Section.AddressAlign = 0;
+    Section.Name = ".note.inteloneompoffload";
+    Section.Notes.emplace(std::move(Notes));
+
+    ELFYAML::Object Object{};
+    Object.Header = Header;
+    Object.Chunks.push_back(
+        std::make_unique<ELFYAML::NoteSection>(std::move(Section)));
+
+    // Create the section that will hold the image
+    ELFYAML::RawContentSection ImageSection{};
+    ImageSection.Type = ELF::SHT_PROGBITS;
+    ImageSection.AddressAlign = 0;
+    std::string Name = "__openmp_offload_spirv_0";
+    ImageSection.Name = Name;
+    ImageSection.Content =
+        llvm::yaml::BinaryRef(arrayRefFromStringRef(Img->getBuffer()));
+    Object.Chunks.push_back(
+        std::make_unique<ELFYAML::RawContentSection>(std::move(ImageSection)));
+    Error Err = Error::success();
+    llvm::yaml::yaml2elf(
+        Object, YamlFileStream,
+        [&Err](const Twine &Msg) { Err = createStringError(Msg); }, UINT64_MAX);
+    if (Err)
+      return Err;
+  }
+  Img = MemoryBuffer::getMemBufferCopy(YamlFile);
   return Error::success();
 }

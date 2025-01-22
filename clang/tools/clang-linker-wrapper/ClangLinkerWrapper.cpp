@@ -605,6 +605,17 @@ Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
   }
 }
 
+Error containerizeRawImage(std::unique_ptr<MemoryBuffer> &Img, OffloadKind Kind,
+                           const ArgList &Args) {
+  llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
+  if (Kind != OFK_OpenMP || !Triple.isSPIRV() ||
+      Triple.getVendor() != llvm::Triple::Intel)
+    return Error::success();
+  if (Error E = offloading::intel::containerizeOpenMPSPIRVImage(Img))
+    return E;
+  return Error::success();
+}
+
 Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
   const OffloadBinary &Binary = *File.getBinary();
 
@@ -959,6 +970,10 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
         else
           return createFileError(*OutputOrErr, EC);
       }
+
+      // Manually containerize offloading images not in ELF format.
+      if (Error E = containerizeRawImage(*FileOrErr, Kind, LinkerArgs))
+        return E;
 
       std::scoped_lock<decltype(ImageMtx)> Guard(ImageMtx);
       OffloadingImage TheImage{};
