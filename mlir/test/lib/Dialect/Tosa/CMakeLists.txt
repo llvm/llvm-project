@@ -8,8 +8,8 @@ add_mlir_dialect_library(MLIRTosaTestPasses
 
   DEPENDS
   MLIRTosaPassIncGen
-  )
-mlir_target_link_libraries(MLIRTosaTestPasses PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIRFuncDialect
   MLIRPass
   MLIRTosaDialect

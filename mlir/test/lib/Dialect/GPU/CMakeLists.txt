@@ -36,8 +36,8 @@ add_mlir_library(MLIRGPUTestPasses
   TestGpuRewrite.cpp
 
   EXCLUDE_FROM_LIBMLIR
-  )
-mlir_target_link_libraries(MLIRGPUTestPasses PUBLIC
+
+  LINK_LIBS PUBLIC
   ${LIBS}
   )
 

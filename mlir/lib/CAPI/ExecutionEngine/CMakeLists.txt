@@ -1,8 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   nativecodegen
   native
-  orcjit
-  support
 )
   
 # Main API shared library.

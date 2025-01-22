@@ -27,8 +27,8 @@ add_mlir_library(MLIRTestIR
   TestVisitorsGeneric.cpp
 
   EXCLUDE_FROM_LIBMLIR
-  )
-mlir_target_link_libraries(MLIRTestIR PUBLIC
+
+  LINK_LIBS PUBLIC
   MLIRPass
   MLIRBytecodeReader
   MLIRBytecodeWriter
