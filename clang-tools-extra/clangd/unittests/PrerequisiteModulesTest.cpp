@@ -34,6 +34,8 @@ public:
         TFS(TFS) {
     this->ExtraClangFlags.push_back("-std=c++20");
     this->ExtraClangFlags.push_back("-c");
+    this->ExtraClangFlags.push_back("-fmodules");
+    this->ExtraClangFlags.push_back("-fcxx-modules");
   }
 
   void addFile(llvm::StringRef Path, llvm::StringRef Contents);
