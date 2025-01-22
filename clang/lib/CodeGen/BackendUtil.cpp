@@ -794,12 +794,37 @@ static void addSanitizers(const Triple &TargetTriple,
     PB.registerOptimizerLastEPCallback(SanitizersCallback);
   }
 
-  if (LowerAllowCheckPass::IsRequested()) {
+  bool lowerAllowCheck = LowerAllowCheckPass::IsRequested();
+  // Is there a non-zero cutoff?
+  static const double SanitizerMaskCutoffsEps = 0.000000001f;
+  for (unsigned int i = 0; i < SanitizerKind::SO_Count; ++i) {
+    std::optional<double> maybeCutoff = CodeGenOpts.SanitizeSkipHotCutoffs[i];
+    lowerAllowCheck |= (maybeCutoff.has_value() &&
+                        (maybeCutoff.value() > SanitizerMaskCutoffsEps));
+  }
+
+  if (lowerAllowCheck) {
     // We want to call it after inline, which is about OptimizerEarlyEPCallback.
     PB.registerOptimizerEarlyEPCallback([&](ModulePassManager &MPM,
                                             OptimizationLevel Level,
                                             ThinOrFullLTOPhase Phase) {
       LowerAllowCheckPass::Options Opts;
+
+      // SanitizeSkipHotCutoffs stores doubles with range [0, 1]
+      // Opts.cutoffs wants ints with range [0, 999999]
+      for (unsigned int i = 0; i < SanitizerKind::SO_Count; ++i) {
+        std::optional<double> maybeCutoff =
+            CodeGenOpts.SanitizeSkipHotCutoffs[i];
+        if (maybeCutoff.has_value() &&
+            (maybeCutoff.value() > SanitizerMaskCutoffsEps)) {
+          Opts.cutoffs.push_back(
+              std::clamp((int)(maybeCutoff.value() * 1000000), 0, 999999));
+        } else {
+          // Default is don't skip the check
+          Opts.cutoffs.push_back(0);
+        }
+      }
+
       MPM.addPass(createModuleToFunctionPassAdaptor(LowerAllowCheckPass(Opts)));
     });
   }

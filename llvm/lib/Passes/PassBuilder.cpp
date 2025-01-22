@@ -828,11 +828,34 @@ parseLowerAllowCheckPassOptions(StringRef Params) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');
 
-    return make_error<StringError>(
-        formatv("invalid LowerAllowCheck pass parameter '{0}' ", ParamName)
-            .str(),
-        inconvertibleErrorCode());
+    // cutoffs=990000|990000|0|...100000
+    if (ParamName.starts_with("cutoffs=")) {
+      StringRef CutoffsStr;
+      std::tie(ParamName, CutoffsStr) = ParamName.split('=');
+
+      while (CutoffsStr != "") {
+        StringRef firstCutoffStr;
+        std::tie(firstCutoffStr, CutoffsStr) = CutoffsStr.split('|');
+
+        int cutoff;
+        if (firstCutoffStr.getAsInteger(0, cutoff))
+          return make_error<StringError>(
+              formatv("invalid LowerAllowCheck pass cutoffs parameter '{0}' "
+                      "({1}) {2}",
+                      firstCutoffStr, Params, Result.cutoffs.size())
+                  .str(),
+              inconvertibleErrorCode());
+
+        Result.cutoffs.push_back(cutoff);
+      }
+    } else {
+      return make_error<StringError>(
+          formatv("invalid LowerAllowCheck pass parameter '{0}' ", ParamName)
+              .str(),
+          inconvertibleErrorCode());
+    }
   }
+
   return Result;
 }
 

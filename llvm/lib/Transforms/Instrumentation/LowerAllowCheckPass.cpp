@@ -20,6 +20,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include <memory>
 #include <random>
@@ -71,7 +72,8 @@ static void emitRemark(IntrinsicInst *II, OptimizationRemarkEmitter &ORE,
 
 static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
                              const ProfileSummaryInfo *PSI,
-                             OptimizationRemarkEmitter &ORE) {
+                             OptimizationRemarkEmitter &ORE,
+                             std::vector<unsigned int> &cutoffs) {
   SmallVector<std::pair<IntrinsicInst *, bool>, 16> ReplaceWithValue;
   std::unique_ptr<RandomNumberGenerator> Rng;
 
@@ -81,10 +83,9 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
     return *Rng;
   };
 
-  auto ShouldRemoveHot = [&](const BasicBlock &BB) {
-    return HotPercentileCutoff.getNumOccurrences() && PSI &&
-           PSI->isHotCountNthPercentile(
-               HotPercentileCutoff, BFI.getBlockProfileCount(&BB).value_or(0));
+  auto ShouldRemoveHot = [&](const BasicBlock &BB, const unsigned int &cutoff) {
+    return PSI && PSI->isHotCountNthPercentile(
+                      cutoff, BFI.getBlockProfileCount(&BB).value_or(0));
   };
 
   auto ShouldRemoveRandom = [&]() {
@@ -92,10 +93,10 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
            !std::bernoulli_distribution(RandomRate)(GetRng());
   };
 
-  auto ShouldRemove = [&](const BasicBlock &BB) {
-    return ShouldRemoveRandom() || ShouldRemoveHot(BB);
-  };
-
+  // In some cases, EmitCheck was called with multiple checks (e.g.,
+  // SanitizerKind::{Null,ObjectSize,Alignment}, which fall under the umbrella
+  // of SanitizerHandler::TypeMismatch). We use the threshold for each
+  // corresponding SanitizerKind.
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
@@ -107,7 +108,18 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
       case Intrinsic::allow_runtime_check: {
         ++NumChecksTotal;
 
-        bool ToRemove = ShouldRemove(BB);
+        bool ToRemove = ShouldRemoveRandom();
+
+        unsigned int cutoff = 0;
+        if (ID == Intrinsic::allow_ubsan_check) {
+          auto *Kind = cast<ConstantInt>(II->getArgOperand(0));
+          if (Kind->getZExtValue() < cutoffs.size())
+            cutoff = cutoffs[Kind->getZExtValue()];
+        }
+        if (HotPercentileCutoff.getNumOccurrences())
+          cutoff = HotPercentileCutoff;
+        ToRemove |= ShouldRemoveHot(BB, cutoff);
+
         ReplaceWithValue.push_back({
             II,
             ToRemove,
@@ -142,11 +154,28 @@ PreservedAnalyses LowerAllowCheckPass::run(Function &F,
   OptimizationRemarkEmitter &ORE =
       AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
-  return removeUbsanTraps(F, BFI, PSI, ORE) ? PreservedAnalyses::none()
-                                            : PreservedAnalyses::all();
+  return removeUbsanTraps(F, BFI, PSI, ORE, Opts.cutoffs)
+             ? PreservedAnalyses::none()
+             : PreservedAnalyses::all();
 }
 
 bool LowerAllowCheckPass::IsRequested() {
   return RandomRate.getNumOccurrences() ||
          HotPercentileCutoff.getNumOccurrences();
+}
+
+void LowerAllowCheckPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<LowerAllowCheckPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << "<cutoffs=";
+
+  bool first = true;
+  for (unsigned int cutoff : Opts.cutoffs) {
+    if (!first)
+      OS << "|";
+    OS << cutoff;
+    first = false;
+  }
+  OS << '>';
 }
