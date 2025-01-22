@@ -8013,8 +8013,7 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
     SmallVector<FunctionDecl*, 8> OperatorArrows;
     CTypes.insert(Context.getCanonicalType(BaseType));
 
-    while (
-        isa<InjectedClassNameType, RecordType>(BaseType.getCanonicalType())) {
+    while (BaseType->getAsRecordDecl()) {
       if (OperatorArrows.size() >= getLangOpts().ArrowDepth) {
         Diag(OpLoc, diag::err_operator_arrow_depth_exceeded)
           << StartingType << getLangOpts().ArrowDepth << Base->getSourceRange();
@@ -8033,7 +8032,6 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
           (FirstIteration && CurFD && CurFD->isFunctionTemplateSpecialization())
               ? nullptr
               : &NoArrowOperatorFound);
-
       if (Result.isInvalid()) {
         if (NoArrowOperatorFound) {
           if (FirstIteration) {
@@ -8053,7 +8051,6 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
         }
         return ExprError();
       }
-
       Base = Result.get();
       if (CXXOperatorCallExpr *OpCall = dyn_cast<CXXOperatorCallExpr>(Base))
         OperatorArrows.push_back(OpCall->getDirectCallee());
