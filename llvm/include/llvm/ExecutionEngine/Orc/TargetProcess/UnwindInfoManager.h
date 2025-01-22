@@ -18,6 +18,7 @@
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorBootstrapService.h"
 #include "llvm/Support/Error.h"
 #include <map>
+#include <mutex>
 
 namespace llvm::orc {
 
