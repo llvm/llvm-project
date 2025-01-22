@@ -109,7 +109,7 @@ def SDTOther  : SDTypeProfile<1, 0, [SDTCisVT<0, OtherVT>]>; // for 'vt'.
 def SDTUNDEF  : SDTypeProfile<1, 0, []>;                     // for 'undef'.
 def SDTUnaryOp  : SDTypeProfile<1, 1, []>;                   // for bitconvert.
 
-def SDTPtrAddOp : SDTypeProfile<1, 2, [  // ptradd
+def SDTPtrAddOp : SDTypeProfile<1, 2, [     // ptradd
   SDTCisSameAs<0, 1>, SDTCisInt<2>, SDTCisPtrTy<1>
 ]>;
 def SDTIntBinOp : SDTypeProfile<1, 2, [     // add, and, or, xor, udiv, etc.
