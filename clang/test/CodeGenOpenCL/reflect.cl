@@ -15,12 +15,15 @@ bool device_function() {
 // CHECK-LABEL: define dso_local ptx_kernel void @kernel_function(
 // CHECK-SAME: ptr addrspace(1) noundef align 4 [[I:%.*]]) #[[ATTR2:[0-9]+]] !kernel_arg_addr_space [[META3:![0-9]+]] !kernel_arg_access_qual [[META4:![0-9]+]] !kernel_arg_type [[META5:![0-9]+]] !kernel_arg_base_type [[META5]] !kernel_arg_type_qual [[META6:![0-9]+]] {
 // CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[I_ADDR_I:%.*]] = alloca ptr addrspace(1), align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca ptr addrspace(1), align 4
 // CHECK-NEXT:    store ptr addrspace(1) [[I]], ptr [[I_ADDR]], align 4
-// CHECK-NEXT:    [[CALL:%.*]] = call zeroext i1 @device_function() #[[ATTR3:[0-9]+]]
-// CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CALL]] to i32
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[I_ADDR]], align 4
-// CHECK-NEXT:    store i32 [[CONV]], ptr addrspace(1) [[TMP0]], align 4
+// CHECK-NEXT:    store ptr addrspace(1) [[TMP0]], ptr [[I_ADDR_I]], align 4
+// CHECK-NEXT:    [[CALL_I:%.*]] = call zeroext i1 @device_function() #[[ATTR4:[0-9]+]]
+// CHECK-NEXT:    [[CONV_I:%.*]] = zext i1 [[CALL_I]] to i32
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr [[I_ADDR_I]], align 4
+// CHECK-NEXT:    store i32 [[CONV_I]], ptr addrspace(1) [[TMP1]], align 4
 // CHECK-NEXT:    ret void
 //
 __kernel void kernel_function(__global int *i) {

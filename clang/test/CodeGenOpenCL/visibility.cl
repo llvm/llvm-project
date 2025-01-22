@@ -37,22 +37,33 @@ __attribute__((visibility("protected"))) extern int ext_protected;
 // FVIS-PROTECTED: @ext_default = external local_unnamed_addr
 // FVIS-HIDDEN: @ext_default = external local_unnamed_addr
 __attribute__((visibility("default"))) extern int ext_default;
-
 // FVIS-DEFAULT: define{{.*}} amdgpu_kernel void @kern()
 // FVIS-PROTECTED: define protected amdgpu_kernel void @kern()
 // FVIS-HIDDEN: define protected amdgpu_kernel void @kern()
+// FVIS-DEFAULT: define{{.*}} void @__clang_ocl_kern_imp_kern()
+// FVIS-PROTECTED: define protected void @__clang_ocl_kern_imp_kern()
+// FVIS-HIDDEN: define protected void @__clang_ocl_kern_imp_kern()
 kernel void kern() {}
 // FVIS-DEFAULT: define protected amdgpu_kernel void @kern_hidden()
 // FVIS-PROTECTED: define protected amdgpu_kernel void @kern_hidden()
 // FVIS-HIDDEN: define protected amdgpu_kernel void @kern_hidden()
+// FVIS-DEFAULT: define protected void @__clang_ocl_kern_imp_kern_hidden()
+// FVIS-PROTECTED: define protected void @__clang_ocl_kern_imp_kern_hidden()
+// FVIS-HIDDEN: define protected void @__clang_ocl_kern_imp_kern_hidden()
 __attribute__((visibility("hidden"))) kernel void kern_hidden() {}
 // FVIS-DEFAULT: define protected amdgpu_kernel void @kern_protected()
 // FVIS-PROTECTED: define protected amdgpu_kernel void @kern_protected()
 // FVIS-HIDDEN: define protected amdgpu_kernel void @kern_protected()
+// FVIS-DEFAULT: define protected void @__clang_ocl_kern_imp_kern_protected()
+// FVIS-PROTECTED: define protected void @__clang_ocl_kern_imp_kern_protected()
+// FVIS-HIDDEN: define protected void @__clang_ocl_kern_imp_kern_protected()
 __attribute__((visibility("protected"))) kernel void kern_protected() {}
 // FVIS-DEFAULT: define{{.*}} amdgpu_kernel void @kern_default()
 // FVIS-PROTECTED: define{{.*}} amdgpu_kernel void @kern_default()
 // FVIS-HIDDEN: define{{.*}} amdgpu_kernel void @kern_default()
+// FVIS-DEFAULT: define{{.*}} void @__clang_ocl_kern_imp_kern_default()
+// FVIS-PROTECTED: define{{.*}} void @__clang_ocl_kern_imp_kern_default()
+// FVIS-HIDDEN: define{{.*}} void @__clang_ocl_kern_imp_kern_default()
 __attribute__((visibility("default"))) kernel void kern_default() {}
 
 // FVIS-DEFAULT: define{{.*}} void @func()
@@ -138,18 +149,5 @@ void use() {
 // FVIS-PROTECTED: declare void @ext_func_default()
 // FVIS-HIDDEN: declare void @ext_func_default()
 
-// FVIS-DEFAULT: define{{.*}} void @__clang_ocl_kern_imp_kern()
-// FVIS-PROTECTED: define protected void @__clang_ocl_kern_imp_kern()
-// FVIS-HIDDEN: define protected void @__clang_ocl_kern_imp_kern()
 
-// FVIS-DEFAULT: define protected void @__clang_ocl_kern_imp_kern_hidden()
-// FVIS-PROTECTED: define protected void @__clang_ocl_kern_imp_kern_hidden()
-// FVIS-HIDDEN: define protected void @__clang_ocl_kern_imp_kern_hidden()
 
-// FVIS-DEFAULT: define protected void @__clang_ocl_kern_imp_kern_protected()
-// FVIS-PROTECTED: define protected void @__clang_ocl_kern_imp_kern_protected()
-// FVIS-HIDDEN: define protected void @__clang_ocl_kern_imp_kern_protected()
-
-// FVIS-DEFAULT: define{{.*}} void @__clang_ocl_kern_imp_kern_default()
-// FVIS-PROTECTED: define{{.*}} void @__clang_ocl_kern_imp_kern_default()
-// FVIS-HIDDEN: define{{.*}} void @__clang_ocl_kern_imp_kern_default()

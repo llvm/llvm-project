@@ -39,7 +39,7 @@ void callee(int id, __global int *out) {
   out[id] = id;
 }
 
-// COMMON-LABEL: define{{.*}} spir_kernel void @device_side_enqueue(ptr addrspace(1) align 4 %{{.*}}, ptr addrspace(1) align 4 %b, i32 %i)
+// COMMON-LABEL: define{{.*}} spir_func void @__clang_ocl_kern_imp_device_side_enqueue(ptr addrspace(1) align 4 %{{.*}}, ptr addrspace(1) align 4 %b, i32 %i)
 kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // SPIR: %default_queue = alloca target("spirv.Queue")
   // X86: %default_queue = alloca ptr

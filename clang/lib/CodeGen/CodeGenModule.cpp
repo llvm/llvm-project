@@ -4864,6 +4864,11 @@ CodeGenModule::GetAddrOfFunction(GlobalDecl GD, llvm::Type *Ty, bool ForVTable,
   if (!Ty) {
     const auto *FD = cast<FunctionDecl>(GD.getDecl());
     Ty = getTypes().ConvertType(FD->getType());
+    if (FD->hasAttr<OpenCLKernelAttr>() &&
+        GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
+      const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
+      Ty = getTypes().GetFunctionType(FI);
+    }
   }
 
   // Devirtualized destructor calls may come through here instead of via
@@ -6143,6 +6148,17 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   CodeGenFunction(*this).GenerateCode(GD, Fn, FI);
 
   setNonAliasAttributes(GD, Fn);
+
+  if (D->hasAttr<OpenCLKernelAttr>()) {
+    if (GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
+      if (Fn->hasFnAttribute(llvm::Attribute::NoInline))
+        Fn->removeFnAttr(llvm::Attribute::NoInline);
+      if (Fn->hasFnAttribute(llvm::Attribute::InlineHint))
+        Fn->removeFnAttr(llvm::Attribute::InlineHint);
+      Fn->addFnAttr(llvm::Attribute::AlwaysInline);
+    }
+  }
+
   SetLLVMFunctionAttributesForDefinition(D, Fn);
 
   if (const ConstructorAttr *CA = D->getAttr<ConstructorAttr>())

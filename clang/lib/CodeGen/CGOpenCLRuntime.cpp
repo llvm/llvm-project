@@ -126,12 +126,8 @@ static const BlockExpr *getBlockExpr(const Expr *E) {
 /// corresponding block expression.
 void CGOpenCLRuntime::recordBlockInfo(const BlockExpr *E,
                                       llvm::Function *InvokeF,
-                                      llvm::Value *Block, llvm::Type *BlockTy,
-                                      bool isBlkExprInOCLKern) {
-
-  assert((!EnqueuedBlockMap.contains(E) ||
-          EnqueuedBlockMap[E].isBlkExprInOCLKern != isBlkExprInOCLKern) &&
-         "Block expression emitted twice");
+                                      llvm::Value *Block, llvm::Type *BlockTy) {
+  assert(!EnqueuedBlockMap.contains(E) && "Block expression emitted twice");
   assert(isa<llvm::Function>(InvokeF) && "Invalid invoke function");
   assert(Block->getType()->isPointerTy() && "Invalid block literal type");
   EnqueuedBlockInfo &BlockInfo = EnqueuedBlockMap[E];

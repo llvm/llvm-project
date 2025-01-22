@@ -1495,6 +1495,12 @@ public:
                             const FunctionDecl *Caller,
                             const FunctionDecl *Callee, const CallArgList &Args,
                             QualType ReturnType) const override;
+
+  void
+  setOCLKernelStubCallingConvention(const FunctionType *&FT) const override {
+    FT = getABIInfo().getContext().adjustFunctionType(
+        FT, FT->getExtInfo().withCallingConv(CC_SpirFunction));
+  }
 };
 } // namespace
 
