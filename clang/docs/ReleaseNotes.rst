@@ -275,6 +275,8 @@ C++23 Feature Support
   
 - ``__cpp_explicit_this_parameter`` is now defined. (#GH82780)
 
+- Add support for `P2280R4 Using unknown pointers and references in constant expressions <https://wg21.link/P2280R4>`_. (#GH63139)
+
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
