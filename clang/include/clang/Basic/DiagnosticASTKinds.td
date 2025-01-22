@@ -395,6 +395,12 @@ def note_constexpr_assumption_failed : Note<
   "assumption evaluated to false">;
 def err_experimental_clang_interp_failed : Error<
   "the experimental clang interpreter failed to evaluate an expression">;
+def note_unaligned_atomic_pointer_op : Note<
+  "atomic pointer operation with argument %0 not aligned to size of pointee type (sizeof %1 is %2)">;
+def note_constexpr_atomic_ops_only_in_cpp : Note<
+  "constant evaluated atomic operations are supported only in C++ mode">;
+def note_atomic_op_with_invalid_memory_order : Note<
+  "evaluated %select{|success |failure }0memory order argument to atomic operation is not allowed">;
 
 def warn_attribute_needs_aggregate : Warning<
   "%0 attribute is ignored in non-aggregate type %1">,

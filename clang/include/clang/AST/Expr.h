@@ -6830,6 +6830,9 @@ public:
   std::unique_ptr<AtomicScopeModel> getScopeModel() const {
     return getScopeModel(getOp());
   }
+
+  /// Helper function to check valid ordering for specified Op.
+  static bool isValidOrderingForOp(int64_t Ordering, AtomicExpr::AtomicOp Op);
 };
 
 /// TypoExpr - Internal placeholder for expressions where typo correction

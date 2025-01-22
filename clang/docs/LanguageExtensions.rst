@@ -4448,6 +4448,18 @@ whole system, the current device, an OpenCL workgroup, wavefront, or just a
 single thread. If these are used on a target that does not support atomic
 scopes, then they will behave exactly as the standard GNU atomic builtins.
 
+Constant evaluatable atomic builtins
+------------------------------------
+
+Clang supports constant evaluation of all ``__c11_atomic_*`` and GCC-compatible 
+``__atomic_*`` builtins. Behaviour of identical as if evaluating these builtins
+in a single-threaded environment. 
+
+(Note the GCC-compatible ``__atomic_fetch_OP`` and ``__atomic_OP_fetch`` 
+builtins with a pointer argument operates as if pointer was pointing to bytes.
+Evaluating these builtins which would result in a non-aligned pointer to pointee
+type is unsupported.)
+
 Low-level ARM exclusive memory builtins
 ---------------------------------------
 

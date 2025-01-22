@@ -309,6 +309,9 @@ C++2c Feature Support
 
 - Implemented `P3176R1 The Oxford variadic comma <https://wg21.link/P3176R1>`_
 
+- Making GCC and C11 atomic intrinsics evaluatable during constant evaluation,
+  which supports `P3309R3 constexpr atomic and atomic_ref <https://wg21.link/P3309R3>`_
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Removed the restriction to literal types in constexpr functions in C++23 mode.

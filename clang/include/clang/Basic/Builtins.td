@@ -1744,97 +1744,97 @@ def SyncSwapN : Builtin, SyncBuiltinsTemplate {
 // C11 _Atomic operations for <stdatomic.h>.
 def C11AtomicInit : AtomicBuiltin {
   let Spellings = ["__c11_atomic_init"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def C11AtomicLoad : AtomicBuiltin {
   let Spellings = ["__c11_atomic_load"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def C11AtomicStore : AtomicBuiltin {
   let Spellings = ["__c11_atomic_store"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def C11AtomicExchange : AtomicBuiltin {
   let Spellings = ["__c11_atomic_exchange"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def C11AtomicCompareExchangeStrong : AtomicBuiltin {
   let Spellings = ["__c11_atomic_compare_exchange_strong"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def C11AtomicCompareExchangeWeak : AtomicBuiltin {
   let Spellings = ["__c11_atomic_compare_exchange_weak"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def C11AtomicFetchAdd : AtomicBuiltin {
   let Spellings = ["__c11_atomic_fetch_add"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def C11AtomicFetchSub : AtomicBuiltin {
   let Spellings = ["__c11_atomic_fetch_sub"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def C11AtomicFetchAnd : AtomicBuiltin {
   let Spellings = ["__c11_atomic_fetch_and"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def C11AtomicFetchOr : AtomicBuiltin {
   let Spellings = ["__c11_atomic_fetch_or"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def C11AtomicFetchXor : AtomicBuiltin {
   let Spellings = ["__c11_atomic_fetch_xor"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def C11AtomicFetchNand : AtomicBuiltin {
   let Spellings = ["__c11_atomic_fetch_nand"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def C11AtomicFetchMax : AtomicBuiltin {
   let Spellings = ["__c11_atomic_fetch_max"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def C11AtomicFetchMin : AtomicBuiltin {
   let Spellings = ["__c11_atomic_fetch_min"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def C11AtomicThreadFence : Builtin {
   let Spellings = ["__c11_atomic_thread_fence"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, Constexpr];
   let Prototype = "void(int)";
 }
 
 def C11AtomicSignalFence : Builtin {
   let Spellings = ["__c11_atomic_signal_fence"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, Constexpr];
   let Prototype = "void(int)";
 }
 
@@ -1847,133 +1847,133 @@ def C11AtomicIsLockFree : Builtin {
 // GNU atomic builtins.
 def AtomicLoad : AtomicBuiltin {
   let Spellings = ["__atomic_load"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def AtomicLoadN : AtomicBuiltin {
   let Spellings = ["__atomic_load_n"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def AtomicStore : AtomicBuiltin {
   let Spellings = ["__atomic_store"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def AtomicStoreN : AtomicBuiltin {
   let Spellings = ["__atomic_store_n"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def AtomicExchange : AtomicBuiltin {
   let Spellings = ["__atomic_exchange"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def AtomicExchangeN : AtomicBuiltin {
   let Spellings = ["__atomic_exchange_n"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def AtomicCompareExchange : AtomicBuiltin {
   let Spellings = ["__atomic_compare_exchange"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def AtomicCompareExchangeN : AtomicBuiltin {
   let Spellings = ["__atomic_compare_exchange_n"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def AtomicFetchAdd : AtomicBuiltin {
   let Spellings = ["__atomic_fetch_add"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def AtomicFetchSub : AtomicBuiltin {
   let Spellings = ["__atomic_fetch_sub"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def AtomicFetchAnd : AtomicBuiltin {
   let Spellings = ["__atomic_fetch_and"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def AtomicFetchOr : AtomicBuiltin {
   let Spellings = ["__atomic_fetch_or"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def AtomicFetchXor : AtomicBuiltin {
   let Spellings = ["__atomic_fetch_xor"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def AtomicFetchNand : AtomicBuiltin {
   let Spellings = ["__atomic_fetch_nand"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def AtomicAddFetch : AtomicBuiltin {
   let Spellings = ["__atomic_add_fetch"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def AtomicSubFetch : AtomicBuiltin {
   let Spellings = ["__atomic_sub_fetch"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def AtomicAndFetch : AtomicBuiltin {
   let Spellings = ["__atomic_and_fetch"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def AtomicOrFetch : AtomicBuiltin {
   let Spellings = ["__atomic_or_fetch"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def AtomicXorFetch : AtomicBuiltin {
   let Spellings = ["__atomic_xor_fetch"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def AtomicMaxFetch : AtomicBuiltin {
   let Spellings = ["__atomic_max_fetch"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def AtomicMinFetch : AtomicBuiltin {
   let Spellings = ["__atomic_min_fetch"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def AtomicNandFetch : AtomicBuiltin {
   let Spellings = ["__atomic_nand_fetch"];
-  let Attributes = [CustomTypeChecking];
+  let Attributes = [CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
@@ -1991,7 +1991,7 @@ def AtomicClear : Builtin {
 
 def AtomicThreadFence : Builtin {
   let Spellings = ["__atomic_thread_fence"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, Constexpr];
   let Prototype = "void(int)";
 }
 
@@ -2003,7 +2003,7 @@ def ScopedAtomicThreadFence : Builtin {
 
 def AtomicSignalFence : Builtin {
   let Spellings = ["__atomic_signal_fence"];
-  let Attributes = [NoThrow];
+  let Attributes = [NoThrow, Constexpr];
   let Prototype = "void(int)";
 }
 
