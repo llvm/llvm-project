@@ -1313,6 +1313,12 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) {
     return false;
   }
 
+  if (CommonVL->isIdenticalTo(VLOp)) {
+    LLVM_DEBUG(
+        dbgs() << "    Abort due to CommonVL == VLOp, no point in reducing.\n");
+    return false;
+  }
+
   if (CommonVL->isImm()) {
     LLVM_DEBUG(dbgs() << "  Reduce VL from " << VLOp << " to "
                       << CommonVL->getImm() << " for " << MI << "\n");
