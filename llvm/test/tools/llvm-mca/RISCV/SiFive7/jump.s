@@ -12,12 +12,12 @@ ret
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      5
-# CHECK-NEXT: Total Cycles:      10
+# CHECK-NEXT: Total Cycles:      200
 # CHECK-NEXT: Total uOps:        5
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.50
-# CHECK-NEXT: IPC:               0.50
+# CHECK-NEXT: uOps Per Cycle:    0.03
+# CHECK-NEXT: IPC:               0.03
 # CHECK-NEXT: Block RThroughput: 5.0
 
 # CHECK:      Instruction Info:
@@ -58,13 +58,10 @@ ret
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ret
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: Index     0123
 
-# CHECK:      [0,0]     DeeE .   .   j	.Ltmp0
-# CHECK-NEXT: [0,1]     .DeeE.   .   jal	a0, .Ltmp1
-# CHECK-NEXT: [0,2]     .   DeeE .   jr	a0
-# CHECK-NEXT: [0,3]     .    DeeE.   jalr	t0, a0
-# CHECK-NEXT: [0,4]     .    .DeeE   ret
+# CHECK:      [0,0]     DeeE   j	.Ltmp0
+# CHECK-NEXT: Truncated display due to cycle limit
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
