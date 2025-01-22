@@ -5509,7 +5509,7 @@ bool Sema::CheckTemplateArgumentList(
 
   SourceLocation RAngleLoc = NewArgs.getRAngleLoc();
 
-  // C++ [temp.arg]p1:
+  // C++23 [temp.arg.general]p1:
   //   [...] The type and form of each template-argument specified in
   //   a template-id shall match the type and form specified for the
   //   corresponding parameter declared by the template in its
@@ -5570,61 +5570,69 @@ bool Sema::CheckTemplateArgumentList(
     }
 
     if (ArgIdx < NumArgs) {
-      // Check the template argument we were given.
-      if (CheckTemplateArgument(*Param, NewArgs[ArgIdx], Template, TemplateLoc,
-                                RAngleLoc, SugaredArgumentPack.size(),
-                                SugaredConverted, CanonicalConverted,
-                                CTAK_Specified, /*PartialOrdering=*/false,
-                                MatchedPackOnParmToNonPackOnArg))
-        return true;
+      TemplateArgumentLoc &ArgLoc = NewArgs[ArgIdx];
+      bool NonPackParameter =
+          !(*Param)->isTemplateParameterPack() || getExpandedPackSize(*Param);
+      bool ArgIsExpansion = ArgLoc.getArgument().isPackExpansion();
 
-      CanonicalConverted.back().setIsDefaulted(
-          clang::isSubstitutedDefaultArgument(
-              Context, NewArgs[ArgIdx].getArgument(), *Param,
-              CanonicalConverted, Params->getDepth()));
-
-      bool PackExpansionIntoNonPack =
-          NewArgs[ArgIdx].getArgument().isPackExpansion() &&
-          (!(*Param)->isTemplateParameterPack() || getExpandedPackSize(*Param));
-      // CWG1430: Don't diagnose this pack expansion when partial
-      // ordering template template parameters. Some uses of the template could
-      // be valid, and invalid uses will be diagnosed later during
-      // instantiation.
-      if (PackExpansionIntoNonPack && !PartialOrderingTTP &&
-          (isa<TypeAliasTemplateDecl>(Template) ||
-           isa<ConceptDecl>(Template))) {
-        // CWG1430: we have a pack expansion as an argument to an
-        // alias template, and it's not part of a parameter pack. This
-        // can't be canonicalized, so reject it now.
-        // As for concepts - we cannot normalize constraints where this
-        // situation exists.
-        Diag(NewArgs[ArgIdx].getLocation(),
-             diag::err_template_expansion_into_fixed_list)
-          << (isa<ConceptDecl>(Template) ? 1 : 0)
-          << NewArgs[ArgIdx].getSourceRange();
-        NoteTemplateParameterLocation(**Param);
-        return true;
+      if (ArgIsExpansion && PartialOrderingTTP) {
+        SmallVector<TemplateArgument, 4> Args(ParamEnd - Param);
+        for (TemplateParameterList::iterator First = Param; Param != ParamEnd;
+             ++Param) {
+          TemplateArgument &Arg = Args[Param - First];
+          Arg = ArgLoc.getArgument();
+          if (!(*Param)->isTemplateParameterPack() ||
+              getExpandedPackSize(*Param))
+            Arg = Arg.getPackExpansionPattern();
+          TemplateArgumentLoc NewArgLoc(Arg, ArgLoc.getLocInfo());
+          if (CheckTemplateArgument(*Param, NewArgLoc, Template, TemplateLoc,
+                                    RAngleLoc, SugaredArgumentPack.size(),
+                                    SugaredConverted, CanonicalConverted,
+                                    CTAK_Specified, /*PartialOrdering=*/false,
+                                    MatchedPackOnParmToNonPackOnArg))
+            return true;
+          Arg = NewArgLoc.getArgument();
+          CanonicalConverted.back().setIsDefaulted(
+              clang::isSubstitutedDefaultArgument(Context, Arg, *Param,
+                                                  CanonicalConverted,
+                                                  Params->getDepth()));
+        }
+        ArgLoc =
+            TemplateArgumentLoc(TemplateArgument::CreatePackCopy(Context, Args),
+                                ArgLoc.getLocInfo());
+      } else {
+        if (CheckTemplateArgument(*Param, ArgLoc, Template, TemplateLoc,
+                                  RAngleLoc, SugaredArgumentPack.size(),
+                                  SugaredConverted, CanonicalConverted,
+                                  CTAK_Specified, /*PartialOrdering=*/false,
+                                  MatchedPackOnParmToNonPackOnArg))
+          return true;
+        CanonicalConverted.back().setIsDefaulted(
+            clang::isSubstitutedDefaultArgument(Context, ArgLoc.getArgument(),
+                                                *Param, CanonicalConverted,
+                                                Params->getDepth()));
+        if (ArgIsExpansion && NonPackParameter) {
+          // CWG1430/CWG2686: we have a pack expansion as an argument to an
+          // alias template or concept, and it's not part of a parameter pack.
+          // This can't be canonicalized, so reject it now.
+          if (isa<TypeAliasTemplateDecl, ConceptDecl>(Template)) {
+            Diag(ArgLoc.getLocation(),
+                 diag::err_template_expansion_into_fixed_list)
+                << (isa<ConceptDecl>(Template) ? 1 : 0)
+                << ArgLoc.getSourceRange();
+            NoteTemplateParameterLocation(**Param);
+            return true;
+          }
+        }
       }
 
       // We're now done with this argument.
       ++ArgIdx;
 
-      if ((*Param)->isTemplateParameterPack()) {
-        // The template parameter was a template parameter pack, so take the
-        // deduced argument and place it on the argument pack. Note that we
-        // stay on the same template parameter so that we can deduce more
-        // arguments.
-        SugaredArgumentPack.push_back(SugaredConverted.pop_back_val());
-        CanonicalArgumentPack.push_back(CanonicalConverted.pop_back_val());
-      } else {
-        // Move to the next template parameter.
-        ++Param;
-      }
+      if (ArgIsExpansion && (PartialOrderingTTP || NonPackParameter)) {
+        // Directly convert the remaining arguments, because we don't know what
+        // parameters they'll match up with.
 
-      // If we just saw a pack expansion into a non-pack, then directly convert
-      // the remaining arguments, because we don't know what parameters they'll
-      // match up with.
-      if (PackExpansionIntoNonPack) {
         if (!SugaredArgumentPack.empty()) {
           // If we were part way through filling in an expanded parameter pack,
           // fall back to just producing individual arguments.
@@ -5650,6 +5658,17 @@ bool Sema::CheckTemplateArgumentList(
         return false;
       }
 
+      if ((*Param)->isTemplateParameterPack()) {
+        // The template parameter was a template parameter pack, so take the
+        // deduced argument and place it on the argument pack. Note that we
+        // stay on the same template parameter so that we can deduce more
+        // arguments.
+        SugaredArgumentPack.push_back(SugaredConverted.pop_back_val());
+        CanonicalArgumentPack.push_back(CanonicalConverted.pop_back_val());
+      } else {
+        // Move to the next template parameter.
+        ++Param;
+      }
       continue;
     }
 

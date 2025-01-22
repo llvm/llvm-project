@@ -2696,9 +2696,6 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
   if (FoldPackParameter && hasPackExpansionBeforeEnd(Ps))
     return TemplateDeductionResult::Success;
 
-  if (FoldPackArgument && hasPackExpansionBeforeEnd(As))
-    return TemplateDeductionResult::Success;
-
   // C++0x [temp.deduct.type]p9:
   //   If P has a form that contains <T> or <i>, then each argument Pi of the
   //   respective template argument list P is compared with the corresponding
@@ -3400,36 +3397,61 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
     return Result;
 
   // Check that we produced the correct argument list.
-  TemplateParameterList *TemplateParams = Template->getTemplateParameters();
-  auto isSame = [&](unsigned I, const TemplateArgument &P,
-                    const TemplateArgument &A) {
-    if (isSameTemplateArg(S.Context, P, A, PartialOrdering,
-                          /*PackExpansionMatchesPack=*/true))
-      return true;
-    Info.Param = makeTemplateParameter(TemplateParams->getParam(I));
-    Info.FirstArg = P;
-    Info.SecondArg = A;
-    return false;
-  };
-  for (unsigned I = 0, E = TemplateParams->size(); I != E; ++I) {
-    const TemplateArgument &P = TemplateArgs[I];
-    if (P.isPackExpansion()) {
-      assert(I == TemplateArgs.size() - 1);
-      for (/**/; I != E; ++I) {
-        const TemplateArgument &A = CanonicalBuilder[I];
-        if (A.getKind() == TemplateArgument::Pack) {
-          for (const TemplateArgument &Ai : A.getPackAsArray())
-            if (!isSame(I, P, Ai))
-              return TemplateDeductionResult::NonDeducedMismatch;
-        } else if (!isSame(I, P, A)) {
-          return TemplateDeductionResult::NonDeducedMismatch;
+  SmallVector<ArrayRef<TemplateArgument>, 4> PsStack{TemplateArgs},
+      AsStack{CanonicalBuilder};
+  for (;;) {
+    auto take = [](SmallVectorImpl<ArrayRef<TemplateArgument>> &Stack)
+        -> std::tuple<ArrayRef<TemplateArgument> &, TemplateArgument> {
+      while (!Stack.empty()) {
+        auto &Xs = Stack.back();
+        if (Xs.empty()) {
+          Stack.pop_back();
+          continue;
         }
+        auto &X = Xs.front();
+        if (X.getKind() == TemplateArgument::Pack) {
+          Stack.emplace_back(X.getPackAsArray());
+          Xs = Xs.drop_front();
+          continue;
+        }
+        assert(!X.isNull());
+        return {Xs, X};
       }
+      static constexpr ArrayRef<TemplateArgument> None;
+      return {const_cast<ArrayRef<TemplateArgument> &>(None),
+              TemplateArgument()};
+    };
+    auto [Ps, P] = take(PsStack);
+    auto [As, A] = take(AsStack);
+    if (P.isNull() && A.isNull())
       break;
+    TemplateArgument PP = P.isPackExpansion() ? P.getPackExpansionPattern() : P,
+                     PA = A.isPackExpansion() ? A.getPackExpansionPattern() : A;
+    if (!isSameTemplateArg(S.Context, PP, PA, /*PartialOrdering=*/false)) {
+      if (!P.isPackExpansion() && !A.isPackExpansion()) {
+        Info.Param =
+            makeTemplateParameter(Template->getTemplateParameters()->getParam(
+                (PsStack.empty() ? TemplateArgs.end()
+                                 : PsStack.front().begin()) -
+                TemplateArgs.begin()));
+        Info.FirstArg = P;
+        Info.SecondArg = A;
+        return TemplateDeductionResult::NonDeducedMismatch;
+      }
+      if (P.isPackExpansion()) {
+        Ps = Ps.drop_front();
+        continue;
+      }
+      if (A.isPackExpansion()) {
+        As = As.drop_front();
+        continue;
+      }
     }
-    if (!isSame(I, P, CanonicalBuilder[I]))
-      return TemplateDeductionResult::NonDeducedMismatch;
+    Ps = Ps.drop_front(P.isPackExpansion() ? 0 : 1);
+    As = As.drop_front(A.isPackExpansion() && !P.isPackExpansion() ? 0 : 1);
   }
+  assert(PsStack.empty());
+  assert(AsStack.empty());
 
   if (!PartialOrdering) {
     if (auto Result = CheckDeducedArgumentConstraints(
