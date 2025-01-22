@@ -1991,11 +1991,6 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
     // turn that into an assertion.
     return ValueTrackerResult();
 
-  if (!TII)
-    // We could handle the REG_SEQUENCE here, but we do not want to
-    // duplicate the code from the generic TII.
-    return ValueTrackerResult();
-
   SmallVector<RegSubRegPairAndIdx, 8> RegSeqInputRegs;
   if (!TII->getRegSequenceInputs(*Def, DefIdx, RegSeqInputRegs))
     return ValueTrackerResult();
