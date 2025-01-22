@@ -94,6 +94,7 @@ class TargetRegisterClass;
 class TargetRegisterInfo;
 class TargetTransformInfo;
 class Value;
+class VPIntrinsic;
 
 namespace Sched {
 
@@ -3149,6 +3150,34 @@ public:
   /// \p Factor is the interleave factor.
   virtual bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
                                      unsigned Factor) const {
+    return false;
+  }
+
+  /// Lower an interleaved load to target specific intrinsics. Return
+  /// true on success.
+  ///
+  /// \p Load is a vp.load instruction.
+  /// \p Mask is a mask value
+  /// \p DeinterleaveIntrin is vector.deinterleave intrinsic
+  /// \p DeinterleaveRes is a list of deinterleaved results.
+  virtual bool
+  lowerInterleavedScalableLoad(VPIntrinsic *Load, Value *Mask,
+                               IntrinsicInst *DeinterleaveIntrin,
+                               ArrayRef<Value *> DeinterleaveRes) const {
+    return false;
+  }
+
+  /// Lower an interleaved store to target specific intrinsics. Return
+  /// true on success.
+  ///
+  /// \p Store is the vp.store instruction.
+  /// \p Mask is a mask value
+  /// \p InterleaveIntrin is vector.interleave intrinsic
+  /// \p InterleaveOps is a list of values being interleaved.
+  virtual bool
+  lowerInterleavedScalableStore(VPIntrinsic *Store, Value *Mask,
+                                IntrinsicInst *InterleaveIntrin,
+                                ArrayRef<Value *> InterleaveOps) const {
     return false;
   }
 
