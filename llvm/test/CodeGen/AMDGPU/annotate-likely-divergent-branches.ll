@@ -6,7 +6,7 @@ declare i32 @llvm.amdgcn.workitem.id.y()
 
 declare { i1, i64 } @llvm.amdgcn.if.i64(i1, i1)
 
-; The branch here is likely varying:
+; The branch here is likely dynamically divergent:
 define amdgpu_kernel void @cond_store_even(ptr addrspace(1) inreg %dest) #0 !reqd_work_group_size !0 {
 ; CHECK-LABEL: define amdgpu_kernel void @cond_store_even(
 ; CHECK-SAME: ptr addrspace(1) inreg [[DEST:%.*]]) #[[ATTR2:[0-9]+]] !reqd_work_group_size [[META0:![0-9]+]] {
@@ -48,7 +48,7 @@ exit:
 }
 
 
-; The branch here is likely varying:
+; The branch here is likely dynamically divergent:
 define amdgpu_kernel void @cond_store_even_ann_cf(ptr addrspace(1) inreg %dest) #0 !reqd_work_group_size !0 {
 ; CHECK-LABEL: define amdgpu_kernel void @cond_store_even_ann_cf(
 ; CHECK-SAME: ptr addrspace(1) inreg [[DEST:%.*]]) #[[ATTR2]] !reqd_work_group_size [[META0]] {
@@ -98,7 +98,7 @@ exit:
 }
 
 
-; The branch here is likely varying:
+; The branch here is likely dynamically divergent:
 define amdgpu_kernel void @cond_store_complex1(ptr addrspace(1) inreg %dest) #0 !reqd_work_group_size !0 {
 ; CHECK-LABEL: define amdgpu_kernel void @cond_store_complex1(
 ; CHECK-SAME: ptr addrspace(1) inreg [[DEST:%.*]]) #[[ATTR2]] !reqd_work_group_size [[META0]] {
@@ -138,7 +138,7 @@ exit:
 }
 
 
-; The branch here is likely varying:
+; The branch here is likely dynamically divergent:
 define amdgpu_kernel void @cond_store_complex2(ptr addrspace(1) inreg %dest) #0 !reqd_work_group_size !0 {
 ; CHECK-LABEL: define amdgpu_kernel void @cond_store_complex2(
 ; CHECK-SAME: ptr addrspace(1) inreg [[DEST:%.*]]) #[[ATTR2]] !reqd_work_group_size [[META0]] {
@@ -178,7 +178,7 @@ exit:
 }
 
 
-; The branch here is likely varying:
+; The branch here is likely dynamically divergent:
 define amdgpu_kernel void @cond_store_even_only_reqd_wgsz(ptr addrspace(1) inreg %dest) !reqd_work_group_size !0 {
 ; CHECK-LABEL: define amdgpu_kernel void @cond_store_even_only_reqd_wgsz(
 ; CHECK-SAME: ptr addrspace(1) inreg [[DEST:%.*]]) #[[ATTR3:[0-9]+]] !reqd_work_group_size [[META0]] {
@@ -220,7 +220,7 @@ exit:
 }
 
 
-; The branch here is likely varying:
+; The branch here is likely dynamically divergent:
 define amdgpu_kernel void @cond_store_even_only_flat_wgsz(ptr addrspace(1) inreg %dest) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @cond_store_even_only_flat_wgsz(
 ; CHECK-SAME: ptr addrspace(1) inreg [[DEST:%.*]]) #[[ATTR2]] {
@@ -262,7 +262,7 @@ exit:
 }
 
 
-; The branch here is likely varying, since the y dimension varies in each
+; The branch here is likely dynamically divergent, since the y dimension varies in each
 ; wavefront with the required work group size:
 define amdgpu_kernel void @cond_store_even_ydim_small_wgs(ptr addrspace(1) inreg %dest) !reqd_work_group_size !1 {
 ; CHECK-LABEL: define amdgpu_kernel void @cond_store_even_ydim_small_wgs(
@@ -305,7 +305,7 @@ exit:
 }
 
 
-; The branch here is likely varying, even though there are no attributes with
+; The branch here is likely dynamically divergent, even though there are no attributes with
 ; work group size information:
 define amdgpu_kernel void @cond_store_even_no_attributes(ptr addrspace(1) inreg %dest) {
 ; CHECK-LABEL: define amdgpu_kernel void @cond_store_even_no_attributes(
@@ -348,7 +348,7 @@ exit:
 }
 
 
-; The branch here is likely varying, even though the condition only depends on a
+; The branch here is likely dynamically divergent, even though the condition only depends on a
 ; workitem id dimension that does not vary per wavefront (namely y):
 define amdgpu_kernel void @cond_store_even_ydim(ptr addrspace(1) inreg %dest) #0 !reqd_work_group_size !0 {
 ; CHECK-LABEL: define amdgpu_kernel void @cond_store_even_ydim(
@@ -391,7 +391,7 @@ exit:
 }
 
 
-; The branch here is not likely varying, because its condition is directly
+; The branch here is not likely dynamically divergent, because its condition is directly
 ; loaded from memory:
 define amdgpu_kernel void @cond_store_loaded(ptr addrspace(1) inreg %dest, ptr addrspace(1) inreg %lookup) #0 !reqd_work_group_size !0 {
 ; CHECK-LABEL: define amdgpu_kernel void @cond_store_loaded(
@@ -436,7 +436,7 @@ exit:
 }
 
 
-; The branch here is not likely varying, because its condition directly results from a PHI:
+; The branch here is not likely dynamically divergent, because its condition directly results from a PHI:
 define amdgpu_kernel void @cond_store_loop_phi(ptr addrspace(1) inreg %dest, ptr addrspace(1) inreg %lookup, i32 %n) #0 !reqd_work_group_size !0 {
 ; CHECK-LABEL: define amdgpu_kernel void @cond_store_loop_phi(
 ; CHECK-SAME: ptr addrspace(1) inreg [[DEST:%.*]], ptr addrspace(1) inreg [[LOOKUP:%.*]], i32 [[N:%.*]]) #[[ATTR2]] !reqd_work_group_size [[META0]] {
@@ -497,7 +497,7 @@ exit:
   ret void
 }
 
-; The then and else branches are likely varying here:
+; The then and else branches are likely dynamically divergent here:
 define amdgpu_kernel void @cond_store_even_ifelse(ptr addrspace(1) inreg %dest) #0 !reqd_work_group_size !0 {
 ; CHECK-LABEL: define amdgpu_kernel void @cond_store_even_ifelse(
 ; CHECK-SAME: ptr addrspace(1) inreg [[DEST:%.*]]) #[[ATTR2]] !reqd_work_group_size [[META0]] {
@@ -553,7 +553,7 @@ exit:
 }
 
 
-; The then and else branches are not likely varying here:
+; The then and else branches are not likely dynamically divergent here:
 define amdgpu_kernel void @cond_store_loaded_ifelse(ptr addrspace(1) inreg %dest, ptr addrspace(1) inreg %lookup) #0 !reqd_work_group_size !0 {
 ; CHECK-LABEL: define amdgpu_kernel void @cond_store_loaded_ifelse(
 ; CHECK-SAME: ptr addrspace(1) inreg [[DEST:%.*]], ptr addrspace(1) inreg [[LOOKUP:%.*]]) #[[ATTR2]] !reqd_work_group_size [[META0]] {

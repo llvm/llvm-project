@@ -37,22 +37,22 @@ namespace {
 using StackEntry = std::pair<BasicBlock *, Value *>;
 using StackVector = SmallVector<StackEntry, 16>;
 
-class LikelyVaryingHeuristic {
+class DynamicDivergenceHeuristic {
 public:
-  LikelyVaryingHeuristic(const Function &F, const GCNSubtarget &ST) {
+  DynamicDivergenceHeuristic(const Function &F, const GCNSubtarget &ST) {
     IsSingleLaneExecution = ST.isSingleLaneExecution(F);
   }
 
-  /// Check if \p V is likely to be have dynamically varying values among the
+  /// Check if \p V is likely to be have dynamically diverging values among the
   /// workitems in each wavefront.
-  bool isLikelyVarying(const Value *V);
+  bool isLikelyDivergent(const Value *V);
 
 private:
   bool IsSingleLaneExecution = false;
 
-  bool isRelevantSourceOfDivergence(const Value *V) const;
+  bool isWorkitemID(const Value *V) const;
 
-  ValueMap<const Value *, bool> LikelyVaryingCache;
+  ValueMap<const Value *, bool> LikelyDivergentCache;
 };
 
 class SIAnnotateControlFlow {
@@ -81,7 +81,7 @@ private:
 
   LoopInfo *LI;
 
-  LikelyVaryingHeuristic LVHeuristic;
+  DynamicDivergenceHeuristic DivergenceHeuristic;
 
   void initialize(const GCNSubtarget &ST);
 
@@ -120,7 +120,7 @@ private:
 public:
   SIAnnotateControlFlow(Function &F, const GCNSubtarget &ST, DominatorTree &DT,
                         LoopInfo &LI, UniformityInfo &UA)
-      : F(&F), UA(&UA), DT(&DT), LI(&LI), LVHeuristic(F, ST) {
+      : F(&F), UA(&UA), DT(&DT), LI(&LI), DivergenceHeuristic(F, ST) {
     initialize(ST);
   }
 
@@ -209,12 +209,13 @@ bool SIAnnotateControlFlow::openIf(BranchInst *Term) {
 
   // Check if it's likely that at least one lane will always follow the
   // then-branch, i.e., the then-branch is never skipped completly.
-  Value *IsLikelyVarying =
-      LVHeuristic.isLikelyVarying(Term->getCondition()) ? BoolTrue : BoolFalse;
+  Value *IsLikelyDivergent =
+      DivergenceHeuristic.isLikelyDivergent(Term->getCondition()) ? BoolTrue
+                                                                  : BoolFalse;
 
   IRBuilder<> IRB(Term);
   Value *IfCall = IRB.CreateCall(getDecl(If, Intrinsic::amdgcn_if, IntMask),
-                                 {Term->getCondition(), IsLikelyVarying});
+                                 {Term->getCondition(), IsLikelyDivergent});
   Value *Cond = IRB.CreateExtractValue(IfCall, {0});
   Value *Mask = IRB.CreateExtractValue(IfCall, {1});
   Term->setCondition(Cond);
@@ -231,13 +232,14 @@ bool SIAnnotateControlFlow::insertElse(BranchInst *Term) {
   Value *IncomingMask = popSaved();
   // Check if it's likely that at least one lane will always follow the
   // else-branch, i.e., the else-branch is never skipped completly.
-  Value *IsLikelyVarying =
-      LVHeuristic.isLikelyVarying(IncomingMask) ? BoolTrue : BoolFalse;
+  Value *IsLikelyDivergent = DivergenceHeuristic.isLikelyDivergent(IncomingMask)
+                                 ? BoolTrue
+                                 : BoolFalse;
 
   IRBuilder<> IRB(Term);
   Value *ElseCall =
       IRB.CreateCall(getDecl(Else, Intrinsic::amdgcn_else, {IntMask, IntMask}),
-                     {IncomingMask, IsLikelyVarying});
+                     {IncomingMask, IsLikelyDivergent});
   Value *Cond = IRB.CreateExtractValue(ElseCall, {0});
   Value *Mask = IRB.CreateExtractValue(ElseCall, {1});
   Term->setCondition(Cond);
@@ -418,8 +420,7 @@ bool SIAnnotateControlFlow::run() {
   return Changed;
 }
 
-bool LikelyVaryingHeuristic::isRelevantSourceOfDivergence(
-    const Value *V) const {
+bool DynamicDivergenceHeuristic::isWorkitemID(const Value *V) const {
   auto *II = dyn_cast<IntrinsicInst>(V);
   if (!II)
     return false;
@@ -439,11 +440,11 @@ bool LikelyVaryingHeuristic::isRelevantSourceOfDivergence(
   }
 }
 
-bool LikelyVaryingHeuristic::isLikelyVarying(const Value *V) {
+bool DynamicDivergenceHeuristic::isLikelyDivergent(const Value *V) {
   if (IsSingleLaneExecution)
     return false;
 
-  if (isRelevantSourceOfDivergence(V))
+  if (isWorkitemID(V))
     return true;
 
   auto *I = dyn_cast<Instruction>(V);
@@ -458,19 +459,19 @@ bool LikelyVaryingHeuristic::isLikelyVarying(const Value *V) {
     return false;
 
   // Have we already checked V?
-  auto CacheEntry = LikelyVaryingCache.find(V);
-  if (CacheEntry != LikelyVaryingCache.end())
+  auto CacheEntry = LikelyDivergentCache.find(V);
+  if (CacheEntry != LikelyDivergentCache.end())
     return CacheEntry->second;
 
   // Does it use a likely varying Value?
   bool Result = false;
   for (const auto &Use : I->operands()) {
-    Result |= isLikelyVarying(Use);
+    Result |= isLikelyDivergent(Use);
     if (Result)
       break;
   }
 
-  LikelyVaryingCache.insert({V, Result});
+  LikelyDivergentCache.insert({V, Result});
   return Result;
 }
 

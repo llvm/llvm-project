@@ -227,7 +227,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   MachineOperand &ImpDefSCC = MI.getOperand(5);
   assert(ImpDefSCC.getReg() == AMDGPU::SCC && ImpDefSCC.isDef());
 
-  bool LikelyVarying = MI.getOperand(2).getImm();
+  bool LikelyDivergent = MI.getOperand(2).getImm();
 
   // If there is only one use of save exec register and that use is SI_END_CF,
   // we can optimize SI_IF by returning the full saved exec mask instead of
@@ -288,7 +288,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   MachineInstr *NewBr = BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CBRANCH_EXECZ))
                             .add(MI.getOperand(3));
 
-  if (LikelyVarying) {
+  if (LikelyDivergent) {
     MachineBasicBlock *ExeczDest = MI.getOperand(3).getMBB();
     auto **E = MBB.succ_end();
     for (auto **SI = MBB.succ_begin(); SI != E; ++SI) {
@@ -344,7 +344,7 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   if (LV)
     LV->replaceKillInstruction(SrcReg, MI, *OrSaveExec);
 
-  bool LikelyVarying = MI.getOperand(2).getImm();
+  bool LikelyDivergent = MI.getOperand(2).getImm();
 
   MachineBasicBlock *DestBB = MI.getOperand(3).getMBB();
 
@@ -369,7 +369,7 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
       BuildMI(MBB, ElsePt, DL, TII->get(AMDGPU::S_CBRANCH_EXECZ))
           .addMBB(DestBB);
 
-  if (LikelyVarying) {
+  if (LikelyDivergent) {
     auto **E = MBB.succ_end();
     for (auto **SI = MBB.succ_begin(); SI != E; ++SI) {
       if (*SI == DestBB)

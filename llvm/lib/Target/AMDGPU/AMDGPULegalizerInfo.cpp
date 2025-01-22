@@ -7264,7 +7264,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
       Register Def = MI.getOperand(1).getReg();
       Register Use = MI.getOperand(3).getReg();
-      auto LikelyVarying = MI.getOperand(4).getImm();
+      auto LikelyDivergent = MI.getOperand(4).getImm();
 
       MachineBasicBlock *CondBrTarget = BrCond->getOperand(1).getMBB();
 
@@ -7276,13 +7276,13 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
         B.buildInstr(AMDGPU::SI_IF)
             .addDef(Def)
             .addUse(Use)
-            .addImm(LikelyVarying)
+            .addImm(LikelyDivergent)
             .addMBB(UncondBrTarget);
       } else {
         B.buildInstr(AMDGPU::SI_ELSE)
             .addDef(Def)
             .addUse(Use)
-            .addImm(LikelyVarying)
+            .addImm(LikelyDivergent)
             .addMBB(UncondBrTarget);
       }
 

@@ -417,8 +417,8 @@ def IGLP_OPT : SPseudoInstSI<(outs), (ins i32imm:$mask),
 let isTerminator = 1, isNotDuplicable = 1 in {
 
 def SI_IF: CFPseudoInstSI <
-  (outs SReg_1:$dst), (ins SReg_1:$vcc, i1imm:$likelyvarying, brtarget:$target),
-  [(set i1:$dst, (AMDGPUif i1:$vcc, (i1 timm:$likelyvarying), bb:$target))], 1, 1> {
+  (outs SReg_1:$dst), (ins SReg_1:$vcc, i1imm:$likelydivergent, brtarget:$target),
+  [(set i1:$dst, (AMDGPUif i1:$vcc, (i1 timm:$likelydivergent), bb:$target))], 1, 1> {
   let Constraints = "";
   let Size = 12;
   let hasSideEffects = 1;
@@ -427,7 +427,7 @@ def SI_IF: CFPseudoInstSI <
 
 def SI_ELSE : CFPseudoInstSI <
   (outs SReg_1:$dst),
-  (ins SReg_1:$src, i1imm:$likelyvarying, brtarget:$target), [], 1, 1> {
+  (ins SReg_1:$src, i1imm:$likelydivergent, brtarget:$target), [], 1, 1> {
   let Size = 12;
   let hasSideEffects = 1;
   let IsNeverUniform = 1;
@@ -1049,8 +1049,8 @@ def : GCNPat<
 >;
 
 def : GCNPat<
-  (AMDGPUelse i1:$src, i1:$likelyvarying, bb:$target),
-  (SI_ELSE $src, $likelyvarying, $target)
+  (AMDGPUelse i1:$src, i1:$likelydivergent, bb:$target),
+  (SI_ELSE $src, $likelydivergent, $target)
 >;
 
 def : Pat <

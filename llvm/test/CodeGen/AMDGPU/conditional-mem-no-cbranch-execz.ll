@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 < %s | FileCheck %s
 
 ; Check that simple conditional memory accesses that are guarded by likely
-; varying conditions are not lowered with an s_cbranch_execz to bypass them.
+; divergent conditions are not lowered with an s_cbranch_execz to bypass them.
 ; Instructions like s_waitcnt vmcnt(0) block the elimination of s_cbranch_execz.
 
 declare i32 @llvm.amdgcn.workitem.id.x()
