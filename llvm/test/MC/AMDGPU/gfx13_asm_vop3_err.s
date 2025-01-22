@@ -154,16 +154,6 @@ v_mad_u32 v2, v4, v7, v8 dpp8:[7,6,5,4,3,2,1,0]
 // GFX13-NEXT:{{^}}v_mad_u32 v2, v4, v7, v8 dpp8:[7,6,5,4,3,2,1,0]
 // GFX13-NEXT:{{^}}                         ^
 
-v_max_i64 v[2:3], v[4:5], v[6:7] dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_max_i64 v[2:3], v[4:5], v[6:7] dpp8:[7,6,5,4,3,2,1,0]
-// GFX13-NEXT:{{^}}                                 ^
-
-v_max_u64 v[2:3], v[4:5], v[6:7] dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_max_u64 v[2:3], v[4:5], v[6:7] dpp8:[7,6,5,4,3,2,1,0]
-// GFX13-NEXT:{{^}}                                 ^
-
 v_maximum_f64 v[4:5], v[2:3], v[6:7] dpp8:[7,6,5,4,3,2,1,0]
 // GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 // GFX13-NEXT:{{^}}v_maximum_f64 v[4:5], v[2:3], v[6:7] dpp8:[7,6,5,4,3,2,1,0]
@@ -178,16 +168,6 @@ v_maximum_f64 v[4:5], v[2:3], v[6:7] row_share:1
 // GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 // GFX13-NEXT:{{^}}v_maximum_f64 v[4:5], v[2:3], v[6:7] row_share:1
 // GFX13-NEXT:{{^}}                                     ^
-
-v_min_i64 v[2:3], v[4:5], v[6:7] dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_min_i64 v[2:3], v[4:5], v[6:7] dpp8:[7,6,5,4,3,2,1,0]
-// GFX13-NEXT:{{^}}                                 ^
-
-v_min_u64 v[2:3], v[4:5], v[6:7] dpp8:[7,6,5,4,3,2,1,0]
-// GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
-// GFX13-NEXT:{{^}}v_min_u64 v[2:3], v[4:5], v[6:7] dpp8:[7,6,5,4,3,2,1,0]
-// GFX13-NEXT:{{^}}                                 ^
 
 v_minimum_f64 v[4:5], v[2:3], v[6:7] dpp8:[7,6,5,4,3,2,1,0]
 // GFX13: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
