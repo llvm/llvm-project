@@ -288,8 +288,6 @@ private:
   IdataContents idata;
   Chunk *importTableStart = nullptr;
   uint64_t importTableSize = 0;
-  Chunk *edataStart = nullptr;
-  Chunk *edataEnd = nullptr;
   Chunk *iatStart = nullptr;
   uint64_t iatSize = 0;
   DelayLoadContents delayIdata;
@@ -1331,22 +1329,46 @@ void Writer::createExportTable() {
   if (!edataSec->chunks.empty()) {
     // Allow using a custom built export table from input object files, instead
     // of having the linker synthesize the tables.
-    if (ctx.symtab.hadExplicitExports)
-      Warn(ctx) << "literal .edata sections override exports";
-  } else if (!ctx.symtab.exports.empty()) {
-    std::vector<Chunk *> edataChunks;
-    createEdataChunks(ctx.symtab, edataChunks);
-    for (Chunk *c : edataChunks)
-      edataSec->addChunk(c);
+    if (!ctx.hybridSymtab) {
+      ctx.symtab.edataStart = edataSec->chunks.front();
+      ctx.symtab.edataEnd = edataSec->chunks.back();
+    } else {
+      // On hybrid target, split EC and native chunks.
+      llvm::stable_sort(edataSec->chunks, [=](const Chunk *a, const Chunk *b) {
+        return (a->getMachine() != ARM64) < (b->getMachine() != ARM64);
+      });
+
+      for (auto chunk : edataSec->chunks) {
+        if (chunk->getMachine() != ARM64) {
+          ctx.hybridSymtab->edataStart = chunk;
+          ctx.hybridSymtab->edataEnd = edataSec->chunks.back();
+          break;
+        }
+
+        if (!ctx.symtab.edataStart)
+          ctx.symtab.edataStart = chunk;
+        ctx.symtab.edataEnd = chunk;
+      }
+    }
   }
-  if (!edataSec->chunks.empty()) {
-    edataStart = edataSec->chunks.front();
-    edataEnd = edataSec->chunks.back();
-  }
-  // Warn on exported deleting destructor.
-  for (auto e : ctx.symtab.exports)
-    if (e.sym && e.sym->getName().starts_with("??_G"))
-      Warn(ctx) << "export of deleting dtor: " << e.sym;
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    if (symtab.edataStart) {
+      if (symtab.hadExplicitExports)
+        Warn(ctx) << "literal .edata sections override exports";
+    } else if (!symtab.exports.empty()) {
+      std::vector<Chunk *> edataChunks;
+      createEdataChunks(symtab, edataChunks);
+      for (Chunk *c : edataChunks)
+        edataSec->addChunk(c);
+      symtab.edataStart = edataChunks.front();
+      symtab.edataEnd = edataChunks.back();
+    }
+
+    // Warn on exported deleting destructor.
+    for (auto e : symtab.exports)
+      if (e.sym && e.sym->getName().starts_with("??_G"))
+        Warn(ctx) << "export of deleting dtor: " << toString(ctx, *e.sym);
+  });
 }
 
 void Writer::removeUnusedSections() {
@@ -1819,10 +1841,11 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
          dataDirOffset64 == buf - buffer->getBufferStart());
   auto *dir = reinterpret_cast<data_directory *>(buf);
   buf += sizeof(*dir) * numberOfDataDirectory;
-  if (edataStart) {
-    dir[EXPORT_TABLE].RelativeVirtualAddress = edataStart->getRVA();
-    dir[EXPORT_TABLE].Size =
-        edataEnd->getRVA() + edataEnd->getSize() - edataStart->getRVA();
+  if (ctx.symtab.edataStart) {
+    dir[EXPORT_TABLE].RelativeVirtualAddress = ctx.symtab.edataStart->getRVA();
+    dir[EXPORT_TABLE].Size = ctx.symtab.edataEnd->getRVA() +
+                             ctx.symtab.edataEnd->getSize() -
+                             ctx.symtab.edataStart->getRVA();
   }
   if (importTableStart) {
     dir[IMPORT_TABLE].RelativeVirtualAddress = importTableStart->getRVA();
@@ -2392,6 +2415,19 @@ void Writer::setECSymbols() {
       symtab->findUnderscore("__arm64x_native_entrypoint")
           ->replaceKeepingName(altEntrySym, sizeof(SymbolUnion));
     }
+
+    if (symtab->edataStart)
+      ctx.dynamicRelocs->set(
+          dataDirOffset64 + EXPORT_TABLE * sizeof(data_directory) +
+              offsetof(data_directory, Size),
+          symtab->edataEnd->getRVA() - symtab->edataStart->getRVA() +
+              symtab->edataEnd->getSize());
+    if (hybridPdata.first)
+      ctx.dynamicRelocs->set(
+          dataDirOffset64 + EXCEPTION_TABLE * sizeof(data_directory) +
+              offsetof(data_directory, Size),
+          hybridPdata.last->getRVA() - hybridPdata.first->getRVA() +
+              hybridPdata.last->getSize());
   }
 }
 
@@ -2642,6 +2678,32 @@ void Writer::createDynamicRelocs() {
           cast_or_null<Defined>(ctx.symtab.entry));
     else
       Warn(ctx) << "'__chpe_metadata' is missing for ARM64X target";
+  }
+
+  if (ctx.symtab.edataStart != ctx.hybridSymtab->edataStart) {
+    ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                           dataDirOffset64 +
+                               EXPORT_TABLE * sizeof(data_directory) +
+                               offsetof(data_directory, RelativeVirtualAddress),
+                           ctx.hybridSymtab->edataStart);
+    // The Size value is assigned after addresses are finalized.
+    ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                           dataDirOffset64 +
+                               EXPORT_TABLE * sizeof(data_directory) +
+                               offsetof(data_directory, Size));
+  }
+
+  if (pdata.first != hybridPdata.first) {
+    ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                           dataDirOffset64 +
+                               EXCEPTION_TABLE * sizeof(data_directory) +
+                               offsetof(data_directory, RelativeVirtualAddress),
+                           hybridPdata.first);
+    // The Size value is assigned after addresses are finalized.
+    ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                           dataDirOffset64 +
+                               EXCEPTION_TABLE * sizeof(data_directory) +
+                               offsetof(data_directory, Size));
   }
 
   // Set the hybrid load config to the EC load config.

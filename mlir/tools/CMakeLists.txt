@@ -7,7 +7,6 @@ add_subdirectory(mlir-reduce)
 add_subdirectory(mlir-rewrite)
 add_subdirectory(mlir-shlib)
 add_subdirectory(mlir-translate)
-add_subdirectory(mlir-vulkan-runner)
 add_subdirectory(tblgen-lsp-server)
 add_subdirectory(tblgen-to-irdl)
 

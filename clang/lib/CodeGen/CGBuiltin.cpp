@@ -68,6 +68,7 @@
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/X86TargetParser.h"
+#include <numeric>
 #include <optional>
 #include <utility>
 
@@ -5125,147 +5126,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::FunctionCallee Func = CGM.CreateRuntimeFunction(FTy, LibCallName);
     return EmitCall(FuncInfo, CGCallee::forDirect(Func),
                     ReturnValueSlot(), Args);
-  }
-
-  case Builtin::BI__atomic_test_and_set: {
-    // Look at the argument type to determine whether this is a volatile
-    // operation. The parameter type is always volatile.
-    QualType PtrTy = E->getArg(0)->IgnoreImpCasts()->getType();
-    bool Volatile =
-        PtrTy->castAs<PointerType>()->getPointeeType().isVolatileQualified();
-
-    Address Ptr =
-        EmitPointerWithAlignment(E->getArg(0)).withElementType(Int8Ty);
-
-    Value *NewVal = Builder.getInt8(1);
-    Value *Order = EmitScalarExpr(E->getArg(1));
-    if (isa<llvm::ConstantInt>(Order)) {
-      int ord = cast<llvm::ConstantInt>(Order)->getZExtValue();
-      AtomicRMWInst *Result = nullptr;
-      switch (ord) {
-      case 0:  // memory_order_relaxed
-      default: // invalid order
-        Result = Builder.CreateAtomicRMW(llvm::AtomicRMWInst::Xchg, Ptr, NewVal,
-                                         llvm::AtomicOrdering::Monotonic);
-        break;
-      case 1: // memory_order_consume
-      case 2: // memory_order_acquire
-        Result = Builder.CreateAtomicRMW(llvm::AtomicRMWInst::Xchg, Ptr, NewVal,
-                                         llvm::AtomicOrdering::Acquire);
-        break;
-      case 3: // memory_order_release
-        Result = Builder.CreateAtomicRMW(llvm::AtomicRMWInst::Xchg, Ptr, NewVal,
-                                         llvm::AtomicOrdering::Release);
-        break;
-      case 4: // memory_order_acq_rel
-
-        Result = Builder.CreateAtomicRMW(llvm::AtomicRMWInst::Xchg, Ptr, NewVal,
-                                         llvm::AtomicOrdering::AcquireRelease);
-        break;
-      case 5: // memory_order_seq_cst
-        Result = Builder.CreateAtomicRMW(
-            llvm::AtomicRMWInst::Xchg, Ptr, NewVal,
-            llvm::AtomicOrdering::SequentiallyConsistent);
-        break;
-      }
-      Result->setVolatile(Volatile);
-      return RValue::get(Builder.CreateIsNotNull(Result, "tobool"));
-    }
-
-    llvm::BasicBlock *ContBB = createBasicBlock("atomic.continue", CurFn);
-
-    llvm::BasicBlock *BBs[5] = {
-      createBasicBlock("monotonic", CurFn),
-      createBasicBlock("acquire", CurFn),
-      createBasicBlock("release", CurFn),
-      createBasicBlock("acqrel", CurFn),
-      createBasicBlock("seqcst", CurFn)
-    };
-    llvm::AtomicOrdering Orders[5] = {
-        llvm::AtomicOrdering::Monotonic, llvm::AtomicOrdering::Acquire,
-        llvm::AtomicOrdering::Release, llvm::AtomicOrdering::AcquireRelease,
-        llvm::AtomicOrdering::SequentiallyConsistent};
-
-    Order = Builder.CreateIntCast(Order, Builder.getInt32Ty(), false);
-    llvm::SwitchInst *SI = Builder.CreateSwitch(Order, BBs[0]);
-
-    Builder.SetInsertPoint(ContBB);
-    PHINode *Result = Builder.CreatePHI(Int8Ty, 5, "was_set");
-
-    for (unsigned i = 0; i < 5; ++i) {
-      Builder.SetInsertPoint(BBs[i]);
-      AtomicRMWInst *RMW = Builder.CreateAtomicRMW(llvm::AtomicRMWInst::Xchg,
-                                                   Ptr, NewVal, Orders[i]);
-      RMW->setVolatile(Volatile);
-      Result->addIncoming(RMW, BBs[i]);
-      Builder.CreateBr(ContBB);
-    }
-
-    SI->addCase(Builder.getInt32(0), BBs[0]);
-    SI->addCase(Builder.getInt32(1), BBs[1]);
-    SI->addCase(Builder.getInt32(2), BBs[1]);
-    SI->addCase(Builder.getInt32(3), BBs[2]);
-    SI->addCase(Builder.getInt32(4), BBs[3]);
-    SI->addCase(Builder.getInt32(5), BBs[4]);
-
-    Builder.SetInsertPoint(ContBB);
-    return RValue::get(Builder.CreateIsNotNull(Result, "tobool"));
-  }
-
-  case Builtin::BI__atomic_clear: {
-    QualType PtrTy = E->getArg(0)->IgnoreImpCasts()->getType();
-    bool Volatile =
-        PtrTy->castAs<PointerType>()->getPointeeType().isVolatileQualified();
-
-    Address Ptr = EmitPointerWithAlignment(E->getArg(0));
-    Ptr = Ptr.withElementType(Int8Ty);
-    Value *NewVal = Builder.getInt8(0);
-    Value *Order = EmitScalarExpr(E->getArg(1));
-    if (isa<llvm::ConstantInt>(Order)) {
-      int ord = cast<llvm::ConstantInt>(Order)->getZExtValue();
-      StoreInst *Store = Builder.CreateStore(NewVal, Ptr, Volatile);
-      switch (ord) {
-      case 0:  // memory_order_relaxed
-      default: // invalid order
-        Store->setOrdering(llvm::AtomicOrdering::Monotonic);
-        break;
-      case 3:  // memory_order_release
-        Store->setOrdering(llvm::AtomicOrdering::Release);
-        break;
-      case 5:  // memory_order_seq_cst
-        Store->setOrdering(llvm::AtomicOrdering::SequentiallyConsistent);
-        break;
-      }
-      return RValue::get(nullptr);
-    }
-
-    llvm::BasicBlock *ContBB = createBasicBlock("atomic.continue", CurFn);
-
-    llvm::BasicBlock *BBs[3] = {
-      createBasicBlock("monotonic", CurFn),
-      createBasicBlock("release", CurFn),
-      createBasicBlock("seqcst", CurFn)
-    };
-    llvm::AtomicOrdering Orders[3] = {
-        llvm::AtomicOrdering::Monotonic, llvm::AtomicOrdering::Release,
-        llvm::AtomicOrdering::SequentiallyConsistent};
-
-    Order = Builder.CreateIntCast(Order, Builder.getInt32Ty(), false);
-    llvm::SwitchInst *SI = Builder.CreateSwitch(Order, BBs[0]);
-
-    for (unsigned i = 0; i < 3; ++i) {
-      Builder.SetInsertPoint(BBs[i]);
-      StoreInst *Store = Builder.CreateStore(NewVal, Ptr, Volatile);
-      Store->setOrdering(Orders[i]);
-      Builder.CreateBr(ContBB);
-    }
-
-    SI->addCase(Builder.getInt32(0), BBs[0]);
-    SI->addCase(Builder.getInt32(3), BBs[1]);
-    SI->addCase(Builder.getInt32(5), BBs[2]);
-
-    Builder.SetInsertPoint(ContBB);
-    return RValue::get(nullptr);
   }
 
   case Builtin::BI__atomic_thread_fence:
@@ -19332,9 +19192,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     assert(T0->isVectorTy() && T1->isVectorTy() &&
            "Dot product of vector and scalar is not supported.");
 
-    auto *VecTy0 = E->getArg(0)->getType()->getAs<VectorType>();
+    auto *VecTy0 = E->getArg(0)->getType()->castAs<VectorType>();
     [[maybe_unused]] auto *VecTy1 =
-        E->getArg(1)->getType()->getAs<VectorType>();
+        E->getArg(1)->getType()->castAs<VectorType>();
 
     assert(VecTy0->getElementType() == VecTy1->getElementType() &&
            "Dot product of vectors need the same element types.");
@@ -19427,7 +19287,7 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     llvm::Type *Xty = Op0->getType();
     llvm::Type *retType = llvm::Type::getInt1Ty(this->getLLVMContext());
     if (Xty->isVectorTy()) {
-      auto *XVecTy = E->getArg(0)->getType()->getAs<VectorType>();
+      auto *XVecTy = E->getArg(0)->getType()->castAs<VectorType>();
       retType = llvm::VectorType::get(
           retType, ElementCount::getFixed(XVecTy->getNumElements()));
     }
@@ -19613,7 +19473,7 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     llvm::Type *Xty = Op0->getType();
     llvm::Type *retType = llvm::Type::getInt32Ty(this->getLLVMContext());
     if (Xty->isVectorTy()) {
-      auto *XVecTy = Arg0->getType()->getAs<VectorType>();
+      auto *XVecTy = Arg0->getType()->castAs<VectorType>();
       retType = llvm::VectorType::get(
           retType, ElementCount::getFixed(XVecTy->getNumElements()));
     }

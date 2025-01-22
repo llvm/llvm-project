@@ -1018,3 +1018,19 @@ func.func @test_const_shape_value() -> !tosa.shape<5> {
   %cst = tosa.const_shape {value = dense<[1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<5>
   return %cst : !tosa.shape<5>
 }
+
+// -----
+
+func.func @test_sub_with_unequal_operand_ranks(%arg0: tensor<1x21x3xf32>, %arg1: tensor<1x13x21x3xf32>) -> tensor<1x13x21x3xf32> {
+  // expected-error@+1 {{'tosa.sub' op operands don't have matching ranks}}
+  %0 = tosa.sub %arg0, %arg1 : (tensor<1x21x3xf32>, tensor<1x13x21x3xf32>) -> tensor<1x13x21x3xf32>
+  return %0 : tensor<1x13x21x3xf32>
+}
+
+// -----
+
+func.func @test_sub_with_unequal_result_ranks(%arg0: tensor<1x21x3xf32>, %arg1: tensor<13x21x3xf32>) -> tensor<1x13x21x3xf32> {
+  // expected-error@+1 {{'tosa.sub' op result type has different rank than operands}}
+  %0 = tosa.sub %arg0, %arg1 : (tensor<1x21x3xf32>, tensor<13x21x3xf32>) -> tensor<1x13x21x3xf32>
+  return %0 : tensor<1x13x21x3xf32>
+}
