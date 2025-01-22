@@ -2275,8 +2275,7 @@ define i64 @load_i16_anyext_i64(ptr %ptr) {
 ;
 ; CHECK-O3-LABEL: load_i16_anyext_i64:
 ; CHECK-O3:       # %bb.0:
-; CHECK-O3-NEXT:    movzwl (%rdi), %eax
-; CHECK-O3-NEXT:    vmovd %eax, %xmm0
+; CHECK-O3-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-O3-NEXT:    vmovq %xmm0, %rax
 ; CHECK-O3-NEXT:    retq
   %v = load atomic i16, ptr %ptr unordered, align 8
