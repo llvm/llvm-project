@@ -3261,9 +3261,8 @@ void Record::checkUnusedTemplateArgs() {
   }
 }
 
-RecordKeeper::RecordKeeper()
-    : Impl(std::make_unique<detail::RecordKeeperImpl>(*this)),
-      Timer(std::make_unique<TGTimer>()) {}
+RecordKeeper::RecordKeeper(TGTimer &Timer)
+    : Impl(std::make_unique<detail::RecordKeeperImpl>(*this)), Timer(Timer) {}
 
 RecordKeeper::~RecordKeeper() = default;
 
