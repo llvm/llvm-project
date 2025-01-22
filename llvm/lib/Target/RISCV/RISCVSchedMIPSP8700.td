@@ -125,7 +125,6 @@ def : WriteRes<WriteCSR, [p8700ALQ]>;
 
 // Handle CTI Pipeline.
 def : WriteRes<WriteJmp, [p8700IssueCTI]>;
-def : WriteRes<WriteJalr, [p8700IssueCTI]>;
 let Latency = 2 in {
 def : WriteRes<WriteJal, [p8700IssueCTI]>;
 def : WriteRes<WriteJalr, [p8700IssueCTI]>;
