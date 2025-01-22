@@ -6549,8 +6549,13 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
       DiagID = diag::err_keyword_not_supported_on_target;
     else if (AL.isDeclspecAttribute())
       DiagID = diag::warn_unhandled_ms_attribute_ignored;
-    else if (AL.getScopeName() && !AL.isKnownScopeName())
-      return;
+    else if (AL.hasScope() && !AL.isKnownScopeName()) {
+      const std::vector<std::string> UnknownAttributeNamespaces =
+          S.getDiagnostics().getDiagnosticOptions().UnknownAttributeNamespaces;
+      if (llvm::is_contained(UnknownAttributeNamespaces,
+                             AL.getScopeName()->getName()))
+        return;
+    }
 
     S.Diag(AL.getLoc(), DiagID) << AL << AL.getRange();
     return;

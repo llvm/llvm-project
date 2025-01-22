@@ -12,5 +12,5 @@
 [[using clang:]] extern int n; // ok
 [[using blah: clang::optnone]] extern int n; // expected-error {{attribute with scope specifier cannot follow}} expected-warning {{only applies to functions}}
 
-[[using clang: unknown_attr]] extern int n; // expected-warning {{unknown attribute 'unknown_attr' ignored}}
-[[using unknown_ns: something]] extern int n;
+[[using clang: unknown_attr]] extern int n;   // expected-warning {{unknown attribute 'unknown_attr' ignored}}
+[[using unknown_ns: something]] extern int n; // expected-warning {{unknown attribute 'something' ignored}}

@@ -131,6 +131,11 @@ public:
   /// whether -Wsystem-headers is enabled on a per-module basis.
   std::vector<std::string> SystemHeaderWarningsModules;
 
+  /// The list of namespaces from -Wunknown-attribute-namespace=... used to
+  /// specify the allowed unknown attribute namespaces. Any attribute namespace
+  /// not in this list will trigger a warning.
+  std::vector<std::string> UnknownAttributeNamespaces;
+
 public:
   // Define accessors/mutators for diagnostic options of enumeration type.
 #define DIAGOPT(Name, Bits, Default)
