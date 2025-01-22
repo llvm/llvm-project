@@ -205,6 +205,12 @@ def main():
             "commits"
         ),
     )
+    p.add_argument(
+        "-0",
+        "--null",
+        action="store_true",
+        help="print the affected paths with null-terminated characters",
+    )
     # We gather all the remaining positional arguments into 'args' since we need
     # to use some heuristics to determine whether or not <commit> was present.
     # However, to print pretty messages, we make use of metavar and help.
@@ -261,11 +267,11 @@ def main():
                 "ignored by clang-format):"
             )
             for filename in ignored_files:
-                print("    %s" % filename)
+                print_filename(filename, opts.null)
         if changed_lines:
             print("Running clang-format on the following files:")
             for filename in changed_lines:
-                print("    %s" % filename)
+                print_filename(filename, opts.null)
 
     if not changed_lines:
         if opts.verbose >= 0:
@@ -304,7 +310,7 @@ def main():
     if (opts.verbose >= 0 and not opts.patch) or opts.verbose >= 1:
         print("changed files:")
         for filename in changed_files:
-            print("    %s" % filename)
+            print_filename(filename, opts.null)
 
     return 1
 
@@ -867,6 +873,13 @@ def convert_string(bytes_input):
         return str(bytes_input)
     except UnicodeError:
         return str(bytes_input)
+
+
+def print_filename(filename, null=False):
+    if null:
+        print(filename + "\0", end="")
+    else:
+        print("    %s" % filename)
 
 
 if __name__ == "__main__":
