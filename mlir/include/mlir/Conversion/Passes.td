@@ -1439,7 +1439,11 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
     Option<"x86Vector", "enable-x86vector",
            "bool", /*default=*/"false",
            "Enables the use of X86Vector dialect while lowering the vector "
-	   "dialect.">
+	   "dialect.">,
+    Option<"vectorTransformsOptions", "vector-transform-options",
+           "vector::VectorTransformsOptions",
+           /*default=*/"vector::VectorTransformsOptions()",
+           "Options to lower some operations like contractions and transposes.">,
   ];
 }
 

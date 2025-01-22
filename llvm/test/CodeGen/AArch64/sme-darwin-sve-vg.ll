@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-darwin -mattr=+sve -mattr=+sme -enable-aarch64-sme-peephole-opt=false -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-darwin -aarch64-streaming-hazard-size=0 -mattr=+sve -mattr=+sme -enable-aarch64-sme-peephole-opt=false -verify-machineinstrs < %s | FileCheck %s
 
 declare void @normal_callee();
 
