@@ -7783,6 +7783,10 @@ and https://microsoft.github.io/hlsl-specs/proposals/0013-wave-size-range.html
   }];
 }
 
+def HLSLRootSignatureDocs : Documentation {
+  let Category = DocCatUndocumented;
+}
+
 def NumThreadsDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
