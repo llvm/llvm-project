@@ -490,7 +490,7 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
 
   bool Linking = !Args.hasArg(options::OPT_E, options::OPT_c, options::OPT_S,
                               options::OPT_emit_ast);
-  if (!CustomSysroot && Linking) {
+  if (Linking) {
     SmallString<128> Dir(SDKLibraryRootDir);
     llvm::sys::path::append(Dir, "target/lib");
     if (CheckSDKPartExists(Dir, "system libraries"))
