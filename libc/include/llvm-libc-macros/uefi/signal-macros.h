@@ -1,4 +1,4 @@
-//===-- Definition of GPU signal number macros ----------------------------===//
+//===-- Definition of UEFI signal number macros ---------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_MACROS_GPU_SIGNAL_MACROS_H
-#define LLVM_LIBC_MACROS_GPU_SIGNAL_MACROS_H
+#ifndef LLVM_LIBC_MACROS_UEFI_SIGNAL_MACROS_H
+#define LLVM_LIBC_MACROS_UEFI_SIGNAL_MACROS_H
 
 #define SIGINT 2
 #define SIGILL 4
@@ -25,4 +25,4 @@
 
 #define __NSIGSET_WORDS NSIG
 
-#endif // LLVM_LIBC_MACROS_GPU_SIGNAL_MACROS_H
+#endif // LLVM_LIBC_MACROS_UEFI_SIGNAL_MACROS_H
