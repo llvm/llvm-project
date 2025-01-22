@@ -62,10 +62,7 @@ OPTION_CC1 = "-cc1"
 OPTION_CC1AS = "-cc1as"
 OPTION_FC1 = "-fc1"
 OPTION_SLASH_C = "/c"
-<<<<<<< HEAD
 OPTION_T = "/T lib_6_7"
-=======
->>>>>>> 0b098550d9fb451e57dce7da8e98246c0d8e9842
 SLASH_SLASH = "// "
 EXCLAMATION = "! "
 
@@ -317,7 +314,6 @@ def get_index(driver_vis):
             return index
 
 
-<<<<<<< HEAD
 def get_visibility(option, filtered_visibility):
     """Get a list of drivers that a given option exposed to
     option: The option object from Options.td
