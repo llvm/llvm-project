@@ -244,6 +244,12 @@ struct CodeGenProcModel {
   ConstRecVec WriteResDefs;
   ConstRecVec ReadAdvanceDefs;
 
+  // Map from the WriteType field to the parent WriteRes record.
+  DenseMap<const Record *, const Record *> WriteResMap;
+
+  // Map from the ReadType field to the parent ReadAdvance record.
+  DenseMap<const Record *, const Record *> ReadAdvanceMap;
+
   // Per-operand machine model resources associated with this processor.
   ConstRecVec ProcResourceDefs;
 
