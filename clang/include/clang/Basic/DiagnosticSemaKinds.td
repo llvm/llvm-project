@@ -976,7 +976,7 @@ def err_ptrauth_indirect_goto_addrlabel_arithmetic : Error<
 
 // __ptrauth qualifier
 def err_ptrauth_qualifier_invalid : Error<
-  "%select{return types|parameter types|properties}2 may not be qualified with %select{__ptrauth|__ptrauth_restricted_intptr}1; type is %0">;
+  "%select{return types|parameter types|properties}1 may not be qualified with __ptrauth; type is %0">;
 def err_ptrauth_qualifier_cast : Error<
   "cast types may not be qualified with __ptrauth; type is %0">;
 def err_ptrauth_qualifier_nonpointer : Error<

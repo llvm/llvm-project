@@ -15268,8 +15268,7 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
 
   // __ptrauth is forbidden on parameters.
   if (T.getPointerAuth()) {
-    Diag(NameLoc, diag::err_ptrauth_qualifier_invalid)
-        << T << (int)!T->isSignableType() << 1;
+    Diag(NameLoc, diag::err_ptrauth_qualifier_invalid) << T << 1;
     New->setInvalidDecl();
   }
 

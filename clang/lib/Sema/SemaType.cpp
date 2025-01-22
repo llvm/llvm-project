@@ -2550,8 +2550,7 @@ bool Sema::CheckFunctionReturnType(QualType T, SourceLocation Loc) {
 
   // __ptrauth is illegal on a function return type.
   if (T.getPointerAuth()) {
-    Diag(Loc, diag::err_ptrauth_qualifier_invalid)
-        << T << (int)!T->isSignableType() << 0;
+    Diag(Loc, diag::err_ptrauth_qualifier_invalid) << T << 0;
     return true;
   }
 
@@ -2662,8 +2661,7 @@ QualType Sema::BuildFunctionType(QualType T,
       Invalid = true;
     } else if (ParamType.getPointerAuth()) {
       // __ptrauth is illegal on a function return type.
-      Diag(Loc, diag::err_ptrauth_qualifier_invalid)
-          << T << (int)!T->isSignableType() << 1;
+      Diag(Loc, diag::err_ptrauth_qualifier_invalid) << T << 1;
       Invalid = true;
     }
 
@@ -4977,8 +4975,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
       // __ptrauth is illegal on a function return type.
       if (T.getPointerAuth()) {
-        S.Diag(DeclType.Loc, diag::err_ptrauth_qualifier_invalid)
-            << T << (int)!T->isSignableType() << 0;
+        S.Diag(DeclType.Loc, diag::err_ptrauth_qualifier_invalid) << T << 0;
       }
 
       if (LangOpts.OpenCL) {
