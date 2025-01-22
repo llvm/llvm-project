@@ -5,6 +5,7 @@ add_clang_library(MLIRCIR
 
   DEPENDS
   MLIRCIROpsIncGen
+  MLIRCIRAttrsEnumsGen
 
   LINK_LIBS PUBLIC
   MLIRIR

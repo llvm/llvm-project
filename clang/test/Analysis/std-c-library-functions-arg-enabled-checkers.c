@@ -22,6 +22,7 @@
 // CHECK-NEXT: core.BitwiseShift
 // CHECK-NEXT: core.CallAndMessageModeling
 // CHECK-NEXT: core.CallAndMessage
+// CHECK-NEXT: core.DereferenceModeling
 // CHECK-NEXT: core.DivideZero
 // CHECK-NEXT: core.DynamicTypePropagation
 // CHECK-NEXT: core.NonNullParamChecker

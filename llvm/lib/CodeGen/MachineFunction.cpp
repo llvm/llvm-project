@@ -459,11 +459,11 @@ MachineInstr &MachineFunction::cloneMachineInstrBundle(
       break;
     ++I;
   }
-  // Copy over call site info to the cloned instruction if needed. If Orig is in
-  // a bundle, copyCallSiteInfo takes care of finding the call instruction in
-  // the bundle.
-  if (Orig.shouldUpdateCallSiteInfo())
-    copyCallSiteInfo(&Orig, FirstClone);
+  // Copy over call info to the cloned instruction if needed. If Orig is in
+  // a bundle, copyAdditionalCallInfo takes care of finding the call instruction
+  // in the bundle.
+  if (Orig.shouldUpdateAdditionalCallInfo())
+    copyAdditionalCallInfo(&Orig, FirstClone);
   return *FirstClone;
 }
 
@@ -476,8 +476,13 @@ void MachineFunction::deleteMachineInstr(MachineInstr *MI) {
   // be triggered during the implementation of support for the
   // call site info of a new architecture. If the assertion is triggered,
   // back trace will tell where to insert a call to updateCallSiteInfo().
-  assert((!MI->isCandidateForCallSiteEntry() || !CallSitesInfo.contains(MI)) &&
+  assert((!MI->isCandidateForAdditionalCallInfo() ||
+          !CallSitesInfo.contains(MI)) &&
          "Call site info was not updated!");
+  // Verify that the "called globals" info is in a valid state.
+  assert((!MI->isCandidateForAdditionalCallInfo() ||
+          !CalledGlobalsInfo.contains(MI)) &&
+         "Called globals info was not updated!");
   // Strip it for parts. The operand array and the MI object itself are
   // independently recyclable.
   if (MI->Operands)
@@ -911,7 +916,7 @@ try_next:;
 
 MachineFunction::CallSiteInfoMap::iterator
 MachineFunction::getCallSiteInfo(const MachineInstr *MI) {
-  assert(MI->isCandidateForCallSiteEntry() &&
+  assert(MI->isCandidateForAdditionalCallInfo() &&
          "Call site info refers only to call (MI) candidates");
 
   if (!Target.Options.EmitCallSiteInfo)
@@ -926,59 +931,74 @@ static const MachineInstr *getCallInstr(const MachineInstr *MI) {
 
   for (const auto &BMI : make_range(getBundleStart(MI->getIterator()),
                                     getBundleEnd(MI->getIterator())))
-    if (BMI.isCandidateForCallSiteEntry())
+    if (BMI.isCandidateForAdditionalCallInfo())
       return &BMI;
 
   llvm_unreachable("Unexpected bundle without a call site candidate");
 }
 
-void MachineFunction::eraseCallSiteInfo(const MachineInstr *MI) {
-  assert(MI->shouldUpdateCallSiteInfo() &&
-         "Call site info refers only to call (MI) candidates or "
+void MachineFunction::eraseAdditionalCallInfo(const MachineInstr *MI) {
+  assert(MI->shouldUpdateAdditionalCallInfo() &&
+         "Call info refers only to call (MI) candidates or "
          "candidates inside bundles");
 
   const MachineInstr *CallMI = getCallInstr(MI);
+
   CallSiteInfoMap::iterator CSIt = getCallSiteInfo(CallMI);
-  if (CSIt == CallSitesInfo.end())
-    return;
-  CallSitesInfo.erase(CSIt);
+  if (CSIt != CallSitesInfo.end())
+    CallSitesInfo.erase(CSIt);
+
+  CalledGlobalsMap::iterator CGIt = CalledGlobalsInfo.find(CallMI);
+  if (CGIt != CalledGlobalsInfo.end())
+    CalledGlobalsInfo.erase(CGIt);
 }
 
-void MachineFunction::copyCallSiteInfo(const MachineInstr *Old,
-                                       const MachineInstr *New) {
-  assert(Old->shouldUpdateCallSiteInfo() &&
-         "Call site info refers only to call (MI) candidates or "
+void MachineFunction::copyAdditionalCallInfo(const MachineInstr *Old,
+                                             const MachineInstr *New) {
+  assert(Old->shouldUpdateAdditionalCallInfo() &&
+         "Call info refers only to call (MI) candidates or "
          "candidates inside bundles");
 
-  if (!New->isCandidateForCallSiteEntry())
-    return eraseCallSiteInfo(Old);
+  if (!New->isCandidateForAdditionalCallInfo())
+    return eraseAdditionalCallInfo(Old);
 
   const MachineInstr *OldCallMI = getCallInstr(Old);
   CallSiteInfoMap::iterator CSIt = getCallSiteInfo(OldCallMI);
-  if (CSIt == CallSitesInfo.end())
-    return;
+  if (CSIt != CallSitesInfo.end()) {
+    CallSiteInfo CSInfo = CSIt->second;
+    CallSitesInfo[New] = CSInfo;
+  }
 
-  CallSiteInfo CSInfo = CSIt->second;
-  CallSitesInfo[New] = CSInfo;
+  CalledGlobalsMap::iterator CGIt = CalledGlobalsInfo.find(OldCallMI);
+  if (CGIt != CalledGlobalsInfo.end()) {
+    CalledGlobalInfo CGInfo = CGIt->second;
+    CalledGlobalsInfo[New] = CGInfo;
+  }
 }
 
-void MachineFunction::moveCallSiteInfo(const MachineInstr *Old,
-                                       const MachineInstr *New) {
-  assert(Old->shouldUpdateCallSiteInfo() &&
-         "Call site info refers only to call (MI) candidates or "
+void MachineFunction::moveAdditionalCallInfo(const MachineInstr *Old,
+                                             const MachineInstr *New) {
+  assert(Old->shouldUpdateAdditionalCallInfo() &&
+         "Call info refers only to call (MI) candidates or "
          "candidates inside bundles");
 
-  if (!New->isCandidateForCallSiteEntry())
-    return eraseCallSiteInfo(Old);
+  if (!New->isCandidateForAdditionalCallInfo())
+    return eraseAdditionalCallInfo(Old);
 
   const MachineInstr *OldCallMI = getCallInstr(Old);
   CallSiteInfoMap::iterator CSIt = getCallSiteInfo(OldCallMI);
-  if (CSIt == CallSitesInfo.end())
-    return;
+  if (CSIt != CallSitesInfo.end()) {
+    CallSiteInfo CSInfo = std::move(CSIt->second);
+    CallSitesInfo.erase(CSIt);
+    CallSitesInfo[New] = CSInfo;
+  }
 
-  CallSiteInfo CSInfo = std::move(CSIt->second);
-  CallSitesInfo.erase(CSIt);
-  CallSitesInfo[New] = CSInfo;
+  CalledGlobalsMap::iterator CGIt = CalledGlobalsInfo.find(OldCallMI);
+  if (CGIt != CalledGlobalsInfo.end()) {
+    CalledGlobalInfo CGInfo = std::move(CGIt->second);
+    CalledGlobalsInfo.erase(CGIt);
+    CalledGlobalsInfo[New] = CGInfo;
+  }
 }
 
 void MachineFunction::setDebugInstrNumberingCount(unsigned Num) {

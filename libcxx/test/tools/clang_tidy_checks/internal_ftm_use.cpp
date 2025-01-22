@@ -26,9 +26,6 @@ std::array valid_macros{
     // Testing macros
     "_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER",
 
-    // TODO: Why does this macro even exist?
-    "_LIBCPP_HAS_NO_TREE_BARRIER",
-
     // Experimental features
     "_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB",
     "_LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM",

@@ -465,6 +465,94 @@ least-significant bit position. 0xffffffff is returned if no 1 bit is found.
 TMA family of Intrinsics
 ------------------------
 
+'``llvm.nvvm.cp.async.bulk.global.to.shared.cluster``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(3) %dst, ptr addrspace(3) %mbar, ptr addrspace(1) %src, i32 %size, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.global.to.shared.cluster``' intrinsic
+corresponds to the ``cp.async.bulk.shared::cluster.global.*`` family
+of PTX instructions. These instructions initiate an asynchronous
+copy of bulk data from global memory to shared::cluster memory.
+The 32-bit operand ``%size`` specifies the amount of memory to be
+copied and it must be a multiple of 16.
+
+* The last two arguments to these intrinsics are boolean flags
+  indicating support for cache_hint and/or multicast modifiers.
+  These flag arguments must be compile-time constants. The backend
+  looks through these flags and lowers the intrinsics appropriately.
+
+* The Nth argument (denoted by ``i1 %flag_ch``) when set, indicates
+  a valid cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
+  variant of the PTX instruction.
+
+* The [N-1]th argument (denoted by ``i1 %flag_mc``) when set, indicates
+  the presence of a multicast mask (``i16 %mc``) and generates the PTX
+  instruction with the ``.multicast::cluster`` modifier.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
+
+'``llvm.nvvm.cp.async.bulk.shared.cta.to.global``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.shared.cta.to.global(ptr addrspace(1) %dst, ptr addrspace(3) %src, i32 %size, i64 %ch, i1 %flag_ch)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.shared.cta.to.global``' intrinsic
+corresponds to the ``cp.async.bulk.global.shared::cta.*`` set of PTX
+instructions. These instructions initiate an asynchronous copy from
+shared::cta to global memory. The 32-bit operand ``%size`` specifies
+the amount of memory to be copied and it must be a multiple of 16.
+
+* The last argument to these intrinsics is a boolean flag
+  indicating support for cache_hint. This flag argument must
+  be a compile-time constant. When set, it indicates a valid
+  cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
+  variant of the PTX instruction.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
+
+'``llvm.nvvm.cp.async.bulk.shared.cta.to.cluster``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.shared.cta.to.cluster(ptr addrspace(3) %dst, ptr addrspace(3) %mbar, ptr addrspace(3) %src, i32 %size)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.shared.cta.to.cluster``' intrinsic
+corresponds to the ``cp.async.bulk.shared::cluster.shared::cta.*``
+PTX instruction. This instruction initiates an asynchronous copy from
+shared::cta to shared::cluster memory. The destination has to be in
+the shared memory of a different CTA within the cluster. The 32-bit
+operand ``%size`` specifies the amount of memory to be copied and
+it must be a multiple of 16.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
+
 '``llvm.nvvm.cp.async.bulk.tensor.g2s.tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

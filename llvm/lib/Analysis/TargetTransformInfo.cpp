@@ -864,11 +864,12 @@ bool TargetTransformInfo::shouldPrefetchAddressSpace(unsigned AS) const {
 }
 
 InstructionCost TargetTransformInfo::getPartialReductionCost(
-    unsigned Opcode, Type *InputType, Type *AccumType, ElementCount VF,
-    PartialReductionExtendKind OpAExtend, PartialReductionExtendKind OpBExtend,
-    std::optional<unsigned> BinOp) const {
-  return TTIImpl->getPartialReductionCost(Opcode, InputType, AccumType, VF,
-                                          OpAExtend, OpBExtend, BinOp);
+    unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+    ElementCount VF, PartialReductionExtendKind OpAExtend,
+    PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp) const {
+  return TTIImpl->getPartialReductionCost(Opcode, InputTypeA, InputTypeB,
+                                          AccumType, VF, OpAExtend, OpBExtend,
+                                          BinOp);
 }
 
 unsigned TargetTransformInfo::getMaxInterleaveFactor(ElementCount VF) const {
@@ -1380,6 +1381,14 @@ TargetTransformInfo::getVPLegalizationStrategy(const VPIntrinsic &VPI) const {
 
 bool TargetTransformInfo::hasArmWideBranch(bool Thumb) const {
   return TTIImpl->hasArmWideBranch(Thumb);
+}
+
+uint64_t TargetTransformInfo::getFeatureMask(const Function &F) const {
+  return TTIImpl->getFeatureMask(F);
+}
+
+bool TargetTransformInfo::isMultiversionedFunction(const Function &F) const {
+  return TTIImpl->isMultiversionedFunction(F);
 }
 
 unsigned TargetTransformInfo::getMaxNumArgs() const {

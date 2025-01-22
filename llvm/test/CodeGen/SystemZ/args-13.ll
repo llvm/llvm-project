@@ -2,6 +2,7 @@
 ; Test incoming i128 arguments.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=arch15 | FileCheck %s
 
 ; Do some arithmetic so that we can see the register being used.
 define void @f1(ptr %r2, i16 %r3, i32 %r4, i64 %r5, i128 %r6) {

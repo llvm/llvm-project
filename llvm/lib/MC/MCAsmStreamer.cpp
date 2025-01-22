@@ -209,6 +209,8 @@ public:
   void emitCOFFSectionIndex(MCSymbol const *Symbol) override;
   void emitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset) override;
   void emitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) override;
+  void emitCOFFSecNumber(MCSymbol const *Symbol) override;
+  void emitCOFFSecOffset(MCSymbol const *Symbol) override;
   void emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
                                   MCSymbol *CsectSym, Align Alignment) override;
   void emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol,
@@ -442,8 +444,6 @@ public:
   void emitDwarfAdvanceLineAddr(int64_t LineDelta, const MCSymbol *LastLabel,
                                 const MCSymbol *Label,
                                 unsigned PointerSize) override;
-
-  void doFinalizationAtSectionEnd(MCSection *Section) override;
 };
 
 } // end anonymous namespace.
@@ -892,6 +892,18 @@ void MCAsmStreamer::emitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) {
     OS << '+' << Offset;
   else if (Offset < 0)
     OS << '-' << -Offset;
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCOFFSecNumber(MCSymbol const *Symbol) {
+  OS << "\t.secnum\t";
+  Symbol->print(OS, MAI);
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCOFFSecOffset(MCSymbol const *Symbol) {
+  OS << "\t.secoffset\t";
+  Symbol->print(OS, MAI);
   EmitEOL();
 }
 
@@ -2677,18 +2689,6 @@ void MCAsmStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
   emitIntValue(dwarf::DW_LNS_advance_line, 1);
   emitSLEB128IntValue(LineDelta);
   emitIntValue(dwarf::DW_LNS_copy, 1);
-}
-
-void MCAsmStreamer::doFinalizationAtSectionEnd(MCSection *Section) {
-  // Emit section end. This is used to tell the debug line section where the end
-  // is for a text section if we don't use .loc to represent the debug line.
-  assert(MAI->isAIX());
-  switchSectionNoPrint(Section);
-
-  MCSymbol *Sym = getCurrentSectionOnly()->getEndSymbol(getContext());
-
-  if (!Sym->isInSection())
-    emitLabel(Sym);
 }
 
 MCStreamer *llvm::createAsmStreamer(MCContext &Context,
