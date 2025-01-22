@@ -7,8 +7,8 @@
 # CHECK-DBG: ********** JOINING INTERVALS ***********
 # CHECK-DBG: ********** INTERVALS **********
 # CHECK-DBG: %0 [16r,32r:0) 0@16r  weight:0.000000e+00
-# CHECK-DBG: %3 [48r,112r:0) 0@48r  L0000000000000080 [48r,112r:0) 0@48r  L0000000000000040 [48r,112r:0) 0@48r  weight:0.000000e+00
-# CHECK-DBG: %4 [80r,112e:1)[112e,112d:0) 0@112e 1@80r  L0000000000000080 [80r,112e:1)[112e,112d:0) 0@112e 1@80r  L0000000000000040 [80r,112e:1)[112e,112d:0) 0@112e 1@80r  weight:0.000000e+00
+# CHECK-DBG: %3 [48r,112r:0) 0@48r  L0000000000000040 [48r,112r:0) 0@48r  weight:0.000000e+00
+# CHECK-DBG: %4 [80r,112e:1)[112e,112d:0) 0@112e 1@80r  L0000000000000080 [112e,112d:0) 0@112e  L0000000000000040 [80r,112e:1)[112e,112d:0) 0@112e 1@80r  weight:0.000000e+00
 # CHECK-DBG: %5 [32r,112r:1)[112r,112d:0) 0@112r 1@32r  weight:0.000000e+00
 ---
 name:            test
@@ -43,7 +43,7 @@ body:             |
 # CHECK-DBG: %1 [32r,48B:2)[48B,320r:0)[320r,368B:1) 0@48B-phi 1@320r 2@32r
 # CHECK-DBG-SAME: weight:0.000000e+00
 # CHECK-DBG: %3 [80r,160B:2)[240r,272B:1)[288r,304B:0)[304B,320r:3) 0@288r 1@240r 2@80r 3@304B-phi
-# CHECK-DBG-SAME: L0000000000000080 [240r,272B:1)[288r,304B:0)[304B,320r:3) 0@288r 1@240r 2@x 3@304B-phi
+# CHECK-DBG-SAME: L0000000000000080 [288r,304B:0)[304B,320r:3) 0@288r 1@x 2@x 3@304B-phi
 # CHECK-DBG-SAME: L0000000000000040 [80r,160B:2)[240r,272B:1)[288r,304B:0)[304B,320r:3) 0@288r 1@240r 2@80r 3@304B-phi
 # CHECK-DBG-SAME: weight:0.000000e+00
 ---
@@ -125,57 +125,5 @@ body:             |
     %5:gpr64 = ADDXrs killed %1, killed %4, 1
     %1:gpr64 = COPY killed %5
     B %bb.1
-
-...
-# Test that the interval `L0000000000000080 [112r,112d:1)` is not removed,
-# when removing undefined subranges.
-#
-# CHECK-DBG: ********** REGISTER COALESCER **********
-# CHECK-DBG: ********** Function: reproducer3
-# CHECK-DBG: ********** JOINING INTERVALS ***********
-# CHECK-DBG: ********** INTERVALS **********
-# CHECK-DBG: W0 [0B,32r:0)[320r,336r:1) 0@0B-phi 1@320r
-# CHECK-DBG: W1 [0B,16r:0) 0@0B-phi
-# CHECK-DBG: %0 [16r,64r:0) 0@16r  weight:0.000000e+00
-# CHECK-DBG: %1 [32r,128r:0) 0@32r  weight:0.000000e+00
-# CHECK-DBG: %2 [48r,64r:0) 0@48r  weight:0.000000e+00
-# CHECK-DBG: %3 [64r,80r:0) 0@64r  weight:0.000000e+00
-# CHECK-DBG: %4 [80r,176r:0) 0@80r  weight:0.000000e+00
-# CHECK-DBG: %7 [112r,128r:1)[128r,256r:0)[304B,320r:0) 0@128r 1@112r
-# CHECK-DBG-SAME: L0000000000000080 [112r,112d:1)[128r,256r:0)[304B,320r:0) 0@128r 1@112r
-# CHECK-DBG-SAME: L0000000000000040 [112r,128r:1)[128r,256r:0)[304B,320r:0) 0@128r 1@112r
-# CHECK-DBG-SAME: weight:0.000000e+00
-# CHECK-DBG: %8 [96r,176r:1)[176r,192r:0) 0@176r 1@96r  weight:0.000000e+00
-# CHECK-DBG: %9 [256r,272r:0) 0@256r  weight:0.000000e+00
----
-name:            reproducer3
-tracksRegLiveness: true
-body:             |
-  bb.0:
-    liveins: $w0, $w1
-
-    %0:gpr32 = COPY killed $w1
-    %1:gpr32 = COPY killed $w0
-    %3:gpr32 = UBFMWri %1, 31, 30
-    %4:gpr32 = SUBWrs killed %3, killed %0, 1
-    %5:gpr32 = UBFMWri killed %4, 1, 31
-    %6:gpr32 = MOVi32imm 1
-    %7:gpr32 = COPY %6
-    %7:gpr32 = BFMWri %7, killed %1, 31, 30
-    %8:gpr64 = SUBREG_TO_REG 0, killed %7, %subreg.sub_32
-    %9:gpr32common = COPY killed %6
-    %9:gpr32common = BFMWri %9, killed %5, 30, 29
-    dead $wzr = SUBSWri killed %9, 0, 0, implicit-def $nzcv
-    Bcc 2, %bb.2, implicit killed $nzcv
-    B %bb.1
-
-  bb.1:
-    %10:gpr64common = UBFMXri killed %8, 62, 61
-    dead $xzr = LDRXui killed %10, 0
-    RET_ReallyLR
-
-  bb.2:
-    $x0 = COPY killed %8
-    RET_ReallyLR implicit killed $x0
 
 ...
