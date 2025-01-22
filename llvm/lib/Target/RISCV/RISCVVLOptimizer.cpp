@@ -1311,8 +1311,15 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) {
     unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
     MachineOperand &VLOp = MI.getOperand(VLOpNum);
 
-    if (!RISCV::isVLKnownLT(*CommonVL, VLOp)) {
-      LLVM_DEBUG(dbgs() << "    Abort due to CommonVL not < VLOp.\n");
+    if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
+      LLVM_DEBUG(dbgs() << "    Abort due to CommonVL not <= VLOp.\n");
+      continue;
+    }
+
+    if (CommonVL->isIdenticalTo(VLOp)) {
+      LLVM_DEBUG(
+          dbgs()
+          << "    Abort due to CommonVL == VLOp, no point in reducing.\n");
       continue;
     }
 

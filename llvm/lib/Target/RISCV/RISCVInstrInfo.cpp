@@ -4243,21 +4243,6 @@ bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
   return LHS.getImm() <= RHS.getImm();
 }
 
-/// Given two VL operands, do we know that LHS < RHS?
-bool RISCV::isVLKnownLT(const MachineOperand &LHS, const MachineOperand &RHS) {
-  if (LHS.isReg() && RHS.isReg() && LHS.getReg().isVirtual() &&
-      LHS.getReg() == RHS.getReg())
-    return false;
-  if (RHS.isImm() && RHS.getImm() == RISCV::VLMaxSentinel && LHS.isImm() &&
-      LHS.getImm() != RHS.getImm())
-    return true;
-  if (LHS.isImm() && LHS.getImm() == RISCV::VLMaxSentinel)
-    return false;
-  if (!LHS.isImm() || !RHS.isImm())
-    return false;
-  return LHS.getImm() < RHS.getImm();
-}
-
 namespace {
 class RISCVPipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
   const MachineInstr *LHS;
