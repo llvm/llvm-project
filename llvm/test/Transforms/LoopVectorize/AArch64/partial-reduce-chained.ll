@@ -47,32 +47,6 @@ define i32 @chained_partial_reduce_add_sub(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-NEON-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP13]])
 ; CHECK-NEON-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-NEON-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
-; CHECK-NEON:       scalar.ph:
-; CHECK-NEON-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEON-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP15]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEON-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-NEON:       for.cond.cleanup:
-; CHECK-NEON-NEXT:    [[RES_0_LCSSA:%.*]] = phi i32 [ [[SUB:%.*]], [[FOR_BODY]] ], [ [[TMP15]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEON-NEXT:    ret i32 [[RES_0_LCSSA]]
-; CHECK-NEON:       for.body:
-; CHECK-NEON-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEON-NEXT:    [[RES:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SUB]], [[FOR_BODY]] ]
-; CHECK-NEON-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEON-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-NEON-NEXT:    [[C_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-NEON-NEXT:    [[A_VAL:%.*]] = load i8, ptr [[A_PTR]], align 1
-; CHECK-NEON-NEXT:    [[B_VAL:%.*]] = load i8, ptr [[B_PTR]], align 1
-; CHECK-NEON-NEXT:    [[C_VAL:%.*]] = load i8, ptr [[C_PTR]], align 1
-; CHECK-NEON-NEXT:    [[A_EXT:%.*]] = sext i8 [[A_VAL]] to i32
-; CHECK-NEON-NEXT:    [[B_EXT:%.*]] = sext i8 [[B_VAL]] to i32
-; CHECK-NEON-NEXT:    [[C_EXT:%.*]] = sext i8 [[C_VAL]] to i32
-; CHECK-NEON-NEXT:    [[MUL_AB:%.*]] = mul nsw i32 [[A_EXT]], [[B_EXT]]
-; CHECK-NEON-NEXT:    [[ADD:%.*]] = add nsw i32 [[RES]], [[MUL_AB]]
-; CHECK-NEON-NEXT:    [[MUL_AC:%.*]] = mul nsw i32 [[A_EXT]], [[C_EXT]]
-; CHECK-NEON-NEXT:    [[SUB]] = sub i32 [[ADD]], [[MUL_AC]]
-; CHECK-NEON-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEON-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEON-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]], !loop [[META4:![0-9]+]]
 ;
 ; CHECK-SVE-LABEL: define i32 @chained_partial_reduce_add_sub(
 ; CHECK-SVE-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -119,32 +93,6 @@ define i32 @chained_partial_reduce_add_sub(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP19]])
 ; CHECK-SVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-SVE-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
-; CHECK-SVE:       scalar.ph:
-; CHECK-SVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP21]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; CHECK-SVE-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-SVE:       for.cond.cleanup:
-; CHECK-SVE-NEXT:    [[RES_0_LCSSA:%.*]] = phi i32 [ [[SUB:%.*]], [[FOR_BODY]] ], [ [[TMP21]], [[MIDDLE_BLOCK]] ]
-; CHECK-SVE-NEXT:    ret i32 [[RES_0_LCSSA]]
-; CHECK-SVE:       for.body:
-; CHECK-SVE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-SVE-NEXT:    [[RES:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SUB]], [[FOR_BODY]] ]
-; CHECK-SVE-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-SVE-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-SVE-NEXT:    [[C_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-SVE-NEXT:    [[A_VAL:%.*]] = load i8, ptr [[A_PTR]], align 1
-; CHECK-SVE-NEXT:    [[B_VAL:%.*]] = load i8, ptr [[B_PTR]], align 1
-; CHECK-SVE-NEXT:    [[C_VAL:%.*]] = load i8, ptr [[C_PTR]], align 1
-; CHECK-SVE-NEXT:    [[A_EXT:%.*]] = sext i8 [[A_VAL]] to i32
-; CHECK-SVE-NEXT:    [[B_EXT:%.*]] = sext i8 [[B_VAL]] to i32
-; CHECK-SVE-NEXT:    [[C_EXT:%.*]] = sext i8 [[C_VAL]] to i32
-; CHECK-SVE-NEXT:    [[MUL_AB:%.*]] = mul nsw i32 [[A_EXT]], [[B_EXT]]
-; CHECK-SVE-NEXT:    [[ADD:%.*]] = add nsw i32 [[RES]], [[MUL_AB]]
-; CHECK-SVE-NEXT:    [[MUL_AC:%.*]] = mul nsw i32 [[A_EXT]], [[C_EXT]]
-; CHECK-SVE-NEXT:    [[SUB]] = sub i32 [[ADD]], [[MUL_AC]]
-; CHECK-SVE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-SVE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-SVE-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]], !loop [[META4:![0-9]+]]
 ;
 ; CHECK-SVE-MAXBW-LABEL: define i32 @chained_partial_reduce_add_sub(
 ; CHECK-SVE-MAXBW-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -191,32 +139,6 @@ define i32 @chained_partial_reduce_add_sub(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32> [[TMP19]])
 ; CHECK-SVE-MAXBW-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-SVE-MAXBW-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
-; CHECK-SVE-MAXBW:       scalar.ph:
-; CHECK-SVE-MAXBW-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP21]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; CHECK-SVE-MAXBW-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-SVE-MAXBW:       for.cond.cleanup:
-; CHECK-SVE-MAXBW-NEXT:    [[RES_0_LCSSA:%.*]] = phi i32 [ [[SUB:%.*]], [[FOR_BODY]] ], [ [[TMP21]], [[MIDDLE_BLOCK]] ]
-; CHECK-SVE-MAXBW-NEXT:    ret i32 [[RES_0_LCSSA]]
-; CHECK-SVE-MAXBW:       for.body:
-; CHECK-SVE-MAXBW-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[RES:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SUB]], [[FOR_BODY]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-SVE-MAXBW-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-SVE-MAXBW-NEXT:    [[C_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-SVE-MAXBW-NEXT:    [[A_VAL:%.*]] = load i8, ptr [[A_PTR]], align 1
-; CHECK-SVE-MAXBW-NEXT:    [[B_VAL:%.*]] = load i8, ptr [[B_PTR]], align 1
-; CHECK-SVE-MAXBW-NEXT:    [[C_VAL:%.*]] = load i8, ptr [[C_PTR]], align 1
-; CHECK-SVE-MAXBW-NEXT:    [[A_EXT:%.*]] = sext i8 [[A_VAL]] to i32
-; CHECK-SVE-MAXBW-NEXT:    [[B_EXT:%.*]] = sext i8 [[B_VAL]] to i32
-; CHECK-SVE-MAXBW-NEXT:    [[C_EXT:%.*]] = sext i8 [[C_VAL]] to i32
-; CHECK-SVE-MAXBW-NEXT:    [[MUL_AB:%.*]] = mul nsw i32 [[A_EXT]], [[B_EXT]]
-; CHECK-SVE-MAXBW-NEXT:    [[ADD:%.*]] = add nsw i32 [[RES]], [[MUL_AB]]
-; CHECK-SVE-MAXBW-NEXT:    [[MUL_AC:%.*]] = mul nsw i32 [[A_EXT]], [[C_EXT]]
-; CHECK-SVE-MAXBW-NEXT:    [[SUB]] = sub i32 [[ADD]], [[MUL_AC]]
-; CHECK-SVE-MAXBW-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-SVE-MAXBW-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-SVE-MAXBW-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]], !loop [[META4:![0-9]+]]
 ;
 entry:
   %cmp28.not = icmp ult i32 %N, 2
@@ -289,32 +211,6 @@ define i32 @chained_partial_reduce_add_add(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-NEON-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE3]])
 ; CHECK-NEON-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-NEON-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
-; CHECK-NEON:       scalar.ph:
-; CHECK-NEON-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEON-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP13]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEON-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-NEON:       for.cond.cleanup:
-; CHECK-NEON-NEXT:    [[RES_0_LCSSA:%.*]] = phi i32 [ [[ADD_2:%.*]], [[FOR_BODY]] ], [ [[TMP13]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEON-NEXT:    ret i32 [[RES_0_LCSSA]]
-; CHECK-NEON:       for.body:
-; CHECK-NEON-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEON-NEXT:    [[RES:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ADD_2]], [[FOR_BODY]] ]
-; CHECK-NEON-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEON-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-NEON-NEXT:    [[C_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-NEON-NEXT:    [[A_VAL:%.*]] = load i8, ptr [[A_PTR]], align 1
-; CHECK-NEON-NEXT:    [[B_VAL:%.*]] = load i8, ptr [[B_PTR]], align 1
-; CHECK-NEON-NEXT:    [[C_VAL:%.*]] = load i8, ptr [[C_PTR]], align 1
-; CHECK-NEON-NEXT:    [[A_EXT:%.*]] = sext i8 [[A_VAL]] to i32
-; CHECK-NEON-NEXT:    [[B_EXT:%.*]] = sext i8 [[B_VAL]] to i32
-; CHECK-NEON-NEXT:    [[C_EXT:%.*]] = sext i8 [[C_VAL]] to i32
-; CHECK-NEON-NEXT:    [[MUL_AB:%.*]] = mul nsw i32 [[A_EXT]], [[B_EXT]]
-; CHECK-NEON-NEXT:    [[ADD:%.*]] = add nsw i32 [[RES]], [[MUL_AB]]
-; CHECK-NEON-NEXT:    [[MUL_AC:%.*]] = mul nsw i32 [[A_EXT]], [[C_EXT]]
-; CHECK-NEON-NEXT:    [[ADD_2]] = add i32 [[ADD]], [[MUL_AC]]
-; CHECK-NEON-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEON-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEON-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]], !loop [[META4]]
 ;
 ; CHECK-SVE-LABEL: define i32 @chained_partial_reduce_add_add(
 ; CHECK-SVE-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
@@ -361,32 +257,6 @@ define i32 @chained_partial_reduce_add_add(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP19]])
 ; CHECK-SVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-SVE-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
-; CHECK-SVE:       scalar.ph:
-; CHECK-SVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP21]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; CHECK-SVE-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-SVE:       for.cond.cleanup:
-; CHECK-SVE-NEXT:    [[RES_0_LCSSA:%.*]] = phi i32 [ [[ADD_2:%.*]], [[FOR_BODY]] ], [ [[TMP21]], [[MIDDLE_BLOCK]] ]
-; CHECK-SVE-NEXT:    ret i32 [[RES_0_LCSSA]]
-; CHECK-SVE:       for.body:
-; CHECK-SVE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-SVE-NEXT:    [[RES:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ADD_2]], [[FOR_BODY]] ]
-; CHECK-SVE-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-SVE-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-SVE-NEXT:    [[C_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-SVE-NEXT:    [[A_VAL:%.*]] = load i8, ptr [[A_PTR]], align 1
-; CHECK-SVE-NEXT:    [[B_VAL:%.*]] = load i8, ptr [[B_PTR]], align 1
-; CHECK-SVE-NEXT:    [[C_VAL:%.*]] = load i8, ptr [[C_PTR]], align 1
-; CHECK-SVE-NEXT:    [[A_EXT:%.*]] = sext i8 [[A_VAL]] to i32
-; CHECK-SVE-NEXT:    [[B_EXT:%.*]] = sext i8 [[B_VAL]] to i32
-; CHECK-SVE-NEXT:    [[C_EXT:%.*]] = sext i8 [[C_VAL]] to i32
-; CHECK-SVE-NEXT:    [[MUL_AB:%.*]] = mul nsw i32 [[A_EXT]], [[B_EXT]]
-; CHECK-SVE-NEXT:    [[ADD:%.*]] = add nsw i32 [[RES]], [[MUL_AB]]
-; CHECK-SVE-NEXT:    [[MUL_AC:%.*]] = mul nsw i32 [[A_EXT]], [[C_EXT]]
-; CHECK-SVE-NEXT:    [[ADD_2]] = add i32 [[ADD]], [[MUL_AC]]
-; CHECK-SVE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-SVE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-SVE-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]], !loop [[META4]]
 ;
 ; CHECK-SVE-MAXBW-LABEL: define i32 @chained_partial_reduce_add_add(
 ; CHECK-SVE-MAXBW-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
@@ -433,32 +303,6 @@ define i32 @chained_partial_reduce_add_add(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP19:%.*]] = call i32 @llvm.vector.reduce.add.nxv2i32(<vscale x 2 x i32> [[PARTIAL_REDUCE3]])
 ; CHECK-SVE-MAXBW-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-SVE-MAXBW-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
-; CHECK-SVE-MAXBW:       scalar.ph:
-; CHECK-SVE-MAXBW-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP19]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; CHECK-SVE-MAXBW-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-SVE-MAXBW:       for.cond.cleanup:
-; CHECK-SVE-MAXBW-NEXT:    [[RES_0_LCSSA:%.*]] = phi i32 [ [[ADD_2:%.*]], [[FOR_BODY]] ], [ [[TMP19]], [[MIDDLE_BLOCK]] ]
-; CHECK-SVE-MAXBW-NEXT:    ret i32 [[RES_0_LCSSA]]
-; CHECK-SVE-MAXBW:       for.body:
-; CHECK-SVE-MAXBW-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[RES:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ADD_2]], [[FOR_BODY]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-SVE-MAXBW-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-SVE-MAXBW-NEXT:    [[C_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-SVE-MAXBW-NEXT:    [[A_VAL:%.*]] = load i8, ptr [[A_PTR]], align 1
-; CHECK-SVE-MAXBW-NEXT:    [[B_VAL:%.*]] = load i8, ptr [[B_PTR]], align 1
-; CHECK-SVE-MAXBW-NEXT:    [[C_VAL:%.*]] = load i8, ptr [[C_PTR]], align 1
-; CHECK-SVE-MAXBW-NEXT:    [[A_EXT:%.*]] = sext i8 [[A_VAL]] to i32
-; CHECK-SVE-MAXBW-NEXT:    [[B_EXT:%.*]] = sext i8 [[B_VAL]] to i32
-; CHECK-SVE-MAXBW-NEXT:    [[C_EXT:%.*]] = sext i8 [[C_VAL]] to i32
-; CHECK-SVE-MAXBW-NEXT:    [[MUL_AB:%.*]] = mul nsw i32 [[A_EXT]], [[B_EXT]]
-; CHECK-SVE-MAXBW-NEXT:    [[ADD:%.*]] = add nsw i32 [[RES]], [[MUL_AB]]
-; CHECK-SVE-MAXBW-NEXT:    [[MUL_AC:%.*]] = mul nsw i32 [[A_EXT]], [[C_EXT]]
-; CHECK-SVE-MAXBW-NEXT:    [[ADD_2]] = add i32 [[ADD]], [[MUL_AC]]
-; CHECK-SVE-MAXBW-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-SVE-MAXBW-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-SVE-MAXBW-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]], !loop [[META4]]
 ;
 entry:
   %cmp28.not = icmp ult i32 %N, 2
@@ -531,32 +375,6 @@ define i32 @chained_partial_reduce_sub_add(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-NEON-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP13]])
 ; CHECK-NEON-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-NEON-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
-; CHECK-NEON:       scalar.ph:
-; CHECK-NEON-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEON-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP15]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEON-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-NEON:       for.cond.cleanup:
-; CHECK-NEON-NEXT:    [[RES_0_LCSSA:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[TMP15]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEON-NEXT:    ret i32 [[RES_0_LCSSA]]
-; CHECK-NEON:       for.body:
-; CHECK-NEON-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEON-NEXT:    [[RES:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ADD]], [[FOR_BODY]] ]
-; CHECK-NEON-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEON-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-NEON-NEXT:    [[C_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-NEON-NEXT:    [[A_VAL:%.*]] = load i8, ptr [[A_PTR]], align 1
-; CHECK-NEON-NEXT:    [[B_VAL:%.*]] = load i8, ptr [[B_PTR]], align 1
-; CHECK-NEON-NEXT:    [[C_VAL:%.*]] = load i8, ptr [[C_PTR]], align 1
-; CHECK-NEON-NEXT:    [[A_EXT:%.*]] = sext i8 [[A_VAL]] to i32
-; CHECK-NEON-NEXT:    [[B_EXT:%.*]] = sext i8 [[B_VAL]] to i32
-; CHECK-NEON-NEXT:    [[C_EXT:%.*]] = sext i8 [[C_VAL]] to i32
-; CHECK-NEON-NEXT:    [[MUL_AB:%.*]] = mul nsw i32 [[A_EXT]], [[B_EXT]]
-; CHECK-NEON-NEXT:    [[SUB:%.*]] = sub nsw i32 [[RES]], [[MUL_AB]]
-; CHECK-NEON-NEXT:    [[MUL_AC:%.*]] = mul nsw i32 [[A_EXT]], [[C_EXT]]
-; CHECK-NEON-NEXT:    [[ADD]] = add i32 [[SUB]], [[MUL_AC]]
-; CHECK-NEON-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEON-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEON-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]], !loop [[META4]]
 ;
 ; CHECK-SVE-LABEL: define i32 @chained_partial_reduce_sub_add(
 ; CHECK-SVE-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
@@ -603,32 +421,6 @@ define i32 @chained_partial_reduce_sub_add(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP19]])
 ; CHECK-SVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-SVE-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
-; CHECK-SVE:       scalar.ph:
-; CHECK-SVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP21]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; CHECK-SVE-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-SVE:       for.cond.cleanup:
-; CHECK-SVE-NEXT:    [[RES_0_LCSSA:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[TMP21]], [[MIDDLE_BLOCK]] ]
-; CHECK-SVE-NEXT:    ret i32 [[RES_0_LCSSA]]
-; CHECK-SVE:       for.body:
-; CHECK-SVE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-SVE-NEXT:    [[RES:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ADD]], [[FOR_BODY]] ]
-; CHECK-SVE-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-SVE-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-SVE-NEXT:    [[C_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-SVE-NEXT:    [[A_VAL:%.*]] = load i8, ptr [[A_PTR]], align 1
-; CHECK-SVE-NEXT:    [[B_VAL:%.*]] = load i8, ptr [[B_PTR]], align 1
-; CHECK-SVE-NEXT:    [[C_VAL:%.*]] = load i8, ptr [[C_PTR]], align 1
-; CHECK-SVE-NEXT:    [[A_EXT:%.*]] = sext i8 [[A_VAL]] to i32
-; CHECK-SVE-NEXT:    [[B_EXT:%.*]] = sext i8 [[B_VAL]] to i32
-; CHECK-SVE-NEXT:    [[C_EXT:%.*]] = sext i8 [[C_VAL]] to i32
-; CHECK-SVE-NEXT:    [[MUL_AB:%.*]] = mul nsw i32 [[A_EXT]], [[B_EXT]]
-; CHECK-SVE-NEXT:    [[SUB:%.*]] = sub nsw i32 [[RES]], [[MUL_AB]]
-; CHECK-SVE-NEXT:    [[MUL_AC:%.*]] = mul nsw i32 [[A_EXT]], [[C_EXT]]
-; CHECK-SVE-NEXT:    [[ADD]] = add i32 [[SUB]], [[MUL_AC]]
-; CHECK-SVE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-SVE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-SVE-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]], !loop [[META4]]
 ;
 ; CHECK-SVE-MAXBW-LABEL: define i32 @chained_partial_reduce_sub_add(
 ; CHECK-SVE-MAXBW-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
@@ -675,32 +467,6 @@ define i32 @chained_partial_reduce_sub_add(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32> [[TMP19]])
 ; CHECK-SVE-MAXBW-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-SVE-MAXBW-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
-; CHECK-SVE-MAXBW:       scalar.ph:
-; CHECK-SVE-MAXBW-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP21]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; CHECK-SVE-MAXBW-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-SVE-MAXBW:       for.cond.cleanup:
-; CHECK-SVE-MAXBW-NEXT:    [[RES_0_LCSSA:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[TMP21]], [[MIDDLE_BLOCK]] ]
-; CHECK-SVE-MAXBW-NEXT:    ret i32 [[RES_0_LCSSA]]
-; CHECK-SVE-MAXBW:       for.body:
-; CHECK-SVE-MAXBW-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[RES:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ADD]], [[FOR_BODY]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-SVE-MAXBW-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-SVE-MAXBW-NEXT:    [[C_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-SVE-MAXBW-NEXT:    [[A_VAL:%.*]] = load i8, ptr [[A_PTR]], align 1
-; CHECK-SVE-MAXBW-NEXT:    [[B_VAL:%.*]] = load i8, ptr [[B_PTR]], align 1
-; CHECK-SVE-MAXBW-NEXT:    [[C_VAL:%.*]] = load i8, ptr [[C_PTR]], align 1
-; CHECK-SVE-MAXBW-NEXT:    [[A_EXT:%.*]] = sext i8 [[A_VAL]] to i32
-; CHECK-SVE-MAXBW-NEXT:    [[B_EXT:%.*]] = sext i8 [[B_VAL]] to i32
-; CHECK-SVE-MAXBW-NEXT:    [[C_EXT:%.*]] = sext i8 [[C_VAL]] to i32
-; CHECK-SVE-MAXBW-NEXT:    [[MUL_AB:%.*]] = mul nsw i32 [[A_EXT]], [[B_EXT]]
-; CHECK-SVE-MAXBW-NEXT:    [[SUB:%.*]] = sub nsw i32 [[RES]], [[MUL_AB]]
-; CHECK-SVE-MAXBW-NEXT:    [[MUL_AC:%.*]] = mul nsw i32 [[A_EXT]], [[C_EXT]]
-; CHECK-SVE-MAXBW-NEXT:    [[ADD]] = add i32 [[SUB]], [[MUL_AC]]
-; CHECK-SVE-MAXBW-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-SVE-MAXBW-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-SVE-MAXBW-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]], !loop [[META4]]
 ;
 entry:
   %cmp28.not = icmp ult i32 %N, 2
@@ -775,32 +541,6 @@ define i32 @chained_partial_reduce_sub_sub(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-NEON-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP13]])
 ; CHECK-NEON-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-NEON-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
-; CHECK-NEON:       scalar.ph:
-; CHECK-NEON-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEON-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP15]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEON-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-NEON:       for.cond.cleanup:
-; CHECK-NEON-NEXT:    [[RES_0_LCSSA:%.*]] = phi i32 [ [[SUB_2:%.*]], [[FOR_BODY]] ], [ [[TMP15]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEON-NEXT:    ret i32 [[RES_0_LCSSA]]
-; CHECK-NEON:       for.body:
-; CHECK-NEON-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEON-NEXT:    [[RES:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SUB_2]], [[FOR_BODY]] ]
-; CHECK-NEON-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEON-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-NEON-NEXT:    [[C_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-NEON-NEXT:    [[A_VAL:%.*]] = load i8, ptr [[A_PTR]], align 1
-; CHECK-NEON-NEXT:    [[B_VAL:%.*]] = load i8, ptr [[B_PTR]], align 1
-; CHECK-NEON-NEXT:    [[C_VAL:%.*]] = load i8, ptr [[C_PTR]], align 1
-; CHECK-NEON-NEXT:    [[A_EXT:%.*]] = sext i8 [[A_VAL]] to i32
-; CHECK-NEON-NEXT:    [[B_EXT:%.*]] = sext i8 [[B_VAL]] to i32
-; CHECK-NEON-NEXT:    [[C_EXT:%.*]] = sext i8 [[C_VAL]] to i32
-; CHECK-NEON-NEXT:    [[MUL_AB:%.*]] = mul nsw i32 [[A_EXT]], [[B_EXT]]
-; CHECK-NEON-NEXT:    [[SUB:%.*]] = sub nsw i32 [[RES]], [[MUL_AB]]
-; CHECK-NEON-NEXT:    [[MUL_AC:%.*]] = mul nsw i32 [[A_EXT]], [[C_EXT]]
-; CHECK-NEON-NEXT:    [[SUB_2]] = sub i32 [[SUB]], [[MUL_AC]]
-; CHECK-NEON-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEON-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEON-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]], !loop [[META4]]
 ;
 ; CHECK-SVE-LABEL: define i32 @chained_partial_reduce_sub_sub(
 ; CHECK-SVE-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
@@ -847,32 +587,6 @@ define i32 @chained_partial_reduce_sub_sub(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP19]])
 ; CHECK-SVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-SVE-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
-; CHECK-SVE:       scalar.ph:
-; CHECK-SVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP21]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; CHECK-SVE-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-SVE:       for.cond.cleanup:
-; CHECK-SVE-NEXT:    [[RES_0_LCSSA:%.*]] = phi i32 [ [[SUB_2:%.*]], [[FOR_BODY]] ], [ [[TMP21]], [[MIDDLE_BLOCK]] ]
-; CHECK-SVE-NEXT:    ret i32 [[RES_0_LCSSA]]
-; CHECK-SVE:       for.body:
-; CHECK-SVE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-SVE-NEXT:    [[RES:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SUB_2]], [[FOR_BODY]] ]
-; CHECK-SVE-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-SVE-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-SVE-NEXT:    [[C_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-SVE-NEXT:    [[A_VAL:%.*]] = load i8, ptr [[A_PTR]], align 1
-; CHECK-SVE-NEXT:    [[B_VAL:%.*]] = load i8, ptr [[B_PTR]], align 1
-; CHECK-SVE-NEXT:    [[C_VAL:%.*]] = load i8, ptr [[C_PTR]], align 1
-; CHECK-SVE-NEXT:    [[A_EXT:%.*]] = sext i8 [[A_VAL]] to i32
-; CHECK-SVE-NEXT:    [[B_EXT:%.*]] = sext i8 [[B_VAL]] to i32
-; CHECK-SVE-NEXT:    [[C_EXT:%.*]] = sext i8 [[C_VAL]] to i32
-; CHECK-SVE-NEXT:    [[MUL_AB:%.*]] = mul nsw i32 [[A_EXT]], [[B_EXT]]
-; CHECK-SVE-NEXT:    [[SUB:%.*]] = sub nsw i32 [[RES]], [[MUL_AB]]
-; CHECK-SVE-NEXT:    [[MUL_AC:%.*]] = mul nsw i32 [[A_EXT]], [[C_EXT]]
-; CHECK-SVE-NEXT:    [[SUB_2]] = sub i32 [[SUB]], [[MUL_AC]]
-; CHECK-SVE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-SVE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-SVE-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]], !loop [[META4]]
 ;
 ; CHECK-SVE-MAXBW-LABEL: define i32 @chained_partial_reduce_sub_sub(
 ; CHECK-SVE-MAXBW-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
@@ -919,32 +633,6 @@ define i32 @chained_partial_reduce_sub_sub(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32> [[TMP19]])
 ; CHECK-SVE-MAXBW-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-SVE-MAXBW-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
-; CHECK-SVE-MAXBW:       scalar.ph:
-; CHECK-SVE-MAXBW-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP21]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; CHECK-SVE-MAXBW-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-SVE-MAXBW:       for.cond.cleanup:
-; CHECK-SVE-MAXBW-NEXT:    [[RES_0_LCSSA:%.*]] = phi i32 [ [[SUB_2:%.*]], [[FOR_BODY]] ], [ [[TMP21]], [[MIDDLE_BLOCK]] ]
-; CHECK-SVE-MAXBW-NEXT:    ret i32 [[RES_0_LCSSA]]
-; CHECK-SVE-MAXBW:       for.body:
-; CHECK-SVE-MAXBW-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[RES:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SUB_2]], [[FOR_BODY]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-SVE-MAXBW-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-SVE-MAXBW-NEXT:    [[C_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-SVE-MAXBW-NEXT:    [[A_VAL:%.*]] = load i8, ptr [[A_PTR]], align 1
-; CHECK-SVE-MAXBW-NEXT:    [[B_VAL:%.*]] = load i8, ptr [[B_PTR]], align 1
-; CHECK-SVE-MAXBW-NEXT:    [[C_VAL:%.*]] = load i8, ptr [[C_PTR]], align 1
-; CHECK-SVE-MAXBW-NEXT:    [[A_EXT:%.*]] = sext i8 [[A_VAL]] to i32
-; CHECK-SVE-MAXBW-NEXT:    [[B_EXT:%.*]] = sext i8 [[B_VAL]] to i32
-; CHECK-SVE-MAXBW-NEXT:    [[C_EXT:%.*]] = sext i8 [[C_VAL]] to i32
-; CHECK-SVE-MAXBW-NEXT:    [[MUL_AB:%.*]] = mul nsw i32 [[A_EXT]], [[B_EXT]]
-; CHECK-SVE-MAXBW-NEXT:    [[SUB:%.*]] = sub nsw i32 [[RES]], [[MUL_AB]]
-; CHECK-SVE-MAXBW-NEXT:    [[MUL_AC:%.*]] = mul nsw i32 [[A_EXT]], [[C_EXT]]
-; CHECK-SVE-MAXBW-NEXT:    [[SUB_2]] = sub i32 [[SUB]], [[MUL_AC]]
-; CHECK-SVE-MAXBW-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-SVE-MAXBW-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-SVE-MAXBW-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]], !loop [[META4]]
 ;
 entry:
   %cmp28.not = icmp ult i32 %N, 2
@@ -1022,34 +710,6 @@ define i32 @chained_partial_reduce_add_add_add(ptr %a, ptr %b, ptr %c, i32 %N) #
 ; CHECK-NEON-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE4]])
 ; CHECK-NEON-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-NEON-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
-; CHECK-NEON:       scalar.ph:
-; CHECK-NEON-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEON-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP14]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEON-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-NEON:       for.cond.cleanup:
-; CHECK-NEON-NEXT:    [[RES_0_LCSSA:%.*]] = phi i32 [ [[SUB_2:%.*]], [[FOR_BODY]] ], [ [[TMP14]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEON-NEXT:    ret i32 [[RES_0_LCSSA]]
-; CHECK-NEON:       for.body:
-; CHECK-NEON-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEON-NEXT:    [[RES:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SUB_2]], [[FOR_BODY]] ]
-; CHECK-NEON-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEON-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-NEON-NEXT:    [[C_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-NEON-NEXT:    [[A_VAL:%.*]] = load i8, ptr [[A_PTR]], align 1
-; CHECK-NEON-NEXT:    [[B_VAL:%.*]] = load i8, ptr [[B_PTR]], align 1
-; CHECK-NEON-NEXT:    [[C_VAL:%.*]] = load i8, ptr [[C_PTR]], align 1
-; CHECK-NEON-NEXT:    [[A_EXT:%.*]] = sext i8 [[A_VAL]] to i32
-; CHECK-NEON-NEXT:    [[B_EXT:%.*]] = sext i8 [[B_VAL]] to i32
-; CHECK-NEON-NEXT:    [[C_EXT:%.*]] = sext i8 [[C_VAL]] to i32
-; CHECK-NEON-NEXT:    [[MUL_AB:%.*]] = mul nsw i32 [[A_EXT]], [[B_EXT]]
-; CHECK-NEON-NEXT:    [[SUB:%.*]] = add nsw i32 [[RES]], [[MUL_AB]]
-; CHECK-NEON-NEXT:    [[MUL_AC:%.*]] = mul nsw i32 [[A_EXT]], [[C_EXT]]
-; CHECK-NEON-NEXT:    [[ADD:%.*]] = add nsw i32 [[SUB]], [[MUL_AC]]
-; CHECK-NEON-NEXT:    [[MUL_BC:%.*]] = mul nsw i32 [[B_EXT]], [[C_EXT]]
-; CHECK-NEON-NEXT:    [[SUB_2]] = add i32 [[ADD]], [[MUL_BC]]
-; CHECK-NEON-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEON-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEON-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]], !loop [[META4]]
 ;
 ; CHECK-SVE-LABEL: define i32 @chained_partial_reduce_add_add_add(
 ; CHECK-SVE-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
@@ -1098,34 +758,6 @@ define i32 @chained_partial_reduce_add_add_add(ptr %a, ptr %b, ptr %c, i32 %N) #
 ; CHECK-SVE-NEXT:    [[TMP23:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP21]])
 ; CHECK-SVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-SVE-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
-; CHECK-SVE:       scalar.ph:
-; CHECK-SVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP23]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; CHECK-SVE-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-SVE:       for.cond.cleanup:
-; CHECK-SVE-NEXT:    [[RES_0_LCSSA:%.*]] = phi i32 [ [[SUB_2:%.*]], [[FOR_BODY]] ], [ [[TMP23]], [[MIDDLE_BLOCK]] ]
-; CHECK-SVE-NEXT:    ret i32 [[RES_0_LCSSA]]
-; CHECK-SVE:       for.body:
-; CHECK-SVE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-SVE-NEXT:    [[RES:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SUB_2]], [[FOR_BODY]] ]
-; CHECK-SVE-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-SVE-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-SVE-NEXT:    [[C_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-SVE-NEXT:    [[A_VAL:%.*]] = load i8, ptr [[A_PTR]], align 1
-; CHECK-SVE-NEXT:    [[B_VAL:%.*]] = load i8, ptr [[B_PTR]], align 1
-; CHECK-SVE-NEXT:    [[C_VAL:%.*]] = load i8, ptr [[C_PTR]], align 1
-; CHECK-SVE-NEXT:    [[A_EXT:%.*]] = sext i8 [[A_VAL]] to i32
-; CHECK-SVE-NEXT:    [[B_EXT:%.*]] = sext i8 [[B_VAL]] to i32
-; CHECK-SVE-NEXT:    [[C_EXT:%.*]] = sext i8 [[C_VAL]] to i32
-; CHECK-SVE-NEXT:    [[MUL_AB:%.*]] = mul nsw i32 [[A_EXT]], [[B_EXT]]
-; CHECK-SVE-NEXT:    [[SUB:%.*]] = add nsw i32 [[RES]], [[MUL_AB]]
-; CHECK-SVE-NEXT:    [[MUL_AC:%.*]] = mul nsw i32 [[A_EXT]], [[C_EXT]]
-; CHECK-SVE-NEXT:    [[ADD:%.*]] = add nsw i32 [[SUB]], [[MUL_AC]]
-; CHECK-SVE-NEXT:    [[MUL_BC:%.*]] = mul nsw i32 [[B_EXT]], [[C_EXT]]
-; CHECK-SVE-NEXT:    [[SUB_2]] = add i32 [[ADD]], [[MUL_BC]]
-; CHECK-SVE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-SVE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-SVE-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]], !loop [[META4]]
 ;
 ; CHECK-SVE-MAXBW-LABEL: define i32 @chained_partial_reduce_add_add_add(
 ; CHECK-SVE-MAXBW-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
@@ -1171,37 +803,9 @@ define i32 @chained_partial_reduce_add_add_add(ptr %a, ptr %b, ptr %c, i32 %N) #
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-SVE-MAXBW-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-SVE-MAXBW:       middle.block:
-; CHECK-SVE-MAXBW-NEXT:    [[TMP20:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[PARTIAL_REDUCE4]])
+; CHECK-SVE-MAXBW-NEXT:    [[TMP23:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[PARTIAL_REDUCE4]])
 ; CHECK-SVE-MAXBW-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-SVE-MAXBW-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
-; CHECK-SVE-MAXBW:       scalar.ph:
-; CHECK-SVE-MAXBW-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP20]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; CHECK-SVE-MAXBW-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-SVE-MAXBW:       for.cond.cleanup:
-; CHECK-SVE-MAXBW-NEXT:    [[RES_0_LCSSA:%.*]] = phi i32 [ [[SUB_2:%.*]], [[FOR_BODY]] ], [ [[TMP20]], [[MIDDLE_BLOCK]] ]
-; CHECK-SVE-MAXBW-NEXT:    ret i32 [[RES_0_LCSSA]]
-; CHECK-SVE-MAXBW:       for.body:
-; CHECK-SVE-MAXBW-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[RES:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SUB_2]], [[FOR_BODY]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-SVE-MAXBW-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-SVE-MAXBW-NEXT:    [[C_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-SVE-MAXBW-NEXT:    [[A_VAL:%.*]] = load i8, ptr [[A_PTR]], align 1
-; CHECK-SVE-MAXBW-NEXT:    [[B_VAL:%.*]] = load i8, ptr [[B_PTR]], align 1
-; CHECK-SVE-MAXBW-NEXT:    [[C_VAL:%.*]] = load i8, ptr [[C_PTR]], align 1
-; CHECK-SVE-MAXBW-NEXT:    [[A_EXT:%.*]] = sext i8 [[A_VAL]] to i32
-; CHECK-SVE-MAXBW-NEXT:    [[B_EXT:%.*]] = sext i8 [[B_VAL]] to i32
-; CHECK-SVE-MAXBW-NEXT:    [[C_EXT:%.*]] = sext i8 [[C_VAL]] to i32
-; CHECK-SVE-MAXBW-NEXT:    [[MUL_AB:%.*]] = mul nsw i32 [[A_EXT]], [[B_EXT]]
-; CHECK-SVE-MAXBW-NEXT:    [[SUB:%.*]] = add nsw i32 [[RES]], [[MUL_AB]]
-; CHECK-SVE-MAXBW-NEXT:    [[MUL_AC:%.*]] = mul nsw i32 [[A_EXT]], [[C_EXT]]
-; CHECK-SVE-MAXBW-NEXT:    [[ADD:%.*]] = add nsw i32 [[SUB]], [[MUL_AC]]
-; CHECK-SVE-MAXBW-NEXT:    [[MUL_BC:%.*]] = mul nsw i32 [[B_EXT]], [[C_EXT]]
-; CHECK-SVE-MAXBW-NEXT:    [[SUB_2]] = add i32 [[ADD]], [[MUL_BC]]
-; CHECK-SVE-MAXBW-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-SVE-MAXBW-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-SVE-MAXBW-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]], !loop [[META4]]
 ;
 entry:
   %cmp28.not = icmp ult i32 %N, 2
@@ -1281,34 +885,6 @@ define i32 @chained_partial_reduce_sub_add_sub(ptr %a, ptr %b, ptr %c, i32 %N) #
 ; CHECK-NEON-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP15]])
 ; CHECK-NEON-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-NEON-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
-; CHECK-NEON:       scalar.ph:
-; CHECK-NEON-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEON-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP17]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEON-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-NEON:       for.cond.cleanup:
-; CHECK-NEON-NEXT:    [[RES_0_LCSSA:%.*]] = phi i32 [ [[SUB_2:%.*]], [[FOR_BODY]] ], [ [[TMP17]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEON-NEXT:    ret i32 [[RES_0_LCSSA]]
-; CHECK-NEON:       for.body:
-; CHECK-NEON-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEON-NEXT:    [[RES:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SUB_2]], [[FOR_BODY]] ]
-; CHECK-NEON-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEON-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-NEON-NEXT:    [[C_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-NEON-NEXT:    [[A_VAL:%.*]] = load i8, ptr [[A_PTR]], align 1
-; CHECK-NEON-NEXT:    [[B_VAL:%.*]] = load i8, ptr [[B_PTR]], align 1
-; CHECK-NEON-NEXT:    [[C_VAL:%.*]] = load i8, ptr [[C_PTR]], align 1
-; CHECK-NEON-NEXT:    [[A_EXT:%.*]] = sext i8 [[A_VAL]] to i32
-; CHECK-NEON-NEXT:    [[B_EXT:%.*]] = sext i8 [[B_VAL]] to i32
-; CHECK-NEON-NEXT:    [[C_EXT:%.*]] = sext i8 [[C_VAL]] to i32
-; CHECK-NEON-NEXT:    [[MUL_AB:%.*]] = mul nsw i32 [[A_EXT]], [[B_EXT]]
-; CHECK-NEON-NEXT:    [[SUB:%.*]] = sub nsw i32 [[RES]], [[MUL_AB]]
-; CHECK-NEON-NEXT:    [[MUL_AC:%.*]] = mul nsw i32 [[A_EXT]], [[C_EXT]]
-; CHECK-NEON-NEXT:    [[ADD:%.*]] = add nsw i32 [[SUB]], [[MUL_AC]]
-; CHECK-NEON-NEXT:    [[MUL_BC:%.*]] = mul nsw i32 [[B_EXT]], [[C_EXT]]
-; CHECK-NEON-NEXT:    [[SUB_2]] = sub i32 [[ADD]], [[MUL_BC]]
-; CHECK-NEON-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEON-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEON-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]], !loop [[META4]]
 ;
 ; CHECK-SVE-LABEL: define i32 @chained_partial_reduce_sub_add_sub(
 ; CHECK-SVE-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
@@ -1357,34 +933,6 @@ define i32 @chained_partial_reduce_sub_add_sub(ptr %a, ptr %b, ptr %c, i32 %N) #
 ; CHECK-SVE-NEXT:    [[TMP23:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP21]])
 ; CHECK-SVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-SVE-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
-; CHECK-SVE:       scalar.ph:
-; CHECK-SVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-SVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP23]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; CHECK-SVE-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-SVE:       for.cond.cleanup:
-; CHECK-SVE-NEXT:    [[RES_0_LCSSA:%.*]] = phi i32 [ [[SUB_2:%.*]], [[FOR_BODY]] ], [ [[TMP23]], [[MIDDLE_BLOCK]] ]
-; CHECK-SVE-NEXT:    ret i32 [[RES_0_LCSSA]]
-; CHECK-SVE:       for.body:
-; CHECK-SVE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-SVE-NEXT:    [[RES:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SUB_2]], [[FOR_BODY]] ]
-; CHECK-SVE-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-SVE-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-SVE-NEXT:    [[C_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-SVE-NEXT:    [[A_VAL:%.*]] = load i8, ptr [[A_PTR]], align 1
-; CHECK-SVE-NEXT:    [[B_VAL:%.*]] = load i8, ptr [[B_PTR]], align 1
-; CHECK-SVE-NEXT:    [[C_VAL:%.*]] = load i8, ptr [[C_PTR]], align 1
-; CHECK-SVE-NEXT:    [[A_EXT:%.*]] = sext i8 [[A_VAL]] to i32
-; CHECK-SVE-NEXT:    [[B_EXT:%.*]] = sext i8 [[B_VAL]] to i32
-; CHECK-SVE-NEXT:    [[C_EXT:%.*]] = sext i8 [[C_VAL]] to i32
-; CHECK-SVE-NEXT:    [[MUL_AB:%.*]] = mul nsw i32 [[A_EXT]], [[B_EXT]]
-; CHECK-SVE-NEXT:    [[SUB:%.*]] = sub nsw i32 [[RES]], [[MUL_AB]]
-; CHECK-SVE-NEXT:    [[MUL_AC:%.*]] = mul nsw i32 [[A_EXT]], [[C_EXT]]
-; CHECK-SVE-NEXT:    [[ADD:%.*]] = add nsw i32 [[SUB]], [[MUL_AC]]
-; CHECK-SVE-NEXT:    [[MUL_BC:%.*]] = mul nsw i32 [[B_EXT]], [[C_EXT]]
-; CHECK-SVE-NEXT:    [[SUB_2]] = sub i32 [[ADD]], [[MUL_BC]]
-; CHECK-SVE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-SVE-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-SVE-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]], !loop [[META4]]
 ;
 ; CHECK-SVE-MAXBW-LABEL: define i32 @chained_partial_reduce_sub_add_sub(
 ; CHECK-SVE-MAXBW-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
@@ -1433,34 +981,6 @@ define i32 @chained_partial_reduce_sub_add_sub(ptr %a, ptr %b, ptr %c, i32 %N) #
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP23:%.*]] = call i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32> [[TMP21]])
 ; CHECK-SVE-MAXBW-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-SVE-MAXBW-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
-; CHECK-SVE-MAXBW:       scalar.ph:
-; CHECK-SVE-MAXBW-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP23]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; CHECK-SVE-MAXBW-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-SVE-MAXBW:       for.cond.cleanup:
-; CHECK-SVE-MAXBW-NEXT:    [[RES_0_LCSSA:%.*]] = phi i32 [ [[SUB_2:%.*]], [[FOR_BODY]] ], [ [[TMP23]], [[MIDDLE_BLOCK]] ]
-; CHECK-SVE-MAXBW-NEXT:    ret i32 [[RES_0_LCSSA]]
-; CHECK-SVE-MAXBW:       for.body:
-; CHECK-SVE-MAXBW-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[RES:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SUB_2]], [[FOR_BODY]] ]
-; CHECK-SVE-MAXBW-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-SVE-MAXBW-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-SVE-MAXBW-NEXT:    [[C_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-SVE-MAXBW-NEXT:    [[A_VAL:%.*]] = load i8, ptr [[A_PTR]], align 1
-; CHECK-SVE-MAXBW-NEXT:    [[B_VAL:%.*]] = load i8, ptr [[B_PTR]], align 1
-; CHECK-SVE-MAXBW-NEXT:    [[C_VAL:%.*]] = load i8, ptr [[C_PTR]], align 1
-; CHECK-SVE-MAXBW-NEXT:    [[A_EXT:%.*]] = sext i8 [[A_VAL]] to i32
-; CHECK-SVE-MAXBW-NEXT:    [[B_EXT:%.*]] = sext i8 [[B_VAL]] to i32
-; CHECK-SVE-MAXBW-NEXT:    [[C_EXT:%.*]] = sext i8 [[C_VAL]] to i32
-; CHECK-SVE-MAXBW-NEXT:    [[MUL_AB:%.*]] = mul nsw i32 [[A_EXT]], [[B_EXT]]
-; CHECK-SVE-MAXBW-NEXT:    [[SUB:%.*]] = sub nsw i32 [[RES]], [[MUL_AB]]
-; CHECK-SVE-MAXBW-NEXT:    [[MUL_AC:%.*]] = mul nsw i32 [[A_EXT]], [[C_EXT]]
-; CHECK-SVE-MAXBW-NEXT:    [[ADD:%.*]] = add nsw i32 [[SUB]], [[MUL_AC]]
-; CHECK-SVE-MAXBW-NEXT:    [[MUL_BC:%.*]] = mul nsw i32 [[B_EXT]], [[C_EXT]]
-; CHECK-SVE-MAXBW-NEXT:    [[SUB_2]] = sub i32 [[ADD]], [[MUL_BC]]
-; CHECK-SVE-MAXBW-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-SVE-MAXBW-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-SVE-MAXBW-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]], !loop [[META4]]
 ;
 entry:
   %cmp28.not = icmp ult i32 %N, 2
@@ -1503,55 +1023,3 @@ attributes #0 = { vscale_range(1,16) }
 
 !0 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
 !1 = distinct !{!0}
-;.
-; CHECK-NEON: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
-; CHECK-NEON: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-NEON: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-NEON: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-; CHECK-NEON: [[META4]] = distinct !{[[META5:![0-9]+]]}
-; CHECK-NEON: [[META5]] = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
-; CHECK-NEON: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
-; CHECK-NEON: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
-; CHECK-NEON: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
-; CHECK-NEON: [[LOOP9]] = distinct !{[[LOOP9]], [[META2]], [[META1]]}
-; CHECK-NEON: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
-; CHECK-NEON: [[LOOP11]] = distinct !{[[LOOP11]], [[META2]], [[META1]]}
-; CHECK-NEON: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]]}
-; CHECK-NEON: [[LOOP13]] = distinct !{[[LOOP13]], [[META2]], [[META1]]}
-; CHECK-NEON: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]], [[META2]]}
-; CHECK-NEON: [[LOOP15]] = distinct !{[[LOOP15]], [[META2]], [[META1]]}
-;.
-; CHECK-SVE: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
-; CHECK-SVE: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-SVE: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-SVE: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-; CHECK-SVE: [[META4]] = distinct !{[[META5:![0-9]+]]}
-; CHECK-SVE: [[META5]] = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
-; CHECK-SVE: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
-; CHECK-SVE: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
-; CHECK-SVE: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
-; CHECK-SVE: [[LOOP9]] = distinct !{[[LOOP9]], [[META2]], [[META1]]}
-; CHECK-SVE: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
-; CHECK-SVE: [[LOOP11]] = distinct !{[[LOOP11]], [[META2]], [[META1]]}
-; CHECK-SVE: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]]}
-; CHECK-SVE: [[LOOP13]] = distinct !{[[LOOP13]], [[META2]], [[META1]]}
-; CHECK-SVE: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]], [[META2]]}
-; CHECK-SVE: [[LOOP15]] = distinct !{[[LOOP15]], [[META2]], [[META1]]}
-;.
-; CHECK-SVE-MAXBW: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
-; CHECK-SVE-MAXBW: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-SVE-MAXBW: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-SVE-MAXBW: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-; CHECK-SVE-MAXBW: [[META4]] = distinct !{[[META5:![0-9]+]]}
-; CHECK-SVE-MAXBW: [[META5]] = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
-; CHECK-SVE-MAXBW: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
-; CHECK-SVE-MAXBW: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
-; CHECK-SVE-MAXBW: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
-; CHECK-SVE-MAXBW: [[LOOP9]] = distinct !{[[LOOP9]], [[META2]], [[META1]]}
-; CHECK-SVE-MAXBW: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
-; CHECK-SVE-MAXBW: [[LOOP11]] = distinct !{[[LOOP11]], [[META2]], [[META1]]}
-; CHECK-SVE-MAXBW: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]], [[META2]]}
-; CHECK-SVE-MAXBW: [[LOOP13]] = distinct !{[[LOOP13]], [[META2]], [[META1]]}
-; CHECK-SVE-MAXBW: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]], [[META2]]}
-; CHECK-SVE-MAXBW: [[LOOP15]] = distinct !{[[LOOP15]], [[META2]], [[META1]]}
-;.
