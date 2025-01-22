@@ -8062,14 +8062,19 @@ SDValue SelectionDAG::getMemBasePlusOffset(SDValue Base, TypeSize Offset,
 
 SDValue SelectionDAG::getMemBasePlusOffset(SDValue Ptr, SDValue Offset,
                                            const SDLoc &DL,
-                                           const SDNodeFlags Flags) {
+                                           const SDNodeFlags Flags,
+                                           const bool Inverted) {
   assert(Offset.getValueType().isInteger());
   EVT BasePtrVT = Ptr.getValueType();
   if (!this->getTarget().shouldPreservePtrArith(
           this->getMachineFunction().getFunction())) {
     return getNode(ISD::ADD, DL, BasePtrVT, Ptr, Offset, Flags);
   } else {
-    return getNode(ISD::PTRADD, DL, BasePtrVT, Ptr, Offset, Flags);
+    if (Inverted) {
+      return getNode(ISD::PTRADD, DL, BasePtrVT, Offset, Ptr, Flags);
+    } else {
+      return getNode(ISD::PTRADD, DL, BasePtrVT, Ptr, Offset, Flags);
+    }
   }
 }
 

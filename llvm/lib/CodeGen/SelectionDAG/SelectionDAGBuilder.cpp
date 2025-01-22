@@ -4499,18 +4499,9 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
   // Round the size of the allocation up to the stack alignment size
   // by add SA-1 to the size. This doesn't overflow because we're computing
   // an address inside an alloca.
-  SDNodeFlags Flags;
-  Flags.setNoUnsignedWrap(true);
-  if (DAG.getTarget().shouldPreservePtrArith(
-          DAG.getMachineFunction().getFunction())) {
-    AllocSize = DAG.getNode(ISD::PTRADD, dl, AllocSize.getValueType(),
-                            DAG.getConstant(StackAlignMask, dl, IntPtr),
-                            AllocSize, SDNodeFlags::NoUnsignedWrap);
-  } else {
-    AllocSize = DAG.getNode(ISD::ADD, dl, AllocSize.getValueType(), AllocSize,
-                            DAG.getConstant(StackAlignMask, dl, IntPtr),
-                            SDNodeFlags::NoUnsignedWrap);
-  }
+  AllocSize = DAG.getMemBasePlusOffset(
+      AllocSize, DAG.getConstant(StackAlignMask, dl, IntPtr), dl,
+      SDNodeFlags::NoUnsignedWrap, true);
 
   // Mask out the low bits for alignment purposes.
   AllocSize = DAG.getNode(ISD::AND, dl, AllocSize.getValueType(), AllocSize,
