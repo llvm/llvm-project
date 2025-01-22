@@ -1889,9 +1889,6 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(InsertElementInst, Value)
 struct ShuffleMaskAttrs {
   bool SingleSource : 1;
   bool Identity : 1;
-  // bool IdentityWithPadding : 1;
-  // bool IdentityWithExtract : 1;
-  // bool Concat : 1;
   bool Reverse : 1;
   bool ZeroEltSplat : 1;
   bool Select : 1;
@@ -1924,7 +1921,7 @@ class ShuffleVectorInst : public Instruction {
 
   // This function is const so that it's callable from other const functions.
   void computeShuffleAttrs() const {
-    ShuffleAttrs = {};  // reset
+    ShuffleAttrs = {}; // reset
     ShuffleAttrs.SingleSource =
         !changesLength() && isSingleSourceMask(ShuffleMask, ShuffleMask.size());
     ShuffleAttrs.Identity =
