@@ -234,6 +234,14 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
   MachineInstr::MIFlag Flag =
       isSub ? MachineInstr::FrameSetup : MachineInstr::FrameDestroy;
 
+  if (!Uses64BitFramePtr && !isUInt<32>(Offset)) {
+    // We're being asked to adjust a 32-bit stack pointer by 4 GiB or more.
+    // This might be unreachable code, so don't complain now; just trap if
+    // it's reached at runtime.
+    BuildMI(MBB, MBBI, DL, TII.get(X86::TRAP));
+    return;
+  }
+
   uint64_t Chunk = (1LL << 31) - 1;
 
   MachineFunction &MF = *MBB.getParent();
@@ -253,17 +261,19 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
     // Rather than emit a long series of instructions for large offsets,
     // load the offset into a register and do one sub/add
     unsigned Reg = 0;
-    unsigned Rax = (unsigned)(Is64Bit ? X86::RAX : X86::EAX);
+    unsigned Rax = (unsigned)(Uses64BitFramePtr ? X86::RAX : X86::EAX);
 
     if (isSub && !isEAXLiveIn(MBB))
       Reg = Rax;
     else
-      Reg = TRI->findDeadCallerSavedReg(MBB, MBBI);
+      Reg = getX86SubSuperRegister(TRI->findDeadCallerSavedReg(MBB, MBBI),
+                                   Uses64BitFramePtr ? 64 : 32);
 
-    unsigned AddSubRROpc =
-        isSub ? getSUBrrOpcode(Is64Bit) : getADDrrOpcode(Is64Bit);
+    unsigned AddSubRROpc = isSub ? getSUBrrOpcode(Uses64BitFramePtr)
+                                 : getADDrrOpcode(Uses64BitFramePtr);
     if (Reg) {
-      BuildMI(MBB, MBBI, DL, TII.get(getMOVriOpcode(Is64Bit, Offset)), Reg)
+      BuildMI(MBB, MBBI, DL, TII.get(getMOVriOpcode(Uses64BitFramePtr, Offset)),
+              Reg)
           .addImm(Offset)
           .setMIFlag(Flag);
       MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(AddSubRROpc), StackPtr)
@@ -279,7 +289,7 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
       //   addq %rsp, %rax
       //   xchg %rax, (%rsp)
       //   movq (%rsp), %rsp
-      assert(Is64Bit && "can't have 32-bit 16GB stack frame");
+      assert(Uses64BitFramePtr && "can't have 32-bit 16GB stack frame");
       BuildMI(MBB, MBBI, DL, TII.get(X86::PUSH64r))
           .addReg(Rax, RegState::Kill)
           .setMIFlag(Flag);
@@ -289,7 +299,8 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
         Offset = -(Offset - SlotSize);
       else
         Offset = Offset + SlotSize;
-      BuildMI(MBB, MBBI, DL, TII.get(getMOVriOpcode(Is64Bit, Offset)), Rax)
+      BuildMI(MBB, MBBI, DL, TII.get(getMOVriOpcode(Uses64BitFramePtr, Offset)),
+              Rax)
           .addImm(Offset)
           .setMIFlag(Flag);
       MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(X86::ADD64rr), Rax)
@@ -826,10 +837,7 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
           .addReg(StackPtr)
           .setMIFlag(MachineInstr::FrameSetup);
     } else {
-      // We're being asked to probe a stack frame that's 4 GiB or larger,
-      // but our stack pointer is only 32 bits.  This might be unreachable
-      // code, so don't complain now; just trap if it's reached at runtime.
-      BuildMI(MBB, MBBI, DL, TII.get(X86::TRAP));
+      llvm_unreachable("Offset too large for 32-bit stack pointer");
     }
 
     // while in the loop, use loop-invariant reg for CFI,
