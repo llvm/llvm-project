@@ -489,6 +489,9 @@ Changes to LLDB
   to be opened in the firewall (one for the `lldb-server` platform, one for gdbserver connections).
   In addition, due to this work, `lldb-server` now works on Windows in the server mode.
 
+* LLDB now supports execution of user expressions for non-trivial cases for RISC-V
+  targets, like function calls, when some code needs to be executed on the target.
+
 Changes to BOLT
 ---------------------------------
 
