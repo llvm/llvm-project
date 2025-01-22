@@ -965,10 +965,16 @@ static bool relax(Ctx &ctx, InputSection &sec) {
     case R_LARCH_GOT_PC_HI20:
     case R_LARCH_TLS_GD_PC_HI20:
     case R_LARCH_TLS_LD_PC_HI20:
-    case R_LARCH_TLS_DESC_PC_HI20:
       // The overflow check for i+2 will be carried out in isPairRelaxable.
-      if (r.expr != RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC &&
-          r.expr != R_RELAX_TLS_GD_TO_LE && isPairRelaxable(relocs, i))
+      if (isPairRelaxable(relocs, i))
+        relaxPCHi20Lo12(ctx, sec, i, loc, r, relocs[i + 2], remove);
+      break;
+    case R_LARCH_TLS_DESC_PC_HI20:
+      if (r.expr == RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC ||
+          r.expr == R_RELAX_TLS_GD_TO_LE) {
+        if (relaxable(relocs, i))
+          remove = 4;
+      } else if (isPairRelaxable(relocs, i))
         relaxPCHi20Lo12(ctx, sec, i, loc, r, relocs[i + 2], remove);
       break;
     case R_LARCH_CALL36:
@@ -983,6 +989,17 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       break;
     case R_LARCH_TLS_IE_PC_HI20:
       if (relaxable(relocs, i) && r.expr == R_RELAX_TLS_IE_TO_LE &&
+          isUInt<12>(r.sym->getVA(ctx, r.addend)))
+        remove = 4;
+      break;
+    case R_LARCH_TLS_DESC_PC_LO12:
+      if (relaxable(relocs, i) &&
+          (r.expr == RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC ||
+           r.expr == R_RELAX_TLS_GD_TO_LE))
+        remove = 4;
+      break;
+    case R_LARCH_TLS_DESC_LD:
+      if (relaxable(relocs, i) && r.expr == R_RELAX_TLS_GD_TO_LE &&
           isUInt<12>(r.sym->getVA(ctx, r.addend)))
         remove = 4;
       break;
@@ -1214,6 +1231,10 @@ void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
                            bits);
         relocateNoSym(loc, rel.type, val);
       } else {
+        isRelax = relaxable(relocs, i);
+        if (isRelax && (rel.type == R_LARCH_TLS_DESC_PC_HI20 ||
+                        rel.type == R_LARCH_TLS_DESC_PC_LO12))
+          continue;
         tlsdescToIe(loc, rel, val);
       }
       continue;
@@ -1230,6 +1251,11 @@ void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
                            bits);
         relocateNoSym(loc, rel.type, val);
       } else {
+        isRelax = relaxable(relocs, i);
+        if (isRelax && (rel.type == R_LARCH_TLS_DESC_PC_HI20 ||
+                        rel.type == R_LARCH_TLS_DESC_PC_LO12 ||
+                        (rel.type == R_LARCH_TLS_DESC_LD && isUInt<12>(val))))
+          continue;
         tlsdescToLe(loc, rel, val);
       }
       continue;
