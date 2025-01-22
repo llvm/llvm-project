@@ -74,7 +74,6 @@ void MarkRAStates::runOnFunction(BinaryFunction &BF) {
       if (BC.MIB->isPSign(Inst)) {
         assert(!RAState && "Signed RA State before PSign");
         BC.MIB->setRASigning(Inst);
-
       } else if (BC.MIB->isPAuth(Inst)) {
         assert(RAState && "Unsigned RA State before PAuth");
         BC.MIB->setAuthenticating(Inst);
