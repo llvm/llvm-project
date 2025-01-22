@@ -10140,7 +10140,6 @@ public:
 
   void adjustTripCount(int TripCountAdjust) override {}
 
-  void disposed(LiveIntervals *LIS) override {}
   bool isMVEExpanderSupported() override { return true; }
 };
 } // namespace

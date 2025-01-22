@@ -6847,8 +6847,6 @@ public:
   void setPreheader(MachineBasicBlock *NewPreheader) override {}
 
   void adjustTripCount(int TripCountAdjust) override {}
-
-  void disposed(LiveIntervals *LIS) override {}
 };
 
 void ARMPipelinerLoopInfo::bumpCrossIterationPressure(RegPressureTracker &RPT,
