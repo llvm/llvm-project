@@ -57,6 +57,20 @@ private:
   const TargetRegisterClass *
   getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB) const;
 
+  static constexpr unsigned MaxRecursionDepth = 6;
+
+  bool hasAllNBitUsers(const MachineInstr &MI, unsigned Bits,
+                       const unsigned Depth = 0) const;
+  bool hasAllBUsers(const MachineInstr &MI) const {
+    return hasAllNBitUsers(MI, 8);
+  }
+  bool hasAllHUsers(const MachineInstr &MI) const {
+    return hasAllNBitUsers(MI, 16);
+  }
+  bool hasAllWUsers(const MachineInstr &MI) const {
+    return hasAllNBitUsers(MI, 32);
+  }
+
   bool isRegInGprb(Register Reg) const;
   bool isRegInFprb(Register Reg) const;
 
@@ -183,6 +197,10 @@ RISCVInstructionSelector::RISCVInstructionSelector(
 #undef GET_GLOBALISEL_TEMPORARIES_INIT
 {
 }
+
+bool RISCVInstructionSelector::hasAllNBitUsers(const MachineInstr &MI, unsigned Bits, const unsigned Depth) const {
+    return false;
+};
 
 InstructionSelector::ComplexRendererFns
 RISCVInstructionSelector::selectShiftMask(MachineOperand &Root,
