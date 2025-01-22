@@ -1058,12 +1058,9 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     }
   }
 
-  if (S.PrePlatformSetup) {
-    if (auto Err2 = S.PrePlatformSetup(*this)) {
-      Err = std::move(Err2);
+  if (S.PrePlatformSetup)
+    if ((Err = S.PrePlatformSetup(*this)))
       return;
-    }
-  }
 
   if (!S.SetUpPlatform)
     S.SetUpPlatform = setUpGenericLLVMIRPlatform;
