@@ -4630,8 +4630,9 @@ ExprResult Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
 
   // Adds overload of TransformToPotentiallyEvaluated for TypeSourceInfo to
   // properly deal with VLAs in nested calls of sizeof and typeof.
-  if (isUnevaluatedContext() && ExprKind == UETT_SizeOf &&
-      TInfo->getType()->isVariablyModifiedType())
+  if (currentEvaluationContext().isUnevaluated() &&
+      currentEvaluationContext().InConditionallyConstantEvaluateContext &&
+      ExprKind == UETT_SizeOf && TInfo->getType()->isVariablyModifiedType())
     TInfo = TransformToPotentiallyEvaluated(TInfo);
 
   // C99 6.5.3.4p4: the type (an unsigned integer type) is size_t.

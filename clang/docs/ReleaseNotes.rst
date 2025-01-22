@@ -968,7 +968,7 @@ Bug Fixes to C++ Support
   constraints are applied. (#GH122134)
 - Fixed canonicalization of pack indexing types - Clang did not always recognized identical pack indexing. (#GH123033)
 - Fixed a nested lambda substitution issue for constraint evaluation. (#GH123441)
-
+- Fixed various false diagnostics related to the use of immediate functions. (#GH123472)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
