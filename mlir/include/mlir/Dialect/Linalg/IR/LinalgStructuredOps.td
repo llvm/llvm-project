@@ -769,6 +769,7 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
 
   let extraClassDeclaration = structuredOpsBaseDecls # [{
     // Declare/implement functions necessary for LinalgStructuredInterface.
+
     /// Infer iterator types for each dim in the domain of IndexingMaps.
     SmallVector<utils::IteratorType> getIteratorTypesArray();
 

@@ -3746,22 +3746,29 @@ LogicalResult ContractOp::verify() {
       return failure(); // NOTE: checking lambda will emit error.
 
   bool hasContractingDim = false;
-  for (auto &&[inOccCount, outOccCount] : zip(inOccurrences, outOccurrences)) {
+  for (size_t dimIndex = 0; dimIndex < (size_t)iterationSpaceDims; dimIndex++) {
+    size_t inOccCount = inOccurrences[dimIndex];
+    size_t outOccCount = outOccurrences[dimIndex];
+
     hasContractingDim |= inOccCount == 2 && outOccCount == 0;
 
     if (inOccCount == 0)
-      return emitError("iteration space dim not used by either input");
+      return emitError() << "iteration space dim at index " << dimIndex
+                         << " not used by either input";
 
-    // NB: A dim which occurs for only one input operand and not for the output.
-    //     In terms of einsum semantics, such dims have a sensible meaning -
-    //     namely an additional reduction per such dim - though this can also
-    //     always be expressed through an additional op. Additionally, at time
-    //     of writing, vector.contract's verifier accepts these dims but many of
-    //     its lowerings do not handle these kinds of dims. Hence...
+    // NB: We disallow a dim which occurs for only one input operand and not
+    //     for the output. In terms of einsum semantics such dims have a
+    //     sensible meaning - namely an additional reduction per each such dim.
+    //     By contrast, the ContractionOpInterface does not know about this
+    //     iter type - cf. inferContractionDims' supported dim kinds. Similarly,
+    //     while vector.contract's verifier accepts dims of this kind many of
+    //     its lowerings give up on encountering these dims.
     // TODO: Remove following once we have comprehensive support for input-only
     //       reduction dims, at both the linalg- and vector-dialect levels.
     if (inOccCount == 1 && outOccCount != 1)
-      return emitError("iter type of dim is not one of M, N, K or batch");
+      return emitError()
+             << "iteration space dim at index " << dimIndex
+             << " is neither a contracting dim nor of parallel iteration type";
   }
 
   if (!hasContractingDim)

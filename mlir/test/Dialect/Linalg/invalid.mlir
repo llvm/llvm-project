@@ -617,7 +617,7 @@ func.func @mismatch_type_affine_map_and_operand_contraction(%lhs: f32, %rhs: ten
 // -----
 
 func.func @unused_iteration_space_dim_contraction(%lhs: tensor<4x1xf32>, %rhs: tensor<1x64xf32>, %init: tensor<4x64xf32>) {
-  // expected-error @+1 {{iteration space dim not used by either input}}
+  // expected-error @+1 {{iteration space dim at index 3 not used by either input}}
   linalg.contract indexing_maps = [
                     affine_map<(d0, d1, d2, d3) -> (d0, d2)>,
                     affine_map<(d0, d1, d2, d3) -> (d2, d1)>,
@@ -631,7 +631,7 @@ func.func @unused_iteration_space_dim_contraction(%lhs: tensor<4x1xf32>, %rhs: t
 // -----
 
 func.func @unused_iteration_space_dim_contraction(%lhs: tensor<8x4x1xf32>, %rhs: tensor<1x64xf32>, %init: tensor<4x64xf32>) {
-  // expected-error @+1 {{iter type of dim is not one of M, N, K or batch}}
+  // expected-error @+1 {{iteration space dim at index 3 is neither a contracting dim nor of parallel iteration type}}
   linalg.contract indexing_maps = [
                     affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>,
                     affine_map<(d0, d1, d2, d3) -> (d2, d1)>,
