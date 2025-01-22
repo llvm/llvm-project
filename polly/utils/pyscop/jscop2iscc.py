@@ -9,8 +9,8 @@ def printDomain(scop):
   for statement in scop['statements']:
     domain = domain.union(isl.USet(statement['domain']))
 
-  print "D :=",
-  print str(domain) + ";"
+  print("D :=", end=" ")
+  print(str(domain) + ";")
 
 def printAccesses(scop):
 
@@ -21,8 +21,8 @@ def printAccesses(scop):
       if access['kind'] == 'read':
         read = read.union(isl.UMap(access['relation']))
 
-  print "R :=",
-  print str(read) + ";"
+  print("R :=", end=" ")
+  print(str(read) + ";")
 
   write = isl.UMap('{}')
 
@@ -31,8 +31,8 @@ def printAccesses(scop):
       if access['kind'] == 'write':
         write = write.union(isl.UMap(access['relation']))
 
-  print "W :=",
-  print str(write) + ";"
+  print("W :=", end=" ")
+  print(str(write) + ";")
 
 def printSchedule(scop):
 
@@ -41,8 +41,8 @@ def printSchedule(scop):
   for statement in scop['statements']:
     schedule = schedule.union(isl.UMap(statement['schedule']))
 
-  print "S :=",
-  print str(schedule) + ";"
+  print("S :=", end=" ")
+  print(str(schedule) + ";")
 
 def __main__():
   description = 'Translate JSCoP into iscc input'
@@ -58,10 +58,10 @@ def __main__():
   printAccesses(scop)
   printSchedule(scop)
 
-  print 'R := R * D;'
-  print 'W := W * D;'
-  print 'Dep := (last W before R under S)[0];'
-  print 'schedule D respecting Dep minimizing Dep;'
+  print('R := R * D;')
+  print('W := W * D;')
+  print('Dep := (last W before R under S)[0];')
+  print('schedule D respecting Dep minimizing Dep;')
 
 
 __main__()
