@@ -1360,7 +1360,7 @@ WebAssemblyCFGStackify::getTrampolineBlock(MachineBasicBlock *UnwindDest) {
       .addReg(ExnReg);
 
   // The trampoline BB's return type is exnref because it is a target of
-  // catch_all_ref. But the body type of the blodk we just created is not. We
+  // catch_all_ref. But the body type of the block we just created is not. We
   // add an 'unreachable' right before the 'end_block' to make the code valid.
   MachineBasicBlock *TrampolineLayoutPred = TrampolineBB->getPrevNode();
   BuildMI(TrampolineLayoutPred, TrampolineLayoutPred->findBranchDebugLoc(),
@@ -1953,7 +1953,7 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
   if (!WebAssembly::WasmUseLegacyEH)
     for (auto &[UnwindDest, _] : UnwindDestToTryRanges) {
       auto It = EHPadToTry.find(UnwindDest);
-      // If UnwindDest is the faker caller block, it will not be in EHPadToTry
+      // If UnwindDest is the fake caller block, it will not be in EHPadToTry
       // map
       if (It != EHPadToTry.end()) {
         auto *TryTable = It->second;
@@ -2197,7 +2197,7 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
   // destinations, we should split the end_loop into another BB.
   for (auto &[_, UnwindDest] : EHPadToUnwindDest) {
     auto It = EHPadToTry.find(UnwindDest);
-    // If UnwindDest is the faker caller block, it will not be in EHPadToTry map
+    // If UnwindDest is the fake caller block, it will not be in EHPadToTry map
     if (It != EHPadToTry.end()) {
       auto *TryTable = It->second;
       auto *EndTryTable = BeginToEnd[TryTable];
