@@ -23,4 +23,16 @@ def XeGPUFoldAliasOps : Pass<"xegpu-fold-alias-ops"> {
   ];
 }
 
+def XeGPUDistributeToWI : Pass<"xegpu-distribute-to-wi", "gpu::GPUModuleOp"> {
+  let summary = "Distribute SIMD vector ops to SIMT work items";
+  let dependentDialects = [
+      "gpu::GPUDialect",
+      "xegpu::XeGPUDialect",
+      "vector::VectorDialect",
+      "arith::ArithDialect",
+      "func::FuncDialect",
+      "memref::MemRefDialect"
+  ];
+}
+
 #endif // MLIR_DIALECT_XEGPU_TRANSFORMS_PASSES_TD
