@@ -5732,23 +5732,12 @@ TEST_F(FormatTest, HashInMacroDefinition) {
 
   verifyFormat("#define A void # ## #", getLLVMStyleWithColumns(22));
 
-#if 0
-  // FIXME: The correct format is:
   verifyFormat("{\n"
                "  {\n"
                "#define GEN_ID(_x) char *_x{#_x}\n"
                "    GEN_ID(one);\n"
                "  }\n"
                "}");
-#endif
-  verifyFormat("{\n"
-               "  {\n"
-               "#define GEN_ID(_x) \\\n"
-               "  char *_x { #_x }\n"
-               "    GEN_ID(one);\n"
-               "  }\n"
-               "}",
-               getGoogleStyle());
 }
 
 TEST_F(FormatTest, RespectWhitespaceInMacroDefinitions) {
@@ -5886,6 +5875,11 @@ TEST_F(FormatTest, MacrosWithoutTrailingSemicolon) {
   // Only if the next line can actually start an unwrapped line.
   verifyFormat("SOME_WEIRD_LOG_MACRO << SomeThing;", "SOME_WEIRD_LOG_MACRO\n"
                                                      "<< SomeThing;");
+
+  verifyFormat("GGGG(ffff(xxxxxxxxxxxxxxxxxxxx)->yyyyyyyyyyyyyyyyyyyy)(foo);",
+               "GGGG(ffff(xxxxxxxxxxxxxxxxxxxx)->yyyyyyyyyyyyyyyyyyyy)\n"
+               "(foo);",
+               getLLVMStyleWithColumns(60));
 
   verifyFormat("VISIT_GL_CALL(GenBuffers, void, (GLsizei n, GLuint* buffers), "
                "(n, buffers))",
@@ -9063,6 +9057,121 @@ TEST_F(FormatTest, AdaptiveOnePerLineFormatting) {
                "    aaaa  );\n"
                "aaa(aaaa,  aaaa,  aaaa);", // inconclusive
                Style);
+}
+
+TEST_F(FormatTest, IndentExportBlock) {
+  FormatStyle Style = getLLVMStyleWithColumns(80);
+  Style.IndentExportBlock = true;
+  verifyFormat("export {\n"
+               "  int x;\n"
+               "  int y;\n"
+               "}",
+               "export {\n"
+               "int x;\n"
+               "int y;\n"
+               "}",
+               Style);
+
+  Style.IndentExportBlock = false;
+  verifyFormat("export {\n"
+               "int x;\n"
+               "int y;\n"
+               "}",
+               "export {\n"
+               "  int x;\n"
+               "  int y;\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTest, ShortExportBlocks) {
+  FormatStyle Style = getLLVMStyleWithColumns(80);
+  Style.IndentExportBlock = false;
+
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Never;
+  verifyFormat("export {\n"
+               "}",
+               Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               "export\n"
+               "{\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export {\n"
+               "}",
+               "export {}", Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               "export { int x; }", Style);
+
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
+  verifyFormat("export {}",
+               "export {\n"
+               "}",
+               Style);
+
+  verifyFormat("export { int x; }",
+               "export {\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export { int x; }",
+               "export\n"
+               "{\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export {}",
+               "export {\n"
+               "}",
+               Style);
+
+  verifyFormat("export { int x; }",
+               "export {\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Empty;
+  verifyFormat("export {}",
+               "export {\n"
+               "}",
+               Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               "export\n"
+               "{\n"
+               "int x;\n"
+               "}",
+               Style);
+
+  verifyFormat("export {}", Style);
+
+  verifyFormat("export {\n"
+               "int x;\n"
+               "}",
+               "export { int x; }", Style);
 }
 
 TEST_F(FormatTest, FormatsBuilderPattern) {
@@ -27982,6 +28091,11 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "    operand1 + operand2 - (operand3 + operand4);",
                Style);
 
+  // Check operator>> special case.
+  verifyFormat("std::cin >> longOperand_1 >> longOperand_2 >>\n"
+               "    longOperand_3_;",
+               Style);
+
   Style.BreakBinaryOperations = FormatStyle::BBO_OnePerLine;
 
   // Logical operations
@@ -28060,6 +28174,13 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "         operand6->member;",
                Style);
 
+  // Check operator>> special case.
+  verifyFormat("std::cin >>\n"
+               "    longOperand_1 >>\n"
+               "    longOperand_2 >>\n"
+               "    longOperand_3_;",
+               Style);
+
   Style.BreakBinaryOperations = FormatStyle::BBO_RespectPrecedence;
   verifyFormat("result = op1 + op2 * op3 - op4;", Style);
 
@@ -28083,6 +28204,13 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "                  byte_buffer[1] << 8 |\n"
                "                  byte_buffer[2] << 16 |\n"
                "                  byte_buffer[3] << 24;",
+               Style);
+
+  // Check operator>> special case.
+  verifyFormat("std::cin >>\n"
+               "    longOperand_1 >>\n"
+               "    longOperand_2 >>\n"
+               "    longOperand_3_;",
                Style);
 
   Style.BreakBinaryOperations = FormatStyle::BBO_OnePerLine;
@@ -28159,6 +28287,13 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "                  << 24;",
                Style);
 
+  // Check operator>> special case.
+  verifyFormat("std::cin\n"
+               "    >> longOperand_1\n"
+               "    >> longOperand_2\n"
+               "    >> longOperand_3_;",
+               Style);
+
   Style.BreakBinaryOperations = FormatStyle::BBO_RespectPrecedence;
   verifyFormat("result = op1 + op2 * op3 - op4;", Style);
 
@@ -28182,6 +28317,13 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "                  | byte_buffer[1] << 8\n"
                "                  | byte_buffer[2] << 16\n"
                "                  | byte_buffer[3] << 24;",
+               Style);
+
+  // Check operator>> special case.
+  verifyFormat("std::cin\n"
+               "    >> longOperand_1\n"
+               "    >> longOperand_2\n"
+               "    >> longOperand_3_;",
                Style);
 }
 
@@ -28425,6 +28567,136 @@ TEST_F(FormatTest, ShortNamespacesOption) {
       "}}} // namespace foo::bar::baz",
       "namespace foo { namespace bar { namespace baz { class qux; } } }",
       Style);
+}
+
+TEST_F(FormatTest, WrapNamespaceBodyWithEmptyLinesNever) {
+  auto Style = getLLVMStyle();
+  Style.FixNamespaceComments = false;
+  Style.MaxEmptyLinesToKeep = 2;
+  Style.WrapNamespaceBodyWithEmptyLines = FormatStyle::WNBWELS_Never;
+
+  // Empty namespace.
+  verifyFormat("namespace N {}", Style);
+
+  // Single namespace.
+  verifyFormat("namespace N {\n"
+               "int f1(int a) { return 2 * a; }\n"
+               "}",
+               "namespace N {\n"
+               "\n"
+               "\n"
+               "int f1(int a) { return 2 * a; }\n"
+               "\n"
+               "\n"
+               "}",
+               Style);
+
+  // Nested namespace.
+  verifyFormat("namespace N1 {\n"
+               "namespace N2 {\n"
+               "int a = 1;\n"
+               "}\n"
+               "}",
+               "namespace N1 {\n"
+               "\n"
+               "\n"
+               "namespace N2 {\n"
+               "\n"
+               "int a = 1;\n"
+               "\n"
+               "}\n"
+               "\n"
+               "\n"
+               "}",
+               Style);
+
+  Style.CompactNamespaces = true;
+
+  verifyFormat("namespace N1 { namespace N2 {\n"
+               "int a = 1;\n"
+               "}}",
+               "namespace N1 { namespace N2 {\n"
+               "\n"
+               "\n"
+               "int a = 1;\n"
+               "\n"
+               "\n"
+               "}}",
+               Style);
+}
+
+TEST_F(FormatTest, WrapNamespaceBodyWithEmptyLinesAlways) {
+  auto Style = getLLVMStyle();
+  Style.FixNamespaceComments = false;
+  Style.MaxEmptyLinesToKeep = 2;
+  Style.WrapNamespaceBodyWithEmptyLines = FormatStyle::WNBWELS_Always;
+
+  // Empty namespace.
+  verifyFormat("namespace N {}", Style);
+
+  // Single namespace.
+  verifyFormat("namespace N {\n"
+               "\n"
+               "int f1(int a) { return 2 * a; }\n"
+               "\n"
+               "}",
+               "namespace N {\n"
+               "int f1(int a) { return 2 * a; }\n"
+               "}",
+               Style);
+
+  // Nested namespace.
+  verifyFormat("namespace N1 {\n"
+               "namespace N2 {\n"
+               "\n"
+               "int a = 1;\n"
+               "\n"
+               "}\n"
+               "}",
+               "namespace N1 {\n"
+               "namespace N2 {\n"
+               "int a = 1;\n"
+               "}\n"
+               "}",
+               Style);
+
+  verifyFormat("namespace N1 {\n"
+               "\n"
+               "namespace N2 {\n"
+               "\n"
+               "\n"
+               "int a = 1;\n"
+               "\n"
+               "\n"
+               "}\n"
+               "\n"
+               "}",
+               "namespace N1 {\n"
+               "\n"
+               "namespace N2 {\n"
+               "\n"
+               "\n"
+               "\n"
+               "int a = 1;\n"
+               "\n"
+               "\n"
+               "\n"
+               "}\n"
+               "\n"
+               "}",
+               Style);
+
+  Style.CompactNamespaces = true;
+
+  verifyFormat("namespace N1 { namespace N2 {\n"
+               "\n"
+               "int a = 1;\n"
+               "\n"
+               "}}",
+               "namespace N1 { namespace N2 {\n"
+               "int a = 1;\n"
+               "}}",
+               Style);
 }
 
 } // namespace

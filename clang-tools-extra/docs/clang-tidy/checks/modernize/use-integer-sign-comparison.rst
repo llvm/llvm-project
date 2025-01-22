@@ -39,3 +39,9 @@ Options
 
   Ignore comparisons between signed wide and unsigned narrow integer
   types. Default is `true`.
+
+.. option:: EnableQtSupport
+
+  Makes C++17 ``q20::cmp_*`` alternative available for Qt-based
+  applications. Default is `false`.
+

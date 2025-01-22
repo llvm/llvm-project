@@ -283,8 +283,6 @@ void DependencyGraph::createNewNodes(const Interval<Instruction> &NewInterval) {
     // Build the Mem node chain.
     if (auto *MemN = dyn_cast<MemDGNode>(N)) {
       MemN->setPrevNode(LastMemN);
-      if (LastMemN != nullptr)
-        LastMemN->setNextNode(MemN);
       LastMemN = MemN;
     }
   }
@@ -302,7 +300,6 @@ void DependencyGraph::createNewNodes(const Interval<Instruction> &NewInterval) {
            "Wrong order!");
     if (LinkTopN != nullptr && LinkBotN != nullptr) {
       LinkTopN->setNextNode(LinkBotN);
-      LinkBotN->setPrevNode(LinkTopN);
     }
 #ifndef NDEBUG
     // TODO: Remove this once we've done enough testing.
@@ -371,10 +368,11 @@ void DependencyGraph::notifyCreateInstr(Instruction *I) {
 }
 
 void DependencyGraph::notifyMoveInstr(Instruction *I, const BBIterator &To) {
-  // Early return if `I` doesn't actually move.
+  // NOTE: This function runs before `I` moves to its new destination.
   BasicBlock *BB = To.getNodeParent();
-  if (To != BB->end() && &*To == I->getNextNode())
-    return;
+  assert(!(To != BB->end() && &*To == I->getNextNode()) &&
+         !(To == BB->end() && std::next(I->getIterator()) == BB->end()) &&
+         "Should not have been called if destination is same as origin.");
 
   // Maintain the DAGInterval.
   DAGInterval.notifyMoveInstr(I, To);
@@ -394,22 +392,14 @@ void DependencyGraph::notifyMoveInstr(Instruction *I, const BBIterator &To) {
   if (To != BB->end()) {
     DGNode *ToN = getNodeOrNull(&*To);
     if (ToN != nullptr) {
-      MemDGNode *PrevMemN = getMemDGNodeBefore(ToN, /*IncludingN=*/false);
-      MemDGNode *NextMemN = getMemDGNodeAfter(ToN, /*IncludingN=*/true);
-      MemN->PrevMemN = PrevMemN;
-      if (PrevMemN != nullptr)
-        PrevMemN->NextMemN = MemN;
-      MemN->NextMemN = NextMemN;
-      if (NextMemN != nullptr)
-        NextMemN->PrevMemN = MemN;
+      MemN->setPrevNode(getMemDGNodeBefore(ToN, /*IncludingN=*/false));
+      MemN->setNextNode(getMemDGNodeAfter(ToN, /*IncludingN=*/true));
     }
   } else {
     // MemN becomes the last instruction in the BB.
     auto *TermN = getNodeOrNull(BB->getTerminator());
     if (TermN != nullptr) {
-      MemDGNode *PrevMemN = getMemDGNodeBefore(TermN, /*IncludingN=*/false);
-      PrevMemN->NextMemN = MemN;
-      MemN->PrevMemN = PrevMemN;
+      MemN->setPrevNode(getMemDGNodeBefore(TermN, /*IncludingN=*/false));
     } else {
       // The terminator is outside the DAG interval so do nothing.
     }

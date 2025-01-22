@@ -1,4 +1,5 @@
-header: sys-utsname.h
+header: sys/utsname.h
+header_template: utsname.h.def
 macros: []
 types:
   - type_name: struct_utsname

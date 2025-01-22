@@ -2298,7 +2298,7 @@ struct FormatStyle {
     BBO_RespectPrecedence
   };
 
-  /// The break constructor initializers style to use.
+  /// The break binary operations style to use.
   /// \version 20
   BreakBinaryOperationsStyle BreakBinaryOperations;
 
@@ -2510,6 +2510,7 @@ struct FormatStyle {
   /// lists.
   ///
   /// Important differences:
+  ///
   /// * No spaces inside the braced list.
   /// * No line break before the closing brace.
   /// * Indentation with the continuation indent, not with the block indent.
@@ -2801,22 +2802,18 @@ struct FormatStyle {
   /// \version 3.3
   bool IndentCaseLabels;
 
-  /// Indent goto labels.
-  ///
-  /// When ``false``, goto labels are flushed left.
+  /// If ``true``, clang-format will indent the body of an ``export { ... }``
+  /// block. This doesn't affect the formatting of anything else related to
+  /// exported declarations.
   /// \code
-  ///    true:                                  false:
-  ///    int f() {                      vs.     int f() {
-  ///      if (foo()) {                           if (foo()) {
-  ///      label1:                              label1:
-  ///        bar();                                 bar();
-  ///      }                                      }
-  ///    label2:                                label2:
-  ///      return 1;                              return 1;
-  ///    }                                      }
+  ///    true:                     false:
+  ///    export {          vs.     export {
+  ///      void foo();             void foo();
+  ///      void bar();             void bar();
+  ///    }                         }
   /// \endcode
-  /// \version 10
-  bool IndentGotoLabels;
+  /// \version 20
+  bool IndentExportBlock;
 
   /// Indents extern blocks
   enum IndentExternBlockStyle : int8_t {
@@ -2857,6 +2854,23 @@ struct FormatStyle {
   /// IndentExternBlockStyle is the type of indenting of extern blocks.
   /// \version 11
   IndentExternBlockStyle IndentExternBlock;
+
+  /// Indent goto labels.
+  ///
+  /// When ``false``, goto labels are flushed left.
+  /// \code
+  ///    true:                                  false:
+  ///    int f() {                      vs.     int f() {
+  ///      if (foo()) {                           if (foo()) {
+  ///      label1:                              label1:
+  ///        bar();                                 bar();
+  ///      }                                      }
+  ///    label2:                                label2:
+  ///      return 1;                              return 1;
+  ///    }                                      }
+  /// \endcode
+  /// \version 10
+  bool IndentGotoLabels;
 
   /// Options for indenting preprocessor directives.
   enum PPDirectiveIndentStyle : int8_t {
@@ -3203,11 +3217,12 @@ struct FormatStyle {
   /// \version 19
   KeepEmptyLinesStyle KeepEmptyLines;
 
-  /// This option is deprecated. See ``AtEndOfFile`` of ``KeepEmptyLines``.
+  /// This option is **deprecated**. See ``AtEndOfFile`` of ``KeepEmptyLines``.
   /// \version 17
   // bool KeepEmptyLinesAtEOF;
 
-  /// This option is deprecated. See ``AtStartOfBlock`` of ``KeepEmptyLines``.
+  /// This option is **deprecated**. See ``AtStartOfBlock`` of
+  /// ``KeepEmptyLines``.
   /// \version 3.7
   // bool KeepEmptyLinesAtTheStartOfBlocks;
 
@@ -5042,8 +5057,8 @@ struct FormatStyle {
   /// \version 3.7
   unsigned TabWidth;
 
-  /// A vector of non-keyword identifiers that should be interpreted as
-  /// template names.
+  /// A vector of non-keyword identifiers that should be interpreted as template
+  /// names.
   ///
   /// A ``<`` after a template name is annotated as a template opener instead of
   /// a binary operator.
@@ -5143,6 +5158,39 @@ struct FormatStyle {
   /// \version 11
   std::vector<std::string> WhitespaceSensitiveMacros;
 
+  /// Different styles for wrapping namespace body with empty lines.
+  enum WrapNamespaceBodyWithEmptyLinesStyle : int8_t {
+    /// Remove all empty lines at the beginning and the end of namespace body.
+    /// \code
+    ///   namespace N1 {
+    ///   namespace N2
+    ///   function();
+    ///   }
+    ///   }
+    /// \endcode
+    WNBWELS_Never,
+    /// Always have at least one empty line at the beginning and the end of
+    /// namespace body except that the number of empty lines between consecutive
+    /// nested namespace definitions is not increased.
+    /// \code
+    ///   namespace N1 {
+    ///   namespace N2 {
+    ///
+    ///   function();
+    ///
+    ///   }
+    ///   }
+    /// \endcode
+    WNBWELS_Always,
+    /// Keep existing newlines at the beginning and the end of namespace body.
+    /// ``MaxEmptyLinesToKeep`` still applies.
+    WNBWELS_Leave
+  };
+
+  /// Wrap namespace body with empty lines.
+  /// \version 20
+  WrapNamespaceBodyWithEmptyLinesStyle WrapNamespaceBodyWithEmptyLines;
+
   bool operator==(const FormatStyle &R) const {
     return AccessModifierOffset == R.AccessModifierOffset &&
            AlignAfterOpenBracket == R.AlignAfterOpenBracket &&
@@ -5231,6 +5279,7 @@ struct FormatStyle {
            IndentAccessModifiers == R.IndentAccessModifiers &&
            IndentCaseBlocks == R.IndentCaseBlocks &&
            IndentCaseLabels == R.IndentCaseLabels &&
+           IndentExportBlock == R.IndentExportBlock &&
            IndentExternBlock == R.IndentExternBlock &&
            IndentGotoLabels == R.IndentGotoLabels &&
            IndentPPDirectives == R.IndentPPDirectives &&
@@ -5326,7 +5375,8 @@ struct FormatStyle {
            UseTab == R.UseTab && VariableTemplates == R.VariableTemplates &&
            VerilogBreakBetweenInstancePorts ==
                R.VerilogBreakBetweenInstancePorts &&
-           WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros;
+           WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros &&
+           WrapNamespaceBodyWithEmptyLines == R.WrapNamespaceBodyWithEmptyLines;
   }
 
   std::optional<FormatStyle> GetLanguageStyle(LanguageKind Language) const;

@@ -119,7 +119,7 @@ float2 HowManyFloats(float V) {
 // CHECK: store <1 x double> splat (double 1.000000e+00), ptr [[Tmp]], align 8
 // CHECK: [[vec1:%.*]] = load <1 x double>, ptr [[Tmp]], align 8
 // CHECK: [[vec3:%.*]] = shufflevector <1 x double> [[vec1]], <1 x double> poison, <3 x i32> zeroinitializer
-// CHECK: [[vec3f:%.*]] = fptrunc <3 x double> [[vec3]] to <3 x float>
+// CHECK: [[vec3f:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn <3 x double> [[vec3]] to <3 x float>
 // CHECK: ret <3 x float> [[vec3f]]
 
 float3 AllRighty() {

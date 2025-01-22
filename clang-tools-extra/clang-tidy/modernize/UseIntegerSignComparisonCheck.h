@@ -30,12 +30,13 @@ public:
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.CPlusPlus20;
+    return LangOpts.CPlusPlus20 || (LangOpts.CPlusPlus17 && EnableQtSupport);
   }
 
 private:
   utils::IncludeInserter IncludeInserter;
   const bool CheckIntegerSize;
+  const bool EnableQtSupport;
 };
 
 } // namespace clang::tidy::modernize

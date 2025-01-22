@@ -33,6 +33,7 @@ static_library("Support") {
     "Windows",
   ]
   sources = [
+    "AArch64BuildAttributes.cpp",
     "ABIBreak.cpp",
     "AMDGPUMetadata.cpp",
     "APFixedPoint.cpp",

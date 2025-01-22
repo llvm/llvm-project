@@ -171,6 +171,8 @@ private:
   void parseRequiresClause(FormatToken *RequiresToken);
   void parseRequiresExpression(FormatToken *RequiresToken);
   void parseConstraintExpression();
+  void parseCppExportBlock();
+  void parseNamespaceOrExportBlock(unsigned AddLevels);
   void parseJavaEnumBody();
   // Parses a record (aka class) as a top level element. If ParseAsExpr is true,
   // parses the record as a child block, i.e. if the class declaration is an
@@ -228,7 +230,7 @@ private:
   // NextTok specifies the next token. A null pointer NextTok is supported, and
   // signifies either the absence of a next token, or that the next token
   // shouldn't be taken into account for the analysis.
-  void distributeComments(const SmallVectorImpl<FormatToken *> &Comments,
+  void distributeComments(const ArrayRef<FormatToken *> &Comments,
                           const FormatToken *NextTok);
 
   // Adds the comment preceding the next token to unwrapped lines.

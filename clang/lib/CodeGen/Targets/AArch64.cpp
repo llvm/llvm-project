@@ -1169,8 +1169,9 @@ void AArch64TargetCodeGenInfo::checkFunctionABI(
 enum class ArmSMEInlinability : uint8_t {
   Ok = 0,
   ErrorCalleeRequiresNewZA = 1 << 0,
-  WarnIncompatibleStreamingModes = 1 << 1,
-  ErrorIncompatibleStreamingModes = 1 << 2,
+  ErrorCalleeRequiresNewZT0 = 1 << 1,
+  WarnIncompatibleStreamingModes = 1 << 2,
+  ErrorIncompatibleStreamingModes = 1 << 3,
 
   IncompatibleStreamingModes =
       WarnIncompatibleStreamingModes | ErrorIncompatibleStreamingModes,
@@ -1198,9 +1199,12 @@ static ArmSMEInlinability GetArmSMEInlinability(const FunctionDecl *Caller,
     else
       Inlinability |= ArmSMEInlinability::WarnIncompatibleStreamingModes;
   }
-  if (auto *NewAttr = Callee->getAttr<ArmNewAttr>())
+  if (auto *NewAttr = Callee->getAttr<ArmNewAttr>()) {
     if (NewAttr->isNewZA())
       Inlinability |= ArmSMEInlinability::ErrorCalleeRequiresNewZA;
+    if (NewAttr->isNewZT0())
+      Inlinability |= ArmSMEInlinability::ErrorCalleeRequiresNewZT0;
+  }
 
   return Inlinability;
 }
@@ -1226,6 +1230,11 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABIStreaming(
   if ((Inlinability & ArmSMEInlinability::ErrorCalleeRequiresNewZA) ==
       ArmSMEInlinability::ErrorCalleeRequiresNewZA)
     CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_za)
+        << Callee->getDeclName();
+
+  if ((Inlinability & ArmSMEInlinability::ErrorCalleeRequiresNewZT0) ==
+      ArmSMEInlinability::ErrorCalleeRequiresNewZT0)
+    CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_zt0)
         << Callee->getDeclName();
 }
 

@@ -3441,7 +3441,7 @@ the configuration (without a prefix: ``Auto``).
 .. _BreakBinaryOperations:
 
 **BreakBinaryOperations** (``BreakBinaryOperationsStyle``) :versionbadge:`clang-format 20` :ref:`¶ <BreakBinaryOperations>`
-  The break constructor initializers style to use.
+  The break binary operations style to use.
 
   Possible values:
 
@@ -3764,6 +3764,7 @@ the configuration (without a prefix: ``Auto``).
   lists.
 
   Important differences:
+
   * No spaces inside the braced list.
   * No line break before the closing brace.
   * Indentation with the continuation indent, not with the block indent.
@@ -4211,6 +4212,21 @@ the configuration (without a prefix: ``Auto``).
      default:                                 default:
        plop();                                  plop();
      }                                      }
+
+.. _IndentExportBlock:
+
+**IndentExportBlock** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <IndentExportBlock>`
+  If ``true``, clang-format will indent the body of an ``export { ... }``
+  block. This doesn't affect the formatting of anything else related to
+  exported declarations.
+
+  .. code-block:: c++
+
+     true:                     false:
+     export {          vs.     export {
+       void foo();             void foo();
+       void bar();             void bar();
+     }                         }
 
 .. _IndentExternBlock:
 
@@ -4661,12 +4677,13 @@ the configuration (without a prefix: ``Auto``).
 .. _KeepEmptyLinesAtEOF:
 
 **KeepEmptyLinesAtEOF** (``Boolean``) :versionbadge:`clang-format 17` :ref:`¶ <KeepEmptyLinesAtEOF>`
-  This option is deprecated. See ``AtEndOfFile`` of ``KeepEmptyLines``.
+  This option is **deprecated**. See ``AtEndOfFile`` of ``KeepEmptyLines``.
 
 .. _KeepEmptyLinesAtTheStartOfBlocks:
 
 **KeepEmptyLinesAtTheStartOfBlocks** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <KeepEmptyLinesAtTheStartOfBlocks>`
-  This option is deprecated. See ``AtStartOfBlock`` of ``KeepEmptyLines``.
+  This option is **deprecated**. See ``AtStartOfBlock`` of
+  ``KeepEmptyLines``.
 
 .. _KeepFormFeed:
 
@@ -6730,8 +6747,8 @@ the configuration (without a prefix: ``Auto``).
 .. _TemplateNames:
 
 **TemplateNames** (``List of Strings``) :versionbadge:`clang-format 20` :ref:`¶ <TemplateNames>`
-  A vector of non-keyword identifiers that should be interpreted as
-  template names.
+  A vector of non-keyword identifiers that should be interpreted as template
+  names.
 
   A ``<`` after a template name is annotated as a template opener instead of
   a binary operator.
@@ -6842,6 +6859,45 @@ the configuration (without a prefix: ``Auto``).
     WhitespaceSensitiveMacros: [STRINGIZE, PP_STRINGIZE]
 
   For example: BOOST_PP_STRINGIZE
+
+.. _WrapNamespaceBodyWithEmptyLines:
+
+**WrapNamespaceBodyWithEmptyLines** (``WrapNamespaceBodyWithEmptyLinesStyle``) :versionbadge:`clang-format 20` :ref:`¶ <WrapNamespaceBodyWithEmptyLines>`
+  Wrap namespace body with empty lines.
+
+  Possible values:
+
+  * ``WNBWELS_Never`` (in configuration: ``Never``)
+    Remove all empty lines at the beginning and the end of namespace body.
+
+    .. code-block:: c++
+
+      namespace N1 {
+      namespace N2
+      function();
+      }
+      }
+
+  * ``WNBWELS_Always`` (in configuration: ``Always``)
+    Always have at least one empty line at the beginning and the end of
+    namespace body except that the number of empty lines between consecutive
+    nested namespace definitions is not increased.
+
+    .. code-block:: c++
+
+      namespace N1 {
+      namespace N2 {
+
+      function();
+
+      }
+      }
+
+  * ``WNBWELS_Leave`` (in configuration: ``Leave``)
+    Keep existing newlines at the beginning and the end of namespace body.
+    ``MaxEmptyLinesToKeep`` still applies.
+
+
 
 .. END_FORMAT_STYLE_OPTIONS
 
