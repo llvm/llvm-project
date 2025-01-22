@@ -2789,12 +2789,12 @@ bool SIInstrInfo::isLegalToSwap(const MachineInstr &MI, unsigned OpIdx0,
       return false;
   }
 
-  if (OpIdx1 != Src0Idx && MO0->isReg()) {
+  if ((int)OpIdx1 != Src0Idx && MO0->isReg()) {
     if (!DefinedRC1)
       return OpInfo1.OperandType == MCOI::OPERAND_UNKNOWN;
     return isLegalRegOperand(MI, OpIdx1, *MO0);
   }
-  if (OpIdx0 != Src0Idx && MO1->isReg()) {
+  if ((int)OpIdx0 != Src0Idx && MO1->isReg()) {
     if (!DefinedRC0)
       return OpInfo0.OperandType == MCOI::OPERAND_UNKNOWN;
     return isLegalRegOperand(MI, OpIdx0, *MO1);
