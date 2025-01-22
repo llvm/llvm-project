@@ -974,7 +974,6 @@ Bug Fixes to C++ Support
 - Fix immediate escalation not propagating through inherited constructors.  (#GH112677)
 - Clang now rejects declaring an alias template with the same name as its template parameter. (#GH123423)
 
-
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
