@@ -15,8 +15,8 @@
 #include <__cxx03/__config>
 #include <__cxx03/ctime>
 #include <__cxx03/errno.h>
-#include <__cxx03/pthread.h>
-#include <__cxx03/sched.h>
+#include <pthread.h>
+#include <sched.h>
 
 #ifdef __MVS__
 #  include <__cxx03/__support/ibm/nanosleep.h>

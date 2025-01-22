@@ -112,6 +112,7 @@ def loongarch_bstrpick
 def loongarch_revb_2h : SDNode<"LoongArchISD::REVB_2H", SDTUnaryOp>;
 def loongarch_revb_2w : SDNode<"LoongArchISD::REVB_2W", SDTUnaryOp>;
 def loongarch_bitrev_4b : SDNode<"LoongArchISD::BITREV_4B", SDTUnaryOp>;
+def loongarch_bitrev_8b : SDNode<"LoongArchISD::BITREV_8B", SDTUnaryOp>;
 def loongarch_bitrev_w : SDNode<"LoongArchISD::BITREV_W", SDTUnaryOp>;
 def loongarch_clzw : SDNode<"LoongArchISD::CLZ_W", SDTIntBitCountUnaryOp>;
 def loongarch_ctzw : SDNode<"LoongArchISD::CTZ_W", SDTIntBitCountUnaryOp>;
@@ -521,6 +522,7 @@ def HI16ForAddu16idAddiPair: SDNodeXForm<imm, [{
 def BaseAddr : ComplexPattern<iPTR, 1, "SelectBaseAddr">;
 def AddrConstant : ComplexPattern<iPTR, 2, "SelectAddrConstant">;
 def NonFIBaseAddr : ComplexPattern<iPTR, 1, "selectNonFIBaseAddr">;
+def AddrRegImm : ComplexPattern<iPTR, 2, "SelectAddrRegImm12">;
 
 def fma_nsz : PatFrag<(ops node:$fj, node:$fk, node:$fa),
                       (fma node:$fj, node:$fk, node:$fa), [{
@@ -1765,6 +1767,7 @@ def : Pat<(bitreverse (bswap GPR:$rj)), (BITREV_4B GPR:$rj)>;
 let Predicates = [IsLA64] in {
 def : Pat<(loongarch_revb_2w GPR:$rj), (REVB_2W GPR:$rj)>;
 def : Pat<(bswap GPR:$rj), (REVB_D GPR:$rj)>;
+def : Pat<(loongarch_bitrev_8b GPR:$rj), (BITREV_8B GPR:$rj)>;
 def : Pat<(loongarch_bitrev_w GPR:$rj), (BITREV_W GPR:$rj)>;
 def : Pat<(bitreverse GPR:$rj), (BITREV_D GPR:$rj)>;
 def : Pat<(bswap (bitreverse GPR:$rj)), (BITREV_8B GPR:$rj)>;
@@ -2008,6 +2011,14 @@ class PseudoMaskedAMMinMax
 
 def PseudoMaskedAtomicLoadMax32 : PseudoMaskedAMMinMax;
 def PseudoMaskedAtomicLoadMin32 : PseudoMaskedAMMinMax;
+
+// Data prefetch
+
+// TODO: Supports for preldx instruction.
+def : Pat<(prefetch (AddrRegImm GPR:$rj, simm12:$imm12), (i32 0), timm, (i32 1)),
+          (PRELD 0, GPR:$rj, simm12:$imm12)>; // data prefetch for loads
+def : Pat<(prefetch (AddrRegImm GPR:$rj, simm12:$imm12), (i32 1), timm, (i32 1)),
+          (PRELD 8, GPR:$rj, simm12:$imm12)>; // data prefetch for stores
 
 /// Compare and exchange
 

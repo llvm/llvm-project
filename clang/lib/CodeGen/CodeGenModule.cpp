@@ -73,6 +73,7 @@
 #include "llvm/TargetParser/X86TargetParser.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include <optional>
+#include <set>
 
 using namespace clang;
 using namespace CodeGen;
@@ -119,6 +120,8 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
   case llvm::Triple::mipsel:
     if (Triple.getOS() == llvm::Triple::NaCl)
       return createPNaClTargetCodeGenInfo(CGM);
+    else if (Triple.getOS() == llvm::Triple::Win32)
+      return createWindowsMIPSTargetCodeGenInfo(CGM, /*IsOS32=*/true);
     return createMIPSTargetCodeGenInfo(CGM, /*IsOS32=*/true);
 
   case llvm::Triple::mips64:
@@ -397,8 +400,8 @@ CodeGenModule::CodeGenModule(ASTContext &C,
   if (LangOpts.HLSL)
     createHLSLRuntime();
 
-  // Enable TBAA unless it's suppressed. ThreadSanitizer needs TBAA even at O0.
-  if (LangOpts.Sanitize.has(SanitizerKind::Thread) ||
+  // Enable TBAA unless it's suppressed. TSan and TySan need TBAA even at O0.
+  if (LangOpts.Sanitize.hasOneOf(SanitizerKind::Thread | SanitizerKind::Type) ||
       (!CodeGenOpts.RelaxedAliasing && CodeGenOpts.OptimizationLevel > 0))
     TBAA.reset(new CodeGenTBAA(Context, getTypes(), TheModule, CodeGenOpts,
                                getLangOpts()));
@@ -1218,6 +1221,9 @@ void CodeGenModule::Release() {
       getModule().addModuleFlag(llvm::Module::Min, "ptrauth-elf-got", 1);
 
     if (getTriple().isOSLinux()) {
+      if (LangOpts.PointerAuthCalls)
+        getModule().addModuleFlag(llvm::Module::Min, "ptrauth-sign-personality",
+                                  1);
       assert(getTriple().isOSBinFormatELF());
       using namespace llvm::ELF;
       uint64_t PAuthABIVersion =
@@ -2745,7 +2751,30 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     Attrs.addAttribute("target-features", llvm::join(Features, ","));
     AddedAttr = true;
   }
-
+  // Add metadata for AArch64 Function Multi Versioning.
+  if (getTarget().getTriple().isAArch64()) {
+    llvm::SmallVector<StringRef, 8> Feats;
+    bool IsDefault = false;
+    if (TV) {
+      IsDefault = TV->isDefaultVersion();
+      TV->getFeatures(Feats);
+    } else if (TC) {
+      IsDefault = TC->isDefaultVersion(GD.getMultiVersionIndex());
+      TC->getFeatures(Feats, GD.getMultiVersionIndex());
+    }
+    if (IsDefault) {
+      Attrs.addAttribute("fmv-features");
+      AddedAttr = true;
+    } else if (!Feats.empty()) {
+      // Sort features and remove duplicates.
+      std::set<StringRef> OrderedFeats(Feats.begin(), Feats.end());
+      std::string FMVFeatures;
+      for (StringRef F : OrderedFeats)
+        FMVFeatures.append("," + F.str());
+      Attrs.addAttribute("fmv-features", FMVFeatures.substr(1));
+      AddedAttr = true;
+    }
+  }
   return AddedAttr;
 }
 
@@ -2783,6 +2812,7 @@ void CodeGenModule::setNonAliasAttributes(GlobalDecl GD,
         llvm::AttributeMask RemoveAttrs;
         RemoveAttrs.addAttribute("target-cpu");
         RemoveAttrs.addAttribute("target-features");
+        RemoveAttrs.addAttribute("fmv-features");
         RemoveAttrs.addAttribute("tune-cpu");
         F->removeFnAttrs(RemoveAttrs);
         F->addFnAttrs(Attrs);
@@ -4224,7 +4254,7 @@ void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD, llvm::GlobalValue *GV) {
 static void ReplaceUsesOfNonProtoTypeWithRealFunction(llvm::GlobalValue *Old,
                                                       llvm::Function *NewFn);
 
-static unsigned getFMVPriority(const TargetInfo &TI,
+static uint64_t getFMVPriority(const TargetInfo &TI,
                                const CodeGenFunction::FMVResolverOption &RO) {
   llvm::SmallVector<StringRef, 8> Features{RO.Features};
   if (RO.Architecture)
@@ -4280,7 +4310,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
     getContext().forEachMultiversionedFunctionVersion(
         FD, [&](const FunctionDecl *CurFD) {
           llvm::SmallVector<StringRef, 8> Feats;
-          bool IsDefined = CurFD->doesThisDeclarationHaveABody();
+          bool IsDefined = CurFD->getDefinition() != nullptr;
 
           if (const auto *TA = CurFD->getAttr<TargetAttr>()) {
             assert(getTarget().getTriple().isX86() && "Unsupported target");

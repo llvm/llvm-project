@@ -439,9 +439,8 @@ define i8 @srai_i8(i8 %a) nounwind {
 define i16 @srli_i16(i16 %a) nounwind {
 ; RV64I-LABEL: srli_i16:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    srli a0, a0, 6
 ; RV64I-NEXT:    ret
 ;

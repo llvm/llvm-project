@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: f0
 ; CHECK-NOT: allocframe
 ; CHECK-NOT: memd(r29

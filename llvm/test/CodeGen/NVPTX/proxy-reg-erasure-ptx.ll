@@ -1,9 +1,9 @@
-; RUN: llc -march=nvptx64 -stop-before=nvptx-proxyreg-erasure < %s 2>&1 \
-; RUN:   | llc -x mir -march=nvptx64 -start-before=nvptx-proxyreg-erasure 2>&1 \
+; RUN: llc -mtriple=nvptx64 -stop-before=nvptx-proxyreg-erasure < %s 2>&1 \
+; RUN: | llc -x mir -mtriple=nvptx64 -start-before=nvptx-proxyreg-erasure 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=PTX --check-prefix=PTX-WITH
 
-; RUN: llc -march=nvptx64 -stop-before=nvptx-proxyreg-erasure < %s 2>&1 \
-; RUN:   | llc -x mir -march=nvptx64 -start-after=nvptx-proxyreg-erasure 2>&1 \
+; RUN: llc -mtriple=nvptx64 -stop-before=nvptx-proxyreg-erasure < %s 2>&1 \
+; RUN: | llc -x mir -mtriple=nvptx64 -start-after=nvptx-proxyreg-erasure 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=PTX --check-prefix=PTX-WITHOUT
 
 ; Thorough testing of ProxyRegErasure: PTX assembly with and without the pass.

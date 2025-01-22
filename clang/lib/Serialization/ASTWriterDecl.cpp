@@ -177,11 +177,12 @@ namespace clang {
       Record.AddSourceLocation(typeParams->getRAngleLoc());
     }
 
-    /// Add to the record the first declaration from each module file that
-    /// provides a declaration of D. The intent is to provide a sufficient
-    /// set such that reloading this set will load all current redeclarations.
-    void AddFirstDeclFromEachModule(const Decl *D, bool IncludeLocal) {
-      llvm::MapVector<ModuleFile*, const Decl*> Firsts;
+    /// Collect the first declaration from each module file that provides a
+    /// declaration of D.
+    void CollectFirstDeclFromEachModule(
+        const Decl *D, bool IncludeLocal,
+        llvm::MapVector<ModuleFile *, const Decl *> &Firsts) {
+
       // FIXME: We can skip entries that we know are implied by others.
       for (const Decl *R = D->getMostRecentDecl(); R; R = R->getPreviousDecl()) {
         if (R->isFromASTFile())
@@ -189,8 +190,39 @@ namespace clang {
         else if (IncludeLocal)
           Firsts[nullptr] = R;
       }
+    }
+
+    /// Add to the record the first declaration from each module file that
+    /// provides a declaration of D. The intent is to provide a sufficient
+    /// set such that reloading this set will load all current redeclarations.
+    void AddFirstDeclFromEachModule(const Decl *D, bool IncludeLocal) {
+      llvm::MapVector<ModuleFile *, const Decl *> Firsts;
+      CollectFirstDeclFromEachModule(D, IncludeLocal, Firsts);
+
       for (const auto &F : Firsts)
         Record.AddDeclRef(F.second);
+    }
+
+    /// Add to the record the first template specialization from each module
+    /// file that provides a declaration of D. We store the DeclId and an
+    /// ODRHash of the template arguments of D which should provide enough
+    /// information to load D only if the template instantiator needs it.
+    void AddFirstSpecializationDeclFromEachModule(
+        const Decl *D, llvm::SmallVectorImpl<const Decl *> &SpecsInMap,
+        llvm::SmallVectorImpl<const Decl *> &PartialSpecsInMap) {
+      assert((isa<ClassTemplateSpecializationDecl>(D) ||
+              isa<VarTemplateSpecializationDecl>(D) || isa<FunctionDecl>(D)) &&
+             "Must not be called with other decls");
+      llvm::MapVector<ModuleFile *, const Decl *> Firsts;
+      CollectFirstDeclFromEachModule(D, /*IncludeLocal*/ true, Firsts);
+
+      for (const auto &F : Firsts) {
+        if (isa<ClassTemplatePartialSpecializationDecl,
+                VarTemplatePartialSpecializationDecl>(F.second))
+          PartialSpecsInMap.push_back(F.second);
+        else
+          SpecsInMap.push_back(F.second);
+      }
     }
 
     /// Get the specialization decl from an entry in the specialization list.
@@ -205,8 +237,9 @@ namespace clang {
     decltype(T::PartialSpecializations) &getPartialSpecializations(T *Common) {
       return Common->PartialSpecializations;
     }
-    ArrayRef<Decl> getPartialSpecializations(FunctionTemplateDecl::Common *) {
-      return {};
+    MutableArrayRef<FunctionTemplateSpecializationInfo>
+    getPartialSpecializations(FunctionTemplateDecl::Common *) {
+      return std::nullopt;
     }
 
     template<typename DeclTy>
@@ -217,37 +250,37 @@ namespace clang {
       // our chained AST reader, we can just write out the DeclIDs. Otherwise,
       // we need to resolve them to actual declarations.
       if (Writer.Chain != Record.getASTContext().getExternalSource() &&
-          Common->LazySpecializations) {
+          Writer.Chain && Writer.Chain->haveUnloadedSpecializations(D)) {
         D->LoadLazySpecializations();
-        assert(!Common->LazySpecializations);
+        assert(!Writer.Chain->haveUnloadedSpecializations(D));
       }
 
-      ArrayRef<GlobalDeclID> LazySpecializations;
-      if (auto *LS = Common->LazySpecializations)
-        LazySpecializations = llvm::ArrayRef(LS + 1, LS[0].getRawValue());
-
-      // Add a slot to the record for the number of specializations.
-      unsigned I = Record.size();
-      Record.push_back(0);
-
-      // AddFirstDeclFromEachModule might trigger deserialization, invalidating
-      // *Specializations iterators.
-      llvm::SmallVector<const Decl*, 16> Specs;
+      // AddFirstSpecializationDeclFromEachModule might trigger deserialization,
+      // invalidating *Specializations iterators.
+      llvm::SmallVector<const Decl *, 16> AllSpecs;
       for (auto &Entry : Common->Specializations)
-        Specs.push_back(getSpecializationDecl(Entry));
+        AllSpecs.push_back(getSpecializationDecl(Entry));
       for (auto &Entry : getPartialSpecializations(Common))
-        Specs.push_back(getSpecializationDecl(Entry));
+        AllSpecs.push_back(getSpecializationDecl(Entry));
 
-      for (auto *D : Specs) {
+      llvm::SmallVector<const Decl *, 16> Specs;
+      llvm::SmallVector<const Decl *, 16> PartialSpecs;
+      for (auto *D : AllSpecs) {
         assert(D->isCanonicalDecl() && "non-canonical decl in set");
-        AddFirstDeclFromEachModule(D, /*IncludeLocal*/true);
+        AddFirstSpecializationDeclFromEachModule(D, Specs, PartialSpecs);
       }
-      Record.append(
-          DeclIDIterator<GlobalDeclID, DeclID>(LazySpecializations.begin()),
-          DeclIDIterator<GlobalDeclID, DeclID>(LazySpecializations.end()));
 
-      // Update the size entry we added earlier.
-      Record[I] = Record.size() - I - 1;
+      Record.AddOffset(Writer.WriteSpecializationInfoLookupTable(
+          D, Specs, /*IsPartial=*/false));
+
+      // Function Template Decl doesn't have partial decls.
+      if (isa<FunctionTemplateDecl>(D)) {
+        assert(PartialSpecs.empty());
+        return;
+      }
+
+      Record.AddOffset(Writer.WriteSpecializationInfoLookupTable(
+          D, PartialSpecs, /*IsPartial=*/true));
     }
 
     /// Ensure that this template specialization is associated with the specified
@@ -268,8 +301,13 @@ namespace clang {
       if (Writer.getFirstLocalDecl(Specialization) != Specialization)
         return;
 
-      Writer.DeclUpdates[Template].push_back(ASTWriter::DeclUpdate(
-          UPD_CXX_ADDED_TEMPLATE_SPECIALIZATION, Specialization));
+      if (isa<ClassTemplatePartialSpecializationDecl,
+              VarTemplatePartialSpecializationDecl>(Specialization))
+        Writer.PartialSpecializationsUpdates[cast<NamedDecl>(Template)]
+            .push_back(cast<NamedDecl>(Specialization));
+      else
+        Writer.SpecializationsUpdates[cast<NamedDecl>(Template)].push_back(
+            cast<NamedDecl>(Specialization));
     }
   };
 }
@@ -573,6 +611,7 @@ void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
   RecordDeclBits.addBit(D->hasNonTrivialToPrimitiveDefaultInitializeCUnion());
   RecordDeclBits.addBit(D->hasNonTrivialToPrimitiveDestructCUnion());
   RecordDeclBits.addBit(D->hasNonTrivialToPrimitiveCopyCUnion());
+  RecordDeclBits.addBit(D->hasUninitializedExplicitInitFields());
   RecordDeclBits.addBit(D->isParamDestroyedInCallee());
   RecordDeclBits.addBits(llvm::to_underlying(D->getArgPassingRestrictions()), 2);
   Record.push_back(RecordDeclBits);
@@ -758,6 +797,17 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
     } else {
       Record.push_back(0);
     }
+  }
+
+  if (D->getFriendObjectKind()) {
+    // For a function defined inline within a class template, we have to force
+    // the canonical definition to be the one inside the canonical definition of
+    // the template. Remember this relation to deserialize them together.
+    if (auto *RD = dyn_cast<CXXRecordDecl>(D->getLexicalParent()))
+      if (RD->isDependentContext() && RD->isThisDeclarationADefinition()) {
+        Writer.RelatedDeclsMap[Writer.GetDeclRef(RD)].push_back(
+            Writer.GetDeclRef(D));
+      }
   }
 
   Record.push_back(D->param_size());
@@ -1525,7 +1575,7 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     // For lambdas inside canonical FunctionDecl remember the mapping.
     if (auto FD = llvm::dyn_cast_or_null<FunctionDecl>(D->getDeclContext());
         FD && FD->isCanonicalDecl()) {
-      Writer.FunctionToLambdasMap[Writer.GetDeclRef(FD)].push_back(
+      Writer.RelatedDeclsMap[Writer.GetDeclRef(FD)].push_back(
           Writer.GetDeclRef(D));
     }
   } else {
@@ -1902,7 +1952,8 @@ void ASTDeclWriter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   Record.push_back(D->wasDeclaredWithTypename());
 
   const TypeConstraint *TC = D->getTypeConstraint();
-  assert((bool)TC == D->hasTypeConstraint());
+  if (D->hasTypeConstraint())
+    Record.push_back(/*TypeConstraintInitialized=*/TC != nullptr);
   if (TC) {
     auto *CR = TC->getConceptReference();
     Record.push_back(CR != nullptr);
@@ -1920,7 +1971,7 @@ void ASTDeclWriter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   if (OwnsDefaultArg)
     Record.AddTemplateArgumentLoc(D->getDefaultArgument());
 
-  if (!TC && !OwnsDefaultArg &&
+  if (!D->hasTypeConstraint() && !OwnsDefaultArg &&
       D->getDeclContext() == D->getLexicalDeclContext() &&
       !D->isInvalidDecl() && !D->hasAttrs() &&
       !D->isTopLevelDeclInObjCContainer() && !D->isImplicit() &&
@@ -2017,6 +2068,8 @@ void ASTDeclWriter::VisitDeclContext(DeclContext *DC) {
 
   uint64_t LexicalOffset = 0;
   uint64_t VisibleOffset = 0;
+  uint64_t ModuleLocalOffset = 0;
+  uint64_t TULocalOffset = 0;
 
   if (Writer.isGeneratingReducedBMI() && isa<NamespaceDecl>(DC) &&
       cast<NamespaceDecl>(DC)->isFromExplicitGlobalModule()) {
@@ -2027,12 +2080,15 @@ void ASTDeclWriter::VisitDeclContext(DeclContext *DC) {
   } else {
     LexicalOffset =
         Writer.WriteDeclContextLexicalBlock(Record.getASTContext(), DC);
-    VisibleOffset =
-        Writer.WriteDeclContextVisibleBlock(Record.getASTContext(), DC);
+    Writer.WriteDeclContextVisibleBlock(Record.getASTContext(), DC,
+                                        VisibleOffset, ModuleLocalOffset,
+                                        TULocalOffset);
   }
 
   Record.AddOffset(LexicalOffset);
   Record.AddOffset(VisibleOffset);
+  Record.AddOffset(ModuleLocalOffset);
+  Record.AddOffset(TULocalOffset);
 }
 
 const Decl *ASTWriter::getFirstLocalDecl(const Decl *D) {
@@ -2387,6 +2443,8 @@ void ASTWriter::WriteDeclAbbrevs() {
   // DC
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // LexicalOffset
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // VisibleOffset
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // ModuleLocalOffset
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // TULocalOffset
   DeclEnumAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   // Abbreviation for DECL_RECORD
@@ -2430,7 +2488,8 @@ void ASTWriter::WriteDeclAbbrevs() {
             // isNonTrivialToPrimitiveCopy, isNonTrivialToPrimitiveDestroy,
             // hasNonTrivialToPrimitiveDefaultInitializeCUnion,
             // hasNonTrivialToPrimitiveDestructCUnion,
-            // hasNonTrivialToPrimitiveCopyCUnion, isParamDestroyedInCallee,
+            // hasNonTrivialToPrimitiveCopyCUnion,
+            // hasUninitializedExplicitInitFields, isParamDestroyedInCallee,
             // getArgPassingRestrictions
   // ODRHash
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 26));
@@ -2438,6 +2497,8 @@ void ASTWriter::WriteDeclAbbrevs() {
   // DC
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // LexicalOffset
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // VisibleOffset
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // ModuleLocalOffset
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // TULocalOffset
   DeclRecordAbbrev = Stream.EmitAbbrev(std::move(Abv));
 
   // Abbreviation for DECL_PARM_VAR
@@ -2774,6 +2835,26 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_CONTEXT_VISIBLE));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
   DeclContextVisibleLookupAbbrev = Stream.EmitAbbrev(std::move(Abv));
+
+  Abv = std::make_shared<BitCodeAbbrev>();
+  Abv->Add(BitCodeAbbrevOp(serialization::DECL_CONTEXT_MODULE_LOCAL_VISIBLE));
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
+  DeclModuleLocalVisibleLookupAbbrev = Stream.EmitAbbrev(std::move(Abv));
+
+  Abv = std::make_shared<BitCodeAbbrev>();
+  Abv->Add(BitCodeAbbrevOp(serialization::DECL_CONTEXT_TU_LOCAL_VISIBLE));
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
+  DeclTULocalLookupAbbrev = Stream.EmitAbbrev(std::move(Abv));
+
+  Abv = std::make_shared<BitCodeAbbrev>();
+  Abv->Add(BitCodeAbbrevOp(serialization::DECL_SPECIALIZATIONS));
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
+  DeclSpecializationsAbbrev = Stream.EmitAbbrev(std::move(Abv));
+
+  Abv = std::make_shared<BitCodeAbbrev>();
+  Abv->Add(BitCodeAbbrevOp(serialization::DECL_PARTIAL_SPECIALIZATIONS));
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
+  DeclPartialSpecializationsAbbrev = Stream.EmitAbbrev(std::move(Abv));
 }
 
 /// isRequiredDecl - Check if this is a "required" Decl, which must be seen by

@@ -627,6 +627,24 @@ bool CodeExtractor::isEligible() const {
         return false;
     }
   }
+  // stacksave as input implies stackrestore in the outlined function.
+  // This can confuse prolog epilog insertion phase.
+  // stacksave's uses must not cross outlined function.
+  for (BasicBlock *BB : Blocks) {
+    for (Instruction &I : *BB) {
+      IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
+      if (!II)
+        continue;
+      bool IsSave = II->getIntrinsicID() == Intrinsic::stacksave;
+      bool IsRestore = II->getIntrinsicID() == Intrinsic::stackrestore;
+      if (IsSave && any_of(II->users(), [&Blks = this->Blocks](User *U) {
+            return !definedInRegion(Blks, U);
+          }))
+        return false;
+      if (IsRestore && !definedInRegion(Blocks, II->getArgOperand(0)))
+        return false;
+    }
+  }
   return true;
 }
 
@@ -831,7 +849,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       StructValues.insert(output);
     } else
       ParamTy.push_back(
-          PointerType::get(output->getType(), DL.getAllocaAddrSpace()));
+          PointerType::get(output->getContext(), DL.getAllocaAddrSpace()));
   }
 
   assert(
@@ -845,7 +863,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
   if (!AggParamTy.empty()) {
     StructTy = StructType::get(M->getContext(), AggParamTy);
     ParamTy.push_back(PointerType::get(
-        StructTy, ArgsInZeroAddressSpace ? 0 : DL.getAllocaAddrSpace()));
+        M->getContext(), ArgsInZeroAddressSpace ? 0 : DL.getAllocaAddrSpace()));
   }
 
   Type *RetTy = getSwitchType();
@@ -935,6 +953,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::SanitizeMemory:
       case Attribute::SanitizeNumericalStability:
       case Attribute::SanitizeThread:
+      case Attribute::SanitizeType:
       case Attribute::SanitizeHWAddress:
       case Attribute::SanitizeMemTag:
       case Attribute::SanitizeRealtime:
@@ -956,6 +975,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::AllocatedPointer:
       case Attribute::AllocAlign:
       case Attribute::ByVal:
+      case Attribute::Captures:
       case Attribute::Dereferenceable:
       case Attribute::DereferenceableOrNull:
       case Attribute::ElementType:

@@ -801,7 +801,7 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %v4, i8 %v5) {
 
 TEST_F(DependencyGraphTest, CreateInstrCallback) {
   parseIR(C, R"IR(
-define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %arg) {
+define void @foo(ptr %ptr, ptr noalias %ptr2, i8 %v1, i8 %v2, i8 %v3, i8 %arg) {
   store i8 %v1, ptr %ptr
   store i8 %v2, ptr %ptr
   store i8 %v3, ptr %ptr
@@ -880,6 +880,49 @@ define void @foo(ptr %ptr, i8 %v1, i8 %v2, i8 %v3, i8 %arg) {
   S2->eraseFromParent();
   auto *DeletedN = DAG.getNodeOrNull(S2);
   EXPECT_TRUE(DeletedN == nullptr);
+
+  // Check the MemDGNode chain.
+  auto *S1MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
+  auto *S3MemN = cast<sandboxir::MemDGNode>(DAG.getNode(S3));
+  EXPECT_EQ(S1MemN->getNextNode(), S3MemN);
+  EXPECT_EQ(S3MemN->getPrevNode(), S1MemN);
+
+  // Check the chain when we erase the top node.
+  S1->eraseFromParent();
+  EXPECT_EQ(S3MemN->getPrevNode(), nullptr);
+
   // TODO: Check the dependencies to/from NewSN after they land.
-  // TODO: Check the MemDGNode chain.
+}
+
+TEST_F(DependencyGraphTest, MoveInstrCallback) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, ptr %ptr2, i8 %v1, i8 %v2, i8 %v3, i8 %arg) {
+  %ld0 = load i8, ptr %ptr2
+  store i8 %v1, ptr %ptr
+  store i8 %v2, ptr %ptr
+  store i8 %v3, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Ld = cast<sandboxir::LoadInst>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S2 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S3 = cast<sandboxir::StoreInst>(&*It++);
+
+  sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
+  DAG.extend({Ld, S3});
+  auto *LdN = cast<sandboxir::MemDGNode>(DAG.getNode(Ld));
+  auto *S1N = cast<sandboxir::MemDGNode>(DAG.getNode(S1));
+  auto *S2N = cast<sandboxir::MemDGNode>(DAG.getNode(S2));
+  EXPECT_EQ(S1N->getPrevNode(), LdN);
+  S1->moveBefore(Ld);
+  EXPECT_EQ(S1N->getPrevNode(), nullptr);
+  EXPECT_EQ(S1N->getNextNode(), LdN);
+  EXPECT_EQ(LdN->getPrevNode(), S1N);
+  EXPECT_EQ(LdN->getNextNode(), S2N);
 }

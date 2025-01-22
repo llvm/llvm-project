@@ -196,8 +196,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  std::pair<const char *, ArrayRef<Builtin::Info>>
-  getTargetBuiltinStorage() const override;
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
   bool isCLZForZeroUndef() const override;
   BuiltinVaListKind getBuiltinVaListKind() const override;
@@ -299,6 +298,17 @@ public:
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
+};
+
+class LLVM_LIBRARY_VISIBILITY AppleMachOARMTargetInfo
+    : public AppleMachOTargetInfo<ARMleTargetInfo> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override;
+
+public:
+  AppleMachOARMTargetInfo(const llvm::Triple &Triple,
+                          const TargetOptions &Opts);
 };
 
 class LLVM_LIBRARY_VISIBILITY DarwinARMTargetInfo

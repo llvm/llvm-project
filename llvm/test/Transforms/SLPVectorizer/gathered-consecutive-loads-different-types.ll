@@ -11,8 +11,8 @@ define i32 @test(i8 %0) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <2 x i8> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load volatile i8, ptr null, align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i8>, ptr addrspace(21) getelementptr inbounds (i8, ptr addrspace(21) null, i64 8), align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i8> [[TMP5]], <2 x i8> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 poison, i32 poison, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i8> [[TMP6]], <8 x i8> <i8 0, i8 0, i8 poison, i8 0, i8 0, i8 poison, i8 0, i8 0>, <8 x i32> <i32 8, i32 9, i32 0, i32 11, i32 12, i32 1, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i8> [[TMP5]], <2 x i8> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i8> <i8 0, i8 0, i8 poison, i8 0, i8 0, i8 poison, i8 0, i8 0>, <8 x i8> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 8, i32 3, i32 4, i32 9, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <8 x i8> zeroinitializer, [[TMP7]]
 ; CHECK-NEXT:    [[TEST_STRUCTCOPY_14_S14_CM_COERCE_SROA_2_0_COPYLOAD:%.*]] = load i48, ptr addrspace(21) getelementptr inbounds (i8, ptr addrspace(21) null, i64 8), align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i48> <i48 poison, i48 0, i48 0, i48 0>, i48 [[TEST_STRUCTCOPY_14_S14_CM_COERCE_SROA_2_0_COPYLOAD]], i32 0
@@ -21,9 +21,9 @@ define i32 @test(i8 %0) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr addrspace(21) null, align 2
 ; CHECK-NEXT:    [[TMP13:%.*]] = load volatile i8, ptr null, align 2
 ; CHECK-NEXT:    [[TMP14:%.*]] = load <2 x i8>, ptr addrspace(21) getelementptr inbounds (i8, ptr addrspace(21) null, i64 8), align 8
-; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <2 x i8> [[TMP14]], <2 x i8> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 0, i32 1, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <8 x i8> [[TMP15]], <8 x i8> <i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 0, i8 0, i8 0>, <8 x i32> <i32 8, i32 poison, i32 10, i32 3, i32 4, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <8 x i8> [[TMP16]], i8 [[TMP12]], i32 1
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x i8> <i8 0, i8 poison, i8 0, i8 poison, i8 poison, i8 0, i8 0, i8 0>, i8 [[TMP12]], i32 1
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x i8> [[TMP14]], <2 x i8> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <8 x i8> [[TMP15]], <8 x i8> [[TMP16]], <8 x i32> <i32 0, i32 1, i32 2, i32 8, i32 9, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <8 x i8> <i8 0, i8 poison, i8 0, i8 poison, i8 0, i8 0, i8 0, i8 0>, i8 [[TMP0]], i32 3
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <8 x i8> [[TMP18]], i8 [[TMP13]], i32 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq <8 x i8> [[TMP17]], [[TMP19]]

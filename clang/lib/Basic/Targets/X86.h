@@ -384,7 +384,7 @@ public:
     return CPU != llvm::X86::CK_None;
   }
 
-  unsigned getFMVPriority(ArrayRef<StringRef> Features) const override;
+  uint64_t getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   bool setFPMath(StringRef Name) override;
 
@@ -508,8 +508,7 @@ public:
       MaxAtomicInlineWidth = 64;
   }
 
-  std::pair<const char *, ArrayRef<Builtin::Info>>
-  getTargetBuiltinStorage() const override;
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
   bool hasBitIntType() const override { return true; }
   size_t getMaxBitIntWidth() const override {
@@ -533,6 +532,14 @@ public:
     IntPtrType = SignedLong;
     PtrDiffType = SignedLong;
   }
+};
+
+class LLVM_LIBRARY_VISIBILITY AppleMachOI386TargetInfo
+    : public AppleMachOTargetInfo<X86_32TargetInfo> {
+public:
+  AppleMachOI386TargetInfo(const llvm::Triple &Triple,
+                           const TargetOptions &Opts)
+      : AppleMachOTargetInfo<X86_32TargetInfo>(Triple, Opts) {}
 };
 
 class LLVM_LIBRARY_VISIBILITY DarwinI386TargetInfo
@@ -813,8 +820,7 @@ public:
       MaxAtomicInlineWidth = 128;
   }
 
-  std::pair<const char *, ArrayRef<Builtin::Info>>
-  getTargetBuiltinStorage() const override;
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
   bool hasBitIntType() const override { return true; }
   size_t getMaxBitIntWidth() const override {
@@ -832,11 +838,6 @@ public:
     this->MaxTLSAlign = 8192u * this->getCharWidth();
     this->resetDataLayout("e-m:w-p270:32:32-p271:32:32-p272:64:64-"
                           "i64:64-i128:128-f80:128-n8:16:32:64-S128");
-  }
-
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override {
-    getOSDefines(Opts, X86TargetInfo::getTriple(), Builder);
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {

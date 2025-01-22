@@ -1,7 +1,7 @@
-; RUN: llc -march=mipsel -mcpu=mips32 < %s | FileCheck %s -check-prefix=CHECK-MIPS32
-; RUN: llc -march=mips64el -mcpu=mips64 -relocation-model=pic < %s | \
+; RUN: llc -mtriple=mipsel -mcpu=mips32 < %s | FileCheck %s -check-prefix=CHECK-MIPS32
+; RUN: llc -mtriple=mips64el -mcpu=mips64 -relocation-model=pic < %s | \
 ; RUN:      FileCheck %s -check-prefix=CHECK-MIPS64
-; RUN: llc -march=mipsel -mcpu=mips64 -target-abi n32 < %s | \
+; RUN: llc -mtriple=mipsel -mcpu=mips64 -target-abi n32 < %s | \
 ; RUN:      FileCheck %s -check-prefix=CHECK-MIPSN32
 
 ; Test that the expansion of ADJCALLSTACKDOWN and ADJCALLSTACKUP generate

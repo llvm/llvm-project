@@ -54,6 +54,10 @@
 using namespace lldb;
 using namespace lldb_private;
 
+#define OPTTABLE_STR_TABLE_CODE
+#include "clang/Driver/Options.inc"
+#undef OPTTABLE_STR_TABLE_CODE
+
 static Status ExceptionMaskValidator(const char *string, void *unused) {
   Status error;
   llvm::StringRef str_ref(string);
@@ -1078,8 +1082,8 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   // clang has no version-min clang flag for XROS.
   if (!version.empty() && sdk_type != XcodeSDK::Type::Linux &&
       sdk_type != XcodeSDK::Type::XROS) {
-#define OPTION(PREFIX, NAME, VAR, ...)                                         \
-  llvm::StringRef opt_##VAR = NAME;                                            \
+#define OPTION(PREFIX_OFFSET, NAME_OFFSET, VAR, ...)                           \
+  llvm::StringRef opt_##VAR = &OptionStrTable[NAME_OFFSET];                    \
   (void)opt_##VAR;
 #include "clang/Driver/Options.inc"
 #undef OPTION

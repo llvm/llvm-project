@@ -1,0 +1,20 @@
+functions:
+  imaxabs:
+    c-definition: 7.8.2.1
+    in-latest-posix: ''
+  imaxdiv:
+    c-definition: 7.8.2.2
+    in-latest-posix: ''
+  strtoimax:
+    c-definition: 7.8.2.3
+    in-latest-posix: ''
+  strtoumax:
+    c-definition: 7.8.2.3
+    in-latest-posix: ''
+  wcstoimax:
+    c-definition: 7.8.2.4
+    in-latest-posix: ''
+  wcstoumax:
+    c-definition: 7.8.2.4
+    in-latest-posix: ''
+

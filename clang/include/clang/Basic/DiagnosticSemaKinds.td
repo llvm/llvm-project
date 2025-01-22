@@ -487,6 +487,10 @@ def err_noreturn_non_function : Error<
 def warn_qual_return_type : Warning<
   "'%0' type qualifier%s1 on return type %plural{1:has|:have}1 no effect">,
   InGroup<IgnoredQualifiers>, DefaultIgnore;
+def warn_qual_base_type : Warning<
+  "'%0' qualifier%s1 on base class type %2 have no effect">,
+  InGroup<IgnoredQualifiers>, DefaultIgnore;
+
 def warn_deprecated_redundant_constexpr_static_def : Warning<
   "out-of-line definition of constexpr static data member is redundant "
   "in C++17 and is deprecated">,
@@ -617,9 +621,11 @@ def err_ambiguous_inherited_constructor : Error<
   "constructor of %0 inherited from multiple base class subobjects">;
 def note_ambiguous_inherited_constructor_using : Note<
   "inherited from base class %0 here">;
-def note_using_decl_class_member_workaround : Note<
-  "use %select{an alias declaration|a typedef declaration|a reference|"
-  "a const variable|a constexpr variable}0 instead">;
+def note_using_decl_class_member_workaround
+    : Note<"use %enum_select<MemClassWorkaround>{%AliasDecl{an alias "
+           "declaration}|%TypedefDecl{a typedef declaration}|%ReferenceDecl{a "
+           "reference}|%ConstVar{a const variable}|%ConstexprVar{a constexpr "
+           "variable}}0 instead">;
 def err_using_decl_can_not_refer_to_namespace : Error<
   "using declaration cannot refer to a namespace">;
 def note_namespace_using_decl : Note<
@@ -2202,6 +2208,8 @@ def err_invalid_qualified_constructor : Error<
   "'%0' qualifier is not allowed on a constructor">;
 def err_ref_qualifier_constructor : Error<
   "ref-qualifier '%select{&&|&}0' is not allowed on a constructor">;
+def err_invalid_ctor_dtor_decl : Error<
+  "invalid %select{constructor|destructor}0 declaration">;
 
 def err_constructor_return_type : Error<
   "constructor cannot have a return type">;
@@ -2347,6 +2355,9 @@ def err_init_reference_member_uninitialized : Error<
   "reference member of type %0 uninitialized">;
 def note_uninit_reference_member : Note<
   "uninitialized reference member is here">;
+def warn_field_requires_explicit_init : Warning<
+  "field %select{%1|in %1}0 requires explicit initialization but is not "
+   "explicitly initialized">, InGroup<UninitializedExplicitInit>;
 def warn_field_is_uninit : Warning<"field %0 is uninitialized when used here">,
   InGroup<Uninitialized>;
 def warn_base_class_is_uninit : Warning<
@@ -3233,8 +3244,8 @@ def err_attribute_too_few_arguments : Error<
   "%0 attribute takes at least %1 argument%s1">;
 def err_attribute_invalid_vector_type : Error<"invalid vector element type %0">;
 def err_attribute_invalid_bitint_vector_type : Error<
-  "'_BitInt' vector element width must be %select{a power of 2|"
-  "at least as wide as 'CHAR_BIT'}0">;
+  "'_BitInt' %select{vector|matrix}0 element width must be %select{a power of 2|"
+  "at least as wide as 'CHAR_BIT'}1">;
 def err_attribute_invalid_matrix_type : Error<"invalid matrix element type %0">;
 def err_attribute_bad_neon_vector_size : Error<
   "Neon vector size must be 64 or 128 bits">;
@@ -3423,7 +3434,7 @@ def warn_typecheck_vector_element_sizes_not_equal : Warning<
 def err_ext_vector_component_exceeds_length : Error<
   "vector component access exceeds type %0">;
 def err_ext_vector_component_name_illegal : Error<
-  "illegal vector component name '%0'">;
+  "illegal vector component name %0">;
 def err_attribute_address_space_negative : Error<
   "address space is negative">;
 def err_attribute_address_space_too_high : Error<
@@ -3799,7 +3810,14 @@ def warn_attribute_wrong_decl_type : Warning<
   "|types and namespaces"
   "|variables, functions and classes"
   "|kernel functions"
-  "|non-K&R-style functions}2">,
+  "|non-K&R-style functions"
+  "|for loop statements"
+  "|virtual functions"
+  "|parameters and implicit object parameters"
+  "|non-member functions"
+  "|functions, classes, or enumerations"
+  "|classes"
+  "|typedefs}2">,
   InGroup<IgnoredAttributes>;
 def err_attribute_wrong_decl_type : Error<warn_attribute_wrong_decl_type.Summary>;
 def warn_type_attribute_wrong_type : Warning<
@@ -3835,6 +3853,9 @@ def err_sme_unimplemented_za_save_restore : Error<
   "call to a function that shares state other than 'za' from a "
   "function that has live 'za' state requires a spill/fill of ZA, which is not yet "
   "implemented">;
+def err_sme_unsupported_agnostic_new : Error<
+  "__arm_agnostic(\"sme_za_state\") is not supported together with "
+  "__arm_new(\"za\") or __arm_new(\"zt0\")">;
 def note_sme_use_preserves_za : Note<
   "add '__arm_preserves(\"za\")' to the callee if it preserves ZA">;
 def err_sme_definition_using_sm_in_non_sme_target : Error<
@@ -3851,6 +3872,8 @@ def warn_sme_locally_streaming_has_vl_args_returns : Warning<
   "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a locally streaming function is undefined"
   " behaviour when the streaming and non-streaming vector lengths are different at runtime">,
   InGroup<AArch64SMEAttributes>, DefaultIgnore;
+def err_conflicting_attributes_arm_agnostic : Error<
+  "__arm_agnostic(\"sme_za_state\") cannot share ZA state with its caller">;
 def err_conflicting_attributes_arm_state : Error<
   "conflicting attributes for state '%0'">;
 def err_unknown_arm_state : Error<
@@ -3999,6 +4022,10 @@ def warn_thread_attribute_decl_not_lockable : Warning<
 def warn_thread_attribute_decl_not_pointer : Warning<
   "%0 only applies to pointer types; type here is %1">,
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
+def warn_thread_attribute_not_on_scoped_lockable_param : Warning<
+  "%0 attribute applies to function parameters only if their type is a "
+  "reference to a 'scoped_lockable'-annotated type">,
+  InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def err_attribute_argument_out_of_bounds_extra_info : Error<
   "%0 attribute parameter %1 is out of bounds: "
   "%plural{0:no parameters to index into|"
@@ -4054,6 +4081,17 @@ def warn_acquired_before : Warning<
 def warn_acquired_before_after_cycle : Warning<
   "cycle in acquired_before/after dependencies, starting with '%0'">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
+def warn_unmatched_underlying_mutexes : Warning<
+  "%0 managed by '%1' is '%3' instead of '%2'">,
+  InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
+def warn_expect_more_underlying_mutexes : Warning<
+  "%0 '%2' not managed by '%1'">,
+  InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
+def warn_expect_fewer_underlying_mutexes : Warning<
+  "did not expect %0 '%2' to be managed by '%1'">,
+  InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
+def note_managed_mismatch_here_for_param : Note<
+  "see attribute on parameter here">;
 
 
 // Thread safety warnings negative capabilities
@@ -5863,10 +5901,10 @@ def err_pack_expansion_without_parameter_packs : Error<
   "pack expansion does not contain any unexpanded parameter packs">;
 def err_pack_expansion_length_conflict : Error<
   "pack expansion contains parameter packs %0 and %1 that have different "
-  "lengths (%2 vs. %3)">;
+  "lengths (%2 vs. %select{|at least }3%4)">;
 def err_pack_expansion_length_conflict_multilevel : Error<
   "pack expansion contains parameter pack %0 that has a different "
-  "length (%1 vs. %2) from outer parameter packs">;
+  "length (%1 vs. %select{|at least }2%3) from outer parameter packs">;
 def err_pack_expansion_length_conflict_partial : Error<
   "pack expansion contains parameter pack %0 that has a different "
   "length (at least %1 vs. %2) from outer parameter packs">;
@@ -9271,7 +9309,7 @@ def err_typecheck_expect_scalar_or_vector : Error<
   "invalid operand of type %0 where %1 or "
   "a vector of such type is required">;
 def err_typecheck_expect_any_scalar_or_vector : Error<
-  "invalid operand of type %0 where a scalar or vector is required">;
+  "invalid operand of type %0%select{| where a scalar or vector is required}1">;
 def err_typecheck_expect_flt_or_vector : Error<
   "invalid operand of type %0 where floating, complex or "
   "a vector of such types is required">;
@@ -9346,7 +9384,7 @@ def note_inequality_comparison_to_or_assign : Note<
   "use '|=' to turn this inequality comparison into an or-assignment">;
 
 def err_incomplete_type_used_in_type_trait_expr : Error<
-  "incomplete type %0 used in type trait expression">;
+  "incomplete type %0 used in type trait expression">, NoSFINAE;
 
 // C++20 constinit and require_constant_initialization attribute
 def warn_cxx20_compat_constinit : Warning<
@@ -10237,16 +10275,16 @@ def warn_dangling_pointer_assignment : Warning<
    InGroup<DanglingAssignment>;
 def warn_dangling_reference_captured : Warning<
    "object whose reference is captured by '%0' will be destroyed at the end of "
-   "the full-expression">, InGroup<DanglingCapture>, DefaultIgnore;
+   "the full-expression">, InGroup<DanglingCapture>;
 def warn_dangling_reference_captured_by_unknown : Warning<
    "object whose reference is captured will be destroyed at the end of "
-   "the full-expression">, InGroup<DanglingCapture>, DefaultIgnore;
+   "the full-expression">, InGroup<DanglingCapture>;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
 // Array comparisons have similar warnings
 def warn_comparison_always : Warning<
-  "%select{self-|array }0comparison always evaluates to "
+  "%select{self-|array |pointer }0comparison always evaluates to "
   "%select{a constant|true|false|'std::strong_ordering::equal'}1">,
   InGroup<TautologicalCompare>;
 def warn_comparison_bitwise_always : Warning<
@@ -10497,6 +10535,10 @@ def warn_second_parameter_to_va_arg_ownership_qualified : Warning<
 def warn_second_parameter_to_va_arg_never_compatible : Warning<
   "second argument to 'va_arg' is of promotable type %0; this va_arg has "
   "undefined behavior because arguments will be promoted to %1">, InGroup<Varargs>;
+def warn_second_parameter_to_va_arg_array : Warning<
+  "second argument to 'va_arg' is of array type %0; "
+  "this va_arg has undefined behavior because arguments "
+  "will never be compatible with array type">, InGroup<Varargs>;
 
 def warn_return_missing_expr : Warning<
   "non-void %select{function|method}1 %0 should return a value">, DefaultError,
@@ -12324,6 +12366,8 @@ def warn_noderef_to_dereferenceable_pointer : Warning<
 def err_builtin_launder_invalid_arg : Error<
   "%select{non-pointer|function pointer|void pointer}0 argument to "
   "'__builtin_launder' is not allowed">;
+def err_builtin_assume_aligned_invalid_arg : Error<
+  "non-pointer argument to '__builtin_assume_aligned' is not allowed">;
 
 def err_builtin_is_within_lifetime_invalid_arg : Error<
   "%select{non-|function }0pointer argument to '__builtin_is_within_lifetime' "
@@ -12407,6 +12451,33 @@ def warn_sycl_kernel_return_type : Warning<
 def err_sycl_special_type_num_init_method : Error<
   "types with 'sycl_special_class' attribute must have one and only one '__init' "
   "method defined">;
+
+// SYCL kernel entry point diagnostics
+def err_sycl_entry_point_invalid : Error<
+  "'sycl_kernel_entry_point' attribute cannot be applied to a"
+  " %select{non-static member function|variadic function|deleted function|"
+           "defaulted function|constexpr function|consteval function|"
+           "function declared with the 'noreturn' attribute|coroutine}0">;
+def err_sycl_entry_point_invalid_redeclaration : Error<
+  "'sycl_kernel_entry_point' kernel name argument does not match prior"
+  " declaration%diff{: $ vs $|}0,1">;
+def err_sycl_kernel_name_conflict : Error<
+  "'sycl_kernel_entry_point' kernel name argument conflicts with a previous"
+  " declaration">;
+def warn_sycl_kernel_name_not_a_class_type : Warning<
+  "%0 is not a valid SYCL kernel name type; a non-union class type is required">,
+  InGroup<DiagGroup<"nonportable-sycl">>, DefaultError;
+def warn_sycl_entry_point_redundant_declaration : Warning<
+  "redundant 'sycl_kernel_entry_point' attribute">, InGroup<RedundantAttribute>;
+def err_sycl_entry_point_after_definition : Error<
+  "'sycl_kernel_entry_point' attribute cannot be added to a function after the"
+  " function is defined">;
+def err_sycl_entry_point_return_type : Error<
+  "'sycl_kernel_entry_point' attribute only applies to functions with a"
+  " 'void' return type">;
+def err_sycl_entry_point_deduced_return_type : Error<
+  "'sycl_kernel_entry_point' attribute only applies to functions with a"
+  " non-deduced 'void' return type">;
 
 def warn_cuda_maxclusterrank_sm_90 : Warning<
   "maxclusterrank requires sm_90 or higher, CUDA arch provided: %0, ignoring "
@@ -12667,8 +12738,8 @@ def err_acc_int_expr_requires_integer
 def err_acc_int_expr_incomplete_class_type
     : Error<"OpenACC integer expression has incomplete class type %0">;
 def err_acc_int_expr_explicit_conversion
-    : Error<"OpenACC integer expression type %0 requires explicit conversion "
-            "to %1">;
+    : Error<"OpenACC integer expression requires explicit conversion "
+            "from %0 to %1">;
 def note_acc_int_expr_conversion
     : Note<"conversion to %select{integral|enumeration}0 type %1">;
 def err_acc_int_expr_multiple_conversions
@@ -12682,6 +12753,9 @@ def err_acc_not_a_var_ref
     : Error<"OpenACC variable is not a valid variable name, sub-array, array "
             "element,%select{| member of a composite variable,}0 or composite "
             "variable member">;
+def err_acc_not_a_var_ref_use_device
+    : Error<"OpenACC variable in 'use_device' clause is not a valid variable "
+            "name or array name">;
 def err_acc_typecheck_subarray_value
     : Error<"OpenACC sub-array subscripted value is not an array or pointer">;
 def err_acc_subarray_function_type
@@ -12801,6 +12875,12 @@ def err_acc_loop_terminating_condition
 def err_acc_loop_not_monotonic
     : Error<"OpenACC '%0' variable must monotonically increase or decrease "
             "('++', '--', or compound assignment)">;
+def err_acc_construct_one_clause_of
+    : Error<"OpenACC '%0' construct must have at least one %1 clause">;
+def err_acc_update_as_body
+    : Error<"OpenACC 'update' construct may not appear in place of the "
+            "statement following a%select{n if statement| while statement| do "
+            "statement| switch statement| label statement}0">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;

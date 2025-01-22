@@ -99,7 +99,6 @@ configure_lit_site_cfg(
   )
 
 set(MLIR_TEST_DEPENDS
-  FileCheck count not split-file
   mlir-capi-ir-test
   mlir-capi-irdl-test
   mlir-capi-llvm-test
@@ -121,6 +120,9 @@ set(MLIR_TEST_DEPENDS
   tblgen-lsp-server
   tblgen-to-irdl
   )
+if(NOT MLIR_STANDALONE_BUILD)
+  list(APPEND MLIR_TEST_DEPENDS FileCheck count not split-file)
+endif()
 
 set(MLIR_TEST_DEPENDS ${MLIR_TEST_DEPENDS}
   mlir-capi-pdl-test
@@ -204,7 +206,7 @@ endif()
 
 if(MLIR_ENABLE_VULKAN_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS
-    mlir-vulkan-runner
+    mlir_vulkan_runtime
   )
 endif()
 

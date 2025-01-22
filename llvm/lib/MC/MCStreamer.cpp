@@ -414,7 +414,7 @@ void MCStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
 }
 
 void MCStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
-  switchSection(getContext().getObjectFileInfo()->getTextSection());
+  switchSectionNoPrint(getContext().getObjectFileInfo()->getTextSection());
 }
 
 void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
@@ -1023,6 +1023,10 @@ void MCStreamer::emitCOFFSecRel32(MCSymbol const *Symbol, uint64_t Offset) {}
 
 void MCStreamer::emitCOFFImgRel32(MCSymbol const *Symbol, int64_t Offset) {}
 
+void MCStreamer::emitCOFFSecNumber(MCSymbol const *Symbol) {}
+
+void MCStreamer::emitCOFFSecOffset(MCSymbol const *Symbol) {}
+
 /// EmitRawText - If this file is backed by an assembly streamer, this dumps
 /// the specified string in the output .s file.  This capability is
 /// indicated by the hasRawTextSupport() predicate.
@@ -1332,7 +1336,10 @@ bool MCStreamer::switchSection(MCSection *Section, const MCExpr *SubsecExpr) {
 void MCStreamer::switchSectionNoPrint(MCSection *Section) {
   SectionStack.back().second = SectionStack.back().first;
   SectionStack.back().first = MCSectionSubPair(Section, 0);
-  CurFrag = &Section->getDummyFragment();
+  changeSection(Section, 0);
+  MCSymbol *Sym = Section->getBeginSymbol();
+  if (Sym && !Sym->isInSection())
+    emitLabel(Sym);
 }
 
 MCSymbol *MCStreamer::endSection(MCSection *Section) {

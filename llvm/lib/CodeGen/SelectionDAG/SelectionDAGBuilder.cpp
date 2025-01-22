@@ -319,13 +319,14 @@ getCopyFromParts(SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts,
 static void diagnosePossiblyInvalidConstraint(LLVMContext &Ctx, const Value *V,
                                               const Twine &ErrMsg) {
   const Instruction *I = dyn_cast_or_null<Instruction>(V);
-  if (!V)
+  if (!I)
     return Ctx.emitError(ErrMsg);
 
-  const char *AsmError = ", possible invalid constraint for vector type";
   if (const CallInst *CI = dyn_cast<CallInst>(I))
-    if (CI->isInlineAsm())
-      return Ctx.emitError(I, ErrMsg + AsmError);
+    if (CI->isInlineAsm()) {
+      return Ctx.diagnose(DiagnosticInfoInlineAsm(
+          *CI, ErrMsg + ", possible invalid constraint for vector type"));
+    }
 
   return Ctx.emitError(I, ErrMsg);
 }
@@ -2194,19 +2195,13 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
 
   if (!FuncInfo.CanLowerReturn) {
     Register DemoteReg = FuncInfo.DemoteRegister;
-    const Function *F = I.getParent()->getParent();
 
     // Emit a store of the return value through the virtual register.
     // Leave Outs empty so that LowerReturn won't try to load return
     // registers the usual way.
-    SmallVector<EVT, 1> PtrValueVTs;
-    ComputeValueVTs(TLI, DL,
-                    PointerType::get(F->getContext(),
-                                     DAG.getDataLayout().getAllocaAddrSpace()),
-                    PtrValueVTs);
-
+    MVT PtrValueVT = TLI.getPointerTy(DL, DL.getAllocaAddrSpace());
     SDValue RetPtr =
-        DAG.getCopyFromReg(Chain, getCurSDLoc(), DemoteReg, PtrValueVTs[0]);
+        DAG.getCopyFromReg(Chain, getCurSDLoc(), DemoteReg, PtrValueVT);
     SDValue RetOp = getValue(I.getOperand(0));
 
     SmallVector<EVT, 4> ValueVTs, MemVTs;
@@ -6432,42 +6427,25 @@ void SelectionDAGBuilder::visitVectorExtractLastActive(const CallInst &I,
   assert(Intrinsic == Intrinsic::experimental_vector_extract_last_active &&
          "Tried lowering invalid vector extract last");
   SDLoc sdl = getCurSDLoc();
+  const DataLayout &Layout = DAG.getDataLayout();
   SDValue Data = getValue(I.getOperand(0));
   SDValue Mask = getValue(I.getOperand(1));
-  SDValue PassThru = getValue(I.getOperand(2));
 
-  EVT DataVT = Data.getValueType();
-  EVT ScalarVT = PassThru.getValueType();
-  EVT BoolVT = Mask.getValueType().getScalarType();
-
-  // Find a suitable type for a stepvector.
-  ConstantRange VScaleRange(1, /*isFullSet=*/true); // Dummy value.
-  if (DataVT.isScalableVector())
-    VScaleRange = getVScaleRange(I.getCaller(), 64);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  unsigned EltWidth = TLI.getBitWidthForCttzElements(
-      I.getType(), DataVT.getVectorElementCount(), /*ZeroIsPoison=*/true,
-      &VScaleRange);
-  MVT StepVT = MVT::getIntegerVT(EltWidth);
-  EVT StepVecVT = DataVT.changeVectorElementType(StepVT);
+  EVT ResVT = TLI.getValueType(Layout, I.getType());
 
-  // Zero out lanes with inactive elements, then find the highest remaining
-  // value from the stepvector.
-  SDValue Zeroes = DAG.getConstant(0, sdl, StepVecVT);
-  SDValue StepVec = DAG.getStepVector(sdl, StepVecVT);
-  SDValue ActiveElts = DAG.getSelect(sdl, StepVecVT, Mask, StepVec, Zeroes);
-  SDValue HighestIdx =
-      DAG.getNode(ISD::VECREDUCE_UMAX, sdl, StepVT, ActiveElts);
+  EVT ExtVT = TLI.getVectorIdxTy(Layout);
+  SDValue Idx = DAG.getNode(ISD::VECTOR_FIND_LAST_ACTIVE, sdl, ExtVT, Mask);
+  SDValue Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, sdl, ResVT, Data, Idx);
 
-  // Extract the corresponding lane from the data vector
-  EVT ExtVT = TLI.getVectorIdxTy(DAG.getDataLayout());
-  SDValue Idx = DAG.getZExtOrTrunc(HighestIdx, sdl, ExtVT);
-  SDValue Extract =
-      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, sdl, ScalarVT, Data, Idx);
+  Value *Default = I.getOperand(2);
+  if (!isa<PoisonValue>(Default) && !isa<UndefValue>(Default)) {
+    SDValue PassThru = getValue(Default);
+    EVT BoolVT = Mask.getValueType().getScalarType();
+    SDValue AnyActive = DAG.getNode(ISD::VECREDUCE_OR, sdl, BoolVT, Mask);
+    Result = DAG.getSelect(sdl, ResVT, AnyActive, Result, PassThru);
+  }
 
-  // If all mask lanes were inactive, choose the passthru value instead.
-  SDValue AnyActive = DAG.getNode(ISD::VECREDUCE_OR, sdl, BoolVT, Mask);
-  SDValue Result = DAG.getSelect(sdl, ScalarVT, AnyActive, Extract, PassThru);
   setValue(&I, Result);
 }
 
@@ -10509,7 +10487,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
 void SelectionDAGBuilder::emitInlineAsmError(const CallBase &Call,
                                              const Twine &Message) {
   LLVMContext &Ctx = *DAG.getContext();
-  Ctx.emitError(&Call, Message);
+  Ctx.diagnose(DiagnosticInfoInlineAsm(Call, Message));
 
   // Make sure we leave the DAG in a valid state
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -10984,7 +10962,6 @@ std::pair<SDValue, SDValue>
 TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   // Handle the incoming return values from the call.
   CLI.Ins.clear();
-  Type *OrigRetTy = CLI.RetTy;
   SmallVector<EVT, 4> RetTys;
   SmallVector<TypeSize, 4> Offsets;
   auto &DL = CLI.DAG.getDataLayout();
@@ -11014,7 +10991,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
 
   bool CanLowerReturn =
       this->CanLowerReturn(CLI.CallConv, CLI.DAG.getMachineFunction(),
-                           CLI.IsVarArg, Outs, CLI.RetTy->getContext());
+                           CLI.IsVarArg, Outs, CLI.RetTy->getContext(), CLI.RetTy);
 
   SDValue DemoteStackSlot;
   int DemoteStackIdx = -100;
@@ -11027,8 +11004,8 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     MachineFunction &MF = CLI.DAG.getMachineFunction();
     DemoteStackIdx =
         MF.getFrameInfo().CreateStackObject(TySize, Alignment, false);
-    Type *StackSlotPtrType = PointerType::get(CLI.RetTy,
-                                              DL.getAllocaAddrSpace());
+    Type *StackSlotPtrType =
+        PointerType::get(CLI.RetTy->getContext(), DL.getAllocaAddrSpace());
 
     DemoteStackSlot = CLI.DAG.getFrameIndex(DemoteStackIdx, getFrameIndexTy(DL));
     ArgListEntry Entry;
@@ -11309,13 +11286,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   if (!CanLowerReturn) {
     // The instruction result is the result of loading from the
     // hidden sret parameter.
-    SmallVector<EVT, 1> PVTs;
-    Type *PtrRetTy =
-        PointerType::get(OrigRetTy->getContext(), DL.getAllocaAddrSpace());
-
-    ComputeValueVTs(*this, DL, PtrRetTy, PVTs);
-    assert(PVTs.size() == 1 && "Pointers should fit in one register");
-    EVT PtrVT = PVTs[0];
+    MVT PtrVT = getPointerTy(DL, DL.getAllocaAddrSpace());
 
     unsigned NumValues = RetTys.size();
     ReturnValues.resize(NumValues);
@@ -11635,18 +11606,12 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
 
   if (!FuncInfo->CanLowerReturn) {
     // Put in an sret pointer parameter before all the other parameters.
-    SmallVector<EVT, 1> ValueVTs;
-    ComputeValueVTs(*TLI, DAG.getDataLayout(),
-                    PointerType::get(F.getContext(),
-                                     DAG.getDataLayout().getAllocaAddrSpace()),
-                    ValueVTs);
+    MVT ValueVT = TLI->getPointerTy(DL, DL.getAllocaAddrSpace());
 
-    // NOTE: Assuming that a pointer will never break down to more than one VT
-    // or one register.
     ISD::ArgFlagsTy Flags;
     Flags.setSRet();
-    MVT RegisterVT = TLI->getRegisterType(*DAG.getContext(), ValueVTs[0]);
-    ISD::InputArg RetArg(Flags, RegisterVT, ValueVTs[0], true,
+    MVT RegisterVT = TLI->getRegisterType(*DAG.getContext(), ValueVT);
+    ISD::InputArg RetArg(Flags, RegisterVT, ValueVT, true,
                          ISD::InputArg::NoArgIndex, 0);
     Ins.push_back(RetArg);
   }
@@ -11829,12 +11794,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
   if (!FuncInfo->CanLowerReturn) {
     // Create a virtual register for the sret pointer, and put in a copy
     // from the sret argument into it.
-    SmallVector<EVT, 1> ValueVTs;
-    ComputeValueVTs(*TLI, DAG.getDataLayout(),
-                    PointerType::get(F.getContext(),
-                                     DAG.getDataLayout().getAllocaAddrSpace()),
-                    ValueVTs);
-    MVT VT = ValueVTs[0].getSimpleVT();
+    MVT VT = TLI->getPointerTy(DL, DL.getAllocaAddrSpace());
     MVT RegVT = TLI->getRegisterType(*CurDAG->getContext(), VT);
     std::optional<ISD::NodeType> AssertOp;
     SDValue ArgValue =
@@ -12792,7 +12752,7 @@ void SelectionDAGBuilder::visitCallBrLandingPad(const CallInst &I) {
       // the OpInfo.ConstraintVT is legal on the target or not.
       for (Register &Reg : OpInfo.AssignedRegs.Regs) {
         Register OriginalDef = FollowCopyChain(MRI, InitialDef++);
-        if (Register::isPhysicalRegister(OriginalDef))
+        if (OriginalDef.isPhysical())
           FuncInfo.MBB->addLiveIn(OriginalDef);
         // Update the assigned registers to use the original defs.
         Reg = OriginalDef;

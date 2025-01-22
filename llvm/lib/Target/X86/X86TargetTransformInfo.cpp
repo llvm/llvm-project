@@ -1532,6 +1532,11 @@ InstructionCost X86TTIImpl::getShuffleCost(
 
   Kind = improveShuffleKindFromMask(Kind, Mask, BaseTp, Index, SubTp);
 
+  // If all args are constant than this will be constant folded away.
+  if (!Args.empty() &&
+      all_of(Args, [](const Value *Arg) { return isa<Constant>(Arg); }))
+    return TTI::TCC_Free;
+
   // Recognize a basic concat_vector shuffle.
   if (Kind == TTI::SK_PermuteTwoSrc &&
       Mask.size() == (2 * BaseTp->getElementCount().getKnownMinValue()) &&
@@ -1584,7 +1589,7 @@ InstructionCost X86TTIImpl::getShuffleCost(
   if (Kind == TTI::SK_ExtractSubvector && LT.second.isVector()) {
     int NumElts = LT.second.getVectorNumElements();
     if ((Index % NumElts) == 0)
-      return 0;
+      return TTI::TCC_Free;
     std::pair<InstructionCost, MVT> SubLT = getTypeLegalizationCost(SubTp);
     if (SubLT.second.isVector()) {
       int NumSubElts = SubLT.second.getVectorNumElements();
@@ -1630,15 +1635,27 @@ InstructionCost X86TTIImpl::getShuffleCost(
 
   // Subvector insertions are cheap if the subvectors are aligned.
   // Note that in general, the insertion starting at the beginning of a vector
-  // isn't free, because we need to preserve the rest of the wide vector.
+  // isn't free, because we need to preserve the rest of the wide vector,
+  // but if the destination vector legalizes to the same width as the subvector
+  // then the insertion will simplify to a (free) register copy.
   if (Kind == TTI::SK_InsertSubvector && LT.second.isVector()) {
     int NumElts = LT.second.getVectorNumElements();
     std::pair<InstructionCost, MVT> SubLT = getTypeLegalizationCost(SubTp);
     if (SubLT.second.isVector()) {
       int NumSubElts = SubLT.second.getVectorNumElements();
+      bool MatchingTypes =
+          NumElts == NumSubElts &&
+          (SubTp->getElementCount().getKnownMinValue() % NumSubElts) == 0;
       if ((Index % NumSubElts) == 0 && (NumElts % NumSubElts) == 0)
-        return SubLT.first;
+        return MatchingTypes ? TTI::TCC_Free : SubLT.first;
     }
+
+    // Attempt to match MOVSS (Idx == 0) or INSERTPS pattern. This will have
+    // been matched by improveShuffleKindFromMask as a SK_InsertSubvector of
+    // v1f32 (legalised to f32) into a v4f32.
+    if (LT.first == 1 && LT.second == MVT::v4f32 && SubLT.first == 1 &&
+        SubLT.second == MVT::f32 && (Index == 0 || ST->hasSSE41()))
+      return 1;
 
     // If the insertion isn't aligned, treat it like a 2-op shuffle.
     Kind = TTI::SK_PermuteTwoSrc;
@@ -1688,7 +1705,7 @@ InstructionCost X86TTIImpl::getShuffleCost(
   // We are going to permute multiple sources and the result will be in multiple
   // destinations. Providing an accurate cost only for splits where the element
   // type remains the same.
-  if (Kind == TTI::SK_PermuteSingleSrc && LT.first != 1) {
+  if (LT.first != 1) {
     MVT LegalVT = LT.second;
     if (LegalVT.isVector() &&
         LegalVT.getVectorElementType().getSizeInBits() ==
@@ -1718,7 +1735,7 @@ InstructionCost X86TTIImpl::getShuffleCost(
         // destination register is just a copy of the source register or the
         // copy of the previous destination register (the cost is
         // TTI::TCC_Basic). If the source register is just reused, the cost for
-        // this operation is 0.
+        // this operation is TTI::TCC_Free.
         NumOfDests =
             getTypeLegalizationCost(
                 FixedVectorType::get(BaseTp->getElementType(), Mask.size()))
@@ -1752,14 +1769,14 @@ InstructionCost X86TTIImpl::getShuffleCost(
               if (SrcReg != DestReg &&
                   any_of(RegMask, [](int I) { return I != PoisonMaskElem; })) {
                 // Just a copy of the source register.
-                Cost += TTI::TCC_Basic;
+                Cost += TTI::TCC_Free;
               }
               PrevSrcReg = SrcReg;
               PrevRegMask = RegMask;
             },
-            [this, SingleOpTy, CostKind, &Cost](ArrayRef<int> RegMask,
-                                                unsigned /*Unused*/,
-                                                unsigned /*Unused*/) {
+            [this, SingleOpTy, CostKind,
+             &Cost](ArrayRef<int> RegMask, unsigned /*Unused*/,
+                    unsigned /*Unused*/, bool /*Unused*/) {
               Cost += getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy, RegMask,
                                      CostKind, 0, nullptr);
             });
@@ -1772,14 +1789,6 @@ InstructionCost X86TTIImpl::getShuffleCost(
     }
 
     return BaseT::getShuffleCost(Kind, BaseTp, Mask, CostKind, Index, SubTp);
-  }
-
-  // For 2-input shuffles, we must account for splitting the 2 inputs into many.
-  if (Kind == TTI::SK_PermuteTwoSrc && !IsInLaneShuffle && LT.first != 1) {
-    // We assume that source and destination have the same vector type.
-    InstructionCost NumOfDests = LT.first;
-    InstructionCost NumOfShufflesPerDest = LT.first * 2 - 1;
-    LT.first = NumOfDests * NumOfShufflesPerDest;
   }
 
   static const CostTblEntry AVX512VBMIShuffleTbl[] = {
@@ -2224,9 +2233,18 @@ InstructionCost X86TTIImpl::getShuffleCost(
     { TTI::SK_PermuteTwoSrc,    MVT::v4f32, 2 }, // 2*shufps
   };
 
-  if (ST->hasSSE1())
+  if (ST->hasSSE1()) {
+    if (LT.first == 1 && LT.second == MVT::v4f32 && Mask.size() == 4) {
+      // SHUFPS: both pairs must come from the same source register.
+      auto MatchSHUFPS = [](int X, int Y) {
+        return X < 0 || Y < 0 || ((X & 4) == (Y & 4));
+      };
+      if (MatchSHUFPS(Mask[0], Mask[1]) && MatchSHUFPS(Mask[2], Mask[3]))
+        return 1;
+    }
     if (const auto *Entry = CostTableLookup(SSE1ShuffleTbl, Kind, LT.second))
       return LT.first * Entry->Cost;
+  }
 
   return BaseT::getShuffleCost(Kind, BaseTp, Mask, CostKind, Index, SubTp);
 }
@@ -4763,7 +4781,7 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
 
     // This type is legalized to a scalar type.
     if (!LT.second.isVector())
-      return 0;
+      return TTI::TCC_Free;
 
     // The type may be split. Normalize the index to the new type.
     unsigned SizeInBits = LT.second.getSizeInBits();
@@ -4786,9 +4804,12 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     MVT MScalarTy = LT.second.getScalarType();
     auto IsCheapPInsrPExtrInsertPS = [&]() {
       // Assume pinsr/pextr XMM <-> GPR is relatively cheap on all targets.
+      // Inserting f32 into index0 is just movss.
       // Also, assume insertps is relatively cheap on all >= SSE41 targets.
       return (MScalarTy == MVT::i16 && ST->hasSSE2()) ||
              (MScalarTy.isInteger() && ST->hasSSE41()) ||
+             (MScalarTy == MVT::f32 && ST->hasSSE1() && Index == 0 &&
+              Opcode == Instruction::InsertElement) ||
              (MScalarTy == MVT::f32 && ST->hasSSE41() &&
               Opcode == Instruction::InsertElement);
     };
@@ -6030,9 +6051,9 @@ InstructionCost X86TTIImpl::getCFInstrCost(unsigned Opcode,
                                            TTI::TargetCostKind CostKind,
                                            const Instruction *I) {
   if (CostKind != TTI::TCK_RecipThroughput)
-    return Opcode == Instruction::PHI ? 0 : 1;
+    return Opcode == Instruction::PHI ? TTI::TCC_Free : TTI::TCC_Basic;
   // Branches are assumed to be predicted.
-  return 0;
+  return TTI::TCC_Free;
 }
 
 int X86TTIImpl::getGatherOverhead() const {

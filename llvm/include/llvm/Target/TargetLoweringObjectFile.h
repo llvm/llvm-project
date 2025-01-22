@@ -82,13 +82,17 @@ public:
   virtual void Initialize(MCContext &ctx, const TargetMachine &TM);
 
   virtual void emitPersonalityValue(MCStreamer &Streamer, const DataLayout &TM,
-                                    const MCSymbol *Sym) const;
+                                    const MCSymbol *Sym,
+                                    const MachineModuleInfo *MMI) const;
 
   /// Emit the module-level metadata that the platform cares about.
   virtual void emitModuleMetadata(MCStreamer &Streamer, Module &M) const {}
 
   /// Emit Call Graph Profile metadata.
   void emitCGProfileMetadata(MCStreamer &Streamer, Module &M) const;
+
+  /// Process linker options metadata and emit platform-specific bits.
+  virtual void emitLinkerDirectives(MCStreamer &Streamer, Module &M) const {}
 
   /// Get the module-level metadata that the platform cares about.
   virtual void getModuleMetadata(Module &M) {}

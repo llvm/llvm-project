@@ -4,13 +4,14 @@ add_mlir_library(MLIRTestPass
   TestDynamicPipeline.cpp
   TestPassManager.cpp
   TestSPIRVCPURunnerPipeline.cpp
+  TestVulkanRunnerPipeline.cpp
 
   EXCLUDE_FROM_LIBMLIR
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Pass
-
-  LINK_LIBS PUBLIC
+  )
+mlir_target_link_libraries(MLIRTestPass PUBLIC
   ${conversion_libs}
   MLIRIR
   MLIRPass

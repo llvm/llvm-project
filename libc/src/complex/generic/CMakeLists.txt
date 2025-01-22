@@ -1,4 +1,132 @@
 add_entrypoint_object(
+  cproj
+  SRCS
+    cproj.cpp
+  HDRS
+    ../cproj.h
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    libc.src.__support.complex_type
+)
+
+add_entrypoint_object(
+  cprojf
+  SRCS
+    cprojf.cpp
+  HDRS
+    ../cprojf.h
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    libc.src.__support.complex_type
+)
+
+add_entrypoint_object(
+  cprojl
+  SRCS
+    cprojl.cpp
+  HDRS
+    ../cprojl.h
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    libc.src.__support.complex_type
+)
+
+add_entrypoint_object(
+  cprojf16
+  SRCS
+    cprojf16.cpp
+  HDRS
+    ../cprojf16.h
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    libc.src.__support.complex_type
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
+)
+
+add_entrypoint_object(
+  cprojf128
+  SRCS
+    cprojf128.cpp
+  HDRS
+    ../cprojf128.h
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    libc.src.__support.complex_type
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
+)
+
+add_entrypoint_object(
+  conj
+  SRCS
+    conj.cpp
+  HDRS
+    ../conj.h
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    libc.src.__support.complex_type
+)
+
+add_entrypoint_object(
+  conjf
+  SRCS
+    conjf.cpp
+  HDRS
+    ../conjf.h
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    libc.src.__support.complex_type
+)
+
+add_entrypoint_object(
+  conjl
+  SRCS
+    conjl.cpp
+  HDRS
+    ../conjl.h
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    libc.src.__support.complex_type
+)
+
+add_entrypoint_object(
+  conjf16
+  SRCS
+    conjf16.cpp
+  HDRS
+    ../conjf16.h
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    libc.src.__support.complex_type
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
+)
+
+add_entrypoint_object(
+  conjf128
+  SRCS
+    conjf128.cpp
+  HDRS
+    ../conjf128.h
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    libc.src.__support.complex_type
+    libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.complex_types
+)
+
+add_entrypoint_object(
   creal
   SRCS
     creal.cpp

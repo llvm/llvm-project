@@ -511,6 +511,11 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
       AnyTypeChanged = true;
   }
 
+  // returns_(un)retained
+  if (!Info.SwiftReturnOwnership.empty())
+    D->addAttr(SwiftAttrAttr::Create(S.Context,
+                                     "returns_" + Info.SwiftReturnOwnership));
+
   // Result type override.
   QualType OverriddenResultType;
   if (Metadata.IsActive && !Info.ResultType.empty() &&

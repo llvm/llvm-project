@@ -30,5 +30,6 @@ static_library("Serialization") {
     "ModuleManager.cpp",
     "ObjectFilePCHContainerReader.cpp",
     "PCHContainerOperations.cpp",
+    "TemplateArgumentHasher.cpp",
   ]
 }

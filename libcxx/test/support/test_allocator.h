@@ -477,7 +477,7 @@ public:
   TEST_CONSTEXPR_CXX20 pointer allocate(size_type n) { return handle_->template allocate<T>(n); }
   TEST_CONSTEXPR_CXX20 void deallocate(pointer p, size_type n) { handle_->template deallocate<T>(p, n); }
   TEST_CONSTEXPR size_type max_size() const { return N; }
-  TEST_CONSTEXPR BuffT* getHandle() const { return handle_.get(); }
+  TEST_CONSTEXPR const BuffT* getHandle() const { return handle_.get(); }
 };
 
 template <class T, class U, std::size_t N>

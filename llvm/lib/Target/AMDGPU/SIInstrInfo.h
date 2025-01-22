@@ -36,6 +36,8 @@ class RegScavenger;
 class TargetRegisterClass;
 class ScheduleHazardRecognizer;
 
+constexpr unsigned DefaultMemoryClusterDWordsLimit = 8;
+
 /// Mark the MMO of a uniform load if there are no potentially clobbering stores
 /// on any path from the start of an entry function to this load.
 static const MachineMemOperand::Flags MONoClobber =
@@ -191,7 +193,9 @@ protected:
   bool swapSourceModifiers(MachineInstr &MI,
                            MachineOperand &Src0, unsigned Src0OpName,
                            MachineOperand &Src1, unsigned Src1OpName) const;
-
+  bool isLegalToSwap(const MachineInstr &MI, unsigned fromIdx,
+                     const MachineOperand *fromMO, unsigned toIdx,
+                     const MachineOperand *toMO) const;
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx0,
                                        unsigned OpIdx1) const override;
@@ -240,6 +244,8 @@ public:
   bool areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1, int64_t &Offset0,
                                int64_t &Offset1) const override;
 
+  bool isGlobalMemoryObject(const MachineInstr *MI) const override;
+
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
@@ -276,18 +282,17 @@ public:
                     MachineBasicBlock::iterator I, const DebugLoc &DL,
                     Register SrcReg, int Value)  const;
 
-  void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MI, Register SrcReg,
-                           bool isKill, int FrameIndex,
-                           const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI,
-                           Register VReg) const override;
+  void storeRegToStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
-  void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MI, Register DestReg,
-                            int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI,
-                            Register VReg) const override;
+  void loadRegFromStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
+      int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
@@ -966,6 +971,13 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::TiedSourceNotRead;
   }
 
+  bool isIGLP(unsigned Opcode) const {
+    return Opcode == AMDGPU::SCHED_BARRIER ||
+           Opcode == AMDGPU::SCHED_GROUP_BARRIER || Opcode == AMDGPU::IGLP_OPT;
+  }
+
+  bool isIGLP(const MachineInstr &MI) const { return isIGLP(MI.getOpcode()); }
+
   static unsigned getNonSoftWaitcntOpcode(unsigned Opcode) {
     switch (Opcode) {
     case AMDGPU::S_WAITCNT_soft:
@@ -1207,11 +1219,13 @@ public:
                           const MachineOperand &MO) const;
 
   /// Check if \p MO (a register operand) is a legal register for the
-  /// given operand description.
+  /// given operand description or operand index.
+  /// The operand index version provide more legality checks
   bool isLegalRegOperand(const MachineRegisterInfo &MRI,
                          const MCOperandInfo &OpInfo,
                          const MachineOperand &MO) const;
-
+  bool isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
+                         const MachineOperand &MO) const;
   /// Legalize operands in \p MI by either commuting it or inserting a
   /// copy of src1.
   void legalizeOperandsVOP2(MachineRegisterInfo &MRI, MachineInstr &MI) const;

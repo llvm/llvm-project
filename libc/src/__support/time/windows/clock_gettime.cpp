@@ -14,6 +14,7 @@
 #include "src/__support/macros/optimization.h"
 #include "src/__support/time/clock_gettime.h"
 #include "src/__support/time/units.h"
+#include "src/__support/time/windows/performance_counter.h"
 
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -21,23 +22,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
-static long long get_ticks_per_second() {
-  static cpp::Atomic<long long> frequency = 0;
-  // Relaxed ordering is enough. It is okay to record the frequency multiple
-  // times. The store operation itself is atomic and the value must propagate
-  // as required by cache coherence.
-  auto freq = frequency.load(cpp::MemoryOrder::RELAXED);
-  if (!freq) {
-    [[clang::uninitialized]] LARGE_INTEGER buffer;
-    // On systems that run Windows XP or later, the function will always
-    // succeed and will thus never return zero.
-    ::QueryPerformanceFrequency(&buffer);
-    frequency.store(buffer.QuadPart, cpp::MemoryOrder::RELAXED);
-    return buffer.QuadPart;
-  }
-  return freq;
-}
-
 ErrorOr<int> clock_gettime(clockid_t clockid, timespec *ts) {
   using namespace time_units;
   constexpr unsigned long long HNS_PER_SEC = 1_s_ns / 100ULL;
@@ -53,12 +37,12 @@ ErrorOr<int> clock_gettime(clockid_t clockid, timespec *ts) {
     // see
     // https://learn.microsoft.com/en-us/windows/win32/sysinfo/acquiring-high-resolution-time-stamps
     // Is the performance counter monotonic (non-decreasing)?
-    // Yes. QPC does not go backward.
+    // Yes. performance_counter does not go backward.
     [[clang::uninitialized]] LARGE_INTEGER buffer;
     // On systems that run Windows XP or later, the function will always
     // succeed and will thus never return zero.
     ::QueryPerformanceCounter(&buffer);
-    long long freq = get_ticks_per_second();
+    long long freq = performance_counter::get_ticks_per_second();
     long long ticks = buffer.QuadPart;
     long long tv_sec = ticks / freq;
     long long tv_nsec = (ticks % freq) * 1_s_ns / freq;

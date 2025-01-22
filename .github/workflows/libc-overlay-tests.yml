@@ -1,6 +1,7 @@
 # This workflow is for pre-commit testing of the LLVM-libc project.
 name: LLVM-libc Pre-commit Overlay Tests
-
+permissions:
+  contents: read
 on:
   pull_request:
     branches: [ "main" ]
@@ -32,7 +33,14 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
-
+    
+    # Libc's build is relatively small comparing with other components of LLVM.
+    # A fresh linux overlay takes about 180MiB of uncompressed disk space, which can
+    # be compressed into ~40MiB. MacOS and Windows overlay builds are less than 10MiB
+    # after compression. Limiting the cache size to 1G should be enough.
+    # Prefer sccache as it is modern and it has a guarantee to work with MSVC.
+    # Do not use direct GHAC access even though it is supported by sccache. GHAC rejects
+    # frequent small object writes.
     - name: Setup ccache
       uses: hendrikmuhs/ccache-action@v1
       with:
@@ -40,12 +48,15 @@ jobs:
         key: libc_overlay_build_${{ matrix.os }}_${{ matrix.compiler.c_compiler }}
         variant: sccache
     
+    # MPFR is required by some of the mathlib tests.
     - name: Prepare dependencies (Ubuntu)
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
         sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev ninja-build
     
+    # Chocolatey is shipped with Windows runners. Windows Server 2025 recommends WinGet.
+    # Consider migrating to WinGet when Windows Server 2025 is available.
     - name: Prepare dependencies (Windows)
       if: runner.os == 'Windows'
       run: |
@@ -62,6 +73,9 @@ jobs:
       run: |
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
+    # Use MinSizeRel to reduce the size of the build.
+    # Notice that CMP0141=NEW and MSVC_DEBUG_INFORMATION_FORMAT=Embedded are required
+    # by the sccache tool.
     - name: Configure CMake
       run: >
         cmake -B ${{ steps.strings.outputs.build-output-dir }}
