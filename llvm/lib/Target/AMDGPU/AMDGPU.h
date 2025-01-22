@@ -195,8 +195,8 @@ extern char &AMDGPURegBankSelectID;
 void initializeAMDGPURegBankLegalizePass(PassRegistry &);
 extern char &AMDGPURegBankLegalizeID;
 
-void initializeAMDGPUMarkLastScratchLoadPass(PassRegistry &);
-extern char &AMDGPUMarkLastScratchLoadID;
+void initializeAMDGPUMarkLastScratchLoadLegacyPass(PassRegistry &);
+extern char &AMDGPUMarkLastScratchLoadLegacyID;
 
 void initializeSILowerSGPRSpillsLegacyPass(PassRegistry &);
 extern char &SILowerSGPRSpillsLegacyID;

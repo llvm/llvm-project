@@ -22,6 +22,7 @@
 #include "AMDGPUIGroupLP.h"
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPUMacroFusion.h"
+#include "AMDGPUMarkLastScratchLoad.h"
 #include "AMDGPUOpenCLEnqueuedBlockLowering.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPURemoveIncompatibleFunctions.h"
@@ -484,7 +485,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURegBankSelectPass(*PR);
   initializeAMDGPURegBankLegalizePass(*PR);
   initializeSILowerWWMCopiesPass(*PR);
-  initializeAMDGPUMarkLastScratchLoadPass(*PR);
+  initializeAMDGPUMarkLastScratchLoadLegacyPass(*PR);
   initializeSILowerSGPRSpillsLegacyPass(*PR);
   initializeSIFixSGPRCopiesLegacyPass(*PR);
   initializeSIFixVGPRCopiesLegacyPass(*PR);
@@ -1628,7 +1629,7 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   addPreRewrite();
   addPass(&VirtRegRewriterID);
 
-  addPass(&AMDGPUMarkLastScratchLoadID);
+  addPass(&AMDGPUMarkLastScratchLoadLegacyID);
 
   return true;
 }
