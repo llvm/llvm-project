@@ -4279,7 +4279,7 @@ public:
 
   void adjustTripCount(int TripCountAdjust) override {}
 
-  void disposed() override {}
+  void disposed(LiveIntervals *LIS) override {}
 };
 } // namespace
 
