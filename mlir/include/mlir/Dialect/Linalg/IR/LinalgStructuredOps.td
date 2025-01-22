@@ -674,8 +674,7 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
       static unsigned getNumRegionArgs();
       std::string getLibraryCallName();
       bool hasDynamicIndexingMaps();
-      /// Check if the op has broadcast and/or transpose semantic. Returns true if the
-      /// user defined indexing maps are not equal to default map.
+      /// Returns true if the user defined indexing maps are not equal to default maps.
       bool hasUserDefinedMaps();
     }];
 }
@@ -933,8 +932,7 @@ def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSiz
       static unsigned getNumRegionArgs();
       bool hasDynamicIndexingMaps() { return true; }
       std::string getLibraryCallName();
-      /// Check if the op has broadcast and/or transpose semantic. Returns true if the
-      /// user defined indexing maps are not equal to default map.
+      /// Returns true if the user defined indexing maps are not equal to default maps.
       bool hasUserDefinedMaps();
     }];
 }

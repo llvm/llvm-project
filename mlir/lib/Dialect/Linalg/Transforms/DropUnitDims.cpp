@@ -907,14 +907,9 @@ struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
 
   LogicalResult matchAndRewrite(FromOpTy contractionOp,
                                 PatternRewriter &rewriter) const override {
-    // Check to not let go the batch_matmul with extended semantic, through this
-    // transform.
-    if (std::is_same<FromOpTy, BatchMatmulOp>::value ||
-        std::is_same<FromOpTy, MatmulOp>::value) {
-      if (contractionOp.hasUserDefinedMaps()) {
-        return rewriter.notifyMatchFailure(
-            contractionOp, "ops with user-defined maps are not supported");
-      }
+    if (contractionOp.hasUserDefinedMaps()) {
+      return rewriter.notifyMatchFailure(
+          contractionOp, "ops with user-defined maps are not supported");
     }
 
     auto loc = contractionOp.getLoc();
@@ -945,21 +940,10 @@ struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
         loc, collapsedResultTy, ValueRange{collapsedLhs, collapsedRhs},
         ValueRange{collapsedInit});
     for (auto attr : contractionOp->getAttrs()) {
-      if (attr.getName() == LinalgDialect::kMemoizedIndexingMapsAttrName)
+      if (attr.getName() == LinalgDialect::kMemoizedIndexingMapsAttrName ||
+          attr.getName() == "indexing_maps")
         continue;
-
-      // Update the indexing_maps attribute for the collapsed MatmulOp.
-      if (attr.getName() == "indexing_maps" &&
-          std::is_same<FromOpTy, BatchMatmulOp>::value &&
-          std::is_same<ToOpTy, MatmulOp>::value) {
-        SmallVector<Attribute, 3> indexingMapsAttr = llvm::map_to_vector(
-            MatmulOp::getDefaultIndexingMaps(rewriter.getContext()),
-            [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
-        collapsedOp->setAttr(attr.getName(),
-                             rewriter.getArrayAttr(indexingMapsAttr));
-      } else {
-        collapsedOp->setAttr(attr.getName(), attr.getValue());
-      }
+      collapsedOp->setAttr(attr.getName(), attr.getValue());
     }
 
     auto results = contractionOp.getResults();
