@@ -944,7 +944,7 @@ SDValue DAGTypeLegalizer::LowerBitcastInRegister(SDNode *N) const {
 
       SDValue Elem = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ElemVT,
                                  N->getOperand(0), Index);
-      
+
       SDValue ExtElem = DAG.getNode(ISD::ZERO_EXTEND, DL, PackVT, Elem);
       SDValue ShiftAmount =
           DAG.getShiftAmountConstant(ElemBits * I, PackVT, DL);
@@ -980,7 +980,7 @@ SDValue DAGTypeLegalizer::LowerBitcastInRegister(SDNode *N) const {
           DAG.getNode(ISD::SRL, DL, FromVT, N->getOperand(0), ShiftAmount);
       SDValue Element = DAG.getNode(ISD::TRUNCATE, DL, ElemVT, Shifted);
       Elements[I] = Element;
-    } 
+    }
 
     return DAG.getBuildVector(ToVT, DL, Elements);
   }
