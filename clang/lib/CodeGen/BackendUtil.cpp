@@ -815,10 +815,11 @@ static void addSanitizers(const Triple &TargetTriple,
 
   if (LowerAllowCheckPass::IsRequested()) {
     // We want to call it after inline, which is about OptimizerEarlyEPCallback.
-    PB.registerOptimizerEarlyEPCallback([](ModulePassManager &MPM,
-                                           OptimizationLevel Level,
-                                           ThinOrFullLTOPhase Phase) {
-      MPM.addPass(createModuleToFunctionPassAdaptor(LowerAllowCheckPass()));
+    PB.registerOptimizerEarlyEPCallback([&](ModulePassManager &MPM,
+                                            OptimizationLevel Level,
+                                            ThinOrFullLTOPhase Phase) {
+      LowerAllowCheckPass::Options Opts;
+      MPM.addPass(createModuleToFunctionPassAdaptor(LowerAllowCheckPass(Opts)));
     });
   }
 }
