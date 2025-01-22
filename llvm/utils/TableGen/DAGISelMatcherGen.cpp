@@ -13,8 +13,10 @@
 #include "Common/CodeGenTarget.h"
 #include "Common/DAGISelMatcher.h"
 #include "Common/InfoByHwMode.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <utility>
@@ -777,6 +779,14 @@ static unsigned numNodesThatMayLoadOrStore(const TreePatternNode &N,
   return Count;
 }
 
+static unsigned numNodesThatMayLoadOrStore(const TreePattern &Pattern,
+                                           const CodeGenDAGPatterns &CGP) {
+  unsigned Count = 0;
+  for (const auto &Tree : Pattern.getTrees())
+    Count += numNodesThatMayLoadOrStore(*Tree, CGP);
+  return Count;
+}
+
 void MatcherGen::EmitResultInstructionAsOperand(
     const TreePatternNode &N, SmallVectorImpl<unsigned> &OutputOps) {
   const Record *Op = N.getOperator();
@@ -784,19 +794,23 @@ void MatcherGen::EmitResultInstructionAsOperand(
   CodeGenInstruction &II = CGT.getInstruction(Op);
   const DAGInstruction &Inst = CGP.getInstruction(Op);
 
-  bool isRoot = &N == &Pattern.getDstPattern();
+  // Is this the root of the first/last tree in the output TreePattern?
+  const bool IsFirstRoot = &N == Pattern.getDstPattern().getTrees().front();
+  const bool IsLastRoot = &N == Pattern.getDstPattern().getTrees().back();
+  // Is this any one of the roots?
+  const bool IsAnyRoot = llvm::any_of(Pattern.getDstPattern().getTrees(),
+                                      [&](auto &T) { return &N == T.get(); });
 
-  // TreeHasOutGlue - True if this tree has glue.
-  bool TreeHasInGlue = false, TreeHasOutGlue = false;
-  if (isRoot) {
+  const TreePatternNode &SrcPat = Pattern.getSrcPattern();
+
+  bool TreeHasInGlue = false;
+  if (IsFirstRoot) {
     const TreePatternNode &SrcPat = Pattern.getSrcPattern();
     TreeHasInGlue = SrcPat.TreeHasProperty(SDNPOptInGlue, CGP) ||
                     SrcPat.TreeHasProperty(SDNPInGlue, CGP);
-
-    // FIXME2: this is checking the entire pattern, not just the node in
-    // question, doing this just for the root seems like a total hack.
-    TreeHasOutGlue = SrcPat.TreeHasProperty(SDNPOutGlue, CGP);
   }
+  const bool TreeHasOutGlue =
+      IsLastRoot && SrcPat.TreeHasProperty(SDNPOutGlue, CGP);
 
   // NumResults - This is the number of results produced by the instruction in
   // the "outs" list.
@@ -884,7 +898,7 @@ void MatcherGen::EmitResultInstructionAsOperand(
   // If this node has input glue or explicitly specified input physregs, we
   // need to add chained and glued copyfromreg nodes and materialize the glue
   // input.
-  if (isRoot && !PhysRegInputs.empty()) {
+  if (IsFirstRoot && !PhysRegInputs.empty()) {
     // Emit all of the CopyToReg nodes for the input physical registers.  These
     // occur in patterns like (mul:i8 AL:i8, GR8:i8:$src).
     for (unsigned i = 0, e = PhysRegInputs.size(); i != e; ++i) {
@@ -905,10 +919,11 @@ void MatcherGen::EmitResultInstructionAsOperand(
   for (unsigned i = 0, e = N.getNumTypes(); i != e; ++i)
     ResultVTs.push_back(N.getSimpleType(i));
 
-  // If this is the root instruction of a pattern that has physical registers in
-  // its result pattern, add output VTs for them.  For example, X86 has:
+  // If this is the last root instruction of a pattern that has physical
+  // registers in its result pattern, add output VTs for them.  For example, X86
+  // has:
   //   (set AL, (mul ...))
-  if (isRoot && !Pattern.getDstRegs().empty()) {
+  if (IsLastRoot && !Pattern.getDstRegs().empty()) {
     // If the root came from an implicit def in the instruction handling stuff,
     // don't re-add it.
     const Record *HandledReg = nullptr;
@@ -925,36 +940,40 @@ void MatcherGen::EmitResultInstructionAsOperand(
   // If this is the root of the pattern and the pattern we're matching includes
   // a node that is variadic, mark the generated node as variadic so that it
   // gets the excess operands from the input DAG.
+  const bool srcIsVariadic =
+      Pattern.getSrcPattern().NodeHasProperty(SDNPVariadic, CGP);
+  if (Pattern.getDstPattern().getNumTrees() > 1 && srcIsVariadic)
+    llvm_unreachable("Unimplemented: Variadic patterns with multiple outputs");
   int NumFixedArityOperands = -1;
-  if (isRoot && Pattern.getSrcPattern().NodeHasProperty(SDNPVariadic, CGP))
+  if (IsFirstRoot && srcIsVariadic)
     NumFixedArityOperands = Pattern.getSrcPattern().getNumChildren();
 
-  // If this is the root node and multiple matched nodes in the input pattern
-  // have MemRefs in them, have the interpreter collect them and plop them onto
-  // this node. If there is just one node with MemRefs, leave them on that node
-  // even if it is not the root.
+  // NodeTakesMemRefs indicates that OPFL_MemRefs will be set for the node,
+  // which results in *all* of the MemRefs from the input pattern being applied
+  // to it. This should be modelled more accurately, but for now we
+  // conservatively set it for *all* top level (root) instructions (unless we
+  // can identify a unique memory-accessing instruction).
   //
   // FIXME3: This is actively incorrect for result patterns with multiple
   // memory-referencing instructions.
-  bool PatternHasMemOperands =
-      Pattern.getSrcPattern().TreeHasProperty(SDNPMemOperand, CGP);
-
-  bool NodeHasMemRefs = false;
-  if (PatternHasMemOperands) {
-    unsigned NumNodesThatLoadOrStore =
+  bool NodeTakesMemRefs = false;
+  if (Pattern.getSrcPattern().TreeHasProperty(SDNPMemOperand, CGP)) {
+    const unsigned NumNodesThatLoadOrStore =
         numNodesThatMayLoadOrStore(Pattern.getDstPattern(), CGP);
-    bool NodeIsUniqueLoadOrStore =
-        mayInstNodeLoadOrStore(N, CGP) && NumNodesThatLoadOrStore == 1;
-    NodeHasMemRefs =
-        NodeIsUniqueLoadOrStore || (isRoot && (mayInstNodeLoadOrStore(N, CGP) ||
-                                               NumNodesThatLoadOrStore != 1));
+    const bool NMayLoadOrStore = mayInstNodeLoadOrStore(N, CGP);
+    const bool NodeIsUniqueLoadOrStore =
+        NMayLoadOrStore && NumNodesThatLoadOrStore == 1;
+    NodeTakesMemRefs =
+        NodeIsUniqueLoadOrStore ||
+        (IsAnyRoot && (NMayLoadOrStore || NumNodesThatLoadOrStore != 1));
   }
 
   // Determine whether we need to attach a chain to this node.
   bool NodeHasChain = false;
   if (Pattern.getSrcPattern().TreeHasProperty(SDNPHasChain, CGP)) {
     // For some instructions, we were able to infer from the pattern whether
-    // they should have a chain.  Otherwise, attach the chain to the root.
+    // they should have a chain.  Otherwise, attach the chain to all top level
+    // instructions (roots).
     //
     // FIXME2: This is extremely dubious for several reasons, not the least of
     // which it gives special status to instructions with patterns that Pat<>
@@ -962,20 +981,25 @@ void MatcherGen::EmitResultInstructionAsOperand(
     if (II.hasChain_Inferred)
       NodeHasChain = II.hasChain;
     else
-      NodeHasChain = isRoot;
+      NodeHasChain = IsAnyRoot;
     // Instructions which load and store from memory should have a chain,
     // regardless of whether they happen to have a pattern saying so.
     if (II.hasCtrlDep || II.mayLoad || II.mayStore || II.canFoldAsLoad ||
         II.hasSideEffects)
       NodeHasChain = true;
   }
+  // Any instruction which is one of multiple outputs must have a chain
+  if (Pattern.getDstPattern().getNumTrees() > 1)
+    NodeHasChain = true;
 
-  assert((!ResultVTs.empty() || TreeHasOutGlue || NodeHasChain) &&
-         "Node has no result");
+  if ((ResultVTs.empty() && !TreeHasOutGlue && !NodeHasChain)) {
+    errs() << N << '\n';
+    PrintFatalError("Node has no results");
+  }
 
-  AddMatcher(new EmitNodeMatcher(II, ResultVTs, InstOps, NodeHasChain,
-                                 TreeHasInGlue, TreeHasOutGlue, NodeHasMemRefs,
-                                 NumFixedArityOperands, NextRecordedOperandNo));
+  AddMatcher(new EmitNodeMatcher(
+      II, ResultVTs, InstOps, NodeHasChain, TreeHasInGlue, TreeHasOutGlue,
+      NodeTakesMemRefs, NumFixedArityOperands, NextRecordedOperandNo));
 
   // The non-chain and non-glue results of the newly emitted node get recorded.
   for (unsigned i = 0, e = ResultVTs.size(); i != e; ++i) {
@@ -1033,7 +1057,11 @@ void MatcherGen::EmitResultCode() {
 
   // Codegen the root of the result pattern, capturing the resulting values.
   SmallVector<unsigned, 8> Ops;
-  EmitResultOperand(Pattern.getDstPattern(), Ops);
+  for (const TreePatternNodePtr &Tree : Pattern.getDstPattern().getTrees()) {
+    SmallVector<unsigned, 8> Tmp;
+    EmitResultOperand(*Tree, Tmp);
+    Ops.append(Tmp);
+  }
 
   // At this point, we have however many values the result pattern produces.
   // However, the input pattern might not need all of these.  If there are
@@ -1048,7 +1076,7 @@ void MatcherGen::EmitResultCode() {
     // If the root came from an implicit def in the instruction handling stuff,
     // don't re-add it.
     const Record *HandledReg = nullptr;
-    const TreePatternNode &DstPat = Pattern.getDstPattern();
+    const TreePatternNode &DstPat = *Pattern.getDstPattern().getOnlyTree();
     if (!DstPat.isLeaf() && DstPat.getOperator()->isSubClassOf("Instruction")) {
       const CodeGenTarget &CGT = CGP.getTargetInfo();
       CodeGenInstruction &II = CGT.getInstruction(DstPat.getOperator());
@@ -1067,9 +1095,19 @@ void MatcherGen::EmitResultCode() {
   SmallVector<unsigned, 8> Results(Ops);
 
   // Apply result permutation.
-  for (unsigned ResNo = 0; ResNo < Pattern.getDstPattern().getNumResults();
-       ++ResNo) {
-    Results[ResNo] = Ops[Pattern.getDstPattern().getResultIndex(ResNo)];
+  // If there are multiple result instructions, the results of each root are
+  // added in order but each set may be permuted.
+  //
+  // e.g. inst1 and inst2 results appear in order, but inst2 results are
+  // permuted:
+  //   src pattern: a, b, c = some_ops();
+  //   dst pattern: [a = inst1(); c, b = inst2();]
+  unsigned ResBase = 0;
+  for (const auto &Tree : Pattern.getDstPattern().getTrees()) {
+    for (unsigned i = 0; i < Tree->getNumTypes(); ++i) {
+      Results[ResBase + i] = Ops[ResBase + Tree->getResultIndex(i)];
+    }
+    ResBase += Tree->getNumTypes();
   }
 
   Results.resize(NumSrcResults);

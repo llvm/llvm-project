@@ -2800,12 +2800,32 @@ TreePattern::TreePattern(const Record *TheRec, TreePatternNodePtr Pat,
   Trees.push_back(Pat);
 }
 
+TreePattern::TreePattern(const Record *TheRec,
+                         const std::vector<TreePatternNodePtr> &Pats,
+                         bool isInput, CodeGenDAGPatterns &cdp)
+    : TheRecord(TheRec), CDP(cdp), isInputPattern(isInput), HasError(false),
+      Infer(*this) {
+  Trees = Pats;
+}
+
+TreePattern TreePattern::clone() const {
+  TreePattern New = *this;
+  for (TreePatternNodePtr &Tree : New.Trees)
+    Tree = Tree->clone();
+  return New;
+}
+
 void TreePattern::error(const Twine &Msg) {
   if (HasError)
     return;
   dump();
   PrintError(TheRecord->getLoc(), "In " + TheRecord->getName() + ": " + Msg);
   HasError = true;
+}
+
+bool TreePattern::hasProperTypeByHwMode() const {
+  return llvm::any_of(getTrees(),
+                      [](auto &T) { return T->hasProperTypeByHwMode(); });
 }
 
 void TreePattern::ComputeNamedNodes() {
@@ -3157,11 +3177,11 @@ void TreePattern::print(raw_ostream &OS) const {
   OS << ": ";
 
   if (Trees.size() > 1)
-    OS << "[\n";
+    OS << "[";
   for (const TreePatternNodePtr &Tree : Trees) {
     OS << "\t";
     Tree->print(OS);
-    OS << "\n";
+    OS << ", ";
   }
 
   if (Trees.size() > 1)
@@ -3725,6 +3745,13 @@ static void getInstructionsInTree(const TreePatternNode &Tree,
     getInstructionsInTree(Child, Instrs);
 }
 
+/// Get all the instructions in all trees in a pattern.
+static void getInstructionsInPattern(const TreePattern &Pat,
+                                     SmallVectorImpl<const Record *> &Instrs) {
+  for (const auto &Tree : Pat.getTrees())
+    getInstructionsInTree(*Tree, Instrs);
+}
+
 /// Check the class of a pattern leaf node against the instruction operand it
 /// represents.
 static bool checkOperandClass(CGIOperandList::OperandInfo &OI,
@@ -4029,7 +4056,8 @@ void CodeGenDAGPatterns::AddPatternToMatch(TreePattern *Pattern,
   // same type.
   std::map<std::string, NameRecord> SrcNames, DstNames;
   FindNames(PTM.getSrcPattern(), SrcNames, Pattern);
-  FindNames(PTM.getDstPattern(), DstNames, Pattern);
+  for (const auto &Tree : PTM.getDstPattern().getTrees())
+    FindNames(*Tree, DstNames, Pattern);
 
   // Scan all of the named values in the destination pattern, rejecting them if
   // they don't exist in the input pattern.
@@ -4062,7 +4090,7 @@ void CodeGenDAGPatterns::InferInstructionFlags() {
     // We can only infer from single-instruction patterns, otherwise we won't
     // know which instruction should get the flags.
     SmallVector<const Record *, 8> PatInstrs;
-    getInstructionsInTree(PTM.getDstPattern(), PatInstrs);
+    getInstructionsInPattern(PTM.getDstPattern(), PatInstrs);
     if (PatInstrs.size() != 1)
       continue;
 
@@ -4119,7 +4147,7 @@ void CodeGenDAGPatterns::VerifyInstructionFlags() {
   unsigned Errors = 0;
   for (const PatternToMatch &PTM : ptms()) {
     SmallVector<const Record *, 8> Instrs;
-    getInstructionsInTree(PTM.getDstPattern(), Instrs);
+    getInstructionsInPattern(PTM.getDstPattern(), Instrs);
     if (Instrs.empty())
       continue;
 
@@ -4234,11 +4262,6 @@ void CodeGenDAGPatterns::ParseOnePattern(
   Pattern.InlinePatternFragments();
   Result.InlinePatternFragments();
 
-  if (Result.getNumTrees() != 1) {
-    Result.error("Cannot use multi-alternative fragments in result pattern!");
-    return;
-  }
-
   // Infer types.
   bool IterateInference;
   bool InferredAllPatternTypes, InferredAllResultTypes;
@@ -4254,19 +4277,51 @@ void CodeGenDAGPatterns::ParseOnePattern(
 
     IterateInference = false;
 
-    // Apply the type of the result to the source pattern.  This helps us
-    // resolve cases where the input type is known to be a pointer type (which
-    // is considered resolved), but the result knows it needs to be 32- or
-    // 64-bits.  Infer the other way for good measure.
-    for (const auto &T : Pattern.getTrees())
-      for (unsigned i = 0, e = std::min(Result.getOnlyTree()->getNumTypes(),
-                                        T->getNumTypes());
-           i != e; ++i) {
-        IterateInference |=
-            T->UpdateNodeType(i, Result.getOnlyTree()->getExtType(i), Result);
-        IterateInference |=
-            Result.getOnlyTree()->UpdateNodeType(i, T->getExtType(i), Result);
+    // For output patterns with multiple trees, the result types of each tree
+    // are simply concatenated. We need to track which of the output trees each
+    // result corresponds to, and how many results that tree produced.
+    std::vector<TypeSetByHwMode> FlatOutTypes;
+    using FlatInstrRange =
+        std::pair<unsigned, unsigned>; // instr idx, number of results
+    std::vector<FlatInstrRange> FlatOutRanges;
+    for (unsigned iTree = 0; iTree < Result.getNumTrees(); ++iTree) {
+      const TreePatternNodePtr &OutTree = Result.getTree(iTree);
+      // Note: getNumTypes() may include one(?) implicit def.
+      FlatOutRanges.emplace_back(iTree, OutTree->getNumTypes());
+      for (const TypeSetByHwMode &TypeSet : OutTree->getExtTypes()) {
+        FlatOutTypes.push_back(TypeSet);
       }
+    }
+
+    // Apply the type of each result to each source pattern and vice versa. This
+    // helps us resolve cases where the input type is known to be a pointer type
+    // (which is considered resolved), but the result knows it needs to be 32-
+    // or 64-bits.
+    for (const TreePatternNodePtr &InTree : Pattern.getTrees()) {
+      // Apply output pattern types to input tree
+      const unsigned N =
+          std::min(InTree->getNumTypes(), (unsigned)FlatOutTypes.size());
+      for (unsigned i = 0; i < N; ++i)
+        IterateInference |= InTree->UpdateNodeType(i, FlatOutTypes[i], Result);
+      // Apply input pattern types to output tree
+      for (const FlatInstrRange &Range : FlatOutRanges) {
+        unsigned InstrIdx = Range.first;
+        unsigned NumResults = Range.second;
+        unsigned gIdx = 0; // total number of results handled so far
+        for (unsigned i = 0; i < NumResults; ++i) {
+          // If implicit def type has been added to the result types, we can
+          // end up with NumResults exceeding the number of input results.
+          // However, in the case of multiple results, we don't know which
+          // instruction the implicit def(s) came from. So just make sure we
+          // don't go out of bounds.
+          // FIXME all of the implicit def handling needs cleaned up.
+          if (gIdx >= InTree->getNumResults())
+            break;
+          IterateInference |= Result.getTree(InstrIdx)->UpdateNodeType(
+              i, InTree->getExtType(gIdx++), Result);
+        }
+      }
+    }
 
     // If our iteration has converged and the input pattern's types are fully
     // resolved but the result pattern is not fully resolved, we may have a
@@ -4278,8 +4333,8 @@ void CodeGenDAGPatterns::ParseOnePattern(
     // In any case, to handle this, we just go through and disambiguate some
     // arbitrary types to the result pattern's nodes.
     if (!IterateInference && InferredAllPatternTypes && !InferredAllResultTypes)
-      IterateInference =
-          ForceArbitraryInstResultType(*Result.getTree(0), Result);
+      for (const TreePatternNodePtr &OT : Result.getTrees())
+        IterateInference |= ForceArbitraryInstResultType(*OT, Result);
   } while (IterateInference);
 
   // Verify that we inferred enough types that we can do something with the
@@ -4292,10 +4347,13 @@ void CodeGenDAGPatterns::ParseOnePattern(
   }
 
   // Promote xform function to be an explicit node wherever set.
-  TreePatternNodePtr DstShared = PromoteXForms(Result.getOnlyTree());
+  std::vector<TreePatternNodePtr> ExpandedOutTrees;
+  for (auto &RT : Result.getTrees())
+    ExpandedOutTrees.push_back(PromoteXForms(RT));
 
-  TreePattern Temp(Result.getRecord(), DstShared, false, *this);
-  Temp.InferAllTypes();
+  TreePattern ExpandedOutPattern(Result.getRecord(), ExpandedOutTrees, false,
+                                 *this);
+  ExpandedOutPattern.InferAllTypes();
 
   const ListInit *Preds = TheDef->getValueAsListInit("Predicates");
   int Complexity = TheDef->getValueAsInt("AddedComplexity");
@@ -4310,23 +4368,33 @@ void CodeGenDAGPatterns::ParseOnePattern(
   // that register class does not accept that type, the type inference
   // will lead to a contradiction, which is not an error however, but
   // a sign that this pattern will simply never match.
-  if (Temp.getOnlyTree()->hasPossibleType()) {
-    for (const auto &T : Pattern.getTrees()) {
-      if (T->hasPossibleType())
-        AddPatternToMatch(&Pattern,
-                          PatternToMatch(TheDef, Preds, T, Temp.getOnlyTree(),
-                                         InstImpResults, Complexity,
-                                         TheDef->getID(), ShouldIgnore));
+  for (const auto &OutTree : ExpandedOutPattern.getTrees()) {
+    if (!OutTree->hasPossibleType()) {
+      // Show a message about a dropped pattern with some info to make it
+      // easier to identify it in the .td files.
+      LLVM_DEBUG({
+        dbgs() << "Dropping: ";
+        Pattern.dump();
+        ExpandedOutPattern.dump();
+        dbgs() << "\n";
+        if (ExpandedOutPattern.getNumTrees() > 1) {
+          dbgs() << "  ...because this result tree has no possible types: ";
+          OutTree->dump();
+          dbgs() << "\n";
+        }
+      });
+      return;
     }
-  } else {
-    // Show a message about a dropped pattern with some info to make it
-    // easier to identify it in the .td files.
-    LLVM_DEBUG({
-      dbgs() << "Dropping: ";
-      Pattern.dump();
-      Temp.getOnlyTree()->dump();
-      dbgs() << "\n";
-    });
+  }
+
+  // All result trees have possible types. Add a PatternToMatch for each input
+  // tree which has possible types.
+  for (const auto &InTree : Pattern.getTrees()) {
+    if (InTree->hasPossibleType())
+      AddPatternToMatch(
+          &Pattern, PatternToMatch(TheDef, Preds, InTree, ExpandedOutPattern,
+                                   InstImpResults, Complexity, TheDef->getID(),
+                                   ShouldIgnore));
   }
 }
 
@@ -4346,10 +4414,6 @@ void CodeGenDAGPatterns::ParsePatterns() {
 
     // Parse the instruction.
     TreePattern Result(CurPattern, LI, false, *this);
-
-    if (Result.getNumTrees() != 1)
-      Result.error("Cannot handle instructions producing instructions "
-                   "with temporaries yet!");
 
     // Validate that the input pattern is correct.
     std::map<std::string, TreePatternNodePtr> InstInputs;
@@ -4374,6 +4438,12 @@ static void collectModes(std::set<unsigned> &Modes, const TreePatternNode &N) {
     collectModes(Modes, Child);
 }
 
+static void collectModes(std::set<unsigned> &Modes,
+                         const TreePattern &Pattern) {
+  for (const auto &Tree : Pattern.getTrees())
+    collectModes(Modes, *Tree);
+}
+
 void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
   const CodeGenHwModes &CGH = getTargetInfo().getHwModes();
   if (CGH.getNumModeIds() == 1)
@@ -4385,19 +4455,22 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
   auto AppendPattern = [this](PatternToMatch &P, unsigned Mode,
                               StringRef Check) {
     TreePatternNodePtr NewSrc = P.getSrcPattern().clone();
-    TreePatternNodePtr NewDst = P.getDstPattern().clone();
-    if (!NewSrc->setDefaultMode(Mode) || !NewDst->setDefaultMode(Mode)) {
+    TreePattern NewDst = P.getDstPattern().clone();
+    if (!NewSrc->setDefaultMode(Mode))
       return;
-    }
+    for (auto &DstTree : NewDst.getTrees())
+      if (!DstTree->setDefaultMode(Mode))
+        return;
 
     PatternsToMatch.emplace_back(P.getSrcRecord(), P.getPredicates(),
-                                 std::move(NewSrc), std::move(NewDst),
-                                 P.getDstRegs(), P.getAddedComplexity(),
-                                 getNewUID(), P.getGISelShouldIgnore(), Check);
+                                 std::move(NewSrc), NewDst, P.getDstRegs(),
+                                 P.getAddedComplexity(), getNewUID(),
+                                 P.getGISelShouldIgnore(), Check);
   };
 
   for (PatternToMatch &P : Copy) {
-    const TreePatternNode *SrcP = nullptr, *DstP = nullptr;
+    const TreePatternNode *SrcP = nullptr;
+    const TreePattern *DstP = nullptr;
     if (P.getSrcPattern().hasProperTypeByHwMode())
       SrcP = &P.getSrcPattern();
     if (P.getDstPattern().hasProperTypeByHwMode())
@@ -4761,7 +4834,7 @@ void CodeGenDAGPatterns::GenerateVariants() {
       // Otherwise, add it to the list of patterns we have.
       PatternsToMatch.emplace_back(
           PatternsToMatch[i].getSrcRecord(), PatternsToMatch[i].getPredicates(),
-          Variant, PatternsToMatch[i].getDstPatternShared(),
+          Variant, PatternsToMatch[i].getDstPattern(),
           PatternsToMatch[i].getDstRegs(),
           PatternsToMatch[i].getAddedComplexity(), getNewUID(),
           PatternsToMatch[i].getGISelShouldIgnore(),

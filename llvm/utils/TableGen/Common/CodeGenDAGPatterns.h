@@ -925,8 +925,15 @@ public:
               CodeGenDAGPatterns &ise);
   TreePattern(const Record *TheRec, const DagInit *Pat, bool isInput,
               CodeGenDAGPatterns &ise);
+  /// Construct from a single pattern
   TreePattern(const Record *TheRec, TreePatternNodePtr Pat, bool isInput,
               CodeGenDAGPatterns &ise);
+  /// Construct from multiple patterns
+  TreePattern(const Record *TheRec, const std::vector<TreePatternNodePtr> &Pat,
+              bool isInput, CodeGenDAGPatterns &ise);
+
+  /// Return a new copy of the TreePattern, with cloned Trees.
+  TreePattern clone() const;
 
   /// getTrees - Return the tree patterns which corresponds to this pattern.
   ///
@@ -984,6 +991,8 @@ public:
 
   TypeInfer &getInfer() { return Infer; }
 
+  bool hasProperTypeByHwMode() const;
+
   void print(raw_ostream &OS) const;
   void dump() const;
 
@@ -992,6 +1001,11 @@ private:
   void ComputeNamedNodes();
   void ComputeNamedNodes(TreePatternNode &N);
 };
+
+inline raw_ostream &operator<<(raw_ostream &OS, const TreePattern &TP) {
+  TP.print(OS);
+  return OS;
+}
 
 inline bool TreePatternNode::UpdateNodeType(unsigned ResNo,
                                             const TypeSetByHwMode &InTy,
@@ -1070,7 +1084,7 @@ class PatternToMatch {
   const Record *SrcRecord;       // Originating Record for the pattern.
   const ListInit *Predicates;    // Top level predicate conditions to match.
   TreePatternNodePtr SrcPattern; // Source pattern to match.
-  TreePatternNodePtr DstPattern; // Resulting pattern.
+  TreePattern DstPattern;        // Resulting pattern.
   std::vector<const Record *> Dstregs; // Physical register defs being matched.
   std::string HwModeFeatures;
   int AddedComplexity;    // Add to matching pattern complexity.
@@ -1079,7 +1093,7 @@ class PatternToMatch {
 
 public:
   PatternToMatch(const Record *srcrecord, const ListInit *preds,
-                 TreePatternNodePtr src, TreePatternNodePtr dst,
+                 TreePatternNodePtr src, TreePattern dst,
                  ArrayRef<const Record *> dstregs, int complexity, unsigned uid,
                  bool ignore, const Twine &hwmodefeatures = "")
       : SrcRecord(srcrecord), Predicates(preds), SrcPattern(src),
@@ -1090,8 +1104,7 @@ public:
   const ListInit *getPredicates() const { return Predicates; }
   TreePatternNode &getSrcPattern() const { return *SrcPattern; }
   TreePatternNodePtr getSrcPatternShared() const { return SrcPattern; }
-  TreePatternNode &getDstPattern() const { return *DstPattern; }
-  TreePatternNodePtr getDstPatternShared() const { return DstPattern; }
+  const TreePattern &getDstPattern() const { return DstPattern; }
   ArrayRef<const Record *> getDstRegs() const { return Dstregs; }
   StringRef getHwModeFeatures() const { return HwModeFeatures; }
   int getAddedComplexity() const { return AddedComplexity; }
