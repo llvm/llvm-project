@@ -9,7 +9,7 @@
 #include "AMDGPUOpenMP.h"
 #include "AMDGPU.h"
 #include "CommonArgs.h"
-#include "ToolChains/ROCm.h"
+#include "ROCm.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
@@ -158,11 +158,6 @@ llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 AMDGPUOpenMPToolChain::getDeviceLibs(const llvm::opt::ArgList &Args) const {
   if (Args.hasArg(options::OPT_nogpulib))
     return {};
-
-  if (!RocmInstallation->hasDeviceLibrary()) {
-    getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 0;
-    return {};
-  }
 
   StringRef GpuArch = getProcessorFromTargetID(
       getTriple(), Args.getLastArgValue(options::OPT_march_EQ));
