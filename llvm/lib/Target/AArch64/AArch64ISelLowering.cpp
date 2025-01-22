@@ -19732,8 +19732,7 @@ performLastTrueTestVectorCombine(SDNode *N,
 }
 
 static SDValue
-performExtractLastActiveCombine(SDNode *N,
-                                TargetLowering::DAGCombinerInfo &DCI,
+performExtractLastActiveCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const AArch64Subtarget *Subtarget) {
   assert(N->getOpcode() == ISD::EXTRACT_VECTOR_ELT);
   SelectionDAG &DAG = DCI.DAG;
@@ -19746,12 +19745,12 @@ performExtractLastActiveCombine(SDNode *N,
 
   SDValue Mask = Idx.getOperand(0);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (TLI.getOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, Mask.getValueType())
-      != TargetLowering::Legal)
+  if (TLI.getOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE,
+                             Mask.getValueType()) != TargetLowering::Legal)
     return SDValue();
 
-  return DAG.getNode(AArch64ISD::LASTB, SDLoc(N), N->getValueType(0),
-                     Mask, Vec);
+  return DAG.getNode(AArch64ISD::LASTB, SDLoc(N), N->getValueType(0), Mask,
+                     Vec);
 }
 
 static SDValue
