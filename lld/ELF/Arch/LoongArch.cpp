@@ -1162,9 +1162,9 @@ void LoongArch::tlsdescToLe(uint8_t *loc, const Relocation &rel,
 //  * pcalau12i $a0, %pc_hi20(sym)
 //  * addi.w/d  $a0, $a0, %pc_lo12(sym)
 //
-// FIXME: Althouth the optimization has been performed, the GOT entries still
-// exists, similarly to AArch64. Eliminating the entries may be require
-// additional marking in the common code.
+// Note: Althouth the optimization has been performed, the GOT entries still
+// exists, similarly to AArch64. Eliminating the entries will increase code
+// complexity.
 bool LoongArch::tryGotToPCRel(uint8_t *loc, const Relocation &rHi20,
                               const Relocation &rLo12, uint64_t secAddr) const {
   if (!rHi20.sym->isDefined() || rHi20.sym->isPreemptible ||
