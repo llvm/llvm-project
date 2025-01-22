@@ -193,16 +193,33 @@ typedef struct {
 void unamed_struct_typedef(TypedefS *ptr) {
 // COMMON-LABEL: define void @unamed_struct_typedef(
 // COMMON-SAME: ptr noundef [[PTRA:%.+]])
-// COMMON:   [[PTR_ADDR:%.+]]  = alloca ptr, align 8
+// COMMON:        [[PTR_ADDR:%.+]]  = alloca ptr, align 8
 // DISABLE-NEXT:  store ptr [[PTRA]], ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
-// DISABLE-NEXT:  [[L0:%.+]] = load ptr, ptr  [[PTR_ADDR]], align 8, !tbaa  [[ANYPTR]]
-// DEFAULT-NEXT:  store ptr [[PTRA]], ptr [[PTR_ADDR]], align 8, !tbaa [[P1TYPEDEF:!.+]]
-// DEFAULT-NEXT:  [[L0:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa  [[P1TYPEDEF]]
+// DEFAULT-NEXT:  store ptr [[PTRA]], ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR:!.+]]
+// COMMON-NEXT:   [[L0:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa  [[ANYPTR]]
 // COMMON-NEXT:   [[GEP:%.+]]  = getelementptr inbounds nuw %struct.TypedefS, ptr [[L0]], i32 0, i32 0
 // COMMON-NEXT:   store i32 0, ptr [[GEP]], align 4
 // COMMON-NEXT:   ret void
 
   ptr->i1 = 0;
+}
+
+int void_ptrs(void **ptr) {
+// COMMON-LABEL: define i32 @void_ptrs(
+// COMMON-SAME: ptr noundef [[PTRA:%.+]])
+// COMMON:        [[PTR_ADDR:%.+]]  = alloca ptr, align 8
+// DISABLE-NEXT:  store ptr [[PTRA]], ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
+// DISABLE-NEXT:  [[L0:%.+]] = load ptr, ptr  [[PTR_ADDR]], align 8, !tbaa  [[ANYPTR]]
+// DISABLE-NEXT:  [[L1:%.+]] = load ptr, ptr [[L0]], align 8, !tbaa  [[ANYPTR]]
+// DEFAULT-NEXT:  store ptr [[PTRA]], ptr [[PTR_ADDR]], align 8, !tbaa [[P2VOID:!.+]]
+// DEFAULT-NEXT:  [[L0:%.+]] = load ptr, ptr  [[PTR_ADDR]], align 8, !tbaa  [[P2VOID]]
+// DEFAULT-NEXT:  [[L1:%.+]] = load ptr, ptr [[L0]], align 8, !tbaa  [[P1VOID:!.+]]
+// COMMON-NEXT:   [[BOOL:%.+]] = icmp ne ptr [[L1]], null
+// COMMON-NEXT:   [[BOOL_EXT:%.+]] = zext i1 [[BOOL]] to i64
+// COMMON-NEXT:   [[COND:%.+]] = select i1 [[BOOL]], i32 0, i32 1
+// COMMON-NEXT:   ret i32 [[COND]]
+
+  return *ptr ? 0 : 1;
 }
 
 // DEFAULT: [[P2INT_0]] = !{[[P2INT:!.+]], [[P2INT]], i64 0}
@@ -236,4 +253,8 @@ void unamed_struct_typedef(TypedefS *ptr) {
 // DISABLE: [[S2_TY]]  = !{!"S2", [[ANY_POINTER]], i64 0}
 // COMMON:  [[INT_TAG]] = !{[[INT_TY:!.+]], [[INT_TY]], i64 0}
 // COMMON:  [[INT_TY]] = !{!"int", [[CHAR]], i64 0}
-// DEFAULT: [[P1TYPEDEF]] = !{[[ANY_POINTER]],  [[ANY_POINTER]], i64 0}
+// DEFAULT: [[ANYPTR]] = !{[[ANY_POINTER]],  [[ANY_POINTER]], i64 0}
+// DEFAULT: [[P2VOID]] = !{[[P2VOID_TY:!.+]], [[P2VOID_TY]], i64 0}
+// DEFAULT: [[P2VOID_TY]] = !{!"p2 void", [[ANY_POINTER]], i64 0}
+// DEFAULT: [[P1VOID]] = !{[[P1VOID_TY:!.+]], [[P1VOID_TY]], i64 0}
+// DEFAULT: [[P1VOID_TY]] = !{!"p1 void", [[ANY_POINTER]], i64 0}

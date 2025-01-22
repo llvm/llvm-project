@@ -210,6 +210,7 @@ public:
   void convertVOP3DPPInst(MCInst &MI) const;
   void convertVOP3PDPPInst(MCInst &MI) const;
   void convertVOPCDPPInst(MCInst &MI) const;
+  void convertVOPC64DPPInst(MCInst &MI) const;
   void convertMacDPPInst(MCInst &MI) const;
   void convertTrue16OpSel(MCInst &MI) const;
 
@@ -259,6 +260,7 @@ public:
   MCOperand decodeVOPDDstYOp(MCInst &Inst, unsigned Val) const;
   MCOperand decodeSpecialReg32(unsigned Val) const;
   MCOperand decodeSpecialReg64(unsigned Val) const;
+  MCOperand decodeSpecialReg96Plus(unsigned Val) const;
 
   MCOperand decodeSDWASrc(const OpWidthTy Width, unsigned Val,
                           unsigned ImmWidth,

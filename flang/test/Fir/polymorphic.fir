@@ -169,16 +169,16 @@ func.func @_QMmod2Pinitp(%arg0: !fir.ref<!fir.class<!fir.ptr<none>>> {fir.bindc_
   %1 = fir.load %arg0 : !fir.ref<!fir.class<!fir.ptr<none>>>
   %2 = fir.convert %0 : (!fir.ref<!fir.class<!fir.ptr<none>>>) -> !fir.ref<!fir.box<none>>
   %3 = fir.convert %1 : (!fir.class<!fir.ptr<none>>) -> !fir.box<none>
-  %4 = fir.call @_FortranAPointerAssociate(%2, %3) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>) -> none
+  fir.call @_FortranAPointerAssociate(%2, %3) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>) -> ()
   return
 }
-func.func private @_FortranAPointerAssociate(!fir.ref<!fir.box<none>>, !fir.box<none>) -> none attributes {fir.runtime}
+func.func private @_FortranAPointerAssociate(!fir.ref<!fir.box<none>>, !fir.box<none>) -> () attributes {fir.runtime}
 
 // CHECK-LABEL: define void @_QMmod2Pinitp(
 // CHECK-SAME: ptr nocapture %[[ARG0:.*]]){{.*}}{
 // CHECK: %[[ALLOCA_CLASS_NONE:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
 // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr %[[ALLOCA_CLASS_NONE]], ptr %[[ARG0]], i32 40, i1 false)
-// CHECK: %{{.*}} = call {} @_FortranAPointerAssociate(ptr @_QMmod2Ep, ptr %[[ALLOCA_CLASS_NONE]])
+// CHECK: call void @_FortranAPointerAssociate(ptr @_QMmod2Ep, ptr %[[ALLOCA_CLASS_NONE]])
 // CHECK: ret void
 
 fir.global linkonce_odr @_QMmod1E.dt.p1 constant target : !fir.type<_QM__fortran_type_infoTderivedtype{binding:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTbinding{proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>}>>>>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>,sizeinbytes:i64,uninstantiated:!fir.box<!fir.ptr<!fir.type<_QM__fortran_type_infoTderivedtype>>>,kindparameter:!fir.box<!fir.ptr<!fir.array<?xi64>>>,lenparameterkind:!fir.box<!fir.ptr<!fir.array<?xi8>>>,component:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTcomponent{name:!fir.box<!fir.ptr<!fir.char<1,?>>>,genre:i8,category:i8,kind:i8,rank:i8,__padding0:!fir.array<4xi8>,offset:i64,characterlen:!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>,derived:!fir.box<!fir.ptr<!fir.type<_QM__fortran_type_infoTderivedtype>>>,lenvalue:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>>,bounds:!fir.box<!fir.ptr<!fir.array<?x?x!fir.type<_QM__fortran_type_infoTvalue{genre:i8,__padding0:!fir.array<7xi8>,value:i64}>>>>,initialization:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>>>,procptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTprocptrcomponent{name:!fir.box<!fir.ptr<!fir.char<1,?>>>,offset:i64,initialization:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>}>>>>,special:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QM__fortran_type_infoTspecialbinding{which:i8,isargdescriptorset:i8,__padding0:!fir.array<6xi8>,proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>}>>>>,specialbitset:i32,hasparent:i8,noinitializationneeded:i8,nodestructionneeded:i8,nofinalizationneeded:i8,__padding0:!fir.array<4xi8>}> {

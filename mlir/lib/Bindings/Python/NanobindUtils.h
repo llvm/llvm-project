@@ -10,9 +10,8 @@
 #ifndef MLIR_BINDINGS_PYTHON_PYBINDUTILS_H
 #define MLIR_BINDINGS_PYTHON_PYBINDUTILS_H
 
-#include <nanobind/nanobind.h>
-
 #include "mlir-c/Support.h"
+#include "mlir/Bindings/Python/Nanobind.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DataTypes.h"
@@ -68,7 +67,7 @@ namespace detail {
 
 template <typename DefaultingTy>
 struct MlirDefaultingCaster {
-  NB_TYPE_CASTER(DefaultingTy, const_name(DefaultingTy::kTypeDescription));
+  NB_TYPE_CASTER(DefaultingTy, const_name(DefaultingTy::kTypeDescription))
 
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) {
     if (src.is_none()) {

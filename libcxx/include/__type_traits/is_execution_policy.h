@@ -50,7 +50,7 @@ __remove_parallel_policy(const _ExecutionPolicy& = _ExecutionPolicy{execution::_
 // Removes the "parallel" part of an execution policy.
 // For example, turns par_unseq into unseq, and par into seq.
 template <class _ExecutionPolicy>
-using __remove_parallel_policy_t = decltype(std::__remove_parallel_policy<_ExecutionPolicy>());
+using __remove_parallel_policy_t _LIBCPP_NODEBUG = decltype(std::__remove_parallel_policy<_ExecutionPolicy>());
 
 _LIBCPP_END_NAMESPACE_STD
 

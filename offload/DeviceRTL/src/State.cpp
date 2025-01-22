@@ -138,8 +138,8 @@ void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
   }
 
   if (config::isDebugMode(DeviceDebugKind::CommonIssues))
-    PRINT("Shared memory stack full, fallback to dynamic allocation of global "
-          "memory will negatively impact performance.\n");
+    printf("Shared memory stack full, fallback to dynamic allocation of global "
+           "memory will negatively impact performance.\n");
   void *GlobalMemory = memory::allocGlobal(
       AlignedBytes, "Slow path shared memory allocation, insufficient "
                     "shared memory stack memory!");
@@ -173,7 +173,7 @@ void memory::freeShared(void *Ptr, uint64_t Bytes, const char *Reason) {
 void *memory::allocGlobal(uint64_t Bytes, const char *Reason) {
   void *Ptr = malloc(Bytes);
   if (config::isDebugMode(DeviceDebugKind::CommonIssues) && Ptr == nullptr)
-    PRINT("nullptr returned by malloc!\n");
+    printf("nullptr returned by malloc!\n");
   return Ptr;
 }
 
@@ -277,7 +277,7 @@ void state::enterDataEnvironment(IdentTy *Ident) {
         sizeof(ThreadStates[0]) * mapping::getNumberOfThreadsInBlock();
     void *ThreadStatesPtr =
         memory::allocGlobal(Bytes, "Thread state array allocation");
-    memset(ThreadStatesPtr, 0, Bytes);
+    __builtin_memset(ThreadStatesPtr, 0, Bytes);
     if (!atomic::cas(ThreadStatesBitsPtr, uintptr_t(0),
                      reinterpret_cast<uintptr_t>(ThreadStatesPtr),
                      atomic::seq_cst, atomic::seq_cst))

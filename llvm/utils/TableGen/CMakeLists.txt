@@ -11,14 +11,13 @@ set(LLVM_LINK_COMPONENTS Support)
 # build llvm/include. It must not depend on TableGenCommon, as
 # TableGenCommon depends on this already to generate things such as
 # ValueType definitions.
+# Sources included in both, llvm-min-tblgen and llvm-tblgen, must be included
+# into LLVMTableGenBasic to avoid redundant compilation and problems with build
+# caches.
+# At least one source file must be included directly to avoid CMake problems.
+# E.g. CMake derives which linker to use from the types of sources added.
 add_tablegen(llvm-min-tblgen LLVM_HEADERS
-  TableGen.cpp
-  ARMTargetDefEmitter.cpp
-  Attributes.cpp
-  DirectiveEmitter.cpp
-  IntrinsicEmitter.cpp
-  RISCVTargetDefEmitter.cpp
-  VTEmitter.cpp
+  llvm-min-tblgen.cpp
   $<TARGET_OBJECTS:obj.LLVMTableGenBasic>
 
   PARTIAL_SOURCES_INTENDED
@@ -32,10 +31,8 @@ set(LLVM_LINK_COMPONENTS
 add_tablegen(llvm-tblgen LLVM
   DESTINATION "${LLVM_TOOLS_INSTALL_DIR}"
   EXPORT LLVM
-  ARMTargetDefEmitter.cpp
   AsmMatcherEmitter.cpp
   AsmWriterEmitter.cpp
-  Attributes.cpp
   CallingConvEmitter.cpp
   CodeEmitterGen.cpp
   CodeGenMapTable.cpp
@@ -48,7 +45,6 @@ add_tablegen(llvm-tblgen LLVM
   DecoderEmitter.cpp
   DFAEmitter.cpp
   DFAPacketizerEmitter.cpp
-  DirectiveEmitter.cpp
   DisassemblerEmitter.cpp
   DXILEmitter.cpp
   ExegesisEmitter.cpp
@@ -57,18 +53,16 @@ add_tablegen(llvm-tblgen LLVM
   GlobalISelEmitter.cpp
   InstrDocsEmitter.cpp
   InstrInfoEmitter.cpp
-  IntrinsicEmitter.cpp
+  llvm-tblgen.cpp
   MacroFusionPredicatorEmitter.cpp
   OptionParserEmitter.cpp
   OptionRSTEmitter.cpp
   PseudoLoweringEmitter.cpp
   RegisterBankEmitter.cpp
   RegisterInfoEmitter.cpp
-  RISCVTargetDefEmitter.cpp
+  SDNodeInfoEmitter.cpp
   SearchableTableEmitter.cpp
   SubtargetEmitter.cpp
-  TableGen.cpp
-  VTEmitter.cpp
   WebAssemblyDisassemblerEmitter.cpp
   X86InstrMappingEmitter.cpp
   X86DisassemblerTables.cpp
@@ -78,6 +72,8 @@ add_tablegen(llvm-tblgen LLVM
   X86RecognizableInstr.cpp
   $<TARGET_OBJECTS:obj.LLVMTableGenBasic>
   $<TARGET_OBJECTS:obj.LLVMTableGenCommon>
+
+  PARTIAL_SOURCES_INTENDED
 
   DEPENDS
   intrinsics_gen # via llvm-min-tablegen

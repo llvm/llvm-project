@@ -133,6 +133,14 @@ public:
     assert(tryGetCommonScalarType(Bndl) && "Expected common scalar type!");
     return ScalarTy;
   }
+  /// \Returns the first integer power of 2 that is <= Num.
+  static unsigned getFloorPowerOf2(unsigned Num);
+
+#ifndef NDEBUG
+  /// Helper dump function for debugging.
+  LLVM_DUMP_METHOD static void dump(ArrayRef<Value *> Bndl);
+  LLVM_DUMP_METHOD static void dump(ArrayRef<Instruction *> Bndl);
+#endif // NDEBUG
 };
 
 } // namespace llvm::sandboxir

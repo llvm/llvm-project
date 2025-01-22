@@ -7,8 +7,8 @@
 // RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
 
-#if __cplusplus >= 201103L
 namespace cwg2211 { // cwg2211: 8
+#if __cplusplus >= 201103L
 void f() {
   int a;
   auto f = [a](int a) { (void)a; };
@@ -16,10 +16,10 @@ void f() {
   //   since-cxx11-note@-2 {{variable 'a' is explicitly captured here}}
   auto g = [=](int a) { (void)a; };
 }
-}
 #endif
+} // namespace cwg2211
 
-namespace cwg2213 { // cwg2213: yes
+namespace cwg2213 { // cwg2213: 2.7
 template <typename T, typename U>
 struct A;
 
@@ -41,7 +41,7 @@ struct AnonBitfieldQualifiers {
   volatile unsigned i2 : 1;
   const volatile unsigned i3 : 1;
 };
-}
+} // namespace cwg2229
 
 namespace cwg2233 { // cwg2233: 11
 #if __cplusplus >= 201103L
@@ -153,7 +153,7 @@ D d1(c);
 const D &d2{c}; // FIXME ill-formed
 const D &d3(c); // FIXME ill-formed
 #endif
-}
+} // namespace cwg2267
 
 namespace cwg2273 { // cwg2273: 3.3
 #if __cplusplus >= 201103L
@@ -170,7 +170,7 @@ B b;
 //   since-cxx11-note@#cwg2273-B {{default constructor of 'B' is implicitly deleted because base class 'A' has a deleted default constructor}}
 //   since-cxx11-note@#cwg2273-A {{'A' has been explicitly marked deleted here}}
 #endif
-}
+} // namespace cwg2273
 
 namespace cwg2277 { // cwg2277: partial
 #if __cplusplus >= 201103L
@@ -194,7 +194,7 @@ void g() {
   //   since-cxx11-note@#cwg2277-B-f {{candidate function}}
 }
 #endif
-}
+} // namespace cwg2277
 
 namespace cwg2292 { // cwg2292: 9
 #if __cplusplus >= 201103L
@@ -203,4 +203,4 @@ namespace cwg2292 { // cwg2292: 9
     p->template id<int>::~id<int>();
   }
 #endif
-}
+} // namespace cwg2292

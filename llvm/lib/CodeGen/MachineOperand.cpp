@@ -91,7 +91,7 @@ void MachineOperand::substVirtReg(Register Reg, unsigned SubIdx,
 }
 
 void MachineOperand::substPhysReg(MCRegister Reg, const TargetRegisterInfo &TRI) {
-  assert(Register::isPhysicalRegister(Reg));
+  assert(Reg.isPhysical());
   if (getSubReg()) {
     Reg = TRI.getSubReg(Reg, getSubReg());
     // Note that getSubReg() may return 0 if the sub-register doesn't exist.
@@ -1170,6 +1170,9 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     if (getFlags() & MachineMemOperand::MOTargetFlag3)
       OS << '"' << getTargetMMOFlagName(*TII, MachineMemOperand::MOTargetFlag3)
          << "\" ";
+    if (getFlags() & MachineMemOperand::MOTargetFlag4)
+      OS << '"' << getTargetMMOFlagName(*TII, MachineMemOperand::MOTargetFlag4)
+         << "\" ";
   } else {
     if (getFlags() & MachineMemOperand::MOTargetFlag1)
       OS << "\"MOTargetFlag1\" ";
@@ -1177,6 +1180,8 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << "\"MOTargetFlag2\" ";
     if (getFlags() & MachineMemOperand::MOTargetFlag3)
       OS << "\"MOTargetFlag3\" ";
+    if (getFlags() & MachineMemOperand::MOTargetFlag4)
+      OS << "\"MOTargetFlag4\" ";
   }
 
   assert((isLoad() || isStore()) &&

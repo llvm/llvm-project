@@ -308,13 +308,13 @@ static __inline __m512h __DEFAULT_FN_ATTRS512 _mm512_cvtpbf8_ph(__m256i __A) {
 }
 
 static __inline __m512h __DEFAULT_FN_ATTRS512
-_mm512_mask_cvtpbf8_ph(__m512h __S, __mmask16 __U, __m256i __A) {
+_mm512_mask_cvtpbf8_ph(__m512h __S, __mmask32 __U, __m256i __A) {
   return _mm512_castsi512_ph(
       _mm512_mask_slli_epi16((__m512i)__S, __U, _mm512_cvtepi8_epi16(__A), 8));
 }
 
 static __inline __m512h __DEFAULT_FN_ATTRS512
-_mm512_maskz_cvtpbf8_ph(__mmask16 __U, __m256i __A) {
+_mm512_maskz_cvtpbf8_ph(__mmask32 __U, __m256i __A) {
   return _mm512_castsi512_ph(
       _mm512_slli_epi16(_mm512_maskz_cvtepi8_epi16(__U, __A), 8));
 }

@@ -181,10 +181,6 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     }
   }
 
-  // Select the `ual` feature determined by -m[no-]strict-align.
-  AddTargetFeature(Args, Features, options::OPT_mno_strict_align,
-                   options::OPT_mstrict_align, "ual");
-
   // Accept but warn about these TargetSpecific options.
   if (Arg *A = Args.getLastArgNoClaim(options::OPT_mabi_EQ))
     A->ignoreTargetSpecific();
@@ -257,50 +253,20 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
       Features.push_back("-lasx");
   }
 
-  // Select frecipe feature determined by -m[no-]frecipe.
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_mfrecipe, options::OPT_mno_frecipe)) {
-    if (A->getOption().matches(options::OPT_mfrecipe))
-      Features.push_back("+frecipe");
-    else
-      Features.push_back("-frecipe");
-  }
-
-  // Select lam-bh feature determined by -m[no-]lam-bh.
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_mlam_bh, options::OPT_mno_lam_bh)) {
-    if (A->getOption().matches(options::OPT_mlam_bh))
-      Features.push_back("+lam-bh");
-    else
-      Features.push_back("-lam-bh");
-  }
-
-  // Select lamcas feature determined by -m[no-]lamcas.
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_mlamcas, options::OPT_mno_lamcas)) {
-    if (A->getOption().matches(options::OPT_mlamcas))
-      Features.push_back("+lamcas");
-    else
-      Features.push_back("-lamcas");
-  }
-
-  // Select ld-seq-sa feature determined by -m[no-]ld-seq-sa.
-  if (const Arg *A = Args.getLastArg(options::OPT_mld_seq_sa,
-                                     options::OPT_mno_ld_seq_sa)) {
-    if (A->getOption().matches(options::OPT_mld_seq_sa))
-      Features.push_back("+ld-seq-sa");
-    else
-      Features.push_back("-ld-seq-sa");
-  }
-
-  // Select div32 feature determined by -m[no-]div32.
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_mdiv32, options::OPT_mno_div32)) {
-    if (A->getOption().matches(options::OPT_mdiv32))
-      Features.push_back("+div32");
-    else
-      Features.push_back("-div32");
-  }
+  AddTargetFeature(Args, Features, options::OPT_mno_strict_align,
+                   options::OPT_mstrict_align, "ual");
+  AddTargetFeature(Args, Features, options::OPT_mno_strict_align,
+                   options::OPT_mstrict_align, "ual");
+  AddTargetFeature(Args, Features, options::OPT_mfrecipe,
+                   options::OPT_mno_frecipe, "frecipe");
+  AddTargetFeature(Args, Features, options::OPT_mlam_bh,
+                   options::OPT_mno_lam_bh, "lam-bh");
+  AddTargetFeature(Args, Features, options::OPT_mlamcas,
+                   options::OPT_mno_lamcas, "lamcas");
+  AddTargetFeature(Args, Features, options::OPT_mld_seq_sa,
+                   options::OPT_mno_ld_seq_sa, "ld-seq-sa");
+  AddTargetFeature(Args, Features, options::OPT_mdiv32,
+                   options::OPT_mno_div32, "div32");
 }
 
 std::string loongarch::postProcessTargetCPUString(const std::string &CPU,

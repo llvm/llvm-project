@@ -55,7 +55,6 @@ enum NodeType : unsigned {
   FSHR_CLAMP,
   MUL_WIDE_SIGNED,
   MUL_WIDE_UNSIGNED,
-  IMAD,
   SETP_F16X2,
   SETP_BF16X2,
   BFE,
@@ -70,7 +69,8 @@ enum NodeType : unsigned {
   BrxEnd,
   Dummy,
 
-  LoadV2 = ISD::FIRST_TARGET_MEMORY_OPCODE,
+  FIRST_MEMORY_OPCODE,
+  LoadV2 = FIRST_MEMORY_OPCODE,
   LoadV4,
   LDUV2, // LDU.v2
   LDUV4, // LDU.v4
@@ -87,6 +87,7 @@ enum NodeType : unsigned {
   StoreRetval,
   StoreRetvalV2,
   StoreRetvalV4,
+  LAST_MEMORY_OPCODE = StoreRetvalV4,
 };
 }
 
@@ -276,6 +277,8 @@ private:
   SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFROUND32(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFROUND64(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue PromoteBinOpIfF32FTZ(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;

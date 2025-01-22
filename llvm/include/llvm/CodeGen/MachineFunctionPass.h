@@ -18,7 +18,6 @@
 #ifndef LLVM_CODEGEN_MACHINEFUNCTIONPASS_H
 #define LLVM_CODEGEN_MACHINEFUNCTIONPASS_H
 
-#include "llvm/CodeGen/DroppedVariableStatsMIR.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/Pass.h"
 
@@ -68,7 +67,6 @@ private:
   MachineFunctionProperties RequiredProperties;
   MachineFunctionProperties SetProperties;
   MachineFunctionProperties ClearedProperties;
-  DroppedVariableStatsMIR DroppedVarStatsMF;
 
   /// createPrinterPass - Get a machine function printer pass.
   Pass *createPrinterPass(raw_ostream &O,

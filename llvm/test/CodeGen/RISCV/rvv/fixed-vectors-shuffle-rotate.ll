@@ -556,12 +556,14 @@ define <8 x i16> @shuffle_v8i16_as_i64_32(<8 x i16> %v) {
 ;
 ; ZVKB-ZVE32X-LABEL: shuffle_v8i16_as_i64_32:
 ; ZVKB-ZVE32X:       # %bb.0:
-; ZVKB-ZVE32X-NEXT:    lui a0, %hi(.LCPI20_0)
-; ZVKB-ZVE32X-NEXT:    addi a0, a0, %lo(.LCPI20_0)
-; ZVKB-ZVE32X-NEXT:    vsetivli zero, 8, e16, m2, ta, ma
-; ZVKB-ZVE32X-NEXT:    vle8.v v10, (a0)
+; ZVKB-ZVE32X-NEXT:    lui a0, 8240
+; ZVKB-ZVE32X-NEXT:    addi a0, a0, 1
+; ZVKB-ZVE32X-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; ZVKB-ZVE32X-NEXT:    vmv.s.x v10, a0
+; ZVKB-ZVE32X-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
 ; ZVKB-ZVE32X-NEXT:    vsext.vf2 v12, v10
-; ZVKB-ZVE32X-NEXT:    vrgather.vv v10, v8, v12
+; ZVKB-ZVE32X-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; ZVKB-ZVE32X-NEXT:    vrgatherei16.vv v10, v8, v12
 ; ZVKB-ZVE32X-NEXT:    vmv.v.v v8, v10
 ; ZVKB-ZVE32X-NEXT:    ret
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> poison, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 6, i32 7, i32 4, i32 5>
@@ -765,12 +767,14 @@ define <8 x half> @shuffle_v8f16_as_i64_32(<8 x half> %v) {
 ;
 ; ZVKB-ZVE32X-LABEL: shuffle_v8f16_as_i64_32:
 ; ZVKB-ZVE32X:       # %bb.0:
-; ZVKB-ZVE32X-NEXT:    lui a0, %hi(.LCPI25_0)
-; ZVKB-ZVE32X-NEXT:    addi a0, a0, %lo(.LCPI25_0)
-; ZVKB-ZVE32X-NEXT:    vsetivli zero, 8, e16, m2, ta, ma
-; ZVKB-ZVE32X-NEXT:    vle8.v v10, (a0)
+; ZVKB-ZVE32X-NEXT:    lui a0, 8240
+; ZVKB-ZVE32X-NEXT:    addi a0, a0, 1
+; ZVKB-ZVE32X-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; ZVKB-ZVE32X-NEXT:    vmv.s.x v10, a0
+; ZVKB-ZVE32X-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
 ; ZVKB-ZVE32X-NEXT:    vsext.vf2 v12, v10
-; ZVKB-ZVE32X-NEXT:    vrgather.vv v10, v8, v12
+; ZVKB-ZVE32X-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; ZVKB-ZVE32X-NEXT:    vrgatherei16.vv v10, v8, v12
 ; ZVKB-ZVE32X-NEXT:    vmv.v.v v8, v10
 ; ZVKB-ZVE32X-NEXT:    ret
   %shuffle = shufflevector <8 x half> %v, <8 x half> poison, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 6, i32 7, i32 4, i32 5>

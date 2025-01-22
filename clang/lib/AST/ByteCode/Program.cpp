@@ -155,7 +155,7 @@ unsigned Program::getOrCreateDummy(const DeclTy &D) {
 
   QualType QT;
   bool IsWeak = false;
-  if (const auto *E = D.dyn_cast<const Expr *>()) {
+  if (const auto *E = dyn_cast<const Expr *>(D)) {
     QT = E->getType();
   } else {
     const ValueDecl *VD = cast<ValueDecl>(cast<const Decl *>(D));

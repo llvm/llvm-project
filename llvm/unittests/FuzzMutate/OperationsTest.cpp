@@ -93,8 +93,7 @@ TEST(OperationsTest, SourcePreds) {
   Constant *v8i1 = ConstantVector::getSplat(ElementCount::getFixed(8), i1);
   Constant *v8i8 = ConstantVector::getSplat(ElementCount::getFixed(8), i8);
   Constant *v4f16 = ConstantVector::getSplat(ElementCount::getFixed(4), f16);
-  Constant *p0i32 =
-      ConstantPointerNull::get(PointerType::get(i32->getType(), 0));
+  Constant *p0i32 = ConstantPointerNull::get(PointerType::get(Ctx, 0));
   Constant *v8p0i32 =
       ConstantVector::getSplat(ElementCount::getFixed(8), p0i32);
   Constant *vni32 = ConstantVector::getSplat(ElementCount::getScalable(8), i32);

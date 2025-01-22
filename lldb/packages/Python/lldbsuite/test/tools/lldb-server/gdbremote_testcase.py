@@ -1410,7 +1410,17 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             p_response = context.get("p_response")
             self.assertIsNotNone(p_response)
             self.assertTrue(len(p_response) > 0)
-            self.assertFalse(p_response[0] == "E")
+
+            # on x86 Darwin, 4 GPR registers are often
+            # unavailable, this is expected and correct.
+            if (
+                self.getArchitecture() == "x86_64"
+                and self.platformIsDarwin()
+                and p_response[0] == "E"
+            ):
+                values[reg_index] = 0
+            else:
+                self.assertFalse(p_response[0] == "E")
 
             values[reg_index] = unpack_register_hex_unsigned(endian, p_response)
 

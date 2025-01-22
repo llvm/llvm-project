@@ -32,6 +32,11 @@ TEST_CONSTEXPR_CXX20 void test_vector_flip(std::size_t n, Allocator a) {
 }
 
 TEST_CONSTEXPR_CXX20 bool tests() {
+  // Test empty vectors
+  test_vector_flip(0, std::allocator<bool>());
+  test_vector_flip(0, min_allocator<bool>());
+  test_vector_flip(0, test_allocator<bool>(5));
+
   // Test small vectors with different allocators
   test_vector_flip(3, std::allocator<bool>());
   test_vector_flip(3, min_allocator<bool>());

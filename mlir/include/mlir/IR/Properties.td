@@ -14,6 +14,7 @@
 #define PROPERTIES
 
 include "mlir/IR/Constraints.td"
+include "mlir/IR/Utils.td"
 
 // Base class for defining properties.
 class Property<string storageTypeParam = "", string desc = ""> {
@@ -211,7 +212,7 @@ defvar writeMlirBytecodeWithConvertToAttribute = [{
 // Primitive property kinds
 
 // Any kind of integer stored as properties.
-class IntProperty<string storageTypeParam, string desc = ""> :
+class IntProp<string storageTypeParam, string desc = ""> :
     Property<storageTypeParam, desc> {
   let summary = !if(!empty(desc), storageTypeParam, desc);
   let optionalParser = [{
@@ -228,10 +229,16 @@ class IntProperty<string storageTypeParam, string desc = ""> :
   }];
 }
 
-def I32Property : IntProperty<"int32_t">;
-def I64Property : IntProperty<"int64_t">;
+class IntProperty<string storageTypeParam, string desc = "">
+  : IntProp<storageTypeParam, desc>, Deprecated<"moved to the shorter name IntProp">;
 
-class EnumProperty<string storageTypeParam, string desc = "", string default = ""> :
+def I32Prop : IntProp<"int32_t">;
+def I64Prop : IntProp<"int64_t">;
+
+def I32Property : IntProp<"int32_t">, Deprecated<"moved to shorter name I32Prop">;
+def I64Property : IntProp<"int64_t">, Deprecated<"moved to shorter name I64Prop">;
+
+class EnumProp<string storageTypeParam, string desc = "", string default = ""> :
     Property<storageTypeParam, desc> {
   // TODO:  implement predicate for enum validity.
   let writeToMlirBytecode = [{
@@ -246,7 +253,12 @@ class EnumProperty<string storageTypeParam, string desc = "", string default = "
   let defaultValue = default;
 }
 
-def StringProperty : Property<"std::string", "string"> {
+class EnumProperty<string storageTypeParam, string desc = "", string default = ""> :
+  EnumProp<storageTypeParam, desc, default>,
+  Deprecated<"moved to shorter name EnumProp">;
+
+// Note: only a class so we can deprecate the old name
+class _cls_StringProp : Property<"std::string", "string"> {
   let interfaceType = "::llvm::StringRef";
   let convertFromStorage = "::llvm::StringRef{$_storage}";
   let assignToStorage = "$_storage = $_value.str()";
@@ -265,8 +277,11 @@ def StringProperty : Property<"std::string", "string"> {
     $_writer.writeOwnedString($_storage);
   }];
 }
+def StringProp : _cls_StringProp;
+def StringProperty : _cls_StringProp, Deprecated<"moved to shorter name StringProp">;
 
-def BoolProperty : IntProperty<"bool", "boolean"> {
+// Note: only a class so we can deprecate the old name
+class _cls_BoolProp : IntProp<"bool", "boolean"> {
   let printer = [{ $_printer << ($_storage ? "true" : "false") }];
   let readFromMlirBytecode = [{
     return $_reader.readBool($_storage);
@@ -275,8 +290,11 @@ def BoolProperty : IntProperty<"bool", "boolean"> {
     $_writer.writeOwnedBool($_storage);
   }];
 }
+def BoolProp : _cls_BoolProp;
+def BoolProperty : _cls_BoolProp, Deprecated<"moved to shorter name BoolProp">;
 
-def UnitProperty : Property<"bool", "unit property"> {
+// Note: only a class so we can deprecate the old name
+class _cls_UnitProp : Property<"bool", "unit property"> {
   let summary = "unit property";
   let description = [{
     A property whose presence or abscence is used as a flag.
@@ -337,6 +355,8 @@ def UnitProperty : Property<"bool", "unit property"> {
       return ::mlir::failure();
   }];
 }
+def UnitProp : _cls_UnitProp;
+def UnitProperty : _cls_UnitProp, Deprecated<"moved to shorter name UnitProp">;
 
 //===----------------------------------------------------------------------===//
 // Property field overwrites
@@ -344,7 +364,7 @@ def UnitProperty : Property<"bool", "unit property"> {
 /// Class for giving a property a default value.
 /// This doesn't change anything about the property other than giving it a default
 /// which can be used by ODS to elide printing.
-class DefaultValuedProperty<Property p, string default = "", string storageDefault = ""> : Property<p.storageType, p.summary> {
+class DefaultValuedProp<Property p, string default = "", string storageDefault = ""> : Property<p.storageType, p.summary> {
   let defaultValue = default;
   let storageTypeValueOverride = storageDefault;
   let baseProperty = p;
@@ -365,11 +385,13 @@ class DefaultValuedProperty<Property p, string default = "", string storageDefau
   let readFromMlirBytecode = p.readFromMlirBytecode;
   let writeToMlirBytecode = p.writeToMlirBytecode;
 }
+class DefaultValuedProperty<Property p, string default = "", string storageDefault = "">
+  : DefaultValuedProp<p, default, storageDefault>, Deprecated<"moved to shorter name DefaultValuedProp">;
 
 /// Apply the predicate `pred` to the property `p`, ANDing it with any
 /// predicates it may already have. If `newSummary` is provided, replace the
 /// summary of `p` with `newSummary`.
-class ConfinedProperty<Property p, Pred pred, string newSummary = "">
+class ConfinedProp<Property p, Pred pred, string newSummary = "">
     : Property<p.storageType, !if(!empty(newSummary), p.summary, newSummary)> {
   let predicate = !if(!ne(p.predicate, TruePred), And<[p.predicate, pred]>, pred);
   let baseProperty = p;
@@ -390,6 +412,10 @@ class ConfinedProperty<Property p, Pred pred, string newSummary = "">
   let defaultValue = p.defaultValue;
   let storageTypeValueOverride = p.storageTypeValueOverride;
 }
+
+class ConfinedProperty<Property p, Pred pred, string newSummary = "">
+  : ConfinedProp<p, pred, newSummary>,
+    Deprecated<"moved to shorter name ConfinedProp">;
 
 //===----------------------------------------------------------------------===//
 // Primitive property combinators
@@ -428,8 +454,8 @@ class _makeStorageWrapperPred<Property wrappedProp> {
 /// `SmallVector` of that property. This uses an `ArrayAttr` as its attribute form
 /// though subclasses can override this, as is the case with IntArrayAttr below.
 /// Those wishing to use a non-default number of SmallVector elements should
-/// subclass `ArrayProperty`.
-class ArrayProperty<Property elem = Property<>, string newSummary = ""> :
+/// subclass `ArrayProp`.
+class ArrayProp<Property elem = Property<>, string newSummary = ""> :
   Property<"::llvm::SmallVector<" # elem.storageType # ">",
     !if(!empty(newSummary), "array of " # elem.summary, newSummary)> {
   let interfaceType = "::llvm::ArrayRef<" # elem.storageType # ">";
@@ -548,9 +574,11 @@ class ArrayProperty<Property elem = Property<>, string newSummary = ""> :
       }()
     }]);
 }
+class ArrayProperty<Property elem = Property<>, string newSummary = "">
+  : ArrayProp<elem, newSummary>, Deprecated<"moved to shorter name ArrayProp">;
 
-class IntArrayProperty<Property elem, string newSummary=""> :
-    ArrayProperty<elem, newSummary> {
+class IntArrayProp<Property elem, string newSummary=""> :
+    ArrayProp<elem, newSummary> {
   // Bring back the trivial conversions we don't get in the general case.
   let convertFromAttribute = [{
     return convertFromAttribute($_storage, $_attr, $_diag);
@@ -559,6 +587,8 @@ class IntArrayProperty<Property elem, string newSummary=""> :
     return convertToAttribute($_ctxt, $_storage);
   }];
 }
+class IntArrayProperty<Property elem, string newSummary="">
+  : IntArrayProp<elem, newSummary>, Deprecated<"moved to shorter name IntArrayProp">;
 
 /// An optional property, stored as an std::optional<p.storageType>
 /// interfaced with as an std::optional<p.interfaceType>..
@@ -570,7 +600,7 @@ class IntArrayProperty<Property elem, string newSummary=""> :
 /// bracketing and delegate to the optional parser. In that case, the syntax is the
 /// syntax of the underlying property, or the keyword `none` in the rare cases that
 /// it is needed. This behavior can be disabled by setting `canDelegateParsing` to 0.
-class OptionalProperty<Property p, bit canDelegateParsing = 1>
+class OptionalProp<Property p, bit canDelegateParsing = 1>
     : Property<"std::optional<" # p.storageType # ">", "optional " # p.summary> {
 
   // In the cases where the underlying attribute is plain old data that's passed by
@@ -754,4 +784,7 @@ class OptionalProperty<Property p, bit canDelegateParsing = 1>
     "For delegated parsing to be used, the default value must be nullopt. " #
     "To use a non-trivial default, set the canDelegateParsing argument to 0";
 }
+class OptionalProperty<Property p, bit canDelegateParsing = 1>
+  : OptionalProp<p, canDelegateParsing>,
+    Deprecated<"moved to shorter name OptionalProp">;
 #endif // PROPERTIES

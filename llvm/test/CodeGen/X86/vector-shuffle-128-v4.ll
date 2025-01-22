@@ -2516,7 +2516,7 @@ define  <4 x float> @shuffle_mem_v4f32_0624(<4 x float> %a0, ptr %a1) {
 ;
 ; AVX512VL-LABEL: shuffle_mem_v4f32_0624:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovaps {{.*#+}} xmm1 = [4,2,6,0]
+; AVX512VL-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [4,2,6,0]
 ; AVX512VL-NEXT:    vpermt2ps (%rdi), %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
   %1 = load <4 x float>, ptr %a1
@@ -2540,7 +2540,7 @@ define  <4 x float> @shuffle_mem_v4f32_4760(<4 x float> %a0, ptr %a1) {
 ;
 ; AVX512VL-LABEL: shuffle_mem_v4f32_4760:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovaps {{.*#+}} xmm1 = [0,3,2,4]
+; AVX512VL-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [0,3,2,4]
 ; AVX512VL-NEXT:    vpermt2ps (%rdi), %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
   %1 = load <4 x float>, ptr %a1

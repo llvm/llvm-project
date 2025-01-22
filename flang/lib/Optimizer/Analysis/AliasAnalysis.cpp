@@ -505,30 +505,17 @@ getAttrsFromVariable(fir::FortranVariableOpInterface var) {
 }
 
 template <typename OMPTypeOp, typename DeclTypeOp>
-static Value getPrivateArg(omp::BlockArgOpenMPOpInterface &argIface,
-                           OMPTypeOp &op, DeclTypeOp &declOp) {
-  Value privateArg;
+static bool isPrivateArg(omp::BlockArgOpenMPOpInterface &argIface,
+                         OMPTypeOp &op, DeclTypeOp &declOp) {
   if (!op.getPrivateSyms().has_value())
-    return privateArg;
+    return false;
   for (auto [opSym, blockArg] :
        llvm::zip_equal(*op.getPrivateSyms(), argIface.getPrivateBlockArgs())) {
     if (blockArg == declOp.getMemref()) {
-      omp::PrivateClauseOp privateOp =
-          SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
-              op, cast<SymbolRefAttr>(opSym));
-      privateOp.walk([&](omp::YieldOp yieldOp) {
-        // TODO Extend alias analysis if omp.yield points to
-        // block argument value
-        if (!yieldOp.getResults()[0].getDefiningOp())
-          return;
-        llvm::TypeSwitch<Operation *>(yieldOp.getResults()[0].getDefiningOp())
-            .template Case<fir::DeclareOp, hlfir::DeclareOp>(
-                [&](auto declOp) { privateArg = declOp.getMemref(); });
-      });
-      return privateArg;
+      return true;
     }
   }
-  return privateArg;
+  return false;
 }
 
 AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
@@ -599,8 +586,9 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           // If load is inside target and it points to mapped item,
           // continue tracking.
           Operation *loadMemrefOp = op.getMemref().getDefiningOp();
-          bool isDeclareOp = llvm::isa<fir::DeclareOp>(loadMemrefOp) ||
-                             llvm::isa<hlfir::DeclareOp>(loadMemrefOp);
+          bool isDeclareOp =
+              llvm::isa_and_present<fir::DeclareOp>(loadMemrefOp) ||
+              llvm::isa_and_present<hlfir::DeclareOp>(loadMemrefOp);
           if (isDeclareOp &&
               llvm::isa<omp::TargetOp>(loadMemrefOp->getParentOp())) {
             v = op.getMemref();
@@ -630,6 +618,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           breakFromLoop = true;
         })
         .Case<hlfir::DeclareOp, fir::DeclareOp>([&](auto op) {
+          bool isPrivateItem = false;
           if (omp::BlockArgOpenMPOpInterface argIface =
                   dyn_cast<omp::BlockArgOpenMPOpInterface>(op->getParentOp())) {
             Value ompValArg;
@@ -643,19 +632,18 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                       omp::MapInfoOp mapInfo =
                           llvm::cast<omp::MapInfoOp>(opArg.getDefiningOp());
                       ompValArg = mapInfo.getVarPtr();
-                      break;
+                      return;
                     }
                   }
                   // If given operation does not reflect mapping item,
                   // check private clause
-                  if (!ompValArg)
-                    ompValArg = getPrivateArg(argIface, targetOp, op);
+                  isPrivateItem = isPrivateArg(argIface, targetOp, op);
                 })
                 .template Case<omp::DistributeOp, omp::ParallelOp,
                                omp::SectionsOp, omp::SimdOp, omp::SingleOp,
                                omp::TaskloopOp, omp::TaskOp, omp::WsloopOp>(
                     [&](auto privateOp) {
-                      ompValArg = getPrivateArg(argIface, privateOp, op);
+                      isPrivateItem = isPrivateArg(argIface, privateOp, op);
                     });
             if (ompValArg) {
               v = ompValArg;
@@ -704,6 +692,11 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             }
           } else {
             instantiationPoint = op;
+          }
+          if (isPrivateItem) {
+            type = SourceKind::Allocate;
+            breakFromLoop = true;
+            return;
           }
           // TODO: Look for the fortran attributes present on the operation
           // Track further through the operand

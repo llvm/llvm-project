@@ -379,7 +379,7 @@ struct _LIBCPP_TEMPLATE_VIS basic_format_string {
 private:
   basic_string_view<_CharT> __str_;
 
-  using _Context = __format::__compile_time_basic_format_context<_CharT>;
+  using _Context _LIBCPP_NODEBUG = __format::__compile_time_basic_format_context<_CharT>;
 
   static constexpr array<__format::__arg_t, sizeof...(_Args)> __types_{
       __format::__determine_arg_t<_Context, remove_cvref_t<_Args>>()...};

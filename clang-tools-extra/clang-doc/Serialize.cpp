@@ -696,13 +696,11 @@ emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
 
     // What this is a specialization of.
     auto SpecOf = CTSD->getSpecializedTemplateOrPartial();
-    if (SpecOf.is<ClassTemplateDecl *>()) {
-      Specialization.SpecializationOf =
-          getUSRForDecl(SpecOf.get<ClassTemplateDecl *>());
-    } else if (SpecOf.is<ClassTemplatePartialSpecializationDecl *>()) {
-      Specialization.SpecializationOf =
-          getUSRForDecl(SpecOf.get<ClassTemplatePartialSpecializationDecl *>());
-    }
+    if (auto *CTD = dyn_cast<ClassTemplateDecl *>(SpecOf))
+      Specialization.SpecializationOf = getUSRForDecl(CTD);
+    else if (auto *CTPSD =
+                 dyn_cast<ClassTemplatePartialSpecializationDecl *>(SpecOf))
+      Specialization.SpecializationOf = getUSRForDecl(CTPSD);
 
     // Parameters to the specilization. For partial specializations, get the
     // parameters "as written" from the ClassTemplatePartialSpecializationDecl

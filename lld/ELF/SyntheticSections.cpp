@@ -681,6 +681,11 @@ bool GotSection::addTlsDescEntry(const Symbol &sym) {
   return true;
 }
 
+void GotSection::addTlsDescAuthEntry() {
+  authEntries.push_back({(numEntries - 2) * ctx.arg.wordsize, true});
+  authEntries.push_back({(numEntries - 1) * ctx.arg.wordsize, false});
+}
+
 bool GotSection::addDynTlsEntry(const Symbol &sym) {
   assert(sym.auxIdx == ctx.symAux.size() - 1);
   ctx.symAux.back().tlsGdIdx = numEntries;
@@ -3798,9 +3803,8 @@ VersionTableSection::VersionTableSection(Ctx &ctx)
 }
 
 void VersionTableSection::finalizeContents() {
-  // At the moment of june 2016 GNU docs does not mention that sh_link field
-  // should be set, but Sun docs do. Also readelf relies on this field.
-  getParent()->link = getPartition(ctx).dynSymTab->getParent()->sectionIndex;
+  if (OutputSection *osec = getPartition(ctx).dynSymTab->getParent())
+    getParent()->link = osec->sectionIndex;
 }
 
 size_t VersionTableSection::getSize() const {

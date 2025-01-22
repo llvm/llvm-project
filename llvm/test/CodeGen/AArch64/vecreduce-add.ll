@@ -72,6 +72,24 @@ entry:
   ret i64 %z
 }
 
+define i64 @add_v4i32_v4i64_zsext(<4 x i32> %xi) {
+; CHECK-LABEL: add_v4i32_v4i64_zsext:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ushll v1.2d, v0.2s, #0
+; CHECK-NEXT:    saddw2 v0.2d, v1.2d, v0.4s
+; CHECK-NEXT:    addp d0, v0.2d
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    ret
+entry:
+  %x = shufflevector <4 x i32> %xi, <4 x i32> %xi, <2 x i32> <i32 0, i32 1>
+  %y = shufflevector <4 x i32> %xi, <4 x i32> %xi, <2 x i32> <i32 2, i32 3>
+  %xx = zext <2 x i32> %x to <2 x i64>
+  %yy = sext <2 x i32> %y to <2 x i64>
+  %zz = add <2 x i64> %xx, %yy
+  %z = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %zz)
+  ret i64 %z
+}
+
 define i64 @add_v2i32_v2i64_zext(<2 x i32> %x) {
 ; CHECK-LABEL: add_v2i32_v2i64_zext:
 ; CHECK:       // %bb.0: // %entry

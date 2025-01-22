@@ -51,7 +51,7 @@ HwModeSelect::HwModeSelect(const Record *R, CodeGenHwModes &CGH) {
   }
   for (auto [Mode, Object] : zip_equal(Modes, Objects)) {
     unsigned ModeId = CGH.getHwModeId(Mode);
-    Items.push_back(std::pair(ModeId, Object));
+    Items.emplace_back(ModeId, Object);
   }
 }
 
@@ -70,13 +70,13 @@ CodeGenHwModes::CodeGenHwModes(const RecordKeeper &RK) : Records(RK) {
     if (R->getName() == DefaultModeName)
       continue;
     Modes.emplace_back(R);
-    ModeIds.insert(std::pair(R, Modes.size()));
+    ModeIds.try_emplace(R, Modes.size());
   }
 
   assert(Modes.size() <= 32 && "number of HwModes exceeds maximum of 32");
 
   for (const Record *R : Records.getAllDerivedDefinitions("HwModeSelect")) {
-    auto P = ModeSelects.emplace(std::pair(R, HwModeSelect(R, *this)));
+    auto P = ModeSelects.emplace(R, HwModeSelect(R, *this));
     assert(P.second);
     (void)P;
   }

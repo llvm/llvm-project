@@ -108,7 +108,10 @@ struct ConvertToSPIRVPass final
     SmallVector<Operation *, 1> gpuModules;
     OpBuilder builder(context);
     op->walk([&](gpu::GPUModuleOp gpuModule) {
-      builder.setInsertionPoint(gpuModule);
+      if (nestInGPUModule)
+        builder.setInsertionPointToStart(gpuModule.getBody());
+      else
+        builder.setInsertionPoint(gpuModule);
       gpuModules.push_back(builder.clone(*gpuModule));
     });
     // Run conversion for each module independently as they can have

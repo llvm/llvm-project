@@ -36,8 +36,9 @@ size_t c32rtomb(char* s, char32_t c32, mbstate_t* ps);
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/cuchar>
+#else
 #  include <__config>
 #  include <__cstddef/size_t.h>
 
@@ -71,8 +72,9 @@ using ::mbrtoc32 _LIBCPP_USING_IF_EXISTS;
 using ::c32rtomb _LIBCPP_USING_IF_EXISTS;
 
 #  endif // _LIBCPP_CXX03_LANG
-#endif   // 0
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_CUCHAR

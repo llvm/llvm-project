@@ -34,6 +34,7 @@
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Designator.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/ParsedAttr.h"
@@ -121,8 +122,7 @@ private:
         return;
       }
 
-      if (const NamedDecl *PrevND =
-              DeclOrVector.dyn_cast<const NamedDecl *>()) {
+      if (const NamedDecl *PrevND = dyn_cast<const NamedDecl *>(DeclOrVector)) {
         // 1 -> 2 elements: create the vector of results and push in the
         // existing declaration.
         DeclIndexPairVector *Vec = new DeclIndexPairVector;
@@ -702,7 +702,7 @@ ResultBuilder::ShadowMapEntry::begin() const {
   if (DeclOrVector.isNull())
     return iterator();
 
-  if (const NamedDecl *ND = DeclOrVector.dyn_cast<const NamedDecl *>())
+  if (const NamedDecl *ND = dyn_cast<const NamedDecl *>(DeclOrVector))
     return iterator(ND, SingleDeclIndex);
 
   return iterator(cast<DeclIndexPairVector *>(DeclOrVector)->begin());
@@ -5862,8 +5862,10 @@ void SemaCodeCompletion::CodeCompleteMemberReferenceExpr(
   enum CodeCompletionContext::Kind contextKind;
 
   if (IsArrow) {
-    if (const auto *Ptr = ConvertedBaseType->getAs<PointerType>())
-      ConvertedBaseType = Ptr->getPointeeType();
+    if (QualType PointeeType = Resolver.getPointeeType(ConvertedBaseType);
+        !PointeeType.isNull()) {
+      ConvertedBaseType = PointeeType;
+    }
   }
 
   if (IsArrow) {
@@ -5900,8 +5902,9 @@ void SemaCodeCompletion::CodeCompleteMemberReferenceExpr(
     ExprValueKind BaseKind = Base->getValueKind();
 
     if (IsArrow) {
-      if (const PointerType *Ptr = BaseType->getAs<PointerType>()) {
-        BaseType = Ptr->getPointeeType();
+      if (QualType PointeeType = Resolver.getPointeeType(BaseType);
+          !PointeeType.isNull()) {
+        BaseType = PointeeType;
         BaseKind = VK_LValue;
       } else if (BaseType->isObjCObjectPointerType() ||
                  BaseType->isTemplateTypeParmType()) {
@@ -10473,4 +10476,5 @@ void SemaCodeCompletion::GatherGlobalCodeCompletions(
 
 SemaCodeCompletion::SemaCodeCompletion(Sema &S,
                                        CodeCompleteConsumer *CompletionConsumer)
-    : SemaBase(S), CodeCompleter(CompletionConsumer) {}
+    : SemaBase(S), CodeCompleter(CompletionConsumer),
+      Resolver(S.getASTContext()) {}

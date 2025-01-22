@@ -2380,14 +2380,12 @@ define float @v_sqrt_f32_ulp2_contractable_rcp(float %x) {
 ; GISEL-IEEE:       ; %bb.0:
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, 0x800000
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, 0x4b800000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e32 v1, 1.0, v2, vcc
-; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 24, vcc
+; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v1
 ; GISEL-IEEE-NEXT:    v_rsq_f32_e32 v0, v0
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, 0x45800000
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
-; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 12, vcc
+; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v1
 ; GISEL-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-DAZ-LABEL: v_sqrt_f32_ulp2_contractable_rcp:
@@ -2734,20 +2732,18 @@ define <2 x float> @v_sqrt_v2f32_ulp2_contractable_rcp(<2 x float> %x) {
 ; GISEL-IEEE:       ; %bb.0:
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, 0x800000
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v3, 0x4b800000
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v2
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e32 v4, 1.0, v3, vcc
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v3, 0, 24, vcc
 ; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e64 s[4:5], v1, v2
-; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, v0, v4
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 1.0, v3, s[4:5]
+; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v3
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, 24, s[4:5]
 ; GISEL-IEEE-NEXT:    v_rsq_f32_e32 v0, v0
-; GISEL-IEEE-NEXT:    v_mul_f32_e32 v1, v1, v2
+; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v1, v1, v2
 ; GISEL-IEEE-NEXT:    v_rsq_f32_e32 v1, v1
-; GISEL-IEEE-NEXT:    v_mov_b32_e32 v4, 0x45800000
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e32 v2, 1.0, v4, vcc
-; GISEL-IEEE-NEXT:    v_mul_f32_e32 v0, v0, v2
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 1.0, v4, s[4:5]
-; GISEL-IEEE-NEXT:    v_mul_f32_e32 v1, v1, v2
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, 12, vcc
+; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v2
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, 12, s[4:5]
+; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v1, v1, v2
 ; GISEL-IEEE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-DAZ-LABEL: v_sqrt_v2f32_ulp2_contractable_rcp:

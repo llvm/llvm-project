@@ -116,7 +116,8 @@ TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {
   auto MemMgr = std::make_unique<EPCGenericJITLinkMemoryManager>(*SelfEPC, SAs);
   StringRef Hello = "hello";
   auto SSA = jitlink::SimpleSegmentAlloc::Create(
-      *MemMgr, std::make_shared<orc::SymbolStringPool>(), nullptr,
+      *MemMgr, std::make_shared<orc::SymbolStringPool>(),
+      Triple("x86_64-apple-darwin"), nullptr,
       {{MemProt::Read, {Hello.size(), Align(1)}}});
   EXPECT_THAT_EXPECTED(SSA, Succeeded());
   auto SegInfo = SSA->getSegInfo(MemProt::Read);

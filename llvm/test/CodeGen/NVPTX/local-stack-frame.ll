@@ -29,7 +29,7 @@ define void @foo(i32 %a) {
 ; PTX64:        ld.param.u32     %r{{[0-9]+}}, [foo2_param_0];
 ; PTX64:        add.u64          %rd[[SP_REG:[0-9]+]], %SPL, 0;
 ; PTX64:        st.local.u32  [%rd[[SP_REG]]], %r{{[0-9]+}};
-define void @foo2(i32 %a) {
+define ptx_kernel void @foo2(i32 %a) {
   %local = alloca i32, align 4
   store i32 %a, ptr %local
   call void @bar(ptr %local)
@@ -38,8 +38,6 @@ define void @foo2(i32 %a) {
 
 declare void @bar(ptr %a)
 
-!nvvm.annotations = !{!0}
-!0 = !{ptr @foo2, !"kernel", i32 1}
 
 ; PTX32:        mov.u32          %SPL, __local_depot{{[0-9]+}};
 ; PTX32-NOT:    cvta.local.u32   %SP, %SPL;

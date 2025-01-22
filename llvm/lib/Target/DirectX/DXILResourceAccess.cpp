@@ -30,6 +30,9 @@ static void replaceTypedBufferAccess(IntrinsicInst *II,
          "Unexpected typed buffer type");
   Type *ContainedType = HandleType->getTypeParameter(0);
 
+  Type *LoadType =
+      StructType::get(ContainedType, Type::getInt1Ty(II->getContext()));
+
   // We need the size of an element in bytes so that we can calculate the offset
   // in elements given a total offset in bytes later.
   Type *ScalarType = ContainedType->getScalarType();
@@ -81,13 +84,15 @@ static void replaceTypedBufferAccess(IntrinsicInst *II,
         // We're storing a scalar, so we need to load the current value and only
         // replace the relevant part.
         auto *Load = Builder.CreateIntrinsic(
-            ContainedType, Intrinsic::dx_resource_load_typedbuffer,
+            LoadType, Intrinsic::dx_resource_load_typedbuffer,
             {II->getOperand(0), II->getOperand(1)});
+        auto *Struct = Builder.CreateExtractValue(Load, {0});
+
         // If we have an offset from seeing a GEP earlier, use it.
         Value *IndexOp = Current.Index
                              ? Current.Index
                              : ConstantInt::get(Builder.getInt32Ty(), 0);
-        V = Builder.CreateInsertElement(Load, V, IndexOp);
+        V = Builder.CreateInsertElement(Struct, V, IndexOp);
       } else {
         llvm_unreachable("Store to typed resource has invalid type");
       }
@@ -101,8 +106,10 @@ static void replaceTypedBufferAccess(IntrinsicInst *II,
     } else if (auto *LI = dyn_cast<LoadInst>(Current.Access)) {
       IRBuilder<> Builder(LI);
       Value *V = Builder.CreateIntrinsic(
-          ContainedType, Intrinsic::dx_resource_load_typedbuffer,
+          LoadType, Intrinsic::dx_resource_load_typedbuffer,
           {II->getOperand(0), II->getOperand(1)});
+      V = Builder.CreateExtractValue(V, {0});
+
       if (Current.Index)
         V = Builder.CreateExtractElement(V, Current.Index);
 

@@ -284,22 +284,29 @@ OpPrintingFlags &OpPrintingFlags::skipRegions(bool skip) {
 }
 
 /// Do not verify the operation when using custom operation printers.
-OpPrintingFlags &OpPrintingFlags::assumeVerified() {
-  assumeVerifiedFlag = true;
+OpPrintingFlags &OpPrintingFlags::assumeVerified(bool enable) {
+  assumeVerifiedFlag = enable;
   return *this;
 }
 
 /// Use local scope when printing the operation. This allows for using the
 /// printer in a more localized and thread-safe setting, but may not necessarily
 /// be identical of what the IR will look like when dumping the full module.
-OpPrintingFlags &OpPrintingFlags::useLocalScope() {
-  printLocalScope = true;
+OpPrintingFlags &OpPrintingFlags::useLocalScope(bool enable) {
+  printLocalScope = enable;
   return *this;
 }
 
 /// Print users of values as comments.
-OpPrintingFlags &OpPrintingFlags::printValueUsers() {
-  printValueUsersFlag = true;
+OpPrintingFlags &OpPrintingFlags::printValueUsers(bool enable) {
+  printValueUsersFlag = enable;
+  return *this;
+}
+
+/// Print unique SSA ID numbers for values, block arguments and naming conflicts
+/// across all regions
+OpPrintingFlags &OpPrintingFlags::printUniqueSSAIDs(bool enable) {
+  printUniqueSSAIDsFlag = enable;
   return *this;
 }
 

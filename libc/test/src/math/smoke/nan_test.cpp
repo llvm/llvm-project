@@ -23,7 +23,7 @@ public:
     auto actual_fp = LIBC_NAMESPACE::fputil::FPBits<double>(result);
     auto expected_fp = LIBC_NAMESPACE::fputil::FPBits<double>(bits);
     EXPECT_EQ(actual_fp.uintval(), expected_fp.uintval());
-  };
+  }
 };
 
 TEST_F(LlvmLibcNanTest, NCharSeq) {

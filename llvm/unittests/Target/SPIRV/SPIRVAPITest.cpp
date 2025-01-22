@@ -36,7 +36,9 @@ protected:
                const std::vector<std::string> &AllowExtNames,
                const std::vector<std::string> &Opts) {
     SMDiagnostic ParseError;
-    M = parseAssemblyString(Assembly, ParseError, Context);
+    LLVMContext Context;
+    std::unique_ptr<Module> M =
+        parseAssemblyString(Assembly, ParseError, Context);
     if (!M) {
       ParseError.print("IR parsing failed: ", errs());
       report_fatal_error("Can't parse input assembly.");
@@ -47,9 +49,6 @@ protected:
       errs() << ErrMsg;
     return Status;
   }
-
-  LLVMContext Context;
-  std::unique_ptr<Module> M;
 
   static constexpr StringRef ExtensionAssembly = R"(
     define dso_local spir_func void @test1() {

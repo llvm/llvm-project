@@ -15,3 +15,6 @@
 
 // TYSAN_FLAG(Type, Name, DefaultValue, Description)
 // See COMMON_FLAG in sanitizer_flags.inc for more details.
+
+TYSAN_FLAG(bool, print_stacktrace, false,
+           "Include full stacktrace into an error report")

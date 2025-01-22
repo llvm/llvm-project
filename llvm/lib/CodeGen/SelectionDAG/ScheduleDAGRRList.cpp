@@ -125,9 +125,9 @@ static cl::opt<int> MaxReorderWindow(
   cl::desc("Number of instructions to allow ahead of the critical path "
            "in sched=list-ilp"));
 
-static cl::opt<unsigned> AvgIPC(
-  "sched-avg-ipc", cl::Hidden, cl::init(1),
-  cl::desc("Average inst/cycle whan no target itinerary exists."));
+static cl::opt<unsigned>
+    AvgIPC("sched-avg-ipc", cl::Hidden, cl::init(1),
+           cl::desc("Average inst/cycle when no target itinerary exists."));
 
 namespace {
 

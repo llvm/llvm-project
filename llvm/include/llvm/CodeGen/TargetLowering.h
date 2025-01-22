@@ -2795,9 +2795,9 @@ public:
   /// possible to be done in the address mode for that operand. This hook lets
   /// targets also pass back when this should be done on intrinsics which
   /// load/store.
-  virtual bool getAddrModeArguments(IntrinsicInst * /*I*/,
-                                    SmallVectorImpl<Value*> &/*Ops*/,
-                                    Type *&/*AccessTy*/) const {
+  virtual bool getAddrModeArguments(const IntrinsicInst * /*I*/,
+                                    SmallVectorImpl<Value *> & /*Ops*/,
+                                    Type *& /*AccessTy*/) const {
     return false;
   }
 
@@ -4781,7 +4781,7 @@ public:
   virtual bool CanLowerReturn(CallingConv::ID /*CallConv*/,
                               MachineFunction &/*MF*/, bool /*isVarArg*/,
                const SmallVectorImpl<ISD::OutputArg> &/*Outs*/,
-               LLVMContext &/*Context*/) const
+               LLVMContext &/*Context*/, const Type *RetTy) const
   {
     // Return true by default to get preexisting behavior.
     return true;
@@ -5367,6 +5367,11 @@ public:
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTTZElements(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand VECTOR_FIND_LAST_ACTIVE nodes
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandVectorFindLastActive(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand ABS nodes. Expands vector/scalar ABS nodes,
   /// vector nodes can only succeed if all operations are legal/custom.

@@ -535,6 +535,17 @@ define void @indirect_vararg_call(ptr addrspace(42) %fn) {
 
 ; // -----
 
+; CHECK-LABEL: @inlineasm
+; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
+define i32 @inlineasm(i32 %arg1) {
+  ; CHECK:  %[[RES:.+]] = llvm.inline_asm has_side_effects "bswap $0", "=r,r" %[[ARG1]] : (i32) -> i32
+  %1 = call i32 asm "bswap $0", "=r,r"(i32 %arg1)
+  ; CHECK: return %[[RES]]
+  ret i32 %1
+}
+
+; // -----
+
 ; CHECK-LABEL: @gep_static_idx
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
 define void @gep_static_idx(ptr %ptr) {

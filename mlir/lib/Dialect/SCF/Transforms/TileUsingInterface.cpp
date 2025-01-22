@@ -28,6 +28,7 @@
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -656,20 +657,28 @@ getResultTilePosition(RewriterBase &rewriter, int64_t index, Value tiledResult,
                                     resultOffset, resultSize);
   case scf::SCFTilingOptions::ReductionTilingStrategy::
       PartialReductionOuterReduction: {
-    // TODO: This does not work for non identity accesses to the result tile.
-    // The proper fix is to add a getPartialResultTilePosition method to
-    // PartialReductionOpInterface.
-    resultOffset =
-        SmallVector<OpFoldResult>(offsets.size(), rewriter.getIndexAttr(0));
-    for (size_t i = 0; i < offsets.size(); i++) {
-      resultSize.push_back(
-          tensor::getMixedSize(rewriter, op.getLoc(), tiledResult, i));
+    auto redOp = dyn_cast<PartialReductionOpInterface>(op.getOperation());
+    if (!redOp) {
+      return rewriter.notifyMatchFailure(
+          op, "PartialReductionOuterReduction tiling strategy is only supported"
+              "for operations implementing PartialReductionOpInterface");
     }
-    return success();
+    // Get reduction dimensions.
+    // TODO: PartialReductionOpInterface should really query TilingInterface
+    // itself and find reduction dimensions.
+    SmallVector<int> reductionDims;
+    for (auto [idx, iteratorType] :
+         llvm::enumerate(op.getLoopIteratorTypes())) {
+      if (iteratorType == utils::IteratorType::reduction)
+        reductionDims.push_back(idx);
+    }
+    return redOp.getPartialResultTilePosition(rewriter, index, offsets, sizes,
+                                              resultOffset, resultSize,
+                                              reductionDims);
+  }
   default:
     return rewriter.notifyMatchFailure(op,
                                        "unhandled reduction tiling strategy");
-  }
   }
 }
 
@@ -1467,6 +1476,47 @@ void SliceTrackingListener::notifyOperationReplaced(Operation *op,
                                                     ValueRange replacement) {
   removeOp(op);
 }
+
+//===----------------------------------------------------------------------===//
+// ReplacementListener
+//===----------------------------------------------------------------------===//
+
+/// Listener that tracks updates replacements for values which can be mutated.
+/// This listener runs on top of the existing listener for the rewriter,
+/// to make sure external users can still run listeners.
+class ReplacementListener : public RewriterBase::ForwardingListener {
+public:
+  ReplacementListener(DenseMap<Value, Value> &replacements,
+                      OpBuilder::Listener *listener)
+      : ForwardingListener(listener), replacements(replacements) {}
+
+  void updateReplacementValues(ValueRange origValues,
+                               ValueRange replaceValues) {
+    // This can probably be written better, but just iterates over the map
+    // and the new replacements for now.
+    for (auto &[key, val] : replacements) {
+      for (auto [orig, replace] : llvm::zip_equal(origValues, replaceValues)) {
+        if (val == orig) {
+          val = replace;
+        }
+      }
+    }
+  }
+
+  void notifyOperationReplaced(Operation *op, Operation *newOp) override {
+    ForwardingListener::notifyOperationReplaced(op, newOp);
+    updateReplacementValues(op->getResults(), newOp->getResults());
+  }
+
+  void notifyOperationReplaced(Operation *op, ValueRange values) override {
+    ForwardingListener::notifyOperationReplaced(op, values);
+    updateReplacementValues(op->getResults(), values);
+  }
+
+private:
+  DenseMap<Value, Value> &replacements;
+};
+
 } // namespace
 
 /// Implementation of tile consumer and fuse producer greedily.
@@ -1493,26 +1543,27 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
   for (auto *tiledOp : tilingResult->tiledOps)
     tiledAndFusedOps.insert(tiledOp);
 
+  DenseMap<Value, Value> replacements;
+  for (auto [origVal, replacement] : llvm::zip_equal(
+           consumer->getResults(), tilingResult->mergeResult.replacements)) {
+    replacements[origVal] = replacement;
+  }
+
   // If there are no loops generated, fusion is immaterial.
   auto &loops = tilingResult->loops;
   if (loops.empty()) {
-    DenseMap<Value, Value> replacements;
-    for (auto [origVal, replacement] : llvm::zip_equal(
-             consumer->getResults(), tilingResult->mergeResult.replacements)) {
-      replacements[origVal] = replacement;
-    }
     return scf::SCFTileAndFuseResult{fusedProducers, tiledAndFusedOps, loops,
                                      replacements};
   }
 
-  // To keep track of replacements for now just record the map from the
-  // original untiled value to the result number of the for loop. Since the
-  // loop gets potentially replaced during fusion, keeping the value directly
-  // wont work.
-  DenseMap<Value, size_t> origValToResultNumber;
-  for (auto [index, result] : llvm::enumerate(consumer->getResults())) {
-    origValToResultNumber[result] = index;
-  }
+  // Since the loop gets potentially replaced during fusion, we need to track
+  // the mutation of replacement values. To do this, we attach a listener to
+  // update the replacements as they happen.
+  OpBuilder::Listener *previousListener = rewriter.getListener();
+  auto resetListener =
+      llvm::make_scope_exit([&]() { rewriter.setListener(previousListener); });
+  ReplacementListener replaceListener(replacements, previousListener);
+  rewriter.setListener(&replaceListener);
 
   // 2. Typically, the operands of the tiled operation are slices of the
   //    operands of the untiled operation. These are expressed in IR using
@@ -1581,9 +1632,9 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
       worklistCandidates.append(newSlices.value());
       for (auto [index, result] :
            llvm::enumerate(fusableProducerOp->getResults())) {
-        origValToResultNumber[result] = loops.front()->getNumResults() -
-                                        fusableProducerOp->getNumResults() +
-                                        index;
+        replacements[result] = loops.front()->getResult(
+            loops.front()->getNumResults() -
+            fusableProducerOp->getNumResults() + index);
       }
     }
     if (Operation *tiledAndFusedOp =
@@ -1595,11 +1646,6 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
     if (failed(sliceTracker.insertAndApplyPatterns(worklistCandidates))) {
       return rewriter.notifyMatchFailure(consumer, "cleanup patterns failed");
     }
-  }
-
-  DenseMap<Value, Value> replacements;
-  for (auto [origVal, resultNumber] : origValToResultNumber) {
-    replacements[origVal] = loops.front()->getResult(resultNumber);
   }
 
   return scf::SCFTileAndFuseResult{fusedProducers, tiledAndFusedOps, loops,

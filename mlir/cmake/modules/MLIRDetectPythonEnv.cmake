@@ -95,5 +95,17 @@ function(mlir_detect_nanobind_install)
     endif()
     message(STATUS "found (${PACKAGE_DIR})")
     set(nanobind_DIR "${PACKAGE_DIR}" PARENT_SCOPE)
+    execute_process(
+      COMMAND "${Python3_EXECUTABLE}"
+      -c "import nanobind;print(nanobind.include_dir(), end='')"
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      RESULT_VARIABLE STATUS
+      OUTPUT_VARIABLE PACKAGE_DIR
+      ERROR_QUIET)
+    if(NOT STATUS EQUAL "0")
+      message(STATUS "not found (install via 'pip install nanobind' or set nanobind_DIR)")
+      return()
+    endif()
+    set(nanobind_INCLUDE_DIR "${PACKAGE_DIR}" PARENT_SCOPE)
   endif()
 endfunction()

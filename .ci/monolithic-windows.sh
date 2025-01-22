@@ -28,6 +28,8 @@ fi
 
 sccache --zero-stats
 function at-exit {
+  retcode=$?
+
   mkdir -p artifacts
   sccache --show-stats >> artifacts/sccache_stats.txt
 
@@ -36,7 +38,7 @@ function at-exit {
   if command -v buildkite-agent 2>&1 >/dev/null
   then
     python "${MONOREPO_ROOT}"/.ci/generate_test_report.py ":windows: Windows x64 Test Results" \
-      "windows-x64-test-results" "${BUILD_DIR}"/test-results.*.xml
+      "windows-x64-test-results" $retcode "${BUILD_DIR}"/test-results.*.xml
   fi
 }
 trap at-exit EXIT

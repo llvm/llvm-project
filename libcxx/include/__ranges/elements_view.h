@@ -171,7 +171,7 @@ class elements_view<_View, _Np>::__iterator
   template <bool>
   friend class __sentinel;
 
-  using _Base = __maybe_const<_Const, _View>;
+  using _Base _LIBCPP_NODEBUG = __maybe_const<_Const, _View>;
 
   iterator_t<_Base> __current_ = iterator_t<_Base>();
 
@@ -335,7 +335,7 @@ template <input_range _View, size_t _Np>
 template <bool _Const>
 class elements_view<_View, _Np>::__sentinel {
 private:
-  using _Base                                        = __maybe_const<_Const, _View>;
+  using _Base _LIBCPP_NODEBUG                        = __maybe_const<_Const, _View>;
   _LIBCPP_NO_UNIQUE_ADDRESS sentinel_t<_Base> __end_ = sentinel_t<_Base>();
 
   template <bool>

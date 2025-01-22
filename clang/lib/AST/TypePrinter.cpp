@@ -1000,6 +1000,8 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
     OS << " __arm_streaming_compatible";
   if (SMEBits & FunctionType::SME_PStateSMEnabledMask)
     OS << " __arm_streaming";
+  if (SMEBits & FunctionType::SME_AgnosticZAStateMask)
+    OS << "__arm_agnostic(\"sme_za_state\")";
   if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_Preserves)
     OS << " __arm_preserves(\"za\")";
   if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_In)
@@ -2000,6 +2002,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::CmseNSCall:
   case attr::AnnotateType:
   case attr::WebAssemblyFuncref:
+  case attr::ArmAgnostic:
   case attr::ArmStreaming:
   case attr::ArmStreamingCompatible:
   case attr::ArmIn:

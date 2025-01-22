@@ -149,7 +149,7 @@ ConvertTosaConv2DOp::matchAndRewrite(Operation *op,
       op->getLoc(), newTosaConv2DOpType, tosaConv2DOp.getInput(),
       tosaConv2DOp.getWeight(), tosaConv2DOp.getBias(),
       tosaConv2DOp.getPadAttr(), tosaConv2DOp.getStrideAttr(),
-      tosaConv2DOp.getDilationAttr());
+      tosaConv2DOp.getDilationAttr(), tosaConv2DOp.getAccTypeAttr());
 
   // Create rescale to quantized type
   double inputScale = inputQType.getScale();

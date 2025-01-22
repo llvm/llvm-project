@@ -19,8 +19,9 @@ Macros:
 
 */
 
-#if 0
-#else // 0
+#if defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/stdbool.h>
+#else
 #  include <__config>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -38,6 +39,6 @@ Macros:
 #    undef __bool_true_false_are_defined
 #    define __bool_true_false_are_defined 1
 #  endif
-#endif // 0
+#endif // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_STDBOOL_H

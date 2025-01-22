@@ -205,7 +205,7 @@ InputSection *ARM64::getThunkBranchTarget(InputSection *thunk) const {
   assert(isa<InputSection *>(reloc.referent) &&
          "ARM64 thunk reloc is expected to point to an InputSection");
 
-  return reloc.referent.dyn_cast<InputSection *>();
+  return cast<InputSection *>(reloc.referent);
 }
 
 uint32_t ARM64::getICFSafeThunkSize() const { return sizeof(icfSafeThunkCode); }

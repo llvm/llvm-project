@@ -302,7 +302,7 @@ size_t SymbolFileBreakpad::ParseBlocksRecursive(Function &func) {
   blocks.push_back(&func.GetBlock(false));
 
   size_t blocks_added = 0;
-  addr_t func_base = func.GetAddressRange().GetBaseAddress().GetOffset();
+  addr_t func_base = func.GetAddress().GetOffset();
   CompUnitData &data = m_cu_data->GetEntryRef(comp_unit->GetID()).data;
   LineIterator It(*m_objfile_sp, Record::Func, data.bookmark),
       End(*m_objfile_sp);
@@ -396,7 +396,7 @@ SymbolFileBreakpad::ResolveSymbolContext(const Address &so_addr,
         Block &block = func_sp->GetBlock(true);
         sc.block = block.FindInnermostBlockByOffset(
             so_addr.GetFileAddress() -
-            sc.function->GetAddressRange().GetBaseAddress().GetFileAddress());
+            sc.function->GetAddress().GetFileAddress());
         if (sc.block)
           result |= eSymbolContextBlock;
       }

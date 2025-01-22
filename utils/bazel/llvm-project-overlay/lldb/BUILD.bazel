@@ -1071,6 +1071,7 @@ cc_binary(
         "//lldb:APIHeaders",
         "//lldb:Headers",
         "//lldb:Host",
+        "//lldb:Utility",
         "//lldb:liblldb.wrapper",
         "//llvm:Option",
         "//llvm:Support",

@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -std=c++98 -pedantic-errors -verify=expected,cxx98 %s
-// RUN: %clang_cc1 -std=c++11 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++14 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++17 -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++20 -pedantic-errors -verify=expected,since-cxx20 %s
-// RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected,since-cxx20,since-cxx23 %s
-// RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected,since-cxx20,since-cxx23,since-cxx26 %s
+// RUN: %clang_cc1 -std=c++11 -pedantic-errors -verify=expected,since-cxx11,cxx11-23 %s
+// RUN: %clang_cc1 -std=c++14 -pedantic-errors -verify=expected,since-cxx11,cxx11-23 %s
+// RUN: %clang_cc1 -std=c++17 -pedantic-errors -verify=expected,since-cxx11,cxx11-23 %s
+// RUN: %clang_cc1 -std=c++20 -pedantic-errors -verify=expected,since-cxx11,cxx11-23,since-cxx20 %s
+// RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected,since-cxx11,cxx11-23,since-cxx20,since-cxx23 %s
+// RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected,since-cxx11,since-cxx20,since-cxx23,since-cxx26 %s
 
 
 int main() {} // required for cwg2811
@@ -14,14 +14,14 @@ namespace cwg2811 { // cwg2811: 3.5
 void f() {
   (void)[&] {
     using T = decltype(main);
-    // expected-error@-1 {{referring to 'main' within an expression is a Clang extension}}
+    // since-cxx11-error@-1 {{referring to 'main' within an expression is a Clang extension}}
   };
   using T2 = decltype(main);
-  // expected-error@-1 {{referring to 'main' within an expression is a Clang extension}}
+  // since-cxx11-error@-1 {{referring to 'main' within an expression is a Clang extension}}
 }
 
 using T = decltype(main);
-// expected-error@-1 {{referring to 'main' within an expression is a Clang extension}}
+// since-cxx11-error@-1 {{referring to 'main' within an expression is a Clang extension}}
 
 int main();
 
@@ -47,14 +47,19 @@ void f() {
 #endif
 } // namespace cwg2813
 
-namespace cwg2819 { // cwg2819: 19 tentatively ready 2023-12-01
-
-#if __cpp_constexpr >= 202306L
+namespace cwg2819 { // cwg2819: 19 c++26
+#if __cplusplus >= 201103L
+  // CWG 2024-04-19: This issue is not a DR.
   constexpr void* p = nullptr;
-  constexpr int* q = static_cast<int*>(p);
-  static_assert(q == nullptr);
+  constexpr int* q = static_cast<int*>(p); // #cwg2819-q
+  // cxx11-23-error@-1 {{constexpr variable 'q' must be initialized by a constant expression}}
+  //   cxx11-23-note@-2 {{cast from 'void *' is not allowed in a constant expression}}
+  static_assert(q == nullptr, "");
+  // cxx11-23-error@-1 {{static assertion expression is not an integral constant expression}}
+  //   cxx11-23-note@-2 {{initializer of 'q' is not a constant expression}}
+  //   cxx11-23-note@#cwg2819-q {{declared here}}
 #endif
-}
+} // namespace cwg2819
 
 namespace cwg2847 { // cwg2847: 19 review 2024-03-01
 
@@ -145,7 +150,7 @@ struct A {
   // FIXME: The index of the pack-index-specifier is printed as a memory address in the diagnostic.
   template<typename U>
   friend struct Ts...[0]::C;
-  // expected-warning-re@-1 {{dependent nested name specifier 'Ts...[{{.*}}]::' for friend template declaration is not supported; ignoring this friend declaration}}
+  // since-cxx26-warning@-1 {{dependent nested name specifier 'Ts...[0]::' for friend template declaration is not supported; ignoring this friend declaration}}
 };
 
 #endif
@@ -169,9 +174,7 @@ void g() {
 } // namespace cwg2877
 
 namespace cwg2881 { // cwg2881: 19
-
 #if __cplusplus >= 202302L
-
 template <typename T> struct A : T {};
 template <typename T> struct B : T {};
 template <typename T> struct C : virtual T { C(T t) : T(t) {} };
@@ -183,12 +186,12 @@ struct O1 : A<Ts>, B<Ts> {
   using B<Ts>::operator();
 };
 
-template <typename Ts> struct O2 : protected Ts { // expected-note {{declared protected here}}
+template <typename Ts> struct O2 : protected Ts { // #cwg2881-O2
   using Ts::operator();
   O2(Ts ts) : Ts(ts) {}
 };
 
-template <typename Ts> struct O3 : private Ts { // expected-note {{declared private here}}
+template <typename Ts> struct O3 : private Ts { // #cwg2881-O3
   using Ts::operator();
   O3(Ts ts) : Ts(ts) {}
 };
@@ -212,7 +215,7 @@ struct O5 : private C<Ts>, D<Ts> {
 
 // This is only invalid if we call T's call operator.
 template <typename T, typename U>
-struct O6 : private T, U { // expected-note {{declared private here}}
+struct O6 : private T, U { // #cwg2881-O6
   using T::operator();
   using U::operator();
   O6(T t, U u) : T(t), U(u) {}
@@ -222,14 +225,26 @@ void f() {
   int x;
   auto L1 = [=](this auto&& self) { (void) &x; };
   auto L2 = [&](this auto&& self) { (void) &x; };
-  O1<decltype(L1)>{L1, L1}(); // expected-error {{inaccessible due to ambiguity}}
-  O1<decltype(L2)>{L2, L2}(); // expected-error {{inaccessible due to ambiguity}}
-  O2{L1}(); // expected-error {{must derive publicly from the lambda}}
-  O3{L1}(); // expected-error {{must derive publicly from the lambda}}
+  O1<decltype(L1)>{L1, L1}();
+  /* since-cxx23-error-re@-1 {{inaccessible due to ambiguity:
+    struct cwg2881::O1<class (lambda at {{.+}})> -> A<(lambda at {{.+}})> -> class (lambda at {{.+}})
+    struct cwg2881::O1<class (lambda at {{.+}})> -> B<(lambda at {{.+}})> -> class (lambda at {{.+}})}}*/
+  O1<decltype(L2)>{L2, L2}();
+  /* since-cxx23-error-re@-1 {{inaccessible due to ambiguity:
+    struct cwg2881::O1<class (lambda at {{.+}})> -> A<(lambda at {{.+}})> -> class (lambda at {{.+}})
+    struct cwg2881::O1<class (lambda at {{.+}})> -> B<(lambda at {{.+}})> -> class (lambda at {{.+}})}}*/
+  O2{L1}();
+  // since-cxx23-error-re@-1 {{invalid explicit object parameter type 'cwg2881::O2<(lambda at {{.+}})>' in lambda with capture; the type must derive publicly from the lambda}}
+  //   since-cxx23-note@#cwg2881-O2 {{declared protected here}}
+  O3{L1}();
+  // since-cxx23-error-re@-1 {{invalid explicit object parameter type 'cwg2881::O3<(lambda at {{.+}})>' in lambda with capture; the type must derive publicly from the lambda}}
+  //   since-cxx23-note@#cwg2881-O3 {{declared private here}}
   O4{L1}();
   O5{L1}();
   O6 o{L1, L2};
-  o.decltype(L1)::operator()(); // expected-error {{must derive publicly from the lambda}}
+  o.decltype(L1)::operator()();
+  // since-cxx23-error-re@-1 {{invalid explicit object parameter type 'cwg2881::O6<(lambda at {{.+}}), (lambda at {{.+}})>' in lambda with capture; the type must derive publicly from the lambda}}
+  //   since-cxx23-note@#cwg2881-O6 {{declared private here}}
   o.decltype(L1)::operator()(); // No error here because we've already diagnosed this method.
   o.decltype(L2)::operator()();
 }
@@ -238,12 +253,14 @@ void f2() {
   int x = 0;
   auto lambda = [x] (this auto self) { return x; };
   using Lambda = decltype(lambda);
-  struct D : private Lambda { // expected-note {{declared private here}}
+  struct D : private Lambda { // #cwg2881-D
     D(Lambda l) : Lambda(l) {}
     using Lambda::operator();
     friend Lambda;
   } d(lambda);
-  d(); // expected-error {{must derive publicly from the lambda}}
+  d();
+  // since-cxx23-error@-1 {{invalid explicit object parameter type 'D' in lambda with capture; the type must derive publicly from the lambda}}
+  //   since-cxx23-note@#cwg2881-D {{declared private here}}
 }
 
 template <typename L>
@@ -258,18 +275,20 @@ struct Indirect : T {
 };
 
 template<typename T>
-struct Ambiguous : Indirect<T>, T { // expected-warning {{is inaccessible due to ambiguity}}
+struct Ambiguous : Indirect<T>, T {
+/* since-cxx23-warning-re@-1 {{direct base '(lambda at {{.+}})' is inaccessible due to ambiguity:
+    struct cwg2881::Ambiguous<class (lambda at {{.+}})> -> Indirect<(lambda at {{.+}})> -> class (lambda at {{.+}})
+    struct cwg2881::Ambiguous<class (lambda at {{.+}})> -> class (lambda at {{.+}})}}*/
+//   since-cxx23-note-re@#cwg2881-f4 {{in instantiation of template class 'cwg2881::Ambiguous<(lambda at {{.+}})>' requested here}}
+//   since-cxx34-note-re@#cwg2881-f4-call {{while substituting deduced template arguments into function template 'f4' [with L = (lambda at {{.+}})]}}
   using Indirect<T>::operator();
 };
 
 template <typename L>
-constexpr auto f3(L l) -> decltype(Private<L>{l}()) { return l(); }
-// expected-note@-1 {{must derive publicly from the lambda}}
+constexpr auto f3(L l) -> decltype(Private<L>{l}()) { return l(); } // #cwg2881-f3
 
 template <typename L>
-constexpr auto f4(L l) -> decltype(Ambiguous<L>{{l}, l}()) { return l(); }
-// expected-note@-1 {{is inaccessible due to ambiguity}}
-// expected-note@-2 {{in instantiation of template class}}
+constexpr auto f4(L l) -> decltype(Ambiguous<L>{{l}, l}()) { return l(); } // #cwg2881-f4
 
 template<typename T>
 concept is_callable = requires(T t) { { t() }; };
@@ -277,15 +296,19 @@ concept is_callable = requires(T t) { { t() }; };
 void g() {
   int x = 0;
   auto lambda = [x](this auto self) {};
-  f3(lambda); // expected-error {{no matching function for call to 'f3'}}
-  f4(lambda); // expected-error {{no matching function for call to 'f4'}}
-  // expected-note@-1 {{while substituting deduced template arguments into function template 'f4'}}
+  f3(lambda);
+  // since-cxx23-error@-1 {{no matching function for call to 'f3'}}
+  //   since-cxx23-note-re@#cwg2881-f3 {{candidate template ignored: substitution failure [with L = (lambda at {{.+}})]: invalid explicit object parameter type 'cwg2881::Private<(lambda at {{.+}})>' in lambda with capture; the type must derive publicly from the lambda}}
+  f4(lambda); // #cwg2881-f4-call
+  // expected-error@-1 {{no matching function for call to 'f4'}}
+  //   expected-note-re@-2 {{while substituting deduced template arguments into function template 'f4' [with L = (lambda at {{.+}})]}}
+  /*   expected-note-re@#cwg2881-f4 {{candidate template ignored: substitution failure [with L = (lambda at {{.+}})]: lambda '(lambda at {{.+}})' is inaccessible due to ambiguity:
+    struct cwg2881::Ambiguous<class (lambda at {{.+}})> -> Indirect<(lambda at {{.+}})> -> class (lambda at {{.+}})
+    struct cwg2881::Ambiguous<class (lambda at {{.+}})> -> class (lambda at {{.+}})}}*/
   static_assert(!is_callable<Private<decltype(lambda)>>);
   static_assert(!is_callable<Ambiguous<decltype(lambda)>>);
 }
-
 #endif
-
 } // namespace cwg2881
 
 namespace cwg2882 { // cwg2882: 2.7

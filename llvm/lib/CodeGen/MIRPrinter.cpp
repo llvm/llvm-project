@@ -133,6 +133,9 @@ public:
   void convertMachineMetadataNodes(yaml::MachineFunction &YMF,
                                    const MachineFunction &MF,
                                    MachineModuleSlotTracker &MST);
+  void convertCalledGlobals(yaml::MachineFunction &YMF,
+                            const MachineFunction &MF,
+                            MachineModuleSlotTracker &MST);
 
 private:
   void initRegisterMaskIds(const MachineFunction &MF);
@@ -268,6 +271,8 @@ void MIRPrinter::print(const MachineFunction &MF) {
   // Convert machine metadata collected during the print of the machine
   // function.
   convertMachineMetadataNodes(YamlMF, MF, MST);
+
+  convertCalledGlobals(YamlMF, MF, MST);
 
   yaml::Output Out(OS);
   if (!SimplifyMIR)
@@ -555,7 +560,7 @@ void MIRPrinter::convertCallSiteObjects(yaml::MachineFunction &YMF,
   const auto *TRI = MF.getSubtarget().getRegisterInfo();
   for (auto CSInfo : MF.getCallSitesInfo()) {
     yaml::CallSiteInfo YmlCS;
-    yaml::CallSiteInfo::MachineInstrLoc CallLocation;
+    yaml::MachineInstrLoc CallLocation;
 
     // Prepare instruction position.
     MachineBasicBlock::const_instr_iterator CallI = CSInfo.first->getIterator();
@@ -594,6 +599,29 @@ void MIRPrinter::convertMachineMetadataNodes(yaml::MachineFunction &YMF,
     MD.second->print(StrOS, MST, MF.getFunction().getParent());
     YMF.MachineMetadataNodes.push_back(NS);
   }
+}
+
+void MIRPrinter::convertCalledGlobals(yaml::MachineFunction &YMF,
+                                      const MachineFunction &MF,
+                                      MachineModuleSlotTracker &MST) {
+  for (const auto &[CallInst, CG] : MF.getCalledGlobals()) {
+    yaml::MachineInstrLoc CallSite;
+    CallSite.BlockNum = CallInst->getParent()->getNumber();
+    CallSite.Offset = std::distance(CallInst->getParent()->instr_begin(),
+                                    CallInst->getIterator());
+
+    yaml::CalledGlobal YamlCG{CallSite, CG.Callee->getName().str(),
+                              CG.TargetFlags};
+    YMF.CalledGlobals.push_back(YamlCG);
+  }
+
+  // Sort by position of call instructions.
+  llvm::sort(YMF.CalledGlobals.begin(), YMF.CalledGlobals.end(),
+             [](yaml::CalledGlobal A, yaml::CalledGlobal B) {
+               if (A.CallSite.BlockNum == B.CallSite.BlockNum)
+                 return A.CallSite.Offset < B.CallSite.Offset;
+               return A.CallSite.BlockNum < B.CallSite.BlockNum;
+             });
 }
 
 void MIRPrinter::convert(yaml::MachineFunction &MF,

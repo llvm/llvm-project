@@ -840,8 +840,10 @@ public:
   bool matchRedundantBinOpInEquality(MachineInstr &MI,
                                      BuildFnTy &MatchInfo) const;
 
-  /// Match shifts greater or equal to the bitwidth of the operation.
-  bool matchShiftsTooBig(MachineInstr &MI) const;
+  /// Match shifts greater or equal to the range (the bitwidth of the result
+  /// datatype, or the effective bitwidth of the source value).
+  bool matchShiftsTooBig(MachineInstr &MI,
+                         std::optional<int64_t> &MatchInfo) const;
 
   /// Match constant LHS ops that should be commuted.
   bool matchCommuteConstantToRHS(MachineInstr &MI) const;
@@ -863,6 +865,9 @@ public:
 
   /// Combine select to integer min/max.
   bool matchSelectIMinMax(const MachineOperand &MO, BuildFnTy &MatchInfo) const;
+
+  /// Tranform (neg (min/max x, (neg x))) into (max/min x, (neg x)).
+  bool matchSimplifyNegMinMax(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
   /// Combine selects.
   bool matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo) const;

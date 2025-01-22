@@ -84,6 +84,7 @@ public:
   static PythonObject ToSWIGWrapper(lldb::ValueObjectSP value_sp);
   static PythonObject ToSWIGWrapper(lldb::TargetSP target_sp);
   static PythonObject ToSWIGWrapper(lldb::ProcessSP process_sp);
+  static PythonObject ToSWIGWrapper(lldb::ModuleSP module_sp);
   static PythonObject ToSWIGWrapper(lldb::ThreadPlanSP thread_plan_sp);
   static PythonObject ToSWIGWrapper(lldb::BreakpointSP breakpoint_sp);
   static PythonObject ToSWIGWrapper(Status &&status);

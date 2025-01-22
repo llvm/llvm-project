@@ -699,11 +699,11 @@ FailureOr<GenericOp> interchangeGenericOp(RewriterBase &rewriter,
                                           GenericOp genericOp,
                                           ArrayRef<unsigned> interchangeVector);
 
-/// Create a GenericOp from the given named operation `namedOp` and replace
-/// namedOp.
-/// Return failure if `namedOp` is a GenericOp or misses a region builder.
+/// Create a GenericOp from the given named operation `linalgOp` and replace
+/// the given `linalgOp`.
+/// Return failure if `linalgOp` is a GenericOp or misses a region builder.
 FailureOr<GenericOp> generalizeNamedOp(RewriterBase &rewriter,
-                                       LinalgOp namedOp);
+                                       LinalgOp linalgOp);
 
 /// Create a namedOp from the given GenericOp and replace the GenericOp.
 /// Currently we can specialize only trivial linalg copy operations.

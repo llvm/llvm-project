@@ -832,12 +832,11 @@ bool MachineCSEImpl::ProcessBlockPRE(MachineDominatorTree *DT,
     if (!isPRECandidate(&MI, PhysRefs))
       continue;
 
-    if (!PREMap.count(&MI)) {
-      PREMap[&MI] = MBB;
+    auto [It, Inserted] = PREMap.try_emplace(&MI, MBB);
+    if (Inserted)
       continue;
-    }
 
-    auto MBB1 = PREMap[&MI];
+    auto *MBB1 = It->second;
     assert(
         !DT->properlyDominates(MBB, MBB1) &&
         "MBB cannot properly dominate MBB1 while DFS through dominators tree!");

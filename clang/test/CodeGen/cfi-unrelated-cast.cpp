@@ -29,7 +29,7 @@ class C1 {
   virtual void f() {}
 };
 
-C1 *f1() {
+void f1() {
   myalloc<C1> allocator;
   (void)allocator.allocate(16);
   (void)allocator.allocate(16, 0);

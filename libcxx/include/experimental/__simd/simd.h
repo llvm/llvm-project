@@ -43,8 +43,8 @@ public:
 // TODO: implement simd class
 template <class _Tp, class _Abi>
 class simd : public __simd_int_operators<simd<_Tp, _Abi>, __simd_operations<_Tp, _Abi>, is_integral_v<_Tp>> {
-  using _Impl    = __simd_operations<_Tp, _Abi>;
-  using _Storage = typename _Impl::_SimdStorage;
+  using _Impl _LIBCPP_NODEBUG    = __simd_operations<_Tp, _Abi>;
+  using _Storage _LIBCPP_NODEBUG = typename _Impl::_SimdStorage;
 
   _Storage __s_;
 

@@ -4,6 +4,7 @@
 // RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
 
 namespace std {
   __extension__ typedef __SIZE_TYPE__ size_t;
@@ -12,7 +13,7 @@ namespace std {
     const T *p; size_t n;
     initializer_list(const T *p, size_t n);
   };
-}
+} // namespace std
 
 namespace cwg1004 { // cwg1004: 5
   template<typename> struct A {};
@@ -43,7 +44,7 @@ namespace cwg1004 { // cwg1004: 5
   // expected-error@-1 {{is a constructor name}}
   //   expected-note@#cwg1004-t {{in instantiation of default argument}}
   Third<A<int> > t; // #cwg1004-t
-}
+} // namespace cwg1004
 
 namespace cwg1042 { // cwg1042: 3.5
 #if __cplusplus >= 201402L
@@ -58,7 +59,7 @@ namespace cwg1042 { // cwg1042: 3.5
   // list in this mode.
   using foo [[]] = int;
 #endif
-}
+} // namespace cwg1042
 
 namespace cwg1048 { // cwg1048: 3.6
   struct A {};
@@ -76,7 +77,7 @@ namespace cwg1048 { // cwg1048: 3.6
     }
   } (0);
 #endif
-}
+} // namespace cwg1048
 
 namespace cwg1054 { // cwg1054: no
   // FIXME: Test is incomplete.
@@ -89,7 +90,7 @@ namespace cwg1054 { // cwg1054: no
     a;
     // expected-warning@-1 {{expression result unused; assign into a variable to force a volatile load}}
   }
-}
+} // namespace cwg1054
 
 namespace cwg1070 { // cwg1070: 3.5
 #if __cplusplus >= 201103L
@@ -108,4 +109,4 @@ namespace cwg1070 { // cwg1070: 3.5
   };
   C c = {};
 #endif
-}
+} // namespace cwg1070

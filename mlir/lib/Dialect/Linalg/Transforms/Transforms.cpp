@@ -1656,8 +1656,8 @@ void linalg::populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
 }
 
 void linalg::populateDecomposePackUnpackPatterns(RewritePatternSet &patterns) {
-  // TODO: Add and test patterns for tensor.unpack
   patterns.add<DecomposeOuterUnitDimsPackOpPattern>(patterns.getContext());
+  patterns.add<DecomposeOuterUnitDimsUnPackOpPattern>(patterns.getContext());
 }
 
 void linalg::populateDecomposePadPatterns(RewritePatternSet &patterns) {

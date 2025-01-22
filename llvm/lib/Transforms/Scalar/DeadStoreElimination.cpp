@@ -2262,6 +2262,14 @@ struct DSEState {
   bool eliminateDeadDefs(const MemoryDefWrapper &KillingDefWrapper);
 };
 
+// Return true if "Arg" is function local and isn't captured before "CB".
+bool isFuncLocalAndNotCaptured(Value *Arg, const CallBase *CB,
+                               EarliestEscapeAnalysis &EA) {
+  const Value *UnderlyingObj = getUnderlyingObject(Arg);
+  return isIdentifiedFunctionLocal(UnderlyingObj) &&
+         EA.isNotCapturedBefore(UnderlyingObj, CB, /*OrAt*/ true);
+}
+
 SmallVector<MemoryLocation, 1>
 DSEState::getInitializesArgMemLoc(const Instruction *I) {
   const CallBase *CB = dyn_cast<CallBase>(I);
@@ -2277,6 +2285,13 @@ DSEState::getInitializesArgMemLoc(const Instruction *I) {
       Inits = InitializesAttr.getValueAsConstantRangeList();
 
     Value *CurArg = CB->getArgOperand(Idx);
+    // Check whether "CurArg" could alias with global variables. We require
+    // either it's function local and isn't captured before or the "CB" only
+    // accesses arg or inaccessible mem.
+    if (!Inits.empty() && !CB->onlyAccessesInaccessibleMemOrArgMem() &&
+        !isFuncLocalAndNotCaptured(CurArg, CB, EA))
+      Inits = ConstantRangeList();
+
     // We don't perform incorrect DSE on unwind edges in the current function,
     // and use the "initializes" attribute to kill dead stores if:
     // - The call does not throw exceptions, "CB->doesNotThrow()".

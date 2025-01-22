@@ -1489,6 +1489,8 @@ Expr ScriptParser::readPrimary() {
     Expr e = readPrimary();
     return [=] { return -e().getValue(); };
   }
+  if (consume("+"))
+    return readPrimary();
 
   StringRef tok = next();
   std::string location = getCurrentLocation();

@@ -66,7 +66,7 @@ class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
 
 public:
   // exception_ptr is basically a COW string.
-  using __trivially_relocatable = exception_ptr;
+  using __trivially_relocatable _LIBCPP_NODEBUG = exception_ptr;
 
   _LIBCPP_HIDE_FROM_ABI exception_ptr() _NOEXCEPT : __ptr_() {}
   _LIBCPP_HIDE_FROM_ABI exception_ptr(nullptr_t) _NOEXCEPT : __ptr_() {}

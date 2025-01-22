@@ -661,6 +661,11 @@ backend:DirectX:
 
 backend:SPIR-V:
   - clang/lib/Driver/ToolChains/SPIRV.*
+  - clang/lib/Sema/SemaSPIRV.cpp
+  - clang/include/clang/Sema/SemaSPIRV.h
+  - clang/include/clang/Basic/BuiltinsSPIRV.td
+  - clang/test/CodeGenSPIRV/**
+  - clang/test/SemaSPIRV/**
   - llvm/lib/Target/SPIRV/**
   - llvm/test/CodeGen/SPIRV/**
   - llvm/test/Frontend/HLSL/**

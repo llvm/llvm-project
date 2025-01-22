@@ -291,8 +291,9 @@ long double    truncl(long double x);
 
 */
 
-#  if 0
-#  else // 0
+#  if defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#    include <__cxx03/math.h>
+#  else
 #    include <__config>
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -504,7 +505,7 @@ using std::__math::trunc;
 } // extern "C++"
 
 #    endif // __cplusplus
-#  endif   // 0
+#  endif   // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #else // _LIBCPP_MATH_H
 

@@ -195,12 +195,14 @@ template <class T, class Allocator, class Predicate>
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/forward_list>
+#else
 #  include <__algorithm/comp.h>
 #  include <__algorithm/lexicographical_compare.h>
 #  include <__algorithm/lexicographical_compare_three_way.h>
 #  include <__algorithm/min.h>
+#  include <__assert>
 #  include <__config>
 #  include <__cstddef/nullptr_t.h>
 #  include <__iterator/distance.h>
@@ -315,7 +317,8 @@ struct __forward_begin_node {
 };
 
 template <class _Tp, class _VoidPtr>
-using __begin_node_of = __forward_begin_node<__rebind_pointer_t<_VoidPtr, __forward_list_node<_Tp, _VoidPtr> > >;
+using __begin_node_of _LIBCPP_NODEBUG =
+    __forward_begin_node<__rebind_pointer_t<_VoidPtr, __forward_list_node<_Tp, _VoidPtr> > >;
 
 template <class _Tp, class _VoidPtr>
 struct __forward_list_node : public __begin_node_of<_Tp, _VoidPtr> {
@@ -765,8 +768,14 @@ public:
     return std::min<size_type>(__node_traits::max_size(this->__alloc_), numeric_limits<difference_type>::max());
   }
 
-  _LIBCPP_HIDE_FROM_ABI reference front() { return __base::__before_begin()->__next_->__get_value(); }
-  _LIBCPP_HIDE_FROM_ABI const_reference front() const { return __base::__before_begin()->__next_->__get_value(); }
+  _LIBCPP_HIDE_FROM_ABI reference front() {
+    _LIBCPP_ASSERT_NON_NULL(!empty(), "forward_list::front called on an empty list");
+    return __base::__before_begin()->__next_->__get_value();
+  }
+  _LIBCPP_HIDE_FROM_ABI const_reference front() const {
+    _LIBCPP_ASSERT_NON_NULL(!empty(), "forward_list::front called on an empty list");
+    return __base::__before_begin()->__next_->__get_value();
+  }
 
 #  ifndef _LIBCPP_CXX03_LANG
 #    if _LIBCPP_STD_VER >= 17
@@ -1084,6 +1093,7 @@ void forward_list<_Tp, _Alloc>::push_front(const value_type& __v) {
 
 template <class _Tp, class _Alloc>
 void forward_list<_Tp, _Alloc>::pop_front() {
+  _LIBCPP_ASSERT_NON_NULL(!empty(), "forward_list::pop_front called on an empty list");
   __node_pointer __p                = __base::__before_begin()->__next_;
   __base::__before_begin()->__next_ = __p->__next_;
   this->__delete_node(__p);
@@ -1586,6 +1596,6 @@ _LIBCPP_POP_MACROS
 #    include <type_traits>
 #    include <typeinfo>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_FORWARD_LIST

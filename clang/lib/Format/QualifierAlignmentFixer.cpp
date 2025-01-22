@@ -348,7 +348,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
       }
     }
 
-    if (Next->is(tok::kw_auto))
+    if (Next && Next->is(tok::kw_auto))
       TypeToken = Next;
 
     // Place the Qualifier at the end of the list of qualifiers.
@@ -386,7 +386,8 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
   // For left qualifiers preceeded by nothing, a template declaration, or *,&,&&
   // we only perform sorting.
   if (!TypeToken || TypeToken->isPointerOrReference() ||
-      TypeToken->ClosesRequiresClause || TypeToken->ClosesTemplateDeclaration) {
+      TypeToken->ClosesRequiresClause || TypeToken->ClosesTemplateDeclaration ||
+      TypeToken->is(tok::r_square)) {
 
     // Don't sort past a non-configured qualifier token.
     const FormatToken *FirstQual = Tok;

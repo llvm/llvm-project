@@ -174,25 +174,26 @@
 
 // Test implicit library search paths are supplied to the linker, after any
 // search paths specified by the user. <sdk-root>/target/lib is implicitly
-// added if it exists and no --sysroot is specified. CRT objects are found
-// there. "." is always implicitly added to library search paths. This is
-// long-standing behavior, unique to PlayStation toolchains.
+// added if it exists. CRT objects are found there. "." is always implicitly
+// added to library search paths. This is long-standing behavior, unique to
+// PlayStation toolchains.
 
 // RUN: rm -rf %t.dir && mkdir %t.dir
 // RUN: env SCE_PROSPERO_SDK_DIR=%t.dir %clang --target=x64_64-sie-ps5 %s -### -Luser 2>&1 | FileCheck --check-prefixes=CHECK-NO-TARGETLIB %s
-// RUN: env SCE_PROSPERO_SDK_DIR=%t.dir %clang --target=x64_64-sie-ps5 %s -### -Luser --sysroot=%t.dir 2>&1 | FileCheck --check-prefixes=CHECK-NO-TARGETLIB %s
+// RUN: %clang --target=x64_64-sie-ps5 %s -### -Luser --sysroot=%t.dir 2>&1 | FileCheck --check-prefixes=CHECK-NO-TARGETLIB %s
 
 // CHECK-NO-TARGETLIB: {{ld(\.exe)?}}"
 // CHECK-NO-TARGETLIB-SAME: "-Luser"
 // CHECK-NO-TARGETLIB-NOT: "-L{{.*[/\\]}}target/lib"
 // CHECK-NO-TARGETLIB-SAME: "-L."
 
-// RUN: mkdir -p %t.dir/target/lib
-// RUN: touch %t.dir/target/lib/crti.o
-// RUN: env SCE_PROSPERO_SDK_DIR=%t.dir %clang --target=x64_64-sie-ps5 %s -### -Luser 2>&1 | FileCheck --check-prefixes=CHECK-TARGETLIB %s
+// RUN: mkdir -p %t.dir/myroot/target/lib
+// RUN: touch %t.dir/myroot/target/lib/crti.o
+// RUN: env SCE_PROSPERO_SDK_DIR=%t.dir/myroot %clang --target=x64_64-sie-ps5 %s -### -Luser 2>&1 | FileCheck --check-prefixes=CHECK-TARGETLIB %s
+// RUN: %clang --target=x64_64-sie-ps5 %s -### -Luser --sysroot=%t.dir/myroot 2>&1 | FileCheck --check-prefixes=CHECK-TARGETLIB %s
 
 // CHECK-TARGETLIB: {{ld(\.exe)?}}"
 // CHECK-TARGETLIB-SAME: "-Luser"
-// CHECK-TARGETLIB-SAME: "-L{{.*[/\\]}}target/lib"
+// CHECK-TARGETLIB-SAME: "-L{{.*}}myroot{{/|\\\\}}target{{/|\\\\}}lib"
 // CHECK-TARGETLIB-SAME: "-L."
-// CHECK-TARGETLIB-SAME: "{{.*[/\\]}}target{{/|\\\\}}lib{{/|\\\\}}crti.o"
+// CHECK-TARGETLIB-SAME: "{{.*}}myroot{{/|\\\\}}target{{/|\\\\}}lib{{/|\\\\}}crti.o"

@@ -321,6 +321,25 @@ def SIFIVE_P470 : RISCVProcessorModel<"sifive-p470", SiFiveP400Model,
                                                   [TuneNoSinkSplatOperands,
                                                    TuneVXRMPipelineFlush])>;
 
+defvar SiFiveP500TuneFeatures = [TuneNoDefaultUnroll,
+                                 TuneConditionalCompressedMoveFusion,
+                                 TuneLUIADDIFusion,
+                                 TuneAUIPCADDIFusion,
+                                 TunePostRAScheduler];
+
+def SIFIVE_P550 : RISCVProcessorModel<"sifive-p550", NoSchedModel,
+                                      [Feature64Bit,
+                                       FeatureStdExtI,
+                                       FeatureStdExtZifencei,
+                                       FeatureStdExtM,
+                                       FeatureStdExtA,
+                                       FeatureStdExtF,
+                                       FeatureStdExtD,
+                                       FeatureStdExtC,
+                                       FeatureStdExtZba,
+                                       FeatureStdExtZbb],
+                                      SiFiveP500TuneFeatures>;
+
 def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", SiFiveP600Model,
                                       !listconcat(RVA22U64Features,
                                       [FeatureStdExtV,

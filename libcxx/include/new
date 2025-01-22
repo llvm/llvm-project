@@ -86,8 +86,9 @@ void  operator delete[](void* ptr, void*) noexcept;
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/new>
+#else
 #  include <__config>
 #  include <__new/align_val_t.h>
 #  include <__new/allocate.h>
@@ -118,6 +119,6 @@ void  operator delete[](void* ptr, void*) noexcept;
 #    include <cstdlib>
 #    include <type_traits>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_NEW

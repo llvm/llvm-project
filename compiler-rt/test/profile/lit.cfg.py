@@ -31,7 +31,7 @@ if (
 target_is_msvc = bool(re.match(r".*-windows-msvc$", config.target_triple))
 
 # Whether continous profile collection (%c) requires runtime counter relocation on this platform
-runtime_reloc = bool(config.host_os in ["AIX"])
+runtime_reloc = bool(config.host_os in ["AIX", "Linux"])
 
 if config.host_os in ["Linux"]:
     extra_link_flags = ["-ldl"]
@@ -210,3 +210,6 @@ if config.android:
 
 if config.have_curl:
     config.available_features.add("curl")
+
+if config.host_os in ("AIX", "Darwin", "Linux"):
+    config.available_features.add("continuous-mode")

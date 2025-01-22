@@ -124,9 +124,8 @@ define <vscale x 2 x half> @vuitofp_nxv2f16_nxv2i7(<vscale x 2 x i7> %va, <vscal
 ; ZVFH-LABEL: vuitofp_nxv2f16_nxv2i7:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    li a1, 127
-; ZVFH-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
-; ZVFH-NEXT:    vand.vx v9, v8, a1
 ; ZVFH-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; ZVFH-NEXT:    vand.vx v9, v8, a1
 ; ZVFH-NEXT:    vfwcvt.f.xu.v v8, v9, v0.t
 ; ZVFH-NEXT:    ret
 ;

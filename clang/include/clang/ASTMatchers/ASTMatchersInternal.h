@@ -2343,6 +2343,14 @@ MatchTemplateArgLocAt(const TemplateSpecializationTypeLoc &Node,
          InnerMatcher.matches(Node.getArgLoc(Index), Finder, Builder);
 }
 
+inline std::string getDependentName(const DependentScopeDeclRefExpr &node) {
+  return node.getDeclName().getAsString();
+}
+
+inline std::string getDependentName(const DependentNameType &node) {
+  return node.getIdentifier()->getName().str();
+}
+
 } // namespace internal
 
 } // namespace ast_matchers

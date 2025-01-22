@@ -99,7 +99,7 @@ def G_PHI : GenericInstruction {
 }
 
 def G_FRAME_INDEX : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
+  let OutOperandList = (outs ptype0:$dst);
   let InOperandList = (ins unknown:$src2);
   let hasSideEffects = false;
 }

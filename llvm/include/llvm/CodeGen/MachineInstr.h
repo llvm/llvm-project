@@ -957,13 +957,14 @@ public:
     return hasProperty(MCID::Call, Type);
   }
 
-  /// Return true if this is a call instruction that may have an associated
-  /// call site entry in the debug info.
-  bool isCandidateForCallSiteEntry(QueryType Type = IgnoreBundle) const;
+  /// Return true if this is a call instruction that may have an additional
+  /// information associated with it.
+  bool isCandidateForAdditionalCallInfo(QueryType Type = IgnoreBundle) const;
+
   /// Return true if copying, moving, or erasing this instruction requires
-  /// updating Call Site Info (see \ref copyCallSiteInfo, \ref moveCallSiteInfo,
-  /// \ref eraseCallSiteInfo).
-  bool shouldUpdateCallSiteInfo() const;
+  /// updating additional call info (see \ref copyCallInfo, \ref moveCallInfo,
+  /// \ref eraseCallInfo).
+  bool shouldUpdateAdditionalCallInfo() const;
 
   /// Returns true if the specified instruction stops control flow
   /// from executing the instruction immediately following it.  Examples include

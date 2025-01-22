@@ -616,9 +616,11 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
   }
   if (allocateInfo_.gotPinned) {
     std::optional<common::CUDADataAttr> cudaAttr{GetCUDADataAttr(ultimate_)};
-    if (!cudaAttr || *cudaAttr != common::CUDADataAttr::Pinned) {
+    if ((!cudaAttr || *cudaAttr != common::CUDADataAttr::Pinned) &&
+        context.languageFeatures().ShouldWarn(
+            common::UsageWarning::CUDAUsage)) {
       context.Say(name_.source,
-          "Object in ALLOCATE must have PINNED attribute when PINNED option is specified"_err_en_US);
+          "Object in ALLOCATE should have PINNED attribute when PINNED option is specified"_warn_en_US);
     }
   }
   if (allocateInfo_.gotStream) {

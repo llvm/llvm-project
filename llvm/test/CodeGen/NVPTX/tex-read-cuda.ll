@@ -10,7 +10,7 @@ target triple = "nvptx-unknown-cuda"
 declare { float, float, float, float } @llvm.nvvm.tex.unified.1d.v4f32.s32(i64, i32)
 declare i64 @llvm.nvvm.texsurf.handle.internal.p1(ptr addrspace(1))
 
-define void @foo(i64 %img, ptr %red, i32 %idx) {
+define ptx_kernel void @foo(i64 %img, ptr %red, i32 %idx) {
 ; CHECK-LABEL: foo(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
@@ -34,7 +34,7 @@ define void @foo(i64 %img, ptr %red, i32 %idx) {
 
 @tex0 = internal addrspace(1) global i64 0, align 8
 
-define void @bar(ptr %red, i32 %idx) {
+define ptx_kernel void @bar(ptr %red, i32 %idx) {
 ; CHECK-LABEL: bar(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
@@ -57,7 +57,7 @@ define void @bar(ptr %red, i32 %idx) {
 
 declare float @texfunc(i64)
 
-define void @baz(ptr %red, i32 %idx) {
+define ptx_kernel void @baz(ptr %red, i32 %idx) {
 ; CHECK-LABEL: baz(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
@@ -93,8 +93,5 @@ define void @baz(ptr %red, i32 %idx) {
   ret void
 }
 
-!nvvm.annotations = !{!1, !2, !3, !4}
-!1 = !{ptr @foo, !"kernel", i32 1}
-!2 = !{ptr @bar, !"kernel", i32 1}
-!3 = !{ptr addrspace(1) @tex0, !"texture", i32 1}
-!4 = !{ptr @baz, !"kernel", i32 1}
+!nvvm.annotations = !{!1}
+!1 = !{ptr addrspace(1) @tex0, !"texture", i32 1}

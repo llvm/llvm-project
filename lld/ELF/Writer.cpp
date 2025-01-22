@@ -1080,12 +1080,14 @@ static void maybeShuffle(Ctx &ctx,
   }
 }
 
-// Builds section order for handling --symbol-ordering-file.
+// Return section order within an InputSectionDescription.
+// If both --symbol-ordering-file and call graph profile are present, the order
+// file takes precedence, but the call graph profile is still used for symbols
+// that don't appear in the order file.
 static DenseMap<const InputSectionBase *, int> buildSectionOrder(Ctx &ctx) {
   DenseMap<const InputSectionBase *, int> sectionOrder;
-  // Use the rarely used option --call-graph-ordering-file to sort sections.
   if (!ctx.arg.callGraphProfile.empty())
-    return computeCallGraphProfileOrder(ctx);
+    sectionOrder = computeCallGraphProfileOrder(ctx);
 
   if (ctx.arg.symbolOrderingFile.empty())
     return sectionOrder;
@@ -1099,7 +1101,7 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder(Ctx &ctx) {
   // appear in the symbol ordering file have the lowest priority 0.
   // All explicitly mentioned symbols have negative (higher) priorities.
   DenseMap<CachedHashStringRef, SymbolOrderEntry> symbolOrder;
-  int priority = -ctx.arg.symbolOrderingFile.size();
+  int priority = -sectionOrder.size() - ctx.arg.symbolOrderingFile.size();
   for (StringRef s : ctx.arg.symbolOrderingFile)
     symbolOrder.insert({CachedHashStringRef(s), {priority++, false}});
 
@@ -1255,11 +1257,11 @@ static void sortSection(Ctx &ctx, OutputSection &osec,
   }
 }
 
-// If no layout was provided by linker script, we want to apply default
-// sorting for special input sections. This also handles --symbol-ordering-file.
+// Sort sections within each InputSectionDescription.
 template <class ELFT> void Writer<ELFT>::sortInputSections() {
-  // Build the order once since it is expensive.
+  // Assign negative priorities.
   DenseMap<const InputSectionBase *, int> order = buildSectionOrder(ctx);
+  // Assign non-negative priorities due to --shuffle-sections.
   maybeShuffle(ctx, order);
   for (SectionCommand *cmd : ctx.script->sectionCommands)
     if (auto *osd = dyn_cast<OutputDesc>(cmd))

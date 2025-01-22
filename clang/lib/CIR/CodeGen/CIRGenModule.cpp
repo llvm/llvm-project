@@ -115,6 +115,48 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   if (clang::IdentifierInfo *identifier = vd->getIdentifier()) {
     auto varOp = builder.create<cir::GlobalOp>(getLoc(vd->getSourceRange()),
                                                identifier->getName(), type);
+    // TODO(CIR): This code for processing initial values is a placeholder
+    // until class ConstantEmitter is upstreamed and the code for processing
+    // constant expressions is filled out.  Only the most basic handling of
+    // certain constant expressions is implemented for now.
+    const VarDecl *initDecl;
+    const Expr *initExpr = vd->getAnyInitializer(initDecl);
+    if (initExpr) {
+      mlir::Attribute initializer;
+      if (APValue *value = initDecl->evaluateValue()) {
+        switch (value->getKind()) {
+        case APValue::Int: {
+          initializer = builder.getAttr<cir::IntAttr>(type, value->getInt());
+          break;
+        }
+        case APValue::Float: {
+          initializer = builder.getAttr<cir::FPAttr>(type, value->getFloat());
+          break;
+        }
+        case APValue::LValue: {
+          if (value->getLValueBase()) {
+            errorNYI(initExpr->getSourceRange(),
+                     "non-null pointer initialization");
+          } else {
+            if (auto ptrType = mlir::dyn_cast<cir::PointerType>(type)) {
+              initializer = builder.getConstPtrAttr(
+                  ptrType, value->getLValueOffset().getQuantity());
+            } else {
+              llvm_unreachable(
+                  "non-pointer variable initialized with a pointer");
+            }
+          }
+          break;
+        }
+        default:
+          errorNYI(initExpr->getSourceRange(), "unsupported initializer kind");
+          break;
+        }
+      } else {
+        errorNYI(initExpr->getSourceRange(), "non-constant initializer");
+      }
+      varOp.setInitialValueAttr(initializer);
+    }
     theModule.push_back(varOp);
   } else {
     errorNYI(vd->getSourceRange().getBegin(),

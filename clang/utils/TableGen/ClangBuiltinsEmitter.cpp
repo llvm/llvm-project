@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TableGenBackends.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -25,18 +26,28 @@ enum class BuiltinType {
   LibBuiltin,
   LangBuiltin,
   TargetBuiltin,
+  TargetLibBuiltin,
 };
 
 class PrototypeParser {
 public:
   PrototypeParser(StringRef Substitution, const Record *Builtin)
-      : Loc(Builtin->getFieldLoc("Prototype")), Substitution(Substitution) {
+      : Loc(Builtin->getFieldLoc("Prototype")), Substitution(Substitution),
+        EnableOpenCLLong(Builtin->getValueAsBit("EnableOpenCLLong")) {
     ParsePrototype(Builtin->getValueAsString("Prototype"));
   }
 
 private:
   void ParsePrototype(StringRef Prototype) {
     Prototype = Prototype.trim();
+
+    // Some builtins don't have an expressible prototype, simply emit an empty
+    // string for them.
+    if (Prototype.empty()) {
+      Type = "";
+      return;
+    }
+
     ParseTypes(Prototype);
   }
 
@@ -108,8 +119,14 @@ private:
     } else if (T.consume_back("&")) {
       ParseType(T);
       Type += "&";
+    } else if (EnableOpenCLLong && T.consume_front("long long")) {
+      Type += "O";
+      ParseType(T);
     } else if (T.consume_front("long")) {
       Type += "L";
+      ParseType(T);
+    } else if (T.consume_front("signed")) {
+      Type += "S";
       ParseType(T);
     } else if (T.consume_front("unsigned")) {
       Type += "U";
@@ -155,6 +172,7 @@ private:
                                .Case("__fp16", "h")
                                .Case("__int128_t", "LLLi")
                                .Case("_Float16", "x")
+                               .Case("__bf16", "y")
                                .Case("bool", "b")
                                .Case("char", "c")
                                .Case("constant_CFString", "F")
@@ -194,6 +212,7 @@ public:
 private:
   SMLoc Loc;
   StringRef Substitution;
+  bool EnableOpenCLLong;
   std::string Type;
 };
 
@@ -236,8 +255,15 @@ void PrintAttributes(const Record *Builtin, BuiltinType BT, raw_ostream &OS) {
 
   for (const auto *Attr : Builtin->getValueAsListOfDefs("Attributes")) {
     OS << Attr->getValueAsString("Mangling");
-    if (Attr->isSubClassOf("IndexedAttribute"))
+    if (Attr->isSubClassOf("IndexedAttribute")) {
       OS << ':' << Attr->getValueAsInt("Index") << ':';
+    } else if (Attr->isSubClassOf("MultiIndexAttribute")) {
+      OS << '<';
+      llvm::ListSeparator Sep(",");
+      for (int64_t Index : Attr->getValueAsListOfInts("Indices"))
+        OS << Sep << Index;
+      OS << '>';
+    }
   }
   OS << '\"';
 }
@@ -262,6 +288,9 @@ void EmitBuiltinDef(raw_ostream &OS, StringRef Substitution,
   case BuiltinType::TargetBuiltin:
     OS << "TARGET_BUILTIN";
     break;
+  case BuiltinType::TargetLibBuiltin:
+    OS << "TARGET_HEADER_BUILTIN";
+    break;
   }
 
   OS << "(" << Spelling;
@@ -278,6 +307,12 @@ void EmitBuiltinDef(raw_ostream &OS, StringRef Substitution,
   case BuiltinType::LangBuiltin: {
     OS << ", " << Builtin->getValueAsString("Languages");
     break;
+  }
+  case BuiltinType::TargetLibBuiltin: {
+    OS << ", ";
+    HeaderNameParser{Builtin}.Print(OS);
+    OS << ", " << Builtin->getValueAsString("Languages");
+    [[fallthrough]];
   }
   case BuiltinType::TargetBuiltin:
     OS << ", \"" << Builtin->getValueAsString("Features") << "\"";
@@ -331,6 +366,8 @@ void EmitBuiltin(raw_ostream &OS, const Record *Builtin) {
         BT = BuiltinType::AtomicBuiltin;
       } else if (Builtin->isSubClassOf("LangBuiltin")) {
         BT = BuiltinType::LangBuiltin;
+      } else if (Builtin->isSubClassOf("TargetLibBuiltin")) {
+        BT = BuiltinType::TargetLibBuiltin;
       } else if (Builtin->isSubClassOf("TargetBuiltin")) {
         BT = BuiltinType::TargetBuiltin;
       } else if (Builtin->isSubClassOf("LibBuiltin")) {
@@ -367,6 +404,10 @@ void clang::EmitClangBuiltins(const RecordKeeper &Records, raw_ostream &OS) {
 #if defined(BUILTIN) && !defined(TARGET_BUILTIN)
 #  define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BUILTIN(ID, TYPE, ATTRS)
 #endif
+
+#if defined(BUILTIN) && !defined(TARGET_HEADER_BUILTIN)
+#  define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANG, FEATURE) BUILTIN(ID, TYPE, ATTRS)
+#endif
 )c++";
 
   // AtomicBuiltins are order dependent
@@ -380,15 +421,12 @@ void clang::EmitClangBuiltins(const RecordKeeper &Records, raw_ostream &OS) {
     EmitBuiltin(OS, Builtin);
   }
 
-  for (const auto *Entry : Records.getAllDerivedDefinitions("CustomEntry")) {
-    OS << Entry->getValueAsString("Entry") << '\n';
-  }
-
   OS << R"c++(
 #undef ATOMIC_BUILTIN
 #undef BUILTIN
 #undef LIBBUILTIN
 #undef LANGBUILTIN
 #undef TARGET_BUILTIN
+#undef TARGET_HEADER_BUILTIN
 )c++";
 }

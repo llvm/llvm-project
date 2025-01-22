@@ -809,7 +809,8 @@ namespace llvm {
     CTEST,
 
     /// X86 strict FP compare instructions.
-    STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
+    FIRST_STRICTFP_OPCODE,
+    STRICT_FCMP = FIRST_STRICTFP_OPCODE,
     STRICT_FCMPS,
 
     // Vector packed double/float comparison.
@@ -853,12 +854,11 @@ namespace llvm {
     /// Floating point max and min.
     STRICT_FMAX,
     STRICT_FMIN,
-
-    // WARNING: Only add nodes here if they are strict FP nodes. Non-memory and
-    // non-strict FP nodes should be above FIRST_TARGET_STRICTFP_OPCODE.
+    LAST_STRICTFP_OPCODE = STRICT_FMIN,
 
     // Compare and swap.
-    LCMPXCHG_DAG = ISD::FIRST_TARGET_MEMORY_OPCODE,
+    FIRST_MEMORY_OPCODE,
+    LCMPXCHG_DAG = FIRST_MEMORY_OPCODE,
     LCMPXCHG8_DAG,
     LCMPXCHG16_DAG,
     LCMPXCHG16_SAVE_RBX_DAG,
@@ -907,6 +907,10 @@ namespace llvm {
 
     // Load x87 FPU environment from memory.
     FLDENVm,
+
+    // Custom handling for FP_TO_xINT_SAT
+    FP_TO_SINT_SAT,
+    FP_TO_UINT_SAT,
 
     /// This instruction implements FP_TO_SINT with the
     /// integer destination in memory and a FP reg source.  This corresponds
@@ -979,10 +983,7 @@ namespace llvm {
     // Conditional load/store instructions
     CLOAD,
     CSTORE,
-
-    // WARNING: Do not add anything in the end unless you want the node to
-    // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
-    // opcodes will be thought as target memory ops!
+    LAST_MEMORY_OPCODE = CSTORE,
   };
   } // end namespace X86ISD
 
@@ -1802,7 +1803,8 @@ namespace llvm {
     bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                         bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        LLVMContext &Context) const override;
+                        LLVMContext &Context,
+                        const Type *RetTy) const override;
 
     const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
     ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;

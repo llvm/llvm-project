@@ -340,46 +340,38 @@ struct X86Operand final : public MCParsedAsmOperand {
     return Mem.IndexReg >= LowR && Mem.IndexReg <= HighR;
   }
 
+  bool isMem32_RC128() const {
+    return isMem32() && isMemIndexReg(X86::XMM0, X86::XMM15);
+  }
   bool isMem64_RC128() const {
     return isMem64() && isMemIndexReg(X86::XMM0, X86::XMM15);
   }
-  bool isMem128_RC128() const {
-    return isMem128() && isMemIndexReg(X86::XMM0, X86::XMM15);
+  bool isMem32_RC256() const {
+    return isMem32() && isMemIndexReg(X86::YMM0, X86::YMM15);
   }
-  bool isMem128_RC256() const {
-    return isMem128() && isMemIndexReg(X86::YMM0, X86::YMM15);
-  }
-  bool isMem256_RC128() const {
-    return isMem256() && isMemIndexReg(X86::XMM0, X86::XMM15);
-  }
-  bool isMem256_RC256() const {
-    return isMem256() && isMemIndexReg(X86::YMM0, X86::YMM15);
+  bool isMem64_RC256() const {
+    return isMem64() && isMemIndexReg(X86::YMM0, X86::YMM15);
   }
 
+  bool isMem32_RC128X() const {
+    return isMem32() && X86II::isXMMReg(Mem.IndexReg);
+  }
   bool isMem64_RC128X() const {
     return isMem64() && X86II::isXMMReg(Mem.IndexReg);
   }
-  bool isMem128_RC128X() const {
-    return isMem128() && X86II::isXMMReg(Mem.IndexReg);
+  bool isMem32_RC256X() const {
+    return isMem32() && X86II::isYMMReg(Mem.IndexReg);
   }
-  bool isMem128_RC256X() const {
-    return isMem128() && X86II::isYMMReg(Mem.IndexReg);
+  bool isMem64_RC256X() const {
+    return isMem64() && X86II::isYMMReg(Mem.IndexReg);
   }
-  bool isMem256_RC128X() const {
-    return isMem256() && X86II::isXMMReg(Mem.IndexReg);
+  bool isMem32_RC512() const {
+    return isMem32() && X86II::isZMMReg(Mem.IndexReg);
   }
-  bool isMem256_RC256X() const {
-    return isMem256() && X86II::isYMMReg(Mem.IndexReg);
+  bool isMem64_RC512() const {
+    return isMem64() && X86II::isZMMReg(Mem.IndexReg);
   }
-  bool isMem256_RC512() const {
-    return isMem256() && X86II::isZMMReg(Mem.IndexReg);
-  }
-  bool isMem512_RC256X() const {
-    return isMem512() && X86II::isYMMReg(Mem.IndexReg);
-  }
-  bool isMem512_RC512() const {
-    return isMem512() && X86II::isZMMReg(Mem.IndexReg);
-  }
+
   bool isMem512_GR16() const {
     if (!isMem512())
       return false;

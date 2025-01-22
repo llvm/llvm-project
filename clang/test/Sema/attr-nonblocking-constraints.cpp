@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -std=c++20 -verify -Wfunction-effects %s
+// RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -std=c++20 -verify -Wfunction-effects -Wno-vla-extension %s
 // These are in a separate file because errors (e.g. incompatible attributes) currently prevent
 // the FXAnalysis pass from running at all.
 
@@ -244,6 +244,23 @@ struct PTMFTester {
 void PTMFTester::convert() [[clang::nonblocking]]
 {
 	(this->*mConvertFunc)();
+}
+
+// Allow implicit conversion from array to pointer.
+void nb14(unsigned idx) [[clang::nonblocking]]
+{
+	using FP = void (*)() [[clang::nonblocking]];
+	using FPArray = FP[2];
+	auto nb = +[]() [[clang::nonblocking]] {};
+
+	FPArray src{ nb, nullptr };
+	FP f = src[idx]; // This should not generate a warning.
+
+	FP twoDim[2][2] = {};
+	FP g = twoDim[1][1];
+
+	FP vla[idx];
+	FP h = vla[0];
 }
 
 // Block variables

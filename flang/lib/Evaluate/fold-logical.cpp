@@ -881,8 +881,11 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     return Expr<T>{context.targetCharacteristics().ieeeFeatures().test(
         IeeeFeature::Flags)};
   } else if (name == "__builtin_ieee_support_halting") {
-    return Expr<T>{context.targetCharacteristics().ieeeFeatures().test(
-        IeeeFeature::Halting)};
+    if (!context.targetCharacteristics()
+             .haltingSupportIsUnknownAtCompileTime()) {
+      return Expr<T>{context.targetCharacteristics().ieeeFeatures().test(
+          IeeeFeature::Halting)};
+    }
   } else if (name == "__builtin_ieee_support_inf") {
     return Expr<T>{
         context.targetCharacteristics().ieeeFeatures().test(IeeeFeature::Inf)};

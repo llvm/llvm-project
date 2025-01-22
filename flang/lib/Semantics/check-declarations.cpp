@@ -2742,6 +2742,9 @@ void CheckHelper::CheckBlockData(const Scope &scope) {
 void CheckHelper::CheckGenericOps(const Scope &scope) {
   DistinguishabilityHelper helper{context_};
   auto addSpecifics{[&](const Symbol &generic) {
+    if (!IsAccessible(generic, scope)) {
+      return;
+    }
     const auto *details{generic.GetUltimate().detailsIf<GenericDetails>()};
     if (!details) {
       // Not a generic; ensure characteristics are defined if a function.

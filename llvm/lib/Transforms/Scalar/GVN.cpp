@@ -113,6 +113,8 @@ static cl::opt<bool>
 GVNEnableSplitBackedgeInLoadPRE("enable-split-backedge-in-load-pre",
                                 cl::init(false));
 static cl::opt<bool> GVNEnableMemDep("enable-gvn-memdep", cl::init(true));
+static cl::opt<bool> GVNEnableMemorySSA("enable-gvn-memoryssa",
+                                        cl::init(false));
 
 static cl::opt<uint32_t> MaxNumDeps(
     "gvn-max-num-deps", cl::Hidden, cl::init(100),
@@ -820,6 +822,10 @@ bool GVNPass::isMemDepEnabled() const {
   return Options.AllowMemDep.value_or(GVNEnableMemDep);
 }
 
+bool GVNPass::isMemorySSAEnabled() const {
+  return Options.AllowMemorySSA.value_or(GVNEnableMemorySSA);
+}
+
 PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
   // FIXME: The order of evaluation of these 'getResult' calls is very
   // significant! Re-ordering these variables will cause GVN when run alone to
@@ -833,6 +839,11 @@ PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
       isMemDepEnabled() ? &AM.getResult<MemoryDependenceAnalysis>(F) : nullptr;
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto *MSSA = AM.getCachedResult<MemorySSAAnalysis>(F);
+  if (isMemorySSAEnabled() && !MSSA) {
+    assert(!MemDep &&
+           "On-demand computation of MemSSA implies that MemDep is disabled!");
+    MSSA = &AM.getResult<MemorySSAAnalysis>(F);
+  }
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   bool Changed = runImpl(F, AC, DT, TLI, AA, MemDep, LI, &ORE,
                          MSSA ? &MSSA->getMSSA() : nullptr);
@@ -861,7 +872,9 @@ void GVNPass::printPipeline(
     OS << (*Options.AllowLoadPRESplitBackedge ? "" : "no-")
        << "split-backedge-load-pre;";
   if (Options.AllowMemDep != std::nullopt)
-    OS << (*Options.AllowMemDep ? "" : "no-") << "memdep";
+    OS << (*Options.AllowMemDep ? "" : "no-") << "memdep;";
+  if (Options.AllowMemorySSA != std::nullopt)
+    OS << (*Options.AllowMemorySSA ? "" : "no-") << "memoryssa";
   OS << '>';
 }
 
@@ -3293,8 +3306,11 @@ class llvm::gvn::GVNLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  explicit GVNLegacyPass(bool NoMemDepAnalysis = !GVNEnableMemDep)
-      : FunctionPass(ID), Impl(GVNOptions().setMemDep(!NoMemDepAnalysis)) {
+  explicit GVNLegacyPass(bool MemDepAnalysis = GVNEnableMemDep,
+                         bool MemSSAAnalysis = GVNEnableMemorySSA)
+      : FunctionPass(ID), Impl(GVNOptions()
+                                   .setMemDep(MemDepAnalysis)
+                                   .setMemorySSA(MemSSAAnalysis)) {
     initializeGVNLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -3303,6 +3319,9 @@ public:
       return false;
 
     auto *MSSAWP = getAnalysisIfAvailable<MemorySSAWrapperPass>();
+    if (Impl.isMemorySSAEnabled() && !MSSAWP)
+      MSSAWP = &getAnalysis<MemorySSAWrapperPass>();
+
     return Impl.runImpl(
         F, getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F),
         getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
@@ -3330,6 +3349,8 @@ public:
     AU.addPreserved<LoopInfoWrapperPass>();
     AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
     AU.addPreserved<MemorySSAWrapperPass>();
+    if (Impl.isMemorySSAEnabled())
+      AU.addRequired<MemorySSAWrapperPass>();
   }
 
 private:
@@ -3341,6 +3362,7 @@ char GVNLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(GVNLegacyPass, "gvn", "Global Value Numbering", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
@@ -3349,6 +3371,4 @@ INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(GVNLegacyPass, "gvn", "Global Value Numbering", false, false)
 
 // The public interface to this file...
-FunctionPass *llvm::createGVNPass(bool NoMemDepAnalysis) {
-  return new GVNLegacyPass(NoMemDepAnalysis);
-}
+FunctionPass *llvm::createGVNPass() { return new GVNLegacyPass(); }

@@ -327,18 +327,89 @@ public:
                                  SourceLocation EndLoc);
 };
 
-/// A 'self' clause, which has an optional condition expression.
-class OpenACCSelfClause : public OpenACCClauseWithCondition {
+/// A 'self' clause, which has an optional condition expression, or, in the
+/// event of an 'update' directive, contains a 'VarList'.
+class OpenACCSelfClause final
+    : public OpenACCClauseWithParams,
+      private llvm::TrailingObjects<OpenACCSelfClause, Expr *> {
+  friend TrailingObjects;
+  // Holds whether this HAS a condition expression. Lacks a value if this is NOT
+  // a condition-expr self clause.
+  std::optional<bool> HasConditionExpr;
+  // Holds the number of stored expressions.  In the case of a condition-expr
+  // self clause, this is expected to be ONE (and there to be 1 trailing
+  // object), whether or not that is null.
+  unsigned NumExprs;
+
   OpenACCSelfClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                     Expr *ConditionExpr, SourceLocation EndLoc);
+  OpenACCSelfClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                    ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+
+  // Intentionally internal, meant to be an implementation detail of everything
+  // else. All non-internal uses should go through getConditionExpr/getVarList.
+  llvm::ArrayRef<Expr *> getExprs() const {
+    return {getTrailingObjects<Expr *>(), NumExprs};
+  }
 
 public:
   static bool classof(const OpenACCClause *C) {
     return C->getClauseKind() == OpenACCClauseKind::Self;
   }
+
+  bool isConditionExprClause() const { return HasConditionExpr.has_value(); }
+
+  bool hasConditionExpr() const {
+    assert(HasConditionExpr.has_value() &&
+           "VarList Self Clause asked about condition expression");
+    return *HasConditionExpr;
+  }
+
+  const Expr *getConditionExpr() const {
+    assert(HasConditionExpr.has_value() &&
+           "VarList Self Clause asked about condition expression");
+    assert(getExprs().size() == 1 &&
+           "ConditionExpr Self Clause with too many Exprs");
+    return getExprs()[0];
+  }
+
+  Expr *getConditionExpr() {
+    assert(HasConditionExpr.has_value() &&
+           "VarList Self Clause asked about condition expression");
+    assert(getExprs().size() == 1 &&
+           "ConditionExpr Self Clause with too many Exprs");
+    return getExprs()[0];
+  }
+
+  ArrayRef<Expr *> getVarList() {
+    assert(!HasConditionExpr.has_value() &&
+           "Condition Expr self clause asked about var list");
+    return getExprs();
+  }
+  ArrayRef<Expr *> getVarList() const {
+    assert(!HasConditionExpr.has_value() &&
+           "Condition Expr self clause asked about var list");
+    return getExprs();
+  }
+
+  child_range children() {
+    return child_range(
+        reinterpret_cast<Stmt **>(getTrailingObjects<Expr *>()),
+        reinterpret_cast<Stmt **>(getTrailingObjects<Expr *>() + NumExprs));
+  }
+
+  const_child_range children() const {
+    child_range Children = const_cast<OpenACCSelfClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
   static OpenACCSelfClause *Create(const ASTContext &C, SourceLocation BeginLoc,
                                    SourceLocation LParenLoc,
                                    Expr *ConditionExpr, SourceLocation EndLoc);
+  static OpenACCSelfClause *Create(const ASTContext &C, SourceLocation BeginLoc,
+                                   SourceLocation LParenLoc,
+                                   ArrayRef<Expr *> ConditionExpr,
+                                   SourceLocation EndLoc);
 };
 
 /// Represents a clause that has one or more expressions associated with it.
@@ -633,6 +704,19 @@ public:
                                         SourceLocation EndLoc);
 };
 
+class OpenACCDefaultAsyncClause : public OpenACCClauseWithSingleIntExpr {
+  OpenACCDefaultAsyncClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                            Expr *IntExpr, SourceLocation EndLoc);
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::DefaultAsync;
+  }
+  static OpenACCDefaultAsyncClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         Expr *IntExpr, SourceLocation EndLoc);
+};
+
 /// Represents a 'collapse' clause on a 'loop' construct. This clause takes an
 /// integer constant expression 'N' that represents how deep to collapse the
 /// construct. It also takes an optional 'force' tag that permits intervening
@@ -878,6 +962,52 @@ public:
     return C->getClauseKind() == OpenACCClauseKind::Present;
   }
   static OpenACCPresentClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+};
+class OpenACCHostClause final
+    : public OpenACCClauseWithVarList,
+      private llvm::TrailingObjects<OpenACCHostClause, Expr *> {
+  friend TrailingObjects;
+
+  OpenACCHostClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                    ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::Host, BeginLoc, LParenLoc,
+                                 EndLoc) {
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Host;
+  }
+  static OpenACCHostClause *Create(const ASTContext &C, SourceLocation BeginLoc,
+                                   SourceLocation LParenLoc,
+                                   ArrayRef<Expr *> VarList,
+                                   SourceLocation EndLoc);
+};
+
+class OpenACCDeviceClause final
+    : public OpenACCClauseWithVarList,
+      private llvm::TrailingObjects<OpenACCDeviceClause, Expr *> {
+  friend TrailingObjects;
+
+  OpenACCDeviceClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                      ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::Device, BeginLoc, LParenLoc,
+                                 EndLoc) {
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Device;
+  }
+  static OpenACCDeviceClause *
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
          ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };

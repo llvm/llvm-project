@@ -54,13 +54,15 @@ cl::opt<bool>
 // setjmp/longjmp handling using wasm EH instrutions
 cl::opt<bool> WebAssembly::WasmEnableSjLj(
     "wasm-enable-sjlj", cl::desc("WebAssembly setjmp/longjmp handling"));
-// Whether we use the new exnref Wasm EH proposal adopted on Oct 2023.
-// Should be used with -wasm-enable-eh.
-// Currently set to false by default, but will later change to true and then
-// later can be removed after the legacy WAsm EH instructions are removed.
-cl::opt<bool> WebAssembly::WasmEnableExnref(
-    "wasm-enable-exnref", cl::desc("WebAssembly exception handling (exnref)"),
-    cl::init(false));
+// If true, use the legacy Wasm EH proposal:
+// https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/legacy/Exceptions.md
+// And if false, use the standardized Wasm EH proposal:
+// https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/Exceptions.md
+// Currently set to true by default because not all major web browsers turn on
+// the new standard proposal by default, but will later change to false.
+cl::opt<bool> WebAssembly::WasmUseLegacyEH(
+    "wasm-use-legacy-eh", cl::desc("WebAssembly exception handling (legacy)"),
+    cl::init(true));
 
 static MCAsmInfo *createMCAsmInfo(const MCRegisterInfo & /*MRI*/,
                                   const Triple &TT,

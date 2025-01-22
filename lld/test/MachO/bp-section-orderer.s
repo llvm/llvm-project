@@ -7,7 +7,7 @@
 # RUN: %no-fatal-warnings-lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --irpgo-profile-sort=%t/a.profdata --verbose-bp-section-orderer 2>&1 | FileCheck %s --check-prefix=STARTUP
 # RUN: %no-fatal-warnings-lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --irpgo-profile-sort=%t/a.profdata --verbose-bp-section-orderer --icf=all --compression-sort=none 2>&1 | FileCheck %s --check-prefix=STARTUP
 
-# RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --irpgo-profile=%t/a.profdata --bp-startup-sort=function --verbose-bp-section-orderer 2>&1 | FileCheck %s --check-prefix=STARTUP
+# RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --irpgo-profile %t/a.profdata --bp-startup-sort=function --verbose-bp-section-orderer 2>&1 | FileCheck %s --check-prefix=STARTUP
 # RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --irpgo-profile=%t/a.profdata --bp-startup-sort=function --verbose-bp-section-orderer --icf=all --bp-compression-sort=none 2>&1 | FileCheck %s --check-prefix=STARTUP
 # STARTUP: Ordered 3 sections using balanced partitioning
 

@@ -101,8 +101,7 @@ void VectorizerTestPass::testVectorShapeRatio(llvm::raw_ostream &outs) {
   using affine::matcher::Op;
   SmallVector<int64_t, 8> shape(clTestVectorShapeRatio.begin(),
                                 clTestVectorShapeRatio.end());
-  auto subVectorType =
-      VectorType::get(shape, FloatType::getF32(f.getContext()));
+  auto subVectorType = VectorType::get(shape, Float32Type::get(f.getContext()));
   // Only filter operations that operate on a strict super-vector and have one
   // return. This makes testing easier.
   auto filter = [&](Operation &op) {
