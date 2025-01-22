@@ -471,6 +471,6 @@ void HIP::constructGenerateObjFileFromHIPFatBinary(
                        "-x",      "assembler",
                        ObjinFile, "-c"};
   C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
-                                         D.getClangProgramPath(), McArgs,
+                                         D.getClangProgramPath(), ClangArgs,
                                          Inputs, Output, D.getPrependArg()));
 }
