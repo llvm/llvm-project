@@ -463,7 +463,8 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(MachineInstr &MI,
           continue;
         MachineOperand &DataOp = II->getOperand(
             AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data_op));
-        if (DataOp.getReg() != CoreOp->getReg())
+        Register DataReg = DataOp.getReg();
+        if (DataReg != CoreOp->getReg())
           continue;
 
         // Replace CoreOp with a new register of the correct width and offset
@@ -487,8 +488,16 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(MachineInstr &MI,
                 .getReg()
                 .asMCReg();
 
-        --II;
-        II->getNextNode()->removeFromBundle();
+        bool HasOtherUsers =
+            AMDGPU::STAGING_REGRegClass.contains(DataReg) &&
+            any_of(CoreMI->explicit_uses(), [&](const auto &Use) {
+              return Use.isReg() && Use.getReg() == DataReg;
+            });
+        // Delete V_LOAD_IDX without other users, and V_STORE_IDX.
+        if (Opc == AMDGPU::V_STORE_IDX || !HasOtherUsers) {
+          --II;
+          II->getNextNode()->removeFromBundle();
+        }
       }
     }
 

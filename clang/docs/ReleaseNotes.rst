@@ -318,6 +318,8 @@ C++23 Feature Support
 
 - ``__cpp_explicit_this_parameter`` is now defined. (#GH82780)
 
+- Add support for `P2280R4 Using unknown pointers and references in constant expressions <https://wg21.link/P2280R4>`_. (#GH63139)
+
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -800,6 +802,8 @@ Improvements to Clang's diagnostics
 
 - Fix false positives warning for non-std functions with name `infinity` (#123231).
 
+- Clang now emits a ``-Wignored-qualifiers`` diagnostic when a base class includes cv-qualifiers (#GH55474).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -966,7 +970,7 @@ Bug Fixes to C++ Support
   constraints are applied. (#GH122134)
 - Fixed canonicalization of pack indexing types - Clang did not always recognized identical pack indexing. (#GH123033)
 - Fixed a nested lambda substitution issue for constraint evaluation. (#GH123441)
-
+- Fixed various false diagnostics related to the use of immediate functions. (#GH123472)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1121,6 +1125,8 @@ Windows Support
   Clang now follows the MSVC behavior in this scenario.
   When `-fms-compatibility-version=18.00` or prior is set on the command line this Microsoft extension is still
   allowed as VS2013 and prior allow it.
+
+- Clang now supports the ``#pragma clang section`` directive for COFF targets.
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^

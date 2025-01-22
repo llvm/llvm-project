@@ -221,7 +221,7 @@ bool NVVMReflect::runOnFunction(Function &F) {
   return runNVVMReflect(F, SmVersion);
 }
 
-NVVMReflectPass::NVVMReflectPass() {}
+NVVMReflectPass::NVVMReflectPass() : NVVMReflectPass(0) {}
 
 PreservedAnalyses NVVMReflectPass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
