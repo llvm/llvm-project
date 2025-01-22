@@ -32,7 +32,7 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
 
         self.dap_server.wait_for_event("progressEnd", 15)
         # Expect at least a start, an update, and end event
-        # However because the progress is an RAII object and we can't guaruntee
+        # However because the underlying Progress instance is an RAII object and we can't guaruntee
         # it's deterministic destruction in the python API, we verify just start and update
         # otherwise this test could be flakey.
         self.assertTrue(len(self.dap_server.progress_events) > 0)

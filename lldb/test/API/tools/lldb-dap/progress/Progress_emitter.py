@@ -29,7 +29,7 @@ class ProgressTesterCommand:
     @classmethod
     def create_options(cls):
         usage = "usage: %prog [options]"
-        description = "Jacob Lalonde's sbprogress testing tool"
+        description = "SBProgress testing tool"
         # Opt parse is deprecated, but leaving this the way it is because it allows help formating
         # Additionally all our commands use optparse right now, ideally we migrate them all in one go.
         parser = optparse.OptionParser(
@@ -70,7 +70,6 @@ class ProgressTesterCommand:
         total = cmd_options.total
         progress = lldb.SBProgress("Progress tester", "Detail", total, debugger)
 
-        # This actually should start at 1 but it's 6:30 on a Friday...
         for i in range(1, total):
             progress.Increment(1, f"Step {i}")
             time.sleep(cmd_options.seconds)
