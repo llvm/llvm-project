@@ -4746,7 +4746,7 @@ public:
   }
 
   // Range interface to parameters.
-  using parameter_const_iterator = const ImplicitParamDecl * const *;
+  using parameter_const_iterator = const ImplicitParamDecl *const *;
   using parameter_const_range = llvm::iterator_range<parameter_const_iterator>;
   parameter_const_range parameters() const {
     return {param_begin(), param_end()};

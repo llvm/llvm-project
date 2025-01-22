@@ -15990,8 +15990,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     }
 
     if (Body && !FD->isTemplated() && !SKEPAttr->isInvalidAttr()) {
-      StmtResult SR = SYCL().BuildSYCLKernelCallStmt(FD,
-                                                     cast<CompoundStmt>(Body));
+      StmtResult SR =
+          SYCL().BuildSYCLKernelCallStmt(FD, cast<CompoundStmt>(Body));
       if (SR.isInvalid())
         return nullptr;
       Body = SR.get();
