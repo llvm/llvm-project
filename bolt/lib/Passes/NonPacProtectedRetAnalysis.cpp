@@ -63,29 +63,6 @@ raw_ostream &operator<<(raw_ostream &OS, const GeneralDiagnostic &Diag) {
 
 namespace NonPacProtectedRetAnalysis {
 
-raw_ostream &operator<<(raw_ostream &OS, const Gadget &G) {
-  OS << "pac-ret<Ret:" << G.RetInst << ", ";
-  OS << "gadget<Overwriting:[";
-  for (auto Ref : G.OverwritingRetRegInst)
-    OS << Ref << " ";
-  OS << "]>>";
-  return OS;
-}
-
-raw_ostream &operator<<(raw_ostream &OS, const GenDiag &Diag) {
-  OS << "pac-ret<Ret:" << Diag.RetInst << ", " << Diag.Diag << ">";
-  return OS;
-}
-
-raw_ostream &operator<<(raw_ostream &OS, const Annotation &Diag) {
-  OS << "pac-ret<Ret:" << Diag.RetInst << ">";
-  return OS;
-}
-
-void Annotation::print(raw_ostream &OS) const { OS << *this; }
-void Gadget::print(raw_ostream &OS) const { OS << *this; }
-void GenDiag::print(raw_ostream &OS) const { OS << *this; }
-
 // The security property that is checked is:
 // When a register is used as the address to jump to in a return instruction,
 // that register must either:
@@ -181,7 +158,7 @@ void PacStatePrinter::print(raw_ostream &OS, const State &S) const {
   OS << "pacret-state<";
   OS << "NonAutClobRegs: ";
   RegStatePrinter.print(OS, S.NonAutClobRegs);
-  OS << "Insts: ";
+  OS << ", ";
   printLastInsts(OS, S.LastInstWritingReg);
   OS << ">";
 }
@@ -317,7 +294,7 @@ protected:
 public:
   std::vector<MCInstReference>
   getLastClobberingInsts(const MCInst Ret, BinaryFunction &BF,
-                         const BitVector &DirtyRawRegs) const {
+                         const BitVector &UsedDirtyRegs) const {
     if (!TrackingLastInsts)
       return {};
     auto MaybeState = getStateAt(Ret);
@@ -326,7 +303,7 @@ public:
     const State &S = *MaybeState;
     // Due to aliasing registers, multiple registers may have been tracked.
     std::set<const MCInst *> LastWritingInsts;
-    for (MCPhysReg TrackedReg : DirtyRawRegs.set_bits()) {
+    for (MCPhysReg TrackedReg : UsedDirtyRegs.set_bits()) {
       for (const MCInst *Inst : lastWritingInsts(S, TrackedReg))
         LastWritingInsts.insert(Inst);
     }
@@ -375,26 +352,26 @@ Analysis::computeDfState(PacRetAnalysis &PRA, BinaryFunction &BF,
         });
         if (BC.MIB->isAuthenticationOfReg(Inst, RetReg))
           break;
-        BitVector DirtyRawRegs = PRA.getStateAt(Inst)->NonAutClobRegs;
+        BitVector UsedDirtyRegs = PRA.getStateAt(Inst)->NonAutClobRegs;
         LLVM_DEBUG({
-          dbgs() << "  DirtyRawRegs at Ret: ";
+          dbgs() << "  NonAutClobRegs at Ret: ";
           RegStatePrinter RSP(BC);
-          RSP.print(dbgs(), DirtyRawRegs);
+          RSP.print(dbgs(), UsedDirtyRegs);
           dbgs() << "\n";
         });
-        DirtyRawRegs &= BC.MIB->getAliases(RetReg, /*OnlySmaller=*/true);
+        UsedDirtyRegs &= BC.MIB->getAliases(RetReg, /*OnlySmaller=*/true);
         LLVM_DEBUG({
           dbgs() << "  Intersection with RetReg: ";
           RegStatePrinter RSP(BC);
-          RSP.print(dbgs(), DirtyRawRegs);
+          RSP.print(dbgs(), UsedDirtyRegs);
           dbgs() << "\n";
         });
-        if (DirtyRawRegs.any()) {
+        if (UsedDirtyRegs.any()) {
           // This return instruction needs to be reported
           Result.Diagnostics.push_back(std::make_shared<Gadget>(
               MCInstInBBReference(&BB, I),
-              PRA.getLastClobberingInsts(Inst, BF, DirtyRawRegs)));
-          for (MCPhysReg RetRegWithGadget : DirtyRawRegs.set_bits())
+              PRA.getLastClobberingInsts(Inst, BF, UsedDirtyRegs)));
+          for (MCPhysReg RetRegWithGadget : UsedDirtyRegs.set_bits())
             Result.RegistersAffected.insert(RetRegWithGadget);
         }
       }

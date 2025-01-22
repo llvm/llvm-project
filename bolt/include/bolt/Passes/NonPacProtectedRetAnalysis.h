@@ -68,7 +68,7 @@ struct MCInstInBFReference {
   uint64_t Offset;
   MCInstInBFReference(BinaryFunction *BF, uint64_t Offset)
       : BF(BF), Offset(Offset) {}
-  MCInstInBFReference() : BF(nullptr) {}
+  MCInstInBFReference() : BF(nullptr), Offset(0) {}
   bool operator==(const MCInstInBFReference &RHS) const {
     return BF == RHS.BF && Offset == RHS.Offset;
   }
@@ -200,7 +200,6 @@ struct Annotation {
   virtual ~Annotation() {}
   virtual void generateReport(raw_ostream &OS,
                               const BinaryContext &BC) const = 0;
-  virtual void print(raw_ostream &OS) const;
 };
 
 struct Gadget : public Annotation {
@@ -214,7 +213,6 @@ struct Gadget : public Annotation {
       : Annotation(RetInst), OverwritingRetRegInst(OverwritingRetRegInst) {}
   virtual void generateReport(raw_ostream &OS,
                               const BinaryContext &BC) const override;
-  virtual void print(raw_ostream &OS) const override;
 };
 
 struct GenDiag : public Annotation {
@@ -226,12 +224,7 @@ struct GenDiag : public Annotation {
       : Annotation(RetInst), Diag(Text) {}
   virtual void generateReport(raw_ostream &OS,
                               const BinaryContext &BC) const override;
-  virtual void print(raw_ostream &OS) const override;
 };
-
-raw_ostream &operator<<(raw_ostream &OS, const Gadget &G);
-raw_ostream &operator<<(raw_ostream &OS, const GenDiag &Diag);
-raw_ostream &operator<<(raw_ostream &OS, const Annotation &A);
 
 class PacRetAnalysis;
 

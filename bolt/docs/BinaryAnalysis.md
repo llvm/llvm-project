@@ -28,7 +28,7 @@ pac-ret, shadow stacks, arm64e, and many more.
 
 These mitigations guarantee a so-called "security property" on the binaries they
 produce. For example, for stack canaries, the security property is roughly that
-a canary is located on the stack between the set of saved variables and the set
+a canary is located on the stack between the set of saved registers and the set
 of local variables. For pac-ret, it is roughly that either the return address is
 never stored/retrieved to/from memory; or, there are no writes to the register
 containing the return address between an instruction authenticating it and a
@@ -67,7 +67,7 @@ examples.
 `pac-ret` protection is a security hardening scheme implemented in compilers
 such as GCC and Clang, using the command line option
 `-mbranch-protection=pac-ret`. This option is enabled by default on most widely
-used linux distributions.
+used Linux distributions.
 
 The hardening scheme mitigates
 [Return-Oriented Programming (ROP)](https://llsoftsec.github.io/llsoftsecbook/#return-oriented-programming)
@@ -82,7 +82,7 @@ The hardening scheme relies on compilers producing appropriate code sequences wh
 processing return addresses, especially when these are stored to and retrieved
 from memory.
 
-The 'pac-ret' binary analysis can be invoked using the command line option
+The `pac-ret` binary analysis can be invoked using the command line option
 `--scanners=pac-ret`. It makes `llvm-bolt-binary-analysis` scan through the
 provided binary, checking each function for the following security property:
 
@@ -173,7 +173,7 @@ The following are current known cases of false positives:
         ret     x16
    ```
 
-The folowing are current known cases of false negatives:
+The following are current known cases of false negatives:
 
 1. Not handling functions for which the CFG cannot be reconstructed by BOLT. The
    plan is to implement support for this, picking up the implementation from the
