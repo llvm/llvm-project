@@ -252,7 +252,7 @@ ExprResult Parser::ParseArrayBoundExpression() {
   //
   //   sizeof(typeof(*(int (*)[N])array))
   //
-  // in which the expression N is supposed to be ODR-used, as is the `array`.
+  // N and array are supposed to be ODR-used.
   // Initially when encountering `array`, it is deemed unevaluated and non-ODR
   // used because that occurs before parsing the type cast. Therefore we use
   // Sema::TransformToPotentiallyEvaluated() to rebuild the expression to ensure
