@@ -1589,7 +1589,7 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     }
     // For lambdas inside template functions, remember the mapping to
     // deserialize them together.
-    if (auto *FD = getDependentDeclContext<CXXRecordDecl>(D)) {
+    if (auto *FD = getDependentDeclContext<FunctionDecl>(D)) {
       Writer.RelatedDeclsMap[Writer.GetDeclRef(FD)].push_back(
           Writer.GetDeclRef(D));
     }
