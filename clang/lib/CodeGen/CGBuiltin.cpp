@@ -19333,9 +19333,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     assert(T0->isVectorTy() && T1->isVectorTy() &&
            "Dot product of vector and scalar is not supported.");
 
-    auto *VecTy0 = E->getArg(0)->getType()->getAs<VectorType>();
+    auto *VecTy0 = E->getArg(0)->getType()->castAs<VectorType>();
     [[maybe_unused]] auto *VecTy1 =
-        E->getArg(1)->getType()->getAs<VectorType>();
+        E->getArg(1)->getType()->castAs<VectorType>();
 
     assert(VecTy0->getElementType() == VecTy1->getElementType() &&
            "Dot product of vectors need the same element types.");
@@ -19428,7 +19428,7 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     llvm::Type *Xty = Op0->getType();
     llvm::Type *retType = llvm::Type::getInt1Ty(this->getLLVMContext());
     if (Xty->isVectorTy()) {
-      auto *XVecTy = E->getArg(0)->getType()->getAs<VectorType>();
+      auto *XVecTy = E->getArg(0)->getType()->castAs<VectorType>();
       retType = llvm::VectorType::get(
           retType, ElementCount::getFixed(XVecTy->getNumElements()));
     }
@@ -19614,7 +19614,7 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
     llvm::Type *Xty = Op0->getType();
     llvm::Type *retType = llvm::Type::getInt32Ty(this->getLLVMContext());
     if (Xty->isVectorTy()) {
-      auto *XVecTy = Arg0->getType()->getAs<VectorType>();
+      auto *XVecTy = Arg0->getType()->castAs<VectorType>();
       retType = llvm::VectorType::get(
           retType, ElementCount::getFixed(XVecTy->getNumElements()));
     }
