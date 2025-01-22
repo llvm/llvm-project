@@ -20,13 +20,13 @@ program reshaper
   integer :: array8(2,3) = RESHAPE([(n, n=1,4)], [2,3], [99_8])
   !ERROR: Actual argument for 'pad=' has bad type or kind 'REAL(4)'
   real :: array9(2,3) = RESHAPE([(n, n=1,4)], [2,3], [99.9])
-  !ERROR: Invalid 'order=' argument in RESHAPE
+  !ERROR: Invalid 'order=' argument ([INTEGER(4)::2_4,3_4]) in RESHAPE
   real :: array10(2,3) = RESHAPE([(n,n=1,4)],[2,3],[99],[2,3])
   !ERROR: Actual argument for 'order=' has bad type 'REAL(4)'
   real :: array11(2,3) = RESHAPE([(n, n=1,4)], [2,3], [99], [2.2,3.3])
-  !ERROR: Invalid 'order=' argument in RESHAPE
+  !ERROR: Invalid 'order=' argument ([INTEGER(4)::1_4]) in RESHAPE
   real :: array12(2,3) = RESHAPE([(n, n=1,4)], [2,3], [99], [1])
-  !ERROR: Invalid 'order=' argument in RESHAPE
+  !ERROR: Invalid 'order=' argument ([INTEGER(4)::1_4,1_4]) in RESHAPE
   real :: array13(2,3) = RESHAPE([(n, n = 1, 4)], [2, 3], [99], [1, 1])
 
   ! Examples that have caused problems
@@ -50,13 +50,13 @@ program reshaper
   integer, parameter :: array22(2) = RESHAPE(array21, [2])
 
   integer(8), parameter :: huge_shape(2) = [I64_MAX, I64_MAX]
-  !ERROR: 'shape=' argument has too many elements
+  !ERROR: 'shape=' argument ([INTEGER(8)::9223372036854775807_8,9223372036854775807_8]) specifies an array with too many elements
   integer :: array23(I64_MAX, I64_MAX) = RESHAPE([1, 2, 3], huge_shape)
 
   CALL ext_sub(RESHAPE([(n, n=1,20)], &
   !ERROR: 'shape=' argument must be a vector of at most 15 elements (has 16)
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]))
-  !ERROR: 'shape=' argument must not have a negative extent
+  !ERROR: 'shape=' argument ([INTEGER(4)::1_4,-5_4,3_4]) must not have a negative extent
   CALL ext_sub(RESHAPE([(n, n=1,20)], [1, -5, 3]))
   !ERROR: 'order=' argument has unacceptable rank 2
   array20 = RESHAPE([(n, n = 1, 4)], [2, 3], order = bad_order)

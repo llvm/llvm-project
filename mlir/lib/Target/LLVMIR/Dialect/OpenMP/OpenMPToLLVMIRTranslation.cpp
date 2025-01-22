@@ -183,10 +183,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
           result = op.emitError("not yet implemented: host evaluation of loop "
                                 "bounds in omp.target operation");
   };
-  auto checkIf = [&todo](auto op, LogicalResult &result) {
-    if (op.getIfExpr())
-      result = todo("if");
-  };
   auto checkInReduction = [&todo](auto op, LogicalResult &result) {
     if (!op.getInReductionVars().empty() || op.getInReductionByref() ||
         op.getInReductionSyms())
@@ -274,8 +270,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::TaskOp op) {
         checkAllocate(op, result);
         checkInReduction(op, result);
-        checkPriority(op, result);
-        checkUntied(op, result);
       })
       .Case([&](omp::TaskgroupOp op) {
         checkAllocate(op, result);
@@ -284,6 +278,11 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::TaskwaitOp op) {
         checkDepend(op, result);
         checkNowait(op, result);
+      })
+      .Case([&](omp::TaskloopOp op) {
+        // TODO: Add other clauses check
+        checkUntied(op, result);
+        checkPriority(op, result);
       })
       .Case([&](omp::WsloopOp op) {
         checkAllocate(op, result);
@@ -306,7 +305,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkDevice(op, result);
         checkHasDeviceAddr(op, result);
         checkHostEval(op, result);
-        checkIf(op, result);
         checkInReduction(op, result);
         checkIsDevicePtr(op, result);
         checkPrivate(op, result);
@@ -1349,13 +1347,21 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
                     llvm::SmallVectorImpl<llvm::Value *> &llvmPrivateVars,
                     const llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
                     llvm::DenseMap<Value, Value> *mappedPrivateVars = nullptr) {
-  llvm::IRBuilderBase::InsertPointGuard guard(builder);
   // Allocate private vars
   llvm::BranchInst *allocaTerminator =
+      llvm::cast<llvm::BranchInst>(allocaIP.getBlock()->getTerminator());
+  splitBB(llvm::OpenMPIRBuilder::InsertPointTy(allocaIP.getBlock(),
+                                               allocaTerminator->getIterator()),
+          true, "omp.region.after_alloca");
+
+  llvm::IRBuilderBase::InsertPointGuard guard(builder);
+  // Update the allocaTerminator in case the alloca block was split above.
+  allocaTerminator =
       llvm::cast<llvm::BranchInst>(allocaIP.getBlock()->getTerminator());
   builder.SetInsertPoint(allocaTerminator);
   assert(allocaTerminator->getNumSuccessors() == 1 &&
          "This is an unconditional branch created by OpenMPIRBuilder");
+
   llvm::BasicBlock *afterAllocas = allocaTerminator->getSuccessor(0);
 
   // FIXME: Some of the allocation regions do more than just allocating.
@@ -1792,7 +1798,8 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupValue(taskOp.getFinal()),
           moduleTranslation.lookupValue(taskOp.getIfExpr()), dds,
           taskOp.getMergeable(),
-          moduleTranslation.lookupValue(taskOp.getEventHandle()));
+          moduleTranslation.lookupValue(taskOp.getEventHandle()),
+          moduleTranslation.lookupValue(taskOp.getPriority()));
 
   if (failed(handleError(afterIP, *taskOp)))
     return failure();
@@ -1882,13 +1889,61 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
 
+  // The following loop is workaround until we private ops' alloca regions to be
+  // "pure". See
+  // https://discourse.llvm.org/t/rfc-openmp-supporting-delayed-task-execution-with-firstprivate-variables/83084/7
+  // and https://discourse.llvm.org/t/delayed-privatization-for-omp-wsloop/83989
+  // for more info.
+  for (auto [privateVar, privateDeclOp] :
+       llvm::zip_equal(mlirPrivateVars, privateDecls)) {
+    llvm::Value *llvmValue = moduleTranslation.lookupValue(privateVar);
+    bool isAllocArgUsed =
+        !privateDeclOp.getAllocRegion().args_begin()->use_empty();
+
+    // If the alloc region argument is not used, we can skip the workaround.
+    if (!isAllocArgUsed)
+      continue;
+
+    llvm::Instruction *definingInst =
+        llvm::dyn_cast<llvm::Instruction>(llvmValue);
+
+    // If the alloc region argument is not defined by an op, it has to dominate
+    // the current alloc IP. So we skip the workaround.
+    if (!definingInst)
+      continue;
+
+    llvm::BasicBlock *definingBlock = definingInst->getParent();
+    llvm::Function *definingFun = definingBlock->getParent();
+    llvm::Function *allocaFun = allocaIP.getBlock()->getParent();
+
+    // If the alloc region argument is defined in a different function that
+    // current one where allocs are being inserted (for example, we are building
+    // the outlined function of a target region), we skip the workaround.
+    if (definingFun != allocaFun)
+      continue;
+
+    llvm::DominatorTree dt(*definingFun);
+    // If the defining instruction of the alloc region argument dominates the
+    // alloca insertion point already, we can skip the workaround.
+    if (dt.dominates(definingInst, allocaIP.getPoint()))
+      continue;
+
+    // If all the above conditions are violated, then we have to move the alloca
+    // insertion point below the defining instruction.
+
+    if (definingBlock->getTerminator() == nullptr) {
+      assert(builder.GetInsertBlock() == definingBlock);
+      builder.SetInsertPoint(splitBB(llvm::OpenMPIRBuilder::InsertPointTy(
+                                         definingBlock, definingBlock->end()),
+                                     true, "omp.region.after_defining_block"));
+    }
+
+    allocaIP = llvm::OpenMPIRBuilder::InsertPointTy(
+        definingBlock, definingBlock->getTerminator()->getIterator());
+  }
+
   SmallVector<llvm::Value *> privateReductionVariables(
       wsloopOp.getNumReductionVars());
-
-  splitBB(llvm::OpenMPIRBuilder::InsertPointTy(
-              allocaIP.getBlock(),
-              allocaIP.getBlock()->getTerminator()->getIterator()),
-          true, "omp.region.after_alloca");
 
   llvm::Expected<llvm::BasicBlock *> afterAllocas = allocatePrivateVars(
       builder, moduleTranslation, privateBlockArgs, privateDecls,
@@ -4378,10 +4433,14 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
       findAllocaInsertPoint(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
 
+  llvm::Value *ifCond = nullptr;
+  if (Value targetIfCond = targetOp.getIfExpr())
+    ifCond = moduleTranslation.lookupValue(targetIfCond);
+
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTarget(
           ompLoc, isOffloadEntry, allocaIP, builder.saveIP(), entryInfo,
-          defaultAttrs, runtimeAttrs, kernelInput, genMapInfoCB, bodyCB,
+          defaultAttrs, runtimeAttrs, ifCond, kernelInput, genMapInfoCB, bodyCB,
           argAccessorCB, dds, targetOp.getNowait());
 
   if (failed(handleError(afterIP, opInst)))

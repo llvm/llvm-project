@@ -356,14 +356,14 @@ func.func @stop_terminator() {
   fir.freemem %0 : !fir.heap<!fir.array<42xi32>>
   %c0_i32 = arith.constant 0 : i32
   %false = arith.constant false
-  %none = fir.call @_FortranAStopStatement(%c0_i32, %false, %false) : (i32, i1, i1) -> none
+  fir.call @_FortranAStopStatement(%c0_i32, %false, %false) : (i32, i1, i1) -> ()
   fir.unreachable
 }
 // CHECK: func.func @stop_terminator() {
 // CHECK-NEXT: fir.alloca !fir.array<42xi32>
 // CHECK-NEXT:  %[[ZERO:.*]] = arith.constant 0 : i32
 // CHECK-NEXT:  %[[FALSE:.*]] = arith.constant false
-// CHECK-NEXT:  %[[NONE:.*]] = fir.call @_FortranAStopStatement(%[[ZERO]], %[[FALSE]], %[[FALSE]]) : (i32, i1, i1) -> none
+// CHECK-NEXT:  fir.call @_FortranAStopStatement(%[[ZERO]], %[[FALSE]], %[[FALSE]]) : (i32, i1, i1) -> ()
 // CHECK-NEXT:  fir.unreachable
 // CHECK-NEXT: }
 

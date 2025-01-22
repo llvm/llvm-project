@@ -1045,7 +1045,8 @@ void AMDGPUDAGToDAGISel::SelectMUL_LOHI(SDNode *N) {
   SDValue Zero = CurDAG->getTargetConstant(0, SL, MVT::i64);
   SDValue Clamp = CurDAG->getTargetConstant(0, SL, MVT::i1);
   SDValue Ops[] = {N->getOperand(0), N->getOperand(1), Zero, Clamp};
-  SDNode *Mad = CurDAG->getMachineNode(Opc, SL, N->getVTList(), Ops);
+  SDNode *Mad = CurDAG->getMachineNode(
+      Opc, SL, CurDAG->getVTList(MVT::i64, MVT::i1), Ops);
   if (!SDValue(N, 0).use_empty()) {
     SDValue Sub0 = CurDAG->getTargetConstant(AMDGPU::sub0, SL, MVT::i32);
     SDNode *Lo = CurDAG->getMachineNode(TargetOpcode::EXTRACT_SUBREG, SL,
@@ -1926,7 +1927,8 @@ bool AMDGPUDAGToDAGISel::checkFlatScratchSVSSwizzleBug(
   KnownBits VKnown = CurDAG->computeKnownBits(VAddr);
   KnownBits SKnown =
       KnownBits::add(CurDAG->computeKnownBits(SAddr),
-                     KnownBits::makeConstant(APInt(32, ImmOffset)));
+                     KnownBits::makeConstant(APInt(32, ImmOffset,
+                                                   /*isSigned=*/true)));
   uint64_t VMax = VKnown.getMaxValue().getZExtValue();
   uint64_t SMax = SKnown.getMaxValue().getZExtValue();
   return (VMax & 3) + (SMax & 3) >= 4;

@@ -583,6 +583,12 @@ MachOPlatform::MachOPlatform(
     return;
 
   // (5) Associate runtime support functions.
+  // TODO: Consider moving this above (4) to make runtime support functions
+  //       available to the bootstrap completion graph. We'd just need to be
+  //       sure that the runtime support functions are fully usable before any
+  //       bootstrap completion actions use them (e.g. the ORC runtime
+  //       macho_platform object would have to have been created and
+  //       initialized).
   if ((Err = associateRuntimeSupportFunctions()))
     return;
 }
@@ -1492,26 +1498,19 @@ Error MachOPlatform::MachOPlatformPlugin::populateObjCRuntimeObject(
     memcpy(SD.Sec.sectname, "__objc_imageinfo", 16);
     strcpy(SD.Sec.segname, "__DATA");
     SD.Sec.size = 8;
-    SD.AddFixups = [&](size_t RecordOffset) {
+    jitlink::Symbol *ObjCImageInfoSym = nullptr;
+    SD.AddFixups = [&, ObjCImageInfoSym](size_t RecordOffset) mutable {
       auto PointerEdge = getPointerEdgeKind(G);
 
       // Look for an existing __objc_imageinfo symbol.
-      jitlink::Symbol *ObjCImageInfoSym = nullptr;
-      for (auto *Sym : G.external_symbols())
-        if (Sym->hasName() && *Sym->getName() == ObjCImageInfoSymbolName) {
-          ObjCImageInfoSym = Sym;
-          break;
-        }
-      if (!ObjCImageInfoSym)
-        for (auto *Sym : G.absolute_symbols())
-          if (Sym->hasName() && *Sym->getName() == ObjCImageInfoSymbolName) {
-            ObjCImageInfoSym = Sym;
-            break;
-          }
-      if (!ObjCImageInfoSym)
-        for (auto *Sym : G.defined_symbols())
-          if (Sym->hasName() && *Sym->getName() == ObjCImageInfoSymbolName) {
-            ObjCImageInfoSym = Sym;
+      if (!ObjCImageInfoSym) {
+        auto Name = G.intern(ObjCImageInfoSymbolName);
+        ObjCImageInfoSym = G.findExternalSymbolByName(Name);
+        if (!ObjCImageInfoSym)
+          ObjCImageInfoSym = G.findAbsoluteSymbolByName(Name);
+        if (!ObjCImageInfoSym) {
+          ObjCImageInfoSym = G.findDefinedSymbolByName(Name);
+          if (ObjCImageInfoSym) {
             std::optional<uint32_t> Flags;
             {
               std::lock_guard<std::mutex> Lock(PluginMutex);
@@ -1525,16 +1524,17 @@ Error MachOPlatform::MachOPlatformPlugin::populateObjCRuntimeObject(
             if (Flags) {
               // We own the definition of __objc_image_info; write the final
               // merged flags value.
-              auto Content = Sym->getBlock().getMutableContent(G);
-              assert(Content.size() == 8 &&
+              auto Content = ObjCImageInfoSym->getBlock().getMutableContent(G);
+              assert(
+                  Content.size() == 8 &&
                   "__objc_image_info size should have been verified already");
               support::endian::write32(&Content[4], *Flags, G.getEndianness());
             }
-            break;
           }
-      if (!ObjCImageInfoSym)
-        ObjCImageInfoSym =
-            &G.addExternalSymbol(ObjCImageInfoSymbolName, 8, false);
+        }
+        if (!ObjCImageInfoSym)
+          ObjCImageInfoSym = &G.addExternalSymbol(std::move(Name), 8, false);
+      }
 
       SecBlock.addEdge(PointerEdge,
                        RecordOffset + ((char *)&SD.Sec.addr - (char *)&SD.Sec),

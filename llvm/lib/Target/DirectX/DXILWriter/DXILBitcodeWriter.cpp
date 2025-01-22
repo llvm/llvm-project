@@ -1390,16 +1390,16 @@ void DXILBitcodeWriter::writeDISubrange(const DISubrange *N,
 
   // TODO: Do we need to handle DIExpression here? What about cases where Count
   // isn't specified but UpperBound and such are?
-  ConstantInt *Count = N->getCount().dyn_cast<ConstantInt *>();
+  ConstantInt *Count = dyn_cast<ConstantInt *>(N->getCount());
   assert(Count && "Count is missing or not ConstantInt");
   Record.push_back(Count->getValue().getSExtValue());
 
   // TODO: Similarly, DIExpression is allowed here now
   DISubrange::BoundType LowerBound = N->getLowerBound();
-  assert((LowerBound.isNull() || LowerBound.is<ConstantInt *>()) &&
+  assert((LowerBound.isNull() || isa<ConstantInt *>(LowerBound)) &&
          "Lower bound provided but not ConstantInt");
   Record.push_back(
-      LowerBound ? rotateSign(LowerBound.get<ConstantInt *>()->getValue()) : 0);
+      LowerBound ? rotateSign(cast<ConstantInt *>(LowerBound)->getValue()) : 0);
 
   Stream.EmitRecord(bitc::METADATA_SUBRANGE, Record, Abbrev);
   Record.clear();

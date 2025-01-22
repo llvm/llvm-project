@@ -633,10 +633,12 @@ ArgumentAccessInfo getArgmentAccessInfo(const Instruction *I,
       [](Value *Length,
          std::optional<int64_t> Offset) -> std::optional<ConstantRange> {
     auto *ConstantLength = dyn_cast<ConstantInt>(Length);
-    if (ConstantLength && Offset && !ConstantLength->isNegative())
+    if (ConstantLength && Offset &&
+        ConstantLength->getValue().isStrictlyPositive()) {
       return ConstantRange(
           APInt(64, *Offset, true),
           APInt(64, *Offset + ConstantLength->getSExtValue(), true));
+    }
     return std::nullopt;
   };
   if (auto *SI = dyn_cast<StoreInst>(I)) {
@@ -890,14 +892,11 @@ determinePointerAccessAttrs(Argument *A,
           // can participate in the speculation.
           break;
 
-      const bool IsByVal =
-          CB.isArgOperand(U) && CB.isByValArgument(CB.getArgOperandNo(U));
-
       // The accessors used on call site here do the right thing for calls and
       // invokes with operand bundles.
       if (CB.doesNotAccessMemory(UseIndex)) {
         /* nop */
-      } else if (!isModSet(ArgMR) || CB.onlyReadsMemory(UseIndex) || IsByVal) {
+      } else if (!isModSet(ArgMR) || CB.onlyReadsMemory(UseIndex)) {
         IsRead = true;
       } else if (!isRefSet(ArgMR) ||
                  CB.dataOperandHasImpliedAttr(UseIndex, Attribute::WriteOnly)) {

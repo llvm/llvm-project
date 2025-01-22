@@ -3062,7 +3062,7 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
       // Check that the ComplexPattern uses are consistent: "(MY_PAT $a, $b)"
       // and "(MY_PAT $b, $a)" should not be allowed in the same pattern;
       // neither should "(MY_PAT_1 $a, $b)" and "(MY_PAT_2 $a, $b)".
-      auto OperandId = std::make_pair(Operator, i);
+      auto OperandId = std::pair(Operator, i);
       auto [PrevOp, Inserted] =
           ComplexPatternOperands.try_emplace(Child->getName(), OperandId);
       if (!Inserted && PrevOp->getValue() != OperandId) {
@@ -3274,7 +3274,7 @@ void CodeGenDAGPatterns::ParseNodeInfo() {
   const CodeGenHwModes &CGH = getTargetInfo().getHwModes();
 
   for (const Record *R : reverse(Records.getAllDerivedDefinitions("SDNode")))
-    SDNodes.insert(std::pair(R, SDNodeInfo(R, CGH)));
+    SDNodes.try_emplace(R, SDNodeInfo(R, CGH));
 
   // Get the builtin intrinsic nodes.
   intrinsic_void_sdnode = getSDNodeNamed("intrinsic_void");
@@ -3404,8 +3404,7 @@ void CodeGenDAGPatterns::ParseDefaultOperands() {
     // SomeSDnode so that we can parse this.
     std::vector<std::pair<const Init *, const StringInit *>> Ops;
     for (unsigned op = 0, e = DefaultInfo->getNumArgs(); op != e; ++op)
-      Ops.push_back(
-          std::pair(DefaultInfo->getArg(op), DefaultInfo->getArgName(op)));
+      Ops.emplace_back(DefaultInfo->getArg(op), DefaultInfo->getArgName(op));
     const DagInit *DI = DagInit::get(SomeSDNode, nullptr, Ops);
 
     // Create a TreePattern to parse this.

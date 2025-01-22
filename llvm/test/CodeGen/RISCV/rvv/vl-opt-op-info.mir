@@ -243,6 +243,36 @@ body: |
     %y:vrm2 = PseudoVWADD_WV_M1 $noreg, $noreg, %x, 1, 3 /* e8 */, 0
 ...
 ---
+name: tied_vwop_wv_vs1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: tied_vwop_wv_vs1
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: early-clobber %y:vrm2 = PseudoVWADD_WV_M1_TIED $noreg, %x, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
+    %y:vrm2 = PseudoVWADD_WV_M1_TIED $noreg, %x, 1, 3 /* e8 */, 0
+...
+---
+name: tied_vwop_wv_vs1_incompatible_eew
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: tied_vwop_wv_vs1_incompatible_eew
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0 /* tu, mu */
+    ; CHECK-NEXT: early-clobber %y:vrm2 = PseudoVWADD_WV_M1_TIED $noreg, %x, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 4 /* e16 */, 0
+    %y:vrm2 = PseudoVWADD_WV_M1_TIED $noreg, %x, 1, 3 /* e8 */, 0
+...
+---
+name: tied_vwop_wv_vs1_incompatible_emul
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: tied_vwop_wv_vs1_incompatible_emul
+    ; CHECK: %x:vr = PseudoVADD_VV_MF2 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: early-clobber %y:vrm2 = PseudoVWADD_WV_M1_TIED $noreg, %x, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = PseudoVADD_VV_MF2 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0
+    %y:vrm2 = PseudoVWADD_WV_M1_TIED $noreg, %x, 1, 3 /* e8 */, 0
+...
+---
 name: vop_vf2_vd
 body: |
   bb.0:

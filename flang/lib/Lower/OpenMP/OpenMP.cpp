@@ -600,6 +600,7 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
   assert(ompEval &&
          llvm::omp::allTargetSet.test(extractOmpDirective(*ompEval)) &&
          "expected TARGET construct evaluation");
+  (void)ompEval;
 
   // Use the whole list of clauses passed to the construct here, rather than the
   // ones only applied to omp.target.
@@ -1345,11 +1346,12 @@ static void genBodyOfTargetOp(
             firOpBuilder.createTemporary(val.getLoc(), val.getType());
         firOpBuilder.createStoreWithConvert(copyVal.getLoc(), val, copyVal);
 
-        lower::AddrAndBoundsInfo info = lower::getDataOperandBaseAddr(
-            firOpBuilder, val, /*isOptional=*/false, val.getLoc());
+        fir::factory::AddrAndBoundsInfo info =
+            fir::factory::getDataOperandBaseAddr(
+                firOpBuilder, val, /*isOptional=*/false, val.getLoc());
         llvm::SmallVector<mlir::Value> bounds =
-            Fortran::lower::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
-                                                 mlir::omp::MapBoundsType>(
+            fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
+                                               mlir::omp::MapBoundsType>(
                 firOpBuilder, info,
                 hlfir::translateToExtendedValue(val.getLoc(), firOpBuilder,
                                                 hlfir::Entity{val})
@@ -2081,7 +2083,7 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       const auto &objList = std::get<ObjectList>(lastp->t);
       for (const Object &object : objList) {
         semantics::Symbol *sym = object.sym();
-        converter.copyHostAssociateVar(*sym, &insp);
+        converter.copyHostAssociateVar(*sym, &insp, /*hostIsSource=*/false);
       }
     }
   }
@@ -2187,11 +2189,12 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(sym);
       name << sym.name().ToString();
 
-      lower::AddrAndBoundsInfo info = getDataOperandBaseAddr(
-          converter, firOpBuilder, sym, converter.getCurrentLocation());
+      fir::factory::AddrAndBoundsInfo info =
+          Fortran::lower::getDataOperandBaseAddr(
+              converter, firOpBuilder, sym, converter.getCurrentLocation());
       llvm::SmallVector<mlir::Value> bounds =
-          lower::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
-                                      mlir::omp::MapBoundsType>(
+          fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
+                                             mlir::omp::MapBoundsType>(
               firOpBuilder, info, dataExv,
               semantics::IsAssumedSizeArray(sym.GetUltimate()),
               converter.getCurrentLocation());
@@ -2510,7 +2513,7 @@ static void genStandaloneDo(lower::AbstractConverter &converter,
 
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
-                           enableDelayedPrivatizationStaging, symTable);
+                           enableDelayedPrivatization, symTable);
   dsp.processStep1(&wsloopClauseOps);
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
@@ -3340,6 +3343,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         !std::holds_alternative<clause::UseDevicePtr>(clause.u) &&
         !std::holds_alternative<clause::InReduction>(clause.u) &&
         !std::holds_alternative<clause::Mergeable>(clause.u) &&
+        !std::holds_alternative<clause::Untied>(clause.u) &&
         !std::holds_alternative<clause::TaskReduction>(clause.u) &&
         !std::holds_alternative<clause::Detach>(clause.u)) {
       std::string name =

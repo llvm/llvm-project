@@ -98,7 +98,7 @@ ExegesisTarget::createBenchmarkRunner(
     return nullptr;
   case Benchmark::Latency:
   case Benchmark::InverseThroughput:
-    if (BenchmarkPhaseSelector >= BenchmarkPhaseSelectorE::Measure &&
+    if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure &&
         !PfmCounters.CycleCounter) {
       const char *ModeName = Mode == Benchmark::Latency
                                  ? "latency"
@@ -116,7 +116,7 @@ ExegesisTarget::createBenchmarkRunner(
         State, Mode, BenchmarkPhaseSelector, ResultAggMode, ExecutionMode,
         ValidationCounters, BenchmarkRepeatCount);
   case Benchmark::Uops:
-    if (BenchmarkPhaseSelector >= BenchmarkPhaseSelectorE::Measure &&
+    if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure &&
         !PfmCounters.UopsCounter && !PfmCounters.IssueCounters)
       return make_error<Failure>(
           "can't run 'uops' mode, sched model does not define uops or issue "
@@ -212,7 +212,7 @@ public:
   ExegesisDefaultTarget() : ExegesisTarget({}, opcodeIsNotAvailable) {}
 
 private:
-  std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,
+  std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, MCRegister Reg,
                                const APInt &Value) const override {
     llvm_unreachable("Not yet implemented");
   }

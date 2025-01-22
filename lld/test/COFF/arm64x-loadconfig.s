@@ -7,6 +7,7 @@
 // RUN: llvm-mc -filetype=obj -triple=arm64ec-windows loadconfig-ec.s -o loadconfig-ec.obj
 // RUN: llvm-mc -filetype=obj -triple=aarch64-windows loadconfig-short.s -o loadconfig-short.obj
 // RUN: llvm-mc -filetype=obj -triple=arm64ec-windows loadconfig-short.s -o loadconfig-short-arm64ec.obj
+// RUN: llvm-lib -machine:arm64x -out:loadconfig.lib loadconfig.obj loadconfig-ec.obj
 
 // RUN: lld-link -machine:arm64x -out:out-warn.dll -dll -noentry test.obj \
 // RUN:           2>&1 | FileCheck --check-prefixes=WARN-LOADCFG,WARN-EC-LOADCFG %s
@@ -157,6 +158,10 @@
 // BASERELOC-NEXT:     Type: DIR64
 // BASERELOC-NEXT:     Address: 0x2074
 // BASERELOC-NEXT:   }
+
+// RUN: lld-link -machine:arm64x -out:out-hyb-lib.dll -dll -noentry loadconfig.lib chpe.obj test.obj
+// RUN: llvm-readobj --coff-load-config out-hyb-lib.dll | FileCheck --check-prefix=LOADCFG %s
+// RUN: llvm-readobj --coff-basereloc out-hyb-lib.dll | FileCheck --check-prefix=BASERELOC %s
 
 #--- test.s
         .data

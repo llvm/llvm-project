@@ -335,4 +335,16 @@ def cuf_RegisterKernelOp : cuf_Op<"register_kernel", []> {
   }];
 }
 
+def cuf_DeviceAddressOp : cuf_Op<"device_address", []> {
+  let summary = "Get the device address from a host symbol";
+
+  let arguments = (ins SymbolRefAttr:$hostSymbol);
+
+  let assemblyFormat = [{
+    $hostSymbol attr-dict `->` type($addr)
+  }];
+
+  let results = (outs fir_ReferenceType:$addr);
+}
+
 #endif // FORTRAN_DIALECT_CUF_CUF_OPS

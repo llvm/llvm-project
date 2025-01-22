@@ -2399,7 +2399,7 @@ Expr *VarDecl::getInit() {
   if (!hasInit())
     return nullptr;
 
-  if (auto *S = Init.dyn_cast<Stmt *>())
+  if (auto *S = dyn_cast<Stmt *>(Init))
     return cast<Expr>(S);
 
   auto *Eval = getEvaluatedStmt();

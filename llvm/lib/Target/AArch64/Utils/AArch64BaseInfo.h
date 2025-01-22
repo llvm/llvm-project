@@ -306,6 +306,36 @@ inline static CondCode getInvertedCondCode(CondCode Code) {
   return static_cast<CondCode>(static_cast<unsigned>(Code) ^ 0x1);
 }
 
+/// getSwappedCondition - assume the flags are set by MI(a,b), return
+/// the condition code if we modify the instructions such that flags are
+/// set by MI(b,a).
+inline static CondCode getSwappedCondition(CondCode CC) {
+  switch (CC) {
+  default:
+    return AL;
+  case EQ:
+    return EQ;
+  case NE:
+    return NE;
+  case HS:
+    return LS;
+  case LO:
+    return HI;
+  case HI:
+    return LO;
+  case LS:
+    return HS;
+  case GE:
+    return LE;
+  case LT:
+    return GT;
+  case GT:
+    return LT;
+  case LE:
+    return GE;
+  }
+}
+
 /// Given a condition code, return NZCV flags that would satisfy that condition.
 /// The flag bits are in the format expected by the ccmp instructions.
 /// Note that many different flag settings can satisfy a given condition code,
