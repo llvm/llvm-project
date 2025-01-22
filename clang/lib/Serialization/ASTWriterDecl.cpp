@@ -28,6 +28,24 @@ using namespace clang;
 using namespace serialization;
 
 //===----------------------------------------------------------------------===//
+// Utility functions
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+// Helper function that returns dependent decl context for the declaration
+// passed in the argument.
+template <typename DCT> DCT *getDependentDeclContext(Decl *D) {
+  if (auto *DC = llvm::dyn_cast_or_null<DCT>(D->getDeclContext());
+      DC && DC->isDependentContext() && DC->isThisDeclarationADefinition()) {
+    return DC;
+  }
+  return nullptr;
+}
+
+} // namespace
+
+//===----------------------------------------------------------------------===//
 // Declaration serialization
 //===----------------------------------------------------------------------===//
 
@@ -802,11 +820,9 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
     // For a friend function defined inline within a class template, we have to
     // force the definition to be the one inside the definition of the template
     // class. Remember this relation to deserialize them together.
-    if (auto *RD = dyn_cast<CXXRecordDecl>(D->getLexicalParent()))
-      if (RD->isDependentContext() && RD->isThisDeclarationADefinition()) {
-        Writer.RelatedDeclsMap[Writer.GetDeclRef(RD)].push_back(
-            Writer.GetDeclRef(D));
-      }
+    if (auto *RD = getDependentDeclContext<CXXRecordDecl>(D))
+      Writer.RelatedDeclsMap[Writer.GetDeclRef(RD)].push_back(
+          Writer.GetDeclRef(D));
   }
 
   Record.push_back(D->param_size());
@@ -1573,8 +1589,7 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     }
     // For lambdas inside template functions, remember the mapping to
     // deserialize them together.
-    if (auto FD = llvm::dyn_cast_or_null<FunctionDecl>(D->getDeclContext());
-        FD && FD->isDependentContext() && FD->isThisDeclarationADefinition()) {
+    if (auto *FD = getDependentDeclContext<CXXRecordDecl>(D)) {
       Writer.RelatedDeclsMap[Writer.GetDeclRef(FD)].push_back(
           Writer.GetDeclRef(D));
     }
