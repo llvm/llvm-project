@@ -768,9 +768,20 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; DEFAULT-LABEL: define void @multiple_exit_conditions(
 ; DEFAULT-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR2:[0-9]+]] {
 ; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; DEFAULT-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
+; DEFAULT-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP7]], 8
+; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 257, [[TMP9]]
+; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; DEFAULT:       vector.ph:
-; DEFAULT-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[DST]], i64 2048
+; DEFAULT-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; DEFAULT-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 8
+; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 257, [[TMP3]]
+; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 257, [[N_MOD_VF]]
+; DEFAULT-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
+; DEFAULT-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP10]], 8
+; DEFAULT-NEXT:    [[TMP6:%.*]] = mul i64 [[N_VEC]], 8
+; DEFAULT-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP6]]
+; DEFAULT-NEXT:    [[TMP8:%.*]] = mul i64 [[N_VEC]], 2
 ; DEFAULT-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; DEFAULT:       vector.body:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -778,20 +789,39 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; DEFAULT-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP0]]
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = load i16, ptr [[SRC]], align 2
-; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i16> poison, i16 [[TMP1]], i64 0
-; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT]], <8 x i16> poison, <8 x i32> zeroinitializer
-; DEFAULT-NEXT:    [[TMP2:%.*]] = or <8 x i16> [[BROADCAST_SPLAT]], splat (i16 1)
-; DEFAULT-NEXT:    [[TMP3:%.*]] = uitofp <8 x i16> [[TMP2]] to <8 x double>
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i16> poison, i16 [[TMP1]], i64 0
+; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i16> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
+; DEFAULT-NEXT:    [[TMP11:%.*]] = or <vscale x 2 x i16> [[BROADCAST_SPLAT]], splat (i16 1)
+; DEFAULT-NEXT:    [[TMP12:%.*]] = or <vscale x 2 x i16> [[BROADCAST_SPLAT]], splat (i16 1)
+; DEFAULT-NEXT:    [[TMP13:%.*]] = or <vscale x 2 x i16> [[BROADCAST_SPLAT]], splat (i16 1)
+; DEFAULT-NEXT:    [[TMP14:%.*]] = or <vscale x 2 x i16> [[BROADCAST_SPLAT]], splat (i16 1)
+; DEFAULT-NEXT:    [[TMP15:%.*]] = uitofp <vscale x 2 x i16> [[TMP11]] to <vscale x 2 x double>
+; DEFAULT-NEXT:    [[TMP16:%.*]] = uitofp <vscale x 2 x i16> [[TMP12]] to <vscale x 2 x double>
+; DEFAULT-NEXT:    [[TMP17:%.*]] = uitofp <vscale x 2 x i16> [[TMP13]] to <vscale x 2 x double>
+; DEFAULT-NEXT:    [[TMP18:%.*]] = uitofp <vscale x 2 x i16> [[TMP14]] to <vscale x 2 x double>
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = getelementptr double, ptr [[NEXT_GEP]], i32 0
-; DEFAULT-NEXT:    store <8 x double> [[TMP3]], ptr [[TMP4]], align 8
-; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; DEFAULT-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
-; DEFAULT-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; DEFAULT-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
+; DEFAULT-NEXT:    [[TMP21:%.*]] = mul i64 [[TMP20]], 2
+; DEFAULT-NEXT:    [[TMP22:%.*]] = getelementptr double, ptr [[NEXT_GEP]], i64 [[TMP21]]
+; DEFAULT-NEXT:    [[TMP23:%.*]] = call i64 @llvm.vscale.i64()
+; DEFAULT-NEXT:    [[TMP24:%.*]] = mul i64 [[TMP23]], 4
+; DEFAULT-NEXT:    [[TMP25:%.*]] = getelementptr double, ptr [[NEXT_GEP]], i64 [[TMP24]]
+; DEFAULT-NEXT:    [[TMP26:%.*]] = call i64 @llvm.vscale.i64()
+; DEFAULT-NEXT:    [[TMP27:%.*]] = mul i64 [[TMP26]], 6
+; DEFAULT-NEXT:    [[TMP28:%.*]] = getelementptr double, ptr [[NEXT_GEP]], i64 [[TMP27]]
+; DEFAULT-NEXT:    store <vscale x 2 x double> [[TMP15]], ptr [[TMP4]], align 8
+; DEFAULT-NEXT:    store <vscale x 2 x double> [[TMP16]], ptr [[TMP22]], align 8
+; DEFAULT-NEXT:    store <vscale x 2 x double> [[TMP17]], ptr [[TMP25]], align 8
+; DEFAULT-NEXT:    store <vscale x 2 x double> [[TMP18]], ptr [[TMP28]], align 8
+; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; DEFAULT-NEXT:    [[TMP29:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; DEFAULT-NEXT:    br i1 [[TMP29]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; DEFAULT:       middle.block:
-; DEFAULT-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 257, [[N_VEC]]
+; DEFAULT-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; DEFAULT:       scalar.ph:
 ; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[DST]], [[ENTRY:%.*]] ]
-; DEFAULT-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ 512, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
+; DEFAULT-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ [[TMP8]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
 ; DEFAULT-NEXT:    br label [[LOOP:%.*]]
 ; DEFAULT:       vector.scevcheck:
 ; DEFAULT-NEXT:    unreachable

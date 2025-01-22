@@ -742,6 +742,18 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getArithmeticReductionCost(
         Instruction::Or, cast<VectorType>(VecTy), std::nullopt, Ctx.CostKind);
   }
+  case VPInstruction::BranchOnCount: {
+    // BranchOnCount will genearte icmp_eq + br instructions and the
+    // cost of branch will be calculated in VPRegionBlock.
+    // If the vector loop only executed once, ignore the cost of the cmp.
+    Type *ValTy = Ctx.Types.inferScalarType(getOperand(0));
+    auto TC = dyn_cast_if_present<ConstantInt>(
+        getParent()->getPlan()->getTripCount()->getUnderlyingValue());
+    if (TC && VF.isFixed() && TC->getSExtValue() == VF.getFixedValue())
+      return 0;
+    return Ctx.TTI.getCmpSelInstrCost(Instruction::ICmp, ValTy, nullptr,
+                                      CmpInst::ICMP_EQ, Ctx.CostKind);
+  }
   default:
     // TODO: Compute cost other VPInstructions once the legacy cost model has
     // been retired.
