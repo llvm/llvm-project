@@ -24,7 +24,7 @@
 /// indirectly via a parent object.
 //===----------------------------------------------------------------------===//
 
-#include "flang/Lower/DirectivesCommon.h"
+#include "flang/Optimizer/Builder/DirectivesCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -598,6 +598,7 @@ class MapInfoFinalizationPass
       //     if (alreadyMapped)
       //       continue;
 
+#if 1//<<<<<<< HEAD
       //     builder.setInsertionPoint(op);
       //     mlir::Value fieldIdxVal = builder.createIntegerConstant(
       //         op.getLoc(), mlir::IndexType::get(builder.getContext()),
@@ -616,6 +617,26 @@ class MapInfoFinalizationPass
       //                                             hlfir::Entity{fieldCoord})
       //                 .first,
       //             /*dataExvIsAssumedSize=*/false, op.getLoc());
+#else//=======
+          builder.setInsertionPoint(op);
+          mlir::Value fieldIdxVal = builder.createIntegerConstant(
+              op.getLoc(), mlir::IndexType::get(builder.getContext()),
+              fieldIdx);
+          auto fieldCoord = builder.create<fir::CoordinateOp>(
+              op.getLoc(), builder.getRefType(memTy), op.getVarPtr(),
+              fieldIdxVal);
+          fir::factory::AddrAndBoundsInfo info =
+              fir::factory::getDataOperandBaseAddr(
+                  builder, fieldCoord, /*isOptional=*/false, op.getLoc());
+          llvm::SmallVector<mlir::Value> bounds =
+              fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
+                                                 mlir::omp::MapBoundsType>(
+                  builder, info,
+                  hlfir::translateToExtendedValue(op.getLoc(), builder,
+                                                  hlfir::Entity{fieldCoord})
+                      .first,
+                  /*dataExvIsAssumedSize=*/false, op.getLoc());
+#endif//>>>>>>> ffde2687be1fcb92c0c686aee441b83e71531457
 
       //     mlir::omp::MapInfoOp fieldMapOp =
       //         builder.create<mlir::omp::MapInfoOp>(

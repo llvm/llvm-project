@@ -1,7 +1,6 @@
 ! This test checks the insertion of lifetime information for loop indices of
 ! OpenMP loop operations.
 ! RUN: %flang_fc1 -flang-experimental-hlfir -emit-llvm -fopenmp %s -o - | FileCheck %s
-! XFAIL: *
 
 ! CHECK-LABEL: define void @wsloop_i32
 subroutine wsloop_i32()
