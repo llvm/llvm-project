@@ -544,7 +544,13 @@ private:
   /// to ensure that the definition for related decls comes from the same module
   /// as the enclosing main decl. Without this, due to lazy deserialization,
   /// the definition for the main decl and related decls may come from different
-  /// modules.
+  /// modules. It is used for the following cases:
+  /// - Lambda inside a template function definition: The main declaration is
+  ///   the enclosing function, and the related declarations are the lambda
+  ///   declarations.
+  /// - Friend function defined inside a template CXXRecord declaration: The
+  ///   main declaration is the enclosing record, and the related declarations
+  ///   are the friend functions.
   llvm::DenseMap<GlobalDeclID, SmallVector<GlobalDeclID, 4>> RelatedDeclsMap;
 
   struct PendingUpdateRecord {

@@ -817,7 +817,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
     // force the definition to be the one inside the definition of the template
     // class. Remember this relation to deserialize them together.
     if (auto *RD = dyn_cast<CXXRecordDecl>(D->getLexicalParent());
-        isDefinitionInDependentContext(RD)) {
+        RD && isDefinitionInDependentContext(RD)) {
       Writer.RelatedDeclsMap[Writer.GetDeclRef(RD)].push_back(
           Writer.GetDeclRef(D));
     }
