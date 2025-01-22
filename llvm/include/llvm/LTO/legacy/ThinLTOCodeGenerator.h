@@ -244,6 +244,12 @@ public:
   /// the processing.
   void setSaveTempsDir(std::string Path) { SaveTempsDir = std::move(Path); }
 
+  /// Set the path to a directory where to save temporaries from the remote
+  /// service.
+  void setRemoteServiceTempsDir(std::string Path) {
+    RemoteServiceTempsDir = std::move(Path);
+  }
+
   /// Set the path to a directory where to save generated object files. This
   /// path can be used by a linker to request on-disk files instead of in-memory
   /// buffers. When set, results are available through getProducedBinaryFiles()
@@ -384,6 +390,9 @@ private:
 
   /// Path to a directory to save the temporary bitcode files.
   std::string SaveTempsDir;
+
+  /// Path to a directory to save the temporary remote service files.
+  std::string RemoteServiceTempsDir;
 
   /// Path to a directory to save the generated object files.
   std::string SavedObjectsDirectoryPath;

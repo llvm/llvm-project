@@ -619,6 +619,10 @@ void thinlto_codegen_set_cpu(thinlto_code_gen_t cg, const char *cpu) {
 
 void thinlto_codegen_set_cache_dir(thinlto_code_gen_t cg,
                                    const char *cache_dir) {
+  if (sys::Process::GetEnv("LLVM_THINLTO_USE_REMOTE_CACHE")) {
+    unwrap(cg)->setRemoteServiceTempsDir(cache_dir);
+    return;
+  }
   // FIXME: need to return error somehow.
   Error Err = unwrap(cg)->setCacheDir(cache_dir);
   if (Err)
