@@ -308,6 +308,40 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl, unsigned Depth) {
     NewVec = createShuffle(VecOp, Mask);
     break;
   }
+  case LegalityResultID::DiamondReuseMultiInput: {
+    const auto &Descr =
+        cast<DiamondReuseMultiInput>(LegalityRes).getCollectDescr();
+    Type *ResTy = FixedVectorType::get(Bndl[0]->getType(), Bndl.size());
+
+    // TODO: Try to get WhereIt without creating a vector.
+    SmallVector<Value *, 4> DescrInstrs;
+    for (const auto &ElmDescr : Descr.getDescrs()) {
+      if (auto *I = dyn_cast<Instruction>(ElmDescr.getValue()))
+        DescrInstrs.push_back(I);
+    }
+    auto WhereIt = getInsertPointAfterInstrs(DescrInstrs);
+
+    Value *LastV = PoisonValue::get(ResTy);
+    for (auto [Lane, ElmDescr] : enumerate(Descr.getDescrs())) {
+      Value *VecOp = ElmDescr.getValue();
+      Context &Ctx = VecOp->getContext();
+      Value *ValueToInsert;
+      if (ElmDescr.needsExtract()) {
+        ConstantInt *IdxC =
+            ConstantInt::get(Type::getInt32Ty(Ctx), ElmDescr.getExtractIdx());
+        ValueToInsert = ExtractElementInst::create(VecOp, IdxC, WhereIt,
+                                                   VecOp->getContext(), "VExt");
+      } else {
+        ValueToInsert = VecOp;
+      }
+      ConstantInt *LaneC = ConstantInt::get(Type::getInt32Ty(Ctx), Lane);
+      Value *Ins = InsertElementInst::create(LastV, ValueToInsert, LaneC,
+                                             WhereIt, Ctx, "VIns");
+      LastV = Ins;
+    }
+    NewVec = LastV;
+    break;
+  }
   case LegalityResultID::Pack: {
     // If we can't vectorize the seeds then just return.
     if (Depth == 0)
