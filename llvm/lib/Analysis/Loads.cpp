@@ -531,7 +531,8 @@ static bool areNonOverlapSameBaseLoadAndStore(const Value *LoadPtr,
 
 static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
                                     Type *AccessTy, bool AtLeastAtomic,
-                                    const DataLayout &DL, bool *IsLoadCSE) {
+                                    const DataLayout &DL, bool *IsLoadCSE,
+                                    bool AllowPartwiseBitcastStructs = false) {
   // If this is a load of Ptr, the loaded value is available.
   // (This is true even if the load is volatile or atomic, although
   // those cases are unlikely.)
@@ -571,6 +572,19 @@ static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
     Value *Val = SI->getValueOperand();
     if (CastInst::isBitOrNoopPointerCastable(Val->getType(), AccessTy, DL))
       return Val;
+
+    if (AllowPartwiseBitcastStructs) {
+      if (StructType *SrcStructTy = dyn_cast<StructType>(Val->getType())) {
+        if (StructType *DestStructTy = dyn_cast<StructType>(AccessTy)) {
+          if (SrcStructTy->getNumElements() == DestStructTy->getNumElements() &&
+              all_of_zip(SrcStructTy->elements(), DestStructTy->elements(),
+                         [](Type *T1, Type *T2) {
+                           return CastInst::isBitCastable(T1, T2);
+                         }))
+            return Val;
+        }
+      }
+    }
 
     TypeSize StoreSize = DL.getTypeSizeInBits(Val->getType());
     TypeSize LoadSize = DL.getTypeSizeInBits(AccessTy);
@@ -704,8 +718,8 @@ Value *llvm::findAvailablePtrLoadStore(
 }
 
 Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
-                                      bool *IsLoadCSE,
-                                      unsigned MaxInstsToScan) {
+                                      bool *IsLoadCSE, unsigned MaxInstsToScan,
+                                      bool AllowPartwiseBitcastStructs) {
   const DataLayout &DL = Load->getDataLayout();
   Value *StrippedPtr = Load->getPointerOperand()->stripPointerCasts();
   BasicBlock *ScanBB = Load->getParent();
@@ -727,8 +741,9 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
     if (MaxInstsToScan-- == 0)
       return nullptr;
 
-    Available = getAvailableLoadStore(&Inst, StrippedPtr, AccessTy,
-                                      AtLeastAtomic, DL, IsLoadCSE);
+    Available =
+        getAvailableLoadStore(&Inst, StrippedPtr, AccessTy, AtLeastAtomic, DL,
+                              IsLoadCSE, AllowPartwiseBitcastStructs);
     if (Available)
       break;
 

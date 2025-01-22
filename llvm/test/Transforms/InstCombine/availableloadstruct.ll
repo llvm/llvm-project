@@ -29,7 +29,12 @@ define {<vscale x 16 x i8>, <vscale x 16 x i8>} @check_nxv16i8_nxv4i32({<vscale 
 ; CHECK-SAME: { <vscale x 4 x i32>, <vscale x 4 x i32> } [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32> } [[X]], ptr [[P]], align 16
-; CHECK-NEXT:    [[R:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[P]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[X]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 4 x i32> [[TMP0]] to <vscale x 16 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[X]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <vscale x 4 x i32> [[TMP3]] to <vscale x 16 x i8>
+; CHECK-NEXT:    [[R:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], <vscale x 16 x i8> [[TMP4]], 1
 ; CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[R]]
 ;
 entry:
@@ -42,9 +47,12 @@ define {<vscale x 16 x i8>, <vscale x 16 x i8>} @alloca_nxv16i8_nxv4i32({<vscale
 ; CHECK-LABEL: define { <vscale x 16 x i8>, <vscale x 16 x i8> } @alloca_nxv16i8_nxv4i32(
 ; CHECK-SAME: { <vscale x 4 x i32>, <vscale x 4 x i32> } [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[P:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
-; CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32> } [[X]], ptr [[P]], align 16
-; CHECK-NEXT:    [[R:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[P]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[X]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 4 x i32> [[TMP0]] to <vscale x 16 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[X]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <vscale x 4 x i32> [[TMP3]] to <vscale x 16 x i8>
+; CHECK-NEXT:    [[R:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]], <vscale x 16 x i8> [[TMP4]], 1
 ; CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[R]]
 ;
 entry:
@@ -60,7 +68,12 @@ define { <16 x i8>, <32 x i8> } @differenttypes({ <4 x i32>, <8 x i32> } %a, ptr
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr nonnull [[P]])
 ; CHECK-NEXT:    store { <4 x i32>, <8 x i32> } [[A]], ptr [[P]], align 16
-; CHECK-NEXT:    [[TMP0:%.*]] = load { <16 x i8>, <32 x i8> }, ptr [[P]], align 16
+; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <4 x i32>, <8 x i32> } [[A]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP5]] to <16 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <16 x i8>, <32 x i8> } poison, <16 x i8> [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x i32>, <8 x i32> } [[A]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i32> [[TMP3]] to <32 x i8>
+; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <16 x i8>, <32 x i8> } [[TMP2]], <32 x i8> [[TMP4]], 1
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr nonnull [[P]])
 ; CHECK-NEXT:    ret { <16 x i8>, <32 x i8> } [[TMP0]]
 ;

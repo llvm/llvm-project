@@ -1010,10 +1010,24 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
   // separated by a few arithmetic operations.
   bool IsLoadCSE = false;
   BatchAAResults BatchAA(*AA);
-  if (Value *AvailableVal = FindAvailableLoadedValue(&LI, BatchAA, &IsLoadCSE)) {
+  if (Value *AvailableVal =
+          FindAvailableLoadedValue(&LI, BatchAA, &IsLoadCSE, DefMaxInstsToScan,
+                                   /*AllowPartwiseBitcastStructs=*/true)) {
     if (IsLoadCSE)
       combineMetadataForCSE(cast<LoadInst>(AvailableVal), &LI, false);
 
+    if (AvailableVal->getType() != LI.getType() &&
+        isa<StructType>(LI.getType())) {
+      StructType *DstST = cast<StructType>(LI.getType());
+      Value *R = PoisonValue::get(LI.getType());
+      for (unsigned I = 0, E = DstST->getNumElements(); I < E; I++) {
+        Value *Ext = Builder.CreateExtractValue(AvailableVal, I);
+        Value *BC =
+            Builder.CreateBitOrPointerCast(Ext, DstST->getElementType(I));
+        R = Builder.CreateInsertValue(R, BC, I);
+      }
+      return replaceInstUsesWith(LI, R);
+    }
     return replaceInstUsesWith(
         LI, Builder.CreateBitOrPointerCast(AvailableVal, LI.getType(),
                                            LI.getName() + ".cast"));
