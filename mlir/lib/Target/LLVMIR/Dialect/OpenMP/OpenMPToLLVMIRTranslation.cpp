@@ -2120,38 +2120,6 @@ convertOmpTaskwaitOp(omp::TaskwaitOp twOp, llvm::IRBuilderBase &builder,
   return success();
 }
 
-static LogicalResult generateOMPWorkshareLoop(
-    Operation &opInst, llvm::IRBuilderBase &builder,
-    LLVM::ModuleTranslation &moduleTranslation, llvm::Value *chunk,
-    bool isOrdered, bool isSimd, omp::ClauseScheduleKind &schedule,
-    std::optional<omp::ScheduleModifier> &scheduleMod, bool loopNeedsBarrier,
-    llvm::omp::WorksharingLoopType workshareLoopType) {
-  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
-
-  llvm::Expected<llvm::BasicBlock *> regionBlock = convertOmpOpRegions(
-      opInst.getRegion(0), "omp.wsloop.region", builder, moduleTranslation);
-
-  if (failed(handleError(regionBlock, opInst)))
-    return failure();
-
-  builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
-
-  llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
-      findAllocaInsertPoint(builder, moduleTranslation);
-  llvm::CanonicalLoopInfo *loopInfo = findCurrentLoopInfo(moduleTranslation);
-
-  llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
-      ompBuilder->applyWorkshareLoop(
-          ompLoc.DL, loopInfo, allocaIP, loopNeedsBarrier,
-          convertToScheduleKind(schedule), chunk, isSimd,
-          scheduleMod == omp::ScheduleModifier::monotonic,
-          scheduleMod == omp::ScheduleModifier::nonmonotonic, isOrdered,
-          workshareLoopType);
-
-  return handleError(wsloopIP, opInst);
-}
-
 /// Converts an OpenMP workshare loop into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
@@ -2240,22 +2208,36 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   bool isOrdered = wsloopOp.getOrdered().has_value();
   std::optional<omp::ScheduleModifier> scheduleMod = wsloopOp.getScheduleMod();
   bool isSimd = wsloopOp.getScheduleSimd();
-  auto distributeParentOp = dyn_cast<omp::DistributeOp>(opInst.getParentOp());
-  //  bool distributeCodeGen = opInst.getParentOfType<omp::DistributeOp>();
+
+  // The only legal way for the direct parent to be omp.distribute is that this
+  // represents 'distribute parallel do'. Otherwise, this is a regular
+  // worksharing loop.
   llvm::omp::WorksharingLoopType workshareLoopType =
-      llvm::omp::WorksharingLoopType::ForStaticLoop;
-  if (distributeParentOp) {
-    if (isa<omp::ParallelOp>(distributeParentOp->getParentOp()))
-      workshareLoopType =
-          llvm::omp::WorksharingLoopType::DistributeForStaticLoop;
-    else
-      workshareLoopType = llvm::omp::WorksharingLoopType::DistributeStaticLoop;
-  }
+      llvm::isa_and_present<omp::DistributeOp>(opInst.getParentOp())
+          ? llvm::omp::WorksharingLoopType::DistributeForStaticLoop
+          : llvm::omp::WorksharingLoopType::ForStaticLoop;
 
   bool loopNeedsBarrier = !wsloopOp.getNowait();
-  if (failed(generateOMPWorkshareLoop(opInst, builder, moduleTranslation, chunk,
-                                      isOrdered, isSimd, schedule, scheduleMod,
-                                      loopNeedsBarrier, workshareLoopType)))
+
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  llvm::Expected<llvm::BasicBlock *> regionBlock = convertOmpOpRegions(
+      wsloopOp.getRegion(), "omp.wsloop.region", builder, moduleTranslation);
+
+  if (failed(handleError(regionBlock, opInst)))
+    return failure();
+
+  builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
+  llvm::CanonicalLoopInfo *loopInfo = findCurrentLoopInfo(moduleTranslation);
+
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
+      moduleTranslation.getOpenMPBuilder()->applyWorkshareLoop(
+          ompLoc.DL, loopInfo, allocaIP, loopNeedsBarrier,
+          convertToScheduleKind(schedule), chunk, isSimd,
+          scheduleMod == omp::ScheduleModifier::monotonic,
+          scheduleMod == omp::ScheduleModifier::nonmonotonic, isOrdered,
+          workshareLoopType);
+
+  if (failed(handleError(wsloopIP, opInst)))
     return failure();
 
   // Process the reductions if required.
@@ -4169,7 +4151,6 @@ static LogicalResult
 convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-  // FIXME: This ignores any other nested wrappers (e.g. omp.wsloop, omp.simd).
   auto distributeOp = cast<omp::DistributeOp>(opInst);
   if (failed(checkImplementationStatus(opInst)))
     return failure();
@@ -4216,46 +4197,45 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
     // DistributeOp has only one region associated with it.
     builder.restoreIP(codeGenIP);
 
-    if (!distributeOp.isComposite() ||
-        isa<omp::SimdOp>(distributeOp.getNestedWrapper())) {
-      // Convert a standalone DISTRIBUTE construct.
-      llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-      bool isGPU = ompBuilder->Config.isGPU();
-      // TODO: Unify host and target lowering for standalone DISTRIBUTE
-      if (!isGPU) {
-        llvm::Expected<llvm::BasicBlock *> regionBlock = convertOmpOpRegions(
-            distributeOp.getRegion(), "omp.distribute.region", builder,
-            moduleTranslation);
-        if (!regionBlock)
-          return regionBlock.takeError();
-        builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
-        return llvm::Error::success();
-      }
-      // TODO: Add support for clauses which are valid for DISTRIBUTE construct
-      // Static schedule is the default.
-      auto schedule = omp::ClauseScheduleKind::Static;
-      bool isOrdered = false;
-      std::optional<omp::ScheduleModifier> scheduleMod;
-      bool isSimd = false;
-      llvm::omp::WorksharingLoopType workshareLoopType =
-          llvm::omp::WorksharingLoopType::DistributeStaticLoop;
-      bool loopNeedsBarier = true;
-      llvm::Value *chunk = nullptr;
-      auto loopNestConversionResult = generateOMPWorkshareLoop(
-          opInst, builder, moduleTranslation, chunk, isOrdered, isSimd,
-          schedule, scheduleMod, loopNeedsBarier, workshareLoopType);
+    llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+    llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+    llvm::Expected<llvm::BasicBlock *> regionBlock =
+        convertOmpOpRegions(distributeOp.getRegion(), "omp.distribute.region",
+                            builder, moduleTranslation);
+    if (!regionBlock)
+      return regionBlock.takeError();
+    builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
 
-      if (failed(loopNestConversionResult))
-        return llvm::make_error<PreviouslyReportedError>();
-    } else {
-      // Convert a DISTRIBUTE leaf as part of a composite construct.
-      mlir::Region &reg = distributeOp.getRegion();
-      llvm::Expected<llvm::BasicBlock *> regionBlock = convertOmpOpRegions(
-          reg, "omp.distribute.region", builder, moduleTranslation);
-      if (!regionBlock)
-        return regionBlock.takeError();
-      builder.SetInsertPoint((*regionBlock)->getTerminator());
-    }
+    // Skip applying a workshare loop below when translating 'distribute
+    // parallel do' (it's been already handled by this point while translating
+    // the nested omp.wsloop) and when not targeting a GPU.
+    if (isa_and_present<omp::WsloopOp>(distributeOp.getNestedWrapper()) ||
+        !ompBuilder->Config.isGPU())
+      return llvm::Error::success();
+
+    // TODO: Add support for clauses which are valid for DISTRIBUTE construct
+    // Static schedule is the default.
+    auto schedule = omp::ClauseScheduleKind::Static;
+    bool isOrdered = false;
+    std::optional<omp::ScheduleModifier> scheduleMod;
+    bool isSimd = false;
+    llvm::omp::WorksharingLoopType workshareLoopType =
+        llvm::omp::WorksharingLoopType::DistributeStaticLoop;
+    bool loopNeedsBarier = true;
+    llvm::Value *chunk = nullptr;
+
+    llvm::CanonicalLoopInfo *loopInfo = findCurrentLoopInfo(moduleTranslation);
+    llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
+        ompBuilder->applyWorkshareLoop(
+            ompLoc.DL, loopInfo, allocaIP, loopNeedsBarier,
+            convertToScheduleKind(schedule), chunk, isSimd,
+            scheduleMod == omp::ScheduleModifier::monotonic,
+            scheduleMod == omp::ScheduleModifier::nonmonotonic, isOrdered,
+            workshareLoopType);
+
+    if (!wsloopIP)
+      return wsloopIP.takeError();
+
     return llvm::Error::success();
   };
 
@@ -4265,8 +4245,9 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       ompBuilder->createDistribute(ompLoc, allocaIP, bodyGenCB);
 
-  if (!afterIP)
-    return opInst.emitError(llvm::toString(afterIP.takeError()));
+  if (failed(handleError(afterIP, opInst)))
+    return failure();
+
   builder.restoreIP(*afterIP);
 
   if (doDistributeReduction) {
