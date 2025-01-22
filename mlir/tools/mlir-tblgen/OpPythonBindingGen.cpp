@@ -35,6 +35,7 @@ constexpr const char *fileHeader = R"Py(
 from ._ods_common import _cext as _ods_cext
 from ._ods_common import (
     equally_sized_accessor as _ods_equally_sized_accessor,
+    get_source_location as _get_source_location,
     get_default_loc_context as _ods_get_default_loc_context,
     get_op_result_or_op_results as _get_op_result_or_op_results,
     get_op_result_or_value as _get_op_result_or_value,
@@ -496,6 +497,8 @@ constexpr const char *initTemplate = R"Py(
     attributes = {{}
     regions = None
     {1}
+    if loc is None:
+      loc = _get_source_location()
     super().__init__(self.build_generic({2}))
 )Py";
 
