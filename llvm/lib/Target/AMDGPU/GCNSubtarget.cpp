@@ -38,11 +38,6 @@ using namespace llvm;
 #include "AMDGPUGenSubtargetInfo.inc"
 #undef AMDGPUSubtarget
 
-static cl::opt<bool>
-    EnablePowerSched("amdgpu-enable-power-sched",
-                     cl::desc("Enable scheduling to minimize mAI power bursts"),
-                     cl::init(false));
-
 static cl::opt<bool> EnableVGPRIndexMode(
     "amdgpu-vgpr-index-mode",
     cl::desc("Use GPR indexing mode instead of movrel for vector indexing"),
