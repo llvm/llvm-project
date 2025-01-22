@@ -1,0 +1,31 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -run-pass=si-peephole-sdwa -o - %s | FileCheck -check-prefix=NOHAZARD %s
+
+---
+name:            sdwa_opsel_hazard
+body:             |
+  ; NOHAZARD-LABEL: name: sdwa_opsel_hazard
+
+  ; NOHAZARD:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR killed %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, implicit $exec
+  ; NOHAZARD:   [[V_LSHLREV_B32_sdwa:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_sdwa 0, %{{[0-9]+}}, 0, undef [[GLOBAL_LOAD_DWORD_SADDR]], 0, 6, 0, 6, 5, implicit $exec
+  bb.0:
+    successors: %bb.2(0x40000000)
+    %0:sreg_32 = IMPLICIT_DEF
+    %1:sreg_64_xexec_xnull = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR killed %1, %2, 0, 0, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.1:
+    %5:vgpr_32 = V_AND_B32_e64 undef %6, 255, implicit $exec
+    %7:vgpr_32 = V_LSHLREV_B32_e64 2, killed undef %5, implicit $exec
+    S_ENDPGM 0
+
+  bb.2:
+    successors: %bb.1(0x40000000)
+
+    %6:vgpr_32 = V_LSHRREV_B32_e64 16, undef %3, implicit $exec
+
+    S_BRANCH %bb.1
+
+...
+
