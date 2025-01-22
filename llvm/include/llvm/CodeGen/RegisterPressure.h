@@ -35,11 +35,11 @@ class MachineInstr;
 class MachineRegisterInfo;
 class RegisterClassInfo;
 
-struct VRegOrUnitMaskPair {
+struct VRegMaskOrUnitPair {
   Register RegUnit; ///< Virtual register or register unit.
   LaneBitmask LaneMask;
 
-  VRegOrUnitMaskPair(Register RegUnit, LaneBitmask LaneMask)
+  VRegMaskOrUnitPair(Register RegUnit, LaneBitmask LaneMask)
       : RegUnit(RegUnit), LaneMask(LaneMask) {}
 };
 
@@ -49,8 +49,8 @@ struct RegisterPressure {
   std::vector<unsigned> MaxSetPressure;
 
   /// List of live in virtual registers or physical register units.
-  SmallVector<VRegOrUnitMaskPair, 8> LiveInRegs;
-  SmallVector<VRegOrUnitMaskPair, 8> LiveOutRegs;
+  SmallVector<VRegMaskOrUnitPair, 8> LiveInRegs;
+  SmallVector<VRegMaskOrUnitPair, 8> LiveOutRegs;
 
   void dump(const TargetRegisterInfo *TRI) const;
 };
@@ -166,13 +166,13 @@ public:
 class RegisterOperands {
 public:
   /// List of virtual registers and register units read by the instruction.
-  SmallVector<VRegOrUnitMaskPair, 8> Uses;
+  SmallVector<VRegMaskOrUnitPair, 8> Uses;
   /// List of virtual registers and register units defined by the
   /// instruction which are not dead.
-  SmallVector<VRegOrUnitMaskPair, 8> Defs;
+  SmallVector<VRegMaskOrUnitPair, 8> Defs;
   /// List of virtual registers and register units defined by the
   /// instruction but dead.
-  SmallVector<VRegOrUnitMaskPair, 8> DeadDefs;
+  SmallVector<VRegMaskOrUnitPair, 8> DeadDefs;
 
   /// Analyze the given instruction \p MI and fill in the Uses, Defs and
   /// DeadDefs list based on the MachineOperand flags.
@@ -185,7 +185,7 @@ public:
   void detectDeadDefs(const MachineInstr &MI, const LiveIntervals &LIS);
 
   /// Use liveness information to find out which uses/defs are partially
-  /// undefined/dead and adjust the VRegOrUnitMaskPairs accordingly.
+  /// undefined/dead and adjust the VRegMaskOrUnitPairs accordingly.
   /// If \p AddFlagsMI is given then missing read-undef and dead flags will be
   /// added to the instruction.
   void adjustLaneLiveness(const LiveIntervals &LIS,
@@ -303,7 +303,7 @@ public:
 
   /// Mark the \p Pair.LaneMask lanes of \p Pair.Reg as live.
   /// Returns the previously live lanes of \p Pair.Reg.
-  LaneBitmask insert(VRegOrUnitMaskPair Pair) {
+  LaneBitmask insert(VRegMaskOrUnitPair Pair) {
     unsigned SparseIndex = getSparseIndexFromReg(Pair.RegUnit);
     auto InsertRes = Regs.insert(IndexMaskPair(SparseIndex, Pair.LaneMask));
     if (!InsertRes.second) {
@@ -316,7 +316,7 @@ public:
 
   /// Clears the \p Pair.LaneMask lanes of \p Pair.Reg (mark them as dead).
   /// Returns the previously live lanes of \p Pair.Reg.
-  LaneBitmask erase(VRegOrUnitMaskPair Pair) {
+  LaneBitmask erase(VRegMaskOrUnitPair Pair) {
     unsigned SparseIndex = getSparseIndexFromReg(Pair.RegUnit);
     RegSet::iterator I = Regs.find(SparseIndex);
     if (I == Regs.end())
@@ -330,7 +330,7 @@ public:
     return Regs.size();
   }
 
-  void appendTo(SmallVectorImpl<VRegOrUnitMaskPair> &To) const {
+  void appendTo(SmallVectorImpl<VRegMaskOrUnitPair> &To) const {
     for (const IndexMaskPair &P : Regs) {
       Register Reg = getRegFromSparseIndex(P.Index);
       if (P.LaneMask.any())
@@ -408,7 +408,7 @@ public:
   /// Force liveness of virtual registers or physical register
   /// units. Particularly useful to initialize the livein/out state of the
   /// tracker before the first call to advance/recede.
-  void addLiveRegs(ArrayRef<VRegOrUnitMaskPair> Regs);
+  void addLiveRegs(ArrayRef<VRegMaskOrUnitPair> Regs);
 
   /// Get the MI position corresponding to this register pressure.
   MachineBasicBlock::const_iterator getPos() const { return CurrPos; }
@@ -420,14 +420,14 @@ public:
   void setPos(MachineBasicBlock::const_iterator Pos) { CurrPos = Pos; }
 
   /// Recede across the previous instruction.
-  void recede(SmallVectorImpl<VRegOrUnitMaskPair> *LiveUses = nullptr);
+  void recede(SmallVectorImpl<VRegMaskOrUnitPair> *LiveUses = nullptr);
 
   /// Recede across the previous instruction.
   /// This "low-level" variant assumes that recedeSkipDebugValues() was
   /// called previously and takes precomputed RegisterOperands for the
   /// instruction.
   void recede(const RegisterOperands &RegOpers,
-              SmallVectorImpl<VRegOrUnitMaskPair> *LiveUses = nullptr);
+              SmallVectorImpl<VRegMaskOrUnitPair> *LiveUses = nullptr);
 
   /// Recede until we find an instruction which is not a DebugValue.
   void recedeSkipDebugValues();
@@ -545,21 +545,21 @@ public:
 
 protected:
   /// Add Reg to the live out set and increase max pressure.
-  void discoverLiveOut(VRegOrUnitMaskPair Pair);
+  void discoverLiveOut(VRegMaskOrUnitPair Pair);
   /// Add Reg to the live in set and increase max pressure.
-  void discoverLiveIn(VRegOrUnitMaskPair Pair);
+  void discoverLiveIn(VRegMaskOrUnitPair Pair);
 
   /// Get the SlotIndex for the first nondebug instruction including or
   /// after the current position.
   SlotIndex getCurrSlot() const;
 
-  void bumpDeadDefs(ArrayRef<VRegOrUnitMaskPair> DeadDefs);
+  void bumpDeadDefs(ArrayRef<VRegMaskOrUnitPair> DeadDefs);
 
   void bumpUpwardPressure(const MachineInstr *MI);
   void bumpDownwardPressure(const MachineInstr *MI);
 
-  void discoverLiveInOrOut(VRegOrUnitMaskPair Pair,
-                           SmallVectorImpl<VRegOrUnitMaskPair> &LiveInOrOut);
+  void discoverLiveInOrOut(VRegMaskOrUnitPair Pair,
+                           SmallVectorImpl<VRegMaskOrUnitPair> &LiveInOrOut);
 
   LaneBitmask getLastUsedLanes(Register RegUnit, SlotIndex Pos) const;
   LaneBitmask getLiveLanesAt(Register RegUnit, SlotIndex Pos) const;

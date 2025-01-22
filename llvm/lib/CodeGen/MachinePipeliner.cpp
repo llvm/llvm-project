@@ -1981,7 +1981,7 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
                             NodeSet &NS) {
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  SmallVector<VRegOrUnitMaskPair, 8> LiveOutRegs;
+  SmallVector<VRegMaskOrUnitPair, 8> LiveOutRegs;
   SmallSet<unsigned, 4> Uses;
   for (SUnit *SU : NS) {
     const MachineInstr *MI = SU->getInstr();
