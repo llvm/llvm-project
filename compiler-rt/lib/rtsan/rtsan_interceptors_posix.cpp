@@ -1107,18 +1107,20 @@ INTERCEPTOR(int, execve, const char *filename, char *const argv[],
 }
 
 #if SANITIZER_INTERCEPT_PROCESS_VM_READV
-INTERCEPTOR(ssize_t, process_vm_readv, const struct iovec *local_iov,
+INTERCEPTOR(ssize_t, process_vm_readv, pid_t pid, const struct iovec *local_iov,
             unsigned long liovcnt, const struct iovec *remote_iov,
             unsigned long riovcnt, unsigned long flags) {
   __rtsan_notify_intercepted_call("process_vm_readv");
-  return REAL(process_vm_readv)(local_iov, liovcnt, remote_iov, riovcnt, flags);
+  return REAL(process_vm_readv)(pid, local_iov, liovcnt, remote_iov, riovcnt,
+                                flags);
 }
 
-INTERCEPTOR(ssize_t, process_vm_writev, const struct iovec *local_iov,
-            unsigned long liovcnt, const struct iovec *remote_iov,
-            unsigned long riovcnt, unsigned long flags) {
+INTERCEPTOR(ssize_t, process_vm_writev, pid_t pid,
+            const struct iovec *local_iov, unsigned long liovcnt,
+            const struct iovec *remote_iov, unsigned long riovcnt,
+            unsigned long flags) {
   __rtsan_notify_intercepted_call("process_vm_writev");
-  return REAL(process_vm_writev)(local_iov, liovcnt, remote_iov, riovcnt,
+  return REAL(process_vm_writev)(pid, local_iov, liovcnt, remote_iov, riovcnt,
                                  flags);
 }
 #define RTSAN_MAYBE_INTERCEPT_PROCESS_VM_READV                                 \
