@@ -53,7 +53,7 @@ typedef typeof(*bar) * my_manual_ptr_t;
 void typedefs_of_typeof() {
     // expected-error@+1{{initializing 'my_t *__single' (aka 'char *__single') with an expression of incompatible type 'char * _Nullable' casts away '__unsafe_indexable' qualifier; use '__unsafe_forge_single' or '__unsafe_forge_bidi_indexable' to perform this conversion}}
     my_t * __single p1 = bar;
-    // expected-error@+1{{initializing 'my_ptr_t __single' (aka 'char *__single') with an expression of incompatible type 'char * _Nullable' casts away '__unsafe_indexable' qualifier; use '__unsafe_forge_single' or '__unsafe_forge_bidi_indexable' to perform this conversion}}
+    // expected-error@+1{{initializing 'char *__single _Nullable' with an expression of incompatible type 'char * _Nullable' casts away '__unsafe_indexable' qualifier; use '__unsafe_forge_single' or '__unsafe_forge_bidi_indexable' to perform this conversion}}
     my_ptr_t __single p2 = bar;
     // expected-error@+1{{initializing 'my_manual_ptr_t __single' (aka 'char *__single') with an expression of incompatible type 'char * _Nullable' casts away '__unsafe_indexable' qualifier; use '__unsafe_forge_single' or '__unsafe_forge_bidi_indexable' to perform this conversion}}
     my_manual_ptr_t __single p3 = bar;

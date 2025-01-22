@@ -1,9 +1,6 @@
 
 // RUN: %clang_cc1 -fsyntax-only -fbounds-safety -verify %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -clang-vendor-feature=+disableOVEimplicitConv -verify %s
-
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -clang-vendor-feature=+disableOVEimplicitConv -verify %s
 
 #include <stdint.h>
 #include <ptrcheck.h>

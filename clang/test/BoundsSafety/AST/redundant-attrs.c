@@ -22,4 +22,4 @@ my_c_ptr_nullable_bidi_t __bidi_indexable def_c_nullable_bidi_ptr;
 // CHECK-NEXT: PointerType {{.*}} 'const int *__bidi_indexable'
 // CHECK-NEXT: QualType {{.*}} 'const int' const
 // CHECK-NEXT: BuiltinType {{.*}} 'int'
-// CHECK-NEXT: VarDecl {{.*}} def_c_nullable_bidi_ptr 'my_c_ptr_nullable_bidi_t':'const int *__bidi_indexable'
+// CHECK-NEXT: VarDecl {{.*}} def_c_nullable_bidi_ptr 'const int *__bidi_indexable _Nullable':'const int *__bidi_indexable'

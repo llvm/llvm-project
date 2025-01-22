@@ -1,8 +1,9 @@
 
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -verify %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -I%S/SystemHeaders/include -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -I%S/SystemHeaders/include -x objective-c -fbounds-attributes-objc-experimental -verify %s
 
 #include <ptrcheck.h>
+#include <static-bound-ptr-init.h>
 struct T {
     void (*fp)(const struct T *t);
     int i;
@@ -57,10 +58,10 @@ void *__single s_p3 = foo;
 // T -> U: P
 void *__unsafe_indexable ui_p2 = foo;
 
-// Special case: "unspecified" should convert to __unsafe_indexable
-const char *__unsafe_indexable ui_p3 = __builtin_xnu_type_signature(struct T);
-
 void Test () {
+    // Special case: "unspecified" should convert to __unsafe_indexable
+    const char *__unsafe_indexable ui_p3 = mock_system_func();
+
     static int len1;
     // B -> C: R
     // expected-warning@+1{{possibly initializing 'c_p1' of type 'int *__single __counted_by(len1)' (aka 'int *__single') and implicit count value of 0 with non-null, which creates a non-dereferenceable pointer; explicitly set count value to 0 to remove this warning}}

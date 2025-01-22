@@ -7747,7 +7747,7 @@ bool checkDynamicCountSizeForAssignmentWithKnownCount(
 
   const bool IsImplicitInitExpr = isa<ImplicitValueInitExpr>(RHSExpr);
   const bool IsNull =
-      IsImplicitInitExpr || RHSExpr->isNullPointerConstant(
+      IsImplicitInitExpr || RHSExpr->isNullPointerConstantIgnoreCastsAndOVEs(
                                 S.Context, Expr::NPC_ValueDependentIsNotNull);
   const bool IsNonnull = CAT; // Array decays to nonnull pointer.
 
