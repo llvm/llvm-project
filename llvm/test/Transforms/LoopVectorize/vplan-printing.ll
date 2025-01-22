@@ -1208,6 +1208,11 @@ define i64 @print_extended_reduction(ptr nocapture readonly %x, ptr nocapture re
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body.preheader>:
+; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
@@ -1231,11 +1236,12 @@ define i64 @print_extended_reduction(ptr nocapture readonly %x, ptr nocapture re
 ; CHECK-NEXT: Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:   EMIT vp<%bc.resume.val> = resume-phi vp<%1>, ir<0>
 ; CHECK-NEXT:   EMIT vp<%bc.merge.rdx> = resume-phi vp<%7>, ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:
-; CHECK-NEXT:   IR   %i.010 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
+; CHECK-NEXT:   IR   %i.010 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ] (extra operand: vp<%bc.resume.val> from scalar.ph)
 ; CHECK-NEXT:   IR   %r.09 = phi i64 [ %add, %for.body ], [ 0, %for.body.preheader ] (extra operand: vp<%bc.merge.rdx> from scalar.ph)
 ; CHECK-NEXT:   IR   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.010
 ; CHECK-NEXT:   IR   %load0 = load i32, ptr %arrayidx, align 4
@@ -1309,11 +1315,12 @@ define i64 @print_mulacc(ptr nocapture readonly %x, ptr nocapture readonly %y, i
 ; CHECK-NEXT: Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:   EMIT vp<%bc.resume.val> = resume-phi vp<%1>, ir<0>
 ; CHECK-NEXT:   EMIT vp<%bc.merge.rdx> = resume-phi vp<%8>, ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:
-; CHECK-NEXT:   IR   %i.010 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
+; CHECK-NEXT:   IR   %i.010 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ] (extra operand: vp<%bc.resume.val> from scalar.ph)
 ; CHECK-NEXT:   IR   %r.09 = phi i64 [ %add, %for.body ], [ 0, %for.body.preheader ] (extra operand: vp<%bc.merge.rdx> from scalar.ph)
 ; CHECK-NEXT:   IR   %arrayidx = getelementptr inbounds i64, ptr %x, i32 %i.010
 ; CHECK-NEXT:   IR   %load0 = load i64, ptr %arrayidx, align 4
@@ -1391,11 +1398,12 @@ define i64 @print_mulacc_extended(ptr nocapture readonly %x, ptr nocapture reado
 ; CHECK-NEXT: Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:   EMIT vp<%bc.resume.val> = resume-phi vp<%1>, ir<0>
 ; CHECK-NEXT:   EMIT vp<%bc.merge.rdx> = resume-phi vp<%8>, ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:
-; CHECK-NEXT:   IR   %i.010 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
+; CHECK-NEXT:   IR   %i.010 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ] (extra operand: vp<%bc.resume.val> from scalar.ph)
 ; CHECK-NEXT:   IR   %r.09 = phi i64 [ %add, %for.body ], [ 0, %for.body.preheader ] (extra operand: vp<%bc.merge.rdx> from scalar.ph)
 ; CHECK-NEXT:   IR   %arrayidx = getelementptr inbounds i16, ptr %x, i32 %i.010
 ; CHECK-NEXT:   IR   %load0 = load i16, ptr %arrayidx, align 4

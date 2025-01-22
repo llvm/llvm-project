@@ -2282,12 +2282,12 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
   // and the binOp cost in the getReductionCost().
   if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind)) {
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
-    return Ctx.TTI.getMinMaxReductionCost(Id, VectorTy,
-                                          RdxDesc.getFastMathFlags(), CostKind);
+    return Ctx.TTI.getMinMaxReductionCost(
+        Id, VectorTy, RdxDesc.getFastMathFlags(), Ctx.CostKind);
   }
 
   return Ctx.TTI.getArithmeticReductionCost(
-      Opcode, VectorTy, RdxDesc.getFastMathFlags(), CostKind);
+      Opcode, VectorTy, RdxDesc.getFastMathFlags(), Ctx.CostKind);
 }
 
 InstructionCost
@@ -2297,11 +2297,11 @@ VPExtendedReductionRecipe::computeCost(ElementCount VF,
   unsigned Opcode = RdxDesc.getOpcode();
   Type *RedTy = Ctx.Types.inferScalarType(this);
   auto *SrcVecTy =
-      cast<VectorType>(ToVectorTy(Ctx.Types.inferScalarType(getVecOp()), VF));
-  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+      cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(getVecOp()), VF));
 
   return Ctx.TTI.getExtendedReductionCost(Opcode, isZExt(), RedTy, SrcVecTy,
-                                          RdxDesc.getFastMathFlags(), CostKind);
+                                          RdxDesc.getFastMathFlags(),
+                                          Ctx.CostKind);
 }
 
 InstructionCost
@@ -2309,10 +2309,10 @@ VPMulAccumulateReductionRecipe::computeCost(ElementCount VF,
                                             VPCostContext &Ctx) const {
   Type *RedTy = Ctx.Types.inferScalarType(this);
   auto *SrcVecTy =
-      cast<VectorType>(ToVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
-  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+      cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
 
-  return Ctx.TTI.getMulAccReductionCost(isZExt(), RedTy, SrcVecTy, CostKind);
+  return Ctx.TTI.getMulAccReductionCost(isZExt(), RedTy, SrcVecTy,
+                                        Ctx.CostKind);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

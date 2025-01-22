@@ -2752,7 +2752,7 @@ public:
                     bool IsOrdered, DebugLoc DL = {})
       : VPReductionRecipe(VPDef::VPReductionSC, R, I,
                           ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
-                          IsOrdered, DL) {}
+                          IsOrdered) {}
 
   VPReductionRecipe(const RecurrenceDescriptor &R, VPValue *ChainOp,
                     VPValue *VecOp, VPValue *CondOp, bool IsOrdered,
@@ -2765,8 +2765,7 @@ public:
 
   VPReductionRecipe *clone() override {
     return new VPReductionRecipe(RdxDesc, getUnderlyingInstr(), getChainOp(),
-                                 getVecOp(), getCondOp(), IsOrdered,
-                                 getDebugLoc());
+                                 getVecOp(), getCondOp(), IsOrdered);
   }
 
   static inline bool classof(const VPRecipeBase *R) {

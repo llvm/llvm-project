@@ -2235,7 +2235,7 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
                                              Type *SrcTy) -> bool {
     return LoopVectorizationPlanner::getDecisionAndClampRange(
         [&](ElementCount VF) {
-          auto *SrcVecTy = cast<VectorType>(ToVectorTy(SrcTy, VF));
+          auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
           TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
           InstructionCost ExtRedCost = Ctx.TTI.getExtendedReductionCost(
               Opcode, isZExt, RedTy, SrcVecTy, RdxDesc.getFastMathFlags(),
@@ -2285,7 +2285,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
           TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
           Type *SrcTy =
               Ext0 ? Ctx.Types.inferScalarType(Ext0->getOperand(0)) : RedTy;
-          auto *SrcVecTy = cast<VectorType>(ToVectorTy(SrcTy, VF));
+          auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
           InstructionCost MulAccCost =
               Ctx.TTI.getMulAccReductionCost(isZExt, RedTy, SrcVecTy, CostKind);
           InstructionCost MulCost = Mul->computeCost(VF, Ctx);
