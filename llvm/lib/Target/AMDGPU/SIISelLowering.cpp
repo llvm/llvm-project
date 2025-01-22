@@ -830,26 +830,16 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     if (!(Subtarget->hasTrue16BitInsts() && Subtarget->useRealTrue16Insts())) {
       // MVT::vNi16 for src type check in foldToSaturated
       // MVT::vNi8 for dst type check in CustomLowerNode
+      // FIXME: Handle N = 2, 4, 8 first, should change verification logic from
+      //        LLVM side, like break bigger vector into legal small vectors
       setOperationAction(ISD::TRUNCATE_SSAT_U,
                          {
                              MVT::v2i16,
                              MVT::v4i16,
                              MVT::v8i16,
-                             MVT::v16i16,
-                             MVT::v32i16,
-                             MVT::v64i16,
-                             MVT::v128i16,
-                             MVT::v256i16,
-                             MVT::v512i16,
                              MVT::v2i8,
                              MVT::v4i8,
                              MVT::v8i8,
-                             MVT::v16i8,
-                             MVT::v32i8,
-                             MVT::v64i8,
-                             MVT::v128i8,
-                             MVT::v256i8,
-                             MVT::v512i8,
                          },
                          Custom);
     }
