@@ -895,9 +895,9 @@ CleanupAndPrepareModules(BugDriver &BD, std::unique_ptr<Module> Test,
                                                 "resolver", LookupBB);
 
           // Cast the result from the resolver to correctly-typed function.
-          CastInst *CastedResolver = new BitCastInst(
-              Resolver, PointerType::getUnqual(F->getFunctionType()),
-              "resolverCast", LookupBB);
+          CastInst *CastedResolver =
+              new BitCastInst(Resolver, PointerType::getUnqual(F->getContext()),
+                              "resolverCast", LookupBB);
 
           // Save the value in our cache.
           new StoreInst(CastedResolver, Cache, LookupBB);

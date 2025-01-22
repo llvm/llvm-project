@@ -1529,7 +1529,7 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
       FunctionType *NewFT =
           FunctionType::get(CB.getFunctionType()->getReturnType(), NewArgs,
                             CB.getFunctionType()->isVarArg());
-      PointerType *NewFTPtr = PointerType::getUnqual(NewFT);
+      PointerType *NewFTPtr = PointerType::getUnqual(CB.getContext());
 
       IRBuilder<> IRB(&CB);
       std::vector<Value *> Args;

@@ -380,12 +380,11 @@ void ObjCARCContract::tryToContractReleaseIntoStoreStrong(
                    << "            Load:    " << *Load << "\n");
 
   LLVMContext &C = Release->getContext();
-  Type *I8X = PointerType::getUnqual(Type::getInt8Ty(C));
-  Type *I8XX = PointerType::getUnqual(I8X);
+  Type *I8X = PointerType::getUnqual(C);
 
   Value *Args[] = { Load->getPointerOperand(), New };
-  if (Args[0]->getType() != I8XX)
-    Args[0] = new BitCastInst(Args[0], I8XX, "", Store->getIterator());
+  if (Args[0]->getType() != I8X)
+    Args[0] = new BitCastInst(Args[0], I8X, "", Store->getIterator());
   if (Args[1]->getType() != I8X)
     Args[1] = new BitCastInst(Args[1], I8X, "", Store->getIterator());
   Function *Decl = EP.get(ARCRuntimeEntryPointKind::StoreStrong);

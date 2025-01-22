@@ -9006,8 +9006,9 @@ static SDValue getMemCmpLoad(const Value *PtrVal, MVT LoadVT,
     if (LoadVT.isVector())
       LoadTy = FixedVectorType::get(LoadTy, LoadVT.getVectorNumElements());
 
-    LoadInput = ConstantExpr::getBitCast(const_cast<Constant *>(LoadInput),
-                                         PointerType::getUnqual(LoadTy));
+    LoadInput =
+        ConstantExpr::getBitCast(const_cast<Constant *>(LoadInput),
+                                 PointerType::getUnqual(LoadTy->getContext()));
 
     if (const Constant *LoadCst =
             ConstantFoldLoadFromConstPtr(const_cast<Constant *>(LoadInput),
