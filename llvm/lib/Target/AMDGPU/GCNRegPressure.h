@@ -170,7 +170,7 @@ protected:
              bool After);
 
   /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
-  void bumpDeadDefs(ArrayRef<RegUnitMaskPair> DeadDefs);
+  void bumpDeadDefs(ArrayRef<VRegOrUnitMaskPair> DeadDefs);
 
   LaneBitmask getLastUsedLanes(Register RegUnit, SlotIndex Pos) const;
 

@@ -256,7 +256,7 @@ static LaneBitmask getDefRegMask(const MachineOperand &MO,
 }
 
 static void
-collectVirtualRegUses(SmallVectorImpl<RegUnitMaskPair> &RegUnitMaskPairs,
+collectVirtualRegUses(SmallVectorImpl<VRegOrUnitMaskPair> &VRegOrUnitMaskPairs,
                       const MachineInstr &MI, const LiveIntervals &LIS,
                       const MachineRegisterInfo &MRI) {
 
@@ -268,20 +268,22 @@ collectVirtualRegUses(SmallVectorImpl<RegUnitMaskPair> &RegUnitMaskPairs,
       continue;
 
     Register Reg = MO.getReg();
-    auto I = llvm::find_if(RegUnitMaskPairs, [Reg](const RegUnitMaskPair &RM) {
-      return RM.RegUnit == Reg;
-    });
+    auto I =
+        llvm::find_if(VRegOrUnitMaskPairs, [Reg](const VRegOrUnitMaskPair &RM) {
+          return RM.RegUnit == Reg;
+        });
 
-    auto &P = I == RegUnitMaskPairs.end()
-                  ? RegUnitMaskPairs.emplace_back(Reg, LaneBitmask::getNone())
-                  : *I;
+    auto &P =
+        I == VRegOrUnitMaskPairs.end()
+            ? VRegOrUnitMaskPairs.emplace_back(Reg, LaneBitmask::getNone())
+            : *I;
 
     P.LaneMask |= MO.getSubReg() ? TRI.getSubRegIndexLaneMask(MO.getSubReg())
                                  : MRI.getMaxLaneMaskForVReg(Reg);
   }
 
   SlotIndex InstrSI;
-  for (auto &P : RegUnitMaskPairs) {
+  for (auto &P : VRegOrUnitMaskPairs) {
     auto &LI = LIS.getInterval(P.RegUnit);
     if (!LI.hasSubRanges())
       continue;
@@ -477,9 +479,9 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   MaxPressure = max(DefPressure, MaxPressure);
 
   // Make uses alive.
-  SmallVector<RegUnitMaskPair, 8> RegUses;
+  SmallVector<VRegOrUnitMaskPair, 8> RegUses;
   collectVirtualRegUses(RegUses, MI, LIS, *MRI);
-  for (const RegUnitMaskPair &U : RegUses) {
+  for (const VRegOrUnitMaskPair &U : RegUses) {
     LaneBitmask &LiveMask = LiveRegs[U.RegUnit];
     LaneBitmask PrevMask = LiveMask;
     LiveMask |= U.LaneMask;
@@ -665,7 +667,7 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
   RegOpers.adjustLaneLiveness(LIS, *MRI, SlotIdx);
   GCNRegPressure TempPressure = CurPressure;
 
-  for (const RegUnitMaskPair &Use : RegOpers.Uses) {
+  for (const VRegOrUnitMaskPair &Use : RegOpers.Uses) {
     Register Reg = Use.RegUnit;
     if (!Reg.isVirtual())
       continue;
@@ -699,7 +701,7 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
   }
 
   // Generate liveness for defs.
-  for (const RegUnitMaskPair &Def : RegOpers.Defs) {
+  for (const VRegOrUnitMaskPair &Def : RegOpers.Defs) {
     Register Reg = Def.RegUnit;
     if (!Reg.isVirtual())
       continue;

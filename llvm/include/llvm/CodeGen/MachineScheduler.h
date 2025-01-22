@@ -525,7 +525,7 @@ protected:
 
   void initRegPressure();
 
-  void updatePressureDiffs(ArrayRef<RegUnitMaskPair> LiveUses);
+  void updatePressureDiffs(ArrayRef<VRegOrUnitMaskPair> LiveUses);
 
   void updateScheduledPressure(const SUnit *SU,
                                const std::vector<unsigned> &NewMaxPressure);
