@@ -41,6 +41,93 @@ namespace bolt {
 
 constexpr unsigned ColdFragAlign = 16;
 
+static BinaryBasicBlock *getFrontier(BinaryFunction &Func,
+                                     BinaryBasicBlock &BB) {
+
+  // return the last bb of the current fragment since stub will be inserted
+  // just after this frontier
+  if (!Func.isSplit() || Func.empty())
+    return nullptr;
+  const FunctionFragment &Layout = Func.getLayout().findFragment(&BB);
+
+  for (auto I = Layout.begin(), E = Layout.end(); I != E; ++I) {
+    auto Next = std::next(I);
+    if (Next == E)
+      return *I;
+  }
+
+  llvm_unreachable("No split point found");
+}
+
+static const FunctionFragment *
+getWarmFragmentOrNullptr(const FunctionLayout &Layout) {
+  // See `bool FunctionLayout::update`
+  // FragmentNum Num = BB->getFragmentNum();
+  // while (Fragments.back()->getFragmentNum() < Num)
+  //      addFragment();
+  // Fragments will be added according to FragmentNum, so
+  // we can use `FragmentNum` to get the fragment.
+
+  if (Layout.fragment_size() <= FragmentNum::warm().get()) {
+    return nullptr;
+  }
+  return &Layout.getFragment(FragmentNum::warm());
+}
+
+static const FunctionFragment *
+getColdFragmentOrNullptr(const FunctionLayout &Layout) {
+  if (Layout.fragment_size() <= FragmentNum::cold().get()) {
+    return nullptr;
+  }
+
+  return &Layout.getFragment(FragmentNum::cold());
+}
+
+static bool hasNonEmptyColdFragment(const BinaryFunction *BF) {
+  return BF->isSplit() && getColdFragmentOrNullptr(BF->getLayout()) &&
+         !getColdFragmentOrNullptr(BF->getLayout())->empty();
+}
+
+static bool hasNonEmptyWarmFragment(const BinaryFunction *BF) {
+  return BF->isSplit() && getWarmFragmentOrNullptr(BF->getLayout()) &&
+         !getWarmFragmentOrNullptr(BF->getLayout())->empty();
+}
+
+static size_t estimateWarmSize(const BinaryFunction *BF) {
+  const BinaryContext &BC = BF->getBinaryContext();
+  if (!BF->isSplit())
+    return BF->estimateSize();
+
+  size_t Estimate = 0;
+
+  for (const BinaryBasicBlock &BB : *BF)
+    if (BB.isWarm())
+      Estimate += BC.computeCodeSize(BB.begin(), BB.end());
+
+  return Estimate;
+}
+
+static size_t estimateHotSize(const BinaryFunction *BF,
+                              const bool UseSplitSize = true) {
+  const BinaryContext &BC = BF->getBinaryContext();
+  size_t Estimate = 0;
+
+  if (UseSplitSize && BF->isSplit()) {
+    for (const BinaryBasicBlock &BB : *BF)
+      if (BB.isMain())
+        Estimate += BC.computeCodeSize(BB.begin(), BB.end());
+  } else {
+    for (const BinaryBasicBlock &BB : *BF)
+      if (BB.getKnownExecutionCount() != 0)
+        Estimate += BC.computeCodeSize(BB.begin(), BB.end());
+  }
+
+  return Estimate;
+}
+static size_t estimateSize(const BinaryFunction *BF) {
+  return BF->estimateSize();
+}
+
 static void relaxStubToShortJmp(BinaryBasicBlock &StubBB, const MCSymbol *Tgt) {
   const BinaryContext &BC = StubBB.getFunction()->getBinaryContext();
   InstructionListType Seq;
@@ -57,24 +144,68 @@ static void relaxStubToLongJmp(BinaryBasicBlock &StubBB, const MCSymbol *Tgt) {
   StubBB.addInstructions(Seq.begin(), Seq.end());
 }
 
-static BinaryBasicBlock *getBBAtHotColdSplitPoint(BinaryFunction &Func) {
-  if (!Func.isSplit() || Func.empty())
-    return nullptr;
-
-  assert(!(*Func.begin()).isCold() && "Entry cannot be cold");
-  for (auto I = Func.getLayout().block_begin(),
-            E = Func.getLayout().block_end();
-       I != E; ++I) {
-    auto Next = std::next(I);
-    if (Next != E && (*Next)->isCold())
-      return *I;
-  }
-  llvm_unreachable("No hot-cold split point found");
-}
-
 static bool mayNeedStub(const BinaryContext &BC, const MCInst &Inst) {
   return (BC.MIB->isBranch(Inst) || BC.MIB->isCall(Inst)) &&
          !BC.MIB->isIndirectBranch(Inst) && !BC.MIB->isIndirectCall(Inst);
+}
+
+const LongJmpPass::StubGroupsTy &
+LongJmpPass::getStubGroupsTyByBB(const BinaryBasicBlock &BB) const {
+  if (BB.isMain()) {
+    return HotStubGroups;
+  }
+
+  if (BB.isWarm()) {
+    return WarmStubGroups;
+  }
+
+  if (BB.isCold()) {
+    return ColdStubGroups;
+  }
+
+  llvm_unreachable("Should not reach here\n");
+}
+
+const DenseMap<const BinaryFunction *, LongJmpPass::StubGroupsTy> &
+LongJmpPass::getLocalStubGroupsTyByBB(const BinaryBasicBlock &BB) const {
+  if (BB.isMain()) {
+    return HotLocalStubs;
+  }
+
+  if (BB.isWarm()) {
+    return WarmLocalStubs;
+  }
+
+  if (BB.isCold()) {
+    return ColdLocalStubs;
+  }
+
+  llvm_unreachable("Should not reach here\n");
+}
+
+uint64_t LongJmpPass::tentativeLayoutRelocWarmPart(
+    const BinaryContext &BC, std::vector<BinaryFunction *> &SortedFunctions,
+    uint64_t DotAddress) {
+  DotAddress = alignTo(DotAddress, llvm::Align(opts::AlignFunctions));
+  for (BinaryFunction *Func : SortedFunctions) {
+    if (!hasNonEmptyWarmFragment(Func))
+      continue;
+
+    DotAddress = alignTo(DotAddress, Func->getMinAlignment());
+    uint64_t Pad =
+        offsetToAlignment(DotAddress, llvm::Align(Func->getAlignment()));
+    if (Pad <= Func->getMaxColdAlignmentBytes())
+      DotAddress += Pad;
+    // Warm
+    WarmAddresses[Func] = DotAddress;
+    LLVM_DEBUG(dbgs() << Func->getPrintName() << " warm tentative: "
+                      << Twine::utohexstr(DotAddress) << "\n");
+    DotAddress += estimateWarmSize(Func);
+    DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
+    DotAddress += Func->estimateConstantIslandSize();
+  }
+
+  return DotAddress;
 }
 
 std::pair<std::unique_ptr<BinaryBasicBlock>, MCSymbol *>
@@ -82,7 +213,6 @@ LongJmpPass::createNewStub(BinaryBasicBlock &SourceBB, const MCSymbol *TgtSym,
                            bool TgtIsFunc, uint64_t AtAddress) {
   BinaryFunction &Func = *SourceBB.getFunction();
   const BinaryContext &BC = Func.getBinaryContext();
-  const bool IsCold = SourceBB.isCold();
   MCSymbol *StubSym = BC.Ctx->createNamedTempSymbol("Stub");
   std::unique_ptr<BinaryBasicBlock> StubBB = Func.createBasicBlock(StubSym);
   MCInst Inst;
@@ -107,16 +237,23 @@ LongJmpPass::createNewStub(BinaryBasicBlock &SourceBB, const MCSymbol *TgtSym,
 
   Stubs[&Func].insert(StubBB.get());
   StubBits[StubBB.get()] = BC.MIB->getUncondBranchEncodingSize();
-  if (IsCold) {
+  if (SourceBB.isCold()) {
     registerInMap(ColdLocalStubs[&Func]);
     if (opts::GroupStubs && TgtIsFunc)
       registerInMap(ColdStubGroups);
     ++NumColdStubs;
-  } else {
+  } else if (SourceBB.isWarm()) {
+    registerInMap(WarmLocalStubs[&Func]);
+    if (opts::GroupStubs && TgtIsFunc)
+      registerInMap(WarmStubGroups);
+    ++NumWarmStubs;
+  } else if (SourceBB.isMain()) {
     registerInMap(HotLocalStubs[&Func]);
     if (opts::GroupStubs && TgtIsFunc)
       registerInMap(HotStubGroups);
     ++NumHotStubs;
+  } else {
+    llvm_unreachable("BB must be cold or warm or hot\n");
   }
 
   return std::make_pair(std::move(StubBB), StubSym);
@@ -168,8 +305,7 @@ LongJmpPass::lookupGlobalStub(const BinaryBasicBlock &SourceBB,
                               const MCInst &Inst, const MCSymbol *TgtSym,
                               uint64_t DotAddress) const {
   const BinaryFunction &Func = *SourceBB.getFunction();
-  const StubGroupsTy &StubGroups =
-      SourceBB.isCold() ? ColdStubGroups : HotStubGroups;
+  const StubGroupsTy &StubGroups = getStubGroupsTyByBB(SourceBB);
   return lookupStubFromGroup(StubGroups, Func, Inst, TgtSym, DotAddress);
 }
 
@@ -179,7 +315,7 @@ BinaryBasicBlock *LongJmpPass::lookupLocalStub(const BinaryBasicBlock &SourceBB,
                                                uint64_t DotAddress) const {
   const BinaryFunction &Func = *SourceBB.getFunction();
   const DenseMap<const BinaryFunction *, StubGroupsTy> &StubGroups =
-      SourceBB.isCold() ? ColdLocalStubs : HotLocalStubs;
+      getLocalStubGroupsTyByBB(SourceBB);
   const auto Iter = StubGroups.find(&Func);
   if (Iter == StubGroups.end())
     return nullptr;
@@ -287,23 +423,45 @@ void LongJmpPass::updateStubGroups() {
   for (auto &KeyVal : ColdLocalStubs)
     update(KeyVal.second);
   update(HotStubGroups);
+  update(WarmStubGroups);
   update(ColdStubGroups);
 }
 
 void LongJmpPass::tentativeBBLayout(const BinaryFunction &Func) {
   const BinaryContext &BC = Func.getBinaryContext();
-  uint64_t HotDot = HotAddresses[&Func];
-  uint64_t ColdDot = ColdAddresses[&Func];
-  bool Cold = false;
-  for (const BinaryBasicBlock *BB : Func.getLayout().blocks()) {
-    if (Cold || BB->isCold()) {
-      Cold = true;
-      BBAddresses[BB] = ColdDot;
-      ColdDot += BC.computeCodeSize(BB->begin(), BB->end());
-    } else {
-      BBAddresses[BB] = HotDot;
-      HotDot += BC.computeCodeSize(BB->begin(), BB->end());
+  const FunctionFragment &MainFragment = Func.getLayout().getMainFragment();
+  const FunctionFragment *ColdFragmentPtr = nullptr;
+  const FunctionFragment *WarmFragmentPtr = nullptr;
+
+  auto tentativeFragmentLayout = [&](const FunctionFragment &Fragment,
+                                     uint64_t DotAddress) {
+    for (const BinaryBasicBlock *BB : Fragment) {
+      BBAddresses[BB] = DotAddress;
+      DotAddress += BC.computeCodeSize(BB->begin(), BB->end());
     }
+  };
+
+  if (!MainFragment.empty()) {
+    assert(HotAddresses.find(&Func) != HotAddresses.end() &&
+           "HotAddresses Should contain Func");
+    uint64_t HotDot = HotAddresses[&Func];
+    tentativeFragmentLayout(MainFragment, HotDot);
+  }
+
+  if ((WarmFragmentPtr = getWarmFragmentOrNullptr(Func.getLayout())) &&
+      !WarmFragmentPtr->empty()) {
+    assert(WarmAddresses.find(&Func) != WarmAddresses.end() &&
+           "WarmAddresses Should contain Func");
+    uint64_t WarmDot = WarmAddresses[&Func];
+    tentativeFragmentLayout(*WarmFragmentPtr, WarmDot);
+  }
+
+  if ((ColdFragmentPtr = getColdFragmentOrNullptr(Func.getLayout())) &&
+      !ColdFragmentPtr->empty()) {
+    assert(ColdAddresses.find(&Func) != ColdAddresses.end() &&
+           "ColdAddresses Should contain Func");
+    uint64_t ColdDot = ColdAddresses[&Func];
+    tentativeFragmentLayout(*ColdFragmentPtr, ColdDot);
   }
 }
 
@@ -357,21 +515,60 @@ uint64_t LongJmpPass::tentativeLayoutRelocMode(
 
   // Hot
   CurrentIndex = 0;
-  bool ColdLayoutDone = false;
-  auto runColdLayout = [&]() {
-    DotAddress = tentativeLayoutRelocColdPart(BC, SortedFunctions, DotAddress);
-    ColdLayoutDone = true;
-    if (opts::HotFunctionsAtEnd)
-      DotAddress = alignTo(DotAddress, opts::AlignText);
+  bool ColdWarmLayoutDone = false;
+
+  bool HasWarmFragments = llvm::any_of(SortedFunctions, [&](BinaryFunction *F) {
+    return hasNonEmptyWarmFragment(F);
+  });
+
+  bool HasColdFragments = llvm::any_of(SortedFunctions, [&](BinaryFunction *F) {
+    return hasNonEmptyColdFragment(F);
+  });
+
+  auto runColdWarmLayout = [&]() {
+    if (opts::HotFunctionsAtEnd) {
+      // cold
+      // warm
+      // hot
+      if (HasColdFragments) {
+        DotAddress =
+            tentativeLayoutRelocColdPart(BC, SortedFunctions, DotAddress);
+        DotAddress = alignTo(DotAddress, opts::AlignText);
+      }
+
+      if (HasWarmFragments) {
+        DotAddress =
+            tentativeLayoutRelocWarmPart(BC, SortedFunctions, DotAddress);
+        DotAddress = alignTo(DotAddress, opts::AlignText);
+      }
+    } else {
+      // hot
+      // warm
+      // cold
+      if (HasWarmFragments) {
+        DotAddress = alignTo(DotAddress, opts::AlignText);
+        DotAddress =
+            tentativeLayoutRelocWarmPart(BC, SortedFunctions, DotAddress);
+      }
+
+      if (HasColdFragments) {
+        DotAddress = alignTo(DotAddress, opts::AlignText);
+        DotAddress =
+            tentativeLayoutRelocColdPart(BC, SortedFunctions, DotAddress);
+      }
+    }
+    ColdWarmLayoutDone = true;
   };
+
   for (BinaryFunction *Func : SortedFunctions) {
     if (!BC.shouldEmit(*Func)) {
       HotAddresses[Func] = Func->getAddress();
       continue;
     }
 
-    if (!ColdLayoutDone && CurrentIndex >= LastHotIndex)
-      runColdLayout();
+    if (!ColdWarmLayoutDone && CurrentIndex >= LastHotIndex) {
+      runColdWarmLayout();
+    }
 
     DotAddress = alignTo(DotAddress, Func->getMinAlignment());
     uint64_t Pad =
@@ -382,18 +579,17 @@ uint64_t LongJmpPass::tentativeLayoutRelocMode(
     LLVM_DEBUG(dbgs() << Func->getPrintName() << " tentative: "
                       << Twine::utohexstr(DotAddress) << "\n");
     if (!Func->isSplit())
-      DotAddress += Func->estimateSize();
+      DotAddress += estimateSize(Func);
     else
-      DotAddress += Func->estimateHotSize();
+      DotAddress += estimateHotSize(Func);
 
     DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
     DotAddress += Func->estimateConstantIslandSize();
     ++CurrentIndex;
   }
-
   // Ensure that tentative code layout always runs for cold blocks.
-  if (!ColdLayoutDone)
-    runColdLayout();
+  if (!ColdWarmLayoutDone)
+    runColdWarmLayout();
 
   // BBs
   for (BinaryFunction *Func : SortedFunctions)
@@ -561,11 +757,6 @@ Error LongJmpPass::relax(BinaryFunction &Func, bool &Modified) {
   std::vector<std::pair<BinaryBasicBlock *, std::unique_ptr<BinaryBasicBlock>>>
       Insertions;
 
-  BinaryBasicBlock *Frontier = getBBAtHotColdSplitPoint(Func);
-  uint64_t FrontierAddress = Frontier ? BBAddresses[Frontier] : 0;
-  if (FrontierAddress)
-    FrontierAddress += Frontier->getNumNonPseudos() * InsnSize;
-
   // Add necessary stubs for branch targets we know we can't fit in the
   // instruction
   for (BinaryBasicBlock &BB : Func) {
@@ -573,6 +764,10 @@ Error LongJmpPass::relax(BinaryFunction &Func, bool &Modified) {
     // Stubs themselves are relaxed on the next loop
     if (Stubs[&Func].count(&BB))
       continue;
+    BinaryBasicBlock *Frontier = getFrontier(Func, BB);
+    uint64_t FrontierAddress = Frontier ? BBAddresses[Frontier] : 0;
+    if (FrontierAddress)
+      FrontierAddress += Frontier->getNumNonPseudos() * InsnSize;
 
     for (MCInst &Inst : BB) {
       if (BC.MIB->isPseudo(Inst))
@@ -939,8 +1134,10 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
   } while (Modified);
   BC.outs() << "BOLT-INFO: Inserted " << NumHotStubs
             << " stubs in the hot area and " << NumColdStubs
-            << " stubs in the cold area. Shared " << NumSharedStubs
-            << " times, iterated " << Iterations << " times.\n";
+            << " stubs in the cold area and  " << NumWarmStubs
+            << " stubs in the warm area. "
+            << "Shared " << NumSharedStubs << " times, iterated " << Iterations
+            << " times.\n";
   return Error::success();
 }
 } // namespace bolt

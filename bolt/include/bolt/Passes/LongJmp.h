@@ -37,6 +37,7 @@ class LongJmpPass : public BinaryFunctionPass {
   using StubGroupsTy = DenseMap<const MCSymbol *, StubGroupTy>;
   StubGroupsTy HotStubGroups;
   StubGroupsTy ColdStubGroups;
+  StubGroupsTy WarmStubGroups;
   DenseMap<const MCSymbol *, BinaryBasicBlock *> SharedStubs;
 
   /// Stubs that are local to a function. This will be the primary lookup
@@ -45,6 +46,7 @@ class LongJmpPass : public BinaryFunctionPass {
   /// Used to quickly fetch stubs based on the target they jump to
   StubMapTy HotLocalStubs;
   StubMapTy ColdLocalStubs;
+  StubMapTy WarmLocalStubs;
 
   /// Used to quickly identify whether a BB is a stub, sharded by function
   DenseMap<const BinaryFunction *, std::set<const BinaryBasicBlock *>> Stubs;
@@ -53,6 +55,7 @@ class LongJmpPass : public BinaryFunctionPass {
   /// Hold tentative addresses
   FuncAddressesMapTy HotAddresses;
   FuncAddressesMapTy ColdAddresses;
+  FuncAddressesMapTy WarmAddresses;
   DenseMap<const BinaryBasicBlock *, uint64_t> BBAddresses;
 
   /// Used to identify the stub size
@@ -61,6 +64,7 @@ class LongJmpPass : public BinaryFunctionPass {
   /// Stats about number of stubs inserted
   uint32_t NumHotStubs{0};
   uint32_t NumColdStubs{0};
+  uint32_t NumWarmStubs{0};
   uint32_t NumSharedStubs{0};
 
   /// The shortest distance for any branch instruction on AArch64.
@@ -89,6 +93,10 @@ class LongJmpPass : public BinaryFunctionPass {
                            uint64_t DotAddress);
   uint64_t
   tentativeLayoutRelocColdPart(const BinaryContext &BC,
+                               std::vector<BinaryFunction *> &SortedFunctions,
+                               uint64_t DotAddress);
+  uint64_t
+  tentativeLayoutRelocWarmPart(const BinaryContext &BC,
                                std::vector<BinaryFunction *> &SortedFunctions,
                                uint64_t DotAddress);
   void tentativeBBLayout(const BinaryFunction &Func);
@@ -152,6 +160,9 @@ class LongJmpPass : public BinaryFunctionPass {
 
   /// Relax function by adding necessary stubs or relaxing existing stubs
   Error relax(BinaryFunction &BF, bool &Modified);
+  const StubGroupsTy &getStubGroupsTyByBB(const BinaryBasicBlock &BB) const;
+  const DenseMap<const BinaryFunction *, StubGroupsTy> &
+  getLocalStubGroupsTyByBB(const BinaryBasicBlock &BB) const;
 
 public:
   /// BinaryPass public interface

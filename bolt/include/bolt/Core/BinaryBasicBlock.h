@@ -676,7 +676,7 @@ public:
 
   bool isWarm() const { return Fragment == FragmentNum::warm(); }
 
-  bool isHot() const { return Fragment == FragmentNum::main(); }
+  bool isMain() const { return Fragment == FragmentNum::main(); }
 
   void setIsCold(const bool Flag) {
     Fragment = Flag ? FragmentNum::cold() : FragmentNum::main();
