@@ -106,6 +106,7 @@ static constexpr ISANameRevision ISARevisions[] = {
   {{"arch12"}, 12}, {{"z14"}, 12},
   {{"arch13"}, 13}, {{"z15"}, 13},
   {{"arch14"}, 14}, {{"z16"}, 14},
+  {{"arch15"}, 15},
 };
 
 int SystemZTargetInfo::getISARevision(StringRef Name) const {
@@ -134,6 +135,7 @@ bool SystemZTargetInfo::hasFeature(StringRef Feature) const {
       .Case("arch12", ISARevision >= 12)
       .Case("arch13", ISARevision >= 13)
       .Case("arch14", ISARevision >= 14)
+      .Case("arch15", ISARevision >= 15)
       .Case("htm", HasTransactionalExecution)
       .Case("vx", HasVector)
       .Default(false);
@@ -168,7 +170,7 @@ void SystemZTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasVector)
     Builder.defineMacro("__VX__");
   if (Opts.ZVector)
-    Builder.defineMacro("__VEC__", "10304");
+    Builder.defineMacro("__VEC__", "10305");
 
   /* Set __TARGET_LIB__ only if a value was given.  If no value was given  */
   /* we rely on the LE headers to define __TARGET_LIB__.                   */

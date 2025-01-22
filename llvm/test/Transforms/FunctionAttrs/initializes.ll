@@ -611,3 +611,27 @@ define void @caller_byval(ptr %p) {
   call void @callee_byval(ptr byval(i32) %p)
   ret void
 }
+
+define void @memset_offset_0_size_0(ptr %dst, ptr %src) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
+; CHECK-LABEL: define void @memset_offset_0_size_0(
+; CHECK-SAME: ptr nocapture writeonly [[DST:%.*]], ptr nocapture readonly [[SRC:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST]], ptr [[SRC]], i64 0, i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memmove.p0.p0.i64(ptr %dst, ptr %src, i64 0, i1 false)
+  ret void
+}
+
+define void @memset_offset_1_size_0(ptr %dst, ptr %src) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
+; CHECK-LABEL: define void @memset_offset_1_size_0(
+; CHECK-SAME: ptr nocapture writeonly [[DST:%.*]], ptr nocapture readonly [[SRC:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[DST_1:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 1
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr [[DST_1]], ptr [[SRC]], i64 0, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %dst.1 = getelementptr inbounds i8, ptr %dst, i64 1
+  call void @llvm.memmove.p0.p0.i64(ptr %dst.1, ptr %src, i64 0, i1 false)
+  ret void
+}

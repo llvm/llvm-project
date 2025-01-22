@@ -1305,7 +1305,7 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
   // Record initial state is block information.
   BI.InitialState = State;
 
-  for (;;) {
+  for (unsigned Idx = 0;; ++Idx) {
     MachineBasicBlock::iterator Next = II;
     char Needs = StateExact | StateWQM; // Strict mode is disabled by default.
     char OutNeeds = 0;
@@ -1315,6 +1315,10 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
 
     if (FirstStrict == IE)
       FirstStrict = II;
+
+    // Adjust needs if this is first instruction of WQM requiring shader.
+    if (IsEntry && Idx == 0 && (BI.InNeeds & StateWQM))
+      Needs = StateWQM;
 
     // First, figure out the allowed states (Needs) based on the propagated
     // flags.
@@ -1801,6 +1805,9 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
     lowerKillInstrs(true);
     Changed = true;
   } else {
+    // Mark entry for WQM if required.
+    if (GlobalFlags & StateWQM)
+      Blocks[&Entry].InNeeds |= StateWQM;
     // Wave mode switching requires full lowering pass.
     for (auto BII : Blocks)
       processBlock(*BII.first, BII.first == &Entry);
