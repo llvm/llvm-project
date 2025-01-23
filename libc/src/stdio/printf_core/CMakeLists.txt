@@ -22,6 +22,9 @@ endif()
 if(LIBC_CONF_PRINTF_DISABLE_STRERROR)
   list(APPEND printf_config_copts "-DLIBC_COPT_PRINTF_DISABLE_STRERROR")
 endif()
+if(LIBC_CONF_PRINTF_SPLIT)
+  list(APPEND printf_config_copts "-DLIBC_COPT_PRINTF_SPLIT")
+endif()
 if(printf_config_copts)
   list(PREPEND printf_config_copts "COMPILE_OPTIONS")
 endif()
@@ -73,10 +76,15 @@ add_object_library(
     libc.src.string.memory_utils.inline_memset
 )
 
+set(printf_converter_srcs converter.cpp)
+if(LIBC_CONF_PRINTF_SPLIT)
+  list(APPEND printf_converter_srcs split_float.cpp)
+endif()
+
 add_object_library(
   converter
   SRCS
-    converter.cpp
+  ${printf_converter_srcs}
   HDRS
     converter.h
     converter_atlas.h
