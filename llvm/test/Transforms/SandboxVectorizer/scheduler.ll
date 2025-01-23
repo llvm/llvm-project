@@ -49,3 +49,28 @@ define void @check_dag_scheduler_update(ptr noalias %p, ptr noalias %p1) {
   store i32 %add21, ptr %arrayidx23
   ret void
 }
+
+; This used to generate use-before-def because of a buggy update of the
+; top-of-schedule variable.
+define <4 x float> @check_top_of_schedule(ptr %0) {
+; CHECK-LABEL: define <4 x float> @check_top_of_schedule(
+; CHECK-SAME: ptr [[TMP0:%.*]]) {
+; CHECK-NEXT:    [[INS_1:%.*]] = insertelement <4 x float> zeroinitializer, float poison, i64 0
+; CHECK-NEXT:    [[TRUNC_1:%.*]] = fptrunc double 0.000000e+00 to float
+; CHECK-NEXT:    [[INS_2:%.*]] = insertelement <4 x float> [[INS_1]], float [[TRUNC_1]], i64 0
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr double, ptr [[TMP0]], i64 1
+; CHECK-NEXT:    store <2 x double> <double 0.000000e+00, double 1.000000e+00>, ptr [[GEP_1]], align 8
+; CHECK-NEXT:    ret <4 x float> [[INS_2]]
+;
+  %trunc.1 = fptrunc double 0.000000e+00 to float
+  %trunc.2 = fptrunc double 1.000000e+00 to float
+  %ins.1 = insertelement <4 x float> zeroinitializer, float poison, i64 0
+  %ins.2 = insertelement <4 x float> %ins.1, float %trunc.1, i64 0
+  %ext.1 = fpext float %trunc.1 to double
+  %gep.1  = getelementptr double, ptr %0, i64 1
+  store double %ext.1, ptr %gep.1, align 8
+  %ext.2 = fpext float %trunc.2 to double
+  %gep.2 = getelementptr double, ptr %0, i64 2
+  store double %ext.2, ptr %gep.2, align 8
+  ret <4 x float> %ins.2
+}
