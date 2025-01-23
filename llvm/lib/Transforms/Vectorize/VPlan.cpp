@@ -20,6 +20,7 @@
 #include "LoopVectorizationPlanner.h"
 #include "VPlanCFG.h"
 #include "VPlanPatternMatch.h"
+#include "VPlanVerifier.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"

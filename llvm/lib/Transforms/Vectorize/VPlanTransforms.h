@@ -135,6 +135,14 @@ struct VPlanTransforms {
                                          BasicBlock *UncountableExitingBlock,
                                          VPRecipeBuilder &RecipeBuilder);
 
+  /// Complete the canonical IV of \p Plan by introducing an explicit increment
+  /// between its header phi and latch branch on count. If there is an
+  /// active-lane-mask PHI, adjust the start value depending on \p
+  /// DataAndControlFlowWithoutRuntimeCheck, add its increment and adjust the
+  /// loop region's terminator to BranchOnCond based on the active-lane-mask.
+  static void convertCanonicalIV(VPlan &Plan, bool HasNUW,
+                               bool DataAndControlFlowWithoutRuntimeCheck);
+
   /// Lower abstract recipes to concrete ones, that can be codegen'd.
   static void convertToConcreteRecipes(VPlan &Plan);
 
