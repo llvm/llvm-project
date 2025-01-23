@@ -160,6 +160,7 @@ static void initializeIfDerivedTypeBox(fir::FirOpBuilder &builder,
                                        mlir::Location loc, mlir::Value newBox,
                                        mlir::Value moldBox, bool hasInitializer,
                                        bool isFirstPrivate) {
+  assert(moldBox.getType() == newBox.getType());
   fir::BoxType boxTy = mlir::dyn_cast<fir::BoxType>(newBox.getType());
   fir::ClassType classTy = mlir::dyn_cast<fir::ClassType>(newBox.getType());
   if (!boxTy && !classTy)
@@ -177,7 +178,6 @@ static void initializeIfDerivedTypeBox(fir::FirOpBuilder &builder,
 
   if (!fir::isa_derived(derivedTy))
     return;
-  assert(moldBox.getType() == newBox.getType());
 
   if (hasInitializer)
     fir::runtime::genDerivedTypeInitialize(builder, loc, newBox);
@@ -218,17 +218,16 @@ isDerivedTypeNeedingInitialization(const Fortran::semantics::Symbol &sym) {
   if (const Fortran::semantics::DeclTypeSpec *declTypeSpec = sym.GetType())
     if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
             declTypeSpec->AsDerived())
-      if (derivedTypeSpec->HasDefaultInitialization(
-              /*ignoreAllocatable=*/false, /*ignorePointer=*/true))
-        return true;
+      return derivedTypeSpec->HasDefaultInitialization(
+          /*ignoreAllocatable=*/false, /*ignorePointer=*/true);
   return false;
 }
 
 static mlir::Value generateZeroShapeForRank(fir::FirOpBuilder &builder,
                                             mlir::Location loc,
                                             mlir::Value moldArg) {
-  mlir::Type moldVal = fir::unwrapRefType(moldArg.getType());
-  mlir::Type eleType = fir::dyn_cast_ptrOrBoxEleTy(moldVal);
+  mlir::Type moldType = fir::unwrapRefType(moldArg.getType());
+  mlir::Type eleType = fir::dyn_cast_ptrOrBoxEleTy(moldType);
   fir::SequenceType seqTy =
       mlir::dyn_cast_if_present<fir::SequenceType>(eleType);
   if (!seqTy)
@@ -324,13 +323,8 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
       // Just incase, do initialize the box with a null value
       mlir::Value null = builder.createNullConstant(loc, boxTy.getEleTy());
       mlir::Value nullBox;
-      if (shape)
-        nullBox = builder.create<fir::EmboxOp>(
-            loc, boxTy, null, shape, /*slice=*/mlir::Value{}, lenParams);
-      else
-        nullBox = builder.create<fir::EmboxOp>(
-            loc, boxTy, null, /*shape=*/mlir::Value{}, /*slice=*/mlir::Value{},
-            lenParams);
+      nullBox = builder.create<fir::EmboxOp>(
+          loc, boxTy, null, shape, /*slice=*/mlir::Value{}, lenParams);
       builder.create<fir::StoreOp>(loc, nullBox, boxAlloca);
       yield(boxAlloca);
       return;

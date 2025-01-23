@@ -86,7 +86,7 @@ private:
   lower::pft::Evaluation &eval;
   bool shouldCollectPreDeterminedSymbols;
   bool useDelayedPrivatization;
-  bool mightHaveReadMoldArg = false;
+  bool mightHaveReadHostSym = false;
   lower::SymMap &symTable;
   OMPConstructSymbolVisitor visitor;
 

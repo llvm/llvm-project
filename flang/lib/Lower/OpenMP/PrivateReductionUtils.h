@@ -48,8 +48,8 @@ inline bool isReduction(DeclOperationKind kind) {
 
 /// Generate init and cleanup regions suitable for reduction or privatizer
 /// declarations. `scalarInitValue` may be nullptr if there is no default
-/// initialization (for privatization). If this is for a privatizer, set
-/// `isPrivate` to `true`.
+/// initialization (for privatization). `kind` should be set to indicate
+/// what kind of operation definition this initialization belongs to.
 void populateByRefInitAndCleanupRegions(
     AbstractConverter &converter, mlir::Location loc, mlir::Type argType,
     mlir::Value scalarInitValue, mlir::Block *initBlock,

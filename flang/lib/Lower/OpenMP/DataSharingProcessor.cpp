@@ -168,7 +168,7 @@ void DataSharingProcessor::cloneSymbol(const semantics::Symbol *sym) {
 
   if (needInitClone()) {
     Fortran::lower::initializeCloneAtRuntime(converter, *sym, symTable);
-    mightHaveReadMoldArg = true;
+    mightHaveReadHostSym = true;
   }
 }
 
@@ -221,7 +221,7 @@ bool DataSharingProcessor::needBarrier() {
   for (const semantics::Symbol *sym : allPrivatizedSymbols) {
     if (sym->test(semantics::Symbol::Flag::OmpLastPrivate) &&
         (sym->test(semantics::Symbol::Flag::OmpFirstPrivate) ||
-         mightHaveReadMoldArg))
+         mightHaveReadHostSym))
       return true;
   }
   return false;
@@ -505,16 +505,14 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
   lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*sym);
   assert(hsb && "Host symbol box not found");
 
-  mlir::Value privVal = hsb.getAddr();
-  mlir::Type allocType;
-  if (mlir::isa<fir::PointerType>(privVal.getType()))
-    allocType = privVal.getType();
-  else
-    allocType = fir::unwrapRefType(privVal.getType());
-
   mlir::Location symLoc = hsb.getAddr().getLoc();
   std::string privatizerName = sym->name().ToString() + ".privatizer";
   bool isFirstPrivate = sym->test(semantics::Symbol::Flag::OmpFirstPrivate);
+
+  mlir::Value privVal = hsb.getAddr();
+  mlir::Type allocType = privVal.getType();
+  if (!mlir::isa<fir::PointerType>(privVal.getType()))
+    allocType = fir::unwrapRefType(privVal.getType());
 
   if (auto poly = mlir::dyn_cast<fir::ClassType>(allocType)) {
     if (!mlir::isa<fir::PointerType>(poly.getEleTy()) && isFirstPrivate)
@@ -566,6 +564,12 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
     lower::SymMapScope outerScope(symTable);
 
     // Populate the `init` region.
+    // We need to initialize in the following cases:
+    // 1. The allocation was for a derived type which requires initialization
+    //    (this can be skipped if it will be initialized anyway by the copy
+    //    region, unless the derived type has allocatable components)
+    // 2. The allocation was for any kind of box
+    // 3. The allocation was for a boxed character
     const bool needsInitialization =
         (Fortran::lower::hasDefaultInitialization(sym->GetUltimate()) &&
          (!isFirstPrivate || hlfir::mayHaveAllocatableComponent(allocType))) ||
@@ -586,7 +590,7 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
       // TODO: currently there are false positives from dead uses of the mold
       // arg
       if (!result.getInitMoldArg().getUses().empty())
-        mightHaveReadMoldArg = true;
+        mightHaveReadHostSym = true;
     }
 
     // Populate the `copy` region if this is a `firstprivate`.

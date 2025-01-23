@@ -64,11 +64,17 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
     ```mlir
     omp.private {type = private} @x.privatizer : !some.type init {
     ^bb0(%arg0: !some.pointer<!some.type>, %arg1: !some.pointer<!some.type>):
-    // initialize %arg1, using %arg0 as a mold for allocations
+    // initialize %arg1, using %arg0 as a mold for allocations.
+    // For example if %arg0 is a heap allocated array with a runtime determined
+    // length and !some.type is a runtime type descriptor, the init region
+    // will read the array length from %arg0, and heap allocate an array of the
+    // right length and initialize %arg1 to contain the array allocation and
+    // length.
     omp.yield(%arg1 : !some.pointer<!some.type>)
     } dealloc {
     ^bb0(%arg0: !some.pointer<!some.type>):
-    ... deallocate allocated memory ...
+    // ... deallocate memory allocated by the init region...
+    // In the example above, this will free the heap allocated array data.
     omp.yield
     }
     ```

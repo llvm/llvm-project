@@ -65,7 +65,7 @@ class MapsForPrivatizedSymbolsPass
     // decalred needs a descriptor.
     // Some types are boxed immediately before privatization. These have other
     // operations in between the privatization and the declaration. It is safe
-    // to use var directly here because they will be boxed anyay.
+    // to use var directly here because they will be boxed anyway.
     if (auto declOp = llvm::dyn_cast<hlfir::DeclareOp>(definingOp))
       varPtr = declOp.getBase();
 
