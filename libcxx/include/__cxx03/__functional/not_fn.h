@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_NOT_FN_H
-#define _LIBCPP___FUNCTIONAL_NOT_FN_H
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_NOT_FN_H
+#define _LIBCPP___CXX03___FUNCTIONAL_NOT_FN_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__functional/invoke.h>
@@ -50,4 +50,4 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 auto not_fn(_Fn&& __f) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_NOT_FN_H
+#endif // _LIBCPP___CXX03___FUNCTIONAL_NOT_FN_H

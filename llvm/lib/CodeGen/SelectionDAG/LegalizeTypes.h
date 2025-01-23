@@ -378,6 +378,7 @@ private:
   SDValue PromoteIntRes_VPFunnelShift(SDNode *N);
   SDValue PromoteIntRes_IS_FPCLASS(SDNode *N);
   SDValue PromoteIntRes_PATCHPOINT(SDNode *N);
+  SDValue PromoteIntRes_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
 
   // Integer Operand Promotion.
   bool PromoteIntegerOperand(SDNode *N, unsigned OpNo);
@@ -428,6 +429,7 @@ private:
   SDValue PromoteIntOp_VP_STRIDED(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_VP_SPLICE(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_VECTOR_HISTOGRAM(SDNode *N, unsigned OpNo);
+  SDValue PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N, unsigned OpNo);
 
   void SExtOrZExtPromotedOperands(SDValue &LHS, SDValue &RHS);
   void PromoteSetCCOperands(SDValue &LHS,SDValue &RHS, ISD::CondCode Code);
@@ -487,6 +489,7 @@ private:
   void ExpandIntRes_MINMAX            (SDNode *N, SDValue &Lo, SDValue &Hi);
 
   void ExpandIntRes_CMP               (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_SETCC             (SDNode *N, SDValue &Lo, SDValue &Hi);
 
   void ExpandIntRes_SADDSUBO          (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_UADDSUBO          (SDNode *N, SDValue &Lo, SDValue &Hi);
@@ -557,6 +560,7 @@ private:
   // Convert Float Results to Integer.
   void SoftenFloatResult(SDNode *N, unsigned ResNo);
   SDValue SoftenFloatRes_Unary(SDNode *N, RTLIB::Libcall LC);
+  SDValue SoftenFloatRes_UnaryWithTwoFPResults(SDNode *N, RTLIB::Libcall LC);
   SDValue SoftenFloatRes_Binary(SDNode *N, RTLIB::Libcall LC);
   SDValue SoftenFloatRes_MERGE_VALUES(SDNode *N, unsigned ResNo);
   SDValue SoftenFloatRes_ARITH_FENCE(SDNode *N);
@@ -743,13 +747,13 @@ private:
   void PromoteFloatResult(SDNode *N, unsigned ResNo);
   SDValue PromoteFloatRes_BITCAST(SDNode *N);
   SDValue PromoteFloatRes_BinOp(SDNode *N);
+  SDValue PromoteFloatRes_UnaryWithTwoFPResults(SDNode *N);
   SDValue PromoteFloatRes_ConstantFP(SDNode *N);
   SDValue PromoteFloatRes_EXTRACT_VECTOR_ELT(SDNode *N);
   SDValue PromoteFloatRes_FCOPYSIGN(SDNode *N);
   SDValue PromoteFloatRes_FMAD(SDNode *N);
   SDValue PromoteFloatRes_ExpOp(SDNode *N);
   SDValue PromoteFloatRes_FFREXP(SDNode *N);
-  SDValue PromoteFloatRes_FSINCOS(SDNode *N);
   SDValue PromoteFloatRes_FP_ROUND(SDNode *N);
   SDValue PromoteFloatRes_STRICT_FP_ROUND(SDNode *N);
   SDValue PromoteFloatRes_LOAD(SDNode *N);
@@ -791,6 +795,7 @@ private:
   void SoftPromoteHalfResult(SDNode *N, unsigned ResNo);
   SDValue SoftPromoteHalfRes_ARITH_FENCE(SDNode *N);
   SDValue SoftPromoteHalfRes_BinOp(SDNode *N);
+  SDValue SoftPromoteHalfRes_UnaryWithTwoFPResults(SDNode *N);
   SDValue SoftPromoteHalfRes_BITCAST(SDNode *N);
   SDValue SoftPromoteHalfRes_ConstantFP(SDNode *N);
   SDValue SoftPromoteHalfRes_EXTRACT_VECTOR_ELT(SDNode *N);
@@ -798,7 +803,6 @@ private:
   SDValue SoftPromoteHalfRes_FMAD(SDNode *N);
   SDValue SoftPromoteHalfRes_ExpOp(SDNode *N);
   SDValue SoftPromoteHalfRes_FFREXP(SDNode *N);
-  SDValue SoftPromoteHalfRes_FSINCOS(SDNode *N);
   SDValue SoftPromoteHalfRes_FP_ROUND(SDNode *N);
   SDValue SoftPromoteHalfRes_LOAD(SDNode *N);
   SDValue SoftPromoteHalfRes_ATOMIC_LOAD(SDNode *N);
@@ -856,7 +860,7 @@ private:
   SDValue ScalarizeVecRes_BUILD_VECTOR(SDNode *N);
   SDValue ScalarizeVecRes_EXTRACT_SUBVECTOR(SDNode *N);
   SDValue ScalarizeVecRes_FP_ROUND(SDNode *N);
-  SDValue ScalarizeVecRes_ExpOp(SDNode *N);
+  SDValue ScalarizeVecRes_UnaryOpWithExtraInput(SDNode *N);
   SDValue ScalarizeVecRes_INSERT_VECTOR_ELT(SDNode *N);
   SDValue ScalarizeVecRes_LOAD(LoadSDNode *N);
   SDValue ScalarizeVecRes_SCALAR_TO_VECTOR(SDNode *N);

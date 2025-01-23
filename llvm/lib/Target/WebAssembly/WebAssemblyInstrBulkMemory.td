@@ -11,13 +11,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
-// Instruction requiring HasBulkMemory and the bulk memory prefix byte
+// Instruction requiring HasBulkMemoryOpt and the bulk memory prefix byte
 multiclass BULK_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
                   list<dag> pattern_r, string asmstr_r = "",
                   string asmstr_s = "", bits<32> simdop = -1> {
   defm "" : I<oops_r, iops_r, oops_s, iops_s, pattern_r, asmstr_r, asmstr_s,
               !or(0xfc00, !and(0xff, simdop))>,
-            Requires<[HasBulkMemory]>;
+            Requires<[HasBulkMemoryOpt]>;
 }
 
 // Bespoke types and nodes for bulk memory ops
@@ -89,14 +89,14 @@ defm CPY_A#B : I<(outs), (ins i32imm_op:$src_idx, i32imm_op:$dst_idx,
                    rc:$dst, rc:$src, rc:$len
                  )],
                  "", "", 0>,
-                  Requires<[HasBulkMemory]>;
+                  Requires<[HasBulkMemoryOpt]>;
 
 let usesCustomInserter = 1, isCodeGenOnly = 1, mayStore = 1 in
 defm SET_A#B : I<(outs), (ins i32imm_op:$idx, rc:$dst, I32:$value, rc:$size),
                  (outs), (ins i32imm_op:$idx),
                  [(wasm_memset (i32 imm:$idx), rc:$dst, I32:$value, rc:$size)],
                  "", "", 0>,
-                 Requires<[HasBulkMemory]>;
+                 Requires<[HasBulkMemoryOpt]>;
 
 }
 

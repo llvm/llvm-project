@@ -29,6 +29,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticAST.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
@@ -457,6 +458,10 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     if (BaseClassDecl->hasMutableFields())
       data().HasMutableFields = true;
 
+    if (BaseClassDecl->hasUninitializedExplicitInitFields() &&
+        BaseClassDecl->isAggregate())
+      setHasUninitializedExplicitInitFields(true);
+
     if (BaseClassDecl->hasUninitializedReferenceMember())
       data().HasUninitializedReferenceMember = true;
 
@@ -546,9 +551,9 @@ void CXXRecordDecl::addedClassSubobject(CXXRecordDecl *Subobj) {
     data().NeedOverloadResolutionForDestructor = true;
   }
 
-  // C++2a [dcl.constexpr]p4:
-  //   The definition of a constexpr destructor [shall] satisfy the
-  //   following requirement:
+  // C++20 [dcl.constexpr]p5:
+  //  The definition of a constexpr destructor whose function-body is not
+  //  = delete shall additionally satisfy the following requirement:
   //   -- for every subobject of class type or (possibly multi-dimensional)
   //      array thereof, that class type shall have a constexpr destructor
   if (!Subobj->hasConstexprDestructor())
@@ -993,7 +998,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
       // C++ [meta.unary.prop]p4: [LWG2358]
       //   T is a class type [...] with [...] no unnamed bit-fields of non-zero
       //   length
-      if (data().Empty && !Field->isZeroLengthBitField(Context) &&
+      if (data().Empty && !Field->isZeroLengthBitField() &&
           Context.getLangOpts().getClangABICompat() >
               LangOptions::ClangABI::Ver6)
         data().Empty = false;
@@ -1113,6 +1118,9 @@ void CXXRecordDecl::addedMember(Decl *D) {
     } else if (!T.isCXX98PODType(Context))
       data().PlainOldData = false;
 
+    if (Field->hasAttr<ExplicitInitAttr>())
+      setHasUninitializedExplicitInitFields(true);
+
     if (T->isReferenceType()) {
       if (!Field->hasInClassInitializer())
         data().HasUninitializedReferenceMember = true;
@@ -1213,8 +1221,13 @@ void CXXRecordDecl::addedMember(Decl *D) {
             data().DefaultedCopyAssignmentIsDeleted = true;
           if (FieldRec->hasNonTrivialMoveAssignment())
             data().DefaultedMoveAssignmentIsDeleted = true;
-          if (FieldRec->hasNonTrivialDestructor())
+          if (FieldRec->hasNonTrivialDestructor()) {
             data().DefaultedDestructorIsDeleted = true;
+            // C++20 [dcl.constexpr]p5:
+            //   The definition of a constexpr destructor whose function-body is
+            //   not = delete shall additionally satisfy...
+            data().DefaultedDestructorIsConstexpr = true;
+          }
         }
 
         // For an anonymous union member, our overload resolution will perform
@@ -1366,6 +1379,10 @@ void CXXRecordDecl::addedMember(Decl *D) {
         //   parameter is of type 'const M&', 'const volatile M&' or 'M'.
         if (!FieldRec->hasCopyAssignmentWithConstParam())
           data().ImplicitCopyAssignmentHasConstParam = false;
+
+        if (FieldRec->hasUninitializedExplicitInitFields() &&
+            FieldRec->isAggregate())
+          setHasUninitializedExplicitInitFields(true);
 
         if (FieldRec->hasUninitializedReferenceMember() &&
             !Field->hasInClassInitializer())
@@ -2183,6 +2200,33 @@ void CXXRecordDecl::completeDefinition(CXXFinalOverriderMap *FinalOverriders) {
   for (conversion_iterator I = conversion_begin(), E = conversion_end();
        I != E; ++I)
     I.setAccess((*I)->getAccess());
+
+  ASTContext &Context = getASTContext();
+
+  if (isAggregate() && hasUserDeclaredConstructor() &&
+      !Context.getLangOpts().CPlusPlus20) {
+    // Diagnose any aggregate behavior changes in C++20
+    for (const FieldDecl *FD : fields()) {
+      if (const auto *AT = FD->getAttr<ExplicitInitAttr>())
+        Context.getDiagnostics().Report(
+            AT->getLocation(),
+            diag::warn_cxx20_compat_requires_explicit_init_non_aggregate)
+            << AT << FD << Context.getRecordType(this);
+    }
+  }
+
+  if (!isAggregate() && hasUninitializedExplicitInitFields()) {
+    // Diagnose any fields that required explicit initialization in a
+    // non-aggregate type. (Note that the fields may not be directly in this
+    // type, but in a subobject. In such cases we don't emit diagnoses here.)
+    for (const FieldDecl *FD : fields()) {
+      if (const auto *AT = FD->getAttr<ExplicitInitAttr>())
+        Context.getDiagnostics().Report(AT->getLocation(),
+                                        diag::warn_attribute_needs_aggregate)
+            << AT << Context.getRecordType(this);
+    }
+    setHasUninitializedExplicitInitFields(false);
+  }
 }
 
 bool CXXRecordDecl::mayBeAbstract() const {
@@ -2597,8 +2641,6 @@ bool CXXMethodDecl::isMoveAssignmentOperator() const {
 
 void CXXMethodDecl::addOverriddenMethod(const CXXMethodDecl *MD) {
   assert(MD->isCanonicalDecl() && "Method is not canonical!");
-  assert(!MD->getParent()->isDependentContext() &&
-         "Can't add an overridden method to a class template!");
   assert(MD->isVirtual() && "Method is not virtual!");
 
   getASTContext().addOverriddenMethod(this, MD);
@@ -2733,14 +2775,14 @@ int64_t CXXCtorInitializer::getID(const ASTContext &Context) const {
 
 TypeLoc CXXCtorInitializer::getBaseClassLoc() const {
   if (isBaseInitializer())
-    return Initializee.get<TypeSourceInfo*>()->getTypeLoc();
+    return cast<TypeSourceInfo *>(Initializee)->getTypeLoc();
   else
     return {};
 }
 
 const Type *CXXCtorInitializer::getBaseClass() const {
   if (isBaseInitializer())
-    return Initializee.get<TypeSourceInfo*>()->getType().getTypePtr();
+    return cast<TypeSourceInfo *>(Initializee)->getType().getTypePtr();
   else
     return nullptr;
 }
@@ -2752,7 +2794,7 @@ SourceLocation CXXCtorInitializer::getSourceLocation() const {
   if (isAnyMemberInitializer())
     return getMemberLocation();
 
-  if (const auto *TSInfo = Initializee.get<TypeSourceInfo *>())
+  if (const auto *TSInfo = cast<TypeSourceInfo *>(Initializee))
     return TSInfo->getTypeLoc().getBeginLoc();
 
   return {};
@@ -2964,6 +3006,28 @@ void CXXDestructorDecl::setOperatorDelete(FunctionDecl *OD, Expr *ThisArg) {
     if (auto *L = getASTMutationListener())
       L->ResolvedOperatorDelete(First, OD, ThisArg);
   }
+}
+
+bool CXXDestructorDecl::isCalledByDelete(const FunctionDecl *OpDel) const {
+  // C++20 [expr.delete]p6: If the value of the operand of the delete-
+  // expression is not a null pointer value and the selected deallocation
+  // function (see below) is not a destroying operator delete, the delete-
+  // expression will invoke the destructor (if any) for the object or the
+  // elements of the array being deleted.
+  //
+  // This means we should not look at the destructor for a destroying
+  // delete operator, as that destructor is never called, unless the
+  // destructor is virtual (see [expr.delete]p8.1) because then the
+  // selected operator depends on the dynamic type of the pointer.
+  const FunctionDecl *SelectedOperatorDelete = OpDel ? OpDel : OperatorDelete;
+  if (!SelectedOperatorDelete)
+    return true;
+
+  if (!SelectedOperatorDelete->isDestroyingOperatorDelete())
+    return true;
+
+  // We have a destroying operator delete, so it depends on the dtor.
+  return isVirtual();
 }
 
 void CXXConversionDecl::anchor() {}

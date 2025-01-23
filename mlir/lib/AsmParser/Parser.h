@@ -310,7 +310,7 @@ public:
   ParseResult parseFusedLocation(LocationAttr &loc);
 
   /// Parse a name or FileLineCol location instance.
-  ParseResult parseNameOrFileLineColLocation(LocationAttr &loc);
+  ParseResult parseNameOrFileLineColRange(LocationAttr &loc);
 
   //===--------------------------------------------------------------------===//
   // Affine Parsing

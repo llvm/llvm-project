@@ -60,11 +60,16 @@ public:
         getUnderlyingObject(LSI->getPointerOperand()->Val));
   }
 
+  /// \Returns the number of bits of \p Ty.
+  static unsigned getNumBits(Type *Ty, const DataLayout &DL) {
+    return DL.getTypeSizeInBits(Ty->LLVMTy);
+  }
+
   /// \Returns the number of bits required to represent the operands or return
   /// value of \p V in \p DL.
   static unsigned getNumBits(Value *V, const DataLayout &DL) {
     Type *Ty = getExpectedType(V);
-    return DL.getTypeSizeInBits(Ty->LLVMTy);
+    return getNumBits(Ty, DL);
   }
 
   /// \Returns the number of bits required to represent the operands or

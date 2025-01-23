@@ -318,6 +318,13 @@ static cl::opt<bool> ClDumpStrictInstructions(
     cl::desc("print out instructions with default strict semantics"),
     cl::Hidden, cl::init(false));
 
+static cl::opt<bool> ClDumpStrictIntrinsics(
+    "msan-dump-strict-intrinsics",
+    cl::desc("Prints 'unknown' intrinsics that were handled heuristically. "
+             "Use -msan-dump-strict-instructions to print intrinsics that "
+             "could not be handled exactly nor heuristically."),
+    cl::Hidden, cl::init(false));
+
 static cl::opt<int> ClInstrumentationWithCallThreshold(
     "msan-instrumentation-with-call-threshold",
     cl::desc(
@@ -3014,7 +3021,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// We special-case intrinsics where this approach fails. See llvm.bswap
   /// handling as an example of that.
-  bool handleUnknownIntrinsic(IntrinsicInst &I) {
+  bool handleUnknownIntrinsicUnlogged(IntrinsicInst &I) {
     unsigned NumArgOperands = I.arg_size();
     if (NumArgOperands == 0)
       return false;
@@ -3038,6 +3045,18 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // FIXME: detect and handle SSE maskstore/maskload
     return false;
+  }
+
+  bool handleUnknownIntrinsic(IntrinsicInst &I) {
+    if (handleUnknownIntrinsicUnlogged(I)) {
+      if (ClDumpStrictIntrinsics)
+        dumpInst(I);
+
+      LLVM_DEBUG(dbgs() << "UNKNOWN INTRINSIC HANDLED HEURISTICALLY: " << I
+                        << "\n");
+      return true;
+    } else
+      return false;
   }
 
   void handleInvariantGroup(IntrinsicInst &I) {
@@ -3542,6 +3561,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void handleMaskedExpandLoad(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *Ptr = I.getArgOperand(0);
+    MaybeAlign Align = I.getParamAlign(0);
     Value *Mask = I.getArgOperand(1);
     Value *PassThru = I.getArgOperand(2);
 
@@ -3559,10 +3579,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Type *ShadowTy = getShadowTy(&I);
     Type *ElementShadowTy = cast<VectorType>(ShadowTy)->getElementType();
     auto [ShadowPtr, OriginPtr] =
-        getShadowOriginPtr(Ptr, IRB, ElementShadowTy, {}, /*isStore*/ false);
+        getShadowOriginPtr(Ptr, IRB, ElementShadowTy, Align, /*isStore*/ false);
 
-    Value *Shadow = IRB.CreateMaskedExpandLoad(
-        ShadowTy, ShadowPtr, Mask, getShadow(PassThru), "_msmaskedexpload");
+    Value *Shadow =
+        IRB.CreateMaskedExpandLoad(ShadowTy, ShadowPtr, Align, Mask,
+                                   getShadow(PassThru), "_msmaskedexpload");
 
     setShadow(&I, Shadow);
 
@@ -3574,6 +3595,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     IRBuilder<> IRB(&I);
     Value *Values = I.getArgOperand(0);
     Value *Ptr = I.getArgOperand(1);
+    MaybeAlign Align = I.getParamAlign(1);
     Value *Mask = I.getArgOperand(2);
 
     if (ClCheckAccessAddress) {
@@ -3585,9 +3607,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Type *ElementShadowTy =
         getShadowTy(cast<VectorType>(Values->getType())->getElementType());
     auto [ShadowPtr, OriginPtrs] =
-        getShadowOriginPtr(Ptr, IRB, ElementShadowTy, {}, /*isStore*/ true);
+        getShadowOriginPtr(Ptr, IRB, ElementShadowTy, Align, /*isStore*/ true);
 
-    IRB.CreateMaskedCompressStore(Shadow, ShadowPtr, Mask);
+    IRB.CreateMaskedCompressStore(Shadow, ShadowPtr, Align, Mask);
 
     // TODO: Store origins.
   }
@@ -3832,6 +3854,20 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  // _mm_round_ps / _mm_round_ps.
+  // Similar to maybeHandleSimpleNomemIntrinsic except
+  // the second argument is guranteed to be a constant integer.
+  void handleRoundPdPsIntrinsic(IntrinsicInst &I) {
+    assert(I.getArgOperand(0)->getType() == I.getType());
+    assert(I.arg_size() == 2);
+    assert(isa<ConstantInt>(I.getArgOperand(1)));
+
+    IRBuilder<> IRB(&I);
+    ShadowAndOriginCombiner SC(this, IRB);
+    SC.Add(I.getArgOperand(0));
+    SC.Done(&I);
+  }
+
   // Instrument abs intrinsic.
   // handleUnknownIntrinsic can't handle it because of the last
   // is_int_min_poison argument which does not match the result type.
@@ -3972,6 +4008,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///     shadow[out] =
   ///         intrinsic(shadow[var1], shadow[var2], opType) | shadow[opType]
   ///
+  /// CAUTION: this assumes that the intrinsic will handle arbitrary
+  ///          bit-patterns (for example, if the intrinsic accepts floats for
+  ///          var1, we require that it doesn't care if inputs are NaNs).
+  ///
   /// For example, this can be applied to the Arm NEON vector table intrinsics
   /// (tbl{1,2,3,4}).
   ///
@@ -3986,7 +4026,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Don't use getNumOperands() because it includes the callee
     for (unsigned int i = 0; i < I.arg_size() - trailingVerbatimArgs; i++) {
       Value *Shadow = getShadow(&I, i);
-      ShadowArgs.push_back(Shadow);
+
+      // Shadows are integer-ish types but some intrinsics require a
+      // different (e.g., floating-point) type.
+      ShadowArgs.push_back(
+          IRB.CreateBitCast(Shadow, I.getArgOperand(i)->getType()));
     }
 
     for (unsigned int i = I.arg_size() - trailingVerbatimArgs; i < I.arg_size();
@@ -4007,9 +4051,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       CombinedShadow = IRB.CreateOr(Shadow, CombinedShadow, "_msprop");
     }
 
-    setShadow(&I, CombinedShadow);
+    setShadow(&I, IRB.CreateBitCast(CombinedShadow, getShadowTy(&I)));
 
     setOriginForNaryOp(I);
+  }
+
+  // Approximation only
+  void handleNEONVectorMultiplyIntrinsic(IntrinsicInst &I) {
+    handleShadowOr(I);
   }
 
   void visitIntrinsicInst(IntrinsicInst &I) {
@@ -4327,10 +4376,18 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handlePclmulIntrinsic(I);
       break;
 
+    case Intrinsic::x86_avx_round_pd_256:
+    case Intrinsic::x86_avx_round_ps_256:
+    case Intrinsic::x86_sse41_round_pd:
+    case Intrinsic::x86_sse41_round_ps:
+      handleRoundPdPsIntrinsic(I);
+      break;
+
     case Intrinsic::x86_sse41_round_sd:
     case Intrinsic::x86_sse41_round_ss:
       handleUnarySdSsIntrinsic(I);
       break;
+
     case Intrinsic::x86_sse2_max_sd:
     case Intrinsic::x86_sse_max_ss:
     case Intrinsic::x86_sse2_min_sd:
@@ -4406,6 +4463,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_tbx4: {
       // The last trailing argument (index register) should be handled verbatim
       handleIntrinsicByApplyingToShadow(I, 1);
+      break;
+    }
+
+    case Intrinsic::aarch64_neon_fmulx:
+    case Intrinsic::aarch64_neon_pmul:
+    case Intrinsic::aarch64_neon_pmull:
+    case Intrinsic::aarch64_neon_smull:
+    case Intrinsic::aarch64_neon_pmull64:
+    case Intrinsic::aarch64_neon_umull: {
+      handleNEONVectorMultiplyIntrinsic(I);
       break;
     }
 
@@ -6129,7 +6196,7 @@ struct VarArgI386Helper : public VarArgHelperBase {
       Type *RegSaveAreaPtrTy = PointerType::getUnqual(*MS.C);
       Value *RegSaveAreaPtrPtr =
           IRB.CreateIntToPtr(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
-                             PointerType::get(RegSaveAreaPtrTy, 0));
+                             PointerType::get(*MS.C, 0));
       Value *RegSaveAreaPtr =
           IRB.CreateLoad(RegSaveAreaPtrTy, RegSaveAreaPtrPtr);
       Value *RegSaveAreaShadowPtr, *RegSaveAreaOriginPtr;
@@ -6159,8 +6226,10 @@ struct VarArgGenericHelper : public VarArgHelperBase {
     unsigned VAArgOffset = 0;
     const DataLayout &DL = F.getDataLayout();
     unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
-    for (Value *A :
-         llvm::drop_begin(CB.args(), CB.getFunctionType()->getNumParams())) {
+    for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
+      bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
+      if (IsFixed)
+        continue;
       uint64_t ArgSize = DL.getTypeAllocSize(A->getType());
       if (DL.isBigEndian()) {
         // Adjusting the shadow for argument with size < IntptrSize to match the
@@ -6212,7 +6281,7 @@ struct VarArgGenericHelper : public VarArgHelperBase {
       Type *RegSaveAreaPtrTy = PointerType::getUnqual(*MS.C);
       Value *RegSaveAreaPtrPtr =
           IRB.CreateIntToPtr(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
-                             PointerType::get(RegSaveAreaPtrTy, 0));
+                             PointerType::get(*MS.C, 0));
       Value *RegSaveAreaPtr =
           IRB.CreateLoad(RegSaveAreaPtrTy, RegSaveAreaPtrPtr);
       Value *RegSaveAreaShadowPtr, *RegSaveAreaOriginPtr;

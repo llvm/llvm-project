@@ -37,6 +37,7 @@ static_assert(arr4[1][0] == 0, "");
 static_assert(arr4[1][0] == 0, "");
 static_assert(arr4[1][0] == 0, "");
 
+constexpr VI4 B = __extension__(A);
 
 /// From constant-expression-cxx11.cpp
 namespace Vector {
@@ -55,10 +56,9 @@ namespace Vector {
   static_assert(__builtin_vectorelements(v2) == (32 / sizeof(double)), "");
 }
 
-/// FIXME: We need to support BitCasts between vector types.
 namespace {
   typedef float __attribute__((vector_size(16))) VI42;
-  constexpr VI42 A2 = A; // expected-error {{must be initialized by a constant expression}}
+  constexpr VI42 A2 = A;
 }
 
 namespace BoolToSignedIntegralCast{

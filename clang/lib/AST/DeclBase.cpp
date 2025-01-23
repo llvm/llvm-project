@@ -130,6 +130,14 @@ void Decl::setOwningModuleID(unsigned ID) {
   *IDAddress |= (uint64_t)ID << 48;
 }
 
+Module *Decl::getTopLevelOwningNamedModule() const {
+  if (getOwningModule() &&
+      getOwningModule()->getTopLevelModule()->isNamedModule())
+    return getOwningModule()->getTopLevelModule();
+
+  return nullptr;
+}
+
 Module *Decl::getOwningModuleSlow() const {
   assert(isFromASTFile() && "Not from AST file?");
   return getASTContext().getExternalSource()->getModule(getOwningModuleID());
@@ -958,6 +966,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case PragmaDetectMismatch:
     case Block:
     case Captured:
+    case OutlinedFunction:
     case TranslationUnit:
     case ExternCContext:
     case Decomposition:
@@ -1237,6 +1246,8 @@ template <class T> static Decl *getNonClosureContext(T *D) {
     return getNonClosureContext(BD->getParent());
   if (auto *CD = dyn_cast<CapturedDecl>(D))
     return getNonClosureContext(CD->getParent());
+  if (auto *OFD = dyn_cast<OutlinedFunctionDecl>(D))
+    return getNonClosureContext(OFD->getParent());
   return nullptr;
 }
 
@@ -1429,6 +1440,7 @@ DeclContext *DeclContext::getPrimaryContext() {
   case Decl::TopLevelStmt:
   case Decl::Block:
   case Decl::Captured:
+  case Decl::OutlinedFunction:
   case Decl::OMPDeclareReduction:
   case Decl::OMPDeclareMapper:
   case Decl::RequiresExprBody:
@@ -1500,7 +1512,8 @@ DeclContext *DeclContext::getPrimaryContext() {
 }
 
 template <typename T>
-void collectAllContextsImpl(T *Self, SmallVectorImpl<DeclContext *> &Contexts) {
+static void collectAllContextsImpl(T *Self,
+                                   SmallVectorImpl<DeclContext *> &Contexts) {
   for (T *D = Self->getMostRecentDecl(); D; D = D->getPreviousDecl())
     Contexts.push_back(D);
 
@@ -1855,9 +1868,16 @@ DeclContext::lookup(DeclarationName Name) const {
   if (getDeclKind() == Decl::LinkageSpec || getDeclKind() == Decl::Export)
     return getParent()->lookup(Name);
 
-  const DeclContext *PrimaryContext = getPrimaryContext();
-  if (PrimaryContext != this)
-    return PrimaryContext->lookup(Name);
+  return getPrimaryContext()->lookupImpl(Name, this);
+}
+
+DeclContext::lookup_result
+DeclContext::lookupImpl(DeclarationName Name,
+                        const DeclContext *OriginalLookupDC) const {
+  assert(this == getPrimaryContext() &&
+         "lookupImpl should only be called with primary DC!");
+  assert(getDeclKind() != Decl::LinkageSpec && getDeclKind() != Decl::Export &&
+         "We shouldn't lookup in transparent DC.");
 
   // If we have an external source, ensure that any later redeclarations of this
   // context have been loaded, since they may add names to the result of this
@@ -1888,7 +1908,8 @@ DeclContext::lookup(DeclarationName Name) const {
     if (!R.second && !R.first->second.hasExternalDecls())
       return R.first->second.getLookupResult();
 
-    if (Source->FindExternalVisibleDeclsByName(this, Name) || !R.second) {
+    if (Source->FindExternalVisibleDeclsByName(this, Name, OriginalLookupDC) ||
+        !R.second) {
       if (StoredDeclsMap *Map = LookupPtr) {
         StoredDeclsMap::iterator I = Map->find(Name);
         if (I != Map->end())
@@ -2114,7 +2135,8 @@ void DeclContext::makeDeclVisibleInContextImpl(NamedDecl *D, bool Internal) {
     if (ExternalASTSource *Source = getParentASTContext().getExternalSource())
       if (hasExternalVisibleStorage() &&
           Map->find(D->getDeclName()) == Map->end())
-        Source->FindExternalVisibleDeclsByName(this, D->getDeclName());
+        Source->FindExternalVisibleDeclsByName(this, D->getDeclName(),
+                                               D->getDeclContext());
 
   // Insert this declaration into the map.
   StoredDeclsList &DeclNameEntries = (*Map)[D->getDeclName()];

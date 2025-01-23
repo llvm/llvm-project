@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_RANGES_COPY_N_H
-#define _LIBCPP___ALGORITHM_RANGES_COPY_N_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_RANGES_COPY_N_H
+#define _LIBCPP___CXX03___ALGORITHM_RANGES_COPY_N_H
 
 #include <__cxx03/__algorithm/copy.h>
 #include <__cxx03/__algorithm/in_out_result.h>
@@ -78,4 +78,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_RANGES_COPY_N_H
+#endif // _LIBCPP___CXX03___ALGORITHM_RANGES_COPY_N_H

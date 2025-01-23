@@ -14,6 +14,7 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 DEF_DIAGTOOL("show-enabled",
              "Show which warnings are enabled for a given command line",
@@ -74,7 +75,8 @@ createDiagnostics(unsigned int argc, char **argv) {
 
   // Build the diagnostics parser
   IntrusiveRefCntPtr<DiagnosticsEngine> FinalDiags =
-    CompilerInstance::createDiagnostics(&Invocation->getDiagnosticOpts());
+      CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
+                                          &Invocation->getDiagnosticOpts());
   if (!FinalDiags)
     return nullptr;
 

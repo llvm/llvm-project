@@ -39,20 +39,22 @@ public:
 };
 } // namespace
 
+static const char *GetErrorTypeStr(const DiagnosticsInfo &info) {
+  switch (info.type) {
+  case DiagnosticsInfoType::InterceptedCall:
+    return "unsafe-library-call";
+  case DiagnosticsInfoType::BlockingCall:
+    return "blocking-call";
+  }
+  CHECK(false);
+  return "(unknown error)";
+}
+
 static void PrintError(const Decorator &decorator,
                        const DiagnosticsInfo &info) {
-  const auto ErrorTypeStr = [&info]() -> const char * {
-    switch (info.type) {
-    case DiagnosticsInfoType::InterceptedCall:
-      return "unsafe-library-call";
-    case DiagnosticsInfoType::BlockingCall:
-      return "blocking-call";
-    }
-    return "(unknown error)";
-  };
 
   Printf("%s", decorator.Error());
-  Report("ERROR: RealtimeSanitizer: %s\n", ErrorTypeStr());
+  Report("ERROR: RealtimeSanitizer: %s\n", GetErrorTypeStr(info));
 }
 
 static void PrintReason(const Decorator &decorator,
@@ -78,10 +80,16 @@ static void PrintReason(const Decorator &decorator,
 }
 
 void __rtsan::PrintDiagnostics(const DiagnosticsInfo &info) {
-  ScopedErrorReportLock l;
+  ScopedErrorReportLock::CheckLocked();
 
   Decorator d;
   PrintError(d, info);
   PrintReason(d, info);
   Printf("%s", d.Default());
+}
+
+void __rtsan::PrintErrorSummary(const DiagnosticsInfo &info,
+                                const BufferedStackTrace &stack) {
+  ScopedErrorReportLock::CheckLocked();
+  ReportErrorSummary(GetErrorTypeStr(info), &stack);
 }

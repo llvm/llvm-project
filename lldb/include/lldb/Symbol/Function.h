@@ -444,7 +444,20 @@ public:
 
   Function *CalculateSymbolContextFunction() override;
 
+  /// DEPRECATED: Use GetAddressRanges instead.
   const AddressRange &GetAddressRange() { return m_range; }
+
+  AddressRanges GetAddressRanges() { return m_block.GetRanges(); }
+
+  /// Return the address of the function (its entry point). This address is also
+  /// used as a base address for relocation of function-scope entities (blocks
+  /// and variables).
+  const Address &GetAddress() const { return m_address; }
+
+  bool GetRangeContainingLoadAddress(lldb::addr_t load_addr, Target &target,
+                                     AddressRange &range) {
+    return m_block.GetRangeContainingLoadAddress(load_addr, target, range);
+  }
 
   lldb::LanguageType GetLanguage() const;
   /// Find the file and line number of the source location of the start of the
@@ -650,13 +663,13 @@ protected:
   /// All lexical blocks contained in this function.
   Block m_block;
 
-  /// List of address ranges belonging to the function.
-  AddressRanges m_ranges;
-
   /// The function address range that covers the widest range needed to contain
   /// all blocks. DEPRECATED: do not use this field in new code as the range may
   /// include addresses belonging to other functions.
   AddressRange m_range;
+
+  /// The address (entry point) of the function.
+  Address m_address;
 
   /// The frame base expression for variables that are relative to the frame
   /// pointer.

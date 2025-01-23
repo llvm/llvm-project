@@ -103,7 +103,7 @@ define i32 @vec_store_load_overlap(ptr %p) {
 define i32 @load_i32_store_nxv4i32(ptr %a) {
 ; CHECK-LABEL: @load_i32_store_nxv4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 4 x i32> splat (i32 1), ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
@@ -116,7 +116,7 @@ entry:
 define i64 @load_i64_store_nxv8i8(ptr %a) {
 ; CHECK-LABEL: @load_i64_store_nxv8i8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <vscale x 8 x i8> shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 1, i64 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 8 x i8> splat (i8 1), ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[A]], align 8
 ; CHECK-NEXT:    ret i64 [[LOAD]]
 ;
@@ -129,7 +129,7 @@ entry:
 define i64 @load_i64_store_nxv4i32(ptr %a) {
 ; CHECK-LABEL: @load_i64_store_nxv4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 4 x i32> splat (i32 1), ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[A]], align 8
 ; CHECK-NEXT:    ret i64 [[LOAD]]
 ;
@@ -142,7 +142,7 @@ entry:
 define i8 @load_i8_store_nxv4i32(ptr %a) {
 ; CHECK-LABEL: @load_i8_store_nxv4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 4 x i32> splat (i32 1), ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[A]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
@@ -155,7 +155,7 @@ entry:
 define float @load_f32_store_nxv4f32(ptr %a) {
 ; CHECK-LABEL: @load_f32_store_nxv4f32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 4 x float> splat (float 1.000000e+00), ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[A]], align 4
 ; CHECK-NEXT:    ret float [[TMP0]]
 ;
@@ -168,7 +168,7 @@ entry:
 define i32 @load_i32_store_nxv4f32(ptr %a) {
 ; CHECK-LABEL: @load_i32_store_nxv4f32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 4 x float> splat (float 1.000000e+00), ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
@@ -181,7 +181,7 @@ entry:
 define <4 x i32> @load_v4i32_store_nxv4i32(ptr %a) {
 ; CHECK-LABEL: @load_v4i32_store_nxv4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 4 x i32> splat (i32 1), ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 16
 ; CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 ;
@@ -194,7 +194,7 @@ entry:
 define <4 x i16> @load_v4i16_store_nxv4i32(ptr %a) {
 ; CHECK-LABEL: @load_v4i16_store_nxv4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 4 x i32> splat (i32 1), ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[A]], align 16
 ; CHECK-NEXT:    ret <4 x i16> [[TMP0]]
 ;
@@ -208,7 +208,7 @@ entry:
 define i64 @load_i64_store_nxv4i8(ptr %a) {
 ; CHECK-LABEL: @load_i64_store_nxv4i8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <vscale x 4 x i8> shufflevector (<vscale x 4 x i8> insertelement (<vscale x 4 x i8> poison, i8 1, i64 0), <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 4 x i8> splat (i8 1), ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[A]], align 8
 ; CHECK-NEXT:    ret i64 [[LOAD]]
 ;
@@ -223,7 +223,7 @@ entry:
 define <vscale x 4 x i8> @load_nxv4i8_store_nxv4i32(ptr %a) {
 ; CHECK-LABEL: @load_nxv4i8_store_nxv4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 4 x i32> splat (i32 1), ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 4 x i8>, ptr [[A]], align 16
 ; CHECK-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 ;

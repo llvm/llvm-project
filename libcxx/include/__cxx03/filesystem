@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_FILESYSTEM
-#define _LIBCPP_FILESYSTEM
+#ifndef _LIBCPP___CXX03_FILESYSTEM
+#define _LIBCPP___CXX03_FILESYSTEM
 
 /*
     filesystem synopsis
@@ -574,4 +574,4 @@ inline constexpr bool std::ranges::enable_view<std::filesystem::recursive_direct
 #  include <__cxx03/system_error>
 #endif
 
-#endif // _LIBCPP_FILESYSTEM
+#endif // _LIBCPP___CXX03_FILESYSTEM

@@ -97,6 +97,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::Friend:
   case Decl::FriendTemplate:
   case Decl::Block:
+  case Decl::OutlinedFunction:
   case Decl::Captured:
   case Decl::UsingShadow:
   case Decl::ConstructorUsingShadow:
@@ -360,6 +361,8 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
     }
     return GV;
   }
+
+  PGO.markStmtMaybeUsed(D.getInit()); // FIXME: Too lazy
 
 #ifndef NDEBUG
   CharUnits VarSize = CGM.getContext().getTypeSizeInChars(D.getType()) +
@@ -760,7 +763,7 @@ void CodeGenFunction::EmitNullabilityCheck(LValue LHS, llvm::Value *RHS,
       EmitCheckSourceLocation(Loc), EmitCheckTypeDescriptor(LHS.getType()),
       llvm::ConstantInt::get(Int8Ty, 0), // The LogAlignment info is unused.
       llvm::ConstantInt::get(Int8Ty, TCK_NonnullAssign)};
-  EmitCheck({{IsNotNull, SanitizerKind::NullabilityAssign}},
+  EmitCheck({{IsNotNull, SanitizerKind::SO_NullabilityAssign}},
             SanitizerHandler::TypeMismatch, StaticData, RHS);
 }
 
@@ -1868,7 +1871,10 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   // If we are at an unreachable point, we don't need to emit the initializer
   // unless it contains a label.
   if (!HaveInsertPoint()) {
-    if (!Init || !ContainsLabel(Init)) return;
+    if (!Init || !ContainsLabel(Init)) {
+      PGO.markStmtMaybeUsed(Init);
+      return;
+    }
     EnsureInsertPoint();
   }
 
@@ -1899,13 +1905,16 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   const Address Loc =
       locIsByrefHeader ? emission.getObjectAddress(*this) : emission.Addr;
 
+  auto hasNoTrivialAutoVarInitAttr = [&](const Decl *D) {
+    return D && D->hasAttr<NoTrivialAutoVarInitAttr>();
+  };
   // Note: constexpr already initializes everything correctly.
   LangOptions::TrivialAutoVarInitKind trivialAutoVarInit =
-      (D.isConstexpr()
+      ((D.isConstexpr() || D.getAttr<UninitializedAttr>() ||
+        hasNoTrivialAutoVarInitAttr(type->getAsTagDecl()) ||
+        hasNoTrivialAutoVarInitAttr(CurFuncDecl))
            ? LangOptions::TrivialAutoVarInitKind::Uninitialized
-           : (D.getAttr<UninitializedAttr>()
-                  ? LangOptions::TrivialAutoVarInitKind::Uninitialized
-                  : getContext().getLangOpts().getTrivialAutoVarInit()));
+           : getContext().getLangOpts().getTrivialAutoVarInit());
 
   auto initializeWhatIsTechnicallyUninitialized = [&](Address Loc) {
     if (trivialAutoVarInit ==
@@ -1944,13 +1953,13 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
                                   replaceUndef(CGM, isPattern, constant));
     }
 
-    if (constant && D.getType()->isBitIntType() &&
-        CGM.getTypes().typeRequiresSplitIntoByteArray(D.getType())) {
+    if (constant && type->isBitIntType() &&
+        CGM.getTypes().typeRequiresSplitIntoByteArray(type)) {
       // Constants for long _BitInt types are split into individual bytes.
       // Try to fold these back into an integer constant so it can be stored
       // properly.
-      llvm::Type *LoadType = CGM.getTypes().convertTypeForLoadStore(
-          D.getType(), constant->getType());
+      llvm::Type *LoadType =
+          CGM.getTypes().convertTypeForLoadStore(type, constant->getType());
       constant = llvm::ConstantFoldLoadFromConst(
           constant, LoadType, llvm::APInt::getZero(32), CGM.getDataLayout());
     }
@@ -1967,8 +1976,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
       // It may be that the Init expression uses other uninitialized memory,
       // but auto-var-init here would not help, as auto-init would get
       // overwritten by Init.
-      if (!D.getType()->isScalarType() || capturedByInit ||
-          isAccessedBy(D, Init)) {
+      if (!type->isScalarType() || capturedByInit || isAccessedBy(D, Init)) {
         initializeWhatIsTechnicallyUninitialized(Loc);
       }
     }
@@ -1976,6 +1984,8 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
     lv.setNonGC(true);
     return EmitExprAsInit(Init, &D, lv, capturedByInit);
   }
+
+  PGO.markStmtMaybeUsed(Init);
 
   if (!emission.IsConstantAggregate) {
     // For simple scalar/complex initialization, store the value directly.

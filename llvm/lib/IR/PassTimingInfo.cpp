@@ -103,7 +103,7 @@ PassTimingInfo::~PassTimingInfo() {
 }
 
 void PassTimingInfo::init() {
-  if (!TimePassesIsEnabled || TheTimeInfo)
+  if (TheTimeInfo || !TimePassesIsEnabled)
     return;
 
   // Constructed the first time this is called, iff -time-passes is enabled.

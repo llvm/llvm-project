@@ -42,7 +42,8 @@ def Tosa_ArgMaxOp : Tosa_InferShapedTypeOp<"argmax"> {
 
   let arguments = (ins
     Tosa_Tensor: $input,
-    I32Attr: $axis
+    I32Attr: $axis,
+    DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
   );
 
   let results = (outs
@@ -57,7 +58,7 @@ def Tosa_ArgMaxOp : Tosa_InferShapedTypeOp<"argmax"> {
 // Accumulator types.
 //===----------------------------------------------------------------------===//
 
-def Tosa_AccType : AnyTypeOf<[I<32>, SI<32>, F16, F32]>;
+def Tosa_AccType : AnyTypeOf<[I<32>, I<48>, F16, F32]>;
 
 //===----------------------------------------------------------------------===//
 // Operator: avg_pool2d
@@ -106,6 +107,7 @@ def Tosa_Conv2DOp : Tosa_InferShapedTypeOp<"conv2d"> {
     Tosa_IntArrayAttr4:$pad,
     Tosa_IntArrayAttr2:$stride,
     Tosa_IntArrayAttr2:$dilation,
+    TypeAttrOf<Tosa_AccType>:$acc_type,
     OptionalAttr<Tosa_ConvOpQuantizationAttr>:$quantization_info,
     DefaultValuedOptionalAttr<BoolAttr, "false">:$local_bound
   );
@@ -135,6 +137,7 @@ def Tosa_Conv3DOp : Tosa_InferShapedTypeOp<"conv3d"> {
     Tosa_IntArrayAttr6:$pad,
     Tosa_IntArrayAttr3:$stride,
     Tosa_IntArrayAttr3:$dilation,
+    TypeAttrOf<Tosa_AccType>:$acc_type,
     OptionalAttr<Tosa_ConvOpQuantizationAttr>:$quantization_info,
     DefaultValuedOptionalAttr<BoolAttr, "false">:$local_bound
   );
@@ -165,6 +168,7 @@ def Tosa_DepthwiseConv2DOp : Tosa_InferShapedTypeOp<"depthwise_conv2d"> {
     Tosa_IntArrayAttr4:$pad,
     Tosa_IntArrayAttr2:$stride,
     Tosa_IntArrayAttr2:$dilation,
+    TypeAttrOf<Tosa_AccType>:$acc_type,
     OptionalAttr<Tosa_ConvOpQuantizationAttr>:$quantization_info,
     DefaultValuedOptionalAttr<BoolAttr, "false">:$local_bound
   );
@@ -284,7 +288,8 @@ def Tosa_MaxPool2dOp : Tosa_InferShapedTypeOp<"max_pool2d"> {
 
     Tosa_IntArrayAttr2:$kernel,
     Tosa_IntArrayAttr2:$stride,
-    Tosa_IntArrayAttr4:$pad
+    Tosa_IntArrayAttr4:$pad,
+    DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
   );
 
   let results = (outs
@@ -348,6 +353,7 @@ def Tosa_TransposeConv2DOp : Tosa_InferShapedTypeOp<"transpose_conv2d"> {
     Tosa_IntArrayAttr4:$out_pad,
     Tosa_IntArrayAttr2:$stride,
     Tosa_IntArrayAttr4:$out_shape,
+    TypeAttrOf<Tosa_AccType>:$acc_type,
     OptionalAttr<Tosa_ConvOpQuantizationAttr>:$quantization_info,
     DefaultValuedOptionalAttr<BoolAttr, "false">:$local_bound
   );
@@ -357,6 +363,7 @@ def Tosa_TransposeConv2DOp : Tosa_InferShapedTypeOp<"transpose_conv2d"> {
   );
 
   let builders = [Tosa_TransConvOpQuantInfoBuilder];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -383,7 +390,8 @@ def Tosa_ClampOp : Tosa_ElementwiseUnaryOp<"clamp"> {
     I64Attr:$min_int,
     I64Attr:$max_int,
     Tosa_FloatAttr:$min_fp,
-    Tosa_FloatAttr:$max_fp
+    Tosa_FloatAttr:$max_fp,
+    DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
   );
 
   let results = (outs
@@ -747,7 +755,8 @@ def Tosa_MaximumOp : Tosa_ElementwiseOp<"maximum", [
 
   let arguments = (ins
     Tosa_Tensor:$input1,
-    Tosa_Tensor:$input2
+    Tosa_Tensor:$input2,
+    DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
   );
 
   let results = (outs
@@ -770,7 +779,8 @@ def Tosa_MinimumOp : Tosa_ElementwiseOp<"minimum", [
 
   let arguments = (ins
     Tosa_Tensor:$input1,
-    Tosa_Tensor:$input2
+    Tosa_Tensor:$input2,
+    DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
   );
 
   let results = (outs
@@ -828,7 +838,7 @@ def Tosa_PowOp : Tosa_ElementwiseOp<"pow", [SameOperandsAndResultElementType]> {
   );
 
   let results = (outs
-    Tosa_Tensor:$z
+    Tosa_Tensor:$output
   );
 }
 
@@ -1377,7 +1387,8 @@ def Tosa_ReduceMaxOp : Tosa_InferTensorTypeOp<"reduce_max"> {
 
   let arguments = (ins
     Tosa_Tensor:$input,
-    I32Attr:$axis
+    I32Attr:$axis,
+    DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
   );
 
   let results = (outs
@@ -1412,7 +1423,8 @@ def Tosa_ReduceMinOp : Tosa_InferTensorTypeOp<"reduce_min"> {
 
   let arguments = (ins
     Tosa_Tensor:$input,
-    I32Attr:$axis
+    I32Attr:$axis,
+    DefaultValuedAttr<Tosa_NanPropagationAttr, "\"PROPAGATE\"">:$nan_mode
   );
 
   let results = (outs
@@ -1552,21 +1564,21 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad"> {
     Example:
 
     ```mlir
-    %0 = arith.constant dense<[[1, 2], [3, 4]]> : tensor<2x2xi32>
-    tosa.pad %arg0, %0 : (tensor<1x2xf32>, tensor<2x2xi32>)  -> (tensor<4x9xf32>)
+    %0 = tosa.const_shape { value = dense<[1, 2, 3, 4]> : tensor<4xindex> } : () -> !tosa.shape<4>
+    tosa.pad %arg0, %0 : (tensor<1x2xf32>, !tosa.shape<4>)  -> (tensor<4x9xf32>)
     ```
 
     Example 2:
 
     ```mlir
-    %0 = arith.constant dense<[[-1, 2], [3, 4]]> : tensor<2x2xi32>
-    tosa.pad %arg0, %0 : (tensor<1x2xf32>, tensor<2x2xi32>)  -> (tensor<?x9xf32>)
+    %0 = tosa.const_shape { value = dense<[-1, 2, 3, 4]> : tensor<4xindex> } : () -> !tosa.shape<4>
+    tosa.pad %arg0, %0 : (tensor<1x2xf32>, !tosa.shape<4>)  -> (tensor<?x9xf32>)
     ```
   }];
 
   let arguments = (ins
     Tosa_RankedTensor:$input1,
-    Tosa_Int32Or64Tensor:$padding,
+    Tosa_Shape:$padding,
     Optional<Tosa_ScalarTensor>:$pad_const,
     OptionalAttr<Tosa_PadOpQuantizationAttr>:$quantization_info
   );
@@ -1684,11 +1696,15 @@ def Tosa_TileOp : Tosa_InferShapedTypeOp<"tile"> {
 
   let arguments = (ins
     Tosa_Tensor:$input1,
-    DenseI64ArrayAttr:$multiples);
+    Tosa_Shape:$multiples);
 
   let results = (outs
     Tosa_Tensor:$output
   );
+
+  let extraClassDeclaration = [{
+    LogicalResult getConstantMultiples(llvm::SmallVector<int64_t> &multiples);
+  }];
 
   let hasFolder = 1;
   let hasVerifier = 1;
@@ -1698,7 +1714,8 @@ def Tosa_TileOp : Tosa_InferShapedTypeOp<"tile"> {
 // Operator: transpose
 //===----------------------------------------------------------------------===//
 def Tosa_TransposeOp : Tosa_InferShapedTypeOp<"transpose",
-                [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+                [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+                 AllElementTypesMatch<["input1", "output"]>]> {
   let summary = "Transpose operator";
 
   let description = [{
@@ -1869,22 +1886,23 @@ def Tosa_RescaleOp: Tosa_Op<"rescale", [Pure,
   let description = [{
     Rescale quantized values into a new domain. Supported rescalings are:
 
-    | Mode                   | Input | Output |
-    |------------------------|-------|--------|
-    | signed 8 to 8          | int8  | int8   |
-    | signed 8 to 16         | int8  | int16  |
-    | signed 8 to 32         | int8  | int32  |
-    | signed 16 to 8         | int16 | int8   |
-    | signed 16 to 16        | int16 | int16  |
-    | signed 16 to 32        | int16 | int32  |
-    | signed 32 to 8         | int32 | int8   |
-    | signed 32 to 16        | int32 | int16  |
-    | signed 32 to 32        | int32 | int32  |
-    | signed 48 to 8         | int48 | int8   |
-    | signed 48 to 16        | int48 | int16  |
-    | signed 48 to 32        | int48 | int32  |
-    | unsigned 8 to signed 8 | uint8 | int8   |
-    | signed 8 to unsigned 8 | int8  | uint8  |
+    | Mode                   | Input | Output | Unsigned | Unsigned |
+    |                        |       |        |  input   |  output  |
+    |------------------------|-------|--------|----------|----------|
+    | signed 8 to 8          | int8  | int8   |  false   |  false   |
+    | signed 8 to 16         | int8  | int16  |  false   |  false   |
+    | signed 8 to 32         | int8  | int32  |  false   |  false   |
+    | signed 16 to 8         | int16 | int8   |  false   |  false   |
+    | signed 16 to 16        | int16 | int16  |  false   |  false   |
+    | signed 16 to 32        | int16 | int32  |  false   |  false   |
+    | signed 32 to 8         | int32 | int8   |  false   |  false   |
+    | signed 32 to 16        | int32 | int16  |  false   |  false   |
+    | signed 32 to 32        | int32 | int32  |  false   |  false   |
+    | signed 48 to 8         | int48 | int8   |  false   |  false   |
+    | signed 48 to 16        | int48 | int16  |  false   |  false   |
+    | signed 48 to 32        | int48 | int32  |  false   |  false   |
+    | unsigned 8 to signed 8 | uint8 | int8   |  true    |  false   |
+    | signed 8 to unsigned 8 | int8  | uint8  |  false   |  true    |
   }];
 
   let arguments = (ins
@@ -1895,7 +1913,9 @@ def Tosa_RescaleOp: Tosa_Op<"rescale", [Pure,
     DenseI8ArrayAttr:$shift,
     BoolAttr:$scale32,
     BoolAttr:$double_round,
-    BoolAttr:$per_channel
+    BoolAttr:$per_channel,
+    DefaultValuedOptionalAttr<BoolAttr, "false">:$input_unsigned,
+    DefaultValuedOptionalAttr<BoolAttr, "false">:$output_unsigned
   );
 
   let results = (outs
@@ -1992,9 +2012,9 @@ def Tosa_CustomOp : Tosa_Op<"custom"> {
     `implementation_attrs` is a string which is a backend and identifier specific
     set of attributes to the custom operator.
 
-    `inputs` is the set of tensor inputs to the custom operator.
+    `input_list` is the set of tensor inputs to the custom operator.
 
-    `outputs is the list of tensors returned by the operator. The number of operators
+    `output_list` is the list of tensors returned by the operator. The number of operators
     is backend specific.
 
     Example:
@@ -2010,11 +2030,11 @@ def Tosa_CustomOp : Tosa_Op<"custom"> {
     StrAttr:$operator_name,
     StrAttr:$domain_name,
     StrAttr:$implementation_attrs,
-    Variadic<Tosa_Tensor>:$inputs
+    Variadic<Tosa_Tensor>:$input_list
   );
 
   let results = (outs
-    Variadic<Tosa_Tensor>:$outputs
+    Variadic<Tosa_Tensor>:$output_list
   );
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
@@ -2096,5 +2116,7 @@ def Tosa_WhileOp : Tosa_Op<"while_loop", [
 }
 
 include "mlir/Dialect/Tosa/IR/TosaUtilOps.td"
+
+include "mlir/Dialect/Tosa/IR/TosaShapeOps.td"
 
 #endif // TOSA_OPS

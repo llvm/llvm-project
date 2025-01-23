@@ -113,8 +113,6 @@ static cl::opt<bool> EnableImplicitNullChecks(
 static cl::opt<bool> DisableMergeICmps("disable-mergeicmps",
     cl::desc("Disable MergeICmps Pass"),
     cl::init(false), cl::Hidden);
-static cl::opt<bool> PrintLSR("print-lsr-output", cl::Hidden,
-    cl::desc("Print LLVM IR produced by the loop-reduce pass"));
 static cl::opt<bool>
     PrintISelInput("print-isel-input", cl::Hidden,
                    cl::desc("Print LLVM IR input to isel pass"));
@@ -262,6 +260,11 @@ static cl::opt<bool> DisableSelectOptimize(
 static cl::opt<bool>
     GCEmptyBlocks("gc-empty-basic-blocks", cl::init(false), cl::Hidden,
                   cl::desc("Enable garbage-collecting empty basic blocks"));
+
+static cl::opt<bool>
+    SplitStaticData("split-static-data", cl::Hidden, cl::init(false),
+                    cl::desc("Split static data sections into hot and cold "
+                             "sections using profile information"));
 
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
@@ -503,7 +506,6 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_BOOLEAN_OPTION(DisableCGP)
   SET_BOOLEAN_OPTION(DisablePartialLibcallInlining)
   SET_BOOLEAN_OPTION(DisableSelectOptimize)
-  SET_BOOLEAN_OPTION(PrintLSR)
   SET_BOOLEAN_OPTION(PrintISelInput)
   SET_BOOLEAN_OPTION(DebugifyAndStripAll)
   SET_BOOLEAN_OPTION(DebugifyCheckAndStripAll)
@@ -836,9 +838,6 @@ void TargetPassConfig::addIRPasses() {
       addPass(createLoopStrengthReducePass());
       if (EnableLoopTermFold)
         addPass(createLoopTermFoldPass());
-      if (PrintLSR)
-        addPass(createPrintFunctionPass(dbgs(),
-                                        "\n\n*** Code after LSR ***\n"));
     }
 
     // The MergeICmpsPass tries to create memcmp calls by grouping sequences of
@@ -1235,13 +1234,13 @@ void TargetPassConfig::addMachinePasses() {
     addPass(createMIRAddFSDiscriminatorsPass(
         sampleprof::FSDiscriminatorPass::PassLast));
 
-  bool NeedsBBSections =
-      TM->getBBSectionsType() != llvm::BasicBlockSection::None;
-  // Machine function splitter uses the basic block sections feature. Both
-  // cannot be enabled at the same time. We do not apply machine function
-  // splitter if -basic-block-sections is requested.
-  if (!NeedsBBSections && (TM->Options.EnableMachineFunctionSplitter ||
-                           EnableMachineFunctionSplitter)) {
+  // Machine function splitter uses the basic block sections feature.
+  // When used along with `-basic-block-sections=`, the basic-block-sections
+  // feature takes precedence. This means functions eligible for
+  // basic-block-sections optimizations (`=all`, or `=list=` with function
+  // included in the list profile) will get that optimization instead.
+  if (TM->Options.EnableMachineFunctionSplitter ||
+      EnableMachineFunctionSplitter) {
     const std::string ProfileFile = getFSProfileFile(TM);
     if (!ProfileFile.empty()) {
       if (EnableFSDiscriminator) {
@@ -1257,10 +1256,13 @@ void TargetPassConfig::addMachinePasses() {
       }
     }
     addPass(createMachineFunctionSplitterPass());
+    if (SplitStaticData)
+      addPass(createStaticDataSplitterPass());
   }
   // We run the BasicBlockSections pass if either we need BB sections or BB
   // address map (or both).
-  if (NeedsBBSections || TM->Options.BBAddrMap) {
+  if (TM->getBBSectionsType() != llvm::BasicBlockSection::None ||
+      TM->Options.BBAddrMap) {
     if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
       addPass(llvm::createBasicBlockSectionsProfileReaderWrapperPass(
           TM->getBBSectionsFuncListBuf()));

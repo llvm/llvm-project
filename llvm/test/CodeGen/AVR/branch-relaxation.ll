@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=avr | FileCheck %s
-; RUN: llc < %s -march=avr -mcpu=avr5 | FileCheck -check-prefix=AVR5 %s
+; RUN: llc < %s -mtriple=avr | FileCheck %s
+; RUN: llc < %s -mtriple=avr -mcpu=avr5 | FileCheck -check-prefix=AVR5 %s
 
 ; CHECK-LABEL: relax_breq
 ; CHECK: cpi     r{{[0-9]+}}, 0

@@ -296,7 +296,7 @@ OneToNConversionPattern::matchAndRewrite(Operation *op,
 namespace mlir {
 
 // This function applies the provided patterns using
-// `applyPatternsAndFoldGreedily` and then replaces all newly inserted
+// `applyPatternsGreedily` and then replaces all newly inserted
 // `UnrealizedConversionCastOps` that haven't folded away. ("Backward" casts
 // from target to source types inserted by a `OneToNConversionPattern` normally
 // fold away with the "forward" casts from source to target types inserted by
@@ -317,7 +317,7 @@ applyPartialOneToNConversion(Operation *op, TypeConverter &typeConverter,
 #endif // NDEBUG
 
   // Apply provided conversion patterns.
-  if (failed(applyPatternsAndFoldGreedily(op, patterns))) {
+  if (failed(applyPatternsGreedily(op, patterns))) {
     emitError(op->getLoc()) << "failed to apply conversion patterns";
     return failure();
   }

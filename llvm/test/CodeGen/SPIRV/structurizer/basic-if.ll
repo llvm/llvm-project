@@ -14,15 +14,15 @@ entry:
   %1 = alloca i32, align 4
   br i1 true, label %left, label %right
 
-; CHECK: %[[#left]] = OpLabel
-; CHECK:              OpBranch %[[#merge]]
-left:
-  store i32 0, ptr %1
-  br label %end
-
 ; CHECK: %[[#right]] = OpLabel
 ; CHECK:               OpBranch %[[#merge]]
 right:
+  store i32 0, ptr %1
+  br label %end
+
+; CHECK: %[[#left]] = OpLabel
+; CHECK:              OpBranch %[[#merge]]
+left:
   store i32 0, ptr %1
   br label %end
 

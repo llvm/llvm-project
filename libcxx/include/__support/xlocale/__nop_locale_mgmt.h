@@ -21,8 +21,6 @@ inline _LIBCPP_HIDE_FROM_ABI void freelocale(locale_t) {}
 
 inline _LIBCPP_HIDE_FROM_ABI locale_t newlocale(int, const char*, locale_t) { return nullptr; }
 
-inline _LIBCPP_HIDE_FROM_ABI locale_t uselocale(locale_t) { return nullptr; }
-
 #define LC_COLLATE_MASK (1 << LC_COLLATE)
 #define LC_CTYPE_MASK (1 << LC_CTYPE)
 #define LC_MESSAGES_MASK (1 << LC_MESSAGES)

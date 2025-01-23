@@ -131,11 +131,11 @@ public:
     else if constexpr (cpp::is_complex_type_same<T, _Complex long double>())
       return matchComplex<long double>();
 #ifdef LIBC_TYPES_HAS_CFLOAT16
-    else if constexpr (cpp::is_complex_type_same<T, cfloat16>)
+    else if constexpr (cpp::is_complex_type_same<T, cfloat16>())
       return matchComplex<float16>();
 #endif
 #ifdef LIBC_TYPES_HAS_CFLOAT128
-    else if constexpr (cpp::is_complex_type_same<T, cfloat128>)
+    else if constexpr (cpp::is_complex_type_same<T, cfloat128>())
       return matchComplex<float128>();
 #endif
   }
@@ -148,11 +148,11 @@ public:
     else if constexpr (cpp::is_complex_type_same<T, _Complex long double>())
       return explainErrorComplex<long double>();
 #ifdef LIBC_TYPES_HAS_CFLOAT16
-    else if constexpr (cpp::is_complex_type_same<T, cfloat16>)
+    else if constexpr (cpp::is_complex_type_same<T, cfloat16>())
       return explainErrorComplex<float16>();
 #endif
 #ifdef LIBC_TYPES_HAS_CFLOAT128
-    else if constexpr (cpp::is_complex_type_same<T, cfloat128>)
+    else if constexpr (cpp::is_complex_type_same<T, cfloat128>())
       return explainErrorComplex<float128>();
 #endif
   }

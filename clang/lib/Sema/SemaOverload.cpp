@@ -516,7 +516,7 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
     if (const FieldDecl *BitField = Initializer->getSourceBitField()) {
       if (BitField->getBitWidth()->isValueDependent())
         DependentBitField = true;
-      else if (unsigned BitFieldWidth = BitField->getBitWidthValue(Ctx);
+      else if (unsigned BitFieldWidth = BitField->getBitWidthValue();
                BitFieldWidth < FromWidth) {
         if (CanRepresentAll(FromSigned, BitFieldWidth, ToSigned, ToWidth))
           return NK_Not_Narrowing;
@@ -1309,6 +1309,13 @@ Sema::CheckOverload(Scope *S, FunctionDecl *New, const LookupResult &Old,
   return Ovl_Overload;
 }
 
+template <typename AttrT> static bool hasExplicitAttr(const FunctionDecl *D) {
+  assert(D && "function decl should not be null");
+  if (auto *A = D->getAttr<AttrT>())
+    return !A->isImplicit();
+  return false;
+}
+
 static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
                                      FunctionDecl *Old,
                                      bool UseMemberUsingDeclRules,
@@ -1583,6 +1590,7 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
       return true;
   }
 
+  // At this point, it is known that the two functions have the same signature.
   if (SemaRef.getLangOpts().CUDA && ConsiderCudaAttrs) {
     // Don't allow overloading of destructors.  (In theory we could, but it
     // would be a giant change to clang.)
@@ -1595,8 +1603,19 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
 
         // Allow overloading of functions with same signature and different CUDA
         // target attributes.
-        if (NewTarget != OldTarget)
+        if (NewTarget != OldTarget) {
+          // Special case: non-constexpr function is allowed to override
+          // constexpr virtual function
+          if (OldMethod && NewMethod && OldMethod->isVirtual() &&
+              OldMethod->isConstexpr() && !NewMethod->isConstexpr() &&
+              !hasExplicitAttr<CUDAHostAttr>(Old) &&
+              !hasExplicitAttr<CUDADeviceAttr>(Old) &&
+              !hasExplicitAttr<CUDAHostAttr>(New) &&
+              !hasExplicitAttr<CUDADeviceAttr>(New)) {
+            return false;
+          }
           return true;
+        }
       }
     }
   }
@@ -2236,12 +2255,40 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
       return false;
     }
   }
-  // Lvalue-to-rvalue conversion (C++11 4.1):
-  //   A glvalue (3.10) of a non-function, non-array type T can
-  //   be converted to a prvalue.
+
   bool argIsLValue = From->isGLValue();
-  if (argIsLValue && !FromType->canDecayToPointerType() &&
-      S.Context.getCanonicalType(FromType) != S.Context.OverloadTy) {
+  // To handle conversion from ArrayParameterType to ConstantArrayType
+  // this block must be above the one below because Array parameters
+  // do not decay and when handling HLSLOutArgExprs and
+  // the From expression is an LValue.
+  if (S.getLangOpts().HLSL && FromType->isConstantArrayType() &&
+      ToType->isConstantArrayType()) {
+    // HLSL constant array parameters do not decay, so if the argument is a
+    // constant array and the parameter is an ArrayParameterType we have special
+    // handling here.
+    if (ToType->isArrayParameterType()) {
+      FromType = S.Context.getArrayParameterType(FromType);
+      SCS.First = ICK_HLSL_Array_RValue;
+    } else if (FromType->isArrayParameterType()) {
+      const ArrayParameterType *APT = cast<ArrayParameterType>(FromType);
+      FromType = APT->getConstantArrayType(S.Context);
+      SCS.First = ICK_HLSL_Array_RValue;
+    } else {
+      SCS.First = ICK_Identity;
+    }
+
+    if (S.Context.getCanonicalType(FromType) !=
+        S.Context.getCanonicalType(ToType))
+      return false;
+
+    SCS.setAllToTypes(ToType);
+    return true;
+  } else if (argIsLValue && !FromType->canDecayToPointerType() &&
+             S.Context.getCanonicalType(FromType) != S.Context.OverloadTy) {
+    // Lvalue-to-rvalue conversion (C++11 4.1):
+    //   A glvalue (3.10) of a non-function, non-array type T can
+    //   be converted to a prvalue.
+
     SCS.First = ICK_Lvalue_To_Rvalue;
 
     // C11 6.3.2.1p2:
@@ -2255,24 +2302,6 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // is T (C++ 4.1p1). C++ can't get here with class types; in C, we
     // just strip the qualifiers because they don't matter.
     FromType = FromType.getUnqualifiedType();
-  } else if (S.getLangOpts().HLSL && FromType->isConstantArrayType() &&
-             ToType->isConstantArrayType()) {
-    // HLSL constant array parameters do not decay, so if the argument is a
-    // constant array and the parameter is an ArrayParameterType we have special
-    // handling here.
-    if (ToType->isArrayParameterType()) {
-      FromType = S.Context.getArrayParameterType(FromType);
-      SCS.First = ICK_HLSL_Array_RValue;
-    } else {
-      SCS.First = ICK_Identity;
-    }
-
-    if (S.Context.getCanonicalType(FromType) !=
-        S.Context.getCanonicalType(ToType))
-      return false;
-
-    SCS.setAllToTypes(ToType);
-    return true;
   } else if (FromType->isArrayType()) {
     // Array-to-pointer conversion (C++ 4.2)
     SCS.First = ICK_Array_To_Pointer;
@@ -5923,7 +5952,9 @@ ExprResult Sema::PerformImplicitObjectArgumentInitialization(
     DestType = ImplicitParamRecordType;
     FromClassification = From->Classify(Context);
 
-    // When performing member access on a prvalue, materialize a temporary.
+    // CWG2813 [expr.call]p6:
+    //   If the function is an implicit object member function, the object
+    //   expression of the class member access shall be a glvalue [...]
     if (From->isPRValue()) {
       From = CreateMaterializeTemporaryExpr(FromRecordType, From,
                                             Method->getRefQualifier() !=
@@ -6454,11 +6485,6 @@ static Expr *GetExplicitObjectExpr(Sema &S, Expr *Obj,
                                 VK_LValue, OK_Ordinary, SourceLocation(),
                                 /*CanOverflow=*/false, FPOptionsOverride());
   }
-  if (Obj->Classify(S.getASTContext()).isPRValue()) {
-    Obj = S.CreateMaterializeTemporaryExpr(
-        ObjType, Obj,
-        !Fun->getParamDecl(0)->getType()->isRValueReferenceType());
-  }
   return Obj;
 }
 
@@ -6951,7 +6977,7 @@ void Sema::AddOverloadCandidate(
   Candidate.Viable = true;
   Candidate.RewriteKind =
       CandidateSet.getRewriteInfo().getRewriteKind(Function, PO);
-  Candidate.IsADLCandidate = IsADLCandidate;
+  Candidate.IsADLCandidate = llvm::to_underlying(IsADLCandidate);
   Candidate.ExplicitCallArguments = Args.size();
 
   // Explicit functions are not actually candidates at all if we're not
@@ -6970,11 +6996,26 @@ void Sema::AddOverloadCandidate(
     /// have linkage. So that all entities of the same should share one
     /// linkage. But in clang, different entities of the same could have
     /// different linkage.
-    NamedDecl *ND = Function;
-    if (auto *SpecInfo = Function->getTemplateSpecializationInfo())
+    const NamedDecl *ND = Function;
+    bool IsImplicitlyInstantiated = false;
+    if (auto *SpecInfo = Function->getTemplateSpecializationInfo()) {
       ND = SpecInfo->getTemplate();
+      IsImplicitlyInstantiated = SpecInfo->getTemplateSpecializationKind() ==
+                                 TSK_ImplicitInstantiation;
+    }
 
-    if (ND->getFormalLinkage() == Linkage::Internal) {
+    /// Don't remove inline functions with internal linkage from the overload
+    /// set if they are declared in a GMF, in violation of C++ [basic.link]p17.
+    /// However:
+    /// - Inline functions with internal linkage are a common pattern in
+    ///   headers to avoid ODR issues.
+    /// - The global module is meant to be a transition mechanism for C and C++
+    ///   headers, and the current rules as written work against that goal.
+    const bool IsInlineFunctionInGMF =
+        Function->isFromGlobalModule() &&
+        (IsImplicitlyInstantiated || Function->isInlined());
+
+    if (ND->getFormalLinkage() == Linkage::Internal && !IsInlineFunctionInGMF) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_module_mismatched;
       return;
@@ -7791,7 +7832,7 @@ void Sema::AddTemplateOverloadCandidate(
     Candidate.RewriteKind =
       CandidateSet.getRewriteInfo().getRewriteKind(Candidate.Function, PO);
     Candidate.IsSurrogate = false;
-    Candidate.IsADLCandidate = IsADLCandidate;
+    Candidate.IsADLCandidate = llvm::to_underlying(IsADLCandidate);
     // Ignore the object argument if there is one, since we don't have an object
     // type.
     Candidate.IgnoreObjectArgument =
@@ -14041,7 +14082,8 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
       return ExprError();
     return SemaRef.BuildResolvedCallExpr(
         Res.get(), FDecl, LParenLoc, Args, RParenLoc, ExecConfig,
-        /*IsExecConfig=*/false, (*Best)->IsADLCandidate);
+        /*IsExecConfig=*/false,
+        static_cast<CallExpr::ADLCallKind>((*Best)->IsADLCandidate));
   }
 
   case OR_No_Viable_Function: {
@@ -14115,7 +14157,8 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
       return ExprError();
     return SemaRef.BuildResolvedCallExpr(
         Res.get(), FDecl, LParenLoc, Args, RParenLoc, ExecConfig,
-        /*IsExecConfig=*/false, (*Best)->IsADLCandidate);
+        /*IsExecConfig=*/false,
+        static_cast<CallExpr::ADLCallKind>((*Best)->IsADLCandidate));
   }
   }
 
@@ -14397,7 +14440,8 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
       Args[0] = Input;
       CallExpr *TheCall = CXXOperatorCallExpr::Create(
           Context, Op, FnExpr.get(), ArgsArray, ResultTy, VK, OpLoc,
-          CurFPFeatureOverrides(), Best->IsADLCandidate);
+          CurFPFeatureOverrides(),
+          static_cast<CallExpr::ADLCallKind>(Best->IsADLCandidate));
 
       if (CheckCallReturnType(FnDecl->getReturnType(), OpLoc, TheCall, FnDecl))
         return ExprError();
@@ -14792,7 +14836,8 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         // members; CodeGen should take care not to emit the this pointer.
         TheCall = CXXOperatorCallExpr::Create(
             Context, ChosenOp, FnExpr.get(), Args, ResultTy, VK, OpLoc,
-            CurFPFeatureOverrides(), Best->IsADLCandidate);
+            CurFPFeatureOverrides(),
+            static_cast<CallExpr::ADLCallKind>(Best->IsADLCandidate));
 
         if (const auto *Method = dyn_cast<CXXMethodDecl>(FnDecl);
             Method && Method->isImplicitObjectMemberFunction()) {
@@ -14809,7 +14854,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
           // Check for a self move.
           DiagnoseSelfMove(Args[0], Args[1], OpLoc);
           // lifetime check.
-          checkExprLifetime(
+          checkAssignmentLifetime(
               *this, AssignedEntity{Args[0], dyn_cast<CXXMethodDecl>(FnDecl)},
               Args[1]);
         }
@@ -15574,8 +15619,6 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
                          CurFPFeatureOverrides(), Proto->getNumParams());
   } else {
     // Convert the object argument (for a non-static member function call).
-    // We only need to do this if there was actually an overload; otherwise
-    // it was done at lookup.
     ExprResult ObjectArg = PerformImplicitObjectArgumentInitialization(
         MemExpr->getBase(), Qualifier, FoundDecl, Method);
     if (ObjectArg.isInvalid())
@@ -15919,9 +15962,9 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   return CheckForImmediateInvocation(MaybeBindToTemporary(TheCall), Method);
 }
 
-ExprResult
-Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
-                               bool *NoArrowOperatorFound) {
+ExprResult Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base,
+                                          SourceLocation OpLoc,
+                                          bool *NoArrowOperatorFound) {
   assert(Base->getType()->isRecordType() &&
          "left-hand side must have class type");
 

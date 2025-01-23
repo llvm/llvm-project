@@ -80,10 +80,16 @@ private:
   bool selectFPCompare(MachineInstr &MI, MachineIRBuilder &MIB) const;
   void emitFence(AtomicOrdering FenceOrdering, SyncScope::ID FenceSSID,
                  MachineIRBuilder &MIB) const;
-  bool selectMergeValues(MachineInstr &MI, MachineIRBuilder &MIB) const;
   bool selectUnmergeValues(MachineInstr &MI, MachineIRBuilder &MIB) const;
 
-  ComplexRendererFns selectShiftMask(MachineOperand &Root) const;
+  ComplexRendererFns selectShiftMask(MachineOperand &Root,
+                                     unsigned ShiftWidth) const;
+  ComplexRendererFns selectShiftMaskXLen(MachineOperand &Root) const {
+    return selectShiftMask(Root, STI.getXLen());
+  }
+  ComplexRendererFns selectShiftMask32(MachineOperand &Root) const {
+    return selectShiftMask(Root, 32);
+  }
   ComplexRendererFns selectAddrRegImm(MachineOperand &Root) const;
 
   ComplexRendererFns selectSExtBits(MachineOperand &Root, unsigned Bits) const;
@@ -124,9 +130,18 @@ private:
                       int OpIdx) const;
   void renderImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                  int OpIdx) const;
+  void renderFrameIndex(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const;
 
   void renderTrailingZeros(MachineInstrBuilder &MIB, const MachineInstr &MI,
                            int OpIdx) const;
+  void renderXLenSubTrailingOnes(MachineInstrBuilder &MIB,
+                                 const MachineInstr &MI, int OpIdx) const;
+
+  void renderAddiPairImmLarge(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                              int OpIdx) const;
+  void renderAddiPairImmSmall(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                              int OpIdx) const;
 
   const RISCVSubtarget &STI;
   const RISCVInstrInfo &TII;
@@ -172,22 +187,18 @@ RISCVInstructionSelector::RISCVInstructionSelector(
 }
 
 InstructionSelector::ComplexRendererFns
-RISCVInstructionSelector::selectShiftMask(MachineOperand &Root) const {
+RISCVInstructionSelector::selectShiftMask(MachineOperand &Root,
+                                          unsigned ShiftWidth) const {
   if (!Root.isReg())
     return std::nullopt;
 
   using namespace llvm::MIPatternMatch;
 
-  Register RootReg = Root.getReg();
-  Register ShAmtReg = RootReg;
-  const LLT ShiftLLT = MRI->getType(RootReg);
-  unsigned ShiftWidth = ShiftLLT.getSizeInBits();
-  assert(isPowerOf2_32(ShiftWidth) && "Unexpected max shift amount!");
+  Register ShAmtReg = Root.getReg();
   // Peek through zext.
   Register ZExtSrcReg;
-  if (mi_match(ShAmtReg, *MRI, m_GZExt(m_Reg(ZExtSrcReg)))) {
+  if (mi_match(ShAmtReg, *MRI, m_GZExt(m_Reg(ZExtSrcReg))))
     ShAmtReg = ZExtSrcReg;
-  }
 
   APInt AndMask;
   Register AndSrcReg;
@@ -581,8 +592,6 @@ static void getOperandsForBranch(Register CondReg, RISCVCC::CondCode &CC,
 }
 
 bool RISCVInstructionSelector::select(MachineInstr &MI) {
-  MachineBasicBlock &MBB = *MI.getParent();
-  MachineFunction &MF = *MBB.getParent();
   MachineIRBuilder MIB(MI);
 
   preISelLower(MI, MIB);
@@ -703,70 +712,10 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     MI.eraseFromParent();
     return constrainSelectedInstRegOperands(*Bcc, TII, TRI, RBI);
   }
-  case TargetOpcode::G_BRJT: {
-    // FIXME: Move to legalization?
-    const MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
-    unsigned EntrySize = MJTI->getEntrySize(MF.getDataLayout());
-    assert((EntrySize == 4 || (Subtarget->is64Bit() && EntrySize == 8)) &&
-           "Unsupported jump-table entry size");
-    assert(
-        (MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 ||
-         MJTI->getEntryKind() == MachineJumpTableInfo::EK_Custom32 ||
-         MJTI->getEntryKind() == MachineJumpTableInfo::EK_BlockAddress) &&
-        "Unexpected jump-table entry kind");
-
-    auto SLL =
-        MIB.buildInstr(RISCV::SLLI, {&RISCV::GPRRegClass}, {MI.getOperand(2)})
-            .addImm(Log2_32(EntrySize));
-    if (!SLL.constrainAllUses(TII, TRI, RBI))
-      return false;
-
-    // TODO: Use SHXADD. Moving to legalization would fix this automatically.
-    auto ADD = MIB.buildInstr(RISCV::ADD, {&RISCV::GPRRegClass},
-                              {MI.getOperand(0), SLL.getReg(0)});
-    if (!ADD.constrainAllUses(TII, TRI, RBI))
-      return false;
-
-    unsigned LdOpc = EntrySize == 8 ? RISCV::LD : RISCV::LW;
-    auto Dest =
-        MIB.buildInstr(LdOpc, {&RISCV::GPRRegClass}, {ADD.getReg(0)})
-            .addImm(0)
-            .addMemOperand(MF.getMachineMemOperand(
-                MachinePointerInfo::getJumpTable(MF), MachineMemOperand::MOLoad,
-                EntrySize, Align(MJTI->getEntryAlignment(MF.getDataLayout()))));
-    if (!Dest.constrainAllUses(TII, TRI, RBI))
-      return false;
-
-    // If the Kind is EK_LabelDifference32, the table stores an offset from
-    // the location of the table. Add the table address to get an absolute
-    // address.
-    if (MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32) {
-      Dest = MIB.buildInstr(RISCV::ADD, {&RISCV::GPRRegClass},
-                            {Dest.getReg(0), MI.getOperand(0)});
-      if (!Dest.constrainAllUses(TII, TRI, RBI))
-        return false;
-    }
-
-    auto Branch =
-        MIB.buildInstr(RISCV::PseudoBRIND, {}, {Dest.getReg(0)}).addImm(0);
-    if (!Branch.constrainAllUses(TII, TRI, RBI))
-      return false;
-
-    MI.eraseFromParent();
-    return true;
-  }
   case TargetOpcode::G_BRINDIRECT:
     MI.setDesc(TII.get(RISCV::PseudoBRIND));
     MI.addOperand(MachineOperand::CreateImm(0));
     return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
-  case TargetOpcode::G_FRAME_INDEX: {
-    // TODO: We may want to replace this code with the SelectionDAG patterns,
-    // which fail to get imported because it uses FrameAddrRegImm, which is a
-    // ComplexPattern
-    MI.setDesc(TII.get(RISCV::ADDI));
-    MI.addOperand(MachineOperand::CreateImm(0));
-    return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
-  }
   case TargetOpcode::G_SELECT:
     return selectSelect(MI, MIB);
   case TargetOpcode::G_FCMP:
@@ -782,8 +731,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   }
   case TargetOpcode::G_IMPLICIT_DEF:
     return selectImplicitDef(MI, MIB);
-  case TargetOpcode::G_MERGE_VALUES:
-    return selectMergeValues(MI, MIB);
   case TargetOpcode::G_UNMERGE_VALUES:
     return selectUnmergeValues(MI, MIB);
   default:
@@ -791,25 +738,12 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   }
 }
 
-bool RISCVInstructionSelector::selectMergeValues(MachineInstr &MI,
-                                                 MachineIRBuilder &MIB) const {
-  assert(MI.getOpcode() == TargetOpcode::G_MERGE_VALUES);
-
-  // Build a F64 Pair from operands
-  if (MI.getNumOperands() != 3)
-    return false;
-  Register Dst = MI.getOperand(0).getReg();
-  Register Lo = MI.getOperand(1).getReg();
-  Register Hi = MI.getOperand(2).getReg();
-  if (!isRegInFprb(Dst) || !isRegInGprb(Lo) || !isRegInGprb(Hi))
-    return false;
-  MI.setDesc(TII.get(RISCV::BuildPairF64Pseudo));
-  return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
-}
-
 bool RISCVInstructionSelector::selectUnmergeValues(
     MachineInstr &MI, MachineIRBuilder &MIB) const {
   assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES);
+
+  if (!Subtarget->hasStdExtZfa())
+    return false;
 
   // Split F64 Src into two s32 parts
   if (MI.getNumOperands() != 3)
@@ -819,8 +753,17 @@ bool RISCVInstructionSelector::selectUnmergeValues(
   Register Hi = MI.getOperand(1).getReg();
   if (!isRegInFprb(Src) || !isRegInGprb(Lo) || !isRegInGprb(Hi))
     return false;
-  MI.setDesc(TII.get(RISCV::SplitF64Pseudo));
-  return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+
+  MachineInstr *ExtractLo = MIB.buildInstr(RISCV::FMV_X_W_FPR64, {Lo}, {Src});
+  if (!constrainSelectedInstRegOperands(*ExtractLo, TII, TRI, RBI))
+    return false;
+
+  MachineInstr *ExtractHi = MIB.buildInstr(RISCV::FMVH_X_D, {Hi}, {Src});
+  if (!constrainSelectedInstRegOperands(*ExtractHi, TII, TRI, RBI))
+    return false;
+
+  MI.eraseFromParent();
+  return true;
 }
 
 bool RISCVInstructionSelector::replacePtrWithInt(MachineOperand &Op,
@@ -903,6 +846,14 @@ void RISCVInstructionSelector::renderImm(MachineInstrBuilder &MIB,
   MIB.addImm(CstVal);
 }
 
+void RISCVInstructionSelector::renderFrameIndex(MachineInstrBuilder &MIB,
+                                                const MachineInstr &MI,
+                                                int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_FRAME_INDEX && OpIdx == -1 &&
+         "Expected G_FRAME_INDEX");
+  MIB.add(MI.getOperand(1));
+}
+
 void RISCVInstructionSelector::renderTrailingZeros(MachineInstrBuilder &MIB,
                                                    const MachineInstr &MI,
                                                    int OpIdx) const {
@@ -910,6 +861,33 @@ void RISCVInstructionSelector::renderTrailingZeros(MachineInstrBuilder &MIB,
          "Expected G_CONSTANT");
   uint64_t C = MI.getOperand(1).getCImm()->getZExtValue();
   MIB.addImm(llvm::countr_zero(C));
+}
+
+void RISCVInstructionSelector::renderXLenSubTrailingOnes(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
+  uint64_t C = MI.getOperand(1).getCImm()->getZExtValue();
+  MIB.addImm(Subtarget->getXLen() - llvm::countr_one(C));
+}
+
+void RISCVInstructionSelector::renderAddiPairImmSmall(MachineInstrBuilder &MIB,
+                                                      const MachineInstr &MI,
+                                                      int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
+  int64_t Imm = MI.getOperand(1).getCImm()->getSExtValue();
+  int64_t Adj = Imm < 0 ? -2048 : 2047;
+  MIB.addImm(Imm - Adj);
+}
+
+void RISCVInstructionSelector::renderAddiPairImmLarge(MachineInstrBuilder &MIB,
+                                                      const MachineInstr &MI,
+                                                      int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
+  int64_t Imm = MI.getOperand(1).getCImm()->getSExtValue() < 0 ? -2048 : 2047;
+  MIB.addImm(Imm);
 }
 
 const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(

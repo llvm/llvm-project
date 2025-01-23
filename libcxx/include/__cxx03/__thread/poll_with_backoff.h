@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___THREAD_POLL_WITH_BACKOFF_H
-#define _LIBCPP___THREAD_POLL_WITH_BACKOFF_H
+#ifndef _LIBCPP___CXX03___THREAD_POLL_WITH_BACKOFF_H
+#define _LIBCPP___CXX03___THREAD_POLL_WITH_BACKOFF_H
 
 #include <__cxx03/__chrono/duration.h>
 #include <__cxx03/__chrono/high_resolution_clock.h>
@@ -64,4 +64,4 @@ struct __spinning_backoff_policy {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___THREAD_POLL_WITH_BACKOFF_H
+#endif // _LIBCPP___CXX03___THREAD_POLL_WITH_BACKOFF_H

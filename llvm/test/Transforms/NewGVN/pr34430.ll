@@ -4,10 +4,10 @@
 source_filename = "bugpoint-output-e4c7d0f.bc"
 
 ;  Make sure we still properly resolve phi cycles when they involve predicateinfo copies of phis.
-define void @hoge() local_unnamed_addr #0 {
+define void @hoge(i1 %arg) local_unnamed_addr #0 {
 ; CHECK-LABEL: @hoge(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br i1 undef, label [[BB6:%.*]], label [[BB1:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[BB6:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB6]]
 ; CHECK:       bb2:
@@ -15,12 +15,12 @@ define void @hoge() local_unnamed_addr #0 {
 ; CHECK:       bb3:
 ; CHECK-NEXT:    br label [[BB4:%.*]]
 ; CHECK:       bb4:
-; CHECK-NEXT:    br i1 undef, label [[BB2:%.*]], label [[BB6]]
+; CHECK-NEXT:    br i1 %arg, label [[BB2:%.*]], label [[BB6]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    br label [[BB4]]
 ;
 bb:
-  br i1 undef, label %bb6, label %bb1
+  br i1 %arg, label %bb6, label %bb1
 
 bb1:                                              ; preds = %bb
   br label %bb6
@@ -34,7 +34,7 @@ bb3:                                              ; preds = %bb2
 
 bb4:                                              ; preds = %bb6, %bb3
   %tmp5 = phi i8 [ %tmp5, %bb3 ], [ %tmp7, %bb6 ]
-  br i1 undef, label %bb2, label %bb6
+  br i1 %arg, label %bb2, label %bb6
 
 bb6:                                              ; preds = %bb4, %bb2, %bb1, %bb
   %tmp7 = phi i8 [ %tmp5, %bb4 ], [ %tmp5, %bb2 ], [ 5, %bb1 ], [ undef, %bb ]

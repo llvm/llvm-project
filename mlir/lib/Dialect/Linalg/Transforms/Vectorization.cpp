@@ -86,8 +86,8 @@ extractConvInputSlices(RewriterBase &rewriter, Location loc, Value input,
   if (isSingleChanneled) {
     // Extract input slice of size {wSizeStep} @ [w + kw] for non-channeled
     // convolution.
-    SmallVector<int64_t> sizes{wSizeStep};
-    SmallVector<int64_t> strides{1};
+    SmallVector<int64_t> sizes = {wSizeStep};
+    SmallVector<int64_t> strides = {1};
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
         result.push_back(rewriter.create<vector::ExtractStridedSliceOp>(
@@ -97,8 +97,8 @@ extractConvInputSlices(RewriterBase &rewriter, Location loc, Value input,
   } else {
     // Extract lhs slice of size {n, wSizeStep, c} @ [0, sw * w + dw * kw, 0]
     // for channeled convolution.
-    SmallVector<int64_t> sizes{nSize, wSizeStep, cSize};
-    SmallVector<int64_t> strides{1, 1, 1};
+    SmallVector<int64_t> sizes = {nSize, wSizeStep, cSize};
+    SmallVector<int64_t> strides = {1, 1, 1};
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
         result.push_back(rewriter.create<vector::ExtractStridedSliceOp>(
@@ -135,8 +135,8 @@ extractConvResultSlices(RewriterBase &rewriter, Location loc, Value res,
   SmallVector<Value> result;
   if (isSingleChanneled) {
     // Extract res slice: {wSizeStep} @ [w] for non-channeled convolution.
-    SmallVector<int64_t> sizes{wSizeStep};
-    SmallVector<int64_t> strides{1};
+    SmallVector<int64_t> sizes = {wSizeStep};
+    SmallVector<int64_t> strides = {1};
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
       result.push_back(rewriter.create<vector::ExtractStridedSliceOp>(
           loc, res, /*offsets=*/ArrayRef<int64_t>{w}, sizes, strides));
@@ -144,8 +144,8 @@ extractConvResultSlices(RewriterBase &rewriter, Location loc, Value res,
   } else {
     // Extract res slice: {n, wSizeStep, f} @ [0, w, 0] for channeled
     // convolution.
-    SmallVector<int64_t> sizes{nSize, wSizeStep, fSize};
-    SmallVector<int64_t> strides{1, 1, 1};
+    SmallVector<int64_t> sizes = {nSize, wSizeStep, fSize};
+    SmallVector<int64_t> strides = {1, 1, 1};
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
       result.push_back(rewriter.create<vector::ExtractStridedSliceOp>(
           loc, res, /*offsets=*/ArrayRef<int64_t>{0, w, 0}, sizes, strides));
@@ -163,7 +163,7 @@ static Value insertConvResultSlices(RewriterBase &rewriter, Location loc,
   if (isSingleChanneled) {
     // Write back res slice: {wSizeStep} @ [w] for non-channeled convolution.
     // This does not depend on kw.
-    SmallVector<int64_t> strides{1};
+    SmallVector<int64_t> strides = {1};
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
       res = rewriter.create<vector::InsertStridedSliceOp>(
           loc, resVals[w], res, /*offsets=*/ArrayRef<int64_t>{w}, strides);
@@ -171,7 +171,7 @@ static Value insertConvResultSlices(RewriterBase &rewriter, Location loc,
   } else {
     // Write back res slice: {n, wSizeStep, f} @ [0, w, 0] for channeled
     // convolution. This does not depend on kw.
-    SmallVector<int64_t> strides{1, 1, 1};
+    SmallVector<int64_t> strides = {1, 1, 1};
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
       res = rewriter.create<vector::InsertStridedSliceOp>(
           loc, resVals[w], res, /*offsets=*/ArrayRef<int64_t>{0, w, 0},
@@ -1115,11 +1115,6 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
   //  b. contiguous loads.
   // Both cases use vector.transfer_read.
 
-  assert(llvm::count_if(resultType.getShape(),
-                        [](uint64_t dim) { return dim != 1; }) &&
-         "Contiguous loads and scalar loads + broadcast only support 1-D "
-         "vectors ATM!");
-
   // Collect indices for `vector.transfer_read`. At this point, the indices will
   // either be scalars or would have been broadcast to vectors matching the
   // result type. For indices that are vectors, there are two options:
@@ -1165,8 +1160,18 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
         loc, resultType, extractOp.getTensor(), transferReadIdxs,
         permutationMap, inBounds);
 
+    // Mask this broadcasting xfer_read here rather than relying on the generic
+    // path (the generic path assumes identity masking map, which wouldn't be
+    // valid here).
+    SmallVector<int64_t> readMaskShape = {1};
+    auto readMaskType = VectorType::get(readMaskShape, rewriter.getI1Type());
+    auto allTrue = rewriter.create<vector::ConstantMaskOp>(
+        loc, readMaskType, vector::ConstantMaskKind::AllTrue);
+    auto *maskedReadOp =
+        mlir::vector::maskOperation(rewriter, transferReadOp, allTrue);
+
     LDBG("Vectorised as scalar broadcast load: " << extractOp << "\n");
-    return VectorizationResult{VectorizationStatus::NewOp, transferReadOp};
+    return VectorizationResult{VectorizationStatus::NewOp, maskedReadOp};
   }
 
   // 2b. Handle contiguous access.
@@ -2022,26 +2027,36 @@ vectorizeScalableVectorPrecondition(Operation *op,
 
   // Cond 3: Look at the configuration in `inputScalableVecDims` and verify that
   // it matches one of the supported cases:
-  //  1. exactly 1 dim is scalable and that's the _last_ parallel dim
-  //  2. exactly 2 dims are scalable and those are the _last two adjacent_
-  //     parallel dims
-  //  3. exactly 1 reduction dim is scalable and that's the last (innermost) dim
+  //  1. Exactly 1 dim is scalable and that's the _last_ non-unit parallel dim
+  //    (*).
+  //  2. Exactly 2 dims are scalable and those are the _last two adjacent_
+  //     parallel dims.
+  //  3. Exactly 1 reduction dim is scalable and that's the last (innermost)
+  //  dim.
   // The 2nd restriction above means that only Matmul-like Ops are supported
   // when 2 dims are scalable, e.g. :
   //    * iterators = [parallel, parallel, reduction]
   //    * scalable flags = [true, true, false]
+  //
+  // (*) Non-unit dims get folded away in practice.
+  // TODO: Relax these conditions as good motivating examples are identified.
 
-  // Find the first scalable flag
-  bool seenParalell = false;
+  // Find the first scalable flag.
+  bool seenNonUnitParallel = false;
   auto iterators = linalgOp.getIteratorTypesArray();
   SmallVector<bool> scalableFlags(inputScalableVecDims);
-  while (!scalableFlags.back()) {
-    seenParalell |= (iterators.back() == utils::IteratorType::parallel);
+  int64_t idx = scalableFlags.size() - 1;
+  while (!scalableFlags[idx]) {
+    bool isNonUnitDim = (inputVectorSizes[idx] != 1);
+    seenNonUnitParallel |=
+        (iterators[idx] == utils::IteratorType::parallel && isNonUnitDim);
 
     iterators.pop_back();
     scalableFlags.pop_back();
+    --idx;
   }
 
+  // Analyze the iterator corresponding to the first scalable dim.
   switch (iterators.back()) {
   case utils::IteratorType::reduction: {
     // Check 3. above is met.
@@ -2059,7 +2074,7 @@ vectorizeScalableVectorPrecondition(Operation *op,
   }
   case utils::IteratorType::parallel: {
     // Check 1. and 2. above are met.
-    if (seenParalell) {
+    if (seenNonUnitParallel) {
       LDBG("Inner parallel dim not requested for scalable "
            "vectorization\n");
       return failure();
@@ -2770,12 +2785,6 @@ void mlir::linalg::populateInsertSliceVectorizationPatterns(
 
 void mlir::linalg::populatePadOpVectorizationPatterns(
     RewritePatternSet &patterns, PatternBenefit baseBenefit) {
-  // TODO: The following pattern implements "decomposition" and
-  // optional "vectorization". Seperate "decomposition" into a sepereate
-  // pre-processing pattern group.
-  patterns.add<GeneralizePadOpPattern>(patterns.getContext(), baseBenefit);
-
-  // Try these specialized patterns first before resorting to the generic one.
   patterns.add<PadOpVectorizationWithTransferReadPattern,
                PadOpVectorizationWithTransferWritePattern,
                PadOpVectorizationWithInsertSlicePattern>(
@@ -3496,8 +3505,8 @@ struct Conv1DGenerator
     //===------------------------------------------------------------------===//
     // Unroll along kw and read slices of lhs and rhs.
     SmallVector<Value> lhsVals, rhsVals, resVals;
-    auto inOutSliceSizes = SmallVector<int64_t>{nSize, wSizeStep, cSize};
-    auto inOutStrides = SmallVector<int64_t>{1, 1, 1};
+    SmallVector<int64_t> inOutSliceSizes = {nSize, wSizeStep, cSize};
+    SmallVector<int64_t> inOutStrides = {1, 1, 1};
 
     // Extract lhs slice of size {n, wSizeStep, c}
     //   @ [0, sw * w + dw * kw, 0].
@@ -3529,8 +3538,7 @@ struct Conv1DGenerator
 
     // Note - the scalable flags are ignored as flattening combined with
     // scalable vectorization is not supported.
-    auto inOutFlattenSliceSizes =
-        SmallVector<int64_t>{nSize, wSizeStep * cSize};
+    SmallVector<int64_t> inOutFlattenSliceSizes = {nSize, wSizeStep * cSize};
     auto lhsTypeAfterFlattening =
         VectorType::get(inOutFlattenSliceSizes, lhsEltType);
     auto resTypeAfterFlattening =

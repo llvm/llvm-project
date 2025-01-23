@@ -161,6 +161,7 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_ArmIn:                                                   \
   case ParsedAttr::AT_ArmOut:                                                  \
   case ParsedAttr::AT_ArmInOut:                                                \
+  case ParsedAttr::AT_ArmAgnostic:                                             \
   case ParsedAttr::AT_AnyX86NoCallerSavedRegisters:                            \
   case ParsedAttr::AT_AnyX86NoCfCheck:                                         \
     CALLING_CONV_ATTRS_CASELIST
@@ -2312,6 +2313,17 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
   return T;
 }
 
+static bool CheckBitIntElementType(Sema &S, SourceLocation AttrLoc,
+                                   const BitIntType *BIT,
+                                   bool ForMatrixType = false) {
+  // Only support _BitInt elements with byte-sized power of 2 NumBits.
+  unsigned NumBits = BIT->getNumBits();
+  if (!llvm::isPowerOf2_32(NumBits) || NumBits < 8)
+    return S.Diag(AttrLoc, diag::err_attribute_invalid_bitint_vector_type)
+           << ForMatrixType << (NumBits < 8);
+  return false;
+}
+
 QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
                                SourceLocation AttrLoc) {
   // The base type must be integer (not Boolean or enumeration) or float, and
@@ -2324,15 +2336,10 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
     Diag(AttrLoc, diag::err_attribute_invalid_vector_type) << CurType;
     return QualType();
   }
-  // Only support _BitInt elements with byte-sized power of 2 NumBits.
-  if (const auto *BIT = CurType->getAs<BitIntType>()) {
-    unsigned NumBits = BIT->getNumBits();
-    if (!llvm::isPowerOf2_32(NumBits) || NumBits < 8) {
-      Diag(AttrLoc, diag::err_attribute_invalid_bitint_vector_type)
-          << (NumBits < 8);
-      return QualType();
-    }
-  }
+
+  if (const auto *BIT = CurType->getAs<BitIntType>();
+      BIT && CheckBitIntElementType(*this, AttrLoc, BIT))
+    return QualType();
 
   if (SizeExpr->isTypeDependent() || SizeExpr->isValueDependent())
     return Context.getDependentVectorType(CurType, SizeExpr, AttrLoc,
@@ -2402,15 +2409,9 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
     return QualType();
   }
 
-  // Only support _BitInt elements with byte-sized power of 2 NumBits.
-  if (T->isBitIntType()) {
-    unsigned NumBits = T->castAs<BitIntType>()->getNumBits();
-    if (!llvm::isPowerOf2_32(NumBits) || NumBits < 8) {
-      Diag(AttrLoc, diag::err_attribute_invalid_bitint_vector_type)
-          << (NumBits < 8);
-      return QualType();
-    }
-  }
+  if (const auto *BIT = T->getAs<BitIntType>();
+      BIT && CheckBitIntElementType(*this, AttrLoc, BIT))
+    return QualType();
 
   if (!ArraySize->isTypeDependent() && !ArraySize->isValueDependent()) {
     std::optional<llvm::APSInt> vecSize =
@@ -2454,6 +2455,11 @@ QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
     Diag(AttrLoc, diag::err_attribute_invalid_matrix_type) << ElementTy;
     return QualType();
   }
+
+  if (const auto *BIT = ElementTy->getAs<BitIntType>();
+      BIT &&
+      CheckBitIntElementType(*this, AttrLoc, BIT, /*ForMatrixType=*/true))
+    return QualType();
 
   if (NumRows->isTypeDependent() || NumCols->isTypeDependent() ||
       NumRows->isValueDependent() || NumCols->isValueDependent())
@@ -4882,9 +4888,17 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                       cast<AutoType>(T)->getKeyword() !=
                           AutoTypeKeyword::Auto ||
                       cast<AutoType>(T)->isConstrained())) {
-            S.Diag(D.getDeclSpec().getTypeSpecTypeLoc(),
-                   diag::err_trailing_return_without_auto)
-                << T << D.getDeclSpec().getSourceRange();
+            // Attach a valid source location for diagnostics on functions with
+            // trailing return types missing 'auto'. Attempt to get the location
+            // from the declared type; if invalid, fall back to the trailing
+            // return type's location.
+            SourceLocation Loc = D.getDeclSpec().getTypeSpecTypeLoc();
+            SourceRange SR = D.getDeclSpec().getSourceRange();
+            if (Loc.isInvalid()) {
+              Loc = FTI.getTrailingReturnTypeLoc();
+              SR = D.getSourceRange();
+            }
+            S.Diag(Loc, diag::err_trailing_return_without_auto) << T << SR;
             D.setInvalidType(true);
             // FIXME: recover and fill decls in `TypeLoc`s.
             AreDeclaratorChunksValid = false;
@@ -5339,15 +5353,23 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
         case NestedNameSpecifier::TypeSpec:
         case NestedNameSpecifier::TypeSpecWithTemplate:
-          ClsType = QualType(NNS->getAsType(), 0);
+          const Type *NNSType = NNS->getAsType();
+          ClsType = QualType(NNSType, 0);
           // Note: if the NNS has a prefix and ClsType is a nondependent
-          // TemplateSpecializationType, then the NNS prefix is NOT included
-          // in ClsType; hence we wrap ClsType into an ElaboratedType.
-          // NOTE: in particular, no wrap occurs if ClsType already is an
-          // Elaborated, DependentName, or DependentTemplateSpecialization.
-          if (isa<TemplateSpecializationType>(NNS->getAsType()))
+          // TemplateSpecializationType or a RecordType, then the NNS prefix is
+          // NOT included in ClsType; hence we wrap ClsType into an
+          // ElaboratedType. NOTE: in particular, no wrap occurs if ClsType
+          // already is an Elaborated, DependentName, or
+          // DependentTemplateSpecialization.
+          if (isa<DependentTemplateSpecializationType>(NNSType)) {
+            // FIXME: Rebuild DependentTemplateSpecializationType, adding the
+            // Prefix.
+          } else if (isa<TemplateSpecializationType, RecordType>(NNSType)) {
+            // Either the dependent case (TemplateSpecializationType), or the
+            // non-dependent one (RecordType).
             ClsType = Context.getElaboratedType(ElaboratedTypeKeyword::None,
                                                 NNSPrefix, ClsType);
+          }
           break;
         }
       } else {
@@ -5673,6 +5695,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   assert(!T.isNull() && "T must not be null at the end of this function");
   if (!AreDeclaratorChunksValid)
     return Context.getTrivialTypeSourceInfo(T);
+
+  if (state.didParseHLSLParamMod() && !T->isConstantArrayType())
+    T = S.HLSL().getInoutParameterType(T);
   return GetTypeSourceInfoForDeclarator(state, T, TInfo);
 }
 
@@ -7721,6 +7746,40 @@ static bool checkMutualExclusion(TypeProcessingState &state,
   return true;
 }
 
+static bool handleArmAgnosticAttribute(Sema &S,
+                                       FunctionProtoType::ExtProtoInfo &EPI,
+                                       ParsedAttr &Attr) {
+  if (!Attr.getNumArgs()) {
+    S.Diag(Attr.getLoc(), diag::err_missing_arm_state) << Attr;
+    Attr.setInvalid();
+    return true;
+  }
+
+  for (unsigned I = 0; I < Attr.getNumArgs(); ++I) {
+    StringRef StateName;
+    SourceLocation LiteralLoc;
+    if (!S.checkStringLiteralArgumentAttr(Attr, I, StateName, &LiteralLoc))
+      return true;
+
+    if (StateName != "sme_za_state") {
+      S.Diag(LiteralLoc, diag::err_unknown_arm_state) << StateName;
+      Attr.setInvalid();
+      return true;
+    }
+
+    if (EPI.AArch64SMEAttributes &
+        (FunctionType::SME_ZAMask | FunctionType::SME_ZT0Mask)) {
+      S.Diag(Attr.getLoc(), diag::err_conflicting_attributes_arm_agnostic);
+      Attr.setInvalid();
+      return true;
+    }
+
+    EPI.setArmSMEAttribute(FunctionType::SME_AgnosticZAStateMask);
+  }
+
+  return false;
+}
+
 static bool handleArmStateAttribute(Sema &S,
                                     FunctionProtoType::ExtProtoInfo &EPI,
                                     ParsedAttr &Attr,
@@ -7747,6 +7806,12 @@ static bool handleArmStateAttribute(Sema &S,
       ExistingState = FunctionType::getArmZT0State(EPI.AArch64SMEAttributes);
     } else {
       S.Diag(LiteralLoc, diag::err_unknown_arm_state) << StateName;
+      Attr.setInvalid();
+      return true;
+    }
+
+    if (EPI.AArch64SMEAttributes & FunctionType::SME_AgnosticZAStateMask) {
+      S.Diag(LiteralLoc, diag::err_conflicting_attributes_arm_agnostic);
       Attr.setInvalid();
       return true;
     }
@@ -7901,7 +7966,8 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
       attr.getKind() == ParsedAttr::AT_ArmPreserves ||
       attr.getKind() == ParsedAttr::AT_ArmIn ||
       attr.getKind() == ParsedAttr::AT_ArmOut ||
-      attr.getKind() == ParsedAttr::AT_ArmInOut) {
+      attr.getKind() == ParsedAttr::AT_ArmInOut ||
+      attr.getKind() == ParsedAttr::AT_ArmAgnostic) {
     if (S.CheckAttrTarget(attr))
       return true;
 
@@ -7917,8 +7983,9 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     if (!FnTy) {
       // SME ACLE attributes are not supported on K&R-style unprototyped C
       // functions.
-      S.Diag(attr.getLoc(), diag::warn_attribute_wrong_decl_type) <<
-        attr << attr.isRegularKeywordAttribute() << ExpectedFunctionWithProtoType;
+      S.Diag(attr.getLoc(), diag::warn_attribute_wrong_decl_type)
+          << attr << attr.isRegularKeywordAttribute()
+          << ExpectedFunctionWithProtoType;
       attr.setInvalid();
       return false;
     }
@@ -7950,6 +8017,10 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
       break;
     case ParsedAttr::AT_ArmInOut:
       if (handleArmStateAttribute(S, EPI, attr, FunctionType::ARM_InOut))
+        return true;
+      break;
+    case ParsedAttr::AT_ArmAgnostic:
+      if (handleArmAgnosticAttribute(S, EPI, attr))
         return true;
       break;
     default:
@@ -8604,7 +8675,11 @@ static void HandleLifetimeBoundAttr(TypeProcessingState &State,
     CurType = State.getAttributedType(
         createSimpleAttr<LifetimeBoundAttr>(State.getSema().Context, Attr),
         CurType, CurType);
+    return;
   }
+  State.getSema().Diag(Attr.getLoc(), diag::err_attribute_wrong_decl_type)
+      << Attr << Attr.isRegularKeywordAttribute()
+      << ExpectedParameterOrImplicitObjectParameter;
 }
 
 static void HandleLifetimeCaptureByAttr(TypeProcessingState &State,
@@ -8626,7 +8701,6 @@ static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
     return;
   if (Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_inout ||
       Attr.getSemanticSpelling() == HLSLParamModifierAttr::Keyword_out) {
-    CurType = S.HLSL().getInoutParameterType(CurType);
     State.setParsedHLSLParamMod(true);
   }
 }
