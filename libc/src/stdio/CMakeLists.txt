@@ -196,6 +196,30 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  siprintf
+  SRCS
+    siprintf.cpp
+  HDRS
+    siprintf.h
+  DEPENDS
+    libc.src.stdio.printf_core.printf_main_nofloat
+    libc.src.stdio.printf_core.writer
+)
+
+# technically clang doesn't yet support sniprintf, so I could rename it to the
+# objectively cooler (and more accurate) sinprintf. Alas I chose not to.
+add_entrypoint_object(
+  sniprintf
+  SRCS
+    sniprintf.cpp
+  HDRS
+    sniprintf.h
+  DEPENDS
+    libc.src.stdio.printf_core.printf_main_nofloat
+    libc.src.stdio.printf_core.writer
+)
+
+add_entrypoint_object(
   asprintf
   SRCS
     asprintf.cpp
@@ -286,7 +310,9 @@ add_stdio_entrypoint_object(fputc)
 add_stdio_entrypoint_object(putc)
 add_stdio_entrypoint_object(putchar)
 add_stdio_entrypoint_object(printf)
+add_stdio_entrypoint_object(iprintf)
 add_stdio_entrypoint_object(fprintf)
+add_stdio_entrypoint_object(fiprintf)
 add_stdio_entrypoint_object(fgetc)
 add_stdio_entrypoint_object(fgetc_unlocked)
 add_stdio_entrypoint_object(getc)

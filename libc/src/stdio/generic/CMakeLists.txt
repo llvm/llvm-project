@@ -366,7 +366,6 @@ add_entrypoint_object(
 list(APPEND fprintf_deps
       libc.hdr.types.FILE
       libc.src.__support.arg_list
-      libc.src.stdio.printf_core.vfprintf_internal
 )
 
 if(LLVM_LIBC_FULL_BUILD)
@@ -376,11 +375,26 @@ if(LLVM_LIBC_FULL_BUILD)
   )
 endif()
 
+# Copy the deps for fiprintf_deps
+set(fiprintf_deps ${fprintf_deps})
+
+list(APPEND fprintf_deps
+  libc.src.stdio.printf_core.vfprintf_internal
+)
+
+list(APPEND fiprintf_deps
+  libc.src.stdio.printf_core.vfprintf_internal_nofloat
+)
+
 # Copy the deps for printf_deps
 set(printf_deps ${fprintf_deps})
+set(iprintf_deps ${fiprintf_deps})
 
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND printf_deps
+      libc.src.__support.File.platform_stdout
+  )
+  list(APPEND iprintf_deps
       libc.src.__support.File.platform_stdout
   )
 endif()
@@ -423,6 +437,30 @@ add_entrypoint_object(
     ../vfprintf.h
   DEPENDS
     ${fprintf_deps}
+)
+
+# the printf variant with no floats is called iprintf for some reason. Idk ask XMOS
+add_entrypoint_object(
+  iprintf
+  SRCS
+    iprintf.cpp
+  HDRS
+    ../iprintf.h
+  DEPENDS
+    ${iprintf_deps}
+)
+
+# Similarly I'm unclear why the "i" modifier goes after the target modifier but w/e.
+# Oldest commit I could find mentioning it dates from 2011:
+# https://github.com/llvm/llvm-project/commit/2dfb888392d4d82f467dfc8c9c4d2192cd71afb6
+add_entrypoint_object(
+  fiprintf
+  SRCS
+    fiprintf.cpp
+  HDRS
+    ../fiprintf.h
+  DEPENDS
+    ${fiprintf_deps}
 )
 
 add_entrypoint_object(
