@@ -411,8 +411,7 @@ private:
   __init_with_sentinel(_InputIterator __first, _Sentinel __last) {
     auto __guard = std::__make_exception_guard(__destroy_vector(*this));
 
-    for (; __first != __last; ++__first)
-      push_back(*__first);
+    __push_back_words_with_sentinel(std::move(__first), std::move(__last));
 
     __guard.__complete();
   }
@@ -508,6 +507,10 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __move_assign_alloc(vector&, false_type) _NOEXCEPT {}
+
+  template <class _InputIterator, class _Sentinel>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
+  __push_back_words_with_sentinel(_InputIterator __first, _Sentinel __last);
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_t __hash_code() const _NOEXCEPT;
 
@@ -820,8 +823,7 @@ template <class _Iterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
 vector<bool, _Allocator>::__assign_with_sentinel(_Iterator __first, _Sentinel __last) {
   clear();
-  for (; __first != __last; ++__first)
-    push_back(*__first);
+  __push_back_words_with_sentinel(std::move(__first), std::move(__last));
 }
 
 template <class _Allocator>
@@ -1082,6 +1084,35 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::flip() _NOEXCEPT {
   __storage_pointer __p = __begin_;
   for (size_type __n = __external_cap_to_internal(size()); __n != 0; ++__p, --__n)
     *__p = ~*__p;
+}
+
+// Push bits from the range [__first, __last) into the vector in word-sized chunks.
+// Precondition: The size of the vector must be a multiple of `__bits_per_word`,
+// implying that the vector can only accommodate full words of bits.
+//
+// This function iterates through the input range, collecting bits until a full
+// word is formed or the end of the range is reached. It then stores the word
+// in the vector's internal storage, reallocating if necessary.
+template <class _Allocator>
+template <class _InputIterator, class _Sentinel>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
+vector<bool, _Allocator>::__push_back_words_with_sentinel(_InputIterator __first, _Sentinel __last) {
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+      this->__size_ % __bits_per_word == 0,
+      "vector<bool>::__push_back_words_with_sentinel called with a size that is not a multiple of __bits_per_word");
+  unsigned __n_words = this->__size_ / __bits_per_word;
+  while (__first != __last) {
+    __storage_type __w = 0;
+    unsigned __ctz     = 0;
+    for (; __ctz != __bits_per_word && __first != __last; ++__ctz, (void)++__first) {
+      if (*__first)
+        __w |= static_cast<__storage_type>(static_cast<__storage_type>(1) << __ctz);
+    }
+    if (this->__size_ == this->capacity())
+      reserve(__recommend(this->__size_ + 1));
+    this->__begin_[__n_words++] = __w;
+    this->__size_ += __ctz;
+  }
 }
 
 template <class _Allocator>

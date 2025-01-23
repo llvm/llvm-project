@@ -50,6 +50,24 @@ constexpr auto wrap_input(std::vector<T>& input) {
   return std::ranges::subrange(std::move(b), std::move(e));
 }
 
+template <class It>
+class input_only_range {
+public:
+  using Iter = cpp20_input_iterator<It>;
+  using Sent = sentinel_wrapper<Iter>;
+
+  input_only_range(It begin, It end) : begin_(std::move(begin)), end_(std::move(end)) {}
+  Iter begin() { return Iter(std::move(begin_)); }
+  Sent end() { return Sent(Iter(std::move(end_))); }
+
+private:
+  It begin_;
+  It end_;
+};
+
+template <class It>
+input_only_range(It, It) -> input_only_range<It>;
+
 struct KeyValue {
   int key; // Only the key is considered for equality comparison.
   char value; // Allows distinguishing equivalent instances.

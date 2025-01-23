@@ -15,6 +15,7 @@
 #include <utility>
 
 #include "benchmark/benchmark.h"
+#include "../../std/containers/from_range_helpers.h"
 #include "../Utilities.h"
 #include "test_iterators.h"
 
@@ -51,16 +52,42 @@ void BM_Assignment(benchmark::State& st, Container) {
   }
 }
 
-template <std::size_t... sz, typename Container, typename GenInputs>
-void BM_AssignInputIterIter(benchmark::State& st, Container c, GenInputs gen) {
-  auto v = gen(1, sz...);
-  c.resize(st.range(0), v[0]);
-  auto in = gen(st.range(1), sz...);
-  benchmark::DoNotOptimize(&in);
-  benchmark::DoNotOptimize(&c);
+template <typename Container, class Generator>
+void BM_AssignInputIterIter(benchmark::State& st, Generator gen) {
+  using T   = typename Container::value_type;
+  auto size = st.range(0);
+  auto in1  = gen(size);
+  auto in2  = gen(size);
+  DoNotOptimizeData(in1);
+  DoNotOptimizeData(in2);
+  Container c(in1.begin(), in1.end());
+  bool toggle = false;
   for (auto _ : st) {
-    c.assign(cpp17_input_iterator(in.begin()), cpp17_input_iterator(in.end()));
-    benchmark::ClobberMemory();
+    std::vector<T>& in = toggle ? in1 : in2;
+    auto first         = in.begin();
+    auto last          = in.end();
+    c.assign(cpp17_input_iterator(first), cpp17_input_iterator(last));
+    toggle = !toggle;
+    DoNotOptimizeData(c);
+  }
+}
+
+template <typename Container, class Generator>
+void BM_AssignInputRange(benchmark::State& st, Generator gen) {
+  auto size = st.range(0);
+  auto in1  = gen(size);
+  auto in2  = gen(size);
+  DoNotOptimizeData(in1);
+  DoNotOptimizeData(in2);
+  input_only_range rg1(std::ranges::begin(in1), std::ranges::end(in1));
+  input_only_range rg2(std::ranges::begin(in2), std::ranges::end(in2));
+  Container c(std::from_range, rg1);
+  bool toggle = false;
+  for (auto _ : st) {
+    auto& rg = toggle ? rg1 : rg2;
+    c.assign_range(rg);
+    toggle = !toggle;
+    DoNotOptimizeData(c);
   }
 }
 
@@ -86,11 +113,34 @@ void BM_ConstructIterIter(benchmark::State& st, Container, GenInputs gen) {
 }
 
 template <class Container, class GenInputs>
+void BM_ConstructInputIterIter(benchmark::State& st, GenInputs gen) {
+  auto in        = gen(st.range(0));
+  const auto beg = cpp17_input_iterator(in.begin());
+  const auto end = cpp17_input_iterator(in.end());
+  benchmark::DoNotOptimize(&in);
+  while (st.KeepRunning()) {
+    Container c(beg, end);
+    DoNotOptimizeData(c);
+  }
+}
+
+template <class Container, class GenInputs>
 void BM_ConstructFromRange(benchmark::State& st, Container, GenInputs gen) {
   auto in = gen(st.range(0));
   benchmark::DoNotOptimize(&in);
   while (st.KeepRunning()) {
     Container c(std::from_range, in);
+    DoNotOptimizeData(c);
+  }
+}
+
+template <class Container, class GenInputs>
+void BM_ConstructFromInputRange(benchmark::State& st, GenInputs gen) {
+  auto in = gen(st.range(0));
+  input_only_range rg(std::ranges::begin(in), std::ranges::end(in));
+  benchmark::DoNotOptimize(&in);
+  while (st.KeepRunning()) {
+    Container c(std::from_range, rg);
     DoNotOptimizeData(c);
   }
 }
