@@ -1,3 +1,20 @@
+add_header_library(
+  wide_string_utils
+  HDRS
+    wide_string_utils.h
+)
+
+add_entrypoint_object(
+  wcslen
+  SRCS
+    wcslen.cpp
+  HDRS
+    wcslen.h
+  DEPENDS
+    .wide_string_utils
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+)
 
 add_entrypoint_object(
   wctob
