@@ -410,6 +410,9 @@ protected:
     case ELF::EM_ARM:
       Type = ELF::SHT_ARM_ATTRIBUTES;
       break;
+    case ELF::EM_AARCH64:
+      Type = ELF::SHT_AARCH64_ATTRIBUTES;
+      break;
     case ELF::EM_RISCV:
       Type = ELF::SHT_RISCV_ATTRIBUTES;
       break;
