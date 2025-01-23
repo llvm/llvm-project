@@ -33,7 +33,7 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
   # value.
   if(target_arch MATCHES "^mips")
     set(target_arch "mips")
-  elseif(target_arch MATCHES "^arm")
+  elseif(target_arch MATCHES "^arm" OR target_arch MATCHES "^thumb")
     # TODO(lntue): Shall we separate `arm64`?  It is currently recognized as
     # `arm` here.
     set(target_arch "arm")
@@ -207,6 +207,9 @@ if(explicit_target_triple AND
   else()
     list(APPEND
          LIBC_COMPILE_OPTIONS_DEFAULT "--target=${explicit_target_triple}")
+    if (explicit_target_triple MATCHES "^thumb")
+      list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT "-mthumb")
+    endif()
   endif()
 endif()
 
