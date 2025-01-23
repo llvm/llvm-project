@@ -1950,6 +1950,9 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
 
   addPass(AMDGPUOpenCLEnqueuedBlockLoweringPass());
 
+  if (EnableSwLowerLDS)
+    addPass(AMDGPUSwLowerLDSPass(TM));
+
   // Runs before PromoteAlloca so the latter can account for function uses
   if (EnableLowerModuleLDS)
     addPass(AMDGPULowerModuleLDSPass(TM));
