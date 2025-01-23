@@ -81,8 +81,10 @@ public:
     AsLongDouble, // 'L'
     AsAllocate,   // for '%as', GNU extension to C90 scanf
     AsMAllocate,  // for '%ms', GNU extension to scanf
-    AsWide,       // 'w' (MSVCRT, like l but only for c, C, s, S, or Z
-    AsWideChar = AsLong // for '%ls', only makes sense for printf
+    AsWide,       // 'w' (1. MSVCRT, like l but only for c, C, s, S, or Z on windows
+                  // 2. for b, d, i, o, u, x, or X when a size followed(like 8, 16, 32 or 64)
+    AsWideFast,   // 'wf' (for b, d, i, o, u, x, or X)
+    AsWideChar = AsLong, // for '%ls', only makes sense for printf
   };
 
   LengthModifier()
@@ -430,10 +432,13 @@ protected:
   ///  http://www.opengroup.org/onlinepubs/009695399/functions/printf.html
   bool UsesPositionalArg;
   unsigned argIndex;
+  unsigned ExplicitlyFixedSize;
+  bool ExplicitlyFixedSizeValid;
+
 public:
   FormatSpecifier(bool isPrintf)
     : CS(isPrintf), VectorNumElts(false),
-      UsesPositionalArg(false), argIndex(0) {}
+      UsesPositionalArg(false), argIndex(0), ExplicitlyFixedSizeValid(true) {}
 
   void setLengthModifier(LengthModifier lm) {
     LM = lm;
@@ -473,12 +478,28 @@ public:
     FieldWidth = Amt;
   }
 
+  void setExplicitlyFixedSize(unsigned S) {
+    ExplicitlyFixedSize = S;
+  }
+
+  unsigned getExplicitlyFixedSize() const {
+    return ExplicitlyFixedSize;
+  }
+
   bool usesPositionalArg() const { return UsesPositionalArg; }
 
   bool hasValidLengthModifier(const TargetInfo &Target,
                               const LangOptions &LO) const;
 
   bool hasStandardLengthModifier() const;
+
+  void setExplicitlyFixedSizeValid(bool valid) {
+    ExplicitlyFixedSizeValid = valid;
+  }
+
+  bool isExplicitlyFixedSizeSupported() const {
+    return ExplicitlyFixedSizeValid;
+  }
 
   std::optional<LengthModifier> getCorrectedLengthModifier() const;
 
@@ -792,6 +813,8 @@ bool parseFormatStringHasFormattingSpecifiers(const char *Begin,
                                               const char *End,
                                               const LangOptions &LO,
                                               const TargetInfo &Target);
+
+ArgType wToArgType(int Size, bool IsSigned, bool Fast, ASTContext &C);
 
 } // end analyze_format_string namespace
 } // end clang namespace
