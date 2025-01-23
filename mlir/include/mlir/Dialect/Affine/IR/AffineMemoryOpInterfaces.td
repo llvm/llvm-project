@@ -138,6 +138,16 @@ def AffineWriteOpInterface : OpInterface<"AffineWriteOpInterface"> {
         return $_op.getOperand($_op.getStoredValOperandIndex());
       }]
     >,
+    InterfaceMethod<
+      /*desc=*/"Returns the value to store.",
+      /*retTy=*/"::mlir::OpOperand&",
+      /*methodName=*/"getValueToStoreMutable",
+      /*args=*/(ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+        return $_op->getOpOperand($_op.getStoredValOperandIndex());
+      }]
+    >,
   ];
 }
 

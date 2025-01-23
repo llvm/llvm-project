@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Affine/Utils.h"
 
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
+#include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
@@ -26,9 +27,13 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/IntegerSet.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/LogicalResult.h"
 #include <optional>
+#include <tuple>
 
 #define DEBUG_TYPE "affine-utils"
 
@@ -889,6 +894,8 @@ static void forwardStoreToLoad(
   // loads and stores.
   if (storeVal.getType() != loadOp.getValue().getType())
     return;
+  LLVM_DEBUG(llvm::dbgs() << "Erased load (forwarded from store): " << loadOp
+                          << "\n");
   loadOp.getValue().replaceAllUsesWith(storeVal);
   // Record the memref for a later sweep to optimize away.
   memrefsToErase.insert(loadOp.getMemRef());
@@ -943,9 +950,130 @@ static void findUnusedStore(AffineWriteOpInterface writeA,
                                                              mayAlias))
       continue;
 
+    LLVM_DEBUG(llvm::dbgs() << "Erased store (unused): " << writeA << "\n");
     opsToErase.push_back(writeA);
     break;
   }
+}
+
+static bool isLoopInvariant(LoopLikeOpInterface loop,
+                            AffineReadOpInterface load) {
+  for (auto operand : load.getMapOperands()) {
+    if (!loop.isDefinedOutsideOfLoop(operand)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/// This attempts to find load-store pairs in the body of the loop
+/// that could be replaced by an iter_args variable on the loop. The
+/// initial load and the final store are moved out of the loop. For
+/// such a pair to be eligible:
+/// 1. the load must be followed by the store
+/// 2. the memref must not be read again after the store
+/// 3. the indices of the load and store must match AND be
+/// loop-invariant for the given loop.
+///
+/// This is a useful transformation as
+/// - it exposes reduction dependencies that can be extracted by
+/// --affine-parallelize
+/// - it is a common pattern in code lowered from linalg.
+/// - it exposes more opportunities for forwarding of load/store by
+/// moving the load/store out of the loop and into an enclosing scope,
+/// which may themselves have some load/stores that can be matched with
+/// the new ones.
+///
+/// This last point is why it makes sense to include this transformation within
+/// the scalar replacement pass.
+static void findReductionVariablesAndRewrite(
+    LoopLikeOpInterface loop, PostDominanceInfo &postDominanceInfo,
+    llvm::function_ref<bool(Value, Value)> mayAlias) {
+
+  if (!loop.getLoopResults())
+    return;
+
+  SmallVector<std::pair<AffineReadOpInterface, AffineWriteOpInterface>> result;
+  auto *region = loop.getLoopRegions()[0];
+  auto &block = region->front();
+
+  for (auto &op : block.without_terminator()) {
+    // iterate over ops to find loop-invariant load/store pairs
+    auto asLoad = dyn_cast<AffineReadOpInterface>(op);
+    if (!asLoad) {
+      continue;
+    }
+
+    // Indices must be loop-invariant
+    if (!isLoopInvariant(loop, asLoad))
+      continue;
+
+    // find a corresponding store
+    for (auto *user : asLoad.getMemRef().getUsers()) {
+      if (user->getBlock() != &block || user->isBeforeInBlock(&op))
+        continue;
+      auto asStore = dyn_cast<AffineWriteOpInterface>(user);
+      if (!asStore)
+        continue;
+
+      // both load and store must access the same index
+      if (MemRefAccess(asLoad) != MemRefAccess(asStore)) {
+        break;
+      }
+
+      // Check that nobody could be reading from the store before the next load,
+      // as we want to eliminate the store.
+      if (!affine::hasNoInterveningEffect<MemoryEffects::Read>(
+              asStore.getOperation(), asLoad, mayAlias))
+        break;
+
+      // now let's just replace this pair of accesses with loop iter args
+      result.push_back({asLoad, asStore});
+    }
+  }
+  if (result.empty())
+    return;
+
+  SmallVector<Value> newInitOperands;
+  SmallVector<Value> newYieldOperands;
+  IRRewriter rewriter(loop->getContext());
+  rewriter.startOpModification(loop->getParentOp());
+  rewriter.setInsertionPoint(loop);
+  for (auto [load, store] : result) {
+    auto rewrittenLoad = cast<AffineReadOpInterface>(rewriter.clone(*load));
+    newInitOperands.push_back(rewrittenLoad.getValue());
+    newYieldOperands.push_back(store.getValueToStore());
+  }
+
+  const auto numResults = loop.getLoopResults()->size();
+  auto rewritten = loop.replaceWithAdditionalYields(
+      rewriter, newInitOperands, false,
+      [&](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBbArgs) {
+        return newYieldOperands;
+      });
+  if (failed(rewritten)) {
+    rewriter.cancelOpModification(loop->getParentOp());
+    return;
+  }
+  auto newLoop = *rewritten;
+
+  rewriter.setInsertionPointAfter(newLoop);
+  Operation *next = newLoop;
+  for (auto [loadStore, bbArg, loopRes] :
+       llvm::zip(result, rewritten->getRegionIterArgs().drop_front(numResults),
+                 rewritten->getLoopResults()->drop_front(numResults))) {
+    auto load = loadStore.first;
+    rewriter.replaceOp(load, bbArg);
+
+    auto store = loadStore.second;
+    rewriter.moveOpAfter(store, next);
+    store.getValueToStoreMutable().set(loopRes);
+    next = store;
+  }
+
+  rewriter.finalizeOpModification(newLoop->getParentOp());
+  LLVM_DEBUG(llvm::dbgs() << "Replaced loop reduction variable: \n"
+                          << newLoop << "\n");
 }
 
 // The load to load forwarding / redundant load elimination is similar to the
@@ -1047,6 +1175,11 @@ void mlir::affine::affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
   auto mayAlias = [&](Value val1, Value val2) -> bool {
     return !aliasAnalysis.alias(val1, val2).isNo();
   };
+
+  // scalarize reduction variables as iter_args
+  f.walk([&](AffineForOp loop) {
+    findReductionVariablesAndRewrite(loop, postDomInfo, mayAlias);
+  });
 
   // Walk all load's and perform store to load forwarding.
   f.walk([&](AffineReadOpInterface loadOp) {

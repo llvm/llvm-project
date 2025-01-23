@@ -17,6 +17,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/ShapedOpInterfaces.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -2463,6 +2464,10 @@ bool AffineForOp::matchingBoundOperandList() {
 }
 
 SmallVector<Region *> AffineForOp::getLoopRegions() { return {&getRegion()}; }
+
+std::optional<ResultRange> AffineForOp::getLoopResults() {
+  return {getResults()};
+}
 
 std::optional<SmallVector<Value>> AffineForOp::getLoopInductionVars() {
   return SmallVector<Value>{getInductionVar()};
