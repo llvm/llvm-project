@@ -9,9 +9,11 @@ from lldbsuite.test import lldbutil
 
 
 class TestReverseContinueWatchpoints(ReverseTestBase):
+    @skipIfRemote
     def test_reverse_continue_watchpoint(self):
         self.reverse_continue_watchpoint_internal(async_mode=False)
 
+    @skipIfRemote
     def test_reverse_continue_watchpoint_async(self):
         self.reverse_continue_watchpoint_internal(async_mode=True)
 
@@ -55,9 +57,11 @@ class TestReverseContinueWatchpoints(ReverseTestBase):
             substrs=["stopped", "trigger_watchpoint", "stop reason = watchpoint 1"],
         )
 
+    @skipIfRemote
     def test_reverse_continue_skip_watchpoint(self):
         self.reverse_continue_skip_watchpoint_internal(async_mode=False)
 
+    @skipIfRemote
     def test_reverse_continue_skip_watchpoint_async(self):
         self.reverse_continue_skip_watchpoint_internal(async_mode=True)
 

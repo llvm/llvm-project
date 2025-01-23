@@ -9,9 +9,11 @@ from lldbsuite.test import lldbutil
 
 
 class TestReverseContinueBreakpoints(ReverseTestBase):
+    @skipIfRemote
     def test_reverse_continue(self):
         self.reverse_continue_internal(async_mode=False)
 
+    @skipIfRemote
     def test_reverse_continue_async(self):
         self.reverse_continue_internal(async_mode=True)
 
@@ -39,9 +41,11 @@ class TestReverseContinueBreakpoints(ReverseTestBase):
         self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)
 
+    @skipIfRemote
     def test_reverse_continue_breakpoint(self):
         self.reverse_continue_breakpoint_internal(async_mode=False)
 
+    @skipIfRemote
     def test_reverse_continue_breakpoint_async(self):
         self.reverse_continue_breakpoint_internal(async_mode=True)
 
@@ -58,9 +62,11 @@ class TestReverseContinueBreakpoints(ReverseTestBase):
         threads_now = lldbutil.get_threads_stopped_at_breakpoint(process, trigger_bkpt)
         self.assertEqual(threads_now, initial_threads)
 
+    @skipIfRemote
     def test_reverse_continue_skip_breakpoint(self):
         self.reverse_continue_skip_breakpoint_internal(async_mode=False)
 
+    @skipIfRemote
     def test_reverse_continue_skip_breakpoint_async(self):
         self.reverse_continue_skip_breakpoint_internal(async_mode=True)
 
@@ -84,9 +90,11 @@ class TestReverseContinueBreakpoints(ReverseTestBase):
             substrs=["stopped", "stop reason = history boundary"],
         )
 
+    @skipIfRemote
     def test_continue_preserves_direction(self):
         self.continue_preserves_direction_internal(async_mode=False)
 
+    @skipIfRemote
     def test_continue_preserves_direction_asyhc(self):
         self.continue_preserves_direction_internal(async_mode=True)
 
