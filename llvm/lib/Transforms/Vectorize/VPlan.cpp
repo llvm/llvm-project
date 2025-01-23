@@ -62,9 +62,9 @@ static cl::opt<bool> PrintVPlansInDotFormat(
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 raw_ostream &llvm::operator<<(raw_ostream &OS, const VPValue &V) {
-  const VPInstruction *Instr = dyn_cast<VPInstruction>(&V);
-  VPSlotTracker SlotTracker(
-      (Instr && Instr->getParent()) ? Instr->getParent()->getPlan() : nullptr);
+  const VPRecipeBase *R = V.getDefiningRecipe();
+  VPSlotTracker SlotTracker((R && R->getParent()) ? R->getParent()->getPlan()
+                                                  : nullptr);
   V.print(OS, SlotTracker);
   return OS;
 }
@@ -1557,7 +1557,7 @@ void VPSlotTracker::assignNames(const VPlan &Plan) {
   if (Plan.VFxUF.getNumUsers() > 0)
     assignName(&Plan.VFxUF);
   assignName(&Plan.VectorTripCount);
-  if (Plan.BackedgeTakenCount)
+  if (Plan.BackedgeTakenCount && Plan.BackedgeTakenCount->getNumUsers() > 0)
     assignName(Plan.BackedgeTakenCount);
   for (VPValue *LI : Plan.VPLiveInsToFree)
     assignName(LI);
