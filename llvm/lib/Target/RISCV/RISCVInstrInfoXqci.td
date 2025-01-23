@@ -32,6 +32,8 @@ def uimm10 : RISCVUImmLeafOp<10>;
 
 def uimm11 : RISCVUImmLeafOp<11>;
 
+def simm26 : RISCVSImmLeafOp<26>;
+
 //===----------------------------------------------------------------------===//
 // Instruction Formats
 //===----------------------------------------------------------------------===//
@@ -197,6 +199,51 @@ class QCIInt_IMM<bits<1> funct1, string opcodestr>
   let Inst{31-25} = {0b110011, funct1};
   let Inst{24-20} = imm10{9-5};
 }
+
+class QCIRVInstEIBase<bits<3> funct3, bits<2> funct2, dag outs,
+                      dag ins, string opcodestr, string argstr>
+    : RVInst48<outs, ins, opcodestr, argstr, [], InstFormatOther> {
+  bits<5> rd;
+  bits<5> rs1;
+  bits<26> imm;
+
+  let Inst{47-32} = imm{25-10};
+  let Inst{31-30} = funct2;
+  let Inst{29-20} = imm{9-0};
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = funct3;
+  let Inst{11-7} = rd;
+  let Inst{6-0} = 0b0011111;
+}
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+class QCIRVInstEILoad<bits<3> funct3, bits<2> funct2, string opcodestr>
+    : QCIRVInstEIBase<funct3, funct2, (outs GPR:$rd),
+                      (ins GPRMem:$rs1, simm26:$imm), opcodestr,
+                      "$rd, ${imm}(${rs1})">;
+
+class QCIRVInstESBase<bits<3> funct3, bits<2> funct2, dag outs,
+                      dag ins, string opcodestr, string argstr>
+    : RVInst48<outs, ins, opcodestr, argstr, [], InstFormatOther> {
+  bits<5> rs1;
+  bits<5> rs2;
+  bits<26> imm;
+
+  let Inst{47-32} = imm{25-10};
+  let Inst{31-30} = funct2;
+  let Inst{29-25} = imm{9-5};
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = funct3;
+  let Inst{11-7} = imm{4-0};
+  let Inst{6-0} = 0b0011111;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
+class QCIRVInstESStore<bits<3> funct3, bits<2> funct2, string opcodestr>
+    : QCIRVInstESBase<funct3, funct2, (outs),
+                      (ins GPRMem:$rs2, GPR:$rs1, simm26:$imm),
+                      opcodestr, "$rs2, ${imm}(${rs1})">;
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -376,6 +423,18 @@ let Predicates = [HasVendorXqciint, IsRV32], DecoderNamespace = "Xqciint" in {
   def QC_C_MILEAVERET   : QCIRVInst16CI_NONE<0b10100, "qc.c.mileaveret">;
 } // Predicates = [HasVendorXqciint, IsRV32], DecoderNamespace = "Xqciint"
 
+let Predicates = [HasVendorXqcilo, IsRV32], DecoderNamespace = "Xqcilo" in {
+  def QC_E_LB    : QCIRVInstEILoad<0b101, 0b00, "qc.e.lb">;
+  def QC_E_LBU   : QCIRVInstEILoad<0b101, 0b01, "qc.e.lbu">;
+  def QC_E_LH    : QCIRVInstEILoad<0b101, 0b10, "qc.e.lh">;
+  def QC_E_LHU   : QCIRVInstEILoad<0b101, 0b11, "qc.e.lhu">;
+  def QC_E_LW    : QCIRVInstEILoad<0b110, 0b00, "qc.e.lw">;
+
+  def QC_E_SB    : QCIRVInstESStore<0b110, 0b01, "qc.e.sb">;
+  def QC_E_SH    : QCIRVInstESStore<0b110, 0b10, "qc.e.sh">;
+  def QC_E_SW    : QCIRVInstESStore<0b110, 0b11, "qc.e.sw">;
+} // Predicates = [HasVendorXqcilo, IsRV32], DecoderNamespace = "Xqcilo"
+
 //===----------------------------------------------------------------------===//
 // Aliases
 //===----------------------------------------------------------------------===//
@@ -396,3 +455,24 @@ let EmitPriority = 0 in {
                   (QC_LWMI GPRNoX0:$rd, GPR:$rs1, uimm5nonzero:$length, 0)>;
 } // EmitPriority = 0
 } // Predicates = [HasVendorXqcilsm, IsRV32]
+
+let Predicates = [HasVendorXqcilo, IsRV32] in {
+let EmitPriority = 0 in {
+  def  : InstAlias<"qc.e.lb  $rd, (${rs1})",
+                   (QC_E_LB  GPR:$rd, GPR:$rs1, 0)>;
+  def  : InstAlias<"qc.e.lbu $rd, (${rs1})",
+                   (QC_E_LBU GPR:$rd, GPR:$rs1, 0)>;
+  def  : InstAlias<"qc.e.lh  $rd, (${rs1})",
+                   (QC_E_LH  GPR:$rd, GPR:$rs1, 0)>;
+  def  : InstAlias<"qc.e.lhu $rd, (${rs1})",
+                   (QC_E_LHU GPR:$rd, GPR:$rs1, 0)>;
+  def  : InstAlias<"qc.e.lw  $rd, (${rs1})",
+                   (QC_E_LW  GPR:$rd, GPR:$rs1, 0)>;
+  def  : InstAlias<"qc.e.sb  $rs2, (${rs1})",
+                   (QC_E_SB GPR:$rs2, GPR:$rs1, 0)>;
+  def  : InstAlias<"qc.e.sh  $rs2, (${rs1})",
+                   (QC_E_SH GPR:$rs2, GPR:$rs1, 0)>;
+  def  : InstAlias<"qc.e.sw  $rs2, (${rs1})",
+                   (QC_E_SW GPR:$rs2, GPR:$rs1, 0)>;
+} // EmitPriority = 0
+} // Predicates = [HasVendorXqcilo, IsRV32]

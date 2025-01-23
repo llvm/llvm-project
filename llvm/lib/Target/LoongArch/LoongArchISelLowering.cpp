@@ -386,6 +386,11 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   // cmpxchg sizes down to 8 bits become legal if LAMCAS is available.
   if (Subtarget.hasLAMCAS())
     setMinCmpXchgSizeInBits(8);
+
+  if (Subtarget.hasSCQ()) {
+    setMaxAtomicSizeInBitsSupported(128);
+    setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i128, Custom);
+  }
 }
 
 bool LoongArchTargetLowering::isOffsetFoldingLegal(
@@ -2906,6 +2911,43 @@ replaceINTRINSIC_WO_CHAINResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
   }
 }
 
+static void replaceCMP_XCHG_128Results(SDNode *N,
+                                       SmallVectorImpl<SDValue> &Results,
+                                       SelectionDAG &DAG) {
+  assert(N->getValueType(0) == MVT::i128 &&
+         "AtomicCmpSwap on types less than 128 should be legal");
+  MachineMemOperand *MemOp = cast<MemSDNode>(N)->getMemOperand();
+
+  unsigned Opcode;
+  switch (MemOp->getMergedOrdering()) {
+  case AtomicOrdering::Acquire:
+  case AtomicOrdering::AcquireRelease:
+  case AtomicOrdering::SequentiallyConsistent:
+    Opcode = LoongArch::PseudoCmpXchg128Acquire;
+    break;
+  case AtomicOrdering::Monotonic:
+  case AtomicOrdering::Release:
+    Opcode = LoongArch::PseudoCmpXchg128;
+    break;
+  default:
+    llvm_unreachable("Unexpected ordering!");
+  }
+
+  SDLoc DL(N);
+  auto CmpVal = DAG.SplitScalar(N->getOperand(2), DL, MVT::i64, MVT::i64);
+  auto NewVal = DAG.SplitScalar(N->getOperand(3), DL, MVT::i64, MVT::i64);
+  SDValue Ops[] = {N->getOperand(1), CmpVal.first,  CmpVal.second,
+                   NewVal.first,     NewVal.second, N->getOperand(0)};
+
+  SDNode *CmpSwap = DAG.getMachineNode(
+      Opcode, SDLoc(N), DAG.getVTList(MVT::i64, MVT::i64, MVT::i64, MVT::Other),
+      Ops);
+  DAG.setNodeMemRefs(cast<MachineSDNode>(CmpSwap), {MemOp});
+  Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i128,
+                                SDValue(CmpSwap, 0), SDValue(CmpSwap, 1)));
+  Results.push_back(SDValue(CmpSwap, 3));
+}
+
 void LoongArchTargetLowering::ReplaceNodeResults(
     SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
   SDLoc DL(N);
@@ -3216,6 +3258,10 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     SDValue Result = makeLibCall(DAG, LC, MVT::i64, Op0, CallOptions, DL).first;
     Result = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Result);
     Results.push_back(Result);
+    break;
+  }
+  case ISD::ATOMIC_CMP_SWAP: {
+    replaceCMP_XCHG_128Results(N, Results, DAG);
     break;
   }
   }
