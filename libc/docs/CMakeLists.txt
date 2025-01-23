@@ -62,6 +62,7 @@ if (SPHINX_FOUND)
       termios
       threads
       uchar
+      unistd
       wchar
       wctype
     )
