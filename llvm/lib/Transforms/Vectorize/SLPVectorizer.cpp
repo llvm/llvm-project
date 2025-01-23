@@ -2656,7 +2656,9 @@ public:
         }
         // TODO: Check if we can remove a check for non-power-2 number of
         // scalars after full support of non-power-2 vectorization.
-        return UniqueValues.size() != 2 && has_single_bit(UniqueValues.size());
+        return UniqueValues.size() != 2 &&
+               hasFullVectorsOrPowerOf2(*R.TTI, Op0.front().V->getType(),
+                                        UniqueValues.size());
       };
 
       // If the initial strategy fails for any of the operand indexes, then we
@@ -4140,8 +4142,9 @@ private:
         // through the TreeEntry.
         if (TreeEntry *TE = BundleMember->TE) {
           // Need to search for the lane since the tree entry can be reordered.
+          auto *In = BundleMember->Inst;
           int Lane = std::distance(TE->Scalars.begin(),
-                                   find(TE->Scalars, BundleMember->Inst));
+                                   find(TE->Scalars, In));
           assert(Lane >= 0 && "Lane not set");
 
           // Since vectorization tree is being built recursively this assertion
@@ -4150,16 +4153,13 @@ private:
           // where their second (immediate) operand is not added. Since
           // immediates do not affect scheduler behavior this is considered
           // okay.
-          auto *In = BundleMember->Inst;
           assert(
               In &&
               (isa<ExtractValueInst, ExtractElementInst, IntrinsicInst>(In) ||
                In->getNumOperands() == TE->getNumOperands()) &&
               "Missed TreeEntry operands?");
-          (void)In; // fake use to avoid build failure when assertions disabled
 
-          for (unsigned OpIdx = 0, NumOperands = TE->getNumOperands();
-               OpIdx != NumOperands; ++OpIdx)
+          for (unsigned OpIdx : seq<unsigned>(TE->getNumOperands()))
             if (auto *I = dyn_cast<Instruction>(TE->getOperand(OpIdx)[Lane]))
               DecrUnsched(I);
         } else {
@@ -5101,12 +5101,13 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
                  });
         });
     const unsigned AbsoluteDiff = std::abs(*Diff);
-    if (IsPossibleStrided && (IsAnyPointerUsedOutGraph ||
-                              ((Sz > MinProfitableStridedLoads ||
-                                (AbsoluteDiff <= MaxProfitableLoadStride * Sz &&
-                                 has_single_bit(AbsoluteDiff))) &&
-                               AbsoluteDiff > Sz) ||
-                              *Diff == -(static_cast<int>(Sz) - 1))) {
+    if (IsPossibleStrided &&
+        (IsAnyPointerUsedOutGraph ||
+         (AbsoluteDiff > Sz &&
+          (Sz > MinProfitableStridedLoads ||
+           (AbsoluteDiff <= MaxProfitableLoadStride * Sz &&
+            AbsoluteDiff % Sz == 0 && has_single_bit(AbsoluteDiff / Sz)))) ||
+         *Diff == -(static_cast<int>(Sz) - 1))) {
       int Stride = *Diff / static_cast<int>(Sz - 1);
       if (*Diff == Stride * static_cast<int>(Sz - 1)) {
         Align Alignment =
@@ -5192,9 +5193,9 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
       return MaskedGatherCost - GatherCost >= -SLPCostThreshold;
 
     // FIXME: The following code has not been updated for non-power-of-2
-    // vectors.  The splitting logic here does not cover the original
-    // vector if the vector factor is not a power of two.  FIXME
-    if (!has_single_bit(VL.size()))
+    // vectors (and not whole registers).  The splitting logic here does not
+    // cover the original vector if the vector factor is not a power of two.
+    if (!hasFullVectorsOrPowerOf2(TTI, ScalarTy, VL.size()))
       return false;
 
     unsigned Sz = DL->getTypeSizeInBits(ScalarTy);
@@ -5202,7 +5203,10 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
     DemandedElts.clearAllBits();
     // Iterate through possible vectorization factors and check if vectorized +
     // shuffles is better than just gather.
-    for (unsigned VF = VL.size() / 2; VF >= MinVF; VF /= 2) {
+    for (unsigned VF =
+             getFloorFullVectorNumberOfElements(TTI, ScalarTy, VL.size() - 1);
+         VF >= MinVF;
+         VF = getFloorFullVectorNumberOfElements(TTI, ScalarTy, VF - 1)) {
       SmallVector<LoadsState> States;
       for (unsigned Cnt = 0, End = VL.size(); Cnt + VF <= End; Cnt += VF) {
         ArrayRef<Value *> Slice = VL.slice(Cnt, VF);
@@ -7632,8 +7636,9 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
   case Instruction::ExtractValue:
   case Instruction::ExtractElement: {
     bool Reuse = canReuseExtract(VL, CurrentOrder);
-    // FIXME: Vectorizing is not supported yet for non-power-of-2 ops.
-    if (!has_single_bit(VL.size()))
+    // FIXME: Vectorizing is not supported yet for non-power-of-2 ops (and
+    // non-full registers).
+    if (!hasFullVectorsOrPowerOf2(*TTI, VL0->getType(), VL.size()))
       return TreeEntry::NeedToGather;
     if (Reuse || !CurrentOrder.empty())
       return TreeEntry::Vectorize;
@@ -8089,7 +8094,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       // FIXME: Reshuffing scalars is not supported yet for non-power-of-2 ops.
       if ((UserTreeIdx.UserTE &&
            UserTreeIdx.UserTE->hasNonWholeRegisterOrNonPowerOf2Vec(*TTI)) ||
-          !has_single_bit(VL.size())) {
+          !hasFullVectorsOrPowerOf2(*TTI, VL.front()->getType(), VL.size())) {
         LLVM_DEBUG(dbgs() << "SLP: Reshuffling scalars not yet supported "
                              "for nodes with padding.\n");
         newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx);
@@ -9086,7 +9091,7 @@ static bool isAlternateInstruction(const Instruction *I,
   if (auto *MainCI = dyn_cast<CmpInst>(MainOp)) {
     auto *AltCI = cast<CmpInst>(AltOp);
     CmpInst::Predicate MainP = MainCI->getPredicate();
-    CmpInst::Predicate AltP = AltCI->getPredicate();
+    [[maybe_unused]] CmpInst::Predicate AltP = AltCI->getPredicate();
     assert(MainP != AltP && "Expected different main/alternate predicates.");
     auto *CI = cast<CmpInst>(I);
     if (isCmpSameOrSwapped(MainCI, CI, TLI))
@@ -9099,7 +9104,6 @@ static bool isAlternateInstruction(const Instruction *I,
     assert((MainP == P || AltP == P || MainP == SwappedP || AltP == SwappedP) &&
            "CmpInst expected to match either main or alternate predicate or "
            "their swap.");
-    (void)AltP;
     return MainP != P && MainP != SwappedP;
   }
   return I->getOpcode() == AltOp->getOpcode();
@@ -9480,6 +9484,15 @@ protected:
       return Builder.createShuffleVector(V1, NewMask);
     return Builder.createIdentity(V1);
   }
+
+  /// Transforms mask \p CommonMask per given \p Mask to make proper set after
+  /// shuffle emission.
+  static void transformMaskAfterShuffle(MutableArrayRef<int> CommonMask,
+                                        ArrayRef<int> Mask) {
+    for (unsigned I : seq<unsigned>(CommonMask.size()))
+      if (Mask[I] != PoisonMaskElem)
+        CommonMask[I] = I;
+  }
 };
 } // namespace
 
@@ -9840,7 +9853,8 @@ void BoUpSLP::transformNodes() {
             if (!S || S.isAltShuffle() || !allSameBlock(Slice) ||
                 (S.getOpcode() == Instruction::Load &&
                  areKnownNonVectorizableLoads(Slice)) ||
-                (S.getOpcode() != Instruction::Load && !has_single_bit(VF)))
+                (S.getOpcode() != Instruction::Load &&
+                 !hasFullVectorsOrPowerOf2(*TTI, Slice.front()->getType(), VF)))
               continue;
             if (VF == 2) {
               // Try to vectorize reduced values or if all users are vectorized.
@@ -10308,14 +10322,6 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         Cost = OriginalCost;
     }
     return Cost;
-  }
-  /// Transforms mask \p CommonMask per given \p Mask to make proper set after
-  /// shuffle emission.
-  static void transformMaskAfterShuffle(MutableArrayRef<int> CommonMask,
-                                        ArrayRef<int> Mask) {
-    for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
-      if (Mask[Idx] != PoisonMaskElem)
-        CommonMask[Idx] = Idx;
   }
   /// Adds the cost of reshuffling \p E1 and \p E2 (if present), using given
   /// mask \p Mask, register number \p Part, that includes \p SliceSize
@@ -10939,9 +10945,7 @@ public:
         Cost += createShuffle(Vec, InVectors.back(), CommonMask);
       else
         Cost += createShuffle(Vec, nullptr, CommonMask);
-      for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
-        if (CommonMask[Idx] != PoisonMaskElem)
-          CommonMask[Idx] = Idx;
+      transformMaskAfterShuffle(CommonMask, CommonMask);
       assert(VF > 0 &&
              "Expected vector length for the final value before action.");
       Value *V = cast<Value *>(Vec);
@@ -10954,9 +10958,7 @@ public:
         Cost += createShuffle(Vec, InVectors.back(), CommonMask);
       else
         Cost += createShuffle(Vec, nullptr, CommonMask);
-      for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
-        if (CommonMask[Idx] != PoisonMaskElem)
-          CommonMask[Idx] = Idx;
+      transformMaskAfterShuffle(CommonMask, CommonMask);
       // Add subvectors permutation cost.
       if (!SubVectorsMask.empty()) {
         assert(SubVectorsMask.size() <= CommonMask.size() &&
@@ -12251,18 +12253,12 @@ InstructionCost BoUpSLP::getSpillCost() const {
         if (auto *II = dyn_cast<IntrinsicInst>(I)) {
           if (II->isAssumeLikeIntrinsic())
             return true;
-          FastMathFlags FMF;
-          SmallVector<Type *, 4> Tys;
-          for (auto &ArgOp : II->args())
-            Tys.push_back(ArgOp->getType());
-          if (auto *FPMO = dyn_cast<FPMathOperator>(II))
-            FMF = FPMO->getFastMathFlags();
-          IntrinsicCostAttributes ICA(II->getIntrinsicID(), II->getType(), Tys,
-                                      FMF);
+          IntrinsicCostAttributes ICA(II->getIntrinsicID(), *II);
           InstructionCost IntrCost =
               TTI->getIntrinsicInstrCost(ICA, TTI::TCK_RecipThroughput);
-          InstructionCost CallCost = TTI->getCallInstrCost(
-              nullptr, II->getType(), Tys, TTI::TCK_RecipThroughput);
+          InstructionCost CallCost =
+              TTI->getCallInstrCost(nullptr, II->getType(), ICA.getArgTypes(),
+                                    TTI::TCK_RecipThroughput);
           if (IntrCost < CallCost)
             return true;
         }
@@ -12374,8 +12370,7 @@ static T *performExtractsShuffleAction(
       else
         Mask[Idx] = (Res.second ? Idx : Mask[Idx]) + VF;
     }
-    auto *V = ValueSelect::get<T *>(Base);
-    (void)V;
+    [[maybe_unused]] auto *V = ValueSelect::get<T *>(Base);
     assert((!V || GetVF(V) == Mask.size()) &&
            "Expected base vector of VF number of elements.");
     Prev = Action(Mask, {nullptr, Res.first});
@@ -12426,8 +12421,7 @@ static T *performExtractsShuffleAction(
     }
     VMIt = std::next(VMIt);
   }
-  bool IsBaseNotUndef = !IsBaseUndef.all();
-  (void)IsBaseNotUndef;
+  [[maybe_unused]] bool IsBaseNotUndef = !IsBaseUndef.all();
   // Perform requested actions for the remaining masks/vectors.
   for (auto E = ShuffleMask.end(); VMIt != E; ++VMIt) {
     // Shuffle other input vectors, if any.
@@ -13618,8 +13612,9 @@ BoUpSLP::isGatherShuffledEntry(
                  return !TE->isGather();
                })))
     return {};
-  // FIXME: Gathering for non-power-of-2 nodes not implemented yet.
-  if (TE->isNonPowOf2Vec())
+  // FIXME: Gathering for non-power-of-2 (non whole registers) nodes not
+  // implemented yet.
+  if (TE->hasNonWholeRegisterOrNonPowerOf2Vec(*TTI))
     return {};
   Mask.assign(VL.size(), PoisonMaskElem);
   assert((TE->UserTreeIndices.size() == 1 ||
@@ -14205,15 +14200,6 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
                                                        ShuffleBuilder);
   }
 
-  /// Transforms mask \p CommonMask per given \p Mask to make proper set after
-  /// shuffle emission.
-  static void transformMaskAfterShuffle(MutableArrayRef<int> CommonMask,
-                                        ArrayRef<int> Mask) {
-    for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
-      if (Mask[Idx] != PoisonMaskElem)
-        CommonMask[Idx] = Idx;
-  }
-
   /// Cast value \p V to the vector type with the same number of elements, but
   /// the base type \p ScalarTy.
   Value *castToScalarTyElem(Value *V,
@@ -14546,9 +14532,7 @@ public:
       } else {
         Vec = createShuffle(Vec, nullptr, CommonMask);
       }
-      for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
-        if (CommonMask[Idx] != PoisonMaskElem)
-          CommonMask[Idx] = Idx;
+      transformMaskAfterShuffle(CommonMask, CommonMask);
       assert(VF > 0 &&
              "Expected vector length for the final value before action.");
       unsigned VecVF = cast<FixedVectorType>(Vec->getType())->getNumElements();
@@ -14568,9 +14552,7 @@ public:
       } else {
         Vec = createShuffle(Vec, nullptr, CommonMask);
       }
-      for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
-        if (CommonMask[Idx] != PoisonMaskElem)
-          CommonMask[Idx] = Idx;
+      transformMaskAfterShuffle(CommonMask, CommonMask);
       auto CreateSubVectors = [&](Value *Vec,
                                   SmallVectorImpl<int> &CommonMask) {
         for (auto [E, Idx] : SubVectors) {
@@ -14611,10 +14593,7 @@ public:
         Value *InsertVec =
             CreateSubVectors(PoisonValue::get(Vec->getType()), CommonMask);
         Vec = createShuffle(InsertVec, Vec, SVMask);
-        for (unsigned I : seq<unsigned>(CommonMask.size())) {
-          if (SVMask[I] != PoisonMaskElem)
-            CommonMask[I] = I;
-        }
+        transformMaskAfterShuffle(CommonMask, SVMask);
       }
       InVectors.front() = Vec;
     }
@@ -17636,8 +17615,7 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
   for (auto *I = BS->ScheduleStart; I != BS->ScheduleEnd;
        I = I->getNextNode()) {
     if (ScheduleData *SD = BS->getScheduleData(I)) {
-      TreeEntry *SDTE = getTreeEntry(SD->Inst);
-      (void)SDTE;
+      [[maybe_unused]] TreeEntry *SDTE = getTreeEntry(SD->Inst);
       assert((isVectorLikeInstWithConstOps(SD->Inst) ||
               SD->isPartOfBundle() ==
                   (SDTE && !doesNotNeedToSchedule(SDTE->Scalars))) &&
@@ -19200,9 +19178,11 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
     }
   }
 
+  Type *ScalarTy = getValueType(VL[0]);
   unsigned Sz = R.getVectorElementSize(I0);
   unsigned MinVF = R.getMinVF(Sz);
-  unsigned MaxVF = std::max<unsigned>(llvm::bit_floor(VL.size()), MinVF);
+  unsigned MaxVF = std::max<unsigned>(
+      getFloorFullVectorNumberOfElements(*TTI, ScalarTy, VL.size()), MinVF);
   MaxVF = std::min(R.getMaximumVF(Sz, S.getOpcode()), MaxVF);
   if (MaxVF < 2) {
     R.getORE()->emit([&]() {
@@ -19216,10 +19196,10 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   bool Changed = false;
   bool CandidateFound = false;
   InstructionCost MinCost = SLPCostThreshold.getValue();
-  Type *ScalarTy = getValueType(VL[0]);
 
   unsigned NextInst = 0, MaxInst = VL.size();
-  for (unsigned VF = MaxVF; NextInst + 1 < MaxInst && VF >= MinVF; VF /= 2) {
+  for (unsigned VF = MaxVF; NextInst + 1 < MaxInst && VF >= MinVF;
+       VF = getFloorFullVectorNumberOfElements(*TTI, I0->getType(), VF - 1)) {
     // No actual vectorization should happen, if number of parts is the same as
     // provided vectorization factor (i.e. the scalar type is used for vector
     // code during codegen).
@@ -19234,7 +19214,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
 
       if (MaxVFOnly && ActualVF < MaxVF)
         break;
-      if ((VF > MinVF && ActualVF <= VF / 2) || (VF == MinVF && ActualVF < 2))
+      if ((VF > MinVF && ActualVF < VF) || (VF == MinVF && ActualVF < 2))
         break;
 
       SmallVector<Value *> Ops(ActualVF, nullptr);
