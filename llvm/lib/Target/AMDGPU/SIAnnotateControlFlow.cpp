@@ -52,6 +52,7 @@ private:
 
   bool isWorkitemID(const Value *V) const;
 
+  DenseSet<const Value *> Visited;
   ValueMap<const Value *, bool> LikelyDivergentCache;
 };
 
@@ -453,15 +454,19 @@ bool DynamicDivergenceHeuristic::isLikelyDivergent(const Value *V) {
 
   // ExtractValueInst and IntrinsicInst enable looking through the
   // amdgcn_if/else intrinsics inserted by SIAnnotateControlFlow.
-  // This condition excludes PHINodes, which prevents infinite recursion.
   if (!isa<BinaryOperator>(I) && !isa<UnaryOperator>(I) && !isa<CastInst>(I) &&
-      !isa<CmpInst>(I) && !isa<ExtractValueInst>(I) && !isa<IntrinsicInst>(I))
+      !isa<CmpInst>(I) && !isa<ExtractValueInst>(I) && !isa<IntrinsicInst>(I) &&
+      !isa<PHINode>(I) && !isa<SelectInst>(I))
     return false;
 
   // Have we already checked V?
   auto CacheEntry = LikelyDivergentCache.find(V);
   if (CacheEntry != LikelyDivergentCache.end())
     return CacheEntry->second;
+
+  // Have we hit a cycle?
+  if (!Visited.insert(V).second)
+    return false;
 
   // Does it use a likely varying Value?
   bool Result = false;

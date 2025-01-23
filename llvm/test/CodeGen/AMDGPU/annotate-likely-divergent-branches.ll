@@ -436,7 +436,7 @@ exit:
 }
 
 
-; The branch here is not likely dynamically divergent, because its condition directly results from a PHI:
+; The branch here is likely dynamically divergent, even though it only uses the workitem id through a PHI:
 define amdgpu_kernel void @cond_store_loop_phi(ptr addrspace(1) inreg %dest, ptr addrspace(1) inreg %lookup, i32 %n) #0 !reqd_work_group_size !0 {
 ; CHECK-LABEL: define amdgpu_kernel void @cond_store_loop_phi(
 ; CHECK-SAME: ptr addrspace(1) inreg [[DEST:%.*]], ptr addrspace(1) inreg [[LOOKUP:%.*]], i32 [[N:%.*]]) #[[ATTR2]] !reqd_work_group_size [[META0]] {
@@ -455,10 +455,8 @@ define amdgpu_kernel void @cond_store_loop_phi(ptr addrspace(1) inreg %dest, ptr
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp eq i32 [[IDX_DEC]], 0
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label %[[LOOP_END:.*]], label %[[LOOP]]
 ; CHECK:       [[LOOP_END]]:
-; CHECK-NEXT:    [[LOOKUP_ADDR:%.*]] = getelementptr i32, ptr addrspace(1) [[LOOKUP]], i64 [[TID_EXT]]
-; CHECK-NEXT:    [[LOOKUP_VALUE:%.*]] = load i32, ptr addrspace(1) [[LOOKUP_ADDR]], align 4
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[LOOKUP_VALUE]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[COND]], i1 false)
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[VAL]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[COND]], i1 true)
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i1, i64 } [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i1, i64 } [[TMP0]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[DO_STORE:.*]], label %[[EXIT:.*]]
@@ -485,9 +483,154 @@ loop:
   %loop.cond = icmp eq i32 %idx.dec, 0
   br i1 %loop.cond, label %loop.end, label %loop
 loop.end:
+  %cond = icmp eq i32 %val, 0
+  br i1 %cond, label %do.store, label %exit
+do.store:
+  %local.addr = getelementptr i32, ptr addrspace(1) %dest, i64 %tid.ext
+  store i32 0, ptr addrspace(1) %local.addr
+  br label %exit
+exit:
+  ret void
+}
+
+; The branch here is not likely dynamically divergent, since it doesn't use the workitem id:
+define amdgpu_kernel void @cond_store_loop_unrelated_phi(ptr addrspace(1) inreg %dest, ptr addrspace(1) inreg %lookup, i32 %n) #0 !reqd_work_group_size !0 {
+; CHECK-LABEL: define amdgpu_kernel void @cond_store_loop_unrelated_phi(
+; CHECK-SAME: ptr addrspace(1) inreg [[DEST:%.*]], ptr addrspace(1) inreg [[LOOKUP:%.*]], i32 [[N:%.*]]) #[[ATTR2]] !reqd_work_group_size [[META0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TID_X:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TID_Y:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[TID_Y_SHIFT:%.*]] = shl nuw nsw i32 [[TID_Y]], 6
+; CHECK-NEXT:    [[TID:%.*]] = or disjoint i32 [[TID_X]], [[TID_Y_SHIFT]]
+; CHECK-NEXT:    [[TID_EXT:%.*]] = zext nneg i32 [[TID]] to i64
+; CHECK-NEXT:    [[LOOKUP_ADDR:%.*]] = getelementptr i32, ptr addrspace(1) [[LOOKUP]], i64 [[TID_EXT]]
+; CHECK-NEXT:    [[LOOKUP_VALUE:%.*]] = load i32, ptr addrspace(1) [[LOOKUP_ADDR]], align 4
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ [[VAL_INC:%.*]], %[[LOOP]] ], [ [[LOOKUP_VALUE]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_DEC:%.*]], %[[LOOP]] ], [ [[N]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[VAL_INC]] = add i32 [[VAL]], 1
+; CHECK-NEXT:    [[IDX_DEC]] = sub i32 [[IDX]], 1
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp eq i32 [[IDX_DEC]], 0
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label %[[LOOP_END:.*]], label %[[LOOP]]
+; CHECK:       [[LOOP_END]]:
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[VAL]], 20
+; CHECK-NEXT:    [[TMP0:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[COND]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i1, i64 } [[TMP0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i1, i64 } [[TMP0]], 1
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[DO_STORE:.*]], label %[[EXIT:.*]]
+; CHECK:       [[DO_STORE]]:
+; CHECK-NEXT:    [[LOCAL_ADDR:%.*]] = getelementptr i32, ptr addrspace(1) [[DEST]], i64 [[TID_EXT]]
+; CHECK-NEXT:    store i32 0, ptr addrspace(1) [[LOCAL_ADDR]], align 4
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP2]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %tid.y = tail call i32 @llvm.amdgcn.workitem.id.y()
+  %tid.y.shift = shl nuw nsw i32 %tid.y, 6
+  %tid = or disjoint i32 %tid.x, %tid.y.shift
+  %tid.ext = zext nneg i32 %tid to i64
   %lookup.addr = getelementptr i32, ptr addrspace(1) %lookup, i64 %tid.ext
   %lookup.value = load i32, ptr addrspace(1) %lookup.addr
-  %cond = icmp eq i32 %lookup.value, 0
+  br label %loop
+loop:
+  %val = phi i32 [%val.inc, %loop], [%lookup.value, %entry]
+  %idx = phi i32 [%idx.dec, %loop], [%n, %entry]
+  %val.inc = add i32 %val, 1
+  %idx.dec = sub i32 %idx, 1
+  %loop.cond = icmp eq i32 %idx.dec, 0
+  br i1 %loop.cond, label %loop.end, label %loop
+loop.end:
+  %cond = icmp eq i32 %val, 20
+  br i1 %cond, label %do.store, label %exit
+do.store:
+  %local.addr = getelementptr i32, ptr addrspace(1) %dest, i64 %tid.ext
+  store i32 0, ptr addrspace(1) %local.addr
+  br label %exit
+exit:
+  ret void
+}
+
+; The branch here is likely dynamically divergent, even though it only uses the workitem id through a select:
+define amdgpu_kernel void @cond_store_select_cond(ptr addrspace(1) inreg %dest, ptr addrspace(1) inreg %lookup, i32 %n) #0 !reqd_work_group_size !0 {
+; CHECK-LABEL: define amdgpu_kernel void @cond_store_select_cond(
+; CHECK-SAME: ptr addrspace(1) inreg [[DEST:%.*]], ptr addrspace(1) inreg [[LOOKUP:%.*]], i32 [[N:%.*]]) #[[ATTR2]] !reqd_work_group_size [[META0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TID_X:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TID_Y:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[TID_Y_SHIFT:%.*]] = shl nuw nsw i32 [[TID_Y]], 6
+; CHECK-NEXT:    [[TID:%.*]] = or disjoint i32 [[TID_X]], [[TID_Y_SHIFT]]
+; CHECK-NEXT:    [[TID_EXT:%.*]] = zext nneg i32 [[TID]] to i64
+; CHECK-NEXT:    [[COND_SELECT:%.*]] = icmp eq i32 [[TID]], 13
+; CHECK-NEXT:    [[VAL:%.*]] = select i1 [[COND_SELECT]], i32 0, i32 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[VAL]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[COND]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i1, i64 } [[TMP0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i1, i64 } [[TMP0]], 1
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[DO_STORE:.*]], label %[[EXIT:.*]]
+; CHECK:       [[DO_STORE]]:
+; CHECK-NEXT:    [[LOCAL_ADDR:%.*]] = getelementptr i32, ptr addrspace(1) [[DEST]], i64 [[TID_EXT]]
+; CHECK-NEXT:    store i32 0, ptr addrspace(1) [[LOCAL_ADDR]], align 4
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP2]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %tid.y = tail call i32 @llvm.amdgcn.workitem.id.y()
+  %tid.y.shift = shl nuw nsw i32 %tid.y, 6
+  %tid = or disjoint i32 %tid.x, %tid.y.shift
+  %tid.ext = zext nneg i32 %tid to i64
+  %cond.select = icmp eq i32 %tid, 13
+  %val = select i1 %cond.select, i32 0, i32 1
+  %cond = icmp eq i32 %val, 0
+  br i1 %cond, label %do.store, label %exit
+do.store:
+  %local.addr = getelementptr i32, ptr addrspace(1) %dest, i64 %tid.ext
+  store i32 0, ptr addrspace(1) %local.addr
+  br label %exit
+exit:
+  ret void
+}
+
+; The branch here is likely dynamically divergent, even though it only uses the workitem id through a select:
+define amdgpu_kernel void @cond_store_select_val(ptr addrspace(1) inreg %dest, ptr addrspace(1) inreg %lookup, i32 %n) #0 !reqd_work_group_size !0 {
+; CHECK-LABEL: define amdgpu_kernel void @cond_store_select_val(
+; CHECK-SAME: ptr addrspace(1) inreg [[DEST:%.*]], ptr addrspace(1) inreg [[LOOKUP:%.*]], i32 [[N:%.*]]) #[[ATTR2]] !reqd_work_group_size [[META0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TID_X:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TID_Y:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[TID_Y_SHIFT:%.*]] = shl nuw nsw i32 [[TID_Y]], 6
+; CHECK-NEXT:    [[TID:%.*]] = or disjoint i32 [[TID_X]], [[TID_Y_SHIFT]]
+; CHECK-NEXT:    [[TID_EXT:%.*]] = zext nneg i32 [[TID]] to i64
+; CHECK-NEXT:    [[COND_SELECT:%.*]] = icmp eq i32 [[N]], 13
+; CHECK-NEXT:    [[VAL:%.*]] = select i1 [[COND_SELECT]], i32 0, i32 [[TID]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[VAL]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[COND]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i1, i64 } [[TMP0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i1, i64 } [[TMP0]], 1
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[DO_STORE:.*]], label %[[EXIT:.*]]
+; CHECK:       [[DO_STORE]]:
+; CHECK-NEXT:    [[LOCAL_ADDR:%.*]] = getelementptr i32, ptr addrspace(1) [[DEST]], i64 [[TID_EXT]]
+; CHECK-NEXT:    store i32 0, ptr addrspace(1) [[LOCAL_ADDR]], align 4
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP2]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %tid.y = tail call i32 @llvm.amdgcn.workitem.id.y()
+  %tid.y.shift = shl nuw nsw i32 %tid.y, 6
+  %tid = or disjoint i32 %tid.x, %tid.y.shift
+  %tid.ext = zext nneg i32 %tid to i64
+  %cond.select = icmp eq i32 %n, 13
+  %val = select i1 %cond.select, i32 0, i32 %tid
+  %cond = icmp eq i32 %val, 0
   br i1 %cond, label %do.store, label %exit
 do.store:
   %local.addr = getelementptr i32, ptr addrspace(1) %dest, i64 %tid.ext

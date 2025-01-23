@@ -563,7 +563,6 @@ define amdgpu_kernel void @v8i8_phi_const(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:  .LBB10_2: ; %Flow
 ; GFX906-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX906-NEXT:    s_and_saveexec_b64 s[2:3], s[0:1]
-; GFX906-NEXT:    s_cbranch_execz .LBB10_4
 ; GFX906-NEXT:  ; %bb.3: ; %bb.2
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v3, 8, v10
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v4, 8, v8
@@ -585,7 +584,7 @@ define amdgpu_kernel void @v8i8_phi_const(ptr addrspace(1) %src1, ptr addrspace(
 ; GFX906-NEXT:    v_mov_b32_e32 v15, v7
 ; GFX906-NEXT:    v_mov_b32_e32 v12, v6
 ; GFX906-NEXT:    v_mov_b32_e32 v16, v5
-; GFX906-NEXT:  .LBB10_4: ; %bb.3
+; GFX906-NEXT:  ; %bb.4: ; %bb.3
 ; GFX906-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v0, 8, v13
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v1, 8, v14
@@ -757,7 +756,6 @@ define amdgpu_kernel void @v8i8_multiuse_multiblock(ptr addrspace(1) %src1, ptr 
 ; GFX906-NEXT:  ; %bb.2: ; %Flow
 ; GFX906-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX906-NEXT:    s_and_saveexec_b64 s[4:5], s[2:3]
-; GFX906-NEXT:    s_cbranch_execz .LBB13_4
 ; GFX906-NEXT:  ; %bb.3: ; %bb.2
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v3, 8, v2
 ; GFX906-NEXT:    v_and_b32_e32 v4, 0xffffff00, v2
@@ -779,7 +777,7 @@ define amdgpu_kernel void @v8i8_multiuse_multiblock(ptr addrspace(1) %src1, ptr 
 ; GFX906-NEXT:    global_store_dword v0, v4, s[14:15] offset:8
 ; GFX906-NEXT:    global_store_dword v0, v7, s[14:15] offset:16
 ; GFX906-NEXT:    global_store_dword v0, v2, s[14:15] offset:24
-; GFX906-NEXT:  .LBB13_4: ; %bb.3
+; GFX906-NEXT:  ; %bb.4: ; %bb.3
 ; GFX906-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX906-NEXT:    s_movk_i32 s3, 0xff00
 ; GFX906-NEXT:    v_mov_b32_e32 v4, 8
