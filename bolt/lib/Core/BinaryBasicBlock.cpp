@@ -572,5 +572,78 @@ BinaryBasicBlock *BinaryBasicBlock::splitAt(iterator II) {
   return NewBlock;
 }
 
+BinaryBasicBlock *BinaryBasicBlock::splitInPlaceAt(iterator II) {
+  assert(II != end() && "expected iterator pointing to instruction");
+  if (II == begin())
+    return this;
+  const BinaryContext &BC = Function->getBinaryContext();
+  std::vector<std::unique_ptr<BinaryBasicBlock>> ToAdd;
+  ToAdd.emplace_back(getFunction()->createBasicBlock());
+  BinaryBasicBlock *BBNew = ToAdd.back().get();
+  uint64_t BBNewExecCount = 0;
+
+  // Find successors of the current block that needs to be moved.
+  BinaryBasicBlock *CondSuccessor = nullptr;
+  BinaryBasicBlock::BinaryBranchInfo CondSuccessorBI;
+  BinaryBasicBlock *UncondSuccessor = nullptr;
+  BinaryBasicBlock::BinaryBranchInfo UncondSuccessorBI;
+  auto I = end();
+  while (I != II) {
+    --I;
+    if (BC.MIB->isUnconditionalBranch(*I)) {
+      const MCSymbol *TargetSymbol = BC.MIB->getTargetSymbol(*I);
+      UncondSuccessor = getSuccessor(TargetSymbol, UncondSuccessorBI);
+    } else if (BC.MIB->isConditionalBranch(*I)) {
+      const MCSymbol *TargetSymbol = BC.MIB->getTargetSymbol(*I);
+      CondSuccessor = getSuccessor(TargetSymbol, CondSuccessorBI);
+    }
+  }
+
+  // Adjust successors of the current and the new blocks.
+  if (CondSuccessor != nullptr) {
+    BBNew->addSuccessor(CondSuccessor, CondSuccessorBI);
+    BBNewExecCount +=
+        CondSuccessorBI.Count != BinaryBasicBlock::COUNT_NO_PROFILE
+            ? CondSuccessorBI.Count
+            : 0;
+    removeSuccessor(CondSuccessor);
+  }
+  if (UncondSuccessor != nullptr) {
+    BBNew->addSuccessor(UncondSuccessor, UncondSuccessorBI);
+    BBNewExecCount +=
+        UncondSuccessorBI.Count != BinaryBasicBlock::COUNT_NO_PROFILE
+            ? UncondSuccessorBI.Count
+            : 0;
+    removeSuccessor(UncondSuccessor);
+  } else { // Fall through.
+    BinaryBasicBlock *NextBB =
+        Function->getLayout().getBasicBlockAfter(this, /*IgnoreSplits=*/false);
+    assert(NextBB);
+    if (getSuccessor(NextBB->getLabel())) {
+      const BinaryBasicBlock::BinaryBranchInfo &BI = getBranchInfo(*NextBB);
+      BBNew->addSuccessor(NextBB, BI);
+      BBNewExecCount +=
+          BI.Count != BinaryBasicBlock::COUNT_NO_PROFILE ? BI.Count : 0;
+      removeSuccessor(NextBB);
+    }
+  }
+  addSuccessor(BBNew, BBNewExecCount, 0);
+  BBNew->setExecutionCount(BBNewExecCount);
+
+  // Set correct CFI state for the new block.
+  BBNew->setCFIState(getCFIStateAtInstr(&*II));
+
+  // Move instructions over.
+  adjustNumPseudos(II, end(), -1);
+  BBNew->addInstructions(II, end());
+  Instructions.erase(II, end());
+
+  // Insert new block after the current block.
+  getFunction()->insertBasicBlocks(
+      this, std::move(ToAdd), /*UpdateLayout*/ true, /*UpdateCFIState*/ true,
+      /*RecomputeLandingPads*/ false);
+  return BBNew;
+}
+
 } // namespace bolt
 } // namespace llvm

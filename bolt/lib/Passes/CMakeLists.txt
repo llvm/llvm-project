@@ -27,6 +27,7 @@ add_llvm_library(LLVMBOLTPasses
   PettisAndHansen.cpp
   PLTCall.cpp
   ContinuityStats.cpp
+  RedirectNeverTakenJumps.cpp
   RegAnalysis.cpp
   RegReAssign.cpp
   ReorderAlgorithm.cpp
