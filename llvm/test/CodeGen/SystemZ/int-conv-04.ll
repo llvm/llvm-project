@@ -117,7 +117,7 @@ define i64 @f10(i64 %src, i64 %index) {
 ; to use LLGC if possible.
 define void @f11(ptr %ptr) {
 ; CHECK-LABEL: f11:
-; CHECK: llgc {{%r[0-9]+}}, 199(%r15)
+; CHECK: llgc {{%r[0-9]+}}, 183(%r15)
 ; CHECK: br %r14
   %val0 = load volatile i64, ptr %ptr
   %val1 = load volatile i64, ptr %ptr

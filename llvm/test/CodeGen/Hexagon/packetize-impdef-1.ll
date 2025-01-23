@@ -9,9 +9,7 @@
 ; r1 = IMPLICIT_DEF
 ; S2_storerd_io r29, 0, d0
 
-; CHECK: memd(r29+#0) = r{{[0-9]+}}:{{[0-9]+}}
-; CHECK: memd(r29+#0) = r{{[0-9]+}}:{{[0-9]+}}
-
+; CHECK: memw(r29+#{{[0-9]+}}) = r{{[0-9]+}}.new
 define ptr @f0(ptr %a0) local_unnamed_addr {
 b0:
   %v0 = tail call ptr @f1(i32 0)

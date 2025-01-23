@@ -88,7 +88,8 @@ define double @fmuladd_contract_f64(double %a, double %b, double %c) #0 {
 define <4 x float> @fmuladd_contract_v4f32(<4 x float> %a, <4 x float> %b, <4 x float> %c) #0 {
 ; SOFT-FLOAT-LABEL: fmuladd_contract_v4f32:
 ; SOFT-FLOAT:       # %bb.0:
-; SOFT-FLOAT-NEXT:    stmg %r7, %r15, 56(%r15)
+; SOFT-FLOAT-NEXT:    stmg %r6, %r15, 48(%r15)
+; SOFT-FLOAT-NEXT:    .cfi_offset %r6, -112
 ; SOFT-FLOAT-NEXT:    .cfi_offset %r7, -104
 ; SOFT-FLOAT-NEXT:    .cfi_offset %r8, -96
 ; SOFT-FLOAT-NEXT:    .cfi_offset %r9, -88
@@ -102,17 +103,17 @@ define <4 x float> @fmuladd_contract_v4f32(<4 x float> %a, <4 x float> %b, <4 x 
 ; SOFT-FLOAT-NEXT:    .cfi_def_cfa_offset 336
 ; SOFT-FLOAT-NEXT:    llgf %r0, 388(%r15)
 ; SOFT-FLOAT-NEXT:    stg %r0, 168(%r15) # 8-byte Folded Spill
-; SOFT-FLOAT-NEXT:    llgf %r0, 380(%r15)
-; SOFT-FLOAT-NEXT:    stg %r0, 160(%r15) # 8-byte Folded Spill
+; SOFT-FLOAT-NEXT:    llgf %r12, 380(%r15)
 ; SOFT-FLOAT-NEXT:    llgf %r11, 372(%r15)
 ; SOFT-FLOAT-NEXT:    llgf %r10, 364(%r15)
 ; SOFT-FLOAT-NEXT:    llgf %r8, 340(%r15)
 ; SOFT-FLOAT-NEXT:    llgf %r0, 356(%r15)
 ; SOFT-FLOAT-NEXT:    llgf %r7, 348(%r15)
 ; SOFT-FLOAT-NEXT:    llgfr %r1, %r5
+; SOFT-FLOAT-NEXT:    st %r6, 164(%r15) # 4-byte Folded Spill
 ; SOFT-FLOAT-NEXT:    lr %r9, %r4
 ; SOFT-FLOAT-NEXT:    lr %r13, %r3
-; SOFT-FLOAT-NEXT:    lr %r12, %r2
+; SOFT-FLOAT-NEXT:    lr %r6, %r2
 ; SOFT-FLOAT-NEXT:    lgr %r2, %r1
 ; SOFT-FLOAT-NEXT:    lgr %r3, %r0
 ; SOFT-FLOAT-NEXT:    brasl %r14, __mulsf3@PLT
@@ -126,20 +127,20 @@ define <4 x float> @fmuladd_contract_v4f32(<4 x float> %a, <4 x float> %b, <4 x 
 ; SOFT-FLOAT-NEXT:    lgr %r2, %r0
 ; SOFT-FLOAT-NEXT:    lgr %r3, %r8
 ; SOFT-FLOAT-NEXT:    brasl %r14, __mulsf3@PLT
-; SOFT-FLOAT-NEXT:    llgfr %r0, %r12
-; SOFT-FLOAT-NEXT:    llgfr %r3, %r6
-; SOFT-FLOAT-NEXT:    lgr %r12, %r2
+; SOFT-FLOAT-NEXT:    llgfr %r0, %r6
+; SOFT-FLOAT-NEXT:    llgf %r3, 164(%r15) # 4-byte Folded Reload
+; SOFT-FLOAT-NEXT:    lgr %r8, %r2
 ; SOFT-FLOAT-NEXT:    lgr %r2, %r0
 ; SOFT-FLOAT-NEXT:    brasl %r14, __mulsf3@PLT
 ; SOFT-FLOAT-NEXT:    lgr %r3, %r10
 ; SOFT-FLOAT-NEXT:    brasl %r14, __addsf3@PLT
 ; SOFT-FLOAT-NEXT:    lgr %r10, %r2
-; SOFT-FLOAT-NEXT:    lgr %r2, %r12
+; SOFT-FLOAT-NEXT:    lgr %r2, %r8
 ; SOFT-FLOAT-NEXT:    lgr %r3, %r11
 ; SOFT-FLOAT-NEXT:    brasl %r14, __addsf3@PLT
-; SOFT-FLOAT-NEXT:    lgr %r12, %r2
+; SOFT-FLOAT-NEXT:    lgr %r11, %r2
 ; SOFT-FLOAT-NEXT:    lgr %r2, %r13
-; SOFT-FLOAT-NEXT:    lg %r3, 160(%r15) # 8-byte Folded Reload
+; SOFT-FLOAT-NEXT:    lgr %r3, %r12
 ; SOFT-FLOAT-NEXT:    brasl %r14, __addsf3@PLT
 ; SOFT-FLOAT-NEXT:    lgr %r13, %r2
 ; SOFT-FLOAT-NEXT:    lgr %r2, %r9
@@ -147,10 +148,10 @@ define <4 x float> @fmuladd_contract_v4f32(<4 x float> %a, <4 x float> %b, <4 x 
 ; SOFT-FLOAT-NEXT:    brasl %r14, __addsf3@PLT
 ; SOFT-FLOAT-NEXT:    lgr %r5, %r2
 ; SOFT-FLOAT-NEXT:    lr %r2, %r10
-; SOFT-FLOAT-NEXT:    lr %r3, %r12
+; SOFT-FLOAT-NEXT:    lr %r3, %r11
 ; SOFT-FLOAT-NEXT:    lr %r4, %r13
 ; SOFT-FLOAT-NEXT:    # kill: def $r5l killed $r5l killed $r5d
-; SOFT-FLOAT-NEXT:    lmg %r7, %r15, 232(%r15)
+; SOFT-FLOAT-NEXT:    lmg %r6, %r15, 224(%r15)
 ; SOFT-FLOAT-NEXT:    br %r14
   %product = fmul contract <4 x float> %a, %b
   %result = fadd contract <4 x float> %product, %c

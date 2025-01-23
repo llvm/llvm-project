@@ -210,7 +210,7 @@ define void @test_amx3(i8* %pointer, i8* %base, i64 %stride) #0 {
 define void @test_amx_spill(i8* %pointer, i8* %base, i64 %stride) #0 {
 ; CHECK-LABEL: test_amx_spill:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $6088, %rsp # imm = 0x17C8
+; CHECK-NEXT:    subq $8136, %rsp # imm = 0x1FC8
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
@@ -228,17 +228,27 @@ define void @test_amx_spill(i8* %pointer, i8* %base, i64 %stride) #0 {
 ; CHECK-NEXT:    movw $8, %ax
 ; CHECK-NEXT:    tileloadd (%rsi,%rdx), %tmm0
 ; CHECK-NEXT:    t2rpntlvwz0 (%rsi,%rdx), %tmm4
-; CHECK-NEXT:    t2rpntlvwz0t1 (%rsi,%rdx), %tmm6
 ; CHECK-NEXT:    movabsq $64, %rcx
-; CHECK-NEXT:    tilestored %tmm6, 4032(%rsp,%rcx) # 1024-byte Folded Spill
-; CHECK-NEXT:    tilestored %tmm7, 5056(%rsp,%rcx) # 1024-byte Folded Spill
-; CHECK-NEXT:    t2rpntlvwz1 (%rsi,%rdx), %tmm6
-; CHECK-NEXT:    tilestored %tmm6, 1984(%rsp,%rcx) # 1024-byte Folded Spill
-; CHECK-NEXT:    tilestored %tmm7, 3008(%rsp,%rcx) # 1024-byte Folded Spill
-; CHECK-NEXT:    t2rpntlvwz1t1 (%rsi,%rdx), %tmm6
-; CHECK-NEXT:    tilestored %tmm6, -64(%rsp,%rcx) # 1024-byte Folded Spill
-; CHECK-NEXT:    tilestored %tmm7, 960(%rsp,%rcx) # 1024-byte Folded Spill
+; CHECK-NEXT:    tilestored %tmm4, -64(%rsp,%rcx) # 1024-byte Folded Spill
+; CHECK-NEXT:    tilestored %tmm5, 960(%rsp,%rcx) # 1024-byte Folded Spill
+; CHECK-NEXT:    t2rpntlvwz0t1 (%rsi,%rdx), %tmm4
+; CHECK-NEXT:    tilestored %tmm4, 6080(%rsp,%rcx) # 1024-byte Folded Spill
+; CHECK-NEXT:    tilestored %tmm5, 7104(%rsp,%rcx) # 1024-byte Folded Spill
+; CHECK-NEXT:    t2rpntlvwz1 (%rsi,%rdx), %tmm4
+; CHECK-NEXT:    tilestored %tmm4, 4032(%rsp,%rcx) # 1024-byte Folded Spill
+; CHECK-NEXT:    tilestored %tmm5, 5056(%rsp,%rcx) # 1024-byte Folded Spill
+; CHECK-NEXT:    t2rpntlvwz1t1 (%rsi,%rdx), %tmm4
+; CHECK-NEXT:    tilestored %tmm4, 1984(%rsp,%rcx) # 1024-byte Folded Spill
+; CHECK-NEXT:    tilestored %tmm5, 3008(%rsp,%rcx) # 1024-byte Folded Spill
 ; CHECK-NEXT:    t2rpntlvwz0 (%rsi,%rdx), %tmm6
+; CHECK-NEXT:    tileloadd -64(%rsp,%rcx), %tmm4 # 1024-byte Folded Reload
+; CHECK-NEXT:    tileloadd 960(%rsp,%rcx), %tmm5 # 1024-byte Folded Reload
+; CHECK-NEXT:    tilestored %tmm4, (%rsi,%rdx)
+; CHECK-NEXT:    tileloadd -64(%rsp,%rcx), %tmm4 # 1024-byte Folded Reload
+; CHECK-NEXT:    tileloadd 960(%rsp,%rcx), %tmm5 # 1024-byte Folded Reload
+; CHECK-NEXT:    tilestored %tmm5, (%rsi,%rdx)
+; CHECK-NEXT:    tileloadd 6080(%rsp,%rcx), %tmm4 # 1024-byte Folded Reload
+; CHECK-NEXT:    tileloadd 7104(%rsp,%rcx), %tmm5 # 1024-byte Folded Reload
 ; CHECK-NEXT:    tilestored %tmm4, (%rsi,%rdx)
 ; CHECK-NEXT:    tilestored %tmm5, (%rsi,%rdx)
 ; CHECK-NEXT:    tileloadd 4032(%rsp,%rcx), %tmm4 # 1024-byte Folded Reload
@@ -249,21 +259,17 @@ define void @test_amx_spill(i8* %pointer, i8* %base, i64 %stride) #0 {
 ; CHECK-NEXT:    tileloadd 3008(%rsp,%rcx), %tmm5 # 1024-byte Folded Reload
 ; CHECK-NEXT:    tilestored %tmm4, (%rsi,%rdx)
 ; CHECK-NEXT:    tilestored %tmm5, (%rsi,%rdx)
-; CHECK-NEXT:    tileloadd -64(%rsp,%rcx), %tmm4 # 1024-byte Folded Reload
-; CHECK-NEXT:    tileloadd 960(%rsp,%rcx), %tmm5 # 1024-byte Folded Reload
-; CHECK-NEXT:    tilestored %tmm4, (%rsi,%rdx)
-; CHECK-NEXT:    tilestored %tmm5, (%rsi,%rdx)
 ; CHECK-NEXT:    tilestored %tmm6, (%rsi,%rdx)
 ; CHECK-NEXT:    tilestored %tmm7, (%rsi,%rdx)
-; CHECK-NEXT:    addq $6088, %rsp # imm = 0x17C8
+; CHECK-NEXT:    addq $8136, %rsp # imm = 0x1FC8
 ; CHECK-NEXT:    tilerelease
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 ;
 ; EGPR-LABEL: test_amx_spill:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    subq $6088, %rsp # encoding: [0x48,0x81,0xec,0xc8,0x17,0x00,0x00]
-; EGPR-NEXT:    # imm = 0x17C8
+; EGPR-NEXT:    subq $8136, %rsp # encoding: [0x48,0x81,0xec,0xc8,0x1f,0x00,0x00]
+; EGPR-NEXT:    # imm = 0x1FC8
 ; EGPR-NEXT:    vxorps %xmm0, %xmm0, %xmm0 # encoding: [0xc5,0xf8,0x57,0xc0]
 ; EGPR-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp) # encoding: [0x62,0xf1,0x7c,0x48,0x11,0x44,0x24,0xfe]
 ; EGPR-NEXT:    movb $1, -{{[0-9]+}}(%rsp) # encoding: [0xc6,0x44,0x24,0x80,0x01]
@@ -281,23 +287,41 @@ define void @test_amx_spill(i8* %pointer, i8* %base, i64 %stride) #0 {
 ; EGPR-NEXT:    movw $8, %ax # encoding: [0x66,0xb8,0x08,0x00]
 ; EGPR-NEXT:    tileloadd (%rsi,%rdx), %tmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7b,0x4b,0x04,0x16]
 ; EGPR-NEXT:    t2rpntlvwz0 (%rsi,%rdx), %tmm4 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0x6e,0x24,0x16]
-; EGPR-NEXT:    t2rpntlvwz0t1 (%rsi,%rdx), %tmm6 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0x6f,0x34,0x16]
 ; EGPR-NEXT:    movabsq $64, %rcx # encoding: [0x48,0xb9,0x40,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
-; EGPR-NEXT:    tilestored %tmm6, 4032(%rsp,%rcx) # 1024-byte Folded Spill
-; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7a,0x4b,0xb4,0x0c,0xc0,0x0f,0x00,0x00]
-; EGPR-NEXT:    tilestored %tmm7, 5056(%rsp,%rcx) # 1024-byte Folded Spill
-; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7a,0x4b,0xbc,0x0c,0xc0,0x13,0x00,0x00]
-; EGPR-NEXT:    t2rpntlvwz1 (%rsi,%rdx), %tmm6 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x6e,0x34,0x16]
-; EGPR-NEXT:    tilestored %tmm6, 1984(%rsp,%rcx) # 1024-byte Folded Spill
-; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7a,0x4b,0xb4,0x0c,0xc0,0x07,0x00,0x00]
-; EGPR-NEXT:    tilestored %tmm7, 3008(%rsp,%rcx) # 1024-byte Folded Spill
-; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7a,0x4b,0xbc,0x0c,0xc0,0x0b,0x00,0x00]
-; EGPR-NEXT:    t2rpntlvwz1t1 (%rsi,%rdx), %tmm6 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x6f,0x34,0x16]
-; EGPR-NEXT:    tilestored %tmm6, -64(%rsp,%rcx) # 1024-byte Folded Spill
-; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7a,0x4b,0x74,0x0c,0xc0]
-; EGPR-NEXT:    tilestored %tmm7, 960(%rsp,%rcx) # 1024-byte Folded Spill
-; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7a,0x4b,0xbc,0x0c,0xc0,0x03,0x00,0x00]
+; EGPR-NEXT:    tilestored %tmm4, -64(%rsp,%rcx) # 1024-byte Folded Spill
+; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7a,0x4b,0x64,0x0c,0xc0]
+; EGPR-NEXT:    tilestored %tmm5, 960(%rsp,%rcx) # 1024-byte Folded Spill
+; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7a,0x4b,0xac,0x0c,0xc0,0x03,0x00,0x00]
+; EGPR-NEXT:    t2rpntlvwz0t1 (%rsi,%rdx), %tmm4 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0x6f,0x24,0x16]
+; EGPR-NEXT:    tilestored %tmm4, 6080(%rsp,%rcx) # 1024-byte Folded Spill
+; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7a,0x4b,0xa4,0x0c,0xc0,0x17,0x00,0x00]
+; EGPR-NEXT:    tilestored %tmm5, 7104(%rsp,%rcx) # 1024-byte Folded Spill
+; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7a,0x4b,0xac,0x0c,0xc0,0x1b,0x00,0x00]
+; EGPR-NEXT:    t2rpntlvwz1 (%rsi,%rdx), %tmm4 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x6e,0x24,0x16]
+; EGPR-NEXT:    tilestored %tmm4, 4032(%rsp,%rcx) # 1024-byte Folded Spill
+; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7a,0x4b,0xa4,0x0c,0xc0,0x0f,0x00,0x00]
+; EGPR-NEXT:    tilestored %tmm5, 5056(%rsp,%rcx) # 1024-byte Folded Spill
+; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7a,0x4b,0xac,0x0c,0xc0,0x13,0x00,0x00]
+; EGPR-NEXT:    t2rpntlvwz1t1 (%rsi,%rdx), %tmm4 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x6f,0x24,0x16]
+; EGPR-NEXT:    tilestored %tmm4, 1984(%rsp,%rcx) # 1024-byte Folded Spill
+; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7a,0x4b,0xa4,0x0c,0xc0,0x07,0x00,0x00]
+; EGPR-NEXT:    tilestored %tmm5, 3008(%rsp,%rcx) # 1024-byte Folded Spill
+; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7a,0x4b,0xac,0x0c,0xc0,0x0b,0x00,0x00]
 ; EGPR-NEXT:    t2rpntlvwz0 (%rsi,%rdx), %tmm6 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0x6e,0x34,0x16]
+; EGPR-NEXT:    tileloadd -64(%rsp,%rcx), %tmm4 # 1024-byte Folded Reload
+; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7b,0x4b,0x64,0x0c,0xc0]
+; EGPR-NEXT:    tileloadd 960(%rsp,%rcx), %tmm5 # 1024-byte Folded Reload
+; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7b,0x4b,0xac,0x0c,0xc0,0x03,0x00,0x00]
+; EGPR-NEXT:    tilestored %tmm4, (%rsi,%rdx) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7a,0x4b,0x24,0x16]
+; EGPR-NEXT:    tileloadd -64(%rsp,%rcx), %tmm4 # 1024-byte Folded Reload
+; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7b,0x4b,0x64,0x0c,0xc0]
+; EGPR-NEXT:    tileloadd 960(%rsp,%rcx), %tmm5 # 1024-byte Folded Reload
+; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7b,0x4b,0xac,0x0c,0xc0,0x03,0x00,0x00]
+; EGPR-NEXT:    tilestored %tmm5, (%rsi,%rdx) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7a,0x4b,0x2c,0x16]
+; EGPR-NEXT:    tileloadd 6080(%rsp,%rcx), %tmm4 # 1024-byte Folded Reload
+; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7b,0x4b,0xa4,0x0c,0xc0,0x17,0x00,0x00]
+; EGPR-NEXT:    tileloadd 7104(%rsp,%rcx), %tmm5 # 1024-byte Folded Reload
+; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7b,0x4b,0xac,0x0c,0xc0,0x1b,0x00,0x00]
 ; EGPR-NEXT:    tilestored %tmm4, (%rsi,%rdx) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7a,0x4b,0x24,0x16]
 ; EGPR-NEXT:    tilestored %tmm5, (%rsi,%rdx) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7a,0x4b,0x2c,0x16]
 ; EGPR-NEXT:    tileloadd 4032(%rsp,%rcx), %tmm4 # 1024-byte Folded Reload
@@ -312,16 +336,10 @@ define void @test_amx_spill(i8* %pointer, i8* %base, i64 %stride) #0 {
 ; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7b,0x4b,0xac,0x0c,0xc0,0x0b,0x00,0x00]
 ; EGPR-NEXT:    tilestored %tmm4, (%rsi,%rdx) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7a,0x4b,0x24,0x16]
 ; EGPR-NEXT:    tilestored %tmm5, (%rsi,%rdx) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7a,0x4b,0x2c,0x16]
-; EGPR-NEXT:    tileloadd -64(%rsp,%rcx), %tmm4 # 1024-byte Folded Reload
-; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7b,0x4b,0x64,0x0c,0xc0]
-; EGPR-NEXT:    tileloadd 960(%rsp,%rcx), %tmm5 # 1024-byte Folded Reload
-; EGPR-NEXT:    # encoding: [0xc4,0xe2,0x7b,0x4b,0xac,0x0c,0xc0,0x03,0x00,0x00]
-; EGPR-NEXT:    tilestored %tmm4, (%rsi,%rdx) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7a,0x4b,0x24,0x16]
-; EGPR-NEXT:    tilestored %tmm5, (%rsi,%rdx) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7a,0x4b,0x2c,0x16]
 ; EGPR-NEXT:    tilestored %tmm6, (%rsi,%rdx) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7a,0x4b,0x34,0x16]
 ; EGPR-NEXT:    tilestored %tmm7, (%rsi,%rdx) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7a,0x4b,0x3c,0x16]
-; EGPR-NEXT:    addq $6088, %rsp # encoding: [0x48,0x81,0xc4,0xc8,0x17,0x00,0x00]
-; EGPR-NEXT:    # imm = 0x17C8
+; EGPR-NEXT:    addq $8136, %rsp # encoding: [0x48,0x81,0xc4,0xc8,0x1f,0x00,0x00]
+; EGPR-NEXT:    # imm = 0x1FC8
 ; EGPR-NEXT:    tilerelease # encoding: [0xc4,0xe2,0x78,0x49,0xc0]
 ; EGPR-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; EGPR-NEXT:    retq # encoding: [0xc3]

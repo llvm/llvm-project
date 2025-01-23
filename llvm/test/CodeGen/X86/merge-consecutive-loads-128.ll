@@ -883,6 +883,8 @@ define <16 x i8> @merge_16i8_i8_01u3456789ABCDuF(ptr %ptr) nounwind uwtable noin
 ; X86-SSE1-NEXT:    .cfi_def_cfa_offset 16
 ; X86-SSE1-NEXT:    pushl %esi
 ; X86-SSE1-NEXT:    .cfi_def_cfa_offset 20
+; X86-SSE1-NEXT:    pushl %eax
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 24
 ; X86-SSE1-NEXT:    .cfi_offset %esi, -20
 ; X86-SSE1-NEXT:    .cfi_offset %edi, -16
 ; X86-SSE1-NEXT:    .cfi_offset %ebx, -12
@@ -894,13 +896,17 @@ define <16 x i8> @merge_16i8_i8_01u3456789ABCDuF(ptr %ptr) nounwind uwtable noin
 ; X86-SSE1-NEXT:    movl 7(%ecx), %edi
 ; X86-SSE1-NEXT:    movzwl 11(%ecx), %ebx
 ; X86-SSE1-NEXT:    movzbl 13(%ecx), %edx
+; X86-SSE1-NEXT:    movb %dl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; X86-SSE1-NEXT:    movzbl 15(%ecx), %ecx
+; X86-SSE1-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 1-byte Folded Reload
 ; X86-SSE1-NEXT:    movb %dl, 13(%eax)
 ; X86-SSE1-NEXT:    movb %cl, 15(%eax)
 ; X86-SSE1-NEXT:    movw %bx, 11(%eax)
 ; X86-SSE1-NEXT:    movl %edi, 7(%eax)
 ; X86-SSE1-NEXT:    movl %esi, 3(%eax)
 ; X86-SSE1-NEXT:    movw %bp, (%eax)
+; X86-SSE1-NEXT:    addl $4, %esp
+; X86-SSE1-NEXT:    .cfi_def_cfa_offset 20
 ; X86-SSE1-NEXT:    popl %esi
 ; X86-SSE1-NEXT:    .cfi_def_cfa_offset 16
 ; X86-SSE1-NEXT:    popl %edi

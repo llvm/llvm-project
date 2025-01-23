@@ -456,8 +456,8 @@ entry:
 ; ASM:         .cv_fpo_pushreg %edi
 ; ASM:         pushl   %esi
 ; ASM:         .cv_fpo_pushreg %esi
-; ASM:         subl    $8, %esp
-; ASM:         .cv_fpo_stackalloc 8
+; ASM:         pushl	%eax
+; ASM:         .cv_fpo_stackalloc 4
 ; ASM:         .cv_fpo_endprologue
 ; ASM:         retl
 ; ASM:         .cv_fpo_endproc
@@ -467,11 +467,11 @@ entry:
 ; OBJ-NEXT: LinkageName: _spill
 ; OBJ-NEXT: FrameData {
 ; OBJ-NEXT:   RvaStart: 0x0
-; OBJ-NEXT:   CodeSize: 0x5A
+; OBJ-NEXT:   CodeSize: 0x53
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   PrologSize: 0x7
+; OBJ-NEXT:   PrologSize: 0x5
 ; OBJ-NEXT:   SavedRegsSize: 0x0
 ; OBJ-NEXT:   Flags [ (0x4)
 ; OBJ-NEXT:     IsFunctionStart (0x4)
@@ -484,11 +484,11 @@ entry:
 ; OBJ-NEXT: }
 ; OBJ-NEXT: FrameData {
 ; OBJ-NEXT:   RvaStart: 0x1
-; OBJ-NEXT:   CodeSize: 0x59
+; OBJ-NEXT:   CodeSize: 0x52
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   PrologSize: 0x6
+; OBJ-NEXT:   PrologSize: 0x4
 ; OBJ-NEXT:   SavedRegsSize: 0x4
 ; OBJ-NEXT:   Flags [ (0x0)
 ; OBJ-NEXT:   ]
@@ -501,11 +501,11 @@ entry:
 ; OBJ-NEXT: }
 ; OBJ-NEXT: FrameData {
 ; OBJ-NEXT:   RvaStart: 0x2
-; OBJ-NEXT:   CodeSize: 0x58
+; OBJ-NEXT:   CodeSize: 0x51
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   PrologSize: 0x5
+; OBJ-NEXT:   PrologSize: 0x3
 ; OBJ-NEXT:   SavedRegsSize: 0x8
 ; OBJ-NEXT:   Flags [ (0x0)
 ; OBJ-NEXT:   ]
@@ -519,11 +519,11 @@ entry:
 ; OBJ-NEXT: }
 ; OBJ-NEXT: FrameData {
 ; OBJ-NEXT:   RvaStart: 0x3
-; OBJ-NEXT:   CodeSize: 0x57
+; OBJ-NEXT:   CodeSize: 0x50
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   PrologSize: 0x4
+; OBJ-NEXT:   PrologSize: 0x2
 ; OBJ-NEXT:   SavedRegsSize: 0xC
 ; OBJ-NEXT:   Flags [ (0x0)
 ; OBJ-NEXT:   ]
@@ -538,11 +538,11 @@ entry:
 ; OBJ-NEXT: }
 ; OBJ-NEXT: FrameData {
 ; OBJ-NEXT:   RvaStart: 0x4
-; OBJ-NEXT:   CodeSize: 0x56
+; OBJ-NEXT:   CodeSize: 0x4F
 ; OBJ-NEXT:   LocalSize: 0x0
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
-; OBJ-NEXT:   PrologSize: 0x3
+; OBJ-NEXT:   PrologSize: 0x1
 ; OBJ-NEXT:   SavedRegsSize: 0x10
 ; OBJ-NEXT:   Flags [ (0x0)
 ; OBJ-NEXT:   ]
@@ -557,9 +557,9 @@ entry:
 ; OBJ-NEXT:   ]
 ; OBJ-NEXT: }
 ; OBJ-NEXT: FrameData {
-; OBJ-NEXT:   RvaStart: 0x7
-; OBJ-NEXT:   CodeSize: 0x53
-; OBJ-NEXT:   LocalSize: 0x8
+; OBJ-NEXT:   RvaStart: 0x5
+; OBJ-NEXT:   CodeSize: 0x4E
+; OBJ-NEXT:   LocalSize: 0x4
 ; OBJ-NEXT:   ParamsSize: 0x0
 ; OBJ-NEXT:   MaxStackSize: 0x0
 ; OBJ-NEXT:   PrologSize: 0x0

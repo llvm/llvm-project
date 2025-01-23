@@ -231,7 +231,7 @@ define arm_aapcs_vfpcc <12 x float> @abp90c12(<12 x float> %a, <12 x float> %b, 
 ; CHECK-NEXT:    vmov.f32 s4, s1
 ; CHECK-NEXT:    vmov.f32 s24, s9
 ; CHECK-NEXT:    vmov.f32 s16, s12
-; CHECK-NEXT:    vstrw.32 q6, [sp, #32] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q6, [sp, #16] @ 16-byte Spill
 ; CHECK-NEXT:    vmov.f32 s12, s8
 ; CHECK-NEXT:    vldr s27, [sp, #184]
 ; CHECK-NEXT:    vmov.f32 s17, s14
@@ -244,32 +244,33 @@ define arm_aapcs_vfpcc <12 x float> @abp90c12(<12 x float> %a, <12 x float> %b, 
 ; CHECK-NEXT:    vneg.f32 q0, q0
 ; CHECK-NEXT:    vldr s24, [sp, #160]
 ; CHECK-NEXT:    vfma.f32 q1, q5, q2
-; CHECK-NEXT:    vstrw.32 q0, [sp, #16] @ 16-byte Spill
-; CHECK-NEXT:    vstrw.32 q3, [sp, #48] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q3, [sp, #32] @ 16-byte Spill
 ; CHECK-NEXT:    vsub.f32 q6, q6, q1
-; CHECK-NEXT:    vldrw.u32 q1, [sp, #16] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q1, [sp] @ 16-byte Reload
 ; CHECK-NEXT:    vldr s13, [sp, #156]
-; CHECK-NEXT:    vfma.f32 q1, q4, q2
 ; CHECK-NEXT:    vldr s12, [sp, #148]
+; CHECK-NEXT:    vfma.f32 q1, q4, q2
 ; CHECK-NEXT:    vadd.f32 q1, q7, q1
-; CHECK-NEXT:    vldrw.u32 q7, [sp, #32] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q7, [sp, #16] @ 16-byte Reload
+; CHECK-NEXT:    vstrw.32 q3, [sp, #48] @ 16-byte Spill
 ; CHECK-NEXT:    vldr s1, [sp, #152]
-; CHECK-NEXT:    vstrw.32 q3, [sp] @ 16-byte Spill
-; CHECK-NEXT:    vmul.f32 q2, q3, q7
+; CHECK-NEXT:    vldrw.u32 q2, [sp, #48] @ 16-byte Reload
 ; CHECK-NEXT:    vldr s0, [sp, #144]
-; CHECK-NEXT:    vldrw.u32 q3, [sp, #48] @ 16-byte Reload
-; CHECK-NEXT:    vneg.f32 q2, q2
+; CHECK-NEXT:    vldrw.u32 q3, [sp, #32] @ 16-byte Reload
 ; CHECK-NEXT:    vldr s21, [sp, #200]
+; CHECK-NEXT:    vmul.f32 q2, q2, q7
+; CHECK-NEXT:    vldr s20, [sp, #192]
+; CHECK-NEXT:    vneg.f32 q2, q2
+; CHECK-NEXT:    vldr s17, [sp, #204]
 ; CHECK-NEXT:    vfma.f32 q2, q0, q3
 ; CHECK-NEXT:    vmul.f32 q0, q0, q7
-; CHECK-NEXT:    vldrw.u32 q7, [sp] @ 16-byte Reload
-; CHECK-NEXT:    vldr s20, [sp, #192]
-; CHECK-NEXT:    vldr s17, [sp, #204]
+; CHECK-NEXT:    vldrw.u32 q7, [sp, #48] @ 16-byte Reload
 ; CHECK-NEXT:    vldr s16, [sp, #196]
 ; CHECK-NEXT:    vfma.f32 q0, q7, q3
+; CHECK-NEXT:    vadd.f32 q4, q4, q2
 ; CHECK-NEXT:    vsub.f32 q3, q5, q0
 ; CHECK-NEXT:    vmov.f32 s1, s4
-; CHECK-NEXT:    vadd.f32 q4, q4, q2
 ; CHECK-NEXT:    vmov.f32 s3, s5
 ; CHECK-NEXT:    vmov.f32 s5, s6
 ; CHECK-NEXT:    vmov.f32 s0, s24

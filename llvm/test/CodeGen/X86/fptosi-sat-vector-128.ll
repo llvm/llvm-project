@@ -245,11 +245,11 @@ define <4 x i128> @test_signed_v4i128_v4f32(<4 x float> %f) nounwind {
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmovbq %r14, %rax
-; CHECK-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
-; CHECK-NEXT:    cmovbq %rcx, %r15
+; CHECK-NEXT:    movabsq $-9223372036854775808, %rbp # imm = 0x8000000000000000
+; CHECK-NEXT:    cmovbq %rbp, %r15
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    movabsq $9223372036854775807, %rbp # imm = 0x7FFFFFFFFFFFFFFF
-; CHECK-NEXT:    cmovaq %rbp, %r15
+; CHECK-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; CHECK-NEXT:    cmovaq %rcx, %r15
 ; CHECK-NEXT:    movq $-1, %rcx
 ; CHECK-NEXT:    cmovaq %rcx, %rax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
@@ -265,10 +265,10 @@ define <4 x i128> @test_signed_v4i128_v4f32(<4 x float> %f) nounwind {
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmovbq %r14, %r12
-; CHECK-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
-; CHECK-NEXT:    cmovbq %rax, %r13
+; CHECK-NEXT:    cmovbq %rbp, %r13
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmovaq %rbp, %r13
+; CHECK-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
+; CHECK-NEXT:    cmovaq %rax, %r13
 ; CHECK-NEXT:    movq $-1, %rax
 ; CHECK-NEXT:    cmovaq %rax, %r12
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
@@ -1187,8 +1187,8 @@ define <8 x i128> @test_signed_v8i128_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmovbq %r12, %rax
-; CHECK-NEXT:    movabsq $-9223372036854775808, %rbp # imm = 0x8000000000000000
-; CHECK-NEXT:    cmovbq %rbp, %rdx
+; CHECK-NEXT:    movabsq $-9223372036854775808, %r14 # imm = 0x8000000000000000
+; CHECK-NEXT:    cmovbq %r14, %rdx
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movabsq $9223372036854775807, %r15 # imm = 0x7FFFFFFFFFFFFFFF
 ; CHECK-NEXT:    cmovaq %r15, %rdx
@@ -1209,11 +1209,11 @@ define <8 x i128> @test_signed_v8i128_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmovbq %r12, %rax
-; CHECK-NEXT:    cmovbq %rbp, %rdx
+; CHECK-NEXT:    cmovbq %r14, %rdx
+; CHECK-NEXT:    movq %r14, %rbp
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmovaq %r15, %rdx
 ; CHECK-NEXT:    cmovaq %r13, %rax
-; CHECK-NEXT:    movq $-1, %r14
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
 ; CHECK-NEXT:    cmovpq %r12, %rax
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1228,11 +1228,12 @@ define <8 x i128> @test_signed_v8i128_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmovbq %r12, %rax
-; CHECK-NEXT:    cmovbq %rbp, %rdx
+; CHECK-NEXT:    cmovbq %r14, %rdx
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmovaq %r15, %rdx
-; CHECK-NEXT:    cmovaq %r14, %rax
+; CHECK-NEXT:    movq %r15, %r13
 ; CHECK-NEXT:    movq $-1, %r14
+; CHECK-NEXT:    cmovaq %r14, %rax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
 ; CHECK-NEXT:    cmovpq %r12, %rax
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1247,10 +1248,10 @@ define <8 x i128> @test_signed_v8i128_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmovbq %r12, %rax
+; CHECK-NEXT:    movq %rbp, %r15
 ; CHECK-NEXT:    cmovbq %rbp, %rdx
-; CHECK-NEXT:    movq %rbp, %r13
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmovaq %r15, %rdx
+; CHECK-NEXT:    cmovaq %r13, %rdx
 ; CHECK-NEXT:    cmovaq %r14, %rax
 ; CHECK-NEXT:    movq $-1, %r14
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
@@ -1268,10 +1269,9 @@ define <8 x i128> @test_signed_v8i128_v8f16(<8 x half> %f) nounwind {
 ; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmovbq %r12, %rax
-; CHECK-NEXT:    cmovbq %r13, %rbp
+; CHECK-NEXT:    cmovbq %r15, %rbp
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    cmovaq %r15, %rbp
-; CHECK-NEXT:    movq %r15, %r13
+; CHECK-NEXT:    cmovaq %r13, %rbp
 ; CHECK-NEXT:    cmovaq %r14, %rax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
 ; CHECK-NEXT:    cmovpq %r12, %rax

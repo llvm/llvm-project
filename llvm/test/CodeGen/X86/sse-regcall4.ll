@@ -200,20 +200,20 @@ define x86_regcallcc i32 @testi32_inp(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a
 ; WIN32-NEXT:    movl %edi, %eax
 ; WIN32-NEXT:    movl %edx, (%esp) # 4-byte Spill
 ; WIN32-NEXT:    movl %ecx, %edi
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; WIN32-NEXT:    leal (%eax,%esi), %ecx
 ; WIN32-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; WIN32-NEXT:    movl %eax, %ebx
 ; WIN32-NEXT:    subl %esi, %ebx
 ; WIN32-NEXT:    movl %edi, %eax
 ; WIN32-NEXT:    subl %edx, %eax
-; WIN32-NEXT:    subl {{[0-9]+}}(%esp), %ebp
-; WIN32-NEXT:    imull %eax, %ebp
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; WIN32-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; WIN32-NEXT:    imull %eax, %ecx
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN32-NEXT:    movl %edx, %esi
 ; WIN32-NEXT:    subl {{[0-9]+}}(%esp), %esi
 ; WIN32-NEXT:    imull %ebx, %esi
-; WIN32-NEXT:    addl %ebp, %esi
+; WIN32-NEXT:    addl %ecx, %esi
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; WIN32-NEXT:    movl %ebp, %ebx
 ; WIN32-NEXT:    subl {{[0-9]+}}(%esp), %ebx

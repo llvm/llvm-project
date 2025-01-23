@@ -2,7 +2,7 @@
 # RUN:   | FileCheck %s
 #
 # Test that the reg alloc hints are given in a good order that gives no more
-# than 5 LGRs in output.
+# than 6 LGRs in output.
 
 --- |
   ; ModuleID = 'tc.ll'
@@ -108,6 +108,7 @@
 
 ...
 
+# CHECK: lgr
 # CHECK: lgr
 # CHECK: lgr
 # CHECK: lgr

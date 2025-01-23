@@ -113,35 +113,12 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %in) {
 ; GCN-LABEL: test:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_clause 0x1
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GCN-NEXT:    s_load_dword vcc_lo, s[4:5], 0x8
+; GCN-NEXT:    s_load_dwordx2 vcc, s[4:5], 0x0
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0x8
 ; GCN-NEXT:    ; implicit-def: $vgpr0 : SGPR spill to VGPR lane
 ; GCN-NEXT:    ; kill: killed $sgpr4_sgpr5
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_writelane_b32 v0, s0, 0
-; GCN-NEXT:    v_writelane_b32 v0, s1, 1
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    ;;#ASMSTART
@@ -151,8 +128,29 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %in) {
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    v_readlane_b32 s0, v0, 0
-; GCN-NEXT:    v_mov_b32_e32 v1, vcc_lo
-; GCN-NEXT:    v_readlane_b32 s1, v0, 1
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ;;#ASMSTART
+; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    v_mov_b32_e32 v1, s0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
@@ -216,7 +214,7 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %in) {
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    global_store_dword v2, v1, s[0:1]
+; GCN-NEXT:    global_store_dword v2, v1, vcc
 ; GCN-NEXT:    s_endpgm
   call void asm sideeffect "", "~{s[0:7]}" ()
   call void asm sideeffect "", "~{s[8:15]}" ()

@@ -643,27 +643,28 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    cmpl %eax, %esi
+; X86-NEXT:    cmpl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    sbbl %ebx, %ecx
-; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    sbbl %ebp, %ecx
+; X86-NEXT:    movl %esi, %ecx
+; X86-NEXT:    sbbl %edx, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-NEXT:    movl %ebp, %ecx
 ; X86-NEXT:    sbbl %edi, %ecx
 ; X86-NEXT:    movl %edi, %ecx
-; X86-NEXT:    cmovll %edx, %ecx
+; X86-NEXT:    cmovll %ebp, %ecx
 ; X86-NEXT:    movl %ecx, (%esp) # 4-byte Spill
-; X86-NEXT:    cmovll {{[0-9]+}}(%esp), %ebp
+; X86-NEXT:    movl %edx, %ebp
+; X86-NEXT:    cmovll %esi, %ebp
 ; X86-NEXT:    movl %ebx, %ecx
 ; X86-NEXT:    cmovll {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    cmovll %esi, %edx
 ; X86-NEXT:    cmpl %esi, %eax
 ; X86-NEXT:    movl %ebx, %esi

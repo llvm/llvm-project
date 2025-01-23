@@ -6908,114 +6908,103 @@ define void @vec512_v16i16(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec
 ; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; SCALAR-NEXT:    movl 28(%rdi), %eax
 ; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    movzwl 26(%rdi), %eax
-; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    movl 24(%rdi), %r13d
-; SCALAR-NEXT:    movzwl 22(%rdi), %r12d
-; SCALAR-NEXT:    movl 20(%rdi), %r15d
-; SCALAR-NEXT:    movzwl 18(%rdi), %r14d
+; SCALAR-NEXT:    movzwl 26(%rdi), %r13d
+; SCALAR-NEXT:    movl 24(%rdi), %r12d
+; SCALAR-NEXT:    movzwl 22(%rdi), %r15d
+; SCALAR-NEXT:    movl 20(%rdi), %r14d
+; SCALAR-NEXT:    movzwl 18(%rdi), %ebp
 ; SCALAR-NEXT:    movl 16(%rdi), %ebx
 ; SCALAR-NEXT:    movzwl 14(%rdi), %r11d
 ; SCALAR-NEXT:    movl 12(%rdi), %r10d
 ; SCALAR-NEXT:    movzwl 10(%rdi), %r9d
 ; SCALAR-NEXT:    movl 8(%rdi), %r8d
 ; SCALAR-NEXT:    movzwl 6(%rdi), %ecx
-; SCALAR-NEXT:    movzwl 2(%rdi), %ebp
+; SCALAR-NEXT:    movzwl 2(%rdi), %eax
+; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; SCALAR-NEXT:    movl (%rdi), %eax
 ; SCALAR-NEXT:    movl 4(%rdi), %edi
 ; SCALAR-NEXT:    notl %eax
 ; SCALAR-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    notl %ebp
-; SCALAR-NEXT:    movl %ebp, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SCALAR-NEXT:    notl {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
 ; SCALAR-NEXT:    notl %edi
 ; SCALAR-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; SCALAR-NEXT:    notl %ecx
-; SCALAR-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SCALAR-NEXT:    movl %ecx, %eax
 ; SCALAR-NEXT:    notl %r8d
 ; SCALAR-NEXT:    movl %r8d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; SCALAR-NEXT:    notl %r9d
-; SCALAR-NEXT:    movl %r9d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    movl %r10d, %edi
-; SCALAR-NEXT:    notl %edi
-; SCALAR-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SCALAR-NEXT:    notl %r10d
 ; SCALAR-NEXT:    notl %r11d
-; SCALAR-NEXT:    movl %r11d, %r9d
 ; SCALAR-NEXT:    notl %ebx
-; SCALAR-NEXT:    movl %ebx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SCALAR-NEXT:    notl %ebp
 ; SCALAR-NEXT:    notl %r14d
 ; SCALAR-NEXT:    notl %r15d
 ; SCALAR-NEXT:    notl %r12d
-; SCALAR-NEXT:    notl %r13d
-; SCALAR-NEXT:    movl %r13d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r10d # 4-byte Reload
-; SCALAR-NEXT:    notl %r10d
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r11d # 4-byte Reload
-; SCALAR-NEXT:    notl %r11d
+; SCALAR-NEXT:    movl %r13d, %ecx
+; SCALAR-NEXT:    notl %ecx
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
+; SCALAR-NEXT:    notl %edi
 ; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 4-byte Reload
 ; SCALAR-NEXT:    notl %r8d
-; SCALAR-NEXT:    movl %r8d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; SCALAR-NEXT:    movw %r8w, 30(%rsi)
-; SCALAR-NEXT:    movw %r11w, 28(%rsi)
-; SCALAR-NEXT:    movl %r11d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    movw %r10w, 26(%rsi)
-; SCALAR-NEXT:    movl %r10d, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SCALAR-NEXT:    movw %r13w, 24(%rsi)
-; SCALAR-NEXT:    movw %r12w, 22(%rsi)
-; SCALAR-NEXT:    movw %r15w, 20(%rsi)
-; SCALAR-NEXT:    movw %r14w, 18(%rsi)
+; SCALAR-NEXT:    movw %di, 28(%rsi)
+; SCALAR-NEXT:    movw %cx, 26(%rsi)
+; SCALAR-NEXT:    movw %r12w, 24(%rsi)
+; SCALAR-NEXT:    movw %r15w, 22(%rsi)
+; SCALAR-NEXT:    movw %r14w, 20(%rsi)
+; SCALAR-NEXT:    movw %bp, 18(%rsi)
 ; SCALAR-NEXT:    movw %bx, 16(%rsi)
-; SCALAR-NEXT:    movw %r9w, 14(%rsi)
-; SCALAR-NEXT:    movw %di, 12(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ebp # 4-byte Reload
-; SCALAR-NEXT:    movw %bp, 10(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edi # 4-byte Reload
-; SCALAR-NEXT:    movw %di, 8(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 4-byte Reload
-; SCALAR-NEXT:    movw %cx, 6(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r8d # 4-byte Reload
-; SCALAR-NEXT:    movw %r8w, 4(%rsi)
+; SCALAR-NEXT:    movw %r11w, 14(%rsi)
+; SCALAR-NEXT:    movw %r10w, 12(%rsi)
+; SCALAR-NEXT:    movw %r9w, 10(%rsi)
+; SCALAR-NEXT:    movl %r9d, %r13d
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r9d # 4-byte Reload
+; SCALAR-NEXT:    movw %r9w, 8(%rsi)
+; SCALAR-NEXT:    movw %ax, 6(%rsi)
+; SCALAR-NEXT:    movl %eax, %r9d
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
+; SCALAR-NEXT:    movw %ax, 4(%rsi)
 ; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
 ; SCALAR-NEXT:    movw %ax, 2(%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 4-byte Reload
-; SCALAR-NEXT:    movw %bx, (%rsi)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r13d # 4-byte Reload
-; SCALAR-NEXT:    movw %r13w, 30(%rdx)
-; SCALAR-NEXT:    movw %r11w, 28(%rdx)
-; SCALAR-NEXT:    movw %r10w, 26(%rdx)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 4-byte Reload
-; SCALAR-NEXT:    movw %si, 24(%rdx)
-; SCALAR-NEXT:    movw %r12w, 22(%rdx)
-; SCALAR-NEXT:    movw %r15w, 20(%rdx)
-; SCALAR-NEXT:    movw %r14w, 18(%rdx)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r11d # 4-byte Reload
-; SCALAR-NEXT:    movw %r11w, 16(%rdx)
-; SCALAR-NEXT:    movw %r9w, 14(%rdx)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r10d # 4-byte Reload
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
+; SCALAR-NEXT:    movw %ax, (%rsi)
+; SCALAR-NEXT:    movw %r8w, 30(%rdx)
+; SCALAR-NEXT:    movw %di, 28(%rdx)
+; SCALAR-NEXT:    movw %cx, 26(%rdx)
+; SCALAR-NEXT:    movw %r12w, 24(%rdx)
+; SCALAR-NEXT:    movw %r15w, 22(%rdx)
+; SCALAR-NEXT:    movw %r14w, 20(%rdx)
+; SCALAR-NEXT:    movw %bp, 18(%rdx)
+; SCALAR-NEXT:    movw %bx, 16(%rdx)
+; SCALAR-NEXT:    movw %r11w, 14(%rdx)
 ; SCALAR-NEXT:    movw %r10w, 12(%rdx)
-; SCALAR-NEXT:    movw %bp, 10(%rdx)
-; SCALAR-NEXT:    movw %di, 8(%rdx)
-; SCALAR-NEXT:    movw %cx, 6(%rdx)
-; SCALAR-NEXT:    movw %r8w, 4(%rdx)
+; SCALAR-NEXT:    movw %r13w, 10(%rdx)
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
+; SCALAR-NEXT:    movw %ax, 8(%rdx)
+; SCALAR-NEXT:    movw %r9w, 6(%rdx)
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
+; SCALAR-NEXT:    movw %ax, 4(%rdx)
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
 ; SCALAR-NEXT:    movw %ax, 2(%rdx)
-; SCALAR-NEXT:    movl %ebx, %esi
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 4-byte Reload
 ; SCALAR-NEXT:    movw %si, (%rdx)
-; SCALAR-NEXT:    movw %r13w, 62(%rdx)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 4-byte Reload
-; SCALAR-NEXT:    movw %bx, 60(%rdx)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 4-byte Reload
-; SCALAR-NEXT:    movw %bx, 58(%rdx)
-; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ebx # 4-byte Reload
-; SCALAR-NEXT:    movw %bx, 56(%rdx)
-; SCALAR-NEXT:    movw %r12w, 54(%rdx)
-; SCALAR-NEXT:    movw %r15w, 52(%rdx)
-; SCALAR-NEXT:    movw %r14w, 50(%rdx)
-; SCALAR-NEXT:    movw %r11w, 48(%rdx)
-; SCALAR-NEXT:    movw %r9w, 46(%rdx)
+; SCALAR-NEXT:    movw %r8w, 62(%rdx)
+; SCALAR-NEXT:    movw %di, 60(%rdx)
+; SCALAR-NEXT:    movw %cx, 58(%rdx)
+; SCALAR-NEXT:    movw %r12w, 56(%rdx)
+; SCALAR-NEXT:    movw %r15w, 54(%rdx)
+; SCALAR-NEXT:    movw %r14w, 52(%rdx)
+; SCALAR-NEXT:    movw %bp, 50(%rdx)
+; SCALAR-NEXT:    movw %bx, 48(%rdx)
+; SCALAR-NEXT:    movw %r11w, 46(%rdx)
 ; SCALAR-NEXT:    movw %r10w, 44(%rdx)
-; SCALAR-NEXT:    movw %bp, 42(%rdx)
-; SCALAR-NEXT:    movw %di, 40(%rdx)
-; SCALAR-NEXT:    movw %cx, 38(%rdx)
-; SCALAR-NEXT:    movw %r8w, 36(%rdx)
+; SCALAR-NEXT:    movw %r13w, 42(%rdx)
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
+; SCALAR-NEXT:    movw %ax, 40(%rdx)
+; SCALAR-NEXT:    movw %r9w, 38(%rdx)
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
+; SCALAR-NEXT:    movw %ax, 36(%rdx)
+; SCALAR-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
 ; SCALAR-NEXT:    movw %ax, 34(%rdx)
 ; SCALAR-NEXT:    movw %si, 32(%rdx)
 ; SCALAR-NEXT:    popq %rbx

@@ -3014,8 +3014,8 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[24:27], off, s[8:11], 0 offset:16
 ; SI-NOHSA-NEXT:    buffer_load_dwordx4 v[8:11], off, s[8:11], 0
 ; SI-NOHSA-NEXT:    s_waitcnt vmcnt(7)
-; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v47, 31, v31
-; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v45, 31, v30
+; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v46, 31, v31
+; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v44, 31, v30
 ; SI-NOHSA-NEXT:    s_waitcnt vmcnt(6)
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v39, 31, v15
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v37, 31, v14
@@ -3029,16 +3029,17 @@ define amdgpu_kernel void @global_sextload_v32i32_to_v32i64(ptr addrspace(1) %ou
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v33, 31, v28
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v32, v28
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v34, v29
-; SI-NOHSA-NEXT:    v_mov_b32_e32 v44, v30
-; SI-NOHSA-NEXT:    v_mov_b32_e32 v46, v31
-; SI-NOHSA-NEXT:    buffer_store_dword v44, off, s[12:15], 0 ; 4-byte Folded Spill
-; SI-NOHSA-NEXT:    buffer_store_dword v45, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
-; SI-NOHSA-NEXT:    buffer_store_dword v46, off, s[12:15], 0 offset:8 ; 4-byte Folded Spill
-; SI-NOHSA-NEXT:    buffer_store_dword v47, off, s[12:15], 0 offset:12 ; 4-byte Folded Spill
-; SI-NOHSA-NEXT:    s_waitcnt vmcnt(9)
+; SI-NOHSA-NEXT:    v_mov_b32_e32 v13, v44
+; SI-NOHSA-NEXT:    v_mov_b32_e32 v15, v46
+; SI-NOHSA-NEXT:    v_mov_b32_e32 v12, v30
+; SI-NOHSA-NEXT:    v_mov_b32_e32 v14, v31
+; SI-NOHSA-NEXT:    buffer_store_dword v12, off, s[12:15], 0 ; 4-byte Folded Spill
+; SI-NOHSA-NEXT:    buffer_store_dword v13, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
+; SI-NOHSA-NEXT:    buffer_store_dword v14, off, s[12:15], 0 offset:8 ; 4-byte Folded Spill
+; SI-NOHSA-NEXT:    buffer_store_dword v15, off, s[12:15], 0 offset:12 ; 4-byte Folded Spill
+; SI-NOHSA-NEXT:    s_waitcnt vmcnt(9) expcnt(0)
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v15, 31, v7
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v13, 31, v6
-; SI-NOHSA-NEXT:    s_waitcnt expcnt(0)
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v47, 31, v5
 ; SI-NOHSA-NEXT:    v_ashrrev_i32_e32 v45, 31, v4
 ; SI-NOHSA-NEXT:    v_mov_b32_e32 v44, v4
