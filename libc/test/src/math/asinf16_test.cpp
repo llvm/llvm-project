@@ -27,7 +27,8 @@ TEST_F(LlvmLibcAsinf16Test, PositiveRange) {
   for (uint16_t v = POS_START; v <= POS_STOP; ++v) {
     float16 x = FPBits(v).get_val();
 
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asin, x, LIBC_NAMESPACE::asinf16(x), 0.5);
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asin, x,
+                                   LIBC_NAMESPACE::asinf16(x), 0.5);
   }
 }
 
@@ -35,6 +36,7 @@ TEST_F(LlvmLibcAsinf16Test, NegativeRange) {
   for (uint16_t v = NEG_START; v <= NEG_STOP; ++v) {
     float16 x = FPBits(v).get_val();
 
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asin, x, LIBC_NAMESPACE::asinf16(x), 0.5);
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asin, x,
+                                   LIBC_NAMESPACE::asinf16(x), 0.5);
   }
 }
