@@ -37,6 +37,7 @@
 #define LLVM_LIB_CODEGEN_REGALLOCBASE_H
 
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegAllocCommon.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
@@ -81,6 +82,7 @@ protected:
   /// always available for the remat of all the siblings of the original reg.
   SmallPtrSet<MachineInstr *, 32> DeadRemats;
 
+  SmallSet<Register, 2> FailedVRegs;
   RegAllocBase(const RegAllocFilterFunc F = nullptr)
       : shouldAllocateRegisterImpl(F) {}
 
@@ -103,6 +105,10 @@ protected:
   // Include spiller post optimization and removing dead defs left because of
   // rematerialization.
   virtual void postOptimization();
+
+  /// Perform cleanups on registers that failed to allocate. This hacks on the
+  /// liveness in order to avoid spurious verifier errors in later passes.
+  void cleanupFailedVRegs();
 
   // Get a temporary reference to a Spiller instance.
   virtual Spiller &spiller() = 0;

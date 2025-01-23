@@ -1,4 +1,4 @@
-; RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -verify-machineinstrs < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -verify-machineinstrs -filetype=null %s 2>&1 | FileCheck -implicit-check-not=error %s
 
 ; This testcase fails register allocation at the same time it performs
 ; virtual register splitting (by introducing VGPR to AGPR copies). We
@@ -11,7 +11,6 @@
 ; it takes the first avialable register.
 
 ; CHECK: error: <unknown>:0:0: ran out of registers during register allocation
-; CHECK: Bad machine code: Using an undefined physical register
 define amdgpu_kernel void @alloc_failure_with_split_vregs(float %v0, float %v1) #0 {
   %agpr0 = call float asm sideeffect "; def $0", "=${a0}"()
   %agpr.vec = insertelement <16 x float> undef, float %agpr0, i32 0
