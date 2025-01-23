@@ -870,6 +870,14 @@ LLVMDIBuilderCreateObjCProperty(LLVMDIBuilderRef Builder,
                                 LLVMMetadataRef Ty);
 
 /**
+ * Create a uniqued DIType* clone with FlagObjectPointer.
+ * \param Builder   The DIBuilder.
+ * \param Type      The underlying type to which this pointer points.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateObjectPointerType(LLVMDIBuilderRef Builder,
+                                                     LLVMMetadataRef Type);
+
+/**
  * Create a uniqued DIType* clone with FlagObjectPointer. If \c Implicit
  * is true, then also set FlagArtificial.
  * \param Builder   The DIBuilder.
@@ -877,9 +885,9 @@ LLVMDIBuilderCreateObjCProperty(LLVMDIBuilderRef Builder,
  * \param Implicit  Indicates whether this pointer was implicitly generated
  *                  (i.e., not spelled out in source).
  */
-LLVMMetadataRef LLVMDIBuilderCreateObjectPointerType(LLVMDIBuilderRef Builder,
-                                                     LLVMMetadataRef Type,
-                                                     LLVMBool Implicit);
+LLVMMetadataRef
+LLVMDIBuilderCreateImplicitObjectPointerType(LLVMDIBuilderRef Builder,
+                                             LLVMMetadataRef Type);
 
 /**
  * Create debugging information entry for a qualified
