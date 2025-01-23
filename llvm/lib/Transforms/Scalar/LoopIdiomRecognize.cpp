@@ -87,6 +87,9 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <map>
+#include <memory>
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -131,6 +134,12 @@ static cl::opt<bool> UseLIRCodeSizeHeurs(
     cl::desc("Use loop idiom recognition code size heuristics when compiling "
              "with -Os/-Oz"),
     cl::init(true), cl::Hidden);
+
+static cl::opt<bool>
+    CRCRecognize("recognize-crc",
+                 cl::desc("Recognize loop-based CRC implementations and "
+                          "replaces them with a lookup table."),
+                 cl::init(false), cl::Hidden);
 
 namespace {
 
@@ -181,6 +190,15 @@ private:
     UnorderedAtomicMemcpy,
     DontUse // Dummy retval never to be used. Allows catching errors in retval
             // handling.
+  };
+
+  struct CRCInfo {
+    Value *CRCInput;
+    Value *CRCOutput;
+    Value *DataInput;
+    uint64_t Width;
+    uint64_t Polynomial;
+    bool BitReversed;
   };
 
   /// \name Countable Loop Idiom Handling
@@ -246,6 +264,9 @@ private:
 
   bool recognizeShiftUntilBitTest();
   bool recognizeShiftUntilZero();
+  std::optional<CRCInfo> looksLikeCRC(const SCEV *BECount);
+  bool recognizeCRC(const SCEV *BECount);
+  void writeTableBasedCRCOneByte(CRCInfo &CRC);
 
   /// @}
 };
@@ -302,13 +323,8 @@ bool LoopIdiomRecognize::runOnLoop(Loop *L) {
   ApplyCodeSizeHeuristics =
       L->getHeader()->getParent()->hasOptSize() && UseLIRCodeSizeHeurs;
 
-  HasMemset = TLI->has(LibFunc_memset);
-  HasMemsetPattern = TLI->has(LibFunc_memset_pattern16);
-  HasMemcpy = TLI->has(LibFunc_memcpy);
-
-  if (HasMemset || HasMemsetPattern || HasMemcpy)
-    if (SE->hasLoopInvariantBackedgeTakenCount(L))
-      return runOnCountableLoop();
+  if (SE->hasLoopInvariantBackedgeTakenCount(L))
+    return runOnCountableLoop();
 
   return runOnNoncountableLoop();
 }
@@ -333,14 +349,23 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
                     << "] Countable Loop %" << CurLoop->getHeader()->getName()
                     << "\n");
 
+  bool MadeChange = false;
+  if (CRCRecognize)
+    MadeChange |= recognizeCRC(BECount);
+
+  HasMemset = TLI->has(LibFunc_memset);
+  HasMemsetPattern = TLI->has(LibFunc_memset_pattern16);
+  HasMemcpy = TLI->has(LibFunc_memcpy);
+
+  if (!(HasMemset || HasMemsetPattern || HasMemcpy))
+    return MadeChange;
+
   // The following transforms hoist stores/memsets into the loop pre-header.
   // Give up if the loop has instructions that may throw.
   SimpleLoopSafetyInfo SafetyInfo;
   SafetyInfo.computeLoopSafetyInfo(CurLoop);
   if (SafetyInfo.anyBlockMayThrow())
     return false;
-
-  bool MadeChange = false;
 
   // Scan all the blocks in the loop that are not in subloops.
   for (auto *BB : CurLoop->getBlocks()) {
@@ -3084,4 +3109,936 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
 
   ++NumShiftUntilZero;
   return MadeChange;
+}
+
+static uint64_t reverseBits(uint64_t Num, unsigned NumBits) {
+  uint64_t Reversed = 0;
+  for (unsigned i = 1; i <= NumBits; i++) {
+    Reversed |= (Num & 1) << (NumBits - i);
+    Num >>= 1;
+  }
+  return Reversed;
+}
+
+class ValueBits {
+  // This is a representation of a value's bits in terms of references to
+  // other values' bits, or 1/0 if the bit is known. This allows symbolic
+  // execution of bitwise instructions without knowing the exact values.
+  //
+  // Example:
+  //
+  // LLVM IR Value i8 %x:
+  // [%x[7], %x[6], %x[5], %x[4], %x[3], %x[2], %x[1], %x[0]]
+  //
+  // %shr = lshr i8 %x, 2
+  // [ 0, 0, %x[7], %x[6], %x[5], %x[4], %x[3], %x[2]]
+  //
+  // %shl = shl i8 %shr, 1
+  // [ 0, %x[7], %x[6], %x[5], %x[4], %x[3], %x[2], 0]
+  //
+  // %xor = xor i8 %shl, 0xb
+  // [ 0, %x[7], %x[6], %x[5], %x[4]^1, %x[3], %x[2]^1, 1]
+public:
+  class ValueBit {
+  public:
+    enum BitType { ONE, ZERO, REF, XOR };
+
+  private:
+    BitType _Type;
+    std::pair<Value *, uint64_t> _BitRef;
+    // Pointers to LHS and RHS of an XOR operation. These pointers are owned by
+    // the ValueBit object.
+    ValueBit *_LHS = nullptr;
+    ValueBit *_RHS = nullptr;
+
+  public:
+    ValueBit(BitType Type) : _Type(Type) {}
+    ValueBit(BitType Type, std::pair<Value *, uint64_t> BitRef)
+        : _Type(Type), _BitRef(BitRef) {}
+    ValueBit(BitType Type, ValueBit &LHS, ValueBit &RHS)
+        : _Type(Type), _LHS(new ValueBit(LHS)), _RHS(new ValueBit(RHS)) {
+      assert(_Type == BitType::XOR);
+    }
+    ValueBit() = delete;
+    // Define Copy and Assignment constructor to create copies of the LHS and
+    // RHS if the bit type is XOR. This is done to ensure the pointers will be
+    // owned by the ValueBit object and avoid double free in the destructor.
+    ValueBit(const ValueBit &VB) {
+      _Type = VB._Type;
+      if (_Type == BitType::REF)
+        _BitRef = VB._BitRef;
+      else if (_Type == BitType::XOR) {
+        _LHS = new ValueBit(*VB._LHS);
+        _RHS = new ValueBit(*VB._RHS);
+      }
+    }
+    ValueBit &operator=(const ValueBit &VB) {
+      _Type = VB._Type;
+      if (_Type == BitType::REF)
+        _BitRef = VB._BitRef;
+      else if (_Type == BitType::XOR) {
+        _LHS = new ValueBit(*VB._LHS);
+        _RHS = new ValueBit(*VB._RHS);
+      }
+      return *this;
+    }
+    ~ValueBit() {
+      if (_LHS)
+        delete _LHS;
+      if (_RHS)
+        delete _RHS;
+    }
+
+  public:
+    static ValueBit CreateOneBit() { return ValueBit(BitType::ONE); }
+    static ValueBit CreateZeroBit() { return ValueBit(BitType::ZERO); }
+    static ValueBit CreateRefBit(Value *Ref, uint64_t Offset) {
+      return ValueBit(BitType::REF, std::make_pair(Ref, Offset));
+    }
+    static ValueBit CreateXORBit(ValueBit &LHS, ValueBit &RHS) {
+      return ValueBit(BitType::XOR, LHS, RHS);
+    }
+    inline BitType getType() { return _Type; }
+    bool equals(ValueBit RHS) {
+      if (_Type != RHS.getType())
+        return false;
+      switch (_Type) {
+      case BitType::ONE:
+      case BitType::ZERO:
+        return true;
+      case BitType::REF:
+        return _BitRef == RHS._BitRef;
+      case BitType::XOR:
+        return (_LHS->equals(*RHS._LHS) && _RHS->equals(*RHS._RHS)) ||
+               (_LHS->equals(*RHS._RHS) && _RHS->equals(*RHS._LHS));
+      }
+      return false;
+    }
+
+    void print(raw_ostream &OS) {
+#ifndef NDEBUG
+      switch (_Type) {
+      case BitType::ONE:
+        OS << "1";
+        break;
+      case BitType::ZERO:
+        OS << "0";
+        break;
+      case BitType::REF:
+        OS << _BitRef.first->getNameOrAsOperand() << "[" << _BitRef.second
+           << "]";
+        break;
+      case BitType::XOR:
+        _LHS->print(OS);
+        OS << "^";
+        _RHS->print(OS);
+        break;
+      }
+#endif
+    }
+  };
+  using PValueBits = std::shared_ptr<ValueBits>;
+
+private:
+  uint64_t Size;
+  std::vector<ValueBit> Bits;
+
+  virtual void _Shl(uint64_t N) {
+    for (; N > 0; N--) {
+      Bits.insert(Bits.begin(), ValueBit::CreateZeroBit());
+      Bits.pop_back();
+    }
+  }
+  virtual void _LShr(uint64_t N) {
+    for (; N > 0; N--) {
+      Bits.insert(Bits.end(), ValueBit::CreateZeroBit());
+      Bits.erase(Bits.begin());
+    }
+  }
+  virtual void _Xor(const ValueBits &RHS) {
+    assert(Size == RHS.getSize());
+    for (unsigned I = 0; I < Size; I++) {
+      auto It = Bits.begin() + I;
+      ValueBit RHSBit = RHS.getBit(I);
+      if (RHSBit.getType() == ValueBit::BitType::ONE) {
+        ValueBit ItVB = *It;
+        Bits.erase(It);
+        if (ItVB.getType() == ValueBit::BitType::ZERO) {
+          Bits.insert(It, ValueBit::CreateOneBit());
+        } else if (ItVB.getType() == ValueBit::BitType::ONE) {
+          Bits.insert(It, ValueBit::CreateZeroBit());
+        } else {
+          ValueBit One = ValueBit::CreateOneBit();
+          Bits.insert(It, ValueBit::CreateXORBit(ItVB, One));
+        }
+      } else if (RHSBit.getType() != ValueBit::BitType::ZERO) {
+        if ((*It).getType() == ValueBit::BitType::ZERO) {
+          Bits.erase(It);
+          Bits.insert(It, RHSBit);
+        } else {
+          ValueBit ItVB = *It;
+          Bits.erase(It);
+          Bits.insert(It, ValueBit::CreateXORBit(ItVB, RHSBit));
+        }
+      }
+    }
+  }
+  virtual void _ZExt(uint64_t ToSize) {
+    assert(ToSize > Size);
+    for (uint64_t I = 0; I < ToSize - Size; I++)
+      Bits.push_back(ValueBit::CreateZeroBit());
+    Size = ToSize;
+  }
+  virtual void _Trunc(uint64_t ToSize) {
+    assert(ToSize < Size);
+    Bits.erase(Bits.begin() + ToSize, Bits.end());
+    Size = ToSize;
+  }
+  virtual void _And(uint64_t RHS) {
+    for (unsigned I = 0; I < Size; I++) {
+      if (!(RHS & 1)) {
+        auto It = Bits.begin() + I;
+        Bits.erase(It);
+        Bits.insert(It, ValueBit::CreateZeroBit());
+      }
+      RHS >>= 1;
+    }
+  }
+
+protected:
+  ValueBits() {}
+
+public:
+  ValueBits(Value *InitialVal, uint64_t BitLength) : Size(BitLength) {
+    for (unsigned i = 0; i < BitLength; i++)
+      Bits.push_back(ValueBit::CreateRefBit(InitialVal, i));
+  }
+  ValueBits(uint64_t InitialVal, uint64_t BitLength) : Size(BitLength) {
+    for (unsigned i = 0; i < BitLength; i++) {
+      if (InitialVal & 0x1)
+        Bits.push_back(ValueBit::CreateOneBit());
+      else
+        Bits.push_back(ValueBit::CreateZeroBit());
+      InitialVal >>= 1;
+    }
+  }
+  uint64_t getSize() const { return Size; }
+  ValueBit getBit(unsigned i) const { return Bits[i]; }
+
+  virtual ValueBits copyBits() { return ValueBits(*this); }
+
+  static PValueBits Shl(const ValueBits &LHS, uint64_t N) {
+    PValueBits VB = std::make_shared<ValueBits>(LHS);
+    VB->_Shl(N);
+    return VB;
+  }
+  static PValueBits LShr(const ValueBits &LHS, uint64_t N) {
+    PValueBits VB = std::make_shared<ValueBits>(LHS);
+    VB->_LShr(N);
+    return VB;
+  }
+  static PValueBits Xor(const ValueBits &LHS, const ValueBits &RHS) {
+    PValueBits VB = std::make_shared<ValueBits>(LHS);
+    VB->_Xor(RHS);
+    return VB;
+  }
+  static PValueBits ZExt(const ValueBits &LHS, uint64_t ToSize) {
+    PValueBits VB = std::make_shared<ValueBits>(LHS);
+    VB->_ZExt(ToSize);
+    return VB;
+  }
+  static PValueBits Trunc(const ValueBits &LHS, uint64_t N) {
+    PValueBits VB = std::make_shared<ValueBits>(LHS);
+    VB->_Trunc(N);
+    return VB;
+  }
+  static PValueBits And(const ValueBits &LHS, uint64_t RHS) {
+    PValueBits VB = std::make_shared<ValueBits>(LHS);
+    VB->_And(RHS);
+    return VB;
+  }
+
+  virtual bool isPredicated() { return false; }
+
+  virtual bool equals(ValueBits *RHS) {
+    if (Size != RHS->getSize())
+      return false;
+
+    for (unsigned I = 0; I < Size; I++)
+      if (!getBit(I).equals(RHS->getBit(I)))
+        return false;
+
+    return true;
+  }
+
+  virtual void print(raw_ostream &OS) {
+#ifndef NDEBUG
+    assert(Size != 0);
+    OS << "[";
+    Bits[Size - 1].print(OS);
+    for (int i = Size - 2; i >= 0; i--) {
+      OS << " | ";
+      Bits[i].print(OS);
+    }
+    OS << "]\n";
+#endif
+  }
+};
+
+inline raw_ostream &operator<<(raw_ostream &OS, ValueBits &VBS) {
+  VBS.print(OS);
+  return OS;
+}
+
+inline raw_ostream &operator<<(raw_ostream &OS, ValueBits::ValueBit &VB) {
+  VB.print(OS);
+  return OS;
+}
+class PredicatedValueBits : public ValueBits {
+  // This would be representitive of select or phi instructions where the bits
+  // would depend on an icmp.
+private:
+  ICmpInst *_Predicate;
+  PValueBits _IfTrue;
+  PValueBits _IfFalse;
+
+  void _Shl(uint64_t N) override {
+    _IfTrue = ValueBits::Shl(*_IfTrue, N);
+    _IfFalse = ValueBits::Shl(*_IfFalse, N);
+  }
+  void _LShr(uint64_t N) override {
+    _IfTrue = ValueBits::LShr(*_IfTrue, N);
+    _IfFalse = ValueBits::LShr(*_IfFalse, N);
+  }
+  void _ZExt(uint64_t N) override {
+    _IfTrue = ValueBits::ZExt(*_IfTrue, N);
+    _IfFalse = ValueBits::ZExt(*_IfFalse, N);
+  }
+  void _And(uint64_t N) override {
+    _IfTrue = ValueBits::And(*_IfTrue, N);
+    _IfFalse = ValueBits::And(*_IfFalse, N);
+  }
+  void _Xor(const ValueBits &RHS) override {
+    _IfTrue = ValueBits::Xor(*_IfTrue, RHS);
+    _IfFalse = ValueBits::Xor(*_IfFalse, RHS);
+  }
+  void _Trunc(uint64_t N) override {
+    _IfTrue = ValueBits::Trunc(*_IfTrue, N);
+    _IfFalse = ValueBits::Trunc(*_IfFalse, N);
+  }
+
+public:
+  PredicatedValueBits(ICmpInst *Predicate, PValueBits IfTrue,
+                      PValueBits IfFalse)
+      : _Predicate(Predicate), _IfTrue(IfTrue), _IfFalse(IfFalse) {}
+
+  ValueBits copyBits() override { return PredicatedValueBits(*this); }
+  bool isPredicated() override { return true; }
+  PValueBits getIfTrue() { return _IfTrue; }
+  PValueBits getIfFalse() { return _IfFalse; }
+  ICmpInst *getPredicate() { return _Predicate; }
+
+  virtual void print(raw_ostream &OS) override {
+#ifndef NDEBUG
+    OS << "Predicate: " << *_Predicate << "\nIf True:\n"
+       << *_IfTrue << "If False:\n"
+       << *_IfFalse;
+#endif
+  }
+};
+
+// Execute the instructions in a basic block whilst mapping out Values to
+// ValueBits
+static bool
+symbolicallyExecute(BasicBlock *BB,
+                    std::map<Value *, std::shared_ptr<ValueBits>> &ValueMap) {
+
+  auto getConstantOperand = [](Instruction *I, uint8_t Operand) {
+    ConstantInt *CI = dyn_cast<ConstantInt>(I->getOperand(Operand));
+    if (!CI) {
+      LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRecognize: Do not know how to"
+                        << " handle this operation with non-constant operand "
+                        << Operand << ":\n"
+                        << *I << "\n");
+    }
+    return CI;
+  };
+
+  auto getOrCreateValueBits = [&ValueMap](Value *Val) {
+    auto Result = ValueMap.find(Val);
+    if (Result != ValueMap.end())
+      return Result->second;
+    ConstantInt *CI = dyn_cast<ConstantInt>(Val);
+    if (CI) {
+      return std::make_shared<ValueBits>(CI->getSExtValue(),
+                                         Val->getType()->getScalarSizeInBits());
+    }
+    return std::make_shared<ValueBits>(Val,
+                                       Val->getType()->getScalarSizeInBits());
+  };
+
+  for (Instruction &I : *BB) {
+    uint64_t BitSize = I.getType()->getScalarSizeInBits();
+    switch (I.getOpcode()) {
+    case Instruction::PHI: {
+      PHINode *PHI = dyn_cast<PHINode>(&I);
+      const BasicBlock *IncomingBlock = nullptr;
+      for (const BasicBlock *Incoming : PHI->blocks()) {
+        if (Incoming != BB) {
+          if (IncomingBlock) {
+            LLVM_DEBUG(dbgs()
+                       << DEBUG_TYPE " CRCRecognize: Do not know how to"
+                       << " handle loop with multiple entries" << I << "\n");
+            return false;
+          }
+          IncomingBlock = Incoming;
+        }
+      }
+      assert(IncomingBlock);
+      ValueMap.insert({&I, getOrCreateValueBits(
+                               PHI->getIncomingValueForBlock(IncomingBlock))});
+    } break;
+    case Instruction::Shl: {
+      ConstantInt *CI = getConstantOperand(&I, 1);
+      if (!CI)
+        return false;
+      auto LHSBits = getOrCreateValueBits(I.getOperand(0));
+      ValueMap.insert({&I, ValueBits::Shl(*LHSBits, CI->getSExtValue())});
+    } break;
+    case Instruction::LShr: {
+      ConstantInt *CI = getConstantOperand(&I, 1);
+      if (!CI)
+        return false;
+      auto LHSBits = getOrCreateValueBits(I.getOperand(0));
+      ValueMap.insert({&I, ValueBits::LShr(*LHSBits, CI->getSExtValue())});
+    } break;
+    case Instruction::And: {
+      ConstantInt *CI = getConstantOperand(&I, 1);
+      if (!CI)
+        return false;
+      auto LHSBits = getOrCreateValueBits(I.getOperand(0));
+      ValueMap.insert({&I, ValueBits::And(*LHSBits, CI->getSExtValue())});
+    } break;
+    case Instruction::Xor: {
+      auto LHSBits = getOrCreateValueBits(I.getOperand(0));
+      auto RHSBits = getOrCreateValueBits(I.getOperand(1));
+      ValueMap.insert({&I, ValueBits::Xor(*LHSBits, *RHSBits)});
+    } break;
+    case Instruction::ZExt: {
+      auto LHSBits = getOrCreateValueBits(I.getOperand(0));
+      ValueMap.insert({&I, ValueBits::ZExt(*LHSBits, BitSize)});
+    } break;
+    case Instruction::Trunc: {
+      auto LHSBits = getOrCreateValueBits(I.getOperand(0));
+      ValueMap.insert({&I, ValueBits::Trunc(*LHSBits, BitSize)});
+    } break;
+    case Instruction::Select: {
+      SelectInst *Select = cast<SelectInst>(&I);
+      ICmpInst *Cond = dyn_cast<ICmpInst>(Select->getCondition());
+      if (!Cond) {
+        LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRecognize: Do not know how to"
+                          << " handle SelectInst with non-icmp condition: " << I
+                          << "\n");
+        return false;
+      }
+      auto IfTrue = getOrCreateValueBits(Select->getTrueValue());
+      auto IfFalse = getOrCreateValueBits(Select->getFalseValue());
+      ValueMap.insert(
+          {&I, std::make_shared<PredicatedValueBits>(Cond, IfTrue, IfFalse)});
+    } break;
+    default:
+      // If this instruction is not recognized, then just continue. This is
+      // okay because users of this will just reference it by value, which is
+      // conservative.
+      break;
+    }
+  }
+  return true;
+}
+
+void LoopIdiomRecognize::writeTableBasedCRCOneByte(CRCInfo &CRC) {
+  BasicBlock *ExitBB = CurLoop->getExitBlock();
+  IRBuilder<> Builder(ExitBB);
+  Builder.SetInsertPoint(ExitBB->getFirstNonPHI());
+  Type *CRCType = CRC.CRCInput->getType();
+  uint64_t CRCSize = CRCType->getScalarSizeInBits();
+
+  // Construct the CRC table
+  uint64_t CRCTable[256];
+  uint64_t Polynomial = CRC.Polynomial;
+  uint64_t SB = CRC.BitReversed ? 0x1 : (0x1 << (CRCSize - 1));
+  if (CRC.BitReversed)
+    Polynomial = reverseBits(Polynomial, CRCSize);
+  for (uint64_t Dividend = 0; Dividend < 256; Dividend++) {
+    uint64_t CurByte = Dividend;
+    if (!CRC.BitReversed)
+      CurByte <<= CRCSize - 8;
+    for (uint8_t Bit = 0; Bit < 8; Bit++) {
+      if ((CurByte & SB) != 0) {
+        CurByte = CRC.BitReversed ? CurByte >> 1 : CurByte << 1;
+        CurByte = CurByte ^ Polynomial;
+      } else {
+        CurByte = CRC.BitReversed ? CurByte >> 1 : CurByte << 1;
+      }
+    }
+    CRCTable[Dividend] = CurByte;
+  }
+  // To construct a global data array, we need the raw data in bytes.
+  // The calculated table array is an array of 64bit values because we can't
+  // dynamically type it, so we need to truncate the values to the crc size
+  // to avoid padded zeros. Do this by allocating a byte array (of slightly more
+  // than we need to account for overflow) and copying the 64bit values across
+  // aligned correctly
+  uint64_t CRCNumBytes = CRCSize / 8;
+  char *CRCTableData = new char[CRCNumBytes * 260];
+  for (int I = 0; I < 256; I++) {
+    *((uint64_t *)(CRCTableData + I * CRCNumBytes)) = CRCTable[I];
+  }
+
+  // Construct and add the table as a global variable
+  ArrayType *TableType = ArrayType::get(CRCType, 256);
+  Constant *ConstantArr = ConstantDataArray::getRaw(
+      StringRef(CRCTableData, CRCNumBytes * 256), 256, CRCType);
+  std::stringstream TableNameSS;
+  TableNameSS << "crctable.i" << CRCSize << "." << CRC.Polynomial;
+  if (CRC.BitReversed)
+    TableNameSS << ".reversed";
+  GlobalVariable *CRCTableGlobal = new GlobalVariable(
+      TableType, true, GlobalVariable::LinkageTypes::PrivateLinkage,
+      ConstantArr, TableNameSS.str());
+  ExitBB->getModule()->insertGlobalVariable(CRCTableGlobal);
+  delete CRCTableData;
+
+  // Construct the IR to load from this table
+  Value *CRCOffset = CRC.CRCInput;
+  if (CRCSize > 8) {
+    // Get the next byte into position and truncate
+    if (!CRC.BitReversed)
+      CRCOffset = Builder.CreateLShr(CRCOffset, CRCSize - 8);
+    CRCOffset = Builder.CreateTrunc(CRCOffset, Builder.getInt8Ty());
+  }
+  if (CRC.DataInput) {
+    // Data size can be more than 8 due to extending
+    Value *Data = CRC.DataInput;
+    if (CRC.DataInput->getType()->getScalarSizeInBits() > 8) {
+      Data = Builder.CreateTrunc(Data, Builder.getInt8Ty());
+    }
+    // Xor the data, offset into the table and load
+    CRCOffset = Builder.CreateXor(CRCOffset, Data);
+  }
+
+  CRCOffset =
+      Builder.CreateZExt(CRCOffset, DL->getIndexType(ExitBB->getContext(), 0));
+  Value *Gep = Builder.CreateInBoundsGEP(CRCType, CRCTableGlobal, {CRCOffset});
+  Value *CRCRes = Builder.CreateLoad(CRCType, Gep);
+  if (CRCSize > 8) {
+    // Shift out SB used for division and Xor the rest of the crc back in
+    Value *RestOfCRC = CRC.CRCInput;
+    if (CRC.BitReversed)
+      RestOfCRC = Builder.CreateLShr(CRC.CRCInput, 8);
+    else
+      RestOfCRC = Builder.CreateShl(CRC.CRCInput, 8);
+    CRCRes = Builder.CreateXor(RestOfCRC, CRCRes);
+  }
+  for (PHINode &ExitPhi : CurLoop->getExitBlock()->phis()) {
+    if (ExitPhi.getNumIncomingValues() == 1 &&
+        ExitPhi.getIncomingValue(0) == CRC.CRCOutput)
+      ExitPhi.replaceAllUsesWith(CRCRes);
+  }
+}
+
+bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
+  // Step one: Check if the loop looks like crc, and extract some useful
+  // information for us to check
+  std::optional<CRCInfo> MaybeCRC = looksLikeCRC(BECount);
+  if (!MaybeCRC)
+    return false;
+  CRCInfo CRC = *MaybeCRC;
+
+  uint64_t CRCSize = CRC.CRCInput->getType()->getScalarSizeInBits();
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRecognize: Found potential CRCLoop "
+                    << *CurLoop << "\n"
+                    << "Input CRC: " << *CRC.CRCInput << "\n"
+                    << "Output CRC: " << *CRC.CRCOutput << "\n"
+                    << "GeneratorPolynomial: " << CRC.Polynomial << "\n"
+                    << "CRC Size: " << CRCSize << "\n"
+                    << "CRC Width: " << CRC.Width << "\n"
+                    << "Reversed: " << CRC.BitReversed << "\n");
+  if (CRC.DataInput) {
+    LLVM_DEBUG(dbgs() << "Data Input: " << *CRC.DataInput << "\n"
+                      << "Data Size: "
+                      << CRC.DataInput->getType()->getScalarSizeInBits()
+                      << "\n");
+  }
+
+  // Symbolically execute one iteration of the loop to populate a map of
+  // Value's to their ValueBits, i.e. a representation of their bits in terms of
+  // 1's, 0's and references to other values' bits. This tracks how the bits
+  // move through an iteration of the loop. If the loop output's ValueBits
+  // match pre-computed values, then we can say it's doing crc. If there are
+  // any unexpected loop variant operations happening, e.g. additional select
+  // logic or shifts, then this will be captured in the ValueBits.
+  std::map<Value *, std::shared_ptr<ValueBits>> ValueMap;
+
+  if (!symbolicallyExecute(CurLoop->getHeader(), ValueMap))
+    return false;
+
+  auto Result = ValueMap.find(CRC.CRCOutput);
+  if (Result == ValueMap.end()) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRecognize: Did not find CRC output"
+                      << " after symbolic execution\n");
+    return false;
+  }
+
+  using PValueBits = std::shared_ptr<ValueBits>;
+  PValueBits CRCOutBits = Result->second;
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE
+                    << " CRCRecognize: ValueBits for output crc value:\n"
+                    << *CRCOutBits);
+
+  // Check this value is predicated
+  if (!CRCOutBits->isPredicated()) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE
+                      << " CRCRecognize: Output CRC ValueBits is not"
+                      << " predicated.\n");
+    return false;
+  }
+  std::shared_ptr<PredicatedValueBits> CRCOutBitsPred =
+      std::static_pointer_cast<PredicatedValueBits>(CRCOutBits);
+
+  // Need to check if the predicate is checking the MSB/LSB depending on
+  // whether this is bit reversed CRC
+  ICmpInst *ICmp = CRCOutBitsPred->getPredicate();
+  CmpInst::Predicate Pred = ICmp->getPredicate();
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE << " CRCRecognize checking to see if "
+                    << *ICmp << " is checking the "
+                    << (CRC.BitReversed ? "LSB\n" : "MSB\n"));
+
+  // Firstly check the LHS is in our map, and RHS is a constant
+  ConstantInt *RHS = dyn_cast<ConstantInt>(ICmp->getOperand(1));
+  Result = ValueMap.find(ICmp->getOperand(0));
+  if (!RHS || (Result == ValueMap.end())) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE
+                      << " CRCRecognize: Cannot determine ICmp operands\n");
+    return false;
+  }
+  PValueBits ICmpOp0Bits = Result->second;
+
+  // Now match the following cases
+  // (LSB): (crc & 1)
+  // (MSB): (crc & (1 << n))
+  // (MSB): crc > 0
+  // (MSB): crc >= 1
+  // (MSB): crc < 0
+  // (MSB): crc <= -1
+  // And decide whether the check is checking for existence of 1 or 0
+  bool CheckZero = false;
+  std::optional<ValueBits::ValueBit> CheckBit;
+  switch (Pred) {
+  case CmpInst::ICMP_NE:
+  case CmpInst::ICMP_EQ: {
+    // Check RHS is checking only one bit.
+    uint64_t RHSNum = RHS->getZExtValue();
+    uint64_t MSBNum = 1 << (ICmpOp0Bits->getSize() - 1);
+    // LSB if BitReversed, MSB otherwise.
+    if (!(CRC.BitReversed && RHSNum == 1) &&
+        !(!CRC.BitReversed && RHSNum == MSBNum) && RHSNum != 0) {
+      LLVM_DEBUG(dbgs() << DEBUG_TYPE
+                        << " CRCRecognize: ICmp RHS is not checking [M/L]SB\n");
+      return false;
+    }
+    // Now to check if we already know all the other bits of the RHS are zero.
+    ValueBits AllZeroValueBits((uint64_t)0, ICmpOp0Bits->getSize());
+    PValueBits CRCOutBitsMasked;
+    if (CRC.BitReversed) {
+      // Masking out the LSB is equivalent to shifting right one if we're just
+      // comparing all the other bits are zero.
+      CRCOutBitsMasked = ValueBits::LShr(*ICmpOp0Bits, 1);
+      CheckBit = ICmpOp0Bits->getBit(0);
+    } else {
+      // The CRC type might be larger than the data, so we can't shift left
+      // one. Mask instead.
+      uint64_t MSBMask = ~(1 << (CRC.Width - 1));
+      CRCOutBitsMasked = ValueBits::And(*ICmpOp0Bits, MSBMask);
+      CheckBit = ICmpOp0Bits->getBit(CRC.Width - 1);
+    }
+    if (!CRCOutBitsMasked->equals(&AllZeroValueBits)) {
+      LLVM_DEBUG(
+          dbgs() << DEBUG_TYPE
+                 << " CRCRecognize: Cannot determine ICmp checks [M/L]SB\n");
+      return false;
+    }
+    CheckZero = RHSNum == 0;
+    break;
+  }
+  case CmpInst::ICMP_SGT:
+  case CmpInst::ICMP_SGE:
+  case CmpInst::ICMP_ULT:
+  case CmpInst::ICMP_ULE:
+    CheckZero = true;
+    [[fallthrough]];
+  case CmpInst::ICMP_SLT:
+  case CmpInst::ICMP_SLE: {
+    int64_t RHSNum = RHS->getSExtValue();
+    if (((Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SGE) &&
+         RHSNum != 0) ||
+        ((Pred == CmpInst::ICMP_SLE) && RHSNum != -1) ||
+        ((Pred == CmpInst::ICMP_SGT) && RHSNum != 1) ||
+        ((Pred == CmpInst::ICMP_ULT) && RHSNum != (1 << (CRC.Width - 1))) ||
+        ((Pred == CmpInst::ICMP_ULE) && RHSNum != (1 << (CRC.Width - 1)) - 1)) {
+      LLVM_DEBUG(dbgs() << DEBUG_TYPE
+                        << " CRCRecognize: ICmp RHS is not checking MSB\n");
+      return false;
+    }
+    CheckBit = ICmpOp0Bits->getBit(CRCSize - 1);
+    break;
+  }
+  default:
+    return false;
+  }
+
+  if (!CheckBit.has_value())
+    return false;
+
+  // If there exists a Data input, ensure the check bit is crc^data.
+  std::optional<ValueBits::ValueBit> RefCheckBit;
+  uint64_t CRCCheckIdx = CRC.BitReversed ? 0 : CRCSize - 1;
+  ValueBits::ValueBit CRCInputRefBit =
+      ValueBits::ValueBit::CreateRefBit(CRC.CRCInput, CRCCheckIdx);
+  if (CRC.DataInput) {
+    uint64_t DataSize = CRC.DataInput->getType()->getScalarSizeInBits();
+    uint64_t DataCheckIdx = CRC.BitReversed ? 0 : DataSize - 1;
+    ValueBits::ValueBit DataInputRefBit =
+        ValueBits::ValueBit::CreateRefBit(CRC.DataInput, DataCheckIdx);
+    RefCheckBit =
+        ValueBits::ValueBit::CreateXORBit(CRCInputRefBit, DataInputRefBit);
+  } else {
+    RefCheckBit = CRCInputRefBit;
+  }
+
+  if (!RefCheckBit.value().equals(CheckBit.value())) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE
+                      << " CRCRecognize: Cannot verify check bit!\n"
+                      << *RefCheckBit << "\n"
+                      << *CheckBit << "\n");
+    return false;
+  }
+
+  PValueBits CRCOutBitsIfOne = CRCOutBitsPred->getIfTrue();
+  PValueBits CRCOutBitsIfZero = CRCOutBitsPred->getIfFalse();
+  if (CheckZero) {
+    PValueBits Tmp = CRCOutBitsIfOne;
+    CRCOutBitsIfOne = CRCOutBitsIfZero;
+    CRCOutBitsIfZero = Tmp;
+  }
+
+  // Now construct ValueBits that would be the result of crc for one iteration.
+  // That is, a shift and then xor if [M/L]SB is 1.
+  PValueBits CRCValueBits;
+  Result = ValueMap.find(CRC.CRCInput);
+  if (Result == ValueMap.end()) {
+    CRCValueBits = std::make_shared<ValueBits>(CRC.CRCInput, CRCSize);
+  } else {
+    CRCValueBits = Result->second;
+  }
+  uint64_t GeneratorPolynomial =
+      CRC.BitReversed ? reverseBits(CRC.Polynomial, CRCSize) : CRC.Polynomial;
+  PValueBits Polynomial =
+      std::make_shared<ValueBits>(GeneratorPolynomial, CRCSize);
+
+  // Case where the MSB/LSB of the data is 0
+  PValueBits IfZero = CRC.BitReversed ? ValueBits::LShr(*CRCValueBits, 1)
+                                      : ValueBits::Shl(*CRCValueBits, 1);
+
+  // Case where the MSB/LSB of the data is 1
+  PValueBits IfOne = ValueBits::Xor(*IfZero, *Polynomial);
+
+  if (!IfZero->equals(CRCOutBitsIfZero.get())) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE << " CRCRecognize: Not Equal!\n"
+                      << *IfZero << *CRCOutBitsPred->getIfFalse());
+    return false;
+  }
+  if (!IfOne->equals(CRCOutBitsIfOne.get())) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE << " CRCRecognize: Not Equal!\n"
+                      << *IfOne << *CRCOutBitsPred->getIfTrue());
+    return false;
+  }
+
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE << " CRCRecognize: This looks like crc!\n");
+
+  writeTableBasedCRCOneByte(CRC);
+
+  return true;
+}
+
+std::optional<LoopIdiomRecognize::CRCInfo>
+LoopIdiomRecognize::looksLikeCRC(const SCEV *BECount) {
+  // Initial checks to see if this loop looks like CRC:
+  // - Inner most loop
+  // - One block
+  // - One exit
+  // - Iteration count is 8
+
+  // Check if this is inner most loop
+  if (!CurLoop->isInnermost())
+    return std::nullopt;
+
+  // Since we are far enough in the optimization pipeline that small branches
+  // will have been folded into Select instructions, if we have branches we are
+  // unlikely to be CRC. To reduce complexity, only consider single-block loops
+  // for CRC recognition
+  if (CurLoop->getBlocks().size() > 1) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRecognize: Loops with more than one"
+                      << "block are unsupported\n");
+    return std::nullopt;
+  }
+
+  // Ensure one exit block
+  const BasicBlock *ExitBlock = CurLoop->getExitBlock();
+  if (!ExitBlock)
+    return std::nullopt;
+
+  // Check iteration count is 8
+  const SCEV *TripCountSCEV =
+      SE->getTripCountFromExitCount(BECount, BECount->getType(), CurLoop);
+  const SCEVConstant *TripCountSCEVConst =
+      dyn_cast<SCEVConstant>(TripCountSCEV);
+  if (!TripCountSCEVConst)
+    return std::nullopt;
+  APInt TripCount = TripCountSCEVConst->getAPInt();
+  // Only support one byte CRC loops. Loops with tripcount 16 or 32 can also be
+  // CRC, but this is currently unsupported
+  if (TripCount != 8)
+    return std::nullopt;
+
+  // Ensure only one value that is live across the loop boundary, and track the
+  // operations on this value. This should include:
+  // 1) A phi with an initial value outside the loop
+  // 2) Shift operation
+  // 3) ICMP operation
+
+  // Ensure only one value is live across the loop boundary. LCSSA ensures any
+  // live values are captured in a PHI of the exit block.
+  Instruction *LoopOutput = nullptr;
+  for (const PHINode &ExitPhi : ExitBlock->phis()) {
+    for (const Use &IncomingUse : ExitPhi.incoming_values()) {
+      Instruction *IncomingUser = dyn_cast<Instruction>(&IncomingUse);
+      if (!IncomingUser)
+        continue;
+      if (CurLoop->contains(IncomingUser)) {
+        if (LoopOutput)
+          return std::nullopt;
+        LoopOutput = IncomingUser;
+      }
+    }
+  }
+
+  if (!LoopOutput)
+    return std::nullopt;
+
+  auto AddAllInstOps = [](Instruction *I,
+                          SmallVectorImpl<Instruction *> &Worklist) {
+    for (Use &Op : I->operands()) {
+      Instruction *OpInst = dyn_cast<Instruction>(Op.get());
+      if (OpInst)
+        Worklist.push_back(OpInst);
+    }
+  };
+
+  // Follow this value in the loop
+  SmallVector<Instruction *, 4> Worklist;
+  SmallPtrSet<Instruction *, 4> Visited;
+  bool FoundIcmp = false;
+  BinaryOperator *CRCShift = nullptr;
+  ConstantInt *GeneratorPolynomial = nullptr;
+  Value *CRCInput = nullptr;
+  Worklist.push_back(LoopOutput);
+  while (!Worklist.empty()) {
+    Instruction *I = Worklist.pop_back_val();
+    if (Visited.contains(I))
+      continue;
+    Visited.insert(I);
+    if (SelectInst *Select = dyn_cast<SelectInst>(I)) {
+      FoundIcmp |= isa<ICmpInst>(Select->getCondition());
+      AddAllInstOps(Select, Worklist);
+    } else if (isa<ICmpInst>(I)) {
+      // Instead of tracking the condition and working out if it's based on
+      // MSB of crc/data, just greedily assume it will be and check later.
+      FoundIcmp = true;
+    } else if (BinaryOperator *BinOp = dyn_cast<BinaryOperator>(I)) {
+      switch (BinOp->getOpcode()) {
+      default:
+        break;
+      case Instruction::Shl:
+      case Instruction::LShr: {
+        // This shift could be the data or the crc. Either way, the RHS should
+        // be constant one.
+        Instruction *ShLHS = dyn_cast<Instruction>(BinOp->getOperand(0));
+        ConstantInt *ShRHS = dyn_cast<ConstantInt>(BinOp->getOperand(1));
+        if (!ShRHS || !ShLHS || ShRHS->getZExtValue() != 1)
+          return std::nullopt;
+        CRCShift = BinOp;
+        Worklist.push_back(ShLHS);
+        break;
+      }
+      case Instruction::Xor: {
+        Value *XorRHS = BinOp->getOperand(1);
+        if (ConstantInt *RHSConst = dyn_cast<ConstantInt>(XorRHS))
+          GeneratorPolynomial = RHSConst;
+        AddAllInstOps(BinOp, Worklist);
+        break;
+      }
+      }
+    } else if (PHINode *PHI = dyn_cast<PHINode>(I)) {
+      for (BasicBlock *IncomingBlock : PHI->blocks()) {
+        Value *IncomingValue = PHI->getIncomingValueForBlock(IncomingBlock);
+
+        if (CurLoop->contains(IncomingBlock)) {
+          if (Instruction *IncomingI = dyn_cast<Instruction>(IncomingValue)) {
+            Worklist.push_back(IncomingI);
+          }
+        } else {
+          CRCInput = IncomingValue;
+        }
+      }
+    }
+  }
+
+  if (!(CRCShift && GeneratorPolynomial && CRCInput)) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE " CRCRecognize: Does not look like CRC");
+    return std::nullopt;
+  }
+
+  // The crc loop will have either one or two inputs depending on whether the
+  // data is xor'd inside or outside the loop. Assume any additional inputs that
+  // isn't our crc input is the data.
+  Value *DataInput = nullptr;
+  PHINode *InductionPhi = CurLoop->getInductionVariable(*SE);
+  for (const PHINode &EntryPhi : CurLoop->getHeader()->phis()) {
+    if (&EntryPhi == InductionPhi)
+      continue;
+    for (BasicBlock *BB : EntryPhi.blocks()) {
+      if (!CurLoop->contains(BB)) {
+        Value *IncomingVal = EntryPhi.getIncomingValueForBlock(BB);
+        if (IncomingVal != CRCInput) {
+          // Only allow exactly one additional input to the loop.
+          if (DataInput)
+            return std::nullopt;
+          DataInput = IncomingVal;
+        }
+      }
+    }
+  }
+
+  bool Reversed = CRCShift->getOpcode() == Instruction::LShr;
+
+  uint64_t Polynomial = GeneratorPolynomial->getZExtValue();
+  if (Reversed)
+    Polynomial =
+        reverseBits(Polynomial, CRCInput->getType()->getScalarSizeInBits());
+
+  CRCInfo CRC = {CRCInput,   LoopOutput, DataInput, TripCount.getZExtValue(),
+                 Polynomial, Reversed};
+
+  return std::optional<CRCInfo>{CRC};
 }
