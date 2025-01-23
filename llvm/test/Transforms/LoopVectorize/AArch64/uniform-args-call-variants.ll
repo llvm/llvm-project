@@ -200,15 +200,16 @@ define void @test_uniform_not_invariant(ptr noalias %dst, ptr readonly %src, i64
 ; INTERLEAVE-LABEL: define void @test_uniform_not_invariant
 ; INTERLEAVE-SAME: (ptr noalias [[DST:%.*]], ptr readonly [[SRC:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; INTERLEAVE-NEXT:  entry:
+; INTERLEAVE-NEXT:    [[MIN_PROF_CHECK:%.*]] = icmp eq i64 [[N]], 0
+; INTERLEAVE-NEXT:    br i1 [[MIN_PROF_CHECK]], label [[FOR_BODY:%.*]], label [[VECTOR_PH:%.*]]
+; INTERLEAVE:       vector.ph:
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 2)
-; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = icmp ne i64 [[N]], 0
-; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = icmp ugt i64 [[N]], 1
+; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = icmp ne i64 [[N]], 1
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; INTERLEAVE:       vector.body:
-; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE4:%.*]] ]
-; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi i1 [ [[ACTIVE_LANE_MASK_ENTRY]], [[ENTRY]] ], [ true, [[PRED_STORE_CONTINUE4]] ]
-; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = phi i1 [ [[ACTIVE_LANE_MASK_ENTRY1]], [[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT5:%.*]], [[PRED_STORE_CONTINUE4]] ]
-; INTERLEAVE-NEXT:    br i1 [[ACTIVE_LANE_MASK]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE4:%.*]] ]
+; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = phi i1 [ [[ACTIVE_LANE_MASK_ENTRY1]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT5:%.*]], [[PRED_STORE_CONTINUE4]] ]
+; INTERLEAVE-NEXT:    br i1 true, label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; INTERLEAVE:       pred.store.if:
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[SRC]], i64 [[INDEX]]
 ; INTERLEAVE-NEXT:    [[TMP2:%.*]] = load double, ptr [[TMP1]], align 8
@@ -232,6 +233,16 @@ define void @test_uniform_not_invariant(ptr noalias %dst, ptr readonly %src, i64
 ; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_NEXT:%.*]] = icmp ult i64 [[INDEX]], [[TMP0]]
 ; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_NEXT5]] = icmp ult i64 [[TMP10]], [[TMP0]]
 ; INTERLEAVE-NEXT:    br i1 [[ACTIVE_LANE_MASK_NEXT]], label [[VECTOR_BODY]], label [[FOR_COND_CLEANUP:%.*]], !llvm.loop [[LOOP4:![0-9]+]]
+; INTERLEAVE:       for.body:
+; INTERLEAVE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; INTERLEAVE-NEXT:    [[GEPSRC:%.*]] = getelementptr double, ptr [[SRC]], i64 [[INDVARS_IV]]
+; INTERLEAVE-NEXT:    [[DATA:%.*]] = load double, ptr [[GEPSRC]], align 8
+; INTERLEAVE-NEXT:    [[CALL:%.*]] = call double @foo(double [[DATA]], i64 [[INDVARS_IV]]) #[[ATTR5]]
+; INTERLEAVE-NEXT:    [[GEPDST:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[INDVARS_IV]]
+; INTERLEAVE-NEXT:    store double [[CALL]], ptr [[GEPDST]], align 8
+; INTERLEAVE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; INTERLEAVE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
+; INTERLEAVE-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; INTERLEAVE:       for.cond.cleanup:
 ; INTERLEAVE-NEXT:    ret void
 ;
