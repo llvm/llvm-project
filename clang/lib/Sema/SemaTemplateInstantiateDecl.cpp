@@ -1707,6 +1707,11 @@ TemplateDeclInstantiator::VisitBuiltinTemplateDecl(BuiltinTemplateDecl *D) {
   llvm_unreachable("BuiltinTemplateDecls cannot be instantiated.");
 }
 
+Decl *TemplateDeclInstantiator::VisitCVRefQualifyingTemplateDecl(
+    CVRefQualifyingTemplateDecl *D) {
+  llvm_unreachable("CVRefQualifyingTemplateDecls cannot be instantiated.");
+}
+
 Decl *TemplateDeclInstantiator::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   bool isFriend = (D->getFriendObjectKind() != Decl::FOK_None);
 

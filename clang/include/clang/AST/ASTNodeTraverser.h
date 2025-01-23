@@ -690,6 +690,10 @@ public:
     dumpTemplateParameters(D->getTemplateParameters());
   }
 
+  void VisitCVRefQualifyingTemplateDecl(const CVRefQualifyingTemplateDecl *D) {
+    dumpTemplateParameters(D->getTemplateParameters());
+  }
+
   void
   VisitVarTemplateSpecializationDecl(const VarTemplateSpecializationDecl *D) {
     dumpTemplateArgumentList(D->getTemplateArgs());

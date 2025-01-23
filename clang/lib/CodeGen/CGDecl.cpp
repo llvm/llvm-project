@@ -50,6 +50,7 @@ static_assert(clang::Sema::MaximumAlignment <= llvm::Value::MaximumAlignment,
 void CodeGenFunction::EmitDecl(const Decl &D) {
   switch (D.getKind()) {
   case Decl::BuiltinTemplate:
+  case Decl::CVRefQualifyingTemplate:
   case Decl::TranslationUnit:
   case Decl::ExternCContext:
   case Decl::Namespace:

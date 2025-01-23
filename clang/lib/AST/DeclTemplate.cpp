@@ -306,6 +306,7 @@ bool TemplateDecl::isTypeAlias() const {
   switch (getKind()) {
   case TemplateDecl::TypeAliasTemplate:
   case TemplateDecl::BuiltinTemplate:
+  case TemplateDecl::CVRefQualifyingTemplate:
     return true;
   default:
     return false;
@@ -1696,6 +1697,83 @@ static TemplateParameterList *createBuiltinCommonTypeList(const ASTContext &C,
       nullptr);
 }
 
+static TemplateTypeParmDecl *BICreateTemplateParm(const ASTContext &C,
+                                                  DeclContext *DC,
+                                                  unsigned Depth,
+                                                  unsigned Position,
+                                                  bool ParameterPack = false) {
+  return TemplateTypeParmDecl::Create(
+      C, DC, SourceLocation(), SourceLocation(), Depth, Position,
+      /*Id=*/nullptr, /*Typename=*/false, ParameterPack);
+}
+
+static TemplateTemplateParmDecl *
+BICreateTemplateTemplateParm(const ASTContext &C, DeclContext *DC,
+                             ArrayRef<NamedDecl *> Parms, unsigned Depth,
+                             unsigned Position, bool ParameterPack = false) {
+  auto *List = TemplateParameterList::Create(
+      C, SourceLocation(), SourceLocation(), Parms, SourceLocation(), nullptr);
+  return TemplateTemplateParmDecl::Create(C, DC, SourceLocation(), Depth,
+                                          Position, ParameterPack,
+                                          /*Id=*/nullptr, false, List);
+}
+
+static TemplateTemplateParmDecl *
+createBuiltinCommonReferenceBasicCommonReferenceT(const ASTContext &C,
+                                                  DeclContext *DC) {
+  auto *T = BICreateTemplateParm(C, DC, /*Depth=*/1, /*Position=*/0);
+  auto *U = BICreateTemplateParm(C, DC, /*Depth=*/1, /*Position=*/1);
+  auto *TXArg = BICreateTemplateParm(C, DC, /*Depth=*/2, /*Position=*/0);
+  auto *TX =
+      BICreateTemplateTemplateParm(C, DC, {TXArg}, /*Depth=*/1, /*Position=*/2);
+  auto *UXArg = BICreateTemplateParm(C, DC, /*Depth=*/2, /*Position=*/0);
+  auto *UX =
+      BICreateTemplateTemplateParm(C, DC, {UXArg}, /*Depth=*/1, /*Position=*/2);
+  return BICreateTemplateTemplateParm(C, DC, {T, U, TX, UX}, /*Depth=*/0,
+                                      /*Position=*/0);
+}
+
+static TemplateParameterList *createBuiltinCommonReferenceList(const ASTContext &C,
+                                                          DeclContext *DC) {
+  // template <class, class, template <class> class, template <class> class>
+  // class
+  auto *BasicCommonReference =
+      createBuiltinCommonReferenceBasicCommonReferenceT(C, DC);
+  // class... Args
+  auto *Args = BICreateTemplateParm(C, DC, /*Depth=*/1, /*Position=*/0,
+                                    /*ParameterPack=*/true);
+
+  // template <class... Args>
+  auto *BaseTemplate =
+      BICreateTemplateTemplateParm(C, DC, Args, /*Depth=*/0, /*Position=*/1);
+
+  // class TypeMember
+  auto *TypeMember = BICreateTemplateParm(C, DC, /*Depth=*/1, /*Position=*/0);
+
+  // template <class TypeMember>
+  auto *HasTypeMember = BICreateTemplateTemplateParm(
+      C, DC, TypeMember, /*Depth=*/0, /*Position=*/2);
+
+  // class HasNoTypeMember
+  auto *HasNoTypeMember =
+      BICreateTemplateParm(C, DC, /*Depth=*/0, /*Position=*/3);
+
+  // class... Ts
+  auto *Ts = BICreateTemplateParm(C, DC, /*Depth=*/0, /*Position=*/4,
+                                  /*ParameterPack=*/true);
+
+  // template <template <class, class, template <class> class, template <class>
+  //               class BasicCommonReference,
+  //           template <class... Args> class CommonType,
+  //           template <class TypeMember> class HasTypeMember,
+  //           class HasNoTypeMember,
+  //           class... Ts>
+  return TemplateParameterList::Create(
+      C, SourceLocation(), SourceLocation(),
+      {BasicCommonReference, BaseTemplate, HasTypeMember, HasNoTypeMember, Ts},
+      SourceLocation(), nullptr);
+}
+
 static TemplateParameterList *createBuiltinTemplateParameterList(
     const ASTContext &C, DeclContext *DC, BuiltinTemplateKind BTK) {
   switch (BTK) {
@@ -1705,6 +1783,8 @@ static TemplateParameterList *createBuiltinTemplateParameterList(
     return createTypePackElementParameterList(C, DC);
   case BTK__builtin_common_type:
     return createBuiltinCommonTypeList(C, DC);
+  case BTK__builtin_common_reference:
+    return createBuiltinCommonReferenceList(C, DC);
   }
 
   llvm_unreachable("unhandled BuiltinTemplateKind!");
@@ -1718,6 +1798,26 @@ BuiltinTemplateDecl::BuiltinTemplateDecl(const ASTContext &C, DeclContext *DC,
     : TemplateDecl(BuiltinTemplate, DC, SourceLocation(), Name,
                    createBuiltinTemplateParameterList(C, DC, BTK)),
       BTK(BTK) {}
+
+void CVRefQualifyingTemplateDecl::anchor() {}
+
+static TemplateParameterList *
+createCVRefQualifyingTemplateParameterList(const ASTContext &C,
+                                           DeclContext *DC) {
+  auto *T = TemplateTypeParmDecl::Create(
+      C, DC, SourceLocation(), SourceLocation(),
+      /*Depth=*/0, /*Position=*/0, /*Id=*/nullptr, false, false);
+  return TemplateParameterList::Create(C, SourceLocation(), SourceLocation(),
+                                       {T}, SourceLocation(), nullptr);
+}
+
+CVRefQualifyingTemplateDecl::CVRefQualifyingTemplateDecl(const ASTContext &C,
+                                                         DeclContext *DC,
+                                                         CVRefQuals Quals)
+    : TemplateDecl(CVRefQualifyingTemplate, DC, SourceLocation(),
+                   DeclarationName(),
+                   createCVRefQualifyingTemplateParameterList(C, DC)),
+      Quals(Quals) {}
 
 TemplateParamObjectDecl *TemplateParamObjectDecl::Create(const ASTContext &C,
                                                          QualType T,
@@ -1784,6 +1884,8 @@ TemplateParameterList *clang::getReplacedTemplateParameterList(Decl *D) {
     return cast<TypeAliasTemplateDecl>(D)->getTemplateParameters();
   case Decl::Kind::BuiltinTemplate:
     return cast<BuiltinTemplateDecl>(D)->getTemplateParameters();
+  case Decl::Kind::CVRefQualifyingTemplate:
+    return cast<CVRefQualifyingTemplateDecl>(D)->getTemplateParameters();
   case Decl::Kind::CXXDeductionGuide:
   case Decl::Kind::CXXConversion:
   case Decl::Kind::CXXConstructor:
