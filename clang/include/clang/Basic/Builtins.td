@@ -1238,6 +1238,12 @@ def NondetermenisticValue : Builtin {
   let Prototype = "void(...)";
 }
 
+def VectorCompress : Builtin {
+  let Spellings = ["__builtin_experimental_vectorcompress"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ElementwiseAbs : Builtin {
   let Spellings = ["__builtin_elementwise_abs"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
