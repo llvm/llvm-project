@@ -1185,14 +1185,25 @@ AliasResult BasicAAResult::aliasGEP(
         return AR;
       }
       return AliasResult::NoAlias;
-    } else {
-      // We can use the getVScaleRange to prove that Off >= (CR.upper * LSize).
-      ConstantRange CR = getVScaleRange(&F, Off.getBitWidth());
-      bool Overflow;
-      APInt UpperRange = CR.getUnsignedMax().umul_ov(
-          APInt(Off.getBitWidth(), LSize.getKnownMinValue()), Overflow);
-      if (!Overflow && Off.uge(UpperRange))
-        return AliasResult::NoAlias;
+    }
+
+    // We can use the getVScaleRange to prove that Off >= (CR.upper * LSizeMin)
+    // and Off < (CR.Lower * LSizeMin).
+    APInt LSizeMin = APInt(Off.getBitWidth(), LSize.getKnownMinValue());
+    ConstantRange CR = getVScaleRange(&F, Off.getBitWidth());
+    bool Overflow;
+    APInt UpperRange = CR.getUnsignedMax().umul_ov(LSizeMin, Overflow);
+    if (!Overflow && Off.uge(UpperRange))
+      return AliasResult::NoAlias;
+    APInt LowerRange = CR.getUnsignedMin().umul_ov(LSizeMin, Overflow);
+    if (!Overflow && Off.ult(LowerRange)) {
+      AliasResult AR = AliasResult::PartialAlias;
+      if (VRightSize.hasValue() && !VRightSize.isScalable() &&
+          Off.ule(INT32_MAX) && (Off + VRightSize.getValue()).ule(LSizeMin)) {
+        AR.setOffset(-Off.getSExtValue());
+        AR.swap(Swapped);
+      }
+      return AR;
     }
   }
 
