@@ -2048,9 +2048,9 @@ ValueTrackerResult ValueTracker::getNextSourceFromInsertSubreg() {
   // Get the TRI and check if the inserted sub-register overlaps with the
   // sub-register we are tracking.
   const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-  if (!TRI || !(TRI->getSubRegIndexLaneMask(DefSubReg) &
-                TRI->getSubRegIndexLaneMask(InsertedReg.SubIdx))
-                   .none())
+  if ((TRI->getSubRegIndexLaneMask(DefSubReg) &
+       TRI->getSubRegIndexLaneMask(InsertedReg.SubIdx))
+          .any())
     return ValueTrackerResult();
   // At this point, the value is available in v0 via the same subreg
   // we used for Def.
