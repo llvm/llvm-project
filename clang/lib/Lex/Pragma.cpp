@@ -1294,7 +1294,7 @@ public:
 
     if (II->isStr("pop")) {
       if (!PP.getDiagnostics().popMappings(DiagLoc))
-        PP.Diag(Tok, diag::warn_pragma_diagnostic_cannot_pop);
+        PP.Diag(Tok, diag::warn_pragma_cannot_pop) << /*diagnostic*/ 0;
       else if (Callbacks)
         Callbacks->PragmaDiagnosticPop(DiagLoc, Namespace);
 
@@ -1416,7 +1416,7 @@ struct PragmaWarningHandler : public PragmaHandler {
       // #pragma warning( pop )
       PP.Lex(Tok);
       if (!PP.getDiagnostics().popMappings(DiagLoc))
-        PP.Diag(Tok, diag::warn_pragma_diagnostic_cannot_pop);
+        PP.Diag(Tok, diag::warn_pragma_cannot_pop) << /*diagnostic*/ 0;
       else if (Callbacks)
         Callbacks->PragmaWarningPop(DiagLoc);
     } else {
@@ -2122,6 +2122,26 @@ struct PragmaFinalHandler : public PragmaHandler {
   }
 };
 
+struct PragmaScopeHandler : public PragmaHandler {
+  PragmaScopeHandler() : PragmaHandler("scope") {}
+
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &Tok) override {
+    // Lex the 'push' or 'pop'.
+    PP.LexUnexpandedToken(Tok);
+    const IdentifierInfo *PushPop = Tok.getIdentifierInfo();
+    if (PushPop && PushPop->isStr("push"))
+      PP.pushMacroScope();
+    else if (PushPop && PushPop->isStr("pop"))
+      PP.popMacroScope(Tok.getLocation());
+    else
+      PP.Diag(Tok, diag::err_expected) << "'push' or 'pop'";
+    PP.Lex(Tok);
+    if (Tok.isNot(tok::eod))
+      PP.Diag(Tok, diag::ext_pp_extra_tokens_at_eol) << "pragma";
+  }
+};
+
 } // namespace
 
 /// RegisterBuiltinPragmas - Install the standard preprocessor pragmas:
@@ -2153,6 +2173,7 @@ void Preprocessor::RegisterBuiltinPragmas() {
   AddPragmaHandler("clang", new PragmaDeprecatedHandler());
   AddPragmaHandler("clang", new PragmaRestrictExpansionHandler());
   AddPragmaHandler("clang", new PragmaFinalHandler());
+  AddPragmaHandler("clang", new PragmaScopeHandler());
 
   // #pragma clang module ...
   auto *ModuleHandler = new PragmaNamespace("module");
