@@ -340,5 +340,41 @@ static bool CC_X86_64_Pointer(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   return false;
 }
 
+/// Special handling for i128: Either allocate the value to two consecutive
+/// i64 registers, or to the stack. Do not partially allocate in registers,
+/// and do not reserve any registers when allocating to the stack.
+static bool CC_X86_64_I128(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                           CCValAssign::LocInfo &LocInfo,
+                           ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+  assert(ValVT == MVT::i64 && "Should have i64 parts");
+  SmallVectorImpl<CCValAssign> &PendingMembers = State.getPendingLocs();
+  PendingMembers.push_back(
+      CCValAssign::getPending(ValNo, ValVT, LocVT, LocInfo));
+
+  if (!ArgFlags.isInConsecutiveRegsLast())
+    return true;
+
+  unsigned NumRegs = PendingMembers.size();
+  assert(NumRegs == 2 && "Should have two parts");
+
+  MCPhysReg Regs[] = {X86::RDI, X86::RSI, X86::RDX, X86::RCX, X86::R8, X86::R9};
+  ArrayRef<MCPhysReg> Allocated = State.AllocateRegBlock(Regs, NumRegs);
+  if (!Allocated.empty()) {
+    for (const auto &[Pending, Reg] : zip(PendingMembers, Allocated)) {
+      Pending.convertToReg(Reg);
+      State.addLoc(Pending);
+    }
+  } else {
+    int64_t Offset = State.AllocateStack(8, Align(16));
+    for (auto &Pending : PendingMembers) {
+      Pending.convertToMem(Offset);
+      State.addLoc(Pending);
+      Offset += 8;
+    }
+  }
+  PendingMembers.clear();
+  return true;
+}
+
 // Provides entry points of CC_X86 and RetCC_X86.
 #include "X86GenCallingConv.inc"
