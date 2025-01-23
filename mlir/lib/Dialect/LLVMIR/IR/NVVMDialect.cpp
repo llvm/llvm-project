@@ -1110,6 +1110,44 @@ LogicalResult NVVM::BarrierOp::verify() {
   return success();
 }
 
+#define CP_ASYNC_ID_IMPL(mod, size, suffix)                                    \
+  llvm::Intrinsic::nvvm_cp_async_##mod##_shared_global_##size##suffix
+
+#define GET_CP_ASYNC_ID(mod, size, has_cpsize)                                 \
+  has_cpsize ? CP_ASYNC_ID_IMPL(mod, size, _s) : CP_ASYNC_ID_IMPL(mod, size, )
+
+llvm::Intrinsic::ID
+CpAsyncOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                                 llvm::SmallVector<llvm::Value *> &args) {
+  llvm::Intrinsic::ID id;
+
+  auto cpAsyncOp = cast<NVVM::CpAsyncOp>(op);
+  bool hasCpSize = cpAsyncOp.getCpSize() ? true : false;
+  switch (cpAsyncOp.getSize()) {
+  case 4:
+    id = GET_CP_ASYNC_ID(ca, 4, hasCpSize);
+    break;
+  case 8:
+    id = GET_CP_ASYNC_ID(ca, 8, hasCpSize);
+    break;
+  case 16:
+    id = (cpAsyncOp.getModifier() == NVVM::LoadCacheModifierKind::CG)
+             ? GET_CP_ASYNC_ID(cg, 16, hasCpSize)
+             : GET_CP_ASYNC_ID(ca, 16, hasCpSize);
+    break;
+  default:
+    llvm_unreachable("Invalid copy size in CpAsyncOp.");
+  }
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(cpAsyncOp.getDst()));
+  args.push_back(mt.lookupValue(cpAsyncOp.getSrc()));
+  if (hasCpSize)
+    args.push_back(mt.lookupValue(cpAsyncOp.getCpSize()));
+
+  return id;
+}
+
 llvm::Intrinsic::ID CpAsyncBulkTensorPrefetchOp::getIntrinsicID(int tensorDims,
                                                                 bool isIm2Col) {
   switch (tensorDims) {
