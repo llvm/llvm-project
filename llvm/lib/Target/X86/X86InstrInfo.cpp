@@ -5220,6 +5220,7 @@ inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag,
 }
 
 /// Check whether the use can be converted to remove a comparison against zero.
+/// Returns the EFLAGS condition and the operand that we are comparing against zero.
 static std::pair<X86::CondCode, unsigned> isUseDefConvertible(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
