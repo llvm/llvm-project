@@ -9002,8 +9002,8 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
       isa<VPPartialReductionRecipe>(BinOpRecipe))
     std::swap(BinOp, Accumulator);
 
-  return new VPPartialReductionRecipe(Reduction->getOpcode(), BinOp, Accumulator,
-                                      Reduction);
+  return new VPPartialReductionRecipe(Reduction->getOpcode(), BinOp,
+                                      Accumulator, Reduction);
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
