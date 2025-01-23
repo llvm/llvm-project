@@ -1741,7 +1741,7 @@ bool MachineSinking::aggressivelySinkIntoCycle(
                            UseReg.SubReg, *TRI);
   }
   // If we have replaced all uses, then delete the dead instruction
-  if (I.isDead(MRI))
+  if (I.isDead(*MRI))
     I.eraseFromParent();
   return true;
 }
