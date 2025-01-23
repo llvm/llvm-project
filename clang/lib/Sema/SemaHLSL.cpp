@@ -274,11 +274,10 @@ static bool isResourceRecordType(const Type *Ty) {
   return HLSLAttributedResourceType::findHandleTypeOnResource(Ty) != nullptr;
 }
 
-// Returns true if the type is a leaf element type that is not valid to be included
-// in HLSL Buffer, such as a resource class, empty struct, zero-sized array,
-// or a builtin intangible type.
-// Returns false it is a valid leaf element type or if it is a record type that
-// needs to be inspected further.
+// Returns true if the type is a leaf element type that is not valid to be
+// included in HLSL Buffer, such as a resource class, empty struct, zero-sized
+// array, or a builtin intangible type. Returns false it is a valid leaf element
+// type or if it is a record type that needs to be inspected further.
 static bool isInvalidConstantBufferLeafElementType(const Type *Ty) {
   if (Ty->isRecordType()) {
     if (isResourceRecordType(Ty) || Ty->getAsCXXRecordDecl()->isEmpty())
