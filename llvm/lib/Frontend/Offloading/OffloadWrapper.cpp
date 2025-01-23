@@ -50,7 +50,7 @@ StructType *getDeviceImageTy(Module &M) {
 }
 
 PointerType *getDeviceImagePtrTy(Module &M) {
-  return PointerType::getUnqual(getDeviceImageTy(M));
+  return PointerType::getUnqual(M.getContext());
 }
 
 // struct __tgt_bin_desc {
@@ -70,7 +70,7 @@ StructType *getBinDescTy(Module &M) {
 }
 
 PointerType *getBinDescPtrTy(Module &M) {
-  return PointerType::getUnqual(getBinDescTy(M));
+  return PointerType::getUnqual(M.getContext());
 }
 
 /// Creates binary descriptor for the given device images. Binary descriptor
