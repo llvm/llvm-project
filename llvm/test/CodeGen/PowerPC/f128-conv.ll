@@ -1450,6 +1450,70 @@ entry:
   ret void
 }
 
+define half @trunc(fp128 %a) unnamed_addr {
+; CHECK-LABEL: trunc:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    bl __trunctfhf2
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    clrlwi r3, r3, 16
+; CHECK-NEXT:    mtfprwz f0, r3
+; CHECK-NEXT:    xscvhpdp f1, f0
+; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; CHECK-P8-LABEL: trunc:
+; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    bl __trunctfhf2
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    clrldi r3, r3, 48
+; CHECK-P8-NEXT:    bl __gnu_h2f_ieee
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    addi r1, r1, 32
+; CHECK-P8-NEXT:    ld r0, 16(r1)
+; CHECK-P8-NEXT:    mtlr r0
+; CHECK-P8-NEXT:    blr
+entry:
+  %0 = fptrunc fp128 %a to half
+  ret half %0
+}
+
+define fp128 @ext(half %a) unnamed_addr {
+; CHECK-LABEL: ext:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xscpsgndp v2, f1, f1
+; CHECK-NEXT:    xscvdpqp v2, v2
+; CHECK-NEXT:    blr
+;
+; CHECK-P8-LABEL: ext:
+; CHECK-P8:       # %bb.0: # %entry
+; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    bl __extendsfkf2
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    addi r1, r1, 32
+; CHECK-P8-NEXT:    ld r0, 16(r1)
+; CHECK-P8-NEXT:    mtlr r0
+; CHECK-P8-NEXT:    blr
+entry:
+  %0 = fpext half %a to fp128
+  ret fp128 %0
+}
+
 @f128Glob = common global fp128 0xL00000000000000000000000000000000, align 16
 
 ; Function Attrs: norecurse nounwind readnone
