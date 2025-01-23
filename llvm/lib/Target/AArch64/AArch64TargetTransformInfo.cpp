@@ -1954,10 +1954,8 @@ instCombineLD1GatherIndex(InstCombiner &IC, IntrinsicInst &II) {
     Align Alignment =
         BasePtr->getPointerAlignment(II.getDataLayout());
 
-    Type *VecPtrTy = PointerType::getUnqual(Ty);
     Value *Ptr = IC.Builder.CreateGEP(cast<VectorType>(Ty)->getElementType(),
                                       BasePtr, IndexBase);
-    Ptr = IC.Builder.CreateBitCast(Ptr, VecPtrTy);
     CallInst *MaskedLoad =
         IC.Builder.CreateMaskedLoad(Ty, Ptr, Alignment, Mask, PassThru);
     MaskedLoad->takeName(&II);
@@ -1986,9 +1984,6 @@ instCombineST1ScatterIndex(InstCombiner &IC, IntrinsicInst &II) {
 
     Value *Ptr = IC.Builder.CreateGEP(cast<VectorType>(Ty)->getElementType(),
                                       BasePtr, IndexBase);
-    Type *VecPtrTy = PointerType::getUnqual(Ty);
-    Ptr = IC.Builder.CreateBitCast(Ptr, VecPtrTy);
-
     (void)IC.Builder.CreateMaskedStore(Val, Ptr, Alignment, Mask);
 
     return IC.eraseInstFromFunction(II);
