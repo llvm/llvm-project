@@ -28,3 +28,122 @@ define void @store(ptr %x, <vscale x 1 x i32> %y, <vscale x 1 x i32> %z) {
   store %struct.test %b, ptr %x
   ret void
 }
+
+define {<vscale x 16 x i8>, <vscale x 16 x i8>} @split_load(ptr %p) nounwind {
+; CHECK-LABEL: define { <vscale x 16 x i8>, <vscale x 16 x i8> } @split_load
+; CHECK-SAME: (ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[R:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[P]], align 16
+; CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[R]]
+;
+entry:
+  %r = load {<vscale x 16 x i8>, <vscale x 16 x i8>}, ptr %p
+  ret {<vscale x 16 x i8>, <vscale x 16 x i8>} %r
+}
+
+define {<vscale x 16 x i8>} @split_load_one(ptr %p) nounwind {
+; CHECK-LABEL: define { <vscale x 16 x i8> } @split_load_one
+; CHECK-SAME: (ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[R_UNPACK:%.*]] = load <vscale x 16 x i8>, ptr [[P]], align 16
+; CHECK-NEXT:    [[R1:%.*]] = insertvalue { <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[R_UNPACK]], 0
+; CHECK-NEXT:    ret { <vscale x 16 x i8> } [[R1]]
+;
+entry:
+  %r = load {<vscale x 16 x i8>}, ptr %p
+  ret {<vscale x 16 x i8>} %r
+}
+
+define void @split_store({<vscale x 4 x i32>, <vscale x 4 x i32>} %x, ptr %p) nounwind {
+; CHECK-LABEL: define void @split_store
+; CHECK-SAME: ({ <vscale x 4 x i32>, <vscale x 4 x i32> } [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32> } [[X]], ptr [[P]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  store {<vscale x 4 x i32>, <vscale x 4 x i32>} %x, ptr %p
+  ret void
+}
+
+define void @split_store_one({<vscale x 4 x i32>} %x, ptr %p) nounwind {
+; CHECK-LABEL: define void @split_store_one
+; CHECK-SAME: ({ <vscale x 4 x i32> } [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = extractvalue { <vscale x 4 x i32> } [[X]], 0
+; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP0]], ptr [[P]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  store {<vscale x 4 x i32>} %x, ptr %p
+  ret void
+}
+
+define {<16 x i8>, <16 x i8>} @check_v16i8_v4i32({<4 x i32>, <4 x i32>} %x, ptr %p) nounwind {
+; CHECK-LABEL: define { <16 x i8>, <16 x i8> } @check_v16i8_v4i32
+; CHECK-SAME: ({ <4 x i32>, <4 x i32> } [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_ELT:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[X]], 0
+; CHECK-NEXT:    store <4 x i32> [[X_ELT]], ptr [[P]], align 16
+; CHECK-NEXT:    [[P_REPACK1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
+; CHECK-NEXT:    [[X_ELT2:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[X]], 1
+; CHECK-NEXT:    store <4 x i32> [[X_ELT2]], ptr [[P_REPACK1]], align 16
+; CHECK-NEXT:    [[R_UNPACK_CAST:%.*]] = bitcast <4 x i32> [[X_ELT]] to <16 x i8>
+; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <16 x i8>, <16 x i8> } poison, <16 x i8> [[R_UNPACK_CAST]], 0
+; CHECK-NEXT:    [[R_UNPACK4_CAST:%.*]] = bitcast <4 x i32> [[X_ELT2]] to <16 x i8>
+; CHECK-NEXT:    [[R5:%.*]] = insertvalue { <16 x i8>, <16 x i8> } [[TMP0]], <16 x i8> [[R_UNPACK4_CAST]], 1
+; CHECK-NEXT:    ret { <16 x i8>, <16 x i8> } [[R5]]
+;
+entry:
+  store {<4 x i32>, <4 x i32>} %x, ptr %p
+  %r = load {<16 x i8>, <16 x i8>}, ptr %p
+  ret {<16 x i8>, <16 x i8>} %r
+}
+
+define {<vscale x 16 x i8>, <vscale x 16 x i8>} @check_nxv16i8_nxv4i32({<vscale x 4 x i32>, <vscale x 4 x i32>} %x, ptr %p) nounwind {
+; CHECK-LABEL: define { <vscale x 16 x i8>, <vscale x 16 x i8> } @check_nxv16i8_nxv4i32
+; CHECK-SAME: ({ <vscale x 4 x i32>, <vscale x 4 x i32> } [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32> } [[X]], ptr [[P]], align 16
+; CHECK-NEXT:    [[R:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[P]], align 16
+; CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[R]]
+;
+entry:
+  store {<vscale x 4 x i32>, <vscale x 4 x i32>} %x, ptr %p
+  %r = load {<vscale x 16 x i8>, <vscale x 16 x i8>}, ptr %p
+  ret {<vscale x 16 x i8>, <vscale x 16 x i8>} %r
+}
+
+define {<vscale x 16 x i8>, <vscale x 16 x i8>} @alloca_nxv16i8_nxv4i32({<vscale x 4 x i32>, <vscale x 4 x i32>} %x) nounwind {
+; CHECK-LABEL: define { <vscale x 16 x i8>, <vscale x 16 x i8> } @alloca_nxv16i8_nxv4i32
+; CHECK-SAME: ({ <vscale x 4 x i32>, <vscale x 4 x i32> } [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
+; CHECK-NEXT:    store { <vscale x 4 x i32>, <vscale x 4 x i32> } [[X]], ptr [[P]], align 16
+; CHECK-NEXT:    [[R:%.*]] = load { <vscale x 16 x i8>, <vscale x 16 x i8> }, ptr [[P]], align 16
+; CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[R]]
+;
+entry:
+  %p = alloca {<vscale x 4 x i32>, <vscale x 4 x i32>}
+  store {<vscale x 4 x i32>, <vscale x 4 x i32>} %x, ptr %p
+  %r = load {<vscale x 16 x i8>, <vscale x 16 x i8>}, ptr %p
+  ret {<vscale x 16 x i8>, <vscale x 16 x i8>} %r
+}
+
+define { <16 x i8>, <32 x i8> } @differenttypes({ <4 x i32>, <8 x i32> } %a, ptr %p) {
+; CHECK-LABEL: define { <16 x i8>, <32 x i8> } @differenttypes
+; CHECK-SAME: ({ <4 x i32>, <8 x i32> } [[A:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr nonnull [[P]])
+; CHECK-NEXT:    store { <4 x i32>, <8 x i32> } [[A]], ptr [[P]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load { <16 x i8>, <32 x i8> }, ptr [[P]], align 16
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr nonnull [[P]])
+; CHECK-NEXT:    ret { <16 x i8>, <32 x i8> } [[TMP0]]
+;
+entry:
+  call void @llvm.lifetime.start.p0(i64 -1, ptr nonnull %p) #5
+  store { <4 x i32>, <8 x i32> } %a, ptr %p, align 16
+  %2 = load { <16 x i8>, <32 x i8> }, ptr %p, align 16
+  call void @llvm.lifetime.end.p0(i64 -1, ptr nonnull %p) #5
+  ret { <16 x i8>, <32 x i8> } %2
+}
