@@ -143,6 +143,32 @@ void NextUseResult::getFromSortedRecords(
   }
 }
 
+SmallVector<VRegMaskPair>
+NextUseResult::getSortedSubregUses(const MachineBasicBlock::iterator I,
+                                   const VRegMaskPair VMP) {
+  SmallVector<VRegMaskPair> Result;
+  const MachineBasicBlock *MBB = I->getParent();
+  unsigned MBBNum = MBB->getNumber();
+  if (NextUseMap.contains(MBBNum) &&
+      NextUseMap[MBBNum].InstrDist.contains(&*I)) {
+    VRegDistances Dists = NextUseMap[MBBNum].InstrDist[&*I];
+    if (NextUseMap[MBBNum].InstrDist[&*I].contains(VMP.VReg)) {
+      VRegDistances::SortedRecords Dists =
+          NextUseMap[MBBNum].InstrDist[&*I][VMP.VReg];
+      LLVM_DEBUG(dbgs() << "Mask : [" << PrintLaneMask(VMP.LaneMask) << "]\n");
+      for (auto P : reverse(Dists)) {
+        LaneBitmask UseMask = P.first;
+        LLVM_DEBUG(dbgs() << "Used mask : [" << PrintLaneMask(UseMask)
+                          << "]\n");
+        if ((UseMask & VMP.LaneMask) == UseMask) {
+          Result.push_back({VMP.VReg, UseMask});
+        }
+      }
+    }
+  }
+  return std::move(Result);
+}
+
 unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock::iterator I,
                                            const VRegMaskPair VMP) {
   unsigned Dist = Infinity;

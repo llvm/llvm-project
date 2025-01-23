@@ -569,38 +569,17 @@ void AMDGPUSSASpiller::limit(MachineBasicBlock &MBB, RegisterSet &Active,
     unsigned RegSize = getSizeInRegs(P);
     unsigned SizeToSpill = CurRP - Limit;
     if (RegSize > SizeToSpill) {
-      const TargetRegisterClass *SuperRC = TRI->getRegClassForReg(*MRI, P.VReg);
-      DenseMap<unsigned, std::pair<unsigned, LaneBitmask>> Cands;
-      SmallVector<unsigned> Sorted;
-      for (auto &SubReg : MRI->reg_operands(P.VReg)) {
-        if (!SubReg.isUse())
-          continue;
-        unsigned SubRegIdx = SubReg.getSubReg();
-        LaneBitmask Mask = TRI->getSubRegIndexLaneMask(SubRegIdx);
-        if ((P.LaneMask & Mask) != LaneBitmask::getNone()) {
-          VRegMaskPair X(P.VReg, Mask);
-          unsigned D = I == MBB.end() ? NU.getNextUseDistance(MBB, X)
-                                      : NU.getNextUseDistance(I, X);
-          Cands[D] = {SubRegIdx, Mask};
-          Sorted.push_back(D);
-        }
-      }
 
       LaneBitmask ActiveMask = P.LaneMask;
-      std::sort(Sorted.begin(), Sorted.end(), [](unsigned x, unsigned y) { return x > y;});
-      for (auto i : Sorted) {
-        unsigned SubIdx = Cands[i].first;
-        LaneBitmask SubMask = Cands[i].second;
-        VRegMaskPair Y(P.VReg, SubMask);
-        // dbgs() << "[ " << printReg(Y.VReg, TRI, SubIdx, MRI) << " ] : " << i
-        //        << "\n";
-        const TargetRegisterClass *RC =
-            TRI->getSubRegisterClass(SuperRC, SubIdx);
-        unsigned Size = TRI->getRegClassWeight(RC).RegWeight;
+
+      SmallVector<VRegMaskPair> Sorted = NU.getSortedSubregUses(I, P);
+
+      for (auto P : Sorted) {
+        unsigned Size = getSizeInRegs(P);
         CurRP -= Size;
-        if (!Spilled.contains(Y))
-          ToSpill.insert(Y);
-        ActiveMask &= (~SubMask);
+        if (!Spilled.contains(P))
+          ToSpill.insert(P);
+        ActiveMask &= (~P.LaneMask);
         if (CurRP == Limit)
           break;
       }
