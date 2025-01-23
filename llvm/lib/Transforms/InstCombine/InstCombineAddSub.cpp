@@ -1632,6 +1632,20 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     }
   }
 
+  {
+    // A - B + B * C -> A + B * (C - 1)
+    const APInt *C;
+    if (((match(LHS, m_Sub(m_Value(A), m_Value(B))) &&
+          match(RHS, m_Mul(m_Specific(B), m_APInt(C)))) ||
+         (match(RHS, m_Sub(m_Value(A), m_Value(B))) &&
+          match(LHS, m_Mul(m_Specific(B), m_APInt(C))))) &&
+        LHS->hasOneUse() && RHS->hasOneUse()) {
+      Value *Mul =
+          Builder.CreateMul(B, ConstantInt::get(RHS->getType(), *C - 1));
+      return BinaryOperator::CreateAdd(A, Mul);
+    }
+  }
+
   // X % C0 + (( X / C0 ) % C1) * C0 => X % (C0 * C1)
   if (Value *V = SimplifyAddWithRemainder(I)) return replaceInstUsesWith(I, V);
 
