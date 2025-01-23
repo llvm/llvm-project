@@ -356,6 +356,8 @@ protected:
   MonitorDebugserverProcess(std::weak_ptr<ProcessGDBRemote> process_wp,
                             lldb::pid_t pid, int signo, int exit_status);
 
+  virtual std::shared_ptr<ThreadGDBRemote> CreateThread(lldb::tid_t tid);
+
   lldb::StateType SetThreadStopInfo(StringExtractor &stop_packet);
 
   bool

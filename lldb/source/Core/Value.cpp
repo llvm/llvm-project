@@ -555,8 +555,9 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
         Process *process = exe_ctx->GetProcessPtr();
 
         if (process) {
-          const size_t bytes_read =
-              process->ReadMemory(address, dst, byte_size, error);
+          const size_t bytes_read = process->ReadMemory(
+              process->FixMemoryAddress(address, exe_ctx->GetFramePtr()), dst,
+              byte_size, error);
           if (bytes_read != byte_size)
             error = Status::FromErrorStringWithFormat(
                 "read memory from 0x%" PRIx64 " failed (%u of %u bytes read)",

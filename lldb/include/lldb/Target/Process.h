@@ -1440,6 +1440,14 @@ public:
   /// platforms where there is a difference (only Arm Thumb at this time).
   lldb::addr_t FixAnyAddress(lldb::addr_t pc);
 
+  /// Some targets might use bits in a code address to represent additional
+  /// information; for example WebAssembly targets have a different memory space
+  /// per module and have a different address space per memory and code.
+  virtual lldb::addr_t FixMemoryAddress(lldb::addr_t address,
+                                        StackFrame *stack_frame) const {
+    return address;
+  }
+
   /// Get the Modification ID of the process.
   ///
   /// \return
@@ -1923,9 +1931,9 @@ public:
   ///     the instruction has completed executing.
   bool GetWatchpointReportedAfter();
 
-  lldb::ModuleSP ReadModuleFromMemory(const FileSpec &file_spec,
-                                      lldb::addr_t header_addr,
-                                      size_t size_to_read = 512);
+  virtual lldb::ModuleSP ReadModuleFromMemory(const FileSpec &file_spec,
+                                              lldb::addr_t header_addr,
+                                              size_t size_to_read = 512);
 
   /// Attempt to get the attributes for a region of memory in the process.
   ///

@@ -40,7 +40,9 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 
+#include "Plugins/Process/wasm/wasmRegisterContext.h"
 #include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
+#include "Plugins/SymbolFile/DWARF/DWARFWasm.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -332,6 +334,16 @@ static lldb::offset_t GetOpcodeDataSize(const DataExtractor &data,
   {
     uint64_t subexpr_len = data.GetULEB128(&offset);
     return (offset - data_offset) + subexpr_len;
+  }
+
+  case DW_OP_WASM_location: {
+    DWARFWasmLocation wasm_location =
+        static_cast<DWARFWasmLocation>(data.GetU8(&offset));
+    if (wasm_location == DWARFWasmLocation::eGlobalU32)
+      data.GetU32(&offset);
+    else
+      data.GetULEB128(&offset);
+    return offset - data_offset;
   }
 
   default:
@@ -2261,6 +2273,40 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return llvm::createStringError(
             "could not evaluate DW_OP_entry_value: %s",
             llvm::toString(std::move(err)).c_str());
+      break;
+    }
+
+    case DW_OP_WASM_location: {
+      uint8_t wasm_op = opcodes.GetU8(&offset);
+      if (wasm_op > DWARFWasmLocation::eGlobalU32) {
+        if (error_ptr)
+          error_ptr->SetErrorString("Invalid Wasm location index");
+        return false;
+      }
+      DWARFWasmLocation wasm_location = static_cast<DWARFWasmLocation>(wasm_op);
+
+      /* LLDB doesn't have an address space to represents WebAssembly locals,
+       * globals and operand stacks.
+       * We encode these elements into virtual registers:
+       *   | WasmVirtualRegisterKinds: 2 bits | index: 30 bits |
+       */
+      uint32_t index;
+      if (wasm_location == DWARFWasmLocation::eGlobalU32) {
+        index = opcodes.GetU32(&offset);
+      } else {
+        index = opcodes.GetULEB128(&offset);
+      }
+      wasm::WasmVirtualRegisterKinds register_tag =
+          wasm::WasmVirtualRegisterInfo::VirtualRegisterKindFromDWARFLocation(
+              wasm_location);
+      reg_num = (register_tag << wasm::WasmRegisterContext::kTagShift) |
+                (index & wasm::WasmRegisterContext::kIndexMask);
+
+      if (ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num, error_ptr, tmp))
+        stack.push_back(tmp);
+      else
+        return false;
+
       break;
     }
 
