@@ -5,13 +5,13 @@ set(LLVM_LINK_COMPONENTS
   native
   )
 
-add_mlir_tool(mlir-cpu-runner
-  mlir-cpu-runner.cpp
+add_mlir_tool(mlir-runner
+  mlir-runner.cpp
 
   EXPORT_SYMBOLS
   )
-llvm_update_compile_flags(mlir-cpu-runner)
-mlir_target_link_libraries(mlir-cpu-runner PRIVATE
+llvm_update_compile_flags(mlir-runner)
+mlir_target_link_libraries(mlir-runner PRIVATE
   MLIRAnalysis
   MLIRBuiltinToLLVMIRTranslation
   MLIRIR
@@ -22,14 +22,14 @@ mlir_target_link_libraries(mlir-cpu-runner PRIVATE
   MLIRTargetLLVMIRExport
   MLIRSupport
   )
-target_link_libraries(mlir-cpu-runner PRIVATE
+target_link_libraries(mlir-runner PRIVATE
   MLIRExecutionEngine
   MLIRJitRunner
   )
 
 # Preventing re-export of symbols causes link errors with ASan and UBSan libs.
 if (NOT LLVM_USE_SANITIZER)
-  target_link_options(mlir-cpu-runner
+  target_link_options(mlir-runner
     PRIVATE
       # On Linux, disable re-export of any static linked libraries that came
       # through. This prevents our LLVM build from interfering with the version
