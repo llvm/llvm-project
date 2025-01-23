@@ -189,6 +189,11 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
 endif()
 
 add_subdirectory(Common)
+add_subdirectory(COFF)
+add_subdirectory(ELF)
+add_subdirectory(MachO)
+add_subdirectory(MinGW)
+add_subdirectory(wasm)
 add_subdirectory(tools/lld)
 
 if (LLVM_INCLUDE_TESTS)
@@ -201,10 +206,5 @@ if (LLVM_INCLUDE_TESTS)
 endif()
 
 add_subdirectory(docs)
-add_subdirectory(COFF)
-add_subdirectory(ELF)
-add_subdirectory(MachO)
-add_subdirectory(MinGW)
-add_subdirectory(wasm)
 
 add_subdirectory(cmake/modules)
