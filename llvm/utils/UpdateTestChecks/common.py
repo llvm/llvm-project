@@ -2299,7 +2299,7 @@ def filter_globals_according_to_preference(
 
 METADATA_FILTERS = [
     (
-        r"(?<=\")(.+ )?(\w+ version )[\d.]+(?:[^\" ]*)(?: \([^)]+\))?",
+        r"(?<=\")(.+ )??(\w+ version )[\d.]+(?:[^\" ]*)(?: \([^)]+\))?",
         r"{{.*}}\2{{.*}}",
     ),  # preface with glob also, to capture optional CLANG_VENDOR
     (r'(!DIFile\(filename: ".+", directory: )".+"', r"\1{{.*}}"),
