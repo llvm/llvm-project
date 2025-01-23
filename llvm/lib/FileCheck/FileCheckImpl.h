@@ -837,8 +837,9 @@ struct FileCheckString {
   /// Hold the DAG/NOT strings occurring in the input file.
   std::vector<DagNotPrefixInfo> DagNotStrings;
 
-  FileCheckString(const Pattern &P, StringRef S, SMLoc L)
-      : Pat(P), Prefix(S), Loc(L) {}
+  FileCheckString(Pattern &&P, StringRef S, SMLoc L,
+                  std::vector<DagNotPrefixInfo> &&D)
+      : Pat(std::move(P)), Prefix(S), Loc(L), DagNotStrings(std::move(D)) {}
 
   /// Matches check string and its "not strings" and/or "dag strings".
   size_t Check(const SourceMgr &SM, StringRef Buffer, bool IsLabelScanMode,

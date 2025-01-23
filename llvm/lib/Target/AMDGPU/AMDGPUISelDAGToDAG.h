@@ -87,6 +87,7 @@ public:
 
 protected:
   void SelectBuildVector(SDNode *N, unsigned RegClassID);
+  void SelectVectorShuffle(SDNode *N);
 
 private:
   std::pair<SDValue, SDValue> foldFrameIndex(SDValue N) const;
