@@ -1025,7 +1025,9 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
     // Therefore, we make LLD always add PT_GNU_STACK unless it is
     // explicitly told to do otherwise (by -z execstack). Because the stack
     // executable-ness is controlled solely by command line options,
-    // .note.GNU-stack sections are simply ignored.
+    // .note.GNU-stack sections are, with one exception, ignored. Report
+    // an error if we encounter an executable .note.GNU-stack to force the
+    // user to explicitly request an executable stack.
     if (name == ".note.GNU-stack") {
       if ((sec.sh_flags & SHF_EXECINSTR) && !ctx.arg.relocatable &&
           ctx.arg.zGnustack != GnuStackKind::Exec) {
