@@ -173,7 +173,7 @@ If a number passed as a field width or precision value is out of range for an
 int, then it will be treated as the largest value in the int range
 (e.g. "%-999999999999.999999999999s" is the same as "%-2147483647.2147483647s").
 
-If the field width is set to INT_MIN by using the '*' form, 
+If the field width is set to INT_MIN by using the '*' form,
 e.g. printf("%*d", INT_MIN, 1), it will be treated as INT_MAX, since -INT_MIN is
 not representable as an int.
 
