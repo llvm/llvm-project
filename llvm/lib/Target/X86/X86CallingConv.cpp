@@ -365,7 +365,7 @@ static bool CC_X86_64_I128(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
       State.addLoc(Pending);
     }
   } else {
-    int64_t Offset = State.AllocateStack(8, Align(16));
+    int64_t Offset = State.AllocateStack(16, Align(16));
     for (auto &Pending : PendingMembers) {
       Pending.convertToMem(Offset);
       State.addLoc(Pending);
