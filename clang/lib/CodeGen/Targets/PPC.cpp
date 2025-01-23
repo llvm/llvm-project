@@ -215,9 +215,9 @@ ABIArgInfo AIXABIInfo::classifyArgumentType(QualType Ty) const {
     CharUnits TyAlign = getContext().getTypeAlignInChars(Ty);
 
     return ABIArgInfo::getIndirect(
-        CCAlign, /*AddrSpace*/ getDataLayout().getAllocaAddrSpace(),
-        /*ByVal*/ true,
-        /*Realign*/ TyAlign > CCAlign);
+        CCAlign, /*AddrSpace=*/ getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/ true,
+        /*Realign=*/ TyAlign > CCAlign);
   }
 
   return (isPromotableTypeForABI(Ty)

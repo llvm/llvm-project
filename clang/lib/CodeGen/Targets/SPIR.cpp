@@ -159,7 +159,7 @@ ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
       // and matches the NVPTX implementation. TODO: hardcoding to 0 should be
       // revisited if HIPSPV / byval starts making use of the AS of an indirect
       // arg.
-      return getNaturalAlignIndirect(Ty, /* AddrSpace */ 0, /* byval */ true);
+      return getNaturalAlignIndirect(Ty, /*AddrSpace=*/ 0, /*byval=*/ true);
     }
   }
   return classifyArgumentType(Ty);
