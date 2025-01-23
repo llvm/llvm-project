@@ -1175,9 +1175,6 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // Make clamp modifier on NaN input returns 0.
   ProgInfo.DX10Clamp = Mode.DX10Clamp;
 
-  ProgInfo.SGPRSpill = MFI->getNumSpilledSGPRs();
-  ProgInfo.VGPRSpill = MFI->getNumSpilledVGPRs();
-
   unsigned LDSAlignShift;
   if (STM.getFeatureBits().test(FeatureAddressableLocalMemorySize163840)) {
     // LDS is allocated in 320 dword blocks.
@@ -1190,6 +1187,10 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     // LDS is allocated in 64 dword blocks.
     LDSAlignShift = 8;
   }
+
+  ProgInfo.SGPRSpill = MFI->getNumSpilledSGPRs();
+  ProgInfo.VGPRSpill = MFI->getNumSpilledVGPRs();
+
   ProgInfo.LDSSize = MFI->getLDSSize();
   ProgInfo.LDSBlocks =
       alignTo(ProgInfo.LDSSize, 1ULL << LDSAlignShift) >> LDSAlignShift;
