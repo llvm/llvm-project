@@ -1609,7 +1609,7 @@ public:
   /// reduction operation.
   /// \p Input1 First input for the partial reduction operation.
   /// \p Input2 Second input for the partial reduction operation.
-  SDValue expandPartialReduceAdd(SDLoc DL, SDValue Acc, SDValue Input1,
+  SDValue expandPartialReduceMLA(SDLoc DL, SDValue Acc, SDValue Input1,
                                  SDValue Input2);
 
   /// Expands a node with multiple results to an FP or vector libcall. The

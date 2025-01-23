@@ -2467,12 +2467,17 @@ SDValue SelectionDAG::getShiftAmountOperand(EVT LHSTy, SDValue Op) {
   return getZExtOrTrunc(Op, SDLoc(Op), ShTy);
 }
 
-SDValue SelectionDAG::expandPartialReduceAdd(SDLoc DL, SDValue Acc,
+SDValue SelectionDAG::expandPartialReduceMLA(SDLoc DL, SDValue Acc,
                                              SDValue Input1, SDValue Input2) {
 
   EVT FullTy = Input1.getValueType();
-  Input2 = getAnyExtOrTrunc(Input2, DL, FullTy);
-  SDValue Input = getNode(ISD::MUL, DL, FullTy, Input1, Input2);
+  unsigned Input2Opcode = Input2.getOpcode();
+
+  SDValue Input = Input1;
+  if ((Input2Opcode != ISD::SPLAT_VECTOR &&
+       Input2Opcode != ISD::BUILD_VECTOR) ||
+      !isOneConstant(Input2.getOperand(0)))
+    Input = getNode(ISD::MUL, DL, FullTy, Input1, Input2);
 
   EVT ReducedTy = Acc.getValueType();
 

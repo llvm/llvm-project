@@ -1455,13 +1455,12 @@ enum NodeType {
   // Input1 and Input2 are multiplied together first. This result is then
   // reduced, by addition, to the number of elements that the Accumulator's type
   // has.
-  // Input1 and Input2 must be the same type. Accumulator's element type must
-  // match that of Input1 and Input2. The number of elements in Input1 and
-  // Input2 must be a positive integer multiple of the number of elements in the
-  // Accumulator.
-  // The signedness of this node will dictate the signedness of nodes expanded
-  // from it. The signedness of the node is dictated by the signedness of
-  // Input1.
+  // Input1 and Input2 must be the same type. The Accumulator and the Output
+  // must be the same type.
+  // The number of elements in Input1 and Input2 must be a positive integer
+  // multiple of the number of elements in the Accumulator / Output type.
+  // Input1 and Input2 may have a different element type from Accumulator and
+  // Output.
   // Operands: Accumulator, Input1, Input2
   // Outputs: Output
   PARTIAL_REDUCE_SMLA,

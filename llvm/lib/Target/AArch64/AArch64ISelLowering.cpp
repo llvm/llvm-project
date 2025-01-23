@@ -22010,7 +22010,38 @@ static SDValue tryCombineWhileLo(SDNode *N,
   return SDValue(N, 0);
 }
 
-SDValue tryCombineToDotProduct(SDValue &Op0, SDValue &Op1, SDValue &Op2,
+SDValue tryCombinePartialReduceMLAMulOp(SDValue &Op0, SDValue &Op1,
+                                        SDValue &Op2, SelectionDAG &DAG,
+                                        SDLoc &DL) {
+  // Makes PARTIAL_REDUCE_MLA(Acc, MUL(EXT(MulOpLHS), EXT(MulOpRHS)), Splat (1))
+  // into PARTIAL_REDUCE_MLA(Acc, EXT(MulOpLHS), EXT(MulOpRHS))
+  if (Op1->getOpcode() != ISD::MUL)
+    return SDValue();
+
+  SDValue ExtMulOpLHS = Op1->getOperand(0);
+  SDValue ExtMulOpRHS = Op1->getOperand(1);
+  unsigned ExtMulOpLHSOpcode = ExtMulOpLHS->getOpcode();
+  unsigned ExtMulOpRHSOpcode = ExtMulOpRHS->getOpcode();
+  if (!ISD::isExtOpcode(ExtMulOpLHSOpcode) ||
+      !ISD::isExtOpcode(ExtMulOpRHSOpcode))
+    return SDValue();
+
+  SDValue MulOpLHS = ExtMulOpLHS->getOperand(0);
+  SDValue MulOpRHS = ExtMulOpRHS->getOperand(0);
+  EVT MulOpLHSVT = MulOpLHS.getValueType();
+  if (MulOpLHSVT != MulOpRHS.getValueType())
+    return SDValue();
+
+  unsigned Op2Opcode = Op2->getOpcode();
+  if ((Op2Opcode != ISD::SPLAT_VECTOR && Op2Opcode != ISD::BUILD_VECTOR) ||
+      !isOneConstant(Op2->getOperand(0)))
+    return SDValue();
+
+  return DAG.getNode(ISD::PARTIAL_REDUCE_UMLA, DL, Op0->getValueType(0), Op0,
+                     ExtMulOpLHS, ExtMulOpRHS);
+}
+
+SDValue tryCombineToDotProduct(SDValue &Op0, SDValue &ExtOp1, SDValue &ExtOp2,
                                SelectionDAG &DAG,
                                const AArch64Subtarget *Subtarget, SDLoc &DL) {
   bool Scalable = Op0->getValueType(0).isScalableVector();
@@ -22019,56 +22050,51 @@ SDValue tryCombineToDotProduct(SDValue &Op0, SDValue &Op1, SDValue &Op2,
   if (!Scalable && (!Subtarget->isNeonAvailable() || !Subtarget->hasDotProd()))
     return SDValue();
 
-  unsigned Op1Opcode = Op1->getOpcode();
-  SDValue MulOpLHS, MulOpRHS;
-  bool MulOpLHSIsSigned, MulOpRHSIsSigned;
-  if (ISD::isExtOpcode(Op1Opcode)) {
-    MulOpLHSIsSigned = MulOpRHSIsSigned = (Op1Opcode == ISD::SIGN_EXTEND);
-    MulOpLHS = Op1->getOperand(0);
-    MulOpRHS = DAG.getAnyExtOrTrunc(Op2, DL, MulOpLHS.getValueType());
-  } else if (Op1Opcode == ISD::MUL) {
-    SDValue ExtMulOpLHS = Op1->getOperand(0);
-    SDValue ExtMulOpRHS = Op1->getOperand(1);
-
-    unsigned ExtMulOpLHSOpcode = ExtMulOpLHS->getOpcode();
-    unsigned ExtMulOpRHSOpcode = ExtMulOpRHS->getOpcode();
-    if (!ISD::isExtOpcode(ExtMulOpLHSOpcode) ||
-        !ISD::isExtOpcode(ExtMulOpRHSOpcode))
-      return SDValue();
-
-    MulOpLHSIsSigned = ExtMulOpLHSOpcode == ISD::SIGN_EXTEND;
-    MulOpRHSIsSigned = ExtMulOpRHSOpcode == ISD::SIGN_EXTEND;
-
-    MulOpLHS = ExtMulOpLHS->getOperand(0);
-    MulOpRHS = ExtMulOpRHS->getOperand(0);
-    EVT MulOpLHSVT = MulOpLHS.getValueType();
-
-    if (MulOpLHSVT != MulOpRHS.getValueType())
-      return SDValue();
-
-    Op2 = DAG.getAnyExtOrTrunc(Op2, DL, MulOpLHSVT);
-    MulOpLHS = DAG.getNode(ISD::MUL, DL, MulOpLHSVT, MulOpLHS, Op2);
-    MulOpRHS = DAG.getNode(ISD::MUL, DL, MulOpLHSVT, MulOpRHS, Op2);
-  } else
+  unsigned ExtOp1Opcode = ExtOp1->getOpcode();
+  unsigned ExtOp2Opcode = ExtOp2->getOpcode();
+  SDValue Op1, Op2;
+  bool Op1IsSigned, Op2IsSigned;
+  if (!ISD::isExtOpcode(ExtOp1Opcode))
     return SDValue();
+  Op1 = ExtOp1->getOperand(0);
+  EVT SrcVT = Op1.getValueType();
+
+  if ((ExtOp2Opcode == ISD::SPLAT_VECTOR ||
+       ExtOp2Opcode == ISD::BUILD_VECTOR) &&
+      isOneConstant(ExtOp2.getOperand(0))) {
+    // Makes PARTIAL_REDUCE_MLA(Acc, Ext(Op1), Splat(1)) into
+    // PARTIAL_REDUCE_MLA(Acc, Op1, Splat(1))
+    Op1IsSigned = Op2IsSigned = (ExtOp1Opcode == ISD::SIGN_EXTEND);
+    // Can only do this because it's a splat vector of constant 1
+    Op2 = DAG.getAnyExtOrTrunc(ExtOp2, DL, SrcVT);
+  } else if (ISD::isExtOpcode(ExtOp2Opcode)) {
+    // Makes PARTIAL_REDUCE_MLA(Acc, Ext(Op1), Ext(Op2)) into
+    // PARTIAL_REDUCE_MLA(Acc, Op1, Op2)
+    Op2 = ExtOp2->getOperand(0);
+    Op1IsSigned = ExtOp1Opcode == ISD::SIGN_EXTEND;
+    Op2IsSigned = ExtOp2Opcode == ISD::SIGN_EXTEND;
+    if (SrcVT != Op2.getValueType())
+      return SDValue();
+  } else {
+    return SDValue();
+  }
 
   SDValue Acc = Op0;
   EVT ReducedVT = Acc->getValueType(0);
-  EVT MulSrcVT = MulOpLHS.getValueType();
 
   // Dot products operate on chunks of four elements so there must be four times
   // as many elements in the wide type
-  if (!(ReducedVT == MVT::nxv4i64 && MulSrcVT == MVT::nxv16i8) &&
-      !(ReducedVT == MVT::nxv4i32 && MulSrcVT == MVT::nxv16i8) &&
-      !(ReducedVT == MVT::nxv2i64 && MulSrcVT == MVT::nxv8i16) &&
-      !(ReducedVT == MVT::v4i64 && MulSrcVT == MVT::v16i8) &&
-      !(ReducedVT == MVT::v4i32 && MulSrcVT == MVT::v16i8) &&
-      !(ReducedVT == MVT::v2i32 && MulSrcVT == MVT::v8i8))
+  if (!(ReducedVT == MVT::nxv4i64 && SrcVT == MVT::nxv16i8) &&
+      !(ReducedVT == MVT::nxv4i32 && SrcVT == MVT::nxv16i8) &&
+      !(ReducedVT == MVT::nxv2i64 && SrcVT == MVT::nxv8i16) &&
+      !(ReducedVT == MVT::v4i64 && SrcVT == MVT::v16i8) &&
+      !(ReducedVT == MVT::v4i32 && SrcVT == MVT::v16i8) &&
+      !(ReducedVT == MVT::v2i32 && SrcVT == MVT::v8i8))
     return SDValue();
 
   // If the extensions are mixed, we should lower it to a usdot instead
-  unsigned DotOpcode = MulOpLHSIsSigned ? AArch64ISD::SDOT : AArch64ISD::UDOT;
-  if (MulOpLHSIsSigned != MulOpRHSIsSigned) {
+  unsigned DotOpcode = Op1IsSigned ? AArch64ISD::SDOT : AArch64ISD::UDOT;
+  if (Op1IsSigned != Op2IsSigned) {
     if (!Subtarget->hasMatMulInt8())
       return SDValue();
 
@@ -22077,71 +22103,69 @@ SDValue tryCombineToDotProduct(SDValue &Op0, SDValue &Op1, SDValue &Op2,
     if (Scalable && ReducedVT != MVT::nxv4i32 && ReducedVT != MVT::nxv4i64)
       return SDValue();
 
-    if (!MulOpRHSIsSigned)
-      std::swap(MulOpLHS, MulOpRHS);
+    if (!Op2IsSigned)
+      std::swap(Op1, Op2);
     DotOpcode = AArch64ISD::USDOT;
     // Lower usdot patterns here because legalisation would attempt to split it
     // unless exts are removed. But, removing the exts would lose the
     // information about whether each operand is signed.
-    if ((ReducedVT != MVT::nxv4i64 || MulSrcVT != MVT::nxv16i8) &&
-        (ReducedVT != MVT::v4i64 || MulSrcVT != MVT::v16i8))
-      return DAG.getNode(DotOpcode, DL, ReducedVT, Acc, MulOpLHS, MulOpRHS);
+    if ((ReducedVT != MVT::nxv4i64 || SrcVT != MVT::nxv16i8) &&
+        (ReducedVT != MVT::v4i64 || SrcVT != MVT::v16i8))
+      return DAG.getNode(DotOpcode, DL, ReducedVT, Acc, Op1, Op2);
   }
 
   // Partial reduction lowering for (nx)v16i8 to (nx)v4i64 requires an i32 dot
   // product followed by a zero / sign extension. Need to lower this here
   // because legalisation would attempt to split it.
-  if ((ReducedVT == MVT::nxv4i64 && MulSrcVT == MVT::nxv16i8) ||
-      (ReducedVT == MVT::v4i64 && MulSrcVT == MVT::v16i8)) {
+  if ((ReducedVT == MVT::nxv4i64 && SrcVT == MVT::nxv16i8) ||
+      (ReducedVT == MVT::v4i64 && SrcVT == MVT::v16i8)) {
     EVT ReducedVTI32 =
         (ReducedVT.isScalableVector()) ? MVT::nxv4i32 : MVT::v4i32;
 
     SDValue DotI32 =
         DAG.getNode(DotOpcode, DL, ReducedVTI32,
-                    DAG.getConstant(0, DL, ReducedVTI32), MulOpLHS, MulOpRHS);
+                    DAG.getConstant(0, DL, ReducedVTI32), Op1, Op2);
     SDValue Extended = DAG.getSExtOrTrunc(DotI32, DL, ReducedVT);
     return DAG.getNode(ISD::ADD, DL, ReducedVT, Acc, Extended);
   }
 
   unsigned NewOpcode =
-      MulOpLHSIsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
-  return DAG.getNode(NewOpcode, DL, ReducedVT, Acc, MulOpLHS, MulOpRHS);
+      Op1IsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
+  return DAG.getNode(NewOpcode, DL, ReducedVT, Acc, Op1, Op2);
 }
 
-SDValue tryCombineToWideAdd(SDValue &Op0, SDValue &Op1, SDValue &Op2,
+SDValue tryCombineToWideAdd(SDValue &Op0, SDValue &ExtOp1, SDValue &Op2,
                             SelectionDAG &DAG,
                             const AArch64Subtarget *Subtarget, SDLoc &DL) {
+  // Makes PARTIAL_REDUCE_MLA(Acc, Ext(Op1), Splat(1)) into
+  // PARTIAL_REDUCE_MLA(Acc, Op1, Splat(1))
   if (!Subtarget->hasSVE2() && !Subtarget->isStreamingSVEAvailable())
     return SDValue();
-  unsigned Op1Opcode = Op1->getOpcode();
-  if (!ISD::isExtOpcode(Op1Opcode))
-    return SDValue();
-
   EVT AccVT = Op0->getValueType(0);
-  Op1 = Op1->getOperand(0);
-  EVT Op1VT = Op1.getValueType();
-  // Makes Op2's value type match the value type of Op1 without its extend.
-  Op2 = DAG.getAnyExtOrTrunc(Op2, DL, Op1VT);
-  // Make a MUL between Op1 and Op2 here so the MUL can be changed if possible
-  // (can be pruned or changed to a shift instruction for example).
-  SDValue Input = DAG.getNode(ISD::MUL, DL, Op1VT, Op1, Op2);
-
-  if (!AccVT.isScalableVector())
+  unsigned ExtOp1Opcode = ExtOp1->getOpcode();
+  if (!ISD::isExtOpcode(ExtOp1Opcode))
     return SDValue();
+  SDValue Op1 = ExtOp1->getOperand(0);
+  EVT Op1VT = Op1.getValueType();
+
+  unsigned Op2Opcode = Op2->getOpcode();
+  if (Op2Opcode != ISD::SPLAT_VECTOR || !isOneConstant(Op2->getOperand(0)))
+    return SDValue();
+  Op2 = DAG.getAnyExtOrTrunc(Op2, DL, Op1VT);
 
   if (!(Op1VT == MVT::nxv4i32 && AccVT == MVT::nxv2i64) &&
       !(Op1VT == MVT::nxv8i16 && AccVT == MVT::nxv4i32) &&
       !(Op1VT == MVT::nxv16i8 && AccVT == MVT::nxv8i16))
     return SDValue();
 
-  unsigned NewOpcode = Op1Opcode == ISD::SIGN_EXTEND ? ISD::PARTIAL_REDUCE_SMLA
-                                                     : ISD::PARTIAL_REDUCE_UMLA;
-  // Return a constant of 1s for Op2 so the MUL is not performed again.
-  return DAG.getNode(NewOpcode, DL, AccVT, Op0, Input,
-                     DAG.getConstant(1, DL, Op1VT));
+  unsigned NewOpcode = ExtOp1Opcode == ISD::SIGN_EXTEND
+                           ? ISD::PARTIAL_REDUCE_SMLA
+                           : ISD::PARTIAL_REDUCE_UMLA;
+
+  return DAG.getNode(NewOpcode, DL, AccVT, Op0, Op1, Op2);
 }
 
-SDValue performPartialReduceAddCombine(SDNode *N, SelectionDAG &DAG,
+SDValue performPartialReduceMLACombine(SDNode *N, SelectionDAG &DAG,
                                        const AArch64Subtarget *Subtarget) {
   SDLoc DL(N);
   SDValue Op0 = N->getOperand(0);
@@ -22155,13 +22179,18 @@ SDValue performPartialReduceAddCombine(SDNode *N, SelectionDAG &DAG,
   if (Op0ElemVT != Op1ElemVT || Op1.getOpcode() == AArch64ISD::USDOT)
     return SDValue(N, 0);
 
+  if (auto MLA = tryCombinePartialReduceMLAMulOp(Op0, Op1, Op2, DAG, DL)) {
+    Op0 = MLA->getOperand(0);
+    Op1 = MLA->getOperand(1);
+    Op2 = MLA->getOperand(2);
+  }
   if (auto Dot = tryCombineToDotProduct(Op0, Op1, Op2, DAG, Subtarget, DL))
     return Dot;
   if (auto WideAdd = tryCombineToWideAdd(Op0, Op1, Op2, DAG, Subtarget, DL))
     return WideAdd;
   // N->getOperand needs calling again because the Op variables may have been
   // changed by the functions above
-  return DAG.expandPartialReduceAdd(DL, N->getOperand(0), N->getOperand(1),
+  return DAG.expandPartialReduceMLA(DL, N->getOperand(0), N->getOperand(1),
                                     N->getOperand(2));
 }
 
@@ -26605,7 +26634,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performMaskedGatherScatterCombine(N, DCI, DAG);
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
-    return performPartialReduceAddCombine(N, DAG, Subtarget);
+    return performPartialReduceMLACombine(N, DAG, Subtarget);
   case ISD::FP_EXTEND:
     return performFPExtendCombine(N, DAG, DCI, Subtarget);
   case AArch64ISD::BRCOND:
@@ -29393,13 +29422,6 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
                                                             : AArch64ISD::UDOT;
     return DAG.getNode(DotOpcode, DL, AccVT, Acc, Input1, Input2);
   }
-
-  SDValue MulInput = Input1;
-  // If Input2 is a splat vector of constant 1 then the MUL instruction is not
-  // needed. If it was created here it would not be automatically pruned.
-  if (Input2.getOpcode() != ISD::SPLAT_VECTOR || Input2.getNumOperands() == 0 ||
-      !isOneConstant(Input2.getOperand(0)))
-    MulInput = DAG.getNode(ISD::MUL, DL, InputVT, Input1, Input2);
 
   bool InputIsSigned = Opcode == ISD::PARTIAL_REDUCE_SMLA;
   unsigned BottomOpcode =
