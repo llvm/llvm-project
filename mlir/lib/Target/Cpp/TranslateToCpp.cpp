@@ -1387,11 +1387,9 @@ LogicalResult CppEmitter::emitOperand(Value value) {
     // as they might be evaluated in the wrong order depending on the shape of
     // the expression tree.
     bool encloseInParenthesis = precedence.value() <= getExpressionPrecedence();
-    if (encloseInParenthesis) {
+    if (encloseInParenthesis)
       os << "(";
-      pushExpressionPrecedence(lowestPrecedence());
-    } else
-      pushExpressionPrecedence(precedence.value());
+    pushExpressionPrecedence(precedence.value());
 
     if (failed(emitOperation(*def, /*trailingSemicolon=*/false)))
       return failure();
