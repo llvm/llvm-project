@@ -41,6 +41,7 @@ static_library("Support") {
     "APInt.cpp",
     "APSInt.cpp",
     "ARMAttributeParser.cpp",
+    "AArch64AttributeParser.cpp",
     "ARMBuildAttrs.cpp",
     "ARMWinEH.cpp",
     "Allocator.cpp",
