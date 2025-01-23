@@ -30,7 +30,6 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/COFFImportFile.h"
-#include "llvm/Object/COFFModuleDefinition.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -1012,67 +1011,6 @@ void LinkerDriver::createImportLibrary(bool asLib) {
   }
 }
 
-void LinkerDriver::parseModuleDefs(StringRef path) {
-  llvm::TimeTraceScope timeScope("Parse def file");
-  std::unique_ptr<MemoryBuffer> mb =
-      CHECK(MemoryBuffer::getFile(path, /*IsText=*/false,
-                                  /*RequiresNullTerminator=*/false,
-                                  /*IsVolatile=*/true),
-            "could not open " + path);
-  COFFModuleDefinition m = check(parseCOFFModuleDefinition(
-      mb->getMemBufferRef(), ctx.config.machine, ctx.config.mingw));
-
-  // Include in /reproduce: output if applicable.
-  ctx.driver.takeBuffer(std::move(mb));
-
-  if (ctx.config.outputFile.empty())
-    ctx.config.outputFile = std::string(saver().save(m.OutputFile));
-  ctx.config.importName = std::string(saver().save(m.ImportName));
-  if (m.ImageBase)
-    ctx.config.imageBase = m.ImageBase;
-  if (m.StackReserve)
-    ctx.config.stackReserve = m.StackReserve;
-  if (m.StackCommit)
-    ctx.config.stackCommit = m.StackCommit;
-  if (m.HeapReserve)
-    ctx.config.heapReserve = m.HeapReserve;
-  if (m.HeapCommit)
-    ctx.config.heapCommit = m.HeapCommit;
-  if (m.MajorImageVersion)
-    ctx.config.majorImageVersion = m.MajorImageVersion;
-  if (m.MinorImageVersion)
-    ctx.config.minorImageVersion = m.MinorImageVersion;
-  if (m.MajorOSVersion)
-    ctx.config.majorOSVersion = m.MajorOSVersion;
-  if (m.MinorOSVersion)
-    ctx.config.minorOSVersion = m.MinorOSVersion;
-
-  for (COFFShortExport e1 : m.Exports) {
-    Export e2;
-    // Renamed exports are parsed and set as "ExtName = Name". If Name has
-    // the form "OtherDll.Func", it shouldn't be a normal exported
-    // function but a forward to another DLL instead. This is supported
-    // by both MS and GNU linkers.
-    if (!e1.ExtName.empty() && e1.ExtName != e1.Name &&
-        StringRef(e1.Name).contains('.')) {
-      e2.name = saver().save(e1.ExtName);
-      e2.forwardTo = saver().save(e1.Name);
-    } else {
-      e2.name = saver().save(e1.Name);
-      e2.extName = saver().save(e1.ExtName);
-    }
-    e2.exportAs = saver().save(e1.ExportAs);
-    e2.importName = saver().save(e1.ImportName);
-    e2.ordinal = e1.Ordinal;
-    e2.noname = e1.Noname;
-    e2.data = e1.Data;
-    e2.isPrivate = e1.Private;
-    e2.constant = e1.Constant;
-    e2.source = ExportSource::ModuleDefinition;
-    ctx.symtab.exports.push_back(e2);
-  }
-}
-
 void LinkerDriver::enqueueTask(std::function<void()> task) {
   taskQueue.push_back(std::move(task));
 }
@@ -1857,6 +1795,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       setMachine(machine);
     }
   }
+
+  // Most of main arguments apply either to both or only to EC symbol table on
+  // ARM64X target.
   SymbolTable &mainSymtab = ctx.hybridSymtab ? *ctx.hybridSymtab : ctx.symtab;
 
   // Handle /nodefaultlib:<filename>
@@ -2352,7 +2293,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle /def
   if (auto *arg = args.getLastArg(OPT_deffile)) {
     // parseModuleDefs mutates Config object.
-    parseModuleDefs(arg->getValue());
+    mainSymtab.parseModuleDefs(arg->getValue());
+    if (ctx.hybridSymtab) {
+      // MSVC ignores the /defArm64Native argument on non-ARM64X targets.
+      // It is also ignored if the /def option is not specified.
+      if (auto *arg = args.getLastArg(OPT_defarm64native))
+        ctx.symtab.parseModuleDefs(arg->getValue());
+    }
   }
 
   // Handle generation of import library from a def file.

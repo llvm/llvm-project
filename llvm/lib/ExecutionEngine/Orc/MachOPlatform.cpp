@@ -794,13 +794,28 @@ void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
 
   bool InBootstrapPhase = false;
 
-  if (LLVM_UNLIKELY(&MR.getTargetJITDylib() == &MP.PlatformJD)) {
+  ExecutorAddr HeaderAddr;
+  {
     std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
-    if (MP.Bootstrap) {
-      InBootstrapPhase = true;
-      ++MP.Bootstrap->ActiveGraphs;
+    if (LLVM_UNLIKELY(&MR.getTargetJITDylib() == &MP.PlatformJD)) {
+      if (MP.Bootstrap) {
+        InBootstrapPhase = true;
+        ++MP.Bootstrap->ActiveGraphs;
+      }
     }
+
+    // Get the dso-base address if available.
+    auto I = MP.JITDylibToHeaderAddr.find(&MR.getTargetJITDylib());
+    if (I != MP.JITDylibToHeaderAddr.end())
+      HeaderAddr = I->second;
   }
+
+  // Point the libunwind dso-base absolute symbol at the header for the
+  // JITDylib. This will prevent us from synthesizing a new header for
+  // every object.
+  if (HeaderAddr)
+    LG.addAbsoluteSymbol("__jitlink$libunwind_dso_base", HeaderAddr, 0,
+                         Linkage::Strong, Scope::Local, true);
 
   // If we're in the bootstrap phase then increment the active graphs.
   if (LLVM_UNLIKELY(InBootstrapPhase))
@@ -857,10 +872,11 @@ void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
 
   // Add a pass to register the final addresses of any special sections in the
   // object with the runtime.
-  Config.PostAllocationPasses.push_back(
-      [this, &JD = MR.getTargetJITDylib(), InBootstrapPhase](LinkGraph &G) {
-        return registerObjectPlatformSections(G, JD, InBootstrapPhase);
-      });
+  Config.PostAllocationPasses.push_back([this, &JD = MR.getTargetJITDylib(),
+                                         HeaderAddr,
+                                         InBootstrapPhase](LinkGraph &G) {
+    return registerObjectPlatformSections(G, JD, HeaderAddr, InBootstrapPhase);
+  });
 
   // If we're in the bootstrap phase then steal allocation actions and then
   // decrement the active graphs.
@@ -1249,7 +1265,7 @@ MachOPlatform::MachOPlatformPlugin::findUnwindSectionInfo(
       SecRange.Start = std::min(SecRange.Start, R.Start);
       SecRange.End = std::max(SecRange.End, R.End);
       for (auto &E : B->edges()) {
-        if (!E.getTarget().isDefined())
+        if (E.getKind() != Edge::KeepAlive || !E.getTarget().isDefined())
           continue;
         auto &TargetBlock = E.getTarget().getBlock();
         auto &TargetSection = TargetBlock.getSection();
@@ -1307,7 +1323,8 @@ MachOPlatform::MachOPlatformPlugin::findUnwindSectionInfo(
 }
 
 Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
-    jitlink::LinkGraph &G, JITDylib &JD, bool InBootstrapPhase) {
+    jitlink::LinkGraph &G, JITDylib &JD, ExecutorAddr HeaderAddr,
+    bool InBootstrapPhase) {
 
   // Get a pointer to the thread data section if there is one. It will be used
   // below.
@@ -1378,21 +1395,12 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
         dbgs() << "  " << KV.first << ": " << KV.second << "\n";
     });
 
+    assert(HeaderAddr && "Null header registered for JD");
     using SPSRegisterObjectPlatformSectionsArgs = SPSArgList<
         SPSExecutorAddr,
         SPSOptional<SPSTuple<SPSSequence<SPSExecutorAddrRange>,
                              SPSExecutorAddrRange, SPSExecutorAddrRange>>,
         SPSSequence<SPSTuple<SPSString, SPSExecutorAddrRange>>>;
-
-    ExecutorAddr HeaderAddr;
-    {
-      std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
-      auto I = MP.JITDylibToHeaderAddr.find(&JD);
-      assert(I != MP.JITDylibToHeaderAddr.end() &&
-             "No header registered for JD");
-      assert(I->second && "Null header registered for JD");
-      HeaderAddr = I->second;
-    }
 
     AllocActionCallPair AllocActions = {
         cantFail(
