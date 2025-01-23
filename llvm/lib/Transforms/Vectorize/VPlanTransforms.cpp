@@ -1658,11 +1658,13 @@ void VPlanTransforms::addActiveLaneMask(
 /// \p TypeInfo    VPlan-based type analysis.
 /// \p AllOneMask  The vector mask parameter of vector-predication intrinsics.
 /// \p EVL         The explicit vector length parameter of vector-predication
-/// intrinsics.
+///                intrinsics.
+/// \p PrevEVL     The explicit vector length of the previous iteration.
 static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
                                      VPRecipeBase &CurRecipe,
                                      VPTypeAnalysis &TypeInfo,
-                                     VPValue &AllOneMask, VPValue &EVL) {
+                                     VPValue &AllOneMask, VPValue &EVL,
+                                     VPValue *PrevEVL) {
   using namespace llvm::VPlanPatternMatch;
   auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
     assert(OrigMask && "Unmasked recipe when folding tail");
@@ -1690,6 +1692,15 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
                                           Sel->getDebugLoc());
       })
       .Case<VPInstruction>([&](VPInstruction *VPI) -> VPRecipeBase * {
+        if (VPI->getOpcode() == VPInstruction::FirstOrderRecurrenceSplice) {
+          assert(PrevEVL && "Fixed-order recurrences require previous EVL");
+          SmallVector<VPValue *> Ops(VPI->operands());
+          Ops.append({&AllOneMask, PrevEVL, &EVL});
+          return new VPWidenIntrinsicRecipe(Intrinsic::experimental_vp_splice,
+                                            Ops, TypeInfo.inferScalarType(VPI),
+                                            VPI->getDebugLoc());
+        }
+
         VPValue *LHS, *RHS;
         // Transform select with a header mask condition
         //   select(header_mask, LHS, RHS)
@@ -1718,6 +1729,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 
   // Create a scalar phi to track the previous EVL if fixed-order recurrence is
   // contained.
+  VPScalarPHIRecipe *PrevEVL = nullptr;
   bool ContainsFORs =
       any_of(Header->phis(), IsaPred<VPFirstOrderRecurrencePHIRecipe>);
   if (ContainsFORs) {
@@ -1733,7 +1745,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
       VPBasicBlock *Preheader = LoopRegion->getPreheaderVPBB();
       Preheader->appendRecipe(cast<VPScalarCastRecipe>(MaxEVL));
     }
-    auto *PrevEVL = new VPScalarPHIRecipe(MaxEVL, &EVL, DebugLoc(), "prev.evl");
+    PrevEVL = new VPScalarPHIRecipe(MaxEVL, &EVL, DebugLoc(), "prev.evl");
     PrevEVL->insertBefore(*Header, Header->getFirstNonPhi());
   }
 
@@ -1747,8 +1759,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       auto *CurRecipe = cast<VPRecipeBase>(U);
-      VPRecipeBase *EVLRecipe =
-          createEVLRecipe(HeaderMask, *CurRecipe, TypeInfo, *AllOneMask, EVL);
+      VPRecipeBase *EVLRecipe = createEVLRecipe(
+          HeaderMask, *CurRecipe, TypeInfo, *AllOneMask, EVL, PrevEVL);
       if (!EVLRecipe)
         continue;
 
