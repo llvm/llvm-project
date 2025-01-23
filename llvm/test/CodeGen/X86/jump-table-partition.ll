@@ -7,8 +7,8 @@
 ; RUN: llc --run-pass=static-data-splitter -stats -x mir %t.mir -o - 2>&1 | FileCheck %s --check-prefix=STAT
 
 ; Tests stat messages are expected.
-; TODO: Update test to verify section suffixes when target-lowering and assembler changes are implemented.
-; TODO: Also run static-data-splitter pass with -static-data-default-hotness=cold and check data section suffix.
+; COM: Update test to verify section suffixes when target-lowering and assembler changes are implemented.
+; COM: Also run static-data-splitter pass with -static-data-default-hotness=cold and check data section suffix.
  
 ; STAT-DAG: 2 static-data-splitter - Number of cold jump tables seen
 ; STAT-DAG: 2 static-data-splitter - Number of hot jump tables seen

@@ -36,6 +36,8 @@ struct MachineJumpTableEntry {
   /// MBBs - The vector of basic blocks from which to create the jump table.
   std::vector<MachineBasicBlock*> MBBs;
 
+  /// The hotness of MJTE is inferred from the hotness of the source basic
+  /// block(s) that reference it.
   MachineFunctionDataHotness Hotness;
 
   explicit MachineJumpTableEntry(const std::vector<MachineBasicBlock *> &M);

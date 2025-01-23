@@ -1347,9 +1347,7 @@ unsigned MachineJumpTableInfo::createJumpTableIndex(
 bool MachineJumpTableInfo::updateJumpTableEntryHotness(
     size_t JTI, MachineFunctionDataHotness Hotness) {
   assert(JTI < JumpTables.size() && "Invalid JTI!");
-  // Note record the largest hotness is important for mergable data (constant
-  // pools). Even if jump table instances are not merged, record the largest
-  // value seen fwiw.
+  // Record the largest hotness value.
   if (Hotness <= JumpTables[JTI].Hotness)
     return false;
 

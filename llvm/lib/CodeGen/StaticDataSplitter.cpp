@@ -58,7 +58,7 @@ class StaticDataSplitter : public MachineFunctionPass {
   bool splitJumpTables(MachineFunction &MF);
 
   // Same as above but works on functions with profile information.
-  bool splitJumpTablesWithProfiles(MachineFunction &MF,
+  bool splitJumpTablesWithProfiles(const MachineFunction &MF,
                                    MachineJumpTableInfo &MJTI);
 
 public:
@@ -89,7 +89,7 @@ bool StaticDataSplitter::runOnMachineFunction(MachineFunction &MF) {
 }
 
 bool StaticDataSplitter::splitJumpTablesWithProfiles(
-    MachineFunction &MF, MachineJumpTableInfo &MJTI) {
+    const MachineFunction &MF, MachineJumpTableInfo &MJTI) {
   int NumChangedJumpTables = 0;
 
   // Jump table could be used by either terminating instructions or
