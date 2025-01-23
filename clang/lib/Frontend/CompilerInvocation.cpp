@@ -2578,7 +2578,8 @@ void CompilerInvocationBase::GenerateDiagnosticArgs(
     if (Warning == "invalid-constexpr" || Warning == "no-invalid-constexpr")
       continue;
     // This option is automatically generated from UnknownAttributeNamespaces.
-    if (Warning == "unknown-attribute-namespaces")
+    if (Warning == "unknown-attribute-namespaces" &&
+        Opts.UnknownAttributeNamespaces.size())
       continue;
     Consumer(StringRef("-W") + Warning);
   }
