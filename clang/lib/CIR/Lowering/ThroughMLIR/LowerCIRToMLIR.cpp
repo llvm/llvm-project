@@ -853,7 +853,7 @@ class CIRScopeOpLowering : public mlir::OpConversionPattern<cir::ScopeOp> {
       return mlir::success();
     }
 
-    for (auto &block : scopeOp.getRegion()) {
+    for (auto &block : scopeOp.getScopeRegion()) {
       rewriter.setInsertionPointToEnd(&block);
       auto *terminator = block.getTerminator();
       rewriter.replaceOpWithNewOp<mlir::memref::AllocaScopeReturnOp>(

@@ -4,15 +4,18 @@
 
 module {
   // Should properly print/parse scope with implicit empty yield.
+  // CHECK-LABEL: implicit_yield
   cir.func @implicit_yield() {
     cir.scope {
     }
     // CHECK: cir.scope {
-    // CHECK: }
+    // CHECK-NEXT: }
+    // CHECK-NEXT: cir.return
     cir.return
   }
 
   // Should properly print/parse scope with explicit yield.
+  // CHECK-LABEL: explicit_yield
   cir.func @explicit_yield() {
     %0 = cir.scope {
       %1 = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init] {alignment = 4 : i64}
@@ -22,6 +25,33 @@ module {
     //          [...]
     // CHECK:   cir.yield %1 : !cir.ptr<!u32i>
     // CHECK: } : !cir.ptr<!u32i>
+    cir.return
+  }
+
+  // Handle optional cleanup presence
+  // CHECK-LABEL: empty_cleanup
+  cir.func @empty_cleanup() {
+    cir.scope {
+    } cleanup {
+    }
+    // CHECK:      cir.scope {
+    // CHECK-NEXT: } cleanup {
+    // CHECK-NEXT: }
+    // CHECK-NEXT: cir.return
+    cir.return
+  }
+
+  // Handle optional cleanup presence
+  // CHECK-LABEL: some_cleanup
+  cir.func @some_cleanup() {
+    cir.scope {
+    } cleanup {
+      %1 = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init] {alignment = 4 : i64}
+    }
+    // CHECK: cir.scope {
+    // CHECK: } cleanup {
+    // CHECK:   cir.alloca
+    // CHECK: }
     cir.return
   }
 }

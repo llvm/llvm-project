@@ -2842,7 +2842,7 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
   if (auto tryOp =
           llvm::dyn_cast_if_present<cir::TryOp>(entryBlock->getParentOp())) {
     if (auto scopeOp = llvm::dyn_cast<cir::ScopeOp>(tryOp->getParentOp()))
-      entryBlock = &scopeOp.getRegion().front();
+      entryBlock = &scopeOp.getScopeRegion().front();
   }
 
   return emitAlloca(name, ty, loc, alignment,

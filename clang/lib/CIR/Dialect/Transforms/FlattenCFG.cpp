@@ -141,9 +141,9 @@ public:
       continueBlock->addArguments(scopeOp.getResultTypes(), loc);
 
     // Inline body region.
-    auto *beforeBody = &scopeOp.getRegion().front();
-    auto *afterBody = &scopeOp.getRegion().back();
-    rewriter.inlineRegionBefore(scopeOp.getRegion(), continueBlock);
+    auto *beforeBody = &scopeOp.getScopeRegion().front();
+    auto *afterBody = &scopeOp.getScopeRegion().back();
+    rewriter.inlineRegionBefore(scopeOp.getScopeRegion(), continueBlock);
 
     // Save stack and then branch into the body of the region.
     rewriter.setInsertionPointToEnd(currentBlock);

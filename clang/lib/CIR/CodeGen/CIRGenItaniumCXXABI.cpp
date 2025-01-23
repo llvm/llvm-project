@@ -826,13 +826,16 @@ void CIRGenItaniumCXXABI::emitBeginCatch(CIRGenFunction &CGF,
   auto getCatchParamAllocaIP = [&]() {
     auto currIns = CGF.getBuilder().saveInsertionPoint();
     auto currParent = currIns.getBlock()->getParentOp();
-    mlir::Operation *scopeLikeOp = currParent->getParentOfType<cir::ScopeOp>();
-    if (!scopeLikeOp)
-      scopeLikeOp = currParent->getParentOfType<cir::FuncOp>();
-    assert(scopeLikeOp && "unknown outermost scope-like parent");
-    assert(scopeLikeOp->getNumRegions() == 1 && "expected single region");
 
-    auto *insertBlock = &scopeLikeOp->getRegion(0).getBlocks().back();
+    mlir::Block *insertBlock = nullptr;
+    if (auto scopeOp = currParent->getParentOfType<cir::ScopeOp>()) {
+      insertBlock = &scopeOp.getScopeRegion().getBlocks().back();
+    } else if (auto fnOp = currParent->getParentOfType<cir::FuncOp>()) {
+      insertBlock = &fnOp.getRegion().getBlocks().back();
+    } else {
+      llvm_unreachable("unknown outermost scope-like parent");
+    }
+
     return CGF.getBuilder().getBestAllocaInsertPoint(insertBlock);
   };
 

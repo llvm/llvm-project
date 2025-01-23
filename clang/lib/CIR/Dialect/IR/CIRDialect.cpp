@@ -276,22 +276,41 @@ void parseVisibilityAttr(OpAsmParser &parser, cir::VisibilityAttr &visibility) {
 // CIR Custom Parsers/Printers
 //===----------------------------------------------------------------------===//
 
-static mlir::ParseResult parseOmittedTerminatorRegion(mlir::OpAsmParser &parser,
-                                                      mlir::Region &region) {
+static mlir::ParseResult
+parseOmittedTerminatorRegion(mlir::OpAsmParser &parser,
+                             mlir::Region &scopeRegion,
+                             mlir::Region &cleanupRegion) {
   auto regionLoc = parser.getCurrentLocation();
-  if (parser.parseRegion(region))
+  if (parser.parseRegion(scopeRegion))
     return failure();
-  if (ensureRegionTerm(parser, region, regionLoc).failed())
+  if (ensureRegionTerm(parser, scopeRegion, regionLoc).failed())
     return failure();
+
+  // Parse optional cleanup region.
+  if (parser.parseOptionalKeyword("cleanup").succeeded()) {
+    if (parser.parseRegion(cleanupRegion, /*arguments=*/{}, /*argTypes=*/{}))
+      return failure();
+    if (ensureRegionTerm(parser, cleanupRegion, regionLoc).failed())
+      return failure();
+  }
+
   return success();
 }
 
 static void printOmittedTerminatorRegion(mlir::OpAsmPrinter &printer,
                                          cir::ScopeOp &op,
-                                         mlir::Region &region) {
-  printer.printRegion(region,
+                                         mlir::Region &scopeRegion,
+                                         mlir::Region &cleanupRegion) {
+  printer.printRegion(scopeRegion,
                       /*printEntryBlockArgs=*/false,
-                      /*printBlockTerminators=*/!omitRegionTerm(region));
+                      /*printBlockTerminators=*/!omitRegionTerm(scopeRegion));
+  if (!op.getCleanupRegion().empty()) {
+    printer << " cleanup ";
+    printer.printRegion(
+        cleanupRegion,
+        /*printEntryBlockArgs=*/false,
+        /*printBlockTerminators=*/!omitRegionTerm(cleanupRegion));
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -1251,6 +1270,7 @@ void cir::ScopeOp::getSuccessorRegions(
 
   // If the condition isn't constant, both regions may be executed.
   regions.push_back(RegionSuccessor(&getScopeRegion()));
+  regions.push_back(RegionSuccessor(&getCleanupRegion()));
 }
 
 void cir::ScopeOp::build(
@@ -1261,6 +1281,8 @@ void cir::ScopeOp::build(
   OpBuilder::InsertionGuard guard(builder);
   Region *scopeRegion = result.addRegion();
   builder.createBlock(scopeRegion);
+  // cleanup region, do not eagarly create blocks, do it upon demand.
+  (void)result.addRegion();
 
   mlir::Type yieldTy;
   scopeBuilder(builder, yieldTy, result.location);
@@ -1276,17 +1298,22 @@ void cir::ScopeOp::build(
   OpBuilder::InsertionGuard guard(builder);
   Region *scopeRegion = result.addRegion();
   builder.createBlock(scopeRegion);
+  // cleanup region, do not eagarly create blocks, do it upon demand.
+  (void)result.addRegion();
   scopeBuilder(builder, result.location);
 }
 
 LogicalResult cir::ScopeOp::verify() {
-  if (getRegion().empty()) {
+  if (getScopeRegion().empty()) {
     return emitOpError() << "cir.scope must not be empty since it should "
                             "include at least an implicit cir.yield ";
   }
 
-  if (getRegion().back().empty() ||
-      !getRegion().back().getTerminator()->hasTrait<OpTrait::IsTerminator>())
+  if (getScopeRegion().back().empty() ||
+      !getScopeRegion()
+           .back()
+           .getTerminator()
+           ->hasTrait<OpTrait::IsTerminator>())
     return emitOpError() << "last block of cir.scope must be terminated";
   return success();
 }

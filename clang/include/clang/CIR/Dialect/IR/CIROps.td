@@ -1066,23 +1066,29 @@ def ScopeOp : CIR_Op<"scope", [
     The blocks can be terminated by `cir.yield`, `cir.return` or `cir.throw`.
     If `cir.scope` yields no value, the `cir.yield` can be left out, and
     will be inserted implicitly.
+
+    The scope might also have an associated `cleanup` region, providing code
+    that run destruction of automatic variables. Note that in order to lower the
+    cleanup region while keeping C++ semantics, all immediate control-flow
+    breaking operations not under a children scope should jump to this cleanup
+    code.
   }];
 
   let results = (outs Optional<CIR_AnyType>:$results);
-  let regions = (region AnyRegion:$scopeRegion);
+  let regions = (region AnyRegion:$scopeRegion, AnyRegion:$cleanupRegion);
 
   let hasVerifier = 1;
   let skipDefaultBuilders = 1;
   let assemblyFormat = [{
-    custom<OmittedTerminatorRegion>($scopeRegion) (`:` type($results)^)? attr-dict
+    custom<OmittedTerminatorRegion>($scopeRegion, $cleanupRegion) (`:` type($results)^)? attr-dict
   }];
 
   let extraClassDeclaration = [{
     /// Determine whether the scope is empty, meaning it contains a single block
     /// terminated by a cir.yield.
     bool isEmpty() {
-      auto &entry = getRegion().front();
-      return getRegion().hasOneBlock() &&
+      auto &entry = getScopeRegion().front();
+      return getScopeRegion().hasOneBlock() &&
         llvm::isa<YieldOp>(entry.front());
       }
     }];
