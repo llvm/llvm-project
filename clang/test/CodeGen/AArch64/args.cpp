@@ -45,7 +45,8 @@ EXTERNC int super_empty_arg(struct SuperEmpty e, int a) {
   return a;
 }
 
-// This is not empty. It has 0 size but consumes a register slot for GCC.
+// This is also not empty, and non-standard. We previously considered it to
+// consume a register slot, but GCC does not, so we match that.
 
 struct SortOfEmpty {
   struct SuperEmpty e;
@@ -53,7 +54,7 @@ struct SortOfEmpty {
 
 // CHECK: define{{.*}} i32 @sort_of_empty_arg(i32 noundef %a)
 // CHECK-GNU-C: define{{.*}} i32 @sort_of_empty_arg(i32 noundef %a)
-// CHECK-GNU-CXX: define{{.*}} i32 @sort_of_empty_arg(i8 %e.coerce, i32 noundef %a)
+// CHECK-GNU-CXX: define{{.*}} i32 @sort_of_empty_arg(i32 noundef %a)
 EXTERNC int sort_of_empty_arg(struct SortOfEmpty e, int a) {
   return a;
 }

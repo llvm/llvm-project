@@ -426,9 +426,10 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
     if (!getContext().getLangOpts().CPlusPlus || isDarwinPCS())
       return ABIArgInfo::getIgnore();
 
-    // In C++ mode, arguments which are empty and have sizeof() == 0 (which are
-    // non-standard C++) are ignored.
-    if (IsEmpty && Size == 0)
+    // In C++ mode, arguments which have sizeof() == 0 (which are non-standard
+    // C++) are ignored. This isn't defined by any standard, so we copy GCC's
+    // behaviour here.
+    if (Size == 0)
       return ABIArgInfo::getIgnore();
 
     // Otherwise, they are passed as if they have a size of 1 byte.
