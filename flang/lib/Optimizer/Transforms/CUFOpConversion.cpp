@@ -189,11 +189,12 @@ struct CUFAllocateOpConversion
 
     mlir::func::FuncOp func;
     if (op.getSource()) {
-      if (isPointer)
-        TODO(loc, "pointer allocation with source");
       func =
-          fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableAllocateSource)>(
-              loc, builder);
+          isPointer
+              ? fir::runtime::getRuntimeFunc<mkRTKey(CUFPointerAllocateSource)>(
+                    loc, builder)
+              : fir::runtime::getRuntimeFunc<mkRTKey(
+                    CUFAllocatableAllocateSource)>(loc, builder);
     } else {
       func =
           isPointer
