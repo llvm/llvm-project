@@ -223,6 +223,11 @@ def NullDereferenceChecker : Checker<"NullDereference">,
   Documentation<HasDocumentation>,
   Dependencies<[DereferenceModeling]>;
 
+def MutexModeling : Checker<"MutexModeling">,
+  HelpText<"Model mutexes lock and unlock events">,
+  Documentation<NotDocumented>,
+  Hidden;
+
 def NonNullParamChecker : Checker<"NonNullParamChecker">,
   HelpText<"Check for null pointers passed as arguments to a function whose "
            "arguments are references or marked with the 'nonnull' attribute">,
@@ -307,6 +312,7 @@ def StackAddrAsyncEscapeChecker : Checker<"StackAddressAsyncEscape">,
 
 def PthreadLockBase : Checker<"PthreadLockBase">,
   HelpText<"Helper registering multiple checks.">,
+  Dependencies<[MutexModeling]>,
   Documentation<NotDocumented>,
   Hidden;
 
@@ -506,6 +512,7 @@ def UnixAPIMisuseChecker : Checker<"API">,
 
 def BlockInCriticalSectionChecker : Checker<"BlockInCriticalSection">,
   HelpText<"Check for calls to blocking functions inside a critical section">,
+  Dependencies<[MutexModeling]>,
   Documentation<HasDocumentation>;
 
 def DynamicMemoryModeling: Checker<"DynamicMemoryModeling">,
@@ -611,7 +618,7 @@ let ParentPackage = UnixAlpha in {
 
 def PthreadLockChecker : Checker<"PthreadLock">,
   HelpText<"Simple lock -> unlock checker">,
-  Dependencies<[PthreadLockBase]>,
+  Dependencies<[PthreadLockBase, MutexModeling]>,
   Documentation<HasDocumentation>;
 
 def SimpleStreamChecker : Checker<"SimpleStream">,
