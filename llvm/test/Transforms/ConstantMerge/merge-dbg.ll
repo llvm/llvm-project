@@ -1,8 +1,8 @@
 ; RUN: opt < %s -passes=constmerge -S | FileCheck %s
 
-; CHECK: = constant i32 1, !dbg [[A:![0-9]+]], !dbg [[B:![0-9]+]]
-@a = internal constant i32 1, !dbg !0
-@b = unnamed_addr constant i32 1, !dbg !9
+; CHECK: = private unnamed_addr constant i32 1, !dbg [[A:![0-9]+]], !dbg [[B:![0-9]+]]
+@a = private unnamed_addr constant i32 1, !dbg !0
+@b = private unnamed_addr constant i32 1, !dbg !9
 
 define void @test1(ptr %P1, ptr %P2) {
   store ptr @a, ptr %P1

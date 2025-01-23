@@ -1,6 +1,6 @@
 ; RUN: opt -passes=constmerge -S < %s | FileCheck %s
-; Test which corresponding x and y are merged and that unnamed_addr
-; is correctly set.
+; Test which corresponding x and y are merged when they both are marked with
+; unnamed_addr attribute.
 
 declare void @zed(ptr, ptr)
 
@@ -23,7 +23,9 @@ declare void @zed(ptr, ptr)
 ; CHECK-NOT: @
 ; CHECK: @test1.x = internal constant %struct.foobar { i32 1 }
 ; CHECK-NEXT: @test1.y = constant %struct.foobar { i32 1 }
-; CHECK-NEXT: @test2.y = constant %struct.foobar { i32 2 }
+; CHECK-NEXT: @test2.x = internal constant %struct.foobar { i32 2 }
+; CHECK-NEXT: @test2.y = unnamed_addr constant %struct.foobar { i32 2 }
+; CHECK-NEXT: @test3.x = internal unnamed_addr constant %struct.foobar { i32 3 }
 ; CHECK-NEXT: @test3.y = constant %struct.foobar { i32 3 }
 ; CHECK-NEXT: @test4.y = unnamed_addr constant %struct.foobar { i32 4 }
 ; CHECK-NOT: @
