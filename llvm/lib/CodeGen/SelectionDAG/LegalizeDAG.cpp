@@ -3405,11 +3405,12 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(ExpandInsertToVectorThroughStack(SDValue(Node, 0)));
     break;
   case ISD::CONCAT_VECTORS:
-    if (!TLI.isOperationExpand(ISD::EXTRACT_VECTOR_ELT, Node->getOperand(0).getValueType())) {
-      Results.push_back(ExpandConcatVectors(Node));
-    } else {
+    if (Node->getValueType().isScalableVector() ||
+        TLI.isOperationExpand(ISD::EXTRACT_VECTOR_ELT,
+                              Node->getOperand(0).getValueType()))
       Results.push_back(ExpandVectorBuildThroughStack(Node));
-    }
+    else
+      Results.push_back(ExpandConcatVectors(Node));
     break;
   case ISD::SCALAR_TO_VECTOR:
     Results.push_back(ExpandSCALAR_TO_VECTOR(Node));
