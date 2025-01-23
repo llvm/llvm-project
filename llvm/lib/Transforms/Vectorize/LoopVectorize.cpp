@@ -4327,6 +4327,12 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
   SmallVector<RecipeVFPair> InvalidCosts;
   for (const auto &Plan : VPlans) {
     for (ElementCount VF : Plan->vectorFactors()) {
+      // The VPlan-based cost model is designed for computing vector cost.
+      // Quering VPlan-based cost model with scarlar VF will cause some error
+      // because we expect the VF is vector for most of the widen recipes.
+      if (VF.isScalar())
+        continue;
+
       VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(),
                             CM, CM.CostKind);
       precomputeCosts(*Plan, VF, CostCtx);
