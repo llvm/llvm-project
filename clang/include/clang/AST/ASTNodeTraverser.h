@@ -11,6 +11,22 @@
 // similar to RecursiveASTVisitor.
 //
 //===----------------------------------------------------------------------===//
+//
+// Modifications to this file by SEI staff are copyright Carnegie Mellon
+// University and contributed under the Apache License v2.0 with LLVM
+// Exceptions.
+//
+// SEI Contributions are made with funding sand support from the Department of
+// Defense under Contract No. FA8702-15-D-0002 with Carnegie Mellon University
+// for the operation of the Software Engineering Institute, a federally funded
+// research and development center.
+//
+// The view, opinions, and/or findings contained in this material are those of
+// the author(s) and should not be construed as an official Government position,
+// policy, or decision, unless designated by other documentation.
+// DM24-0194
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_AST_ASTNODETRAVERSER_H
 #define LLVM_CLANG_AST_ASTNODETRAVERSER_H
@@ -177,14 +193,34 @@ public:
     if (!SQT.Quals.hasQualifiers())
       return Visit(SQT.Ty);
 
-    getNodeDelegate().AddChild([=] {
+    // SEI: changed from default label to "qualTypeDetail"
+    getNodeDelegate().AddChild("qualTypeDetail", [this, T] {
       getNodeDelegate().Visit(T);
       Visit(T.split().Ty);
     });
+
+    // SEI function pointer support. this gets called whenever the three
+    // conditions are met:
+    // 1. the function pointer is not typedef'd
+    // 2. after Visit(VarDecl *) gets called
+    // 3. if VarDecl determines this is a function pointer
+    if (T->isFunctionPointerType()) {
+      // create as a child node to this type
+      getNodeDelegate().AddChild(
+          [=] { getNodeDelegate().Visit(T->getPointeeType()); });
+    }
+
+    // SEI: traverse PointerType information
+    if (T->isPointerType())
+      Visit(T->getPointeeType());
   }
 
+  // SEI: traverse ReturnType information
+  void VisitReturnType(QualType T) { getNodeDelegate().VisitReturnType(T); }
+
   void Visit(const Type *T) {
-    getNodeDelegate().AddChild([=] {
+    // SEI: renamed this from default label
+    getNodeDelegate().AddChild("typeDetails", [this, T] {
       getNodeDelegate().Visit(T);
       if (!T)
         return;
@@ -209,7 +245,8 @@ public:
   }
 
   void Visit(const Attr *A) {
-    getNodeDelegate().AddChild([=] {
+    // SEI: renamed from default label
+    getNodeDelegate().AddChild("attrDetails", [this, A] {
       getNodeDelegate().Visit(A);
       ConstAttrVisitor<Derived>::Visit(A);
     });
@@ -410,8 +447,17 @@ public:
     Visit(T->getSizeExpr());
   }
   void VisitVectorType(const VectorType *T) { Visit(T->getElementType()); }
-  void VisitFunctionType(const FunctionType *T) { Visit(T->getReturnType()); }
+  void VisitFunctionType(const FunctionType *T) {
+    // SEI: add functionDetails, incl. return type
+    getNodeDelegate().AddChild("functionDetails", [this, T] {
+      getNodeDelegate().VisitFunctionType(T);
+      getNodeDelegate().VisitReturnType(T->getReturnType());
+    });
+  }
+
   void VisitFunctionProtoType(const FunctionProtoType *T) {
+
+    // SEI: visit the function type. this will force the return type info too.
     VisitFunctionType(T);
     for (const QualType &PT : T->getParamTypes())
       Visit(PT);
@@ -560,6 +606,11 @@ public:
       Visit(TSI->getTypeLoc());
     if (D->hasInit())
       Visit(D->getInit());
+
+    // SEI: if this is a function pointer, then we need to get the
+    // FunctionProtoType and then make add'l visits. if the FP is typedef'd,
+    // then this behavior occurs for us outside of Visit(VarDecl *)
+    getNodeDelegate().Visit(D->getType());
   }
 
   void VisitDecompositionDecl(const DecompositionDecl *D) {
