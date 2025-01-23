@@ -12,15 +12,9 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcWCSLenTest, EmptyString) {
-  const wchar_t *empty = L"";
-
-  size_t result = LIBC_NAMESPACE::wcslen(empty);
-  ASSERT_EQ(size_t{0}, result);
+  ASSERT_EQ(size_t{0}, LIBC_NAMESPACE::wcslen(L""));
 }
 
 TEST(LlvmLibcWCSLenTest, AnyString) {
-  const wchar_t *any = L"Hello World!";
-
-  size_t result = LIBC_NAMESPACE::wcslen(any);
-  ASSERT_EQ(size_t{12}, result);
+  ASSERT_EQ(size_t{12}, LIBC_NAMESPACE::wcslen(L"Hello World!"));
 }
