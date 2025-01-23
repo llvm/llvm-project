@@ -496,6 +496,9 @@ private:
   /// file.
   unsigned NumModuleLocalDeclContexts = 0;
 
+  /// The number of TULocal declcontexts written to the AST file.
+  unsigned NumTULocalDeclContexts = 0;
+
   /// A mapping from each known submodule to its ID number, which will
   /// be a positive integer.
   llvm::DenseMap<const Module *, unsigned> SubmoduleIDs;
@@ -594,12 +597,14 @@ private:
   void
   GenerateNameLookupTable(ASTContext &Context, const DeclContext *DC,
                           llvm::SmallVectorImpl<char> &LookupTable,
-                          llvm::SmallVectorImpl<char> &ModuleLocalLookupTable);
+                          llvm::SmallVectorImpl<char> &ModuleLocalLookupTable,
+                          llvm::SmallVectorImpl<char> &TULocalLookupTable);
   uint64_t WriteDeclContextLexicalBlock(ASTContext &Context,
                                         const DeclContext *DC);
   void WriteDeclContextVisibleBlock(ASTContext &Context, DeclContext *DC,
                                     uint64_t &VisibleBlockOffset,
-                                    uint64_t &ModuleLocalBlockOffset);
+                                    uint64_t &ModuleLocalBlockOffset,
+                                    uint64_t &TULocalBlockOffset);
   void WriteTypeDeclOffsets();
   void WriteFileDeclIDsMap();
   void WriteComments(ASTContext &Context);
@@ -633,8 +638,10 @@ private:
   unsigned DeclContextLexicalAbbrev = 0;
   unsigned DeclContextVisibleLookupAbbrev = 0;
   unsigned DeclModuleLocalVisibleLookupAbbrev = 0;
+  unsigned DeclTULocalLookupAbbrev = 0;
   unsigned UpdateVisibleAbbrev = 0;
   unsigned ModuleLocalUpdateVisibleAbbrev = 0;
+  unsigned TULocalUpdateVisibleAbbrev = 0;
   unsigned DeclRecordAbbrev = 0;
   unsigned DeclTypedefAbbrev = 0;
   unsigned DeclVarAbbrev = 0;

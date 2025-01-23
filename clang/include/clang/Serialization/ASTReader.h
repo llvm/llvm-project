@@ -528,6 +528,7 @@ private:
     uint64_t LexicalOffset;
     uint64_t VisibleOffset;
     uint64_t ModuleLocalOffset;
+    uint64_t TULocalOffset;
   };
 
   using DelayedNamespaceOffsetMapTy =
@@ -545,11 +546,18 @@ private:
 
   /// Mapping from main decl ID to the related decls IDs.
   ///
-  /// These related decls have to be loaded right after the main decl.
-  /// It is required to have canonical declaration for related decls from the
-  /// same module as the enclosing main decl. Without this, due to lazy
-  /// deserialization, canonical declarations for the main decl and related can
-  /// be selected from different modules.
+  /// The key is the main decl ID, and the value is a vector of related decls
+  /// that must be loaded immediately after the main decl. This is necessary
+  /// to ensure that the definition for related decls comes from the same module
+  /// as the enclosing main decl. Without this, due to lazy deserialization,
+  /// the definition for the main decl and related decls may come from different
+  /// modules. It is used for the following cases:
+  /// - Lambda inside a template function definition: The main declaration is
+  ///   the enclosing function, and the related declarations are the lambda
+  ///   declarations.
+  /// - Friend function defined inside a template CXXRecord declaration: The
+  ///   main declaration is the enclosing record, and the related declarations
+  ///   are the friend functions.
   llvm::DenseMap<GlobalDeclID, SmallVector<GlobalDeclID, 4>> RelatedDeclsMap;
 
   struct PendingUpdateRecord {
@@ -640,6 +648,9 @@ private:
   llvm::DenseMap<const DeclContext *,
                  serialization::reader::ModuleLocalLookupTable>
       ModuleLocalLookups;
+  llvm::DenseMap<const DeclContext *,
+                 serialization::reader::DeclContextLookupTable>
+      TULocalLookups;
 
   using SpecLookupTableTy =
       llvm::DenseMap<const Decl *,
@@ -670,6 +681,7 @@ private:
   llvm::DenseMap<GlobalDeclID, DeclContextVisibleUpdates> PendingVisibleUpdates;
   llvm::DenseMap<GlobalDeclID, DeclContextVisibleUpdates>
       PendingModuleLocalVisibleUpdates;
+  llvm::DenseMap<GlobalDeclID, DeclContextVisibleUpdates> TULocalUpdates;
 
   using SpecializationsUpdate = SmallVector<UpdateData, 1>;
   using SpecializationsUpdateMap =
@@ -704,11 +716,17 @@ private:
                                      llvm::BitstreamCursor &Cursor,
                                      uint64_t Offset, DeclContext *DC);
 
+  enum class VisibleDeclContextStorageKind {
+    GenerallyVisible,
+    ModuleLocalVisible,
+    TULocalVisible,
+  };
+
   /// Read the record that describes the visible contents of a DC.
   bool ReadVisibleDeclContextStorage(ModuleFile &M,
                                      llvm::BitstreamCursor &Cursor,
                                      uint64_t Offset, GlobalDeclID ID,
-                                     bool IsModuleLocal);
+                                     VisibleDeclContextStorageKind VisibleKind);
 
   bool ReadSpecializations(ModuleFile &M, llvm::BitstreamCursor &Cursor,
                            uint64_t Offset, Decl *D, bool IsPartial);
@@ -1148,6 +1166,10 @@ private:
   unsigned NumModuleLocalVisibleDeclContexts = 0,
            TotalModuleLocalVisibleDeclContexts = 0;
 
+  /// Number of TU Local decl contexts read/total
+  unsigned NumTULocalVisibleDeclContexts = 0,
+           TotalTULocalVisibleDeclContexts = 0;
+
   /// Total size of modules, in bits, currently loaded
   uint64_t TotalModulesSizeInBits = 0;
 
@@ -1462,6 +1484,9 @@ public:
 
   const serialization::reader::ModuleLocalLookupTable *
   getModuleLocalLookupTables(DeclContext *Primary) const;
+
+  const serialization::reader::DeclContextLookupTable *
+  getTULocalLookupTables(DeclContext *Primary) const;
 
   /// Get the loaded specializations lookup tables for \p D,
   /// if any.

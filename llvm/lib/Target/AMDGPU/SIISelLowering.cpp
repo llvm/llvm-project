@@ -422,6 +422,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                      {MVT::v8i32, MVT::v8f32, MVT::v16i32, MVT::v16f32},
                      Expand);
 
+  if (Subtarget->hasPkMovB32()) {
+    // TODO: 16-bit element vectors should be legal with even aligned elements.
+    // TODO: Can be legal with wider source types than the result with
+    // subregister extracts.
+    setOperationAction(ISD::VECTOR_SHUFFLE, {MVT::v2i32, MVT::v2f32}, Legal);
+  }
+
   setOperationAction(ISD::BUILD_VECTOR, {MVT::v4f16, MVT::v4i16, MVT::v4bf16},
                      Custom);
 
@@ -3157,7 +3164,8 @@ SDValue SITargetLowering::LowerFormalArguments(
 // possible in registers before passing on stack.
 bool SITargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   // Replacing returns with sret/stack usage doesn't make sense for shaders.
   // FIXME: Also sort of a workaround for custom vector splitting in LowerReturn
   // for shaders. Vector types should be explicitly handled by CC.
@@ -7816,9 +7824,8 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
 
   SDValue GOTAddr = buildPCRelGlobalAddress(DAG, GV, DL, 0, PtrVT,
                                             SIInstrInfo::MO_GOTPCREL32);
-
-  Type *Ty = PtrVT.getTypeForEVT(*DAG.getContext());
-  PointerType *PtrTy = PointerType::get(Ty, AMDGPUAS::CONSTANT_ADDRESS);
+  PointerType *PtrTy =
+      PointerType::get(*DAG.getContext(), AMDGPUAS::CONSTANT_ADDRESS);
   const DataLayout &DataLayout = DAG.getDataLayout();
   Align Alignment = DataLayout.getABITypeAlign(PtrTy);
   MachinePointerInfo PtrInfo =
@@ -15876,6 +15883,12 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
             RC = TRI->getAGPRClassForBitWidth(Width);
           if (RC) {
             Reg = TRI->getMatchingSuperReg(Reg, AMDGPU::sub0, RC);
+            if (!Reg) {
+              // The register class does not contain the requested register,
+              // e.g., because it is an SGPR pair that would violate alignment
+              // requirements.
+              return std::pair(0U, nullptr);
+            }
             return std::pair(Reg, RC);
           }
         }
