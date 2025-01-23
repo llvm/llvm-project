@@ -491,6 +491,10 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
       TC.AddCXXStdlibLibArgs(Args, CmdArgs);
     else if (A.getOption().matches(options::OPT_Z_reserved_lib_cckext))
       TC.AddCCKextLibArgs(Args, CmdArgs);
+    // Do not pass OPT_rpath to linker in AIX
+    else if (A.getOption().matches(options::OPT_rpath) &&
+             TC.getTriple().isOSAIX())
+      continue;
     else
       A.renderAsInput(Args, CmdArgs);
   }
