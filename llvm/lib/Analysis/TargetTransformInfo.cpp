@@ -1122,6 +1122,14 @@ InstructionCost TargetTransformInfo::getReplicationShuffleCost(
   return Cost;
 }
 
+InstructionCost TargetTransformInfo::getConstantMaterializationCost(
+    ArrayRef<Constant *> VL, Type *SrcTy, TTI::TargetCostKind CostKind,
+    ArrayRef<SmallVector<Constant *>> ConstVectsPerTree,
+    ArrayRef<SmallVector<Constant *>> MaterializedConstVectsPerFunc) const {
+  return TTIImpl->getConstantMaterializationCost(
+      VL, SrcTy, CostKind, ConstVectsPerTree, MaterializedConstVectsPerFunc);
+}
+
 InstructionCost TargetTransformInfo::getMemoryOpCost(
     unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo OpInfo,

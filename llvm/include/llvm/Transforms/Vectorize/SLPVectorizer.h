@@ -22,6 +22,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
@@ -80,6 +81,12 @@ public:
                TargetLibraryInfo *TLI_, AAResults *AA_, LoopInfo *LI_,
                DominatorTree *DT_, AssumptionCache *AC_, DemandedBits *DB_,
                OptimizationRemarkEmitter *ORE_);
+
+  // Store constant vector(s) used in the vectorized tree. This helps in
+  // avoiding counting the constant vector cost twice if it has already been
+  // materialized.
+  static inline SmallVector<SmallVector<Constant *>>
+      MaterializedConstVectsPerFunc = {};
 
 private:
   /// Collect store and getelementptr instructions and organize them

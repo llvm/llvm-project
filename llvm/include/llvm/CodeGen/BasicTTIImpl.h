@@ -1406,11 +1406,19 @@ public:
     return Cost;
   }
 
-  InstructionCost
-  getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
-                  unsigned AddressSpace, TTI::TargetCostKind CostKind,
-                  TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
-                  const Instruction *I = nullptr) {
+  InstructionCost getConstantMaterializationCost(
+      ArrayRef<Constant *> VL, Type *SrcTy,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      ArrayRef<SmallVector<Constant *>> ConstVectsPerTree = {},
+      ArrayRef<SmallVector<Constant *>> MaterializedConstVectsPerFunc = {}) {
+    return 0;
+  }
+
+  InstructionCost getMemoryOpCost(
+      unsigned Opcode, Type *Src, MaybeAlign Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
+      const Instruction *I = nullptr) {
     assert(!Src->isVoidTy() && "Invalid type");
     // Assume types, such as structs, are expensive.
     if (getTLI()->getValueType(DL, Src,  true) == MVT::Other)

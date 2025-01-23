@@ -1323,6 +1323,10 @@ class BoUpSLP {
   class ShuffleInstructionBuilder;
 
 public:
+  /// List of const vectors per tree. If the tree is vectorized, only then we
+  /// copy the data from tree list to function list.
+  SmallVector<SmallVector<Constant *>> ConstVectsPerTree = {};
+
   /// Tracks the state we can represent the loads in the given sequence.
   enum class LoadsState {
     Gather,
@@ -1460,6 +1464,7 @@ public:
   void deleteTree() {
     VectorizableTree.clear();
     ScalarToTreeEntry.clear();
+    ConstVectsPerTree.clear();
     MultiNodeScalars.clear();
     MustGather.clear();
     NonScheduledFirst.clear();
@@ -10155,9 +10160,33 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
   }
 
   InstructionCost getBuildVectorCost(ArrayRef<Value *> VL, Value *Root) {
-    if ((!Root && allConstant(VL)) || all_of(VL, IsaPred<UndefValue>))
+    if (all_of(VL, IsaPred<UndefValue, PoisonValue>))
       return TTI::TCC_Free;
     auto *VecTy = getWidenedType(ScalarTy, VL.size());
+    if ((!Root && allConstant(VL))) {
+      if (isSplat(VL))
+        return TTI::TCC_Free;
+
+      InstructionCost ScalarCost;
+      SmallVector<Constant *> ConstVL;
+      for (auto *V : VL) {
+        ConstVL.clear();
+        ConstVL.emplace_back(cast<Constant>(V));
+        ScalarCost += TTI.getConstantMaterializationCost(ConstVL, V->getType());
+      }
+
+      for (auto *V : VL)
+        ConstVL.emplace_back(cast<Constant>(V));
+      InstructionCost VectorCost = TTI.getConstantMaterializationCost(
+          ConstVL, VecTy, CostKind, R.ConstVectsPerTree,
+          SLPVectorizerPass::MaterializedConstVectsPerFunc);
+      R.ConstVectsPerTree.emplace_back(ConstVL);
+
+      // Bail out for now to avoid any regressions.
+      if (!VectorCost.isValid() || !ScalarCost.isValid())
+        return 0;
+      return VectorCost - ScalarCost;
+    }
     InstructionCost GatherCost = 0;
     SmallVector<Value *> Gathers(VL);
     if (!Root && isSplat(VL)) {
@@ -11118,8 +11147,6 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   auto *FinalVecTy = getWidenedType(ScalarTy, EntryVF);
 
   if (E->isGather()) {
-    if (allConstant(VL))
-      return 0;
     if (isa<InsertElementInst>(VL[0]))
       return InstructionCost::getInvalid();
     if (isa<CmpInst>(VL.front()))
@@ -18534,6 +18561,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
 
   Stores.clear();
   GEPs.clear();
+  MaterializedConstVectsPerFunc.clear();
   bool Changed = false;
 
   // If the target claims to have no vector registers don't attempt
@@ -18649,6 +18677,8 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   }
   if (R.isLoadCombineCandidate(Chain))
     return true;
+
+  R.ConstVectsPerTree.clear();
   R.buildTree(Chain);
   // Check if tree tiny and store itself or its value is not vectorized.
   if (R.isTreeTinyAndNotFullyVectorizable()) {
@@ -18683,6 +18713,8 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
                      << NV("TreeSize", R.getTreeSize()));
 
     R.vectorizeTree();
+    for (auto &V : R.ConstVectsPerTree)
+      MaterializedConstVectsPerFunc.emplace_back(V);
     return true;
   }
 
@@ -19248,7 +19280,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
 
       LLVM_DEBUG(dbgs() << "SLP: Analyzing " << ActualVF << " operations "
                         << "\n");
-
+      R.ConstVectsPerTree.clear();
       R.buildTree(Ops);
       if (R.isTreeTinyAndNotFullyVectorizable())
         continue;
@@ -19279,6 +19311,8 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
         I += VF - 1;
         NextInst = I + 1;
         Changed = true;
+        for (auto &V : R.ConstVectsPerTree)
+          MaterializedConstVectsPerFunc.emplace_back(V);
       }
     }
   }
@@ -20172,6 +20206,7 @@ public:
               return V.isDeleted(RedValI);
             }))
           break;
+        V.ConstVectsPerTree.clear();
         V.buildTree(VL, IgnoreList);
         if (V.isTreeTinyAndNotFullyVectorizable(/*ForReduction=*/true)) {
           if (!AdjustReducedVals())
@@ -20285,7 +20320,8 @@ public:
           }
           continue;
         }
-
+        for (auto &L : V.ConstVectsPerTree)
+          SLPVectorizerPass::MaterializedConstVectsPerFunc.emplace_back(L);
         LLVM_DEBUG(dbgs() << "SLP: Vectorizing horizontal reduction at cost:"
                           << Cost << ". (HorRdx)\n");
         V.getORE()->emit([&]() {

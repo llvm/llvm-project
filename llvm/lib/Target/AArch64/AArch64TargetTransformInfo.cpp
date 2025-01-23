@@ -3897,12 +3897,116 @@ bool AArch64TTIImpl::useNeonVector(const Type *Ty) const {
   return isa<FixedVectorType>(Ty) && !ST->useSVEForFixedLengthVectors();
 }
 
-InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
-                                                MaybeAlign Alignment,
-                                                unsigned AddressSpace,
-                                                TTI::TargetCostKind CostKind,
-                                                TTI::OperandValueInfo OpInfo,
-                                                const Instruction *I) {
+template <typename T>
+static bool HaveIdenticalVectVals(ArrayRef<Constant *> A,
+                                  ArrayRef<Constant *> B) {
+  auto R = zip(A, B);
+  return all_of(R, [&](std::tuple<Constant *, Constant *> P) {
+    return cast<T>(get<0>(P))->getValue() == cast<T>(get<1>(P))->getValue();
+  });
+}
+
+template <typename T>
+static bool HaveIdenticalVectTy(ArrayRef<Constant *> A,
+                                ArrayRef<Constant *> B) {
+  auto R1 = all_of(A, [&](Constant *C) { return isa<T>(C); });
+  auto R2 = all_of(B, [&](Constant *C) { return isa<T>(C); });
+  return R1 & R2;
+}
+
+template <typename T>
+static bool AreIdenticalVects(ArrayRef<Constant *> A, ArrayRef<Constant *> B) {
+  if (A.empty() || B.empty() || !HaveIdenticalVectTy<T>(A, B))
+    return false;
+  return HaveIdenticalVectVals<T>(A, B);
+}
+
+InstructionCost AArch64TTIImpl::getConstantMaterializationCost(
+    ArrayRef<Constant *> VL, Type *SrcTy, TTI::TargetCostKind CostKind,
+    ArrayRef<SmallVector<Constant *>> ConstVectsPerTree,
+    ArrayRef<SmallVector<Constant *>> MaterializedConstVectsPerFunc) {
+  // Compute the scalar cost.
+  InstructionCost Cost;
+  if (!SrcTy->isVectorTy()) {
+    // FIXME: Consider floating point types as well.
+    auto *C = dyn_cast<ConstantInt>(VL[0]);
+    return C ? getIntImmCost(C->getValue(), C->getType(), CostKind)
+             : InstructionCost::getInvalid();
+  } else // Vector cost.
+  {
+    // FIXME: Consider floating point types as well.
+    if (!all_of(VL, IsaPred<ConstantInt>))
+      return InstructionCost::getInvalid();
+
+    auto isSplat = [](ArrayRef<Constant *> VL) {
+      Value *FirstNonUndef = nullptr;
+      for (Value *V : VL) {
+        if (isa<UndefValue>(V))
+          continue;
+        if (!FirstNonUndef) {
+          FirstNonUndef = V;
+          continue;
+        }
+        if (V != FirstNonUndef)
+          return false;
+      }
+      return FirstNonUndef != nullptr;
+    };
+    // FIXME: Calculate cost of scalar realization + broadcast.
+    if (isSplat(VL) || all_of(VL, IsaPred<UndefValue, PoisonValue>))
+      return InstructionCost::getInvalid();
+    // Check if this VL has already been materialized in the function.
+    for (auto &V : MaterializedConstVectsPerFunc) {
+      if (AreIdenticalVects<ConstantInt>(V, VL))
+        return 0;
+    }
+    // Check if this VL has already been seen in the SLP tree.
+    for (auto &V : ConstVectsPerTree) {
+      if (AreIdenticalVects<ConstantInt>(V, VL))
+        return 0;
+    }
+    auto *EltTy = VL[0]->getType();
+    auto *VTy = FixedVectorType::get(EltTy, VL.size());
+    auto LT = getTypeLegalizationCost(VTy);
+    // FIXME: Consider types with more legalization cost.
+    if (LT.first > 1)
+      return InstructionCost::getInvalid();
+    if (useNeonVector(VTy)) {
+      if (ST->hasSVE()) {
+        auto Elts = VTy->getNumElements();
+
+        // `index` instruction can be emitted for Elts > 2. We can't analyze
+        // this.
+        if (Elts > 2)
+          return InstructionCost::getInvalid();
+
+        // Check if all the constants are in the range -16 to 15. If not, this
+        // results in scalar/immediate index instruction.
+        auto FirstVal = cast<ConstantInt>(VL[0])->getSExtValue();
+        auto SecondVal = cast<ConstantInt>(VL[1])->getSExtValue();
+        auto IsInIndexInstrImmRange = [](int64_t Val) {
+          return Val >= -16 && Val <= 15;
+        };
+        if (IsInIndexInstrImmRange(FirstVal) &&
+            IsInIndexInstrImmRange(std::abs(SecondVal - FirstVal)))
+          Cost = 2;
+        else // It's mov + index.
+          Cost = 4;
+      } else {
+        // This results in `adrp + ldr` instruction.
+        Cost = 4;
+      }
+    } else {
+      Cost = InstructionCost::getInvalid();
+    }
+    return Cost;
+  }
+}
+
+InstructionCost AArch64TTIImpl::getMemoryOpCost(
+    unsigned Opcode, Type *Ty, MaybeAlign Alignment, unsigned AddressSpace,
+    TTI::TargetCostKind CostKind, TTI::OperandValueInfo OpInfo,
+    const Instruction *I, InstructionCost ConstVectScalarCost) {
   EVT VT = TLI->getValueType(DL, Ty, true);
   // Type legalization can't handle structs
   if (VT == MVT::Other)
@@ -3957,6 +4061,7 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
       // Otherwise we need to scalarize.
       return cast<FixedVectorType>(Ty)->getNumElements() * 2;
     }
+
     EVT EltVT = VT.getVectorElementType();
     unsigned EltSize = EltVT.getScalarSizeInBits();
     if (!isPowerOf2_32(EltSize) || EltSize < 8 || EltSize > 64 ||
