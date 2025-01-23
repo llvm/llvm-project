@@ -2858,6 +2858,11 @@ void CodeGenFunction::EmitKCFIOperandBundle(
       Callee.getAbstractInfo().getCalleeFunctionProtoType();
   if (FP)
     Bundles.emplace_back("kcfi", CGM.CreateKCFITypeId(FP->desugar()));
+  else {
+    ASTContext &context = this->getContext();
+    QualType voidType = context.VoidTy;
+    Bundles.emplace_back("kcfi", CGM.CreateKCFITypeId(voidType));
+  }
 }
 
 llvm::Value *
