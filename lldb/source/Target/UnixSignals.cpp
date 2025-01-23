@@ -163,7 +163,7 @@ UnixSignals::GetSignalDescription(int32_t signo, std::optional<int32_t> code,
           break;
         case SignalCodePrintOption::Address:
           if (addr)
-            strm << " (fault address: 0x" << std::hex << *addr << ")";
+            strm << " (fault address=0x" << std::hex << *addr << ")";
           break;
         case SignalCodePrintOption::Bounds:
           if (lower && upper && addr) {
@@ -172,9 +172,9 @@ UnixSignals::GetSignalDescription(int32_t signo, std::optional<int32_t> code,
             else
               strm << "upper bound violation ";
 
-            strm << "(fault address: 0x" << std::hex << *addr;
-            strm << ", lower bound: 0x" << std::hex << *lower;
-            strm << ", upper bound: 0x" << std::hex << *upper;
+            strm << "(fault address=0x" << std::hex << *addr;
+            strm << ", lower bound=0x" << std::hex << *lower;
+            strm << ", upper bound=0x" << std::hex << *upper;
             strm << ")";
           } else
             strm << sc.m_description.str();
