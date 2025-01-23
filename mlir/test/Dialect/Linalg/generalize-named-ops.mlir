@@ -1164,3 +1164,28 @@ func.func @contract_dot(%arg0: memref<9xf32>, %arg1: memref<9xf32>, %arg2: memre
                   outs(%arg2: memref<f32>)
   return
 }
+
+// -----
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2) -> (d2)>
+// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+// CHECK-LABEL:   func.func @contract_matmul_bcast_a_b
+// CHECK-SAME:                           (%[[VAL_0:.*]]: memref<5xf32>, %[[VAL_1:.*]]: memref<5xf32>, %[[VAL_2:.*]]: memref<3x7xf32>) {
+
+// CHECK:           linalg.generic {indexing_maps = [#[[$ATTR_0]], #[[$ATTR_0]], #[[$ATTR_2]]], iterator_types = ["parallel", "parallel", "reduction"]}
+// CHECK-NEXT:     ^{{.+}}(
+// CHECK-NEXT:      arith.mulf
+// CHECK-NEXT:      arith.addf
+// CHECK-NEXT:      linalg.yield
+
+func.func @contract_matmul_bcast_a_b(%arg0: memref<5xf32>, %arg1: memref<5xf32>, %arg2: memref<3x7xf32>) {
+  linalg.contract indexing_maps = [
+                    affine_map<(d0, d1, d2) -> (d2)>,
+                    affine_map<(d0, d1, d2) -> (d2)>,
+                    affine_map<(d0, d1, d2) -> (d0, d1)>
+                  ]
+                  ins(%arg0, %arg1 : memref<5xf32>, memref<5xf32>)
+                  outs(%arg2: memref<3x7xf32>)
+  return
+}

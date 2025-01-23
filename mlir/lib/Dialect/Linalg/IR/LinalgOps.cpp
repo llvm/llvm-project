@@ -3622,15 +3622,15 @@ Speculation::Speculatability MatmulOp::getSpeculatability() {
 
 SmallVector<utils::IteratorType> ContractOp::getIteratorTypesArray() {
   AffineMap outAffineMap = getIndexingMapsArray().pop_back_val();
-  /// On well-formed IR, indexing_maps is non-empty, contained affine_maps'
-  /// domains are all the same, and each implements a projected permutation.
-  /// Each dim in the domain must occur for at least one operand and is
-  /// classified as either batch, N-like, M-like, or K-like. Only the latter
-  /// corresponds to a reduction _and_ it is the only dim-kind which does not
-  /// occur for the output operand. We use this fact for fast inference:
+  // On well-formed IR, indexing_maps is non-empty, contained affine_maps'
+  // domains are all the same, and each implements a projected permutation.
+  // Each iteration space dim must occur for at least one operand and either
+  // takes part in a contraction/reduction or else has parallel iteration type.
+  // We have that a dim is a contraction/reduction dim if and only if the dim
+  // occurs for the output operand. We use this fact for fast inference:
   // NB: In case we allow dims to occur solely for one input, the above still
   //     holds: per the einsum semantics, these are reduction dims as well.
-  auto dimsInOutput = SmallVector<bool>(outAffineMap.getNumDims(), false);
+  SmallVector<bool> dimsInOutput(outAffineMap.getNumDims(), false);
   for (auto result : outAffineMap.getResults()) {
     auto dimExpr = dyn_cast<AffineDimExpr>(result);
     assert(dimExpr && "affine_map is a projected permutation");
@@ -3741,9 +3741,10 @@ LogicalResult ContractOp::verify() {
 
   for (auto &&[affineMap, operandType, isInput] :
        llvm::zip(getIndexingMapsArray(), getOperandTypes(),
-                 SmallVector<bool>{true, true, false}))
+                 SmallVector<bool>{true, true, false})) {
     if (failed(checkAffineMapAndType(affineMap, operandType, isInput)))
       return failure(); // NOTE: checking lambda will emit error.
+  }
 
   bool hasContractingDim = false;
   for (size_t dimIndex = 0; dimIndex < (size_t)iterationSpaceDims; dimIndex++) {
@@ -3752,9 +3753,9 @@ LogicalResult ContractOp::verify() {
 
     hasContractingDim |= inOccCount == 2 && outOccCount == 0;
 
-    if (inOccCount == 0)
+    if (inOccCount == 0 && outOccCount == 0)
       return emitError() << "iteration space dim at index " << dimIndex
-                         << " not used by either input";
+                         << " not used to access any operand";
 
     // NB: We disallow a dim which occurs for only one input operand and not
     //     for the output. In terms of einsum semantics such dims have a
