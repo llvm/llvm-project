@@ -1178,7 +1178,18 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.SGPRSpill = MFI->getNumSpilledSGPRs();
   ProgInfo.VGPRSpill = MFI->getNumSpilledVGPRs();
 
-  unsigned LDSAlignShift = Log2_32_Ceil(STM.getLDSAllocGranularity());
+  unsigned LDSAlignShift;
+  if (STM.getFeatureBits().test(FeatureAddressableLocalMemorySize163840)) {
+    // LDS is allocated in 320 dword blocks.
+    LDSAlignShift = 11;
+  } else if (STM.getFeatureBits().test(
+                 FeatureAddressableLocalMemorySize65536)) {
+    // LDS is allocated in 128 dword blocks.
+    LDSAlignShift = 9;
+  } else {
+    // LDS is allocated in 64 dword blocks.
+    LDSAlignShift = 8;
+  }
   ProgInfo.LDSSize = MFI->getLDSSize();
   ProgInfo.LDSBlocks =
       alignTo(ProgInfo.LDSSize, 1ULL << LDSAlignShift) >> LDSAlignShift;

@@ -55,15 +55,10 @@ AMDGPUSubtarget::getMaxLocalMemSizeWithWaveCount(unsigned NWaves,
   return getLocalMemorySize() / WorkGroupsPerCU;
 }
 
-std::pair<unsigned, unsigned> AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(
-    uint32_t LDSBytes, const Function &F, const TargetMachine &TM) const {
-  // Compute occupancy restriction based on LDS usage.
-  if (TM.getTargetTriple().getArch() == Triple::amdgcn) {
-    // For GCN subtargets, LDS size must be aligned on allocation granularity.
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    LDSBytes = alignTo(LDSBytes, ST.getLDSAllocGranularity());
-  }
-
+std::pair<unsigned, unsigned>
+AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(uint32_t LDSBytes,
+                                                const Function &F) const {
+  // FIXME: We should take into account the LDS allocation granularity.
   const unsigned MaxWGsLDS = getLocalMemorySize() / std::max(LDSBytes, 1u);
 
   // Queried LDS size may be larger than available on a CU, in which case we
@@ -143,8 +138,7 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(
     const MachineFunction &MF) const {
   const auto *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  return getOccupancyWithWorkGroupSizes(MFI->getLDSSize(), MF.getFunction(),
-                                        MF.getTarget());
+  return getOccupancyWithWorkGroupSizes(MFI->getLDSSize(), MF.getFunction());
 }
 
 std::pair<unsigned, unsigned>

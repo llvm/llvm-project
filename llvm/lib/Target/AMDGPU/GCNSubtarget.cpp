@@ -408,22 +408,13 @@ unsigned GCNSubtarget::getReservedNumSGPRs(const Function &F) const {
 std::pair<unsigned, unsigned>
 GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
                                unsigned NumSGPRs, unsigned NumVGPRs) const {
-  auto [MinOcc, MaxOcc] =
-      getOccupancyWithWorkGroupSizes(LDSSize, F, TLInfo.getTargetMachine());
+  auto [MinOcc, MaxOcc] = getOccupancyWithWorkGroupSizes(LDSSize, F);
   unsigned SGPROcc = getOccupancyWithNumSGPRs(NumSGPRs);
   unsigned VGPROcc = getOccupancyWithNumVGPRs(NumVGPRs);
 
   // Maximum occupancy may be further limited by high SGPR/VGPR usage.
   MaxOcc = std::min(MaxOcc, std::min(SGPROcc, VGPROcc));
   return {std::min(MinOcc, MaxOcc), MaxOcc};
-}
-
-unsigned GCNSubtarget::getLDSAllocGranularity() const {
-  if (getFeatureBits().test(AMDGPU::FeatureAddressableLocalMemorySize163840))
-    return 1280; // LDS is allocated in 320 dword blocks.
-  if (getFeatureBits().test(AMDGPU::FeatureAddressableLocalMemorySize65536))
-    return 512; // LDS is allocated in 128 dword blocks.
-  return 256;   // LDS is allocated in 64 dword blocks.
 }
 
 unsigned GCNSubtarget::getBaseMaxNumSGPRs(

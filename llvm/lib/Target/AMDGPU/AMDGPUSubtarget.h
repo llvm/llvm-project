@@ -133,8 +133,7 @@ public:
   /// This notably depends on the range of allowed flat group sizes for the
   /// function and hardware characteristics.
   std::pair<unsigned, unsigned>
-  getOccupancyWithWorkGroupSizes(uint32_t LDSBytes, const Function &F,
-                                 const TargetMachine &TM) const;
+  getOccupancyWithWorkGroupSizes(uint32_t LDSBytes, const Function &F) const;
 
   /// Subtarget's minimum/maximum occupancy, in number of waves per EU, that can
   /// be achieved when the only function running on a CU is \p MF. This notably
