@@ -4284,7 +4284,7 @@ bool LoopVectorizationPlanner::isMoreProfitable(
   // vector width, on the assumption that throughput will be greater.
   if (CM.CostKind == TTI::TCK_CodeSize)
     return CostA < CostB ||
-      (CostA == CostB && EstimatedWidthA > EstimatedWidthB);
+           (CostA == CostB && EstimatedWidthA > EstimatedWidthB);
 
   // Assume vscale may be larger than 1 (or the value being tuned for),
   // so that scalable vectorization is slightly favorable over fixed-width
