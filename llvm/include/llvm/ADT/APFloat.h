@@ -790,6 +790,8 @@ private:
 
   /// Sign bit of the number.
   unsigned int sign : 1;
+
+  friend class IEEEFloatUnitTestHelper;
 };
 
 hash_code hash_value(const IEEEFloat &Arg);
