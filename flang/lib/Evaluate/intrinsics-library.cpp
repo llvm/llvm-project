@@ -260,24 +260,6 @@ struct HostRuntimeLibrary<HostT, LibraryVersion::Libm> {
   static_assert(map.Verify(), "map must be sorted");
 };
 
-// Helpers to map complex std::pow whose resolution in F2{std::pow} is
-// ambiguous as of clang++ 20.
-template <typename HostT>
-static std::complex<HostT> StdPowF2(
-    const std::complex<HostT> &x, const std::complex<HostT> &y) {
-  return std::pow(x, y);
-}
-template <typename HostT>
-static std::complex<HostT> StdPowF2A(
-    const HostT &x, const std::complex<HostT> &y) {
-  return std::pow(x, y);
-}
-template <typename HostT>
-static std::complex<HostT> StdPowF2B(
-    const std::complex<HostT> &x, const HostT &y) {
-  return std::pow(x, y);
-}
-
 enum trigFunc {
   Cacos,
   Cacosh,
@@ -322,6 +304,8 @@ float _Complex cexpf(float _Complex);
 double _Complex cexp(double _Complex);
 float _Complex clogf(float _Complex);
 double _Complex __clog(double _Complex);
+float _Complex cpowf(float _Complex, float _Complex);
+double _Complex cpow(double _Complex, double _Complex);
 float _Complex csinf(float _Complex);
 double _Complex csin(double _Complex);
 float _Complex csinhf(float _Complex);
@@ -429,6 +413,66 @@ template <trigFunc TF> struct X {
     return res;
   }
 };
+
+// Helpers to map complex std::pow whose resolution in F2{std::pow} is
+// ambiguous as of clang++ 20.
+template <typename HostT>
+static std::complex<HostT> StdPowF2(const std::complex<HostT> &x,
+                                    const std::complex<HostT> &y) {
+#ifdef _AIX
+  if constexpr (std::is_same_v<HostT, float>) {
+    float _Complex r{cpowf(CppToC<float _Complex, float>(x),
+                           CppToC<float _Complex, float>(y))};
+    return CToCpp<float, float _Complex>(r);
+  } else if constexpr (std::is_same_v<HostT, double>) {
+    double _Complex r{cpow(CppToC<double _Complex, double>(x),
+                           CppToC<double _Complex, double>(y))};
+    return CToCpp<double, double _Complex>(r);
+  }
+#else
+  return std::pow(x, y);
+#endif
+}
+
+template <typename HostT>
+static std::complex<HostT> StdPowF2A(const HostT &x,
+                                     const std::complex<HostT> &y) {
+#ifdef _AIX
+  constexpr HostT zero{0.0};
+  std::complex<HostT> z(x, zero);
+  if constexpr (std::is_same_v<HostT, float>) {
+    float _Complex r{cpowf(CppToC<float _Complex, float>(z),
+                           CppToC<float _Complex, float>(y))};
+    return CToCpp<float, float _Complex>(r);
+  } else if constexpr (std::is_same_v<HostT, double>) {
+    double _Complex r{cpow(CppToC<double _Complex, double>(z),
+                           CppToC<double _Complex, double>(y))};
+    return CToCpp<double, double _Complex>(r);
+  }
+#else
+  return std::pow(x, y);
+#endif
+}
+
+template <typename HostT>
+static std::complex<HostT> StdPowF2B(const std::complex<HostT> &x,
+                                     const HostT &y) {
+#ifdef _AIX
+  constexpr HostT zero{0.0};
+  std::complex<HostT> z(y, zero);
+  if constexpr (std::is_same_v<HostT, float>) {
+    float _Complex r{cpowf(CppToC<float _Complex, float>(x),
+                           CppToC<float _Complex, float>(z))};
+    return CToCpp<float, float _Complex>(r);
+  } else if constexpr (std::is_same_v<HostT, double>) {
+    double _Complex r{cpow(CppToC<double _Complex, double>(x),
+                           CppToC<double _Complex, double>(z))};
+    return CToCpp<double, double _Complex>(r);
+  }
+#else
+  return std::pow(x, y);
+#endif
+}
 
 template <typename HostT>
 struct HostRuntimeLibrary<std::complex<HostT>, LibraryVersion::Libm> {
