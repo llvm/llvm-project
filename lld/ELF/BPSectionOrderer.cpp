@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "BPSectionOrderer.h"
-#include "llvm/Support/xxhash.h"
 
 using namespace llvm;
 using namespace lld::elf;
