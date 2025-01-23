@@ -520,6 +520,50 @@ INTERCEPTOR(ssize_t, pwrite64, int fd, const void *buf, size_t count,
 #define RTSAN_MAYBE_INTERCEPT_PWRITE64
 #endif // SANITIZER_INTERCEPT_PWRITE64
 
+#if SANITIZER_INTERCEPT_PREADV
+INTERCEPTOR(ssize_t, preadv, int fd, const struct iovec *iov, int count,
+            off_t offset) {
+  __rtsan_notify_intercepted_call("preadv");
+  return REAL(preadv)(fd, iov, count, offset);
+}
+#define RTSAN_MAYBE_INTERCEPT_PREADV INTERCEPT_FUNCTION(preadv)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PREADV
+#endif
+
+#if SANITIZER_INTERCEPT_PREADV64
+INTERCEPTOR(ssize_t, preadv64, int fd, const struct iovec *iov, int count,
+            off_t offset) {
+  __rtsan_notify_intercepted_call("preadv64");
+  return REAL(preadv)(fd, iov, count, offset);
+}
+#define RTSAN_MAYBE_INTERCEPT_PREADV64 INTERCEPT_FUNCTION(preadv64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PREADV64
+#endif
+
+#if SANITIZER_INTERCEPT_PWRITEV
+INTERCEPTOR(ssize_t, pwritev, int fd, const struct iovec *iov, int count,
+            off_t offset) {
+  __rtsan_notify_intercepted_call("pwritev");
+  return REAL(pwritev)(fd, iov, count, offset);
+}
+#define RTSAN_MAYBE_INTERCEPT_PWRITEV INTERCEPT_FUNCTION(pwritev)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PWRITEV
+#endif
+
+#if SANITIZER_INTERCEPT_PWRITEV64
+INTERCEPTOR(ssize_t, pwritev64, int fd, const struct iovec *iov, int count,
+            off_t offset) {
+  __rtsan_notify_intercepted_call("pwritev64");
+  return REAL(pwritev64)(fd, iov, count, offset);
+}
+#define RTSAN_MAYBE_INTERCEPT_PWRITEV64 INTERCEPT_FUNCTION(pwritev64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PWRITEV64
+#endif
+
 INTERCEPTOR(ssize_t, writev, int fd, const struct iovec *iov, int iovcnt) {
   __rtsan_notify_intercepted_call("writev");
   return REAL(writev)(fd, iov, iovcnt);
@@ -1265,9 +1309,13 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(write);
   INTERCEPT_FUNCTION(pread);
   RTSAN_MAYBE_INTERCEPT_PREAD64;
+  RTSAN_MAYBE_INTERCEPT_PREADV;
+  RTSAN_MAYBE_INTERCEPT_PREADV64;
   INTERCEPT_FUNCTION(readv);
   INTERCEPT_FUNCTION(pwrite);
   RTSAN_MAYBE_INTERCEPT_PWRITE64;
+  RTSAN_MAYBE_INTERCEPT_PWRITEV;
+  RTSAN_MAYBE_INTERCEPT_PWRITEV64;
   INTERCEPT_FUNCTION(writev);
   INTERCEPT_FUNCTION(fwrite);
   INTERCEPT_FUNCTION(fclose);
