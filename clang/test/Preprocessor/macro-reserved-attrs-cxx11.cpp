@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -fsyntax-only -verify -pedantic %s -DTEST1
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -fsyntax-only -verify -pedantic %s -DTEST2
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -fsyntax-only -verify -pedantic %s -DTEST3
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -fsyntax-only -verify -pedantic %s -DTEST4
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -Wreserved-attribute-identifier -fsyntax-only -verify %s -DTEST1
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -Wreserved-attribute-identifier -fsyntax-only -verify %s -DTEST2
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -Wreserved-attribute-identifier -fsyntax-only -verify %s -DTEST3
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -Wreserved-attribute-identifier -fsyntax-only -verify %s -DTEST4
 
 #ifdef TEST1
 
