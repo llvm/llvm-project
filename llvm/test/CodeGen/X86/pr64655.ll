@@ -7,32 +7,32 @@ define void @f(ptr %0) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movzbl (%rdi), %eax
 ; AVX2-NEXT:    movl %eax, %ecx
-; AVX2-NEXT:    shrb $2, %cl
-; AVX2-NEXT:    andb $1, %cl
 ; AVX2-NEXT:    movl %eax, %edx
-; AVX2-NEXT:    andb $1, %dl
-; AVX2-NEXT:    vmovd %edx, %xmm0
-; AVX2-NEXT:    vpinsrb $4, %ecx, %xmm0, %xmm0
-; AVX2-NEXT:    movl %eax, %ecx
-; AVX2-NEXT:    shrb $3, %cl
-; AVX2-NEXT:    andb $1, %cl
-; AVX2-NEXT:    vpinsrb $6, %ecx, %xmm0, %xmm0
-; AVX2-NEXT:    movl %eax, %ecx
-; AVX2-NEXT:    shrb $4, %cl
-; AVX2-NEXT:    andb $1, %cl
-; AVX2-NEXT:    vpinsrb $8, %ecx, %xmm0, %xmm0
-; AVX2-NEXT:    movl %eax, %ecx
-; AVX2-NEXT:    shrb $5, %cl
-; AVX2-NEXT:    andb $1, %cl
-; AVX2-NEXT:    vpinsrb $10, %ecx, %xmm0, %xmm0
-; AVX2-NEXT:    movl %eax, %ecx
+; AVX2-NEXT:    movl %eax, %esi
+; AVX2-NEXT:    movl %eax, %r8d
+; AVX2-NEXT:    movl %eax, %r9d
+; AVX2-NEXT:    vmovd %eax, %xmm0
+; AVX2-NEXT:    # kill: def $al killed $al killed $eax
+; AVX2-NEXT:    movl $1, %r10d
+; AVX2-NEXT:    vpinsrw $1, %r10d, %xmm0, %xmm0
+; AVX2-NEXT:    shrb $2, %r9b
+; AVX2-NEXT:    movzbl %r9b, %r9d
+; AVX2-NEXT:    vpinsrw $2, %r9d, %xmm0, %xmm0
+; AVX2-NEXT:    shrb $3, %r8b
+; AVX2-NEXT:    movzbl %r8b, %r8d
+; AVX2-NEXT:    vpinsrw $3, %r8d, %xmm0, %xmm0
+; AVX2-NEXT:    shrb $4, %sil
+; AVX2-NEXT:    movzbl %sil, %esi
+; AVX2-NEXT:    vpinsrw $4, %esi, %xmm0, %xmm0
+; AVX2-NEXT:    shrb $5, %dl
+; AVX2-NEXT:    movzbl %dl, %edx
+; AVX2-NEXT:    vpinsrw $5, %edx, %xmm0, %xmm0
 ; AVX2-NEXT:    shrb $6, %cl
-; AVX2-NEXT:    andb $1, %cl
-; AVX2-NEXT:    vpinsrb $12, %ecx, %xmm0, %xmm0
+; AVX2-NEXT:    movzbl %cl, %ecx
+; AVX2-NEXT:    vpinsrw $6, %ecx, %xmm0, %xmm0
 ; AVX2-NEXT:    shrb $7, %al
-; AVX2-NEXT:    vpinsrb $14, %eax, %xmm0, %xmm0
-; AVX2-NEXT:    movl $1, %eax
-; AVX2-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; AVX2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vpmovmskb %xmm0, %eax

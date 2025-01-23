@@ -45,12 +45,12 @@ define amdgpu_kernel void @build_vector_v2i16 (ptr addrspace(1) %out) {
 ; R600-LABEL: build_vector_v2i16:
 ; R600:       ; %bb.0: ; %entry
 ; R600-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T4.X, T5.X, 1
+; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; R600-NEXT:    CF_END
 ; R600-NEXT:    PAD
 ; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     MOV T4.X, literal.x,
-; R600-NEXT:     LSHR * T5.X, KC0[2].Y, literal.y,
+; R600-NEXT:      MOV   T0.X, literal.x,  
+; R600-NEXT:      LSHR * T1.X, KC0[2].Y, literal.y,  
 ; R600-NEXT:    393221(5.510200e-40), 2(2.802597e-45)
 entry:
   store <2 x i16> <i16 5, i16 6>, ptr addrspace(1) %out
@@ -61,14 +61,14 @@ define amdgpu_kernel void @build_vector_v2i16_trunc (ptr addrspace(1) %out, i32 
 ; R600-LABEL: build_vector_v2i16_trunc:
 ; R600:       ; %bb.0:
 ; R600-NEXT:    ALU 4, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T4.X, T5.X, 1
+; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; R600-NEXT:    CF_END
 ; R600-NEXT:    PAD
 ; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     LSHR * T0.W, KC0[2].Z, literal.x,
+; R600-NEXT:      LSHR * T0.W, KC0[2].Z, literal.x,  
 ; R600-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; R600-NEXT:     OR_INT T4.X, PV.W, literal.x,
-; R600-NEXT:     LSHR * T5.X, KC0[2].Y, literal.y,
+; R600-NEXT:      OR_INT   T0.X, PV.W, literal.x,  
+; R600-NEXT:      LSHR * T1.X, KC0[2].Y, literal.y,  
 ; R600-NEXT:    327680(4.591775e-40), 2(2.802597e-45)
   %srl = lshr i32 %a, 16
   %trunc = trunc i32 %srl to i16

@@ -281,7 +281,6 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(ptr nocapture readonly %b, ptr
 ; CHECK-NEXT:  .LBB2_1: @ %vector.ph
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
-; CHECK-NEXT:    sub sp, #8
 ; CHECK-NEXT:    adds r3, r2, #3
 ; CHECK-NEXT:    vmov.i32 q5, #0x0
 ; CHECK-NEXT:    bic r3, r3, #3
@@ -316,20 +315,14 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(ptr nocapture readonly %b, ptr
 ; CHECK-NEXT:    vmov q3, q5
 ; CHECK-NEXT:    vcmp.u32 cs, q1, q4
 ; CHECK-NEXT:    @ implicit-def: $q5
-; CHECK-NEXT:    vmrs r4, p0
-; CHECK-NEXT:    and r2, r4, #1
-; CHECK-NEXT:    rsbs r5, r2, #0
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    bfi r2, r5, #0, #1
-; CHECK-NEXT:    ubfx r5, r4, #4, #1
-; CHECK-NEXT:    rsbs r5, r5, #0
-; CHECK-NEXT:    bfi r2, r5, #1, #1
-; CHECK-NEXT:    ubfx r5, r4, #8, #1
-; CHECK-NEXT:    ubfx r4, r4, #12, #1
-; CHECK-NEXT:    rsbs r5, r5, #0
-; CHECK-NEXT:    bfi r2, r5, #2, #1
-; CHECK-NEXT:    rsbs r4, r4, #0
-; CHECK-NEXT:    bfi r2, r4, #3, #1
+; CHECK-NEXT:    vmrs r2, p0
+; CHECK-NEXT:    and r5, r2, #1
+; CHECK-NEXT:    ubfx r4, r2, #4, #1
+; CHECK-NEXT:    orr.w r4, r5, r4, lsl #1
+; CHECK-NEXT:    ubfx r5, r2, #8, #1
+; CHECK-NEXT:    ubfx r2, r2, #12, #1
+; CHECK-NEXT:    orr.w r4, r4, r5, lsl #2
+; CHECK-NEXT:    orr.w r2, r4, r2, lsl #3
 ; CHECK-NEXT:    lsls r4, r2, #31
 ; CHECK-NEXT:    bne .LBB2_12
 ; CHECK-NEXT:  @ %bb.4: @ %else
@@ -352,20 +345,14 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(ptr nocapture readonly %b, ptr
 ; CHECK-NEXT:    @ in Loop: Header=BB2_3 Depth=1
 ; CHECK-NEXT:    vcmp.u32 cs, q2, q4
 ; CHECK-NEXT:    @ implicit-def: $q6
-; CHECK-NEXT:    vmrs r4, p0
-; CHECK-NEXT:    and r2, r4, #1
-; CHECK-NEXT:    rsbs r5, r2, #0
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    bfi r2, r5, #0, #1
-; CHECK-NEXT:    ubfx r5, r4, #4, #1
-; CHECK-NEXT:    rsbs r5, r5, #0
-; CHECK-NEXT:    bfi r2, r5, #1, #1
-; CHECK-NEXT:    ubfx r5, r4, #8, #1
-; CHECK-NEXT:    ubfx r4, r4, #12, #1
-; CHECK-NEXT:    rsbs r5, r5, #0
-; CHECK-NEXT:    bfi r2, r5, #2, #1
-; CHECK-NEXT:    rsbs r4, r4, #0
-; CHECK-NEXT:    bfi r2, r4, #3, #1
+; CHECK-NEXT:    vmrs r2, p0
+; CHECK-NEXT:    and r5, r2, #1
+; CHECK-NEXT:    ubfx r4, r2, #4, #1
+; CHECK-NEXT:    orr.w r4, r5, r4, lsl #1
+; CHECK-NEXT:    ubfx r5, r2, #8, #1
+; CHECK-NEXT:    ubfx r2, r2, #12, #1
+; CHECK-NEXT:    orr.w r4, r4, r5, lsl #2
+; CHECK-NEXT:    orr.w r2, r4, r2, lsl #3
 ; CHECK-NEXT:    lsls r4, r2, #31
 ; CHECK-NEXT:    bne .LBB2_15
 ; CHECK-NEXT:  @ %bb.9: @ %else15
@@ -432,7 +419,6 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(ptr nocapture readonly %b, ptr
 ; CHECK-NEXT:    vadd.f32 q0, q0, q1
 ; CHECK-NEXT:    vmov r0, s1
 ; CHECK-NEXT:    vadd.f32 q0, q0, r0
-; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-NEXT:    .p2align 4

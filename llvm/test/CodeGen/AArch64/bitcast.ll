@@ -49,12 +49,15 @@ define <4 x i16> @foo2(<2 x i32> %a) {
 define i32 @bitcast_v4i8_i32(<4 x i8> %a, <4 x i8> %b){
 ; CHECK-SD-LABEL: bitcast_v4i8_i32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sub sp, sp, #16
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SD-NEXT:    add v0.4h, v0.4h, v1.4h
-; CHECK-SD-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    fmov w0, s0
-; CHECK-SD-NEXT:    add sp, sp, #16
+; CHECK-SD-NEXT:    add	v0.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    umov	w8, v0.h[0]
+; CHECK-SD-NEXT:    umov	w9, v0.h[1]
+; CHECK-SD-NEXT:    umov	w10, v0.h[2]
+; CHECK-SD-NEXT:    and	w8, w8, #0xff
+; CHECK-SD-NEXT:    bfi	w8, w9, #8, #8
+; CHECK-SD-NEXT:    umov	w9, v0.h[3]
+; CHECK-SD-NEXT:    bfi	w8, w10, #16, #8
+; CHECK-SD-NEXT:    orr	w0, w8, w9, lsl #24
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: bitcast_v4i8_i32:
@@ -99,15 +102,10 @@ define <4 x i8> @bitcast_i32_v4i8(i32 %a, i32 %b){
 define i32 @bitcast_v2i16_i32(<2 x i16> %a, <2 x i16> %b){
 ; CHECK-SD-LABEL: bitcast_v2i16_i32:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sub sp, sp, #16
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SD-NEXT:    add v0.2s, v0.2s, v1.2s
-; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    strh w9, [sp, #12]
-; CHECK-SD-NEXT:    strh w8, [sp, #14]
-; CHECK-SD-NEXT:    ldr w0, [sp, #12]
-; CHECK-SD-NEXT:    add sp, sp, #16
+; CHECK-SD-NEXT:    add	v0.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    mov	w8, v0.s[1]
+; CHECK-SD-NEXT:    fmov	w0, s0
+; CHECK-SD-NEXT:    bfi	w0, w8, #16, #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: bitcast_v2i16_i32:
