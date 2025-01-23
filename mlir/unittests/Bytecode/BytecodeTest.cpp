@@ -10,6 +10,7 @@
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OwningOpRef.h"
 #include "mlir/Parser/Parser.h"
@@ -146,4 +147,25 @@ TEST(Bytecode, OpWithoutProperties) {
 
   EXPECT_TRUE(OperationEquivalence::computeHash(op.get()) ==
               OperationEquivalence::computeHash(roundtripped));
+}
+
+TEST(Bytecode, FusedLocCrash) {
+  MLIRContext context;
+  OpBuilder builder(&context);
+  SmallVector<Location> locs;
+  FusedLoc fusedLoc = FusedLoc::get(&context, locs, {});
+
+  auto module = builder.create<mlir::ModuleOp>(fusedLoc, "test");
+
+  // Write the module to bytecode
+  std::string buffer;
+  llvm::raw_string_ostream ostream(buffer);
+  ASSERT_TRUE(succeeded(writeBytecodeToFile(module, ostream)));
+  ostream.flush();
+
+  // Parse it back
+  ParserConfig parseConfig(&context);
+  OwningOpRef<Operation *> roundTripModule =
+      parseSourceString<Operation *>(buffer, parseConfig);
+  ASSERT_TRUE(roundTripModule);
 }
