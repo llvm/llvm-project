@@ -4142,8 +4142,9 @@ private:
         // through the TreeEntry.
         if (TreeEntry *TE = BundleMember->TE) {
           // Need to search for the lane since the tree entry can be reordered.
+          auto *In = BundleMember->Inst;
           int Lane = std::distance(TE->Scalars.begin(),
-                                   find(TE->Scalars, BundleMember->Inst));
+                                   find(TE->Scalars, In));
           assert(Lane >= 0 && "Lane not set");
 
           // Since vectorization tree is being built recursively this assertion
@@ -4152,16 +4153,13 @@ private:
           // where their second (immediate) operand is not added. Since
           // immediates do not affect scheduler behavior this is considered
           // okay.
-          auto *In = BundleMember->Inst;
           assert(
               In &&
               (isa<ExtractValueInst, ExtractElementInst, IntrinsicInst>(In) ||
                In->getNumOperands() == TE->getNumOperands()) &&
               "Missed TreeEntry operands?");
-          (void)In; // fake use to avoid build failure when assertions disabled
 
-          for (unsigned OpIdx = 0, NumOperands = TE->getNumOperands();
-               OpIdx != NumOperands; ++OpIdx)
+          for (unsigned OpIdx : seq<unsigned>(TE->getNumOperands()))
             if (auto *I = dyn_cast<Instruction>(TE->getOperand(OpIdx)[Lane]))
               DecrUnsched(I);
         } else {
@@ -9093,7 +9091,7 @@ static bool isAlternateInstruction(const Instruction *I,
   if (auto *MainCI = dyn_cast<CmpInst>(MainOp)) {
     auto *AltCI = cast<CmpInst>(AltOp);
     CmpInst::Predicate MainP = MainCI->getPredicate();
-    CmpInst::Predicate AltP = AltCI->getPredicate();
+    [[maybe_unused]] CmpInst::Predicate AltP = AltCI->getPredicate();
     assert(MainP != AltP && "Expected different main/alternate predicates.");
     auto *CI = cast<CmpInst>(I);
     if (isCmpSameOrSwapped(MainCI, CI, TLI))
@@ -9106,7 +9104,6 @@ static bool isAlternateInstruction(const Instruction *I,
     assert((MainP == P || AltP == P || MainP == SwappedP || AltP == SwappedP) &&
            "CmpInst expected to match either main or alternate predicate or "
            "their swap.");
-    (void)AltP;
     return MainP != P && MainP != SwappedP;
   }
   return I->getOpcode() == AltOp->getOpcode();
@@ -12379,8 +12376,7 @@ static T *performExtractsShuffleAction(
       else
         Mask[Idx] = (Res.second ? Idx : Mask[Idx]) + VF;
     }
-    auto *V = ValueSelect::get<T *>(Base);
-    (void)V;
+    [[maybe_unused]] auto *V = ValueSelect::get<T *>(Base);
     assert((!V || GetVF(V) == Mask.size()) &&
            "Expected base vector of VF number of elements.");
     Prev = Action(Mask, {nullptr, Res.first});
@@ -12431,8 +12427,7 @@ static T *performExtractsShuffleAction(
     }
     VMIt = std::next(VMIt);
   }
-  bool IsBaseNotUndef = !IsBaseUndef.all();
-  (void)IsBaseNotUndef;
+  [[maybe_unused]] bool IsBaseNotUndef = !IsBaseUndef.all();
   // Perform requested actions for the remaining masks/vectors.
   for (auto E = ShuffleMask.end(); VMIt != E; ++VMIt) {
     // Shuffle other input vectors, if any.
@@ -17626,8 +17621,7 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
   for (auto *I = BS->ScheduleStart; I != BS->ScheduleEnd;
        I = I->getNextNode()) {
     if (ScheduleData *SD = BS->getScheduleData(I)) {
-      TreeEntry *SDTE = getTreeEntry(SD->Inst);
-      (void)SDTE;
+      [[maybe_unused]] TreeEntry *SDTE = getTreeEntry(SD->Inst);
       assert((isVectorLikeInstWithConstOps(SD->Inst) ||
               SD->isPartOfBundle() ==
                   (SDTE && !doesNotNeedToSchedule(SDTE->Scalars))) &&
