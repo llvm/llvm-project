@@ -10,9 +10,9 @@
 #define _LIBCPP___RANDOM_EXTREME_VALUE_DISTRIBUTION_H
 
 #include <__config>
+#include <__math/logarithms.h>
 #include <__random/is_valid.h>
 #include <__random/uniform_real_distribution.h>
-#include <cmath>
 #include <iosfwd>
 #include <limits>
 
@@ -100,7 +100,7 @@ template <class _RealType>
 template <class _URNG>
 _RealType extreme_value_distribution<_RealType>::operator()(_URNG& __g, const param_type& __p) {
   static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
-  return __p.a() - __p.b() * std::log(-std::log(1 - uniform_real_distribution<result_type>()(__g)));
+  return __p.a() - __p.b() * __math::log(-__math::log(1 - uniform_real_distribution<result_type>()(__g)));
 }
 
 template <class _CharT, class _Traits, class _RT>
