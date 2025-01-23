@@ -551,6 +551,36 @@ let SubtargetPredicate = isGFX13Plus in {
   }
 } // End SubtargetPredicate = isGFX13Plus
 
+// Move from/to global registers.
+//
+// Global register operands are represented as constant operands in Machine IR
+// because they do not interact with regular registers in any way (e.g. for
+// code generation purposes).
+//
+// The instructions are modeled as accessing "memory" (load / store). Think of
+// the global register operands as part of the address of this memory access.
+let SubtargetPredicate = isGFX13Plus, maybeAtomic = 1, Uses = [M0] in {
+
+let mayLoad = 1 in {
+def S_MOV_FROM_GLOBAL_B32 : SOP1_Pseudo <"s_mov_from_global_b32",
+    (outs SReg_32:$sdst), (ins GlobalSReg32:$src0), "$sdst, $src0",
+    [(set i32:$sdst, (int_amdgcn_s_mov_from_global timm:$src0, M0))]>;
+def S_MOV_FROM_GLOBAL_B64 : SOP1_Pseudo <"s_mov_from_global_b64",
+    (outs SReg_64:$sdst), (ins GlobalSReg64:$src0), "$sdst, $src0",
+    [(set i64:$sdst, (int_amdgcn_s_mov_from_global timm:$src0, M0))]>;
+} // End mayLoad = 1
+
+let mayStore = 1 in {
+def S_MOV_TO_GLOBAL_B32 : SOP1_Pseudo <"s_mov_to_global_b32", (outs),
+    (ins GlobalSReg32:$sdst, SSrc_b32:$src0), "$sdst, $src0",
+    [(int_amdgcn_s_mov_to_global timm:$sdst, i32:$src0, M0)]>;
+def S_MOV_TO_GLOBAL_B64 : SOP1_Pseudo <"s_mov_to_global_b64", (outs),
+    (ins GlobalSReg64:$sdst, SSrc_b64:$src0), "$sdst, $src0",
+    [(int_amdgcn_s_mov_to_global timm:$sdst, i64:$src0, M0)]>;
+} // End mayStore = 1
+
+} // End SubtargetPredicate = isGFX13Plus, maybeAtomic = 1, Uses = [M0]
+
 //===----------------------------------------------------------------------===//
 // SOP2 Instructions
 //===----------------------------------------------------------------------===//
@@ -2127,9 +2157,13 @@ multiclass SOP1_Real_gfx13<bits<8> op, string name = !tolower(NAME)> {
     def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
 }
 
-defm S_GET_SHADER_CYCLES_U64 : SOP1_Real_gfx13<0x11>;
-defm S_SET_GPR_IDX_U32 : SOP1_Real_gfx13<0x6f>;
-defm S_ADD_GPR_IDX_U32 : SOP1_Real_gfx13<0x70>;
+defm S_GET_SHADER_CYCLES_U64 : SOP1_Real_gfx13<0x011>;
+defm S_MOV_FROM_GLOBAL_B32   : SOP1_Real_gfx13<0x05b>;
+defm S_MOV_FROM_GLOBAL_B64   : SOP1_Real_gfx13<0x05c>;
+defm S_MOV_TO_GLOBAL_B32     : SOP1_Real_gfx13<0x05d>;
+defm S_MOV_TO_GLOBAL_B64     : SOP1_Real_gfx13<0x05e>;
+defm S_SET_GPR_IDX_U32       : SOP1_Real_gfx13<0x06f>;
+defm S_ADD_GPR_IDX_U32       : SOP1_Real_gfx13<0x070>;
 
 //===----------------------------------------------------------------------===//
 //  SOP1 - GFX11, GFX12
