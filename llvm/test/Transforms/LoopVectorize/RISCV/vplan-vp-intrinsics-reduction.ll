@@ -96,7 +96,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT:    EMIT vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; IF-EVL-INLOOP-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>
 ; IF-EVL-INLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
-; IF-EVL-INLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
+; IF-EVL-INLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer inbounds ir<[[GEP1]]>
 ; IF-EVL-INLOOP-NEXT:    WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
 ; IF-EVL-INLOOP-NEXT:    REDUCE ir<[[ADD:%.+]]> = ir<[[RDX_PHI]]> + vp.reduce.add (ir<[[LD1]]>, vp<[[EVL]]>)
 ; IF-EVL-INLOOP-NEXT:    SCALAR-CAST vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
@@ -144,7 +144,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-OUTLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi ir<%start>, ir<[[RDX_NEXT:%.+]]>
 ; NO-VP-OUTLOOP-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[IV]]>, ir<1>
 ; NO-VP-OUTLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
-; NO-VP-OUTLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
+; NO-VP-OUTLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer inbounds ir<[[GEP1]]>
 ; NO-VP-OUTLOOP-NEXT:    WIDEN ir<[[LD1:%.+]]> = load vp<[[PTR1]]>
 ; NO-VP-OUTLOOP-NEXT:    WIDEN ir<[[ADD:%.+]]> = add ir<[[LD1]]>, ir<[[RDX_PHI]]>
 ; NO-VP-OUTLOOP-NEXT:    EMIT vp<[[IV_NEXT_EXIT:%.+]]> = add nuw vp<[[IV]]>, vp<[[VFUF]]>
@@ -191,7 +191,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-INLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi ir<%start>, ir<[[RDX_NEXT:%.+]]>
 ; NO-VP-INLOOP-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[IV]]>, ir<1>
 ; NO-VP-INLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
-; NO-VP-INLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer ir<[[GEP1]]>
+; NO-VP-INLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer inbounds ir<[[GEP1]]>
 ; NO-VP-INLOOP-NEXT:    WIDEN ir<[[LD1:%.+]]> = load vp<[[PTR1]]>
 ; NO-VP-INLOOP-NEXT:    REDUCE ir<[[ADD:%.+]]> = ir<[[RDX_PHI]]> + reduce.add (ir<[[LD1]]>)
 ; NO-VP-INLOOP-NEXT:    EMIT vp<[[IV_NEXT_EXIT:%.+]]> = add nuw vp<[[IV]]>, vp<[[VFUF]]>

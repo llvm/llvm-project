@@ -2095,6 +2095,9 @@ void VPVectorPointerRecipe::print(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = vector-pointer ";
 
+  if (isInBounds())
+    O << "inbounds ";
+
   printOperands(O, SlotTracker);
 }
 #endif
