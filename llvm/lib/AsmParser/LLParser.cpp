@@ -3907,6 +3907,40 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   case lltok::kw_poison: ID.Kind = ValID::t_Poison; break;
   case lltok::kw_zeroinitializer: ID.Kind = ValID::t_Zero; break;
   case lltok::kw_none: ID.Kind = ValID::t_None; break;
+  case lltok::kw_nan:
+    ID.APFloatVal = APFloat::getQNaN(APFloat::IEEEdouble());
+    ID.Kind = ValID::t_APFloat;
+    break;
+  case lltok::kw_qnan:
+  case lltok::kw_snan: {
+    bool IsSignaling = Lex.getKind() == lltok::kw_snan;
+    Lex.Lex();
+    if (parseToken(lltok::lparen, "expected '('") ||
+        (Lex.getKind() != lltok::APSInt &&
+         tokError("expected an integer as payload")))
+      return true;
+    const APSInt &Payload = Lex.getAPSIntVal();
+    if (IsSignaling) {
+      if (Payload.isZero())
+        return tokError("expected non-zero value for SNaN's payload");
+      ID.APFloatVal =
+          APFloat::getSNaN(APFloat::IEEEdouble(), /*Negative=*/false, &Payload);
+    } else {
+      ID.APFloatVal =
+          APFloat::getQNaN(APFloat::IEEEdouble(), /*Negative=*/false, &Payload);
+    }
+    ID.Kind = ValID::t_APFloat;
+
+    Lex.Lex();
+    return parseToken(lltok::rparen, "expected ')'");
+  }
+  case lltok::kw_pinf:
+  case lltok::kw_ninf:
+    ID.APFloatVal =
+        APFloat::getInf(APFloat::IEEEdouble(),
+                        /*Negative=*/Lex.getKind() == lltok::kw_ninf);
+    ID.Kind = ValID::t_APFloat;
+    break;
 
   case lltok::lbrace: {
     // ValID ::= '{' ConstVector '}'
