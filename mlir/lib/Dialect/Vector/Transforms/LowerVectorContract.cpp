@@ -80,6 +80,28 @@ static AffineMap adjustMap(AffineMap map, int64_t index,
   return AffineMap::get(map.getNumDims() - 1, 0, results, ctx);
 }
 
+static Value promoteToElementType(Location loc, RewriterBase &rewriter, Value v,
+                                  Type dstElementType) {
+  Type elementType = getElementTypeOrSelf(v.getType());
+  if (elementType == dstElementType)
+    return v;
+
+  // vector.contract only allows extension on operands.
+  assert(elementType.getIntOrFloatBitWidth() <=
+             dstElementType.getIntOrFloatBitWidth() &&
+         "vector.contract does not allow truncation of operands");
+
+  Type promotedType = dstElementType;
+  if (auto vecType = dyn_cast<VectorType>(v.getType()))
+    promotedType = vecType.clone(promotedType);
+
+  if (isa<FloatType>(dstElementType))
+    return rewriter.create<arith::ExtFOp>(loc, promotedType, v);
+  // For integer types, vector.contract only supports signless integer types
+  // and promotion happens via sign extension.
+  return rewriter.create<arith::ExtSIOp>(loc, promotedType, v);
+}
+
 // Helper method to possibly drop a dimension in a load.
 // TODO
 static Value reshapeLoad(Location loc, Value val, VectorType type,
@@ -135,6 +157,11 @@ createContractArithOp(Location loc, Value x, Value y, Value acc,
                       bool isInt, Value mask = Value()) {
   using vector::CombiningKind;
   Value mul;
+
+  if (acc) {
+    x = promoteToElementType(loc, rewriter, x, getElementTypeOrSelf(acc));
+    y = promoteToElementType(loc, rewriter, y, getElementTypeOrSelf(acc));
+  }
 
   if (isInt) {
     if (kind == CombiningKind::MINNUMF || kind == CombiningKind::MAXNUMF ||
@@ -413,21 +440,6 @@ struct UnrolledOuterProductGenerator
     return rewriter.create<vector::TransposeOp>(loc, v, perm);
   }
 
-  Value promote(Value v, Type dstElementType) {
-    Type elementType = v.getType();
-    auto vecType = dyn_cast<VectorType>(elementType);
-    if (vecType)
-      elementType = vecType.getElementType();
-    if (elementType == dstElementType)
-      return v;
-    Type promotedType = dstElementType;
-    if (vecType)
-      promotedType = vecType.clone(promotedType);
-    if (isa<FloatType>(dstElementType))
-      return rewriter.create<arith::ExtFOp>(loc, promotedType, v);
-    return rewriter.create<arith::ExtSIOp>(loc, promotedType, v);
-  }
-
   FailureOr<Value> outerProd(Value lhs, Value rhs, Value res,
                              VectorType lhsType, int reductionSize,
                              std::optional<Value> maybeMask = std::nullopt) {
@@ -439,8 +451,8 @@ struct UnrolledOuterProductGenerator
     for (int64_t k = 0; k < reductionSize; ++k) {
       Value extractA = rewriter.create<vector::ExtractOp>(loc, lhs, k);
       Value extractB = rewriter.create<vector::ExtractOp>(loc, rhs, k);
-      extractA = promote(extractA, resElementType);
-      extractB = promote(extractB, resElementType);
+      extractA = promoteToElementType(loc, rewriter, extractA, resElementType);
+      extractB = promoteToElementType(loc, rewriter, extractB, resElementType);
       Value extractMask;
       if (maybeMask.has_value() && maybeMask.value())
         extractMask =
@@ -764,6 +776,8 @@ FailureOr<Value> ContractionOpToDotLowering::matchAndRewriteMaskableOp(
       Value b = rank == 1
                     ? rhs
                     : rewriter.create<vector::ExtractOp>(op.getLoc(), rhs, c);
+      a = promoteToElementType(loc, rewriter, a, getElementTypeOrSelf(dstType));
+      b = promoteToElementType(loc, rewriter, b, getElementTypeOrSelf(dstType));
       Value m = createMul(op.getLoc(), a, b, isInt, rewriter);
       Value reduced = rewriter.create<vector::ReductionOp>(
           op.getLoc(), vector::CombiningKind::ADD, m);
@@ -923,12 +937,6 @@ FailureOr<Value> ContractionOpLowering::matchAndRewriteMaskableOp(
     vector::ContractionOp op, MaskingOpInterface maskOp,
     PatternRewriter &rewriter) const {
   if (failed(filter(op)))
-    return failure();
-
-  // TODO: support mixed mode contract lowering.
-  if (op.getLhsType().getElementType() !=
-          getElementTypeOrSelf(op.getAccType()) ||
-      op.getRhsType().getElementType() != getElementTypeOrSelf(op.getAccType()))
     return failure();
 
   // TODO: the code below assumes the default contraction, make sure it supports
@@ -1149,10 +1157,15 @@ FailureOr<Value> ContractionOpLowering::lowerReduction(
     if (rhsType.getRank() != 1)
       return rewriter.notifyMatchFailure(
           op, "When LHS has rank 1, expected also RHS to have rank 1");
-    Value m = createMul(loc, op.getLhs(), op.getRhs(), isInt, rewriter);
-    auto kind = vector::CombiningKind::ADD;
 
     Value acc = op.getAcc();
+    Value lhs = promoteToElementType(loc, rewriter, op.getLhs(),
+                                     getElementTypeOrSelf(acc));
+    Value rhs = promoteToElementType(loc, rewriter, op.getRhs(),
+                                     getElementTypeOrSelf(acc));
+    Value m = createMul(loc, lhs, rhs, isInt, rewriter);
+    auto kind = vector::CombiningKind::ADD;
+
     Operation *reductionOp =
         acc ? rewriter.create<vector::ReductionOp>(loc, kind, m, acc)
             : rewriter.create<vector::ReductionOp>(loc, kind, m);
