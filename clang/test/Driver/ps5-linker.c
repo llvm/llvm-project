@@ -49,7 +49,6 @@
 // CHECK-EXE: {{ld(\.exe)?}}"
 // CHECK-EXE-SAME: "--eh-frame-hdr"
 // CHECK-EXE-SAME: "--hash-style=sysv"
-// CHECK-EXE-SAME: "--build-id=uuid"
 // CHECK-EXE-SAME: "--unresolved-symbols=report-all"
 // CHECK-EXE-SAME: "-z" "now"
 // CHECK-EXE-SAME: "-z" "start-stop-visibility=hidden"
@@ -63,9 +62,22 @@
 // CHECK-NO-EXE: {{ld(\.exe)?}}"
 // CHECK-NO-EXE-NOT: "--eh-frame-hdr"
 // CHECK-NO-EXE-NOT: "--hash-style
-// CHECK-NO-EXE-NOT: "--build-id
 // CHECK-NO-EXE-NOT: "--unresolved-symbols
 // CHECK-NO-EXE-NOT: "-z"
+
+// Test that --build-id is supplied to the linker for non-static executables
+// and -shared.
+
+// RUN: %clang --target=x86_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-BUILD-ID %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -shared -### 2>&1 | FileCheck --check-prefixes=CHECK-BUILD-ID %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -static -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-BUILD-ID %s
+// RUN: %clang --target=x86_64-sie-ps5 %s -r -### 2>&1 | FileCheck --check-prefixes=CHECK-NO-BUILD-ID %s
+
+// CHECK-BUILD-ID: {{ld(\.exe)?}}"
+// CHECK-BUILD-ID-SAME: "--build-id=uuid"
+
+// CHECK-NO-BUILD-ID: {{ld(\.exe)?}}"
+// CHECK-NO-BUILD-ID-NOT: "--build-id
 
 // Test that an appropriate linker script is supplied by the driver, but can
 // be overridden with -T.
