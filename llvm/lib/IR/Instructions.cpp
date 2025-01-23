@@ -604,17 +604,46 @@ bool CallBase::hasClobberingOperandBundles() const {
          getIntrinsicID() != Intrinsic::assume;
 }
 
+std::optional<RoundingMode> CallBase::getRoundingMode() const {
+  if (auto RoundingBundle = getOperandBundle(LLVMContext::OB_fpe_control)) {
+    Value *V = RoundingBundle->Inputs.front();
+    Metadata *MD = cast<MetadataAsValue>(V)->getMetadata();
+    return convertStrToRoundingMode(cast<MDString>(MD)->getString(), true);
+  }
+  return std::nullopt;
+}
+
+std::optional<fp::ExceptionBehavior> CallBase::getExceptionBehavior() const {
+  if (auto ExceptionBundle = getOperandBundle(LLVMContext::OB_fpe_except)) {
+    Value *V = ExceptionBundle->Inputs.front();
+    Metadata *MD = cast<MetadataAsValue>(V)->getMetadata();
+    return convertStrToExceptionBehavior(cast<MDString>(MD)->getString(), true);
+  }
+  return std::nullopt;
+}
+
+bool CallBase::hasFloatingPointBundles() const {
+  return getOperandBundle(LLVMContext::OB_fpe_control) ||
+         getOperandBundle(LLVMContext::OB_fpe_except);
+}
+
+MemoryEffects CallBase::getMemoryEffectsForBundles() const {
+  MemoryEffects ME = MemoryEffects::none();
+  if (hasFloatingPointBundles())
+    ME |= MemoryEffects::inaccessibleMemOnly();
+  if (hasReadingOperandBundles())
+    ME |= MemoryEffects::readOnly();
+  if (hasClobberingOperandBundles())
+    ME |= MemoryEffects::writeOnly();
+  return ME;
+}
+
 MemoryEffects CallBase::getMemoryEffects() const {
   MemoryEffects ME = getAttributes().getMemoryEffects();
   if (auto *Fn = dyn_cast<Function>(getCalledOperand())) {
     MemoryEffects FnME = Fn->getMemoryEffects();
-    if (hasOperandBundles()) {
-      // TODO: Add a method to get memory effects for operand bundles instead.
-      if (hasReadingOperandBundles())
-        FnME |= MemoryEffects::readOnly();
-      if (hasClobberingOperandBundles())
-        FnME |= MemoryEffects::writeOnly();
-    }
+    if (hasOperandBundles())
+      FnME |= getMemoryEffectsForBundles();
     ME &= FnME;
   }
   return ME;
@@ -673,6 +702,26 @@ bool CallBase::onlyAccessesInaccessibleMemOrArgMem() const {
 void CallBase::setOnlyAccessesInaccessibleMemOrArgMem() {
   setMemoryEffects(getMemoryEffects() &
                    MemoryEffects::inaccessibleOrArgMemOnly());
+}
+
+void llvm::addFPRoundingBundle(LLVMContext &Ctx,
+                               SmallVectorImpl<OperandBundleDef> &Bundles,
+                               RoundingMode Rounding) {
+  std::optional<StringRef> RndStr = convertRoundingModeToStr(Rounding, true);
+  assert(RndStr && "Garbage rounding mode!");
+  auto *RoundingMDS = MDString::get(Ctx, *RndStr);
+  auto *RM = MetadataAsValue::get(Ctx, RoundingMDS);
+  Bundles.emplace_back("fpe.control", RM);
+}
+
+void llvm::addFPExceptionBundle(LLVMContext &Ctx,
+                                SmallVectorImpl<OperandBundleDef> &Bundles,
+                                fp::ExceptionBehavior Except) {
+  std::optional<StringRef> ExcStr = convertExceptionBehaviorToStr(Except, true);
+  assert(ExcStr && "Garbage exception behavior!");
+  auto *ExceptMDS = MDString::get(Ctx, *ExcStr);
+  auto *EB = MetadataAsValue::get(Ctx, ExceptMDS);
+  Bundles.emplace_back("fpe.except", EB);
 }
 
 //===----------------------------------------------------------------------===//

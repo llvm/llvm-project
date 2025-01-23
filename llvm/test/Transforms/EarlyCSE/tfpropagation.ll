@@ -68,10 +68,10 @@ define double @branching_exceptignore(i64 %a) #0 {
 ; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double 1.000000e+00, double [[CONV1]], metadata !"ogt", metadata !"fpexcept.ignore") #[[ATTR0]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_END3:%.*]]
 ; CHECK:       if.then3:
-; CHECK-NEXT:    [[C:%.*]] = call double @truefunc.f64.i1(i1 true) #[[ATTR0]]
+; CHECK-NEXT:    [[C:%.*]] = call double @truefunc.f64.i1(i1 true) #0
 ; CHECK-NEXT:    br label [[OUT:%.*]]
 ; CHECK:       if.end3:
-; CHECK-NEXT:    [[D:%.*]] = call double @falsefunc.f64.i1(i1 false) #[[ATTR0]]
+; CHECK-NEXT:    [[D:%.*]] = call double @falsefunc.f64.i1(i1 false) #0
 ; CHECK-NEXT:    br label [[OUT]]
 ; CHECK:       out:
 ; CHECK-NEXT:    ret double [[CONV1]]
@@ -98,10 +98,10 @@ define double @branching_exceptignore_dynround(i64 %a) #0 {
 ; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double 1.000000e+00, double [[CONV1]], metadata !"ogt", metadata !"fpexcept.ignore") #[[ATTR0]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_END3:%.*]]
 ; CHECK:       if.then3:
-; CHECK-NEXT:    [[C:%.*]] = call double @truefunc.f64.i1(i1 true) #[[ATTR0]]
+; CHECK-NEXT:    [[C:%.*]] = call double @truefunc.f64.i1(i1 true) #0
 ; CHECK-NEXT:    br label [[OUT:%.*]]
 ; CHECK:       if.end3:
-; CHECK-NEXT:    [[D:%.*]] = call double @falsefunc.f64.i1(i1 false) #[[ATTR0]]
+; CHECK-NEXT:    [[D:%.*]] = call double @falsefunc.f64.i1(i1 false) #0
 ; CHECK-NEXT:    br label [[OUT]]
 ; CHECK:       out:
 ; CHECK-NEXT:    ret double [[CONV1]]
@@ -128,10 +128,10 @@ define double @branching_maytrap(i64 %a) #0 {
 ; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double 1.000000e+00, double [[CONV1]], metadata !"ogt", metadata !"fpexcept.maytrap") #[[ATTR0]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_END3:%.*]]
 ; CHECK:       if.then3:
-; CHECK-NEXT:    [[C:%.*]] = call double @truefunc.f64.i1(i1 true) #[[ATTR0]]
+; CHECK-NEXT:    [[C:%.*]] = call double @truefunc.f64.i1(i1 true) #0
 ; CHECK-NEXT:    br label [[OUT:%.*]]
 ; CHECK:       if.end3:
-; CHECK-NEXT:    [[D:%.*]] = call double @falsefunc.f64.i1(i1 false) #[[ATTR0]]
+; CHECK-NEXT:    [[D:%.*]] = call double @falsefunc.f64.i1(i1 false) #0
 ; CHECK-NEXT:    br label [[OUT]]
 ; CHECK:       out:
 ; CHECK-NEXT:    ret double [[CONV1]]
@@ -160,10 +160,10 @@ define double @branching_ebstrict(i64 %a) #0 {
 ; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double 1.000000e+00, double [[CONV1]], metadata !"ogt", metadata !"fpexcept.strict") #[[ATTR0]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_END3:%.*]]
 ; CHECK:       if.then3:
-; CHECK-NEXT:    [[C:%.*]] = call double @truefunc.f64.i1(i1 [[CMP2]]) #[[ATTR0]]
+; CHECK-NEXT:    [[C:%.*]] = call double @truefunc.f64.i1(i1 [[CMP2]]) #0
 ; CHECK-NEXT:    br label [[OUT:%.*]]
 ; CHECK:       if.end3:
-; CHECK-NEXT:    [[D:%.*]] = call double @falsefunc.f64.i1(i1 [[CMP2]]) #[[ATTR0]]
+; CHECK-NEXT:    [[D:%.*]] = call double @falsefunc.f64.i1(i1 [[CMP2]]) #0
 ; CHECK-NEXT:    br label [[OUT]]
 ; CHECK:       out:
 ; CHECK-NEXT:    ret double [[CONV1]]
@@ -190,5 +190,6 @@ declare double @llvm.experimental.constrained.uitofp.f64.i64(i64, metadata, meta
 declare i1 @llvm.experimental.constrained.fcmps.f64(double, double, metadata, metadata) #0
 
 attributes #0 = { strictfp }
+; CHECK: attributes #[[ATTR0]] = { strictfp memory(inaccessiblemem: readwrite) }
 
 declare <4 x float> @llvm.experimental.constrained.fadd.v4f32(<4 x float>, <4 x float>, metadata, metadata) strictfp

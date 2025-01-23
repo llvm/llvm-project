@@ -27,7 +27,7 @@ void p(char *str, int x) {
 // CHECK-NEXT:    [[LD_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-NEXT:    store x86_fp80 [[LD:%.*]], ptr [[LD_ADDR]], align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[LD_ADDR]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f80(x86_fp80 [[TMP0]], i32 516) #[[ATTR3]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f80(x86_fp80 [[TMP0]], i32 516)
 // CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-NEXT:    call void @p(ptr noundef @.str.1, i32 noundef [[TMP2]]) #[[ATTR3]]
 // CHECK-NEXT:    ret void
@@ -43,7 +43,7 @@ void test_long_double_isinf(long double ld) {
 // CHECK-NEXT:    [[LD_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-NEXT:    store x86_fp80 [[LD:%.*]], ptr [[LD_ADDR]], align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[LD_ADDR]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f80(x86_fp80 [[TMP0]], i32 504) #[[ATTR3]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f80(x86_fp80 [[TMP0]], i32 504)
 // CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-NEXT:    call void @p(ptr noundef @.str.2, i32 noundef [[TMP2]]) #[[ATTR3]]
 // CHECK-NEXT:    ret void
@@ -59,7 +59,7 @@ void test_long_double_isfinite(long double ld) {
 // CHECK-NEXT:    [[LD_ADDR:%.*]] = alloca x86_fp80, align 16
 // CHECK-NEXT:    store x86_fp80 [[LD:%.*]], ptr [[LD_ADDR]], align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = load x86_fp80, ptr [[LD_ADDR]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f80(x86_fp80 [[TMP0]], i32 3) #[[ATTR3]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f80(x86_fp80 [[TMP0]], i32 3)
 // CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-NEXT:    call void @p(ptr noundef @.str.3, i32 noundef [[TMP2]]) #[[ATTR3]]
 // CHECK-NEXT:    ret void

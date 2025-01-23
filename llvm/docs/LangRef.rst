@@ -3062,6 +3062,46 @@ A "convergencectrl" operand bundle is only valid on a ``convergent`` operation.
 When present, the operand bundle must contain exactly one value of token type.
 See the :doc:`ConvergentOperations` document for details.
 
+.. _ob_fpe:
+
+Floating-point Environment Operand Bundles
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+These operand bundles provide details on how the operation interacts with the
+:ref:`floating-point environment <floatenv>`. There are two kinds of such
+operand bundles, which characterize interaction with floating-point control
+modes and status bits respectively.
+
+An operand bundle tagged with "fpe.control" keeps information about control
+modes used by the operation. Only rounding mode is supported now. It is
+represented by a metadata string value and specifies the rounding mode, which
+will be used for the operation evaluation. Possible values are:
+
+::
+
+    "rtz"  - toward zero
+    "rte"  - to nearest, ties to even
+    "rtp"  - toward positive infinity
+    "rtn"  - toward negative infinity
+    "rmm"  - to nearest, ties away from zero
+    "dyn"  - rounding mode is taken from control register
+
+If "fpe.control" is absent, default rounding rounding to nearest, ties to even
+is assumed. 
+
+An operand bundle tagged with "fpe.except" may be associated with the operations
+that may read or write floating-point exception flags. It has a single metadata
+string value, which may have one of the values:
+
+::
+
+    "ignore"
+    "strict"
+    "maytrap"
+
+It has the same meaning as the corresponding argument in
+:ref:`constrained intrinsics <constrainedfp>`.
+
 .. _moduleasm:
 
 Module-Level Inline Assembly

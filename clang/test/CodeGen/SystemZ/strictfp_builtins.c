@@ -9,7 +9,7 @@
 // CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    store float [[F:%.*]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.s390.tdc.f32(float [[TMP0]], i64 15) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.s390.tdc.f32(float [[TMP0]], i64 15)
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int test_isnan_float(float f) {
@@ -21,7 +21,7 @@ int test_isnan_float(float f) {
 // CHECK-NEXT:    [[D_ADDR:%.*]] = alloca double, align 8
 // CHECK-NEXT:    store double [[D:%.*]], ptr [[D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[D_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.s390.tdc.f64(double [[TMP0]], i64 15) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.s390.tdc.f64(double [[TMP0]], i64 15)
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int test_isnan_double(double d) {
@@ -34,7 +34,7 @@ int test_isnan_double(double d) {
 // CHECK-NEXT:    [[LD:%.*]] = load fp128, ptr [[TMP0:%.*]], align 8
 // CHECK-NEXT:    store fp128 [[LD]], ptr [[LD_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load fp128, ptr [[LD_ADDR]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.s390.tdc.f128(fp128 [[TMP1]], i64 15) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.s390.tdc.f128(fp128 [[TMP1]], i64 15)
 // CHECK-NEXT:    ret i32 [[TMP2]]
 //
 int test_isnan_long_double(long double ld) {
@@ -46,7 +46,7 @@ int test_isnan_long_double(long double ld) {
 // CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    store float [[F:%.*]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.s390.tdc.f32(float [[TMP0]], i64 48) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.s390.tdc.f32(float [[TMP0]], i64 48)
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int test_isinf_float(float f) {
@@ -58,7 +58,7 @@ int test_isinf_float(float f) {
 // CHECK-NEXT:    [[D_ADDR:%.*]] = alloca double, align 8
 // CHECK-NEXT:    store double [[D:%.*]], ptr [[D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[D_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.s390.tdc.f64(double [[TMP0]], i64 48) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.s390.tdc.f64(double [[TMP0]], i64 48)
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int test_isinf_double(double d) {
@@ -71,7 +71,7 @@ int test_isinf_double(double d) {
 // CHECK-NEXT:    [[LD:%.*]] = load fp128, ptr [[TMP0:%.*]], align 8
 // CHECK-NEXT:    store fp128 [[LD]], ptr [[LD_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load fp128, ptr [[LD_ADDR]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.s390.tdc.f128(fp128 [[TMP1]], i64 48) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.s390.tdc.f128(fp128 [[TMP1]], i64 48)
 // CHECK-NEXT:    ret i32 [[TMP2]]
 //
 int test_isinf_long_double(long double ld) {
@@ -83,7 +83,7 @@ int test_isinf_long_double(long double ld) {
 // CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    store float [[F:%.*]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.s390.tdc.f32(float [[TMP0]], i64 4032) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.s390.tdc.f32(float [[TMP0]], i64 4032)
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int test_isfinite_float(float f) {
@@ -95,7 +95,7 @@ int test_isfinite_float(float f) {
 // CHECK-NEXT:    [[D_ADDR:%.*]] = alloca double, align 8
 // CHECK-NEXT:    store double [[D:%.*]], ptr [[D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[D_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.s390.tdc.f64(double [[TMP0]], i64 4032) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.s390.tdc.f64(double [[TMP0]], i64 4032)
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int test_isfinite_double(double d) {
@@ -108,7 +108,7 @@ int test_isfinite_double(double d) {
 // CHECK-NEXT:    [[LD:%.*]] = load fp128, ptr [[TMP0:%.*]], align 8
 // CHECK-NEXT:    store fp128 [[LD]], ptr [[LD_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load fp128, ptr [[LD_ADDR]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.s390.tdc.f128(fp128 [[TMP1]], i64 4032) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.s390.tdc.f128(fp128 [[TMP1]], i64 4032)
 // CHECK-NEXT:    ret i32 [[TMP2]]
 //
 int test_isfinite_long_double(long double ld) {

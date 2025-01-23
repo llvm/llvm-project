@@ -1848,7 +1848,7 @@ define bfloat @test_atomicrmw_fadd_bf16_global_system_align4(ptr addrspace(1) %p
 
 define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bfloat %value) #2 {
 ; ALL-LABEL: @test_atomicrmw_fadd_bf16_local_strictfp(
-; ALL-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4) #[[ATTR8:[0-9]+]]
+; ALL-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
 ; ALL-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
 ; ALL-NEXT:    [[PTRLSB:%.*]] = and i32 [[TMP1]], 3
 ; ALL-NEXT:    [[TMP2:%.*]] = shl i32 [[PTRLSB]], 3
@@ -1861,7 +1861,7 @@ define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bf
 ; ALL-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[TMP2]]
 ; ALL-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; ALL-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
-; ALL-NEXT:    [[NEW:%.*]] = call bfloat @llvm.experimental.constrained.fadd.bf16(bfloat [[TMP4]], bfloat [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8]]
+; ALL-NEXT:    [[NEW:%.*]] = call bfloat @llvm.experimental.constrained.fadd.bf16(bfloat [[TMP4]], bfloat [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR8:[0-9]+]]
 ; ALL-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
 ; ALL-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
 ; ALL-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[TMP2]]
