@@ -11,7 +11,9 @@
 #include "flang/Runtime/exceptions.h"
 #include "terminator.h"
 #include <cfenv>
-#if __x86_64__
+#if __aarch64__
+#include <fpu_control.h>
+#elif __x86_64__
 #include <xmmintrin.h>
 #endif
 
@@ -90,20 +92,40 @@ bool RTNAME(SupportHalting)([[maybe_unused]] uint32_t except) {
 #endif
 }
 
+// A hardware FZ (flush to zero) bit is the negation of the
+// ieee_[get|set]_underflow_mode GRADUAL argument.
+#if defined(_MM_FLUSH_ZERO_MASK)
+// The MXCSR FZ bit affects computations of real kinds 3, 4, and 8.
+#elif defined(_FPU_GETCW)
+// The FPCR FZ bit affects computations of real kinds 3, 4, and 8.
+// bit 24: FZ   -- single, double precision flush to zero bit
+// bit 19: FZ16 -- half precision flush to zero bit [not currently relevant]
+#define _FPU_FPCR_FZ_MASK_ 0x01080000
+#endif
+
 bool RTNAME(GetUnderflowMode)(void) {
-#if _MM_FLUSH_ZERO_MASK
-  // The MXCSR Flush to Zero flag is the negation of the ieee_get_underflow_mode
-  // GRADUAL argument. It affects real computations of kinds 3, 4, and 8.
+#if defined(_MM_FLUSH_ZERO_MASK)
   return _MM_GET_FLUSH_ZERO_MODE() == _MM_FLUSH_ZERO_OFF;
+#elif defined(_FPU_GETCW)
+  uint32_t fpcr;
+  _FPU_GETCW(fpcr);
+  return (fpcr & _FPU_FPCR_FZ_MASK_) != _FPU_FPCR_FZ_MASK_;
 #else
   return false;
 #endif
 }
 void RTNAME(SetUnderflowMode)(bool flag) {
-#if _MM_FLUSH_ZERO_MASK
-  // The MXCSR Flush to Zero flag is the negation of the ieee_set_underflow_mode
-  // GRADUAL argument. It affects real computations of kinds 3, 4, and 8.
+#if defined(_MM_FLUSH_ZERO_MASK)
   _MM_SET_FLUSH_ZERO_MODE(flag ? _MM_FLUSH_ZERO_OFF : _MM_FLUSH_ZERO_ON);
+#elif defined(_FPU_GETCW)
+  uint32_t fpcr;
+  _FPU_GETCW(fpcr);
+  if (flag) {
+    fpcr &= ~_FPU_FPCR_FZ_MASK_;
+  } else {
+    fpcr |= _FPU_FPCR_FZ_MASK_;
+  }
+  _FPU_SETCW(fpcr);
 #endif
 }
 
