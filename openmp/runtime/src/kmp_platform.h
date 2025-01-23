@@ -164,6 +164,9 @@
 #define KMP_ARCH_PPC_XCOFF 1
 #undef KMP_ARCH_PPC
 #define KMP_ARCH_PPC 1
+#elif defined(__powerpc__) && defined(KMP_OS_NETBSD)
+#undef KMP_ARCH_PPC
+#define KMP_ARCH_PPC 1
 #elif defined __ARM64_ARCH_8_32__
 #undef KMP_ARCH_AARCH64_32
 #define KMP_ARCH_AARCH64_32 1
