@@ -66,6 +66,9 @@ uint32_t InputChunk::getSize() const {
   if (const auto *ms = dyn_cast<SyntheticMergedChunk>(this))
     return ms->builder.getSize();
 
+  if (const auto *s = dyn_cast<SyntheticChunk>(this))
+    return s->builder.getSize();
+
   if (const auto *f = dyn_cast<InputFunction>(this)) {
     if (ctx.arg.compressRelocations && f->file) {
       return f->getCompressedSize();
@@ -358,6 +361,48 @@ uint64_t InputChunk::getVA(uint64_t offset) const {
   return (outputSeg ? outputSeg->startVA : 0) + getChunkOffset(offset);
 }
 
+int InputChunk::numDataRelocations() const {
+  int rtn = 0;
+  for (const WasmRelocation &rel : relocations) {
+    Symbol *sym = file->getSymbol(rel);
+    if (!ctx.isPic && sym->isDefined())
+      continue;
+    // Symbols that have a GOT index can't use data
+    // driven relocation.
+    if (!sym->hasGOTIndex()) {
+      rtn++;
+  }
+}
+
+// Generate relocation data for relocations that can be encoded as data.
+// Each relocation entry has the following form in the data segment:
+//
+// struct Reloc {
+//   uint32_t TargetLocation; // relative to section start
+//   uint32_t Offset;         // relative to __tls_base or __memory_base
+//   uint8_t isTLS;           // uses __tls_base if true
+//   uint8_t is64;            // target is 64bit-wide
+// }
+void InputChunk::generateRelocationData(raw_ostream &os) const {
+  for (const WasmRelocation &rel : relocations) {
+    if (!ctx.isPic && sym->isDefined())
+      continue;
+    if (sym->hasGOTIndex())
+      continue;
+
+    uint64_t offset = getVA(rel.Offset) - getInputSectionOffset();
+    LLVM_DEBUG(dbgs() << "gen reloc (data): type="
+                      << relocTypeToString(rel.Type) << " addend=" << rel.Addend
+                      << " index=" << rel.Index << " output offset=" << offset
+                      << "\n");
+
+    writeU32(os, offset, "TargetLocation");
+    writeU32(os, file->calcNewValue(rel, tombstone, this), "Offset");
+    writeU8(os, isTLS(), "isTLS");
+    writeU8(os, relocIs64(is64), "is64");
+  }
+}
+
 // Generate code to apply relocations to the data section at runtime.
 // This is only called when generating shared libraries (PIC) where address are
 // not known at static link time.
@@ -373,11 +418,7 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
                                  : WASM_OPCODE_I32_ADD;
 
   uint64_t tombstone = getTombstone();
-  // TODO(sbc): Encode the relocations in the data section and write a loop
-  // here to apply them.
   for (const WasmRelocation &rel : relocations) {
-    uint64_t offset = getVA(rel.Offset) - getInputSectionOffset();
-
     Symbol *sym = file->getSymbol(rel);
     // Runtime relocations are needed when we don't know the address of
     // a symbol statically.
@@ -385,9 +426,14 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
     if (!requiresRuntimeReloc)
       continue;
 
-    LLVM_DEBUG(dbgs() << "gen reloc: type=" << relocTypeToString(rel.Type)
-                      << " addend=" << rel.Addend << " index=" << rel.Index
-                      << " output offset=" << offset << "\n");
+    if (!sym->hasGOTIndex())
+      continue;
+
+    uint64_t offset = getVA(rel.Offset) - getInputSectionOffset();
+    LLVM_DEBUG(dbgs() << "gen reloc (code): type="
+                      << relocTypeToString(rel.Type) << " addend=" << rel.Addend
+                      << " index=" << rel.Index << " output offset=" << offset
+                      << "\n");
 
     // Calculate the address at which to apply the relocation
     writeU8(os, opcode_ptr_const, "CONST");
@@ -412,26 +458,11 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
     unsigned opcode_reloc_store =
         is64 ? WASM_OPCODE_I64_STORE : WASM_OPCODE_I32_STORE;
 
-    if (sym->hasGOTIndex()) {
-      writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
-      writeUleb128(os, sym->getGOTIndex(), "global index");
-      if (rel.Addend) {
-        writeU8(os, opcode_reloc_const, "CONST");
-        writeSleb128(os, rel.Addend, "addend");
-        writeU8(os, opcode_reloc_add, "ADD");
-      }
-    } else {
-      assert(ctx.isPic);
-      const GlobalSymbol* baseSymbol = WasmSym::memoryBase;
-      if (rel.Type == R_WASM_TABLE_INDEX_I32 ||
-          rel.Type == R_WASM_TABLE_INDEX_I64)
-        baseSymbol = WasmSym::tableBase;
-      else if (sym->isTLS())
-        baseSymbol = WasmSym::tlsBase;
-      writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
-      writeUleb128(os, baseSymbol->getGlobalIndex(), "base");
+    writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
+    writeUleb128(os, sym->getGOTIndex(), "global index");
+    if (rel.Addend) {
       writeU8(os, opcode_reloc_const, "CONST");
-      writeSleb128(os, file->calcNewValue(rel, tombstone, this), "offset");
+      writeSleb128(os, rel.Addend, "addend");
       writeU8(os, opcode_reloc_add, "ADD");
     }
 
