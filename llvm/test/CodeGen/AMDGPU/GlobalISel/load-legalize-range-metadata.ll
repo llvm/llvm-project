@@ -10,20 +10,20 @@ define <4 x i8> @global_load_v4i8_align4__rangemd(ptr addrspace(1) %ptr) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p1) :: (load (s32) from %ir.ptr, addrspace 1)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; CHECK-NEXT:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; CHECK-NEXT:   [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C1]](s32)
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-  ; CHECK-NEXT:   [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C2]](s32)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[LOAD]](s32)
-  ; CHECK-NEXT:   $vgpr1 = COPY [[LSHR]](s32)
-  ; CHECK-NEXT:   $vgpr2 = COPY [[LSHR1]](s32)
-  ; CHECK-NEXT:   $vgpr3 = COPY [[LSHR2]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[MV]](p1) :: (load (i32) from %ir.ptr, addrspace 1)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 8
+  ; CHECK-NEXT:   [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[LOAD]], [[C]](i32)
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+  ; CHECK-NEXT:   [[LSHR1:%[0-9]+]]:_(i32) = G_LSHR [[LOAD]], [[C1]](i32)
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 24
+  ; CHECK-NEXT:   [[LSHR2:%[0-9]+]]:_(i32) = G_LSHR [[LOAD]], [[C2]](i32)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[LOAD]](i32)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[LSHR]](i32)
+  ; CHECK-NEXT:   $vgpr2 = COPY [[LSHR1]](i32)
+  ; CHECK-NEXT:   $vgpr3 = COPY [[LSHR2]](i32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   %load = load <4 x i8>, ptr addrspace(1) %ptr, align 4, !range !0, !noundef !1
   ret <4 x i8> %load
@@ -35,17 +35,17 @@ define <3 x i8> @global_load_v3i8_align4__rangemd(ptr addrspace(1) %ptr) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p1) :: (load (s32) from %ir.ptr, addrspace 1)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; CHECK-NEXT:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; CHECK-NEXT:   [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C1]](s32)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[LOAD]](s32)
-  ; CHECK-NEXT:   $vgpr1 = COPY [[LSHR]](s32)
-  ; CHECK-NEXT:   $vgpr2 = COPY [[LSHR1]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[MV]](p1) :: (load (i32) from %ir.ptr, addrspace 1)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 8
+  ; CHECK-NEXT:   [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[LOAD]], [[C]](i32)
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+  ; CHECK-NEXT:   [[LSHR1:%[0-9]+]]:_(i32) = G_LSHR [[LOAD]], [[C1]](i32)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[LOAD]](i32)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[LSHR]](i32)
+  ; CHECK-NEXT:   $vgpr2 = COPY [[LSHR1]](i32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
   %load = load <3 x i8>, ptr addrspace(1) %ptr, align 4, !range !0, !noundef !1
   ret <3 x i8> %load
@@ -56,14 +56,14 @@ define <2 x i8> @global_load_v2i8_align2__rangemd(ptr addrspace(1) %ptr) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p1) :: (load (s16) from %ir.ptr, addrspace 1)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; CHECK-NEXT:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[LOAD]](s32)
-  ; CHECK-NEXT:   $vgpr1 = COPY [[LSHR]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[MV]](p1) :: (load (i16) from %ir.ptr, addrspace 1)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 8
+  ; CHECK-NEXT:   [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[LOAD]], [[C]](i32)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[LOAD]](i32)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[LSHR]](i32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %load = load <2 x i8>, ptr addrspace(1) %ptr, align 2, !range !0, !noundef !1
   ret <2 x i8> %load
@@ -74,15 +74,15 @@ define <2 x i64> @global_load_v2i64_align16__rangemd(ptr addrspace(1) %ptr) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[MV]](p1) :: (load (<2 x s64>) from %ir.ptr, !range !2, addrspace 1)
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s64>)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
-  ; CHECK-NEXT:   $vgpr2 = COPY [[UV2]](s32)
-  ; CHECK-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x i64>) = G_LOAD [[MV]](p1) :: (load (<2 x i64>) from %ir.ptr, !range !2, addrspace 1)
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32), [[UV3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[LOAD]](<2 x i64>)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](i32)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](i32)
+  ; CHECK-NEXT:   $vgpr2 = COPY [[UV2]](i32)
+  ; CHECK-NEXT:   $vgpr3 = COPY [[UV3]](i32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   %load = load <2 x i64>, ptr addrspace(1) %ptr, align 16, !range !2, !noundef !1
   ret <2 x i64> %load
@@ -94,16 +94,16 @@ define i128 @global_load_i128_align16__rangemd(ptr addrspace(1) %ptr) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[MV]](p1) :: (load (<4 x s32>) from %ir.ptr, addrspace 1)
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(s128) = G_BITCAST [[LOAD]](<4 x s32>)
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](s128)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
-  ; CHECK-NEXT:   $vgpr2 = COPY [[UV2]](s32)
-  ; CHECK-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<4 x i32>) = G_LOAD [[MV]](p1) :: (load (<4 x i32>) from %ir.ptr, addrspace 1)
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(i128) = G_BITCAST [[LOAD]](<4 x i32>)
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32), [[UV3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[BITCAST]](i128)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](i32)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](i32)
+  ; CHECK-NEXT:   $vgpr2 = COPY [[UV2]](i32)
+  ; CHECK-NEXT:   $vgpr3 = COPY [[UV3]](i32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   %load = load i128, ptr addrspace(1) %ptr, align 16, !range !3, !noundef !1
   ret i128 %load
@@ -116,11 +116,11 @@ define i32 @global_sextload_i8_align1__rangemd(ptr addrspace(1) %ptr) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[MV]](p1) :: (load (s8) from %ir.ptr, !range !0, addrspace 1)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[SEXTLOAD]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
+  ; CHECK-NEXT:   [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[MV]](p1) :: (load (i8) from %ir.ptr, !range !0, addrspace 1)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[SEXTLOAD]](i32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %load = load i8, ptr addrspace(1) %ptr, align 1, !range !0, !noundef !1
   %ext = sext i8 %load to i32
@@ -132,11 +132,11 @@ define i32 @global_zextload_i8_align1__rangemd(ptr addrspace(1) %ptr) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[MV]](p1) :: (load (s8) from %ir.ptr, !range !4, addrspace 1)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[SEXTLOAD]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
+  ; CHECK-NEXT:   [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[MV]](p1) :: (load (i8) from %ir.ptr, !range !4, addrspace 1)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[SEXTLOAD]](i32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %load = load i8, ptr addrspace(1) %ptr, align 1, !range !4, !noundef !1
   %ext = sext i8 %load to i32
