@@ -19,6 +19,7 @@ add_lldb_unittest(SymbolTests
     lldbUtilityHelpers
     lldbPluginObjectFileELF
     lldbPluginObjectFileMachO
+    lldbPluginPlatformLinux
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFileSymtab
     lldbPluginTypeSystemClang
@@ -26,6 +27,7 @@ add_lldb_unittest(SymbolTests
   )
 
 set(test_inputs
+  inlined-functions.cpp
   inlined-functions.yaml
   )
 add_unittest_inputs(SymbolTests "${test_inputs}")

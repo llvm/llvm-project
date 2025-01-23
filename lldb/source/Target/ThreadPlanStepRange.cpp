@@ -430,8 +430,11 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
                 new SupportFile(call_site_file_spec));
             top_most_line_entry.range = range;
             top_most_line_entry.file_sp.reset();
-            top_most_line_entry.ApplyFileMappings(
-                GetThread().CalculateTarget());
+
+            lldb::ModuleSP module_sp =
+                run_to_address.CalculateSymbolContextModule();
+            top_most_line_entry.ApplyFileMappings(GetThread().CalculateTarget(),
+                                                  module_sp);
             if (!top_most_line_entry.file_sp)
               top_most_line_entry.file_sp =
                   top_most_line_entry.original_file_sp;
