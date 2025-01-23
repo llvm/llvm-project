@@ -1731,12 +1731,19 @@ void DAGTypeLegalizer::ExpandFloatRes_FCEIL(SDNode *N,
 
 void DAGTypeLegalizer::ExpandFloatRes_FCOPYSIGN(SDNode *N,
                                                 SDValue &Lo, SDValue &Hi) {
-  ExpandFloatRes_Binary(N, GetFPLibCall(N->getValueType(0),
-                                        RTLIB::COPYSIGN_F32,
-                                        RTLIB::COPYSIGN_F64,
-                                        RTLIB::COPYSIGN_F80,
-                                        RTLIB::COPYSIGN_F128,
-                                        RTLIB::COPYSIGN_PPCF128), Lo, Hi);
+
+  assert(N->getValueType(0) == MVT::ppcf128 &&
+         "Logic only correct for ppcf128!");
+  SDLoc DL = SDLoc(N);
+  SDValue Tmp = SDValue();
+  GetExpandedFloat(N->getOperand(0), Lo, Tmp);
+
+  Hi = DAG.getNode(ISD::FCOPYSIGN, DL, Tmp.getValueType(), Tmp,
+                   N->getOperand(1));
+  // A double-double is Hi + Lo, so if Hi flips sign, so must Lo
+  Lo = DAG.getSelectCC(DL, Tmp, Hi, Lo,
+                       DAG.getNode(ISD::FNEG, DL, Lo.getValueType(), Lo),
+                       ISD::SETUEQ);
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_FCOS(SDNode *N,
