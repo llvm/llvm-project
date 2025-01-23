@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/wchar/wcslen.h"
-#include "hdr/types/wchar_t.h"
 #include "hdr/types/size_t.h"
+#include "hdr/types/wchar_t.h"
+#include "src/wchar/wcslen.h"
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcWCSLenTest, EmptyString) {

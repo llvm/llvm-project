@@ -15,7 +15,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-size_t wcslen (const wchar_t *src);
+size_t wcslen(const wchar_t *src);
 
 } // namespace LIBC_NAMESPACE_DECL
 
