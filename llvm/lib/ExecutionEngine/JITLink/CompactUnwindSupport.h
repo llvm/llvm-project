@@ -31,7 +31,15 @@ Error splitCompactUnwindBlocks(LinkGraph &G, Section &CompactUnwindSection,
 
 /// CRTP base for compact unwind traits classes. Automatically provides derived
 /// constants.
-template <typename CRTPImpl> struct CompactUnwindTraits {
+///
+/// FIXME: Passing PtrSize as a template parameter is a hack to work around a
+///        bug in older MSVC compilers (until at least MSVC 15) where constexpr
+///        fields in the CRTP impl class were not visible to the base class.
+///        Once we no longer need to support these compilers the PtrSize
+///        template argument should be removed and PointerSize should be
+///        defined as a member in the CRTP Impl classes.
+template <typename CRTPImpl, size_t PtrSize> struct CompactUnwindTraits {
+  static constexpr size_t PointerSize = PtrSize;
   static constexpr size_t Size = 3 * CRTPImpl::PointerSize + 2 * 4;
   static constexpr size_t FnFieldOffset = 0;
   static constexpr size_t SizeFieldOffset =

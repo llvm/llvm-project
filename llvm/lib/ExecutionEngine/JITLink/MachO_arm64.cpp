@@ -627,8 +627,12 @@ static Error applyPACSigningToModInitPointers(LinkGraph &G) {
 }
 
 struct CompactUnwindTraits_MachO_arm64
-    : public CompactUnwindTraits<CompactUnwindTraits_MachO_arm64> {
-  constexpr static size_t PointerSize = 8;
+    : public CompactUnwindTraits<CompactUnwindTraits_MachO_arm64,
+                                 /* PointerSize = */ 8> {
+  // FIXME: Reinstate once we no longer need the MSVC workaround. See
+  //        FIXME for CompactUnwindTraits in CompactUnwindSupport.h.
+  // constexpr static size_t PointerSize = 8;
+
   constexpr static endianness Endianness = endianness::little;
 
   constexpr static uint32_t EncodingModeMask = 0x0f000000;
