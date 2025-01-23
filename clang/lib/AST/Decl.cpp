@@ -3300,6 +3300,11 @@ bool FunctionDecl::isImmediateEscalating() const {
   // consteval specifier,
   if (isDefaulted() && !isConsteval())
     return true;
+
+  if (auto *CD = dyn_cast<CXXConstructorDecl>(this);
+      CD && CD->isInheritingConstructor())
+    return CD->getInheritedConstructor().getConstructor();
+
   // - a function that results from the instantiation of a templated entity
   // defined with the constexpr specifier.
   TemplatedKind TK = getTemplatedKind();
@@ -3319,6 +3324,12 @@ bool FunctionDecl::isImmediateFunction() const {
   // immediate-escalating expression
   if (isImmediateEscalating() && BodyContainsImmediateEscalatingExpressions())
     return true;
+
+  if (auto *CD = dyn_cast<CXXConstructorDecl>(this);
+      CD && CD->isInheritingConstructor())
+    return CD->getInheritedConstructor()
+        .getConstructor()
+        ->isImmediateFunction();
 
   if (const auto *MD = dyn_cast<CXXMethodDecl>(this);
       MD && MD->isLambdaStaticInvoker())
