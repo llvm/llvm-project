@@ -142,7 +142,7 @@ LIBC_INLINE int convert_int(printf_core::Writer *writer,
 
   // sign isn't a problem because we're taking the max. The result is always
   // non-negative.
-  if (static_cast<int>(pad_to_len) < to_conv.min_width)
+  if (to_conv.min_width > 0)
     pad_to_len = to_conv.min_width;
 
   // one less digit of padding if there's a sign char
