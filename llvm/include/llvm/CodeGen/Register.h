@@ -161,33 +161,33 @@ template <> struct DenseMapInfo<Register> {
 };
 
 /// Wrapper class representing a virtual register or register unit.
-class RegisterUnit {
-  unsigned RegUnit;
+class VirtRegOrUnit {
+  unsigned VRegOrUnit;
 
 public:
-  constexpr explicit RegisterUnit(MCRegUnit Unit) : RegUnit(Unit) {
-    assert(!Register::isVirtualRegister(RegUnit));
+  constexpr explicit VirtRegOrUnit(MCRegUnit Unit) : VRegOrUnit(Unit) {
+    assert(!Register::isVirtualRegister(VRegOrUnit));
   }
-  constexpr explicit RegisterUnit(Register Reg) : RegUnit(Reg.id()) {
+  constexpr explicit VirtRegOrUnit(Register Reg) : VRegOrUnit(Reg.id()) {
     assert(Reg.isVirtual());
   }
 
-  constexpr bool isVirtual() const {
-    return Register::isVirtualRegister(RegUnit);
+  constexpr bool isVirtualReg() const {
+    return Register::isVirtualRegister(VRegOrUnit);
   }
 
   constexpr MCRegUnit asMCRegUnit() const {
-    assert(!isVirtual() && "Not a register unit");
-    return RegUnit;
+    assert(!isVirtualReg() && "Not a register unit");
+    return VRegOrUnit;
   }
 
   constexpr Register asVirtualReg() const {
-    assert(isVirtual() && "Not a virtual register");
-    return Register(RegUnit);
+    assert(isVirtualReg() && "Not a virtual register");
+    return Register(VRegOrUnit);
   }
 
-  constexpr bool operator==(const RegisterUnit &Other) const {
-    return RegUnit == Other.RegUnit;
+  constexpr bool operator==(const VirtRegOrUnit &Other) const {
+    return VRegOrUnit == Other.VRegOrUnit;
   }
 };
 
