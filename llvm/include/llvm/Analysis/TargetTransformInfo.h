@@ -669,6 +669,10 @@ public:
     /// If the value is true the peeling cost model can decide to peel only
     /// some iterations and in this case it will set this to false.
     bool PeelProfiledIterations;
+    /// Allow aggressively peeling of loop iterations to eliminate compares.
+    /// When true, the elimination of any comparison in the loop is cause for
+    /// increasing the peel count.
+    bool AggresiveEliminateCompares;
   };
 
   /// Get target-customized preferences for the generic loop peeling
