@@ -24,6 +24,7 @@
 #include "MCTargetDesc/AArch64TargetStreamer.h"
 #include "TargetInfo/AArch64TargetInfo.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -77,6 +78,11 @@ static cl::opt<PtrauthCheckMode> PtrauthAuthChecks(
     cl::desc("Check pointer authentication auth/resign failures"),
     cl::init(Default));
 
+static cl::opt<bool> EnableImportCallOptimization(
+    "aarch64-win-import-call-optimization", cl::Hidden,
+    cl::desc("Enable import call optimization for AArch64 Windows"),
+    cl::init(false));
+
 #define DEBUG_TYPE "asm-printer"
 
 namespace {
@@ -89,6 +95,8 @@ class AArch64AsmPrinter : public AsmPrinter {
 #ifndef NDEBUG
   unsigned InstsEmitted;
 #endif
+  DenseMap<MCSection *, std::vector<std::pair<MCSymbol *, MCSymbol *>>>
+      SectionToImportedFunctionCalls;
 
 public:
   AArch64AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
@@ -162,8 +170,27 @@ public:
   // Emit the sequence for AUT or AUTPAC.
   void emitPtrauthAuthResign(const MachineInstr *MI);
 
-  // Emit the sequence to compute a discriminator into x17, or reuse AddrDisc.
-  unsigned emitPtrauthDiscriminator(uint16_t Disc, unsigned AddrDisc);
+  // Emit the sequence to compute the discriminator.
+  //
+  // ScratchReg should be x16/x17.
+  //
+  // The returned register is either unmodified AddrDisc or x16/x17.
+  //
+  // If the expanded pseudo is allowed to clobber AddrDisc register, setting
+  // MayUseAddrAsScratch may save one MOV instruction, provided the address
+  // is already in x16/x17 (i.e. return x16/x17 which is the *modified* AddrDisc
+  // register at the same time):
+  //
+  //   mov   x17, x16
+  //   movk  x17, #1234, lsl #48
+  //   ; x16 is not used anymore
+  //
+  // can be replaced by
+  //
+  //   movk  x16, #1234, lsl #48
+  Register emitPtrauthDiscriminator(uint16_t Disc, Register AddrDisc,
+                                    Register ScratchReg,
+                                    bool MayUseAddrAsScratch = false);
 
   // Emit the sequence for LOADauthptrstatic
   void LowerLOADauthptrstatic(const MachineInstr &MI);
@@ -180,6 +207,10 @@ public:
   /// tblgen'erated driver function for lowering simple MI->MC
   /// pseudo instructions.
   bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
+
+  // Emit Build Attributes
+  void emitAttributes(unsigned Flags, uint64_t PAuthABIPlatform,
+                      uint64_t PAuthABIVersion, AArch64TargetStreamer *TS);
 
   void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
   void EmitToStreamer(const MCInst &Inst) {
@@ -274,6 +305,11 @@ private:
                               MCSymbol *LazyPointer) override;
   void emitMachOIFuncStubHelperBody(Module &M, const GlobalIFunc &GI,
                                     MCSymbol *LazyPointer) override;
+
+  /// Checks if this instruction is part of a sequence that is eligle for import
+  /// call optimization and, if so, records it to be emitted in the import call
+  /// section.
+  void recordIfImportCall(const MachineInstr *BranchInst);
 };
 
 } // end anonymous namespace
@@ -313,36 +349,53 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   if (!TT.isOSBinFormatELF())
     return;
 
-  // Assemble feature flags that may require creation of a note section.
-  unsigned Flags = 0;
+  // For emitting build attributes and .note.gnu.property section
+  auto *TS =
+      static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
+  // Assemble feature flags that may require creation of build attributes and a
+  // note section.
+  unsigned BAFlags = 0;
+  unsigned GNUFlags = 0;
   if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("branch-target-enforcement")))
-    if (!BTE->isZero())
-      Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
+          M.getModuleFlag("branch-target-enforcement"))) {
+    if (!BTE->isZero()) {
+      BAFlags |= AArch64BuildAttributes::FeatureAndBitsFlag::Feature_BTI_Flag;
+      GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
+    }
+  }
 
   if (const auto *GCS = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("guarded-control-stack")))
-    if (!GCS->isZero())
-      Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+          M.getModuleFlag("guarded-control-stack"))) {
+    if (!GCS->isZero()) {
+      BAFlags |= AArch64BuildAttributes::FeatureAndBitsFlag::Feature_GCS_Flag;
+      GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+    }
+  }
 
   if (const auto *Sign = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("sign-return-address")))
-    if (!Sign->isZero())
-      Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
+          M.getModuleFlag("sign-return-address"))) {
+    if (!Sign->isZero()) {
+      BAFlags |= AArch64BuildAttributes::FeatureAndBitsFlag::Feature_PAC_Flag;
+      GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
+    }
+  }
 
   uint64_t PAuthABIPlatform = -1;
   if (const auto *PAP = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("aarch64-elf-pauthabi-platform")))
+          M.getModuleFlag("aarch64-elf-pauthabi-platform"))) {
     PAuthABIPlatform = PAP->getZExtValue();
+  }
+
   uint64_t PAuthABIVersion = -1;
   if (const auto *PAV = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("aarch64-elf-pauthabi-version")))
+          M.getModuleFlag("aarch64-elf-pauthabi-version"))) {
     PAuthABIVersion = PAV->getZExtValue();
+  }
 
+  // Emit AArch64 Build Attributes
+  emitAttributes(BAFlags, PAuthABIPlatform, PAuthABIVersion, TS);
   // Emit a .note.gnu.property section with the flags.
-  auto *TS =
-      static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
-  TS->emitNoteSection(Flags, PAuthABIPlatform, PAuthABIVersion);
+  TS->emitNoteSection(GNUFlags, PAuthABIPlatform, PAuthABIVersion);
 }
 
 void AArch64AsmPrinter::emitFunctionHeaderComment() {
@@ -413,6 +466,58 @@ void AArch64AsmPrinter::emitSled(const MachineInstr &MI, SledKind Kind) {
 
   OutStreamer->emitLabel(Target);
   recordSled(CurSled, MI, Kind, 2);
+}
+
+void AArch64AsmPrinter::emitAttributes(unsigned Flags,
+                                       uint64_t PAuthABIPlatform,
+                                       uint64_t PAuthABIVersion,
+                                       AArch64TargetStreamer *TS) {
+
+  PAuthABIPlatform = (uint64_t(-1) == PAuthABIPlatform) ? 0 : PAuthABIPlatform;
+  PAuthABIVersion = (uint64_t(-1) == PAuthABIVersion) ? 0 : PAuthABIVersion;
+
+  if (PAuthABIPlatform || PAuthABIVersion) {
+    TS->emitAtributesSubsection(
+        AArch64BuildAttributes::getVendorName(
+            AArch64BuildAttributes::AEABI_PAUTHABI),
+        AArch64BuildAttributes::SubsectionOptional::REQUIRED,
+        AArch64BuildAttributes::SubsectionType::ULEB128);
+    TS->emitAttribute(AArch64BuildAttributes::getVendorName(
+                          AArch64BuildAttributes::AEABI_PAUTHABI),
+                      AArch64BuildAttributes::TAG_PAUTH_PLATFORM,
+                      PAuthABIPlatform, "", false);
+    TS->emitAttribute(AArch64BuildAttributes::getVendorName(
+                          AArch64BuildAttributes::AEABI_PAUTHABI),
+                      AArch64BuildAttributes::TAG_PAUTH_SCHEMA, PAuthABIVersion,
+                      "", false);
+  }
+
+  unsigned BTIValue =
+      (Flags & AArch64BuildAttributes::Feature_BTI_Flag) ? 1 : 0;
+  unsigned PACValue =
+      (Flags & AArch64BuildAttributes::Feature_PAC_Flag) ? 1 : 0;
+  unsigned GCSValue =
+      (Flags & AArch64BuildAttributes::Feature_GCS_Flag) ? 1 : 0;
+
+  if (BTIValue || PACValue || GCSValue) {
+    TS->emitAtributesSubsection(
+        AArch64BuildAttributes::getVendorName(
+            AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
+        AArch64BuildAttributes::SubsectionOptional::OPTIONAL,
+        AArch64BuildAttributes::SubsectionType::ULEB128);
+    TS->emitAttribute(AArch64BuildAttributes::getVendorName(
+                          AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
+                      AArch64BuildAttributes::TAG_FEATURE_BTI, BTIValue, "",
+                      false);
+    TS->emitAttribute(AArch64BuildAttributes::getVendorName(
+                          AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
+                      AArch64BuildAttributes::TAG_FEATURE_PAC, PACValue, "",
+                      false);
+    TS->emitAttribute(AArch64BuildAttributes::getVendorName(
+                          AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
+                      AArch64BuildAttributes::TAG_FEATURE_GCS, GCSValue, "",
+                      false);
+  }
 }
 
 // Emit the following code for Intrinsic::{xray_customevent,xray_typedevent}
@@ -586,6 +691,15 @@ void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
 
 void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
   Register Reg = MI.getOperand(0).getReg();
+
+  // The HWASan pass won't emit a CHECK_MEMACCESS intrinsic with a pointer
+  // statically known to be zero. However, conceivably, the HWASan pass may
+  // encounter a "cannot currently statically prove to be null" pointer (and is
+  // therefore unable to omit the intrinsic) that later optimization passes
+  // convert into a statically known-null pointer.
+  if (Reg == AArch64::XZR)
+    return;
+
   bool IsShort =
       ((MI.getOpcode() == AArch64::HWASAN_CHECK_MEMACCESS_SHORTGRANULES) ||
        (MI.getOpcode() ==
@@ -902,6 +1016,38 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
   // Emit stack and fault map information.
   FM.serializeToFaultMapSection();
 
+  // If import call optimization is enabled, emit the appropriate section.
+  // We do this whether or not we recorded any import calls.
+  if (EnableImportCallOptimization && TT.isOSBinFormatCOFF()) {
+    OutStreamer->switchSection(getObjFileLowering().getImportCallSection());
+
+    // Section always starts with some magic.
+    constexpr char ImpCallMagic[12] = "Imp_Call_V1";
+    OutStreamer->emitBytes(StringRef{ImpCallMagic, sizeof(ImpCallMagic)});
+
+    // Layout of this section is:
+    // Per section that contains calls to imported functions:
+    //  uint32_t SectionSize: Size in bytes for information in this section.
+    //  uint32_t Section Number
+    //  Per call to imported function in section:
+    //    uint32_t Kind: the kind of imported function.
+    //    uint32_t BranchOffset: the offset of the branch instruction in its
+    //                            parent section.
+    //    uint32_t TargetSymbolId: the symbol id of the called function.
+    for (auto &[Section, CallsToImportedFuncs] :
+         SectionToImportedFunctionCalls) {
+      unsigned SectionSize =
+          sizeof(uint32_t) * (2 + 3 * CallsToImportedFuncs.size());
+      OutStreamer->emitInt32(SectionSize);
+      OutStreamer->emitCOFFSecNumber(Section->getBeginSymbol());
+      for (auto &[CallsiteSymbol, CalledSymbol] : CallsToImportedFuncs) {
+        // Kind is always IMAGE_REL_ARM64_DYNAMIC_IMPORT_CALL (0x13).
+        OutStreamer->emitInt32(0x13);
+        OutStreamer->emitCOFFSecOffset(CallsiteSymbol);
+        OutStreamer->emitCOFFSymbolIndex(CalledSymbol);
+      }
+    }
+  }
 }
 
 void AArch64AsmPrinter::emitLOHs() {
@@ -1726,8 +1872,11 @@ void AArch64AsmPrinter::emitFMov0(const MachineInstr &MI) {
   }
 }
 
-unsigned AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
-                                                     unsigned AddrDisc) {
+Register AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
+                                                     Register AddrDisc,
+                                                     Register ScratchReg,
+                                                     bool MayUseAddrAsScratch) {
+  assert(ScratchReg == AArch64::X16 || ScratchReg == AArch64::X17);
   // So far we've used NoRegister in pseudos.  Now we need real encodings.
   if (AddrDisc == AArch64::NoRegister)
     AddrDisc = AArch64::XZR;
@@ -1737,16 +1886,24 @@ unsigned AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
   if (!Disc)
     return AddrDisc;
 
-  // If there's only a constant discriminator, MOV it into x17.
+  // If there's only a constant discriminator, MOV it into the scratch register.
   if (AddrDisc == AArch64::XZR) {
-    emitMOVZ(AArch64::X17, Disc, 0);
-    return AArch64::X17;
+    emitMOVZ(ScratchReg, Disc, 0);
+    return ScratchReg;
   }
 
-  // If there are both, emit a blend into x17.
-  emitMovXReg(AArch64::X17, AddrDisc);
-  emitMOVK(AArch64::X17, Disc, 48);
-  return AArch64::X17;
+  // If there are both, emit a blend into the scratch register.
+
+  // Check if we can save one MOV instruction.
+  assert(MayUseAddrAsScratch || ScratchReg != AddrDisc);
+  bool AddrDiscIsSafe = AddrDisc == AArch64::X16 || AddrDisc == AArch64::X17;
+  if (MayUseAddrAsScratch && AddrDiscIsSafe)
+    ScratchReg = AddrDisc;
+  else
+    emitMovXReg(ScratchReg, AddrDisc);
+
+  emitMOVK(ScratchReg, Disc, 48);
+  return ScratchReg;
 }
 
 /// Emits a code sequence to check an authenticated pointer value.
@@ -1963,7 +2120,8 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
 
   // Compute aut discriminator into x17
   assert(isUInt<16>(AUTDisc));
-  unsigned AUTDiscReg = emitPtrauthDiscriminator(AUTDisc, AUTAddrDisc);
+  Register AUTDiscReg =
+      emitPtrauthDiscriminator(AUTDisc, AUTAddrDisc, AArch64::X17);
   bool AUTZero = AUTDiscReg == AArch64::XZR;
   unsigned AUTOpc = getAUTOpcodeForKey(AUTKey, AUTZero);
 
@@ -2004,7 +2162,8 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
 
   // Compute pac discriminator into x17
   assert(isUInt<16>(PACDisc));
-  unsigned PACDiscReg = emitPtrauthDiscriminator(PACDisc, PACAddrDisc);
+  Register PACDiscReg =
+      emitPtrauthDiscriminator(PACDisc, PACAddrDisc, AArch64::X17);
   bool PACZero = PACDiscReg == AArch64::XZR;
   unsigned PACOpc = getPACOpcodeForKey(PACKey, PACZero);
 
@@ -2036,8 +2195,20 @@ void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
 
   unsigned AddrDisc = MI->getOperand(3).getReg();
 
-  // Compute discriminator into x17
-  unsigned DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc);
+  // Make sure AddrDisc is solely used to compute the discriminator.
+  // While hardly meaningful, it is still possible to describe an authentication
+  // of a pointer against its own value (instead of storage address) with
+  // intrinsics, so use report_fatal_error instead of assert.
+  if (BrTarget == AddrDisc)
+    report_fatal_error("Branch target is signed with its own value");
+
+  // If we are printing BLRA pseudo instruction, then x16 and x17 are
+  // implicit-def'ed by the MI and AddrDisc is not used as any other input, so
+  // try to save one MOV by setting MayUseAddrAsScratch.
+  // Unlike BLRA, BRA pseudo is used to perform computed goto, and thus not
+  // declared as clobbering x16/x17.
+  Register DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, AArch64::X17,
+                                              /*MayUseAddrAsScratch=*/IsCall);
   bool IsZeroDisc = DiscReg == AArch64::XZR;
 
   unsigned Opc;
@@ -2331,16 +2502,7 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
     }
   }
 
-  unsigned DiscReg = AddrDisc;
-  if (Disc != 0) {
-    if (AddrDisc != AArch64::XZR) {
-      emitMovXReg(AArch64::X17, AddrDisc);
-      emitMOVK(AArch64::X17, Disc, 48);
-    } else {
-      emitMOVZ(AArch64::X17, Disc, 0);
-    }
-    DiscReg = AArch64::X17;
-  }
+  Register DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, AArch64::X17);
 
   auto MIB = MCInstBuilder(getPACOpcodeForKey(Key, DiscReg == AArch64::XZR))
                  .addReg(AArch64::X16)
@@ -2356,28 +2518,39 @@ void AArch64AsmPrinter::LowerLOADgotAUTH(const MachineInstr &MI) {
   const MachineOperand &GAMO = MI.getOperand(1);
   assert(GAMO.getOffset() == 0);
 
-  MachineOperand GAHiOp(GAMO);
-  MachineOperand GALoOp(GAMO);
-  GAHiOp.addTargetFlag(AArch64II::MO_PAGE);
-  GALoOp.addTargetFlag(AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+  if (MI.getMF()->getTarget().getCodeModel() == CodeModel::Tiny) {
+    MCOperand GAMC;
+    MCInstLowering.lowerOperand(GAMO, GAMC);
+    EmitToStreamer(
+        MCInstBuilder(AArch64::ADR).addReg(AArch64::X17).addOperand(GAMC));
+    EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
+                       .addReg(AuthResultReg)
+                       .addReg(AArch64::X17)
+                       .addImm(0));
+  } else {
+    MachineOperand GAHiOp(GAMO);
+    MachineOperand GALoOp(GAMO);
+    GAHiOp.addTargetFlag(AArch64II::MO_PAGE);
+    GALoOp.addTargetFlag(AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
 
-  MCOperand GAMCHi, GAMCLo;
-  MCInstLowering.lowerOperand(GAHiOp, GAMCHi);
-  MCInstLowering.lowerOperand(GALoOp, GAMCLo);
+    MCOperand GAMCHi, GAMCLo;
+    MCInstLowering.lowerOperand(GAHiOp, GAMCHi);
+    MCInstLowering.lowerOperand(GALoOp, GAMCLo);
 
-  EmitToStreamer(
-      MCInstBuilder(AArch64::ADRP).addReg(AArch64::X17).addOperand(GAMCHi));
+    EmitToStreamer(
+        MCInstBuilder(AArch64::ADRP).addReg(AArch64::X17).addOperand(GAMCHi));
 
-  EmitToStreamer(MCInstBuilder(AArch64::ADDXri)
-                     .addReg(AArch64::X17)
-                     .addReg(AArch64::X17)
-                     .addOperand(GAMCLo)
-                     .addImm(0));
+    EmitToStreamer(MCInstBuilder(AArch64::ADDXri)
+                       .addReg(AArch64::X17)
+                       .addReg(AArch64::X17)
+                       .addOperand(GAMCLo)
+                       .addImm(0));
 
-  EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
-                     .addReg(AuthResultReg)
-                     .addReg(AArch64::X17)
-                     .addImm(0));
+    EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
+                       .addReg(AuthResultReg)
+                       .addReg(AArch64::X17)
+                       .addImm(0));
+  }
 
   assert(GAMO.isGlobal());
   MCSymbol *UndefWeakSym;
@@ -2608,6 +2781,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   // instruction here.
   case AArch64::AUTH_TCRETURN:
   case AArch64::AUTH_TCRETURN_BTI: {
+    Register Callee = MI->getOperand(0).getReg();
     const uint64_t Key = MI->getOperand(2).getImm();
     assert((Key == AArch64PACKey::IA || Key == AArch64PACKey::IB) &&
            "Invalid auth key for tail-call return");
@@ -2617,31 +2791,23 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     Register AddrDisc = MI->getOperand(4).getReg();
 
-    Register ScratchReg = MI->getOperand(0).getReg() == AArch64::X16
-                              ? AArch64::X17
-                              : AArch64::X16;
+    Register ScratchReg = Callee == AArch64::X16 ? AArch64::X17 : AArch64::X16;
 
     emitPtrauthTailCallHardening(MI);
 
-    unsigned DiscReg = AddrDisc;
-    if (Disc) {
-      if (AddrDisc != AArch64::NoRegister) {
-        if (ScratchReg != AddrDisc)
-          emitMovXReg(ScratchReg, AddrDisc);
-        emitMOVK(ScratchReg, Disc, 48);
-      } else {
-        emitMOVZ(ScratchReg, Disc, 0);
-      }
-      DiscReg = ScratchReg;
-    }
+    // See the comments in emitPtrauthBranch.
+    if (Callee == AddrDisc)
+      report_fatal_error("Call target is signed with its own value");
+    Register DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, ScratchReg,
+                                                /*MayUseAddrAsScratch=*/true);
 
-    const bool IsZero = DiscReg == AArch64::NoRegister;
+    const bool IsZero = DiscReg == AArch64::XZR;
     const unsigned Opcodes[2][2] = {{AArch64::BRAA, AArch64::BRAAZ},
                                     {AArch64::BRAB, AArch64::BRABZ}};
 
     MCInst TmpInst;
     TmpInst.setOpcode(Opcodes[Key][IsZero]);
-    TmpInst.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
+    TmpInst.addOperand(MCOperand::createReg(Callee));
     if (!IsZero)
       TmpInst.addOperand(MCOperand::createReg(DiscReg));
     EmitToStreamer(*OutStreamer, TmpInst);
@@ -2655,6 +2821,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::TCRETURNriALL: {
     emitPtrauthTailCallHardening(MI);
 
+    recordIfImportCall(MI);
     MCInst TmpInst;
     TmpInst.setOpcode(AArch64::BR);
     TmpInst.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
@@ -2666,6 +2833,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     MCOperand Dest;
     MCInstLowering.lowerOperand(MI->getOperand(0), Dest);
+    recordIfImportCall(MI);
     MCInst TmpInst;
     TmpInst.setOpcode(AArch64::B);
     TmpInst.addOperand(Dest);
@@ -2689,6 +2857,54 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     MCInst TmpInstSB;
     TmpInstSB.setOpcode(AArch64::SB);
     EmitToStreamer(*OutStreamer, TmpInstSB);
+    return;
+  }
+  case AArch64::TLSDESC_AUTH_CALLSEQ: {
+    /// lower this to:
+    ///    adrp  x0, :tlsdesc_auth:var
+    ///    ldr   x16, [x0, #:tlsdesc_auth_lo12:var]
+    ///    add   x0, x0, #:tlsdesc_auth_lo12:var
+    ///    blraa x16, x0
+    ///    (TPIDR_EL0 offset now in x0)
+    const MachineOperand &MO_Sym = MI->getOperand(0);
+    MachineOperand MO_TLSDESC_LO12(MO_Sym), MO_TLSDESC(MO_Sym);
+    MCOperand SymTLSDescLo12, SymTLSDesc;
+    MO_TLSDESC_LO12.setTargetFlags(AArch64II::MO_TLS | AArch64II::MO_PAGEOFF);
+    MO_TLSDESC.setTargetFlags(AArch64II::MO_TLS | AArch64II::MO_PAGE);
+    MCInstLowering.lowerOperand(MO_TLSDESC_LO12, SymTLSDescLo12);
+    MCInstLowering.lowerOperand(MO_TLSDESC, SymTLSDesc);
+
+    MCInst Adrp;
+    Adrp.setOpcode(AArch64::ADRP);
+    Adrp.addOperand(MCOperand::createReg(AArch64::X0));
+    Adrp.addOperand(SymTLSDesc);
+    EmitToStreamer(*OutStreamer, Adrp);
+
+    MCInst Ldr;
+    Ldr.setOpcode(AArch64::LDRXui);
+    Ldr.addOperand(MCOperand::createReg(AArch64::X16));
+    Ldr.addOperand(MCOperand::createReg(AArch64::X0));
+    Ldr.addOperand(SymTLSDescLo12);
+    Ldr.addOperand(MCOperand::createImm(0));
+    EmitToStreamer(*OutStreamer, Ldr);
+
+    MCInst Add;
+    Add.setOpcode(AArch64::ADDXri);
+    Add.addOperand(MCOperand::createReg(AArch64::X0));
+    Add.addOperand(MCOperand::createReg(AArch64::X0));
+    Add.addOperand(SymTLSDescLo12);
+    Add.addOperand(MCOperand::createImm(AArch64_AM::getShiftValue(0)));
+    EmitToStreamer(*OutStreamer, Add);
+
+    // Authenticated TLSDESC accesses are not relaxed.
+    // Thus, do not emit .tlsdesccall for AUTH TLSDESC.
+
+    MCInst Blraa;
+    Blraa.setOpcode(AArch64::BLRAA);
+    Blraa.addOperand(MCOperand::createReg(AArch64::X16));
+    Blraa.addOperand(MCOperand::createReg(AArch64::X0));
+    EmitToStreamer(*OutStreamer, Blraa);
+
     return;
   }
   case AArch64::TLSDESC_CALLSEQ: {
@@ -2948,12 +3164,37 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     TS->emitARM64WinCFISaveAnyRegQPX(MI->getOperand(0).getImm(),
                                      -MI->getOperand(2).getImm());
     return;
+
+  case AArch64::BLR:
+  case AArch64::BR:
+    recordIfImportCall(MI);
+    MCInst TmpInst;
+    MCInstLowering.Lower(MI, TmpInst);
+    EmitToStreamer(*OutStreamer, TmpInst);
+    return;
   }
 
   // Finally, do the automated lowerings for everything else.
   MCInst TmpInst;
   MCInstLowering.Lower(MI, TmpInst);
   EmitToStreamer(*OutStreamer, TmpInst);
+}
+
+void AArch64AsmPrinter::recordIfImportCall(
+    const llvm::MachineInstr *BranchInst) {
+  if (!EnableImportCallOptimization ||
+      !TM.getTargetTriple().isOSBinFormatCOFF())
+    return;
+
+  auto [GV, OpFlags] = BranchInst->getMF()->tryGetCalledGlobal(BranchInst);
+  if (GV && GV->hasDLLImportStorageClass()) {
+    auto *CallSiteSymbol = MMI->getContext().createNamedTempSymbol("impcall");
+    OutStreamer->emitLabel(CallSiteSymbol);
+
+    auto *CalledSymbol = MCInstLowering.GetGlobalValueSymbol(GV, OpFlags);
+    SectionToImportedFunctionCalls[OutStreamer->getCurrentSectionOnly()]
+        .push_back({CallSiteSymbol, CalledSymbol});
+  }
 }
 
 void AArch64AsmPrinter::emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,

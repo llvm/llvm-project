@@ -37,7 +37,7 @@ define i32 @foo(ptr %arg, i1 %arg1) {
 ; O2-NEXT:    [[TMP0:%.*]] = xor i1 [[ARG1]], true
 ; O2-NEXT:    tail call void @llvm.assume(i1 [[TMP0]])
 ; O2-NEXT:    [[I_I:%.*]] = load ptr, ptr [[ARG]], align 8, !nonnull [[META0:![0-9]+]], !noundef [[META0]]
-; O2-NEXT:    [[I3_I:%.*]] = getelementptr inbounds i8, ptr [[I_I]], i64 1
+; O2-NEXT:    [[I3_I:%.*]] = getelementptr inbounds nuw i8, ptr [[I_I]], i64 1
 ; O2-NEXT:    store ptr [[I3_I]], ptr [[ARG]], align 8
 ; O2-NEXT:    [[I3:%.*]] = load i32, ptr [[I_I]], align 4
 ; O2-NEXT:    ret i32 [[I3]]

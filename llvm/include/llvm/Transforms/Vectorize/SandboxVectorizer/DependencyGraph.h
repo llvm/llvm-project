@@ -117,7 +117,7 @@ public:
     assert(!isMemDepNodeCandidate(I) && "Expected Non-Mem instruction, ");
   }
   DGNode(const DGNode &Other) = delete;
-  virtual ~DGNode() = default;
+  virtual ~DGNode();
   /// \Returns the number of unscheduled successors.
   unsigned getNumUnscheduledSuccs() const { return UnscheduledSuccs; }
   void decrUnscheduledSuccs() {
@@ -216,10 +216,27 @@ class MemDGNode final : public DGNode {
   /// Memory predecessors.
   DenseSet<MemDGNode *> MemPreds;
   friend class PredIterator; // For MemPreds.
-
-  void setNextNode(MemDGNode *N) { NextMemN = N; }
-  void setPrevNode(MemDGNode *N) { PrevMemN = N; }
+  /// Creates both edges: this<->N.
+  void setNextNode(MemDGNode *N) {
+    NextMemN = N;
+    if (NextMemN != nullptr)
+      NextMemN->PrevMemN = this;
+  }
+  /// Creates both edges: N<->this.
+  void setPrevNode(MemDGNode *N) {
+    PrevMemN = N;
+    if (PrevMemN != nullptr)
+      PrevMemN->NextMemN = this;
+  }
   friend class DependencyGraph; // For setNextNode(), setPrevNode().
+  void detachFromChain() {
+    if (PrevMemN != nullptr)
+      PrevMemN->NextMemN = NextMemN;
+    if (NextMemN != nullptr)
+      NextMemN->PrevMemN = PrevMemN;
+    PrevMemN = nullptr;
+    NextMemN = nullptr;
+  }
 
 public:
   MemDGNode(Instruction *I) : DGNode(I, DGNodeID::MemDGNode) {
@@ -292,6 +309,8 @@ private:
 
   Context *Ctx = nullptr;
   std::optional<Context::CallbackID> CreateInstrCB;
+  std::optional<Context::CallbackID> EraseInstrCB;
+  std::optional<Context::CallbackID> MoveInstrCB;
 
   std::unique_ptr<BatchAAResults> BatchAA;
 
@@ -328,12 +347,23 @@ private:
   /// chain.
   void createNewNodes(const Interval<Instruction> &NewInterval);
 
+  /// Helper for `notify*Instr()`. \Returns the first MemDGNode that comes
+  /// before \p N, including or excluding \p N based on \p IncludingN, or
+  /// nullptr if not found.
+  MemDGNode *getMemDGNodeBefore(DGNode *N, bool IncludingN) const;
+  /// Helper for `notifyMoveInstr()`. \Returns the first MemDGNode that comes
+  /// after \p N, including or excluding \p N based on \p IncludingN, or nullptr
+  /// if not found.
+  MemDGNode *getMemDGNodeAfter(DGNode *N, bool IncludingN) const;
+
   /// Called by the callbacks when a new instruction \p I has been created.
-  void notifyCreateInstr(Instruction *I) {
-    getOrCreateNode(I);
-    // TODO: Update the dependencies for the new node.
-    // TODO: Update the MemDGNode chain to include the new node if needed.
-  }
+  void notifyCreateInstr(Instruction *I);
+  /// Called by the callbacks when instruction \p I is about to get
+  /// deleted.
+  void notifyEraseInstr(Instruction *I);
+  /// Called by the callbacks when instruction \p I is about to be moved to
+  /// \p To.
+  void notifyMoveInstr(Instruction *I, const BBIterator &To);
 
 public:
   /// This constructor also registers callbacks.
@@ -341,10 +371,20 @@ public:
       : Ctx(&Ctx), BatchAA(std::make_unique<BatchAAResults>(AA)) {
     CreateInstrCB = Ctx.registerCreateInstrCallback(
         [this](Instruction *I) { notifyCreateInstr(I); });
+    EraseInstrCB = Ctx.registerEraseInstrCallback(
+        [this](Instruction *I) { notifyEraseInstr(I); });
+    MoveInstrCB = Ctx.registerMoveInstrCallback(
+        [this](Instruction *I, const BBIterator &To) {
+          notifyMoveInstr(I, To);
+        });
   }
   ~DependencyGraph() {
     if (CreateInstrCB)
       Ctx->unregisterCreateInstrCallback(*CreateInstrCB);
+    if (EraseInstrCB)
+      Ctx->unregisterEraseInstrCallback(*EraseInstrCB);
+    if (MoveInstrCB)
+      Ctx->unregisterMoveInstrCallback(*MoveInstrCB);
   }
 
   DGNode *getNode(Instruction *I) const {

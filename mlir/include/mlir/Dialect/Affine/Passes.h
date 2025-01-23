@@ -116,6 +116,10 @@ std::unique_ptr<OperationPass<func::FuncOp>> createPipelineDataTransferPass();
 /// operations (not necessarily restricted to Affine dialect).
 std::unique_ptr<Pass> createAffineExpandIndexOpsPass();
 
+/// Creates a pass to expand affine index operations into affine.apply
+/// operations.
+std::unique_ptr<Pass> createAffineExpandIndexOpsAsAffinePass();
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//

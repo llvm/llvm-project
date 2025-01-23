@@ -16,7 +16,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/MemoryBufferRef.h"
-#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
@@ -32,6 +31,16 @@ StructType *offloading::getEntryTy(Module &M) {
         PointerType::getUnqual(C), M.getDataLayout().getIntPtrType(C),
         Type::getInt32Ty(C), Type::getInt32Ty(C));
   return EntryTy;
+}
+
+StructType *offloading::getManagedTy(Module &M) {
+  LLVMContext &C = M.getContext();
+  StructType *StructTy = StructType::getTypeByName(C, "struct.__managed_var");
+  if (!StructTy)
+    StructTy = llvm::StructType::create("struct.__managed_var",
+                                        PointerType::getUnqual(M.getContext()),
+                                        PointerType::getUnqual(M.getContext()));
+  return StructTy;
 }
 
 // TODO: Rework this interface to be more generic.

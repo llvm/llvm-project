@@ -39,8 +39,7 @@ struct AlgebraicSimplification
 void AlgebraicSimplification::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   populateMathAlgebraicSimplificationPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns),
-                                     config);
+  (void)applyPatternsGreedily(getOperation(), std::move(patterns), config);
 }
 
 std::unique_ptr<mlir::Pass> fir::createAlgebraicSimplificationPass() {

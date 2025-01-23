@@ -28,8 +28,8 @@ using namespace llvm;
 namespace llvm {
 cl::opt<bool> ShouldPreserveAllAttributes(
     "assume-preserve-all", cl::init(false), cl::Hidden,
-    cl::desc("enable preservation of all attrbitues. even those that are "
-             "unlikely to be usefull"));
+    cl::desc("enable preservation of all attributes. even those that are "
+             "unlikely to be useful"));
 
 cl::opt<bool> EnableKnowledgeRetention(
     "enable-knowledge-retention", cl::init(false), cl::Hidden,

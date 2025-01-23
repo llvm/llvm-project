@@ -71,6 +71,10 @@ namespace llvm {
   /// using profile information.
   MachineFunctionPass *createMachineFunctionSplitterPass();
 
+  /// createStaticDataSplitterPass - This pass partitions a static data section
+  /// into a hot and cold section using profile information.
+  MachineFunctionPass *createStaticDataSplitterPass();
+
   /// MachineFunctionPrinter pass - This pass prints out the machine function to
   /// the given stream as a debugging tool.
   MachineFunctionPass *
@@ -118,7 +122,7 @@ namespace llvm {
   extern char &MachineRegionInfoPassID;
 
   /// EdgeBundles analysis - Bundle machine CFG edges.
-  extern char &EdgeBundlesID;
+  extern char &EdgeBundlesWrapperLegacyID;
 
   /// LiveVariables pass - This pass computes the set of blocks in which each
   /// variable is life and sets machine operand kill flags.

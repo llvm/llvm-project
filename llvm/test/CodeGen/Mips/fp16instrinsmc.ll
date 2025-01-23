@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -relocation-model=pic < %s | FileCheck %s -check-prefix=pic
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -relocation-model=static -mips32-function-mask=1010111 -mips-os16 < %s | FileCheck %s -check-prefix=fmask
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -relocation-model=pic < %s | FileCheck %s -check-prefix=pic
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -relocation-model=static -mips32-function-mask=1010111 -mips-os16 < %s | FileCheck %s -check-prefix=fmask
 
 @x = global float 1.500000e+00, align 4
 @xn = global float -1.900000e+01, align 4

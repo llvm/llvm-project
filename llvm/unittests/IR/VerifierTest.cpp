@@ -12,6 +12,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -75,7 +76,7 @@ TEST(VerifierTest, Freeze) {
   FI_dbl->eraseFromParent();
 
   // Valid type : freeze(i32*)
-  PointerType *PT = PointerType::get(ITy, 0);
+  PointerType *PT = PointerType::get(C, 0);
   ConstantPointerNull *CPN = ConstantPointerNull::get(PT);
   FreezeInst *FI_ptr = new FreezeInst(CPN);
   FI_ptr->insertBefore(RI);
@@ -412,6 +413,27 @@ TEST(VerifierTest, GetElementPtrInst) {
   EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
   EXPECT_TRUE(
       StringRef(Error).starts_with("GEP address space doesn't match type"))
+      << Error;
+}
+
+TEST(VerifierTest, DetectTaggedGlobalInSection) {
+  LLVMContext C;
+  Module M("M", C);
+  GlobalVariable *GV = new GlobalVariable(
+      Type::getInt64Ty(C), false, GlobalValue::InternalLinkage,
+      ConstantInt::get(Type::getInt64Ty(C), 1));
+  GV->setDSOLocal(true);
+  GlobalValue::SanitizerMetadata MD{};
+  MD.Memtag = true;
+  GV->setSanitizerMetadata(MD);
+  GV->setSection("foo");
+  M.insertGlobalVariable(GV);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyModule(M, &ErrorOS));
+  EXPECT_TRUE(
+      StringRef(Error).starts_with("tagged GlobalValue must not be in section"))
       << Error;
 }
 

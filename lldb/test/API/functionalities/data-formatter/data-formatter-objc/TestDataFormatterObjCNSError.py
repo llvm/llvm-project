@@ -23,10 +23,12 @@ class ObjCDataFormatterNSError(ObjCDataFormatterTestCase):
         self.appkit_tester_impl(self.nserror_data_formatter_commands, False)
 
     def nserror_data_formatter_commands(self):
-        self.expect("frame variable nserror", substrs=['domain: @"Foobar" - code: 12'])
+        self.expect(
+            "frame variable nserror", substrs=['domain: @"Foobar" - code: -1234']
+        )
 
         self.expect(
-            "frame variable nserrorptr", substrs=['domain: @"Foobar" - code: 12']
+            "frame variable nserrorptr", substrs=['domain: @"Foobar" - code: -1234']
         )
 
         self.expect("frame variable nserror->_userInfo", substrs=["2 key/value pairs"])

@@ -102,22 +102,26 @@ template <typename A> bool IsAssumedRank(const A *x) {
   return x && IsAssumedRank(*x);
 }
 
+// Finds the corank of an entity, possibly packaged in various ways.
+// Unlike rank, only data references have corank > 0.
+int GetCorank(const ActualArgument &);
+static inline int GetCorank(const Symbol &symbol) { return symbol.Corank(); }
+template <typename A> int GetCorank(const A &) { return 0; }
+template <typename T> int GetCorank(const Designator<T> &designator) {
+  return designator.Corank();
+}
+template <typename T> int GetCorank(const Expr<T> &expr) {
+  return common::visit([](const auto &x) { return GetCorank(x); }, expr.u);
+}
+template <typename A> int GetCorank(const std::optional<A> &x) {
+  return x ? GetCorank(*x) : 0;
+}
+template <typename A> int GetCorank(const A *x) {
+  return x ? GetCorank(*x) : 0;
+}
+
 // Predicate: true when an expression is a coarray (corank > 0)
-bool IsCoarray(const ActualArgument &);
-bool IsCoarray(const Symbol &);
-template <typename A> bool IsCoarray(const A &) { return false; }
-template <typename A> bool IsCoarray(const Designator<A> &designator) {
-  if (const auto *symbol{std::get_if<SymbolRef>(&designator.u)}) {
-    return IsCoarray(**symbol);
-  }
-  return false;
-}
-template <typename T> bool IsCoarray(const Expr<T> &expr) {
-  return common::visit([](const auto &x) { return IsCoarray(x); }, expr.u);
-}
-template <typename A> bool IsCoarray(const std::optional<A> &x) {
-  return x && IsCoarray(*x);
-}
+template <typename A> bool IsCoarray(const A &x) { return GetCorank(x) > 0; }
 
 // Generalizing packagers: these take operations and expressions of more
 // specific types and wrap them in Expr<> containers of more abstract types.
@@ -582,7 +586,8 @@ Expr<TO> ConvertToType(Expr<Type<FROMCAT, FROMKIND>> &&x) {
 
 template <typename TO> Expr<TO> ConvertToType(BOZLiteralConstant &&x) {
   static_assert(IsSpecificIntrinsicType<TO>);
-  if constexpr (TO::category == TypeCategory::Integer) {
+  if constexpr (TO::category == TypeCategory::Integer ||
+      TO::category == TypeCategory::Unsigned) {
     return Expr<TO>{
         Constant<TO>{Scalar<TO>::ConvertUnsigned(std::move(x)).value}};
   } else {
@@ -754,11 +759,11 @@ Expr<SomeKind<CAT>> PromoteAndCombine(
 // one of the operands to the type of the other.  Handles special cases with
 // typeless literal operands and with REAL/COMPLEX exponentiation to INTEGER
 // powers.
-template <template <typename> class OPR>
+template <template <typename> class OPR, bool CAN_BE_UNSIGNED = true>
 std::optional<Expr<SomeType>> NumericOperation(parser::ContextualMessages &,
     Expr<SomeType> &&, Expr<SomeType> &&, int defaultRealKind);
 
-extern template std::optional<Expr<SomeType>> NumericOperation<Power>(
+extern template std::optional<Expr<SomeType>> NumericOperation<Power, false>(
     parser::ContextualMessages &, Expr<SomeType> &&, Expr<SomeType> &&,
     int defaultRealKind);
 extern template std::optional<Expr<SomeType>> NumericOperation<Multiply>(
@@ -909,6 +914,9 @@ common::IfNoLvalue<std::optional<Expr<SomeType>>, WRAPPED> TypedWrapper(
     SWITCH_COVERS_ALL_CASES
   case TypeCategory::Integer:
     return WrapperHelper<TypeCategory::Integer, WRAPPER, WRAPPED>(
+        dyType.kind(), std::move(x));
+  case TypeCategory::Unsigned:
+    return WrapperHelper<TypeCategory::Unsigned, WRAPPER, WRAPPED>(
         dyType.kind(), std::move(x));
   case TypeCategory::Real:
     return WrapperHelper<TypeCategory::Real, WRAPPER, WRAPPED>(
@@ -1102,6 +1110,9 @@ extern template semantics::UnorderedSymbolSet CollectCudaSymbols(
 // Predicate: does a variable contain a vector-valued subscript (not a triplet)?
 bool HasVectorSubscript(const Expr<SomeType> &);
 
+// Predicate: does an expression contain constant?
+bool HasConstant(const Expr<SomeType> &);
+
 // Utilities for attaching the location of the declaration of a symbol
 // of interest to a message.  Handles the case of USE association gracefully.
 parser::Message *AttachDeclaration(parser::Message &, const Symbol &);
@@ -1143,7 +1154,7 @@ bool IsExpandableScalar(const Expr<T> &expr, FoldingContext &context,
     const Shape &shape, bool admitPureCall = false) {
   if (UnexpandabilityFindingVisitor{admitPureCall}(expr)) {
     auto extents{AsConstantExtents(context, shape)};
-    return extents && GetSize(*extents) == 1;
+    return extents && !HasNegativeExtent(*extents) && GetSize(*extents) == 1;
   } else {
     return true;
   }
@@ -1319,7 +1330,8 @@ inline bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
       ++hostSymbols;
     }
   }
-  return hostSymbols > 0 && deviceSymbols > 0;
+  bool hasConstant{HasConstant(expr)};
+  return (hasConstant || (hostSymbols > 0)) && deviceSymbols > 0;
 }
 
 } // namespace Fortran::evaluate
@@ -1415,6 +1427,8 @@ bool AreTkCompatibleTypes(const DeclTypeSpec *x, const DeclTypeSpec *y);
 common::IgnoreTKRSet GetIgnoreTKR(const Symbol &);
 
 std::optional<int> GetDummyArgumentNumber(const Symbol *);
+
+const Symbol *FindAncestorModuleProcedure(const Symbol *symInSubmodule);
 
 } // namespace Fortran::semantics
 

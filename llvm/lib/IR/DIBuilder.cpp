@@ -139,7 +139,7 @@ DICompileUnit *DIBuilder::createCompileUnit(
     DICompileUnit::DebugNameTableKind NameTableKind, bool RangesBaseAddress,
     StringRef SysRoot, StringRef SDK) {
 
-  assert(((Lang <= dwarf::DW_LANG_Mojo && Lang >= dwarf::DW_LANG_C89) ||
+  assert(((Lang <= dwarf::DW_LANG_Metal && Lang >= dwarf::DW_LANG_C89) ||
           (Lang <= dwarf::DW_LANG_hi_user && Lang >= dwarf::DW_LANG_lo_user)) &&
          "Invalid Language tag");
 
@@ -644,11 +644,15 @@ DIType *DIBuilder::createArtificialType(DIType *Ty) {
   return createTypeWithFlags(Ty, DINode::FlagArtificial);
 }
 
-DIType *DIBuilder::createObjectPointerType(DIType *Ty) {
+DIType *DIBuilder::createObjectPointerType(DIType *Ty, bool Implicit) {
   // FIXME: Restrict this to the nodes where it's valid.
   if (Ty->isObjectPointer())
     return Ty;
-  DINode::DIFlags Flags = DINode::FlagObjectPointer | DINode::FlagArtificial;
+  DINode::DIFlags Flags = DINode::FlagObjectPointer;
+
+  if (Implicit)
+    Flags |= DINode::FlagArtificial;
+
   return createTypeWithFlags(Ty, Flags);
 }
 

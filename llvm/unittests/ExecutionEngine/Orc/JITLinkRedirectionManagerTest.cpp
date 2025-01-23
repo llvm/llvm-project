@@ -81,8 +81,8 @@ TEST_F(JITLinkRedirectionManagerTest, BasicRedirectionOperation) {
                         JD->getDefaultResourceTracker(),
                         {{RedirectableSymbol, MakeTarget(initialTarget)}}),
                     Succeeded());
-  auto RTDef = cantFail(ES->lookup({JD}, RedirectableSymbol));
 
+  auto RTDef = cantFail(ES->lookup({JD}, RedirectableSymbol));
   auto RTPtr = RTDef.getAddress().toPtr<int (*)()>();
   auto Result = RTPtr();
   EXPECT_EQ(Result, 42) << "Failed to call initial target";

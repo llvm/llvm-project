@@ -42,6 +42,7 @@ class DILabel;
 class Instruction;
 class MDNode;
 class AAResults;
+class BatchAAResults;
 template <typename T> class ArrayRef;
 class DIExpression;
 class DILocalVariable;
@@ -556,13 +557,18 @@ public:
   /// will be dropped.
   void dropDebugNumber() { DebugInstrNum = 0; }
 
-  /// Emit an error referring to the source location of this instruction.
-  /// This should only be used for inline assembly that is somehow
-  /// impossible to compile. Other errors should have been handled much
-  /// earlier.
-  ///
-  /// If this method returns, the caller should try to recover from the error.
-  void emitError(StringRef Msg) const;
+  /// For inline asm, get the !srcloc metadata node if we have it, and decode
+  /// the loc cookie from it.
+  const MDNode *getLocCookieMD() const;
+
+  /// Emit an error referring to the source location of this instruction. This
+  /// should only be used for inline assembly that is somehow impossible to
+  /// compile. Other errors should have been handled much earlier.
+  void emitInlineAsmError(const Twine &ErrMsg) const;
+
+  // Emit an error in the LLVMContext referring to the source location of this
+  // instruction, if available.
+  void emitGenericError(const Twine &ErrMsg) const;
 
   /// Returns the target instruction descriptor of this MachineInstr.
   const MCInstrDesc &getDesc() const { return *MCID; }
@@ -953,13 +959,14 @@ public:
     return hasProperty(MCID::Call, Type);
   }
 
-  /// Return true if this is a call instruction that may have an associated
-  /// call site entry in the debug info.
-  bool isCandidateForCallSiteEntry(QueryType Type = IgnoreBundle) const;
+  /// Return true if this is a call instruction that may have an additional
+  /// information associated with it.
+  bool isCandidateForAdditionalCallInfo(QueryType Type = IgnoreBundle) const;
+
   /// Return true if copying, moving, or erasing this instruction requires
-  /// updating Call Site Info (see \ref copyCallSiteInfo, \ref moveCallSiteInfo,
-  /// \ref eraseCallSiteInfo).
-  bool shouldUpdateCallSiteInfo() const;
+  /// updating additional call info (see \ref copyCallInfo, \ref moveCallInfo,
+  /// \ref eraseCallInfo).
+  bool shouldUpdateAdditionalCallInfo() const;
 
   /// Returns true if the specified instruction stops control flow
   /// from executing the instruction immediately following it.  Examples include
@@ -1760,6 +1767,8 @@ public:
   /// @param AA Optional alias analysis, used to compare memory operands.
   /// @param Other MachineInstr to check aliasing against.
   /// @param UseTBAA Whether to pass TBAA information to alias analysis.
+  bool mayAlias(BatchAAResults *AA, const MachineInstr &Other,
+                bool UseTBAA) const;
   bool mayAlias(AAResults *AA, const MachineInstr &Other, bool UseTBAA) const;
 
   /// Return true if this instruction may have an ordered

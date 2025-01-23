@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FILESYSTEM_PATH_H
-#define _LIBCPP___FILESYSTEM_PATH_H
+#ifndef _LIBCPP___CXX03___FILESYSTEM_PATH_H
+#define _LIBCPP___CXX03___FILESYSTEM_PATH_H
 
 #include <__cxx03/__algorithm/replace.h>
 #include <__cxx03/__algorithm/replace_copy.h>
@@ -928,4 +928,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___FILESYSTEM_PATH_H
+#endif // _LIBCPP___CXX03___FILESYSTEM_PATH_H

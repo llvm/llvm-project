@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_LATCH
-#define _LIBCPP_LATCH
+#ifndef _LIBCPP___CXX03_LATCH
+#define _LIBCPP___CXX03_LATCH
 
 /*
     latch synopsis
@@ -126,4 +126,4 @@ _LIBCPP_POP_MACROS
 #  include <__cxx03/atomic>
 #endif
 
-#endif //_LIBCPP_LATCH
+#endif //_LIBCPP___CXX03_LATCH

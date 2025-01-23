@@ -1,4 +1,4 @@
-; RUN: llc -O3 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O3 -mtriple=hexagon < %s | FileCheck %s
 
 ; We do not want the opt-addr-mode pass to modify the addi instructions whose
 ; base register has a predicated register definition

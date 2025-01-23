@@ -1,0 +1,174 @@
+; REQUIRES: x86_64-linux
+
+; Make sure that we can undrift the MemProf profile and annotate the IR
+; accordingly.
+;
+; The IR was generated from:
+;
+; char *foo() { return ::new char[4]; }
+; char *leaf() { return ::new char[4]; }
+; char *middle() { return leaf(); }
+; char *aaa() { return middle(); }
+; char *bbb() { return middle(); }
+;
+; int main() {
+;   foo();
+;
+;   char *a = aaa();
+;   char *b = bbb();
+;   a[0] = 'a';
+;   b[0] = 'b';
+;   delete[] a;
+;   sleep(10);
+;   delete[] b;
+;
+;   return 0;
+; }
+
+; RUN: split-file %s %t
+; RUN: llvm-profdata merge %t/memprof_undrift.yaml -o %t/memprof_undrift.memprofdata
+; RUN: opt < %t/memprof_undrift.ll -passes='memprof-use<profile-filename=%t/memprof_undrift.memprofdata>' -memprof-salvage-stale-profile -memprof-ave-lifetime-cold-threshold=5 -S 2>&1 | FileCheck %s
+
+;--- memprof_undrift.yaml
+---
+HeapProfileRecords:
+  - GUID:            _Z3aaav
+    AllocSites:      []
+    CallSites:
+      - - { Function: _Z3aaav, LineOffset: 5, Column: 33, IsInlineFrame: false }
+  - GUID:            _Z6middlev
+    AllocSites:      []
+    CallSites:
+      - - { Function: _Z6middlev, LineOffset: 5, Column: 33, IsInlineFrame: false }
+  - GUID:            _Z3foov
+    AllocSites:
+      - Callstack:
+          - { Function: _Z3foov, LineOffset: 5, Column: 33, IsInlineFrame: false }
+          - { Function: main, LineOffset: 5, Column: 33, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       4
+          TotalLifetime:   10000
+          TotalLifetimeAccessDensity: 0
+    CallSites:       []
+  - GUID:            _Z4leafv
+    AllocSites:
+      - Callstack:
+          - { Function: _Z4leafv, LineOffset: 5, Column: 33, IsInlineFrame: false }
+          - { Function: _Z6middlev, LineOffset: 5, Column: 33, IsInlineFrame: false }
+          - { Function: _Z3aaav, LineOffset: 5, Column: 33, IsInlineFrame: false }
+          - { Function: main, LineOffset: 5, Column: 33, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       4
+          TotalLifetime:   0
+          TotalLifetimeAccessDensity: 25000
+      - Callstack:
+          - { Function: _Z4leafv, LineOffset: 5, Column: 33, IsInlineFrame: false }
+          - { Function: _Z6middlev, LineOffset: 5, Column: 33, IsInlineFrame: false }
+          - { Function: _Z3bbbv, LineOffset: 5, Column: 33, IsInlineFrame: false }
+          - { Function: main, LineOffset: 5, Column: 33, IsInlineFrame: false }
+        MemInfoBlock:
+          AllocCount:      1
+          TotalSize:       4
+          TotalLifetime:   10000
+          TotalLifetimeAccessDensity: 2
+    CallSites:       []
+  - GUID:            _Z3bbbv
+    AllocSites:      []
+    CallSites:
+      - - { Function: _Z3bbbv, LineOffset: 5, Column: 33, IsInlineFrame: false }
+...
+;--- memprof_undrift.ll
+define dso_local ptr @_Z3foov() !dbg !5 {
+; CHECK-LABEL: @_Z3foov()
+entry:
+  %call = call ptr @_Znam(i64 4) #1, !dbg !8
+; CHECK: call ptr @_Znam(i64 4) #[[ATTR:[0-9]+]]
+  ret ptr %call, !dbg !9
+}
+
+; Function Attrs: nobuiltin allocsize(0)
+declare ptr @_Znam(i64 noundef) #0
+
+define dso_local ptr @_Z4leafv() !dbg !10 {
+; CHECK-LABEL: @_Z4leafv()
+entry:
+  %call = call ptr @_Znam(i64 4) #1, !dbg !11
+; CHECK: call ptr @_Znam(i64 4) {{.*}}, !memprof ![[M1:[0-9]+]], !callsite ![[C1:[0-9]+]]
+  ret ptr %call, !dbg !12
+}
+
+define dso_local ptr @_Z6middlev() !dbg !13 {
+; CHECK-LABEL: @_Z6middlev()
+entry:
+  %call.i = call ptr @_Znam(i64 4) #1, !dbg !14
+; CHECK: call ptr @_Znam(i64 4) {{.*}}, !callsite ![[C2:[0-9]+]]
+  ret ptr %call.i, !dbg !16
+}
+
+define dso_local ptr @_Z3aaav() !dbg !17 {
+; CHECK-LABEL: @_Z3aaav()
+entry:
+  %call.i.i = call ptr @_Znam(i64 4) #1, !dbg !18
+; CHECK: call ptr @_Znam(i64 4) {{.*}}, !callsite ![[C3:[0-9]+]]
+  ret ptr %call.i.i, !dbg !21
+}
+
+define dso_local ptr @_Z3bbbv() !dbg !22 {
+; CHECK-LABEL: @_Z3bbbv()
+entry:
+  %call.i.i = call ptr @_Znam(i64 4) #1, !dbg !23
+; CHECK: call ptr @_Znam(i64 4) {{.*}}, !callsite ![[C4:[0-9]+]]
+  ret ptr %call.i.i, !dbg !26
+}
+
+attributes #0 = { nobuiltin allocsize(0) }
+attributes #1 = { builtin allocsize(0) }
+
+!llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!2, !3}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1)
+!1 = !DIFile(filename: "undrift.cc", directory: "/")
+!2 = !{i32 7, !"Dwarf Version", i32 5}
+!3 = !{i32 2, !"Debug Info Version", i32 3}
+!4 = !{}
+!5 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov", scope: !1, file: !1, line: 56, type: !6, unit: !0)
+!6 = !DISubroutineType(types: !7)
+!7 = !{}
+!8 = !DILocation(line: 56, column: 22, scope: !5)
+!9 = !DILocation(line: 56, column: 15, scope: !5)
+!10 = distinct !DISubprogram(name: "leaf", linkageName: "_Z4leafv", scope: !1, file: !1, line: 58, type: !6, unit: !0)
+!11 = !DILocation(line: 58, column: 23, scope: !10)
+!12 = !DILocation(line: 58, column: 16, scope: !10)
+!13 = distinct !DISubprogram(name: "middle", linkageName: "_Z6middlev", scope: !1, file: !1, line: 59, type: !6, unit: !0)
+!14 = !DILocation(line: 58, column: 23, scope: !10, inlinedAt: !15)
+!15 = distinct !DILocation(line: 59, column: 25, scope: !13)
+!16 = !DILocation(line: 59, column: 18, scope: !13)
+!17 = distinct !DISubprogram(name: "aaa", linkageName: "_Z3aaav", scope: !1, file: !1, line: 61, type: !6, unit: !0)
+!18 = !DILocation(line: 58, column: 23, scope: !10, inlinedAt: !19)
+!19 = distinct !DILocation(line: 59, column: 25, scope: !13, inlinedAt: !20)
+!20 = distinct !DILocation(line: 61, column: 22, scope: !17)
+!21 = !DILocation(line: 61, column: 15, scope: !17)
+!22 = distinct !DISubprogram(name: "bbb", linkageName: "_Z3bbbv", scope: !1, file: !1, line: 62, type: !6, unit: !0)
+!23 = !DILocation(line: 58, column: 23, scope: !10, inlinedAt: !24)
+!24 = distinct !DILocation(line: 59, column: 25, scope: !13, inlinedAt: !25)
+!25 = distinct !DILocation(line: 62, column: 22, scope: !22)
+!26 = !DILocation(line: 62, column: 15, scope: !22)
+
+; CHECK: attributes #[[ATTR]] = { builtin allocsize(0) "memprof"="cold" }
+
+; CHECK: ![[M1]] = !{![[M1L:[0-9]+]], ![[M1R:[0-9]+]]}
+; CHECK: ![[M1L]] = !{![[M1LL:[0-9]+]], !"cold"}
+; CHECK: ![[M1LL]] = !{i64 -7165227774426488445, i64 6179674587295384169, i64 7749555980993309703}
+; CHECK: ![[M1R]] = !{![[M1RL:[0-9]+]], !"notcold"}
+; CHECK: ![[M1RL]] = !{i64 -7165227774426488445, i64 6179674587295384169, i64 -4748707735015301746}
+
+; CHECK: ![[C1]] = !{i64 -7165227774426488445}
+
+; CHECK: ![[C2]] = !{i64 6179674587295384169}
+
+; CHECK: ![[C3]] = !{i64 -4748707735015301746}
+
+; CHECK: ![[C4]] = !{i64 7749555980993309703}

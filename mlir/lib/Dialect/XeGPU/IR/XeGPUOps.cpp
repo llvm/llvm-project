@@ -73,6 +73,39 @@ static bool isWriteHintOrNone(const CachePolicyAttr &attr) {
          kind == CachePolicy::WRITE_BACK || kind == CachePolicy::WRITE_THROUGH;
 }
 
+// Validations for nd instruction arguments is successful if any of these are
+// true:
+// - tensor descriptor and the output vector shapes exactly match.
+// - tensor descriptor has a sg_map attribute and the distributed vector shape
+//   matches the tensor descriptor shape when scaled using sg_map factors on
+//   each dimension.
+static bool isArgShapesValid(ArrayRef<int64_t> descShape,
+                             ArrayRef<int64_t> valShape, SGMapAttr sgMap) {
+  if (descShape == valShape) {
+    if (!sgMap)
+      return true;
+
+    // this can be relaxed if necessary by supporting non-2d shapes distribution
+    // until the constraints are defined this lives here instead of the tensor
+    // descriptor type.
+    return valShape.size() == sgMap.getWiLayout().size();
+  }
+
+  if (!sgMap)
+    return false;
+
+  if (valShape.size() != descShape.size())
+    return false;
+
+  for (const auto &[factor, dim, expected] :
+       llvm::zip_equal(sgMap.getWiLayout(), valShape, descShape)) {
+    if (factor * dim != expected)
+      return false;
+  }
+
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // XeGPU_CreateNdDescOp
 //===----------------------------------------------------------------------===//
@@ -91,6 +124,33 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
         ValueRange({}) /* empty dynamic strides */,
         staticOffsets /* const offsets */, {} /* empty const shape*/,
         {} /* empty const strides*/);
+}
+
+void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
+                           Type tdesc, TypedValue<MemRefType> source,
+                           llvm::ArrayRef<OpFoldResult> offsets,
+                           llvm::ArrayRef<OpFoldResult> shape,
+                           llvm::ArrayRef<OpFoldResult> strides) {
+  assert(shape.size() && offsets.size() && strides.size() &&
+         shape.size() == strides.size() && shape.size() == offsets.size());
+
+  llvm::SmallVector<int64_t> staticOffsets;
+  llvm::SmallVector<int64_t> staticShape;
+  llvm::SmallVector<int64_t> staticStrides;
+  llvm::SmallVector<Value> dynamicOffsets;
+  llvm::SmallVector<Value> dynamicShape;
+  llvm::SmallVector<Value> dynamicStrides;
+
+  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
+  dispatchIndexOpFoldResults(shape, dynamicShape, staticShape);
+  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
+
+  auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
+  auto staticShapeAttr = builder.getDenseI64ArrayAttr(staticShape);
+  auto staticStridesAttr = builder.getDenseI64ArrayAttr(staticStrides);
+
+  build(builder, state, tdesc, source, dynamicOffsets, dynamicShape,
+        dynamicStrides, staticOffsetsAttr, staticShapeAttr, staticStridesAttr);
 }
 
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
@@ -183,13 +243,13 @@ LogicalResult PrefetchNdOp::verify() {
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
   if (!isReadHintOrNone(getL1HintAttr()))
-    return emitOpError("invlid l1_hint: ") << getL1HintAttr();
+    return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
   if (!isReadHintOrNone(getL2HintAttr()))
-    return emitOpError("invlid l2_hint: ") << getL2HintAttr();
+    return emitOpError("invalid l2_hint: ") << getL2HintAttr();
 
   if (!isReadHintOrNone(getL3HintAttr()))
-    return emitOpError("invlid l3_hint: ") << getL3HintAttr();
+    return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   return success();
 }
@@ -211,13 +271,13 @@ LogicalResult LoadNdOp::verify() {
     return emitOpError("Invalid result, it should be a VectorType.\n");
 
   if (!isReadHintOrNone(getL1HintAttr()))
-    return emitOpError("invlid l1_hint: ") << getL1HintAttr();
+    return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
   if (!isReadHintOrNone(getL2HintAttr()))
-    return emitOpError("invlid l2_hint: ") << getL2HintAttr();
+    return emitOpError("invalid l2_hint: ") << getL2HintAttr();
 
   if (!isReadHintOrNone(getL3HintAttr()))
-    return emitOpError("invlid l3_hint: ") << getL3HintAttr();
+    return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   auto array_len = tdescTy.getArrayLength();
   auto tdescShape = getShapeOf(tdescTy);
@@ -253,8 +313,9 @@ LogicalResult LoadNdOp::verify() {
     auto it = tdescShape.begin();
     tdescShape.insert(it, array_len);
   }
+  auto sgMap = tdescTy.getSGMapAttr();
 
-  if (tdescShape != valueShape)
+  if (!isArgShapesValid(tdescShape, valueShape, sgMap))
     return emitOpError() << "Result shape doesn't match TensorDesc shape."
                          << "The expected shape is " << makeString(tdescShape)
                          << ". But the given shape is "
@@ -276,17 +337,26 @@ LogicalResult StoreNdOp::verify() {
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
   if (!valTy)
-    return emitOpError("Exepcting a VectorType result.\n");
+    return emitOpError("Expecting a VectorType result.\n");
 
   if (!isWriteHintOrNone(getL1HintAttr()))
-    return emitOpError("invlid l1_hint: ") << getL1HintAttr();
+    return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
   if (!isWriteHintOrNone(getL2HintAttr()))
-    return emitOpError("invlid l2_hint: ") << getL2HintAttr();
+    return emitOpError("invalid l2_hint: ") << getL2HintAttr();
 
   if (!isWriteHintOrNone(getL3HintAttr()))
-    return emitOpError("invlid l3_hint: ") << getL3HintAttr();
+    return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
+  auto tdescShape = getShapeOf(dstTy);
+  auto valueShape = getShapeOf(valTy);
+  auto sgMap = dstTy.getSGMapAttr();
+
+  if (!isArgShapesValid(tdescShape, valueShape, sgMap))
+    return emitOpError() << "Result shape doesn't match TensorDesc shape."
+                         << "The expected shape is " << makeString(tdescShape)
+                         << ". But the given shape is "
+                         << makeString(valueShape) << ".\n";
   return success();
 }
 
@@ -396,13 +466,13 @@ LogicalResult PrefetchOp::verify() {
     return emitOpError("Expects a scattered TensorDesc.\n");
 
   if (!isReadHintOrNone(getL1HintAttr()))
-    return emitOpError("invlid l1_hint: ") << getL1HintAttr();
+    return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
   if (!isReadHintOrNone(getL2HintAttr()))
-    return emitOpError("invlid l2_hint: ") << getL2HintAttr();
+    return emitOpError("invalid l2_hint: ") << getL2HintAttr();
 
   if (!isReadHintOrNone(getL3HintAttr()))
-    return emitOpError("invlid l3_hint: ") << getL3HintAttr();
+    return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   return success();
 }
@@ -419,13 +489,13 @@ LogicalResult LoadGatherOp::verify() {
     return emitOpError("Expects a scattered TensorDesc.\n");
 
   if (!isReadHintOrNone(getL1HintAttr()))
-    return emitOpError("invlid l1_hint: ") << getL1HintAttr();
+    return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
   if (!isReadHintOrNone(getL2HintAttr()))
-    return emitOpError("invlid l2_hint: ") << getL2HintAttr();
+    return emitOpError("invalid l2_hint: ") << getL2HintAttr();
 
   if (!isReadHintOrNone(getL3HintAttr()))
-    return emitOpError("invlid l3_hint: ") << getL3HintAttr();
+    return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   auto tdescElemTy = tdescTy.getElementType();
   auto valueElemTy = getElementType();
@@ -463,13 +533,13 @@ LogicalResult StoreScatterOp::verify() {
     return emitOpError("Expects a scattered TensorDesc.\n");
 
   if (!isWriteHintOrNone(getL1HintAttr()))
-    return emitOpError("invlid l1_hint: ") << getL1HintAttr();
+    return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
   if (!isWriteHintOrNone(getL2HintAttr()))
-    return emitOpError("invlid l2_hint: ") << getL2HintAttr();
+    return emitOpError("invalid l2_hint: ") << getL2HintAttr();
 
   if (!isWriteHintOrNone(getL3HintAttr()))
-    return emitOpError("invlid l3_hint: ") << getL3HintAttr();
+    return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   auto maskTy = getMaskType();
   auto valueTy = getValueType();

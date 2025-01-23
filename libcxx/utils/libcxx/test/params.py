@@ -448,5 +448,12 @@ DEFAULT_PARAMETERS = [
             AddSubstitution('%{clang-tidy}', exe),
         ]
     ),
+    Parameter(
+        name='test_frozen_cxx03_headers',
+        type=bool,
+        default=False,
+        help="Whether to test the main or C++03-specific headers. Only changes behaviour when std=c++03.",
+        actions=lambda enabled: [] if not enabled else [AddFlag("-D_LIBCPP_USE_FROZEN_CXX03_HEADERS"), AddFeature("FROZEN-CXX03-HEADERS-FIXME")],
+    ),
 ]
 # fmt: on

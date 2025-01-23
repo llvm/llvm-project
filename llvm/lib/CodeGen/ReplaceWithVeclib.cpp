@@ -110,7 +110,8 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
 
   // OloadTys collects types used in scalar intrinsic overload name.
   SmallVector<Type *, 3> OloadTys;
-  if (!RetTy->isVoidTy() && isVectorIntrinsicWithOverloadTypeAtArg(IID, -1))
+  if (!RetTy->isVoidTy() &&
+      isVectorIntrinsicWithOverloadTypeAtArg(IID, -1, /*TTI=*/nullptr))
     OloadTys.push_back(ScalarRetTy);
 
   // Compute the argument types of the corresponding scalar call and check that
@@ -118,8 +119,9 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   SmallVector<Type *, 8> ScalarArgTypes;
   for (auto Arg : enumerate(II->args())) {
     auto *ArgTy = Arg.value()->getType();
-    bool IsOloadTy = isVectorIntrinsicWithOverloadTypeAtArg(IID, Arg.index());
-    if (isVectorIntrinsicWithScalarOpAtArg(IID, Arg.index())) {
+    bool IsOloadTy = isVectorIntrinsicWithOverloadTypeAtArg(IID, Arg.index(),
+                                                            /*TTI=*/nullptr);
+    if (isVectorIntrinsicWithScalarOpAtArg(IID, Arg.index(), /*TTI=*/nullptr)) {
       ScalarArgTypes.push_back(ArgTy);
       if (IsOloadTy)
         OloadTys.push_back(ArgTy);

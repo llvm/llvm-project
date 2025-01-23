@@ -36,8 +36,7 @@ FriendDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L,
                    SourceLocation EllipsisLoc,
                    ArrayRef<TemplateParameterList *> FriendTypeTPLists) {
 #ifndef NDEBUG
-  if (Friend.is<NamedDecl *>()) {
-    const auto *D = Friend.get<NamedDecl*>();
+  if (const auto *D = dyn_cast<NamedDecl *>(Friend)) {
     assert(isa<FunctionDecl>(D) ||
            isa<CXXRecordDecl>(D) ||
            isa<FunctionTemplateDecl>(D) ||

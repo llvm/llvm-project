@@ -278,6 +278,7 @@ public:
   bool isUnaryOp() const { return isUnaryOp(getOpcode()); }
   bool isBinaryOp() const { return isBinaryOp(getOpcode()); }
   bool isIntDivRem() const { return isIntDivRem(getOpcode()); }
+  bool isFPDivRem() const { return isFPDivRem(getOpcode()); }
   bool isShift() const { return isShift(getOpcode()); }
   bool isCast() const { return isCast(getOpcode()); }
   bool isFuncletPad() const { return isFuncletPad(getOpcode()); }
@@ -302,6 +303,10 @@ public:
 
   static inline bool isIntDivRem(unsigned Opcode) {
     return Opcode == UDiv || Opcode == SDiv || Opcode == URem || Opcode == SRem;
+  }
+
+  static inline bool isFPDivRem(unsigned Opcode) {
+    return Opcode == FDiv || Opcode == FRem;
   }
 
   /// Determine if the Opcode is one of the shift instructions.
@@ -361,6 +366,10 @@ public:
 
   /// Return true if this instruction has any metadata attached to it.
   bool hasMetadata() const { return DbgLoc || Value::hasMetadata(); }
+
+  // Return true if this instruction contains loop metadata other than
+  // a debug location
+  bool hasNonDebugLocLoopMetadata() const;
 
   /// Return true if this instruction has metadata attached to it other than a
   /// debug location.

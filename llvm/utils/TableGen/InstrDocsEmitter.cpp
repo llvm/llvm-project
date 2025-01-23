@@ -159,7 +159,7 @@ static void EmitInstrDocs(const RecordKeeper &RK, raw_ostream &OS) {
     // Operands.
     for (unsigned i = 0; i < II->Operands.size(); ++i) {
       bool IsDef = i < II->Operands.NumDefs;
-      auto Op = II->Operands[i];
+      const auto &Op = II->Operands[i];
 
       if (Op.MINumOperands > 1) {
         // This operand corresponds to multiple operands on the

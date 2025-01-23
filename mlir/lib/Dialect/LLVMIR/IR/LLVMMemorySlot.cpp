@@ -1566,7 +1566,7 @@ DeletionKind LLVM::MemmoveOp::rewire(const DestructurableMemorySlot &slot,
 //===----------------------------------------------------------------------===//
 
 std::optional<DenseMap<Attribute, Type>>
-LLVM::LLVMStructType::getSubelementIndexMap() {
+LLVM::LLVMStructType::getSubelementIndexMap() const {
   Type i32 = IntegerType::get(getContext(), 32);
   DenseMap<Attribute, Type> destructured;
   for (const auto &[index, elemType] : llvm::enumerate(getBody()))
@@ -1574,7 +1574,7 @@ LLVM::LLVMStructType::getSubelementIndexMap() {
   return destructured;
 }
 
-Type LLVM::LLVMStructType::getTypeAtIndex(Attribute index) {
+Type LLVM::LLVMStructType::getTypeAtIndex(Attribute index) const {
   auto indexAttr = llvm::dyn_cast<IntegerAttr>(index);
   if (!indexAttr || !indexAttr.getType().isInteger(32))
     return {};

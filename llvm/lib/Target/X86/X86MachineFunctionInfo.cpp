@@ -15,9 +15,7 @@ using namespace llvm;
 
 yaml::X86MachineFunctionInfo::X86MachineFunctionInfo(
     const llvm::X86MachineFunctionInfo &MFI)
-    : AMXProgModel(MFI.getAMXProgModel()),
-      FPClobberedByCall(MFI.getFPClobberedByCall()),
-      HasPushSequences(MFI.getHasPushSequences()) {}
+    : AMXProgModel(MFI.getAMXProgModel()) {}
 
 void yaml::X86MachineFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
   MappingTraits<X86MachineFunctionInfo>::mapping(YamlIO, *this);
@@ -33,8 +31,6 @@ MachineFunctionInfo *X86MachineFunctionInfo::clone(
 void X86MachineFunctionInfo::initializeBaseYamlFields(
     const yaml::X86MachineFunctionInfo &YamlMFI) {
   AMXProgModel = YamlMFI.AMXProgModel;
-  FPClobberedByCall = YamlMFI.FPClobberedByCall;
-  HasPushSequences = YamlMFI.HasPushSequences;
 }
 
 void X86MachineFunctionInfo::anchor() { }

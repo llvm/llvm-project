@@ -733,5 +733,5 @@ define <4 x i16> @dup_i16_v4i16_constant() {
 ; CHECK-GI-NEXT:    adrp x8, .LCPI50_0
 ; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI50_0]
 ; CHECK-GI-NEXT:    ret
-    ret <4 x i16> <i16 9211, i16 9211, i16 9211, i16 9211>
+  ret <4 x i16> <i16 9211, i16 9211, i16 9211, i16 9211>
 }

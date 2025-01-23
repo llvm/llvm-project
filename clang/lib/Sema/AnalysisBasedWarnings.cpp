@@ -1843,6 +1843,14 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
                : getNotes();
   }
 
+  OptionalNotes makeManagedMismatchNoteForParam(SourceLocation DeclLoc) {
+    return DeclLoc.isValid()
+               ? getNotes(PartialDiagnosticAt(
+                     DeclLoc,
+                     S.PDiag(diag::note_managed_mismatch_here_for_param)))
+               : getNotes();
+  }
+
  public:
   ThreadSafetyReporter(Sema &S, SourceLocation FL, SourceLocation FEL)
     : S(S), FunLocation(FL), FunEndLocation(FEL),
@@ -1861,6 +1869,38 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
       for (const auto &Note : Diag.second)
         S.Diag(Note.first, Note.second);
     }
+  }
+
+  void handleUnmatchedUnderlyingMutexes(SourceLocation Loc, SourceLocation DLoc,
+                                        Name scopeName, StringRef Kind,
+                                        Name expected, Name actual) override {
+    PartialDiagnosticAt Warning(Loc,
+                                S.PDiag(diag::warn_unmatched_underlying_mutexes)
+                                    << Kind << scopeName << expected << actual);
+    Warnings.emplace_back(std::move(Warning),
+                          makeManagedMismatchNoteForParam(DLoc));
+  }
+
+  void handleExpectMoreUnderlyingMutexes(SourceLocation Loc,
+                                         SourceLocation DLoc, Name scopeName,
+                                         StringRef Kind,
+                                         Name expected) override {
+    PartialDiagnosticAt Warning(
+        Loc, S.PDiag(diag::warn_expect_more_underlying_mutexes)
+                 << Kind << scopeName << expected);
+    Warnings.emplace_back(std::move(Warning),
+                          makeManagedMismatchNoteForParam(DLoc));
+  }
+
+  void handleExpectFewerUnderlyingMutexes(SourceLocation Loc,
+                                          SourceLocation DLoc, Name scopeName,
+                                          StringRef Kind,
+                                          Name actual) override {
+    PartialDiagnosticAt Warning(
+        Loc, S.PDiag(diag::warn_expect_fewer_underlying_mutexes)
+                 << Kind << scopeName << actual);
+    Warnings.emplace_back(std::move(Warning),
+                          makeManagedMismatchNoteForParam(DLoc));
   }
 
   void handleInvalidLockExp(SourceLocation Loc) override {
@@ -2257,7 +2297,7 @@ public:
       } else if (isa<MemberExpr>(Operation)) {
         // note_unsafe_buffer_operation doesn't have this mode yet.
         assert(!IsRelatedToDecl && "Not implemented yet!");
-        auto ME = dyn_cast<MemberExpr>(Operation);
+        auto *ME = cast<MemberExpr>(Operation);
         D = ME->getMemberDecl();
         MsgParam = 5;
       } else if (const auto *ECE = dyn_cast<ExplicitCastExpr>(Operation)) {

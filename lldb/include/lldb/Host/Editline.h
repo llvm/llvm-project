@@ -152,7 +152,7 @@ using namespace line_editor;
 class Editline {
 public:
   Editline(const char *editor_name, FILE *input_file, FILE *output_file,
-           FILE *error_file, std::recursive_mutex &output_mutex);
+           FILE *error_file, bool color, std::recursive_mutex &output_mutex);
 
   ~Editline();
 
@@ -212,19 +212,23 @@ public:
   }
 
   void SetPromptAnsiPrefix(std::string prefix) {
-    m_prompt_ansi_prefix = std::move(prefix);
+    if (m_color)
+      m_prompt_ansi_prefix = std::move(prefix);
   }
 
   void SetPromptAnsiSuffix(std::string suffix) {
-    m_prompt_ansi_suffix = std::move(suffix);
+    if (m_color)
+      m_prompt_ansi_suffix = std::move(suffix);
   }
 
   void SetSuggestionAnsiPrefix(std::string prefix) {
-    m_suggestion_ansi_prefix = std::move(prefix);
+    if (m_color)
+      m_suggestion_ansi_prefix = std::move(prefix);
   }
 
   void SetSuggestionAnsiSuffix(std::string suffix) {
-    m_suggestion_ansi_suffix = std::move(suffix);
+    if (m_color)
+      m_suggestion_ansi_suffix = std::move(suffix);
   }
 
   /// Prompts for and reads a single line of user input.
@@ -237,6 +241,10 @@ public:
 
   /// Convert the current input lines into a UTF8 StringList
   StringList GetInputAsStringList(int line_count = UINT32_MAX);
+
+  size_t GetTerminalWidth() { return m_terminal_width; }
+
+  size_t GetTerminalHeight() { return m_terminal_height; }
 
 private:
   /// Sets the lowest line number for multi-line editing sessions.  A value of
@@ -371,6 +379,7 @@ private:
   std::vector<EditLineStringType> m_input_lines;
   EditorStatus m_editor_status;
   int m_terminal_width = 0;
+  int m_terminal_height = 0;
   int m_base_line_number = 0;
   unsigned m_current_line_index = 0;
   int m_current_line_rows = -1;
@@ -395,6 +404,7 @@ private:
   CompleteCallbackType m_completion_callback;
   SuggestionCallbackType m_suggestion_callback;
 
+  bool m_color;
   std::string m_prompt_ansi_prefix;
   std::string m_prompt_ansi_suffix;
   std::string m_suggestion_ansi_prefix;
