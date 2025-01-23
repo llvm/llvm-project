@@ -810,7 +810,7 @@ public:
     ///
     /// Once this function is called, no other functions on this object are
     /// valid; the loop has been removed.
-    virtual void disposed() = 0;
+    virtual void disposed(LiveIntervals *LIS = nullptr) {}
 
     /// Return true if the target can expand pipelined schedule with modulo
     /// variable expansion.

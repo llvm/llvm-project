@@ -103,6 +103,14 @@ define void @workgroup_id_z(ptr addrspace(1) inreg %out) {
   ret void
 }
 
+; CHECK-LABEL: for function 'global_sreg':
+; CHECK: DIVERGENT: i32 %divergent
+; CHECK-NOT: DIVERGENT
+define void @global_sreg(i32 %divergent) {
+  %a = call i32 @llvm.amdgcn.s.mov.from.global.i32(i16 95, i32 %divergent)
+  ret void
+}
+
 ; CHECK-LABEL: for function 's_getpc':
 ; CHECK: ALL VALUES UNIFORM
 define void @s_getpc(ptr addrspace(1) inreg %out) {
@@ -206,6 +214,7 @@ declare i32 @llvm.amdgcn.cluster.workgroup.max.id.x()
 declare i32 @llvm.amdgcn.cluster.workgroup.max.id.y()
 declare i32 @llvm.amdgcn.cluster.workgroup.max.id.z()
 declare i32 @llvm.amdgcn.cluster.workgroup.max.flat.id()
+declare i32 @llvm.amdgcn.s.mov.from.global.i32(i16, i32)
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind readnone convergent }

@@ -297,3 +297,15 @@ v_mad_nc_u64_u32 v[2:3], v4, v7, s[5:6]
 
 v_mul_u64 v[254:255], v[2:3], v[4:5]
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_max_i64 v[2:3], s[4:5], v[6:7]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_max_u64 v[2:3], s[4:5], v[6:7]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_min_i64 v[2:3], s[4:5], v[6:7]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_min_u64 v[2:3], s[4:5], v[6:7]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

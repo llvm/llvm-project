@@ -46,6 +46,10 @@ private:
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printFP64ImmOperand(const MCInst *MI, unsigned OpNo,
                            const MCSubtargetInfo &STI, raw_ostream &O);
+  void printGlobalSReg32(const MCInst *MI, unsigned OpNo,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
+  void printGlobalSReg64(const MCInst *MI, unsigned OpNo,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
   void printNamedBit(const MCInst *MI, unsigned OpNo, raw_ostream &O,
                      StringRef BitName);
   void printOffset(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,

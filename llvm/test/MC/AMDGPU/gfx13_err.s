@@ -58,3 +58,24 @@ s_getreg_b32 s0, hwreg(HW_REG_SHADER_CYCLES_LO)
 
 s_getreg_b32 s0, hwreg(HW_REG_SHADER_CYCLES_HI)
 // GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
+
+s_mov_from_global_b32 s1, m0
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected an SGPR or vcc/vcc_lo/vcc_hi
+
+s_mov_from_global_b32 s1, ttmp5
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected an SGPR or vcc/vcc_lo/vcc_hi
+
+s_mov_from_global_b64 s[2:3], null
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected an SGPR or vcc/vcc_lo/vcc_hi
+
+s_mov_to_global_b32 s[4:5], s10
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 32-bit register
+
+s_mov_to_global_b64 s5, s[10:11]
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected a 64-bit register
+
+s_mov_to_global_b64 s[5:6], s[10:11]
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register alignment
+
+s_mov_to_global_b64 exec, s[10:11]
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected an SGPR or vcc/vcc_lo/vcc_hi
