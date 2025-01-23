@@ -983,7 +983,8 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-NEXT:    v_cmp_gt_i32_e32 vcc, s4, v0
 ; GCN-NEXT:    s_mov_b32 s8, 0
 ; GCN-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v0
-; GCN-NEXT:    s_mov_b64 s[12:13], 0
+; GCN-NEXT:    s_mov_b64 s[14:15], 0
+; GCN-NEXT:    s_mov_b32 s13, 1.0
 ; GCN-NEXT:    s_mov_b64 s[6:7], 0
 ; GCN-NEXT:    s_branch .LBB5_3
 ; GCN-NEXT:  .LBB5_1: ; %Flow
@@ -991,11 +992,11 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-NEXT:    s_or_b64 exec, exec, s[10:11]
 ; GCN-NEXT:  .LBB5_2: ; %bb10
 ; GCN-NEXT:    ; in Loop: Header=BB5_3 Depth=1
-; GCN-NEXT:    s_or_b64 exec, exec, s[14:15]
+; GCN-NEXT:    s_or_b64 exec, exec, s[16:17]
 ; GCN-NEXT:    s_and_b64 s[6:7], exec, s[4:5]
-; GCN-NEXT:    s_or_b64 s[12:13], s[6:7], s[12:13]
+; GCN-NEXT:    s_or_b64 s[14:15], s[6:7], s[14:15]
 ; GCN-NEXT:    s_mov_b64 s[6:7], 0
-; GCN-NEXT:    s_andn2_b64 exec, exec, s[12:13]
+; GCN-NEXT:    s_andn2_b64 exec, exec, s[14:15]
 ; GCN-NEXT:    s_cbranch_execz .LBB5_7
 ; GCN-NEXT:  .LBB5_3: ; %bb1
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -1013,7 +1014,7 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-NEXT:    v_mov_b32_e32 v1, s9
 ; GCN-NEXT:    v_mov_b32_e32 v2, s10
 ; GCN-NEXT:    v_mov_b32_e32 v3, s11
-; GCN-NEXT:    s_and_saveexec_b64 s[14:15], s[4:5]
+; GCN-NEXT:    s_and_saveexec_b64 s[16:17], s[4:5]
 ; GCN-NEXT:    s_cbranch_execz .LBB5_2
 ; GCN-NEXT:  ; %bb.5: ; %bb4
 ; GCN-NEXT:    ; in Loop: Header=BB5_3 Depth=1
@@ -1028,14 +1029,13 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-NEXT:    s_cbranch_execz .LBB5_1
 ; GCN-NEXT:  ; %bb.6: ; %bb8
 ; GCN-NEXT:    ; in Loop: Header=BB5_3 Depth=1
-; GCN-NEXT:    s_mov_b32 s9, s8
-; GCN-NEXT:    v_mov_b32_e32 v0, s8
-; GCN-NEXT:    v_mov_b32_e32 v1, s9
-; GCN-NEXT:    v_mov_b32_e32 v2, s10
-; GCN-NEXT:    v_mov_b32_e32 v3, s11
+; GCN-NEXT:    v_mov_b32_e32 v0, s12
+; GCN-NEXT:    v_mov_b32_e32 v1, s13
+; GCN-NEXT:    v_mov_b32_e32 v2, s14
+; GCN-NEXT:    v_mov_b32_e32 v3, s15
 ; GCN-NEXT:    s_branch .LBB5_1
 ; GCN-NEXT:  .LBB5_7: ; %bb12
-; GCN-NEXT:    s_or_b64 exec, exec, s[12:13]
+; GCN-NEXT:    s_or_b64 exec, exec, s[14:15]
 ; GCN-NEXT:    buffer_store_dword v3, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen
@@ -1168,7 +1168,7 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-O0-NEXT:    s_cbranch_execz .LBB5_6
 ; GCN-O0-NEXT:  ; %bb.4: ; %bb8
 ; GCN-O0-NEXT:    ; in Loop: Header=BB5_1 Depth=1
-; GCN-O0-NEXT:    s_mov_b32 s10, 0
+; GCN-O0-NEXT:    s_mov_b32 s10, 1.0
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr4
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr5
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr9
@@ -1372,7 +1372,7 @@ bb4:                                              ; preds = %bb2
   br i1 %tmp7, label %bb8, label %Flow
 
 bb8:                                              ; preds = %bb4
-  %tmp9 = insertelement <4 x float> undef, float 0.0, i32 1
+  %tmp9 = insertelement <4 x float> undef, float 1.0, i32 1
   br label %Flow
 
 Flow:                                             ; preds = %bb8, %bb4
