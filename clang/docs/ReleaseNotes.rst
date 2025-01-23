@@ -239,6 +239,9 @@ C++ Specific Potentially Breaking Changes
     // Previously only accepted in C++23 and later, now also accepted in C++20.
     consteval void foo() { Opt<NonLiteral>{}; }
 
+- Clang now emits errors for coroutine `await_suspend` functions whose return type is not
+  one of `void`, `bool`, or `std::coroutine_handle`.
+
 ABI Changes in This Version
 ---------------------------
 
