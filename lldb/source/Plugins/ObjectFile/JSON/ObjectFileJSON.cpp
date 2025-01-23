@@ -183,7 +183,7 @@ void ObjectFileJSON::CreateSections(SectionList &unified_section_list) {
   for (const auto &section : m_sections) {
     auto section_sp = std::make_shared<Section>(
         GetModule(), this, id++, ConstString(section.name),
-        section.type.value_or(eSectionTypeCode), 0, section.size.value_or(0), 0,
+        section.type.value_or(eSectionTypeCode), section.address.value_or(0), section.size.value_or(0), 0,
         section.size.value_or(0), /*log2align*/ 0, /*flags*/ 0);
     m_sections_up->AddSection(section_sp);
     unified_section_list.AddSection(section_sp);
