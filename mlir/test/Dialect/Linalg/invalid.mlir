@@ -728,6 +728,25 @@ func.func @reduce_reduced_input_init_rank_mismatch(%input: tensor<16x32x64xf32>,
   func.return %reduce : tensor<16x64xf32>
 }
 
+
+// -----
+
+func.func @reduce_mismatched_inputs_outputs(
+    %input1: tensor<16x32x64xf32>,
+    %init1: tensor<16x64xf32>, %input2: tensor<16x32x64xf32>)  -> (tensor<16x64xf32>) {
+  // expected-error @+1{{'linalg.reduce' op requires same number of input and init operands}}
+  %reduce = linalg.reduce
+      ins(%input1, %input2 : tensor<16x32x64xf32>, tensor<16x32x64xf32>)
+      outs(%init1 : tensor<16x64xf32>)
+      dimensions = [1]
+      (%in: f32, %in2: f32, %out: f32) {
+        %0 = arith.mulf %in, %in2: f32
+        %1 = arith.addf %in, %out: f32
+        linalg.yield %1: f32
+      }
+  func.return %reduce : tensor<16x64xf32>
+}
+
 // -----
 
 func.func @reduce_wrong_number_of_block_arguments(
