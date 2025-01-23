@@ -19147,14 +19147,22 @@ OMPClause *SemaOpenMP::ActOnOpenMPReductionClause(
   // worksharing-loop construct, a worksharing-loop SIMD construct, a simd
   // construct, a parallel worksharing-loop construct or a parallel
   // worksharing-loop SIMD construct.
-  if (Modifier == OMPC_REDUCTION_inscan &&
-      (DSAStack->getCurrentDirective() != OMPD_for &&
-       DSAStack->getCurrentDirective() != OMPD_for_simd &&
-       DSAStack->getCurrentDirective() != OMPD_simd &&
-       DSAStack->getCurrentDirective() != OMPD_parallel_for &&
-       DSAStack->getCurrentDirective() != OMPD_parallel_for_simd)) {
-    Diag(ModifierLoc, diag::err_omp_wrong_inscan_reduction);
-    return nullptr;
+  // [5.2:136:1-4] A reduction clause with the inscan reduction-modifier may
+  // only appear on a worksharing-loop construct, a simd construct or a
+  // combined or composite construct for which any of the aforementioned
+  // constructs is a constituent construct and distribute is not a constituent
+  // construct.
+  if (Modifier == OMPC_REDUCTION_inscan) {
+    SmallVector<OpenMPDirectiveKind, 4> LeafOrComposite;
+    ArrayRef<OpenMPDirectiveKind> CurrentLOC = getLeafOrCompositeConstructs(
+        DSAStack->getCurrentDirective(), LeafOrComposite);
+    bool Valid = llvm::any_of(CurrentLOC, [](OpenMPDirectiveKind DK) {
+      return llvm::is_contained({OMPD_for, OMPD_simd, OMPD_for_simd}, DK);
+    });
+    if (!Valid) {
+      Diag(ModifierLoc, diag::err_omp_wrong_inscan_reduction);
+      return nullptr;
+    }
   }
 
   ReductionData RD(VarList.size(), Modifier);
