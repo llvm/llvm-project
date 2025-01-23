@@ -409,6 +409,7 @@ public:
   void VisitFriendTemplateDecl(FriendTemplateDecl *D);
   void VisitStaticAssertDecl(StaticAssertDecl *D);
   void VisitBlockDecl(BlockDecl *BD);
+  void VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D);
   void VisitCapturedDecl(CapturedDecl *CD);
   void VisitEmptyDecl(EmptyDecl *D);
   void VisitLifetimeExtendedTemporaryDecl(LifetimeExtendedTemporaryDecl *D);
@@ -1793,6 +1794,15 @@ void ASTDeclReader::VisitBlockDecl(BlockDecl *BD) {
     captures.push_back(BlockDecl::Capture(decl, byRef, nested, copyExpr));
   }
   BD->setCaptures(Reader.getContext(), captures, capturesCXXThis);
+}
+
+void ASTDeclReader::VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D) {
+  // NumParams is deserialized by OutlinedFunctionDecl::CreateDeserialized().
+  VisitDecl(D);
+  for (unsigned I = 0; I < D->NumParams; ++I)
+    D->setParam(I, readDeclAs<ImplicitParamDecl>());
+  D->setNothrow(Record.readInt() != 0);
+  D->setBody(cast_or_null<Stmt>(Record.readStmt()));
 }
 
 void ASTDeclReader::VisitCapturedDecl(CapturedDecl *CD) {
@@ -4103,6 +4113,9 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
     break;
   case DECL_TEMPLATE_PARAM_OBJECT:
     D = TemplateParamObjectDecl::CreateDeserialized(Context, ID);
+    break;
+  case DECL_OUTLINEDFUNCTION:
+    D = OutlinedFunctionDecl::CreateDeserialized(Context, ID, Record.readInt());
     break;
   case DECL_CAPTURED:
     D = CapturedDecl::CreateDeserialized(Context, ID, Record.readInt());
