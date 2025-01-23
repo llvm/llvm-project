@@ -143,6 +143,7 @@ struct Configuration {
   bool timeTraceEnabled = false;
   bool dataConst = false;
   bool dedupStrings = true;
+  bool dedupSymbolStrings = true;
   bool deadStripDuplicates = false;
   bool omitDebugInfo = false;
   bool warnDylibInstallName = false;
@@ -256,8 +257,6 @@ struct Configuration {
   llvm::MachO::PlatformType platform() const {
     return platformInfo.target.Platform;
   }
-
-  bool deduplicateSymbolStrings = true;
 };
 
 extern std::unique_ptr<Configuration> config;

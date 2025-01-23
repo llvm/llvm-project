@@ -1541,8 +1541,7 @@ StringTableSection::StringTableSection()
 
 uint32_t StringTableSection::addString(StringRef str) {
   uint32_t strx = size;
-  if (config->deduplicateSymbolStrings) {
-    // Deduplicate strings
+  if (config->dedupSymbolStrings) {
     llvm::CachedHashStringRef hashedStr(str);
     auto [it, inserted] = stringMap.try_emplace(hashedStr, strx);
     if (!inserted)
