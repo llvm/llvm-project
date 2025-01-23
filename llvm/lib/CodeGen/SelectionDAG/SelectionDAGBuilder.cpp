@@ -4525,6 +4525,17 @@ static const MDNode *getRangeMetadata(const Instruction &I) {
   // transforms that are known not to be poison-safe, such as folding logical
   // and/or to bitwise and/or. For now, only transfer !range if !noundef is
   // also present.
+  if (const auto *CB = dyn_cast<CallBase>(&I))
+    if (CB->hasRetAttr(Attribute::NoUndef))
+      if (std::optional<ConstantRange> CR = CB->getRange()) {
+        Metadata *Range[] = {ConstantAsMetadata::get(ConstantInt::get(
+                                 I.getContext(), CR->getLower())),
+                             ConstantAsMetadata::get(ConstantInt::get(
+                                 I.getContext(), CR->getUpper()))};
+
+        return MDNode::get(I.getContext(), Range);
+      }
+
   if (!I.hasMetadata(LLVMContext::MD_noundef))
     return nullptr;
   return I.getMetadata(LLVMContext::MD_range);
