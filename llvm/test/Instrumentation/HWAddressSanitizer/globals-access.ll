@@ -27,16 +27,17 @@ define dso_local noundef i32 @_Z3tmpv() sanitize_hwaddress {
 ; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 ptrtoint (ptr @x to i64), 56
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i8
-; CHECK-NEXT:    [[TMP5:%.*]] = and i64 ptrtoint (ptr @x to i64), 72057594037927935
-; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 ptrtoint (ptr @x to i64), 8
+; CHECK-NEXT:    [[TMP10:%.*]] = ashr i64 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP6:%.*]] = ashr i64 [[TMP10]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP2]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i8 [[TMP4]], [[TMP8]]
-; CHECK-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF2:![0-9]+]]
-; CHECK:       10:
+; CHECK-NEXT:    br i1 [[TMP9]], label [[TMP13:%.*]], label [[TMP11:%.*]], !prof [[PROF3:![0-9]+]]
+; CHECK:       11:
 ; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[TMP2]], ptr @x, i32 2)
 ; CHECK-NEXT:    br label [[TMP11]]
-; CHECK:       11:
+; CHECK:       12:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @x, align 4
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
