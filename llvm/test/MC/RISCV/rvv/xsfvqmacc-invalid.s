@@ -32,3 +32,19 @@ sf.vqmaccus.4x8x4 v8, v8, v20
 sf.vqmaccsu.4x8x4 v8, v8, v20
 # CHECK-ERROR: the destination vector register group cannot overlap the source vector register group{{$}}
 # CHECK-ERROR-LABEL: sf.vqmaccsu.4x8x4 v8, v8, v20
+
+sf.vqmaccu.4x8x4 v8, v4, v8
+# CHECK-ERROR: the destination vector register group cannot overlap the source vector register group{{$}}
+# CHECK-ERROR-LABEL: sf.vqmaccu.4x8x4 v8, v4, v8
+
+sf.vqmacc.4x8x4 v8, v4, v8
+# CHECK-ERROR: the destination vector register group cannot overlap the source vector register group{{$}}
+# CHECK-ERROR-LABEL: sf.vqmacc.4x8x4 v8, v4, v8
+
+sf.vqmaccus.4x8x4 v8, v4, v8
+# CHECK-ERROR: the destination vector register group cannot overlap the source vector register group{{$}}
+# CHECK-ERROR-LABEL: sf.vqmaccus.4x8x4 v8, v4, v8
+
+sf.vqmaccsu.4x8x4 v8, v4, v8
+# CHECK-ERROR: the destination vector register group cannot overlap the source vector register group{{$}}
+# CHECK-ERROR-LABEL: sf.vqmaccsu.4x8x4 v8, v4, v8

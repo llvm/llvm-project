@@ -210,7 +210,7 @@ let Predicates = [HasVendorXSfvqmaccdod], DecoderNamespace = "XSfvqmaccdod",
 }
 
 let Predicates = [HasVendorXSfvqmaccqoq], DecoderNamespace = "XSfvqmaccqoq",
-    DestEEW = EEWSEWx4, RVVConstraint=VS2Constraint in {
+    DestEEW = EEWSEWx4, RVVConstraint=WidenV in {
   def VQMACCU_4x8x4  : CustomSiFiveVMACC<0b111100, OPMVV, "sf.vqmaccu.4x8x4">;
   def VQMACC_4x8x4   : CustomSiFiveVMACC<0b111101, OPMVV, "sf.vqmacc.4x8x4">;
   def VQMACCUS_4x8x4 : CustomSiFiveVMACC<0b111110, OPMVV, "sf.vqmaccus.4x8x4">;
@@ -218,7 +218,7 @@ let Predicates = [HasVendorXSfvqmaccqoq], DecoderNamespace = "XSfvqmaccqoq",
 }
 
 let Predicates = [HasVendorXSfvfwmaccqqq], DecoderNamespace = "XSfvfwmaccqqq",
-    DestEEW = EEWSEWx2, RVVConstraint=VS2Constraint in {
+    DestEEW = EEWSEWx2, RVVConstraint=WidenV in {
   def VFWMACC_4x4x4 : CustomSiFiveVMACC<0b111100, OPFVV, "sf.vfwmacc.4x4x4">;
 }
 
