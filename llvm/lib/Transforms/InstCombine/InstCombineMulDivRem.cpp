@@ -584,6 +584,9 @@ Instruction *InstCombinerImpl::foldFPSignBitOps(BinaryOperator &I) {
     return replaceInstUsesWith(I, Fabs);
   }
 
+  if (Instruction *R = foldOpWithTwoPossibleValuesToSelect(I))
+    return R;
+
   return nullptr;
 }
 
@@ -1707,6 +1710,9 @@ Instruction *InstCombinerImpl::visitUDiv(BinaryOperator &I) {
     return replaceInstUsesWith(
         I, Builder.CreateLShr(Op0, Res, I.getName(), I.isExact()));
 
+  if (Instruction *R = foldOpWithTwoPossibleValuesToSelect(I))
+    return R;
+
   return nullptr;
 }
 
@@ -1846,6 +1852,10 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
     return SelectInst::Create(Cond, ConstantInt::get(Ty, 1),
                               ConstantInt::getAllOnesValue(Ty));
   }
+
+  if (Instruction *R = foldOpWithTwoPossibleValuesToSelect(I))
+    return R;
+
   return nullptr;
 }
 
@@ -2434,6 +2444,9 @@ Instruction *InstCombinerImpl::visitURem(BinaryOperator &I) {
     }
   }
 
+  if (Instruction *R = foldOpWithTwoPossibleValuesToSelect(I))
+    return R;
+
   return nullptr;
 }
 
@@ -2505,6 +2518,9 @@ Instruction *InstCombinerImpl::visitSRem(BinaryOperator &I) {
         return replaceOperand(I, 1, NewRHSV);
     }
   }
+
+  if (Instruction *R = foldOpWithTwoPossibleValuesToSelect(I))
+    return R;
 
   return nullptr;
 }
