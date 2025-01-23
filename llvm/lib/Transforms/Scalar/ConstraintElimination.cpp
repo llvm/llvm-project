@@ -192,9 +192,13 @@ struct State {
   /// Process block \p BB and add known facts to work-list.
   void addInfoFor(BasicBlock &BB);
 
-  /// Try to add facts for loop inductions (AddRecs) in EQ/NE compares
-  /// controlling the loop header.
+  /// Try to add facts for loop inductions (AddRecs) from EQ/NE compares
+  /// controlling loop exits.
   void addInfoForInductions(BasicBlock &BB);
+
+  /// Try to add facts for loop inductions (AddRecs) from \p Cond which controls
+  /// an exit from \p L.
+  void addInfoForInduction(ICmpInst *Cond, Loop *L);
 
   /// Returns true if we can add a known condition from BB to its successor
   /// block Succ.
@@ -920,18 +924,14 @@ static void dumpConstraint(ArrayRef<int64_t> C,
 }
 #endif
 
-void State::addInfoForInductions(BasicBlock &BB) {
-  auto *L = LI.getLoopFor(&BB);
-  if (!L || L->getHeader() != &BB)
-    return;
-
+void State::addInfoForInduction(ICmpInst *Cond, Loop *L) {
   Value *A;
   Value *B;
   CmpPredicate Pred;
 
-  if (!match(BB.getTerminator(),
-             m_Br(m_ICmp(Pred, m_Value(A), m_Value(B)), m_Value(), m_Value())))
+  if (!match(Cond, m_ICmp(Pred, m_Value(A), m_Value(B))))
     return;
+
   PHINode *PN = dyn_cast<PHINode>(A);
   if (!PN) {
     Pred = CmpInst::getSwappedPredicate(Pred);
@@ -939,10 +939,11 @@ void State::addInfoForInductions(BasicBlock &BB) {
     PN = dyn_cast<PHINode>(A);
   }
 
-  if (!PN || PN->getParent() != &BB || PN->getNumIncomingValues() != 2 ||
-      !SE.isSCEVable(PN->getType()))
+  if (!PN || PN->getParent() != L->getHeader() ||
+      PN->getNumIncomingValues() != 2 || !SE.isSCEVable(PN->getType()))
     return;
 
+  BasicBlock &BB = *Cond->getParent();
   BasicBlock *InLoopSucc = nullptr;
   if (Pred == CmpInst::ICMP_NE)
     InLoopSucc = cast<BranchInst>(BB.getTerminator())->getSuccessor(0);
@@ -951,7 +952,11 @@ void State::addInfoForInductions(BasicBlock &BB) {
   else
     return;
 
-  if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB) || InLoopSucc == &BB)
+  assert(L->isLoopExiting(&BB) &&
+         "Most be called with a condition in a loop-exiting block");
+  assert(InLoopSucc != L->getHeader() &&
+         "Cannot inject condition back to loop header");
+  if (!L->contains(InLoopSucc) || InLoopSucc == &BB)
     return;
 
   auto *AR = dyn_cast_or_null<SCEVAddRecExpr>(SE.getSCEV(PN));
@@ -1068,6 +1073,28 @@ void State::addInfoForInductions(BasicBlock &BB) {
       WorkList.emplace_back(FactOrCheck::getConditionFact(
           DT.getNode(EB), CmpInst::ICMP_ULE, A, B, Precond));
     }
+  }
+}
+
+void State::addInfoForInductions(BasicBlock &BB) {
+  auto *L = LI.getLoopFor(&BB);
+  if (!L)
+    return;
+  if (L->getHeader() != &BB)
+    return;
+
+  BasicBlock *Curr = &BB;
+  while (L->isLoopExiting(Curr)) {
+    // Don't try to add condition from latch to loop header.
+    if (L->isLoopLatch(Curr))
+      break;
+    auto *Term = dyn_cast<BranchInst>(Curr->getTerminator());
+    if (!Term)
+      break;
+    if (auto *CmpI = dyn_cast<ICmpInst>(Term->getCondition()))
+      addInfoForInduction(CmpI, L);
+    Curr = L->contains(Term->getSuccessor(0)) ? Term->getSuccessor(0)
+                                              : Term->getSuccessor(1);
   }
 }
 
