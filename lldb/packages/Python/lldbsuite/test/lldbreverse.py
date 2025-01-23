@@ -28,8 +28,9 @@ class StateSnapshot:
 
 
 class RegisterInfo:
-    def __init__(self, lldb_index, bitsize, little_endian):
+    def __init__(self, lldb_index, name, bitsize, little_endian):
         self.lldb_index = lldb_index
+        self.name = name
         self.bitsize = bitsize
         self.little_endian = little_endian
 
@@ -338,7 +339,11 @@ class ReverseTestBase(GDBProxyTestBase):
                     f"P{lldb_index:x}={data};thread:{thread_id:x};"
                 )
                 if reply != "OK":
-                    raise ValueError("Can't restore thread register")
+                    try:
+                        reg_name = self.general_purpose_register_info[lldb_index].name
+                    except KeyError:
+                        reg_name = f"with index {lldb_index}"
+                    raise ValueError(f"Can't restore thread register {reg_name}")
             if thread_id == snapshot.thread_id:
                 new_pc = self.get_register(
                     self.pc_register_info, thread_snapshot.registers
@@ -501,7 +506,9 @@ class ReverseTestBase(GDBProxyTestBase):
             if not reply or reply[0] == "E":
                 break
             info = {k: v for k, v in self.parse_pairs(reply)}
-            reg_info = RegisterInfo(lldb_index, int(info["bitsize"]), little_endian)
+            reg_info = RegisterInfo(
+                lldb_index, info["name"], int(info["bitsize"]), little_endian
+            )
             if (
                 info["set"] == "General Purpose Registers"
                 and not "container-regs" in info
