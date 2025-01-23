@@ -383,7 +383,8 @@ BasicBlock::const_iterator BasicBlock::getFirstNonPHIIt() const {
   return It;
 }
 
-const Instruction *BasicBlock::getFirstNonPHIOrDbg(bool SkipPseudoOp) const {
+BasicBlock::const_iterator
+BasicBlock::getFirstNonPHIOrDbg(bool SkipPseudoOp) const {
   for (const Instruction &I : *this) {
     if (isa<PHINode>(I) || isa<DbgInfoIntrinsic>(I))
       continue;
@@ -391,12 +392,15 @@ const Instruction *BasicBlock::getFirstNonPHIOrDbg(bool SkipPseudoOp) const {
     if (SkipPseudoOp && isa<PseudoProbeInst>(I))
       continue;
 
-    return &I;
+    BasicBlock::const_iterator It = I.getIterator();
+    // Signal that this comes after any debug records.
+    It.setHeadBit(false);
+    return It;
   }
-  return nullptr;
+  return end();
 }
 
-const Instruction *
+BasicBlock::const_iterator
 BasicBlock::getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp) const {
   for (const Instruction &I : *this) {
     if (isa<PHINode>(I) || isa<DbgInfoIntrinsic>(I))
@@ -408,9 +412,13 @@ BasicBlock::getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp) const {
     if (SkipPseudoOp && isa<PseudoProbeInst>(I))
       continue;
 
-    return &I;
+    BasicBlock::const_iterator It = I.getIterator();
+    // Signal that this comes after any debug records.
+    It.setHeadBit(false);
+    return It;
+
   }
-  return nullptr;
+  return end();
 }
 
 BasicBlock::const_iterator BasicBlock::getFirstInsertionPt() const {
@@ -428,11 +436,10 @@ BasicBlock::const_iterator BasicBlock::getFirstInsertionPt() const {
 }
 
 BasicBlock::const_iterator BasicBlock::getFirstNonPHIOrDbgOrAlloca() const {
-  const Instruction *FirstNonPHI = getFirstNonPHI();
-  if (!FirstNonPHI)
+  const_iterator InsertPt = getFirstNonPHIIt();
+  if (InsertPt == end())
     return end();
 
-  const_iterator InsertPt = FirstNonPHI->getIterator();
   if (InsertPt->isEHPad())
     ++InsertPt;
 
@@ -448,6 +455,9 @@ BasicBlock::const_iterator BasicBlock::getFirstNonPHIOrDbgOrAlloca() const {
       ++InsertPt;
     }
   }
+
+  // Signal that this comes after any debug records.
+  InsertPt.setHeadBit(false);
   return InsertPt;
 }
 
