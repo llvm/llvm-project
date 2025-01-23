@@ -9,11 +9,9 @@ program main
   real, external :: foo, bar, baz
  
   !ERROR: DEFAULT clause is not allowed on the DO directive
-  !$omp do ordered default(private)
+  !$omp do default(private)
   do i = 1, N
-     !$omp ordered
        arrayA(i) = arrayA(i) + 1
-     !$omp end ordered
   end do
   !$omp end do
 
