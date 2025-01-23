@@ -164,13 +164,6 @@ public:
   /// removed from the code.
   void run(const SmallVectorImpl<Instruction *> &Insts);
 
-  /// Return true if the specified instruction is in the Inst list.
-  ///
-  /// The Insts list is the one passed into the constructor. Clients should
-  /// implement this with a more efficient version if possible.
-  virtual bool isInstInList(Instruction *I,
-                            const SmallVectorImpl<Instruction *> &Insts) const;
-
   /// This hook is invoked after all the stores are found and inserted as
   /// available values.
   virtual void doExtraRewritesBeforeFinalDeletion() {}

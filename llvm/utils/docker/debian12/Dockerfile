@@ -1,4 +1,4 @@
-#===- llvm/utils/docker/debian10/build/Dockerfile -------------------------===//
+#===- llvm/utils/docker/debian12/build/Dockerfile -------------------------===//
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 #
 #===----------------------------------------------------------------------===//
 # Stage 1. Check out LLVM source code and run the build.
-FROM launcher.gcr.io/google/debian10:latest as builder
-LABEL maintainer "LLVM Developers"
+FROM launcher.gcr.io/google/debian12:latest AS builder
+LABEL maintainer="LLVM Developers"
 # Install build dependencies of llvm.
 # First, Update the apt's source list and include the sources of the packages.
 RUN grep deb /etc/apt/sources.list | \
@@ -19,8 +19,8 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 # Install a newer ninja release. It seems the older version in the debian repos
 # randomly crashes when compiling llvm.
-RUN wget "https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-linux.zip" && \
-    echo "d2fea9ff33b3ef353161ed906f260d565ca55b8ca0568fa07b1d2cab90a84a07 ninja-linux.zip" \
+RUN wget "https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-linux.zip" && \
+    echo "6f98805688d19672bd699fbbfa2c2cf0fc054ac3df1f0e6a47664d963d530255 ninja-linux.zip" \
         | sha256sum -c  && \
     unzip ninja-linux.zip -d /usr/local/bin && \
     rm ninja-linux.zip
@@ -37,11 +37,11 @@ RUN /tmp/scripts/build_install_llvm.sh --to /tmp/clang-install ${buildscript_arg
 
 
 # Stage 2. Produce a minimal release image with build results.
-FROM launcher.gcr.io/google/debian10:latest
-LABEL maintainer "LLVM Developers"
+FROM launcher.gcr.io/google/debian12:latest
+LABEL maintainer="LLVM Developers"
 # Install packages for minimal useful image.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends libstdc++-7-dev binutils && \
+    apt-get install -y --no-install-recommends binutils && \
     rm -rf /var/lib/apt/lists/*
 # Copy build results of stage 1 to /usr/local.
 COPY --from=builder /tmp/clang-install/ /usr/local/
