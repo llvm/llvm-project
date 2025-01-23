@@ -1212,8 +1212,6 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       if (debugger.GetUseColor()) {
         s.PutCString(entry.string);
       }
-    } else {
-      assert(false);
     }
     // Always return true, so colors being disabled is transparent.
     return true;
