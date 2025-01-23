@@ -438,7 +438,7 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
   }
 
   // Now we found a bunch of sets of globals used together. We accumulated
-  // the number of times we encountered the sets (i.e., the number of functions 
+  // the number of times we encountered the sets (i.e., the number of functions
   // that use that exact set of globals). Multiply that by the size of the set
   // to give us a crude profitability metric.
   llvm::stable_sort(UsedGlobalSets,
