@@ -3299,7 +3299,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
 
     if (RT->getDecl()->hasFlexibleArrayMember())
       return getNaturalAlignIndirect(Ty,
-                                     getDataLayout().getAllocaAddressSpace(),
+                                     getDataLayout().getAllocaAddrSpace(),
                                      /*ByVal=*/false);
   }
 
