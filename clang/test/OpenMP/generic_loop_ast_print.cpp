@@ -31,7 +31,7 @@
 //DUMP: FunctionTemplateDecl{{.*}}templ_foo
 //DUMP: TemplateTypeParmDecl{{.*}}T
 //DUMP: NonTypeTemplateParmDecl{{.*}}C
-//DUMP: OMPGenericLoopDirective
+//DUMP: OMPOpaqueLoopDirective{{.*}}'loop'
 //DUMP: OMPCollapseClause
 //DUMP: DeclRefExpr{{.*}}'C' 'int'
 //DUMP: OMPReductionClause

@@ -742,6 +742,41 @@ void StmtPrinter::PrintOMPExecutableDirective(OMPExecutableDirective *S,
     PrintStmt(S->getRawStmt());
 }
 
+void StmtPrinter::VisitOMPOpaqueBlockDirective(OMPOpaqueBlockDirective *Node) {
+  OpenMPDirectiveKind DKind = Node->getDirectiveKind();
+  bool ForceNoStmt = false;
+
+  Indent() << "#pragma omp " << llvm::omp::getOpenMPDirectiveName(DKind);
+  switch (DKind) {
+  case llvm::omp::OMPD_cancel:
+  case llvm::omp::OMPD_cancellation_point:
+    if (Node->getCancelRegion() != llvm::omp::OMPD_unknown)
+      OS << ' ' << llvm::omp::getOpenMPDirectiveName(Node->getCancelRegion());
+    break;
+  case llvm::omp::OMPD_critical:
+    if (Node->getDirectiveName().getName()) {
+      OS << " (";
+      Node->getDirectiveName().printName(OS, Policy);
+      OS << ")";
+    }
+    break;
+  case llvm::omp::OMPD_target_enter_data:
+  case llvm::omp::OMPD_target_exit_data:
+  case llvm::omp::OMPD_target_update:
+    ForceNoStmt = true;
+    break;
+  default:
+    break;
+  }
+  PrintOMPExecutableDirective(Node, ForceNoStmt);
+}
+
+void StmtPrinter::VisitOMPOpaqueLoopDirective(OMPOpaqueLoopDirective *Node) {
+  Indent() << "#pragma omp "
+           << llvm::omp::getOpenMPDirectiveName(Node->getDirectiveKind());
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPMetaDirective(OMPMetaDirective *Node) {
   Indent() << "#pragma omp metadirective";
   PrintOMPExecutableDirective(Node);

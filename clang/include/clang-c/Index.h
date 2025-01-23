@@ -2158,6 +2158,14 @@ enum CXCursorKind {
    */
   CXCursor_OMPAssumeDirective = 309,
 
+  /** OpenMP opaque block-associated directive.
+   */
+  CXCursor_OMPOpaqueBlockDirective = 310,
+
+  /** OpenMP opaque loop-associated directive.
+   */
+  CXCursor_OMPOpaqueLoopDirective = 311,
+
   /** OpenACC Compute Construct.
    */
   CXCursor_OpenACCComputeConstruct = 320,

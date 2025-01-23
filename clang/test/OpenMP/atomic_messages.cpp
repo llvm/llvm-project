@@ -46,20 +46,21 @@ T read() {
   T a = T(), b = T();
 // Test for atomic read
 #pragma omp atomic read
-  // expected-error@+2 {{the statement for 'atomic read' must be an expression statement of form 'v = x;', where v and x are both lvalue expressions with scalar type}}
-  // expected-note@+1 {{expected an expression statement}}
+  // expected-error@+2 2 {{the statement for 'atomic read' must be an expression statement of form 'v = x;', where v and x are both lvalue expressions with scalar type}}
+  // expected-note@+1 2 {{expected an expression statement}}
   ;
 #pragma omp atomic read
-  // expected-error@+2 {{the statement for 'atomic read' must be an expression statement of form 'v = x;', where v and x are both lvalue expressions with scalar type}}
-  // expected-note@+1 {{expected built-in assignment operator}}
+  // expected-error@+2 2 {{the statement for 'atomic read' must be an expression statement of form 'v = x;', where v and x are both lvalue expressions with scalar type}}
+  // expected-note@+1 2 {{expected built-in assignment operator}}
   foo();
 #pragma omp atomic read
   // expected-error@+2 2 {{the statement for 'atomic read' must be an expression statement of form 'v = x;', where v and x are both lvalue expressions with scalar type}}
   // expected-note@+1 2 {{expected built-in assignment operator}}
   a += b;
 #pragma omp atomic read
-  // expected-error@+2 {{the statement for 'atomic read' must be an expression statement of form 'v = x;', where v and x are both lvalue expressions with scalar type}}
-  // expected-note@+1 {{expected lvalue expression}}
+  // expected-error@+3 2 {{the statement for 'atomic read' must be an expression statement of form 'v = x;', where v and x are both lvalue expressions with scalar type}}
+  // expected-note@+2 {{expected lvalue expression}}
+  // expected-note@+1 {{expected built-in assignment operator}}
   a = 0;
 #pragma omp atomic read
   // expected-error@+2 {{the statement for 'atomic read' must be an expression statement of form 'v = x;', where v and x are both lvalue expressions with scalar type}}
@@ -335,6 +336,7 @@ int update() {
   // expected-note@+1 {{expected an expression statement}}
   ;
 
+  // expected-note@+1 {{in instantiation of function template specialization 'update<int>' requested here}}
   return update<int>();
 }
 
@@ -724,6 +726,7 @@ int seq_cst() {
   // expected-note@+1 {{expected an expression statement}}
   ;
 
+  // expected-note@+1 {{in instantiation of function template specialization 'seq_cst<int>' requested here}}
  return seq_cst<int>();
 }
 
@@ -735,7 +738,7 @@ T acq_rel() {
   // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an lvalue expression with scalar type}}
   // expected-note@+1 {{expected an expression statement}}
   ;
-// omp50-error@+1 2 {{directive '#pragma omp atomic' cannot contain more than one 'seq_cst', 'relaxed', 'acq_rel', 'acquire' or 'release' clause}} omp50-note@+1 2 {{'acq_rel' clause used here}} omp45-error@+1 {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp atomic'}} omp50-error@+1 2 {{directive '#pragma omp atomic read' cannot be used with 'acq_rel' clause}} omp50-note@+1 2 {{'acq_rel' clause used here}}
+// omp50-error@+1 {{directive '#pragma omp atomic' cannot contain more than one 'seq_cst', 'relaxed', 'acq_rel', 'acquire' or 'release' clause}} omp50-note@+1 {{'acq_rel' clause used here}} omp45-error@+1 {{unexpected OpenMP clause 'acq_rel' in directive '#pragma omp atomic'}} omp50-error@+1 {{directive '#pragma omp atomic read' cannot be used with 'acq_rel' clause}} omp50-note@+1 {{'acq_rel' clause used here}}
 #pragma omp atomic read acq_rel seq_cst
   a = b;
 
@@ -766,7 +769,7 @@ int acq_rel() {
   // expected-note@+1 {{expected an expression statement}}
   ;
 
- return acq_rel<int>(); // omp50-note {{in instantiation of function template specialization 'acq_rel<int>' requested here}}
+ return acq_rel<int>(); // expected-note {{in instantiation of function template specialization 'acq_rel<int>' requested here}}
 }
 
 template <class T>
@@ -777,7 +780,7 @@ T acquire() {
   // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an lvalue expression with scalar type}}
   // expected-note@+1 {{expected an expression statement}}
   ;
-// omp50-error@+1 2 {{directive '#pragma omp atomic' cannot contain more than one 'seq_cst', 'relaxed', 'acq_rel', 'acquire' or 'release' clause}} omp50-note@+1 2 {{'acquire' clause used here}} omp45-error@+1 {{unexpected OpenMP clause 'acquire' in directive '#pragma omp atomic'}} omp50-error@+1 2 {{directive '#pragma omp atomic' cannot be used with 'acquire' clause}} omp50-note@+1 2 {{'acquire' clause used here}}
+// omp50-error@+1 {{directive '#pragma omp atomic' cannot contain more than one 'seq_cst', 'relaxed', 'acq_rel', 'acquire' or 'release' clause}} omp50-note@+1 {{'acquire' clause used here}} omp45-error@+1 {{unexpected OpenMP clause 'acquire' in directive '#pragma omp atomic'}} omp50-error@+1 {{directive '#pragma omp atomic' cannot be used with 'acquire' clause}} omp50-note@+1 {{'acquire' clause used here}}
 #pragma omp atomic acquire seq_cst
   a += b;
 
@@ -808,7 +811,7 @@ int acquire() {
   // expected-note@+1 {{expected an expression statement}}
   ;
 
- return acquire<int>(); // omp50-note {{in instantiation of function template specialization 'acquire<int>' requested here}}
+ return acquire<int>(); // expected-note {{in instantiation of function template specialization 'acquire<int>' requested here}}
 }
 
 template <class T>
@@ -819,7 +822,7 @@ T release() {
   // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an lvalue expression with scalar type}}
   // expected-note@+1 {{expected an expression statement}}
   ;
-// omp50-error@+1 2 {{directive '#pragma omp atomic' cannot contain more than one 'seq_cst', 'relaxed', 'acq_rel', 'acquire' or 'release' clause}} omp50-note@+1 2 {{'release' clause used here}} omp45-error@+1 {{unexpected OpenMP clause 'release' in directive '#pragma omp atomic'}}
+// omp50-error@+1 {{directive '#pragma omp atomic' cannot contain more than one 'seq_cst', 'relaxed', 'acq_rel', 'acquire' or 'release' clause}} omp50-note@+1 {{'release' clause used here}} omp45-error@+1 {{unexpected OpenMP clause 'release' in directive '#pragma omp atomic'}}
 #pragma omp atomic release seq_cst
   a += b;
 
@@ -850,7 +853,7 @@ int release() {
   // expected-note@+1 {{expected an expression statement}}
   ;
 
- return release<int>(); // omp50-note {{in instantiation of function template specialization 'release<int>' requested here}}
+ return release<int>(); // expected-note {{in instantiation of function template specialization 'release<int>' requested here}}
 }
 
 template <class T>
@@ -861,7 +864,7 @@ T relaxed() {
   // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an lvalue expression with scalar type}}
   // expected-note@+1 {{expected an expression statement}}
   ;
-// omp50-error@+1 2 {{directive '#pragma omp atomic' cannot contain more than one 'seq_cst', 'relaxed', 'acq_rel', 'acquire' or 'release' clause}} omp50-note@+1 2 {{'relaxed' clause used here}} omp45-error@+1 {{unexpected OpenMP clause 'relaxed' in directive '#pragma omp atomic'}}
+// omp50-error@+1 {{directive '#pragma omp atomic' cannot contain more than one 'seq_cst', 'relaxed', 'acq_rel', 'acquire' or 'release' clause}} omp50-note@+1 {{'relaxed' clause used here}} omp45-error@+1 {{unexpected OpenMP clause 'relaxed' in directive '#pragma omp atomic'}}
 #pragma omp atomic relaxed seq_cst
   a += b;
 
@@ -892,35 +895,35 @@ int relaxed() {
   // expected-note@+1 {{expected an expression statement}}
   ;
 
- return relaxed<int>(); // omp50-note {{in instantiation of function template specialization 'relaxed<int>' requested here}}
+ return relaxed<int>(); // expected-note {{in instantiation of function template specialization 'relaxed<int>' requested here}}
 }
 
 template <class T>
 T mixed() {
   T a, b = T();
-// expected-error@+2 2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
-// expected-note@+1 2 {{'read' clause used here}}
+// expected-error@+2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
+// expected-note@+1 {{'read' clause used here}}
 #pragma omp atomic read write
   a = b;
-// expected-error@+2 2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
-// expected-note@+1 2 {{'write' clause used here}}
+// expected-error@+2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
+// expected-note@+1 {{'write' clause used here}}
 #pragma omp atomic write read
   a = b;
-// expected-error@+2 2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
-// expected-note@+1 2 {{'update' clause used here}}
+// expected-error@+2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
+// expected-note@+1 {{'update' clause used here}}
 #pragma omp atomic update read
   a += b;
-// expected-error@+2 2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
-// expected-note@+1 2 {{'capture' clause used here}}
+// expected-error@+2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
+// expected-note@+1 {{'capture' clause used here}}
 #pragma omp atomic capture read
   a = ++b;
 #ifdef OMP51
-// expected-error@+2 2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
-// expected-note@+1 2 {{'write' clause used here}}
+// expected-error@+2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
+// expected-note@+1 {{'write' clause used here}}
 #pragma omp atomic write compare
   a = b;
-// expected-error@+2 2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
-// expected-note@+1 2 {{'read' clause used here}}
+// expected-error@+2 {{directive '#pragma omp atomic' cannot contain more than one 'read', 'write', 'update', 'capture', or 'compare' clause}}
+// expected-note@+1 {{'read' clause used here}}
 #pragma omp atomic read compare
   a = b;
 #endif

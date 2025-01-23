@@ -2407,7 +2407,6 @@ void ASTStmtReader::VisitOMPExecutableDirective(OMPExecutableDirective *E) {
 }
 
 void ASTStmtReader::VisitOMPLoopBasedDirective(OMPLoopBasedDirective *D) {
-  VisitStmt(D);
   // Field CollapsedNum was read in ReadStmtFromStream.
   Record.skipInts(1);
   VisitOMPExecutableDirective(D);
@@ -2415,6 +2414,24 @@ void ASTStmtReader::VisitOMPLoopBasedDirective(OMPLoopBasedDirective *D) {
 
 void ASTStmtReader::VisitOMPLoopDirective(OMPLoopDirective *D) {
   VisitOMPLoopBasedDirective(D);
+}
+
+void ASTStmtReader::VisitOMPOpaqueBlockDirective(OMPOpaqueBlockDirective *D) {
+  VisitStmt(D);
+  // The DKind was read in ReadStmtFromStream.
+  Record.skipInts(1);
+  VisitOMPExecutableDirective(D);
+  D->setHasCancel(Record.readBool());
+  D->setCancelRegion(Record.readEnum<OpenMPDirectiveKind>());
+  D->setDirectiveName(Record.readDeclarationNameInfo());
+}
+
+void ASTStmtReader::VisitOMPOpaqueLoopDirective(OMPOpaqueLoopDirective *D) {
+  VisitStmt(D);
+  // The DKind was read in ReadStmtFromStream.
+  Record.skipInts(1);
+  VisitOMPLoopDirective(D);
+  D->setHasCancel(Record.readBool());
 }
 
 void ASTStmtReader::VisitOMPMetaDirective(OMPMetaDirective *D) {
@@ -2431,11 +2448,13 @@ void ASTStmtReader::VisitOMPParallelDirective(OMPParallelDirective *D) {
 }
 
 void ASTStmtReader::VisitOMPSimdDirective(OMPSimdDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
 void ASTStmtReader::VisitOMPLoopTransformationDirective(
     OMPLoopTransformationDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopBasedDirective(D);
   D->setNumGeneratedLoops(Record.readUInt32());
 }
@@ -2457,11 +2476,13 @@ void ASTStmtReader::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
 }
 
 void ASTStmtReader::VisitOMPForDirective(OMPForDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
   D->setHasCancel(Record.readBool());
 }
 
 void ASTStmtReader::VisitOMPForSimdDirective(OMPForSimdDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
@@ -2499,12 +2520,14 @@ void ASTStmtReader::VisitOMPCriticalDirective(OMPCriticalDirective *D) {
 }
 
 void ASTStmtReader::VisitOMPParallelForDirective(OMPParallelForDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
   D->setHasCancel(Record.readBool());
 }
 
 void ASTStmtReader::VisitOMPParallelForSimdDirective(
     OMPParallelForSimdDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
@@ -2626,6 +2649,7 @@ void ASTStmtReader::VisitOMPTargetParallelDirective(
 
 void ASTStmtReader::VisitOMPTargetParallelForDirective(
     OMPTargetParallelForDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
   D->setHasCancel(Record.readBool());
 }
@@ -2649,59 +2673,70 @@ void ASTStmtReader::VisitOMPCancelDirective(OMPCancelDirective *D) {
 }
 
 void ASTStmtReader::VisitOMPTaskLoopDirective(OMPTaskLoopDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
   D->setHasCancel(Record.readBool());
 }
 
 void ASTStmtReader::VisitOMPTaskLoopSimdDirective(OMPTaskLoopSimdDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
 void ASTStmtReader::VisitOMPMasterTaskLoopDirective(
     OMPMasterTaskLoopDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
   D->setHasCancel(Record.readBool());
 }
 
 void ASTStmtReader::VisitOMPMaskedTaskLoopDirective(
     OMPMaskedTaskLoopDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
   D->setHasCancel(Record.readBool());
 }
 
 void ASTStmtReader::VisitOMPMasterTaskLoopSimdDirective(
     OMPMasterTaskLoopSimdDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
 void ASTStmtReader::VisitOMPMaskedTaskLoopSimdDirective(
     OMPMaskedTaskLoopSimdDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
 void ASTStmtReader::VisitOMPParallelMasterTaskLoopDirective(
     OMPParallelMasterTaskLoopDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
   D->setHasCancel(Record.readBool());
 }
 
 void ASTStmtReader::VisitOMPParallelMaskedTaskLoopDirective(
     OMPParallelMaskedTaskLoopDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
   D->setHasCancel(Record.readBool());
 }
 
 void ASTStmtReader::VisitOMPParallelMasterTaskLoopSimdDirective(
     OMPParallelMasterTaskLoopSimdDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
 void ASTStmtReader::VisitOMPParallelMaskedTaskLoopSimdDirective(
     OMPParallelMaskedTaskLoopSimdDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
 void ASTStmtReader::VisitOMPDistributeDirective(OMPDistributeDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
@@ -2712,46 +2747,55 @@ void ASTStmtReader::VisitOMPTargetUpdateDirective(OMPTargetUpdateDirective *D) {
 
 void ASTStmtReader::VisitOMPDistributeParallelForDirective(
     OMPDistributeParallelForDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
   D->setHasCancel(Record.readBool());
 }
 
 void ASTStmtReader::VisitOMPDistributeParallelForSimdDirective(
     OMPDistributeParallelForSimdDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
 void ASTStmtReader::VisitOMPDistributeSimdDirective(
     OMPDistributeSimdDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
 void ASTStmtReader::VisitOMPTargetParallelForSimdDirective(
     OMPTargetParallelForSimdDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
 void ASTStmtReader::VisitOMPTargetSimdDirective(OMPTargetSimdDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
 void ASTStmtReader::VisitOMPTeamsDistributeDirective(
     OMPTeamsDistributeDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
 void ASTStmtReader::VisitOMPTeamsDistributeSimdDirective(
     OMPTeamsDistributeSimdDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
 void ASTStmtReader::VisitOMPTeamsDistributeParallelForSimdDirective(
     OMPTeamsDistributeParallelForSimdDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
 void ASTStmtReader::VisitOMPTeamsDistributeParallelForDirective(
     OMPTeamsDistributeParallelForDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
   D->setHasCancel(Record.readBool());
 }
@@ -2763,22 +2807,26 @@ void ASTStmtReader::VisitOMPTargetTeamsDirective(OMPTargetTeamsDirective *D) {
 
 void ASTStmtReader::VisitOMPTargetTeamsDistributeDirective(
     OMPTargetTeamsDistributeDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
 void ASTStmtReader::VisitOMPTargetTeamsDistributeParallelForDirective(
     OMPTargetTeamsDistributeParallelForDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
   D->setHasCancel(Record.readBool());
 }
 
 void ASTStmtReader::VisitOMPTargetTeamsDistributeParallelForSimdDirective(
     OMPTargetTeamsDistributeParallelForSimdDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
 void ASTStmtReader::VisitOMPTargetTeamsDistributeSimdDirective(
     OMPTargetTeamsDistributeSimdDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
@@ -2799,27 +2847,32 @@ void ASTStmtReader::VisitOMPMaskedDirective(OMPMaskedDirective *D) {
 }
 
 void ASTStmtReader::VisitOMPGenericLoopDirective(OMPGenericLoopDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
 void ASTStmtReader::VisitOMPTeamsGenericLoopDirective(
     OMPTeamsGenericLoopDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
 void ASTStmtReader::VisitOMPTargetTeamsGenericLoopDirective(
     OMPTargetTeamsGenericLoopDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
   D->setCanBeParallelFor(Record.readBool());
 }
 
 void ASTStmtReader::VisitOMPParallelGenericLoopDirective(
     OMPParallelGenericLoopDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
 void ASTStmtReader::VisitOMPTargetParallelGenericLoopDirective(
     OMPTargetParallelGenericLoopDirective *D) {
+  VisitStmt(D);
   VisitOMPLoopDirective(D);
 }
 
@@ -3527,6 +3580,27 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case STMT_OMP_CANONICAL_LOOP:
       S = OMPCanonicalLoop::createEmpty(Context);
       break;
+
+    case STMT_OMP_OPAQUE_BLOCK_DIRECTIVE: {
+      unsigned DKind = Record[ASTStmtReader::NumStmtFields];
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
+      // NumChildren is at index + 2.
+      bool HasAssociatedStmt = Record[ASTStmtReader::NumStmtFields + 3];
+      S = OMPOpaqueBlockDirective::CreateEmpty(
+          Context, static_cast<OpenMPDirectiveKind>(DKind), NumClauses,
+          HasAssociatedStmt, Empty);
+      break;
+    }
+
+    case STMT_OMP_OPAQUE_LOOP_DIRECTIVE: {
+      unsigned DKind = Record[ASTStmtReader::NumStmtFields];
+      unsigned CollapsedNum = Record[ASTStmtReader::NumStmtFields + 1];
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 2];
+      S = OMPOpaqueLoopDirective::CreateEmpty(
+          Context, static_cast<OpenMPDirectiveKind>(DKind), NumClauses,
+          CollapsedNum, Empty);
+      break;
+    }
 
     case STMT_OMP_META_DIRECTIVE:
       S = OMPMetaDirective::CreateEmpty(

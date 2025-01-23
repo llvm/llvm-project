@@ -259,7 +259,7 @@ void fooTemp() {
   omp_interop_t interop_var;
   //PRINT: #pragma omp interop init(prefer_type(I,4,"level_one"), target : interop_var)
   //DUMP: FunctionDecl{{.*}}fooTemp
-  //DUMP: OMPInteropDirective
+  //DUMP: OMPOpaqueBlockDirective{{.*}}'interop'
   //DUMP: OMPInitClause
   //DUMP: DeclRefExpr{{.*}}'omp_interop_t'{{.*}}'interop_var'
   //DUMP: DeclRefExpr{{.*}}NonTypeTemplateParm{{.*}}'I' 'int'
@@ -287,7 +287,7 @@ void barTemp(T t) {
   //PRINT: #pragma omp interop init(prefer_type(4,"level_one"), target : t)
   //DUMP: FunctionDecl{{.*}}barTemp 'void (T)'
   //DUMP: ParmVarDecl{{.*}}t 'T'
-  //DUMP: OMPInteropDirective
+  //DUMP: OMPOpaqueBlockDirective{{.*}}'interop'
   //DUMP: OMPInitClause
   //DUMP: DeclRefExpr{{.*}}ParmVar{{.*}}'t' 'T'
   //DUMP: IntegerLiteral{{.*}}'int' 4
@@ -295,13 +295,13 @@ void barTemp(T t) {
   #pragma omp interop init(prefer_type(4,"level_one"), target: t)
 
   //PRINT: #pragma omp interop use(t)
-  //DUMP: OMPInteropDirective
+  //DUMP: OMPOpaqueBlockDirective{{.*}}'interop'
   //DUMP: OMPUseClause
   //DUMP: DeclRefExpr{{.*}}ParmVar{{.*}}'t' 'T'
   #pragma omp interop use(t)
 
   //PRINT: #pragma omp interop destroy(t)
-  //DUMP: OMPInteropDirective
+  //DUMP: OMPOpaqueBlockDirective{{.*}}'interop'
   //DUMP: OMPDestroyClause
   //DUMP: DeclRefExpr{{.*}}ParmVar{{.*}}'t' 'T'
   #pragma omp interop destroy(t)

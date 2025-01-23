@@ -135,7 +135,7 @@ void foo4(int start, int end, int step) {
 template<typename T, T P>
 void foo5(T start, T end) {
   // PRINT: #pragma omp for
-  // DUMP:  OMPForDirective
+  // DUMP:  OMPOpaqueLoopDirective
   #pragma omp for
     // PRINT:     #pragma omp interchange permutation(P + 1, 2 - P)
     // DUMP:      OMPInterchangeDirective
