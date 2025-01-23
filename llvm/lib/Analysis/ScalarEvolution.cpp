@@ -319,6 +319,9 @@ void SCEV::print(raw_ostream &OS) const {
     if (AR->hasNoSelfWrap() &&
         !AR->getNoWrapFlags((NoWrapFlags)(FlagNUW | FlagNSW)))
       OS << "nw><";
+    if (AR->hasSafeWrap() &&
+        !AR->getNoWrapFlags((NoWrapFlags)(FlagNUW | FlagNSW | FlagNW)))
+      OS << "sw><";
     AR->getLoop()->getHeader()->printAsOperand(OS, /*PrintType=*/false);
     OS << ">";
     return;
@@ -1148,6 +1151,7 @@ const SCEV *ScalarEvolution::getPtrToIntExpr(const SCEV *Op, Type *Ty) {
 }
 
 const SCEV *ScalarEvolution::getTruncateExpr(const SCEV *Op, Type *Ty,
+                                             SCEV::NoWrapFlags Flags,
                                              unsigned Depth) {
   assert(getTypeSizeInBits(Op->getType()) > getTypeSizeInBits(Ty) &&
          "This is not a truncating conversion!");
@@ -1170,15 +1174,15 @@ const SCEV *ScalarEvolution::getTruncateExpr(const SCEV *Op, Type *Ty,
 
   // trunc(trunc(x)) --> trunc(x)
   if (const SCEVTruncateExpr *ST = dyn_cast<SCEVTruncateExpr>(Op))
-    return getTruncateExpr(ST->getOperand(), Ty, Depth + 1);
+    return getTruncateExpr(ST->getOperand(), Ty, Flags, Depth + 1);
 
   // trunc(sext(x)) --> sext(x) if widening or trunc(x) if narrowing
   if (const SCEVSignExtendExpr *SS = dyn_cast<SCEVSignExtendExpr>(Op))
-    return getTruncateOrSignExtend(SS->getOperand(), Ty, Depth + 1);
+    return getTruncateOrSignExtend(SS->getOperand(), Ty, Flags, Depth + 1);
 
   // trunc(zext(x)) --> zext(x) if widening or trunc(x) if narrowing
   if (const SCEVZeroExtendExpr *SZ = dyn_cast<SCEVZeroExtendExpr>(Op))
-    return getTruncateOrZeroExtend(SZ->getOperand(), Ty, Depth + 1);
+    return getTruncateOrZeroExtend(SZ->getOperand(), Ty, Flags, Depth + 1);
 
   if (Depth > MaxCastDepth) {
     SCEV *S =
@@ -1198,7 +1202,8 @@ const SCEV *ScalarEvolution::getTruncateExpr(const SCEV *Op, Type *Ty,
     unsigned numTruncs = 0;
     for (unsigned i = 0, e = CommOp->getNumOperands(); i != e && numTruncs < 2;
          ++i) {
-      const SCEV *S = getTruncateExpr(CommOp->getOperand(i), Ty, Depth + 1);
+      const SCEV *S =
+          getTruncateExpr(CommOp->getOperand(i), Ty, Flags, Depth + 1);
       if (!isa<SCEVIntegralCastExpr>(CommOp->getOperand(i)) &&
           isa<SCEVTruncateExpr>(S))
         numTruncs++;
@@ -1222,8 +1227,8 @@ const SCEV *ScalarEvolution::getTruncateExpr(const SCEV *Op, Type *Ty,
   if (const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(Op)) {
     SmallVector<const SCEV *, 4> Operands;
     for (const SCEV *Op : AddRec->operands())
-      Operands.push_back(getTruncateExpr(Op, Ty, Depth + 1));
-    return getAddRecExpr(Operands, AddRec->getLoop(), SCEV::FlagAnyWrap);
+      Operands.push_back(getTruncateExpr(Op, Ty, Flags, Depth + 1));
+    return getAddRecExpr(Operands, AddRec->getLoop(), Flags);
   }
 
   // Return zero if truncating to known zeros.
@@ -1622,7 +1627,7 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
     unsigned NewBits = getTypeSizeInBits(Ty);
     if (CR.truncate(TruncBits).zeroExtend(NewBits).contains(
             CR.zextOrTrunc(NewBits)))
-      return getTruncateOrZeroExtend(X, Ty, Depth);
+      return getTruncateOrZeroExtend(X, Ty, SCEV::FlagAnyWrap, Depth);
   }
 
   // If the input value is a chrec scev, and we can prove that the value
@@ -1659,10 +1664,10 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
 
         // Check whether the backedge-taken count can be losslessly casted to
         // the addrec's type. The count is always unsigned.
-        const SCEV *CastedMaxBECount =
-            getTruncateOrZeroExtend(MaxBECount, Start->getType(), Depth);
+        const SCEV *CastedMaxBECount = getTruncateOrZeroExtend(
+            MaxBECount, Start->getType(), SCEV::FlagAnyWrap, Depth);
         const SCEV *RecastedMaxBECount = getTruncateOrZeroExtend(
-            CastedMaxBECount, MaxBECount->getType(), Depth);
+            CastedMaxBECount, MaxBECount->getType(), SCEV::FlagAnyWrap, Depth);
         if (MaxBECount == RecastedMaxBECount) {
           Type *WideTy = IntegerType::get(getContext(), BitWidth * 2);
           // Check whether Start+Step*MaxBECount has no unsigned overflow.
@@ -1963,7 +1968,7 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(const SCEV *Op, Type *Ty,
     unsigned NewBits = getTypeSizeInBits(Ty);
     if (CR.truncate(TruncBits).signExtend(NewBits).contains(
             CR.sextOrTrunc(NewBits)))
-      return getTruncateOrSignExtend(X, Ty, Depth);
+      return getTruncateOrSignExtend(X, Ty, SCEV::FlagAnyWrap, Depth);
   }
 
   if (auto *SA = dyn_cast<SCEVAddExpr>(Op)) {
@@ -2034,10 +2039,10 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(const SCEV *Op, Type *Ty,
 
         // Check whether the backedge-taken count can be losslessly casted to
         // the addrec's type. The count is always unsigned.
-        const SCEV *CastedMaxBECount =
-            getTruncateOrZeroExtend(MaxBECount, Start->getType(), Depth);
+        const SCEV *CastedMaxBECount = getTruncateOrZeroExtend(
+            MaxBECount, Start->getType(), SCEV::FlagAnyWrap, Depth);
         const SCEV *RecastedMaxBECount = getTruncateOrZeroExtend(
-            CastedMaxBECount, MaxBECount->getType(), Depth);
+            CastedMaxBECount, MaxBECount->getType(), SCEV::FlagAnyWrap, Depth);
         if (MaxBECount == RecastedMaxBECount) {
           Type *WideTy = IntegerType::get(getContext(), BitWidth * 2);
           // Check whether Start+Step*MaxBECount has no signed overflow.
@@ -4703,6 +4708,7 @@ const SCEV *ScalarEvolution::getMinusSCEV(const SCEV *LHS, const SCEV *RHS,
 }
 
 const SCEV *ScalarEvolution::getTruncateOrZeroExtend(const SCEV *V, Type *Ty,
+                                                     SCEV::NoWrapFlags Flags,
                                                      unsigned Depth) {
   Type *SrcTy = V->getType();
   assert(SrcTy->isIntOrPtrTy() && Ty->isIntOrPtrTy() &&
@@ -4710,11 +4716,12 @@ const SCEV *ScalarEvolution::getTruncateOrZeroExtend(const SCEV *V, Type *Ty,
   if (getTypeSizeInBits(SrcTy) == getTypeSizeInBits(Ty))
     return V;  // No conversion
   if (getTypeSizeInBits(SrcTy) > getTypeSizeInBits(Ty))
-    return getTruncateExpr(V, Ty, Depth);
+    return getTruncateExpr(V, Ty, Flags, Depth);
   return getZeroExtendExpr(V, Ty, Depth);
 }
 
 const SCEV *ScalarEvolution::getTruncateOrSignExtend(const SCEV *V, Type *Ty,
+                                                     SCEV::NoWrapFlags Flags,
                                                      unsigned Depth) {
   Type *SrcTy = V->getType();
   assert(SrcTy->isIntOrPtrTy() && Ty->isIntOrPtrTy() &&
@@ -4722,7 +4729,7 @@ const SCEV *ScalarEvolution::getTruncateOrSignExtend(const SCEV *V, Type *Ty,
   if (getTypeSizeInBits(SrcTy) == getTypeSizeInBits(Ty))
     return V;  // No conversion
   if (getTypeSizeInBits(SrcTy) > getTypeSizeInBits(Ty))
-    return getTruncateExpr(V, Ty, Depth);
+    return getTruncateExpr(V, Ty, Flags, Depth);
   return getSignExtendExpr(V, Ty, Depth);
 }
 
@@ -7866,8 +7873,10 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
             ShiftedLHS = getUDivExpr(LHS, MulCount);
           return getMulExpr(
               getZeroExtendExpr(
-                  getTruncateExpr(ShiftedLHS,
-                      IntegerType::get(getContext(), BitWidth - LZ - TZ)),
+                  getTruncateExpr(
+                      ShiftedLHS,
+                      IntegerType::get(getContext(), BitWidth - LZ - TZ),
+                      SCEV::FlagSafeWrap, 0),
                   BO->LHS->getType()),
               MulCount);
         }
@@ -14809,7 +14818,7 @@ public:
   const SCEV *visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
     const SCEV *Operand = visit(Expr->getOperand());
     const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(Operand);
-    if (AR && AR->getLoop() == L && AR->isAffine()) {
+    if (AR && AR->getLoop() == L && AR->isAffine() && !AR->hasSafeWrap()) {
       // This couldn't be folded because the operand didn't have the nuw
       // flag. Add the nusw flag as an assumption that we could make.
       const SCEV *Step = AR->getStepRecurrence(SE);
@@ -14825,7 +14834,7 @@ public:
   const SCEV *visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
     const SCEV *Operand = visit(Expr->getOperand());
     const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(Operand);
-    if (AR && AR->getLoop() == L && AR->isAffine()) {
+    if (AR && AR->getLoop() == L && AR->isAffine() && !AR->hasSafeWrap()) {
       // This couldn't be folded because the operand didn't have the nsw
       // flag. Add the nssw flag as an assumption that we could make.
       const SCEV *Step = AR->getStepRecurrence(SE);
