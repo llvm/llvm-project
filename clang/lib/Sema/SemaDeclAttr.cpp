@@ -63,6 +63,7 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -5711,11 +5712,39 @@ static void handleMSConstexprAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) MSConstexprAttr(S.Context, AL));
 }
 
+static bool checkValidAbiTag(Sema &S, const Expr *Exp, StringRef Tag) {
+  if (Tag.empty()) {
+    S.Diag(Exp->getExprLoc(), diag::err_empty_abi_tag) << Exp->getSourceRange();
+    return false;
+  }
+
+  for (size_t I = 0; I < Tag.size(); ++I) {
+    if (!isAsciiIdentifierContinue(Tag[I])) {
+      S.Diag(Exp->getBeginLoc().getLocWithOffset(1 + I),
+             diag::err_invalid_char_in_abi_tag)
+          << Tag.substr(I, llvm::getNumBytesForUTF8(Tag[I]))
+          << /*not allowed at all*/ 1;
+      return false;
+    }
+  }
+
+  if (!isAsciiIdentifierStart(Tag[0])) {
+    S.Diag(Exp->getBeginLoc().getLocWithOffset(1),
+           diag::err_invalid_char_in_abi_tag)
+        << Tag.substr(0, llvm::getNumBytesForUTF8(Tag[0]))
+        << /*not allowed at the start*/ 0;
+    return false;
+  }
+
+  return true;
+}
+
 static void handleAbiTagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   SmallVector<StringRef, 4> Tags;
   for (unsigned I = 0, E = AL.getNumArgs(); I != E; ++I) {
     StringRef Tag;
-    if (!S.checkStringLiteralArgumentAttr(AL, I, Tag))
+    if (!S.checkStringLiteralArgumentAttr(AL, I, Tag) ||
+        !checkValidAbiTag(S, AL.getArgAsExpr(I), Tag))
       return;
     Tags.push_back(Tag);
   }
