@@ -39,6 +39,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-reg-stackify"
 
+static cl::opt<int> MaxRegStackifyDepth(
+    "webassembly-max-reg-stackify-depth", cl::init(10), cl::Hidden,
+    cl::desc("The maximum number of register uses in stack"));
+
 namespace {
 class WebAssemblyRegStackify final : public MachineFunctionPass {
   StringRef getPassName() const override {
@@ -691,12 +695,16 @@ class TreeWalkerState {
   using mop_reverse_iterator = std::reverse_iterator<mop_iterator>;
   using RangeTy = iterator_range<mop_reverse_iterator>;
   SmallVector<RangeTy, 4> Worklist;
+  int cur_stack_depth;
 
 public:
   explicit TreeWalkerState(MachineInstr *Insert) {
+    cur_stack_depth = 0;
     const iterator_range<mop_iterator> &Range = Insert->explicit_uses();
-    if (!Range.empty())
+    if (!Range.empty()) {
       Worklist.push_back(reverse(Range));
+      cur_stack_depth = getNumRegs(Range);
+    }
   }
 
   bool done() const { return Worklist.empty(); }
@@ -705,18 +713,46 @@ public:
     RangeTy &Range = Worklist.back();
     MachineOperand &Op = *Range.begin();
     Range = drop_begin(Range);
+    if (Op.isReg())
+      cur_stack_depth--;
+
     if (Range.empty())
       Worklist.pop_back();
+
+    assert(cur_stack_depth >= 0);
     assert((Worklist.empty() || !Worklist.back().empty()) &&
            "Empty ranges shouldn't remain in the worklist");
     return Op;
   }
 
+  template <typename T> int getNumRegs(const T &Range) {
+    int num = 0;
+    for (auto it = Range.begin(); it != Range.end(); it++) {
+      if (it->isReg())
+        num++;
+    }
+    return num;
+  }
+
   /// Push Instr's operands onto the stack to be visited.
   void pushOperands(MachineInstr *Instr) {
     const iterator_range<mop_iterator> &Range(Instr->explicit_uses());
-    if (!Range.empty())
+    if (!Range.empty()) {
       Worklist.push_back(reverse(Range));
+      cur_stack_depth += getNumRegs(Range);
+    }
+  }
+
+  bool canExceedStackDepth(MachineInstr *Instr) {
+    const iterator_range<mop_iterator> &Range(Instr->explicit_uses());
+    int expect_stack_depth = cur_stack_depth + getNumRegs(Range);
+    if (expect_stack_depth > MaxRegStackifyDepth) {
+      LLVM_DEBUG(dbgs() << "Stop stackify as the stack depth may reach "
+                        << expect_stack_depth << " and exceeds the threshold!");
+      return true;
+    }
+
+    return false;
   }
 
   /// Some of Instr's operands are on the top of the stack; remove them and
@@ -725,7 +761,9 @@ public:
     assert(hasRemainingOperands(Instr) &&
            "Reseting operands should only be done when the instruction has "
            "an operand still on the stack");
+    int remain_reg_num = getNumRegs(Worklist.back());
     Worklist.back() = reverse(Instr->explicit_uses());
+    cur_stack_depth += getNumRegs(Worklist.back()) - remain_reg_num;
   }
 
   /// Test whether Instr has operands remaining to be visited at the top of
@@ -863,6 +901,10 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         // Argument instructions represent live-in registers and not real
         // instructions.
         if (WebAssembly::isArgument(DefI->getOpcode()))
+          continue;
+
+        if (!MF.getFunction().hasOptSize() &&
+            TreeWalker.canExceedStackDepth(DefI))
           continue;
 
         MachineOperand *Def =
