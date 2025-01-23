@@ -1126,10 +1126,10 @@ def MemRef_GlobalOp : MemRef_Op<"global", [Symbol]> {
 
     ```mlir
     // Private variable with an initial value.
-    memref.global "private" @x : memref<2xf32> = dense<0.0,2.0>
+    memref.global "private" @x : memref<2xf32> = dense<[0.0,2.0]>
 
     // Private variable with an initial value and an alignment (power of 2).
-    memref.global "private" @x : memref<2xf32> = dense<0.0,2.0> {alignment = 64}
+    memref.global "private" @x : memref<2xf32> = dense<[0.0,2.0]> {alignment = 64}
 
     // Declaration of an external variable.
     memref.global "private" @y : memref<4xi32>
@@ -1138,7 +1138,7 @@ def MemRef_GlobalOp : MemRef_Op<"global", [Symbol]> {
     memref.global @z : memref<3xf16> = uninitialized
 
     // Externally visible constant variable.
-    memref.global constant @c : memref<2xi32> = dense<1, 4>
+    memref.global constant @c : memref<2xi32> = dense<[1, 4]>
     ```
   }];
 
