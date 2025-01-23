@@ -259,8 +259,7 @@ static int compileModule(char **, LLVMContext &);
   llvm_unreachable("reportError() should not return");
 }
 
-static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
-                                                       Triple::OSType OS,
+static std::unique_ptr<ToolOutputFile> GetOutputStream(Triple::OSType OS,
                                                        const char *ProgName) {
   // If we don't yet have an output filename, make one.
   if (OutputFilename.empty()) {
@@ -613,7 +612,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
   // Figure out where we are going to send the output.
   std::unique_ptr<ToolOutputFile> Out =
-      GetOutputStream(TheTarget->getName(), TheTriple.getOS(), argv[0]);
+      GetOutputStream(TheTriple.getOS(), argv[0]);
   if (!Out) return 1;
 
   // Ensure the filename is passed down to CodeViewDebug.
