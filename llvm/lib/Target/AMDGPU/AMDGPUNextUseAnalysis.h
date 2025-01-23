@@ -299,8 +299,12 @@ public:
   void getFromSortedRecords(const VRegDistances::SortedRecords Dists,
                             LaneBitmask Mask, unsigned &D);
 
-  bool isDead(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-              const VRegMaskPair VMP) {
+  SmallVector<VRegMaskPair>
+  getSortedSubregUses(const MachineBasicBlock::iterator I,
+                      const VRegMaskPair VMP);
+
+      bool isDead(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
+                  const VRegMaskPair VMP) {
     if (!VMP.VReg.isVirtual())
       report_fatal_error("Only virtual registers allowed!\n", true);
     return I == MBB.end() ? getNextUseDistance(MBB, VMP) == Infinity
