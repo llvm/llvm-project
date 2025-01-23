@@ -198,11 +198,15 @@ _LIBCPP_HARDENING_MODE_DEBUG
 
 // Incomplete features get their own specific disabling flags. This makes it
 // easier to grep for target specific flags once the feature is complete.
-#  if !defined(_LIBCPP_ENABLE_EXPERIMENTAL) && !defined(_LIBCPP_BUILDING_LIBRARY)
-#    define _LIBCPP_HAS_NO_INCOMPLETE_PSTL
-#    define _LIBCPP_HAS_NO_EXPERIMENTAL_TZDB
-#    define _LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM
+#  if defined(_LIBCPP_ENABLE_EXPERIMENTAL) || defined(_LIBCPP_BUILDING_LIBRARY)
+#    define _LIBCPP_HAS_EXPERIMENTAL_LIBRARY 1
+#  else
+#    define _LIBCPP_HAS_EXPERIMENTAL_LIBRARY 0
 #  endif
+
+#  define _LIBCPP_HAS_EXPERIMENTAL_PSTL _LIBCPP_HAS_EXPERIMENTAL_LIBRARY
+#  define _LIBCPP_HAS_EXPERIMENTAL_TZDB _LIBCPP_HAS_EXPERIMENTAL_LIBRARY
+#  define _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM _LIBCPP_HAS_EXPERIMENTAL_LIBRARY
 
 #  if defined(__MVS__)
 #    include <features.h> // for __NATIVE_ASCII_F
