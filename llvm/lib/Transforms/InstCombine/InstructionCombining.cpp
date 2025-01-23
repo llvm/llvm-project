@@ -40,6 +40,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
@@ -4898,6 +4899,16 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
   /// the new position.
 
   BasicBlock::iterator InsertPos = DestBlock->getFirstInsertionPt();
+
+  if (!CleanupAssumptions && isa<LoadInst>(I)) {
+    // Preserve dereferenceable at original position.
+    // TODO: Only need to add this extra information if I doesn't always execute
+    // in the new position.
+    Builder.SetInsertPoint(I);
+    Value *Ptr = I->getOperand(0);
+    Builder.CreateDereferenceableAssumption(
+        Ptr, I->getType()->getScalarSizeInBits());
+  }
   I->moveBefore(*DestBlock, InsertPos);
   ++NumSunkInst;
 
@@ -5159,7 +5170,9 @@ bool InstCombinerImpl::run() {
 
       for (Use &U : I->uses()) {
         User *User = U.getUser();
-        if (User->isDroppable())
+        if (User->isDroppable() &&
+            (!I->getType()->isPointerTy() ||
+             !getKnowledgeForValue(I, Attribute::Dereferenceable, &AC)))
           continue;
         if (NumUsers > MaxSinkNumUsers)
           return std::nullopt;
@@ -5550,7 +5563,7 @@ static bool combineInstructionsOverFunction(
                       << F.getName() << "\n");
 
     InstCombinerImpl IC(Worklist, Builder, F.hasMinSize(), AA, AC, TLI, TTI, DT,
-                        ORE, BFI, BPI, PSI, DL, RPOT);
+                        ORE, BFI, BPI, PSI, DL, RPOT, Opts.CleanupAssumptions);
     IC.MaxArraySizeForCombine = MaxArraySize;
     bool MadeChangeInThisIteration = IC.prepareWorklist(F);
     MadeChangeInThisIteration |= IC.run();
@@ -5599,7 +5612,7 @@ PreservedAnalyses InstCombinePass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
   auto &LRT = AM.getResult<LastRunTrackingAnalysis>(F);
   // No changes since last InstCombine pass, exit early.
-  if (LRT.shouldSkip(&ID))
+  if (LRT.shouldSkip(&ID) && !Options.CleanupAssumptions)
     return PreservedAnalyses::all();
 
   auto &AC = AM.getResult<AssumptionAnalysis>(F);

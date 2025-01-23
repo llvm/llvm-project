@@ -44,7 +44,7 @@ define i32 @test2(i32 %x) nounwind ssp "instcombine-no-verify-fixpoint" {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[X_ADDR_17]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = sdiv i32 [[TMP1]], [[X_ADDR_17]]
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @bar() #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @bar() #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[X_ADDR_0]] = phi i32 [ [[TMP2]], [[BB1]] ], [ [[X_ADDR_17]], [[BB]] ]
@@ -84,13 +84,14 @@ declare i32 @bar()
 define i32 @test3(ptr nocapture readonly %P, i32 %i) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i32 [[I:%.*]], label [[SW_EPILOG:%.*]] [
+; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I:%.*]] to i64
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[ARRAYIDX]], i64 32) ]
+; CHECK-NEXT:    switch i32 [[I]], label [[SW_EPILOG:%.*]] [
 ; CHECK-NEXT:      i32 5, label [[SW_BB:%.*]]
 ; CHECK-NEXT:      i32 2, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
-; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[I]]
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
@@ -182,11 +183,12 @@ sw.epilog:                                        ; preds = %entry, %sw.bb
 define i32 @test6(ptr nocapture readonly %P, i32 %i, i1 %cond) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADD:%.*]] = shl nsw i32 [[I:%.*]], 1
+; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I:%.*]] to i64
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[ARRAYIDX]], i64 32) ]
+; CHECK-NEXT:    [[ADD:%.*]] = shl nsw i32 [[I]], 1
 ; CHECK-NEXT:    br label [[DISPATCHBB:%.*]]
 ; CHECK:       dispatchBB:
-; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    switch i32 [[I]], label [[SW_BB:%.*]] [
 ; CHECK-NEXT:      i32 5, label [[SW_EPILOG:%.*]]
@@ -277,12 +279,13 @@ abort:
 define i32 @invariant_load_metadata(ptr %p, i1 %cond) {
 ; CHECK-LABEL: @invariant_load_metadata(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P:%.*]], i64 32) ]
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BLOCK:%.*]], label [[END:%.*]]
 ; CHECK:       block:
 ; CHECK-NEXT:    call void @fn()
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4, !invariant.load [[META0:![0-9]+]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P]], align 4, !invariant.load [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
 entry:
@@ -324,12 +327,13 @@ end:
 define void @invariant_load_use_in_br(ptr %p, i1 %cond) {
 ; CHECK-LABEL: @invariant_load_use_in_br(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P:%.*]], i64 32) ]
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[TRUE_BR:%.*]], label [[FALSE_BR:%.*]]
 ; CHECK:       true.br:
 ; CHECK-NEXT:    call void @fn()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       false.br:
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    call void @fn(i32 [[VAL]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -353,13 +357,14 @@ exit:
 define void @invariant_load_metadata_call(ptr %p, i1 %cond) {
 ; CHECK-LABEL: @invariant_load_metadata_call(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P:%.*]], i64 32) ]
 ; CHECK-NEXT:    call void @fn()
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[TRUE_BR:%.*]], label [[FALSE_BR:%.*]]
 ; CHECK:       true.br:
 ; CHECK-NEXT:    call void @fn()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       false.br:
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[P:%.*]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[P]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    call void @fn(i32 [[VAL]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:

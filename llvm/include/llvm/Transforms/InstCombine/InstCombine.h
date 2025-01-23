@@ -31,6 +31,7 @@ struct InstCombineOptions {
   // Verify that a fix point has been reached after MaxIterations.
   bool VerifyFixpoint = false;
   unsigned MaxIterations = InstCombineDefaultMaxIterations;
+  bool CleanupAssumptions = false;
 
   InstCombineOptions() = default;
 
@@ -41,6 +42,11 @@ struct InstCombineOptions {
 
   InstCombineOptions &setMaxIterations(unsigned Value) {
     MaxIterations = Value;
+    return *this;
+  }
+
+  InstCombineOptions &setCleanupAssumptions(bool Value) {
+    CleanupAssumptions = Value;
     return *this;
   }
 };

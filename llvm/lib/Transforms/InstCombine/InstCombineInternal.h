@@ -59,6 +59,8 @@ class User;
 class LLVM_LIBRARY_VISIBILITY InstCombinerImpl final
     : public InstCombiner,
       public InstVisitor<InstCombinerImpl, Instruction *> {
+  bool CleanupAssumptions = false;
+
 public:
   InstCombinerImpl(InstructionWorklist &Worklist, BuilderTy &Builder,
                    bool MinimizeSize, AAResults *AA, AssumptionCache &AC,
@@ -66,9 +68,11 @@ public:
                    DominatorTree &DT, OptimizationRemarkEmitter &ORE,
                    BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
                    ProfileSummaryInfo *PSI, const DataLayout &DL,
-                   ReversePostOrderTraversal<BasicBlock *> &RPOT)
+                   ReversePostOrderTraversal<BasicBlock *> &RPOT,
+                   bool CleanupAssumptions)
       : InstCombiner(Worklist, Builder, MinimizeSize, AA, AC, TLI, TTI, DT, ORE,
-                     BFI, BPI, PSI, DL, RPOT) {}
+                     BFI, BPI, PSI, DL, RPOT),
+        CleanupAssumptions(CleanupAssumptions) {}
 
   virtual ~InstCombinerImpl() = default;
 
