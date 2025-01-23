@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineRegisterClassInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
@@ -75,7 +76,7 @@ AntiDepBreaker::~AntiDepBreaker() = default;
 namespace {
   class PostRAScheduler : public MachineFunctionPass {
     const TargetInstrInfo *TII = nullptr;
-    RegisterClassInfo RegClassInfo;
+    RegisterClassInfo *RegClassInfo = nullptr;
 
   public:
     static char ID;
@@ -89,6 +90,8 @@ namespace {
       AU.addPreserved<MachineDominatorTreeWrapperPass>();
       AU.addRequired<MachineLoopInfoWrapperPass>();
       AU.addPreserved<MachineLoopInfoWrapperPass>();
+      AU.addRequired<MachineRegisterClassInfoWrapperPass>();
+      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -190,8 +193,11 @@ namespace {
 
 char &llvm::PostRASchedulerID = PostRAScheduler::ID;
 
-INITIALIZE_PASS(PostRAScheduler, DEBUG_TYPE,
-                "Post RA top-down list latency scheduler", false, false)
+INITIALIZE_PASS_BEGIN(PostRAScheduler, DEBUG_TYPE,
+                      "Post RA top-down list latency scheduler", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
+INITIALIZE_PASS_END(PostRAScheduler, DEBUG_TYPE,
+                    "Post RA top-down list latency scheduler", false, false)
 
 SchedulePostRATDList::SchedulePostRATDList(
     MachineFunction &MF, MachineLoopInfo &MLI, AliasAnalysis *AA,
@@ -287,11 +293,11 @@ bool PostRAScheduler::runOnMachineFunction(MachineFunction &Fn) {
   }
   SmallVector<const TargetRegisterClass *, 4> CriticalPathRCs;
   Subtarget.getCriticalPathRCs(CriticalPathRCs);
-  RegClassInfo.runOnMachineFunction(Fn);
+  RegClassInfo = &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
 
   LLVM_DEBUG(dbgs() << "PostRAScheduler\n");
 
-  SchedulePostRATDList Scheduler(Fn, MLI, AA, RegClassInfo, AntiDepMode,
+  SchedulePostRATDList Scheduler(Fn, MLI, AA, *RegClassInfo, AntiDepMode,
                                  CriticalPathRCs);
 
   // Loop over all of the basic blocks

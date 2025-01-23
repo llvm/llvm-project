@@ -65,6 +65,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
+#include "llvm/CodeGen/MachineRegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
@@ -112,7 +113,7 @@ namespace {
 /// are safe for such insertion.
 class ShrinkWrap : public MachineFunctionPass {
   /// Hold callee-saved information.
-  RegisterClassInfo RCI;
+  RegisterClassInfo *RCI = nullptr;
   MachineDominatorTree *MDT = nullptr;
   MachinePostDominatorTree *MPDT = nullptr;
 
@@ -223,7 +224,7 @@ class ShrinkWrap : public MachineFunctionPass {
 
   /// Initialize the pass for \p MF.
   void init(MachineFunction &MF) {
-    RCI.runOnMachineFunction(MF);
+    RCI = &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
     MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
     MPDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
     Save = nullptr;
@@ -265,6 +266,7 @@ public:
     AU.addRequired<MachinePostDominatorTreeWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addRequired<MachineOptimizationRemarkEmitterPass>();
+    AU.addRequired<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -292,6 +294,7 @@ INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_END(ShrinkWrap, DEBUG_TYPE, "Shrink Wrap Pass", false, false)
 
 bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
@@ -350,7 +353,7 @@ bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
       // instruction we can ignore, otherwise we may pessimize shrinkwrapping.
       UseOrDefCSR =
           (!MI.isCall() && PhysReg == SP) ||
-          RCI.getLastCalleeSavedAlias(PhysReg) ||
+          RCI->getLastCalleeSavedAlias(PhysReg) ||
           (!MI.isReturn() && TRI->isNonallocatableRegisterCalleeSave(PhysReg));
     } else if (MO.isRegMask()) {
       // Check if this regmask clobbers any of the CSRs.

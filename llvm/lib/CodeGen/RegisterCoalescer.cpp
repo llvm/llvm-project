@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterClassInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
@@ -131,7 +132,7 @@ namespace {
     LiveIntervals *LIS = nullptr;
     const MachineLoopInfo* Loops = nullptr;
     AliasAnalysis *AA = nullptr;
-    RegisterClassInfo RegClassInfo;
+    RegisterClassInfo *RegClassInfo = nullptr;
 
     /// Position and VReg of a PHI instruction during coalescing.
     struct PHIValPos {
@@ -410,6 +411,7 @@ INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_END(RegisterCoalescer, "register-coalescer",
                     "Register Coalescer", false, false)
 
@@ -594,6 +596,8 @@ void RegisterCoalescer::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineLoopInfoWrapperPass>();
   AU.addPreserved<MachineLoopInfoWrapperPass>();
   AU.addPreservedID(MachineDominatorsID);
+  AU.addRequired<MachineRegisterClassInfoWrapperPass>();
+  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -2199,7 +2203,7 @@ bool RegisterCoalescer::joinCopy(
 
   // Removing sub-register copies can ease the register class constraints.
   // Make sure we attempt to inflate the register class of DstReg.
-  if (!CP.isPhys() && RegClassInfo.isProperSubClass(CP.getNewRC()))
+  if (!CP.isPhys() && RegClassInfo->isProperSubClass(CP.getNewRC()))
     InflateRegs.push_back(CP.getDstReg());
 
   // CopyMI has been erased by joinIntervals at this point. Remove it from
@@ -4261,6 +4265,8 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
   LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  RegClassInfo = &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
+
   if (EnableGlobalCopies == cl::BOU_UNSET)
     JoinGlobalCopies = STI.enableJoinGlobalCopies();
   else
@@ -4289,8 +4295,6 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
 
   DbgVRegToValues.clear();
   buildVRegToDbgValueMap(fn);
-
-  RegClassInfo.runOnMachineFunction(fn);
 
   // Join (coalesce) intervals if requested.
   if (EnableJoining)
