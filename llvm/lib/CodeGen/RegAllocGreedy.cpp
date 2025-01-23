@@ -183,7 +183,9 @@ RAGreedyLegacy::RAGreedyLegacy(const RegAllocFilterFunc F)
   initializeRAGreedyLegacyPass(*PassRegistry::getPassRegistry());
 }
 
-RAGreedy::RAGreedy(const RegAllocFilterFunc F) : RegAllocBase(F) {}
+RAGreedy::RAGreedy(RequiredAnalyses &Analyses, const RegAllocFilterFunc F) : RegAllocBase(F) {
+  setAnalyses(Analyses);
+}
 
 void RAGreedy::setAnalyses(RequiredAnalyses &Analyses) {
   VRM = Analyses.VRM;
@@ -204,14 +206,13 @@ void RAGreedy::setAnalyses(RequiredAnalyses &Analyses) {
 
 void RAGreedyPass::printPipeline(raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) const {
   StringRef FilterName = Opts.FilterName.empty() ? "all" : Opts.FilterName;
-  OS << "regallocgreedy<" << FilterName << ">";
+  OS << "regallocgreedy<" << FilterName << '>';
 }
 
 PreservedAnalyses RAGreedyPass::run(MachineFunction &MF,
                                     MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(*this, MF);
 
-  RAGreedy Impl(Opts.Filter);
   RAGreedy::RequiredAnalyses Analyses;
 
   Analyses.LIS = &MFAM.getResult<LiveIntervalsAnalysis>(MF);
@@ -231,7 +232,8 @@ PreservedAnalyses RAGreedyPass::run(MachineFunction &MF,
       MFAM.getResult<RegAllocPriorityAdvisorAnalysis>(MF).Provider;
   Analyses.VRM = &MFAM.getResult<VirtRegMapAnalysis>(MF);
 
-  Impl.setAnalyses(Analyses);
+  RAGreedy Impl(Analyses, Opts.Filter);
+
   bool Changed = Impl.run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
@@ -248,7 +250,6 @@ PreservedAnalyses RAGreedyPass::run(MachineFunction &MF,
 }
 
 bool RAGreedyLegacy::runOnMachineFunction(MachineFunction &MF) {
-  RAGreedy Impl(F);
 
   RAGreedy::RequiredAnalyses Analyses;
   Analyses.VRM = &getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
@@ -271,7 +272,7 @@ bool RAGreedyLegacy::runOnMachineFunction(MachineFunction &MF) {
   Analyses.PriorityProvider =
       &getAnalysis<RegAllocPriorityAdvisorAnalysisLegacy>().getProvider();
 
-  Impl.setAnalyses(Analyses);
+  RAGreedy Impl(Analyses, F);
   return Impl.run(MF);
 }
 

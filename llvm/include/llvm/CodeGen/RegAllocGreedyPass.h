@@ -13,7 +13,6 @@
 using namespace llvm;
 
 class RAGreedyPass : public PassInfoMixin<RAGreedyPass> {
-
 public:
   struct Options {
     RegAllocFilterFunc Filter;

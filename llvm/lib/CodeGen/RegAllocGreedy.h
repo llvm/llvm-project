@@ -305,12 +305,9 @@ private:
 
   bool ReverseLocalAssignment = false;
 
-public:
-  RAGreedy(const RegAllocFilterFunc F = nullptr);
-  // Evict and priority advisors use this object, so we can construct those
-  // first and pass them here.
-  // Not required once legacy PM is removed.
   void setAnalyses(RequiredAnalyses &Analyses);
+public:
+  RAGreedy(RequiredAnalyses &Analyses, const RegAllocFilterFunc F = nullptr);
 
   Spiller &spiller() override { return *SpillerInstance; }
   void enqueueImpl(const LiveInterval *LI) override;
