@@ -163,7 +163,7 @@ public:
   GetPossibleMatches(ValueObject &valobj, lldb::DynamicValueType use_dynamic) {
     FormattersMatchVector matches;
     GetPossibleMatches(valobj, valobj.GetCompilerType(), use_dynamic, matches,
-                       FormattersMatchCandidate::Flags(), true, true);
+                       FormattersMatchCandidate::Flags(), true);
     return matches;
   }
 
@@ -180,7 +180,6 @@ private:
                                  lldb::DynamicValueType use_dynamic,
                                  FormattersMatchVector &entries,
                                  FormattersMatchCandidate::Flags current_flags,
-                                 bool dereference_ptr = true,
                                  bool root_level = false);
 
   std::atomic<uint32_t> m_last_revision;
