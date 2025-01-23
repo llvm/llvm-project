@@ -347,14 +347,15 @@ bool ClauseProcessor::processDistSchedule(
 bool ClauseProcessor::processExclusive(
     mlir::Location currentLocation,
     mlir::omp::ExclusiveClauseOps &result) const {
-  return findRepeatableClause<omp::clause::Exclusive>(
-      [&](const omp::clause::Exclusive &clause, const parser::CharBlock &) {
-        for (const Object &object : clause.v) {
-          const semantics::Symbol *symbol = object.sym();
-          mlir::Value symVal = converter.getSymbolAddress(*symbol);
-          result.exclusiveVars.push_back(symVal);
-        }
-      });
+  if (auto *clause = findUniqueClause<omp::clause::Exclusive>()) {
+    for (const Object &object : clause->v) {
+      const semantics::Symbol *symbol = object.sym();
+      mlir::Value symVal = converter.getSymbolAddress(*symbol);
+      result.exclusiveVars.push_back(symVal);
+    }
+    return true;
+  }
+  return false;
 }
 
 bool ClauseProcessor::processFilter(lower::StatementContext &stmtCtx,
@@ -396,14 +397,15 @@ bool ClauseProcessor::processHint(mlir::omp::HintClauseOps &result) const {
 bool ClauseProcessor::processInclusive(
     mlir::Location currentLocation,
     mlir::omp::InclusiveClauseOps &result) const {
-  return findRepeatableClause<omp::clause::Inclusive>(
-      [&](const omp::clause::Inclusive &clause, const parser::CharBlock &) {
-        for (const Object &object : clause.v) {
-          const semantics::Symbol *symbol = object.sym();
-          mlir::Value symVal = converter.getSymbolAddress(*symbol);
-          result.inclusiveVars.push_back(symVal);
-        }
-      });
+  if (auto *clause = findUniqueClause<omp::clause::Inclusive>()) {
+    for (const Object &object : clause->v) {
+      const semantics::Symbol *symbol = object.sym();
+      mlir::Value symVal = converter.getSymbolAddress(*symbol);
+      result.inclusiveVars.push_back(symVal);
+    }
+    return true;
+  }
+  return false;
 }
 
 bool ClauseProcessor::processMergeable(
@@ -1163,7 +1165,7 @@ bool ClauseProcessor::processReduction(
         ReductionProcessor rp;
         rp.addDeclareReduction(
             currentLocation, converter, clause, reductionVars, reduceVarByRef,
-            reductionDeclSymbols, reductionSyms, &result.reductionMod);
+            reductionDeclSymbols, reductionSyms, result.reductionMod);
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
         llvm::copy(reduceVarByRef, std::back_inserter(result.reductionByref));
