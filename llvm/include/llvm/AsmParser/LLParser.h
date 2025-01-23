@@ -427,6 +427,7 @@ namespace llvm {
     bool parseTypeIdEntry(unsigned ID);
     bool parseTypeIdSummary(TypeIdSummary &TIS);
     bool parseTypeIdCompatibleVtableEntry(unsigned ID);
+    bool parseTypeIdMayBeAccessed(unsigned ID);
     bool parseTypeTestResolution(TypeTestResolution &TTRes);
     bool parseOptionalWpdResolutions(
         std::map<uint64_t, WholeProgramDevirtResolution> &WPDResMap);

@@ -33,6 +33,7 @@
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LibCXXABI.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -573,14 +574,23 @@ static void dropDeadSymbols(Module &Mod, const GVSummaryMapTy &DefinedGlobals,
         convertToDeclaration(GV);
       }
 
+  Triple TT(Mod.getTargetTriple());
+  std::unique_ptr<CXXABI> ABI = CXXABI::Create(TT);
+
   // Now that all dead bodies have been dropped, delete the actual objects
   // themselves when possible.
   for (GlobalValue *GV : DeadGVs) {
     GV->removeDeadConstantUsers();
-    // Might reference something defined in native object (i.e. dropped a
-    // non-prevailing IR def, but we need to keep the declaration).
-    if (GV->use_empty())
+    if (ABI && (ABI->isTypeInfo(GV->getName()) ||
+                            ABI->isTypeName(GV->getName()))) {
+      GV->replaceAllUsesWith(
+          ConstantPointerNull::get(PointerType::get(Mod.getContext(), 0)));
       GV->eraseFromParent();
+    } else if (GV->use_empty()) {
+      // Might reference something defined in native object (i.e. dropped a
+      // non-prevailing IR def, but we need to keep the declaration).
+      GV->eraseFromParent();
+    }
   }
 }
 

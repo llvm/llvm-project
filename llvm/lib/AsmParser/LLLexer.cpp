@@ -826,6 +826,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(args);
   KEYWORD(typeid);
   KEYWORD(typeidCompatibleVTable);
+  KEYWORD(typeidMayBeAccessed);
   KEYWORD(summary);
   KEYWORD(typeTestRes);
   KEYWORD(kind);

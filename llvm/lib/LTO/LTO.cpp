@@ -55,6 +55,7 @@
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/MemProfContextDisambiguation.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
+#include "llvm/Transforms/IPO/DeadRTTIElimination.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
 
@@ -729,6 +730,9 @@ Error LTO::add(std::unique_ptr<InputFile> Input,
                ArrayRef<SymbolResolution> Res) {
   assert(!CalledGetMaxTasks);
 
+  if (getTargetTriple().empty())
+    setTargetTriple(Input->getTargetTriple().str());
+
   if (Conf.ResolutionFile)
     writeToResolutionFile(*Conf.ResolutionFile, Input.get(), Res);
 
@@ -1187,8 +1191,10 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
       return PrevailingType::Unknown;
     return It->second;
   };
-  computeDeadSymbolsWithConstProp(ThinLTO.CombinedIndex, GUIDPreservedSymbols,
-                                  isPrevailing, Conf.OptLevel > 0);
+
+  if (!RegularLTO.ModsWithSummaries.empty())
+    computeDeadSymbolsWithConstProp(ThinLTO.CombinedIndex, GUIDPreservedSymbols,
+                                    isPrevailing, Conf.OptLevel > 0);
 
   // Setup output file to emit statistics.
   auto StatsFileOrErr = setupStatsFile(Conf.StatsFile);
@@ -1208,7 +1214,7 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   if (!Result)
     // This will reset the GlobalResolutions optional once done with it to
     // reduce peak memory before importing.
-    Result = runThinLTO(AddStream, Cache, GUIDPreservedSymbols);
+    Result = runThinLTO(AddStream, Cache, GUIDPreservedSymbols, isPrevailing);
 
   if (StatsFile)
     PrintStatisticsJSON(StatsFile->os());
@@ -1839,8 +1845,10 @@ ThinBackend lto::createWriteIndexesThinBackend(
   return ThinBackend(Func, Parallelism);
 }
 
-Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
-                      const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
+Error LTO::runThinLTO(
+    AddStreamFn AddStream, FileCache Cache,
+    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
+    function_ref<PrevailingType(GlobalValue::GUID)> IsPrevailing) {
   LLVM_DEBUG(dbgs() << "Running ThinLTO\n");
   ThinLTO.CombinedIndex.releaseTemporaryMemory();
   timeTraceProfilerBegin("ThinLink", StringRef(""));
@@ -1855,10 +1863,6 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
     llvm::errs() << "warning: [ThinLTO] No module compiled\n";
     return Error::success();
   }
-
-  if (Conf.CombinedIndexHook &&
-      !Conf.CombinedIndexHook(ThinLTO.CombinedIndex, GUIDPreservedSymbols))
-    return Error::success();
 
   // Collect for each module the list of function it defines (GUID ->
   // Summary).
@@ -1919,6 +1923,18 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   updateVCallVisibilityInIndex(
       ThinLTO.CombinedIndex, WholeProgramVisibilityEnabledInLTO,
       DynamicExportSymbols, VisibleToRegularObjSymbols);
+
+  Triple TT(getTargetTriple());
+  DeadRTTIElimIndex(ThinLTO.CombinedIndex, TT).run();
+
+  if (!ThinLTO.CombinedIndex.withGlobalValueDeadStripping())
+    computeDeadSymbolsWithConstProp(ThinLTO.CombinedIndex, GUIDPreservedSymbols,
+                                    IsPrevailing, Conf.OptLevel > 0);
+
+
+  if (Conf.CombinedIndexHook &&
+      !Conf.CombinedIndexHook(ThinLTO.CombinedIndex, GUIDPreservedSymbols))
+    return Error::success();
 
   // Perform index-based WPD. This will return immediately if there are
   // no index entries in the typeIdMetadata map (e.g. if we are instead
