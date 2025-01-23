@@ -63,9 +63,13 @@ void NextUseResult::analyze(const MachineFunction &MF) {
         Prev = UpwardNextUses[MBBNum];
       }
 
+      LLVM_DEBUG(dbgs() << "\nMerging successors for " << MBB->getName()
+                        << "\n";);
 
       for (auto Succ : successors(MBB)) {
         unsigned SuccNum = Succ->getNumber();
+
+        LLVM_DEBUG(dbgs() << "Merging " << Succ->getName() << "\n");
 
         if (UpwardNextUses.contains(SuccNum)) {
           VRegDistances SuccDist = UpwardNextUses[SuccNum];
@@ -76,7 +80,14 @@ void NextUseResult::analyze(const MachineFunction &MF) {
             if (Succ->getNumber() == SuccNum)
               Weight = Infinity;
           }
+          LLVM_DEBUG(
+            dbgs() << "Curr: ";
+            printVregDistances(Curr);
+            dbgs() << "Succ: ";
+            printVregDistances(SuccDist));
           Curr.merge(SuccDist, Weight);
+          LLVM_DEBUG(dbgs() << "Curr after merge: ";
+                     printVregDistances(Curr));
         }
       }
 
@@ -85,8 +96,10 @@ void NextUseResult::analyze(const MachineFunction &MF) {
       for (auto &MI : make_range(MBB->rbegin(), MBB->rend())) {
         
         for (auto &P : Curr) {
+          VRegDistances::SortedRecords Tmp;
           for (auto D : P.second)
-            D.second++;
+            Tmp.insert({D.first, ++D.second});
+          P.second = Tmp;
         }
 
         for (auto &MO : MI.operands()) {
@@ -101,7 +114,7 @@ void NextUseResult::analyze(const MachineFunction &MF) {
           }
         }
         NextUseMap[MBBNum].InstrDist[&MI] = Curr;
-        // printVregDistancesD(Curr);
+        // printVregDistances(Curr);
       }
 
       UpwardNextUses[MBBNum] = std::move(Curr);
@@ -117,10 +130,12 @@ void NextUseResult::analyze(const MachineFunction &MF) {
 
 void NextUseResult::getFromSortedRecords(
     const VRegDistances::SortedRecords Dists, LaneBitmask Mask, unsigned &D) {
+  LLVM_DEBUG(dbgs() << "Mask : [" << PrintLaneMask(Mask) <<"]\n");
   for (auto P : Dists) {
     // Records are sorted in distance increasing order. So, the first record
     // is for the closest use.
     LaneBitmask UseMask = P.first;
+    LLVM_DEBUG(dbgs() << "Used mask : [" << PrintLaneMask(UseMask) << "]\n");
     if ((UseMask & Mask) == UseMask) {
       D = P.second;
       break;
@@ -137,6 +152,7 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock::iterator I,
       NextUseMap[MBBNum].InstrDist.contains(&*I)) {
     VRegDistances Dists = NextUseMap[MBBNum].InstrDist[&*I];
     if (NextUseMap[MBBNum].InstrDist[&*I].contains(VMP.VReg)) {
+      // printSortedRecords(Dists[VMP.VReg], VMP.VReg);
       getFromSortedRecords(Dists[VMP.VReg], VMP.LaneMask, Dist);
     }
   }
