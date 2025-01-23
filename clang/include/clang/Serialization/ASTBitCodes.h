@@ -1327,6 +1327,9 @@ enum DeclCode {
   /// A BlockDecl record.
   DECL_BLOCK,
 
+  /// A OutlinedFunctionDecl record.
+  DECL_OUTLINEDFUNCTION,
+
   /// A CapturedDecl record.
   DECL_CAPTURED,
 
@@ -1610,6 +1613,9 @@ enum StmtCode {
 
   /// A CapturedStmt record.
   STMT_CAPTURED,
+
+  /// A SYCLKernelCallStmt record.
+  STMT_SYCLKERNELCALL,
 
   /// A GCC-style AsmStmt record.
   STMT_GCCASM,
