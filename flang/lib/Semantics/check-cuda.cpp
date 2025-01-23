@@ -520,7 +520,8 @@ void CUDAChecker::Enter(const parser::SeparateModuleSubprogram &x) {
 
 static int DoConstructTightNesting(
     const parser::DoConstruct *doConstruct, const parser::Block *&innerBlock) {
-  if (!doConstruct || !doConstruct->IsDoNormal()) {
+  if (!doConstruct ||
+      (!doConstruct->IsDoNormal() && !doConstruct->IsDoConcurrent())) {
     return 0;
   }
   innerBlock = &std::get<parser::Block>(doConstruct->t);
