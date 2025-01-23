@@ -2833,6 +2833,14 @@ LLVMTypeRef LLVMIntrinsicGetType(LLVMContextRef Ctx, unsigned ID,
  */
 const char *LLVMIntrinsicGetName(unsigned ID, size_t *NameLength);
 
+/**
+ * Copies the name of an intrinsic. The caller is responsible for freeing the
+ * returned string.
+ *
+ * @see llvm::Intrinsic::getName()
+ */
+char *LLVMIntrinsicCopyName(unsigned ID, size_t *NameLength);
+
 /** Deprecated: Use LLVMIntrinsicCopyOverloadedName2 instead. */
 char *LLVMIntrinsicCopyOverloadedName(unsigned ID, LLVMTypeRef *ParamTypes,
                                       size_t ParamCount, size_t *NameLength);
