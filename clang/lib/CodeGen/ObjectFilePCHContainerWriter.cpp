@@ -324,19 +324,17 @@ public:
       // Print the IR for the PCH container to the debug output.
       llvm::SmallString<0> Buffer;
       clang::emitBackendOutput(
-          CI,
-          CASOpts, // MCCAS
-	  Ctx.getTargetInfo().getDataLayoutString(), M.get(),
+          CI, CodeGenOpts, CASOpts /* MCCAS */,
+          Ctx.getTargetInfo().getDataLayoutString(), M.get(),
           BackendAction::Backend_EmitLL, FS,
           std::make_unique<llvm::raw_svector_ostream>(Buffer));
       llvm::dbgs() << Buffer;
     });
 
     // Use the LLVM backend to emit the pch container.
-    clang::emitBackendOutput(CI, CASOpts, // MCCAS
-			     Ctx.getTargetInfo().getDataLayoutString(),
-                             M.get(), BackendAction::Backend_EmitObj, FS,
-                             std::move(OS));
+    clang::emitBackendOutput(CI, CodeGenOpts, CASOpts, // MCCAS
+                             Ctx.getTargetInfo().getDataLayoutString(), M.get(),
+                             BackendAction::Backend_EmitObj, FS, std::move(OS));
 
     // Free the memory for the temporary buffer.
     llvm::SmallVector<char, 0> Empty;

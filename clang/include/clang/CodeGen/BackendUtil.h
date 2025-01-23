@@ -40,10 +40,9 @@ enum BackendAction {
   Backend_EmitObj       ///< Emit native object files
 };
 
-void emitBackendOutput(CompilerInstance &CI,
-		       const CASOptions &CASOpts, // MCCAS 
-		       StringRef TDesc,
-		       llvm::Module *M, BackendAction Action,
+void emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
+		                   const CASOptions &CASOpts, // MCCAS 
+                       StringRef TDesc, llvm::Module *M, BackendAction Action,
                        llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                        std::unique_ptr<raw_pwrite_stream> OS,
                        std::unique_ptr<raw_pwrite_stream> CasidOS = nullptr,		       

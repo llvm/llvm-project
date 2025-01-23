@@ -211,13 +211,13 @@ class EmitAssemblyHelper {
   }
 
 public:
-  EmitAssemblyHelper(CompilerInstance &CI,
-		     const CASOptions &CASOpts, // MCCAS
-		     llvm::Module *M,
+  EmitAssemblyHelper(CompilerInstance &CI, CodeGenOptions &CGOpts,
+		                 const CASOptions &CASOpts, // MCCAS
+                     llvm::Module *M,
                      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS)
-      : CI(CI), Diags(CI.getDiagnostics()), CodeGenOpts(CI.getCodeGenOpts()),
+      : CI(CI), Diags(CI.getDiagnostics()), CodeGenOpts(CGOpts),
         TargetOpts(CI.getTargetOpts()), LangOpts(CI.getLangOpts()),
-	CASOpts(CASOpts), // MCCAS
+        CASOpts(CASOpts), // MCCAS
         TheModule(M), VFS(std::move(VFS)),
         TargetTriple(TheModule->getTargetTriple()) {}
 
@@ -1395,17 +1395,16 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   }
 }
 
-void clang::emitBackendOutput(CompilerInstance &CI,
+void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
                               const CASOptions &CASOpts, // MCCAS
-                              StringRef TDesc,
-                              llvm::Module *M, BackendAction Action,
+                              StringRef TDesc, llvm::Module *M,
+                              BackendAction Action,
                               IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                               std::unique_ptr<raw_pwrite_stream> OS,
                               std::unique_ptr<raw_pwrite_stream> CasIDOS,
                               BackendConsumer *BC) {
   llvm::TimeTraceScope TimeScope("Backend");
   DiagnosticsEngine &Diags = CI.getDiagnostics();
-  const auto &CGOpts = CI.getCodeGenOpts();
 
   std::unique_ptr<llvm::Module> EmptyModule;
   if (!CGOpts.ThinLTOIndexFile.empty()) {
@@ -1446,7 +1445,7 @@ void clang::emitBackendOutput(CompilerInstance &CI,
     }
   }
 
-  EmitAssemblyHelper AsmHelper(CI, CASOpts/* MCCAS */, M, VFS);
+  EmitAssemblyHelper AsmHelper(CI, CGOpts, CASOpts/* MCCAS */, M, VFS);
   AsmHelper.emitAssembly(Action, std::move(OS), std::move(CasIDOS), BC);
 
   // Verify clang's TargetInfo DataLayout against the LLVM TargetMachine's
