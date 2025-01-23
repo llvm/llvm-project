@@ -12,9 +12,11 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Error.h"
 
 using namespace mlir;
 using namespace mlir::link;
+using llvm::Error;
 
 enum class LinkFrom { Dst, Src, Both };
 
@@ -253,6 +255,7 @@ void ModuleLinker::dropReplacedComdat(
   llvm_unreachable("unimplemented");
 }
 
+// Returns true if no linking is needed
 bool ModuleLinker::linkIfNeeded(GlobalValueLinkageOpInterface gv,
                                 std::vector<Operation *> &gvToClone) {
 
@@ -286,7 +289,8 @@ bool ModuleLinker::linkIfNeeded(GlobalValueLinkageOpInterface gv,
       llvm_unreachable("unimplemented");
     }
 
-    llvm_unreachable("unimplemented");
+    // TODO: Implement
+    // llvm_unreachable("unimplemented");
   }
 
   if (!dgv && !shouldOverrideFromSrc() &&
@@ -350,22 +354,26 @@ LogicalResult ModuleLinker::run() {
   });
 
   std::vector<Operation *> gvToClone;
-  bool anythingToLink = false;
+  bool nothingToLink = false;
   src->walk([&](GlobalValueLinkageOpInterface gv) {
-    anythingToLink |= linkIfNeeded(gv, gvToClone);
+    nothingToLink |= linkIfNeeded(gv, gvToClone);
     return WalkResult::skip();
   });
 
-  if (!anythingToLink)
+  // TODO: Consider if there are combinations of Function/GlobalVariable where
+  // linkIfNeeded returns true that would cause this to behave incorrect.
+  if (nothingToLink)
     return success();
 
-  for ([[maybe_unused]] auto gv : gvToClone) {
-    llvm_unreachable("unimplemented");
-  }
+  // TODO: Implement
+  // for ([[maybe_unused]] auto gv : gvToClone) {
+  //   llvm_unreachable("unimplemented");
+  // }
 
-  for (unsigned i = 0; i < valuesToLink.size(); ++i) {
-    llvm_unreachable("unimplemented");
-  }
+  // TODO: Implement
+  // for (unsigned i = 0; i < valuesToLink.size(); ++i) {
+  //   llvm_unreachable("unimplemented");
+  // }
 
   if (internalizeCallback) {
     for (auto gv : valuesToLink) {
@@ -374,7 +382,18 @@ LogicalResult ModuleLinker::run() {
     }
   }
 
-  // TODO integrate Mover
+  bool hasErrors = false;
+  // TODO: We are moving whatever the local src points to here (this->src), so
+  // it can't be touched past this point.
+  if (Error e = mover.move(std::move(this->src), valuesToLink.getArrayRef())) {
+    handleAllErrors(std::move(e), [&](llvm::ErrorInfoBase &eib) {
+      // TODO: Handle errors somehow
+      hasErrors = true;
+    });
+  }
+
+  if (hasErrors)
+    return LogicalResult::failure();
 
   if (internalizeCallback) {
     internalizeCallback(dst, internalize);

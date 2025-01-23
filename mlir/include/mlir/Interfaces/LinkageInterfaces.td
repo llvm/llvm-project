@@ -203,11 +203,7 @@ def GlobalValueLinkageOpInterface : OpInterface<"GlobalValueLinkageOpInterface">
       }],
       /*returnType=*/  "bool",
       /*methodName=*/  "isDeclarationForLinkage",
-      /*args=*/        (ins),
-      /*methodBody=*/  [{}],
-      /*defaultImplementation=*/[{
-        return cast<SymbolOpInterface>($_op.getOperation()).isDeclaration();
-      }]
+      /*args=*/        (ins)
     >,
     InterfaceMethod<
       /*desc=*/        "Returns linked name of the operation",
