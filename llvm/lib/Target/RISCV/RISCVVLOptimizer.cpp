@@ -208,13 +208,6 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MI.getDesc());
   const bool IsTied = RISCVII::isTiedPseudo(MI.getDesc().TSFlags);
 
-  // We bail out early for instructions that have passthru with non NoRegister,
-  // which means they are using TU policy. We are not interested in these
-  // since they must preserve the entire register content.
-  if (HasPassthru && MO.getOperandNo() == MI.getNumExplicitDefs() &&
-      (MO.getReg() != RISCV::NoRegister))
-    return std::nullopt;
-
   bool IsMODef = MO.getOperandNo() == 0;
 
   // All mask operands have EEW=1
@@ -1189,6 +1182,10 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
     return false;
   }
 
+  assert(MI.getOperand(0).isReg() &&
+         isVectorRegClass(MI.getOperand(0).getReg(), MRI) &&
+         "All supported instructions produce a vector register result");
+
   LLVM_DEBUG(dbgs() << "Found a candidate for VL reduction: " << MI << "\n");
   return true;
 }
@@ -1292,70 +1289,47 @@ std::optional<MachineOperand> RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
   return CommonVL;
 }
 
-bool RISCVVLOptimizer::tryReduceVL(MachineInstr &OrigMI) {
-  SetVector<MachineInstr *> Worklist;
-  Worklist.insert(&OrigMI);
+bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) {
+  LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI << "\n");
 
-  bool MadeChange = false;
-  while (!Worklist.empty()) {
-    MachineInstr &MI = *Worklist.pop_back_val();
-    LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI << "\n");
+  auto CommonVL = checkUsers(MI);
+  if (!CommonVL)
+    return false;
 
-    if (!isVectorRegClass(MI.getOperand(0).getReg(), MRI))
-      continue;
+  assert((CommonVL->isImm() || CommonVL->getReg().isVirtual()) &&
+         "Expected VL to be an Imm or virtual Reg");
 
-    auto CommonVL = checkUsers(MI);
-    if (!CommonVL)
-      continue;
+  unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
+  MachineOperand &VLOp = MI.getOperand(VLOpNum);
 
-    assert((CommonVL->isImm() || CommonVL->getReg().isVirtual()) &&
-           "Expected VL to be an Imm or virtual Reg");
-
-    unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
-    MachineOperand &VLOp = MI.getOperand(VLOpNum);
-
-    if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
-      LLVM_DEBUG(dbgs() << "    Abort due to CommonVL not <= VLOp.\n");
-      continue;
-    }
-
-    if (CommonVL->isImm()) {
-      LLVM_DEBUG(dbgs() << "  Reduce VL from " << VLOp << " to "
-                        << CommonVL->getImm() << " for " << MI << "\n");
-      VLOp.ChangeToImmediate(CommonVL->getImm());
-    } else {
-      const MachineInstr *VLMI = MRI->getVRegDef(CommonVL->getReg());
-      if (!MDT->dominates(VLMI, &MI))
-        continue;
-      LLVM_DEBUG(
-          dbgs() << "  Reduce VL from " << VLOp << " to "
-                 << printReg(CommonVL->getReg(), MRI->getTargetRegisterInfo())
-                 << " for " << MI << "\n");
-
-      // All our checks passed. We can reduce VL.
-      VLOp.ChangeToRegister(CommonVL->getReg(), false);
-    }
-
-    MadeChange = true;
-
-    // Now add all inputs to this instruction to the worklist.
-    for (auto &Op : MI.operands()) {
-      if (!Op.isReg() || !Op.isUse() || !Op.getReg().isVirtual())
-        continue;
-
-      if (!isVectorRegClass(Op.getReg(), MRI))
-        continue;
-
-      MachineInstr *DefMI = MRI->getVRegDef(Op.getReg());
-
-      if (!isCandidate(*DefMI))
-        continue;
-
-      Worklist.insert(DefMI);
-    }
+  if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
+    LLVM_DEBUG(dbgs() << "    Abort due to CommonVL not <= VLOp.\n");
+    return false;
   }
 
-  return MadeChange;
+  if (CommonVL->isIdenticalTo(VLOp)) {
+    LLVM_DEBUG(
+        dbgs() << "    Abort due to CommonVL == VLOp, no point in reducing.\n");
+    return false;
+  }
+
+  if (CommonVL->isImm()) {
+    LLVM_DEBUG(dbgs() << "  Reduce VL from " << VLOp << " to "
+                      << CommonVL->getImm() << " for " << MI << "\n");
+    VLOp.ChangeToImmediate(CommonVL->getImm());
+    return true;
+  }
+  const MachineInstr *VLMI = MRI->getVRegDef(CommonVL->getReg());
+  if (!MDT->dominates(VLMI, &MI))
+    return false;
+  LLVM_DEBUG(
+      dbgs() << "  Reduce VL from " << VLOp << " to "
+             << printReg(CommonVL->getReg(), MRI->getTargetRegisterInfo())
+             << " for " << MI << "\n");
+
+  // All our checks passed. We can reduce VL.
+  VLOp.ChangeToRegister(CommonVL->getReg(), false);
+  return true;
 }
 
 bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
@@ -1369,15 +1343,52 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
   if (!ST.hasVInstructions())
     return false;
 
+  SetVector<MachineInstr *> Worklist;
+  auto PushOperands = [this, &Worklist](MachineInstr &MI,
+                                        bool IgnoreSameBlock) {
+    for (auto &Op : MI.operands()) {
+      if (!Op.isReg() || !Op.isUse() || !Op.getReg().isVirtual() ||
+          !isVectorRegClass(Op.getReg(), MRI))
+        continue;
+
+      MachineInstr *DefMI = MRI->getVRegDef(Op.getReg());
+      if (!isCandidate(*DefMI))
+        continue;
+
+      if (IgnoreSameBlock && DefMI->getParent() == MI.getParent())
+        continue;
+
+      Worklist.insert(DefMI);
+    }
+  };
+
+  // Do a first pass eagerly rewriting in roughly reverse instruction
+  // order, populate the worklist with any instructions we might need to
+  // revisit.  We avoid adding definitions to the worklist if they're
+  // in the same block - we're about to visit them anyways.
   bool MadeChange = false;
   for (MachineBasicBlock &MBB : MF) {
-    // Visit instructions in reverse order.
+    // Avoid unreachable blocks as they have degenerate dominance
+    if (!MDT->isReachableFromEntry(&MBB))
+      continue;
+
     for (auto &MI : make_range(MBB.rbegin(), MBB.rend())) {
       if (!isCandidate(MI))
         continue;
-
-      MadeChange |= tryReduceVL(MI);
+      if (!tryReduceVL(MI))
+        continue;
+      MadeChange = true;
+      PushOperands(MI, /*IgnoreSameBlock*/ true);
     }
+  }
+
+  while (!Worklist.empty()) {
+    assert(MadeChange);
+    MachineInstr &MI = *Worklist.pop_back_val();
+    assert(isCandidate(MI));
+    if (!tryReduceVL(MI))
+      continue;
+    PushOperands(MI, /*IgnoreSameBlock*/ false);
   }
 
   return MadeChange;

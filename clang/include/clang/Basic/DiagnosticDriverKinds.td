@@ -808,6 +808,9 @@ def err_drv_loongarch_invalid_simd_option_combination : Error<
 def err_drv_loongarch_invalid_msimd_EQ : Error<
   "invalid argument '%0' to -msimd=; must be one of: none, lsx, lasx">;
 
+def err_drv_loongarch_unsupported_with_linker_relaxation : Error<
+  "%0 is unsupported with LoongArch linker relaxation (-mrelax)">;
+
 def err_drv_expand_response_file : Error<
   "failed to expand response file: %0">;
 
