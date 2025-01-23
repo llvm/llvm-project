@@ -31,6 +31,8 @@ using namespace mlir::vector;
 static void incIdx(SmallVectorImpl<int64_t> &indices, VectorType vecType,
                    int step = 1) {
   for (int dim : llvm::reverse(llvm::seq<int>(0, indices.size()))) {
+    assert(indices[dim] < vecType.getDimSize(dim) &&
+           "Indices are out of bound");
     indices[dim] += step;
     if (indices[dim] < vecType.getDimSize(dim))
       break;
@@ -68,8 +70,8 @@ public:
       numElts *= sourceVectorType.getDimSize(dim);
 
     auto loc = op.getLoc();
-    SmallVector<int64_t> srcIdx(srcRank - 1);
-    SmallVector<int64_t> resIdx(resRank);
+    SmallVector<int64_t> srcIdx(srcRank - 1, 0);
+    SmallVector<int64_t> resIdx(resRank, 0);
     int64_t extractSize = sourceVectorType.getShape().back();
     Value result = rewriter.create<arith::ConstantOp>(
         loc, resultVectorType, rewriter.getZeroAttr(resultVectorType));
@@ -124,8 +126,8 @@ public:
     // Compute the indices of each 1-D vector element of the source slice
     // extraction and destination insertion and generate such instructions.
     auto loc = op.getLoc();
-    SmallVector<int64_t> srcIdx(srcRank);
-    SmallVector<int64_t> resIdx(resRank - 1);
+    SmallVector<int64_t> srcIdx(srcRank, 0);
+    SmallVector<int64_t> resIdx(resRank - 1, 0);
     int64_t extractSize = resultVectorType.getShape().back();
     Value result = rewriter.create<arith::ConstantOp>(
         loc, resultVectorType, rewriter.getZeroAttr(resultVectorType));
@@ -180,8 +182,8 @@ public:
     //    x[0,1,0] = y[0,2]
     // etc., incrementing the two index vectors "row-major"
     // within the source and result shape.
-    SmallVector<int64_t> srcIdx(srcRank);
-    SmallVector<int64_t> resIdx(resRank);
+    SmallVector<int64_t> srcIdx(srcRank, 0);
+    SmallVector<int64_t> resIdx(resRank, 0);
     Value result = rewriter.create<arith::ConstantOp>(
         loc, resultVectorType, rewriter.getZeroAttr(resultVectorType));
     for (int64_t i = 0; i < numElts; i++) {
@@ -292,8 +294,8 @@ public:
     Value result = rewriter.create<arith::ConstantOp>(
         loc, resultVectorType, rewriter.getZeroAttr(resultVectorType));
 
-    SmallVector<int64_t> srcIdx(srcRank);
-    SmallVector<int64_t> resIdx(resRank);
+    SmallVector<int64_t> srcIdx(srcRank, 0);
+    SmallVector<int64_t> resIdx(resRank, 0);
 
     // TODO: Try rewriting this with StaticTileOffsetRange (from IndexingUtils)
     // once D150000 lands.
