@@ -29,7 +29,7 @@ add_libc_unittest(
     libc.src.errno.errno
     libc.src.unistd.chdir
     libc.src.unistd.close
-    libc.src.fcntl.open 
+    libc.src.fcntl.open
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -427,7 +427,7 @@ add_libc_unittest(
     libc.include.unistd
     libc.hdr.fcntl_macros
     libc.include.sys_syscall
-    libc.src.errno.errno 
+    libc.src.errno.errno
     libc.src.unistd.__llvm_libc_syscall
     libc.test.UnitTest.ErrnoSetterMatcher
 )

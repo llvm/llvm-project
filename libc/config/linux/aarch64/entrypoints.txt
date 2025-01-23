@@ -439,7 +439,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsl
-    libc.src.math.fadd 
+    libc.src.math.fadd
     libc.src.math.faddl
     libc.src.math.fadd
     libc.src.math.fdim
