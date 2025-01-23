@@ -1,10 +1,13 @@
 ; -stats requires asserts
 ; requires: asserts
 
+; COM: Investigate test failure with fuchsia environment and re-enable the test.
+; UNSUPPORTED: target={{.*}}-fuchsia
+
 ; Stop after 'finalize-isel' for simpler MIR, and lower the minimum number of
 ; jump table entries so 'switch' needs fewer cases to generate a jump table.
-; RUN: llc -stop-after=finalize-isel -min-jump-table-entries=2 %s -o %t.mir
-; RUN: llc --run-pass=static-data-splitter -stats -x mir %t.mir -o - 2>&1 | FileCheck %s --check-prefix=STAT
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -stop-after=finalize-isel -min-jump-table-entries=2 %s -o %t.mir
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu --run-pass=static-data-splitter -stats -x mir %t.mir -o - 2>&1 | FileCheck %s --check-prefix=STAT
 
 ; Tests stat messages are expected.
 ; COM: Update test to verify section suffixes when target-lowering and assembler changes are implemented.

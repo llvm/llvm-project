@@ -1272,6 +1272,13 @@ libclang
 - Added ``clang_getOffsetOfBase``, which allows computing the offset of a base
   class in a class's layout.
 
+
+Code Completion
+---------------
+
+- Use ``HeuristicResolver`` (upstreamed from clangd) to improve code completion results
+  in dependent code
+
 Static Analyzer
 ---------------
 
