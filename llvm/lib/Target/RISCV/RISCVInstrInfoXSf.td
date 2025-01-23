@@ -374,28 +374,28 @@ multiclass VPseudoVC_XVW<LMULInfo m, DAGOperand RS1Class,
   }
 }
 
-multiclass VPseudoSiFiveVMACC<string mx, VReg vd_type, VReg vs2_type,
-                              string Constraint = ""> {
+multiclass VPseudoSiFiveVMACC<string mx, VReg vd_type, VReg vs2_type> {
   def "Pseudo" # NAME # "_" # mx
-      : VPseudoTernaryNoMaskWithPolicy<vd_type, V_M1.vrclass, vs2_type, Constraint>;
+      : VPseudoTernaryNoMaskWithPolicy<vd_type, V_M1.vrclass, vs2_type,
+                                       "@earlyclobber $rd">;
 }
 
-multiclass VPseudoSiFiveVQMACCDOD<string Constraint = ""> {
+multiclass VPseudoSiFiveVQMACCDOD {
   foreach m = MxListVF8 in
     let VLMul = m.value in
-    defm NAME : VPseudoSiFiveVMACC<m.MX, m.vrclass, m.vrclass, Constraint>;
+    defm NAME : VPseudoSiFiveVMACC<m.MX, m.vrclass, m.vrclass>;
 }
 
-multiclass VPseudoSiFiveVQMACCQOQ<string Constraint = ""> {
+multiclass VPseudoSiFiveVQMACCQOQ {
   foreach m = [V_MF2, V_M1, V_M2, V_M4] in
     let VLMul = m.value in
-    defm NAME : VPseudoSiFiveVMACC<m.MX, m.wvrclass, m.vrclass, Constraint>;
+    defm NAME : VPseudoSiFiveVMACC<m.MX, m.wvrclass, m.vrclass>;
 }
 
-multiclass VPseudoSiFiveVFWMACC<string Constraint = ""> {
+multiclass VPseudoSiFiveVFWMACC {
   foreach m = MxListVF2 in
     let VLMul = m.value in
-    defm NAME : VPseudoSiFiveVMACC<m.MX, m.wvrclass, m.vrclass, Constraint>;
+    defm NAME : VPseudoSiFiveVMACC<m.MX, m.wvrclass, m.vrclass>;
 }
 
 multiclass VPseudoSiFiveVFNRCLIP<string Constraint = "@earlyclobber $rd"> {
