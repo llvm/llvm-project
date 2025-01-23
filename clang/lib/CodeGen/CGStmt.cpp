@@ -206,6 +206,11 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::SEHTryStmtClass:
     EmitSEHTryStmt(cast<SEHTryStmt>(*S));
     break;
+  case Stmt::OMPOpaqueBlockDirectiveClass:
+  case Stmt::OMPOpaqueLoopDirectiveClass:
+    // These are catch-all nodes for executable OpenMP directives in templates.
+    // Template instantiation should replace them with specific nodes.
+    llvm_unreachable("These nodes should have been eliminated");
   case Stmt::OMPMetaDirectiveClass:
     EmitOMPMetaDirective(cast<OMPMetaDirective>(*S));
     break;

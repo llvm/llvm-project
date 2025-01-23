@@ -48,7 +48,7 @@ struct SomeKernel {
     // PRINT-NEXT:     return this->targetDev++;
     // PRINT-NEXT:  }();
     // PRINT-NEXT: }
-    // DUMP: -OMPParallelDirective
+    // DUMP: -OMPOpaqueBlockDirective{{.*}}'parallel'
     // DUMP-NEXT: -OMPDefaultClause
     // DUMP-NOT:   -OMPFirstprivateClause
   }

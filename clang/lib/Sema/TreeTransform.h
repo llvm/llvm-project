@@ -9365,6 +9365,8 @@ TreeTransform<Derived>::TransformOMPCanonicalLoop(OMPCanonicalLoop *L) {
 template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformOMPExecutableDirective(
     OMPExecutableDirective *D) {
+  // If D is OMPOpaqueBlockDirective or OMPOpaqueLoopDirective,
+  // then D->getDirectiveKind() will return the actual directive kind.
 
   // Transform the clauses
   llvm::SmallVector<OMPClause *, 16> TClauses;
@@ -9416,14 +9418,29 @@ StmtResult TreeTransform<Derived>::TransformOMPExecutableDirective(
   // Transform directive name for 'omp critical' directive.
   DeclarationNameInfo DirName;
   if (D->getDirectiveKind() == OMPD_critical) {
-    DirName = cast<OMPCriticalDirective>(D)->getDirectiveName();
+    if (auto *C = dyn_cast<OMPCriticalDirective>(D))
+      DirName = C->getDirectiveName();
+    else if (auto *C = dyn_cast<OMPOpaqueBlockDirective>(D))
+      DirName = C->getDirectiveName();
+    else
+      llvm_unreachable("Unexpected directive class");
     DirName = getDerived().TransformDeclarationNameInfo(DirName);
   }
   OpenMPDirectiveKind CancelRegion = OMPD_unknown;
   if (D->getDirectiveKind() == OMPD_cancellation_point) {
-    CancelRegion = cast<OMPCancellationPointDirective>(D)->getCancelRegion();
+    if (auto *C = dyn_cast<OMPCancellationPointDirective>(D))
+      CancelRegion = C->getCancelRegion();
+    else if (auto *C = dyn_cast<OMPOpaqueBlockDirective>(D))
+      CancelRegion = C->getCancelRegion();
+    else
+      llvm_unreachable("Unexpected directive class");
   } else if (D->getDirectiveKind() == OMPD_cancel) {
-    CancelRegion = cast<OMPCancelDirective>(D)->getCancelRegion();
+    if (auto *C = dyn_cast<OMPCancelDirective>(D))
+      CancelRegion = C->getCancelRegion();
+    else if (auto *C = dyn_cast<OMPOpaqueBlockDirective>(D))
+      CancelRegion = C->getCancelRegion();
+    else
+      llvm_unreachable("Unexpected directive class");
   }
 
   return getDerived().RebuildOMPExecutableDirective(
@@ -9481,6 +9498,28 @@ StmtResult TreeTransform<Derived>::TransformOMPInformationalDirective(
   return getDerived().RebuildOMPInformationalDirective(
       D->getDirectiveKind(), DirName, TClauses, AssociatedStmt.get(),
       D->getBeginLoc(), D->getEndLoc());
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOMPOpaqueBlockDirective(
+    OMPOpaqueBlockDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOMPOpaqueLoopDirective(
+    OMPOpaqueLoopDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
 }
 
 template <typename Derived>

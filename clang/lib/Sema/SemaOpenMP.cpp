@@ -5965,6 +5965,328 @@ static bool teamsLoopCanBeParallelFor(Stmt *AStmt, Sema &SemaRef) {
   return Checker.teamsLoopCanBeParallelFor();
 }
 
+static StmtResult createASTForDirective(
+    Sema &SemaRef, OpenMPDirectiveKind Kind, ArrayRef<OMPClause *> Clauses,
+    Stmt *AStmt, SourceLocation StartLoc, SourceLocation EndLoc,
+    const DeclarationNameInfo &DirName, OpenMPDirectiveKind CancelRegion,
+    SemaOpenMP::VarsWithInheritedDSAType &VarsWithInheritedDSA) {
+
+  SemaOpenMP &S = SemaRef.OpenMP();
+  StmtResult Res = StmtError();
+
+  switch (Kind) {
+  case OMPD_parallel:
+    Res = S.ActOnOpenMPParallelDirective(Clauses, AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_simd:
+    Res = S.ActOnOpenMPSimdDirective(Clauses, AStmt, StartLoc, EndLoc,
+                                     VarsWithInheritedDSA);
+    break;
+  case OMPD_tile:
+    Res = S.ActOnOpenMPTileDirective(Clauses, AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_unroll:
+    Res = S.ActOnOpenMPUnrollDirective(Clauses, AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_reverse:
+    assert(Clauses.empty() && "reverse directive does not support any clauses");
+    Res = S.ActOnOpenMPReverseDirective(AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_interchange:
+    Res = S.ActOnOpenMPInterchangeDirective(Clauses, AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_for:
+    Res = S.ActOnOpenMPForDirective(Clauses, AStmt, StartLoc, EndLoc,
+                                    VarsWithInheritedDSA);
+    break;
+  case OMPD_for_simd:
+    Res = S.ActOnOpenMPForSimdDirective(Clauses, AStmt, StartLoc, EndLoc,
+                                        VarsWithInheritedDSA);
+    break;
+  case OMPD_sections:
+    Res = S.ActOnOpenMPSectionsDirective(Clauses, AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_section:
+    assert(Clauses.empty() &&
+           "No clauses are allowed for 'omp section' directive");
+    Res = S.ActOnOpenMPSectionDirective(AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_single:
+    Res = S.ActOnOpenMPSingleDirective(Clauses, AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_master:
+    assert(Clauses.empty() &&
+           "No clauses are allowed for 'omp master' directive");
+    Res = S.ActOnOpenMPMasterDirective(AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_masked:
+    Res = S.ActOnOpenMPMaskedDirective(Clauses, AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_critical:
+    Res = S.ActOnOpenMPCriticalDirective(DirName, Clauses, AStmt, StartLoc,
+                                         EndLoc);
+    break;
+  case OMPD_parallel_for:
+    Res = S.ActOnOpenMPParallelForDirective(Clauses, AStmt, StartLoc, EndLoc,
+                                            VarsWithInheritedDSA);
+    break;
+  case OMPD_parallel_for_simd:
+    Res = S.ActOnOpenMPParallelForSimdDirective(Clauses, AStmt, StartLoc,
+                                                EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_scope:
+    Res = S.ActOnOpenMPScopeDirective(Clauses, AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_parallel_master:
+    Res =
+        S.ActOnOpenMPParallelMasterDirective(Clauses, AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_parallel_masked:
+    Res =
+        S.ActOnOpenMPParallelMaskedDirective(Clauses, AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_parallel_sections:
+    Res = S.ActOnOpenMPParallelSectionsDirective(Clauses, AStmt, StartLoc,
+                                                 EndLoc);
+    break;
+  case OMPD_task:
+    Res = S.ActOnOpenMPTaskDirective(Clauses, AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_taskyield:
+    assert(Clauses.empty() &&
+           "No clauses are allowed for 'omp taskyield' directive");
+    assert(AStmt == nullptr &&
+           "No associated statement allowed for 'omp taskyield' directive");
+    Res = S.ActOnOpenMPTaskyieldDirective(StartLoc, EndLoc);
+    break;
+  case OMPD_error:
+    assert(AStmt == nullptr &&
+           "No associated statement allowed for 'omp error' directive");
+    Res = S.ActOnOpenMPErrorDirective(Clauses, StartLoc, EndLoc);
+    break;
+  case OMPD_barrier:
+    assert(Clauses.empty() &&
+           "No clauses are allowed for 'omp barrier' directive");
+    assert(AStmt == nullptr &&
+           "No associated statement allowed for 'omp barrier' directive");
+    Res = S.ActOnOpenMPBarrierDirective(StartLoc, EndLoc);
+    break;
+  case OMPD_taskwait:
+    assert(AStmt == nullptr &&
+           "No associated statement allowed for 'omp taskwait' directive");
+    Res = S.ActOnOpenMPTaskwaitDirective(Clauses, StartLoc, EndLoc);
+    break;
+  case OMPD_taskgroup:
+    Res = S.ActOnOpenMPTaskgroupDirective(Clauses, AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_flush:
+    assert(AStmt == nullptr &&
+           "No associated statement allowed for 'omp flush' directive");
+    Res = S.ActOnOpenMPFlushDirective(Clauses, StartLoc, EndLoc);
+    break;
+  case OMPD_depobj:
+    assert(AStmt == nullptr &&
+           "No associated statement allowed for 'omp depobj' directive");
+    Res = S.ActOnOpenMPDepobjDirective(Clauses, StartLoc, EndLoc);
+    break;
+  case OMPD_scan:
+    assert(AStmt == nullptr &&
+           "No associated statement allowed for 'omp scan' directive");
+    Res = S.ActOnOpenMPScanDirective(Clauses, StartLoc, EndLoc);
+    break;
+  case OMPD_ordered:
+    Res = S.ActOnOpenMPOrderedDirective(Clauses, AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_atomic:
+    Res = S.ActOnOpenMPAtomicDirective(Clauses, AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_teams:
+    Res = S.ActOnOpenMPTeamsDirective(Clauses, AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_target:
+    Res = S.ActOnOpenMPTargetDirective(Clauses, AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_target_parallel:
+    Res =
+        S.ActOnOpenMPTargetParallelDirective(Clauses, AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_target_parallel_for:
+    Res = S.ActOnOpenMPTargetParallelForDirective(Clauses, AStmt, StartLoc,
+                                                  EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_cancellation_point:
+    assert(Clauses.empty() &&
+           "No clauses are allowed for 'omp cancellation point' directive");
+    assert(AStmt == nullptr && "No associated statement allowed for 'omp "
+                               "cancellation point' directive");
+    Res =
+        S.ActOnOpenMPCancellationPointDirective(StartLoc, EndLoc, CancelRegion);
+    break;
+  case OMPD_cancel:
+    assert(AStmt == nullptr &&
+           "No associated statement allowed for 'omp cancel' directive");
+    Res = S.ActOnOpenMPCancelDirective(Clauses, StartLoc, EndLoc, CancelRegion);
+    break;
+  case OMPD_target_data:
+    Res = S.ActOnOpenMPTargetDataDirective(Clauses, AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_target_enter_data:
+    Res =
+        S.ActOnOpenMPTargetEnterDataDirective(Clauses, StartLoc, EndLoc, AStmt);
+    break;
+  case OMPD_target_exit_data:
+    Res =
+        S.ActOnOpenMPTargetExitDataDirective(Clauses, StartLoc, EndLoc, AStmt);
+    break;
+  case OMPD_taskloop:
+    Res = S.ActOnOpenMPTaskLoopDirective(Clauses, AStmt, StartLoc, EndLoc,
+                                         VarsWithInheritedDSA);
+    break;
+  case OMPD_taskloop_simd:
+    Res = S.ActOnOpenMPTaskLoopSimdDirective(Clauses, AStmt, StartLoc, EndLoc,
+                                             VarsWithInheritedDSA);
+    break;
+  case OMPD_master_taskloop:
+    Res = S.ActOnOpenMPMasterTaskLoopDirective(Clauses, AStmt, StartLoc, EndLoc,
+                                               VarsWithInheritedDSA);
+    break;
+  case OMPD_masked_taskloop:
+    Res = S.ActOnOpenMPMaskedTaskLoopDirective(Clauses, AStmt, StartLoc, EndLoc,
+                                               VarsWithInheritedDSA);
+    break;
+  case OMPD_master_taskloop_simd:
+    Res = S.ActOnOpenMPMasterTaskLoopSimdDirective(
+        Clauses, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_masked_taskloop_simd:
+    Res = S.ActOnOpenMPMaskedTaskLoopSimdDirective(
+        Clauses, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_parallel_master_taskloop:
+    Res = S.ActOnOpenMPParallelMasterTaskLoopDirective(
+        Clauses, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_parallel_masked_taskloop:
+    Res = S.ActOnOpenMPParallelMaskedTaskLoopDirective(
+        Clauses, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_parallel_master_taskloop_simd:
+    Res = S.ActOnOpenMPParallelMasterTaskLoopSimdDirective(
+        Clauses, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_parallel_masked_taskloop_simd:
+    Res = S.ActOnOpenMPParallelMaskedTaskLoopSimdDirective(
+        Clauses, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_distribute:
+    Res = S.ActOnOpenMPDistributeDirective(Clauses, AStmt, StartLoc, EndLoc,
+                                           VarsWithInheritedDSA);
+    break;
+  case OMPD_target_update:
+    Res = S.ActOnOpenMPTargetUpdateDirective(Clauses, StartLoc, EndLoc, AStmt);
+    break;
+  case OMPD_distribute_parallel_for:
+    Res = S.ActOnOpenMPDistributeParallelForDirective(
+        Clauses, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_distribute_parallel_for_simd:
+    Res = S.ActOnOpenMPDistributeParallelForSimdDirective(
+        Clauses, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_distribute_simd:
+    Res = S.ActOnOpenMPDistributeSimdDirective(Clauses, AStmt, StartLoc, EndLoc,
+                                               VarsWithInheritedDSA);
+    break;
+  case OMPD_target_parallel_for_simd:
+    Res = S.ActOnOpenMPTargetParallelForSimdDirective(
+        Clauses, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_target_simd:
+    Res = S.ActOnOpenMPTargetSimdDirective(Clauses, AStmt, StartLoc, EndLoc,
+                                           VarsWithInheritedDSA);
+    break;
+  case OMPD_teams_distribute:
+    Res = S.ActOnOpenMPTeamsDistributeDirective(Clauses, AStmt, StartLoc,
+                                                EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_teams_distribute_simd:
+    Res = S.ActOnOpenMPTeamsDistributeSimdDirective(
+        Clauses, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_teams_distribute_parallel_for_simd:
+    Res = S.ActOnOpenMPTeamsDistributeParallelForSimdDirective(
+        Clauses, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_teams_distribute_parallel_for:
+    Res = S.ActOnOpenMPTeamsDistributeParallelForDirective(
+        Clauses, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_target_teams:
+    Res = S.ActOnOpenMPTargetTeamsDirective(Clauses, AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_target_teams_distribute:
+    Res = S.ActOnOpenMPTargetTeamsDistributeDirective(
+        Clauses, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_target_teams_distribute_parallel_for:
+    Res = S.ActOnOpenMPTargetTeamsDistributeParallelForDirective(
+        Clauses, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_target_teams_distribute_parallel_for_simd:
+    Res = S.ActOnOpenMPTargetTeamsDistributeParallelForSimdDirective(
+        Clauses, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_target_teams_distribute_simd:
+    Res = S.ActOnOpenMPTargetTeamsDistributeSimdDirective(
+        Clauses, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_interop:
+    assert(AStmt == nullptr &&
+           "No associated statement allowed for 'omp interop' directive");
+    Res = S.ActOnOpenMPInteropDirective(Clauses, StartLoc, EndLoc);
+    break;
+  case OMPD_dispatch:
+    Res = S.ActOnOpenMPDispatchDirective(Clauses, AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_loop:
+    Res = S.ActOnOpenMPGenericLoopDirective(Clauses, AStmt, StartLoc, EndLoc,
+                                            VarsWithInheritedDSA);
+    break;
+  case OMPD_teams_loop:
+    Res = S.ActOnOpenMPTeamsGenericLoopDirective(Clauses, AStmt, StartLoc,
+                                                 EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_target_teams_loop:
+    Res = S.ActOnOpenMPTargetTeamsGenericLoopDirective(
+        Clauses, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_parallel_loop:
+    Res = S.ActOnOpenMPParallelGenericLoopDirective(
+        Clauses, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_target_parallel_loop:
+    Res = S.ActOnOpenMPTargetParallelGenericLoopDirective(
+        Clauses, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_declare_target:
+  case OMPD_end_declare_target:
+  case OMPD_threadprivate:
+  case OMPD_allocate:
+  case OMPD_declare_reduction:
+  case OMPD_declare_mapper:
+  case OMPD_declare_simd:
+  case OMPD_requires:
+  case OMPD_declare_variant:
+  case OMPD_begin_declare_variant:
+  case OMPD_end_declare_variant:
+    llvm_unreachable("OpenMP Directive is not allowed");
+  case OMPD_unknown:
+  default:
+    llvm_unreachable("Unknown OpenMP directive");
+  }
+  return Res;
+}
+
 StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
     OpenMPDirectiveKind Kind, const DeclarationNameInfo &DirName,
     OpenMPDirectiveKind CancelRegion, ArrayRef<OMPClause *> Clauses,
@@ -6170,334 +6492,19 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
                                             ClausesWithImplicit);
   }
 
-  switch (Kind) {
-  case OMPD_parallel:
-    Res = ActOnOpenMPParallelDirective(ClausesWithImplicit, AStmt, StartLoc,
-                                       EndLoc);
-    break;
-  case OMPD_simd:
-    Res = ActOnOpenMPSimdDirective(ClausesWithImplicit, AStmt, StartLoc, EndLoc,
-                                   VarsWithInheritedDSA);
-    break;
-  case OMPD_tile:
-    Res =
-        ActOnOpenMPTileDirective(ClausesWithImplicit, AStmt, StartLoc, EndLoc);
-    break;
-  case OMPD_unroll:
-    Res = ActOnOpenMPUnrollDirective(ClausesWithImplicit, AStmt, StartLoc,
-                                     EndLoc);
-    break;
-  case OMPD_reverse:
-    assert(ClausesWithImplicit.empty() &&
-           "reverse directive does not support any clauses");
-    Res = ActOnOpenMPReverseDirective(AStmt, StartLoc, EndLoc);
-    break;
-  case OMPD_interchange:
-    Res = ActOnOpenMPInterchangeDirective(ClausesWithImplicit, AStmt, StartLoc,
-                                          EndLoc);
-    break;
-  case OMPD_for:
-    Res = ActOnOpenMPForDirective(ClausesWithImplicit, AStmt, StartLoc, EndLoc,
-                                  VarsWithInheritedDSA);
-    break;
-  case OMPD_for_simd:
-    Res = ActOnOpenMPForSimdDirective(ClausesWithImplicit, AStmt, StartLoc,
-                                      EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_sections:
-    Res = ActOnOpenMPSectionsDirective(ClausesWithImplicit, AStmt, StartLoc,
-                                       EndLoc);
-    break;
-  case OMPD_section:
-    assert(ClausesWithImplicit.empty() &&
-           "No clauses are allowed for 'omp section' directive");
-    Res = ActOnOpenMPSectionDirective(AStmt, StartLoc, EndLoc);
-    break;
-  case OMPD_single:
-    Res = ActOnOpenMPSingleDirective(ClausesWithImplicit, AStmt, StartLoc,
-                                     EndLoc);
-    break;
-  case OMPD_master:
-    assert(ClausesWithImplicit.empty() &&
-           "No clauses are allowed for 'omp master' directive");
-    Res = ActOnOpenMPMasterDirective(AStmt, StartLoc, EndLoc);
-    break;
-  case OMPD_masked:
-    Res = ActOnOpenMPMaskedDirective(ClausesWithImplicit, AStmt, StartLoc,
-                                     EndLoc);
-    break;
-  case OMPD_critical:
-    Res = ActOnOpenMPCriticalDirective(DirName, ClausesWithImplicit, AStmt,
-                                       StartLoc, EndLoc);
-    break;
-  case OMPD_parallel_for:
-    Res = ActOnOpenMPParallelForDirective(ClausesWithImplicit, AStmt, StartLoc,
-                                          EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_parallel_for_simd:
-    Res = ActOnOpenMPParallelForSimdDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_scope:
-    Res =
-        ActOnOpenMPScopeDirective(ClausesWithImplicit, AStmt, StartLoc, EndLoc);
-    break;
-  case OMPD_parallel_master:
-    Res = ActOnOpenMPParallelMasterDirective(ClausesWithImplicit, AStmt,
-                                             StartLoc, EndLoc);
-    break;
-  case OMPD_parallel_masked:
-    Res = ActOnOpenMPParallelMaskedDirective(ClausesWithImplicit, AStmt,
-                                             StartLoc, EndLoc);
-    break;
-  case OMPD_parallel_sections:
-    Res = ActOnOpenMPParallelSectionsDirective(ClausesWithImplicit, AStmt,
-                                               StartLoc, EndLoc);
-    break;
-  case OMPD_task:
-    Res =
-        ActOnOpenMPTaskDirective(ClausesWithImplicit, AStmt, StartLoc, EndLoc);
-    break;
-  case OMPD_taskyield:
-    assert(ClausesWithImplicit.empty() &&
-           "No clauses are allowed for 'omp taskyield' directive");
-    assert(AStmt == nullptr &&
-           "No associated statement allowed for 'omp taskyield' directive");
-    Res = ActOnOpenMPTaskyieldDirective(StartLoc, EndLoc);
-    break;
-  case OMPD_error:
-    assert(AStmt == nullptr &&
-           "No associated statement allowed for 'omp error' directive");
-    Res = ActOnOpenMPErrorDirective(ClausesWithImplicit, StartLoc, EndLoc);
-    break;
-  case OMPD_barrier:
-    assert(ClausesWithImplicit.empty() &&
-           "No clauses are allowed for 'omp barrier' directive");
-    assert(AStmt == nullptr &&
-           "No associated statement allowed for 'omp barrier' directive");
-    Res = ActOnOpenMPBarrierDirective(StartLoc, EndLoc);
-    break;
-  case OMPD_taskwait:
-    assert(AStmt == nullptr &&
-           "No associated statement allowed for 'omp taskwait' directive");
-    Res = ActOnOpenMPTaskwaitDirective(ClausesWithImplicit, StartLoc, EndLoc);
-    break;
-  case OMPD_taskgroup:
-    Res = ActOnOpenMPTaskgroupDirective(ClausesWithImplicit, AStmt, StartLoc,
-                                        EndLoc);
-    break;
-  case OMPD_flush:
-    assert(AStmt == nullptr &&
-           "No associated statement allowed for 'omp flush' directive");
-    Res = ActOnOpenMPFlushDirective(ClausesWithImplicit, StartLoc, EndLoc);
-    break;
-  case OMPD_depobj:
-    assert(AStmt == nullptr &&
-           "No associated statement allowed for 'omp depobj' directive");
-    Res = ActOnOpenMPDepobjDirective(ClausesWithImplicit, StartLoc, EndLoc);
-    break;
-  case OMPD_scan:
-    assert(AStmt == nullptr &&
-           "No associated statement allowed for 'omp scan' directive");
-    Res = ActOnOpenMPScanDirective(ClausesWithImplicit, StartLoc, EndLoc);
-    break;
-  case OMPD_ordered:
-    Res = ActOnOpenMPOrderedDirective(ClausesWithImplicit, AStmt, StartLoc,
-                                      EndLoc);
-    break;
-  case OMPD_atomic:
-    Res = ActOnOpenMPAtomicDirective(ClausesWithImplicit, AStmt, StartLoc,
-                                     EndLoc);
-    break;
-  case OMPD_teams:
-    Res =
-        ActOnOpenMPTeamsDirective(ClausesWithImplicit, AStmt, StartLoc, EndLoc);
-    break;
-  case OMPD_target:
-    Res = ActOnOpenMPTargetDirective(ClausesWithImplicit, AStmt, StartLoc,
-                                     EndLoc);
-    break;
-  case OMPD_target_parallel:
-    Res = ActOnOpenMPTargetParallelDirective(ClausesWithImplicit, AStmt,
-                                             StartLoc, EndLoc);
-    break;
-  case OMPD_target_parallel_for:
-    Res = ActOnOpenMPTargetParallelForDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_cancellation_point:
-    assert(ClausesWithImplicit.empty() &&
-           "No clauses are allowed for 'omp cancellation point' directive");
-    assert(AStmt == nullptr && "No associated statement allowed for 'omp "
-                               "cancellation point' directive");
-    Res = ActOnOpenMPCancellationPointDirective(StartLoc, EndLoc, CancelRegion);
-    break;
-  case OMPD_cancel:
-    assert(AStmt == nullptr &&
-           "No associated statement allowed for 'omp cancel' directive");
-    Res = ActOnOpenMPCancelDirective(ClausesWithImplicit, StartLoc, EndLoc,
-                                     CancelRegion);
-    break;
-  case OMPD_target_data:
-    Res = ActOnOpenMPTargetDataDirective(ClausesWithImplicit, AStmt, StartLoc,
-                                         EndLoc);
-    break;
-  case OMPD_target_enter_data:
-    Res = ActOnOpenMPTargetEnterDataDirective(ClausesWithImplicit, StartLoc,
-                                              EndLoc, AStmt);
-    break;
-  case OMPD_target_exit_data:
-    Res = ActOnOpenMPTargetExitDataDirective(ClausesWithImplicit, StartLoc,
-                                             EndLoc, AStmt);
-    break;
-  case OMPD_taskloop:
-    Res = ActOnOpenMPTaskLoopDirective(ClausesWithImplicit, AStmt, StartLoc,
-                                       EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_taskloop_simd:
-    Res = ActOnOpenMPTaskLoopSimdDirective(ClausesWithImplicit, AStmt, StartLoc,
-                                           EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_master_taskloop:
-    Res = ActOnOpenMPMasterTaskLoopDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_masked_taskloop:
-    Res = ActOnOpenMPMaskedTaskLoopDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_master_taskloop_simd:
-    Res = ActOnOpenMPMasterTaskLoopSimdDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_masked_taskloop_simd:
-    Res = ActOnOpenMPMaskedTaskLoopSimdDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_parallel_master_taskloop:
-    Res = ActOnOpenMPParallelMasterTaskLoopDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_parallel_masked_taskloop:
-    Res = ActOnOpenMPParallelMaskedTaskLoopDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_parallel_master_taskloop_simd:
-    Res = ActOnOpenMPParallelMasterTaskLoopSimdDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_parallel_masked_taskloop_simd:
-    Res = ActOnOpenMPParallelMaskedTaskLoopSimdDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_distribute:
-    Res = ActOnOpenMPDistributeDirective(ClausesWithImplicit, AStmt, StartLoc,
-                                         EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_target_update:
-    Res = ActOnOpenMPTargetUpdateDirective(ClausesWithImplicit, StartLoc,
-                                           EndLoc, AStmt);
-    break;
-  case OMPD_distribute_parallel_for:
-    Res = ActOnOpenMPDistributeParallelForDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_distribute_parallel_for_simd:
-    Res = ActOnOpenMPDistributeParallelForSimdDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_distribute_simd:
-    Res = ActOnOpenMPDistributeSimdDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_target_parallel_for_simd:
-    Res = ActOnOpenMPTargetParallelForSimdDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_target_simd:
-    Res = ActOnOpenMPTargetSimdDirective(ClausesWithImplicit, AStmt, StartLoc,
-                                         EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_teams_distribute:
-    Res = ActOnOpenMPTeamsDistributeDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_teams_distribute_simd:
-    Res = ActOnOpenMPTeamsDistributeSimdDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_teams_distribute_parallel_for_simd:
-    Res = ActOnOpenMPTeamsDistributeParallelForSimdDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_teams_distribute_parallel_for:
-    Res = ActOnOpenMPTeamsDistributeParallelForDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_target_teams:
-    Res = ActOnOpenMPTargetTeamsDirective(ClausesWithImplicit, AStmt, StartLoc,
-                                          EndLoc);
-    break;
-  case OMPD_target_teams_distribute:
-    Res = ActOnOpenMPTargetTeamsDistributeDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_target_teams_distribute_parallel_for:
-    Res = ActOnOpenMPTargetTeamsDistributeParallelForDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_target_teams_distribute_parallel_for_simd:
-    Res = ActOnOpenMPTargetTeamsDistributeParallelForSimdDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_target_teams_distribute_simd:
-    Res = ActOnOpenMPTargetTeamsDistributeSimdDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_interop:
-    assert(AStmt == nullptr &&
-           "No associated statement allowed for 'omp interop' directive");
-    Res = ActOnOpenMPInteropDirective(ClausesWithImplicit, StartLoc, EndLoc);
-    break;
-  case OMPD_dispatch:
-    Res = ActOnOpenMPDispatchDirective(ClausesWithImplicit, AStmt, StartLoc,
-                                       EndLoc);
-    break;
-  case OMPD_loop:
-    Res = ActOnOpenMPGenericLoopDirective(ClausesWithImplicit, AStmt, StartLoc,
-                                          EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_teams_loop:
-    Res = ActOnOpenMPTeamsGenericLoopDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_target_teams_loop:
-    Res = ActOnOpenMPTargetTeamsGenericLoopDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_parallel_loop:
-    Res = ActOnOpenMPParallelGenericLoopDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_target_parallel_loop:
-    Res = ActOnOpenMPTargetParallelGenericLoopDirective(
-        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
-    break;
-  case OMPD_declare_target:
-  case OMPD_end_declare_target:
-  case OMPD_threadprivate:
-  case OMPD_allocate:
-  case OMPD_declare_reduction:
-  case OMPD_declare_mapper:
-  case OMPD_declare_simd:
-  case OMPD_requires:
-  case OMPD_declare_variant:
-  case OMPD_begin_declare_variant:
-  case OMPD_end_declare_variant:
-    llvm_unreachable("OpenMP Directive is not allowed");
-  case OMPD_unknown:
-  default:
-    llvm_unreachable("Unknown OpenMP directive");
+  if (!SemaRef.CurContext->isDependentContext()) {
+    Res = createASTForDirective(SemaRef, Kind, ClausesWithImplicit, AStmt,
+                                StartLoc, EndLoc, DirName, CancelRegion,
+                                VarsWithInheritedDSA);
+  } else {
+    if (getDirectiveAssociation(Kind) == Association::Loop)
+      Res = ActOnOpenMPOpaqueLoopDirective(Kind, ClausesWithImplicit, AStmt,
+                                           StartLoc, EndLoc,
+                                           VarsWithInheritedDSA);
+    else
+      Res = ActOnOpenMPOpaqueBlockDirective(Kind, ClausesWithImplicit, AStmt,
+                                            CancelRegion, DirName, StartLoc,
+                                            EndLoc);
   }
 
   ErrorFound = Res.isInvalid() || ErrorFound;
@@ -11148,6 +11155,21 @@ StmtResult SemaOpenMP::ActOnOpenMPDepobjDirective(ArrayRef<OMPClause *> Clauses,
   return OMPDepobjDirective::Create(getASTContext(), StartLoc, EndLoc, Clauses);
 }
 
+static bool checkScanScope(Sema &S, Scope *CurrentS, SourceLocation Loc) {
+  bool ErrorFound = false;
+  // Check that scan directive is used in the scope of the OpenMP loop body.
+  if (CurrentS) {
+    Scope *ParentS = CurrentS->getParent();
+    if (!ParentS || ParentS->getParent() != ParentS->getBreakParent() ||
+        !ParentS->getBreakParent()->isOpenMPLoopScope()) {
+      S.Diag(Loc, diag::err_omp_orphaned_device_directive)
+          << getOpenMPDirectiveName(OMPD_scan) << 5;
+      ErrorFound = true;
+    }
+  }
+  return ErrorFound;
+}
+
 StmtResult SemaOpenMP::ActOnOpenMPScanDirective(ArrayRef<OMPClause *> Clauses,
                                                 SourceLocation StartLoc,
                                                 SourceLocation EndLoc) {
@@ -11158,13 +11180,9 @@ StmtResult SemaOpenMP::ActOnOpenMPScanDirective(ArrayRef<OMPClause *> Clauses,
     return StmtError();
   }
   // Check that scan directive is used in the scope of the OpenMP loop body.
-  if (Scope *S = DSAStack->getCurScope()) {
-    Scope *ParentS = S->getParent();
-    if (!ParentS || ParentS->getParent() != ParentS->getBreakParent() ||
-        !ParentS->getBreakParent()->isOpenMPLoopScope())
-      return StmtError(Diag(StartLoc, diag::err_omp_orphaned_device_directive)
-                       << getOpenMPDirectiveName(OMPD_scan) << 5);
-  }
+  if (checkScanScope(SemaRef, DSAStack->getCurScope(), StartLoc))
+    return StmtError();
+
   // Check that only one instance of scan directives is used in the same outer
   // region.
   if (DSAStack->doesParentHasScanDirective()) {
@@ -23319,6 +23337,143 @@ StmtResult SemaOpenMP::ActOnOpenMPScopeDirective(ArrayRef<OMPClause *> Clauses,
 
   return OMPScopeDirective::Create(getASTContext(), StartLoc, EndLoc, Clauses,
                                    AStmt);
+}
+
+static bool checkScanScope(Sema &S, Scope *CurrentS, SourceLocation Loc);
+
+StmtResult SemaOpenMP::ActOnOpenMPOpaqueBlockDirective(
+    OpenMPDirectiveKind DKind, ArrayRef<OMPClause *> Clauses, Stmt *AStmt,
+    OpenMPDirectiveKind CancelRegion, const DeclarationNameInfo &DirName,
+    SourceLocation StartLoc, SourceLocation EndLoc) {
+  bool NeedsStmt = false;
+  if (DKind == OMPD_section || DKind == OMPD_target_enter_data ||
+      DKind == OMPD_target_exit_data || DKind == OMPD_target_update) {
+    // The association of these in the spec is either "none" or "separating",
+    // but they do have an associated statement in clang.
+    NeedsStmt = true;
+  } else if (DKind != OMPD_ordered) {
+    // "ordered" has two versions, one with and one without a statement.
+    Association Assoc = getDirectiveAssociation(DKind);
+    NeedsStmt = Assoc != Association::None && Assoc != Association::Separating;
+  }
+
+  if (!AStmt && NeedsStmt)
+    return StmtError();
+
+  if (AStmt && isOpenMPCapturingDirective(DKind))
+    setBranchProtectedScope(SemaRef, DKind, AStmt);
+
+  // "scan" is the only executable, non-loop-associated directive so far
+  // that relies on DSAStack->getCurScope for diagnostic checks. The scope is
+  // not available (i.e. nullptr) when instantiating a template, so perform
+  // the check early.
+  if (DKind == OMPD_scan) {
+    if (checkScanScope(SemaRef, DSAStack->getCurScope(), StartLoc))
+      return StmtError();
+  }
+
+  Expr *ReductionRef = nullptr;
+  assert(!isOpenMPSimdDirective(DKind) && "Unexpected loop directive");
+  if (DKind == OMPD_taskgroup || isOpenMPParallelDirective(DKind) ||
+      isOpenMPWorksharingDirective(DKind))
+    ReductionRef = DSAStack->getTaskgroupReductionRef();
+
+  return OMPOpaqueBlockDirective::Create(
+      getASTContext(), StartLoc, EndLoc, DKind, Clauses, AStmt, ReductionRef,
+      DSAStack->isCancelRegion(), CancelRegion, DirName);
+}
+
+StmtResult SemaOpenMP::ActOnOpenMPOpaqueLoopDirective(
+    OpenMPDirectiveKind DKind, ArrayRef<OMPClause *> Clauses, Stmt *AStmt,
+    SourceLocation StartLoc, SourceLocation EndLoc,
+    VarsWithInheritedDSAType &VarsWithImplicitDSA) {
+  if (!AStmt)
+    return StmtError();
+
+  if (isOpenMPLoopTransformationDirective(DKind)) {
+    switch (DKind) {
+    case OMPD_tile:
+      return ActOnOpenMPTileDirective(Clauses, AStmt, StartLoc, EndLoc);
+    case OMPD_unroll:
+      return ActOnOpenMPUnrollDirective(Clauses, AStmt, StartLoc, EndLoc);
+    case OMPD_reverse:
+      return ActOnOpenMPReverseDirective(AStmt, StartLoc, EndLoc);
+    case OMPD_interchange:
+      return ActOnOpenMPInterchangeDirective(Clauses, AStmt, StartLoc, EndLoc);
+    default:
+      llvm_unreachable("Unexpected loop-transformatinal directive");
+    }
+  }
+
+  ArrayRef<OpenMPDirectiveKind> Leafs = getLeafConstructsOrSelf(DKind);
+
+  if (isOpenMPGenericLoopDirective(DKind)) {
+    // OpenMP 5.1 [2.11.7, loop construct, Restrictions]
+    // A list item may not appear in a lastprivate clause unless it is the
+    // loop iteration variable of a loop that is associated with the construct.
+    if (checkGenericLoopLastprivate(SemaRef, Clauses, DKind, DSAStack))
+      return StmtError();
+  }
+
+  CapturedStmt *CS = [&]() {
+    switch (DKind) {
+    case OMPD_distribute:
+    case OMPD_for:
+    case OMPD_taskloop:
+      return cast<CapturedStmt>(AStmt);
+    default:
+      return setBranchProtectedScope(SemaRef, DKind, AStmt);
+    }
+  }();
+
+  // assert(isa<CapturedStmt>(AStmt) && "Captured statement expected");
+  OMPLoopBasedDirective::HelperExprs B;
+  // In presence of clause 'collapse' or 'ordered' with number of loops, it will
+  // define the nested loops number.
+  unsigned NestedLoopCount = checkOpenMPLoop(
+      DKind, getCollapseNumberExpr(Clauses), getOrderedNumberExpr(Clauses), CS,
+      SemaRef, *DSAStack, VarsWithImplicitDSA, B);
+  if (NestedLoopCount == 0)
+    return StmtError();
+
+  assert((SemaRef.CurContext->isDependentContext() || B.builtAll()) &&
+         "omp for loop exprs were not built");
+
+  if (finishLinearClauses(SemaRef, Clauses, B, DSAStack))
+    return StmtError();
+
+  if (isOpenMPSimdDirective(DKind)) {
+    if (checkSimdlenSafelenSpecified(SemaRef, Clauses))
+      return StmtError();
+  }
+
+  if (llvm::is_contained(Leafs, OMPD_taskloop)) {
+    // OpenMP, [2.9.2 taskloop Construct, Restrictions]
+    // The grainsize clause and num_tasks clause are mutually exclusive and may
+    // not appear on the same taskloop directive.
+    if (checkMutuallyExclusiveClauses(SemaRef, Clauses,
+                                      {OMPC_grainsize, OMPC_num_tasks}))
+      return StmtError();
+    // OpenMP, [2.9.2 taskloop Construct, Restrictions]
+    // If a reduction clause is present on the taskloop directive, the nogroup
+    // clause must not be specified.
+    if (checkReductionClauseWithNogroup(SemaRef, Clauses))
+      return StmtError();
+  }
+
+  if (llvm::is_contained(Leafs, OMPD_teams))
+    DSAStack->setParentTeamsRegionLoc(StartLoc);
+
+  Expr *ReductionRef = nullptr;
+  assert(DKind != OMPD_taskgroup && "Unexpected block directive");
+  if ((isOpenMPParallelDirective(DKind) ||
+       isOpenMPWorksharingDirective(DKind)) &&
+      !isOpenMPSimdDirective(DKind))
+    ReductionRef = DSAStack->getTaskgroupReductionRef();
+
+  return OMPOpaqueLoopDirective::Create(
+      getASTContext(), StartLoc, EndLoc, DKind, NestedLoopCount, Clauses, AStmt,
+      B, ReductionRef, DSAStack->isCancelRegion());
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPInclusiveClause(ArrayRef<Expr *> VarList,
