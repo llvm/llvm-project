@@ -2,19 +2,15 @@
 ; RUN: llc --yk-stackmap-spillreloads-fix --yk-stackmap-add-locs < %s | FileCheck %s
 
 ; CHECK-LABEL: __LLVM_StackMaps:
-; CHECK-LABEL: .long   -56
-; CHECK-NEXT: .byte 1
-; CHECK-NEXT: .byte 1
-; CHECK-NEXT: .byte 0
-; CHECK-NEXT: .short 8
+; CHECK-LABEL: .long   -184
 ; NOTE: Actual tracked register
-; CHECK-NEXT: .short 13
+; CHECK-LABEL: .short  12
 ; NOTE: Reserved
 ; CHECK-NEXT: .short 0
 ; NOTE: Number of extra locations.
 ; CHECK-NEXT: .short 1
 ; NOTE: Stack offset this value is stored in.
-; CHECK-NEXT: .short -80
+; CHECK-NEXT: .short -64
 
 source_filename = "ld-temp.o"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
