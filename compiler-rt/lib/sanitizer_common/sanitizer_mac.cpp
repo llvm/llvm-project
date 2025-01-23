@@ -819,7 +819,7 @@ struct crashreporter_annotations_t gCRAnnotations
 };
 #    endif
 #  else
-// Revert to previous crash reporter API if client is not available
+// Revert to previous crash reporter API if client header is not available
 static const char *__crashreporter_info__ __attribute__((__used__)) =
     &crashreporter_info_buff[0];
 asm(".desc ___crashreporter_info__, 0x10");
