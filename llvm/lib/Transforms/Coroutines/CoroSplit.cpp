@@ -1419,7 +1419,7 @@ struct SwitchCoroutineSplitter {
     SmallVector<Type *> NewParams;
     NewParams.reserve(OldParams.size() + 1);
     NewParams.append(OldParams.begin(), OldParams.end());
-    NewParams.push_back(PointerType::getUnqual(Shape.FrameTy));
+    NewParams.push_back(PointerType::getUnqual(Shape.FrameTy->getContext()));
 
     auto *NewFnTy = FunctionType::get(OrigFnTy->getReturnType(), NewParams,
                                       OrigFnTy->isVarArg());

@@ -1721,7 +1721,7 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
 
   if (MFI->Occupancy == 0) {
     // Fixup the subtarget dependent default value.
-    MFI->Occupancy = ST.computeOccupancy(MF.getFunction(), MFI->getLDSSize());
+    MFI->Occupancy = ST.getOccupancyWithWorkGroupSizes(MF).second;
   }
 
   auto parseRegister = [&](const yaml::StringValue &RegName, Register &RegVal) {
