@@ -15,3 +15,9 @@ functions:
     return_type: int
     arguments:
       - type: wint_t
+  - name: btowc
+    standards:
+      - stdc
+    return_type: wint_t
+    arguments:
+      - type: int
