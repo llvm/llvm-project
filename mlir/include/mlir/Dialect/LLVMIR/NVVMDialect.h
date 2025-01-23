@@ -21,7 +21,6 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 
 #include "mlir/Dialect/LLVMIR/NVVMOpsEnums.h.inc"
@@ -50,6 +49,12 @@ std::pair<mlir::Type, unsigned> inferMMAType(mlir::NVVM::MMATypes type,
                                              int nCol,
                                              mlir::MLIRContext *context);
 } // namespace NVVM
+} // namespace mlir
+
+namespace mlir {
+namespace LLVM {
+class ModuleTranslation;
+} // namespace LLVM
 } // namespace mlir
 
 ///// Ops /////
