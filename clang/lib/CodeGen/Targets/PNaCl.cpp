@@ -65,8 +65,7 @@ ABIArgInfo PNaClABIInfo::classifyArgumentType(QualType Ty) const {
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                      RAA == CGCXXABI::RAA_DirectInMemory);
-    return getNaturalAlignIndirect(
-        Ty, getContext().getTargetAddressSpace(LangAS::Default));
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
   } else if (const EnumType *EnumTy = Ty->getAs<EnumType>()) {
     // Treat an enum type as its underlying type.
     Ty = EnumTy->getDecl()->getIntegerType();
