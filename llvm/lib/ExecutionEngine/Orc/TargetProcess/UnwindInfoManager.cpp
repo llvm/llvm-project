@@ -17,7 +17,7 @@ using namespace llvm;
 using namespace llvm::orc;
 using namespace llvm::orc::shared;
 
-extern "C" orc::shared::CWrapperFunctionResult
+static orc::shared::CWrapperFunctionResult
 llvm_orc_rt_alt_UnwindInfoManager_enable(const char *Data, uint64_t Size) {
   return WrapperFunction<SPSError(SPSExecutorAddr, SPSExecutorAddr)>::handle(
              Data, Size,
@@ -28,7 +28,7 @@ llvm_orc_rt_alt_UnwindInfoManager_enable(const char *Data, uint64_t Size) {
       .release();
 }
 
-extern "C" orc::shared::CWrapperFunctionResult
+static orc::shared::CWrapperFunctionResult
 llvm_orc_rt_alt_UnwindInfoManager_disable(const char *Data, uint64_t Size) {
   return WrapperFunction<SPSError(SPSExecutorAddr)>::handle(
              Data, Size,
@@ -38,7 +38,7 @@ llvm_orc_rt_alt_UnwindInfoManager_disable(const char *Data, uint64_t Size) {
       .release();
 }
 
-extern "C" orc::shared::CWrapperFunctionResult
+static orc::shared::CWrapperFunctionResult
 llvm_orc_rt_alt_UnwindInfoManager_register(const char *Data, uint64_t Size) {
   using SPSSig =
       SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddrRange>,
@@ -56,7 +56,7 @@ llvm_orc_rt_alt_UnwindInfoManager_register(const char *Data, uint64_t Size) {
       .release();
 }
 
-extern "C" orc::shared::CWrapperFunctionResult
+static orc::shared::CWrapperFunctionResult
 llvm_orc_rt_alt_UnwindInfoManager_deregister(const char *Data, uint64_t Size) {
   using SPSSig = SPSError(SPSExecutorAddr, SPSSequence<SPSExecutorAddrRange>);
 
