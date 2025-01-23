@@ -1432,6 +1432,12 @@ public:
   void push_back(Attribute attr) { results.push_back(attr); }
   void push_back(ApplyToEachResult r) { results.push_back(r); }
 
+  // Inserts an element to the list.
+  using iterator = SmallVector<ApplyToEachResult>::iterator;
+  void insert(iterator I, Operation *op) { results.insert(I, op); }
+  void insert(iterator I, Attribute attr) { results.insert(I, attr); }
+  void insert(iterator I, ApplyToEachResult r) { results.insert(I, r); }
+
   /// Reserves space for `size` elements in the list.
   void reserve(unsigned size) { results.reserve(size); }
 
