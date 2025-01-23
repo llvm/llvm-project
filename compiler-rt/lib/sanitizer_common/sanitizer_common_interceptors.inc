@@ -34,6 +34,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <stdarg.h>
+#include <stddef.h>
 
 #include "interception/interception.h"
 #include "sanitizer_addrhashmap.h"
@@ -1375,6 +1376,16 @@ INTERCEPTOR(__sanitizer_tm *, localtime_r, unsigned long *timep, void *result) {
   }
   return res;
 }
+INTERCEPTOR(__sanitizer_tm *, localtime_s, unsigned long *timep, void *result) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, localtime_r, timep, result);
+  __sanitizer_tm *res = REAL(localtime_r)(timep, result);
+  if (res) {
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, timep, sizeof(*timep));
+    unpoison_tm(ctx, res);
+  }
+  return res;
+}
 INTERCEPTOR(__sanitizer_tm *, gmtime, unsigned long *timep) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, gmtime, timep);
@@ -1415,6 +1426,20 @@ INTERCEPTOR(char *, ctime_r, unsigned long *timep, char *result) {
   // its metadata. See
   // https://github.com/google/sanitizers/issues/321.
   char *res = REAL(ctime_r)(timep, result);
+  if (res) {
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, timep, sizeof(*timep));
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res, internal_strlen(res) + 1);
+  }
+  return res;
+}
+INTERCEPTOR(char *, ctime_s, char *result, size_t result_size,
+            unsigned long *timep) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, ctime_s, result, result_size, timep);
+  // FIXME: under ASan the call below may write to freed memory and corrupt
+  // its metadata. See
+  // https://github.com/google/sanitizers/issues/321.
+  char *res = REAL(ctime_s)(result, result_size, timep);
   if (res) {
     COMMON_INTERCEPTOR_READ_RANGE(ctx, timep, sizeof(*timep));
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res, internal_strlen(res) + 1);

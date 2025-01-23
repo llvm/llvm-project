@@ -112,6 +112,8 @@ Improvements to clang-tidy
   option to exclude files not present in the compilation database, avoiding
   false-negative results.
 
+- Added `ctime` and `localtime` to clang-tidy.
+
 - Improved :program:`run-clang-tidy.py` script. Fixed minor shutdown noise
   happening on certain platforms when interrupting the script.
 
@@ -198,6 +200,13 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/branch-clone>` check to improve detection of
   branch clones by now detecting duplicate inner and outer if statements.
 
+- New unsafe functions checks :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` were added to clang-tidy.
+
+- Improved :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>`, added `ctime` and `localtime`
+  to unsafe functions check in clang-tidy.
+
 - Improved :doc:`bugprone-casting-through-void
   <clang-tidy/checks/bugprone/casting-through-void>` check to suggest replacing
   the offending code with ``reinterpret_cast``, to more clearly express intent.
@@ -252,6 +261,10 @@ Changes in existing checks
 - Improved :doc:`bugprone-unhandled-self-assignment
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by fixing smart
   pointer check against std::unique_ptr type.
+
+- Improved :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` by adding ``ctime`` and
+  ``localtime`` functions.
 
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying

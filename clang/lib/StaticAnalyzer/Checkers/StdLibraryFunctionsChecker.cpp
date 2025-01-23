@@ -3532,10 +3532,19 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{ConstTime_tPtrTy}, RetType{StructTmPtrTy}),
         Summary(NoEvalCall).ArgConstraint(NotNull(ArgNo(0))));
 
-    // struct tm *localtime_r(const time_t *restrict timer,
+    // struct tm *localtime_r(const time_t *timer,
+    //                        struct tm *result);
+    addToFunctionSummaryMap("localtime_r",
+                            Signature(ArgTypes{ConstTime_tPtrTy, StructTmPtrTy},
+                                      RetType{StructTmPtrTy}),
+                            Summary(NoEvalCall)
+                                .ArgConstraint(NotNull(ArgNo(0)))
+                                .ArgConstraint(NotNull(ArgNo(1))));
+
+    // struct tm *localtime_s(const time_t *restrict timer,
     //                        struct tm *restrict result);
     addToFunctionSummaryMap(
-        "localtime_r",
+        "localtime_s",
         Signature(ArgTypes{ConstTime_tPtrRestrictTy, StructTmPtrRestrictTy},
                   RetType{StructTmPtrTy}),
         Summary(NoEvalCall)
@@ -3564,15 +3573,29 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                 /*Buffer=*/ArgNo(1),
                 /*MinBufSize=*/BVF.getValue(26, IntTy))));
 
-    // struct tm *gmtime_r(const time_t *restrict timer,
-    //                     struct tm *restrict result);
+    // char *ctime_s(char *buf, rsize_t buf_size, const time_t *timep);
     addToFunctionSummaryMap(
-        "gmtime_r",
-        Signature(ArgTypes{ConstTime_tPtrRestrictTy, StructTmPtrRestrictTy},
-                  RetType{StructTmPtrTy}),
+        "ctime_s",
+        Signature(ArgTypes{CharPtrTy,
+                           BufferSize(ArgNo(0), BVF.getValue(26, IntTy)),
+                           ConstTime_tPtrTy},
+                  RetType{CharPtrTy}),
         Summary(NoEvalCall)
             .ArgConstraint(NotNull(ArgNo(0)))
-            .ArgConstraint(NotNull(ArgNo(1))));
+            .ArgConstraint(BufferSize(
+                /*Buffer=*/ArgNo(0),
+                /*MinBufSize=*/BVF.getValue(26, IntTy))));
+    .ArgConstraint(NotNull(ArgNo(2)))
+
+        // struct tm *gmtime_r(const time_t *restrict timer,
+        //                     struct tm *restrict result);
+        addToFunctionSummaryMap(
+            "gmtime_r",
+            Signature(ArgTypes{ConstTime_tPtrRestrictTy, StructTmPtrRestrictTy},
+                      RetType{StructTmPtrTy}),
+            Summary(NoEvalCall)
+                .ArgConstraint(NotNull(ArgNo(0)))
+                .ArgConstraint(NotNull(ArgNo(1))));
 
     // struct tm * gmtime(const time_t *tp);
     addToFunctionSummaryMap(

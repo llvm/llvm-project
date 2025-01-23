@@ -34,12 +34,15 @@ following functions:
 ``vsnprintf``, ``vsprintf``, ``vsscanf``, ``vswprintf``, ``vswscanf``,
 ``vwprintf``, ``vwscanf``, ``wcrtomb``, ``wcscat``, ``wcscpy``,
 ``wcslen``, ``wcsncat``, ``wcsncpy``, ``wcsrtombs``, ``wcstok``, ``wcstombs``,
-``wctomb``, ``wmemcpy``, ``wmemmove``, ``wprintf``, ``wscanf``.
+``wctomb``, ``wmemcpy``, ``wmemmove``, ``wprintf``, ``wscanf``. ``ctime_r``,
+``localtime_r``
 
 If *Annex K.* is not available, replacements are suggested only for the
 following functions from the previous list:
 
  - ``asctime``, ``asctime_r``, suggested replacement: ``strftime``
+ - ``ctime``, ``ctime_r``, suggested replacement: ``ctime_s``
+ - ``localtime``, ``localtime_r``, suggested replacement: ``localtime_s``
  - ``gets``, suggested replacement: ``fgets``
 
 The following functions are always checked, regardless of *Annex K* availability:
