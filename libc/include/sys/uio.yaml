@@ -1,7 +1,7 @@
 header: sys/uio.h
 header_template: uio.h.def
 macros: []
-types: 
+types:
   - type_name: struct_iovec
   - type_name: ssize_t
 enums: []
