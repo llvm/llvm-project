@@ -829,6 +829,10 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     } else if (Arg *FinalOutput =
                    C.getArgs().getLastArg(options::OPT__SLASH_Fo)) {
       CoverageFilename = FinalOutput->getValue();
+      StringRef V = FinalOutput->getValue();
+      if (llvm::sys::path::is_separator(V.back())) {
+        CoverageFilename += llvm::sys::path::filename(Output.getBaseInput());
+      }
     } else if (Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o)) {
       CoverageFilename = FinalOutput->getValue();
     } else {
