@@ -53,6 +53,8 @@ STRING_EXTENSION_OUTSIDE(SBThread)
 
         def set_selected_frame(self, frame):
             if isinstance(frame, SBFrame):
+                if frame.thread != self:
+                    raise ValueError("cannot select frame from different thread")
                 self.SetSelectedFrame(frame.idx)
             else:
                 self.SetSelectedFrame(frame)
