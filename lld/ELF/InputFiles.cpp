@@ -1026,8 +1026,15 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
     // explicitly told to do otherwise (by -z execstack). Because the stack
     // executable-ness is controlled solely by command line options,
     // .note.GNU-stack sections are simply ignored.
-    if (name == ".note.GNU-stack")
+    if (name == ".note.GNU-stack") {
+      if ((sec.sh_flags & SHF_EXECINSTR) && !ctx.arg.relocatable &&
+          ctx.arg.zGnustack != GnuStackKind::Exec) {
+        Err(ctx) << this
+                 << ": requires an executable stack, but -z execstack is not "
+                    "specified";
+      }
       return &InputSection::discarded;
+    }
 
     // Object files that use processor features such as Intel Control-Flow
     // Enforcement (CET) or AArch64 Branch Target Identification BTI, use a
