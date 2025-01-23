@@ -2348,7 +2348,7 @@ generateByrefCopyHelper(CodeGenFunction &CGF, const BlockByrefInfo &byrefInfo,
     // Create a scope with an artificial location for the body of this function.
   auto AL = ApplyDebugLocation::CreateArtificial(CGF);
 
-  if (generator.needsCopy()) {
+  if (generator.needsCopy() && !byrefInfo.ForInitOnHeap) {
     // dst->x
     Address destField = CGF.GetAddrOfLocalVar(&Dst);
     destField = Address(CGF.Builder.CreateLoad(destField), byrefInfo.Type,
@@ -2417,9 +2417,32 @@ generateByrefDisposeHelper(CodeGenFunction &CGF,
     Address addr = CGF.GetAddrOfLocalVar(&Src);
     addr = Address(CGF.Builder.CreateLoad(addr), byrefInfo.Type,
                    byrefInfo.ByrefAlignment);
-    addr = CGF.emitBlockByrefAddress(addr, byrefInfo, false, "object");
 
+    llvm::BasicBlock *skipBB = nullptr;
+    if (byrefInfo.ForInitOnHeap) {
+      // For objects initialized on the heap, a separate field tracks whether
+      // the object has completed initialization.  If it's still false here,
+      // then initialization threw an exception, so we don't want to run the
+      // destructor.
+      skipBB = CGF.createBasicBlock("skip");
+      llvm::BasicBlock *runBB = CGF.createBasicBlock("run");
+
+      Address initializedAddr = CGF.Builder.CreateStructGEP(
+          addr, byrefInfo.IndexOfInitializedFlag, "byref.initialized");
+      // This is safe to load non-atomically because the store of true (if any)
+      // happens while the creating function still holds a reference.
+      llvm::Value *initialized =
+          CGF.Builder.CreateFlagLoad(initializedAddr.emitRawPointer(CGF));
+
+      CGF.Builder.CreateCondBr(initialized, runBB, skipBB);
+      CGF.EmitBlock(runBB);
+    }
+
+    addr = CGF.emitBlockByrefAddress(addr, byrefInfo, false, "object");
     generator.emitDispose(CGF, addr);
+
+    if (skipBB)
+      CGF.EmitBlock(skipBB);
   }
 
   CGF.FinishFunction();
@@ -2515,15 +2538,14 @@ CodeGenFunction::buildByrefHelpers(llvm::StructType &byrefType,
 
     // ARC __strong __block variables need to be retained.
     case Qualifiers::OCL_Strong:
-      // Block pointers need to be copied, and there's no direct
-      // transfer possible.
       if (type->isBlockPointerType()) {
+        // Block pointers need to be copied, and there's no direct
+        // transfer possible.
         return ::buildByrefHelpers(CGM, byrefInfo,
                                    ARCStrongBlockByrefHelpers(valueAlignment));
-
-      // Otherwise, we transfer ownership of the retain from the stack
-      // to the heap.
       } else {
+        // Otherwise, we transfer ownership of the retain from the stack
+        // to the heap.
         return ::buildByrefHelpers(CGM, byrefInfo,
                                    ARCStrongByrefHelpers(valueAlignment));
       }
@@ -2631,6 +2653,14 @@ const BlockByrefInfo &CodeGenFunction::getBlockByrefInfo(const VarDecl *D) {
     size += CharUnits::fromQuantity(PointerSizeInBytes);
   }
 
+  unsigned indexOfInitializedFlag = UINT_MAX;
+  if (D->needsInitOnHeap()) {
+    /// uint8_t initialized;
+    types.push_back(Int8Ty);
+    size += CharUnits::fromQuantity(1);
+    indexOfInitializedFlag = types.size() - 1;
+  }
+
   // T x;
   llvm::Type *varTy = ConvertTypeForMem(Ty);
 
@@ -2662,10 +2692,54 @@ const BlockByrefInfo &CodeGenFunction::getBlockByrefInfo(const VarDecl *D) {
   info.FieldIndex = types.size() - 1;
   info.FieldOffset = varOffset;
   info.ByrefAlignment = std::max(varAlign, getPointerAlign());
+  info.ForInitOnHeap = D->needsInitOnHeap();
+  info.IndexOfInitializedFlag = indexOfInitializedFlag;
 
   auto pair = BlockByrefInfos.insert({D, info});
   assert(pair.second && "info was inserted recursively?");
   return pair.first->second;
+}
+
+/// Allocate a byref on the heap (but don't initialize it yet).
+void CodeGenFunction::emitByrefHeapAlloc(llvm::Value *stackByref,
+                                         QualType declType) {
+  // The object itself is initialized directly on the heap.  But for ABI
+  // backwards compatibility reasons, we have to set up a fake byref struct on
+  // the stack (with the structural components initialized but not the object
+  // itself), then call _Block_object_assign to move it to the heap (which is
+  // safe because we forced a no-op copy helper), then call
+  // _Block_object_dispose to release the extra ref from _Block_object_assign.
+  BlockFieldFlags flags = BLOCK_FIELD_IS_BYREF;
+  RawAddress heapByref =
+      CreateDefaultAlignTempAlloca(stackByref->getType(), "initOnHeap.ptr");
+
+  llvm::Value *args[] = {heapByref.getPointer(), stackByref,
+                         llvm::ConstantInt::get(Int32Ty, flags.getBitMask())};
+  EmitNounwindRuntimeCall(CGM.getBlockObjectAssign(), args);
+
+  BuildBlockRelease(stackByref, flags, false);
+
+  // We need to add a cleanup as soon as the allocation happens, to ensure the
+  // allocation is freed if initialization throws.
+  if (CGM.getLangOpts().getGC() != LangOptions::GCOnly) {
+    enterByrefCleanup(NormalAndEHCleanup, heapByref, BLOCK_FIELD_IS_BYREF,
+                      /*LoadBlockVarAddr*/ true,
+                      cxxDestructorCanThrow(declType));
+  }
+}
+
+/// Set the initialized flag of a heap-initialized byref.
+void CodeGenFunction::emitByrefMarkInitialized(
+    const AutoVarEmission &emission) {
+  auto &info = getBlockByrefInfo(emission.Variable);
+  Address forwardingAddr =
+      Builder.CreateStructGEP(emission.Addr, 1, "forwarding");
+  Address heapByref(Builder.CreateLoad(forwardingAddr), info.Type,
+                    info.ByrefAlignment);
+
+  Address initializedAddr = Builder.CreateStructGEP(
+      heapByref, info.IndexOfInitializedFlag, "byref.initialized");
+  Builder.CreateFlagStore(true, initializedAddr.emitRawPointer(*this));
 }
 
 /// Initialize the structural components of a __block variable, i.e.
@@ -2709,8 +2783,8 @@ void CodeGenFunction::emitByrefStructureInit(const AutoVarEmission &emission) {
   storeHeaderField(V, getPointerSize(), "byref.isa");
 
   // Store the address of the variable into its own forwarding pointer.
-  storeHeaderField(addr.emitRawPointer(*this), getPointerSize(),
-                   "byref.forwarding");
+  llvm::Value *pointer = addr.emitRawPointer(*this);
+  storeHeaderField(pointer, getPointerSize(), "byref.forwarding");
 
   // Blocks ABI:
   //   c) the flags field is set to either 0 if no helper functions are
@@ -2773,6 +2847,12 @@ void CodeGenFunction::emitByrefStructureInit(const AutoVarEmission &emission) {
   if (ByRefHasLifetime && HasByrefExtendedLayout) {
     auto layoutInfo = CGM.getObjCRuntime().BuildByrefLayout(CGM, type);
     storeHeaderField(layoutInfo, getPointerSize(), "byref.layout");
+  }
+
+  if (emission.NeedsInitOnHeap) {
+    V = llvm::ConstantInt::get(Int8Ty, 0);
+    storeHeaderField(V, CharUnits::fromQuantity(1), "byref.initialized");
+    emitByrefHeapAlloc(pointer, type);
   }
 }
 

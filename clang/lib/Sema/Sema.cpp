@@ -2223,6 +2223,13 @@ static void checkEscapingByref(VarDecl *VD, Sema &S) {
   SourceLocation Loc = VD->getLocation();
   Expr *VarRef =
       new (S.Context) DeclRefExpr(S.Context, VD, false, T, VK_LValue, Loc);
+  // Note: If needsInitOnHeap is true, the move/copy constructor will not
+  // actually be called, so in theory we don't have to require that it exists.
+  // But needsInitOnHeap is based on a conservative estimate of __block
+  // variables that might be retained in their own initializers; it could be
+  // refined in the future, which could cause variables to suddenly start
+  // requiring move constructors again.  To avoid the backwards compatibility
+  // hazard, require a move/copy constructor regardless of needsInitOnHeap.
   ExprResult Result;
   auto IE = InitializedEntity::InitializeBlock(Loc, T);
   if (S.getLangOpts().CPlusPlus23) {
@@ -2248,6 +2255,62 @@ static void checkEscapingByref(VarDecl *VD, Sema &S) {
       auto *FPT = DD->getType()->castAs<FunctionProtoType>();
       S.ResolveExceptionSpec(Loc, FPT);
     }
+}
+
+namespace {
+// Find blocks within a __block variable's initializer that capture that __block
+// variable.
+class CapturedByOwnInitVisitor
+    : public EvaluatedExprVisitor<CapturedByOwnInitVisitor> {
+  typedef EvaluatedExprVisitor<CapturedByOwnInitVisitor> Inherited;
+  VarDecl *const VD;
+
+public:
+  const BlockExpr *FoundBE;
+  CapturedByOwnInitVisitor(Sema &S, VarDecl *VD)
+      : Inherited(S.getASTContext()), VD(VD), FoundBE(nullptr) {}
+
+  void VisitBlockExpr(const BlockExpr *BE) {
+    if (FoundBE)
+      return; // No more work to do if already found.
+    for (const BlockDecl::Capture &BC : BE->getBlockDecl()->captures()) {
+      if (BC.getVariable() == VD) {
+        FoundBE = BE;
+        return;
+      }
+    }
+  }
+};
+} // namespace
+
+static void checkCapturedByOwnInit(VarDecl *VD, Sema &S) {
+  Expr *I = VD->getInit();
+  if (!I)
+    return;
+
+  // Check whether the variable is captured by a block literal within its own
+  // initializer.
+  CapturedByOwnInitVisitor V(S, VD);
+  V.Visit(I);
+  if (!V.FoundBE)
+    return;
+
+  if (VD->hasConstantInitialization()) {
+    // Block literals with captures can't be constant-evaluated.  But we can
+    // still reach here if the initializer syntactically contains a block
+    // literal that's never actually evaluated.  And if it's never evaluated,
+    // then we don't need to care about the capture.
+    return;
+  }
+
+  // Mark as self-capturing.
+  VD->setCapturedByOwnInit();
+  // If this is a record type, then it will need an implicit heap
+  // allocation, so warn.
+  if (VD->needsInitOnHeap()) {
+    S.Diag(VD->getLocation(), diag::warn_implicit_block_var_alloc) << VD;
+    S.Diag(V.FoundBE->getCaretLocation(), diag::note_because_captured_by_block);
+  }
 }
 
 static void markEscapingByrefs(const FunctionScopeInfo &FSI, Sema &S) {
@@ -2279,6 +2342,9 @@ static void markEscapingByrefs(const FunctionScopeInfo &FSI, Sema &S) {
     // __block variables might require us to capture a copy-initializer.
     if (!VD->isEscapingByref())
       continue;
+
+    checkCapturedByOwnInit(VD, S);
+
     // It's currently invalid to ever have a __block variable with an
     // array type; should we diagnose that here?
     // Regardless, we don't want to ignore array nesting when
