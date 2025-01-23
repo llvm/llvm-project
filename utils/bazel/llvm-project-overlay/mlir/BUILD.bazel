@@ -5549,7 +5549,11 @@ cc_library(
         [
             "lib/Dialect/LLVMIR/Transforms/*.cpp",
         ],
-        exclude = ["lib/Dialect/LLVMIR/Transforms/LegalizeForExport.cpp"],
+        exclude = [
+            "lib/Dialect/LLVMIR/Transforms/DIExpressionLegalization.cpp",
+            "lib/Dialect/LLVMIR/Transforms/DIExpressionRewriter.cpp",
+            "lib/Dialect/LLVMIR/Transforms/LegalizeForExport.cpp",
+        ],
     ),
     hdrs = glob(
         [
@@ -5583,17 +5587,37 @@ cc_library(
 cc_library(
     name = "LLVMIRTransformsLegalizeForExport",
     srcs = ["lib/Dialect/LLVMIR/Transforms/LegalizeForExport.cpp"],
-    hdrs = [
-        "include/mlir/Dialect/LLVMIR/Transforms/DIExpressionLegalization.h",
-        "include/mlir/Dialect/LLVMIR/Transforms/DIExpressionRewriter.h",
-        "include/mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h",
-    ],
+    hdrs = ["include/mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"],
     includes = ["include"],
     deps = [
         ":IR",
-        ":LLVMPassIncGen",
         ":LLVMDialect",
+        ":LLVMPassIncGen",
+        ":LLVMIRTransformsDIExpressionLegalization",
         ":Pass",
+    ],
+)
+
+cc_library(
+    name = "LLVMIRTransformsDIExpressionLegalization",
+    srcs = ["lib/Dialect/LLVMIR/Transforms/DIExpressionLegalization.cpp"],
+    hdrs = ["include/mlir/Dialect/LLVMIR/Transforms/DIExpressionLegalization.h"],
+    includes = ["include"],
+    deps = [
+        ":LLVMIRTransformsDIExpressionRewriter",
+        "//llvm:BinaryFormat",
+    ],
+)
+
+cc_library(
+    name = "LLVMIRTransformsDIExpressionRewriter",
+    srcs = ["lib/Dialect/LLVMIR/Transforms/DIExpressionRewriter.cpp"],
+    hdrs = ["include/mlir/Dialect/LLVMIR/Transforms/DIExpressionRewriter.h"],
+    includes = ["include"],
+    deps = [
+        ":LLVMDialect",
+        ":TransformUtils",
+        "//llvm:Support",
     ],
 )
 
@@ -9244,6 +9268,7 @@ cc_library(
         ":LLVMConversionIncGen",
         ":LLVMDialect",
         ":LLVMIntrinsicConversionIncGen",
+        ":LLVMIRTransformsDIExpressionLegalization",
         ":LLVMIRTransformsLegalizeForExport",
         ":OpenMPDialect",
         ":Support",
