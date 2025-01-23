@@ -18,6 +18,9 @@
 namespace mlir {
 class SPIRVTypeConverter;
 
+#define GEN_PASS_DECL_CONVERTVECTORTOSPIRV
+#include "mlir/Conversion/Passes.h.inc"
+
 /// Appends to a pattern list additional patterns for translating Vector Ops to
 /// SPIR-V ops.
 void populateVectorToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,

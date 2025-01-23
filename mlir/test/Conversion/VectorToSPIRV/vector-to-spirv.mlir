@@ -1,4 +1,6 @@
 // RUN: mlir-opt -split-input-file -convert-vector-to-spirv -verify-diagnostics %s -o - | FileCheck %s
+// RUN: mlir-opt -split-input-file -convert-vector-to-spirv=use-64bit-index=false -verify-diagnostics %s -o - | FileCheck %s --check-prefix=INDEX32
+// RUN: mlir-opt -split-input-file -convert-vector-to-spirv=use-64bit-index=true -verify-diagnostics %s -o - | FileCheck %s --check-prefix=INDEX64
 
 module attributes { spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Float16], []>, #spirv.resource_limits<>> } {
 
@@ -255,12 +257,26 @@ func.func @insert(%arg0 : vector<4xf32>, %arg1: f32) -> vector<4xf32> {
 }
 
 // -----
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Int64], []>, #spirv.resource_limits<>>
+} {
+  // CHECK-LABEL: @insert_index_vector
+  // INDEX32-LABEL: @insert_index_vector
+  // INDEX64-LABEL: @insert_index_vector
+  // CHECK-SAME: %[[IN_VEC:.*]]: vector<4xindex>
+  // INDEX32-SAME: %[[IN_VEC:.*]]: vector<4xindex>
+  // INDEX64-SAME: %[[IN_VEC:.*]]: vector<4xindex>
+  func.func @insert_index_vector(%arg0 : vector<4xindex>, %arg1: index) -> vector<4xindex> {
+    // CHECK: builtin.unrealized_conversion_cast %[[IN_VEC]] : vector<4xindex> to vector<4xi32> 
+    // INDEX32: builtin.unrealized_conversion_cast %[[IN_VEC]] : vector<4xindex> to vector<4xi32> 
+    // INDEX64: builtin.unrealized_conversion_cast %[[IN_VEC]] : vector<4xindex> to vector<4xi64> 
 
-// CHECK-LABEL: @insert_index_vector
-//       CHECK:   spirv.CompositeInsert %{{.+}}, %{{.+}}[2 : i32] : i32 into vector<4xi32>
-func.func @insert_index_vector(%arg0 : vector<4xindex>, %arg1: index) -> vector<4xindex> {
-  %1 = vector.insert %arg1, %arg0[2] : index into vector<4xindex>
-  return %1: vector<4xindex>
+    // CHECK:   spirv.CompositeInsert %{{.+}}, %{{.+}}[2 : i32] : i32 into vector<4xi32>
+    // INDEX32: spirv.CompositeInsert %{{.+}}, %{{.+}}[2 : i32] : i32 into vector<4xi32>
+    // INDEX64: spirv.CompositeInsert %{{.+}}, %{{.+}}[2 : i32] : i64 into vector<4xi64>
+    %1 = vector.insert %arg1, %arg0[2] : index into vector<4xindex>
+    return %1: vector<4xindex>
+  }
 }
 
 // -----
@@ -517,14 +533,28 @@ func.func @shuffle(%v0 : vector<1xf32>, %v1: vector<1xf32>) -> vector<4xf32> {
 
 // -----
 
-// CHECK-LABEL:  func @shuffle_index_vector
-//  CHECK-SAME:  %[[ARG0:.+]]: vector<1xindex>, %[[ARG1:.+]]: vector<1xindex>
-//   CHECK-DAG:    %[[V0:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
-//   CHECK-DAG:    %[[V1:.+]] = builtin.unrealized_conversion_cast %[[ARG1]]
-//       CHECK:    spirv.CompositeConstruct %[[V0]], %[[V1]], %[[V1]], %[[V0]] : (i32, i32, i32, i32) -> vector<4xi32>
-func.func @shuffle_index_vector(%v0 : vector<1xindex>, %v1: vector<1xindex>) -> vector<4xindex> {
-  %shuffle = vector.shuffle %v0, %v1 [0, 1, 1, 0] : vector<1xindex>, vector<1xindex>
-  return %shuffle : vector<4xindex>
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Int64], []>, #spirv.resource_limits<>>
+} {
+  // CHECK-LABEL:  func @shuffle_index_vector
+  // INDEX32-LABEL:  func @shuffle_index_vector
+  // INDEX64-LABEL:  func @shuffle_index_vector
+  //  CHECK-SAME:  %[[ARG0:.+]]: vector<1xindex>, %[[ARG1:.+]]: vector<1xindex>
+  //  INDEX32-SAME:  %[[ARG0:.+]]: vector<1xindex>, %[[ARG1:.+]]: vector<1xindex>
+  //  INDEX64-SAME:  %[[ARG0:.+]]: vector<1xindex>, %[[ARG1:.+]]: vector<1xindex>
+  //   CHECK-DAG:    %[[V0:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
+  //   CHECK-DAG:    %[[V1:.+]] = builtin.unrealized_conversion_cast %[[ARG1]]
+  //   INDEX32-DAG:    %[[V0:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
+  //   INDEX32-DAG:    %[[V1:.+]] = builtin.unrealized_conversion_cast %[[ARG1]]
+  //   INDEX64-DAG:    %[[V0:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
+  //   INDEX64-DAG:    %[[V1:.+]] = builtin.unrealized_conversion_cast %[[ARG1]]
+  func.func @shuffle_index_vector(%v0 : vector<1xindex>, %v1: vector<1xindex>) -> vector<4xindex> {    
+    //  CHECK: spirv.CompositeConstruct %[[V0]], %[[V1]], %[[V1]], %[[V0]] : (i32, i32, i32, i32) -> vector<4xi32>
+    //  INDEX32: spirv.CompositeConstruct %[[V0]], %[[V1]], %[[V1]], %[[V0]] : (i32, i32, i32, i32) -> vector<4xi32>
+    //  INDEX64: spirv.CompositeConstruct %[[V0]], %[[V1]], %[[V1]], %[[V0]] : (i64, i64, i64, i64) -> vector<4xi64>
+    %shuffle = vector.shuffle %v0, %v1 [0, 1, 1, 0] : vector<1xindex>, vector<1xindex>
+    return %shuffle : vector<4xindex>
+  }
 }
 
 // -----
