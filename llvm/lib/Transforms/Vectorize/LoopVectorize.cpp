@@ -8996,13 +8996,13 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
          "Unexpected number of operands for partial reduction");
 
   VPValue *BinOp = Operands[0];
-  VPValue *Phi = Operands[1];
+  VPValue *Accumulator = Operands[1];
   VPRecipeBase *BinOpRecipe = BinOp->getDefiningRecipe();
   if (isa<VPReductionPHIRecipe>(BinOpRecipe) ||
       isa<VPPartialReductionRecipe>(BinOpRecipe))
-    std::swap(BinOp, Phi);
+    std::swap(BinOp, Accumulator);
 
-  return new VPPartialReductionRecipe(Reduction->getOpcode(), BinOp, Phi,
+  return new VPPartialReductionRecipe(Reduction->getOpcode(), BinOp, Accumulator,
                                       Reduction);
 }
 
