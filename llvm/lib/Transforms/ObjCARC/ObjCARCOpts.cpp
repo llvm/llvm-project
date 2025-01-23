@@ -1769,14 +1769,11 @@ void ObjCARCOpt::MoveCalls(Value *Arg, RRInfo &RetainsToMove,
 
   // Insert the new retain and release calls.
   for (Instruction *InsertPt : ReleasesToMove.ReverseInsertPts) {
-    Value *MyArg = ArgTy == ParamTy ? Arg
-                                    : new BitCastInst(Arg, ParamTy, "",
-                                                      InsertPt->getIterator());
     Function *Decl = EP.get(ARCRuntimeEntryPointKind::Retain);
     SmallVector<OperandBundleDef, 1> BundleList;
     addOpBundleForFunclet(InsertPt->getParent(), BundleList);
     CallInst *Call =
-        CallInst::Create(Decl, MyArg, BundleList, "", InsertPt->getIterator());
+        CallInst::Create(Decl, Arg, BundleList, "", InsertPt->getIterator());
     Call->setDoesNotThrow();
     Call->setTailCall();
 
