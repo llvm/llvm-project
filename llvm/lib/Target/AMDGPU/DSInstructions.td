@@ -702,6 +702,7 @@ def DS_PERMUTE_B32  : DS_1A1D_PERMUTE <"ds_permute_b32",
                                        int_amdgcn_ds_permute>;
 def DS_BPERMUTE_B32 : DS_1A1D_PERMUTE <"ds_bpermute_b32",
                                        int_amdgcn_ds_bpermute>;
+def DS_BPERMUTE_FI_B32 : DS_1A1D_PERMUTE <"ds_bpermute_fi_b32">;
 }
 
 } // let SubtargetPredicate = isGFX8Plus
@@ -1275,6 +1276,7 @@ defm DS_PK_ADD_F16        : DS_Real_gfx12<0x09a>;
 defm DS_PK_ADD_RTN_F16    : DS_Real_gfx12<0x0aa>;
 defm DS_PK_ADD_BF16       : DS_Real_gfx12<0x09b>;
 defm DS_PK_ADD_RTN_BF16   : DS_Real_gfx12<0x0ab>;
+defm DS_BPERMUTE_FI_B32   : DS_Real_gfx12<0x0cd>;
 
 defm DS_BVH_STACK_RTN_B32             : DS_Real_gfx12<0x0e0,
   "ds_bvh_stack_push4_pop1_rtn_b32", true>;

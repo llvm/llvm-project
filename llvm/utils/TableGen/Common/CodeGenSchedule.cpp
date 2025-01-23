@@ -1849,21 +1849,21 @@ void CodeGenSchedModels::collectProcResources() {
   // Add resources separately defined by each subtarget.
   for (const Record *WR : Records.getAllDerivedDefinitions("WriteRes")) {
     const Record *ModelDef = WR->getValueAsDef("SchedModel");
-    addWriteRes(WR, getProcModel(ModelDef).Index);
+    addWriteRes(WR, getProcModel(ModelDef));
   }
   for (const Record *SWR : Records.getAllDerivedDefinitions("SchedWriteRes")) {
     const Record *ModelDef = SWR->getValueAsDef("SchedModel");
-    addWriteRes(SWR, getProcModel(ModelDef).Index);
+    addWriteRes(SWR, getProcModel(ModelDef));
   }
   for (const Record *RA : Records.getAllDerivedDefinitions("ReadAdvance")) {
     const Record *ModelDef = RA->getValueAsDef("SchedModel");
-    addReadAdvance(RA, getProcModel(ModelDef).Index);
+    addReadAdvance(RA, getProcModel(ModelDef));
   }
   for (const Record *SRA :
        Records.getAllDerivedDefinitions("SchedReadAdvance")) {
     if (SRA->getValueInit("SchedModel")->isComplete()) {
       const Record *ModelDef = SRA->getValueAsDef("SchedModel");
-      addReadAdvance(SRA, getProcModel(ModelDef).Index);
+      addReadAdvance(SRA, getProcModel(ModelDef));
     }
   }
   // Add ProcResGroups that are defined within this processor model, which may
@@ -2005,10 +2005,10 @@ void CodeGenSchedModels::collectRWResources(unsigned RWIdx, bool IsRead,
   if (SchedRW.TheDef) {
     if (!IsRead && SchedRW.TheDef->isSubClassOf("SchedWriteRes")) {
       for (unsigned Idx : ProcIndices)
-        addWriteRes(SchedRW.TheDef, Idx);
+        addWriteRes(SchedRW.TheDef, ProcModels[Idx]);
     } else if (IsRead && SchedRW.TheDef->isSubClassOf("SchedReadAdvance")) {
       for (unsigned Idx : ProcIndices)
-        addReadAdvance(SchedRW.TheDef, Idx);
+        addReadAdvance(SchedRW.TheDef, ProcModels[Idx]);
     }
   }
   for (auto *Alias : SchedRW.Aliases) {
@@ -2104,16 +2104,14 @@ void CodeGenSchedModels::addProcResource(const Record *ProcResKind,
 
 // Add resources for a SchedWrite to this processor if they don't exist.
 void CodeGenSchedModels::addWriteRes(const Record *ProcWriteResDef,
-                                     unsigned PIdx) {
-  assert(PIdx && "don't add resources to an invalid Processor model");
-
-  ConstRecVec &WRDefs = ProcModels[PIdx].WriteResDefs;
+                                     CodeGenProcModel &PM) {
+  ConstRecVec &WRDefs = PM.WriteResDefs;
   if (is_contained(WRDefs, ProcWriteResDef))
     return;
   WRDefs.push_back(ProcWriteResDef);
 
   if (ProcWriteResDef->isSubClassOf("WriteRes")) {
-    auto &WRMap = ProcModels[PIdx].WriteResMap;
+    auto &WRMap = PM.WriteResMap;
     const Record *WRDef = ProcWriteResDef->getValueAsDef("WriteType");
     if (!WRMap.try_emplace(WRDef, ProcWriteResDef).second)
       PrintFatalError(ProcWriteResDef->getLoc(),
@@ -2123,13 +2121,13 @@ void CodeGenSchedModels::addWriteRes(const Record *ProcWriteResDef,
   // Visit ProcResourceKinds referenced by the newly discovered WriteRes.
   for (const Record *ProcResDef :
        ProcWriteResDef->getValueAsListOfDefs("ProcResources")) {
-    addProcResource(ProcResDef, ProcModels[PIdx], ProcWriteResDef->getLoc());
+    addProcResource(ProcResDef, PM, ProcWriteResDef->getLoc());
   }
 }
 
 // Add resources for a ReadAdvance to this processor if they don't exist.
 void CodeGenSchedModels::addReadAdvance(const Record *ProcReadAdvanceDef,
-                                        unsigned PIdx) {
+                                        CodeGenProcModel &PM) {
   for (const Record *ValidWrite :
        ProcReadAdvanceDef->getValueAsListOfDefs("ValidWrites"))
     if (getSchedRWIdx(ValidWrite, /*IsRead=*/false) == 0)
@@ -2139,13 +2137,13 @@ void CodeGenSchedModels::addReadAdvance(const Record *ProcReadAdvanceDef,
           "any instruction (" +
               ValidWrite->getName() + ")");
 
-  ConstRecVec &RADefs = ProcModels[PIdx].ReadAdvanceDefs;
+  ConstRecVec &RADefs = PM.ReadAdvanceDefs;
   if (is_contained(RADefs, ProcReadAdvanceDef))
     return;
   RADefs.push_back(ProcReadAdvanceDef);
 
   if (ProcReadAdvanceDef->isSubClassOf("ReadAdvance")) {
-    auto &RAMap = ProcModels[PIdx].ReadAdvanceMap;
+    auto &RAMap = PM.ReadAdvanceMap;
     const Record *RADef = ProcReadAdvanceDef->getValueAsDef("ReadType");
     if (!RAMap.try_emplace(RADef, ProcReadAdvanceDef).second)
       PrintFatalError(ProcReadAdvanceDef->getLoc(),

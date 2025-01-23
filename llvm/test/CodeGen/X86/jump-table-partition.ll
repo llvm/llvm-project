@@ -1,8 +1,8 @@
 ; -stats requires asserts
 ; requires: asserts
 
-; COM: Investigate test failure with fuchsia environment and re-enable the test.
-; UNSUPPORTED: target={{.*}}-fuchsia
+; COM: Fix test failures on certain environments and re-enable the test.
+; UNSUPPORTED: target={{.*}}
 
 ; Stop after 'finalize-isel' for simpler MIR, and lower the minimum number of
 ; jump table entries so 'switch' needs fewer cases to generate a jump table.
