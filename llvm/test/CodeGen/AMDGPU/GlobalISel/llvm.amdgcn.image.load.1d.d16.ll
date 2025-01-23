@@ -622,10 +622,13 @@ define amdgpu_ps <3 x half> @load_1d_v3f16_xyz(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX8-UNPACKED-NEXT:    s_mov_b32 s6, s8
 ; GFX8-UNPACKED-NEXT:    s_mov_b32 s7, s9
 ; GFX8-UNPACKED-NEXT:    image_load v[0:2], v0, s[0:7] dmask:0x7 unorm d16
+; GFX8-UNPACKED-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX8-UNPACKED-NEXT:    s_lshl_b32 s0, s0, 16
+; GFX8-UNPACKED-NEXT:    v_mov_b32_e32 v3, s0
 ; GFX8-UNPACKED-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-UNPACKED-NEXT:    v_and_b32_e32 v3, 0xffff, v1
-; GFX8-UNPACKED-NEXT:    v_and_b32_e32 v1, 0xffff, v2
-; GFX8-UNPACKED-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
+; GFX8-UNPACKED-NEXT:    v_and_b32_e32 v4, 0xffff, v1
+; GFX8-UNPACKED-NEXT:    v_or_b32_sdwa v1, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX8-UNPACKED-NEXT:    v_lshlrev_b32_e32 v2, 16, v4
 ; GFX8-UNPACKED-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-UNPACKED-NEXT:    ; return to shader part epilog
 ;
@@ -640,8 +643,14 @@ define amdgpu_ps <3 x half> @load_1d_v3f16_xyz(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX8-PACKED-NEXT:    s_mov_b32 s6, s8
 ; GFX8-PACKED-NEXT:    s_mov_b32 s7, s9
 ; GFX8-PACKED-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x7 unorm d16
+; GFX8-PACKED-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX8-PACKED-NEXT:    s_lshl_b32 s0, s0, 16
+; GFX8-PACKED-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8-PACKED-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-PACKED-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX8-PACKED-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
+; GFX8-PACKED-NEXT:    v_or_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX8-PACKED-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
+; GFX8-PACKED-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-PACKED-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: load_1d_v3f16_xyz:
@@ -655,7 +664,9 @@ define amdgpu_ps <3 x half> @load_1d_v3f16_xyz(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX9-NEXT:    s_mov_b32 s6, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s9
 ; GFX9-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x7 unorm d16
+; GFX9-NEXT:    s_mov_b32 s0, 0xffff
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_bfi_b32 v0, s0, v0, v0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: load_1d_v3f16_xyz:
@@ -670,6 +681,7 @@ define amdgpu_ps <3 x half> @load_1d_v3f16_xyz(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX10PLUS-NEXT:    s_mov_b32 s7, s9
 ; GFX10PLUS-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_1D unorm d16
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0)
+; GFX10PLUS-NEXT:    v_bfi_b32 v0, 0xffff, v0, v0
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: load_1d_v3f16_xyz:
@@ -684,6 +696,7 @@ define amdgpu_ps <3 x half> @load_1d_v3f16_xyz(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX12-NEXT:    s_mov_b32 s7, s9
 ; GFX12-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_1D d16
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_bfi_b32 v0, 0xffff, v0, v0
 ; GFX12-NEXT:    ; return to shader part epilog
   %v = call <3 x half> @llvm.amdgcn.image.load.1d.v3f16.i32(i32 7, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret <3 x half> %v

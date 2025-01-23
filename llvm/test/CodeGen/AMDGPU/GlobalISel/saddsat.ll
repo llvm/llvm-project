@@ -2676,6 +2676,7 @@ define amdgpu_ps half @saddsat_i16_sv(i16 inreg %lhs, i16 %rhs) {
 ; GFX6-NEXT:    v_min_i32_e32 v0, s1, v0
 ; GFX6-NEXT:    v_add_i32_e32 v0, vcc, s0, v0
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v0, 16, v0
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: saddsat_i16_sv:
@@ -2718,6 +2719,7 @@ define amdgpu_ps half @saddsat_i16_vs(i16 %lhs, i16 inreg %rhs) {
 ; GFX6-NEXT:    v_min_i32_e32 v1, v2, v1
 ; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v0, 16, v0
+; GFX6-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: saddsat_i16_vs:
@@ -5343,8 +5345,7 @@ define amdgpu_ps <4 x float> @saddsat_i128_sv(i128 inreg %lhs, i128 %rhs) {
 ; GFX6-NEXT:    v_ashrrev_i32_e32 v3, 31, v5
 ; GFX6-NEXT:    v_cndmask_b32_e64 v2, v7, 0, vcc
 ; GFX6-NEXT:    v_xor_b32_e32 v2, v2, v6
-; GFX6-NEXT:    v_bfrev_b32_e32 v6, 1
-; GFX6-NEXT:    v_add_i32_e32 v6, vcc, v3, v6
+; GFX6-NEXT:    v_add_i32_e32 v6, vcc, 0x80000000, v3
 ; GFX6-NEXT:    v_and_b32_e32 v2, 1, v2
 ; GFX6-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
 ; GFX6-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
@@ -5374,8 +5375,7 @@ define amdgpu_ps <4 x float> @saddsat_i128_sv(i128 inreg %lhs, i128 %rhs) {
 ; GFX8-NEXT:    v_ashrrev_i32_e32 v3, 31, v5
 ; GFX8-NEXT:    v_cndmask_b32_e64 v2, v7, 0, vcc
 ; GFX8-NEXT:    v_xor_b32_e32 v2, v2, v6
-; GFX8-NEXT:    v_bfrev_b32_e32 v6, 1
-; GFX8-NEXT:    v_add_u32_e32 v6, vcc, v3, v6
+; GFX8-NEXT:    v_add_u32_e32 v6, vcc, 0x80000000, v3
 ; GFX8-NEXT:    v_and_b32_e32 v2, 1, v2
 ; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
@@ -5491,10 +5491,9 @@ define amdgpu_ps <4 x float> @saddsat_i128_vs(i128 %lhs, i128 inreg %rhs) {
 ; GFX6-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX6-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
 ; GFX6-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[2:3], 0
+; GFX6-NEXT:    v_add_i32_e32 v3, vcc, 0x80000000, v2
 ; GFX6-NEXT:    v_cndmask_b32_e64 v1, v1, 0, s[0:1]
 ; GFX6-NEXT:    v_xor_b32_e32 v0, v1, v0
-; GFX6-NEXT:    v_bfrev_b32_e32 v1, 1
-; GFX6-NEXT:    v_add_i32_e32 v3, vcc, v2, v1
 ; GFX6-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX6-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; GFX6-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc
@@ -5527,8 +5526,7 @@ define amdgpu_ps <4 x float> @saddsat_i128_vs(i128 %lhs, i128 inreg %rhs) {
 ; GFX8-NEXT:    v_cndmask_b32_e64 v1, v1, 0, s[0:1]
 ; GFX8-NEXT:    v_xor_b32_e32 v0, v1, v0
 ; GFX8-NEXT:    v_ashrrev_i32_e32 v2, 31, v7
-; GFX8-NEXT:    v_bfrev_b32_e32 v1, 1
-; GFX8-NEXT:    v_add_u32_e32 v3, vcc, v2, v1
+; GFX8-NEXT:    v_add_u32_e32 v3, vcc, 0x80000000, v2
 ; GFX8-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc

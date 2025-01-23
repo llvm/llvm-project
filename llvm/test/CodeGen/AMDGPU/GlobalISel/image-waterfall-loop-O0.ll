@@ -169,9 +169,11 @@ define <4 x float> @waterfall_loop(<8 x i32> %vgpr_srd) {
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s4
 ; CHECK-NEXT:  ; %bb.4:
 ; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
+; CHECK-NEXT:    ; implicit-def: $sgpr6
+; CHECK-NEXT:    ; implicit-def: $sgpr5
 ; CHECK-NEXT:    ; implicit-def: $sgpr4
-; CHECK-NEXT:    v_mov_b32_e32 v1, s4
-; CHECK-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-NEXT:    v_mov_b32_e32 v1, s6
+; CHECK-NEXT:    v_mov_b32_e32 v2, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s4
 ; CHECK-NEXT:    s_xor_saveexec_b32 s4, -1
 ; CHECK-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:80 ; 4-byte Folded Reload
