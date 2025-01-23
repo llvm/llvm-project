@@ -1867,6 +1867,9 @@ public:
   bool isElemental() const { return getSPFlags() & SPFlagElemental; }
   bool isRecursive() const { return getSPFlags() & SPFlagRecursive; }
   bool isObjCDirect() const { return getSPFlags() & SPFlagObjCDirect; }
+  bool isDebugTransparent() const {
+    return getSPFlags() & SPFlagIsDebugTransparent;
+  }
 
   /// Check if this is deleted member function.
   ///

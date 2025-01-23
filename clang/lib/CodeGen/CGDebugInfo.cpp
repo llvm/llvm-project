@@ -21,6 +21,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
@@ -105,6 +106,20 @@ static bool IsArtificial(VarDecl const *VD) {
 
   return VD->isImplicit() || (isa<Decl>(VD->getDeclContext()) &&
                               cast<Decl>(VD->getDeclContext())->isImplicit());
+}
+
+static bool usesDebugTransparent(const Decl *D, const CodeGenModule &CGM) {
+  if (!D)
+    return false;
+
+  if (auto *attr = D->getAttr<DebugTransparentAttr>()) {
+    if (CGM.getCodeGenOpts().DwarfVersion == 0)
+      CGM.getDiags().Report(attr->getLocation(),
+                            diag::warn_debug_transparent_ignored);
+    return true;
+  }
+
+  return false;
 }
 
 CGDebugInfo::CGDebugInfo(CodeGenModule &CGM)
@@ -4477,6 +4492,8 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
     SPFlags |= llvm::DISubprogram::SPFlagLocalToUnit;
   if (CGM.getLangOpts().Optimize)
     SPFlags |= llvm::DISubprogram::SPFlagOptimized;
+  if (usesDebugTransparent(D, CGM))
+    SPFlags |= llvm::DISubprogram::SPFlagIsDebugTransparent;
 
   llvm::DINode::DIFlags FlagsForDef = Flags | getCallSiteRelatedAttrs();
   llvm::DISubprogram::DISPFlags SPFlagsForDef =
