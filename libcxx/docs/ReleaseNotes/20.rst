@@ -111,6 +111,8 @@ Improvements and New Features
   std::errc::not_a_directory``, or use ``err.default_error_condition()`` to map to an ``error_condition``, and then test
   its ``value()`` and ``category()``.
 
+- The performance of ``std::getline`` has been improved, resulting in a performance uplift of up to 10x.
+
 Deprecations and Removals
 -------------------------
 
