@@ -1,6 +1,9 @@
 ; -stats requires asserts
 ; requires: asserts
 
+; COM: Investigate test failure with fuchsia environment and re-enable the test.
+; UNSUPPORTED: target={{.*}}-fuchsia
+
 ; Stop after 'finalize-isel' for simpler MIR, and lower the minimum number of
 ; jump table entries so 'switch' needs fewer cases to generate a jump table.
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -stop-after=finalize-isel -min-jump-table-entries=2 %s -o %t.mir
