@@ -132,10 +132,10 @@ private:
   unsigned Lane;
 
   /// Indicates how the Lane should be interpreted, as described above.
-  Kind LaneKind;
+  Kind LaneKind = Kind::First;
 
 public:
-  VPLane(unsigned Lane) : Lane(Lane), LaneKind(VPLane::Kind::First) {}
+  VPLane(unsigned Lane) : Lane(Lane) {}
   VPLane(unsigned Lane, Kind LaneKind) : Lane(Lane), LaneKind(LaneKind) {}
 
   static VPLane getFirstLane() { return VPLane(0, VPLane::Kind::First); }
@@ -161,7 +161,8 @@ public:
   /// Returns a compile-time known value for the lane index and asserts if the
   /// lane can only be calculated at runtime.
   unsigned getKnownLane() const {
-    assert(LaneKind == Kind::First);
+    assert(LaneKind == Kind::First &&
+           "can only get known lane from the beginning");
     return Lane;
   }
 
@@ -179,10 +180,12 @@ public:
   unsigned mapToCacheIndex(const ElementCount &VF) const {
     switch (LaneKind) {
     case VPLane::Kind::ScalableLast:
-      assert(VF.isScalable() && Lane < VF.getKnownMinValue());
+      assert(VF.isScalable() && Lane < VF.getKnownMinValue() &&
+             "ScalableLast can only be used with scalable VFs");
       return VF.getKnownMinValue() + Lane;
     default:
-      assert(Lane < VF.getKnownMinValue());
+      assert(Lane < VF.getKnownMinValue() &&
+             "Cannot extract lane larger than VF");
       return Lane;
     }
   }

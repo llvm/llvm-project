@@ -82,10 +82,11 @@ void VPInterleavedAccessInfo::visitBlock(VPBlockBase *Block, Old2NewTy &Old2New,
           Align(IG->isReverse() ? (-1) * int(IG->getFactor())
                                 : IG->getFactor()));
     }
-  } else if (VPRegionBlock *Region = dyn_cast<VPRegionBlock>(Block))
+  } else if (VPRegionBlock *Region = dyn_cast<VPRegionBlock>(Block)) {
     visitRegion(Region, Old2New, IAI);
-  else
+  } else {
     llvm_unreachable("Unsupported kind of VPBlock.");
+  }
 }
 
 VPInterleavedAccessInfo::VPInterleavedAccessInfo(VPlan &Plan,
