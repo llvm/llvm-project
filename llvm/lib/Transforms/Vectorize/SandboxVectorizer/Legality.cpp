@@ -223,7 +223,8 @@ const LegalityResult &LegalityAnalysis::canVectorize(ArrayRef<Value *> Bndl,
         return createLegalityResult<DiamondReuse>(Vec);
       return createLegalityResult<DiamondReuseWithShuffle>(Vec, Mask);
     }
-    llvm_unreachable("TODO: Unimplemented");
+    return createLegalityResult<DiamondReuseMultiInput>(
+        std::move(CollectDescrs));
   }
 
   if (auto ReasonOpt = notVectorizableBasedOnOpcodesAndTypes(Bndl))

@@ -2802,23 +2802,6 @@ struct FormatStyle {
   /// \version 3.3
   bool IndentCaseLabels;
 
-  /// Indent goto labels.
-  ///
-  /// When ``false``, goto labels are flushed left.
-  /// \code
-  ///    true:                                  false:
-  ///    int f() {                      vs.     int f() {
-  ///      if (foo()) {                           if (foo()) {
-  ///      label1:                              label1:
-  ///        bar();                                 bar();
-  ///      }                                      }
-  ///    label2:                                label2:
-  ///      return 1;                              return 1;
-  ///    }                                      }
-  /// \endcode
-  /// \version 10
-  bool IndentGotoLabels;
-
   /// If ``true``, clang-format will indent the body of an ``export { ... }``
   /// block. This doesn't affect the formatting of anything else related to
   /// exported declarations.
@@ -2871,6 +2854,23 @@ struct FormatStyle {
   /// IndentExternBlockStyle is the type of indenting of extern blocks.
   /// \version 11
   IndentExternBlockStyle IndentExternBlock;
+
+  /// Indent goto labels.
+  ///
+  /// When ``false``, goto labels are flushed left.
+  /// \code
+  ///    true:                                  false:
+  ///    int f() {                      vs.     int f() {
+  ///      if (foo()) {                           if (foo()) {
+  ///      label1:                              label1:
+  ///        bar();                                 bar();
+  ///      }                                      }
+  ///    label2:                                label2:
+  ///      return 1;                              return 1;
+  ///    }                                      }
+  /// \endcode
+  /// \version 10
+  bool IndentGotoLabels;
 
   /// Options for indenting preprocessor directives.
   enum PPDirectiveIndentStyle : int8_t {

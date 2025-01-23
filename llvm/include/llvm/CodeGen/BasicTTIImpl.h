@@ -2689,9 +2689,10 @@ public:
     if (auto *FTp = dyn_cast<FixedVectorType>(Tp);
         Tp && LT.second.isFixedLengthVector()) {
       // Check if the n x i1 fits fully into largest integer.
-      if (unsigned VF = LT.second.getVectorNumElements();
-          LT.second.getVectorElementType() == MVT::i1)
+      if (LT.second.getVectorElementType() == MVT::i1) {
+        unsigned VF = LT.second.getVectorNumElements();
         return DL.isLegalInteger(VF) && !DL.isLegalInteger(VF * 2);
+      }
       return FTp == EVT(LT.second).getTypeForEVT(Tp->getContext());
     }
     return false;
