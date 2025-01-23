@@ -254,14 +254,14 @@ public:
     /// \param Address - The starting address of the range.
     /// \param Size - The size of the address range.
     /// \param Result - The vector to fill with row indices.
-    /// \param Die - if provided, the function will check for a
-    /// DW_AT_LLVM_stmt_sequence attribute. If present, only rows from the
-    /// sequence starting at the matching offset will be added to the result.
+    /// \param StmtSequenceOffset - if provided, only rows from the sequence
+    /// starting at the matching offset will be added to the result.
     ///
     /// Returns true if any rows were found.
-    bool lookupAddressRange(object::SectionedAddress Address, uint64_t Size,
-                            std::vector<uint32_t> &Result,
-                            const DWARFDie *Die = nullptr) const;
+    bool lookupAddressRange(
+        object::SectionedAddress Address, uint64_t Size,
+        std::vector<uint32_t> &Result,
+        std::optional<uint64_t> StmtSequenceOffset = std::nullopt) const;
 
     bool hasFileAtIndex(uint64_t FileIndex) const {
       return Prologue.hasFileAtIndex(FileIndex);

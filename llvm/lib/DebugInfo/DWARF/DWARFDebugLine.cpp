@@ -1374,15 +1374,8 @@ DWARFDebugLine::LineTable::lookupAddressImpl(object::SectionedAddress Address,
 
 bool DWARFDebugLine::LineTable::lookupAddressRange(
     object::SectionedAddress Address, uint64_t Size,
-    std::vector<uint32_t> &Result, const DWARFDie *Die) const {
-
-  // If DIE is provided, check for DW_AT_LLVM_stmt_sequence
-  std::optional<uint64_t> StmtSequenceOffset;
-  if (Die) {
-    if (auto StmtSeqAttr = Die->find(dwarf::DW_AT_LLVM_stmt_sequence)) {
-      StmtSequenceOffset = toSectionOffset(StmtSeqAttr);
-    }
-  }
+    std::vector<uint32_t> &Result,
+    std::optional<uint64_t> StmtSequenceOffset) const {
 
   // Search for relocatable addresses
   if (lookupAddressRangeImpl(Address, Size, Result, StmtSequenceOffset))

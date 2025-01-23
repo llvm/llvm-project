@@ -2140,27 +2140,31 @@ TEST_F(DebugLineBasicFixture, LookupAddressRangeWithStmtSequenceOffset) {
     std::vector<uint32_t> Rows;
     bool Found;
 
-    // Look up using Sub3Die, which has an invalid DW_AT_LLVM_stmt_sequence
+    // Look up using Sub3Die's invalid stmt_sequence offset
+    auto StmtSeqAttr3 = Sub3Die.find(dwarf::DW_AT_LLVM_stmt_sequence);
+    ASSERT_TRUE(StmtSeqAttr3);
     Found = Table->lookupAddressRange(
         {0x1000, object::SectionedAddress::UndefSection}, /*Size=*/1, Rows,
-        &Sub3Die);
+        toSectionOffset(StmtSeqAttr3));
     EXPECT_FALSE(Found);
 
-    // Look up using Sub1Die, which has a valid DW_AT_LLVM_stmt_sequence and
-    // should return row 0
+    // Look up using Sub1Die's valid stmt_sequence offset
+    auto StmtSeqAttr1 = Sub1Die.find(dwarf::DW_AT_LLVM_stmt_sequence);
+    ASSERT_TRUE(StmtSeqAttr1);
     Found = Table->lookupAddressRange(
         {0x1000, object::SectionedAddress::UndefSection}, /*Size=*/1, Rows,
-        &Sub1Die);
+        toSectionOffset(StmtSeqAttr1));
     EXPECT_TRUE(Found);
     ASSERT_EQ(Rows.size(), 1u);
     EXPECT_EQ(Rows[0], 0U);
 
-    // Look up using Sub2Die, which has a valid DW_AT_LLVM_stmt_sequence and
-    // should return row 3
+    // Look up using Sub2Die's valid stmt_sequence offset
     Rows.clear();
+    auto StmtSeqAttr2 = Sub2Die.find(dwarf::DW_AT_LLVM_stmt_sequence);
+    ASSERT_TRUE(StmtSeqAttr2);
     Found = Table->lookupAddressRange(
         {0x1000, object::SectionedAddress::UndefSection}, /*Size=*/1, Rows,
-        &Sub2Die);
+        toSectionOffset(StmtSeqAttr2));
     EXPECT_TRUE(Found);
     ASSERT_EQ(Rows.size(), 1u);
     EXPECT_EQ(Rows[0], 3u);
