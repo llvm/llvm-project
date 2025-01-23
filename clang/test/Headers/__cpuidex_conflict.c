@@ -4,8 +4,7 @@
 // RUN:  -fms-compatibility-version=19.00 -triple x86_64-pc-windows-msvc -emit-llvm -o -
 // %clang_cc1 %s -ffreestanding -triple x86_64-w64-windows-gnu -fms-extensions -emit-llvm -o -
 //
-// TODO(boomanaiden154)
-// See https://github.com/llvm/llvm-project/pull/121839
+// FIXME: See https://github.com/llvm/llvm-project/pull/121839
 // RUN: not %clang_cc1 %s -ffreestanding -fopenmp -fopenmp-is-target-device -aux-triple x86_64-unknown-linux-gnu
 
 typedef __SIZE_TYPE__ size_t;
