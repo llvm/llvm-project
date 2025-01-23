@@ -320,6 +320,22 @@ TEST(TestRtsanInterceptors, SchedYieldDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+#if SANITIZER_LINUX
+TEST(TestRtsanInterceptors, SchedGetaffinityDiesWhenRealtime) {
+  cpu_set_t set{};
+  auto Func = [&set]() { sched_getaffinity(0, sizeof(set), &set); };
+  ExpectRealtimeDeath(Func, "sched_getaffinity");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, SchedSetaffinityDiesWhenRealtime) {
+  cpu_set_t set{};
+  auto Func = [&set]() { sched_setaffinity(0, sizeof(set), &set); };
+  ExpectRealtimeDeath(Func, "sched_setaffinity");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 /*
     Filesystem
 */

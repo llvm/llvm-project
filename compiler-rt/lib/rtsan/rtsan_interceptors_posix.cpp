@@ -693,6 +693,26 @@ INTERCEPTOR(int, sched_yield, void) {
   return REAL(sched_yield)();
 }
 
+#if SANITIZER_LINUX
+INTERCEPTOR(int, sched_getaffinity, pid_t pid, size_t len, cpu_set_t *set) {
+  __rtsan_notify_intercepted_call("sched_getaffinity");
+  return REAL(sched_getaffinity)(pid, len, set);
+}
+
+INTERCEPTOR(int, sched_setaffinity, pid_t pid, size_t len,
+            const cpu_set_t *set) {
+  __rtsan_notify_intercepted_call("sched_setaffinity");
+  return REAL(sched_setaffinity)(pid, len, set);
+}
+#define RTSAN_MAYBE_INTERCEPT_SCHED_GETAFFINITY                                \
+  INTERCEPT_FUNCTION(sched_getaffinity)
+#define RTSAN_MAYBE_INTERCEPT_SCHED_SETAFFINITY                                \
+  INTERCEPT_FUNCTION(sched_setaffinity)
+#else
+#define RTSAN_MAYBE_INTERCEPT_SCHED_GETAFFINITY
+#define RTSAN_MAYBE_INTERCEPT_SCHED_SETAFFINITY
+#endif
+
 // Memory
 
 INTERCEPTOR(void *, calloc, SIZE_T num, SIZE_T size) {
@@ -1331,6 +1351,8 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(usleep);
   INTERCEPT_FUNCTION(nanosleep);
   INTERCEPT_FUNCTION(sched_yield);
+  RTSAN_MAYBE_INTERCEPT_SCHED_GETAFFINITY;
+  RTSAN_MAYBE_INTERCEPT_SCHED_SETAFFINITY;
 
   INTERCEPT_FUNCTION(accept);
   INTERCEPT_FUNCTION(bind);
