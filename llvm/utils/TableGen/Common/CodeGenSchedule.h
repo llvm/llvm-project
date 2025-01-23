@@ -250,6 +250,9 @@ struct CodeGenProcModel {
   // Map from the ReadType field to the parent ReadAdvance record.
   DenseMap<const Record *, const Record *> ReadAdvanceMap;
 
+  // Set of WriteRes that are referenced by a ReadAdvance.
+  DenseSet<const Record *> ReadOfWriteSet;
+
   // Per-operand machine model resources associated with this processor.
   ConstRecVec ProcResourceDefs;
 
