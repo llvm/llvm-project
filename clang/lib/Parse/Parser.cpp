@@ -1175,12 +1175,21 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
       }
 
     };
-    // Suggest correct location to fix '[[attrib]] struct' to 'struct [[attrib]]'
+    // Suggest correct location to fix '[[attrib]] struct' to 'struct [[attrib]]'...
     SourceLocation CorrectLocationForAttributes =
         DeclSpec::isDeclRep(DS.getTypeSpecType())
             ? DS.getTypeSpecTypeLoc().getLocWithOffset(
                   LengthOfTSTToken(DS.getTypeSpecType()))
             : SourceLocation();
+    // ... suggested location should be after 'class/struct' for scoped enums
+    if (DS.getTypeSpecType() == DeclSpec::TST_enum) {
+      const EnumDecl *ED = cast<EnumDecl>(DS.getRepAsDecl());
+      if (ED->isScoped()) {
+        // FIXME: offset is dependent on number of spaces after 'enum'
+        CorrectLocationForAttributes =
+            CorrectLocationForAttributes.getLocWithOffset(6);
+      }
+    }
     ProhibitAttributes(Attrs, CorrectLocationForAttributes);
     ConsumeToken();
     RecordDecl *AnonRecord = nullptr;
