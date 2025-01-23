@@ -426,8 +426,8 @@ public:
 
     const MachineOperand &MODef = CopyLike.getOperand(0);
     Dst.Reg = MODef.getReg();
-    // If we have to compose sub-registers, bail.
-    return MODef.getSubReg() == 0;
+    assert(MODef.getSubReg() == 0 && "cannot have subregister def in SSA");
+    return true;
   }
 
   bool RewriteCurrentSource(Register NewReg, unsigned NewSubReg) override {
