@@ -4021,7 +4021,7 @@ public:
   QualType getIntegerType() const {
     if (!IntegerType)
       return QualType();
-    if (const Type *T = IntegerType.dyn_cast<const Type*>())
+    if (const Type *T = dyn_cast<const Type *>(IntegerType))
       return QualType(T, 0);
     return cast<TypeSourceInfo *>(IntegerType)->getType().getUnqualifiedType();
   }

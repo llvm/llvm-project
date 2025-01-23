@@ -210,6 +210,7 @@ mlir::Type getDerivedType(mlir::Type ty) {
           return seq.getEleTy();
         return p.getEleTy();
       })
+      .Case<fir::BoxType>([](auto p) { return getDerivedType(p.getEleTy()); })
       .Default([](mlir::Type t) { return t; });
 }
 
@@ -1249,17 +1250,17 @@ mlir::Type fir::fromRealTypeID(mlir::MLIRContext *context,
                                llvm::Type::TypeID typeID, fir::KindTy kind) {
   switch (typeID) {
   case llvm::Type::TypeID::HalfTyID:
-    return mlir::FloatType::getF16(context);
+    return mlir::Float16Type::get(context);
   case llvm::Type::TypeID::BFloatTyID:
-    return mlir::FloatType::getBF16(context);
+    return mlir::BFloat16Type::get(context);
   case llvm::Type::TypeID::FloatTyID:
-    return mlir::FloatType::getF32(context);
+    return mlir::Float32Type::get(context);
   case llvm::Type::TypeID::DoubleTyID:
-    return mlir::FloatType::getF64(context);
+    return mlir::Float64Type::get(context);
   case llvm::Type::TypeID::X86_FP80TyID:
-    return mlir::FloatType::getF80(context);
+    return mlir::Float80Type::get(context);
   case llvm::Type::TypeID::FP128TyID:
-    return mlir::FloatType::getF128(context);
+    return mlir::Float128Type::get(context);
   default:
     mlir::emitError(mlir::UnknownLoc::get(context))
         << "unsupported type: !fir.real<" << kind << ">";

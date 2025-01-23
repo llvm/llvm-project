@@ -686,11 +686,13 @@ struct VPCostContext {
   LLVMContext &LLVMCtx;
   LoopVectorizationCostModel &CM;
   SmallPtrSet<Instruction *, 8> SkipCostComputation;
+  TargetTransformInfo::TargetCostKind CostKind;
 
   VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
-                Type *CanIVTy, LoopVectorizationCostModel &CM)
+                Type *CanIVTy, LoopVectorizationCostModel &CM,
+                TargetTransformInfo::TargetCostKind CostKind)
       : TTI(TTI), TLI(TLI), Types(CanIVTy), LLVMCtx(CanIVTy->getContext()),
-        CM(CM) {}
+        CM(CM), CostKind(CostKind) {}
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.
@@ -1223,8 +1225,8 @@ public:
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).
     PtrAdd,
-    // Returns a scalar boolean value, which is true if any lane of its single
-    // operand is true.
+    // Returns a scalar boolean value, which is true if any lane of its (only
+    // boolean) vector operand is true.
     AnyOf,
   };
 
@@ -1416,6 +1418,12 @@ public:
   }
 
   bool onlyFirstPartUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
+
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
@@ -1813,11 +1821,10 @@ public:
 };
 
 /// A recipe for widening select instructions.
-struct VPWidenSelectRecipe : public VPSingleDefRecipe {
+struct VPWidenSelectRecipe : public VPRecipeWithIRFlags {
   template <typename IterT>
   VPWidenSelectRecipe(SelectInst &I, iterator_range<IterT> Operands)
-      : VPSingleDefRecipe(VPDef::VPWidenSelectSC, Operands, &I,
-                          I.getDebugLoc()) {}
+      : VPRecipeWithIRFlags(VPDef::VPWidenSelectSC, Operands, I) {}
 
   ~VPWidenSelectRecipe() override = default;
 
@@ -3527,6 +3534,15 @@ public:
 /// holds a sequence of zero or more VPRecipe's each representing a sequence of
 /// output IR instructions. All PHI-like recipes must come before any non-PHI recipes.
 class VPBasicBlock : public VPBlockBase {
+  friend class VPlan;
+
+  /// Use VPlan::createVPBasicBlock to create VPBasicBlocks.
+  VPBasicBlock(const Twine &Name = "", VPRecipeBase *Recipe = nullptr)
+      : VPBlockBase(VPBasicBlockSC, Name.str()) {
+    if (Recipe)
+      appendRecipe(Recipe);
+  }
+
 public:
   using RecipeListTy = iplist<VPRecipeBase>;
 
@@ -3538,12 +3554,6 @@ protected:
       : VPBlockBase(BlockSC, Name.str()) {}
 
 public:
-  VPBasicBlock(const Twine &Name = "", VPRecipeBase *Recipe = nullptr)
-      : VPBlockBase(VPBasicBlockSC, Name.str()) {
-    if (Recipe)
-      appendRecipe(Recipe);
-  }
-
   ~VPBasicBlock() override {
     while (!Recipes.empty())
       Recipes.pop_back();
@@ -3666,14 +3676,17 @@ private:
 /// Note: At the moment, VPIRBasicBlock can only be used to wrap VPlan's
 /// preheader block.
 class VPIRBasicBlock : public VPBasicBlock {
+  friend class VPlan;
+
   BasicBlock *IRBB;
 
-public:
+  /// Use VPlan::createVPIRBasicBlock to create VPIRBasicBlocks.
   VPIRBasicBlock(BasicBlock *IRBB)
       : VPBasicBlock(VPIRBasicBlockSC,
                      (Twine("ir-bb<") + IRBB->getName() + Twine(">")).str()),
         IRBB(IRBB) {}
 
+public:
   ~VPIRBasicBlock() override {}
 
   static inline bool classof(const VPBlockBase *V) {
@@ -3698,6 +3711,8 @@ public:
 /// candidate VF's. The actual replication takes place only once the desired VF
 /// and UF have been determined.
 class VPRegionBlock : public VPBlockBase {
+  friend class VPlan;
+
   /// Hold the Single Entry of the SESE region modelled by the VPRegionBlock.
   VPBlockBase *Entry;
 
@@ -3709,7 +3724,7 @@ class VPRegionBlock : public VPBlockBase {
   /// instances of output IR corresponding to its VPBlockBases.
   bool IsReplicator;
 
-public:
+  /// Use VPlan::createVPRegionBlock to create VPRegionBlocks.
   VPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting,
                 const std::string &Name = "", bool IsReplicator = false)
       : VPBlockBase(VPRegionBlockSC, Name), Entry(Entry), Exiting(Exiting),
@@ -3723,6 +3738,7 @@ public:
       : VPBlockBase(VPRegionBlockSC, Name), Entry(nullptr), Exiting(nullptr),
         IsReplicator(IsReplicator) {}
 
+public:
   ~VPRegionBlock() override {}
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.

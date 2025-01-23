@@ -6376,7 +6376,7 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
   D2->setTemplateSpecializationKind(D->getTemplateSpecializationKind());
 
   if (auto P = D->getInstantiatedFrom()) {
-    if (auto *CTD = P.dyn_cast<ClassTemplateDecl *>()) {
+    if (auto *CTD = dyn_cast<ClassTemplateDecl *>(P)) {
       if (auto CTDorErr = import(CTD))
         D2->setInstantiationOf(*CTDorErr);
     } else {

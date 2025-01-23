@@ -201,10 +201,10 @@ public:
                                     int &FrameIndex) const override;
 
   void copyToCPSR(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                  unsigned SrcReg, bool KillSrc,
+                  MCRegister SrcReg, bool KillSrc,
                   const ARMSubtarget &Subtarget) const;
   void copyFromCPSR(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                    unsigned DestReg, bool KillSrc,
+                    MCRegister DestReg, bool KillSrc,
                     const ARMSubtarget &Subtarget) const;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,

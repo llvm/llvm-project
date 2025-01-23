@@ -1243,7 +1243,7 @@ static FailureOr<size_t>
 getTransferFoldableInnerUnitDims(MemRefType srcType, VectorType vectorType) {
   SmallVector<int64_t> srcStrides;
   int64_t srcOffset;
-  if (failed(getStridesAndOffset(srcType, srcStrides, srcOffset)))
+  if (failed(srcType.getStridesAndOffset(srcStrides, srcOffset)))
     return failure();
 
   auto isUnitDim = [](VectorType type, int dim) {

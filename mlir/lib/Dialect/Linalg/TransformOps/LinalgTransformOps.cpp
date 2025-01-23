@@ -3889,7 +3889,7 @@ DiagnosedSilenceableFailure transform::WinogradConv2DOp::applyToOne(
            << "this operation is not supported to convert to Winograd Conv2D";
   }
 
-  if (supported && failed(maybeTransformed)) {
+  if (failed(maybeTransformed)) {
     return emitSilenceableError() << "apply Winograd Conv2D failed";
   }
 
@@ -3927,7 +3927,7 @@ DiagnosedSilenceableFailure transform::DecomposeWinogradOp::applyToOne(
     return diag;
   }
 
-  if (supported && failed(maybeTransformed)) {
+  if (failed(maybeTransformed)) {
     DiagnosedSilenceableFailure diag =
         emitSilenceableError() << "decompose Winograd operations failed";
     diag.attachNote(target->getLoc()) << "target op";

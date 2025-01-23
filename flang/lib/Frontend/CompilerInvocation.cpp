@@ -246,6 +246,10 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::driver::options::OPT_fno_loop_versioning, false))
     opts.LoopVersioning = 1;
 
+  opts.UnrollLoops = args.hasFlag(clang::driver::options::OPT_funroll_loops,
+                                  clang::driver::options::OPT_fno_unroll_loops,
+                                  (opts.OptimizationLevel > 1));
+
   opts.AliasAnalysis = opts.OptimizationLevel > 0;
 
   // -mframe-pointer=none/non-leaf/all option.
@@ -1372,6 +1376,14 @@ bool CompilerInvocation::createFromArgs(
   if (args.hasArg(clang::driver::options::OPT_fno_ppc_native_vec_elem_order)) {
     invoc.loweringOpts.setNoPPCNativeVecElemOrder(true);
   }
+
+  // -f[no-]init-global-zero
+  if (args.hasFlag(clang::driver::options::OPT_finit_global_zero,
+                   clang::driver::options::OPT_fno_init_global_zero,
+                   /*default=*/true))
+    invoc.loweringOpts.setInitGlobalZero(true);
+  else
+    invoc.loweringOpts.setInitGlobalZero(false);
 
   // Preserve all the remark options requested, i.e. -Rpass, -Rpass-missed or
   // -Rpass-analysis. This will be used later when processing and outputting the

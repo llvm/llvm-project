@@ -36,11 +36,14 @@
 #include "R600.h"
 #include "R600TargetMachine.h"
 #include "SIFixSGPRCopies.h"
+#include "SIFixVGPRCopies.h"
 #include "SIFoldOperands.h"
 #include "SILoadStoreOptimizer.h"
+#include "SILowerControlFlow.h"
 #include "SILowerSGPRSpills.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
+#include "SIOptimizeExecMasking.h"
 #include "SIOptimizeVGPRLiveRange.h"
 #include "SIPeepholeSDWA.h"
 #include "SIPreAllocateWWMRegs.h"
@@ -484,7 +487,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUMarkLastScratchLoadPass(*PR);
   initializeSILowerSGPRSpillsLegacyPass(*PR);
   initializeSIFixSGPRCopiesLegacyPass(*PR);
-  initializeSIFixVGPRCopiesPass(*PR);
+  initializeSIFixVGPRCopiesLegacyPass(*PR);
   initializeSIFoldOperandsLegacyPass(*PR);
   initializeSIPeepholeSDWALegacyPass(*PR);
   initializeSIShrinkInstructionsLegacyPass(*PR);
@@ -523,11 +526,11 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIInsertWaitcntsPass(*PR);
   initializeSIModeRegisterPass(*PR);
   initializeSIWholeQuadModePass(*PR);
-  initializeSILowerControlFlowPass(*PR);
+  initializeSILowerControlFlowLegacyPass(*PR);
   initializeSIPreEmitPeepholePass(*PR);
   initializeSILateBranchLoweringPass(*PR);
   initializeSIMemoryLegalizerPass(*PR);
-  initializeSIOptimizeExecMaskingPass(*PR);
+  initializeSIOptimizeExecMaskingLegacyPass(*PR);
   initializeSIPreAllocateWWMRegsLegacyPass(*PR);
   initializeSIFormMemoryClausesPass(*PR);
   initializeSIPostRABundlerPass(*PR);
@@ -1459,7 +1462,7 @@ void GCNPassConfig::addFastRegAlloc() {
   // This must be run immediately after phi elimination and before
   // TwoAddressInstructions, otherwise the processing of the tied operand of
   // SI_ELSE will introduce a copy of the tied operand source after the else.
-  insertPass(&PHIEliminationID, &SILowerControlFlowID);
+  insertPass(&PHIEliminationID, &SILowerControlFlowLegacyID);
 
   insertPass(&TwoAddressInstructionPassID, &SIWholeQuadModeID);
 
@@ -1480,7 +1483,7 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // This must be run immediately after phi elimination and before
   // TwoAddressInstructions, otherwise the processing of the tied operand of
   // SI_ELSE will introduce a copy of the tied operand source after the else.
-  insertPass(&PHIEliminationID, &SILowerControlFlowID);
+  insertPass(&PHIEliminationID, &SILowerControlFlowLegacyID);
 
   if (EnableRewritePartialRegUses)
     insertPass(&RenameIndependentSubregsID, &GCNRewritePartialRegUsesID);
@@ -1633,7 +1636,7 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
 void GCNPassConfig::addPostRegAlloc() {
   addPass(&SIFixVGPRCopiesID);
   if (getOptLevel() > CodeGenOptLevel::None)
-    addPass(&SIOptimizeExecMaskingID);
+    addPass(&SIOptimizeExecMaskingLegacyID);
   TargetPassConfig::addPostRegAlloc();
 }
 
@@ -2102,6 +2105,13 @@ void AMDGPUCodeGenPassBuilder::addMachineSSAOptimization(
   }
   addPass(DeadMachineInstructionElimPass());
   addPass(SIShrinkInstructionsPass());
+}
+
+void AMDGPUCodeGenPassBuilder::addPostRegAlloc(AddMachinePass &addPass) const {
+  addPass(SIFixVGPRCopiesPass());
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addPass(SIOptimizeExecMaskingPass());
+  Base::addPostRegAlloc(addPass);
 }
 
 bool AMDGPUCodeGenPassBuilder::isPassEnabled(const cl::opt<bool> &Opt,
