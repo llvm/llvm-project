@@ -336,27 +336,26 @@ template <typename T, typename TA> static std::complex<T> CToCpp(const TA &x) {
 using FTypeCmplxFlt = _Complex float (*)(_Complex float);
 using FTypeCmplxDble = _Complex double (*)(_Complex double);
 template <typename T>
-using FTypeStdCmplx = std::complex<T> (*)(const std::complex<T>&);
+using FTypeStdCmplx = std::complex<T> (*)(const std::complex<T> &);
 
 std::map<trigFunc, std::tuple<FTypeCmplxFlt, FTypeCmplxDble>> mapLibmTrigFunc{
     {Cacos, {&cacosf, &cacos}}, {Cacosh, {&cacoshf, &cacosh}},
     {Casin, {&casinf, &casin}}, {Casinh, {&casinhf, &casinh}},
     {Catan, {&catanf, &catan}}, {Catanh, {&catanhf, &catanh}},
     {Ccos, {&ccosf, &ccos}}, {Ccosh, {&ccoshf, &ccosh}},
-    {Cexp, {&cexpf, &cexp}}, {Clog, {&clogf, &__clog}},
-    {Csin, {&csinf, &csin}}, {Csinh, {&csinhf, &csinh}},
-    {Csqrt, {&csqrtf, &csqrt}}, {Ctan, {&ctanf, &ctan}},
-    {Ctanh, {&ctanhf, &ctanh}}};
+    {Cexp, {&cexpf, &cexp}}, {Clog, {&clogf, &__clog}}, {Csin, {&csinf, &csin}},
+    {Csinh, {&csinhf, &csinh}}, {Csqrt, {&csqrtf, &csqrt}},
+    {Ctan, {&ctanf, &ctan}}, {Ctanh, {&ctanhf, &ctanh}}};
 
 template <trigFunc TF, typename HostT>
 std::complex<HostT> LibmTrigFunc(const std::complex<HostT> &x) {
   if constexpr (std::is_same_v<HostT, float>) {
-    float _Complex r{
-      std::get<FTypeCmplxFlt>(mapLibmTrigFunc[TF])(CppToC<float _Complex, float>(x))};
+    float _Complex r{std::get<FTypeCmplxFlt>(mapLibmTrigFunc[TF])(
+        CppToC<float _Complex, float>(x))};
     return CToCpp<float, float _Complex>(r);
   } else if constexpr (std::is_same_v<HostT, double>) {
-    double _Complex r{
-      std::get<FTypeCmplxDble>(mapLibmTrigFunc[TF])(CppToC<double _Complex, double>(x))};
+    double _Complex r{std::get<FTypeCmplxDble>(mapLibmTrigFunc[TF])(
+        CppToC<double _Complex, double>(x))};
     return CToCpp<double, double _Complex>(r);
   }
   DIE("bad complex component type");
@@ -404,7 +403,7 @@ template <trigFunc TF> struct X {
   static std::complex<HostT> f(const std::complex<HostT> &x) {
     std::complex<HostT> res;
 #ifdef _AIX
-    // On AIX, the implementation in libm is different from that of std::
+    // On AIX, the implementation in libm is different from that of the STL
     // routines, use the libm routines here in folding for consistent results.
     res = LibmTrigFunc<TF>(x);
 #else
@@ -417,16 +416,16 @@ template <trigFunc TF> struct X {
 // Helpers to map complex std::pow whose resolution in F2{std::pow} is
 // ambiguous as of clang++ 20.
 template <typename HostT>
-static std::complex<HostT> StdPowF2(const std::complex<HostT> &x,
-                                    const std::complex<HostT> &y) {
+static std::complex<HostT> StdPowF2(
+    const std::complex<HostT> &x, const std::complex<HostT> &y) {
 #ifdef _AIX
   if constexpr (std::is_same_v<HostT, float>) {
-    float _Complex r{cpowf(CppToC<float _Complex, float>(x),
-                           CppToC<float _Complex, float>(y))};
+    float _Complex r{cpowf(
+        CppToC<float _Complex, float>(x), CppToC<float _Complex, float>(y))};
     return CToCpp<float, float _Complex>(r);
   } else if constexpr (std::is_same_v<HostT, double>) {
     double _Complex r{cpow(CppToC<double _Complex, double>(x),
-                           CppToC<double _Complex, double>(y))};
+        CppToC<double _Complex, double>(y))};
     return CToCpp<double, double _Complex>(r);
   }
 #else
@@ -435,18 +434,18 @@ static std::complex<HostT> StdPowF2(const std::complex<HostT> &x,
 }
 
 template <typename HostT>
-static std::complex<HostT> StdPowF2A(const HostT &x,
-                                     const std::complex<HostT> &y) {
+static std::complex<HostT> StdPowF2A(
+    const HostT &x, const std::complex<HostT> &y) {
 #ifdef _AIX
   constexpr HostT zero{0.0};
   std::complex<HostT> z(x, zero);
   if constexpr (std::is_same_v<HostT, float>) {
-    float _Complex r{cpowf(CppToC<float _Complex, float>(z),
-                           CppToC<float _Complex, float>(y))};
+    float _Complex r{cpowf(
+        CppToC<float _Complex, float>(z), CppToC<float _Complex, float>(y))};
     return CToCpp<float, float _Complex>(r);
   } else if constexpr (std::is_same_v<HostT, double>) {
     double _Complex r{cpow(CppToC<double _Complex, double>(z),
-                           CppToC<double _Complex, double>(y))};
+        CppToC<double _Complex, double>(y))};
     return CToCpp<double, double _Complex>(r);
   }
 #else
@@ -455,18 +454,18 @@ static std::complex<HostT> StdPowF2A(const HostT &x,
 }
 
 template <typename HostT>
-static std::complex<HostT> StdPowF2B(const std::complex<HostT> &x,
-                                     const HostT &y) {
+static std::complex<HostT> StdPowF2B(
+    const std::complex<HostT> &x, const HostT &y) {
 #ifdef _AIX
   constexpr HostT zero{0.0};
   std::complex<HostT> z(y, zero);
   if constexpr (std::is_same_v<HostT, float>) {
-    float _Complex r{cpowf(CppToC<float _Complex, float>(x),
-                           CppToC<float _Complex, float>(z))};
+    float _Complex r{cpowf(
+        CppToC<float _Complex, float>(x), CppToC<float _Complex, float>(z))};
     return CToCpp<float, float _Complex>(r);
   } else if constexpr (std::is_same_v<HostT, double>) {
     double _Complex r{cpow(CppToC<double _Complex, double>(x),
-                           CppToC<double _Complex, double>(z))};
+        CppToC<double _Complex, double>(z))};
     return CToCpp<double, double _Complex>(r);
   }
 #else
