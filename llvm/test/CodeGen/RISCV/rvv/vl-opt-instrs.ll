@@ -2946,8 +2946,8 @@ define <vscale x 4 x float> @vfadd_vv(<vscale x 4 x float> %a, <vscale x 4 x flo
   ret <vscale x 4 x float> %2
 }
 
-define <vscale x 4 x float> @vfadd_vx(<vscale x 4 x float> %a, float %b, iXLen %vl) {
-; NOVLOPT-LABEL: vfadd_vx:
+define <vscale x 4 x float> @vfadd_vf(<vscale x 4 x float> %a, float %b, iXLen %vl) {
+; NOVLOPT-LABEL: vfadd_vf:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vfadd.vf v10, v8, fa0
@@ -2955,7 +2955,7 @@ define <vscale x 4 x float> @vfadd_vx(<vscale x 4 x float> %a, float %b, iXLen %
 ; NOVLOPT-NEXT:    vfadd.vv v8, v10, v8
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vfadd_vx:
+; VLOPT-LABEL: vfadd_vf:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfadd.vf v10, v8, fa0
@@ -2986,8 +2986,8 @@ define <vscale x 4 x float> @vfsub_vv(<vscale x 4 x float> %a, <vscale x 4 x flo
   ret <vscale x 4 x float> %2
 }
 
-define <vscale x 4 x float> @vfsub_vx(<vscale x 4 x float> %a, float %b, iXLen %vl) {
-; NOVLOPT-LABEL: vfsub_vx:
+define <vscale x 4 x float> @vfsub_vf(<vscale x 4 x float> %a, float %b, iXLen %vl) {
+; NOVLOPT-LABEL: vfsub_vf:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vfsub.vf v10, v8, fa0
@@ -2995,7 +2995,7 @@ define <vscale x 4 x float> @vfsub_vx(<vscale x 4 x float> %a, float %b, iXLen %
 ; NOVLOPT-NEXT:    vfadd.vv v8, v10, v8
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vfsub_vx:
+; VLOPT-LABEL: vfsub_vf:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfsub.vf v10, v8, fa0
@@ -3006,8 +3006,8 @@ define <vscale x 4 x float> @vfsub_vx(<vscale x 4 x float> %a, float %b, iXLen %
   ret <vscale x 4 x float> %2
 }
 
-define <vscale x 4 x float> @vfrsub_vx(<vscale x 4 x float> %a, float %b, iXLen %vl) {
-; NOVLOPT-LABEL: vfrsub_vx:
+define <vscale x 4 x float> @vfrsub_vf(<vscale x 4 x float> %a, float %b, iXLen %vl) {
+; NOVLOPT-LABEL: vfrsub_vf:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vfrsub.vf v10, v8, fa0
@@ -3015,7 +3015,7 @@ define <vscale x 4 x float> @vfrsub_vx(<vscale x 4 x float> %a, float %b, iXLen 
 ; NOVLOPT-NEXT:    vfadd.vv v8, v10, v8
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vfrsub_vx:
+; VLOPT-LABEL: vfrsub_vf:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfrsub.vf v10, v8, fa0
@@ -3089,8 +3089,8 @@ define <vscale x 4 x double> @vfwsub_vv(<vscale x 4 x float> %a, <vscale x 4 x f
   ret <vscale x 4 x double> %2
 }
 
-define <vscale x 4 x double> @vfwsub_vx(<vscale x 4 x float> %a, float %b, iXLen %vl) {
-; NOVLOPT-LABEL: vfwsub_vx:
+define <vscale x 4 x double> @vfwsub_vf(<vscale x 4 x float> %a, float %b, iXLen %vl) {
+; NOVLOPT-LABEL: vfwsub_vf:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vfwsub.vf v12, v8, fa0
@@ -3098,7 +3098,7 @@ define <vscale x 4 x double> @vfwsub_vx(<vscale x 4 x float> %a, float %b, iXLen
 ; NOVLOPT-NEXT:    vfadd.vv v8, v12, v12
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vfwsub_vx:
+; VLOPT-LABEL: vfwsub_vf:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfwsub.vf v12, v8, fa0
@@ -3852,8 +3852,8 @@ define <vscale x 4 x float> @vfmax_vv(<vscale x 4 x float> %a, <vscale x 4 x flo
   ret <vscale x 4 x float> %2
 }
 
-define <vscale x 4 x float> @vfmax_vx(<vscale x 4 x float> %a, float %b, iXLen %vl) {
-; NOVLOPT-LABEL: vfmax_vx:
+define <vscale x 4 x float> @vfmax_vf(<vscale x 4 x float> %a, float %b, iXLen %vl) {
+; NOVLOPT-LABEL: vfmax_vf:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vfmax.vf v10, v8, fa0
@@ -3861,7 +3861,7 @@ define <vscale x 4 x float> @vfmax_vx(<vscale x 4 x float> %a, float %b, iXLen %
 ; NOVLOPT-NEXT:    vfadd.vv v8, v10, v8
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vfmax_vx:
+; VLOPT-LABEL: vfmax_vf:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfmax.vf v10, v8, fa0
@@ -3892,8 +3892,8 @@ define <vscale x 4 x float> @vfmin_vv(<vscale x 4 x float> %a, <vscale x 4 x flo
   ret <vscale x 4 x float> %2
 }
 
-define <vscale x 4 x float> @vfmin_vx(<vscale x 4 x float> %a, float %b, iXLen %vl) {
-; NOVLOPT-LABEL: vfmin_vx:
+define <vscale x 4 x float> @vfmin_vf(<vscale x 4 x float> %a, float %b, iXLen %vl) {
+; NOVLOPT-LABEL: vfmin_vf:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; NOVLOPT-NEXT:    vfmin.vf v10, v8, fa0
@@ -3901,7 +3901,7 @@ define <vscale x 4 x float> @vfmin_vx(<vscale x 4 x float> %a, float %b, iXLen %
 ; NOVLOPT-NEXT:    vfadd.vv v8, v10, v8
 ; NOVLOPT-NEXT:    ret
 ;
-; VLOPT-LABEL: vfmin_vx:
+; VLOPT-LABEL: vfmin_vf:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfmin.vf v10, v8, fa0
