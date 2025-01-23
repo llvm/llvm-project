@@ -356,7 +356,9 @@ class ReverseTestBase(GDBProxyTestBase):
                 f"M{block.address:x},{len(block.data)//2:x}:" + block.data
             )
             if reply != "OK":
-                raise ValueError("Can't restore memory")
+                raise ValueError(
+                    f"Can't restore memory block ranging from 0x{block.address:x} to 0x{block.address+len(block.data):x}."
+                )
             watch_addr = self.watchpoint_triggered(block, current_memory)
             if watch_addr is not None:
                 stop_reasons.append(
