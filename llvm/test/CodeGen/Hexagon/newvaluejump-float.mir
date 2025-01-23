@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass=hexagon-nvj %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass=hexagon-nvj %s -o - | FileCheck %s
 
 # Check that we don't generate a new-value jump for a floating-point
 # instruction.

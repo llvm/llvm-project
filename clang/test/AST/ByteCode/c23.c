@@ -49,3 +49,11 @@ static_assert(arg1[1] == 254);
 static_assert(arg1[2] == 186);
 static_assert(arg1[3] == 190);
 #endif
+
+void ghissue109095() {
+  constexpr char c[] = { 'a' };
+  constexpr int i = c[1]; // both-error {{constexpr variable 'i' must be initialized by a constant expression}}\
+                          // both-note {{declared here}}
+  _Static_assert(i == c[0]); // both-error {{static assertion expression is not an integral constant expression}}\
+                             // both-note {{initializer of 'i' is not a constant expression}}
+}

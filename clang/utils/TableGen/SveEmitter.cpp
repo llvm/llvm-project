@@ -253,7 +253,7 @@ public:
   /// Return true if the intrinsic takes a splat operand.
   bool hasSplat() const {
     // These prototype modifiers are described in arm_sve.td.
-    return Proto.find_first_of("ajfrKLR@") != std::string::npos;
+    return Proto.find_first_of("ajfrKLR@!") != std::string::npos;
   }
 
   /// Return the parameter index of the splat operand.
@@ -262,7 +262,7 @@ public:
     for (; I < Proto.size(); ++I, ++Param) {
       if (Proto[I] == 'a' || Proto[I] == 'j' || Proto[I] == 'f' ||
           Proto[I] == 'r' || Proto[I] == 'K' || Proto[I] == 'L' ||
-          Proto[I] == 'R' || Proto[I] == '@')
+          Proto[I] == 'R' || Proto[I] == '@' || Proto[I] == '!')
         break;
 
       // Multivector modifier can be skipped
@@ -295,7 +295,7 @@ private:
     const char *Suffix;
   };
 
-  static const std::array<ReinterpretTypeInfo, 12> Reinterprets;
+  static const std::array<ReinterpretTypeInfo, 13> Reinterprets;
 
   const RecordKeeper &Records;
   StringMap<uint64_t> EltTypes;
@@ -418,9 +418,10 @@ public:
                        SmallVectorImpl<std::unique_ptr<Intrinsic>> &Out);
 };
 
-const std::array<SVEEmitter::ReinterpretTypeInfo, 12> SVEEmitter::Reinterprets =
+const std::array<SVEEmitter::ReinterpretTypeInfo, 13> SVEEmitter::Reinterprets =
     {{{SVEType("c", 'd'), "s8"},
       {SVEType("Uc", 'd'), "u8"},
+      {SVEType("m", 'd'), "mf8"},
       {SVEType("s", 'd'), "s16"},
       {SVEType("Us", 'd'), "u16"},
       {SVEType("i", 'd'), "s32"},
@@ -779,6 +780,10 @@ void SVEType::applyModifier(char Mod) {
     Kind = UInt;
     ElementBitwidth = 64;
     break;
+  case '#':
+    Kind = SInt;
+    ElementBitwidth = 64;
+    break;
   case '[':
     Kind = UInt;
     ElementBitwidth = 8;
@@ -910,6 +915,11 @@ void SVEType::applyModifier(char Mod) {
     Kind = MFloat8;
     ElementBitwidth = 8;
     break;
+  case '!':
+    Kind = MFloat8;
+    Bitwidth = ElementBitwidth = 8;
+    NumVectors = 0;
+    break;
   case '.':
     llvm_unreachable(". is never a type in itself");
     break;
@@ -1040,7 +1050,7 @@ std::string Intrinsic::replaceTemplatedArgs(std::string Name, TypeSpec TS,
     else if (T.isBFloat())
       TypeCode = "bf";
     else if (T.isMFloat())
-      TypeCode = "mfp";
+      TypeCode = "mf";
     else
       TypeCode = 'f';
     Ret.replace(Pos, NumChars, TypeCode + utostr(T.getElementSizeInBits()));
@@ -1629,13 +1639,6 @@ void SVEEmitter::createSMEHeader(raw_ostream &OS) {
   OS << "  uint64_t x0, x1;\n";
   OS << "  __builtin_arm_get_sme_state(&x0, &x1);\n";
   OS << "  return x0 & (1ULL << 63);\n";
-  OS << "}\n\n";
-
-  OS << "__ai bool __arm_in_streaming_mode(void) __arm_streaming_compatible "
-        "{\n";
-  OS << "  uint64_t x0, x1;\n";
-  OS << "  __builtin_arm_get_sme_state(&x0, &x1);\n";
-  OS << "  return x0 & 1;\n";
   OS << "}\n\n";
 
   OS << "void *__arm_sc_memcpy(void *dest, const void *src, size_t n) __arm_streaming_compatible;\n";

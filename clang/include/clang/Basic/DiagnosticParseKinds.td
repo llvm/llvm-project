@@ -721,6 +721,9 @@ def warn_empty_init_statement : Warning<
   "has no effect">, InGroup<EmptyInitStatement>, DefaultIgnore;
 def err_keyword_as_parameter : Error <
   "invalid parameter name: '%0' is a keyword">;
+def warn_pre_cxx26_ambiguous_pack_indexing_type : Warning<
+  "%0 is no longer a pack expansion but a pack "
+  "indexing type; add a name to specify a pack expansion">, InGroup<CXXPre26Compat>;
 
 // C++ derived classes
 def err_dup_virtual : Error<"duplicate 'virtual' in base specifier">;
@@ -1655,6 +1658,8 @@ def warn_omp_depend_in_ordered_deprecated : Warning<"'depend' clause for"
 def warn_omp_invalid_attribute_for_ompx_attributes : Warning<"'ompx_attribute' clause only allows "
   "'amdgpu_flat_work_group_size', 'amdgpu_waves_per_eu', and 'launch_bounds'; "
   "%0 is ignored">, InGroup<OpenMPExtensions>;
+def err_omp_duplicate_modifier : Error<"duplicate modifier '%0' in '%1' clause">;
+def err_omp_expected_modifier : Error<"expected modifier in '%0' clause">;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<

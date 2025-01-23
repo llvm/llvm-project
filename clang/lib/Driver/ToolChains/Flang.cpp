@@ -55,7 +55,10 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
                             options::OPT_fdefault_double_8,
                             options::OPT_flarge_sizes,
                             options::OPT_fno_automatic,
-                            options::OPT_fhermetic_module_files});
+                            options::OPT_fhermetic_module_files,
+                            options::OPT_frealloc_lhs,
+                            options::OPT_fno_realloc_lhs,
+                            options::OPT_fsave_main_program});
 }
 
 void Flang::addPreprocessingOptions(const ArgList &Args,
@@ -120,7 +123,8 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
                    options::OPT_fintrinsic_modules_path, options::OPT_pedantic,
                    options::OPT_std_EQ, options::OPT_W_Joined,
                    options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ,
-                   options::OPT_funderscoring, options::OPT_fno_underscoring});
+                   options::OPT_funderscoring, options::OPT_fno_underscoring,
+                   options::OPT_funsigned, options::OPT_fno_unsigned});
 
   llvm::codegenoptions::DebugInfoKind DebugInfoKind;
   if (Args.hasArg(options::OPT_gN_Group)) {
@@ -146,10 +150,15 @@ void Flang::addCodegenOptions(const ArgList &Args,
   if (shouldLoopVersion(Args))
     CmdArgs.push_back("-fversion-loops-for-stride");
 
-  Args.addAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
-                            options::OPT_flang_deprecated_no_hlfir,
-                            options::OPT_fno_ppc_native_vec_elem_order,
-                            options::OPT_fppc_native_vec_elem_order});
+  Args.addAllArgs(CmdArgs,
+                  {options::OPT_flang_experimental_hlfir,
+                   options::OPT_flang_deprecated_no_hlfir,
+                   options::OPT_fno_ppc_native_vec_elem_order,
+                   options::OPT_fppc_native_vec_elem_order,
+                   options::OPT_finit_global_zero,
+                   options::OPT_fno_init_global_zero, options::OPT_ftime_report,
+                   options::OPT_ftime_report_EQ, options::OPT_funroll_loops,
+                   options::OPT_fno_unroll_loops});
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {

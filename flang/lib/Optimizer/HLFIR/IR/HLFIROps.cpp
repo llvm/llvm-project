@@ -1197,7 +1197,8 @@ hlfir::MatmulOp::canonicalize(MatmulOp matmulOp,
       mlir::Location loc = matmulOp.getLoc();
       mlir::Type resultTy = matmulOp.getResult().getType();
       auto matmulTransposeOp = rewriter.create<hlfir::MatmulTransposeOp>(
-          loc, resultTy, transposeOp.getArray(), matmulOp.getRhs());
+          loc, resultTy, transposeOp.getArray(), matmulOp.getRhs(),
+          matmulOp.getFastmathAttr());
 
       // we don't need to remove any hlfir.destroy because it will be needed for
       // the new intrinsic result anyway
@@ -1702,6 +1703,15 @@ hlfir::ShapeOfOp::canonicalize(ShapeOfOp shapeOf,
   rewriter.replaceAllUsesWith(shapeOf.getResult(), shape);
   rewriter.eraseOp(shapeOf);
   return llvm::LogicalResult::success();
+}
+
+mlir::OpFoldResult hlfir::ShapeOfOp::fold(FoldAdaptor adaptor) {
+  if (matchPattern(getExpr(), mlir::m_Op<hlfir::ElementalOp>())) {
+    auto elementalOp =
+        mlir::cast<hlfir::ElementalOp>(getExpr().getDefiningOp());
+    return elementalOp.getShape();
+  }
+  return {};
 }
 
 //===----------------------------------------------------------------------===//

@@ -13,7 +13,7 @@ declare ptr @strncat(ptr, ptr, i32)
 define void @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
 ; CHECK-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(ptr noundef nonnull dereferenceable(1) @a)
-; CHECK-NEXT:    [[ENDPTR:%.*]] = getelementptr inbounds nuw i8, ptr @a, i32 [[STRLEN]]
+; CHECK-NEXT:    [[ENDPTR:%.*]] = getelementptr inbounds i8, ptr @a, i32 [[STRLEN]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(6) [[ENDPTR]], ptr noundef nonnull align 1 dereferenceable(6) @hello, i32 6, i1 false)
 ; CHECK-NEXT:    ret void
 ;

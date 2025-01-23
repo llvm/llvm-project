@@ -215,6 +215,10 @@ template <class PA> inline constexpr auto bracketed(const PA &p) {
   return "[" >> p / "]";
 }
 
+template <class PA> inline constexpr auto braced(const PA &p) {
+  return "{" >> p / "}";
+}
+
 // Quoted character literal constants.
 struct CharLiteralChar {
   using resultType = std::pair<char, bool /* was escaped */>;

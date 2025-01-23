@@ -18,6 +18,8 @@ namespace interp {
 
 enum class Endian { Little, Big };
 
+struct Bytes;
+
 /// A quantity in bits.
 struct Bits {
   size_t N = 0;
@@ -30,6 +32,7 @@ struct Bits {
   bool isFullByte() const { return N % 8 == 0; }
   bool nonZero() const { return N != 0; }
   bool isZero() const { return N == 0; }
+  Bytes toBytes() const;
 
   Bits operator-(Bits Other) const { return Bits(N - Other.N); }
   Bits operator+(Bits Other) const { return Bits(N + Other.N); }
@@ -55,6 +58,11 @@ struct Bytes {
   size_t getQuantity() const { return N; }
   Bits toBits() const { return Bits(N * 8); }
 };
+
+inline Bytes Bits::toBytes() const {
+  assert(isFullByte());
+  return Bytes(N / 8);
+}
 
 /// A bit range. Both Start and End are inclusive.
 struct BitRange {
@@ -83,6 +91,7 @@ struct BitcastBuffer {
 
   /// Returns the buffer size in bits.
   Bits size() const { return FinalBitSize; }
+  Bytes byteSize() const { return FinalBitSize.toBytes(); }
 
   /// Returns \c true if all bits in the buffer have been initialized.
   bool allInitialized() const;

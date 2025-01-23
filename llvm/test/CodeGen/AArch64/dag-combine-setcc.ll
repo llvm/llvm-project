@@ -5,8 +5,10 @@ define i1 @combine_setcc_eq_vecreduce_or_v8i1(<8 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_eq_vecreduce_or_v8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmeq v0.8b, v0.8b, #0
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    umaxv b0, v0.8b
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    bic w0, w8, w9
 ; CHECK-NEXT:    ret
   %cmp1 = icmp eq <8 x i8> %a, zeroinitializer
   %cast = bitcast <8 x i1> %cmp1 to i8
@@ -71,8 +73,9 @@ define i1 @combine_setcc_ne_vecreduce_or_v8i1(<8 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_ne_vecreduce_or_v8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmtst v0.8b, v0.8b, v0.8b
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    umaxv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ne <8 x i8> %a, zeroinitializer
   %cast = bitcast <8 x i1> %cmp1 to i8
@@ -129,9 +132,10 @@ define i1 @combine_setcc_ne_vecreduce_or_v64i1(<64 x i8> %a) {
 define i1 @combine_setcc_eq_vecreduce_and_v8i1(<8 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_eq_vecreduce_and_v8i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmtst v0.8b, v0.8b, v0.8b
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    cmeq v0.8b, v0.8b, #0
+; CHECK-NEXT:    uminv b0, v0.8b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %cmp1 = icmp eq <8 x i8> %a, zeroinitializer
   %cast = bitcast <8 x i1> %cmp1 to i8
@@ -188,9 +192,11 @@ define i1 @combine_setcc_eq_vecreduce_and_v64i1(<64 x i8> %a) {
 define i1 @combine_setcc_ne_vecreduce_and_v8i1(<8 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_ne_vecreduce_and_v8i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmeq v0.8b, v0.8b, #0
-; CHECK-NEXT:    fcmp d0, #0.0
-; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    cmtst v0.8b, v0.8b, v0.8b
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    uminv b0, v0.8b
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    bic w0, w8, w9
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ne <8 x i8> %a, zeroinitializer
   %cast = bitcast <8 x i1> %cmp1 to i8
