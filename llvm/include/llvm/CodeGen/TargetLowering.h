@@ -3156,7 +3156,6 @@ public:
   /// Return true on success. Currently only supports
   /// llvm.vector.deinterleave2
   ///
-  /// \p DI is the deinterleave intrinsic.
   /// \p LI is the accompanying load instruction.
   /// \p DeinterleaveValues contains the deinterleaved values.
   virtual bool
@@ -3169,7 +3168,6 @@ public:
   /// Return true on success. Currently only supports
   /// llvm.vector.interleave2
   ///
-  /// \p II is the interleave intrinsic.
   /// \p SI is the accompanying store instruction
   /// \p InterleaveValues contains the interleaved values.
   virtual bool
