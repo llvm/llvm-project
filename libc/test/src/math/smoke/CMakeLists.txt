@@ -129,7 +129,7 @@ add_fp_unittest(
     tanf16_test.cpp
   DEPENDS
     libc.src.errno.errno
-    libc.src.math.tanf16 
+    libc.src.math.tanf16
 )
 
 add_fp_unittest(

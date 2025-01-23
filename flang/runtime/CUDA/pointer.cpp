@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/CUDA/pointer.h"
+#include "../assign-impl.h"
 #include "../stat.h"
 #include "../terminator.h"
+#include "flang/Runtime/CUDA/memmove-function.h"
 #include "flang/Runtime/pointer.h"
 
 #include "cuda_runtime.h"
@@ -30,6 +32,19 @@ int RTDEF(CUFPointerAllocate)(Descriptor &desc, int64_t stream, bool hasStat,
   // Perform the standard allocation.
   int stat{
       RTNAME(PointerAllocate)(desc, hasStat, errMsg, sourceFile, sourceLine)};
+  return stat;
+}
+
+int RTDEF(CUFPointerAllocateSource)(Descriptor &pointer,
+    const Descriptor &source, int64_t stream, bool hasStat,
+    const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
+  int stat{RTNAME(CUFPointerAllocate)(
+      pointer, stream, hasStat, errMsg, sourceFile, sourceLine)};
+  if (stat == StatOk) {
+    Terminator terminator{sourceFile, sourceLine};
+    Fortran::runtime::DoFromSourceAssign(
+        pointer, source, terminator, &MemmoveHostToDevice);
+  }
   return stat;
 }
 

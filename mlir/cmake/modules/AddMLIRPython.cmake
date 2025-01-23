@@ -671,8 +671,11 @@ function(add_mlir_python_extension libname extname)
       ${ARG_SOURCES}
     )
 
-    if (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL)
-      # Avoids warnings from upstream nanobind.
+    if (NOT MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES
+        AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
+      # Avoid some warnings from upstream nanobind.
+      # If a superproject set MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES, let
+      # the super project handle compile options as it wishes.
       set(nanobind_target "nanobind-static")
       if (NOT TARGET ${nanobind_target})
         # Get correct nanobind target name: nanobind-static-ft or something else
