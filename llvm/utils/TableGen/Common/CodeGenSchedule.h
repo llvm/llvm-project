@@ -244,6 +244,12 @@ struct CodeGenProcModel {
   ConstRecVec WriteResDefs;
   ConstRecVec ReadAdvanceDefs;
 
+  // Map from the WriteType field to the parent WriteRes record.
+  DenseMap<const Record *, const Record *> WriteResMap;
+
+  // Map from the ReadType field to the parent ReadAdvance record.
+  DenseMap<const Record *, const Record *> ReadAdvanceMap;
+
   // Per-operand machine model resources associated with this processor.
   ConstRecVec ProcResourceDefs;
 
@@ -647,9 +653,9 @@ private:
   void addProcResource(const Record *ProcResourceKind, CodeGenProcModel &PM,
                        ArrayRef<SMLoc> Loc);
 
-  void addWriteRes(const Record *ProcWriteResDef, unsigned PIdx);
+  void addWriteRes(const Record *ProcWriteResDef, CodeGenProcModel &PM);
 
-  void addReadAdvance(const Record *ProcReadAdvanceDef, unsigned PIdx);
+  void addReadAdvance(const Record *ProcReadAdvanceDef, CodeGenProcModel &PM);
 };
 
 } // namespace llvm

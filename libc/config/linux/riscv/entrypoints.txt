@@ -432,7 +432,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fabs
     libc.src.math.fabsf
     libc.src.math.fabsl
-    libc.src.math.fadd 
+    libc.src.math.fadd
     libc.src.math.faddl
     libc.src.math.fadd
     libc.src.math.fdim
@@ -630,7 +630,7 @@ if(LIBC_TYPES_HAS_CFLOAT128)
   )
 endif()
 
-if(LIBC_TYPES_HAS_FLOAT128)    
+if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
     libc.src.math.canonicalizef128

@@ -8682,12 +8682,12 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(Instruction *I,
 /// are valid so recipes can be formed later.
 void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
   // Find all possible partial reductions.
-  SmallVector<std::pair<PartialReductionChain, unsigned>, 1>
+  SmallVector<std::pair<PartialReductionChain, unsigned>>
       PartialReductionChains;
-  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars())
-    if (std::optional<std::pair<PartialReductionChain, unsigned>> Pair =
-            getScaledReduction(Phi, RdxDesc, Range))
-      PartialReductionChains.push_back(*Pair);
+  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars()) {
+    if (auto SR = getScaledReduction(Phi, RdxDesc.getLoopExitInstr(), Range))
+      PartialReductionChains.append(*SR);
+  }
 
   // A partial reduction is invalid if any of its extends are used by
   // something that isn't another partial reduction. This is because the
@@ -8715,26 +8715,44 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
   }
 }
 
-std::optional<std::pair<PartialReductionChain, unsigned>>
-VPRecipeBuilder::getScaledReduction(PHINode *PHI,
-                                    const RecurrenceDescriptor &Rdx,
+std::optional<SmallVector<std::pair<PartialReductionChain, unsigned>>>
+VPRecipeBuilder::getScaledReduction(Instruction *PHI, Instruction *RdxExitInstr,
                                     VFRange &Range) {
+
+  if (!CM.TheLoop->contains(RdxExitInstr))
+    return std::nullopt;
+
   // TODO: Allow scaling reductions when predicating. The select at
   // the end of the loop chooses between the phi value and most recent
   // reduction result, both of which have different VFs to the active lane
   // mask when scaling.
-  if (CM.blockNeedsPredicationForAnyReason(Rdx.getLoopExitInstr()->getParent()))
+  if (CM.blockNeedsPredicationForAnyReason(RdxExitInstr->getParent()))
     return std::nullopt;
 
-  auto *Update = dyn_cast<BinaryOperator>(Rdx.getLoopExitInstr());
+  auto *Update = dyn_cast<BinaryOperator>(RdxExitInstr);
   if (!Update)
     return std::nullopt;
 
   Value *Op = Update->getOperand(0);
   Value *PhiOp = Update->getOperand(1);
-  if (Op == PHI) {
-    Op = Update->getOperand(1);
-    PhiOp = Update->getOperand(0);
+  if (Op == PHI)
+    std::swap(Op, PhiOp);
+
+  SmallVector<std::pair<PartialReductionChain, unsigned>> Chains;
+
+  // Try and get a scaled reduction from the first non-phi operand.
+  // If one is found, we use the discovered reduction instruction in
+  // place of the accumulator for costing.
+  if (auto *OpInst = dyn_cast<Instruction>(Op)) {
+    if (auto SR0 = getScaledReduction(PHI, OpInst, Range)) {
+      Chains.append(*SR0);
+      PHI = SR0->rbegin()->first.Reduction;
+
+      Op = Update->getOperand(0);
+      PhiOp = Update->getOperand(1);
+      if (Op == PHI)
+        std::swap(Op, PhiOp);
+    }
   }
   if (PhiOp != PHI)
     return std::nullopt;
@@ -8757,7 +8775,7 @@ VPRecipeBuilder::getScaledReduction(PHINode *PHI,
   TTI::PartialReductionExtendKind OpBExtend =
       TargetTransformInfo::getPartialReductionExtendKind(ExtB);
 
-  PartialReductionChain Chain(Rdx.getLoopExitInstr(), ExtA, ExtB, BinOp);
+  PartialReductionChain Chain(RdxExitInstr, ExtA, ExtB, BinOp);
 
   unsigned TargetScaleFactor =
       PHI->getType()->getPrimitiveSizeInBits().getKnownScalarFactor(
@@ -8772,9 +8790,9 @@ VPRecipeBuilder::getScaledReduction(PHINode *PHI,
             return Cost.isValid();
           },
           Range))
-    return std::make_pair(Chain, TargetScaleFactor);
+    Chains.push_back(std::make_pair(Chain, TargetScaleFactor));
 
-  return std::nullopt;
+  return Chains;
 }
 
 VPRecipeBase *
@@ -8869,12 +8887,14 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
          "Unexpected number of operands for partial reduction");
 
   VPValue *BinOp = Operands[0];
-  VPValue *Phi = Operands[1];
-  if (isa<VPReductionPHIRecipe>(BinOp->getDefiningRecipe()))
-    std::swap(BinOp, Phi);
+  VPValue *Accumulator = Operands[1];
+  VPRecipeBase *BinOpRecipe = BinOp->getDefiningRecipe();
+  if (isa<VPReductionPHIRecipe>(BinOpRecipe) ||
+      isa<VPPartialReductionRecipe>(BinOpRecipe))
+    std::swap(BinOp, Accumulator);
 
-  return new VPPartialReductionRecipe(Reduction->getOpcode(), BinOp, Phi,
-                                      Reduction);
+  return new VPPartialReductionRecipe(Reduction->getOpcode(), BinOp,
+                                      Accumulator, Reduction);
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,

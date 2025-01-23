@@ -142,8 +142,8 @@ class VPRecipeBuilder {
   /// Returns null if no scaled reduction was found, otherwise a pair with a
   /// struct containing reduction information and the scaling factor between the
   /// number of elements in the input and output.
-  std::optional<std::pair<PartialReductionChain, unsigned>>
-  getScaledReduction(PHINode *PHI, const RecurrenceDescriptor &Rdx,
+  std::optional<SmallVector<std::pair<PartialReductionChain, unsigned>>>
+  getScaledReduction(Instruction *PHI, Instruction *RdxExitInstr,
                      VFRange &Range);
 
 public:
