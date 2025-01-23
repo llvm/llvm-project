@@ -9930,7 +9930,7 @@ static CXXConstructorDecl *findUserDeclaredCtor(CXXRecordDecl *RD) {
 
   // Look for constructor templates.
   typedef CXXRecordDecl::specific_decl_iterator<FunctionTemplateDecl> tmpl_iter;
-  for (tmpl_iter TI(RD->decls_begin()), TE(RD->decls_end()); TI != TE; ++TI) {
+  for (tmpl_iter TI(RD->decls_begin(), RD->decls_end()), TE(RD->decls_end(), RD->decls_end()); TI != TE; ++TI) {
     if (CXXConstructorDecl *CD =
           dyn_cast<CXXConstructorDecl>(TI->getTemplatedDecl()))
       return CD;

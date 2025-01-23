@@ -504,10 +504,14 @@ bool Decl::isFlexibleArrayMemberLike(
     }
   }
 
+  auto Itr = llvm::find(FD->getParent()->fields(), FD->getCanonicalDecl());
+  assert(Itr != FD->getParent()->field_end() && "Field not in fields?!");
+  return ++Itr != FD->getParent()->field_end();
+
   // Test that the field is the last in the structure.
-  RecordDecl::field_iterator FI(
-      DeclContext::decl_iterator(const_cast<FieldDecl *>(FD)));
-  return ++FI == FD->getParent()->field_end();
+  //RecordDecl::field_iterator FI(
+  //    DeclContext::decl_iterator(const_cast<FieldDecl *>(FD)));
+  //return (++llvm::find(FD->getParent()->fields(), FD)) == FD->getParent()->field_end();
 }
 
 TranslationUnitDecl *Decl::getTranslationUnitDecl() {
@@ -1533,26 +1537,26 @@ void DeclContext::collectAllContexts(SmallVectorImpl<DeclContext *> &Contexts) {
     Contexts.push_back(this);
 }
 
-std::pair<Decl *, Decl *>
-DeclContext::BuildDeclChain(ArrayRef<Decl *> Decls,
-                            bool FieldsAlreadyLoaded) {
-  // Build up a chain of declarations via the Decl::NextInContextAndBits field.
-  Decl *FirstNewDecl = nullptr;
-  Decl *PrevDecl = nullptr;
-  for (auto *D : Decls) {
-    if (FieldsAlreadyLoaded && isa<FieldDecl>(D))
-      continue;
-
-    if (PrevDecl)
-      PrevDecl->NextInContextAndBits.setPointer(D);
-    else
-      FirstNewDecl = D;
-
-    PrevDecl = D;
-  }
-
-  return std::make_pair(FirstNewDecl, PrevDecl);
-}
+//std::pair<Decl *, Decl *>
+//DeclContext::BuildDeclChain(ArrayRef<Decl *> Decls,
+//                            bool FieldsAlreadyLoaded) {
+//  // Build up a chain of declarations via the Decl::NextInContextAndBits field.
+//  Decl *FirstNewDecl = nullptr;
+//  Decl *PrevDecl = nullptr;
+//  for (auto *D : Decls) {
+//    if (FieldsAlreadyLoaded && isa<FieldDecl>(D))
+//      continue;
+//
+//    if (PrevDecl)
+//      PrevDecl->NextInContextAndBits.setPointer(D);
+//    else
+//      FirstNewDecl = D;
+//
+//    PrevDecl = D;
+//  }
+//
+//  return std::make_pair(FirstNewDecl, PrevDecl);
+//}
 
 /// We have just acquired external visible storage, and we already have
 /// built a lookup map. For every name in the map, pull in the new names from
@@ -1592,13 +1596,21 @@ DeclContext::LoadLexicalDeclsFromExternalStorage() const {
 
   // Splice the newly-read declarations into the beginning of the list
   // of declarations.
-  Decl *ExternalFirst, *ExternalLast;
-  std::tie(ExternalFirst, ExternalLast) =
-      BuildDeclChain(Decls, FieldsAlreadyLoaded);
-  ExternalLast->NextInContextAndBits.setPointer(FirstDecl);
-  FirstDecl = ExternalFirst;
-  if (!LastDecl)
-    LastDecl = ExternalLast;
+  //Decl *ExternalFirst, *ExternalLast;
+  //std::tie(ExternalFirst, ExternalLast) =
+  //    BuildDeclChain(Decls, FieldsAlreadyLoaded);
+  //ExternalLast->NextInContextAndBits.setPointer(FirstDecl);
+  //FirstDecl = ExternalFirst;
+  //if (!LastDecl)
+  //  LastDecl = ExternalLast;
+
+  // TODO: ERICH: It isn't clear why these decls are going at the beginning,
+  // but we can do that.  Also have to filter out the 'field decl' if fields are
+  // already loaded, so make_filter_range can do that.
+  auto NewDeclRange = llvm::make_filter_range(Decls, [=](Decl *NewD) {
+    return !FieldsAlreadyLoaded || !isa<FieldDecl>(NewD);
+  });
+  OurDecls.insert(OurDecls.begin(), NewDeclRange.begin(), NewDeclRange.end());
   return true;
 }
 
@@ -1636,19 +1648,37 @@ ExternalASTSource::SetExternalVisibleDeclsForName(const DeclContext *DC,
 DeclContext::decl_iterator DeclContext::decls_begin() const {
   if (hasExternalLexicalStorage())
     LoadLexicalDeclsFromExternalStorage();
-  return decl_iterator(FirstDecl);
+  return DeclContext::decl_iterator(OurDecls.begin());
+  //return decl_iterator(FirstDecl);
+}
+
+// TODO: ERICH: we need this now, since we don't know the order of the
+// evaluation of args that use decls_begin/decls_end.
+// LoadLexicalDeclsFromExternalStorage sets the hasExternalLexicalStorage while
+// it is working, so only the 1st one will execute.  Previously it was able to
+// do this as just an 'empty' iterator, because all end iterators in the
+// collection were identical, but we obviously cannot do that here.
+DeclContext::decl_iterator DeclContext::decls_end() const {
+  if (hasExternalLexicalStorage())
+    LoadLexicalDeclsFromExternalStorage();
+  return DeclContext::decl_iterator(OurDecls.end());
 }
 
 bool DeclContext::decls_empty() const {
   if (hasExternalLexicalStorage())
     LoadLexicalDeclsFromExternalStorage();
 
-  return !FirstDecl;
+  return OurDecls.empty();
+//  return !FirstDecl;
 }
 
 bool DeclContext::containsDecl(Decl *D) const {
-  return (D->getLexicalDeclContext() == this &&
-          (D->NextInContextAndBits.getPointer() || D == LastDecl));
+  return D->getLexicalDeclContext() == this &&
+         llvm::find(OurDecls, D) != OurDecls.end();
+  // TODO: ERICH: Again, this isn't really checking what it thinks it was
+  // checking?  though at least it is ensuring the lexical context is this one.
+  // return (D->getLexicalDeclContext() == this &&
+  //        (D->NextInContextAndBits.getPointer() || D == LastDecl));
 }
 
 bool DeclContext::containsDeclAndLoad(Decl *D) const {
@@ -1699,28 +1729,36 @@ static bool shouldBeHidden(NamedDecl *D) {
 void DeclContext::removeDecl(Decl *D) {
   assert(D->getLexicalDeclContext() == this &&
          "decl being removed from non-lexical context");
-  assert((D->NextInContextAndBits.getPointer() || D == LastDecl) &&
-         "decl is not in decls list");
+  // TODO: ERICH: Assert here isn't really meaningful anymore?  Same problem as
+  // below, only checks to see if this is the not-last decl in _A_ context, or
+  // is LastDecl of THIS context.
+  // assert((D->NextInContextAndBits.getPointer()
+  // || D == LastDecl) &&
+  //        "decl is not in decls list");
 
-  // Remove D from the decl chain.  This is O(n) but hopefully rare.
-  if (D == FirstDecl) {
-    if (D == LastDecl)
-      FirstDecl = LastDecl = nullptr;
-    else
-      FirstDecl = D->NextInContextAndBits.getPointer();
-  } else {
-    for (Decl *I = FirstDecl; true; I = I->NextInContextAndBits.getPointer()) {
-      assert(I && "decl not found in linked list");
-      if (I->NextInContextAndBits.getPointer() == D) {
-        I->NextInContextAndBits.setPointer(D->NextInContextAndBits.getPointer());
-        if (D == LastDecl) LastDecl = I;
-        break;
-      }
-    }
-  }
+  const auto *Itr = llvm::find(OurDecls, D);
+  assert(Itr != OurDecls.end() && "decl not found in linked list");
+  OurDecls.erase(Itr);
 
-  // Mark that D is no longer in the decl chain.
-  D->NextInContextAndBits.setPointer(nullptr);
+  //// Remove D from the decl chain.  This is O(n) but hopefully rare.{
+  //if (D == FirstDecl) {
+  //  if (D == LastDecl)
+  //    FirstDecl = LastDecl = nullptr;
+  //  else
+  //    FirstDecl = D->NextInContextAndBits.getPointer();
+  //} else {
+  //  for (Decl *I = FirstDecl; true; I = I->NextInContextAndBits.getPointer()) {
+  //    assert(I && "decl not found in linked list");
+  //    if (I->NextInContextAndBits.getPointer() == D) {
+  //      I->NextInContextAndBits.setPointer(D->NextInContextAndBits.getPointer());
+  //      if (D == LastDecl) LastDecl = I;
+  //      break;
+  //    }
+  //  }
+  //}
+
+  //// Mark that D is no longer in the decl chain.
+  //D->NextInContextAndBits.setPointer(nullptr);
 
   // Remove D from the lookup table if necessary.
   if (isa<NamedDecl>(D)) {
@@ -1754,15 +1792,23 @@ void DeclContext::removeDecl(Decl *D) {
 void DeclContext::addHiddenDecl(Decl *D) {
   assert(D->getLexicalDeclContext() == this &&
          "Decl inserted into wrong lexical context");
-  assert(!D->getNextDeclInContext() && D != LastDecl &&
-         "Decl already inserted into a DeclContext");
+  // TODO: ERICH: The original version here isn't really possible, though it
+  // wasn't really checking what it thought it was checking (it was checking: is
+  // already in a Decl-Context where it isn't last, AND isn't last in this
+  // decl). Best we can do I think is to see if it is in this decl context.
+  assert(llvm::find(OurDecls, D) == OurDecls.end() &&
+         "decl already inserted into this DeclContext");
+  // TODO: this isn't really possible now,
+  //assert(!D->getNextDeclInContext() && D != LastDecl &&
+  //       "Decl already inserted into a DeclContext");
 
-  if (FirstDecl) {
-    LastDecl->NextInContextAndBits.setPointer(D);
-    LastDecl = D;
-  } else {
-    FirstDecl = LastDecl = D;
-  }
+  OurDecls.push_back(D);
+//  if (FirstDecl) {
+//    LastDecl->NextInContextAndBits.setPointer(D);
+//    LastDecl = D;
+//  } else {
+//    FirstDecl = LastDecl = D;
+//  }
 
   // Notify a C++ record declaration that we've added a member, so it can
   // update its class-specific state.
@@ -2000,7 +2046,12 @@ void DeclContext::localUncachedLookup(DeclarationName Name,
   // matches.
   // FIXME: If we have lazy external declarations, this will not find them!
   // FIXME: Should we CollectAllContexts and walk them all here?
-  for (Decl *D = FirstDecl; D; D = D->getNextDeclInContext()) {
+  //for (Decl *D = FirstDecl; D; D = D->getNextDeclInContext()) {
+  //  if (auto *ND = dyn_cast<NamedDecl>(D))
+  //    if (ND->getDeclName() == Name)
+  //      Results.push_back(ND);
+  //}
+  for (Decl *D : OurDecls) {
     if (auto *ND = dyn_cast<NamedDecl>(D))
       if (ND->getDeclName() == Name)
         Results.push_back(ND);

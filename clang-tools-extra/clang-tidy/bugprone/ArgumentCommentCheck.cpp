@@ -187,10 +187,22 @@ static bool looksLikeExpectMethod(const CXXMethodDecl *Expect) {
          Expect->getNameInfo().getName().isIdentifier() &&
          Expect->getName().starts_with("gmock_");
 }
+
+static Decl *getNextDeclInContext(const Decl *D) {
+  // TODO: ERICH: This again uses declcontext, which we'd very much like to
+  // remove as well. So we'll eventually need to find a way to get here. At
+  // least in this case, we are only checking CXXMethodDecls, which probably
+  // need this link anyway, so this is perhaps fine.
+  const DeclContext *DC = D->getDeclContext();
+  auto *Itr = llvm::find(DC->decls(), D);
+  assert(Itr != DC->decls().end() && "Decl not in own decl context?!");
+  ++Itr;
+  return Itr != DC->decls().end() ? *Itr : nullptr;
+}
 static bool areMockAndExpectMethods(const CXXMethodDecl *Mock,
                                     const CXXMethodDecl *Expect) {
   assert(looksLikeExpectMethod(Expect));
-  return Mock != nullptr && Mock->getNextDeclInContext() == Expect &&
+  return Mock != nullptr && getNextDeclInContext(Mock) == Expect &&
          Mock->getNumParams() == Expect->getNumParams() &&
          Mock->getLocation().isMacroID() &&
          Mock->getNameInfo().getName().isIdentifier() &&
@@ -208,7 +220,7 @@ static const CXXMethodDecl *findMockedMethod(const CXXMethodDecl *Method) {
     if (Ctx == nullptr || !Ctx->isRecord())
       return nullptr;
     for (const auto *D : Ctx->decls()) {
-      if (D->getNextDeclInContext() == Method) {
+      if (getNextDeclInContext(D) == Method) {
         const auto *Previous = dyn_cast<CXXMethodDecl>(D);
         return areMockAndExpectMethods(Previous, Method) ? Previous : nullptr;
       }
@@ -216,7 +228,7 @@ static const CXXMethodDecl *findMockedMethod(const CXXMethodDecl *Method) {
     return nullptr;
   }
   if (const auto *Next =
-          dyn_cast_or_null<CXXMethodDecl>(Method->getNextDeclInContext())) {
+          dyn_cast_or_null<CXXMethodDecl>(getNextDeclInContext(Method))) {
     if (looksLikeExpectMethod(Next) && areMockAndExpectMethods(Method, Next))
       return Method;
   }

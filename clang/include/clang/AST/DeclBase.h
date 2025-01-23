@@ -240,14 +240,6 @@ public:
     ModulePrivate
   };
 
-protected:
-  /// The next declaration within the same lexical
-  /// DeclContext. These pointers form the linked list that is
-  /// traversed via DeclContext's decls_begin()/decls_end().
-  ///
-  /// The extra three bits are used for the ModuleOwnershipKind.
-  llvm::PointerIntPair<Decl *, 3, ModuleOwnershipKind> NextInContextAndBits;
-
 private:
   friend class DeclContext;
 
@@ -347,6 +339,13 @@ protected:
   LLVM_PREFERRED_TYPE(Linkage)
   mutable unsigned CacheValidAndLinkage : 3;
 
+  // TODO: ERICH: Does this have to be protected? The PointerIntPair was, but it
+  // isn't clear that is necessary.
+  /// Kind of ownership the declaration has, for visibility purposes. See
+  /// declaration of `ModuleOwnershipKind`.
+  LLVM_PREFERRED_TYPE(ModuleOwnershipKind)
+  unsigned ModuleOwnership : 3;
+
   /// Allocate memory for a deserialized declaration.
   ///
   /// This routine must be used to allocate memory for any declaration that is
@@ -390,12 +389,12 @@ public:
 
 protected:
   Decl(Kind DK, DeclContext *DC, SourceLocation L)
-      : NextInContextAndBits(nullptr, getModuleOwnershipKindForChildOf(DC)),
-        DeclCtx(DC), Loc(L), DeclKind(DK), InvalidDecl(false), HasAttrs(false),
+      : DeclCtx(DC), Loc(L), DeclKind(DK), InvalidDecl(false), HasAttrs(false),
         Implicit(false), Used(false), Referenced(false),
         TopLevelDeclInObjCContainer(false), Access(AS_none), FromASTFile(0),
         IdentifierNamespace(getIdentifierNamespaceForKind(DK)),
-        CacheValidAndLinkage(llvm::to_underlying(Linkage::Invalid)) {
+        CacheValidAndLinkage(llvm::to_underlying(Linkage::Invalid)),
+        ModuleOwnership(static_cast<unsigned>(getModuleOwnershipKindForChildOf(DC))) {
     if (StatisticsEnabled) add(DK);
   }
 
@@ -445,8 +444,9 @@ public:
   Kind getKind() const { return static_cast<Kind>(DeclKind); }
   const char *getDeclKindName() const;
 
-  Decl *getNextDeclInContext() { return NextInContextAndBits.getPointer(); }
-  const Decl *getNextDeclInContext() const {return NextInContextAndBits.getPointer();}
+  //TODO: ERICH: figure out how necessary these are? Can be implemented 'dumb-ly'
+  //Decl *getNextDeclInContext() { return NextInContextAndBits.getPointer(); }
+  //const Decl *getNextDeclInContext() const {return NextInContextAndBits.getPointer();}
 
   DeclContext *getDeclContext() {
     if (isInSemaDC())
@@ -867,7 +867,7 @@ public:
 
   /// Get the kind of module ownership for this declaration.
   ModuleOwnershipKind getModuleOwnershipKind() const {
-    return NextInContextAndBits.getInt();
+    return static_cast<ModuleOwnershipKind>(ModuleOwnership);
   }
 
   /// Set whether this declaration is hidden from name lookup.
@@ -876,7 +876,7 @@ public:
              MOK != ModuleOwnershipKind::Unowned && !isFromASTFile() &&
              !hasLocalOwningModuleStorage()) &&
            "no storage available for owning module for this declaration");
-    NextInContextAndBits.setInt(MOK);
+    ModuleOwnership = static_cast<unsigned>(MOK);
   }
 
   unsigned getIdentifierNamespace() const {
@@ -2071,19 +2071,21 @@ protected:
 
   /// FirstDecl - The first declaration stored within this declaration
   /// context.
-  mutable Decl *FirstDecl = nullptr;
+  ///mutable Decl *FirstDecl = nullptr;
 
   /// LastDecl - The last declaration stored within this declaration
   /// context. FIXME: We could probably cache this value somewhere
   /// outside of the DeclContext, to reduce the size of DeclContext by
   /// another pointer.
-  mutable Decl *LastDecl = nullptr;
+  ///mutable Decl *LastDecl = nullptr;
 
   /// Build up a chain of declarations.
   ///
   /// \returns the first/last pair of declarations.
-  static std::pair<Decl *, Decl *>
-  BuildDeclChain(ArrayRef<Decl*> Decls, bool FieldsAlreadyLoaded);
+  // TODO: ERICH: this ends up being just a filter if it doesn't need to update
+  // next decl.
+  //static std::pair<Decl *, Decl *>
+  //BuildDeclChain(ArrayRef<Decl*> Decls, bool FieldsAlreadyLoaded);
 
   DeclContext(Decl::Kind K);
 
@@ -2316,11 +2318,15 @@ public:
   /// for non-namespace contexts).
   void collectAllContexts(SmallVectorImpl<DeclContext *> &Contexts);
 
+  // TODO: ERICH: Remove?  Looks like folks depend on being able to do prefix
+  // increment on the iterators, and we cannot do that when using
+  // iterator_range, as that makes it an operator++ on an rvalue.
+
   /// decl_iterator - Iterates through the declarations stored
   /// within this context.
   class decl_iterator {
     /// Current - The current declaration.
-    Decl *Current = nullptr;
+    Decl **Current = nullptr;
 
   public:
     using value_type = Decl *;
@@ -2330,15 +2336,16 @@ public:
     using difference_type = std::ptrdiff_t;
 
     decl_iterator() = default;
-    explicit decl_iterator(Decl *C) : Current(C) {}
+    explicit decl_iterator(Decl **C) : Current(C) {}
 
-    reference operator*() const { return Current; }
+    reference operator*() const { return *Current; }
 
+    // TODO: ERICH: this doesn't make sense anymore?
     // This doesn't meet the iterator requirements, but it's convenient
-    value_type operator->() const { return Current; }
+    value_type operator->() const { return *Current; }
 
     decl_iterator& operator++() {
-      Current = Current->getNextDeclInContext();
+      ++Current;
       return *this;
     }
 
@@ -2357,13 +2364,21 @@ public:
     }
   };
 
+
+  // TODO: ERICH: Put this somewhere better? Rename?
+  using DeclCollection = llvm::SmallVector<Decl*>;
+  mutable DeclCollection OurDecls;
+
+//  using decl_iterator = DeclCollection::iterator;
   using decl_range = llvm::iterator_range<decl_iterator>;
+
 
   /// decls_begin/decls_end - Iterate over the declarations stored in
   /// this context.
   decl_range decls() const { return decl_range(decls_begin(), decls_end()); }
   decl_iterator decls_begin() const;
-  decl_iterator decls_end() const { return decl_iterator(); }
+  // TODO: ERICH: Do we need to do the 'load' decls thing here too?
+  decl_iterator decls_end() const;// { return OurDecls.end(); }
   bool decls_empty() const;
 
   /// noload_decls_begin/end - Iterate over the declarations stored in this
@@ -2372,26 +2387,30 @@ public:
   decl_range noload_decls() const {
     return decl_range(noload_decls_begin(), noload_decls_end());
   }
-  decl_iterator noload_decls_begin() const { return decl_iterator(FirstDecl); }
-  decl_iterator noload_decls_end() const { return decl_iterator(); }
+  decl_iterator noload_decls_begin() const { return decl_iterator(OurDecls.begin()); }
+  decl_iterator noload_decls_end() const { return decl_iterator(OurDecls.end()); }
 
   /// specific_decl_iterator - Iterates over a subrange of
   /// declarations stored in a DeclContext, providing only those that
   /// are of type SpecificDecl (or a class derived from it). This
   /// iterator is used, for example, to provide iteration over just
   /// the fields within a RecordDecl (with SpecificDecl = FieldDecl).
+  // TODO: ERICH: Could this just be a llvm_filter_range as well?
   template<typename SpecificDecl>
   class specific_decl_iterator {
     /// Current - The current, underlying declaration iterator, which
     /// will either be NULL or will point to a declaration of
     /// type SpecificDecl.
     DeclContext::decl_iterator Current;
+    // TODO: ERICH: This really likely needs to change.  Having this iterator
+    // have to keep around the extra pointer is unfortunate. Perhaps we can change all uses to use llvm_filtered_range?
+    DeclContext::decl_iterator End;
 
     /// SkipToNextDecl - Advances the current position up to the next
     /// declaration of type SpecificDecl that also meets the criteria
     /// required by Acceptable.
     void SkipToNextDecl() {
-      while (*Current && !isa<SpecificDecl>(*Current))
+      while (Current != End && !isa<SpecificDecl>(*Current))
         ++Current;
     }
 
@@ -2415,7 +2434,7 @@ public:
     /// of iterators. For example, if you want Objective-C instance
     /// methods, SpecificDecl will be ObjCMethodDecl and A will be
     /// &ObjCMethodDecl::isInstanceMethod.
-    explicit specific_decl_iterator(DeclContext::decl_iterator C) : Current(C) {
+    explicit specific_decl_iterator(DeclContext::decl_iterator C, DeclContext::decl_iterator E) : Current(C), End(E) {
       SkipToNextDecl();
     }
 
@@ -2462,12 +2481,14 @@ public:
     /// will either be NULL or will point to a declaration of
     /// type SpecificDecl.
     DeclContext::decl_iterator Current;
+    // TODO: ERICH: WHY is this not ok being a filtered-range?
+    DeclContext::decl_iterator End;
 
     /// SkipToNextDecl - Advances the current position up to the next
     /// declaration of type SpecificDecl that also meets the criteria
     /// required by Acceptable.
     void SkipToNextDecl() {
-      while (*Current &&
+      while (Current != End &&
              (!isa<SpecificDecl>(*Current) ||
               (Acceptable && !(cast<SpecificDecl>(*Current)->*Acceptable)())))
         ++Current;
@@ -2493,7 +2514,7 @@ public:
     /// of iterators. For example, if you want Objective-C instance
     /// methods, SpecificDecl will be ObjCMethodDecl and A will be
     /// &ObjCMethodDecl::isInstanceMethod.
-    explicit filtered_decl_iterator(DeclContext::decl_iterator C) : Current(C) {
+    explicit filtered_decl_iterator(DeclContext::decl_iterator C,DeclContext::decl_iterator E ) : Current(C), End(E) {
       SkipToNextDecl();
     }
 
@@ -2700,11 +2721,16 @@ public:
       DeclContextBits.NeedToReconcileExternalVisibleStorage = true;
   }
 
-  /// Determine whether the given declaration is stored in the list of
-  /// declarations lexically within this context.
+  // TODO: ERICH: Used in ASTReader.cpp
+  ///// Determine whether the given declaration is stored in the list of
+  ///// declarations lexically within this context.
   bool isDeclInLexicalTraversal(const Decl *D) const {
-    return D && (D->NextInContextAndBits.getPointer() || D == FirstDecl ||
-                 D == LastDecl);
+    // TODO: ERICH: Not sure exactly what is happening here? Previous impl seems
+    // to be checking that D is either not last in its declaration, or is this
+    // first or last decl.
+    return D && llvm::find(OurDecls, D) != OurDecls.end();
+    //return D && (D->NextInContextAndBits.getPointer() || D == FirstDecl ||
+    //             D == LastDecl);
   }
 
   void setUseQualifiedLookup(bool use = true) const {

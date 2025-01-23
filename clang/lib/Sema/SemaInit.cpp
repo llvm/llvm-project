@@ -2930,8 +2930,9 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
       ++FieldIndex;
     }
 
-    RecordDecl::field_iterator Field =
-        RecordDecl::field_iterator(DeclContext::decl_iterator(KnownField));
+    RecordDecl::field_iterator Field = llvm::find(RD->fields(), KnownField);
+    // TODO: ERICH: Used to be:
+        //RecordDecl::field_iterator(DeclContext::decl_iterator(KnownField));
 
     // All of the fields of a union are located at the same place in
     // the initializer list.

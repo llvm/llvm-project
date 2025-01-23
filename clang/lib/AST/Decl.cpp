@@ -5110,7 +5110,9 @@ RecordDecl::field_iterator RecordDecl::field_begin() const {
   // FIXME: Come up with a test case that breaks without definition.
   if (RecordDecl *D = getDefinition(); D && D != this)
     return D->field_begin();
-  return field_iterator(decl_iterator(FirstDecl));
+
+  return field_iterator(decls_begin(), decls_end());
+  //return field_iterator(decl_iterator(FirstDecl));
 }
 
 /// completeDefinition - Notes that the definition of this type is now
@@ -5141,8 +5143,19 @@ bool RecordDecl::isMsStruct(const ASTContext &C) const {
 }
 
 void RecordDecl::reorderDecls(const SmallVectorImpl<Decl *> &Decls) {
-  std::tie(FirstDecl, LastDecl) = DeclContext::BuildDeclChain(Decls, false);
-  LastDecl->NextInContextAndBits.setPointer(nullptr);
+  // std::tie(FirstDecl, LastDecl) = DeclContext::BuildDeclChain(Decls, false);
+  //  TODO: ERICH: This function could possibly be used to steal decls, but i
+  //  don't htink it is doing that, I think the purpose of it is to just have
+  //  current decls reordered. This could presumably have leaked/stolen decls,
+  //  but we'll assume nothing gets lost here.  I also wonder if the uses of
+  //  this could be replaced iwth some sort of std::sort here.
+  //  We could also try harder on the assert here to make sure this is the same
+  //  collection, just sorted differently.
+
+  assert(Decls.size() == OurDecls.size() && "Reordering a different set of decls?");
+  OurDecls.clear();
+  OurDecls.insert(OurDecls.begin(), Decls.begin(), Decls.end());
+  //LastDecl->NextInContextAndBits.setPointer(nullptr);
   setIsRandomized(true);
 }
 
@@ -5168,13 +5181,17 @@ void RecordDecl::LoadFieldsFromExternalStorage() const {
   if (Decls.empty())
     return;
 
-  auto [ExternalFirst, ExternalLast] =
-      BuildDeclChain(Decls,
-                     /*FieldsAlreadyLoaded=*/false);
-  ExternalLast->NextInContextAndBits.setPointer(FirstDecl);
-  FirstDecl = ExternalFirst;
-  if (!LastDecl)
-    LastDecl = ExternalLast;
+  // TODO: ERICH: does an insert from the beginning.  Also, the
+  // FieldsAlreadyLoaded removes the filter criteria, so this is just an
+  // 'insert'.
+  OurDecls.insert(OurDecls.begin(), Decls.begin(), Decls.end());
+  //auto [ExternalFirst, ExternalLast] =
+  //    BuildDeclChain(Decls,
+  //                   /*FieldsAlreadyLoaded=*/false);
+  //ExternalLast->NextInContextAndBits.setPointer(FirstDecl);
+  //FirstDecl = ExternalFirst;
+  //if (!LastDecl)
+  //  LastDecl = ExternalLast;
 }
 
 bool RecordDecl::mayInsertExtraPadding(bool EmitRemark) const {

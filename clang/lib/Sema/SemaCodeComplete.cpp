@@ -7001,8 +7001,8 @@ void SemaCodeCompletion::CodeCompleteNamespaceDecl(Scope *S) {
     // definition of each namespace.
     std::map<NamespaceDecl *, NamespaceDecl *> OrigToLatest;
     for (DeclContext::specific_decl_iterator<NamespaceDecl>
-             NS(Ctx->decls_begin()),
-         NSEnd(Ctx->decls_end());
+             NS(Ctx->decls_begin(), Ctx->decls_end()),
+         NSEnd(Ctx->decls_end(), Ctx->decls_end());
          NS != NSEnd; ++NS)
       OrigToLatest[NS->getFirstDecl()] = *NS;
 

@@ -666,12 +666,12 @@ public:
   /// Method begin iterator.  Iterates in the order the methods
   /// were declared.
   method_iterator method_begin() const {
-    return method_iterator(decls_begin());
+    return method_iterator(decls_begin(), decls_end());
   }
 
   /// Method past-the-end iterator.
   method_iterator method_end() const {
-    return method_iterator(decls_end());
+    return method_iterator(decls_end(), decls_end());
   }
 
   /// Iterator access to constructor members.
@@ -682,11 +682,11 @@ public:
   ctor_range ctors() const { return ctor_range(ctor_begin(), ctor_end()); }
 
   ctor_iterator ctor_begin() const {
-    return ctor_iterator(decls_begin());
+    return ctor_iterator(decls_begin(), decls_end());
   }
 
   ctor_iterator ctor_end() const {
-    return ctor_iterator(decls_end());
+    return ctor_iterator(decls_end(), decls_end());
   }
 
   /// An iterator over friend declarations.  All of these are defined
@@ -3006,7 +3006,7 @@ public:
       return getRBraceLoc();
     // No braces: get the end location of the (only) declaration in context
     // (if present).
-    return decls_empty() ? getLocation() : decls_begin()->getEndLoc();
+    return decls_empty() ? getLocation() : (*decls_begin())->getEndLoc();
   }
 
   SourceRange getSourceRange() const override LLVM_READONLY {

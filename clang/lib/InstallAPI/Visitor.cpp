@@ -695,7 +695,14 @@ bool InstallAPIVisitor::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
   using var_iter = CXXRecordDecl::specific_decl_iterator<VarDecl>;
   using var_range = iterator_range<var_iter>;
-  for (const auto *Var : var_range(D->decls())) {
+  for (const auto *D : /*var_range(D->decls_begin(), D->decls_end())*/
+
+      // TODO: ERICH: is this what we should be doing everywhere?
+      llvm::make_filter_range(D->decls(), llvm::IsaPred<VarDecl>)
+      ) {
+    const auto *Var = cast<VarDecl>(D);
+
+
     // Skip const static member variables.
     // \code
     // struct S {

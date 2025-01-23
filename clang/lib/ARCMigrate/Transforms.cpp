@@ -523,8 +523,8 @@ static void GCRewriteFinalize(MigrationPass &pass) {
 
   typedef DeclContext::specific_decl_iterator<ObjCImplementationDecl>
   impl_iterator;
-  for (impl_iterator I = impl_iterator(DC->decls_begin()),
-       E = impl_iterator(DC->decls_end()); I != E; ++I) {
+  for (impl_iterator I = impl_iterator(DC->decls_begin(), DC->decls_end()),
+       E = impl_iterator(DC->decls_end(), DC->decls_end()); I != E; ++I) {
     for (const auto *MD : I->instance_methods()) {
       if (!MD->hasBody())
         continue;
