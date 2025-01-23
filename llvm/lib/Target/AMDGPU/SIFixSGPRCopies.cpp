@@ -1106,6 +1106,7 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
 void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
   bool IsWave32 = MF.getSubtarget<GCNSubtarget>().isWave32();
   for (MachineBasicBlock &MBB : MF) {
+    SIInstrWorklist Worklist;
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
          ++I) {
       MachineInstr &MI = *I;
@@ -1131,6 +1132,34 @@ void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
         continue;
       }
       if (DstReg == AMDGPU::SCC) {
+        MachineBasicBlock::iterator J = std::next(I);
+        MachineBasicBlock::iterator E = MBB.end();
+        for (; J != E; ++J) {
+          if (J->definesRegister(DstReg, TRI))
+            break;
+          if (J->readsRegister(DstReg, TRI) &&
+              J->getOpcode() == AMDGPU::S_CSELECT_B32) {
+            Register SelectResult = J->getOperand(0).getReg();
+            if (MRI->hasOneUse(SelectResult)) {
+              MachineInstr *User = &*MRI->use_instr_begin(SelectResult);
+              if (User->isCopy()) {
+                const TargetRegisterClass *SrcRC =
+                    TRI->getRegClassForReg(*MRI, SelectResult);
+                const TargetRegisterClass *DstRC =
+                    TRI->getRegClassForOperandReg(*MRI, User->getOperand(0));
+                if (isSGPRToVGPRCopy(SrcRC, DstRC, *TRI)) {
+                  Worklist.insert(&*J);
+                }
+              }
+            }
+          }
+        }
+        if (!Worklist.empty()) {
+          TII->moveToVALU(Worklist, MDT);
+          I = std::next(I);
+          continue;
+        }
+
         unsigned Opcode = IsWave32 ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;
         Register Exec = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
         Register Tmp = MRI->createVirtualRegister(TRI->getBoolRC());
@@ -1139,6 +1168,7 @@ void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
                 .addReg(Tmp, getDefRegState(true))
                 .addReg(SrcReg)
                 .addReg(Exec);
+
         MI.eraseFromParent();
       }
     }
