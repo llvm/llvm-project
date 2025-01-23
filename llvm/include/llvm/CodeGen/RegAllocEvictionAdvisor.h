@@ -20,6 +20,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCRegister.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class AllocationOrder;
@@ -279,7 +280,7 @@ RegAllocEvictionAdvisorAnalysisLegacy *createReleaseModeAdvisorAnalysisLegacy();
 RegAllocEvictionAdvisorAnalysisLegacy *
 createDevelopmentModeAdvisorAnalysisLegacy();
 
-RegAllocEvictionAdvisorProvider *
+LLVM_ATTRIBUTE_RETURNS_NONNULL RegAllocEvictionAdvisorProvider *
 createReleaseModeAdvisorProvider(LLVMContext &Ctx);
 
 RegAllocEvictionAdvisorProvider *

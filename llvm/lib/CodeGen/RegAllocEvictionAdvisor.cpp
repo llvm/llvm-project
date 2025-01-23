@@ -122,20 +122,20 @@ void RegAllocEvictionAdvisorAnalysis::initializeProvider(
   case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Default:
     Provider.reset(
         new DefaultEvictionAdvisorProvider(/*NotAsRequested=*/false, Ctx));
-    break;
+    return;
   case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development:
 #if defined(LLVM_HAVE_TFLITE)
     Provider.reset(createDevelopmentModeAdvisorProvider(Ctx));
-#endif
-    break;
-  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Release:
-    Provider.reset(createReleaseModeAdvisorProvider(Ctx));
-    break;
-  }
-
-  if (!Provider)
+#else
     Provider.reset(
         new DefaultEvictionAdvisorProvider(/*NotAsRequested=*/true, Ctx));
+#endif
+    assert(Provider && "EvictionAdvisorProvider cannot be null");
+    return;
+  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Release:
+    Provider.reset(createReleaseModeAdvisorProvider(Ctx));
+    return;
+  }
 }
 
 RegAllocEvictionAdvisorAnalysis::Result
@@ -151,20 +151,21 @@ Pass *llvm::callDefaultCtor<RegAllocEvictionAdvisorAnalysisLegacy>() {
   Pass *Ret = nullptr;
   switch (Mode) {
   case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Default:
-    Ret = new DefaultEvictionAdvisorAnalysisLegacy(/*NotAsRequested*/ false);
+    return new DefaultEvictionAdvisorAnalysisLegacy(/*NotAsRequested*/ false);
+  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Release:
+    Ret = createReleaseModeAdvisorAnalysisLegacy();
     break;
   case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development:
 #if defined(LLVM_HAVE_TFLITE)
     Ret = createDevelopmentModeAdvisorAnalysisLegacy();
 #endif
     break;
-  case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Release:
-    Ret = createReleaseModeAdvisorAnalysisLegacy();
-    break;
   }
-  if (Ret)
-    return Ret;
-  return new DefaultEvictionAdvisorAnalysisLegacy(/*NotAsRequested*/ true);
+
+  // release or development mode advisor may not be supported
+  if (!Ret)
+    Ret = new DefaultEvictionAdvisorAnalysisLegacy(/*NotAsRequested*/ true);
+  return Ret;
 }
 
 StringRef RegAllocEvictionAdvisorAnalysisLegacy::getPassName() const {
