@@ -1368,6 +1368,16 @@ public:
   /// VGPRs
   unsigned getOccupancyWithNumVGPRs(unsigned VGPRs) const;
 
+  /// Returns the necessary reduction in number of VGPRs from using \p VGPRs
+  /// VGPRs to increase occupancy by 1. Returns 0 when using \p VGPRs VGPRs
+  /// already results in maximum occupancy.
+  unsigned getNumVGPRsToIncreaseOccupancy(unsigned VGPRs) const;
+
+  /// Returns the necessary reduction in number of VGPRs from using \p VGPRs
+  /// VGPRs to eliminate spilling. Returns 0 when using \p VGPRs VGPRs does not
+  /// result in spilling.
+  unsigned getNumVGPRsToEliminateSpilling(unsigned VGPRs) const;
+
   /// Return occupancy for the given function. Used LDS and a number of
   /// registers if provided.
   /// Note, occupancy can be affected by the scratch allocation as well, but
