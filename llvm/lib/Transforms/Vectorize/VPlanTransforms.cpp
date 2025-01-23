@@ -1694,8 +1694,11 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
       .Case<VPInstruction>([&](VPInstruction *VPI) -> VPRecipeBase * {
         if (VPI->getOpcode() == VPInstruction::FirstOrderRecurrenceSplice) {
           assert(PrevEVL && "Fixed-order recurrences require previous EVL");
+          VPValue *MinusOneVPV = VPI->getParent()->getPlan()->getOrAddLiveIn(
+              ConstantInt::getSigned(Type::getInt32Ty(TypeInfo.getContext()),
+                                     -1));
           SmallVector<VPValue *> Ops(VPI->operands());
-          Ops.append({&AllOneMask, PrevEVL, &EVL});
+          Ops.append({MinusOneVPV, &AllOneMask, PrevEVL, &EVL});
           return new VPWidenIntrinsicRecipe(Intrinsic::experimental_vp_splice,
                                             Ops, TypeInfo.inferScalarType(VPI),
                                             VPI->getDebugLoc());
