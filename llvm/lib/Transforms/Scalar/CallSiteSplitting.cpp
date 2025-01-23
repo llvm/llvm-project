@@ -218,7 +218,7 @@ static bool canSplitCallSite(CallBase &CB, TargetTransformInfo &TTI) {
   return true;
 }
 
-static Instruction *cloneInstForMustTail(Instruction *I, Instruction *Before,
+static Instruction *cloneInstForMustTail(Instruction *I, BasicBlock::iterator Before,
                                          Value *V) {
   Instruction *Copy = I->clone();
   Copy->setName(I->getName());
@@ -251,8 +251,8 @@ static void copyMustTailReturn(BasicBlock *SplitBB, Instruction *CI,
   Instruction *TI = SplitBB->getTerminator();
   Value *V = NewCI;
   if (BCI)
-    V = cloneInstForMustTail(BCI, TI, V);
-  cloneInstForMustTail(RI, TI, IsVoid ? nullptr : V);
+    V = cloneInstForMustTail(BCI, TI->getIterator(), V);
+  cloneInstForMustTail(RI, TI->getIterator(), IsVoid ? nullptr : V);
 
   // FIXME: remove TI here, `DuplicateInstructionsInSplitBetween` has a bug
   // that prevents doing this now.

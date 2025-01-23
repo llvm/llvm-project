@@ -836,7 +836,7 @@ BasicBlock *llvm::ehAwareSplitEdge(BasicBlock *BB, BasicBlock *Succ,
                                    const CriticalEdgeSplittingOptions &Options,
                                    const Twine &BBName) {
 
-  auto *PadInst = Succ->getFirstNonPHI();
+  auto PadInst = Succ->getFirstNonPHIIt();
   if (!LandingPadReplacement && !PadInst->isEHPad())
     return SplitEdge(BB, Succ, Options.DT, Options.LI, Options.MSSAU, BBName);
 
@@ -981,7 +981,7 @@ BasicBlock *llvm::ehAwareSplitEdge(BasicBlock *BB, BasicBlock *Succ,
 void llvm::createPHIsForSplitLoopExit(ArrayRef<BasicBlock *> Preds,
                                       BasicBlock *SplitBB, BasicBlock *DestBB) {
   // SplitBB shouldn't have anything non-trivial in it yet.
-  assert((SplitBB->getFirstNonPHI() == SplitBB->getTerminator() ||
+  assert((&*SplitBB->getFirstNonPHIIt() == SplitBB->getTerminator() ||
           SplitBB->isLandingPad()) &&
          "SplitBB has non-PHI nodes!");
 
@@ -1450,7 +1450,7 @@ static void SplitLandingPadPredecessorsImpl(
 
   // The new block unconditionally branches to the old block.
   BranchInst *BI1 = BranchInst::Create(OrigBB, NewBB1);
-  BI1->setDebugLoc(OrigBB->getFirstNonPHI()->getDebugLoc());
+  BI1->setDebugLoc(OrigBB->getFirstNonPHIIt()->getDebugLoc());
 
   // Move the edges from Preds to point to NewBB1 instead of OrigBB.
   for (BasicBlock *Pred : Preds) {
@@ -1491,7 +1491,7 @@ static void SplitLandingPadPredecessorsImpl(
 
     // The new block unconditionally branches to the old block.
     BranchInst *BI2 = BranchInst::Create(OrigBB, NewBB2);
-    BI2->setDebugLoc(OrigBB->getFirstNonPHI()->getDebugLoc());
+    BI2->setDebugLoc(OrigBB->getFirstNonPHIIt()->getDebugLoc());
 
     // Move the remaining edges from OrigBB to point to NewBB2.
     for (BasicBlock *NewBB2Pred : NewBB2Preds)

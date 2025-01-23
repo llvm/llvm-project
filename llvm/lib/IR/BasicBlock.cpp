@@ -543,7 +543,7 @@ void BasicBlock::removePredecessor(BasicBlock *Pred,
 }
 
 bool BasicBlock::canSplitPredecessors() const {
-  const Instruction *FirstNonPHI = getFirstNonPHI();
+  const_iterator FirstNonPHI = getFirstNonPHIIt();
   if (isa<LandingPadInst>(FirstNonPHI))
     return true;
   // This is perhaps a little conservative because constructs like
@@ -675,11 +675,11 @@ void BasicBlock::replaceSuccessorsPhiUsesWith(BasicBlock *New) {
 }
 
 bool BasicBlock::isLandingPad() const {
-  return isa<LandingPadInst>(getFirstNonPHI());
+  return isa<LandingPadInst>(getFirstNonPHIIt());
 }
 
 const LandingPadInst *BasicBlock::getLandingPadInst() const {
-  return dyn_cast<LandingPadInst>(getFirstNonPHI());
+  return dyn_cast<LandingPadInst>(getFirstNonPHIIt());
 }
 
 std::optional<uint64_t> BasicBlock::getIrrLoopHeaderWeight() const {
