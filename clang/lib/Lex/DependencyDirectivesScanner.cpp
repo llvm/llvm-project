@@ -497,21 +497,32 @@ bool Scanner::lexModuleDirectiveBody(DirectiveKind Kind, const char *&First,
   const char *DirectiveLoc = Input.data() + CurDirToks.front().Offset;
   for (;;) {
     const dependency_directives_scan::Token &Tok = lexToken(First, End);
-    if (Tok.is(tok::eof))
+    if (Tok.isOneOf(tok::eof, tok::eod))
       return reportError(
           DirectiveLoc,
           diag::err_dep_source_scanner_missing_semi_after_at_import);
     if (Tok.is(tok::semi))
       break;
   }
+
+  // Skip extra tokens after semi in C++20 Modules directive.
+  bool IsCXXModules = Kind == DirectiveKind::cxx_export_import_decl ||
+                      Kind == DirectiveKind::cxx_export_module_decl ||
+                      Kind == DirectiveKind::cxx_import_decl ||
+                      Kind == DirectiveKind::cxx_module_decl;
+  if (IsCXXModules)
+    lexPPDirectiveBody(First, End);
   pushDirective(Kind);
   skipWhitespace(First, End);
   if (First == End)
     return false;
-  if (!isVerticalWhitespace(*First))
-    return reportError(
-        DirectiveLoc, diag::err_dep_source_scanner_unexpected_tokens_at_import);
-  skipNewline(First, End);
+  if (!IsCXXModules) {
+    if (!isVerticalWhitespace(*First))
+      return reportError(
+          DirectiveLoc,
+          diag::err_dep_source_scanner_unexpected_tokens_at_import);
+    skipNewline(First, End);
+  }
   return false;
 }
 
@@ -846,8 +857,8 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
   if (*First == '@')
     return lexAt(First, End);
 
-  if (*First == 'i' || *First == 'e' || *First == 'm')
-    return lexModule(First, End);
+  // if (!LangOpts.CPlusPlusModules && (*First == 'i' || *First == 'e' || *First == 'm'))
+  //   return lexModule(First, End);
 
   if (*First == '_') {
     if (isNextIdentifierOrSkipLine("_Pragma", First, End))
@@ -860,7 +871,8 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
   TheLexer.setParsingPreprocessorDirective(true);
   auto ScEx2 = make_scope_exit(
       [&]() { TheLexer.setParsingPreprocessorDirective(false); });
-
+   if (*First == 'i' || *First == 'e' || *First == 'm')
+    return lexModule(First, End);
   // Lex '#'.
   const dependency_directives_scan::Token &HashTok = lexToken(First, End);
   if (HashTok.is(tok::hashhash)) {
