@@ -709,8 +709,7 @@ static char *sys_error(int err) {
   */
 
 #if (defined(__GLIBC__) && defined(_GNU_SOURCE)) ||                            \
-    (defined(__BIONIC__) && defined(_GNU_SOURCE) &&                            \
-     __ANDROID_API__ >= __ANDROID_API_M__)
+    (defined(__BIONIC__) && defined(_GNU_SOURCE))
   // GNU version of strerror_r.
 
   char buffer[2048];
