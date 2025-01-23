@@ -61,13 +61,18 @@ public:
   };
   enum Kind {
 #define PARSED_ATTR(NAME) AT_##NAME,
-#include "clang/Sema/AttrParsedAttrList.inc"
+#include "clang/Basic/AttrParsedAttrList.inc"
 #undef PARSED_ATTR
     NoSemaHandlerAttribute,
     IgnoredAttribute,
     UnknownAttribute,
   };
   enum class Scope { NONE, CLANG, GNU, MSVC, OMP, HLSL, GSL, RISCV, UNKNOWN };
+  enum class AttrArgsInfo {
+    None,
+    Optional,
+    Required,
+  };
 
 private:
   const IdentifierInfo *AttrName = nullptr;
@@ -242,6 +247,7 @@ public:
                             const IdentifierInfo *Scope, Syntax SyntaxUsed);
 
   bool isUnknownScopeName() const;
+  static AttrArgsInfo getCXX11AttrArgsInfo(const IdentifierInfo *Name);
 
 private:
   /// Get an index into the attribute spelling list

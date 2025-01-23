@@ -108,11 +108,7 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
         }
       }
 
-      auto padSizeTy = RankedTensorType::get({10}, rewriter.getI64Type());
-      auto padSize =
-          DenseIntElementsAttr::get(padSizeTy, ArrayRef<int64_t>(pad));
-      Value padSizeVal =
-          rewriter.create<tosa::ConstOp>(op->getLoc(), padSizeTy, padSize);
+      Value padSizeVal = getTosaConstShape(rewriter, op->getLoc(), pad);
 
       auto padTy = RankedTensorType::get({}, inputETy);
       auto padAttr = DenseElementsAttr::get(padTy, zeroAttr);

@@ -238,6 +238,7 @@ private:
   int fd = -1;
 };
 
+#if !SANITIZER_APPLE
 TEST_F(RtsanOpenedMmapTest, MadviseDiesWhenRealtime) {
   auto Func = [this]() { madvise(GetAddr(), GetSize(), MADV_NORMAL); };
   ExpectRealtimeDeath(Func, "madvise");
@@ -245,10 +246,13 @@ TEST_F(RtsanOpenedMmapTest, MadviseDiesWhenRealtime) {
 }
 
 TEST_F(RtsanOpenedMmapTest, PosixMadviseDiesWhenRealtime) {
-  auto Func = [this]() { posix_madvise(GetAddr(), GetSize(), MADV_NORMAL); };
+  auto Func = [this]() {
+    posix_madvise(GetAddr(), GetSize(), POSIX_MADV_NORMAL);
+  };
   ExpectRealtimeDeath(Func, "posix_madvise");
   ExpectNonRealtimeSurvival(Func);
 }
+#endif
 
 TEST_F(RtsanOpenedMmapTest, MprotectDiesWhenRealtime) {
   auto Func = [this]() { mprotect(GetAddr(), GetSize(), PROT_READ); };
@@ -1278,6 +1282,28 @@ TEST(TestRtsanInterceptors, GetpeernameOnASocketDiesWhenRealtime) {
   socklen_t len{};
   auto Func = [&]() { getpeername(0, &addr, &len); };
   ExpectRealtimeDeath(Func, "getpeername");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
+#if SANITIZER_INTERCEPT_GETSOCKOPT
+TEST(TestRtsanInterceptors, GetsockoptOnASocketDiesWhenRealtime) {
+  int val = 0;
+  socklen_t len = static_cast<socklen_t>(sizeof(val));
+  auto Func = [&val, &len]() {
+    getsockopt(0, SOL_SOCKET, SO_REUSEADDR, &val, &len);
+  };
+  ExpectRealtimeDeath(Func, "getsockopt");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, SetsockoptOnASocketDiesWhenRealtime) {
+  int val = 0;
+  socklen_t len = static_cast<socklen_t>(sizeof(val));
+  auto Func = [&val, &len]() {
+    setsockopt(0, SOL_SOCKET, SO_REUSEADDR, &val, len);
+  };
+  ExpectRealtimeDeath(Func, "setsockopt");
   ExpectNonRealtimeSurvival(Func);
 }
 #endif

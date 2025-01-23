@@ -104,7 +104,7 @@ add_fp_unittest(
   SRCS
     sinf16_test.cpp
   DEPENDS
-    libc.src.math.sinf16  
+    libc.src.math.sinf16
 )
 
 add_fp_unittest(
@@ -198,7 +198,7 @@ add_fp_unittest(
   SRCS
     tanf16_test.cpp
   DEPENDS
-    libc.src.math.tanf16  
+    libc.src.math.tanf16
 )
 
 add_fp_unittest(

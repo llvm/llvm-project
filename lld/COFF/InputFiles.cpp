@@ -105,6 +105,18 @@ static bool ignoredSymbolName(StringRef name) {
   return name == "@feat.00" || name == "@comp.id";
 }
 
+static coff_symbol_generic *cloneSymbol(COFFSymbolRef sym) {
+  if (sym.isBigObj()) {
+    auto *copy = make<coff_symbol32>(
+        *reinterpret_cast<const coff_symbol32 *>(sym.getRawPtr()));
+    return reinterpret_cast<coff_symbol_generic *>(copy);
+  } else {
+    auto *copy = make<coff_symbol16>(
+        *reinterpret_cast<const coff_symbol16 *>(sym.getRawPtr()));
+    return reinterpret_cast<coff_symbol_generic *>(copy);
+  }
+}
+
 ArchiveFile::ArchiveFile(COFFLinkerContext &ctx, MemoryBufferRef m)
     : InputFile(ctx.symtab, ArchiveKind, m) {}
 
@@ -458,9 +470,16 @@ Symbol *ObjFile::createRegular(COFFSymbolRef sym) {
       return nullptr;
     return symtab.addUndefined(name, this, false);
   }
-  if (sc)
+  if (sc) {
+    const coff_symbol_generic *symGen = sym.getGeneric();
+    if (sym.isSection()) {
+      auto *customSymGen = cloneSymbol(sym);
+      customSymGen->Value = 0;
+      symGen = customSymGen;
+    }
     return make<DefinedRegular>(this, /*Name*/ "", /*IsCOMDAT*/ false,
-                                /*IsExternal*/ false, sym.getGeneric(), sc);
+                                /*IsExternal*/ false, symGen, sc);
+  }
   return nullptr;
 }
 
@@ -755,15 +774,23 @@ std::optional<Symbol *> ObjFile::createDefined(
     memset(hdr, 0, sizeof(*hdr));
     strncpy(hdr->Name, name.data(),
             std::min(name.size(), (size_t)COFF::NameSize));
-    // We have no idea what characteristics should be assumed here; pick
-    // a default. This matches what is used for .idata sections in the regular
-    // object files in import libraries.
-    hdr->Characteristics = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ |
-                           IMAGE_SCN_MEM_WRITE | IMAGE_SCN_ALIGN_4BYTES;
+    // The Value field in a section symbol may contain the characteristics,
+    // or it may be zero, where we make something up (that matches what is
+    // used in .idata sections in the regular object files in import libraries).
+    if (sym.getValue())
+      hdr->Characteristics = sym.getValue() | IMAGE_SCN_ALIGN_4BYTES;
+    else
+      hdr->Characteristics = IMAGE_SCN_CNT_INITIALIZED_DATA |
+                             IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE |
+                             IMAGE_SCN_ALIGN_4BYTES;
     auto *sc = make<SectionChunk>(this, hdr);
     chunks.push_back(sc);
+
+    auto *symGen = cloneSymbol(sym);
+    // Ignore the Value offset of these symbols, as it may be a bitmask.
+    symGen->Value = 0;
     return make<DefinedRegular>(this, /*name=*/"", /*isCOMDAT=*/false,
-                                /*isExternal=*/false, sym.getGeneric(), sc);
+                                /*isExternal=*/false, symGen, sc);
   }
 
   if (llvm::COFF::isReservedSectionNumber(sectionNumber))

@@ -253,7 +253,7 @@ linked in by forwarding the static library to the device-side link job.
 Extensions
 ----------
 
-The opcode is a 32-bit integer that must be unique to the requested operation. 
-All opcodes used by ``libc`` internally have the character ``c`` in the most 
+The opcode is a 32-bit integer that must be unique to the requested operation.
+All opcodes used by ``libc`` internally have the character ``c`` in the most
 significant byte. Any other opcode is available for use outside of the ``libc``
 implementation.

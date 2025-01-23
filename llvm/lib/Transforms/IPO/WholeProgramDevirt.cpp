@@ -1225,8 +1225,9 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
       // perform a debug trap.
       if (DevirtCheckMode == WPDCheckMode::Trap) {
         auto *Cond = Builder.CreateICmpNE(CB.getCalledOperand(), Callee);
-        Instruction *ThenTerm =
-            SplitBlockAndInsertIfThen(Cond, &CB, /*Unreachable=*/false);
+        Instruction *ThenTerm = SplitBlockAndInsertIfThen(
+            Cond, &CB, /*Unreachable=*/false,
+            MDBuilder(M.getContext()).createUnlikelyBranchWeights());
         Builder.SetInsertPoint(ThenTerm);
         Function *TrapFn =
             Intrinsic::getOrInsertDeclaration(&M, Intrinsic::debugtrap);
@@ -1529,8 +1530,6 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
       FunctionType *NewFT =
           FunctionType::get(CB.getFunctionType()->getReturnType(), NewArgs,
                             CB.getFunctionType()->isVarArg());
-      PointerType *NewFTPtr = PointerType::getUnqual(NewFT);
-
       IRBuilder<> IRB(&CB);
       std::vector<Value *> Args;
       Args.push_back(VCallSite.VTable);
@@ -1538,11 +1537,11 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
 
       CallBase *NewCS = nullptr;
       if (isa<CallInst>(CB))
-        NewCS = IRB.CreateCall(NewFT, IRB.CreateBitCast(JT, NewFTPtr), Args);
+        NewCS = IRB.CreateCall(NewFT, JT, Args);
       else
-        NewCS = IRB.CreateInvoke(NewFT, IRB.CreateBitCast(JT, NewFTPtr),
-                                 cast<InvokeInst>(CB).getNormalDest(),
-                                 cast<InvokeInst>(CB).getUnwindDest(), Args);
+        NewCS =
+            IRB.CreateInvoke(NewFT, JT, cast<InvokeInst>(CB).getNormalDest(),
+                             cast<InvokeInst>(CB).getUnwindDest(), Args);
       NewCS->setCallingConv(CB.getCallingConv());
 
       AttributeList Attrs = CB.getAttributes();

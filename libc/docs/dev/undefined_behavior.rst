@@ -78,8 +78,8 @@ POSIX.1 leaves that when the name of a shared memory object does not begin with 
 Handling of NULL arguments to the 's' format specifier
 ------------------------------------------------------
 The C standard does not specify behavior for ``printf("%s", NULL)``. We will
-print the string literal ``(null)`` unless using the 
-``LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS`` option described in :ref:`printf 
+print the string literal ``(null)`` unless using the
+``LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS`` option described in :ref:`printf
 behavior<printf_behavior>`.
 
 Unknown Math Rounding Direction

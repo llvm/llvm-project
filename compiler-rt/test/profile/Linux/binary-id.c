@@ -62,6 +62,8 @@ int main() {
 // BINARY-ID-RAW-PROF-NEXT: Total functions: 3
 // BINARY-ID-RAW-PROF-NEXT: Maximum function count: 1
 // BINARY-ID-RAW-PROF-NEXT: Maximum internal block count: 0
+// BINARY-ID-RAW-PROF-NEXT: Total number of blocks: 3
+// BINARY-ID-RAW-PROF-NEXT: Total count: 3
 // BINARY-ID-RAW-PROF-NEXT: Binary IDs:
 // BINARY-ID-RAW-PROF-NEXT: {{[0-9a-f]+}}
 
@@ -69,6 +71,8 @@ int main() {
 // BINARY-ID-MERGE-PROF-NEXT: Total functions: 3
 // BINARY-ID-MERGE-PROF-NEXT: Maximum function count: 3
 // BINARY-ID-MERGE-PROF-NEXT: Maximum internal block count: 0
+// BINARY-ID-MERGE-PROF-NEXT: Total number of blocks: 3
+// BINARY-ID-MERGE-PROF-NEXT: Total count: 9
 // BINARY-ID-MERGE-PROF-NEXT: Binary IDs:
 // BINARY-ID-MERGE-PROF-NEXT: {{[0-9a-f]+}}
 
@@ -76,6 +80,8 @@ int main() {
 // BINARY-ID-INDEXED-PROF-NEXT: Total functions: 3
 // BINARY-ID-INDEXED-PROF-NEXT: Maximum function count: 3
 // BINARY-ID-INDEXED-PROF-NEXT: Maximum internal block count: 0
+// BINARY-ID-INDEXED-PROF-NEXT: Total number of blocks: 3
+// BINARY-ID-INDEXED-PROF-NEXT: Total count: 9
 // BINARY-ID-INDEXED-PROF-NEXT: Binary IDs:
 // BINARY-ID-INDEXED-PROF-NEXT: {{[0-9a-f]+}}
 
@@ -83,6 +89,8 @@ int main() {
 // BINARY-ID-SHARE-RAW-PROF-NEXT: Total functions: 3
 // BINARY-ID-SHARE-RAW-PROF-NEXT: Maximum function count: 1
 // BINARY-ID-SHARE-RAW-PROF-NEXT: Maximum internal block count: 0
+// BINARY-ID-SHARE-RAW-PROF-NEXT: Total number of blocks: 3
+// BINARY-ID-SHARE-RAW-PROF-NEXT: Total count: 3
 // BINARY-ID-SHARE-RAW-PROF-NEXT: Binary IDs:
 // BINARY-ID-SHARE-RAW-PROF-NEXT: {{[0-9a-f]+}}
 // BINARY-ID-SHARE-RAW-PROF-NEXT: {{[0-9a-f]+}}
@@ -92,6 +100,8 @@ int main() {
 // BINARY-ID-SHARE-INDEXED-PROF-NEXT: Total functions: 3
 // BINARY-ID-SHARE-INDEXED-PROF-NEXT: Maximum function count: 1
 // BINARY-ID-SHARE-INDEXED-PROF-NEXT: Maximum internal block count: 0
+// BINARY-ID-SHARE-INDEXED-PROF-NEXT: Total number of blocks: 3
+// BINARY-ID-SHARE-INDEXED-PROF-NEXT: Total count: 3
 // BINARY-ID-SHARE-INDEXED-PROF-NEXT: Binary IDs:
 // BINARY-ID-SHARE-INDEXED-PROF-NEXT: {{[0-9a-f]+}}
 // BINARY-ID-SHARE-INDEXED-PROF-NEXT: {{[0-9a-f]+}}

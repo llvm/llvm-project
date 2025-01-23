@@ -51,8 +51,8 @@ class AArch64LinuxMTEMemoryTagFaultsTestCase(TestBase):
             "continue",
             patterns=[
                 "\* thread #1, name = 'a.out', stop reason = signal SIGSEGV: "
-                "sync tag check fault \(fault address: 0x9[0-9A-Fa-f]+11\ "
-                "logical tag: 0x9 allocation tag: 0xa\)"
+                "sync tag check fault \(fault address=0x9[0-9A-Fa-f]+11\ "
+                "logical tag=0x9 allocation tag=0xa\)"
             ],
         )
 

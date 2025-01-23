@@ -133,15 +133,16 @@ def get_op_results_or_values(
 def get_op_result_or_op_results(
     op: _Union[_cext.ir.OpView, _cext.ir.Operation],
 ) -> _Union[_cext.ir.Operation, _cext.ir.OpResult, _Sequence[_cext.ir.OpResult]]:
-    if isinstance(op, _cext.ir.OpView):
-        op = op.operation
-    return (
-        list(get_op_results_or_values(op))
-        if len(op.results) > 1
-        else get_op_result_or_value(op)
-        if len(op.results) > 0
-        else op
-    )
+    results = op.results
+    num_results = len(results)
+    if num_results == 1:
+        return results[0]
+    elif num_results > 1:
+        return results
+    elif isinstance(op, _cext.ir.OpView):
+        return op.operation
+    else:
+        return op
 
 ResultValueTypeTuple = _cext.ir.Operation, _cext.ir.OpView, _cext.ir.Value
 ResultValueT = _Union[ResultValueTypeTuple]

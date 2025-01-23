@@ -1156,7 +1156,7 @@ visit(_Visitor&& __visitor, _Vs&&... __vs);
 #    endif
 
 template <class... _Types>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_DECLSPEC_EMPTY_BASES variant
+class _LIBCPP_TEMPLATE_VIS _LIBCPP_DECLSPEC_EMPTY_BASES _LIBCPP_NO_SPECIALIZATIONS variant
     : private __sfinae_ctor_base< __all<is_copy_constructible_v<_Types>...>::value,
                                   __all<is_move_constructible_v<_Types>...>::value>,
       private __sfinae_assign_base<

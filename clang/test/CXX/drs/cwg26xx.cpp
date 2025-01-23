@@ -132,27 +132,18 @@ struct E {
 #endif
 } // namespace cwg2627
 
-namespace cwg2628 { // cwg2628: no
-                   // this was reverted for the 16.x release
-                   // due to regressions, see the issue for more details:
-                   // https://github.com/llvm/llvm-project/issues/60777
+namespace cwg2628 { // cwg2628: 20
 #if __cplusplus >= 202002L
 template <bool A = false, bool B = false>
 struct foo {
-  // The expected notes below should be removed when cwg2628 is fully implemented again
-  constexpr foo() requires (!A && !B) = delete; // #cwg2628-ctor-1
-  constexpr foo() requires (A || B) = delete; //  #cwg2628-ctor-2
+  constexpr foo() requires (!A && !B) = delete; // #cwg2628-ctor
+  constexpr foo() requires (A || B) = delete;
 };
 
 void f() {
-  // The FIXME's below should be the expected errors when cwg2628 is
-  // fully implemented again.
   foo fooable; // #cwg2628-fooable
-  // since-cxx20-error@-1 {{ambiguous deduction for template arguments of 'foo'}}
-  //   since-cxx20-note@#cwg2628-ctor-1 {{candidate function [with A = false, B = false]}}
-  //   since-cxx20-note@#cwg2628-ctor-2 {{candidate function [with A = false, B = false]}}
-  // FIXME-since-cxx20-error@#cwg2628-fooable {{call to deleted}} 
-  //   FIXME-since-cxx20-note@#cwg2628-ctor {{marked deleted here}} 
+  // since-cxx20-error@#cwg2628-fooable {{call to deleted}} 
+  //   since-cxx20-note@#cwg2628-ctor {{marked deleted here}} 
 }
 #endif
 } // namespace cwg2628

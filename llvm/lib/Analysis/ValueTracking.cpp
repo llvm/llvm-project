@@ -592,6 +592,36 @@ static bool cmpExcludesZero(CmpInst::Predicate Pred, const Value *RHS) {
   return true;
 }
 
+static void breakSelfRecursivePHI(const Use *U, const PHINode *PHI,
+                                  Value *&ValOut, Instruction *&CtxIOut) {
+  ValOut = U->get();
+  if (ValOut == PHI)
+    return;
+  CtxIOut = PHI->getIncomingBlock(*U)->getTerminator();
+  Value *V;
+  // If the Use is a select of this phi, compute analysis on other arm to break
+  // recursion.
+  // TODO: Min/Max
+  if (match(ValOut, m_Select(m_Value(), m_Specific(PHI), m_Value(V))) ||
+      match(ValOut, m_Select(m_Value(), m_Value(V), m_Specific(PHI))))
+    ValOut = V;
+
+  // Same for select, if this phi is 2-operand phi, compute analysis on other
+  // incoming value to break recursion.
+  // TODO: We could handle any number of incoming edges as long as we only have
+  // two unique values.
+  else if (auto *IncPhi = dyn_cast<PHINode>(ValOut);
+           IncPhi && IncPhi->getNumIncomingValues() == 2) {
+    for (int Idx = 0; Idx < 2; ++Idx) {
+      if (IncPhi->getIncomingValue(Idx) == PHI) {
+        ValOut = IncPhi->getIncomingValue(1 - Idx);
+        CtxIOut = IncPhi->getIncomingBlock(1 - Idx)->getTerminator();
+        break;
+      }
+    }
+  }
+}
+
 static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
   // Use of assumptions is context-sensitive. If we don't have a context, we
   // cannot use them!
@@ -1641,25 +1671,19 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
       Known.Zero.setAllBits();
       Known.One.setAllBits();
-      for (unsigned u = 0, e = P->getNumIncomingValues(); u < e; ++u) {
-        Value *IncValue = P->getIncomingValue(u);
+      for (const Use &U : P->operands()) {
+        Value *IncValue;
+        Instruction *CxtI;
+        breakSelfRecursivePHI(&U, P, IncValue, CxtI);
         // Skip direct self references.
-        if (IncValue == P) continue;
-
-        // If the Use is a select of this phi, use the knownbit of the other
-        // operand to break the recursion.
-        if (auto *SI = dyn_cast<SelectInst>(IncValue)) {
-          if (SI->getTrueValue() == P || SI->getFalseValue() == P)
-            IncValue = SI->getTrueValue() == P ? SI->getFalseValue()
-                                               : SI->getTrueValue();
-        }
+        if (IncValue == P)
+          continue;
 
         // Change the context instruction to the "edge" that flows into the
         // phi. This is important because that is where the value is actually
         // "evaluated" even though it is used later somewhere else. (see also
         // D69571).
-        SimplifyQuery RecQ = Q.getWithoutCondContext();
-        RecQ.CxtI = P->getIncomingBlock(u)->getTerminator();
+        SimplifyQuery RecQ = Q.getWithoutCondContext().getWithInstruction(CxtI);
 
         Known2 = KnownBits(BitWidth);
 
@@ -6053,29 +6077,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       bool First = true;
 
       for (const Use &U : P->operands()) {
-        Value *IncValue = U.get();
+        Value *IncValue;
+        Instruction *CxtI;
+        breakSelfRecursivePHI(&U, P, IncValue, CxtI);
         // Skip direct self references.
         if (IncValue == P)
           continue;
-
-        Instruction *CxtI = P->getIncomingBlock(U)->getTerminator();
-
-        // If the Use is a select of this phi, use the fp class of the other
-        // operand to break the recursion. Same around 2-operand phi nodes
-        Value *V;
-        if (match(IncValue, m_Select(m_Value(), m_Specific(P), m_Value(V))) ||
-            match(IncValue, m_Select(m_Value(), m_Value(V), m_Specific(P)))) {
-          IncValue = V;
-        } else if (auto *IncPhi = dyn_cast<PHINode>(IncValue);
-                   IncPhi && IncPhi->getNumIncomingValues() == 2) {
-          for (int Idx = 0; Idx < 2; ++Idx) {
-            if (IncPhi->getIncomingValue(Idx) == P) {
-              IncValue = IncPhi->getIncomingValue(1 - Idx);
-              CxtI = IncPhi->getIncomingBlock(1 - Idx)->getTerminator();
-              break;
-            }
-          }
-        }
 
         KnownFPClass KnownSrc;
         // Recurse, but cap the recursion to two levels, because we don't want

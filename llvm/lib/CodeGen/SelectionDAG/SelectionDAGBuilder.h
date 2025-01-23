@@ -225,7 +225,7 @@ public:
   static const unsigned LowestSDNodeOrder = 1;
 
   SelectionDAG &DAG;
-  AAResults *AA = nullptr;
+  BatchAAResults *BatchAA = nullptr;
   AssumptionCache *AC = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
 
@@ -280,7 +280,7 @@ public:
         SL(std::make_unique<SDAGSwitchLowering>(this, funcinfo)),
         FuncInfo(funcinfo), SwiftError(swifterror) {}
 
-  void init(GCFunctionInfo *gfi, AAResults *AA, AssumptionCache *AC,
+  void init(GCFunctionInfo *gfi, BatchAAResults *BatchAA, AssumptionCache *AC,
             const TargetLibraryInfo *li);
 
   /// Clear out the current SelectionDAG and the associated state and prepare

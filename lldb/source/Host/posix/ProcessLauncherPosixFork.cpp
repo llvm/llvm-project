@@ -25,13 +25,10 @@
 #include <sstream>
 
 #ifdef __ANDROID__
-#include <android/api-level.h>
 #define PT_TRACE_ME PTRACE_TRACEME
 #endif
 
-#if defined(__ANDROID_API__) && __ANDROID_API__ < 15
-#include <linux/personality.h>
-#elif defined(__linux__)
+#if defined(__linux__)
 #include <sys/personality.h>
 #endif
 

@@ -94,13 +94,17 @@ For more information about the workflow of using GitHub Pull Requests see our
 `LLVM's Phabricator <https://reviews.llvm.org>`_ instance.
 
 To make sure the right people see your patch, please select suitable reviewers
-and add them to your patch when requesting a review. Suitable reviewers are the
-maintainers (see ``Maintainers.rst``) and other people doing work in the area your
-patch touches. Github will normally suggest some reviewers based on rules or
-people that have worked on the code before. If you are a new contributor, you
-will not be able to select reviewers in such a way, in which case you can still
-get the attention of potential reviewers by CC'ing them in a comment -- just
-@name them.
+and add them to your patch when requesting a review.
+
+Suitable reviewers are the maintainers of the project you are modifying, and
+anyone else working in the area your patch touches. To find maintainers, look for
+the ``Maintainers.md`` or ``Maintainers.rst`` file in the root of the project's
+sub-directory. For example, LLVM's is ``llvm/Maintainers.md`` and Clang's is
+``clang/Maintainers.rst``.
+
+If you are a new contributor, you will not be able to select reviewers in such a
+way, in which case you can still get the attention of potential reviewers by CC'ing
+them in a comment -- just @name them.
 
 If you have received no comments on your patch for a week, you can request a
 review by 'ping'ing the GitHub PR with "Ping". The common courtesy 'ping' rate

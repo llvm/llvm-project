@@ -193,8 +193,7 @@ public:
         {PlatformInstanceDecl, DSOHandle});
 
     auto *IntTy = Type::getIntNTy(*Ctx, sizeof(int) * CHAR_BIT);
-    auto *AtExitCallbackTy = FunctionType::get(VoidTy, {}, false);
-    auto *AtExitCallbackPtrTy = PointerType::getUnqual(AtExitCallbackTy);
+    auto *AtExitCallbackPtrTy = PointerType::getUnqual(*Ctx);
     auto *AtExit = addHelperAndWrapper(
         *M, "atexit", FunctionType::get(IntTy, {AtExitCallbackPtrTy}, false),
         GlobalValue::HiddenVisibility, "__lljit.atexit_helper",
@@ -468,12 +467,9 @@ private:
         *M, GenericIRPlatformSupportTy, true, GlobalValue::ExternalLinkage,
         nullptr, "__lljit.platform_support_instance");
 
-    auto *Int8Ty = Type::getInt8Ty(*Ctx);
     auto *IntTy = Type::getIntNTy(*Ctx, sizeof(int) * CHAR_BIT);
-    auto *VoidTy = Type::getVoidTy(*Ctx);
-    auto *BytePtrTy = PointerType::getUnqual(Int8Ty);
-    auto *CxaAtExitCallbackTy = FunctionType::get(VoidTy, {BytePtrTy}, false);
-    auto *CxaAtExitCallbackPtrTy = PointerType::getUnqual(CxaAtExitCallbackTy);
+    auto *BytePtrTy = PointerType::getUnqual(*Ctx);
+    auto *CxaAtExitCallbackPtrTy = PointerType::getUnqual(*Ctx);
 
     auto *CxaAtExit = addHelperAndWrapper(
         *M, "__cxa_atexit",

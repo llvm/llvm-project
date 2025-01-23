@@ -12,7 +12,7 @@ For Linux, we support kernel versions as listed on
 date), ``stable``, and ``mainline`` versions. We actively adopt new features
 from ``linux-next``.
 
-For Windows, we plan to support products within their lifecycle. Please refer to 
+For Windows, we plan to support products within their lifecycle. Please refer to
 `Search Product and Services Lifecycle Information <https://learn.microsoft.com/en-us/lifecycle/products/?products=windows>`_ for more information.
 
 LLVM-libc does not guarantee backward compatibility with operating systems that

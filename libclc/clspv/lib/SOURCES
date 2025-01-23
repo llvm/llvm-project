@@ -1,5 +1,4 @@
 math/fma.cl
-math/nextafter.cl
 shared/vstore_half.cl
 subnormal_config.cl
 ../../generic/lib/geometric/distance.cl
@@ -21,7 +20,6 @@ subnormal_config.cl
 ../../generic/lib/math/clc_fmod.cl
 ../../generic/lib/math/clc_hypot.cl
 ../../generic/lib/math/clc_ldexp.cl
-../../generic/lib/math/clc_nextafter.cl
 ../../generic/lib/math/clc_pow.cl
 ../../generic/lib/math/clc_pown.cl
 ../../generic/lib/math/clc_powr.cl
@@ -71,6 +69,7 @@ subnormal_config.cl
 ../../generic/lib/math/minmag.cl
 ../../generic/lib/math/modf.cl
 ../../generic/lib/math/nan.cl
+../../generic/lib/math/nextafter.cl
 ../../generic/lib/math/pow.cl
 ../../generic/lib/math/pown.cl
 ../../generic/lib/math/powr.cl

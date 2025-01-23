@@ -180,15 +180,6 @@ std::string Linux::getMultiarchTriple(const Driver &D,
 
 static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
   if (Triple.isMIPS()) {
-    if (Triple.isAndroid()) {
-      StringRef CPUName;
-      StringRef ABIName;
-      tools::mips::getMipsCPUAndABI(Args, Triple, CPUName, ABIName);
-      if (CPUName == "mips32r6")
-        return "libr6";
-      if (CPUName == "mips32r2")
-        return "libr2";
-    }
     // lib32 directory has a special meaning on MIPS targets.
     // It contains N32 ABI binaries. Use this folder if produce
     // code for N32 ABI only.

@@ -1,0 +1,685 @@
+macros:
+  _POSIX_VERSION:
+    in-latest-posix: ""
+  _POSIX2_VERSION:
+    in-latest-posix: ""
+  _POSIX_SUBPROFILE:
+    in-latest-posix: ""
+  _XOPEN_VERSION:
+    in-latest-posix: ""
+
+  _POSIX_ADVISORY_INFO:
+    in-latest-posix: ""
+  _POSIX_ASYNCHRONOUS_IO:
+    in-latest-posix: ""
+  _POSIX_BARRIERS:
+    in-latest-posix: ""
+  _POSIX_CHOWN_RESTRICTED:
+    in-latest-posix: ""
+  _POSIX_CLOCK_SELECTION:
+    in-latest-posix: ""
+  _POSIX_CPUTIME:
+    in-latest-posix: ""
+  _POSIX_DEVICE_CONTROL:
+    in-latest-posix: ""
+  _POSIX_FSYNC:
+    in-latest-posix: ""
+  _POSIX_IPV6:
+    in-latest-posix: ""
+  _POSIX_JOB_CONTROL:
+    in-latest-posix: ""
+  _POSIX_MAPPED_FILES:
+    in-latest-posix: ""
+  _POSIX_MEMLOCK:
+    in-latest-posix: ""
+  _POSIX_MEMLOCK_RANGE:
+    in-latest-posix: ""
+  _POSIX_MEMORY_PROTECTION:
+    in-latest-posix: ""
+  _POSIX_MESSAGE_PASSING:
+    in-latest-posix: ""
+  _POSIX_MONOTONIC_CLOCK:
+    in-latest-posix: ""
+  _POSIX_NO_TRUNC:
+    in-latest-posix: ""
+  _POSIX_PRIORITIZED_IO:
+    in-latest-posix: ""
+  _POSIX_PRIORITY_SCHEDULING:
+    in-latest-posix: ""
+  _POSIX_RAW_SOCKETS:
+    in-latest-posix: ""
+  _POSIX_READER_WRITER_LOCKS:
+    in-latest-posix: ""
+  _POSIX_REALTIME_SIGNALS:
+    in-latest-posix: ""
+  _POSIX_REGEXP:
+    in-latest-posix: ""
+  _POSIX_SAVED_IDS:
+    in-latest-posix: ""
+  _POSIX_SEMAPHORES:
+    in-latest-posix: ""
+  _POSIX_SHARED_MEMORY_OBJECTS:
+    in-latest-posix: ""
+  _POSIX_SHELL:
+    in-latest-posix: ""
+  _POSIX_SPAWN:
+    in-latest-posix: ""
+  _POSIX_SPIN_LOCKS:
+    in-latest-posix: ""
+  _POSIX_SPORADIC_SERVER:
+    in-latest-posix: ""
+  _POSIX_SYNCHRONIZED_IO:
+    in-latest-posix: ""
+  _POSIX_THREAD_ATTR_STACKADDR:
+    in-latest-posix: ""
+  _POSIX_THREAD_ATTR_STACKSIZE:
+    in-latest-posix: ""
+  _POSIX_THREAD_CPUTIME:
+    in-latest-posix: ""
+  _POSIX_THREAD_PRIO_INHERIT:
+    in-latest-posix: ""
+  _POSIX_THREAD_PRIO_PROTECT:
+    in-latest-posix: ""
+  _POSIX_THREAD_PRIORITY_SCHEDULING:
+    in-latest-posix: ""
+  _POSIX_THREAD_PROCESS_SHARED:
+    in-latest-posix: ""
+  _POSIX_THREAD_ROBUST_PRIO_INHERIT:
+    in-latest-posix: ""
+  _POSIX_THREAD_ROBUST_PRIO_PROTECT:
+    in-latest-posix: ""
+  _POSIX_THREAD_SAFE_FUNCTIONS:
+    in-latest-posix: ""
+  _POSIX_THREAD_SPORADIC_SERVER:
+    in-latest-posix: ""
+  _POSIX_THREADS:
+    in-latest-posix: ""
+  _POSIX_TIMEOUTS:
+    in-latest-posix: ""
+  _POSIX_TIMERS:
+    in-latest-posix: ""
+  _POSIX_TYPED_MEMORY_OBJECTS:
+    in-latest-posix: ""
+  _POSIX_V7_ILP32_OFF32:
+    in-latest-posix: ""
+  _POSIX_V7_ILP32_OFFBIG:
+    in-latest-posix: ""
+  _POSIX_V7_LP64_OFF64:
+    in-latest-posix: ""
+  _POSIX_V7_LPBIG_OFFBIG:
+    in-latest-posix: ""
+  _POSIX_V8_ILP32_OFF32:
+    in-latest-posix: ""
+  _POSIX_V8_ILP32_OFFBIG:
+    in-latest-posix: ""
+  _POSIX_V8_LP64_OFF64:
+    in-latest-posix: ""
+  _POSIX_V8_LPBIG_OFFBIG:
+    in-latest-posix: ""
+
+  _POSIX2_C_BIND:
+    in-latest-posix: ""
+  _POSIX2_C_DEV:
+    in-latest-posix: ""
+  _POSIX2_CHAR_TERM:
+    in-latest-posix: ""
+  _POSIX2_FORT_RUN:
+    in-latest-posix: ""
+  _POSIX2_LOCALEDEF:
+    in-latest-posix: ""
+  _POSIX2_SW_DEV:
+    in-latest-posix: ""
+  _POSIX2_UPE:
+    in-latest-posix: ""
+  _XOPEN_CRYPT:
+    in-latest-posix: ""
+  _XOPEN_ENH_I18N:
+    in-latest-posix: ""
+  _XOPEN_REALTIME:
+    in-latest-posix: ""
+  _XOPEN_REALTIME_THREADS:
+    in-latest-posix: ""
+  _XOPEN_SHM:
+    in-latest-posix: ""
+  _XOPEN_UNIX:
+    in-latest-posix: ""
+  _XOPEN_UUCP:
+    in-latest-posix: ""
+
+  _POSIX_ASYNC_IO:
+    in-latest-posix: ""
+  _POSIX_FALLOC:
+    in-latest-posix: ""
+  _POSIX_PRIO_IO:
+    in-latest-posix: ""
+  _POSIX_SYNC_IO:
+    in-latest-posix: ""
+  _POSIX_TIMESTAMP_RESOLUTION:
+    in-latest-posix: ""
+  _POSIX2_SYMLINKS:
+    in-latest-posix: ""
+
+  F_OK:
+    in-latest-posix: ""
+  R_OK:
+    in-latest-posix: ""
+  W_OK:
+    in-latest-posix: ""
+  X_OK:
+    in-latest-posix: ""
+
+  _CS_PATH:
+    in-latest-posix: ""
+  _CS_POSIX_V8_ILP32_OFF32_CFLAGS:
+    in-latest-posix: ""
+  _CS_POSIX_V8_ILP32_OFF32_LDFLAGS:
+    in-latest-posix: ""
+  _CS_POSIX_V8_ILP32_OFF32_LIBS:
+    in-latest-posix: ""
+  _CS_POSIX_V8_ILP32_OFFBIG_CFLAGS:
+    in-latest-posix: ""
+  _CS_POSIX_V8_ILP32_OFFBIG_LDFLAGS:
+    in-latest-posix: ""
+  _CS_POSIX_V8_ILP32_OFFBIG_LIBS:
+    in-latest-posix: ""
+  _CS_POSIX_V8_LP64_OFF64_CFLAGS:
+    in-latest-posix: ""
+  _CS_POSIX_V8_LP64_OFF64_LDFLAGS:
+    in-latest-posix: ""
+  _CS_POSIX_V8_LP64_OFF64_LIBS:
+    in-latest-posix: ""
+  _CS_POSIX_V8_LPBIG_OFFBIG_CFLAGS:
+    in-latest-posix: ""
+  _CS_POSIX_V8_LPBIG_OFFBIG_LDFLAGS:
+    in-latest-posix: ""
+  _CS_POSIX_V8_LPBIG_OFFBIG_LIBS:
+    in-latest-posix: ""
+  _CS_POSIX_V8_THREADS_CFLAGS:
+    in-latest-posix: ""
+  _CS_POSIX_V8_THREADS_LDFLAGS:
+    in-latest-posix: ""
+  _CS_POSIX_V8_WIDTH_RESTRICTED_ENVS:
+    in-latest-posix: ""
+  _CS_V8_ENV:
+    in-latest-posix: ""
+
+  SEEK_END:
+    in-latest-posix: ""
+  SEEK_SET:
+    in-latest-posix: ""
+
+  F_LOCK:
+    in-latest-posix: ""
+  F_TEST:
+    in-latest-posix: ""
+  F_TLOCK:
+    in-latest-posix: ""
+  F_ULOCK:
+    in-latest-posix: ""
+
+  _PC_2_SYMLINKS:
+    in-latest-posix: ""
+  _PC_ALLOC_SIZE_MIN:
+    in-latest-posix: ""
+  _PC_ASYNC_IO:
+    in-latest-posix: ""
+  _PC_CHOWN_RESTRICTED:
+    in-latest-posix: ""
+  _PC_FALLOC:
+    in-latest-posix: ""
+  _PC_FILESIZEBITS:
+    in-latest-posix: ""
+  _PC_LINK_MAX:
+    in-latest-posix: ""
+  _PC_MAX_CANON:
+    in-latest-posix: ""
+  _PC_MAX_INPUT:
+    in-latest-posix: ""
+  _PC_NAME_MAX:
+    in-latest-posix: ""
+  _PC_NO_TRUNC:
+    in-latest-posix: ""
+  _PC_PATH_MAX:
+    in-latest-posix: ""
+  _PC_PIPE_BUF:
+    in-latest-posix: ""
+  _PC_PRIO_IO:
+    in-latest-posix: ""
+  _PC_REC_INCR_XFER_SIZE:
+    in-latest-posix: ""
+  _PC_REC_MAX_XFER_SIZE:
+    in-latest-posix: ""
+  _PC_REC_MIN_XFER_SIZE:
+    in-latest-posix: ""
+  _PC_REC_XFER_ALIGN:
+    in-latest-posix: ""
+  _PC_SYMLINK_MAX:
+    in-latest-posix: ""
+  _PC_SYNC_IO:
+    in-latest-posix: ""
+  _PC_TEXTDOMAIN_MAX:
+    in-latest-posix: ""
+  _PC_TIMESTAMP_RESOLUTION:
+    in-latest-posix: ""
+  _PC_VDISABLE:
+    in-latest-posix: ""
+
+  _SC_2_C_BIND:
+    in-latest-posix: ""
+  _SC_2_C_DEV:
+    in-latest-posix: ""
+  _SC_2_CHAR_TERM:
+    in-latest-posix: ""
+  _SC_2_FORT_RUN:
+    in-latest-posix: ""
+  _SC_2_LOCALEDEF:
+    in-latest-posix: ""
+  _SC_2_SW_DEV:
+    in-latest-posix: ""
+  _SC_2_UPE:
+    in-latest-posix: ""
+  _SC_2_VERSION:
+    in-latest-posix: ""
+  _SC_ADVISORY_INFO:
+    in-latest-posix: ""
+  _SC_AIO_LISTIO_MAX:
+    in-latest-posix: ""
+  _SC_AIO_MAX:
+    in-latest-posix: ""
+  _SC_AIO_PRIO_DELTA_MAX:
+    in-latest-posix: ""
+  _SC_ARG_MAX:
+    in-latest-posix: ""
+  _SC_ASYNCHRONOUS_IO:
+    in-latest-posix: ""
+  _SC_ATEXIT_MAX:
+    in-latest-posix: ""
+  _SC_BARRIERS:
+    in-latest-posix: ""
+  _SC_BC_BASE_MAX:
+    in-latest-posix: ""
+  _SC_BC_DIM_MAX:
+    in-latest-posix: ""
+  _SC_BC_SCALE_MAX:
+    in-latest-posix: ""
+  _SC_BC_STRING_MAX:
+    in-latest-posix: ""
+  _SC_CHILD_MAX:
+    in-latest-posix: ""
+  _SC_CLK_TCK:
+    in-latest-posix: ""
+  _SC_CLOCK_SELECTION:
+    in-latest-posix: ""
+  _SC_COLL_WEIGHTS_MAX:
+    in-latest-posix: ""
+  _SC_CPUTIME:
+    in-latest-posix: ""
+  _SC_DELAYTIMER_MAX:
+    in-latest-posix: ""
+  _SC_DEVICE_CONTROL:
+    in-latest-posix: ""
+  _SC_EXPR_NEST_MAX:
+    in-latest-posix: ""
+  _SC_FSYNC:
+    in-latest-posix: ""
+  _SC_GETGR_R_SIZE_MAX:
+    in-latest-posix: ""
+  _SC_GETPW_R_SIZE_MAX:
+    in-latest-posix: ""
+  _SC_HOST_NAME_MAX:
+    in-latest-posix: ""
+  _SC_IOV_MAX:
+    in-latest-posix: ""
+  _SC_IPV6:
+    in-latest-posix: ""
+  _SC_JOB_CONTROL:
+    in-latest-posix: ""
+  _SC_LINE_MAX:
+    in-latest-posix: ""
+  _SC_LOGIN_NAME_MAX:
+    in-latest-posix: ""
+  _SC_MAPPED_FILES:
+    in-latest-posix: ""
+  _SC_MEMLOCK:
+    in-latest-posix: ""
+  _SC_MEMLOCK_RANGE:
+    in-latest-posix: ""
+  _SC_MEMORY_PROTECTION:
+    in-latest-posix: ""
+  _SC_MESSAGE_PASSING:
+    in-latest-posix: ""
+  _SC_MONOTONIC_CLOCK:
+    in-latest-posix: ""
+  _SC_MQ_OPEN_MAX:
+    in-latest-posix: ""
+  _SC_MQ_PRIO_MAX:
+    in-latest-posix: ""
+  _SC_NGROUPS_MAX:
+    in-latest-posix: ""
+  _SC_NPROCESSORS_CONF:
+    in-latest-posix: ""
+  _SC_NPROCESSORS_ONLN:
+    in-latest-posix: ""
+  _SC_NSIG:
+    in-latest-posix: ""
+  _SC_OPEN_MAX:
+    in-latest-posix: ""
+  _SC_PAGE_SIZE:
+    in-latest-posix: ""
+  _SC_PAGESIZE:
+    in-latest-posix: ""
+  _SC_PRIORITIZED_IO:
+    in-latest-posix: ""
+  _SC_PRIORITY_SCHEDULING:
+    in-latest-posix: ""
+  _SC_RAW_SOCKETS:
+    in-latest-posix: ""
+  _SC_RE_DUP_MAX:
+    in-latest-posix: ""
+  _SC_READER_WRITER_LOCKS:
+    in-latest-posix: ""
+  _SC_REALTIME_SIGNALS:
+    in-latest-posix: ""
+  _SC_REGEXP:
+    in-latest-posix: ""
+  _SC_RTSIG_MAX:
+    in-latest-posix: ""
+  _SC_SAVED_IDS:
+    in-latest-posix: ""
+  _SC_SEM_NSEMS_MAX:
+    in-latest-posix: ""
+  _SC_SEM_VALUE_MAX:
+    in-latest-posix: ""
+  _SC_SEMAPHORES:
+    in-latest-posix: ""
+  _SC_SHARED_MEMORY_OBJECTS:
+    in-latest-posix: ""
+  _SC_SHELL:
+    in-latest-posix: ""
+  _SC_SIGQUEUE_MAX:
+    in-latest-posix: ""
+  _SC_SPAWN:
+    in-latest-posix: ""
+  _SC_SPIN_LOCKS:
+    in-latest-posix: ""
+  _SC_SPORADIC_SERVER:
+    in-latest-posix: ""
+  _SC_SS_REPL_MAX:
+    in-latest-posix: ""
+  _SC_STREAM_MAX:
+    in-latest-posix: ""
+  _SC_SYMLOOP_MAX:
+    in-latest-posix: ""
+  _SC_SYNCHRONIZED_IO:
+    in-latest-posix: ""
+  _SC_THREAD_ATTR_STACKADDR:
+    in-latest-posix: ""
+  _SC_THREAD_ATTR_STACKSIZE:
+    in-latest-posix: ""
+  _SC_THREAD_CPUTIME:
+    in-latest-posix: ""
+  _SC_THREAD_DESTRUCTOR_ITERATIONS:
+    in-latest-posix: ""
+  _SC_THREAD_KEYS_MAX:
+    in-latest-posix: ""
+  _SC_THREAD_PRIO_INHERIT:
+    in-latest-posix: ""
+  _SC_THREAD_PRIO_PROTECT:
+    in-latest-posix: ""
+  _SC_THREAD_PRIORITY_SCHEDULING:
+    in-latest-posix: ""
+  _SC_THREAD_PROCESS_SHARED:
+    in-latest-posix: ""
+  _SC_THREAD_ROBUST_PRIO_INHERIT:
+    in-latest-posix: ""
+  _SC_THREAD_ROBUST_PRIO_PROTECT:
+    in-latest-posix: ""
+  _SC_THREAD_SAFE_FUNCTIONS:
+    in-latest-posix: ""
+  _SC_THREAD_SPORADIC_SERVER:
+    in-latest-posix: ""
+  _SC_THREAD_STACK_MIN:
+    in-latest-posix: ""
+  _SC_THREAD_THREADS_MAX:
+    in-latest-posix: ""
+  _SC_THREADS:
+    in-latest-posix: ""
+  _SC_TIMEOUTS:
+    in-latest-posix: ""
+  _SC_TIMER_MAX:
+    in-latest-posix: ""
+  _SC_TIMERS:
+    in-latest-posix: ""
+  _SC_TTY_NAME_MAX:
+    in-latest-posix: ""
+  _SC_TYPED_MEMORY_OBJECTS:
+    in-latest-posix: ""
+  _SC_TZNAME_MAX:
+    in-latest-posix: ""
+  _SC_V8_ILP32_OFF32:
+    in-latest-posix: ""
+  _SC_V8_ILP32_OFFBIG:
+    in-latest-posix: ""
+  _SC_V8_LP64_OFF64:
+    in-latest-posix: ""
+  _SC_V8_LPBIG_OFFBIG:
+    in-latest-posix: ""
+  _SC_V7_ILP32_OFF32:
+    in-latest-posix: ""
+  _SC_V7_ILP32_OFFBIG:
+    in-latest-posix: ""
+  _SC_V7_LP64_OFF64:
+    in-latest-posix: ""
+  _SC_V7_LPBIG_OFFBIG:
+    in-latest-posix: ""
+  _SC_VERSION:
+    in-latest-posix: ""
+  _SC_XOPEN_CRYPT:
+    in-latest-posix: ""
+  _SC_XOPEN_ENH_I18N:
+    in-latest-posix: ""
+  _SC_XOPEN_REALTIME:
+    in-latest-posix: ""
+  _SC_XOPEN_REALTIME_THREADS:
+    in-latest-posix: ""
+  _SC_XOPEN_SHM:
+    in-latest-posix: ""
+  _SC_XOPEN_UNIX:
+    in-latest-posix: ""
+  _SC_XOPEN_UUCP:
+    in-latest-posix: ""
+  _SC_XOPEN_VERSION:
+    in-latest-posix: ""
+
+  STDERR_FILENO:
+    in-latest-posix: ""
+  STDIN_FILENO:
+    in-latest-posix: ""
+  STDOUT_FILENO:
+    in-latest-posix: ""
+  _POSIX_VDISABLE:
+    in-latest-posix: ""
+  POSIX_CLOSE_RESTART:
+    in-latest-posix: ""
+
+functions:
+  access:
+    in-latest-posix: ""
+  alarm:
+    in-latest-posix: ""
+  chdir:
+    in-latest-posix: ""
+  chown:
+    in-latest-posix: ""
+  close:
+    in-latest-posix: ""
+  confstr:
+    in-latest-posix: ""
+  crypt:
+    in-latest-posix: ""
+  dup:
+    in-latest-posix: ""
+  dup2:
+    in-latest-posix: ""
+  dup3:
+    in-latest-posix: ""
+  _exit:
+    in-latest-posix: ""
+  encrypt:
+    in-latest-posix: ""
+  execl:
+    in-latest-posix: ""
+  execle:
+    in-latest-posix: ""
+  execlp:
+    in-latest-posix: ""
+  execv:
+    in-latest-posix: ""
+  execve:
+    in-latest-posix: ""
+  execvp:
+    in-latest-posix: ""
+  faccessat:
+    in-latest-posix: ""
+  fchdir:
+    in-latest-posix: ""
+  fchown:
+    in-latest-posix: ""
+  fchownat:
+    in-latest-posix: ""
+  fdatasync:
+    in-latest-posix: ""
+  fexecve:
+    in-latest-posix: ""
+  _Fork:
+    in-latest-posix: ""
+  fork:
+    in-latest-posix: ""
+  fpathconf:
+    in-latest-posix: ""
+  fsync:
+    in-latest-posix: ""
+  ftruncate:
+    in-latest-posix: ""
+  getcwd:
+    in-latest-posix: ""
+  getegid:
+    in-latest-posix: ""
+  getentropy:
+    in-latest-posix: ""
+  geteuid:
+    in-latest-posix: ""
+  getgid:
+    in-latest-posix: ""
+  getgroups:
+    in-latest-posix: ""
+  gethostid:
+    in-latest-posix: ""
+  gethostname:
+    in-latest-posix: ""
+  getlogin:
+    in-latest-posix: ""
+  getlogin_r:
+    in-latest-posix: ""
+  getopt:
+    in-latest-posix: ""
+  getpgid:
+    in-latest-posix: ""
+  getpgrp:
+    in-latest-posix: ""
+  getpid:
+    in-latest-posix: ""
+  getppid:
+    in-latest-posix: ""
+  getresgid:
+    in-latest-posix: ""
+  getresuid:
+    in-latest-posix: ""
+  getsid:
+    in-latest-posix: ""
+  getuid:
+    in-latest-posix: ""
+  isatty:
+    in-latest-posix: ""
+  lchown:
+    in-latest-posix: ""
+  link:
+    in-latest-posix: ""
+  linkat:
+    in-latest-posix: ""
+  lockf:
+    in-latest-posix: ""
+  lseek:
+    in-latest-posix: ""
+  nice:
+    in-latest-posix: ""
+  pathconf:
+    in-latest-posix: ""
+  pause:
+    in-latest-posix: ""
+  pipe:
+    in-latest-posix: ""
+  pipe2:
+    in-latest-posix: ""
+  posix_close:
+    in-latest-posix: ""
+  pread:
+    in-latest-posix: ""
+  pwrite:
+    in-latest-posix: ""
+  read:
+    in-latest-posix: ""
+  readlink:
+    in-latest-posix: ""
+  readlinkat:
+    in-latest-posix: ""
+  rmdir:
+    in-latest-posix: ""
+  setegid:
+    in-latest-posix: ""
+  seteuid:
+    in-latest-posix: ""
+  setgid:
+    in-latest-posix: ""
+  setpgid:
+    in-latest-posix: ""
+  setregid:
+    in-latest-posix: ""
+  setresgid:
+    in-latest-posix: ""
+  setresuid:
+    in-latest-posix: ""
+  setreuid:
+    in-latest-posix: ""
+  setsid:
+    in-latest-posix: ""
+  setuid:
+    in-latest-posix: ""
+  sleep:
+    in-latest-posix: ""
+  swab:
+    in-latest-posix: ""
+  symlink:
+    in-latest-posix: ""
+  symlinkat:
+    in-latest-posix: ""
+  sync:
+    in-latest-posix: ""
+  sysconf:
+    in-latest-posix: ""
+  tcgetpgrp:
+    in-latest-posix: ""
+  tcsetpgrp:
+    in-latest-posix: ""
+  truncate:
+    in-latest-posix: ""
+  ttyname:
+    in-latest-posix: ""
+  ttyname_r:
+    in-latest-posix: ""
+  unlink:
+    in-latest-posix: ""
+  unlinkat:
+    in-latest-posix: ""
+  write:
+    in-latest-posix: ""

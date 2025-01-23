@@ -1267,6 +1267,12 @@ filegroup(
     ]),
 )
 
+td_library(
+    name = "CommonTargetTdFiles",
+    srcs = [":common_target_td_sources"],
+    includes = ["include"],
+)
+
 gentbl(
     name = "ARMTargetParserDefGen",
     tbl_outs = [("-gen-arm-target-def", "include/llvm/TargetParser/ARMTargetParserDef.inc")],

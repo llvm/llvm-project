@@ -22,6 +22,7 @@ static_library("Basic") {
   public_deps = [
     # public_dep because public header Version.h includes generated Version.inc.
     "//clang/include/clang/Basic:AttrList",
+    "//clang/include/clang/Basic:AttrParsedAttrList",
     "//clang/include/clang/Basic:AttrSubMatchRulesList",
     "//clang/include/clang/Basic:Builtins",
     "//clang/include/clang/Basic:BuiltinsBPF",
@@ -41,10 +42,6 @@ static_library("Basic") {
     "//clang/include/clang/Basic:riscv_sifive_vector_builtins",
     "//clang/include/clang/Basic:riscv_vector_builtins",
     "//clang/include/clang/Basic:version",
-
-    # public_dep because public header AttributeCommonInfo.h includes generated
-    # AttrParsedAttrList.inc.
-    "//clang/include/clang/Sema:AttrParsedAttrList",
 
     # public_dep because public header OpenMPKinds.h includes generated
     # OMP.h.inc.

@@ -16,7 +16,7 @@ add_libc_test(
   DEPENDS
     libc.include.stdio
     libc.hdr.types.size_t
-    libc.src.errno.errno 
+    libc.src.errno.errno
     libc.src.__support.CPP.new
     libc.src.__support.File.file
 )
