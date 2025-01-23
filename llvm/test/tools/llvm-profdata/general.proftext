@@ -1,5 +1,3 @@
-# FIXME: Somehow this is failing on windows after https://github.com/llvm/llvm-project/pull/105915
-# XFAIL: system-windows
 # RUN: llvm-profdata merge -sparse=true %s -o %t.profdata
 
 # RUN: llvm-profdata merge -sparse=false %s -o %t.profdata.dense
