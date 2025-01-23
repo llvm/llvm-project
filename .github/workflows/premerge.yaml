@@ -30,8 +30,8 @@ jobs:
         uses: hendrikmuhs/ccache-action@v1.2.14
         with:
           variant: "sccache"
-      - name: Build and Test
-        continue-on-error: true
+      - name: Compute Projects
+        id: vars
         run: |
           modified_files=$(git diff --name-only HEAD~1...HEAD)
           modified_dirs=$(echo "$modified_files" | cut -d'/' -f1 | sort | uniq)
@@ -56,5 +56,12 @@ jobs:
           echo "Building projects: ${windows_projects}"
           echo "Running project checks targets: ${windows_check_targets}"
 
-          .ci/monolithic-windows.sh "$(echo ${windows_projects} | tr ' ' ';')" "$(echo ${windows_check_targets})"
-
+          #echo "windows-projects=${windows_projects}" >> $GITHUB_OUTPUT
+          #echo "windows-check-targets=${windows_check_targets}" >> $GITHUB_OUTPUT
+          echo "windows-projects=llvm" >> $GITHUB_OUTPUT
+          echo "windows-check-targets=check-llvm" >> $GITHUB_OUTPUT
+      - name: Build and Test
+        shell: cmd
+        run: |
+          call C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64
+          bash .ci/monolithic-windows.sh "llvm;clang" "check-llvm check-clang"

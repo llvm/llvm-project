@@ -50,6 +50,10 @@ echo "--- cmake"
 pip install -q -r "${MONOREPO_ROOT}"/mlir/python/requirements.txt
 pip install -q -r "${MONOREPO_ROOT}"/.ci/requirements.txt
 
+export CC=cl
+export CXX=cl
+export LD=link
+
 # The CMAKE_*_LINKER_FLAGS to disable the manifest come from research
 # on fixing a build reliability issue on the build server, please
 # see https://github.com/llvm/llvm-project/pull/82393 and
@@ -71,9 +75,7 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
       -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
-      -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
-      -D LLVM_PARALLEL_COMPILE_JOBS=16 \
-      -D LLVM_PARALLEL_LINK_JOBS=4
+      -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO"
 
 echo "--- ninja"
 # Targets are not escaped as they are passed as separate arguments.
