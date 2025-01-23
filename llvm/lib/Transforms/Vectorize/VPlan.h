@@ -2456,7 +2456,8 @@ public:
       : VPSingleDefRecipe(VPDef::VPPartialReductionSC,
                           ArrayRef<VPValue *>({Op0, Op1}), ReductionInst),
         Opcode(Opcode) {
-    auto *AccumulatorRecipe = getOperand(1)->getDefiningRecipe();
+    [[maybe_unused]] auto *AccumulatorRecipe =
+        getOperand(1)->getDefiningRecipe();
     assert((isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
             isa<VPPartialReductionRecipe>(AccumulatorRecipe)) &&
            "Unexpected operand order for partial reduction recipe");
