@@ -223,12 +223,6 @@ public:
       return Lane;
     }
   }
-
-  /// Returns the maxmimum number of lanes that we are able to consider
-  /// caching for \p VF.
-  static unsigned getNumCachedLanes(const ElementCount &VF) {
-    return VF.getKnownMinValue() * (VF.isScalable() ? 2 : 1);
-  }
 };
 
 /// VPTransformState holds information passed down when "executing" a VPlan,
