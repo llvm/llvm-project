@@ -167,7 +167,9 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
                   context.foldingContext(), /*getLastComponent=*/true};
               if (auto actualOffset{folder.FoldDesignator(actual)}) {
                 std::int64_t actualChars{*actualLength};
-                if (static_cast<std::size_t>(actualOffset->offset()) >=
+                if (IsAllocatableOrPointer(actualOffset->symbol())) {
+                  // don't use actualOffset->symbol().size()!
+                } else if (static_cast<std::size_t>(actualOffset->offset()) >=
                         actualOffset->symbol().size() ||
                     !evaluate::IsContiguous(
                         actualOffset->symbol(), foldingContext)) {
@@ -634,7 +636,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
                 context.foldingContext(), /*getLastComponent=*/true};
             if (auto actualOffset{folder.FoldDesignator(actual)}) {
               std::optional<std::int64_t> actualElements;
-              if (static_cast<std::size_t>(actualOffset->offset()) >=
+              if (IsAllocatableOrPointer(actualOffset->symbol())) {
+                // don't use actualOffset->symbol().size()!
+              } else if (static_cast<std::size_t>(actualOffset->offset()) >=
                       actualOffset->symbol().size() ||
                   !evaluate::IsContiguous(
                       actualOffset->symbol(), foldingContext)) {
