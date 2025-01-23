@@ -1308,6 +1308,15 @@ TEST(TestRtsanInterceptors, SetsockoptOnASocketDiesWhenRealtime) {
 }
 #endif
 
+#if !SANITIZER_APPLE
+TEST(TestRtsanInterceptors, SocketpairDiesWhenRealtime) {
+  int pair[2]{};
+  auto Func = [&pair]() { socketpair(0, 0, 0, pair); };
+  ExpectRealtimeDeath(Func, "socketpair");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 /*
     I/O Multiplexing
 */

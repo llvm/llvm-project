@@ -1021,6 +1021,16 @@ INTERCEPTOR(int, setsockopt, int socket, int level, int option,
 #define RTSAN_MAYBE_INTERCEPT_SETSOCKOPT
 #endif
 
+#if !SANITIZER_APPLE
+INTERCEPTOR(int, socketpair, int domain, int type, int protocol, int pair[2]) {
+  __rtsan_notify_intercepted_call("socketpair");
+  return REAL(socketpair)(domain, type, protocol, pair);
+}
+#define RTSAN_MAYBE_INTERCEPT_SOCKETPAIR INTERCEPT_FUNCTION(socketpair)
+#else
+#define RTSAN_MAYBE_INTERCEPT_SOCKETPAIR
+#endif
+
 // I/O Multiplexing
 
 INTERCEPTOR(int, poll, struct pollfd *fds, nfds_t nfds, int timeout) {
@@ -1353,6 +1363,7 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_GETPEERNAME;
   RTSAN_MAYBE_INTERCEPT_GETSOCKOPT;
   RTSAN_MAYBE_INTERCEPT_SETSOCKOPT;
+  RTSAN_MAYBE_INTERCEPT_SOCKETPAIR;
 
   RTSAN_MAYBE_INTERCEPT_SELECT;
   INTERCEPT_FUNCTION(pselect);
