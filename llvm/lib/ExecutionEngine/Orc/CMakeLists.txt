@@ -57,6 +57,7 @@ add_llvm_component_library(LLVMOrcJIT
   ExecutorProcessControl.cpp
   TaskDispatch.cpp
   ThreadSafeModule.cpp
+  UnwindInfoRegistrationPlugin.cpp
   RedirectionManager.cpp
   JITLinkRedirectableSymbolManager.cpp
   ReOptimizeLayer.cpp

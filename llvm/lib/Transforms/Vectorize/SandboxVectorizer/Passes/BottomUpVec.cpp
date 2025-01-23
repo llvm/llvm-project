@@ -169,14 +169,19 @@ Value *BottomUpVec::createVectorInstr(ArrayRef<Value *> Bndl,
 }
 
 void BottomUpVec::tryEraseDeadInstrs() {
-  // Visiting the dead instructions bottom-to-top.
-  SmallVector<Instruction *> SortedDeadInstrCandidates(
-      DeadInstrCandidates.begin(), DeadInstrCandidates.end());
-  sort(SortedDeadInstrCandidates,
-       [](Instruction *I1, Instruction *I2) { return I1->comesBefore(I2); });
-  for (Instruction *I : reverse(SortedDeadInstrCandidates)) {
-    if (I->hasNUses(0))
-      I->eraseFromParent();
+  DenseMap<BasicBlock *, SmallVector<Instruction *>> SortedDeadInstrCandidates;
+  // The dead instrs could span BBs, so we need to collect and sort them per BB.
+  for (auto *DeadI : DeadInstrCandidates)
+    SortedDeadInstrCandidates[DeadI->getParent()].push_back(DeadI);
+  for (auto &Pair : SortedDeadInstrCandidates)
+    sort(Pair.second,
+         [](Instruction *I1, Instruction *I2) { return I1->comesBefore(I2); });
+  for (const auto &Pair : SortedDeadInstrCandidates) {
+    for (Instruction *I : reverse(Pair.second)) {
+      if (I->hasNUses(0))
+        // Erase the dead instructions bottom-to-top.
+        I->eraseFromParent();
+    }
   }
   DeadInstrCandidates.clear();
 }
