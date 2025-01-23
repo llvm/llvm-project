@@ -56,6 +56,7 @@
 #include "StaticAccessedThroughInstanceCheck.h"
 #include "StaticDefinitionInAnonymousNamespaceCheck.h"
 #include "StringCompareCheck.h"
+#include "StringViewSubstrCheck.h"
 #include "SuspiciousCallArgumentCheck.h"
 #include "UniqueptrDeleteReleaseCheck.h"
 #include "UppercaseLiteralSuffixCheck.h"
@@ -146,6 +147,8 @@ public:
         "readability-static-definition-in-anonymous-namespace");
     CheckFactories.registerCheck<StringCompareCheck>(
         "readability-string-compare");
+    CheckFactories.registerCheck<StringViewSubstrCheck>(
+        "readability-stringview-substr");
     CheckFactories.registerCheck<readability::NamedParameterCheck>(
         "readability-named-parameter");
     CheckFactories.registerCheck<NonConstParameterCheck>(

@@ -168,6 +168,15 @@ New checks
   Gives warnings for tagged unions, where the number of tags is
   different from the number of data members inside the union.
 
+- New :doc:`readability-stringview-substr 
+  <clang-tidy/checks/readability/stringview-substr>` check.
+
+  Finds ``std::string_view::substr()`` calls that can be replaced with clearer 
+  alternatives using ``remove_prefix()``, ``remove_suffix()``, or direct assignment.
+  The suggested transformations make the intent clearer and are more efficient as they 
+  either modify the string_view in place or perform a direct assignment instead of 
+  creating an intermediate substring.
+
 - New :doc:`modernize-use-integer-sign-comparison
   <clang-tidy/checks/modernize/use-integer-sign-comparison>` check.
 
