@@ -319,6 +319,9 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
       CreateAndPopulateDiagOpts(Args);
 
+  // The _driver_ (vs cc1) diagnostics engine shouldn't bother to load a suppression file.
+  DiagOpts->DiagnosticSuppressionMappingsFile = "";
+
   TextDiagnosticPrinter *DiagClient
     = new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
   FixupDiagPrefixExeName(DiagClient, ProgName);

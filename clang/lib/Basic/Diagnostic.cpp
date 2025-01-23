@@ -547,11 +547,9 @@ void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
     StringRef DiagGroup = SectionEntry->getKey();
     if (Diags.getDiagnosticIDs()->getDiagnosticsInGroup(
             WarningFlavor, DiagGroup, GroupDiags)) {
-      StringRef Suggestion =
-          DiagnosticIDs::getNearestOption(WarningFlavor, DiagGroup);
-      Diags.Report(diag::warn_unknown_diag_option)
-          << static_cast<unsigned>(WarningFlavor) << DiagGroup
-          << !Suggestion.empty() << Suggestion;
+      // If a diagnostic group name is unknown, simply ignore the
+      // suppressions. This allows use of a single suppression file on multiple
+      // versions of clang.
       continue;
     }
     for (diag::kind Diag : GroupDiags)
