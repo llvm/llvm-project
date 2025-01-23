@@ -393,7 +393,7 @@ if.else:
 define <vscale x 16 x i8> @load_v16i8_store_v4i32_forward_load(ptr %p, <vscale x 4 x i32> %x)  {
 ; CHECK-LABEL: @load_v16i8_store_v4i32_forward_load(
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[X:%.*]], ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[LOAD:%.*]] = load <vscale x 16 x i8>, ptr [[P]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = bitcast <vscale x 4 x i32> [[X]] to <vscale x 16 x i8>
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[LOAD]]
 ;
   store <vscale x 4 x i32> %x, ptr %p
@@ -404,7 +404,7 @@ define <vscale x 16 x i8> @load_v16i8_store_v4i32_forward_load(ptr %p, <vscale x
 define <vscale x 4 x float> @load_v4f32_store_v4i32_forward_load(ptr %p, <vscale x 4 x i32> %x)  {
 ; CHECK-LABEL: @load_v4f32_store_v4i32_forward_load(
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[X:%.*]], ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[LOAD:%.*]] = load <vscale x 4 x float>, ptr [[P]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = bitcast <vscale x 4 x i32> [[X]] to <vscale x 4 x float>
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[LOAD]]
 ;
   store <vscale x 4 x i32> %x, ptr %p
@@ -415,7 +415,7 @@ define <vscale x 4 x float> @load_v4f32_store_v4i32_forward_load(ptr %p, <vscale
 define <vscale x 4 x float> @load_v4f32_store_v16i8_forward_load(ptr %p, <vscale x 16 x i8> %x)  {
 ; CHECK-LABEL: @load_v4f32_store_v16i8_forward_load(
 ; CHECK-NEXT:    store <vscale x 16 x i8> [[X:%.*]], ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[LOAD:%.*]] = load <vscale x 4 x float>, ptr [[P]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = bitcast <vscale x 16 x i8> [[X]] to <vscale x 4 x float>
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[LOAD]]
 ;
   store <vscale x 16 x i8> %x, ptr %p
@@ -426,7 +426,7 @@ define <vscale x 4 x float> @load_v4f32_store_v16i8_forward_load(ptr %p, <vscale
 define <vscale x 4 x i32> @load_v4i32_store_v4f32_forward_load(ptr %p, <vscale x 4 x float> %x)  {
 ; CHECK-LABEL: @load_v4i32_store_v4f32_forward_load(
 ; CHECK-NEXT:    store <vscale x 4 x float> [[X:%.*]], ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[P]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = bitcast <vscale x 4 x float> [[X]] to <vscale x 4 x i32>
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[LOAD]]
 ;
   store <vscale x 4 x float> %x, ptr %p
@@ -496,7 +496,8 @@ define <vscale x 2 x i32> @load_v2i32_store_v4i32_forward_load_offsetc(ptr %p, <
 define <vscale x 2 x ptr> @load_v2p0_store_v4i32_forward_load(ptr %p, <vscale x 4 x i32> %x)  {
 ; CHECK-LABEL: @load_v2p0_store_v4i32_forward_load(
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[X:%.*]], ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[LOAD:%.*]] = load <vscale x 2 x ptr>, ptr [[P]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 4 x i32> [[X]] to <vscale x 2 x i64>
+; CHECK-NEXT:    [[LOAD:%.*]] = inttoptr <vscale x 2 x i64> [[TMP1]] to <vscale x 2 x ptr>
 ; CHECK-NEXT:    ret <vscale x 2 x ptr> [[LOAD]]
 ;
   store <vscale x 4 x i32> %x, ptr %p
@@ -507,7 +508,7 @@ define <vscale x 2 x ptr> @load_v2p0_store_v4i32_forward_load(ptr %p, <vscale x 
 define <vscale x 2 x i64> @load_v2i64_store_v2p0_forward_load(ptr %p, <vscale x 2 x ptr> %x)  {
 ; CHECK-LABEL: @load_v2i64_store_v2p0_forward_load(
 ; CHECK-NEXT:    store <vscale x 2 x ptr> [[X:%.*]], ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[P]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = ptrtoint <vscale x 2 x ptr> [[X]] to <vscale x 2 x i64>
 ; CHECK-NEXT:    ret <vscale x 2 x i64> [[LOAD]]
 ;
   store <vscale x 2 x ptr> %x, ptr %p
@@ -540,8 +541,7 @@ define <16 x i8> @load_v16i8_store_nxv4i32_forward_load(ptr %p, <vscale x 4 x i3
 define <vscale x 16 x i8> @load_v16i8_store_v4i32_forward_constant(ptr %p)  {
 ; CHECK-LABEL: @load_v16i8_store_v4i32_forward_constant(
 ; CHECK-NEXT:    store <vscale x 4 x i32> splat (i32 4), ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[LOAD:%.*]] = load <vscale x 16 x i8>, ptr [[P]], align 16
-; CHECK-NEXT:    ret <vscale x 16 x i8> [[LOAD]]
+; CHECK-NEXT:    ret <vscale x 16 x i8> bitcast (<vscale x 4 x i32> splat (i32 4) to <vscale x 16 x i8>)
 ;
   store <vscale x 4 x i32> splat (i32 4), ptr %p
   %load = load <vscale x 16 x i8>, ptr %p
@@ -590,13 +590,13 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    [[REF_TMP_REPACK5:%.*]] = getelementptr inbounds i8, ptr [[REF_TMP]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[A_ELT6:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[A]], 3
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[A_ELT6]], ptr [[REF_TMP_REPACK5]], align 16
-; CHECK-NEXT:    [[DOTUNPACK:%.*]] = load <vscale x 16 x i8>, ptr [[REF_TMP]], align 16
+; CHECK-NEXT:    [[DOTUNPACK:%.*]] = bitcast <vscale x 4 x i32> [[A_ELT]] to <vscale x 16 x i8>
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[DOTUNPACK]], 0
-; CHECK-NEXT:    [[DOTUNPACK8:%.*]] = load <vscale x 16 x i8>, ptr [[REF_TMP_REPACK1]], align 16
+; CHECK-NEXT:    [[DOTUNPACK8:%.*]] = bitcast <vscale x 4 x i32> [[A_ELT2]] to <vscale x 16 x i8>
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP6]], <vscale x 16 x i8> [[DOTUNPACK8]], 1
-; CHECK-NEXT:    [[DOTUNPACK10:%.*]] = load <vscale x 16 x i8>, ptr [[REF_TMP_REPACK3]], align 16
+; CHECK-NEXT:    [[DOTUNPACK10:%.*]] = bitcast <vscale x 4 x i32> [[A_ELT4]] to <vscale x 16 x i8>
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP9]], <vscale x 16 x i8> [[DOTUNPACK10]], 2
-; CHECK-NEXT:    [[DOTUNPACK12:%.*]] = load <vscale x 16 x i8>, ptr [[REF_TMP_REPACK5]], align 16
+; CHECK-NEXT:    [[DOTUNPACK12:%.*]] = bitcast <vscale x 4 x i32> [[A_ELT6]] to <vscale x 16 x i8>
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP12]], <vscale x 16 x i8> [[DOTUNPACK12]], 3
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr nonnull [[REF_TMP]])
 ; CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP15]]

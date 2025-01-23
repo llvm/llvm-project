@@ -114,10 +114,7 @@ static_library("Host") {
     ]
   }
   if (current_os == "android") {
-    sources += [
-      "android/HostInfoAndroid.cpp",
-      "android/LibcGlue.cpp",
-    ]
+    sources += [ "android/HostInfoAndroid.cpp" ]
   }
 
   if (current_os == "freebsd") {
