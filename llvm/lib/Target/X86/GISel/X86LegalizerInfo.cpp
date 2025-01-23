@@ -449,8 +449,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   // fp comparison
   getActionDefinitionsBuilder(G_FCMP)
       .legalIf([=](const LegalityQuery &Query) {
-        return (HasSSE1 && typePairInSet(0, 1, {{s8, s32}})(Query)) ||
-               (HasSSE2 && typePairInSet(0, 1, {{s8, s64}})(Query)) ||
+        return ((HasSSE1 || UseX87) &&
+                typePairInSet(0, 1, {{s8, s32}})(Query)) ||
+               ((HasSSE2 || UseX87) &&
+                typePairInSet(0, 1, {{s8, s64}})(Query)) ||
                (UseX87 && typePairInSet(0, 1, {{s8, s80}})(Query));
       })
       .clampScalar(0, s8, s8)

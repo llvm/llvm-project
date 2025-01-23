@@ -7,7 +7,7 @@
 ; RUN: llc < %s -fast-isel -mtriple=i686-apple-darwin10 -mattr=+x87,-sse,-sse2 -verify-machineinstrs | FileCheck %s --check-prefixes=FAST-X86
 ; RUN: llc < %s -global-isel -global-isel-abort=1 -mtriple=i686-apple-darwin10 -mattr=+x87,-sse,-sse2 -verify-machineinstrs | FileCheck %s --check-prefixes=GISEL-X86
 
-  define i1 @fcmp_x86_fp80_oeq(x86_fp80 %x, x86_fp80 %y) {
+  define i1 @fcmp_x86_fp80_oeq(x86_fp80 %x, x86_fp80 %y) nounwind {
 ; SDAG-X64-LABEL: fcmp_x86_fp80_oeq:
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
@@ -45,7 +45,6 @@
 ; SDAG-X86-LABEL: fcmp_x86_fp80_oeq:
 ; SDAG-X86:       ## %bb.0:
 ; SDAG-X86-NEXT:    subl $12, %esp
-; SDAG-X86-NEXT:    .cfi_def_cfa_offset 16
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fucompp
@@ -61,7 +60,6 @@
 ; FAST-X86-LABEL: fcmp_x86_fp80_oeq:
 ; FAST-X86:       ## %bb.0:
 ; FAST-X86-NEXT:    subl $12, %esp
-; FAST-X86-NEXT:    .cfi_def_cfa_offset 16
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fucompp
@@ -77,7 +75,6 @@
 ; GISEL-X86-LABEL: fcmp_x86_fp80_oeq:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    .cfi_def_cfa_offset 16
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fxch %st(1)
@@ -92,7 +89,7 @@
     ret i1 %1
   }
 
-  define i1 @fcmp_x86_fp80_ogt(x86_fp80 %x, x86_fp80 %y) {
+  define i1 @fcmp_x86_fp80_ogt(x86_fp80 %x, x86_fp80 %y) nounwind {
 ; SDAG-X64-LABEL: fcmp_x86_fp80_ogt:
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
@@ -124,7 +121,6 @@
 ; SDAG-X86-LABEL: fcmp_x86_fp80_ogt:
 ; SDAG-X86:       ## %bb.0:
 ; SDAG-X86-NEXT:    subl $12, %esp
-; SDAG-X86-NEXT:    .cfi_def_cfa_offset 16
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fucompp
@@ -138,7 +134,6 @@
 ; FAST-X86-LABEL: fcmp_x86_fp80_ogt:
 ; FAST-X86:       ## %bb.0:
 ; FAST-X86-NEXT:    subl $12, %esp
-; FAST-X86-NEXT:    .cfi_def_cfa_offset 16
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fucompp
@@ -152,7 +147,6 @@
 ; GISEL-X86-LABEL: fcmp_x86_fp80_ogt:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    .cfi_def_cfa_offset 16
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fxch %st(1)
@@ -165,7 +159,7 @@
     ret i1 %1
   }
 
-  define i1 @fcmp_x86_fp80_oge(x86_fp80 %x, x86_fp80 %y) {
+  define i1 @fcmp_x86_fp80_oge(x86_fp80 %x, x86_fp80 %y) nounwind {
 ; SDAG-X64-LABEL: fcmp_x86_fp80_oge:
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
@@ -197,7 +191,6 @@
 ; SDAG-X86-LABEL: fcmp_x86_fp80_oge:
 ; SDAG-X86:       ## %bb.0:
 ; SDAG-X86-NEXT:    subl $12, %esp
-; SDAG-X86-NEXT:    .cfi_def_cfa_offset 16
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fucompp
@@ -211,7 +204,6 @@
 ; FAST-X86-LABEL: fcmp_x86_fp80_oge:
 ; FAST-X86:       ## %bb.0:
 ; FAST-X86-NEXT:    subl $12, %esp
-; FAST-X86-NEXT:    .cfi_def_cfa_offset 16
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fucompp
@@ -225,7 +217,6 @@
 ; GISEL-X86-LABEL: fcmp_x86_fp80_oge:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    .cfi_def_cfa_offset 16
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fxch %st(1)
@@ -238,7 +229,7 @@
     ret i1 %1
   }
 
-  define i1 @fcmp_x86_fp80_olt(x86_fp80 %x, x86_fp80 %y) {
+  define i1 @fcmp_x86_fp80_olt(x86_fp80 %x, x86_fp80 %y) nounwind {
 ; SDAG-X64-LABEL: fcmp_x86_fp80_olt:
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
@@ -270,7 +261,6 @@
 ; SDAG-X86-LABEL: fcmp_x86_fp80_olt:
 ; SDAG-X86:       ## %bb.0:
 ; SDAG-X86-NEXT:    subl $12, %esp
-; SDAG-X86-NEXT:    .cfi_def_cfa_offset 16
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fucompp
@@ -284,7 +274,6 @@
 ; FAST-X86-LABEL: fcmp_x86_fp80_olt:
 ; FAST-X86:       ## %bb.0:
 ; FAST-X86-NEXT:    subl $12, %esp
-; FAST-X86-NEXT:    .cfi_def_cfa_offset 16
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fxch %st(1)
@@ -299,7 +288,6 @@
 ; GISEL-X86-LABEL: fcmp_x86_fp80_olt:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    .cfi_def_cfa_offset 16
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fucompi %st(1), %st
@@ -311,7 +299,7 @@
     ret i1 %1
   }
 
-  define i1 @fcmp_x86_fp80_ole(x86_fp80 %x, x86_fp80 %y) {
+  define i1 @fcmp_x86_fp80_ole(x86_fp80 %x, x86_fp80 %y) nounwind {
 ; SDAG-X64-LABEL: fcmp_x86_fp80_ole:
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
@@ -343,7 +331,6 @@
 ; SDAG-X86-LABEL: fcmp_x86_fp80_ole:
 ; SDAG-X86:       ## %bb.0:
 ; SDAG-X86-NEXT:    subl $12, %esp
-; SDAG-X86-NEXT:    .cfi_def_cfa_offset 16
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fucompp
@@ -357,7 +344,6 @@
 ; FAST-X86-LABEL: fcmp_x86_fp80_ole:
 ; FAST-X86:       ## %bb.0:
 ; FAST-X86-NEXT:    subl $12, %esp
-; FAST-X86-NEXT:    .cfi_def_cfa_offset 16
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fxch %st(1)
@@ -372,7 +358,6 @@
 ; GISEL-X86-LABEL: fcmp_x86_fp80_ole:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    .cfi_def_cfa_offset 16
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fucompi %st(1), %st
@@ -384,7 +369,7 @@
     ret i1 %1
   }
 
-  define i1 @fcmp_x86_fp80_one(x86_fp80 %x, x86_fp80 %y) {
+  define i1 @fcmp_x86_fp80_one(x86_fp80 %x, x86_fp80 %y) nounwind {
 ; SDAG-X64-LABEL: fcmp_x86_fp80_one:
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
@@ -416,7 +401,6 @@
 ; SDAG-X86-LABEL: fcmp_x86_fp80_one:
 ; SDAG-X86:       ## %bb.0:
 ; SDAG-X86-NEXT:    subl $12, %esp
-; SDAG-X86-NEXT:    .cfi_def_cfa_offset 16
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fucompp
@@ -430,7 +414,6 @@
 ; FAST-X86-LABEL: fcmp_x86_fp80_one:
 ; FAST-X86:       ## %bb.0:
 ; FAST-X86-NEXT:    subl $12, %esp
-; FAST-X86-NEXT:    .cfi_def_cfa_offset 16
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fucompp
@@ -444,7 +427,6 @@
 ; GISEL-X86-LABEL: fcmp_x86_fp80_one:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    .cfi_def_cfa_offset 16
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fxch %st(1)
@@ -457,7 +439,7 @@
     ret i1 %1
   }
 
-  define i1 @fcmp_x86_fp80_ord(x86_fp80 %x, x86_fp80 %y) {
+  define i1 @fcmp_x86_fp80_ord(x86_fp80 %x, x86_fp80 %y) nounwind {
 ; SDAG-X64-LABEL: fcmp_x86_fp80_ord:
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
@@ -489,7 +471,6 @@
 ; SDAG-X86-LABEL: fcmp_x86_fp80_ord:
 ; SDAG-X86:       ## %bb.0:
 ; SDAG-X86-NEXT:    subl $12, %esp
-; SDAG-X86-NEXT:    .cfi_def_cfa_offset 16
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fucompp
@@ -503,7 +484,6 @@
 ; FAST-X86-LABEL: fcmp_x86_fp80_ord:
 ; FAST-X86:       ## %bb.0:
 ; FAST-X86-NEXT:    subl $12, %esp
-; FAST-X86-NEXT:    .cfi_def_cfa_offset 16
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fucompp
@@ -517,7 +497,6 @@
 ; GISEL-X86-LABEL: fcmp_x86_fp80_ord:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    .cfi_def_cfa_offset 16
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fxch %st(1)
@@ -530,7 +509,7 @@
     ret i1 %1
   }
 
-  define i1 @fcmp_x86_fp80_uno(x86_fp80 %x, x86_fp80 %y) {
+  define i1 @fcmp_x86_fp80_uno(x86_fp80 %x, x86_fp80 %y) nounwind {
 ; SDAG-X64-LABEL: fcmp_x86_fp80_uno:
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
@@ -562,7 +541,6 @@
 ; SDAG-X86-LABEL: fcmp_x86_fp80_uno:
 ; SDAG-X86:       ## %bb.0:
 ; SDAG-X86-NEXT:    subl $12, %esp
-; SDAG-X86-NEXT:    .cfi_def_cfa_offset 16
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fucompp
@@ -576,7 +554,6 @@
 ; FAST-X86-LABEL: fcmp_x86_fp80_uno:
 ; FAST-X86:       ## %bb.0:
 ; FAST-X86-NEXT:    subl $12, %esp
-; FAST-X86-NEXT:    .cfi_def_cfa_offset 16
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fucompp
@@ -590,7 +567,6 @@
 ; GISEL-X86-LABEL: fcmp_x86_fp80_uno:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    .cfi_def_cfa_offset 16
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fxch %st(1)
@@ -603,7 +579,7 @@
     ret i1 %1
   }
 
-  define i1 @fcmp_x86_fp80_ueq(x86_fp80 %x, x86_fp80 %y) {
+  define i1 @fcmp_x86_fp80_ueq(x86_fp80 %x, x86_fp80 %y) nounwind {
 ; SDAG-X64-LABEL: fcmp_x86_fp80_ueq:
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
@@ -635,7 +611,6 @@
 ; SDAG-X86-LABEL: fcmp_x86_fp80_ueq:
 ; SDAG-X86:       ## %bb.0:
 ; SDAG-X86-NEXT:    subl $12, %esp
-; SDAG-X86-NEXT:    .cfi_def_cfa_offset 16
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fucompp
@@ -649,7 +624,6 @@
 ; FAST-X86-LABEL: fcmp_x86_fp80_ueq:
 ; FAST-X86:       ## %bb.0:
 ; FAST-X86-NEXT:    subl $12, %esp
-; FAST-X86-NEXT:    .cfi_def_cfa_offset 16
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fucompp
@@ -663,7 +637,6 @@
 ; GISEL-X86-LABEL: fcmp_x86_fp80_ueq:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    .cfi_def_cfa_offset 16
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fxch %st(1)
@@ -676,7 +649,7 @@
     ret i1 %1
   }
 
-  define i1 @fcmp_x86_fp80_ugt(x86_fp80 %x, x86_fp80 %y) {
+  define i1 @fcmp_x86_fp80_ugt(x86_fp80 %x, x86_fp80 %y) nounwind {
 ; SDAG-X64-LABEL: fcmp_x86_fp80_ugt:
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
@@ -708,7 +681,6 @@
 ; SDAG-X86-LABEL: fcmp_x86_fp80_ugt:
 ; SDAG-X86:       ## %bb.0:
 ; SDAG-X86-NEXT:    subl $12, %esp
-; SDAG-X86-NEXT:    .cfi_def_cfa_offset 16
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fucompp
@@ -722,7 +694,6 @@
 ; FAST-X86-LABEL: fcmp_x86_fp80_ugt:
 ; FAST-X86:       ## %bb.0:
 ; FAST-X86-NEXT:    subl $12, %esp
-; FAST-X86-NEXT:    .cfi_def_cfa_offset 16
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fxch %st(1)
@@ -737,7 +708,6 @@
 ; GISEL-X86-LABEL: fcmp_x86_fp80_ugt:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    .cfi_def_cfa_offset 16
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fucompi %st(1), %st
@@ -749,7 +719,7 @@
     ret i1 %1
   }
 
-  define i1 @fcmp_x86_fp80_uge(x86_fp80 %x, x86_fp80 %y) {
+  define i1 @fcmp_x86_fp80_uge(x86_fp80 %x, x86_fp80 %y) nounwind {
 ; SDAG-X64-LABEL: fcmp_x86_fp80_uge:
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
@@ -781,7 +751,6 @@
 ; SDAG-X86-LABEL: fcmp_x86_fp80_uge:
 ; SDAG-X86:       ## %bb.0:
 ; SDAG-X86-NEXT:    subl $12, %esp
-; SDAG-X86-NEXT:    .cfi_def_cfa_offset 16
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fucompp
@@ -795,7 +764,6 @@
 ; FAST-X86-LABEL: fcmp_x86_fp80_uge:
 ; FAST-X86:       ## %bb.0:
 ; FAST-X86-NEXT:    subl $12, %esp
-; FAST-X86-NEXT:    .cfi_def_cfa_offset 16
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fxch %st(1)
@@ -810,7 +778,6 @@
 ; GISEL-X86-LABEL: fcmp_x86_fp80_uge:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    .cfi_def_cfa_offset 16
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fucompi %st(1), %st
@@ -822,7 +789,7 @@
     ret i1 %1
   }
 
-  define i1 @fcmp_x86_fp80_ult(x86_fp80 %x, x86_fp80 %y) {
+  define i1 @fcmp_x86_fp80_ult(x86_fp80 %x, x86_fp80 %y) nounwind {
 ; SDAG-X64-LABEL: fcmp_x86_fp80_ult:
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
@@ -854,7 +821,6 @@
 ; SDAG-X86-LABEL: fcmp_x86_fp80_ult:
 ; SDAG-X86:       ## %bb.0:
 ; SDAG-X86-NEXT:    subl $12, %esp
-; SDAG-X86-NEXT:    .cfi_def_cfa_offset 16
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fucompp
@@ -868,7 +834,6 @@
 ; FAST-X86-LABEL: fcmp_x86_fp80_ult:
 ; FAST-X86:       ## %bb.0:
 ; FAST-X86-NEXT:    subl $12, %esp
-; FAST-X86-NEXT:    .cfi_def_cfa_offset 16
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fucompp
@@ -882,7 +847,6 @@
 ; GISEL-X86-LABEL: fcmp_x86_fp80_ult:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    .cfi_def_cfa_offset 16
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fxch %st(1)
@@ -895,7 +859,7 @@
     ret i1 %1
   }
 
-  define i1 @fcmp_x86_fp80_ule(x86_fp80 %x, x86_fp80 %y) {
+  define i1 @fcmp_x86_fp80_ule(x86_fp80 %x, x86_fp80 %y) nounwind {
 ; SDAG-X64-LABEL: fcmp_x86_fp80_ule:
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
@@ -927,7 +891,6 @@
 ; SDAG-X86-LABEL: fcmp_x86_fp80_ule:
 ; SDAG-X86:       ## %bb.0:
 ; SDAG-X86-NEXT:    subl $12, %esp
-; SDAG-X86-NEXT:    .cfi_def_cfa_offset 16
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fucompp
@@ -941,7 +904,6 @@
 ; FAST-X86-LABEL: fcmp_x86_fp80_ule:
 ; FAST-X86:       ## %bb.0:
 ; FAST-X86-NEXT:    subl $12, %esp
-; FAST-X86-NEXT:    .cfi_def_cfa_offset 16
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fucompp
@@ -955,7 +917,6 @@
 ; GISEL-X86-LABEL: fcmp_x86_fp80_ule:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    .cfi_def_cfa_offset 16
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fxch %st(1)
@@ -968,7 +929,7 @@
     ret i1 %1
   }
 
-  define i1 @fcmp_x86_fp80_une(x86_fp80 %x, x86_fp80 %y) {
+  define i1 @fcmp_x86_fp80_une(x86_fp80 %x, x86_fp80 %y) nounwind {
 ; SDAG-X64-LABEL: fcmp_x86_fp80_une:
 ; SDAG-X64:       ## %bb.0:
 ; SDAG-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
@@ -1006,7 +967,6 @@
 ; SDAG-X86-LABEL: fcmp_x86_fp80_une:
 ; SDAG-X86:       ## %bb.0:
 ; SDAG-X86-NEXT:    subl $12, %esp
-; SDAG-X86-NEXT:    .cfi_def_cfa_offset 16
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; SDAG-X86-NEXT:    fucompp
@@ -1022,7 +982,6 @@
 ; FAST-X86-LABEL: fcmp_x86_fp80_une:
 ; FAST-X86:       ## %bb.0:
 ; FAST-X86-NEXT:    subl $12, %esp
-; FAST-X86-NEXT:    .cfi_def_cfa_offset 16
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; FAST-X86-NEXT:    fucompp
@@ -1038,7 +997,6 @@
 ; GISEL-X86-LABEL: fcmp_x86_fp80_une:
 ; GISEL-X86:       ## %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    .cfi_def_cfa_offset 16
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fxch %st(1)
