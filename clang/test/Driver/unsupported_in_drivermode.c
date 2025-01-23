@@ -1,3 +1,4 @@
+// UNSUPPORTED: system-windows
 // NOTE: This lit test was automatically generated to validate unintentionally exposed arguments to various driver flavours.
 // NOTE: To make changes, see /Users/georgeasante/llvm-project/clang/utils/generate_unsupported_in_drivermode.py from which it was generated.
 

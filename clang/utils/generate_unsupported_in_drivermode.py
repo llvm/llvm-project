@@ -385,6 +385,7 @@ def get_lit_test_note(test_visibility):
     test_prefix = EXCLAMATION if test_visibility == VISIBILITY_FLANG else SLASH_SLASH
 
     return (
+        f"{test_prefix}UNSUPPORTED: system-windows\n"
         f"{test_prefix}NOTE: This lit test was automatically generated to validate "
         "unintentionally exposed arguments to various driver flavours.\n"
         f"{test_prefix}NOTE: To make changes, see "
