@@ -240,6 +240,12 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                                  Expr *asmString, MultiExprArg clobbers,
                                  unsigned NumLabels,
                                  SourceLocation RParenLoc) {
+  struct _Cleaner {
+    Sema &S;
+    ~_Cleaner() {
+      S.DiscardCleanupsInEvaluationContext();
+    }
+  } _C{*this};
   unsigned NumClobbers = clobbers.size();
   StringLiteral **Constraints =
     reinterpret_cast<StringLiteral**>(constraints.data());
