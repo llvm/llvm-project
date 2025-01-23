@@ -139,6 +139,11 @@ public:
 
   uint64_t getFMVPriority(ArrayRef<StringRef> Features) const override;
 
+  bool
+  initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
+                 StringRef CPU,
+                 const std::vector<std::string> &FeaturesVec) const override;
+
   bool useFP16ConversionIntrinsics() const override {
     return false;
   }
