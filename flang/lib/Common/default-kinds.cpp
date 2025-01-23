@@ -11,11 +11,7 @@
 
 namespace Fortran::common {
 
-IntrinsicTypeDefaultKinds::IntrinsicTypeDefaultKinds() {
-#if __x86_64__
-  quadPrecisionKind_ = 10;
-#endif
-}
+IntrinsicTypeDefaultKinds::IntrinsicTypeDefaultKinds() {}
 
 IntrinsicTypeDefaultKinds &IntrinsicTypeDefaultKinds::set_defaultIntegerKind(
     int k) {
