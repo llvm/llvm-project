@@ -900,7 +900,9 @@ void CodeGenModule::Release() {
   EmitGlobalAnnotations();
   EmitStaticExternCAliases();
   checkAliases();
-  EmitDeferredUnusedCoverageMappings();
+  if (!CodeGenOpts.NoUnusedCoverage) {
+    EmitDeferredUnusedCoverageMappings();
+  }
   CodeGenPGO(*this).setValueProfilingFlag(getModule());
   CodeGenPGO(*this).setProfileVersion(getModule());
   if (CoverageMapping)
