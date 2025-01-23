@@ -284,8 +284,11 @@ koachan@protonmail.com (email), [koachan](https://github.com/koachan) (GitHub)
 
 #### SPIRV backend
 
-Ilia Diachkov \
-ilia.diachkov@gmail.com (email), [iliya-diyachkov](https://github.com/iliya-diyachkov) (GitHub)
+Vyacheslav Levytskyy \
+vyacheslav.levytskyy@intel.com, vyacheslav.levytskyy@gmail.com (email), [VyacheslavLevytskyy](https://github.com/VyacheslavLevytskyy) (GitHub)
+
+Nathan Gauër \
+brioche@google.com (email), [Keenuts](https://github.com/Keenuts) (GitHub)
 
 #### SystemZ backend
 
@@ -333,10 +336,10 @@ jakub@nod-labs.com (email), [kuhar](https://github.com/kuhar) (GitHub)
 Peter Collingbourne \
 peter@pcc.me.uk (email), [pcc](https://github.com/pcc) (GitHub)
 
-#### CMake and library layering
+#### CMake
 
-Chandler Carruth \
-chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub)
+Petr Hosek \
+phosek@google.com (email), [petrhosek](https://github.com/petrhosek) (GitHub)
 
 #### Debug info and DWARF
 
@@ -355,6 +358,11 @@ echristo@gmail.com (email), [echristo](https://github.com/echristo) (GitHub)
 
 Teresa Johnson \
 tejohnson@google.com (email), [teresajohnson](https://github.com/teresajohnson) (GitHub)
+
+#### Library layering
+
+Takumi Nakamura \
+geek4civic@gmail.com (email), [chapuni](https://github.com/chapuni) (GitHub)
 
 #### MCJIT, Orc, RuntimeDyld, PerfJITEvents
 
@@ -477,7 +485,7 @@ sabre@nondot.org (email), [lattner](https://github.com/lattner) (GitHub), clattn
 
 Paul C. Anagnostopoulos (paul@windfall.com, [Paul-C-Anagnostopoulos](https://github.com/Paul-C-Anagnostopoulos)) -- TableGen \
 Justin Bogner (mail@justinbogner.com, [bogner](https://github.com/bogner)) -- SelectionDAG \
-Chandler Carruth (chandlerc@gmail.com, chandlerc@google.com, [chandlerc](https://github.com/chandlerc)) -- ADT, Support, Inlining \
+Chandler Carruth (chandlerc@gmail.com, chandlerc@google.com, [chandlerc](https://github.com/chandlerc)) -- ADT, Support, Inlining, CMake and library layering \
 Peter Collingbourne (peter@pcc.me.uk, [pcc](https://github.com/pcc)) -- LTO \
 Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
 Jake Ehrlich (jakehehrlich@google.com, [jakehehrlich](https://github.com/jakehehrlich)) -- llvm-objcopy and ObjCopy library \

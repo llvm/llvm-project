@@ -227,6 +227,32 @@ func.func @rocdl.xdlops(%arg0 : f32, %arg1 : f32,
   llvm.return
 }
 
+llvm.func @rocdl.ds.read.tr(%ptr : !llvm.ptr<3>) -> vector<4xf16> {
+  // CHECK-LABEL: rocdl.ds.read.tr
+  // CHECK: rocdl.ds.read.tr4.b64 {{.*}} : <3> -> vector<2xi32>
+  %r0 = rocdl.ds.read.tr4.b64 %ptr : !llvm.ptr<3> -> vector<2xi32>
+  // CHECK: rocdl.ds.read.tr6.b96 {{.*}} : <3> -> vector<3xi32>
+  %r1 = rocdl.ds.read.tr6.b96 %ptr : !llvm.ptr<3> -> vector<3xi32>
+  // CHECK: rocdl.ds.read.tr8.b64 {{.*}} : <3> -> vector<2xi32>
+  %r2 = rocdl.ds.read.tr8.b64 %ptr : !llvm.ptr<3> -> vector<2xi32>
+  // CHECK: rocdl.ds.read.tr16.b64 {{.*}} : <3> -> vector<4xf16>
+  %r3 = rocdl.ds.read.tr16.b64 %ptr : !llvm.ptr<3> -> vector<4xf16>
+  // CHECK: rocdl.ds.read.tr16.b64 {{.*}} : <3> -> vector<4xbf16>
+  %r4 = rocdl.ds.read.tr16.b64 %ptr : !llvm.ptr<3> -> vector<4xbf16>
+  llvm.return %r3 : vector<4xf16>
+}
+
+llvm.func @rocdl.global.load.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
+  %aux = llvm.mlir.constant(0 : i32) : i32
+  %offset = llvm.mlir.constant(0 : i32) : i32
+  %size = llvm.mlir.constant(10 : i32) : i32
+
+  //CHECK: rocdl.global.load.lds %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}
+  rocdl.global.load.lds %src, %dst, %size, %offset, %aux
+
+  llvm.return
+}
+
 llvm.func @rocdl.make.buffer.rsrc(%ptr : !llvm.ptr,
                                   %stride : i16,
                                   %numRecords : i32,

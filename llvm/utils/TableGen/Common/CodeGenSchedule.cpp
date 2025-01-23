@@ -311,15 +311,13 @@ static void processSTIPredicate(STIPredicateFunction &Fn,
     ConstRecVec Classes = Def->getValueAsListOfDefs("Classes");
     for (const Record *EC : Classes) {
       const Record *Pred = EC->getValueAsDef("Predicate");
-      if (!Predicate2Index.contains(Pred))
-        Predicate2Index[Pred] = NumUniquePredicates++;
+      if (Predicate2Index.try_emplace(Pred, NumUniquePredicates).second)
+        ++NumUniquePredicates;
 
       ConstRecVec Opcodes = EC->getValueAsListOfDefs("Opcodes");
       for (const Record *Opcode : Opcodes) {
-        if (!Opcode2Index.contains(Opcode)) {
-          Opcode2Index[Opcode] = OpcodeMappings.size();
+        if (Opcode2Index.try_emplace(Opcode, OpcodeMappings.size()).second)
           OpcodeMappings.emplace_back(Opcode, OpcodeInfo());
-        }
       }
     }
   }
@@ -452,11 +450,9 @@ void CodeGenSchedModels::checkMCInstPredicates() const {
   for (const Record *TIIPred :
        Records.getAllDerivedDefinitions("TIIPredicate")) {
     StringRef Name = TIIPred->getValueAsString("FunctionName");
-    StringMap<const Record *>::const_iterator It = TIIPredicates.find(Name);
-    if (It == TIIPredicates.end()) {
-      TIIPredicates[Name] = TIIPred;
+    auto [It, Inserted] = TIIPredicates.try_emplace(Name, TIIPred);
+    if (Inserted)
       continue;
-    }
 
     PrintError(TIIPred->getLoc(),
                "TIIPredicate " + Name + " is multiply defined.");
@@ -2116,6 +2112,14 @@ void CodeGenSchedModels::addWriteRes(const Record *ProcWriteResDef,
     return;
   WRDefs.push_back(ProcWriteResDef);
 
+  if (ProcWriteResDef->isSubClassOf("WriteRes")) {
+    auto &WRMap = ProcModels[PIdx].WriteResMap;
+    const Record *WRDef = ProcWriteResDef->getValueAsDef("WriteType");
+    if (!WRMap.try_emplace(WRDef, ProcWriteResDef).second)
+      PrintFatalError(ProcWriteResDef->getLoc(),
+                      "WriteType already used in another WriteRes");
+  }
+
   // Visit ProcResourceKinds referenced by the newly discovered WriteRes.
   for (const Record *ProcResDef :
        ProcWriteResDef->getValueAsListOfDefs("ProcResources")) {
@@ -2139,6 +2143,14 @@ void CodeGenSchedModels::addReadAdvance(const Record *ProcReadAdvanceDef,
   if (is_contained(RADefs, ProcReadAdvanceDef))
     return;
   RADefs.push_back(ProcReadAdvanceDef);
+
+  if (ProcReadAdvanceDef->isSubClassOf("ReadAdvance")) {
+    auto &RAMap = ProcModels[PIdx].ReadAdvanceMap;
+    const Record *RADef = ProcReadAdvanceDef->getValueAsDef("ReadType");
+    if (!RAMap.try_emplace(RADef, ProcReadAdvanceDef).second)
+      PrintFatalError(ProcReadAdvanceDef->getLoc(),
+                      "ReadType already used in another ReadAdvance");
+  }
 }
 
 unsigned CodeGenProcModel::getProcResourceIdx(const Record *PRDef) const {
