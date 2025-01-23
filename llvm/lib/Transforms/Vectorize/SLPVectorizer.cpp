@@ -3986,6 +3986,8 @@ private:
       }
     }
 
+    LLVM_DUMP_METHOD void dump() const { dump(dbgs()); }
+
     Instruction *Inst = nullptr;
 
     /// The TreeEntry that this instruction corresponds to.
