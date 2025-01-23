@@ -273,12 +273,12 @@ defm V_MAXIMUM_F64 : VOP3Inst <"v_maximum_f64", VOP3_Profile<VOP_F64_F64_F64>, f
 } // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0, AddedComplexity = 1
 
 #ifdef LLPC_BUILD_NPI
-let SubtargetPredicate = isGFX1250Plus, SchedRW = [WriteDoubleAdd] in {
+let SubtargetPredicate = isGFX125xOnly, SchedRW = [WriteDoubleAdd] in {
 defm V_MAX_I64 : VOP3Inst <"v_max_i64", VOP_I64_I64_I64_DPP, smax>;
 defm V_MAX_U64 : VOP3Inst <"v_max_u64", VOP_I64_I64_I64_DPP, umax>;
 defm V_MIN_I64 : VOP3Inst <"v_min_i64", VOP_I64_I64_I64_DPP, smin>;
 defm V_MIN_U64 : VOP3Inst <"v_min_u64", VOP_I64_I64_I64_DPP, umin>;
-} // End SubtargetPredicate = isGFX1250Plus, SchedRW = [WriteDoubleAdd]
+} // End SubtargetPredicate = isGFX125xOnly, SchedRW = [WriteDoubleAdd]
 
 #endif /* LLPC_BUILD_NPI */
 } // End isReMaterializable = 1
@@ -2072,10 +2072,10 @@ defm V_BITOP3_B32         : VOP3_Real_BITOP3_gfx1250_gfx13<0x234>;
 defm V_MAD_U32 : VOP3Only_Realtriple_gfx1250_gfx13<0x235>;
 defm V_MAD_NC_U64_U32 : VOP3Only_Realtriple_gfx1250<0x2fa>;
 defm V_MAD_NC_I64_I32 : VOP3Only_Realtriple_gfx1250<0x2fb>;
-defm V_MIN_U64 : VOP3Only_Realtriple_gfx1250_gfx13<0x318, 0x326>;
-defm V_MAX_U64 : VOP3Only_Realtriple_gfx1250_gfx13<0x319, 0x327>;
-defm V_MIN_I64 : VOP3Only_Realtriple_gfx1250_gfx13<0x31a, 0x328>;
-defm V_MAX_I64 : VOP3Only_Realtriple_gfx1250_gfx13<0x31b, 0x329>;
+defm V_MIN_U64 : VOP3Only_Realtriple_gfx1250<0x318>;
+defm V_MAX_U64 : VOP3Only_Realtriple_gfx1250<0x319>;
+defm V_MIN_I64 : VOP3Only_Realtriple_gfx1250<0x31a>;
+defm V_MAX_I64 : VOP3Only_Realtriple_gfx1250<0x31b>;
 defm V_ADD_MAX_I32 : VOP3Only_Realtriple_gfx1250_gfx13<0x25e>;
 defm V_ADD_MAX_U32 : VOP3Only_Realtriple_gfx1250_gfx13<0x25f>;
 defm V_ADD_MIN_I32 : VOP3Only_Realtriple_gfx1250_gfx13<0x260>;

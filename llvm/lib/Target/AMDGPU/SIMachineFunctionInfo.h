@@ -39,7 +39,12 @@ class AMDGPUPseudoSourceValue : public PseudoSourceValue {
 public:
   enum AMDGPUPSVKind : unsigned {
     PSVImage = PseudoSourceValue::TargetCustom,
+#if LLPC_BUILD_NPI
+    GWSResource,
+    GlobalRegister,
+#else /* LLPC_BUILD_NPI */
     GWSResource
+#endif /* LLPC_BUILD_NPI */
   };
 
 protected:
@@ -86,6 +91,27 @@ public:
   }
 };
 
+#if LLPC_BUILD_NPI
+class AMDGPUGlobalRegisterPseudoSourceValue final
+    : public AMDGPUPseudoSourceValue {
+public:
+  explicit AMDGPUGlobalRegisterPseudoSourceValue(const AMDGPUTargetMachine &TM)
+      : AMDGPUPseudoSourceValue(GlobalRegister, TM) {}
+
+  static bool classof(const PseudoSourceValue *V) {
+    return V->kind() == GlobalRegister;
+  }
+
+  // These are inaccessible memory from IR.
+  bool isAliased(const MachineFrameInfo *) const override { return false; }
+
+  // These are inaccessible memory from IR.
+  bool mayAlias(const MachineFrameInfo *) const override { return false; }
+
+  void printCustom(raw_ostream &OS) const override { OS << "GlobalRegister"; }
+};
+
+#endif /* LLPC_BUILD_NPI */
 namespace yaml {
 
 struct SIArgument {
@@ -468,6 +494,9 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
   std::pair<unsigned, unsigned> WavesPerEU = {0, 0};
 
   const AMDGPUGWSResourcePseudoSourceValue GWSResourcePSV;
+#if LLPC_BUILD_NPI
+  const AMDGPUGlobalRegisterPseudoSourceValue GlobalRegisterPSV;
+#endif /* LLPC_BUILD_NPI */
 
   // Default/requested number of work groups for the function.
   SmallVector<unsigned> MaxNumWorkGroups = {0, 0, 0};
@@ -626,11 +655,11 @@ private:
   // This is only useful during prolog/epilog insertion, so it doesn't need to
   // be serialized.
   IndexedMap<uint32_t, VGPRBlock2IndexFunctor> MaskForVGPRBlockOps;
+
 #if LLPC_BUILD_NPI
-
   LdsSpill LdsSpillInfo;
-#endif /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
 private:
   Register VGPRForAGPRCopy;
 
@@ -1183,6 +1212,13 @@ public:
   const AMDGPUGWSResourcePseudoSourceValue *
   getGWSPSV(const AMDGPUTargetMachine &TM) {
     return &GWSResourcePSV;
+#if LLPC_BUILD_NPI
+  }
+
+  const AMDGPUGlobalRegisterPseudoSourceValue *
+  getGlobalRegisterPSV(const AMDGPUTargetMachine &TM) {
+    return &GlobalRegisterPSV;
+#endif /* LLPC_BUILD_NPI */
   }
 
   unsigned getOccupancy() const {

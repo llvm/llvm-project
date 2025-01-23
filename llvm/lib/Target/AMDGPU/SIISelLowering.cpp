@@ -1856,6 +1856,33 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags |= MachineMemOperand::MOLoad;
     return true;
   }
+#if LLPC_BUILD_NPI
+  case Intrinsic::amdgcn_s_mov_from_global:
+  case Intrinsic::amdgcn_s_mov_to_global: {
+    Type *T;
+    if (IntrID == Intrinsic::amdgcn_s_mov_to_global) {
+      Info.opc = ISD::INTRINSIC_VOID;
+      T = CI.getArgOperand(1)->getType();
+    } else {
+      Info.opc = ISD::INTRINSIC_W_CHAIN;
+      T = CI.getType();
+    }
+    Info.memVT = EVT::getIntegerVT(CI.getContext(), T->getIntegerBitWidth());
+
+    Info.flags |= MachineMemOperand::MODereferenceable;
+    if (IntrID == Intrinsic::amdgcn_s_mov_from_global)
+      Info.flags |= MachineMemOperand::MOLoad;
+    if (IntrID == Intrinsic::amdgcn_s_mov_to_global)
+      Info.flags |= MachineMemOperand::MOStore;
+
+    const GCNTargetMachine &TM =
+        static_cast<const GCNTargetMachine &>(getTargetMachine());
+    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    Info.ptrVal = MFI->getGlobalRegisterPSV(TM);
+
+    return true;
+  }
+#endif /* LLPC_BUILD_NPI */
   default:
     return false;
   }

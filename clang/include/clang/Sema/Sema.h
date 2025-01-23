@@ -13094,7 +13094,7 @@ public:
       auto *FD = dyn_cast<FunctionDecl>(DC);
       S.PushFunctionScope();
       S.PushExpressionEvaluationContext(
-          (FD && FD->isConsteval())
+          (FD && FD->isImmediateFunction())
               ? ExpressionEvaluationContext::ImmediateFunctionContext
               : ExpressionEvaluationContext::PotentiallyEvaluated);
       if (FD) {

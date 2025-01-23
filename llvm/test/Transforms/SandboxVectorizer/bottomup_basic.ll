@@ -242,3 +242,30 @@ define void @diamondWithShuffle(ptr %ptr) {
   store float %sub1, ptr %ptr1
   ret void
 }
+
+define void @diamondMultiInput(ptr %ptr, ptr %ptrX) {
+; CHECK-LABEL: define void @diamondMultiInput(
+; CHECK-SAME: ptr [[PTR:%.*]], ptr [[PTRX:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[LDX:%.*]] = load float, ptr [[PTRX]], align 4
+; CHECK-NEXT:    [[VINS:%.*]] = insertelement <2 x float> poison, float [[LDX]], i32 0
+; CHECK-NEXT:    [[VEXT:%.*]] = extractelement <2 x float> [[VECL]], i32 0
+; CHECK-NEXT:    [[VINS1:%.*]] = insertelement <2 x float> [[VINS]], float [[VEXT]], i32 1
+; CHECK-NEXT:    [[VEC:%.*]] = fsub <2 x float> [[VECL]], [[VINS1]]
+; CHECK-NEXT:    store <2 x float> [[VEC]], ptr [[PTR0]], align 4
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr float, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 1
+  %ld0 = load float, ptr %ptr0
+  %ld1 = load float, ptr %ptr1
+
+  %ldX = load float, ptr %ptrX
+
+  %sub0 = fsub float %ld0, %ldX
+  %sub1 = fsub float %ld1, %ld0
+  store float %sub0, ptr %ptr0
+  store float %sub1, ptr %ptr1
+  ret void
+}

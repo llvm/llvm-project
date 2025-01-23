@@ -401,6 +401,9 @@ def : AlwaysUniform<int_amdgcn_readlane>;
 def : AlwaysUniform<int_amdgcn_icmp>;
 def : AlwaysUniform<int_amdgcn_fcmp>;
 def : AlwaysUniform<int_amdgcn_ballot>;
+#ifdef LLPC_BUILD_NPI
+def : AlwaysUniform<int_amdgcn_s_mov_from_global>;
+#endif /* LLPC_BUILD_NPI */
 def : AlwaysUniform<int_amdgcn_if_break>;
 def : AlwaysUniform<int_amdgcn_waterfall_readfirstlane>;
 def : AlwaysUniform<int_amdgcn_waterfall_begin>;

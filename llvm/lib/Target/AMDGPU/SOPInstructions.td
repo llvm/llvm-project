@@ -560,6 +560,36 @@ let SubtargetPredicate = isGFX13Plus in {
   }
 } // End SubtargetPredicate = isGFX13Plus
 
+// Move from/to global registers.
+//
+// Global register operands are represented as constant operands in Machine IR
+// because they do not interact with regular registers in any way (e.g. for
+// code generation purposes).
+//
+// The instructions are modeled as accessing "memory" (load / store). Think of
+// the global register operands as part of the address of this memory access.
+let SubtargetPredicate = isGFX13Plus, maybeAtomic = 1, Uses = [M0] in {
+
+let mayLoad = 1 in {
+def S_MOV_FROM_GLOBAL_B32 : SOP1_Pseudo <"s_mov_from_global_b32",
+    (outs SReg_32:$sdst), (ins GlobalSReg32:$src0), "$sdst, $src0",
+    [(set i32:$sdst, (int_amdgcn_s_mov_from_global timm:$src0, M0))]>;
+def S_MOV_FROM_GLOBAL_B64 : SOP1_Pseudo <"s_mov_from_global_b64",
+    (outs SReg_64:$sdst), (ins GlobalSReg64:$src0), "$sdst, $src0",
+    [(set i64:$sdst, (int_amdgcn_s_mov_from_global timm:$src0, M0))]>;
+} // End mayLoad = 1
+
+let mayStore = 1 in {
+def S_MOV_TO_GLOBAL_B32 : SOP1_Pseudo <"s_mov_to_global_b32", (outs),
+    (ins GlobalSReg32:$sdst, SSrc_b32:$src0), "$sdst, $src0",
+    [(int_amdgcn_s_mov_to_global timm:$sdst, i32:$src0, M0)]>;
+def S_MOV_TO_GLOBAL_B64 : SOP1_Pseudo <"s_mov_to_global_b64", (outs),
+    (ins GlobalSReg64:$sdst, SSrc_b64:$src0), "$sdst, $src0",
+    [(int_amdgcn_s_mov_to_global timm:$sdst, i64:$src0, M0)]>;
+} // End mayStore = 1
+
+} // End SubtargetPredicate = isGFX13Plus, maybeAtomic = 1, Uses = [M0]
+
 #endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
 // SOP2 Instructions
@@ -2170,9 +2200,13 @@ multiclass SOP1_Real_gfx13<bits<8> op, string name = !tolower(NAME)> {
     def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
 }
 
-defm S_GET_SHADER_CYCLES_U64 : SOP1_Real_gfx13<0x11>;
-defm S_SET_GPR_IDX_U32 : SOP1_Real_gfx13<0x6f>;
-defm S_ADD_GPR_IDX_U32 : SOP1_Real_gfx13<0x70>;
+defm S_GET_SHADER_CYCLES_U64 : SOP1_Real_gfx13<0x011>;
+defm S_MOV_FROM_GLOBAL_B32   : SOP1_Real_gfx13<0x05b>;
+defm S_MOV_FROM_GLOBAL_B64   : SOP1_Real_gfx13<0x05c>;
+defm S_MOV_TO_GLOBAL_B32     : SOP1_Real_gfx13<0x05d>;
+defm S_MOV_TO_GLOBAL_B64     : SOP1_Real_gfx13<0x05e>;
+defm S_SET_GPR_IDX_U32       : SOP1_Real_gfx13<0x06f>;
+defm S_ADD_GPR_IDX_U32       : SOP1_Real_gfx13<0x070>;
 
 //===----------------------------------------------------------------------===//
 #endif /* LLPC_BUILD_NPI */
@@ -2554,20 +2588,6 @@ defm S_MOVRELS_B64        : SOP1_Real_gfx6_gfx7_gfx10_gfx13<0x02f>;
 defm S_MOVRELD_B32        : SOP1_Real_gfx6_gfx7_gfx10_gfx13<0x030>;
 defm S_MOVRELD_B64        : SOP1_Real_gfx6_gfx7_gfx10_gfx13<0x031>;
 defm S_ABS_I32            : SOP1_Real_gfx6_gfx7_gfx10_gfx13<0x034>;
-
-//===----------------------------------------------------------------------===//
-// SOP2 - GFX13.
-//===----------------------------------------------------------------------===//
-
-multiclass SOP2_Real_gfx13<bits<7> op, string name = !tolower(NAME)> {
-  defvar ps = !cast<SOP2_Pseudo>(NAME);
-  def _gfx13 : SOP2_Real32<op, ps, name>,
-               Select<GFX13Gen, ps.Mnemonic>;
-  if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
-}
-
-defm S_PACK_HL_B32_B16 : SOP2_Real_gfx13<0x37>;
 #else /* LLPC_BUILD_NPI */
 defm S_FF1_I32_B32        : SOP1_Real_gfx6_gfx7_gfx10<0x013>;
 defm S_FF1_I32_B64        : SOP1_Real_gfx6_gfx7_gfx10<0x014>;
@@ -2604,6 +2624,20 @@ defm S_ABS_I32            : SOP1_Real_gfx6_gfx7_gfx10<0x034>;
 
 //===----------------------------------------------------------------------===//
 #ifdef LLPC_BUILD_NPI
+// SOP2 - GFX13.
+//===----------------------------------------------------------------------===//
+
+multiclass SOP2_Real_gfx13<bits<7> op, string name = !tolower(NAME)> {
+  defvar ps = !cast<SOP2_Pseudo>(NAME);
+  def _gfx13 : SOP2_Real32<op, ps, name>,
+               Select<GFX13Gen, ps.Mnemonic>;
+  if !ne(ps.Mnemonic, name) then
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
+}
+
+defm S_PACK_HL_B32_B16 : SOP2_Real_gfx13<0x37>;
+
+//===----------------------------------------------------------------------===//
 // SOP2 - GFX12.
 #else /* LLPC_BUILD_NPI */
 // SOP2 - GFX12
@@ -2847,15 +2881,15 @@ multiclass SOP2_Real_gfx6_gfx7<bits<7> op> {
 #ifdef LLPC_BUILD_NPI
 multiclass SOP2_Real_gfx6_gfx7_gfx10_gfx13<bits<7> op> :
   SOP2_Real_gfx6_gfx7<op>, SOP2_Real_gfx10<op>, SOP2_Real_gfx13<op>;
+
+multiclass SOP2_Real_gfx6_gfx7_gfx10_Renamed_gfx13<bits<7> op, string gfx13_name> :
+  SOP2_Real_gfx6_gfx7<op>, SOP2_Real_gfx10<op>, SOP2_Real_gfx13<op, gfx13_name>;
 #else /* LLPC_BUILD_NPI */
 multiclass SOP2_Real_gfx6_gfx7_gfx10<bits<7> op> :
   SOP2_Real_gfx6_gfx7<op>, SOP2_Real_gfx10<op>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-multiclass SOP2_Real_gfx6_gfx7_gfx10_Renamed_gfx13<bits<7> op, string gfx13_name> :
-  SOP2_Real_gfx6_gfx7<op>, SOP2_Real_gfx10<op>, SOP2_Real_gfx13<op, gfx13_name>;
-
 multiclass SOP2_Real_gfx6_gfx7_gfx10_gfx11_Renamed_gfx12_gfx13<bits<7> op, string gfx12_gfx13_name> :
 #else /* LLPC_BUILD_NPI */
 multiclass SOP2_Real_gfx6_gfx7_gfx10_gfx11_Renamed_gfx12<bits<7> op, string gfx12_name> :
@@ -3052,24 +3086,24 @@ multiclass SOPK_Real32_gfx13<bits<5> op, string name = !tolower(NAME)> {
   if !ne(ps.Mnemonic, name) then
     def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
 }
-
-multiclass SOPK_Real32_gfx10_gfx11_gfx12_gfx13<bits<5> op> :
-  SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11<op>, SOPK_Real32_gfx12<op>,
-  SOPK_Real32_gfx13<op>;
 #else /* LLPC_BUILD_NPI */
 multiclass SOPK_Real32_gfx10_gfx11<bits<5> op> :
   SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11<op>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-multiclass SOPK_Real32_gfx10_Renamed_gfx13<bits<5> op, string gfx13_name> :
-  SOPK_Real32_gfx10<op>, SOPK_Real32_gfx13<op, gfx13_name>;
+multiclass SOPK_Real32_gfx10_gfx11_gfx12_gfx13<bits<5> op> :
+  SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11<op>, SOPK_Real32_gfx12<op>,
+  SOPK_Real32_gfx13<op>;
 #else /* LLPC_BUILD_NPI */
 multiclass SOPK_Real32_gfx10_gfx11_gfx12<bits<5> op> :
   SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11_gfx12<op>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
+multiclass SOPK_Real32_gfx10_Renamed_gfx13<bits<5> op, string gfx13_name> :
+  SOPK_Real32_gfx10<op>, SOPK_Real32_gfx13<op, gfx13_name>;
+
 defm S_VERSION              : SOPK_Real32_gfx10_gfx11_gfx12_gfx13<0x001>;
 defm S_CALL_B64             : SOPK_Real32_gfx10_Renamed_gfx13<0x016, "s_call_i64">;
 #else /* LLPC_BUILD_NPI */
@@ -3116,29 +3150,29 @@ multiclass SOPK_Real64_gfx6_gfx7_gfx10<bits<5> op> :
 multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx11<bits<5> op> :
 #ifdef LLPC_BUILD_NPI
   SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11<op>;
-
-multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx13<bits<5> op> :
-  SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10<op>, SOPK_Real32_gfx13<op>;
 #else /* LLPC_BUILD_NPI */
   SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10_gfx11<op>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<bits<5> op> :
-  SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11<op>,
-  SOPK_Real32_gfx12<op>, SOPK_Real32_gfx13<op>;
+multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx13<bits<5> op> :
+  SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10<op>, SOPK_Real32_gfx13<op>;
 #else /* LLPC_BUILD_NPI */
 multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12<bits<5> op> :
   SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10_gfx11_gfx12<op>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx11_Renamed_gfx12_gfx13<bits<5> op, string gfx12_gfx13_name> :
+multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<bits<5> op> :
 #else /* LLPC_BUILD_NPI */
 multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx11_Renamed_gfx12<bits<5> op, string gfx12_name> :
 #endif /* LLPC_BUILD_NPI */
   SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11<op>,
 #ifdef LLPC_BUILD_NPI
+  SOPK_Real32_gfx12<op>, SOPK_Real32_gfx13<op>;
+
+multiclass SOPK_Real32_gfx6_gfx7_gfx10_gfx11_Renamed_gfx12_gfx13<bits<5> op, string gfx12_gfx13_name> :
+  SOPK_Real32_gfx6_gfx7<op>, SOPK_Real32_gfx10<op>, SOPK_Real32_gfx11<op>,
   SOPK_Real32_gfx12<op, gfx12_gfx13_name>, SOPK_Real32_gfx13<op, gfx12_gfx13_name>;
 
 multiclass SOPK_Real64_gfx6_gfx7_gfx10_gfx13<bits<5> op> :

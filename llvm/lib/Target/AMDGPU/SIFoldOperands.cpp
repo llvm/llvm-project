@@ -761,8 +761,19 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
   }
 
   // Check the case where we might introduce a second constant operand to a
+#if LLPC_BUILD_NPI
+  // scalar instruction.
+  //
+  // S_MOV_TO_GLOBAL has an immediate operand that is always encoded in sdst
+  // and confuses this check. It also only has a single "real" source operand
+  // and therefore doesn't need this check anyway.
+  if (TII->isSALU(MI->getOpcode()) &&
+      MI->getOpcode() != AMDGPU::S_MOV_TO_GLOBAL_B32 &&
+      MI->getOpcode() != AMDGPU::S_MOV_TO_GLOBAL_B64) {
+#else /* LLPC_BUILD_NPI */
   // scalar instruction
   if (TII->isSALU(MI->getOpcode())) {
+#endif /* LLPC_BUILD_NPI */
     const MCInstrDesc &InstDesc = MI->getDesc();
     const MCOperandInfo &OpInfo = InstDesc.operands()[OpNo];
 
