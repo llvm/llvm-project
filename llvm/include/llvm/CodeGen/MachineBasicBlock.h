@@ -347,6 +347,10 @@ public:
 
   using instr_range = iterator_range<instr_iterator>;
   using const_instr_range = iterator_range<const_instr_iterator>;
+
+  /// Range that iterates over all instructions in the basic block.
+  ///
+  /// Unlike begin/end methods the range contains bundled instructions.
   instr_range instrs() { return instr_range(instr_begin(), instr_end()); }
   const_instr_range instrs() const {
     return const_instr_range(instr_begin(), instr_end());
