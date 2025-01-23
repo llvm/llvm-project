@@ -548,18 +548,6 @@ public:
                                                Register TargetReg,
                                                bool FrameSetup) const;
 
-  bool isFormTransposedOpcode(unsigned Opc) const {
-    switch (Opc) {
-    case AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO:
-    case AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO:
-    case AArch64::FORM_TRANSPOSED_REG_TUPLE_MULX2_PSEUDO:
-    case AArch64::FORM_TRANSPOSED_REG_TUPLE_MULX4_PSEUDO:
-      return true;
-    default:
-      return false;
-    }
-  }
-
 #define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"
 
