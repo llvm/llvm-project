@@ -3087,8 +3087,7 @@ TEST_F(OpenMPIRBuilderTest, CriticalDirective) {
   EXPECT_EQ(CriticalEndCI->arg_size(), 3U);
   EXPECT_TRUE(isa<GlobalVariable>(CriticalEndCI->getArgOperand(0)));
   EXPECT_EQ(CriticalEndCI->getArgOperand(1), CriticalEntryCI->getArgOperand(1));
-  PointerType *CriticalNamePtrTy =
-      PointerType::getUnqual(ArrayType::get(Type::getInt32Ty(Ctx), 8));
+  PointerType *CriticalNamePtrTy = PointerType::getUnqual(Ctx);
   EXPECT_EQ(CriticalEndCI->getArgOperand(2), CriticalEntryCI->getArgOperand(2));
   GlobalVariable *GV =
       dyn_cast<GlobalVariable>(CriticalEndCI->getArgOperand(2));
@@ -6243,8 +6242,8 @@ TEST_F(OpenMPIRBuilderTest, TargetRegion) {
       OpenMPIRBuilder::InsertPointTy, AfterIP,
       OMPBuilder.createTarget(OmpLoc, /*IsOffloadEntry=*/true, Builder.saveIP(),
                               Builder.saveIP(), EntryInfo, DefaultAttrs,
-                              RuntimeAttrs, Inputs, GenMapInfoCB, BodyGenCB,
-                              SimpleArgAccessorCB));
+                              RuntimeAttrs, /*IfCond=*/nullptr, Inputs,
+                              GenMapInfoCB, BodyGenCB, SimpleArgAccessorCB));
   Builder.restoreIP(AfterIP);
 
   OMPBuilder.finalize();
@@ -6402,11 +6401,12 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
       /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC,
       /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
 
-  ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, AfterIP,
-                       OMPBuilder.createTarget(
-                           Loc, /*IsOffloadEntry=*/true, EntryIP, EntryIP,
-                           EntryInfo, DefaultAttrs, RuntimeAttrs, CapturedArgs,
-                           GenMapInfoCB, BodyGenCB, SimpleArgAccessorCB));
+  ASSERT_EXPECTED_INIT(
+      OpenMPIRBuilder::InsertPointTy, AfterIP,
+      OMPBuilder.createTarget(Loc, /*IsOffloadEntry=*/true, EntryIP, EntryIP,
+                              EntryInfo, DefaultAttrs, RuntimeAttrs,
+                              /*IfCond=*/nullptr, CapturedArgs, GenMapInfoCB,
+                              BodyGenCB, SimpleArgAccessorCB));
   Builder.restoreIP(AfterIP);
 
   Builder.CreateRetVoid();
@@ -6561,8 +6561,8 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionSPMD) {
       OpenMPIRBuilder::InsertPointTy, AfterIP,
       OMPBuilder.createTarget(OmpLoc, /*IsOffloadEntry=*/true, Builder.saveIP(),
                               Builder.saveIP(), EntryInfo, DefaultAttrs,
-                              RuntimeAttrs, Inputs, GenMapInfoCB, BodyGenCB,
-                              SimpleArgAccessorCB));
+                              RuntimeAttrs, /*IfCond=*/nullptr, Inputs,
+                              GenMapInfoCB, BodyGenCB, SimpleArgAccessorCB));
   Builder.restoreIP(AfterIP);
 
   OMPBuilder.finalize();
@@ -6660,11 +6660,12 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDeviceSPMD) {
       /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD,
       /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
 
-  ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, AfterIP,
-                       OMPBuilder.createTarget(
-                           Loc, /*IsOffloadEntry=*/true, EntryIP, EntryIP,
-                           EntryInfo, DefaultAttrs, RuntimeAttrs, CapturedArgs,
-                           GenMapInfoCB, BodyGenCB, SimpleArgAccessorCB));
+  ASSERT_EXPECTED_INIT(
+      OpenMPIRBuilder::InsertPointTy, AfterIP,
+      OMPBuilder.createTarget(Loc, /*IsOffloadEntry=*/true, EntryIP, EntryIP,
+                              EntryInfo, DefaultAttrs, RuntimeAttrs,
+                              /*IfCond=*/nullptr, CapturedArgs, GenMapInfoCB,
+                              BodyGenCB, SimpleArgAccessorCB));
   Builder.restoreIP(AfterIP);
 
   Builder.CreateRetVoid();
@@ -6774,11 +6775,12 @@ TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
       /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC,
       /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
 
-  ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, AfterIP,
-                       OMPBuilder.createTarget(
-                           Loc, /*IsOffloadEntry=*/true, EntryIP, EntryIP,
-                           EntryInfo, DefaultAttrs, RuntimeAttrs, CapturedArgs,
-                           GenMapInfoCB, BodyGenCB, SimpleArgAccessorCB));
+  ASSERT_EXPECTED_INIT(
+      OpenMPIRBuilder::InsertPointTy, AfterIP,
+      OMPBuilder.createTarget(Loc, /*IsOffloadEntry=*/true, EntryIP, EntryIP,
+                              EntryInfo, DefaultAttrs, RuntimeAttrs,
+                              /*IfCond=*/nullptr, CapturedArgs, GenMapInfoCB,
+                              BodyGenCB, SimpleArgAccessorCB));
   Builder.restoreIP(AfterIP);
 
   Builder.CreateRetVoid();

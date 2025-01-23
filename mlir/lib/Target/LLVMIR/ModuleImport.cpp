@@ -816,7 +816,7 @@ static TypedAttr getScalarConstantAsAttr(OpBuilder &builder,
     llvm::Type *type = constFloat->getType();
     FloatType floatType =
         type->isBFloatTy()
-            ? FloatType::getBF16(context)
+            ? BFloat16Type::get(context)
             : LLVM::detail::getFloatType(context, type->getScalarSizeInBits());
     if (!floatType) {
       emitError(UnknownLoc::get(builder.getContext()))

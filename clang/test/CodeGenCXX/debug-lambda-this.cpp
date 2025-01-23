@@ -4,9 +4,9 @@ struct D {
   D();
   D(const D&);
   int x;
-  int d(int x);
+  void d(int x);
 };
-int D::d(int x) {
+void D::d(int x) {
   [=] {
     return this->x;
   }();
