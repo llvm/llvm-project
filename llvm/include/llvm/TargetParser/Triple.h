@@ -62,6 +62,7 @@ public:
     loongarch64,    // LoongArch (64-bit): loongarch64
     m68k,           // M68k: Motorola 680x0 family
     mips,           // MIPS: mips, mipsallegrex, mipsr6
+    cpu0,           // CPU0
     mipsel,         // MIPSEL: mipsel, mipsallegrexe, mipsr6el
     mips64,         // MIPS64: mips64, mips64r6, mipsn32, mipsn32r6
     mips64el,       // MIPS64EL: mips64el, mips64r6el, mipsn32el, mipsn32r6el
@@ -985,6 +986,9 @@ public:
   bool isMIPS() const {
     return isMIPS32() || isMIPS64();
   }
+
+  /// Tests whether the target is CPU0
+  bool isCPU0() const { return getArch() == Triple::cpu0; }
 
   /// Tests whether the target is PowerPC (32- or 64-bit LE or BE).
   bool isPPC() const {
