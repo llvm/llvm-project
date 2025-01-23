@@ -42,8 +42,7 @@ template <typename CRTPImpl, size_t PtrSize> struct CompactUnwindTraits {
   static constexpr size_t PointerSize = PtrSize;
   static constexpr size_t Size = 3 * PointerSize + 2 * 4;
   static constexpr size_t FnFieldOffset = 0;
-  static constexpr size_t SizeFieldOffset =
-      FnFieldOffset + PointerSize;
+  static constexpr size_t SizeFieldOffset = FnFieldOffset + PointerSize;
   static constexpr size_t EncodingFieldOffset = SizeFieldOffset + 4;
   static constexpr size_t PersonalityFieldOffset = EncodingFieldOffset + 4;
   static constexpr size_t LSDAFieldOffset =
