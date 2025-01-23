@@ -22,8 +22,8 @@
 #include "llvm/IR/Analysis.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
-#include <utility>
 #include <type_traits>
+#include <utility>
 
 namespace llvm {
 
