@@ -1,17 +1,14 @@
 #include "clang/Analysis/Analyses/DanglingReference.h"
 #include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Basic/DiagnosticSema.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/Support/raw_ostream.h"
 #include <sstream>
 
 namespace clang {
@@ -277,28 +274,30 @@ public:
 class DanglingReferenceAnalyzer {
 public:
   DanglingReferenceAnalyzer(const DeclContext &DC, const CFG &cfg,
-                            AnalysisDeclContext &AC, Sema &S)
-      : DC(DC), cfg(cfg), AC(AC), S(S) {}
+                            AnalysisDeclContext &AC,
+                            DanglingReferenceReporter *Reporter)
+      : DC(DC), cfg(cfg), AC(AC), Reporter(Reporter) {}
   void RunAnalysis() {
 
     // For simplicity in protoytpe, avoid joins and stick to functions without
     // branches.
     if (!cfg.isLinear())
       return;
-    cfg.dump(AC.getASTContext().getLangOpts(), true);
+    // cfg.dump(AC.getASTContext().getLangOpts(), true);
     for (auto I = cfg.begin(), E = cfg.end(); I != E; ++I) {
       for (CFGBlock::const_iterator BI = (*I)->begin(), BE = (*I)->end();
            BI != BE; ++BI) {
         if (auto cfgstmt = BI->getAs<CFGStmt>()) {
           auto *stmt = cfgstmt->getStmt();
-          llvm::errs() << "================================================\n";
-          cfgstmt->dump();
-          if (auto *E = dyn_cast<Expr>(stmt))
-            E->dumpColor();
+          // llvm::errs() <<
+          // "================================================\n";
+          // cfgstmt->dump();
+          // if (auto *E = dyn_cast<Expr>(stmt))
+          //   E->dumpColor();
           PointsTo.Handle(stmt);
           if (auto *E = dyn_cast<Expr>(stmt)) {
-            llvm::errs() << "Points To : " << PointsTo.ResolveExpr(E).str()
-                         << "\n";
+            // llvm::errs() << "Points To : " << PointsTo.ResolveExpr(E).str()
+            //              << "\n";
           }
           if (auto *RS = dyn_cast<ReturnStmt>(stmt))
             HandleReturnStmt(RS);
@@ -321,30 +320,26 @@ private:
     // llvm::errs() << "Returning pointer to " << RetPointee.str() << "\n";
     if (RetPointee.IsOnStack()) {
       // This points to something on stack!!
-      if (auto *D = RetPointee.getDecl()) {
-        S.Diag(RetExpr->getExprLoc(), diag::warn_ret_stack_variable_ref_cfg)
-            << RetExpr->getExprLoc();
-        S.Diag(D->getLocation(), diag::note_local_variable_declared_here)
-            << D->getLocation();
-      }
+      if (auto *D = RetPointee.getDecl())
+        Reporter->ReportReturnLocalVar(RetExpr, D);
       if (auto *E = RetPointee.getExpr())
-        S.Diag(E->getExprLoc(), diag::warn_ret_stack_temporary_ref_cfg)
-            << E->getExprLoc();
+        Reporter->ReportReturnTemporaryExpr(E);
     }
   }
 
   [[maybe_unused]] const DeclContext &DC;
   const CFG &cfg;
   [[maybe_unused]] AnalysisDeclContext &AC;
-  Sema &S;
+  DanglingReferenceReporter *Reporter;
   // ExpressionResolver ExprResolver;
   PointsToTracker PointsTo;
 };
 } // namespace
 
 void runDanglingReferenceAnalysis(const DeclContext &DC, const CFG &cfg,
-                                  AnalysisDeclContext &AC, Sema &S) {
-  DanglingReferenceAnalyzer DRA(DC, cfg, AC, S);
+                                  AnalysisDeclContext &AC,
+                                  DanglingReferenceReporter *Reporter) {
+  DanglingReferenceAnalyzer DRA(DC, cfg, AC, Reporter);
   DRA.RunAnalysis();
 }
 

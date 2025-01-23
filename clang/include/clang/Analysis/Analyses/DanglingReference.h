@@ -3,11 +3,20 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Sema/Sema.h"
-
 namespace clang {
+class DanglingReferenceReporter {
+public:
+  DanglingReferenceReporter() = default;
+  virtual ~DanglingReferenceReporter() = default;
+
+  virtual void ReportReturnLocalVar(const Expr *RetExpr,
+                                    const Decl *LocalDecl) {}
+  virtual void ReportReturnTemporaryExpr(const Expr *TemporaryExpr) {}
+};
+
 void runDanglingReferenceAnalysis(const DeclContext &dc, const CFG &cfg,
-                                  AnalysisDeclContext &ac, Sema &S);
+                                  AnalysisDeclContext &ac,
+                                  DanglingReferenceReporter *reporter);
 
 } // namespace clang
 

@@ -2638,6 +2638,28 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   }
 }
 
+namespace {
+
+class DanglingReferenceReporterImpl : public DanglingReferenceReporter {
+public:
+  DanglingReferenceReporterImpl(Sema &S) : S(S) {}
+
+  void ReportReturnLocalVar(const Expr *RetExpr,
+                            const Decl *LocalDecl) override {
+    S.Diag(RetExpr->getExprLoc(), diag::warn_ret_stack_variable_ref_cfg)
+        << RetExpr->getExprLoc();
+    S.Diag(LocalDecl->getLocation(), diag::note_local_variable_declared_here)
+        << LocalDecl->getLocation();
+  }
+  void ReportReturnTemporaryExpr(const Expr *TemporaryExpr) override {
+    S.Diag(TemporaryExpr->getExprLoc(), diag::warn_ret_stack_temporary_ref_cfg)
+        << TemporaryExpr->getExprLoc();
+  }
+
+private:
+  Sema &S;
+};
+} // namespace
 void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     sema::AnalysisBasedWarnings::Policy P, sema::FunctionScopeInfo *fscope,
     const Decl *D, QualType BlockType) {
@@ -2831,7 +2853,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       !Diags.isIgnored(diag::warn_ret_stack_variable_ref_cfg,
                        D->getBeginLoc())) {
     if (CFG *cfg = AC.getCFG()) {
-      runDanglingReferenceAnalysis(*cast<DeclContext>(D), *cfg, AC, S);
+      DanglingReferenceReporterImpl Reporter(S);
+      runDanglingReferenceAnalysis(*cast<DeclContext>(D), *cfg, AC, &Reporter);
     }
   }
   // Check for violations of "called once" parameter properties.
