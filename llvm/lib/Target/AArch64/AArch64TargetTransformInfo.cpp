@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
@@ -3575,15 +3576,35 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
         // If the information about individual scalars being vectorized is
         // available, this yeilds better cost estimation.
         if (auto *VTy = dyn_cast<FixedVectorType>(Ty); VTy && !Args.empty()) {
+          assert(Args.size() % 2 == 0 && "Args size should be even");
           InstructionCost InsertExtractCost =
               ST->getVectorInsertExtractBaseCost();
-          Cost = (3 * InsertExtractCost) * VTy->getNumElements();
-          for (int i = 0, Sz = Args.size(); i < Sz; i += 2) {
-            Cost += getArithmeticInstrCost(
-                Opcode, VTy->getScalarType(), CostKind,
-                TTI::getOperandInfo(Args[i]), TTI::getOperandInfo(Args[i + 1]));
+          // If the cost of single sdiv is inquired through the cost-model.
+          // FIXME: remove the isa checks once the PR 122236 lands.
+          if (Args.size() == 2 &&
+              !(isa<ConstantVector>(Args[1]) ||
+                isa<ConstantDataVector>(Args[1]) ||
+                isa<ConstantExpr>(Args[1])) &&
+              none_of(Args, IsaPred<UndefValue, PoisonValue>)) {
+            unsigned NElts = VTy->getNumElements();
+            // Compute per element cost
+            Cost = getArithmeticInstrCost(Opcode, VTy->getScalarType(),
+                                          CostKind, Op1Info.getNoProps(),
+                                          Op2Info.getNoProps());
+            Cost += 3 * InsertExtractCost;
+            Cost *= NElts;
+            return Cost;
+          } else if (Args.size() > 2) // vectorization cost is inquired
+          {
+            Cost = (3 * InsertExtractCost) * VTy->getNumElements();
+            for (int i = 0, Sz = Args.size(); i < Sz; i += 2) {
+              Cost +=
+                  getArithmeticInstrCost(Opcode, VTy->getScalarType(), CostKind,
+                                         TTI::getOperandInfo(Args[i]),
+                                         TTI::getOperandInfo(Args[i + 1]));
+            }
+            return Cost;
           }
-          return Cost;
         }
 
         // If one of the operands is a uniform constant then the cost for each
