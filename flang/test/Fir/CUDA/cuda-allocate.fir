@@ -24,7 +24,7 @@ func.func @_QPsub1() {
 // CHECK: %[[BOX_NONE:.*]] = fir.convert %[[DECL_DESC]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK: %{{.*}} = fir.call @_FortranAAllocatableDeallocate(%[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 // CHECK: %[[BOX_NONE:.*]] = fir.convert %[[DECL_DESC]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
-// CHECK: fir.call @_FortranACUFFreeDescriptor(%[[BOX_NONE]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> none
+// CHECK: fir.call @_FortranACUFFreeDescriptor(%[[BOX_NONE]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.ref<i8>, i32) -> ()
 
 fir.global @_QMmod1Ea {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?xf32>>> {
     %0 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
@@ -80,7 +80,7 @@ func.func @_QPsub5() {
   %6 = fir.convert %5#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
   %7 = fir.convert %c1 : (index) -> i64
   %8 = fir.convert %c10_i32 : (i32) -> i64
-  %9 = fir.call @_FortranAAllocatableSetBounds(%6, %c0_i32, %7, %8) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+  fir.call @_FortranAAllocatableSetBounds(%6, %c0_i32, %7, %8) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
   %10 = cuf.allocate %5#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<pinned>} -> i32
   %11 = cuf.deallocate %5#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<pinned>} -> i32
   return
@@ -108,7 +108,7 @@ func.func @_QQsub6() attributes {fir.bindc_name = "test"} {
   %2 = fir.convert %1#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
   %3 = fir.convert %c1 : (index) -> i64
   %4 = fir.convert %c10_i32 : (i32) -> i64
-  %5 = fir.call @_FortranAAllocatableSetBounds(%2, %c0_i32, %3, %4) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+  fir.call @_FortranAAllocatableSetBounds(%2, %c0_i32, %3, %4) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
   %6 = cuf.allocate %1#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {data_attr = #cuf.cuda<device>} -> i32
   return
 }
@@ -180,5 +180,34 @@ func.func @_QQallocate_stream() {
 // CHECK: %[[STREAM:.*]] = fir.declare %[[STREAM_ALLOCA]] {uniq_name = "_QFEstream1"} : (!fir.ref<i64>) -> !fir.ref<i64>
 // CHECK: %[[STREAM_LOAD:.*]] = fir.load %[[STREAM]] : !fir.ref<i64>
 // CHECK: fir.call @_FortranACUFAllocatableAllocate(%{{.*}}, %[[STREAM_LOAD]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, i64, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+
+
+func.func @_QPp_alloc() {
+  %0 = cuf.alloc !fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>> {bindc_name = "complex_array", data_attr = #cuf.cuda<device>, uniq_name = "_QFp_allocEcomplex_array"} -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>>
+  %4 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFp_allocEcomplex_array"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>>
+  %9 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>> {data_attr = #cuf.cuda<device>} -> i32
+  return
+}
+
+// CHECK-LABEL: func.func @_QPp_alloc()
+// CHECK: fir.call @_FortranACUFPointerAllocate
+
+func.func @_QPpointer_source() {
+  %c0_i64 = arith.constant 0 : i64
+  %c1_i32 = arith.constant 1 : i32
+  %c0_i32 = arith.constant 0 : i32
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xf32>>> {bindc_name = "a", uniq_name = "_QFpointer_sourceEa"}
+  %4 = fir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFpointer_sourceEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+  %5 = cuf.alloc !fir.box<!fir.heap<!fir.array<?x?xf32>>> {bindc_name = "a_d", data_attr = #cuf.cuda<device>, uniq_name = "_QFpointer_sourceEa_d"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+  %7 = fir.declare %5 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFpointer_sourceEa_d"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+  %8 = fir.load %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+  %22 = cuf.allocate %7 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>> source(%8 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>) {data_attr = #cuf.cuda<device>} -> i32
+  return
+}
+
+// CHECK-LABEL: func.func @_QPpointer_source()
+// CHECK: _FortranACUFPointerAllocateSource
 
 } // end of module

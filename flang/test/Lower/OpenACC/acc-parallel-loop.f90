@@ -345,6 +345,8 @@ subroutine acc_parallel_loop
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
+! CHECK:      acc.delete accPtr(%[[COPYIN_A]] : !fir.ref<!fir.array<10xf32>>) bounds(%{{.*}}) {dataClause = #acc<data_clause acc_copyin>, name = "a"}
+! CHECK:      acc.delete accPtr(%[[COPYIN_B]] : !fir.ref<!fir.array<10xf32>>) bounds(%{{.*}}) {dataClause = #acc<data_clause acc_copyin_readonly>, name = "b"}
 
   !$acc parallel loop copyout(a) copyout(zero: b)
   DO i = 1, n

@@ -3,6 +3,11 @@ macro(clang_diag_gen component)
     -gen-clang-diags-defs -clang-component=${component}
     SOURCE Diagnostic.td
     TARGET ClangDiagnostic${component})
+
+  clang_tablegen(Diagnostic${component}Enums.inc
+    -gen-clang-diags-enums -clang-component=${component}
+    SOURCE Diagnostic.td
+    TARGET ClangDiagnostic${component}Enums)
 endmacro(clang_diag_gen)
 
 clang_diag_gen(Analysis)
@@ -31,6 +36,11 @@ clang_tablegen(AttrList.inc -gen-clang-attr-list
   SOURCE Attr.td
   TARGET ClangAttrList)
 
+clang_tablegen(AttrParsedAttrList.inc -gen-clang-attr-parsed-attr-list
+  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  SOURCE Attr.td
+  TARGET ClangAttrParsedAttrList)
+
 clang_tablegen(AttrSubMatchRulesList.inc -gen-clang-attr-subject-match-rule-list
   -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
@@ -46,6 +56,12 @@ clang_tablegen(AttrHasAttributeImpl.inc -gen-clang-attr-has-attribute-impl
   -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td
   TARGET ClangAttrHasAttributeImpl
+  )
+
+clang_tablegen(CXX11AttributeInfo.inc -gen-cxx11-attribute-info
+  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  SOURCE Attr.td
+  TARGET CXX11AttributeInfo
   )
 
 clang_tablegen(Builtins.inc -gen-clang-builtins

@@ -200,14 +200,12 @@ TEST(MemoryTagManagerAArch64MTETest, ExpandToGranule) {
 static MemoryRegionInfo MakeRegionInfo(lldb::addr_t base, lldb::addr_t size,
                                        bool tagged) {
   return MemoryRegionInfo(
-      MemoryRegionInfo::RangeType(base, size),
-      MemoryRegionInfo::eYes, MemoryRegionInfo::eYes, MemoryRegionInfo::eYes,
-      MemoryRegionInfo::eNo,
-      MemoryRegionInfo::eYes,
-      ConstString(), MemoryRegionInfo::eNo, 0,
+      MemoryRegionInfo::RangeType(base, size), MemoryRegionInfo::eYes,
+      MemoryRegionInfo::eYes, MemoryRegionInfo::eYes, MemoryRegionInfo::eNo,
+      MemoryRegionInfo::eYes, ConstString(), MemoryRegionInfo::eNo, 0,
       /*memory_tagged=*/
       tagged ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo,
-      MemoryRegionInfo::eDontKnow);
+      MemoryRegionInfo::eDontKnow, MemoryRegionInfo::eDontKnow);
 }
 
 TEST(MemoryTagManagerAArch64MTETest, MakeTaggedRange) {

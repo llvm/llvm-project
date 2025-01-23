@@ -1,12 +1,8 @@
 #ifndef __CLC_RELATIONAL_CLC_ISNAN_H__
 #define __CLC_RELATIONAL_CLC_ISNAN_H__
 
-#if defined(CLC_CLSPV) || defined(CLC_SPIRV)
-// clspv and spir-v targets provide their own OpenCL-compatible isnan
-#define __clc_isnan isnan
-#else
-
 #include <clc/clcfunc.h>
+#include <clc/clctypes.h>
 
 #define _CLC_ISNAN_DECL(RET_TYPE, ARG_TYPE)                                    \
   _CLC_OVERLOAD _CLC_DECL RET_TYPE __clc_isnan(ARG_TYPE);
@@ -35,7 +31,5 @@ _CLC_VECTOR_ISNAN_DECL(short, half)
 
 #undef _CLC_ISNAN_DECL
 #undef _CLC_VECTOR_ISNAN_DECL
-
-#endif
 
 #endif // __CLC_RELATIONAL_CLC_ISNAN_H__

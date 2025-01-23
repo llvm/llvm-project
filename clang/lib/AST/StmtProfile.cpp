@@ -392,6 +392,10 @@ void StmtProfiler::VisitCapturedStmt(const CapturedStmt *S) {
   VisitStmt(S);
 }
 
+void StmtProfiler::VisitSYCLKernelCallStmt(const SYCLKernelCallStmt *S) {
+  VisitStmt(S);
+}
+
 void StmtProfiler::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S) {
   VisitStmt(S);
 }
@@ -2554,9 +2558,23 @@ void OpenACCClauseProfiler::VisitCreateClause(
   VisitClauseWithVarList(Clause);
 }
 
+void OpenACCClauseProfiler::VisitHostClause(const OpenACCHostClause &Clause) {
+  VisitClauseWithVarList(Clause);
+}
+
+void OpenACCClauseProfiler::VisitDeviceClause(
+    const OpenACCDeviceClause &Clause) {
+  VisitClauseWithVarList(Clause);
+}
+
 void OpenACCClauseProfiler::VisitSelfClause(const OpenACCSelfClause &Clause) {
-  if (Clause.hasConditionExpr())
-    Profiler.VisitStmt(Clause.getConditionExpr());
+  if (Clause.isConditionExprClause()) {
+    if (Clause.hasConditionExpr())
+      Profiler.VisitStmt(Clause.getConditionExpr());
+  } else {
+    for (auto *E : Clause.getVarList())
+      Profiler.VisitStmt(E);
+  }
 }
 
 void OpenACCClauseProfiler::VisitFinalizeClause(

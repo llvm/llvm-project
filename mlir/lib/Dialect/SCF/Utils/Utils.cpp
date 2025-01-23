@@ -361,7 +361,7 @@ static void generateUnrolledLoop(
 
     // Update yielded values.
     for (unsigned i = 0, e = lastYielded.size(); i < e; i++)
-      lastYielded[i] = operandMap.lookup(yieldedValues[i]);
+      lastYielded[i] = operandMap.lookupOrDefault(yieldedValues[i]);
   }
 
   // Make sure we annotate the Ops in the original body. We do this last so that

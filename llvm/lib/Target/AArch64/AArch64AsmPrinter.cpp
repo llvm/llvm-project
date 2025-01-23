@@ -24,6 +24,7 @@
 #include "MCTargetDesc/AArch64TargetStreamer.h"
 #include "TargetInfo/AArch64TargetInfo.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -77,6 +78,11 @@ static cl::opt<PtrauthCheckMode> PtrauthAuthChecks(
     cl::desc("Check pointer authentication auth/resign failures"),
     cl::init(Default));
 
+static cl::opt<bool> EnableImportCallOptimization(
+    "aarch64-win-import-call-optimization", cl::Hidden,
+    cl::desc("Enable import call optimization for AArch64 Windows"),
+    cl::init(false));
+
 #define DEBUG_TYPE "asm-printer"
 
 namespace {
@@ -89,6 +95,8 @@ class AArch64AsmPrinter : public AsmPrinter {
 #ifndef NDEBUG
   unsigned InstsEmitted;
 #endif
+  DenseMap<MCSection *, std::vector<std::pair<MCSymbol *, MCSymbol *>>>
+      SectionToImportedFunctionCalls;
 
 public:
   AArch64AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
@@ -200,6 +208,10 @@ public:
   /// pseudo instructions.
   bool lowerPseudoInstExpansion(const MachineInstr *MI, MCInst &Inst);
 
+  // Emit Build Attributes
+  void emitAttributes(unsigned Flags, uint64_t PAuthABIPlatform,
+                      uint64_t PAuthABIVersion, AArch64TargetStreamer *TS);
+
   void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
   void EmitToStreamer(const MCInst &Inst) {
     EmitToStreamer(*OutStreamer, Inst);
@@ -293,6 +305,11 @@ private:
                               MCSymbol *LazyPointer) override;
   void emitMachOIFuncStubHelperBody(Module &M, const GlobalIFunc &GI,
                                     MCSymbol *LazyPointer) override;
+
+  /// Checks if this instruction is part of a sequence that is eligle for import
+  /// call optimization and, if so, records it to be emitted in the import call
+  /// section.
+  void recordIfImportCall(const MachineInstr *BranchInst);
 };
 
 } // end anonymous namespace
@@ -332,36 +349,53 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   if (!TT.isOSBinFormatELF())
     return;
 
-  // Assemble feature flags that may require creation of a note section.
-  unsigned Flags = 0;
+  // For emitting build attributes and .note.gnu.property section
+  auto *TS =
+      static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
+  // Assemble feature flags that may require creation of build attributes and a
+  // note section.
+  unsigned BAFlags = 0;
+  unsigned GNUFlags = 0;
   if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("branch-target-enforcement")))
-    if (!BTE->isZero())
-      Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
+          M.getModuleFlag("branch-target-enforcement"))) {
+    if (!BTE->isZero()) {
+      BAFlags |= AArch64BuildAttributes::FeatureAndBitsFlag::Feature_BTI_Flag;
+      GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
+    }
+  }
 
   if (const auto *GCS = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("guarded-control-stack")))
-    if (!GCS->isZero())
-      Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+          M.getModuleFlag("guarded-control-stack"))) {
+    if (!GCS->isZero()) {
+      BAFlags |= AArch64BuildAttributes::FeatureAndBitsFlag::Feature_GCS_Flag;
+      GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+    }
+  }
 
   if (const auto *Sign = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("sign-return-address")))
-    if (!Sign->isZero())
-      Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
+          M.getModuleFlag("sign-return-address"))) {
+    if (!Sign->isZero()) {
+      BAFlags |= AArch64BuildAttributes::FeatureAndBitsFlag::Feature_PAC_Flag;
+      GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
+    }
+  }
 
   uint64_t PAuthABIPlatform = -1;
   if (const auto *PAP = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("aarch64-elf-pauthabi-platform")))
+          M.getModuleFlag("aarch64-elf-pauthabi-platform"))) {
     PAuthABIPlatform = PAP->getZExtValue();
+  }
+
   uint64_t PAuthABIVersion = -1;
   if (const auto *PAV = mdconst::extract_or_null<ConstantInt>(
-          M.getModuleFlag("aarch64-elf-pauthabi-version")))
+          M.getModuleFlag("aarch64-elf-pauthabi-version"))) {
     PAuthABIVersion = PAV->getZExtValue();
+  }
 
+  // Emit AArch64 Build Attributes
+  emitAttributes(BAFlags, PAuthABIPlatform, PAuthABIVersion, TS);
   // Emit a .note.gnu.property section with the flags.
-  auto *TS =
-      static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
-  TS->emitNoteSection(Flags, PAuthABIPlatform, PAuthABIVersion);
+  TS->emitNoteSection(GNUFlags, PAuthABIPlatform, PAuthABIVersion);
 }
 
 void AArch64AsmPrinter::emitFunctionHeaderComment() {
@@ -432,6 +466,58 @@ void AArch64AsmPrinter::emitSled(const MachineInstr &MI, SledKind Kind) {
 
   OutStreamer->emitLabel(Target);
   recordSled(CurSled, MI, Kind, 2);
+}
+
+void AArch64AsmPrinter::emitAttributes(unsigned Flags,
+                                       uint64_t PAuthABIPlatform,
+                                       uint64_t PAuthABIVersion,
+                                       AArch64TargetStreamer *TS) {
+
+  PAuthABIPlatform = (uint64_t(-1) == PAuthABIPlatform) ? 0 : PAuthABIPlatform;
+  PAuthABIVersion = (uint64_t(-1) == PAuthABIVersion) ? 0 : PAuthABIVersion;
+
+  if (PAuthABIPlatform || PAuthABIVersion) {
+    TS->emitAtributesSubsection(
+        AArch64BuildAttributes::getVendorName(
+            AArch64BuildAttributes::AEABI_PAUTHABI),
+        AArch64BuildAttributes::SubsectionOptional::REQUIRED,
+        AArch64BuildAttributes::SubsectionType::ULEB128);
+    TS->emitAttribute(AArch64BuildAttributes::getVendorName(
+                          AArch64BuildAttributes::AEABI_PAUTHABI),
+                      AArch64BuildAttributes::TAG_PAUTH_PLATFORM,
+                      PAuthABIPlatform, "", false);
+    TS->emitAttribute(AArch64BuildAttributes::getVendorName(
+                          AArch64BuildAttributes::AEABI_PAUTHABI),
+                      AArch64BuildAttributes::TAG_PAUTH_SCHEMA, PAuthABIVersion,
+                      "", false);
+  }
+
+  unsigned BTIValue =
+      (Flags & AArch64BuildAttributes::Feature_BTI_Flag) ? 1 : 0;
+  unsigned PACValue =
+      (Flags & AArch64BuildAttributes::Feature_PAC_Flag) ? 1 : 0;
+  unsigned GCSValue =
+      (Flags & AArch64BuildAttributes::Feature_GCS_Flag) ? 1 : 0;
+
+  if (BTIValue || PACValue || GCSValue) {
+    TS->emitAtributesSubsection(
+        AArch64BuildAttributes::getVendorName(
+            AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
+        AArch64BuildAttributes::SubsectionOptional::OPTIONAL,
+        AArch64BuildAttributes::SubsectionType::ULEB128);
+    TS->emitAttribute(AArch64BuildAttributes::getVendorName(
+                          AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
+                      AArch64BuildAttributes::TAG_FEATURE_BTI, BTIValue, "",
+                      false);
+    TS->emitAttribute(AArch64BuildAttributes::getVendorName(
+                          AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
+                      AArch64BuildAttributes::TAG_FEATURE_PAC, PACValue, "",
+                      false);
+    TS->emitAttribute(AArch64BuildAttributes::getVendorName(
+                          AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
+                      AArch64BuildAttributes::TAG_FEATURE_GCS, GCSValue, "",
+                      false);
+  }
 }
 
 // Emit the following code for Intrinsic::{xray_customevent,xray_typedevent}
@@ -605,6 +691,15 @@ void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
 
 void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
   Register Reg = MI.getOperand(0).getReg();
+
+  // The HWASan pass won't emit a CHECK_MEMACCESS intrinsic with a pointer
+  // statically known to be zero. However, conceivably, the HWASan pass may
+  // encounter a "cannot currently statically prove to be null" pointer (and is
+  // therefore unable to omit the intrinsic) that later optimization passes
+  // convert into a statically known-null pointer.
+  if (Reg == AArch64::XZR)
+    return;
+
   bool IsShort =
       ((MI.getOpcode() == AArch64::HWASAN_CHECK_MEMACCESS_SHORTGRANULES) ||
        (MI.getOpcode() ==
@@ -921,6 +1016,38 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
   // Emit stack and fault map information.
   FM.serializeToFaultMapSection();
 
+  // If import call optimization is enabled, emit the appropriate section.
+  // We do this whether or not we recorded any import calls.
+  if (EnableImportCallOptimization && TT.isOSBinFormatCOFF()) {
+    OutStreamer->switchSection(getObjFileLowering().getImportCallSection());
+
+    // Section always starts with some magic.
+    constexpr char ImpCallMagic[12] = "Imp_Call_V1";
+    OutStreamer->emitBytes(StringRef{ImpCallMagic, sizeof(ImpCallMagic)});
+
+    // Layout of this section is:
+    // Per section that contains calls to imported functions:
+    //  uint32_t SectionSize: Size in bytes for information in this section.
+    //  uint32_t Section Number
+    //  Per call to imported function in section:
+    //    uint32_t Kind: the kind of imported function.
+    //    uint32_t BranchOffset: the offset of the branch instruction in its
+    //                            parent section.
+    //    uint32_t TargetSymbolId: the symbol id of the called function.
+    for (auto &[Section, CallsToImportedFuncs] :
+         SectionToImportedFunctionCalls) {
+      unsigned SectionSize =
+          sizeof(uint32_t) * (2 + 3 * CallsToImportedFuncs.size());
+      OutStreamer->emitInt32(SectionSize);
+      OutStreamer->emitCOFFSecNumber(Section->getBeginSymbol());
+      for (auto &[CallsiteSymbol, CalledSymbol] : CallsToImportedFuncs) {
+        // Kind is always IMAGE_REL_ARM64_DYNAMIC_IMPORT_CALL (0x13).
+        OutStreamer->emitInt32(0x13);
+        OutStreamer->emitCOFFSecOffset(CallsiteSymbol);
+        OutStreamer->emitCOFFSymbolIndex(CalledSymbol);
+      }
+    }
+  }
 }
 
 void AArch64AsmPrinter::emitLOHs() {
@@ -2694,6 +2821,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::TCRETURNriALL: {
     emitPtrauthTailCallHardening(MI);
 
+    recordIfImportCall(MI);
     MCInst TmpInst;
     TmpInst.setOpcode(AArch64::BR);
     TmpInst.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
@@ -2705,6 +2833,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     MCOperand Dest;
     MCInstLowering.lowerOperand(MI->getOperand(0), Dest);
+    recordIfImportCall(MI);
     MCInst TmpInst;
     TmpInst.setOpcode(AArch64::B);
     TmpInst.addOperand(Dest);
@@ -3035,12 +3164,37 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     TS->emitARM64WinCFISaveAnyRegQPX(MI->getOperand(0).getImm(),
                                      -MI->getOperand(2).getImm());
     return;
+
+  case AArch64::BLR:
+  case AArch64::BR:
+    recordIfImportCall(MI);
+    MCInst TmpInst;
+    MCInstLowering.Lower(MI, TmpInst);
+    EmitToStreamer(*OutStreamer, TmpInst);
+    return;
   }
 
   // Finally, do the automated lowerings for everything else.
   MCInst TmpInst;
   MCInstLowering.Lower(MI, TmpInst);
   EmitToStreamer(*OutStreamer, TmpInst);
+}
+
+void AArch64AsmPrinter::recordIfImportCall(
+    const llvm::MachineInstr *BranchInst) {
+  if (!EnableImportCallOptimization ||
+      !TM.getTargetTriple().isOSBinFormatCOFF())
+    return;
+
+  auto [GV, OpFlags] = BranchInst->getMF()->tryGetCalledGlobal(BranchInst);
+  if (GV && GV->hasDLLImportStorageClass()) {
+    auto *CallSiteSymbol = MMI->getContext().createNamedTempSymbol("impcall");
+    OutStreamer->emitLabel(CallSiteSymbol);
+
+    auto *CalledSymbol = MCInstLowering.GetGlobalValueSymbol(GV, OpFlags);
+    SectionToImportedFunctionCalls[OutStreamer->getCurrentSectionOnly()]
+        .push_back({CallSiteSymbol, CalledSymbol});
+  }
 }
 
 void AArch64AsmPrinter::emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,

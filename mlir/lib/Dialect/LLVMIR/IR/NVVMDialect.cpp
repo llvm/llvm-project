@@ -138,6 +138,26 @@ LogicalResult CpAsyncBulkTensorReduceOp::verify() {
                                          getLoc());
 }
 
+LogicalResult CvtFloatToTF32Op::verify() {
+  using RndMode = NVVM::FPRoundingMode;
+  switch (getRnd()) {
+  case RndMode::RNA:
+    if (getRelu())
+      return emitError("Relu not supported with rna rounding mode.");
+    break;
+  case RndMode::RN:
+  case RndMode::RZ:
+    if (getSat() != NVVM::SaturationMode::NONE)
+      return emitError(
+          "Saturation mode not supported with rn/rz rounding modes.");
+    break;
+  default:
+    return emitError(
+        "Only {rn,rz,rna} rounding modes supported for CvtFloatToTF32Op.");
+  }
+  return success();
+}
+
 // Given the element type of an operand and whether or not it is an accumulator,
 // this function returns the PTX type (`NVVM::MMATypes`) that corresponds to the
 // operand's element type.
@@ -445,8 +465,13 @@ LogicalResult MmaOp::verify() {
       expectedResult.push_back(LLVM::LLVMStructType::getLiteral(
           context, {f32Ty, f32Ty, f32Ty, f32Ty}));
       break;
-    case MMATypes::f16:
     case MMATypes::bf16:
+      kFactor = 8;
+      multiplicandFragType = i32Ty;
+      expectedResult.push_back(LLVM::LLVMStructType::getLiteral(
+          context, {f32Ty, f32Ty, f32Ty, f32Ty}));
+      break;
+    case MMATypes::f16:
       kFactor = 8;
       multiplicandFragType = f16x2Ty;
       expectedResult.push_back(f16x2x2StructTy);
@@ -1085,6 +1110,44 @@ LogicalResult NVVM::BarrierOp::verify() {
   return success();
 }
 
+#define CP_ASYNC_ID_IMPL(mod, size, suffix)                                    \
+  llvm::Intrinsic::nvvm_cp_async_##mod##_shared_global_##size##suffix
+
+#define GET_CP_ASYNC_ID(mod, size, has_cpsize)                                 \
+  has_cpsize ? CP_ASYNC_ID_IMPL(mod, size, _s) : CP_ASYNC_ID_IMPL(mod, size, )
+
+llvm::Intrinsic::ID
+CpAsyncOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                                 llvm::SmallVector<llvm::Value *> &args) {
+  llvm::Intrinsic::ID id;
+
+  auto cpAsyncOp = cast<NVVM::CpAsyncOp>(op);
+  bool hasCpSize = cpAsyncOp.getCpSize() ? true : false;
+  switch (cpAsyncOp.getSize()) {
+  case 4:
+    id = GET_CP_ASYNC_ID(ca, 4, hasCpSize);
+    break;
+  case 8:
+    id = GET_CP_ASYNC_ID(ca, 8, hasCpSize);
+    break;
+  case 16:
+    id = (cpAsyncOp.getModifier() == NVVM::LoadCacheModifierKind::CG)
+             ? GET_CP_ASYNC_ID(cg, 16, hasCpSize)
+             : GET_CP_ASYNC_ID(ca, 16, hasCpSize);
+    break;
+  default:
+    llvm_unreachable("Invalid copy size in CpAsyncOp.");
+  }
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(cpAsyncOp.getDst()));
+  args.push_back(mt.lookupValue(cpAsyncOp.getSrc()));
+  if (hasCpSize)
+    args.push_back(mt.lookupValue(cpAsyncOp.getCpSize()));
+
+  return id;
+}
+
 llvm::Intrinsic::ID CpAsyncBulkTensorPrefetchOp::getIntrinsicID(int tensorDims,
                                                                 bool isIm2Col) {
   switch (tensorDims) {
@@ -1156,6 +1219,37 @@ llvm::Intrinsic::ID CpAsyncBulkTensorReduceOp::getIntrinsicID(
     return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_xor, tensorDims, isIm2Col);
   }
   llvm_unreachable("Invalid Reduction Op for CpAsyncBulkTensorReduceOp");
+}
+
+llvm::Intrinsic::ID CvtFloatToTF32Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
+                                                     NVVM::SaturationMode sat,
+                                                     bool hasRelu) {
+  using RndMode = NVVM::FPRoundingMode;
+  switch (rnd) {
+  case RndMode::RN:
+    return hasRelu ? llvm::Intrinsic::nvvm_f2tf32_rn_relu
+                   : llvm::Intrinsic::nvvm_f2tf32_rn;
+  case RndMode::RZ:
+    return hasRelu ? llvm::Intrinsic::nvvm_f2tf32_rz_relu
+                   : llvm::Intrinsic::nvvm_f2tf32_rz;
+  case RndMode::RNA:
+    return (sat == NVVM::SaturationMode::SATFINITE)
+               ? llvm::Intrinsic::nvvm_f2tf32_rna_satfinite
+               : llvm::Intrinsic::nvvm_f2tf32_rna;
+  default:
+    llvm_unreachable("Invalid RoundingMode for CvtFloatToTF32Op");
+  }
+}
+
+/// Infer the result ranges for the NVVM SpecialRangeableRegisterOp that might
+/// have ConstantRangeAttr.
+static void nvvmInferResultRanges(Operation *op, Value result,
+                                  ArrayRef<::mlir::ConstantIntRanges> argRanges,
+                                  SetIntRangeFn setResultRanges) {
+  if (auto rangeAttr = op->getAttrOfType<LLVM::ConstantRangeAttr>("range")) {
+    setResultRanges(result, {rangeAttr.getLower(), rangeAttr.getUpper(),
+                             rangeAttr.getLower(), rangeAttr.getUpper()});
+  }
 }
 
 //===----------------------------------------------------------------------===//

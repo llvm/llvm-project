@@ -6,19 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Utility class to wrap up information about a register and DAG type for more
-// convenient iteration and parameterization
-class RegTyInfo<ValueType ty, NVPTXRegClass rc, Operand imm> {
-  ValueType Ty = ty;
-  NVPTXRegClass RC = rc;
-  Operand Imm = imm;
-  int Size = ty.Size;
-}
-
-def I32RT : RegTyInfo<i32, Int32Regs, i32imm>;
-def I64RT : RegTyInfo<i64, Int64Regs, i64imm>;
-
-
 def immFloat0 : PatLeaf<(fpimm), [{
     float f = (float)N->getValueAPF().convertToFloat();
     return (f==0.0f);
@@ -498,9 +485,83 @@ def CP_ASYNC_BULK_WAIT_GROUP_READ :
   [(int_nvvm_cp_async_bulk_wait_group_read timm:$n)]>,
   Requires<[hasPTX<80>, hasSM<90>]>;
 
-//-----------------------------------
-// TMA Async Tensor Copy Functions
-//-----------------------------------
+//------------------------------
+// TMA Async Bulk Copy Functions
+//------------------------------
+
+class CpAsyncBulkStr<bit mc, bit ch> {
+  // Shared to Global memory
+  string S2G = "cp.async.bulk.global.shared::cta.bulk_group"
+               # !if(ch, ".L2::cache_hint", "");
+
+  // Global to Shared cluster memory
+  string G2S = "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes"
+               # !if(mc, ".multicast::cluster", "")
+               # !if(ch, ".L2::cache_hint", "");
+
+  // Shared CTA to Cluster memory
+  string C2C = "cp.async.bulk.shared::cluster.shared::cta.mbarrier::complete_tx::bytes";
+}
+
+multiclass CP_ASYNC_BULK_S2G<NVPTXRegClass rc> {
+  def NAME: NVPTXInst<(outs),
+            (ins Int64Regs:$dst, rc:$src, Int32Regs:$size),
+            !strconcat(CpAsyncBulkStr<0, 0>.S2G, " [$dst], [$src], $size;"), []>,
+            Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _CH: NVPTXInst<(outs),
+                  (ins Int64Regs:$dst, rc:$src, Int32Regs:$size, Int64Regs:$ch),
+                  !strconcat(CpAsyncBulkStr<0, 1>.S2G, " [$dst], [$src], $size, $ch;"), []>,
+                  Requires<[hasPTX<80>, hasSM<90>]>;
+}
+defm CP_ASYNC_BULK_S2G : CP_ASYNC_BULK_S2G<Int64Regs>;
+defm CP_ASYNC_BULK_S2G_SHARED32 : CP_ASYNC_BULK_S2G<Int32Regs>;
+
+multiclass CP_ASYNC_BULK_G2S<NVPTXRegClass rc> {
+  def NAME: NVPTXInst<(outs),
+            (ins rc:$dst, rc:$mbar, Int64Regs:$src, Int32Regs:$size),
+            !strconcat(CpAsyncBulkStr<0, 0>.G2S, " [$dst], [$src], $size, [$mbar];"), []>,
+            Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _MC: NVPTXInst<(outs),
+                  (ins rc:$dst, rc:$mbar, Int64Regs:$src, Int32Regs:$size, Int16Regs:$mc),
+                  !strconcat(CpAsyncBulkStr<1, 0>.G2S, " [$dst], [$src], $size, [$mbar], $mc;"), []>,
+                  Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _CH: NVPTXInst<(outs),
+                  (ins rc:$dst, rc:$mbar, Int64Regs:$src, Int32Regs:$size, Int64Regs:$ch),
+                  !strconcat(CpAsyncBulkStr<0, 1>.G2S, " [$dst], [$src], $size, [$mbar], $ch;"), []>,
+                  Requires<[hasPTX<80>, hasSM<90>]>;
+  def NAME # _MC_CH: NVPTXInst<(outs),
+                     (ins rc:$dst, rc:$mbar, Int64Regs:$src, Int32Regs:$size, Int16Regs:$mc, Int64Regs:$ch),
+                     !strconcat(CpAsyncBulkStr<1, 1>.G2S, " [$dst], [$src], $size, [$mbar], $mc, $ch;"), []>,
+                     Requires<[hasPTX<80>, hasSM<90>]>;
+}
+defm CP_ASYNC_BULK_G2S : CP_ASYNC_BULK_G2S<Int64Regs>;
+defm CP_ASYNC_BULK_G2S_SHARED32 : CP_ASYNC_BULK_G2S<Int32Regs>;
+
+multiclass CP_ASYNC_BULK_CTA_TO_CLUSTER<NVPTXRegClass rc> {
+  def NAME: NVPTXInst<(outs),
+            (ins rc:$dst, rc:$mbar, rc:$src, Int32Regs:$size),
+            !strconcat(CpAsyncBulkStr<0, 0>.C2C, " [$dst], [$src], $size, [$mbar];"),
+            [(int_nvvm_cp_async_bulk_shared_cta_to_cluster rc:$dst, rc:$mbar, rc:$src, Int32Regs:$size)]>,
+            Requires<[hasPTX<80>, hasSM<90>]>;
+}
+defm CP_ASYNC_BULK_CTA_TO_CLUSTER : CP_ASYNC_BULK_CTA_TO_CLUSTER<Int64Regs>;
+defm CP_ASYNC_BULK_CTA_TO_CLUSTER_SHARED32 : CP_ASYNC_BULK_CTA_TO_CLUSTER<Int32Regs>;
+
+//------------------------------
+// Bulk Copy Prefetch Functions
+//------------------------------
+def CP_ASYNC_BULK_PREFETCH : NVPTXInst<(outs),
+                             (ins Int64Regs:$src, Int32Regs:$size),
+                             "cp.async.bulk.prefetch.L2.global [$src], $size;", []>,
+                             Requires<[hasPTX<80>, hasSM<90>]>;
+
+def CP_ASYNC_BULK_PREFETCH_CH : NVPTXInst<(outs),
+                                (ins Int64Regs:$src, Int32Regs:$size, Int64Regs:$ch),
+                                "cp.async.bulk.prefetch.L2.global.L2::cache_hint [$src], $size, $ch;", []>,
+                                Requires<[hasPTX<80>, hasSM<90>]>;
+//-------------------------------------
+// TMA Async Bulk Tensor Copy Functions
+//-------------------------------------
 
 // From Global to Shared memory (G2S)
 class G2S_STRINGS<int dim, string mode, bit mc, bit ch, bit is_shared32 = 0> {
@@ -1255,10 +1316,20 @@ def INT_NVVM_EX2_APPROX_F : F_MATH_1<"ex2.approx.f32 \t$dst, $src0;",
   Float32Regs, Float32Regs, int_nvvm_ex2_approx_f>;
 def INT_NVVM_EX2_APPROX_D : F_MATH_1<"ex2.approx.f64 \t$dst, $src0;",
   Float64Regs, Float64Regs, int_nvvm_ex2_approx_d>;
+
 def INT_NVVM_EX2_APPROX_F16 : F_MATH_1<"ex2.approx.f16 \t$dst, $src0;",
   Int16Regs, Int16Regs, int_nvvm_ex2_approx_f16, [hasPTX<70>, hasSM<75>]>;
 def INT_NVVM_EX2_APPROX_F16X2 : F_MATH_1<"ex2.approx.f16x2 \t$dst, $src0;",
   Int32Regs, Int32Regs, int_nvvm_ex2_approx_f16x2, [hasPTX<70>, hasSM<75>]>;
+
+def : Pat<(fexp2 f32:$a),
+          (INT_NVVM_EX2_APPROX_FTZ_F $a)>, Requires<[doF32FTZ]>;
+def : Pat<(fexp2 f32:$a),
+          (INT_NVVM_EX2_APPROX_F $a)>, Requires<[doNoF32FTZ]>;
+def : Pat<(fexp2 f16:$a),
+          (INT_NVVM_EX2_APPROX_F16 $a)>, Requires<[useFP16Math]>;
+def : Pat<(fexp2 v2f16:$a),
+          (INT_NVVM_EX2_APPROX_F16X2 $a)>, Requires<[useFP16Math]>;
 
 def INT_NVVM_LG2_APPROX_FTZ_F : F_MATH_1<"lg2.approx.ftz.f32 \t$dst, $src0;",
   Float32Regs, Float32Regs, int_nvvm_lg2_approx_ftz_f>;
@@ -1266,6 +1337,11 @@ def INT_NVVM_LG2_APPROX_F : F_MATH_1<"lg2.approx.f32 \t$dst, $src0;",
   Float32Regs, Float32Regs, int_nvvm_lg2_approx_f>;
 def INT_NVVM_LG2_APPROX_D : F_MATH_1<"lg2.approx.f64 \t$dst, $src0;",
   Float64Regs, Float64Regs, int_nvvm_lg2_approx_d>;
+
+def : Pat<(flog2 f32:$a), (INT_NVVM_LG2_APPROX_FTZ_F $a)>,
+          Requires<[doF32FTZ]>;
+def : Pat<(flog2 f32:$a), (INT_NVVM_LG2_APPROX_F $a)>,
+          Requires<[doNoF32FTZ]>;
 
 //
 // Sin  Cos
@@ -1659,11 +1735,6 @@ def : Pat<(int_nvvm_f2bf16_rz f32:$a),
           (CVT_bf16_f32 $a, CvtRZ)>;
 def : Pat<(int_nvvm_f2bf16_rz_relu f32:$a),
           (CVT_bf16_f32 $a, CvtRZ_RELU)>;
-
-def CVT_tf32_f32 :
-   NVPTXInst<(outs Int32Regs:$dest), (ins Float32Regs:$a),
-                   "cvt.rna.tf32.f32 \t$dest, $a;",
-       [(set i32:$dest, (int_nvvm_f2tf32_rna f32:$a))]>;
 
 def INT_NVVM_LOHI_I2D : F_MATH_2<"mov.b64 \t$dst, {{$src0, $src1}};",
   Float64Regs, Int32Regs, Int32Regs, int_nvvm_lohi_i2d>;

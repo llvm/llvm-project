@@ -223,12 +223,6 @@ public:
       return Lane;
     }
   }
-
-  /// Returns the maxmimum number of lanes that we are able to consider
-  /// caching for \p VF.
-  static unsigned getNumCachedLanes(const ElementCount &VF) {
-    return VF.getKnownMinValue() * (VF.isScalable() ? 2 : 1);
-  }
 };
 
 /// VPTransformState holds information passed down when "executing" a VPlan,
@@ -686,11 +680,13 @@ struct VPCostContext {
   LLVMContext &LLVMCtx;
   LoopVectorizationCostModel &CM;
   SmallPtrSet<Instruction *, 8> SkipCostComputation;
+  TargetTransformInfo::TargetCostKind CostKind;
 
   VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
-                Type *CanIVTy, LoopVectorizationCostModel &CM)
+                Type *CanIVTy, LoopVectorizationCostModel &CM,
+                TargetTransformInfo::TargetCostKind CostKind)
       : TTI(TTI), TLI(TLI), Types(CanIVTy), LLVMCtx(CanIVTy->getContext()),
-        CM(CM) {}
+        CM(CM), CostKind(CostKind) {}
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.
@@ -883,6 +879,7 @@ public:
     case VPRecipeBase::VPWidenPointerInductionSC:
     case VPRecipeBase::VPReductionPHISC:
     case VPRecipeBase::VPScalarCastSC:
+    case VPRecipeBase::VPPartialReductionSC:
       return true;
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPInterleaveSC:
@@ -1222,8 +1219,8 @@ public:
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).
     PtrAdd,
-    // Returns a scalar boolean value, which is true if any lane of its single
-    // operand is true.
+    // Returns a scalar boolean value, which is true if any lane of its (only
+    // boolean) vector operand is true.
     AnyOf,
   };
 
@@ -1415,6 +1412,12 @@ public:
   }
 
   bool onlyFirstPartUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
+
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return true;
@@ -1812,11 +1815,10 @@ public:
 };
 
 /// A recipe for widening select instructions.
-struct VPWidenSelectRecipe : public VPSingleDefRecipe {
+struct VPWidenSelectRecipe : public VPRecipeWithIRFlags {
   template <typename IterT>
   VPWidenSelectRecipe(SelectInst &I, iterator_range<IterT> Operands)
-      : VPSingleDefRecipe(VPDef::VPWidenSelectSC, Operands, &I,
-                          I.getDebugLoc()) {}
+      : VPRecipeWithIRFlags(VPDef::VPWidenSelectSC, Operands, I) {}
 
   ~VPWidenSelectRecipe() override = default;
 
@@ -2384,23 +2386,28 @@ class VPReductionPHIRecipe : public VPHeaderPHIRecipe,
   /// The phi is part of an ordered reduction. Requires IsInLoop to be true.
   bool IsOrdered;
 
+  /// When expanding the reduction PHI, the plan's VF element count is divided
+  /// by this factor to form the reduction phi's VF.
+  unsigned VFScaleFactor = 1;
+
 public:
   /// Create a new VPReductionPHIRecipe for the reduction \p Phi described by \p
   /// RdxDesc.
   VPReductionPHIRecipe(PHINode *Phi, const RecurrenceDescriptor &RdxDesc,
                        VPValue &Start, bool IsInLoop = false,
-                       bool IsOrdered = false)
+                       bool IsOrdered = false, unsigned VFScaleFactor = 1)
       : VPHeaderPHIRecipe(VPDef::VPReductionPHISC, Phi, &Start),
-        RdxDesc(RdxDesc), IsInLoop(IsInLoop), IsOrdered(IsOrdered) {
+        RdxDesc(RdxDesc), IsInLoop(IsInLoop), IsOrdered(IsOrdered),
+        VFScaleFactor(VFScaleFactor) {
     assert((!IsOrdered || IsInLoop) && "IsOrdered requires IsInLoop");
   }
 
   ~VPReductionPHIRecipe() override = default;
 
   VPReductionPHIRecipe *clone() override {
-    auto *R =
-        new VPReductionPHIRecipe(cast<PHINode>(getUnderlyingInstr()), RdxDesc,
-                                 *getOperand(0), IsInLoop, IsOrdered);
+    auto *R = new VPReductionPHIRecipe(cast<PHINode>(getUnderlyingInstr()),
+                                       RdxDesc, *getOperand(0), IsInLoop,
+                                       IsOrdered, VFScaleFactor);
     R->addOperand(getBackedgeValue());
     return R;
   }
@@ -2429,6 +2436,52 @@ public:
 
   /// Returns true, if the phi is part of an in-loop reduction.
   bool isInLoop() const { return IsInLoop; }
+};
+
+/// A recipe for forming partial reductions. In the loop, an accumulator and
+/// vector operand are added together and passed to the next iteration as the
+/// next accumulator. After the loop body, the accumulator is reduced to a
+/// scalar value.
+class VPPartialReductionRecipe : public VPSingleDefRecipe {
+  unsigned Opcode;
+
+public:
+  VPPartialReductionRecipe(Instruction *ReductionInst, VPValue *Op0,
+                           VPValue *Op1)
+      : VPPartialReductionRecipe(ReductionInst->getOpcode(), Op0, Op1,
+                                 ReductionInst) {}
+  VPPartialReductionRecipe(unsigned Opcode, VPValue *Op0, VPValue *Op1,
+                           Instruction *ReductionInst = nullptr)
+      : VPSingleDefRecipe(VPDef::VPPartialReductionSC,
+                          ArrayRef<VPValue *>({Op0, Op1}), ReductionInst),
+        Opcode(Opcode) {
+    assert(isa<VPReductionPHIRecipe>(getOperand(1)->getDefiningRecipe()) &&
+           "Unexpected operand order for partial reduction recipe");
+  }
+  ~VPPartialReductionRecipe() override = default;
+
+  VPPartialReductionRecipe *clone() override {
+    return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1),
+                                        getUnderlyingInstr());
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPPartialReductionSC)
+
+  /// Generate the reduction in the loop.
+  void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPPartialReductionRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+  /// Get the binary op's opcode.
+  unsigned getOpcode() const { return Opcode; }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select
@@ -2640,7 +2693,7 @@ public:
     return R && classof(R);
   }
 
-  /// Generate the reduction in the loop
+  /// Generate the reduction in the loop.
   void execute(VPTransformState &State) override;
 
   /// Return the cost of VPReductionRecipe.
@@ -3476,6 +3529,15 @@ public:
 /// holds a sequence of zero or more VPRecipe's each representing a sequence of
 /// output IR instructions. All PHI-like recipes must come before any non-PHI recipes.
 class VPBasicBlock : public VPBlockBase {
+  friend class VPlan;
+
+  /// Use VPlan::createVPBasicBlock to create VPBasicBlocks.
+  VPBasicBlock(const Twine &Name = "", VPRecipeBase *Recipe = nullptr)
+      : VPBlockBase(VPBasicBlockSC, Name.str()) {
+    if (Recipe)
+      appendRecipe(Recipe);
+  }
+
 public:
   using RecipeListTy = iplist<VPRecipeBase>;
 
@@ -3487,12 +3549,6 @@ protected:
       : VPBlockBase(BlockSC, Name.str()) {}
 
 public:
-  VPBasicBlock(const Twine &Name = "", VPRecipeBase *Recipe = nullptr)
-      : VPBlockBase(VPBasicBlockSC, Name.str()) {
-    if (Recipe)
-      appendRecipe(Recipe);
-  }
-
   ~VPBasicBlock() override {
     while (!Recipes.empty())
       Recipes.pop_back();
@@ -3615,14 +3671,17 @@ private:
 /// Note: At the moment, VPIRBasicBlock can only be used to wrap VPlan's
 /// preheader block.
 class VPIRBasicBlock : public VPBasicBlock {
+  friend class VPlan;
+
   BasicBlock *IRBB;
 
-public:
+  /// Use VPlan::createVPIRBasicBlock to create VPIRBasicBlocks.
   VPIRBasicBlock(BasicBlock *IRBB)
       : VPBasicBlock(VPIRBasicBlockSC,
                      (Twine("ir-bb<") + IRBB->getName() + Twine(">")).str()),
         IRBB(IRBB) {}
 
+public:
   ~VPIRBasicBlock() override {}
 
   static inline bool classof(const VPBlockBase *V) {
@@ -3647,6 +3706,8 @@ public:
 /// candidate VF's. The actual replication takes place only once the desired VF
 /// and UF have been determined.
 class VPRegionBlock : public VPBlockBase {
+  friend class VPlan;
+
   /// Hold the Single Entry of the SESE region modelled by the VPRegionBlock.
   VPBlockBase *Entry;
 
@@ -3658,7 +3719,7 @@ class VPRegionBlock : public VPBlockBase {
   /// instances of output IR corresponding to its VPBlockBases.
   bool IsReplicator;
 
-public:
+  /// Use VPlan::createVPRegionBlock to create VPRegionBlocks.
   VPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting,
                 const std::string &Name = "", bool IsReplicator = false)
       : VPBlockBase(VPRegionBlockSC, Name), Entry(Entry), Exiting(Exiting),
@@ -3672,6 +3733,7 @@ public:
       : VPBlockBase(VPRegionBlockSC, Name), Entry(nullptr), Exiting(nullptr),
         IsReplicator(IsReplicator) {}
 
+public:
   ~VPRegionBlock() override {}
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
@@ -4134,150 +4196,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const VPlan &Plan) {
   return OS;
 }
 #endif
-
-//===----------------------------------------------------------------------===//
-// VPlan Utilities
-//===----------------------------------------------------------------------===//
-
-/// Class that provides utilities for VPBlockBases in VPlan.
-class VPBlockUtils {
-public:
-  VPBlockUtils() = delete;
-
-  /// Insert disconnected VPBlockBase \p NewBlock after \p BlockPtr. Add \p
-  /// NewBlock as successor of \p BlockPtr and \p BlockPtr as predecessor of \p
-  /// NewBlock, and propagate \p BlockPtr parent to \p NewBlock. \p BlockPtr's
-  /// successors are moved from \p BlockPtr to \p NewBlock. \p NewBlock must
-  /// have neither successors nor predecessors.
-  static void insertBlockAfter(VPBlockBase *NewBlock, VPBlockBase *BlockPtr) {
-    assert(NewBlock->getSuccessors().empty() &&
-           NewBlock->getPredecessors().empty() &&
-           "Can't insert new block with predecessors or successors.");
-    NewBlock->setParent(BlockPtr->getParent());
-    SmallVector<VPBlockBase *> Succs(BlockPtr->successors());
-    for (VPBlockBase *Succ : Succs) {
-      disconnectBlocks(BlockPtr, Succ);
-      connectBlocks(NewBlock, Succ);
-    }
-    connectBlocks(BlockPtr, NewBlock);
-  }
-
-  /// Insert disconnected block \p NewBlock before \p Blockptr. First
-  /// disconnects all predecessors of \p BlockPtr and connects them to \p
-  /// NewBlock. Add \p NewBlock as predecessor of \p BlockPtr and \p BlockPtr as
-  /// successor of \p NewBlock.
-  static void insertBlockBefore(VPBlockBase *NewBlock, VPBlockBase *BlockPtr) {
-    assert(NewBlock->getSuccessors().empty() &&
-           NewBlock->getPredecessors().empty() &&
-           "Can't insert new block with predecessors or successors.");
-    NewBlock->setParent(BlockPtr->getParent());
-    for (VPBlockBase *Pred : to_vector(BlockPtr->predecessors())) {
-      disconnectBlocks(Pred, BlockPtr);
-      connectBlocks(Pred, NewBlock);
-    }
-    connectBlocks(NewBlock, BlockPtr);
-  }
-
-  /// Insert disconnected VPBlockBases \p IfTrue and \p IfFalse after \p
-  /// BlockPtr. Add \p IfTrue and \p IfFalse as succesors of \p BlockPtr and \p
-  /// BlockPtr as predecessor of \p IfTrue and \p IfFalse. Propagate \p BlockPtr
-  /// parent to \p IfTrue and \p IfFalse. \p BlockPtr must have no successors
-  /// and \p IfTrue and \p IfFalse must have neither successors nor
-  /// predecessors.
-  static void insertTwoBlocksAfter(VPBlockBase *IfTrue, VPBlockBase *IfFalse,
-                                   VPBlockBase *BlockPtr) {
-    assert(IfTrue->getSuccessors().empty() &&
-           "Can't insert IfTrue with successors.");
-    assert(IfFalse->getSuccessors().empty() &&
-           "Can't insert IfFalse with successors.");
-    BlockPtr->setTwoSuccessors(IfTrue, IfFalse);
-    IfTrue->setPredecessors({BlockPtr});
-    IfFalse->setPredecessors({BlockPtr});
-    IfTrue->setParent(BlockPtr->getParent());
-    IfFalse->setParent(BlockPtr->getParent());
-  }
-
-  /// Connect VPBlockBases \p From and \p To bi-directionally. If \p PredIdx is
-  /// -1, append \p From to the predecessors of \p To, otherwise set \p To's
-  /// predecessor at \p PredIdx to \p From. If \p SuccIdx is -1, append \p To to
-  /// the successors of \p From, otherwise set \p From's successor at \p SuccIdx
-  /// to \p To. Both VPBlockBases must have the same parent, which can be null.
-  /// Both VPBlockBases can be already connected to other VPBlockBases.
-  static void connectBlocks(VPBlockBase *From, VPBlockBase *To,
-                            unsigned PredIdx = -1u, unsigned SuccIdx = -1u) {
-    assert((From->getParent() == To->getParent()) &&
-           "Can't connect two block with different parents");
-    assert((SuccIdx != -1u || From->getNumSuccessors() < 2) &&
-           "Blocks can't have more than two successors.");
-    if (SuccIdx == -1u)
-      From->appendSuccessor(To);
-    else
-      From->getSuccessors()[SuccIdx] = To;
-
-    if (PredIdx == -1u)
-      To->appendPredecessor(From);
-    else
-      To->getPredecessors()[PredIdx] = From;
-  }
-
-  /// Disconnect VPBlockBases \p From and \p To bi-directionally. Remove \p To
-  /// from the successors of \p From and \p From from the predecessors of \p To.
-  static void disconnectBlocks(VPBlockBase *From, VPBlockBase *To) {
-    assert(To && "Successor to disconnect is null.");
-    From->removeSuccessor(To);
-    To->removePredecessor(From);
-  }
-
-  /// Reassociate all the blocks connected to \p Old so that they now point to
-  /// \p New.
-  static void reassociateBlocks(VPBlockBase *Old, VPBlockBase *New) {
-    for (auto *Pred : to_vector(Old->getPredecessors()))
-      Pred->replaceSuccessor(Old, New);
-    for (auto *Succ : to_vector(Old->getSuccessors()))
-      Succ->replacePredecessor(Old, New);
-    New->setPredecessors(Old->getPredecessors());
-    New->setSuccessors(Old->getSuccessors());
-    Old->clearPredecessors();
-    Old->clearSuccessors();
-  }
-
-  /// Return an iterator range over \p Range which only includes \p BlockTy
-  /// blocks. The accesses are casted to \p BlockTy.
-  template <typename BlockTy, typename T>
-  static auto blocksOnly(const T &Range) {
-    // Create BaseTy with correct const-ness based on BlockTy.
-    using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
-                                      const VPBlockBase, VPBlockBase>;
-
-    // We need to first create an iterator range over (const) BlocktTy & instead
-    // of (const) BlockTy * for filter_range to work properly.
-    auto Mapped =
-        map_range(Range, [](BaseTy *Block) -> BaseTy & { return *Block; });
-    auto Filter = make_filter_range(
-        Mapped, [](BaseTy &Block) { return isa<BlockTy>(&Block); });
-    return map_range(Filter, [](BaseTy &Block) -> BlockTy * {
-      return cast<BlockTy>(&Block);
-    });
-  }
-
-  /// Inserts \p BlockPtr on the edge between \p From and \p To. That is, update
-  /// \p From's successor to \p To to point to \p BlockPtr and \p To's
-  /// predecessor from \p From to \p BlockPtr. \p From and \p To are added to \p
-  /// BlockPtr's predecessors and successors respectively. There must be a
-  /// single edge between \p From and \p To.
-  static void insertOnEdge(VPBlockBase *From, VPBlockBase *To,
-                           VPBlockBase *BlockPtr) {
-    auto &Successors = From->getSuccessors();
-    auto &Predecessors = To->getPredecessors();
-    assert(count(Successors, To) == 1 && count(Predecessors, From) == 1 &&
-           "must have single between From and To");
-    unsigned SuccIdx = std::distance(Successors.begin(), find(Successors, To));
-    unsigned PredIx =
-        std::distance(Predecessors.begin(), find(Predecessors, From));
-    VPBlockUtils::connectBlocks(From, BlockPtr, -1, SuccIdx);
-    VPBlockUtils::connectBlocks(BlockPtr, To, PredIx, -1);
-  }
-};
 
 class VPInterleavedAccessInfo {
   DenseMap<VPInstruction *, InterleaveGroup<VPInstruction> *>

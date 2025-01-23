@@ -34,13 +34,14 @@
 ;;
 ;; The IR was then reduced using llvm-reduce with the expected FileCheck input.
 
-;; By default we should enable cloning of contexts involved with recursive
+;; Check behavior when we enable cloning of contexts involved with recursive
 ;; cycles, but not through the cycle itself. I.e. until full support for
 ;; recursion is added, the cloned recursive call from C back to B (line 12) will
 ;; not be updated to call a clone.
 ; RUN: opt -passes=memprof-context-disambiguation -supports-hot-cold-new \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes \
 ; RUN:  -pass-remarks=memprof-context-disambiguation \
+; RUN:	-memprof-allow-recursive-callsites=true \
 ; RUN:  %s -S 2>&1 | FileCheck %s \
 ; RUN:  --implicit-check-not "memprof_recursive3.cc:12:10: call in clone _Z1Ci.memprof.1 assigned" \
 ; RUN:  --check-prefix=ALL --check-prefix=ALLOW-RECUR-CALLSITES --check-prefix=ALLOW-RECUR-CONTEXTS
@@ -56,12 +57,23 @@
 ; RUN:	--implicit-check-not="marked with memprof allocation attribute cold" \
 ; RUN:  --check-prefix=ALL
 
+;; Check the default behavior (disabled recursive callsites).
+; RUN: opt -passes=memprof-context-disambiguation -supports-hot-cold-new \
+; RUN:  -memprof-verify-ccg -memprof-verify-nodes \
+; RUN:  -pass-remarks=memprof-context-disambiguation \
+; RUN:  %s -S 2>&1 | FileCheck %s \
+; RUN:  --implicit-check-not "memprof_recursive3.cc:12:10: call in clone _Z1Ci.memprof.1 assigned" \
+; RUN:  --implicit-check-not="created clone" \
+; RUN:	--implicit-check-not="marked with memprof allocation attribute cold" \
+; RUN:  --check-prefix=ALL
+
 ;; Skipping recursive contexts should prevent spurious call to cloned version of
 ;; B from the context starting at memprof_recursive.cc:19:13, which is actually
 ;; recursive (until that support is added).
 ; RUN: opt -passes=memprof-context-disambiguation -supports-hot-cold-new \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes \
 ; RUN:  -pass-remarks=memprof-context-disambiguation \
+; RUN:	-memprof-allow-recursive-callsites=true \
 ; RUN:	-memprof-allow-recursive-contexts=false \
 ; RUN:  %s -S 2>&1 | FileCheck %s \
 ; RUN:  --implicit-check-not "memprof_recursive3.cc:12:10: call in clone _Z1Ci.memprof.1 assigned" \
