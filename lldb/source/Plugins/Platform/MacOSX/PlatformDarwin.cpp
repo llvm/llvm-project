@@ -42,6 +42,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Timer.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
@@ -1083,7 +1084,7 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   if (!version.empty() && sdk_type != XcodeSDK::Type::Linux &&
       sdk_type != XcodeSDK::Type::XROS) {
 #define OPTION(PREFIX_OFFSET, NAME_OFFSET, VAR, ...)                           \
-  llvm::StringRef opt_##VAR = &OptionStrTable[NAME_OFFSET];                    \
+  llvm::StringRef opt_##VAR = OptionStrTable[NAME_OFFSET];                     \
   (void)opt_##VAR;
 #include "clang/Driver/Options.inc"
 #undef OPTION

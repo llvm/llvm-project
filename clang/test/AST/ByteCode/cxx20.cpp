@@ -893,3 +893,18 @@ namespace VirtDtor {
 
   static_assert(test('C', 'B'));
 }
+
+namespace TemporaryInNTTP {
+  template<auto n> struct B { /* ... */ };
+  struct J1 {
+    J1 *self=this;
+  };
+  /// FIXME: The bytecode interpreter emits a different diagnostic here.
+  /// The current interpreter creates a fake MaterializeTemporaryExpr (see EvaluateAsConstantExpr)
+  /// which is later used as the LValueBase of the created APValue.
+  B<J1{}> j1;  // ref-error {{pointer to temporary object is not allowed in a template argument}} \
+               // expected-error {{non-type template argument is not a constant expression}} \
+               // expected-note {{pointer to temporary is not a constant expression}} \
+               // expected-note {{created here}}
+  B<2> j2; /// Ok.
+}

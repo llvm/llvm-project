@@ -409,12 +409,14 @@ public:
   void VisitFriendTemplateDecl(FriendTemplateDecl *D);
   void VisitStaticAssertDecl(StaticAssertDecl *D);
   void VisitBlockDecl(BlockDecl *BD);
+  void VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D);
   void VisitCapturedDecl(CapturedDecl *CD);
   void VisitEmptyDecl(EmptyDecl *D);
   void VisitLifetimeExtendedTemporaryDecl(LifetimeExtendedTemporaryDecl *D);
 
   void VisitDeclContext(DeclContext *DC, uint64_t &LexicalOffset,
-                        uint64_t &VisibleOffset, uint64_t &ModuleLocalOffset);
+                        uint64_t &VisibleOffset, uint64_t &ModuleLocalOffset,
+                        uint64_t &TULocalOffset);
 
   template <typename T>
   RedeclarableResult VisitRedeclarable(Redeclarable<T> *D);
@@ -1794,6 +1796,15 @@ void ASTDeclReader::VisitBlockDecl(BlockDecl *BD) {
   BD->setCaptures(Reader.getContext(), captures, capturesCXXThis);
 }
 
+void ASTDeclReader::VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D) {
+  // NumParams is deserialized by OutlinedFunctionDecl::CreateDeserialized().
+  VisitDecl(D);
+  for (unsigned I = 0; I < D->NumParams; ++I)
+    D->setParam(I, readDeclAs<ImplicitParamDecl>());
+  D->setNothrow(Record.readInt() != 0);
+  D->setBody(cast_or_null<Stmt>(Record.readStmt()));
+}
+
 void ASTDeclReader::VisitCapturedDecl(CapturedDecl *CD) {
   VisitDecl(CD);
   unsigned ContextParamPos = Record.readInt();
@@ -1859,7 +1870,9 @@ void ASTDeclReader::VisitHLSLBufferDecl(HLSLBufferDecl *D) {
   uint64_t LexicalOffset = 0;
   uint64_t VisibleOffset = 0;
   uint64_t ModuleLocalOffset = 0;
-  VisitDeclContext(D, LexicalOffset, VisibleOffset, ModuleLocalOffset);
+  uint64_t TULocalOffset = 0;
+  VisitDeclContext(D, LexicalOffset, VisibleOffset, ModuleLocalOffset,
+                   TULocalOffset);
   D->IsCBuffer = Record.readBool();
   D->KwLoc = readSourceLocation();
   D->LBraceLoc = readSourceLocation();
@@ -2770,10 +2783,12 @@ void ASTDeclReader::VisitLifetimeExtendedTemporaryDecl(
 
 void ASTDeclReader::VisitDeclContext(DeclContext *DC, uint64_t &LexicalOffset,
                                      uint64_t &VisibleOffset,
-                                     uint64_t &ModuleLocalOffset) {
+                                     uint64_t &ModuleLocalOffset,
+                                     uint64_t &TULocalOffset) {
   LexicalOffset = ReadLocalOffset();
   VisibleOffset = ReadLocalOffset();
   ModuleLocalOffset = ReadLocalOffset();
+  TULocalOffset = ReadLocalOffset();
 }
 
 template <typename T>
@@ -3875,6 +3890,7 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   case DECL_CONTEXT_LEXICAL:
   case DECL_CONTEXT_VISIBLE:
   case DECL_CONTEXT_MODULE_LOCAL_VISIBLE:
+  case DECL_CONTEXT_TU_LOCAL_VISIBLE:
   case DECL_SPECIALIZATIONS:
   case DECL_PARTIAL_SPECIALIZATIONS:
     llvm_unreachable("Record cannot be de-serialized with readDeclRecord");
@@ -4098,6 +4114,9 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   case DECL_TEMPLATE_PARAM_OBJECT:
     D = TemplateParamObjectDecl::CreateDeserialized(Context, ID);
     break;
+  case DECL_OUTLINEDFUNCTION:
+    D = OutlinedFunctionDecl::CreateDeserialized(Context, ID, Record.readInt());
+    break;
   case DECL_CAPTURED:
     D = CapturedDecl::CreateDeserialized(Context, ID, Record.readInt());
     break;
@@ -4185,9 +4204,10 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
     uint64_t LexicalOffset = 0;
     uint64_t VisibleOffset = 0;
     uint64_t ModuleLocalOffset = 0;
+    uint64_t TULocalOffset = 0;
 
-    Reader.VisitDeclContext(DC, LexicalOffset, VisibleOffset,
-                            ModuleLocalOffset);
+    Reader.VisitDeclContext(DC, LexicalOffset, VisibleOffset, ModuleLocalOffset,
+                            TULocalOffset);
 
     // Get the lexical and visible block for the delayed namespace.
     // It is sufficient to judge if ID is in DelayedNamespaceOffsetMap.
@@ -4199,18 +4219,24 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
         LexicalOffset = Iter->second.LexicalOffset;
         VisibleOffset = Iter->second.VisibleOffset;
         ModuleLocalOffset = Iter->second.ModuleLocalOffset;
+        TULocalOffset = Iter->second.TULocalOffset;
       }
 
     if (LexicalOffset &&
         ReadLexicalDeclContextStorage(*Loc.F, DeclsCursor, LexicalOffset, DC))
       return nullptr;
-    if (VisibleOffset &&
-        ReadVisibleDeclContextStorage(*Loc.F, DeclsCursor, VisibleOffset, ID,
-                                      /*IsModuleLocal=*/false))
+    if (VisibleOffset && ReadVisibleDeclContextStorage(
+                             *Loc.F, DeclsCursor, VisibleOffset, ID,
+                             VisibleDeclContextStorageKind::GenerallyVisible))
       return nullptr;
     if (ModuleLocalOffset &&
-        ReadVisibleDeclContextStorage(*Loc.F, DeclsCursor, ModuleLocalOffset,
-                                      ID, /*IsModuleLocal=*/true))
+        ReadVisibleDeclContextStorage(
+            *Loc.F, DeclsCursor, ModuleLocalOffset, ID,
+            VisibleDeclContextStorageKind::ModuleLocalVisible))
+      return nullptr;
+    if (TULocalOffset && ReadVisibleDeclContextStorage(
+                             *Loc.F, DeclsCursor, TULocalOffset, ID,
+                             VisibleDeclContextStorageKind::TULocalVisible))
       return nullptr;
   }
   assert(Record.getIdx() == Record.size());
@@ -4373,6 +4399,18 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
           reader::ModuleLocalNameLookupTrait(*this, *Update.Mod));
     // NOTE: Can we optimize the case that the data being loaded
     // is not related to current module?
+    DC->setHasExternalVisibleStorage(true);
+  }
+
+  if (auto I = TULocalUpdates.find(ID); I != TULocalUpdates.end()) {
+    auto Updates = std::move(I->second);
+    TULocalUpdates.erase(I);
+
+    auto *DC = cast<DeclContext>(D)->getPrimaryContext();
+    for (const auto &Update : Updates)
+      TULocalLookups[DC].Table.add(
+          Update.Mod, Update.Data,
+          reader::ASTDeclContextNameLookupTrait(*this, *Update.Mod));
     DC->setHasExternalVisibleStorage(true);
   }
 

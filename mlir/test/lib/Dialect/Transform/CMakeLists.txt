@@ -15,8 +15,8 @@ add_mlir_library(MLIRTestTransformDialect
 
   DEPENDS
   MLIRTestTransformDialectExtensionIncGen
-
-  LINK_LIBS PUBLIC
+)
+mlir_target_link_libraries(MLIRTestTransformDialect PUBLIC
   MLIRIR
   MLIRPass
   MLIRPDLDialect
