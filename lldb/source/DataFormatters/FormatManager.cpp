@@ -174,7 +174,8 @@ void FormatManager::DisableAllCategories() {
 void FormatManager::GetPossibleMatches(
     ValueObject &valobj, CompilerType compiler_type,
     lldb::DynamicValueType use_dynamic, FormattersMatchVector &entries,
-    FormattersMatchCandidate::Flags current_flags, bool root_level) {
+    FormattersMatchCandidate::Flags current_flags, bool dereference_ptr,
+    bool root_level) {
   compiler_type = compiler_type.GetTypeForFormatters();
   ConstString type_name(compiler_type.GetTypeName());
   // A ValueObject that couldn't be made correctly won't necessarily have a
@@ -222,14 +223,15 @@ void FormatManager::GetPossibleMatches(
 
   if (compiler_type.IsPointerType()) {
     CompilerType non_ptr_type = compiler_type.GetPointeeType();
-    GetPossibleMatches(valobj, non_ptr_type, use_dynamic, entries,
-                       current_flags.WithStrippedPointer());
+    if (dereference_ptr)
+      GetPossibleMatches(valobj, non_ptr_type, use_dynamic, entries,
+                        current_flags.WithStrippedPointer(), false);
     if (non_ptr_type.IsTypedefType()) {
       CompilerType deffed_pointed_type =
           non_ptr_type.GetTypedefedType().GetPointerType();
       // this is not exactly the usual meaning of stripping typedefs
       GetPossibleMatches(valobj, deffed_pointed_type, use_dynamic, entries,
-                         current_flags.WithStrippedTypedef());
+                         current_flags.WithStrippedTypedef(), dereference_ptr);
     }
   }
 
