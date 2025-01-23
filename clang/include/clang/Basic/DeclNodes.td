@@ -101,6 +101,7 @@ def Friend : DeclNode<Decl>;
 def FriendTemplate : DeclNode<Decl>;
 def StaticAssert : DeclNode<Decl>;
 def Block : DeclNode<Decl, "blocks">, DeclContext;
+def OutlinedFunction : DeclNode<Decl>, DeclContext;
 def Captured : DeclNode<Decl>, DeclContext;
 def Import : DeclNode<Decl>;
 def OMPThreadPrivate : DeclNode<Decl>;

@@ -496,3 +496,35 @@ struct Y {
 template void g<Y>();
 
 }
+
+namespace GH112677 {
+
+class ConstEval {
+ public:
+  consteval ConstEval(int); // expected-note 2{{declared here}}
+};
+
+struct TemplateCtor {
+    ConstEval val;
+    template <class Anything = int> constexpr
+    TemplateCtor(int arg) : val(arg) {} // expected-note {{undefined constructor 'ConstEval'}}
+};
+struct C : TemplateCtor {
+    using TemplateCtor::TemplateCtor; // expected-note {{in call to 'TemplateCtor<int>(0)'}}
+};
+
+C c(0); // expected-note{{in implicit initialization for inherited constructor of 'C'}}
+// expected-error@-1 {{call to immediate function 'GH112677::C::TemplateCtor' is not a constant expression}}
+
+struct SimpleCtor { constexpr SimpleCtor(int) {}};
+struct D : SimpleCtor {
+    int y = 10;
+    ConstEval x = y; // expected-note {{undefined constructor 'ConstEval'}}
+    using SimpleCtor::SimpleCtor;
+    //expected-note@-1 {{'SimpleCtor' is an immediate constructor because the default initializer of 'x' contains a call to a consteval constructor 'ConstEval' and that call is not a constant expression}}
+};
+
+D d(0); // expected-note {{in implicit initialization for inherited constructor of 'D'}}
+// expected-error@-1 {{call to immediate function 'GH112677::D::SimpleCtor' is not a constant expression}}
+
+}

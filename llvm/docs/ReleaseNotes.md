@@ -488,6 +488,11 @@ Changes to LLDB
   that port to the connection handler processes. This means that only 2 ports need
   to be opened in the firewall (one for the `lldb-server` platform, one for gdbserver connections).
   In addition, due to this work, `lldb-server` now works on Windows in the server mode.
+  
+* LLDB now supports execution of user expressions for non-trivial cases for RISC-V targets, like function calls, when some code needs to be executed on the target.
+
+* LLDB now supports optionally enabled/disabled register sets (particularly floating point registers) for RISC-V 64. This happens for targets like `RV64IMAC` or `RV64IMACV`,
+  that have no floating point registers. The change is applied to native debugging and core-file usage.
 
 Changes to BOLT
 ---------------------------------

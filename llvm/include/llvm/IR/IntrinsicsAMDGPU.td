@@ -2563,9 +2563,10 @@ def int_amdgcn_buffer_wbinvl1_vol :
 // VI Intrinsics
 //===----------------------------------------------------------------------===//
 
-// The llvm.amdgcn.mov.dpp.i32 intrinsic represents the mov.dpp operation in AMDGPU.
-// This operation is being deprecated and can be replaced with llvm.amdgcn.update.dpp.i32.
-// llvm.amdgcn.mov.dpp.i32 <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>
+// The llvm.amdgcn.mov.dpp intrinsic represents the mov.dpp operation in AMDGPU.
+// This operation is being deprecated and can be replaced with
+// llvm.amdgcn.update.dpp.
+// llvm.amdgcn.mov.dpp <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>
 def int_amdgcn_mov_dpp :
   Intrinsic<[llvm_anyint_ty],
             [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
@@ -2574,11 +2575,12 @@ def int_amdgcn_mov_dpp :
              ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>,
              ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree]>;
 
-// The llvm.amdgcn.update.dpp.i32 intrinsic represents the update.dpp operation in AMDGPU.
-// It takes an old value, a source operand, a DPP control operand, a row mask, a bank mask, and a bound control.
-// This operation is equivalent to a sequence of v_mov_b32 operations.
-// It is preferred over llvm.amdgcn.mov.dpp.i32 for future use.
-// llvm.amdgcn.update.dpp.i32 <old> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>
+// The llvm.amdgcn.update.dpp intrinsic represents the update.dpp operation in
+// AMDGPU. It takes an old value, a source operand, a DPP control operand, a row
+// mask, a bank mask, and a bound control. This operation is equivalent to a
+// sequence of v_mov_b32 operations. It is preferred over llvm.amdgcn.mov.dpp
+// for future use.
+// llvm.amdgcn.update.dpp <old> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>
 // Should be equivalent to:
 // v_mov_b32 <dest> <old>
 // v_mov_b32 <dest> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>
@@ -2662,7 +2664,7 @@ def int_amdgcn_permlanex16 :
             [IntrNoMem, IntrConvergent, IntrWillReturn,
              ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>, IntrNoCallback, IntrNoFree]>;
 
-// llvm.amdgcn.mov.dpp8.i32 <src> <sel>
+// llvm.amdgcn.mov.dpp8 <src> <sel>
 // <sel> is a 32-bit constant whose high 8 bits must be zero which selects
 // the lanes to read from.
 def int_amdgcn_mov_dpp8 :

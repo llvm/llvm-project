@@ -180,8 +180,8 @@ extern char &SIFixSGPRCopiesLegacyID;
 void initializeSIFixVGPRCopiesLegacyPass(PassRegistry &);
 extern char &SIFixVGPRCopiesID;
 
-void initializeSILowerWWMCopiesPass(PassRegistry &);
-extern char &SILowerWWMCopiesID;
+void initializeSILowerWWMCopiesLegacyPass(PassRegistry &);
+extern char &SILowerWWMCopiesLegacyID;
 
 void initializeSILowerI1CopiesLegacyPass(PassRegistry &);
 extern char &SILowerI1CopiesLegacyID;

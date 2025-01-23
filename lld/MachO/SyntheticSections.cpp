@@ -1958,7 +1958,7 @@ void InitOffsetsSection::writeTo(uint8_t *buf) const {
   // FIXME: Add function specified by -init when that argument is implemented.
   for (ConcatInputSection *isec : sections) {
     for (const Reloc &rel : isec->relocs) {
-      const Symbol *referent = rel.referent.dyn_cast<Symbol *>();
+      const Symbol *referent = cast<Symbol *>(rel.referent);
       assert(referent && "section relocation should have been rejected");
       uint64_t offset = referent->getVA() - in.header->addr;
       // FIXME: Can we handle this gracefully?

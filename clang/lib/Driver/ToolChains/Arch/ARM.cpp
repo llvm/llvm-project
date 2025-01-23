@@ -756,6 +756,15 @@ fp16_fml_fallthrough:
       Features.push_back("-crc");
   }
 
+  // Invalid value of the __ARM_FEATURE_MVE macro when an explicit -mfpu= option
+  // disables MVE-FP -mfpu=fpv5-d16 or -mfpu=fpv5-sp-d16 disables the scalar
+  // half-precision floating-point operations feature. Therefore, because the
+  // M-profile Vector Extension (MVE) floating-point feature requires the scalar
+  // half-precision floating-point operations, this option also disables the MVE
+  // floating-point feature: -mve.fp
+  if (FPUKind == llvm::ARM::FK_FPV5_D16 || FPUKind == llvm::ARM::FK_FPV5_SP_D16)
+    Features.push_back("-mve.fp");
+
   // For Arch >= ARMv8.0 && A or R profile:  crypto = sha2 + aes
   // Rather than replace within the feature vector, determine whether each
   // algorithm is enabled and append this to the end of the vector.

@@ -80,7 +80,7 @@ TEST_F(SPIRVAPITest, checkTranslateOk) {
   // Those command line arguments that overlap with registered by llc/codegen
   // are to be started with the ' ' symbol.
   std::vector<std::string> SetOfOpts[] = {
-      {}, {"- mtriple=spirv32-unknown-unknown"}};
+      {}, {"--spirv-mtriple=spirv32-unknown-unknown"}};
   for (const auto &Opts : SetOfOpts) {
     for (StringRef &Assembly : Assemblies) {
       std::string Result, Error;
@@ -100,7 +100,7 @@ TEST_F(SPIRVAPITest, checkTranslateError) {
   EXPECT_THAT(Error,
               StartsWith("SPIRVTranslateModule: Unknown command line argument "
                          "'-mtriple=spirv32-unknown-unknown'"));
-  Status = toSpirv(OkAssembly, Result, Error, {}, {"- O 5"});
+  Status = toSpirv(OkAssembly, Result, Error, {}, {"--spirv-O 5"});
   EXPECT_FALSE(Status);
   EXPECT_TRUE(Result.empty());
   EXPECT_EQ(Error, "Invalid optimization level!");

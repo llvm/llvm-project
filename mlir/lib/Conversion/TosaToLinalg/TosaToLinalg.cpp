@@ -1476,7 +1476,7 @@ public:
       reassociationMap.push_back({});
     reassociationMap.back().push_back(builder.getAffineDimExpr(3));
 
-    llvm::SmallVector<int64_t> collapseShape{batch};
+    llvm::SmallVector<int64_t> collapseShape = {batch};
     if (inputH != 1)
       collapseShape.push_back(outputH);
     if (inputW != 1)

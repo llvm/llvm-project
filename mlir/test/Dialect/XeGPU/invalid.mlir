@@ -32,7 +32,7 @@ func.func @test_create_nd_tdesc_vc_4(%src: memref<2x24x32xf32, 3>) {
 // -----
 func.func @test_prefetch_nd_vc_1(%src: memref<24x32xf16>) {
   %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf16> -> !xegpu.tensor_desc<8x16xf16>
-  // expected-error@+1 {{invlid l1_hint: #xegpu.cache_hint<write_back>}}
+  // expected-error@+1 {{invalid l1_hint: #xegpu.cache_hint<write_back>}}
   xegpu.prefetch_nd %1 <{l1_hint = #xegpu.cache_hint<write_back>}>: !xegpu.tensor_desc<8x16xf16>
   return
 }
@@ -51,7 +51,7 @@ func.func @test_prefetch_nd_vc_2(%src: memref<24xf16>) {
 // -----
 func.func @test_load_nd_vc_1(%src: memref<8x16xf16>) {
   %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
-  // expected-error@+1 {{invlid l1_hint: #xegpu.cache_hint<write_back>}}
+  // expected-error@+1 {{invalid l1_hint: #xegpu.cache_hint<write_back>}}
   %2 = xegpu.load_nd %1 <{l1_hint = #xegpu.cache_hint<write_back>}>
       : !xegpu.tensor_desc<8x16xf16> -> vector<4x16x2xf16>
   return
@@ -78,10 +78,28 @@ func.func @test_load_nd_vc_3(%src: memref<8x16xf16>) {
 }
 
 // -----
+func.func @test_load_nd_vc_4(%src: memref<24x32xf32>) {
+  %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
+    !xegpu.tensor_desc<8x16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
+  // expected-error@+1 {{Result shape doesn't match TensorDesc shape.}}
+  %2 = xegpu.load_nd %1 <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<8x16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>> -> vector<8x2xf32>
+  return
+}
+
+// -----
+func.func @test_load_nd_vc_5(%src: memref<24x32xf32>) {
+  %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
+      !xegpu.tensor_desc<16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
+  // expected-error@+1 {{Result shape doesn't match TensorDesc shape.}}
+  %2 = xegpu.load_nd %1: !xegpu.tensor_desc<16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>> -> vector<16xf32>
+  return
+}
+
+// -----
 func.func @test_store_nd_vc_1(%dst: memref<24x32xf16>) {
   %1 = arith.constant dense<1.0>: vector<24x32xf16>
   %2 = xegpu.create_nd_tdesc %dst[0, 0] : memref<24x32xf16> -> !xegpu.tensor_desc<24x32xf16>
-  // expected-error@+1 {{invlid l1_hint: #xegpu.cache_hint<streaming>}}
+  // expected-error@+1 {{invalid l1_hint: #xegpu.cache_hint<streaming>}}
   xegpu.store_nd %1, %2 <{l1_hint = #xegpu.cache_hint<streaming>}>: vector<24x32xf16>, !xegpu.tensor_desc<24x32xf16>
   return
 }
@@ -147,7 +165,7 @@ func.func @test_prefetch_vc_2(%src: ui64) {
   %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %1 = xegpu.create_tdesc %src, %0 : ui64, vector<4xindex>
           -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>>
-  // expected-error@+1 {{invlid l1_hint: #xegpu.cache_hint<write_back>}}
+  // expected-error@+1 {{invalid l1_hint: #xegpu.cache_hint<write_back>}}
   xegpu.prefetch %1 <{l1_hint = #xegpu.cache_hint<write_back>}>: !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>>
   return
 }
@@ -168,7 +186,7 @@ func.func @test_load_gather_vc_2(%src: ui64) {
   %0 = arith.constant dense<1>: vector<4xi1>
   %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex>
         -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>>
-  // expected-error@+1 {{invlid l1_hint: #xegpu.cache_hint<write_back>}}
+  // expected-error@+1 {{invalid l1_hint: #xegpu.cache_hint<write_back>}}
   %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<write_back>}>
         : !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>>, vector<4xi1>
           -> vector<4x2xf32>
@@ -193,7 +211,7 @@ func.func @test_store_scatter_vc_2(%src: ui64) {
   %1 = arith.constant dense<2.9>: vector<4x2xf32>
   %2 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex>
               -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>>
-  // expected-error@+1 {{invlid l1_hint: #xegpu.cache_hint<streaming>}}
+  // expected-error@+1 {{invalid l1_hint: #xegpu.cache_hint<streaming>}}
   xegpu.store %1, %2, %0 <{l1_hint = #xegpu.cache_hint<streaming>}> : vector<4x2xf32>,
           !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>>, vector<4xi1>
   return

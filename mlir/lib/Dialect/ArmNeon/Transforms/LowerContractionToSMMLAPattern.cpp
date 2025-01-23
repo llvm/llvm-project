@@ -126,8 +126,8 @@ public:
         loc, op.getResultType(), rewriter.getZeroAttr(op.getResultType()));
 
     SmallVector<int64_t> unrolledSize = *op.getShapeForUnroll();
-    SmallVector<int64_t> smmlaShape{2, 8};
-    SmallVector<int64_t> loopOrder{0, 1};
+    SmallVector<int64_t> smmlaShape = {2, 8};
+    SmallVector<int64_t> loopOrder = {0, 1};
     if (unrolledSize.size() == 3) {
       smmlaShape.insert(smmlaShape.begin(), isVecmat ? 1 : 2);
       loopOrder.push_back(2);
