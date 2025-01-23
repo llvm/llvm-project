@@ -42,12 +42,17 @@ private:
   mpc_rnd_t mpc_rounding;
 
 public:
-  MPCNumber(unsigned int p) : precision(p), mpc_rounding(MPC_RNDNN) {
+  explicit MPCNumber(unsigned int p) : precision(p), mpc_rounding(MPC_RNDNN) {
     mpc_init2(value, precision);
   }
 
   MPCNumber() : precision(256), mpc_rounding(MPC_RNDNN) {
     mpc_init2(value, 256);
+  }
+
+  MPCNumber(unsigned int p, mpc_rnd_t rnd)
+      : precision(p), mpc_rounding(rnd) {
+    mpc_init2(value, precision);
   }
 
   template <typename XType,
@@ -89,6 +94,8 @@ public:
     mpc_set(value, other.value, mpc_rounding);
   }
 
+  ~MPCNumber() { mpc_clear(value); }
+
   MPCNumber &operator=(const MPCNumber &rhs) {
     precision = rhs.precision;
     mpc_rounding = rhs.mpc_rounding;
@@ -97,45 +104,27 @@ public:
     return *this;
   }
 
-  MPCNumber(const mpc_t x, unsigned int p, mpc_rnd_t rnd)
-      : precision(p), mpc_rounding(rnd) {
-    mpc_init2(value, precision);
-    mpc_set(value, x, mpc_rounding);
-  }
+  void setValue(mpc_t val) const { mpc_set(val, value, mpc_rounding); }
 
-  ~MPCNumber() { mpc_clear(value); }
-
-  void getValue(mpc_t val) const { mpc_set(val, value, mpc_rounding); }
+  mpc_t& getValue() { return value; }
 
   MPCNumber carg() const {
     mpfr_t res;
-    mpc_t res_mpc;
+    MPCNumber result(precision, mpc_rounding);
 
     mpfr_init2(res, precision);
-    mpc_init2(res_mpc, precision);
 
     mpc_arg(res, value, MPC_RND_RE(mpc_rounding));
-    mpc_set_fr(res_mpc, res, mpc_rounding);
-
-    MPCNumber result(res_mpc, precision, mpc_rounding);
+    mpc_set_fr(result.value, res, mpc_rounding);
 
     mpfr_clear(res);
-    mpc_clear(res_mpc);
 
     return result;
   }
 
   MPCNumber cproj() const {
-    mpc_t res;
-
-    mpc_init2(res, precision);
-
-    mpc_proj(res, value, mpc_rounding);
-
-    MPCNumber result(res, precision, mpc_rounding);
-
-    mpc_clear(res);
-
+    MPCNumber result(precision, mpc_rounding);
+    mpc_proj(result.value, value, mpc_rounding);
     return result;
   }
 };
@@ -172,7 +161,7 @@ bool compare_unary_operation_single_output_same_type(Operation op,
 
   mpc_t mpc_result_val;
   mpc_init2(mpc_result_val, precision);
-  mpc_result.getValue(mpc_result_val);
+  mpc_result.setValue(mpc_result_val);
 
   mpfr_t real, imag;
   mpfr_init2(real, precision);
@@ -211,7 +200,7 @@ bool compare_unary_operation_single_output_different_type(
 
   mpc_t mpc_result_val;
   mpc_init2(mpc_result_val, precision);
-  mpc_result.getValue(mpc_result_val);
+  mpc_result.setValue(mpc_result_val);
 
   mpfr_t real;
   mpfr_init2(real, precision);
@@ -243,7 +232,7 @@ void explain_unary_operation_single_output_different_type_error(
 
   mpc_t mpc_result_val;
   mpc_init2(mpc_result_val, precision);
-  mpc_result.getValue(mpc_result_val);
+  mpc_result.setValue(mpc_result_val);
 
   mpfr_t real;
   mpfr_init2(real, precision);
@@ -292,7 +281,7 @@ void explain_unary_operation_single_output_same_type_error(
 
   mpc_t mpc_result_val;
   mpc_init2(mpc_result_val, precision);
-  mpc_result.getValue(mpc_result_val);
+  mpc_result.setValue(mpc_result_val);
 
   mpfr_t real, imag;
   mpfr_init2(real, precision);
