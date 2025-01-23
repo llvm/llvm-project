@@ -1225,8 +1225,9 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
       // perform a debug trap.
       if (DevirtCheckMode == WPDCheckMode::Trap) {
         auto *Cond = Builder.CreateICmpNE(CB.getCalledOperand(), Callee);
-        Instruction *ThenTerm =
-            SplitBlockAndInsertIfThen(Cond, &CB, /*Unreachable=*/false);
+        Instruction *ThenTerm = SplitBlockAndInsertIfThen(
+            Cond, &CB, /*Unreachable=*/false,
+            MDBuilder(M.getContext()).createUnlikelyBranchWeights());
         Builder.SetInsertPoint(ThenTerm);
         Function *TrapFn =
             Intrinsic::getOrInsertDeclaration(&M, Intrinsic::debugtrap);
