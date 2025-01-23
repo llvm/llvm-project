@@ -38,6 +38,9 @@ private:
   void printProgramHeaders();
   void printSymbolVersion();
   void printSymbolVersionDependency(const typename ELFT::Shdr &Sec);
+  void printSymbolVersionDefinition(const typename ELFT::Shdr &Shdr,
+                                    ArrayRef<uint8_t> Contents,
+                                    StringRef StrTab);
 };
 } // namespace
 
@@ -379,9 +382,9 @@ void ELFDumper<ELFT>::printSymbolVersionDependency(
 }
 
 template <class ELFT>
-static void printSymbolVersionDefinition(const typename ELFT::Shdr &Shdr,
-                                         ArrayRef<uint8_t> Contents,
-                                         StringRef StrTab) {
+void ELFDumper<ELFT>::printSymbolVersionDefinition(
+    const typename ELFT::Shdr &Shdr, ArrayRef<uint8_t> Contents,
+    StringRef StrTab) {
   outs() << "\nVersion definitions:\n";
 
   const uint8_t *Buf = Contents.data();
@@ -397,6 +400,12 @@ static void printSymbolVersionDefinition(const typename ELFT::Shdr &Shdr,
            << format("0x%08" PRIx32 " ", (uint32_t)Verdef->vd_hash);
 
     const uint8_t *BufAux = Buf + Verdef->vd_aux;
+    if (BufAux > Contents.end()) {
+      reportWarning("corrupted section: vd_aux value " + Twine(Verdef->vd_aux) +
+                        " in section verdef points past end of the section",
+                    Obj.getFileName());
+      break;
+    }
     uint16_t VerdauxIndex = 0;
     while (BufAux) {
       auto *Verdaux = reinterpret_cast<const typename ELFT::Verdaux *>(BufAux);
@@ -429,7 +438,7 @@ template <class ELFT> void ELFDumper<ELFT>::printSymbolVersion() {
     if (Shdr.sh_type == ELF::SHT_GNU_verneed)
       printSymbolVersionDependency(Shdr);
     else
-      printSymbolVersionDefinition<ELFT>(Shdr, Contents, StrTab);
+      printSymbolVersionDefinition(Shdr, Contents, StrTab);
   }
 }
 
