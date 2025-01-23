@@ -162,6 +162,12 @@ New checks
 
   Finds nondeterministic usages of pointers in unordered containers.
 
+- New :doc:`bugprone-sprintf-argument-overlap
+  <clang-tidy/checks/bugprone/sprintf-argument-overlap>` check.
+
+  Warns if any arguments to the ``sprintf`` family of functions overlap with the
+  first argument.
+
 - New :doc:`bugprone-tagged-union-member-count
   <clang-tidy/checks/bugprone/tagged-union-member-count>` check.
 

@@ -64,6 +64,7 @@
 #include "SignedCharMisuseCheck.h"
 #include "SizeofContainerCheck.h"
 #include "SizeofExpressionCheck.h"
+#include "SprintfArgumentOverlapCheck.h"
 #include "SpuriouslyWakeUpFunctionsCheck.h"
 #include "StandaloneEmptyCheck.h"
 #include "StringConstructorCheck.h"
@@ -207,6 +208,8 @@ public:
         "bugprone-sizeof-container");
     CheckFactories.registerCheck<SizeofExpressionCheck>(
         "bugprone-sizeof-expression");
+    CheckFactories.registerCheck<SprintfArgumentOverlapCheck>(
+        "bugprone-sprintf-argument-overlap");
     CheckFactories.registerCheck<SpuriouslyWakeUpFunctionsCheck>(
         "bugprone-spuriously-wake-up-functions");
     CheckFactories.registerCheck<StandaloneEmptyCheck>(
