@@ -17,7 +17,6 @@ Implementation Status
    math/index.rst
    net/if
    netinet/in
-   pthread
    search
    setjmp
    signal
@@ -35,5 +34,9 @@ Implementation Status
    threads
    time
    uchar
+   unistd
    wchar
    wctype
+..
+   TODO: https://github.com/llvm/llvm-project/issues/123821
+   pthread

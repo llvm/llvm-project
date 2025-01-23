@@ -149,6 +149,300 @@ namespace {
 class ValueTrackerResult;
 class RecurrenceInstr;
 
+/// Interface to query instructions amenable to copy rewriting.
+class Rewriter {
+protected:
+  MachineInstr &CopyLike;
+  unsigned CurrentSrcIdx = 0; ///< The index of the source being rewritten.
+public:
+  Rewriter(MachineInstr &CopyLike) : CopyLike(CopyLike) {}
+  virtual ~Rewriter() = default;
+
+  /// Get the next rewritable source (SrcReg, SrcSubReg) and
+  /// the related value that it affects (DstReg, DstSubReg).
+  /// A source is considered rewritable if its register class and the
+  /// register class of the related DstReg may not be register
+  /// coalescer friendly. In other words, given a copy-like instruction
+  /// not all the arguments may be returned at rewritable source, since
+  /// some arguments are none to be register coalescer friendly.
+  ///
+  /// Each call of this method moves the current source to the next
+  /// rewritable source.
+  /// For instance, let CopyLike be the instruction to rewrite.
+  /// CopyLike has one definition and one source:
+  /// dst.dstSubIdx = CopyLike src.srcSubIdx.
+  ///
+  /// The first call will give the first rewritable source, i.e.,
+  /// the only source this instruction has:
+  /// (SrcReg, SrcSubReg) = (src, srcSubIdx).
+  /// This source defines the whole definition, i.e.,
+  /// (DstReg, DstSubReg) = (dst, dstSubIdx).
+  ///
+  /// The second and subsequent calls will return false, as there is only one
+  /// rewritable source.
+  ///
+  /// \return True if a rewritable source has been found, false otherwise.
+  /// The output arguments are valid if and only if true is returned.
+  virtual bool getNextRewritableSource(RegSubRegPair &Src,
+                                       RegSubRegPair &Dst) = 0;
+
+  /// Rewrite the current source with \p NewReg and \p NewSubReg if possible.
+  /// \return True if the rewriting was possible, false otherwise.
+  virtual bool RewriteCurrentSource(Register NewReg, unsigned NewSubReg) = 0;
+};
+
+/// Rewriter for COPY instructions.
+class CopyRewriter : public Rewriter {
+public:
+  CopyRewriter(MachineInstr &MI) : Rewriter(MI) {
+    assert(MI.isCopy() && "Expected copy instruction");
+  }
+  virtual ~CopyRewriter() = default;
+
+  bool getNextRewritableSource(RegSubRegPair &Src,
+                               RegSubRegPair &Dst) override {
+    // CurrentSrcIdx > 0 means this function has already been called.
+    if (CurrentSrcIdx > 0)
+      return false;
+    // This is the first call to getNextRewritableSource.
+    // Move the CurrentSrcIdx to remember that we made that call.
+    CurrentSrcIdx = 1;
+    // The rewritable source is the argument.
+    const MachineOperand &MOSrc = CopyLike.getOperand(1);
+    Src = RegSubRegPair(MOSrc.getReg(), MOSrc.getSubReg());
+    // What we track are the alternative sources of the definition.
+    const MachineOperand &MODef = CopyLike.getOperand(0);
+    Dst = RegSubRegPair(MODef.getReg(), MODef.getSubReg());
+    return true;
+  }
+
+  bool RewriteCurrentSource(Register NewReg, unsigned NewSubReg) override {
+    if (CurrentSrcIdx != 1)
+      return false;
+    MachineOperand &MOSrc = CopyLike.getOperand(CurrentSrcIdx);
+    MOSrc.setReg(NewReg);
+    MOSrc.setSubReg(NewSubReg);
+    return true;
+  }
+};
+
+/// Helper class to rewrite uncoalescable copy like instructions
+/// into new COPY (coalescable friendly) instructions.
+class UncoalescableRewriter : public Rewriter {
+  unsigned NumDefs; ///< Number of defs in the bitcast.
+
+public:
+  UncoalescableRewriter(MachineInstr &MI) : Rewriter(MI) {
+    NumDefs = MI.getDesc().getNumDefs();
+  }
+
+  /// \see See Rewriter::getNextRewritableSource()
+  /// All such sources need to be considered rewritable in order to
+  /// rewrite a uncoalescable copy-like instruction. This method return
+  /// each definition that must be checked if rewritable.
+  bool getNextRewritableSource(RegSubRegPair &Src,
+                               RegSubRegPair &Dst) override {
+    // Find the next non-dead definition and continue from there.
+    if (CurrentSrcIdx == NumDefs)
+      return false;
+
+    while (CopyLike.getOperand(CurrentSrcIdx).isDead()) {
+      ++CurrentSrcIdx;
+      if (CurrentSrcIdx == NumDefs)
+        return false;
+    }
+
+    // What we track are the alternative sources of the definition.
+    Src = RegSubRegPair(0, 0);
+    const MachineOperand &MODef = CopyLike.getOperand(CurrentSrcIdx);
+    Dst = RegSubRegPair(MODef.getReg(), MODef.getSubReg());
+
+    CurrentSrcIdx++;
+    return true;
+  }
+
+  bool RewriteCurrentSource(Register NewReg, unsigned NewSubReg) override {
+    return false;
+  }
+};
+
+/// Specialized rewriter for INSERT_SUBREG instruction.
+class InsertSubregRewriter : public Rewriter {
+public:
+  InsertSubregRewriter(MachineInstr &MI) : Rewriter(MI) {
+    assert(MI.isInsertSubreg() && "Invalid instruction");
+  }
+
+  /// \see See Rewriter::getNextRewritableSource()
+  /// Here CopyLike has the following form:
+  /// dst = INSERT_SUBREG Src1, Src2.src2SubIdx, subIdx.
+  /// Src1 has the same register class has dst, hence, there is
+  /// nothing to rewrite.
+  /// Src2.src2SubIdx, may not be register coalescer friendly.
+  /// Therefore, the first call to this method returns:
+  /// (SrcReg, SrcSubReg) = (Src2, src2SubIdx).
+  /// (DstReg, DstSubReg) = (dst, subIdx).
+  ///
+  /// Subsequence calls will return false.
+  bool getNextRewritableSource(RegSubRegPair &Src,
+                               RegSubRegPair &Dst) override {
+    // If we already get the only source we can rewrite, return false.
+    if (CurrentSrcIdx == 2)
+      return false;
+    // We are looking at v2 = INSERT_SUBREG v0, v1, sub0.
+    CurrentSrcIdx = 2;
+    const MachineOperand &MOInsertedReg = CopyLike.getOperand(2);
+    Src = RegSubRegPair(MOInsertedReg.getReg(), MOInsertedReg.getSubReg());
+    const MachineOperand &MODef = CopyLike.getOperand(0);
+
+    // We want to track something that is compatible with the
+    // partial definition.
+    if (MODef.getSubReg())
+      // Bail if we have to compose sub-register indices.
+      return false;
+    Dst = RegSubRegPair(MODef.getReg(),
+                        (unsigned)CopyLike.getOperand(3).getImm());
+    return true;
+  }
+
+  bool RewriteCurrentSource(Register NewReg, unsigned NewSubReg) override {
+    if (CurrentSrcIdx != 2)
+      return false;
+    // We are rewriting the inserted reg.
+    MachineOperand &MO = CopyLike.getOperand(CurrentSrcIdx);
+    MO.setReg(NewReg);
+    MO.setSubReg(NewSubReg);
+    return true;
+  }
+};
+
+/// Specialized rewriter for EXTRACT_SUBREG instruction.
+class ExtractSubregRewriter : public Rewriter {
+  const TargetInstrInfo &TII;
+
+public:
+  ExtractSubregRewriter(MachineInstr &MI, const TargetInstrInfo &TII)
+      : Rewriter(MI), TII(TII) {
+    assert(MI.isExtractSubreg() && "Invalid instruction");
+  }
+
+  /// \see Rewriter::getNextRewritableSource()
+  /// Here CopyLike has the following form:
+  /// dst.dstSubIdx = EXTRACT_SUBREG Src, subIdx.
+  /// There is only one rewritable source: Src.subIdx,
+  /// which defines dst.dstSubIdx.
+  bool getNextRewritableSource(RegSubRegPair &Src,
+                               RegSubRegPair &Dst) override {
+    // If we already get the only source we can rewrite, return false.
+    if (CurrentSrcIdx == 1)
+      return false;
+    // We are looking at v1 = EXTRACT_SUBREG v0, sub0.
+    CurrentSrcIdx = 1;
+    const MachineOperand &MOExtractedReg = CopyLike.getOperand(1);
+    // If we have to compose sub-register indices, bail out.
+    if (MOExtractedReg.getSubReg())
+      return false;
+
+    Src =
+        RegSubRegPair(MOExtractedReg.getReg(), CopyLike.getOperand(2).getImm());
+
+    // We want to track something that is compatible with the definition.
+    const MachineOperand &MODef = CopyLike.getOperand(0);
+    Dst = RegSubRegPair(MODef.getReg(), MODef.getSubReg());
+    return true;
+  }
+
+  bool RewriteCurrentSource(Register NewReg, unsigned NewSubReg) override {
+    // The only source we can rewrite is the input register.
+    if (CurrentSrcIdx != 1)
+      return false;
+
+    CopyLike.getOperand(CurrentSrcIdx).setReg(NewReg);
+
+    // If we find a source that does not require to extract something,
+    // rewrite the operation with a copy.
+    if (!NewSubReg) {
+      // Move the current index to an invalid position.
+      // We do not want another call to this method to be able
+      // to do any change.
+      CurrentSrcIdx = -1;
+      // Rewrite the operation as a COPY.
+      // Get rid of the sub-register index.
+      CopyLike.removeOperand(2);
+      // Morph the operation into a COPY.
+      CopyLike.setDesc(TII.get(TargetOpcode::COPY));
+      return true;
+    }
+    CopyLike.getOperand(CurrentSrcIdx + 1).setImm(NewSubReg);
+    return true;
+  }
+};
+
+/// Specialized rewriter for REG_SEQUENCE instruction.
+class RegSequenceRewriter : public Rewriter {
+public:
+  RegSequenceRewriter(MachineInstr &MI) : Rewriter(MI) {
+    assert(MI.isRegSequence() && "Invalid instruction");
+  }
+
+  /// \see Rewriter::getNextRewritableSource()
+  /// Here CopyLike has the following form:
+  /// dst = REG_SEQUENCE Src1.src1SubIdx, subIdx1, Src2.src2SubIdx, subIdx2.
+  /// Each call will return a different source, walking all the available
+  /// source.
+  ///
+  /// The first call returns:
+  /// (SrcReg, SrcSubReg) = (Src1, src1SubIdx).
+  /// (DstReg, DstSubReg) = (dst, subIdx1).
+  ///
+  /// The second call returns:
+  /// (SrcReg, SrcSubReg) = (Src2, src2SubIdx).
+  /// (DstReg, DstSubReg) = (dst, subIdx2).
+  ///
+  /// And so on, until all the sources have been traversed, then
+  /// it returns false.
+  bool getNextRewritableSource(RegSubRegPair &Src,
+                               RegSubRegPair &Dst) override {
+    // We are looking at v0 = REG_SEQUENCE v1, sub1, v2, sub2, etc.
+
+    // If this is the first call, move to the first argument.
+    if (CurrentSrcIdx == 0) {
+      CurrentSrcIdx = 1;
+    } else {
+      // Otherwise, move to the next argument and check that it is valid.
+      CurrentSrcIdx += 2;
+      if (CurrentSrcIdx >= CopyLike.getNumOperands())
+        return false;
+    }
+    const MachineOperand &MOInsertedReg = CopyLike.getOperand(CurrentSrcIdx);
+    Src.Reg = MOInsertedReg.getReg();
+    // If we have to compose sub-register indices, bail out.
+    if ((Src.SubReg = MOInsertedReg.getSubReg()))
+      return false;
+
+    // We want to track something that is compatible with the related
+    // partial definition.
+    Dst.SubReg = CopyLike.getOperand(CurrentSrcIdx + 1).getImm();
+
+    const MachineOperand &MODef = CopyLike.getOperand(0);
+    Dst.Reg = MODef.getReg();
+    assert(MODef.getSubReg() == 0 && "cannot have subregister def in SSA");
+    return true;
+  }
+
+  bool RewriteCurrentSource(Register NewReg, unsigned NewSubReg) override {
+    // We cannot rewrite out of bound operands.
+    // Moreover, rewritable sources are at odd positions.
+    if ((CurrentSrcIdx & 1) != 1 || CurrentSrcIdx > CopyLike.getNumOperands())
+      return false;
+
+    MachineOperand &MO = CopyLike.getOperand(CurrentSrcIdx);
+    MO.setReg(NewReg);
+    MO.setSubReg(NewSubReg);
+    return true;
+  }
+};
+
 class PeepholeOptimizer : private MachineFunction::Delegate {
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
@@ -174,6 +468,8 @@ private:
   bool optimizeSelect(MachineInstr &MI,
                       SmallPtrSetImpl<MachineInstr *> &LocalMIs);
   bool optimizeCondBranch(MachineInstr &MI);
+
+  bool optimizeCoalescableCopyImpl(Rewriter &&CpyRewriter);
   bool optimizeCoalescableCopy(MachineInstr &MI);
   bool optimizeUncoalescableCopy(MachineInstr &MI,
                                  SmallPtrSetImpl<MachineInstr *> &LocalMIs);
@@ -839,327 +1135,6 @@ static MachineInstr &insertPHI(MachineRegisterInfo &MRI,
   return *MIB;
 }
 
-namespace {
-
-/// Interface to query instructions amenable to copy rewriting.
-class Rewriter {
-protected:
-  MachineInstr &CopyLike;
-  unsigned CurrentSrcIdx = 0; ///< The index of the source being rewritten.
-public:
-  Rewriter(MachineInstr &CopyLike) : CopyLike(CopyLike) {}
-  virtual ~Rewriter() = default;
-
-  /// Get the next rewritable source (SrcReg, SrcSubReg) and
-  /// the related value that it affects (DstReg, DstSubReg).
-  /// A source is considered rewritable if its register class and the
-  /// register class of the related DstReg may not be register
-  /// coalescer friendly. In other words, given a copy-like instruction
-  /// not all the arguments may be returned at rewritable source, since
-  /// some arguments are none to be register coalescer friendly.
-  ///
-  /// Each call of this method moves the current source to the next
-  /// rewritable source.
-  /// For instance, let CopyLike be the instruction to rewrite.
-  /// CopyLike has one definition and one source:
-  /// dst.dstSubIdx = CopyLike src.srcSubIdx.
-  ///
-  /// The first call will give the first rewritable source, i.e.,
-  /// the only source this instruction has:
-  /// (SrcReg, SrcSubReg) = (src, srcSubIdx).
-  /// This source defines the whole definition, i.e.,
-  /// (DstReg, DstSubReg) = (dst, dstSubIdx).
-  ///
-  /// The second and subsequent calls will return false, as there is only one
-  /// rewritable source.
-  ///
-  /// \return True if a rewritable source has been found, false otherwise.
-  /// The output arguments are valid if and only if true is returned.
-  virtual bool getNextRewritableSource(RegSubRegPair &Src,
-                                       RegSubRegPair &Dst) = 0;
-
-  /// Rewrite the current source with \p NewReg and \p NewSubReg if possible.
-  /// \return True if the rewriting was possible, false otherwise.
-  virtual bool RewriteCurrentSource(Register NewReg, unsigned NewSubReg) = 0;
-};
-
-/// Rewriter for COPY instructions.
-class CopyRewriter : public Rewriter {
-public:
-  CopyRewriter(MachineInstr &MI) : Rewriter(MI) {
-    assert(MI.isCopy() && "Expected copy instruction");
-  }
-  virtual ~CopyRewriter() = default;
-
-  bool getNextRewritableSource(RegSubRegPair &Src,
-                               RegSubRegPair &Dst) override {
-    // CurrentSrcIdx > 0 means this function has already been called.
-    if (CurrentSrcIdx > 0)
-      return false;
-    // This is the first call to getNextRewritableSource.
-    // Move the CurrentSrcIdx to remember that we made that call.
-    CurrentSrcIdx = 1;
-    // The rewritable source is the argument.
-    const MachineOperand &MOSrc = CopyLike.getOperand(1);
-    Src = RegSubRegPair(MOSrc.getReg(), MOSrc.getSubReg());
-    // What we track are the alternative sources of the definition.
-    const MachineOperand &MODef = CopyLike.getOperand(0);
-    Dst = RegSubRegPair(MODef.getReg(), MODef.getSubReg());
-    return true;
-  }
-
-  bool RewriteCurrentSource(Register NewReg, unsigned NewSubReg) override {
-    if (CurrentSrcIdx != 1)
-      return false;
-    MachineOperand &MOSrc = CopyLike.getOperand(CurrentSrcIdx);
-    MOSrc.setReg(NewReg);
-    MOSrc.setSubReg(NewSubReg);
-    return true;
-  }
-};
-
-/// Helper class to rewrite uncoalescable copy like instructions
-/// into new COPY (coalescable friendly) instructions.
-class UncoalescableRewriter : public Rewriter {
-  unsigned NumDefs; ///< Number of defs in the bitcast.
-
-public:
-  UncoalescableRewriter(MachineInstr &MI) : Rewriter(MI) {
-    NumDefs = MI.getDesc().getNumDefs();
-  }
-
-  /// \see See Rewriter::getNextRewritableSource()
-  /// All such sources need to be considered rewritable in order to
-  /// rewrite a uncoalescable copy-like instruction. This method return
-  /// each definition that must be checked if rewritable.
-  bool getNextRewritableSource(RegSubRegPair &Src,
-                               RegSubRegPair &Dst) override {
-    // Find the next non-dead definition and continue from there.
-    if (CurrentSrcIdx == NumDefs)
-      return false;
-
-    while (CopyLike.getOperand(CurrentSrcIdx).isDead()) {
-      ++CurrentSrcIdx;
-      if (CurrentSrcIdx == NumDefs)
-        return false;
-    }
-
-    // What we track are the alternative sources of the definition.
-    Src = RegSubRegPair(0, 0);
-    const MachineOperand &MODef = CopyLike.getOperand(CurrentSrcIdx);
-    Dst = RegSubRegPair(MODef.getReg(), MODef.getSubReg());
-
-    CurrentSrcIdx++;
-    return true;
-  }
-
-  bool RewriteCurrentSource(Register NewReg, unsigned NewSubReg) override {
-    return false;
-  }
-};
-
-/// Specialized rewriter for INSERT_SUBREG instruction.
-class InsertSubregRewriter : public Rewriter {
-public:
-  InsertSubregRewriter(MachineInstr &MI) : Rewriter(MI) {
-    assert(MI.isInsertSubreg() && "Invalid instruction");
-  }
-
-  /// \see See Rewriter::getNextRewritableSource()
-  /// Here CopyLike has the following form:
-  /// dst = INSERT_SUBREG Src1, Src2.src2SubIdx, subIdx.
-  /// Src1 has the same register class has dst, hence, there is
-  /// nothing to rewrite.
-  /// Src2.src2SubIdx, may not be register coalescer friendly.
-  /// Therefore, the first call to this method returns:
-  /// (SrcReg, SrcSubReg) = (Src2, src2SubIdx).
-  /// (DstReg, DstSubReg) = (dst, subIdx).
-  ///
-  /// Subsequence calls will return false.
-  bool getNextRewritableSource(RegSubRegPair &Src,
-                               RegSubRegPair &Dst) override {
-    // If we already get the only source we can rewrite, return false.
-    if (CurrentSrcIdx == 2)
-      return false;
-    // We are looking at v2 = INSERT_SUBREG v0, v1, sub0.
-    CurrentSrcIdx = 2;
-    const MachineOperand &MOInsertedReg = CopyLike.getOperand(2);
-    Src = RegSubRegPair(MOInsertedReg.getReg(), MOInsertedReg.getSubReg());
-    const MachineOperand &MODef = CopyLike.getOperand(0);
-
-    // We want to track something that is compatible with the
-    // partial definition.
-    if (MODef.getSubReg())
-      // Bail if we have to compose sub-register indices.
-      return false;
-    Dst = RegSubRegPair(MODef.getReg(),
-                        (unsigned)CopyLike.getOperand(3).getImm());
-    return true;
-  }
-
-  bool RewriteCurrentSource(Register NewReg, unsigned NewSubReg) override {
-    if (CurrentSrcIdx != 2)
-      return false;
-    // We are rewriting the inserted reg.
-    MachineOperand &MO = CopyLike.getOperand(CurrentSrcIdx);
-    MO.setReg(NewReg);
-    MO.setSubReg(NewSubReg);
-    return true;
-  }
-};
-
-/// Specialized rewriter for EXTRACT_SUBREG instruction.
-class ExtractSubregRewriter : public Rewriter {
-  const TargetInstrInfo &TII;
-
-public:
-  ExtractSubregRewriter(MachineInstr &MI, const TargetInstrInfo &TII)
-      : Rewriter(MI), TII(TII) {
-    assert(MI.isExtractSubreg() && "Invalid instruction");
-  }
-
-  /// \see Rewriter::getNextRewritableSource()
-  /// Here CopyLike has the following form:
-  /// dst.dstSubIdx = EXTRACT_SUBREG Src, subIdx.
-  /// There is only one rewritable source: Src.subIdx,
-  /// which defines dst.dstSubIdx.
-  bool getNextRewritableSource(RegSubRegPair &Src,
-                               RegSubRegPair &Dst) override {
-    // If we already get the only source we can rewrite, return false.
-    if (CurrentSrcIdx == 1)
-      return false;
-    // We are looking at v1 = EXTRACT_SUBREG v0, sub0.
-    CurrentSrcIdx = 1;
-    const MachineOperand &MOExtractedReg = CopyLike.getOperand(1);
-    // If we have to compose sub-register indices, bail out.
-    if (MOExtractedReg.getSubReg())
-      return false;
-
-    Src =
-        RegSubRegPair(MOExtractedReg.getReg(), CopyLike.getOperand(2).getImm());
-
-    // We want to track something that is compatible with the definition.
-    const MachineOperand &MODef = CopyLike.getOperand(0);
-    Dst = RegSubRegPair(MODef.getReg(), MODef.getSubReg());
-    return true;
-  }
-
-  bool RewriteCurrentSource(Register NewReg, unsigned NewSubReg) override {
-    // The only source we can rewrite is the input register.
-    if (CurrentSrcIdx != 1)
-      return false;
-
-    CopyLike.getOperand(CurrentSrcIdx).setReg(NewReg);
-
-    // If we find a source that does not require to extract something,
-    // rewrite the operation with a copy.
-    if (!NewSubReg) {
-      // Move the current index to an invalid position.
-      // We do not want another call to this method to be able
-      // to do any change.
-      CurrentSrcIdx = -1;
-      // Rewrite the operation as a COPY.
-      // Get rid of the sub-register index.
-      CopyLike.removeOperand(2);
-      // Morph the operation into a COPY.
-      CopyLike.setDesc(TII.get(TargetOpcode::COPY));
-      return true;
-    }
-    CopyLike.getOperand(CurrentSrcIdx + 1).setImm(NewSubReg);
-    return true;
-  }
-};
-
-/// Specialized rewriter for REG_SEQUENCE instruction.
-class RegSequenceRewriter : public Rewriter {
-public:
-  RegSequenceRewriter(MachineInstr &MI) : Rewriter(MI) {
-    assert(MI.isRegSequence() && "Invalid instruction");
-  }
-
-  /// \see Rewriter::getNextRewritableSource()
-  /// Here CopyLike has the following form:
-  /// dst = REG_SEQUENCE Src1.src1SubIdx, subIdx1, Src2.src2SubIdx, subIdx2.
-  /// Each call will return a different source, walking all the available
-  /// source.
-  ///
-  /// The first call returns:
-  /// (SrcReg, SrcSubReg) = (Src1, src1SubIdx).
-  /// (DstReg, DstSubReg) = (dst, subIdx1).
-  ///
-  /// The second call returns:
-  /// (SrcReg, SrcSubReg) = (Src2, src2SubIdx).
-  /// (DstReg, DstSubReg) = (dst, subIdx2).
-  ///
-  /// And so on, until all the sources have been traversed, then
-  /// it returns false.
-  bool getNextRewritableSource(RegSubRegPair &Src,
-                               RegSubRegPair &Dst) override {
-    // We are looking at v0 = REG_SEQUENCE v1, sub1, v2, sub2, etc.
-
-    // If this is the first call, move to the first argument.
-    if (CurrentSrcIdx == 0) {
-      CurrentSrcIdx = 1;
-    } else {
-      // Otherwise, move to the next argument and check that it is valid.
-      CurrentSrcIdx += 2;
-      if (CurrentSrcIdx >= CopyLike.getNumOperands())
-        return false;
-    }
-    const MachineOperand &MOInsertedReg = CopyLike.getOperand(CurrentSrcIdx);
-    Src.Reg = MOInsertedReg.getReg();
-    // If we have to compose sub-register indices, bail out.
-    if ((Src.SubReg = MOInsertedReg.getSubReg()))
-      return false;
-
-    // We want to track something that is compatible with the related
-    // partial definition.
-    Dst.SubReg = CopyLike.getOperand(CurrentSrcIdx + 1).getImm();
-
-    const MachineOperand &MODef = CopyLike.getOperand(0);
-    Dst.Reg = MODef.getReg();
-    // If we have to compose sub-registers, bail.
-    return MODef.getSubReg() == 0;
-  }
-
-  bool RewriteCurrentSource(Register NewReg, unsigned NewSubReg) override {
-    // We cannot rewrite out of bound operands.
-    // Moreover, rewritable sources are at odd positions.
-    if ((CurrentSrcIdx & 1) != 1 || CurrentSrcIdx > CopyLike.getNumOperands())
-      return false;
-
-    MachineOperand &MO = CopyLike.getOperand(CurrentSrcIdx);
-    MO.setReg(NewReg);
-    MO.setSubReg(NewSubReg);
-    return true;
-  }
-};
-
-} // end anonymous namespace
-
-/// Get the appropriated Rewriter for \p MI.
-/// \return A pointer to a dynamically allocated Rewriter or nullptr if no
-/// rewriter works for \p MI.
-static Rewriter *getCopyRewriter(MachineInstr &MI, const TargetInstrInfo &TII) {
-  // Handle uncoalescable copy-like instructions.
-  if (MI.isBitcast() || MI.isRegSequenceLike() || MI.isInsertSubregLike() ||
-      MI.isExtractSubregLike())
-    return new UncoalescableRewriter(MI);
-
-  switch (MI.getOpcode()) {
-  default:
-    return nullptr;
-  case TargetOpcode::COPY:
-    return new CopyRewriter(MI);
-  case TargetOpcode::INSERT_SUBREG:
-    return new InsertSubregRewriter(MI);
-  case TargetOpcode::EXTRACT_SUBREG:
-    return new ExtractSubregRewriter(MI, TII);
-  case TargetOpcode::REG_SEQUENCE:
-    return new RegSequenceRewriter(MI);
-  }
-}
-
 /// Given a \p Def.Reg and Def.SubReg  pair, use \p RewriteMap to find
 /// the new source to use for rewrite. If \p HandleMultipleSources is true and
 /// multiple sources for a given \p Def are found along the way, we found a
@@ -1212,6 +1187,44 @@ getNewSource(MachineRegisterInfo *MRI, const TargetInstrInfo *TII,
   return RegSubRegPair(0, 0);
 }
 
+bool PeepholeOptimizer::optimizeCoalescableCopyImpl(Rewriter &&CpyRewriter) {
+  bool Changed = false;
+  // Get the right rewriter for the current copy.
+  // Rewrite each rewritable source.
+  RegSubRegPair Src;
+  RegSubRegPair TrackPair;
+  while (CpyRewriter.getNextRewritableSource(Src, TrackPair)) {
+    // Keep track of PHI nodes and its incoming edges when looking for sources.
+    RewriteMapTy RewriteMap;
+    // Try to find a more suitable source. If we failed to do so, or get the
+    // actual source, move to the next source.
+    if (!findNextSource(TrackPair, RewriteMap))
+      continue;
+
+    // Get the new source to rewrite. TODO: Only enable handling of multiple
+    // sources (PHIs) once we have a motivating example and testcases for it.
+    RegSubRegPair NewSrc = getNewSource(MRI, TII, TrackPair, RewriteMap,
+                                        /*HandleMultipleSources=*/false);
+    if (Src.Reg == NewSrc.Reg || NewSrc.Reg == 0)
+      continue;
+
+    // Rewrite source.
+    if (CpyRewriter.RewriteCurrentSource(NewSrc.Reg, NewSrc.SubReg)) {
+      // We may have extended the live-range of NewSrc, account for that.
+      MRI->clearKillFlags(NewSrc.Reg);
+      Changed = true;
+    }
+  }
+
+  // TODO: We could have a clean-up method to tidy the instruction.
+  // E.g., v0 = INSERT_SUBREG v1, v1.sub0, sub0
+  // => v0 = COPY v1
+  // Currently we haven't seen motivating example for that and we
+  // want to avoid untested code.
+  NumRewrittenCopies += Changed;
+  return Changed;
+}
+
 /// Optimize generic copy instructions to avoid cross register bank copy.
 /// The optimization looks through a chain of copies and tries to find a source
 /// that has a compatible register class.
@@ -1232,44 +1245,22 @@ bool PeepholeOptimizer::optimizeCoalescableCopy(MachineInstr &MI) {
   if (MODef.getReg().isPhysical())
     return false;
 
-  bool Changed = false;
-  // Get the right rewriter for the current copy.
-  std::unique_ptr<Rewriter> CpyRewriter(getCopyRewriter(MI, *TII));
-  // If none exists, bail out.
-  if (!CpyRewriter)
+  switch (MI.getOpcode()) {
+  case TargetOpcode::COPY:
+    return optimizeCoalescableCopyImpl(CopyRewriter(MI));
+  case TargetOpcode::INSERT_SUBREG:
+    return optimizeCoalescableCopyImpl(InsertSubregRewriter(MI));
+  case TargetOpcode::EXTRACT_SUBREG:
+    return optimizeCoalescableCopyImpl(ExtractSubregRewriter(MI, *TII));
+  case TargetOpcode::REG_SEQUENCE:
+    return optimizeCoalescableCopyImpl(RegSequenceRewriter(MI));
+  default:
+    // Handle uncoalescable copy-like instructions.
+    if (MI.isBitcast() || MI.isRegSequenceLike() || MI.isInsertSubregLike() ||
+        MI.isExtractSubregLike())
+      return optimizeCoalescableCopyImpl(UncoalescableRewriter(MI));
     return false;
-  // Rewrite each rewritable source.
-  RegSubRegPair Src;
-  RegSubRegPair TrackPair;
-  while (CpyRewriter->getNextRewritableSource(Src, TrackPair)) {
-    // Keep track of PHI nodes and its incoming edges when looking for sources.
-    RewriteMapTy RewriteMap;
-    // Try to find a more suitable source. If we failed to do so, or get the
-    // actual source, move to the next source.
-    if (!findNextSource(TrackPair, RewriteMap))
-      continue;
-
-    // Get the new source to rewrite. TODO: Only enable handling of multiple
-    // sources (PHIs) once we have a motivating example and testcases for it.
-    RegSubRegPair NewSrc = getNewSource(MRI, TII, TrackPair, RewriteMap,
-                                        /*HandleMultipleSources=*/false);
-    if (Src.Reg == NewSrc.Reg || NewSrc.Reg == 0)
-      continue;
-
-    // Rewrite source.
-    if (CpyRewriter->RewriteCurrentSource(NewSrc.Reg, NewSrc.SubReg)) {
-      // We may have extended the live-range of NewSrc, account for that.
-      MRI->clearKillFlags(NewSrc.Reg);
-      Changed = true;
-    }
   }
-  // TODO: We could have a clean-up method to tidy the instruction.
-  // E.g., v0 = INSERT_SUBREG v1, v1.sub0, sub0
-  // => v0 = COPY v1
-  // Currently we haven't seen motivating example for that and we
-  // want to avoid untested code.
-  NumRewrittenCopies += Changed;
-  return Changed;
 }
 
 /// Rewrite the source found through \p Def, by using the \p RewriteMap
@@ -1991,11 +1982,6 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
     // turn that into an assertion.
     return ValueTrackerResult();
 
-  if (!TII)
-    // We could handle the REG_SEQUENCE here, but we do not want to
-    // duplicate the code from the generic TII.
-    return ValueTrackerResult();
-
   SmallVector<RegSubRegPairAndIdx, 8> RegSeqInputRegs;
   if (!TII->getRegSequenceInputs(*Def, DefIdx, RegSeqInputRegs))
     return ValueTrackerResult();
@@ -2022,11 +2008,6 @@ ValueTrackerResult ValueTracker::getNextSourceFromInsertSubreg() {
     // If we are composing subreg, bail out.
     // Same remark as getNextSourceFromRegSequence.
     // I.e., this may be turned into an assert.
-    return ValueTrackerResult();
-
-  if (!TII)
-    // We could handle the REG_SEQUENCE here, but we do not want to
-    // duplicate the code from the generic TII.
     return ValueTrackerResult();
 
   RegSubRegPair BaseReg;
@@ -2058,9 +2039,9 @@ ValueTrackerResult ValueTracker::getNextSourceFromInsertSubreg() {
   // Get the TRI and check if the inserted sub-register overlaps with the
   // sub-register we are tracking.
   const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-  if (!TRI || !(TRI->getSubRegIndexLaneMask(DefSubReg) &
-                TRI->getSubRegIndexLaneMask(InsertedReg.SubIdx))
-                   .none())
+  if ((TRI->getSubRegIndexLaneMask(DefSubReg) &
+       TRI->getSubRegIndexLaneMask(InsertedReg.SubIdx))
+          .any())
     return ValueTrackerResult();
   // At this point, the value is available in v0 via the same subreg
   // we used for Def.
@@ -2076,11 +2057,6 @@ ValueTrackerResult ValueTracker::getNextSourceFromExtractSubreg() {
   // Bail if we have to compose sub registers.
   // Indeed, if DefSubReg != 0, we would have to compose it with sub0.
   if (DefSubReg)
-    return ValueTrackerResult();
-
-  if (!TII)
-    // We could handle the EXTRACT_SUBREG here, but we do not want to
-    // duplicate the code from the generic TII.
     return ValueTrackerResult();
 
   RegSubRegPairAndIdx ExtractSubregInputReg;
