@@ -159,6 +159,76 @@ static bool TagIsRecordType(dw_tag_t tag) {
   }
 }
 
+/// Get the object parameter DIE if one exists, otherwise returns
+/// a default DWARFDIE. If \c containing_decl_ctx is not a valid
+/// C++ declaration context for class methods, assume no object
+/// parameter exists for the given \c subprogram.
+static DWARFDIE
+GetCXXObjectParameter(const DWARFDIE &subprogram,
+                      const clang::DeclContext &containing_decl_ctx) {
+  assert(subprogram.Tag() == DW_TAG_subprogram ||
+         subprogram.Tag() == DW_TAG_inlined_subroutine ||
+         subprogram.Tag() == DW_TAG_subroutine_type);
+
+  if (!DeclKindIsCXXClass(containing_decl_ctx.getDeclKind()))
+    return {};
+
+  // FIXME: if subprogram has a explicit DW_AT_object_pointer, use it.
+
+  // If no DW_AT_object_pointer was specified, assume the implicit object
+  // parameter is the first parameter to the function, is called "this" and is
+  // artificial (which is what most compilers would generate).
+  auto children = subprogram.children();
+  auto it = llvm::find_if(children, [](const DWARFDIE &child) {
+    return child.Tag() == DW_TAG_formal_parameter;
+  });
+
+  if (it == children.end())
+    return {};
+
+  DWARFDIE object_pointer = *it;
+
+  if (!object_pointer.GetAttributeValueAsUnsigned(DW_AT_artificial, 0))
+    return {};
+
+  // Often times compilers omit the "this" name for the
+  // specification DIEs, so we can't rely upon the name being in
+  // the formal parameter DIE...
+  if (const char *name = object_pointer.GetName();
+      name && ::strcmp(name, "this") != 0)
+    return {};
+
+  return object_pointer;
+}
+
+/// In order to determine the CV-qualifiers for a C++ class
+/// method in DWARF, we have to look at the CV-qualifiers of
+/// the object parameter's type.
+static unsigned GetCXXMethodCVQuals(const DWARFDIE &subprogram,
+                                    const DWARFDIE &object_parameter) {
+  if (!subprogram || !object_parameter)
+    return 0;
+
+  Type *this_type = subprogram.ResolveTypeUID(
+      object_parameter.GetAttributeValueAsReferenceDIE(DW_AT_type));
+  if (!this_type)
+    return 0;
+
+  uint32_t encoding_mask = this_type->GetEncodingMask();
+
+  // FIXME: explicit object parameters need not to be pointers
+  if (!(encoding_mask & (1u << Type::eEncodingIsPointerUID)))
+    return 0;
+
+  unsigned cv_quals = 0;
+  if (encoding_mask & (1u << Type::eEncodingIsConstUID))
+    cv_quals |= clang::Qualifiers::Const;
+  if (encoding_mask & (1u << Type::eEncodingIsVolatileUID))
+    cv_quals |= clang::Qualifiers::Volatile;
+
+  return cv_quals;
+}
+
 TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
                                                      const DWARFDIE &die,
                                                      Log *log) {
@@ -1188,10 +1258,7 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
   const dw_tag_t tag = die.Tag();
 
   bool is_variadic = false;
-  bool is_static = false;
   bool has_template_params = false;
-
-  unsigned type_quals = 0;
 
   DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(),
                DW_TAG_value_to_name(tag), type_name_cstr);
@@ -1215,23 +1282,15 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
   DWARFDIE decl_ctx_die;
   clang::DeclContext *containing_decl_ctx =
       GetClangDeclContextContainingDIE(die, &decl_ctx_die);
-  const clang::Decl::Kind containing_decl_kind =
-      containing_decl_ctx->getDeclKind();
-
-  bool is_cxx_method = DeclKindIsCXXClass(containing_decl_kind);
-  // Start off static. This will be set to false in
-  // ParseChildParameters(...) if we find a "this" parameters as the
-  // first parameter
-  if (is_cxx_method) {
-    is_static = true;
-  }
+  assert(containing_decl_ctx);
 
   if (die.HasChildren()) {
-    ParseChildParameters(containing_decl_ctx, die, is_static, is_variadic,
+    ParseChildParameters(containing_decl_ctx, die, is_variadic,
                          has_template_params, function_param_types,
-                         function_param_decls, type_quals);
+                         function_param_decls);
   }
 
+  bool is_cxx_method = DeclKindIsCXXClass(containing_decl_ctx->getDeclKind());
   bool ignore_containing_context = false;
   // Check for templatized class member functions. If we had any
   // DW_TAG_template_type_parameter or DW_TAG_template_value_parameter
@@ -1251,12 +1310,16 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
   clang::CallingConv calling_convention =
       ConvertDWARFCallingConventionToClang(attrs);
 
+  const DWARFDIE object_parameter =
+      GetCXXObjectParameter(die, *containing_decl_ctx);
+
   // clang_type will get the function prototype clang type after this
   // call
   CompilerType clang_type =
       m_ast.CreateFunctionType(return_clang_type, function_param_types.data(),
                                function_param_types.size(), is_variadic,
-                               type_quals, calling_convention, attrs.ref_qual);
+                               GetCXXMethodCVQuals(die, object_parameter),
+                               calling_convention, attrs.ref_qual);
 
   if (attrs.name) {
     bool type_handled = false;
@@ -1267,6 +1330,8 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
         type_handled =
             ParseObjCMethod(*objc_method, die, clang_type, attrs, is_variadic);
       } else if (is_cxx_method) {
+        // In DWARF, a C++ method is static if it has no object parameter child.
+        const bool is_static = !object_parameter.IsValid();
         auto [handled, type_sp] =
             ParseCXXMethod(die, clang_type, attrs, decl_ctx_die, is_static,
                            ignore_containing_context);
@@ -2315,10 +2380,8 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
 
 ConstString
 DWARFASTParserClang::ConstructDemangledNameFromDWARF(const DWARFDIE &die) {
-  bool is_static = false;
   bool is_variadic = false;
   bool has_template_params = false;
-  unsigned type_quals = 0;
   std::vector<CompilerType> param_types;
   std::vector<clang::ParmVarDecl *> param_decls;
   StreamString sstr;
@@ -2328,9 +2391,13 @@ DWARFASTParserClang::ConstructDemangledNameFromDWARF(const DWARFDIE &die) {
 
   clang::DeclContext *containing_decl_ctx =
       GetClangDeclContextContainingDIE(die, nullptr);
-  ParseChildParameters(containing_decl_ctx, die, is_static, is_variadic,
-                       has_template_params, param_types, param_decls,
-                       type_quals);
+  assert(containing_decl_ctx);
+
+  const unsigned cv_quals = GetCXXMethodCVQuals(
+      die, GetCXXObjectParameter(die, *containing_decl_ctx));
+
+  ParseChildParameters(containing_decl_ctx, die, is_variadic,
+                       has_template_params, param_types, param_decls);
   sstr << "(";
   for (size_t i = 0; i < param_types.size(); i++) {
     if (i > 0)
@@ -2340,7 +2407,7 @@ DWARFASTParserClang::ConstructDemangledNameFromDWARF(const DWARFDIE &die) {
   if (is_variadic)
     sstr << ", ...";
   sstr << ")";
-  if (type_quals & clang::Qualifiers::Const)
+  if (cv_quals & clang::Qualifiers::Const)
     sstr << " const";
 
   return ConstString(sstr.GetString());
@@ -3070,57 +3137,37 @@ bool DWARFASTParserClang::ParseChildMembers(
   return true;
 }
 
-size_t DWARFASTParserClang::ParseChildParameters(
+void DWARFASTParserClang::ParseChildParameters(
     clang::DeclContext *containing_decl_ctx, const DWARFDIE &parent_die,
-    bool &is_static, bool &is_variadic, bool &has_template_params,
+    bool &is_variadic, bool &has_template_params,
     std::vector<CompilerType> &function_param_types,
-    std::vector<clang::ParmVarDecl *> &function_param_decls,
-    unsigned &type_quals) {
+    std::vector<clang::ParmVarDecl *> &function_param_decls) {
   if (!parent_die)
-    return 0;
+    return;
 
-  size_t arg_idx = 0;
   for (DWARFDIE die : parent_die.children()) {
     const dw_tag_t tag = die.Tag();
     switch (tag) {
     case DW_TAG_formal_parameter: {
+      if (die.GetAttributeValueAsUnsigned(DW_AT_artificial, 0))
+        continue;
+
       const char *name = die.GetName();
       DWARFDIE param_type_die = die.GetAttributeValueAsReferenceDIE(DW_AT_type);
 
-      if (die.GetAttributeValueAsUnsigned(DW_AT_artificial, 0)) {
-        // In order to determine if a C++ member function is "const" we
-        // have to look at the const-ness of "this"...
-        if (arg_idx == 0 &&
-            DeclKindIsCXXClass(containing_decl_ctx->getDeclKind()) &&
-            // Often times compilers omit the "this" name for the
-            // specification DIEs, so we can't rely upon the name being in
-            // the formal parameter DIE...
-            (name == nullptr || ::strcmp(name, "this") == 0)) {
-          if (Type *this_type = die.ResolveTypeUID(param_type_die)) {
-            uint32_t encoding_mask = this_type->GetEncodingMask();
-            if (encoding_mask & Type::eEncodingIsPointerUID) {
-              is_static = false;
+      Type *type = die.ResolveTypeUID(param_type_die);
+      if (!type)
+        break;
 
-              if (encoding_mask & (1u << Type::eEncodingIsConstUID))
-                type_quals |= clang::Qualifiers::Const;
-              if (encoding_mask & (1u << Type::eEncodingIsVolatileUID))
-                type_quals |= clang::Qualifiers::Volatile;
-            }
-          }
-        }
-      } else if (Type *type = die.ResolveTypeUID(param_type_die)) {
-        function_param_types.push_back(type->GetForwardCompilerType());
+      function_param_types.push_back(type->GetForwardCompilerType());
 
-        clang::ParmVarDecl *param_var_decl = m_ast.CreateParameterDeclaration(
-            containing_decl_ctx, GetOwningClangModule(die), name,
-            type->GetForwardCompilerType(), clang::StorageClass::SC_None);
-        assert(param_var_decl);
-        function_param_decls.push_back(param_var_decl);
+      clang::ParmVarDecl *param_var_decl = m_ast.CreateParameterDeclaration(
+          containing_decl_ctx, GetOwningClangModule(die), name,
+          type->GetForwardCompilerType(), clang::StorageClass::SC_None);
+      assert(param_var_decl);
+      function_param_decls.push_back(param_var_decl);
 
-        m_ast.SetMetadataAsUserID(param_var_decl, die.GetID());
-      }
-
-      arg_idx++;
+      m_ast.SetMetadataAsUserID(param_var_decl, die.GetID());
     } break;
 
     case DW_TAG_unspecified_parameters:
@@ -3142,7 +3189,6 @@ size_t DWARFASTParserClang::ParseChildParameters(
       break;
     }
   }
-  return arg_idx;
 }
 
 clang::Decl *DWARFASTParserClang::GetClangDeclForDIE(const DWARFDIE &die) {
