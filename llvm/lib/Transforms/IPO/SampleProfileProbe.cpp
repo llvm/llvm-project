@@ -340,9 +340,7 @@ uint32_t SampleProfileProber::getCallsiteId(const Instruction *Call) const {
   return Iter == CallProbeIds.end() ? 0 : Iter->second;
 }
 
-void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
-  Module *M = F.getParent();
-  MDBuilder MDB(F.getContext());
+static StringRef getFuncName(const Function &F) {
   // Since the GUID from probe desc and inline stack are computed separately, we
   // need to make sure their names are consistent, so here also use the name
   // from debug info.
@@ -352,6 +350,13 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
     if (FName.empty())
       FName = SP->getName();
   }
+  return FName;
+}
+
+void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
+  Module *M = F.getParent();
+  MDBuilder MDB(F.getContext());
+  StringRef FName = getFuncName(F);
   uint64_t Guid = Function::getGUID(FName);
 
   // Assign an artificial debug line to a probe that doesn't come with a real
@@ -511,4 +516,32 @@ PreservedAnalyses PseudoProbeUpdatePass::run(Module &M,
     }
   }
   return PreservedAnalyses::none();
+}
+
+PreservedAnalyses PseudoProbeDescUpdatePass::run(Module &M,
+                                                 ModuleAnalysisManager &AM) {
+  if (NamedMDNode *FuncInfo = M.getNamedMetadata(PseudoProbeDescMetadataName)) {
+    DenseSet<uint64_t> GuidSet;
+    for (const auto *Operand : FuncInfo->operands()) {
+      const auto *MD = cast<MDNode>(Operand);
+      auto *GUID = mdconst::dyn_extract<ConstantInt>(MD->getOperand(0));
+      GuidSet.insert(GUID->getZExtValue());
+    }
+
+    MDBuilder MDB(M.getContext());
+    for (Function &F : M) {
+      if (F.isDeclaration())
+        continue;
+      StringRef FName = getFuncName(F);
+      uint64_t Guid = Function::getGUID(FName);
+      if (GuidSet.insert(Guid).second) {
+        // Set those function's hash to 0 since it may vary depending on IR
+        // input to optimization transformation.
+        auto *MD = MDB.createPseudoProbeDesc(Guid, 0, FName);
+        FuncInfo->addOperand(MD);
+        LLVM_DEBUG(dbgs() << "New fixup pseudo_probe_desc MD: " << *MD << "\n");
+      }
+    }
+  }
+  return PreservedAnalyses::all();
 }
