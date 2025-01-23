@@ -1124,7 +1124,11 @@ def int_objectsize : DefaultAttrsIntrinsic<[llvm_anyint_ty],
 //===--------------- Access to Floating Point Environment -----------------===//
 //
 
-let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
+/// IntrStrictFP - The intrinsic is allowed to be used in an alternate
+/// floating point environment or touches the current one.
+def IntrStrictFP : IntrinsicProperty;
+
+let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn, IntrStrictFP] in {
   def int_get_rounding  : DefaultAttrsIntrinsic<[llvm_i32_ty], []>;
   def int_set_rounding  : DefaultAttrsIntrinsic<[], [llvm_i32_ty]>;
   def int_get_fpenv     : DefaultAttrsIntrinsic<[llvm_anyint_ty], []>;
@@ -1145,10 +1149,6 @@ def int_is_fpclass
 
 //===--------------- Constrained Floating Point Intrinsics ----------------===//
 //
-
-/// IntrStrictFP - The intrinsic is allowed to be used in an alternate
-/// floating point environment.
-def IntrStrictFP : IntrinsicProperty;
 
 let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn, IntrStrictFP] in {
   def int_experimental_constrained_fadd : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
