@@ -1181,6 +1181,9 @@ void AMDGPUPassConfig::addIRPasses() {
   // Replace OpenCL enqueued block function pointers with global variables.
   addPass(createAMDGPUOpenCLEnqueuedBlockLoweringLegacyPass());
 
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addPass(createInferAddressSpacesPass());
+
   // Lower LDS accesses to global memory pass if address sanitizer is enabled.
   if (EnableSwLowerLDS)
     addPass(createAMDGPUSwLowerLDSLegacyPass(&TM));
@@ -1189,9 +1192,6 @@ void AMDGPUPassConfig::addIRPasses() {
   if (EnableLowerModuleLDS) {
     addPass(createAMDGPULowerModuleLDSLegacyPass(&TM));
   }
-
-  if (TM.getOptLevel() > CodeGenOptLevel::None)
-    addPass(createInferAddressSpacesPass());
 
   // Run atomic optimizer before Atomic Expand
   if ((TM.getTargetTriple().getArch() == Triple::amdgcn) &&
@@ -1950,12 +1950,16 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
 
   addPass(AMDGPUOpenCLEnqueuedBlockLoweringPass());
 
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addPass(InferAddressSpacesPass());
+
+  // Lower LDS accesses to global memory pass if address sanitizer is enabled.
+  if (EnableSwLowerLDS)
+    addPass(AMDGPUSwLowerLDSPass(TM));
+
   // Runs before PromoteAlloca so the latter can account for function uses
   if (EnableLowerModuleLDS)
     addPass(AMDGPULowerModuleLDSPass(TM));
-
-  if (TM.getOptLevel() > CodeGenOptLevel::None)
-    addPass(InferAddressSpacesPass());
 
   // Run atomic optimizer before Atomic Expand
   if (TM.getOptLevel() >= CodeGenOptLevel::Less &&
