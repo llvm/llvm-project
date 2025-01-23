@@ -246,6 +246,11 @@ ABI Changes in This Version
 - Fixed the Itanium mangling of the construction vtable name. This change will introduce incompatibilities with code compiled by Clang 19 and earlier versions, unless the -fclang-abi-compat=19 option is used. (#GH108015)
 - Mangle member-like friend function templates as members of the enclosing class. (#GH110247, #GH110503)
 
+- Records carrying the trivial_abi attribute are now returned directly in registers
+  in more cases when using the Microsoft ABI. It is not possible to pass trivial_abi
+  records between MSVC and Clang, so there is no ABI compatibility requirement. This
+  is an ABI break with old versions of Clang. (#GH87993)
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
