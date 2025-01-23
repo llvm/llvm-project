@@ -429,6 +429,7 @@ StmtResult SemaSYCL::BuildSYCLKernelCallStmt(FunctionDecl *FD,
       getASTContext().getSYCLKernelInfo(SKEPAttr->getKernelName());
   assert(declaresSameEntity(SKI.getKernelEntryPointDecl(), FD) &&
          "SYCL kernel name conflict");
+  (void)SKI;
 
   using ParmDeclMap = OutlinedFunctionDeclBodyInstantiator::ParmDeclMap;
   ParmDeclMap ParmMap;
