@@ -3076,16 +3076,17 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(
       }
     }
     if (type->IsAssumedType()) { // ok
-    } else if (IsAssumedLengthCharacter(symbol)) {
+    } else if (IsAssumedLengthCharacter(symbol) &&
+        !IsAllocatableOrPointer(symbol)) {
     } else if (IsAllocatableOrPointer(symbol) &&
         type->category() == DeclTypeSpec::Character &&
         type->characterTypeSpec().length().isDeferred()) {
       // ok; F'2023 18.3.7 p2(6)
     } else if (derived) { // type has been checked
     } else if (auto dyType{evaluate::DynamicType::From(*type)}; dyType &&
-               evaluate::IsInteroperableIntrinsicType(*dyType,
-                   InModuleFile() ? nullptr : &context_.languageFeatures())
-                   .value_or(false)) {
+        evaluate::IsInteroperableIntrinsicType(
+            *dyType, InModuleFile() ? nullptr : &context_.languageFeatures())
+            .value_or(false)) {
       // F'2023 18.3.7 p2(4,5)
       // N.B. Language features are not passed to IsInteroperableIntrinsicType
       // when processing a module file, since the module file might have been
