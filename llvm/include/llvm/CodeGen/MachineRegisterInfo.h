@@ -803,7 +803,7 @@ public:
   /// of an earlier hint it will be overwritten.
   void setRegAllocationHint(Register VReg, unsigned Type, Register PrefReg) {
     assert(VReg.isVirtual());
-    RegAllocHints.grow(Register::index2VirtReg(getNumVirtRegs()));
+    RegAllocHints.grow(Register::index2VirtReg(getNumVirtRegs() - 1));
     RegAllocHints[VReg].first  = Type;
     RegAllocHints[VReg].second.clear();
     RegAllocHints[VReg].second.push_back(PrefReg);
@@ -813,7 +813,7 @@ public:
   /// vector for VReg.
   void addRegAllocationHint(Register VReg, Register PrefReg) {
     assert(VReg.isVirtual());
-    RegAllocHints.grow(Register::index2VirtReg(getNumVirtRegs()));
+    RegAllocHints.grow(Register::index2VirtReg(getNumVirtRegs() - 1));
     RegAllocHints[VReg].second.push_back(PrefReg);
   }
 
