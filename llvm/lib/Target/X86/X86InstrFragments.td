@@ -134,8 +134,8 @@ def SDTX86Cmpccxadd : SDTypeProfile<1, 4, [SDTCisSameAs<0, 2>,
 def X86MFence : SDNode<"X86ISD::MFENCE", SDTNone, [SDNPHasChain]>;
 
 
-def X86bsf     : SDNode<"X86ISD::BSF",      SDTUnaryArithWithFlags>;
-def X86bsr     : SDNode<"X86ISD::BSR",      SDTUnaryArithWithFlags>;
+def X86bsf     : SDNode<"X86ISD::BSF",      SDTBinaryArithWithFlags>;
+def X86bsr     : SDNode<"X86ISD::BSR",      SDTBinaryArithWithFlags>;
 def X86fshl    : SDNode<"X86ISD::FSHL",     SDTIntShiftDOp>;
 def X86fshr    : SDNode<"X86ISD::FSHR",     SDTIntShiftDOp>;
 
@@ -685,8 +685,9 @@ def anyext_sdiv : PatFrag<(ops node:$lhs), (anyext node:$lhs),[{
 // register. Truncate can be lowered to EXTRACT_SUBREG. CopyFromReg may
 // be copying from a truncate. AssertSext/AssertZext/AssertAlign aren't saying
 // anything about the upper 32 bits, they're probably just qualifying a
-// CopyFromReg. FREEZE may be coming from a a truncate. Any other 32-bit
-// operation will zero-extend up to 64 bits.
+// CopyFromReg. FREEZE may be coming from a a truncate. BitScan fall through
+// values may not zero the upper bits correctly.
+// Any other 32-bit operation will zero-extend up to 64 bits.
 def def32 : PatLeaf<(i32 GR32:$src), [{
   return N->getOpcode() != ISD::TRUNCATE &&
          N->getOpcode() != TargetOpcode::EXTRACT_SUBREG &&
@@ -694,7 +695,9 @@ def def32 : PatLeaf<(i32 GR32:$src), [{
          N->getOpcode() != ISD::AssertSext &&
          N->getOpcode() != ISD::AssertZext &&
          N->getOpcode() != ISD::AssertAlign &&
-         N->getOpcode() != ISD::FREEZE;
+         N->getOpcode() != ISD::FREEZE &&
+         !((N->getOpcode() == X86ISD::BSF || N->getOpcode() == X86ISD::BSR) &&
+           (!N->getOperand(0).isUndef() && !isa<ConstantSDNode>(N->getOperand(0))));
 }]>;
 
 // Treat an 'or' node is as an 'add' if the or'ed bits are known to be zero.
