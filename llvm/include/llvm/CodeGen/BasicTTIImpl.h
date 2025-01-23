@@ -1469,10 +1469,9 @@ public:
                                        true, CostKind);
   }
 
-  InstructionCost getConsecutiveMemoryOpCost(unsigned Opcode, Type *DataTy,
-                                             bool VariableMask, Align Alignment,
-                                             TTI::TargetCostKind CostKind,
-                                             const Instruction *I = nullptr) {
+  InstructionCost getExpandCompressMemoryOpCost(
+      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+      TTI::TargetCostKind CostKind, const Instruction *I = nullptr) {
     return getCommonMaskedMemoryOpCost(Opcode, DataTy, Alignment, VariableMask,
                                        true, CostKind);
   }
@@ -1789,16 +1788,16 @@ public:
       const Value *Data = Args[0];
       const Value *Mask = Args[2];
       Align Alignment = I->getParamAlign(1).valueOrOne();
-      return thisT()->getConsecutiveMemoryOpCost(
+      return thisT()->getExpandCompressMemoryOpCost(
           Instruction::Store, Data->getType(), !isa<Constant>(Mask), Alignment,
           CostKind, I);
     }
     case Intrinsic::masked_expandload: {
       const Value *Mask = Args[1];
       Align Alignment = I->getParamAlign(0).valueOrOne();
-      return thisT()->getConsecutiveMemoryOpCost(Instruction::Load, RetTy,
-                                                 !isa<Constant>(Mask),
-                                                 Alignment, CostKind, I);
+      return thisT()->getExpandCompressMemoryOpCost(Instruction::Load, RetTy,
+                                                    !isa<Constant>(Mask),
+                                                    Alignment, CostKind, I);
     }
     case Intrinsic::experimental_vp_strided_store: {
       const Value *Data = Args[0];

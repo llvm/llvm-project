@@ -838,7 +838,7 @@ InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
   return NumLoads * MemOpCost;
 }
 
-InstructionCost RISCVTTIImpl::getConsecutiveMemoryOpCost(
+InstructionCost RISCVTTIImpl::getExpandCompressMemoryOpCost(
     unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
     TTI::TargetCostKind CostKind, const Instruction *I) {
   bool IsLegal = (Opcode == Instruction::Store &&
@@ -846,8 +846,8 @@ InstructionCost RISCVTTIImpl::getConsecutiveMemoryOpCost(
                  (Opcode == Instruction::Load &&
                   isLegalMaskedExpandLoad(DataTy, Alignment));
   if (!IsLegal || CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getConsecutiveMemoryOpCost(Opcode, DataTy, VariableMask,
-                                             Alignment, CostKind, I);
+    return BaseT::getExpandCompressMemoryOpCost(Opcode, DataTy, VariableMask,
+                                                Alignment, CostKind, I);
   // Example compressstore sequence:
   // vsetivli        zero, 8, e32, m2, ta, ma (ignored)
   // vcompress.vm    v10, v8, v0

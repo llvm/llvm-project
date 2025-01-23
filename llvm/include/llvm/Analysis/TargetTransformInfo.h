@@ -1500,7 +1500,7 @@ public:
   /// \p Alignment - alignment of single element
   /// \p I - the optional original context instruction, if one exists, e.g. the
   ///        load/store to transform or the call to the gather/scatter intrinsic
-  InstructionCost getConsecutiveMemoryOpCost(
+  InstructionCost getExpandCompressMemoryOpCost(
       unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       const Instruction *I = nullptr) const;
@@ -2190,10 +2190,9 @@ public:
                          bool VariableMask, Align Alignment,
                          TTI::TargetCostKind CostKind,
                          const Instruction *I = nullptr) = 0;
-  virtual InstructionCost
-  getConsecutiveMemoryOpCost(unsigned Opcode, Type *DataTy, bool VariableMask,
-                             Align Alignment, TTI::TargetCostKind CostKind,
-                             const Instruction *I = nullptr) = 0;
+  virtual InstructionCost getExpandCompressMemoryOpCost(
+      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+      TTI::TargetCostKind CostKind, const Instruction *I = nullptr) = 0;
   virtual InstructionCost
   getStridedMemoryOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,
                          bool VariableMask, Align Alignment,
@@ -2914,12 +2913,11 @@ public:
     return Impl.getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
                                        Alignment, CostKind, I);
   }
-  InstructionCost
-  getConsecutiveMemoryOpCost(unsigned Opcode, Type *DataTy, bool VariableMask,
-                             Align Alignment, TTI::TargetCostKind CostKind,
-                             const Instruction *I = nullptr) override {
-    return Impl.getConsecutiveMemoryOpCost(Opcode, DataTy, VariableMask,
-                                           Alignment, CostKind, I);
+  InstructionCost getExpandCompressMemoryOpCost(
+      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+      TTI::TargetCostKind CostKind, const Instruction *I = nullptr) override {
+    return Impl.getExpandCompressMemoryOpCost(Opcode, DataTy, VariableMask,
+                                              Alignment, CostKind, I);
   }
   InstructionCost
   getStridedMemoryOpCost(unsigned Opcode, Type *DataTy, const Value *Ptr,

@@ -765,10 +765,9 @@ public:
     return 1;
   }
 
-  InstructionCost
-  getConsecutiveMemoryOpCost(unsigned Opcode, Type *DataTy, bool VariableMask,
-                             Align Alignment, TTI::TargetCostKind CostKind,
-                             const Instruction *I = nullptr) const {
+  InstructionCost getExpandCompressMemoryOpCost(
+      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+      TTI::TargetCostKind CostKind, const Instruction *I = nullptr) const {
     return 1;
   }
 
