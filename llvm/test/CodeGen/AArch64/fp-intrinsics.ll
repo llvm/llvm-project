@@ -765,7 +765,7 @@ define float @trunc_f32(float %x) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    frintz s0, s0
 ; CHECK-NEXT:    ret
-  %val = call float @llvm.experimental.constrained.trunc.f32(float %x, metadata !"fpexcept.strict") #0
+  %val = call float @llvm.trunc.f32(float %x) #0 [ "fpe.except"(metadata !"strict") ]
   ret float %val
 }
 
@@ -1559,7 +1559,7 @@ define double @trunc_f64(double %x) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    frintz d0, d0
 ; CHECK-NEXT:    ret
-  %val = call double @llvm.experimental.constrained.trunc.f64(double %x, metadata !"fpexcept.strict") #0
+  %val = call double @llvm.trunc.f64(double %x) #0 [ "fpe.except"(metadata !"strict") ]
   ret double %val
 }
 
@@ -2428,7 +2428,7 @@ define fp128 @trunc_f128(fp128 %x) #0 {
 ; CHECK-NEXT:    bl truncl
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %val = call fp128 @llvm.experimental.constrained.trunc.f128(fp128 %x, metadata !"fpexcept.strict") #0
+  %val = call fp128 @llvm.trunc.f128(fp128 %x) #0 [ "fpe.except"(metadata !"strict") ]
   ret fp128 %val
 }
 
@@ -3179,7 +3179,6 @@ declare i32 @llvm.experimental.constrained.lround.i32.f32(float, metadata)
 declare i64 @llvm.experimental.constrained.llround.i64.f32(float, metadata)
 declare float @llvm.experimental.constrained.round.f32(float, metadata)
 declare float @llvm.experimental.constrained.roundeven.f32(float, metadata)
-declare float @llvm.experimental.constrained.trunc.f32(float, metadata)
 declare i1 @llvm.experimental.constrained.fcmps.f32(float, float, metadata, metadata)
 declare i1 @llvm.experimental.constrained.fcmp.f32(float, float, metadata, metadata)
 
@@ -3231,7 +3230,6 @@ declare i32 @llvm.experimental.constrained.lround.i32.f64(double, metadata)
 declare i64 @llvm.experimental.constrained.llround.i64.f64(double, metadata)
 declare double @llvm.experimental.constrained.round.f64(double, metadata)
 declare double @llvm.experimental.constrained.roundeven.f64(double, metadata)
-declare double @llvm.experimental.constrained.trunc.f64(double, metadata)
 declare i1 @llvm.experimental.constrained.fcmps.f64(double, double, metadata, metadata)
 declare i1 @llvm.experimental.constrained.fcmp.f64(double, double, metadata, metadata)
 
@@ -3280,7 +3278,6 @@ declare fp128 @llvm.experimental.constrained.floor.f128(fp128, metadata)
 declare i32 @llvm.experimental.constrained.lround.i32.f128(fp128, metadata)
 declare i64 @llvm.experimental.constrained.llround.i64.f128(fp128, metadata)
 declare fp128 @llvm.experimental.constrained.round.f128(fp128, metadata)
-declare fp128 @llvm.experimental.constrained.trunc.f128(fp128, metadata)
 declare i1 @llvm.experimental.constrained.fcmps.f128(fp128, fp128, metadata, metadata)
 declare i1 @llvm.experimental.constrained.fcmp.f128(fp128, fp128, metadata, metadata)
 

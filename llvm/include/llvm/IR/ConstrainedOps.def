@@ -39,6 +39,11 @@
 #define CMP_INSTRUCTION(N,A,R,I,D) DAG_INSTRUCTION(N,A,R,I,D)
 #endif
 
+// Intrinsic function that had constrained variant.
+#ifndef LEGACY_FUNCTION
+#define LEGACY_FUNCTION(N,A,R,I,D)
+#endif
+
 // Arguments of the entries are:
 // - instruction or intrinsic function name.
 // - Number of original instruction/intrinsic arguments.
@@ -103,7 +108,7 @@ DAG_FUNCTION(sinh,            1, 1, experimental_constrained_sinh,       FSINH)
 DAG_FUNCTION(sqrt,            1, 1, experimental_constrained_sqrt,       FSQRT)
 DAG_FUNCTION(tan,             1, 1, experimental_constrained_tan,        FTAN)
 DAG_FUNCTION(tanh,            1, 1, experimental_constrained_tanh,       FTANH)
-DAG_FUNCTION(trunc,           1, 0, experimental_constrained_trunc,      FTRUNC)
+LEGACY_FUNCTION(trunc,        1, 0, experimental_constrained_trunc,      FTRUNC)
 
 // This is definition for fmuladd intrinsic function, that is converted into
 // constrained FMA or FMUL + FADD intrinsics.
@@ -114,3 +119,4 @@ FUNCTION(fmuladd,         3, 1, experimental_constrained_fmuladd)
 #undef CMP_INSTRUCTION
 #undef DAG_INSTRUCTION
 #undef DAG_FUNCTION
+#undef LEGACY_FUNCTION

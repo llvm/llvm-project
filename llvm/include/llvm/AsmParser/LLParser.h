@@ -567,6 +567,11 @@ namespace llvm {
     bool resolveFunctionType(Type *RetType, ArrayRef<ParamInfo> ArgList,
                              FunctionType *&FuncTy);
 
+    void updateConstrainedIntrinsic(ValID &CalleeID,
+                                    SmallVectorImpl<ParamInfo> &Args,
+                                    SmallVectorImpl<OperandBundleDef> &Bundles,
+                                    AttrBuilder &FnAttrs);
+
     // Constant Parsing.
     bool parseValID(ValID &ID, PerFunctionState *PFS,
                     Type *ExpectedTy = nullptr);

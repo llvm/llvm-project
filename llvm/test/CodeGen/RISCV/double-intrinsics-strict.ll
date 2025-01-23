@@ -1552,8 +1552,6 @@ define double @ceil_f64(double %a) nounwind strictfp {
   ret double %1
 }
 
-declare double @llvm.experimental.constrained.trunc.f64(double, metadata)
-
 define double @trunc_f64(double %a) nounwind strictfp {
 ; RV32IFD-LABEL: trunc_f64:
 ; RV32IFD:       # %bb.0:
@@ -1608,7 +1606,7 @@ define double @trunc_f64(double %a) nounwind strictfp {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call double @llvm.experimental.constrained.trunc.f64(double %a, metadata !"fpexcept.strict") strictfp
+  %1 = call double @llvm.trunc.f64(double %a) strictfp [ "fpe.except"(metadata !"strict") ]
   ret double %1
 }
 

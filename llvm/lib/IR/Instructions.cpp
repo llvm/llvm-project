@@ -604,6 +604,29 @@ bool CallBase::hasClobberingOperandBundles() const {
          getIntrinsicID() != Intrinsic::assume;
 }
 
+std::optional<RoundingMode> CallBase::getRoundingMode() const {
+  if (auto RoundingBundle = getOperandBundle(LLVMContext::OB_fpe_control)) {
+    Value *V = RoundingBundle->Inputs.front();
+    Metadata *MD = cast<MetadataAsValue>(V)->getMetadata();
+    return convertStrToRoundingMode(cast<MDString>(MD)->getString(), true);
+  }
+  return std::nullopt;
+}
+
+std::optional<fp::ExceptionBehavior> CallBase::getExceptionBehavior() const {
+  if (auto ExceptionBundle = getOperandBundle(LLVMContext::OB_fpe_except)) {
+    Value *V = ExceptionBundle->Inputs.front();
+    Metadata *MD = cast<MetadataAsValue>(V)->getMetadata();
+    return convertStrToExceptionBehavior(cast<MDString>(MD)->getString(), true);
+  }
+  return std::nullopt;
+}
+
+bool CallBase::isConstrained() const {
+  return getOperandBundle(LLVMContext::OB_fpe_control) ||
+         getOperandBundle(LLVMContext::OB_fpe_except);
+}
+
 MemoryEffects CallBase::getMemoryEffects() const {
   MemoryEffects ME = getAttributes().getMemoryEffects();
   if (auto *Fn = dyn_cast<Function>(getCalledOperand())) {
@@ -673,6 +696,26 @@ bool CallBase::onlyAccessesInaccessibleMemOrArgMem() const {
 void CallBase::setOnlyAccessesInaccessibleMemOrArgMem() {
   setMemoryEffects(getMemoryEffects() &
                    MemoryEffects::inaccessibleOrArgMemOnly());
+}
+
+void llvm::addFPRoundingBundle(LLVMContext &Ctx,
+                               SmallVectorImpl<OperandBundleDef> &Bundles,
+                               RoundingMode Rounding) {
+  std::optional<StringRef> RndStr = convertRoundingModeToStr(Rounding, true);
+  assert(RndStr && "Garbage rounding mode!");
+  auto *RoundingMDS = MDString::get(Ctx, *RndStr);
+  auto *RM = MetadataAsValue::get(Ctx, RoundingMDS);
+  Bundles.emplace_back("fpe.control", RM);
+}
+
+void llvm::addFPExceptionBundle(LLVMContext &Ctx,
+                                SmallVectorImpl<OperandBundleDef> &Bundles,
+                                fp::ExceptionBehavior Except) {
+  std::optional<StringRef> ExcStr = convertExceptionBehaviorToStr(Except, true);
+  assert(ExcStr && "Garbage exception behavior!");
+  auto *ExceptMDS = MDString::get(Ctx, *ExcStr);
+  auto *EB = MetadataAsValue::get(Ctx, ExceptMDS);
+  Bundles.emplace_back("fpe.except", EB);
 }
 
 //===----------------------------------------------------------------------===//

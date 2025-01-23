@@ -1517,8 +1517,6 @@ define float @ceil_f32(float %a) nounwind strictfp {
   ret float %1
 }
 
-declare float @llvm.experimental.constrained.trunc.f32(float, metadata)
-
 define float @trunc_f32(float %a) nounwind strictfp {
 ; RV32IF-LABEL: trunc_f32:
 ; RV32IF:       # %bb.0:
@@ -1573,7 +1571,7 @@ define float @trunc_f32(float %a) nounwind strictfp {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call float @llvm.experimental.constrained.trunc.f32(float %a, metadata !"fpexcept.strict") strictfp
+  %1 = call float @llvm.trunc.f32(float %a) strictfp [ "fpe.except"(metadata !"strict") ]
   ret float %1
 }
 

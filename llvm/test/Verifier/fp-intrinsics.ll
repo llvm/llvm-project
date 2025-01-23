@@ -5,7 +5,7 @@ declare double @llvm.experimental.constrained.sqrt.f64(double, metadata, metadat
 
 ; Test an illegal value for the rounding mode argument.
 ; CHECK: invalid rounding mode argument
-; CHECK-NEXT:   %fadd = call double @llvm.experimental.constrained.fadd.f64(double %a, double %b, metadata !"round.dynomic", metadata !"fpexcept.strict") #1
+; CHECK-NEXT:   %fadd = call double @llvm.experimental.constrained.fadd.f64(double %a, double %b, metadata !"round.dynomic", metadata !"fpexcept.strict") #{{[0-9]+}}
 define double @f2(double %a, double %b) #0 {
 entry:
   %fadd = call double @llvm.experimental.constrained.fadd.f64(
@@ -17,7 +17,7 @@ entry:
 
 ; Test an illegal value for the exception behavior argument.
 ; CHECK-NEXT: invalid exception behavior argument
-; CHECK-NEXT:   %fadd = call double @llvm.experimental.constrained.fadd.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.restrict") #1
+; CHECK-NEXT:   %fadd = call double @llvm.experimental.constrained.fadd.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.restrict") #{{[0-9]+}}
 define double @f3(double %a, double %b) #0 {
 entry:
   %fadd = call double @llvm.experimental.constrained.fadd.f64(
@@ -29,7 +29,7 @@ entry:
 
 ; Test an illegal value for the rounding mode argument.
 ; CHECK-NEXT: invalid rounding mode argument
-; CHECK-NEXT:   %fadd = call double @llvm.experimental.constrained.sqrt.f64(double %a, metadata !"round.dynomic", metadata !"fpexcept.strict") #1
+; CHECK-NEXT:   %fadd = call double @llvm.experimental.constrained.sqrt.f64(double %a, metadata !"round.dynomic", metadata !"fpexcept.strict") #{{[0-9]+}}
 define double @f4(double %a) #0 {
 entry:
   %fadd = call double @llvm.experimental.constrained.sqrt.f64(
@@ -41,7 +41,7 @@ entry:
 
 ; Test an illegal value for the exception behavior argument.
 ; CHECK-NEXT: invalid exception behavior argument
-; CHECK-NEXT:   %fadd = call double @llvm.experimental.constrained.sqrt.f64(double %a, metadata !"round.dynamic", metadata !"fpexcept.restrict") #1
+; CHECK-NEXT:   %fadd = call double @llvm.experimental.constrained.sqrt.f64(double %a, metadata !"round.dynamic", metadata !"fpexcept.restrict") #{{[0-9]+}}
 define double @f5(double %a) #0 {
 entry:
   %fadd = call double @llvm.experimental.constrained.sqrt.f64(

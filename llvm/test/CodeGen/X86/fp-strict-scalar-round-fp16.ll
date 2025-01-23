@@ -7,7 +7,6 @@
 
 declare half @llvm.experimental.constrained.ceil.f16(half, metadata)
 declare half @llvm.experimental.constrained.floor.f16(half, metadata)
-declare half @llvm.experimental.constrained.trunc.f16(half, metadata)
 declare half @llvm.experimental.constrained.rint.f16(half, metadata, metadata)
 declare half @llvm.experimental.constrained.nearbyint.f16(half, metadata, metadata)
 declare half @llvm.experimental.constrained.roundeven.f16(half, metadata)
@@ -122,8 +121,7 @@ define half @ftrunc32(half %f) #0 {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vrndscalesh $11, %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %res = call half @llvm.experimental.constrained.trunc.f16(
-                        half %f, metadata !"fpexcept.strict") #0
+  %res = call half @llvm.trunc.f16(half %f) #1 [ "fpe.except"(metadata !"strict") ]
   ret half %res
 }
 

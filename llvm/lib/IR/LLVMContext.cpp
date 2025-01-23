@@ -82,6 +82,16 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
     assert(Entry->second == BundleTagID && "operand bundle id drifted!");
   }
 
+  auto *RoundingEntry = pImpl->getOrInsertBundleTag("fpe.control");
+  assert(RoundingEntry->second == LLVMContext::OB_fpe_control &&
+         "fpe.round operand bundle id drifted!");
+  (void)RoundingEntry;
+
+  auto *ExceptionEntry = pImpl->getOrInsertBundleTag("fpe.except");
+  assert(ExceptionEntry->second == LLVMContext::OB_fpe_except &&
+         "fpe.except operand bundle id drifted!");
+  (void)ExceptionEntry;
+
   SyncScope::ID SingleThreadSSID =
       pImpl->getOrInsertSyncScopeID("singlethread");
   assert(SingleThreadSSID == SyncScope::SingleThread &&

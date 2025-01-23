@@ -242,10 +242,10 @@ __builtin_atan2(f,f);        __builtin_atan2f(f,f);       __builtin_atan2l(f,f);
 
   __builtin_trunc(f);      __builtin_truncf(f);     __builtin_truncl(f); __builtin_truncf128(f);
 
-// CHECK: call double @llvm.experimental.constrained.trunc.f64(double %{{.*}}, metadata !"fpexcept.strict")
-// CHECK: call float @llvm.experimental.constrained.trunc.f32(float %{{.*}}, metadata !"fpexcept.strict")
-// CHECK: call x86_fp80 @llvm.experimental.constrained.trunc.f80(x86_fp80 %{{.*}}, metadata !"fpexcept.strict")
-// CHECK: call fp128 @llvm.experimental.constrained.trunc.f128(fp128 %{{.*}}, metadata !"fpexcept.strict")
+// CHECK: call double @llvm.trunc.f64(double %{{.*}}) #[[ATTR_CALL:[0-9]+]] [ "fpe.except"(metadata !"strict") ]
+// CHECK: call float @llvm.trunc.f32(float %{{.*}}) #[[ATTR_CALL]] [ "fpe.except"(metadata !"strict") ]
+// CHECK: call x86_fp80 @llvm.trunc.f80(x86_fp80 %{{.*}}) #[[ATTR_CALL]] [ "fpe.except"(metadata !"strict") ]
+// CHECK: call fp128 @llvm.trunc.f128(fp128 %{{.*}}) #[[ATTR_CALL]] [ "fpe.except"(metadata !"strict") ]
 };
 
 // CHECK: declare double @llvm.experimental.constrained.frem.f64(double, double, metadata, metadata)
@@ -377,10 +377,10 @@ __builtin_atan2(f,f);        __builtin_atan2f(f,f);       __builtin_atan2l(f,f);
 // CHECK: declare x86_fp80 @llvm.experimental.constrained.tan.f80(x86_fp80, metadata, metadata)
 // CHECK: declare fp128 @llvm.experimental.constrained.tan.f128(fp128, metadata, metadata)
 
-// CHECK: declare double @llvm.experimental.constrained.trunc.f64(double, metadata)
-// CHECK: declare float @llvm.experimental.constrained.trunc.f32(float, metadata)
-// CHECK: declare x86_fp80 @llvm.experimental.constrained.trunc.f80(x86_fp80, metadata)
-// CHECK: declare fp128 @llvm.experimental.constrained.trunc.f128(fp128, metadata)
+// CHECK: declare double @llvm.trunc.f64(double) #[[ATTR_FUNC:[0-9]+]]
+// CHECK: declare float @llvm.trunc.f32(float) #[[ATTR_FUNC]]
+// CHECK: declare x86_fp80 @llvm.trunc.f80(x86_fp80) #[[ATTR_FUNC]]
+// CHECK: declare fp128 @llvm.trunc.f128(fp128) #[[ATTR_FUNC]]
 
 #pragma STDC FP_CONTRACT ON
 void bar(float f) {
@@ -401,3 +401,6 @@ void bar(float f) {
   // CHECK: fneg
   // CHECK: call float @llvm.experimental.constrained.fmuladd.f32(float %{{.*}}, float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 };
+
+// CHECK: attributes #[[ATTR_FUNC]] = { {{.*}} memory(none) }
+// CHECK: attributes #[[ATTR_CALL]] = { strictfp memory(inaccessiblemem: readwrite) }

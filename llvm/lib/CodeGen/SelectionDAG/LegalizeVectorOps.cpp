@@ -314,6 +314,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     break;
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
   case ISD::STRICT_##DAGN:
+#define LEGACY_FUNCTION DAG_INSTRUCTION
 #include "llvm/IR/ConstrainedOps.def"
     ValVT = Node->getValueType(0);
     if (Op.getOpcode() == ISD::STRICT_SINT_TO_FP ||
@@ -1175,6 +1176,7 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     break;
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
   case ISD::STRICT_##DAGN:
+#define LEGACY_FUNCTION DAG_INSTRUCTION
 #include "llvm/IR/ConstrainedOps.def"
     ExpandStrictFPOp(Node, Results);
     return;

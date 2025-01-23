@@ -14,7 +14,7 @@
 float64x2_t rnd5(float64x2_t a) { return vrndq_f64(a); }
 // COMMON-LABEL: rnd5
 // UNCONSTRAINED: call <2 x double> @llvm.trunc.v2f64(<2 x double>
-// CONSTRAINED:   call <2 x double> @llvm.experimental.constrained.trunc.v2f64(<2 x double>
+// CONSTRAINED:   call <2 x double> @llvm.trunc.v2f64(<2 x double> %{{.*}}) #[[ATTR:[0-9]+]] [ "fpe.except"(metadata !"strict") ]
 // CHECK-ASM:     frintz.2d v{{[0-9]+}}, v{{[0-9]+}}
 
 float64x2_t rnd13(float64x2_t a) { return vrndmq_f64(a); }
@@ -40,4 +40,6 @@ float64x2_t rnd25(float64x2_t a) { return vrndxq_f64(a); }
 // UNCONSTRAINED: call <2 x double> @llvm.rint.v2f64(<2 x double>
 // CONSTRAINED:   call <2 x double> @llvm.experimental.constrained.rint.v2f64(<2 x double>
 // CHECK-ASM:     frintx.2d v{{[0-9]+}}, v{{[0-9]+}}
+
+// CHECK: attributes #[[ATTR]] = { strictfp memory(inaccessiblemem: readwrite) }
 

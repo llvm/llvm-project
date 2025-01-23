@@ -819,11 +819,11 @@ define float @test_pown_fast_f32_strictfp(float %x, i32 %y) #1 {
 ; CHECK-LABEL: define float @test_pown_fast_f32_strictfp
 ; CHECK-SAME: (float [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[__FABS:%.*]] = call fast float @llvm.fabs.f32(float [[X]]) #[[ATTR0]]
-; CHECK-NEXT:    [[__LOG2:%.*]] = call fast float @llvm.log2.f32(float [[__FABS]]) #[[ATTR0]]
-; CHECK-NEXT:    [[POWNI2F:%.*]] = call fast float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[Y]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    [[__YLOGX:%.*]] = call fast float @llvm.experimental.constrained.fmul.f32(float [[POWNI2F]], float [[__LOG2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    [[__EXP2:%.*]] = call fast float @llvm.exp2.f32(float [[__YLOGX]]) #[[ATTR0]]
+; CHECK-NEXT:    [[__FABS:%.*]] = call fast float @llvm.fabs.f32(float [[X]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    [[__LOG2:%.*]] = call fast float @llvm.log2.f32(float [[__FABS]]) #[[ATTR5]]
+; CHECK-NEXT:    [[POWNI2F:%.*]] = call fast float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[Y]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR5]] [ "fpe.control"(metadata !"dyn"), "fpe.except"(metadata !"strict") ]
+; CHECK-NEXT:    [[__YLOGX:%.*]] = call fast float @llvm.experimental.constrained.fmul.f32(float [[POWNI2F]], float [[__LOG2]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR5]] [ "fpe.control"(metadata !"dyn"), "fpe.except"(metadata !"strict") ]
+; CHECK-NEXT:    [[__EXP2:%.*]] = call fast float @llvm.exp2.f32(float [[__YLOGX]]) #[[ATTR5]]
 ; CHECK-NEXT:    [[__YEVEN:%.*]] = shl i32 [[Y]], 31
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[X]] to i32
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and i32 [[__YEVEN]], [[TMP0]]

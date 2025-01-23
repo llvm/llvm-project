@@ -6,13 +6,11 @@ declare double @llvm.experimental.constrained.rint.f64(double, metadata, metadat
 declare double @llvm.experimental.constrained.nearbyint.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.floor.f64(double, metadata)
 declare double @llvm.experimental.constrained.ceil.f64(double, metadata)
-declare double @llvm.experimental.constrained.trunc.f64(double, metadata)
 declare double @llvm.experimental.constrained.round.f64(double, metadata)
 declare <2 x double> @llvm.experimental.constrained.rint.v2f64(<2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.nearbyint.v2f64(<2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.floor.v2f64(<2 x double>, metadata)
 declare <2 x double> @llvm.experimental.constrained.ceil.v2f64(<2 x double>, metadata)
-declare <2 x double> @llvm.experimental.constrained.trunc.v2f64(<2 x double>, metadata)
 declare <2 x double> @llvm.experimental.constrained.round.v2f64(<2 x double>, metadata)
 
 define <2 x double> @f1(<2 x double> %val) #0 {
@@ -61,9 +59,7 @@ define <2 x double> @f5(<2 x double> %val) #0 {
 ; CHECK-LABEL: f5:
 ; CHECK: vfidb %v24, %v24, 4, 5
 ; CHECK: br %r14
-  %res = call <2 x double> @llvm.experimental.constrained.trunc.v2f64(
-                        <2 x double> %val,
-                        metadata !"fpexcept.strict") #0
+  %res = call <2 x double> @llvm.trunc.v2f64(<2 x double> %val) #0 [ "fpe.except"(metadata !"strict") ]
   ret <2 x double> %res
 }
 
@@ -129,9 +125,7 @@ define double @f11(<2 x double> %val) #0 {
 ; CHECK: wfidb %f0, %v24, 4, 5
 ; CHECK: br %r14
   %scalar = extractelement <2 x double> %val, i32 0
-  %res = call double @llvm.experimental.constrained.trunc.f64(
-                        double %scalar,
-                        metadata !"fpexcept.strict") #0
+  %res = call double @llvm.trunc.f64(double %scalar) #0 [ "fpe.except"(metadata !"strict") ]
   ret double %res
 }
 

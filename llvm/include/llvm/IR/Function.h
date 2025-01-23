@@ -263,7 +263,7 @@ public:
   /// Returns true if the function is one of the "Constrained Floating-Point
   /// Intrinsics". Returns false if not, and returns false when
   /// getIntrinsicID() returns Intrinsic::not_intrinsic.
-  bool isConstrainedFPIntrinsic() const;
+  bool isLegacyConstrainedIntrinsic() const;
 
   /// Update internal caches that depend on the function name (such as the
   /// intrinsic ID and libcall cache).

@@ -128,6 +128,10 @@ public:
   /// course of IR transformations
   static bool mayLowerToFunctionCall(Intrinsic::ID IID);
 
+  /// Check if the specified intrinsic can read or write FP environment.
+  /// Constrained intrinsics are not handled in it.
+  static bool canAccessFPEnvironment(Intrinsic::ID IID);
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const CallInst *I) {
     if (const Function *CF = I->getCalledFunction())
@@ -138,6 +142,21 @@ public:
     return isa<CallInst>(V) && classof(cast<CallInst>(V));
   }
 };
+
+std::optional<RoundingMode> getRoundingModeArg(const CallBase &I);
+std::optional<fp::ExceptionBehavior> getExceptionBehaviorArg(const CallBase &I);
+
+/// Return true if the argument specifies an intrinsic that had a constrained
+/// variant (like 'trunc.f32').
+bool hadConstrainedVariant(StringRef Name);
+
+/// If the given string specifies some legacy constrained intrinsic (like
+/// 'llvm.experimental.constrained.trunc.f32'), return corresponding intrinsic
+/// id (like 'Intrinsic::trunc') and the number of FP metadata arguments.
+///
+/// \param Name Intrinsic name without prefix 'llvm.experimental.constrained'
+///             (like 'trunc.f32').
+std::pair<Intrinsic::ID, unsigned> getIntrinsicForConstrained(StringRef Name);
 
 /// Check if \p ID corresponds to a lifetime intrinsic.
 static inline bool isLifetimeIntrinsic(Intrinsic::ID ID) {
@@ -723,8 +742,6 @@ public:
 class ConstrainedFPIntrinsic : public IntrinsicInst {
 public:
   unsigned getNonMetadataArgCount() const;
-  std::optional<RoundingMode> getRoundingMode() const;
-  std::optional<fp::ExceptionBehavior> getExceptionBehavior() const;
   bool isDefaultFPEnvironment() const;
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:

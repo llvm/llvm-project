@@ -21,7 +21,18 @@
 
 namespace llvm {
 
-std::optional<RoundingMode> convertStrToRoundingMode(StringRef RoundingArg) {
+std::optional<RoundingMode> convertStrToRoundingMode(StringRef RoundingArg,
+                                                     bool InBundle) {
+  if (InBundle)
+    return StringSwitch<std::optional<RoundingMode>>(RoundingArg)
+        .Case("dyn", RoundingMode::Dynamic)
+        .Case("rte", RoundingMode::NearestTiesToEven)
+        .Case("rmm", RoundingMode::NearestTiesToAway)
+        .Case("rtn", RoundingMode::TowardNegative)
+        .Case("rtp", RoundingMode::TowardPositive)
+        .Case("rtz", RoundingMode::TowardZero)
+        .Default(std::nullopt);
+
   // For dynamic rounding mode, we use round to nearest but we will set the
   // 'exact' SDNodeFlag so that the value will not be rounded.
   return StringSwitch<std::optional<RoundingMode>>(RoundingArg)
@@ -34,26 +45,27 @@ std::optional<RoundingMode> convertStrToRoundingMode(StringRef RoundingArg) {
       .Default(std::nullopt);
 }
 
-std::optional<StringRef> convertRoundingModeToStr(RoundingMode UseRounding) {
+std::optional<StringRef> convertRoundingModeToStr(RoundingMode UseRounding,
+                                                  bool InBundle) {
   std::optional<StringRef> RoundingStr;
   switch (UseRounding) {
   case RoundingMode::Dynamic:
-    RoundingStr = "round.dynamic";
+    RoundingStr = InBundle ? "dyn" : "round.dynamic";
     break;
   case RoundingMode::NearestTiesToEven:
-    RoundingStr = "round.tonearest";
+    RoundingStr = InBundle ? "rte" : "round.tonearest";
     break;
   case RoundingMode::NearestTiesToAway:
-    RoundingStr = "round.tonearestaway";
+    RoundingStr = InBundle ? "rmm" : "round.tonearestaway";
     break;
   case RoundingMode::TowardNegative:
-    RoundingStr = "round.downward";
+    RoundingStr = InBundle ? "rtn" : "round.downward";
     break;
   case RoundingMode::TowardPositive:
-    RoundingStr = "round.upward";
+    RoundingStr = InBundle ? "rtp" : "round.upward";
     break;
   case RoundingMode::TowardZero:
-    RoundingStr = "round.towardzero";
+    RoundingStr = InBundle ? "rtz" : "round.towardzero";
     break;
   default:
     break;
@@ -62,7 +74,14 @@ std::optional<StringRef> convertRoundingModeToStr(RoundingMode UseRounding) {
 }
 
 std::optional<fp::ExceptionBehavior>
-convertStrToExceptionBehavior(StringRef ExceptionArg) {
+convertStrToExceptionBehavior(StringRef ExceptionArg, bool InBundle) {
+  if (InBundle)
+    return StringSwitch<std::optional<fp::ExceptionBehavior>>(ExceptionArg)
+        .Case("ignore", fp::ebIgnore)
+        .Case("maytrap", fp::ebMayTrap)
+        .Case("strict", fp::ebStrict)
+        .Default(std::nullopt);
+
   return StringSwitch<std::optional<fp::ExceptionBehavior>>(ExceptionArg)
       .Case("fpexcept.ignore", fp::ebIgnore)
       .Case("fpexcept.maytrap", fp::ebMayTrap)
@@ -71,17 +90,17 @@ convertStrToExceptionBehavior(StringRef ExceptionArg) {
 }
 
 std::optional<StringRef>
-convertExceptionBehaviorToStr(fp::ExceptionBehavior UseExcept) {
+convertExceptionBehaviorToStr(fp::ExceptionBehavior UseExcept, bool InBundle) {
   std::optional<StringRef> ExceptStr;
   switch (UseExcept) {
   case fp::ebStrict:
-    ExceptStr = "fpexcept.strict";
+    ExceptStr = InBundle ? "strict" : "fpexcept.strict";
     break;
   case fp::ebIgnore:
-    ExceptStr = "fpexcept.ignore";
+    ExceptStr = InBundle ? "ignore" : "fpexcept.ignore";
     break;
   case fp::ebMayTrap:
-    ExceptStr = "fpexcept.maytrap";
+    ExceptStr = InBundle ? "maytrap" : "fpexcept.maytrap";
     break;
   }
   return ExceptStr;

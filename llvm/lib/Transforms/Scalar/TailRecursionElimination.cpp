@@ -251,10 +251,12 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
 
       // Special-case operand bundles "clang.arc.attachedcall", "ptrauth", and
       // "kcfi".
-      bool IsNoTail = CI->isNoTailCall() ||
-                      CI->hasOperandBundlesOtherThan(
-                          {LLVMContext::OB_clang_arc_attachedcall,
-                           LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi});
+      bool IsNoTail =
+          CI->isNoTailCall() ||
+          CI->hasOperandBundlesOtherThan(
+              {LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_ptrauth,
+               LLVMContext::OB_kcfi, LLVMContext::OB_fpe_control,
+               LLVMContext::OB_fpe_except});
 
       if (!IsNoTail && CI->doesNotAccessMemory()) {
         // A call to a readnone function whose arguments are all things computed

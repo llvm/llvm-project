@@ -21,6 +21,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -64,6 +65,68 @@ bool IntrinsicInst::mayLowerToFunctionCall(Intrinsic::ID IID) {
   default:
     return false;
   }
+}
+
+bool IntrinsicInst::canAccessFPEnvironment(Intrinsic::ID IID) {
+  switch (IID) {
+#define FUNCTION(NAME, A, R, I) case Intrinsic::NAME:
+#define LEGACY_FUNCTION(NAME, A, R, I, N) case Intrinsic::NAME:
+#include "llvm/IR/ConstrainedOps.def"
+    return true;
+  default:
+    return false;
+  }
+}
+
+std::optional<RoundingMode> llvm::getRoundingModeArg(const CallBase &I) {
+  unsigned NumOperands = I.arg_size();
+  if (NumOperands <= 2)
+    return std::nullopt;
+  Metadata *MD = nullptr;
+  auto *MAV = dyn_cast<MetadataAsValue>(I.getArgOperand(NumOperands - 2));
+  if (MAV)
+    MD = MAV->getMetadata();
+  if (!MD || !isa<MDString>(MD))
+    return std::nullopt;
+  return convertStrToRoundingMode(cast<MDString>(MD)->getString());
+}
+
+std::optional<fp::ExceptionBehavior>
+llvm::getExceptionBehaviorArg(const CallBase &I) {
+  unsigned NumOperands = I.arg_size();
+  if (NumOperands <= 1)
+    return std::nullopt;
+  Metadata *MD = nullptr;
+  auto *MAV = dyn_cast<MetadataAsValue>(I.getArgOperand(NumOperands - 1));
+  if (MAV)
+    MD = MAV->getMetadata();
+  if (!MD || !isa<MDString>(MD))
+    return std::nullopt;
+  return convertStrToExceptionBehavior(cast<MDString>(MD)->getString());
+}
+
+bool llvm::hadConstrainedVariant(StringRef Name) {
+  size_t period_pos = Name.find('.');
+  if (period_pos != StringRef::npos)
+    Name = Name.take_front(period_pos);
+#define LEGACY_FUNCTION(NAME, A, R, I, D)                                      \
+  if (Name == #NAME)                                                           \
+    return true;
+#include "llvm/IR/ConstrainedOps.def"
+  return false;
+}
+
+std::pair<Intrinsic::ID, unsigned>
+llvm::getIntrinsicForConstrained(StringRef Name) {
+  size_t period_pos = Name.find('.');
+  if (period_pos != StringRef::npos)
+    Name = Name.take_front(period_pos);
+#define LEGACY_FUNCTION(NAME, A, R, I, D)                                      \
+  if (Name == #NAME)                                                           \
+    return std::make_pair(Intrinsic::NAME, 1 + R);
+#include "llvm/IR/ConstrainedOps.def"
+
+  return std::make_pair(Intrinsic::not_intrinsic, 0);
 }
 
 //===----------------------------------------------------------------------===//
@@ -273,29 +336,6 @@ void InstrProfCallsite::setCallee(Value *Callee) {
   setArgOperand(4, Callee);
 }
 
-std::optional<RoundingMode> ConstrainedFPIntrinsic::getRoundingMode() const {
-  unsigned NumOperands = arg_size();
-  Metadata *MD = nullptr;
-  auto *MAV = dyn_cast<MetadataAsValue>(getArgOperand(NumOperands - 2));
-  if (MAV)
-    MD = MAV->getMetadata();
-  if (!MD || !isa<MDString>(MD))
-    return std::nullopt;
-  return convertStrToRoundingMode(cast<MDString>(MD)->getString());
-}
-
-std::optional<fp::ExceptionBehavior>
-ConstrainedFPIntrinsic::getExceptionBehavior() const {
-  unsigned NumOperands = arg_size();
-  Metadata *MD = nullptr;
-  auto *MAV = dyn_cast<MetadataAsValue>(getArgOperand(NumOperands - 1));
-  if (MAV)
-    MD = MAV->getMetadata();
-  if (!MD || !isa<MDString>(MD))
-    return std::nullopt;
-  return convertStrToExceptionBehavior(cast<MDString>(MD)->getString());
-}
-
 bool ConstrainedFPIntrinsic::isDefaultFPEnvironment() const {
   std::optional<fp::ExceptionBehavior> Except = getExceptionBehavior();
   if (Except) {
@@ -354,7 +394,7 @@ unsigned ConstrainedFPIntrinsic::getNonMetadataArgCount() const {
 }
 
 bool ConstrainedFPIntrinsic::classof(const IntrinsicInst *I) {
-  return Intrinsic::isConstrainedFPIntrinsic(I->getIntrinsicID());
+  return Intrinsic::isLegacyConstrainedIntrinsic(I->getIntrinsicID());
 }
 
 ElementCount VPIntrinsic::getStaticVectorLength() const {

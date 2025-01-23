@@ -791,7 +791,8 @@ void TargetLoweringBase::initActions() {
 
       // Constrained floating-point operations default to expand.
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
-    setOperationAction(ISD::STRICT_##DAGN, VT, Expand);
+  setOperationAction(ISD::STRICT_##DAGN, VT, Expand);
+#define LEGACY_FUNCTION DAG_INSTRUCTION
 #include "llvm/IR/ConstrainedOps.def"
 
     // For most targets @llvm.get.dynamic.area.offset just returns 0.

@@ -759,7 +759,7 @@ Function *Intrinsic::getDeclarationIfExists(Module *M, ID id,
 #include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_LLVM_INTRINSIC_FOR_MS_BUILTIN
 
-bool Intrinsic::isConstrainedFPIntrinsic(ID QID) {
+bool Intrinsic::isLegacyConstrainedIntrinsic(ID QID) {
   switch (QID) {
 #define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
   case Intrinsic::INTRINSIC:

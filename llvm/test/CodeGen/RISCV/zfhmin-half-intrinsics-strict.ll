@@ -216,8 +216,6 @@ define half @ceil_f16(half %a) nounwind strictfp {
   ret half %1
 }
 
-declare half @llvm.experimental.constrained.trunc.f16(half, metadata)
-
 define half @trunc_f16(half %a) nounwind strictfp {
 ; RV32IZFHMIN-LABEL: trunc_f16:
 ; RV32IZFHMIN:       # %bb.0:
@@ -284,7 +282,7 @@ define half @trunc_f16(half %a) nounwind strictfp {
 ; RV64IZDINXZHINXMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZDINXZHINXMIN-NEXT:    addi sp, sp, 16
 ; RV64IZDINXZHINXMIN-NEXT:    ret
-  %1 = call half @llvm.experimental.constrained.trunc.f16(half %a, metadata !"fpexcept.strict") strictfp
+  %1 = call half @llvm.trunc.f16(half %a) strictfp [ "fpe.except"(metadata !"strict") ]
   ret half %1
 }
 

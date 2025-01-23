@@ -6378,6 +6378,61 @@ bool isOldDbgFormatIntrinsic(StringRef Name) {
          FnID == Intrinsic::dbg_assign;
 }
 
+void LLParser::updateConstrainedIntrinsic(
+    ValID &CalleeID, SmallVectorImpl<LLParser::ParamInfo> &Args,
+    SmallVectorImpl<OperandBundleDef> &Bundles, AttrBuilder &FnAttrs) {
+  if (Args.empty())
+    return;
+
+  StringRef Name = CalleeID.StrVal;
+  if (!Name.consume_front("llvm.experimental.constrained."))
+    return;
+
+  for (auto &B : Bundles) {
+    if (B.getTag().starts_with("fpe."))
+      return;
+  }
+
+  const auto getMetadataArgumentValue = [](Value *Arg) -> StringRef {
+    if (auto *MAV = dyn_cast<MetadataAsValue>(Arg)) {
+      if (const auto *MD = MAV->getMetadata()) {
+        if (auto MDStr = dyn_cast<MDString>(MD))
+          return MDStr->getString();
+      }
+    }
+    return StringRef();
+  };
+
+  unsigned NumMetadataArgs = 0;
+  if (Args.size() > 1) {
+    Value *V = Args[Args.size() - 2].V;
+    StringRef VStr = getMetadataArgumentValue(V);
+    if (!VStr.empty()) {
+      NumMetadataArgs++;
+      if (auto RM = convertStrToRoundingMode(VStr))
+        addFPRoundingBundle(Context, Bundles, *RM);
+    }
+  }
+
+  Value *V = Args.back().V;
+  StringRef VStr = getMetadataArgumentValue(V);
+  if (!VStr.empty()) {
+    NumMetadataArgs++;
+    if (auto EB = convertStrToExceptionBehavior(VStr))
+      addFPExceptionBundle(Context, Bundles, *EB);
+  }
+
+  if (hadConstrainedVariant(Name)) {
+    Args.pop_back_n(NumMetadataArgs);
+    CalleeID.StrVal = "llvm." + Name.str();
+  }
+
+  FnAttrs.addAttribute(Attribute::StrictFP);
+  MemoryEffects ME = MemoryEffects::inaccessibleMemOnly();
+  FnAttrs.addAttribute(Attribute::getWithMemoryEffects(Context, ME));
+  FnAttrs.addAttribute(Attribute::StrictFP);
+}
+
 /// FunctionHeader
 ///   ::= OptionalLinkage OptionalPreemptionSpecifier OptionalVisibility
 ///       OptionalCallingConv OptRetAttrs OptUnnamedAddr Type GlobalName
@@ -8104,6 +8159,8 @@ bool LLParser::parseCall(Instruction *&Inst, PerFunctionState &PFS,
       parseFnAttributeValuePairs(FnAttrs, FwdRefAttrGrps, false, BuiltinLoc) ||
       parseOptionalOperandBundles(BundleList, PFS))
     return true;
+
+  updateConstrainedIntrinsic(CalleeID, ArgList, BundleList, FnAttrs);
 
   // If RetType is a non-function pointer type, then this is the short syntax
   // for the call, which means that RetType is just the return type.  Infer the

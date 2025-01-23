@@ -1791,7 +1791,6 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::experimental_constrained_floor:
   case Intrinsic::experimental_constrained_round:
   case Intrinsic::experimental_constrained_roundeven:
-  case Intrinsic::experimental_constrained_trunc:
   case Intrinsic::experimental_constrained_nearbyint:
   case Intrinsic::experimental_constrained_rint:
   case Intrinsic::experimental_constrained_fcmp:
@@ -2233,16 +2232,17 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
   }
 
   if (auto *Op = dyn_cast<ConstantFP>(Operands[0])) {
+    auto EB = Call->getExceptionBehavior();
+    APFloat U = Op->getValueAPF();
+
     if (IntrinsicID == Intrinsic::convert_to_fp16) {
-      APFloat Val(Op->getValueAPF());
+      APFloat Val(U);
 
       bool lost = false;
       Val.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &lost);
 
       return ConstantInt::get(Ty->getContext(), Val.bitcastToAPInt());
     }
-
-    APFloat U = Op->getValueAPF();
 
     if (IntrinsicID == Intrinsic::wasm_trunc_signed ||
         IntrinsicID == Intrinsic::wasm_trunc_unsigned) {
@@ -2322,6 +2322,8 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     }
 
     if (IntrinsicID == Intrinsic::trunc) {
+      if (U.isSignaling() && EB && *EB != fp::ebIgnore)
+        return nullptr;
       U.roundToIntegral(APFloat::rmTowardZero);
       return ConstantFP::get(Ty->getContext(), U);
     }
@@ -2367,9 +2369,6 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       break;
     case Intrinsic::experimental_constrained_floor:
       RM = APFloat::rmTowardNegative;
-      break;
-    case Intrinsic::experimental_constrained_trunc:
-      RM = APFloat::rmTowardZero;
       break;
     }
     if (RM) {

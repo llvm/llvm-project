@@ -6452,6 +6452,11 @@ void SelectionDAGBuilder::visitVectorExtractLastActive(const CallInst &I,
 /// Lower the call to the specified intrinsic function.
 void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                                              unsigned Intrinsic) {
+  if (I.isConstrained()) {
+    visitConstrainedFPIntrinsic(cast<IntrinsicInst>(I));
+    return;
+  }
+
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc sdl = getCurSDLoc();
   DebugLoc dl = getCurDebugLoc();
@@ -7012,7 +7017,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 #define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
   case Intrinsic::INTRINSIC:
 #include "llvm/IR/ConstrainedOps.def"
-    visitConstrainedFPIntrinsic(cast<ConstrainedFPIntrinsic>(I));
+    visitConstrainedFPIntrinsic(cast<IntrinsicInst>(I));
     return;
 #define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
 #include "llvm/IR/VPIntrinsics.def"
@@ -8280,7 +8285,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 }
 
 void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
-    const ConstrainedFPIntrinsic &FPI) {
+    const IntrinsicInst &FPI) {
   SDLoc sdl = getCurSDLoc();
 
   // We do not need to serialize constrained FP intrinsics against
@@ -8289,7 +8294,13 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
   SDValue Chain = DAG.getRoot();
   SmallVector<SDValue, 4> Opers;
   Opers.push_back(Chain);
-  for (unsigned I = 0, E = FPI.getNonMetadataArgCount(); I != E; ++I)
+
+  Intrinsic::ID ID = FPI.getIntrinsicID();
+  bool IsLegacy = Intrinsic::isLegacyConstrainedIntrinsic(ID);
+  unsigned NumArgs = IsLegacy ? static_cast<const ConstrainedFPIntrinsic &>(FPI)
+                                    .getNonMetadataArgCount()
+                              : FPI.arg_size();
+  for (unsigned I = 0; I != NumArgs; ++I)
     Opers.push_back(getValue(FPI.getArgOperand(I)));
 
   auto pushOutChain = [this](SDValue Result, fp::ExceptionBehavior EB) {
@@ -8337,6 +8348,8 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
   case Intrinsic::INTRINSIC:                                                   \
     Opcode = ISD::STRICT_##DAGN;                                               \
     break;
+#define LEGACY_FUNCTION(NAME, NARG, ROUND_MODE, I, DAGN)                       \
+  DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, NAME, DAGN)
 #include "llvm/IR/ConstrainedOps.def"
   case Intrinsic::experimental_constrained_fmuladd: {
     Opcode = ISD::STRICT_FMA;

@@ -150,7 +150,7 @@ uint64_t test_vcvth_u64_f16 (float16_t a) {
 
 // COMMON-LABEL: test_vrndh_f16
 // UNCONSTRAINED:  [[RND:%.*]] = call half @llvm.trunc.f16(half %a)
-// CONSTRAINED:    [[RND:%.*]] = call half @llvm.experimental.constrained.trunc.f16(half %a, metadata !"fpexcept.strict")
+// CONSTRAINED:    [[RND:%.*]] = call half @llvm.trunc.f16(half %a) #[[ATTR:[0-9]+]] [ "fpe.except"(metadata !"strict") ]
 // COMMONIR:       ret half [[RND]]
 float16_t test_vrndh_f16(float16_t a) {
   return vrndh_f16(a);
@@ -297,4 +297,6 @@ float16_t test_vfmah_f16(float16_t a, float16_t b, float16_t c) {
 float16_t test_vfmsh_f16(float16_t a, float16_t b, float16_t c) {
   return vfmsh_f16(a, b, c);
 }
+
+// CHECK: attributes #[[ATTR]] = { strictfp memory(inaccessiblemem: readwrite) }
 

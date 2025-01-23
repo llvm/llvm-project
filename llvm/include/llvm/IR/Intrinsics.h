@@ -118,9 +118,10 @@ namespace Intrinsic {
   /// Map a MS builtin name to an intrinsic ID.
   ID getIntrinsicForMSBuiltin(StringRef TargetPrefix, StringRef BuiltinName);
 
-  /// Returns true if the intrinsic ID is for one of the "Constrained
-  /// Floating-Point Intrinsics".
-  bool isConstrainedFPIntrinsic(ID QID);
+  /// Returns true if the intrinsic ID is for one of the legacy constrained
+  /// floating-point intrinsics, which use metadata argument to present
+  /// floating-point options.
+  bool isLegacyConstrainedIntrinsic(ID QID);
 
   /// Returns true if the intrinsic ID is for one of the "Constrained
   /// Floating-Point Intrinsics" that take rounding mode metadata.
