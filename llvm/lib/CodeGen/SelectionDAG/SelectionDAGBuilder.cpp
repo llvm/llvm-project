@@ -9005,10 +9005,6 @@ static SDValue getMemCmpLoad(const Value *PtrVal, MVT LoadVT,
         Type::getIntNTy(PtrVal->getContext(), LoadVT.getScalarSizeInBits());
     if (LoadVT.isVector())
       LoadTy = FixedVectorType::get(LoadTy, LoadVT.getVectorNumElements());
-
-    LoadInput = ConstantExpr::getBitCast(const_cast<Constant *>(LoadInput),
-                                         PointerType::getUnqual(LoadTy));
-
     if (const Constant *LoadCst =
             ConstantFoldLoadFromConstPtr(const_cast<Constant *>(LoadInput),
                                          LoadTy, Builder.DAG.getDataLayout()))
