@@ -1917,10 +1917,10 @@ class ShuffleVectorInst : public Instruction {
 
   SmallVector<int, 4> ShuffleMask;
   Constant *ShuffleMaskForBitcode;
-  mutable ShuffleMaskAttrs ShuffleAttrs;
+  ShuffleMaskAttrs ShuffleAttrs;
 
-  // This function is const so that it's callable from other const functions.
-  void computeShuffleAttrs() const {
+  // (Re)compute the shuffle mask attributes.
+  void computeShuffleAttrs() {
     ShuffleAttrs = {}; // reset
     ShuffleAttrs.SingleSource =
         !changesLength() && isSingleSourceMask(ShuffleMask, ShuffleMask.size());
