@@ -32,7 +32,7 @@
 
 #if defined(_LIBUNWIND_TARGET_LINUX) &&                                        \
     (defined(_LIBUNWIND_TARGET_AARCH64) || defined(_LIBUNWIND_TARGET_RISCV) || \
-     defined(_LIBUNWIND_TARGET_S390X))
+     defined(_LIBUNWIND_TARGET_S390X) || defined(_LIBUNWIND_TARGET_X86_64))
 #include <errno.h>
 #include <signal.h>
 #include <sys/syscall.h>
@@ -1003,6 +1003,10 @@ private:
 #if defined(_LIBUNWIND_TARGET_S390X)
   bool setInfoForSigReturn(Registers_s390x &);
   int stepThroughSigReturn(Registers_s390x &);
+#endif
+#if defined(_LIBUNWIND_TARGET_X86_64)
+  bool setInfoForSigReturn(Registers_x86_64 &);
+  int stepThroughSigReturn(Registers_x86_64 &);
 #endif
   template <typename Registers> bool setInfoForSigReturn(Registers &) {
     return false;
@@ -2971,6 +2975,96 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_s390x &) {
 }
 #endif // defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&
        // defined(_LIBUNWIND_TARGET_S390X)
+
+#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&                               \
+    defined(_LIBUNWIND_TARGET_X86_64)
+template <typename A, typename R>
+bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_x86_64 &) {
+  // Look for the sigreturn trampoline. The trampoline's body is two
+  // specific instructions (see below). Typically the trampoline comes from the
+  // vDSO or from libc.
+  //
+  // This special code path is a fallback that is only used if the trampoline
+  // lacks proper (e.g. DWARF) unwind info.
+  const uint8_t amd64_linux_sigtramp_code[9] = {
+    0x48, 0xc7, 0xc0, 0x0f, 0x00, 0x00, 0x00, // mov rax, 15
+    0x0f, 0x05                                // syscall
+  };
+  const size_t code_size = sizeof(amd64_linux_sigtramp_code);
+
+  // The PC might contain an invalid address if the unwind info is bad, so
+  // directly accessing it could cause a SIGSEGV.
+  unw_word_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
+  if (!isReadableAddr(pc))
+    return false;
+  // If near page boundary, check the next page too.
+  if (((pc + code_size - 1) & 4095) != (pc & 4095) && !isReadableAddr(pc + code_size - 1))
+    return false;
+
+  const uint8_t *pc_ptr = reinterpret_cast<const uint8_t *>(pc);
+  if (memcmp(pc_ptr, amd64_linux_sigtramp_code, code_size))
+    return false;
+
+  _info = {};
+  _info.start_ip = pc;
+  _info.end_ip = pc + code_size;
+  _isSigReturn = true;
+  return true;
+}
+
+template <typename A, typename R>
+int UnwindCursor<A, R>::stepThroughSigReturn(Registers_x86_64 &) {
+  // In the signal trampoline frame, sp points to ucontext:
+  //   struct ucontext {
+  //     unsigned long     uc_flags;
+  //     struct ucontext  *uc_link;
+  //     stack_t           uc_stack; // 24 bytes
+  //     struct sigcontext uc_mcontext;
+  //     ...
+  //   };
+  const pint_t kOffsetSpToSigcontext = (8 + 8 + 24);
+  pint_t sigctx = _registers.getSP() + kOffsetSpToSigcontext;
+
+  // UNW_X86_64_* -> field in struct sigcontext_64.
+  //   struct sigcontext_64 {
+  //     __u64 r8;  // 0
+  //     __u64 r9;  // 1
+  //     __u64 r10; // 2
+  //     __u64 r11; // 3
+  //     __u64 r12; // 4
+  //     __u64 r13; // 5
+  //     __u64 r14; // 6
+  //     __u64 r15; // 7
+  //     __u64 di;  // 8
+  //     __u64 si;  // 9
+  //     __u64 bp;  // 10
+  //     __u64 bx;  // 11
+  //     __u64 dx;  // 12
+  //     __u64 ax;  // 13
+  //     __u64 cx;  // 14
+  //     __u64 sp;  // 15
+  //     __u64 ip;  // 16
+  //     ...
+  //   };
+  const size_t idx_map[17] = {13, 12, 14, 11, 9, 8, 10, 15, 0, 1, 2, 3, 4, 5, 6, 7, 16};
+
+  for (int i = 0; i < 17; ++i) {
+    uint64_t value = _addressSpace.get64(sigctx + idx_map[i] * 8);
+    _registers.setRegister(i, value);
+  }
+
+  // The +1 story is the same as in DwarfInstructions::stepWithDwarf()
+  // (search for "returnAddress + cieInfo.isSignalFrame" or "Return address points to the next instruction").
+  // This is probably not the right place for this because this function is not necessarily used
+  // with DWARF. Need to research whether the other unwind methods have the same +-1 situation or
+  // are off by one.
+  _registers.setIP(_registers.getIP() + 1);
+
+  _isSignalFrame = true;
+  return UNW_STEP_SUCCESS;
+}
+#endif // defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&
+       // defined(_LIBUNWIND_TARGET_X86_64)
 
 template <typename A, typename R> int UnwindCursor<A, R>::step(bool stage2) {
   (void)stage2;
