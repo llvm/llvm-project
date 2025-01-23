@@ -265,6 +265,27 @@ def err_test_module_file_extension_version : Error<
   "test module file extension '%0' has different version (%1.%2) than expected "
   "(%3.%4)">;
 
+// Module Build Daemon
+def err_path_length :
+  Error<"path '%0' is longer then the max length of %1">,
+  DefaultFatal;
+def err_mbd_handshake :
+  Error<"attempt to handshake with module build daemon has failed: %0">,
+  DefaultFatal;
+def err_mbd_connect :
+  Error<"attempt to connect to module build daemon has failed: %0">,
+  DefaultFatal;
+def remark_mbd_spawn :
+  Remark<"successfully spawned module build daemon">,
+  InGroup<ModuleBuildDaemon>;
+def remark_mbd_connection :
+  Remark<"successfully connected to module build daemon at %0">,
+  InGroup<ModuleBuildDaemon>;
+def remark_mbd_handshake :
+  Remark<"clang invocation responsible for %0 successfully completed handshake "
+         "with module build daemon">,
+  InGroup<ModuleBuildDaemon>;
+
 def warn_eagerly_load_for_standard_cplusplus_modules : Warning<
   "the form '-fmodule-file=<BMI-path>' is deprecated for standard C++ named modules;"
   "consider to use '-fmodule-file=<module-name>=<BMI-path>' instead">,
