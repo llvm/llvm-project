@@ -420,7 +420,7 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
 }
 
 static void collectUses(const Value &V, SmallVectorImpl<const Use *> &Uses) {
-  SmallVector<Instruction *> WorkList;
+  SmallVector<const User *> WorkList;
   SmallPtrSet<const User *, 8> Visited;
 
   auto extendWorkList = [&](const Use &U) {
@@ -428,8 +428,10 @@ static void collectUses(const Value &V, SmallVectorImpl<const Use *> &Uses) {
     if (Visited.count(User))
       return;
     Visited.insert(User);
-    if (isa<GetElementPtrInst, PHINode, SelectInst>(User))
-      WorkList.push_back(cast<Instruction>(User));
+    if (isa<ConstantExpr>(User) && isa<GEPOperator>(User))
+      WorkList.push_back(User);
+    else if (isa<GetElementPtrInst, PHINode, SelectInst>(User))
+      WorkList.push_back(User);
   };
 
   for (auto &U : V.uses()) {
