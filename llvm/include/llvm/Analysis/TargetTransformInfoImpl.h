@@ -504,7 +504,10 @@ public:
   }
 
   unsigned getNumberOfRegisters(unsigned ClassID) const { return 8; }
-  bool hasConditionalLoadStoreForType(Type *Ty) const { return false; }
+  bool hasConditionalMoveForType(Type *Ty,
+                                 TargetTransformInfo::MoveType MT) const {
+    return false;
+  }
 
   unsigned getRegisterClassForType(bool Vector, Type *Ty = nullptr) const {
     return Vector ? 1 : 0;
