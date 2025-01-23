@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../lib/Target/AArch64/AArch64ISelLowering.h"
+#include "AArch64SelectionDAGInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/AsmParser/Parser.h"
@@ -27,8 +27,9 @@ namespace llvm {
 class AArch64SelectionDAGTest : public testing::Test {
 protected:
   static void SetUpTestCase() {
-    InitializeAllTargets();
-    InitializeAllTargetMCs();
+    LLVMInitializeAArch64TargetInfo();
+    LLVMInitializeAArch64Target();
+    LLVMInitializeAArch64TargetMC();
   }
 
   void SetUp() override {
@@ -37,18 +38,11 @@ protected:
     Triple TargetTriple("aarch64--");
     std::string Error;
     const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
-    // FIXME: These tests do not depend on AArch64 specifically, but we have to
-    // initialize a target. A skeleton Target for unittests would allow us to
-    // always run these tests.
-    if (!T)
-      GTEST_SKIP();
 
     TargetOptions Options;
     TM = std::unique_ptr<TargetMachine>(
         T->createTargetMachine("AArch64", "", "+sve", Options, std::nullopt,
                                std::nullopt, CodeGenOptLevel::Aggressive));
-    if (!TM)
-      GTEST_SKIP();
 
     SMDiagnostic SMError;
     M = parseAssemblyString(Assembly, SMError, Context);

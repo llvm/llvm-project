@@ -29,7 +29,7 @@
 ; Check bf16 buffer fadd does not select on supported subtargets.
 
 ;--- raw-ret-f32-error.ll
-; ERR-RAW-F32-SDAG: LLVM ERROR: Cannot select: {{.+}}: f32,ch = BUFFER_ATOMIC_FADD
+; ERR-RAW-F32-SDAG: LLVM ERROR: Cannot select: {{.+}}: f32,ch = AMDGPUISD::BUFFER_ATOMIC_FADD
 ; ERR-RAW-F32-GISEL: LLVM ERROR: cannot select: %{{[0-9]+}}:vgpr_32(s32) = G_AMDGPU_BUFFER_ATOMIC_FADD
 
 define float @raw_ptr_buffer_atomic_fadd_f32_rtn(float %val, <4 x i32> inreg %rsrc, i32 inreg %soffset) {
@@ -38,7 +38,7 @@ define float @raw_ptr_buffer_atomic_fadd_f32_rtn(float %val, <4 x i32> inreg %rs
 }
 
 ;--- struct-ret-f32-error.ll
-; ERR-STRUCT-F32-SDAG: LLVM ERROR: Cannot select: {{.+}}: f32,ch = BUFFER_ATOMIC_FADD
+; ERR-STRUCT-F32-SDAG: LLVM ERROR: Cannot select: {{.+}}: f32,ch = AMDGPUISD::BUFFER_ATOMIC_FADD
 ; ERR-STRUCT-F32-GISEL: LLVM ERROR: cannot select: %{{[0-9]+}}:vgpr_32(s32) = G_AMDGPU_BUFFER_ATOMIC_FADD
 
 define float @struct_ptr_buffer_atomic_fadd_f32_rtn(float %val, ptr addrspace(8) inreg %rsrc, i32 %vindex, i32 %voffset, i32 inreg %soffset) {
@@ -47,7 +47,7 @@ define float @struct_ptr_buffer_atomic_fadd_f32_rtn(float %val, ptr addrspace(8)
 }
 
 ;--- raw-ret-v2f16-error.ll
-; ERR-RAW-V2F16-SDAG: LLVM ERROR: Cannot select: {{.+}}: v2f16,ch = BUFFER_ATOMIC_FADD
+; ERR-RAW-V2F16-SDAG: LLVM ERROR: Cannot select: {{.+}}: v2f16,ch = AMDGPUISD::BUFFER_ATOMIC_FADD
 ; ERR-RAW-V2F16-GISEL: LLVM ERROR: cannot select: %{{[0-9]+}}:vgpr_32(<2 x s16>) = G_AMDGPU_BUFFER_ATOMIC_FADD
 
 define <2 x half> @raw_ptr_buffer_atomic_fadd_v2f16_rtn(<2 x half> %val, <4 x i32> inreg %rsrc, i32 inreg %soffset) {
@@ -56,7 +56,7 @@ define <2 x half> @raw_ptr_buffer_atomic_fadd_v2f16_rtn(<2 x half> %val, <4 x i3
 }
 
 ;--- struct-ret-v2f16-error.ll
-; ERR-STRUCT-V2F16-SDAG: LLVM ERROR: Cannot select: {{.+}}: v2f16,ch = BUFFER_ATOMIC_FADD
+; ERR-STRUCT-V2F16-SDAG: LLVM ERROR: Cannot select: {{.+}}: v2f16,ch = AMDGPUISD::BUFFER_ATOMIC_FADD
 ; ERR-STRUCT-V2F16-GISEL: LLVM ERROR: cannot select: %{{[0-9]+}}:vgpr_32(<2 x s16>) = G_AMDGPU_BUFFER_ATOMIC_FADD
 
 define <2 x half> @struct_ptr_buffer_atomic_fadd_v2f16_rtn(<2 x half> %val, ptr addrspace(8) inreg %rsrc, i32 %vindex, i32 %voffset, i32 inreg %soffset) {
@@ -65,7 +65,7 @@ define <2 x half> @struct_ptr_buffer_atomic_fadd_v2f16_rtn(<2 x half> %val, ptr 
 }
 
 ;--- raw-ret-v2bf16-error.ll
-; ERR-RAW-V2BF16-SDAG: LLVM ERROR: Cannot select: {{.+}}: v2bf16,ch = BUFFER_ATOMIC_FADD
+; ERR-RAW-V2BF16-SDAG: LLVM ERROR: Cannot select: {{.+}}: v2bf16,ch = AMDGPUISD::BUFFER_ATOMIC_FADD
 ; ERR-RAW-V2BF16-GISEL: LLVM ERROR: cannot select: %{{[0-9]+}}:vgpr_32(<2 x s16>) = G_AMDGPU_BUFFER_ATOMIC_FADD
 
 define <2 x bfloat> @raw_ptr_buffer_atomic_fadd_v2bf16_rtn(<2 x bfloat> %val, <4 x i32> inreg %rsrc, i32 inreg %soffset) {
@@ -74,7 +74,7 @@ define <2 x bfloat> @raw_ptr_buffer_atomic_fadd_v2bf16_rtn(<2 x bfloat> %val, <4
 }
 
 ;--- struct-ret-v2bf16-error.ll
-; ERR-STRUCT-V2BF16-SDAG: LLVM ERROR: Cannot select: {{.+}}: v2bf16,ch = BUFFER_ATOMIC_FADD
+; ERR-STRUCT-V2BF16-SDAG: LLVM ERROR: Cannot select: {{.+}}: v2bf16,ch = AMDGPUISD::BUFFER_ATOMIC_FADD
 ; ERR-STRUCT-V2BF16-GISEL: LLVM ERROR: cannot select: %{{[0-9]+}}:vgpr_32(<2 x s16>) = G_AMDGPU_BUFFER_ATOMIC_FADD
 
 define <2 x bfloat> @struct_ptr_buffer_atomic_fadd_v2bf16_rtn(<2 x bfloat> %val, ptr addrspace(8) inreg %rsrc, i32 %vindex, i32 %voffset, i32 inreg %soffset) {

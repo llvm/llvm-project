@@ -41,8 +41,7 @@ def BPFcallseq_start: SDNode<"ISD::CALLSEQ_START", SDT_BPFCallSeqStart,
                              [SDNPHasChain, SDNPOutGlue]>;
 def BPFcallseq_end  : SDNode<"ISD::CALLSEQ_END",   SDT_BPFCallSeqEnd,
                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
-def BPFbrcc         : SDNode<"BPFISD::BR_CC", SDT_BPFBrCC,
-                             [SDNPHasChain, SDNPOutGlue, SDNPInGlue]>;
+def BPFbrcc         : SDNode<"BPFISD::BR_CC", SDT_BPFBrCC, [SDNPHasChain]>;
 
 def BPFselectcc     : SDNode<"BPFISD::SELECT_CC", SDT_BPFSelectCC>;
 def BPFWrapper      : SDNode<"BPFISD::Wrapper", SDT_BPFWrapper>;

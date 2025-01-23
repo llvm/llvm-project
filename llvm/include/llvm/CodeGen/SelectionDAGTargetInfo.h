@@ -15,6 +15,7 @@
 #ifndef LLVM_CODEGEN_SELECTIONDAGTARGETINFO_H
 #define LLVM_CODEGEN_SELECTIONDAGTARGETINFO_H
 
+#include "SDNodeInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/Support/CodeGen.h"
@@ -35,6 +36,8 @@ public:
   SelectionDAGTargetInfo &operator=(const SelectionDAGTargetInfo &) = delete;
   virtual ~SelectionDAGTargetInfo();
 
+  virtual const char *getTargetNodeName(unsigned Opcode) const;
+
   /// Returns true if a node with the given target-specific opcode has
   /// a memory operand. Nodes with such opcodes can only be created with
   /// `SelectionDAG::getMemIntrinsicNode`.
@@ -47,6 +50,9 @@ public:
   /// Returns true if a node with the given target-specific opcode
   /// may raise a floating-point exception.
   virtual bool mayRaiseFPException(unsigned Opcode) const;
+
+  virtual void verifyTargetNode(const SelectionDAG &DAG,
+                                const SDNode *N) const {}
 
   /// Emit target-specific code that performs a memcpy.
   /// This can be used by targets to provide code sequences for cases
@@ -100,8 +106,8 @@ public:
     return SDValue();
   }
 
-  /// Emit target-specific code that performs a memcmp/bcmp, in cases where that is
-  /// faster than a libcall. The first returned SDValue is the result of the
+  /// Emit target-specific code that performs a memcmp/bcmp, in cases where that
+  /// is faster than a libcall. The first returned SDValue is the result of the
   /// memcmp and the second is the chain. Both SDValues can be null if a normal
   /// libcall should be used.
   virtual std::pair<SDValue, SDValue>
@@ -176,6 +182,41 @@ public:
   }
 };
 
-} // end namespace llvm
+class SelectionDAGGenTargetInfo : public SelectionDAGTargetInfo {
+protected:
+  const SDNodeInfo &GenNodeInfo;
+
+  explicit SelectionDAGGenTargetInfo(const SDNodeInfo &GenNodeInfo)
+      : GenNodeInfo(GenNodeInfo) {}
+
+public:
+  ~SelectionDAGGenTargetInfo() override;
+
+  const char *getTargetNodeName(unsigned Opcode) const override {
+    assert(GenNodeInfo.hasDesc(Opcode) && "Should be handled by derived class");
+    return GenNodeInfo.getName(Opcode).data();
+  }
+
+  bool isTargetMemoryOpcode(unsigned Opcode) const override {
+    if (GenNodeInfo.hasDesc(Opcode))
+      return GenNodeInfo.getDesc(Opcode).hasProperty(SDNPMemOperand);
+    return SelectionDAGTargetInfo::isTargetMemoryOpcode(Opcode);
+  }
+
+  bool isTargetStrictFPOpcode(unsigned Opcode) const override {
+    if (GenNodeInfo.hasDesc(Opcode))
+      return GenNodeInfo.getDesc(Opcode).hasFlag(SDNFIsStrictFP);
+    return SelectionDAGTargetInfo::isTargetStrictFPOpcode(Opcode);
+  }
+
+  void verifyTargetNode(const SelectionDAG &DAG,
+                        const SDNode *N) const override {
+    if (GenNodeInfo.hasDesc(N->getOpcode()))
+      GenNodeInfo.verifyNode(DAG, N);
+    SelectionDAGTargetInfo::verifyTargetNode(DAG, N);
+  }
+};
+
+} // namespace llvm
 
 #endif // LLVM_CODEGEN_SELECTIONDAGTARGETINFO_H

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Xtensa.h"
+#include "XtensaSelectionDAGInfo.h"
 #include "XtensaTargetMachine.h"
 #include "XtensaUtils.h"
 #include "llvm/CodeGen/MachineFunction.h"

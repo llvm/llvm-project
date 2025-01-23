@@ -783,10 +783,14 @@ def AArch64fccmp     : SDNode<"AArch64ISD::FCCMP", SDT_AArch64FCCMP>;
 def AArch64threadpointer : SDNode<"AArch64ISD::THREAD_POINTER", SDTPtrLeaf>;
 
 def AArch64fcmp         : SDNode<"AArch64ISD::FCMP", SDT_AArch64FCmp>;
-def AArch64strict_fcmp  : SDNode<"AArch64ISD::STRICT_FCMP", SDT_AArch64FCmp,
-                                 [SDNPHasChain]>;
-def AArch64strict_fcmpe : SDNode<"AArch64ISD::STRICT_FCMPE", SDT_AArch64FCmp,
-                                 [SDNPHasChain]>;
+
+let IsStrictFP = true in {
+  def AArch64strict_fcmp  : SDNode<"AArch64ISD::STRICT_FCMP", SDT_AArch64FCmp,
+                                   [SDNPHasChain]>;
+  def AArch64strict_fcmpe : SDNode<"AArch64ISD::STRICT_FCMPE", SDT_AArch64FCmp,
+                                   [SDNPHasChain]>;
+}
+
 def AArch64any_fcmp     : PatFrags<(ops node:$lhs, node:$rhs),
                                    [(AArch64strict_fcmp node:$lhs, node:$rhs),
                                     (AArch64fcmp node:$lhs, node:$rhs)]>;

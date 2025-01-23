@@ -11,13 +11,46 @@
 
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 
-namespace llvm {
+#define GET_SDNODE_ENUM
+#include "NVPTXGenSDNodeInfo.inc"
 
-class NVPTXSelectionDAGInfo : public SelectionDAGTargetInfo {
+namespace llvm {
+namespace NVPTXISD {
+
+enum NodeType : unsigned {
+  LOAD_PARAM = GENERATED_OPCODE_END,
+  DeclareScalarRet,
+  CallSymbol,
+  CallSeqBegin,
+  CallSeqEnd,
+  SETP_F16X2,
+  SETP_BF16X2,
+  Dummy,
+
+  FIRST_MEMORY_OPCODE,
+  LoadV2 = FIRST_MEMORY_OPCODE,
+  LoadV4,
+  LDUV2, // LDU.v2
+  LDUV4, // LDU.v4
+  StoreV2,
+  StoreV4,
+  LAST_MEMORY_OPCODE = StoreV4,
+};
+
+} // namespace NVPTXISD
+
+class NVPTXSelectionDAGInfo : public SelectionDAGGenTargetInfo {
 public:
+  NVPTXSelectionDAGInfo();
+
   ~NVPTXSelectionDAGInfo() override;
 
+  const char *getTargetNodeName(unsigned Opcode) const override;
+
   bool isTargetMemoryOpcode(unsigned Opcode) const override;
+
+  void verifyTargetNode(const SelectionDAG &DAG,
+                        const SDNode *N) const override;
 };
 
 } // namespace llvm
