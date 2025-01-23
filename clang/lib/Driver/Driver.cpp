@@ -1337,7 +1337,7 @@ static bool findTripleConfigFile(llvm::cl::ExpansionContext &ExpCtx,
 bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {
   // Disable default config if CLANG_NO_DEFAULT_CONFIG is set to a non-empty
   // value.
-  if (const char *NoConfigEnv = ::getenv("CLANG_NO_DEFAULT_CONFIG")) {
+  if (const char *NoConfigEnv = std::getenv("CLANG_NO_DEFAULT_CONFIG")) {
     if (*NoConfigEnv)
       return false;
   }

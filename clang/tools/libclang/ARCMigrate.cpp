@@ -37,7 +37,7 @@ CXRemapping clang_getRemappings(const char *migrate_dir_path) {
   llvm::errs() << "error: feature not enabled in this build\n";
   return nullptr;
 #else
-  bool Logging = ::getenv("LIBCLANG_LOGGING");
+  bool Logging = std::getenv("LIBCLANG_LOGGING");
 
   if (!migrate_dir_path) {
     if (Logging)
@@ -80,7 +80,7 @@ CXRemapping clang_getRemappingsFromFileList(const char **filePaths,
   llvm::errs() << "error: feature not enabled in this build\n";
   return nullptr;
 #else
-  bool Logging = ::getenv("LIBCLANG_LOGGING");
+  bool Logging = std::getenv("LIBCLANG_LOGGING");
 
   std::unique_ptr<Remap> remap(new Remap());
 
