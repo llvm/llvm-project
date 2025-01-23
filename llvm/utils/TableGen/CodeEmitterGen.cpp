@@ -484,7 +484,7 @@ void CodeEmitterGen::run(raw_ostream &O) {
     const CodeGenHwModes &HWM = Target.getHwModes();
     // The set of HwModes used by instruction encodings.
     std::set<unsigned> HwModes;
-    BitWidth = 0;
+    BitWidth = 1;
     for (const CodeGenInstruction *CGI : NumberedInstructions) {
       const Record *R = CGI->TheDef;
       if (R->getValueAsString("Namespace") == "TargetOpcode" ||
