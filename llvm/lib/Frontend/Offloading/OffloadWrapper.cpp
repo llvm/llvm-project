@@ -50,7 +50,7 @@ StructType *getDeviceImageTy(Module &M) {
 }
 
 PointerType *getDeviceImagePtrTy(Module &M) {
-  return PointerType::getUnqual(getDeviceImageTy(M));
+  return PointerType::getUnqual(M.getContext());
 }
 
 // struct __tgt_bin_desc {
@@ -70,7 +70,7 @@ StructType *getBinDescTy(Module &M) {
 }
 
 PointerType *getBinDescPtrTy(Module &M) {
-  return PointerType::getUnqual(getBinDescTy(M));
+  return PointerType::getUnqual(M.getContext());
 }
 
 /// Creates binary descriptor for the given device images. Binary descriptor
@@ -354,6 +354,16 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP,
       IsHIP ? "__hipRegisterVar" : "__cudaRegisterVar", RegVarTy);
 
   // Get the __cudaRegisterSurface function declaration.
+  FunctionType *RegManagedVarTy =
+      FunctionType::get(Type::getVoidTy(C),
+                        {Int8PtrPtrTy, Int8PtrTy, Int8PtrTy, Int8PtrTy,
+                         getSizeTTy(M), Type::getInt32Ty(C)},
+                        /*isVarArg=*/false);
+  FunctionCallee RegManagedVar = M.getOrInsertFunction(
+      IsHIP ? "__hipRegisterManagedVar" : "__cudaRegisterManagedVar",
+      RegManagedVarTy);
+
+  // Get the __cudaRegisterSurface function declaration.
   FunctionType *RegSurfaceTy =
       FunctionType::get(Type::getVoidTy(C),
                         {Int8PtrPtrTy, Int8PtrTy, Int8PtrTy, Int8PtrTy,
@@ -466,6 +476,12 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP,
 
   // Create managed variable registration code.
   Builder.SetInsertPoint(SwManagedBB);
+  auto *ManagedVar = Builder.CreateLoad(Int8PtrTy, Addr, "managed.addr");
+  auto *ManagedAddr = Builder.CreateInBoundsGEP(
+      Int8PtrTy, Addr, {ConstantInt::get(Builder.getInt64Ty(), 1)});
+  auto *Managed = Builder.CreateLoad(Int8PtrTy, ManagedAddr, "managed.addr");
+  Builder.CreateCall(RegManagedVar, {RegGlobalsFn->arg_begin(), ManagedVar,
+                                     Managed, Name, Size, Data});
   Builder.CreateBr(IfEndBB);
   Switch->addCase(Builder.getInt32(llvm::offloading::OffloadGlobalManagedEntry),
                   SwManagedBB);
@@ -575,7 +591,7 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
 
   // Create the destructor to unregister the image with the runtime. We cannot
   // use a standard global destructor after CUDA 9.2 so this must be called by
-  // `atexit()` intead.
+  // `atexit()` instead.
   IRBuilder<> DtorBuilder(BasicBlock::Create(C, "entry", DtorFunc));
   LoadInst *BinaryHandle = DtorBuilder.CreateAlignedLoad(
       PtrTy, BinaryHandleGlobal,

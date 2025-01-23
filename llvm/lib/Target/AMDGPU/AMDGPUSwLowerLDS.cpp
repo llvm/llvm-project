@@ -89,7 +89,6 @@
 #include "AMDGPUTargetMachine.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -1177,10 +1176,13 @@ bool AMDGPUSwLowerLDS::run() {
         LDSParams.IndirectAccess.DynamicLDSGlobals.empty()) {
       Changed = false;
     } else {
-      removeFnAttrFromReachable(CG, Func,
-                                {"amdgpu-no-workitem-id-x",
-                                 "amdgpu-no-workitem-id-y",
-                                 "amdgpu-no-workitem-id-z"});
+      removeFnAttrFromReachable(
+          CG, Func,
+          {"amdgpu-no-workitem-id-x", "amdgpu-no-workitem-id-y",
+           "amdgpu-no-workitem-id-z", "amdgpu-no-heap-ptr"});
+      if (!LDSParams.IndirectAccess.StaticLDSGlobals.empty() ||
+          !LDSParams.IndirectAccess.DynamicLDSGlobals.empty())
+        removeFnAttrFromReachable(CG, Func, {"amdgpu-no-lds-kernel-id"});
       reorderStaticDynamicIndirectLDSSet(LDSParams);
       buildSwLDSGlobal(Func);
       buildSwDynLDSGlobal(Func);

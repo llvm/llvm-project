@@ -1,30 +1,30 @@
-; RUN: llc < %s -march=mips -mcpu=mips2 | FileCheck %s -check-prefixes=ALL,GP32
-; RUN: llc < %s -march=mips -mcpu=mips32 | FileCheck %s -check-prefixes=ALL,GP32
-; RUN: llc < %s -march=mips -mcpu=mips32r2 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips -mcpu=mips2 | FileCheck %s -check-prefixes=ALL,GP32
+; RUN: llc < %s -mtriple=mips -mcpu=mips32 | FileCheck %s -check-prefixes=ALL,GP32
+; RUN: llc < %s -mtriple=mips -mcpu=mips32r2 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,GP32
-; RUN: llc < %s -march=mips -mcpu=mips32r3 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips -mcpu=mips32r3 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,GP32
-; RUN: llc < %s -march=mips -mcpu=mips32r5 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips -mcpu=mips32r5 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,GP32
-; RUN: llc < %s -march=mips -mcpu=mips32r6 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips -mcpu=mips32r6 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,GP32
-; RUN: llc < %s -march=mips64 -mcpu=mips3 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips64 -mcpu=mips3 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,GP64
-; RUN: llc < %s -march=mips64 -mcpu=mips4 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips64 -mcpu=mips4 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,GP64
-; RUN: llc < %s -march=mips64 -mcpu=mips64 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips64 -mcpu=mips64 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,GP64
-; RUN: llc < %s -march=mips64 -mcpu=mips64r2 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips64 -mcpu=mips64r2 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,GP64
-; RUN: llc < %s -march=mips64 -mcpu=mips64r3 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips64 -mcpu=mips64r3 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,GP64
-; RUN: llc < %s -march=mips64 -mcpu=mips64r5 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips64 -mcpu=mips64r5 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,GP64
-; RUN: llc < %s -march=mips64 -mcpu=mips64r6 | FileCheck %s \
+; RUN: llc < %s -mtriple=mips64 -mcpu=mips64r6 | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,GP64
-; RUN: llc < %s -march=mips -mcpu=mips32r3 -mattr=+micromips | FileCheck %s \
+; RUN: llc < %s -mtriple=mips -mcpu=mips32r3 -mattr=+micromips | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,MM,MM32
-; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips | FileCheck %s \
+; RUN: llc < %s -mtriple=mips -mcpu=mips32r6 -mattr=+micromips | FileCheck %s \
 ; RUN:    -check-prefixes=ALL,MM,MM32
 
 define signext i1 @not_i1(i1 signext %a) {

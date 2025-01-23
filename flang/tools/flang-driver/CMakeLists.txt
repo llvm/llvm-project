@@ -6,6 +6,7 @@ link_directories(${LLVM_LIBRARY_DIR})
 
 set( LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
+  MC
   Option
   Support
   TargetParser

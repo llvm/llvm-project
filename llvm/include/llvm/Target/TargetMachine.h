@@ -5,9 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines the TargetMachine and LLVMTargetMachine classes.
-//
+///
+/// This file defines the TargetMachine class.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TARGET_TARGETMACHINE_H
@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Error.h"
@@ -40,7 +41,6 @@ class MCAsmInfo;
 class MCContext;
 class MCInstrInfo;
 class MCRegisterInfo;
-class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
 class raw_pwrite_stream;
@@ -60,13 +60,13 @@ class TargetSubtargetInfo;
 // The old pass manager infrastructure is hidden in a legacy namespace now.
 namespace legacy {
 class PassManagerBase;
-}
+} // namespace legacy
 using legacy::PassManagerBase;
 
 struct MachineFunctionInfo;
 namespace yaml {
 struct MachineFunctionInfo;
-}
+} // namespace yaml
 
 //===----------------------------------------------------------------------===//
 ///
@@ -434,43 +434,12 @@ public:
       function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback) {
     return false;
   }
-};
-
-/// This class describes a target machine that is implemented with the LLVM
-/// target-independent code generator.
-///
-class LLVMTargetMachine : public TargetMachine {
-protected: // Can only create subclasses.
-  LLVMTargetMachine(const Target &T, StringRef DataLayoutString,
-                    const Triple &TT, StringRef CPU, StringRef FS,
-                    const TargetOptions &Options, Reloc::Model RM,
-                    CodeModel::Model CM, CodeGenOptLevel OL);
-
-  void initAsmInfo();
-
-  /// Reset internal state.
-  virtual void reset() {};
-
-public:
-  /// Get a TargetTransformInfo implementation for the target.
-  ///
-  /// The TTI returned uses the common code generator to answer queries about
-  /// the IR.
-  TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   /// Create a pass configuration object to be used by addPassToEmitX methods
   /// for generating a pipeline of CodeGen passes.
-  virtual TargetPassConfig *createPassConfig(PassManagerBase &PM);
-
-  /// Add passes to the specified pass manager to get the specified file
-  /// emitted.  Typically this will involve several steps of code generation.
-  /// \p MMIWP is an optional parameter that, if set to non-nullptr,
-  /// will be used to set the MachineModuloInfo for this PM.
-  bool
-  addPassesToEmitFile(PassManagerBase &PM, raw_pwrite_stream &Out,
-                      raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
-                      bool DisableVerify = true,
-                      MachineModuleInfoWrapperPass *MMIWP = nullptr) override;
+  virtual TargetPassConfig *createPassConfig(PassManagerBase &PM) {
+    return nullptr;
+  }
 
   virtual Error buildCodeGenPipeline(ModulePassManager &, raw_pwrite_stream &,
                                      raw_pwrite_stream *, CodeGenFileType,
@@ -480,14 +449,6 @@ public:
                                    inconvertibleErrorCode());
   }
 
-  /// Add passes to the specified pass manager to get machine code emitted with
-  /// the MCJIT. This method returns true if machine code is not supported. It
-  /// fills the MCContext Ctx pointer which can be used to build custom
-  /// MCStreamer.
-  bool addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
-                         raw_pwrite_stream &Out,
-                         bool DisableVerify = true) override;
-
   /// Returns true if the target is expected to pass all machine verifier
   /// checks. This is a stopgap measure to fix targets one by one. We will
   /// remove this at some point and always enable the verifier when
@@ -496,13 +457,17 @@ public:
 
   /// Adds an AsmPrinter pass to the pipeline that prints assembly or
   /// machine code from the MI representation.
-  bool addAsmPrinter(PassManagerBase &PM, raw_pwrite_stream &Out,
-                     raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
-                     MCContext &Context);
+  virtual bool addAsmPrinter(PassManagerBase &PM, raw_pwrite_stream &Out,
+                             raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType, MCContext &Context) {
+    return false;
+  }
 
-  Expected<std::unique_ptr<MCStreamer>>
+  virtual Expected<std::unique_ptr<MCStreamer>>
   createMCStreamer(raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-                   CodeGenFileType FileType, MCContext &Ctx);
+                   CodeGenFileType FileType, MCContext &Ctx) {
+    return nullptr;
+  }
 
   /// True if the target uses physical regs (as nearly all targets do). False
   /// for stack machines such as WebAssembly and other virtual-register
@@ -514,9 +479,7 @@ public:
 
   /// True if the target wants to use interprocedural register allocation by
   /// default. The -enable-ipra flag can be used to override this.
-  virtual bool useIPRA() const {
-    return false;
-  }
+  virtual bool useIPRA() const { return false; }
 
   /// The default variant to use in unqualified `asm` instructions.
   /// If this returns 0, `asm "$(foo$|bar$)"` will evaluate to `asm "foo"`.
@@ -525,24 +488,6 @@ public:
   // MachineRegisterInfo callback function
   virtual void registerMachineRegisterInfoCallback(MachineFunction &MF) const {}
 };
-
-/// Helper method for getting the code model, returning Default if
-/// CM does not have a value. The tiny and kernel models will produce
-/// an error, so targets that support them or require more complex codemodel
-/// selection logic should implement and call their own getEffectiveCodeModel.
-inline CodeModel::Model
-getEffectiveCodeModel(std::optional<CodeModel::Model> CM,
-                      CodeModel::Model Default) {
-  if (CM) {
-    // By default, targets do not support the tiny and kernel models.
-    if (*CM == CodeModel::Tiny)
-      report_fatal_error("Target does not support the tiny CodeModel", false);
-    if (*CM == CodeModel::Kernel)
-      report_fatal_error("Target does not support the kernel CodeModel", false);
-    return *CM;
-  }
-  return Default;
-}
 
 } // end namespace llvm
 

@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/LoopCacheAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -56,6 +57,14 @@ static cl::opt<int> LoopInterchangeCostThreshold(
     "loop-interchange-threshold", cl::init(0), cl::Hidden,
     cl::desc("Interchange if you gain more than this number"));
 
+// Maximum number of load-stores that can be handled in the dependency matrix.
+static cl::opt<unsigned int> MaxMemInstrCount(
+    "loop-interchange-max-meminstr-count", cl::init(64), cl::Hidden,
+    cl::desc(
+        "Maximum number of load-store instructions that should be handled "
+        "in the dependency matrix. Higher value may lead to more interchanges "
+        "at the cost of compile-time"));
+
 namespace {
 
 using LoopVector = SmallVector<Loop *, 8>;
@@ -65,13 +74,17 @@ using CharMatrix = std::vector<std::vector<char>>;
 
 } // end anonymous namespace
 
-// Maximum number of dependencies that can be handled in the dependency matrix.
-static const unsigned MaxMemInstrCount = 100;
+// Minimum loop depth supported.
+static cl::opt<unsigned int> MinLoopNestDepth(
+    "loop-interchange-min-loop-nest-depth", cl::init(2), cl::Hidden,
+    cl::desc("Minimum depth of loop nest considered for the transform"));
 
 // Maximum loop depth supported.
-static const unsigned MaxLoopNestDepth = 10;
+static cl::opt<unsigned int> MaxLoopNestDepth(
+    "loop-interchange-max-loop-nest-depth", cl::init(10), cl::Hidden,
+    cl::desc("Maximum depth of loop nest considered for the transform"));
 
-#ifdef DUMP_DEP_MATRICIES
+#ifndef NDEBUG
 static void printDepMatrix(CharMatrix &DepMatrix) {
   for (auto &Row : DepMatrix) {
     for (auto D : Row)
@@ -83,7 +96,8 @@ static void printDepMatrix(CharMatrix &DepMatrix) {
 
 static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
                                      Loop *L, DependenceInfo *DI,
-                                     ScalarEvolution *SE) {
+                                     ScalarEvolution *SE,
+                                     OptimizationRemarkEmitter *ORE) {
   using ValueVector = SmallVector<Value *, 16>;
 
   ValueVector MemInstr;
@@ -108,8 +122,20 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
 
   LLVM_DEBUG(dbgs() << "Found " << MemInstr.size()
                     << " Loads and Stores to analyze\n");
-
+  if (MemInstr.size() > MaxMemInstrCount) {
+    LLVM_DEBUG(dbgs() << "The transform doesn't support more than "
+                      << MaxMemInstrCount << " load/stores in a loop\n");
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLoop",
+                                      L->getStartLoc(), L->getHeader())
+             << "Number of loads/stores exceeded, the supported maximum "
+                "can be increased with option "
+                "-loop-interchange-maxmeminstr-count.";
+    });
+    return false;
+  }
   ValueVector::iterator I, IE, J, JE;
+  StringSet<> Seen;
 
   for (I = MemInstr.begin(), IE = MemInstr.end(); I != IE; ++I) {
     for (J = I, JE = MemInstr.end(); J != JE; ++J) {
@@ -134,34 +160,25 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
         unsigned Levels = D->getLevels();
         char Direction;
         for (unsigned II = 1; II <= Levels; ++II) {
-          if (D->isScalar(II)) {
-            Direction = 'S';
-            Dep.push_back(Direction);
-          } else {
-            unsigned Dir = D->getDirection(II);
-            if (Dir == Dependence::DVEntry::LT ||
-                Dir == Dependence::DVEntry::LE)
-              Direction = '<';
-            else if (Dir == Dependence::DVEntry::GT ||
-                     Dir == Dependence::DVEntry::GE)
-              Direction = '>';
-            else if (Dir == Dependence::DVEntry::EQ)
-              Direction = '=';
-            else
-              Direction = '*';
-            Dep.push_back(Direction);
-          }
+          unsigned Dir = D->getDirection(II);
+          if (Dir == Dependence::DVEntry::LT || Dir == Dependence::DVEntry::LE)
+            Direction = '<';
+          else if (Dir == Dependence::DVEntry::GT ||
+                   Dir == Dependence::DVEntry::GE)
+            Direction = '>';
+          else if (Dir == Dependence::DVEntry::EQ)
+            Direction = '=';
+          else
+            Direction = '*';
+          Dep.push_back(Direction);
         }
         while (Dep.size() != Level) {
           Dep.push_back('I');
         }
 
-        DepMatrix.push_back(Dep);
-        if (DepMatrix.size() > MaxMemInstrCount) {
-          LLVM_DEBUG(dbgs() << "Cannot handle more than " << MaxMemInstrCount
-                            << " dependencies inside loop\n");
-          return false;
-        }
+        // Make sure we only add unique entries to the dependency matrix.
+        if (Seen.insert(StringRef(Dep.data(), Dep.size())).second)
+          DepMatrix.push_back(Dep);
       }
     }
   }
@@ -234,6 +251,26 @@ static void populateWorklist(Loop &L, LoopVector &LoopList) {
   LoopList.push_back(CurrentLoop);
 }
 
+static bool hasSupportedLoopDepth(SmallVectorImpl<Loop *> &LoopList,
+                                  OptimizationRemarkEmitter &ORE) {
+  unsigned LoopNestDepth = LoopList.size();
+  if (LoopNestDepth < MinLoopNestDepth || LoopNestDepth > MaxLoopNestDepth) {
+    LLVM_DEBUG(dbgs() << "Unsupported depth of loop nest " << LoopNestDepth
+                      << ", the supported range is [" << MinLoopNestDepth
+                      << ", " << MaxLoopNestDepth << "].\n");
+    Loop **OuterLoop = LoopList.begin();
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLoopNestDepth",
+                                      (*OuterLoop)->getStartLoc(),
+                                      (*OuterLoop)->getHeader())
+             << "Unsupported depth of loop nest, the supported range is ["
+             << std::to_string(MinLoopNestDepth) << ", "
+             << std::to_string(MaxLoopNestDepth) << "].\n";
+    });
+    return false;
+  }
+  return true;
+}
 namespace {
 
 /// LoopInterchangeLegality checks if it is legal to interchange the loop.
@@ -416,16 +453,12 @@ struct LoopInterchange {
 
   bool processLoopList(SmallVectorImpl<Loop *> &LoopList) {
     bool Changed = false;
+
+    // Ensure proper loop nest depth.
+    assert(hasSupportedLoopDepth(LoopList, *ORE) &&
+           "Unsupported depth of loop nest.");
+
     unsigned LoopNestDepth = LoopList.size();
-    if (LoopNestDepth < 2) {
-      LLVM_DEBUG(dbgs() << "Loop doesn't contain minimum nesting level.\n");
-      return false;
-    }
-    if (LoopNestDepth > MaxLoopNestDepth) {
-      LLVM_DEBUG(dbgs() << "Cannot handle loops of depth greater than "
-                        << MaxLoopNestDepth << "\n");
-      return false;
-    }
     if (!isComputableLoopNest(LoopList)) {
       LLVM_DEBUG(dbgs() << "Not valid loop candidate for interchange\n");
       return false;
@@ -437,14 +470,13 @@ struct LoopInterchange {
     CharMatrix DependencyMatrix;
     Loop *OuterMostLoop = *(LoopList.begin());
     if (!populateDependencyMatrix(DependencyMatrix, LoopNestDepth,
-                                  OuterMostLoop, DI, SE)) {
+                                  OuterMostLoop, DI, SE, ORE)) {
       LLVM_DEBUG(dbgs() << "Populating dependency matrix failed\n");
       return false;
     }
-#ifdef DUMP_DEP_MATRICIES
-    LLVM_DEBUG(dbgs() << "Dependence before interchange\n");
-    printDepMatrix(DependencyMatrix);
-#endif
+
+    LLVM_DEBUG(dbgs() << "Dependency matrix before interchange:\n";
+               printDepMatrix(DependencyMatrix));
 
     // Get the Outermost loop exit.
     BasicBlock *LoopNestExit = OuterMostLoop->getExitBlock();
@@ -484,10 +516,10 @@ struct LoopInterchange {
         std::swap(LoopList[i - 1], LoopList[i]);
         // Update the DependencyMatrix
         interChangeDependencies(DependencyMatrix, i, i - 1);
-#ifdef DUMP_DEP_MATRICIES
-        LLVM_DEBUG(dbgs() << "Dependence after interchange\n");
-        printDepMatrix(DependencyMatrix);
-#endif
+
+        LLVM_DEBUG(dbgs() << "Dependency matrix after interchange:\n";
+                   printDepMatrix(DependencyMatrix));
+
         ChangedPerIter |= Interchanged;
         Changed |= Interchanged;
       }
@@ -1712,11 +1744,21 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
                                            LoopStandardAnalysisResults &AR,
                                            LPMUpdater &U) {
   Function &F = *LN.getParent();
+  SmallVector<Loop *, 8> LoopList(LN.getLoops());
 
+  if (MaxMemInstrCount < 1) {
+    LLVM_DEBUG(dbgs() << "MaxMemInstrCount should be at least 1");
+    return PreservedAnalyses::all();
+  }
+  OptimizationRemarkEmitter ORE(&F);
+
+  // Ensure minimum depth of the loop nest to do the interchange.
+  if (!hasSupportedLoopDepth(LoopList, ORE))
+    return PreservedAnalyses::all();
   DependenceInfo DI(&F, &AR.AA, &AR.SE, &AR.LI);
   std::unique_ptr<CacheCost> CC =
       CacheCost::getCacheCost(LN.getOutermostLoop(), AR, DI);
-  OptimizationRemarkEmitter ORE(&F);
+  
   if (!LoopInterchange(&AR.SE, &AR.LI, &DI, &AR.DT, CC, &ORE).run(LN))
     return PreservedAnalyses::all();
   U.markLoopNestChanged(true);

@@ -159,7 +159,7 @@ consteval bool __use_fraction() {
   else if constexpr (__is_specialization_v<_Tp, chrono::zoned_time>)
     return chrono::hh_mm_ss<typename _Tp::duration>::fractional_width;
 #    endif
-  else if constexpr (chrono::__is_duration<_Tp>::value)
+  else if constexpr (chrono::__is_duration_v<_Tp>)
     return chrono::hh_mm_ss<_Tp>::fractional_width;
   else if constexpr (__is_hh_mm_ss<_Tp>)
     return _Tp::fractional_width;
@@ -273,7 +273,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
       } break;
 
       case _CharT('j'):
-        if constexpr (chrono::__is_duration<_Tp>::value)
+        if constexpr (chrono::__is_duration_v<_Tp>)
           // Converting a duration where the period has a small ratio to days
           // may fail to compile. This due to loss of precision in the
           // conversion. In order to avoid that issue convert to seconds as
@@ -285,7 +285,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
         break;
 
       case _CharT('q'):
-        if constexpr (chrono::__is_duration<_Tp>::value) {
+        if constexpr (chrono::__is_duration_v<_Tp>) {
           __sstr << chrono::__units_suffix<_CharT, typename _Tp::period>();
           break;
         }
@@ -301,7 +301,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
         // MSVC STL ignores precision but uses separator
         // FMT honours precision and has a bug for separator
         // https://godbolt.org/z/78b7sMxns
-        if constexpr (chrono::__is_duration<_Tp>::value) {
+        if constexpr (chrono::__is_duration_v<_Tp>) {
           __sstr << std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "{}"), __value.count());
           break;
         }
@@ -351,7 +351,7 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
 
       case _CharT('Y'):
         // Depending on the platform's libc the range of supported years is
-        // limited. Intead of of testing all conditions use the internal
+        // limited. Instead of of testing all conditions use the internal
         // implementation unconditionally.
         __formatter::__format_year(__sstr, __t.tm_year + 1900);
         break;
@@ -627,7 +627,7 @@ __format_chrono(const _Tp& __value,
   if (__chrono_specs.empty())
     __sstr << __value;
   else {
-    if constexpr (chrono::__is_duration<_Tp>::value) {
+    if constexpr (chrono::__is_duration_v<_Tp>) {
       // A duration can be a user defined arithmetic type. Users may specialize
       // numeric_limits, but they may not specialize is_signed.
       if constexpr (numeric_limits<typename _Tp::rep>::is_signed) {
@@ -711,7 +711,7 @@ public:
 template <class _Duration, __fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<chrono::sys_time<_Duration>, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -722,7 +722,7 @@ public:
 template <class _Duration, __fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<chrono::file_time<_Duration>, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -733,7 +733,7 @@ public:
 template <class _Duration, __fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<chrono::local_time<_Duration>, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -745,7 +745,7 @@ public:
 template <class _Rep, class _Period, __fmt_char_type _CharT>
 struct formatter<chrono::duration<_Rep, _Period>, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -767,7 +767,7 @@ public:
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<chrono::day, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -778,7 +778,7 @@ public:
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<chrono::month, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -789,7 +789,7 @@ public:
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<chrono::year, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -800,7 +800,7 @@ public:
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<chrono::weekday, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -811,7 +811,7 @@ public:
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<chrono::weekday_indexed, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -822,7 +822,7 @@ public:
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<chrono::weekday_last, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -833,7 +833,7 @@ public:
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<chrono::month_day, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -844,7 +844,7 @@ public:
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<chrono::month_day_last, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -855,7 +855,7 @@ public:
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<chrono::month_weekday, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -866,7 +866,7 @@ public:
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<chrono::month_weekday_last, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -877,7 +877,7 @@ public:
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<chrono::year_month, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -888,7 +888,7 @@ public:
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<chrono::year_month_day, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -899,7 +899,7 @@ public:
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<chrono::year_month_day_last, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -910,7 +910,7 @@ public:
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<chrono::year_month_weekday, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -921,7 +921,7 @@ public:
 template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<chrono::year_month_weekday_last, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -932,7 +932,7 @@ public:
 template <class _Duration, __fmt_char_type _CharT>
 struct formatter<chrono::hh_mm_ss<_Duration>, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -944,7 +944,7 @@ public:
 template <__fmt_char_type _CharT>
 struct formatter<chrono::sys_info, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -955,7 +955,7 @@ public:
 template <__fmt_char_type _CharT>
 struct formatter<chrono::local_info, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
@@ -968,7 +968,7 @@ public:
 template <class _Duration, class _TimeZonePtr, __fmt_char_type _CharT>
 struct formatter<chrono::zoned_time<_Duration, _TimeZonePtr>, _CharT> : public __formatter_chrono<_CharT> {
 public:
-  using _Base = __formatter_chrono<_CharT>;
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {

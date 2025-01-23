@@ -20,7 +20,6 @@
 #if SANITIZER_APPLE
 #include <libkern/OSAtomic.h>
 #include <os/lock.h>
-#include <sys/types.h>
 #include <unistd.h>
 #endif
 
@@ -28,12 +27,28 @@
 #include <malloc.h>
 #endif
 
+#if SANITIZER_INTERCEPT_EPOLL
+#include <sys/epoll.h>
+#endif
+
+#if SANITIZER_INTERCEPT_KQUEUE
+#include <sys/event.h>
+#include <sys/time.h>
+#endif
+
 #include <fcntl.h>
+#include <ifaddrs.h>
+#include <net/if.h>
 #include <netdb.h>
+#include <poll.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/syscall.h>
+#include <sys/types.h>
 #include <sys/uio.h>
 
 #if _FILE_OFFSET_BITS == 64 && SANITIZER_GLIBC
@@ -189,6 +204,79 @@ TEST(TestRtsanInterceptors, MunmapDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+class RtsanOpenedMmapTest : public RtsanFileTest {
+protected:
+  void SetUp() override {
+    RtsanFileTest::SetUp();
+    file = fopen(GetTemporaryFilePath(), "w+");
+    ASSERT_THAT(file, Ne(nullptr));
+    fd = fileno(file);
+    ASSERT_THAT(fd, Ne(-1));
+    int ret = ftruncate(GetOpenFd(), size);
+    ASSERT_THAT(ret, Ne(-1));
+    addr =
+        mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, GetOpenFd(), 0);
+    ASSERT_THAT(addr, Ne(MAP_FAILED));
+    ASSERT_THAT(addr, Ne(nullptr));
+  }
+
+  void TearDown() override {
+    if (addr != nullptr && addr != MAP_FAILED)
+      munmap(addr, size);
+    RtsanFileTest::TearDown();
+  }
+
+  void *GetAddr() { return addr; }
+  static constexpr size_t GetSize() { return size; }
+
+  int GetOpenFd() { return fd; }
+
+private:
+  void *addr = nullptr;
+  static constexpr size_t size = 4096;
+  FILE *file = nullptr;
+  int fd = -1;
+};
+
+#if !SANITIZER_APPLE
+TEST_F(RtsanOpenedMmapTest, MadviseDiesWhenRealtime) {
+  auto Func = [this]() { madvise(GetAddr(), GetSize(), MADV_NORMAL); };
+  ExpectRealtimeDeath(Func, "madvise");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedMmapTest, PosixMadviseDiesWhenRealtime) {
+  auto Func = [this]() {
+    posix_madvise(GetAddr(), GetSize(), POSIX_MADV_NORMAL);
+  };
+  ExpectRealtimeDeath(Func, "posix_madvise");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
+TEST_F(RtsanOpenedMmapTest, MprotectDiesWhenRealtime) {
+  auto Func = [this]() { mprotect(GetAddr(), GetSize(), PROT_READ); };
+  ExpectRealtimeDeath(Func, "mprotect");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedMmapTest, MsyncDiesWhenRealtime) {
+  auto Func = [this]() { msync(GetAddr(), GetSize(), MS_INVALIDATE); };
+  ExpectRealtimeDeath(Func, "msync");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedMmapTest, MincoreDiesWhenRealtime) {
+#if SANITIZER_APPLE
+  std::vector<char> vec(GetSize() / 1024);
+#else
+  std::vector<unsigned char> vec(GetSize() / 1024);
+#endif
+  auto Func = [this, &vec]() { mincore(GetAddr(), GetSize(), vec.data()); };
+  ExpectRealtimeDeath(Func, "mincore");
+  ExpectNonRealtimeSurvival(Func);
+}
+
 TEST(TestRtsanInterceptors, ShmOpenDiesWhenRealtime) {
   auto Func = []() { shm_open("/rtsan_test_shm", O_CREAT | O_RDWR, 0); };
   ExpectRealtimeDeath(Func, "shm_open");
@@ -223,6 +311,12 @@ TEST(TestRtsanInterceptors, NanosleepDiesWhenRealtime) {
     nanosleep(&T, &T);
   };
   ExpectRealtimeDeath(Func, "nanosleep");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, SchedYieldDiesWhenRealtime) {
+  auto Func = []() { sched_yield(); };
+  ExpectRealtimeDeath(Func, "sched_yield");
   ExpectNonRealtimeSurvival(Func);
 }
 
@@ -332,6 +426,106 @@ TEST_F(RtsanFileTest, FopenDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+#if SANITIZER_INTERCEPT_FOPENCOOKIE
+TEST_F(RtsanFileTest, FopenCookieDieWhenRealtime) {
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+  struct fholder {
+    FILE *fp;
+    size_t read;
+  } fh = {f, 0};
+  auto CookieRead = [](void *cookie, char *buf, size_t size) {
+    fholder *p = reinterpret_cast<fholder *>(cookie);
+    p->read = fread(static_cast<void *>(buf), 1, size, p->fp);
+    EXPECT_NE(0u, p->read);
+  };
+  cookie_io_functions_t funcs = {(cookie_read_function_t *)&CookieRead, nullptr,
+                                 nullptr, nullptr};
+  auto Func = [&fh, &funcs]() {
+    FILE *f = fopencookie(&fh, "w", funcs);
+    EXPECT_THAT(f, Ne(nullptr));
+  };
+
+  ExpectRealtimeDeath(Func, "fopencookie");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
+#if SANITIZER_INTERCEPT_OPEN_MEMSTREAM
+TEST_F(RtsanFileTest, OpenMemstreamDiesWhenRealtime) {
+  char *buffer;
+  size_t size;
+  auto Func = [&buffer, &size]() {
+    FILE *f = open_memstream(&buffer, &size);
+    EXPECT_THAT(f, Ne(nullptr));
+  };
+
+  ExpectRealtimeDeath(Func, "open_memstream");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanFileTest, FmemOpenDiesWhenRealtime) {
+  char buffer[1024];
+  auto Func = [&buffer]() {
+    FILE *f = fmemopen(&buffer, sizeof(buffer), "w");
+    EXPECT_THAT(f, Ne(nullptr));
+  };
+
+  ExpectRealtimeDeath(Func, "fmemopen");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
+#if SANITIZER_INTERCEPT_SETVBUF
+TEST_F(RtsanFileTest, SetbufDieWhenRealtime) {
+  char buffer[BUFSIZ];
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+
+  auto Func = [f, &buffer]() { setbuf(f, buffer); };
+
+  ExpectRealtimeDeath(Func, "setbuf");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanFileTest, SetvbufDieWhenRealtime) {
+  char buffer[1024];
+  size_t size = sizeof(buffer);
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+
+  auto Func = [f, &buffer, size]() {
+    int r = setvbuf(f, buffer, _IOFBF, size);
+    EXPECT_THAT(r, Eq(0));
+  };
+
+  ExpectRealtimeDeath(Func, "setvbuf");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanFileTest, SetlinebufDieWhenRealtime) {
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+
+  auto Func = [f]() { setlinebuf(f); };
+
+  ExpectRealtimeDeath(Func, "setlinebuf");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanFileTest, SetbufferDieWhenRealtime) {
+  char buffer[1024];
+  size_t size = sizeof(buffer);
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+
+  auto Func = [f, &buffer, size]() { setbuffer(f, buffer, size); };
+
+  ExpectRealtimeDeath(Func, "setbuffer");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 class RtsanOpenedFileTest : public RtsanFileTest {
 protected:
   void SetUp() override {
@@ -356,6 +550,243 @@ private:
   FILE *file = nullptr;
   int fd = -1;
 };
+
+#if SANITIZER_INTERCEPT_FSEEK
+TEST_F(RtsanOpenedFileTest, FgetposDieWhenRealtime) {
+  auto Func = [this]() {
+    fpos_t pos;
+    int ret = fgetpos(GetOpenFile(), &pos);
+    ASSERT_THAT(ret, Eq(0));
+  };
+
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("fgetpos"));
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, FsetposDieWhenRealtime) {
+  fpos_t pos;
+  int ret = fgetpos(GetOpenFile(), &pos);
+  ASSERT_THAT(ret, Eq(0));
+  auto Func = [this, pos]() {
+    int ret = fsetpos(GetOpenFile(), &pos);
+    ASSERT_THAT(ret, Eq(0));
+  };
+
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("fsetpos"));
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, FseekDieWhenRealtime) {
+  auto Func = [this]() {
+    int ret = fseek(GetOpenFile(), 0, SEEK_CUR);
+    ASSERT_THAT(ret, Eq(0));
+  };
+
+  ExpectRealtimeDeath(Func, "fseek");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, FseekoDieWhenRealtime) {
+  auto Func = [this]() {
+    int ret = fseeko(GetOpenFile(), 0, SEEK_CUR);
+    ASSERT_THAT(ret, Eq(0));
+  };
+
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("fseeko"));
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, FtellDieWhenRealtime) {
+  auto Func = [this]() {
+    long ret = ftell(GetOpenFile());
+    ASSERT_THAT(ret, Eq(0));
+  };
+
+  ExpectRealtimeDeath(Func, "ftell");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, FtelloDieWhenRealtime) {
+  auto Func = [this]() {
+    off_t ret = ftello(GetOpenFile());
+    ASSERT_THAT(ret, Eq(0));
+  };
+
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("ftello"));
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, RewindDieWhenRealtime) {
+  int end = fseek(GetOpenFile(), 0, SEEK_END);
+  EXPECT_THAT(end, Eq(0));
+  auto Func = [this]() { rewind(GetOpenFile()); };
+
+  ExpectRealtimeDeath(Func, "rewind");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
+TEST(TestRtsanInterceptors, IoctlDiesWhenRealtime) {
+  auto Func = []() { ioctl(0, FIONREAD); };
+  ExpectRealtimeDeath(Func, "ioctl");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, IoctlBehavesWithOutputArg) {
+  int arg{};
+  ioctl(GetOpenFd(), FIONREAD, &arg);
+
+  EXPECT_THAT(arg, Ge(0));
+}
+
+TEST_F(RtsanOpenedFileTest, FdopenDiesWhenRealtime) {
+  auto Func = [&]() {
+    FILE *f = fdopen(GetOpenFd(), "w");
+    EXPECT_THAT(f, Ne(nullptr));
+  };
+
+  ExpectRealtimeDeath(Func, "fdopen");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, FreopenDiesWhenRealtime) {
+  auto Func = [&]() {
+    FILE *newfile = freopen(GetTemporaryFilePath(), "w", GetOpenFile());
+    EXPECT_THAT(newfile, Ne(nullptr));
+  };
+
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("freopen"));
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, IoctlBehavesWithOutputPointer) {
+  // These initial checks just see if we CAN run these tests.
+  // If we can't (can't open a socket, or can't find an interface, just
+  // gracefully skip.
+  int sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (sock == -1) {
+    perror("socket");
+    GTEST_SKIP();
+  }
+
+  struct ifaddrs *ifaddr = nullptr;
+  if (getifaddrs(&ifaddr) == -1 || ifaddr == nullptr) {
+    perror("getifaddrs");
+    close(sock);
+    GTEST_SKIP();
+  }
+
+  struct ifreq ifr {};
+  strncpy(ifr.ifr_name, ifaddr->ifa_name, IFNAMSIZ - 1);
+
+  int retval = ioctl(sock, SIOCGIFADDR, &ifr);
+  if (retval == -1) {
+    perror("ioctl");
+    close(sock);
+    freeifaddrs(ifaddr);
+    FAIL();
+  }
+
+  freeifaddrs(ifaddr);
+  close(sock);
+
+  ASSERT_THAT(ifr.ifr_addr.sa_data, NotNull());
+  ASSERT_THAT(ifr.ifr_addr.sa_family, Eq(AF_INET));
+}
+
+TEST_F(RtsanOpenedFileTest, LseekDiesWhenRealtime) {
+  auto Func = [this]() { lseek(GetOpenFd(), 0, SEEK_SET); };
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("lseek"));
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, DupDiesWhenRealtime) {
+  auto Func = [this]() { dup(GetOpenFd()); };
+  ExpectRealtimeDeath(Func, "dup");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, Dup2DiesWhenRealtime) {
+  auto Func = [this]() { dup2(GetOpenFd(), 0); };
+  ExpectRealtimeDeath(Func, "dup2");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanFileTest, ChmodDiesWhenRealtime) {
+  auto Func = [this]() { chmod(GetTemporaryFilePath(), 0777); };
+  ExpectRealtimeDeath(Func, "chmod");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, FchmodDiesWhenRealtime) {
+  auto Func = [this]() { fchmod(GetOpenFd(), 0777); };
+  ExpectRealtimeDeath(Func, "fchmod");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, UmaskDiesWhenRealtime) {
+  auto Func = []() { umask(0); };
+  ExpectRealtimeDeath(Func, "umask");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+#if SANITIZER_INTERCEPT_PROCESS_VM_READV
+TEST(TestRtsanInterceptors, ProcessVmReadvDiesWhenRealtime) {
+  char stack[1024];
+  int p;
+  iovec lcl{&stack, sizeof(stack)};
+  iovec rmt{&p, sizeof(p)};
+  auto Func = [&lcl, &rmt]() { process_vm_readv(0, &lcl, 1, &rmt, 1, 0); };
+  ExpectRealtimeDeath(Func, "process_vm_readv");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, ProcessVmWritevDiesWhenRealtime) {
+  char stack[1024];
+  int p;
+  iovec lcl{&p, sizeof(p)};
+  iovec rmt{&stack, sizeof(stack)};
+  auto Func = [&lcl, &rmt]() { process_vm_writev(0, &lcl, 1, &rmt, 1, 0); };
+  ExpectRealtimeDeath(Func, "process_vm_writev");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
+class RtsanDirectoryTest : public ::testing::Test {
+protected:
+  void SetUp() override {
+    const ::testing::TestInfo *const test_info =
+        ::testing::UnitTest::GetInstance()->current_test_info();
+    directory_path_ = std::string("/tmp/rtsan_temp_dir_") + test_info->name();
+    RemoveTemporaryDirectory();
+  }
+
+  const char *GetTemporaryDirectoryPath() const {
+    return directory_path_.c_str();
+  }
+
+  void TearDown() override { RemoveTemporaryDirectory(); }
+
+private:
+  void RemoveTemporaryDirectory() const {
+    std::remove(GetTemporaryDirectoryPath());
+  }
+  std::string directory_path_;
+};
+
+TEST_F(RtsanDirectoryTest, MkdirDiesWhenRealtime) {
+  auto Func = [this]() { mkdir(GetTemporaryDirectoryPath(), 0777); };
+  ExpectRealtimeDeath(Func, "mkdir");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanDirectoryTest, RmdirDiesWhenRealtime) {
+  // We don't actually create this directory before we try to remove it
+  // Thats OK - we are just making sure the call gets intercepted
+  auto Func = [this]() { rmdir(GetTemporaryDirectoryPath()); };
+  ExpectRealtimeDeath(Func, "rmdir");
+  ExpectNonRealtimeSurvival(Func);
+}
 
 TEST_F(RtsanOpenedFileTest, FreadDiesWhenRealtime) {
   auto Func = [this]() {
@@ -392,6 +823,34 @@ TEST_F(RtsanOpenedFileTest, FputsDiesWhenRealtime) {
   ExpectRealtimeDeath(Func);
   ExpectNonRealtimeSurvival(Func);
 }
+
+TEST_F(RtsanFileTest, FflushDiesWhenRealtime) {
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+  int written = fwrite("abc", 1, 3, f);
+  EXPECT_THAT(written, Eq(3));
+  auto Func = [&f]() {
+    int res = fflush(f);
+    EXPECT_THAT(res, Eq(0));
+  };
+  ExpectRealtimeDeath(Func, "fflush");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+#if SANITIZER_APPLE
+TEST_F(RtsanFileTest, FpurgeDiesWhenRealtime) {
+  FILE *f = fopen(GetTemporaryFilePath(), "w");
+  EXPECT_THAT(f, Ne(nullptr));
+  int written = fwrite("abc", 1, 3, f);
+  EXPECT_THAT(written, Eq(3));
+  auto Func = [&f]() {
+    int res = fpurge(f);
+    EXPECT_THAT(res, Eq(0));
+  };
+  ExpectRealtimeDeath(Func, "fpurge");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
 
 TEST_F(RtsanOpenedFileTest, ReadDiesWhenRealtime) {
   auto Func = [this]() {
@@ -719,6 +1178,16 @@ TEST(TestRtsanInterceptors, AcceptingASocketDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+#if SANITIZER_INTERCEPT_ACCEPT4
+TEST(TestRtsanInterceptors, Accepting4ASocketDiesWhenRealtime) {
+  auto Func = []() {
+    EXPECT_LT(accept4(kNotASocketFd, nullptr, nullptr, 0), 0);
+  };
+  ExpectRealtimeDeath(Func, "accept4");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 TEST(TestRtsanInterceptors, ConnectingASocketDiesWhenRealtime) {
   auto Func = []() { EXPECT_NE(connect(kNotASocketFd, nullptr, 0), 0); };
   ExpectRealtimeDeath(Func, "connect");
@@ -743,6 +1212,15 @@ TEST(TestRtsanInterceptors, SendmsgToASocketDiesWhenRealtime) {
   ExpectRealtimeDeath(Func, "sendmsg");
   ExpectNonRealtimeSurvival(Func);
 }
+
+#if SANITIZER_INTERCEPT_SENDMMSG
+TEST(TestRtsanInterceptors, SendmmsgOnASocketDiesWhenRealtime) {
+  mmsghdr msg{};
+  auto Func = [&]() { sendmmsg(0, &msg, 0, 0); };
+  ExpectRealtimeDeath(Func, "sendmmsg");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
 
 TEST(TestRtsanInterceptors, SendtoToASocketDiesWhenRealtime) {
   sockaddr addr{};
@@ -773,10 +1251,272 @@ TEST(TestRtsanInterceptors, RecvmsgOnASocketDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+#if SANITIZER_INTERCEPT_RECVMMSG
+TEST(TestRtsanInterceptors, RecvmmsgOnASocketDiesWhenRealtime) {
+  mmsghdr msg{};
+  auto Func = [&]() { recvmmsg(0, &msg, 0, 0, nullptr); };
+  ExpectRealtimeDeath(Func, "recvmmsg");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 TEST(TestRtsanInterceptors, ShutdownOnASocketDiesWhenRealtime) {
   auto Func = [&]() { shutdown(0, 0); };
   ExpectRealtimeDeath(Func, "shutdown");
   ExpectNonRealtimeSurvival(Func);
 }
+
+#if SANITIZER_INTERCEPT_GETSOCKNAME
+TEST(TestRtsanInterceptors, GetsocknameOnASocketDiesWhenRealtime) {
+  sockaddr addr{};
+  socklen_t len{};
+  auto Func = [&]() { getsockname(0, &addr, &len); };
+  ExpectRealtimeDeath(Func, "getsockname");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
+#if SANITIZER_INTERCEPT_GETPEERNAME
+TEST(TestRtsanInterceptors, GetpeernameOnASocketDiesWhenRealtime) {
+  sockaddr addr{};
+  socklen_t len{};
+  auto Func = [&]() { getpeername(0, &addr, &len); };
+  ExpectRealtimeDeath(Func, "getpeername");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
+#if SANITIZER_INTERCEPT_GETSOCKOPT
+TEST(TestRtsanInterceptors, GetsockoptOnASocketDiesWhenRealtime) {
+  int val = 0;
+  socklen_t len = static_cast<socklen_t>(sizeof(val));
+  auto Func = [&val, &len]() {
+    getsockopt(0, SOL_SOCKET, SO_REUSEADDR, &val, &len);
+  };
+  ExpectRealtimeDeath(Func, "getsockopt");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, SetsockoptOnASocketDiesWhenRealtime) {
+  int val = 0;
+  socklen_t len = static_cast<socklen_t>(sizeof(val));
+  auto Func = [&val, &len]() {
+    setsockopt(0, SOL_SOCKET, SO_REUSEADDR, &val, len);
+  };
+  ExpectRealtimeDeath(Func, "setsockopt");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
+/*
+    I/O Multiplexing
+*/
+
+TEST(TestRtsanInterceptors, PollDiesWhenRealtime) {
+  struct pollfd fds[1];
+  fds[0].fd = 0;
+  fds[0].events = POLLIN;
+
+  auto Func = [&fds]() { poll(fds, 1, 0); };
+
+  ExpectRealtimeDeath(Func, "poll");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+#if !SANITIZER_APPLE
+// FIXME: This should work on Darwin as well
+// see the comment near the interceptor
+TEST(TestRtsanInterceptors, SelectDiesWhenRealtime) {
+  fd_set readfds;
+  FD_ZERO(&readfds);
+  FD_SET(0, &readfds);
+  struct timeval timeout = {0, 0};
+
+  auto Func = [&readfds, &timeout]() {
+    select(1, &readfds, nullptr, nullptr, &timeout);
+  };
+  ExpectRealtimeDeath(Func, "select");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
+TEST(TestRtsanInterceptors, PSelectDiesWhenRealtime) {
+  fd_set readfds;
+  FD_ZERO(&readfds);
+  FD_SET(0, &readfds);
+  struct timespec timeout = {0, 0};
+
+  auto Func = [&]() {
+    pselect(1, &readfds, nullptr, nullptr, &timeout, nullptr);
+  };
+  ExpectRealtimeDeath(Func, "pselect");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+#if SANITIZER_INTERCEPT_EPOLL
+TEST(TestRtsanInterceptors, EpollCreateDiesWhenRealtime) {
+  auto Func = []() { epoll_create(1); };
+  ExpectRealtimeDeath(Func, "epoll_create");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, EpollCreate1DiesWhenRealtime) {
+  auto Func = []() { epoll_create1(EPOLL_CLOEXEC); };
+  ExpectRealtimeDeath(Func, "epoll_create1");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+class EpollTest : public ::testing::Test {
+protected:
+  void SetUp() override {
+    epfd = epoll_create1(EPOLL_CLOEXEC);
+    ASSERT_GE(epfd, 0);
+  }
+
+  void TearDown() override {
+    if (epfd >= 0)
+      close(epfd);
+  }
+
+  int GetEpollFd() { return epfd; }
+
+private:
+  int epfd = -1;
+};
+
+TEST_F(EpollTest, EpollCtlDiesWhenRealtime) {
+  auto Func = [this]() {
+    struct epoll_event event = {.events = EPOLLIN, .data = {.fd = 0}};
+    epoll_ctl(GetEpollFd(), EPOLL_CTL_ADD, 0, &event);
+  };
+  ExpectRealtimeDeath(Func, "epoll_ctl");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(EpollTest, EpollWaitDiesWhenRealtime) {
+  auto Func = [this]() {
+    struct epoll_event events[1];
+    epoll_wait(GetEpollFd(), events, 1, 0);
+  };
+
+  ExpectRealtimeDeath(Func, "epoll_wait");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(EpollTest, EpollPWaitDiesWhenRealtime) {
+  auto Func = [this]() {
+    struct epoll_event events[1];
+    epoll_pwait(GetEpollFd(), events, 1, 0, nullptr);
+  };
+
+  ExpectRealtimeDeath(Func, "epoll_pwait");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif // SANITIZER_INTERCEPT_EPOLL
+
+#if SANITIZER_INTERCEPT_PPOLL
+TEST(TestRtsanInterceptors, PpollDiesWhenRealtime) {
+  struct pollfd fds[1];
+  fds[0].fd = 0;
+  fds[0].events = POLLIN;
+
+  timespec ts = {0, 0};
+
+  auto Func = [&fds, &ts]() { ppoll(fds, 1, &ts, nullptr); };
+
+  ExpectRealtimeDeath(Func, "ppoll");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
+#if SANITIZER_INTERCEPT_KQUEUE
+TEST(TestRtsanInterceptors, KqueueDiesWhenRealtime) {
+  auto Func = []() { kqueue(); };
+  ExpectRealtimeDeath(Func, "kqueue");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+class KqueueTest : public ::testing::Test {
+protected:
+  void SetUp() override {
+    kq = kqueue();
+    ASSERT_GE(kq, 0);
+  }
+
+  void TearDown() override {
+    if (kq >= 0)
+      close(kq);
+  }
+
+  int GetKqueueFd() { return kq; }
+
+private:
+  int kq = -1;
+};
+
+TEST_F(KqueueTest, KeventDiesWhenRealtime) {
+  struct kevent event;
+  EV_SET(&event, 0, EVFILT_READ, EV_ADD, 0, 0, nullptr);
+  struct timespec timeout = {0, 0};
+
+  auto Func = [this, event, timeout]() {
+    kevent(GetKqueueFd(), &event, 1, nullptr, 0, &timeout);
+  };
+
+  ExpectRealtimeDeath(Func, "kevent");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(KqueueTest, Kevent64DiesWhenRealtime) {
+  struct kevent64_s event;
+  EV_SET64(&event, 0, EVFILT_READ, EV_ADD, 0, 0, 0, 0, 0);
+  struct timespec timeout = {0, 0};
+
+  auto Func = [this, event, timeout]() {
+    kevent64(GetKqueueFd(), &event, 1, nullptr, 0, 0, &timeout);
+  };
+
+  ExpectRealtimeDeath(Func, "kevent64");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif // SANITIZER_INTERCEPT_KQUEUE
+
+TEST(TestRtsanInterceptors, MkfifoDiesWhenRealtime) {
+  auto Func = []() { mkfifo("/tmp/rtsan_test_fifo", 0); };
+  ExpectRealtimeDeath(Func, "mkfifo");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, PipeDiesWhenRealtime) {
+  int fds[2];
+  auto Func = [&fds]() { pipe(fds); };
+  ExpectRealtimeDeath(Func, "pipe");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+#if !SANITIZER_APPLE
+TEST(TestRtsanInterceptors, Pipe2DiesWhenRealtime) {
+  int fds[2];
+  auto Func = [&fds]() { pipe2(fds, O_CLOEXEC); };
+  ExpectRealtimeDeath(Func, "pipe2");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+TEST(TestRtsanInterceptors, SyscallDiesWhenRealtime) {
+  auto Func = []() { syscall(SYS_getpid); };
+  ExpectRealtimeDeath(Func, "syscall");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, GetPidReturnsSame) {
+  int pid = syscall(SYS_getpid);
+  EXPECT_THAT(pid, Ne(-1));
+
+  EXPECT_THAT(getpid(), Eq(pid));
+}
+#pragma clang diagnostic pop
 
 #endif // SANITIZER_POSIX

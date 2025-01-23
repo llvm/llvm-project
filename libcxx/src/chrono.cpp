@@ -12,7 +12,7 @@
 #  define _LARGE_TIME_API
 #endif
 
-#include <__system_error/system_error.h>
+#include <__system_error/throw_system_error.h>
 #include <cerrno> // errno
 #include <chrono>
 
@@ -29,6 +29,10 @@
 
 #if __has_include(<sys/time.h>)
 #  include <sys/time.h> // for gettimeofday and timeval
+#endif
+
+#if defined(__LLVM_LIBC__)
+#  define _LIBCPP_HAS_TIMESPEC_GET
 #endif
 
 // OpenBSD and GPU do not have a fully conformant suite of POSIX timers, but
@@ -113,6 +117,15 @@ static system_clock::time_point __libcpp_system_clock_now() {
 
   filetime_duration d{(static_cast<__int64>(ft.dwHighDateTime) << 32) | static_cast<__int64>(ft.dwLowDateTime)};
   return system_clock::time_point(duration_cast<system_clock::duration>(d - nt_to_unix_epoch));
+}
+
+#elif defined(_LIBCPP_HAS_TIMESPEC_GET)
+
+static system_clock::time_point __libcpp_system_clock_now() {
+  struct timespec ts;
+  if (timespec_get(&ts, TIME_UTC) != TIME_UTC)
+    __throw_system_error(errno, "timespec_get(TIME_UTC) failed");
+  return system_clock::time_point(seconds(ts.tv_sec) + microseconds(ts.tv_nsec / 1000));
 }
 
 #elif defined(_LIBCPP_HAS_CLOCK_GETTIME)
@@ -214,6 +227,15 @@ static steady_clock::time_point __libcpp_steady_clock_now() noexcept {
 #    pragma comment(lib, "zircon")
 
   return steady_clock::time_point(nanoseconds(_zx_clock_get_monotonic()));
+}
+
+#  elif defined(_LIBCPP_HAS_TIMESPEC_GET)
+
+static steady_clock::time_point __libcpp_steady_clock_now() {
+  struct timespec ts;
+  if (timespec_get(&ts, TIME_MONOTONIC) != TIME_MONOTONIC)
+    __throw_system_error(errno, "timespec_get(TIME_MONOTONIC) failed");
+  return steady_clock::time_point(seconds(ts.tv_sec) + microseconds(ts.tv_nsec / 1000));
 }
 
 #  elif defined(_LIBCPP_HAS_CLOCK_GETTIME)

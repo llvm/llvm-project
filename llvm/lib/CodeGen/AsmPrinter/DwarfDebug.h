@@ -410,6 +410,9 @@ class DwarfDebug : public DebugHandlerBase {
       std::pair<std::unique_ptr<DwarfTypeUnit>, const DICompositeType *>, 1>
       TypeUnitsUnderConstruction;
 
+  /// Symbol pointing to the current function's DWARF line table entries.
+  MCSymbol *FunctionLineTableLabel;
+
   /// Used to set a uniqe ID for a Type Unit.
   /// This counter represents number of DwarfTypeUnits created, not necessarily
   /// number of type units that will be emitted.

@@ -587,6 +587,12 @@ llvm:ir:
   - llvm/docs/LangRef.rst
   - llvm/unittests/IR/**
 
+llvm:SandboxIR:
+  - llvm/lib/SandboxIR/**
+  - llvm/include/llvm/SandboxIR/**
+  - llvm/docs/SandboxIR.md
+  - llvm/unittests/SandboxIR/**
+
 llvm:analysis:
   - llvm/lib/Analysis/**
   - llvm/include/llvm/Analysis/**
@@ -655,6 +661,11 @@ backend:DirectX:
 
 backend:SPIR-V:
   - clang/lib/Driver/ToolChains/SPIRV.*
+  - clang/lib/Sema/SemaSPIRV.cpp
+  - clang/include/clang/Sema/SemaSPIRV.h
+  - clang/include/clang/Basic/BuiltinsSPIRV.td
+  - clang/test/CodeGenSPIRV/**
+  - clang/test/SemaSPIRV/**
   - llvm/lib/Target/SPIRV/**
   - llvm/test/CodeGen/SPIRV/**
   - llvm/test/Frontend/HLSL/**
@@ -740,6 +751,12 @@ backend:RISC-V:
   - clang/**/*RISCV*
   - llvm/**/*riscv*
   - llvm/**/*RISCV*
+
+backend:Xtensa:
+  - clang/**/*xtensa*
+  - clang/**/*Xtensa*
+  - llvm/**/*xtensa*
+  - llvm/**/*Xtensa*
 
 lld:coff:
   - lld/**/COFF/**

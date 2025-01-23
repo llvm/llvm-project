@@ -118,11 +118,11 @@ define void @vfwmacc_v2f32_multiple_users(ptr %x, ptr %y, ptr %z, <2 x float> %a
 ; FOLDING:       # %bb.0:
 ; FOLDING-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; FOLDING-NEXT:    vfwmul.vv v12, v8, v9
+; FOLDING-NEXT:    vfwsub.vv v13, v9, v10
 ; FOLDING-NEXT:    vfwmacc.vv v11, v8, v10
-; FOLDING-NEXT:    vfwsub.vv v8, v9, v10
 ; FOLDING-NEXT:    vse64.v v12, (a0)
 ; FOLDING-NEXT:    vse64.v v11, (a1)
-; FOLDING-NEXT:    vse64.v v8, (a2)
+; FOLDING-NEXT:    vse64.v v13, (a2)
 ; FOLDING-NEXT:    ret
   %c = fpext <2 x float> %a to <2 x double>
   %d = fpext <2 x float> %b to <2 x double>

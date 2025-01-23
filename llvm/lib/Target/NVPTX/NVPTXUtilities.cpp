@@ -13,17 +13,13 @@
 #include "NVPTXUtilities.h"
 #include "NVPTX.h"
 #include "NVPTXTargetMachine.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Mutex.h"
-#include <algorithm>
 #include <cstring>
 #include <map>
 #include <mutex>
@@ -315,11 +311,13 @@ std::optional<unsigned> getMaxNReg(const Function &F) {
 }
 
 bool isKernelFunction(const Function &F) {
+  if (F.getCallingConv() == CallingConv::PTX_Kernel)
+    return true;
+
   if (const auto X = findOneNVVMAnnotation(&F, "kernel"))
     return (*X == 1);
 
-  // There is no NVVM metadata, check the calling convention
-  return F.getCallingConv() == CallingConv::PTX_Kernel;
+  return false;
 }
 
 MaybeAlign getAlign(const Function &F, unsigned Index) {

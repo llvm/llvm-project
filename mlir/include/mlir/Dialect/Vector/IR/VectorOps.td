@@ -40,7 +40,7 @@ def Vector_ContractionOp :
       DeclareOpInterfaceMethods<MaskableOpInterface>,
       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
     ]>,
-    Arguments<(ins AnyVector:$lhs, AnyVector:$rhs, AnyType:$acc,
+    Arguments<(ins AnyVectorOfNonZeroRank:$lhs, AnyVectorOfNonZeroRank:$rhs, AnyType:$acc,
                ArrayAttr:$indexing_maps,
                Vector_IteratorTypeArrayAttr:$iterator_types,
                DefaultValuedAttr<Vector_CombiningKindAttr,
@@ -285,7 +285,7 @@ def Vector_MultiDimReductionOp :
      DeclareOpInterfaceMethods<VectorUnrollOpInterface,
                                ["getShapeForUnroll"]>]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind,
-                   AnyVector:$source,
+                   AnyVectorOfNonZeroRank:$source,
                    AnyType:$acc,
                    DenseI64ArrayAttr:$reduction_dims)>,
     Results<(outs AnyType:$dest)> {
@@ -417,25 +417,26 @@ def Vector_BroadcastOp :
   let hasVerifier = 1;
 }
 
-def Vector_ShuffleOp :
-  Vector_Op<"shuffle", [Pure,
-     PredOpTrait<"first operand v1 and result have same element type",
-                 TCresVTEtIsSameAsOpBase<0, 0>>,
-     PredOpTrait<"second operand v2 and result have same element type",
-                 TCresVTEtIsSameAsOpBase<0, 1>>,
-     InferTypeOpAdaptor]>,
-     Arguments<(ins AnyFixedVector:$v1, AnyFixedVector:$v2,
-                    DenseI64ArrayAttr:$mask)>,
-     Results<(outs AnyVector:$vector)> {
+def Vector_ShuffleOp
+    : Vector_Op<
+          "shuffle",
+          [Pure,
+           PredOpTrait<"first operand v1 and result have same element type",
+                       TCresVTEtIsSameAsOpBase<0, 0>>,
+           PredOpTrait<"second operand v2 and result have same element type",
+                       TCresVTEtIsSameAsOpBase<0, 1>>,
+           InferTypeOpAdaptor]>,
+      Arguments<(ins AnyFixedVectorOfAnyRank:$v1, AnyFixedVectorOfAnyRank:$v2,
+          DenseI64ArrayAttr:$mask)>,
+      Results<(outs AnyVectorOfNonZeroRank:$vector)> {
   let summary = "shuffle operation";
   let description = [{
     The shuffle operation constructs a permutation (or duplication) of elements
     from two input vectors, returning a vector with the same element type as
     the input and a length that is the same as the shuffle mask. The two input
-    vectors must have the same element type, same rank , and trailing dimension
-    sizes and shuffles their values in the
-    leading dimension (which may differ in size) according to the given mask.
-    The legality rules are:
+    vectors must have the same element type, same rank, and trailing dimension
+    sizes and shuffles their values in the leading dimension (which may differ
+    in size) according to the given mask. The legality rules are:
     * the two operands must have the same element type as the result
       - Either, the two operands and the result must have the same
         rank and trailing dimension sizes, viz. given two k-D operands
@@ -446,7 +447,9 @@ def Vector_ShuffleOp :
     * the mask length equals the leading dimension size of the result
     * numbering the input vector indices left to right across the operands, all
       mask values must be within range, viz. given two k-D operands v1 and v2
-      above, all mask values are in the range [0,s_1+t_1)
+      above, all mask values are in the range [0,s_1+t_1). The value `-1`
+      represents a poison mask value, which specifies that the selected element
+      is poison.
 
     Note, scalable vectors are not supported.
 
@@ -461,10 +464,15 @@ def Vector_ShuffleOp :
                : vector<2xf32>, vector<2xf32>       ; yields vector<4xf32>
     %3 = vector.shuffle %a, %b[0, 1]
                : vector<f32>, vector<f32>           ; yields vector<2xf32>
+    %4 = vector.shuffle %a, %b[0, 4, -1, -1, -1, -1]
+               : vector<4xf32>, vector<4xf32>       ; yields vector<6xf32>
     ```
   }];
 
   let extraClassDeclaration = [{
+    // Integer to represent a poison value in a vector shuffle mask.
+    static constexpr int64_t kMaskPoisonValue = -1;
+
     VectorType getV1VectorType() {
       return ::llvm::cast<VectorType>(getV1().getType());
     }
@@ -531,7 +539,7 @@ def Vector_InterleaveOp :
   }];
 
   let arguments = (ins AnyVectorOfAnyRank:$lhs, AnyVectorOfAnyRank:$rhs);
-  let results = (outs AnyVector:$result);
+  let results = (outs AnyVectorOfNonZeroRank:$result);
 
   let assemblyFormat = [{
     $lhs `,` $rhs  attr-dict `:` type($lhs) `->` type($result)
@@ -610,8 +618,8 @@ def Vector_DeinterleaveOp :
         ```
       }];
 
-      let arguments = (ins AnyVector:$source);
-      let results = (outs AnyVector:$res1, AnyVector:$res2);
+      let arguments = (ins AnyVectorOfNonZeroRank:$source);
+      let results = (outs AnyVectorOfNonZeroRank:$res1, AnyVectorOfNonZeroRank:$res2);
 
       let assemblyFormat = [{
         $source attr-dict `:` type($source) `->` type($res1)
@@ -698,6 +706,8 @@ def Vector_ExtractOp :
     %4 = vector.extract %0[%a, %b, %c]: f32 from vector<4x8x16xf32>
     %5 = vector.extract %0[2, %b]: vector<16xf32> from vector<4x8x16xf32>
     ```
+
+    TODO: Implement support for poison indices.
   }];
 
   let arguments = (ins
@@ -758,7 +768,7 @@ def Vector_FMAOp :
   let summary = "vector fused multiply-add";
   let description = [{
     Multiply-add expressions operate on n-D vectors and compute a fused
-    pointwise multiply-and-accumulate: `$result = `$lhs * $rhs + $acc`.
+    pointwise multiply-and-accumulate: `$result = $lhs * $rhs + $acc`.
     All operands and result have the same vector type. The semantics
     of the operation correspond to those of the `llvm.fma`
     [intrinsic](https://llvm.org/docs/LangRef.html#int-fma). In the
@@ -804,10 +814,12 @@ def Vector_FromElementsOp : Vector_Op<"from_elements", [
     // [[[%f1, %f2]], [[%f3, %f4]], [[%f5, %f6]]]
     %3 = vector.from_elements %f1, %f2, %f3, %f4, %f5, %f6 : vector<3x1x2xf32>
     ```
+
+    Note, scalable vectors are not supported.
   }];
 
   let arguments = (ins Variadic<AnyType>:$elements);
-  let results = (outs AnyVectorOfAnyRank:$result);
+  let results = (outs AnyFixedVectorOfAnyRank:$result);
   let assemblyFormat = "$elements attr-dict `:` type($result)";
   let hasCanonicalizer = 1;
 }
@@ -886,6 +898,8 @@ def Vector_InsertOp :
     %11 = vector.insert %9, %10[%a, %b, %c] : vector<f32> into vector<4x8x16xf32>
     %12 = vector.insert %4, %10[2, %b] : vector<16xf32> into vector<4x8x16xf32>
     ```
+
+    TODO: Implement support for poison indices.
   }];
 
   let arguments = (ins
@@ -976,6 +990,8 @@ def Vector_ScalableInsertOp :
     ```mlir
     %2 = vector.scalable.insert %0, %1[5] : vector<4xf32> into vector<[16]xf32>
     ```
+
+    TODO: Implement support for poison indices.
   }];
 
   let assemblyFormat = [{
@@ -1027,6 +1043,8 @@ def Vector_ScalableExtractOp :
     ```mlir
     %1 = vector.scalable.extract %0[5] : vector<4xf32> from vector<[16]xf32>
     ```
+
+    TODO: Implement support for poison indices.
   }];
 
   let assemblyFormat = [{
@@ -1048,9 +1066,9 @@ def Vector_InsertStridedSliceOp :
     PredOpTrait<"operand #0 and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
     AllTypesMatch<["dest", "res"]>]>,
-    Arguments<(ins AnyVector:$source, AnyVector:$dest, I64ArrayAttr:$offsets,
+    Arguments<(ins AnyVectorOfNonZeroRank:$source, AnyVectorOfNonZeroRank:$dest, I64ArrayAttr:$offsets,
                I64ArrayAttr:$strides)>,
-    Results<(outs AnyVector:$res)> {
+    Results<(outs AnyVectorOfNonZeroRank:$res)> {
   let summary = "strided_slice operation";
   let description = [{
     Takes a k-D source vector, an n-D destination vector (n >= k), n-sized
@@ -1071,6 +1089,8 @@ def Vector_InsertStridedSliceOp :
         {offsets = [0, 0, 2], strides = [1, 1]}:
       vector<2x4xf32> into vector<16x4x8xf32>
     ```
+
+    TODO: Implement support for poison indices.
   }];
 
   let assemblyFormat = [{
@@ -1107,10 +1127,10 @@ def Vector_OuterProductOp :
     PredOpTrait<"rhs operand and result have same element type",
                 TCresVTEtIsSameAsOpBase<0, 1>>,
     DeclareOpInterfaceMethods<MaskableOpInterface>]>,
-    Arguments<(ins AnyVector:$lhs, AnyType:$rhs,
-               Optional<AnyVector>:$acc,
+    Arguments<(ins AnyVectorOfNonZeroRank:$lhs, AnyType:$rhs,
+               Optional<AnyVectorOfNonZeroRank>:$acc,
                DefaultValuedAttr<Vector_CombiningKindAttr, "CombiningKind::ADD">:$kind)>,
-    Results<(outs AnyVector)> {
+    Results<(outs AnyVectorOfNonZeroRank)> {
   let summary = "vector outerproduct with optional fused add";
   let description = [{
     Takes 2 1-D vectors and returns the 2-D vector containing the outer-product,
@@ -1190,9 +1210,9 @@ def Vector_ExtractStridedSliceOp :
   Vector_Op<"extract_strided_slice", [Pure,
     PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
-    Arguments<(ins AnyVector:$vector, I64ArrayAttr:$offsets,
+    Arguments<(ins AnyVectorOfNonZeroRank:$vector, I64ArrayAttr:$offsets,
                I64ArrayAttr:$sizes, I64ArrayAttr:$strides)>,
-    Results<(outs AnyVector)> {
+    Results<(outs AnyVectorOfNonZeroRank)> {
   let summary = "extract_strided_slice operation";
   let description = [{
     Takes an n-D vector, k-D `offsets` integer array attribute, a k-sized
@@ -1216,6 +1236,8 @@ def Vector_ExtractStridedSliceOp :
     %1 = vector.extract_strided_slice %0[0:2:1][2:4:1]
       vector<4x8x16xf32> to vector<2x4x16xf32>
     ```
+
+    TODO: Implement support for poison indices.
   }];
   let builders = [
     OpBuilder<(ins "Value":$source, "ArrayRef<int64_t>":$offsets,
@@ -1254,7 +1276,7 @@ def Vector_TransferReadOp :
                    Variadic<Index>:$indices,
                    AffineMapAttr:$permutation_map,
                    AnyType:$padding,
-                   Optional<VectorOf<[I1]>>:$mask,
+                   Optional<VectorOfNonZeroRankOf<[I1]>>:$mask,
                    BoolArrayAttr:$in_bounds)>,
     Results<(outs AnyVectorOfAnyRank:$vector)> {
 
@@ -1502,7 +1524,7 @@ def Vector_TransferWriteOp :
                    AnyShaped:$source,
                    Variadic<Index>:$indices,
                    AffineMapAttr:$permutation_map,
-                   Optional<VectorOf<[I1]>>:$mask,
+                   Optional<VectorOfNonZeroRankOf<[I1]>>:$mask,
                    BoolArrayAttr:$in_bounds)>,
     Results<(outs Optional<AnyRankedTensor>:$result)> {
 
@@ -1825,9 +1847,9 @@ def Vector_MaskedLoadOp :
   Vector_Op<"maskedload">,
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
-               VectorOf<[I1]>:$mask,
-               AnyVector:$pass_thru)>,
-    Results<(outs AnyVector:$result)> {
+               VectorOfNonZeroRankOf<[I1]>:$mask,
+               AnyVectorOfNonZeroRank:$pass_thru)>,
+    Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
   let summary = "loads elements from memory into a vector as defined by a mask vector";
 
@@ -1888,8 +1910,8 @@ def Vector_MaskedStoreOp :
   Vector_Op<"maskedstore">,
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
-               VectorOf<[I1]>:$mask,
-               AnyVector:$valueToStore)> {
+               VectorOfNonZeroRankOf<[I1]>:$mask,
+               AnyVectorOfNonZeroRank:$valueToStore)> {
 
   let summary = "stores elements from a vector into memory as defined by a mask vector";
 
@@ -1951,10 +1973,10 @@ def Vector_GatherOp :
   ]>,
     Arguments<(ins Arg<AnyShaped, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
-               VectorOf<[AnyInteger, Index]>:$index_vec,
-               VectorOf<[I1]>:$mask,
-               AnyVector:$pass_thru)>,
-    Results<(outs AnyVector:$result)> {
+               VectorOfNonZeroRankOf<[AnyInteger, Index]>:$index_vec,
+               VectorOfNonZeroRankOf<[I1]>:$mask,
+               AnyVectorOfNonZeroRank:$pass_thru)>,
+    Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
   let summary = [{
     gathers elements from memory or ranked tensor into a vector as defined by an
@@ -2082,9 +2104,9 @@ def Vector_ExpandLoadOp :
   Vector_Op<"expandload">,
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
-               VectorOf<[I1]>:$mask,
-               AnyVector:$pass_thru)>,
-    Results<(outs AnyVector:$result)> {
+               FixedVectorOfNonZeroRankOf<[I1]>:$mask,
+               AnyVectorOfNonZeroRank:$pass_thru)>,
+    Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
   let summary = "reads elements from memory and spreads them into a vector as defined by a mask";
 
@@ -2114,6 +2136,8 @@ def Vector_ExpandLoadOp :
     hardware ISA support for an expand. The semantics of the operation closely
     correspond to those of the `llvm.masked.expandload`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-expandload-intrinsics).
+
+    Note, at the moment this Op is only available for fixed-width vectors.
 
     Examples:
 
@@ -2149,8 +2173,8 @@ def Vector_CompressStoreOp :
   Vector_Op<"compressstore">,
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
-               VectorOf<[I1]>:$mask,
-               AnyVector:$valueToStore)> {
+               FixedVectorOfNonZeroRankOf<[I1]>:$mask,
+               AnyVectorOfNonZeroRank:$valueToStore)> {
 
   let summary = "writes elements selectively from a vector as defined by a mask";
 
@@ -2180,6 +2204,8 @@ def Vector_CompressStoreOp :
     hardware ISA support for a compress. The semantics of the operation closely
     correspond to those of the `llvm.masked.compressstore`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-compressstore-intrinsics).
+
+    Note, at the moment this Op is only available for fixed-width vectors.
 
     Examples:
 
@@ -2475,7 +2501,9 @@ def Vector_MaskOp : Vector_Op<"mask", [
     should not. The `vector.mask` operation returns the value produced by the
     masked execution of the nested operation, if any. The masked-off lanes in
     the result vector are taken from the corresponding lanes of the pass-thru
-    argument, if provided, or left unmodified, otherwise.
+    argument, if provided, or left unmodified, otherwise. At this point, 0-D
+    vectors are not supported by `vector.mask`. They may be supported in the
+    future.
 
     The `vector.mask` operation does not prescribe how a maskable operation
     should be masked or how a masked operation should be lowered. Masking
@@ -2506,7 +2534,7 @@ def Vector_MaskOp : Vector_Op<"mask", [
   }];
 
   // TODO: Support multiple passthru values.
-  let arguments = (ins VectorOf<[I1]>:$mask,
+  let arguments = (ins VectorOfNonZeroRankOf<[I1]>:$mask,
                    Optional<AnyType>:$passthru);
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$maskRegion);
@@ -2889,11 +2917,11 @@ def Vector_ScanOp :
     AllTypesMatch<["source", "dest"]>,
     AllTypesMatch<["initial_value", "accumulated_value"]> ]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind,
-                   AnyVector:$source,
+                   AnyVectorOfNonZeroRank:$source,
                    AnyVectorOfAnyRank:$initial_value,
                    I64Attr:$reduction_dim,
                    BoolAttr:$inclusive)>,
-    Results<(outs AnyVector:$dest,
+    Results<(outs AnyVectorOfNonZeroRank:$dest,
                   AnyVectorOfAnyRank:$accumulated_value)> {
   let summary = "Scan operation";
   let description = [{
@@ -2983,138 +3011,5 @@ def Vector_YieldOp : Vector_Op<"yield", [
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }
 
-def Vector_WarpExecuteOnLane0Op : Vector_Op<"warp_execute_on_lane_0",
-      [DeclareOpInterfaceMethods<RegionBranchOpInterface, ["areTypesCompatible"]>,
-       SingleBlockImplicitTerminator<"vector::YieldOp">,
-       RecursiveMemoryEffects]> {
-  let summary = "Executes operations in the associated region on thread #0 of a"
-                "SPMD program";
-  let description = [{
-    `warp_execute_on_lane_0` is an operation used to bridge the gap between
-    vector programming and SPMD programming model like GPU SIMT. It allows to
-    trivially convert a region of vector code meant to run on a multiple threads
-    into a valid SPMD region and then allows incremental transformation to
-    distribute vector operations on the threads.
-
-    Any code present in the region would only be executed on first thread/lane
-    based on the `laneid` operand. The `laneid` operand is an integer ID between
-    [0, `warp_size`). The `warp_size` attribute indicates the number of lanes in
-    a warp.
-
-    Operands are vector values distributed on all lanes that may be used by
-    the single lane execution. The matching region argument is a vector of all
-    the values of those lanes available to the single active lane. The
-    distributed dimension is implicit based on the shape of the operand and
-    argument. the properties of the distribution may be described by extra
-    attributes (e.g. affine map).
-
-    Return values are distributed on all lanes using laneId as index. The
-    vector is distributed based on the shape ratio between the vector type of
-    the yield and the result type.
-    If the shapes are the same this means the value is broadcasted to all lanes.
-    In the future the distribution can be made more explicit using affine_maps
-    and will support having multiple Ids.
-
-    Therefore the `warp_execute_on_lane_0` operations allow to implicitly copy
-    between lane0 and the lanes of the warp. When distributing a vector
-    from lane0 to all the lanes, the data are distributed in a block cyclic way.
-    For exemple `vector<64xf32>` gets distributed on 32 threads and map to
-    `vector<2xf32>` where thread 0 contains vector[0] and vector[1].
-
-    During lowering values passed as operands and return value need to be
-    visible to different lanes within the warp. This would usually be done by
-    going through memory.
-
-    The region is *not* isolated from above. For values coming from the parent
-    region not going through operands only the lane 0 value will be accesible so
-    it generally only make sense for uniform values.
-
-    Example:
-    ```
-    // Execute in parallel on all threads/lanes.
-    vector.warp_execute_on_lane_0 (%laneid)[32] {
-      // Serial code running only on thread/lane 0.
-      ...
-    }
-    // Execute in parallel on all threads/lanes.
-    ```
-
-    This may be lowered to an scf.if region as below:
-    ```
-      // Execute in parallel on all threads/lanes.
-      %cnd = arith.cmpi eq, %laneid, %c0 : index
-      scf.if %cnd {
-        // Serial code running only on thread/lane 0.
-        ...
-      }
-      // Execute in parallel on all threads/lanes.
-    ```
-
-    When the region has operands and/or return values:
-    ```
-    // Execute in parallel on all threads/lanes.
-    %0 = vector.warp_execute_on_lane_0(%laneid)[32]
-    args(%v0 : vector<4xi32>) -> (vector<1xf32>) {
-    ^bb0(%arg0 : vector<128xi32>) :
-      // Serial code running only on thread/lane 0.
-      ...
-      vector.yield %1 : vector<32xf32>
-    }
-    // Execute in parallel on all threads/lanes.
-    ```
-
-    values at the region boundary would go through memory:
-    ```
-    // Execute in parallel on all threads/lanes.
-    ...
-    // Store the data from each thread into memory and Synchronization.
-    %tmp0 = memreg.alloc() : memref<128xf32>
-    %tmp1 = memreg.alloc() : memref<32xf32>
-    %cnd = arith.cmpi eq, %laneid, %c0 : index
-    vector.store %v0, %tmp0[%laneid] : memref<128xf32>, vector<4xf32>
-    some_synchronization_primitive
-    scf.if %cnd {
-      // Serialized code running only on thread 0.
-      // Load the data from all the threads into a register from thread 0. This
-      // allow threads 0 to access data from all the threads.
-      %arg0 = vector.load %tmp0[%c0] : memref<128xf32>, vector<128xf32>
-      ...
-      // Store the data from thread 0 into memory.
-      vector.store %1, %tmp1[%c0] : memref<32xf32>, vector<32xf32>
-    }
-    // Synchronization and load the data in a block cyclic way so that the
-    // vector is distributed on all threads.
-    some_synchronization_primitive
-    %0 = vector.load %tmp1[%laneid] : memref<32xf32>, vector<32xf32>
-    // Execute in parallel on all threads/lanes.
-    ```
-
-  }];
-
-  let hasVerifier = 1;
-  let hasCustomAssemblyFormat = 1;
-  let arguments = (ins Index:$laneid, I64Attr:$warp_size,
-                       Variadic<AnyType>:$args);
-  let results = (outs Variadic<AnyType>:$results);
-  let regions = (region SizedRegion<1>:$warpRegion);
-
-  let skipDefaultBuilders = 1;
-  let builders = [
-    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$laneid,
-                   "int64_t":$warpSize)>,
-    // `blockArgTypes` are different than `args` types as they are they
-    // represent all the `args` instances visibile to lane 0. Therefore we need
-    // to explicit pass the type.
-    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$laneid,
-                   "int64_t":$warpSize, "ValueRange":$args,
-                   "TypeRange":$blockArgTypes)>
-  ];
-
-  let extraClassDeclaration = [{
-    bool isDefinedOutsideOfRegion(Value value) {
-      return !getRegion().isAncestor(value.getParentRegion());
-    }
-  }];
-}
 
 #endif // MLIR_DIALECT_VECTOR_IR_VECTOR_OPS

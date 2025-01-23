@@ -36,12 +36,12 @@ define <vscale x 32 x i32> @caller_scalable_vector_split_indirect(<vscale x 32 x
 ; RV32-NEXT:    sub sp, sp, a0
 ; RV32-NEXT:    andi sp, sp, -128
 ; RV32-NEXT:    addi a0, sp, 128
-; RV32-NEXT:    vs8r.v v8, (a0)
 ; RV32-NEXT:    csrr a1, vlenb
+; RV32-NEXT:    vs8r.v v8, (a0)
+; RV32-NEXT:    vsetvli a2, zero, e32, m8, ta, ma
+; RV32-NEXT:    vmv.v.i v8, 0
 ; RV32-NEXT:    slli a1, a1, 3
 ; RV32-NEXT:    add a1, a0, a1
-; RV32-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
-; RV32-NEXT:    vmv.v.i v8, 0
 ; RV32-NEXT:    addi a0, sp, 128
 ; RV32-NEXT:    vs8r.v v16, (a1)
 ; RV32-NEXT:    vmv.v.i v16, 0
@@ -71,12 +71,12 @@ define <vscale x 32 x i32> @caller_scalable_vector_split_indirect(<vscale x 32 x
 ; RV64-NEXT:    sub sp, sp, a0
 ; RV64-NEXT:    andi sp, sp, -128
 ; RV64-NEXT:    addi a0, sp, 128
-; RV64-NEXT:    vs8r.v v8, (a0)
 ; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    vs8r.v v8, (a0)
+; RV64-NEXT:    vsetvli a2, zero, e32, m8, ta, ma
+; RV64-NEXT:    vmv.v.i v8, 0
 ; RV64-NEXT:    slli a1, a1, 3
 ; RV64-NEXT:    add a1, a0, a1
-; RV64-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
-; RV64-NEXT:    vmv.v.i v8, 0
 ; RV64-NEXT:    addi a0, sp, 128
 ; RV64-NEXT:    vs8r.v v16, (a1)
 ; RV64-NEXT:    vmv.v.i v16, 0
@@ -103,6 +103,7 @@ define target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @caller_tuple_return(
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    call callee_tuple_return
+; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV32-NEXT:    vmv2r.v v6, v8
 ; RV32-NEXT:    vmv2r.v v8, v10
 ; RV32-NEXT:    vmv2r.v v10, v6
@@ -119,6 +120,7 @@ define target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @caller_tuple_return(
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    call callee_tuple_return
+; RV64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV64-NEXT:    vmv2r.v v6, v8
 ; RV64-NEXT:    vmv2r.v v8, v10
 ; RV64-NEXT:    vmv2r.v v10, v6
@@ -144,6 +146,7 @@ define void @caller_tuple_argument(target("riscv.vector.tuple", <vscale x 16 x i
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
+; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV32-NEXT:    vmv2r.v v6, v8
 ; RV32-NEXT:    vmv2r.v v8, v10
 ; RV32-NEXT:    vmv2r.v v10, v6
@@ -160,6 +163,7 @@ define void @caller_tuple_argument(target("riscv.vector.tuple", <vscale x 16 x i
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
+; RV64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; RV64-NEXT:    vmv2r.v v6, v8
 ; RV64-NEXT:    vmv2r.v v8, v10
 ; RV64-NEXT:    vmv2r.v v10, v6

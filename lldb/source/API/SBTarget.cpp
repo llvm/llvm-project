@@ -220,6 +220,13 @@ SBStructuredData SBTarget::GetStatistics(SBStatisticsOptions options) {
   return data;
 }
 
+void SBTarget::ResetStatistics() {
+  LLDB_INSTRUMENT_VA(this);
+  TargetSP target_sp(GetSP());
+  if (target_sp)
+    DebuggerStats::ResetStatistics(target_sp->GetDebugger(), target_sp.get());
+}
+
 void SBTarget::SetCollectingStats(bool v) {
   LLDB_INSTRUMENT_VA(this, v);
 

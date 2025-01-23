@@ -18,7 +18,7 @@ entry:
 define i64 @reduce_add2(<4 x i64> %v) {
 ; CHECK-LABEL: reduce_add2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 8
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vredsum.vs v8, v8, v10
@@ -282,10 +282,10 @@ define float @reduce_fadd4(float %x, float %y, <4 x float> %v, <4 x float> %w) {
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v10, fa0
 ; CHECK-NEXT:    vfredusum.vs v8, v8, v10
+; CHECK-NEXT:    vfmv.s.f v10, fa1
+; CHECK-NEXT:    vfredusum.vs v9, v9, v10
 ; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:    vfmv.s.f v8, fa1
-; CHECK-NEXT:    vfredusum.vs v8, v9, v8
-; CHECK-NEXT:    vfmv.f.s fa4, v8
+; CHECK-NEXT:    vfmv.f.s fa4, v9
 ; CHECK-NEXT:    fdiv.s fa0, fa5, fa4
 ; CHECK-NEXT:    ret
 entry:

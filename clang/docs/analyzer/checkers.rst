@@ -476,6 +476,9 @@ cplusplus.NewDelete (C++)
 """""""""""""""""""""""""
 Check for double-free and use-after-free problems. Traces memory managed by new/delete.
 
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
+
 .. literalinclude:: checkers/newdelete_example.cpp
     :language: cpp
 
@@ -484,6 +487,9 @@ Check for double-free and use-after-free problems. Traces memory managed by new/
 cplusplus.NewDeleteLeaks (C++)
 """"""""""""""""""""""""""""""
 Check for memory leaks. Traces memory managed by new/delete.
+
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
 
 .. code-block:: cpp
 
@@ -1263,6 +1269,9 @@ You can silence this warning either by bound checking the ``size`` parameter, or
 by explicitly marking the ``size`` parameter as sanitized. See the
 :ref:`optin-taint-GenericTaint` checker for an example.
 
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
+
 .. code-block:: c
 
   void vulnerable(void) {
@@ -1750,6 +1759,37 @@ Critical section handling functions modeled by this checker:
    }
  }
 
+.. _unix-Chroot:
+
+unix.Chroot (C)
+"""""""""""""""
+Check improper use of chroot described by SEI Cert C recommendation `POS05-C.
+Limit access to files by creating a jail
+<https://wiki.sei.cmu.edu/confluence/display/c/POS05-C.+Limit+access+to+files+by+creating+a+jail>`_.
+The checker finds usage patterns where ``chdir("/")`` is not called immediately
+after a call to ``chroot(path)``.
+
+.. code-block:: c
+
+ void f();
+
+ void test_bad() {
+   chroot("/usr/local");
+   f(); // warn: no call of chdir("/") immediately after chroot
+ }
+
+  void test_bad_path() {
+    chroot("/usr/local");
+    chdir("/usr"); // warn: no call of chdir("/") immediately after chroot
+    f();
+  }
+
+ void test_good() {
+   chroot("/usr/local");
+   chdir("/"); // no warning
+   f();
+ }
+
 .. _unix-Errno:
 
 unix.Errno (C)
@@ -1826,6 +1866,9 @@ unix.Malloc (C)
 """""""""""""""
 Check for memory leaks, double free, and use-after-free problems. Traces memory managed by malloc()/free().
 
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
+
 .. literalinclude:: checkers/unix_malloc_example.c
     :language: c
 
@@ -1834,6 +1877,9 @@ Check for memory leaks, double free, and use-after-free problems. Traces memory 
 unix.MallocSizeof (C)
 """""""""""""""""""""
 Check for dubious ``malloc`` arguments involving ``sizeof``.
+
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
 
 .. code-block:: c
 
@@ -1849,6 +1895,9 @@ Check for dubious ``malloc`` arguments involving ``sizeof``.
 unix.MismatchedDeallocator (C, C++)
 """""""""""""""""""""""""""""""""""
 Check for mismatched deallocators.
+
+Custom allocation/deallocation functions can be defined using
+:ref:`ownership attributes<analyzer-ownership-attrs>`.
 
 .. literalinclude:: checkers/mismatched_deallocator_example.cpp
     :language: c
@@ -1897,6 +1946,29 @@ Check the size argument passed into C string functions for common erroneous patt
    char dest[3];
    strncat(dest, """""""""""""""""""""""""*", sizeof(dest));
      // warn: potential buffer overflow
+ }
+
+.. _unix-cstring-NotNullTerminated:
+
+unix.cstring.NotNullTerminated (C)
+""""""""""""""""""""""""""""""""""
+Check for arguments which are not null-terminated strings;
+applies to the ``strlen``, ``strcpy``, ``strcat``, ``strcmp`` family of functions.
+
+Only very fundamental cases are detected where the passed memory block is
+absolutely different from a null-terminated string. This checker does not
+find if a memory buffer is passed where the terminating zero character
+is missing.
+
+.. code-block:: c
+
+ void test1() {
+   int l = strlen((char *)&test1); // warn
+ }
+
+ void test2() {
+ label:
+   int l = strlen((char *)&&label); // warn
  }
 
 .. _unix-cstring-NullArg:
@@ -2788,36 +2860,6 @@ Check for assignment of a fixed address to a pointer.
    p = (int *) 0x10000; // warn
  }
 
-.. _alpha-core-IdenticalExpr:
-
-alpha.core.IdenticalExpr (C, C++)
-"""""""""""""""""""""""""""""""""
-Warn about unintended use of identical expressions in operators.
-
-.. code-block:: cpp
-
- // C
- void test() {
-   int a = 5;
-   int b = a | 4 | a; // warn: identical expr on both sides
- }
-
- // C++
- bool f(void);
-
- void test(bool b) {
-   int i = 10;
-   if (f()) { // warn: true and false branches are identical
-     do {
-       i--;
-     } while (f());
-   } else {
-     do {
-       i--;
-     } while (f());
-   }
- }
-
 .. _alpha-core-PointerArithm:
 
 alpha.core.PointerArithm (C)
@@ -3275,21 +3317,6 @@ SEI CERT checkers which tries to find errors based on their `C coding rules <htt
 alpha.unix
 ^^^^^^^^^^
 
-.. _alpha-unix-Chroot:
-
-alpha.unix.Chroot (C)
-"""""""""""""""""""""
-Check improper use of chroot.
-
-.. code-block:: c
-
- void f();
-
- void test() {
-   chroot("/usr/local");
-   f(); // warn: no call of chdir("/") immediately after chroot
- }
-
 .. _alpha-unix-PthreadLock:
 
 alpha.unix.PthreadLock (C)
@@ -3367,29 +3394,6 @@ Checks for overlap in two buffer arguments. Applies to:  ``memcpy, mempcpy, wmem
    memcpy(a + 2, a + 1, 8); // warn
  }
 
-.. _alpha-unix-cstring-NotNullTerminated:
-
-alpha.unix.cstring.NotNullTerminated (C)
-""""""""""""""""""""""""""""""""""""""""
-Check for arguments which are not null-terminated strings;
-applies to the ``strlen``, ``strcpy``, ``strcat``, ``strcmp`` family of functions.
-
-Only very fundamental cases are detected where the passed memory block is
-absolutely different from a null-terminated string. This checker does not
-find if a memory buffer is passed where the terminating zero character
-is missing.
-
-.. code-block:: c
-
- void test1() {
-   int l = strlen((char *)&test); // warn
- }
-
- void test2() {
- label:
-   int l = strlen((char *)&&label); // warn
- }
-
 .. _alpha-unix-cstring-OutOfBounds:
 
 alpha.unix.cstring.OutOfBounds (C)
@@ -3451,6 +3455,31 @@ alpha.WebKit
 ^^^^^^^^^^^^
 
 .. _alpha-webkit-NoUncheckedPtrMemberChecker:
+
+alpha.webkit.MemoryUnsafeCastChecker
+""""""""""""""""""""""""""""""""""""""
+Check for all casts from a base type to its derived type as these might be memory-unsafe.
+
+Example:
+
+.. code-block:: cpp
+
+    class Base { };
+    class Derived : public Base { };
+
+    void f(Base* base) {
+        Derived* derived = static_cast<Derived*>(base); // ERROR
+    }
+
+For all cast operations (C-style casts, static_cast, reinterpret_cast, dynamic_cast), if the source type a `Base*` and the destination type is `Derived*`, where `Derived` inherits from `Base`, the static analyzer should signal an error.
+
+This applies to:
+
+- C structs, C++ structs and classes, and Objective-C classes and protocols.
+- Pointers and references.
+- Inside template instantiations and macro expansions that are visible to the compiler.
+
+For types like this, instead of using built in casts, the programmer will use helper functions that internally perform the appropriate type check and disable static analysis.
 
 alpha.webkit.NoUncheckedPtrMemberChecker
 """"""""""""""""""""""""""""""""""""""""

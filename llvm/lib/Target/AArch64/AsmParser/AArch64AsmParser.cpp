@@ -42,7 +42,7 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Casting.h"
+#include "llvm/Support/AArch64BuildAttributes.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -228,6 +228,8 @@ private:
   bool parseDirectiveSEHClearUnwoundToCall(SMLoc L);
   bool parseDirectiveSEHPACSignLR(SMLoc L);
   bool parseDirectiveSEHSaveAnyReg(SMLoc L, bool Paired, bool Writeback);
+  bool parseDirectiveAeabiSubSectionHeader(SMLoc L);
+  bool parseDirectiveAeabiAArch64Attr(SMLoc L);
 
   bool validateInstruction(MCInst &Inst, SMLoc &IDLoc,
                            SmallVectorImpl<SMLoc> &Loc);
@@ -904,6 +906,7 @@ public:
         ELFRefKind == AArch64MCExpr::VK_TPREL_LO12_NC ||
         ELFRefKind == AArch64MCExpr::VK_GOTTPREL_LO12_NC ||
         ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12 ||
+        ELFRefKind == AArch64MCExpr::VK_TLSDESC_AUTH_LO12 ||
         ELFRefKind == AArch64MCExpr::VK_SECREL_LO12 ||
         ELFRefKind == AArch64MCExpr::VK_SECREL_HI12 ||
         ELFRefKind == AArch64MCExpr::VK_GOT_PAGE_LO15) {
@@ -1021,6 +1024,7 @@ public:
              ELFRefKind == AArch64MCExpr::VK_TPREL_LO12 ||
              ELFRefKind == AArch64MCExpr::VK_TPREL_LO12_NC ||
              ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12 ||
+             ELFRefKind == AArch64MCExpr::VK_TLSDESC_AUTH_LO12 ||
              ELFRefKind == AArch64MCExpr::VK_SECREL_HI12 ||
              ELFRefKind == AArch64MCExpr::VK_SECREL_LO12;
     }
@@ -1445,11 +1449,12 @@ public:
 
   /// Is this a vector list with the type implicit (presumably attached to the
   /// instruction itself)?
-  template <RegKind VectorKind, unsigned NumRegs>
+  template <RegKind VectorKind, unsigned NumRegs, bool IsConsecutive = false>
   bool isImplicitlyTypedVectorList() const {
     return Kind == k_VectorList && VectorList.Count == NumRegs &&
            VectorList.NumElements == 0 &&
-           VectorList.RegisterKind == VectorKind;
+           VectorList.RegisterKind == VectorKind &&
+           (!IsConsecutive || (VectorList.Stride == 1));
   }
 
   template <RegKind VectorKind, unsigned NumRegs, unsigned NumElements,
@@ -1864,9 +1869,12 @@ public:
     VecListIdx_PReg = 3,
   };
 
-  template <VecListIndexType RegTy, unsigned NumRegs>
+  template <VecListIndexType RegTy, unsigned NumRegs,
+            bool IsConsecutive = false>
   void addVectorListOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
+    assert((!IsConsecutive || (getVectorListStride() == 1)) &&
+           "Expected consecutive registers");
     static const unsigned FirstRegs[][5] = {
       /* DReg */ { AArch64::Q0,
                    AArch64::D0,       AArch64::D0_D1,
@@ -3025,7 +3033,7 @@ unsigned AArch64AsmParser::matchRegisterNameAlias(StringRef Name,
     return Kind == RegKind::Matrix ? RegNum : 0;
 
  if (Name.equals_insensitive("zt0"))
-    return Kind == RegKind::LookupTable ? AArch64::ZT0 : 0;
+    return Kind == RegKind::LookupTable ? unsigned(AArch64::ZT0) : 0;
 
   // The parsed register must be of RegKind Scalar
   if ((RegNum = MatchRegisterName(Name)))
@@ -3314,7 +3322,8 @@ ParseStatus AArch64AsmParser::tryParseAdrpLabel(OperandVector &Operands) {
                ELFRefKind != AArch64MCExpr::VK_GOT_AUTH_PAGE &&
                ELFRefKind != AArch64MCExpr::VK_GOT_PAGE_LO15 &&
                ELFRefKind != AArch64MCExpr::VK_GOTTPREL_PAGE &&
-               ELFRefKind != AArch64MCExpr::VK_TLSDESC_PAGE) {
+               ELFRefKind != AArch64MCExpr::VK_TLSDESC_PAGE &&
+               ELFRefKind != AArch64MCExpr::VK_TLSDESC_AUTH_PAGE) {
       // The operand must be an @page or @gotpage qualified symbolref.
       return Error(S, "page or gotpage label reference expected");
     }
@@ -3354,7 +3363,13 @@ ParseStatus AArch64AsmParser::tryParseAdrLabel(OperandVector &Operands) {
       // No modifier was specified at all; this is the syntax for an ELF basic
       // ADR relocation (unfortunately).
       Expr = AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS, getContext());
-    } else {
+    } else if (ELFRefKind != AArch64MCExpr::VK_GOT_AUTH_PAGE) {
+      // For tiny code model, we use :got_auth: operator to fill 21-bit imm of
+      // adr. It's not actually GOT entry page address but the GOT address
+      // itself - we just share the same variant kind with :got_auth: operator
+      // applied for adrp.
+      // TODO: can we somehow get current TargetMachine object to call
+      // getCodeModel() on it to ensure we are using tiny code model?
       return Error(S, "unexpected adr label");
     }
   }
@@ -3738,10 +3753,14 @@ static const struct Extension {
     {"sve", {AArch64::FeatureSVE}},
     {"sve-b16b16", {AArch64::FeatureSVEB16B16}},
     {"sve2", {AArch64::FeatureSVE2}},
-    {"sve2-aes", {AArch64::FeatureSVE2AES}},
+    {"sve-aes", {AArch64::FeatureSVEAES}},
+    {"sve2-aes", {AArch64::FeatureAliasSVE2AES, AArch64::FeatureSVEAES}},
     {"sve2-sm4", {AArch64::FeatureSVE2SM4}},
     {"sve2-sha3", {AArch64::FeatureSVE2SHA3}},
-    {"sve2-bitperm", {AArch64::FeatureSVE2BitPerm}},
+    {"sve-bitperm", {AArch64::FeatureSVEBitPerm}},
+    {"sve2-bitperm",
+     {AArch64::FeatureAliasSVE2BitPerm, AArch64::FeatureSVEBitPerm,
+      AArch64::FeatureSVE2}},
     {"sve2p1", {AArch64::FeatureSVE2p1}},
     {"ls64", {AArch64::FeatureLS64}},
     {"xs", {AArch64::FeatureXS}},
@@ -3813,6 +3832,9 @@ static const struct Extension {
     {"lsui", {AArch64::FeatureLSUI}},
     {"occmo", {AArch64::FeatureOCCMO}},
     {"pcdphint", {AArch64::FeaturePCDPHINT}},
+    {"ssve-bitperm", {AArch64::FeatureSSVE_BitPerm}},
+    {"sme-mop4", {AArch64::FeatureSME_MOP4}},
+    {"sme-tmop", {AArch64::FeatureSME_TMOP}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
@@ -4391,56 +4413,59 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
       return TokError("expect relocation specifier in operand after ':'");
 
     std::string LowerCase = getTok().getIdentifier().lower();
-    RefKind = StringSwitch<AArch64MCExpr::VariantKind>(LowerCase)
-                  .Case("lo12", AArch64MCExpr::VK_LO12)
-                  .Case("abs_g3", AArch64MCExpr::VK_ABS_G3)
-                  .Case("abs_g2", AArch64MCExpr::VK_ABS_G2)
-                  .Case("abs_g2_s", AArch64MCExpr::VK_ABS_G2_S)
-                  .Case("abs_g2_nc", AArch64MCExpr::VK_ABS_G2_NC)
-                  .Case("abs_g1", AArch64MCExpr::VK_ABS_G1)
-                  .Case("abs_g1_s", AArch64MCExpr::VK_ABS_G1_S)
-                  .Case("abs_g1_nc", AArch64MCExpr::VK_ABS_G1_NC)
-                  .Case("abs_g0", AArch64MCExpr::VK_ABS_G0)
-                  .Case("abs_g0_s", AArch64MCExpr::VK_ABS_G0_S)
-                  .Case("abs_g0_nc", AArch64MCExpr::VK_ABS_G0_NC)
-                  .Case("prel_g3", AArch64MCExpr::VK_PREL_G3)
-                  .Case("prel_g2", AArch64MCExpr::VK_PREL_G2)
-                  .Case("prel_g2_nc", AArch64MCExpr::VK_PREL_G2_NC)
-                  .Case("prel_g1", AArch64MCExpr::VK_PREL_G1)
-                  .Case("prel_g1_nc", AArch64MCExpr::VK_PREL_G1_NC)
-                  .Case("prel_g0", AArch64MCExpr::VK_PREL_G0)
-                  .Case("prel_g0_nc", AArch64MCExpr::VK_PREL_G0_NC)
-                  .Case("dtprel_g2", AArch64MCExpr::VK_DTPREL_G2)
-                  .Case("dtprel_g1", AArch64MCExpr::VK_DTPREL_G1)
-                  .Case("dtprel_g1_nc", AArch64MCExpr::VK_DTPREL_G1_NC)
-                  .Case("dtprel_g0", AArch64MCExpr::VK_DTPREL_G0)
-                  .Case("dtprel_g0_nc", AArch64MCExpr::VK_DTPREL_G0_NC)
-                  .Case("dtprel_hi12", AArch64MCExpr::VK_DTPREL_HI12)
-                  .Case("dtprel_lo12", AArch64MCExpr::VK_DTPREL_LO12)
-                  .Case("dtprel_lo12_nc", AArch64MCExpr::VK_DTPREL_LO12_NC)
-                  .Case("pg_hi21_nc", AArch64MCExpr::VK_ABS_PAGE_NC)
-                  .Case("tprel_g2", AArch64MCExpr::VK_TPREL_G2)
-                  .Case("tprel_g1", AArch64MCExpr::VK_TPREL_G1)
-                  .Case("tprel_g1_nc", AArch64MCExpr::VK_TPREL_G1_NC)
-                  .Case("tprel_g0", AArch64MCExpr::VK_TPREL_G0)
-                  .Case("tprel_g0_nc", AArch64MCExpr::VK_TPREL_G0_NC)
-                  .Case("tprel_hi12", AArch64MCExpr::VK_TPREL_HI12)
-                  .Case("tprel_lo12", AArch64MCExpr::VK_TPREL_LO12)
-                  .Case("tprel_lo12_nc", AArch64MCExpr::VK_TPREL_LO12_NC)
-                  .Case("tlsdesc_lo12", AArch64MCExpr::VK_TLSDESC_LO12)
-                  .Case("got", AArch64MCExpr::VK_GOT_PAGE)
-                  .Case("gotpage_lo15", AArch64MCExpr::VK_GOT_PAGE_LO15)
-                  .Case("got_lo12", AArch64MCExpr::VK_GOT_LO12)
-                  .Case("got_auth", AArch64MCExpr::VK_GOT_AUTH_PAGE)
-                  .Case("got_auth_lo12", AArch64MCExpr::VK_GOT_AUTH_LO12)
-                  .Case("gottprel", AArch64MCExpr::VK_GOTTPREL_PAGE)
-                  .Case("gottprel_lo12", AArch64MCExpr::VK_GOTTPREL_LO12_NC)
-                  .Case("gottprel_g1", AArch64MCExpr::VK_GOTTPREL_G1)
-                  .Case("gottprel_g0_nc", AArch64MCExpr::VK_GOTTPREL_G0_NC)
-                  .Case("tlsdesc", AArch64MCExpr::VK_TLSDESC_PAGE)
-                  .Case("secrel_lo12", AArch64MCExpr::VK_SECREL_LO12)
-                  .Case("secrel_hi12", AArch64MCExpr::VK_SECREL_HI12)
-                  .Default(AArch64MCExpr::VK_INVALID);
+    RefKind =
+        StringSwitch<AArch64MCExpr::VariantKind>(LowerCase)
+            .Case("lo12", AArch64MCExpr::VK_LO12)
+            .Case("abs_g3", AArch64MCExpr::VK_ABS_G3)
+            .Case("abs_g2", AArch64MCExpr::VK_ABS_G2)
+            .Case("abs_g2_s", AArch64MCExpr::VK_ABS_G2_S)
+            .Case("abs_g2_nc", AArch64MCExpr::VK_ABS_G2_NC)
+            .Case("abs_g1", AArch64MCExpr::VK_ABS_G1)
+            .Case("abs_g1_s", AArch64MCExpr::VK_ABS_G1_S)
+            .Case("abs_g1_nc", AArch64MCExpr::VK_ABS_G1_NC)
+            .Case("abs_g0", AArch64MCExpr::VK_ABS_G0)
+            .Case("abs_g0_s", AArch64MCExpr::VK_ABS_G0_S)
+            .Case("abs_g0_nc", AArch64MCExpr::VK_ABS_G0_NC)
+            .Case("prel_g3", AArch64MCExpr::VK_PREL_G3)
+            .Case("prel_g2", AArch64MCExpr::VK_PREL_G2)
+            .Case("prel_g2_nc", AArch64MCExpr::VK_PREL_G2_NC)
+            .Case("prel_g1", AArch64MCExpr::VK_PREL_G1)
+            .Case("prel_g1_nc", AArch64MCExpr::VK_PREL_G1_NC)
+            .Case("prel_g0", AArch64MCExpr::VK_PREL_G0)
+            .Case("prel_g0_nc", AArch64MCExpr::VK_PREL_G0_NC)
+            .Case("dtprel_g2", AArch64MCExpr::VK_DTPREL_G2)
+            .Case("dtprel_g1", AArch64MCExpr::VK_DTPREL_G1)
+            .Case("dtprel_g1_nc", AArch64MCExpr::VK_DTPREL_G1_NC)
+            .Case("dtprel_g0", AArch64MCExpr::VK_DTPREL_G0)
+            .Case("dtprel_g0_nc", AArch64MCExpr::VK_DTPREL_G0_NC)
+            .Case("dtprel_hi12", AArch64MCExpr::VK_DTPREL_HI12)
+            .Case("dtprel_lo12", AArch64MCExpr::VK_DTPREL_LO12)
+            .Case("dtprel_lo12_nc", AArch64MCExpr::VK_DTPREL_LO12_NC)
+            .Case("pg_hi21_nc", AArch64MCExpr::VK_ABS_PAGE_NC)
+            .Case("tprel_g2", AArch64MCExpr::VK_TPREL_G2)
+            .Case("tprel_g1", AArch64MCExpr::VK_TPREL_G1)
+            .Case("tprel_g1_nc", AArch64MCExpr::VK_TPREL_G1_NC)
+            .Case("tprel_g0", AArch64MCExpr::VK_TPREL_G0)
+            .Case("tprel_g0_nc", AArch64MCExpr::VK_TPREL_G0_NC)
+            .Case("tprel_hi12", AArch64MCExpr::VK_TPREL_HI12)
+            .Case("tprel_lo12", AArch64MCExpr::VK_TPREL_LO12)
+            .Case("tprel_lo12_nc", AArch64MCExpr::VK_TPREL_LO12_NC)
+            .Case("tlsdesc_lo12", AArch64MCExpr::VK_TLSDESC_LO12)
+            .Case("tlsdesc_auth_lo12", AArch64MCExpr::VK_TLSDESC_AUTH_LO12)
+            .Case("got", AArch64MCExpr::VK_GOT_PAGE)
+            .Case("gotpage_lo15", AArch64MCExpr::VK_GOT_PAGE_LO15)
+            .Case("got_lo12", AArch64MCExpr::VK_GOT_LO12)
+            .Case("got_auth", AArch64MCExpr::VK_GOT_AUTH_PAGE)
+            .Case("got_auth_lo12", AArch64MCExpr::VK_GOT_AUTH_LO12)
+            .Case("gottprel", AArch64MCExpr::VK_GOTTPREL_PAGE)
+            .Case("gottprel_lo12", AArch64MCExpr::VK_GOTTPREL_LO12_NC)
+            .Case("gottprel_g1", AArch64MCExpr::VK_GOTTPREL_G1)
+            .Case("gottprel_g0_nc", AArch64MCExpr::VK_GOTTPREL_G0_NC)
+            .Case("tlsdesc", AArch64MCExpr::VK_TLSDESC_PAGE)
+            .Case("tlsdesc_auth", AArch64MCExpr::VK_TLSDESC_AUTH_PAGE)
+            .Case("secrel_lo12", AArch64MCExpr::VK_SECREL_LO12)
+            .Case("secrel_hi12", AArch64MCExpr::VK_SECREL_HI12)
+            .Default(AArch64MCExpr::VK_INVALID);
 
     if (RefKind == AArch64MCExpr::VK_INVALID)
       return TokError("expect relocation specifier in operand after ':'");
@@ -5814,6 +5839,7 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
              ELFRefKind == AArch64MCExpr::VK_TPREL_LO12 ||
              ELFRefKind == AArch64MCExpr::VK_TPREL_LO12_NC ||
              ELFRefKind == AArch64MCExpr::VK_TLSDESC_LO12 ||
+             ELFRefKind == AArch64MCExpr::VK_TLSDESC_AUTH_LO12 ||
              ELFRefKind == AArch64MCExpr::VK_SECREL_LO12 ||
              ELFRefKind == AArch64MCExpr::VK_SECREL_HI12) &&
             (Inst.getOpcode() == AArch64::ADDXri ||
@@ -6968,6 +6994,7 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
   const MCContext::Environment Format = getContext().getObjectFileType();
   bool IsMachO = Format == MCContext::IsMachO;
   bool IsCOFF = Format == MCContext::IsCOFF;
+  bool IsELF = Format == MCContext::IsELF;
 
   auto IDVal = DirectiveID.getIdentifier().lower();
   SMLoc Loc = DirectiveID.getLoc();
@@ -7061,6 +7088,13 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
       parseDirectiveSEHSaveAnyReg(Loc, false, true);
     else if (IDVal == ".seh_save_any_reg_px")
       parseDirectiveSEHSaveAnyReg(Loc, true, true);
+    else
+      return true;
+  } else if (IsELF) {
+    if (IDVal == ".aeabi_subsection")
+      parseDirectiveAeabiSubSectionHeader(Loc);
+    else if (IDVal == ".aeabi_attribute")
+      parseDirectiveAeabiAArch64Attr(Loc);
     else
       return true;
   } else
@@ -7795,6 +7829,265 @@ bool AArch64AsmParser::parseDirectiveSEHSaveAnyReg(SMLoc L, bool Paired,
     }
   } else {
     return Error(Start, "save_any_reg register must be x, q or d register");
+  }
+  return false;
+}
+
+bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
+  // Expecting 3 AsmToken::Identifier after '.aeabi_subsection', a name and 2
+  // parameters, e.g.: .aeabi_subsection (1)aeabi_feature_and_bits, (2)optional,
+  // (3)uleb128 separated by 2 commas.
+  MCAsmParser &Parser = getParser();
+
+  // Consume the name (subsection name)
+  StringRef SubsectionName;
+  AArch64BuildAttributes::VendorID SubsectionNameID;
+  if (Parser.getTok().is(AsmToken::Identifier)) {
+    SubsectionName = Parser.getTok().getIdentifier();
+    SubsectionNameID = AArch64BuildAttributes::getVendorID(SubsectionName);
+  } else {
+    Error(Parser.getTok().getLoc(), "subsection name not found");
+    return true;
+  }
+  Parser.Lex();
+  // consume a comma
+  // parseComma() return *false* on success, and call Lex(), no need to call
+  // Lex() again.
+  if (Parser.parseComma()) {
+    return true;
+  }
+
+  std::unique_ptr<MCELFStreamer::AttributeSubSection> SubsectionExists =
+      getTargetStreamer().getAtributesSubsectionByName(SubsectionName);
+
+  // Consume the first parameter (optionality parameter)
+  AArch64BuildAttributes::SubsectionOptional IsOptional;
+  // options: optional/required
+  if (Parser.getTok().is(AsmToken::Identifier)) {
+    StringRef Optionality = Parser.getTok().getIdentifier();
+    IsOptional = AArch64BuildAttributes::getOptionalID(Optionality);
+    if (AArch64BuildAttributes::OPTIONAL_NOT_FOUND == IsOptional) {
+      Error(Parser.getTok().getLoc(),
+            AArch64BuildAttributes::getSubsectionOptionalUnknownError() + ": " +
+                Optionality);
+      return true;
+    }
+    if (SubsectionExists) {
+      if (IsOptional != SubsectionExists->IsOptional) {
+        Error(Parser.getTok().getLoc(),
+              "optionality mismatch! subsection '" + SubsectionName +
+                  "' already exists with optionality defined as '" +
+                  AArch64BuildAttributes::getOptionalStr(
+                      SubsectionExists->IsOptional) +
+                  "' and not '" +
+                  AArch64BuildAttributes::getOptionalStr(IsOptional) + "'");
+        return true;
+      }
+    }
+  } else {
+    Error(Parser.getTok().getLoc(),
+          "optionality parameter not found, expected required|optional");
+    return true;
+  }
+  // Check for possible IsOptional unaccepted values for known subsections
+  if (AArch64BuildAttributes::AEABI_FEATURE_AND_BITS == SubsectionNameID) {
+    if (AArch64BuildAttributes::REQUIRED == IsOptional) {
+      Error(Parser.getTok().getLoc(),
+            "aeabi_feature_and_bits must be marked as optional");
+      return true;
+    }
+  }
+  if (AArch64BuildAttributes::AEABI_PAUTHABI == SubsectionNameID) {
+    if (AArch64BuildAttributes::OPTIONAL == IsOptional) {
+      Error(Parser.getTok().getLoc(),
+            "aeabi_pauthabi must be marked as required");
+      return true;
+    }
+  }
+  Parser.Lex();
+  // consume a comma
+  if (Parser.parseComma()) {
+    return true;
+  }
+
+  // Consume the second parameter (type parameter)
+  AArch64BuildAttributes::SubsectionType Type;
+  if (Parser.getTok().is(AsmToken::Identifier)) {
+    StringRef Name = Parser.getTok().getIdentifier();
+    Type = AArch64BuildAttributes::getTypeID(Name);
+    if (AArch64BuildAttributes::TYPE_NOT_FOUND == Type) {
+      Error(Parser.getTok().getLoc(),
+            AArch64BuildAttributes::getSubsectionTypeUnknownError() + ": " +
+                Name);
+      return true;
+    }
+    if (SubsectionExists) {
+      if (Type != SubsectionExists->ParameterType) {
+        Error(Parser.getTok().getLoc(),
+              "type mismatch! subsection '" + SubsectionName +
+                  "' already exists with type defined as '" +
+                  AArch64BuildAttributes::getTypeStr(
+                      SubsectionExists->ParameterType) +
+                  "' and not '" + AArch64BuildAttributes::getTypeStr(Type) +
+                  "'");
+        return true;
+      }
+    }
+  } else {
+    Error(Parser.getTok().getLoc(),
+          "type parameter not found, expected uleb128|ntbs");
+    return true;
+  }
+  // Check for possible unaccepted 'type' values for known subsections
+  if (AArch64BuildAttributes::AEABI_FEATURE_AND_BITS == SubsectionNameID ||
+      AArch64BuildAttributes::AEABI_PAUTHABI == SubsectionNameID) {
+    if (AArch64BuildAttributes::NTBS == Type) {
+      Error(Parser.getTok().getLoc(),
+            SubsectionName + " must be marked as ULEB128");
+      return true;
+    }
+  }
+  Parser.Lex();
+  // Parsing finished, check for trailing tokens.
+  if (Parser.getTok().isNot(llvm::AsmToken::EndOfStatement)) {
+    Error(Parser.getTok().getLoc(), "unexpected token for AArch64 build "
+                                    "attributes subsection header directive");
+    return true;
+  }
+
+  getTargetStreamer().emitAtributesSubsection(SubsectionName, IsOptional, Type);
+
+  return false;
+}
+
+bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
+  // Expecting 2 Tokens: after '.aeabi_attribute', e.g.:
+  // .aeabi_attribute	(1)Tag_Feature_BTI, (2)[uleb128|ntbs]
+  // separated by a comma.
+  MCAsmParser &Parser = getParser();
+
+  std::unique_ptr<MCELFStreamer::AttributeSubSection> ActiveSubsection =
+      getTargetStreamer().getActiveAtributesSubsection();
+  if (nullptr == ActiveSubsection) {
+    Error(Parser.getTok().getLoc(),
+          "no active subsection, build attribute can not be added");
+    return true;
+  }
+  StringRef ActiveSubsectionName = ActiveSubsection->VendorName;
+  unsigned ActiveSubsectionType = ActiveSubsection->ParameterType;
+
+  unsigned ActiveSubsectionID = AArch64BuildAttributes::VENDOR_UNKNOWN;
+  if (AArch64BuildAttributes::getVendorName(
+          AArch64BuildAttributes::AEABI_PAUTHABI) == ActiveSubsectionName)
+    ActiveSubsectionID = AArch64BuildAttributes::AEABI_PAUTHABI;
+  if (AArch64BuildAttributes::getVendorName(
+          AArch64BuildAttributes::AEABI_FEATURE_AND_BITS) ==
+      ActiveSubsectionName)
+    ActiveSubsectionID = AArch64BuildAttributes::AEABI_FEATURE_AND_BITS;
+
+  StringRef TagStr = "";
+  unsigned Tag;
+  if (Parser.getTok().is(AsmToken::Identifier)) {
+    TagStr = Parser.getTok().getIdentifier();
+    switch (ActiveSubsectionID) {
+    default:
+      assert(0 && "Subsection name error");
+      break;
+    case AArch64BuildAttributes::VENDOR_UNKNOWN:
+      // Private subsection, accept any tag.
+      break;
+    case AArch64BuildAttributes::AEABI_PAUTHABI:
+      Tag = AArch64BuildAttributes::getPauthABITagsID(TagStr);
+      if (AArch64BuildAttributes::PAUTHABI_TAG_NOT_FOUND == Tag) {
+        Error(Parser.getTok().getLoc(), "unknown AArch64 build attribute '" +
+                                            TagStr + "' for subsection '" +
+                                            ActiveSubsectionName + "'");
+        return true;
+      }
+      break;
+    case AArch64BuildAttributes::AEABI_FEATURE_AND_BITS:
+      Tag = AArch64BuildAttributes::getFeatureAndBitsTagsID(TagStr);
+      if (AArch64BuildAttributes::FEATURE_AND_BITS_TAG_NOT_FOUND == Tag) {
+        Error(Parser.getTok().getLoc(), "unknown AArch64 build attribute '" +
+                                            TagStr + "' for subsection '" +
+                                            ActiveSubsectionName + "'");
+        return true;
+      }
+      break;
+    }
+  } else if (Parser.getTok().is(AsmToken::Integer)) {
+    Tag = getTok().getIntVal();
+  } else {
+    Error(Parser.getTok().getLoc(), "AArch64 build attributes tag not found");
+    return true;
+  }
+  Parser.Lex();
+  // consume a comma
+  // parseComma() return *false* on success, and call Lex(), no need to call
+  // Lex() again.
+  if (Parser.parseComma()) {
+    return true;
+  }
+
+  // Consume the second parameter (attribute value)
+  unsigned ValueInt = unsigned(-1);
+  std::string ValueStr = "";
+  if (Parser.getTok().is(AsmToken::Integer)) {
+    if (AArch64BuildAttributes::NTBS == ActiveSubsectionType) {
+      Error(
+          Parser.getTok().getLoc(),
+          "active subsection type is NTBS (string), found ULEB128 (unsigned)");
+      return true;
+    }
+    ValueInt = getTok().getIntVal();
+  } else if (Parser.getTok().is(AsmToken::Identifier)) {
+    if (AArch64BuildAttributes::ULEB128 == ActiveSubsectionType) {
+      Error(
+          Parser.getTok().getLoc(),
+          "active subsection type is ULEB128 (unsigned), found NTBS (string)");
+      return true;
+    }
+    ValueStr = Parser.getTok().getIdentifier();
+  } else if (Parser.getTok().is(AsmToken::String)) {
+    if (AArch64BuildAttributes::ULEB128 == ActiveSubsectionType) {
+      Error(
+          Parser.getTok().getLoc(),
+          "active subsection type is ULEB128 (unsigned), found NTBS (string)");
+      return true;
+    }
+    ValueStr = Parser.getTok().getString();
+  } else {
+    Error(Parser.getTok().getLoc(), "AArch64 build attributes value not found");
+    return true;
+  }
+  // Check for possible unaccepted values for known tags (AEABI_PAUTHABI,
+  // AEABI_FEATURE_AND_BITS)
+  if (!(ActiveSubsectionID == AArch64BuildAttributes::VENDOR_UNKNOWN) &&
+      TagStr != "") { // TagStr was a recognized string
+    if (0 != ValueInt && 1 != ValueInt) {
+      Error(Parser.getTok().getLoc(),
+            "unknown AArch64 build attributes Value for Tag '" + TagStr +
+                "' options are 0|1");
+      return true;
+    }
+  }
+  Parser.Lex();
+  // Parsing finished, check for trailing tokens.
+  if (Parser.getTok().isNot(llvm::AsmToken::EndOfStatement)) {
+    Error(Parser.getTok().getLoc(),
+          "unexpected token for AArch64 build attributes tag and value "
+          "attribute directive");
+    return true;
+  }
+
+  if (unsigned(-1) != ValueInt) {
+    getTargetStreamer().emitAttribute(ActiveSubsectionName, Tag, ValueInt, "",
+                                      false);
+  }
+
+  if ("" != ValueStr) {
+    getTargetStreamer().emitAttribute(ActiveSubsectionName, Tag, unsigned(-1),
+                                      ValueStr, false);
   }
   return false;
 }

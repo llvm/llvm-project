@@ -112,7 +112,7 @@ void test_builtin_elementwise_add_sat(float f1, float f2, double d1, double d2,
   // CHECK-NEXT: call i32 @llvm.sadd.sat.i32(i32 [[IAS1]], i32 [[B]])
   int_as_one = __builtin_elementwise_add_sat(int_as_one, b);
 
-  // CHECK: call i32 @llvm.sadd.sat.i32(i32 1, i32 97)
+  // CHECK: store i64 98, ptr %i1.addr, align 8
   i1 = __builtin_elementwise_add_sat(1, 'a');
 }
 
@@ -165,7 +165,7 @@ void test_builtin_elementwise_sub_sat(float f1, float f2, double d1, double d2,
   // CHECK-NEXT: call i32 @llvm.ssub.sat.i32(i32 [[IAS1]], i32 [[B]])
   int_as_one = __builtin_elementwise_sub_sat(int_as_one, b);
 
-  // CHECK: call i32 @llvm.ssub.sat.i32(i32 1, i32 97)
+  // CHECK: store i64 -96, ptr %i1.addr, align 8
   i1 = __builtin_elementwise_sub_sat(1, 'a');
 }
 
@@ -443,7 +443,7 @@ void test_builtin_elementwise_bitreverse(si8 vi1, si8 vi2,
   // CHECK-NEXT: call i32 @llvm.bitreverse.i32(i32 [[IA1]])
   b = __builtin_elementwise_bitreverse(int_as_one);
 
-  // CHECK:   call i32 @llvm.bitreverse.i32(i32 -10)
+  // CHECK:      store i32 1879048191, ptr @b, align 4
   b = __builtin_elementwise_bitreverse(-10);
 
   // CHECK:      [[SI:%.+]] = load i16, ptr %si.addr, align 2
@@ -666,11 +666,9 @@ void test_builtin_elementwise_log2(float f1, float f2, double d1, double d2,
   vf2 = __builtin_elementwise_log2(vf1);
 }
 
-void test_builtin_elementwise_popcount(si8 vi1, si8 vi2,
-                                  long long int i1, long long int i2, short si,
-                                  _BitInt(31) bi1, _BitInt(31) bi2) {
-
-  
+void test_builtin_elementwise_popcount(si8 vi1, si8 vi2, long long int i1,
+                                       long long int i2, short si,
+                                       _BitInt(31) bi1, _BitInt(31) bi2) {
   // CHECK:      [[I1:%.+]] = load i64, ptr %i1.addr, align 8
   // CHECK-NEXT: call i64 @llvm.ctpop.i64(i64 [[I1]])
   i2 = __builtin_elementwise_popcount(i1);
@@ -693,7 +691,7 @@ void test_builtin_elementwise_popcount(si8 vi1, si8 vi2,
   // CHECK-NEXT: call i32 @llvm.ctpop.i32(i32 [[IA1]])
   b = __builtin_elementwise_popcount(int_as_one);
 
-  // CHECK:   call i32 @llvm.ctpop.i32(i32 -10)
+  // CHECK:      store i32 30, ptr @b, align 4
   b = __builtin_elementwise_popcount(-10);
 
   // CHECK:      [[SI:%.+]] = load i16, ptr %si.addr, align 2

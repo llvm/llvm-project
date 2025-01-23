@@ -42,6 +42,17 @@ point (e.g. maybe you would like to give an example of the
 functionality, or simply have a lot to talk about), see the comment below
 for adding a new subsection. -->
 
+* Added a new IRNormalizer pass which aims to transform LLVM modules into
+  a normal form by reordering and renaming instructions while preserving the
+  same semantics. The normalizer makes it easier to spot semantic differences
+  when diffing two modules which have undergone different passes.
+
+* The SPIR-V backend is now an official LLVM target, providing OpenCL and SYCL
+  conformance and establishing a foundation for broader applicability to other
+  APIs, including Vulkan, GLSL, and HLSL. This backend aims to offer a unified
+  approach for diverse compute and graphics workloads, providing a robust
+  alternative to the Khronos SPIR-V LLVM Translator.
+
 * ...
 
 <!-- If you would like to document a larger change, then you can add a
@@ -100,11 +111,15 @@ Changes to the LLVM IR
 
 * Operand bundle values can now be metadata strings.
 
+* Fast math flags are now permitted on `fptrunc` and `fpext`.
+
 Changes to LLVM infrastructure
 ------------------------------
 
 Changes to building LLVM
 ------------------------
+
+* Raised the minimum MSVC version to Visual Studio 2019 16.8.
 
 Changes to TableGen
 -------------------
@@ -121,6 +136,8 @@ Changes to the AArch64 Backend
 
 * Assembler/disassembler support has been added for Armv9.6-A (2024)
   architecture extensions.
+
+* Added support for the FUJITSU-MONAKA CPU.
 
 Changes to the AMDGPU Backend
 -----------------------------
@@ -160,6 +177,57 @@ Changes to the Hexagon Backend
 Changes to the LoongArch Backend
 --------------------------------
 
+* [Incorrect GOT usage](https://github.com/llvm/llvm-project/pull/117099) for `non-dso_local` function calls in large code model is fixed.
+
+* A [gprof support issue](https://github.com/llvm/llvm-project/issues/121103) is fixed.
+
+* A [SDAG hang issue](https://github.com/llvm/llvm-project/issues/107355) caused by `ISD::CONCAT_VECTORS` is fixed.
+
+* A [compiler crash issue](https://github.com/llvm/llvm-project/issues/118301) when converting `half` to `i32` is fixed.
+
+* Almost all of `la64v1.1` instructions can now be generated. The full list is
+  `frecipe.s`, `frecipe.d`, `frsqrte.s`, `frsqrte.d`, `vfrecipe.s`, `vfrecipe.d`,
+  `vfrsqrte.s`, `vfrsqrte.d`, `xvfrecipe.s`, `xvfrecipe.d`, `xvfrsqrte.s`,
+  `xvfrsqrte.d`, `sc.q`, `amcas.b`, `amcas.h`, `amcas.w`, `amcas.d`, `amcas_db.b`,
+  `amcas_db.h`, `amcas_db.w`, `amcas_db.d`, `amswap.b`, `amswap.h`, `amswap_db.b`,
+  `amswap_db.h`, `amadd.b`, `amadd.h`, `amadd_db.b`, `amadd_db.h`. Optionally
+  generate instructions `dbar 0x700`, `div.w`, `div.wu`, `mod.w` and `mod.wu`
+  when related target features are enabled. `llacq.w`, `screl.w`, `llacq.d` and
+  `screl.d` cannot be generated yet.
+
+* An llc option called `-loongarch-annotate-tablejump` is added to annotate
+  table jump instruction in the `.discard.tablejump_annotate` section. A typical
+  user of these annotations is the `objtool` in Linux kernel.
+
+* The default cpu in `MCSubtargetInfo` is changed from `la464` to `generic-la64`.
+  In addition, the `lsx` feature is added to `generic-la64`.
+
+* CFI instructions now allow register names and aliases, previously only numbers
+  were allowed.
+
+* `RuntimeDyld` now supports LoongArch, which means that programs relying on
+  `MCJIT` can now work.
+
+* `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
+  the required alignment space with a sequence of `0x0` bytes (the requested
+  fill value) rather than NOPs.
+
+* `%ld_pcrel_20`, `%gd_pcrel_20` and `%desc_pcrel_20` operand modifiers are
+   supported by assembler.
+
+* A machine function pass called `LoongArch Merge Base Offset` is added to merge
+  the offset of address calculation into the offset field of instructions in a
+  global address lowering sequence.
+
+* The `LoopDataPrefetch` pass can now work on LoongArch, but it is disabled by
+  default due to the bad effect on Fortran benchmarks.
+
+* Enable alias analysis by default.
+
+* Avoid indirect branch jumps using the `$ra` register.
+
+* Other optimizations.
+
 Changes to the MIPS Backend
 ---------------------------
 
@@ -185,6 +253,9 @@ Changes to the RISC-V Backend
 * The `Zvbc32e` and `Zvkgs` extensions are now supported experimentally.
 * Added `Smctr`, `Ssctr` and `Svvptc` extensions.
 * `-mcpu=syntacore-scr7` was added.
+* `-mcpu=tt-ascalon-d8` was added.
+* `-mcpu=mips-p8700` was added.
+* `-mcpu=sifive-p550` was added.
 * The `Zacas` extension is no longer marked as experimental.
 * Added Smdbltrp, Ssdbltrp extensions to -march.
 * The `Smmpm`, `Smnpm`, `Ssnpm`, `Supm`, and `Sspm` pointer masking extensions
@@ -192,18 +263,66 @@ Changes to the RISC-V Backend
 * The `Sha` extension is now supported.
 * The RVA23U64, RVA23S64, RVB23U64, and RVB23S64 profiles are no longer marked
   as experimental.
+* `.insn <length>, <raw encoding>` can be used to assemble 48- and 64-bit
+  instructions from raw integer values.
+* `.insn [<length>,] <raw encoding>` now accepts absolute expressions for both
+  expressions, so that they can be computed from constants and absolute symbols.
+* The following new inline assembly constraints and modifiers are accepted:
+  * `cr` constraint meaning an RVC-encoding compatible GPR (`x8`-`x15`)
+  * `cf` constraint meaning an RVC-encoding compatible FPR (`f8`-`f15`)
+  * `R` constraint meaning an even-odd GPR pair (prints as the even register,
+    but both registers in the pair are considered live).
+  * `N` modifer meaning print the register encoding (0-31) rather than the name.
+* `f` and `cf` inline assembly constraints, when using F-/D-/H-in-X extensions,
+  will use the relevant GPR rather than FPR. This makes inline assembly portable
+  between e.g. F and Zfinx code.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcicsr` (CSR)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcisls` (Scaled Load Store)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcia` (Arithmetic)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqciac` (Load-Store Address Calculation)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcics` (Conditonal Select)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcilsm` (Load Store Multiple)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcicli` (Conditional Load Immediate)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcicm` (Conditonal Move)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqciint` (Interrupts)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcilo` (Large Offset Load Store)
+  extension.
+* Added ``Sdext`` and ``Sdtrig`` extensions.
 
 Changes to the WebAssembly Backend
 ----------------------------------
 
-The default target CPU, "generic", now enables the `-mnontrapping-fptoint`
-and `-mbulk-memory` flags, which correspond to the [Bulk Memory Operations]
-and [Non-trapping float-to-int Conversions] language features, which are
-[widely implemented in engines].
+* The default target CPU, "generic", now enables the `-mnontrapping-fptoint`
+  and `-mbulk-memory` flags, which correspond to the [Bulk Memory Operations]
+  and [Non-trapping float-to-int Conversions] language features, which are
+  [widely implemented in engines].
+
+* A new Lime1 target CPU is added, `-mcpu=lime1`. This CPU follows the
+  definition of the Lime1 CPU [here], and enables `-mmultivalue`,
+  `-mmutable-globals`, `-mcall-indirect-overlong`, `-msign-ext`,
+  `-mbulk-memory-opt`, `-mnontrapping-fptoint`, and `-mextended-const`.
+
+* Support for the new standardized [Exception Handling] proposal is added.
+  The [legacy Exception Handling] proposal is still supported, and turned on by
+  the newly added `-wasm-use-legacy-eh` option. Given that major web browsers
+  still default to the legacy EH proposal, this option is turned on by default
+  for the moment.
 
 [Bulk Memory Operations]: https://github.com/WebAssembly/bulk-memory-operations/blob/master/proposals/bulk-memory-operations/Overview.md
 [Non-trapping float-to-int Conversions]: https://github.com/WebAssembly/spec/blob/master/proposals/nontrapping-float-to-int-conversion/Overview.md
+[Exception Handling]: https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/Exceptions.md
+[legacy Exception Handling]: https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/legacy/Exceptions.md
 [widely implemented in engines]: https://webassembly.org/features/
+[here]: https://github.com/WebAssembly/tool-conventions/blob/main/Lime.md#lime1
 
 Changes to the Windows Target
 -----------------------------
@@ -231,6 +350,15 @@ Changes to the X86 Backend
 * Supported ISA of `SM4(EVEX)`.
 
 * Supported ISA of `MSR_IMM`.
+
+* Supported ``-mcpu=diamondrapids``
+
+* Supported emitting relocation types for x86-64 target:
+  * `R_X86_64_CODE_4_GOTPCRELX`
+  * `R_X86_64_CODE_4_GOTTPOFF`
+  * `R_X86_64_CODE_4_GOTPC32_TLSDESC`
+  * `R_X86_64_CODE_6_GOTTPOFF`
+
 
 Changes to the OCaml bindings
 -----------------------------
@@ -301,8 +429,40 @@ Changes to the Debug Info
 Changes to the LLVM tools
 ---------------------------------
 
+* llvm-objcopy now supports the following options for Mach-O:
+  `--globalize-symbol`, `--globalize-symbols`,
+  `--keep-global-symbol`, `--keep-global-symbols`,
+  `--localize-symbol`, `--localize-symbols`,
+  `--skip-symbol`, `--skip-symbols`.
+
 Changes to LLDB
 ---------------------------------
+
+* It is now recommended that LLDB be built with Python >= 3.8, but no changes
+  have been made to the supported Python versions. The next release, LLDB 21,
+  will require Python >= 3.8.
+
+* LLDB now supports inline diagnostics for the expression evaluator and command line parser.
+
+  Old:
+  ```
+  (lldb) p a+b
+  error: <user expression 0>:1:1: use of undeclared identifier 'a'
+      1 | a+b
+        | ^
+  error: <user expression 0>:1:3: use of undeclared identifier 'b'
+      1 | a+b
+        |   ^
+  ```
+
+  New:
+
+  ```
+  (lldb) p a+b
+           ˄ ˄
+           │ ╰─ error: use of undeclared identifier 'b'
+           ╰─ error: use of undeclared identifier 'a'
+  ```
 
 * LLDB can now read the `fpmr` register from AArch64 Linux processes and core
   files.
@@ -311,6 +471,107 @@ Changes to LLDB
   * eg. `settings set target.output-path/target.error-path <path/to/file>`
 
 * A new setting `target.launch-working-dir` can be used to set a persistent cwd that is used by default by `process launch` and `run`.
+
+* LLDB now parses shared libraries in parallel, resulting in an average 2x speedup when attaching (only available on Darwin platforms) and launching (available on all platforms).
+
+* It is now possible to implement lldb commands in Python that use lldb's native command-line parser.  In particular, that allows per-option/argument completion,
+  with all the basic completers automatically supported and auto-generated help.
+  The command template file in `lldb/examples/python/cmdtemplate.py` has been updated to show how to use this.
+
+* Breakpoints on "inlined call sites" are now supported.  Previous to this fix, breakpoints on source lines that only contained inlined call sites would be
+  moved to the next source line, causing you to miss the inlined executions.
+
+* On the command line, LLDB now limits tab completions to your terminal width to avoid wrapping.
+
+  Old:
+  ```
+  Available completions:
+          _regexp-attach    -- Attach to process by ID or name.
+          _regexp-break     -- Set a breakpoint using one of several shorthand
+  formats.
+          _regexp-bt        -- Show backtrace of the current thread's call sta
+  ck. Any numeric argument displays at most that many frames. The argument 'al
+  l' displays all threads. Use 'settings set frame-format' to customize the pr
+  inting of individual frames and 'settings set thread-format' to customize th
+  e thread header. Frame recognizers may filter thelist. Use 'thread backtrace
+  -u (--unfiltered)' to see them all.
+          _regexp-display   -- Evaluate an expression at every stop (see 'help
+  target stop-hook'.)
+
+  ```
+
+  New:
+  ```
+  Available completions:
+          _regexp-attach    -- Attach to process by ID or name.
+          _regexp-break     -- Set a breakpoint using one of several shorth...
+          _regexp-bt        -- Show backtrace of the current thread's call ...
+          _regexp-display   -- Evaluate an expression at every stop (see 'h...
+  ```
+* DWARF indexing speed (for binaries not using the debug_names index) increased
+  by [30-60%](https://github.com/llvm/llvm-project/pull/118657).
+
+* Minidumps generated by LLDB now support:
+  * 64 bit memory (due to 64b support, Minidumps are now paged to disk while being written).
+  * Capturing of TLS variables.
+  * Multiple signals or exceptions, including breakpoints.
+
+* [New Core File API](https://lldb.llvm.org/python_api/lldb.SBSaveCoreOptions.html). This gives greater control on the data captured into the core file, relative to the existing `process save-core` styles.
+
+* When opening ELF core files, LLDB will print additional information about the
+  signal that killed the process and the disassembly view will display actual
+  (relocated) targets of the jump instructions instead of raw offsets encoded in
+  the instruction. This matches existing behavior for live processes.
+
+  Old:
+  ```
+  * thread #1: tid = 329384, 0x0000000000401262, name = 'a.out', stop reason = signal SIGSEGV
+
+  0x7f1e3193e0a7 <+23>:  ja     0xfe100        ; <+112>
+  ```
+
+  New:
+  ```
+  * thread #1: tid = 329384, 0x0000000000401262, name = 'a.out', stop reason = SIGSEGV: address not mapped to object (fault address=0x0)
+
+  0x7f1e3193e0a7 <+23>:  ja     0x7f1e3193e100 ; <+112>
+  ```
+
+* `lldb-server` now listens to a single port for gdbserver connections and provides
+  that port to the connection handler processes. This means that only 2 ports need
+  to be opened in the firewall (one for the `lldb-server` platform, one for gdbserver connections).
+  In addition, due to this work, `lldb-server` now works on Windows in the server mode.
+  
+* LLDB now supports execution of user expressions for non-trivial cases for LoongArch and RISC-V targets, like function calls, when some code needs to be executed on the target.
+
+* LLDB now supports optionally enabled/disabled register sets (particularly floating point registers) for RISC-V 64. This happens for targets like `RV64IMAC` or `RV64IMACV`,
+  that have no floating point registers. The change is applied to native debugging and core-file usage.
+
+* LLDB now supports [core-file for LoongArch](https://github.com/llvm/llvm-project/pull/112296).
+
+* LLDB now supports [hardware breakpoint and watchpoint for LoongArch](https://github.com/llvm/llvm-project/pull/118770).
+
+* LLDB now supports [vector registers for LoongArch](https://github.com/llvm/llvm-project/pull/120664) when debugging a live process.
+
+* Incorrect floating-point register dwarf number for LoongArch is [fixed](https://github.com/llvm/llvm-project/pull/120391).
+
+* The `frame diagnose` now works on ELF-based systems. After a crash, LLDB will
+  try to determine the likely cause of the signal, matching Darwin behavior.
+  This feature requires using a new `lldb-server` version and (like Darwin) only
+  works on x86 binaries.
+
+  ```
+  * thread #1, name = 'a.out', stop reason = signal SIGSEGV: address not mapped to object (fault address=0x4)
+      frame #0: 0x00005555555551aa a.out`GetSum(f=0x0000555555558018) at main.c:21:37
+     18   }
+     19
+     20   int GetSum(struct Foo *f) {
+  -> 21     return SumTwoIntegers(f->a, f->b->d ? 0 : 1);
+     22   }
+     23
+     24   int main() {
+  Likely cause: f->b->d accessed 0x4
+  ```
 
 Changes to BOLT
 ---------------------------------

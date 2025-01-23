@@ -177,7 +177,7 @@ Available checks are:
      problems at higher optimization levels.
   -  ``-fsanitize=pointer-overflow``: Performing pointer arithmetic which
      overflows, or where either the old or new pointer value is a null pointer
-     (or in C, when they both are).
+     (excluding the case where both are null pointers).
   -  ``-fsanitize=return``: In C++, reaching the end of a
      value-returning function without returning a value.
   -  ``-fsanitize=returns-nonnull-attribute``: Returning null pointer
@@ -276,8 +276,8 @@ Stack traces and report symbolization
 If you want UBSan to print symbolized stack trace for each error report, you
 will need to:
 
-#. Compile with ``-g`` and ``-fno-omit-frame-pointer`` to get proper debug
-   information in your binary.
+#. Compile with ``-g``, ``-fno-sanitize-merge`` and ``-fno-omit-frame-pointer``
+   to get proper debug information in your binary.
 #. Run your program with environment variable
    ``UBSAN_OPTIONS=print_stacktrace=1``.
 #. Make sure ``llvm-symbolizer`` binary is in ``PATH``.

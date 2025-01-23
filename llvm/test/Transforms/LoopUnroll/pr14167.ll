@@ -2,7 +2,7 @@
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v128:128:128-n32:64"
 target triple = "powerpc64le-unknown-linux"
 
-define void @test1() nounwind {
+define void @test1(i1 %arg) nounwind {
 ; Ensure that we don't crash when the trip count == -1.
 ; CHECK-LABEL: @test1(
 entry:
@@ -15,7 +15,7 @@ vector.ph:                                        ; preds = %for.cond2.preheader
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
-  br i1 undef, label %middle.block.loopexit, label %vector.body
+  br i1 %arg, label %middle.block.loopexit, label %vector.body
 
 middle.block.loopexit:                            ; preds = %vector.body
   br label %middle.block
@@ -37,7 +37,7 @@ for.end.loopexit:                                 ; preds = %for.body4
   br label %for.end
 
 for.end:                                          ; preds = %for.end.loopexit, %middle.block
-  br i1 undef, label %for.cond2.preheader, label %for.end15
+  br i1 %arg, label %for.cond2.preheader, label %for.end15
 
 for.end15:                                        ; preds = %for.end
   ret void

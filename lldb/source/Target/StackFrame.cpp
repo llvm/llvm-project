@@ -22,6 +22,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrameRecognizer.h"
@@ -508,6 +509,29 @@ StackFrame::GetInScopeVariableList(bool get_file_globals,
 ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
     VariableSP &var_sp, Status &error) {
+  ExecutionContext exe_ctx;
+  CalculateExecutionContext(exe_ctx);
+  bool use_DIL = exe_ctx.GetTargetRef().GetUseDIL(&exe_ctx);
+  if (use_DIL)
+    return DILGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
+                                                var_sp, error);
+
+  return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
+                                                 var_sp, error);
+}
+
+ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
+    llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+    uint32_t options, lldb::VariableSP &var_sp, Status &error) {
+  // This is a place-holder for the calls into the DIL parser and
+  // evaluator.  For now, just call the "real" frame variable implementation.
+  return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
+                                                 var_sp, error);
+}
+
+ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
+    llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
+    VariableSP &var_sp, Status &error) {
   llvm::StringRef original_var_expr = var_expr;
   // We can't fetch variable information for a history stack frame.
   if (IsHistorical())
@@ -646,8 +670,8 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         }
       }
 
-      // If we have a non pointer type with a sythetic value then lets check if
-      // we have an sythetic dereference specified.
+      // If we have a non-pointer type with a synthetic value then lets check if
+      // we have a synthetic dereference specified.
       if (!valobj_sp->IsPointerType() && valobj_sp->HasSyntheticValue()) {
         Status deref_error;
         if (valobj_sp->GetCompilerType().IsReferenceType()) {
@@ -662,13 +686,13 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         valobj_sp = valobj_sp->Dereference(deref_error);
         if (!valobj_sp || deref_error.Fail()) {
           error = Status::FromErrorStringWithFormatv(
-              "Failed to dereference sythetic value: {0}", deref_error);
+              "Failed to dereference synthetic value: {0}", deref_error);
           return ValueObjectSP();
         }
         // Some synthetic plug-ins fail to set the error in Dereference
         if (!valobj_sp) {
           error =
-              Status::FromErrorString("Failed to dereference sythetic value");
+              Status::FromErrorString("Failed to dereference synthetic value");
           return ValueObjectSP();
         }
         expr_is_ptr = false;
@@ -1097,8 +1121,7 @@ llvm::Error StackFrame::GetFrameBaseValue(Scalar &frame_base) {
       addr_t loclist_base_addr = LLDB_INVALID_ADDRESS;
       if (!m_sc.function->GetFrameBaseExpression().IsAlwaysValidSingleExpr())
         loclist_base_addr =
-            m_sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress(
-                exe_ctx.GetTargetPtr());
+            m_sc.function->GetAddress().GetLoadAddress(exe_ctx.GetTargetPtr());
 
       llvm::Expected<Value> expr_value =
           m_sc.function->GetFrameBaseExpression().Evaluate(
@@ -1205,6 +1228,71 @@ bool StackFrame::IsHidden() {
   if (auto recognized_frame_sp = GetRecognizedFrame())
     return recognized_frame_sp->ShouldHide();
   return false;
+}
+
+StructuredData::ObjectSP StackFrame::GetLanguageSpecificData() {
+  auto process_sp = CalculateProcess();
+  SourceLanguage language = GetLanguage();
+  if (!language)
+    return {};
+  if (auto runtime_sp =
+          process_sp->GetLanguageRuntime(language.AsLanguageType()))
+    return runtime_sp->GetLanguageSpecificData(
+        GetSymbolContext(eSymbolContextFunction));
+  return {};
+}
+
+const char *StackFrame::GetFunctionName() {
+  const char *name = nullptr;
+  SymbolContext sc = GetSymbolContext(
+      eSymbolContextFunction | eSymbolContextBlock | eSymbolContextSymbol);
+  if (sc.block) {
+    Block *inlined_block = sc.block->GetContainingInlinedBlock();
+    if (inlined_block) {
+      const InlineFunctionInfo *inlined_info =
+          inlined_block->GetInlinedFunctionInfo();
+      if (inlined_info)
+        name = inlined_info->GetName().AsCString();
+    }
+  }
+
+  if (name == nullptr) {
+    if (sc.function)
+      name = sc.function->GetName().GetCString();
+  }
+
+  if (name == nullptr) {
+    if (sc.symbol)
+      name = sc.symbol->GetName().GetCString();
+  }
+
+  return name;
+}
+
+const char *StackFrame::GetDisplayFunctionName() {
+  const char *name = nullptr;
+  SymbolContext sc = GetSymbolContext(
+      eSymbolContextFunction | eSymbolContextBlock | eSymbolContextSymbol);
+  if (sc.block) {
+    Block *inlined_block = sc.block->GetContainingInlinedBlock();
+    if (inlined_block) {
+      const InlineFunctionInfo *inlined_info =
+          inlined_block->GetInlinedFunctionInfo();
+      if (inlined_info)
+        name = inlined_info->GetDisplayName().AsCString();
+    }
+  }
+
+  if (name == nullptr) {
+    if (sc.function)
+      name = sc.function->GetDisplayName().GetCString();
+  }
+
+  if (name == nullptr) {
+    if (sc.symbol)
+      name = sc.symbol->GetDisplayName().GetCString();
+  }
+  return name;
 }
 
 SourceLanguage StackFrame::GetLanguage() {
@@ -1931,19 +2019,9 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
           if (num_lines != 0)
             have_source = true;
           // TODO: Give here a one time warning if source file is missing.
-          if (!m_sc.line_entry.line) {
-            ConstString fn_name = m_sc.GetFunctionName();
-
-            if (!fn_name.IsEmpty())
-              strm.Printf(
-                  "Note: this address is compiler-generated code in function "
-                  "%s that has no source code associated with it.",
-                  fn_name.AsCString());
-            else
-              strm.Printf("Note: this address is compiler-generated code that "
-                          "has no source code associated with it.");
-            strm.EOL();
-          }
+          if (!m_sc.line_entry.line)
+            strm << "note: This address is not associated with a specific line "
+                    "of code. This may be due to compiler optimizations.\n";
         }
       }
       switch (disasm_display) {

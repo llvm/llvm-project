@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=xcore | FileCheck %s
-; RUN: llc < %s -march=xcore -frame-pointer=all | FileCheck %s -check-prefix=CHECKFP
+; RUN: llc < %s -mtriple=xcore | FileCheck %s
+; RUN: llc < %s -mtriple=xcore -frame-pointer=all | FileCheck %s -check-prefix=CHECKFP
 
 declare ptr @llvm.frameaddress(i32) nounwind readnone
 declare ptr @llvm.returnaddress(i32) nounwind

@@ -3541,12 +3541,12 @@ TEST_F(DIExpressionTest, Fold) {
   ResExpr = DIExpression::get(Context, ResOps);
   EXPECT_EQ(E, ResExpr);
 
-  // Test a left shift greater than 64.
+  // Test a left shift greater than 63.
   Ops.clear();
   Ops.push_back(dwarf::DW_OP_constu);
   Ops.push_back(1);
   Ops.push_back(dwarf::DW_OP_constu);
-  Ops.push_back(65);
+  Ops.push_back(64);
   Ops.push_back(dwarf::DW_OP_shl);
   Expr = DIExpression::get(Context, Ops);
   E = Expr->foldConstantMath();
@@ -3554,17 +3554,17 @@ TEST_F(DIExpressionTest, Fold) {
   ResOps.push_back(dwarf::DW_OP_constu);
   ResOps.push_back(1);
   ResOps.push_back(dwarf::DW_OP_constu);
-  ResOps.push_back(65);
+  ResOps.push_back(64);
   ResOps.push_back(dwarf::DW_OP_shl);
   ResExpr = DIExpression::get(Context, ResOps);
   EXPECT_EQ(E, ResExpr);
 
-  // Test a right shift greater than 64.
+  // Test a right shift greater than 63.
   Ops.clear();
   Ops.push_back(dwarf::DW_OP_constu);
   Ops.push_back(1);
   Ops.push_back(dwarf::DW_OP_constu);
-  Ops.push_back(65);
+  Ops.push_back(64);
   Ops.push_back(dwarf::DW_OP_shr);
   Expr = DIExpression::get(Context, Ops);
   E = Expr->foldConstantMath();
@@ -3572,7 +3572,7 @@ TEST_F(DIExpressionTest, Fold) {
   ResOps.push_back(dwarf::DW_OP_constu);
   ResOps.push_back(1);
   ResOps.push_back(dwarf::DW_OP_constu);
-  ResOps.push_back(65);
+  ResOps.push_back(64);
   ResOps.push_back(dwarf::DW_OP_shr);
   ResExpr = DIExpression::get(Context, ResOps);
   EXPECT_EQ(E, ResExpr);

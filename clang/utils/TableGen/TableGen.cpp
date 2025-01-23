@@ -1,4 +1,4 @@
-//===- TableGen.cpp - Top-Level TableGen implementation for Clang ---------===//
+//===-- TableGen.cpp - Top-Level TableGen implementation for Clang --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,13 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TableGenBackends.h" // Declares all backends.
 #include "ASTTableGen.h"
+#include "TableGenBackends.h" // Declares all backends.
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Main.h"
 #include "llvm/TableGen/Record.h"
 
@@ -49,6 +48,7 @@ enum ActionType {
   GenClangBasicWriter,
   GenClangBuiltins,
   GenClangDiagsDefs,
+  GenClangDiagsEnums,
   GenClangDiagGroups,
   GenClangDiagsIndexName,
   GenClangCommentNodes,
@@ -174,6 +174,8 @@ cl::opt<ActionType> Action(
                    "Generate clang builtins list"),
         clEnumValN(GenClangDiagsDefs, "gen-clang-diags-defs",
                    "Generate Clang diagnostics definitions"),
+        clEnumValN(GenClangDiagsEnums, "gen-clang-diags-enums",
+                   "Generate Clang diagnostic enums for selects"),
         clEnumValN(GenClangDiagGroups, "gen-clang-diag-groups",
                    "Generate Clang diagnostic groups"),
         clEnumValN(GenClangDiagsIndexName, "gen-clang-diags-index-name",
@@ -387,6 +389,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenClangDiagsDefs:
     EmitClangDiagsDefs(Records, OS, ClangComponent);
+    break;
+  case GenClangDiagsEnums:
+    EmitClangDiagsEnums(Records, OS, ClangComponent);
     break;
   case GenClangDiagGroups:
     EmitClangDiagGroups(Records, OS);

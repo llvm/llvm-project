@@ -217,6 +217,35 @@ func.func @extract_dynamic_cst(%arg0 : vector<4xf32>) -> f32 {
 
 // -----
 
+// CHECK-LABEL: @from_elements_0d
+//  CHECK-SAME: %[[ARG0:.+]]: f32
+//       CHECK:   %[[RETVAL:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
+//       CHECK:   return %[[RETVAL]]
+func.func @from_elements_0d(%arg0 : f32) -> vector<f32> {
+  %0 = vector.from_elements %arg0 : vector<f32>
+  return %0: vector<f32>
+}
+
+// CHECK-LABEL: @from_elements_1x
+//  CHECK-SAME: %[[ARG0:.+]]: f32
+//       CHECK:   %[[RETVAL:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
+//       CHECK:   return %[[RETVAL]]
+func.func @from_elements_1x(%arg0 : f32) -> vector<1xf32> {
+  %0 = vector.from_elements %arg0 : vector<1xf32>
+  return %0: vector<1xf32>
+}
+
+// CHECK-LABEL: @from_elements_3x
+//  CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: f32, %[[ARG2:.+]]: f32
+//       CHECK:   %[[RETVAL:.+]] = spirv.CompositeConstruct %[[ARG0]], %[[ARG1]], %[[ARG2]] : (f32, f32, f32) -> vector<3xf32>
+//       CHECK:   return %[[RETVAL]]
+func.func @from_elements_3x(%arg0 : f32, %arg1 : f32, %arg2 : f32) -> vector<3xf32> {
+  %0 = vector.from_elements %arg0, %arg1, %arg2 : vector<3xf32>
+  return %0: vector<3xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @insert
 //  CHECK-SAME: %[[V:.*]]: vector<4xf32>, %[[S:.*]]: f32
 //       CHECK:   spirv.CompositeInsert %[[S]], %[[V]][2 : i32] : f32 into vector<4xf32>
@@ -580,6 +609,17 @@ func.func @shuffle(%v0 : vector<4xi32>, %v1: vector<4xi32>) -> vector<1xi32> {
 func.func @shuffle(%v0 : vector<4xi32>, %v1: vector<4xi32>) -> vector<1xi32> {
   %shuffle = vector.shuffle %v0, %v1 [5] : vector<4xi32>, vector<4xi32>
   return %shuffle : vector<1xi32>
+}
+
+// -----
+
+// CHECK-LABEL:  func @shuffle
+//  CHECK-SAME:  %[[ARG0:.+]]: vector<4xi32>, %[[ARG1:.+]]: vector<4xi32>
+//       CHECK:    %[[SHUFFLE:.*]] = spirv.VectorShuffle [1 : i32, -1 : i32, 5 : i32, -1 : i32] %[[ARG0]], %[[ARG1]] : vector<4xi32>, vector<4xi32> -> vector<4xi32>
+//       CHECK:    return %[[SHUFFLE]] : vector<4xi32>
+func.func @shuffle(%v0 : vector<4xi32>, %v1: vector<4xi32>) -> vector<4xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [1, -1, 5, -1] : vector<4xi32>, vector<4xi32>
+  return %shuffle : vector<4xi32>
 }
 
 // -----

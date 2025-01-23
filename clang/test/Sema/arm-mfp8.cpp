@@ -3,6 +3,39 @@
 
 // REQUIRES: aarch64-registered-target
 
+__mfp8 test_static_cast_from_char(char in) {
+  return static_cast<__mfp8>(in); // scalar-error {{static_cast from 'char' to '__mfp8' is not allowed}}
+}
+
+char test_static_cast_to_char(__mfp8 in) {
+  return static_cast<char>(in); // scalar-error {{static_cast from '__mfp8' to 'char' is not allowed}}
+}
+
+void test(bool b) {
+  __mfp8 mfp8;
+
+  mfp8 + mfp8;  // scalar-error {{invalid operands to binary expression ('__mfp8' and '__mfp8')}}
+  mfp8 - mfp8;  // scalar-error {{invalid operands to binary expression ('__mfp8' and '__mfp8')}}
+  mfp8 * mfp8;  // scalar-error {{invalid operands to binary expression ('__mfp8' and '__mfp8')}}
+  mfp8 / mfp8;  // scalar-error {{invalid operands to binary expression ('__mfp8' and '__mfp8')}}
+  ++mfp8;       // scalar-error {{cannot increment value of type '__mfp8'}}
+  --mfp8;       // scalar-error {{cannot decrement value of type '__mfp8'}}
+
+  char u8;
+
+  mfp8 + u8;   // scalar-error {{invalid operands to binary expression ('__mfp8' and 'char')}}
+  u8 + mfp8;   // scalar-error {{invalid operands to binary expression ('char' and '__mfp8')}}
+  mfp8 - u8;   // scalar-error {{invalid operands to binary expression ('__mfp8' and 'char')}}
+  u8 - mfp8;   // scalar-error {{invalid operands to binary expression ('char' and '__mfp8')}}
+  mfp8 * u8;   // scalar-error {{invalid operands to binary expression ('__mfp8' and 'char')}}
+  u8 * mfp8;   // scalar-error {{invalid operands to binary expression ('char' and '__mfp8')}}
+  mfp8 / u8;   // scalar-error {{invalid operands to binary expression ('__mfp8' and 'char')}}
+  u8 / mfp8;   // scalar-error {{invalid operands to binary expression ('char' and '__mfp8')}}
+  mfp8 = u8;   // scalar-error {{assigning to '__mfp8' from incompatible type 'char'}}
+  u8 = mfp8;   // scalar-error {{assigning to 'char' from incompatible type '__mfp8'}}
+  mfp8 + (b ? u8 : mfp8);  // scalar-error {{incompatible operand types ('char' and '__mfp8')}}
+}
+
 #include <arm_sve.h>
 void test_vector_sve(svmfloat8_t a, svuint8_t c) {
   a + c;  // sve-error {{cannot convert between vector type 'svuint8_t' (aka '__SVUint8_t') and vector type 'svmfloat8_t' (aka '__SVMfloat8_t') as implicit conversion would cause truncation}}
@@ -29,35 +62,3 @@ void test_vector(mfloat8x8_t a, mfloat8x16_t b, uint8x8_t c) {
   c * b;  // neon-error {{cannot convert between vector and non-scalar values ('uint8x8_t' (vector of 8 'uint8_t' values) and 'mfloat8x16_t' (aka '__MFloat8x16_t'))}}
   c / b;  // neon-error {{cannot convert between vector and non-scalar values ('uint8x8_t' (vector of 8 'uint8_t' values) and 'mfloat8x16_t' (aka '__MFloat8x16_t'))}}
 }
-__mfp8 test_static_cast_from_char(char in) {
-  return static_cast<__mfp8>(in); // scalar-error {{static_cast from 'char' to '__mfp8' (aka '__MFloat8_t') is not allowed}}
-}
-
-char test_static_cast_to_char(__mfp8 in) {
-  return static_cast<char>(in); // scalar-error {{static_cast from '__mfp8' (aka '__MFloat8_t') to 'char' is not allowed}}
-}
-void test(bool b) {
-  __mfp8 mfp8;
-
-  mfp8 + mfp8;  // scalar-error {{invalid operands to binary expression ('__mfp8' (aka '__MFloat8_t') and '__mfp8')}}
-  mfp8 - mfp8;  // scalar-error {{invalid operands to binary expression ('__mfp8' (aka '__MFloat8_t') and '__mfp8')}}
-  mfp8 * mfp8;  // scalar-error {{invalid operands to binary expression ('__mfp8' (aka '__MFloat8_t') and '__mfp8')}}
-  mfp8 / mfp8;  // scalar-error {{invalid operands to binary expression ('__mfp8' (aka '__MFloat8_t') and '__mfp8')}}
-  ++mfp8;       // scalar-error {{cannot increment value of type '__mfp8' (aka '__MFloat8_t')}}
-  --mfp8;       // scalar-error {{cannot decrement value of type '__mfp8' (aka '__MFloat8_t')}}
-
-  char u8;
-
-  mfp8 + u8;   // scalar-error {{invalid operands to binary expression ('__mfp8' (aka '__MFloat8_t') and 'char')}}
-  u8 + mfp8;   // scalar-error {{invalid operands to binary expression ('char' and '__mfp8' (aka '__MFloat8_t'))}}
-  mfp8 - u8;   // scalar-error {{invalid operands to binary expression ('__mfp8' (aka '__MFloat8_t') and 'char')}}
-  u8 - mfp8;   // scalar-error {{invalid operands to binary expression ('char' and '__mfp8' (aka '__MFloat8_t'))}}
-  mfp8 * u8;   // scalar-error {{invalid operands to binary expression ('__mfp8' (aka '__MFloat8_t') and 'char')}}
-  u8 * mfp8;   // scalar-error {{invalid operands to binary expression ('char' and '__mfp8' (aka '__MFloat8_t'))}}
-  mfp8 / u8;   // scalar-error {{invalid operands to binary expression ('__mfp8' (aka '__MFloat8_t') and 'char')}}
-  u8 / mfp8;   // scalar-error {{invalid operands to binary expression ('char' and '__mfp8' (aka '__MFloat8_t'))}}
-  mfp8 = u8;   // scalar-error {{assigning to '__mfp8' (aka '__MFloat8_t') from incompatible type 'char'}}
-  u8 = mfp8;   // scalar-error {{assigning to 'char' from incompatible type '__mfp8' (aka '__MFloat8_t')}}
-  mfp8 + (b ? u8 : mfp8);  // scalar-error {{incompatible operand types ('char' and '__mfp8' (aka '__MFloat8_t'))}}
-}
-

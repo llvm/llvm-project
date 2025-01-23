@@ -435,6 +435,10 @@ bool SjLjEHPrepareImpl::setupEntryBlockAndCallSites(Function &F) {
   // where to look for it.
   Builder.CreateCall(FuncCtxFn, FuncCtx);
 
+  // Register the function context and make sure it's known to not throw.
+  CallInst *Register = Builder.CreateCall(RegisterFn, FuncCtx, "");
+  Register->setDoesNotThrow();
+
   // At this point, we are all set up, update the invoke instructions to mark
   // their call_site values.
   for (unsigned I = 0, E = Invokes.size(); I != E; ++I) {
@@ -457,14 +461,9 @@ bool SjLjEHPrepareImpl::setupEntryBlockAndCallSites(Function &F) {
     if (&BB == &F.front())
       continue;
     for (Instruction &I : BB)
-      if (I.mayThrow())
+      if (!isa<InvokeInst>(I) && I.mayThrow())
         insertCallSiteStore(&I, -1);
   }
-
-  // Register the function context and make sure it's known to not throw
-  CallInst *Register = CallInst::Create(
-      RegisterFn, FuncCtx, "", EntryBB->getTerminator()->getIterator());
-  Register->setDoesNotThrow();
 
   // Following any allocas not in the entry block, update the saved SP in the
   // jmpbuf to the new value.
@@ -501,10 +500,10 @@ bool SjLjEHPrepareImpl::runOnFunction(Function &F) {
   Module &M = *F.getParent();
   RegisterFn = M.getOrInsertFunction(
       "_Unwind_SjLj_Register", Type::getVoidTy(M.getContext()),
-      PointerType::getUnqual(FunctionContextTy));
+      PointerType::getUnqual(FunctionContextTy->getContext()));
   UnregisterFn = M.getOrInsertFunction(
       "_Unwind_SjLj_Unregister", Type::getVoidTy(M.getContext()),
-      PointerType::getUnqual(FunctionContextTy));
+      PointerType::getUnqual(FunctionContextTy->getContext()));
 
   PointerType *AllocaPtrTy = M.getDataLayout().getAllocaPtrType(M.getContext());
 

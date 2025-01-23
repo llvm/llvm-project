@@ -116,7 +116,7 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
       return std::__convert_to_tm<_Tm>(chrono::sys_time<typename _ChronoT::duration>{__value.time_since_epoch()});
     else
       static_assert(sizeof(_ChronoT) == 0, "TODO: Add the missing clock specialization");
-  } else if constexpr (chrono::__is_duration<_ChronoT>::value) {
+  } else if constexpr (chrono::__is_duration_v<_ChronoT>) {
     // [time.format]/6
     //   ...  However, if a flag refers to a "time of day" (e.g. %H, %I, %p,
     //   etc.), then a specialization of duration is interpreted as the time of

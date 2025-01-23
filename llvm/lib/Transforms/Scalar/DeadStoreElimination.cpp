@@ -883,7 +883,7 @@ ConstantRangeList getIntersectedInitRangeList(ArrayRef<ArgumentInitInfo> Args,
 struct DSEState {
   Function &F;
   AliasAnalysis &AA;
-  EarliestEscapeInfo EI;
+  EarliestEscapeAnalysis EA;
 
   /// The single BatchAA instance that is used to cache AA queries. It will
   /// not be invalidated over the whole run. This is safe, because:
@@ -943,7 +943,7 @@ struct DSEState {
   DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA, DominatorTree &DT,
            PostDominatorTree &PDT, const TargetLibraryInfo &TLI,
            const LoopInfo &LI)
-      : F(F), AA(AA), EI(DT, &LI), BatchAA(AA, &EI), MSSA(MSSA), DT(DT),
+      : F(F), AA(AA), EA(DT, &LI), BatchAA(AA, &EA), MSSA(MSSA), DT(DT),
         PDT(PDT), TLI(TLI), DL(F.getDataLayout()), LI(LI) {
     // Collect blocks with throwing instructions not modeled in MemorySSA and
     // alloc-like objects.
@@ -1850,7 +1850,7 @@ struct DSEState {
             NowDeadInsts.push_back(OpI);
         }
 
-      EI.removeInstruction(DeadInst);
+      EA.removeInstruction(DeadInst);
       // Remove memory defs directly if they don't produce results, but only
       // queue other dead instructions for later removal. They may have been
       // used as memory locations that have been cached by BatchAA. Removing
@@ -2054,7 +2054,7 @@ struct DSEState {
       return false;
 
     Instruction *ICmpL;
-    ICmpInst::Predicate Pred;
+    CmpPredicate Pred;
     if (!match(BI->getCondition(),
                m_c_ICmp(Pred,
                         m_CombineAnd(m_Load(m_Specific(StorePtr)),
@@ -2262,6 +2262,14 @@ struct DSEState {
   bool eliminateDeadDefs(const MemoryDefWrapper &KillingDefWrapper);
 };
 
+// Return true if "Arg" is function local and isn't captured before "CB".
+bool isFuncLocalAndNotCaptured(Value *Arg, const CallBase *CB,
+                               EarliestEscapeAnalysis &EA) {
+  const Value *UnderlyingObj = getUnderlyingObject(Arg);
+  return isIdentifiedFunctionLocal(UnderlyingObj) &&
+         EA.isNotCapturedBefore(UnderlyingObj, CB, /*OrAt*/ true);
+}
+
 SmallVector<MemoryLocation, 1>
 DSEState::getInitializesArgMemLoc(const Instruction *I) {
   const CallBase *CB = dyn_cast<CallBase>(I);
@@ -2277,6 +2285,13 @@ DSEState::getInitializesArgMemLoc(const Instruction *I) {
       Inits = InitializesAttr.getValueAsConstantRangeList();
 
     Value *CurArg = CB->getArgOperand(Idx);
+    // Check whether "CurArg" could alias with global variables. We require
+    // either it's function local and isn't captured before or the "CB" only
+    // accesses arg or inaccessible mem.
+    if (!Inits.empty() && !CB->onlyAccessesInaccessibleMemOrArgMem() &&
+        !isFuncLocalAndNotCaptured(CurArg, CB, EA))
+      Inits = ConstantRangeList();
+
     // We don't perform incorrect DSE on unwind edges in the current function,
     // and use the "initializes" attribute to kill dead stores if:
     // - The call does not throw exceptions, "CB->doesNotThrow()".

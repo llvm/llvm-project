@@ -136,7 +136,7 @@ awareness of. For such changes, the following should be done:
 
 .. warning::
 
-  Phabricator is deprecated is available in read-only mode,
+  Phabricator is deprecated and is available in read-only mode,
   for new code contributions use :ref:`GitHub Pull Requests <github-reviews>`.
   This section contains old information that needs to be updated.
 
@@ -533,13 +533,13 @@ Obtaining Commit Access
 -----------------------
 
 We grant commit access to contributors that can provide a valid justification.
-If you would like commit access, please send an email to
-`Chris <mailto:clattner@llvm.org>`_ with your GitHub username.  This is true
-for former contributors with SVN access as well as new contributors. If
-approved, a GitHub invitation will be sent to your GitHub account. In case you
-don't get notification from GitHub, go to
+If you would like commit access, please use this `link <https://github.com/llvm/llvm-project/issues/new?title=Request%20Commit%20Access%20For%20%3Cuser%3E&body=%23%23%23%20Why%20Are%20you%20requesting%20commit%20access%20?>`_ to file
+an issue and request commit access. Replace the <user> string in the title
+with your github username, and explain why you are requesting commit access in
+the issue description. If approved, a GitHub invitation will be sent to your
+GitHub account. In case you don't get notification from GitHub, go to
 `Invitation Link <https://github.com/orgs/llvm/invitation>`_ directly. Once
-accept the invitation, you'll get commit access.
+you accept the invitation, you'll get commit access.
 
 Prior to obtaining commit access, it is common practice to request that
 someone with commit access commits on your behalf. When doing so, please
@@ -1153,6 +1153,18 @@ contributors to LLVM and getting them to agree that a license change is
 acceptable for their contributions.  We feel that a high burden for relicensing
 is good for the project, because contributors do not have to fear that their
 code will be used in a way with which they disagree.
+
+Embedded Copyright or 'Contributed by' Statements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The LLVM project does not accept contributions that include in-source copyright
+notices except where such notices are part of a larger external project being
+added as a vendored dependency.
+
+LLVM source code lives for a long time and is edited by many people, the best
+way to track contributions is through revision control history.
+See the `Attribution of Changes`_ section for more information about attributing
+changes to authors other than the committer.
 
 Relicensing
 -----------

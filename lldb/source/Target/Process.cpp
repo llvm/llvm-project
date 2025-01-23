@@ -1182,7 +1182,7 @@ void Process::UpdateThreadListIfNeeded() {
           // See if the OS plugin reports all threads.  If it does, then
           // it is safe to clear unseen thread's plans here.  Otherwise we
           // should preserve them in case they show up again:
-          clear_unused_threads = GetOSPluginReportsAllThreads();
+          clear_unused_threads = os->DoesPluginReportAllThreads();
 
           // Turn off dynamic types to ensure we don't run any expressions.
           // Objective-C can run an expression to determine if a SBValue is a
@@ -1292,17 +1292,12 @@ bool Process::HasAssignedIndexIDToThread(uint64_t thread_id) {
 }
 
 uint32_t Process::AssignIndexIDToThread(uint64_t thread_id) {
-  uint32_t result = 0;
-  std::map<uint64_t, uint32_t>::iterator iterator =
-      m_thread_id_to_index_id_map.find(thread_id);
-  if (iterator == m_thread_id_to_index_id_map.end()) {
-    result = ++m_thread_index_id;
-    m_thread_id_to_index_id_map[thread_id] = result;
-  } else {
-    result = iterator->second;
-  }
+  auto [iterator, inserted] =
+      m_thread_id_to_index_id_map.try_emplace(thread_id, m_thread_index_id + 1);
+  if (inserted)
+    ++m_thread_index_id;
 
-  return result;
+  return iterator->second;
 }
 
 StateType Process::GetState() {
@@ -2517,7 +2512,8 @@ bool Process::GetWatchpointReportedAfter() {
   llvm::Triple triple = arch.GetTriple();
 
   if (triple.isMIPS() || triple.isPPC64() || triple.isRISCV() ||
-      triple.isAArch64() || triple.isArmMClass() || triple.isARM())
+      triple.isAArch64() || triple.isArmMClass() || triple.isARM() ||
+      triple.isLoongArch())
     reported_after = false;
 
   return reported_after;
@@ -6080,6 +6076,10 @@ bool Process::GetProcessInfo(ProcessInstanceInfo &info) {
   return platform_sp->GetProcessInfo(GetID(), info);
 }
 
+lldb_private::UUID Process::FindModuleUUID(const llvm::StringRef path) {
+  return lldb_private::UUID();
+}
+
 ThreadCollectionSP Process::GetHistoryThreads(lldb::addr_t addr) {
   ThreadCollectionSP threads;
 
@@ -6184,7 +6184,12 @@ Status Process::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                     MemoryRegionInfo &range_info) {
   if (const lldb::ABISP &abi = GetABI())
     load_addr = abi->FixAnyAddress(load_addr);
-  return DoGetMemoryRegionInfo(load_addr, range_info);
+  Status error = DoGetMemoryRegionInfo(load_addr, range_info);
+  // Reject a region that does not contain the requested address.
+  if (error.Success() && !range_info.GetRange().Contains(load_addr))
+    error = Status::FromErrorString("Invalid memory region");
+
+  return error;
 }
 
 Status Process::GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list) {

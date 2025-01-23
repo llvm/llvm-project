@@ -75,20 +75,37 @@ ParseResult VoteBallotOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void VoteBallotOp::print(OpAsmPrinter &p) { printNVVMIntrinsicOp(p, *this); }
 
-LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
-  if (getCoordinates().empty() || getCoordinates().size() > 5)
-    return emitError("expects coordinates between 1 to 5 dimension");
+// This verifier is shared among the following Ops:
+// CpAsyncBulkTensorGlobalToSharedClusterOp (TMA Load)
+// CpAsyncBulkTensorPrefetchOp (TMA Prefetch)
+// CpAsyncBulkTensorReduceOp (TMA Store-Reduce)
+static LogicalResult CpAsyncBulkTensorCommonVerifier(size_t tensorDims,
+                                                     bool isIm2Col,
+                                                     size_t numIm2ColOffsets,
+                                                     Location loc) {
+  if (tensorDims < 1 || tensorDims > 5)
+    return emitError(loc, "expects coordinates between 1 to 5 dimension");
 
-  // Check for im2col mode
-  if (!getIm2colOffsets().empty()) {
-    if (getCoordinates().size() < 3)
+  // For Im2Col mode, there are two constraints:
+  if (isIm2Col) {
+    // 1. Tensor must always be at least 3-d.
+    if (tensorDims < 3)
       return emitError(
+          loc,
           "to use im2col mode, the tensor has to be at least 3-dimensional");
-    if (getCoordinates().size() != (getIm2colOffsets().size() + 2))
+    // 2. When there are Im2ColOffsets, they must be (Dims - 2) in number.
+    if (numIm2ColOffsets && (tensorDims != (numIm2ColOffsets + 2)))
       return emitError(
-          "im2col offsets must be 2 less than number of coordinates");
+          loc, "im2col offsets must be 2 less than number of coordinates");
   }
   return success();
+}
+
+LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
+  size_t numIm2ColOffsets = getIm2colOffsets().size();
+  bool isIm2Col = numIm2ColOffsets > 0;
+  return CpAsyncBulkTensorCommonVerifier(getCoordinates().size(), isIm2Col,
+                                         numIm2ColOffsets, getLoc());
 }
 
 LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOp::verify() {
@@ -105,6 +122,39 @@ LogicalResult CpAsyncOp::verify() {
     return emitError("expected byte size to be either 4, 8 or 16.");
   if (getModifier() == LoadCacheModifierKind::CG && getSize() != 16)
     return emitError("CG cache modifier is only support for 16 bytes copy.");
+  return success();
+}
+
+LogicalResult CpAsyncBulkTensorPrefetchOp::verify() {
+  size_t numIm2ColOffsets = getIm2colOffsets().size();
+  bool isIm2Col = numIm2ColOffsets > 0;
+  return CpAsyncBulkTensorCommonVerifier(getCoordinates().size(), isIm2Col,
+                                         numIm2ColOffsets, getLoc());
+}
+
+LogicalResult CpAsyncBulkTensorReduceOp::verify() {
+  bool isIm2Col = (getMode() == TMAStoreMode::IM2COL);
+  return CpAsyncBulkTensorCommonVerifier(getCoordinates().size(), isIm2Col, 0,
+                                         getLoc());
+}
+
+LogicalResult CvtFloatToTF32Op::verify() {
+  using RndMode = NVVM::FPRoundingMode;
+  switch (getRnd()) {
+  case RndMode::RNA:
+    if (getRelu())
+      return emitError("Relu not supported with rna rounding mode.");
+    break;
+  case RndMode::RN:
+  case RndMode::RZ:
+    if (getSat() != NVVM::SaturationMode::NONE)
+      return emitError(
+          "Saturation mode not supported with rn/rz rounding modes.");
+    break;
+  default:
+    return emitError(
+        "Only {rn,rz,rna} rounding modes supported for CvtFloatToTF32Op.");
+  }
   return success();
 }
 
@@ -415,8 +465,13 @@ LogicalResult MmaOp::verify() {
       expectedResult.push_back(LLVM::LLVMStructType::getLiteral(
           context, {f32Ty, f32Ty, f32Ty, f32Ty}));
       break;
-    case MMATypes::f16:
     case MMATypes::bf16:
+      kFactor = 8;
+      multiplicandFragType = i32Ty;
+      expectedResult.push_back(LLVM::LLVMStructType::getLiteral(
+          context, {f32Ty, f32Ty, f32Ty, f32Ty}));
+      break;
+    case MMATypes::f16:
       kFactor = 8;
       multiplicandFragType = f16x2Ty;
       expectedResult.push_back(f16x2x2StructTy);
@@ -1055,6 +1110,148 @@ LogicalResult NVVM::BarrierOp::verify() {
   return success();
 }
 
+#define CP_ASYNC_ID_IMPL(mod, size, suffix)                                    \
+  llvm::Intrinsic::nvvm_cp_async_##mod##_shared_global_##size##suffix
+
+#define GET_CP_ASYNC_ID(mod, size, has_cpsize)                                 \
+  has_cpsize ? CP_ASYNC_ID_IMPL(mod, size, _s) : CP_ASYNC_ID_IMPL(mod, size, )
+
+llvm::Intrinsic::ID
+CpAsyncOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                                 llvm::SmallVector<llvm::Value *> &args) {
+  llvm::Intrinsic::ID id;
+
+  auto cpAsyncOp = cast<NVVM::CpAsyncOp>(op);
+  bool hasCpSize = cpAsyncOp.getCpSize() ? true : false;
+  switch (cpAsyncOp.getSize()) {
+  case 4:
+    id = GET_CP_ASYNC_ID(ca, 4, hasCpSize);
+    break;
+  case 8:
+    id = GET_CP_ASYNC_ID(ca, 8, hasCpSize);
+    break;
+  case 16:
+    id = (cpAsyncOp.getModifier() == NVVM::LoadCacheModifierKind::CG)
+             ? GET_CP_ASYNC_ID(cg, 16, hasCpSize)
+             : GET_CP_ASYNC_ID(ca, 16, hasCpSize);
+    break;
+  default:
+    llvm_unreachable("Invalid copy size in CpAsyncOp.");
+  }
+
+  // Fill the Intrinsic Args
+  args.push_back(mt.lookupValue(cpAsyncOp.getDst()));
+  args.push_back(mt.lookupValue(cpAsyncOp.getSrc()));
+  if (hasCpSize)
+    args.push_back(mt.lookupValue(cpAsyncOp.getCpSize()));
+
+  return id;
+}
+
+llvm::Intrinsic::ID CpAsyncBulkTensorPrefetchOp::getIntrinsicID(int tensorDims,
+                                                                bool isIm2Col) {
+  switch (tensorDims) {
+  case 1:
+    return llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_1d;
+  case 2:
+    return llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_2d;
+  case 3:
+    return isIm2Col
+               ? llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_3d
+               : llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_3d;
+  case 4:
+    return isIm2Col
+               ? llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_4d
+               : llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_4d;
+  case 5:
+    return isIm2Col
+               ? llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_5d
+               : llvm::Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_5d;
+  default:
+    llvm_unreachable("Invalid TensorDim in CpAsyncBulkTensorPrefetchOp.");
+  }
+}
+
+#define CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, dim, mode)                        \
+  llvm::Intrinsic::nvvm_cp_async_bulk_tensor_##op##_##mode##_##dim##d
+
+#define CP_ASYNC_BULK_TENSOR_REDUCE(op, dim, is_im2col)                        \
+  is_im2col ? CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, dim, im2col)                \
+            : CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, dim, tile)
+
+#define GET_CP_ASYNC_BULK_TENSOR_ID(op, dims, is_im2col)                       \
+  [&]() -> auto {                                                              \
+    switch (dims) {                                                            \
+    case 1:                                                                    \
+      return CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, 1, tile);                    \
+    case 2:                                                                    \
+      return CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, 2, tile);                    \
+    case 3:                                                                    \
+      return CP_ASYNC_BULK_TENSOR_REDUCE(op, 3, is_im2col);                    \
+    case 4:                                                                    \
+      return CP_ASYNC_BULK_TENSOR_REDUCE(op, 4, is_im2col);                    \
+    case 5:                                                                    \
+      return CP_ASYNC_BULK_TENSOR_REDUCE(op, 5, is_im2col);                    \
+    default:                                                                   \
+      llvm_unreachable("Invalid TensorDim in CpAsyncBulkTensorReduceOp.");     \
+    }                                                                          \
+  }()
+
+llvm::Intrinsic::ID CpAsyncBulkTensorReduceOp::getIntrinsicID(
+    int tensorDims, NVVM::TMAReduxKind kind, bool isIm2Col) {
+  using RedTy = NVVM::TMAReduxKind;
+  switch (kind) {
+  case RedTy::ADD:
+    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_add, tensorDims, isIm2Col);
+  case RedTy::MIN:
+    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_min, tensorDims, isIm2Col);
+  case RedTy::MAX:
+    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_max, tensorDims, isIm2Col);
+  case RedTy::INC:
+    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_inc, tensorDims, isIm2Col);
+  case RedTy::DEC:
+    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_dec, tensorDims, isIm2Col);
+  case RedTy::AND:
+    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_and, tensorDims, isIm2Col);
+  case RedTy::OR:
+    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_or, tensorDims, isIm2Col);
+  case RedTy::XOR:
+    return GET_CP_ASYNC_BULK_TENSOR_ID(reduce_xor, tensorDims, isIm2Col);
+  }
+  llvm_unreachable("Invalid Reduction Op for CpAsyncBulkTensorReduceOp");
+}
+
+llvm::Intrinsic::ID CvtFloatToTF32Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
+                                                     NVVM::SaturationMode sat,
+                                                     bool hasRelu) {
+  using RndMode = NVVM::FPRoundingMode;
+  switch (rnd) {
+  case RndMode::RN:
+    return hasRelu ? llvm::Intrinsic::nvvm_f2tf32_rn_relu
+                   : llvm::Intrinsic::nvvm_f2tf32_rn;
+  case RndMode::RZ:
+    return hasRelu ? llvm::Intrinsic::nvvm_f2tf32_rz_relu
+                   : llvm::Intrinsic::nvvm_f2tf32_rz;
+  case RndMode::RNA:
+    return (sat == NVVM::SaturationMode::SATFINITE)
+               ? llvm::Intrinsic::nvvm_f2tf32_rna_satfinite
+               : llvm::Intrinsic::nvvm_f2tf32_rna;
+  default:
+    llvm_unreachable("Invalid RoundingMode for CvtFloatToTF32Op");
+  }
+}
+
+/// Infer the result ranges for the NVVM SpecialRangeableRegisterOp that might
+/// have ConstantRangeAttr.
+static void nvvmInferResultRanges(Operation *op, Value result,
+                                  ArrayRef<::mlir::ConstantIntRanges> argRanges,
+                                  SetIntRangeFn setResultRanges) {
+  if (auto rangeAttr = op->getAttrOfType<LLVM::ConstantRangeAttr>("range")) {
+    setResultRanges(result, {rangeAttr.getLower(), rangeAttr.getUpper(),
+                             rangeAttr.getLower(), rangeAttr.getUpper()});
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // NVVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
@@ -1087,18 +1284,22 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
                              << "' attribute attached to unexpected op";
     }
   }
-  // If maxntid and reqntid exist, it must be an array with max 3 dim
+  // If maxntid / reqntid / cluster_dim exist, it must be an array with max 3
+  // dim
   if (attrName == NVVMDialect::getMaxntidAttrName() ||
-      attrName == NVVMDialect::getReqntidAttrName()) {
+      attrName == NVVMDialect::getReqntidAttrName() ||
+      attrName == NVVMDialect::getClusterDimAttrName()) {
     auto values = llvm::dyn_cast<DenseI32ArrayAttr>(attr.getValue());
     if (!values || values.empty() || values.size() > 3)
       return op->emitError()
              << "'" << attrName
              << "' attribute must be integer array with maximum 3 index";
   }
-  // If minctasm and maxnreg exist, it must be an integer attribute
+  // If minctasm / maxnreg / cluster_max_blocks exist, it must be an integer
+  // attribute
   if (attrName == NVVMDialect::getMinctasmAttrName() ||
-      attrName == NVVMDialect::getMaxnregAttrName()) {
+      attrName == NVVMDialect::getMaxnregAttrName() ||
+      attrName == NVVMDialect::getClusterMaxBlocksAttrName()) {
     if (!llvm::dyn_cast<IntegerAttr>(attr.getValue()))
       return op->emitError()
              << "'" << attrName << "' attribute must be integer constant";

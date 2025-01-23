@@ -131,7 +131,14 @@ public:
 // Contents of this chunk is always null bytes.
 class NullChunk : public NonSectionChunk {
 public:
-  explicit NullChunk(size_t n) : size(n) { hasData = false; }
+  explicit NullChunk(size_t n, uint32_t align) : size(n) {
+    hasData = false;
+    setAlignment(align);
+  }
+  explicit NullChunk(COFFLinkerContext &ctx)
+      : NullChunk(ctx.config.wordsize, ctx.config.wordsize) {}
+  explicit NullChunk(COFFLinkerContext &ctx, size_t n)
+      : NullChunk(n, ctx.config.wordsize) {}
   size_t getSize() const override { return size; }
 
   void writeTo(uint8_t *buf) const override {
@@ -153,13 +160,14 @@ public:
   void writeTo(uint8_t *buf) const override {
     uint64_t impchkVA = 0;
     if (file->impchkThunk)
-      impchkVA = file->impchkThunk->getRVA() + file->ctx.config.imageBase;
+      impchkVA =
+          file->impchkThunk->getRVA() + file->symtab.ctx.config.imageBase;
     write64le(buf, impchkVA);
   }
 
   void getBaserels(std::vector<Baserel> *res) override {
     if (file->impchkThunk)
-      res->emplace_back(rva, file->ctx.config.machine);
+      res->emplace_back(rva, file->symtab.machine);
   }
 
 private:
@@ -388,6 +396,7 @@ public:
   }
 
   size_t getSize() const override { return 3 * sizeof(uint32_t); }
+  MachineTypes getMachine() const override { return AMD64; }
 
   void writeTo(uint8_t *buf) const override {
     write32le(buf + 0, tm->getRVA()); // TailMergeChunk start RVA
@@ -408,6 +417,7 @@ public:
   }
 
   size_t getSize() const override { return sizeof(tailMergeUnwindInfoX64); }
+  MachineTypes getMachine() const override { return AMD64; }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, tailMergeUnwindInfoX64, sizeof(tailMergeUnwindInfoX64));
@@ -629,22 +639,22 @@ public:
 
 class AddressTableChunk : public NonSectionChunk {
 public:
-  explicit AddressTableChunk(COFFLinkerContext &ctx, size_t baseOrdinal,
+  explicit AddressTableChunk(SymbolTable &symtab, size_t baseOrdinal,
                              size_t maxOrdinal)
       : baseOrdinal(baseOrdinal), size((maxOrdinal - baseOrdinal) + 1),
-        ctx(ctx) {}
+        symtab(symtab) {}
   size_t getSize() const override { return size * 4; }
 
   void writeTo(uint8_t *buf) const override {
     memset(buf, 0, getSize());
 
-    for (const Export &e : ctx.config.exports) {
+    for (const Export &e : symtab.exports) {
       assert(e.ordinal >= baseOrdinal && "Export symbol has invalid ordinal");
       // Subtract the OrdinalBase to get the index.
       uint8_t *p = buf + (e.ordinal - baseOrdinal) * 4;
       uint32_t bit = 0;
       // Pointer to thumb code must have the LSB set, so adjust it.
-      if (ctx.config.machine == ARMNT && !e.data)
+      if (symtab.machine == ARMNT && !e.data)
         bit = 1;
       if (e.forwardChunk) {
         write32le(p, e.forwardChunk->getRVA() | bit);
@@ -659,7 +669,7 @@ public:
 private:
   size_t baseOrdinal;
   size_t size;
-  const COFFLinkerContext &ctx;
+  const SymbolTable &symtab;
 };
 
 class NamePointersChunk : public NonSectionChunk {
@@ -680,13 +690,13 @@ private:
 
 class ExportOrdinalChunk : public NonSectionChunk {
 public:
-  explicit ExportOrdinalChunk(const COFFLinkerContext &ctx, size_t baseOrdinal,
+  explicit ExportOrdinalChunk(const SymbolTable &symtab, size_t baseOrdinal,
                               size_t tableSize)
-      : baseOrdinal(baseOrdinal), size(tableSize), ctx(ctx) {}
+      : baseOrdinal(baseOrdinal), size(tableSize), symtab(symtab) {}
   size_t getSize() const override { return size * 2; }
 
   void writeTo(uint8_t *buf) const override {
-    for (const Export &e : ctx.config.exports) {
+    for (const Export &e : symtab.exports) {
       if (e.noname)
         continue;
       assert(e.ordinal >= baseOrdinal && "Export symbol has invalid ordinal");
@@ -699,7 +709,7 @@ public:
 private:
   size_t baseOrdinal;
   size_t size;
-  const COFFLinkerContext &ctx;
+  const SymbolTable &symtab;
 };
 
 } // anonymous namespace
@@ -737,11 +747,11 @@ void IdataContents::create(COFFLinkerContext &ctx) {
       }
     }
     // Terminate with null values.
-    lookups.push_back(make<NullChunk>(ctx.config.wordsize));
-    addresses.push_back(make<NullChunk>(ctx.config.wordsize));
+    lookups.push_back(make<NullChunk>(ctx));
+    addresses.push_back(make<NullChunk>(ctx));
     if (ctx.config.machine == ARM64EC) {
-      auxIat.push_back(make<NullChunk>(ctx.config.wordsize));
-      auxIatCopy.push_back(make<NullChunk>(ctx.config.wordsize));
+      auxIat.push_back(make<NullChunk>(ctx));
+      auxIatCopy.push_back(make<NullChunk>(ctx));
     }
 
     for (int i = 0, e = syms.size(); i < e; ++i)
@@ -755,7 +765,7 @@ void IdataContents::create(COFFLinkerContext &ctx) {
     dirs.push_back(dir);
   }
   // Add null terminator.
-  dirs.push_back(make<NullChunk>(sizeof(ImportDirectoryTableEntry)));
+  dirs.push_back(make<NullChunk>(sizeof(ImportDirectoryTableEntry), 4));
 }
 
 std::vector<Chunk *> DelayLoadContents::getChunks() {
@@ -830,17 +840,16 @@ void DelayLoadContents::create(Defined *h) {
         saver().save("__tailMerge_" + syms[0]->getDLLName().lower());
     ctx.symtab.addSynthetic(tmName, tm);
     // Terminate with null values.
-    addresses.push_back(make<NullChunk>(8));
-    names.push_back(make<NullChunk>(8));
+    addresses.push_back(make<NullChunk>(ctx, 8));
+    names.push_back(make<NullChunk>(ctx, 8));
     if (ctx.config.machine == ARM64EC) {
-      auxIat.push_back(make<NullChunk>(8));
-      auxIatCopy.push_back(make<NullChunk>(8));
+      auxIat.push_back(make<NullChunk>(ctx, 8));
+      auxIatCopy.push_back(make<NullChunk>(ctx, 8));
     }
 
     for (int i = 0, e = syms.size(); i < e; ++i)
       syms[i]->setLocation(addresses[base + i]);
-    auto *mh = make<NullChunk>(8);
-    mh->setAlignment(8);
+    auto *mh = make<NullChunk>(8, 8);
     moduleHandles.push_back(mh);
 
     // Fill the delay import table header fields.
@@ -853,7 +862,8 @@ void DelayLoadContents::create(Defined *h) {
   if (unwind)
     unwindinfo.push_back(unwind);
   // Add null terminator.
-  dirs.push_back(make<NullChunk>(sizeof(delay_import_directory_table_entry)));
+  dirs.push_back(
+      make<NullChunk>(sizeof(delay_import_directory_table_entry), 4));
 }
 
 Chunk *DelayLoadContents::newTailMergeChunk(Chunk *dir) {
@@ -875,6 +885,7 @@ Chunk *DelayLoadContents::newTailMergeChunk(Chunk *dir) {
 Chunk *DelayLoadContents::newTailMergeUnwindInfoChunk() {
   switch (ctx.config.machine) {
   case AMD64:
+  case ARM64EC:
     return make<TailMergeUnwindInfoX64>();
     // FIXME: Add support for other architectures.
   default:
@@ -884,6 +895,7 @@ Chunk *DelayLoadContents::newTailMergeUnwindInfoChunk() {
 Chunk *DelayLoadContents::newTailMergePDataChunk(Chunk *tm, Chunk *unwind) {
   switch (ctx.config.machine) {
   case AMD64:
+  case ARM64EC:
     return make<TailMergePDataChunkX64>(tm, unwind);
     // FIXME: Add support for other architectures.
   default:
@@ -908,9 +920,9 @@ Chunk *DelayLoadContents::newThunkChunk(DefinedImportData *s,
   }
 }
 
-EdataContents::EdataContents(COFFLinkerContext &ctx) : ctx(ctx) {
+void createEdataChunks(SymbolTable &symtab, std::vector<Chunk *> &chunks) {
   unsigned baseOrdinal = 1 << 16, maxOrdinal = 0;
-  for (Export &e : ctx.config.exports) {
+  for (Export &e : symtab.exports) {
     baseOrdinal = std::min(baseOrdinal, (unsigned)e.ordinal);
     maxOrdinal = std::max(maxOrdinal, (unsigned)e.ordinal);
   }
@@ -918,15 +930,16 @@ EdataContents::EdataContents(COFFLinkerContext &ctx) : ctx(ctx) {
   // https://learn.microsoft.com/en-us/cpp/build/reference/export-exports-a-function?view=msvc-170
   assert(baseOrdinal >= 1);
 
-  auto *dllName = make<StringChunk>(sys::path::filename(ctx.config.outputFile));
-  auto *addressTab = make<AddressTableChunk>(ctx, baseOrdinal, maxOrdinal);
+  auto *dllName =
+      make<StringChunk>(sys::path::filename(symtab.ctx.config.outputFile));
+  auto *addressTab = make<AddressTableChunk>(symtab, baseOrdinal, maxOrdinal);
   std::vector<Chunk *> names;
-  for (Export &e : ctx.config.exports)
+  for (Export &e : symtab.exports)
     if (!e.noname)
       names.push_back(make<StringChunk>(e.exportName));
 
   std::vector<Chunk *> forwards;
-  for (Export &e : ctx.config.exports) {
+  for (Export &e : symtab.exports) {
     if (e.forwardTo.empty())
       continue;
     e.forwardChunk = make<StringChunk>(e.forwardTo);
@@ -934,7 +947,8 @@ EdataContents::EdataContents(COFFLinkerContext &ctx) : ctx(ctx) {
   }
 
   auto *nameTab = make<NamePointersChunk>(names);
-  auto *ordinalTab = make<ExportOrdinalChunk>(ctx, baseOrdinal, names.size());
+  auto *ordinalTab =
+      make<ExportOrdinalChunk>(symtab, baseOrdinal, names.size());
   auto *dir =
       make<ExportDirectoryChunk>(baseOrdinal, maxOrdinal, names.size(), dllName,
                                  addressTab, nameTab, ordinalTab);

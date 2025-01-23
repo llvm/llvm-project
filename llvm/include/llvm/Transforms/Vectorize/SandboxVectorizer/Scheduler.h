@@ -69,12 +69,20 @@ public:
 private:
   ContainerTy Nodes;
 
+  /// Called by the DGNode destructor to avoid accessing freed memory.
+  void eraseFromBundle(DGNode *N) { Nodes.erase(find(Nodes, N)); }
+  friend DGNode::~DGNode(); // For eraseFromBundle().
+
 public:
   SchedBundle() = default;
   SchedBundle(ContainerTy &&Nodes) : Nodes(std::move(Nodes)) {
     for (auto *N : this->Nodes)
       N->setSchedBundle(*this);
   }
+  /// Copy CTOR (unimplemented).
+  SchedBundle(const SchedBundle &Other) = delete;
+  /// Copy Assignment (unimplemented).
+  SchedBundle &operator=(const SchedBundle &Other) = delete;
   ~SchedBundle() {
     for (auto *N : this->Nodes)
       N->clearSchedBundle();
@@ -101,13 +109,19 @@ public:
 
 /// The list scheduler.
 class Scheduler {
+  /// This is a list-scheduler and this is the list containing the instructions
+  /// that are ready, meaning that all their dependency successors have already
+  /// been scheduled.
   ReadyListContainer ReadyList;
+  /// The dependency graph is used by the scheduler to determine the legal
+  /// ordering of instructions.
   DependencyGraph DAG;
+  /// This is the top of the schedule, i.e. the location where the scheduler
+  /// is about to place the scheduled instructions. It gets updated as we
+  /// schedule.
   std::optional<BasicBlock::iterator> ScheduleTopItOpt;
   // TODO: This is wasting memory in exchange for fast removal using a raw ptr.
   DenseMap<SchedBundle *, std::unique_ptr<SchedBundle>> Bndls;
-  Context &Ctx;
-  Context::CallbackID CreateInstrCB;
 
   /// \Returns a scheduling bundle containing \p Instrs.
   SchedBundle *createBundle(ArrayRef<Instruction *> Instrs);
@@ -137,13 +151,21 @@ class Scheduler {
   Scheduler &operator=(const Scheduler &) = delete;
 
 public:
-  Scheduler(AAResults &AA, Context &Ctx) : DAG(AA), Ctx(Ctx) {
-    CreateInstrCB = Ctx.registerCreateInstrCallback(
-        [this](Instruction *I) { DAG.notifyCreateInstr(I); });
-  }
-  ~Scheduler() { Ctx.unregisterCreateInstrCallback(CreateInstrCB); }
-
+  Scheduler(AAResults &AA, Context &Ctx) : DAG(AA, Ctx) {}
+  ~Scheduler() {}
+  /// Tries to build a schedule that includes all of \p Instrs scheduled at the
+  /// same scheduling cycle. This essentially checks that there are no
+  /// dependencies among \p Instrs. This function may involve scheduling
+  /// intermediate instructions or canceling and re-scheduling if needed.
+  /// \Returns true on success, false otherwise.
   bool trySchedule(ArrayRef<Instruction *> Instrs);
+  /// Clear the scheduler's state, including the DAG.
+  void clear() {
+    Bndls.clear();
+    // TODO: clear view once it lands.
+    DAG.clear();
+    ScheduleTopItOpt = std::nullopt;
+  }
 
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const;

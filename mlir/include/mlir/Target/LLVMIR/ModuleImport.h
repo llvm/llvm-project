@@ -192,6 +192,11 @@ public:
   /// implement the exact flag interface.
   void setExactFlag(llvm::Instruction *inst, Operation *op) const;
 
+  /// Sets the disjoint flag attribute for the imported operation `op`
+  /// given the original instruction `inst`. Asserts if the operation does
+  /// not implement the disjoint flag interface.
+  void setDisjointFlag(llvm::Instruction *inst, Operation *op) const;
+
   /// Sets the nneg flag attribute for the imported operation `op` given
   /// the original instruction `inst`. Asserts if the operation does not
   /// implement the nneg flag interface.
@@ -314,9 +319,13 @@ private:
   /// Appends the converted result type and operands of `callInst` to the
   /// `types` and `operands` arrays. For indirect calls, the method additionally
   /// inserts the called function at the beginning of the `operands` array.
+  /// If `allowInlineAsm` is set to false (the default), it will return failure
+  /// if the called operand is an inline asm which isn't convertible to MLIR as
+  /// a value.
   LogicalResult convertCallTypeAndOperands(llvm::CallBase *callInst,
                                            SmallVectorImpl<Type> &types,
-                                           SmallVectorImpl<Value> &operands);
+                                           SmallVectorImpl<Value> &operands,
+                                           bool allowInlineAsm = false);
   /// Converts the parameter attributes attached to `func` and adds them to the
   /// `funcOp`.
   void convertParameterAttributes(llvm::Function *func, LLVMFuncOp funcOp,

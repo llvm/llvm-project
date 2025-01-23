@@ -82,8 +82,6 @@ public:
   Type *get(Type *SrcTy);
   Type *get(Type *SrcTy, SmallPtrSet<StructType *, 8> &Visited);
 
-  void finishType(StructType *DTy, StructType *STy, ArrayRef<Type *> ETypes);
-
   FunctionType *get(FunctionType *T) {
     return cast<FunctionType>(get((Type *)T));
   }
@@ -233,20 +231,6 @@ Error TypeMapTy::linkDefinedTypeBodies() {
   return Error::success();
 }
 
-void TypeMapTy::finishType(StructType *DTy, StructType *STy,
-                           ArrayRef<Type *> ETypes) {
-  DTy->setBody(ETypes, STy->isPacked());
-
-  // Steal STy's name.
-  if (STy->hasName()) {
-    SmallString<16> TmpName = STy->getName();
-    STy->setName("");
-    DTy->setName(TmpName);
-  }
-
-  DstStructTypesSet.addNonOpaque(DTy);
-}
-
 Type *TypeMapTy::get(Type *Ty) {
   SmallPtrSet<StructType *, 8> Visited;
   return get(Ty, Visited);
@@ -292,17 +276,9 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
     AnyChange |= ElementTypes[I] != Ty->getContainedType(I);
   }
 
-  // If we found our type while recursively processing stuff, just use it.
+  // Refresh Entry after recursively processing stuff.
   Entry = &MappedTypes[Ty];
-  if (*Entry) {
-    if (auto *DTy = dyn_cast<StructType>(*Entry)) {
-      if (DTy->isOpaque()) {
-        auto *STy = cast<StructType>(Ty);
-        finishType(DTy, STy, ElementTypes);
-      }
-    }
-    return *Entry;
-  }
+  assert(!*Entry && "Recursive type!");
 
   // If all of the element types mapped directly over and the type is not
   // a named struct, then the type is usable as-is.
@@ -320,9 +296,6 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
   case Type::FixedVectorTyID:
     return *Entry = VectorType::get(ElementTypes[0],
                                     cast<VectorType>(Ty)->getElementCount());
-  case Type::PointerTyID:
-    return *Entry = PointerType::get(ElementTypes[0],
-                                     cast<PointerType>(Ty)->getAddressSpace());
   case Type::FunctionTyID:
     return *Entry = FunctionType::get(ElementTypes[0],
                                       ArrayRef(ElementTypes).slice(1),
@@ -350,8 +323,17 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
       return *Entry = Ty;
     }
 
-    StructType *DTy = StructType::create(Ty->getContext());
-    finishType(DTy, STy, ElementTypes);
+    StructType *DTy =
+        StructType::create(Ty->getContext(), ElementTypes, "", STy->isPacked());
+
+    // Steal STy's name.
+    if (STy->hasName()) {
+      SmallString<16> TmpName = STy->getName();
+      STy->setName("");
+      DTy->setName(TmpName);
+    }
+
+    DstStructTypesSet.addNonOpaque(DTy);
     return *Entry = DTy;
   }
   }
@@ -1445,11 +1427,15 @@ Error IRLinker::linkModuleFlagsMetadata() {
       llvm_unreachable("not possible");
     case Module::Error: {
       // Emit an error if the values differ.
-      if (SrcOp->getOperand(2) != DstOp->getOperand(2))
-        return stringErr("linking module flags '" + ID->getString() +
-                         "': IDs have conflicting values in '" +
-                         SrcM->getModuleIdentifier() + "' and '" +
-                         DstM.getModuleIdentifier() + "'");
+      if (SrcOp->getOperand(2) != DstOp->getOperand(2)) {
+        std::string Str;
+        raw_string_ostream(Str)
+            << "linking module flags '" << ID->getString()
+            << "': IDs have conflicting values: '" << *SrcOp->getOperand(2)
+            << "' from " << SrcM->getModuleIdentifier() << ", and '"
+            << *DstOp->getOperand(2) << "' from " + DstM.getModuleIdentifier();
+        return stringErr(Str);
+      }
       continue;
     }
     case Module::Warning: {
@@ -1573,10 +1559,6 @@ Error IRLinker::run() {
   bool EnableDLWarning = true;
   bool EnableTripleWarning = true;
   if (SrcTriple.isNVPTX() && DstTriple.isNVPTX()) {
-    std::string ModuleId = SrcM->getModuleIdentifier();
-    StringRef FileName = llvm::sys::path::filename(ModuleId);
-    bool SrcIsLibDevice =
-        FileName.starts_with("libdevice") && FileName.ends_with(".10.bc");
     bool SrcHasLibDeviceDL =
         (SrcM->getDataLayoutStr().empty() ||
          SrcM->getDataLayoutStr() == "e-i64:64-v16:16-v32:32-n16:32:64");
@@ -1587,8 +1569,8 @@ Error IRLinker::run() {
                                   SrcTriple.getOSName() == "gpulibs") ||
                                  (SrcTriple.getVendorName() == "unknown" &&
                                   SrcTriple.getOSName() == "unknown");
-    EnableTripleWarning = !(SrcIsLibDevice && SrcHasLibDeviceTriple);
-    EnableDLWarning = !(SrcIsLibDevice && SrcHasLibDeviceDL);
+    EnableTripleWarning = !SrcHasLibDeviceTriple;
+    EnableDLWarning = !(SrcHasLibDeviceTriple && SrcHasLibDeviceDL);
   }
 
   if (EnableDLWarning && (SrcM->getDataLayout() != DstM.getDataLayout())) {

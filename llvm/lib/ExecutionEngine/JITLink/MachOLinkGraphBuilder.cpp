@@ -49,13 +49,14 @@ Expected<std::unique_ptr<LinkGraph>> MachOLinkGraphBuilder::buildGraph() {
 }
 
 MachOLinkGraphBuilder::MachOLinkGraphBuilder(
-    const object::MachOObjectFile &Obj, Triple TT, SubtargetFeatures Features,
+    const object::MachOObjectFile &Obj,
+    std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
+    SubtargetFeatures Features,
     LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
     : Obj(Obj),
-      G(std::make_unique<LinkGraph>(std::string(Obj.getFileName()),
-                                    std::move(TT), std::move(Features),
-                                    getPointerSize(Obj), getEndianness(Obj),
-                                    std::move(GetEdgeKindName))) {
+      G(std::make_unique<LinkGraph>(
+          std::string(Obj.getFileName()), std::move(SSP), std::move(TT),
+          std::move(Features), std::move(GetEdgeKindName))) {
   auto &MachHeader = Obj.getHeader64();
   SubsectionsViaSymbols = MachHeader.flags & MachO::MH_SUBSECTIONS_VIA_SYMBOLS;
 }
@@ -101,17 +102,6 @@ bool MachOLinkGraphBuilder::isZeroFillSection(const NormalizedSection &NSec) {
   default:
     return false;
   }
-}
-
-unsigned
-MachOLinkGraphBuilder::getPointerSize(const object::MachOObjectFile &Obj) {
-  return Obj.is64Bit() ? 8 : 4;
-}
-
-llvm::endianness
-MachOLinkGraphBuilder::getEndianness(const object::MachOObjectFile &Obj) {
-  return Obj.isLittleEndian() ? llvm::endianness::little
-                              : llvm::endianness::big;
 }
 
 Section &MachOLinkGraphBuilder::getCommonSection() {
@@ -319,9 +309,8 @@ Error MachOLinkGraphBuilder::createNormalizedSymbols() {
       }
     }
 
-    IndexToSymbol[SymbolIndex] =
-        &createNormalizedSymbol(*Name, Value, Type, Sect, Desc,
-                                getLinkage(Desc), getScope(*Name, Type));
+    IndexToSymbol[SymbolIndex] = &createNormalizedSymbol(
+        Name, Value, Type, Sect, Desc, getLinkage(Desc), getScope(*Name, Type));
   }
 
   return Error::success();
@@ -587,7 +576,7 @@ Symbol &MachOLinkGraphBuilder::createStandardGraphSymbol(NormalizedSymbol &NSym,
     if (!NSym.Name)
       dbgs() << "<anonymous symbol>";
     else
-      dbgs() << NSym.Name;
+      dbgs() << *NSym.Name;
     if (IsText)
       dbgs() << " [text]";
     if (IsNoDeadStrip)
@@ -726,7 +715,7 @@ Error MachOLinkGraphBuilder::graphifyCStringSection(
         LLVM_DEBUG({
           dbgs() << "      Adding symbol for c-string block " << B.getRange()
                  << ": "
-                 << (Sym.hasName() ? Sym.getName() : "<anonymous symbol>")
+                 << (Sym.hasName() ? *Sym.getName() : "<anonymous symbol>")
                  << " at offset " << formatv("{0:x}", Sym.getOffset()) << "\n";
         });
 
@@ -826,7 +815,7 @@ Error CompactUnwindSplitter::operator()(LinkGraph &G) {
           LLVM_DEBUG({
             dbgs() << "    Updating compact unwind record at "
                    << CURec->getAddress() << " to point to "
-                   << (E.getTarget().hasName() ? E.getTarget().getName()
+                   << (E.getTarget().hasName() ? *E.getTarget().getName()
                                                : StringRef())
                    << " (at " << E.getTarget().getAddress() << ")\n";
           });
@@ -835,7 +824,7 @@ Error CompactUnwindSplitter::operator()(LinkGraph &G) {
             return make_error<JITLinkError>(
                 "Error adding keep-alive edge for compact unwind record at " +
                 formatv("{0:x}", CURec->getAddress()) + ": target " +
-                E.getTarget().getName() + " is an external symbol");
+                *E.getTarget().getName() + " is an external symbol");
           auto &TgtBlock = E.getTarget().getBlock();
           auto &CURecSym =
               G.addAnonymousSymbol(*CURec, 0, CURecordSize, false, false);

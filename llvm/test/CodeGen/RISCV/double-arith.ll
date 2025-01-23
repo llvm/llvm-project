@@ -225,8 +225,8 @@ define double @fsgnj_d(double %a, double %b) nounwind {
 ; RV32I-LABEL: fsgnj_d:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a2, 524288
-; RV32I-NEXT:    and a2, a3, a2
 ; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    and a2, a3, a2
 ; RV32I-NEXT:    srli a1, a1, 1
 ; RV32I-NEXT:    or a1, a1, a2
 ; RV32I-NEXT:    ret
@@ -234,8 +234,8 @@ define double @fsgnj_d(double %a, double %b) nounwind {
 ; RV64I-LABEL: fsgnj_d:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srli a1, a1, 63
-; RV64I-NEXT:    slli a1, a1, 63
 ; RV64I-NEXT:    slli a0, a0, 1
+; RV64I-NEXT:    slli a1, a1, 63
 ; RV64I-NEXT:    srli a0, a0, 1
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -327,8 +327,8 @@ define double @fsgnjn_d(double %a, double %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    not a2, a3
 ; RV32I-NEXT:    lui a3, 524288
-; RV32I-NEXT:    and a2, a2, a3
 ; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    and a2, a2, a3
 ; RV32I-NEXT:    srli a1, a1, 1
 ; RV32I-NEXT:    or a1, a1, a2
 ; RV32I-NEXT:    ret
@@ -1524,8 +1524,8 @@ define double @fsgnjx_f64(double %x, double %y) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    srli a0, a0, 63
-; RV64I-NEXT:    slli a0, a0, 63
 ; RV64I-NEXT:    li a2, 1023
+; RV64I-NEXT:    slli a0, a0, 63
 ; RV64I-NEXT:    slli a2, a2, 52
 ; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    call __muldf3

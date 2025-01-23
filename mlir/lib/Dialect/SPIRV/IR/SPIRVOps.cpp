@@ -1253,33 +1253,6 @@ LogicalResult spirv::GlobalVariableOp::verify() {
 // spirv.INTEL.SubgroupBlockRead
 //===----------------------------------------------------------------------===//
 
-ParseResult spirv::INTELSubgroupBlockReadOp::parse(OpAsmParser &parser,
-                                                   OperationState &result) {
-  // Parse the storage class specification
-  spirv::StorageClass storageClass;
-  OpAsmParser::UnresolvedOperand ptrInfo;
-  Type elementType;
-  if (parseEnumStrAttr(storageClass, parser) || parser.parseOperand(ptrInfo) ||
-      parser.parseColon() || parser.parseType(elementType)) {
-    return failure();
-  }
-
-  auto ptrType = spirv::PointerType::get(elementType, storageClass);
-  if (auto valVecTy = llvm::dyn_cast<VectorType>(elementType))
-    ptrType = spirv::PointerType::get(valVecTy.getElementType(), storageClass);
-
-  if (parser.resolveOperand(ptrInfo, ptrType, result.operands)) {
-    return failure();
-  }
-
-  result.addTypes(elementType);
-  return success();
-}
-
-void spirv::INTELSubgroupBlockReadOp::print(OpAsmPrinter &printer) {
-  printer << " " << getPtr() << " : " << getType();
-}
-
 LogicalResult spirv::INTELSubgroupBlockReadOp::verify() {
   if (failed(verifyBlockReadWritePtrAndValTypes(*this, getPtr(), getValue())))
     return failure();
@@ -1721,6 +1694,33 @@ LogicalResult spirv::TransposeOp::verify() {
   if (inputMatrix.getElementType() != resultMatrix.getElementType())
     return emitError("input and output matrices must have the same "
                      "component type");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.MatrixTimesVector
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::MatrixTimesVectorOp::verify() {
+  auto matrixType = llvm::cast<spirv::MatrixType>(getMatrix().getType());
+  auto vectorType = llvm::cast<VectorType>(getVector().getType());
+  auto resultType = llvm::cast<VectorType>(getType());
+
+  if (matrixType.getNumColumns() != vectorType.getNumElements())
+    return emitOpError("matrix columns (")
+           << matrixType.getNumColumns() << ") must match vector operand size ("
+           << vectorType.getNumElements() << ")";
+
+  if (resultType.getNumElements() != matrixType.getNumRows())
+    return emitOpError("result size (")
+           << resultType.getNumElements() << ") must match the matrix rows ("
+           << matrixType.getNumRows() << ")";
+
+  auto matrixElementType = matrixType.getElementType();
+  if (matrixElementType != vectorType.getElementType() ||
+      matrixElementType != resultType.getElementType())
+    return emitOpError("matrix, vector, and result element types must match");
 
   return success();
 }

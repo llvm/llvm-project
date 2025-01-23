@@ -20,8 +20,9 @@ define amdgpu_kernel void @local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; MUBUF-LABEL: local_stack_offset_uses_sp:
 ; MUBUF:       ; %bb.0: ; %entry
 ; MUBUF-NEXT:    s_add_u32 s0, s0, s17
+; MUBUF-NEXT:    v_mov_b32_e32 v1, 0x3000
 ; MUBUF-NEXT:    s_addc_u32 s1, s1, 0
-; MUBUF-NEXT:    v_mov_b32_e32 v0, 0x3040
+; MUBUF-NEXT:    v_add_u32_e32 v0, 64, v1
 ; MUBUF-NEXT:    v_mov_b32_e32 v1, 0
 ; MUBUF-NEXT:    v_mov_b32_e32 v2, 0x2000
 ; MUBUF-NEXT:    s_mov_b32 s4, 0
@@ -110,7 +111,8 @@ define void @func_local_stack_offset_uses_sp(ptr addrspace(1) %out) {
 ; MUBUF-NEXT:    s_add_i32 s33, s32, 0x7ffc0
 ; MUBUF-NEXT:    s_and_b32 s33, s33, 0xfff80000
 ; MUBUF-NEXT:    v_lshrrev_b32_e64 v3, 6, s33
-; MUBUF-NEXT:    v_add_u32_e32 v2, 0x3040, v3
+; MUBUF-NEXT:    v_add_u32_e32 v3, 0x3000, v3
+; MUBUF-NEXT:    v_add_u32_e32 v2, 64, v3
 ; MUBUF-NEXT:    v_mov_b32_e32 v3, 0
 ; MUBUF-NEXT:    v_mov_b32_e32 v4, 0x2000
 ; MUBUF-NEXT:    s_mov_b32 s4, 0

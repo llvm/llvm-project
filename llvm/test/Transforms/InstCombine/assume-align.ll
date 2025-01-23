@@ -6,7 +6,7 @@ declare void @llvm.assume(i1 noundef)
 define void @f1(ptr %a) {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 4
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[PTR]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 0
@@ -50,7 +50,7 @@ define void @f2(ptr %a) {
 ; CHECK-LABEL: @f2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A:%.*]], i64 32, i32 24) ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], 0
@@ -171,3 +171,85 @@ define ptr @dont_fold_assume_align_zero_of_loaded_pointer_into_align_metadata(pt
   call void @llvm.assume(i1 true) [ "align"(ptr %p2, i64 0) ]
   ret ptr %p2
 }
+
+define ptr @redundant_assume_align_1(ptr %p) {
+; CHECK-LABEL: @redundant_assume_align_1(
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P2]], i32 1) ]
+; CHECK-NEXT:    call void @foo(ptr [[P2]])
+; CHECK-NEXT:    ret ptr [[P2]]
+;
+  %p2 = load ptr, ptr %p
+  call void @llvm.assume(i1 true) [ "align"(ptr %p2, i32 1) ]
+  call void @foo(ptr %p2)
+  ret ptr %p2
+}
+
+
+define ptr @redundant_assume_align_8_via_align_metadata(ptr %p) {
+; CHECK-LABEL: @redundant_assume_align_8_via_align_metadata(
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P:%.*]], align 8, !align [[META0:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P2]], i32 8) ]
+; CHECK-NEXT:    call void @foo(ptr [[P2]])
+; CHECK-NEXT:    ret ptr [[P2]]
+;
+  %p2 = load ptr, ptr %p, !align !{i64 8}
+  call void @llvm.assume(i1 true) [ "align"(ptr %p2, i32 8) ]
+  call void @foo(ptr %p2)
+  ret ptr %p2
+}
+
+define ptr @assume_align_16_via_align_metadata(ptr %p) {
+; CHECK-LABEL: @assume_align_16_via_align_metadata(
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P:%.*]], align 8, !align [[META0]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P2]], i32 16) ]
+; CHECK-NEXT:    call void @foo(ptr [[P2]])
+; CHECK-NEXT:    ret ptr [[P2]]
+;
+  %p2 = load ptr, ptr %p, !align !{i64 8}
+  call void @llvm.assume(i1 true) [ "align"(ptr %p2, i32 16) ]
+  call void @foo(ptr %p2)
+  ret ptr %p2
+}
+
+define ptr @redundant_assume_align_8_via_align_attribute(ptr align 8 %p) {
+; CHECK-LABEL: @redundant_assume_align_8_via_align_attribute(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P:%.*]], i32 8) ]
+; CHECK-NEXT:    call void @foo(ptr [[P]])
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %p, i32 8) ]
+  call void @foo(ptr %p)
+  ret ptr %p
+}
+
+define ptr @assume_align_16_via_align_attribute(ptr align 8 %p) {
+; CHECK-LABEL: @assume_align_16_via_align_attribute(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P:%.*]], i32 16) ]
+; CHECK-NEXT:    call void @foo(ptr [[P]])
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %p, i32 16) ]
+  call void @foo(ptr %p)
+  ret ptr %p
+}
+
+define ptr @redundant_assume_align_8_via_asume(ptr %p) {
+; CHECK-LABEL: @redundant_assume_align_8_via_asume(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P:%.*]], i32 16) ]
+; CHECK-NEXT:    call void @foo(ptr [[P]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i32 8) ]
+; CHECK-NEXT:    call void @foo(ptr [[P]])
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %p, i32 16) ]
+  call void @foo(ptr %p)
+  call void @llvm.assume(i1 true) [ "align"(ptr %p, i32 8) ]
+  call void @foo(ptr %p)
+  ret ptr %p
+}
+
+declare void @foo(ptr)
+;.
+; CHECK: [[META0]] = !{i64 8}
+;.

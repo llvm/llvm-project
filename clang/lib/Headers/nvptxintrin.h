@@ -24,11 +24,11 @@ _Pragma("omp begin declare target device_type(nohost)");
 _Pragma("omp begin declare variant match(device = {arch(nvptx64)})");
 
 // Type aliases to the address spaces used by the NVPTX backend.
-#define __gpu_private __attribute__((opencl_private))
-#define __gpu_constant __attribute__((opencl_constant))
-#define __gpu_local __attribute__((opencl_local))
-#define __gpu_global __attribute__((opencl_global))
-#define __gpu_generic __attribute__((opencl_generic))
+#define __gpu_private __attribute__((address_space(5)))
+#define __gpu_constant __attribute__((address_space(4)))
+#define __gpu_local __attribute__((address_space(3)))
+#define __gpu_global __attribute__((address_space(1)))
+#define __gpu_generic __attribute__((address_space(0)))
 
 // Attribute to declare a function as a kernel.
 #define __gpu_kernel __attribute__((nvptx_kernel, visibility("protected")))

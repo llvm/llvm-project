@@ -83,8 +83,8 @@ define i32 @main(ptr %ptr) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP4]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND4_FOR_INC9_CRIT_EDGE:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[DOTPROMOTED]], [[FOR_BODY8_LR_PH]] ], [ [[DOTPROMOTED]], [[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i8 [ [[IND_END2]], [[MIDDLE_BLOCK]] ], [ [[CONV3]], [[FOR_BODY8_LR_PH]] ], [ [[CONV3]], [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[DOTPROMOTED]], [[VECTOR_SCEVCHECK]] ], [ [[DOTPROMOTED]], [[FOR_BODY8_LR_PH]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i8 [ [[IND_END2]], [[MIDDLE_BLOCK]] ], [ [[CONV3]], [[VECTOR_SCEVCHECK]] ], [ [[CONV3]], [[FOR_BODY8_LR_PH]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY8:%.*]]
 ; CHECK:       for.body8:
 ; CHECK-NEXT:    [[INC5:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY8]] ]

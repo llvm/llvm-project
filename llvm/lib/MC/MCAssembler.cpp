@@ -222,7 +222,7 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
 
   // Let the backend force a relocation if needed.
   if (IsResolved &&
-      getBackend().shouldForceRelocation(*this, Fixup, Target, STI)) {
+      getBackend().shouldForceRelocation(*this, Fixup, Target, Value, STI)) {
     IsResolved = false;
     WasForced = true;
   }
@@ -829,7 +829,7 @@ void MCAssembler::writeSectionData(raw_ostream &OS,
         // into a virtual section. This is to support clients which use standard
         // directives to fill the contents of virtual sections.
         const MCDataFragment &DF = cast<MCDataFragment>(F);
-        if (DF.fixup_begin() != DF.fixup_end())
+        if (DF.getFixups().size())
           getContext().reportError(SMLoc(), Sec->getVirtualSectionKind() +
                                                 " section '" + Sec->getName() +
                                                 "' cannot have fixups");

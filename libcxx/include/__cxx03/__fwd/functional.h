@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_FUNCTIONAL_H
-#define _LIBCPP___FWD_FUNCTIONAL_H
+#ifndef _LIBCPP___CXX03___FWD_FUNCTIONAL_H
+#define _LIBCPP___CXX03___FWD_FUNCTIONAL_H
 
 #include <__cxx03/__config>
 
@@ -25,4 +25,4 @@ class _LIBCPP_TEMPLATE_VIS reference_wrapper;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_FUNCTIONAL_H
+#endif // _LIBCPP___CXX03___FWD_FUNCTIONAL_H

@@ -1,4 +1,4 @@
-//===- MveEmitter.cpp - Generate arm_mve.h for use with clang -*- C++ -*-=====//
+//===-- MveEmitter.cpp - Generate arm_mve.h for use with clang ------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

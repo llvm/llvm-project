@@ -1581,7 +1581,12 @@ ModuleTranslation::convertParameterAttrs(LLVMFuncOp func, int argIdx,
           .Case<IntegerAttr>([&](auto intAttr) {
             attrBuilder.addRawIntAttr(llvmKind, intAttr.getInt());
           })
-          .Case<UnitAttr>([&](auto) { attrBuilder.addAttribute(llvmKind); });
+          .Case<UnitAttr>([&](auto) { attrBuilder.addAttribute(llvmKind); })
+          .Case<LLVM::ConstantRangeAttr>([&](auto rangeAttr) {
+            attrBuilder.addConstantRangeAttr(
+                llvmKind, llvm::ConstantRange(rangeAttr.getLower(),
+                                              rangeAttr.getUpper()));
+          });
     } else if (namedAttr.getNameDialect()) {
       if (failed(iface.convertParameterAttr(func, argIdx, namedAttr, *this)))
         return failure();
@@ -1719,25 +1724,36 @@ ModuleTranslation::getOrCreateAliasScope(AliasScopeAttr aliasScopeAttr) {
       aliasScopeAttr.getDomain(), nullptr);
   if (insertedDomain) {
     llvm::SmallVector<llvm::Metadata *, 2> operands;
-    // Placeholder for self-reference.
+    // Placeholder for potential self-reference.
     operands.push_back(dummy.get());
     if (StringAttr description = aliasScopeAttr.getDomain().getDescription())
       operands.push_back(llvm::MDString::get(ctx, description));
     domainIt->second = llvm::MDNode::get(ctx, operands);
     // Self-reference for uniqueness.
-    domainIt->second->replaceOperandWith(0, domainIt->second);
+    llvm::Metadata *replacement;
+    if (auto stringAttr =
+            dyn_cast<StringAttr>(aliasScopeAttr.getDomain().getId()))
+      replacement = llvm::MDString::get(ctx, stringAttr.getValue());
+    else
+      replacement = domainIt->second;
+    domainIt->second->replaceOperandWith(0, replacement);
   }
   // Convert the scope metadata node.
   assert(domainIt->second && "Scope's domain should already be valid");
   llvm::SmallVector<llvm::Metadata *, 3> operands;
-  // Placeholder for self-reference.
+  // Placeholder for potential self-reference.
   operands.push_back(dummy.get());
   operands.push_back(domainIt->second);
   if (StringAttr description = aliasScopeAttr.getDescription())
     operands.push_back(llvm::MDString::get(ctx, description));
   scopeIt->second = llvm::MDNode::get(ctx, operands);
   // Self-reference for uniqueness.
-  scopeIt->second->replaceOperandWith(0, scopeIt->second);
+  llvm::Metadata *replacement;
+  if (auto stringAttr = dyn_cast<StringAttr>(aliasScopeAttr.getId()))
+    replacement = llvm::MDString::get(ctx, stringAttr.getValue());
+  else
+    replacement = scopeIt->second;
+  scopeIt->second->replaceOperandWith(0, replacement);
   return scopeIt->second;
 }
 
@@ -1896,6 +1912,13 @@ void ModuleTranslation::setLoopMetadata(Operation *op,
   llvm::MDNode *loopMD =
       loopAnnotationTranslation->translateLoopAnnotation(attr, op);
   inst->setMetadata(llvm::LLVMContext::MD_loop, loopMD);
+}
+
+void ModuleTranslation::setDisjointFlag(Operation *op, llvm::Value *value) {
+  auto iface = cast<DisjointFlagInterface>(op);
+  // We do a dyn_cast here in case the value got folded into a constant.
+  if (auto disjointInst = dyn_cast<llvm::PossiblyDisjointInst>(value))
+    disjointInst->setIsDisjoint(iface.getIsDisjoint());
 }
 
 llvm::Type *ModuleTranslation::convertType(Type type) {

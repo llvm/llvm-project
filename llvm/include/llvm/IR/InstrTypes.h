@@ -935,43 +935,6 @@ public:
     return isUnsigned(getPredicate());
   }
 
-  /// For example, ULT->SLT, ULE->SLE, UGT->SGT, UGE->SGE, SLT->Failed assert
-  /// @returns the signed version of the unsigned predicate pred.
-  /// return the signed version of a predicate
-  static Predicate getSignedPredicate(Predicate pred);
-
-  /// For example, ULT->SLT, ULE->SLE, UGT->SGT, UGE->SGE, SLT->Failed assert
-  /// @returns the signed version of the predicate for this instruction (which
-  /// has to be an unsigned predicate).
-  /// return the signed version of a predicate
-  Predicate getSignedPredicate() {
-    return getSignedPredicate(getPredicate());
-  }
-
-  /// For example, SLT->ULT, SLE->ULE, SGT->UGT, SGE->UGE, ULT->Failed assert
-  /// @returns the unsigned version of the signed predicate pred.
-  static Predicate getUnsignedPredicate(Predicate pred);
-
-  /// For example, SLT->ULT, SLE->ULE, SGT->UGT, SGE->UGE, ULT->Failed assert
-  /// @returns the unsigned version of the predicate for this instruction (which
-  /// has to be an signed predicate).
-  /// return the unsigned version of a predicate
-  Predicate getUnsignedPredicate() {
-    return getUnsignedPredicate(getPredicate());
-  }
-
-  /// For example, SLT->ULT, ULT->SLT, SLE->ULE, ULE->SLE, EQ->Failed assert
-  /// @returns the unsigned version of the signed predicate pred or
-  ///          the signed version of the signed predicate pred.
-  static Predicate getFlippedSignednessPredicate(Predicate pred);
-
-  /// For example, SLT->ULT, ULT->SLT, SLE->ULE, ULE->SLE, EQ->Failed assert
-  /// @returns the unsigned version of the signed predicate pred or
-  ///          the signed version of the signed predicate pred.
-  Predicate getFlippedSignednessPredicate() {
-    return getFlippedSignednessPredicate(getPredicate());
-  }
-
   /// This is just a convenience.
   /// Determine if this is true when both operands are the same.
   bool isTrueWhenEqual() const {
@@ -1003,14 +966,6 @@ public:
 
   /// Determine if the predicate is false when comparing a value with itself.
   static bool isFalseWhenEqual(Predicate predicate);
-
-  /// Determine if Pred1 implies Pred2 is true when two compares have matching
-  /// operands.
-  static bool isImpliedTrueByMatchingCmp(Predicate Pred1, Predicate Pred2);
-
-  /// Determine if Pred1 implies Pred2 is false when two compares have matching
-  /// operands.
-  static bool isImpliedFalseByMatchingCmp(Predicate Pred1, Predicate Pred2);
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
@@ -1712,6 +1667,11 @@ public:
   // FIXME: Once this API is no longer duplicated in `CallSite`, rename this to
   // better indicate that this may return a conservative answer.
   bool doesNotCapture(unsigned OpNo) const {
+    // If the argument is passed byval, the callee does not have access to the
+    // original pointer and thus cannot capture it.
+    if (OpNo < arg_size() && isByValArgument(OpNo))
+      return true;
+
     return dataOperandHasImpliedAttr(OpNo, Attribute::NoCapture);
   }
 
@@ -1759,6 +1719,11 @@ public:
   // FIXME: Once this API is no longer duplicated in `CallSite`, rename this to
   // better indicate that this may return a conservative answer.
   bool onlyReadsMemory(unsigned OpNo) const {
+    // If the argument is passed byval, the callee does not have access to the
+    // original pointer and thus cannot write to it.
+    if (OpNo < arg_size() && isByValArgument(OpNo))
+      return true;
+
     return dataOperandHasImpliedAttr(OpNo, Attribute::ReadOnly) ||
            dataOperandHasImpliedAttr(OpNo, Attribute::ReadNone);
   }

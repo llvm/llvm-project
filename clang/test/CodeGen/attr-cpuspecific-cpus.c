@@ -43,6 +43,7 @@ ATTR(cpu_specific(icelake_client)) void CPU(void){}
 ATTR(cpu_specific(tigerlake)) void CPU(void){}
 ATTR(cpu_specific(alderlake)) void CPU(void){}
 ATTR(cpu_specific(sapphirerapids)) void CPU(void){}
+ATTR(cpu_specific(diamondrapids)) void CPU(void){}
 
 // ALIAS CPUs
 ATTR(cpu_specific(pentium_iii_no_xmm_regs)) void CPU0(void){}

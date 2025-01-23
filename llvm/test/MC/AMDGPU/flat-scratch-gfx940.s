@@ -1,4 +1,5 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx940 -show-encoding %s | FileCheck -check-prefix=GFX940 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx950 -show-encoding %s | FileCheck -check-prefix=GFX940 %s
 
 scratch_load_dword a2, v4, s6
 // GFX940: scratch_load_dword a2, v4, s6           ; encoding: [0x00,0x60,0x50,0xdc,0x04,0x00,0x86,0x02]

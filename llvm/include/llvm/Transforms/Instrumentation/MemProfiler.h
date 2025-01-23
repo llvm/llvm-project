@@ -14,9 +14,13 @@
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/ProfileData/MemProf.h"
+
+#include <unordered_map>
 
 namespace llvm {
 class Function;
+class IndexedInstrProfReader;
 class Module;
 class TargetLibraryInfo;
 
@@ -60,35 +64,28 @@ private:
 
 namespace memprof {
 
-struct LineLocation {
-  LineLocation(uint32_t L, uint32_t D) : LineOffset(L), Column(D) {}
-
-  bool operator<(const LineLocation &O) const {
-    return LineOffset < O.LineOffset ||
-           (LineOffset == O.LineOffset && Column < O.Column);
-  }
-
-  bool operator==(const LineLocation &O) const {
-    return LineOffset == O.LineOffset && Column == O.Column;
-  }
-
-  bool operator!=(const LineLocation &O) const {
-    return LineOffset != O.LineOffset || Column != O.Column;
-  }
-
-  uint64_t getHashCode() const { return ((uint64_t)Column << 32) | LineOffset; }
-
-  uint32_t LineOffset;
-  uint32_t Column;
-};
-
-// A pair of a call site location and its corresponding callee GUID.
-using CallEdgeTy = std::pair<LineLocation, uint64_t>;
-
 // Extract all calls from the IR.  Arrange them in a map from caller GUIDs to a
 // list of call sites, each of the form {LineLocation, CalleeGUID}.
-DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>>
-extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI);
+DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>> extractCallsFromIR(
+    Module &M, const TargetLibraryInfo &TLI,
+    function_ref<bool(uint64_t)> IsPresentInProfile = [](uint64_t) {
+      return true;
+    });
+
+struct LineLocationHash {
+  uint64_t operator()(const LineLocation &Loc) const {
+    return Loc.getHashCode();
+  }
+};
+
+using LocToLocMap =
+    std::unordered_map<LineLocation, LineLocation, LineLocationHash>;
+
+// Compute an undrifting map.  The result is a map from caller GUIDs to an inner
+// map that maps source locations in the profile to those in the current IR.
+DenseMap<uint64_t, LocToLocMap>
+computeUndriftMap(Module &M, IndexedInstrProfReader *MemProfReader,
+                  const TargetLibraryInfo &TLI);
 
 } // namespace memprof
 } // namespace llvm

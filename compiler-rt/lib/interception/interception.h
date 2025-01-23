@@ -37,7 +37,7 @@
 #endif
 
 #define SIZE_T __sanitizer::usize
-#define SSIZE_T __sanitizer::sptr
+#define SSIZE_T __sanitizer::ssize
 typedef __sanitizer::sptr    PTRDIFF_T;
 typedef __sanitizer::s64     INTMAX_T;
 typedef __sanitizer::u64     UINTMAX_T;

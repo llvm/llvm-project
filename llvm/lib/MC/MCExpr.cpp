@@ -177,6 +177,35 @@ LLVM_DUMP_METHOD void MCExpr::dump() const {
 }
 #endif
 
+bool MCExpr::isSymbolUsedInExpression(const MCSymbol *Sym) const {
+  switch (getKind()) {
+  case MCExpr::Binary: {
+    const MCBinaryExpr *BE = static_cast<const MCBinaryExpr *>(this);
+    return BE->getLHS()->isSymbolUsedInExpression(Sym) ||
+           BE->getRHS()->isSymbolUsedInExpression(Sym);
+  }
+  case MCExpr::Target: {
+    const MCTargetExpr *TE = static_cast<const MCTargetExpr *>(this);
+    return TE->isSymbolUsedInExpression(Sym);
+  }
+  case MCExpr::Constant:
+    return false;
+  case MCExpr::SymbolRef: {
+    const MCSymbol &S = static_cast<const MCSymbolRefExpr *>(this)->getSymbol();
+    if (S.isVariable() && !S.isWeakExternal())
+      return S.getVariableValue()->isSymbolUsedInExpression(Sym);
+    return &S == Sym;
+  }
+  case MCExpr::Unary: {
+    const MCExpr *SubExpr =
+        static_cast<const MCUnaryExpr *>(this)->getSubExpr();
+    return SubExpr->isSymbolUsedInExpression(Sym);
+  }
+  }
+
+  llvm_unreachable("Unknown expr kind!");
+}
+
 /* *** */
 
 const MCBinaryExpr *MCBinaryExpr::create(Opcode Opc, const MCExpr *LHS,

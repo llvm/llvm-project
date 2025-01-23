@@ -14,8 +14,8 @@ define target("riscv.vector.tuple", <vscale x 8 x i8>, 5) @load_store_m1x5(targe
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs1r.v v8, (a0)
 ; CHECK-NEXT:    csrrs a1, vlenb, zero
+; CHECK-NEXT:    vs1r.v v8, (a0)
 ; CHECK-NEXT:    add a2, a0, a1
 ; CHECK-NEXT:    vs1r.v v9, (a2)
 ; CHECK-NEXT:    add a3, a2, a1
@@ -57,8 +57,8 @@ define target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @load_store_m2x2(targ
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs2r.v v8, (a0)
 ; CHECK-NEXT:    csrrs a1, vlenb, zero
+; CHECK-NEXT:    vs2r.v v8, (a0)
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    add a1, a0, a1
 ; CHECK-NEXT:    vs2r.v v10, (a1)
@@ -92,8 +92,8 @@ define target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @load_store_m4x2(targ
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs4r.v v8, (a0)
 ; CHECK-NEXT:    csrrs a1, vlenb, zero
+; CHECK-NEXT:    vs4r.v v8, (a0)
 ; CHECK-NEXT:    slli a1, a1, 2
 ; CHECK-NEXT:    add a1, a0, a1
 ; CHECK-NEXT:    vs4r.v v12, (a1)

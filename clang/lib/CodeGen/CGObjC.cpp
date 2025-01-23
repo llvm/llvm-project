@@ -23,7 +23,6 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/CodeGenABITypes.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/IR/Constants.h"
@@ -1985,7 +1984,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
       llvm::Constant *StaticData[] = {
           EmitCheckSourceLocation(S.getBeginLoc()),
           EmitCheckTypeDescriptor(QualType(InterfaceTy, 0))};
-      EmitCheck({{IsClass, SanitizerKind::ObjCCast}},
+      EmitCheck({{IsClass, SanitizerKind::SO_ObjCCast}},
                 SanitizerHandler::InvalidObjCCast,
                 ArrayRef<llvm::Constant *>(StaticData), CurrentItem);
     }

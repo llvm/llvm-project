@@ -16,6 +16,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include <map>
@@ -37,21 +38,7 @@ struct StaticDiagInfoDescriptionStringTable {
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
              SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
   char ENUM##_desc[sizeof(DESC)];
-  // clang-format off
-#include "clang/Basic/DiagnosticCommonKinds.inc"
-#include "clang/Basic/DiagnosticDriverKinds.inc"
-#include "clang/Basic/DiagnosticFrontendKinds.inc"
-#include "clang/Basic/DiagnosticSerializationKinds.inc"
-#include "clang/Basic/DiagnosticLexKinds.inc"
-#include "clang/Basic/DiagnosticParseKinds.inc"
-#include "clang/Basic/DiagnosticASTKinds.inc"
-#include "clang/Basic/DiagnosticCommentKinds.inc"
-#include "clang/Basic/DiagnosticCrossTUKinds.inc"
-#include "clang/Basic/DiagnosticSemaKinds.inc"
-#include "clang/Basic/DiagnosticAnalysisKinds.inc"
-#include "clang/Basic/DiagnosticRefactoringKinds.inc"
-#include "clang/Basic/DiagnosticInstallAPIKinds.inc"
-  // clang-format on
+#include "clang/Basic/AllDiagnosticKinds.inc"
 #undef DIAG
 };
 
@@ -59,21 +46,7 @@ const StaticDiagInfoDescriptionStringTable StaticDiagInfoDescriptions = {
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
              SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
   DESC,
-// clang-format off
-#include "clang/Basic/DiagnosticCommonKinds.inc"
-#include "clang/Basic/DiagnosticDriverKinds.inc"
-#include "clang/Basic/DiagnosticFrontendKinds.inc"
-#include "clang/Basic/DiagnosticSerializationKinds.inc"
-#include "clang/Basic/DiagnosticLexKinds.inc"
-#include "clang/Basic/DiagnosticParseKinds.inc"
-#include "clang/Basic/DiagnosticASTKinds.inc"
-#include "clang/Basic/DiagnosticCommentKinds.inc"
-#include "clang/Basic/DiagnosticCrossTUKinds.inc"
-#include "clang/Basic/DiagnosticSemaKinds.inc"
-#include "clang/Basic/DiagnosticAnalysisKinds.inc"
-#include "clang/Basic/DiagnosticRefactoringKinds.inc"
-#include "clang/Basic/DiagnosticInstallAPIKinds.inc"
-// clang-format on
+#include "clang/Basic/AllDiagnosticKinds.inc"
 #undef DIAG
 };
 
@@ -85,21 +58,7 @@ const uint32_t StaticDiagInfoDescriptionOffsets[] = {
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
              SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
   offsetof(StaticDiagInfoDescriptionStringTable, ENUM##_desc),
-// clang-format off
-#include "clang/Basic/DiagnosticCommonKinds.inc"
-#include "clang/Basic/DiagnosticDriverKinds.inc"
-#include "clang/Basic/DiagnosticFrontendKinds.inc"
-#include "clang/Basic/DiagnosticSerializationKinds.inc"
-#include "clang/Basic/DiagnosticLexKinds.inc"
-#include "clang/Basic/DiagnosticParseKinds.inc"
-#include "clang/Basic/DiagnosticASTKinds.inc"
-#include "clang/Basic/DiagnosticCommentKinds.inc"
-#include "clang/Basic/DiagnosticCrossTUKinds.inc"
-#include "clang/Basic/DiagnosticSemaKinds.inc"
-#include "clang/Basic/DiagnosticAnalysisKinds.inc"
-#include "clang/Basic/DiagnosticRefactoringKinds.inc"
-#include "clang/Basic/DiagnosticInstallAPIKinds.inc"
-// clang-format on
+#include "clang/Basic/AllDiagnosticKinds.inc"
 #undef DIAG
 };
 
@@ -601,15 +560,8 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
     return diag::Severity::Ignored;
 
   // Clang-diagnostics pragmas always take precedence over suppression mapping.
-  if (!Mapping.isPragma() && Diag.DiagSuppressionMapping) {
-    // We also use presumed locations here to improve reproducibility for
-    // preprocessed inputs.
-    if (PresumedLoc PLoc = SM.getPresumedLoc(Loc);
-        PLoc.isValid() && Diag.isSuppressedViaMapping(
-                              DiagID, llvm::sys::path::remove_leading_dotslash(
-                                          PLoc.getFilename())))
-      return diag::Severity::Ignored;
-  }
+  if (!Mapping.isPragma() && Diag.isSuppressedViaMapping(DiagID, Loc))
+    return diag::Severity::Ignored;
 
   return Result;
 }
@@ -625,11 +577,7 @@ namespace {
     uint16_t SubGroups;
     StringRef Documentation;
 
-    // String is stored with a pascal-style length byte.
-    StringRef getName() const {
-      return StringRef(DiagGroupNames + NameOffset + 1,
-                       DiagGroupNames[NameOffset]);
-    }
+    StringRef getName() const { return DiagGroupNames[NameOffset]; }
   };
 }
 
@@ -676,11 +624,12 @@ StringRef DiagnosticIDs::getWarningOptionForDiag(unsigned DiagID) {
 
 std::vector<std::string> DiagnosticIDs::getDiagnosticFlags() {
   std::vector<std::string> Res{"-W", "-Wno-"};
-  for (size_t I = 1; DiagGroupNames[I] != '\0';) {
-    std::string Diag(DiagGroupNames + I + 1, DiagGroupNames[I]);
-    I += DiagGroupNames[I] + 1;
-    Res.push_back("-W" + Diag);
-    Res.push_back("-Wno-" + Diag);
+  for (StringRef Name : DiagGroupNames) {
+    if (Name.empty())
+      continue;
+
+    Res.push_back((Twine("-W") + Name).str());
+    Res.push_back((Twine("-Wno-") + Name).str());
   }
 
   return Res;

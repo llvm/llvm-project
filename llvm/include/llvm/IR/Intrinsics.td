@@ -1006,6 +1006,17 @@ def int_memset_inline
        NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>,
        ImmArg<ArgIndex<3>>]>;
 
+// Memset variant that writes a given pattern.
+def int_experimental_memset_pattern
+    : Intrinsic<[],
+      [llvm_anyptr_ty, // Destination.
+       llvm_anyint_ty, // Pattern value.
+       llvm_anyint_ty, // Count (number of times to fill value).
+       llvm_i1_ty],    // IsVolatile.
+      [IntrWriteMem, IntrArgMemOnly, IntrWillReturn, IntrNoFree, IntrNoCallback,
+       NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>,
+       ImmArg<ArgIndex<3>>]>;
+
 // FIXME: Add version of these floating point intrinsics which allow non-default
 // rounding modes and FP exception handling.
 
@@ -1644,7 +1655,7 @@ def int_strip_invariant_group : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
 //
 def int_experimental_stackmap : DefaultAttrsIntrinsic<[],
                                   [llvm_i64_ty, llvm_i32_ty, llvm_vararg_ty],
-                                  [Throws]>;
+                                  [Throws, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 def int_experimental_patchpoint_void : Intrinsic<[],
                                                  [llvm_i64_ty, llvm_i32_ty,
                                                   llvm_ptr_ty, llvm_i32_ty,
@@ -1919,6 +1930,20 @@ def int_experimental_vector_histogram_add : DefaultAttrsIntrinsic<[],
                                llvm_anyint_ty,    // Increment
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>], // Mask
                              [ IntrArgMemOnly ]>;
+
+// Experimental match
+def int_experimental_vector_match : DefaultAttrsIntrinsic<
+                             [ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty> ],
+                             [ llvm_anyvector_ty,
+                               llvm_anyvector_ty,
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty> ],  // Mask
+                             [ IntrNoMem, IntrNoSync, IntrWillReturn ]>;
+
+// Extract based on mask bits
+def int_experimental_vector_extract_last_active:
+    DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+              [llvm_anyvector_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+               LLVMVectorElementType<0>], [IntrNoMem]>;
 
 // Operators
 let IntrProperties = [IntrNoMem, IntrNoSync, IntrWillReturn] in {
