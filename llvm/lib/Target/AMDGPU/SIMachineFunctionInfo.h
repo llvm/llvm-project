@@ -1135,6 +1135,25 @@ public:
   unsigned getMaxNumWorkGroupsX() const { return MaxNumWorkGroups[0]; }
   unsigned getMaxNumWorkGroupsY() const { return MaxNumWorkGroups[1]; }
   unsigned getMaxNumWorkGroupsZ() const { return MaxNumWorkGroups[2]; }
+  // Track resource usage for callee functions.
+  struct SIFunctionResourceInfo {
+    // Track the number of explicitly used VGPRs. Special registers reserved at
+    // the end are tracked separately.
+    // NumVGPR is the wave-private number of VGPRs, it excludes shared VGPRs.
+    int32_t NumVGPR = 0;
+    int32_t NumAGPR = 0;
+    int32_t NumExplicitSGPR = 0;
+    int32_t NumNamedBarrier = 0;
+    uint64_t CalleeSegmentSize = 0;
+    uint64_t PrivateSegmentSize = 0;
+    bool UsesVCC = false;
+    bool UsesFlatScratch = false;
+    bool HasDynamicallySizedStack = false;
+    bool HasRecursion = false;
+    bool HasIndirectCall = false;
+    SmallVector<const Function *, 16> Callees;
+  };
+  std::optional<SIFunctionResourceInfo> ResourceInfo;
 };
 
 } // end namespace llvm
