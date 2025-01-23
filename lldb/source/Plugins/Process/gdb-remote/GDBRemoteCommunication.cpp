@@ -1305,8 +1305,8 @@ std::string GDBRemoteCommunication::ExpandRLE(std::string packet) {
   // Reserve enough byte for the most common case (no RLE used).
   std::string decoded;
   decoded.reserve(packet.size());
-  for (std::string::const_iterator c = packet.begin(); c != packet.end(); ++c) {
-    if (*c == '*') {
+  for (std::string::const_iterator c = packet.begin(); c != packet.end();) {
+    if (*c == '*' && std::next(c) != packet.end()) {
       // '*' indicates RLE. Next character will give us the repeat count and
       // previous character is what is to be repeated.
       char char_to_repeat = decoded.back();
@@ -1324,6 +1324,7 @@ std::string GDBRemoteCommunication::ExpandRLE(std::string packet) {
     } else {
       decoded.push_back(*c);
     }
+    c++;
   }
   return decoded;
 }
