@@ -9095,16 +9095,11 @@ addUsersInExitBlocks(VPlan &Plan,
   // Introduce extract for exiting values and update the VPIRInstructions
   // modeling the corresponding LCSSA phis.
   for (VPIRInstruction *ExitIRI : ExitUsersToFix) {
-    for (const auto &[Idx, Op] : enumerate(ExitIRI->operands())) {
-      assert(ExitIRI->getParent()->getSinglePredecessor() == MiddleVPBB &&
-             "exit values from early exits must be fixed when branch to "
-             "early-exit is added");
-      LLVMContext &Ctx = ExitIRI->getInstruction().getContext();
-      VPValue *Ext = B.createNaryOp(VPInstruction::ExtractFromEnd,
-                                    {Op, Plan.getOrAddLiveIn(ConstantInt::get(
-                                             IntegerType::get(Ctx, 32), 1))});
-      ExitIRI->setOperand(Idx, Ext);
-    }
+    assert(ExitIRI->getNumOperands() == 1 &&
+           ExitIRI->getParent()->getSinglePredecessor() == MiddleVPBB &&
+           "exit values from early exits must be fixed when branch to "
+           "early-exit is added");
+    ExitIRI->extractLastLaneOfOperand(B);
   }
 }
 

@@ -2114,7 +2114,7 @@ bool VPlanTransforms::handleUncountableEarlyExit(
     VPValue *IncomingFromEarlyExit = RecipeBuilder.getVPValueOrAddLiveIn(
         ExitPhi->getIncomingValueForBlock(UncountableExitingBlock));
     // The incoming value from the early exit must be a live-in for now.
-    if (!IncomingFromm EarlyExit->isLiveIn())
+    if (!IncomingFromEarlyExit->isLiveIn())
       return false;
 
     if (OrigLoop->getUniqueExitBlock()) {
@@ -2123,14 +2123,8 @@ bool VPlanTransforms::handleUncountableEarlyExit(
       // which is coming from the original latch.
       VPValue *IncomingFromLatch = RecipeBuilder.getVPValueOrAddLiveIn(
           ExitPhi->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
-      if (!IncomingFromLatch->isLiveIn()) {
-        LLVMContext &Ctx = ExitIRI->getInstruction().getContext();
-        IncomingFromLatch = MiddleBuilder.createNaryOp(
-            VPInstruction::ExtractFromEnd,
-            {IncomingFromLatch, Plan.getOrAddLiveIn(ConstantInt::get(
-                                    IntegerType::get(Ctx, 32), 1))});
-      }
       ExitIRI->addOperand(IncomingFromLatch);
+      ExitIRI->extractLastLaneOfOperand(MiddleBuilder);
     }
     // Add the incoming value from the early exit.
     ExitIRI->addOperand(IncomingFromEarlyExit);
