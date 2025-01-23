@@ -503,6 +503,8 @@ const SCEV *ScalarEvolution::getVScale(Type *Ty) {
   return S;
 }
 
+void ScalarEvolution::setAssumeLoopExits() { this->AssumeLoopFinite = true; }
+
 const SCEV *ScalarEvolution::getElementCount(Type *Ty, ElementCount EC) {
   const SCEV *Res = getConstant(Ty, EC.getKnownMinValue());
   if (EC.isScalable())
@@ -7468,7 +7470,8 @@ bool ScalarEvolution::loopIsFiniteByAssumption(const Loop *L) {
   // A mustprogress loop without side effects must be finite.
   // TODO: The check used here is very conservative.  It's only *specific*
   // side effects which are well defined in infinite loops.
-  return isFinite(L) || (isMustProgress(L) && loopHasNoSideEffects(L));
+  return AssumeLoopFinite || isFinite(L) ||
+         (isMustProgress(L) && loopHasNoSideEffects(L));
 }
 
 const SCEV *ScalarEvolution::createSCEVIter(Value *V) {
