@@ -414,7 +414,7 @@ unsigned AArch64Subtarget::getHwModeSet() const {
   //
   // FIXME: This overrides the table-gen'd `getHwModeSet()` which only looks at
   // CPU features.
-  if (EnableZPRPredicateSpills.getValue() &&
+  if (EnableZPRPredicateSpills.getValue() && getStreamingHazardSize() > 0 &&
       (isStreaming() || isStreamingCompatible())) {
     Modes |= (1 << 0);
   }
