@@ -4151,7 +4151,7 @@ std::optional<ValueIDNum> InstrRefBasedLDV::resolveDbgPHIsImpl(
   // Adapted LLVM SSA Updater:
   LDVSSAUpdater Updater(Loc, MLiveIns);
   // Map of which Def or PHI is the current value in each block.
-  DenseMap<LDVSSABlock *, BlockValueNum> AvailableValues;
+  SmallDenseMap<LDVSSABlock *, BlockValueNum, 16> AvailableValues;
   // Set of PHIs that we have created along the way.
   SmallVector<LDVSSAPhi *, 8> CreatedPHIs;
 

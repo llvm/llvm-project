@@ -268,7 +268,7 @@ struct UniqueVirtualMethod {
 /// subobject in which that virtual function occurs).
 class OverridingMethods {
   using ValuesT = SmallVector<UniqueVirtualMethod, 4>;
-  using MapType = llvm::MapVector<unsigned, ValuesT>;
+  using MapType = llvm::SmallMapVector<unsigned, ValuesT, 16>;
 
   MapType Overrides;
 

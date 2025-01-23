@@ -100,7 +100,7 @@ static inline MDString *getRVInstMarker(Module &M) {
 CallInst *createCallInstWithColors(
     FunctionCallee Func, ArrayRef<Value *> Args, const Twine &NameStr,
     BasicBlock::iterator InsertBefore,
-    const DenseMap<BasicBlock *, ColorVector> &BlockColors);
+    const BlockColorMapT &BlockColors);
 
 class BundledRetainClaimRVs {
 public:
@@ -119,7 +119,7 @@ public:
   /// Insert a retainRV/claimRV call with colors.
   CallInst *insertRVCallWithColors(
       BasicBlock::iterator InsertPt, CallBase *AnnotatedCall,
-      const DenseMap<BasicBlock *, ColorVector> &BlockColors);
+      const BlockColorMapT &BlockColors);
 
   /// See if an instruction is a bundled retainRV/claimRV call.
   bool contains(const Instruction *I) const {

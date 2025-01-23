@@ -390,8 +390,8 @@ class CXXNameMangler {
   AbiTagState *AbiTags = nullptr;
   AbiTagState AbiTagsRoot;
 
-  llvm::DenseMap<uintptr_t, unsigned> Substitutions;
-  llvm::DenseMap<StringRef, unsigned> ModuleSubstitutions;
+  llvm::SmallDenseMap<uintptr_t, unsigned, 16> Substitutions;
+  llvm::SmallDenseMap<StringRef, unsigned, 16> ModuleSubstitutions;
 
   ASTContext &getASTContext() const { return Context.getASTContext(); }
 
