@@ -606,7 +606,8 @@ Attribute Changes in Clang
 
 - Clang now disallows the use of attributes after the namespace name. (#GH121407)
 
-- Clang now raises warnings for unknown namespaced attributes only in pedantic mode (#GH120875).
+- Clang now diagnoses unknown attribute namespaces. Added the ``-Wunknown-namespace-attributes=`` option to
+  specify a comma-separated list of allowed unknown attribute namespaces (#GH120875).
 
 Improvements to Clang's diagnostics
 -----------------------------------
