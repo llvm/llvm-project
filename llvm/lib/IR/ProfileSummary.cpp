@@ -259,10 +259,11 @@ void ProfileSummary::printSummary(raw_ostream &OS) const {
 void ProfileSummary::printDetailedSummary(raw_ostream &OS) const {
   OS << "Detailed summary:\n";
   for (const auto &Entry : DetailedSummary) {
-    OS << format("%lu blocks (%.2f%%) with count >= %lu account for %0.6g%% of "
-                 "the total counts.\n",
-                 Entry.NumCounts,
-                 NumCounts ? (100.f * Entry.NumCounts / NumCounts) : 0,
-                 Entry.MinCount, 100.f * Entry.Cutoff / Scale);
+    OS << Entry.NumCounts << " blocks "
+       << format("(%.2f%%)",
+                 NumCounts ? (100.f * Entry.NumCounts / NumCounts) : 0)
+       << " with count >= " << Entry.MinCount << " account for "
+       << format("%0.6g", 100.f * Entry.Cutoff / Scale)
+       << "% of the total counts.\n";
   }
 }
