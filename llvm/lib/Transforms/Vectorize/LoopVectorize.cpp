@@ -4380,9 +4380,9 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
                 [](const auto *R) { return Instruction::PHI; })
             .Case<VPWidenSelectRecipe>(
                 [](const auto *R) { return Instruction::Select; })
-            .Case<VPWidenStoreRecipe>(
+            .Case<VPWidenStoreRecipe, VPWidenStoreEVLRecipe>(
                 [](const auto *R) { return Instruction::Store; })
-            .Case<VPWidenLoadRecipe>(
+            .Case<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(
                 [](const auto *R) { return Instruction::Load; })
             .Case<VPWidenCallRecipe, VPWidenIntrinsicRecipe>(
                 [](const auto *R) { return Instruction::Call; })
