@@ -40,14 +40,14 @@ Error splitCompactUnwindBlocks(LinkGraph &G, Section &CompactUnwindSection,
 ///        defined as a member in the CRTP Impl classes.
 template <typename CRTPImpl, size_t PtrSize> struct CompactUnwindTraits {
   static constexpr size_t PointerSize = PtrSize;
-  static constexpr size_t Size = 3 * CRTPImpl::PointerSize + 2 * 4;
+  static constexpr size_t Size = 3 * PointerSize + 2 * 4;
   static constexpr size_t FnFieldOffset = 0;
   static constexpr size_t SizeFieldOffset =
-      FnFieldOffset + CRTPImpl::PointerSize;
+      FnFieldOffset + PointerSize;
   static constexpr size_t EncodingFieldOffset = SizeFieldOffset + 4;
   static constexpr size_t PersonalityFieldOffset = EncodingFieldOffset + 4;
   static constexpr size_t LSDAFieldOffset =
-      PersonalityFieldOffset + CRTPImpl::PointerSize;
+      PersonalityFieldOffset + PointerSize;
 
   static uint32_t readPCRangeSize(ArrayRef<char> RecordContent) {
     assert(SizeFieldOffset + 4 <= RecordContent.size() &&
