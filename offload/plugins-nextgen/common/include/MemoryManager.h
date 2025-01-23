@@ -70,7 +70,7 @@ class MemoryManagerTy {
   }
 
   /// Find a suitable bucket
-  static int findBucket(size_t Size) {
+  OMPTARGET_INLINE static int findBucket(size_t Size) {
     const size_t F = floorToPowerOfTwo(Size);
 
     DP("findBucket: Size %zu is floored to %zu.\n", Size, F);
@@ -175,7 +175,8 @@ class MemoryManagerTy {
   /// allocate directly on the device. If a \p nullptr is returned, it might
   /// be because the device is OOM. In that case, it will free all unused
   /// memory and then try again.
-  void *allocateOrFreeAndAllocateOnDevice(size_t Size, void *HstPtr) {
+  OMPTARGET_INLINE void *allocateOrFreeAndAllocateOnDevice(size_t Size,
+                                                           void *HstPtr) {
     void *TgtPtr = allocateOnDevice(Size, HstPtr);
     // We cannot get memory from the device. It might be due to OOM. Let's
     // free all memory in FreeLists and try again.
@@ -213,7 +214,7 @@ public:
 
   /// Allocate memory of size \p Size from target device. \p HstPtr is used to
   /// assist the allocation.
-  void *allocate(size_t Size, void *HstPtr) {
+  OMPTARGET_INLINE void *allocate(size_t Size, void *HstPtr) {
     // If the size is zero, we will not bother the target device. Just return
     // nullptr directly.
     if (Size == 0)
@@ -282,7 +283,7 @@ public:
   }
 
   /// Deallocate memory pointed by \p TgtPtr
-  int free(void *TgtPtr) {
+  OMPTARGET_INLINE int free(void *TgtPtr) {
     DP("MemoryManagerTy::free: target memory " DPxMOD ".\n", DPxPTR(TgtPtr));
 
     NodeTy *P = nullptr;
@@ -323,7 +324,7 @@ public:
   /// threshold and the second element represents whether user disables memory
   /// manager explicitly by setting the var to 0. If user doesn't specify
   /// anything, returns <0, true>.
-  static std::pair<size_t, bool> getSizeThresholdFromEnv() {
+  OMPTARGET_INLINE static std::pair<size_t, bool> getSizeThresholdFromEnv() {
     static UInt32Envar MemoryManagerThreshold(
         "LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD", 0);
 
