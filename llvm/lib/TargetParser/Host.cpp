@@ -424,8 +424,11 @@ StringRef getCPUNameFromS390Model(unsigned int Id, bool HaveVectorSupport) {
       return HaveVectorSupport? "z15" : "zEC12";
     case 3931:
     case 3932:
-    default:
       return HaveVectorSupport? "z16" : "zEC12";
+    case 9175:
+    case 9176:
+    default:
+      return HaveVectorSupport? "arch15" : "zEC12";
   }
 }
 } // end anonymous namespace
@@ -2132,12 +2135,12 @@ const StringMap<bool> sys::getHostCPUFeatures() {
   Features["div32"] = cpucfg2 & (1U << 26);   // CPUCFG.2.DIV32
   Features["lam-bh"] = cpucfg2 & (1U << 27);  // CPUCFG.2.LAM_BH
   Features["lamcas"] = cpucfg2 & (1U << 28);  // CPUCFG.2.LAMCAS
+  Features["scq"] = cpucfg2 & (1U << 30);     // CPUCFG.2.SCQ
 
   Features["ld-seq-sa"] = cpucfg3 & (1U << 23); // CPUCFG.3.LD_SEQ_SA
 
   // TODO: Need to complete.
   // Features["llacq-screl"] = cpucfg2 & (1U << 29); // CPUCFG.2.LLACQ_SCREL
-  // Features["scq"] = cpucfg2 & (1U << 30);         // CPUCFG.2.SCQ
   return Features;
 }
 #elif defined(__linux__) && defined(__riscv)

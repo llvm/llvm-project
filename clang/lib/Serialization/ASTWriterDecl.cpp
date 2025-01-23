@@ -28,6 +28,20 @@ using namespace clang;
 using namespace serialization;
 
 //===----------------------------------------------------------------------===//
+// Utility functions
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+// Helper function that returns true if the decl passed in the argument is
+// a defintion in dependent contxt.
+template <typename DT> bool isDefinitionInDependentContext(DT *D) {
+  return D->isDependentContext() && D->isThisDeclarationADefinition();
+}
+
+} // namespace
+
+//===----------------------------------------------------------------------===//
 // Declaration serialization
 //===----------------------------------------------------------------------===//
 
@@ -132,6 +146,7 @@ namespace clang {
     void VisitFriendTemplateDecl(FriendTemplateDecl *D);
     void VisitStaticAssertDecl(StaticAssertDecl *D);
     void VisitBlockDecl(BlockDecl *D);
+    void VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D);
     void VisitCapturedDecl(CapturedDecl *D);
     void VisitEmptyDecl(EmptyDecl *D);
     void VisitLifetimeExtendedTemporaryDecl(LifetimeExtendedTemporaryDecl *D);
@@ -800,14 +815,14 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   }
 
   if (D->getFriendObjectKind()) {
-    // For a function defined inline within a class template, we have to force
-    // the canonical definition to be the one inside the canonical definition of
-    // the template. Remember this relation to deserialize them together.
-    if (auto *RD = dyn_cast<CXXRecordDecl>(D->getLexicalParent()))
-      if (RD->isDependentContext() && RD->isThisDeclarationADefinition()) {
-        Writer.RelatedDeclsMap[Writer.GetDeclRef(RD)].push_back(
-            Writer.GetDeclRef(D));
-      }
+    // For a friend function defined inline within a class template, we have to
+    // force the definition to be the one inside the definition of the template
+    // class. Remember this relation to deserialize them together.
+    if (auto *RD = dyn_cast<CXXRecordDecl>(D->getLexicalParent());
+        RD && isDefinitionInDependentContext(RD)) {
+      Writer.RelatedDeclsMap[Writer.GetDeclRef(RD)].push_back(
+          Writer.GetDeclRef(D));
+    }
   }
 
   Record.push_back(D->param_size());
@@ -1377,6 +1392,16 @@ void ASTDeclWriter::VisitBlockDecl(BlockDecl *D) {
   Code = serialization::DECL_BLOCK;
 }
 
+void ASTDeclWriter::VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D) {
+  Record.push_back(D->getNumParams());
+  VisitDecl(D);
+  for (unsigned I = 0; I < D->getNumParams(); ++I)
+    Record.AddDeclRef(D->getParam(I));
+  Record.push_back(D->isNothrow() ? 1 : 0);
+  Record.AddStmt(D->getBody());
+  Code = serialization::DECL_OUTLINEDFUNCTION;
+}
+
 void ASTDeclWriter::VisitCapturedDecl(CapturedDecl *CD) {
   Record.push_back(CD->getNumParams());
   VisitDecl(CD);
@@ -1572,9 +1597,10 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     } else {
       Record.push_back(0);
     }
-    // For lambdas inside canonical FunctionDecl remember the mapping.
-    if (auto FD = llvm::dyn_cast_or_null<FunctionDecl>(D->getDeclContext());
-        FD && FD->isCanonicalDecl()) {
+    // For lambdas inside template functions, remember the mapping to
+    // deserialize them together.
+    if (auto *FD = llvm::dyn_cast_or_null<FunctionDecl>(D->getDeclContext());
+        FD && isDefinitionInDependentContext(FD)) {
       Writer.RelatedDeclsMap[Writer.GetDeclRef(FD)].push_back(
           Writer.GetDeclRef(D));
     }
