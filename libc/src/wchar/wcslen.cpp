@@ -17,7 +17,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(size_t, wcslen, (const wchar_t *src)) {
-  return internal::string_length_trivial(src);
+  return internal::string_length(src);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
