@@ -5271,7 +5271,7 @@ ASTReader::ASTReadResult ASTReader::readUnhashedControlBlockImpl(
     }
     case FILE_SYSTEM_OPTIONS: {
       bool Complain = (ClientLoadCapabilities & ARR_ConfigurationMismatch) == 0;
-      if (!AllowCompatibleConfigurationMismatch &&
+      if (Listener && !AllowCompatibleConfigurationMismatch &&
           ParseFileSystemOptions(Record, Complain, *Listener))
         Result = ConfigurationMismatch;
       break;
