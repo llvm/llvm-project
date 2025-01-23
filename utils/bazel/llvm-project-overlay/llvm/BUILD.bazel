@@ -3013,6 +3013,7 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":DebugInfo",
+        ":DebugInfoDWARF",
         ":JITLink",
         ":OrcJIT",
         ":OrcShared",
@@ -4499,6 +4500,7 @@ cc_library(
         ":BinaryFormat",
         ":CodeGen",
         ":DebugInfo",
+        ":DebugInfoBTF",
         ":DebugInfoDWARF",
         ":Debuginfod",
         ":Demangle",
