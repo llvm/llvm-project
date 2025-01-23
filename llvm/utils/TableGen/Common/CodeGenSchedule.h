@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/SetTheory.h"
@@ -251,7 +252,7 @@ struct CodeGenProcModel {
   DenseMap<const Record *, const Record *> ReadAdvanceMap;
 
   // Set of WriteRes that are referenced by a ReadAdvance.
-  DenseSet<const Record *> ReadOfWriteSet;
+  SmallPtrSet<const Record *, 8> ReadOfWriteSet;
 
   // Per-operand machine model resources associated with this processor.
   ConstRecVec ProcResourceDefs;

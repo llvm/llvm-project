@@ -2175,7 +2175,7 @@ bool CodeGenProcModel::isUnsupported(const CodeGenInstruction &Inst) const {
 }
 
 bool CodeGenProcModel::hasReadOfWrite(const Record *WriteDef) const {
-  return ReadOfWriteSet.count(WriteDef) != 0;
+  return ReadOfWriteSet.count(WriteDef);
 }
 
 #ifndef NDEBUG
