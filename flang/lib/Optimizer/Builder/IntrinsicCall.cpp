@@ -44,6 +44,7 @@
 #include "flang/Runtime/iostat-consts.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "llvm/Support/CommandLine.h"
@@ -51,7 +52,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cfenv> // temporary -- only used in genIeeeGetOrSetModesOrStatus
-#include <mlir/IR/Value.h>
 #include <optional>
 
 #define DEBUG_TYPE "flang-lower-intrinsic"
@@ -147,6 +147,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"atan2pi", &I::genAtanpi},
     {"atand", &I::genAtand},
     {"atanpi", &I::genAtanpi},
+    {"atomicaddd", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicaddf", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicaddi", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicaddl", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"bessel_jn",
      &I::genBesselJn,
      {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
@@ -2572,6 +2576,26 @@ mlir::Value IntrinsicLibrary::genAtanpi(mlir::Type resultType,
       builder.createRealConstant(loc, mlir::Float64Type::get(context), inv_pi);
   mlir::Value factor = builder.createConvert(loc, resultType, dfactor);
   return builder.create<mlir::arith::MulFOp>(loc, atan, factor);
+}
+
+static mlir::Value genAtomBinOp(fir::FirOpBuilder &builder, mlir::Location &loc,
+                                mlir::LLVM::AtomicBinOp binOp, mlir::Value arg0,
+                                mlir::Value arg1) {
+  auto llvmPointerType = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+  arg0 = builder.createConvert(loc, llvmPointerType, arg0);
+  return builder.create<mlir::LLVM::AtomicRMWOp>(
+      loc, binOp, arg0, arg1, mlir::LLVM::AtomicOrdering::seq_cst);
+}
+
+mlir::Value IntrinsicLibrary::genAtomicAdd(mlir::Type resultType,
+                                           llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+
+  mlir::LLVM::AtomicBinOp binOp =
+      mlir::isa<mlir::IntegerType>(args[1].getType())
+          ? mlir::LLVM::AtomicBinOp::add
+          : mlir::LLVM::AtomicBinOp::fadd;
+  return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
 }
 
 // ASSOCIATED

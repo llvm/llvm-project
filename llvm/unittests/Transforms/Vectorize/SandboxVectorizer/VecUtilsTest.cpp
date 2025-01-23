@@ -50,6 +50,14 @@ struct VecUtilsTest : public testing::Test {
   }
 };
 
+sandboxir::BasicBlock &getBasicBlockByName(sandboxir::Function &F,
+                                           StringRef Name) {
+  for (sandboxir::BasicBlock &BB : F)
+    if (BB.getName() == Name)
+      return BB;
+  llvm_unreachable("Expected to find basic block!");
+}
+
 TEST_F(VecUtilsTest, GetNumElements) {
   sandboxir::Context Ctx(C);
   auto *ElemTy = sandboxir::Type::getInt32Ty(Ctx);
@@ -415,9 +423,11 @@ TEST_F(VecUtilsTest, GetLowest) {
   parseIR(R"IR(
 define void @foo(i8 %v) {
 bb0:
-  %A = add i8 %v, %v
-  %B = add i8 %v, %v
-  %C = add i8 %v, %v
+  br label %bb1
+bb1:
+  %A = add i8 %v, 1
+  %B = add i8 %v, 2
+  %C = add i8 %v, 3
   ret void
 }
 )IR");
@@ -425,11 +435,21 @@ bb0:
 
   sandboxir::Context Ctx(C);
   auto &F = *Ctx.createFunction(&LLVMF);
-  auto &BB = *F.begin();
-  auto It = BB.begin();
-  auto *IA = &*It++;
-  auto *IB = &*It++;
-  auto *IC = &*It++;
+  auto &BB0 = getBasicBlockByName(F, "bb0");
+  auto It = BB0.begin();
+  auto *BB0I = cast<sandboxir::BranchInst>(&*It++);
+
+  auto &BB = getBasicBlockByName(F, "bb1");
+  It = BB.begin();
+  auto *IA = cast<sandboxir::Instruction>(&*It++);
+  auto *C1 = cast<sandboxir::Constant>(IA->getOperand(1));
+  auto *IB = cast<sandboxir::Instruction>(&*It++);
+  auto *C2 = cast<sandboxir::Constant>(IB->getOperand(1));
+  auto *IC = cast<sandboxir::Instruction>(&*It++);
+  auto *C3 = cast<sandboxir::Constant>(IC->getOperand(1));
+  // Check getLowest(ArrayRef<Instruction *>)
+  SmallVector<sandboxir::Instruction *> A({IA});
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(A), IA);
   SmallVector<sandboxir::Instruction *> ABC({IA, IB, IC});
   EXPECT_EQ(sandboxir::VecUtils::getLowest(ABC), IC);
   SmallVector<sandboxir::Instruction *> ACB({IA, IC, IB});
@@ -438,6 +458,27 @@ bb0:
   EXPECT_EQ(sandboxir::VecUtils::getLowest(CAB), IC);
   SmallVector<sandboxir::Instruction *> CBA({IC, IB, IA});
   EXPECT_EQ(sandboxir::VecUtils::getLowest(CBA), IC);
+
+  // Check getLowest(ArrayRef<Value *>)
+  SmallVector<sandboxir::Value *> C1Only({C1});
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(C1Only), nullptr);
+  SmallVector<sandboxir::Value *> AOnly({IA});
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(AOnly), IA);
+  SmallVector<sandboxir::Value *> AC1({IA, C1});
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(AC1), IA);
+  SmallVector<sandboxir::Value *> C1A({C1, IA});
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(C1A), IA);
+  SmallVector<sandboxir::Value *> AC1B({IA, C1, IB});
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(AC1B), IB);
+  SmallVector<sandboxir::Value *> ABC1({IA, IB, C1});
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(ABC1), IB);
+  SmallVector<sandboxir::Value *> AC1C2({IA, C1, C2});
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(AC1C2), IA);
+  SmallVector<sandboxir::Value *> C1C2C3({C1, C2, C3});
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(C1C2C3), nullptr);
+
+  SmallVector<sandboxir::Value *> DiffBBs({BB0I, IA});
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(DiffBBs), nullptr);
 }
 
 TEST_F(VecUtilsTest, GetCommonScalarType) {
