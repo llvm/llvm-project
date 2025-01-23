@@ -116,7 +116,7 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK-NEXT:       // GIR_Coverage, 5,
 // CHECK-NEXT:       GIR_EraseRootFromParent_Done,
 // CHECK-NEXT:     // Label 3: @228
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 4*/ GIMT_Encode4(299), // Rule ID 7 //
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 4*/ GIMT_Encode4(298), // Rule ID 7 //
 // CHECK-NEXT:       GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:       GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_FEXP2),
 // CHECK-NEXT:       // MIs[0] DstI[dst]
@@ -126,7 +126,7 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK-NEXT:       GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
 // CHECK-NEXT:       GIM_CheckComplexPattern, /*MI*/0, /*Op*/1, /*Renderer*/GIMT_Encode2(0), GIMT_Encode2(GICP_gi_SelectClamp),
 // CHECK-NEXT:       // (fexp2:{ *:[f32] } (SelectClamp:{ *:[f32] } f32:{ *:[f32] }:$src0, i1:{ *:[i1] }:$clamp))  =>  (FEEPLE:{ *:[f32] } FPR32:{ *:[f32] }:$src0, (FFOO:{ *:[f32] } FPR32:{ *:[f32] }:$src0), clamp:{ *:[i1] }:$clamp)
-// CHECK-NEXT:       GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
+// CHECK-NEXT:       GIR_MakeVirtualTempReg, /*TempRegID*/0,
 // CHECK-NEXT:       GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(MyTarget::FFOO),
 // CHECK-NEXT:       GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
 // CHECK-NEXT:       GIR_ComplexSubOperandRenderer, /*InsnID*/1, /*RendererID*/GIMT_Encode2(0), /*SubOperand*/0, // src0
@@ -140,8 +140,8 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK-NEXT:       GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT:       // GIR_Coverage, 7,
 // CHECK-NEXT:       GIR_EraseRootFromParent_Done,
-// CHECK-NEXT:     // Label 4: @299
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 5*/ GIMT_Encode4(345), // Rule ID 0 //
+// CHECK-NEXT:     // Label 4: @298
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 5*/ GIMT_Encode4(344), // Rule ID 0 //
 // CHECK-NEXT:       GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:       GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_FSIN),
 // CHECK-NEXT:       // MIs[0] DstI[dst]
@@ -158,8 +158,8 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK-NEXT:       GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT:       // GIR_Coverage, 0,
 // CHECK-NEXT:       GIR_EraseRootFromParent_Done,
-// CHECK-NEXT:     // Label 5: @345
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 6*/ GIMT_Encode4(394), // Rule ID 6 //
+// CHECK-NEXT:     // Label 5: @344
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 6*/ GIMT_Encode4(393), // Rule ID 6 //
 // CHECK-NEXT:       GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:       GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_FSQRT),
 // CHECK-NEXT:       // MIs[0] DstI[dst]
@@ -177,8 +177,8 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK-NEXT:       GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT:       // GIR_Coverage, 6,
 // CHECK-NEXT:       GIR_EraseRootFromParent_Done,
-// CHECK-NEXT:     // Label 6: @394
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 7*/ GIMT_Encode4(428), // Rule ID 1 //
+// CHECK-NEXT:     // Label 6: @393
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 7*/ GIMT_Encode4(427), // Rule ID 1 //
 // CHECK-NEXT:       GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:       GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_INTRINSIC_ROUND),
 // CHECK-NEXT:       // MIs[0] DstI[dst]
@@ -194,8 +194,8 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK-NEXT:       GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT:       // GIR_Coverage, 1,
 // CHECK-NEXT:       GIR_EraseRootFromParent_Done,
-// CHECK-NEXT:     // Label 7: @428
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 8*/ GIMT_Encode4(462), // Rule ID 4 //
+// CHECK-NEXT:     // Label 7: @427
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 8*/ GIMT_Encode4(461), // Rule ID 4 //
 // CHECK-NEXT:       GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT:       GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_INTRINSIC_TRUNC),
 // CHECK-NEXT:       // MIs[0] DstI[dst]
@@ -211,9 +211,9 @@ def clamp : OperandWithDefaultOps <i1, (ops (i1 0))>;
 // CHECK-NEXT:       GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT:       // GIR_Coverage, 4,
 // CHECK-NEXT:       GIR_EraseRootFromParent_Done,
-// CHECK-NEXT:     // Label 8: @462
+// CHECK-NEXT:     // Label 8: @461
 // CHECK-NEXT:     GIM_Reject,
-// CHECK-NEXT:     }; // Size: 463 bytes
+// CHECK-NEXT:     }; // Size: 462 bytes
 // CHECK-NEXT:   return MatchTable0;
 // CHECK-NEXT: }
 
