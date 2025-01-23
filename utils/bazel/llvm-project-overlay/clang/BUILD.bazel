@@ -573,6 +573,10 @@ gentbl(
             "include/clang/Basic/AttrList.inc",
         ),
         (
+            "-gen-clang-attr-parsed-attr-list",
+            "include/clang/Basic/AttrParsedAttrList.inc",
+        ),
+        (
             "-gen-clang-attr-subject-match-rule-list",
             "include/clang/Basic/AttrSubMatchRulesList.inc",
         ),
@@ -1136,10 +1140,6 @@ gentbl(
             "include/clang/Sema/AttrParsedAttrKinds.inc",
         ),
         (
-            "-gen-clang-attr-parsed-attr-list",
-            "include/clang/Sema/AttrParsedAttrList.inc",
-        ),
-        (
             "-gen-clang-attr-spelling-index",
             "include/clang/Sema/AttrSpellingListIndex.inc",
         ),
@@ -1174,7 +1174,6 @@ cc_library(
     textual_hdrs = [
         "include/clang/Sema/AttrParsedAttrImpl.inc",
         "include/clang/Sema/AttrParsedAttrKinds.inc",
-        "include/clang/Sema/AttrParsedAttrList.inc",
         "include/clang/Sema/AttrSpellingListIndex.inc",
         "include/clang/Sema/AttrTemplateInstantiate.inc",
         "lib/Sema/OpenCLBuiltins.inc",
