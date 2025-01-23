@@ -147,10 +147,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"atan2pi", &I::genAtanpi},
     {"atand", &I::genAtand},
     {"atanpi", &I::genAtanpi},
-    {"atomicaddd", &I::genAtomAdd, {{{"addr", asAddr}, {"v", asValue}}}, false},
-    {"atomicaddf", &I::genAtomAdd, {{{"addr", asAddr}, {"v", asValue}}}, false},
-    {"atomicaddi", &I::genAtomAdd, {{{"addr", asAddr}, {"v", asValue}}}, false},
-    {"atomicaddl", &I::genAtomAdd, {{{"addr", asAddr}, {"v", asValue}}}, false},
+    {"atomicaddd", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicaddf", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicaddi", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
+    {"atomicaddl", &I::genAtomicAdd, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"bessel_jn",
      &I::genBesselJn,
      {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
@@ -2587,8 +2587,8 @@ static mlir::Value genAtomBinOp(fir::FirOpBuilder &builder, mlir::Location &loc,
       loc, binOp, arg0, arg1, mlir::LLVM::AtomicOrdering::seq_cst);
 }
 
-mlir::Value IntrinsicLibrary::genAtomAdd(mlir::Type resultType,
-                                         llvm::ArrayRef<mlir::Value> args) {
+mlir::Value IntrinsicLibrary::genAtomicAdd(mlir::Type resultType,
+                                           llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
 
   mlir::LLVM::AtomicBinOp binOp =
