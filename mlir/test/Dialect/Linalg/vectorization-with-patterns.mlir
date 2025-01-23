@@ -1819,11 +1819,8 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-LABEL: func @zero_dim_tensor
 //       CHECK:     vector.transfer_read {{.*}} : tensor<f32>, vector<f32>
-//       CHECK:     vector.extract
 //       CHECK:     vector.transfer_read {{.*}} : tensor<f32>, vector<f32>
-//       CHECK:     vector.extract
-//       CHECK:     arith.addf {{.*}} : f32
-//       CHECK:     vector.broadcast %{{.*}} : f32 to vector<f32>
+//       CHECK:     arith.addf {{.*}} : vector<f32>
 //       CHECK:     vector.transfer_write {{.*}} : vector<f32>, tensor<f32>
 
 // -----

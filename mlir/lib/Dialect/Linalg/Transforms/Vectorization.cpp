@@ -590,9 +590,6 @@ static Operation *matchLinalgReduction(OpOperand *outputOperand) {
 /// otherwise.
 static Value broadcastIfNeeded(OpBuilder &b, Value value, Type dstType) {
   auto dstVecType = dyn_cast<VectorType>(dstType);
-  // If no shape to broadcast to, just return `value`.
-  if (dstVecType.getRank() == 0)
-    return value;
   if (vector::isBroadcastableTo(value.getType(), dstVecType) !=
       vector::BroadcastableToResult::Success)
     return value;
@@ -608,6 +605,15 @@ static Value broadcastIfNeeded(OpBuilder &b, Value value, Type dstType) {
 static Operation *buildMultiDimReduce(OpBuilder &b, Operation *reduceOp,
                                       Value valueToReduce, Value acc,
                                       ArrayRef<bool> dimsToMask) {
+  // If `acc` is a zero-rank vector, extract the scalar value from it, since
+  // vector.multi_reduction does not support 0 rank vectors yet.
+  // TODO: Remove this once vector.multi_reduction supports 0 rank vectors.
+  auto accVecType = dyn_cast<VectorType>(acc.getType());
+  if (accVecType && accVecType.getRank() == 0) {
+    acc = b.create<vector::ExtractOp>(reduceOp->getLoc(), acc,
+                                      ArrayRef<int64_t>());
+  }
+
   auto maybeKind = getCombinerOpKind(reduceOp);
   assert(maybeKind && "Failed precondition: could not get reduction kind");
   return b.create<vector::MultiDimReductionOp>(
@@ -1414,12 +1420,6 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
       cast<vector::TransferReadOp>(maskOp.getMaskableOp())
           .setInBoundsAttr(rewriter.getBoolArrayAttr(inBounds));
     }
-
-    // 3.c. Not all ops support 0-d vectors, extract the scalar for now.
-    // TODO: remove this.
-    if (readType.getRank() == 0)
-      readValue = rewriter.create<vector::ExtractOp>(loc, readValue,
-                                                     ArrayRef<int64_t>());
 
     LDBG("New vectorized bbarg(" << bbarg.getArgNumber() << "): " << readValue
                                  << "\n");
