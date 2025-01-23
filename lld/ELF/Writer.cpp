@@ -381,6 +381,13 @@ template <class ELFT> void Writer<ELFT>::run() {
     if (errCount(ctx))
       return;
 
+    if (config->outputFile == "-") {
+      lld::outs() << StringRef((const char *)buffer->getBufferStart(),
+                               buffer->getBufferSize());
+      lld::outs().flush();
+      return;
+    }
+
     if (auto e = buffer->commit())
       Err(ctx) << "failed to write output '" << buffer->getPath()
                << "': " << std::move(e);
