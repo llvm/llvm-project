@@ -584,7 +584,7 @@ protected:
   void introduceCheckBlockInVPlan(BasicBlock *CheckIRBB);
 
   /// The original loop.
-  Loop *OrigLoop;
+  Loop *const OrigLoop;
 
   /// A wrapper around ScalarEvolution used to add runtime SCEV checks. Applies
   /// dynamic knowledge to simplify SCEV expressions and converts them to a
@@ -592,22 +592,22 @@ protected:
   PredicatedScalarEvolution &PSE;
 
   /// Loop Info.
-  LoopInfo *LI;
+  LoopInfo *const LI;
 
   /// Dominator Tree.
-  DominatorTree *DT;
+  DominatorTree *const DT;
 
   /// Target Library Info.
-  const TargetLibraryInfo *TLI;
+  const TargetLibraryInfo *const TLI;
 
   /// Target Transform Info.
-  const TargetTransformInfo *TTI;
+  const TargetTransformInfo *const TTI;
 
   /// Assumption Cache.
-  AssumptionCache *AC;
+  AssumptionCache *const AC;
 
   /// Interface to emit optimization remarks.
-  OptimizationRemarkEmitter *ORE;
+  OptimizationRemarkEmitter *const ORE;
 
   /// The vectorization SIMD factor to use. Each vector will have this many
   /// vector elements.
@@ -817,7 +817,7 @@ protected:
 } // end namespace llvm
 
 /// Look for a meaningful debug location on the instruction or its operands.
-static DebugLoc getDebugLocFromInstOrOperands(Instruction *I) {
+static DebugLoc getDebugLocFromInstOrOperands(const Instruction *I) {
   if (!I)
     return DebugLoc();
 
@@ -825,8 +825,8 @@ static DebugLoc getDebugLocFromInstOrOperands(Instruction *I) {
   if (I->getDebugLoc() != Empty)
     return I->getDebugLoc();
 
-  for (Use &Op : I->operands()) {
-    if (Instruction *OpInst = dyn_cast<Instruction>(Op))
+  for (const Use &Op : I->operands()) {
+    if (const Instruction *OpInst = dyn_cast<Instruction>(Op))
       if (OpInst->getDebugLoc() != Empty)
         return OpInst->getDebugLoc();
   }
@@ -839,7 +839,7 @@ static DebugLoc getDebugLocFromInstOrOperands(Instruction *I) {
 #ifndef NDEBUG
 static void debugVectorizationMessage(const StringRef Prefix,
                                       const StringRef DebugMsg,
-                                      Instruction *I) {
+                                      const Instruction *I) {
   dbgs() << "LV: " << Prefix << DebugMsg;
   if (I != nullptr)
     dbgs() << " " << *I;
@@ -857,9 +857,9 @@ static void debugVectorizationMessage(const StringRef Prefix,
 /// the location of the remark. If \p DL is passed, use it as debug location for
 /// the remark. \return the remark object that can be streamed to.
 static OptimizationRemarkAnalysis
-createLVAnalysis(const char *PassName, StringRef RemarkName, Loop *TheLoop,
-                 Instruction *I, DebugLoc DL = {}) {
-  Value *CodeRegion = I ? I->getParent() : TheLoop->getHeader();
+createLVAnalysis(const char *PassName, StringRef RemarkName,
+                 const Loop *TheLoop, const Instruction *I, DebugLoc DL = {}) {
+  const Value *CodeRegion = I ? I->getParent() : TheLoop->getHeader();
   // If debug location is attached to the instruction, use it. Otherwise if DL
   // was not provided, use the loop's.
   if (I && I->getDebugLoc())
@@ -901,7 +901,8 @@ void reportVectorizationFailure(const StringRef DebugMsg,
 /// remark. If \p DL is passed, use it as debug location for the remark.
 static void reportVectorizationInfo(const StringRef Msg, const StringRef ORETag,
                                     OptimizationRemarkEmitter *ORE,
-                                    Loop *TheLoop, Instruction *I = nullptr,
+                                    Loop *TheLoop,
+                                    const Instruction *I = nullptr,
                                     DebugLoc DL = {}) {
   LLVM_DEBUG(debugVectorizationMessage("", Msg, I));
   LoopVectorizeHints Hints(TheLoop, true /* doesn't matter */, *ORE);
@@ -1746,36 +1747,36 @@ private:
 
 public:
   /// The loop that we evaluate.
-  Loop *TheLoop;
+  Loop *const TheLoop;
 
   /// Predicated scalar evolution analysis.
   PredicatedScalarEvolution &PSE;
 
   /// Loop Info analysis.
-  LoopInfo *LI;
+  LoopInfo *const LI;
 
   /// Vectorization legality.
-  LoopVectorizationLegality *Legal;
+  LoopVectorizationLegality *const Legal;
 
   /// Vector target information.
   const TargetTransformInfo &TTI;
 
   /// Target Library Info.
-  const TargetLibraryInfo *TLI;
+  const TargetLibraryInfo *const TLI;
 
   /// Demanded bits analysis.
-  DemandedBits *DB;
+  DemandedBits *const DB;
 
   /// Assumption cache.
-  AssumptionCache *AC;
+  AssumptionCache *const AC;
 
   /// Interface to emit optimization remarks.
-  OptimizationRemarkEmitter *ORE;
+  OptimizationRemarkEmitter *const ORE;
 
-  const Function *TheFunction;
+  const Function *const TheFunction;
 
   /// Loop Vectorize Hint.
-  const LoopVectorizeHints *Hints;
+  const LoopVectorizeHints *const Hints;
 
   /// The interleave access information contains groups of interleaved accesses
   /// with the same stride and close to each other.
@@ -1818,9 +1819,9 @@ class GeneratedRTChecks {
   /// they have been used.
   Value *MemRuntimeCheckCond = nullptr;
 
-  DominatorTree *DT;
-  LoopInfo *LI;
-  TargetTransformInfo *TTI;
+  DominatorTree *const DT;
+  LoopInfo *const LI;
+  TargetTransformInfo *const TTI;
 
   SCEVExpander SCEVExp;
   SCEVExpander MemCheckExp;
