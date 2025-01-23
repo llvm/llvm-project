@@ -424,9 +424,8 @@ cc_library(
 
 cc_library(
     name = "DebugInfo",
-    hdrs = glob(["include/llvm/DebugInfo/**/*.h"]),
+    hdrs = glob(["include/llvm/DebugInfo/*.h"]),
     copts = llvm_copts,
-    textual_hdrs = glob(["include/llvm/DebugInfo/**/*.def"]),
     deps = [
         ":Object",
         ":Support",
