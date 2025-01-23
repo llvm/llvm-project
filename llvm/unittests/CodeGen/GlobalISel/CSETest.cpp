@@ -81,9 +81,11 @@ TEST_F(AArch64GISelMITest, TestCSE) {
     auto MIBFAdd2 = CSEB.buildFAdd(s32, Copies[0], Copies[1]);
     EXPECT_TRUE(&*MIBFAdd == &*MIBFAdd2);
 
-    MIBFAdd2->setFlag(MachineInstr::FmNsz);
-    EXPECT_FALSE(&*MIBFAdd == &*MIBFAdd2);
+    auto MIBFAdd3 =
+        CSEB.buildFAdd(s32, Copies[0], Copies[1], MachineInstr::FmNsz);
+    EXPECT_FALSE(&*MIBFAdd == &*MIBFAdd3);
 
+    MIBFAdd2->setFlag(MachineInstr::FmNsz);
     MIBFAdd2->clearFlag(MachineInstr::FmNsz);
     EXPECT_TRUE(&*MIBFAdd == &*MIBFAdd2);
   }
@@ -94,9 +96,11 @@ TEST_F(AArch64GISelMITest, TestCSE) {
     auto MIBFSub2 = CSEB.buildFSub(s32, Copies[0], Copies[1]);
     EXPECT_TRUE(&*MIBFSub == &*MIBFSub2);
 
-    MIBFSub2->setFlag(MachineInstr::FmNoNans);
-    EXPECT_FALSE(&*MIBFSub == &*MIBFSub2);
+    auto MIBFSub3 =
+        CSEB.buildFSub(s32, Copies[0], Copies[1], MachineInstr::FmNoNans);
+    EXPECT_FALSE(&*MIBFSub == &*MIBFSub3);
 
+    MIBFSub2->setFlag(MachineInstr::FmNoNans);
     MIBFSub2->clearFlag(MachineInstr::FmNoNans);
     EXPECT_TRUE(&*MIBFSub == &*MIBFSub2);
   }
@@ -107,9 +111,11 @@ TEST_F(AArch64GISelMITest, TestCSE) {
     auto MIBFMul2 = CSEB.buildFMul(s32, Copies[0], Copies[1]);
     EXPECT_TRUE(&*MIBFMul == &*MIBFMul2);
 
-    MIBFMul2->setFlag(MachineInstr::FmNoNans);
-    EXPECT_FALSE(&*MIBFMul == &*MIBFMul2);
+    auto MIBFMul3 =
+        CSEB.buildFMul(s32, Copies[0], Copies[1], MachineInstr::FmNoNans);
+    EXPECT_FALSE(&*MIBFMul == &*MIBFMul3);
 
+    MIBFMul2->setFlag(MachineInstr::FmNoNans);
     MIBFMul2->clearFlag(MachineInstr::FmNoNans);
     EXPECT_TRUE(&*MIBFMul == &*MIBFMul2);
   }
@@ -120,9 +126,11 @@ TEST_F(AArch64GISelMITest, TestCSE) {
     auto MIBFDiv2 = CSEB.buildFDiv(s32, Copies[0], Copies[1]);
     EXPECT_TRUE(&*MIBFDiv == &*MIBFDiv2);
 
-    MIBFDiv2->setFlag(MachineInstr::FmNoNans);
-    EXPECT_FALSE(&*MIBFDiv == &*MIBFDiv2);
+    auto MIBFDiv3 =
+        CSEB.buildFDiv(s32, Copies[0], Copies[1], MachineInstr::FmNoNans);
+    EXPECT_FALSE(&*MIBFDiv == &*MIBFDiv3);
 
+    MIBFDiv2->setFlag(MachineInstr::FmNoNans);
     MIBFDiv2->clearFlag(MachineInstr::FmNoNans);
     EXPECT_TRUE(&*MIBFDiv == &*MIBFDiv2);
   }
@@ -133,9 +141,10 @@ TEST_F(AArch64GISelMITest, TestCSE) {
     auto MIBFAbs2 = CSEB.buildFAbs(s32, Copies[0]);
     EXPECT_TRUE(&*MIBFAbs == &*MIBFAbs2);
 
-    MIBFAbs2->setFlag(MachineInstr::FmNsz);
-    EXPECT_FALSE(&*MIBFAbs == &*MIBFAbs2);
+    auto MIBFAbs3 = CSEB.buildFAbs(s32, Copies[0], MachineInstr::FmNsz);
+    EXPECT_FALSE(&*MIBFAbs == &*MIBFAbs3);
 
+    MIBFAbs2->setFlag(MachineInstr::FmNsz);
     MIBFAbs2->clearFlag(MachineInstr::FmNsz);
     EXPECT_TRUE(&*MIBFAbs == &*MIBFAbs2);
   }
@@ -146,9 +155,11 @@ TEST_F(AArch64GISelMITest, TestCSE) {
     auto MIBFMinNum2 = CSEB.buildFMinNum(s32, Copies[0], Copies[1]);
     EXPECT_TRUE(&*MIBFMinNum == &*MIBFMinNum2);
 
-    MIBFMinNum2->setFlag(MachineInstr::FmNsz);
-    EXPECT_FALSE(&*MIBFMinNum == &*MIBFMinNum2);
+    auto MIBFMinNum3 =
+        CSEB.buildFMinNum(s32, Copies[0], Copies[1], MachineInstr::FmNsz);
+    EXPECT_FALSE(&*MIBFMinNum == &*MIBFMinNum3);
 
+    MIBFMinNum2->setFlag(MachineInstr::FmNsz);
     MIBFMinNum2->clearFlag(MachineInstr::FmNsz);
     EXPECT_TRUE(&*MIBFMinNum == &*MIBFMinNum2);
   }
@@ -158,9 +169,11 @@ TEST_F(AArch64GISelMITest, TestCSE) {
     auto MIBFMaxNum2 = CSEB.buildFMaxNum(s32, Copies[0], Copies[1]);
     EXPECT_TRUE(&*MIBFMaxNum == &*MIBFMaxNum2);
 
-    MIBFMaxNum2->setFlag(MachineInstr::FmNsz);
-    EXPECT_FALSE(&*MIBFMaxNum == &*MIBFMaxNum2);
+    auto MIBFMaxNum3 =
+        CSEB.buildFMaxNum(s32, Copies[0], Copies[1], MachineInstr::FmNsz);
+    EXPECT_FALSE(&*MIBFMaxNum == &*MIBFMaxNum3);
 
+    MIBFMaxNum2->setFlag(MachineInstr::FmNsz);
     MIBFMaxNum2->clearFlag(MachineInstr::FmNsz);
     EXPECT_TRUE(&*MIBFMaxNum == &*MIBFMaxNum2);
   }
@@ -171,9 +184,11 @@ TEST_F(AArch64GISelMITest, TestCSE) {
     auto MIBFMinNumIEEE2 = CSEB.buildFMinNumIEEE(s32, Copies[0], Copies[1]);
     EXPECT_TRUE(&*MIBFMinNumIEEE == &*MIBFMinNumIEEE2);
 
-    MIBFMinNumIEEE2->setFlag(MachineInstr::FmNsz);
-    EXPECT_FALSE(&*MIBFMinNumIEEE == &*MIBFMinNumIEEE2);
+    auto MIBFMinNumIEEE3 =
+        CSEB.buildFMinNumIEEE(s32, Copies[0], Copies[1], MachineInstr::FmNsz);
+    EXPECT_FALSE(&*MIBFMinNumIEEE == &*MIBFMinNumIEEE3);
 
+    MIBFMinNumIEEE2->setFlag(MachineInstr::FmNsz);
     MIBFMinNumIEEE2->clearFlag(MachineInstr::FmNsz);
     EXPECT_TRUE(&*MIBFMinNumIEEE == &*MIBFMinNumIEEE2);
   }
@@ -183,9 +198,11 @@ TEST_F(AArch64GISelMITest, TestCSE) {
     auto MIBFMaxNumIEEE2 = CSEB.buildFMaxNumIEEE(s32, Copies[0], Copies[1]);
     EXPECT_TRUE(&*MIBFMaxNumIEEE == &*MIBFMaxNumIEEE2);
 
-    MIBFMaxNumIEEE2->setFlag(MachineInstr::FmNsz);
-    EXPECT_FALSE(&*MIBFMaxNumIEEE == &*MIBFMaxNumIEEE2);
+    auto MIBFMaxNumIEEE3 =
+        CSEB.buildFMaxNumIEEE(s32, Copies[0], Copies[1], MachineInstr::FmNsz);
+    EXPECT_FALSE(&*MIBFMaxNumIEEE == &*MIBFMaxNumIEEE3);
 
+    MIBFMaxNumIEEE2->setFlag(MachineInstr::FmNsz);
     MIBFMaxNumIEEE2->clearFlag(MachineInstr::FmNsz);
     EXPECT_TRUE(&*MIBFMaxNumIEEE == &*MIBFMaxNumIEEE2);
   }
