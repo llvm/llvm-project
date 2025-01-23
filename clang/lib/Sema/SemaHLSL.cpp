@@ -27,7 +27,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Initialization.h"
-#include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/Template.h"
@@ -40,8 +39,8 @@
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
+#include <cstddef>
 #include <iterator>
-#include <string>
 #include <utility>
 
 using namespace clang;
@@ -339,30 +338,33 @@ static IdentifierInfo *getHostLayoutStructName(Sema &S, NamedDecl *BaseDecl,
   ASTContext &AST = S.getASTContext();
 
   IdentifierInfo *NameBaseII = BaseDecl->getIdentifier();
-  StringRef NameBase;
+  llvm::SmallString<64> Name("__layout_");
   if (NameBaseII) {
-    NameBase = NameBaseII->getName();
+    Name.append(NameBaseII->getName());
   } else {
     // anonymous struct
-    NameBase = "anon";
+    Name.append("anon");
     MustBeUnique = true;
   }
 
-  std::string Name = ("__layout_" + NameBase).str();
+  size_t NameLength = Name.size();
   IdentifierInfo *II = &AST.Idents.get(Name, tok::TokenKind::identifier);
   if (!MustBeUnique)
     return II;
 
   unsigned suffix = 0;
   while (true) {
-    if (suffix != 0)
-      II = &AST.Idents.get((Name + "_" + Twine(suffix)).str(),
-                           tok::TokenKind::identifier);
+    if (suffix != 0) {
+      Name.append("_");
+      Name.append(llvm::Twine(suffix).str());
+      II = &AST.Idents.get(Name, tok::TokenKind::identifier);
+    }
     if (!findRecordDeclInContext(II, BaseDecl->getDeclContext()))
       return II;
     // declaration with that name already exists - increment suffix and try
     // again until unique name is found
     suffix++;
+    Name.truncate(NameLength);
   };
 }
 
@@ -421,6 +423,8 @@ static CXXRecordDecl *createHostLayoutStruct(Sema &S,
 
   // copy base struct, create HLSL Buffer compatible version if needed
   if (unsigned NumBases = StructDecl->getNumBases()) {
+    // FIXME: Filter out interfaces from the list of base classes
+    // (llvm/llvm-project#124178)
     assert(NumBases == 1 && "HLSL supports only one base type");
     CXXBaseSpecifier Base = *StructDecl->bases_begin();
     CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
