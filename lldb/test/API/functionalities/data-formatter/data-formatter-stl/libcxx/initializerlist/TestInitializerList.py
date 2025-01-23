@@ -25,7 +25,7 @@ class InitializerListTestCase(TestBase):
         self.runCmd("run", RUN_SUCCEEDED)
 
         lldbutil.skip_if_library_missing(
-            self, self.target(), lldbutil.PrintableRegex("libc\+\+")
+            self, self.target(), lldbutil.PrintableRegex(r"libc\+\+")
         )
 
         # The stop reason of the thread should be breakpoint.
