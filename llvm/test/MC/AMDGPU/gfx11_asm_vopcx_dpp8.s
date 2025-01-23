@@ -2,14 +2,23 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,+real-true16 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64,+real-true16 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
 
-v_cmpx_class_f16_dpp v1, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX11: v_cmpx_class_f16 v1, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x04,0xfa,0x7d,0x01,0x77,0x39,0x05]
+v_cmpx_class_f16 v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: v_cmpx_class_f16 v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x04,0xfa,0x7d,0x01,0x77,0x39,0x05]
 
-v_cmpx_class_f16 v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// GFX11: v_cmpx_class_f16 v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0x04,0xfa,0x7d,0x01,0x77,0x39,0x05]
+v_cmpx_class_f16 v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX11: v_cmpx_class_f16 v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0x04,0xfa,0x7d,0x01,0x77,0x39,0x05]
 
-v_cmpx_class_f16 v127, v127 dpp8:[0,0,0,0,0,0,0,0] fi:0
-// GFX11: v_cmpx_class_f16 v127, v127 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xfe,0xfa,0x7d,0x7f,0x00,0x00,0x00]
+v_cmpx_class_f16 v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0]
+// GFX11: v_cmpx_class_f16 v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xfe,0xfa,0x7d,0x7f,0x00,0x00,0x00]
+
+v_cmpx_class_f16 v127.l, v127.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: v_cmpx_class_f16 v127.l, v127.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0xfe,0xfa,0x7d,0x7f,0x77,0x39,0x05]
+
+v_cmpx_class_f16 v1.h, v2.h dpp8:[7,6,5,4,3,2,1,0] fi:1
+// GFX11: v_cmpx_class_f16 v1.h, v2.h dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0x04,0xfb,0x7d,0x81,0x77,0x39,0x05]
+
+v_cmpx_class_f16 v127.h, v127.h dpp8:[0,0,0,0,0,0,0,0] fi:0
+// GFX11: v_cmpx_class_f16 v127.h, v127.h dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xfe,0xfb,0x7d,0xff,0x00,0x00,0x00]
 
 v_cmpx_class_f32 v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: v_cmpx_class_f32 v1, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x04,0xfc,0x7d,0x01,0x77,0x39,0x05]
