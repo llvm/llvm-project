@@ -1933,7 +1933,7 @@ bool FileCheck::readCheckFile(
     }
 
     // Okay, add the string we captured to the output vector and move on.
-    CheckStrings.emplace_back(P, UsedPrefix, PatternLoc,
+    CheckStrings.emplace_back(std::move(P), UsedPrefix, PatternLoc,
                               std::move(DagNotMatches));
     DagNotMatches = ImplicitNegativeChecks;
   }
