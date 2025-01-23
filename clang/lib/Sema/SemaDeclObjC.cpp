@@ -32,6 +32,199 @@
 
 using namespace clang;
 
+/// An Objective-C public name (a class name or protocol name) is
+/// expected to have a prefix as all names are in a single global
+/// namespace.
+///
+/// If the `-Wobjc-prefixes=<list>` option is active, it specifies a list
+/// of permitted prefixes; classes and protocols must start with a
+/// prefix from that list.  Note that in this case, we check that
+/// the name matches <prefix>(<upper-case><not-upper-case>?)?, so e.g.
+/// if you specify `-Wobjc-prefixes=NS`, then `NSURL` would not be valid;
+/// you would want to specify `-Wobjc-prefixes=NS,NSURL` in that case.
+///
+/// If the -Wobjc-prefix-length is set to N, the name must start
+/// with N+1 capital letters, which must be followed by a character
+/// that is not a capital letter.
+///
+/// For instance, for N set to 2, the following are valid:
+///
+///          NSString
+///          NSArray
+///
+///      but these are not:
+///
+///          MyString
+///          NSKString
+///          NSnotAString
+///
+/// We make a special exception for NSCF things when the prefix is set
+/// to length 2, because that's an unusual special case in the implementation
+/// of the Cocoa frameworks.
+///
+/// Underscore prefixes are stripped from the name before looking for the
+/// prefix.  This is to avoid people thinking that they can put an underscore
+/// on the front "to make the name private", as it does no such thing.
+
+static inline bool ObjCNameMatchesPrefix(StringRef Name, StringRef Prefix) {
+  size_t NameLen = Name.size();
+  size_t PrefixLen = Prefix.size();
+  return (NameLen >= PrefixLen && Name.starts_with(Prefix) &&
+          (NameLen <= PrefixLen || isUppercase(Name[PrefixLen])) &&
+          (NameLen <= PrefixLen + 1 || !isUppercase(Name[PrefixLen + 1])));
+}
+
+SemaObjC::ObjCNameValidationResult
+SemaObjC::ValidateObjCPublicName(StringRef Name) {
+  // Ignore leading underscores
+  Name = Name.ltrim('_');
+
+  // Check the -Wobjc-forbidden-prefixes list
+  if (!getLangOpts().ObjCForbiddenPrefixes.empty()) {
+    for (StringRef Prefix : getLangOpts().ObjCForbiddenPrefixes) {
+      if (ObjCNameMatchesPrefix(Name, Prefix))
+        return ObjCNameForbidden;
+    }
+  }
+
+  // Check the -Wobjc-prefixes list
+  if (!getLangOpts().ObjCAllowedPrefixes.empty()) {
+    for (StringRef Prefix : getLangOpts().ObjCAllowedPrefixes) {
+      if (ObjCNameMatchesPrefix(Name, Prefix))
+        return ObjCNameAllowed;
+    }
+
+    return ObjCNameNotAllowed;
+  }
+
+  // Finally, check against the -Wobjc-prefix-length setting
+  if (getLangOpts().ObjCPrefixLength) {
+    size_t NameLen = Name.size();
+    size_t RequiredUpperCase = getLangOpts().ObjCPrefixLength + 1;
+
+    // Special case for NSCF when prefix length is 2
+    if (RequiredUpperCase == 3 && NameLen > 4 && Name.starts_with("NSCF") &&
+        isUppercase(Name[4]) && (NameLen == 5 || !isUppercase(Name[5])))
+      return ObjCNameAllowed;
+
+    if (NameLen < RequiredUpperCase)
+      return ObjCNameUnprefixed;
+
+    for (size_t N = 0; N < RequiredUpperCase; ++N) {
+      if (!isUppercase(Name[N]))
+        return ObjCNameUnprefixed;
+    }
+
+    if (NameLen > RequiredUpperCase && isUppercase(Name[RequiredUpperCase]))
+      return ObjCNameUnprefixed;
+  }
+
+  return ObjCNameAllowed;
+}
+
+/// For categories on Objective-C classes whose names do not match an
+/// allowed prefix, method selectors must be prefixed to avoid collisions.
+///
+/// As with class and protocol names, the set of allowed prefixes is
+/// controlled by the `-Wobjc-prefixes=<list>`, `-Wobjc-prefix-length` and
+/// `-Wobjc-forbidden-prefixes=<list>` options.
+///
+/// Method name prefixes are expected to start with a valid prefix, which
+/// for methods may be lowercase, followed by a character of a different
+/// case, or an underscore.  For instance, the following are valid:
+///
+///          NShasAnEvenNumberOfVowels
+///          NS_consistsOnlyOfConsonants
+///          NS_findSecondToLastOccurrenceOf:inReverse:
+///          ns_stringByRemovingAllVowels
+///          nsHasAtLeastTwentyCharacters
+///
+/// but these are not:
+///
+///          :
+///          MySHA256Hash
+///          NSOhNoYouDont
+///          nshasAnOddNumberOfVowels
+///
+/// As with classes and protocols, leading underscores are ignored when
+/// examining the selector.
+///
+/// Additionally, the prefixes "set" is ignored; the reasoning behind
+/// this is that a property
+///
+///          @property int NSfoo;
+///
+/// should be allowed in a category, and that will generate the getter and
+/// setter as follows:
+///
+///          - (int)NSfoo;
+///          - (void)setNSfoo:(int)n;
+///
+/// We also ignore the prefix "is", which is generally discouraged but
+/// very occasionally does get used.
+
+static inline bool ObjCSelNameMatchesPrefix(StringRef Name, StringRef Prefix) {
+  size_t NameLen = Name.size();
+  size_t PrefixLen = Prefix.size();
+  return (NameLen >= PrefixLen && Name.starts_with_insensitive(Prefix) &&
+          (NameLen <= PrefixLen ||
+           (isUppercase(Name[0]) && !isUppercase(Name[PrefixLen])) ||
+           (isLowercase(Name[0]) && !isLowercase(Name[PrefixLen]))));
+}
+
+SemaObjC::ObjCNameValidationResult
+SemaObjC::ValidateObjCForeignCategorySelector(Selector Sel) {
+  StringRef Name = Sel.getNameForSlot(0).ltrim('_');
+
+  // Ignore any "set" or "is" prefix
+  if (Name.size() >= 4 && Name.starts_with("set") && !isLowercase(Name[3]))
+    Name = Name.drop_front(3).ltrim('_');
+  else if (Name.size() >= 3 && Name.starts_with("is") && !isLowercase(Name[2]))
+    Name = Name.drop_front(2).ltrim('_');
+
+  // Check the -Wobjc-forbidden-prefixes list
+  if (!getLangOpts().ObjCForbiddenPrefixes.empty()) {
+    for (StringRef Prefix : getLangOpts().ObjCForbiddenPrefixes) {
+      if (ObjCSelNameMatchesPrefix(Name, Prefix))
+        return ObjCNameForbidden;
+    }
+  }
+
+  // Check the -Wobjc-prefixes list
+  if (!getLangOpts().ObjCAllowedPrefixes.empty()) {
+    for (StringRef Prefix : getLangOpts().ObjCAllowedPrefixes) {
+      if (ObjCSelNameMatchesPrefix(Name, Prefix))
+        return ObjCNameAllowed;
+    }
+
+    return ObjCNameNotAllowed;
+  }
+
+  // Finally, check against the -Wobjc-prefix-length setting
+  if (getLangOpts().ObjCPrefixLength) {
+    size_t NameLen = Name.size();
+    size_t RequiredUpperCase = getLangOpts().ObjCPrefixLength;
+
+    // Special case for NSCF when prefix length is 2
+    if (RequiredUpperCase == 2 && NameLen > 4 && Name.starts_with("NSCF") &&
+        !isUppercase(Name[4]))
+      return ObjCNameAllowed;
+
+    if (NameLen < RequiredUpperCase)
+      return ObjCNameUnprefixed;
+
+    for (size_t N = 0; N < RequiredUpperCase; ++N) {
+      if (!isUppercase(Name[N]))
+        return ObjCNameUnprefixed;
+    }
+
+    if (NameLen > RequiredUpperCase && isUppercase(Name[RequiredUpperCase]))
+      return ObjCNameUnprefixed;
+  }
+
+  return ObjCNameAllowed;
+}
+
 /// Check whether the given method, which must be in the 'init'
 /// family, is a valid member of that family.
 ///
@@ -991,6 +1184,23 @@ ObjCInterfaceDecl *SemaObjC::ActOnStartClassInterface(
     Diag(PrevDecl->getLocation(), diag::note_previous_definition);
   }
 
+  // Check the name to make sure it has the required prefix.
+  if (!SemaRef.getSourceManager().isInSystemHeader(ClassLoc)) {
+    switch (ValidateObjCPublicName(ClassName->getName())) {
+    case ObjCNameUnprefixed:
+      Diag(ClassLoc, diag::warn_objc_unprefixed_class_name);
+      break;
+    case ObjCNameNotAllowed:
+      Diag(ClassLoc, diag::warn_objc_bad_class_name_prefix);
+      break;
+    case ObjCNameForbidden:
+      Diag(ClassLoc, diag::warn_objc_forbidden_class_name_prefix);
+      break;
+    case ObjCNameAllowed:
+      break;
+    }
+  }
+
   // Create a declaration to describe this @interface.
   ObjCInterfaceDecl* PrevIDecl = dyn_cast_or_null<ObjCInterfaceDecl>(PrevDecl);
 
@@ -1221,6 +1431,24 @@ ObjCProtocolDecl *SemaObjC::ActOnStartProtocolInterface(
   bool err = false;
   // FIXME: Deal with AttrList.
   assert(ProtocolName && "Missing protocol identifier");
+
+  // Check the name to make sure it has the required prefix.
+  if (!SemaRef.getSourceManager().isInSystemHeader(ProtocolLoc)) {
+    switch (ValidateObjCPublicName(ProtocolName->getName())) {
+    case ObjCNameUnprefixed:
+      Diag(ProtocolLoc, diag::warn_objc_unprefixed_protocol_name);
+      break;
+    case ObjCNameNotAllowed:
+      Diag(ProtocolLoc, diag::warn_objc_bad_protocol_name_prefix);
+      break;
+    case ObjCNameForbidden:
+      Diag(ProtocolLoc, diag::warn_objc_forbidden_protocol_name_prefix);
+      break;
+    case ObjCNameAllowed:
+      break;
+    }
+  }
+
   ObjCProtocolDecl *PrevDecl = LookupProtocol(
       ProtocolName, ProtocolLoc, SemaRef.forRedeclarationInCurContext());
   ObjCProtocolDecl *PDecl = nullptr;
@@ -5002,6 +5230,32 @@ Decl *SemaObjC::ActOnMethodDeclaration(
     Diag(PrevMethod->getLocation(), diag::note_previous_declaration);
     ObjCMethod->setInvalidDecl();
     return ObjCMethod;
+  }
+
+  // If the method is in a category, check the name of the category to
+  // see if we're supposed to be using a prefix on the method name.
+  if (ObjCCategoryDecl *Cat = dyn_cast<ObjCCategoryDecl>(ClassDecl)) {
+    ObjCInterfaceDecl *Interface = Cat->getClassInterface();
+    if (Interface &&
+        !SemaRef.getSourceManager().isInSystemHeader(SelectorLocs[0]) &&
+        ValidateObjCPublicName(Interface->getName()) != ObjCNameAllowed) {
+      // The class we're adding a category to does not match our prefix
+      // warning settings; check that Sel has a prefix that does.
+      switch (ValidateObjCForeignCategorySelector(Sel)) {
+      case ObjCNameUnprefixed:
+        Diag(SelectorLocs[0], diag::warn_objc_unprefixed_category_method_name);
+        break;
+      case ObjCNameNotAllowed:
+        Diag(SelectorLocs[0], diag::warn_objc_bad_category_method_name_prefix);
+        break;
+      case ObjCNameForbidden:
+        Diag(SelectorLocs[0],
+             diag::warn_objc_forbidden_category_method_name_prefix);
+        break;
+      case ObjCNameAllowed:
+        break;
+      }
+    }
   }
 
   // If this Objective-C method does not have a related result type, but we
