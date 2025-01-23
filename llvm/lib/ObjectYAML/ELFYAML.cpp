@@ -1747,7 +1747,9 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
 std::string MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::validate(
     IO &io, std::unique_ptr<ELFYAML::Chunk> &C) {
   if (const auto *F = dyn_cast<ELFYAML::Fill>(C.get())) {
-    if (F->Pattern && F->Pattern->binary_size() != 0 && !F->Size)
+    // Can't check the `Size`, as it's required and may be left uninitialized by
+    // previous error.
+    if (!io.error() && F->Pattern && F->Pattern->binary_size() != 0 && !F->Size)
       return "\"Size\" can't be 0 when \"Pattern\" is not empty";
     return "";
   }
