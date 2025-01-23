@@ -145,6 +145,22 @@ def G_VMSET_VL : RISCVGenericInstruction {
 }
 def : GINodeEquiv<G_VMSET_VL, riscv_vmset_vl>;
 
+// Pseudo equivalent to a RISCVISD::VMV_V_X_VL
+def G_VMV_V_X_VL : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_VMV_V_X_VL, riscv_vmv_v_x_vl>;
+
+// Pseudo equivalent to a RISCVISD::VFMV_V_F_VL
+def G_VFMV_V_F_VL : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_VFMV_V_F_VL, riscv_vfmv_v_f_vl>;
+
 // Pseudo equivalent to a RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL. There is no
 // record to mark as equivalent to using GINodeEquiv because it gets lowered
 // before instruction selection.

@@ -3314,8 +3314,14 @@ bool IRTranslator::translateShuffleVector(const User &U,
   // poison are treated as zeroinitializer here).
   if (U.getOperand(0)->getType()->isScalableTy()) {
     Register Val = getOrCreateVReg(*U.getOperand(0));
-    auto SplatVal = MIRBuilder.buildExtractVectorElementConstant(
-        MRI->getType(Val).getElementType(), Val, 0);
+    // We don't use buildExtractVectorElementConstant because it creates
+    // problems for CSE since the constant gets placed in a different basic
+    // block.
+    unsigned VecIdxWidth = TLI->getVectorIdxTy(*DL).getSizeInBits();
+    auto *IdxCI = ConstantInt::get(U.getContext(), APInt(VecIdxWidth, 0));
+    Register Idx = getOrCreateVReg(*IdxCI);
+    auto SplatVal = MIRBuilder.buildExtractVectorElement(
+        MRI->getType(Val).getElementType(), Val, Idx);
     MIRBuilder.buildSplatVector(getOrCreateVReg(U), SplatVal);
     return true;
   }
