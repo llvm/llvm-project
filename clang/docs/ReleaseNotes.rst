@@ -837,6 +837,9 @@ Bug Fixes in This Version
   ``delete`` which resolves to a destroying delete but the type of the object
   being deleted has a potentially throwing destructor (#GH118660).
 
+- cv- and ref- qualified function types no longer silently produce invalid pointer to
+  qualified function types when they implicitly decay in some places. Fixes (#GH27059).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
