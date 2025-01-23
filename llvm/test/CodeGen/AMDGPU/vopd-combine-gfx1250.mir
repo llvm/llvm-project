@@ -2357,6 +2357,35 @@ body:             |
 ...
 
 ---
+name: vopd_no_combine_bitop3_mov_dpp_vgpr_src2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; SCHED-LABEL: name: vopd_no_combine_bitop3_mov_dpp_vgpr_src2
+    ; SCHED: $vgpr1 = IMPLICIT_DEF
+    ; SCHED-NEXT: $vgpr3 = IMPLICIT_DEF
+    ; SCHED-NEXT: $vgpr4 = IMPLICIT_DEF
+    ; SCHED-NEXT: renamable $vgpr1 = V_MOV_B32_dpp killed $vgpr1, $vgpr3, 258, 15, 15, 0, implicit $exec
+    ; SCHED-NEXT: renamable $vgpr1 = V_BITOP3_B32_e64 killed $vgpr3, killed $vgpr4, killed $vgpr1, 128, implicit $exec
+    ; SCHED-NEXT: renamable $vgpr3 = V_MOV_B32_e32 -1, implicit $exec
+    ;
+    ; PAIR-LABEL: name: vopd_no_combine_bitop3_mov_dpp_vgpr_src2
+    ; PAIR: $vgpr1 = IMPLICIT_DEF
+    ; PAIR-NEXT: $vgpr3 = IMPLICIT_DEF
+    ; PAIR-NEXT: $vgpr4 = IMPLICIT_DEF
+    ; PAIR-NEXT: renamable $vgpr1 = V_MOV_B32_dpp killed $vgpr1, $vgpr3, 258, 15, 15, 0, implicit $exec
+    ; PAIR-NEXT: renamable $vgpr1 = V_BITOP3_B32_e64 killed $vgpr3, killed $vgpr4, killed $vgpr1, 128, implicit $exec
+    ; PAIR-NEXT: renamable $vgpr3 = V_MOV_B32_e32 -1, implicit $exec
+    $vgpr1 = IMPLICIT_DEF
+    $vgpr3 = IMPLICIT_DEF
+    $vgpr4 = IMPLICIT_DEF
+
+    renamable $vgpr1 = V_MOV_B32_dpp killed $vgpr1, $vgpr3, 258, 15, 15, 0, implicit $exec
+    renamable $vgpr1 = V_BITOP3_B32_e64 killed $vgpr3, $vgpr4, killed $vgpr1, 128, implicit $exec
+    renamable $vgpr3 = V_MOV_B32_e32 -1, implicit $exec
+...
+
+---
 name:            vopd_combine_mov_or
 tracksRegLiveness: true
 body:             |
