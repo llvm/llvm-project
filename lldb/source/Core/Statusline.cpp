@@ -19,9 +19,6 @@
 #include "lldb/Utility/StreamString.h"
 #include "llvm/Support/Locale.h"
 
-#include <sys/ioctl.h>
-#include <termios.h>
-
 #define ESCAPE "\x1b"
 #define ANSI_SAVE_CURSOR ESCAPE "7"
 #define ANSI_RESTORE_CURSOR ESCAPE "8"
@@ -49,7 +46,8 @@ Statusline::~Statusline() { Disable(); }
 void Statusline::TerminalSizeChanged() {
   m_terminal_size_has_changed = 1;
 
-  // FIXME: This probably isn't safe?
+  // FIXME: This code gets called from a signal handler. It's probably not safe
+  // to redraw the statusline, even without recomputing it?
   Redraw(/*update=*/false);
 }
 

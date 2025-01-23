@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_STATUSBAR_H
-#define LLDB_CORE_STATUSBAR_H
+#ifndef LLDB_CORE_STATUSLINE_H
+#define LLDB_CORE_STATUSLINE_H
 
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
@@ -60,4 +60,4 @@ private:
   static constexpr llvm::StringLiteral k_ansi_suffix = "${ansi.normal}";
 };
 } // namespace lldb_private
-#endif // LLDB_CORE_STATUSBAR_H
+#endif // LLDB_CORE_STATUSLINE_H
