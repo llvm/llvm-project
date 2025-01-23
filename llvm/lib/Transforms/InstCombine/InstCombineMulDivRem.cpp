@@ -2152,22 +2152,81 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
     Value *X;
     bool IsTan = match(Op0, m_Intrinsic<Intrinsic::sin>(m_Value(X))) &&
                  match(Op1, m_Intrinsic<Intrinsic::cos>(m_Specific(X)));
-    bool IsCot =
-        !IsTan && match(Op0, m_Intrinsic<Intrinsic::cos>(m_Value(X))) &&
-                  match(Op1, m_Intrinsic<Intrinsic::sin>(m_Specific(X)));
+    bool IsCot = !IsTan &&
+                 match(Op0, m_Intrinsic<Intrinsic::cos>(m_Value(X))) &&
+                 match(Op1, m_Intrinsic<Intrinsic::sin>(m_Specific(X)));
 
-    if ((IsTan || IsCot) && hasFloatFn(M, &TLI, I.getType(), LibFunc_tan,
-                                       LibFunc_tanf, LibFunc_tanl)) {
+    auto GetReplacement = [&](Value *Arg, bool IsInv, LibFunc DoubleFunc,
+                              LibFunc FloatFunc,
+                              LibFunc LongDoubleFunc) -> Value * {
       IRBuilder<> B(&I);
       IRBuilder<>::FastMathFlagGuard FMFGuard(B);
       B.setFastMathFlags(I.getFastMathFlags());
       AttributeList Attrs =
           cast<CallBase>(Op0)->getCalledFunction()->getAttributes();
-      Value *Res = emitUnaryFloatFnCall(X, &TLI, LibFunc_tan, LibFunc_tanf,
-                                        LibFunc_tanl, B, Attrs);
-      if (IsCot)
+      Value *Res = emitUnaryFloatFnCall(Arg, &TLI, DoubleFunc, FloatFunc,
+                                        LongDoubleFunc, B, Attrs);
+
+      if (IsInv)
         Res = B.CreateFDiv(ConstantFP::get(I.getType(), 1.0), Res);
+
+      return Res;
+    };
+
+    if ((IsTan || IsCot) && hasFloatFn(M, &TLI, I.getType(), LibFunc_tan,
+                                       LibFunc_tanf, LibFunc_tanl)) {
+
+      Value *Res =
+          GetReplacement(X, IsCot, LibFunc_tan, LibFunc_tanf, LibFunc_tanl);
+
       return replaceInstUsesWith(I, Res);
+    }
+
+    // sinh(X) / cosh(X) -> tanh(X)
+    // cosh(X) / sinh(X) -> 1/tanh(X)
+    Value *Y;
+    CallBase *Op0AsCallBase = dyn_cast<CallBase>(Op0);
+    CallBase *Op1AsCallBase = dyn_cast<CallBase>(Op1);
+    LibFunc Op0LibFunc, Op1LibFunc;
+
+    if (Op1AsCallBase && Op0AsCallBase) {
+      TLI.getLibFunc(*Op1AsCallBase, Op1LibFunc);
+      TLI.getLibFunc(*Op0AsCallBase, Op0LibFunc);
+
+      bool ArgsMatch = match(Op0AsCallBase->getArgOperand(0), m_Value(Y)) &&
+                       match(Op1AsCallBase->getArgOperand(0), m_Specific(Y));
+
+      bool IsTanH =
+          ArgsMatch &&
+          ((Op0LibFunc == LibFunc_sinh && Op1LibFunc == LibFunc_cosh) ||
+           (Op0LibFunc == LibFunc_sinhf && Op1LibFunc == LibFunc_coshf) ||
+           (Op0LibFunc == LibFunc_sinhl && Op1LibFunc == LibFunc_coshl));
+
+      bool IsCotH =
+          !IsTanH && ArgsMatch &&
+          ((Op1LibFunc == LibFunc_sinh && Op0LibFunc == LibFunc_cosh) ||
+           (Op1LibFunc == LibFunc_sinhf && Op0LibFunc == LibFunc_coshf) ||
+           (Op1LibFunc == LibFunc_sinhl && Op0LibFunc == LibFunc_coshl));
+
+      if ((IsTanH || IsCotH) && hasFloatFn(M, &TLI, I.getType(), LibFunc_tanh,
+                                           LibFunc_tanhf, LibFunc_tanhl)) {
+
+        Value *Res = GetReplacement(Y, IsCotH, LibFunc_tanh, LibFunc_tanhf,
+                                    LibFunc_tanhl);
+
+        Instruction *Replacement = replaceInstUsesWith(I, Res);
+
+        Op0AsCallBase->replaceAllUsesWith(
+            PoisonValue::get(Op0AsCallBase->getType()));
+
+        Op1AsCallBase->replaceAllUsesWith(
+            PoisonValue::get(Op1AsCallBase->getType()));
+
+        Op0AsCallBase->eraseFromParent();
+        Op1AsCallBase->eraseFromParent();
+
+        return Replacement;
+      }
     }
   }
 
