@@ -91,12 +91,24 @@ const char *SwiftLanguageRuntime::GetStandardLibraryBaseName() {
   return "swiftCore";
 }
 
+const char *SwiftLanguageRuntime::GetConcurrencyLibraryBaseName() {
+  return "swift_Concurrency";
+}
+
 static ConstString GetStandardLibraryName(Process &process) {
   // This result needs to be stored in the constructor.
   PlatformSP platform_sp(process.GetTarget().GetPlatform());
   if (platform_sp)
     return platform_sp->GetFullNameForDylib(
         ConstString(SwiftLanguageRuntime::GetStandardLibraryBaseName()));
+  return {};
+}
+
+static ConstString GetConcurrencyLibraryName(Process &process) {
+  PlatformSP platform_sp = process.GetTarget().GetPlatform();
+  if (platform_sp)
+    return platform_sp->GetFullNameForDylib(
+        ConstString(SwiftLanguageRuntime::GetConcurrencyLibraryBaseName()));
   return {};
 }
 
@@ -107,6 +119,12 @@ ConstString SwiftLanguageRuntime::GetStandardLibraryName() {
 static bool IsModuleSwiftRuntime(lldb_private::Process &process,
                                  lldb_private::Module &module) {
   return module.GetFileSpec().GetFilename() == GetStandardLibraryName(process);
+}
+
+static bool IsModuleSwiftConcurrency(lldb_private::Process &process,
+                                     lldb_private::Module &module) {
+  return module.GetFileSpec().GetFilename() ==
+         GetConcurrencyLibraryName(process);
 }
 
 AppleObjCRuntimeV2 *
@@ -129,6 +147,11 @@ enum class RuntimeKind { Swift, ObjC };
 static bool IsStaticSwiftRuntime(Module &image) {
   static ConstString swift_reflection_version_sym("swift_release");
   return image.FindFirstSymbolWithNameAndType(swift_reflection_version_sym);
+}
+
+static bool IsStaticSwiftConcurrency(Module &image) {
+  static const ConstString task_switch_symbol("_swift_task_switch");
+  return image.FindFirstSymbolWithNameAndType(task_switch_symbol);
 }
 
 /// \return the Swift or Objective-C runtime found in the loaded images.
@@ -166,6 +189,52 @@ static ModuleSP findRuntime(Process &process, RuntimeKind runtime_kind) {
     });
   }
   return runtime_image;
+}
+
+ModuleSP SwiftLanguageRuntime::FindConcurrencyModule(Process &process) {
+  ModuleSP concurrency_module;
+  process.GetTarget().GetImages().ForEach([&](const ModuleSP &candidate) {
+    if (candidate && IsModuleSwiftConcurrency(process, *candidate)) {
+      concurrency_module = candidate;
+      return false;
+    }
+    return true;
+  });
+  if (concurrency_module)
+    return concurrency_module;
+
+  // Do a more expensive search for a statically linked Swift runtime.
+  process.GetTarget().GetImages().ForEach([&](const ModuleSP &candidate) {
+    if (candidate && IsStaticSwiftConcurrency(*candidate)) {
+      concurrency_module = candidate;
+      return false;
+    }
+    return true;
+  });
+  return concurrency_module;
+}
+
+std::optional<uint32_t>
+SwiftLanguageRuntime::FindConcurrencyDebugVersion(Process &process) {
+  ModuleSP concurrency_module = FindConcurrencyModule(process);
+  if (!concurrency_module)
+    return {};
+
+  const Symbol *version_symbol =
+      concurrency_module->FindFirstSymbolWithNameAndType(
+          ConstString("_swift_concurrency_debug_internal_layout_version"));
+  if (!version_symbol)
+    return 0;
+
+  addr_t symbol_addr = version_symbol->GetLoadAddress(&process.GetTarget());
+  if (symbol_addr == LLDB_INVALID_ADDRESS)
+    return {};
+  Status error;
+  uint64_t version = process.ReadUnsignedIntegerFromMemory(
+      symbol_addr, /*width*/ 4, /*fail_value=*/0, error);
+  if (error.Fail())
+    return {};
+  return version;
 }
 
 static std::optional<lldb::addr_t>
