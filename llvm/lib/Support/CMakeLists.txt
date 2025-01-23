@@ -214,6 +214,7 @@ add_llvm_component_library(LLVMSupport
   MemoryBuffer.cpp
   MemoryBufferRef.cpp
   ModRef.cpp
+  ModuleSplitter.cpp
   MD5.cpp
   MSP430Attributes.cpp
   MSP430AttributeParser.cpp
