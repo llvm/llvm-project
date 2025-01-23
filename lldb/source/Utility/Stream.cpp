@@ -103,6 +103,11 @@ void Stream::QuotedCString(const char *cstr, const char *format) {
   Printf(format, cstr);
 }
 
+void Stream::FormatAnsiTerminalCodes(llvm::StringRef format) {
+  if (HasColor())
+    Printf("%s", ansi::FormatAnsiTerminalCodes(format).c_str());
+}
+
 // Put an address "addr" out to the stream with optional prefix and suffix
 // strings.
 void lldb_private::DumpAddress(llvm::raw_ostream &s, uint64_t addr,
@@ -185,6 +190,9 @@ Stream &Stream::operator<<(const void *p) {
 
 // Get the current indentation level
 unsigned Stream::GetIndentLevel() const { return m_indent_level; }
+
+// Get the color setting of the stream.
+bool Stream::HasColor() { return m_forwarder.colors_enabled(); }
 
 // Set the current indentation level
 void Stream::SetIndentLevel(unsigned indent_level) {
