@@ -173,9 +173,7 @@ GetCXXObjectParameter(const DWARFDIE &subprogram,
   if (!DeclKindIsCXXClass(containing_decl_ctx.getDeclKind()))
     return {};
 
-  if (DWARFDIE object_parameter =
-          subprogram.GetAttributeValueAsReferenceDIE(DW_AT_object_pointer))
-    return object_parameter;
+  // FIXME: if subprogram has a explicit DW_AT_object_pointer, use it.
 
   // If no DW_AT_object_pointer was specified, assume the implicit object
   // parameter is the first parameter to the function, is called "this" and is
@@ -217,6 +215,11 @@ static unsigned GetCXXMethodCVQuals(const DWARFDIE &subprogram,
     return 0;
 
   uint32_t encoding_mask = this_type->GetEncodingMask();
+
+  // FIXME: explicit object parameters need not to be pointers
+  if (!(encoding_mask & (1u << Type::eEncodingIsPointerUID)))
+    return 0;
+
   unsigned cv_quals = 0;
   if (encoding_mask & (1u << Type::eEncodingIsConstUID))
     cv_quals |= clang::Qualifiers::Const;
