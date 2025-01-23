@@ -802,8 +802,8 @@ static ABIArgInfo classifyExpandedType(SwiftAggLowering &lowering,
     return ABIArgInfo::getIgnore();
   } else if (lowering.shouldPassIndirectly(forReturn)) {
     return ABIArgInfo::getIndirect(alignmentForIndirect,
-                                   /*AddrSpace=*/ IndirectAS,
-                                   /*byval=*/ false);
+                                   /*AddrSpace=*/IndirectAS,
+                                   /*byval=*/false);
   } else {
     auto types = lowering.getCoerceAndExpandTypes();
     return ABIArgInfo::getCoerceAndExpand(types.first, types.second);

@@ -3298,9 +3298,9 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     }
 
     if (RT->getDecl()->hasFlexibleArrayMember())
-      return getNaturalAlignIndirect(
-          Ty, getDataLayout().getAllocaAddressSpace(),
-          /*ByVal=*/false);
+      return getNaturalAlignIndirect(Ty,
+                                     getDataLayout().getAllocaAddressSpace(),
+                                     /*ByVal=*/false);
   }
 
   const Type *Base = nullptr;
