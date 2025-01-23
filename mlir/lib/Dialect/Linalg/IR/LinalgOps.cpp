@@ -3458,7 +3458,10 @@ static LogicalResult verifyExtendedMatmulSemantic(MatmulOp matmulOp,
     return matmulOp->emitOpError()
            << "Unexpected dim expression in map result.";
 
-  // Check if the requested broadcast is valid.
+  // Check if the user defined map is valid broadcast map. Here broadcast
+  // indexing maps are defined in context of corresponding default indexing maps
+  // for the given Op. This way the check becomes very simple i.e just check the
+  // number of result dims.
   if (isBroadcasted(opIndexingMap, defaultIndexingMap)) {
     if (!matmulOp.isValidLhsRhsBroadcastMap(opIndexingMap)) {
       return matmulOp->emitOpError()
