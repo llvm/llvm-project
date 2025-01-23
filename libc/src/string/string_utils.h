@@ -79,7 +79,8 @@ LIBC_INLINE size_t string_length_wide_read(const char *src) {
   return char_ptr - src;
 }
 
-LIBC_INLINE size_t string_length_byte_read(const char *src) {
+template<typename T>
+LIBC_INLINE size_t string_length_trivial(const T *src) {
   size_t length;
   for (length = 0; *src; ++src, ++length)
     ;
@@ -96,7 +97,7 @@ LIBC_INLINE size_t string_length(const char *src) {
   // string a block at a time.
   return string_length_wide_read<unsigned int>(src);
 #else
-  return string_length_byte_read(src);
+  return string_length_trivial(src);
 #endif
 }
 

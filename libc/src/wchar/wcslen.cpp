@@ -12,12 +12,12 @@
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/wchar/wide_string_utils.h"
+#include "src/string/string_utils.h" // string_length_trivial
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(size_t, wcslen, (const wchar_t *src)) {
-  return internal::wide_string_length(src);
+  return internal::string_length_trivial(src);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

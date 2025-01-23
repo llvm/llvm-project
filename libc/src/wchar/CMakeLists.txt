@@ -1,9 +1,3 @@
-add_header_library(
-  wide_string_utils
-  HDRS
-    wide_string_utils.h
-)
-
 add_entrypoint_object(
   wcslen
   SRCS
@@ -11,9 +5,9 @@ add_entrypoint_object(
   HDRS
     wcslen.h
   DEPENDS
-    .wide_string_utils
     libc.hdr.types.size_t
     libc.hdr.types.wchar_t
+    libc.src.string.string_utils
 )
 
 add_entrypoint_object(
