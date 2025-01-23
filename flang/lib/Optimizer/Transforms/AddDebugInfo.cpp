@@ -148,7 +148,7 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
         auto gvAttr = mlir::LLVM::DIGlobalVariableAttr::get(
             context, commonBlock, mlir::StringAttr::get(context, name),
             declOp.getUniqName(), fileAttr, line, diType,
-            /*isLocalToUnit*/ true, /*isDefinition*/ true, /* alignInBits*/ 0);
+            /*isLocalToUnit*/ false, /*isDefinition*/ true, /* alignInBits*/ 0);
         mlir::LLVM::DIExpressionAttr expr;
         if (*optint != 0) {
           llvm::SmallVector<mlir::LLVM::DIExpressionElemAttr> ops;
