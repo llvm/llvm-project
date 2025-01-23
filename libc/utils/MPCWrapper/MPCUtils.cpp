@@ -50,8 +50,7 @@ public:
     mpc_init2(value, 256);
   }
 
-  MPCNumber(unsigned int p, mpc_rnd_t rnd)
-      : precision(p), mpc_rounding(rnd) {
+  MPCNumber(unsigned int p, mpc_rnd_t rnd) : precision(p), mpc_rounding(rnd) {
     mpc_init2(value, precision);
   }
 
@@ -106,7 +105,7 @@ public:
 
   void setValue(mpc_t val) const { mpc_set(val, value, mpc_rounding); }
 
-  mpc_t& getValue() { return value; }
+  mpc_t &getValue() { return value; }
 
   MPCNumber carg() const {
     mpfr_t res;
