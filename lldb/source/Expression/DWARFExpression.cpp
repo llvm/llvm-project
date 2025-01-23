@@ -358,10 +358,11 @@ static lldb::offset_t GetOpcodeDataSize(const DataExtractor &data,
     return offset - data_offset;
   }
 
-  case DW_OP_implicit_pointer: // 0xa0 4 + LEB128
+  case DW_OP_implicit_pointer: // 0xa0 4-byte (or 8-byte for DWARF 64) constant
+                               // + LEB128
   {
     data.Skip_LEB128(&offset);
-    return 4 + offset - data_offset;
+    return DWARFUnit::GetAddressByteSize(dwarf_cu) + offset - data_offset;
   }
 
   case DW_OP_GNU_entry_value:
