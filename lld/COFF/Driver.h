@@ -143,8 +143,6 @@ private:
   // Used by the resolver to parse .drectve section contents.
   void parseDirectives(InputFile *file);
 
-  void parseModuleDefs(StringRef path);
-
   // Parse an /order file. If an option is given, the linker places COMDAT
   // sections int he same order as their names appear in the given file.
   void parseOrderFile(StringRef arg);
@@ -182,7 +180,6 @@ private:
   std::list<std::function<void()>> taskQueue;
   std::vector<MemoryBufferRef> resources;
 
-  llvm::DenseSet<StringRef> directivesExports;
   llvm::DenseSet<StringRef> excludedSymbols;
 
   COFFLinkerContext &ctx;
@@ -249,8 +246,6 @@ private:
 
   // Used for dllexported symbols.
   Export parseExport(StringRef arg);
-  void fixupExports();
-  void assignExportOrdinals();
 
   // Parses a string in the form of "key=value" and check
   // if value matches previous values for the key.

@@ -422,7 +422,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     return;
   }
 
-  if (Triple.isRISCV()) {
+  if (Triple.isLoongArch() || Triple.isRISCV()) {
     CmdArgs.push_back("-X");
     if (Args.hasArg(options::OPT_mno_relax))
       CmdArgs.push_back("--no-relax");
@@ -1146,53 +1146,6 @@ static bool findMipsCsMultilibs(const Driver &D,
   return false;
 }
 
-static bool findMipsAndroidMultilibs(const Driver &D,
-                                     llvm::vfs::FileSystem &VFS, StringRef Path,
-                                     const Multilib::flags_list &Flags,
-                                     FilterNonExistent &NonExistent,
-                                     DetectedMultilibs &Result) {
-
-  MultilibSet AndroidMipsMultilibs =
-      MultilibSetBuilder()
-          .Maybe(MultilibBuilder("/mips-r2", {}, {}).flag("-march=mips32r2"))
-          .Maybe(MultilibBuilder("/mips-r6", {}, {}).flag("-march=mips32r6"))
-          .makeMultilibSet()
-          .FilterOut(NonExistent);
-
-  MultilibSet AndroidMipselMultilibs =
-      MultilibSetBuilder()
-          .Either(MultilibBuilder().flag("-march=mips32"),
-                  MultilibBuilder("/mips-r2", "", "/mips-r2")
-                      .flag("-march=mips32r2"),
-                  MultilibBuilder("/mips-r6", "", "/mips-r6")
-                      .flag("-march=mips32r6"))
-          .makeMultilibSet()
-          .FilterOut(NonExistent);
-
-  MultilibSet AndroidMips64elMultilibs =
-      MultilibSetBuilder()
-          .Either(MultilibBuilder().flag("-march=mips64r6"),
-                  MultilibBuilder("/32/mips-r1", "", "/mips-r1")
-                      .flag("-march=mips32"),
-                  MultilibBuilder("/32/mips-r2", "", "/mips-r2")
-                      .flag("-march=mips32r2"),
-                  MultilibBuilder("/32/mips-r6", "", "/mips-r6")
-                      .flag("-march=mips32r6"))
-          .makeMultilibSet()
-          .FilterOut(NonExistent);
-
-  MultilibSet *MS = &AndroidMipsMultilibs;
-  if (VFS.exists(Path + "/mips-r6"))
-    MS = &AndroidMipselMultilibs;
-  else if (VFS.exists(Path + "/32"))
-    MS = &AndroidMips64elMultilibs;
-  if (MS->select(D, Flags, Result.SelectedMultilibs)) {
-    Result.Multilibs = *MS;
-    return true;
-  }
-  return false;
-}
-
 static bool findMipsMuslMultilibs(const Driver &D,
                                   const Multilib::flags_list &Flags,
                                   FilterNonExistent &NonExistent,
@@ -1559,10 +1512,6 @@ bool clang::driver::findMIPSMultilibs(const Driver &D,
   addMultilibFlag(!isSoftFloatABI(Args), "-mhard-float", Flags);
   addMultilibFlag(isMipsEL(TargetArch), "-EL", Flags);
   addMultilibFlag(!isMipsEL(TargetArch), "-EB", Flags);
-
-  if (TargetTriple.isAndroid())
-    return findMipsAndroidMultilibs(D, D.getVFS(), Path, Flags, NonExistent,
-                                    Result);
 
   if (TargetTriple.getVendor() == llvm::Triple::MipsTechnologies &&
       TargetTriple.getOS() == llvm::Triple::Linux &&
