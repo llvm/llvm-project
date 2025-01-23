@@ -1226,6 +1226,8 @@ public:
 
   llvm::Function *getIntrinsic(unsigned IID, ArrayRef<llvm::Type *> Tys = {});
 
+  void AddCXXGlobalInit(llvm::Function *F) { CXXGlobalInits.push_back(F); }
+
   /// Emit code for a single top level declaration.
   void EmitTopLevelDecl(Decl *D);
 

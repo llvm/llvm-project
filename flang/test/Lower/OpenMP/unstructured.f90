@@ -69,9 +69,10 @@ end
 ! CHECK:     cond_br %{{[0-9]*}}, ^bb2, ^bb4
 ! CHECK:   ^bb2:  // pred: ^bb1
 
-! CHECK:     omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[ALLOCA_2:.*]] : !fir.ref<i32>) {
+! CHECK:     %[[ALLOCA_2:.*]] = fir.alloca i32 {{{.*}}, pinned, {{.*}}}
+! CHECK:     %[[OMP_LOOP_K_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_2]] {uniq_name = "_QFss3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:     omp.wsloop {
 ! CHECK:       omp.loop_nest (%[[ARG1:.*]]) : {{.*}} {
-! CHECK:         %[[OMP_LOOP_K_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_2]] {uniq_name = "_QFss3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:         fir.store %[[ARG1]] to %[[OMP_LOOP_K_DECL]]#1 : !fir.ref<i32>
 ! CHECK:         @_FortranAioBeginExternalListOutput
 ! CHECK:         %[[LOAD_1:.*]] = fir.load %[[OMP_LOOP_K_DECL]]#0 : !fir.ref<i32>
@@ -80,9 +81,11 @@ end
 ! CHECK:       }
 ! CHECK:     }
 
-! CHECK:     omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[ALLOCA_1:.*]] : !fir.ref<i32>) {
+! CHECK:     %[[ALLOCA_1:.*]] = fir.alloca i32 {{{.*}}, pinned, {{.*}}}
+! CHECK:     %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_1]] {uniq_name = "_QFss3Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
+! CHECK:     omp.wsloop {
 ! CHECK:       omp.loop_nest (%[[ARG2:.*]]) : {{.*}} {
-! CHECK:         %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_1]] {uniq_name = "_QFss3Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:         fir.store %[[ARG2]] to %[[OMP_LOOP_J_DECL]]#1 : !fir.ref<i32>
 ! CHECK:         br ^bb1
 ! CHECK:       ^bb2:  // 2 preds: ^bb1, ^bb5
@@ -125,9 +128,10 @@ end
 
 ! CHECK-LABEL: func @_QPss4{{.*}} {
 ! CHECK:       omp.parallel private(@{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
-! CHECK:         omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[ALLOCA:.*]] : !fir.ref<i32>) {
+! CHECK:         %[[ALLOCA:.*]] = fir.alloca i32 {{{.*}}, pinned, uniq_name = "_QFss4Ej"}
+! CHECK:         %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "_QFss4Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:         omp.wsloop {
 ! CHECK-NEXT:      omp.loop_nest (%[[ARG:.*]]) : {{.*}} {
-! CHECK:             %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "_QFss4Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             fir.store %[[ARG]] to %[[OMP_LOOP_J_DECL]]#1 : !fir.ref<i32>
 ! CHECK:             %[[COND:.*]] = arith.cmpi eq, %{{.*}}, %{{.*}}
 ! CHECK:             %[[COND_XOR:.*]] = arith.xori %[[COND]], %{{.*}}
@@ -156,7 +160,7 @@ end
 
 ! CHECK-LABEL: func @_QPss5() {
 ! CHECK:  omp.parallel private(@{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
-! CHECK:    omp.wsloop private({{.*}}) {
+! CHECK:    omp.wsloop {
 ! CHECK:      omp.loop_nest {{.*}} {
 ! CHECK:        br ^[[BB1:.*]]
 ! CHECK:      ^[[BB1]]:
@@ -198,7 +202,7 @@ end
 ! CHECK:  ^[[BB1_OUTER]]:
 ! CHECK:    cond_br %{{.*}}, ^[[BB2_OUTER:.*]], ^[[BB3_OUTER:.*]]
 ! CHECK:  ^[[BB2_OUTER]]:
-! CHECK:    omp.wsloop private({{.*}}) {
+! CHECK:    omp.wsloop {
 ! CHECK:      omp.loop_nest {{.*}} {
 ! CHECK:        br ^[[BB1:.*]]
 ! CHECK:      ^[[BB1]]:
@@ -244,7 +248,7 @@ end
 ! CHECK:   cond_br %{{.*}}, ^[[BB2_OUTER:.*]], ^[[BB3_OUTER:.*]]
 ! CHECK-NEXT: ^[[BB2_OUTER:.*]]:
 ! CHECK:   omp.parallel  {
-! CHECK:     omp.wsloop private({{.*}}) {
+! CHECK:     omp.wsloop {
 ! CHECK:       omp.loop_nest {{.*}} {
 ! CHECK:         br ^[[BB1:.*]]
 ! CHECK-NEXT:       ^[[BB1]]:
@@ -284,7 +288,7 @@ end
 
 ! CHECK-LABEL: func @_QPss8() {
 ! CHECK:  omp.parallel  {
-! CHECK:    omp.wsloop private({{.*}}) {
+! CHECK:    omp.wsloop {
 ! CHECK:      omp.loop_nest {{.*}} {
 ! CHECK:        br ^[[BB1:.*]]
 ! CHECK-NEXT:      ^[[BB1]]:

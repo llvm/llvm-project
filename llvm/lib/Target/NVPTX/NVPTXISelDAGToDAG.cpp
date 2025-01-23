@@ -3168,6 +3168,25 @@ void NVPTXDAGToDAGISel::SelectCpAsyncBulkG2S(SDNode *N) {
   ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
 }
 
+void NVPTXDAGToDAGISel::SelectCpAsyncBulkPrefetchL2(SDNode *N) {
+  // We have {Chain, Intrinsic-ID} followed by the actual intrisic args:
+  // src, size, cache_hint, cache_hint_flag
+  // NumOperands = {Chain, IID} + {Actual intrinsic args}
+  //             = {2}          + {4}
+  size_t NumOps = N->getNumOperands();
+  bool IsCacheHint = N->getConstantOperandVal(NumOps - 1) == 1;
+  size_t NumArgs = IsCacheHint ? 3 : 2; // src, size, cache_hint
+
+  SDLoc DL(N);
+  SmallVector<SDValue, 4> Ops(N->ops().slice(2, NumArgs));
+  Ops.push_back(N->getOperand(0)); // Chain operand
+  
+  unsigned Opcode = IsCacheHint 
+  ?  NVPTX::CP_ASYNC_BULK_PREFETCH_CH
+  :  NVPTX::CP_ASYNC_BULK_PREFETCH;
+  ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
+}
+
 bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
   unsigned IID = N->getConstantOperandVal(1);
   using TMARedTy = llvm::nvvm::TMAReductionOp;
@@ -3180,6 +3199,9 @@ bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
     return true;
   case Intrinsic::nvvm_cp_async_bulk_shared_cta_to_global:
     SelectCpAsyncBulkS2G(N);
+    return true;
+  case Intrinsic::nvvm_cp_async_bulk_prefetch_L2:
+    SelectCpAsyncBulkPrefetchL2(N);
     return true;
   case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_1d:
   case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_2d:

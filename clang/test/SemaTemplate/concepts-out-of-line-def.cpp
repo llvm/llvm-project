@@ -737,3 +737,17 @@ ptr<U> make_item(auto &&args)
 ptr<char> p;
 
 } // namespace GH114685
+
+namespace GH123472 {
+
+consteval bool fn() { return true; }
+
+struct S {
+  template <typename T>
+  static consteval void mfn() requires (bool(&fn));
+};
+
+template <typename T>
+consteval void S::mfn() requires (bool(&fn)) {}
+
+}

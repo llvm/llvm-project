@@ -20,6 +20,7 @@
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/CUDA/descriptor.h"
 #include "flang/Runtime/CUDA/memory.h"
+#include "flang/Runtime/CUDA/pointer.h"
 #include "flang/Runtime/allocatable.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -161,7 +162,18 @@ struct CUFAllocateOpConversion
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
+    bool isPointer = false;
+
+    if (auto declareOp =
+            mlir::dyn_cast_or_null<fir::DeclareOp>(op.getBox().getDefiningOp()))
+      if (declareOp.getFortranAttrs() &&
+          bitEnumContainsAny(*declareOp.getFortranAttrs(),
+                             fir::FortranVariableFlagsEnum::pointer))
+        isPointer = true;
+
     if (hasDoubleDescriptors(op)) {
+      if (isPointer)
+        TODO(loc, "pointer allocation with double descriptors");
       // Allocation for module variable are done with custom runtime entry point
       // so the descriptors can be synchronized.
       mlir::func::FuncOp func;
@@ -176,13 +188,20 @@ struct CUFAllocateOpConversion
     }
 
     mlir::func::FuncOp func;
-    if (op.getSource())
+    if (op.getSource()) {
+      if (isPointer)
+        TODO(loc, "pointer allocation with source");
       func =
           fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableAllocateSource)>(
               loc, builder);
-    else
-      func = fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableAllocate)>(
-          loc, builder);
+    } else {
+      func =
+          isPointer
+              ? fir::runtime::getRuntimeFunc<mkRTKey(CUFPointerAllocate)>(
+                    loc, builder)
+              : fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableAllocate)>(
+                    loc, builder);
+    }
 
     return convertOpToCall<cuf::AllocateOp>(op, rewriter, func);
   }

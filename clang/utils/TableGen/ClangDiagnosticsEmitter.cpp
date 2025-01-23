@@ -1782,19 +1782,12 @@ static void emitDiagArrays(DiagsInGroupTy &DiagsInGroup,
 
 /// Emit a list of group names.
 ///
-/// This creates a long string which by itself contains a list of pascal style
-/// strings, which consist of a length byte directly followed by the string.
-///
-/// \code
-///   static const char DiagGroupNames[] = {
-///     \000\020#pragma-messages\t#warnings\020CFString-literal"
-///   };
-/// \endcode
+/// This creates an `llvm::StringTable` of all the diagnostic group names.
 static void emitDiagGroupNames(const StringToOffsetTable &GroupNames,
                                raw_ostream &OS) {
-  OS << "static const char DiagGroupNames[] = {\n";
-  GroupNames.EmitString(OS);
-  OS << "};\n\n";
+  GroupNames.EmitStringLiteralDef(
+      OS, "static constexpr llvm::StringTable DiagGroupNames");
+  OS << "\n";
 }
 
 /// Emit diagnostic arrays and related data structures.
@@ -1806,7 +1799,7 @@ static void emitDiagGroupNames(const StringToOffsetTable &GroupNames,
 ///  #ifdef GET_DIAG_ARRAYS
 ///     static const int16_t DiagArrays[];
 ///     static const int16_t DiagSubGroups[];
-///     static const char DiagGroupNames[];
+///     static constexpr llvm::StringTable DiagGroupNames;
 ///  #endif
 ///  \endcode
 static void emitAllDiagArrays(DiagsInGroupTy &DiagsInGroup,
@@ -1858,9 +1851,7 @@ static void emitDiagTable(DiagsInGroupTy &DiagsInGroup,
                                "0123456789!@#$%^*-+=:?") != std::string::npos)
       PrintFatalError("Invalid character in diagnostic group '" + Name + "'");
     OS << Name << " */, ";
-    // Store a pascal-style length byte at the beginning of the string.
-    std::string PascalName = char(Name.size()) + Name.str();
-    OS << *GroupNames.GetStringOffset(PascalName) << ", ";
+    OS << *GroupNames.GetStringOffset(Name) << ", ";
 
     // Special handling for 'pedantic'.
     const bool IsPedantic = Name == "pedantic";
@@ -1948,10 +1939,11 @@ void clang::EmitClangDiagGroups(const RecordKeeper &Records, raw_ostream &OS) {
   inferPedantic.compute(&DiagsInPedantic, &GroupsInPedantic);
 
   StringToOffsetTable GroupNames;
+  // Add an empty string to the table first so we can use `llvm::StringTable`.
+  // TODO: Factor this into `StringToOffsetTable`.
+  GroupNames.GetOrAddStringOffset("");
   for (const auto &[Name, Group] : DiagsInGroup) {
-    // Store a pascal-style length byte at the beginning of the string.
-    std::string PascalName = char(Name.size()) + Name.str();
-    GroupNames.GetOrAddStringOffset(PascalName, false);
+    GroupNames.GetOrAddStringOffset(Name);
   }
 
   emitAllDiagArrays(DiagsInGroup, DiagsInPedantic, GroupsInPedantic, GroupNames,

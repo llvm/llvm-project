@@ -42,9 +42,10 @@ namespace {
 
 // Mimic limited number of command line flags from llc to provide a better
 // user experience when passing options into the translate API call.
-static cl::opt<char> SpvOptLevel(" O", cl::Hidden, cl::Prefix, cl::init('0'));
-static cl::opt<std::string> SpvTargetTriple(" mtriple", cl::Hidden,
-                                            cl::init(""));
+static cl::opt<char> SpirvOptLevel("spirv-O", cl::Hidden, cl::Prefix,
+                                   cl::init('0'));
+static cl::opt<std::string> SpirvTargetTriple("spirv-mtriple", cl::Hidden,
+                                              cl::init(""));
 
 // Utility to accept options in a command line style.
 void parseSPIRVCommandLineOptions(const std::vector<std::string> &Options,
@@ -94,7 +95,7 @@ SPIRVTranslateModule(Module *M, std::string &SpirvObj, std::string &ErrMsg,
   }
 
   llvm::CodeGenOptLevel OLevel;
-  if (auto Level = CodeGenOpt::parseLevel(SpvOptLevel)) {
+  if (auto Level = CodeGenOpt::parseLevel(SpirvOptLevel)) {
     OLevel = *Level;
   } else {
     ErrMsg = "Invalid optimization level!";
@@ -115,9 +116,9 @@ SPIRVTranslateModule(Module *M, std::string &SpirvObj, std::string &ErrMsg,
   // SPIR-V-specific target initialization.
   InitializeSPIRVTarget();
 
-  Triple TargetTriple(SpvTargetTriple.empty()
+  Triple TargetTriple(SpirvTargetTriple.empty()
                           ? M->getTargetTriple()
-                          : Triple::normalize(SpvTargetTriple));
+                          : Triple::normalize(SpirvTargetTriple));
   if (TargetTriple.getTriple().empty()) {
     TargetTriple.setTriple(DefaultTriple);
     M->setTargetTriple(DefaultTriple);

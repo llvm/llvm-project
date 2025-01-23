@@ -20,15 +20,15 @@ end subroutine simd_order
 
 !CHECK-LABEL:   func.func @_QPdo_order() {
 subroutine do_order
-   !CHECK: omp.wsloop order(reproducible:concurrent) private({{.*}}) {
+   !CHECK: omp.wsloop order(reproducible:concurrent) {
    !$omp do order(concurrent)
    do i = 1, 10
    end do
-   !CHECK: omp.wsloop order(reproducible:concurrent) private({{.*}}) {
+   !CHECK: omp.wsloop order(reproducible:concurrent) {
    !$omp do order(reproducible:concurrent)
    do i = 1, 10
    end do
-   !CHECK: omp.wsloop order(unconstrained:concurrent) private({{.*}}) {
+   !CHECK: omp.wsloop order(unconstrained:concurrent) {
    !$omp do order(unconstrained:concurrent)
    do i = 1, 10
    end do

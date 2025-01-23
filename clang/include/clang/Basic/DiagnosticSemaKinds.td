@@ -12457,7 +12457,8 @@ def err_sycl_entry_point_invalid : Error<
   "'sycl_kernel_entry_point' attribute cannot be applied to a"
   " %select{non-static member function|variadic function|deleted function|"
            "defaulted function|constexpr function|consteval function|"
-           "function declared with the 'noreturn' attribute|coroutine}0">;
+           "function declared with the 'noreturn' attribute|coroutine|"
+           "function defined with a function try block}0">;
 def err_sycl_entry_point_invalid_redeclaration : Error<
   "'sycl_kernel_entry_point' kernel name argument does not match prior"
   " declaration%diff{: $ vs $|}0,1">;

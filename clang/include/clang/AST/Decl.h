@@ -4688,6 +4688,83 @@ public:
   }
 };
 
+/// Represents a partial function definition.
+///
+/// An outlined function declaration contains the parameters and body of
+/// a function independent of other function definition concerns such
+/// as function name, type, and calling convention. Such declarations may
+/// be used to hold a parameterized and transformed sequence of statements
+/// used to generate a target dependent function definition without losing
+/// association with the original statements. See SYCLKernelCallStmt as an
+/// example.
+class OutlinedFunctionDecl final
+    : public Decl,
+      public DeclContext,
+      private llvm::TrailingObjects<OutlinedFunctionDecl, ImplicitParamDecl *> {
+private:
+  /// The number of parameters to the outlined function.
+  unsigned NumParams;
+
+  /// The body of the outlined function.
+  llvm::PointerIntPair<Stmt *, 1, bool> BodyAndNothrow;
+
+  explicit OutlinedFunctionDecl(DeclContext *DC, unsigned NumParams);
+
+  ImplicitParamDecl *const *getParams() const {
+    return getTrailingObjects<ImplicitParamDecl *>();
+  }
+
+  ImplicitParamDecl **getParams() {
+    return getTrailingObjects<ImplicitParamDecl *>();
+  }
+
+public:
+  friend class ASTDeclReader;
+  friend class ASTDeclWriter;
+  friend TrailingObjects;
+
+  static OutlinedFunctionDecl *Create(ASTContext &C, DeclContext *DC,
+                                      unsigned NumParams);
+  static OutlinedFunctionDecl *
+  CreateDeserialized(ASTContext &C, GlobalDeclID ID, unsigned NumParams);
+
+  Stmt *getBody() const override;
+  void setBody(Stmt *B);
+
+  bool isNothrow() const;
+  void setNothrow(bool Nothrow = true);
+
+  unsigned getNumParams() const { return NumParams; }
+
+  ImplicitParamDecl *getParam(unsigned i) const {
+    assert(i < NumParams);
+    return getParams()[i];
+  }
+  void setParam(unsigned i, ImplicitParamDecl *P) {
+    assert(i < NumParams);
+    getParams()[i] = P;
+  }
+
+  // Range interface to parameters.
+  using parameter_const_iterator = const ImplicitParamDecl *const *;
+  using parameter_const_range = llvm::iterator_range<parameter_const_iterator>;
+  parameter_const_range parameters() const {
+    return {param_begin(), param_end()};
+  }
+  parameter_const_iterator param_begin() const { return getParams(); }
+  parameter_const_iterator param_end() const { return getParams() + NumParams; }
+
+  // Implement isa/cast/dyncast/etc.
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == OutlinedFunction; }
+  static DeclContext *castToDeclContext(const OutlinedFunctionDecl *D) {
+    return static_cast<DeclContext *>(const_cast<OutlinedFunctionDecl *>(D));
+  }
+  static OutlinedFunctionDecl *castFromDeclContext(const DeclContext *DC) {
+    return static_cast<OutlinedFunctionDecl *>(const_cast<DeclContext *>(DC));
+  }
+};
+
 /// Represents the body of a CapturedStmt, and serves as its DeclContext.
 class CapturedDecl final
     : public Decl,

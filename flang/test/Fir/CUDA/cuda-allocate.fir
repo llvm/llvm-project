@@ -181,4 +181,15 @@ func.func @_QQallocate_stream() {
 // CHECK: %[[STREAM_LOAD:.*]] = fir.load %[[STREAM]] : !fir.ref<i64>
 // CHECK: fir.call @_FortranACUFAllocatableAllocate(%{{.*}}, %[[STREAM_LOAD]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, i64, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
+
+func.func @_QPp_alloc() {
+  %0 = cuf.alloc !fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>> {bindc_name = "complex_array", data_attr = #cuf.cuda<device>, uniq_name = "_QFp_allocEcomplex_array"} -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>>
+  %4 = fir.declare %0 {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFp_allocEcomplex_array"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>>
+  %9 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xcomplex<f32>>>>> {data_attr = #cuf.cuda<device>} -> i32
+  return
+}
+
+// CHECK-LABEL: func.func @_QPp_alloc()
+// CHECK: fir.call @_FortranACUFPointerAllocate
+
 } // end of module

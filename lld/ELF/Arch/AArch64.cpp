@@ -157,9 +157,14 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
     return RE_AARCH64_AUTH;
   case R_AARCH64_TLSDESC_ADR_PAGE21:
     return RE_AARCH64_TLSDESC_PAGE;
+  case R_AARCH64_AUTH_TLSDESC_ADR_PAGE21:
+    return RE_AARCH64_AUTH_TLSDESC_PAGE;
   case R_AARCH64_TLSDESC_LD64_LO12:
   case R_AARCH64_TLSDESC_ADD_LO12:
     return R_TLSDESC;
+  case R_AARCH64_AUTH_TLSDESC_LD64_LO12:
+  case R_AARCH64_AUTH_TLSDESC_ADD_LO12:
+    return RE_AARCH64_AUTH_TLSDESC;
   case R_AARCH64_TLSDESC_CALL:
     return R_TLSDESC_CALL;
   case R_AARCH64_TLSLE_ADD_TPREL_HI12:
@@ -545,6 +550,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_ADR_PREL_PG_HI21:
   case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
   case R_AARCH64_TLSDESC_ADR_PAGE21:
+  case R_AARCH64_AUTH_TLSDESC_ADR_PAGE21:
     checkInt(ctx, loc, val, 33, rel);
     [[fallthrough]];
   case R_AARCH64_ADR_PREL_PG_HI21_NC:
@@ -597,6 +603,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
   case R_AARCH64_TLSLE_LDST64_TPREL_LO12_NC:
   case R_AARCH64_TLSDESC_LD64_LO12:
+  case R_AARCH64_AUTH_TLSDESC_LD64_LO12:
     checkAlignment(ctx, loc, val, 8, rel);
     write32Imm12(loc, getBits(val, 3, 11));
     break;
@@ -671,6 +678,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
   case R_AARCH64_TLSDESC_ADD_LO12:
+  case R_AARCH64_AUTH_TLSDESC_ADD_LO12:
     write32Imm12(loc, val);
     break;
   case R_AARCH64_TLSDESC:

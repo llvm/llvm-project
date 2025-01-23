@@ -808,6 +808,42 @@ INTERCEPTOR(int, munmap, void *addr, size_t length) {
   return REAL(munmap)(addr, length);
 }
 
+#if !SANITIZER_APPLE
+INTERCEPTOR(int, madvise, void *addr, size_t length, int flag) {
+  __rtsan_notify_intercepted_call("madvise");
+  return REAL(madvise)(addr, length, flag);
+}
+
+INTERCEPTOR(int, posix_madvise, void *addr, size_t length, int flag) {
+  __rtsan_notify_intercepted_call("posix_madvise");
+  return REAL(posix_madvise)(addr, length, flag);
+}
+#define RTSAN_MAYBE_INTERCEPT_MADVISE INTERCEPT_FUNCTION(madvise)
+#define RTSAN_MAYBE_INTERCEPT_POSIX_MADVISE INTERCEPT_FUNCTION(posix_madvise)
+#else
+#define RTSAN_MAYBE_INTERCEPT_MADVISE
+#define RTSAN_MAYBE_INTERCEPT_POSIX_MADVISE
+#endif
+
+INTERCEPTOR(int, mprotect, void *addr, size_t length, int prot) {
+  __rtsan_notify_intercepted_call("mprotect");
+  return REAL(mprotect)(addr, length, prot);
+}
+
+INTERCEPTOR(int, msync, void *addr, size_t length, int flag) {
+  __rtsan_notify_intercepted_call("msync");
+  return REAL(msync)(addr, length, flag);
+}
+
+#if SANITIZER_APPLE
+INTERCEPTOR(int, mincore, const void *addr, size_t length, char *vec) {
+#else
+INTERCEPTOR(int, mincore, void *addr, size_t length, unsigned char *vec) {
+#endif
+  __rtsan_notify_intercepted_call("mincore");
+  return REAL(mincore)(addr, length, vec);
+}
+
 INTERCEPTOR(int, shm_open, const char *name, int oflag, mode_t mode) {
   __rtsan_notify_intercepted_call("shm_open");
   return REAL(shm_open)(name, oflag, mode);
@@ -894,8 +930,13 @@ INTERCEPTOR(ssize_t, sendmsg, int socket, const struct msghdr *message,
 }
 
 #if SANITIZER_INTERCEPT_SENDMMSG
+#if SANITIZER_MUSL
+INTERCEPTOR(int, sendmmsg, int socket, struct mmsghdr *message,
+            unsigned int len, unsigned int flags) {
+#else
 INTERCEPTOR(int, sendmmsg, int socket, struct mmsghdr *message,
             unsigned int len, int flags) {
+#endif
   __rtsan_notify_intercepted_call("sendmmsg");
   return REAL(sendmmsg)(socket, message, len, flags);
 }
@@ -927,7 +968,10 @@ INTERCEPTOR(ssize_t, recvmsg, int socket, struct msghdr *message, int flags) {
 }
 
 #if SANITIZER_INTERCEPT_RECVMMSG
-#if defined(__GLIBC_MINOR__) && __GLIBC_MINOR__ < 21
+#if SANITIZER_MUSL
+INTERCEPTOR(int, recvmmsg, int socket, struct mmsghdr *message,
+            unsigned int len, unsigned int flags, struct timespec *timeout) {
+#elif defined(__GLIBC_MINOR__) && __GLIBC_MINOR__ < 21
 INTERCEPTOR(int, recvmmsg, int socket, struct mmsghdr *message,
             unsigned int len, int flags, const struct timespec *timeout) {
 #else
@@ -956,6 +1000,25 @@ INTERCEPTOR(int, accept4, int socket, struct sockaddr *address,
 #define RTSAN_MAYBE_INTERCEPT_ACCEPT4 INTERCEPT_FUNCTION(accept4)
 #else
 #define RTSAN_MAYBE_INTERCEPT_ACCEPT4
+#endif
+
+#if SANITIZER_INTERCEPT_GETSOCKOPT
+INTERCEPTOR(int, getsockopt, int socket, int level, int option, void *value,
+            socklen_t *len) {
+  __rtsan_notify_intercepted_call("getsockopt");
+  return REAL(getsockopt)(socket, level, option, value, len);
+}
+
+INTERCEPTOR(int, setsockopt, int socket, int level, int option,
+            const void *value, socklen_t len) {
+  __rtsan_notify_intercepted_call("setsockopt");
+  return REAL(setsockopt)(socket, level, option, value, len);
+}
+#define RTSAN_MAYBE_INTERCEPT_GETSOCKOPT INTERCEPT_FUNCTION(getsockopt)
+#define RTSAN_MAYBE_INTERCEPT_SETSOCKOPT INTERCEPT_FUNCTION(setsockopt)
+#else
+#define RTSAN_MAYBE_INTERCEPT_GETSOCKOPT
+#define RTSAN_MAYBE_INTERCEPT_SETSOCKOPT
 #endif
 
 // I/O Multiplexing
@@ -1099,18 +1162,20 @@ INTERCEPTOR(int, execve, const char *filename, char *const argv[],
 }
 
 #if SANITIZER_INTERCEPT_PROCESS_VM_READV
-INTERCEPTOR(ssize_t, process_vm_readv, const struct iovec *local_iov,
+INTERCEPTOR(ssize_t, process_vm_readv, pid_t pid, const struct iovec *local_iov,
             unsigned long liovcnt, const struct iovec *remote_iov,
             unsigned long riovcnt, unsigned long flags) {
   __rtsan_notify_intercepted_call("process_vm_readv");
-  return REAL(process_vm_readv)(local_iov, liovcnt, remote_iov, riovcnt, flags);
+  return REAL(process_vm_readv)(pid, local_iov, liovcnt, remote_iov, riovcnt,
+                                flags);
 }
 
-INTERCEPTOR(ssize_t, process_vm_writev, const struct iovec *local_iov,
-            unsigned long liovcnt, const struct iovec *remote_iov,
-            unsigned long riovcnt, unsigned long flags) {
+INTERCEPTOR(ssize_t, process_vm_writev, pid_t pid,
+            const struct iovec *local_iov, unsigned long liovcnt,
+            const struct iovec *remote_iov, unsigned long riovcnt,
+            unsigned long flags) {
   __rtsan_notify_intercepted_call("process_vm_writev");
-  return REAL(process_vm_writev)(local_iov, liovcnt, remote_iov, riovcnt,
+  return REAL(process_vm_writev)(pid, local_iov, liovcnt, remote_iov, riovcnt,
                                  flags);
 }
 #define RTSAN_MAYBE_INTERCEPT_PROCESS_VM_READV                                 \
@@ -1177,6 +1242,11 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(mmap);
   RTSAN_MAYBE_INTERCEPT_MMAP64;
   INTERCEPT_FUNCTION(munmap);
+  RTSAN_MAYBE_INTERCEPT_MADVISE;
+  RTSAN_MAYBE_INTERCEPT_POSIX_MADVISE;
+  INTERCEPT_FUNCTION(mprotect);
+  INTERCEPT_FUNCTION(msync);
+  INTERCEPT_FUNCTION(mincore);
   INTERCEPT_FUNCTION(shm_open);
   INTERCEPT_FUNCTION(shm_unlink);
   RTSAN_MAYBE_INTERCEPT_MEMALIGN;
@@ -1281,6 +1351,8 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_ACCEPT4;
   RTSAN_MAYBE_INTERCEPT_GETSOCKNAME;
   RTSAN_MAYBE_INTERCEPT_GETPEERNAME;
+  RTSAN_MAYBE_INTERCEPT_GETSOCKOPT;
+  RTSAN_MAYBE_INTERCEPT_SETSOCKOPT;
 
   RTSAN_MAYBE_INTERCEPT_SELECT;
   INTERCEPT_FUNCTION(pselect);

@@ -3043,10 +3043,6 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
            << (R.getValueAsBit("InheritEvenIfAlreadyPresent") ? "true"
                                                               : "false");
       }
-      if (R.getValueAsBit("DeferDeserialization")) {
-        OS << ", "
-           << "/*DeferDeserialization=*/true";
-      }
       OS << ")\n";
 
       for (auto const &ai : Args) {
