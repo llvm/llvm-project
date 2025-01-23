@@ -282,7 +282,7 @@ using ArgumentConsumer = CompilerInvocation::ArgumentConsumer;
 #undef OPTTABLE_STR_TABLE_CODE
 
 static llvm::StringRef lookupStrInTable(unsigned Offset) {
-  return &OptionStrTable[Offset];
+  return OptionStrTable[Offset];
 }
 
 #define SIMPLE_ENUM_VALUE_TABLE
