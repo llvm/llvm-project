@@ -378,7 +378,7 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
 
         size_t UGSIdx = GlobalUsesByFunction[ParentFn];
 
-        // If this is the first global the basic block uses, map it to the set
+        // If this is the first global the function uses, map it to the set
         // consisting of this global only.
         if (!UGSIdx) {
           // If that set doesn't exist yet, create it.
@@ -393,7 +393,8 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
           continue;
         }
 
-        // If we already encountered this BB, just increment the counter.
+        // If we already encountered a use of this global in this function, just
+        // increment the counter.
         if (UsedGlobalSets[UGSIdx].Globals.test(GI)) {
           ++UsedGlobalSets[UGSIdx].UsageCount;
           continue;
@@ -423,7 +424,7 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
   }
 
   // Now we found a bunch of sets of globals used together.  We accumulated
-  // the number of times we encountered the sets (i.e., the number of blocks
+  // the number of times we encountered the sets (i.e., the number of functions
   // that use that exact set of globals).
   //
   // Multiply that by the size of the set to give us a crude profitability

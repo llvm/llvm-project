@@ -38,6 +38,7 @@ define void @throw(ptr %p) {
 ; CHECK:       call  foo
 ; CHECK:       br        2
 ; CHECK:     end_try_table
+; CHECK:     unreachable
 ; CHECK:   end_block
 ; CHECK:   local.set  2
 ; CHECK:   local.get  0

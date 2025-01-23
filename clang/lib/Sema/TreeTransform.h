@@ -29,6 +29,7 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Sema/Designator.h"
@@ -17057,10 +17058,9 @@ QualType TreeTransform<Derived>::RebuildDependentSizedMatrixType(
                                  AttributeLoc);
 }
 
-template<typename Derived>
+template <typename Derived>
 QualType TreeTransform<Derived>::RebuildFunctionProtoType(
-    QualType T,
-    MutableArrayRef<QualType> ParamTypes,
+    QualType T, MutableArrayRef<QualType> ParamTypes,
     const FunctionProtoType::ExtProtoInfo &EPI) {
   return SemaRef.BuildFunctionType(T, ParamTypes,
                                    getDerived().getBaseLocation(),
@@ -17282,11 +17282,10 @@ ExprResult TreeTransform<Derived>::RebuildCXXOperatorCallExpr(
   } else if (Op == OO_Arrow) {
     // It is possible that the type refers to a RecoveryExpr created earlier
     // in the tree transformation.
-    if (First->containsErrors())
+    if (First->getType()->isDependentType())
       return ExprError();
     // -> is never a builtin operation.
-    return getSema().BuildOverloadedArrowExpr(First, OpLoc,
-                                              /*NoArrowOperatorFound=*/nullptr);
+    return SemaRef.BuildOverloadedArrowExpr(nullptr, First, OpLoc);
   } else if (Second == nullptr || isPostIncDec) {
     if (!First->getType()->isOverloadableType() ||
         (Op == OO_Amp && getSema().isQualifiedMemberAccess(First))) {
@@ -17415,6 +17414,16 @@ TreeTransform<Derived>::TransformCapturedStmt(CapturedStmt *S) {
   }
 
   return getSema().ActOnCapturedRegionEnd(Body.get());
+}
+
+template <typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformSYCLKernelCallStmt(SYCLKernelCallStmt *S) {
+  // SYCLKernelCallStmt nodes are inserted upon completion of a (non-template)
+  // function definition or instantiation of a function template specialization
+  // and will therefore never appear in a dependent context.
+  llvm_unreachable("SYCL kernel call statement cannot appear in dependent "
+                   "context");
 }
 
 template <typename Derived>
