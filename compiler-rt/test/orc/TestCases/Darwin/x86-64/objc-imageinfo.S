@@ -20,17 +20,17 @@
 // NEW: MachOPlatform: Registered __objc_imageinfo for main
 // NEW-SAME: flags = 0x0040
 // RUN: %llvm_jitlink -num-threads=0 -debug-only=orc %t/main.o \
-// RUN:               %t/swift_4.o 2>&1
+// RUN:               %t/swift_4.o 2>&1 \
 // RUN:               | FileCheck %s -check-prefix=SWIFT_4
 // SWIFT_4: MachOPlatform: Registered __objc_imageinfo for main
 // SWIFT_4-SAME: flags = 0x0640
 // RUN: %llvm_jitlink -num-threads=0 -debug-only=orc %t/main.o \
-// RUN:               %t/swift_5.o 2>&1
+// RUN:               %t/swift_5.o 2>&1 \
 // RUN:               | FileCheck %s -check-prefix=SWIFT_5
 // SWIFT_5: MachOPlatform: Registered __objc_imageinfo for main
 // SWIFT_5-SAME: flags = 0x5000740
 // RUN: %llvm_jitlink -num-threads=0 -debug-only=orc %t/main.o \
-// RUN:               %t/swift_59.o 2>&1
+// RUN:               %t/swift_59.o 2>&1 \
 // RUN:               | FileCheck %s -check-prefix=SWIFT_59
 // SWIFT_59: MachOPlatform: Registered __objc_imageinfo for main
 // SWIFT_59-SAME: flags = 0x5090740
@@ -50,25 +50,25 @@
 
 // Add swift to objc.
 // RUN: %llvm_jitlink -num-threads=0 -debug-only=orc %t/main.o %t/swift_59.o \
-// RUN:               %t/objc_new.o 2>&1
+// RUN:               %t/objc_new.o 2>&1 \
 // RUN:               | FileCheck %s -check-prefix=SWIFT_MIX2
 // SWIFT_MIX2: MachOPlatform: Merging __objc_imageinfo flags for main {{.*}} -> 0x5090740
 
 // Add multiple swift to objc.
 // RUN: %llvm_jitlink -num-threads=0 -debug-only=orc %t/main.o %t/swift_59.o \
-// RUN:               %t/swift_5.o %t/objc_new.o 2>&1
+// RUN:               %t/swift_5.o %t/objc_new.o 2>&1 \
 // RUN:               | FileCheck %s -check-prefix=SWIFT_MIX3
 // SWIFT_MIX3: MachOPlatform: Merging __objc_imageinfo flags for main {{.*}} -> 0x5000740
 
 // Disable categories.
-// RUN: %llvm_jitlink -num-threads=0 -debug-only=orc %t/main.o %t/objc_old.o
-// RUN:               %t/objc_new.o 2>&1
+// RUN: %llvm_jitlink -num-threads=0 -debug-only=orc %t/main.o %t/objc_old.o \
+// RUN:               %t/objc_new.o 2>&1 \
 // RUN:               | FileCheck %s -check-prefix=SWIFT_MIX4
 // SWIFT_MIX4: MachOPlatform: Merging __objc_imageinfo flags for main {{.*}} -> 0x0000
 
 // Disable signed class_ro.
-// RUN: %llvm_jitlink -num-threads=0 -debug-only=orc %t/main.o %t/objc_new.o
-// RUN:               %t/objc_new_signed_ro.o 2>&1
+// RUN: %llvm_jitlink -num-threads=0 -debug-only=orc %t/main.o %t/objc_new.o \
+// RUN:               %t/objc_new_signed_ro.o 2>&1 \
 // RUN:               | FileCheck %s -check-prefix=SWIFT_MIX5
 // SWIFT_MIX5: MachOPlatform: Merging __objc_imageinfo flags for main {{.*}} -> 0x0040
 

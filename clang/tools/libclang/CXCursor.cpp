@@ -375,6 +375,10 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     K = CXCursor_UnexposedStmt;
     break;
 
+  case Stmt::SYCLKernelCallStmtClass:
+    K = CXCursor_UnexposedStmt;
+    break;
+
   case Stmt::IntegerLiteralClass:
     K = CXCursor_IntegerLiteral;
     break;

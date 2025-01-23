@@ -773,7 +773,7 @@ void MachineInstr::eraseFromBundle() {
   getParent()->erase_instr(this);
 }
 
-bool MachineInstr::isCandidateForCallSiteEntry(QueryType Type) const {
+bool MachineInstr::isCandidateForAdditionalCallInfo(QueryType Type) const {
   if (!isCall(Type))
     return false;
   switch (getOpcode()) {
@@ -786,10 +786,10 @@ bool MachineInstr::isCandidateForCallSiteEntry(QueryType Type) const {
   return true;
 }
 
-bool MachineInstr::shouldUpdateCallSiteInfo() const {
+bool MachineInstr::shouldUpdateAdditionalCallInfo() const {
   if (isBundle())
-    return isCandidateForCallSiteEntry(MachineInstr::AnyInBundle);
-  return isCandidateForCallSiteEntry();
+    return isCandidateForAdditionalCallInfo(MachineInstr::AnyInBundle);
+  return isCandidateForAdditionalCallInfo();
 }
 
 unsigned MachineInstr::getNumExplicitOperands() const {
@@ -1350,8 +1350,9 @@ bool MachineInstr::wouldBeTriviallyDead() const {
   return isPHI() || isSafeToMove(SawStore);
 }
 
-static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI, AAResults *AA,
-                                 bool UseTBAA, const MachineMemOperand *MMOa,
+static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI,
+                                 BatchAAResults *AA, bool UseTBAA,
+                                 const MachineMemOperand *MMOa,
                                  const MachineMemOperand *MMOb) {
   // The following interface to AA is fashioned after DAGCombiner::isAlias and
   // operates with MachineMemOperand offset with some important assumptions:
@@ -1434,7 +1435,7 @@ static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI, AAResults *AA,
       MemoryLocation(ValB, LocB, UseTBAA ? MMOb->getAAInfo() : AAMDNodes()));
 }
 
-bool MachineInstr::mayAlias(AAResults *AA, const MachineInstr &Other,
+bool MachineInstr::mayAlias(BatchAAResults *AA, const MachineInstr &Other,
                             bool UseTBAA) const {
   const MachineFunction *MF = getMF();
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
@@ -1476,6 +1477,15 @@ bool MachineInstr::mayAlias(AAResults *AA, const MachineInstr &Other,
         return true;
 
   return false;
+}
+
+bool MachineInstr::mayAlias(AAResults *AA, const MachineInstr &Other,
+                            bool UseTBAA) const {
+  if (AA) {
+    BatchAAResults BAA(*AA);
+    return mayAlias(&BAA, Other, UseTBAA);
+  }
+  return mayAlias(static_cast<BatchAAResults *>(nullptr), Other, UseTBAA);
 }
 
 /// hasOrderedMemoryRef - Return true if this instruction may have an ordered

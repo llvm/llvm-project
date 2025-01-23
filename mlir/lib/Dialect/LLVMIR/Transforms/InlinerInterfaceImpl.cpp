@@ -643,9 +643,9 @@ static Value handleByValArgument(OpBuilder &builder, Operation *callable,
       return argument;
   }
   uint64_t targetAlignment = std::max(requestedAlignment, minimumAlignment);
-  return handleByValArgumentInit(builder, func.getLoc(), argument, elementType,
-                                 dataLayout.getTypeSize(elementType),
-                                 targetAlignment);
+  return handleByValArgumentInit(
+      builder, argument.getLoc(), argument, elementType,
+      dataLayout.getTypeSize(elementType), targetAlignment);
 }
 
 namespace {
@@ -742,6 +742,14 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     OpBuilder builder(op);
     builder.create<LLVM::BrOp>(op->getLoc(), returnOp.getOperands(), newDest);
     op->erase();
+  }
+
+  bool allowSingleBlockOptimization(
+      iterator_range<Region::iterator> inlinedBlocks) const final {
+    if (!inlinedBlocks.empty() &&
+        isa<LLVM::UnreachableOp>(inlinedBlocks.begin()->getTerminator()))
+      return false;
+    return true;
   }
 
   /// Handle the given inlined return by replacing the uses of the call with the

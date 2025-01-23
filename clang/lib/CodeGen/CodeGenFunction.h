@@ -28,6 +28,7 @@
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/CapturedStmt.h"
@@ -614,6 +615,10 @@ public:
 
   /// True if the current statement has noconvergent attribute.
   bool InNoConvergentAttributedStmt = false;
+
+  /// HLSL Branch attribute.
+  HLSLControlFlowHintAttr::Spelling HLSLControlFlowAttr =
+      HLSLControlFlowHintAttr::SpellingNotCalculated;
 
   // The CallExpr within the current statement that the musttail attribute
   // applies to.  nullptr if there is no 'musttail' on the current statement.
@@ -3881,6 +3886,8 @@ public:
       const OMPParallelMaskedTaskLoopDirective &S);
   void EmitOMPParallelMasterTaskLoopSimdDirective(
       const OMPParallelMasterTaskLoopSimdDirective &S);
+  void EmitOMPParallelMaskedTaskLoopSimdDirective(
+      const OMPParallelMaskedTaskLoopSimdDirective &S);
   void EmitOMPDistributeDirective(const OMPDistributeDirective &S);
   void EmitOMPDistributeParallelForDirective(
       const OMPDistributeParallelForDirective &S);

@@ -1176,10 +1176,12 @@ void BranchProbabilityInfo::copyEdgeProbabilities(BasicBlock *Src,
 
 void BranchProbabilityInfo::swapSuccEdgesProbabilities(const BasicBlock *Src) {
   assert(Src->getTerminator()->getNumSuccessors() == 2);
-  if (!Probs.contains(std::make_pair(Src, 0)))
+  auto It0 = Probs.find(std::make_pair(Src, 0));
+  if (It0 == Probs.end())
     return; // No probability is set for edges from Src
-  assert(Probs.contains(std::make_pair(Src, 1)));
-  std::swap(Probs[std::make_pair(Src, 0)], Probs[std::make_pair(Src, 1)]);
+  auto It1 = Probs.find(std::make_pair(Src, 1));
+  assert(It1 != Probs.end());
+  std::swap(It0->second, It1->second);
 }
 
 raw_ostream &

@@ -821,6 +821,21 @@ Expected<EmbedBitcodeOptions> parseEmbedBitcodePassOptions(StringRef Params) {
   return Result;
 }
 
+Expected<LowerAllowCheckPass::Options>
+parseLowerAllowCheckPassOptions(StringRef Params) {
+  LowerAllowCheckPass::Options Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    return make_error<StringError>(
+        formatv("invalid LowerAllowCheck pass parameter '{0}' ", ParamName)
+            .str(),
+        inconvertibleErrorCode());
+  }
+  return Result;
+}
+
 Expected<MemorySanitizerOptions> parseMSanPassOptions(StringRef Params) {
   MemorySanitizerOptions Result;
   while (!Params.empty()) {
@@ -1042,6 +1057,8 @@ Expected<GVNOptions> parseGVNOptions(StringRef Params) {
       Result.setLoadPRESplitBackedge(Enable);
     } else if (ParamName == "memdep") {
       Result.setMemDep(Enable);
+    } else if (ParamName == "memoryssa") {
+      Result.setMemorySSA(Enable);
     } else {
       return make_error<StringError>(
           formatv("invalid GVN pass parameter '{0}' ", ParamName).str(),
@@ -1315,10 +1332,18 @@ parseBoundsCheckingOptions(StringRef Params) {
     } else if (ParamName == "merge") {
       Options.Merge = true;
     } else {
-      return make_error<StringError>(
-          formatv("invalid BoundsChecking pass parameter '{0}' ", ParamName)
-              .str(),
-          inconvertibleErrorCode());
+      StringRef ParamEQ;
+      StringRef Val;
+      std::tie(ParamEQ, Val) = ParamName.split('=');
+      int8_t Id;
+      if (ParamEQ == "guard" && !Val.getAsInteger(0, Id)) {
+        Options.GuardKind = Id;
+      } else {
+        return make_error<StringError>(
+            formatv("invalid BoundsChecking pass parameter '{0}' ", ParamName)
+                .str(),
+            inconvertibleErrorCode());
+      }
     }
   }
   return Options;
