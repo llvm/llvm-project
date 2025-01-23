@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements the library calls simplifier. It does not implement
-// any pass, but can't be used by other passes to do simplifications.
+// any pass, but can be used by other passes to do simplifications.
 //
 //===----------------------------------------------------------------------===//
 
