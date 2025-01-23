@@ -346,6 +346,11 @@ llvm::MDNode *CodeGenTBAA::getTypeInfo(QualType QTy) {
   return MetadataCache[Ty] = TypeNode;
 }
 
+TBAAAccessInfo CodeGenTBAA::genConservativeTBAA(QualType AccessType) {
+  uint64_t Size = Context.getTypeSizeInChars(AccessType).getQuantity();
+  return TBAAAccessInfo(getChar(), Size);
+}
+
 TBAAAccessInfo CodeGenTBAA::getAccessInfo(QualType AccessType) {
   // Pointee values may have incomplete types, but they shall never be
   // dereferenced.

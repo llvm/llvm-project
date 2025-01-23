@@ -856,6 +856,8 @@ public:
   /// an object of the given type.
   TBAAAccessInfo getTBAAAccessInfo(QualType AccessType);
 
+  TBAAAccessInfo genConservativeTBAA(QualType AccessType);
+
   /// getTBAAVTablePtrAccessInfo - Get the TBAA information that describes an
   /// access to a virtual table pointer.
   TBAAAccessInfo getTBAAVTablePtrAccessInfo(llvm::Type *VTablePtrType);
