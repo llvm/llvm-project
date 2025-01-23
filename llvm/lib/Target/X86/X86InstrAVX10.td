@@ -1072,21 +1072,21 @@ defm VCVT2PS2PHX : avx10_cvt2ps2ph<0x67, "vcvt2ps2phx",
                                    avx512vl_f32_info, avx512vl_f16_info,
                                    X86vfpround2, X86vfpround2Rnd>, T8;
 
-defm VCVTNE2PH2BF8 : avx512_binop_all<0x74, "vcvtne2ph2bf8", SchedWriteCvtPD2PS,
+defm VCVT2PH2BF8 : avx512_binop_all<0x74, "vcvt2ph2bf8", SchedWriteCvtPD2PS,
                                      avx512vl_f16_info, avx512vl_i8_info,
-                                     X86vcvtne2ph2bf8, [HasAVX10_2_512], [HasAVX10_2]>,
+                                     X86vcvt2ph2bf8, [HasAVX10_2_512], [HasAVX10_2]>,
                                     EVEX_CD8<16, CD8VF>, T8, XD;
-defm VCVTNE2PH2BF8S : avx512_binop_all<0x74, "vcvtne2ph2bf8s", SchedWriteCvtPD2PS,
+defm VCVT2PH2BF8S : avx512_binop_all<0x74, "vcvt2ph2bf8s", SchedWriteCvtPD2PS,
                                       avx512vl_f16_info, avx512vl_i8_info,
-                                      X86vcvtne2ph2bf8s, [HasAVX10_2_512], [HasAVX10_2]>,
+                                      X86vcvt2ph2bf8s, [HasAVX10_2_512], [HasAVX10_2]>,
                                      EVEX_CD8<16, CD8VF>, T_MAP5, XD;
-defm VCVTNE2PH2HF8 : avx512_binop_all<0x18, "vcvtne2ph2hf8", SchedWriteCvtPD2PS,
+defm VCVT2PH2HF8 : avx512_binop_all<0x18, "vcvt2ph2hf8", SchedWriteCvtPD2PS,
                                      avx512vl_f16_info, avx512vl_i8_info,
-                                     X86vcvtne2ph2hf8, [HasAVX10_2_512], [HasAVX10_2]>,
+                                     X86vcvt2ph2hf8, [HasAVX10_2_512], [HasAVX10_2]>,
                                     EVEX_CD8<16, CD8VF>, T_MAP5, XD;
-defm VCVTNE2PH2HF8S : avx512_binop_all<0x1b, "vcvtne2ph2hf8s", SchedWriteCvtPD2PS,
+defm VCVT2PH2HF8S : avx512_binop_all<0x1b, "vcvt2ph2hf8s", SchedWriteCvtPD2PS,
                                       avx512vl_f16_info, avx512vl_i8_info,
-                                      X86vcvtne2ph2hf8s, [HasAVX10_2_512], [HasAVX10_2]>,
+                                      X86vcvt2ph2hf8s, [HasAVX10_2_512], [HasAVX10_2]>,
                                      EVEX_CD8<16, CD8VF>, T_MAP5, XD;
 
 //TODO: Merge into avx512_vcvt_fp, diffrence is one more source register here.
@@ -1244,27 +1244,27 @@ defm VCVTBIASPH2HF8S : avx10_convert_3op<0x1b, "vcvtbiasph2hf8s",
                                          X86vcvtbiasph2hf8s, X86vmcvtbiasph2hf8s>,
                                          T_MAP5, PS;
 
-defm VCVTNEPH2BF8 : avx512_cvt_trunc_ne<0x74, "vcvtneph2bf8", avx512vl_i8_info,
+defm VCVTPH2BF8 : avx512_cvt_trunc_ne<0x74, "vcvtph2bf8", avx512vl_i8_info,
                                         avx512vl_f16_info, SchedWriteCvtPD2PS,
-                                        X86vcvtneph2bf8, X86vmcvtneph2bf8,
+                                        X86vcvtph2bf8, X86vmcvtph2bf8,
                                         [HasAVX10_2], [HasAVX10_2_512]>,
                                         T8, XS, EVEX_CD8<16, CD8VF>;
 
-defm VCVTNEPH2BF8S : avx512_cvt_trunc_ne<0x74, "vcvtneph2bf8s", avx512vl_i8_info,
+defm VCVTPH2BF8S : avx512_cvt_trunc_ne<0x74, "vcvtph2bf8s", avx512vl_i8_info,
                                          avx512vl_f16_info, SchedWriteCvtPD2PS,
-                                         X86vcvtneph2bf8s, X86vmcvtneph2bf8s,
+                                         X86vcvtph2bf8s, X86vmcvtph2bf8s,
                                          [HasAVX10_2], [HasAVX10_2_512]>,
                                          T_MAP5, XS, EVEX_CD8<16, CD8VF>;
 
-defm VCVTNEPH2HF8 : avx512_cvt_trunc_ne<0x18, "vcvtneph2hf8", avx512vl_i8_info,
+defm VCVTPH2HF8 : avx512_cvt_trunc_ne<0x18, "vcvtph2hf8", avx512vl_i8_info,
                                         avx512vl_f16_info, SchedWriteCvtPD2PS,
-                                        X86vcvtneph2hf8, X86vmcvtneph2hf8,
+                                        X86vcvtph2hf8, X86vmcvtph2hf8,
                                         [HasAVX10_2], [HasAVX10_2_512]>,
                                         T_MAP5, XS, EVEX_CD8<16, CD8VF>;
 
-defm VCVTNEPH2HF8S : avx512_cvt_trunc_ne<0x1b, "vcvtneph2hf8s", avx512vl_i8_info,
+defm VCVTPH2HF8S : avx512_cvt_trunc_ne<0x1b, "vcvtph2hf8s", avx512vl_i8_info,
                                          avx512vl_f16_info, SchedWriteCvtPD2PS,
-                                         X86vcvtneph2hf8s, X86vmcvtneph2hf8s,
+                                         X86vcvtph2hf8s, X86vmcvtph2hf8s,
                                          [HasAVX10_2], [HasAVX10_2_512]>,
                                          T_MAP5, XS, EVEX_CD8<16, CD8VF>;
 
@@ -1332,7 +1332,7 @@ multiclass avx10_fp_binopne_int_pbf16<bits<8> opc, string OpcodeStr,
   }
 }
 
-multiclass avx10_fp_binop_pbf16<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
+multiclass avx10_fp_binop_bf16<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                                 X86SchedWriteSizes sched,
                                 bit IsCommutable = 0,
                                 SDPatternOperator MaskOpNode = OpNode> {
@@ -1351,10 +1351,10 @@ multiclass avx10_fp_binop_pbf16<bits<8> opc, string OpcodeStr, SDPatternOperator
 }
 
 let Uses = []<Register>, mayRaiseFPException = 0 in {
-defm VADDNEPBF16 : avx10_fp_binop_pbf16<0x58, "vaddne", fadd, SchedWriteFAddSizes, 1>;
-defm VSUBNEPBF16 : avx10_fp_binop_pbf16<0x5C, "vsubne", fsub, SchedWriteFAddSizes, 0>;
-defm VMULNEPBF16 : avx10_fp_binop_pbf16<0x59, "vmulne", fmul, SchedWriteFMulSizes, 1>;
-defm VDIVNEPBF16 : avx10_fp_binop_pbf16<0x5E, "vdivne", fdiv, SchedWriteFDivSizes, 0>;
+defm VADDNEPBF16 : avx10_fp_binop_bf16<0x58, "vaddne", fadd, SchedWriteFAddSizes, 1>;
+defm VSUBNEPBF16 : avx10_fp_binop_bf16<0x5C, "vsubne", fsub, SchedWriteFAddSizes, 0>;
+defm VMULNEPBF16 : avx10_fp_binop_bf16<0x59, "vmulne", fmul, SchedWriteFMulSizes, 1>;
+defm VDIVNEPBF16 : avx10_fp_binop_bf16<0x5E, "vdivne", fdiv, SchedWriteFDivSizes, 0>;
 defm VMINPBF16 : avx10_fp_binopne_int_pbf16<0x5D, "vmin", SchedWriteFCmpSizes, 0>;
 defm VMAXPBF16 : avx10_fp_binopne_int_pbf16<0x5F, "vmax", SchedWriteFCmpSizes, 0>;
 }
