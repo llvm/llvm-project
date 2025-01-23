@@ -179,6 +179,13 @@ New checks
 
   Finds cases when an uninstantiated virtual member function in a template class
   causes cross-compiler incompatibility.
+  
+  
+- New :doc:`bugprone-move-shared-pointer-contents
+  <clang-tidy/checks/bugprone/move-shared-pointer-contents>` check.
+
+  Detects calls to move the contents out of a ``std::shared_ptr`` rather than
+  moving the pointer itself.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
