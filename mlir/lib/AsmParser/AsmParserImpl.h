@@ -447,10 +447,13 @@ public:
   }
 
   /// Parse a named dictionary into 'result' if it is present.
-  ParseResult parseOptionalAttrDict(NamedAttrList &result) override {
+  ParseResult parseOptionalAttrDict(
+      NamedAttrList &result,
+      function_ref<FailureOr<Attribute>(StringRef)> parseNamedAttrFn =
+          nullptr) override {
     if (parser.getToken().isNot(Token::l_brace))
       return success();
-    return parser.parseAttributeDict(result);
+    return parser.parseAttributeDict(result, parseNamedAttrFn);
   }
 
   /// Parse a named dictionary into 'result' if the `attributes` keyword is

@@ -265,7 +265,9 @@ public:
   }
 
   /// Parse an attribute dictionary.
-  ParseResult parseAttributeDict(NamedAttrList &attributes);
+  ParseResult parseAttributeDict(
+      NamedAttrList &attributes,
+      function_ref<FailureOr<Attribute>(StringRef)> parseNamedAttrFn = nullptr);
 
   /// Parse a distinct attribute.
   Attribute parseDistinctAttr(Type type);

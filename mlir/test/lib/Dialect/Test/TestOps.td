@@ -2101,6 +2101,16 @@ def OptionalCustomAttrOp : TEST_Op<"optional_custom_attr"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Test overriding attribute parsing/printing in the attr-dict via callbacks
+// on parseOptionalAttrDict() and printOptionalAttrDict().
+
+def CustomAttrParseAndPrintInAttrDict : TEST_Op<"custom_attr_parse_and_print_in_attr_dict">
+{
+  let arguments = (ins DenseI64ArrayAttr:$custom_dense_array);
+  let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // Test OpAsmInterface.
 
 def AsmInterfaceOp : TEST_Op<"asm_interface_op"> {

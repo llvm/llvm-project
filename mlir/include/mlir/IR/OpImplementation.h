@@ -463,9 +463,15 @@ public:
   /// If the specified operation has attributes, print out an attribute
   /// dictionary with their values.  elidedAttrs allows the client to ignore
   /// specific well known attributes, commonly used if the attribute value is
-  /// printed some other way (like as a fixed operand).
+  /// printed some other way (like as a fixed operand). If printNamedAttrFn is
+  /// provided the default printing can be overridden for a named attribute.
+  /// printNamedAttrFn is passed a NamedAttribute, if it prints the attribute
+  /// it returns `success()`, otherwise, it returns `failure()` which indicates
+  /// that generic printing should be used.
   virtual void printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
-                                     ArrayRef<StringRef> elidedAttrs = {}) = 0;
+                                     ArrayRef<StringRef> elidedAttrs = {},
+                                     function_ref<LogicalResult(NamedAttribute)>
+                                         printNamedAttrFn = nullptr) = 0;
 
   /// If the specified operation has attributes, print out an attribute
   /// dictionary prefixed with 'attributes'.
@@ -1124,8 +1130,17 @@ public:
     return parseResult;
   }
 
-  /// Parse a named dictionary into 'result' if it is present.
-  virtual ParseResult parseOptionalAttrDict(NamedAttrList &result) = 0;
+  /// Parse a named dictionary into 'result' if it is present. If
+  /// parseNamedAttrFn is provided the default parsing can be overridden for a
+  /// named attribute. parseNamedAttrFn is passed the name of an attribute, if
+  /// it can parse the attribute it returns the parsed attribute, otherwise, it
+  /// returns `failure()` which indicates that generic parsing should be used.
+  /// Note: Returning a null Attribute from parseNamedAttrFn indicates a parser
+  /// error.
+  virtual ParseResult parseOptionalAttrDict(
+      NamedAttrList &result,
+      function_ref<FailureOr<Attribute>(StringRef)> parseNamedAttrFn =
+          nullptr) = 0;
 
   /// Parse a named dictionary into 'result' if the `attributes` keyword is
   /// present.
