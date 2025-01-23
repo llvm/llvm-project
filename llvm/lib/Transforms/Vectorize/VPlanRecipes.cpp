@@ -709,7 +709,8 @@ bool VPInstruction::isVectorToScalar() const {
 }
 
 bool VPInstruction::isSingleScalar() const {
-  return getOpcode() == VPInstruction::ResumePhi;
+  return getOpcode() == VPInstruction::ResumePhi ||
+         getOpcode() == VPInstruction::ExplicitVectorLength;
 }
 
 #if !defined(NDEBUG)
