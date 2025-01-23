@@ -6141,7 +6141,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fno-direct-access-external-data");
   }
 
-  if (Triple.isOSBinFormatELF())
+  if (Triple.isOSBinFormatELF() && (Triple.isAArch64() || Triple.isX86()))
     Args.addOptOutFlag(CmdArgs, options::OPT_fplt, options::OPT_fno_plt);
 
   // -fhosted is default.
