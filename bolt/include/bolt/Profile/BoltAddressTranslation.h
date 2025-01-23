@@ -168,10 +168,6 @@ private:
   /// Map a function to its secondary entry points vector
   std::unordered_map<uint64_t, std::vector<uint32_t>> SecondaryEntryPointsMap;
 
-  /// Return a secondary entry point ID for a function located at \p Address and
-  /// \p Offset within that function.
-  unsigned getSecondaryEntryPointId(uint64_t Address, uint32_t Offset) const;
-
   /// Links outlined cold bocks to their original function
   std::map<uint64_t, uint64_t> ColdPartSource;
 
@@ -183,6 +179,10 @@ private:
   const static uint32_t BRANCHENTRY = 0x1;
 
 public:
+  /// Return a secondary entry point ID for a function located at \p Address and
+  /// \p Offset within that function.
+  unsigned getSecondaryEntryPointId(uint64_t Address, uint32_t Offset) const;
+
   /// Map basic block input offset to a basic block index and hash pair.
   class BBHashMapTy {
     struct EntryTy {

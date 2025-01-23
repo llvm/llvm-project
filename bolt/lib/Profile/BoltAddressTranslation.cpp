@@ -87,13 +87,33 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
       continue;
 
     uint32_t NumSecondaryEntryPoints = 0;
-    Function.forEachEntryPoint([&](uint64_t Offset, const MCSymbol *) {
-      if (!Offset)
-        return true;
+    // Offset call continuation landing pads by max input offset + 1 to prevent
+    // confusing them with real entry points. Note we can't use the input size
+    // as it's not available in BOLTed binary.
+    const BBHashMapTy &BBHashMap = getBBHashMap(InputAddress);
+    const uint32_t CallContLPOffset = std::prev(BBHashMap.end())->first + 1;
+    for (const BinaryBasicBlock &BB : llvm::drop_begin(Function)) {
+      if (BB.isEntryPoint()) {
+        ++NumSecondaryEntryPoints;
+        SecondaryEntryPointsMap[OutputAddress].push_back(BB.getOffset());
+        continue;
+      }
+      // Add call continuation landing pads, offset by function size
+      if (!BB.isLandingPad())
+        continue;
+      const BinaryBasicBlock *PrevBB =
+          Function.getLayout().getBlock(BB.getIndex() - 1);
+      if (!PrevBB->isSuccessor(&BB))
+        continue;
+      const MCInst *Instr = PrevBB->getLastNonPseudoInstr();
+      if (!Instr || !BC.MIB->isCall(*Instr))
+        continue;
       ++NumSecondaryEntryPoints;
-      SecondaryEntryPointsMap[OutputAddress].push_back(Offset);
-      return true;
-    });
+      SecondaryEntryPointsMap[OutputAddress].push_back(CallContLPOffset +
+                                                       BB.getOffset());
+    }
+    if (NumSecondaryEntryPoints)
+      llvm::sort(SecondaryEntryPointsMap[OutputAddress]);
 
     LLVM_DEBUG(dbgs() << "Function name: " << Function.getPrintName() << "\n");
     LLVM_DEBUG(dbgs() << " Address reference: 0x"
@@ -109,7 +129,6 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
     // Add entries for deleted blocks. They are still required for correct BB
     // mapping of branches modified by SCTC. By convention, they would have the
     // end of the function as output address.
-    const BBHashMapTy &BBHashMap = getBBHashMap(InputAddress);
     if (BBHashMap.size() != Function.size()) {
       const uint64_t EndOffset = Function.getOutputSize();
       std::unordered_set<uint32_t> MappedInputOffsets;
@@ -600,8 +619,8 @@ BoltAddressTranslation::getSecondaryEntryPointId(uint64_t Address,
   if (FunctionIt == SecondaryEntryPointsMap.end())
     return 0;
   const std::vector<uint32_t> &Offsets = FunctionIt->second;
-  auto OffsetIt = std::find(Offsets.begin(), Offsets.end(), Offset);
-  if (OffsetIt == Offsets.end())
+  auto OffsetIt = llvm::lower_bound(FunctionIt->second, Offset);
+  if (OffsetIt == Offsets.end() || *OffsetIt != Offset)
     return 0;
   // Adding one here because main entry point is not stored in BAT, and
   // enumeration for secondary entry points starts with 1.
