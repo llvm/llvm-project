@@ -8,6 +8,7 @@
 
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "OrcTestCommon.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -105,6 +106,37 @@ TEST(ExecutorAddrTest, AddrRanges) {
   EXPECT_LT(R0, R1);
   EXPECT_GE(R0, R0);
   EXPECT_GT(R1, R0);
+}
+
+TEST(ExecutorSymbolDef, PointerConversion) {
+  int X = 0;
+
+  auto XHiddenSym = ExecutorSymbolDef::fromPtr(&X);
+  int *XHiddenPtr = XHiddenSym.toPtr<int *>();
+
+  auto XExportedSym = ExecutorSymbolDef::fromPtr(&X, JITSymbolFlags::Exported);
+  int *XExportedPtr = XExportedSym.toPtr<int *>();
+
+  EXPECT_EQ(XHiddenPtr, &X);
+  EXPECT_EQ(XExportedPtr, &X);
+
+  EXPECT_EQ(XHiddenSym.getFlags(), JITSymbolFlags());
+  EXPECT_EQ(XExportedSym.getFlags(), JITSymbolFlags::Exported);
+}
+
+TEST(ExecutorSymbolDef, FunctionPointerConversion) {
+  auto FHiddenSym = ExecutorSymbolDef::fromPtr(&F);
+  void (*FHiddenPtr)() = FHiddenSym.toPtr<void()>();
+
+  auto FExportedSym = ExecutorSymbolDef::fromPtr(&F, JITSymbolFlags::Exported);
+  void (*FExportedPtr)() = FExportedSym.toPtr<void()>();
+
+  EXPECT_EQ(FHiddenPtr, &F);
+  EXPECT_EQ(FExportedPtr, &F);
+
+  EXPECT_EQ(FHiddenSym.getFlags(), JITSymbolFlags::Callable);
+  EXPECT_EQ(FExportedSym.getFlags(),
+            JITSymbolFlags::Exported | JITSymbolFlags::Callable);
 }
 
 } // namespace

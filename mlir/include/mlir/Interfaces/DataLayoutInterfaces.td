@@ -86,7 +86,7 @@ def DataLayoutEntryInterface : AttrInterface<"DataLayoutEntryInterface"> {
   let extraClassDeclaration = [{
     /// Returns `true` if the key of this entry is a type.
     bool isTypeEntry() {
-      return getKey().is<::mlir::Type>();
+      return llvm::isa<::mlir::Type>(getKey());
     }
   }];
 }

@@ -196,8 +196,7 @@ bool Expr::isKnownToHaveBooleanValue(bool Semantic) const {
 
   if (const FieldDecl *FD = E->getSourceBitField())
     if (!Semantic && FD->getType()->isUnsignedIntegerType() &&
-        !FD->getBitWidth()->isValueDependent() &&
-        FD->getBitWidthValue(FD->getASTContext()) == 1)
+        !FD->getBitWidth()->isValueDependent() && FD->getBitWidthValue() == 1)
       return true;
 
   return false;
@@ -775,7 +774,15 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     const FunctionDecl *Decl = FD;
     if (const FunctionDecl* Pattern = FD->getTemplateInstantiationPattern())
       Decl = Pattern;
-    const FunctionType *AFT = Decl->getType()->getAs<FunctionType>();
+
+    // Bail out if the type of the function has not been set yet.
+    // This can notably happen in the trailing return type of a lambda
+    // expression.
+    const Type *Ty = Decl->getType().getTypePtrOrNull();
+    if (!Ty)
+      return "";
+
+    const FunctionType *AFT = Ty->getAs<FunctionType>();
     const FunctionProtoType *FT = nullptr;
     if (FD->hasWrittenPrototype())
       FT = dyn_cast<FunctionProtoType>(AFT);
@@ -5070,6 +5077,8 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__opencl_atomic_init:
   case AO__c11_atomic_load:
   case AO__atomic_load_n:
+  case AO__atomic_test_and_set:
+  case AO__atomic_clear:
     return 2;
 
   case AO__scoped_atomic_load_n:

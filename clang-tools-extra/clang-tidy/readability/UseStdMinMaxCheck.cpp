@@ -79,6 +79,27 @@ static QualType getNonTemplateAlias(QualType QT) {
   return QT;
 }
 
+static QualType getReplacementCastType(const Expr *CondLhs, const Expr *CondRhs,
+                                       QualType ComparedType) {
+  QualType LhsType = CondLhs->getType();
+  QualType RhsType = CondRhs->getType();
+  QualType LhsCanonicalType =
+      LhsType.getCanonicalType().getNonReferenceType().getUnqualifiedType();
+  QualType RhsCanonicalType =
+      RhsType.getCanonicalType().getNonReferenceType().getUnqualifiedType();
+  QualType GlobalImplicitCastType;
+  if (LhsCanonicalType != RhsCanonicalType) {
+    if (llvm::isa<IntegerLiteral>(CondRhs)) {
+      GlobalImplicitCastType = getNonTemplateAlias(LhsType);
+    } else if (llvm::isa<IntegerLiteral>(CondLhs)) {
+      GlobalImplicitCastType = getNonTemplateAlias(RhsType);
+    } else {
+      GlobalImplicitCastType = getNonTemplateAlias(ComparedType);
+    }
+  }
+  return GlobalImplicitCastType;
+}
+
 static std::string createReplacement(const Expr *CondLhs, const Expr *CondRhs,
                                      const Expr *AssignLhs,
                                      const SourceManager &Source,
@@ -92,18 +113,8 @@ static std::string createReplacement(const Expr *CondLhs, const Expr *CondRhs,
   const llvm::StringRef AssignLhsStr = Lexer::getSourceText(
       Source.getExpansionRange(AssignLhs->getSourceRange()), Source, LO);
 
-  QualType GlobalImplicitCastType;
-  QualType LhsType = CondLhs->getType()
-                         .getCanonicalType()
-                         .getNonReferenceType()
-                         .getUnqualifiedType();
-  QualType RhsType = CondRhs->getType()
-                         .getCanonicalType()
-                         .getNonReferenceType()
-                         .getUnqualifiedType();
-  if (LhsType != RhsType) {
-    GlobalImplicitCastType = getNonTemplateAlias(BO->getLHS()->getType());
-  }
+  QualType GlobalImplicitCastType =
+      getReplacementCastType(CondLhs, CondRhs, BO->getLHS()->getType());
 
   return (AssignLhsStr + " = " + FunctionName +
           (!GlobalImplicitCastType.isNull()

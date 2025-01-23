@@ -16,6 +16,7 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -84,6 +85,7 @@
 #include "llvm/Transforms/Scalar/JumpThreading.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <limits>
 #include <memory>
 #include <optional>
 using namespace clang;
@@ -118,6 +120,9 @@ static cl::opt<PGOOptions::ColdFuncOpt> ClPGOColdFuncAttr(
 
 extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 } // namespace llvm
+namespace clang {
+extern llvm::cl::opt<bool> ClSanitizeGuardChecks;
+}
 
 namespace {
 
@@ -136,8 +141,6 @@ class EmitAssemblyHelper {
   const LangOptions &LangOpts;
   llvm::Module *TheModule;
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
-
-  Timer CodeGenerationTime;
 
   std::unique_ptr<raw_pwrite_stream> OS;
 
@@ -203,12 +206,12 @@ class EmitAssemblyHelper {
   }
 
 public:
-  EmitAssemblyHelper(CompilerInstance &CI, llvm::Module *M,
+  EmitAssemblyHelper(CompilerInstance &CI, CodeGenOptions &CGOpts,
+                     llvm::Module *M,
                      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS)
-      : CI(CI), Diags(CI.getDiagnostics()), CodeGenOpts(CI.getCodeGenOpts()),
+      : CI(CI), Diags(CI.getDiagnostics()), CodeGenOpts(CGOpts),
         TargetOpts(CI.getTargetOpts()), LangOpts(CI.getLangOpts()),
         TheModule(M), VFS(std::move(VFS)),
-        CodeGenerationTime("codegen", "Code Generation Time"),
         TargetTriple(TheModule->getTargetTriple()) {}
 
   ~EmitAssemblyHelper() {
@@ -794,10 +797,11 @@ static void addSanitizers(const Triple &TargetTriple,
 
   if (LowerAllowCheckPass::IsRequested()) {
     // We want to call it after inline, which is about OptimizerEarlyEPCallback.
-    PB.registerOptimizerEarlyEPCallback([](ModulePassManager &MPM,
-                                           OptimizationLevel Level,
-                                           ThinOrFullLTOPhase Phase) {
-      MPM.addPass(createModuleToFunctionPassAdaptor(LowerAllowCheckPass()));
+    PB.registerOptimizerEarlyEPCallback([&](ModulePassManager &MPM,
+                                            OptimizationLevel Level,
+                                            ThinOrFullLTOPhase Phase) {
+      LowerAllowCheckPass::Options Opts;
+      MPM.addPass(createModuleToFunctionPassAdaptor(LowerAllowCheckPass(Opts)));
     });
   }
 }
@@ -1025,6 +1029,15 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       PB.registerScalarOptimizerLateEPCallback([this](FunctionPassManager &FPM,
                                                       OptimizationLevel Level) {
         BoundsCheckingPass::Options Options;
+        if (CodeGenOpts.SanitizeSkipHotCutoffs[SanitizerKind::SO_LocalBounds] ||
+            ClSanitizeGuardChecks) {
+          static_assert(SanitizerKind::SO_LocalBounds <=
+                            std::numeric_limits<
+                                decltype(Options.GuardKind)::value_type>::max(),
+                        "Update type of llvm.allow.ubsan.check to represent "
+                        "SanitizerKind::SO_LocalBounds.");
+          Options.GuardKind = SanitizerKind::SO_LocalBounds;
+        }
         Options.Merge =
             CodeGenOpts.SanitizeMergeHandlers.has(SanitizerKind::LocalBounds);
         if (!CodeGenOpts.SanitizeTrap.has(SanitizerKind::LocalBounds)) {
@@ -1157,7 +1170,14 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   {
     PrettyStackTraceString CrashInfo("Optimizer");
     llvm::TimeTraceScope TimeScope("Optimizer");
+    Timer timer;
+    if (CI.getCodeGenOpts().TimePasses) {
+      timer.init("optimizer", "Optimizer", CI.getTimerGroup());
+      CI.getFrontendTimer().yieldTo(timer);
+    }
     MPM.run(*TheModule, MAM);
+    if (CI.getCodeGenOpts().TimePasses)
+      timer.yieldTo(CI.getFrontendTimer());
   }
 }
 
@@ -1200,14 +1220,20 @@ void EmitAssemblyHelper::RunCodegenPipeline(
   {
     PrettyStackTraceString CrashInfo("Code generation");
     llvm::TimeTraceScope TimeScope("CodeGenPasses");
+    Timer timer;
+    if (CI.getCodeGenOpts().TimePasses) {
+      timer.init("codegen", "Machine code generation", CI.getTimerGroup());
+      CI.getFrontendTimer().yieldTo(timer);
+    }
     CodeGenPasses.run(*TheModule);
+    if (CI.getCodeGenOpts().TimePasses)
+      timer.yieldTo(CI.getFrontendTimer());
   }
 }
 
 void EmitAssemblyHelper::emitAssembly(BackendAction Action,
                                       std::unique_ptr<raw_pwrite_stream> OS,
                                       BackendConsumer *BC) {
-  TimeRegion Region(CodeGenOpts.TimePasses ? &CodeGenerationTime : nullptr);
   setCommandLineOpts(CodeGenOpts);
 
   bool RequiresCodeGen = actionRequiresCodeGen(Action);
@@ -1339,14 +1365,14 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   }
 }
 
-void clang::emitBackendOutput(CompilerInstance &CI, StringRef TDesc,
-                              llvm::Module *M, BackendAction Action,
+void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
+                              StringRef TDesc, llvm::Module *M,
+                              BackendAction Action,
                               IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                               std::unique_ptr<raw_pwrite_stream> OS,
                               BackendConsumer *BC) {
   llvm::TimeTraceScope TimeScope("Backend");
   DiagnosticsEngine &Diags = CI.getDiagnostics();
-  const auto &CGOpts = CI.getCodeGenOpts();
 
   std::unique_ptr<llvm::Module> EmptyModule;
   if (!CGOpts.ThinLTOIndexFile.empty()) {
@@ -1386,7 +1412,7 @@ void clang::emitBackendOutput(CompilerInstance &CI, StringRef TDesc,
     }
   }
 
-  EmitAssemblyHelper AsmHelper(CI, M, VFS);
+  EmitAssemblyHelper AsmHelper(CI, CGOpts, M, VFS);
   AsmHelper.emitAssembly(Action, std::move(OS), BC);
 
   // Verify clang's TargetInfo DataLayout against the LLVM TargetMachine's

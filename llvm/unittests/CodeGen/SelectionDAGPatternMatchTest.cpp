@@ -392,6 +392,7 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   SDValue FPToSI = DAG->getNode(ISD::FP_TO_SINT, DL, FloatVT, Op2);
   SDValue FPToUI = DAG->getNode(ISD::FP_TO_UINT, DL, FloatVT, Op2);
 
+  SDValue Bcast = DAG->getNode(ISD::BITCAST, DL, FloatVT, Op0);
   SDValue Brev = DAG->getNode(ISD::BITREVERSE, DL, Int32VT, Op0);
   SDValue Bswap = DAG->getNode(ISD::BSWAP, DL, Int32VT, Op0);
 
@@ -423,8 +424,12 @@ TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   EXPECT_FALSE(sd_match(FPToUI, m_FPToSI(m_Value())));
   EXPECT_FALSE(sd_match(FPToSI, m_FPToUI(m_Value())));
 
+  EXPECT_TRUE(sd_match(Bcast, m_BitCast(m_Value())));
+  EXPECT_TRUE(sd_match(Bcast, m_BitCast(m_SpecificVT(MVT::i32))));
   EXPECT_TRUE(sd_match(Brev, m_BitReverse(m_Value())));
   EXPECT_TRUE(sd_match(Bswap, m_BSwap(m_Value())));
+  EXPECT_FALSE(sd_match(Bcast, m_BitReverse(m_Value())));
+  EXPECT_FALSE(sd_match(Bcast, m_BitCast(m_SpecificVT(MVT::f32))));
   EXPECT_FALSE(sd_match(Brev, m_BSwap(m_Value())));
   EXPECT_FALSE(sd_match(Bswap, m_BitReverse(m_Value())));
 
@@ -474,6 +479,11 @@ TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
   EXPECT_EQ(CC, ISD::SETULT);
   EXPECT_TRUE(sd_match(SetCC, m_Node(ISD::SETCC, m_Value(), m_Value(),
                                      m_SpecificCondCode(ISD::SETULT))));
+
+  SDValue UndefInt32VT = DAG->getUNDEF(Int32VT);
+  SDValue UndefVInt32VT = DAG->getUNDEF(VInt32VT);
+  EXPECT_TRUE(sd_match(UndefInt32VT, m_Undef()));
+  EXPECT_TRUE(sd_match(UndefVInt32VT, m_Undef()));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, patternCombinators) {

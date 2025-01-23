@@ -36,6 +36,7 @@ using namespace mlir;
 using namespace mlir::tosa;
 
 #include "mlir/Dialect/Tosa/IR/TosaOpsDialect.cpp.inc"
+#include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 
 //===----------------------------------------------------------------------===//
 // Tosa dialect interface includes.
@@ -130,6 +131,10 @@ SmallVector<Region *> tosa::WhileOp::getLoopRegions() { return {&getBody()}; }
 //===----------------------------------------------------------------------===//
 
 void TosaDialect::initialize() {
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "mlir/Dialect/Tosa/IR/TosaOpsTypesBase.cpp.inc"
+      >();
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/Tosa/IR/TosaOps.cpp.inc"
@@ -153,6 +158,10 @@ Operation *TosaDialect::materializeConstant(OpBuilder &builder, Attribute value,
                                             Type type, Location loc) {
   // Tosa dialect constants only support ElementsAttr unlike standard dialect
   // constant which supports all attributes.
+  if (llvm::isa<shapeType>(type) && llvm::isa<DenseIntElementsAttr>(value)) {
+    return builder.create<tosa::ConstShapeOp>(
+        loc, type, llvm::cast<DenseIntElementsAttr>(value));
+  }
   if (llvm::isa<ElementsAttr>(value))
     return builder.create<tosa::ConstOp>(loc, type,
                                          llvm::cast<ElementsAttr>(value));
@@ -298,8 +307,7 @@ static LogicalResult verifyConvOpModes(T op) {
   if (inputEType.isInteger(16) && !accType.isInteger(48))
     return op.emitOpError("accumulator type for i16 tensor is not i48");
 
-  if ((inputEType.isFloat8E5M2() || inputEType.isFloat8E4M3()) &&
-      !accType.isF16())
+  if (isa<Float8E5M2Type, Float8E4M3Type>(inputEType) && !accType.isF16())
     return op.emitOpError("accumulator type for f8 tensor is not f16");
 
   if (inputEType.isF16() && !(accType.isF16() || accType.isF32()))
@@ -815,40 +823,25 @@ LogicalResult tosa::PadOp::inferReturnTypeComponents(
     PadOp::Adaptor adaptor,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ShapeAdaptor inputShape(adaptor.getInput1().getType());
-  ShapeAdaptor paddingShape(adaptor.getPadding().getType());
+  auto paddingRank =
+      cast<tosa::shapeType>(adaptor.getPadding().getType()).getRank();
   SmallVector<int64_t> outputShape;
 
-  // If both inputs have unknown shape, we cannot determine the shape of the
-  // output.
-  if (!inputShape.hasRank() && !paddingShape.hasRank()) {
-    inferredReturnShapes.push_back(ShapedTypeComponents());
-    return success();
-  }
-
-  // If the input rank is unknown we can info the output rank using the
-  // padding shape's first dim.
+  // If the input rank is unknown, we can infer the output rank using the
+  // padding shape's rank divided by 2.
   if (!inputShape.hasRank()) {
-    if (paddingShape.isDynamicDim(0)) {
-      inferredReturnShapes.push_back(ShapedTypeComponents());
-      return success();
-    }
-
-    outputShape.resize(paddingShape.getDimSize(0) / 2, ShapedType::kDynamic);
-    inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
-    return success();
-  }
-
-  DenseIntElementsAttr paddings;
-  // If the paddings value is not a constant, all dimensions must be dynamic.
-  if (!matchPattern(adaptor.getPadding(), m_Constant(&paddings))) {
-    outputShape.resize(inputShape.getRank(), ShapedType::kDynamic);
+    outputShape.resize(paddingRank / 2, ShapedType::kDynamic);
     inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
     return success();
   }
 
   SmallVector<int64_t> paddingValues;
-  for (auto val : paddings) {
-    paddingValues.push_back(val.getSExtValue());
+  // If the paddings value is not a constant, all dimensions must be dynamic.
+  if (!tosa::getConstShapeValue(adaptor.getPadding().getDefiningOp(),
+                                paddingValues)) {
+    outputShape.resize(inputShape.getRank(), ShapedType::kDynamic);
+    inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+    return success();
   }
 
   outputShape.reserve(inputShape.getRank());
@@ -857,9 +850,15 @@ LogicalResult tosa::PadOp::inferReturnTypeComponents(
       outputShape.push_back(ShapedType::kDynamic);
       continue;
     }
+    auto padFront = paddingValues[i * 2];
+    auto padBack = paddingValues[i * 2 + 1];
+    if (padFront < 0 || padBack < 0) {
+      // if either padding for dim i is -1, output dim is unknown
+      outputShape.push_back(ShapedType::kDynamic);
+      continue;
+    }
 
-    outputShape.push_back(inputShape.getDimSize(i) + paddingValues[i * 2] +
-                          paddingValues[i * 2 + 1]);
+    outputShape.push_back(inputShape.getDimSize(i) + padFront + padBack);
   }
 
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
@@ -869,17 +868,15 @@ LogicalResult tosa::PadOp::inferReturnTypeComponents(
 LogicalResult tosa::PadOp::verify() {
   RankedTensorType inputType = getInput1().getType();
   RankedTensorType outputType = getOutput().getType();
-  RankedTensorType paddingType = getPadding().getType();
+  auto paddingRank = cast<tosa::shapeType>(getPadding().getType()).getRank();
 
   if (inputType.getRank() != outputType.getRank())
     return emitOpError() << "expect same input and output tensor rank.";
 
-  if (!paddingType.isDynamicDim(0) &&
-      paddingType.getDimSize(0) != inputType.getRank() * 2)
+  if (paddingRank != inputType.getRank() * 2)
     return emitOpError() << "expected padding tensor dim 0 to have size "
                          << inputType.getRank() * 2
-                         << " (2*rank(shape1)) but got size "
-                         << paddingType.getDimSize(0);
+                         << " (2*rank(shape1)) but got size " << paddingRank;
 
   return success();
 }
@@ -894,8 +891,40 @@ LogicalResult tosa::SliceOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     SliceOp::Adaptor adaptor,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  inferredReturnShapes.push_back(
-      ShapedTypeComponents(convertToMlirShape(adaptor.getSize())));
+  auto start = adaptor.getStart();
+  auto size = adaptor.getSize();
+
+  // if size[i] is -1, all remaining elements in dimension i are included
+  // in the slice, similar to TF.
+  ShapeAdaptor inputShape(adaptor.getInput1().getType());
+  // initialize outputShape to all unknown
+  SmallVector<int64_t> outputShape(size.size(), ShapedType::kDynamic);
+  if (inputShape.hasRank()) {
+    for (size_t i = 0; i < size.size(); i++) {
+      if (size[i] != 0 && size[i] >= -1 && start[i] >= 0 &&
+          (ShapedType::isDynamic(inputShape.getDimSize(i)) ||
+           start[i] < inputShape.getDimSize(i))) {
+        // size[i] is not 0 and not < -1, and start[i] is in valid range
+        if (ShapedType::isDynamic(inputShape.getDimSize(i))) {
+          // input shape has unknown dim[i] - only valid if size[i] > 0
+          if (size[i] > 0) {
+            outputShape[i] = size[i];
+          }
+        } else {
+          // input shape has known dim[i]
+          if (size[i] == -1) {
+            outputShape[i] = inputShape.getDimSize(i) - start[i];
+          } else if (start[i] + size[i] <= inputShape.getDimSize(i)) {
+            // start[i] + size[i] is within bound of input shape's dim[i]
+            outputShape[i] = size[i];
+          }
+        }
+      }
+    }
+  } else {
+    outputShape = convertToMlirShape(size);
+  }
+  inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
   return success();
 }
 
@@ -962,11 +991,30 @@ LogicalResult tosa::TableOp::verify() {
   return success();
 }
 
+LogicalResult
+tosa::TileOp::getConstantMultiples(SmallVector<int64_t> &multiples) {
+  // Multiples must be constants.
+  DenseIntElementsAttr multiplesAttr;
+  if (!matchPattern(getMultiples(), m_Constant(&multiplesAttr)))
+    return failure();
+  multiples = llvm::to_vector(
+      llvm::map_range(multiplesAttr.getValues<APInt>(),
+                      [](const APInt &val) { return val.getSExtValue(); }));
+  return success();
+}
+
 LogicalResult tosa::TileOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     TileOp::Adaptor adaptor,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  ArrayRef<int64_t> multiples = adaptor.getMultiples();
+  DenseIntElementsAttr multiplesAttr;
+  if (!matchPattern(adaptor.getMultiples(), m_Constant(&multiplesAttr)))
+    return failure();
+
+  SmallVector<int64_t> multiples = llvm::to_vector(
+      llvm::map_range(multiplesAttr.getValues<APInt>(),
+                      [](const APInt &val) { return val.getSExtValue(); }));
+
   ShapeAdaptor inputShape(adaptor.getInput1().getType());
   SmallVector<int64_t> outputShape;
   if (!inputShape.hasRank()) {
@@ -992,20 +1040,25 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
 LogicalResult tosa::TileOp::verify() {
   ShapedType inputType = llvm::cast<ShapedType>(getInput1().getType());
   ShapedType outputType = llvm::cast<ShapedType>(getType());
-  auto multiples = getMultiples();
+
+  shapeType multiplesType =
+      llvm::cast<tosa::shapeType>(getMultiples().getType());
+
+  auto multiplesRank = multiplesType.getRank();
 
   if (inputType.hasRank()) {
-    if (static_cast<size_t>(inputType.getRank()) != multiples.size())
-      return emitOpError("expect 'multiples' array to have length ")
-             << inputType.getRank() << " but got " << multiples.size() << ".";
+    if (inputType.getRank() != multiplesRank)
+      return emitOpError("expect 'multiples' to have rank ")
+             << inputType.getRank() << " but got " << multiplesRank << ".";
     if (outputType.hasRank() && inputType.getRank() != outputType.getRank())
       return emitOpError("expect same input and output tensor rank.");
-  } else if (outputType.hasRank() &&
-             static_cast<size_t>(outputType.getRank()) != multiples.size())
+  } else if (outputType.hasRank() && outputType.getRank() != multiplesRank)
     return emitOpError("expect 'multiples' array to have length ")
-           << outputType.getRank() << " but got " << multiples.size() << ".";
+           << outputType.getRank() << " but got " << multiplesRank << ".";
 
-  if (llvm::any_of(multiples, [](int64_t v) { return v <= 0 && v != -1; }))
+  SmallVector<int64_t> multiples;
+  if (getConstantMultiples(multiples).succeeded() &&
+      llvm::any_of(multiples, [](int64_t v) { return v <= 0 && v != -1; }))
     return emitOpError(
         "expect element of 'multiples' to be positive integer or -1.");
 
@@ -2147,11 +2200,102 @@ void WhileOp::print(OpAsmPrinter &parser) {
 }
 
 //===----------------------------------------------------------------------===//
+// TOSA Shape and Shape Operators Helper functions.
+//===----------------------------------------------------------------------===//
+
+bool mlir::tosa::isa_tosa_shape_type(mlir::Type t) {
+  return mlir::isa<tosa::shapeType>(t);
+}
+
+LogicalResult
+mlir::tosa::shapeType::verify(function_ref<InFlightDiagnostic()> emitError,
+                              int rank) {
+  if (rank < 0)
+    return emitError() << "invalid rank (must be >= 0): " << rank;
+  return success();
+}
+
+LogicalResult OpTrait::tosa::verifyTosaResolvableShapeOperands(Operation *op) {
+  for (auto v : op->getOperands()) {
+    if (mlir::isa<::mlir::tosa::shapeType>(v.getType())) {
+      Operation *definingOp = v.getDefiningOp();
+      if (!definingOp || !definingOp->hasTrait<TosaShapeOperator>()) {
+        return op->emitOpError("shape operand is not compile time resolvable");
+      }
+    }
+  }
+  return success();
+}
+
+LogicalResult OpTrait::tosa::verifyTosaShapeOperator(Operation *op) {
+  for (auto type : op->getOperandTypes()) {
+    if (!mlir::isa<mlir::tosa::shapeType>(type)) {
+      return op->emitOpError("must have operands with tosa shape type");
+    }
+  }
+  for (auto type : op->getResultTypes()) {
+    if (!mlir::isa<mlir::tosa::shapeType>(type)) {
+      return op->emitOpError("must have result with tosa shape type");
+    }
+  }
+  return success();
+}
+
+LogicalResult
+OpTrait::tosa::verifyTosaShapeOperatorWithSameRanks(Operation *op) {
+  if (failed(OpTrait::impl::verifyAtLeastNOperands(op, 1)) ||
+      failed(verifyTosaShapeOperator(op)))
+    return failure();
+
+  // delegate function that returns rank of shape type
+  auto getRank = [](const Type type) {
+    return mlir::cast<mlir::tosa::shapeType>(type).getRank();
+  };
+  auto operandTypes = op->getOperandTypes();
+  auto resultTypes = op->getResultTypes();
+
+  auto rank = getRank(*op->getOperandTypes().begin());
+  for (auto type : operandTypes) {
+    if (getRank(type) != rank) {
+      return op->emitOpError("operands don't have matching ranks");
+    }
+  }
+  for (auto type : resultTypes) {
+    if (getRank(type) != rank) {
+      return op->emitOpError("result shape has different rank than operands");
+    }
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TOSA Shape Operators verify functions.
+//===----------------------------------------------------------------------===//
+
+LogicalResult tosa::ConstShapeOp::verify() {
+  // check that number of elements in value attr equal to rank of result shape
+  auto count = getValue().getNumElements();
+  auto rank = (cast<tosa::shapeType>(getResult().getType())).getRank();
+  if (!(count == rank || (count == 1 && rank == 0))) {
+    return emitOpError("expect number of elements in attribute value (")
+           << count << ") to be equal to the rank (" << rank
+           << ") for the result shape type";
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TOSA Attribute Definitions.
 //===----------------------------------------------------------------------===//
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/Tosa/IR/TosaAttributes.cpp.inc"
+
+//===----------------------------------------------------------------------===//
+// TOSA Type Definitions.
+//===----------------------------------------------------------------------===//
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/Tosa/IR/TosaOpsTypesBase.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // TOSA Operator Definitions.

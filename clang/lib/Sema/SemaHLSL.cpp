@@ -1688,13 +1688,21 @@ static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
   auto *VecTyA = ArgTyA->getAs<VectorType>();
   SourceLocation BuiltinLoc = TheCall->getBeginLoc();
 
+  bool AllBArgAreVectors = true;
   for (unsigned i = 1; i < TheCall->getNumArgs(); ++i) {
     ExprResult B = TheCall->getArg(i);
     QualType ArgTyB = B.get()->getType();
     auto *VecTyB = ArgTyB->getAs<VectorType>();
-    if (VecTyA == nullptr && VecTyB == nullptr)
-      return false;
-
+    if (VecTyB == nullptr)
+      AllBArgAreVectors &= false;
+    if (VecTyA && VecTyB == nullptr) {
+      // Note: if we get here 'B' is scalar which
+      // requires a VectorSplat on ArgN
+      S->Diag(BuiltinLoc, diag::err_vec_builtin_non_vector)
+          << TheCall->getDirectCallee() << /*useAllTerminology*/ true
+          << SourceRange(A.get()->getBeginLoc(), B.get()->getEndLoc());
+      return true;
+    }
     if (VecTyA && VecTyB) {
       bool retValue = false;
       if (VecTyA->getElementType() != VecTyB->getElementType()) {
@@ -1712,21 +1720,23 @@ static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
         // HLSLVectorTruncation.
         S->Diag(BuiltinLoc, diag::err_vec_builtin_incompatible_vector)
             << TheCall->getDirectCallee() << /*useAllTerminology*/ true
-            << SourceRange(TheCall->getArg(0)->getBeginLoc(),
-                           TheCall->getArg(1)->getEndLoc());
+            << SourceRange(A.get()->getBeginLoc(), B.get()->getEndLoc());
         retValue = true;
       }
-      return retValue;
+      if (retValue)
+        return retValue;
     }
   }
 
-  // Note: if we get here one of the args is a scalar which
-  // requires a VectorSplat on Arg0 or Arg1
-  S->Diag(BuiltinLoc, diag::err_vec_builtin_non_vector)
-      << TheCall->getDirectCallee() << /*useAllTerminology*/ true
-      << SourceRange(TheCall->getArg(0)->getBeginLoc(),
-                     TheCall->getArg(1)->getEndLoc());
-  return true;
+  if (VecTyA == nullptr && AllBArgAreVectors) {
+    // Note: if we get here 'A' is a scalar which
+    // requires a VectorSplat on Arg0
+    S->Diag(BuiltinLoc, diag::err_vec_builtin_non_vector)
+        << TheCall->getDirectCallee() << /*useAllTerminology*/ true
+        << SourceRange(A.get()->getBeginLoc(), A.get()->getEndLoc());
+    return true;
+  }
+  return false;
 }
 
 static bool CheckArgTypeMatches(Sema *S, Expr *Arg, QualType ExpectedType) {
@@ -1859,7 +1869,24 @@ static bool CheckAnyScalarOrVector(Sema *S, CallExpr *TheCall,
         (VTy && VTy->getElementType()->isScalarType()))) {
     S->Diag(TheCall->getArg(0)->getBeginLoc(),
             diag::err_typecheck_expect_any_scalar_or_vector)
-        << ArgType;
+        << ArgType << 1;
+    return true;
+  }
+  return false;
+}
+
+static bool CheckWaveActive(Sema *S, CallExpr *TheCall) {
+  QualType BoolType = S->getASTContext().BoolTy;
+  assert(TheCall->getNumArgs() >= 1);
+  QualType ArgType = TheCall->getArg(0)->getType();
+  auto *VTy = ArgType->getAs<VectorType>();
+  // is the bool or vector<bool>
+  if (S->Context.hasSameUnqualifiedType(ArgType, BoolType) ||
+      (VTy &&
+       S->Context.hasSameUnqualifiedType(VTy->getElementType(), BoolType))) {
+    S->Diag(TheCall->getArg(0)->getBeginLoc(),
+            diag::err_typecheck_expect_any_scalar_or_vector)
+        << ArgType << 0;
     return true;
   }
   return false;
@@ -2036,7 +2063,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
-  case Builtin::BI__builtin_hlsl_elementwise_firstbithigh: {
+  case Builtin::BI__builtin_hlsl_elementwise_firstbithigh:
+  case Builtin::BI__builtin_hlsl_elementwise_firstbitlow: {
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
 
@@ -2112,24 +2140,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
-  case Builtin::BI__builtin_hlsl_length: {
-    if (CheckFloatOrHalfRepresentations(&SemaRef, TheCall))
-      return true;
-    if (SemaRef.checkArgCount(TheCall, 1))
-      return true;
-
-    ExprResult A = TheCall->getArg(0);
-    QualType ArgTyA = A.get()->getType();
-    QualType RetTy;
-
-    if (auto *VTy = ArgTyA->getAs<VectorType>())
-      RetTy = VTy->getElementType();
-    else
-      RetTy = TheCall->getArg(0)->getType();
-
-    TheCall->setType(RetTy);
-    break;
-  }
   case Builtin::BI__builtin_hlsl_mad: {
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
@@ -2171,6 +2181,20 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     QualType ArgTyA = A.get()->getType();
     // return type is the same as the input type
     TheCall->setType(ArgTyA);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_wave_active_sum: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    // Ensure input expr type is a scalar/vector and the same as the return type
+    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
+      return true;
+    if (CheckWaveActive(&SemaRef, TheCall))
+      return true;
+    ExprResult Expr = TheCall->getArg(0);
+    QualType ArgTyExpr = Expr.get()->getType();
+    TheCall->setType(ArgTyExpr);
     break;
   }
   // Note these are llvm builtins that we want to catch invalid intrinsic

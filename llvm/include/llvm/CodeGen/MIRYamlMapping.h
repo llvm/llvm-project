@@ -457,6 +457,16 @@ template <> struct ScalarTraits<FrameIndex> {
   static QuotingType mustQuote(StringRef S) { return needsQuotes(S); }
 };
 
+/// Identifies call instruction location in machine function.
+struct MachineInstrLoc {
+  unsigned BlockNum;
+  unsigned Offset;
+
+  bool operator==(const MachineInstrLoc &Other) const {
+    return BlockNum == Other.BlockNum && Offset == Other.Offset;
+  }
+};
+
 /// Serializable representation of CallSiteInfo.
 struct CallSiteInfo {
   // Representation of call argument and register which is used to
@@ -467,16 +477,6 @@ struct CallSiteInfo {
 
     bool operator==(const ArgRegPair &Other) const {
       return Reg == Other.Reg && ArgNo == Other.ArgNo;
-    }
-  };
-
-  /// Identifies call instruction location in machine function.
-  struct MachineInstrLoc {
-    unsigned BlockNum;
-    unsigned Offset;
-
-    bool operator==(const MachineInstrLoc &Other) const {
-      return BlockNum == Other.BlockNum && Offset == Other.Offset;
     }
   };
 
@@ -595,6 +595,26 @@ template <> struct MappingTraits<MachineJumpTable::Entry> {
   }
 };
 
+struct CalledGlobal {
+  MachineInstrLoc CallSite;
+  StringValue Callee;
+  unsigned Flags;
+
+  bool operator==(const CalledGlobal &Other) const {
+    return CallSite == Other.CallSite && Callee == Other.Callee &&
+           Flags == Other.Flags;
+  }
+};
+
+template <> struct MappingTraits<CalledGlobal> {
+  static void mapping(IO &YamlIO, CalledGlobal &CG) {
+    YamlIO.mapRequired("bb", CG.CallSite.BlockNum);
+    YamlIO.mapRequired("offset", CG.CallSite.Offset);
+    YamlIO.mapRequired("callee", CG.Callee);
+    YamlIO.mapRequired("flags", CG.Flags);
+  }
+};
+
 } // end namespace yaml
 } // end namespace llvm
 
@@ -606,6 +626,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::FixedMachineStackObject)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::CallSiteInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::MachineConstantPoolValue)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::MachineJumpTable::Entry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::CalledGlobal)
 
 namespace llvm {
 namespace yaml {
@@ -764,6 +785,7 @@ struct MachineFunction {
   std::vector<DebugValueSubstitution> DebugValueSubstitutions;
   MachineJumpTable JumpTableInfo;
   std::vector<StringValue> MachineMetadataNodes;
+  std::vector<CalledGlobal> CalledGlobals;
   BlockStringValue Body;
 };
 
@@ -822,6 +844,9 @@ template <> struct MappingTraits<MachineFunction> {
     if (!YamlIO.outputting() || !MF.MachineMetadataNodes.empty())
       YamlIO.mapOptional("machineMetadataNodes", MF.MachineMetadataNodes,
                          std::vector<StringValue>());
+    if (!YamlIO.outputting() || !MF.CalledGlobals.empty())
+      YamlIO.mapOptional("calledGlobals", MF.CalledGlobals,
+                         std::vector<CalledGlobal>());
     YamlIO.mapOptional("body", MF.Body, BlockStringValue());
   }
 };

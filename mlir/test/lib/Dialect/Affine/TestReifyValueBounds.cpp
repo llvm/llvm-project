@@ -150,7 +150,7 @@ static LogicalResult testReifyValueBounds(FunctionOpInterface funcOp,
       return WalkResult::skip();
     }
     Value constOp = rewriter.create<arith::ConstantIndexOp>(
-        op->getLoc(), cast<IntegerAttr>(reified->get<Attribute>()).getInt());
+        op->getLoc(), cast<IntegerAttr>(cast<Attribute>(*reified)).getInt());
     rewriter.replaceOp(op, constOp);
     return WalkResult::skip();
   });

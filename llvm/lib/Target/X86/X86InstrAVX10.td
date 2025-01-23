@@ -447,8 +447,8 @@ multiclass avx10_minmax_scalar<string OpStr, X86VectorVTInfo _, SDNode OpNode,
 
 
 let mayRaiseFPException = 0 in
-defm VMINMAXNEPBF16 : avx10_minmax_packed<"vminmaxnepbf16", avx512vl_bf16_info, X86vminmax>,
-                      AVX512XDIi8Base, EVEX_CD8<16, CD8VF>, TA;
+defm VMINMAXBF16 : avx10_minmax_packed<"vminmaxbf16", avx512vl_bf16_info, X86vminmax>,
+                   AVX512XDIi8Base, EVEX_CD8<16, CD8VF>, TA;
 
 defm VMINMAXPD : avx10_minmax_packed<"vminmaxpd", avx512vl_f64_info, X86vminmax>,
                  avx10_minmax_packed_sae<"vminmaxpd", avx512vl_f64_info, X86vminmaxSae>,
@@ -564,13 +564,13 @@ multiclass avx10_sat_cvt_base<bits<8> Opc, string OpStr, X86SchedWriteWidths sch
   }
 }
 
-defm VCVTNEBF162IBS : avx10_sat_cvt_base<0x69, "vcvtnebf162ibs",
-                                         SchedWriteVecIMul, X86vcvtp2ibs,
-                                         avx512vl_i16_info, avx512vl_bf16_info>,
+defm VCVTBF162IBS : avx10_sat_cvt_base<0x69, "vcvtbf162ibs",
+                                       SchedWriteVecIMul, X86vcvtp2ibs,
+                                       avx512vl_i16_info, avx512vl_bf16_info>,
                       AVX512XDIi8Base, T_MAP5, EVEX_CD8<16, CD8VF>;
-defm VCVTNEBF162IUBS : avx10_sat_cvt_base<0x6b, "vcvtnebf162iubs",
-                                          SchedWriteVecIMul, X86vcvtp2iubs,
-                                          avx512vl_i16_info, avx512vl_bf16_info>,
+defm VCVTBF162IUBS : avx10_sat_cvt_base<0x6b, "vcvtbf162iubs",
+                                        SchedWriteVecIMul, X86vcvtp2iubs,
+                                        avx512vl_i16_info, avx512vl_bf16_info>,
                        AVX512XDIi8Base, T_MAP5, EVEX_CD8<16, CD8VF>;
 
 defm VCVTPH2IBS : avx10_sat_cvt_base<0x69, "vcvtph2ibs", SchedWriteVecIMul,
@@ -603,13 +603,13 @@ defm VCVTPS2IUBS : avx10_sat_cvt_base<0x6b, "vcvtps2iubs", SchedWriteVecIMul,
                                     X86vcvtp2iubsRnd>,
                    AVX512PDIi8Base, T_MAP5, EVEX_CD8<32, CD8VF>;
 
-defm VCVTTNEBF162IBS : avx10_sat_cvt_base<0x68, "vcvttnebf162ibs",
-                                          SchedWriteVecIMul, X86vcvttp2ibs,
-                                          avx512vl_i16_info, avx512vl_bf16_info>,
+defm VCVTTBF162IBS : avx10_sat_cvt_base<0x68, "vcvttbf162ibs",
+                                        SchedWriteVecIMul, X86vcvttp2ibs,
+                                        avx512vl_i16_info, avx512vl_bf16_info>,
                        AVX512XDIi8Base, T_MAP5, EVEX_CD8<16, CD8VF>;
-defm VCVTTNEBF162IUBS : avx10_sat_cvt_base<0x6a, "vcvttnebf162iubs",
-                                           SchedWriteVecIMul, X86vcvttp2iubs,
-                                           avx512vl_i16_info, avx512vl_bf16_info>,
+defm VCVTTBF162IUBS : avx10_sat_cvt_base<0x6a, "vcvttbf162iubs",
+                                         SchedWriteVecIMul, X86vcvttp2iubs,
+                                         avx512vl_i16_info, avx512vl_bf16_info>,
                         AVX512XDIi8Base, T_MAP5, EVEX_CD8<16, CD8VF>;
 
 defm VCVTTPH2IBS : avx10_sat_cvt_base<0x68, "vcvttph2ibs", SchedWriteVecIMul,
@@ -1767,9 +1767,9 @@ multiclass vmovrs_p<bits<8> opc, string OpStr, X86VectorVTInfo _> {
 }
 
 multiclass vmovrs_p_vl<bits<8> opc, string OpStr, AVX512VLVectorVTInfo _Vec> {
-  let Predicates = [HasMOVRS, HasAVX10_2_512] in
+  let Predicates = [HasMOVRS, HasAVX10_2_512, In64BitMode] in
     defm Z : vmovrs_p<opc, OpStr, _Vec.info512>, EVEX_V512;
-  let Predicates = [HasMOVRS, HasAVX10_2] in {
+  let Predicates = [HasMOVRS, HasAVX10_2, In64BitMode] in {
     defm Z128 : vmovrs_p<opc, OpStr, _Vec.info128>, EVEX_V128;
     defm Z256 : vmovrs_p<opc, OpStr, _Vec.info256>, EVEX_V256;
   }

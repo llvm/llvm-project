@@ -662,6 +662,14 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     CmdArgs.push_back("--pgo-function-entry-coverage");
   }
 
+  if (auto *A = Args.getLastArg(options::OPT_ftemporal_profile)) {
+    if (!PGOGenerateArg && !CSPGOGenerateArg)
+      D.Diag(clang::diag::err_drv_argument_only_allowed_with)
+          << A->getSpelling() << "-fprofile-generate or -fcs-profile-generate";
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("--pgo-temporal-instrumentation");
+  }
+
   Arg *PGOGenArg = nullptr;
   if (PGOGenerateArg) {
     assert(!CSPGOGenerateArg);
@@ -8054,7 +8062,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           Args.getLastArg(options::OPT_forder_file_instrumentation)) {
     D.Diag(diag::warn_drv_deprecated_arg)
         << A->getAsString(Args) << /*hasReplacement=*/true
-        << "-mllvm -pgo-temporal-instrumentation";
+        << "-ftemporal-profile";
     CmdArgs.push_back("-forder-file-instrumentation");
     // Enable order file instrumentation when ThinLTO is not on. When ThinLTO is
     // on, we need to pass these flags as linker flags and that will be handled

@@ -138,6 +138,8 @@ struct Opcode_match {
 
 inline Opcode_match m_Opc(unsigned Opcode) { return Opcode_match(Opcode); }
 
+inline Opcode_match m_Undef() { return Opcode_match(ISD::UNDEF); }
+
 template <unsigned NumUses, typename Pattern> struct NUses_match {
   Pattern P;
 
@@ -892,6 +894,10 @@ template <typename Opnd>
 inline UnaryOpc_match<Opnd, true> m_ChainedUnaryOp(unsigned Opc,
                                                    const Opnd &Op) {
   return UnaryOpc_match<Opnd, true>(Opc, Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_BitCast(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::BITCAST, Op);
 }
 
 template <typename Opnd>
