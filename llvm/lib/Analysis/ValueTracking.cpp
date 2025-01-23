@@ -655,11 +655,16 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
     // Warning: This loop can end up being somewhat performance sensitive.
     // We're running this loop for once for each value queried resulting in a
     // runtime of ~O(#assumes * #values).
+    Value *Arg = I->getArgOperand(0);
+    if (match(Arg, m_TruncOrSelf(m_Specific(V))) &&
+        isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+      return true;
+    }
 
     Value *RHS;
     CmpPredicate Pred;
     auto m_V = m_CombineOr(m_Specific(V), m_PtrToInt(m_Specific(V)));
-    if (!match(I->getArgOperand(0), m_c_ICmp(Pred, m_V, m_Value(RHS))))
+    if (!match(Arg, m_c_ICmp(Pred, m_V, m_Value(RHS))))
       continue;
 
     if (cmpExcludesZero(Pred, RHS) && isValidAssumeForContext(I, Q.CxtI, Q.DT))
@@ -852,8 +857,6 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
   if (!Q.AC)
     return;
 
-  unsigned BitWidth = Known.getBitWidth();
-
   // Note that the patterns below need to be kept in sync with the code
   // in AssumptionCache::updateAffectedValues.
 
@@ -887,17 +890,14 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
 
     Value *Arg = I->getArgOperand(0);
 
-    if (Arg == V && isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
-      assert(BitWidth == 1 && "assume operand is not i1?");
-      (void)BitWidth;
-      Known.setAllOnes();
+    if (match(Arg, m_TruncOrSelf(m_Specific(V))) &&
+        isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+      Known.One.setBit(0);
       return;
     }
-    if (match(Arg, m_Not(m_Specific(V))) &&
+    if (match(Arg, m_Not(m_TruncOrSelf(m_Specific(V)))) &&
         isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
-      assert(BitWidth == 1 && "assume operand is not i1?");
-      (void)BitWidth;
-      Known.setAllZero();
+      Known.Zero.setBit(0);
       return;
     }
 
