@@ -436,6 +436,12 @@ public:
     if ((CurrentSrcIdx & 1) != 1 || CurrentSrcIdx > CopyLike.getNumOperands())
       return false;
 
+    // Do not introduce new subregister uses in a reg_sequence. Until composing
+    // subregister indices is supported while folding, we're just blocking
+    // folding of subregister copies later in the function.
+    if (NewSubReg)
+      return false;
+
     MachineOperand &MO = CopyLike.getOperand(CurrentSrcIdx);
     MO.setReg(NewReg);
     MO.setSubReg(NewSubReg);
