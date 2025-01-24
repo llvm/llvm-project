@@ -226,11 +226,11 @@ entry:
 ; GCN-NEXT: s_addc_u32 s5, s5, sibling_call_i32_fastcc_i32_i32@rel32@hi+12
 ; GCN-NEXT: v_readlane_b32 s31, [[CSRV]], 1
 ; GCN-NEXT: v_readlane_b32 s30, [[CSRV]], 0
+; GCN-NEXT: s_mov_b32 s32, s33
 ; GCN-NEXT: v_readlane_b32 [[FP_SCRATCH_COPY:s[0-9]+]], [[CSRV]], 2
 ; GCN-NEXT: s_or_saveexec_b64 s[8:9], -1
 ; GCN-NEXT: buffer_load_dword [[CSRV]], off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
 ; GCN-NEXT: s_mov_b64 exec, s[8:9]
-; GCN-NEXT: s_addk_i32 s32, 0xfc00
 ; GCN-NEXT: s_mov_b32 s33, [[FP_SCRATCH_COPY]]
 ; GCN-NEXT: s_setpc_b64 s[4:5]
 define fastcc i32 @sibling_call_i32_fastcc_i32_i32_other_call(i32 %a, i32 %b, i32 %c) #1 {

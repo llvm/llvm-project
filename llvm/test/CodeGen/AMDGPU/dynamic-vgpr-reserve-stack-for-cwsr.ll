@@ -235,12 +235,13 @@ define amdgpu_gfx void @amdgpu_gfx() #0 {
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
+; CHECK-NEXT:    s_wait_alu 0xfffe
+; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    v_readlane_b32 s0, v40, 2
 ; CHECK-NEXT:    s_or_saveexec_b32 s1, -1
 ; CHECK-NEXT:    scratch_load_b32 v40, off, s33 offset:4 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s1
-; CHECK-NEXT:    s_add_co_i32 s32, s32, -16
 ; CHECK-NEXT:    s_mov_b32 s33, s0
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    s_wait_alu 0xfffe
