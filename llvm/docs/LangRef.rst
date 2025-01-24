@@ -2552,6 +2552,17 @@ For example:
     attempt is made to diagnose unsupported uses. Currently this
     attribute is respected by the AMDGPU and NVPTX backends.
 
+``"denormal-fp-math-bf16"``
+    Same as ``"denormal-fp-math"``, but only controls the behavior of
+    the Brain Float16 type (or vectors of Brain Float16). If both are
+    are present, this overrides ``"denormal-fp-math"``. Not all targets
+    support separately setting the denormal mode per type, and no
+    attempt is made to diagnose unsupported uses. Currently this
+    attribute is respected by the X86 backend.
+
+    If this is attribute is not specified, the default is
+    ``"preserve-sign,preserve-sign"``.
+
 ``"thunk"``
     This attribute indicates that the function will delegate to some other
     function with a tail call. The prototype of a thunk should not be used for

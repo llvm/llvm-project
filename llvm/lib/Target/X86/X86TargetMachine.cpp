@@ -306,6 +306,15 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
     }
   }
 
+  // Extract denormal-fp-math-bf16 attribute.
+  bool DenormalMathFTZDAZBF16 = true;
+  Attribute DenormalBF16MathAttr = F.getFnAttribute("denormal-fp-math-bf16");
+  if (DenormalBF16MathAttr.isValid()) {
+    StringRef Val = DenormalBF16MathAttr.getValueAsString();
+    if (Val != "" && Val != "preserve-sign,preserve-sign")
+      DenormalMathFTZDAZBF16 = false;
+  }
+
   // Add CPU to the Key.
   Key += CPU;
 
@@ -341,7 +350,7 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
     I = std::make_unique<X86Subtarget>(
         TargetTriple, CPU, TuneCPU, FS, *this,
         MaybeAlign(F.getParent()->getOverrideStackAlignment()),
-        PreferVectorWidthOverride, RequiredVectorWidth);
+        PreferVectorWidthOverride, RequiredVectorWidth, DenormalMathFTZDAZBF16);
   }
   return I.get();
 }

@@ -73,6 +73,7 @@ CGOPT(bool, EnableNoTrappingFPMath)
 CGOPT(bool, EnableAIXExtendedAltivecABI)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFPMath)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFP32Math)
+CGOPT(DenormalMode::DenormalModeKind, DenormalBF16Math)
 CGOPT(bool, EnableHonorSignDependentRoundingFPMath)
 CGOPT(FloatABI::ABIType, FloatABIForCalls)
 CGOPT(FPOpFusion::FPOpFusionMode, FuseFPOps)
@@ -280,6 +281,13 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
     cl::init(DenormalMode::Invalid),
     DenormFlagEnumOptions);
   CGBINDOPT(DenormalFP32Math);
+
+  static cl::opt<DenormalMode::DenormalModeKind> DenormalBF16Math(
+      "denormal-fp-math-bf16",
+      cl::desc("Select which denormal numbers the code is permitted to require "
+               "for bfloat"),
+      cl::init(DenormalMode::PreserveSign), DenormFlagEnumOptions);
+  CGBINDOPT(DenormalBF16Math);
 
   static cl::opt<bool> EnableHonorSignDependentRoundingFPMath(
       "enable-sign-dependent-rounding-fp-math", cl::Hidden,
@@ -722,6 +730,14 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
     NewAttrs.addAttribute(
       "denormal-fp-math-f32",
       DenormalMode(DenormKind, DenormKind).str());
+  }
+
+  if (DenormalBF16MathView->getNumOccurrences() > 0 &&
+      !F.hasFnAttribute("denormal-fp-math-bf16")) {
+    // FIXME: Command line flag should expose separate input/output modes.
+    DenormalMode::DenormalModeKind DenormKind = getDenormalBF16Math();
+    NewAttrs.addAttribute("denormal-fp-math-bf16",
+                          DenormalMode(DenormKind, DenormKind).str());
   }
 
   if (TrapFuncNameView->getNumOccurrences() > 0)
