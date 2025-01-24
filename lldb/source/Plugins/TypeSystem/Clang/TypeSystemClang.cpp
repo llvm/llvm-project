@@ -7862,9 +7862,8 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
         getASTContext(), mangled_name, /*literal=*/false));
   }
 
-  auto params =
-      CreateParameterDeclarations(cxx_method_decl, *method_function_prototype);
-  cxx_method_decl->setParams(params);
+  cxx_method_decl->setParams(
+      CreateParameterDeclarations(cxx_method_decl, *method_function_prototype));
 
   AddAccessSpecifierDecl(cxx_record_decl, getASTContext(),
                          GetCXXRecordDeclAccess(cxx_record_decl),
