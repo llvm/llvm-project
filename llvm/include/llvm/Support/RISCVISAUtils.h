@@ -14,7 +14,9 @@
 #define LLVM_SUPPORT_RISCVISAUTILS_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Compiler.h"
+#include <cassert>
 #include <map>
 #include <string>
 
@@ -42,6 +44,23 @@ struct ExtensionComparator {
 /// in canonical order of extension.
 typedef std::map<std::string, ExtensionVersion, ExtensionComparator>
     OrderedExtensionMap;
+
+enum class ZicfilpLabelSchemeKind {
+  Invalid,
+  Unlabeled,
+  FuncSig,
+};
+
+// See clang::getCFBranchLabelSchemeFlagVal() for possible CFBranchLabelScheme
+inline ZicfilpLabelSchemeKind
+getZicfilpLabelScheme(const StringRef CFBranchLabelScheme) {
+  const auto Ret = StringSwitch<ZicfilpLabelSchemeKind>(CFBranchLabelScheme)
+                       .Case("unlabeled", ZicfilpLabelSchemeKind::Unlabeled)
+                       .Case("func-sig", ZicfilpLabelSchemeKind::FuncSig)
+                       .Default(ZicfilpLabelSchemeKind::Invalid);
+  assert(Ret != ZicfilpLabelSchemeKind::Invalid);
+  return Ret;
+}
 
 } // namespace RISCVISAUtils
 
