@@ -548,11 +548,9 @@ def CC_X86_64_C : CallingConv<[
   CCIfType<[i32], CCAssignToReg<[EDI, ESI, EDX, ECX, R8D, R9D]>>,
 
   // i128 can be either passed in two i64 registers, or on the stack, but
-  // not split across register and stack. As such, do not allow using R9
-  // for a split i64.
+  // not split across register and stack. Handle this with a custom function.
   CCIfType<[i64],
-           CCIfSplit<CCAssignToReg<[RDI, RSI, RDX, RCX, R8]>>>,
-  CCIfType<[i64], CCIfSplit<CCAssignToStackWithShadow<8, 16, [R9]>>>,
+           CCIfConsecutiveRegs<CCCustom<"CC_X86_64_I128">>>,
 
   CCIfType<[i64], CCAssignToReg<[RDI, RSI, RDX, RCX, R8 , R9 ]>>,
 

@@ -1488,12 +1488,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
     // Add additional casts to enforce pointers in zero address space
     TIDAddr = new AddrSpaceCastInst(
         TIDAddrAlloca, PointerType ::get(M.getContext(), 0), "tid.addr.ascast");
-    TIDAddr->insertAfter(TIDAddrAlloca);
+    TIDAddr->insertAfter(TIDAddrAlloca->getIterator());
     ToBeDeleted.push_back(TIDAddr);
     ZeroAddr = new AddrSpaceCastInst(ZeroAddrAlloca,
                                      PointerType ::get(M.getContext(), 0),
                                      "zero.addr.ascast");
-    ZeroAddr->insertAfter(ZeroAddrAlloca);
+    ZeroAddr->insertAfter(ZeroAddrAlloca->getIterator());
     ToBeDeleted.push_back(ZeroAddr);
   }
 

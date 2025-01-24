@@ -6219,7 +6219,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     // TODO: Try to salvage debug information here.
     CloneI->setDebugLoc(DebugLoc());
     VMap[&I] = CloneI;
-    CloneI->insertBefore(CtxI);
+    CloneI->insertBefore(CtxI->getIterator());
     RemapInstruction(CloneI, VMap);
     return CloneI;
   }
@@ -12421,7 +12421,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       CallInst *NewCall = nullptr;
       if (isLegalToPromote(*CB, NewCallee)) {
         auto *CBClone = cast<CallBase>(CB->clone());
-        CBClone->insertBefore(ThenTI);
+        CBClone->insertBefore(ThenTI->getIterator());
         NewCall = &cast<CallInst>(promoteCall(*CBClone, NewCallee, &RetBC));
         NumIndirectCallsPromoted++;
       } else {
@@ -12546,7 +12546,7 @@ static bool makeChange(Attributor &A, InstType *MemInst, const Use &U,
   }
 
   Instruction *CastInst = new AddrSpaceCastInst(OriginalValue, NewPtrTy);
-  CastInst->insertBefore(MemInst);
+  CastInst->insertBefore(MemInst->getIterator());
   A.changeUseAfterManifest(const_cast<Use &>(U), *CastInst);
   return true;
 }

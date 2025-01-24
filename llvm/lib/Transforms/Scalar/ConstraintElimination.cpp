@@ -1353,7 +1353,7 @@ static void generateReproducer(CmpInst *Cond, Module *M,
       Instruction *Cloned = I->clone();
       Old2New[I] = Cloned;
       Old2New[I]->setName(I->getName());
-      Cloned->insertBefore(&*Builder.GetInsertPoint());
+      Cloned->insertBefore(Builder.GetInsertPoint());
       Cloned->dropUnknownNonDebugMetadata();
       Cloned->setDebugLoc({});
     }
