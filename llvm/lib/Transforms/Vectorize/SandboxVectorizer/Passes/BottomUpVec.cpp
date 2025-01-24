@@ -54,7 +54,7 @@ static SmallVector<Value *, 4> getOperand(ArrayRef<Value *> Bndl,
 /// of BB if no instruction found in \p Vals.
 static BasicBlock::iterator getInsertPointAfterInstrs(ArrayRef<Value *> Vals,
                                                       BasicBlock *BB) {
-  auto *BotI = VecUtils::getLastPHIOrSelf(VecUtils::getLowest(Vals));
+  auto *BotI = VecUtils::getLastPHIOrSelf(VecUtils::getLowest(Vals, BB));
   if (BotI == nullptr)
     // We are using BB->begin() (or after PHIs) as the fallback insert point.
     return BB->empty()
