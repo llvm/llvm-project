@@ -65,9 +65,6 @@ enum ActionKind {
   /// Translate input source into HTML.
   EmitHTML,
 
-  /// Emit a .cir file
-  EmitCIR,
-
   /// Emit a .ll file.
   EmitLLVM,
 
@@ -415,10 +412,6 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned GenReducedBMI : 1;
 
-  /// Use Clang IR pipeline to emit code
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned UseClangIRPipeline : 1;
-
   CodeCompleteOptions CodeCompleteOpts;
 
   /// Specifies the output format of the AST.
@@ -606,8 +599,7 @@ public:
         EmitSymbolGraph(false), EmitExtensionSymbolGraphs(false),
         EmitSymbolGraphSymbolLabelsForTesting(false),
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
-        UseClangIRPipeline(false), TimeTraceGranularity(500),
-        TimeTraceVerbose(false) {}
+        TimeTraceGranularity(500), TimeTraceVerbose(false) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.
