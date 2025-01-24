@@ -25,7 +25,6 @@
 #  include "tsan_interceptors.h"
 #  include "tsan_interface.h"
 #  include "tsan_interface_ann.h"
-#  include "tsan_spinlock_defs_mac.h"
 
 #  if defined(__has_include) && __has_include(<xpc/xpc.h>)
 #    include <xpc/xpc.h>
@@ -196,6 +195,17 @@ TSAN_INTERCEPTOR(void *, OSAtomicFifoDequeue, OSFifoQueueHead *list,
 
 #  endif
 
+// If `OSSPINLOCK_USE_INLINED=1` is set, then SDK headers don't declare these
+// as functions, but macros that call non-deprecated APIs.  Undefine these
+// macros so they don't interfere with the interceptor machinery.
+#  undef OSSpinLockLock
+#  undef OSSpinLockTry
+#  undef OSSpinLockUnlock
+
+#  pragma clang diagnostic push
+// OSSpinLock* functions are deprecated.
+#  pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 TSAN_INTERCEPTOR(void, OSSpinLockLock, volatile OSSpinLock *lock) {
   CHECK(!cur_thread()->is_dead);
   if (!cur_thread()->is_inited) {
@@ -227,6 +237,7 @@ TSAN_INTERCEPTOR(void, OSSpinLockUnlock, volatile OSSpinLock *lock) {
   Release(thr, pc, (uptr)lock);
   REAL(OSSpinLockUnlock)(lock);
 }
+#  pragma clang diagnostic pop  // OSSpinLock* deprecation
 
 TSAN_INTERCEPTOR(void, os_lock_lock, void *lock) {
   CHECK(!cur_thread()->is_dead);
