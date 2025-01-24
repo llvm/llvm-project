@@ -54,7 +54,7 @@ jobs:
           fi
 
           echo blah1
-          echo "${windows_projects}" | tr '\n' ';'
+          echo "${windows_projects}" | tr '\r\n' ';'
           echo blah2
 
           echo "Building projects: ${windows_projects}"
