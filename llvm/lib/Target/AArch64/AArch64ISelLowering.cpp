@@ -4627,9 +4627,7 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
 
   // Expand cases where the result type is BF16 but we don't have hardware
   // instructions to lower it.
-  if (VT.getScalarType() == MVT::bf16 &&
-      !((Subtarget->hasNEON() || Subtarget->hasSME()) &&
-        Subtarget->hasBF16())) {
+  if (VT.getScalarType() == MVT::bf16 && !Subtarget->hasBF16()) {
     SDLoc dl(Op);
     SDValue Narrow = SrcVal;
     SDValue NaN;
@@ -4643,7 +4641,9 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
         NaN = DAG.getNode(ISD::OR, dl, I32, Narrow,
                           DAG.getConstant(0x400000, dl, I32));
       }
-    } else if (SrcVT.getScalarType() == MVT::f64) {
+    } else if (SrcVT.getScalarType() == MVT::f64 && Subtarget->hasNEON()) {
+      assert((!VT.isVector() || Subtarget->isNeonAvailable()) &&
+             "FP_ROUND should have been scalarised");
       Narrow = DAG.getNode(AArch64ISD::FCVTXN, dl, F32, Narrow);
       Narrow = DAG.getNode(ISD::BITCAST, dl, I32, Narrow);
     } else {
@@ -23832,9 +23832,10 @@ static SDValue performSTORECombine(SDNode *N,
   SDValue Ptr = ST->getBasePtr();
   EVT ValueVT = Value.getValueType();
 
-  auto hasValidElementTypeForFPTruncStore = [](EVT VT) {
+  auto hasValidElementTypeForFPTruncStore = [](EVT VT, EVT MemVT) {
     EVT EltVT = VT.getVectorElementType();
-    return EltVT == MVT::f32 || EltVT == MVT::f64;
+    EVT MemEltVT = MemVT.getVectorElementType();
+    return MemEltVT != MVT::bf16 && (EltVT == MVT::f32 || EltVT == MVT::f64);
   };
 
   if (SDValue Res = combineI8TruncStore(ST, DAG, Subtarget))
@@ -23849,7 +23850,8 @@ static SDValue performSTORECombine(SDNode *N,
       Subtarget->useSVEForFixedLengthVectors() &&
       ValueVT.isFixedLengthVector() &&
       ValueVT.getFixedSizeInBits() >= Subtarget->getMinSVEVectorSizeInBits() &&
-      hasValidElementTypeForFPTruncStore(Value.getOperand(0).getValueType()))
+      hasValidElementTypeForFPTruncStore(Value.getOperand(0).getValueType(),
+                                         ST->getMemoryVT()))
     return DAG.getTruncStore(Chain, SDLoc(N), Value.getOperand(0), Ptr,
                              ST->getMemoryVT(), ST->getMemOperand());
 
