@@ -1020,11 +1020,41 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 
 void RISCVAsmPrinter::emitNoteGnuProperty(const Module &M) {
   assert(TM.getTargetTriple().isOSBinFormatELF() && "invalid binary format");
+  uint32_t GnuProps = 0;
   if (const Metadata *const Flag = M.getModuleFlag("cf-protection-return");
+      Flag && !mdconst::extract<ConstantInt>(Flag)->isZero())
+    GnuProps |= ELF::GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS;
+
+  if (const Metadata *const Flag = M.getModuleFlag("cf-protection-branch");
       Flag && !mdconst::extract<ConstantInt>(Flag)->isZero()) {
-    auto &RTS = static_cast<RISCVTargetELFStreamer &>(getTargetStreamer());
-    RTS.emitNoteGnuPropertySection(ELF::GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS);
+    using namespace llvm::RISCVISAUtils;
+    const Metadata *const CFBranchLabelSchemeFlag =
+        M.getModuleFlag("cf-branch-label-scheme");
+    assert(CFBranchLabelSchemeFlag &&
+           "cf-protection=branch should come with cf-branch-label-scheme=... "
+           "on RISC-V targets");
+    const StringRef CFBranchLabelScheme =
+        cast<MDString>(CFBranchLabelSchemeFlag)->getString();
+    switch (getZicfilpLabelScheme(CFBranchLabelScheme)) {
+    case ZicfilpLabelSchemeKind::Invalid:
+      report_fatal_error("invalid RISC-V Zicfilp label scheme");
+    case ZicfilpLabelSchemeKind::Unlabeled:
+      GnuProps |= ELF::GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED;
+      break;
+    case ZicfilpLabelSchemeKind::FuncSig:
+      // TODO: Emit the func-sig bit after the feature is implemented
+      report_fatal_error("the complete func-sig label scheme feature is not "
+                         "implemented yet",
+                         /*GenCrashDiag=*/false);
+      break;
+    }
   }
+
+  if (!GnuProps)
+    return;
+
+  auto &RTS = static_cast<RISCVTargetELFStreamer &>(getTargetStreamer());
+  RTS.emitNoteGnuPropertySection(GnuProps);
 }
 
 static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
