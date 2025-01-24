@@ -16890,7 +16890,7 @@ static bool matchSelectAddSub(SDValue TrueVal, SDValue FalseVal, bool &SwapCC) {
 
   SDValue A = FalseVal.getOperand(0);
   SDValue B = FalseVal.getOperand(1);
-  // Add is associative, so check both orders
+  // Add is commutative, so check both orders
   return ((TrueVal.getOperand(0) == A && TrueVal.getOperand(1) == B) ||
           (TrueVal.getOperand(1) == A && TrueVal.getOperand(0) == B));
 }
