@@ -23,11 +23,6 @@ _warningFlags = [
     "-Wundef",
     "-Wunused-template",
     "-Wno-unused-command-line-argument",
-    "-Wno-attributes",
-    "-Wno-pessimizing-move",
-    "-Wno-noexcept-type",
-    "-Wno-aligned-allocation-unavailable",
-    "-Wno-atomic-alignment",
     "-Wno-reserved-module-identifier",
     '-Wdeprecated-copy',
     '-Wdeprecated-copy-dtor',
@@ -41,10 +36,7 @@ _warningFlags = [
     # GCC warns about this when TEST_IS_CONSTANT_EVALUATED is used on a non-constexpr
     # function. (This mostly happens in C++11 mode.)
     # TODO(mordante) investigate a solution for this issue.
-    "-Wno-tautological-compare",
-    # -Wstringop-overread and -Wstringop-overflow seem to be a bit buggy currently
-    "-Wno-stringop-overread",
-    "-Wno-stringop-overflow",
+
     # These warnings should be enabled in order to support the MSVC
     # team using the test suite; They enable the warnings below and
     # expect the test suite to be clean.
@@ -57,20 +49,10 @@ _warningFlags = [
     # Disable warnings for extensions used in C++03
     "-Wno-local-type-template-args",
     "-Wno-c++11-extensions",
+    "-Wno-ignored-attributes",
+    "-Wno-attributes",
+    "-Wno-atomic-alignment"
 
-    # TODO(philnik) This fails with the PSTL.
-    "-Wno-unknown-pragmas",
-    # Don't fail compilation in case the compiler fails to perform the requested
-    # loop vectorization.
-    "-Wno-pass-failed",
-
-    # TODO: Find out why GCC warns in lots of places (is this a problem with always_inline?)
-    "-Wno-dangling-reference",
-    "-Wno-mismatched-new-delete",
-    "-Wno-redundant-move",
-
-    # This doesn't make sense in real code, but we have to test it because the standard requires us to not break
-    "-Wno-self-move",
 ]
 
 _allStandards = ["c++03", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26"]
