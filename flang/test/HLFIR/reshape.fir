@@ -71,3 +71,16 @@ func.func @reshape6(%arg0: !fir.class<!fir.heap<!fir.array<?x!fir.type<whatever>
 // CHECK:           %[[VAL_2:.*]] = hlfir.reshape %[[VAL_0]] %[[VAL_1]] pad %[[VAL_0]] : (!fir.class<!fir.heap<!fir.array<?x!fir.type<whatever>>>>, !hlfir.expr<1xi32>, !fir.class<!fir.heap<!fir.array<?x!fir.type<whatever>>>>) -> !hlfir.expr<?x!fir.type<whatever>?>
 // CHECK:           return %[[VAL_2]] : !hlfir.expr<?x!fir.type<whatever>?>
 // CHECK:         }
+
+// Allow character LEN mismatch for ARRAY/PAD and the result
+func.func @reshape7(%arg0: !hlfir.expr<1x!fir.char<2,2>>, %arg1: !hlfir.expr<1xi32>, %arg2: !hlfir.expr<1x!fir.char<2,1>>) -> !hlfir.expr<?x!fir.char<2,3>> {
+  %0 = hlfir.reshape %arg0 %arg1 pad %arg2 : (!hlfir.expr<1x!fir.char<2,2>>, !hlfir.expr<1xi32>, !hlfir.expr<1x!fir.char<2,1>>) -> !hlfir.expr<?x!fir.char<2,3>>
+  return %0 : !hlfir.expr<?x!fir.char<2,3>>
+}
+// CHECK-LABEL:   func.func @reshape7(
+// CHECK-SAME:                        %[[VAL_0:.*]]: !hlfir.expr<1x!fir.char<2,2>>,
+// CHECK-SAME:                        %[[VAL_1:.*]]: !hlfir.expr<1xi32>,
+// CHECK-SAME:                        %[[VAL_2:.*]]: !hlfir.expr<1x!fir.char<2>>) -> !hlfir.expr<?x!fir.char<2,3>> {
+// CHECK:           %[[VAL_3:.*]] = hlfir.reshape %[[VAL_0]] %[[VAL_1]] pad %[[VAL_2]] : (!hlfir.expr<1x!fir.char<2,2>>, !hlfir.expr<1xi32>, !hlfir.expr<1x!fir.char<2>>) -> !hlfir.expr<?x!fir.char<2,3>>
+// CHECK:           return %[[VAL_3]] : !hlfir.expr<?x!fir.char<2,3>>
+// CHECK:         }
