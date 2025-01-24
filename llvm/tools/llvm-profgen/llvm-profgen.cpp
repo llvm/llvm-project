@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ErrorHandling.h"
+#include "PGOAccuracyMetrics.h"
 #include "PerfReader.h"
 #include "ProfileGenerator.h"
 #include "ProfiledBinary.h"
@@ -66,6 +67,11 @@ static cl::opt<std::string> DebugBinPath(
     cl::desc("Path of debug info binary, llvm-profgen will load the DWARF info "
              "from it instead of the executable binary."),
     cl::cat(ProfGenCategory));
+
+static cl::opt<bool>
+    EmitPGOAccuracyMetrics("pgo-accuracy-metrics", cl::init(false),
+                           cl::desc("Print PGO accuracy metrics"),
+                           cl::cat(ProfGenCategory));
 
 extern cl::opt<bool> ShowDisassemblyOnly;
 extern cl::opt<bool> ShowSourceLocations;
@@ -178,6 +184,13 @@ int main(int argc, const char *argv[]) {
         PerfReaderBase::create(Binary.get(), PerfFile, PIDFilter);
     // Parse perf events and samples
     Reader->parsePerfTraces();
+
+    if (EmitPGOAccuracyMetrics) {
+      PGOAccuracyMetrics PGOAM(Reader->getSampleCounters(),
+                               Binary->getBBAddrMaps(),
+                               Binary->getPGOAnalysisMaps());
+      PGOAM.emitPGOAccuracyMetrics();
+    }
 
     if (SkipSymbolization)
       return EXIT_SUCCESS;
