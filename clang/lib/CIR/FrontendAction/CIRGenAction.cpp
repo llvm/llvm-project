@@ -66,6 +66,9 @@ public:
         MlirModule->print(*OutputStream, Flags);
       }
       break;
+    default:
+      llvm_unreachable("NYI: CIRGenAction other than EmitCIR");
+      break;
     }
   }
 };
