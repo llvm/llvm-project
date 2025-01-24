@@ -423,8 +423,6 @@ static CXXRecordDecl *createHostLayoutStruct(Sema &S,
 
   // copy base struct, create HLSL Buffer compatible version if needed
   if (unsigned NumBases = StructDecl->getNumBases()) {
-    // FIXME: Filter out interfaces from the list of base classes
-    // (llvm/llvm-project#124178)
     assert(NumBases == 1 && "HLSL supports only one base type");
     CXXBaseSpecifier Base = *StructDecl->bases_begin();
     CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
