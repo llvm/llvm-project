@@ -119,7 +119,7 @@ std::optional<std::string> PosixUserIDResolver::DoGetUserName(id_t uid) {
 }
 
 std::optional<std::string> PosixUserIDResolver::DoGetGroupName(id_t gid) {
-#ifndef __ANDROID__
+#if !defined(__ANDROID__) || __ANDROID_API__ >= 24
   char group_buffer[PATH_MAX];
   size_t group_buffer_size = sizeof(group_buffer);
   struct group group_info;
