@@ -2076,7 +2076,7 @@ static void findWasmUnwindDestinations(
     SmallVectorImpl<std::pair<MachineBasicBlock *, BranchProbability>>
         &UnwindDests) {
   while (EHPadBB) {
-    const Instruction *Pad = EHPadBB->getFirstNonPHI();
+    BasicBlock::const_iterator Pad = EHPadBB->getFirstNonPHIIt();
     if (isa<CleanupPadInst>(Pad)) {
       // Stop on cleanup pads.
       UnwindDests.emplace_back(FuncInfo.getMBB(EHPadBB), Prob);
@@ -2124,7 +2124,7 @@ static void findUnwindDestinations(
   }
 
   while (EHPadBB) {
-    const Instruction *Pad = EHPadBB->getFirstNonPHI();
+    BasicBlock::const_iterator Pad = EHPadBB->getFirstNonPHIIt();
     BasicBlock *NewEHPadBB = nullptr;
     if (isa<LandingPadInst>(Pad)) {
       // Stop on landingpads. They are not funclets.

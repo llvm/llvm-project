@@ -316,10 +316,9 @@ Value *VPTransformState::get(VPValue *Def, bool NeedsScalar) {
   // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
   // will directly follow the scalar definitions.
   auto OldIP = Builder.saveIP();
-  auto NewIP =
-      isa<PHINode>(LastInst)
-          ? BasicBlock::iterator(LastInst->getParent()->getFirstNonPHI())
-          : std::next(BasicBlock::iterator(LastInst));
+  auto NewIP = isa<PHINode>(LastInst)
+                   ? LastInst->getParent()->getFirstNonPHIIt()
+                   : std::next(BasicBlock::iterator(LastInst));
   Builder.SetInsertPoint(&*NewIP);
 
   // However, if we are vectorizing, we need to construct the vector values.

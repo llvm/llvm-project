@@ -2108,7 +2108,7 @@ insertDbgVariableRecordsForPHIs(BasicBlock *BB,
   for (auto PHI : InsertedPHIs) {
     BasicBlock *Parent = PHI->getParent();
     // Avoid inserting a debug-info record into an EH block.
-    if (Parent->getFirstNonPHI()->isEHPad())
+    if (Parent->getFirstNonPHIIt()->isEHPad())
       continue;
     for (auto VI : PHI->operand_values()) {
       auto V = DbgValueMap.find(VI);
@@ -2174,7 +2174,7 @@ void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
   for (auto *PHI : InsertedPHIs) {
     BasicBlock *Parent = PHI->getParent();
     // Avoid inserting an intrinsic into an EH block.
-    if (Parent->getFirstNonPHI()->isEHPad())
+    if (Parent->getFirstNonPHIIt()->isEHPad())
       continue;
     for (auto *VI : PHI->operand_values()) {
       auto V = DbgValueMap.find(VI);
@@ -3211,7 +3211,7 @@ static bool markAliveBlocks(Function &F,
         BasicBlock *HandlerBB = *I;
         if (DTU)
           ++NumPerSuccessorCases[HandlerBB];
-        auto *CatchPad = cast<CatchPadInst>(HandlerBB->getFirstNonPHI());
+        auto *CatchPad = cast<CatchPadInst>(HandlerBB->getFirstNonPHIIt());
         if (!HandlerSet.insert({CatchPad, Empty}).second) {
           if (DTU)
             --NumPerSuccessorCases[HandlerBB];

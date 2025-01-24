@@ -673,7 +673,7 @@ public:
   void replaceSuccessorsPhiUsesWith(BasicBlock *New);
 
   /// Return true if this basic block is an exception handling block.
-  bool isEHPad() const { return getFirstNonPHI()->isEHPad(); }
+  bool isEHPad() const { return getFirstNonPHIIt()->isEHPad(); }
 
   /// Return true if this basic block is a landing pad.
   ///
