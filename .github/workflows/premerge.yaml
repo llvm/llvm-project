@@ -27,6 +27,9 @@ jobs:
         uses: hendrikmuhs/ccache-action@v1.2.14
         with:
           max-size: "2000M"
+      - name: Install zstd
+        run: |
+          sudo apt-get install zstd
       - name: Restore ccache from previous PR run
         uses: ./.github/workflows/pr-ccache-restore
         with:
