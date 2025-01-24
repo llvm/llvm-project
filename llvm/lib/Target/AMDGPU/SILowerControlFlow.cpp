@@ -216,6 +216,21 @@ static bool isSimpleIf(const MachineInstr &MI, const MachineRegisterInfo *MRI) {
   return true;
 }
 
+/// Mark Succ as an unlikely successor of MBB.
+static void setSuccessorUnlikely(MachineBasicBlock &MBB,
+                                 const MachineBasicBlock *Succ) {
+  auto **E = MBB.succ_end();
+  bool Found = false;
+  for (auto **SI = MBB.succ_begin(); SI != E; ++SI) {
+    if (*SI == Succ) {
+      MBB.setSuccProbability(SI, BranchProbability::getZero());
+      Found = true;
+    }
+  }
+  assert(Found && "Succ must be a successor of MBB!");
+  MBB.normalizeSuccProbs();
+}
+
 void SILowerControlFlow::emitIf(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
@@ -290,12 +305,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
 
   if (LikelyDivergent) {
     MachineBasicBlock *ExeczDest = MI.getOperand(3).getMBB();
-    auto **E = MBB.succ_end();
-    for (auto **SI = MBB.succ_begin(); SI != E; ++SI) {
-      if (*SI == ExeczDest)
-        MBB.setSuccProbability(SI, BranchProbability::getZero());
-    }
-    MBB.normalizeSuccProbs();
+    setSuccessorUnlikely(MBB, ExeczDest);
   }
 
   if (!LIS) {
@@ -369,14 +379,8 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
       BuildMI(MBB, ElsePt, DL, TII->get(AMDGPU::S_CBRANCH_EXECZ))
           .addMBB(DestBB);
 
-  if (LikelyDivergent) {
-    auto **E = MBB.succ_end();
-    for (auto **SI = MBB.succ_begin(); SI != E; ++SI) {
-      if (*SI == DestBB)
-        MBB.setSuccProbability(SI, BranchProbability::getZero());
-    }
-    MBB.normalizeSuccProbs();
-  }
+  if (LikelyDivergent)
+    setSuccessorUnlikely(MBB, DestBB);
 
   if (!LIS) {
     MI.eraseFromParent();
