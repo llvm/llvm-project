@@ -1759,8 +1759,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPDispatchConstruct &x) {
 
   auto it{block.begin()};
   bool passChecks{false};
-  if (const parser::AssignmentStmt *assignStmt{
-          parser::Unwrap<parser::AssignmentStmt>(*it)}) {
+  if (const parser::AssignmentStmt *
+      assignStmt{parser::Unwrap<parser::AssignmentStmt>(*it)}) {
     if (parser::Unwrap<parser::FunctionReference>(assignStmt->t)) {
       passChecks = true;
     }

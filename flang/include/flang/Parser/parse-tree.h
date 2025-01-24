@@ -4783,8 +4783,8 @@ struct OpenMPConstruct {
   std::variant<OpenMPStandaloneConstruct, OpenMPSectionsConstruct,
       OpenMPSectionConstruct, OpenMPLoopConstruct, OpenMPBlockConstruct,
       OpenMPAtomicConstruct, OpenMPDeclarativeAllocate, OpenMPDispatchConstruct,
-      OpenMPUtilityConstruct, OpenMPExecutableAllocate, OpenMPAllocatorsConstruct,
-      OpenMPCriticalConstruct>
+      OpenMPUtilityConstruct, OpenMPExecutableAllocate,
+      OpenMPAllocatorsConstruct, OpenMPCriticalConstruct>
       u;
 };
 
