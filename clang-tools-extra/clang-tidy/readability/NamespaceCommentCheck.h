@@ -34,6 +34,7 @@ private:
   llvm::Regex NamespaceCommentPattern;
   const unsigned ShortNamespaceLines;
   const unsigned SpacesBeforeComments;
+  const bool AllowNoNamespaceComments;
   llvm::SmallVector<SourceLocation, 4> Ends;
 };
 
