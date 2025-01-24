@@ -238,7 +238,7 @@
 "`LWG3313 <https://wg21.link/LWG3313>`__","``join_view::iterator::operator--``\  is incorrectly constrained","2020-02 (Prague)","|Complete|","14",""
 "`LWG3314 <https://wg21.link/LWG3314>`__","Is stream insertion behavior locale dependent when ``Period::type``\  is ``micro``\ ?","2020-02 (Prague)","|Complete|","16",""
 "`LWG3315 <https://wg21.link/LWG3315>`__","LWG3315: Correct Allocator Default Behavior","2020-02 (Prague)","|Complete|","",""
-"`LWG3316 <https://wg21.link/LWG3316>`__","Correctly define epoch for ``utc_clock``\  / ``utc_timepoint``\ ","2020-02 (Prague)","","",""
+"`LWG3316 <https://wg21.link/LWG3316>`__","Correctly define epoch for ``utc_clock``\  / ``utc_timepoint``\ ","2020-02 (Prague)","|Nothing To Do|","",""
 "`LWG3317 <https://wg21.link/LWG3317>`__","Incorrect ``operator<<``\  for floating-point durations","2020-02 (Prague)","|Complete|","16",""
 "`LWG3318 <https://wg21.link/LWG3318>`__","Clarify whether clocks can represent time before their epoch","2020-02 (Prague)","","",""
 "`LWG3319 <https://wg21.link/LWG3319>`__","Properly reference specification of IANA time zone database","2020-02 (Prague)","|Nothing To Do|","",""
