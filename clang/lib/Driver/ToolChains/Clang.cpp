@@ -6293,9 +6293,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
     CmdArgs.push_back("-fno-direct-access-external-data");
   }
 
-  if (Args.hasFlag(options::OPT_fno_plt, options::OPT_fplt, false)) {
-    CmdArgs.push_back("-fno-plt");
-  }
+  if (Triple.isOSBinFormatELF() && (Triple.isAArch64() || Triple.isX86()))
+    Args.addOptOutFlag(CmdArgs, options::OPT_fplt, options::OPT_fno_plt);
 
   // -fhosted is default.
   // TODO: Audit uses of KernelOrKext and see where it'd be more appropriate to
