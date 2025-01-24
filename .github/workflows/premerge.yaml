@@ -74,7 +74,6 @@ jobs:
   permerge-check-macos:
     runs-on: macos-14
     if: >-
-      github.repository_owner == 'llvm' &&
       (startswith(github.ref_name, 'release/') ||
        startswith(github.base_ref, 'refs/heads/release/'))
     steps:
