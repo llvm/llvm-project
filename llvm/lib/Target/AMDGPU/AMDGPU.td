@@ -1251,6 +1251,12 @@ def FeatureXF32Insts : SubtargetFeature<"xf32-insts",
    "v_mfma_f32_16x16x8_xf32 and v_mfma_f32_32x32x4_xf32"
  >;
 
+def FeatureWholeWaveFunction : SubtargetFeature<"whole-wave-function",
+  "IsWholeWaveFunction",
+  "true",
+  "Current function is a whole wave function (runs with all lanes enabled)"
+  >;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
