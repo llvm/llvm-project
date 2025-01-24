@@ -276,11 +276,11 @@ public:
     }
   }
 
-  // Handle main() separatley, since it works slightly differently to other
+  // Handle `main` separatley, since it works slightly differently to other
   // functions: it allocates the shadow stack
   //
-  // For main clone: `__yk_unopt_main` we need to update the allocas
-  // while reusing the same shadow stack pointer as the original main.
+  // For `__yk_unopt_main` we update the allocas while reusing the same shadow
+  // stack instance allocated by `main`.
   //
   // Note that since we assuming main() doesn't call main(), we can consider
   // the shadow stack disused at the point main() returns. For this reason,
@@ -307,28 +307,28 @@ public:
     // If we have two control points, we need to update the cloned main
     // function as well.
     if (controlPointCount == 2) {
-      Function *MainClone = M.getFunction(YK_UNOPT_MAIN);
-      if (MainClone == nullptr || MainClone->isDeclaration()) {
+      Function *UnoptMain = M.getFunction(YK_UNOPT_MAIN);
+      if (UnoptMain == nullptr || UnoptMain->isDeclaration()) {
         Context.emitError(
             "Unable to add shadow stack: could not find definition "
             "of \"__yk_unopt_main\" function!");
         return;
       }
 
-      std::map<AllocaInst *, size_t> MainCloneAllocas;
-      std::vector<ReturnInst *> MainCloneRets;
-      size_t SFrameSizeClone =
-          analyseFunction(*MainClone, DL, MainCloneAllocas, MainCloneRets);
+      std::map<AllocaInst *, size_t> UnoptMainAllocas;
+      std::vector<ReturnInst *> UnoptMainRets;
+      size_t SFrameSizeUnopt =
+          analyseFunction(*UnoptMain, DL, UnoptMainAllocas, UnoptMainRets);
 
-      // Insert a load of SSGlobal at the beginning of MainClone.
-      BasicBlock &EntryBB = MainClone->getEntryBlock();
+      // Insert a load of SSGlobal at the beginning of UnoptMain.
+      BasicBlock &EntryBB = UnoptMain->getEntryBlock();
       Instruction *FirstNonPHI = EntryBB.getFirstNonPHI();
-      IRBuilder<> BuilderClone(FirstNonPHI);
+      IRBuilder<> Builder(FirstNonPHI);
 
       // Load the current shadow stack pointer from the global variable.
-      LoadInst *LoadedSSPtr = BuilderClone.CreateLoad(Int8PtrTy, SSGlobal);
-      // Replace all allocas in MainClone with the loaded shadow stack pointer.
-      rewriteAllocas(DL, MainCloneAllocas, LoadedSSPtr);
+      LoadInst *LoadedSSPtr = Builder.CreateLoad(Int8PtrTy, SSGlobal);
+      // Replace all allocas in UnoptMain with the loaded shadow stack pointer.
+      rewriteAllocas(DL, UnoptMainAllocas, LoadedSSPtr);
     }
   }
 
