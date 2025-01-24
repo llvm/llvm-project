@@ -147,9 +147,26 @@ bool RootSignatureLexer::LexToken(RootSignatureToken &Result) {
     return false;
   }
 
-  // Unable to match on any token type
-  PP.getDiagnostics().Report(Result.TokLoc, diag::err_hlsl_invalid_token);
-  return true;
+  // Keywords and Enums:
+  StringRef TokSpelling =
+      Buffer.take_while([](char C) { return isalnum(C) || C == '_'; });
+
+  // Define a large string switch statement for all the keywords and enums
+  auto Switch = llvm::StringSwitch<TokenKind>(TokSpelling);
+#define KEYWORD(NAME) Switch.Case(#NAME, TokenKind::kw_##NAME);
+#define ENUM(NAME, LIT) Switch.CaseLower(LIT, TokenKind::en_##NAME);
+#include "clang/Parse/HLSLRootSignatureTokenKinds.def"
+
+  // Then attempt to retreive a string from it
+  auto Kind = Switch.Default(TokenKind::invalid);
+  if (Kind == TokenKind::invalid) {
+    PP.getDiagnostics().Report(Result.TokLoc, diag::err_hlsl_invalid_token);
+    return true;
+  }
+
+  Result.Kind = Kind;
+  AdvanceBuffer(TokSpelling.size());
+  return false;
 }
 
 } // namespace hlsl

@@ -147,6 +147,10 @@ TEST_F(ParseHLSLRootSignatureTest, ValidLexAllTokensTest) {
     b0 t43 u987 s234
 
     (),|=
+
+    DescriptorTable
+
+    DESCRIPTOR_RANGE_OFFSET_APPEND
   )cc";
 
   TrivialModuleLoader ModLoader;

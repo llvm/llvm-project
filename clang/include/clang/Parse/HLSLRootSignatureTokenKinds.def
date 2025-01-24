@@ -20,6 +20,17 @@
 #ifndef PUNCTUATOR
 #define PUNCTUATOR(X,Y) TOK(pu_ ## X)
 #endif
+#ifndef KEYWORD
+#define KEYWORD(X) TOK(kw_ ## X)
+#endif
+#ifndef ENUM
+#define ENUM(NAME, LIT) TOK(en_ ## NAME)
+#endif
+
+// Defines the various types of enum
+#ifndef DESCRIPTOR_RANGE_OFFSET_ENUM
+#define DESCRIPTOR_RANGE_OFFSET_ENUM(NAME, LIT) ENUM(NAME, LIT)
+#endif
 
 // General Tokens:
 TOK(invalid)
@@ -38,5 +49,14 @@ PUNCTUATOR(comma,   ',')
 PUNCTUATOR(or,      '|')
 PUNCTUATOR(equal,   '=')
 
+// RootElement Keywords:
+KEYWORD(DescriptorTable)
+
+// Descriptor Range Offset Enum:
+DESCRIPTOR_RANGE_OFFSET_ENUM(DescriptorRangeOffsetAppend, "DESCRIPTOR_RANGE_OFFSET_APPEND")
+
+#undef DESCRIPTOR_RANGE_OFFSET_ENUM
+#undef ENUM
+#undef KEYWORD
 #undef PUNCTUATOR
 #undef TOK
