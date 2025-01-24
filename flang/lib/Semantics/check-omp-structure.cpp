@@ -1606,7 +1606,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclareMapperConstruct &x) {
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   PushContextAndClauseSets(
       dir.source, llvm::omp::Directive::OMPD_declare_mapper);
-  const auto &spec{std::get<parser::OmpDeclareMapperSpecifier>(x.t)};
+  const auto &spec{std::get<parser::OmpMapperSpecifier>(x.t)};
   const auto &type = std::get<parser::TypeSpec>(spec.t);
   if (!std::get_if<parser::DerivedTypeSpec>(&type.u)) {
     context_.Say(dir.source, "Type is not a derived type"_err_en_US);
