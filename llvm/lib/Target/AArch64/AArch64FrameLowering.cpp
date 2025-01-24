@@ -4443,7 +4443,8 @@ void AArch64FrameLowering::processFunctionBeforeFrameFinalized(
 
     auto ComputeScavengeableRegisters = [&](unsigned RegClassID) {
       BitVector Regs = TRI.getAllocatableSet(MF, TRI.getRegClass(RegClassID));
-      Regs.clearBitsInMask(CSRMask);
+      if (CSRMask)
+        Regs.clearBitsInMask(CSRMask);
       assert(Regs.count() > 0 && "Expected scavengeable registers");
       return Regs;
     };
