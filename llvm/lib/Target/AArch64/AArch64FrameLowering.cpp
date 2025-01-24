@@ -4438,42 +4438,49 @@ void AArch64FrameLowering::processFunctionBeforeFrameFinalized(
     // If predicates spills are 16-bytes we may need to expand
     // SPILL_PPR_TO_ZPR_SLOT_PSEUDO/FILL_PPR_FROM_ZPR_SLOT_PSEUDO.
 
-    const MachineFrameInfo &MFI = MF.getFrameInfo();
-    assert(MFI.isCalleeSavedInfoValid());
-    const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
+    const uint32_t *CSRMask =
+        TRI.getCallPreservedMask(MF, MF.getFunction().getCallingConv());
 
     auto ComputeScavengeableRegisters = [&](unsigned RegClassID) {
       BitVector Regs = TRI.getAllocatableSet(MF, TRI.getRegClass(RegClassID));
-
-      for (const CalleeSavedInfo &I : CSI)
-        if (TRI.getRegClass(RegClassID)->contains(I.getReg()))
-          Regs.set(I.getReg());
-
+      Regs.clearBitsInMask(CSRMask);
       assert(Regs.count() > 0 && "Expected scavengeable registers");
       return Regs;
     };
 
-    const uint32_t *CSRMask =
-        TRI.getCallPreservedMask(MF, MF.getFunction().getCallingConv());
-
-    // Registers free to scavenge in the function body.
-    ScavengeableRegs ScavengeableRegsBody;
-    ScavengeableRegsBody.ZPRRegs =
+    // Registers free to scavenge in the prologue/epilogue.
+    ScavengeableRegs ScavengeableRegsFrameSetup;
+    ScavengeableRegsFrameSetup.ZPRRegs =
         ComputeScavengeableRegisters(AArch64::ZPRRegClassID);
     // Only p0-7 are possible as the second operand of cmpne (needed for fills).
-    ScavengeableRegsBody.PPR3bRegs =
+    ScavengeableRegsFrameSetup.PPR3bRegs =
         ComputeScavengeableRegisters(AArch64::PPR_3bRegClassID);
-    ScavengeableRegsBody.GPRRegs =
+    ScavengeableRegsFrameSetup.GPRRegs =
         ComputeScavengeableRegisters(AArch64::GPR64RegClassID);
 
-    // Registers free to scavenge in the prologue/epilogue.
-    ScavengeableRegs ScavengeableRegsFrameSetup = ScavengeableRegsBody;
-    ScavengeableRegsFrameSetup.ZPRRegs.clearBitsInMask(CSRMask);
-    ScavengeableRegsFrameSetup.GPRRegs.clearBitsInMask(CSRMask);
-    // Note: If p4 was available allow it to be scavenged (even though it is a
-    // CSR). P4 is reloaded last in the epilogue and is needed to reload
-    // predicates >= p8 if p0-p3 are used as return values.
-    ScavengeableRegsFrameSetup.PPR3bRegs.clearBitsInMask(CSRMask);
+    const MachineFrameInfo &MFI = MF.getFrameInfo();
+    assert(MFI.isCalleeSavedInfoValid());
+    const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
+    auto MarkSavedRegistersAsAvailable =
+        [&, &Reserved = MF.getRegInfo().getReservedRegs()](
+            BitVector &Regs, unsigned RegClassID) {
+          for (const CalleeSavedInfo &I : CSI)
+            if (!Reserved[I.getReg()] &&
+                TRI.getRegClass(RegClassID)->contains(I.getReg()))
+              Regs.set(I.getReg());
+        };
+
+    // Registers free to scavenge in the function body.
+    ScavengeableRegs ScavengeableRegsBody = ScavengeableRegsFrameSetup;
+    MarkSavedRegistersAsAvailable(ScavengeableRegsBody.ZPRRegs,
+                                  AArch64::ZPRRegClassID);
+    MarkSavedRegistersAsAvailable(ScavengeableRegsBody.PPR3bRegs,
+                                  AArch64::PPR_3bRegClassID);
+    MarkSavedRegistersAsAvailable(ScavengeableRegsBody.GPRRegs,
+                                  AArch64::GPR64RegClassID);
+
+    // p4 (CSR) is reloaded last in the epilogue, so if it is saved, it can be
+    // used to reload other predicates.
     if (ScavengeableRegsBody.PPR3bRegs[AArch64::P4])
       ScavengeableRegsFrameSetup.PPR3bRegs.set(AArch64::P4);
 
