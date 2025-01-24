@@ -286,6 +286,8 @@ static inline void *CU_LAUNCH_PARAM_END = (void *)0x00;
 static inline void *CU_LAUNCH_PARAM_BUFFER_POINTER = (void *)0x01;
 static inline void *CU_LAUNCH_PARAM_BUFFER_SIZE = (void *)0x02;
 
+typedef void (*CUstreamCallback)(CUstream, CUresult, void *);
+
 CUresult cuCtxGetDevice(CUdevice *);
 CUresult cuDeviceGet(CUdevice *, int);
 CUresult cuDeviceGetAttribute(int *, CUdevice_attribute, CUdevice);
@@ -326,6 +328,7 @@ CUresult cuStreamCreate(CUstream *, unsigned);
 CUresult cuStreamDestroy(CUstream);
 CUresult cuStreamSynchronize(CUstream);
 CUresult cuStreamQuery(CUstream);
+CUresult cuStreamAddCallback(CUstream, CUstreamCallback, void *, unsigned int);
 CUresult cuCtxSetCurrent(CUcontext);
 CUresult cuDevicePrimaryCtxRelease(CUdevice);
 CUresult cuDevicePrimaryCtxGetState(CUdevice, unsigned *, int *);
