@@ -962,11 +962,8 @@ bool isConvertibleToSDWA(MachineInstr &MI,
                          const SIInstrInfo* TII) {
   // Check if this is already an SDWA instruction
   unsigned Opc = MI.getOpcode();
-  if (TII->isSDWA(Opc)) {
-    // FIXME: Reenable after fixing selection handling.
-    // Cf. llvm/test/CodeGen/AMDGPU/sdwa-peephole-instr-combine-sel.ll
-    return false;
-  }
+  if (TII->isSDWA(Opc))
+    return true;
 
   // Check if this instruction has opcode that supports SDWA
   if (AMDGPU::getSDWAOp(Opc) == -1)
