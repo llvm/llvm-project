@@ -39,6 +39,7 @@ DLWRAP(cuDriverGetVersion, 1)
 
 DLWRAP(cuGetErrorString, 2)
 DLWRAP(cuLaunchKernel, 11)
+DLWRAP(cuLaunchHostFunc, 3)
 
 DLWRAP(cuMemAlloc, 2)
 DLWRAP(cuMemAllocHost, 2)
