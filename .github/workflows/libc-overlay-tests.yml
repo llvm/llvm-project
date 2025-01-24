@@ -23,6 +23,7 @@ jobs:
             compiler:
               c_compiler: clang
               cpp_compiler: clang++
+          # TODO: remove ccache logic when https://github.com/hendrikmuhs/ccache-action/issues/279 is resolved.
           - os: ubuntu-24.04-arm
             ccache-variant: ccache
             compiler:
