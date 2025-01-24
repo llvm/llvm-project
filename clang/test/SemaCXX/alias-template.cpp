@@ -54,7 +54,7 @@ namespace LookupFilter {
   template<typename U> using S = S<U>*; // ok
 }
 
-namespace UnexpectedPack {
+namespace UnexpandedPack {
   template<typename...T> struct S0 {
     template<typename Z> using U = T*; // expected-error {{declaration type contains unexpanded parameter pack 'T'}}
     U<char> u;
