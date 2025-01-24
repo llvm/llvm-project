@@ -2258,6 +2258,12 @@ public:
     case Intrinsic::abs:
       ISD = ISD::ABS;
       break;
+    case Intrinsic::fshl:
+      ISD = ISD::FSHL;
+      break;
+    case Intrinsic::fshr:
+      ISD = ISD::FSHR;
+      break;
     case Intrinsic::smax:
       ISD = ISD::SMAX;
       break;
@@ -2545,6 +2551,29 @@ public:
       Cost += thisT()->getArithmeticInstrCost(
           BinaryOperator::Sub, RetTy, CostKind,
           {TTI::OK_UniformConstantValue, TTI::OP_None});
+      return Cost;
+    }
+    case Intrinsic::fshl:
+    case Intrinsic::fshr: {
+      // fshl: (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
+      // fshr: (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      InstructionCost Cost = 0;
+      Cost +=
+          thisT()->getArithmeticInstrCost(BinaryOperator::Or, RetTy, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(BinaryOperator::Sub, RetTy, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(BinaryOperator::Shl, RetTy, CostKind);
+      Cost += thisT()->getArithmeticInstrCost(BinaryOperator::LShr, RetTy,
+                                              CostKind);
+      Cost += thisT()->getArithmeticInstrCost(BinaryOperator::URem, RetTy,
+                                              CostKind);
+      // Shift-by-zero handling.
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
+                                          CmpInst::ICMP_EQ, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                          CmpInst::ICMP_EQ, CostKind);
       return Cost;
     }
     case Intrinsic::fptosi_sat:

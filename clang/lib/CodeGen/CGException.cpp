@@ -1858,7 +1858,7 @@ Address CodeGenFunction::recoverAddrOfEscapedLocal(CodeGenFunction &ParentCGF,
            "expected alloca or localrecover in parent LocalDeclMap");
     RecoverCall = cast<llvm::CallInst>(ParentRecover->clone());
     RecoverCall->setArgOperand(1, ParentFP);
-    RecoverCall->insertBefore(AllocaInsertPt);
+    RecoverCall->insertBefore(AllocaInsertPt->getIterator());
   }
 
   // Bitcast the variable, rename it, and insert it in the local decl map.

@@ -4158,6 +4158,36 @@ def G_SI_CALL : AMDGPUGenericInstruction {
   let isConvergent = 1;
 }
 
+// Uniform in vgpr - vgpr with same value in all active lanes.
+
+// $dst = $src0 != 0, selected as:
+// $dst(SCC) = s_cmp_lg $src0, 0
+// src0 is either exec or 0 (same value for all active lanes),
+// for example result of comparison of two uniform in vgpr.
+def G_AMDGPU_COPY_SCC_VCC : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src0);
+  let hasSideEffects = 0;
+}
+
+// $dst = $src0 ? exec : 0, selected as:
+// SCC = COPY $src0
+// $dst(SReg_32/64) = s_cselect exec, 0
+def G_AMDGPU_COPY_VCC_SCC : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src0);
+  let hasSideEffects = 0;
+}
+
+// Move uniform in vgpr to sgpr. Selected as v_readfirstlane_b32.
+// Semantic difference in READ ANY instead of FIRST(active) LANE allows for
+// vgpr to sgpr back-to vgpr combine, vgpr has same value in all active lanes
+// vgprDst = COPY (G_AMDGPU_READANYLANE vgprSrc) -> vgprDst = sgprSrc
+def G_AMDGPU_READANYLANE : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0);
+  let hasSideEffects = 0;
+}
 
 //============================================================================//
 // Dummy Instructions

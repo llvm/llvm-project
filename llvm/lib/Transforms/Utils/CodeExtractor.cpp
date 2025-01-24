@@ -1124,9 +1124,9 @@ static void insertLifetimeMarkersSurroundingCall(
           Intrinsic::getOrInsertDeclaration(M, MarkerFunc, Mem->getType());
       auto Marker = CallInst::Create(Func, {NegativeOne, Mem});
       if (InsertBefore)
-        Marker->insertBefore(TheCall);
+        Marker->insertBefore(TheCall->getIterator());
       else
-        Marker->insertBefore(Term);
+        Marker->insertBefore(Term->getIterator());
     }
   };
 
@@ -1441,7 +1441,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     auto *HoistToBlock = findOrCreateBlockForHoisting(CommonExit);
     Instruction *TI = HoistToBlock->getTerminator();
     for (auto *II : HoistingCands)
-      cast<Instruction>(II)->moveBefore(TI);
+      cast<Instruction>(II)->moveBefore(TI->getIterator());
     computeExtractedFuncRetVals();
   }
 
@@ -1815,7 +1815,7 @@ CallInst *CodeExtractor::emitReplacerCall(
     if (ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
       auto *StructSpaceCast = new AddrSpaceCastInst(
           Struct, PointerType ::get(Context, 0), "structArg.ascast");
-      StructSpaceCast->insertAfter(Struct);
+      StructSpaceCast->insertAfter(Struct->getIterator());
       params.push_back(StructSpaceCast);
     } else {
       params.push_back(Struct);

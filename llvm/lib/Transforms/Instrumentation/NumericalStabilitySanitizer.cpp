@@ -1110,7 +1110,7 @@ PHINode *NumericalStabilitySanitizer::maybeCreateShadowPhi(
   // created. They will be populated in a final phase, once all shadow values
   // have been created.
   PHINode *Shadow = PHINode::Create(ExtendedVT, Phi.getNumIncomingValues());
-  Shadow->insertAfter(&Phi);
+  Shadow->insertAfter(Phi.getIterator());
   return Shadow;
 }
 

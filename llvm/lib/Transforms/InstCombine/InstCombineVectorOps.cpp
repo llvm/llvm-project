@@ -747,7 +747,7 @@ static bool replaceExtractElements(InsertElementInst *InsElt,
   // extract, so any subsequent extracts in the same basic block can use it.
   // TODO: Insert before the earliest ExtractElementInst that is replaced.
   if (ExtVecOpInst && !isa<PHINode>(ExtVecOpInst))
-    WideVec->insertAfter(ExtVecOpInst);
+    WideVec->insertAfter(ExtVecOpInst->getIterator());
   else
     IC.InsertNewInstWith(WideVec, ExtElt->getParent()->getFirstInsertionPt());
 

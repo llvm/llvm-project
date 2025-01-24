@@ -208,13 +208,6 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MI.getDesc());
   const bool IsTied = RISCVII::isTiedPseudo(MI.getDesc().TSFlags);
 
-  // We bail out early for instructions that have passthru with non NoRegister,
-  // which means they are using TU policy. We are not interested in these
-  // since they must preserve the entire register content.
-  if (HasPassthru && MO.getOperandNo() == MI.getNumExplicitDefs() &&
-      (MO.getReg() != RISCV::NoRegister))
-    return std::nullopt;
-
   bool IsMODef = MO.getOperandNo() == 0;
 
   // All mask operands have EEW=1
@@ -1024,6 +1017,18 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   // Vector Widening Floating-Point Multiply
   case RISCV::VFWMUL_VF:
   case RISCV::VFWMUL_VV:
+  // Vector Floating-Point MIN/MAX Instructions
+  case RISCV::VFMIN_VF:
+  case RISCV::VFMIN_VV:
+  case RISCV::VFMAX_VF:
+  case RISCV::VFMAX_VV:
+  // Vector Floating-Point Sign-Injection Instructions
+  case RISCV::VFSGNJ_VF:
+  case RISCV::VFSGNJ_VV:
+  case RISCV::VFSGNJN_VV:
+  case RISCV::VFSGNJN_VF:
+  case RISCV::VFSGNJX_VF:
+  case RISCV::VFSGNJX_VV:
   // Vector Floating-Point Compare Instructions
   case RISCV::VMFEQ_VF:
   case RISCV::VMFEQ_VV:

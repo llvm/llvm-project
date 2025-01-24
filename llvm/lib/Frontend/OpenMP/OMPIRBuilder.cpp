@@ -1488,12 +1488,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
     // Add additional casts to enforce pointers in zero address space
     TIDAddr = new AddrSpaceCastInst(
         TIDAddrAlloca, PointerType ::get(M.getContext(), 0), "tid.addr.ascast");
-    TIDAddr->insertAfter(TIDAddrAlloca);
+    TIDAddr->insertAfter(TIDAddrAlloca->getIterator());
     ToBeDeleted.push_back(TIDAddr);
     ZeroAddr = new AddrSpaceCastInst(ZeroAddrAlloca,
                                      PointerType ::get(M.getContext(), 0),
                                      "zero.addr.ascast");
-    ZeroAddr->insertAfter(ZeroAddrAlloca);
+    ZeroAddr->insertAfter(ZeroAddrAlloca->getIterator());
     ToBeDeleted.push_back(ZeroAddr);
   }
 
@@ -9177,16 +9177,16 @@ void OpenMPIRBuilder::initializeTypes(Module &M) {
 #define OMP_TYPE(VarName, InitValue) VarName = InitValue;
 #define OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)                             \
   VarName##Ty = ArrayType::get(ElemTy, ArraySize);                             \
-  VarName##PtrTy = PointerType::getUnqual(VarName##Ty);
+  VarName##PtrTy = PointerType::getUnqual(Ctx);
 #define OMP_FUNCTION_TYPE(VarName, IsVarArg, ReturnType, ...)                  \
   VarName = FunctionType::get(ReturnType, {__VA_ARGS__}, IsVarArg);            \
-  VarName##Ptr = PointerType::getUnqual(VarName);
+  VarName##Ptr = PointerType::getUnqual(Ctx);
 #define OMP_STRUCT_TYPE(VarName, StructName, Packed, ...)                      \
   T = StructType::getTypeByName(Ctx, StructName);                              \
   if (!T)                                                                      \
     T = StructType::create(Ctx, {__VA_ARGS__}, StructName, Packed);            \
   VarName = T;                                                                 \
-  VarName##Ptr = PointerType::getUnqual(T);
+  VarName##Ptr = PointerType::getUnqual(Ctx);
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 }
 
