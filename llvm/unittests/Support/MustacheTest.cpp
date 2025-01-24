@@ -377,7 +377,6 @@ TEST(MustacheInterpolation, IsFalseyArray) {
   EXPECT_EQ("Hello, ", Out);
 }
 
-
 TEST(MustacheInterpolation, IsFalseyObject) {
   // Mustache-free templates should render as-is.
   Value D = Object{{"boolean", Object{}}};
@@ -1225,4 +1224,3 @@ TEST(MustacheComments, VariableNameCollision) {
   T.render(D, OS);
   EXPECT_EQ("comments never show: ><", Out);
 }
-

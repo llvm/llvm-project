@@ -66,7 +66,11 @@ public:
   StringRef getTokenBody() const { return TokenBody; };
 
   StringRef getRawBody() const { return RawBody; };
-
+  
+  std::string takeTokenBody() { return std::move(TokenBody); }
+  
+  std::string takeRawBody() { return std::move(TokenBody); }
+  
   void setTokenBody(std::string NewBody) { TokenBody = std::move(NewBody); };
 
   Accessor getAccessor() const { return Accessor; };
@@ -107,16 +111,16 @@ public:
           llvm::DenseMap<char, std::string> &Escapes)
       : Allocator(Alloc), Partials(Partials), Lambdas(Lambdas),
         SectionLambdas(SectionLambdas), Escapes(Escapes), Ty(Type::Root),
-        Parent(nullptr), ParentContext(nullptr){}
+        Parent(nullptr), ParentContext(nullptr) {}
 
-  ASTNode(llvm::StringRef Body, ASTNode *Parent, llvm::BumpPtrAllocator &Alloc,
+  ASTNode(std::string Body, ASTNode *Parent, llvm::BumpPtrAllocator &Alloc,
           llvm::StringMap<ASTNode *> &Partials,
           llvm::StringMap<Lambda> &Lambdas,
           llvm::StringMap<SectionLambda> &SectionLambdas,
           llvm::DenseMap<char, std::string> &Escapes)
       : Allocator(Alloc), Partials(Partials), Lambdas(Lambdas),
         SectionLambdas(SectionLambdas), Escapes(Escapes), Ty(Type::Text),
-        Body(Body.str()), Parent(Parent), ParentContext(nullptr){}
+        Body(std::move(Body)), Parent(Parent), ParentContext(nullptr) {}
 
   // Constructor for Section/InvertSection/Variable/UnescapeVariable Nodes
   ASTNode(Type Ty, Accessor Accessor, ASTNode *Parent,
@@ -126,7 +130,7 @@ public:
           llvm::DenseMap<char, std::string> &Escapes)
       : Allocator(Alloc), Partials(Partials), Lambdas(Lambdas),
         SectionLambdas(SectionLambdas), Escapes(Escapes), Ty(Ty),
-        Parent(Parent), Accessor(std::move(Accessor)), ParentContext(nullptr){}
+        Parent(Parent), Accessor(std::move(Accessor)), ParentContext(nullptr) {}
 
   void addChild(ASTNode *Child) { Children.emplace_back(Child); };
 
@@ -186,14 +190,14 @@ ASTNode *createNode(void *Node, ASTNode::Type T, Accessor A, ASTNode *Parent,
                             SectionLambdas, Escapes);
 };
 
-ASTNode *createTextNode(void *Node, StringRef Body, ASTNode *Parent,
+ASTNode *createTextNode(void *Node, std::string Body, ASTNode *Parent,
                         llvm::BumpPtrAllocator &Alloc,
                         llvm::StringMap<ASTNode *> &Partials,
                         llvm::StringMap<Lambda> &Lambdas,
                         llvm::StringMap<SectionLambda> &SectionLambdas,
                         llvm::DenseMap<char, std::string> &Escapes) {
   return new (Node)
-      ASTNode(Body, Parent, Alloc, Partials, Lambdas, SectionLambdas, Escapes);
+      ASTNode(std::move(Body), Parent, Alloc, Partials, Lambdas, SectionLambdas, Escapes);
 };
 
 // Function to check if there is meaningful text behind.
@@ -294,14 +298,11 @@ SmallVector<Token> tokenize(StringRef Template) {
     return Tokens;
   }
   while (DelimiterStart != StringRef::npos) {
-    if (DelimiterStart != Start) {
+    if (DelimiterStart != Start)
       Tokens.emplace_back(Template.substr(Start, DelimiterStart - Start).str());
-    }
-
     size_t DelimiterEnd = Template.find(Close, DelimiterStart);
-    if (DelimiterEnd == StringRef::npos) {
+    if (DelimiterEnd == StringRef::npos)
       break;
-    }
 
     // Extract the Interpolated variable without delimiters.
     size_t InterpolatedStart = DelimiterStart + Open.size();
@@ -431,7 +432,7 @@ Token::Token(std::string RawBody, std::string TokenBody, char Identifier)
 
 Token::Token(std::string Str)
     : TokenType(Type::Text), RawBody(std::move(Str)), TokenBody(RawBody),
-      Accessor({}), Indentation(0){}
+      Accessor({}), Indentation(0) {}
 
 Token::Type Token::getTokenType(char Identifier) {
   switch (Identifier) {
@@ -506,26 +507,27 @@ void Parser::parseMustache(ASTNode *Parent, llvm::BumpPtrAllocator &Alloc,
     switch (CurrentToken.getType()) {
     case Token::Type::Text: {
       CurrentNode =
-          createTextNode(Node, std::move(CurrentToken.getTokenBody()), Parent, Alloc,
-                         Partials, Lambdas, SectionLambdas, Escapes);
+          createTextNode(Node, std::move(CurrentToken.takeTokenBody()), Parent, 
+                         Alloc, Partials, Lambdas, SectionLambdas, Escapes);
       Parent->addChild(CurrentNode);
       break;
     }
     case Token::Type::Variable: {
-      CurrentNode = createNode(Node, ASTNode::Variable, A, Parent, Alloc,
-                               Partials, Lambdas, SectionLambdas, Escapes);
+      CurrentNode = createNode(Node, ASTNode::Variable, std::move(A), Parent,
+                               Alloc, Partials, Lambdas, SectionLambdas, 
+                               Escapes);
       Parent->addChild(CurrentNode);
       break;
     }
     case Token::Type::UnescapeVariable: {
       CurrentNode =
-          createNode(Node, ASTNode::UnescapeVariable, A, Parent, Alloc,
+          createNode(Node, ASTNode::UnescapeVariable, std::move(A), Parent, Alloc,
                      Partials, Lambdas, SectionLambdas, Escapes);
       Parent->addChild(CurrentNode);
       break;
     }
     case Token::Type::Partial: {
-      CurrentNode = createNode(Node, ASTNode::Partial, A, Parent, Alloc,
+      CurrentNode = createNode(Node, ASTNode::Partial, std::move(A), Parent, Alloc,
                                Partials, Lambdas, SectionLambdas, Escapes);
       CurrentNode->setIndentation(CurrentToken.getIndentation());
       Parent->addChild(CurrentNode);
@@ -540,7 +542,7 @@ void Parser::parseMustache(ASTNode *Parent, llvm::BumpPtrAllocator &Alloc,
       const size_t End = CurrentPtr - 1;
       std::string RawBody;
       for (std::size_t I = Start; I < End; I++)
-        RawBody += Tokens[I].getRawBody();
+        RawBody += Tokens[I].takeRawBody();
       CurrentNode->setRawBody(std::move(RawBody));
       Parent->addChild(CurrentNode);
       break;
@@ -554,7 +556,7 @@ void Parser::parseMustache(ASTNode *Parent, llvm::BumpPtrAllocator &Alloc,
       const size_t End = CurrentPtr - 1;
       std::string RawBody;
       for (size_t Idx = Start; Idx < End; Idx++)
-        RawBody += Tokens[Idx].getRawBody();
+        RawBody += Tokens[Idx].takeRawBody();
       CurrentNode->setRawBody(std::move(RawBody));
       Parent->addChild(CurrentNode);
       break;
