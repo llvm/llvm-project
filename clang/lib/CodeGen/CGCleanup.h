@@ -87,7 +87,7 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsLifetimeMarker : 1;
 
-    /// Whether this cleanup is a fake use
+    /// Whether this cleanup is a fake use.
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsFakeUse : 1;
 

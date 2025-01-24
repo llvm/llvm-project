@@ -3612,6 +3612,8 @@ static llvm::StoreInst *findDominatingStoreToReturnValue(CodeGenFunction &CGF) {
 
         if (II->getIntrinsicID() == llvm::Intrinsic::fake_use) {
           LoadIntoFakeUse = dyn_cast<llvm::Instruction>(II->getArgOperand(0));
+          assert(isa<llvm::LoadInst>(LoadIntoFakeUse) &&
+                 "Expected fake use operand to be a load instruction.");
           continue;
         }
       }
