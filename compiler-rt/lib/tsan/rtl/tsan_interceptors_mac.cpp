@@ -95,8 +95,7 @@ static constexpr morder kMacFailureOrder = mo_relaxed;
                 m_orig(int32_t, uint32_t, a32, f##32##OrigBarrier,       \
                        __tsan_atomic32_##tsan_atomic_f, kMacOrderBarrier)
 
-#  pragma clang diagnostic push
-// OSAtomic* functions are deprecated.
+#  pragma clang diagnostic push  // OSAtomic* deprecation
 #  pragma clang diagnostic ignored "-Wdeprecated-declarations"
 OSATOMIC_INTERCEPTORS_ARITHMETIC(OSAtomicAdd, fetch_add,
                                  OSATOMIC_INTERCEPTOR_PLUS_X)
@@ -110,6 +109,7 @@ OSATOMIC_INTERCEPTORS_BITWISE(OSAtomicAnd, fetch_and,
                               OSATOMIC_INTERCEPTOR_PLUS_X, OSATOMIC_INTERCEPTOR)
 OSATOMIC_INTERCEPTORS_BITWISE(OSAtomicXor, fetch_xor,
                               OSATOMIC_INTERCEPTOR_PLUS_X, OSATOMIC_INTERCEPTOR)
+#  pragma clang diagnostic pop  // OSAtomic* deprecation
 
 #  define OSATOMIC_INTERCEPTORS_CAS(f, tsan_atomic_f, tsan_t, t)           \
     TSAN_INTERCEPTOR(bool, f, t old_value, t new_value, t volatile *ptr) { \
@@ -127,8 +127,7 @@ OSATOMIC_INTERCEPTORS_BITWISE(OSAtomicXor, fetch_xor,
           kMacOrderBarrier, kMacFailureOrder);                             \
     }
 
-#  pragma clang diagnostic push
-// OSAtomicCompareAndSwap* functions are deprecated.
+#  pragma clang diagnostic push  // OSAtomicCompareAndSwap* deprecation
 #  pragma clang diagnostic ignored "-Wdeprecated-declarations"
 OSATOMIC_INTERCEPTORS_CAS(OSAtomicCompareAndSwapInt, __tsan_atomic32, a32, int)
 OSATOMIC_INTERCEPTORS_CAS(OSAtomicCompareAndSwapLong, __tsan_atomic64, a64,
@@ -139,7 +138,7 @@ OSATOMIC_INTERCEPTORS_CAS(OSAtomicCompareAndSwap32, __tsan_atomic32, a32,
                           int32_t)
 OSATOMIC_INTERCEPTORS_CAS(OSAtomicCompareAndSwap64, __tsan_atomic64, a64,
                           int64_t)
-#  pragma clang diagnostic pop
+#  pragma clang diagnostic pop  // OSAtomicCompareAndSwap* deprecation
 
 #  define OSATOMIC_INTERCEPTOR_BITOP(f, op, clear, mo)             \
     TSAN_INTERCEPTOR(bool, f, uint32_t n, volatile void *ptr) {    \
@@ -155,9 +154,12 @@ OSATOMIC_INTERCEPTORS_CAS(OSAtomicCompareAndSwap64, __tsan_atomic64, a64,
     OSATOMIC_INTERCEPTOR_BITOP(f, op, clear, kMacOrderNonBarrier) \
     OSATOMIC_INTERCEPTOR_BITOP(f##Barrier, op, clear, kMacOrderBarrier)
 
+#  pragma clang diagnostic push  // OSAtomicTestAnd* deprecation
+#  pragma clang diagnostic ignored "-Wdeprecated-declarations"
 OSATOMIC_INTERCEPTORS_BITOP(OSAtomicTestAndSet, __tsan_atomic8_fetch_or, false)
 OSATOMIC_INTERCEPTORS_BITOP(OSAtomicTestAndClear, __tsan_atomic8_fetch_and,
                             true)
+#  pragma clang diagnostic pop  // OSAtomicTestAnd* deprecation
 
 TSAN_INTERCEPTOR(void, OSAtomicEnqueue, OSQueueHead *list, void *item,
                  size_t offset) {
@@ -202,8 +204,7 @@ TSAN_INTERCEPTOR(void *, OSAtomicFifoDequeue, OSFifoQueueHead *list,
 #  undef OSSpinLockTry
 #  undef OSSpinLockUnlock
 
-#  pragma clang diagnostic push
-// OSSpinLock* functions are deprecated.
+#  pragma clang diagnostic push  // OSSpinLock* deprecation
 #  pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 TSAN_INTERCEPTOR(void, OSSpinLockLock, volatile OSSpinLock *lock) {
