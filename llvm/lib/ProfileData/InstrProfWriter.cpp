@@ -455,6 +455,9 @@ void InstrProfWriter::mergeRecordsFromWriter(InstrProfWriter &&IPW,
   for (auto &I : IPW.BinaryIds)
     addBinaryIds(I);
 
+  for (auto& kv: IPW.VTableNames)
+    addVTableName(kv.getKey());
+
   addTemporalProfileTraces(IPW.TemporalProfTraces,
                            IPW.TemporalProfTraceStreamSize);
 
