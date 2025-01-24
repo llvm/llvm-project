@@ -240,9 +240,10 @@ static Value staticallyInsertSubvector(OpBuilder &rewriter, Location loc,
 /// function emits multiple `vector.extract` and `vector.insert` ops, so only
 /// use it when `offset` cannot be folded into a constant value.
 static Value dynamicallyExtractSubVector(OpBuilder &rewriter, Location loc,
-                                         VectorValue source, Value dest,
+                                         Value source, Value dest,
                                          OpFoldResult offset,
                                          int64_t numElementsToExtract) {
+  assert(isa<VectorValue>(source) && "expected `source` to be a vector type");
   for (int i = 0; i < numElementsToExtract; ++i) {
     Value extractLoc =
         (i == 0) ? offset.dyn_cast<Value>()
@@ -258,9 +259,10 @@ static Value dynamicallyExtractSubVector(OpBuilder &rewriter, Location loc,
 
 /// Inserts a 1-D subvector into a 1-D `dest` vector at index `destOffsetVar`.
 static Value dynamicallyInsertSubVector(RewriterBase &rewriter, Location loc,
-                                        VectorValue source, Value dest,
+                                        Value source, Value dest,
                                         OpFoldResult destOffsetVar,
                                         size_t length) {
+  assert(isa<VectorValue>(source) && "expected `source` to be a vector type");
   assert(length > 0 && "length must be greater than 0");
   Value destOffsetVal =
       getValueOrCreateConstantIndexOp(rewriter, loc, destOffsetVar);
@@ -468,7 +470,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
 
     auto memrefBase = cast<MemRefValue>(adaptor.getBase());
 
-    // Conditions when subbyte emulated store is not needed:
+    // Conditions when atomic RMWs are not needed:
     // 1. The source vector size (in bits) is a multiple of byte size.
     // 2. The address of the store is aligned to the emulated width boundary.
     //
@@ -499,7 +501,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
     // Destination: memref<12xi2>
     // Store offset: 2 (i.e. 4 bits into the 1st emulated byte).
     //
-    // MLIR: vector.store %val, %dest[%c2] : memref<12xi2>, vector<7xi2>
+    // Input MLIR: vector.store %val, %dest[%c2] : memref<12xi2>, vector<7xi2>
     //
     // Destination memref before:
     //
@@ -817,9 +819,9 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
     if (!foldedIntraVectorOffset) {
       auto resultVector = rewriter.create<arith::ConstantOp>(
           loc, op.getType(), rewriter.getZeroAttr(op.getType()));
-      result = dynamicallyExtractSubVector(
-          rewriter, loc, cast<VectorValue>(result), resultVector,
-          linearizedInfo.intraDataOffset, origElements);
+      result = dynamicallyExtractSubVector(rewriter, loc, result, resultVector,
+                                           linearizedInfo.intraDataOffset,
+                                           origElements);
     } else if (!isAlignedEmulation) {
       result = staticallyExtractSubvector(
           rewriter, loc, result, *foldedIntraVectorOffset, origElements);
@@ -938,8 +940,8 @@ struct ConvertVectorMaskedLoad final
         loc, newBitcastType, rewriter.getZeroAttr(newBitcastType));
     if (!foldedIntraVectorOffset) {
       passthru = dynamicallyInsertSubVector(
-          rewriter, loc, cast<VectorValue>(passthru), emptyVector,
-          linearizedInfo.intraDataOffset, origElements);
+          rewriter, loc, passthru, emptyVector, linearizedInfo.intraDataOffset,
+          origElements);
     } else if (!isAlignedEmulation) {
       passthru = staticallyInsertSubvector(rewriter, loc, passthru, emptyVector,
                                            *foldedIntraVectorOffset);
@@ -965,9 +967,9 @@ struct ConvertVectorMaskedLoad final
     auto emptyMask = rewriter.create<arith::ConstantOp>(
         loc, newSelectMaskType, rewriter.getZeroAttr(newSelectMaskType));
     if (!foldedIntraVectorOffset) {
-      mask = dynamicallyInsertSubVector(
-          rewriter, loc, cast<VectorValue>(mask), emptyMask,
-          linearizedInfo.intraDataOffset, origElements);
+      mask = dynamicallyInsertSubVector(rewriter, loc, mask, emptyMask,
+                                        linearizedInfo.intraDataOffset,
+                                        origElements);
     } else if (!isAlignedEmulation) {
       mask = staticallyInsertSubvector(rewriter, loc, op.getMask(), emptyMask,
                                        *foldedIntraVectorOffset);
@@ -977,7 +979,7 @@ struct ConvertVectorMaskedLoad final
         rewriter.create<arith::SelectOp>(loc, mask, bitCast, passthru);
     if (!foldedIntraVectorOffset) {
       result = dynamicallyExtractSubVector(
-          rewriter, loc, cast<VectorValue>(result), op.getPassThru(),
+          rewriter, loc, result, op.getPassThru(),
           linearizedInfo.intraDataOffset, origElements);
     } else if (!isAlignedEmulation) {
       result = staticallyExtractSubvector(
