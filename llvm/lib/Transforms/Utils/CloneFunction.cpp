@@ -1144,7 +1144,7 @@ BasicBlock *llvm::DuplicateInstructionsInSplitBetween(
   for (; StopAt != &*BI && BB->getTerminator() != &*BI; ++BI) {
     Instruction *New = BI->clone();
     New->setName(BI->getName());
-    New->insertBefore(NewTerm);
+    New->insertBefore(NewTerm->getIterator());
     New->cloneDebugInfoFrom(&*BI);
     ValueMapping[&*BI] = New;
 
