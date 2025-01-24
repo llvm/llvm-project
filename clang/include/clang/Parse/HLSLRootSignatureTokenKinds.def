@@ -23,6 +23,7 @@
 
 // General Tokens:
 TOK(invalid)
+TOK(int_literal)
 
 // Punctuators:
 PUNCTUATOR(l_paren, '(')

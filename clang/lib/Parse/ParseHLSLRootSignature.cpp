@@ -5,6 +5,61 @@ namespace hlsl {
 
 // Lexer Definitions
 
+static bool IsNumberChar(char C) {
+  // TODO(#120472): extend for float support exponents
+  return isdigit(C); // integer support
+}
+
+bool RootSignatureLexer::LexNumber(RootSignatureToken &Result) {
+  // NumericLiteralParser does not handle the sign so we will manually apply it
+  bool Negative = Buffer.front() == '-';
+  bool Signed = Negative || Buffer.front() == '+';
+  if (Signed)
+    AdvanceBuffer();
+
+  // Retrieve the possible number
+  StringRef NumSpelling = Buffer.take_while(IsNumberChar);
+
+  // Catch this now as the Literal Parser will accept it as valid
+  if (NumSpelling.empty()) {
+    PP.getDiagnostics().Report(Result.TokLoc,
+                               diag::err_hlsl_invalid_number_literal);
+    return true;
+  }
+
+  // Parse the numeric value and do semantic checks on its specification
+  clang::NumericLiteralParser Literal(NumSpelling, SourceLoc,
+                                      PP.getSourceManager(), PP.getLangOpts(),
+                                      PP.getTargetInfo(), PP.getDiagnostics());
+  if (Literal.hadError)
+    return true; // Error has already been reported so just return
+
+  if (!Literal.isIntegerLiteral()) {
+    // Note: if IsNumberChar allows for hexidecimal we will need to turn this
+    // into a diagnostics for potential fixed-point literals
+    llvm_unreachable("IsNumberChar will only support digits");
+    return true;
+  }
+
+  // Retrieve the number value to store into the token
+  Result.Kind = TokenKind::int_literal;
+
+  llvm::APSInt X = llvm::APSInt(32, !Signed);
+  if (Literal.GetIntegerValue(X)) {
+    // Report that the value has overflowed
+    PP.getDiagnostics().Report(Result.TokLoc,
+                               diag::err_hlsl_number_literal_overflow)
+        << (unsigned)Signed << NumSpelling;
+    return true;
+  }
+
+  X = Negative ? -X : X;
+  Result.NumLiteral = APValue(X);
+
+  AdvanceBuffer(NumSpelling.size());
+  return false;
+}
+
 bool RootSignatureLexer::Lex(SmallVector<RootSignatureToken> &Tokens) {
   // Discard any leading whitespace
   AdvanceBuffer(Buffer.take_while(isspace).size());
@@ -40,6 +95,10 @@ bool RootSignatureLexer::LexToken(RootSignatureToken &Result) {
   default:
     break;
   }
+
+  // Numeric constant
+  if (isdigit(C) || C == '-' || C == '+')
+    return LexNumber(Result);
 
   // Unable to match on any token type
   PP.getDiagnostics().Report(Result.TokLoc, diag::err_hlsl_invalid_token);

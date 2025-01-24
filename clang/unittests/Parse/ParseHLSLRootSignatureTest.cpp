@@ -111,10 +111,39 @@ protected:
 
 // Valid Lexing Tests
 
+TEST_F(ParseHLSLRootSignatureTest, ValidLexNumbersTest) {
+  // This test will check that we can lex different number tokens
+  const llvm::StringLiteral Source = R"cc(
+    -42 42 +42
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  // Test no diagnostics produced
+  Consumer->SetNoDiag();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
+
+  SmallVector<hlsl::RootSignatureToken> Tokens;
+  ASSERT_FALSE(Lexer.Lex(Tokens));
+  ASSERT_TRUE(Consumer->IsSatisfied());
+
+  SmallVector<hlsl::TokenKind> Expected = {
+      hlsl::TokenKind::int_literal,
+      hlsl::TokenKind::int_literal,
+      hlsl::TokenKind::int_literal,
+  };
+  CheckTokens(Tokens, Expected);
+}
+
 TEST_F(ParseHLSLRootSignatureTest, ValidLexAllTokensTest) {
   // This test will check that we can lex all defined tokens as defined in
   // HLSLRootSignatureTokenKinds.def, plus some additional integer variations
   const llvm::StringLiteral Source = R"cc(
+    42
+
     (),|=
   )cc";
 
@@ -143,6 +172,46 @@ TEST_F(ParseHLSLRootSignatureTest, ValidLexAllTokensTest) {
 }
 
 // Invalid Lexing Tests
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedNumberTest) {
+  // This test will check that the lexing fails due to an integer overflow
+  const llvm::StringLiteral Source = R"cc(
+    4294967296
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  // Test correct diagnostic produced
+  Consumer->SetExpected(diag::err_hlsl_number_literal_overflow);
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
+
+  SmallVector<hlsl::RootSignatureToken> Tokens;
+  ASSERT_TRUE(Lexer.Lex(Tokens));
+  ASSERT_TRUE(Consumer->IsSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidLexEmptyNumberTest) {
+  // This test will check that the lexing fails due to no integer being provided
+  const llvm::StringLiteral Source = R"cc(
+    -
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  // Test correct diagnostic produced
+  Consumer->SetExpected(diag::err_hlsl_invalid_number_literal);
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
+
+  SmallVector<hlsl::RootSignatureToken> Tokens;
+  ASSERT_TRUE(Lexer.Lex(Tokens));
+  ASSERT_TRUE(Consumer->IsSatisfied());
+}
 
 TEST_F(ParseHLSLRootSignatureTest, InvalidLexIdentifierTest) {
   // This test will check that the lexing fails due to no valid token

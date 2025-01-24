@@ -13,7 +13,9 @@
 #ifndef LLVM_CLANG_PARSE_PARSEHLSLROOTSIGNATURE_H
 #define LLVM_CLANG_PARSE_PARSEHLSLROOTSIGNATURE_H
 
+#include "clang/AST/APValue.h"
 #include "clang/Basic/DiagnosticLex.h"
+#include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/Preprocessor.h"
 
 #include "llvm/ADT/SmallVector.h"
@@ -32,6 +34,8 @@ struct RootSignatureToken {
 
   // Retain the SouceLocation of the token for diagnostics
   clang::SourceLocation TokLoc;
+
+  APValue NumLiteral = APValue();
 
   // Constructors
   RootSignatureToken(clang::SourceLocation TokLoc) : TokLoc(TokLoc) {}
@@ -59,6 +63,8 @@ private:
   // Passed down parameters from Sema
   clang::SourceLocation SourceLoc;
   clang::Preprocessor &PP;
+
+  bool LexNumber(RootSignatureToken &Result);
 
   // Consumes the internal buffer for a single token.
   //
