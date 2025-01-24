@@ -15,12 +15,14 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclarationName.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
@@ -32,15 +34,20 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
+#include <cstddef>
 #include <iterator>
 #include <utility>
 
 using namespace clang;
 using RegisterType = HLSLResourceBindingAttr::RegisterType;
+
+static CXXRecordDecl *createHostLayoutStruct(Sema &S,
+                                             CXXRecordDecl *StructDecl);
 
 static RegisterType getRegisterType(ResourceClass RC) {
   switch (RC) {
@@ -253,11 +260,243 @@ static void validatePackoffset(Sema &S, HLSLBufferDecl *BufDecl) {
   }
 }
 
+// Returns true if the array has a zero size = if any of the dimensions is 0
+static bool isZeroSizedArray(const ConstantArrayType *CAT) {
+  while (CAT && !CAT->isZeroSize())
+    CAT = dyn_cast<ConstantArrayType>(
+        CAT->getElementType()->getUnqualifiedDesugaredType());
+  return CAT != nullptr;
+}
+
+// Returns true if the record type is an HLSL resource class
+static bool isResourceRecordType(const Type *Ty) {
+  return HLSLAttributedResourceType::findHandleTypeOnResource(Ty) != nullptr;
+}
+
+// Returns true if the type is a leaf element type that is not valid to be
+// included in HLSL Buffer, such as a resource class, empty struct, zero-sized
+// array, or a builtin intangible type. Returns false it is a valid leaf element
+// type or if it is a record type that needs to be inspected further.
+static bool isInvalidConstantBufferLeafElementType(const Type *Ty) {
+  if (Ty->isRecordType()) {
+    if (isResourceRecordType(Ty) || Ty->getAsCXXRecordDecl()->isEmpty())
+      return true;
+    return false;
+  }
+  if (Ty->isConstantArrayType() &&
+      isZeroSizedArray(cast<ConstantArrayType>(Ty)))
+    return true;
+  if (Ty->isHLSLBuiltinIntangibleType())
+    return true;
+  return false;
+}
+
+// Returns true if the struct contains at least one element that prevents it
+// from being included inside HLSL Buffer as is, such as an intangible type,
+// empty struct, or zero-sized array. If it does, a new implicit layout struct
+// needs to be created for HLSL Buffer use that will exclude these unwanted
+// declarations (see createHostLayoutStruct function).
+static bool requiresImplicitBufferLayoutStructure(const CXXRecordDecl *RD) {
+  if (RD->getTypeForDecl()->isHLSLIntangibleType() || RD->isEmpty())
+    return true;
+  // check fields
+  for (const FieldDecl *Field : RD->fields()) {
+    QualType Ty = Field->getType();
+    if (isInvalidConstantBufferLeafElementType(Ty.getTypePtr()))
+      return true;
+    if (Ty->isRecordType() &&
+        requiresImplicitBufferLayoutStructure(Ty->getAsCXXRecordDecl()))
+      return true;
+  }
+  // check bases
+  for (const CXXBaseSpecifier &Base : RD->bases())
+    if (requiresImplicitBufferLayoutStructure(
+            Base.getType()->getAsCXXRecordDecl()))
+      return true;
+  return false;
+}
+
+static CXXRecordDecl *findRecordDeclInContext(IdentifierInfo *II,
+                                              DeclContext *DC) {
+  CXXRecordDecl *RD = nullptr;
+  for (NamedDecl *Decl :
+       DC->getNonTransparentContext()->lookup(DeclarationName(II))) {
+    if (CXXRecordDecl *FoundRD = dyn_cast<CXXRecordDecl>(Decl)) {
+      assert(RD == nullptr &&
+             "there should be at most 1 record by a given name in a scope");
+      RD = FoundRD;
+    }
+  }
+  return RD;
+}
+
+// Creates a name for buffer layout struct using the provide name base.
+// If the name must be unique (not previously defined), a suffix is added
+// until a unique name is found.
+static IdentifierInfo *getHostLayoutStructName(Sema &S, NamedDecl *BaseDecl,
+                                               bool MustBeUnique) {
+  ASTContext &AST = S.getASTContext();
+
+  IdentifierInfo *NameBaseII = BaseDecl->getIdentifier();
+  llvm::SmallString<64> Name("__layout_");
+  if (NameBaseII) {
+    Name.append(NameBaseII->getName());
+  } else {
+    // anonymous struct
+    Name.append("anon");
+    MustBeUnique = true;
+  }
+
+  size_t NameLength = Name.size();
+  IdentifierInfo *II = &AST.Idents.get(Name, tok::TokenKind::identifier);
+  if (!MustBeUnique)
+    return II;
+
+  unsigned suffix = 0;
+  while (true) {
+    if (suffix != 0) {
+      Name.append("_");
+      Name.append(llvm::Twine(suffix).str());
+      II = &AST.Idents.get(Name, tok::TokenKind::identifier);
+    }
+    if (!findRecordDeclInContext(II, BaseDecl->getDeclContext()))
+      return II;
+    // declaration with that name already exists - increment suffix and try
+    // again until unique name is found
+    suffix++;
+    Name.truncate(NameLength);
+  };
+}
+
+// Creates a field declaration of given name and type for HLSL buffer layout
+// struct. Returns nullptr if the type cannot be use in HLSL Buffer layout.
+static FieldDecl *createFieldForHostLayoutStruct(Sema &S, const Type *Ty,
+                                                 IdentifierInfo *II,
+                                                 CXXRecordDecl *LayoutStruct) {
+  if (isInvalidConstantBufferLeafElementType(Ty))
+    return nullptr;
+
+  if (Ty->isRecordType()) {
+    CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
+    if (requiresImplicitBufferLayoutStructure(RD)) {
+      RD = createHostLayoutStruct(S, RD);
+      if (!RD)
+        return nullptr;
+      Ty = RD->getTypeForDecl();
+    }
+  }
+
+  QualType QT = QualType(Ty, 0);
+  ASTContext &AST = S.getASTContext();
+  TypeSourceInfo *TSI = AST.getTrivialTypeSourceInfo(QT, SourceLocation());
+  auto *Field = FieldDecl::Create(AST, LayoutStruct, SourceLocation(),
+                                  SourceLocation(), II, QT, TSI, nullptr, false,
+                                  InClassInitStyle::ICIS_NoInit);
+  Field->setAccess(AccessSpecifier::AS_private);
+  return Field;
+}
+
+// Creates host layout struct for a struct included in HLSL Buffer.
+// The layout struct will include only fields that are allowed in HLSL buffer.
+// These fields will be filtered out:
+// - resource classes
+// - empty structs
+// - zero-sized arrays
+// Returns nullptr if the resulting layout struct would be empty.
+static CXXRecordDecl *createHostLayoutStruct(Sema &S,
+                                             CXXRecordDecl *StructDecl) {
+  assert(requiresImplicitBufferLayoutStructure(StructDecl) &&
+         "struct is already HLSL buffer compatible");
+
+  ASTContext &AST = S.getASTContext();
+  DeclContext *DC = StructDecl->getDeclContext();
+  IdentifierInfo *II = getHostLayoutStructName(S, StructDecl, false);
+
+  // reuse existing if the layout struct if it already exists
+  if (CXXRecordDecl *RD = findRecordDeclInContext(II, DC))
+    return RD;
+
+  CXXRecordDecl *LS = CXXRecordDecl::Create(
+      AST, TagDecl::TagKind::Class, DC, SourceLocation(), SourceLocation(), II);
+  LS->setImplicit(true);
+  LS->startDefinition();
+
+  // copy base struct, create HLSL Buffer compatible version if needed
+  if (unsigned NumBases = StructDecl->getNumBases()) {
+    assert(NumBases == 1 && "HLSL supports only one base type");
+    CXXBaseSpecifier Base = *StructDecl->bases_begin();
+    CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
+    if (requiresImplicitBufferLayoutStructure(BaseDecl)) {
+      BaseDecl = createHostLayoutStruct(S, BaseDecl);
+      if (BaseDecl) {
+        TypeSourceInfo *TSI = AST.getTrivialTypeSourceInfo(
+            QualType(BaseDecl->getTypeForDecl(), 0));
+        Base = CXXBaseSpecifier(SourceRange(), false, StructDecl->isClass(),
+                                AS_none, TSI, SourceLocation());
+      }
+    }
+    if (BaseDecl) {
+      const CXXBaseSpecifier *BasesArray[1] = {&Base};
+      LS->setBases(BasesArray, 1);
+    }
+  }
+
+  // filter struct fields
+  for (const FieldDecl *FD : StructDecl->fields()) {
+    const Type *Ty = FD->getType()->getUnqualifiedDesugaredType();
+    if (FieldDecl *NewFD =
+            createFieldForHostLayoutStruct(S, Ty, FD->getIdentifier(), LS))
+      LS->addDecl(NewFD);
+  }
+  LS->completeDefinition();
+
+  if (LS->field_empty() && LS->getNumBases() == 0)
+    return nullptr;
+
+  DC->addDecl(LS);
+  return LS;
+}
+
+// Creates host layout struct for HLSL Buffer. The struct will include only
+// fields of types that are allowed in HLSL buffer and it will filter out:
+// - static variable declarations
+// - resource classes
+// - empty structs
+// - zero-sized arrays
+// - non-variable declarations
+// The layour struct will be added to the HLSLBufferDecl declarations.
+void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
+  ASTContext &AST = S.getASTContext();
+  IdentifierInfo *II = getHostLayoutStructName(S, BufDecl, true);
+
+  CXXRecordDecl *LS =
+      CXXRecordDecl::Create(AST, TagDecl::TagKind::Class, BufDecl,
+                            SourceLocation(), SourceLocation(), II);
+  LS->setImplicit(true);
+  LS->startDefinition();
+
+  for (const Decl *D : BufDecl->decls()) {
+    const VarDecl *VD = dyn_cast<VarDecl>(D);
+    if (!VD || VD->getStorageClass() == SC_Static)
+      continue;
+    const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
+    if (FieldDecl *FD =
+            createFieldForHostLayoutStruct(S, Ty, VD->getIdentifier(), LS))
+      LS->addDecl(FD);
+  }
+  LS->completeDefinition();
+  BufDecl->addDecl(LS);
+}
+
+// Handle end of cbuffer/tbuffer declaration
 void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
   auto *BufDecl = cast<HLSLBufferDecl>(Dcl);
   BufDecl->setRBraceLoc(RBrace);
 
   validatePackoffset(SemaRef, BufDecl);
+
+  // create buffer layout struct
+  createHostLayoutStructForBuffer(SemaRef, BufDecl);
 
   SemaRef.PopDeclContext();
 }
