@@ -46,6 +46,9 @@ void OSSpinLockLock(volatile OSSpinLock *__lock);
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
+#if SANITIZER_LINUX
+#include <sys/inotify.h>
+#endif
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -520,6 +523,50 @@ INTERCEPTOR(ssize_t, pwrite64, int fd, const void *buf, size_t count,
 #define RTSAN_MAYBE_INTERCEPT_PWRITE64
 #endif // SANITIZER_INTERCEPT_PWRITE64
 
+#if SANITIZER_INTERCEPT_PREADV
+INTERCEPTOR(ssize_t, preadv, int fd, const struct iovec *iov, int count,
+            off_t offset) {
+  __rtsan_notify_intercepted_call("preadv");
+  return REAL(preadv)(fd, iov, count, offset);
+}
+#define RTSAN_MAYBE_INTERCEPT_PREADV INTERCEPT_FUNCTION(preadv)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PREADV
+#endif
+
+#if SANITIZER_INTERCEPT_PREADV64
+INTERCEPTOR(ssize_t, preadv64, int fd, const struct iovec *iov, int count,
+            off_t offset) {
+  __rtsan_notify_intercepted_call("preadv64");
+  return REAL(preadv)(fd, iov, count, offset);
+}
+#define RTSAN_MAYBE_INTERCEPT_PREADV64 INTERCEPT_FUNCTION(preadv64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PREADV64
+#endif
+
+#if SANITIZER_INTERCEPT_PWRITEV
+INTERCEPTOR(ssize_t, pwritev, int fd, const struct iovec *iov, int count,
+            off_t offset) {
+  __rtsan_notify_intercepted_call("pwritev");
+  return REAL(pwritev)(fd, iov, count, offset);
+}
+#define RTSAN_MAYBE_INTERCEPT_PWRITEV INTERCEPT_FUNCTION(pwritev)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PWRITEV
+#endif
+
+#if SANITIZER_INTERCEPT_PWRITEV64
+INTERCEPTOR(ssize_t, pwritev64, int fd, const struct iovec *iov, int count,
+            off_t offset) {
+  __rtsan_notify_intercepted_call("pwritev64");
+  return REAL(pwritev64)(fd, iov, count, offset);
+}
+#define RTSAN_MAYBE_INTERCEPT_PWRITEV64 INTERCEPT_FUNCTION(pwritev64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PWRITEV64
+#endif
+
 INTERCEPTOR(ssize_t, writev, int fd, const struct iovec *iov, int iovcnt) {
   __rtsan_notify_intercepted_call("writev");
   return REAL(writev)(fd, iov, iovcnt);
@@ -808,6 +855,42 @@ INTERCEPTOR(int, munmap, void *addr, size_t length) {
   return REAL(munmap)(addr, length);
 }
 
+#if !SANITIZER_APPLE
+INTERCEPTOR(int, madvise, void *addr, size_t length, int flag) {
+  __rtsan_notify_intercepted_call("madvise");
+  return REAL(madvise)(addr, length, flag);
+}
+
+INTERCEPTOR(int, posix_madvise, void *addr, size_t length, int flag) {
+  __rtsan_notify_intercepted_call("posix_madvise");
+  return REAL(posix_madvise)(addr, length, flag);
+}
+#define RTSAN_MAYBE_INTERCEPT_MADVISE INTERCEPT_FUNCTION(madvise)
+#define RTSAN_MAYBE_INTERCEPT_POSIX_MADVISE INTERCEPT_FUNCTION(posix_madvise)
+#else
+#define RTSAN_MAYBE_INTERCEPT_MADVISE
+#define RTSAN_MAYBE_INTERCEPT_POSIX_MADVISE
+#endif
+
+INTERCEPTOR(int, mprotect, void *addr, size_t length, int prot) {
+  __rtsan_notify_intercepted_call("mprotect");
+  return REAL(mprotect)(addr, length, prot);
+}
+
+INTERCEPTOR(int, msync, void *addr, size_t length, int flag) {
+  __rtsan_notify_intercepted_call("msync");
+  return REAL(msync)(addr, length, flag);
+}
+
+#if SANITIZER_APPLE
+INTERCEPTOR(int, mincore, const void *addr, size_t length, char *vec) {
+#else
+INTERCEPTOR(int, mincore, void *addr, size_t length, unsigned char *vec) {
+#endif
+  __rtsan_notify_intercepted_call("mincore");
+  return REAL(mincore)(addr, length, vec);
+}
+
 INTERCEPTOR(int, shm_open, const char *name, int oflag, mode_t mode) {
   __rtsan_notify_intercepted_call("shm_open");
   return REAL(shm_open)(name, oflag, mode);
@@ -894,8 +977,13 @@ INTERCEPTOR(ssize_t, sendmsg, int socket, const struct msghdr *message,
 }
 
 #if SANITIZER_INTERCEPT_SENDMMSG
+#if SANITIZER_MUSL
+INTERCEPTOR(int, sendmmsg, int socket, struct mmsghdr *message,
+            unsigned int len, unsigned int flags) {
+#else
 INTERCEPTOR(int, sendmmsg, int socket, struct mmsghdr *message,
             unsigned int len, int flags) {
+#endif
   __rtsan_notify_intercepted_call("sendmmsg");
   return REAL(sendmmsg)(socket, message, len, flags);
 }
@@ -927,8 +1015,16 @@ INTERCEPTOR(ssize_t, recvmsg, int socket, struct msghdr *message, int flags) {
 }
 
 #if SANITIZER_INTERCEPT_RECVMMSG
+#if SANITIZER_MUSL
+INTERCEPTOR(int, recvmmsg, int socket, struct mmsghdr *message,
+            unsigned int len, unsigned int flags, struct timespec *timeout) {
+#elif defined(__GLIBC_MINOR__) && __GLIBC_MINOR__ < 21
+INTERCEPTOR(int, recvmmsg, int socket, struct mmsghdr *message,
+            unsigned int len, int flags, const struct timespec *timeout) {
+#else
 INTERCEPTOR(int, recvmmsg, int socket, struct mmsghdr *message,
             unsigned int len, int flags, struct timespec *timeout) {
+#endif // defined(__GLIBC_MINOR) && __GLIBC_MINOR__ < 21
   __rtsan_notify_intercepted_call("recvmmsg");
   return REAL(recvmmsg)(socket, message, len, flags, timeout);
 }
@@ -951,6 +1047,25 @@ INTERCEPTOR(int, accept4, int socket, struct sockaddr *address,
 #define RTSAN_MAYBE_INTERCEPT_ACCEPT4 INTERCEPT_FUNCTION(accept4)
 #else
 #define RTSAN_MAYBE_INTERCEPT_ACCEPT4
+#endif
+
+#if SANITIZER_INTERCEPT_GETSOCKOPT
+INTERCEPTOR(int, getsockopt, int socket, int level, int option, void *value,
+            socklen_t *len) {
+  __rtsan_notify_intercepted_call("getsockopt");
+  return REAL(getsockopt)(socket, level, option, value, len);
+}
+
+INTERCEPTOR(int, setsockopt, int socket, int level, int option,
+            const void *value, socklen_t len) {
+  __rtsan_notify_intercepted_call("setsockopt");
+  return REAL(setsockopt)(socket, level, option, value, len);
+}
+#define RTSAN_MAYBE_INTERCEPT_GETSOCKOPT INTERCEPT_FUNCTION(getsockopt)
+#define RTSAN_MAYBE_INTERCEPT_SETSOCKOPT INTERCEPT_FUNCTION(setsockopt)
+#else
+#define RTSAN_MAYBE_INTERCEPT_GETSOCKOPT
+#define RTSAN_MAYBE_INTERCEPT_SETSOCKOPT
 #endif
 
 // I/O Multiplexing
@@ -1062,6 +1177,39 @@ INTERCEPTOR(int, kevent64, int kq, const struct kevent64_s *changelist,
 #define RTSAN_MAYBE_INTERCEPT_KEVENT64
 #endif // SANITIZER_INTERCEPT_KQUEUE
 
+#if SANITIZER_LINUX
+INTERCEPTOR(int, inotify_init) {
+  __rtsan_notify_intercepted_call("inotify_init");
+  return REAL(inotify_init)();
+}
+
+INTERCEPTOR(int, inotify_init1, int flags) {
+  __rtsan_notify_intercepted_call("inotify_init1");
+  return REAL(inotify_init1)(flags);
+}
+
+INTERCEPTOR(int, inotify_add_watch, int fd, const char *path, uint32_t mask) {
+  __rtsan_notify_intercepted_call("inotify_add_watch");
+  return REAL(inotify_add_watch)(fd, path, mask);
+}
+
+INTERCEPTOR(int, inotify_rm_watch, int fd, int wd) {
+  __rtsan_notify_intercepted_call("inotify_rm_watch");
+  return REAL(inotify_rm_watch)(fd, wd);
+}
+#define RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT INTERCEPT_FUNCTION(inotify_init)
+#define RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT1 INTERCEPT_FUNCTION(inotify_init1)
+#define RTSAN_MAYBE_INTERCEPT_INOTIFY_ADD_WATCH                                \
+  INTERCEPT_FUNCTION(inotify_add_watch)
+#define RTSAN_MAYBE_INTERCEPT_INOTIFY_RM_WATCH                                 \
+  INTERCEPT_FUNCTION(inotify_rm_watch)
+#else
+#define RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT
+#define RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT1
+#define RTSAN_MAYBE_INTERCEPT_INOTIFY_ADD_WATCH
+#define RTSAN_MAYBE_INTERCEPT_INOTIFY_RM_WATCH
+#endif
+
 INTERCEPTOR(int, pipe, int pipefd[2]) {
   __rtsan_notify_intercepted_call("pipe");
   return REAL(pipe)(pipefd);
@@ -1092,6 +1240,32 @@ INTERCEPTOR(int, execve, const char *filename, char *const argv[],
   __rtsan_notify_intercepted_call("execve");
   return REAL(execve)(filename, argv, envp);
 }
+
+#if SANITIZER_INTERCEPT_PROCESS_VM_READV
+INTERCEPTOR(ssize_t, process_vm_readv, pid_t pid, const struct iovec *local_iov,
+            unsigned long liovcnt, const struct iovec *remote_iov,
+            unsigned long riovcnt, unsigned long flags) {
+  __rtsan_notify_intercepted_call("process_vm_readv");
+  return REAL(process_vm_readv)(pid, local_iov, liovcnt, remote_iov, riovcnt,
+                                flags);
+}
+
+INTERCEPTOR(ssize_t, process_vm_writev, pid_t pid,
+            const struct iovec *local_iov, unsigned long liovcnt,
+            const struct iovec *remote_iov, unsigned long riovcnt,
+            unsigned long flags) {
+  __rtsan_notify_intercepted_call("process_vm_writev");
+  return REAL(process_vm_writev)(pid, local_iov, liovcnt, remote_iov, riovcnt,
+                                 flags);
+}
+#define RTSAN_MAYBE_INTERCEPT_PROCESS_VM_READV                                 \
+  INTERCEPT_FUNCTION(process_vm_readv)
+#define RTSAN_MAYBE_INTERCEPT_PROCESS_VM_WRITEV                                \
+  INTERCEPT_FUNCTION(process_vm_writev)
+#else
+#define RTSAN_MAYBE_INTERCEPT_PROCESS_VM_READV
+#define RTSAN_MAYBE_INTERCEPT_PROCESS_VM_WRITEV
+#endif
 
 // TODO: the `wait` family of functions is an oddity. In testing, if you
 // intercept them, Darwin seemingly ignores them, and linux never returns from
@@ -1148,6 +1322,11 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(mmap);
   RTSAN_MAYBE_INTERCEPT_MMAP64;
   INTERCEPT_FUNCTION(munmap);
+  RTSAN_MAYBE_INTERCEPT_MADVISE;
+  RTSAN_MAYBE_INTERCEPT_POSIX_MADVISE;
+  INTERCEPT_FUNCTION(mprotect);
+  INTERCEPT_FUNCTION(msync);
+  INTERCEPT_FUNCTION(mincore);
   INTERCEPT_FUNCTION(shm_open);
   INTERCEPT_FUNCTION(shm_unlink);
   RTSAN_MAYBE_INTERCEPT_MEMALIGN;
@@ -1166,9 +1345,13 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(write);
   INTERCEPT_FUNCTION(pread);
   RTSAN_MAYBE_INTERCEPT_PREAD64;
+  RTSAN_MAYBE_INTERCEPT_PREADV;
+  RTSAN_MAYBE_INTERCEPT_PREADV64;
   INTERCEPT_FUNCTION(readv);
   INTERCEPT_FUNCTION(pwrite);
   RTSAN_MAYBE_INTERCEPT_PWRITE64;
+  RTSAN_MAYBE_INTERCEPT_PWRITEV;
+  RTSAN_MAYBE_INTERCEPT_PWRITEV64;
   INTERCEPT_FUNCTION(writev);
   INTERCEPT_FUNCTION(fwrite);
   INTERCEPT_FUNCTION(fclose);
@@ -1252,6 +1435,8 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_ACCEPT4;
   RTSAN_MAYBE_INTERCEPT_GETSOCKNAME;
   RTSAN_MAYBE_INTERCEPT_GETPEERNAME;
+  RTSAN_MAYBE_INTERCEPT_GETSOCKOPT;
+  RTSAN_MAYBE_INTERCEPT_SETSOCKOPT;
 
   RTSAN_MAYBE_INTERCEPT_SELECT;
   INTERCEPT_FUNCTION(pselect);
@@ -1266,11 +1451,19 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_KEVENT;
   RTSAN_MAYBE_INTERCEPT_KEVENT64;
 
+  RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT;
+  RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT1;
+  RTSAN_MAYBE_INTERCEPT_INOTIFY_ADD_WATCH;
+  RTSAN_MAYBE_INTERCEPT_INOTIFY_RM_WATCH;
+
   INTERCEPT_FUNCTION(pipe);
   INTERCEPT_FUNCTION(mkfifo);
 
   INTERCEPT_FUNCTION(fork);
   INTERCEPT_FUNCTION(execve);
+
+  RTSAN_MAYBE_INTERCEPT_PROCESS_VM_READV;
+  RTSAN_MAYBE_INTERCEPT_PROCESS_VM_WRITEV;
 
   INTERCEPT_FUNCTION(syscall);
 }

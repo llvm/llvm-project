@@ -118,6 +118,29 @@ findMembersUsedInInitExpr(const CXXCtorInitializer *Initializer,
   return Results;
 }
 
+/// Returns the start of the leading comments before `Loc`.
+static SourceLocation getStartOfLeadingComment(SourceLocation Loc,
+                                               const SourceManager &SM,
+                                               const LangOptions &LangOpts) {
+  // We consider any leading comment token that is on the same line or
+  // indented similarly to the first comment to be part of the leading comment.
+  const unsigned Line = SM.getPresumedLineNumber(Loc);
+  const unsigned Column = SM.getPresumedColumnNumber(Loc);
+  std::optional<Token> Tok =
+      Lexer::findPreviousToken(Loc, SM, LangOpts, /*IncludeComments=*/true);
+  while (Tok && Tok->is(tok::comment)) {
+    const SourceLocation CommentLoc =
+        Lexer::GetBeginningOfToken(Tok->getLocation(), SM, LangOpts);
+    if (SM.getPresumedLineNumber(CommentLoc) != Line &&
+        SM.getPresumedColumnNumber(CommentLoc) != Column) {
+      break;
+    }
+    Loc = CommentLoc;
+    Tok = Lexer::findPreviousToken(Loc, SM, LangOpts, /*IncludeComments=*/true);
+  }
+  return Loc;
+}
+
 /// Returns the end of the trailing comments after `Loc`.
 static SourceLocation getEndOfTrailingComment(SourceLocation Loc,
                                               const SourceManager &SM,
@@ -159,6 +182,7 @@ static SourceRange getFullFieldSourceRange(const FieldDecl &Field,
     if (CurrentToken->is(tok::semi))
       break;
   }
+  Begin = getStartOfLeadingComment(Begin, SM, LangOpts);
   End = getEndOfTrailingComment(End, SM, LangOpts);
   return SourceRange(Begin, End);
 }

@@ -16,6 +16,9 @@ set(LLVM_OPTIONAL_SOURCES
   JitRunner.cpp
   SpirvCpuRuntimeWrappers.cpp
   SyclRuntimeWrappers.cpp
+  VulkanRuntimeWrappers.cpp
+  VulkanRuntime.cpp
+  VulkanRuntime.h
   )
 
 # Use a separate library for OptUtils, to avoid pulling in the entire JIT and
@@ -88,8 +91,9 @@ add_mlir_library(MLIRExecutionEngine
   IPO
   Passes
   ${LLVM_JIT_LISTENER_LIB}
+  )
 
-  LINK_LIBS PUBLIC
+mlir_target_link_libraries(MLIRExecutionEngine PUBLIC
   MLIRBuiltinToLLVMIRTranslation
   MLIRExecutionEngineUtils
   MLIRLLVMDialect
@@ -136,8 +140,10 @@ add_mlir_library(MLIRJitRunner
   JITLink
 
   LINK_LIBS PUBLIC
-  ${dialect_libs}
   MLIRExecutionEngine
+)
+mlir_target_link_libraries(MLIRJitRunner PUBLIC
+  ${dialect_libs}
   MLIRFuncDialect
   MLIRFuncToLLVM
   MLIRIR
@@ -414,5 +420,47 @@ if(LLVM_ENABLE_PIC)
     target_compile_definitions(mlir_spirv_cpu_runtime
       PRIVATE
       mlir_spirv_cpu_runtime_EXPORTS)
+  endif()
+
+  if (MLIR_ENABLE_VULKAN_RUNNER)
+    find_package(Vulkan)
+
+    # If Vulkan is not found try a path specified by VULKAN_SDK.
+    if (NOT Vulkan_FOUND)
+      if ("$ENV{VULKAN_SDK}" STREQUAL "")
+        message(FATAL_ERROR "Vulkan not found through CMake; please provide "
+                            "VULKAN_SDK path as an environment variable")
+      endif()
+
+      find_library(Vulkan_LIBRARY vulkan HINTS "$ENV{VULKAN_SDK}/lib" REQUIRED)
+      if (Vulkan_LIBRARY)
+        set(Vulkan_FOUND ON)
+        set(Vulkan_INCLUDE_DIR "$ENV{VULKAN_SDK}/include")
+        message(STATUS "Found Vulkan: " ${Vulkan_LIBRARY})
+      endif()
+    endif()
+
+    if (NOT Vulkan_FOUND)
+      message(FATAL_ERROR "Cannot find Vulkan library")
+    endif()
+
+    add_llvm_library(mlir_vulkan_runtime SHARED
+      VulkanRuntimeWrappers.cpp
+      VulkanRuntime.cpp
+    )
+
+    target_include_directories(mlir_vulkan_runtime
+      PUBLIC
+      ${Vulkan_INCLUDE_DIR}
+    )
+
+    # *IMPORTANT*: This library cannot depend on LLVM libraries. Otherwise,
+    # it may cause LLVM version conflict when used together with other shared
+    # libraries depending on LLVM. Notably, Mesa, who implements Vulkan
+    # drivers on Linux, depends on the system libLLVM.so.
+    target_link_libraries(mlir_vulkan_runtime
+      PUBLIC
+      ${Vulkan_LIBRARY}
+    )
   endif()
 endif()

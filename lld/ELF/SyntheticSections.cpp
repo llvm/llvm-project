@@ -681,6 +681,11 @@ bool GotSection::addTlsDescEntry(const Symbol &sym) {
   return true;
 }
 
+void GotSection::addTlsDescAuthEntry() {
+  authEntries.push_back({(numEntries - 2) * ctx.arg.wordsize, true});
+  authEntries.push_back({(numEntries - 1) * ctx.arg.wordsize, false});
+}
+
 bool GotSection::addDynTlsEntry(const Symbol &sym) {
   assert(sym.auxIdx == ctx.symAux.size() - 1);
   ctx.symAux.back().tlsGdIdx = numEntries;
