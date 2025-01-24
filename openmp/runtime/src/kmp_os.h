@@ -189,7 +189,7 @@ typedef unsigned long long kmp_uint64;
 #error "Can't determine size_t printf format specifier."
 #endif
 
-#if KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_WASM || KMP_ARCH_PPC
+#if KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_WASM || KMP_ARCH_PPC || defined(__ILP32__)
 #define KMP_SIZE_T_MAX (0xFFFFFFFF)
 #else
 #define KMP_SIZE_T_MAX (0xFFFFFFFFFFFFFFFF)
