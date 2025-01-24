@@ -386,6 +386,13 @@ func.func @transpose10_4x1xf32_scalable(%arg0: vector<4x[1]xf32>) -> vector<[1]x
   return %0 : vector<[1]x4xf32>
 }
 
+// CHECK-LABEL: func @transpose_nd
+func.func @transpose_nd(%arg0: vector<1x2x1x16xf32>) -> vector<1x1x2x16xf32> {
+  // CHECK-NEXT: vector.shape_cast %arg0 : vector<1x2x1x16xf32> to vector<1x1x2x16xf32>
+  %0 = vector.transpose %arg0, [0, 2, 1, 3] : vector<1x2x1x16xf32> to vector<1x1x2x16xf32>
+  return %0 : vector<1x1x2x16xf32>
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
     %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
