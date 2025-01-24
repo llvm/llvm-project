@@ -6749,6 +6749,21 @@ void SemaCodeCompletion::CodeCompleteInitializer(Scope *S, Decl *D) {
   CodeCompleteExpression(S, Data);
 }
 
+void SemaCodeCompletion::CodeCompleteIfConstExpr(Scope *S) const {
+  ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
+                        CodeCompleter->getCodeCompletionTUInfo(),
+                        CodeCompletionContext::CCC_SymbolOrNewName);
+  Results.EnterNewScope();
+
+  Results.AddResult(CodeCompletionResult("constexpr"));
+
+  Results.ExitScope();
+
+  HandleCodeCompleteResults(&SemaRef, CodeCompleter,
+                            Results.getCompletionContext(), Results.data(),
+                            Results.size());
+}
+
 void SemaCodeCompletion::CodeCompleteAfterIf(Scope *S, bool IsBracedThen) {
   ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
