@@ -7732,16 +7732,37 @@ bool CodeGenPrepare::optimizeSwitchType(SwitchInst *SI) {
   // attribute. In that case, we can avoid an unnecessary mask/extension by
   // matching the argument extension instead.
   Instruction::CastOps ExtType = Instruction::ZExt;
+
+  unsigned SExtUsers = 0;
+  unsigned ZExtUsers = 0;
+  if (auto *Arg = dyn_cast<Argument>(Cond)) {
+    if (Arg->hasSExtAttr())
+      SExtUsers++;
+    if (Arg->hasZExtAttr())
+      ZExtUsers++;
+  }
+  for (auto U : Cond->users()) {
+    if (isa<SExtInst>(U)) {
+      SExtUsers++;
+    } else if (isa<ZExtInst>(U)) {
+      ZExtUsers++;
+    } else if (auto *IC = dyn_cast<ICmpInst>(U)) {
+      if (IC->isSigned()) {
+        SExtUsers++;
+      } else if (IC->isUnsigned()) {
+        ZExtUsers++;
+      }
+    }
+  }
+  if (SExtUsers > ZExtUsers) {
+    ExtType = Instruction::SExt;
+  } else {
+    ExtType = Instruction::ZExt;
+  }
+
   // Some targets prefer SExt over ZExt.
   if (TLI->isSExtCheaperThanZExt(OldVT, RegType))
     ExtType = Instruction::SExt;
-
-  if (auto *Arg = dyn_cast<Argument>(Cond)) {
-    if (Arg->hasSExtAttr())
-      ExtType = Instruction::SExt;
-    if (Arg->hasZExtAttr())
-      ExtType = Instruction::ZExt;
-  }
 
   auto *ExtInst = CastInst::Create(ExtType, Cond, NewType);
   ExtInst->insertBefore(SI);
