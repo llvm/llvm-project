@@ -2131,13 +2131,8 @@ public:
   ~VPPartialReductionRecipe() override = default;
 
   VPPartialReductionRecipe *clone() override {
-    return getNumOperands() == 3
-               ? new VPPartialReductionRecipe(Opcode, getOperand(0),
-                                              getOperand(1), getOperand(2),
-                                              getUnderlyingInstr())
-               : new VPPartialReductionRecipe(Opcode, getOperand(0),
-                                              getOperand(1), nullptr,
-                                              getUnderlyingInstr());
+    return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1),
+                                        getMask(), getUnderlyingInstr());
   }
 
   VPValue *getMask() const {

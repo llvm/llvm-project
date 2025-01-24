@@ -9728,6 +9728,11 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // beginning of the dedicated latch block.
     auto *OrigExitingVPV = PhiR->getBackedgeValue();
     auto *NewExitingVPV = PhiR->getBackedgeValue();
+    // Don't add selects here for partial reductions because the phi and partial
+    // reduction values have less vector elements than Cond. But, each operand
+    // in a select instruction needs to have the same number of vector elements,
+    // so the compiler would crash. Instead, a select, with the active lane
+    // mask, is applied to the inputs to the partial reduction.
     if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
         !isa<VPPartialReductionRecipe>(OrigExitingVPV->getDefiningRecipe())) {
       VPValue *Cond = RecipeBuilder.getBlockInMask(OrigLoop->getHeader());
