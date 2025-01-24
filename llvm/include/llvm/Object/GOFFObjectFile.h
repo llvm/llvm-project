@@ -20,6 +20,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/ConvertEBCDIC.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
@@ -27,6 +28,66 @@
 namespace llvm {
 
 namespace object {
+
+// The GOFF file format consists of 2 layers. The data is organized in logical
+// records, which are divided into physical records. A RecordRef object
+// represents a logical record, with the data still divided in physical record.
+class RecordRef {
+  const ObjectFile *OwningObject = nullptr;
+  const uint8_t *Data = nullptr;
+  uint64_t Size = 0U;
+  Error *Err = nullptr;
+
+  const uint8_t *base() const {
+    return reinterpret_cast<const uint8_t *>(OwningObject->getData().data());
+  }
+
+  // Create a string error, and clear the position.
+  void createError(std::error_code EC, const Twine &S) {
+    if (Err)
+      *Err = createStringError(EC, S);
+    Data = nullptr;
+    Size = 0;
+  }
+
+  // Determine the size of the logical record. Also makes sure that the physical
+  // records are correctly linked.
+  void determineSize();
+
+public:
+  RecordRef() = default;
+  RecordRef(const ObjectFile *Owner) : OwningObject(Owner) {}
+  RecordRef(const ObjectFile *Owner, Error *Err)
+      : OwningObject(Owner), Data(base()), Err(Err) {
+    determineSize();
+  };
+  RecordRef(const RecordRef &Other) {
+    OwningObject = Other.OwningObject;
+    Data = Other.Data;
+    Size = Other.Size;
+    Err = Other.Err;
+  };
+
+  bool operator==(const RecordRef &Other) const;
+  void moveNext();
+
+  /// Returns the type of the record.
+  llvm::GOFF::RecordType getRecordType() const;
+
+  /// Returns the size of the logical record. This is a multiply of the size of
+  /// a physical record.
+  uint64_t getSize() const;
+
+  /// Data of the logical record, still divided in physical records.
+  const ArrayRef<uint8_t> getContents() const;
+};
+
+inline bool RecordRef::operator==(const RecordRef &Other) const {
+  return OwningObject == Other.OwningObject && Data == Other.Data &&
+         Size == Other.Size;
+}
+
+using record_iterator = content_iterator<RecordRef>;
 
 class GOFFObjectFile : public ObjectFile {
   friend class GOFFSymbolRef;
@@ -44,6 +105,12 @@ class GOFFObjectFile : public ObjectFile {
   mutable DenseMap<uint32_t, SmallVector<uint8_t>> SectionDataCache;
 
 public:
+  record_iterator record_begin(Error *Err) const;
+  record_iterator record_end() const;
+  iterator_range<record_iterator> records(Error *Err) const {
+    return make_range(record_begin(Err), record_end());
+  }
+
   Expected<StringRef> getSymbolName(SymbolRef Symbol) const;
 
   GOFFObjectFile(MemoryBufferRef Object, Error &Err);
@@ -57,7 +124,9 @@ public:
 
   Triple::ArchType getArch() const override { return Triple::systemz; }
 
-  Expected<SubtargetFeatures> getFeatures() const override { return SubtargetFeatures(); }
+  Expected<SubtargetFeatures> getFeatures() const override {
+    return SubtargetFeatures();
+  }
 
   bool isRelocatableObject() const override { return true; }
 
@@ -65,9 +134,7 @@ public:
   basic_symbol_iterator symbol_begin() const override;
   basic_symbol_iterator symbol_end() const override;
 
-  bool is64Bit() const override {
-    return true;
-  }
+  bool is64Bit() const override { return true; }
 
   bool isSectionNoLoad(DataRefImpl Sec) const;
   bool isSectionReadOnlyData(DataRefImpl Sec) const;
