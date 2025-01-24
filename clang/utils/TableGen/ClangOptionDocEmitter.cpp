@@ -216,7 +216,7 @@ bool canSphinxCopeWithOption(const Record *Option) {
   return false;
 }
 
-void emitHeading(int Depth, std::string Heading, raw_ostream &OS) {
+void emitHeading(int Depth, const std::string &Heading, raw_ostream &OS) {
   assert(Depth < 8 && "groups nested too deeply");
   OS << Heading << '\n'
      << std::string(Heading.size(), "=~-_'+<>"[Depth]) << "\n";
