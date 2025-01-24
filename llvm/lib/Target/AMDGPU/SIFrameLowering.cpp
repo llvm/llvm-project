@@ -1265,7 +1265,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
       BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::COPY), StackPtrReg)
           .addReg(FramePtrReg)
           .setMIFlag(MachineInstr::FrameDestroy);
-    }  
+    }
   }
 
   Register FramePtrRegScratchCopy;
