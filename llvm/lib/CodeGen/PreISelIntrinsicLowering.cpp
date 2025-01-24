@@ -461,7 +461,7 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
         if (!isa<ScalableVectorType>(Ty))
           return false;
         const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
-        unsigned Op = TargetLibraryInfo::getISDNode(F.getIntrinsicID());
+        unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());
         if (!TL->isOperationExpand(Op, EVT::getEVT(Ty)))
           return false;
         return lowerUnaryVectorIntrinsicAsLoop(M, CI);
