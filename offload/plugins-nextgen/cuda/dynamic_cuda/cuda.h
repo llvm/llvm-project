@@ -30,15 +30,16 @@ typedef uintptr_t CUdeviceptr;
 typedef struct CUmod_st *CUmodule;
 typedef struct CUctx_st *CUcontext;
 typedef struct CUfunc_st *CUfunction;
+typedef void (*CUhostFn)(void *userData);
 typedef struct CUstream_st *CUstream;
 typedef struct CUevent_st *CUevent;
 
-#define CU_DEVICE_INVALID ((CUdevice)-2)
+#define CU_DEVICE_INVALID ((CUdevice)(-2))
 
 typedef unsigned long long CUmemGenericAllocationHandle_v1;
 typedef CUmemGenericAllocationHandle_v1 CUmemGenericAllocationHandle;
 
-#define CU_DEVICE_INVALID ((CUdevice)-2)
+#define CU_DEVICE_INVALID ((CUdevice)(-2))
 
 typedef enum CUmemAllocationGranularity_flags_enum {
   CU_MEM_ALLOC_GRANULARITY_MINIMUM = 0x0,
@@ -304,6 +305,7 @@ CUresult cuInit(unsigned);
 CUresult cuLaunchKernel(CUfunction, unsigned, unsigned, unsigned, unsigned,
                         unsigned, unsigned, unsigned, CUstream, void **,
                         void **);
+CUresult cuLaunchHostFunc(CUstream, CUhostFn, void *);
 
 CUresult cuMemAlloc(CUdeviceptr *, size_t);
 CUresult cuMemAllocHost(void **, size_t);
