@@ -1,5 +1,5 @@
 // RUN:   mlir-opt %s -pass-pipeline="builtin.module(async-func-to-async-runtime,async-to-async-runtime,func.func(async-runtime-ref-counting,async-runtime-ref-counting-opt),convert-async-to-llvm,test-lower-to-llvm)" \
-// RUN: | mlir-cpu-runner                                                      \
+// RUN: | mlir-runner                                                      \
 // RUN:     -e main -entry-point-result=void -O0                               \
 // RUN:     -shared-libs=%mlir_c_runner_utils  \
 // RUN:     -shared-libs=%mlir_runner_utils    \

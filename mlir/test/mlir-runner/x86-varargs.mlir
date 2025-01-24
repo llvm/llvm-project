@@ -1,4 +1,4 @@
-// RUN: mlir-cpu-runner %s -e caller --entry-point-result=i32 | FileCheck %s
+// RUN: mlir-runner %s -e caller --entry-point-result=i32 | FileCheck %s
 // Varaidic argument list (va_list) and the extraction logics are ABI-specific.
 // REQUIRES: x86-native-target
 // UNSUPPORTED: system-windows

@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-linalg-to-loops,convert-scf-to-cf,convert-arith-to-llvm),finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)" |        \
-// RUN: mlir-cpu-runner -e main -entry-point-result=void \
+// RUN: mlir-runner -e main -entry-point-result=void \
 // RUN: -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils | FileCheck %s
 
 // CHECK: rank = 2
