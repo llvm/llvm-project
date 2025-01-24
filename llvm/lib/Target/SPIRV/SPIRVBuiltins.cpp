@@ -1003,7 +1003,8 @@ static bool buildExtendedBitOpsInst(const SPIRV::IncomingCall *Call,
 
   // Generate SPIRV instruction accordingly.
   if (Call->isSpirvOp())
-    return buildOpFromWrapper(MIRBuilder, Opcode, Call, Register(0));
+    return buildOpFromWrapper(MIRBuilder, Opcode, Call,
+                              GR->getSPIRVTypeID(Call->ReturnType));
 
   auto MIB = MIRBuilder.buildInstr(Opcode)
                  .addDef(Call->ReturnRegister)
