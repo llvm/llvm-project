@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/SymbolicFile.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
+
 #include "gtest/gtest.h"
 #include <sstream>
 
@@ -37,4 +39,25 @@ TEST(Object, DataRefImplOstream) {
   OS << Data;
 
   EXPECT_EQ(Expected, s);
+}
+
+struct ProxyContent {
+  unsigned Index = 0;
+  ProxyContent(unsigned Index) : Index(Index) {};
+  void moveNext() { Index++; }
+
+  bool operator==(const ProxyContent &Another) const {
+    return Index == Another.Index;
+  }
+};
+
+TEST(Object, ContentIterator) {
+  using Iter = llvm::object::content_iterator<ProxyContent>;
+  auto Sequence = llvm::make_range(Iter(0u), Iter(10u));
+  auto EvenSequence = llvm::make_filter_range(
+      Sequence, [](auto &&PC) { return PC.Index % 2 == 0; });
+
+  for (auto &&[I, Value] : llvm::enumerate(EvenSequence)) {
+    EXPECT_EQ(I * 2u, Value.Index);
+  }
 }
