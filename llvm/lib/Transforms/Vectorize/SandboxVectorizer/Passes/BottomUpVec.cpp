@@ -47,11 +47,13 @@ static SmallVector<Value *, 4> getOperand(ArrayRef<Value *> Bndl,
 /// of BB if no instruction found in \p Vals.
 static BasicBlock::iterator getInsertPointAfterInstrs(ArrayRef<Value *> Vals,
                                                       BasicBlock *BB) {
-  auto *BotI = VecUtils::getLowest(Vals);
+  auto *BotI = VecUtils::getLastPHIOrSelf(VecUtils::getLowest(Vals));
   if (BotI == nullptr)
-    // We are using BB->begin() as the fallback insert point if `ToPack` did
-    // not contain instructions.
-    return BB->begin();
+    // We are using BB->begin() (or after PHIs) as the fallback insert point.
+    return BB->empty()
+               ? BB->begin()
+               : std::next(
+                     VecUtils::getLastPHIOrSelf(&*BB->begin())->getIterator());
   return std::next(BotI->getIterator());
 }
 
