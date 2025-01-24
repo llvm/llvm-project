@@ -20,7 +20,7 @@ func.func @scan1d_inc(%arg0 : vector<2xi32>, %arg1 : vector<i32>) -> (vector<2xi
 
 // -----
 
-// Rducing scalable dims is not yet supported!
+// Reducing scalable dims is not yet supported!
 
 // CHECK-LABEL: func @scan1d_inc_scalable
 // CHECK: vector.scan
