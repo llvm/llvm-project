@@ -483,9 +483,6 @@ exit:
 }
 
 ; Variables that hande counter can be allocated to sgprs.
-; Machine uniformity analysis claims some of those registers are divergent while
-; LLVM-IR uniformity analysis claims corresponding values are uniform.
-; TODO: fix this in Machine uniformity analysis.
 define amdgpu_cs void @loop_with_2breaks(ptr addrspace(1) %x, ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; OLD_RBS-LABEL: loop_with_2breaks:
 ; OLD_RBS:       ; %bb.0: ; %entry
@@ -551,62 +548,69 @@ define amdgpu_cs void @loop_with_2breaks(ptr addrspace(1) %x, ptr addrspace(1) %
 ;
 ; NEW_RBS-LABEL: loop_with_2breaks:
 ; NEW_RBS:       ; %bb.0: ; %entry
+; NEW_RBS-NEXT:    s_mov_b32 s4, 0
 ; NEW_RBS-NEXT:    s_mov_b32 s0, 0
-; NEW_RBS-NEXT:    ; implicit-def: $sgpr1
-; NEW_RBS-NEXT:    v_mov_b32_e32 v6, s0
+; NEW_RBS-NEXT:    ; implicit-def: $sgpr5
 ; NEW_RBS-NEXT:    s_branch .LBB16_3
 ; NEW_RBS-NEXT:  .LBB16_1: ; %Flow3
 ; NEW_RBS-NEXT:    ; in Loop: Header=BB16_3 Depth=1
 ; NEW_RBS-NEXT:    s_waitcnt_depctr 0xffe3
-; NEW_RBS-NEXT:    s_or_b32 exec_lo, exec_lo, s4
-; NEW_RBS-NEXT:    s_andn2_b32 s1, s1, exec_lo
-; NEW_RBS-NEXT:    s_and_b32 s3, exec_lo, s3
-; NEW_RBS-NEXT:    s_or_b32 s1, s1, s3
+; NEW_RBS-NEXT:    s_or_b32 exec_lo, exec_lo, s7
+; NEW_RBS-NEXT:    s_andn2_b32 s2, s5, exec_lo
+; NEW_RBS-NEXT:    s_and_b32 s3, exec_lo, s6
+; NEW_RBS-NEXT:    s_or_b32 s5, s2, s3
 ; NEW_RBS-NEXT:  .LBB16_2: ; %Flow
 ; NEW_RBS-NEXT:    ; in Loop: Header=BB16_3 Depth=1
-; NEW_RBS-NEXT:    s_or_b32 exec_lo, exec_lo, s2
-; NEW_RBS-NEXT:    s_and_b32 s2, exec_lo, s1
-; NEW_RBS-NEXT:    s_or_b32 s0, s2, s0
-; NEW_RBS-NEXT:    s_andn2_b32 exec_lo, exec_lo, s0
+; NEW_RBS-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; NEW_RBS-NEXT:    s_and_b32 s1, exec_lo, s5
+; NEW_RBS-NEXT:    s_or_b32 s4, s1, s4
+; NEW_RBS-NEXT:    s_andn2_b32 exec_lo, exec_lo, s4
 ; NEW_RBS-NEXT:    s_cbranch_execz .LBB16_6
 ; NEW_RBS-NEXT:  .LBB16_3: ; %A
 ; NEW_RBS-NEXT:    ; =>This Inner Loop Header: Depth=1
-; NEW_RBS-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
-; NEW_RBS-NEXT:    s_andn2_b32 s1, s1, exec_lo
-; NEW_RBS-NEXT:    s_and_b32 s2, exec_lo, exec_lo
-; NEW_RBS-NEXT:    s_or_b32 s1, s1, s2
-; NEW_RBS-NEXT:    v_lshlrev_b64 v[7:8], 2, v[6:7]
-; NEW_RBS-NEXT:    v_add_co_u32 v9, vcc_lo, v2, v7
-; NEW_RBS-NEXT:    v_add_co_ci_u32_e32 v10, vcc_lo, v3, v8, vcc_lo
-; NEW_RBS-NEXT:    global_load_dword v9, v[9:10], off
+; NEW_RBS-NEXT:    s_ashr_i32 s1, s0, 31
+; NEW_RBS-NEXT:    s_lshl_b64 s[2:3], s[0:1], 2
+; NEW_RBS-NEXT:    s_andn2_b32 s1, s5, exec_lo
+; NEW_RBS-NEXT:    v_mov_b32_e32 v7, s3
+; NEW_RBS-NEXT:    v_mov_b32_e32 v6, s2
+; NEW_RBS-NEXT:    s_and_b32 s5, exec_lo, exec_lo
+; NEW_RBS-NEXT:    s_or_b32 s5, s1, s5
+; NEW_RBS-NEXT:    v_add_co_u32 v6, vcc_lo, v2, v6
+; NEW_RBS-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, v3, v7, vcc_lo
+; NEW_RBS-NEXT:    global_load_dword v6, v[6:7], off
 ; NEW_RBS-NEXT:    s_waitcnt vmcnt(0)
-; NEW_RBS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v9
-; NEW_RBS-NEXT:    s_and_saveexec_b32 s2, vcc_lo
+; NEW_RBS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v6
+; NEW_RBS-NEXT:    s_and_saveexec_b32 s1, vcc_lo
 ; NEW_RBS-NEXT:    s_cbranch_execz .LBB16_2
 ; NEW_RBS-NEXT:  ; %bb.4: ; %B
 ; NEW_RBS-NEXT:    ; in Loop: Header=BB16_3 Depth=1
-; NEW_RBS-NEXT:    v_add_co_u32 v9, vcc_lo, v4, v7
-; NEW_RBS-NEXT:    v_add_co_ci_u32_e32 v10, vcc_lo, v5, v8, vcc_lo
-; NEW_RBS-NEXT:    s_mov_b32 s3, exec_lo
-; NEW_RBS-NEXT:    global_load_dword v9, v[9:10], off
+; NEW_RBS-NEXT:    v_mov_b32_e32 v7, s3
+; NEW_RBS-NEXT:    v_mov_b32_e32 v6, s2
+; NEW_RBS-NEXT:    s_mov_b32 s6, exec_lo
+; NEW_RBS-NEXT:    v_add_co_u32 v6, vcc_lo, v4, v6
+; NEW_RBS-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, v5, v7, vcc_lo
+; NEW_RBS-NEXT:    global_load_dword v6, v[6:7], off
 ; NEW_RBS-NEXT:    s_waitcnt vmcnt(0)
-; NEW_RBS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v9
-; NEW_RBS-NEXT:    s_and_saveexec_b32 s4, vcc_lo
+; NEW_RBS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v6
+; NEW_RBS-NEXT:    s_and_saveexec_b32 s7, vcc_lo
 ; NEW_RBS-NEXT:    s_cbranch_execz .LBB16_1
 ; NEW_RBS-NEXT:  ; %bb.5: ; %loop.body
 ; NEW_RBS-NEXT:    ; in Loop: Header=BB16_3 Depth=1
-; NEW_RBS-NEXT:    v_add_co_u32 v7, vcc_lo, v0, v7
-; NEW_RBS-NEXT:    v_add_co_ci_u32_e32 v8, vcc_lo, v1, v8, vcc_lo
-; NEW_RBS-NEXT:    v_add_nc_u32_e32 v10, 1, v6
-; NEW_RBS-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 0x64, v6
-; NEW_RBS-NEXT:    s_andn2_b32 s3, s3, exec_lo
-; NEW_RBS-NEXT:    global_load_dword v9, v[7:8], off
-; NEW_RBS-NEXT:    v_mov_b32_e32 v6, v10
-; NEW_RBS-NEXT:    s_and_b32 s5, exec_lo, vcc_lo
-; NEW_RBS-NEXT:    s_or_b32 s3, s3, s5
+; NEW_RBS-NEXT:    v_mov_b32_e32 v7, s3
+; NEW_RBS-NEXT:    v_mov_b32_e32 v6, s2
+; NEW_RBS-NEXT:    s_add_i32 s2, s0, 1
+; NEW_RBS-NEXT:    s_cmpk_lt_u32 s0, 0x64
+; NEW_RBS-NEXT:    s_cselect_b32 s0, exec_lo, 0
+; NEW_RBS-NEXT:    v_add_co_u32 v6, vcc_lo, v0, v6
+; NEW_RBS-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, v1, v7, vcc_lo
+; NEW_RBS-NEXT:    s_andn2_b32 s3, s6, exec_lo
+; NEW_RBS-NEXT:    s_and_b32 s0, exec_lo, s0
+; NEW_RBS-NEXT:    s_or_b32 s6, s3, s0
+; NEW_RBS-NEXT:    global_load_dword v8, v[6:7], off
+; NEW_RBS-NEXT:    s_mov_b32 s0, s2
 ; NEW_RBS-NEXT:    s_waitcnt vmcnt(0)
-; NEW_RBS-NEXT:    v_add_nc_u32_e32 v9, 1, v9
-; NEW_RBS-NEXT:    global_store_dword v[7:8], v9, off
+; NEW_RBS-NEXT:    v_add_nc_u32_e32 v8, 1, v8
+; NEW_RBS-NEXT:    global_store_dword v[6:7], v8, off
 ; NEW_RBS-NEXT:    s_branch .LBB16_1
 ; NEW_RBS-NEXT:  .LBB16_6: ; %exit
 ; NEW_RBS-NEXT:    s_endpgm
