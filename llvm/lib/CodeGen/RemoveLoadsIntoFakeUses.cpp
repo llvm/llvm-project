@@ -79,7 +79,7 @@ INITIALIZE_PASS_END(RemoveLoadsIntoFakeUses, DEBUG_TYPE,
 bool RemoveLoadsIntoFakeUses::runOnMachineFunction(MachineFunction &MF) {
   // Skip this pass if we would use VarLoc-based LDV, as there may be DBG_VALUE
   // instructions of the restored values that would become invalid.
-  if (debuginfoShouldUseDebugInstrRef(MF.getTarget().getTargetTriple()))
+  if (!MF.shouldUseDebugInstrRef())
     return false;
   // Only run this for functions that have fake uses.
   if (!MF.hasFakeUses() || skipFunction(MF.getFunction()))
