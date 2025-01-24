@@ -10857,6 +10857,64 @@ SDValue TargetLowering::expandShlSat(SDNode *Node, SelectionDAG &DAG) const {
   return DAG.getSelect(dl, VT, Cond, SatVal, Result);
 }
 
+void TargetLowering::forceExpandMUL(SelectionDAG &DAG, const SDLoc &dl,
+                                    bool Signed, SDValue &Lo, SDValue &Hi,
+                                    SDValue LHS, SDValue RHS, SDValue HiLHS,
+                                    SDValue HiRHS) const {
+  EVT VT = LHS.getValueType();
+  assert(RHS.getValueType() == VT && "Mismatching operand types");
+
+  assert((HiLHS && HiRHS) || (!HiLHS && !HiRHS));
+  assert((!Signed || !HiLHS) &&
+         "Signed flag should only be set when HiLHS and RiRHS are null");
+
+  // We'll expand the multiplication by brute force because we have no other
+  // options. This is a trivially-generalized version of the code from
+  // Hacker's Delight (itself derived from Knuth's Algorithm M from section
+  // 4.3.1). If Signed is set, we can use arithmetic right shifts to propagate
+  // sign bits while calculating the Hi half.
+  unsigned Bits = VT.getSizeInBits();
+  unsigned HalfBits = Bits / 2;
+  SDValue Mask = DAG.getConstant(APInt::getLowBitsSet(Bits, HalfBits), dl, VT);
+  SDValue LL = DAG.getNode(ISD::AND, dl, VT, LHS, Mask);
+  SDValue RL = DAG.getNode(ISD::AND, dl, VT, RHS, Mask);
+
+  SDValue T = DAG.getNode(ISD::MUL, dl, VT, LL, RL);
+  SDValue TL = DAG.getNode(ISD::AND, dl, VT, T, Mask);
+
+  SDValue Shift = DAG.getShiftAmountConstant(HalfBits, VT, dl);
+  // This is always an unsigned shift.
+  SDValue TH = DAG.getNode(ISD::SRL, dl, VT, T, Shift);
+
+  unsigned ShiftOpc = Signed ? ISD::SRA : ISD::SRL;
+  SDValue LH = DAG.getNode(ShiftOpc, dl, VT, LHS, Shift);
+  SDValue RH = DAG.getNode(ShiftOpc, dl, VT, RHS, Shift);
+
+  SDValue U =
+      DAG.getNode(ISD::ADD, dl, VT, DAG.getNode(ISD::MUL, dl, VT, LH, RL), TH);
+  SDValue UL = DAG.getNode(ISD::AND, dl, VT, U, Mask);
+  SDValue UH = DAG.getNode(ShiftOpc, dl, VT, U, Shift);
+
+  SDValue V =
+      DAG.getNode(ISD::ADD, dl, VT, DAG.getNode(ISD::MUL, dl, VT, LL, RH), UL);
+  SDValue VH = DAG.getNode(ShiftOpc, dl, VT, V, Shift);
+
+  Lo = DAG.getNode(ISD::ADD, dl, VT, TL,
+                   DAG.getNode(ISD::SHL, dl, VT, V, Shift));
+
+  Hi = DAG.getNode(ISD::ADD, dl, VT, DAG.getNode(ISD::MUL, dl, VT, LH, RH),
+                   DAG.getNode(ISD::ADD, dl, VT, UH, VH));
+
+  // If HiLHS and HiRHS are set, multiply them by the opposite low part and add
+  // them to products to Hi.
+  if (HiLHS) {
+    Hi = DAG.getNode(ISD::ADD, dl, VT, Hi,
+                     DAG.getNode(ISD::ADD, dl, VT,
+                                 DAG.getNode(ISD::MUL, dl, VT, HiRHS, LHS),
+                                 DAG.getNode(ISD::MUL, dl, VT, RHS, HiLHS)));
+  }
+}
+
 void TargetLowering::forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl,
                                         bool Signed, const SDValue LHS,
                                         const SDValue RHS, SDValue &Lo,
@@ -10876,7 +10934,11 @@ void TargetLowering::forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl,
   else if (WideVT == MVT::i128)
     LC = RTLIB::MUL_I128;
 
-  if (LC != RTLIB::UNKNOWN_LIBCALL && getLibcallName(LC)) {
+  if (LC == RTLIB::UNKNOWN_LIBCALL || !getLibcallName(LC)) {
+    forceExpandMUL(DAG, dl, Signed, Lo, Hi, LHS, RHS);
+    return;
+  }
+
     SDValue HiLHS, HiRHS;
     if (Signed) {
       // The high part is obtained by SRA'ing all but one of the bits of low
@@ -10916,44 +10978,6 @@ void TargetLowering::forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl,
       Lo = Ret.getOperand(1);
       Hi = Ret.getOperand(0);
     }
-    return;
-  }
-
-  // Expand the multiplication by brute force. This is a generalized-version of
-  // the code from Hacker's Delight (itself derived from Knuth's Algorithm M
-  // from section 4.3.1) combined with the Hacker's delight code
-  // for calculating mulhs.
-  unsigned Bits = VT.getSizeInBits();
-  unsigned HalfBits = Bits / 2;
-  SDValue Mask = DAG.getConstant(APInt::getLowBitsSet(Bits, HalfBits), dl, VT);
-  SDValue LL = DAG.getNode(ISD::AND, dl, VT, LHS, Mask);
-  SDValue RL = DAG.getNode(ISD::AND, dl, VT, RHS, Mask);
-
-  SDValue T = DAG.getNode(ISD::MUL, dl, VT, LL, RL);
-  SDValue TL = DAG.getNode(ISD::AND, dl, VT, T, Mask);
-
-  SDValue Shift = DAG.getShiftAmountConstant(HalfBits, VT, dl);
-  // This is always an unsigned shift.
-  SDValue TH = DAG.getNode(ISD::SRL, dl, VT, T, Shift);
-
-  unsigned ShiftOpc = Signed ? ISD::SRA : ISD::SRL;
-  SDValue LH = DAG.getNode(ShiftOpc, dl, VT, LHS, Shift);
-  SDValue RH = DAG.getNode(ShiftOpc, dl, VT, RHS, Shift);
-
-  SDValue U =
-      DAG.getNode(ISD::ADD, dl, VT, DAG.getNode(ISD::MUL, dl, VT, LH, RL), TH);
-  SDValue UL = DAG.getNode(ISD::AND, dl, VT, U, Mask);
-  SDValue UH = DAG.getNode(ShiftOpc, dl, VT, U, Shift);
-
-  SDValue V =
-      DAG.getNode(ISD::ADD, dl, VT, DAG.getNode(ISD::MUL, dl, VT, LL, RH), UL);
-  SDValue VH = DAG.getNode(ShiftOpc, dl, VT, V, Shift);
-
-  Lo = DAG.getNode(ISD::ADD, dl, VT, TL,
-                   DAG.getNode(ISD::SHL, dl, VT, V, Shift));
-
-  Hi = DAG.getNode(ISD::ADD, dl, VT, DAG.getNode(ISD::MUL, dl, VT, LH, RH),
-                   DAG.getNode(ISD::ADD, dl, VT, UH, VH));
 }
 
 SDValue
