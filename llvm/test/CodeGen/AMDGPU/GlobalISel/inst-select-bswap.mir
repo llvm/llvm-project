@@ -19,6 +19,7 @@ body: |
     ; GFX7-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16711935
     ; GFX7-NEXT: [[V_BFI_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFI_B32_e64 [[S_MOV_B32_]], [[V_ALIGNBIT_B32_e64_1]], [[V_ALIGNBIT_B32_e64_]], implicit $exec
     ; GFX7-NEXT: S_ENDPGM 0, implicit [[V_BFI_B32_e64_]]
+    ;
     ; GFX8-LABEL: name: bswap_i32_vv
     ; GFX8: liveins: $vgpr0
     ; GFX8-NEXT: {{  $}}
@@ -26,7 +27,7 @@ body: |
     ; GFX8-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 66051
     ; GFX8-NEXT: [[V_PERM_B32_e64_:%[0-9]+]]:vgpr_32 = V_PERM_B32_e64 0, [[COPY]], [[S_MOV_B32_]], implicit $exec
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[V_PERM_B32_e64_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = G_BSWAP %0
-    S_ENDPGM 0, implicit %1
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = G_BSWAP %0
+    S_ENDPGM 0, implicit %1(i32)
 ...

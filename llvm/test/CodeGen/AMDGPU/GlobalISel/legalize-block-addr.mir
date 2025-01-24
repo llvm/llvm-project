@@ -23,6 +23,6 @@ body:             |
     ; CHECK: [[BLOCK_ADDR:%[0-9]+]]:_(p0) = G_BLOCK_ADDR blockaddress(@test_blockaddress, %ir-block.block)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[BLOCK_ADDR]](p0)
     %0:_(p0) = G_BLOCK_ADDR blockaddress(@test_blockaddress, %ir-block.block)
-    S_ENDPGM 0, implicit %0
+    S_ENDPGM 0, implicit %0(p0)
 
 ...

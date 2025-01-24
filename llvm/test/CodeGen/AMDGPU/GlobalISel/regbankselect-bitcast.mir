@@ -12,10 +12,10 @@ body: |
     ; CHECK-LABEL: name: bitcast_s
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(<2 x s16>) = G_BITCAST [[COPY]](s32)
-    %0:_(s32) = COPY $sgpr0
-    %1:_(<2 x s16>) = G_BITCAST %0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(<2 x i16>) = G_BITCAST [[COPY]](i32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(<2 x i16>) = G_BITCAST %0(i32)
 ...
 
 ---
@@ -28,8 +28,8 @@ body: |
     ; CHECK-LABEL: name: bitcast_v
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:vgpr(<2 x s16>) = G_BITCAST [[COPY]](s32)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(<2 x s16>) = G_BITCAST %0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:vgpr(<2 x i16>) = G_BITCAST [[COPY]](i32)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(<2 x i16>) = G_BITCAST %0(i32)
 ...

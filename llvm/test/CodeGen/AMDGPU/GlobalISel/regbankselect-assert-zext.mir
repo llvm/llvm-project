@@ -13,12 +13,12 @@ body:             |
     ; CHECK-LABEL: name: assert_zext_vgpr
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %assert_zext:vgpr(s32) = G_ASSERT_ZEXT %copy, 4
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_zext(s32)
-    %copy:_(s32) = COPY $vgpr0
-    %assert_zext:_(s32) = G_ASSERT_ZEXT %copy, 4
-    S_ENDPGM 0, implicit %assert_zext
+    ; CHECK-NEXT: %copy:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %assert_zext:vgpr(i32) = G_ASSERT_ZEXT %copy, 4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_zext(i32)
+    %copy:_(i32) = COPY $vgpr0
+    %assert_zext:_(i32) = G_ASSERT_ZEXT %copy, 4
+    S_ENDPGM 0, implicit %assert_zext(i32)
 ...
 
 ---
@@ -33,12 +33,12 @@ body:             |
     ; CHECK-LABEL: name: assert_zext_sgpr
     ; CHECK: liveins: $sgpr8
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:sgpr(s32) = COPY $sgpr8
-    ; CHECK-NEXT: %assert_zext:sgpr(s32) = G_ASSERT_ZEXT %copy, 4
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_zext(s32)
-    %copy:_(s32) = COPY $sgpr8
-    %assert_zext:_(s32) = G_ASSERT_ZEXT %copy, 4
-    S_ENDPGM 0, implicit %assert_zext
+    ; CHECK-NEXT: %copy:sgpr(i32) = COPY $sgpr8
+    ; CHECK-NEXT: %assert_zext:sgpr(i32) = G_ASSERT_ZEXT %copy, 4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_zext(i32)
+    %copy:_(i32) = COPY $sgpr8
+    %assert_zext:_(i32) = G_ASSERT_ZEXT %copy, 4
+    S_ENDPGM 0, implicit %assert_zext(i32)
 ...
 
 ---
@@ -53,12 +53,12 @@ body:             |
     ; CHECK-LABEL: name: assert_zext_agpr
     ; CHECK: liveins: $agpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:agpr(s32) = COPY $agpr0
-    ; CHECK-NEXT: %assert_zext:agpr(s32) = G_ASSERT_ZEXT %copy, 4
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_zext(s32)
-    %copy:_(s32) = COPY $agpr0
-    %assert_zext:_(s32) = G_ASSERT_ZEXT %copy, 4
-    S_ENDPGM 0, implicit %assert_zext
+    ; CHECK-NEXT: %copy:agpr(i32) = COPY $agpr0
+    ; CHECK-NEXT: %assert_zext:agpr(i32) = G_ASSERT_ZEXT %copy, 4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_zext(i32)
+    %copy:_(i32) = COPY $agpr0
+    %assert_zext:_(i32) = G_ASSERT_ZEXT %copy, 4
+    S_ENDPGM 0, implicit %assert_zext(i32)
 ...
 
 ---
@@ -73,12 +73,12 @@ body:             |
     ; CHECK-LABEL: name: assert_zext_vgpr_regclass
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:vgpr_32(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %assert_zext:vgpr(s32) = G_ASSERT_ZEXT %copy, 4
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_zext(s32)
-    %copy:vgpr_32(s32) = COPY $vgpr0
-    %assert_zext:_(s32) = G_ASSERT_ZEXT %copy, 4
-    S_ENDPGM 0, implicit %assert_zext
+    ; CHECK-NEXT: %copy:vgpr_32(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %assert_zext:vgpr(i32) = G_ASSERT_ZEXT %copy, 4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_zext(i32)
+    %copy:vgpr_32(i32) = COPY $vgpr0
+    %assert_zext:_(i32) = G_ASSERT_ZEXT %copy, 4
+    S_ENDPGM 0, implicit %assert_zext(i32)
 ...
 
 ---
@@ -93,10 +93,10 @@ body:             |
     ; CHECK-LABEL: name: assert_zext_sgpr_regcllass
     ; CHECK: liveins: $sgpr8
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:sgpr_32(s32) = COPY $sgpr8
-    ; CHECK-NEXT: %assert_zext:sgpr(s32) = G_ASSERT_ZEXT %copy, 4
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_zext(s32)
-    %copy:sgpr_32(s32) = COPY $sgpr8
-    %assert_zext:_(s32) = G_ASSERT_ZEXT %copy, 4
-    S_ENDPGM 0, implicit %assert_zext
+    ; CHECK-NEXT: %copy:sgpr_32(i32) = COPY $sgpr8
+    ; CHECK-NEXT: %assert_zext:sgpr(i32) = G_ASSERT_ZEXT %copy, 4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_zext(i32)
+    %copy:sgpr_32(i32) = COPY $sgpr8
+    %assert_zext:_(i32) = G_ASSERT_ZEXT %copy, 4
+    S_ENDPGM 0, implicit %assert_zext(i32)
 ...

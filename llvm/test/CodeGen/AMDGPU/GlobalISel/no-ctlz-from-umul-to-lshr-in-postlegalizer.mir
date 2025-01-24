@@ -11,13 +11,13 @@ body: |
     ; CHECK-LABEL: name: test
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-    ; CHECK-NEXT: [[UMULH:%[0-9]+]]:_(s32) = G_UMULH [[COPY]], [[C]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[UMULH]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
+    ; CHECK-NEXT: [[UMULH:%[0-9]+]]:_(i32) = G_UMULH [[COPY]], [[C]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[UMULH]](i32)
     ; CHECK-NEXT: SI_RETURN implicit $vgpr0
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = G_CONSTANT i32 4
-    %2:_(s32) = G_UMULH %0:_, %1:_
-    $vgpr0 = COPY %2:_(s32)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = G_CONSTANT i32 4
+    %2:_(i32) = G_UMULH %0, %1
+    $vgpr0 = COPY %2(i32)
     SI_RETURN implicit $vgpr0

@@ -18,10 +18,10 @@ body: |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
     ; GCN-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vgpr(<2 x s32>) = G_BUILD_VECTOR %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(<2 x i32>) = G_BUILD_VECTOR %0(i32), %1(i32)
+    S_ENDPGM 0, implicit %2(<2 x i32>)
 ...
 
 ---
@@ -41,10 +41,10 @@ body: |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
     ; GCN-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:vgpr(s32) = COPY $vgpr0
-    %2:vgpr(<2 x s32>) = G_BUILD_VECTOR %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:vgpr(i32) = COPY $vgpr0
+    %2:vgpr(<2 x i32>) = G_BUILD_VECTOR %0(i32), %1(i32)
+    S_ENDPGM 0, implicit %2(<2 x i32>)
 ...
 
 ---
@@ -64,10 +64,10 @@ body: |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
     ; GCN-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:sgpr(s32) = COPY $sgpr0
-    %2:vgpr(<2 x s32>) = G_BUILD_VECTOR %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(i32) = COPY $sgpr0
+    %2:vgpr(<2 x i32>) = G_BUILD_VECTOR %0(i32), %1(i32)
+    S_ENDPGM 0, implicit %2(<2 x i32>)
 ...
 
 ---
@@ -87,10 +87,10 @@ body: |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
     ; GCN-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:sgpr(s32) = COPY $sgpr1
-    %2:sgpr(<2 x s32>) = G_BUILD_VECTOR %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:sgpr(i32) = COPY $sgpr1
+    %2:sgpr(<2 x i32>) = G_BUILD_VECTOR %0(i32), %1(i32)
+    S_ENDPGM 0, implicit %2(<2 x i32>)
 ...
 
 ---
@@ -110,8 +110,8 @@ body: |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1, [[COPY1]], %subreg.sub2_sub3
     ; GCN-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[REG_SEQUENCE]]
-    %0:sgpr(s64) = COPY $sgpr0_sgpr1
-    %1:sgpr(s64) = COPY $sgpr2_sgpr3
-    %4:sgpr(<2 x s64>) = G_BUILD_VECTOR %0, %1
-    $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %4
+    %0:sgpr(i64) = COPY $sgpr0_sgpr1
+    %1:sgpr(i64) = COPY $sgpr2_sgpr3
+    %2:sgpr(<2 x i64>) = G_BUILD_VECTOR %0(i64), %1(i64)
+    $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %2(<2 x i64>)
 ...

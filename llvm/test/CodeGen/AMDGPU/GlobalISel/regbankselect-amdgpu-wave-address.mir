@@ -12,7 +12,7 @@ body: |
     ; CHECK: [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:sgpr(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[AMDGPU_WAVE_ADDRESS]](p5)
     %0:_(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
-    S_ENDPGM 0, implicit %0
+    S_ENDPGM 0, implicit %0(p5)
 ...
 
 # TODO: Should infer v here
@@ -29,5 +29,5 @@ body: |
     ; CHECK-NEXT: G_STORE [[COPY]](p5), [[COPY1]](p1) :: (store (p5), addrspace 1)
     %0:_(p1) = G_IMPLICIT_DEF
     %1:_(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
-    G_STORE %1, %0 :: (store (p5), addrspace 1)
+    G_STORE %1(p5), %0(p1) :: (store (p5), addrspace 1)
 ...

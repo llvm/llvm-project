@@ -9,6 +9,6 @@ legalized: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: getreg
-    ; CHECK: [[INT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.getreg), 0
-    %0:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.getreg), 0
+    ; CHECK: [[INT:%[0-9]+]]:sgpr(i32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.getreg), 0
+    %0:_(i32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.getreg), 0
 ...

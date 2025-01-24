@@ -14,25 +14,26 @@ body: |
     ; GFX9PLUS-LABEL: name: legal_s32_to_v2s16
     ; GFX9PLUS: liveins: $vgpr0, $vgpr1
     ; GFX9PLUS-NEXT: {{  $}}
-    ; GFX9PLUS-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GFX9PLUS-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; GFX9PLUS-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY]](s32), [[COPY1]](s32)
-    ; GFX9PLUS-NEXT: S_NOP 0, implicit [[BUILD_VECTOR_TRUNC]](<2 x s16>)
+    ; GFX9PLUS-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; GFX9PLUS-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+    ; GFX9PLUS-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x i16>) = G_BUILD_VECTOR_TRUNC [[COPY]](i32), [[COPY1]](i32)
+    ; GFX9PLUS-NEXT: S_NOP 0, implicit [[BUILD_VECTOR_TRUNC]](<2 x i16>)
+    ;
     ; PREGFX8-LABEL: name: legal_s32_to_v2s16
     ; PREGFX8: liveins: $vgpr0, $vgpr1
     ; PREGFX8-NEXT: {{  $}}
-    ; PREGFX8-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; PREGFX8-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; PREGFX8-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; PREGFX8-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; PREGFX8-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
-    ; PREGFX8-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; PREGFX8-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C1]](s32)
-    ; PREGFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
-    ; PREGFX8-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
-    ; PREGFX8-NEXT: S_NOP 0, implicit [[BITCAST]](<2 x s16>)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $vgpr1
-    %2:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %0, %1
-    S_NOP 0, implicit %2
+    ; PREGFX8-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; PREGFX8-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+    ; PREGFX8-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 65535
+    ; PREGFX8-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[COPY]], [[C]]
+    ; PREGFX8-NEXT: [[AND1:%[0-9]+]]:_(i32) = G_AND [[COPY1]], [[C]]
+    ; PREGFX8-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; PREGFX8-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[AND1]], [[C1]](i32)
+    ; PREGFX8-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[AND]], [[SHL]]
+    ; PREGFX8-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x i16>) = G_BITCAST [[OR]](i32)
+    ; PREGFX8-NEXT: S_NOP 0, implicit [[BITCAST]](<2 x i16>)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(<2 x i16>) = G_BUILD_VECTOR_TRUNC %0(i32), %1(i32)
+    S_NOP 0, implicit %2(<2 x i16>)
 ...

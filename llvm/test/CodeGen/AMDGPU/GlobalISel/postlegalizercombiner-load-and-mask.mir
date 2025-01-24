@@ -13,13 +13,13 @@ body: |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p1) :: (load (s64), addrspace 1)
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[LOAD]], [[C]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[AND]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 255
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[COPY]](p1) :: (load (i64), addrspace 1)
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i64) = G_AND [[LOAD]], [[C]]
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[AND]](i64)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s64) = G_CONSTANT i64 255
-    %2:_(s64) = G_LOAD %0 :: (load (s64), align 8, addrspace 1)
-    %3:_(s64) = G_AND %2, %1
-    $vgpr0_vgpr1 = COPY %3
+    %1:_(i64) = G_CONSTANT i64 255
+    %2:_(i64) = G_LOAD %0(p1) :: (load (i64), addrspace 1)
+    %3:_(i64) = G_AND %2, %1
+    $vgpr0_vgpr1 = COPY %3(i64)
 ...

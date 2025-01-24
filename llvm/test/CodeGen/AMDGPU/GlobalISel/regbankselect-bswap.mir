@@ -12,11 +12,11 @@ body: |
     ; CHECK-LABEL: name: bswap_i32_s
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-    ; CHECK-NEXT: [[BSWAP:%[0-9]+]]:vgpr(s32) = G_BSWAP [[COPY1]]
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s32) = G_BSWAP %0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[COPY]](i32)
+    ; CHECK-NEXT: [[BSWAP:%[0-9]+]]:vgpr(i32) = G_BSWAP [[COPY1]]
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = G_BSWAP %0
 ...
 
 ---
@@ -29,8 +29,8 @@ body: |
     ; CHECK-LABEL: name: bswap_i32_v
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[BSWAP:%[0-9]+]]:vgpr(s32) = G_BSWAP [[COPY]]
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = G_BSWAP %0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[BSWAP:%[0-9]+]]:vgpr(i32) = G_BSWAP [[COPY]]
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = G_BSWAP %0
 ...

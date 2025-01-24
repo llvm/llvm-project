@@ -12,14 +12,14 @@ body: |
     ; CHECK-LABEL: name: shl_s32_ss
     ; CHECK: liveins: $sgpr0, $sgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[COPY1]](s32)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](s32)
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s32) = COPY $sgpr1
-    %2:_(s32) = G_SHL %0, %1
-    S_ENDPGM 0, implicit %2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(i32) = COPY $sgpr1
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[COPY]], [[COPY1]](i32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](i32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = COPY $sgpr1
+    %2:_(i32) = G_SHL %0, %1(i32)
+    S_ENDPGM 0, implicit %2(i32)
 ...
 
 ---
@@ -32,15 +32,15 @@ body: |
     ; CHECK-LABEL: name: shl_s32_sv
     ; CHECK: liveins: $sgpr0, $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(s32) = G_SHL [[COPY2]], [[COPY1]](s32)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](s32)
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s32) = COPY $vgpr0
-    %2:_(s32) = G_SHL %0, %1
-    S_ENDPGM 0, implicit %2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[COPY]](i32)
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(i32) = G_SHL [[COPY2]], [[COPY1]](i32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](i32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = COPY $vgpr0
+    %2:_(i32) = G_SHL %0, %1(i32)
+    S_ENDPGM 0, implicit %2(i32)
 ...
 
 ---
@@ -53,15 +53,15 @@ body: |
     ; CHECK-LABEL: name: shl_s32_vs
     ; CHECK: liveins: $sgpr0, $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(s32) = G_SHL [[COPY]], [[COPY2]](s32)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](s32)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $sgpr0
-    %2:_(s32) = G_SHL %0, %1
-    S_ENDPGM 0, implicit %2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[COPY1]](i32)
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(i32) = G_SHL [[COPY]], [[COPY2]](i32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](i32)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $sgpr0
+    %2:_(i32) = G_SHL %0, %1(i32)
+    S_ENDPGM 0, implicit %2(i32)
 ...
 
 ---
@@ -74,14 +74,14 @@ body: |
     ; CHECK-LABEL: name: shl_s32_vv
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(s32) = G_SHL [[COPY]], [[COPY1]](s32)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](s32)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $vgpr1
-    %2:_(s32) = G_SHL %0, %1
-    S_ENDPGM 0, implicit %2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY $vgpr1
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(i32) = G_SHL [[COPY]], [[COPY1]](i32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](i32)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(i32) = G_SHL %0, %1(i32)
+    S_ENDPGM 0, implicit %2(i32)
 ...
 
 ---
@@ -94,21 +94,21 @@ body: |
     ; CHECK-LABEL: name: shl_s16_ss
     ; CHECK: liveins: $sgpr0, $sgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY1]](s32)
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC]](s16)
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC1]](s16)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[ANYEXT]], [[ZEXT]](s32)
-    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:sgpr(s16) = G_TRUNC [[SHL]](s32)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[TRUNC2]](s16)
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s32) = COPY $sgpr1
-    %2:_(s16) = G_TRUNC %0
-    %3:_(s16) = G_TRUNC %1
-    %4:_(s16) = G_SHL %2, %3
-    S_ENDPGM 0, implicit %4
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(i32) = COPY $sgpr1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(i16) = G_TRUNC [[COPY]](i32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:sgpr(i16) = G_TRUNC [[COPY1]](i32)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:sgpr(i32) = G_ANYEXT [[TRUNC]](i16)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:sgpr(i32) = G_ZEXT [[TRUNC1]](i16)
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[ANYEXT]], [[ZEXT]](i32)
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:sgpr(i16) = G_TRUNC [[SHL]](i32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[TRUNC2]](i16)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = COPY $sgpr1
+    %2:_(i16) = G_TRUNC %0(i32)
+    %3:_(i16) = G_TRUNC %1(i32)
+    %4:_(i16) = G_SHL %2, %3(i16)
+    S_ENDPGM 0, implicit %4(i16)
 ...
 
 ---
@@ -122,19 +122,19 @@ body: |
     ; CHECK-LABEL: name: shl_s16_sv
     ; CHECK: liveins: $sgpr0, $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY1]](s32)
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s16) = COPY [[TRUNC]](s16)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(s16) = G_SHL [[COPY2]], [[TRUNC1]](s16)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](s16)
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s32) = COPY $vgpr0
-    %2:_(s16) = G_TRUNC %0
-    %3:_(s16) = G_TRUNC %1
-    %4:_(s16) = G_SHL %2, %3
-    S_ENDPGM 0, implicit %4
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(i16) = G_TRUNC [[COPY]](i32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:vgpr(i16) = G_TRUNC [[COPY1]](i32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i16) = COPY [[TRUNC]](i16)
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(i16) = G_SHL [[COPY2]], [[TRUNC1]](i16)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](i16)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = COPY $vgpr0
+    %2:_(i16) = G_TRUNC %0(i32)
+    %3:_(i16) = G_TRUNC %1(i32)
+    %4:_(i16) = G_SHL %2, %3(i16)
+    S_ENDPGM 0, implicit %4(i16)
 ...
 
 ---
@@ -147,19 +147,19 @@ body: |
     ; CHECK-LABEL: name: shl_s16_vs
     ; CHECK: liveins: $sgpr0, $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY1]](s32)
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s16) = COPY [[TRUNC1]](s16)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(s16) = G_SHL [[TRUNC]], [[COPY2]](s16)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](s16)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $sgpr0
-    %2:_(s16) = G_TRUNC %0
-    %3:_(s16) = G_TRUNC %1
-    %4:_(s16) = G_SHL %2, %3
-    S_ENDPGM 0, implicit %4
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(i16) = G_TRUNC [[COPY]](i32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:sgpr(i16) = G_TRUNC [[COPY1]](i32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i16) = COPY [[TRUNC1]](i16)
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(i16) = G_SHL [[TRUNC]], [[COPY2]](i16)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](i16)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $sgpr0
+    %2:_(i16) = G_TRUNC %0(i32)
+    %3:_(i16) = G_TRUNC %1(i32)
+    %4:_(i16) = G_SHL %2, %3(i16)
+    S_ENDPGM 0, implicit %4(i16)
 
 ...
 
@@ -173,18 +173,18 @@ body: |
     ; CHECK-LABEL: name: shl_s16_vv
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY1]](s32)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(s16) = G_SHL [[TRUNC]], [[TRUNC1]](s16)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](s16)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $vgpr1
-    %2:_(s16) = G_TRUNC %0
-    %3:_(s16) = G_TRUNC %1
-    %4:_(s16) = G_SHL %2, %3
-    S_ENDPGM 0, implicit %4
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY $vgpr1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(i16) = G_TRUNC [[COPY]](i32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:vgpr(i16) = G_TRUNC [[COPY1]](i32)
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(i16) = G_SHL [[TRUNC]], [[TRUNC1]](i16)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](i16)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(i16) = G_TRUNC %0(i32)
+    %3:_(i16) = G_TRUNC %1(i32)
+    %4:_(i16) = G_SHL %2, %3(i16)
+    S_ENDPGM 0, implicit %4(i16)
 
 ...
 
@@ -198,22 +198,22 @@ body: |
     ; CHECK-LABEL: name: shl_v2s16_ss
     ; CHECK: liveins: $sgpr0, $sgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr1
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(s32) = G_BITCAST [[COPY]](<2 x s16>)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:sgpr(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:sgpr(s32) = G_BITCAST [[COPY1]](<2 x s16>)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:sgpr(s32) = G_LSHR [[BITCAST1]], [[C1]](s32)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[BITCAST]], [[BITCAST1]](s32)
-    ; CHECK-NEXT: [[SHL1:%[0-9]+]]:sgpr(s32) = G_SHL [[LSHR]], [[LSHR1]](s32)
-    ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[SHL]](s32), [[SHL1]](s32)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR_TRUNC]](<2 x s16>)
-    %0:_(<2 x s16>) = COPY $sgpr0
-    %1:_(<2 x s16>) = COPY $sgpr1
-    %2:_(<2 x s16>) = G_SHL %0, %1
-    S_ENDPGM 0, implicit %2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(<2 x i16>) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(<2 x i16>) = COPY $sgpr1
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i32) = G_BITCAST [[COPY]](<2 x i16>)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:sgpr(i32) = G_LSHR [[BITCAST]], [[C]](i32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:sgpr(i32) = G_BITCAST [[COPY1]](<2 x i16>)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:sgpr(i32) = G_LSHR [[BITCAST1]], [[C1]](i32)
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[BITCAST]], [[BITCAST1]](i32)
+    ; CHECK-NEXT: [[SHL1:%[0-9]+]]:sgpr(i32) = G_SHL [[LSHR]], [[LSHR1]](i32)
+    ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC [[SHL]](i32), [[SHL1]](i32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR_TRUNC]](<2 x i16>)
+    %0:_(<2 x i16>) = COPY $sgpr0
+    %1:_(<2 x i16>) = COPY $sgpr1
+    %2:_(<2 x i16>) = G_SHL %0, %1(<2 x i16>)
+    S_ENDPGM 0, implicit %2(<2 x i16>)
 
 ...
 
@@ -227,15 +227,15 @@ body: |
     ; CHECK-LABEL: name: shl_v2s16_sv
     ; CHECK: liveins: $sgpr0, $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<2 x s16>) = COPY [[COPY]](<2 x s16>)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(<2 x s16>) = G_SHL [[COPY2]], [[COPY1]](<2 x s16>)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](<2 x s16>)
-    %0:_(<2 x s16>) = COPY $sgpr0
-    %1:_(<2 x s16>) = COPY $vgpr0
-    %2:_(<2 x s16>) = G_SHL %0, %1
-    S_ENDPGM 0, implicit %2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(<2 x i16>) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x i16>) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<2 x i16>) = COPY [[COPY]](<2 x i16>)
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(<2 x i16>) = G_SHL [[COPY2]], [[COPY1]](<2 x i16>)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](<2 x i16>)
+    %0:_(<2 x i16>) = COPY $sgpr0
+    %1:_(<2 x i16>) = COPY $vgpr0
+    %2:_(<2 x i16>) = G_SHL %0, %1(<2 x i16>)
+    S_ENDPGM 0, implicit %2(<2 x i16>)
 ...
 
 ---
@@ -248,15 +248,15 @@ body: |
     ; CHECK-LABEL: name: shl_v2s16_vs
     ; CHECK: liveins: $sgpr0, $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<2 x s16>) = COPY [[COPY1]](<2 x s16>)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(<2 x s16>) = G_SHL [[COPY]], [[COPY2]](<2 x s16>)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](<2 x s16>)
-    %0:_(<2 x s16>) = COPY $vgpr0
-    %1:_(<2 x s16>) = COPY $sgpr0
-    %2:_(<2 x s16>) = G_SHL %0, %1
-    S_ENDPGM 0, implicit %2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(<2 x i16>) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(<2 x i16>) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<2 x i16>) = COPY [[COPY1]](<2 x i16>)
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(<2 x i16>) = G_SHL [[COPY]], [[COPY2]](<2 x i16>)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](<2 x i16>)
+    %0:_(<2 x i16>) = COPY $vgpr0
+    %1:_(<2 x i16>) = COPY $sgpr0
+    %2:_(<2 x i16>) = G_SHL %0, %1(<2 x i16>)
+    S_ENDPGM 0, implicit %2(<2 x i16>)
 
 ...
 
@@ -270,13 +270,13 @@ body: |
     ; CHECK-LABEL: name: shl_v2s16_vv
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr1
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(<2 x s16>) = G_SHL [[COPY]], [[COPY1]](<2 x s16>)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](<2 x s16>)
-    %0:_(<2 x s16>) = COPY $vgpr0
-    %1:_(<2 x s16>) = COPY $vgpr1
-    %2:_(<2 x s16>) = G_SHL %0, %1
-    S_ENDPGM 0, implicit %2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(<2 x i16>) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x i16>) = COPY $vgpr1
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(<2 x i16>) = G_SHL [[COPY]], [[COPY1]](<2 x i16>)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](<2 x i16>)
+    %0:_(<2 x i16>) = COPY $vgpr0
+    %1:_(<2 x i16>) = COPY $vgpr1
+    %2:_(<2 x i16>) = G_SHL %0, %1(<2 x i16>)
+    S_ENDPGM 0, implicit %2(<2 x i16>)
 
 ...

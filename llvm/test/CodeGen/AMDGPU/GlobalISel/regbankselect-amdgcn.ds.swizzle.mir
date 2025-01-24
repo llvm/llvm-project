@@ -13,10 +13,10 @@ body: |
     ; CHECK-LABEL: name: ds_swizzle_s
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ds.swizzle), [[COPY1]](s32), 0
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ds.swizzle), %0, 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[COPY]](i32)
+    ; CHECK-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:vgpr(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ds.swizzle), [[COPY1]](i32), 0
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ds.swizzle), %0(i32), 0
 
 ...

@@ -11,14 +11,14 @@ body: |
     ; CHECK-LABEL: name: v2s16_trunc_same_bitcast_lshr16
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %src:_(<2 x s16>) = COPY $vgpr0
-    ; CHECK-NEXT: $vgpr0 = COPY %src(<2 x s16>)
-    %src:_(<2 x s16>) = COPY $vgpr0
-    %bitcast:_(s32) = G_BITCAST %src
-    %lshr_amount:_(s32) = G_CONSTANT i32 16
-    %lshr:_(s32) = G_LSHR %bitcast, %lshr_amount
-    %root:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %bitcast, %lshr
-    $vgpr0 = COPY %root
+    ; CHECK-NEXT: %src:_(<2 x i16>) = COPY $vgpr0
+    ; CHECK-NEXT: $vgpr0 = COPY %src(<2 x i16>)
+    %src:_(<2 x i16>) = COPY $vgpr0
+    %bitcast:_(i32) = G_BITCAST %src(<2 x i16>)
+    %lshr_amount:_(i32) = G_CONSTANT i32 16
+    %lshr:_(i32) = G_LSHR %bitcast, %lshr_amount(i32)
+    %root:_(<2 x i16>) = G_BUILD_VECTOR_TRUNC %bitcast(i32), %lshr(i32)
+    $vgpr0 = COPY %root(<2 x i16>)
 ...
 
 ---
@@ -31,15 +31,15 @@ body: |
     ; CHECK-LABEL: name: v2s16_trunc_different_bitcast_lshr16
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %src:_(<2 x s16>) = COPY $vgpr0
-    ; CHECK-NEXT: $vgpr0 = COPY %src(<2 x s16>)
-    %src:_(<2 x s16>) = COPY $vgpr0
-    %bitcast0:_(s32) = G_BITCAST %src
-    %bitcast1:_(s32) = G_BITCAST %src
-    %lshr_amount:_(s32) = G_CONSTANT i32 16
-    %lshr:_(s32) = G_LSHR %bitcast1, %lshr_amount
-    %root:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %bitcast0, %lshr
-    $vgpr0 = COPY %root
+    ; CHECK-NEXT: %src:_(<2 x i16>) = COPY $vgpr0
+    ; CHECK-NEXT: $vgpr0 = COPY %src(<2 x i16>)
+    %src:_(<2 x i16>) = COPY $vgpr0
+    %bitcast0:_(i32) = G_BITCAST %src(<2 x i16>)
+    %bitcast1:_(i32) = G_BITCAST %src(<2 x i16>)
+    %lshr_amount:_(i32) = G_CONSTANT i32 16
+    %lshr:_(i32) = G_LSHR %bitcast1, %lshr_amount(i32)
+    %root:_(<2 x i16>) = G_BUILD_VECTOR_TRUNC %bitcast0(i32), %lshr(i32)
+    $vgpr0 = COPY %root(<2 x i16>)
 ...
 
 ---
@@ -52,18 +52,18 @@ body: |
     ; CHECK-LABEL: name: v2s16_trunc_same_bitcast_lshr8_nocombine
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %src:_(<2 x s16>) = COPY $vgpr0
-    ; CHECK-NEXT: %bitcast:_(s32) = G_BITCAST %src(<2 x s16>)
-    ; CHECK-NEXT: %lshr_amount:_(s32) = G_CONSTANT i32 8
-    ; CHECK-NEXT: %lshr:_(s32) = G_LSHR %bitcast, %lshr_amount(s32)
-    ; CHECK-NEXT: %root:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %bitcast(s32), %lshr(s32)
-    ; CHECK-NEXT: $vgpr0 = COPY %root(<2 x s16>)
-    %src:_(<2 x s16>) = COPY $vgpr0
-    %bitcast:_(s32) = G_BITCAST %src
-    %lshr_amount:_(s32) = G_CONSTANT i32 8
-    %lshr:_(s32) = G_LSHR %bitcast, %lshr_amount
-    %root:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC %bitcast, %lshr
-    $vgpr0 = COPY %root
+    ; CHECK-NEXT: %src:_(<2 x i16>) = COPY $vgpr0
+    ; CHECK-NEXT: %bitcast:_(i32) = G_BITCAST %src(<2 x i16>)
+    ; CHECK-NEXT: %lshr_amount:_(i32) = G_CONSTANT i32 8
+    ; CHECK-NEXT: %lshr:_(i32) = G_LSHR %bitcast, %lshr_amount(i32)
+    ; CHECK-NEXT: %root:_(<2 x i16>) = G_BUILD_VECTOR_TRUNC %bitcast(i32), %lshr(i32)
+    ; CHECK-NEXT: $vgpr0 = COPY %root(<2 x i16>)
+    %src:_(<2 x i16>) = COPY $vgpr0
+    %bitcast:_(i32) = G_BITCAST %src(<2 x i16>)
+    %lshr_amount:_(i32) = G_CONSTANT i32 8
+    %lshr:_(i32) = G_LSHR %bitcast, %lshr_amount(i32)
+    %root:_(<2 x i16>) = G_BUILD_VECTOR_TRUNC %bitcast(i32), %lshr(i32)
+    $vgpr0 = COPY %root(<2 x i16>)
 ...
 
 ---
@@ -76,16 +76,16 @@ body: |
     ; CHECK-LABEL: name: v2s16_same_bitcast_lshr16
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %src:_(<2 x s16>) = COPY $vgpr0
-    ; CHECK-NEXT: $vgpr0 = COPY %src(<2 x s16>)
-    %src:_(<2 x s16>) = COPY $vgpr0
-    %bitcast:_(s32) = G_BITCAST %src
-    %lshr_amount:_(s32) = G_CONSTANT i32 16
-    %lshr:_(s32) = G_LSHR %bitcast, %lshr_amount
-    %trunclo:_(s16) = G_TRUNC %bitcast
-    %trunchi:_(s16) = G_TRUNC %lshr
-    %root:_(<2 x s16>) = G_BUILD_VECTOR %trunclo, %trunchi
-    $vgpr0 = COPY %root
+    ; CHECK-NEXT: %src:_(<2 x i16>) = COPY $vgpr0
+    ; CHECK-NEXT: $vgpr0 = COPY %src(<2 x i16>)
+    %src:_(<2 x i16>) = COPY $vgpr0
+    %bitcast:_(i32) = G_BITCAST %src(<2 x i16>)
+    %lshr_amount:_(i32) = G_CONSTANT i32 16
+    %lshr:_(i32) = G_LSHR %bitcast, %lshr_amount(i32)
+    %trunclo:_(i16) = G_TRUNC %bitcast(i32)
+    %trunchi:_(i16) = G_TRUNC %lshr(i32)
+    %root:_(<2 x i16>) = G_BUILD_VECTOR %trunclo(i16), %trunchi(i16)
+    $vgpr0 = COPY %root(<2 x i16>)
 ...
 
 ---
@@ -98,22 +98,22 @@ body: |
     ; CHECK-LABEL: name: v2s16_same_bitcast_lshr8_nocombine
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %src:_(<2 x s16>) = COPY $vgpr0
-    ; CHECK-NEXT: %bitcast:_(s32) = G_BITCAST %src(<2 x s16>)
-    ; CHECK-NEXT: %lshr_amount:_(s32) = G_CONSTANT i32 8
-    ; CHECK-NEXT: %lshr:_(s32) = G_LSHR %bitcast, %lshr_amount(s32)
-    ; CHECK-NEXT: %trunclo:_(s16) = G_TRUNC %bitcast(s32)
-    ; CHECK-NEXT: %trunchi:_(s16) = G_TRUNC %lshr(s32)
-    ; CHECK-NEXT: %root:_(<2 x s16>) = G_BUILD_VECTOR %trunclo(s16), %trunchi(s16)
-    ; CHECK-NEXT: $vgpr0 = COPY %root(<2 x s16>)
-    %src:_(<2 x s16>) = COPY $vgpr0
-    %bitcast:_(s32) = G_BITCAST %src
-    %lshr_amount:_(s32) = G_CONSTANT i32 8
-    %lshr:_(s32) = G_LSHR %bitcast, %lshr_amount
-    %trunclo:_(s16) = G_TRUNC %bitcast
-    %trunchi:_(s16) = G_TRUNC %lshr
-    %root:_(<2 x s16>) = G_BUILD_VECTOR %trunclo, %trunchi
-    $vgpr0 = COPY %root
+    ; CHECK-NEXT: %src:_(<2 x i16>) = COPY $vgpr0
+    ; CHECK-NEXT: %bitcast:_(i32) = G_BITCAST %src(<2 x i16>)
+    ; CHECK-NEXT: %lshr_amount:_(i32) = G_CONSTANT i32 8
+    ; CHECK-NEXT: %lshr:_(i32) = G_LSHR %bitcast, %lshr_amount(i32)
+    ; CHECK-NEXT: %trunclo:_(i16) = G_TRUNC %bitcast(i32)
+    ; CHECK-NEXT: %trunchi:_(i16) = G_TRUNC %lshr(i32)
+    ; CHECK-NEXT: %root:_(<2 x i16>) = G_BUILD_VECTOR %trunclo(i16), %trunchi(i16)
+    ; CHECK-NEXT: $vgpr0 = COPY %root(<2 x i16>)
+    %src:_(<2 x i16>) = COPY $vgpr0
+    %bitcast:_(i32) = G_BITCAST %src(<2 x i16>)
+    %lshr_amount:_(i32) = G_CONSTANT i32 8
+    %lshr:_(i32) = G_LSHR %bitcast, %lshr_amount(i32)
+    %trunclo:_(i16) = G_TRUNC %bitcast(i32)
+    %trunchi:_(i16) = G_TRUNC %lshr(i32)
+    %root:_(<2 x i16>) = G_BUILD_VECTOR %trunclo(i16), %trunchi(i16)
+    $vgpr0 = COPY %root(<2 x i16>)
 ...
 
 ---
@@ -126,14 +126,14 @@ body: |
     ; CHECK-LABEL: name: v2s16_undefhi
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %src:_(<2 x s16>) = COPY $vgpr0
-    ; CHECK-NEXT: $vgpr0 = COPY %src(<2 x s16>)
-    %src:_(<2 x s16>) = COPY $vgpr0
-    %bitcast:_(s32) = G_BITCAST %src
-    %trunc:_(s16) = G_TRUNC %bitcast
-    %undef:_(s16) = G_IMPLICIT_DEF
-    %root:_(<2 x s16>) = G_BUILD_VECTOR %trunc, %undef
-    $vgpr0 = COPY %root
+    ; CHECK-NEXT: %src:_(<2 x i16>) = COPY $vgpr0
+    ; CHECK-NEXT: $vgpr0 = COPY %src(<2 x i16>)
+    %src:_(<2 x i16>) = COPY $vgpr0
+    %bitcast:_(i32) = G_BITCAST %src(<2 x i16>)
+    %trunc:_(i16) = G_TRUNC %bitcast(i32)
+    %undef:_(i16) = G_IMPLICIT_DEF
+    %root:_(<2 x i16>) = G_BUILD_VECTOR %trunc(i16), %undef(i16)
+    $vgpr0 = COPY %root(<2 x i16>)
 ...
 
 ---
@@ -146,12 +146,12 @@ body: |
     ; CHECK-LABEL: name: v2s32_undefhi
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %src:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %src(<2 x s32>)
-    %src:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    %bitcast:_(s64) = G_BITCAST %src
-    %trunc:_(s32) = G_TRUNC %bitcast
-    %undef:_(s32) = G_IMPLICIT_DEF
-    %root:_(<2 x s32>) = G_BUILD_VECTOR %trunc, %undef
-    $vgpr0_vgpr1 = COPY %root
+    ; CHECK-NEXT: %src:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %src(<2 x i32>)
+    %src:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    %bitcast:_(i64) = G_BITCAST %src(<2 x i32>)
+    %trunc:_(i32) = G_TRUNC %bitcast(i64)
+    %undef:_(i32) = G_IMPLICIT_DEF
+    %root:_(<2 x i32>) = G_BUILD_VECTOR %trunc(i32), %undef(i32)
+    $vgpr0_vgpr1 = COPY %root(<2 x i32>)
 ...

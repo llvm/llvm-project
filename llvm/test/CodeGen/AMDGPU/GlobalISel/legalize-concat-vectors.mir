@@ -10,14 +10,14 @@ body: |
     ; CHECK-LABEL: name: concat_vectors_v2s32_v2s32
     ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s32>) = G_CONCAT_VECTORS [[COPY]](<2 x s32>), [[COPY1]](<2 x s32>)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[CONCAT_VECTORS]](<4 x s32>)
-    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
-    %2:_(<4 x s32>) = G_CONCAT_VECTORS %0, %1
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x i32>) = G_CONCAT_VECTORS [[COPY]](<2 x i32>), [[COPY1]](<2 x i32>)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[CONCAT_VECTORS]](<4 x i32>)
+    %0:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    %1:_(<2 x i32>) = COPY $vgpr2_vgpr3
+    %2:_(<4 x i32>) = G_CONCAT_VECTORS %0(<2 x i32>), %1(<2 x i32>)
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %2(<4 x i32>)
 ...
 
 ---
@@ -29,14 +29,14 @@ body: |
     ; CHECK-LABEL: name: concat_vectors_v2s16_v2s16
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
-    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
-    %0:_(<2 x s16>) = COPY $vgpr0
-    %1:_(<2 x s16>) = COPY $vgpr1
-    %2:_(<4 x s16>) = G_CONCAT_VECTORS %0, %1
-    $vgpr0_vgpr1 = COPY %2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i16>) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i16>) = COPY $vgpr1
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x i16>) = G_CONCAT_VECTORS [[COPY]](<2 x i16>), [[COPY1]](<2 x i16>)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x i16>)
+    %0:_(<2 x i16>) = COPY $vgpr0
+    %1:_(<2 x i16>) = COPY $vgpr1
+    %2:_(<4 x i16>) = G_CONCAT_VECTORS %0(<2 x i16>), %1(<2 x i16>)
+    $vgpr0_vgpr1 = COPY %2(<4 x i16>)
 ...
 
 ---
@@ -48,18 +48,18 @@ body: |
     ; CHECK-LABEL: name: concat_vectors_v2s16_v2s16_v2s16_v2s16
     ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr2
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr3
-    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[COPY]](<2 x s16>), [[COPY1]](<2 x s16>), [[COPY2]](<2 x s16>), [[COPY3]](<2 x s16>)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[CONCAT_VECTORS]](<8 x s16>)
-    %0:_(<2 x s16>) = COPY $vgpr0
-    %1:_(<2 x s16>) = COPY $vgpr1
-    %2:_(<2 x s16>) = COPY $vgpr2
-    %3:_(<2 x s16>) = COPY $vgpr3
-    %4:_(<8 x s16>) = G_CONCAT_VECTORS %0, %1, %2, %3
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %4
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i16>) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i16>) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x i16>) = COPY $vgpr2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<2 x i16>) = COPY $vgpr3
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x i16>) = G_CONCAT_VECTORS [[COPY]](<2 x i16>), [[COPY1]](<2 x i16>), [[COPY2]](<2 x i16>), [[COPY3]](<2 x i16>)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[CONCAT_VECTORS]](<8 x i16>)
+    %0:_(<2 x i16>) = COPY $vgpr0
+    %1:_(<2 x i16>) = COPY $vgpr1
+    %2:_(<2 x i16>) = COPY $vgpr2
+    %3:_(<2 x i16>) = COPY $vgpr3
+    %4:_(<8 x i16>) = G_CONCAT_VECTORS %0(<2 x i16>), %1(<2 x i16>), %2(<2 x i16>), %3(<2 x i16>)
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %4(<8 x i16>)
 ...
 
 ---
@@ -71,14 +71,14 @@ body: |
     ; CHECK-LABEL: name: concat_vectors_v4s16_v4s16
     ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[COPY]](<4 x s16>), [[COPY1]](<4 x s16>)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[CONCAT_VECTORS]](<8 x s16>)
-    %0:_(<4 x s16>) = COPY $vgpr0_vgpr1
-    %1:_(<4 x s16>) = COPY $vgpr2_vgpr3
-    %2:_(<8 x s16>) = G_CONCAT_VECTORS %0, %1
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i16>) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x i16>) = G_CONCAT_VECTORS [[COPY]](<4 x i16>), [[COPY1]](<4 x i16>)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[CONCAT_VECTORS]](<8 x i16>)
+    %0:_(<4 x i16>) = COPY $vgpr0_vgpr1
+    %1:_(<4 x i16>) = COPY $vgpr2_vgpr3
+    %2:_(<8 x i16>) = G_CONCAT_VECTORS %0(<4 x i16>), %1(<4 x i16>)
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %2(<8 x i16>)
 ...
 
 ---
@@ -90,14 +90,14 @@ body: |
     ; CHECK-LABEL: name: concat_vectors_v4s32_v4s32
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY]](<4 x s32>), [[COPY1]](<4 x s32>)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[CONCAT_VECTORS]](<8 x s32>)
-    %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3,
-    %1:_(<4 x s32>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    %2:_(<8 x s32>) = G_CONCAT_VECTORS %0, %1
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i32>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x i32>) = G_CONCAT_VECTORS [[COPY]](<4 x i32>), [[COPY1]](<4 x i32>)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[CONCAT_VECTORS]](<8 x i32>)
+    %0:_(<4 x i32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(<4 x i32>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    %2:_(<8 x i32>) = G_CONCAT_VECTORS %0(<4 x i32>), %1(<4 x i32>)
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %2(<8 x i32>)
 ...
 
 ---
@@ -109,19 +109,19 @@ body: |
     ; CHECK-LABEL: name: concat_vectors_v2s32_v2s32_v2s32_v2s32
     ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr4_vgpr5
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr6_vgpr7
-    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[COPY]](<2 x s32>), [[COPY1]](<2 x s32>), [[COPY2]](<2 x s32>), [[COPY3]](<2 x s32>)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[CONCAT_VECTORS]](<8 x s32>)
-    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
-    %2:_(<2 x s32>) = COPY $vgpr4_vgpr5
-    %3:_(<2 x s32>) = COPY $vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr6_vgpr7
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x i32>) = G_CONCAT_VECTORS [[COPY]](<2 x i32>), [[COPY1]](<2 x i32>), [[COPY2]](<2 x i32>), [[COPY3]](<2 x i32>)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[CONCAT_VECTORS]](<8 x i32>)
+    %0:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    %1:_(<2 x i32>) = COPY $vgpr2_vgpr3
+    %2:_(<2 x i32>) = COPY $vgpr4_vgpr5
+    %3:_(<2 x i32>) = COPY $vgpr6_vgpr7
+    %4:_(<8 x i32>) = G_CONCAT_VECTORS %0(<2 x i32>), %1(<2 x i32>), %2(<2 x i32>), %3(<2 x i32>)
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %4(<8 x i32>)
 
-    %4:_(<8 x s32>) = G_CONCAT_VECTORS %0, %1, %2, %3
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %4
 ...
 ---
 name: concat_vectors_v2s64_v2s64
@@ -132,14 +132,14 @@ body: |
     ; CHECK-LABEL: name: concat_vectors_v2s64_v2s64
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s64>) = G_CONCAT_VECTORS [[COPY]](<2 x s64>), [[COPY1]](<2 x s64>)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[CONCAT_VECTORS]](<4 x s64>)
-    %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    %1:_(<2 x s64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    %2:_(<4 x s64>) = G_CONCAT_VECTORS %0, %1
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x i64>) = G_CONCAT_VECTORS [[COPY]](<2 x i64>), [[COPY1]](<2 x i64>)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[CONCAT_VECTORS]](<4 x i64>)
+    %0:_(<2 x i64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(<2 x i64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    %2:_(<4 x i64>) = G_CONCAT_VECTORS %0(<2 x i64>), %1(<2 x i64>)
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %2(<4 x i64>)
 ...
 
 ---
@@ -157,8 +157,8 @@ body: |
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[CONCAT_VECTORS]](<4 x p1>)
     %0:_(<2 x p1>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(<2 x p1>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    %2:_(<4 x p1>) = G_CONCAT_VECTORS %0, %1
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %2
+    %2:_(<4 x p1>) = G_CONCAT_VECTORS %0(<2 x p1>), %1(<2 x p1>)
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %2(<4 x p1>)
 ...
 
 ---
@@ -176,8 +176,8 @@ body: |
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[CONCAT_VECTORS]](<4 x p0>)
     %0:_(<2 x p0>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(<2 x p0>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    %2:_(<4 x p0>) = G_CONCAT_VECTORS %0, %1
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %2
+    %2:_(<4 x p0>) = G_CONCAT_VECTORS %0(<2 x p0>), %1(<2 x p0>)
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %2(<4 x p0>)
 ...
 
 ---
@@ -195,8 +195,8 @@ body: |
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[CONCAT_VECTORS]](<4 x p3>)
     %0:_(<2 x p3>) = COPY $vgpr0_vgpr1
     %1:_(<2 x p3>) = COPY $vgpr2_vgpr3
-    %2:_(<4 x p3>) = G_CONCAT_VECTORS %0, %1
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %2
+    %2:_(<4 x p3>) = G_CONCAT_VECTORS %0(<2 x p3>), %1(<2 x p3>)
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %2(<4 x p3>)
 ...
 
 ---
@@ -214,8 +214,8 @@ body: |
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[CONCAT_VECTORS]](<4 x p5>)
     %0:_(<2 x p5>) = COPY $vgpr0_vgpr1
     %1:_(<2 x p5>) = COPY $vgpr2_vgpr3
-    %2:_(<4 x p5>) = G_CONCAT_VECTORS %0, %1
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %2
+    %2:_(<4 x p5>) = G_CONCAT_VECTORS %0(<2 x p5>), %1(<2 x p5>)
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %2(<4 x p5>)
 ...
 
 ---
@@ -233,8 +233,8 @@ body: |
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[CONCAT_VECTORS]](<4 x p999>)
     %0:_(<2 x p999>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(<2 x p999>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    %2:_(<4 x p999>) = G_CONCAT_VECTORS %0, %1
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %2
+    %2:_(<4 x p999>) = G_CONCAT_VECTORS %0(<2 x p999>), %1(<2 x p999>)
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %2(<4 x p999>)
 ...
 
 ---
@@ -246,10 +246,10 @@ body: |
     ; CHECK-LABEL: name: concat_vectors_v6s16_v3s16
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[COPY]](<6 x s16>)
-    %0:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
-    %1:_(<3 x s16>), %2:_(<3 x s16>) = G_UNMERGE_VALUES %0
-    %3:_(<6 x s16>) = G_CONCAT_VECTORS %1, %2
-    $vgpr0_vgpr1_vgpr2 = COPY %3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<6 x i16>) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[COPY]](<6 x i16>)
+    %0:_(<6 x i16>) = COPY $vgpr0_vgpr1_vgpr2
+    %1:_(<3 x i16>), %2:_(<3 x i16>) = G_UNMERGE_VALUES %0(<6 x i16>)
+    %3:_(<6 x i16>) = G_CONCAT_VECTORS %1(<3 x i16>), %2(<3 x i16>)
+    $vgpr0_vgpr1_vgpr2 = COPY %3(<6 x i16>)
 ...

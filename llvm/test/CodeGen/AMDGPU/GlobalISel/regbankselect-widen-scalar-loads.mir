@@ -13,23 +13,25 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), align 8, addrspace 4)
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), align 8, addrspace 4)
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    ;
     ; GFX9-LABEL: name: constant_load_i8_align8
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), align 8, addrspace 4)
-    ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), align 8, addrspace 4)
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    ;
     ; GFX10-LABEL: name: constant_load_i8_align8
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), align 8, addrspace 4)
-    ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
-   %0:_(p1) = COPY $sgpr0_sgpr1
-   %1:_(s32) = G_LOAD %0 :: (invariant load (s8), align 8, addrspace 4)
-   S_ENDPGM 0, implicit %1
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), align 8, addrspace 4)
+    ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    %0:_(p1) = COPY $sgpr0_sgpr1
+    %1:_(i32) = G_LOAD %0(p1) :: (invariant load (i8), align 8, addrspace 4)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 ---
 name: constant_load_i8_align4
@@ -42,23 +44,25 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 4)
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    ;
     ; GFX9-LABEL: name: constant_load_i8_align4
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
-    ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 4)
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    ;
     ; GFX10-LABEL: name: constant_load_i8_align4
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
-    ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
-   %0:_(p1) = COPY $sgpr0_sgpr1
-   %1:_(s32) = G_LOAD %0 :: (invariant load (s8), align 4, addrspace 4)
-   S_ENDPGM 0, implicit %1
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 4)
+    ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    %0:_(p1) = COPY $sgpr0_sgpr1
+    %1:_(i32) = G_LOAD %0(p1) :: (invariant load (i8), align 4, addrspace 4)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 ---
 name: constant_load_i16_align4
@@ -71,23 +75,25 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 4)
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    ;
     ; GFX9-LABEL: name: constant_load_i16_align4
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
-    ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 4)
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    ;
     ; GFX10-LABEL: name: constant_load_i16_align4
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
-    ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
-   %0:_(p1) = COPY $sgpr0_sgpr1
-   %1:_(s32) = G_LOAD %0 :: (invariant load (s16), align 4, addrspace 4)
-   S_ENDPGM 0, implicit %1
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 4)
+    ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    %0:_(p1) = COPY $sgpr0_sgpr1
+    %1:_(i32) = G_LOAD %0(p1) :: (invariant load (i16), align 4, addrspace 4)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 ---
 name: constant_sextload_i8_align4
@@ -100,26 +106,28 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
-    ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[LOAD]], 8
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](s32)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 4)
+    ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(i32) = G_SEXT_INREG [[LOAD]], 8
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](i32)
+    ;
     ; GFX9-LABEL: name: constant_sextload_i8_align4
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
-    ; GFX9-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[LOAD]], 8
-    ; GFX9-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](s32)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 4)
+    ; GFX9-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(i32) = G_SEXT_INREG [[LOAD]], 8
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](i32)
+    ;
     ; GFX10-LABEL: name: constant_sextload_i8_align4
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
-    ; GFX10-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[LOAD]], 8
-    ; GFX10-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](s32)
-   %0:_(p1) = COPY $sgpr0_sgpr1
-   %1:_(s32) = G_SEXTLOAD %0 :: (invariant load (s8), align 4, addrspace 4)
-   S_ENDPGM 0, implicit %1
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 4)
+    ; GFX10-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(i32) = G_SEXT_INREG [[LOAD]], 8
+    ; GFX10-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](i32)
+    %0:_(p1) = COPY $sgpr0_sgpr1
+    %1:_(i32) = G_SEXTLOAD %0(p1) :: (invariant load (i8), align 4, addrspace 4)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 ---
 name: constant_sextload_i16_align4
@@ -132,26 +140,28 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
-    ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[LOAD]], 16
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](s32)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 4)
+    ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(i32) = G_SEXT_INREG [[LOAD]], 16
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](i32)
+    ;
     ; GFX9-LABEL: name: constant_sextload_i16_align4
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
-    ; GFX9-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[LOAD]], 16
-    ; GFX9-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](s32)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 4)
+    ; GFX9-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(i32) = G_SEXT_INREG [[LOAD]], 16
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](i32)
+    ;
     ; GFX10-LABEL: name: constant_sextload_i16_align4
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
-    ; GFX10-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[LOAD]], 16
-    ; GFX10-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](s32)
-   %0:_(p1) = COPY $sgpr0_sgpr1
-   %1:_(s32) = G_SEXTLOAD %0 :: (invariant load (s16), align 4, addrspace 4)
-   S_ENDPGM 0, implicit %1
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 4)
+    ; GFX10-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(i32) = G_SEXT_INREG [[LOAD]], 16
+    ; GFX10-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](i32)
+    %0:_(p1) = COPY $sgpr0_sgpr1
+    %1:_(i32) = G_SEXTLOAD %0(p1) :: (invariant load (i16), align 4, addrspace 4)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 
 ---
@@ -165,29 +175,31 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
-    ; GFX8-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 255
-    ; GFX8-NEXT: [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[LOAD]], [[C]]
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[AND]](s32)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 4)
+    ; GFX8-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 255
+    ; GFX8-NEXT: [[AND:%[0-9]+]]:sgpr(i32) = G_AND [[LOAD]], [[C]]
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[AND]](i32)
+    ;
     ; GFX9-LABEL: name: constant_zextload_i8_align4
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
-    ; GFX9-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 255
-    ; GFX9-NEXT: [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[LOAD]], [[C]]
-    ; GFX9-NEXT: S_ENDPGM 0, implicit [[AND]](s32)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 4)
+    ; GFX9-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 255
+    ; GFX9-NEXT: [[AND:%[0-9]+]]:sgpr(i32) = G_AND [[LOAD]], [[C]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[AND]](i32)
+    ;
     ; GFX10-LABEL: name: constant_zextload_i8_align4
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
-    ; GFX10-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 255
-    ; GFX10-NEXT: [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[LOAD]], [[C]]
-    ; GFX10-NEXT: S_ENDPGM 0, implicit [[AND]](s32)
-   %0:_(p1) = COPY $sgpr0_sgpr1
-   %1:_(s32) = G_ZEXTLOAD %0 :: (invariant load (s8), align 4, addrspace 4)
-   S_ENDPGM 0, implicit %1
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 4)
+    ; GFX10-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 255
+    ; GFX10-NEXT: [[AND:%[0-9]+]]:sgpr(i32) = G_AND [[LOAD]], [[C]]
+    ; GFX10-NEXT: S_ENDPGM 0, implicit [[AND]](i32)
+    %0:_(p1) = COPY $sgpr0_sgpr1
+    %1:_(i32) = G_ZEXTLOAD %0(p1) :: (invariant load (i8), align 4, addrspace 4)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 ---
 name: constant_zextload_i16_align4
@@ -200,29 +212,31 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
-    ; GFX8-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 65535
-    ; GFX8-NEXT: [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[LOAD]], [[C]]
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[AND]](s32)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 4)
+    ; GFX8-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 65535
+    ; GFX8-NEXT: [[AND:%[0-9]+]]:sgpr(i32) = G_AND [[LOAD]], [[C]]
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[AND]](i32)
+    ;
     ; GFX9-LABEL: name: constant_zextload_i16_align4
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
-    ; GFX9-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 65535
-    ; GFX9-NEXT: [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[LOAD]], [[C]]
-    ; GFX9-NEXT: S_ENDPGM 0, implicit [[AND]](s32)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 4)
+    ; GFX9-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 65535
+    ; GFX9-NEXT: [[AND:%[0-9]+]]:sgpr(i32) = G_AND [[LOAD]], [[C]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[AND]](i32)
+    ;
     ; GFX10-LABEL: name: constant_zextload_i16_align4
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 4)
-    ; GFX10-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 65535
-    ; GFX10-NEXT: [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[LOAD]], [[C]]
-    ; GFX10-NEXT: S_ENDPGM 0, implicit [[AND]](s32)
-   %0:_(p1) = COPY $sgpr0_sgpr1
-   %1:_(s32) = G_ZEXTLOAD %0 :: (invariant load (s16), align 4, addrspace 4)
-   S_ENDPGM 0, implicit %1
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 4)
+    ; GFX10-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 65535
+    ; GFX10-NEXT: [[AND:%[0-9]+]]:sgpr(i32) = G_AND [[LOAD]], [[C]]
+    ; GFX10-NEXT: S_ENDPGM 0, implicit [[AND]](i32)
+    %0:_(p1) = COPY $sgpr0_sgpr1
+    %1:_(i32) = G_ZEXTLOAD %0(p1) :: (invariant load (i16), align 4, addrspace 4)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 ---
 name: global_load_i8_align4
@@ -235,23 +249,25 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 1)
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    ;
     ; GFX9-LABEL: name: global_load_i8_align4
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
-    ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 1)
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    ;
     ; GFX10-LABEL: name: global_load_i8_align4
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
-    ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
-   %0:_(p1) = COPY $sgpr0_sgpr1
-   %1:_(s32) = G_LOAD %0 :: (invariant load (s8), align 4, addrspace 1)
-   S_ENDPGM 0, implicit %1
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 1)
+    ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    %0:_(p1) = COPY $sgpr0_sgpr1
+    %1:_(i32) = G_LOAD %0(p1) :: (invariant load (i8), align 4, addrspace 1)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 ---
 name: global_load_i16_align4
@@ -264,23 +280,25 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 1)
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    ;
     ; GFX9-LABEL: name: global_load_i16_align4
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
-    ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 1)
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    ;
     ; GFX10-LABEL: name: global_load_i16_align4
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
-    ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
-   %0:_(p1) = COPY $sgpr0_sgpr1
-   %1:_(s32) = G_LOAD %0 :: (invariant load (s16), align 4, addrspace 1)
-   S_ENDPGM 0, implicit %1
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 1)
+    ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    %0:_(p1) = COPY $sgpr0_sgpr1
+    %1:_(i32) = G_LOAD %0(p1) :: (invariant load (i16), align 4, addrspace 1)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 ---
 name: global_sextload_i8_alig4
@@ -293,26 +311,28 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
-    ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[LOAD]], 8
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](s32)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 1)
+    ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(i32) = G_SEXT_INREG [[LOAD]], 8
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](i32)
+    ;
     ; GFX9-LABEL: name: global_sextload_i8_alig4
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
-    ; GFX9-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[LOAD]], 8
-    ; GFX9-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](s32)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 1)
+    ; GFX9-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(i32) = G_SEXT_INREG [[LOAD]], 8
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](i32)
+    ;
     ; GFX10-LABEL: name: global_sextload_i8_alig4
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
-    ; GFX10-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[LOAD]], 8
-    ; GFX10-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](s32)
-   %0:_(p1) = COPY $sgpr0_sgpr1
-   %1:_(s32) = G_SEXTLOAD %0 :: (invariant load (s8), align 4, addrspace 1)
-   S_ENDPGM 0, implicit %1
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 1)
+    ; GFX10-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(i32) = G_SEXT_INREG [[LOAD]], 8
+    ; GFX10-NEXT: S_ENDPGM 0, implicit [[SEXT_INREG]](i32)
+    %0:_(p1) = COPY $sgpr0_sgpr1
+    %1:_(i32) = G_SEXTLOAD %0(p1) :: (invariant load (i8), align 4, addrspace 1)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 ---
 name: global_zextload_i16_align4
@@ -325,29 +345,31 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
-    ; GFX8-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 65535
-    ; GFX8-NEXT: [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[LOAD]], [[C]]
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[AND]](s32)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 1)
+    ; GFX8-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 65535
+    ; GFX8-NEXT: [[AND:%[0-9]+]]:sgpr(i32) = G_AND [[LOAD]], [[C]]
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[AND]](i32)
+    ;
     ; GFX9-LABEL: name: global_zextload_i16_align4
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
-    ; GFX9-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 65535
-    ; GFX9-NEXT: [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[LOAD]], [[C]]
-    ; GFX9-NEXT: S_ENDPGM 0, implicit [[AND]](s32)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 1)
+    ; GFX9-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 65535
+    ; GFX9-NEXT: [[AND:%[0-9]+]]:sgpr(i32) = G_AND [[LOAD]], [[C]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[AND]](i32)
+    ;
     ; GFX10-LABEL: name: global_zextload_i16_align4
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p1) :: (invariant load (s32), addrspace 1)
-    ; GFX10-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 65535
-    ; GFX10-NEXT: [[AND:%[0-9]+]]:sgpr(s32) = G_AND [[LOAD]], [[C]]
-    ; GFX10-NEXT: S_ENDPGM 0, implicit [[AND]](s32)
-   %0:_(p1) = COPY $sgpr0_sgpr1
-   %1:_(s32) = G_ZEXTLOAD %0 :: (invariant load (s16), align 4, addrspace 1)
-   S_ENDPGM 0, implicit %1
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:sgpr(i32) = G_LOAD [[COPY]](p1) :: (invariant load (i32), addrspace 1)
+    ; GFX10-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 65535
+    ; GFX10-NEXT: [[AND:%[0-9]+]]:sgpr(i32) = G_AND [[LOAD]], [[C]]
+    ; GFX10-NEXT: S_ENDPGM 0, implicit [[AND]](i32)
+    %0:_(p1) = COPY $sgpr0_sgpr1
+    %1:_(i32) = G_ZEXTLOAD %0(p1) :: (invariant load (i16), align 4, addrspace 1)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 # Some negative test cases
 ---
@@ -361,25 +383,27 @@ body: |
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (invariant load (s8), align 2, addrspace 4)
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:vgpr(i32) = G_LOAD [[COPY1]](p1) :: (invariant load (i8), align 2, addrspace 4)
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    ;
     ; GFX9-LABEL: name: constant_load_i8_align2
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (invariant load (s8), align 2, addrspace 4)
-    ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:vgpr(i32) = G_LOAD [[COPY1]](p1) :: (invariant load (i8), align 2, addrspace 4)
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    ;
     ; GFX10-LABEL: name: constant_load_i8_align2
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (invariant load (s8), align 2, addrspace 4)
-    ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:vgpr(i32) = G_LOAD [[COPY1]](p1) :: (invariant load (i8), align 2, addrspace 4)
+    ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (invariant load (s8), align 2, addrspace 4)
-    S_ENDPGM 0, implicit %1
+    %1:_(i32) = G_LOAD %0(p1) :: (invariant load (i8), align 2, addrspace 4)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 ---
 name: constant_load_i16_align2
@@ -393,25 +417,27 @@ body: |
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (invariant load (s16), addrspace 4)
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:vgpr(i32) = G_LOAD [[COPY1]](p1) :: (invariant load (i16), addrspace 4)
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    ;
     ; GFX9-LABEL: name: constant_load_i16_align2
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (invariant load (s16), addrspace 4)
-    ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:vgpr(i32) = G_LOAD [[COPY1]](p1) :: (invariant load (i16), addrspace 4)
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    ;
     ; GFX10-LABEL: name: constant_load_i16_align2
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (invariant load (s16), addrspace 4)
-    ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:vgpr(i32) = G_LOAD [[COPY1]](p1) :: (invariant load (i16), addrspace 4)
+    ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (invariant load (s16), align 2, addrspace 4)
-    S_ENDPGM 0, implicit %1
+    %1:_(i32) = G_LOAD %0(p1) :: (invariant load (i16), addrspace 4)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 ---
 name: constant_sextload_i8_align2
@@ -425,25 +451,27 @@ body: |
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY1]](p1) :: (invariant load (s8), align 2, addrspace 4)
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[SEXTLOAD]](s32)
+    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(i32) = G_SEXTLOAD [[COPY1]](p1) :: (invariant load (i8), align 2, addrspace 4)
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[SEXTLOAD]](i32)
+    ;
     ; GFX9-LABEL: name: constant_sextload_i8_align2
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX9-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY1]](p1) :: (invariant load (s8), align 2, addrspace 4)
-    ; GFX9-NEXT: S_ENDPGM 0, implicit [[SEXTLOAD]](s32)
+    ; GFX9-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(i32) = G_SEXTLOAD [[COPY1]](p1) :: (invariant load (i8), align 2, addrspace 4)
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[SEXTLOAD]](i32)
+    ;
     ; GFX10-LABEL: name: constant_sextload_i8_align2
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX10-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY1]](p1) :: (invariant load (s8), align 2, addrspace 4)
-    ; GFX10-NEXT: S_ENDPGM 0, implicit [[SEXTLOAD]](s32)
+    ; GFX10-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(i32) = G_SEXTLOAD [[COPY1]](p1) :: (invariant load (i8), align 2, addrspace 4)
+    ; GFX10-NEXT: S_ENDPGM 0, implicit [[SEXTLOAD]](i32)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_SEXTLOAD %0 :: (invariant load (s8), align 2, addrspace 4)
-    S_ENDPGM 0, implicit %1
+    %1:_(i32) = G_SEXTLOAD %0(p1) :: (invariant load (i8), align 2, addrspace 4)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 ---
 name: constant_sextload_i16_align2
@@ -457,25 +485,27 @@ body: |
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY1]](p1) :: (invariant load (s16), addrspace 4)
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[SEXTLOAD]](s32)
+    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(i32) = G_SEXTLOAD [[COPY1]](p1) :: (invariant load (i16), addrspace 4)
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[SEXTLOAD]](i32)
+    ;
     ; GFX9-LABEL: name: constant_sextload_i16_align2
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX9-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY1]](p1) :: (invariant load (s16), addrspace 4)
-    ; GFX9-NEXT: S_ENDPGM 0, implicit [[SEXTLOAD]](s32)
+    ; GFX9-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(i32) = G_SEXTLOAD [[COPY1]](p1) :: (invariant load (i16), addrspace 4)
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[SEXTLOAD]](i32)
+    ;
     ; GFX10-LABEL: name: constant_sextload_i16_align2
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX10-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(s32) = G_SEXTLOAD [[COPY1]](p1) :: (invariant load (s16), addrspace 4)
-    ; GFX10-NEXT: S_ENDPGM 0, implicit [[SEXTLOAD]](s32)
+    ; GFX10-NEXT: [[SEXTLOAD:%[0-9]+]]:vgpr(i32) = G_SEXTLOAD [[COPY1]](p1) :: (invariant load (i16), addrspace 4)
+    ; GFX10-NEXT: S_ENDPGM 0, implicit [[SEXTLOAD]](i32)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_SEXTLOAD %0 :: (invariant load (s16), align 2, addrspace 4)
-    S_ENDPGM 0, implicit %1
+    %1:_(i32) = G_SEXTLOAD %0(p1) :: (invariant load (i16), addrspace 4)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 ---
 name: constant_zextload_i8_align2
@@ -489,25 +519,27 @@ body: |
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX8-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY1]](p1) :: (invariant load (s8), align 2, addrspace 4)
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[ZEXTLOAD]](s32)
+    ; GFX8-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(i32) = G_ZEXTLOAD [[COPY1]](p1) :: (invariant load (i8), align 2, addrspace 4)
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[ZEXTLOAD]](i32)
+    ;
     ; GFX9-LABEL: name: constant_zextload_i8_align2
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX9-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY1]](p1) :: (invariant load (s8), align 2, addrspace 4)
-    ; GFX9-NEXT: S_ENDPGM 0, implicit [[ZEXTLOAD]](s32)
+    ; GFX9-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(i32) = G_ZEXTLOAD [[COPY1]](p1) :: (invariant load (i8), align 2, addrspace 4)
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[ZEXTLOAD]](i32)
+    ;
     ; GFX10-LABEL: name: constant_zextload_i8_align2
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX10-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY1]](p1) :: (invariant load (s8), align 2, addrspace 4)
-    ; GFX10-NEXT: S_ENDPGM 0, implicit [[ZEXTLOAD]](s32)
+    ; GFX10-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(i32) = G_ZEXTLOAD [[COPY1]](p1) :: (invariant load (i8), align 2, addrspace 4)
+    ; GFX10-NEXT: S_ENDPGM 0, implicit [[ZEXTLOAD]](i32)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_ZEXTLOAD %0 :: (invariant load (s8), align 2, addrspace 4)
-    S_ENDPGM 0, implicit %1
+    %1:_(i32) = G_ZEXTLOAD %0(p1) :: (invariant load (i8), align 2, addrspace 4)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 ---
 name: constant_zextload_i16_align2
@@ -521,25 +553,27 @@ body: |
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX8-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY1]](p1) :: (invariant load (s16), addrspace 4)
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[ZEXTLOAD]](s32)
+    ; GFX8-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(i32) = G_ZEXTLOAD [[COPY1]](p1) :: (invariant load (i16), addrspace 4)
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[ZEXTLOAD]](i32)
+    ;
     ; GFX9-LABEL: name: constant_zextload_i16_align2
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX9-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY1]](p1) :: (invariant load (s16), addrspace 4)
-    ; GFX9-NEXT: S_ENDPGM 0, implicit [[ZEXTLOAD]](s32)
+    ; GFX9-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(i32) = G_ZEXTLOAD [[COPY1]](p1) :: (invariant load (i16), addrspace 4)
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[ZEXTLOAD]](i32)
+    ;
     ; GFX10-LABEL: name: constant_zextload_i16_align2
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX10-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY1]](p1) :: (invariant load (s16), addrspace 4)
-    ; GFX10-NEXT: S_ENDPGM 0, implicit [[ZEXTLOAD]](s32)
+    ; GFX10-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(i32) = G_ZEXTLOAD [[COPY1]](p1) :: (invariant load (i16), addrspace 4)
+    ; GFX10-NEXT: S_ENDPGM 0, implicit [[ZEXTLOAD]](i32)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_ZEXTLOAD %0 :: (invariant load (s16), align 2, addrspace 4)
-    S_ENDPGM 0, implicit %1
+    %1:_(i32) = G_ZEXTLOAD %0(p1) :: (invariant load (i16), addrspace 4)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 ---
 name: local_load_i8_align4
@@ -553,25 +587,27 @@ body: |
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (load (s8), align 4, addrspace 3)
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:vgpr(i32) = G_LOAD [[COPY1]](p1) :: (load (i8), align 4, addrspace 3)
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    ;
     ; GFX9-LABEL: name: local_load_i8_align4
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (load (s8), align 4, addrspace 3)
-    ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:vgpr(i32) = G_LOAD [[COPY1]](p1) :: (load (i8), align 4, addrspace 3)
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    ;
     ; GFX10-LABEL: name: local_load_i8_align4
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (load (s8), align 4, addrspace 3)
-    ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:vgpr(i32) = G_LOAD [[COPY1]](p1) :: (load (i8), align 4, addrspace 3)
+    ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (load (s8), align 4, addrspace 3)
-    S_ENDPGM 0, implicit %1
+    %1:_(i32) = G_LOAD %0(p1) :: (load (i8), align 4, addrspace 3)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 ---
 name: private_load_i8_align4
@@ -585,23 +621,25 @@ body: |
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (load (s8), align 4, addrspace 5)
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:vgpr(i32) = G_LOAD [[COPY1]](p1) :: (load (i8), align 4, addrspace 5)
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    ;
     ; GFX9-LABEL: name: private_load_i8_align4
     ; GFX9: liveins: $sgpr0_sgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (load (s8), align 4, addrspace 5)
-    ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:vgpr(i32) = G_LOAD [[COPY1]](p1) :: (load (i8), align 4, addrspace 5)
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
+    ;
     ; GFX10-LABEL: name: private_load_i8_align4
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (load (s8), align 4, addrspace 5)
-    ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](s32)
+    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:vgpr(i32) = G_LOAD [[COPY1]](p1) :: (load (i8), align 4, addrspace 5)
+    ; GFX10-NEXT: S_ENDPGM 0, implicit [[LOAD]](i32)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (load (s8), align 4, addrspace 5)
-    S_ENDPGM 0, implicit %1
+    %1:_(i32) = G_LOAD %0(p1) :: (load (i8), align 4, addrspace 5)
+    S_ENDPGM 0, implicit %1(i32)
 ...

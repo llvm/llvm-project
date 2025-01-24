@@ -20,13 +20,16 @@ body:             |
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_SETPC_B64_return undef $sgpr30_sgpr31
   bb.0:
+    successors: %bb.1(0x80000000)
+
     %0:_(p0) = G_CONSTANT i64 0
     G_BR %bb.1
 
   bb.1:
     ADJCALLSTACKUP 0, 0, implicit-def $scc
-    $sgpr30_sgpr31 = G_SI_CALL %0, 0, csr_amdgpu
+    $sgpr30_sgpr31 = G_SI_CALL %0(p0), 0, csr_amdgpu
     ADJCALLSTACKDOWN 0, 0, implicit-def $scc
     S_SETPC_B64_return undef $sgpr30_sgpr31
+
 
 ...

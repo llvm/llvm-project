@@ -20,12 +20,12 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GCN-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[COPY]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GCN-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[COPY]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ; GCN-NEXT: $vgpr0 = COPY [[FLAT_ATOMIC_ADD_RTN]]
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
-    %1:vgpr(s32) = COPY $vgpr2
-    %2:vgpr(s32) = G_ATOMICRMW_ADD %0, %1 :: (load store seq_cst (s32), addrspace 0)
-    $vgpr0 = COPY %2
+    %1:vgpr(i32) = COPY $vgpr2
+    %2:vgpr(i32) = G_ATOMICRMW_ADD %0(p0), %1 :: (load store seq_cst (i32))
+    $vgpr0 = COPY %2(i32)
 
 ...
 
@@ -43,10 +43,10 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GCN-NEXT: FLAT_ATOMIC_ADD [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GCN-NEXT: FLAT_ATOMIC_ADD [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
-    %1:vgpr(s32) = COPY $vgpr2
-    %2:vgpr(s32) = G_ATOMICRMW_ADD %0, %1 :: (load store seq_cst (s32), addrspace 0)
+    %1:vgpr(i32) = COPY $vgpr2
+    %2:vgpr(i32) = G_ATOMICRMW_ADD %0(p0), %1 :: (load store seq_cst (i32))
 
 ...
 
@@ -72,7 +72,7 @@ body:             |
     ; GFX7-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX7-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX7-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX7-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GFX7-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ; GFX7-NEXT: $vgpr0 = COPY [[FLAT_ATOMIC_ADD_RTN]]
     ;
     ; LARGE_IOFFSET-LABEL: name: flat_atomicrmw_add_s32_offset2047
@@ -80,7 +80,7 @@ body:             |
     ; LARGE_IOFFSET-NEXT: {{  $}}
     ; LARGE_IOFFSET-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; LARGE_IOFFSET-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; LARGE_IOFFSET-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[COPY]], [[COPY1]], 2047, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; LARGE_IOFFSET-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[COPY]], [[COPY1]], 2047, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ; LARGE_IOFFSET-NEXT: $vgpr0 = COPY [[FLAT_ATOMIC_ADD_RTN]]
     ;
     ; GFX10-LABEL: name: flat_atomicrmw_add_s32_offset2047
@@ -96,14 +96,14 @@ body:             |
     ; GFX10-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX10-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX10-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GFX10-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ; GFX10-NEXT: $vgpr0 = COPY [[FLAT_ATOMIC_ADD_RTN]]
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
-    %1:vgpr(s32) = COPY $vgpr2
-    %2:vgpr(s64) = G_CONSTANT i64 2047
-    %3:vgpr(p0) = G_PTR_ADD %0, %2
-    %4:vgpr(s32) = G_ATOMICRMW_ADD %3, %1 :: (load store seq_cst (s32), addrspace 0)
-    $vgpr0 = COPY %4
+    %1:vgpr(i32) = COPY $vgpr2
+    %2:vgpr(i64) = G_CONSTANT i64 2047
+    %3:vgpr(p0) = G_PTR_ADD %0, %2(i64)
+    %4:vgpr(i32) = G_ATOMICRMW_ADD %3(p0), %1 :: (load store seq_cst (i32))
+    $vgpr0 = COPY %4(i32)
 
 ...
 
@@ -129,14 +129,14 @@ body:             |
     ; GFX7-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX7-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX7-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX7-NEXT: FLAT_ATOMIC_ADD [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GFX7-NEXT: FLAT_ATOMIC_ADD [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ;
     ; LARGE_IOFFSET-LABEL: name: flat_atomicrmw_add_s32_offset2047_nortn
     ; LARGE_IOFFSET: liveins: $vgpr0_vgpr1, $vgpr2
     ; LARGE_IOFFSET-NEXT: {{  $}}
     ; LARGE_IOFFSET-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; LARGE_IOFFSET-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; LARGE_IOFFSET-NEXT: FLAT_ATOMIC_ADD [[COPY]], [[COPY1]], 2047, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; LARGE_IOFFSET-NEXT: FLAT_ATOMIC_ADD [[COPY]], [[COPY1]], 2047, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ;
     ; GFX10-LABEL: name: flat_atomicrmw_add_s32_offset2047_nortn
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
@@ -151,12 +151,12 @@ body:             |
     ; GFX10-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX10-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX10-NEXT: FLAT_ATOMIC_ADD [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GFX10-NEXT: FLAT_ATOMIC_ADD [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
-    %1:vgpr(s32) = COPY $vgpr2
-    %2:vgpr(s64) = G_CONSTANT i64 2047
-    %3:vgpr(p0) = G_PTR_ADD %0, %2
-    %4:vgpr(s32) = G_ATOMICRMW_ADD %3, %1 :: (load store seq_cst (s32), addrspace 0)
+    %1:vgpr(i32) = COPY $vgpr2
+    %2:vgpr(i64) = G_CONSTANT i64 2047
+    %3:vgpr(p0) = G_PTR_ADD %0, %2(i64)
+    %4:vgpr(i32) = G_ATOMICRMW_ADD %3(p0), %1 :: (load store seq_cst (i32))
 
 ...
 
@@ -182,7 +182,7 @@ body:             |
     ; GFX7-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX7-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX7-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX7-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GFX7-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ; GFX7-NEXT: $vgpr0 = COPY [[FLAT_ATOMIC_ADD_RTN]]
     ;
     ; LARGE_IOFFSET-LABEL: name: flat_atomicrmw_add_s32_offset2048
@@ -190,7 +190,7 @@ body:             |
     ; LARGE_IOFFSET-NEXT: {{  $}}
     ; LARGE_IOFFSET-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; LARGE_IOFFSET-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; LARGE_IOFFSET-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[COPY]], [[COPY1]], 2048, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; LARGE_IOFFSET-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[COPY]], [[COPY1]], 2048, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ; LARGE_IOFFSET-NEXT: $vgpr0 = COPY [[FLAT_ATOMIC_ADD_RTN]]
     ;
     ; GFX10-LABEL: name: flat_atomicrmw_add_s32_offset2048
@@ -206,14 +206,14 @@ body:             |
     ; GFX10-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX10-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX10-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GFX10-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ; GFX10-NEXT: $vgpr0 = COPY [[FLAT_ATOMIC_ADD_RTN]]
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
-    %1:vgpr(s32) = COPY $vgpr2
-    %2:vgpr(s64) = G_CONSTANT i64 2048
-    %3:vgpr(p0) = G_PTR_ADD %0, %2
-    %4:vgpr(s32) = G_ATOMICRMW_ADD %3, %1 :: (load store seq_cst (s32), addrspace 0)
-    $vgpr0 = COPY %4
+    %1:vgpr(i32) = COPY $vgpr2
+    %2:vgpr(i64) = G_CONSTANT i64 2048
+    %3:vgpr(p0) = G_PTR_ADD %0, %2(i64)
+    %4:vgpr(i32) = G_ATOMICRMW_ADD %3(p0), %1 :: (load store seq_cst (i32))
+    $vgpr0 = COPY %4(i32)
 
 ...
 
@@ -239,14 +239,14 @@ body:             |
     ; GFX7-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX7-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX7-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX7-NEXT: FLAT_ATOMIC_ADD [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GFX7-NEXT: FLAT_ATOMIC_ADD [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ;
     ; LARGE_IOFFSET-LABEL: name: flat_atomicrmw_add_s32_offset2048_nortn
     ; LARGE_IOFFSET: liveins: $vgpr0_vgpr1, $vgpr2
     ; LARGE_IOFFSET-NEXT: {{  $}}
     ; LARGE_IOFFSET-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; LARGE_IOFFSET-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; LARGE_IOFFSET-NEXT: FLAT_ATOMIC_ADD [[COPY]], [[COPY1]], 2048, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; LARGE_IOFFSET-NEXT: FLAT_ATOMIC_ADD [[COPY]], [[COPY1]], 2048, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ;
     ; GFX10-LABEL: name: flat_atomicrmw_add_s32_offset2048_nortn
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
@@ -261,12 +261,12 @@ body:             |
     ; GFX10-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX10-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX10-NEXT: FLAT_ATOMIC_ADD [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GFX10-NEXT: FLAT_ATOMIC_ADD [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
-    %1:vgpr(s32) = COPY $vgpr2
-    %2:vgpr(s64) = G_CONSTANT i64 2048
-    %3:vgpr(p0) = G_PTR_ADD %0, %2
-    %4:vgpr(s32) = G_ATOMICRMW_ADD %3, %1 :: (load store seq_cst (s32), addrspace 0)
+    %1:vgpr(i32) = COPY $vgpr2
+    %2:vgpr(i64) = G_CONSTANT i64 2048
+    %3:vgpr(p0) = G_PTR_ADD %0, %2(i64)
+    %4:vgpr(i32) = G_ATOMICRMW_ADD %3(p0), %1 :: (load store seq_cst (i32))
 
 ...
 
@@ -292,7 +292,7 @@ body:             |
     ; GFX7-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX7-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX7-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX7-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GFX7-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ; GFX7-NEXT: $vgpr0 = COPY [[FLAT_ATOMIC_ADD_RTN]]
     ;
     ; LARGE_IOFFSET-LABEL: name: flat_atomicrmw_add_s32_offset4095
@@ -300,7 +300,7 @@ body:             |
     ; LARGE_IOFFSET-NEXT: {{  $}}
     ; LARGE_IOFFSET-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; LARGE_IOFFSET-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; LARGE_IOFFSET-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[COPY]], [[COPY1]], 4095, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; LARGE_IOFFSET-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[COPY]], [[COPY1]], 4095, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ; LARGE_IOFFSET-NEXT: $vgpr0 = COPY [[FLAT_ATOMIC_ADD_RTN]]
     ;
     ; GFX10-LABEL: name: flat_atomicrmw_add_s32_offset4095
@@ -316,14 +316,14 @@ body:             |
     ; GFX10-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX10-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX10-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GFX10-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ; GFX10-NEXT: $vgpr0 = COPY [[FLAT_ATOMIC_ADD_RTN]]
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
-    %1:vgpr(s32) = COPY $vgpr2
-    %2:vgpr(s64) = G_CONSTANT i64 4095
-    %3:vgpr(p0) = G_PTR_ADD %0, %2
-    %4:vgpr(s32) = G_ATOMICRMW_ADD %3, %1 :: (load store seq_cst (s32), addrspace 0)
-    $vgpr0 = COPY %4
+    %1:vgpr(i32) = COPY $vgpr2
+    %2:vgpr(i64) = G_CONSTANT i64 4095
+    %3:vgpr(p0) = G_PTR_ADD %0, %2(i64)
+    %4:vgpr(i32) = G_ATOMICRMW_ADD %3(p0), %1 :: (load store seq_cst (i32))
+    $vgpr0 = COPY %4(i32)
 
 ...
 
@@ -349,14 +349,14 @@ body:             |
     ; GFX7-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX7-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX7-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX7-NEXT: FLAT_ATOMIC_ADD [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GFX7-NEXT: FLAT_ATOMIC_ADD [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ;
     ; LARGE_IOFFSET-LABEL: name: flat_atomicrmw_add_s32_offset4095_nortn
     ; LARGE_IOFFSET: liveins: $vgpr0_vgpr1, $vgpr2
     ; LARGE_IOFFSET-NEXT: {{  $}}
     ; LARGE_IOFFSET-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; LARGE_IOFFSET-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; LARGE_IOFFSET-NEXT: FLAT_ATOMIC_ADD [[COPY]], [[COPY1]], 4095, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; LARGE_IOFFSET-NEXT: FLAT_ATOMIC_ADD [[COPY]], [[COPY1]], 4095, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ;
     ; GFX10-LABEL: name: flat_atomicrmw_add_s32_offset4095_nortn
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
@@ -371,12 +371,12 @@ body:             |
     ; GFX10-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX10-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX10-NEXT: FLAT_ATOMIC_ADD [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GFX10-NEXT: FLAT_ATOMIC_ADD [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
-    %1:vgpr(s32) = COPY $vgpr2
-    %2:vgpr(s64) = G_CONSTANT i64 4095
-    %3:vgpr(p0) = G_PTR_ADD %0, %2
-    %4:vgpr(s32) = G_ATOMICRMW_ADD %3, %1 :: (load store seq_cst (s32), addrspace 0)
+    %1:vgpr(i32) = COPY $vgpr2
+    %2:vgpr(i64) = G_CONSTANT i64 4095
+    %3:vgpr(p0) = G_PTR_ADD %0, %2(i64)
+    %4:vgpr(i32) = G_ATOMICRMW_ADD %3(p0), %1 :: (load store seq_cst (i32))
 
 ...
 
@@ -402,7 +402,7 @@ body:             |
     ; GFX7-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX7-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX7-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX7-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GFX7-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ; GFX7-NEXT: $vgpr0 = COPY [[FLAT_ATOMIC_ADD_RTN]]
     ;
     ; GFX9-LABEL: name: flat_atomicrmw_add_s32_offset4097
@@ -418,7 +418,7 @@ body:             |
     ; GFX9-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX9-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX9-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX9-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GFX9-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ; GFX9-NEXT: $vgpr0 = COPY [[FLAT_ATOMIC_ADD_RTN]]
     ;
     ; GFX10-LABEL: name: flat_atomicrmw_add_s32_offset4097
@@ -434,7 +434,7 @@ body:             |
     ; GFX10-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX10-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX10-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GFX10-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ; GFX10-NEXT: $vgpr0 = COPY [[FLAT_ATOMIC_ADD_RTN]]
     ;
     ; GFX11-LABEL: name: flat_atomicrmw_add_s32_offset4097
@@ -450,7 +450,7 @@ body:             |
     ; GFX11-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX11-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX11-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX11-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GFX11-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ; GFX11-NEXT: $vgpr0 = COPY [[FLAT_ATOMIC_ADD_RTN]]
     ;
     ; GFX12-LABEL: name: flat_atomicrmw_add_s32_offset4097
@@ -458,14 +458,14 @@ body:             |
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX12-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[COPY]], [[COPY1]], 4097, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GFX12-NEXT: [[FLAT_ATOMIC_ADD_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_RTN [[COPY]], [[COPY1]], 4097, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ; GFX12-NEXT: $vgpr0 = COPY [[FLAT_ATOMIC_ADD_RTN]]
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
-    %1:vgpr(s32) = COPY $vgpr2
-    %2:vgpr(s64) = G_CONSTANT i64 4097
-    %3:vgpr(p0) = G_PTR_ADD %0, %2
-    %4:vgpr(s32) = G_ATOMICRMW_ADD %3, %1 :: (load store seq_cst (s32), addrspace 0)
-    $vgpr0 = COPY %4
+    %1:vgpr(i32) = COPY $vgpr2
+    %2:vgpr(i64) = G_CONSTANT i64 4097
+    %3:vgpr(p0) = G_PTR_ADD %0, %2(i64)
+    %4:vgpr(i32) = G_ATOMICRMW_ADD %3(p0), %1 :: (load store seq_cst (i32))
+    $vgpr0 = COPY %4(i32)
 
 ...
 
@@ -491,7 +491,7 @@ body:             |
     ; GFX7-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX7-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX7-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX7-NEXT: FLAT_ATOMIC_ADD [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GFX7-NEXT: FLAT_ATOMIC_ADD [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ;
     ; GFX9-LABEL: name: flat_atomicrmw_add_s32_offset4097_nortn
     ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2
@@ -506,7 +506,7 @@ body:             |
     ; GFX9-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX9-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX9-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX9-NEXT: FLAT_ATOMIC_ADD [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GFX9-NEXT: FLAT_ATOMIC_ADD [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ;
     ; GFX10-LABEL: name: flat_atomicrmw_add_s32_offset4097_nortn
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
@@ -521,7 +521,7 @@ body:             |
     ; GFX10-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX10-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX10-NEXT: FLAT_ATOMIC_ADD [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GFX10-NEXT: FLAT_ATOMIC_ADD [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ;
     ; GFX11-LABEL: name: flat_atomicrmw_add_s32_offset4097_nortn
     ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2
@@ -536,19 +536,19 @@ body:             |
     ; GFX11-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX11-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX11-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX11-NEXT: FLAT_ATOMIC_ADD [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GFX11-NEXT: FLAT_ATOMIC_ADD [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     ;
     ; GFX12-LABEL: name: flat_atomicrmw_add_s32_offset4097_nortn
     ; GFX12: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; GFX12-NEXT: FLAT_ATOMIC_ADD [[COPY]], [[COPY1]], 4097, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (s32))
+    ; GFX12-NEXT: FLAT_ATOMIC_ADD [[COPY]], [[COPY1]], 4097, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (i32))
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
-    %1:vgpr(s32) = COPY $vgpr2
-    %2:vgpr(s64) = G_CONSTANT i64 4097
-    %3:vgpr(p0) = G_PTR_ADD %0, %2
-    %4:vgpr(s32) = G_ATOMICRMW_ADD %3, %1 :: (load store seq_cst (s32), addrspace 0)
+    %1:vgpr(i32) = COPY $vgpr2
+    %2:vgpr(i64) = G_CONSTANT i64 4097
+    %3:vgpr(p0) = G_PTR_ADD %0, %2(i64)
+    %4:vgpr(i32) = G_ATOMICRMW_ADD %3(p0), %1 :: (load store seq_cst (i32))
 
 ...
 
@@ -566,12 +566,12 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; GCN-NEXT: [[FLAT_ATOMIC_ADD_X2_RTN:%[0-9]+]]:vreg_64 = FLAT_ATOMIC_ADD_X2_RTN [[COPY]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (s64))
+    ; GCN-NEXT: [[FLAT_ATOMIC_ADD_X2_RTN:%[0-9]+]]:vreg_64 = FLAT_ATOMIC_ADD_X2_RTN [[COPY]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (i64))
     ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[FLAT_ATOMIC_ADD_X2_RTN]]
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vgpr(s64) = G_ATOMICRMW_ADD %0, %1 :: (load store seq_cst (s64), addrspace 0)
-    $vgpr0_vgpr1 = COPY %2
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %2:vgpr(i64) = G_ATOMICRMW_ADD %0(p0), %1 :: (load store seq_cst (i64))
+    $vgpr0_vgpr1 = COPY %2(i64)
 
 ...
 
@@ -589,10 +589,10 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; GCN-NEXT: FLAT_ATOMIC_ADD_X2 [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (s64))
+    ; GCN-NEXT: FLAT_ATOMIC_ADD_X2 [[COPY]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (i64))
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vgpr(s64) = G_ATOMICRMW_ADD %0, %1 :: (load store seq_cst (s64), addrspace 0)
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %2:vgpr(i64) = G_ATOMICRMW_ADD %0(p0), %1 :: (load store seq_cst (i64))
 
 ...
 
@@ -618,7 +618,7 @@ body:             |
     ; GFX7-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX7-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX7-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX7-NEXT: [[FLAT_ATOMIC_ADD_X2_RTN:%[0-9]+]]:vreg_64 = FLAT_ATOMIC_ADD_X2_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (s64))
+    ; GFX7-NEXT: [[FLAT_ATOMIC_ADD_X2_RTN:%[0-9]+]]:vreg_64 = FLAT_ATOMIC_ADD_X2_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (i64))
     ; GFX7-NEXT: $vgpr0_vgpr1 = COPY [[FLAT_ATOMIC_ADD_X2_RTN]]
     ;
     ; LARGE_IOFFSET-LABEL: name: flat_atomicrmw_add_s64_offset4095
@@ -626,7 +626,7 @@ body:             |
     ; LARGE_IOFFSET-NEXT: {{  $}}
     ; LARGE_IOFFSET-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; LARGE_IOFFSET-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; LARGE_IOFFSET-NEXT: [[FLAT_ATOMIC_ADD_X2_RTN:%[0-9]+]]:vreg_64 = FLAT_ATOMIC_ADD_X2_RTN [[COPY]], [[COPY1]], 4095, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (s64))
+    ; LARGE_IOFFSET-NEXT: [[FLAT_ATOMIC_ADD_X2_RTN:%[0-9]+]]:vreg_64 = FLAT_ATOMIC_ADD_X2_RTN [[COPY]], [[COPY1]], 4095, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (i64))
     ; LARGE_IOFFSET-NEXT: $vgpr0_vgpr1 = COPY [[FLAT_ATOMIC_ADD_X2_RTN]]
     ;
     ; GFX10-LABEL: name: flat_atomicrmw_add_s64_offset4095
@@ -642,14 +642,14 @@ body:             |
     ; GFX10-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX10-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX10-NEXT: [[FLAT_ATOMIC_ADD_X2_RTN:%[0-9]+]]:vreg_64 = FLAT_ATOMIC_ADD_X2_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (s64))
+    ; GFX10-NEXT: [[FLAT_ATOMIC_ADD_X2_RTN:%[0-9]+]]:vreg_64 = FLAT_ATOMIC_ADD_X2_RTN [[REG_SEQUENCE]], [[COPY1]], 0, 1, implicit $exec, implicit $flat_scr :: (load store seq_cst (i64))
     ; GFX10-NEXT: $vgpr0_vgpr1 = COPY [[FLAT_ATOMIC_ADD_X2_RTN]]
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vgpr(s64) = G_CONSTANT i64 4095
-    %3:vgpr(p0) = G_PTR_ADD %0, %2
-    %4:vgpr(s64) = G_ATOMICRMW_ADD %3, %1 :: (load store seq_cst (s64), addrspace 0)
-    $vgpr0_vgpr1 = COPY %4
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %2:vgpr(i64) = G_CONSTANT i64 4095
+    %3:vgpr(p0) = G_PTR_ADD %0, %2(i64)
+    %4:vgpr(i64) = G_ATOMICRMW_ADD %3(p0), %1 :: (load store seq_cst (i64))
+    $vgpr0_vgpr1 = COPY %4(i64)
 
 ...
 
@@ -675,14 +675,14 @@ body:             |
     ; GFX7-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX7-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX7-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX7-NEXT: FLAT_ATOMIC_ADD_X2 [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (s64))
+    ; GFX7-NEXT: FLAT_ATOMIC_ADD_X2 [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (i64))
     ;
     ; LARGE_IOFFSET-LABEL: name: flat_atomicrmw_add_s64_offset4095_nortn
     ; LARGE_IOFFSET: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; LARGE_IOFFSET-NEXT: {{  $}}
     ; LARGE_IOFFSET-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; LARGE_IOFFSET-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; LARGE_IOFFSET-NEXT: FLAT_ATOMIC_ADD_X2 [[COPY]], [[COPY1]], 4095, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (s64))
+    ; LARGE_IOFFSET-NEXT: FLAT_ATOMIC_ADD_X2 [[COPY]], [[COPY1]], 4095, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (i64))
     ;
     ; GFX10-LABEL: name: flat_atomicrmw_add_s64_offset4095_nortn
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -697,11 +697,11 @@ body:             |
     ; GFX10-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 [[COPY2]], [[COPY3]], 0, implicit $exec
     ; GFX10-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADDC_U32_e64 [[COPY4]], [[COPY5]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-    ; GFX10-NEXT: FLAT_ATOMIC_ADD_X2 [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (s64))
+    ; GFX10-NEXT: FLAT_ATOMIC_ADD_X2 [[REG_SEQUENCE]], [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load store seq_cst (i64))
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vgpr(s64) = G_CONSTANT i64 4095
-    %3:vgpr(p0) = G_PTR_ADD %0, %2
-    %4:vgpr(s64) = G_ATOMICRMW_ADD %3, %1 :: (load store seq_cst (s64), addrspace 0)
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %2:vgpr(i64) = G_CONSTANT i64 4095
+    %3:vgpr(p0) = G_PTR_ADD %0, %2(i64)
+    %4:vgpr(i64) = G_ATOMICRMW_ADD %3(p0), %1 :: (load store seq_cst (i64))
 
 ...

@@ -14,22 +14,22 @@ body: |
     ; CHECK-LABEL: name: test_min_max_ValK0_K1_u32
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 12
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 17
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[AMDGPU_UMED3_:%[0-9]+]]:vgpr(s32) = G_AMDGPU_UMED3 [[COPY]], [[COPY1]], [[COPY2]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_UMED3_]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 12
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 17
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[C1]](i32)
+    ; CHECK-NEXT: [[AMDGPU_UMED3_:%[0-9]+]]:vgpr(i32) = G_AMDGPU_UMED3 [[COPY]], [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_UMED3_]](i32)
     ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_CONSTANT i32 12
-    %7:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = G_UMAX %0, %7
-    %4:sgpr(s32) = G_CONSTANT i32 17
-    %8:vgpr(s32) = COPY %4(s32)
-    %5:vgpr(s32) = G_UMIN %3, %8
-    $vgpr0 = COPY %5(s32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(i32) = G_CONSTANT i32 12
+    %2:vgpr(i32) = COPY %1(i32)
+    %3:vgpr(i32) = G_UMAX %0, %2
+    %4:sgpr(i32) = G_CONSTANT i32 17
+    %5:vgpr(i32) = COPY %4(i32)
+    %6:vgpr(i32) = G_UMIN %3, %5
+    $vgpr0 = COPY %6(i32)
     S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
 ...
 
@@ -45,22 +45,22 @@ body: |
     ; CHECK-LABEL: name: min_max_ValK0_K1_i32
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 12
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 17
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[AMDGPU_UMED3_:%[0-9]+]]:vgpr(s32) = G_AMDGPU_UMED3 [[COPY]], [[COPY1]], [[COPY2]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_UMED3_]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 12
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 17
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[C1]](i32)
+    ; CHECK-NEXT: [[AMDGPU_UMED3_:%[0-9]+]]:vgpr(i32) = G_AMDGPU_UMED3 [[COPY]], [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_UMED3_]](i32)
     ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_CONSTANT i32 12
-    %7:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = G_UMAX %7, %0
-    %4:sgpr(s32) = G_CONSTANT i32 17
-    %8:vgpr(s32) = COPY %4(s32)
-    %5:vgpr(s32) = G_UMIN %3, %8
-    $vgpr0 = COPY %5(s32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(i32) = G_CONSTANT i32 12
+    %2:vgpr(i32) = COPY %1(i32)
+    %3:vgpr(i32) = G_UMAX %2, %0
+    %4:sgpr(i32) = G_CONSTANT i32 17
+    %5:vgpr(i32) = COPY %4(i32)
+    %6:vgpr(i32) = G_UMIN %3, %5
+    $vgpr0 = COPY %6(i32)
     S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
 ...
 
@@ -76,22 +76,22 @@ body: |
     ; CHECK-LABEL: name: test_min_K1max_ValK0__u32
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 12
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 17
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[AMDGPU_UMED3_:%[0-9]+]]:vgpr(s32) = G_AMDGPU_UMED3 [[COPY]], [[COPY1]], [[COPY2]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_UMED3_]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 12
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 17
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[C1]](i32)
+    ; CHECK-NEXT: [[AMDGPU_UMED3_:%[0-9]+]]:vgpr(i32) = G_AMDGPU_UMED3 [[COPY]], [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_UMED3_]](i32)
     ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_CONSTANT i32 12
-    %7:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = G_UMAX %0, %7
-    %4:sgpr(s32) = G_CONSTANT i32 17
-    %8:vgpr(s32) = COPY %4(s32)
-    %5:vgpr(s32) = G_UMIN %8, %3
-    $vgpr0 = COPY %5(s32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(i32) = G_CONSTANT i32 12
+    %2:vgpr(i32) = COPY %1(i32)
+    %3:vgpr(i32) = G_UMAX %0, %2
+    %4:sgpr(i32) = G_CONSTANT i32 17
+    %5:vgpr(i32) = COPY %4(i32)
+    %6:vgpr(i32) = G_UMIN %5, %3
+    $vgpr0 = COPY %6(i32)
     S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
 ...
 
@@ -107,22 +107,22 @@ body: |
     ; CHECK-LABEL: name: test_min_K1max_K0Val__u32
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 12
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 17
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[AMDGPU_UMED3_:%[0-9]+]]:vgpr(s32) = G_AMDGPU_UMED3 [[COPY]], [[COPY1]], [[COPY2]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_UMED3_]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 12
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 17
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[C1]](i32)
+    ; CHECK-NEXT: [[AMDGPU_UMED3_:%[0-9]+]]:vgpr(i32) = G_AMDGPU_UMED3 [[COPY]], [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_UMED3_]](i32)
     ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_CONSTANT i32 12
-    %7:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = G_UMAX %7, %0
-    %4:sgpr(s32) = G_CONSTANT i32 17
-    %8:vgpr(s32) = COPY %4(s32)
-    %5:vgpr(s32) = G_UMIN %8, %3
-    $vgpr0 = COPY %5(s32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(i32) = G_CONSTANT i32 12
+    %2:vgpr(i32) = COPY %1(i32)
+    %3:vgpr(i32) = G_UMAX %2, %0
+    %4:sgpr(i32) = G_CONSTANT i32 17
+    %5:vgpr(i32) = COPY %4(i32)
+    %6:vgpr(i32) = G_UMIN %5, %3
+    $vgpr0 = COPY %6(i32)
     S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
 ...
 
@@ -138,22 +138,22 @@ body: |
     ; CHECK-LABEL: name: test_max_min_ValK1_K0_u32
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 17
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 12
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[AMDGPU_UMED3_:%[0-9]+]]:vgpr(s32) = G_AMDGPU_UMED3 [[COPY]], [[COPY2]], [[COPY1]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_UMED3_]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 17
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 12
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[C1]](i32)
+    ; CHECK-NEXT: [[AMDGPU_UMED3_:%[0-9]+]]:vgpr(i32) = G_AMDGPU_UMED3 [[COPY]], [[COPY2]], [[COPY1]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_UMED3_]](i32)
     ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_CONSTANT i32 17
-    %7:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = G_UMIN %0, %7
-    %4:sgpr(s32) = G_CONSTANT i32 12
-    %8:vgpr(s32) = COPY %4(s32)
-    %5:vgpr(s32) = G_UMAX %3, %8
-    $vgpr0 = COPY %5(s32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(i32) = G_CONSTANT i32 17
+    %2:vgpr(i32) = COPY %1(i32)
+    %3:vgpr(i32) = G_UMIN %0, %2
+    %4:sgpr(i32) = G_CONSTANT i32 12
+    %5:vgpr(i32) = COPY %4(i32)
+    %6:vgpr(i32) = G_UMAX %3, %5
+    $vgpr0 = COPY %6(i32)
     S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
 ...
 
@@ -169,22 +169,22 @@ body: |
     ; CHECK-LABEL: name: test_max_min_K1Val_K0_u32
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 17
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 12
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[AMDGPU_UMED3_:%[0-9]+]]:vgpr(s32) = G_AMDGPU_UMED3 [[COPY]], [[COPY2]], [[COPY1]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_UMED3_]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 17
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 12
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[C1]](i32)
+    ; CHECK-NEXT: [[AMDGPU_UMED3_:%[0-9]+]]:vgpr(i32) = G_AMDGPU_UMED3 [[COPY]], [[COPY2]], [[COPY1]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_UMED3_]](i32)
     ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_CONSTANT i32 17
-    %7:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = G_UMIN %7, %0
-    %4:sgpr(s32) = G_CONSTANT i32 12
-    %8:vgpr(s32) = COPY %4(s32)
-    %5:vgpr(s32) = G_UMAX %3, %8
-    $vgpr0 = COPY %5(s32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(i32) = G_CONSTANT i32 17
+    %2:vgpr(i32) = COPY %1(i32)
+    %3:vgpr(i32) = G_UMIN %2, %0
+    %4:sgpr(i32) = G_CONSTANT i32 12
+    %5:vgpr(i32) = COPY %4(i32)
+    %6:vgpr(i32) = G_UMAX %3, %5
+    $vgpr0 = COPY %6(i32)
     S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
 ...
 
@@ -200,22 +200,22 @@ body: |
     ; CHECK-LABEL: name: test_max_K0min_ValK1__u32
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 17
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 12
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[AMDGPU_UMED3_:%[0-9]+]]:vgpr(s32) = G_AMDGPU_UMED3 [[COPY]], [[COPY2]], [[COPY1]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_UMED3_]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 17
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 12
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[C1]](i32)
+    ; CHECK-NEXT: [[AMDGPU_UMED3_:%[0-9]+]]:vgpr(i32) = G_AMDGPU_UMED3 [[COPY]], [[COPY2]], [[COPY1]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_UMED3_]](i32)
     ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_CONSTANT i32 17
-    %7:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = G_UMIN %0, %7
-    %4:sgpr(s32) = G_CONSTANT i32 12
-    %8:vgpr(s32) = COPY %4(s32)
-    %5:vgpr(s32) = G_UMAX %8, %3
-    $vgpr0 = COPY %5(s32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(i32) = G_CONSTANT i32 17
+    %2:vgpr(i32) = COPY %1(i32)
+    %3:vgpr(i32) = G_UMIN %0, %2
+    %4:sgpr(i32) = G_CONSTANT i32 12
+    %5:vgpr(i32) = COPY %4(i32)
+    %6:vgpr(i32) = G_UMAX %5, %3
+    $vgpr0 = COPY %6(i32)
     S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
 ...
 
@@ -231,22 +231,22 @@ body: |
     ; CHECK-LABEL: name: test_max_K0min_K1Val__u32
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 17
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 12
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[AMDGPU_UMED3_:%[0-9]+]]:vgpr(s32) = G_AMDGPU_UMED3 [[COPY]], [[COPY2]], [[COPY1]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_UMED3_]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 17
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 12
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[C1]](i32)
+    ; CHECK-NEXT: [[AMDGPU_UMED3_:%[0-9]+]]:vgpr(i32) = G_AMDGPU_UMED3 [[COPY]], [[COPY2]], [[COPY1]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_UMED3_]](i32)
     ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_CONSTANT i32 17
-    %7:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = G_UMIN %7, %0
-    %4:sgpr(s32) = G_CONSTANT i32 12
-    %8:vgpr(s32) = COPY %4(s32)
-    %5:vgpr(s32) = G_UMAX %8, %3
-    $vgpr0 = COPY %5(s32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(i32) = G_CONSTANT i32 17
+    %2:vgpr(i32) = COPY %1(i32)
+    %3:vgpr(i32) = G_UMIN %2, %0
+    %4:sgpr(i32) = G_CONSTANT i32 12
+    %5:vgpr(i32) = COPY %4(i32)
+    %6:vgpr(i32) = G_UMAX %5, %3
+    $vgpr0 = COPY %6(i32)
     S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
 ...
 
@@ -262,27 +262,27 @@ body: |
     ; CHECK-LABEL: name: test_max_K0min_K1Val__v2u16
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 17
-    ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 12
-    ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[C1]](s32), [[C1]](s32)
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x s16>) = COPY [[BUILD_VECTOR_TRUNC]](<2 x s16>)
-    ; CHECK-NEXT: [[UMIN:%[0-9]+]]:vgpr(<2 x s16>) = G_UMIN [[COPY1]], [[COPY]]
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<2 x s16>) = COPY [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-    ; CHECK-NEXT: [[UMAX:%[0-9]+]]:vgpr(<2 x s16>) = G_UMAX [[COPY2]], [[UMIN]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[UMAX]](<2 x s16>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(<2 x i16>) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 17
+    ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 12
+    ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC [[C1]](i32), [[C1]](i32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x i16>) = COPY [[BUILD_VECTOR_TRUNC]](<2 x i16>)
+    ; CHECK-NEXT: [[UMIN:%[0-9]+]]:vgpr(<2 x i16>) = G_UMIN [[COPY1]], [[COPY]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<2 x i16>) = COPY [[BUILD_VECTOR_TRUNC1]](<2 x i16>)
+    ; CHECK-NEXT: [[UMAX:%[0-9]+]]:vgpr(<2 x i16>) = G_UMAX [[COPY2]], [[UMIN]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[UMAX]](<2 x i16>)
     ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
-    %0:vgpr(<2 x s16>) = COPY $vgpr0
-    %9:sgpr(s32) = G_CONSTANT i32 17
-    %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %9(s32), %9(s32)
-    %10:sgpr(s32) = G_CONSTANT i32 12
-    %5:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %10(s32), %10(s32)
-    %11:vgpr(<2 x s16>) = COPY %2(<2 x s16>)
-    %4:vgpr(<2 x s16>) = G_UMIN %11, %0
-    %12:vgpr(<2 x s16>) = COPY %5(<2 x s16>)
-    %7:vgpr(<2 x s16>) = G_UMAX %12, %4
-    $vgpr0 = COPY %7(<2 x s16>)
+    %0:vgpr(<2 x i16>) = COPY $vgpr0
+    %1:sgpr(i32) = G_CONSTANT i32 17
+    %2:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC %1(i32), %1(i32)
+    %3:sgpr(i32) = G_CONSTANT i32 12
+    %4:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC %3(i32), %3(i32)
+    %5:vgpr(<2 x i16>) = COPY %2(<2 x i16>)
+    %6:vgpr(<2 x i16>) = G_UMIN %5, %0
+    %7:vgpr(<2 x i16>) = COPY %4(<2 x i16>)
+    %8:vgpr(<2 x i16>) = G_UMAX %7, %6
+    $vgpr0 = COPY %8(<2 x i16>)
     S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
 ...
 
@@ -298,23 +298,23 @@ body: |
     ; CHECK-LABEL: name: test_uniform_min_max
     ; CHECK: liveins: $sgpr2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 12
-    ; CHECK-NEXT: [[UMAX:%[0-9]+]]:sgpr(s32) = G_UMAX [[COPY]], [[C]]
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 17
-    ; CHECK-NEXT: [[UMIN:%[0-9]+]]:sgpr(s32) = G_UMIN [[UMAX]], [[C1]]
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[UMIN]](s32)
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY1]](s32)
-    ; CHECK-NEXT: $sgpr0 = COPY [[INT]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr2
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 12
+    ; CHECK-NEXT: [[UMAX:%[0-9]+]]:sgpr(i32) = G_UMAX [[COPY]], [[C]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 17
+    ; CHECK-NEXT: [[UMIN:%[0-9]+]]:sgpr(i32) = G_UMIN [[UMAX]], [[C1]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[UMIN]](i32)
+    ; CHECK-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:sgpr(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY1]](i32)
+    ; CHECK-NEXT: $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](i32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
-    %0:sgpr(s32) = COPY $sgpr2
-    %3:sgpr(s32) = G_CONSTANT i32 12
-    %4:sgpr(s32) = G_UMAX %0, %3
-    %5:sgpr(s32) = G_CONSTANT i32 17
-    %6:sgpr(s32) = G_UMIN %4, %5
-    %8:vgpr(s32) = COPY %6(s32)
-    %7:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %8(s32)
-    $sgpr0 = COPY %7(s32)
+    %0:sgpr(i32) = COPY $sgpr2
+    %1:sgpr(i32) = G_CONSTANT i32 12
+    %2:sgpr(i32) = G_UMAX %0, %1
+    %3:sgpr(i32) = G_CONSTANT i32 17
+    %4:sgpr(i32) = G_UMIN %2, %3
+    %5:vgpr(i32) = COPY %4(i32)
+    %6:sgpr(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %5(i32)
+    $sgpr0 = COPY %6(i32)
     SI_RETURN_TO_EPILOG implicit $sgpr0
 
 ...
@@ -331,21 +331,21 @@ body: |
     ; CHECK-LABEL: name: test_non_inline_constant_i32
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 12
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 65
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[AMDGPU_UMED3_:%[0-9]+]]:vgpr(s32) = G_AMDGPU_UMED3 [[COPY]], [[COPY1]], [[COPY2]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_UMED3_]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 12
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[C]](i32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 65
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[C1]](i32)
+    ; CHECK-NEXT: [[AMDGPU_UMED3_:%[0-9]+]]:vgpr(i32) = G_AMDGPU_UMED3 [[COPY]], [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_UMED3_]](i32)
     ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_CONSTANT i32 12
-    %7:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = G_UMAX %0, %7
-    %4:sgpr(s32) = G_CONSTANT i32 65
-    %8:vgpr(s32) = COPY %4(s32)
-    %5:vgpr(s32) = G_UMIN %3, %8
-    $vgpr0 = COPY %5(s32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(i32) = G_CONSTANT i32 12
+    %2:vgpr(i32) = COPY %1(i32)
+    %3:vgpr(i32) = G_UMAX %0, %2
+    %4:sgpr(i32) = G_CONSTANT i32 65
+    %5:vgpr(i32) = COPY %4(i32)
+    %6:vgpr(i32) = G_UMIN %3, %5
+    $vgpr0 = COPY %6(i32)
     S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0
 ...

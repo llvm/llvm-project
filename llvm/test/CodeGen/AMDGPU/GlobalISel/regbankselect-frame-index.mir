@@ -26,7 +26,7 @@ body: |
     ; CHECK: [[FRAME_INDEX:%[0-9]+]]:sgpr(p5) = G_FRAME_INDEX %stack.0
     ; CHECK-NEXT: $sgpr0 = COPY [[FRAME_INDEX]](p5)
     %0:_(p5) = G_FRAME_INDEX %stack.0
-    $sgpr0 = COPY %0
+    $sgpr0 = COPY %0(p5)
 
 ...
 
@@ -41,6 +41,6 @@ body: |
     ; CHECK: [[FRAME_INDEX:%[0-9]+]]:sgpr(p5) = G_FRAME_INDEX %stack.0
     ; CHECK-NEXT: $vgpr0 = COPY [[FRAME_INDEX]](p5)
     %0:_(p5) = G_FRAME_INDEX %stack.0
-    $vgpr0 = COPY %0
+    $vgpr0 = COPY %0(p5)
 
 ...

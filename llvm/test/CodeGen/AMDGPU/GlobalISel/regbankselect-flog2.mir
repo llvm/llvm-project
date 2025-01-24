@@ -12,11 +12,13 @@ body: |
     ; CHECK-LABEL: name: flog2_s
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-    ; CHECK-NEXT: [[FLOG2_:%[0-9]+]]:vgpr(s32) = G_FLOG2 [[COPY1]]
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s32) = G_FLOG2 %0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(f32) = COPY [[BITCAST]](f32)
+    ; CHECK-NEXT: [[FLOG2_:%[0-9]+]]:vgpr(f32) = G_FLOG2 [[COPY1]]
+    %0:_(i32) = COPY $sgpr0
+    %1:_(f32) = G_BITCAST %0(i32)
+    %2:_(f32) = G_FLOG2 %1
 ...
 
 ---
@@ -29,8 +31,10 @@ body: |
     ; CHECK-LABEL: name: flog2_v
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[FLOG2_:%[0-9]+]]:vgpr(s32) = G_FLOG2 [[COPY]]
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = G_FLOG2 %0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[FLOG2_:%[0-9]+]]:vgpr(f32) = G_FLOG2 [[BITCAST]]
+    %0:_(i32) = COPY $vgpr0
+    %1:_(f32) = G_BITCAST %0(i32)
+    %2:_(f32) = G_FLOG2 %1
 ...

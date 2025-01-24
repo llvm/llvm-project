@@ -17,11 +17,11 @@ regBankSelected: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
-    %0:sgpr(s64) = COPY $sgpr0_sgpr1
-    %1:vgpr(s64) = COPY $vgpr0_vgpr1
+    %0:sgpr(i64) = COPY $sgpr0_sgpr1
+    %1:vgpr(i64) = COPY $vgpr0_vgpr1
     %2:sgpr(p4) = G_INTTOPTR %0
-    %3:sgpr(s32) = G_LOAD %2 :: (load (s32), addrspace 1)
+    %3:sgpr(i32) = G_LOAD %2 :: (load (i32), addrspace 1)
     %4:vgpr(p0) = G_INTTOPTR %1
-    %5:vgpr(s32) = COPY %3
-    G_STORE %5, %4 :: (store (s32), addrspace 1)
+    %5:vgpr(i32) = COPY %3
+    G_STORE %5, %4 :: (store (i32), addrspace 1)
 ...

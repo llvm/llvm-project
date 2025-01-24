@@ -10,14 +10,14 @@ body: |
     ; CHECK-LABEL: name: build_vector_v8s16_splat
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 16256
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16)
-    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR]](<2 x s16>), [[BUILD_VECTOR]](<2 x s16>)
-    ; CHECK-NEXT: S_NOP 0, implicit [[CONCAT_VECTORS]](<8 x s16>)
-    %1:_(s32) = COPY $vgpr0
-    %2:_(s32) = COPY $vgpr1
-    %0:_(p1) = G_MERGE_VALUES %1(s32), %2(s32)
-    %4:_(s16) = G_CONSTANT i16 16256
-    %3:_(<8 x s16>) = G_BUILD_VECTOR %4(s16), %4(s16), %4(s16), %4(s16), %4(s16), %4(s16), %4(s16), %4(s16)
-    S_NOP 0, implicit %3
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i16) = G_CONSTANT i16 16256
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i16>) = G_BUILD_VECTOR [[C]](i16), [[C]](i16)
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x i16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x i16>), [[BUILD_VECTOR]](<2 x i16>), [[BUILD_VECTOR]](<2 x i16>), [[BUILD_VECTOR]](<2 x i16>)
+    ; CHECK-NEXT: S_NOP 0, implicit [[CONCAT_VECTORS]](<8 x i16>)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(p1) = G_MERGE_VALUES %0(i32), %1(i32)
+    %3:_(i16) = G_CONSTANT i16 16256
+    %4:_(<8 x i16>) = G_BUILD_VECTOR %3(i16), %3(i16), %3(i16), %3(i16), %3(i16), %3(i16), %3(i16), %3(i16)
+    S_NOP 0, implicit %4(<8 x i16>)
 ...

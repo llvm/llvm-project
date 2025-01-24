@@ -11,14 +11,14 @@ body: |
     ; CHECK-LABEL: name: test_unmerge_s64_s32_s
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; CHECK-NEXT: $vgpr0 = COPY [[UV]](s32)
-    ; CHECK-NEXT: $vgpr2 = COPY [[UV]](s32)
-    %0:_(s64) = COPY $sgpr0_sgpr1
-    %1:_(s32), %2:_(s32) = G_UNMERGE_VALUES %0:_(s64)
-    $vgpr0 = COPY %1(s32)
-    $vgpr2 = COPY %1(s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:sgpr(i32), [[UV1:%[0-9]+]]:sgpr(i32) = G_UNMERGE_VALUES [[COPY]](i64)
+    ; CHECK-NEXT: $vgpr0 = COPY [[UV]](i32)
+    ; CHECK-NEXT: $vgpr2 = COPY [[UV]](i32)
+    %0:_(i64) = COPY $sgpr0_sgpr1
+    %1:_(i32), %2:_(i32) = G_UNMERGE_VALUES %0(i64)
+    $vgpr0 = COPY %1(i32)
+    $vgpr2 = COPY %1(i32)
 ...
 
 ---
@@ -31,14 +31,14 @@ body: |
     ; CHECK-LABEL: name: test_unmerge_s64_s32_v
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; CHECK-NEXT: $vgpr0 = COPY [[UV]](s32)
-    ; CHECK-NEXT: $vgpr2 = COPY [[UV]](s32)
-    %0:_(s64) = COPY $vgpr0_vgpr1
-    %1:_(s32), %2:_(s32) = G_UNMERGE_VALUES %0:_(s64)
-    $vgpr0 = COPY %1(s32)
-    $vgpr2 = COPY %1(s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(i32), [[UV1:%[0-9]+]]:vgpr(i32) = G_UNMERGE_VALUES [[COPY]](i64)
+    ; CHECK-NEXT: $vgpr0 = COPY [[UV]](i32)
+    ; CHECK-NEXT: $vgpr2 = COPY [[UV]](i32)
+    %0:_(i64) = COPY $vgpr0_vgpr1
+    %1:_(i32), %2:_(i32) = G_UNMERGE_VALUES %0(i64)
+    $vgpr0 = COPY %1(i32)
+    $vgpr2 = COPY %1(i32)
 ...
 
 ---
@@ -51,12 +51,12 @@ body: |
     ; CHECK-LABEL: name: test_unmerge_s32_s64_a
     ; CHECK: liveins: $agpr0_agpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:agpr(s64) = COPY $agpr0_agpr1
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:agpr(s32), [[UV1:%[0-9]+]]:agpr(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; CHECK-NEXT: $agpr0 = COPY [[UV]](s32)
-    ; CHECK-NEXT: $agpr2 = COPY [[UV1]](s32)
-    %0:_(s64) = COPY $agpr0_agpr1
-    %1:_(s32), %2:_(s32) = G_UNMERGE_VALUES %0:_(s64)
-    $agpr0 = COPY %1
-    $agpr2 = COPY %2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:agpr(i64) = COPY $agpr0_agpr1
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:agpr(i32), [[UV1:%[0-9]+]]:agpr(i32) = G_UNMERGE_VALUES [[COPY]](i64)
+    ; CHECK-NEXT: $agpr0 = COPY [[UV]](i32)
+    ; CHECK-NEXT: $agpr2 = COPY [[UV1]](i32)
+    %0:_(i64) = COPY $agpr0_agpr1
+    %1:_(i32), %2:_(i32) = G_UNMERGE_VALUES %0(i64)
+    $agpr0 = COPY %1(i32)
+    $agpr2 = COPY %2(i32)
 ...

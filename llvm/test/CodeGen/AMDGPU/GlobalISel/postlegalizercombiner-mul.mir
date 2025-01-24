@@ -9,14 +9,14 @@ body: |
     ; CHECK-LABEL: name: mul_s64
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 12345
-    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[COPY]], [[C]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[MUL]](s64)
-    %0:_(s64) = COPY $vgpr0_vgpr1
-    %1:_(s64) = G_CONSTANT i64 12345
-    %2:_(s64) = G_MUL %0, %1
-    $vgpr0_vgpr1 = COPY %2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 12345
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(i64) = G_MUL [[COPY]], [[C]]
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[MUL]](i64)
+    %0:_(i64) = COPY $vgpr0_vgpr1
+    %1:_(i64) = G_CONSTANT i64 12345
+    %2:_(i64) = G_MUL %0, %1
+    $vgpr0_vgpr1 = COPY %2(i64)
 ...
 
 ---
@@ -27,16 +27,16 @@ body: |
     ; CHECK-LABEL: name: mul_s64_zext
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s32)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 12345
-    ; CHECK-NEXT: [[AMDGPU_:%[0-9]+]]:_(s64) = G_AMDGPU_S_MUL_U64_U32 [[ZEXT]], [[C]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[AMDGPU_]](s64)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s64) = G_ZEXT %0
-    %2:_(s64) = G_CONSTANT i64 12345
-    %3:_(s64) = G_MUL %1, %2
-    $vgpr0_vgpr1 = COPY %3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[COPY]](i32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 12345
+    ; CHECK-NEXT: [[AMDGPU_S_MUL_U64_U32_:%[0-9]+]]:_(i64) = G_AMDGPU_S_MUL_U64_U32 [[ZEXT]], [[C]]
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[AMDGPU_S_MUL_U64_U32_]](i64)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i64) = G_ZEXT %0(i32)
+    %2:_(i64) = G_CONSTANT i64 12345
+    %3:_(i64) = G_MUL %1, %2
+    $vgpr0_vgpr1 = COPY %3(i64)
 ...
 
 ---
@@ -47,14 +47,14 @@ body: |
     ; CHECK-LABEL: name: mul_s64_sext
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY]](s32)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 12345
-    ; CHECK-NEXT: [[AMDGPU_:%[0-9]+]]:_(s64) = G_AMDGPU_S_MUL_I64_I32 [[SEXT]], [[C]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[AMDGPU_]](s64)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s64) = G_SEXT %0
-    %2:_(s64) = G_CONSTANT i64 12345
-    %3:_(s64) = G_MUL %1, %2
-    $vgpr0_vgpr1 = COPY %3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(i64) = G_SEXT [[COPY]](i32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 12345
+    ; CHECK-NEXT: [[AMDGPU_S_MUL_I64_I32_:%[0-9]+]]:_(i64) = G_AMDGPU_S_MUL_I64_I32 [[SEXT]], [[C]]
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[AMDGPU_S_MUL_I64_I32_]](i64)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i64) = G_SEXT %0(i32)
+    %2:_(i64) = G_CONSTANT i64 12345
+    %3:_(i64) = G_MUL %1, %2
+    $vgpr0_vgpr1 = COPY %3(i64)
 ...

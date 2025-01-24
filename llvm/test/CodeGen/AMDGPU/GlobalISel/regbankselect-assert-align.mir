@@ -18,7 +18,7 @@ body:             |
     ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_align(p1)
     %copy:_(p1) = COPY $vgpr0_vgpr1
     %assert_align:_(p1) = G_ASSERT_ALIGN %copy, 4
-    S_ENDPGM 0, implicit %assert_align
+    S_ENDPGM 0, implicit %assert_align(p1)
 ...
 
 ---
@@ -38,7 +38,7 @@ body:             |
     ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_align(p1)
     %copy:_(p1) = COPY $sgpr8_sgpr9
     %assert_align:_(p1) = G_ASSERT_ALIGN %copy, 4
-    S_ENDPGM 0, implicit %assert_align
+    S_ENDPGM 0, implicit %assert_align(p1)
 ...
 
 ---
@@ -58,5 +58,5 @@ body:             |
     ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_align(p1)
     %copy:_(p1) = COPY $agpr0_agpr1
     %assert_align:_(p1) = G_ASSERT_ALIGN %copy, 4
-    S_ENDPGM 0, implicit %assert_align
+    S_ENDPGM 0, implicit %assert_align(p1)
 ...

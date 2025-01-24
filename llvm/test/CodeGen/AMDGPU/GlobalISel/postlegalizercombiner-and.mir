@@ -14,13 +14,13 @@ body:             |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %and:_(s32) = G_ZEXTLOAD %ptr(p1) :: (load (s8), addrspace 1)
-    ; CHECK-NEXT: $vgpr0 = COPY %and(s32)
+    ; CHECK-NEXT: %and:_(i32) = G_ZEXTLOAD %ptr(p1) :: (load (i8), addrspace 1)
+    ; CHECK-NEXT: $vgpr0 = COPY %and(i32)
     %ptr:_(p1) = COPY $vgpr0_vgpr1
-    %load:_(s32) = G_ZEXTLOAD %ptr :: (load (s8), addrspace 1, align 1)
-    %mask:_(s32) = G_CONSTANT i32 255
-    %and:_(s32) = G_AND %load, %mask
-    $vgpr0 = COPY %and
+    %load:_(i32) = G_ZEXTLOAD %ptr(p1) :: (load (i8), addrspace 1)
+    %mask:_(i32) = G_CONSTANT i32 255
+    %and:_(i32) = G_AND %load, %mask
+    $vgpr0 = COPY %and(i32)
 
 ...
 
@@ -36,18 +36,18 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: %load0:_(s32) = G_ZEXTLOAD %ptr0(p1) :: (load (s8), addrspace 1)
-    ; CHECK-NEXT: %load1:_(s32) = G_ZEXTLOAD %ptr1(p1) :: (load (s8), addrspace 1)
-    ; CHECK-NEXT: %smin:_(s32) = G_SMIN %load0, %load1
-    ; CHECK-NEXT: $vgpr0 = COPY %smin(s32)
+    ; CHECK-NEXT: %load0:_(i32) = G_ZEXTLOAD %ptr0(p1) :: (load (i8), addrspace 1)
+    ; CHECK-NEXT: %load1:_(i32) = G_ZEXTLOAD %ptr1(p1) :: (load (i8), addrspace 1)
+    ; CHECK-NEXT: %smin:_(i32) = G_SMIN %load0, %load1
+    ; CHECK-NEXT: $vgpr0 = COPY %smin(i32)
     %ptr0:_(p1) = COPY $vgpr0_vgpr1
     %ptr1:_(p1) = COPY $vgpr2_vgpr3
-    %load0:_(s32) = G_ZEXTLOAD %ptr0 :: (load (s8), addrspace 1, align 1)
-    %load1:_(s32) = G_ZEXTLOAD %ptr1 :: (load (s8), addrspace 1, align 1)
-    %smin:_(s32) = G_SMIN %load0, %load1
-    %mask:_(s32) = G_CONSTANT i32 255
-    %and:_(s32) = G_AND %smin, %mask
-    $vgpr0 = COPY %and
+    %load0:_(i32) = G_ZEXTLOAD %ptr0(p1) :: (load (i8), addrspace 1)
+    %load1:_(i32) = G_ZEXTLOAD %ptr1(p1) :: (load (i8), addrspace 1)
+    %smin:_(i32) = G_SMIN %load0, %load1
+    %mask:_(i32) = G_CONSTANT i32 255
+    %and:_(i32) = G_AND %smin, %mask
+    $vgpr0 = COPY %and(i32)
 
 ...
 
@@ -63,18 +63,18 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: %load0:_(s32) = G_ZEXTLOAD %ptr0(p1) :: (load (s8), addrspace 1)
-    ; CHECK-NEXT: %load1:_(s32) = G_ZEXTLOAD %ptr1(p1) :: (load (s8), addrspace 1)
-    ; CHECK-NEXT: %smax:_(s32) = G_SMAX %load0, %load1
-    ; CHECK-NEXT: $vgpr0 = COPY %smax(s32)
+    ; CHECK-NEXT: %load0:_(i32) = G_ZEXTLOAD %ptr0(p1) :: (load (i8), addrspace 1)
+    ; CHECK-NEXT: %load1:_(i32) = G_ZEXTLOAD %ptr1(p1) :: (load (i8), addrspace 1)
+    ; CHECK-NEXT: %smax:_(i32) = G_SMAX %load0, %load1
+    ; CHECK-NEXT: $vgpr0 = COPY %smax(i32)
     %ptr0:_(p1) = COPY $vgpr0_vgpr1
     %ptr1:_(p1) = COPY $vgpr2_vgpr3
-    %load0:_(s32) = G_ZEXTLOAD %ptr0 :: (load (s8), addrspace 1, align 1)
-    %load1:_(s32) = G_ZEXTLOAD %ptr1 :: (load (s8), addrspace 1, align 1)
-    %smax:_(s32) = G_SMAX %load0, %load1
-    %mask:_(s32) = G_CONSTANT i32 255
-    %and:_(s32) = G_AND %smax, %mask
-    $vgpr0 = COPY %and
+    %load0:_(i32) = G_ZEXTLOAD %ptr0(p1) :: (load (i8), addrspace 1)
+    %load1:_(i32) = G_ZEXTLOAD %ptr1(p1) :: (load (i8), addrspace 1)
+    %smax:_(i32) = G_SMAX %load0, %load1
+    %mask:_(i32) = G_CONSTANT i32 255
+    %and:_(i32) = G_AND %smax, %mask
+    $vgpr0 = COPY %and(i32)
 
 ...
 
@@ -90,18 +90,18 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: %load0:_(s32) = G_ZEXTLOAD %ptr0(p1) :: (load (s8), addrspace 1)
-    ; CHECK-NEXT: %load1:_(s32) = G_ZEXTLOAD %ptr1(p1) :: (load (s8), addrspace 1)
-    ; CHECK-NEXT: %umin:_(s32) = G_UMIN %load0, %load1
-    ; CHECK-NEXT: $vgpr0 = COPY %umin(s32)
+    ; CHECK-NEXT: %load0:_(i32) = G_ZEXTLOAD %ptr0(p1) :: (load (i8), addrspace 1)
+    ; CHECK-NEXT: %load1:_(i32) = G_ZEXTLOAD %ptr1(p1) :: (load (i8), addrspace 1)
+    ; CHECK-NEXT: %umin:_(i32) = G_UMIN %load0, %load1
+    ; CHECK-NEXT: $vgpr0 = COPY %umin(i32)
     %ptr0:_(p1) = COPY $vgpr0_vgpr1
     %ptr1:_(p1) = COPY $vgpr2_vgpr3
-    %load0:_(s32) = G_ZEXTLOAD %ptr0 :: (load (s8), addrspace 1, align 1)
-    %load1:_(s32) = G_ZEXTLOAD %ptr1 :: (load (s8), addrspace 1, align 1)
-    %umin:_(s32) = G_UMIN %load0, %load1
-    %mask:_(s32) = G_CONSTANT i32 255
-    %and:_(s32) = G_AND %umin, %mask
-    $vgpr0 = COPY %and
+    %load0:_(i32) = G_ZEXTLOAD %ptr0(p1) :: (load (i8), addrspace 1)
+    %load1:_(i32) = G_ZEXTLOAD %ptr1(p1) :: (load (i8), addrspace 1)
+    %umin:_(i32) = G_UMIN %load0, %load1
+    %mask:_(i32) = G_CONSTANT i32 255
+    %and:_(i32) = G_AND %umin, %mask
+    $vgpr0 = COPY %and(i32)
 
 ...
 
@@ -117,18 +117,18 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: %load0:_(s32) = G_ZEXTLOAD %ptr0(p1) :: (load (s8), addrspace 1)
-    ; CHECK-NEXT: %load1:_(s32) = G_ZEXTLOAD %ptr1(p1) :: (load (s8), addrspace 1)
-    ; CHECK-NEXT: %umax:_(s32) = G_UMAX %load0, %load1
-    ; CHECK-NEXT: $vgpr0 = COPY %umax(s32)
+    ; CHECK-NEXT: %load0:_(i32) = G_ZEXTLOAD %ptr0(p1) :: (load (i8), addrspace 1)
+    ; CHECK-NEXT: %load1:_(i32) = G_ZEXTLOAD %ptr1(p1) :: (load (i8), addrspace 1)
+    ; CHECK-NEXT: %umax:_(i32) = G_UMAX %load0, %load1
+    ; CHECK-NEXT: $vgpr0 = COPY %umax(i32)
     %ptr0:_(p1) = COPY $vgpr0_vgpr1
     %ptr1:_(p1) = COPY $vgpr2_vgpr3
-    %load0:_(s32) = G_ZEXTLOAD %ptr0 :: (load (s8), addrspace 1, align 1)
-    %load1:_(s32) = G_ZEXTLOAD %ptr1 :: (load (s8), addrspace 1, align 1)
-    %umax:_(s32) = G_UMAX %load0, %load1
-    %mask:_(s32) = G_CONSTANT i32 255
-    %and:_(s32) = G_AND %umax, %mask
-    $vgpr0 = COPY %and
+    %load0:_(i32) = G_ZEXTLOAD %ptr0(p1) :: (load (i8), addrspace 1)
+    %load1:_(i32) = G_ZEXTLOAD %ptr1(p1) :: (load (i8), addrspace 1)
+    %umax:_(i32) = G_UMAX %load0, %load1
+    %mask:_(i32) = G_CONSTANT i32 255
+    %and:_(i32) = G_AND %umax, %mask
+    $vgpr0 = COPY %and(i32)
 
 ...
 
@@ -145,20 +145,20 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: %load0:_(s32) = G_LOAD %ptr0(p1) :: (load (s32), addrspace 1)
-    ; CHECK-NEXT: %load1:_(s32) = G_ZEXTLOAD %ptr1(p1) :: (load (s8), addrspace 1)
-    ; CHECK-NEXT: %smin:_(s32) = G_SMIN %load0, %load1
-    ; CHECK-NEXT: %mask:_(s32) = G_CONSTANT i32 255
-    ; CHECK-NEXT: %and:_(s32) = G_AND %smin, %mask
-    ; CHECK-NEXT: $vgpr0 = COPY %and(s32)
+    ; CHECK-NEXT: %load0:_(i32) = G_LOAD %ptr0(p1) :: (load (i32), addrspace 1)
+    ; CHECK-NEXT: %load1:_(i32) = G_ZEXTLOAD %ptr1(p1) :: (load (i8), addrspace 1)
+    ; CHECK-NEXT: %smin:_(i32) = G_SMIN %load0, %load1
+    ; CHECK-NEXT: %mask:_(i32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: %and:_(i32) = G_AND %smin, %mask
+    ; CHECK-NEXT: $vgpr0 = COPY %and(i32)
     %ptr0:_(p1) = COPY $vgpr0_vgpr1
     %ptr1:_(p1) = COPY $vgpr2_vgpr3
-    %load0:_(s32) = G_LOAD %ptr0 :: (load (s32), addrspace 1, align 4)
-    %load1:_(s32) = G_ZEXTLOAD %ptr1 :: (load (s8), addrspace 1, align 1)
-    %smin:_(s32) = G_SMIN %load0, %load1
-    %mask:_(s32) = G_CONSTANT i32 255
-    %and:_(s32) = G_AND %smin, %mask
-    $vgpr0 = COPY %and
+    %load0:_(i32) = G_LOAD %ptr0(p1) :: (load (i32), addrspace 1)
+    %load1:_(i32) = G_ZEXTLOAD %ptr1(p1) :: (load (i8), addrspace 1)
+    %smin:_(i32) = G_SMIN %load0, %load1
+    %mask:_(i32) = G_CONSTANT i32 255
+    %and:_(i32) = G_AND %smin, %mask
+    $vgpr0 = COPY %and(i32)
 
 ...
 
@@ -175,20 +175,20 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: %load0:_(s32) = G_ZEXTLOAD %ptr0(p1) :: (load (s8), addrspace 1)
-    ; CHECK-NEXT: %load1:_(s32) = G_LOAD %ptr1(p1) :: (load (s32), addrspace 1)
-    ; CHECK-NEXT: %smin:_(s32) = G_SMIN %load0, %load1
-    ; CHECK-NEXT: %mask:_(s32) = G_CONSTANT i32 255
-    ; CHECK-NEXT: %and:_(s32) = G_AND %smin, %mask
-    ; CHECK-NEXT: $vgpr0 = COPY %and(s32)
+    ; CHECK-NEXT: %load0:_(i32) = G_ZEXTLOAD %ptr0(p1) :: (load (i8), addrspace 1)
+    ; CHECK-NEXT: %load1:_(i32) = G_LOAD %ptr1(p1) :: (load (i32), addrspace 1)
+    ; CHECK-NEXT: %smin:_(i32) = G_SMIN %load0, %load1
+    ; CHECK-NEXT: %mask:_(i32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: %and:_(i32) = G_AND %smin, %mask
+    ; CHECK-NEXT: $vgpr0 = COPY %and(i32)
     %ptr0:_(p1) = COPY $vgpr0_vgpr1
     %ptr1:_(p1) = COPY $vgpr2_vgpr3
-    %load0:_(s32) = G_ZEXTLOAD %ptr0 :: (load (s8), addrspace 1, align 1)
-    %load1:_(s32) = G_LOAD %ptr1 :: (load (s32), addrspace 1, align 4)
-    %smin:_(s32) = G_SMIN %load0, %load1
-    %mask:_(s32) = G_CONSTANT i32 255
-    %and:_(s32) = G_AND %smin, %mask
-    $vgpr0 = COPY %and
+    %load0:_(i32) = G_ZEXTLOAD %ptr0(p1) :: (load (i8), addrspace 1)
+    %load1:_(i32) = G_LOAD %ptr1(p1) :: (load (i32), addrspace 1)
+    %smin:_(i32) = G_SMIN %load0, %load1
+    %mask:_(i32) = G_CONSTANT i32 255
+    %and:_(i32) = G_AND %smin, %mask
+    $vgpr0 = COPY %and(i32)
 
 ...
 
@@ -204,15 +204,15 @@ body:             |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %lds_size:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
-    ; CHECK-NEXT: %mask:_(s32) = G_CONSTANT i32 65535
-    ; CHECK-NEXT: %and:_(s32) = G_AND %lds_size, %mask
-    ; CHECK-NEXT: $vgpr0 = COPY %and(s32)
+    ; CHECK-NEXT: %lds_size:_(i32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
+    ; CHECK-NEXT: %mask:_(i32) = G_CONSTANT i32 65535
+    ; CHECK-NEXT: %and:_(i32) = G_AND %lds_size, %mask
+    ; CHECK-NEXT: $vgpr0 = COPY %and(i32)
     %ptr:_(p1) = COPY $vgpr0_vgpr1
-    %lds_size:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
-    %mask:_(s32) = G_CONSTANT i32 65535
-    %and:_(s32) = G_AND %lds_size, %mask
-    $vgpr0 = COPY %and
+    %lds_size:_(i32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
+    %mask:_(i32) = G_CONSTANT i32 65535
+    %and:_(i32) = G_AND %lds_size, %mask
+    $vgpr0 = COPY %and(i32)
 
 ...
 
@@ -227,13 +227,13 @@ body:             |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %lds_size:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
-    ; CHECK-NEXT: $vgpr0 = COPY %lds_size(s32)
+    ; CHECK-NEXT: %lds_size:_(i32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
+    ; CHECK-NEXT: $vgpr0 = COPY %lds_size(i32)
     %ptr:_(p1) = COPY $vgpr0_vgpr1
-    %lds_size:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
-    %mask:_(s32) = G_CONSTANT i32 131071
-    %and:_(s32) = G_AND %lds_size, %mask
-    $vgpr0 = COPY %and
+    %lds_size:_(i32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
+    %mask:_(i32) = G_CONSTANT i32 131071
+    %and:_(i32) = G_AND %lds_size, %mask
+    $vgpr0 = COPY %and(i32)
 
 ...
 
@@ -248,15 +248,15 @@ body:             |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %lds_size:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
-    ; CHECK-NEXT: %mask:_(s32) = G_CONSTANT i32 65536
-    ; CHECK-NEXT: %and:_(s32) = G_AND %lds_size, %mask
-    ; CHECK-NEXT: $vgpr0 = COPY %and(s32)
+    ; CHECK-NEXT: %lds_size:_(i32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
+    ; CHECK-NEXT: %mask:_(i32) = G_CONSTANT i32 65536
+    ; CHECK-NEXT: %and:_(i32) = G_AND %lds_size, %mask
+    ; CHECK-NEXT: $vgpr0 = COPY %and(i32)
     %ptr:_(p1) = COPY $vgpr0_vgpr1
-    %lds_size:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
-    %mask:_(s32) = G_CONSTANT i32 65536
-    %and:_(s32) = G_AND %lds_size, %mask
-    $vgpr0 = COPY %and
+    %lds_size:_(i32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
+    %mask:_(i32) = G_CONSTANT i32 65536
+    %and:_(i32) = G_AND %lds_size, %mask
+    $vgpr0 = COPY %and(i32)
 
 ...
 
@@ -271,15 +271,15 @@ body:             |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %lds_size:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
-    ; CHECK-NEXT: %mask:_(s32) = G_CONSTANT i32 32767
-    ; CHECK-NEXT: %and:_(s32) = G_AND %lds_size, %mask
-    ; CHECK-NEXT: $vgpr0 = COPY %and(s32)
+    ; CHECK-NEXT: %lds_size:_(i32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
+    ; CHECK-NEXT: %mask:_(i32) = G_CONSTANT i32 32767
+    ; CHECK-NEXT: %and:_(i32) = G_AND %lds_size, %mask
+    ; CHECK-NEXT: $vgpr0 = COPY %and(i32)
     %ptr:_(p1) = COPY $vgpr0_vgpr1
-    %lds_size:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
-    %mask:_(s32) = G_CONSTANT i32 32767
-    %and:_(s32) = G_AND %lds_size, %mask
-    $vgpr0 = COPY %and
+    %lds_size:_(i32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
+    %mask:_(i32) = G_CONSTANT i32 32767
+    %and:_(i32) = G_AND %lds_size, %mask
+    $vgpr0 = COPY %and(i32)
 
 ...
 
@@ -297,17 +297,17 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: %val:_(s32) = COPY $vgpr4
-    ; CHECK-NEXT: %k255:_(s32) = G_CONSTANT i32 255
-    ; CHECK-NEXT: %umin0:_(s32) = G_UMIN %val, %k255
-    ; CHECK-NEXT: $vgpr0 = COPY %umin0(s32)
+    ; CHECK-NEXT: %val:_(i32) = COPY $vgpr4
+    ; CHECK-NEXT: %k255:_(i32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: %umin0:_(i32) = G_UMIN %val, %k255
+    ; CHECK-NEXT: $vgpr0 = COPY %umin0(i32)
     %ptr0:_(p1) = COPY $vgpr0_vgpr1
     %ptr1:_(p1) = COPY $vgpr2_vgpr3
-    %val:_(s32) = COPY $vgpr4
-    %k255:_(s32) = G_CONSTANT i32 255
-    %umin0:_(s32) = G_UMIN %val, %k255
-    %and:_(s32) = G_AND %umin0, %k255
-    $vgpr0 = COPY %and
+    %val:_(i32) = COPY $vgpr4
+    %k255:_(i32) = G_CONSTANT i32 255
+    %umin0:_(i32) = G_UMIN %val, %k255
+    %and:_(i32) = G_AND %umin0, %k255
+    $vgpr0 = COPY %and(i32)
 
 ...
 
@@ -324,16 +324,16 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: %val:_(s32) = COPY $vgpr4
-    ; CHECK-NEXT: %k255:_(s32) = G_CONSTANT i32 255
-    ; CHECK-NEXT: %umin0:_(s32) = G_UMIN %val, %k255
-    ; CHECK-NEXT: $vgpr0 = COPY %umin0(s32)
+    ; CHECK-NEXT: %val:_(i32) = COPY $vgpr4
+    ; CHECK-NEXT: %k255:_(i32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: %umin0:_(i32) = G_UMIN %val, %k255
+    ; CHECK-NEXT: $vgpr0 = COPY %umin0(i32)
     %ptr0:_(p1) = COPY $vgpr0_vgpr1
     %ptr1:_(p1) = COPY $vgpr2_vgpr3
-    %val:_(s32) = COPY $vgpr4
-    %k255:_(s32) = G_CONSTANT i32 255
-    %umin0:_(s32) = G_UMIN %k255, %val
-    %and:_(s32) = G_AND %umin0, %k255
-    $vgpr0 = COPY %and
+    %val:_(i32) = COPY $vgpr4
+    %k255:_(i32) = G_CONSTANT i32 255
+    %umin0:_(i32) = G_UMIN %k255, %val
+    %and:_(i32) = G_AND %umin0, %k255
+    $vgpr0 = COPY %and(i32)
 
 ...

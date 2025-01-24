@@ -39,21 +39,21 @@ body: |
     ; GFX9-NEXT: [[V_SUB_U32_e64_1:%[0-9]+]]:vgpr_32 = V_SUB_U32_e64 [[S_SUB_I32_]], [[V_SUB_U32_e64_]], 0, implicit $exec
     ; GFX9-NEXT: [[V_SUB_U32_e64_2:%[0-9]+]]:vgpr_32 = V_SUB_U32_e64 [[V_SUB_U32_e64_1]], [[COPY2]], 0, implicit $exec
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[V_SUB_U32_e64_2]]
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:sgpr(s32) = COPY $sgpr1
-    %2:vgpr(s32) = COPY $vgpr0
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:sgpr(i32) = COPY $sgpr1
+    %2:vgpr(i32) = COPY $vgpr0
     %3:vgpr(p1) = COPY $vgpr3_vgpr4
-    %4:sgpr(s32) = G_CONSTANT i32 1
-    %5:sgpr(s32) = G_CONSTANT i32 4096
+    %4:sgpr(i32) = G_CONSTANT i32 1
+    %5:sgpr(i32) = G_CONSTANT i32 4096
+    %6:sgpr(i32) = G_SUB %0, %1
+    %7:vgpr(i32) = G_SUB %2, %6
+    %8:vgpr(i32) = G_SUB %6, %7
+    %9:vgpr(i32) = G_SUB %8, %2
+    S_ENDPGM 0, implicit %9(i32)
 
-    %6:sgpr(s32) = G_SUB %0, %1
 
-    %7:vgpr(s32) = G_SUB %2, %6
 
-    %8:vgpr(s32) = G_SUB %6, %7
 
-    %9:vgpr(s32) = G_SUB %8, %2
 
-    S_ENDPGM 0, implicit %9
 
 ...

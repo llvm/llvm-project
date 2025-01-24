@@ -12,11 +12,13 @@ body: |
     ; CHECK-LABEL: name: fpext_s
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:vgpr(s64) = G_FPEXT [[COPY1]](s32)
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s64) = G_FPEXT %0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(f32) = COPY [[BITCAST]](f32)
+    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:vgpr(f64) = G_FPEXT [[COPY1]](f32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(f32) = G_BITCAST %0(i32)
+    %2:_(f64) = G_FPEXT %1(f32)
 ...
 
 ---
@@ -29,8 +31,10 @@ body: |
     ; CHECK-LABEL: name: fpext_v
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:vgpr(s64) = G_FPEXT [[COPY]](s32)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s64) = G_FPEXT %0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:vgpr(f64) = G_FPEXT [[BITCAST]](f32)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(f32) = G_BITCAST %0(i32)
+    %2:_(f64) = G_FPEXT %1(f32)
 ...
