@@ -2442,7 +2442,8 @@ bool GVNPass::propagateEquality(Value *LHS, Value *RHS,
       continue;
 
     // Prefer a constant on the right-hand side, or an Argument if no constants.
-    if (isa<Constant>(LHS) || (isa<Argument>(LHS) && !isa<Constant>(RHS)))
+    if (isa<Constant>(LHS) ||
+        (isa<Argument>(LHS) && !isa<Argument>(RHS) && !isa<Constant>(RHS)))
       std::swap(LHS, RHS);
     assert((isa<Argument>(LHS) || isa<Instruction>(LHS)) && "Unexpected value!");
     const DataLayout &DL =
