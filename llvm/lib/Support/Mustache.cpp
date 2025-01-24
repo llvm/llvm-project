@@ -5,9 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-#include "llvm/Support/Mustache.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Mustache.h"
 #include "llvm/Support/raw_ostream.h"
 #include <sstream>
 
@@ -107,7 +107,7 @@ public:
           llvm::DenseMap<char, std::string> &Escapes)
       : Allocator(Alloc), Partials(Partials), Lambdas(Lambdas),
         SectionLambdas(SectionLambdas), Escapes(Escapes), Ty(Type::Root),
-        Parent(nullptr), ParentContext(nullptr) {}
+        Parent(nullptr), ParentContext(nullptr){}
 
   ASTNode(llvm::StringRef Body, ASTNode *Parent, llvm::BumpPtrAllocator &Alloc,
           llvm::StringMap<ASTNode *> &Partials,
@@ -116,7 +116,7 @@ public:
           llvm::DenseMap<char, std::string> &Escapes)
       : Allocator(Alloc), Partials(Partials), Lambdas(Lambdas),
         SectionLambdas(SectionLambdas), Escapes(Escapes), Ty(Type::Text),
-        Body(Body.str()), Parent(Parent), ParentContext(nullptr) {}
+        Body(Body.str()), Parent(Parent), ParentContext(nullptr){}
 
   // Constructor for Section/InvertSection/Variable/UnescapeVariable Nodes
   ASTNode(Type Ty, Accessor Accessor, ASTNode *Parent,
@@ -126,7 +126,7 @@ public:
           llvm::DenseMap<char, std::string> &Escapes)
       : Allocator(Alloc), Partials(Partials), Lambdas(Lambdas),
         SectionLambdas(SectionLambdas), Escapes(Escapes), Ty(Ty),
-        Parent(Parent), Accessor(std::move(Accessor)), ParentContext(nullptr) {}
+        Parent(Parent), Accessor(std::move(Accessor)), ParentContext(nullptr){}
 
   void addChild(ASTNode *Child) { Children.emplace_back(Child); };
 
@@ -168,7 +168,7 @@ private:
 
 // syntax wrapper for arena allocator for ASTNodes
 
-ASTNode *CreateRootNode(void *Node, llvm::BumpPtrAllocator &Alloc,
+ASTNode *createRootNode(void *Node, llvm::BumpPtrAllocator &Alloc,
                         llvm::StringMap<ASTNode *> &Partials,
                         llvm::StringMap<Lambda> &Lambdas,
                         llvm::StringMap<SectionLambda> &SectionLambdas,
@@ -176,7 +176,7 @@ ASTNode *CreateRootNode(void *Node, llvm::BumpPtrAllocator &Alloc,
   return new (Node) ASTNode(Alloc, Partials, Lambdas, SectionLambdas, Escapes);
 };
 
-ASTNode *CreateNode(void *Node, ASTNode::Type T, Accessor A, ASTNode *Parent,
+ASTNode *createNode(void *Node, ASTNode::Type T, Accessor A, ASTNode *Parent,
                     llvm::BumpPtrAllocator &Alloc,
                     llvm::StringMap<ASTNode *> &Partials,
                     llvm::StringMap<Lambda> &Lambdas,
@@ -186,7 +186,7 @@ ASTNode *CreateNode(void *Node, ASTNode::Type T, Accessor A, ASTNode *Parent,
                             SectionLambdas, Escapes);
 };
 
-ASTNode *CreateTextNode(void *Node, StringRef Body, ASTNode *Parent,
+ASTNode *createTextNode(void *Node, StringRef Body, ASTNode *Parent,
                         llvm::BumpPtrAllocator &Alloc,
                         llvm::StringMap<ASTNode *> &Partials,
                         llvm::StringMap<Lambda> &Lambdas,
@@ -431,7 +431,7 @@ Token::Token(std::string RawBody, std::string TokenBody, char Identifier)
 
 Token::Token(std::string Str)
     : TokenType(Type::Text), RawBody(std::move(Str)), TokenBody(RawBody),
-      Accessor({}), Indentation(0) {}
+      Accessor({}), Indentation(0){}
 
 Token::Type Token::getTokenType(char Identifier) {
   switch (Identifier) {
@@ -485,7 +485,7 @@ ASTNode *Parser::parse(llvm::BumpPtrAllocator &Alloc,
   CurrentPtr = 0;
   void *Root = Allocator.Allocate(sizeof(ASTNode), alignof(ASTNode));
   ASTNode *RootNode =
-      CreateRootNode(Root, Alloc, Partials, Lambdas, SectionLambdas, Escapes);
+      createRootNode(Root, Alloc, Partials, Lambdas, SectionLambdas, Escapes);
   parseMustache(RootNode, Alloc, Partials, Lambdas, SectionLambdas, Escapes);
   return RootNode;
 }
@@ -506,33 +506,33 @@ void Parser::parseMustache(ASTNode *Parent, llvm::BumpPtrAllocator &Alloc,
     switch (CurrentToken.getType()) {
     case Token::Type::Text: {
       CurrentNode =
-          CreateTextNode(Node, CurrentToken.getTokenBody(), Parent, Alloc,
+          createTextNode(Node, std::move(CurrentToken.getTokenBody()), Parent, Alloc,
                          Partials, Lambdas, SectionLambdas, Escapes);
       Parent->addChild(CurrentNode);
       break;
     }
     case Token::Type::Variable: {
-      CurrentNode = CreateNode(Node, ASTNode::Variable, A, Parent, Alloc,
+      CurrentNode = createNode(Node, ASTNode::Variable, A, Parent, Alloc,
                                Partials, Lambdas, SectionLambdas, Escapes);
       Parent->addChild(CurrentNode);
       break;
     }
     case Token::Type::UnescapeVariable: {
       CurrentNode =
-          CreateNode(Node, ASTNode::UnescapeVariable, A, Parent, Alloc,
+          createNode(Node, ASTNode::UnescapeVariable, A, Parent, Alloc,
                      Partials, Lambdas, SectionLambdas, Escapes);
       Parent->addChild(CurrentNode);
       break;
     }
     case Token::Type::Partial: {
-      CurrentNode = CreateNode(Node, ASTNode::Partial, A, Parent, Alloc,
+      CurrentNode = createNode(Node, ASTNode::Partial, A, Parent, Alloc,
                                Partials, Lambdas, SectionLambdas, Escapes);
       CurrentNode->setIndentation(CurrentToken.getIndentation());
       Parent->addChild(CurrentNode);
       break;
     }
     case Token::Type::SectionOpen: {
-      CurrentNode = CreateNode(Node, ASTNode::Section, A, Parent, Alloc,
+      CurrentNode = createNode(Node, ASTNode::Section, A, Parent, Alloc,
                                Partials, Lambdas, SectionLambdas, Escapes);
       size_t Start = CurrentPtr;
       parseMustache(CurrentNode, Alloc, Partials, Lambdas, SectionLambdas,
@@ -546,7 +546,7 @@ void Parser::parseMustache(ASTNode *Parent, llvm::BumpPtrAllocator &Alloc,
       break;
     }
     case Token::Type::InvertSectionOpen: {
-      CurrentNode = CreateNode(Node, ASTNode::InvertSection, A, Parent, Alloc,
+      CurrentNode = createNode(Node, ASTNode::InvertSection, A, Parent, Alloc,
                                Partials, Lambdas, SectionLambdas, Escapes);
       size_t Start = CurrentPtr;
       parseMustache(CurrentNode, Alloc, Partials, Lambdas, SectionLambdas,
@@ -770,7 +770,7 @@ void Template::overrideEscapeCharacters(DenseMap<char, std::string> E) {
   Escapes = std::move(E);
 }
 
-Template::Template(std::string TemplateStr) {
+Template::Template(StringRef TemplateStr) {
   Parser P = Parser(TemplateStr, AstAllocator);
   Tree = P.parse(RenderAllocator, Partials, Lambdas, SectionLambdas, Escapes);
   // The default behavior is to escape html entities.

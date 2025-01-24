@@ -357,6 +357,52 @@ TEST(MustacheSections, Falsey) {
   EXPECT_EQ("", Out);
 }
 
+TEST(MustacheInterpolation, IsFalseyNull) {
+  // Mustache-free templates should render as-is.
+  Value D = Object{{"boolean", nullptr}};
+  auto T = Template("Hello, {{#boolean}}World{{/boolean}}");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("Hello, ", Out);
+}
+
+TEST(MustacheInterpolation, IsFalseyArray) {
+  // Mustache-free templates should render as-is.
+  Value D = Object{{"boolean", Array()}};
+  auto T = Template("Hello, {{#boolean}}World{{/boolean}}");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("Hello, ", Out);
+}
+
+
+TEST(MustacheInterpolation, IsFalseyObject) {
+  // Mustache-free templates should render as-is.
+  Value D = Object{{"boolean", Object{}}};
+  auto T = Template("Hello, {{#boolean}}World{{/boolean}}");
+  std::string Out;
+  raw_string_ostream OS(Out);
+  T.render(D, OS);
+  EXPECT_EQ("Hello, World", Out);
+}
+
+TEST(MustacheInterpolation, DoubleRendering) {
+  // Mustache-free templates should render as-is.
+  Value D1 = Object{{"subject", "World"}};
+  auto T = Template("Hello, {{subject}}!");
+  std::string Out1;
+  raw_string_ostream OS1(Out1);
+  T.render(D1, OS1);
+  EXPECT_EQ("Hello, World!", Out1);
+  std::string Out2;
+  raw_string_ostream OS2(Out2);
+  Value D2 = Object{{"subject", "New World"}};
+  T.render(D2, OS2);
+  EXPECT_EQ("Hello, New World!", Out2);
+}
+
 TEST(MustacheSections, NullIsFalsey) {
   Value D = Object{{"null", nullptr}};
   auto T = Template("{{#null}}This should not be rendered.{{/null}}");
@@ -1179,3 +1225,4 @@ TEST(MustacheComments, VariableNameCollision) {
   T.render(D, OS);
   EXPECT_EQ("comments never show: ><", Out);
 }
+

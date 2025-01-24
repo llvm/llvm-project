@@ -69,7 +69,6 @@
 #define LLVM_SUPPORT_MUSTACHE
 
 #include "Error.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/JSON.h"
@@ -88,7 +87,7 @@ class ASTNode;
 // and Lambdas that are registered with it.
 class Template {
 public:
-  Template(std::string TemplateStr);
+  Template(StringRef TemplateStr);
 
   void render(const llvm::json::Value &Data, llvm::raw_ostream &OS);
 
