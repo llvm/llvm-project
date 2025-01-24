@@ -117,6 +117,7 @@ class YkShadowStack : public ModulePass {
   Type *Int8PtrTy = nullptr;
   Type *Int32Ty = nullptr;
   Type *PointerSizedIntTy = nullptr;
+  using AllocaVector = std::vector<std::pair<AllocaInst *, size_t>>;
 
 private:
   uint64_t controlPointCount;
@@ -184,8 +185,7 @@ public:
 
   // Scan the function `F` for instructions of interest and compute the layout
   // of the shadow frame.
-  size_t analyseFunction(Function &F, DataLayout &DL,
-                         std::map<AllocaInst *, size_t> &Allocas,
+  size_t analyseFunction(Function &F, DataLayout &DL, AllocaVector &Allocas,
                          std::vector<ReturnInst *> &Rets) {
     size_t SFrameSize = 0;
     for (BasicBlock &BB : F) {
@@ -217,7 +217,7 @@ public:
           // space (to padding) by sorting them by size.
           size_t Align = AI->getAlign().value();
           SFrameSize = ((SFrameSize + (Align - 1)) / Align) * Align;
-          Allocas.insert({AI, SFrameSize});
+          Allocas.push_back({AI, SFrameSize});
           SFrameSize += AI->getAllocationSize(DL).value();
         } else if (ReturnInst *RI = dyn_cast<ReturnInst>(&I)) {
           Rets.push_back(RI);
@@ -254,8 +254,7 @@ public:
   }
 
   // Replace alloca instructions with shadow stack accesses.
-  void rewriteAllocas(DataLayout &DL, std::map<AllocaInst *, size_t> &Allocas,
-                      Value *SSPtr) {
+  void rewriteAllocas(DataLayout &DL, AllocaVector &Allocas, Value *SSPtr) {
     for (auto [AI, Off] : Allocas) {
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           Int8Ty, SSPtr, {ConstantInt::get(Int32Ty, Off)}, "", AI);
@@ -298,7 +297,7 @@ public:
     }
 
     // Update the original main function.
-    std::map<AllocaInst *, size_t> MainAllocas;
+    AllocaVector MainAllocas;
     std::vector<ReturnInst *> MainRets;
     size_t SFrameSize = analyseFunction(*Main, DL, MainAllocas, MainRets);
     CallInst *Malloc = insertMainPrologue(Main, SSGlobal, SFrameSize);
@@ -315,7 +314,7 @@ public:
         return;
       }
 
-      std::map<AllocaInst *, size_t> UnoptMainAllocas;
+      AllocaVector UnoptMainAllocas;
       std::vector<ReturnInst *> UnoptMainRets;
       size_t SFrameSizeUnopt =
           analyseFunction(*UnoptMain, DL, UnoptMainAllocas, UnoptMainRets);
@@ -327,6 +326,19 @@ public:
 
       // Load the current shadow stack pointer from the global variable.
       LoadInst *LoadedSSPtr = Builder.CreateLoad(Int8PtrTy, SSGlobal);
+
+      // Add assertions to verify allocas match between opt/unopt main
+      assert(MainAllocas.size() == UnoptMainAllocas.size() &&
+             "Expected same number of allocas between opt/unopt main");
+
+      for (size_t i = 0; i < MainAllocas.size(); i++) {
+        auto &[optAI, optOffset] = MainAllocas[i];
+        auto &[unoptAI, unoptOffset] = UnoptMainAllocas[i];
+        assert(optOffset == unoptOffset && "Alloca offsets must match");
+        assert(optAI->getAllocatedType() == unoptAI->getAllocatedType() &&
+               "Alloca types must match");
+      }
+
       // Replace all allocas in UnoptMain with the loaded shadow stack pointer.
       rewriteAllocas(DL, UnoptMainAllocas, LoadedSSPtr);
     }
@@ -365,7 +377,7 @@ public:
         continue;
       }
 
-      std::map<AllocaInst *, size_t> Allocas;
+      AllocaVector Allocas;
       std::vector<ReturnInst *> Rets;
       size_t SFrameSize = analyseFunction(F, DL, Allocas, Rets);
       if (SFrameSize > 0) {
