@@ -496,7 +496,7 @@ constexpr const char *initTemplate = R"Py(
     attributes = {{}
     regions = None
     {1}
-    super().__init__(self.build_generic({2}))
+    super().__init__({2})
 )Py";
 
 /// Template for appending a single element to the operand/result list.
@@ -915,6 +915,10 @@ static SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
   functionArgs.push_back("ip=None");
 
   SmallVector<std::string> initArgs;
+  initArgs.push_back("self.OPERATION_NAME");
+  initArgs.push_back("self._ODS_REGIONS");
+  initArgs.push_back("self._ODS_OPERAND_SEGMENTS");
+  initArgs.push_back("self._ODS_RESULT_SEGMENTS");
   initArgs.push_back("attributes=attributes");
   if (!hasInferTypeInterface(op))
     initArgs.push_back("results=results");

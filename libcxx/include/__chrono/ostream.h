@@ -269,7 +269,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const hh_mm_ss<_Duration> __hms
   return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%T}"), __hms);
 }
 
-#    if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#    if _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
@@ -314,7 +314,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const zoned_time<_Duration, _Ti
   return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T %Z}"), __tp);
 }
 #      endif
-#    endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#    endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 } // namespace chrono
 

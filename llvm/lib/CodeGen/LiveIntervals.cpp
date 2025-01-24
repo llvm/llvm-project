@@ -127,6 +127,20 @@ LiveIntervalsWrapperPass::LiveIntervalsWrapperPass() : MachineFunctionPass(ID) {
 
 LiveIntervals::~LiveIntervals() { clear(); }
 
+bool LiveIntervals::invalidate(
+    MachineFunction &MF, const PreservedAnalyses &PA,
+    MachineFunctionAnalysisManager::Invalidator &Inv) {
+  auto PAC = PA.getChecker<LiveIntervalsAnalysis>();
+
+  if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<MachineFunction>>())
+    return true;
+
+  // LiveIntervals holds pointers to these results, so check for their
+  // invalidation.
+  return Inv.invalidate<SlotIndexesAnalysis>(MF, PA) ||
+         Inv.invalidate<MachineDominatorTreeAnalysis>(MF, PA);
+}
+
 void LiveIntervals::clear() {
   // Free the live intervals themselves.
   for (unsigned i = 0, e = VirtRegIntervals.size(); i != e; ++i)

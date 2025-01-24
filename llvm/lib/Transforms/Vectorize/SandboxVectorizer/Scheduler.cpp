@@ -206,6 +206,13 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
     // We start scheduling at the bottom instr of Instrs.
     ScheduleTopItOpt = std::next(VecUtils::getLowest(Instrs)->getIterator());
 
+    // TODO: For now don't cross BBs.
+    if (!DAG.getInterval().empty()) {
+      auto *BB = DAG.getInterval().top()->getParent();
+      if (any_of(Instrs, [BB](auto *I) { return I->getParent() != BB; }))
+        return false;
+    }
+
     // Extend the DAG to include Instrs.
     Interval<Instruction> Extension = DAG.extend(Instrs);
     // Add nodes to ready list.

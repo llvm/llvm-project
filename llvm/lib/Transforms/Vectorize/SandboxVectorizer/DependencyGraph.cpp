@@ -232,6 +232,9 @@ void DependencyGraph::setDefUseUnscheduledSuccs(
       auto *OpI = dyn_cast<Instruction>(Op);
       if (OpI == nullptr)
         continue;
+      // TODO: For now don't cross BBs.
+      if (OpI->getParent() != I.getParent())
+        continue;
       if (!NewInterval.contains(OpI))
         continue;
       auto *OpN = getNode(OpI);

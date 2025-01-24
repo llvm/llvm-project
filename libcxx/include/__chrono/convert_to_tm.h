@@ -175,7 +175,7 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
       if (__value.hours().count() > std::numeric_limits<decltype(__result.tm_hour)>::max())
         std::__throw_format_error("Formatting hh_mm_ss, encountered an hour overflow");
     __result.tm_hour = __value.hours().count();
-#  if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#  if _LIBCPP_HAS_EXPERIMENTAL_TZDB
   } else if constexpr (same_as<_ChronoT, chrono::sys_info>) {
     // Has no time information.
   } else if constexpr (same_as<_ChronoT, chrono::local_info>) {
@@ -185,7 +185,7 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
     return std::__convert_to_tm<_Tm>(
         chrono::sys_time<typename _ChronoT::duration>{__value.get_local_time().time_since_epoch()});
 #    endif
-#  endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#  endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
   } else
     static_assert(sizeof(_ChronoT) == 0, "Add the missing type specialization");
 

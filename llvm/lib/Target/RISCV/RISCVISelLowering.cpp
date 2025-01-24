@@ -21087,7 +21087,7 @@ RISCVTargetLowering::getConstraintType(StringRef Constraint) const {
   } else {
     if (Constraint == "vr" || Constraint == "vd" || Constraint == "vm")
       return C_RegisterClass;
-    if (Constraint == "cr" || Constraint == "cf")
+    if (Constraint == "cr" || Constraint == "cR" || Constraint == "cf")
       return C_RegisterClass;
   }
   return TargetLowering::getConstraintType(Constraint);
@@ -21133,8 +21133,6 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       }
       break;
     case 'R':
-      if (VT == MVT::f64 && !Subtarget.is64Bit() && Subtarget.hasStdExtZdinx())
-        return std::make_pair(0U, &RISCV::GPRPairNoX0RegClass);
       return std::make_pair(0U, &RISCV::GPRPairNoX0RegClass);
     default:
       break;
@@ -21176,6 +21174,8 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       return std::make_pair(0U, &RISCV::GPRPairCRegClass);
     if (!VT.isVector())
       return std::make_pair(0U, &RISCV::GPRCRegClass);
+  } else if (Constraint == "cR") {
+    return std::make_pair(0U, &RISCV::GPRPairCRegClass);
   } else if (Constraint == "cf") {
     if (VT == MVT::f16) {
       if (Subtarget.hasStdExtZfhmin())
@@ -22399,18 +22399,16 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
 }
 
 bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
-    IntrinsicInst *DI, LoadInst *LI,
-    SmallVectorImpl<Instruction *> &DeadInsts) const {
+    LoadInst *LI, ArrayRef<Value *> DeinterleaveValues) const {
+  unsigned Factor = DeinterleaveValues.size();
+  if (Factor > 8)
+    return false;
+
   assert(LI->isSimple());
   IRBuilder<> Builder(LI);
 
-  // Only deinterleave2 supported at present.
-  if (DI->getIntrinsicID() != Intrinsic::vector_deinterleave2)
-    return false;
+  auto *ResVTy = cast<VectorType>(DeinterleaveValues[0]->getType());
 
-  const unsigned Factor = 2;
-
-  VectorType *ResVTy = cast<VectorType>(DI->getType()->getContainedType(0));
   const DataLayout &DL = LI->getDataLayout();
 
   if (!isLegalInterleavedAccessType(ResVTy, Factor, LI->getAlign(),
@@ -22458,24 +22456,27 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
     }
   }
 
-  DI->replaceAllUsesWith(Return);
+  for (auto [Idx, DIV] : enumerate(DeinterleaveValues)) {
+    // We have to create a brand new ExtractValue to replace each
+    // of these old ExtractValue instructions.
+    Value *NewEV =
+        Builder.CreateExtractValue(Return, {static_cast<unsigned>(Idx)});
+    DIV->replaceAllUsesWith(NewEV);
+  }
 
   return true;
 }
 
 bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
-    IntrinsicInst *II, StoreInst *SI,
-    SmallVectorImpl<Instruction *> &DeadInsts) const {
+    StoreInst *SI, ArrayRef<Value *> InterleaveValues) const {
+  unsigned Factor = InterleaveValues.size();
+  if (Factor > 8)
+    return false;
+
   assert(SI->isSimple());
   IRBuilder<> Builder(SI);
 
-  // Only interleave2 supported at present.
-  if (II->getIntrinsicID() != Intrinsic::vector_interleave2)
-    return false;
-
-  const unsigned Factor = 2;
-
-  VectorType *InVTy = cast<VectorType>(II->getArgOperand(0)->getType());
+  auto *InVTy = cast<VectorType>(InterleaveValues[0]->getType());
   const DataLayout &DL = SI->getDataLayout();
 
   if (!isLegalInterleavedAccessType(InVTy, Factor, SI->getAlign(),
@@ -22485,11 +22486,16 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
   Type *XLenTy = Type::getIntNTy(SI->getContext(), Subtarget.getXLen());
 
   if (auto *FVTy = dyn_cast<FixedVectorType>(InVTy)) {
+    Function *VssegNFunc = Intrinsic::getOrInsertDeclaration(
+        SI->getModule(), FixedVssegIntrIds[Factor - 2],
+        {InVTy, SI->getPointerOperandType(), XLenTy});
+
+    SmallVector<Value *, 10> Ops(InterleaveValues.begin(),
+                                 InterleaveValues.end());
     Value *VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
-    Builder.CreateIntrinsic(FixedVssegIntrIds[Factor - 2],
-                            {InVTy, SI->getPointerOperandType(), XLenTy},
-                            {II->getArgOperand(0), II->getArgOperand(1),
-                             SI->getPointerOperand(), VL});
+    Ops.append({SI->getPointerOperand(), VL});
+
+    Builder.CreateCall(VssegNFunc, Ops);
   } else {
     static const Intrinsic::ID IntrIds[] = {
         Intrinsic::riscv_vsseg2, Intrinsic::riscv_vsseg3,
@@ -22514,7 +22520,7 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
     for (unsigned i = 0; i < Factor; ++i)
       StoredVal = Builder.CreateIntrinsic(
           Intrinsic::riscv_tuple_insert, {VecTupTy, InVTy},
-          {StoredVal, II->getArgOperand(i), Builder.getInt32(i)});
+          {StoredVal, InterleaveValues[i], Builder.getInt32(i)});
 
     Builder.CreateCall(VssegNFunc, {StoredVal, SI->getPointerOperand(), VL,
                                     ConstantInt::get(XLenTy, Log2_64(SEW))});

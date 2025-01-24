@@ -339,33 +339,84 @@ struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
   }
 };
 
+// Attempts the following transformation:
+//
+// For integers a, b, a', and b' such that [a, b] ∩ [a', b'] ≠ ∅ and input
+// tensor X the following identity holds:
+//
+// CLAMP(CLAMP(X, a, b), a', b') = CLAMP(X, max(a, a'),  min(b, b'))
+//
+// subject to the following valid NaN propagation semantics:
+// --------------------------------------------
+// | OUTER CLAMP | INNER CLAMP  | RESULT MODE |
+// |-------------|--------------|-------------|
+// | PROPAGATE   | PROPAGATE    | PROPAGATE   |
+// | PROPAGATE   | IGNORE       | IGNORE      |
+// | IGNORE      | PROPAGATE    | INVALID     |
+// | IGNORE      | IGNORE       | IGNORE      |
+// |------------------------------------------|
+
 struct ClampClampOptimization : public OpRewritePattern<tosa::ClampOp> {
   using OpRewritePattern<tosa::ClampOp>::OpRewritePattern;
 
+  // Helper structure to describe the range of a clamp operation.
+  template <typename T>
+  struct ClampRange {
+    ClampRange(const T &start, const T &end) : start(start), end(end) {}
+    T start;
+    T end;
+
+    // Helper function to determine if two Clamp ranges intersect.
+    bool intersects(const ClampRange<T> &otherRange) {
+      return start < otherRange.end && otherRange.start < end;
+    }
+  };
+
   LogicalResult matchAndRewrite(tosa::ClampOp op,
                                 PatternRewriter &rewriter) const override {
-    Value input = op.getInput();
-
-    Operation *definingOp = input.getDefiningOp();
-    if (!definingOp)
+    // Check the input to the CLAMP op is itself a CLAMP.
+    auto clampOp =
+        dyn_cast_if_present<tosa::ClampOp>(op.getInput().getDefiningOp());
+    if (!clampOp)
       return failure();
 
-    if (tosa::ClampOp clampOp = dyn_cast<tosa::ClampOp>(definingOp)) {
-      auto minFp = std::max(op.getMinFp(), clampOp.getMinFp()).convertToFloat();
-      auto maxFp = std::min(op.getMaxFp(), clampOp.getMaxFp()).convertToFloat();
+    // Check we have a valid NaN propagation combination.
+    const auto opNanMode = op.getNanMode();
+    const auto clampNanMode = clampOp.getNanMode();
+    if (opNanMode == "IGNORE" && clampNanMode == "PROPAGATE")
+      return failure();
 
-      auto minInt = std::max(op.getMinInt(), clampOp.getMinInt());
-      auto maxInt = std::min(op.getMaxInt(), clampOp.getMaxInt());
+    // Check we have intersecting ranges.
+    const auto opMinInt = op.getMinInt();
+    const auto opMaxInt = op.getMaxInt();
+    const auto clampOpMinInt = clampOp.getMinInt();
+    const auto clampOpMaxInt = clampOp.getMaxInt();
+    ClampRange<std::int64_t> opRangeIntRange(opMinInt, opMaxInt);
+    ClampRange<std::int64_t> clampRangeIntRange(clampOpMinInt, clampOpMaxInt);
+    if (!opRangeIntRange.intersects(clampRangeIntRange))
+      return failure();
 
-      rewriter.replaceOpWithNewOp<tosa::ClampOp>(
-          op, op.getType(), clampOp.getInput(),
-          rewriter.getI64IntegerAttr(minInt),
-          rewriter.getI64IntegerAttr(maxInt), rewriter.getF32FloatAttr(minFp),
-          rewriter.getF32FloatAttr(maxFp));
-      return success();
-    }
+    const auto opMinFloat = op.getMinFp();
+    const auto opMaxFloat = op.getMaxFp();
+    const auto clampOpMinFloat = clampOp.getMinFp();
+    const auto clampOpMaxFloat = clampOp.getMaxFp();
+    ClampRange<APFloat> opRangeFloatRange(opMinFloat, opMaxFloat);
+    ClampRange<APFloat> clampRangeFloatRange(clampOpMinFloat, clampOpMaxFloat);
+    if (!opRangeFloatRange.intersects(clampRangeFloatRange))
+      return failure();
 
-    return failure();
+    // Run the transformation.
+    const auto minFp = std::max(opMinFloat, clampOpMinFloat).convertToFloat();
+    const auto maxFp = std::min(opMaxFloat, clampOpMaxFloat).convertToFloat();
+    const auto minInt = std::max(opMinInt, clampOpMinInt);
+    const auto maxInt = std::min(opMaxInt, clampOpMaxInt);
+    rewriter.replaceOpWithNewOp<tosa::ClampOp>(
+        op, op.getType(), clampOp.getInput(),
+        rewriter.getI64IntegerAttr(minInt), rewriter.getI64IntegerAttr(maxInt),
+        rewriter.getF32FloatAttr(minFp), rewriter.getF32FloatAttr(maxFp),
+        rewriter.getStringAttr((opNanMode != clampNanMode) ? "IGNORE"
+                                                           : opNanMode));
+    return success();
   }
 };
 

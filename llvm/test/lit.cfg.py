@@ -597,6 +597,9 @@ if not re.match(
 ) and not re.match(r"^arm64(e)?-apple-(macos|darwin)", config.target_triple):
     config.available_features.add("debug_frame")
 
+if config.enable_backtrace:
+    config.available_features.add("backtrace")
+
 if config.enable_threads:
     config.available_features.add("thread_support")
 

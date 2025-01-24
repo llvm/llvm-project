@@ -105,10 +105,17 @@ When submitting patches, please do not add confidentiality or non-disclosure
 notices to the patches themselves.  These notices conflict with the LLVM
 licensing terms and may result in your contribution being excluded.
 
+.. _github-email-address:
+
+Email Addresses
+---------------
+
 The LLVM project uses email to communicate to contributors outside of the
 GitHub platform about their past contributions. Primarily, our buildbot
 infrastructure uses emails to contact contributors about build and test
-failures. Therefore, the LLVM community requires contributors to have a public
+failures.
+
+Therefore, the LLVM community requires contributors to have a public
 email address associated with their GitHub commits, so please ensure that "Keep
 my email addresses private" is disabled in your
 `account settings <https://github.com/settings/emails>`_.

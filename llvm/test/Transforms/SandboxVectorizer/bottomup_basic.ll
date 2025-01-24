@@ -242,3 +242,58 @@ define void @diamondWithShuffle(ptr %ptr) {
   store float %sub1, ptr %ptr1
   ret void
 }
+
+define void @diamondMultiInput(ptr %ptr, ptr %ptrX) {
+; CHECK-LABEL: define void @diamondMultiInput(
+; CHECK-SAME: ptr [[PTR:%.*]], ptr [[PTRX:%.*]]) {
+; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
+; CHECK-NEXT:    [[LDX:%.*]] = load float, ptr [[PTRX]], align 4
+; CHECK-NEXT:    [[VINS:%.*]] = insertelement <2 x float> poison, float [[LDX]], i32 0
+; CHECK-NEXT:    [[VEXT:%.*]] = extractelement <2 x float> [[VECL]], i32 0
+; CHECK-NEXT:    [[VINS1:%.*]] = insertelement <2 x float> [[VINS]], float [[VEXT]], i32 1
+; CHECK-NEXT:    [[VEC:%.*]] = fsub <2 x float> [[VECL]], [[VINS1]]
+; CHECK-NEXT:    store <2 x float> [[VEC]], ptr [[PTR0]], align 4
+; CHECK-NEXT:    ret void
+;
+  %ptr0 = getelementptr float, ptr %ptr, i32 0
+  %ptr1 = getelementptr float, ptr %ptr, i32 1
+  %ld0 = load float, ptr %ptr0
+  %ld1 = load float, ptr %ptr1
+
+  %ldX = load float, ptr %ptrX
+
+  %sub0 = fsub float %ld0, %ldX
+  %sub1 = fsub float %ld1, %ld0
+  store float %sub0, ptr %ptr0
+  store float %sub1, ptr %ptr1
+  ret void
+}
+
+define void @diamondWithConstantVector(ptr %ptr) {
+; CHECK-LABEL: define void @diamondWithConstantVector(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[GEPA0:%.*]] = getelementptr i32, ptr [[PTR]], i64 0
+; CHECK-NEXT:    [[GEPB0:%.*]] = getelementptr i32, ptr [[PTR]], i64 10
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[GEPA0]], align 4
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[GEPB0]], align 4
+; CHECK-NEXT:    ret void
+;
+  %gepA0 = getelementptr i32, ptr %ptr, i64 0
+  %gepA1 = getelementptr i32, ptr %ptr, i64 1
+
+  %gepB0 = getelementptr i32, ptr %ptr, i64 10
+  %gepB1 = getelementptr i32, ptr %ptr, i64 11
+
+  %zext0 = zext i16 0 to i32
+  %zext1 = zext i16 0 to i32
+
+  store i32 %zext0, ptr %gepA0
+  store i32 %zext1, ptr %gepA1
+
+  %orB0 = or i32 0, %zext0
+  %orB1 = or i32 0, %zext1
+  store i32 %orB0, ptr %gepB0
+  store i32 %orB1, ptr %gepB1
+  ret void
+}

@@ -74,8 +74,15 @@ using CharMatrix = std::vector<std::vector<char>>;
 
 } // end anonymous namespace
 
+// Minimum loop depth supported.
+static cl::opt<unsigned int> MinLoopNestDepth(
+    "loop-interchange-min-loop-nest-depth", cl::init(2), cl::Hidden,
+    cl::desc("Minimum depth of loop nest considered for the transform"));
+
 // Maximum loop depth supported.
-static const unsigned MaxLoopNestDepth = 10;
+static cl::opt<unsigned int> MaxLoopNestDepth(
+    "loop-interchange-max-loop-nest-depth", cl::init(10), cl::Hidden,
+    cl::desc("Maximum depth of loop nest considered for the transform"));
 
 #ifndef NDEBUG
 static void printDepMatrix(CharMatrix &DepMatrix) {
@@ -244,10 +251,22 @@ static void populateWorklist(Loop &L, LoopVector &LoopList) {
   LoopList.push_back(CurrentLoop);
 }
 
-static bool hasMinimumLoopDepth(SmallVectorImpl<Loop *> &LoopList) {
+static bool hasSupportedLoopDepth(SmallVectorImpl<Loop *> &LoopList,
+                                  OptimizationRemarkEmitter &ORE) {
   unsigned LoopNestDepth = LoopList.size();
-  if (LoopNestDepth < 2) {
-    LLVM_DEBUG(dbgs() << "Loop doesn't contain minimum nesting level.\n");
+  if (LoopNestDepth < MinLoopNestDepth || LoopNestDepth > MaxLoopNestDepth) {
+    LLVM_DEBUG(dbgs() << "Unsupported depth of loop nest " << LoopNestDepth
+                      << ", the supported range is [" << MinLoopNestDepth
+                      << ", " << MaxLoopNestDepth << "].\n");
+    Loop **OuterLoop = LoopList.begin();
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLoopNestDepth",
+                                      (*OuterLoop)->getStartLoc(),
+                                      (*OuterLoop)->getHeader())
+             << "Unsupported depth of loop nest, the supported range is ["
+             << std::to_string(MinLoopNestDepth) << ", "
+             << std::to_string(MaxLoopNestDepth) << "].\n";
+    });
     return false;
   }
   return true;
@@ -435,15 +454,11 @@ struct LoopInterchange {
   bool processLoopList(SmallVectorImpl<Loop *> &LoopList) {
     bool Changed = false;
 
-    // Ensure minimum loop nest depth.
-    assert(hasMinimumLoopDepth(LoopList) && "Loop nest does not meet minimum depth.");
+    // Ensure proper loop nest depth.
+    assert(hasSupportedLoopDepth(LoopList, *ORE) &&
+           "Unsupported depth of loop nest.");
 
     unsigned LoopNestDepth = LoopList.size();
-    if (LoopNestDepth > MaxLoopNestDepth) {
-      LLVM_DEBUG(dbgs() << "Cannot handle loops of depth greater than "
-                        << MaxLoopNestDepth << "\n");
-      return false;
-    }
     if (!isComputableLoopNest(LoopList)) {
       LLVM_DEBUG(dbgs() << "Not valid loop candidate for interchange\n");
       return false;
@@ -1735,14 +1750,15 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
     LLVM_DEBUG(dbgs() << "MaxMemInstrCount should be at least 1");
     return PreservedAnalyses::all();
   }
+  OptimizationRemarkEmitter ORE(&F);
 
   // Ensure minimum depth of the loop nest to do the interchange.
-  if (!hasMinimumLoopDepth(LoopList))
+  if (!hasSupportedLoopDepth(LoopList, ORE))
     return PreservedAnalyses::all();
   DependenceInfo DI(&F, &AR.AA, &AR.SE, &AR.LI);
   std::unique_ptr<CacheCost> CC =
       CacheCost::getCacheCost(LN.getOutermostLoop(), AR, DI);
-  OptimizationRemarkEmitter ORE(&F);
+  
   if (!LoopInterchange(&AR.SE, &AR.LI, &DI, &AR.DT, CC, &ORE).run(LN))
     return PreservedAnalyses::all();
   U.markLoopNestChanged(true);

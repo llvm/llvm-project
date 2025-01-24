@@ -10143,7 +10143,6 @@ public:
 
   void adjustTripCount(int TripCountAdjust) override {}
 
-  void disposed() override {}
   bool isMVEExpanderSupported() override { return true; }
 };
 } // namespace

@@ -5488,8 +5488,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   }
   if ((Left.is(TT_TemplateOpener)) != (Right.is(TT_TemplateCloser)))
     return ShouldAddSpacesInAngles();
-  if (Left.is(tok::r_paren) && Right.is(TT_PointerOrReference) &&
-      Right.isOneOf(tok::amp, tok::ampamp)) {
+  if (Left.is(tok::r_paren) && Left.isNot(TT_TypeDeclarationParen) &&
+      Right.is(TT_PointerOrReference) && Right.isOneOf(tok::amp, tok::ampamp)) {
     return true;
   }
   // Space before TT_StructuredBindingLSquare.

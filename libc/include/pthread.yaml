@@ -402,7 +402,7 @@ functions:
   - name: pthread_setspecific
     standards:
       - POSIX
-    return_type: void *
+    return_type: int
     arguments:
       - type: pthread_key_t
       - type: const void *

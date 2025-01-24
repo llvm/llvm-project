@@ -69,11 +69,9 @@ public:
       return false;
     }
     if (auto recTy = mlir::dyn_cast<RecordType>(ty)) {
-      auto visited = visitedTypes.find(ty);
-      if (visited != visitedTypes.end())
+      auto [visited, inserted] = visitedTypes.try_emplace(ty, false);
+      if (!inserted)
         return visited->second;
-      [[maybe_unused]] auto newIt = visitedTypes.try_emplace(ty, false);
-      assert(newIt.second && "expected ty to not be in the map");
       bool wasAlreadyVisitingRecordType = needConversionIsVisitingRecordType;
       needConversionIsVisitingRecordType = true;
       bool result = false;

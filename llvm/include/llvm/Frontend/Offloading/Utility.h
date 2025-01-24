@@ -55,6 +55,10 @@ enum OffloadEntryKindFlag : uint32_t {
 /// globals that will be registered with the offloading runtime.
 StructType *getEntryTy(Module &M);
 
+/// Returns the struct type we store the two pointers for CUDA / HIP managed
+/// variables in. Necessary until we widen the offload entry struct.
+StructType *getManagedTy(Module &M);
+
 /// Create an offloading section struct used to register this global at
 /// runtime.
 ///

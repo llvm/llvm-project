@@ -75,8 +75,10 @@ def Tensor_BitcastOp : Tensor_Op<"bitcast", [
     ```
   }];
 
-  let arguments = (ins AnyTensor:$source);
-  let results = (outs AnyTensor:$dest);
+  let arguments = (ins TensorOf<[AnySignlessInteger, AnyUnsignedInteger, 
+                                 AnySignedInteger, AnyFloat]>:$source);
+  let results = (outs TensorOf<[AnySignlessInteger, AnyUnsignedInteger,
+                                AnySignedInteger, AnyFloat]>:$dest);
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 
   let hasCanonicalizer = 1;

@@ -5,6 +5,10 @@
 attributes(global) subroutine devsub()
   implicit none
   integer :: ret
+  real(4) :: af
+  real(8) :: ad
+  integer(4) :: ai
+  integer(8) :: al
 
   call syncthreads()
   call syncwarp(1)
@@ -14,6 +18,11 @@ attributes(global) subroutine devsub()
   ret = syncthreads_and(1)
   ret = syncthreads_count(1)
   ret = syncthreads_or(1)
+
+  ai = atomicadd(ai, 1_4)
+  al = atomicadd(al, 1_8)
+  af = atomicadd(af, 1.0_4)
+  ad = atomicadd(ad, 1.0_8)
 end
 
 ! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
@@ -25,6 +34,10 @@ end
 ! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.and(%c1_i32_0) fastmath<contract> : (i32) -> i32
 ! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.popc(%c1_i32_1) fastmath<contract> : (i32) -> i32
 ! CHECK: %{{.*}} = fir.call @llvm.nvvm.barrier0.or(%c1_i32_2) fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = llvm.atomicrmw add  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
+! CHECK: %{{.*}} = llvm.atomicrmw add  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i64
+! CHECK: %{{.*}} = llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f32
+! CHECK: %{{.*}} = llvm.atomicrmw fadd %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, f64
 
 ! CHECK: func.func private @llvm.nvvm.barrier0()
 ! CHECK: func.func private @__syncwarp(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncwarp", fir.proc_attrs = #fir.proc_attrs<bind_c>}

@@ -237,9 +237,13 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     }
   };
   auto checkReduction = [&todo](auto op, LogicalResult &result) {
-    if (!op.getReductionVars().empty() || op.getReductionByref() ||
-        op.getReductionSyms())
-      result = todo("reduction");
+    if (isa<omp::TeamsOp>(op) || isa<omp::SimdOp>(op))
+      if (!op.getReductionVars().empty() || op.getReductionByref() ||
+          op.getReductionSyms())
+        result = todo("reduction");
+    if (op.getReductionMod() &&
+        op.getReductionMod().value() != omp::ReductionModifier::defaultmod)
+      result = todo("reduction with modifier");
   };
   auto checkTaskReduction = [&todo](auto op, LogicalResult &result) {
     if (!op.getTaskReductionVars().empty() || op.getTaskReductionByref() ||
@@ -257,6 +261,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::SectionsOp op) {
         checkAllocate(op, result);
         checkPrivate(op, result);
+        checkReduction(op, result);
       })
       .Case([&](omp::SingleOp op) {
         checkAllocate(op, result);
@@ -288,8 +293,12 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkAllocate(op, result);
         checkLinear(op, result);
         checkOrder(op, result);
+        checkReduction(op, result);
       })
-      .Case([&](omp::ParallelOp op) { checkAllocate(op, result); })
+      .Case([&](omp::ParallelOp op) {
+        checkAllocate(op, result);
+        checkReduction(op, result);
+      })
       .Case([&](omp::SimdOp op) {
         checkLinear(op, result);
         checkNontemporal(op, result);

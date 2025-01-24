@@ -602,7 +602,7 @@ namespace std {
   using size_t = decltype(sizeof(0));
   template<typename T> struct allocator {
     constexpr T *allocate(size_t N) {
-      return (T*)__builtin_operator_new(sizeof(T) * N); // both-note 2{{allocation performed here}} \
+      return (T*)__builtin_operator_new(sizeof(T) * N); // expected-note 2{{allocation performed here}} \
                                                         // #alloc
     }
     constexpr void deallocate(void *p) {
@@ -641,7 +641,7 @@ namespace OperatorNewDelete {
       p = new int[1]; // both-note {{heap allocation performed here}}
       break;
     case 2:
-      p = std::allocator<int>().allocate(1);
+      p = std::allocator<int>().allocate(1); // ref-note 2{{heap allocation performed here}}
       break;
     }
     switch (dealloc_kind) {
