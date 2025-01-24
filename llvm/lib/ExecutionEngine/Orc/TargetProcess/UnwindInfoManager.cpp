@@ -146,8 +146,11 @@ Error UnwindInfoManager::registerSections(
   std::lock_guard<std::mutex> Lock(M);
   for (auto &R : CodeRanges)
     UWSecs[R.Start.getValue()] = UnwindSections{
-        DSOBase.getValue(), DWARFEHFrame.Start.getValue(), DWARFEHFrame.size(),
-        CompactUnwind.Start.getValue(), CompactUnwind.size()};
+        static_cast<uintptr_t>(DSOBase.getValue()),
+        static_cast<uintptr_t>(DWARFEHFrame.Start.getValue()),
+        static_cast<size_t>(DWARFEHFrame.size()),
+        static_cast<uintptr_t>(CompactUnwind.Start.getValue()),
+        static_cast<size_t>(CompactUnwind.size())};
   return Error::success();
 }
 
