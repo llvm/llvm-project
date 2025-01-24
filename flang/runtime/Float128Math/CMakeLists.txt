@@ -118,7 +118,7 @@ elseif (HAVE_LDBL_MANT_DIG_113)
       )
     target_sources(FortranFloat128MathILib INTERFACE ${sources})
   else()
-    message(FATAL_ERROR "FortranRuntime cannot build without libm")
+    message(FATAL_ERROR "flang_rt cannot build without libm")
   endif()
 else()
   # We can use '__float128' version from libc, if it has them.

@@ -360,26 +360,26 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
   case options::OPT__SLASH_MT:
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("--dependent-lib=libcmt");
-    CmdArgs.push_back("--dependent-lib=FortranRuntime.static.lib");
+    CmdArgs.push_back("--dependent-lib=flang_rt.static.lib");
     break;
   case options::OPT__SLASH_MTd:
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DEBUG");
     CmdArgs.push_back("--dependent-lib=libcmtd");
-    CmdArgs.push_back("--dependent-lib=FortranRuntime.static_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=flang_rt.static_dbg.lib");
     break;
   case options::OPT__SLASH_MD:
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DLL");
     CmdArgs.push_back("--dependent-lib=msvcrt");
-    CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic.lib");
+    CmdArgs.push_back("--dependent-lib=flang_rt.dynamic.lib");
     break;
   case options::OPT__SLASH_MDd:
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DEBUG");
     CmdArgs.push_back("-D_DLL");
     CmdArgs.push_back("--dependent-lib=msvcrtd");
-    CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic_dbg.lib");
+    CmdArgs.push_back("--dependent-lib=flang_rt.dynamic_dbg.lib");
     break;
   }
 }

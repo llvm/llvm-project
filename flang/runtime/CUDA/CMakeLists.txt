@@ -31,6 +31,6 @@ endif()
 
 target_link_libraries(${CUFRT_LIBNAME}
   PRIVATE
-  FortranRuntime
+  flang_rt
   ${CUDA_RT_TARGET}
 )

@@ -50,7 +50,7 @@ AutoExporter::AutoExporter(
       "libclang_rt.profile-x86_64",
       "libc++",
       "libc++abi",
-      "libFortranRuntime",
+      "libflang_rt",
       "libunwind",
       "libmsvcrt",
       "libucrtbase",
