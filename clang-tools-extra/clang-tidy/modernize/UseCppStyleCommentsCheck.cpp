@@ -20,9 +20,11 @@ public:
   CStyleCommentHandler(UseCppStyleCommentsCheck &Check)
       : Check(Check),
         CStyleCommentMatch(
-                          "^[ \t]*/\\*+[ \t\r\n]*(.*[ \t\r\n]*)*[ \t\r\n]*\\*+/[ \t\r\n]*$"){}
+            "^[ \t]*/\\*+[ \t\r\n]*(.*[ \t\r\n]*)*[ \t\r\n]*\\*+/[ \t\r\n]*$") {
+  }
 
-  std::string convertToCppStyleComment(const SourceManager &SM, const SourceRange &Range) {
+  std::string convertToCppStyleComment(const SourceManager &SM,
+                                       const SourceRange &Range) {
     StringRef CommentText = Lexer::getSourceText(
         CharSourceRange::getTokenRange(Range), SM, LangOptions());
 
@@ -37,19 +39,19 @@ public:
     if (std::getline(Stream, Line)) {
       size_t startPos = Line.find_first_not_of(" \t");
       if (startPos != std::string::npos) {
-          Line = Line.substr(startPos);
+        Line = Line.substr(startPos);
       } else {
-          Line.clear();
+        Line.clear();
       }
       Result += "// " + Line;
     }
 
     while (std::getline(Stream, Line)) {
-    size_t startPos = Line.find_first_not_of(" \t");
+      size_t startPos = Line.find_first_not_of(" \t");
       if (startPos != std::string::npos) {
-          Line = Line.substr(startPos);
+        Line = Line.substr(startPos);
       } else {
-          Line.clear();
+        Line.clear();
       }
       Result += "\n// " + Line;
     }
@@ -59,18 +61,16 @@ public:
   bool HandleComment(Preprocessor &PP, SourceRange Range) override {
     const SourceManager &SM = PP.getSourceManager();
 
-    if (Range.getBegin().isMacroID() ||
-        SM.isInSystemHeader(Range.getBegin())) {
-        return false;
+    if (Range.getBegin().isMacroID() || SM.isInSystemHeader(Range.getBegin())) {
+      return false;
     }
 
-    const StringRef Text =
-        Lexer::getSourceText(CharSourceRange::getCharRange(Range),
-                             SM, PP.getLangOpts());
+    const StringRef Text = Lexer::getSourceText(
+        CharSourceRange::getCharRange(Range), SM, PP.getLangOpts());
 
     SmallVector<StringRef> Matches;
     if (!CStyleCommentMatch.match(Text, &Matches)) {
-        return false;
+      return false;
     }
 
     SourceLocation CommentStart = Range.getBegin();
@@ -79,22 +79,24 @@ public:
     unsigned StartLine = SM.getSpellingLineNumber(CommentStart);
     unsigned EndLine = SM.getSpellingLineNumber(CommentEnd);
 
-   
     if (StartLine == EndLine) {
-      SourceLocation LineBegin = SM.translateLineCol(
-          SM.getFileID(CommentStart), StartLine, 1);
-      SourceLocation LineEnd = SM.translateLineCol(SM.getFileID(CommentEnd), EndLine, std::numeric_limits<unsigned>::max());
-      StringRef LineContent =
-          Lexer::getSourceText(CharSourceRange::getCharRange(LineBegin, LineEnd),
-                              SM, PP.getLangOpts());
+      SourceLocation LineBegin =
+          SM.translateLineCol(SM.getFileID(CommentStart), StartLine, 1);
+      SourceLocation LineEnd =
+          SM.translateLineCol(SM.getFileID(CommentEnd), EndLine,
+                              std::numeric_limits<unsigned>::max());
+      StringRef LineContent = Lexer::getSourceText(
+          CharSourceRange::getCharRange(LineBegin, LineEnd), SM,
+          PP.getLangOpts());
       size_t CommentStartOffset = SM.getSpellingColumnNumber(CommentStart) - 1;
-      StringRef AfterComment = LineContent.drop_front(CommentStartOffset + Text.size());
+      StringRef AfterComment =
+          LineContent.drop_front(CommentStartOffset + Text.size());
 
       if (!AfterComment.trim().empty()) {
-          return false;
+        return false;
       }
     }
-    
+
     Check.diag(
         Range.getBegin(),
         "use C++ style comments '//' instead of C style comments '/*...*/'")
@@ -102,8 +104,7 @@ public:
                Range, convertToCppStyleComment(SM, Range));
 
     return false;
-}
-
+  }
 
 private:
   UseCppStyleCommentsCheck &Check;

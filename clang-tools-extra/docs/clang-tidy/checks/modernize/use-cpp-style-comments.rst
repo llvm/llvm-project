@@ -1,7 +1,7 @@
 .. title:: clang-tidy - use-cpp-style-comments
 
 modernize-use-cpp-style-comments
-=======================
+================================
 
 Replace C-style comments with C++-style comments.
 C-style comments (`/* ... */`) are inherited from C, while C++ introduces 
