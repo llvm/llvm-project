@@ -553,7 +553,8 @@ static void CheckReduce(
         case parser::ReductionOperator::Operator::Multiply:
         case parser::ReductionOperator::Operator::Max:
         case parser::ReductionOperator::Operator::Min:
-          isOk = cat == TypeCategory::Integer || cat == TypeCategory::Real;
+          isOk = cat == TypeCategory::Integer || cat == TypeCategory::Real ||
+              cat == TypeCategory::Complex;
           break;
         case parser::ReductionOperator::Operator::Iand:
         case parser::ReductionOperator::Operator::Ior:
