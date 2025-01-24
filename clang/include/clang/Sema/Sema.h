@@ -10452,7 +10452,8 @@ public:
       FunctionTemplateDecl *FunctionTemplate, ArrayRef<QualType> ParamTypes,
       ArrayRef<Expr *> Args, OverloadCandidateSet &CandidateSet,
       ConversionSequenceList &Conversions, bool SuppressUserConversions,
-      CXXRecordDecl *ActingContext = nullptr, QualType ObjectType = QualType(),
+      bool NonInstOnly, CXXRecordDecl *ActingContext = nullptr,
+      QualType ObjectType = QualType(),
       Expr::Classification ObjectClassification = {},
       OverloadCandidateParamOrder PO = {});
 
@@ -12497,7 +12498,9 @@ public:
       sema::TemplateDeductionInfo &Info,
       SmallVectorImpl<OriginalCallArg> const *OriginalCallArgs,
       bool PartialOverloading, bool PartialOrdering,
-      llvm::function_ref<bool()> CheckNonDependent = [] { return false; });
+      llvm::function_ref<bool(bool)> CheckNonDependent = [](bool) {
+        return false;
+      });
 
   /// Perform template argument deduction from a function call
   /// (C++ [temp.deduct.call]).
@@ -12532,7 +12535,7 @@ public:
       bool PartialOverloading, bool AggregateDeductionCandidate,
       bool PartialOrdering, QualType ObjectType,
       Expr::Classification ObjectClassification,
-      llvm::function_ref<bool(ArrayRef<QualType>)> CheckNonDependent);
+      llvm::function_ref<bool(ArrayRef<QualType>, bool)> CheckNonDependent);
 
   /// Deduce template arguments when taking the address of a function
   /// template (C++ [temp.deduct.funcaddr]) or matching a specialization to
