@@ -219,11 +219,11 @@ class AArch64LinuxGCSTestCase(TestBase):
         # Now to prove we can write gcs_features_enabled, disable GCS and continue
         # past the fault we caused. Note that although the libc likely locked the
         # ability to disable GCS, ptrace bypasses the lock bits.
-        gcs_enabled &= ~1
-        self.runCmd(f"register write gcs_features_enabled {gcs_enabled}")
+        enabled &= ~1
+        self.runCmd(f"register write gcs_features_enabled {enabled}")
         self.expect(
             "register read gcs_features_enabled",
-            substrs=[f"gcs_features_enabled = 0x{gcs_enabled:016x}"],
+            substrs=[f"gcs_features_enabled = 0x{enabled:016x}"],
         )
 
         # With GCS disabled, the invalid guarded control stack pointer is not
