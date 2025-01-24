@@ -8499,7 +8499,7 @@ TreeTransform<Derived>::TransformDeclStmt(DeclStmt *S) {
             getSema()
                 .getASTContext()
                 .getTypeDeclType(TD)
-                .getCanonicalType()
+                .getSingleStepDesugaredType(getSema().getASTContext())
                 ->containsUnexpandedParameterPack();
 
       if (auto *VD = dyn_cast<VarDecl>(Transformed))
@@ -17282,10 +17282,11 @@ ExprResult TreeTransform<Derived>::RebuildCXXOperatorCallExpr(
   } else if (Op == OO_Arrow) {
     // It is possible that the type refers to a RecoveryExpr created earlier
     // in the tree transformation.
-    if (First->getType()->isDependentType())
+    if (First->containsErrors())
       return ExprError();
     // -> is never a builtin operation.
-    return SemaRef.BuildOverloadedArrowExpr(nullptr, First, OpLoc);
+    return getSema().BuildOverloadedArrowExpr(First, OpLoc,
+                                              /*NoArrowOperatorFound=*/nullptr);
   } else if (Second == nullptr || isPostIncDec) {
     if (!First->getType()->isOverloadableType() ||
         (Op == OO_Amp && getSema().isQualifiedMemberAccess(First))) {
