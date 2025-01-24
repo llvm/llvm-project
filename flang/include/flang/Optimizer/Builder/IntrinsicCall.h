@@ -185,6 +185,7 @@ struct IntrinsicLibrary {
   mlir::Value genAnint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genAny(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAtanpi(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAtomicAdd(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue
       genCommandArgumentCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAsind(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -269,10 +270,8 @@ struct IntrinsicLibrary {
   mlir::Value genIeeeCopySign(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genIeeeGetFlag(llvm::ArrayRef<fir::ExtendedValue>);
   void genIeeeGetHaltingMode(llvm::ArrayRef<fir::ExtendedValue>);
-  template <bool isGet>
-  void genIeeeGetOrSetModes(llvm::ArrayRef<fir::ExtendedValue>);
-  template <bool isGet>
-  void genIeeeGetOrSetStatus(llvm::ArrayRef<fir::ExtendedValue>);
+  template <bool isGet, bool isModes>
+  void genIeeeGetOrSetModesOrStatus(llvm::ArrayRef<fir::ExtendedValue>);
   void genIeeeGetRoundingMode(llvm::ArrayRef<fir::ExtendedValue>);
   void genIeeeGetUnderflowMode(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIeeeInt(mlir::Type, llvm::ArrayRef<mlir::Value>);

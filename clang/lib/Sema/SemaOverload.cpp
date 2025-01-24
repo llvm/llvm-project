@@ -516,7 +516,7 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
     if (const FieldDecl *BitField = Initializer->getSourceBitField()) {
       if (BitField->getBitWidth()->isValueDependent())
         DependentBitField = true;
-      else if (unsigned BitFieldWidth = BitField->getBitWidthValue(Ctx);
+      else if (unsigned BitFieldWidth = BitField->getBitWidthValue();
                BitFieldWidth < FromWidth) {
         if (CanRepresentAll(FromSigned, BitFieldWidth, ToSigned, ToWidth))
           return NK_Not_Narrowing;
@@ -6917,7 +6917,8 @@ void Sema::AddOverloadCandidate(
     OverloadCandidateSet &CandidateSet, bool SuppressUserConversions,
     bool PartialOverloading, bool AllowExplicit, bool AllowExplicitConversions,
     ADLCallKind IsADLCandidate, ConversionSequenceList EarlyConversions,
-    OverloadCandidateParamOrder PO, bool AggregateCandidateDeduction) {
+    OverloadCandidateParamOrder PO, bool AggregateCandidateDeduction,
+    bool HasMatchedPackOnParmToNonPackOnArg) {
   const FunctionProtoType *Proto
     = dyn_cast<FunctionProtoType>(Function->getType()->getAs<FunctionType>());
   assert(Proto && "Functions without a prototype cannot be overloaded");
@@ -6936,7 +6937,8 @@ void Sema::AddOverloadCandidate(
       AddMethodCandidate(Method, FoundDecl, Method->getParent(), QualType(),
                          Expr::Classification::makeSimpleLValue(), Args,
                          CandidateSet, SuppressUserConversions,
-                         PartialOverloading, EarlyConversions, PO);
+                         PartialOverloading, EarlyConversions, PO,
+                         HasMatchedPackOnParmToNonPackOnArg);
       return;
     }
     // We treat a constructor like a non-member function, since its object
@@ -6977,8 +6979,10 @@ void Sema::AddOverloadCandidate(
   Candidate.Viable = true;
   Candidate.RewriteKind =
       CandidateSet.getRewriteInfo().getRewriteKind(Function, PO);
-  Candidate.IsADLCandidate = IsADLCandidate;
+  Candidate.IsADLCandidate = llvm::to_underlying(IsADLCandidate);
   Candidate.ExplicitCallArguments = Args.size();
+  Candidate.HasMatchedPackOnParmToNonPackOnArg =
+      HasMatchedPackOnParmToNonPackOnArg;
 
   // Explicit functions are not actually candidates at all if we're not
   // allowing them in this context, but keep them around so we can point
@@ -7521,16 +7525,13 @@ void Sema::AddMethodCandidate(DeclAccessPair FoundDecl, QualType ObjectType,
   }
 }
 
-void
-Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
-                         CXXRecordDecl *ActingContext, QualType ObjectType,
-                         Expr::Classification ObjectClassification,
-                         ArrayRef<Expr *> Args,
-                         OverloadCandidateSet &CandidateSet,
-                         bool SuppressUserConversions,
-                         bool PartialOverloading,
-                         ConversionSequenceList EarlyConversions,
-                         OverloadCandidateParamOrder PO) {
+void Sema::AddMethodCandidate(
+    CXXMethodDecl *Method, DeclAccessPair FoundDecl,
+    CXXRecordDecl *ActingContext, QualType ObjectType,
+    Expr::Classification ObjectClassification, ArrayRef<Expr *> Args,
+    OverloadCandidateSet &CandidateSet, bool SuppressUserConversions,
+    bool PartialOverloading, ConversionSequenceList EarlyConversions,
+    OverloadCandidateParamOrder PO, bool HasMatchedPackOnParmToNonPackOnArg) {
   const FunctionProtoType *Proto
     = dyn_cast<FunctionProtoType>(Method->getType()->getAs<FunctionType>());
   assert(Proto && "Methods without a prototype cannot be overloaded");
@@ -7561,6 +7562,8 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
   Candidate.TookAddressOfOverload =
       CandidateSet.getKind() == OverloadCandidateSet::CSK_AddressOfOverloadSet;
   Candidate.ExplicitCallArguments = Args.size();
+  Candidate.HasMatchedPackOnParmToNonPackOnArg =
+      HasMatchedPackOnParmToNonPackOnArg;
 
   bool IgnoreExplicitObject =
       (Method->isExplicitObjectMemberFunction() &&
@@ -7731,8 +7734,8 @@ void Sema::AddMethodTemplateCandidate(
   ConversionSequenceList Conversions;
   if (TemplateDeductionResult Result = DeduceTemplateArguments(
           MethodTmpl, ExplicitTemplateArgs, Args, Specialization, Info,
-          PartialOverloading, /*AggregateDeductionCandidate=*/false, ObjectType,
-          ObjectClassification,
+          PartialOverloading, /*AggregateDeductionCandidate=*/false,
+          /*PartialOrdering=*/false, ObjectType, ObjectClassification,
           [&](ArrayRef<QualType> ParamTypes) {
             return CheckNonDependentConversions(
                 MethodTmpl, ParamTypes, Args, CandidateSet, Conversions,
@@ -7770,7 +7773,8 @@ void Sema::AddMethodTemplateCandidate(
   AddMethodCandidate(cast<CXXMethodDecl>(Specialization), FoundDecl,
                      ActingContext, ObjectType, ObjectClassification, Args,
                      CandidateSet, SuppressUserConversions, PartialOverloading,
-                     Conversions, PO);
+                     Conversions, PO,
+                     Info.hasMatchedPackOnParmToNonPackOnArg());
 }
 
 /// Determine whether a given function template has a simple explicit specifier
@@ -7816,6 +7820,7 @@ void Sema::AddTemplateOverloadCandidate(
   if (TemplateDeductionResult Result = DeduceTemplateArguments(
           FunctionTemplate, ExplicitTemplateArgs, Args, Specialization, Info,
           PartialOverloading, AggregateCandidateDeduction,
+          /*PartialOrdering=*/false,
           /*ObjectType=*/QualType(),
           /*ObjectClassification=*/Expr::Classification(),
           [&](ArrayRef<QualType> ParamTypes) {
@@ -7832,7 +7837,7 @@ void Sema::AddTemplateOverloadCandidate(
     Candidate.RewriteKind =
       CandidateSet.getRewriteInfo().getRewriteKind(Candidate.Function, PO);
     Candidate.IsSurrogate = false;
-    Candidate.IsADLCandidate = IsADLCandidate;
+    Candidate.IsADLCandidate = llvm::to_underlying(IsADLCandidate);
     // Ignore the object argument if there is one, since we don't have an object
     // type.
     Candidate.IgnoreObjectArgument =
@@ -7856,7 +7861,8 @@ void Sema::AddTemplateOverloadCandidate(
       Specialization, FoundDecl, Args, CandidateSet, SuppressUserConversions,
       PartialOverloading, AllowExplicit,
       /*AllowExplicitConversions=*/false, IsADLCandidate, Conversions, PO,
-      Info.AggregateDeductionCandidateHasMismatchedArity);
+      Info.AggregateDeductionCandidateHasMismatchedArity,
+      Info.hasMatchedPackOnParmToNonPackOnArg());
 }
 
 bool Sema::CheckNonDependentConversions(
@@ -7978,7 +7984,8 @@ void Sema::AddConversionCandidate(
     CXXConversionDecl *Conversion, DeclAccessPair FoundDecl,
     CXXRecordDecl *ActingContext, Expr *From, QualType ToType,
     OverloadCandidateSet &CandidateSet, bool AllowObjCConversionOnExplicit,
-    bool AllowExplicit, bool AllowResultConversion) {
+    bool AllowExplicit, bool AllowResultConversion,
+    bool HasMatchedPackOnParmToNonPackOnArg) {
   assert(!Conversion->getDescribedFunctionTemplate() &&
          "Conversion function templates use AddTemplateConversionCandidate");
   QualType ConvType = Conversion->getConversionType().getNonReferenceType();
@@ -8023,6 +8030,8 @@ void Sema::AddConversionCandidate(
   Candidate.FinalConversion.setAllToTypes(ToType);
   Candidate.Viable = true;
   Candidate.ExplicitCallArguments = 1;
+  Candidate.HasMatchedPackOnParmToNonPackOnArg =
+      HasMatchedPackOnParmToNonPackOnArg;
 
   // Explicit functions are not actually candidates at all if we're not
   // allowing them in this context, but keep them around so we can point
@@ -8224,7 +8233,8 @@ void Sema::AddTemplateConversionCandidate(
   assert(Specialization && "Missing function template specialization?");
   AddConversionCandidate(Specialization, FoundDecl, ActingDC, From, ToType,
                          CandidateSet, AllowObjCConversionOnExplicit,
-                         AllowExplicit, AllowResultConversion);
+                         AllowExplicit, AllowResultConversion,
+                         Info.hasMatchedPackOnParmToNonPackOnArg());
 }
 
 void Sema::AddSurrogateCandidate(CXXConversionDecl *Conversion,
@@ -10575,6 +10585,10 @@ bool clang::isBetterOverloadCandidate(
       isa<CXXConstructorDecl>(Cand1.Function) !=
           isa<CXXConstructorDecl>(Cand2.Function))
     return isa<CXXConstructorDecl>(Cand1.Function);
+
+  if (Cand1.HasMatchedPackOnParmToNonPackOnArg !=
+      Cand2.HasMatchedPackOnParmToNonPackOnArg)
+    return Cand2.HasMatchedPackOnParmToNonPackOnArg;
 
   //    -- F1 is a non-template function and F2 is a function template
   //       specialization, or, if not that,
@@ -14082,7 +14096,8 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
       return ExprError();
     return SemaRef.BuildResolvedCallExpr(
         Res.get(), FDecl, LParenLoc, Args, RParenLoc, ExecConfig,
-        /*IsExecConfig=*/false, (*Best)->IsADLCandidate);
+        /*IsExecConfig=*/false,
+        static_cast<CallExpr::ADLCallKind>((*Best)->IsADLCandidate));
   }
 
   case OR_No_Viable_Function: {
@@ -14156,7 +14171,8 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
       return ExprError();
     return SemaRef.BuildResolvedCallExpr(
         Res.get(), FDecl, LParenLoc, Args, RParenLoc, ExecConfig,
-        /*IsExecConfig=*/false, (*Best)->IsADLCandidate);
+        /*IsExecConfig=*/false,
+        static_cast<CallExpr::ADLCallKind>((*Best)->IsADLCandidate));
   }
   }
 
@@ -14438,7 +14454,8 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
       Args[0] = Input;
       CallExpr *TheCall = CXXOperatorCallExpr::Create(
           Context, Op, FnExpr.get(), ArgsArray, ResultTy, VK, OpLoc,
-          CurFPFeatureOverrides(), Best->IsADLCandidate);
+          CurFPFeatureOverrides(),
+          static_cast<CallExpr::ADLCallKind>(Best->IsADLCandidate));
 
       if (CheckCallReturnType(FnDecl->getReturnType(), OpLoc, TheCall, FnDecl))
         return ExprError();
@@ -14833,7 +14850,8 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         // members; CodeGen should take care not to emit the this pointer.
         TheCall = CXXOperatorCallExpr::Create(
             Context, ChosenOp, FnExpr.get(), Args, ResultTy, VK, OpLoc,
-            CurFPFeatureOverrides(), Best->IsADLCandidate);
+            CurFPFeatureOverrides(),
+            static_cast<CallExpr::ADLCallKind>(Best->IsADLCandidate));
 
         if (const auto *Method = dyn_cast<CXXMethodDecl>(FnDecl);
             Method && Method->isImplicitObjectMemberFunction()) {
@@ -15958,9 +15976,9 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   return CheckForImmediateInvocation(MaybeBindToTemporary(TheCall), Method);
 }
 
-ExprResult
-Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base, SourceLocation OpLoc,
-                               bool *NoArrowOperatorFound) {
+ExprResult Sema::BuildOverloadedArrowExpr(Scope *S, Expr *Base,
+                                          SourceLocation OpLoc,
+                                          bool *NoArrowOperatorFound) {
   assert(Base->getType()->isRecordType() &&
          "left-hand side must have class type");
 

@@ -33,6 +33,16 @@ StructType *offloading::getEntryTy(Module &M) {
   return EntryTy;
 }
 
+StructType *offloading::getManagedTy(Module &M) {
+  LLVMContext &C = M.getContext();
+  StructType *StructTy = StructType::getTypeByName(C, "struct.__managed_var");
+  if (!StructTy)
+    StructTy = llvm::StructType::create("struct.__managed_var",
+                                        PointerType::getUnqual(M.getContext()),
+                                        PointerType::getUnqual(M.getContext()));
+  return StructTy;
+}
+
 // TODO: Rework this interface to be more generic.
 std::pair<Constant *, GlobalVariable *>
 offloading::getOffloadingEntryInitializer(Module &M, Constant *Addr,

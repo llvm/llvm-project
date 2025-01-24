@@ -1061,8 +1061,7 @@ static void RemoveFunctionsWithModuleNotEqualTo(const ModuleSP &module_sp,
     SymbolContext sc;
     sc_list.GetContextAtIndex(i, sc);
     if (sc.function) {
-      const SectionSP section_sp(
-          sc.function->GetAddressRange().GetBaseAddress().GetSection());
+      const SectionSP section_sp = sc.function->GetAddress().GetSection();
       if (section_sp->GetModule() != module_sp) {
         sc_list.RemoveContextAtIndex(i);
         continue;

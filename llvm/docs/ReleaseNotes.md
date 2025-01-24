@@ -47,6 +47,12 @@ for adding a new subsection. -->
   same semantics. The normalizer makes it easier to spot semantic differences
   when diffing two modules which have undergone different passes.
 
+* The SPIR-V backend is now an official LLVM target, providing OpenCL and SYCL
+  conformance and establishing a foundation for broader applicability to other
+  APIs, including Vulkan, GLSL, and HLSL. This backend aims to offer a unified
+  approach for diverse compute and graphics workloads, providing a robust
+  alternative to the Khronos SPIR-V LLVM Translator.
+
 * ...
 
 <!-- If you would like to document a larger change, then you can add a
@@ -171,6 +177,57 @@ Changes to the Hexagon Backend
 Changes to the LoongArch Backend
 --------------------------------
 
+* [Incorrect GOT usage](https://github.com/llvm/llvm-project/pull/117099) for `non-dso_local` function calls in large code model is fixed.
+
+* A [gprof support issue](https://github.com/llvm/llvm-project/issues/121103) is fixed.
+
+* A [SDAG hang issue](https://github.com/llvm/llvm-project/issues/107355) caused by `ISD::CONCAT_VECTORS` is fixed.
+
+* A [compiler crash issue](https://github.com/llvm/llvm-project/issues/118301) when converting `half` to `i32` is fixed.
+
+* Almost all of `la64v1.1` instructions can now be generated. The full list is
+  `frecipe.s`, `frecipe.d`, `frsqrte.s`, `frsqrte.d`, `vfrecipe.s`, `vfrecipe.d`,
+  `vfrsqrte.s`, `vfrsqrte.d`, `xvfrecipe.s`, `xvfrecipe.d`, `xvfrsqrte.s`,
+  `xvfrsqrte.d`, `sc.q`, `amcas.b`, `amcas.h`, `amcas.w`, `amcas.d`, `amcas_db.b`,
+  `amcas_db.h`, `amcas_db.w`, `amcas_db.d`, `amswap.b`, `amswap.h`, `amswap_db.b`,
+  `amswap_db.h`, `amadd.b`, `amadd.h`, `amadd_db.b`, `amadd_db.h`. Optionally
+  generate instructions `dbar 0x700`, `div.w`, `div.wu`, `mod.w` and `mod.wu`
+  when related target features are enabled. `llacq.w`, `screl.w`, `llacq.d` and
+  `screl.d` cannot be generated yet.
+
+* An llc option called `-loongarch-annotate-tablejump` is added to annotate
+  table jump instruction in the `.discard.tablejump_annotate` section. A typical
+  user of these annotations is the `objtool` in Linux kernel.
+
+* The default cpu in `MCSubtargetInfo` is changed from `la464` to `generic-la64`.
+  In addition, the `lsx` feature is added to `generic-la64`.
+
+* CFI instructions now allow register names and aliases, previously only numbers
+  were allowed.
+
+* `RuntimeDyld` now supports LoongArch, which means that programs relying on
+  `MCJIT` can now work.
+
+* `.balign N, 0`, `.p2align N, 0`, `.align N, 0` in code sections will now fill
+  the required alignment space with a sequence of `0x0` bytes (the requested
+  fill value) rather than NOPs.
+
+* `%ld_pcrel_20`, `%gd_pcrel_20` and `%desc_pcrel_20` operand modifiers are
+   supported by assembler.
+
+* A machine function pass called `LoongArch Merge Base Offset` is added to merge
+  the offset of address calculation into the offset field of instructions in a
+  global address lowering sequence.
+
+* The `LoopDataPrefetch` pass can now work on LoongArch, but it is disabled by
+  default due to the bad effect on Fortran benchmarks.
+
+* Enable alias analysis by default.
+
+* Avoid indirect branch jumps using the `$ra` register.
+
+* Other optimizations.
+
 Changes to the MIPS Backend
 ---------------------------
 
@@ -235,6 +292,10 @@ Changes to the RISC-V Backend
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcicm` (Conditonal Move)
   extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqciint` (Interrupts)
+  extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcilo` (Large Offset Load Store)
+  extension.
 * Added ``Sdext`` and ``Sdtrig`` extensions.
 
 Changes to the WebAssembly Backend
@@ -250,8 +311,16 @@ Changes to the WebAssembly Backend
   `-mmutable-globals`, `-mcall-indirect-overlong`, `-msign-ext`,
   `-mbulk-memory-opt`, `-mnontrapping-fptoint`, and `-mextended-const`.
 
+* Support for the new standardized [Exception Handling] proposal is added.
+  The [legacy Exception Handling] proposal is still supported, and turned on by
+  the newly added `-wasm-use-legacy-eh` option. Given that major web browsers
+  still default to the legacy EH proposal, this option is turned on by default
+  for the moment.
+
 [Bulk Memory Operations]: https://github.com/WebAssembly/bulk-memory-operations/blob/master/proposals/bulk-memory-operations/Overview.md
 [Non-trapping float-to-int Conversions]: https://github.com/WebAssembly/spec/blob/master/proposals/nontrapping-float-to-int-conversion/Overview.md
+[Exception Handling]: https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/Exceptions.md
+[legacy Exception Handling]: https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/legacy/Exceptions.md
 [widely implemented in engines]: https://webassembly.org/features/
 [here]: https://github.com/WebAssembly/tool-conventions/blob/main/Lime.md#lime1
 
@@ -369,6 +438,10 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
+* It is now recommended that LLDB be built with Python >= 3.8, but no changes
+  have been made to the supported Python versions. The next release, LLDB 21,
+  will require Python >= 3.8.
+
 * LLDB now supports inline diagnostics for the expression evaluator and command line parser.
 
   Old:
@@ -401,6 +474,13 @@ Changes to LLDB
 
 * LLDB now parses shared libraries in parallel, resulting in an average 2x speedup when attaching (only available on Darwin platforms) and launching (available on all platforms).
 
+* It is now possible to implement lldb commands in Python that use lldb's native command-line parser.  In particular, that allows per-option/argument completion,
+  with all the basic completers automatically supported and auto-generated help.
+  The command template file in `lldb/examples/python/cmdtemplate.py` has been updated to show how to use this.
+
+* Breakpoints on "inlined call sites" are now supported.  Previous to this fix, breakpoints on source lines that only contained inlined call sites would be
+  moved to the next source line, causing you to miss the inlined executions.
+
 * On the command line, LLDB now limits tab completions to your terminal width to avoid wrapping.
 
   Old:
@@ -427,6 +507,70 @@ Changes to LLDB
           _regexp-break     -- Set a breakpoint using one of several shorth...
           _regexp-bt        -- Show backtrace of the current thread's call ...
           _regexp-display   -- Evaluate an expression at every stop (see 'h...
+  ```
+* DWARF indexing speed (for binaries not using the debug_names index) increased
+  by [30-60%](https://github.com/llvm/llvm-project/pull/118657).
+
+* Minidumps generated by LLDB now support:
+  * 64 bit memory (due to 64b support, Minidumps are now paged to disk while being written).
+  * Capturing of TLS variables.
+  * Multiple signals or exceptions, including breakpoints.
+
+* [New Core File API](https://lldb.llvm.org/python_api/lldb.SBSaveCoreOptions.html). This gives greater control on the data captured into the core file, relative to the existing `process save-core` styles.
+
+* When opening ELF core files, LLDB will print additional information about the
+  signal that killed the process and the disassembly view will display actual
+  (relocated) targets of the jump instructions instead of raw offsets encoded in
+  the instruction. This matches existing behavior for live processes.
+
+  Old:
+  ```
+  * thread #1: tid = 329384, 0x0000000000401262, name = 'a.out', stop reason = signal SIGSEGV
+
+  0x7f1e3193e0a7 <+23>:  ja     0xfe100        ; <+112>
+  ```
+
+  New:
+  ```
+  * thread #1: tid = 329384, 0x0000000000401262, name = 'a.out', stop reason = SIGSEGV: address not mapped to object (fault address=0x0)
+
+  0x7f1e3193e0a7 <+23>:  ja     0x7f1e3193e100 ; <+112>
+  ```
+
+* `lldb-server` now listens to a single port for gdbserver connections and provides
+  that port to the connection handler processes. This means that only 2 ports need
+  to be opened in the firewall (one for the `lldb-server` platform, one for gdbserver connections).
+  In addition, due to this work, `lldb-server` now works on Windows in the server mode.
+  
+* LLDB now supports execution of user expressions for non-trivial cases for LoongArch and RISC-V targets, like function calls, when some code needs to be executed on the target.
+
+* LLDB now supports optionally enabled/disabled register sets (particularly floating point registers) for RISC-V 64. This happens for targets like `RV64IMAC` or `RV64IMACV`,
+  that have no floating point registers. The change is applied to native debugging and core-file usage.
+
+* LLDB now supports [core-file for LoongArch](https://github.com/llvm/llvm-project/pull/112296).
+
+* LLDB now supports [hardware breakpoint and watchpoint for LoongArch](https://github.com/llvm/llvm-project/pull/118770).
+
+* LLDB now supports [vector registers for LoongArch](https://github.com/llvm/llvm-project/pull/120664) when debugging a live process.
+
+* Incorrect floating-point register dwarf number for LoongArch is [fixed](https://github.com/llvm/llvm-project/pull/120391).
+
+* The `frame diagnose` now works on ELF-based systems. After a crash, LLDB will
+  try to determine the likely cause of the signal, matching Darwin behavior.
+  This feature requires using a new `lldb-server` version and (like Darwin) only
+  works on x86 binaries.
+
+  ```
+  * thread #1, name = 'a.out', stop reason = signal SIGSEGV: address not mapped to object (fault address=0x4)
+      frame #0: 0x00005555555551aa a.out`GetSum(f=0x0000555555558018) at main.c:21:37
+     18   }
+     19
+     20   int GetSum(struct Foo *f) {
+  -> 21     return SumTwoIntegers(f->a, f->b->d ? 0 : 1);
+     22   }
+     23
+     24   int main() {
+  Likely cause: f->b->d accessed 0x4
   ```
 
 Changes to BOLT

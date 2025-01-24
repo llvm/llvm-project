@@ -295,8 +295,9 @@ TestTypeWithLayoutType::verifyEntries(DataLayoutEntryListRef params,
   for (DataLayoutEntryInterface entry : params) {
     // This is for testing purposes only, so assert well-formedness.
     assert(entry.isTypeEntry() && "unexpected identifier entry");
-    assert(llvm::isa<TestTypeWithLayoutType>(entry.getKey().get<Type>()) &&
-           "wrong type passed in");
+    assert(
+        llvm::isa<TestTypeWithLayoutType>(llvm::cast<Type>(entry.getKey())) &&
+        "wrong type passed in");
     auto array = llvm::dyn_cast<ArrayAttr>(entry.getValue());
     assert(array && array.getValue().size() == 2 &&
            "expected array of two elements");

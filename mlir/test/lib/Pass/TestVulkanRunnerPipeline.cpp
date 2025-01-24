@@ -6,14 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implements a pipeline for use by mlir-vulkan-runner tests.
+// Implements a pipeline for use by Vulkan runner tests.
 //
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ConvertToSPIRV/ConvertToSPIRVPass.h"
+#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h"
+#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
+#include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h"
@@ -56,6 +60,15 @@ void buildTestVulkanRunnerPipeline(OpPassManager &passManager,
     spirvModulePM.addPass(spirv::createSPIRVWebGPUPreparePass());
 
   passManager.addPass(createGpuModuleToBinaryPass());
+
+  passManager.addPass(createFinalizeMemRefToLLVMConversionPass());
+  passManager.nest<func::FuncOp>().addPass(LLVM::createRequestCWrappersPass());
+  // VulkanRuntimeWrappers.cpp requires these calling convention options.
+  GpuToLLVMConversionPassOptions opt;
+  opt.hostBarePtrCallConv = false;
+  opt.kernelBarePtrCallConv = true;
+  opt.kernelIntersperseSizeCallConv = true;
+  passManager.addPass(createGpuToLLVMConversionPass(opt));
 }
 
 } // namespace
@@ -64,8 +77,9 @@ namespace mlir::test {
 void registerTestVulkanRunnerPipeline() {
   PassPipelineRegistration<VulkanRunnerPipelineOptions>(
       "test-vulkan-runner-pipeline",
-      "Runs a series of passes for lowering GPU-dialect MLIR to "
-      "SPIR-V-dialect MLIR intended for mlir-vulkan-runner.",
+      "Runs a series of passes intended for Vulkan runner tests. Lowers GPU "
+      "dialect to LLVM dialect for the host and to serialized Vulkan SPIR-V "
+      "for the device.",
       buildTestVulkanRunnerPipeline);
 }
 } // namespace mlir::test

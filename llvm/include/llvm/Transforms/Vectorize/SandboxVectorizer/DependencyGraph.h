@@ -216,9 +216,18 @@ class MemDGNode final : public DGNode {
   /// Memory predecessors.
   DenseSet<MemDGNode *> MemPreds;
   friend class PredIterator; // For MemPreds.
-
-  void setNextNode(MemDGNode *N) { NextMemN = N; }
-  void setPrevNode(MemDGNode *N) { PrevMemN = N; }
+  /// Creates both edges: this<->N.
+  void setNextNode(MemDGNode *N) {
+    NextMemN = N;
+    if (NextMemN != nullptr)
+      NextMemN->PrevMemN = this;
+  }
+  /// Creates both edges: N<->this.
+  void setPrevNode(MemDGNode *N) {
+    PrevMemN = N;
+    if (PrevMemN != nullptr)
+      PrevMemN->NextMemN = this;
+  }
   friend class DependencyGraph; // For setNextNode(), setPrevNode().
   void detachFromChain() {
     if (PrevMemN != nullptr)
@@ -408,6 +417,13 @@ public:
     DAGInterval = {};
   }
 #ifndef NDEBUG
+  /// \Returns true if the DAG's state is clear. Used in assertions.
+  bool empty() const {
+    bool IsEmpty = InstrToNodeMap.empty();
+    assert(IsEmpty == DAGInterval.empty() &&
+           "Interval and InstrToNodeMap out of sync!");
+    return IsEmpty;
+  }
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
 #endif // NDEBUG

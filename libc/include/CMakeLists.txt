@@ -633,6 +633,16 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_uio
+  ../libc/include/sys/uio.yaml
+  sys/uio.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_iovec
+    .llvm-libc-types.ssize_t
+)
+
+add_header_macro(
   sys_wait
   ../libc/include/sys/wait.yaml
   sys/wait.h

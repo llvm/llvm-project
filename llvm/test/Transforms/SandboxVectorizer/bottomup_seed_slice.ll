@@ -7,7 +7,6 @@ define void @slice_seeds(ptr %ptr, float %val) {
 ; CHECK-LABEL: define void @slice_seeds(
 ; CHECK-SAME: ptr [[PTR:%.*]], float [[VAL:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
-; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
 ; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr float, ptr [[PTR]], i32 2
 ; CHECK-NEXT:    [[LD2:%.*]] = load float, ptr [[PTR2]], align 4
 ; CHECK-NEXT:    store float [[LD2]], ptr [[PTR2]], align 4

@@ -40,7 +40,7 @@ struct __temporary_buffer_deleter {
       return;
     }
 
-    std::__libcpp_deallocate_unsized((void*)__ptr, _LIBCPP_ALIGNOF(_Tp));
+    std::__libcpp_deallocate_unsized<_Tp>(__ptr);
   }
 };
 

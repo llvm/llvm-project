@@ -402,7 +402,6 @@ FUNCTION_PASS("loop-load-elim", LoopLoadEliminationPass())
 FUNCTION_PASS("loop-simplify", LoopSimplifyPass())
 FUNCTION_PASS("loop-sink", LoopSinkPass())
 FUNCTION_PASS("loop-versioning", LoopVersioningPass())
-FUNCTION_PASS("lower-allow-check", LowerAllowCheckPass())
 FUNCTION_PASS("lower-atomic", LowerAtomicPass())
 FUNCTION_PASS("lower-constant-intrinsics", LowerConstantIntrinsicsPass())
 FUNCTION_PASS("lower-expect", LowerExpectIntrinsicPass())
@@ -526,7 +525,7 @@ FUNCTION_PASS_WITH_PARAMS(
     "gvn", "GVNPass", [](GVNOptions Opts) { return GVNPass(Opts); },
     parseGVNOptions,
     "no-pre;pre;no-load-pre;load-pre;no-split-backedge-load-pre;"
-    "split-backedge-load-pre;no-memdep;memdep")
+    "split-backedge-load-pre;no-memdep;memdep;no-memoryssa;memoryssa")
 FUNCTION_PASS_WITH_PARAMS(
     "hardware-loops", "HardwareLoopsPass",
     [](HardwareLoopOptions Opts) { return HardwareLoopsPass(Opts); },
@@ -553,6 +552,10 @@ FUNCTION_PASS_WITH_PARAMS(
     parseLoopVectorizeOptions,
     "no-interleave-forced-only;interleave-forced-only;no-vectorize-forced-only;"
     "vectorize-forced-only")
+FUNCTION_PASS_WITH_PARAMS(
+    "lower-allow-check", "LowerAllowCheckPass",
+    [](LowerAllowCheckPass::Options Opts) { return LowerAllowCheckPass(Opts); },
+    parseLowerAllowCheckPassOptions, "")
 FUNCTION_PASS_WITH_PARAMS(
     "lower-matrix-intrinsics", "LowerMatrixIntrinsicsPass",
     [](bool Minimal) { return LowerMatrixIntrinsicsPass(Minimal); },
@@ -623,7 +626,7 @@ FUNCTION_PASS_WITH_PARAMS(
     parseWinEHPrepareOptions, "demote-catchswitch-only")
 FUNCTION_PASS_WITH_PARAMS(
     "bounds-checking", "BoundsCheckingPass",
-    [](BoundsCheckingPass::BoundsCheckingOptions Options) {
+    [](BoundsCheckingPass::Options Options) {
       return BoundsCheckingPass(Options);
     },
     parseBoundsCheckingOptions, "trap")
