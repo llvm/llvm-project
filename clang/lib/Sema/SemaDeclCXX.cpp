@@ -13456,6 +13456,9 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
   CheckTypedefForVariablyModifiedType(S, NewTD);
   Invalid |= NewTD->isInvalidDecl();
 
+  // Get the innermost enclosing declaration scope.
+  S = S->getDeclParent();
+
   bool Redeclaration = false;
 
   NamedDecl *NewND;
