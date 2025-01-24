@@ -4762,7 +4762,7 @@ ExpectedDecl ASTNodeImporter::VisitParmVarDecl(ParmVarDecl *D) {
     if (Err)
       return std::move(Err);
 
-    ToParm->setExplicitObjectParameterLoc(ToExplicitObjectParameterLoc);
+    //ToParm->setExplicitObjectParameterLoc(ToExplicitObjectParameterLoc);
   }
 
   // Set the default argument. It should be no problem if it was already done.
