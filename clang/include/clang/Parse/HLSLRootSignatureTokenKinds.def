@@ -25,6 +25,12 @@
 TOK(invalid)
 TOK(int_literal)
 
+// Register Tokens:
+TOK(bReg)
+TOK(tReg)
+TOK(uReg)
+TOK(sReg)
+
 // Punctuators:
 PUNCTUATOR(l_paren, '(')
 PUNCTUATOR(r_paren, ')')

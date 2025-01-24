@@ -144,6 +144,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidLexAllTokensTest) {
   const llvm::StringLiteral Source = R"cc(
     42
 
+    b0 t43 u987 s234
+
     (),|=
   )cc";
 
@@ -211,6 +213,27 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexEmptyNumberTest) {
   SmallVector<hlsl::RootSignatureToken> Tokens;
   ASSERT_TRUE(Lexer.Lex(Tokens));
   ASSERT_TRUE(Consumer->IsSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidLexRegNumberTest) {
+  // This test will check that the lexing fails due to no integer being provided
+  const llvm::StringLiteral Source = R"cc(
+    b32.4
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  // Test correct diagnostic produced
+  Consumer->SetExpected(diag::err_hlsl_invalid_register_literal);
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
+
+  SmallVector<hlsl::RootSignatureToken> Tokens;
+  ASSERT_TRUE(Lexer.Lex(Tokens));
+  // FIXME(#120472): This should be TRUE once we can lex a floating
+  ASSERT_FALSE(Consumer->IsSatisfied());
 }
 
 TEST_F(ParseHLSLRootSignatureTest, InvalidLexIdentifierTest) {

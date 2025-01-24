@@ -100,6 +100,53 @@ bool RootSignatureLexer::LexToken(RootSignatureToken &Result) {
   if (isdigit(C) || C == '-' || C == '+')
     return LexNumber(Result);
 
+  // All following tokens require at least one additional character
+  if (Buffer.size() <= 1) {
+    PP.getDiagnostics().Report(Result.TokLoc, diag::err_hlsl_invalid_token);
+    return true;
+  }
+
+  // Peek at the next character to deteremine token type
+  char NextC = Buffer[1];
+
+  // Registers: [tsub][0-9+]
+  if ((C == 't' || C == 's' || C == 'u' || C == 'b') && isdigit(NextC)) {
+    AdvanceBuffer();
+
+    if (LexNumber(Result))
+      return true; // Error parsing number which is already reported
+
+    // Lex number could also parse a float so ensure it was an unsigned int
+    if (Result.Kind != TokenKind::int_literal ||
+        Result.NumLiteral.getInt().isSigned()) {
+      // Return invalid number literal for register error
+      PP.getDiagnostics().Report(Result.TokLoc,
+                                 diag::err_hlsl_invalid_register_literal);
+      return true;
+    }
+
+    // Convert character to the register type.
+    // This is done after LexNumber to override the TokenKind
+    switch (C) {
+    case 'b':
+      Result.Kind = TokenKind::bReg;
+      break;
+    case 't':
+      Result.Kind = TokenKind::tReg;
+      break;
+    case 'u':
+      Result.Kind = TokenKind::uReg;
+      break;
+    case 's':
+      Result.Kind = TokenKind::sReg;
+      break;
+    default:
+      llvm_unreachable("Switch for an expected token was not provided");
+      return true;
+    }
+    return false;
+  }
+
   // Unable to match on any token type
   PP.getDiagnostics().Report(Result.TokLoc, diag::err_hlsl_invalid_token);
   return true;

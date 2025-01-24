@@ -1025,6 +1025,7 @@ let CategoryName = "Root Signature Lexical Issue" in {
   def err_hlsl_number_literal_overflow :
     Error<"provided %select{unsigned integer|signed integer}0 literal '%1' that overflows the maximum of 32 bits">;
   def err_hlsl_invalid_token: Error<"unable to lex a valid Root Signature token">;
+  def err_hlsl_invalid_register_literal: Error<"expected unsigned integer literal as part of register">;
 }
 
 }
