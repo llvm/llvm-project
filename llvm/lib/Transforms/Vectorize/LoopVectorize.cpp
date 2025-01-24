@@ -8687,8 +8687,7 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
   SmallVector<std::pair<PartialReductionChain, unsigned>>
       PartialReductionChains;
   for (const auto &[Phi, RdxDesc] : Legal->getReductionVars()) {
-    if (auto SR = getScaledReduction(Phi, RdxDesc.getLoopExitInstr(), Range))
-      PartialReductionChains.append(*SR);
+    getScaledReductions(Phi, RdxDesc.getLoopExitInstr(), Range, PartialReductionChains);
   }
 
   // A partial reduction is invalid if any of its extends are used by
@@ -8717,38 +8716,36 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
   }
 }
 
-std::optional<SmallVector<std::pair<PartialReductionChain, unsigned>>>
-VPRecipeBuilder::getScaledReduction(Instruction *PHI, Instruction *RdxExitInstr,
-                                    VFRange &Range) {
+bool
+VPRecipeBuilder::getScaledReductions(Instruction *PHI, Instruction *RdxExitInstr,
+                                    VFRange &Range, SmallVector<std::pair<PartialReductionChain, unsigned>> &Chains) {
 
   if (!CM.TheLoop->contains(RdxExitInstr))
-    return std::nullopt;
+    return false;
 
   // TODO: Allow scaling reductions when predicating. The select at
   // the end of the loop chooses between the phi value and most recent
   // reduction result, both of which have different VFs to the active lane
   // mask when scaling.
   if (CM.blockNeedsPredicationForAnyReason(RdxExitInstr->getParent()))
-    return std::nullopt;
+    return false;
 
   auto *Update = dyn_cast<BinaryOperator>(RdxExitInstr);
   if (!Update)
-    return std::nullopt;
+    return false;
 
   Value *Op = Update->getOperand(0);
   Value *PhiOp = Update->getOperand(1);
   if (Op == PHI)
     std::swap(Op, PhiOp);
 
-  SmallVector<std::pair<PartialReductionChain, unsigned>> Chains;
 
   // Try and get a scaled reduction from the first non-phi operand.
   // If one is found, we use the discovered reduction instruction in
   // place of the accumulator for costing.
   if (auto *OpInst = dyn_cast<Instruction>(Op)) {
-    if (auto SR0 = getScaledReduction(PHI, OpInst, Range)) {
-      Chains.append(*SR0);
-      PHI = SR0->rbegin()->first.Reduction;
+    if (getScaledReductions(PHI, OpInst, Range, Chains)) {
+      PHI = Chains.rbegin()->first.Reduction;
 
       Op = Update->getOperand(0);
       PhiOp = Update->getOperand(1);
@@ -8757,17 +8754,17 @@ VPRecipeBuilder::getScaledReduction(Instruction *PHI, Instruction *RdxExitInstr,
     }
   }
   if (PhiOp != PHI)
-    return std::nullopt;
+    return false;
 
   auto *BinOp = dyn_cast<BinaryOperator>(Op);
   if (!BinOp || !BinOp->hasOneUse())
-    return std::nullopt;
+    return false;
 
   using namespace llvm::PatternMatch;
   Value *A, *B;
   if (!match(BinOp->getOperand(0), m_ZExtOrSExt(m_Value(A))) ||
       !match(BinOp->getOperand(1), m_ZExtOrSExt(m_Value(B))))
-    return std::nullopt;
+    return false;
 
   Instruction *ExtA = cast<Instruction>(BinOp->getOperand(0));
   Instruction *ExtB = cast<Instruction>(BinOp->getOperand(1));
@@ -8791,10 +8788,12 @@ VPRecipeBuilder::getScaledReduction(Instruction *PHI, Instruction *RdxExitInstr,
                 std::make_optional(BinOp->getOpcode()));
             return Cost.isValid();
           },
-          Range))
+          Range)) {
     Chains.push_back(std::make_pair(Chain, TargetScaleFactor));
+    return true;
+  }
 
-  return Chains;
+  return false;
 }
 
 VPRecipeBase *
