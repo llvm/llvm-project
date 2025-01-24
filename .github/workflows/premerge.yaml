@@ -45,8 +45,8 @@ jobs:
           modified_projects="$(keep-modified-projects ${all_projects})"
 
           windows_projects_to_test=$(exclude-windows $(compute-projects-to-test 1 ${modified_projects}))
-          windows_check_targets=$(check-targets ${windows_projects_to_test} | sort | uniq)
-          windows_projects=$(add-dependencies ${windows_projects_to_test} | sort | uniq)
+          windows_check_targets=$(check-targets ${windows_projects_to_test} | sort | uniq | tr '\n' ' ')
+          windows_projects=$(add-dependencies ${windows_projects_to_test} | sort | uniq | tr '\n' ';')
 
           if [[ "${windows_projects}" == "" ]]; then
             echo "No projects to build"
