@@ -1578,7 +1578,7 @@ TEST_F(MemorySSATest, TestLoopInvariantEntryBlockPointer) {
   for (auto &BB : *F) {
     if (BB.getName() == "exit") {
       // Get the store instruction
-      auto *SI = BB.getFirstNonPHI();
+      auto *SI = &*BB.getFirstNonPHIIt();
       // Get the memory access and location
       MemoryAccess *MA = MSSA.getMemoryAccess(SI);
       MemoryLocation ML = MemoryLocation::get(SI);

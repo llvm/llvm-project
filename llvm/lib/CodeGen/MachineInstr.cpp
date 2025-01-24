@@ -1353,18 +1353,6 @@ bool MachineInstr::wouldBeTriviallyDead() const {
 
 bool MachineInstr::isDead(const MachineRegisterInfo &MRI,
                           LiveRegUnits *LivePhysRegs) const {
-  // Technically speaking inline asm without side effects and no defs can still
-  // be deleted. But there is so much bad inline asm code out there, we should
-  // let them be.
-  if (isInlineAsm())
-    return false;
-
-  // If we suspect this instruction may have some side-effects, then we say
-  // this instruction cannot be dead.
-  // FIXME: See issue #105950 for why LIFETIME markers are considered dead here.
-  if (!isLifetimeMarker() && !wouldBeTriviallyDead())
-    return false;
-
   // Instructions without side-effects are dead iff they only define dead regs.
   // This function is hot and this loop returns early in the common case,
   // so only perform additional checks before this if absolutely necessary.
@@ -1385,7 +1373,19 @@ bool MachineInstr::isDead(const MachineRegisterInfo &MRI,
     }
   }
 
-  return true;
+  // Technically speaking inline asm without side effects and no defs can still
+  // be deleted. But there is so much bad inline asm code out there, we should
+  // let them be.
+  if (isInlineAsm())
+    return false;
+
+  // FIXME: See issue #105950 for why LIFETIME markers are considered dead here.
+  if (isLifetimeMarker())
+    return true;
+
+  // If there are no defs with uses, then we call the instruction dead so long
+  // as we do not suspect it may have sideeffects.
+  return wouldBeTriviallyDead();
 }
 
 static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI,
