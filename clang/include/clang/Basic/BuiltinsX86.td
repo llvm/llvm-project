@@ -5304,75 +5304,75 @@ let Features = "avx10.2-256", Attributes = [NoThrow, RequiredVectorWidth<128>] i
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vaddnepbf16128 : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
+  def vaddbf16128 : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vaddnepbf16256 : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>)">;
+  def vaddbf16256 : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vaddnepbf16512 : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>)">;
+  def vaddbf16512 : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vdivnepbf16128 : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
+  def vdivbf16128 : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vdivnepbf16256 : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>)">;
+  def vdivbf16256 : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vdivnepbf16512 : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>)">;
+  def vdivbf16512 : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vmaxpbf16128 : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
+  def vmaxbf16128 : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vmaxpbf16256 : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>)">;
+  def vmaxbf16256 : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vmaxpbf16512 : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>)">;
+  def vmaxbf16512 : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vminpbf16128 : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
+  def vminbf16128 : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vminpbf16256 : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>)">;
+  def vminbf16256 : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vminpbf16512 : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>)">;
+  def vminbf16512 : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vmulnepbf16128 : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
+  def vmulbf16128 : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vmulnepbf16256 : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>)">;
+  def vmulbf16256 : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vmulnepbf16512 : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>)">;
+  def vmulbf16512 : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vsubnepbf16128 : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
+  def vsubbf16128 : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vsubnepbf16256 : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>)">;
+  def vsubbf16256 : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vsubnepbf16512 : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>)">;
+  def vsubbf16512 : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in
@@ -5380,120 +5380,120 @@ let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<
     def vcomisbf16#Cmp : X86Builtin<"int(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
 
 let Features = "avx10.2-512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vcmppbf16512_mask : X86Builtin<"unsigned int(_Vector<32, __bf16>, _Vector<32, __bf16>, _Constant int, unsigned int)">;
+  def vcmpbf16512_mask : X86Builtin<"unsigned int(_Vector<32, __bf16>, _Vector<32, __bf16>, _Constant int, unsigned int)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vcmppbf16256_mask : X86Builtin<"unsigned short(_Vector<16, __bf16>, _Vector<16, __bf16>, _Constant int, unsigned short)">;
+  def vcmpbf16256_mask : X86Builtin<"unsigned short(_Vector<16, __bf16>, _Vector<16, __bf16>, _Constant int, unsigned short)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vcmppbf16128_mask : X86Builtin<"unsigned char(_Vector<8, __bf16>, _Vector<8, __bf16>, _Constant int, unsigned char)">;
-  def vfpclasspbf16128_mask : X86Builtin<"unsigned char(_Vector<8, __bf16>, _Constant int, unsigned char)">;
+  def vcmpbf16128_mask : X86Builtin<"unsigned char(_Vector<8, __bf16>, _Vector<8, __bf16>, _Constant int, unsigned char)">;
+  def vfpclassbf16128_mask : X86Builtin<"unsigned char(_Vector<8, __bf16>, _Constant int, unsigned char)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vfpclasspbf16256_mask : X86Builtin<"unsigned short(_Vector<16, __bf16>, _Constant int, unsigned short)">;
+  def vfpclassbf16256_mask : X86Builtin<"unsigned short(_Vector<16, __bf16>, _Constant int, unsigned short)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vfpclasspbf16512_mask : X86Builtin<"unsigned int(_Vector<32, __bf16>, _Constant int, unsigned int)">;
+  def vfpclassbf16512_mask : X86Builtin<"unsigned int(_Vector<32, __bf16>, _Constant int, unsigned int)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vscalefpbf16128_mask : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>, _Vector<8, __bf16>, unsigned char)">;
+  def vscalefbf16128_mask : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>, _Vector<8, __bf16>, unsigned char)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vscalefpbf16256_mask : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>, _Vector<16, __bf16>, unsigned short)">;
+  def vscalefbf16256_mask : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>, _Vector<16, __bf16>, unsigned short)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vscalefpbf16512_mask : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>, _Vector<32, __bf16>, unsigned int)">;
+  def vscalefbf16512_mask : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>, _Vector<32, __bf16>, unsigned int)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vrcppbf16128_mask : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>, unsigned char)">;
+  def vrcpbf16128_mask : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>, unsigned char)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vrcppbf16256_mask : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>, unsigned short)">;
+  def vrcpbf16256_mask : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>, unsigned short)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vrcppbf16512_mask : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>, unsigned int)">;
+  def vrcpbf16512_mask : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>, unsigned int)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vgetexppbf16128_mask : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>, unsigned char)">;
+  def vgetexpbf16128_mask : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>, unsigned char)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vgetexppbf16256_mask : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>, unsigned short)">;
+  def vgetexpbf16256_mask : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>, unsigned short)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vgetexppbf16512_mask : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>, unsigned int)">;
+  def vgetexpbf16512_mask : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>, unsigned int)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vrsqrtpbf16128_mask : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>, unsigned char)">;
+  def vrsqrtbf16128_mask : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Vector<8, __bf16>, unsigned char)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vrsqrtpbf16256_mask : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>, unsigned short)">;
+  def vrsqrtbf16256_mask : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Vector<16, __bf16>, unsigned short)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vrsqrtpbf16512_mask : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>, unsigned int)">;
+  def vrsqrtbf16512_mask : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>, unsigned int)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vreducenepbf16128_mask : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Constant int, _Vector<8, __bf16>, unsigned char)">;
+  def vreducebf16128_mask : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Constant int, _Vector<8, __bf16>, unsigned char)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vreducenepbf16256_mask : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Constant int, _Vector<16, __bf16>, unsigned short)">;
+  def vreducebf16256_mask : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Constant int, _Vector<16, __bf16>, unsigned short)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vreducenepbf16512_mask : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Constant int, _Vector<32, __bf16>, unsigned int)">;
+  def vreducebf16512_mask : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Constant int, _Vector<32, __bf16>, unsigned int)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vrndscalenepbf16_128_mask : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Constant int, _Vector<8, __bf16>, unsigned char)">;
+  def vrndscalebf16_128_mask : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Constant int, _Vector<8, __bf16>, unsigned char)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vrndscalenepbf16_256_mask : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Constant int, _Vector<16, __bf16>, unsigned short)">;
+  def vrndscalebf16_256_mask : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Constant int, _Vector<16, __bf16>, unsigned short)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vrndscalenepbf16_mask : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Constant int, _Vector<32, __bf16>, unsigned int)">;
+  def vrndscalebf16_mask : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Constant int, _Vector<32, __bf16>, unsigned int)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vgetmantpbf16128_mask : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Constant int, _Vector<8, __bf16>, unsigned char)">;
+  def vgetmantbf16128_mask : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>, _Constant int, _Vector<8, __bf16>, unsigned char)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vgetmantpbf16256_mask : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Constant int, _Vector<16, __bf16>, unsigned short)">;
+  def vgetmantbf16256_mask : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>, _Constant int, _Vector<16, __bf16>, unsigned short)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vgetmantpbf16512_mask : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Constant int, _Vector<32, __bf16>, unsigned int)">;
+  def vgetmantbf16512_mask : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Constant int, _Vector<32, __bf16>, unsigned int)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vsqrtnepbf16 : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>)">;
+  def vsqrtbf16 : X86Builtin<"_Vector<8, __bf16>(_Vector<8, __bf16>)">;
 }
 
 let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vsqrtnepbf16256 : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>)">;
+  def vsqrtbf16256 : X86Builtin<"_Vector<16, __bf16>(_Vector<16, __bf16>)">;
 }
 
 let Features = "avx10.2-512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
-  def vsqrtnepbf16512 : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>)">;
+  def vsqrtbf16512 : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>)">;
   def vfmaddnepbh512 : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>, _Vector<32, __bf16>)">;
 }
 
