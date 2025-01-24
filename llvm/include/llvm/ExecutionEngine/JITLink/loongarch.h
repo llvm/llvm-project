@@ -225,6 +225,13 @@ enum EdgeKind_loongarch : Edge::Kind {
   ///     out-of-range error will be returned.
   ///
   Call36PCRel,
+
+  /// Alignment requirement used by linker relaxation.
+  ///
+  /// Linker relaxation will use this to ensure all code sequences are properly
+  /// aligned and then remove these edges from the graph.
+  ///
+  AlignRelaxable,
 };
 
 /// Returns a string name for the given loongarch edge. For debugging purposes
@@ -362,6 +369,9 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
     *(little32_t *)(FixupPtr + 4) = Jirl | Lo16;
     break;
   }
+  case AlignRelaxable:
+    // Ignore when the relaxation pass did not run
+    break;
   default:
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +

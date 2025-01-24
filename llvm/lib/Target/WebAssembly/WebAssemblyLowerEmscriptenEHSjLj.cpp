@@ -580,7 +580,7 @@ Function *WebAssemblyLowerEmscriptenEHSjLj::getInvokeWrapper(CallBase *CI) {
     return It->second;
 
   // Put the pointer to the callee as first argument
-  ArgTys.push_back(PointerType::getUnqual(CalleeFTy));
+  ArgTys.push_back(PointerType::getUnqual(CI->getContext()));
   // Add argument types
   ArgTys.append(CalleeFTy->param_begin(), CalleeFTy->param_end());
 

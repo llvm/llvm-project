@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -inline='default-pipeline=''' | FileCheck %s
-// RUN: mlir-opt %s --mlir-disable-threading -inline='default-pipeline=''' | FileCheck %s
+// RUN: mlir-opt %s -inline='default-pipeline=' | FileCheck %s
+// RUN: mlir-opt %s --mlir-disable-threading -inline='default-pipeline=' | FileCheck %s
 
 // CHECK-LABEL: func.func @foo0
 func.func @foo0(%arg0 : i32) -> i32 {

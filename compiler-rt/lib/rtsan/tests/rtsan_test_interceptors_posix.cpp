@@ -43,6 +43,9 @@
 #include <poll.h>
 #include <pthread.h>
 #include <stdio.h>
+#if SANITIZER_LINUX
+#include <sys/inotify.h>
+#endif
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/socket.h>
@@ -879,6 +882,30 @@ TEST_F(RtsanOpenedFileTest, PreadDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+#if SANITIZER_INTERCEPT_PREADV
+TEST_F(RtsanOpenedFileTest, PreadvDiesWhenRealtime) {
+  auto Func = [this]() {
+    char c{};
+    iovec iov{&c, sizeof(c)};
+    preadv(GetOpenFd(), &iov, 1, 0);
+  };
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("preadv"));
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
+#if SANITIZER_INTERCEPT_PWRITEV
+TEST_F(RtsanOpenedFileTest, PwritevDiesWhenRealtime) {
+  auto Func = [this]() {
+    char c{};
+    iovec iov{&c, sizeof(c)};
+    pwritev(GetOpenFd(), &iov, 1, 0);
+  };
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("pwritev"));
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 TEST_F(RtsanOpenedFileTest, ReadvDiesWhenRealtime) {
   auto Func = [this]() {
     char c{};
@@ -1480,6 +1507,38 @@ TEST_F(KqueueTest, Kevent64DiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 #endif // SANITIZER_INTERCEPT_KQUEUE
+
+#if SANITIZER_LINUX
+TEST(TestRtsanInterceptors, InotifyInitDiesWhenRealtime) {
+  auto Func = []() { inotify_init(); };
+  ExpectRealtimeDeath(Func, "inotify_init");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, InotifyInit1DiesWhenRealtime) {
+  auto Func = []() { inotify_init1(0); };
+  ExpectRealtimeDeath(Func, "inotify_init1");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, InotifyAddWatchDiesWhenRealtime) {
+  int fd = inotify_init();
+  EXPECT_THAT(fd, Ne(-1));
+  auto Func = [fd]() {
+    inotify_add_watch(fd, "/tmp/rtsan_inotify", IN_CREATE);
+  };
+  ExpectRealtimeDeath(Func, "inotify_add_watch");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, InotifyRmWatchDiesWhenRealtime) {
+  int fd = inotify_init();
+  EXPECT_THAT(fd, Ne(-1));
+  auto Func = [fd]() { inotify_rm_watch(fd, -1); };
+  ExpectRealtimeDeath(Func, "inotify_rm_watch");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
 
 TEST(TestRtsanInterceptors, MkfifoDiesWhenRealtime) {
   auto Func = []() { mkfifo("/tmp/rtsan_test_fifo", 0); };
