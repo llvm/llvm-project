@@ -947,6 +947,41 @@ def ReduceReturnOp :
 }
 
 //===----------------------------------------------------------------------===//
+// ScopeOp
+//===----------------------------------------------------------------------===//
+
+def ScopeOp : SCF_Op<"scope",
+    [AutomaticAllocationScope,
+     RecursiveMemoryEffects,
+     IsolatedFromAbove,
+     SingleBlockImplicitTerminator<"scf::YieldOp">]> {
+  let summary = "isolated code scope";
+  let description = [{
+    The 'scope' op encapsulates computations by providing an isolated-from-above,
+    executed-once single basic block. The op takes any number of operands, and
+    its return values are defined by its terminating `scf.yield`. For example:
+
+    ```mlir
+    %p:2 = scf.scope %arg0, %c77, %arg1, %arg2 : (i32, i32, f32, f32) -> (i32, f32) {
+    ^bb0(%a : i32, %b : i32, %c : f32, %d : f32):
+      %add = arith.addi %a, %b : i32
+      %mul = arith.mulf %c, %d : f32
+      scf.yield %add, %mul : i32, f32
+    }
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$operands);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region AnyRegion:$body);
+
+  let assemblyFormat = [{
+    $operands attr-dict `:` functional-type($operands, $results) $body
+  }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // WhileOp
 //===----------------------------------------------------------------------===//
 
@@ -1170,7 +1205,7 @@ def IndexSwitchOp : SCF_Op<"index_switch", [RecursiveMemoryEffects,
 
 def YieldOp : SCF_Op<"yield", [Pure, ReturnLike, Terminator,
     ParentOneOf<["ExecuteRegionOp", "ForOp", "IfOp", "IndexSwitchOp",
-                 "WhileOp"]>]> {
+                 "ScopeOp", "WhileOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
     The `scf.yield` operation yields an SSA value from the SCF dialect op region and
