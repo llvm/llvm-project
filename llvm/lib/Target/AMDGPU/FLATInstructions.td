@@ -450,7 +450,7 @@ class FLAT_RTS<string opName, bit HasVdst, bit HasData, bit isStore, bit isLoad,
   !if(HasVdst, (outs vdstClass:$vdst), (outs)),
   !con(!if(HasData, !if(HasVdst, (ins VReg_64:$vdata), (ins VGPR_32:$vdata)), (ins)),(ins CPol:$cpol)),
   !if(!and(HasVdst, HasData), " $vdst, $vdata", !if(HasVdst, " $vdst", !if(HasData, " $vdata", "")))#"$cpol">{
-
+  let VM_CNT = 0;
   let hasSideEffects = 1;
   let is_flat_global = 1;
   let has_offset = 0;

@@ -7,7 +7,7 @@ define amdgpu_cs  void @test_rts_read_result(){
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    rts_read_result_all_stop v[0:1]
 ; GFX13-NEXT:    rts_read_result_ongoing v[2:3]
-; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-NEXT:    export prim v0, off, off, off done
 ; GFX13-NEXT:    s_endpgm
   %ret1 = call i64 @llvm.amdgcn.rts.read.result.all.stop()
@@ -46,7 +46,7 @@ define amdgpu_cs void @test_rts_save(){
 ; GFX13-LABEL: test_rts_save:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    rts_ray_save v0
-; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    s_wait_storecnt 0x0
 ; GFX13-NEXT:    export prim v0, off, off, off done
 ; GFX13-NEXT:    s_endpgm
   %ret_two = call i32 @llvm.amdgcn.rts.ray.save()
@@ -58,7 +58,7 @@ define amdgpu_cs void @test_rts_update_ray(i64 %arg){
 ; GFX13-LABEL: test_rts_update_ray:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    rts_update_ray v0, v[0:1]
-; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-NEXT:    export prim v0, off, off, off done
 ; GFX13-NEXT:    s_endpgm
   %ret = call i32 @llvm.amdgcn.rts.update.ray(i64 %arg)
