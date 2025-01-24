@@ -439,6 +439,18 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ufromfpxl
 )
 
+if(LLVM_LIBC_FULL_BUILD)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # stdlib.h entrypoints
+    libc.src.stdlib._Exit
+    libc.src.stdlib.atexit
+    libc.src.stdlib.exit
+
+    # unistd.h entrypoints
+    libc.src.unistd.environ
+  )
+endif()
+
 set(TARGET_LLVMLIBC_ENTRYPOINTS
   ${TARGET_LIBC_ENTRYPOINTS}
   ${TARGET_LIBM_ENTRYPOINTS}
