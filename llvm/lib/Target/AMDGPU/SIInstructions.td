@@ -3955,6 +3955,42 @@ def G_AMDGPU_FMED3 : AMDGPUGenericInstruction {
   let hasSideEffects = 0;
 }
 
+def G_AMDGPU_SMIN3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_UMIN3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_FMIN3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_SMAX3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_UMAX3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_FMAX3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
 def G_AMDGPU_CLAMP : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
