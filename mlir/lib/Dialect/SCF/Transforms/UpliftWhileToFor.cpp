@@ -20,7 +20,194 @@
 
 using namespace mlir;
 
+static Operation *findOpToMoveFromBefore(scf::WhileOp loop) {
+  Block *body = loop.getBeforeBody();
+  if (body->without_terminator().empty())
+    return nullptr;
+
+  // Check last op first.
+  // TODO: It's usually safe to move and duplicate last op even if it has side
+  // effects, as long as the sequence of the ops executed on each path will stay
+  // the same. Exceptions are GPU barrier/group ops, LLVM proper has
+  // convergent attribute/semantics to check this, but we doesn't model it yet.
+  Operation *lastOp = &(*std::prev(body->without_terminator().end()));
+
+  auto term = loop.getConditionOp();
+  Operation *termCondOp = term.getCondition().getDefiningOp();
+  if (lastOp != termCondOp)
+    return lastOp;
+
+  // Try to move terminator args producers.
+  for (Value termArg : term.getArgs()) {
+    Operation *op = termArg.getDefiningOp();
+    if (!op || op->getParentOp() != loop || op == termCondOp || !isPure(op))
+      continue;
+
+    // Each result must be only used as terminator arg, meaning it can have one
+    // use at max, duplicated terminator args must be already cleaned up
+    // by canonicalizations at this point.
+    if (!llvm::all_of(op->getResults(), [&](Value val) {
+          return val.hasOneUse() || val.use_empty();
+        }))
+      continue;
+
+    return op;
+  }
+  return nullptr;
+}
+
 namespace {
+/// `scf.while` uplifting expects before block consisting of single cmp op,
+/// try to move ops from before block to after block and to after loop.
+///
+/// ```
+/// scf.while(...) {
+/// before:
+///   ...
+///   some_op()
+///   scf.condition ..
+/// after:
+///   ...
+/// }
+/// ```
+/// to
+/// ```
+/// scf.while(...) {
+/// before:
+///   ...
+///   scf.condition ..
+/// after:
+///   some_op()
+///   ...
+/// }
+/// some_op()
+/// ```
+struct MoveOpsFromBefore : public OpRewritePattern<scf::WhileOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(scf::WhileOp loop,
+                                PatternRewriter &rewriter) const override {
+    Operation *opToMove = findOpToMoveFromBefore(loop);
+    if (!opToMove)
+      return rewriter.notifyMatchFailure(loop, "No suitable ops found");
+
+    auto condOp = loop.getConditionOp();
+    SmallVector<Value> newCondArgs;
+
+    // Populate new terminator args.
+
+    // Add original terminator args, except args produced by the op we decided
+    // to move.
+    for (Value arg : condOp.getArgs()) {
+      if (arg.getDefiningOp() == opToMove)
+        continue;
+
+      newCondArgs.emplace_back(arg);
+    }
+    auto originalArgsOffset = newCondArgs.size();
+
+    // Add moved op operands to terminator args, if they are defined in loop
+    // block.
+    DominanceInfo dom;
+    for (Value arg : opToMove->getOperands()) {
+      if (dom.properlyDominates(arg, loop))
+        continue;
+
+      newCondArgs.emplace_back(arg);
+    }
+
+    // Create new loop.
+    ValueRange tempRange(newCondArgs);
+    auto newLoop = rewriter.create<mlir::scf::WhileOp>(
+        loop.getLoc(), TypeRange(tempRange), loop.getInits(), nullptr, nullptr);
+
+    OpBuilder::InsertionGuard g(rewriter);
+
+    // Create new terminator, old terminator will be deleted later.
+    rewriter.setInsertionPoint(condOp);
+    rewriter.create<scf::ConditionOp>(condOp.getLoc(), condOp.getCondition(),
+                                      newCondArgs);
+
+    Block *oldBefore = loop.getBeforeBody();
+    Block *newBefore = newLoop.getBeforeBody();
+
+    // Inline before block as is.
+    rewriter.inlineBlockBefore(oldBefore, newBefore, newBefore->begin(),
+                               newBefore->getArguments());
+
+    Block *oldAfter = loop.getAfterBody();
+    Block *newAfter = newLoop.getAfterBody();
+
+    // Build mapping between original op args and new after block args/new loop
+    // results.
+    IRMapping afterBodyMapping;
+    IRMapping afterLoopMapping;
+    {
+      ValueRange blockArgs =
+          newAfter->getArguments().drop_front(originalArgsOffset);
+      ValueRange newLoopArgs =
+          newLoop.getResults().drop_front(originalArgsOffset);
+      for (Value arg : opToMove->getOperands()) {
+        if (dom.properlyDominates(arg, loop))
+          continue;
+
+        assert(!blockArgs.empty());
+        assert(!newLoopArgs.empty());
+        afterBodyMapping.map(arg, blockArgs.front());
+        afterLoopMapping.map(arg, newLoopArgs.front());
+        blockArgs = blockArgs.drop_front();
+        newLoopArgs = newLoopArgs.drop_front();
+      }
+    }
+
+    {
+      // Clone op into after body.
+      rewriter.setInsertionPointToStart(oldAfter);
+      Operation *newAfterBodyOp = rewriter.clone(*opToMove, afterBodyMapping);
+
+      // Clone op after loop.
+      rewriter.setInsertionPointAfter(newLoop);
+      Operation *newAfterLoopOp = rewriter.clone(*opToMove, afterLoopMapping);
+
+      // Build mapping between old and new after block args and between old and
+      // new loop results.
+      ValueRange blockArgs =
+          newAfter->getArguments().take_front(originalArgsOffset);
+      ValueRange newLoopArgs =
+          newLoop.getResults().take_front(originalArgsOffset);
+      SmallVector<Value> argsMapping;
+      SmallVector<Value> newLoopResults;
+      for (Value arg : condOp.getArgs()) {
+        if (arg.getDefiningOp() == opToMove) {
+          auto resNumber = cast<OpResult>(arg).getResultNumber();
+          argsMapping.emplace_back(newAfterBodyOp->getResult(resNumber));
+          newLoopResults.emplace_back(newAfterLoopOp->getResult(resNumber));
+          continue;
+        }
+
+        assert(!blockArgs.empty());
+        assert(!newLoopArgs.empty());
+        argsMapping.emplace_back(blockArgs.front());
+        newLoopResults.emplace_back(newLoopArgs.front());
+        blockArgs = blockArgs.drop_front();
+        newLoopArgs = newLoopArgs.drop_front();
+      }
+
+      // Inline after block.
+      rewriter.inlineBlockBefore(oldAfter, newAfter, newAfter->begin(),
+                                 argsMapping);
+
+      // Replace loop.
+      rewriter.replaceOp(loop, newLoopResults);
+    }
+
+    // Finally, we can remove old terminator and the original op.
+    rewriter.eraseOp(condOp);
+    rewriter.eraseOp(opToMove);
+    return success();
+  }
+};
+
 struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -207,6 +394,11 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
   newArgs.insert(newArgs.begin() + argNumber, res);
   rewriter.replaceOp(loop, newArgs);
   return newLoop;
+}
+
+void mlir::scf::populatePrepareUpliftWhileToForPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<MoveOpsFromBefore>(patterns.getContext());
 }
 
 void mlir::scf::populateUpliftWhileToForPatterns(RewritePatternSet &patterns) {
