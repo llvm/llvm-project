@@ -43,14 +43,17 @@ static SmallVector<Value *, 4> getOperand(ArrayRef<Value *> Bndl,
   return Operands;
 }
 
-static BasicBlock::iterator
-getInsertPointAfterInstrs(ArrayRef<Value *> Instrs) {
-  // TODO: Use the VecUtils function for getting the bottom instr once it lands.
-  auto *BotI = cast<Instruction>(
-      *std::max_element(Instrs.begin(), Instrs.end(), [](auto *V1, auto *V2) {
-        return cast<Instruction>(V1)->comesBefore(cast<Instruction>(V2));
-      }));
-  // If Bndl contains Arguments or Constants, use the beginning of the BB.
+/// \Returns the BB iterator after the lowest instruction in \p Vals, or the top
+/// of BB if no instruction found in \p Vals.
+static BasicBlock::iterator getInsertPointAfterInstrs(ArrayRef<Value *> Vals,
+                                                      BasicBlock *BB) {
+  auto *BotI = VecUtils::getLastPHIOrSelf(VecUtils::getLowest(Vals));
+  if (BotI == nullptr)
+    // We are using BB->begin() (or after PHIs) as the fallback insert point.
+    return BB->empty()
+               ? BB->begin()
+               : std::next(
+                     VecUtils::getLastPHIOrSelf(&*BB->begin())->getIterator());
   return std::next(BotI->getIterator());
 }
 
@@ -65,7 +68,8 @@ Value *BottomUpVec::createVectorInstr(ArrayRef<Value *> Bndl,
     Type *ScalarTy = VecUtils::getElementType(Utils::getExpectedType(Bndl[0]));
     auto *VecTy = VecUtils::getWideType(ScalarTy, VecUtils::getNumLanes(Bndl));
 
-    BasicBlock::iterator WhereIt = getInsertPointAfterInstrs(Bndl);
+    BasicBlock::iterator WhereIt = getInsertPointAfterInstrs(
+        Bndl, cast<Instruction>(Bndl[0])->getParent());
 
     auto Opcode = cast<Instruction>(Bndl[0])->getOpcode();
     switch (Opcode) {
@@ -161,26 +165,38 @@ Value *BottomUpVec::createVectorInstr(ArrayRef<Value *> Bndl,
   auto *VecI = CreateVectorInstr(Bndl, Operands);
   if (VecI != nullptr) {
     Change = true;
-    IMaps.registerVector(Bndl, VecI);
+    IMaps->registerVector(Bndl, VecI);
   }
   return VecI;
 }
 
 void BottomUpVec::tryEraseDeadInstrs() {
-  // Visiting the dead instructions bottom-to-top.
-  SmallVector<Instruction *> SortedDeadInstrCandidates(
-      DeadInstrCandidates.begin(), DeadInstrCandidates.end());
-  sort(SortedDeadInstrCandidates,
-       [](Instruction *I1, Instruction *I2) { return I1->comesBefore(I2); });
-  for (Instruction *I : reverse(SortedDeadInstrCandidates)) {
-    if (I->hasNUses(0))
-      I->eraseFromParent();
+  DenseMap<BasicBlock *, SmallVector<Instruction *>> SortedDeadInstrCandidates;
+  // The dead instrs could span BBs, so we need to collect and sort them per BB.
+  for (auto *DeadI : DeadInstrCandidates)
+    SortedDeadInstrCandidates[DeadI->getParent()].push_back(DeadI);
+  for (auto &Pair : SortedDeadInstrCandidates)
+    sort(Pair.second,
+         [](Instruction *I1, Instruction *I2) { return I1->comesBefore(I2); });
+  for (const auto &Pair : SortedDeadInstrCandidates) {
+    for (Instruction *I : reverse(Pair.second)) {
+      if (I->hasNUses(0))
+        // Erase the dead instructions bottom-to-top.
+        I->eraseFromParent();
+    }
   }
   DeadInstrCandidates.clear();
 }
 
-Value *BottomUpVec::createPack(ArrayRef<Value *> ToPack) {
-  BasicBlock::iterator WhereIt = getInsertPointAfterInstrs(ToPack);
+Value *BottomUpVec::createShuffle(Value *VecOp, const ShuffleMask &Mask,
+                                  BasicBlock *UserBB) {
+  BasicBlock::iterator WhereIt = getInsertPointAfterInstrs({VecOp}, UserBB);
+  return ShuffleVectorInst::create(VecOp, VecOp, Mask, WhereIt,
+                                   VecOp->getContext(), "VShuf");
+}
+
+Value *BottomUpVec::createPack(ArrayRef<Value *> ToPack, BasicBlock *UserBB) {
+  BasicBlock::iterator WhereIt = getInsertPointAfterInstrs(ToPack, UserBB);
 
   Type *ScalarTy = VecUtils::getCommonScalarType(ToPack);
   unsigned Lanes = VecUtils::getNumLanes(ToPack);
@@ -256,8 +272,12 @@ void BottomUpVec::collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl) {
   }
 }
 
-Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl, unsigned Depth) {
+Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
+                                 ArrayRef<Value *> UserBndl, unsigned Depth) {
   Value *NewVec = nullptr;
+  auto *UserBB = !UserBndl.empty()
+                     ? cast<Instruction>(UserBndl.front())->getParent()
+                     : cast<Instruction>(Bndl[0])->getParent();
   const auto &LegalityRes = Legality->canVectorize(Bndl);
   switch (LegalityRes.getSubclassID()) {
   case LegalityResultID::Widen: {
@@ -270,7 +290,7 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl, unsigned Depth) {
       break;
     case Instruction::Opcode::Store: {
       // Don't recurse towards the pointer operand.
-      auto *VecOp = vectorizeRec(getOperand(Bndl, 0), Depth + 1);
+      auto *VecOp = vectorizeRec(getOperand(Bndl, 0), Bndl, Depth + 1);
       VecOperands.push_back(VecOp);
       VecOperands.push_back(cast<StoreInst>(I)->getPointerOperand());
       break;
@@ -278,7 +298,7 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl, unsigned Depth) {
     default:
       // Visit all operands.
       for (auto OpIdx : seq<unsigned>(I->getNumOperands())) {
-        auto *VecOp = vectorizeRec(getOperand(Bndl, OpIdx), Depth + 1);
+        auto *VecOp = vectorizeRec(getOperand(Bndl, OpIdx), Bndl, Depth + 1);
         VecOperands.push_back(VecOp);
       }
       break;
@@ -295,11 +315,53 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl, unsigned Depth) {
     NewVec = cast<DiamondReuse>(LegalityRes).getVector();
     break;
   }
+  case LegalityResultID::DiamondReuseWithShuffle: {
+    auto *VecOp = cast<DiamondReuseWithShuffle>(LegalityRes).getVector();
+    const ShuffleMask &Mask =
+        cast<DiamondReuseWithShuffle>(LegalityRes).getMask();
+    NewVec = createShuffle(VecOp, Mask, UserBB);
+    break;
+  }
+  case LegalityResultID::DiamondReuseMultiInput: {
+    const auto &Descr =
+        cast<DiamondReuseMultiInput>(LegalityRes).getCollectDescr();
+    Type *ResTy = FixedVectorType::get(Bndl[0]->getType(), Bndl.size());
+
+    // TODO: Try to get WhereIt without creating a vector.
+    SmallVector<Value *, 4> DescrInstrs;
+    for (const auto &ElmDescr : Descr.getDescrs()) {
+      if (auto *I = dyn_cast<Instruction>(ElmDescr.getValue()))
+        DescrInstrs.push_back(I);
+    }
+    BasicBlock::iterator WhereIt =
+        getInsertPointAfterInstrs(DescrInstrs, UserBB);
+
+    Value *LastV = PoisonValue::get(ResTy);
+    for (auto [Lane, ElmDescr] : enumerate(Descr.getDescrs())) {
+      Value *VecOp = ElmDescr.getValue();
+      Context &Ctx = VecOp->getContext();
+      Value *ValueToInsert;
+      if (ElmDescr.needsExtract()) {
+        ConstantInt *IdxC =
+            ConstantInt::get(Type::getInt32Ty(Ctx), ElmDescr.getExtractIdx());
+        ValueToInsert = ExtractElementInst::create(VecOp, IdxC, WhereIt,
+                                                   VecOp->getContext(), "VExt");
+      } else {
+        ValueToInsert = VecOp;
+      }
+      ConstantInt *LaneC = ConstantInt::get(Type::getInt32Ty(Ctx), Lane);
+      Value *Ins = InsertElementInst::create(LastV, ValueToInsert, LaneC,
+                                             WhereIt, Ctx, "VIns");
+      LastV = Ins;
+    }
+    NewVec = LastV;
+    break;
+  }
   case LegalityResultID::Pack: {
     // If we can't vectorize the seeds then just return.
     if (Depth == 0)
       return nullptr;
-    NewVec = createPack(Bndl);
+    NewVec = createPack(Bndl, UserBB);
     break;
   }
   }
@@ -309,16 +371,16 @@ Value *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl, unsigned Depth) {
 bool BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl) {
   DeadInstrCandidates.clear();
   Legality->clear();
-  vectorizeRec(Bndl, /*Depth=*/0);
+  vectorizeRec(Bndl, {}, /*Depth=*/0);
   tryEraseDeadInstrs();
   return Change;
 }
 
 bool BottomUpVec::runOnFunction(Function &F, const Analyses &A) {
-  IMaps.clear();
+  IMaps = std::make_unique<InstrMaps>(F.getContext());
   Legality = std::make_unique<LegalityAnalysis>(
       A.getAA(), A.getScalarEvolution(), F.getParent()->getDataLayout(),
-      F.getContext(), IMaps);
+      F.getContext(), *IMaps);
   Change = false;
   const auto &DL = F.getParent()->getDataLayout();
   unsigned VecRegBits =

@@ -573,12 +573,20 @@ gentbl(
             "include/clang/Basic/AttrList.inc",
         ),
         (
+            "-gen-clang-attr-parsed-attr-list",
+            "include/clang/Basic/AttrParsedAttrList.inc",
+        ),
+        (
             "-gen-clang-attr-subject-match-rule-list",
             "include/clang/Basic/AttrSubMatchRulesList.inc",
         ),
         (
             "-gen-clang-regular-keyword-attr-info",
             "include/clang/Basic/RegularKeywordAttrInfo.inc",
+        ),
+        (
+            "-gen-cxx11-attribute-info",
+            "include/clang/Basic/CXX11AttributeInfo.inc",
         ),
     ],
     tblgen = ":clang-tblgen",
@@ -666,19 +674,6 @@ py_binary(
     main = "utils/bundle_resources.py",
 )
 
-# A hacky library to expose some internal headers of the `basic` library to its
-# own implementation source files using a stripped include prefix rather than
-# file-relative-inclusion. This is inherently non-modular as these headers will
-# be repeated in the sources below for file-relative-inclusion.
-cc_library(
-    name = "basic_internal_headers",
-    hdrs = glob([
-        "lib/Basic/*.h",
-    ]),
-    features = ["-header_modules"],
-    strip_include_prefix = "lib/Basic",
-)
-
 cc_library(
     name = "basic",
     srcs = [
@@ -696,6 +691,7 @@ cc_library(
     copts = [
         "-DHAVE_VCS_VERSION_INC",
         "$(STACK_FRAME_UNLIMITED)",
+        "-I$(WORKSPACE_ROOT)/clang/lib/Basic",
     ],
     includes = ["include"],
     textual_hdrs = [
@@ -731,6 +727,7 @@ cc_library(
     ] + glob([
         "include/clang/Basic/*.def",
     ]),
+    toolchains = [":workspace_root"],
     deps = [
         ":basic_arm_cde_gen",
         ":basic_arm_fp16_inc_gen",
@@ -750,7 +747,6 @@ cc_library(
         ":basic_builtins_spirv_gen",
         ":basic_builtins_x86_64_gen",
         ":basic_builtins_x86_gen",
-        ":basic_internal_headers",
         ":basic_riscv_sifive_vector_builtins_gen",
         ":basic_riscv_vector_builtin_cg_gen",
         ":basic_riscv_vector_builtins_gen",
@@ -1148,10 +1144,6 @@ gentbl(
             "include/clang/Sema/AttrParsedAttrKinds.inc",
         ),
         (
-            "-gen-clang-attr-parsed-attr-list",
-            "include/clang/Sema/AttrParsedAttrList.inc",
-        ),
-        (
             "-gen-clang-attr-spelling-index",
             "include/clang/Sema/AttrSpellingListIndex.inc",
         ),
@@ -1186,7 +1178,6 @@ cc_library(
     textual_hdrs = [
         "include/clang/Sema/AttrParsedAttrImpl.inc",
         "include/clang/Sema/AttrParsedAttrKinds.inc",
-        "include/clang/Sema/AttrParsedAttrList.inc",
         "include/clang/Sema/AttrSpellingListIndex.inc",
         "include/clang/Sema/AttrTemplateInstantiate.inc",
         "lib/Sema/OpenCLBuiltins.inc",

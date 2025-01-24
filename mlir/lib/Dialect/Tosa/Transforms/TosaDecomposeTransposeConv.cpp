@@ -135,15 +135,14 @@ public:
     int64_t inputChannels = weightTy.getDimSize(3);
 
     // Pad the weight so that it is modulo of the striding.
-    llvm::SmallVector<int32_t, 8> weightPadding = {0, 0, 0, 0, 0, 0, 0, 0};
+    llvm::SmallVector<int64_t, 8> weightPadding = {0, 0, 0, 0, 0, 0, 0, 0};
     weightPadding[3] =
         (weightHeight % stride[0]) ? (stride[0] - weightHeight % stride[0]) : 0;
     weightPadding[5] =
-        (weightWidth % stride[1]) ? (stride[1] - weightWidth % stride[1]) : 0;
-    DenseElementsAttr weightPaddingAttr = DenseIntElementsAttr::get(
-        RankedTensorType::get({8}, rewriter.getI32Type()), weightPadding);
-    Value weightPaddingVal = CreateOpAndInferShape<tosa::ConstOp>(
-        rewriter, loc, weightPaddingAttr.getType(), weightPaddingAttr);
+        weightWidth % stride[1] ? stride[1] - weightWidth % stride[1] : 0;
+
+    Value weightPaddingVal =
+        getTosaConstShape(rewriter, op->getLoc(), weightPadding);
 
     if (op.getQuantizationInfo().has_value()) {
       auto quantInfo = op.getQuantizationInfo().value();
@@ -197,17 +196,14 @@ public:
         /* axis = */ rewriter.getI32IntegerAttr(2));
 
     // We need to pad the input far enough that we can pull all values.
-    llvm::SmallVector<int32_t, 8> inputPadding = {0, 0, 0, 0, 0, 0, 0, 0};
+    llvm::SmallVector<int64_t, 8> inputPadding = {0, 0, 0, 0, 0, 0, 0, 0};
     inputPadding[2] += restridedWeightTy.getDimSize(1) - 1;
     inputPadding[3] += restridedWeightTy.getDimSize(1) - 1;
     inputPadding[4] += restridedWeightTy.getDimSize(2) - 1;
     inputPadding[5] += restridedWeightTy.getDimSize(2) - 1;
 
-    DenseElementsAttr inputPaddingAttr = DenseIntElementsAttr::get(
-        RankedTensorType::get({8}, rewriter.getI32Type()), inputPadding);
-
-    Value inputPaddingVal = CreateOpAndInferShape<tosa::ConstOp>(
-        rewriter, loc, inputPaddingAttr.getType(), inputPaddingAttr);
+    Value inputPaddingVal =
+        getTosaConstShape(rewriter, op->getLoc(), inputPadding);
 
     if (op.getQuantizationInfo().has_value()) {
       auto quantInfo = op.getQuantizationInfo().value();
@@ -310,17 +306,14 @@ public:
                      rewriter.getDenseI64ArrayAttr(sliceSize))
                      .getResult();
 
-    llvm::SmallVector<int32_t, 8> resultPadding = {0, 0, 0, 0, 0, 0, 0, 0};
+    llvm::SmallVector<int64_t, 8> resultPadding = {0, 0, 0, 0, 0, 0, 0, 0};
     resultPadding[2] = resultPadTop;
     resultPadding[3] = resultTy.getDimSize(1) - resultPadTop - sliceSize[1];
     resultPadding[4] = resultPadLeft;
     resultPadding[5] = resultTy.getDimSize(2) - resultPadLeft - sliceSize[2];
 
-    DenseElementsAttr resultPaddingAttr = DenseIntElementsAttr::get(
-        RankedTensorType::get({8}, rewriter.getI32Type()), resultPadding);
-
-    Value resultPaddingVal = CreateOpAndInferShape<tosa::ConstOp>(
-        rewriter, loc, resultPaddingAttr.getType(), resultPaddingAttr);
+    Value resultPaddingVal =
+        getTosaConstShape(rewriter, op->getLoc(), resultPadding);
 
     Value resultPad = CreateOpAndInferShape<tosa::PadOp>(
         rewriter, loc, UnrankedTensorType::get(resultETy), slice,

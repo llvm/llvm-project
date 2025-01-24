@@ -2,8 +2,8 @@
 #include <sys/auxv.h>
 #include <sys/prctl.h>
 
-#ifndef HWCAP2_GCS
-#define HWCAP2_GCS (1UL << 63)
+#ifndef HWCAP_GCS
+#define HWCAP_GCS (1UL << 32)
 #endif
 
 #define PR_GET_SHADOW_STACK_STATUS 74
@@ -36,8 +36,27 @@ unsigned long get_gcs_status() {
   return mode;
 }
 
+void gcs_signal() {
+  // If we enabled GCS manually, then we could just return from main to generate
+  // a signal. However, if the C library enabled it, then we'd just exit
+  // normally. Assume the latter, and try to return to some bogus address to
+  // generate the signal.
+  __asm__ __volatile__(
+      // Corrupt the link register. This could be many numbers but 16 is a
+      // nicely aligned value that is unlikely to result in a fault because the
+      // PC is misaligned, which would hide the GCS fault.
+      "add x30, x30, #10\n"
+      "ret\n");
+}
+
+// These functions are used to observe gcspr_el0 changing as we enter them, and
+// the fault we cause by changing its value.
+void test_func2() { volatile int i = 99; }
+
+void test_func() { test_func2(); }
+
 int main() {
-  if (!(getauxval(AT_HWCAP2) & HWCAP2_GCS))
+  if (!(getauxval(AT_HWCAP) & HWCAP_GCS))
     return 1;
 
   unsigned long mode = get_gcs_status();
@@ -50,5 +69,16 @@ int main() {
   }
 
   // By now we should have one memory region where the GCS is stored.
-  return 0; // Set break point at this line.
+
+  // For register read/write tests.
+  test_func();
+
+  // If this was a register test, we would have disabled GCS during the
+  // test_func call. We cannot re-enable it from ptrace so skip this part in
+  // this case.
+  mode = get_gcs_status();
+  if ((mode & 1) == 1)
+    gcs_signal(); // Set break point at this line.
+
+  return 0;
 }

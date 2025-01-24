@@ -20,6 +20,11 @@ namespace llvm::sandboxir {
 #define DEBUG_TYPE "SBVec:Legality"
 
 #ifndef NDEBUG
+void ShuffleMask::dump() const {
+  print(dbgs());
+  dbgs() << "\n";
+}
+
 void LegalityResult::dump() const {
   print(dbgs());
   dbgs() << "\n";
@@ -213,13 +218,13 @@ const LegalityResult &LegalityAnalysis::canVectorize(ArrayRef<Value *> Bndl,
   auto CollectDescrs = getHowToCollectValues(Bndl);
   if (CollectDescrs.hasVectorInputs()) {
     if (auto ValueShuffleOpt = CollectDescrs.getSingleInput()) {
-      auto [Vec, NeedsShuffle] = *ValueShuffleOpt;
-      if (!NeedsShuffle)
+      auto [Vec, Mask] = *ValueShuffleOpt;
+      if (Mask.isIdentity())
         return createLegalityResult<DiamondReuse>(Vec);
-      llvm_unreachable("TODO: Unimplemented");
-    } else {
-      llvm_unreachable("TODO: Unimplemented");
+      return createLegalityResult<DiamondReuseWithShuffle>(Vec, Mask);
     }
+    return createLegalityResult<DiamondReuseMultiInput>(
+        std::move(CollectDescrs));
   }
 
   if (auto ReasonOpt = notVectorizableBasedOnOpcodesAndTypes(Bndl))
