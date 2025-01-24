@@ -1,8 +1,12 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_integer_dot_product %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32v1.6-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32v1.6-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_integer_dot_product %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-EXT
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_integer_dot_product %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: Capability DotProduct
 ; CHECK: Capability DotProductInput4x8BitPacked
+; CHECK-EXT: OpExtension "SPV_KHR_integer_dot_product"
+; CHECK-NOT: OpExtension "SPV_KHR_integer_dot_product"
 
 ; CHECK: Name %[[#SignedA:]] "ia"
 ; CHECK: Name %[[#UnsignedA:]] "ua"
@@ -19,7 +23,7 @@
 ; CHECK: SUDotAccSat %[[#]] %[[#SignedB]] %[[#UnsignedA]] %[[#]] 0
 ; CHECK: UDotAccSat %[[#]] %[[#UnsignedA]] %[[#UnsignedB]] %[[#]] 0
 
-define spir_kernel void @test1(i32 %ia, i32 %ua, i32 %ib, i32 %ub, i32 %ires, i32 %ures) !kernel_arg_addr_space !3 !kernel_arg_access_qual !4 !kernel_arg_type !5 !kernel_arg_base_type !5 !kernel_arg_type_qual !6 {
+define spir_kernel void @test(i32 %ia, i32 %ua, i32 %ib, i32 %ub, i32 %ires, i32 %ures) {
 entry:
   %call = tail call spir_func i32 @_Z20dot_4x8packed_ss_intjj(i32 %ia, i32 %ib) #2
   %call1 = tail call spir_func i32 @_Z20dot_4x8packed_su_intjj(i32 %ia, i32 %ub) #2
@@ -47,7 +51,3 @@ declare spir_func i32 @_Z29dot_acc_sat_4x8packed_uu_uintjjj(i32, i32, i32)
 
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 2, i32 0}
-!3 = !{i32 0, i32 0, i32 0, i32 0, i32 0, i32 0}
-!4 = !{!"none", !"none", !"none", !"none", !"none", !"none"}
-!5 = !{!"int", !"uint", !"int", !"uint", !"int", !"uint"}
-!6 = !{!"", !"", !"", !"", !"", !""}

@@ -1721,7 +1721,7 @@ def CLK_IMAGE_MEM_FENCE : CLMemoryFenceFlags<0x4>;
 
 //===----------------------------------------------------------------------===//
 // Class defining dot builtins that should be translated into a
-// SPIR-V instruction using the SPV_KHR_integer_dot_product extension.
+// SPIR-V instruction using SPIR-V 1.6 or SPV_KHR_integer_dot_product extension.
 //
 // name is the demangled name of the given builtin.
 // opcode specifies the SPIR-V operation code of the generated instruction.
