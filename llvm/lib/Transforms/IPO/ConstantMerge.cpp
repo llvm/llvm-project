@@ -109,6 +109,8 @@ static CanMerge makeMergeable(GlobalVariable *Old, GlobalVariable *New) {
   assert(!hasMetadataOtherThanDebugLoc(New));
   if (!Old->hasGlobalUnnamedAddr())
     New->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
+  if (Old->hasLocalLinkage() && !New->hasLocalLinkage())
+    return CanMerge::No;
   return CanMerge::Yes;
 }
 
