@@ -375,6 +375,11 @@ Resolutions to C++ Defect Reports
   by default.
   (`CWG2521: User-defined literals and reserved identifiers <https://cplusplus.github.io/CWG/issues/2521.html>`_).
 
+- Clang now diagnoses ambiguous default arguments declared in different scopes
+  when calling an ``extern "C"`` function, implementing [over.best.match] p4.
+  (`CWG1: What if two using-declarations refer to the same function but the declarations introduce different default-arguments? <https://cplusplus.github.io/CWG/issues/1.html>`_,
+  `CWG418: Imperfect wording on error on multiple default arguments on a called function <https://cplusplus.github.io/CWG/issues/418.html>`_)
+
 - Fix name lookup for a dependent base class that is the current instantiation.
   (`CWG591: When a dependent base class is the current instantiation <https://cplusplus.github.io/CWG/issues/591.html>`_).
 

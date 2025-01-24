@@ -11,21 +11,25 @@
 // cxx98-error@-1 {{variadic macros are a C99 feature}}
 #endif
 
-namespace cwg1 { // cwg1: no
-  namespace X { extern "C" void cwg1_f(int a = 1); }
-  namespace Y { extern "C" void cwg1_f(int a = 1); }
+namespace cwg1 { // cwg1: 20
+  namespace X { extern "C" void cwg1_f(int a = 1); } // #cwg1-X
+  namespace Y { extern "C" void cwg1_f(int a = 1); } // #cwg1-Y
   using X::cwg1_f; using Y::cwg1_f;
   void g() {
     cwg1_f(0);
-    // FIXME: This should be rejected, due to the ambiguous default argument.
     cwg1_f();
+    // expected-error@-1 {{function call relies on ambiguous default argument for parameter 'a'}}
+    //   expected-note@#cwg1-Y {{default argument declared here}}
+    //   expected-note@#cwg1-X {{default argument declared here}}
   }
   namespace X {
     using Y::cwg1_f;
     void h() {
       cwg1_f(0);
-      // FIXME: This should be rejected, due to the ambiguous default argument.
       cwg1_f();
+      // expected-error@-1 {{function call relies on ambiguous default argument for parameter 'a'}}
+      //   expected-note@#cwg1-Y {{default argument declared here}}
+      //   expected-note@#cwg1-X {{default argument declared here}}
     }
   }
 

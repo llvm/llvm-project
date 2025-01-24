@@ -369,7 +369,7 @@ namespace cwg417 { // cwg417: no
   }
 } // namespace cwg417
 
-namespace cwg418 { // cwg418: no
+namespace cwg418 { // cwg418: 20
 namespace example1 {
 void f1(int, int = 0);
 void f1(int = 0, int);
@@ -398,10 +398,10 @@ void g2() {
 // example from [over.match.best]/4
 namespace example3 {
 namespace A {
-extern "C" void f(int = 5);
+extern "C" void f(int = 5); // #cwg418-ex3-A
 }
 namespace B {
-extern "C" void f(int = 5);
+extern "C" void f(int = 5); // #cwg418-ex3-B
 }
 
 using A::f;
@@ -409,7 +409,10 @@ using B::f;
 
 void use() {
   f(3);
-  f(); // FIXME: this should fail
+  f();
+  // expected-error@-1 {{function call relies on ambiguous default argument}}
+  //   expected-note@#cwg418-ex3-B {{default argument declared here}}
+  //   expected-note@#cwg418-ex3-A {{default argument declared here}}
 }
 } // namespace example3
 } // namespace cwg418

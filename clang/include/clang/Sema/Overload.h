@@ -948,7 +948,8 @@ class Sema;
     unsigned char FailureKind;
 
     /// The number of call arguments that were explicitly provided,
-    /// to be used while performing partial ordering of function templates.
+    /// to be used while performing partial ordering of function templates
+    /// and to diagnose ambiguous default arguments ([over.best.match]/4).
     unsigned ExplicitCallArguments;
 
     union {
