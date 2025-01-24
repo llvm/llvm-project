@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin %s -emit-llvm -o - | FileCheck %s --check-prefix=DEFAULT
 // RUN: %clang_cc1 -triple x86_64-apple-darwin %s -emit-llvm -o - -fwrapv | FileCheck %s --check-prefix=WRAPV
 // RUN: %clang_cc1 -triple x86_64-apple-darwin %s -emit-llvm -o - -ftrapv | FileCheck %s --check-prefix=TRAPV
-// RUN: %clang_cc1 -triple x86_64-apple-darwin %s -emit-llvm -o - -fsanitize=signed-integer-overflow | FileCheck %s --check-prefixes=CATCH_UB
-// RUN: %clang_cc1 -triple x86_64-apple-darwin %s -emit-llvm -o - -fsanitize=signed-integer-overflow -fwrapv | FileCheck %s --check-prefixes=CATCH_UB
+// RUN: %clang_cc1 -triple x86_64-apple-darwin %s -emit-llvm -o - -fsanitize=signed-integer-overflow | FileCheck %s --check-prefixes=CATCH_UB,NOCATCH_UB_POINTER
+// RUN: %clang_cc1 -triple x86_64-apple-darwin %s -emit-llvm -o - -fsanitize=signed-integer-overflow -fwrapv | FileCheck %s --check-prefixes=CATCH_UB,NOCATCH_UB_POINTER
 // RUN: %clang_cc1 -triple x86_64-apple-darwin %s -emit-llvm -o - -ftrapv -ftrapv-handler foo | FileCheck %s --check-prefix=TRAPV_HANDLER
 
 
@@ -57,6 +57,15 @@ void test1(void) {
   // TRAPV_HANDLER: foo(
   --a;
   
+  // -fwrapv does not affect inbounds for GEP's.
+  // This is controlled by -fwrapv-pointer instead.
+  extern int* P;
+  ++P;
+  // DEFAULT: getelementptr inbounds nuw i32, ptr
+  // WRAPV: getelementptr inbounds nuw i32, ptr
+  // TRAPV: getelementptr inbounds nuw i32, ptr
+  // NOCATCH_UB_POINTER: getelementptr inbounds nuw i32, ptr
+
   // PR9350: char pre-increment never overflows.
   extern volatile signed char PR9350_char_inc;
   // DEFAULT: add i8 {{.*}}, 1
