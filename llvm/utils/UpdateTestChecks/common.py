@@ -982,7 +982,7 @@ class FunctionTestBuilder:
 ##### Generator of LLVM IR CHECK lines
 
 SCRUB_IR_COMMENT_RE = re.compile(r"\s*;.*")
-SCRUB_IR_FUNC_META_RE = re.compile(r'((?:\!(?!dbg\b)[a-zA-Z_]\w*(?:\s+![0-9]+)?)\s*)+')
+SCRUB_IR_FUNC_META_RE = re.compile(r"((?:\!(?!dbg\b)[a-zA-Z_]\w*(?:\s+![0-9]+)?)\s*)+")
 
 # TODO: We should also derive check lines for global, debug, loop declarations, etc..
 
@@ -1087,7 +1087,7 @@ class GeneralizerInfo:
         nameless_values: List[NamelessValue],
         regexp_prefix,
         regexp_suffix,
-        no_meta_details = False
+        no_meta_details=False,
     ):
         self._version = version
         self._mode = mode
@@ -1229,7 +1229,9 @@ def make_ir_generalizer(version, no_meta_details):
     #        not (unstable_ids_only and nameless_value.match_literally)
     # ]
 
-    return GeneralizerInfo(version, GeneralizerInfo.MODE_IR, values, prefix, suffix, no_meta_details)
+    return GeneralizerInfo(
+        version, GeneralizerInfo.MODE_IR, values, prefix, suffix, no_meta_details
+    )
 
 
 def make_asm_generalizer(version):
@@ -1731,7 +1733,7 @@ def generalize_check_lines(
     original_check_lines=None,
     *,
     unstable_globals_only=False,
-    no_meta_details = False,
+    no_meta_details=False,
 ):
     if unstable_globals_only:
         regexp = ginfo.get_unstable_globals_regexp()
@@ -1763,7 +1765,7 @@ def generalize_check_lines(
             scrubbed_line = SCRUB_IR_COMMENT_RE.sub(r"", line)
             # Ignore the metadata details if check global is none
             if no_meta_details:
-               scrubbed_line = SCRUB_IR_FUNC_META_RE.sub(r"{{.*}}", scrubbed_line)
+                scrubbed_line = SCRUB_IR_FUNC_META_RE.sub(r"{{.*}}", scrubbed_line)
             lines[i] = scrubbed_line
 
     if not preserve_names:
@@ -1995,7 +1997,7 @@ def add_checks(
                     global_vars_seen,
                     preserve_names,
                     original_check_lines=[],
-                    no_meta_details=ginfo.no_meta_details()
+                    no_meta_details=ginfo.no_meta_details(),
                 )[0]
             func_name_separator = func_dict[checkprefix][func_name].func_name_separator
             if "[[" in args_and_sig:
