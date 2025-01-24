@@ -7959,7 +7959,7 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton(
     PhisInBlock.push_back(&Phi);
 
   for (PHINode *Phi : PhisInBlock) {
-    Phi->moveBefore(LoopVectorPreHeader->getFirstNonPHI());
+    Phi->moveBefore(LoopVectorPreHeader->getFirstNonPHIIt());
     Phi->replaceIncomingBlockWith(
         VecEpilogueIterationCountCheck->getSinglePredecessor(),
         VecEpilogueIterationCountCheck);
@@ -10291,8 +10291,8 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
         // VPReductionPHIRecipes for AnyOf reductions expect a boolean as
         // start value; compare the final value from the main vector loop
         // to the start value.
-        IRBuilder<> Builder(
-            cast<Instruction>(ResumeV)->getParent()->getFirstNonPHI());
+        BasicBlock *PBB = cast<Instruction>(ResumeV)->getParent();
+        IRBuilder<> Builder(PBB, PBB->getFirstNonPHIIt());
         ResumeV =
             Builder.CreateICmpNE(ResumeV, RdxDesc.getRecurrenceStartValue());
       } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) {

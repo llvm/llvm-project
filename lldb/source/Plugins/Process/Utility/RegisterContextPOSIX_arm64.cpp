@@ -63,6 +63,10 @@ bool RegisterContextPOSIX_arm64::IsFPMR(unsigned reg) const {
   return m_register_info_up->IsFPMRReg(reg);
 }
 
+bool RegisterContextPOSIX_arm64::IsGCS(unsigned reg) const {
+  return m_register_info_up->IsGCSReg(reg);
+}
+
 RegisterContextPOSIX_arm64::RegisterContextPOSIX_arm64(
     lldb_private::Thread &thread,
     std::unique_ptr<RegisterInfoPOSIX_arm64> register_info)
