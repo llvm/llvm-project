@@ -274,7 +274,7 @@ def main():
                 print_filename(filename, opts.null)
 
     if not changed_lines:
-        if opts.verbose >= 0:
+        if opts.verbose >= 0 and not opts.null:
             print("no modified files to format")
         return 0
 
@@ -295,7 +295,7 @@ def main():
         print("new tree: %s" % new_tree)
 
     if old_tree == new_tree:
-        if opts.verbose >= 0:
+        if opts.verbose >= 0 and not opts.null:
             print("clang-format did not modify any files")
         return 0
 
@@ -308,7 +308,8 @@ def main():
         old_tree, new_tree, force=opts.force, patch_mode=opts.patch
     )
     if (opts.verbose >= 0 and not opts.patch) or opts.verbose >= 1:
-        print("changed files:")
+        if not opts.null:
+            print("changed files:")
         for filename in changed_files:
             print_filename(filename, opts.null)
 
