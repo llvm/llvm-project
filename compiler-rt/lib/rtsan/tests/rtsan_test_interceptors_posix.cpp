@@ -879,6 +879,30 @@ TEST_F(RtsanOpenedFileTest, PreadDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+#if SANITIZER_INTERCEPT_PREADV
+TEST_F(RtsanOpenedFileTest, PreadvDiesWhenRealtime) {
+  auto Func = [this]() {
+    char c{};
+    iovec iov{&c, sizeof(c)};
+    preadv(GetOpenFd(), &iov, 1, 0);
+  };
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("preadv"));
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
+#if SANITIZER_INTERCEPT_PWRITEV
+TEST_F(RtsanOpenedFileTest, PwritevDiesWhenRealtime) {
+  auto Func = [this]() {
+    char c{};
+    iovec iov{&c, sizeof(c)};
+    pwritev(GetOpenFd(), &iov, 1, 0);
+  };
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("pwritev"));
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 TEST_F(RtsanOpenedFileTest, ReadvDiesWhenRealtime) {
   auto Func = [this]() {
     char c{};
