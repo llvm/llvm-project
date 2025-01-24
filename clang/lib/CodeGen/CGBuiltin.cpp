@@ -16556,9 +16556,9 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_sqrtph256:
   case X86::BI__builtin_ia32_sqrtph:
   case X86::BI__builtin_ia32_sqrtph512:
-  case X86::BI__builtin_ia32_vsqrtnepbf16256:
-  case X86::BI__builtin_ia32_vsqrtnepbf16:
-  case X86::BI__builtin_ia32_vsqrtnepbf16512:
+  case X86::BI__builtin_ia32_vsqrtbf16256:
+  case X86::BI__builtin_ia32_vsqrtbf16:
+  case X86::BI__builtin_ia32_vsqrtbf16512:
   case X86::BI__builtin_ia32_sqrtps512:
   case X86::BI__builtin_ia32_sqrtpd512: {
     if (Ops.size() == 2) {
@@ -16778,9 +16778,9 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_fpclassps128_mask:
   case X86::BI__builtin_ia32_fpclassps256_mask:
   case X86::BI__builtin_ia32_fpclassps512_mask:
-  case X86::BI__builtin_ia32_vfpclasspbf16128_mask:
-  case X86::BI__builtin_ia32_vfpclasspbf16256_mask:
-  case X86::BI__builtin_ia32_vfpclasspbf16512_mask:
+  case X86::BI__builtin_ia32_vfpclassbf16128_mask:
+  case X86::BI__builtin_ia32_vfpclassbf16256_mask:
+  case X86::BI__builtin_ia32_vfpclassbf16512_mask:
   case X86::BI__builtin_ia32_fpclassph128_mask:
   case X86::BI__builtin_ia32_fpclassph256_mask:
   case X86::BI__builtin_ia32_fpclassph512_mask:
@@ -16795,14 +16795,14 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Intrinsic::ID ID;
     switch (BuiltinID) {
     default: llvm_unreachable("Unsupported intrinsic!");
-    case X86::BI__builtin_ia32_vfpclasspbf16128_mask:
-      ID = Intrinsic::x86_avx10_fpclass_nepbf16_128;
+    case X86::BI__builtin_ia32_vfpclassbf16128_mask:
+      ID = Intrinsic::x86_avx10_fpclass_bf16_128;
       break;
-    case X86::BI__builtin_ia32_vfpclasspbf16256_mask:
-      ID = Intrinsic::x86_avx10_fpclass_nepbf16_256;
+    case X86::BI__builtin_ia32_vfpclassbf16256_mask:
+      ID = Intrinsic::x86_avx10_fpclass_bf16_256;
       break;
-    case X86::BI__builtin_ia32_vfpclasspbf16512_mask:
-      ID = Intrinsic::x86_avx10_fpclass_nepbf16_512;
+    case X86::BI__builtin_ia32_vfpclassbf16512_mask:
+      ID = Intrinsic::x86_avx10_fpclass_bf16_512;
       break;
     case X86::BI__builtin_ia32_fpclassph128_mask:
       ID = Intrinsic::x86_avx512fp16_fpclass_ph_128;
@@ -16962,9 +16962,9 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_vcmppd256_round_mask:
   case X86::BI__builtin_ia32_vcmpps256_round_mask:
   case X86::BI__builtin_ia32_vcmpph256_round_mask:
-  case X86::BI__builtin_ia32_vcmppbf16512_mask:
-  case X86::BI__builtin_ia32_vcmppbf16256_mask:
-  case X86::BI__builtin_ia32_vcmppbf16128_mask:
+  case X86::BI__builtin_ia32_vcmpbf16512_mask:
+  case X86::BI__builtin_ia32_vcmpbf16256_mask:
+  case X86::BI__builtin_ia32_vcmpbf16128_mask:
     IsMaskFCmp = true;
     [[fallthrough]];
   case X86::BI__builtin_ia32_cmpps:
@@ -20432,19 +20432,6 @@ Value *CodeGenFunction::EmitSPIRVBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(
         /*ReturnType=*/X->getType()->getScalarType(), Intrinsic::spv_length,
         ArrayRef<Value *>{X}, nullptr, "spv.length");
-  }
-  case SPIRV::BI__builtin_spirv_reflect: {
-    Value *I = EmitScalarExpr(E->getArg(0));
-    Value *N = EmitScalarExpr(E->getArg(1));
-    assert(E->getArg(0)->getType()->hasFloatingRepresentation() &&
-           E->getArg(1)->getType()->hasFloatingRepresentation() &&
-           "Reflect operands must have a float representation");
-    assert(E->getArg(0)->getType()->isVectorType() &&
-           E->getArg(1)->getType()->isVectorType() &&
-           "Reflect operands must be a vector");
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/I->getType(), Intrinsic::spv_reflect,
-        ArrayRef<Value *>{I, N}, nullptr, "spv.reflect");
   }
   }
   return nullptr;

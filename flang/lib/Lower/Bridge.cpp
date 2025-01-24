@@ -1290,9 +1290,30 @@ private:
       auto loadVal = builder->create<fir::LoadOp>(loc, rhs);
       builder->create<fir::StoreOp>(loc, loadVal, lhs);
     } else if (isAllocatable &&
-               (flags.test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate) ||
-                flags.test(Fortran::semantics::Symbol::Flag::OmpCopyIn))) {
-      // For firstprivate and copyin allocatable variables, RHS must be copied
+               flags.test(Fortran::semantics::Symbol::Flag::OmpCopyIn)) {
+      // For copyin allocatable variables, RHS must be copied to lhs
+      // only when rhs is allocated.
+      hlfir::Entity temp =
+          hlfir::derefPointersAndAllocatables(loc, *builder, rhs);
+      mlir::Value addr = hlfir::genVariableRawAddress(loc, *builder, temp);
+      mlir::Value isAllocated = builder->genIsNotNullAddr(loc, addr);
+      builder->genIfThenElse(loc, isAllocated)
+          .genThen([&]() { copyData(lhs, rhs); })
+          .genElse([&]() {
+            fir::ExtendedValue hexv = symBoxToExtendedValue(dst);
+            hexv.match(
+                [&](const fir::MutableBoxValue &new_box) -> void {
+                  // if the allocation status of original list item is
+                  // unallocated, unallocate the copy if it is allocated, else
+                  // do nothing.
+                  Fortran::lower::genDeallocateIfAllocated(*this, new_box, loc);
+                },
+                [&](const auto &) -> void {});
+          })
+          .end();
+    } else if (isAllocatable &&
+               flags.test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate)) {
+      // For firstprivate allocatable variables, RHS must be copied
       // only when LHS is allocated.
       hlfir::Entity temp =
           hlfir::derefPointersAndAllocatables(loc, *builder, lhs);

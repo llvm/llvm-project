@@ -294,7 +294,7 @@ LogicalResult LoadNdOp::verify() {
     if (valid)
       transpose(trans, tdescShape);
     else
-      emitWarning("Invalid transpose attr. It is ignored.");
+      mlir::emitWarning(getLoc()) << "Invalid transpose attr. It is ignored.";
   }
 
   if (getPacked()) {
@@ -304,8 +304,9 @@ LogicalResult LoadNdOp::verify() {
       tdescShape[axis] /= vnni_factor;
       tdescShape.push_back(vnni_factor);
     } else {
-      emitWarning("Invalid Packed Attr. It is ignored (available for 2D "
-                  "TensorDesc only).");
+      mlir::emitWarning(getLoc())
+          << "Invalid Packed Attr. It is ignored (available for 2D "
+             "TensorDesc only).";
     }
   }
 

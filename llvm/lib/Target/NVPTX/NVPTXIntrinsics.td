@@ -547,6 +547,18 @@ multiclass CP_ASYNC_BULK_CTA_TO_CLUSTER<NVPTXRegClass rc> {
 defm CP_ASYNC_BULK_CTA_TO_CLUSTER : CP_ASYNC_BULK_CTA_TO_CLUSTER<Int64Regs>;
 defm CP_ASYNC_BULK_CTA_TO_CLUSTER_SHARED32 : CP_ASYNC_BULK_CTA_TO_CLUSTER<Int32Regs>;
 
+//------------------------------
+// Bulk Copy Prefetch Functions
+//------------------------------
+def CP_ASYNC_BULK_PREFETCH : NVPTXInst<(outs),
+                             (ins Int64Regs:$src, Int32Regs:$size),
+                             "cp.async.bulk.prefetch.L2.global [$src], $size;", []>,
+                             Requires<[hasPTX<80>, hasSM<90>]>;
+
+def CP_ASYNC_BULK_PREFETCH_CH : NVPTXInst<(outs),
+                                (ins Int64Regs:$src, Int32Regs:$size, Int64Regs:$ch),
+                                "cp.async.bulk.prefetch.L2.global.L2::cache_hint [$src], $size, $ch;", []>,
+                                Requires<[hasPTX<80>, hasSM<90>]>;
 //-------------------------------------
 // TMA Async Bulk Tensor Copy Functions
 //-------------------------------------
@@ -7556,5 +7568,17 @@ def INT_NVVM_WGMMA_COMMIT_GROUP_SYNC_ALIGNED : NVPTXInst<(outs), (ins), "wgmma.c
 def INT_NVVM_WGMMA_WAIT_GROUP_SYNC_ALIGNED : NVPTXInst<(outs), (ins i64imm:$n), "wgmma.wait_group.sync.aligned \t$n;",
                              [(int_nvvm_wgmma_wait_group_sync_aligned timm:$n)]>, Requires<[hasSM90a, hasPTX<80>]>;
 } // isConvergent = true
+
+def GRIDDEPCONTROL_LAUNCH_DEPENDENTS :
+      NVPTXInst<(outs), (ins),
+                "griddepcontrol.launch_dependents;",
+                [(int_nvvm_griddepcontrol_launch_dependents)]>,
+                Requires<[hasSM<90>, hasPTX<78>]>;
+
+def GRIDDEPCONTROL_WAIT :
+      NVPTXInst<(outs), (ins),
+                "griddepcontrol.wait;",
+                [(int_nvvm_griddepcontrol_wait)]>,
+                Requires<[hasSM<90>, hasPTX<78>]>;
 
 def INT_EXIT : NVPTXInst<(outs), (ins), "exit;", [(int_nvvm_exit)]>;

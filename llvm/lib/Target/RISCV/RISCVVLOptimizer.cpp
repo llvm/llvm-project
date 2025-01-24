@@ -208,13 +208,6 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(MI.getDesc());
   const bool IsTied = RISCVII::isTiedPseudo(MI.getDesc().TSFlags);
 
-  // We bail out early for instructions that have passthru with non NoRegister,
-  // which means they are using TU policy. We are not interested in these
-  // since they must preserve the entire register content.
-  if (HasPassthru && MO.getOperandNo() == MI.getNumExplicitDefs() &&
-      (MO.getReg() != RISCV::NoRegister))
-    return std::nullopt;
-
   bool IsMODef = MO.getOperandNo() == 0;
 
   // All mask operands have EEW=1
@@ -1024,6 +1017,18 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   // Vector Widening Floating-Point Multiply
   case RISCV::VFWMUL_VF:
   case RISCV::VFWMUL_VV:
+  // Vector Floating-Point MIN/MAX Instructions
+  case RISCV::VFMIN_VF:
+  case RISCV::VFMIN_VV:
+  case RISCV::VFMAX_VF:
+  case RISCV::VFMAX_VV:
+  // Vector Floating-Point Sign-Injection Instructions
+  case RISCV::VFSGNJ_VF:
+  case RISCV::VFSGNJ_VV:
+  case RISCV::VFSGNJN_VV:
+  case RISCV::VFSGNJN_VF:
+  case RISCV::VFSGNJX_VF:
+  case RISCV::VFSGNJX_VV:
   // Vector Floating-Point Compare Instructions
   case RISCV::VMFEQ_VF:
   case RISCV::VMFEQ_VV:
@@ -1189,6 +1194,10 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
     return false;
   }
 
+  assert(MI.getOperand(0).isReg() &&
+         isVectorRegClass(MI.getOperand(0).getReg(), MRI) &&
+         "All supported instructions produce a vector register result");
+
   LLVM_DEBUG(dbgs() << "Found a candidate for VL reduction: " << MI << "\n");
   return true;
 }
@@ -1295,9 +1304,6 @@ std::optional<MachineOperand> RISCVVLOptimizer::checkUsers(MachineInstr &MI) {
 bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) {
   LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI << "\n");
 
-  if (!isVectorRegClass(MI.getOperand(0).getReg(), MRI))
-    return false;
-
   auto CommonVL = checkUsers(MI);
   if (!CommonVL)
     return false;
@@ -1353,14 +1359,11 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
   auto PushOperands = [this, &Worklist](MachineInstr &MI,
                                         bool IgnoreSameBlock) {
     for (auto &Op : MI.operands()) {
-      if (!Op.isReg() || !Op.isUse() || !Op.getReg().isVirtual())
-        continue;
-
-      if (!isVectorRegClass(Op.getReg(), MRI))
+      if (!Op.isReg() || !Op.isUse() || !Op.getReg().isVirtual() ||
+          !isVectorRegClass(Op.getReg(), MRI))
         continue;
 
       MachineInstr *DefMI = MRI->getVRegDef(Op.getReg());
-
       if (!isCandidate(*DefMI))
         continue;
 
@@ -1394,6 +1397,7 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
   while (!Worklist.empty()) {
     assert(MadeChange);
     MachineInstr &MI = *Worklist.pop_back_val();
+    assert(isCandidate(MI));
     if (!tryReduceVL(MI))
       continue;
     PushOperands(MI, /*IgnoreSameBlock*/ false);

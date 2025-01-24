@@ -3093,7 +3093,7 @@ foreach vt = [f16, v2f16, f32, v2f32, f64] in {
 // Prefer selecting to max when legal, but using mul is always valid.
 let AddedComplexity = -5 in {
 
-let OtherPredicates = [NotHasTrue16BitInsts] in {
+let True16Predicate = NotHasTrue16BitInsts in {
 def : GCNPat<
   (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
   (V_MUL_F16_e64 0, (i32 CONST.FP16_ONE), $src_mods, $src)
@@ -3103,9 +3103,21 @@ def : GCNPat<
   (fcanonicalize (f16 (fneg (VOP3Mods f16:$src, i32:$src_mods)))),
   (V_MUL_F16_e64 0, (i32 CONST.FP16_NEG_ONE), $src_mods, $src)
 >;
-} // End OtherPredicates
+} // End True16Predicate
 
-let OtherPredicates = [HasTrue16BitInsts] in {
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat<
+  (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
+  (V_MUL_F16_t16_e64 0, (i16 CONST.FP16_ONE), $src_mods, $src, 0/*Clamp*/, /*omod*/0, /*opsel*/0)
+>;
+
+def : GCNPat<
+  (fcanonicalize (f16 (fneg (VOP3Mods f16:$src, i32:$src_mods)))),
+  (V_MUL_F16_t16_e64 0, (i16 CONST.FP16_NEG_ONE), $src_mods, $src, 0/*Clamp*/, /*omod*/0, /*opsel*/0)
+>;
+} // End True16Predicate
+
+let True16Predicate = UseFakeTrue16Insts in {
 def : GCNPat<
   (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
   (V_MUL_F16_fake16_e64 0, (i32 CONST.FP16_ONE), $src_mods, $src)
@@ -3115,7 +3127,7 @@ def : GCNPat<
   (fcanonicalize (f16 (fneg (VOP3Mods f16:$src, i32:$src_mods)))),
   (V_MUL_F16_fake16_e64 0, (i32 CONST.FP16_NEG_ONE), $src_mods, $src)
 >;
-} // End OtherPredicates
+} // End True16Predicate
 
 def : GCNPat<
   (fcanonicalize (v2f16 (VOP3PMods v2f16:$src, i32:$src_mods))),
@@ -3173,13 +3185,22 @@ multiclass SelectCanonicalizeAsMax<
   def : GCNPat<
     (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
     (V_MAX_F16_e64 $src_mods, $src, $src_mods, $src, 0, 0)> {
-    let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts, NotHasTrue16BitInsts]);
+    let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts]);
+    let True16Predicate = NotHasTrue16BitInsts;
+  }
+
+  def : GCNPat<
+    (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
+    (V_MAX_F16_t16_e64 $src_mods, $src, $src_mods, $src, 0, 0)> {
+    let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts]);
+    let True16Predicate = UseRealTrue16Insts;
   }
 
   def : GCNPat<
     (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
     (V_MAX_F16_fake16_e64 $src_mods, $src, $src_mods, $src, 0, 0)> {
-    let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts, HasTrue16BitInsts]);
+    let OtherPredicates = !listconcat(f16_preds, [Has16BitInsts]);
+    let True16Predicate = UseFakeTrue16Insts;
   }
 
   def : GCNPat<
@@ -4158,6 +4179,36 @@ def G_SI_CALL : AMDGPUGenericInstruction {
   let isConvergent = 1;
 }
 
+// Uniform in vgpr - vgpr with same value in all active lanes.
+
+// $dst = $src0 != 0, selected as:
+// $dst(SCC) = s_cmp_lg $src0, 0
+// src0 is either exec or 0 (same value for all active lanes),
+// for example result of comparison of two uniform in vgpr.
+def G_AMDGPU_COPY_SCC_VCC : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src0);
+  let hasSideEffects = 0;
+}
+
+// $dst = $src0 ? exec : 0, selected as:
+// SCC = COPY $src0
+// $dst(SReg_32/64) = s_cselect exec, 0
+def G_AMDGPU_COPY_VCC_SCC : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src0);
+  let hasSideEffects = 0;
+}
+
+// Move uniform in vgpr to sgpr. Selected as v_readfirstlane_b32.
+// Semantic difference in READ ANY instead of FIRST(active) LANE allows for
+// vgpr to sgpr back-to vgpr combine, vgpr has same value in all active lanes
+// vgprDst = COPY (G_AMDGPU_READANYLANE vgprSrc) -> vgprDst = sgprSrc
+def G_AMDGPU_READANYLANE : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0);
+  let hasSideEffects = 0;
+}
 
 //============================================================================//
 // Dummy Instructions

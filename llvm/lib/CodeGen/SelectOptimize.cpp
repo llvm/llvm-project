@@ -512,7 +512,7 @@ static Value *getTrueOrFalseValue(
       CBO->setOperand(OtherIdx,
                       isTrue ? OptSelects[IV].first : OptSelects[IV].second);
   }
-  CBO->insertBefore(B->getTerminator());
+  CBO->insertBefore(B->getTerminator()->getIterator());
   return CBO;
 }
 
@@ -637,7 +637,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     }
     auto InsertionPoint = EndBlock->getFirstInsertionPt();
     for (auto *DI : SinkInstrs)
-      DI->moveBeforePreserving(&*InsertionPoint);
+      DI->moveBeforePreserving(InsertionPoint);
 
     // Duplicate implementation for DbgRecords, the non-instruction debug-info
     // format. Helper lambda for moving DbgRecords to the end block.
@@ -675,7 +675,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
       TrueBranch = BranchInst::Create(EndBlock, TrueBlock);
       TrueBranch->setDebugLoc(LastSI.getI()->getDebugLoc());
       for (Instruction *TrueInst : TrueSlicesInterleaved)
-        TrueInst->moveBefore(TrueBranch);
+        TrueInst->moveBefore(TrueBranch->getIterator());
     }
     if (!FalseSlicesInterleaved.empty() || HasSelectLike(ASI, false)) {
       FalseBlock =
@@ -684,7 +684,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
       FalseBranch = BranchInst::Create(EndBlock, FalseBlock);
       FalseBranch->setDebugLoc(LastSI.getI()->getDebugLoc());
       for (Instruction *FalseInst : FalseSlicesInterleaved)
-        FalseInst->moveBefore(FalseBranch);
+        FalseInst->moveBefore(FalseBranch->getIterator());
     }
     // If there was nothing to sink, then arbitrarily choose the 'false' side
     // for a new input value to the PHI.
@@ -1217,7 +1217,7 @@ bool SelectOptimizeImpl::checkLoopHeuristics(const Loop *L,
     return true;
 
   OptimizationRemarkMissed ORmissL(DEBUG_TYPE, "SelectOpti",
-                                   L->getHeader()->getFirstNonPHI());
+                                   &*L->getHeader()->getFirstNonPHIIt());
 
   if (LoopCost[0].NonPredCost > LoopCost[0].PredCost ||
       LoopCost[1].NonPredCost >= LoopCost[1].PredCost) {
