@@ -363,7 +363,7 @@ TEST(BasicBlockDbgInfoTest, HeadBitOperations) {
   EXPECT_EQ(CInst->getNextNode(), DInst);
 
   // Move back.
-  CInst->moveBefore(BInst);
+  CInst->moveBefore(BInst->getIterator());
   EXPECT_EQ(&*BB.begin(), DInst);
 
   // Current order of insts: "D -> C -> B -> Ret". DbgVariableRecords on "D".
@@ -1259,7 +1259,7 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsert) {
   EXPECT_EQ(std::distance(R3.begin(), R3.end()), 2u);
 
   // Re-insert and re-insert.
-  AddInst->insertAfter(SubInst);
+  AddInst->insertAfter(SubInst->getIterator());
   Entry.reinsertInstInDbgRecords(AddInst, Pos);
   // We should be back into a position of having one DbgVariableRecord on add
   // and ret.
@@ -1331,7 +1331,7 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsertForOneDbgVariableRecord) {
   EXPECT_EQ(std::distance(R2.begin(), R2.end()), 1u);
 
   // Re-insert and re-insert.
-  AddInst->insertAfter(SubInst);
+  AddInst->insertAfter(SubInst->getIterator());
   Entry.reinsertInstInDbgRecords(AddInst, Pos);
   // We should be back into a position of having one DbgVariableRecord on the
   // AddInst.
