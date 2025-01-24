@@ -437,10 +437,6 @@ static bool AsanInitInternal() {
   // flags().
   InitializeFlags();
 
-  // NOTE: The sleep before/after init` flags will not work on Windows when set
-  // through
-  // `__asan_default_options`, because that function is not guaranteed to be
-  // bound this early in initialization.
   WaitForDebugger(flags()->sleep_before_init, "before init");
 
   // Stop performing init at this point if we are being loaded via
