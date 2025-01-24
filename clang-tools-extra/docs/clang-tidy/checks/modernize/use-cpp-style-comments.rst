@@ -14,6 +14,7 @@ Examples:
 
 Input:
 .. code-block::c++
+
     /* This is a single-line comment */
     int x = 42;  /* Inline comment */
 
@@ -23,6 +24,7 @@ Input:
 
 Output:
 .. code-block::c++
+
     // This is a single-line comment
     int x = 42;  // Inline comment
 
