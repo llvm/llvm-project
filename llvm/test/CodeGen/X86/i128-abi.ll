@@ -19,6 +19,15 @@ define i128 @on_stack(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i128 %a5) {
   ret i128 %a5
 }
 
+define i128 @on_stack2(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i128 %a5, i128 %a6) {
+; CHECK-LABEL: on_stack2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq 24(%rsp), %rax
+; CHECK-NEXT:    movq 32(%rsp), %rdx
+; CHECK-NEXT:    retq
+  ret i128 %a6
+}
+
 define i64 @trailing_arg_on_stack(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i128 %a5, i64 %a6) {
 ; CHECK-LABEL: trailing_arg_on_stack:
 ; CHECK:       # %bb.0:
