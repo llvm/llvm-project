@@ -1103,7 +1103,8 @@ std::string Intrinsic::getMangledName(bool ForceClassS) const {
   return mangleName(Name, ForceClassS ? ClassS : LocalCK);
 }
 
-std::string Intrinsic::mangleName(std::string Name, ClassKind LocalCK) const {
+std::string Intrinsic::mangleName(const std::string &Name,
+                                  ClassKind LocalCK) const {
   std::string typeCode = getInstTypeCode(BaseType, LocalCK);
   std::string S = Name;
 
