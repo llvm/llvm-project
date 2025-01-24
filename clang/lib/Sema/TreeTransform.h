@@ -7335,8 +7335,10 @@ QualType TreeTransform<Derived>::TransformTemplateSpecializationType(
                                               NewTemplateArgs))
     return QualType();
 
-  // FIXME: maybe don't rebuild if all the template arguments are the same.
-
+  // This needs to be rebuilt if either the arguments changed, or if the
+  // original template changed. If the template changed, and even if the
+  // arguments didn't change, these arguments might not correspond to their
+  // respective parameters, therefore needing conversions.
   QualType Result =
     getDerived().RebuildTemplateSpecializationType(Template,
                                                    TL.getTemplateNameLoc(),
