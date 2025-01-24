@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-arith-to-llvm),finalize-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)" | mlir-cpu-runner -e main -entry-point-result=void -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-arith-to-llvm),finalize-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)" | mlir-runner -e main -entry-point-result=void -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils | FileCheck %s
 
 func.func private @printMemrefF32(memref<*xf32>) attributes { llvm.emit_c_interface }
 func.func private @printMemrefI32(memref<*xi32>) attributes { llvm.emit_c_interface }
