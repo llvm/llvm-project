@@ -523,34 +523,34 @@ _mm_maskz_min_pbh(__mmask8 __U, __m128bh __A, __m128bh __B) {
       (__mmask8)__U, (__v8bf)_mm_min_pbh(__A, __B), (__v8bf)_mm_setzero_pbh());
 }
 
-static __inline__ int __DEFAULT_FN_ATTRS128 _mm_comeqsbh(__m128bh A,
-                                                         __m128bh B) {
-  return __builtin_ia32_vcomsbf16eq((__v8bf)A, (__v8bf)B);
+static __inline__ int __DEFAULT_FN_ATTRS128 _mm_comieq_sbh(__m128bh A,
+                                                           __m128bh B) {
+  return __builtin_ia32_vcomisbf16eq((__v8bf)A, (__v8bf)B);
 }
 
-static __inline__ int __DEFAULT_FN_ATTRS128 _mm_comltsbh(__m128bh A,
-                                                         __m128bh B) {
-  return __builtin_ia32_vcomsbf16lt((__v8bf)A, (__v8bf)B);
+static __inline__ int __DEFAULT_FN_ATTRS128 _mm_comilt_sbh(__m128bh A,
+                                                           __m128bh B) {
+  return __builtin_ia32_vcomisbf16lt((__v8bf)A, (__v8bf)B);
 }
 
-static __inline__ int __DEFAULT_FN_ATTRS128 _mm_comlesbh(__m128bh A,
-                                                         __m128bh B) {
-  return __builtin_ia32_vcomsbf16le((__v8bf)A, (__v8bf)B);
+static __inline__ int __DEFAULT_FN_ATTRS128 _mm_comile_sbh(__m128bh A,
+                                                           __m128bh B) {
+  return __builtin_ia32_vcomisbf16le((__v8bf)A, (__v8bf)B);
 }
 
-static __inline__ int __DEFAULT_FN_ATTRS128 _mm_comgtsbh(__m128bh A,
-                                                         __m128bh B) {
-  return __builtin_ia32_vcomsbf16gt((__v8bf)A, (__v8bf)B);
+static __inline__ int __DEFAULT_FN_ATTRS128 _mm_comigt_sbh(__m128bh A,
+                                                           __m128bh B) {
+  return __builtin_ia32_vcomisbf16gt((__v8bf)A, (__v8bf)B);
 }
 
-static __inline__ int __DEFAULT_FN_ATTRS128 _mm_comgesbh(__m128bh A,
-                                                         __m128bh B) {
-  return __builtin_ia32_vcomsbf16ge((__v8bf)A, (__v8bf)B);
+static __inline__ int __DEFAULT_FN_ATTRS128 _mm_comige_sbh(__m128bh A,
+                                                           __m128bh B) {
+  return __builtin_ia32_vcomisbf16ge((__v8bf)A, (__v8bf)B);
 }
 
-static __inline__ int __DEFAULT_FN_ATTRS128 _mm_comneqsbh(__m128bh A,
-                                                          __m128bh B) {
-  return __builtin_ia32_vcomsbf16neq((__v8bf)A, (__v8bf)B);
+static __inline__ int __DEFAULT_FN_ATTRS128 _mm_comineq_sbh(__m128bh A,
+                                                            __m128bh B) {
+  return __builtin_ia32_vcomisbf16neq((__v8bf)A, (__v8bf)B);
 }
 
 #define _mm256_cmp_pbh_mask(__A, __B, __P)                                     \
