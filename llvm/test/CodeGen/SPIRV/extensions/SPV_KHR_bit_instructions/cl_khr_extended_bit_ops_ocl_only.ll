@@ -4,6 +4,7 @@
 ;
 ; if OpenCL builtin calls present in LLVM IR input and SPV_KHR_bit_instructions is enabled, no error and BitInstructions capability generated.
 ; CHECK-EXTENSION: Capability BitInstructions
+; CHECK-EXTENSION-NOT: Capability Shader
 ; CHECK-EXTENSION: Extension "SPV_KHR_bit_instructions"
 ; if OpenCL builtin calls present in LLVM IR input and SPV_KHR_bit_instructions is NOT enabled, error.
 ; CHECK-NO-EXTENSION: LLVM ERROR: bitfield_insert: the builtin requires the following SPIR-V extension: SPV_KHR_bit_instructions
