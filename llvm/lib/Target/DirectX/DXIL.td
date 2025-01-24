@@ -1039,6 +1039,7 @@ def WaveActiveOp : DXILOp<119, waveActiveOp> {
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int16Ty, Int32Ty, Int64Ty]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let properties = [IsWave];
 }
 
 def WaveIsFirstLane :  DXILOp<110, waveIsFirstLane> {
