@@ -1,4 +1,4 @@
-; RUN: llc -march=mips -mcpu=mips32r5 -mattr=+fp64,+msa,+nooddspreg < %s | FileCheck %s
+; RUN: llc -mtriple=mips -mcpu=mips32r5 -mattr=+fp64,+msa,+nooddspreg < %s | FileCheck %s
 
 ; Test that the register allocator honours +nooddspreg and does not pick an odd
 ; single precision subregister of an MSA register.

@@ -1,0 +1,36 @@
+# XFAIL: *
+# RUN: not --crash llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -run-pass=none -filetype=null %s
+
+# FIXME: This should fail the machine verifier. There is a missing def
+# of $vgpr2 in bb.1, which is needed since it's live into bb.3
+
+---
+name: missing_live_out_subreg_def
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0, $vgpr0
+
+    S_CMP_EQ_U32 $sgpr0, 0, implicit-def $scc
+    S_CBRANCH_SCC0 %bb.2, implicit killed $scc
+
+  bb.1:
+    liveins: $vgpr0
+
+    renamable $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.2:
+    liveins: $vgpr0
+
+    renamable $sgpr0_sgpr1_sgpr2_sgpr3 = IMPLICIT_DEF
+    renamable $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    renamable $vgpr1_vgpr2 = BUFFER_LOAD_FORMAT_XY_IDXEN killed renamable $vgpr1, killed renamable $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), addrspace 8)
+
+  bb.3:
+    liveins: $vgpr0, $vgpr1_vgpr2
+
+    EXP 0, killed renamable $vgpr0, killed renamable $vgpr1, renamable $vgpr2, renamable $vgpr0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...

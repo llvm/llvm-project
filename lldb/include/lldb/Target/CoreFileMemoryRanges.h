@@ -8,6 +8,7 @@
 
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "llvm/ADT/AddressRanges.h"
 
@@ -34,6 +35,16 @@ struct CoreFileMemoryRange {
     if (range == rhs.range)
       return lldb_permissions < rhs.lldb_permissions;
     return false;
+  }
+
+  std::string Dump() const {
+    lldb_private::StreamString stream;
+    stream << "[";
+    stream.PutHex64(range.start());
+    stream << '-';
+    stream.PutHex64(range.end());
+    stream << ")";
+    return stream.GetString().str();
   }
 };
 

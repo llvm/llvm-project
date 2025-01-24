@@ -1148,13 +1148,21 @@ define <2 x float> @ld1_2s_float(<2 x float> %V, ptr %bar) {
 
 ; Add rdar://13098923 test case: vld1_dup_u32 doesn't generate ld1r.2s
 define void @ld1r_2s_from_dup(ptr nocapture %a, ptr nocapture %b, ptr nocapture %diff) nounwind ssp {
-; CHECK-LABEL: ld1r_2s_from_dup:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ld1r.2s { v0 }, [x0]
-; CHECK-NEXT:    ld1r.2s { v1 }, [x1]
-; CHECK-NEXT:    usubl.8h v0, v0, v1
-; CHECK-NEXT:    str d0, [x2]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ld1r_2s_from_dup:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldr s0, [x0]
+; CHECK-SD-NEXT:    ldr s1, [x1]
+; CHECK-SD-NEXT:    usubl.8h v0, v0, v1
+; CHECK-SD-NEXT:    str d0, [x2]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ld1r_2s_from_dup:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ld1r.2s { v0 }, [x0]
+; CHECK-GI-NEXT:    ld1r.2s { v1 }, [x1]
+; CHECK-GI-NEXT:    usubl.8h v0, v0, v1
+; CHECK-GI-NEXT:    str d0, [x2]
+; CHECK-GI-NEXT:    ret
 entry:
   %tmp1 = load i32, ptr %a, align 4
   %tmp2 = insertelement <2 x i32> undef, i32 %tmp1, i32 0

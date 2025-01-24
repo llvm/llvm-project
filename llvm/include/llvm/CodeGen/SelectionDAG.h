@@ -34,6 +34,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ArrayRecycler.h"
 #include "llvm/Support/CodeGen.h"
@@ -43,6 +44,7 @@
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <set>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -59,7 +61,7 @@ class Type;
 template <class GraphType> struct GraphTraits;
 template <typename T, unsigned int N> class SmallSetVector;
 template <typename T, typename Enable> struct FoldingSetTrait;
-class AAResults;
+class BatchAAResults;
 class BlockAddress;
 class BlockFrequencyInfo;
 class Constant;
@@ -246,6 +248,9 @@ class SelectionDAG {
   BlockFrequencyInfo *BFI = nullptr;
   MachineModuleInfo *MMI = nullptr;
 
+  /// Extended EVTs used for single value VTLists.
+  std::set<EVT, EVT::compareRawBits> EVTs;
+
   /// List of non-single value types.
   FoldingSet<SDVTListNode> VTListMap;
 
@@ -282,12 +287,14 @@ class SelectionDAG {
   SDDbgInfo *DbgInfo;
 
   using CallSiteInfo = MachineFunction::CallSiteInfo;
+  using CalledGlobalInfo = MachineFunction::CalledGlobalInfo;
 
   struct NodeExtraInfo {
     CallSiteInfo CSInfo;
     MDNode *HeapAllocSite = nullptr;
     MDNode *PCSections = nullptr;
     MDNode *MMRA = nullptr;
+    CalledGlobalInfo CalledGlobal{};
     bool NoMerge = false;
   };
   /// Out-of-line extra information for SDNodes.
@@ -450,6 +457,9 @@ public:
   // Maximum depth for recursive analysis such as computeKnownBits, etc.
   static constexpr unsigned MaxRecursionDepth = 6;
 
+  // Returns the maximum steps for SDNode->hasPredecessor() like searches.
+  static unsigned getHasPredecessorMaxSteps();
+
   explicit SelectionDAG(const TargetMachine &TM, CodeGenOptLevel);
   SelectionDAG(const SelectionDAG &) = delete;
   SelectionDAG &operator=(const SelectionDAG &) = delete;
@@ -584,7 +594,7 @@ public:
     return Root;
   }
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
   void VerifyDAGDivergence();
 #endif
 
@@ -592,7 +602,8 @@ public:
   /// certain types of nodes together, or eliminating superfluous nodes.  The
   /// Level argument controls whether Combine is allowed to produce nodes and
   /// types that are illegal on the target.
-  void Combine(CombineLevel Level, AAResults *AA, CodeGenOptLevel OptLevel);
+  void Combine(CombineLevel Level, BatchAAResults *BatchAA,
+               CodeGenOptLevel OptLevel);
 
   /// This transforms the SelectionDAG into a SelectionDAG that
   /// only uses types natively supported by the target.
@@ -699,6 +710,10 @@ public:
                             bool isOpaque = false) {
     return getConstant(Val, DL, VT, true, isOpaque);
   }
+  SDValue getSignedTargetConstant(int64_t Val, const SDLoc &DL, EVT VT,
+                                  bool isOpaque = false) {
+    return getSignedConstant(Val, DL, VT, true, isOpaque);
+  }
 
   /// Create a true or false constant of type \p VT using the target's
   /// BooleanContent for type \p OpVT.
@@ -772,7 +787,7 @@ public:
   SDValue getMCSymbol(MCSymbol *Sym, EVT VT);
 
   SDValue getValueType(EVT);
-  SDValue getRegister(unsigned Reg, EVT VT);
+  SDValue getRegister(Register Reg, EVT VT);
   SDValue getRegisterMask(const uint32_t *RegMask);
   SDValue getEHLabel(const SDLoc &dl, SDValue Root, MCSymbol *Label);
   SDValue getLabelNode(unsigned Opcode, const SDLoc &dl, SDValue Root,
@@ -784,7 +799,7 @@ public:
     return getBlockAddress(BA, VT, Offset, true, TargetFlags);
   }
 
-  SDValue getCopyToReg(SDValue Chain, const SDLoc &dl, unsigned Reg,
+  SDValue getCopyToReg(SDValue Chain, const SDLoc &dl, Register Reg,
                        SDValue N) {
     return getNode(ISD::CopyToReg, dl, MVT::Other, Chain,
                    getRegister(Reg, N.getValueType()), N);
@@ -793,7 +808,7 @@ public:
   // This version of the getCopyToReg method takes an extra operand, which
   // indicates that there is potentially an incoming glue value (if Glue is not
   // null) and that there should be a glue result.
-  SDValue getCopyToReg(SDValue Chain, const SDLoc &dl, unsigned Reg, SDValue N,
+  SDValue getCopyToReg(SDValue Chain, const SDLoc &dl, Register Reg, SDValue N,
                        SDValue Glue) {
     SDVTList VTs = getVTList(MVT::Other, MVT::Glue);
     SDValue Ops[] = { Chain, getRegister(Reg, N.getValueType()), N, Glue };
@@ -810,7 +825,7 @@ public:
                    ArrayRef(Ops, Glue.getNode() ? 4 : 3));
   }
 
-  SDValue getCopyFromReg(SDValue Chain, const SDLoc &dl, unsigned Reg, EVT VT) {
+  SDValue getCopyFromReg(SDValue Chain, const SDLoc &dl, Register Reg, EVT VT) {
     SDVTList VTs = getVTList(VT, MVT::Other);
     SDValue Ops[] = { Chain, getRegister(Reg, VT) };
     return getNode(ISD::CopyFromReg, dl, VTs, Ops);
@@ -819,7 +834,7 @@ public:
   // This version of the getCopyFromReg method takes an extra operand, which
   // indicates that there is potentially an incoming glue value (if Glue is not
   // null) and that there should be a glue result.
-  SDValue getCopyFromReg(SDValue Chain, const SDLoc &dl, unsigned Reg, EVT VT,
+  SDValue getCopyFromReg(SDValue Chain, const SDLoc &dl, Register Reg, EVT VT,
                          SDValue Glue) {
     SDVTList VTs = getVTList(VT, MVT::Other, MVT::Glue);
     SDValue Ops[] = { Chain, getRegister(Reg, VT), Glue };
@@ -1064,17 +1079,13 @@ public:
   /// addressing some offset of an object. i.e. if a load is split into multiple
   /// components, create an add nuw from the base pointer to the offset.
   SDValue getObjectPtrOffset(const SDLoc &SL, SDValue Ptr, TypeSize Offset) {
-    SDNodeFlags Flags;
-    Flags.setNoUnsignedWrap(true);
-    return getMemBasePlusOffset(Ptr, Offset, SL, Flags);
+    return getMemBasePlusOffset(Ptr, Offset, SL, SDNodeFlags::NoUnsignedWrap);
   }
 
   SDValue getObjectPtrOffset(const SDLoc &SL, SDValue Ptr, SDValue Offset) {
     // The object itself can't wrap around the address space, so it shouldn't be
     // possible for the adds of the offsets to the split parts to overflow.
-    SDNodeFlags Flags;
-    Flags.setNoUnsignedWrap(true);
-    return getMemBasePlusOffset(Ptr, Offset, SL, Flags);
+    return getMemBasePlusOffset(Ptr, Offset, SL, SDNodeFlags::NoUnsignedWrap);
   }
 
   /// Return a new CALLSEQ_START node, that starts new call frame, in which
@@ -1192,12 +1203,14 @@ public:
   /* \p CI if not null is the memset call being lowered.
    * \p OverrideTailCall is an optional parameter that can be used to override
    * the tail call optimization decision. */
-  SDValue
-  getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
-            SDValue Size, Align Alignment, bool isVol, bool AlwaysInline,
-            const CallInst *CI, std::optional<bool> OverrideTailCall,
-            MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo,
-            const AAMDNodes &AAInfo = AAMDNodes(), AAResults *AA = nullptr);
+  SDValue getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
+                    SDValue Size, Align Alignment, bool isVol,
+                    bool AlwaysInline, const CallInst *CI,
+                    std::optional<bool> OverrideTailCall,
+                    MachinePointerInfo DstPtrInfo,
+                    MachinePointerInfo SrcPtrInfo,
+                    const AAMDNodes &AAInfo = AAMDNodes(),
+                    BatchAAResults *BatchAA = nullptr);
 
   /* \p CI if not null is the memset call being lowered.
    * \p OverrideTailCall is an optional parameter that can be used to override
@@ -1208,7 +1221,7 @@ public:
                      MachinePointerInfo DstPtrInfo,
                      MachinePointerInfo SrcPtrInfo,
                      const AAMDNodes &AAInfo = AAMDNodes(),
-                     AAResults *AA = nullptr);
+                     BatchAAResults *BatchAA = nullptr);
 
   SDValue getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
                     SDValue Size, Align Alignment, bool isVol,
@@ -1322,8 +1335,8 @@ public:
 
   /// Creates a MemIntrinsicNode that may produce a
   /// result and takes a list of operands. Opcode may be INTRINSIC_VOID,
-  /// INTRINSIC_W_CHAIN, or a target-specific opcode with a value not
-  /// less than FIRST_TARGET_MEMORY_OPCODE.
+  /// INTRINSIC_W_CHAIN, or a target-specific memory-referencing opcode
+  // (see `SelectionDAGTargetInfo::isTargetMemoryOpcode`).
   SDValue getMemIntrinsicNode(
       unsigned Opcode, const SDLoc &dl, SDVTList VTList, ArrayRef<SDValue> Ops,
       EVT MemVT, MachinePointerInfo PtrInfo, Align Alignment,
@@ -1598,6 +1611,15 @@ public:
   /// its operands and ReducedTY is the intrinsic's return type.
   SDValue getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
                               SDValue Op2);
+
+  /// Expands a node with multiple results to an FP or vector libcall. The
+  /// libcall is expected to take all the operands of the \p Node followed by
+  /// output pointers for each of the results. \p CallRetResNo can be optionally
+  /// set to indicate that one of the results comes from the libcall's return
+  /// value.
+  bool expandMultipleResultFPLibCall(RTLIB::Libcall LC, SDNode *Node,
+                                     SmallVectorImpl<SDValue> &Results,
+                                     std::optional<unsigned> CallRetResNo = {});
 
   /// Expand the specified \c ISD::VAARG node as the Legalize pass would.
   SDValue expandVAArg(SDNode *Node);
@@ -2301,10 +2323,11 @@ public:
   Align getEVTAlign(EVT MemoryVT) const;
 
   /// Test whether the given value is a constant int or similar node.
-  SDNode *isConstantIntBuildVectorOrConstantInt(SDValue N) const;
+  bool isConstantIntBuildVectorOrConstantInt(SDValue N,
+                                             bool AllowOpaques = true) const;
 
   /// Test whether the given value is a constant FP or similar node.
-  SDNode *isConstantFPBuildVectorOrConstantFP(SDValue N) const ;
+  bool isConstantFPBuildVectorOrConstantFP(SDValue N) const;
 
   /// \returns true if \p N is any kind of constant or build_vector of
   /// constants, int or float. If a vector, it may not necessarily be a splat.
@@ -2354,6 +2377,18 @@ public:
   MDNode *getMMRAMetadata(const SDNode *Node) const {
     auto It = SDEI.find(Node);
     return It != SDEI.end() ? It->second.MMRA : nullptr;
+  }
+  /// Set CalledGlobal to be associated with Node.
+  void addCalledGlobal(const SDNode *Node, const GlobalValue *GV,
+                       unsigned OpFlags) {
+    SDEI[Node].CalledGlobal = {GV, OpFlags};
+  }
+  /// Return CalledGlobal associated with Node, or a nullopt if none exists.
+  std::optional<CalledGlobalInfo> getCalledGlobal(const SDNode *Node) {
+    auto I = SDEI.find(Node);
+    return I != SDEI.end()
+               ? std::make_optional(std::move(I->second).CalledGlobal)
+               : std::nullopt;
   }
   /// Set NoMergeSiteInfo to be associated with Node if NoMerge is true.
   void addNoMergeSiteInfo(const SDNode *Node, bool NoMerge) {

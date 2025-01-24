@@ -222,7 +222,7 @@ struct SequenceOp : public SetTheory::Operator {
       std::string Name;
       raw_string_ostream OS(Name);
       OS << format(Format.c_str(), unsigned(From));
-      Record *Rec = Records.getDef(Name);
+      const Record *Rec = Records.getDef(Name);
       if (!Rec)
         PrintFatalError(Loc, "No def named '" + Name + "': " +
           Expr->getAsString());
@@ -296,7 +296,7 @@ void SetTheory::evaluate(const Init *Expr, RecSet &Elts, ArrayRef<SMLoc> Loc) {
   const auto *DagExpr = dyn_cast<DagInit>(Expr);
   if (!DagExpr)
     PrintFatalError(Loc, "Invalid set element: " + Expr->getAsString());
-  const DefInit *OpInit = dyn_cast<DefInit>(DagExpr->getOperator());
+  const auto *OpInit = dyn_cast<DefInit>(DagExpr->getOperator());
   if (!OpInit)
     PrintFatalError(Loc, "Bad set expression: " + Expr->getAsString());
   auto I = Operators.find(OpInit->getDef()->getName());

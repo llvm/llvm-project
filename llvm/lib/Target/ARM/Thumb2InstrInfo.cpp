@@ -30,7 +30,6 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
 
@@ -167,7 +166,8 @@ void Thumb2InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                           Register SrcReg, bool isKill, int FI,
                                           const TargetRegisterClass *RC,
                                           const TargetRegisterInfo *TRI,
-                                          Register VReg) const {
+                                          Register VReg,
+                                          MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
 
@@ -207,12 +207,10 @@ void Thumb2InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                         Register());
 }
 
-void Thumb2InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                           MachineBasicBlock::iterator I,
-                                           Register DestReg, int FI,
-                                           const TargetRegisterClass *RC,
-                                           const TargetRegisterInfo *TRI,
-                                           Register VReg) const {
+void Thumb2InstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DestReg,
+    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    Register VReg, MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
@@ -264,8 +262,11 @@ void Thumb2InstrInfo::expandLoadStackGuard(
   }
 
   const auto *GV = cast<GlobalValue>((*MI->memoperands_begin())->getValue());
-  if (MF.getSubtarget<ARMSubtarget>().isTargetELF() && !GV->isDSOLocal())
+  const ARMSubtarget &Subtarget = MF.getSubtarget<ARMSubtarget>();
+  if (Subtarget.isTargetELF() && !GV->isDSOLocal())
     expandLoadStackGuardBase(MI, ARM::t2LDRLIT_ga_pcrel, ARM::t2LDRi12);
+  else if (!Subtarget.useMovt())
+    expandLoadStackGuardBase(MI, ARM::tLDRLIT_ga_abs, ARM::t2LDRi12);
   else if (MF.getTarget().isPositionIndependent())
     expandLoadStackGuardBase(MI, ARM::t2MOV_ga_pcrel, ARM::t2LDRi12);
   else

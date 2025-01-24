@@ -1,0 +1,66 @@
+# REQUIRES: shell, aarch64-registered-target
+# UNSUPPORTED: system-windows
+
+# Test merge a single object file having both __llvm_outline and __llvm_merge into a cgdata.
+# Effectively, this test combines merge-hashtree.test and merge-funcmap.test.
+
+RUN: split-file %s %t
+
+# Synthesize raw hashtree bytes without the header (32 byte) from the indexed cgdata.
+RUN: llvm-cgdata --convert --format binary %t/raw-hashtree.cgtext -o %t/raw-hashtree.cgdata
+RUN: od -t x1 -j 32 -An %t/raw-hashtree.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-hashtree-bytes.txt
+
+# Synthesize raw funcmap bytes without the header (32 byte) from the indexed cgdata.
+RUN: llvm-cgdata --convert --format binary %t/raw-funcmap.cgtext -o %t/raw-funcmap.cgdata
+RUN: od -t x1 -j 32 -An %t/raw-funcmap.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-funcmap-bytes.txt
+
+# Synthesize a bitcode file by creating two sections for the hash tree and the function map, respectively.
+RUN: sed "s/<RAW_1_BYTES>/$(cat %t/raw-hashtree-bytes.txt)/g" %t/merge-both-template.ll > %t/merge-both-hashtree-template.ll
+RUN: sed "s/<RAW_2_BYTES>/$(cat %t/raw-funcmap-bytes.txt)/g" %t/merge-both-hashtree-template.ll > %t/merge-both-hashtree-funcmap.ll
+
+RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-both-hashtree-funcmap.ll -o %t/merge-both-hashtree-funcmap.o
+
+# Merge an object file having cgdata (__llvm_outline and __llvm_merge)
+RUN: llvm-cgdata -m --skip-trim %t/merge-both-hashtree-funcmap.o -o %t/merge-both-hashtree-funcmap.cgdata
+RUN: llvm-cgdata -s %t/merge-both-hashtree-funcmap.cgdata | FileCheck %s
+
+CHECK: Outlined hash tree:
+CHECK-NEXT:  Total Node Count: 3
+CHECK-NEXT:  Terminal Node Count: 1
+CHECK-NEXT:  Depth: 2
+CHECK-NEXT: Stable function map:
+CHECK-NEXT:  Unique hash Count: 1
+CHECK-NEXT:  Total function Count: 1
+CHECK-NEXT:  Mergeable function Count: 0
+
+;--- raw-hashtree.cgtext
+:outlined_hash_tree
+0:
+  Hash:            0x0
+  Terminals:       0
+  SuccessorIds:    [ 1 ]
+1:
+  Hash:            0x1
+  Terminals:       0
+  SuccessorIds:    [ 2 ]
+2:
+  Hash:            0x2
+  Terminals:       4
+  SuccessorIds:    [  ]
+...
+
+;--- raw-funcmap.cgtext
+:stable_function_map
+- Hash:            1
+  FunctionName:    Func1
+  ModuleName:      Mod1
+  InstCount:       2
+  IndexOperandHashes:
+    - InstIndex:       0
+      OpndIndex:       1
+      OpndHash:        3
+...
+
+;--- merge-both-template.ll
+@.data1 = private unnamed_addr constant [72 x i8] c"<RAW_1_BYTES>", section "__DATA,__llvm_outline"
+@.data2 = private unnamed_addr constant [60 x i8] c"<RAW_2_BYTES>", section "__DATA,__llvm_merge"

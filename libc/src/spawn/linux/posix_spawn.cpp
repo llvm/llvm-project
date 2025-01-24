@@ -14,7 +14,8 @@
 #include "src/__support/macros/config.h"
 #include "src/spawn/file_actions.h"
 
-#include <fcntl.h>
+#include "hdr/fcntl_macros.h"
+#include "hdr/types/mode_t.h"
 #include <signal.h> // For SIGCHLD
 #include <spawn.h>
 #include <sys/syscall.h> // For syscall numbers.

@@ -80,7 +80,7 @@ define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) {
 ; ENABLE-NEXT:    ## InlineAsm End
 ; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    movl $10, %ecx
-; ENABLE-NEXT:    .p2align 4, 0x90
+; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB1_2: ## %for.body
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    ## InlineAsm Start
@@ -111,7 +111,7 @@ define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) {
 ; DISABLE-NEXT:    ## InlineAsm End
 ; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    movl $10, %ecx
-; DISABLE-NEXT:    .p2align 4, 0x90
+; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB1_2: ## %for.body
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    ## InlineAsm Start
@@ -174,7 +174,7 @@ define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) {
 ; ENABLE-NEXT:    ## InlineAsm End
 ; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    movl $10, %ecx
-; ENABLE-NEXT:    .p2align 4, 0x90
+; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB2_1: ## %for.body
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    ## InlineAsm Start
@@ -200,7 +200,7 @@ define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) {
 ; DISABLE-NEXT:    ## InlineAsm End
 ; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    movl $10, %ecx
-; DISABLE-NEXT:    .p2align 4, 0x90
+; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB2_1: ## %for.body
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    ## InlineAsm Start
@@ -255,7 +255,7 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) {
 ; ENABLE-NEXT:    ## InlineAsm End
 ; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    movl $10, %ecx
-; ENABLE-NEXT:    .p2align 4, 0x90
+; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB3_2: ## %for.body
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    ## InlineAsm Start
@@ -289,7 +289,7 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) {
 ; DISABLE-NEXT:    ## InlineAsm End
 ; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    movl $10, %ecx
-; DISABLE-NEXT:    .p2align 4, 0x90
+; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB3_2: ## %for.body
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    ## InlineAsm Start
@@ -355,7 +355,7 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind {
 ; ENABLE-NEXT:    ## InlineAsm End
 ; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    movl $10, %ecx
-; ENABLE-NEXT:    .p2align 4, 0x90
+; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB4_2: ## %for.body
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    ## InlineAsm Start
@@ -384,7 +384,7 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) nounwind {
 ; DISABLE-NEXT:    ## InlineAsm End
 ; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    movl $10, %ecx
-; DISABLE-NEXT:    .p2align 4, 0x90
+; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB4_2: ## %for.body
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    ## InlineAsm Start
@@ -461,7 +461,7 @@ define i32 @inlineAsm(i32 %cond, i32 %N) {
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    ## InlineAsm End
 ; ENABLE-NEXT:    movl $10, %eax
-; ENABLE-NEXT:    .p2align 4, 0x90
+; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB6_2: ## %for.body
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    ## InlineAsm Start
@@ -493,7 +493,7 @@ define i32 @inlineAsm(i32 %cond, i32 %N) {
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    ## InlineAsm End
 ; DISABLE-NEXT:    movl $10, %eax
-; DISABLE-NEXT:    .p2align 4, 0x90
+; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB6_2: ## %for.body
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    ## InlineAsm Start
@@ -824,7 +824,7 @@ define void @infiniteloop() {
 ; ENABLE-NEXT:    ## InlineAsm Start
 ; ENABLE-NEXT:    movl $1, %edx
 ; ENABLE-NEXT:    ## InlineAsm End
-; ENABLE-NEXT:    .p2align 4, 0x90
+; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB10_2: ## %for.body
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    addl %edx, %eax
@@ -856,7 +856,7 @@ define void @infiniteloop() {
 ; DISABLE-NEXT:    ## InlineAsm Start
 ; DISABLE-NEXT:    movl $1, %edx
 ; DISABLE-NEXT:    ## InlineAsm End
-; DISABLE-NEXT:    .p2align 4, 0x90
+; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB10_2: ## %for.body
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    addl %edx, %eax
@@ -868,7 +868,7 @@ define void @infiniteloop() {
 ; DISABLE-NEXT:    popq %rbp
 ; DISABLE-NEXT:    retq
 entry:
-  br i1 undef, label %if.then, label %if.end
+  br i1 poison, label %if.then, label %if.end
 
 if.then:
   %ptr = alloca i32, i32 4
@@ -906,7 +906,7 @@ define void @infiniteloop2() {
 ; ENABLE-NEXT:    movq %rcx, %rsp
 ; ENABLE-NEXT:    xorl %edx, %edx
 ; ENABLE-NEXT:    jmp LBB11_2
-; ENABLE-NEXT:    .p2align 4, 0x90
+; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB11_4: ## %body2
 ; ENABLE-NEXT:    ## in Loop: Header=BB11_2 Depth=1
 ; ENABLE-NEXT:    ## InlineAsm Start
@@ -954,7 +954,7 @@ define void @infiniteloop2() {
 ; DISABLE-NEXT:    movq %rcx, %rsp
 ; DISABLE-NEXT:    xorl %edx, %edx
 ; DISABLE-NEXT:    jmp LBB11_2
-; DISABLE-NEXT:    .p2align 4, 0x90
+; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB11_4: ## %body2
 ; DISABLE-NEXT:    ## in Loop: Header=BB11_2 Depth=1
 ; DISABLE-NEXT:    ## InlineAsm Start
@@ -983,7 +983,7 @@ define void @infiniteloop2() {
 ; DISABLE-NEXT:    popq %rbp
 ; DISABLE-NEXT:    retq
 entry:
-  br i1 undef, label %if.then, label %if.end
+  br i1 poison, label %if.then, label %if.end
 
 if.then:
   %ptr = alloca i32, i32 4
@@ -994,7 +994,7 @@ for.body:                                         ; preds = %for.body, %entry
   %call = tail call i32 asm "movl $$1, $0", "=r,~{ebx}"()
   %add = add nsw i32 %call, %sum.03
   store i32 %add, ptr %ptr
-  br i1 undef, label %body1, label %body2
+  br i1 poison, label %body1, label %body2
 
 body1:
   tail call void asm sideeffect "nop", "~{ebx}"()
@@ -1024,7 +1024,7 @@ define void @infiniteloop3() {
 ; ENABLE-NEXT:    xorl %ecx, %ecx
 ; ENABLE-NEXT:    movq %rax, %rsi
 ; ENABLE-NEXT:    jmp LBB12_4
-; ENABLE-NEXT:    .p2align 4, 0x90
+; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB12_3: ## %loop2b
 ; ENABLE-NEXT:    ## in Loop: Header=BB12_4 Depth=1
 ; ENABLE-NEXT:    movq %rdx, (%rsi)
@@ -1056,7 +1056,7 @@ define void @infiniteloop3() {
 ; DISABLE-NEXT:    xorl %ecx, %ecx
 ; DISABLE-NEXT:    movq %rax, %rsi
 ; DISABLE-NEXT:    jmp LBB12_4
-; DISABLE-NEXT:    .p2align 4, 0x90
+; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB12_3: ## %loop2b
 ; DISABLE-NEXT:    ## in Loop: Header=BB12_4 Depth=1
 ; DISABLE-NEXT:    movq %rdx, (%rsi)
@@ -1074,10 +1074,10 @@ define void @infiniteloop3() {
 ; DISABLE-NEXT:  LBB12_7: ## %end
 ; DISABLE-NEXT:    retq
 entry:
-  br i1 undef, label %loop2a, label %body
+  br i1 poison, label %loop2a, label %body
 
 body:                                             ; preds = %entry
-  br i1 undef, label %loop2a, label %end
+  br i1 poison, label %loop2a, label %end
 
 loop1:                                            ; preds = %loop2a, %loop2b
   %var.phi = phi ptr [ %next.phi, %loop2b ], [ %var, %loop2a ]
@@ -1188,7 +1188,7 @@ define i32 @useLEAForPrologue(i32 %d, i32 %a, i8 %c) #3 {
 ; ENABLE-NEXT:    ## InlineAsm Start
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    ## InlineAsm End
-; ENABLE-NEXT:    .p2align 4, 0x90
+; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB14_2: ## %for.body
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    cmpl %esi, %edi
@@ -1223,7 +1223,7 @@ define i32 @useLEAForPrologue(i32 %d, i32 %a, i8 %c) #3 {
 ; DISABLE-NEXT:    ## InlineAsm Start
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    ## InlineAsm End
-; DISABLE-NEXT:    .p2align 4, 0x90
+; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB14_2: ## %for.body
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    cmpl %esi, %edi
@@ -1375,7 +1375,7 @@ define i32 @irreducibleCFG() #4 {
 ; ENABLE-NEXT:    movq _irreducibleCFGf@GOTPCREL(%rip), %rax
 ; ENABLE-NEXT:    cmpb $0, (%rax)
 ; ENABLE-NEXT:    je LBB16_2
-; ENABLE-NEXT:    .p2align 4, 0x90
+; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB16_1: ## %preheader
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    jmp LBB16_1
@@ -1392,7 +1392,7 @@ define i32 @irreducibleCFG() #4 {
 ; ENABLE-NEXT:    jmp LBB16_5
 ; ENABLE-NEXT:  LBB16_3:
 ; ENABLE-NEXT:    xorl %ebx, %ebx
-; ENABLE-NEXT:    .p2align 4, 0x90
+; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB16_5: ## %for.inc
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    incl %ebx
@@ -1418,7 +1418,7 @@ define i32 @irreducibleCFG() #4 {
 ; DISABLE-NEXT:    movq _irreducibleCFGf@GOTPCREL(%rip), %rax
 ; DISABLE-NEXT:    cmpb $0, (%rax)
 ; DISABLE-NEXT:    je LBB16_2
-; DISABLE-NEXT:    .p2align 4, 0x90
+; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB16_1: ## %preheader
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    jmp LBB16_1
@@ -1435,7 +1435,7 @@ define i32 @irreducibleCFG() #4 {
 ; DISABLE-NEXT:    jmp LBB16_5
 ; DISABLE-NEXT:  LBB16_3:
 ; DISABLE-NEXT:    xorl %ebx, %ebx
-; DISABLE-NEXT:    .p2align 4, 0x90
+; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB16_5: ## %for.inc
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    incl %ebx
@@ -1515,7 +1515,7 @@ define void @infiniteLoopNoSuccessor() #5 {
 ; ENABLE-NEXT:  LBB17_3:
 ; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    callq _something
-; ENABLE-NEXT:    .p2align 4, 0x90
+; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB17_4: ## =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    callq _somethingElse
@@ -1542,7 +1542,7 @@ define void @infiniteLoopNoSuccessor() #5 {
 ; DISABLE-NEXT:  LBB17_3:
 ; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    callq _something
-; DISABLE-NEXT:    .p2align 4, 0x90
+; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB17_4: ## =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    callq _somethingElse

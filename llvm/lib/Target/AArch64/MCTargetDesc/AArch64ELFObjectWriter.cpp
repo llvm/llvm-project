@@ -34,8 +34,6 @@ public:
 
   ~AArch64ELFObjectWriter() override = default;
 
-  MCSectionELF *getMemtagRelocsSection(MCContext &Ctx) const override;
-
 protected:
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
                         const MCFixup &Fixup, bool IsPCRel) const override;
@@ -149,6 +147,15 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       }
       return ELF::R_AARCH64_PREL64;
     case AArch64::fixup_aarch64_pcrel_adr_imm21:
+      if (SymLoc == AArch64MCExpr::VK_GOT_AUTH) {
+        if (IsILP32) {
+          Ctx.reportError(Fixup.getLoc(),
+                          "ILP32 ADR AUTH relocation not supported "
+                          "(LP64 eqv: AUTH_GOT_ADR_PREL_LO21)");
+          return ELF::R_AARCH64_NONE;
+        }
+        return ELF::R_AARCH64_AUTH_GOT_ADR_PREL_LO21;
+      }
       if (SymLoc != AArch64MCExpr::VK_ABS)
         Ctx.reportError(Fixup.getLoc(),
                         "invalid symbol kind for ADR relocation");
@@ -167,10 +174,28 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
       }
       if (SymLoc == AArch64MCExpr::VK_GOT && !IsNC)
         return R_CLS(ADR_GOT_PAGE);
+      if (SymLoc == AArch64MCExpr::VK_GOT_AUTH && !IsNC) {
+        if (IsILP32) {
+          Ctx.reportError(Fixup.getLoc(),
+                          "ILP32 ADRP AUTH relocation not supported "
+                          "(LP64 eqv: AUTH_ADR_GOT_PAGE)");
+          return ELF::R_AARCH64_NONE;
+        }
+        return ELF::R_AARCH64_AUTH_ADR_GOT_PAGE;
+      }
       if (SymLoc == AArch64MCExpr::VK_GOTTPREL && !IsNC)
         return R_CLS(TLSIE_ADR_GOTTPREL_PAGE21);
       if (SymLoc == AArch64MCExpr::VK_TLSDESC && !IsNC)
         return R_CLS(TLSDESC_ADR_PAGE21);
+      if (SymLoc == AArch64MCExpr::VK_TLSDESC_AUTH && !IsNC) {
+        if (IsILP32) {
+          Ctx.reportError(Fixup.getLoc(),
+                          "ILP32 ADRP AUTH relocation not supported "
+                          "(LP64 eqv: AUTH_TLSDESC_ADR_PAGE21)");
+          return ELF::R_AARCH64_NONE;
+        }
+        return ELF::R_AARCH64_AUTH_TLSDESC_ADR_PAGE21;
+      }
       Ctx.reportError(Fixup.getLoc(),
                       "invalid symbol kind for ADRP relocation");
       return ELF::R_AARCH64_NONE;
@@ -183,12 +208,26 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
         return R_CLS(TLSIE_LD_GOTTPREL_PREL19);
       if (SymLoc == AArch64MCExpr::VK_GOT)
         return R_CLS(GOT_LD_PREL19);
+      if (SymLoc == AArch64MCExpr::VK_GOT_AUTH) {
+        if (IsILP32) {
+          Ctx.reportError(Fixup.getLoc(),
+                          "ILP32 LDR AUTH relocation not supported "
+                          "(LP64 eqv: AUTH_GOT_LD_PREL19)");
+          return ELF::R_AARCH64_NONE;
+        }
+        return ELF::R_AARCH64_AUTH_GOT_LD_PREL19;
+      }
       return R_CLS(LD_PREL_LO19);
     case AArch64::fixup_aarch64_pcrel_branch14:
       return R_CLS(TSTBR14);
     case AArch64::fixup_aarch64_pcrel_branch16:
       Ctx.reportError(Fixup.getLoc(),
                       "relocation of PAC/AUT instructions is not supported");
+      return ELF::R_AARCH64_NONE;
+    case AArch64::fixup_aarch64_pcrel_branch9:
+      Ctx.reportError(
+          Fixup.getLoc(),
+          "relocation of compare-and-branch instructions not supported");
       return ELF::R_AARCH64_NONE;
     case AArch64::fixup_aarch64_pcrel_branch19:
       return R_CLS(CONDBR19);
@@ -237,6 +276,24 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
         return R_CLS(TLSLE_ADD_TPREL_LO12);
       if (RefKind == AArch64MCExpr::VK_TLSDESC_LO12)
         return R_CLS(TLSDESC_ADD_LO12);
+      if (RefKind == AArch64MCExpr::VK_TLSDESC_AUTH_LO12) {
+        if (IsILP32) {
+          Ctx.reportError(Fixup.getLoc(),
+                          "ILP32 ADD AUTH relocation not supported "
+                          "(LP64 eqv: AUTH_TLSDESC_ADD_LO12)");
+          return ELF::R_AARCH64_NONE;
+        }
+        return ELF::R_AARCH64_AUTH_TLSDESC_ADD_LO12;
+      }
+      if (RefKind == AArch64MCExpr::VK_GOT_AUTH_LO12 && IsNC) {
+        if (IsILP32) {
+          Ctx.reportError(Fixup.getLoc(),
+                          "ILP32 ADD AUTH relocation not supported "
+                          "(LP64 eqv: AUTH_GOT_ADD_LO12_NC)");
+          return ELF::R_AARCH64_NONE;
+        }
+        return ELF::R_AARCH64_AUTH_GOT_ADD_LO12_NC;
+      }
       if (SymLoc == AArch64MCExpr::VK_ABS && IsNC)
         return R_CLS(ADD_ABS_LO12_NC);
 
@@ -329,17 +386,23 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
     case AArch64::fixup_aarch64_ldst_imm12_scale8:
       if (SymLoc == AArch64MCExpr::VK_ABS && IsNC)
         return R_CLS(LDST64_ABS_LO12_NC);
-      if (SymLoc == AArch64MCExpr::VK_GOT && IsNC) {
+      if ((SymLoc == AArch64MCExpr::VK_GOT ||
+           SymLoc == AArch64MCExpr::VK_GOT_AUTH) &&
+          IsNC) {
         AArch64MCExpr::VariantKind AddressLoc =
             AArch64MCExpr::getAddressFrag(RefKind);
+        bool IsAuth = (SymLoc == AArch64MCExpr::VK_GOT_AUTH);
         if (!IsILP32) {
           if (AddressLoc == AArch64MCExpr::VK_LO15)
             return ELF::R_AARCH64_LD64_GOTPAGE_LO15;
-          return ELF::R_AARCH64_LD64_GOT_LO12_NC;
+          return (IsAuth ? ELF::R_AARCH64_AUTH_LD64_GOT_LO12_NC
+                         : ELF::R_AARCH64_LD64_GOT_LO12_NC);
         }
-        Ctx.reportError(Fixup.getLoc(), "ILP32 64-bit load/store "
-                                        "relocation not supported (LP64 eqv: "
-                                        "LD64_GOT_LO12_NC)");
+        Ctx.reportError(Fixup.getLoc(),
+                        Twine("ILP32 64-bit load/store "
+                              "relocation not supported (LP64 eqv: ") +
+                            (IsAuth ? "AUTH_GOT_LO12_NC" : "LD64_GOT_LO12_NC") +
+                            Twine(')'));
         return ELF::R_AARCH64_NONE;
       }
       if (SymLoc == AArch64MCExpr::VK_DTPREL && !IsNC)
@@ -364,6 +427,14 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
         Ctx.reportError(Fixup.getLoc(), "ILP32 64-bit load/store "
                                         "relocation not supported (LP64 eqv: "
                                         "TLSDESC_LD64_LO12)");
+        return ELF::R_AARCH64_NONE;
+      }
+      if (SymLoc == AArch64MCExpr::VK_TLSDESC_AUTH) {
+        if (!IsILP32)
+          return ELF::R_AARCH64_AUTH_TLSDESC_LD64_LO12;
+        Ctx.reportError(Fixup.getLoc(), "ILP32 64-bit load/store AUTH "
+                                        "relocation not supported (LP64 eqv: "
+                                        "AUTH_TLSDESC_LD64_LO12)");
         return ELF::R_AARCH64_NONE;
       }
       Ctx.reportError(Fixup.getLoc(),
@@ -460,12 +531,6 @@ bool AArch64ELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
                                                      const MCSymbol &,
                                                      unsigned) const {
   return (Val.getRefKind() & AArch64MCExpr::VK_GOT) == AArch64MCExpr::VK_GOT;
-}
-
-MCSectionELF *
-AArch64ELFObjectWriter::getMemtagRelocsSection(MCContext &Ctx) const {
-  return Ctx.getELFSection(".memtag.globals.static",
-                           ELF::SHT_AARCH64_MEMTAG_GLOBALS_STATIC, 0);
 }
 
 std::unique_ptr<MCObjectTargetWriter>

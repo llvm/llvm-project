@@ -136,6 +136,10 @@ public:
                                          const TargetRegisterInfo *TRI,
                                          const MachineFunction &MF) const;
 
+  /// Returns true if MI is an instruction we are unable to reason about
+  /// (like a call or something with unmodeled side effects).
+  virtual bool isGlobalMemoryObject(const MachineInstr *MI) const;
+
   /// Return true if the instruction is trivially rematerializable, meaning it
   /// has no side effects and requires no operands that aren't always available.
   /// This means the only allowed uses are constants and unallocatable physical
@@ -157,6 +161,12 @@ public:
   virtual bool isSafeToSink(MachineInstr &MI, MachineBasicBlock *SuccToSinkTo,
                             MachineCycleInfo *CI) const {
     return true;
+  }
+
+  /// For a "cheap" instruction which doesn't enable additional sinking,
+  /// should MachineSink break a critical edge to sink it anyways?
+  virtual bool shouldBreakCriticalEdgeToSink(MachineInstr &MI) const {
+    return false;
   }
 
 protected:
@@ -800,7 +810,7 @@ public:
     ///
     /// Once this function is called, no other functions on this object are
     /// valid; the loop has been removed.
-    virtual void disposed() = 0;
+    virtual void disposed(LiveIntervals *LIS = nullptr) {}
 
     /// Return true if the target can expand pipelined schedule with modulo
     /// variable expansion.
@@ -1132,13 +1142,14 @@ public:
   /// register, \p VReg is the register being assigned. This additional register
   /// argument is needed for certain targets when invoked from RegAllocFast to
   /// map the spilled physical register to its virtual register. A null register
-  /// can be passed elsewhere.
-  virtual void storeRegToStackSlot(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator MI,
-                                   Register SrcReg, bool isKill, int FrameIndex,
-                                   const TargetRegisterClass *RC,
-                                   const TargetRegisterInfo *TRI,
-                                   Register VReg) const {
+  /// can be passed elsewhere. The \p Flags is used to set appropriate machine
+  /// flags on the spill instruction e.g. FrameSetup flag on a callee saved
+  /// register spill instruction, part of prologue, during the frame lowering.
+  virtual void storeRegToStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const {
     llvm_unreachable("Target didn't implement "
                      "TargetInstrInfo::storeRegToStackSlot!");
   }
@@ -1150,13 +1161,14 @@ public:
   /// register, \p VReg is the register being assigned. This additional register
   /// argument is needed for certain targets when invoked from RegAllocFast to
   /// map the loaded physical register to its virtual register. A null register
-  /// can be passed elsewhere.
-  virtual void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                    MachineBasicBlock::iterator MI,
-                                    Register DestReg, int FrameIndex,
-                                    const TargetRegisterClass *RC,
-                                    const TargetRegisterInfo *TRI,
-                                    Register VReg) const {
+  /// can be passed elsewhere. The \p Flags is used to set appropriate machine
+  /// flags on the spill instruction e.g. FrameDestroy flag on a callee saved
+  /// register reload instruction, part of epilogue, during the frame lowering.
+  virtual void loadRegFromStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
+      int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const {
     llvm_unreachable("Target didn't implement "
                      "TargetInstrInfo::loadRegFromStackSlot!");
   }
@@ -2007,7 +2019,7 @@ public:
   /// defined by this method.
   virtual ArrayRef<std::pair<int, const char *>>
   getSerializableTargetIndices() const {
-    return std::nullopt;
+    return {};
   }
 
   /// Decompose the machine operand's target flags into two values - the direct
@@ -2024,7 +2036,7 @@ public:
   /// defined by this method.
   virtual ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const {
-    return std::nullopt;
+    return {};
   }
 
   /// Return an array that contains the bitmask target flag values and their
@@ -2034,7 +2046,7 @@ public:
   /// defined by this method.
   virtual ArrayRef<std::pair<unsigned, const char *>>
   getSerializableBitmaskMachineOperandTargetFlags() const {
-    return std::nullopt;
+    return {};
   }
 
   /// Return an array that contains the MMO target flag values and their
@@ -2044,7 +2056,7 @@ public:
   /// defined by this method.
   virtual ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>
   getSerializableMachineMemOperandTargetFlags() const {
-    return std::nullopt;
+    return {};
   }
 
   /// Determines whether \p Inst is a tail call instruction. Override this
@@ -2287,29 +2299,29 @@ private:
 
 /// Provide DenseMapInfo for TargetInstrInfo::RegSubRegPair.
 template <> struct DenseMapInfo<TargetInstrInfo::RegSubRegPair> {
-  using RegInfo = DenseMapInfo<unsigned>;
+  using RegInfo = DenseMapInfo<Register>;
+  using SubRegInfo = DenseMapInfo<unsigned>;
 
   static inline TargetInstrInfo::RegSubRegPair getEmptyKey() {
     return TargetInstrInfo::RegSubRegPair(RegInfo::getEmptyKey(),
-                                          RegInfo::getEmptyKey());
+                                          SubRegInfo::getEmptyKey());
   }
 
   static inline TargetInstrInfo::RegSubRegPair getTombstoneKey() {
     return TargetInstrInfo::RegSubRegPair(RegInfo::getTombstoneKey(),
-                                          RegInfo::getTombstoneKey());
+                                          SubRegInfo::getTombstoneKey());
   }
 
   /// Reuse getHashValue implementation from
   /// std::pair<unsigned, unsigned>.
   static unsigned getHashValue(const TargetInstrInfo::RegSubRegPair &Val) {
-    std::pair<unsigned, unsigned> PairVal = std::make_pair(Val.Reg, Val.SubReg);
-    return DenseMapInfo<std::pair<unsigned, unsigned>>::getHashValue(PairVal);
+    return DenseMapInfo<std::pair<Register, unsigned>>::getHashValue(
+        std::make_pair(Val.Reg, Val.SubReg));
   }
 
   static bool isEqual(const TargetInstrInfo::RegSubRegPair &LHS,
                       const TargetInstrInfo::RegSubRegPair &RHS) {
-    return RegInfo::isEqual(LHS.Reg, RHS.Reg) &&
-           RegInfo::isEqual(LHS.SubReg, RHS.SubReg);
+    return LHS == RHS;
   }
 };
 

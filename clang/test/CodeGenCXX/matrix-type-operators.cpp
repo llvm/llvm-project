@@ -300,7 +300,11 @@ int test_extract_template(MyMatrix<int, 2, 2> Mat1) {
 using double4x4 = double __attribute__((matrix_type(4, 4)));
 
 template <class R, class C>
-auto matrix_subscript(double4x4 m, R r, C c) -> decltype(m[r][c]) {}
+auto matrix_subscript(double4x4 m, R r, C c) -> decltype(m[r][c]) {
+  // FIXME: We can't actually do 'return m[r][c]' here currently.
+  static double d;
+  return d;
+}
 
 double test_matrix_subscript(double4x4 m) {
   // CHECK-LABEL: @_Z21test_matrix_subscriptu11matrix_typeILm4ELm4EdE(
@@ -407,7 +411,7 @@ void test_constexpr2(matrix_type<int, 5, 5> &m) {
   // NOOPT:         [[MAT:%.*]] = load <25 x i32>, ptr {{.*}}, align 4{{$}}
   // OPT:           [[MAT:%.*]] = load <25 x i32>, ptr {{.*}}, align 4, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:    [[SUB:%.*]] = sub <25 x i32> [[IM]], [[MAT]]
-  // CHECK-NEXT:    [[SUB2:%.*]] = add <25 x i32> [[SUB]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  // CHECK-NEXT:    [[SUB2:%.*]] = add <25 x i32> [[SUB]], splat (i32 1)
   // NOOPT-NEXT:    [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8{{$}}
   // OPT-NEXT:      [[MAT_ADDR:%.*]] = load ptr, ptr %m.addr, align 8, !tbaa !{{[0-9]+}}{{$}}
   // CHECK-NEXT:    store <25 x i32> [[SUB2]], ptr [[MAT_ADDR]], align 4

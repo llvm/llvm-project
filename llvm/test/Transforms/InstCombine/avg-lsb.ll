@@ -34,7 +34,7 @@ define i8 @avg_lsb_mismatch(i8 %a, i8 %b) {
 define <2 x i8> @avg_lsb_vector(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: define <2 x i8> @avg_lsb_vector(
 ; CHECK-SAME: <2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]]) {
-; CHECK-NEXT:    [[REM:%.*]] = and <2 x i8> [[A]], <i8 1, i8 1>
+; CHECK-NEXT:    [[REM:%.*]] = and <2 x i8> [[A]], splat (i8 1)
 ; CHECK-NEXT:    [[DIV2:%.*]] = and <2 x i8> [[B]], [[REM]]
 ; CHECK-NEXT:    ret <2 x i8> [[DIV2]]
 ;

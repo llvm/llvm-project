@@ -17,11 +17,13 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <optional>
 #include <vector>
 
 namespace clang {
   class DiagnosticsEngine;
+  class DiagnosticBuilder;
   class SourceLocation;
 
   // Import the diagnostic enums themselves.
@@ -367,11 +369,13 @@ private:
   ///
   /// \returns \c true if the diagnostic was emitted, \c false if it was
   /// suppressed.
-  bool ProcessDiag(DiagnosticsEngine &Diag) const;
+  bool ProcessDiag(DiagnosticsEngine &Diag,
+                   const DiagnosticBuilder &DiagBuilder) const;
 
   /// Used to emit a diagnostic that is finally fully formed,
   /// ignoring suppression.
-  void EmitDiag(DiagnosticsEngine &Diag, Level DiagLevel) const;
+  void EmitDiag(DiagnosticsEngine &Diag, const DiagnosticBuilder &DiagBuilder,
+                Level DiagLevel) const;
 
   /// Whether the diagnostic may leave the AST in a state where some
   /// invariants can break.

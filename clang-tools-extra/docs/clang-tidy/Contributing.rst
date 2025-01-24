@@ -331,7 +331,7 @@ a starting point for your test cases.  A rough outline of the process looks like
 - Issue the necessary diagnostics and fix-its in the ``check`` method.
 - Add the necessary ``CHECK-MESSAGES`` and ``CHECK-FIXES`` annotations to your
   test case to validate the diagnostics and fix-its.
-- Build the target ``check-clang-tool`` to confirm the test passes.
+- Build the target ``check-clang-tools`` to confirm the test passes.
 - Repeat the process until all aspects of your check are covered by tests.
 
 The quickest way to prototype your matcher is to use :program:`clang-query` to
@@ -344,18 +344,20 @@ matching expressions to simplify your matcher.
   clang-query> let c1 cxxRecordDecl()
   clang-query> match c1
 
-Alternatively, pressing the tab key after a previous matcher's open parentheses would also 
-show which matchers can be chained with the previous matcher, though some matchers that work 
-may not be listed.
+Alternatively, pressing the tab key after a previous matcher's open parentheses 
+would also show which matchers can be chained with the previous matcher, 
+though some matchers that work may not be listed. Note that tab completion 
+does not currently work on Windows.
 
-Just like breaking up a huge function into smaller chunks with intention-revealing names 
-can help you understand a complex algorithm, breaking up a matcher into smaller matchers 
-with intention-revealing names can help you understand a complicated matcher.  
+Just like breaking up a huge function into smaller chunks with 
+intention-revealing names can help you understand a complex algorithm, breaking 
+up a matcher into smaller matchers with intention-revealing names can help 
+you understand a complicated matcher.  
 
-Once you have a working clang-query matcher, the C++ API matchers will be the same or similar 
-to your interactively constructed matcher (there can be cases where they differ slightly). 
-You can use local variables to preserve your intention-revealing names that you applied 
-to nested matchers.
+Once you have a working :program:`clang-query` matcher, the C++ API matchers 
+will be the same or similar to your interactively constructed matcher (there 
+can be cases where they differ slightly). You can use local variables to preserve 
+your intention-revealing names that you applied to nested matchers.
 
 Creating private matchers
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -517,8 +519,8 @@ the check implements and what the current values are (e.g. for the
   public:
     MyCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        SomeOption(Options.get("SomeOption1", -1U)),
-        SomeOption(Options.get("SomeOption2", "some default")) {}
+        SomeOption1(Options.get("SomeOption1", -1U)),
+        SomeOption2(Options.get("SomeOption2", "some default")) {}
 
     void storeOptions(ClangTidyOptions::OptionMap &Opts) override {
       Options.store(Opts, "SomeOption1", SomeOption1);

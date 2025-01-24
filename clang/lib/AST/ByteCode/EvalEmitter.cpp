@@ -10,7 +10,6 @@
 #include "Context.h"
 #include "IntegralAP.h"
 #include "Interp.h"
-#include "Opcode.h"
 #include "clang/AST/DeclCXX.h"
 
 using namespace clang;
@@ -38,13 +37,14 @@ EvalEmitter::~EvalEmitter() {
 void EvalEmitter::cleanup() { S.cleanup(); }
 
 EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
-                                            bool ConvertResultToRValue) {
+                                            bool ConvertResultToRValue,
+                                            bool DestroyToplevelScope) {
   S.setEvalLocation(E->getExprLoc());
   this->ConvertResultToRValue = ConvertResultToRValue && !isa<ConstantExpr>(E);
   this->CheckFullyInitialized = isa<ConstantExpr>(E);
   EvalResult.setSource(E);
 
-  if (!this->visitExpr(E)) {
+  if (!this->visitExpr(E, DestroyToplevelScope)) {
     // EvalResult may already have a result set, but something failed
     // after that (e.g. evaluating destructors).
     EvalResult.setInvalid();
@@ -131,16 +131,9 @@ bool EvalEmitter::fallthrough(const LabelTy &Label) {
   return true;
 }
 
-static bool checkReturnState(InterpState &S) {
-  return S.maybeDiagnoseDanglingAllocations();
-}
-
 template <PrimType OpType> bool EvalEmitter::emitRet(const SourceInfo &Info) {
   if (!isActive())
     return true;
-
-  if (!checkReturnState(S))
-    return false;
 
   using T = typename PrimConv<OpType>::T;
   EvalResult.setValue(S.Stk.pop<T>().toAPValue(Ctx.getASTContext()));
@@ -156,9 +149,6 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
   if (!EvalResult.checkReturnValue(S, Ctx, Ptr, Info))
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
-    return false;
-
-  if (!checkReturnState(S))
     return false;
 
   // Implicitly convert lvalue to rvalue, if requested.
@@ -193,16 +183,12 @@ template <> bool EvalEmitter::emitRet<PT_FnPtr>(const SourceInfo &Info) {
   if (!isActive())
     return true;
 
-  if (!checkReturnState(S))
-    return false;
   // Function pointers cannot be converted to rvalues.
   EvalResult.setFunctionPointer(S.Stk.pop<FunctionPointer>());
   return true;
 }
 
 bool EvalEmitter::emitRetVoid(const SourceInfo &Info) {
-  if (!checkReturnState(S))
-    return false;
   EvalResult.setValid();
   return true;
 }
@@ -213,9 +199,6 @@ bool EvalEmitter::emitRetValue(const SourceInfo &Info) {
   if (!EvalResult.checkReturnValue(S, Ctx, Ptr, Info))
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
-    return false;
-
-  if (!checkReturnState(S))
     return false;
 
   if (std::optional<APValue> APV =

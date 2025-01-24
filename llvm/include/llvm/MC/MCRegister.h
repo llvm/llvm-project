@@ -68,6 +68,10 @@ public:
     return FirstPhysicalReg <= Reg && Reg < FirstStackSlot;
   }
 
+  /// Return true if the specified register number is in the physical register
+  /// namespace.
+  constexpr bool isPhysical() const { return isPhysicalRegister(Reg); }
+
   constexpr operator unsigned() const { return Reg; }
 
   /// Check the provided unsigned value is a valid MCRegister.
@@ -91,7 +95,6 @@ public:
   /// Comparisons against register constants. E.g.
   /// * R == AArch64::WZR
   /// * R == 0
-  /// * R == VirtRegMap::NO_PHYS_REG
   constexpr bool operator==(unsigned Other) const { return Reg == Other; }
   constexpr bool operator!=(unsigned Other) const { return Reg != Other; }
   constexpr bool operator==(int Other) const { return Reg == unsigned(Other); }
@@ -107,17 +110,17 @@ public:
 
 // Provide DenseMapInfo for MCRegister
 template <> struct DenseMapInfo<MCRegister> {
-  static inline unsigned getEmptyKey() {
+  static inline MCRegister getEmptyKey() {
     return DenseMapInfo<unsigned>::getEmptyKey();
   }
-  static inline unsigned getTombstoneKey() {
+  static inline MCRegister getTombstoneKey() {
     return DenseMapInfo<unsigned>::getTombstoneKey();
   }
   static unsigned getHashValue(const MCRegister &Val) {
     return DenseMapInfo<unsigned>::getHashValue(Val.id());
   }
   static bool isEqual(const MCRegister &LHS, const MCRegister &RHS) {
-    return DenseMapInfo<unsigned>::isEqual(LHS.id(), RHS.id());
+    return LHS == RHS;
   }
 };
 

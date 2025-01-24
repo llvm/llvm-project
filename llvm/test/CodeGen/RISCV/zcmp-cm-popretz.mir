@@ -73,7 +73,10 @@ body:                   |
     ; CHECK-NO-ZCMP32-NEXT: $x8 = IMPLICIT_DEF
     ; CHECK-NO-ZCMP32-NEXT: $x1 = LW $x2, 12 :: (load (s32) from %stack.0)
     ; CHECK-NO-ZCMP32-NEXT: $x8 = LW $x2, 8 :: (load (s32) from %stack.1)
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x1
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x8
     ; CHECK-NO-ZCMP32-NEXT: $x2 = frame-destroy ADDI $x2, 16
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
     ; CHECK-NO-ZCMP32-NEXT: PseudoRET
     ;
     ; CHECK-NO-ZCMP64-LABEL: name: popret_rvlist5
@@ -89,7 +92,10 @@ body:                   |
     ; CHECK-NO-ZCMP64-NEXT: $x8 = IMPLICIT_DEF
     ; CHECK-NO-ZCMP64-NEXT: $x1 = LD $x2, 8 :: (load (s64) from %stack.0)
     ; CHECK-NO-ZCMP64-NEXT: $x8 = LD $x2, 0 :: (load (s64) from %stack.1)
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x1
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x8
     ; CHECK-NO-ZCMP64-NEXT: $x2 = frame-destroy ADDI $x2, 16
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
     ; CHECK-NO-ZCMP64-NEXT: PseudoRET
     $x1 = IMPLICIT_DEF
     $x8 = IMPLICIT_DEF
@@ -160,7 +166,10 @@ body:                   |
     ; CHECK-NO-ZCMP32-NEXT: $x10 = ADDI $x0, 0
     ; CHECK-NO-ZCMP32-NEXT: $x1 = LW $x2, 12 :: (load (s32) from %stack.0)
     ; CHECK-NO-ZCMP32-NEXT: $x8 = LW $x2, 8 :: (load (s32) from %stack.1)
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x1
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION restore $x8
     ; CHECK-NO-ZCMP32-NEXT: $x2 = frame-destroy ADDI $x2, 16
+    ; CHECK-NO-ZCMP32-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
     ; CHECK-NO-ZCMP32-NEXT: PseudoRET implicit $x10
     ;
     ; CHECK-NO-ZCMP64-LABEL: name: popretz_rvlist5
@@ -177,7 +186,10 @@ body:                   |
     ; CHECK-NO-ZCMP64-NEXT: $x10 = ADDI $x0, 0
     ; CHECK-NO-ZCMP64-NEXT: $x1 = LD $x2, 8 :: (load (s64) from %stack.0)
     ; CHECK-NO-ZCMP64-NEXT: $x8 = LD $x2, 0 :: (load (s64) from %stack.1)
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x1
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION restore $x8
     ; CHECK-NO-ZCMP64-NEXT: $x2 = frame-destroy ADDI $x2, 16
+    ; CHECK-NO-ZCMP64-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
     ; CHECK-NO-ZCMP64-NEXT: PseudoRET implicit $x10
     $x1 = IMPLICIT_DEF
     $x8 = IMPLICIT_DEF

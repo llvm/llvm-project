@@ -397,6 +397,7 @@ public:
     unsigned extraAlign = asDerived()->getExtraLocalDataAlignment();
     size = llvm::alignTo(size, extraAlign);
     size += asDerived()->getExtraLocalDataSize();
+    size = llvm::alignTo(size, asDerived()->getLocalDataAlignment());
     return size;
   }
 
@@ -942,6 +943,7 @@ public:
 
 struct HLSLAttributedResourceLocInfo {
   SourceRange Range;
+  TypeSourceInfo *ContainedTyInfo;
 };
 
 /// Type source information for HLSL attributed resource type.
@@ -952,8 +954,11 @@ class HLSLAttributedResourceTypeLoc
 public:
   TypeLoc getWrappedLoc() const { return getInnerTypeLoc(); }
 
-  TypeLoc getContainedLoc() const {
-    return TypeLoc(getTypePtr()->getContainedType(), getNonLocalData());
+  TypeSourceInfo *getContainedTypeSourceInfo() const {
+    return getLocalData()->ContainedTyInfo;
+  }
+  void setContainedTypeSourceInfo(TypeSourceInfo *TSI) const {
+    getLocalData()->ContainedTyInfo = TSI;
   }
 
   void setSourceRange(const SourceRange &R) { getLocalData()->Range = R; }

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; This used to crash because SelectionDAG::isSplatValue did not set UndefElts
 ; for ISD::SPLAT_VECTOR.

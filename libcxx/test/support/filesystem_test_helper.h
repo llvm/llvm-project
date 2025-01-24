@@ -530,7 +530,7 @@ inline bool ErrorIs(const std::error_code& ec, std::errc First, ErrcT... Rest) {
 // available in single-threaded mode.
 template <class Dur> void SleepFor(Dur dur) {
     using namespace std::chrono;
-#if defined(_LIBCPP_HAS_NO_MONOTONIC_CLOCK)
+#if !_LIBCPP_HAS_MONOTONIC_CLOCK
     using Clock = system_clock;
 #else
     using Clock = steady_clock;
@@ -583,7 +583,11 @@ struct ExceptionChecker {
     assert(ErrorIsImp(Err.code(), {expected_err}));
     assert(Err.path1() == expected_path1);
     assert(Err.path2() == expected_path2);
+#ifndef _WIN32
+    // On Windows, the error strings are windows error code strings, and don't
+    // match textually with the strings generated for generic std::errc::*.
     LIBCPP_ONLY(check_libcxx_string(Err));
+#endif
   }
 
   void check_libcxx_string(fs::filesystem_error const& Err) {

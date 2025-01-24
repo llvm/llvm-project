@@ -18,12 +18,8 @@
 #include "Unix.h"
 #include <limits.h>
 #include <stdio.h>
-#if HAVE_SYS_STAT_H
 #include <sys/stat.h>
-#endif
-#if HAVE_FCNTL_H
 #include <fcntl.h>
-#endif
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -322,7 +318,7 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
       return std::string(real_path);
     break; // Found entry, but realpath failed.
   }
-#elif defined(HAVE_DLFCN_H) && defined(HAVE_DLADDR)
+#elif defined(HAVE_DLOPEN)
   // Use dladdr to get executable path if available.
   Dl_info DLInfo;
   int err = dladdr(MainAddr, &DLInfo);
@@ -487,7 +483,7 @@ static bool is_local_impl(struct STATVFS &Vfs) {
 #ifndef CIFS_MAGIC_NUMBER
 #define CIFS_MAGIC_NUMBER 0xFF534D42
 #endif
-#ifdef __GNU__
+#if defined(__GNU__) && ((__GLIBC__ < 2) || ((__GLIBC__ == 2) && (__GLIBC_MINOR__ < 39)))
   switch ((uint32_t)Vfs.__f_type) {
 #else
   switch ((uint32_t)Vfs.f_type) {

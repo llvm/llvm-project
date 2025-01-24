@@ -30,9 +30,7 @@
 #include <sys/stat.h>
 
 // <fcntl.h> may provide O_BINARY.
-#if defined(HAVE_FCNTL_H)
 # include <fcntl.h>
-#endif
 
 #if defined(HAVE_UNISTD_H)
 # include <unistd.h>
@@ -842,6 +840,10 @@ size_t raw_fd_ostream::preferred_buffer_size() const {
   // complexity.
   if (IsWindowsConsole)
     return 0;
+  return raw_ostream::preferred_buffer_size();
+#elif defined(__MVS__)
+  // The buffer size on z/OS is defined with macro BUFSIZ, which can be
+  // retrieved by invoking function raw_ostream::preferred_buffer_size().
   return raw_ostream::preferred_buffer_size();
 #else
   assert(FD >= 0 && "File not yet open!");

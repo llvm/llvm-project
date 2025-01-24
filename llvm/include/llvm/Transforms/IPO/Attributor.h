@@ -1287,6 +1287,12 @@ struct InformationCache {
     return AG.getAnalysis<TargetLibraryAnalysis>(F);
   }
 
+  /// Return true if \p F has the "kernel" function attribute
+  bool isKernel(const Function &F) {
+    FunctionInfo &FI = getFunctionInfo(F);
+    return FI.IsKernel;
+  }
+
   /// Return true if \p Arg is involved in a must-tail call, thus the argument
   /// of the caller or callee.
   bool isInvolvedInMustTailCall(const Argument &Arg) {
@@ -1341,6 +1347,9 @@ struct InformationCache {
   const ArrayRef<Function *>
   getIndirectlyCallableFunctions(Attributor &A) const;
 
+  /// Return the flat address space if the associated target has.
+  std::optional<unsigned> getFlatAddressSpace() const;
+
 private:
   struct FunctionInfo {
     ~FunctionInfo();
@@ -1358,6 +1367,9 @@ private:
 
     /// Function contains a `musttail` call.
     bool ContainsMustTailCall;
+
+    /// Function has the `"kernel"` attribute
+    bool IsKernel;
   };
 
   /// A map type from functions to informatio about it.
@@ -1475,7 +1487,7 @@ struct AttributorConfig {
   /// The name of the pass running the attributor, used to emit remarks.
   const char *PassName = nullptr;
 
-  using IPOAmendableCBTy = function_ref<bool(const Function &F)>;
+  using IPOAmendableCBTy = std::function<bool(const Function &F)>;
   IPOAmendableCBTy IPOAmendableCB;
 };
 
@@ -3850,7 +3862,7 @@ struct AANoAlias
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+    if (!IRP.getAssociatedType()->isPointerTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
@@ -4217,7 +4229,7 @@ struct AADereferenceable
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+    if (!IRP.getAssociatedType()->isPointerTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
@@ -4361,7 +4373,7 @@ struct AANoCapture
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+    if (!IRP.getAssociatedType()->isPointerTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
@@ -4632,8 +4644,7 @@ struct AAMemoryBehavior
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    if (!IRP.isFunctionScope() &&
-        !IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+    if (!IRP.isFunctionScope() && !IRP.getAssociatedType()->isPointerTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
@@ -5783,6 +5794,53 @@ struct AAPointerInfo : public AbstractAttribute {
     AK_MUST_READ_WRITE = AK_MUST | AK_R | AK_W,
   };
 
+  /// A helper containing a list of offsets computed for a Use. Ideally this
+  /// list should be strictly ascending, but we ensure that only when we
+  /// actually translate the list of offsets to a RangeList.
+  struct OffsetInfo {
+    using VecTy = SmallSet<int64_t, 4>;
+    using const_iterator = VecTy::const_iterator;
+    VecTy Offsets;
+
+    const_iterator begin() const { return Offsets.begin(); }
+    const_iterator end() const { return Offsets.end(); }
+
+    bool operator==(const OffsetInfo &RHS) const {
+      return Offsets == RHS.Offsets;
+    }
+
+    bool operator!=(const OffsetInfo &RHS) const { return !(*this == RHS); }
+
+    bool insert(int64_t Offset) { return Offsets.insert(Offset).second; }
+    bool isUnassigned() const { return Offsets.size() == 0; }
+
+    bool isUnknown() const {
+      if (isUnassigned())
+        return false;
+      if (Offsets.size() == 1)
+        return *Offsets.begin() == AA::RangeTy::Unknown;
+      return false;
+    }
+
+    void setUnknown() {
+      Offsets.clear();
+      Offsets.insert(AA::RangeTy::Unknown);
+    }
+
+    void addToAll(int64_t Inc) {
+      VecTy NewOffsets;
+      for (auto &Offset : Offsets)
+        NewOffsets.insert(Offset + Inc);
+      Offsets = std::move(NewOffsets);
+    }
+
+    /// Copy offsets from \p R into the current list.
+    ///
+    /// Ideally all lists should be strictly ascending, but we defer that to the
+    /// actual use of the list. So we just blindly append here.
+    bool merge(const OffsetInfo &R) { return set_union(Offsets, R.Offsets); }
+  };
+
   /// A container for a list of ranges.
   struct RangeList {
     // The set of ranges rarely contains more than one element, and is unlikely
@@ -6119,6 +6177,8 @@ struct AAPointerInfo : public AbstractAttribute {
   virtual const_bin_iterator begin() const = 0;
   virtual const_bin_iterator end() const = 0;
   virtual int64_t numOffsetBins() const = 0;
+  virtual bool reachesReturn() const = 0;
+  virtual void addReturnedOffsetsTo(OffsetInfo &) const = 0;
 
   /// Call \p CB on all accesses that might interfere with \p Range and return
   /// true if all such accesses were known and the callback returned true for
@@ -6248,7 +6308,7 @@ struct AAAddressSpace : public StateWrapper<BooleanState, AbstractAttribute> {
   /// Return the address space of the associated value. \p NoAddressSpace is
   /// returned if the associated value is dead. This functions is not supposed
   /// to be called if the AA is invalid.
-  virtual int32_t getAddressSpace() const = 0;
+  virtual uint32_t getAddressSpace() const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAAddressSpace &createForPosition(const IRPosition &IRP,
@@ -6266,11 +6326,12 @@ struct AAAddressSpace : public StateWrapper<BooleanState, AbstractAttribute> {
     return (AA->getIdAddr() == &ID);
   }
 
-  // No address space which indicates the associated value is dead.
-  static const int32_t NoAddressSpace = -1;
-
   /// Unique ID (due to the unique address)
   static const char ID;
+
+protected:
+  // Invalid address space which indicates the associated value is dead.
+  static const uint32_t InvalidAddressSpace = ~0U;
 };
 
 struct AAAllocationInfo : public StateWrapper<BooleanState, AbstractAttribute> {

@@ -43,6 +43,7 @@ on:
       - '.github/workflows/release-binaries.yml'
       - '.github/workflows/release-binaries-setup-stage/*'
       - '.github/workflows/release-binaries-save-stage/*'
+      - 'clang/cmake/caches/Release.cmake'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || 'dispatch' }}
@@ -82,7 +83,6 @@ jobs:
       matrix:
         runs-on:
           - ubuntu-22.04
-          - windows-2022
           - macos-13
           - macos-14
 

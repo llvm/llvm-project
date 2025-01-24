@@ -122,6 +122,7 @@ struct OMPTaskDataTy final {
   bool IsReductionWithTaskMod = false;
   bool IsWorksharingReduction = false;
   bool HasNowaitClause = false;
+  bool HasModifier = false;
 };
 
 /// Class intended to support codegen of all kind of the reduction clauses.
@@ -312,12 +313,9 @@ protected:
   llvm::OpenMPIRBuilder OMPBuilder;
 
   /// Helper to determine the min/max number of threads/teams for \p D.
-  void computeMinAndMaxThreadsAndTeams(const OMPExecutableDirective &D,
-                                       CodeGenFunction &CGF,
-                                       int32_t &MinThreadsVal,
-                                       int32_t &MaxThreadsVal,
-                                       int32_t &MinTeamsVal,
-                                       int32_t &MaxTeamsVal);
+  void computeMinAndMaxThreadsAndTeams(
+      const OMPExecutableDirective &D, CodeGenFunction &CGF,
+      llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs &Attrs);
 
   /// Helper to emit outlined function for 'target' directive.
   /// \param D Directive to emit.
@@ -352,7 +350,7 @@ protected:
   /// Emits \p Callee function call with arguments \p Args with location \p Loc.
   void emitCall(CodeGenFunction &CGF, SourceLocation Loc,
                 llvm::FunctionCallee Callee,
-                ArrayRef<llvm::Value *> Args = std::nullopt) const;
+                ArrayRef<llvm::Value *> Args = {}) const;
 
   /// Emits address of the word in a memory where current thread id is
   /// stored.
@@ -557,15 +555,6 @@ protected:
   void emitThreadPrivateVarInit(CodeGenFunction &CGF, Address VDAddr,
                                 llvm::Value *Ctor, llvm::Value *CopyCtor,
                                 llvm::Value *Dtor, SourceLocation Loc);
-
-  /// Emit the array initialization or deletion portion for user-defined mapper
-  /// code generation.
-  void emitUDMapperArrayInitOrDel(CodeGenFunction &MapperCGF,
-                                  llvm::Value *Handle, llvm::Value *BasePtr,
-                                  llvm::Value *Ptr, llvm::Value *Size,
-                                  llvm::Value *MapType, llvm::Value *MapName,
-                                  CharUnits ElementSize,
-                                  llvm::BasicBlock *ExitBB, bool IsInit);
 
   struct TaskResultTy {
     llvm::Value *NewTask = nullptr;
@@ -1543,7 +1532,7 @@ public:
   virtual void
   emitOutlinedFunctionCall(CodeGenFunction &CGF, SourceLocation Loc,
                            llvm::FunctionCallee OutlinedFn,
-                           ArrayRef<llvm::Value *> Args = std::nullopt) const;
+                           ArrayRef<llvm::Value *> Args = {}) const;
 
   /// Emits OpenMP-specific function prolog.
   /// Required for device constructs.

@@ -49,7 +49,8 @@ def CallOp : Func_Op<"call",
     ```
   }];
 
-  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<AnyType>:$operands);
+  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<AnyType>:$operands,
+                       UnitAttr:$no_inline);
   let results = (outs Variadic<AnyType>);
 
   let builders = [
@@ -96,7 +97,7 @@ def CallOp : Func_Op<"call",
 
     /// Set the callee for this operation.
     void setCalleeFromCallable(CallInterfaceCallable callee) {
-      (*this)->setAttr("callee", callee.get<SymbolRefAttr>());
+      (*this)->setAttr("callee", cast<SymbolRefAttr>(callee));
     }
   }];
 
@@ -167,7 +168,7 @@ def CallIndirectOp : Func_Op<"call_indirect", [
 
     /// Set the callee for this operation.
     void setCalleeFromCallable(CallInterfaceCallable callee) {
-      setOperand(0, callee.get<Value>());
+      setOperand(0, cast<Value>(callee));
     }
   }];
 
@@ -183,6 +184,7 @@ def CallIndirectOp : Func_Op<"call_indirect", [
 
 def ConstantOp : Func_Op<"constant",
     [ConstantLike, Pure,
+     DeclareOpInterfaceMethods<SymbolUserOpInterface>,
      DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>]> {
   let summary = "constant";
   let description = [{
@@ -216,7 +218,6 @@ def ConstantOp : Func_Op<"constant",
   }];
 
   let hasFolder = 1;
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -251,7 +252,7 @@ def FuncOp : Func_Op<"func", [
 
     // A function that returns its argument twice:
     func.func @count(%x: i64) -> (i64, i64)
-      attributes {fruit: "banana"} {
+      attributes {fruit = "banana"} {
       return %x, %x: i64, i64
     }
 
@@ -270,7 +271,8 @@ def FuncOp : Func_Op<"func", [
                        TypeAttrOf<FunctionType>:$function_type,
                        OptionalAttr<StrAttr>:$sym_visibility,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
-                       OptionalAttr<DictArrayAttr>:$res_attrs);
+                       OptionalAttr<DictArrayAttr>:$res_attrs,
+                       UnitAttr:$no_inline);
   let regions = (region AnyRegion:$body);
 
   let builders = [OpBuilder<(ins
@@ -350,7 +352,7 @@ def ReturnOp : Func_Op<"return", [Pure, HasParent<"FuncOp">,
     Example:
 
     ```mlir
-    func.func @foo() : (i32, f8) {
+    func.func @foo() -> (i32, f8) {
       ...
       return %0, %1 : i32, f8
     }

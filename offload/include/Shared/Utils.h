@@ -14,7 +14,7 @@
 #ifndef OMPTARGET_SHARED_UTILS_H
 #define OMPTARGET_SHARED_UTILS_H
 
-#include "Types.h"
+#include <stdint.h>
 
 namespace utils {
 
@@ -66,11 +66,6 @@ inline uint32_t popc(uint32_t V) {
 inline uint32_t popc(uint64_t V) {
   static_assert(sizeof(long) == sizeof(uint64_t), "type size mismatch");
   return __builtin_popcountl(V);
-}
-
-template <typename DstTy, typename SrcTy> inline DstTy convertViaPun(SrcTy V) {
-  static_assert(sizeof(DstTy) == sizeof(SrcTy), "Bad conversion");
-  return *((DstTy *)(&V));
 }
 
 } // namespace utils

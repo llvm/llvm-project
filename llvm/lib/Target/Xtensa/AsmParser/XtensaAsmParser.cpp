@@ -45,9 +45,9 @@ class XtensaAsmParser : public MCTargetAsmParser {
 
   ParseStatus parseDirective(AsmToken DirectiveID) override;
   bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
@@ -192,6 +192,11 @@ public:
   bool isImm16_31() const { return isImm(16, 31); }
 
   bool isImm1_16() const { return isImm(1, 16); }
+
+  // Check that value is either equals (-1) or from [1,15] range.
+  bool isImm1n_15() const { return isImm(1, 15) || isImm(-1, -1); }
+
+  bool isImm32n_95() const { return isImm(-32, 95); }
 
   bool isB4const() const {
     if (Kind != Immediate)
@@ -425,7 +430,7 @@ bool XtensaAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   return true;
 }
 
-bool XtensaAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+bool XtensaAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                               OperandVector &Operands,
                                               MCStreamer &Out,
                                               uint64_t &ErrorInfo,
@@ -480,6 +485,12 @@ bool XtensaAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidImm1_16:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected immediate in range [1, 16]");
+  case Match_InvalidImm1n_15:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range [-1, 15] except 0");
+  case Match_InvalidImm32n_95:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range [-32, 95]");
   case Match_InvalidShimm1_31:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected immediate in range [1, 31]");
@@ -730,7 +741,7 @@ bool XtensaAsmParser::ParseInstructionWithSR(ParseInstructionInfo &Info,
   return false;
 }
 
-bool XtensaAsmParser::ParseInstruction(ParseInstructionInfo &Info,
+bool XtensaAsmParser::parseInstruction(ParseInstructionInfo &Info,
                                        StringRef Name, SMLoc NameLoc,
                                        OperandVector &Operands) {
   if (Name.starts_with("wsr") || Name.starts_with("rsr") ||

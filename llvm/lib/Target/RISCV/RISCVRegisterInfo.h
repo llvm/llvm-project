@@ -39,7 +39,7 @@ enum {
 
 /// \returns the IsVRegClass for the register class.
 static inline bool isVRegClass(uint64_t TSFlags) {
-  return TSFlags & IsVRegClassShiftMask >> IsVRegClassShift;
+  return (TSFlags & IsVRegClassShiftMask) >> IsVRegClassShift;
 }
 
 /// \returns the LMUL for the register class.
@@ -102,6 +102,8 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   Register getFrameRegister(const MachineFunction &MF) const override;
 
+  StringRef getRegAsmName(MCRegister Reg) const override;
+
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {
     return true;
   }
@@ -129,24 +131,6 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
                              SmallVectorImpl<MCPhysReg> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
-
-  const TargetRegisterClass *
-  getLargestSuperClass(const TargetRegisterClass *RC) const override {
-    if (RISCV::VRM8RegClass.hasSubClassEq(RC))
-      return &RISCV::VRM8RegClass;
-    if (RISCV::VRM4RegClass.hasSubClassEq(RC))
-      return &RISCV::VRM4RegClass;
-    if (RISCV::VRM2RegClass.hasSubClassEq(RC))
-      return &RISCV::VRM2RegClass;
-    if (RISCV::VRRegClass.hasSubClassEq(RC))
-      return &RISCV::VRRegClass;
-    return RC;
-  }
-
-  bool doesRegClassHavePseudoInitUndef(
-      const TargetRegisterClass *RC) const override {
-    return isVRRegClass(RC);
-  }
 
   static bool isVRRegClass(const TargetRegisterClass *RC) {
     return RISCVRI::isVRegClass(RC->TSFlags) &&

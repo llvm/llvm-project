@@ -11,12 +11,12 @@ define i32 @slp_schedule_bundle() local_unnamed_addr #0 {
 ; CHECK-LABEL: @slp_schedule_bundle(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @b, align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> [[TMP0]], <i32 31, i32 31, i32 31, i32 31>
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> [[TMP1]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> [[TMP0]], splat (i32 31)
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> [[TMP1]], splat (i32 1)
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr @a, align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr getelementptr ([1 x i32], ptr @b, i64 4, i64 0), align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr <2 x i32> [[TMP3]], <i32 31, i32 31>
-; CHECK-NEXT:    [[TMP5:%.*]] = xor <2 x i32> [[TMP4]], <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr <2 x i32> [[TMP3]], splat (i32 31)
+; CHECK-NEXT:    [[TMP5:%.*]] = xor <2 x i32> [[TMP4]], splat (i32 1)
 ; CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr getelementptr ([1 x i32], ptr @a, i64 4, i64 0), align 4
 ; CHECK-NEXT:    ret i32 undef
 ;

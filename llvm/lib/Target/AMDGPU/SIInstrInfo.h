@@ -36,6 +36,8 @@ class RegScavenger;
 class TargetRegisterClass;
 class ScheduleHazardRecognizer;
 
+constexpr unsigned DefaultMemoryClusterDWordsLimit = 8;
+
 /// Mark the MMO of a uniform load if there are no potentially clobbering stores
 /// on any path from the start of an entry function to this load.
 static const MachineMemOperand::Flags MONoClobber =
@@ -52,12 +54,12 @@ struct SIInstrWorklist {
   void insert(MachineInstr *MI);
 
   MachineInstr *top() const {
-    auto iter = InstrList.begin();
+    const auto *iter = InstrList.begin();
     return *iter;
   }
 
   void erase_top() {
-    auto iter = InstrList.begin();
+    const auto *iter = InstrList.begin();
     InstrList.erase(iter);
   }
 
@@ -178,6 +180,9 @@ private:
 
   Register findUsedSGPR(const MachineInstr &MI, int OpIndices[3]) const;
 
+  bool verifyCopy(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                  StringRef &ErrInfo) const;
+
 protected:
   /// If the specific machine instruction is a instruction that moves/copies
   /// value from one register to another register return destination and source
@@ -188,7 +193,9 @@ protected:
   bool swapSourceModifiers(MachineInstr &MI,
                            MachineOperand &Src0, unsigned Src0OpName,
                            MachineOperand &Src1, unsigned Src1OpName) const;
-
+  bool isLegalToSwap(const MachineInstr &MI, unsigned fromIdx,
+                     const MachineOperand *fromMO, unsigned toIdx,
+                     const MachineOperand *toMO) const;
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx0,
                                        unsigned OpIdx1) const override;
@@ -237,6 +244,8 @@ public:
   bool areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1, int64_t &Offset0,
                                int64_t &Offset1) const override;
 
+  bool isGlobalMemoryObject(const MachineInstr *MI) const override;
+
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
@@ -273,18 +282,17 @@ public:
                     MachineBasicBlock::iterator I, const DebugLoc &DL,
                     Register SrcReg, int Value)  const;
 
-  void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MI, Register SrcReg,
-                           bool isKill, int FrameIndex,
-                           const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI,
-                           Register VReg) const override;
+  void storeRegToStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
-  void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MI, Register DestReg,
-                            int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI,
-                            Register VReg) const override;
+  void loadRegFromStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
+      int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
@@ -943,8 +951,8 @@ public:
            Opcode == AMDGPU::S_BARRIER_INIT_IMM ||
            Opcode == AMDGPU::S_BARRIER_JOIN_IMM ||
            Opcode == AMDGPU::S_BARRIER_LEAVE ||
-           Opcode == AMDGPU::DS_GWS_INIT ||
-           Opcode == AMDGPU::DS_GWS_BARRIER;
+           Opcode == AMDGPU::S_BARRIER_LEAVE_IMM ||
+           Opcode == AMDGPU::DS_GWS_INIT || Opcode == AMDGPU::DS_GWS_BARRIER;
   }
 
   static bool isF16PseudoScalarTrans(unsigned Opcode) {
@@ -962,6 +970,13 @@ public:
   bool doesNotReadTiedSource(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::TiedSourceNotRead;
   }
+
+  bool isIGLP(unsigned Opcode) const {
+    return Opcode == AMDGPU::SCHED_BARRIER ||
+           Opcode == AMDGPU::SCHED_GROUP_BARRIER || Opcode == AMDGPU::IGLP_OPT;
+  }
+
+  bool isIGLP(const MachineInstr &MI) const { return isIGLP(MI.getOpcode()); }
 
   static unsigned getNonSoftWaitcntOpcode(unsigned Opcode) {
     switch (Opcode) {
@@ -1112,6 +1127,12 @@ public:
                        const MachineOperand &MO,
                        const MCOperandInfo &OpInfo) const;
 
+  bool usesConstantBus(const MachineRegisterInfo &MRI, const MachineInstr &MI,
+                       int OpIdx) const {
+    return usesConstantBus(MRI, MI.getOperand(OpIdx),
+                           MI.getDesc().operands()[OpIdx]);
+  }
+
   /// Return true if this instruction has any modifiers.
   ///  e.g. src[012]_mod, omod, clamp.
   bool hasModifiers(unsigned Opcode) const;
@@ -1198,11 +1219,13 @@ public:
                           const MachineOperand &MO) const;
 
   /// Check if \p MO (a register operand) is a legal register for the
-  /// given operand description.
+  /// given operand description or operand index.
+  /// The operand index version provide more legality checks
   bool isLegalRegOperand(const MachineRegisterInfo &MRI,
                          const MCOperandInfo &OpInfo,
                          const MachineOperand &MO) const;
-
+  bool isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
+                         const MachineOperand &MO) const;
   /// Legalize operands in \p MI by either commuting it or inserting a
   /// copy of src1.
   void legalizeOperandsVOP2(MachineRegisterInfo &MRI, MachineInstr &MI) const;
@@ -1210,12 +1233,14 @@ public:
   /// Fix operands in \p MI to satisfy constant bus requirements.
   void legalizeOperandsVOP3(MachineRegisterInfo &MRI, MachineInstr &MI) const;
 
-  /// Copy a value from a VGPR (\p SrcReg) to SGPR.  This function can only
-  /// be used when it is know that the value in SrcReg is same across all
-  /// threads in the wave.
+  /// Copy a value from a VGPR (\p SrcReg) to SGPR. The desired register class
+  /// for the dst register (\p DstRC) can be optionally supplied. This function
+  /// can only be used when it is know that the value in SrcReg is same across
+  /// all threads in the wave.
   /// \returns The SGPR register that \p SrcReg was copied to.
   Register readlaneVGPRToSGPR(Register SrcReg, MachineInstr &UseMI,
-                              MachineRegisterInfo &MRI) const;
+                              MachineRegisterInfo &MRI,
+                              const TargetRegisterClass *DstRC = nullptr) const;
 
   void legalizeOperandsSMRD(MachineRegisterInfo &MRI, MachineInstr &MI) const;
   void legalizeOperandsFLAT(MachineRegisterInfo &MRI, MachineInstr &MI) const;
@@ -1437,8 +1462,6 @@ public:
   // This is used if an operand is a 32 bit register but needs to be aligned
   // regardless.
   void enforceOperandRCAlignment(MachineInstr &MI, unsigned OpName) const;
-
-  static Register findSetInactiveMask(const MachineInstr &MI);
 };
 
 /// \brief Returns true if a reg:subreg pair P has a TRC class
@@ -1558,6 +1581,11 @@ namespace AMDGPU {
   /// \returns earlyclobber version of a MAC MFMA is exists.
   LLVM_READONLY
   int getMFMAEarlyClobberOp(uint16_t Opcode);
+
+  /// \returns Version of an MFMA instruction which uses AGPRs for srcC and
+  /// vdst, given an \p Opcode of an MFMA which uses VGPRs for srcC/vdst.
+  LLVM_READONLY
+  int getMFMASrcCVDstAGPROp(uint16_t Opcode);
 
   /// \returns v_cmpx version of a v_cmp instruction.
   LLVM_READONLY

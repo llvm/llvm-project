@@ -268,6 +268,13 @@ DWARF:
   EXPECT_EQ(found_mismatch, expect_mismatch);
   EXPECT_EQ(sdk.IsAppleInternalSDK(), expect_internal_sdk);
   EXPECT_NE(sdk.GetString().find(expect_sdk_path_pattern), std::string::npos);
+
+  {
+    auto sdk_or_err =
+        platform_sp->GetSDKPathFromDebugInfo(*dwarf_cu->GetLLDBCompUnit());
+    ASSERT_TRUE(static_cast<bool>(sdk_or_err));
+    EXPECT_EQ(sdk.IsAppleInternalSDK(), expect_internal_sdk);
+  }
 }
 
 SDKPathParsingTestData sdkPathParsingTestCases[] = {
@@ -312,6 +319,6 @@ SDKPathParsingTestData sdkPathParsingTestCases[] = {
      .expect_sdk_path_pattern = "iPhoneOS14.1.sdk"},
 };
 
-INSTANTIATE_TEST_CASE_P(SDKPathParsingTests, SDKPathParsingMultiparamTests,
-                        ::testing::ValuesIn(sdkPathParsingTestCases));
+INSTANTIATE_TEST_SUITE_P(SDKPathParsingTests, SDKPathParsingMultiparamTests,
+                         ::testing::ValuesIn(sdkPathParsingTestCases));
 #endif

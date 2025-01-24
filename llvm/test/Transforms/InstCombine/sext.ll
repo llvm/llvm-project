@@ -143,8 +143,8 @@ define i32 @test10(i32 %i) {
 
 define <2 x i32> @test10_vec(<2 x i32> %i) {
 ; CHECK-LABEL: @test10_vec(
-; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i32> [[I:%.*]], <i32 30, i32 30>
-; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i32> [[D1]], <i32 30, i32 30>
+; CHECK-NEXT:    [[D1:%.*]] = shl <2 x i32> [[I:%.*]], splat (i32 30)
+; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i32> [[D1]], splat (i32 30)
 ; CHECK-NEXT:    ret <2 x i32> [[D]]
 ;
   %A = trunc <2 x i32> %i to <2 x i8>
@@ -338,8 +338,8 @@ define <2 x i32> @smear_set_bit_vec_use1(<2 x i32> %x) {
 ; CHECK-LABEL: @smear_set_bit_vec_use1(
 ; CHECK-NEXT:    [[T:%.*]] = trunc <2 x i32> [[X:%.*]] to <2 x i5>
 ; CHECK-NEXT:    call void @use_vec(<2 x i5> [[T]])
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> [[X]], <i32 27, i32 27>
-; CHECK-NEXT:    [[S:%.*]] = ashr <2 x i32> [[TMP1]], <i32 31, i32 31>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> [[X]], splat (i32 27)
+; CHECK-NEXT:    [[S:%.*]] = ashr <2 x i32> [[TMP1]], splat (i32 31)
 ; CHECK-NEXT:    ret <2 x i32> [[S]]
 ;
   %t = trunc <2 x i32> %x to <2 x i5>

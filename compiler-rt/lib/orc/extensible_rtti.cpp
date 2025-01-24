@@ -16,9 +16,9 @@
 
 #include "extensible_rtti.h"
 
-namespace __orc_rt {
+namespace orc_rt {
 
 char RTTIRoot::ID = 0;
 void RTTIRoot::anchor() {}
 
-} // end namespace __orc_rt
+} // namespace orc_rt

@@ -21,6 +21,7 @@
 #include "llvm/ProfileData/InstrProfWriter.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfReader.h"
+#include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
@@ -332,15 +333,22 @@ cl::opt<bool> DoWritePrevVersion(
 cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
     "memprof-version", cl::Hidden, cl::sub(MergeSubcommand),
     cl::desc("Specify the version of the memprof format to use"),
-    cl::init(memprof::Version0),
-    cl::values(clEnumValN(memprof::Version0, "0", "version 0"),
-               clEnumValN(memprof::Version1, "1", "version 1"),
-               clEnumValN(memprof::Version2, "2", "version 2"),
+    cl::init(memprof::Version3),
+    cl::values(clEnumValN(memprof::Version2, "2", "version 2"),
                clEnumValN(memprof::Version3, "3", "version 3")));
 
 cl::opt<bool> MemProfFullSchema(
     "memprof-full-schema", cl::Hidden, cl::sub(MergeSubcommand),
     cl::desc("Use the full schema for serialization"), cl::init(false));
+
+static cl::opt<bool>
+    MemprofGenerateRandomHotness("memprof-random-hotness", cl::init(false),
+                                 cl::Hidden, cl::sub(MergeSubcommand),
+                                 cl::desc("Generate random hotness values"));
+static cl::opt<unsigned> MemprofGenerateRandomHotnessSeed(
+    "memprof-random-hotness-seed", cl::init(0), cl::Hidden,
+    cl::sub(MergeSubcommand),
+    cl::desc("Random hotness seed to use (0 to generate new seed)"));
 
 // Options specific to overlap subcommand.
 cl::opt<std::string> BaseFilename(cl::Positional, cl::Required,
@@ -367,7 +375,7 @@ cl::opt<unsigned long long> OverlapValueCutoff(
     cl::desc(
         "Function level overlap information for every function (with calling "
         "context for csspgo) in test "
-        "profile with max count value greater then the parameter value"),
+        "profile with max count value greater than the parameter value"),
     cl::sub(OverlapSubcommand));
 
 // Options specific to show subcommand.
@@ -641,7 +649,8 @@ struct WriterContext {
                 SmallSet<instrprof_error, 4> &WriterErrorCodes,
                 uint64_t ReservoirSize = 0, uint64_t MaxTraceLength = 0)
       : Writer(IsSparse, ReservoirSize, MaxTraceLength, DoWritePrevVersion,
-               MemProfVersionRequested, MemProfFullSchema),
+               MemProfVersionRequested, MemProfFullSchema,
+               MemprofGenerateRandomHotness, MemprofGenerateRandomHotnessSeed),
         ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {}
 };
 
@@ -711,33 +720,44 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
                               Filename);
     };
 
-    // Add the frame mappings into the writer context.
-    const auto &IdToFrame = Reader->getFrameMapping();
-    for (const auto &I : IdToFrame) {
-      bool Succeeded = WC->Writer.addMemProfFrame(
-          /*Id=*/I.first, /*Frame=*/I.getSecond(), MemProfError);
-      // If we weren't able to add the frame mappings then it doesn't make sense
-      // to try to add the records from this profile.
-      if (!Succeeded)
-        return;
+    WC->Writer.addMemProfData(Reader->takeMemProfData(), MemProfError);
+    return;
+  }
+
+  using ::llvm::memprof::YAMLMemProfReader;
+  if (YAMLMemProfReader::hasFormat(Input.Filename)) {
+    auto ReaderOrErr = YAMLMemProfReader::create(Input.Filename);
+    if (!ReaderOrErr)
+      exitWithError(ReaderOrErr.takeError(), Input.Filename);
+    std::unique_ptr<YAMLMemProfReader> Reader = std::move(ReaderOrErr.get());
+    // Check if the profile types can be merged, e.g. clang frontend profiles
+    // should not be merged with memprof profiles.
+    if (Error E = WC->Writer.mergeProfileKind(Reader->getProfileKind())) {
+      consumeError(std::move(E));
+      WC->Errors.emplace_back(
+          make_error<StringError>(
+              "Cannot merge MemProf profile with incompatible profile.",
+              std::error_code()),
+          Filename);
+      return;
     }
 
-    // Add the call stacks into the writer context.
-    const auto &CSIdToCallStacks = Reader->getCallStacks();
-    for (const auto &I : CSIdToCallStacks) {
-      bool Succeeded = WC->Writer.addMemProfCallStack(
-          /*Id=*/I.first, /*Frame=*/I.getSecond(), MemProfError);
-      // If we weren't able to add the call stacks then it doesn't make sense
-      // to try to add the records from this profile.
-      if (!Succeeded)
-        return;
+    auto MemProfError = [&](Error E) {
+      auto [ErrorCode, Msg] = InstrProfError::take(std::move(E));
+      WC->Errors.emplace_back(make_error<InstrProfError>(ErrorCode, Msg),
+                              Filename);
+    };
+
+    auto MemProfData = Reader->takeMemProfData();
+
+    // Check for the empty input in case the YAML file is invalid.
+    if (MemProfData.Records.empty()) {
+      WC->Errors.emplace_back(
+          make_error<StringError>("The profile is empty.", std::error_code()),
+          Filename);
     }
 
-    const auto &FunctionProfileData = Reader->getProfileData();
-    // Add the memprof records into the writer context.
-    for (const auto &[GUID, Record] : FunctionProfileData) {
-      WC->Writer.addMemProfRecord(GUID, Record);
-    }
+    WC->Writer.addMemProfData(std::move(MemProfData), MemProfError);
     return;
   }
 
@@ -1220,11 +1240,9 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
       }
     }
 
-    if (!StaticFuncMap.contains(NewName)) {
-      StaticFuncMap[NewName] = Name;
-    } else {
-      StaticFuncMap[NewName] = DuplicateNameStr;
-    }
+    auto [It, Inserted] = StaticFuncMap.try_emplace(NewName, Name);
+    if (!Inserted)
+      It->second = DuplicateNameStr;
   };
 
   // We need to flatten the SampleFDO profile as the InstrFDO
@@ -1299,7 +1317,7 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
       } else {
         auto NewName = StaticFuncMap.find(Name);
         if (NewName != StaticFuncMap.end()) {
-          It = InstrProfileMap.find(NewName->second.str());
+          It = InstrProfileMap.find(NewName->second);
           if (NewName->second != DuplicateNameStr) {
             NewRootName = &NewName->second;
           }
@@ -1384,7 +1402,7 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
     if (It == InstrProfileMap.end()) {
       auto NewName = StaticFuncMap.find(Name);
       if (NewName != StaticFuncMap.end()) {
-        It = InstrProfileMap.find(NewName->second.str());
+        It = InstrProfileMap.find(NewName->second);
         if (NewName->second == DuplicateNameStr) {
           WithColor::warning()
               << "Static function " << Name
@@ -2987,20 +3005,20 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   std::unique_ptr<ProfileSummary> PS(Builder.getSummary());
   bool IsIR = Reader->isIRLevelProfile();
   OS << "Instrumentation level: " << (IsIR ? "IR" : "Front-end");
-  if (IsIR)
+  if (IsIR) {
     OS << "  entry_first = " << Reader->instrEntryBBEnabled();
+    OS << "  instrument_loop_entries = " << Reader->instrLoopEntriesEnabled();
+  }
   OS << "\n";
   if (ShowAllFunctions || !FuncNameFilter.empty())
     OS << "Functions shown: " << ShownFunctions << "\n";
-  OS << "Total functions: " << PS->getNumFunctions() << "\n";
+  PS->printSummary(OS);
   if (ShowValueCutoff > 0) {
     OS << "Number of functions with maximum count (< " << ShowValueCutoff
        << "): " << BelowCutoffFunctions << "\n";
     OS << "Number of functions with maximum count (>= " << ShowValueCutoff
        << "): " << PS->getNumFunctions() - BelowCutoffFunctions << "\n";
   }
-  OS << "Maximum function count: " << PS->getMaxFunctionCount() << "\n";
-  OS << "Maximum internal block count: " << PS->getMaxInternalCount() << "\n";
 
   if (TopNFunctions) {
     std::vector<std::pair<std::string, uint64_t>> SortedHottestFuncs;
@@ -3030,11 +3048,8 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     showValueSitesStats(OS, IPVK_MemOPSize, VPStats[IPVK_MemOPSize]);
   }
 
-  if (ShowDetailedSummary) {
-    OS << "Total number of blocks: " << PS->getNumCounts() << "\n";
-    OS << "Total count: " << PS->getTotalCount() << "\n";
+  if (ShowDetailedSummary)
     PS->printDetailedSummary(OS);
-  }
 
   if (ShowBinaryIds)
     if (Error E = Reader->printBinaryIds(OS))
@@ -3260,18 +3275,38 @@ static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
 static int showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Json)
     exitWithError("JSON output is not supported for MemProf");
-  auto ReaderOr = llvm::memprof::RawMemProfReader::create(
-      Filename, ProfiledBinary, /*KeepNames=*/true);
-  if (Error E = ReaderOr.takeError())
-    // Since the error can be related to the profile or the binary we do not
-    // pass whence. Instead additional context is provided where necessary in
-    // the error message.
-    exitWithError(std::move(E), /*Whence*/ "");
 
-  std::unique_ptr<llvm::memprof::RawMemProfReader> Reader(
-      ReaderOr.get().release());
+  // Show the raw profile in YAML.
+  if (memprof::RawMemProfReader::hasFormat(Filename)) {
+    auto ReaderOr = llvm::memprof::RawMemProfReader::create(
+        Filename, ProfiledBinary, /*KeepNames=*/true);
+    if (Error E = ReaderOr.takeError()) {
+      // Since the error can be related to the profile or the binary we do not
+      // pass whence. Instead additional context is provided where necessary in
+      // the error message.
+      exitWithError(std::move(E), /*Whence*/ "");
+    }
 
-  Reader->printYAML(OS);
+    std::unique_ptr<llvm::memprof::RawMemProfReader> Reader(
+        ReaderOr.get().release());
+
+    Reader->printYAML(OS);
+    return 0;
+  }
+
+  // Show the indexed MemProf profile in YAML.
+  auto FS = vfs::getRealFileSystem();
+  auto ReaderOrErr = IndexedInstrProfReader::create(Filename, *FS);
+  if (Error E = ReaderOrErr.takeError())
+    exitWithError(std::move(E), Filename);
+
+  auto Reader = std::move(ReaderOrErr.get());
+  memprof::AllMemProfData Data = Reader->getAllMemProfData();
+  // Construct yaml::Output with the maximum column width of 80 so that each
+  // Frame fits in one line.
+  yaml::Output Yout(OS, nullptr, 80);
+  Yout << Data;
+
   return 0;
 }
 
@@ -3415,8 +3450,9 @@ int llvm_profdata_main(int argc, char **argvNonConst,
   StringRef ProgName(sys::path::filename(argv[0]));
 
   if (argc < 2) {
-    errs() << ProgName
-           << ": No subcommand specified! Run llvm-profata --help for usage.\n";
+    errs()
+        << ProgName
+        << ": No subcommand specified! Run llvm-profdata --help for usage.\n";
     return 1;
   }
 

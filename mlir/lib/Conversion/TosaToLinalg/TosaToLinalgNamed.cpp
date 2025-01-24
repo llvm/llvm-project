@@ -88,15 +88,14 @@ linalgIntBroadcastExtSIAdd(PatternRewriter &rewriter, Location loc, Value bias,
       .getResult(0);
 }
 
-// Broadcast the source value to all the outer dimensions of the result value.
-// If required, the element type is expanded using an arith.extsi operation.
-static mlir::Value linalgBroadcastAndMaybeExtSI(PatternRewriter &rewriter,
-                                                Location loc, Value source,
-                                                Value result) {
+// Construct the affine map that a linalg generic would use to broadcast the
+// source tensor into the shape of the result tensor.
+static AffineMap getBroadcastingMap(PatternRewriter &rewriter, Value source,
+                                    Value result) {
   ShapedType resultTy = cast<ShapedType>(result.getType());
   ShapedType sourceTy = cast<ShapedType>(source.getType());
-  int64_t resultRank = resultTy.getRank();
-  int64_t sourceRank = sourceTy.getRank();
+  const int64_t resultRank = resultTy.getRank();
+  const int64_t sourceRank = sourceTy.getRank();
 
   // The source tensor is broadcast to all the outer dimensions of the
   // result tensor.
@@ -115,14 +114,21 @@ static mlir::Value linalgBroadcastAndMaybeExtSI(PatternRewriter &rewriter,
     }
   }
 
-  // Creating maps for the input and output of the broacast-like generic op.
-  SmallVector<AffineMap, 2> indexingMaps = {
-      // Broadcast the last dimension of the bias to all output dimensions.
-      AffineMap::get(/*dimCount=*/resultRank,
-                     /*symbolCount=*/0, sourceDims, rewriter.getContext()),
+  return AffineMap::get(/*dimCount=*/resultRank,
+                        /*symbolCount=*/0, sourceDims, rewriter.getContext());
+}
 
-      // Output indexing map.
-      rewriter.getMultiDimIdentityMap(resultRank)};
+// Broadcast the source value to all the outer dimensions of the result value.
+// If required, the element type is expanded using an arith.extsi operation.
+static mlir::Value linalgBroadcastAndMaybeExtSI(PatternRewriter &rewriter,
+                                                Location loc, Value source,
+                                                Value result) {
+  ShapedType resultTy = cast<ShapedType>(result.getType());
+  const int64_t resultRank = resultTy.getRank();
+  // Creating maps for the input and output of the broacast-like generic op.
+  SmallVector<AffineMap, 2> indexingMaps;
+  indexingMaps.push_back(getBroadcastingMap(rewriter, source, result));
+  indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultRank));
 
   // Build the broadcast-like operation as a linalg.generic.
   return rewriter
@@ -313,7 +319,7 @@ public:
         // convolution operation.
         // TODO(suderman): See if this can be efficiently folded - check whether
         // the input is used anywhere else, if not fold the constant.
-        SmallVector<int64_t> weightPerm;
+        SmallVector<int32_t> weightPerm;
         for (int i = 1; i < resultTy.getRank(); i++)
           weightPerm.push_back(i);
         weightPerm.push_back(0);
@@ -321,7 +327,7 @@ public:
         SmallVector<int64_t> newWeightShape;
         for (auto dim : weightPerm)
           newWeightShape.push_back(weightShape[dim]);
-        auto weightPermAttr = rewriter.getI64TensorAttr(weightPerm);
+        auto weightPermAttr = rewriter.getI32TensorAttr(weightPerm);
         Value weightPermValue =
             rewriter.create<arith::ConstantOp>(loc, weightPermAttr);
         Type newWeightTy =
@@ -337,7 +343,7 @@ public:
     if (5 == inputTy.getRank()) {
       // TODO(suderman): See if this can be efficiently folded - check whether
       // the input is used anywhere else, if not fold the constant.
-      SmallVector<int64_t> weightPerm;
+      SmallVector<int32_t> weightPerm;
       for (int i = 1; i < resultTy.getRank(); i++)
         weightPerm.push_back(i);
       weightPerm.push_back(0);
@@ -345,7 +351,7 @@ public:
       SmallVector<int64_t> newWeightShape;
       for (auto dim : weightPerm)
         newWeightShape.push_back(weightShape[dim]);
-      auto weightPermAttr = rewriter.getI64TensorAttr(weightPerm);
+      auto weightPermAttr = rewriter.getI32TensorAttr(weightPerm);
       Value weightPermValue =
           rewriter.create<arith::ConstantOp>(loc, weightPermAttr);
       Type newWeightTy =
@@ -488,14 +494,6 @@ public:
                                weightShape[2], weightShape[3]},
                               resultETy);
 
-    // Broadcast the initial value to the output tensor before convolving.
-    SmallVector<AffineMap, 4> indexingMaps;
-    indexingMaps.push_back(AffineMap::get(
-        /*dimCount=*/resultRank, /*symbolCount=*/0,
-        {rewriter.getAffineDimExpr(3)}, rewriter.getContext()));
-    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultRank));
-    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultRank));
-
     auto resultZeroAttr = rewriter.getZeroAttr(resultETy);
     Value emptyTensor = rewriter.create<tensor::EmptyOp>(
         loc, linalgConvTy.getShape(), resultETy, filteredDims);
@@ -507,6 +505,13 @@ public:
 
     Value biasEmptyTensor = rewriter.create<tensor::EmptyOp>(
         loc, resultTy.getShape(), resultETy, filteredDims);
+
+    // Broadcast the initial value to the output tensor before convolving.
+    SmallVector<AffineMap, 4> indexingMaps;
+    indexingMaps.push_back(getBroadcastingMap(rewriter, bias, biasEmptyTensor));
+    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultRank));
+    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultRank));
+
     if (!isQuantized) {
       Value conv = rewriter
                        .create<linalg::DepthwiseConv2DNhwcHwcmOp>(
@@ -643,12 +648,12 @@ public:
 
     SmallVector<Value> filteredDims = condenseValues(dynDims);
 
-    SmallVector<int64_t> permutation{1, 0};
+    SmallVector<int64_t> permutation = {1, 0};
     auto permutationAttr = rewriter.getI64TensorAttr(permutation);
     Value permutationValue =
         rewriter.create<arith::ConstantOp>(loc, permutationAttr);
 
-    SmallVector<int64_t> newWeightShape{weightShape[1], weightShape[0]};
+    SmallVector<int64_t> newWeightShape = {weightShape[1], weightShape[0]};
     Type newWeightTy =
         RankedTensorType::get(newWeightShape, weightTy.getElementType());
 
@@ -690,17 +695,18 @@ public:
   }
 };
 
-class MaxPool2dConverter : public OpRewritePattern<tosa::MaxPool2dOp> {
+class MaxPool2dConverter : public OpConversionPattern<tosa::MaxPool2dOp> {
 public:
-  using OpRewritePattern<tosa::MaxPool2dOp>::OpRewritePattern;
+  using OpConversionPattern::OpConversionPattern;
 
   // Compute the dynamic output sizes of the maxpool operation.
   static SmallVector<Value>
-  computeDynamicOutputSizes(tosa::MaxPool2dOp op, PatternRewriter &rewriter) {
+  computeDynamicOutputSizes(tosa::MaxPool2dOp op, OpAdaptor adaptor,
+                            ConversionPatternRewriter &rewriter) {
     TensorType resultTy = op.getType();
     Location loc = op.getLoc();
 
-    TypedValue<TensorType> input = op.getInput();
+    Value input = adaptor.getInput();
     ArrayRef<int64_t> kernel = op.getKernel();
     ArrayRef<int64_t> pad = op.getPad();
     ArrayRef<int64_t> stride = op.getStride();
@@ -739,16 +745,22 @@ public:
     return dynamicDims;
   }
 
-  LogicalResult matchAndRewrite(tosa::MaxPool2dOp op,
-                                PatternRewriter &rewriter) const final {
+  LogicalResult
+  matchAndRewrite(tosa::MaxPool2dOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
     Location loc = op.getLoc();
-    TypedValue<TensorType> input = op.getInput();
-    ShapedType inputTy = input.getType();
+    Value input = adaptor.getInput();
+    ShapedType inputTy = cast<ShapedType>(input.getType());
 
-    ShapedType resultTy = op.getType();
+    bool isUnsigned = op.getType().getElementType().isUnsignedInteger();
+    ShapedType resultTy =
+        cast<ShapedType>(getTypeConverter()->convertType(op.getType()));
+    if (!resultTy)
+      return rewriter.notifyMatchFailure(op, "failed to convert type");
     Type resultETy = inputTy.getElementType();
 
-    SmallVector<Value> dynamicDims = computeDynamicOutputSizes(op, rewriter);
+    SmallVector<Value> dynamicDims =
+        computeDynamicOutputSizes(op, adaptor, rewriter);
 
     // Determine what the initial value needs to be for the max pool op.
     TypedAttr initialAttr;
@@ -757,7 +769,10 @@ public:
           resultETy, APFloat::getLargest(
                          cast<FloatType>(resultETy).getFloatSemantics(), true));
 
-    if (isa<IntegerType>(resultETy))
+    else if (isUnsigned)
+      initialAttr = rewriter.getIntegerAttr(
+          resultETy, APInt::getZero(resultETy.getIntOrFloatBitWidth()));
+    else if (isa<IntegerType>(resultETy))
       initialAttr = rewriter.getIntegerAttr(
           resultETy,
           APInt::getSignedMinValue(resultETy.getIntOrFloatBitWidth()));
@@ -793,9 +808,15 @@ public:
     Value fakeWindowDims =
         rewriter.create<tensor::EmptyOp>(loc, kernel, resultETy);
 
-    rewriter.replaceOpWithNewOp<linalg::PoolingNhwcMaxOp>(
-        op, ArrayRef<Type>{resultTy}, ValueRange{paddedInput, fakeWindowDims},
-        filledEmptyTensor, strideAttr, dilationAttr);
+    if (isUnsigned) {
+      rewriter.replaceOpWithNewOp<linalg::PoolingNhwcMaxUnsignedOp>(
+          op, ArrayRef<Type>{resultTy}, ValueRange{paddedInput, fakeWindowDims},
+          filledEmptyTensor, strideAttr, dilationAttr);
+    } else {
+      rewriter.replaceOpWithNewOp<linalg::PoolingNhwcMaxOp>(
+          op, ArrayRef<Type>{resultTy}, ValueRange{paddedInput, fakeWindowDims},
+          filledEmptyTensor, strideAttr, dilationAttr);
+    }
     return success();
   }
 };
@@ -1040,29 +1061,33 @@ public:
 
   LogicalResult matchAndRewrite(tosa::TransposeOp op,
                                 PatternRewriter &rewriter) const final {
-    SmallVector<int64_t> constantPerms;
+    SmallVector<int32_t> constantPerms;
     if (failed(op.getConstantPerms(constantPerms)))
       return failure();
 
     Location loc = op.getLoc();
-    // The verifier should have made sure we have a valid permutation tensor.
-    assert(isPermutationVector(constantPerms) && "Expected valid permutation");
+    // The verifier should have made sure we have a valid TOSA permutation
+    // tensor. isPermutationVector doesn't actually check the TOSA perms we
+    // expect.
     SmallVector<OpFoldResult> inputSizes =
         tensor::getMixedSizes(rewriter, loc, op.getInput1());
     auto permutedSizes =
-        applyPermutation<OpFoldResult>(inputSizes, constantPerms);
+        applyTOSAPermutation<OpFoldResult>(inputSizes, constantPerms);
 
     auto permutedInit = rewriter.create<tensor::EmptyOp>(
         loc, permutedSizes, op.getInput1().getType().getElementType());
     rewriter.replaceOpWithNewOp<linalg::TransposeOp>(
-        op, op.getInput1(), permutedInit, constantPerms);
+        op, op.getInput1(), permutedInit,
+        llvm::to_vector(llvm::map_range(
+            constantPerms, [](int32_t v) -> int64_t { return v; })));
     return success();
   }
 };
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgNamedConversionPatterns(
-    RewritePatternSet *patterns, const TosaToLinalgNamedOptions &options) {
+    const TypeConverter &converter, RewritePatternSet *patterns,
+    const TosaToLinalgNamedOptions &options) {
   if (options.preferConv2DKernelLayoutHWCF) {
     patterns->add<ConvConverter<tosa::Conv2DOp, linalg::Conv2DNhwcHwcfOp,
                                 linalg::Conv2DNhwcHwcfQOp>>(
@@ -1077,10 +1102,13 @@ void mlir::tosa::populateTosaToLinalgNamedConversionPatterns(
       ConvConverter<tosa::Conv3DOp, linalg::Conv3DNdhwcDhwcfOp, linalg::Conv3DNdhwcDhwcfQOp>,
       DepthwiseConvConverter,
       MatMulConverter,
-      MaxPool2dConverter,
       AvgPool2dConverter,
       FullyConnectedConverter,
       TransposeConverter
   >(patterns->getContext());
+
+  patterns->add<
+      MaxPool2dConverter
+    >(converter, patterns->getContext());
   // clang-format on
 }

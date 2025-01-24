@@ -303,6 +303,18 @@ COVMAP_HEADER(uint32_t, Int32Ty, Version, \
 #undef COVMAP_HEADER
 /* COVMAP_HEADER end.  */
 
+/* COVINIT_FUNC start */
+#ifndef COVINIT_FUNC
+#define COVINIT_FUNC(Type, LLVMType, Name, Initializer)
+#else
+#define INSTR_PROF_DATA_DEFINED
+#endif
+COVINIT_FUNC(IntPtrT, llvm::PointerType::getUnqual(Ctx), WriteoutFunction, \
+             WriteoutF)
+COVINIT_FUNC(IntPtrT, llvm::PointerType::getUnqual(Ctx), ResetFunction, \
+             ResetF)
+#undef COVINIT_FUNC
+/* COVINIT_FUNC end */
 
 #ifdef INSTR_PROF_SECT_ENTRY
 #define INSTR_PROF_DATA_DEFINED
@@ -345,6 +357,9 @@ INSTR_PROF_SECT_ENTRY(IPSK_covdata, \
 INSTR_PROF_SECT_ENTRY(IPSK_covname, \
                       INSTR_PROF_QUOTE(INSTR_PROF_COVNAME_COMMON), \
                       INSTR_PROF_COVNAME_COFF, "__LLVM_COV,")
+INSTR_PROF_SECT_ENTRY(IPSK_covinit, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_COVINIT_COMMON), \
+                      INSTR_PROF_COVINIT_COFF, "__LLVM_COV,")
 
 #undef INSTR_PROF_SECT_ENTRY
 #endif
@@ -715,10 +730,12 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_COVMAP_VERSION 6
 
 /* Profile version is always of type uint64_t. Reserve the upper 32 bits in the
- * version for other variants of profile. We set the 8th most significant bit 
+ * version for other variants of profile. We set the 8th most significant bit
  * (i.e. bit 56) to 1 to indicate if this is an IR-level instrumentation
  * generated profile, and 0 if this is a Clang FE generated profile.
  * 1 in bit 57 indicates there are context-sensitive records in the profile.
+ * The 54th bit indicates whether to always instrument loop entry blocks.
+ * The 58th bit indicates whether to always instrument function entry blocks.
  * The 59th bit indicates whether to use debug info to correlate profiles.
  * The 60th bit indicates single byte coverage instrumentation.
  * The 61st bit indicates function entry instrumentation only.
@@ -727,6 +744,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
  */
 #define VARIANT_MASKS_ALL 0xffffffff00000000ULL
 #define GET_VERSION(V) ((V) & ~VARIANT_MASKS_ALL)
+#define VARIANT_MASK_INSTR_LOOP_ENTRIES (0x1ULL << 55)
 #define VARIANT_MASK_IR_PROF (0x1ULL << 56)
 #define VARIANT_MASK_CSIR_PROF (0x1ULL << 57)
 #define VARIANT_MASK_INSTR_ENTRY (0x1ULL << 58)
@@ -761,6 +779,8 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_COVDATA_COMMON __llvm_covdata
 #define INSTR_PROF_COVNAME_COMMON __llvm_covnames
 #define INSTR_PROF_ORDERFILE_COMMON __llvm_orderfile
+#define INSTR_PROF_COVINIT_COMMON __llvm_covinit
+
 /* Windows section names. Because these section names contain dollar characters,
  * they must be quoted.
  */
@@ -781,6 +801,10 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_COVNAME_COFF ".lcovn"
 #define INSTR_PROF_ORDERFILE_COFF ".lorderfile$M"
 
+// FIXME: Placeholder for Windows. Windows currently does not initialize
+// the GCOV functions in the runtime.
+#define INSTR_PROF_COVINIT_COFF ".lcovd$M"
+
 #ifdef _WIN32
 /* Runtime section names and name strings.  */
 #define INSTR_PROF_DATA_SECT_NAME INSTR_PROF_DATA_COFF
@@ -800,6 +824,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_COVDATA_SECT_NAME INSTR_PROF_COVDATA_COFF
 #define INSTR_PROF_COVNAME_SECT_NAME INSTR_PROF_COVNAME_COFF
 #define INSTR_PROF_ORDERFILE_SECT_NAME INSTR_PROF_ORDERFILE_COFF
+#define INSTR_PROF_COVINIT_SECT_NAME INSTR_PROF_COVINIT_COFF
 #else
 /* Runtime section names and name strings.  */
 #define INSTR_PROF_DATA_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_DATA_COMMON)
@@ -821,6 +846,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 /* Order file instrumentation. */
 #define INSTR_PROF_ORDERFILE_SECT_NAME                                         \
   INSTR_PROF_QUOTE(INSTR_PROF_ORDERFILE_COMMON)
+#define INSTR_PROF_COVINIT_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_COVINIT_COMMON)
 #endif
 
 #define INSTR_PROF_ORDERFILE_BUFFER_NAME _llvm_order_file_buffer

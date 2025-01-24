@@ -1,10 +1,15 @@
-// RUN: %clang_analyze_cc1  -analyzer-checker=alpha.security.taint,core,alpha.security.ArrayBoundV2 -analyzer-config alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml -Wno-format-security -verify -std=c++11 %s
+// RUN: %clang_analyze_cc1 -std=c++11 -Wno-format-security \
+// RUN:   -analyzer-checker=core,optin.taint,alpha.security.ArrayBoundV2,debug.ExprInspection \
+// RUN:   -analyzer-config optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml \
+// RUN:   -verify %s
+
+template <typename T> void clang_analyzer_isTainted(T);
 
 #define BUFSIZE 10
 int Buffer[BUFSIZE];
 
 int scanf(const char*, ...);
-int mySource1();
+template <typename T = int> T mySource1();
 int mySource3();
 
 typedef struct _FILE FILE;
@@ -136,3 +141,23 @@ void testReadingFromStdin(char **p) {
   fscanf(stdin, "%d", &n);
   Buffer[n] = 1; // expected-warning {{Potential out of bound access }}
 }
+
+namespace gh114270 {
+class Empty {};
+class Aggr {
+public:
+  int data;
+};
+
+void top() {
+  int Int = mySource1<int>();
+  clang_analyzer_isTainted(Int); // expected-warning {{YES}}
+
+  Empty E = mySource1<Empty>();
+  clang_analyzer_isTainted(E); // expected-warning {{YES}}
+
+  Aggr A = mySource1<Aggr>();
+  clang_analyzer_isTainted(A);      // expected-warning {{YES}}
+  clang_analyzer_isTainted(A.data); // expected-warning {{YES}}
+}
+} // namespace gh114270

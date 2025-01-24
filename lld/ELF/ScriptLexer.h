@@ -17,6 +17,7 @@
 #include <vector>
 
 namespace lld::elf {
+struct Ctx;
 
 class ScriptLexer {
 protected:
@@ -30,8 +31,9 @@ protected:
     bool isUnderSysroot = false;
 
     Buffer() = default;
-    Buffer(MemoryBufferRef mb);
+    Buffer(Ctx &ctx, MemoryBufferRef mb);
   };
+  Ctx &ctx;
   // The current buffer and parent buffers due to INCLUDE.
   Buffer curBuf;
   SmallVector<Buffer, 0> buffers;
@@ -57,7 +59,7 @@ protected:
   bool eof = false;
 
 public:
-  explicit ScriptLexer(MemoryBufferRef mb);
+  explicit ScriptLexer(Ctx &ctx, MemoryBufferRef mb);
 
   void setError(const Twine &msg);
   void lex();

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; M2_mpysin takes 8-bit unsigned immediates and is not extendable.
 ; CHECK-NOT: = -mpyi(r{{[0-9]*}},#1536)
 

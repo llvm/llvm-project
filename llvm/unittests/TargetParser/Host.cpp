@@ -83,8 +83,20 @@ TEST(getLinuxHostCPUName, AArch64) {
                                               "CPU part        : 0xd40"),
             "neoverse-v1");
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd4f"),
+            "neoverse-v2");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd84"),
+            "neoverse-v3");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
                                               "CPU part        : 0xd0c"),
             "neoverse-n1");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd49"),
+            "neoverse-n2");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd8e"),
+            "neoverse-n3");
   // Verify that both CPU implementer and CPU part are checked:
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x40\n"
                                               "CPU part        : 0xd03"),
@@ -128,6 +140,12 @@ TEST(getLinuxHostCPUName, AArch64) {
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x51\n"
                                               "CPU part        : 0x001"),
             "oryon-1");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x46\n"
+                                              "CPU part        : 0x003"),
+            "fujitsu-monaka");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x61\n"
+                                              "CPU part        : 0x039"),
+            "apple-m2");
 
   // MSM8992/4 weirdness
   StringRef MSM8992ProcCpuInfo = R"(
@@ -316,9 +334,13 @@ CPU revision    : 0
 
 TEST(getLinuxHostCPUName, s390x) {
   SmallVector<std::string> ModelIDs(
-      {"3931", "8561", "3906", "2964", "2827", "2817", "2097", "2064"});
+      {"9175", "3931", "8561", "3906", "2964", "2827", "2817", "2097", "2064"});
   SmallVector<std::string> VectorSupport({"", "vx"});
   SmallVector<StringRef> ExpectedCPUs;
+
+  // Model Id: 9175
+  ExpectedCPUs.push_back("zEC12");
+  ExpectedCPUs.push_back("arch15");
 
   // Model Id: 3931
   ExpectedCPUs.push_back("zEC12");

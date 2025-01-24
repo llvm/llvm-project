@@ -20,16 +20,13 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
+#include "src/math/generic/range_reduction_double_common.h"
 
-// TODO: We might be able to improve the performance of large range reduction of
-// non-FMA targets further by operating directly on 25-bit chunks of 128/pi and
-// pre-split SIN_K_PI_OVER_128, but that might double the memory footprint of
-// those lookup table.
-#include "range_reduction_double_common.h"
-
-#if ((LIBC_MATH & LIBC_MATH_SKIP_ACCURATE_PASS) != 0)
-#define LIBC_MATH_TAN_SKIP_ACCURATE_PASS
-#endif
+#ifdef LIBC_TARGET_CPU_HAS_FMA
+#include "range_reduction_double_fma.h"
+#else
+#include "range_reduction_double_nofma.h"
+#endif // LIBC_TARGET_CPU_HAS_FMA
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -38,7 +35,7 @@ using Float128 = typename fputil::DyadicFloat<128>;
 
 namespace {
 
-LIBC_INLINE DoubleDouble tan_eval(const DoubleDouble &u) {
+LIBC_INLINE double tan_eval(const DoubleDouble &u, DoubleDouble &result) {
   // Evaluate tan(y) = tan(x - k * (pi/128))
   // We use the degree-9 Taylor approximation:
   //   tan(y) ~ P(y) = y + y^3/3 + 2*y^5/15 + 17*y^7/315 + 62*y^9/2835
@@ -69,10 +66,12 @@ LIBC_INLINE DoubleDouble tan_eval(const DoubleDouble &u) {
   // Overall, |tan(y) - (u_hi + tan_lo)| < ulp(u_hi^3) <= 2^-71.
   // And the relative errors is:
   // |(tan(y) - (u_hi + tan_lo)) / tan(y) | <= 2*ulp(u_hi^2) < 2^-64
-
-  return fputil::exact_add(u.hi, tan_lo);
+  result = fputil::exact_add(u.hi, tan_lo);
+  return fputil::multiply_add(fputil::FPBits<double>(u_hi_3).abs().get_val(),
+                              0x1.0p-51, 0x1.0p-102);
 }
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 // Accurate evaluation of tan for small u.
 [[maybe_unused]] Float128 tan_eval(const Float128 &u) {
   Float128 u_sq = fputil::quick_mul(u, u);
@@ -117,6 +116,7 @@ LIBC_INLINE DoubleDouble tan_eval(const DoubleDouble &u) {
       fputil::quick_mul(q1, fputil::quick_add(TWO, fputil::quick_mul(b, q1)));
   return fputil::quick_mul(a, q2);
 }
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 } // anonymous namespace
 
@@ -128,33 +128,38 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
 
   DoubleDouble y;
   unsigned k;
-  generic::LargeRangeReduction<NO_FMA> range_reduction_large{};
+  LargeRangeReduction range_reduction_large{};
 
-  // |x| < 2^32 (with FMA) or |x| < 2^23 (w/o FMA)
+  // |x| < 2^16
   if (LIBC_LIKELY(x_e < FPBits::EXP_BIAS + FAST_PASS_EXPONENT)) {
-    // |x| < 2^-27
-    if (LIBC_UNLIKELY(x_e < FPBits::EXP_BIAS - 27)) {
-      // Signed zeros.
-      if (LIBC_UNLIKELY(x == 0.0))
-        return x;
+    // |x| < 2^-7
+    if (LIBC_UNLIKELY(x_e < FPBits::EXP_BIAS - 7)) {
+      // |x| < 2^-27, |tan(x) - x| < ulp(x)/2.
+      if (LIBC_UNLIKELY(x_e < FPBits::EXP_BIAS - 27)) {
+        // Signed zeros.
+        if (LIBC_UNLIKELY(x == 0.0))
+          return x + x; // Make sure it works with FTZ/DAZ.
 
-        // For |x| < 2^-27, |tan(x) - x| < ulp(x)/2.
 #ifdef LIBC_TARGET_CPU_HAS_FMA
-      return fputil::multiply_add(x, 0x1.0p-54, x);
+        return fputil::multiply_add(x, 0x1.0p-54, x);
 #else
-      if (LIBC_UNLIKELY(x_e < 4)) {
-        int rounding_mode = fputil::quick_get_round();
-        if (rounding_mode == FE_TOWARDZERO ||
-            (xbits.sign() == Sign::POS && rounding_mode == FE_DOWNWARD) ||
-            (xbits.sign() == Sign::NEG && rounding_mode == FE_UPWARD))
-          return FPBits(xbits.uintval() + 1).get_val();
-      }
-      return fputil::multiply_add(x, 0x1.0p-54, x);
+        if (LIBC_UNLIKELY(x_e < 4)) {
+          int rounding_mode = fputil::quick_get_round();
+          if ((xbits.sign() == Sign::POS && rounding_mode == FE_UPWARD) ||
+              (xbits.sign() == Sign::NEG && rounding_mode == FE_DOWNWARD))
+            return FPBits(xbits.uintval() + 1).get_val();
+        }
+        return fputil::multiply_add(x, 0x1.0p-54, x);
 #endif // LIBC_TARGET_CPU_HAS_FMA
+      }
+      // No range reduction needed.
+      k = 0;
+      y.lo = 0.0;
+      y.hi = x;
+    } else {
+      // Small range reduction.
+      k = range_reduction_small(x, y);
     }
-
-    // // Small range reduction.
-    k = range_reduction_small(x, y);
   } else {
     // Inf or NaN
     if (LIBC_UNLIKELY(x_e > 2 * FPBits::EXP_BIAS)) {
@@ -167,42 +172,32 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
     }
 
     // Large range reduction.
-    k = range_reduction_large.compute_high_part(x);
-    y = range_reduction_large.fast();
+    k = range_reduction_large.fast(x, y);
   }
 
-  DoubleDouble tan_y = tan_eval(y);
+  DoubleDouble tan_y;
+  [[maybe_unused]] double err = tan_eval(y, tan_y);
 
   // Look up sin(k * pi/128) and cos(k * pi/128)
-  // Memory saving versions:
-
-  // Use 128-entry table instead:
-  // DoubleDouble sin_k = SIN_K_PI_OVER_128[k & 127];
-  // uint64_t sin_s = static_cast<uint64_t>(k & 128) << (63 - 7);
-  // sin_k.hi = FPBits(FPBits(sin_k.hi).uintval() ^ sin_s).get_val();
-  // sin_k.lo = FPBits(FPBits(sin_k.hi).uintval() ^ sin_s).get_val();
-  // DoubleDouble cos_k = SIN_K_PI_OVER_128[(k + 64) & 127];
-  // uint64_t cos_s = static_cast<uint64_t>((k + 64) & 128) << (63 - 7);
-  // cos_k.hi = FPBits(FPBits(cos_k.hi).uintval() ^ cos_s).get_val();
-  // cos_k.lo = FPBits(FPBits(cos_k.hi).uintval() ^ cos_s).get_val();
-
-  // Use 64-entry table instead:
-  // auto get_idx_dd = [](unsigned kk) -> DoubleDouble {
-  //   unsigned idx = (kk & 64) ? 64 - (kk & 63) : (kk & 63);
-  //   DoubleDouble ans = SIN_K_PI_OVER_128[idx];
-  //   if (kk & 128) {
-  //     ans.hi = -ans.hi;
-  //     ans.lo = -ans.lo;
-  //   }
-  //   return ans;
-  // };
-  // DoubleDouble msin_k = get_idx_dd(k + 128);
-  // DoubleDouble cos_k = get_idx_dd(k + 64);
-
+#ifdef LIBC_MATH_HAS_SMALL_TABLES
+  // Memory saving versions. Use 65-entry table:
+  auto get_idx_dd = [](unsigned kk) -> DoubleDouble {
+    unsigned idx = (kk & 64) ? 64 - (kk & 63) : (kk & 63);
+    DoubleDouble ans = SIN_K_PI_OVER_128[idx];
+    if (kk & 128) {
+      ans.hi = -ans.hi;
+      ans.lo = -ans.lo;
+    }
+    return ans;
+  };
+  DoubleDouble msin_k = get_idx_dd(k + 128);
+  DoubleDouble cos_k = get_idx_dd(k + 64);
+#else
   // Fast look up version, but needs 256-entry table.
   // cos(k * pi/128) = sin(k * pi/128 + pi/2) = sin((k + 64) * pi/128).
   DoubleDouble msin_k = SIN_K_PI_OVER_128[(k + 128) & 255];
   DoubleDouble cos_k = SIN_K_PI_OVER_128[(k + 64) & 255];
+#endif // LIBC_MATH_HAS_SMALL_TABLES
 
   // After range reduction, k = round(x * 128 / pi) and y = x - k * (pi / 128).
   // So k is an integer and -pi / 256 <= y <= pi / 256.
@@ -212,8 +207,8 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
   //               / (cos(y) * cos(k*pi/128) - sin(y) * sin(k*pi/128))
   //             = (sin(k*pi/128) + tan(y) * cos(k*pi/128)) /
   //               / (cos(k*pi/128) - tan(y) * sin(k*pi/128))
-  DoubleDouble cos_k_tan_y = fputil::quick_mult<NO_FMA>(tan_y, cos_k);
-  DoubleDouble msin_k_tan_y = fputil::quick_mult<NO_FMA>(tan_y, msin_k);
+  DoubleDouble cos_k_tan_y = fputil::quick_mult(tan_y, cos_k);
+  DoubleDouble msin_k_tan_y = fputil::quick_mult(tan_y, msin_k);
 
   // num_dd = sin(k*pi/128) + tan(y) * cos(k*pi/128)
   DoubleDouble num_dd = fputil::exact_add<false>(cos_k_tan_y.hi, -msin_k.hi);
@@ -222,7 +217,7 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
   num_dd.lo += cos_k_tan_y.lo - msin_k.lo;
   den_dd.lo += msin_k_tan_y.lo + cos_k.lo;
 
-#ifdef LIBC_MATH_TAN_SKIP_ACCURATE_PASS
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   double tan_x = (num_dd.hi + num_dd.lo) / (den_dd.hi + den_dd.lo);
   return tan_x;
 #else
@@ -231,18 +226,16 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
   // Accurate double-double division
   DoubleDouble tan_x = fputil::div(num_dd, den_dd);
 
-  // Relative errors for k != 0 mod 64 is:
-  //   absolute errors / min(sin(k*pi/128), cos(k*pi/128)) <= 2^-71 / 2^-7
-  //                                                        = 2^-64.
-  // For k = 0 mod 64, the relative errors is bounded by:
-  //   2^-71 / 2^(exponent of x).
-  constexpr int ERR = 64;
+  // Simple error bound: |1 / den_dd| < 2^(1 + floor(-log2(den_dd)))).
+  uint64_t den_inv = (static_cast<uint64_t>(FPBits::EXP_BIAS + 1)
+                      << (FPBits::FRACTION_LEN + 1)) -
+                     (FPBits(den_dd.hi).uintval() & FPBits::EXP_MASK);
 
-  int y_exp = 7 + FPBits(y.hi).get_exponent();
-  int rel_err_exp = ERR + static_cast<int>((k & 63) == 0) * y_exp;
-  int64_t tan_x_err = static_cast<int64_t>(FPBits(tan_x.hi).uintval()) -
-                      (static_cast<int64_t>(rel_err_exp) << 52);
-  double tan_err = FPBits(static_cast<uint64_t>(tan_x_err)).get_val();
+  // For tan_x = (num_dd + err) / (den_dd + err), the error is bounded by:
+  //   | tan_x - num_dd / den_dd |  <= err * ( 1 + | tan_x * den_dd | ).
+  double tan_err =
+      err * fputil::multiply_add(FPBits(den_inv).get_val(),
+                                 FPBits(tan_x.hi).abs().get_val(), 1.0);
 
   double err_higher = tan_x.lo + tan_err;
   double err_lower = tan_x.lo - tan_err;
@@ -256,7 +249,7 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
 
   Float128 u_f128;
   if (LIBC_LIKELY(x_e < FPBits::EXP_BIAS + FAST_PASS_EXPONENT))
-    u_f128 = generic::range_reduction_small_f128(x);
+    u_f128 = range_reduction_small_f128(x);
   else
     u_f128 = range_reduction_large.accurate();
 
@@ -264,7 +257,7 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
 
   auto get_sin_k = [](unsigned kk) -> Float128 {
     unsigned idx = (kk & 64) ? 64 - (kk & 63) : (kk & 63);
-    Float128 ans = generic::SIN_K_PI_OVER_128_F128[idx];
+    Float128 ans = SIN_K_PI_OVER_128_F128[idx];
     if (kk & 128)
       ans.sign = Sign::NEG;
     return ans;
@@ -292,7 +285,7 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
   // https://github.com/llvm/llvm-project/issues/96452.
   return static_cast<double>(result);
 
-#endif // !LIBC_MATH_TAN_SKIP_ACCURATE_PASS
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 }
 
 } // namespace LIBC_NAMESPACE_DECL

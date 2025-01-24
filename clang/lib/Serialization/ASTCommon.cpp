@@ -15,7 +15,10 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
+#include "clang/Serialization/ModuleFile.h"
 #include "llvm/Support/DJB.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
 
@@ -258,7 +261,7 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
     ID = PREDEF_TYPE_##Id##_ID;                                                \
     break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   case BuiltinType::Id:                                                        \
     ID = PREDEF_TYPE_##Id##_ID;                                                \
     break;
@@ -335,6 +338,7 @@ serialization::getDefinitiveDeclContext(const DeclContext *DC) {
   case Decl::CXXConversion:
   case Decl::ObjCMethod:
   case Decl::Block:
+  case Decl::OutlinedFunction:
   case Decl::Captured:
     // Objective C categories, category implementations, and class
     // implementations can only be defined in one place.
@@ -436,6 +440,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::FriendTemplate:
   case Decl::StaticAssert:
   case Decl::Block:
+  case Decl::OutlinedFunction:
   case Decl::Captured:
   case Decl::Import:
   case Decl::OMPThreadPrivate:
@@ -502,4 +507,16 @@ bool serialization::needsAnonymousDeclarationNumber(const NamedDecl *D) {
   if (!isa<RecordDecl, ObjCInterfaceDecl>(D->getLexicalDeclContext()))
     return false;
   return isa<TagDecl, FieldDecl>(D);
+}
+
+void serialization::updateModuleTimestamp(StringRef ModuleFilename) {
+  // Overwrite the timestamp file contents so that file's mtime changes.
+  std::error_code EC;
+  llvm::raw_fd_ostream OS(ModuleFile::getTimestampFilename(ModuleFilename), EC,
+                          llvm::sys::fs::OF_TextWithCRLF);
+  if (EC)
+    return;
+  OS << "Timestamp file\n";
+  OS.close();
+  OS.clear_error(); // Avoid triggering a fatal error.
 }

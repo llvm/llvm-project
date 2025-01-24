@@ -15,6 +15,7 @@ tablegen(LLVM RISCVGenRegisterBank.inc -gen-register-bank)
 tablegen(LLVM RISCVGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM RISCVGenSearchableTables.inc -gen-searchable-tables)
 tablegen(LLVM RISCVGenSubtargetInfo.inc -gen-subtarget)
+tablegen(LLVM RISCVGenExegesis.inc -gen-exegesis)
 
 set(LLVM_TARGET_DEFINITIONS RISCVGISel.td)
 tablegen(LLVM RISCVGenGlobalISel.inc -gen-global-isel)
@@ -31,6 +32,7 @@ add_llvm_target(RISCVCodeGen
   RISCVAsmPrinter.cpp
   RISCVCallingConv.cpp
   RISCVCodeGenPrepare.cpp
+  RISCVConstantPoolValue.cpp
   RISCVDeadRegisterDefinitions.cpp
   RISCVMakeCompressible.cpp
   RISCVExpandAtomicPseudoInsts.cpp
@@ -53,11 +55,15 @@ add_llvm_target(RISCVCodeGen
   RISCVMoveMerger.cpp
   RISCVPushPopOptimizer.cpp
   RISCVRegisterInfo.cpp
+  RISCVSelectionDAGInfo.cpp
   RISCVSubtarget.cpp
   RISCVTargetMachine.cpp
   RISCVTargetObjectFile.cpp
   RISCVTargetTransformInfo.cpp
+  RISCVVectorMaskDAGMutation.cpp
   RISCVVectorPeephole.cpp
+  RISCVVLOptimizer.cpp
+  RISCVZacasABIFix.cpp
   GISel/RISCVCallLowering.cpp
   GISel/RISCVInstructionSelector.cpp
   GISel/RISCVLegalizerInfo.cpp

@@ -35,18 +35,3 @@ revd    z31.q, p7/m, z31.q
 // CHECK-ENCODING: [0xff,0x9f,0x2e,0x05]
 // CHECK-ERROR: instruction requires: sme
 // CHECK-UNKNOWN: 052e9fff <unknown>
-
-// --------------------------------------------------------------------------//
-// Test compatibility with MOVPRFX instruction.
-
-movprfx z21, z25
-// CHECK-INST: movprfx  z21, z25
-// CHECK-ENCODING: [0x35,0xbf,0x20,0x04]
-// CHECK-ERROR: instruction requires: sve or sme
-// CHECK-UNKNOWN: 0420bf35 <unknown>
-
-revd    z21.q, p5/m, z10.q
-// CHECK-INST: revd    z21.q, p5/m, z10.q
-// CHECK-ENCODING: [0x55,0x95,0x2e,0x05]
-// CHECK-ERROR: instruction requires: sme
-// CHECK-UNKNOWN: 052e9555 <unknown>

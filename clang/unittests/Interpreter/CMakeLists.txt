@@ -16,13 +16,15 @@ add_clang_unittest(ClangReplInterpreterTests
 
   EXPORT_SYMBOLS
   )
-target_link_libraries(ClangReplInterpreterTests PUBLIC
+  
+target_link_libraries(ClangReplInterpreterTests PUBLIC LLVMTestingSupport)
+
+clang_target_link_libraries(ClangReplInterpreterTests PRIVATE
   clangAST
   clangBasic
   clangInterpreter
   clangFrontend
   clangSema
-  LLVMTestingSupport
   )
 
 # Exceptions on Windows are not yet supported.
@@ -65,10 +67,7 @@ if(MSVC)
   endif()
 
   # List to '/EXPORT:sym0 /EXPORT:sym1 /EXPORT:sym2 ...'
-  foreach(sym ${ClangReplInterpreterTests_exports})
-    set(ClangReplInterpreterTests_link_str "${ClangReplInterpreterTests_link_str} /EXPORT:${sym}")
-  endforeach(sym ${ClangReplInterpreterTests_exports})
-
-  set_property(TARGET ClangReplInterpreterTests APPEND_STRING PROPERTY LINK_FLAGS ${ClangReplInterpreterTests_link_str})
+  list(TRANSFORM ClangReplInterpreterTests_exports PREPEND "LINKER:/EXPORT:")
+  set_property(TARGET ClangReplInterpreterTests APPEND PROPERTY LINK_OPTIONS ${ClangReplInterpreterTests_exports})
 
 endif(MSVC)

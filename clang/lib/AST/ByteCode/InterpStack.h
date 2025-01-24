@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_INTERPSTACK_H
 #define LLVM_CLANG_AST_INTERP_INTERPSTACK_H
 
+#include "FixedPoint.h"
 #include "FunctionPointer.h"
 #include "IntegralAP.h"
 #include "MemberPointer.h"
@@ -86,6 +87,7 @@ public:
 
   /// Clears the stack without calling any destructors.
   void clear();
+  void clearTo(size_t NewSize);
 
   /// Returns whether the stack is empty.
   bool empty() const { return StackSize == 0; }
@@ -189,6 +191,8 @@ private:
       return PT_IntAP;
     else if constexpr (std::is_same_v<T, MemberPointer>)
       return PT_MemberPtr;
+    else if constexpr (std::is_same_v<T, FixedPoint>)
+      return PT_FixedPoint;
 
     llvm_unreachable("unknown type push()'ed into InterpStack");
   }

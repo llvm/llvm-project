@@ -21,17 +21,14 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include <sstream>
 #include <csignal>
+#include <sstream>
 
 #ifdef __ANDROID__
-#include <android/api-level.h>
 #define PT_TRACE_ME PTRACE_TRACEME
 #endif
 
-#if defined(__ANDROID_API__) && __ANDROID_API__ < 15
-#include <linux/personality.h>
-#elif defined(__linux__)
+#if defined(__linux__)
 #include <sys/personality.h>
 #endif
 
@@ -47,8 +44,7 @@ static void write_string(int error_fd, const char *str) {
   (void)r;
 }
 
-[[noreturn]] static void ExitWithError(int error_fd,
-                                       const char *operation) {
+[[noreturn]] static void ExitWithError(int error_fd, const char *operation) {
   int err = errno;
   write_string(error_fd, operation);
   write_string(error_fd, " failed: ");
@@ -193,7 +189,11 @@ struct ForkLaunchInfo {
     }
 
     // Start tracing this child that is about to exec.
+#ifdef _AIX
+    if (ptrace64(PT_TRACE_ME, 0, 0, 0, nullptr) == -1)
+#else
     if (ptrace(PT_TRACE_ME, 0, nullptr, 0) == -1)
+#endif
       ExitWithError(error_fd, "ptrace");
   }
 

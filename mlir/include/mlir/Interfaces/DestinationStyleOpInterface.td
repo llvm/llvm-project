@@ -82,7 +82,7 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
       $_op->setOperand($_op.getDpsInits().getBeginOperandIndex() + i, value);
     }
 
-    /// Return the number of DPS inits.
+    /// Return the number of DPS inputs.
     int64_t getNumDpsInputs() {
       return $_op->getNumOperands() - $_op.getNumDpsInits();
     }

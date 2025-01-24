@@ -1,7 +1,8 @@
 ;; Checks that when an instruction at the start of a BasicBlock has the same
 ;; DebugLoc as the instruction at the end of the previous BasicBlock, we add
 ;; is_stmt to the new line, to ensure that we still step on it if we arrive from
-;; a BasicBlock other than the immediately preceding one.
+;; a BasicBlock other than the immediately preceding one, unless all known
+;; predecessor BasicBlocks end with the same line.
 
 ; RUN: %llc_dwarf -mtriple=x86_64-unknown-linux -O0 -filetype=obj < %s | llvm-dwarfdump --debug-line - | FileCheck %s
 
@@ -24,6 +25,25 @@ if.end8:                                          ; preds = %if.then2
   ret void
 }
 
+; CHECK:      {{0x[0-9a-f]+}}    113      5 {{.+}} is_stmt
+; CHECK-NOT:  {{0x[0-9a-f]+}}    113      5
+
+define void @_Z1gi(i1 %cond) !dbg !31 {
+entry:
+  br i1 %cond, label %if.then2, label %if.else4, !dbg !34
+
+if.then2:                                         ; preds = %entry
+  br label %if.end8, !dbg !34
+
+if.else4:                                         ; preds = %entry
+  %0 = load i32, ptr null, align 4, !dbg !34
+  %call5 = call i1 null(i32 %0)
+  ret void
+
+if.end8:                                          ; preds = %if.then2
+  ret void
+}
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!20}
 
@@ -35,3 +55,8 @@ if.end8:                                          ; preds = %if.then2
 !23 = !{null}
 !24 = !DILocation(line: 13, column: 5, scope: !25)
 !25 = distinct !DILexicalBlock(scope: !21, file: !1, line: 11, column: 27)
+!31 = distinct !DISubprogram(name: "g", linkageName: "_Z1gi", scope: !1, file: !1, line: 107, type: !32, scopeLine: 7, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
+!32 = distinct !DISubroutineType(types: !33)
+!33 = !{null}
+!34 = !DILocation(line: 113, column: 5, scope: !35)
+!35 = distinct !DILexicalBlock(scope: !31, file: !1, line: 111, column: 27)

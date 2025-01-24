@@ -9,8 +9,8 @@
 #ifndef LLDB_INTERPRETER_OPTIONGROUPVALUEOBJECTDISPLAY_H
 #define LLDB_INTERPRETER_OPTIONGROUPVALUEOBJECTDISPLAY_H
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 namespace lldb_private {
 

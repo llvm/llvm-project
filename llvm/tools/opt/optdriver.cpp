@@ -375,6 +375,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "fix-irreducible",
       "expand-large-fp-convert",
       "callbrprepare",
+      "scalarizer",
   };
   for (const auto &P : PassNamePrefix)
     if (Pass.starts_with(P))
@@ -800,9 +801,11 @@ extern "C" int optMain(
   }
 
   if (TM) {
-    // FIXME: We should dyn_cast this when supported.
-    auto &LTM = static_cast<LLVMTargetMachine &>(*TM);
-    Pass *TPC = LTM.createPassConfig(Passes);
+    Pass *TPC = TM->createPassConfig(Passes);
+    if (!TPC) {
+      errs() << "Target Machine pass config creation failed.\n";
+      return 1;
+    }
     Passes.add(TPC);
   }
 

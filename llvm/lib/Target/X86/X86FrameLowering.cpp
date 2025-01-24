@@ -32,7 +32,6 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Target/TargetOptions.h"
 #include <cstdlib>
@@ -91,10 +90,10 @@ bool X86FrameLowering::needsFrameIndexResolution(
          MF.getInfo<X86MachineFunctionInfo>()->getHasPushSequences();
 }
 
-/// hasFP - Return true if the specified function should have a dedicated frame
-/// pointer register.  This is true if the function has variable sized allocas
-/// or if frame pointer elimination is disabled.
-bool X86FrameLowering::hasFP(const MachineFunction &MF) const {
+/// hasFPImpl - Return true if the specified function should have a dedicated
+/// frame pointer register.  This is true if the function has variable sized
+/// allocas or if frame pointer elimination is disabled.
+bool X86FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   return (MF.getTarget().Options.DisableFramePointerElim(MF) ||
           TRI->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
@@ -175,7 +174,7 @@ static unsigned getPOP2Opcode(const X86Subtarget &ST) {
 
 static bool isEAXLiveIn(MachineBasicBlock &MBB) {
   for (MachineBasicBlock::RegisterMaskPair RegMask : MBB.liveins()) {
-    unsigned Reg = RegMask.PhysReg;
+    MCRegister Reg = RegMask.PhysReg;
 
     if (Reg == X86::RAX || Reg == X86::EAX || Reg == X86::AX ||
         Reg == X86::AH || Reg == X86::AL)
@@ -254,17 +253,19 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
     // Rather than emit a long series of instructions for large offsets,
     // load the offset into a register and do one sub/add
     unsigned Reg = 0;
-    unsigned Rax = (unsigned)(Is64Bit ? X86::RAX : X86::EAX);
+    unsigned Rax = (unsigned)(Uses64BitFramePtr ? X86::RAX : X86::EAX);
 
     if (isSub && !isEAXLiveIn(MBB))
       Reg = Rax;
     else
-      Reg = TRI->findDeadCallerSavedReg(MBB, MBBI);
+      Reg = getX86SubSuperRegister(TRI->findDeadCallerSavedReg(MBB, MBBI),
+                                   Uses64BitFramePtr ? 64 : 32);
 
-    unsigned AddSubRROpc =
-        isSub ? getSUBrrOpcode(Is64Bit) : getADDrrOpcode(Is64Bit);
+    unsigned AddSubRROpc = isSub ? getSUBrrOpcode(Uses64BitFramePtr)
+                                 : getADDrrOpcode(Uses64BitFramePtr);
     if (Reg) {
-      BuildMI(MBB, MBBI, DL, TII.get(getMOVriOpcode(Is64Bit, Offset)), Reg)
+      BuildMI(MBB, MBBI, DL, TII.get(getMOVriOpcode(Uses64BitFramePtr, Offset)),
+              Reg)
           .addImm(Offset)
           .setMIFlag(Flag);
       MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(AddSubRROpc), StackPtr)
@@ -280,7 +281,7 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
       //   addq %rsp, %rax
       //   xchg %rax, (%rsp)
       //   movq (%rsp), %rsp
-      assert(Is64Bit && "can't have 32-bit 16GB stack frame");
+      assert(Uses64BitFramePtr && "can't have 32-bit 16GB stack frame");
       BuildMI(MBB, MBBI, DL, TII.get(X86::PUSH64r))
           .addReg(Rax, RegState::Kill)
           .setMIFlag(Flag);
@@ -290,7 +291,8 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
         Offset = -(Offset - SlotSize);
       else
         Offset = Offset + SlotSize;
-      BuildMI(MBB, MBBI, DL, TII.get(getMOVriOpcode(Is64Bit, Offset)), Rax)
+      BuildMI(MBB, MBBI, DL, TII.get(getMOVriOpcode(Uses64BitFramePtr, Offset)),
+              Rax)
           .addImm(Offset)
           .setMIFlag(Flag);
       MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(X86::ADD64rr), Rax)
@@ -798,18 +800,40 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
                               : Is64Bit         ? X86::R11D
                                                 : X86::EAX;
 
-  BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::COPY), FinalStackProbed)
-      .addReg(StackPtr)
-      .setMIFlag(MachineInstr::FrameSetup);
-
   // save loop bound
   {
-    const unsigned BoundOffset = alignDown(Offset, StackProbeSize);
-    const unsigned SUBOpc = getSUBriOpcode(Uses64BitFramePtr);
-    BuildMI(MBB, MBBI, DL, TII.get(SUBOpc), FinalStackProbed)
-        .addReg(FinalStackProbed)
-        .addImm(BoundOffset)
-        .setMIFlag(MachineInstr::FrameSetup);
+    const uint64_t BoundOffset = alignDown(Offset, StackProbeSize);
+
+    // Can we calculate the loop bound using SUB with a 32-bit immediate?
+    // Note that the immediate gets sign-extended when used with a 64-bit
+    // register, so in that case we only have 31 bits to work with.
+    bool canUseSub =
+        Uses64BitFramePtr ? isUInt<31>(BoundOffset) : isUInt<32>(BoundOffset);
+
+    if (canUseSub) {
+      const unsigned SUBOpc = getSUBriOpcode(Uses64BitFramePtr);
+
+      BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::COPY), FinalStackProbed)
+          .addReg(StackPtr)
+          .setMIFlag(MachineInstr::FrameSetup);
+      BuildMI(MBB, MBBI, DL, TII.get(SUBOpc), FinalStackProbed)
+          .addReg(FinalStackProbed)
+          .addImm(BoundOffset)
+          .setMIFlag(MachineInstr::FrameSetup);
+    } else if (Uses64BitFramePtr) {
+      BuildMI(MBB, MBBI, DL, TII.get(X86::MOV64ri), FinalStackProbed)
+          .addImm(-BoundOffset)
+          .setMIFlag(MachineInstr::FrameSetup);
+      BuildMI(MBB, MBBI, DL, TII.get(X86::ADD64rr), FinalStackProbed)
+          .addReg(FinalStackProbed)
+          .addReg(StackPtr)
+          .setMIFlag(MachineInstr::FrameSetup);
+    } else {
+      // We're being asked to probe a stack frame that's 4 GiB or larger,
+      // but our stack pointer is only 32 bits.  This might be unreachable
+      // code, so don't complain now; just trap if it's reached at runtime.
+      BuildMI(MBB, MBBI, DL, TII.get(X86::TRAP));
+    }
 
     // while in the loop, use loop-invariant reg for CFI,
     // instead of the stack pointer, which changes during the loop

@@ -78,7 +78,7 @@ public:
 
   size_t getNumRelocations() const { return relocations.size(); }
   void writeRelocations(llvm::raw_ostream &os) const;
-  void generateRelocationCode(raw_ostream &os) const;
+  bool generateRelocationCode(raw_ostream &os) const;
 
   bool isTLS() const { return flags & llvm::wasm::WASM_SEG_FLAG_TLS; }
   bool isRetained() const { return flags & llvm::wasm::WASM_SEG_FLAG_RETAIN; }
@@ -112,7 +112,7 @@ protected:
   InputChunk(ObjFile *f, Kind k, StringRef name, uint32_t alignment = 0,
              uint32_t flags = 0)
       : name(name), file(f), alignment(alignment), flags(flags), sectionKind(k),
-        live(!config->gcSections), discarded(false) {}
+        live(!ctx.arg.gcSections), discarded(false) {}
   ArrayRef<uint8_t> data() const { return rawData; }
   uint64_t getTombstone() const;
 
@@ -156,7 +156,7 @@ class SyntheticMergedChunk;
 // be found by looking at the next one).
 struct SectionPiece {
   SectionPiece(size_t off, uint32_t hash, bool live)
-      : inputOff(off), live(live || !config->gcSections), hash(hash >> 1) {}
+      : inputOff(off), live(live || !ctx.arg.gcSections), hash(hash >> 1) {}
 
   uint32_t inputOff;
   uint32_t live : 1;
@@ -177,8 +177,9 @@ public:
     inputSectionOffset = seg.SectionOffset;
   }
 
-  MergeInputChunk(const WasmSection &s, ObjFile *f)
-      : InputChunk(f, Merge, s.Name, 0, llvm::wasm::WASM_SEG_FLAG_STRINGS) {
+  MergeInputChunk(const WasmSection &s, ObjFile *f, uint32_t alignment)
+      : InputChunk(f, Merge, s.Name, alignment,
+                   llvm::wasm::WASM_SEG_FLAG_STRINGS) {
     assert(s.Type == llvm::wasm::WASM_SEC_CUSTOM);
     comdat = s.Comdat;
     rawData = s.Content;
@@ -234,6 +235,7 @@ public:
 
   void addMergeChunk(MergeInputChunk *ms) {
     comdat = ms->getComdat();
+    alignment = std::max(alignment, ms->alignment);
     ms->parent = this;
     chunks.push_back(ms);
   }
@@ -337,8 +339,8 @@ public:
 // Represents a single Wasm Section within an input file.
 class InputSection : public InputChunk {
 public:
-  InputSection(const WasmSection &s, ObjFile *f)
-      : InputChunk(f, InputChunk::Section, s.Name),
+  InputSection(const WasmSection &s, ObjFile *f, uint32_t alignment)
+      : InputChunk(f, InputChunk::Section, s.Name, alignment),
         tombstoneValue(getTombstoneForSection(s.Name)), section(s) {
     assert(section.Type == llvm::wasm::WASM_SEC_CUSTOM);
     comdat = section.Comdat;

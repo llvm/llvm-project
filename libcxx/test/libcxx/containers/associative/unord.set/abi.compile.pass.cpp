@@ -6,7 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-has-abi-fix-unordered-container-size-type
+// UNSUPPORTED: libcpp-has-abi-fix-unordered-container-size-type, libcpp-abi-no-compressed-pair-padding
+
+// std::unique_ptr is used as an implementation detail of the unordered containers, so the layout of
+// unordered containers changes when bounded unique_ptr is enabled.
+// UNSUPPORTED: libcpp-has-abi-bounded-unique_ptr
+
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 #include <cstdint>
 #include <unordered_set>
@@ -92,7 +98,8 @@ static_assert(TEST_ALIGNOF(unordered_set_alloc<char, final_small_iter_allocator<
 struct TEST_ALIGNAS(32) AlignedHash {};
 struct UnalignedEqualTo {};
 
-static_assert(sizeof(std::unordered_set<int, AlignedHash, UnalignedEqualTo>) == 96, "");
+// This part of the ABI has been broken between LLVM 19 and LLVM 20.
+static_assert(sizeof(std::unordered_set<int, AlignedHash, UnalignedEqualTo>) == 64, "");
 static_assert(TEST_ALIGNOF(std::unordered_set<int, AlignedHash, UnalignedEqualTo>) == 32, "");
 
 #elif __SIZE_WIDTH__ == 32
@@ -124,7 +131,7 @@ static_assert(TEST_ALIGNOF(unordered_set_alloc<char, final_small_iter_allocator<
 struct TEST_ALIGNAS(32) AlignedHash {};
 struct UnalignedEqualTo {};
 
-static_assert(sizeof(std::unordered_set<int, AlignedHash, UnalignedEqualTo>) == 96);
+static_assert(sizeof(std::unordered_set<int, AlignedHash, UnalignedEqualTo>) == 64);
 static_assert(TEST_ALIGNOF(std::unordered_set<int, AlignedHash, UnalignedEqualTo>) == 32);
 
 #else

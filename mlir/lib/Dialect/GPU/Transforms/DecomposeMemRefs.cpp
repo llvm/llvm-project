@@ -29,6 +29,17 @@ namespace mlir {
 
 using namespace mlir;
 
+static MemRefType inferCastResultType(Value source, OpFoldResult offset) {
+  auto sourceType = cast<BaseMemRefType>(source.getType());
+  SmallVector<int64_t> staticOffsets;
+  SmallVector<Value> dynamicOffsets;
+  dispatchIndexOpFoldResults(offset, dynamicOffsets, staticOffsets);
+  auto stridedLayout =
+      StridedLayoutAttr::get(source.getContext(), staticOffsets.front(), {});
+  return MemRefType::get({}, sourceType.getElementType(), stridedLayout,
+                         sourceType.getMemorySpace());
+}
+
 static void setInsertionPointToStart(OpBuilder &builder, Value val) {
   if (auto *parentOp = val.getDefiningOp()) {
     builder.setInsertionPointAfter(parentOp);
@@ -56,7 +67,7 @@ getFlatOffsetAndStrides(OpBuilder &rewriter, Location loc, Value source,
         rewriter.create<memref::ExtractStridedMetadataOp>(loc, source);
   }
 
-  auto &&[sourceStrides, sourceOffset] = getStridesAndOffset(sourceType);
+  auto &&[sourceStrides, sourceOffset] = sourceType.getStridesAndOffset();
 
   auto getDim = [&](int64_t dim, Value dimVal) -> OpFoldResult {
     return ShapedType::isDynamic(dim) ? getAsOpFoldResult(dimVal)
@@ -98,7 +109,7 @@ static Value getFlatMemref(OpBuilder &rewriter, Location loc, Value source,
   SmallVector<OpFoldResult> offsetsTemp = getAsOpFoldResult(offsets);
   auto &&[base, offset, ignore] =
       getFlatOffsetAndStrides(rewriter, loc, source, offsetsTemp);
-  auto retType = cast<MemRefType>(base.getType());
+  MemRefType retType = inferCastResultType(base, offset);
   return rewriter.create<memref::ReinterpretCastOp>(loc, retType, base, offset,
                                                     std::nullopt, std::nullopt);
 }
@@ -216,8 +227,7 @@ struct GpuDecomposeMemrefsPass
 
     populateGpuDecomposeMemrefsPatterns(patterns);
 
-    if (failed(
-            applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
 };

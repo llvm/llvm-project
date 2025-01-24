@@ -136,6 +136,10 @@ let Definition = "debugger" in {
     Global,
     DefaultUnsignedValue<80>,
     Desc<"The maximum number of columns to use for displaying text.">;
+  def TerminalHeight: Property<"term-height", "UInt64">,
+    Global,
+    DefaultUnsignedValue<24>,
+    Desc<"The number of rows used for displaying text.">;
   def ThreadFormat: Property<"thread-format", "FormatEntity">,
     Global,
     DefaultStringValue<"thread #${thread.index}: tid = ${thread.id%tid}{, ${frame.pc}}{ ${module.file.basename}{`${function.name-with-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${ansi.fg.cyan}${line.file.basename}${ansi.normal}:${ansi.fg.yellow}${line.number}${ansi.normal}{:${ansi.fg.yellow}${line.column}${ansi.normal}}}{, name = ${ansi.fg.green}'${thread.name}'${ansi.normal}}{, queue = ${ansi.fg.green}'${thread.queue}'${ansi.normal}}{, activity = ${ansi.fg.green}'${thread.info.activity.name}'${ansi.normal}}{, ${thread.info.trace_messages} messages}{, stop reason = ${ansi.fg.red}${thread.stop-reason}${ansi.normal}}{\\\\nReturn value: ${thread.return-value}}{\\\\nCompleted expression: ${thread.completed-expression}}\\\\n">,
@@ -225,4 +229,8 @@ let Definition = "debugger" in {
     DefaultEnumValue<"eDWIMPrintVerbosityNone">,
     EnumValues<"OptionEnumValues(g_dwim_print_verbosities)">,
     Desc<"The verbosity level used by dwim-print.">;
+  def ShowInlineDiagnostics: Property<"show-inline-diagnostics", "Boolean">,
+    Global,
+    DefaultFalse,
+    Desc<"Controls whether diagnostics can refer directly to the command input, drawing arrows to it. If false, diagnostics will echo the input.">;
 }

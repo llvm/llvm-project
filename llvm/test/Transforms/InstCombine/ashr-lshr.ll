@@ -419,7 +419,7 @@ define i32 @ashr_lshr_no_lshr(i32 %x, i32 %y) {
 
 define <2 x i32> @ashr_lshr_vec_wrong_pred(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @ashr_lshr_vec_wrong_pred(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[X:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[X:%.*]], splat (i32 1)
 ; CHECK-NEXT:    [[L:%.*]] = lshr <2 x i32> [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = ashr <2 x i32> [[X]], [[Y]]
 ; CHECK-NEXT:    [[RET:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[L]], <2 x i32> [[R]]
@@ -741,7 +741,7 @@ define i32 @lshr_mul_times_5_div_4_exact_2(i32 %x) {
 
 define i32 @ashr_mul_times_3_div_2(i32 %0) {
 ; CHECK-LABEL: @ashr_mul_times_3_div_2(
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr i32 [[TMP0:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP0:%.*]], 1
 ; CHECK-NEXT:    [[ASHR:%.*]] = add nuw nsw i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[ASHR]]
 ;
@@ -815,7 +815,7 @@ define i32 @ashr_mul_times_3_div_2_exact_2(i32 %x) {
 
 define i32 @ashr_mul_times_5_div_4(i32 %0) {
 ; CHECK-LABEL: @ashr_mul_times_5_div_4(
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr i32 [[TMP0:%.*]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP0:%.*]], 2
 ; CHECK-NEXT:    [[ASHR:%.*]] = add nuw nsw i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[ASHR]]
 ;

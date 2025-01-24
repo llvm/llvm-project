@@ -72,8 +72,7 @@ public:
     mlirCtx->loadDialect<test::DummyDialect>();
 
     mlir::Location loc(mlir::UnknownLoc::get(mlirCtx.get()));
-    mlirModule =
-        std::make_unique<mlir::ModuleOp>(mlir::ModuleOp::create(loc, "mod"));
+    mlirModule = mlir::ModuleOp::create(loc, "mod");
 
     mlir::OpBuilder builder(mlirCtx.get());
     builder.setInsertionPointToStart(&mlirModule->getRegion().front());
@@ -103,7 +102,7 @@ TEST(CodeGenAction, GracefullyHandleLLVMConversionFailure) {
   action.setCurrentInput(file);
 
   consumeError(action.execute());
-  ASSERT_EQ(diagnosticsOS.str(),
+  ASSERT_EQ(diagnosticOutput,
       "error: Lowering to LLVM IR failed\n"
       "error: failed to create the LLVM module\n");
 }

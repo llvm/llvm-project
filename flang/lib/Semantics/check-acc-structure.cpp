@@ -409,16 +409,12 @@ void AccStructureChecker::CheckMultipleOccurrenceInDeclare(
               if (const auto *name = getDesignatorNameIfDataRef(designator)) {
                 if (declareSymbols.contains(&name->symbol->GetUltimate())) {
                   if (declareSymbols[&name->symbol->GetUltimate()] == clause) {
-                    if (context_.languageFeatures().ShouldWarn(
-                            common::UsageWarning::OpenAccUsage)) {
-                      context_.Say(GetContext().clauseSource,
-                          "'%s' in the %s clause is already present in the "
-                          "same "
-                          "clause in this module"_warn_en_US,
-                          name->symbol->name(),
-                          parser::ToUpperCaseLetters(
-                              llvm::acc::getOpenACCClauseName(clause).str()));
-                    }
+                    context_.Warn(common::UsageWarning::OpenAccUsage,
+                        GetContext().clauseSource,
+                        "'%s' in the %s clause is already present in the same clause in this module"_warn_en_US,
+                        name->symbol->name(),
+                        parser::ToUpperCaseLetters(
+                            llvm::acc::getOpenACCClauseName(clause).str()));
                   } else {
                     context_.Say(GetContext().clauseSource,
                         "'%s' in the %s clause is already present in another "
@@ -678,26 +674,28 @@ void AccStructureChecker::Enter(const parser::AccClause::Reduction &reduction) {
         common::visitors{
             [&](const parser::Designator &designator) {
               if (const auto *name = getDesignatorNameIfDataRef(designator)) {
-                const auto *type{name->symbol->GetType()};
-                if (type->IsNumeric(TypeCategory::Integer) &&
-                    !reductionIntegerSet.test(op.v)) {
-                  context_.Say(GetContext().clauseSource,
-                      "reduction operator not supported for integer type"_err_en_US);
-                } else if (type->IsNumeric(TypeCategory::Real) &&
-                    !reductionRealSet.test(op.v)) {
-                  context_.Say(GetContext().clauseSource,
-                      "reduction operator not supported for real type"_err_en_US);
-                } else if (type->IsNumeric(TypeCategory::Complex) &&
-                    !reductionComplexSet.test(op.v)) {
-                  context_.Say(GetContext().clauseSource,
-                      "reduction operator not supported for complex type"_err_en_US);
-                } else if (type->category() ==
-                        Fortran::semantics::DeclTypeSpec::Category::Logical &&
-                    !reductionLogicalSet.test(op.v)) {
-                  context_.Say(GetContext().clauseSource,
-                      "reduction operator not supported for logical type"_err_en_US);
+                if (name->symbol) {
+                  const auto *type{name->symbol->GetType()};
+                  if (type->IsNumeric(TypeCategory::Integer) &&
+                      !reductionIntegerSet.test(op.v)) {
+                    context_.Say(GetContext().clauseSource,
+                        "reduction operator not supported for integer type"_err_en_US);
+                  } else if (type->IsNumeric(TypeCategory::Real) &&
+                      !reductionRealSet.test(op.v)) {
+                    context_.Say(GetContext().clauseSource,
+                        "reduction operator not supported for real type"_err_en_US);
+                  } else if (type->IsNumeric(TypeCategory::Complex) &&
+                      !reductionComplexSet.test(op.v)) {
+                    context_.Say(GetContext().clauseSource,
+                        "reduction operator not supported for complex type"_err_en_US);
+                  } else if (type->category() ==
+                          Fortran::semantics::DeclTypeSpec::Category::Logical &&
+                      !reductionLogicalSet.test(op.v)) {
+                    context_.Say(GetContext().clauseSource,
+                        "reduction operator not supported for logical type"_err_en_US);
+                  }
+                  // TODO: check composite type.
                 }
-                // TODO: check composite type.
               }
             },
             [&](const Fortran::parser::Name &name) {
@@ -770,10 +768,8 @@ void AccStructureChecker::Enter(const parser::AccClause::Link &x) {
 }
 
 void AccStructureChecker::Enter(const parser::AccClause::Shortloop &x) {
-  if (CheckAllowed(llvm::acc::Clause::ACCC_shortloop) &&
-      context_.languageFeatures().ShouldWarn(
-          common::UsageWarning::OpenAccUsage)) {
-    context_.Say(GetContext().clauseSource,
+  if (CheckAllowed(llvm::acc::Clause::ACCC_shortloop)) {
+    context_.Warn(common::UsageWarning::OpenAccUsage, GetContext().clauseSource,
         "Non-standard shortloop clause ignored"_warn_en_US);
   }
 }
@@ -793,10 +789,8 @@ void AccStructureChecker::Enter(const parser::AccClause::If &x) {
 }
 
 void AccStructureChecker::Enter(const parser::OpenACCEndConstruct &x) {
-  if (context_.languageFeatures().ShouldWarn(
-          common::UsageWarning::OpenAccUsage)) {
-    context_.Say(x.source, "Misplaced OpenACC end directive"_warn_en_US);
-  }
+  context_.Warn(common::UsageWarning::OpenAccUsage, x.source,
+      "Misplaced OpenACC end directive"_warn_en_US);
 }
 
 void AccStructureChecker::Enter(const parser::Module &) {

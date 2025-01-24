@@ -1045,8 +1045,8 @@ define void @srd(ptr %a, i64 %b, i64 %c) {
 ; RV32XTHEADMEMIDX-LABEL: srd:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    add a2, a3, a3
-; RV32XTHEADMEMIDX-NEXT:    sltu a3, a2, a3
 ; RV32XTHEADMEMIDX-NEXT:    add a4, a4, a4
+; RV32XTHEADMEMIDX-NEXT:    sltu a3, a2, a3
 ; RV32XTHEADMEMIDX-NEXT:    add a3, a4, a3
 ; RV32XTHEADMEMIDX-NEXT:    slli a4, a1, 3
 ; RV32XTHEADMEMIDX-NEXT:    add a4, a0, a4
@@ -1069,8 +1069,8 @@ define void @surd(ptr %a, i32 %b, i64 %c) {
 ; RV32XTHEADMEMIDX-LABEL: surd:
 ; RV32XTHEADMEMIDX:       # %bb.0:
 ; RV32XTHEADMEMIDX-NEXT:    add a4, a2, a2
-; RV32XTHEADMEMIDX-NEXT:    sltu a2, a4, a2
 ; RV32XTHEADMEMIDX-NEXT:    add a3, a3, a3
+; RV32XTHEADMEMIDX-NEXT:    sltu a2, a4, a2
 ; RV32XTHEADMEMIDX-NEXT:    add a2, a3, a2
 ; RV32XTHEADMEMIDX-NEXT:    slli a3, a1, 3
 ; RV32XTHEADMEMIDX-NEXT:    add a3, a0, a3

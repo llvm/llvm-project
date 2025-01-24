@@ -14,6 +14,8 @@
 // These compilers don't support constexpr `__builtin_signbit` yet.
 // UNSUPPORTED: clang-17, clang-18, clang-19, apple-clang-15, apple-clang-16
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <cassert>
 #include <cmath>
 #include <limits>
@@ -70,9 +72,22 @@ struct TestInt {
   }
 };
 
+template <typename T>
+struct ConvertibleTo {
+  operator T() const { return T(); }
+};
+
 int main(int, char**) {
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::integral_types(), TestInt());
 
+  // Make sure we can call `std::signbit` with convertible types. This checks
+  // whether overloads for all cv-unqualified floating-point types are working
+  // as expected.
+  {
+    assert(!std::signbit(ConvertibleTo<float>()));
+    assert(!std::signbit(ConvertibleTo<double>()));
+    assert(!std::signbit(ConvertibleTo<long double>()));
+  }
   return 0;
 }

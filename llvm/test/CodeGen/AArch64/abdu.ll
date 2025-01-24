@@ -400,6 +400,87 @@ define i64 @vector_legalized(i16 %a, i16 %b) {
   ret i64 %z
 }
 
+;
+; sub(select(icmp(a,b),a,b),select(icmp(a,b),b,a)) -> abdu(a,b)
+;
+
+define i8 @abd_select_i8(i8 %a, i8 %b) nounwind {
+; CHECK-LABEL: abd_select_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and w8, w0, #0xff
+; CHECK-NEXT:    sub w8, w8, w1, uxtb
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    cneg w0, w8, mi
+; CHECK-NEXT:    ret
+  %cmp = icmp ult i8 %a, %b
+  %ab = select i1 %cmp, i8 %a, i8 %b
+  %ba = select i1 %cmp, i8 %b, i8 %a
+  %sub = sub i8 %ba, %ab
+  ret i8 %sub
+}
+
+define i16 @abd_select_i16(i16 %a, i16 %b) nounwind {
+; CHECK-LABEL: abd_select_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and w8, w0, #0xffff
+; CHECK-NEXT:    sub w8, w8, w1, uxth
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    cneg w0, w8, mi
+; CHECK-NEXT:    ret
+  %cmp = icmp ule i16 %a, %b
+  %ab = select i1 %cmp, i16 %a, i16 %b
+  %ba = select i1 %cmp, i16 %b, i16 %a
+  %sub = sub i16 %ba, %ab
+  ret i16 %sub
+}
+
+define i32 @abd_select_i32(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: abd_select_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub w8, w1, w0
+; CHECK-NEXT:    subs w9, w0, w1
+; CHECK-NEXT:    csel w0, w9, w8, hi
+; CHECK-NEXT:    ret
+  %cmp = icmp ugt i32 %a, %b
+  %ab = select i1 %cmp, i32 %a, i32 %b
+  %ba = select i1 %cmp, i32 %b, i32 %a
+  %sub = sub i32 %ab, %ba
+  ret i32 %sub
+}
+
+define i64 @abd_select_i64(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: abd_select_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub x8, x1, x0
+; CHECK-NEXT:    subs x9, x0, x1
+; CHECK-NEXT:    csel x0, x9, x8, hi
+; CHECK-NEXT:    ret
+  %cmp = icmp uge i64 %a, %b
+  %ab = select i1 %cmp, i64 %a, i64 %b
+  %ba = select i1 %cmp, i64 %b, i64 %a
+  %sub = sub i64 %ab, %ba
+  ret i64 %sub
+}
+
+define i128 @abd_select_i128(i128 %a, i128 %b) nounwind {
+; CHECK-LABEL: abd_select_i128:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs x8, x0, x2
+; CHECK-NEXT:    sbcs x9, x1, x3
+; CHECK-NEXT:    cset w10, lo
+; CHECK-NEXT:    sbfx x10, x10, #0, #1
+; CHECK-NEXT:    eor x8, x8, x10
+; CHECK-NEXT:    eor x9, x9, x10
+; CHECK-NEXT:    subs x0, x8, x10
+; CHECK-NEXT:    sbc x1, x9, x10
+; CHECK-NEXT:    ret
+  %cmp = icmp ult i128 %a, %b
+  %ab = select i1 %cmp, i128 %a, i128 %b
+  %ba = select i1 %cmp, i128 %b, i128 %a
+  %sub = sub i128 %ba, %ab
+  ret i128 %sub
+}
+
 declare i8 @llvm.abs.i8(i8, i1)
 declare i16 @llvm.abs.i16(i16, i1)
 declare i32 @llvm.abs.i32(i32, i1)

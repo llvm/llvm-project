@@ -37,13 +37,6 @@ static cl::opt<unsigned> MaxCopiedFromConstantUsers(
     cl::desc("Maximum users to visit in copy from constant transform"),
     cl::Hidden);
 
-namespace llvm {
-cl::opt<bool> EnableInferAlignmentPass(
-    "enable-infer-alignment-pass", cl::init(true), cl::Hidden, cl::ZeroOrMore,
-    cl::desc("Enable the InferAlignment pass, disabling alignment inference in "
-             "InstCombine"));
-}
-
 /// isOnlyCopiedFromConstantMemory - Recursively walk the uses of a (derived)
 /// pointer to an alloca.  Ignore any reads of the pointer, return false if we
 /// see any stores or other unknown uses.  If we see pointer arithmetic, keep
@@ -118,11 +111,6 @@ isOnlyCopiedFromConstantMemory(AAResults *AA, AllocaInst *V,
         bool NoCapture = Call->doesNotCapture(DataOpNo);
         if ((Call->onlyReadsMemory() && (Call->use_empty() || NoCapture)) ||
             (Call->onlyReadsMemory(DataOpNo) && NoCapture))
-          continue;
-
-        // If this is being passed as a byval argument, the caller is making a
-        // copy, so it is only a read of the alloca.
-        if (IsArgOperand && Call->isByValArgument(DataOpNo))
           continue;
       }
 
@@ -716,29 +704,22 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
     const DataLayout &DL = IC.getDataLayout();
     auto *SL = DL.getStructLayout(ST);
 
-    // Don't unpack for structure with scalable vector.
-    if (SL->getSizeInBits().isScalable())
-      return nullptr;
-
     if (SL->hasPadding())
       return nullptr;
 
     const auto Align = LI.getAlign();
     auto *Addr = LI.getPointerOperand();
-    auto *IdxType = Type::getInt32Ty(T->getContext());
-    auto *Zero = ConstantInt::get(IdxType, 0);
+    auto *IdxType = DL.getIndexType(Addr->getType());
 
     Value *V = PoisonValue::get(T);
     for (unsigned i = 0; i < NumElements; i++) {
-      Value *Indices[2] = {
-        Zero,
-        ConstantInt::get(IdxType, i),
-      };
-      auto *Ptr = IC.Builder.CreateInBoundsGEP(ST, Addr, ArrayRef(Indices),
-                                               Name + ".elt");
+      auto *Ptr = IC.Builder.CreateInBoundsPtrAdd(
+          Addr, IC.Builder.CreateTypeSize(IdxType, SL->getElementOffset(i)),
+          Name + ".elt");
       auto *L = IC.Builder.CreateAlignedLoad(
           ST->getElementType(i), Ptr,
-          commonAlignment(Align, SL->getElementOffset(i)), Name + ".unpack");
+          commonAlignment(Align, SL->getElementOffset(i).getKnownMinValue()),
+          Name + ".unpack");
       // Propagate AA metadata. It'll still be valid on the narrowed load.
       L->setAAMetadata(LI.getAAMetadata());
       V = IC.Builder.CreateInsertValue(V, L, i);
@@ -1010,14 +991,6 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
   if (Instruction *Res = combineLoadToOperationType(*this, LI))
     return Res;
 
-  if (!EnableInferAlignmentPass) {
-    // Attempt to improve the alignment.
-    Align KnownAlign = getOrEnforceKnownAlignment(
-        Op, DL.getPrefTypeAlign(LI.getType()), DL, &LI, &AC, &DT);
-    if (KnownAlign > LI.getAlign())
-      LI.setAlignment(KnownAlign);
-  }
-
   // Replace GEP indices if possible.
   if (Instruction *NewGEPI = replaceGEPIdxWithZero(*this, Op, LI))
     return replaceOperand(LI, 0, NewGEPI);
@@ -1080,6 +1053,10 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
         V1->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
         V2->setAlignment(Alignment);
         V2->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
+        // It is safe to copy any metadata that does not trigger UB. Copy any
+        // poison-generating metadata.
+        V1->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
+        V2->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
         return SelectInst::Create(SI->getCondition(), V1, V2);
       }
 
@@ -1238,10 +1215,6 @@ static bool unpackStoreToAggregate(InstCombinerImpl &IC, StoreInst &SI) {
     const DataLayout &DL = IC.getDataLayout();
     auto *SL = DL.getStructLayout(ST);
 
-    // Don't unpack for structure with scalable vector.
-    if (SL->getSizeInBits().isScalable())
-      return false;
-
     if (SL->hasPadding())
       return false;
 
@@ -1253,17 +1226,14 @@ static bool unpackStoreToAggregate(InstCombinerImpl &IC, StoreInst &SI) {
     SmallString<16> AddrName = Addr->getName();
     AddrName += ".repack";
 
-    auto *IdxType = Type::getInt32Ty(ST->getContext());
-    auto *Zero = ConstantInt::get(IdxType, 0);
+    auto *IdxType = DL.getIndexType(Addr->getType());
     for (unsigned i = 0; i < Count; i++) {
-      Value *Indices[2] = {
-        Zero,
-        ConstantInt::get(IdxType, i),
-      };
-      auto *Ptr =
-          IC.Builder.CreateInBoundsGEP(ST, Addr, ArrayRef(Indices), AddrName);
+      auto *Ptr = IC.Builder.CreateInBoundsPtrAdd(
+          Addr, IC.Builder.CreateTypeSize(IdxType, SL->getElementOffset(i)),
+          AddrName);
       auto *Val = IC.Builder.CreateExtractValue(V, i, EltName);
-      auto EltAlign = commonAlignment(Align, SL->getElementOffset(i));
+      auto EltAlign =
+          commonAlignment(Align, SL->getElementOffset(i).getKnownMinValue());
       llvm::Instruction *NS = IC.Builder.CreateAlignedStore(Val, Ptr, EltAlign);
       NS->setAAMetadata(SI.getAAMetadata());
     }
@@ -1357,14 +1327,6 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   // Try to canonicalize the stored type.
   if (combineStoreToValueType(*this, SI))
     return eraseInstFromFunction(SI);
-
-  if (!EnableInferAlignmentPass) {
-    // Attempt to improve the alignment.
-    const Align KnownAlign = getOrEnforceKnownAlignment(
-        Ptr, DL.getPrefTypeAlign(Val->getType()), DL, &SI, &AC, &DT);
-    if (KnownAlign > SI.getAlign())
-      SI.setAlignment(KnownAlign);
-  }
 
   // Try to canonicalize the stored type.
   if (unpackStoreToAggregate(*this, SI))

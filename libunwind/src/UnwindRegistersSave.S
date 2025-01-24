@@ -746,6 +746,7 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   str    x1,      [x0, #0x0F8]
   str    x30,     [x0, #0x100]    // store return address as pc
   // skip cpsr
+#if defined(__ARM_FP) && __ARM_FP != 0
   stp    d0, d1,  [x0, #0x110]
   stp    d2, d3,  [x0, #0x120]
   stp    d4, d5,  [x0, #0x130]
@@ -763,6 +764,7 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   stp    d28,d29, [x0, #0x1F0]
   str    d30,     [x0, #0x200]
   str    d31,     [x0, #0x208]
+#endif
   mov    x0, #0                   // return UNW_ESUCCESS
   ret
 

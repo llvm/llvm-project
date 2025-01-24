@@ -142,7 +142,7 @@ template <typename R> void basicTests(int rm, Rounding rounding) {
     Integer8 ix{x};
     TEST(!ix.IsNegative())(ldesc);
     MATCH(x, ix.ToUInt64())(ldesc);
-    vr = R::FromInteger(ix, rounding);
+    vr = R::FromInteger(ix, false, rounding);
     TEST(!vr.value.IsNegative())(ldesc);
     TEST(!vr.value.IsNotANumber())(ldesc);
     TEST(!vr.value.IsZero())(ldesc);
@@ -158,10 +158,9 @@ template <typename R> void basicTests(int rm, Rounding rounding) {
       TEST(ivf.flags.empty())(ldesc);
       MATCH(x, ivf.value.ToUInt64())(ldesc);
       if (rounding.mode == RoundingMode::TiesToEven) { // to match stold()
-        std::string buf;
-        llvm::raw_string_ostream ss{buf};
+        std::string decimal;
+        llvm::raw_string_ostream ss{decimal};
         vr.value.AsFortran(ss, kind, false /*exact*/);
-        std::string decimal{ss.str()};
         const char *p{decimal.data()};
         MATCH(x, static_cast<std::uint64_t>(std::stold(decimal)))
         ("%s %s", ldesc, p);
@@ -304,7 +303,7 @@ void inttest(std::int64_t x, int pass, Rounding rounding) {
   ScopedHostFloatingPointEnvironment fpenv;
   Integer8 ix{x};
   ValueWithRealFlags<REAL> real;
-  real = real.value.FromInteger(ix, rounding);
+  real = real.value.FromInteger(ix, false, rounding);
 #ifndef __clang__ // broken and also slow
   fpenv.ClearFlags();
 #endif
@@ -424,14 +423,13 @@ void subsetTests(int pass, Rounding rounding, std::uint32_t opds) {
       ("%d IsInfinite(0x%jx)", pass, static_cast<std::intmax_t>(rj));
 
       static constexpr int kind{REAL::bits / 8};
-      std::string ssBuf, cssBuf;
-      llvm::raw_string_ostream ss{ssBuf};
+      std::string s, cssBuf;
+      llvm::raw_string_ostream ss{s};
       llvm::raw_string_ostream css{cssBuf};
       x.AsFortran(ss, kind, false /*exact*/);
-      std::string s{ss.str()};
       if (IsNaN(rj)) {
         css << "(0._" << kind << "/0.)";
-        MATCH(css.str(), s)
+        MATCH(cssBuf, s)
         ("%d invalid(0x%jx)", pass, static_cast<std::intmax_t>(rj));
       } else if (IsInfinite(rj)) {
         css << '(';
@@ -439,7 +437,7 @@ void subsetTests(int pass, Rounding rounding, std::uint32_t opds) {
           css << '-';
         }
         css << "1._" << kind << "/0.)";
-        MATCH(css.str(), s)
+        MATCH(cssBuf, s)
         ("%d overflow(0x%jx)", pass, static_cast<std::intmax_t>(rj));
       } else {
         const char *p = s.data();

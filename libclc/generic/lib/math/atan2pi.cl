@@ -21,10 +21,10 @@
  */
 
 #include <clc/clc.h>
+#include <clc/clcmacro.h>
 
 #include "math.h"
 #include "tables.h"
-#include "../clcmacro.h"
 
 _CLC_OVERLOAD _CLC_DEF  float atan2pi(float y, float x) {
     const float pi = 0x1.921fb6p+1f;
@@ -220,4 +220,10 @@ _CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, atan2pi, double, double)
 
 #endif
 
+#ifdef cl_khr_fp16
+
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
 _CLC_DEFINE_BINARY_BUILTIN_FP16(atan2pi)
+
+#endif

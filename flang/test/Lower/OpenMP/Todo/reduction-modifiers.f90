@@ -8,6 +8,7 @@ subroutine foo()
   j = 0
   !$omp do reduction (inscan, *: j)
   do i = 1, 10
+    !$omp scan inclusive(j)
     j = j + 1
   end do
 end subroutine

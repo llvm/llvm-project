@@ -485,7 +485,7 @@ define i1 @select_constants_and_icmp_ne0_all_uses(i1 %x, i1 %y) {
 define <2 x i1> @select_constants_and_icmp_ne0_vec_splat(<2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @select_constants_and_icmp_ne0_vec_splat(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = xor <2 x i1> [[TMP1]], <i1 true, i1 true>
+; CHECK-NEXT:    [[CMP:%.*]] = xor <2 x i1> [[TMP1]], splat (i1 true)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %s1 = select <2 x i1> %x, <2 x i9> <i9 3, i9 3>, <2 x i9> <i9 48, i9 48>
