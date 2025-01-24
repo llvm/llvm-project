@@ -26,3 +26,27 @@ let Predicates = [HasStdExtZvabd] in {
   def : InstAlias<"vabs.v $vd, $vs$vm", (VABD_VX VR:$vd, VR:$vs, X0, VMaskOp:$vm)>;
   def : InstAlias<"vabs.v $vd, $vs", (VABD_VX VR:$vd, VR:$vs, X0, zero_reg)>;
 } // Predicates = [HasStdExtZvabd]
+
+//===----------------------------------------------------------------------===//
+// Pseudos
+//===----------------------------------------------------------------------===//
+let Predicates = [HasStdExtZvabd] in {
+  defm PseudoVABD : VPseudoVALU_VV_VX<Commutable = 1>;
+  defm PseudoVABDU : VPseudoVALU_VV_VX<Commutable = 1>;
+} // Predicates = [HasStdExtZvabd]
+
+//===----------------------------------------------------------------------===//
+// CodeGen Patterns
+//===----------------------------------------------------------------------===//
+let HasPassthruOp = true, HasMaskOp = true in {
+def riscv_abds_vl : RVSDNode<"ABDS_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
+def riscv_abdu_vl : RVSDNode<"ABDU_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
+} // let HasPassthruOp = true, HasMaskOp = true
+
+let Predicates = [HasStdExtZvabd] in {
+defm : VPatBinarySDNode_VV_VX<abds, "PseudoVABD">;
+defm : VPatBinarySDNode_VV_VX<abdu, "PseudoVABDU">;
+
+defm : VPatBinaryVL_VV_VX<riscv_abds_vl, "PseudoVABD">;
+defm : VPatBinaryVL_VV_VX<riscv_abdu_vl, "PseudoVABDU">;
+} // Predicates = [HasStdExtZvabd]
