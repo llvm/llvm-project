@@ -1251,7 +1251,9 @@ JITDylib::JITDylib(ExecutionSession &ES, std::string Name)
   LinkOrder.push_back({this, JITDylibLookupFlags::MatchAllSymbols});
 }
 
-JITDylib::RemoveTrackerResult JITDylib::IL_removeTracker(ResourceTracker &RT) {
+std::pair<JITDylib::AsynchronousSymbolQuerySet,
+          std::shared_ptr<SymbolDependenceMap>>
+JITDylib::IL_removeTracker(ResourceTracker &RT) {
   // Note: Should be called under the session lock.
   assert(State != Closed && "JD is defunct");
 
@@ -1290,10 +1292,7 @@ JITDylib::RemoveTrackerResult JITDylib::IL_removeTracker(ResourceTracker &RT) {
       SymbolsToFail.push_back(Sym);
   }
 
-  auto [QueriesToFail, FailedSymbols] =
-      ES.IL_failSymbols(*this, std::move(SymbolsToFail));
-
-  std::vector<std::unique_ptr<MaterializationUnit>> DefunctMUs;
+  auto Result = ES.IL_failSymbols(*this, std::move(SymbolsToFail));
 
   // Removed symbols should be taken out of the table altogether.
   for (auto &Sym : SymbolsToRemove) {
@@ -1303,12 +1302,7 @@ JITDylib::RemoveTrackerResult JITDylib::IL_removeTracker(ResourceTracker &RT) {
     // Remove Materializer if present.
     if (I->second.hasMaterializerAttached()) {
       // FIXME: Should this discard the symbols?
-      auto J = UnmaterializedInfos.find(Sym);
-      assert(J != UnmaterializedInfos.end() &&
-             "Symbol table indicates MU present, but no UMI record");
-      if (J->second->MU)
-        DefunctMUs.push_back(std::move(J->second->MU));
-      UnmaterializedInfos.erase(J);
+      UnmaterializedInfos.erase(Sym);
     } else {
       assert(!UnmaterializedInfos.count(Sym) &&
              "Symbol has materializer attached");
@@ -1319,8 +1313,7 @@ JITDylib::RemoveTrackerResult JITDylib::IL_removeTracker(ResourceTracker &RT) {
 
   shrinkMaterializationInfoMemory();
 
-  return {std::move(QueriesToFail), std::move(FailedSymbols),
-          std::move(DefunctMUs)};
+  return Result;
 }
 
 void JITDylib::transferTracker(ResourceTracker &DstRT, ResourceTracker &SrcRT) {
@@ -2187,16 +2180,15 @@ Error ExecutionSession::removeResourceTracker(ResourceTracker &RT) {
   });
   std::vector<ResourceManager *> CurrentResourceManagers;
 
-  JITDylib::RemoveTrackerResult R;
+  JITDylib::AsynchronousSymbolQuerySet QueriesToFail;
+  std::shared_ptr<SymbolDependenceMap> FailedSymbols;
 
   runSessionLocked([&] {
     CurrentResourceManagers = ResourceManagers;
     RT.makeDefunct();
-    R = RT.getJITDylib().IL_removeTracker(RT);
+    std::tie(QueriesToFail, FailedSymbols) =
+        RT.getJITDylib().IL_removeTracker(RT);
   });
-
-  // Release any defunct MaterializationUnits.
-  R.DefunctMUs.clear();
 
   Error Err = Error::success();
 
@@ -2205,9 +2197,9 @@ Error ExecutionSession::removeResourceTracker(ResourceTracker &RT) {
     Err = joinErrors(std::move(Err),
                      L->handleRemoveResources(JD, RT.getKeyUnsafe()));
 
-  for (auto &Q : R.QueriesToFail)
-    Q->handleFailed(make_error<FailedToMaterialize>(getSymbolStringPool(),
-                                                    R.FailedSymbols));
+  for (auto &Q : QueriesToFail)
+    Q->handleFailed(
+        make_error<FailedToMaterialize>(getSymbolStringPool(), FailedSymbols));
 
   return Err;
 }
