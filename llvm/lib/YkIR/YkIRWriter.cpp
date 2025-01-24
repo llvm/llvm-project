@@ -48,6 +48,7 @@ public:
 
 #define YK_OUTLINE_FNATTR "yk_outline"
 #define YK_PROMOTE_PREFIX "__yk_promote"
+#define YK_DEBUG_STR "yk_debug_str"
 const char *SectionName = ".yk_ir";
 const uint32_t Magic = 0xedd5f00d;
 const uint32_t Version = 0;
@@ -74,6 +75,7 @@ enum OpCode {
   OpCodeFCmp,
   OpCodePromote,
   OpCodeFNeg,
+  OpCodeDebugStr,
   OpCodeUnimplemented = 255, // YKFIXME: Will eventually be deleted.
 };
 
@@ -641,6 +643,21 @@ private:
     InstIdx++;
   }
 
+  void serialiseDebugStr(CallInst *I, FuncLowerCtxt &FLCtxt,
+                         unsigned &InstIdx) {
+    // We expect one argument: a `char *`.
+    assert(I->arg_size() == 1);
+    assert(I->getOperand(0)->getType()->isPointerTy());
+
+    // opcode:
+    serialiseOpcode(OpCodeDebugStr);
+    // message:
+    serialiseOperand(I, FLCtxt, I->getOperand(0));
+
+    FLCtxt.updateVLMap(I, InstIdx);
+    InstIdx++;
+  }
+
   void serialiseIndirectCallInst(CallInst *I, FuncLowerCtxt &FLCtxt,
                                  unsigned BBIdx, unsigned &InstIdx) {
 
@@ -781,6 +798,11 @@ private:
 
     if (I->getCalledFunction()->getName().startswith(YK_PROMOTE_PREFIX)) {
       serialisePromotion(I, FLCtxt, InstIdx);
+      return;
+    }
+
+    if (I->getCalledFunction()->getName() == YK_DEBUG_STR) {
+      serialiseDebugStr(I, FLCtxt, InstIdx);
       return;
     }
 
@@ -1795,7 +1817,7 @@ public:
     int functionCount = 0;
     for (llvm::Function &F : M) {
       // Skip cloned functions
-      if (!StringRef(F.getName()).startswith(YK_CLONE_PREFIX)) {
+      if (!StringRef(F.getName()).startswith(YK_UNOPT_PREFIX)) {
         FunctionIndexMap[&F] = functionCount;
         functionCount++;
       }
@@ -1805,7 +1827,7 @@ public:
     // funcs:
     for (llvm::Function &F : M) {
       // Skip cloned functions
-      if (StringRef(F.getName()).startswith(YK_CLONE_PREFIX)) {
+      if (StringRef(F.getName()).startswith(YK_UNOPT_PREFIX)) {
         continue;
       }
       serialiseFunc(F);
