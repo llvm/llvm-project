@@ -288,6 +288,9 @@ template <class ELFT> class ELFState {
                            const ELFYAML::BBAddrMapSection &Section,
                            ContiguousBlobAccumulator &CBA);
   void writeSectionContent(Elf_Shdr &SHeader,
+                           const ELFYAML::FuncMapSection &Section,
+                           ContiguousBlobAccumulator &CBA);
+  void writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::HashSection &Section,
                            ContiguousBlobAccumulator &CBA);
   void writeSectionContent(Elf_Shdr &SHeader,
@@ -893,6 +896,8 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
     } else if (auto S = dyn_cast<ELFYAML::CallGraphProfileSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::BBAddrMapSection>(Sec)) {
+      writeSectionContent(SHeader, *S, CBA);
+    } else if (auto S = dyn_cast<ELFYAML::FuncMapSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else {
       llvm_unreachable("Unknown section type");
@@ -1534,6 +1539,31 @@ void ELFState<ELFT>::writeSectionContent(
         }
       }
     }
+  }
+}
+
+template <class ELFT>
+void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
+                                         const ELFYAML::FuncMapSection &Section,
+                                         ContiguousBlobAccumulator &CBA) {
+  if (!Section.Entries)
+    return;
+
+  for (const auto &[Idx, E] : llvm::enumerate(*Section.Entries)) {
+    // Write version and feature values.
+    if (Section.Type == llvm::ELF::SHT_LLVM_FUNC_MAP) {
+      if (E.Version > 1)
+        WithColor::warning() << "unsupported SHT_LLVM_FUNC_MAP version: "
+                             << static_cast<int>(E.Version)
+                             << "; encoding using the most recent version";
+      CBA.write(E.Version);
+      CBA.write(E.Feature);
+      SHeader.sh_size += 2;
+    }
+    CBA.write<uintX_t>(E.Address, ELFT::Endianness);
+    SHeader.sh_size += sizeof(uintX_t);
+    if (E.DynamicInstCount)
+      SHeader.sh_size += CBA.writeULEB128(E.DynamicInstCount);
   }
 }
 
