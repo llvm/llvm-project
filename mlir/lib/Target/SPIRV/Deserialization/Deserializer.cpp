@@ -432,8 +432,8 @@ LogicalResult spirv::Deserializer::setFunctionArgAttrs(
   for (NamedAttribute decAttr : decorations[argID]) {
     for (auto decoration :
          {spirv::Decoration::Aliased, spirv::Decoration::Restrict,
-          spirv::Decoration::AliasedPointer,
-          spirv::Decoration::RestrictPointer}) {
+          spirv::Decoration::AliasedPointer, spirv::Decoration::RestrictPointer,
+          spirv::Decoration::RelaxedPrecision}) {
 
       if (decAttr.getName() !=
           getSymbolDecoration(stringifyDecoration(decoration)))
@@ -441,8 +441,8 @@ LogicalResult spirv::Deserializer::setFunctionArgAttrs(
 
       if (foundDecorationAttr)
         return emitError(unknownLoc,
-                         "more than one Aliased/Restrict decorations for "
-                         "function argument with result <id> ")
+                         "more than one decoration for function argument "
+                         "with result <id> ")
                << argID;
 
       foundDecorationAttr = spirv::DecorationAttr::get(context, decoration);
