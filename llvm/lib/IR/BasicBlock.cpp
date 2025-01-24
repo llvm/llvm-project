@@ -372,15 +372,19 @@ const Instruction* BasicBlock::getFirstNonPHI() const {
 }
 
 BasicBlock::const_iterator BasicBlock::getFirstNonPHIIt() const {
-  const Instruction *I = getFirstNonPHI();
-  if (!I)
-    return end();
-  BasicBlock::const_iterator It = I->getIterator();
-  // Set the head-inclusive bit to indicate that this iterator includes
-  // any debug-info at the start of the block. This is a no-op unless the
-  // appropriate CMake flag is set.
-  It.setHeadBit(true);
-  return It;
+  for (const Instruction &I : *this) {
+    if (isa<PHINode>(I))
+      continue;
+
+    BasicBlock::const_iterator It = I.getIterator();
+    // Set the head-inclusive bit to indicate that this iterator includes
+    // any debug-info at the start of the block. This is a no-op unless the
+    // appropriate CMake flag is set.
+    It.setHeadBit(true);
+    return It;
+  }
+
+  return end();
 }
 
 BasicBlock::const_iterator
@@ -424,11 +428,10 @@ BasicBlock::getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp) const {
 }
 
 BasicBlock::const_iterator BasicBlock::getFirstInsertionPt() const {
-  const Instruction *FirstNonPHI = getFirstNonPHI();
-  if (!FirstNonPHI)
+  const_iterator InsertPt = getFirstNonPHIIt();
+  if (InsertPt == end())
     return end();
 
-  const_iterator InsertPt = FirstNonPHI->getIterator();
   if (InsertPt->isEHPad()) ++InsertPt;
   // Set the head-inclusive bit to indicate that this iterator includes
   // any debug-info at the start of the block. This is a no-op unless the
