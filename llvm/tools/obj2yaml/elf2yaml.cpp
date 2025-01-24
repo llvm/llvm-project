@@ -97,6 +97,7 @@ class ELFDumper {
   dumpStackSizesSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::BBAddrMapSection *>
   dumpBBAddrMapSection(const Elf_Shdr *Shdr);
+  Expected<ELFYAML::FuncMapSection *> dumpFuncMapSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::RawContentSection *>
   dumpPlaceholderSection(const Elf_Shdr *Shdr);
 
@@ -629,6 +630,8 @@ ELFDumper<ELFT>::dumpSections() {
           [this](const Elf_Shdr *S) { return dumpCallGraphProfileSection(S); };
     case ELF::SHT_LLVM_BB_ADDR_MAP:
       return [this](const Elf_Shdr *S) { return dumpBBAddrMapSection(S); };
+    case ELF::SHT_LLVM_FUNC_MAP:
+      return [this](const Elf_Shdr *S) { return dumpFuncMapSection(S); };
     case ELF::SHT_STRTAB:
     case ELF::SHT_SYMTAB:
     case ELF::SHT_DYNSYM:
@@ -984,6 +987,55 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
     S->Entries = std::move(Entries);
     if (HasAnyPGOAnalysisMapEntry)
       S->PGOAnalyses = std::move(PGOAnalyses);
+  }
+
+  return S.release();
+}
+
+template <class ELFT>
+Expected<ELFYAML::FuncMapSection *>
+ELFDumper<ELFT>::dumpFuncMapSection(const Elf_Shdr *Shdr) {
+  auto S = std::make_unique<ELFYAML::FuncMapSection>();
+  if (Error E = dumpCommonSection(Shdr, *S))
+    return std::move(E);
+
+  auto ContentOrErr = Obj.getSectionContents(*Shdr);
+  if (!ContentOrErr)
+    return ContentOrErr.takeError();
+
+  ArrayRef<uint8_t> Content = *ContentOrErr;
+  if (Content.empty())
+    return S.release();
+
+  DataExtractor Data(Content, Obj.isLE(), ELFT::Is64Bits ? 8 : 4);
+
+  std::vector<ELFYAML::FuncMapEntry> Entries;
+  DataExtractor::Cursor Cur(0);
+  uint8_t Version = 0;
+  uint8_t Feature = 0;
+  uint64_t Address = 0;
+  while (Cur && Cur.tell() < Content.size()) {
+    if (Shdr->sh_type == ELF::SHT_LLVM_FUNC_MAP) {
+      Version = Data.getU8(Cur);
+      Feature = Data.getU8(Cur);
+    }
+    auto FeatureOrErr = llvm::object::FuncMap::Features::decode(Feature);
+    if (!FeatureOrErr)
+      return FeatureOrErr.takeError();
+
+    Address = Data.getAddress(Cur);
+
+    uint64_t DynamicInstCount =
+        FeatureOrErr->DynamicInstCount ? Data.getULEB128(Cur) : 0;
+    Entries.push_back({Version, Feature, Address, DynamicInstCount});
+  }
+
+  if (!Cur) {
+    // If the section cannot be decoded, we dump it as an array of bytes.
+    consumeError(Cur.takeError());
+    S->Content = yaml::BinaryRef(Content);
+  } else {
+    S->Entries = std::move(Entries);
   }
 
   return S.release();
