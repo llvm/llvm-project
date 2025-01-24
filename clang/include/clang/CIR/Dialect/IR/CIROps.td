@@ -51,12 +51,12 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // following:
 //
 //   class CIRFooOpLowering
-//       : public mlir::OpConversionPattern<cir::FooOp> {
+//       : public mlir::OpConversionPattern<mlir::cir::FooOp> {
 //   public:
-//     using OpConversionPattern<cir::FooOp>::OpConversionPattern;
+//     using OpConversionPattern<mlir::cir::FooOp>::OpConversionPattern;
 //
 //     mlir::LogicalResult matchAndRewrite(
-//         cir::FooOp op,
+//         mlir::cir::FooOp op,
 //         OpAdaptor adaptor,
 //         mlir::ConversionPatternRewriter &rewriter) const override {
 //       rewriter.replaceOpWithNewOp<mlir::LLVM::BarOp>(
@@ -92,7 +92,7 @@ def FuncOp : CIR_Op<"func"> {
 
   let skipDefaultBuilders = 1;
 
-  let builders = [OpBuilder<(ins "llvm::StringRef":$name)>];
+  let builders = [OpBuilder<(ins "StringRef":$name)>];
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;

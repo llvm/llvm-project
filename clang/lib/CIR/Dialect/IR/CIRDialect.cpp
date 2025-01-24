@@ -17,13 +17,13 @@
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 
 using namespace mlir;
-using namespace cir;
+using namespace mlir::cir;
 
 //===----------------------------------------------------------------------===//
 // CIR Dialect
 //===----------------------------------------------------------------------===//
 
-void cir::CIRDialect::initialize() {
+void mlir::cir::CIRDialect::initialize() {
   registerTypes();
   registerAttributes();
   addOperations<
@@ -36,8 +36,8 @@ void cir::CIRDialect::initialize() {
 // FuncOp
 //===----------------------------------------------------------------------===//
 
-void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
-                        StringRef name) {
+void mlir::cir::FuncOp::build(OpBuilder &builder, OperationState &result,
+                              StringRef name) {
   result.addAttribute(SymbolTable::getSymbolAttrName(),
                       builder.getStringAttr(name));
 }
@@ -56,7 +56,7 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   p.printSymbolName(getSymName());
 }
 
-mlir::LogicalResult cir::FuncOp::verify() { return success(); }
+mlir::LogicalResult mlir::cir::FuncOp::verify() { return success(); }
 
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions

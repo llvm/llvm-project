@@ -77,7 +77,7 @@ void CIRGenModule::buildGlobal(clang::GlobalDecl gd) {
 void CIRGenModule::buildGlobalFunctionDefinition(clang::GlobalDecl gd,
                                                  mlir::Operation *op) {
   auto const *funcDecl = cast<FunctionDecl>(gd.getDecl());
-  auto funcOp = builder.create<cir::FuncOp>(
+  auto funcOp = builder.create<mlir::cir::FuncOp>(
       getLoc(funcDecl->getSourceRange()), funcDecl->getIdentifier()->getName());
   theModule.push_back(funcOp);
 }
