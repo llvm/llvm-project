@@ -1591,7 +1591,7 @@ static bool isInteger(StringRef Val) {
 
 void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     IO &IO, std::unique_ptr<ELFYAML::Chunk> &Section) {
-  ELFYAML::ELF_SHT Type;
+  ELFYAML::ELF_SHT Type = ELF::SHT_NULL;
   StringRef TypeStr;
   if (IO.outputting()) {
     if (auto *S = dyn_cast<ELFYAML::Section>(Section.get()))

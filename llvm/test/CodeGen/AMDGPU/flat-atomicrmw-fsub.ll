@@ -12082,8 +12082,10 @@ define <2 x half> @flat_agent_atomic_fsub_ret_v2f16(ptr %ptr, <2 x half> %val) #
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v4, v3
-; GFX8-NEXT:    v_sub_f16_sdwa v3, v4, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-NEXT:    v_lshrrev_b32_e32 v3, 16, v4
+; GFX8-NEXT:    v_sub_f16_sdwa v3, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX8-NEXT:    v_sub_f16_e32 v5, v4, v2
+; GFX8-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX8-NEXT:    v_or_b32_e32 v3, v5, v3
 ; GFX8-NEXT:    flat_atomic_cmpswap v3, v[0:1], v[3:4] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -12303,8 +12305,10 @@ define <2 x half> @flat_agent_atomic_fsub_ret_v2f16__offset12b_pos(ptr %ptr, <2 
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v1, v0
-; GFX8-NEXT:    v_sub_f16_sdwa v0, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
+; GFX8-NEXT:    v_sub_f16_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX8-NEXT:    v_sub_f16_e32 v5, v1, v2
+; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX8-NEXT:    v_or_b32_e32 v0, v5, v0
 ; GFX8-NEXT:    flat_atomic_cmpswap v0, v[3:4], v[0:1] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -12542,8 +12546,10 @@ define <2 x half> @flat_agent_atomic_fsub_ret_v2f16__offset12b_neg(ptr %ptr, <2 
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v1, v0
-; GFX8-NEXT:    v_sub_f16_sdwa v0, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
+; GFX8-NEXT:    v_sub_f16_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX8-NEXT:    v_sub_f16_e32 v5, v1, v2
+; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX8-NEXT:    v_or_b32_e32 v0, v5, v0
 ; GFX8-NEXT:    flat_atomic_cmpswap v0, v[3:4], v[0:1] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -12751,8 +12757,10 @@ define void @flat_agent_atomic_fsub_noret_v2f16(ptr %ptr, <2 x half> %val) #0 {
 ; GFX8-NEXT:  .LBB45_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_sub_f16_sdwa v3, v4, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-NEXT:    v_lshrrev_b32_e32 v3, 16, v4
+; GFX8-NEXT:    v_sub_f16_sdwa v3, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX8-NEXT:    v_sub_f16_e32 v5, v4, v2
+; GFX8-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX8-NEXT:    v_or_b32_e32 v3, v5, v3
 ; GFX8-NEXT:    flat_atomic_cmpswap v3, v[0:1], v[3:4] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -12962,8 +12970,10 @@ define void @flat_agent_atomic_fsub_noret_v2f16__offset12b_pos(ptr %ptr, <2 x ha
 ; GFX8-NEXT:  .LBB46_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_sub_f16_sdwa v3, v4, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-NEXT:    v_lshrrev_b32_e32 v3, 16, v4
+; GFX8-NEXT:    v_sub_f16_sdwa v3, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX8-NEXT:    v_sub_f16_e32 v5, v4, v2
+; GFX8-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX8-NEXT:    v_or_b32_e32 v3, v5, v3
 ; GFX8-NEXT:    flat_atomic_cmpswap v3, v[0:1], v[3:4] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -13194,8 +13204,10 @@ define void @flat_agent_atomic_fsub_noret_v2f16__offset12b_neg(ptr %ptr, <2 x ha
 ; GFX8-NEXT:  .LBB47_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_sub_f16_sdwa v3, v4, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-NEXT:    v_lshrrev_b32_e32 v3, 16, v4
+; GFX8-NEXT:    v_sub_f16_sdwa v3, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX8-NEXT:    v_sub_f16_e32 v5, v4, v2
+; GFX8-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX8-NEXT:    v_or_b32_e32 v3, v5, v3
 ; GFX8-NEXT:    flat_atomic_cmpswap v3, v[0:1], v[3:4] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -13419,8 +13431,10 @@ define <2 x half> @flat_system_atomic_fsub_ret_v2f16__offset12b_pos(ptr %ptr, <2
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v1, v0
-; GFX8-NEXT:    v_sub_f16_sdwa v0, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
+; GFX8-NEXT:    v_sub_f16_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX8-NEXT:    v_sub_f16_e32 v5, v1, v2
+; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX8-NEXT:    v_or_b32_e32 v0, v5, v0
 ; GFX8-NEXT:    flat_atomic_cmpswap v0, v[3:4], v[0:1] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -13635,8 +13649,10 @@ define void @flat_system_atomic_fsub_noret_v2f16__offset12b_pos(ptr %ptr, <2 x h
 ; GFX8-NEXT:  .LBB49_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_sub_f16_sdwa v3, v4, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX8-NEXT:    v_lshrrev_b32_e32 v3, 16, v4
+; GFX8-NEXT:    v_sub_f16_sdwa v3, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX8-NEXT:    v_sub_f16_e32 v5, v4, v2
+; GFX8-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX8-NEXT:    v_or_b32_e32 v3, v5, v3
 ; GFX8-NEXT:    flat_atomic_cmpswap v3, v[0:1], v[3:4] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

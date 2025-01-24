@@ -20822,7 +20822,8 @@ static SDValue truncateVectorWithPACKSS(EVT DstVT, SDValue In, const SDLoc &DL,
 static SDValue matchTruncateWithPACK(unsigned &PackOpcode, EVT DstVT,
                                      SDValue In, const SDLoc &DL,
                                      SelectionDAG &DAG,
-                                     const X86Subtarget &Subtarget) {
+                                     const X86Subtarget &Subtarget,
+                                     const SDNodeFlags Flags = SDNodeFlags()) {
   // Requires SSE2.
   if (!Subtarget.hasSSE2())
     return SDValue();
@@ -20868,7 +20869,8 @@ static SDValue matchTruncateWithPACK(unsigned &PackOpcode, EVT DstVT,
   // e.g. Masks, zext_in_reg, etc.
   // Pre-SSE41 we can only use PACKUSWB.
   KnownBits Known = DAG.computeKnownBits(In);
-  if ((NumSrcEltBits - NumPackedZeroBits) <= Known.countMinLeadingZeros()) {
+  if ((Flags.hasNoUnsignedWrap() && NumDstEltBits <= NumPackedZeroBits) ||
+      (NumSrcEltBits - NumPackedZeroBits) <= Known.countMinLeadingZeros()) {
     PackOpcode = X86ISD::PACKUS;
     return In;
   }
@@ -20887,7 +20889,7 @@ static SDValue matchTruncateWithPACK(unsigned &PackOpcode, EVT DstVT,
     return SDValue();
 
   unsigned MinSignBits = NumSrcEltBits - NumPackedSignBits;
-  if (MinSignBits < NumSignBits) {
+  if (Flags.hasNoSignedWrap() || MinSignBits < NumSignBits) {
     PackOpcode = X86ISD::PACKSS;
     return In;
   }
@@ -20909,10 +20911,9 @@ static SDValue matchTruncateWithPACK(unsigned &PackOpcode, EVT DstVT,
 /// This function lowers a vector truncation of 'extended sign-bits' or
 /// 'extended zero-bits' values.
 /// vXi16/vXi32/vXi64 to vXi8/vXi16/vXi32 into X86ISD::PACKSS/PACKUS operations.
-static SDValue LowerTruncateVecPackWithSignBits(MVT DstVT, SDValue In,
-                                                const SDLoc &DL,
-                                                const X86Subtarget &Subtarget,
-                                                SelectionDAG &DAG) {
+static SDValue LowerTruncateVecPackWithSignBits(
+    MVT DstVT, SDValue In, const SDLoc &DL, const X86Subtarget &Subtarget,
+    SelectionDAG &DAG, const SDNodeFlags Flags = SDNodeFlags()) {
   MVT SrcVT = In.getSimpleValueType();
   MVT DstSVT = DstVT.getVectorElementType();
   MVT SrcSVT = SrcVT.getVectorElementType();
@@ -20934,8 +20935,8 @@ static SDValue LowerTruncateVecPackWithSignBits(MVT DstVT, SDValue In,
   }
 
   unsigned PackOpcode;
-  if (SDValue Src =
-          matchTruncateWithPACK(PackOpcode, DstVT, In, DL, DAG, Subtarget))
+  if (SDValue Src = matchTruncateWithPACK(PackOpcode, DstVT, In, DL, DAG,
+                                          Subtarget, Flags))
     return truncateVectorWithPACK(PackOpcode, DstVT, Src, DL, DAG, Subtarget);
 
   return SDValue();
@@ -21105,8 +21106,8 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
     // Pre-AVX512 (or prefer-256bit) see if we can make use of PACKSS/PACKUS.
     if (!Subtarget.hasAVX512() ||
         (InVT.is512BitVector() && VT.is256BitVector()))
-      if (SDValue SignPack =
-              LowerTruncateVecPackWithSignBits(VT, In, DL, Subtarget, DAG))
+      if (SDValue SignPack = LowerTruncateVecPackWithSignBits(
+              VT, In, DL, Subtarget, DAG, Op->getFlags()))
         return SignPack;
 
     // Pre-AVX512 see if we can make use of PACKSS/PACKUS.
@@ -21123,8 +21124,8 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
   // Attempt to truncate with PACKUS/PACKSS even on AVX512 if we'd have to
   // concat from subvectors to use VPTRUNC etc.
   if (!Subtarget.hasAVX512() || isFreeToSplitVector(In.getNode(), DAG))
-    if (SDValue SignPack =
-            LowerTruncateVecPackWithSignBits(VT, In, DL, Subtarget, DAG))
+    if (SDValue SignPack = LowerTruncateVecPackWithSignBits(
+            VT, In, DL, Subtarget, DAG, Op->getFlags()))
       return SignPack;
 
   // vpmovqb/w/d, vpmovdb/w, vpmovwb
@@ -33594,10 +33595,10 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
 
     // See if there are sufficient leading bits to perform a PACKUS/PACKSS.
     unsigned PackOpcode;
-    if (SDValue Src =
-            matchTruncateWithPACK(PackOpcode, VT, In, dl, DAG, Subtarget)) {
-      if (SDValue Res = truncateVectorWithPACK(PackOpcode, VT, Src,
-                                               dl, DAG, Subtarget)) {
+    if (SDValue Src = matchTruncateWithPACK(PackOpcode, VT, In, dl, DAG,
+                                            Subtarget, N->getFlags())) {
+      if (SDValue Res =
+              truncateVectorWithPACK(PackOpcode, VT, Src, dl, DAG, Subtarget)) {
         Res = widenSubVector(WidenVT, Res, false, Subtarget, DAG, dl);
         Results.push_back(Res);
         return;
