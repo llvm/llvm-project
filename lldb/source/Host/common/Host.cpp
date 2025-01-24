@@ -352,7 +352,6 @@ bool Host::ResolveExecutableInBundle(FileSpec &file) { return false; }
 
 FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
   FileSpec module_filespec;
-#if !defined(__ANDROID__)
   Dl_info info;
   if (::dladdr(host_addr, &info)) {
     if (info.dli_fname) {
@@ -360,7 +359,6 @@ FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
       FileSystem::Instance().Resolve(module_filespec);
     }
   }
-#endif
   return module_filespec;
 }
 

@@ -583,7 +583,8 @@ class ObjCARCOpt {
       const ColorVector &CV = BlockEHColors.find(BB)->second;
       assert(CV.size() > 0 && "Uncolored block");
       for (BasicBlock *EHPadBB : CV)
-        if (auto *EHPad = dyn_cast<FuncletPadInst>(EHPadBB->getFirstNonPHI())) {
+        if (auto *EHPad =
+                dyn_cast<FuncletPadInst>(EHPadBB->getFirstNonPHIIt())) {
           OpBundles.emplace_back("funclet", EHPad);
           return;
         }

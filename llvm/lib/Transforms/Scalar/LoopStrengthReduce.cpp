@@ -2719,7 +2719,7 @@ LSRInstance::OptimizeLoopTermCond() {
     // the exiting block branch, move it.
     if (Cond->getNextNonDebugInstruction() != TermBr) {
       if (Cond->hasOneUse()) {
-        Cond->moveBefore(TermBr);
+        Cond->moveBefore(TermBr->getIterator());
       } else {
         // Clone the terminating condition and insert into the loopend.
         ICmpInst *OldCond = Cond;

@@ -223,12 +223,6 @@ public:
       return Lane;
     }
   }
-
-  /// Returns the maxmimum number of lanes that we are able to consider
-  /// caching for \p VF.
-  static unsigned getNumCachedLanes(const ElementCount &VF) {
-    return VF.getKnownMinValue() * (VF.isScalable() ? 2 : 1);
-  }
 };
 
 /// VPTransformState holds information passed down when "executing" a VPlan,
@@ -2310,9 +2304,10 @@ class VPWidenPHIRecipe : public VPSingleDefRecipe {
   SmallVector<VPBasicBlock *, 2> IncomingBlocks;
 
 public:
-  /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start.
-  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr)
-      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi) {
+  /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start and
+  /// debug location \p DL.
+  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr, DebugLoc DL = {})
+      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi, DL) {
     if (Start)
       addOperand(Start);
   }
@@ -2467,7 +2462,8 @@ public:
   ~VPPartialReductionRecipe() override = default;
 
   VPPartialReductionRecipe *clone() override {
-    return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1));
+    return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1),
+                                        getUnderlyingInstr());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPPartialReductionSC)

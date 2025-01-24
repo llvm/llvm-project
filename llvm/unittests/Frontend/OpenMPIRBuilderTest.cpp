@@ -6434,7 +6434,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
 
   // Check entry block
   auto &EntryBlock = OutlinedFn->getEntryBlock();
-  Instruction *Alloca1 = EntryBlock.getFirstNonPHI();
+  Instruction *Alloca1 = &*EntryBlock.getFirstNonPHIIt();
   EXPECT_NE(Alloca1, nullptr);
 
   EXPECT_TRUE(isa<AllocaInst>(Alloca1));
@@ -6469,7 +6469,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   // Check user code block
   auto *UserCodeBlock = EntryBlockBranch->getSuccessor(0);
   EXPECT_EQ(UserCodeBlock->getName(), "user_code.entry");
-  auto *Load1 = UserCodeBlock->getFirstNonPHI();
+  Instruction *Load1 = &*UserCodeBlock->getFirstNonPHIIt();
   EXPECT_TRUE(isa<LoadInst>(Load1));
   auto *Load2 = Load1->getNextNode();
   EXPECT_TRUE(isa<LoadInst>(Load2));
@@ -6480,7 +6480,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   auto *OutlinedBlock = OutlinedBlockBr->getSuccessor(0);
   EXPECT_EQ(OutlinedBlock->getName(), "outlined.body");
 
-  auto *Value1 = OutlinedBlock->getFirstNonPHI();
+  Instruction *Value1 = &*OutlinedBlock->getFirstNonPHIIt();
   EXPECT_EQ(Value1, Value);
   EXPECT_EQ(Value1->getNextNode(), TargetStore);
   auto *Deinit = TargetStore->getNextNode();
@@ -6496,7 +6496,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   // Check exit block
   auto *ExitBlock = EntryBlockBranch->getSuccessor(1);
   EXPECT_EQ(ExitBlock->getName(), "worker.exit");
-  EXPECT_TRUE(isa<ReturnInst>(ExitBlock->getFirstNonPHI()));
+  EXPECT_TRUE(isa<ReturnInst>(ExitBlock->getFirstNonPHIIt()));
 
   // Check global exec_mode.
   GlobalVariable *Used = M->getGlobalVariable("llvm.compiler.used");
@@ -6804,7 +6804,7 @@ TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
 
   // Check that we have moved our alloca created in the
   // BodyGenCB function, to the top of the function.
-  Instruction *Alloca1 = EntryBlock.getFirstNonPHI();
+  Instruction *Alloca1 = &*EntryBlock.getFirstNonPHIIt();
   EXPECT_NE(Alloca1, nullptr);
   EXPECT_TRUE(isa<AllocaInst>(Alloca1));
   EXPECT_EQ(Alloca1, RaiseAlloca);
@@ -6840,7 +6840,7 @@ TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
   // Check user code block
   auto *UserCodeBlock = EntryBlockBranch->getSuccessor(0);
   EXPECT_EQ(UserCodeBlock->getName(), "user_code.entry");
-  auto *Load1 = UserCodeBlock->getFirstNonPHI();
+  BasicBlock::iterator Load1 = UserCodeBlock->getFirstNonPHIIt();
   EXPECT_TRUE(isa<LoadInst>(Load1));
 
   auto *OutlinedBlockBr = Load1->getNextNode();
@@ -6849,7 +6849,7 @@ TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
   auto *OutlinedBlock = OutlinedBlockBr->getSuccessor(0);
   EXPECT_EQ(OutlinedBlock->getName(), "outlined.body");
 
-  auto *Load2 = OutlinedBlock->getFirstNonPHI();
+  Instruction *Load2 = &*OutlinedBlock->getFirstNonPHIIt();
   EXPECT_TRUE(isa<LoadInst>(Load2));
   EXPECT_EQ(Load2, Value);
   EXPECT_EQ(Load2->getNextNode(), TargetStore);
@@ -6866,7 +6866,7 @@ TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
   // Check exit block
   auto *ExitBlock = EntryBlockBranch->getSuccessor(1);
   EXPECT_EQ(ExitBlock->getName(), "worker.exit");
-  EXPECT_TRUE(isa<ReturnInst>(ExitBlock->getFirstNonPHI()));
+  EXPECT_TRUE(isa<ReturnInst>(ExitBlock->getFirstNonPHIIt()));
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateTask) {

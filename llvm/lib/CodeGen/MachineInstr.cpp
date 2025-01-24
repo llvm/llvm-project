@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -1348,6 +1349,43 @@ bool MachineInstr::wouldBeTriviallyDead() const {
   // a side-effect of some sort.
   bool SawStore = false;
   return isPHI() || isSafeToMove(SawStore);
+}
+
+bool MachineInstr::isDead(const MachineRegisterInfo &MRI,
+                          LiveRegUnits *LivePhysRegs) const {
+  // Technically speaking inline asm without side effects and no defs can still
+  // be deleted. But there is so much bad inline asm code out there, we should
+  // let them be.
+  if (isInlineAsm())
+    return false;
+
+  // If we suspect this instruction may have some side-effects, then we say
+  // this instruction cannot be dead.
+  // FIXME: See issue #105950 for why LIFETIME markers are considered dead here.
+  if (!isLifetimeMarker() && !wouldBeTriviallyDead())
+    return false;
+
+  // Instructions without side-effects are dead iff they only define dead regs.
+  // This function is hot and this loop returns early in the common case,
+  // so only perform additional checks before this if absolutely necessary.
+  for (const MachineOperand &MO : all_defs()) {
+    Register Reg = MO.getReg();
+    if (Reg.isPhysical()) {
+      // Don't delete live physreg defs, or any reserved register defs.
+      if (!LivePhysRegs || !LivePhysRegs->available(Reg) || MRI.isReserved(Reg))
+        return false;
+    } else {
+      if (MO.isDead())
+        continue;
+      for (const MachineInstr &Use : MRI.use_nodbg_instructions(Reg)) {
+        if (&Use != this)
+          // This def has a non-debug use. Don't delete the instruction!
+          return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI,

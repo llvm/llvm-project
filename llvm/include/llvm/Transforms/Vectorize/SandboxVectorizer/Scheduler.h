@@ -164,7 +164,10 @@ public:
     Bndls.clear();
     // TODO: clear view once it lands.
     DAG.clear();
+    ReadyList.clear();
     ScheduleTopItOpt = std::nullopt;
+    assert(Bndls.empty() && DAG.empty() && ReadyList.empty() &&
+           !ScheduleTopItOpt && "Expected empty state!");
   }
 
 #ifndef NDEBUG

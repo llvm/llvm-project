@@ -172,6 +172,9 @@ class hasSM<int version>: Predicate<"Subtarget->getSmVersion() >= " # version>;
 
 // Explicit records for arch-accelerated SM versions
 def hasSM90a : Predicate<"Subtarget->getFullSmVersion() == 901">;
+def hasSM100a : Predicate<"Subtarget->getFullSmVersion() == 1001">;
+def hasSM101a : Predicate<"Subtarget->getFullSmVersion() == 1011">;
+def hasSM120a : Predicate<"Subtarget->getFullSmVersion() == 1201">;
 
 // non-sync shfl instructions are not available on sm_70+ in PTX6.4+
 def hasSHFL : Predicate<"!(Subtarget->getSmVersion() >= 70"

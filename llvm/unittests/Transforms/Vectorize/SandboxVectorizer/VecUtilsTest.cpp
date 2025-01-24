@@ -481,6 +481,36 @@ bb1:
   EXPECT_EQ(sandboxir::VecUtils::getLowest(DiffBBs), nullptr);
 }
 
+TEST_F(VecUtilsTest, GetLastPHIOrSelf) {
+  parseIR(R"IR(
+define void @foo(i8 %v) {
+entry:
+  br label %bb1
+
+bb1:
+  %phi1 = phi i8 [0, %entry], [1, %bb1]
+  %phi2 = phi i8 [0, %entry], [1, %bb1]
+  br label %bb1
+
+bb2:
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = getBasicBlockByName(F, "bb1");
+  auto It = BB.begin();
+  auto *PHI1 = cast<sandboxir::PHINode>(&*It++);
+  auto *PHI2 = cast<sandboxir::PHINode>(&*It++);
+  auto *Br = cast<sandboxir::BranchInst>(&*It++);
+  EXPECT_EQ(sandboxir::VecUtils::getLastPHIOrSelf(PHI1), PHI2);
+  EXPECT_EQ(sandboxir::VecUtils::getLastPHIOrSelf(PHI2), PHI2);
+  EXPECT_EQ(sandboxir::VecUtils::getLastPHIOrSelf(Br), Br);
+  EXPECT_EQ(sandboxir::VecUtils::getLastPHIOrSelf(nullptr), nullptr);
+}
+
 TEST_F(VecUtilsTest, GetCommonScalarType) {
   parseIR(R"IR(
 define void @foo(i8 %v, ptr %ptr) {

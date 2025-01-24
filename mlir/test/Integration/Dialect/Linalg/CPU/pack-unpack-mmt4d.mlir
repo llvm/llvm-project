@@ -4,7 +4,7 @@
 // DEFINE:    -buffer-deallocation-pipeline="private-function-dynamic-ownership" \
 // DEFINE:    -cse -canonicalize -test-lower-to-llvm
 // DEFINE: %{entry_point} = main
-// DEFINE: %{run} = mlir-cpu-runner -e %{entry_point} -entry-point-result=void \
+// DEFINE: %{run} = mlir-runner -e %{entry_point} -entry-point-result=void \
 // DEFINE:    -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
 
 // RUN: %{compile} | %{run} | FileCheck %s
