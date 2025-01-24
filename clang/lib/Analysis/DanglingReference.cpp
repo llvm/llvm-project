@@ -9,6 +9,7 @@
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include <cassert>
 #include <sstream>
 
 namespace clang {
@@ -22,26 +23,29 @@ template <typename T> static bool isRecordWithAttr(QualType Type) {
 
   if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
     Result |= CTSD->getSpecializedTemplate()->getTemplatedDecl()->hasAttr<T>();
-
+  if (RD->hasDefinition())
+    for (auto B : RD->bases())
+      Result |= isRecordWithAttr<T>(B.getType());
   return Result;
 }
-bool isOwner(const Expr *E) {
-  return isRecordWithAttr<OwnerAttr>(E->getType());
-}
+
+bool isOwner(QualType Q) { return isRecordWithAttr<OwnerAttr>(Q); }
+bool isOwner(const Expr *E) { return isOwner(E->getType()); }
 bool isOwner(const Decl *D) {
   return isa<ValueDecl>(D) &&
          isRecordWithAttr<OwnerAttr>(dyn_cast<ValueDecl>(D)->getType());
 }
-bool isPointer(const Expr *E) {
-  return isRecordWithAttr<PointerAttr>(E->getType());
+bool isPointer(QualType Q) {
+  return Q->isPointerType() || isRecordWithAttr<PointerAttr>(Q);
 }
+bool isPointer(const Expr *E) { return isPointer(E->getType()); }
 bool isPointer(const Decl *D) {
-  return isa<ValueDecl>(D) &&
-         isRecordWithAttr<PointerAttr>(dyn_cast<ValueDecl>(D)->getType());
+  auto *VD = dyn_cast<ValueDecl>(D);
+  return VD && isPointer(VD->getType());
 }
 
 struct MemoryLoc {
-  enum MemoryType {
+  enum Storage {
     EMPTY,   // Pointer is null.
     STACK,   // Pointer points to something on stack.
     UNKNOWN, // Pointer points to an unknown entity.
@@ -83,8 +87,25 @@ struct MemoryLoc {
   }
 };
 
+bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
+  const TypeSourceInfo *TSI = FD->getTypeSourceInfo();
+  if (!TSI)
+    return false;
+  AttributedTypeLoc ATL;
+  for (TypeLoc TL = TSI->getTypeLoc();
+       (ATL = TL.getAsAdjusted<AttributedTypeLoc>());
+       TL = ATL.getModifiedLoc()) {
+    if (ATL.getAttrAs<LifetimeBoundAttr>())
+      return true;
+  }
+  return false;
+}
+
 class PointsToTracker : public ConstStmtVisitor<PointsToTracker> {
+  const DeclContext &DC;
+
 public:
+  PointsToTracker(const DeclContext &DC) : DC(DC) {}
   void Handle(const Stmt *S) {
     if (auto *E = dyn_cast<Expr>(S);
         E && ExprPointsTo.find(E) != ExprPointsTo.end())
@@ -100,13 +121,24 @@ public:
       return;
     // Initialise the pointer if we are seeing it for the first time.
     if (isPointer(VD)) {
-      if (DeclPointsTo.find(D) == DeclPointsTo.end())
-        UpdatePointer(VD, ResolveExpr(VD->getInit()));
+      if (DeclPointsTo.find(D) != DeclPointsTo.end())
+        return;
+      // Pointer params are always unknown.
+      if (isa<ParmVarDecl>(VD)) {
+        UpdatePointer(VD, MemoryLoc::Unknown());
+        return;
+      }
+      UpdatePointer(VD, ResolveExpr(VD->getInit()));
+      return;
     }
-    if (isOwner(VD)) {
-      if (StackDecls.find(D) == StackDecls.end() && VD->hasLocalStorage())
-        AddToStack(VD);
-    }
+    // Ignore non-stack variable.
+    // TODO: Track reference variables.
+    if (!DC.containsDecl(const_cast<Decl *>(D)) || !VD->hasLocalStorage() ||
+        VD->getType()->isReferenceType())
+      return;
+
+    if (StackDecls.find(D) == StackDecls.end())
+      AddToStack(VD);
   }
 
   // Merge above and below in VisitVarDecl !!
@@ -123,11 +155,10 @@ public:
     if (isPointer(MTE)) {
       Handle(MTE->getSubExpr());
       SetExprPointer(MTE, MTE->getSubExpr());
+      return;
     }
-    if (isOwner(MTE)) {
-      // We have a temporary owner on stack.
-      AddToStack(MTE);
-    }
+    // We have a temporary on stack.
+    AddToStack(MTE);
   }
 
   void VisitImplicitCastExpr(const ImplicitCastExpr *E) {
@@ -137,16 +168,41 @@ public:
   }
 
   void VisitExprWithCleanups(const ExprWithCleanups *E) {
-    // Handle(E->getSubExpr());
     SetExprPointer(E, E->getSubExpr());
   }
 
-  void VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
+  void VisitCallExpr(const CallExpr *CE) {
     // Conversion from Owner to a Pointer.
-    const Expr *ConversionFrom = MCE->IgnoreConversionOperatorSingleStep();
-    if (ConversionFrom != MCE) {
-      if (isOwner(ConversionFrom) && isPointer(MCE)) {
-        SetExprPointer(MCE, ConversionFrom);
+    if (auto *ConversionFrom = CE->IgnoreConversionOperatorSingleStep();
+        ConversionFrom != CE) {
+      if (isOwner(ConversionFrom) && isPointer(CE)) {
+        SetExprPointer(CE, ConversionFrom);
+        return;
+      }
+    }
+    // Lifetimebound function calls.
+    auto *FD = dyn_cast_or_null<FunctionDecl>(CE->getCalleeDecl());
+    if (!FD)
+      return;
+    // FIXME: This should only be done for GSL pointer args and not all args!
+    QualType RetType = FD->getReturnType();
+    if (RetType->isReferenceType() && !isOwner(RetType->getPointeeType()))
+      return;
+    Expr *ObjectArg = nullptr;
+    if (auto *MCE = dyn_cast<CXXMemberCallExpr>(CE)) {
+      ObjectArg = MCE->getImplicitObjectArgument();
+      if (ObjectArg && implicitObjectParamIsLifetimeBound(FD)) {
+        // TODO: Track more args. Not just the first one!
+        SetExprPointer(CE, ObjectArg);
+        return;
+      }
+    }
+    for (unsigned I = 0; I < FD->getNumParams(); ++I) {
+      const ParmVarDecl *PVD = FD->getParamDecl(I);
+      if (CE->getArg(I) && PVD->hasAttr<LifetimeBoundAttr>()) {
+        // TODO: Track more args. Not just the first one!
+        SetExprPointer(CE, CE->getArg(I));
+        return;
       }
     }
   }
@@ -155,7 +211,8 @@ public:
     if (!isPointer(CCE))
       return;
     if (CCE->getNumArgs() == 1)
-      SetExprPointer(CCE, CCE->getArg(0));
+      if (isOwner(CCE->getArg(0)) || isPointer(CCE->getArg(0)))
+        SetExprPointer(CCE, CCE->getArg(0));
   }
 
   void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
@@ -180,7 +237,8 @@ private:
     if (!isPointer(A))
       return;
 
-    if (const Decl *PointerDecl = DeclReferencedBy(A))
+    if (const Decl *PointerDecl = DeclReferencedBy(A);
+        PointerDecl && isPointer(PointerDecl))
       UpdatePointer(PointerDecl, B);
   }
 
@@ -194,7 +252,11 @@ private:
   }
 
   void SetExprPointer(const Expr *E, MemoryLoc ML) {
-    assert(ExprPointsTo.insert({E, ML}).second);
+    // llvm::errs() << "SetExprPointer : " << "\n";
+    // E->dumpColor();
+    // llvm::errs() << "ML : " << ML.str() << "\n";
+    assert(ExprPointsTo.find(E) == ExprPointsTo.end());
+    ExprPointsTo[E] = ML;
   }
   void SetExprPointer(const Expr *E, const Expr *PointeeE) {
     SetExprPointer(E, ResolveExpr(PointeeE));
@@ -207,8 +269,12 @@ public:
   MemoryLoc ResolveExpr(const Expr *E) {
     if (!E)
       return MemoryLoc::Empty();
-    Handle(E);
     auto Res = ExprPointsTo.find(E);
+    if (Res != ExprPointsTo.end()) {
+      return Res->getSecond();
+    }
+    Handle(E);
+    Res = ExprPointsTo.find(E);
     if (Res != ExprPointsTo.end()) {
       return Res->getSecond();
     }
@@ -218,18 +284,18 @@ public:
   // Returns the memory location pointed to by D. If D is a pointer-type,
   // returns the memory pointed to by the pointer.
   MemoryLoc ResolveDecl(const Decl *D) {
+    // llvm::errs() << "Resolving decl : " << "\n";
+    // D->dumpColor();
     MaybeInitaliseDecl(D);
     if (isPointer(D))
       return ResolvePointer(D);
-    if (isOwner(D))
-      return ResolveOwner(D);
-    return MemoryLoc::Unknown();
+    return ResolveNonPointer(D);
   }
 
   MemoryLoc ResolvePointer(const Decl *D) {
     auto *VD = dyn_cast<VarDecl>(D);
-    assert(VD);
-    if (!VD->hasLocalStorage())
+    // TODO: Handle other decls like field.
+    if (!VD || !VD->hasLocalStorage())
       return MemoryLoc::Unknown();
     assert(isPointer(D));
     auto Res = DeclPointsTo.find(D);
@@ -237,23 +303,29 @@ public:
     return Res->getSecond();
   }
 
-  MemoryLoc ResolveOwner(const Decl *D) {
-    assert(isOwner(D));
-    if (IsOnStack(D))
+  MemoryLoc ResolveNonPointer(const Decl *D) {
+    assert(!isPointer(D));
+    // llvm::errs() << "ResolveNonPointer : " << "\n";
+    // D->dumpColor();
+    if (IsOnStack(D)) {
+      // llvm::errs() << "Resolved NonPointer : " << "On stack\n";
       return MemoryLoc::VarOnStack(D);
+    }
     return MemoryLoc::Unknown();
   }
 
   void AddToStack(const Decl *D) {
-    assert(isOwner(D));
+    // llvm::errs() << "AddToStack : " << "\n";
+    // D->dumpColor();
     StackDecls.insert(D);
   }
   void AddToStack(const Expr *E) {
     assert(isa<MaterializeTemporaryExpr>(E));
-    assert(isOwner(E));
+    assert(!isPointer(E));
     StackExprs.insert(E);
     // Add a self edge.
-    assert(ExprPointsTo.insert({E, MemoryLoc::Temporary(E)}).second);
+    assert(ExprPointsTo.find(E) == ExprPointsTo.end());
+    ExprPointsTo[E] = MemoryLoc::Temporary(E);
   }
   bool IsOnStack(const Decl *D) { return StackDecls.contains(D); }
   bool IsOnStack(const Expr *E) { return StackExprs.contains(E); }
@@ -276,9 +348,8 @@ public:
   DanglingReferenceAnalyzer(const DeclContext &DC, const CFG &cfg,
                             AnalysisDeclContext &AC,
                             DanglingReferenceReporter *Reporter)
-      : DC(DC), cfg(cfg), AC(AC), Reporter(Reporter) {}
+      : DC(DC), cfg(cfg), AC(AC), Reporter(Reporter), PointsTo(DC) {}
   void RunAnalysis() {
-
     // For simplicity in protoytpe, avoid joins and stick to functions without
     // branches.
     if (!cfg.isLinear())
@@ -288,17 +359,21 @@ public:
       for (CFGBlock::const_iterator BI = (*I)->begin(), BE = (*I)->end();
            BI != BE; ++BI) {
         if (auto cfgstmt = BI->getAs<CFGStmt>()) {
-          auto *stmt = cfgstmt->getStmt();
           // llvm::errs() <<
           // "================================================\n";
           // cfgstmt->dump();
+          auto *stmt = cfgstmt->getStmt();
           // if (auto *E = dyn_cast<Expr>(stmt))
           //   E->dumpColor();
+
           PointsTo.Handle(stmt);
-          if (auto *E = dyn_cast<Expr>(stmt)) {
-            // llvm::errs() << "Points To : " << PointsTo.ResolveExpr(E).str()
-            //              << "\n";
-          }
+
+          // if (auto *E = dyn_cast<Expr>(stmt)) {
+          //   E->dumpColor();
+          //   auto Loc = PointsTo.ResolveExpr(E);
+          //   llvm::errs() << "Points To : " << Loc.str() << "\n";
+          // }
+
           if (auto *RS = dyn_cast<ReturnStmt>(stmt))
             HandleReturnStmt(RS);
         }
@@ -319,6 +394,9 @@ private:
     // RetExpr->dumpColor();
     // llvm::errs() << "Returning pointer to " << RetPointee.str() << "\n";
     if (RetPointee.IsOnStack()) {
+      llvm::errs() << "=================================================\n";
+      llvm::errs() << "Returning pointer to " << RetPointee.str() << "\n\n";
+      RetExpr->dumpColor();
       // This points to something on stack!!
       if (auto *D = RetPointee.getDecl())
         Reporter->ReportReturnLocalVar(RetExpr, D);

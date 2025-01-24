@@ -123,11 +123,129 @@ std::string_view copy_of_global_str() {
   return sv; // expected-warning {{returning reference to a stack variable}}
 }
 
-// TODO: Use lifetimebound in function calls. Use Pointer to Owner of pointer
-// std::string_view containerOfString() {
-//   std::vector<std::string> local;
-//   return local.at(0);
-// }
+struct Struct { std::string s; };
+std::string_view field() {
+  Struct s;
+  std::string_view sv;
+  sv = s.s;
+  return sv; // FIXME.
+}
+
+namespace lifetimebound {
+
+std::string_view func_lb_sv(std::string_view sv [[clang::lifetimebound]]);
+std::string_view use_func_lb_sv() {
+  std::string s; // expected-note {{reference to this stack variable is returned}}
+  std::string_view sv = func_lb_sv(s);
+  sv = func_lb_sv(s);
+  std::string_view sv2;
+  sv2 = sv;
+  return sv2; // expected-warning {{returning reference to a stack variable}}
+}
+
+std::string_view use_string_func_lb_sv() {
+  std::string s; // expected-note {{reference to this stack variable is returned}}
+  std::string_view sv = s;
+  std::string_view sv_lb = func_lb_sv(sv);
+  return sv_lb; // expected-warning {{returning reference to a stack variable}}
+}
+
+std::string_view direct_return() {
+  std::string s; // expected-note {{reference to this stack variable is returned}}
+  std::string_view sv = s;
+  return func_lb_sv(sv); // expected-warning {{returning reference to a stack variable}}
+}
+
+namespace MemberFunctions {
+struct S {
+  std::string return_string() const;
+  const std::string& return_string_ref() const [[clang::lifetimebound]];
+};
+
+std::string_view use_return_string() {
+  S s;
+  return s.return_string(); // expected-warning {{returning reference to a temporary object}}
+}
+std::string_view use_return_string_ref() {
+  S s; // expected-note {{reference to this stack variable is returned}}
+  return s.return_string_ref(); // expected-warning {{returning reference to a stack variable}}
+}
+std::string_view use_return_string_ref(const S* s) {
+  return s->return_string_ref();
+}
+std::string_view use_return_string_ref_temporary() {
+  return S{}.return_string_ref(); // expected-warning {{returning reference to a temporary object}}
+}
+} // namespace MemberFunctions
+
+namespace Optional {
+std::optional<std::string_view> getOptional(std::string_view);
+std::string_view usOptional(std::string_view s) {
+  return getOptional(s).value();
+}
+} // namespace Optional
+struct ThisIsLB {
+std::string_view get() [[clang::lifetimebound]];
+};
+
+std::string_view use_lifetimebound_member_fn() {
+  ThisIsLB obj; // expected-note {{reference to this stack variable is returned}}
+  return obj.get(); // expected-warning {{returning reference to a stack variable}}
+}
+
+std::string_view return_temporary_get() {
+  return ThisIsLB{}.get(); // expected-warning {{returning reference to a temporary object}}
+}
+
+std::string_view store_temporary_get() {
+  // FIXME: Move this diagnostic to the return loc!!
+  std::string_view sv1 = ThisIsLB{}.get(); // expected-warning {{returning reference to a temporary object}}
+  std::string_view sv2 = sv1;
+  std::string_view sv3 = func_lb_sv(sv2);
+  return sv3;
+}
+
+std::string_view multiple_lifetimebound_calls() {
+  std::string s; // expected-note {{reference to this stack variable is returned}}
+  std::string_view sv = func_lb_sv(func_lb_sv(func_lb_sv(s)));
+  sv = func_lb_sv(func_lb_sv(func_lb_sv(sv)));
+  return sv; // expected-warning {{returning reference to a stack variable}}
+}
+
+} // namespace lifetimebound
+
+std::string_view return_char_star() {
+  const char* key;
+  key = "foo";
+  return key;
+}
+
+void lambda() {
+  std::string s;
+  auto l1 = [&s]() {
+    std::string_view sv = s;
+    return sv;
+  };
+  auto l2 = []() {
+    std::string s; // expected-note {{reference to this stack variable is returned}}
+    std::string_view sv = s;
+    return sv; // expected-warning {{returning reference to a stack variable}}
+  };
+}
+
+std::string_view default_arg(std::string_view sv = std::string()) {
+  return sv; // Ok!
+}
+std::string_view default_arg_overwritten(std::string_view sv = std::string()) {
+  std::string s; // expected-note {{reference to this stack variable is returned}}
+  sv = s;
+  return sv; // expected-warning {{returning reference to a stack variable}}
+}
+
+std::string_view containerOfString() {
+  std::vector<std::string> local;
+  return local.at(0);
+}
 
 // std::string_view containerOfViewMultistmt() {
 //   std::vector<std::string> local;
