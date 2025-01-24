@@ -3684,6 +3684,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // TODO: Store origin.
   }
 
+  // Intrinsic::masked_store
+  //
+  // Note: handleAVXMaskedStore handles AVX/AVX2 variants, though AVX512 masked
+  //       stores are lowered to Intrinsic::masked_store.
   void handleMaskedStore(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *V = I.getArgOperand(0);
@@ -3714,6 +3718,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                 std::max(Alignment, kMinOriginAlignment));
   }
 
+  // Intrinsic::masked_load
+  //
+  // Note: handleAVXMaskedLoad handles AVX/AVX2 variants, though AVX512 masked
+  //       loads are lowered to Intrinsic::masked_load.
   void handleMaskedLoad(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *Ptr = I.getArgOperand(0);
@@ -3758,13 +3766,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // e.g., void @llvm.x86.avx.maskstore.ps.256(ptr, <8 x i32>, <8 x float>)
   //                                           dst  mask       src
   //
-  // Note: it is difficult to combine this function with handleMaskedStore. The
-  // key challenge is that the LLVM masked intrinsics require a vector of
-  // booleans, while AVX masked intrinsics use the MSBs of a vector of
-  // integers. X86InstCombineIntrinsic.cpp::simplifyX86MaskedLoad mentions that
-  // the x86 backend does not know how to efficiently convert from a vector of
-  // booleans back into the AVX mask format; therefore, they (and we) do not
-  // reduce AVX masked intrinsics into LLVM masked intrinsics.
+  // AVX512 masked stores are lowered to Intrinsic::masked_load and are handled
+  // by handleMaskedStore.
+  //
+  // This function handles AVX and AVX2 masked stores; these use the MSBs of a
+  // vector of integers, unlike the LLVM masked intrinsics, which require a
+  // vector of booleans. X86InstCombineIntrinsic.cpp::simplifyX86MaskedLoad
+  // mentions that the x86 backend does not know how to efficiently convert
+  // from a vector of booleans back into the AVX mask format; therefore, they
+  // (and we) do not reduce AVX/AVX2 masked intrinsics into LLVM masked
+  // intrinsics.
   void handleAVXMaskedStore(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
 
@@ -3819,6 +3830,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //
   // Masked-off values are replaced with 0, which conveniently also represents
   // initialized memory.
+  //
+  // AVX512 masked stores are lowered to Intrinsic::masked_load and are handled
+  // by handleMaskedStore.
   //
   // We do not combine this with handleMaskedLoad; see comment in
   // handleAVXMaskedStore for the rationale.
