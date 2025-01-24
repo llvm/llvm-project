@@ -83,6 +83,7 @@ enum NodeType : unsigned {
   // Produces the full sequence of instructions for getting the thread pointer
   // offset of a variable into X0, using the TLSDesc model.
   TLSDESC_CALLSEQ,
+  TLSDESC_AUTH_CALLSEQ,
   ADRP,     // Page address of a TargetGlobalAddress operand.
   ADR,      // ADR
   ADDlow,   // Add the low 12 bits of a TargetGlobalAddress operand.
@@ -713,12 +714,10 @@ public:
                              unsigned Factor) const override;
 
   bool lowerDeinterleaveIntrinsicToLoad(
-      IntrinsicInst *DI, LoadInst *LI,
-      SmallVectorImpl<Instruction *> &DeadInsts) const override;
+      LoadInst *LI, ArrayRef<Value *> DeinterleaveValues) const override;
 
   bool lowerInterleaveIntrinsicToStore(
-      IntrinsicInst *II, StoreInst *SI,
-      SmallVectorImpl<Instruction *> &DeadInsts) const override;
+      StoreInst *SI, ArrayRef<Value *> InterleaveValues) const override;
 
   bool isLegalAddImmediate(int64_t) const override;
   bool isLegalAddScalableImmediate(int64_t) const override;
@@ -1102,7 +1101,7 @@ private:
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      LLVMContext &Context) const override;
+                      LLVMContext &Context, const Type *RetTy) const override;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,

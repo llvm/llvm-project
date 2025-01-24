@@ -1,5 +1,5 @@
 ; -stats requires asserts
-; requires: asserts
+; REQUIRES: asserts
 
 ; Stop after 'finalize-isel' for simpler MIR, and lower the minimum number of
 ; jump table entries so 'switch' needs fewer cases to generate a jump table.
@@ -7,9 +7,9 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu --run-pass=static-data-splitter -stats -x mir %t.mir -o - 2>&1 | FileCheck %s --check-prefix=STAT
 
  ; Tests stat messages are expected.
-; STAT-DAG: 2 static-data-splitter - Number of cold jump tables seen
-; STAT-DAG: 2 static-data-splitter - Number of hot jump tables seen
-; STAT-DAG: 1 static-data-splitter - Number of jump tables with unknown hotness
+; STAT: 2 static-data-splitter - Number of cold jump tables seen
+; STAT: 2 static-data-splitter - Number of hot jump tables seen
+; STAT: 1 static-data-splitter - Number of jump tables with unknown hotness
 
 ; When 'partition-static-data-sections' is enabled, static data splitter pass will
 ; categorize jump tables and assembly printer will place hot jump tables in the

@@ -67,7 +67,7 @@ def err_drv_no_cuda_libdevice : Error<
   "libdevice">;
 
 def err_drv_no_rocm_device_lib : Error<
-  "cannot find ROCm device library%select{| for %1|for ABI version %1}0; provide its path via "
+  "cannot find ROCm device library%select{| for %1| for ABI version %1}0; provide its path via "
   "'--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build "
   "without ROCm device library">;
 def err_drv_no_hip_runtime : Error<
@@ -807,6 +807,9 @@ def err_drv_loongarch_invalid_simd_option_combination : Error<
   "invalid option combination; LASX depends on LSX">;
 def err_drv_loongarch_invalid_msimd_EQ : Error<
   "invalid argument '%0' to -msimd=; must be one of: none, lsx, lasx">;
+
+def err_drv_loongarch_unsupported_with_linker_relaxation : Error<
+  "%0 is unsupported with LoongArch linker relaxation (-mrelax)">;
 
 def err_drv_expand_response_file : Error<
   "failed to expand response file: %0">;

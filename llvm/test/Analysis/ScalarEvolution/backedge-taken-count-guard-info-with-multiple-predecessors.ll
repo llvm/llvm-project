@@ -310,3 +310,57 @@ inner.header:
 exit:
   ret void
 }
+
+; Checks correct traversal for loops without a unique predecessor
+; outside the loop.
+define void @pr120615() {
+; CHECK-LABEL: pr120615
+; CHECK-NEXT:  Determining loop execution counts for: @pr120615
+; CHECK-NEXT:  Loop %header: backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %header: Trip multiple is 1
+entry:
+  br label %header
+
+bb:
+  br label %header
+
+header:
+  %0 = phi i32 [ %1, %header ], [ 0, %bb ], [ 0, %entry ]
+  %1 = add i32 %0, 1
+  %icmp = icmp slt i32 %0, 0
+  br i1 %icmp, label %header, label %exit
+
+exit:
+  ret void
+
+}
+
+; Checks correct traversal for loops without a unique predecessor
+; outside the loop.
+define void @pr122913() {
+; CHECK-LABEL: pr122913
+; CHECK-NEXT:  Determining loop execution counts for: @pr122913
+; CHECK-NEXT:  Loop %header: backedge-taken count is i1 false
+; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i1 false
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is i1 false
+; CHECK-NEXT:  Loop %header: Trip multiple is 1
+entry:
+  br i1 1, label %bb, label %header
+
+bb:
+  br i1 1, label %exit, label %header
+
+header:
+  %0 = phi i32 [ %1, %body ], [ 0, %bb ], [ 0, %entry ]
+  br label %body
+
+body:
+  %1 = add i32 %0, 1
+  %2 = icmp ult i32 %1, 0
+  br i1 %2, label %header, label %exit
+
+exit:
+  ret void
+}

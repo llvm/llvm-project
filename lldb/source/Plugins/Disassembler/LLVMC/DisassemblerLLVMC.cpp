@@ -1787,9 +1787,9 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
           module_sp->ResolveFileAddress(value, value_so_addr);
           module_sp->ResolveFileAddress(pc, pc_so_addr);
         }
-      } else if (target && !target->GetSectionLoadList().IsEmpty()) {
-        target->GetSectionLoadList().ResolveLoadAddress(value, value_so_addr);
-        target->GetSectionLoadList().ResolveLoadAddress(pc, pc_so_addr);
+      } else if (target && target->HasLoadedSections()) {
+        target->ResolveLoadAddress(value, value_so_addr);
+        target->ResolveLoadAddress(pc, pc_so_addr);
       }
 
       SymbolContext sym_ctx;

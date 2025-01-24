@@ -609,6 +609,14 @@ void ASTStmtWriter::VisitCapturedStmt(CapturedStmt *S) {
   Code = serialization::STMT_CAPTURED;
 }
 
+void ASTStmtWriter::VisitSYCLKernelCallStmt(SYCLKernelCallStmt *S) {
+  VisitStmt(S);
+  Record.AddStmt(S->getOriginalStmt());
+  Record.AddDeclRef(S->getOutlinedFunctionDecl());
+
+  Code = serialization::STMT_SYCLKERNELCALL;
+}
+
 void ASTStmtWriter::VisitExpr(Expr *E) {
   VisitStmt(E);
 
@@ -2955,6 +2963,18 @@ void ASTStmtWriter::VisitOpenACCShutdownConstruct(OpenACCShutdownConstruct *S) {
   VisitStmt(S);
   VisitOpenACCConstructStmt(S);
   Code = serialization::STMT_OPENACC_SHUTDOWN_CONSTRUCT;
+}
+
+void ASTStmtWriter::VisitOpenACCSetConstruct(OpenACCSetConstruct *S) {
+  VisitStmt(S);
+  VisitOpenACCConstructStmt(S);
+  Code = serialization::STMT_OPENACC_SET_CONSTRUCT;
+}
+
+void ASTStmtWriter::VisitOpenACCUpdateConstruct(OpenACCUpdateConstruct *S) {
+  VisitStmt(S);
+  VisitOpenACCConstructStmt(S);
+  Code = serialization::STMT_OPENACC_UPDATE_CONSTRUCT;
 }
 
 void ASTStmtWriter::VisitOpenACCHostDataConstruct(OpenACCHostDataConstruct *S) {

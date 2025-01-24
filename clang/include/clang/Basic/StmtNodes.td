@@ -24,6 +24,7 @@ def SwitchCase : StmtNode<Stmt, 1>;
 def CaseStmt : StmtNode<SwitchCase>;
 def DefaultStmt : StmtNode<SwitchCase>;
 def CapturedStmt : StmtNode<Stmt>;
+def SYCLKernelCallStmt : StmtNode<Stmt>;
 
 // Statements that might produce a value (for example, as the last non-null
 // statement in a GNU statement-expression).
@@ -315,6 +316,8 @@ def OpenACCHostDataConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
 def OpenACCWaitConstruct : StmtNode<OpenACCConstructStmt>;
 def OpenACCInitConstruct : StmtNode<OpenACCConstructStmt>;
 def OpenACCShutdownConstruct : StmtNode<OpenACCConstructStmt>;
+def OpenACCSetConstruct : StmtNode<OpenACCConstructStmt>;
+def OpenACCUpdateConstruct : StmtNode<OpenACCConstructStmt>;
 
 // OpenACC Additional Expressions.
 def OpenACCAsteriskSizeExpr : StmtNode<Expr>;

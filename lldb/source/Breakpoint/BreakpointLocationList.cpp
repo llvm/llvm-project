@@ -103,8 +103,7 @@ BreakpointLocationList::FindByAddress(const Address &addr) const {
       so_addr = addr;
     } else {
       // Try and resolve as a load address if possible.
-      m_owner.GetTarget().GetSectionLoadList().ResolveLoadAddress(
-          addr.GetOffset(), so_addr);
+      m_owner.GetTarget().ResolveLoadAddress(addr.GetOffset(), so_addr);
       if (!so_addr.IsValid()) {
         // The address didn't resolve, so just set to passed in addr.
         so_addr = addr;

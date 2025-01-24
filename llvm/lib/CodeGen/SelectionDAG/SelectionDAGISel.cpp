@@ -502,9 +502,9 @@ void SelectionDAGISel::initializeAnalysisResults(
     FuncInfo->BPI = nullptr;
 
   if (OptLevel != CodeGenOptLevel::None)
-    AA = &FAM.getResult<AAManager>(Fn);
+    BatchAA.emplace(FAM.getResult<AAManager>(Fn));
   else
-    AA = nullptr;
+    BatchAA = std::nullopt;
 
   SP = &FAM.getResult<SSPLayoutAnalysis>(Fn);
 
@@ -560,9 +560,9 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
     FuncInfo->BPI = nullptr;
 
   if (OptLevel != CodeGenOptLevel::None)
-    AA = &MFP.getAnalysis<AAResultsWrapperPass>().getAAResults();
+    BatchAA.emplace(MFP.getAnalysis<AAResultsWrapperPass>().getAAResults());
   else
-    AA = nullptr;
+    BatchAA = std::nullopt;
 
   SP = &MFP.getAnalysis<StackProtector>().getLayoutInfo();
 
@@ -581,7 +581,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
 
   ISEL_DUMP(dbgs() << "\n\n\n=== " << FuncName << '\n');
 
-  SDB->init(GFI, AA, AC, LibInfo);
+  SDB->init(GFI, getBatchAA(), AC, LibInfo);
 
   MF->setHasInlineAsm(false);
 
@@ -706,6 +706,8 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
       continue;
 
     // If Reg is live-in then update debug info to track its copy in a vreg.
+    if (!Reg.isPhysical())
+      continue;
     DenseMap<MCRegister, Register>::iterator LDI = LiveInMap.find(Reg);
     if (LDI != LiveInMap.end()) {
       assert(!hasFI && "There's no handling of frame pointer updating here yet "
@@ -953,7 +955,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   {
     NamedRegionTimer T("combine1", "DAG Combining 1", GroupName,
                        GroupDescription, TimePassesIsEnabled);
-    CurDAG->Combine(BeforeLegalizeTypes, AA, OptLevel);
+    CurDAG->Combine(BeforeLegalizeTypes, getBatchAA(), OptLevel);
   }
 
   ISEL_DUMP(dbgs() << "\nOptimized lowered selection DAG: "
@@ -999,7 +1001,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     {
       NamedRegionTimer T("combine_lt", "DAG Combining after legalize types",
                          GroupName, GroupDescription, TimePassesIsEnabled);
-      CurDAG->Combine(AfterLegalizeTypes, AA, OptLevel);
+      CurDAG->Combine(AfterLegalizeTypes, getBatchAA(), OptLevel);
     }
 
     ISEL_DUMP(dbgs() << "\nOptimized type-legalized selection DAG: "
@@ -1053,7 +1055,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     {
       NamedRegionTimer T("combine_lv", "DAG Combining after legalize vectors",
                          GroupName, GroupDescription, TimePassesIsEnabled);
-      CurDAG->Combine(AfterLegalizeVectorOps, AA, OptLevel);
+      CurDAG->Combine(AfterLegalizeVectorOps, getBatchAA(), OptLevel);
     }
 
     ISEL_DUMP(dbgs() << "\nOptimized vector-legalized selection DAG: "
@@ -1093,7 +1095,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   {
     NamedRegionTimer T("combine2", "DAG Combining 2", GroupName,
                        GroupDescription, TimePassesIsEnabled);
-    CurDAG->Combine(AfterLegalizeDAG, AA, OptLevel);
+    CurDAG->Combine(AfterLegalizeDAG, getBatchAA(), OptLevel);
   }
 
   ISEL_DUMP(dbgs() << "\nOptimized legalized selection DAG: "

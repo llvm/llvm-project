@@ -113,8 +113,6 @@ static cl::opt<bool> EnableImplicitNullChecks(
 static cl::opt<bool> DisableMergeICmps("disable-mergeicmps",
     cl::desc("Disable MergeICmps Pass"),
     cl::init(false), cl::Hidden);
-static cl::opt<bool> PrintLSR("print-lsr-output", cl::Hidden,
-    cl::desc("Print LLVM IR produced by the loop-reduce pass"));
 static cl::opt<bool>
     PrintISelInput("print-isel-input", cl::Hidden,
                    cl::desc("Print LLVM IR input to isel pass"));
@@ -266,7 +264,7 @@ static cl::opt<bool>
 static cl::opt<bool>
     SplitStaticData("split-static-data", cl::Hidden, cl::init(false),
                     cl::desc("Split static data sections into hot and cold "
-                             "section ones using profile information"));
+                             "sections using profile information"));
 
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
@@ -508,7 +506,6 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_BOOLEAN_OPTION(DisableCGP)
   SET_BOOLEAN_OPTION(DisablePartialLibcallInlining)
   SET_BOOLEAN_OPTION(DisableSelectOptimize)
-  SET_BOOLEAN_OPTION(PrintLSR)
   SET_BOOLEAN_OPTION(PrintISelInput)
   SET_BOOLEAN_OPTION(DebugifyAndStripAll)
   SET_BOOLEAN_OPTION(DebugifyCheckAndStripAll)
@@ -841,9 +838,6 @@ void TargetPassConfig::addIRPasses() {
       addPass(createLoopStrengthReducePass());
       if (EnableLoopTermFold)
         addPass(createLoopTermFoldPass());
-      if (PrintLSR)
-        addPass(createPrintFunctionPass(dbgs(),
-                                        "\n\n*** Code after LSR ***\n"));
     }
 
     // The MergeICmpsPass tries to create memcmp calls by grouping sequences of

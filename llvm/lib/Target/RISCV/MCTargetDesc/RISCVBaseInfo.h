@@ -302,6 +302,7 @@ enum OperandType : unsigned {
   OPERAND_UIMM4,
   OPERAND_UIMM5,
   OPERAND_UIMM5_NONZERO,
+  OPERAND_UIMM5_GT3,
   OPERAND_UIMM5_LSB0,
   OPERAND_UIMM6,
   OPERAND_UIMM6_LSB0,
@@ -312,6 +313,7 @@ enum OperandType : unsigned {
   OPERAND_UIMM8_LSB000,
   OPERAND_UIMM8_GE32,
   OPERAND_UIMM9_LSB000,
+  OPERAND_UIMM10,
   OPERAND_UIMM10_LSB00_NONZERO,
   OPERAND_UIMM11,
   OPERAND_UIMM12,
@@ -330,6 +332,7 @@ enum OperandType : unsigned {
   OPERAND_SIMM10_LSB0000_NONZERO,
   OPERAND_SIMM12,
   OPERAND_SIMM12_LSB00000,
+  OPERAND_SIMM26,
   OPERAND_CLUI_IMM,
   OPERAND_VTYPEI10,
   OPERAND_VTYPEI11,
@@ -453,8 +456,6 @@ int getLoadFPImm(APFloat FPImm);
 namespace RISCVSysReg {
 struct SysReg {
   const char Name[32];
-  const char AltName[32];
-  const char DeprecatedName[32];
   unsigned Encoding;
   // FIXME: add these additional fields when needed.
   // Privilege Access: Read, Write, Read-Only.
@@ -466,11 +467,13 @@ struct SysReg {
   // Register number without the privilege bits.
   // unsigned Number;
   FeatureBitset FeaturesRequired;
-  bool isRV32Only;
+  bool IsRV32Only;
+  bool IsAltName;
+  bool IsDeprecatedName;
 
   bool haveRequiredFeatures(const FeatureBitset &ActiveFeatures) const {
     // Not in 32-bit mode.
-    if (isRV32Only && ActiveFeatures[RISCV::Feature64Bit])
+    if (IsRV32Only && ActiveFeatures[RISCV::Feature64Bit])
       return false;
     // No required feature associated with the system register.
     if (FeaturesRequired.none())
@@ -479,6 +482,7 @@ struct SysReg {
   }
 };
 
+#define GET_SysRegEncodings_DECL
 #define GET_SysRegsList_DECL
 #include "RISCVGenSearchableTables.inc"
 } // end namespace RISCVSysReg

@@ -1614,7 +1614,7 @@ bool Sema::isUsableModule(const Module *M) {
 
   // Otherwise, the global module fragment from other translation unit is not
   // directly usable.
-  if (M->isGlobalModule())
+  if (M->isExplicitGlobalModule())
     return false;
 
   Module *Current = getCurrentModule();
@@ -1623,6 +1623,13 @@ bool Sema::isUsableModule(const Module *M) {
   // another module easily.
   if (!Current)
     return false;
+
+  // For implicit global module, the decls in the same modules with the parent
+  // module should be visible to the decls in the implicit global module.
+  if (Current->isImplicitGlobalModule())
+    Current = Current->getTopLevelModule();
+  if (M->isImplicitGlobalModule())
+    M = M->getTopLevelModule();
 
   // If M is the module we're parsing or M and the current module unit lives in
   // the same module, M should be usable.
@@ -3668,7 +3675,9 @@ Sema::LookupLiteralOperator(Scope *S, LookupResult &R,
           TemplateArgumentLoc Arg(TemplateArgument(StringLit), StringLit);
           if (CheckTemplateArgument(
                   Params->getParam(0), Arg, FD, R.getNameLoc(), R.getNameLoc(),
-                  0, SugaredChecked, CanonicalChecked, CTAK_Specified) ||
+                  0, SugaredChecked, CanonicalChecked, CTAK_Specified,
+                  /*PartialOrdering=*/false,
+                  /*MatchedPackOnParmToNonPackOnArg=*/nullptr) ||
               Trap.hasErrorOccurred())
             IsTemplate = false;
         }

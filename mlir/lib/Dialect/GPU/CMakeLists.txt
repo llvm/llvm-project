@@ -1,6 +1,7 @@
 add_mlir_dialect_library(MLIRGPUDialect
   IR/GPUDialect.cpp
   IR/InferIntRangeInterfaceImpls.cpp
+  IR/ValueBoundsOpInterfaceImpl.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/GPU
@@ -40,7 +41,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/ShuffleRewriter.cpp
   Transforms/SPIRVAttachTarget.cpp
   Transforms/SubgroupReduceLowering.cpp
-  
+
   OBJECT
 
   ADDITIONAL_HEADER_DIRS

@@ -152,7 +152,7 @@ define void @store_i32_stride6_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm3[0],xmm2[0]
 ; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vinsertf32x4 $2, %xmm2, %zmm0, %zmm0
-; AVX512-NEXT:    vmovaps {{.*#+}} zmm1 = [0,2,4,6,8,10,1,3,5,7,9,11,u,u,u,u]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [0,2,4,6,8,10,1,3,5,7,9,11,0,0,0,0]
 ; AVX512-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    vextractf32x4 $2, %zmm0, 32(%rax)
 ; AVX512-NEXT:    vmovaps %ymm0, (%rax)
@@ -173,7 +173,7 @@ define void @store_i32_stride6_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512-FCP-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm3[0],xmm2[0]
 ; AVX512-FCP-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512-FCP-NEXT:    vinsertf32x4 $2, %xmm2, %zmm0, %zmm0
-; AVX512-FCP-NEXT:    vmovaps {{.*#+}} zmm1 = [0,2,4,6,8,10,1,3,5,7,9,11,u,u,u,u]
+; AVX512-FCP-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [0,2,4,6,8,10,1,3,5,7,9,11,0,0,0,0]
 ; AVX512-FCP-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; AVX512-FCP-NEXT:    vextractf32x4 $2, %zmm0, 32(%rax)
 ; AVX512-FCP-NEXT:    vmovaps %ymm0, (%rax)
@@ -194,7 +194,7 @@ define void @store_i32_stride6_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512DQ-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm3[0],xmm2[0]
 ; AVX512DQ-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vinsertf32x4 $2, %xmm2, %zmm0, %zmm0
-; AVX512DQ-NEXT:    vmovaps {{.*#+}} zmm1 = [0,2,4,6,8,10,1,3,5,7,9,11,u,u,u,u]
+; AVX512DQ-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [0,2,4,6,8,10,1,3,5,7,9,11,0,0,0,0]
 ; AVX512DQ-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; AVX512DQ-NEXT:    vextractf32x4 $2, %zmm0, 32(%rax)
 ; AVX512DQ-NEXT:    vmovaps %ymm0, (%rax)
@@ -215,7 +215,7 @@ define void @store_i32_stride6_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512DQ-FCP-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm3[0],xmm2[0]
 ; AVX512DQ-FCP-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512DQ-FCP-NEXT:    vinsertf32x4 $2, %xmm2, %zmm0, %zmm0
-; AVX512DQ-FCP-NEXT:    vmovaps {{.*#+}} zmm1 = [0,2,4,6,8,10,1,3,5,7,9,11,u,u,u,u]
+; AVX512DQ-FCP-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [0,2,4,6,8,10,1,3,5,7,9,11,0,0,0,0]
 ; AVX512DQ-FCP-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; AVX512DQ-FCP-NEXT:    vextractf32x4 $2, %zmm0, 32(%rax)
 ; AVX512DQ-FCP-NEXT:    vmovaps %ymm0, (%rax)
@@ -236,7 +236,7 @@ define void @store_i32_stride6_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512BW-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm3[0],xmm2[0]
 ; AVX512BW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vinsertf32x4 $2, %xmm2, %zmm0, %zmm0
-; AVX512BW-NEXT:    vmovaps {{.*#+}} zmm1 = [0,2,4,6,8,10,1,3,5,7,9,11,u,u,u,u]
+; AVX512BW-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [0,2,4,6,8,10,1,3,5,7,9,11,0,0,0,0]
 ; AVX512BW-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; AVX512BW-NEXT:    vextractf32x4 $2, %zmm0, 32(%rax)
 ; AVX512BW-NEXT:    vmovaps %ymm0, (%rax)
@@ -257,7 +257,7 @@ define void @store_i32_stride6_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512BW-FCP-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm3[0],xmm2[0]
 ; AVX512BW-FCP-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512BW-FCP-NEXT:    vinsertf32x4 $2, %xmm2, %zmm0, %zmm0
-; AVX512BW-FCP-NEXT:    vmovaps {{.*#+}} zmm1 = [0,2,4,6,8,10,1,3,5,7,9,11,u,u,u,u]
+; AVX512BW-FCP-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [0,2,4,6,8,10,1,3,5,7,9,11,0,0,0,0]
 ; AVX512BW-FCP-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; AVX512BW-FCP-NEXT:    vextractf32x4 $2, %zmm0, 32(%rax)
 ; AVX512BW-FCP-NEXT:    vmovaps %ymm0, (%rax)
@@ -278,7 +278,7 @@ define void @store_i32_stride6_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512DQ-BW-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm3[0],xmm2[0]
 ; AVX512DQ-BW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512DQ-BW-NEXT:    vinsertf32x4 $2, %xmm2, %zmm0, %zmm0
-; AVX512DQ-BW-NEXT:    vmovaps {{.*#+}} zmm1 = [0,2,4,6,8,10,1,3,5,7,9,11,u,u,u,u]
+; AVX512DQ-BW-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [0,2,4,6,8,10,1,3,5,7,9,11,0,0,0,0]
 ; AVX512DQ-BW-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; AVX512DQ-BW-NEXT:    vextractf32x4 $2, %zmm0, 32(%rax)
 ; AVX512DQ-BW-NEXT:    vmovaps %ymm0, (%rax)
@@ -299,7 +299,7 @@ define void @store_i32_stride6_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512DQ-BW-FCP-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm3[0],xmm2[0]
 ; AVX512DQ-BW-FCP-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512DQ-BW-FCP-NEXT:    vinsertf32x4 $2, %xmm2, %zmm0, %zmm0
-; AVX512DQ-BW-FCP-NEXT:    vmovaps {{.*#+}} zmm1 = [0,2,4,6,8,10,1,3,5,7,9,11,u,u,u,u]
+; AVX512DQ-BW-FCP-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [0,2,4,6,8,10,1,3,5,7,9,11,0,0,0,0]
 ; AVX512DQ-BW-FCP-NEXT:    vpermps %zmm0, %zmm1, %zmm0
 ; AVX512DQ-BW-FCP-NEXT:    vextractf32x4 $2, %zmm0, 32(%rax)
 ; AVX512DQ-BW-FCP-NEXT:    vmovaps %ymm0, (%rax)

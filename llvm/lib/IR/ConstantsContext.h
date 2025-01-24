@@ -380,7 +380,7 @@ struct InlineAsmKeyType {
   using TypeClass = ConstantInfo<InlineAsm>::TypeClass;
 
   InlineAsm *create(TypeClass *Ty) const {
-    assert(PointerType::getUnqual(FTy) == Ty);
+    assert(PointerType::getUnqual(FTy->getContext()) == Ty);
     return new InlineAsm(FTy, std::string(AsmString), std::string(Constraints),
                          HasSideEffects, IsAlignStack, AsmDialect, CanThrow);
   }
@@ -491,8 +491,7 @@ public:
     default:
       if (Instruction::isCast(Opcode))
         return new CastConstantExpr(Opcode, Ops[0], Ty);
-      if ((Opcode >= Instruction::BinaryOpsBegin &&
-           Opcode < Instruction::BinaryOpsEnd))
+      if (Instruction::isBinaryOp(Opcode))
         return new BinaryConstantExpr(Opcode, Ops[0], Ops[1],
                                       SubclassOptionalData);
       llvm_unreachable("Invalid ConstantExpr!");

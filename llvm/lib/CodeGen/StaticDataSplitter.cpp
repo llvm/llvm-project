@@ -58,7 +58,7 @@ class StaticDataSplitter : public MachineFunctionPass {
   bool splitJumpTables(MachineFunction &MF);
 
   // Same as above but works on functions with profile information.
-  bool splitJumpTablesWithProfiles(MachineFunction &MF,
+  bool splitJumpTablesWithProfiles(const MachineFunction &MF,
                                    MachineJumpTableInfo &MJTI);
 
 public:
@@ -89,7 +89,7 @@ bool StaticDataSplitter::runOnMachineFunction(MachineFunction &MF) {
 }
 
 bool StaticDataSplitter::splitJumpTablesWithProfiles(
-    MachineFunction &MF, MachineJumpTableInfo &MJTI) {
+    const MachineFunction &MF, MachineJumpTableInfo &MJTI) {
   int NumChangedJumpTables = 0;
 
   // Jump table could be used by either terminating instructions or
@@ -110,10 +110,12 @@ bool StaticDataSplitter::splitJumpTablesWithProfiles(
         auto Hotness = MachineFunctionDataHotness::Hot;
 
         // Hotness is based on source basic block hotness.
+        // TODO: PSI APIs are about instruction hotness. Introduce API for data
+        // access hotness.
         if (PSI->isColdBlock(&MBB, MBFI))
           Hotness = MachineFunctionDataHotness::Cold;
 
-        if (MF.getJumpTableInfo()->updateJumpTableEntryHotness(JTI, Hotness))
+        if (MJTI.updateJumpTableEntryHotness(JTI, Hotness))
           ++NumChangedJumpTables;
       }
     }
@@ -139,13 +141,13 @@ bool StaticDataSplitter::splitJumpTables(MachineFunction &MF) {
 
     for (size_t JTI = 0; JTI < MJTI->getJumpTables().size(); JTI++) {
       auto Hotness = MJTI->getJumpTables()[JTI].Hotness;
-      if (Hotness == MachineFunctionDataHotness::Hot)
-        NumHotJumpTables++;
-      else {
+      if (Hotness == MachineFunctionDataHotness::Hot) {
+        ++NumHotJumpTables;
+      } else {
         assert(Hotness == MachineFunctionDataHotness::Cold &&
                "A jump table is either hot or cold when profile information is "
                "available.");
-        NumColdJumpTables++;
+        ++NumColdJumpTables;
       }
     }
   });

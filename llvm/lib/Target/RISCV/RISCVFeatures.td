@@ -844,6 +844,10 @@ def HasStdExtH : Predicate<"Subtarget->hasStdExtH()">,
 
 // Supervisor extensions
 
+def FeatureStdExtSdext : RISCVExperimentalExtension<1, 0, "External debugger">;
+
+def FeatureStdExtSdtrig : RISCVExperimentalExtension<1, 0, "Debugger triggers">;
+
 def FeatureStdExtShgatpa
     : RISCVExtension<1, 0,
                      "SvNNx4 mode supported for all modes supported by satp, as well as Bare">;
@@ -1273,6 +1277,46 @@ def HasVendorXqcilsm
     : Predicate<"Subtarget->hasVendorXqcilsm()">,
       AssemblerPredicate<(all_of FeatureVendorXqcilsm),
                          "'Xqcilsm' (Qualcomm uC Load Store Multiple Extension)">;
+
+def FeatureVendorXqciac
+    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Load-Store Address Calculation Extension",
+                                 [FeatureStdExtZca]>;
+def HasVendorXqciac
+    : Predicate<"Subtarget->hasVendorXqciac()">,
+      AssemblerPredicate<(all_of FeatureVendorXqciac),
+                         "'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)">;
+
+def FeatureVendorXqcicli
+    : RISCVExperimentalExtension<0, 2,
+                                 "Qualcomm uC Conditional Load Immediate Extension">;
+def HasVendorXqcicli
+    : Predicate<"Subtarget->hasVendorXqcicli()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcicli),
+                         "'Xqcicli' (Qualcomm uC Conditional Load Immediate Extension)">;
+
+def FeatureVendorXqcicm
+    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Conditional Move Extension",
+                                 [FeatureStdExtZca]>;
+def HasVendorXqcicm
+    : Predicate<"Subtarget->hasVendorXqcicm()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcicm),
+                         "'Xqcicm' (Qualcomm uC Conditional Move Extension)">;
+
+def FeatureVendorXqciint
+    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Interrupts Extension",
+                                 [FeatureStdExtZca]>;
+def HasVendorXqciint
+    : Predicate<"Subtarget->hasVendorXqciint()">,
+      AssemblerPredicate<(all_of FeatureVendorXqciint),
+                         "'Xqciint' (Qualcomm uC Interrupts Extension)">;
+
+def FeatureVendorXqcilo
+    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Large Offset Load Store Extension",
+                                 [FeatureStdExtZca]>;
+def HasVendorXqcilo
+    : Predicate<"Subtarget->hasVendorXqcilo()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcilo),
+                         "'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)">;
 
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions

@@ -708,6 +708,11 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
   case llvm::Triple::loongarch32:
   case llvm::Triple::loongarch64:
     return loongarch::getLoongArchTargetCPU(Args, T);
+
+  case llvm::Triple::xtensa:
+    if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
+      return A->getValue();
+    return "";
   }
 }
 
@@ -1204,6 +1209,10 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   if (ImplicitMapSyms)
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-implicit-mapsyms"));
+
+  if (Args.hasArg(options::OPT_ftime_report))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine(PluginOptPrefix) + "-time-passes"));
 }
 
 void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,
@@ -1854,18 +1863,6 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
   // Android-specific defaults for PIC/PIE
   if (Triple.isAndroid()) {
     switch (Triple.getArch()) {
-    case llvm::Triple::arm:
-    case llvm::Triple::armeb:
-    case llvm::Triple::thumb:
-    case llvm::Triple::thumbeb:
-    case llvm::Triple::aarch64:
-    case llvm::Triple::mips:
-    case llvm::Triple::mipsel:
-    case llvm::Triple::mips64:
-    case llvm::Triple::mips64el:
-      PIC = true; // "-fpic"
-      break;
-
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       PIC = true; // "-fPIC"
@@ -1873,6 +1870,7 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
       break;
 
     default:
+      PIC = true; // "-fpic"
       break;
     }
   }
@@ -2834,12 +2832,14 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
     LibraryPaths.emplace_back(LibPath);
 
   OptSpecifier LibomptargetBCPathOpt =
-      Triple.isAMDGCN() ? options::OPT_libomptarget_amdgpu_bc_path_EQ
-                        : options::OPT_libomptarget_nvptx_bc_path_EQ;
+      Triple.isAMDGCN()  ? options::OPT_libomptarget_amdgpu_bc_path_EQ
+      : Triple.isNVPTX() ? options::OPT_libomptarget_nvptx_bc_path_EQ
+                         : options::OPT_libomptarget_spirv_bc_path_EQ;
 
-  StringRef ArchPrefix = Triple.isAMDGCN() ? "amdgpu" : "nvptx";
-  std::string LibOmpTargetName =
-      ("libomptarget-" + ArchPrefix + "-" + BitcodeSuffix + ".bc").str();
+  StringRef ArchPrefix = Triple.isAMDGCN()  ? "amdgpu"
+                         : Triple.isNVPTX() ? "nvptx"
+                                            : "spirv64";
+  std::string LibOmpTargetName = ("libomptarget-" + ArchPrefix + ".bc").str();
 
   // First check whether user specifies bc library
   if (const Arg *A = DriverArgs.getLastArg(LibomptargetBCPathOpt)) {
