@@ -18,7 +18,6 @@ runs:
       run: |
         # Is this the best way to clear the cache?
         rm -Rf .ccache/
-        unzip ${{ steps.download-artifact.outputs.filename }}
         rm ${{ steps.download-artifact.outputs.filename }}
         tar --zstd -xf ccache.tar.zst
         rm ccache.tar.zst
