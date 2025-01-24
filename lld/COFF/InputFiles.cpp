@@ -151,6 +151,8 @@ void ArchiveFile::addMember(const Archive::Symbol &sym) {
                                  toCOFFString(symtab.ctx, sym));
 
   // Return an empty buffer if we have already returned the same buffer.
+  // FIXME: Remove this once we resolve all defineds before all undefineds in
+  //        ObjFile::initializeSymbols().
   if (!seen.insert(c.getChildOffset()).second)
     return;
 
