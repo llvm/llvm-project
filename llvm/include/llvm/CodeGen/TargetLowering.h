@@ -2123,6 +2123,10 @@ public:
   /// Get the ISD node that corresponds to the Instruction class opcode.
   int InstructionOpcodeToISD(unsigned Opcode) const;
 
+  /// Get the ISD node that corresponds to the Intrinsic ID. Returns
+  /// ISD::DELETED_NODE by default for an unsupported Intrinsic ID.
+  int IntrinsicIDToISD(Intrinsic::ID ID) const;
+
   /// @}
 
   //===--------------------------------------------------------------------===//
