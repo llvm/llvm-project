@@ -19,8 +19,10 @@
 #include "hdr/types/time_t.h"
 #include <stddef.h> // For size_t.
 #include "hdr/types/time_t.h"
+#include "hdr/types/time_t.h"
 #include "src/__support/CPP/limits.h"
 #include "src/time/time_constants.h"
+#include <time.h>
 
 #ifdef LIBC_TARGET_OS_IS_LINUX
 #include "src/time/linux/localtime_utils.h"
