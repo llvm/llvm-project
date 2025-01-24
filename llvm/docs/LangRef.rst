@@ -16723,8 +16723,9 @@ type.
 
 Semantics:
 """"""""""
-Follows the semantics of minimumNumber in IEEE-754-2019, except for signaling NaNs. If either operand
-is an sNaN, the result is always a qNaN. This matches the recommended behavior for the libm
+Follows the semantics of minNum in IEEE-754-2008, except that -0.0 < +0.0 for the purposes
+of this intrinsic. As for signaling NaNs, per the minNum semantics, if either operand is sNaN,
+the result is qNaN. This matches the recommended behavior for the libm
 function ``fmin``, although not all implementations have implemented these recommended behaviors.
 
 If either operand is a qNaN, returns the other non-NaN operand. Returns NaN only if both operands are
@@ -16732,8 +16733,8 @@ NaN or if either operand is sNaN. Note that arithmetic on an sNaN doesn't consis
 so arithmetic feeding into a minnum can produce inconsistent results. For example,
 `minnum(fadd(sNaN, -0.0), 1.0)` can produce qNaN or 1.0 depending on whether `fadd` is folded.
 
-IEEE-754-2008 defines minNum, and it was removed in IEEE-754-2019. The behavior of this intrinsic is
-stricter than minNum in IEEE-754-2008, where either zero may be returned.
+IEEE-754-2008 defines minNum, and it was removed in IEEE-754-2019. As the replacement, IEEE-754-2019
+defines :ref:`minimumNumber <llvm-minimumnum-intrinsic>`.
 
 If the intrinsic is marked with the nsz attribute, then the effect is as in the definition in C
 and IEEE-754-2008: the result of minnum(-0.0, +0.0) may be either -0.0 or +0.0.
@@ -16782,8 +16783,9 @@ type.
 
 Semantics:
 """"""""""
-Follows the semantics of maximumNumber in IEEE-754-2019, except for signaling NaNs. If either operand
-is an sNaN, the result is always a qNaN. This matches the recommended behavior for the libm
+Follows the semantics of maxNum in IEEE-754-2008, except that -0.0 < +0.0 for the purposes
+of this intrinsic. As for signaling NaNs, per the maxNum semantics, if either operand is sNaN,
+the result is qNaN. This matches the recommended behavior for the libm
 function ``fmax``, although not all implementations have implemented these recommended behaviors.
 
 If either operand is a qNaN, returns the other non-NaN operand. Returns NaN only if both operands are
@@ -16791,8 +16793,8 @@ NaN or if either operand is sNaN. Note that arithmetic on an sNaN doesn't consis
 so arithmetic feeding into a maxnum can produce inconsistent results. For example,
 `maxnum(fadd(sNaN, -0.0), 1.0)` can produce qNaN or 1.0 depending on whether `fadd` is folded.
 
-IEEE-754-2008 defines maxNum, and it was removed in IEEE-754-2019. The behavior of this intrinsic is
-stricter than minNum in IEEE-754-2008, where either zero may be returned.
+IEEE-754-2008 defines maxNum, and it was removed in IEEE-754-2019. As the replacement, IEEE-754-2019
+defines :ref:`maximumNumber <llvm-maximumnum-intrinsic>`.
 
 If the intrinsic is marked with the nsz attribute, then the effect is as in the definition in C
 and IEEE-754-2008: the result of maxnum(-0.0, +0.0) may be either -0.0 or +0.0.
