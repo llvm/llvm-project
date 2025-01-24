@@ -1,107 +1,44 @@
 macros:
   C_IRUSR:
-    c-definition: "Read by owner."
     in-latest-posix: ''
-    value: "0000400"
-
   C_IWUSR:
-    c-definition: "Write by owner."
     in-latest-posix: ''
-    value: "0000200"
-
   C_IXUSR:
-    c-definition: "Execute by owner."
     in-latest-posix: ''
-    value: "0000100"
-
   C_IRGRP:
-    c-definition: "Read by group."
     in-latest-posix: ''
-    value: "0000040"
-
   C_IWGRP:
-    c-definition: "Write by group."
     in-latest-posix: ''
-    value: "0000020"
-
   C_IXGRP:
-    c-definition: "Execute by group."
     in-latest-posix: ''
-    value: "0000010"
-
   C_IROTH:
-    c-definition: "Read by others."
     in-latest-posix: ''
-    value: "0000004"
-
   C_IWOTH:
-    c-definition: "Write by others."
     in-latest-posix: ''
-    value: "0000002"
-
   C_IXOTH:
-    c-definition: "Execute by others."
     in-latest-posix: ''
-    value: "0000001"
-
   C_ISUID:
-    c-definition: "Set user ID."
     in-latest-posix: ''
-    value: "0004000"
-
   C_ISGID:
-    c-definition: "Set group ID."
     in-latest-posix: ''
-    value: "0002000"
-
   C_ISVTX:
-    c-definition: "Restricted deletion flag on directories."
     in-latest-posix: ''
-    value: "0001000"
-
   C_ISDIR:
-    c-definition: "Directory."
     in-latest-posix: ''
-    value: "0040000"
-
   C_ISFIFO:
-    c-definition: "FIFO."
     in-latest-posix: ''
-    value: "0010000"
-
   C_ISREG:
-    c-definition: "Regular file."
     in-latest-posix: ''
-    value: "0100000"
-
   C_ISBLK:
-    c-definition: "Block special."
     in-latest-posix: ''
-    value: "0060000"
-
   C_ISCHR:
-    c-definition: "Character special."
     in-latest-posix: ''
-    value: "0020000"
-
   C_ISCTG:
-    c-definition: "Reserved."
     in-latest-posix: ''
-    value: "0110000"
-
   C_ISLNK:
-    c-definition: "Symbolic link."
     in-latest-posix: ''
-    value: "0120000"
-
   C_ISSOCK:
-    c-definition: "Socket."
     in-latest-posix: ''
-    value: "0140000"
-
   MAGIC:
-    c-definition: "The magic string for cpio files."
     in-latest-posix: ''
-    value: '"070707"'
-
 
