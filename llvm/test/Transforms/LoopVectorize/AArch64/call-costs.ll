@@ -14,19 +14,16 @@ define void @fshl_operand_first_order_recurrence(ptr %dst, ptr noalias %src) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i64> [ <i64 poison, i64 0>, %[[VECTOR_PH]] ], [ [[WIDE_LOAD1:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 2
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD1]] = load <2 x i64>, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i64> [[VECTOR_RECUR]], <2 x i64> [[WIDE_LOAD]], <2 x i32> <i32 1, i32 2>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[WIDE_LOAD]], <2 x i64> [[WIDE_LOAD1]], <2 x i32> <i32 1, i32 2>
-; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> <i64 1, i64 1>, <2 x i64> [[TMP6]], <2 x i64> <i64 1, i64 1>)
-; CHECK-NEXT:    [[TMP9:%.*]] = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> <i64 1, i64 1>, <2 x i64> [[TMP7]], <2 x i64> <i64 1, i64 1>)
+; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> splat (i64 1), <2 x i64> [[TMP6]], <2 x i64> splat (i64 1))
+; CHECK-NEXT:    [[TMP9:%.*]] = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> splat (i64 1), <2 x i64> [[TMP7]], <2 x i64> splat (i64 1))
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[TMP10]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[TMP10]], i32 2
 ; CHECK-NEXT:    store <2 x i64> [[TMP8]], ptr [[TMP12]], align 8
@@ -83,15 +80,13 @@ define void @powi_call(ptr %P) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[P]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[P]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.powi.v2f64.i32(<2 x double> [[WIDE_LOAD]], i32 3)
-; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[TMP2]], align 8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[TMP4]], align 8
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -105,7 +100,7 @@ define void @powi_call(ptr %P) {
 ; CHECK-NEXT:    store double [[POWI]], ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 1
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -126,9 +121,9 @@ exit:
   ret void
 }
 
-define void @call_scalarized(ptr noalias %src, ptr noalias %dst, double %0) {
+define void @call_scalarized(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-LABEL: define void @call_scalarized(
-; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]], double [[TMP0:%.*]]) {
+; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
@@ -136,7 +131,7 @@ define void @call_scalarized(ptr noalias %src, ptr noalias %dst, double %0) {
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr double, ptr [[SRC]], i64 [[IV_NEXT]]
 ; CHECK-NEXT:    [[L:%.*]] = load double, ptr [[GEP_SRC]], align 8
-; CHECK-NEXT:    [[CMP295:%.*]] = fcmp ugt double [[TMP0]], 0.000000e+00
+; CHECK-NEXT:    [[CMP295:%.*]] = fcmp une double [[L]], 4.000000e+00
 ; CHECK-NEXT:    [[CMP299:%.*]] = fcmp ugt double [[L]], 0.000000e+00
 ; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP295]], [[CMP299]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label %[[LOOP_LATCH]], label %[[THEN:.*]]
@@ -159,7 +154,7 @@ loop.header:
   %iv.next = add i64 %iv, -1
   %gep.src = getelementptr double, ptr %src, i64 %iv.next
   %l = load double, ptr %gep.src, align 8
-  %cmp295 = fcmp ugt double %0, 0.000000e+00
+  %cmp295 = fcmp une double %l, 4.000000e+00
   %cmp299 = fcmp ugt double %l, 0.000000e+00
   %or.cond = or i1 %cmp295, %cmp299
   br i1 %or.cond, label %loop.latch, label %then
@@ -236,6 +231,5 @@ declare i64 @llvm.fshl.i64(i64, i64, i64)
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META2]], [[META1]]}
 ;.

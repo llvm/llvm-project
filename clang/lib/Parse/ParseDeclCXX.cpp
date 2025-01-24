@@ -16,11 +16,11 @@
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/Attributes.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/LiteralSupport.h"
-#include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
@@ -81,26 +81,16 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
 
   ParsedAttributes attrs(AttrFactory);
 
-  auto ReadAttributes = [&] {
-    bool MoreToParse;
-    do {
-      MoreToParse = false;
-      if (Tok.is(tok::kw___attribute)) {
-        ParseGNUAttributes(attrs);
-        MoreToParse = true;
-      }
-      if (getLangOpts().CPlusPlus11 && isCXX11AttributeSpecifier()) {
+  while (MaybeParseGNUAttributes(attrs) || isAllowedCXX11AttributeSpecifier()) {
+    if (isAllowedCXX11AttributeSpecifier()) {
+      if (getLangOpts().CPlusPlus11)
         Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
                                     ? diag::warn_cxx14_compat_ns_enum_attribute
                                     : diag::ext_ns_enum_attribute)
             << 0 /*namespace*/;
-        ParseCXX11Attributes(attrs);
-        MoreToParse = true;
-      }
-    } while (MoreToParse);
-  };
-
-  ReadAttributes();
+      ParseCXX11Attributes(attrs);
+    }
+  }
 
   if (Tok.is(tok::identifier)) {
     Ident = Tok.getIdentifierInfo();
@@ -126,7 +116,9 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
     }
   }
 
-  ReadAttributes();
+  DiagnoseAndSkipCXX11Attributes();
+  MaybeParseGNUAttributes(attrs);
+  DiagnoseAndSkipCXX11Attributes();
 
   SourceLocation attrLoc = attrs.Range.getBegin();
 
@@ -459,6 +451,15 @@ Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
 Decl *Parser::ParseExportDeclaration() {
   assert(Tok.is(tok::kw_export));
   SourceLocation ExportLoc = ConsumeToken();
+
+  if (Tok.is(tok::code_completion)) {
+    cutOffParsing();
+    Actions.CodeCompletion().CodeCompleteOrdinaryName(
+        getCurScope(), PP.isIncrementalProcessingEnabled()
+                           ? SemaCodeCompletion::PCC_TopLevelOrExpression
+                           : SemaCodeCompletion::PCC_Namespace);
+    return nullptr;
+  }
 
   ParseScope ExportScope(this, Scope::DeclScope);
   Decl *ExportDecl = Actions.ActOnStartExportDecl(
@@ -1109,7 +1110,8 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
     }
   }
 
-  T.consumeClose();
+  if (T.consumeClose())
+    return nullptr;
 
   DeclEnd = Tok.getLocation();
   ExpectAndConsumeSemi(diag::err_expected_semi_after_static_assert, TokName);
@@ -2219,8 +2221,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           // "template<>", so that we treat this construct as a class
           // template specialization.
           FakedParamLists.push_back(Actions.ActOnTemplateParameterList(
-              0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc,
-              std::nullopt, LAngleLoc, nullptr));
+              0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc, {},
+              LAngleLoc, nullptr));
           TemplateParams = &FakedParamLists;
         }
       }
@@ -3147,11 +3149,13 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
   // we did nothing here, but this allows us to issue a more
   // helpful diagnostic.
   if (Tok.is(tok::kw_concept)) {
-    Diag(Tok.getLocation(),
-         DS.isFriendSpecified() || NextToken().is(tok::kw_friend)
-             ? diag::err_friend_concept
-             : diag::
-                   err_concept_decls_may_only_appear_in_global_namespace_scope);
+    Diag(
+        Tok.getLocation(),
+        DS.isFriendSpecified() || NextToken().is(tok::kw_friend)
+            ? llvm::to_underlying(diag::err_friend_concept)
+            : llvm::to_underlying(
+                  diag::
+                      err_concept_decls_may_only_appear_in_global_namespace_scope));
     SkipUntil(tok::semi, tok::r_brace, StopBeforeMatch);
     return nullptr;
   }

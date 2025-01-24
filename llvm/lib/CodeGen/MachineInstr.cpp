@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -596,6 +597,11 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
       MIFlags |= MachineInstr::MIFlag::Disjoint;
   }
 
+  // Copy the samesign flag.
+  if (const ICmpInst *ICmp = dyn_cast<ICmpInst>(&I))
+    if (ICmp->hasSameSign())
+      MIFlags |= MachineInstr::MIFlag::SameSign;
+
   // Copy the exact flag.
   if (const PossiblyExactOperator *PE = dyn_cast<PossiblyExactOperator>(&I))
     if (PE->isExact())
@@ -768,7 +774,7 @@ void MachineInstr::eraseFromBundle() {
   getParent()->erase_instr(this);
 }
 
-bool MachineInstr::isCandidateForCallSiteEntry(QueryType Type) const {
+bool MachineInstr::isCandidateForAdditionalCallInfo(QueryType Type) const {
   if (!isCall(Type))
     return false;
   switch (getOpcode()) {
@@ -781,10 +787,10 @@ bool MachineInstr::isCandidateForCallSiteEntry(QueryType Type) const {
   return true;
 }
 
-bool MachineInstr::shouldUpdateCallSiteInfo() const {
+bool MachineInstr::shouldUpdateAdditionalCallInfo() const {
   if (isBundle())
-    return isCandidateForCallSiteEntry(MachineInstr::AnyInBundle);
-  return isCandidateForCallSiteEntry();
+    return isCandidateForAdditionalCallInfo(MachineInstr::AnyInBundle);
+  return isCandidateForAdditionalCallInfo();
 }
 
 unsigned MachineInstr::getNumExplicitOperands() const {
@@ -1323,8 +1329,68 @@ bool MachineInstr::isSafeToMove(bool &SawStore) const {
   return true;
 }
 
-static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI, AAResults *AA,
-                                 bool UseTBAA, const MachineMemOperand *MMOa,
+bool MachineInstr::wouldBeTriviallyDead() const {
+  // Don't delete frame allocation labels.
+  // FIXME: Why is LOCAL_ESCAPE not considered in MachineInstr::isLabel?
+  if (getOpcode() == TargetOpcode::LOCAL_ESCAPE)
+    return false;
+
+  // Don't delete FAKE_USE.
+  // FIXME: Why is FAKE_USE not considered in MachineInstr::isPosition?
+  if (isFakeUse())
+    return false;
+
+  // LIFETIME markers should be preserved.
+  // FIXME: Why are LIFETIME markers not considered in MachineInstr::isPosition?
+  if (isLifetimeMarker())
+    return false;
+
+  // If we can move an instruction, we can remove it.  Otherwise, it has
+  // a side-effect of some sort.
+  bool SawStore = false;
+  return isPHI() || isSafeToMove(SawStore);
+}
+
+bool MachineInstr::isDead(const MachineRegisterInfo &MRI,
+                          LiveRegUnits *LivePhysRegs) const {
+  // Technically speaking inline asm without side effects and no defs can still
+  // be deleted. But there is so much bad inline asm code out there, we should
+  // let them be.
+  if (isInlineAsm())
+    return false;
+
+  // If we suspect this instruction may have some side-effects, then we say
+  // this instruction cannot be dead.
+  // FIXME: See issue #105950 for why LIFETIME markers are considered dead here.
+  if (!isLifetimeMarker() && !wouldBeTriviallyDead())
+    return false;
+
+  // Instructions without side-effects are dead iff they only define dead regs.
+  // This function is hot and this loop returns early in the common case,
+  // so only perform additional checks before this if absolutely necessary.
+  for (const MachineOperand &MO : all_defs()) {
+    Register Reg = MO.getReg();
+    if (Reg.isPhysical()) {
+      // Don't delete live physreg defs, or any reserved register defs.
+      if (!LivePhysRegs || !LivePhysRegs->available(Reg) || MRI.isReserved(Reg))
+        return false;
+    } else {
+      if (MO.isDead())
+        continue;
+      for (const MachineInstr &Use : MRI.use_nodbg_instructions(Reg)) {
+        if (&Use != this)
+          // This def has a non-debug use. Don't delete the instruction!
+          return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI,
+                                 BatchAAResults *AA, bool UseTBAA,
+                                 const MachineMemOperand *MMOa,
                                  const MachineMemOperand *MMOb) {
   // The following interface to AA is fashioned after DAGCombiner::isAlias and
   // operates with MachineMemOperand offset with some important assumptions:
@@ -1407,7 +1473,7 @@ static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI, AAResults *AA,
       MemoryLocation(ValB, LocB, UseTBAA ? MMOb->getAAInfo() : AAMDNodes()));
 }
 
-bool MachineInstr::mayAlias(AAResults *AA, const MachineInstr &Other,
+bool MachineInstr::mayAlias(BatchAAResults *AA, const MachineInstr &Other,
                             bool UseTBAA) const {
   const MachineFunction *MF = getMF();
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
@@ -1449,6 +1515,15 @@ bool MachineInstr::mayAlias(AAResults *AA, const MachineInstr &Other,
         return true;
 
   return false;
+}
+
+bool MachineInstr::mayAlias(AAResults *AA, const MachineInstr &Other,
+                            bool UseTBAA) const {
+  if (AA) {
+    BatchAAResults BAA(*AA);
+    return mayAlias(&BAA, Other, UseTBAA);
+  }
+  return mayAlias(static_cast<BatchAAResults *>(nullptr), Other, UseTBAA);
 }
 
 /// hasOrderedMemoryRef - Return true if this instruction may have an ordered
@@ -1513,19 +1588,16 @@ bool MachineInstr::isDereferenceableInvariantLoad() const {
   return true;
 }
 
-/// isConstantValuePHI - If the specified instruction is a PHI that always
-/// merges together the same virtual register, return the register, otherwise
-/// return 0.
-unsigned MachineInstr::isConstantValuePHI() const {
+Register MachineInstr::isConstantValuePHI() const {
   if (!isPHI())
-    return 0;
+    return {};
   assert(getNumOperands() >= 3 &&
          "It's illegal to have a PHI without source operands");
 
   Register Reg = getOperand(1).getReg();
   for (unsigned i = 3, e = getNumOperands(); i < e; i += 2)
     if (getOperand(i).getReg() != Reg)
-      return 0;
+      return {};
   return Reg;
 }
 
@@ -1751,6 +1823,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "nneg ";
   if (getFlag(MachineInstr::Disjoint))
     OS << "disjoint ";
+  if (getFlag(MachineInstr::SameSign))
+    OS << "samesign ";
 
   // Print the opcode name.
   if (TII)
@@ -2193,26 +2267,36 @@ MachineInstrExpressionTrait::getHashValue(const MachineInstr* const &MI) {
   return hash_combine_range(HashComponents.begin(), HashComponents.end());
 }
 
-void MachineInstr::emitError(StringRef Msg) const {
+const MDNode *MachineInstr::getLocCookieMD() const {
   // Find the source location cookie.
-  uint64_t LocCookie = 0;
   const MDNode *LocMD = nullptr;
   for (unsigned i = getNumOperands(); i != 0; --i) {
     if (getOperand(i-1).isMetadata() &&
         (LocMD = getOperand(i-1).getMetadata()) &&
         LocMD->getNumOperands() != 0) {
-      if (const ConstantInt *CI =
-              mdconst::dyn_extract<ConstantInt>(LocMD->getOperand(0))) {
-        LocCookie = CI->getZExtValue();
-        break;
-      }
+      if (mdconst::hasa<ConstantInt>(LocMD->getOperand(0)))
+        return LocMD;
     }
   }
 
-  if (const MachineBasicBlock *MBB = getParent())
-    if (const MachineFunction *MF = MBB->getParent())
-      return MF->getFunction().getContext().emitError(LocCookie, Msg);
-  report_fatal_error(Msg);
+  return nullptr;
+}
+
+void MachineInstr::emitInlineAsmError(const Twine &Msg) const {
+  assert(isInlineAsm());
+  const MDNode *LocMD = getLocCookieMD();
+  uint64_t LocCookie =
+      LocMD
+          ? mdconst::extract<ConstantInt>(LocMD->getOperand(0))->getZExtValue()
+          : 0;
+  LLVMContext &Ctx = getMF()->getFunction().getContext();
+  Ctx.diagnose(DiagnosticInfoInlineAsm(LocCookie, Msg));
+}
+
+void MachineInstr::emitGenericError(const Twine &Msg) const {
+  const Function &Fn = getMF()->getFunction();
+  Fn.getContext().diagnose(
+      DiagnosticInfoGenericWithLoc(Msg, Fn, getDebugLoc()));
 }
 
 MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, const DebugLoc &DL,

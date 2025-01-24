@@ -10,10 +10,12 @@ define void @foo() personality ptr @bar {
 ; CHECK:       bb2.loopexit:
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i32> [ [[TMP8:%.*]], [[BB9:%.*]] ], [ poison, [[BB2_LOOPEXIT:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i32> [ [[TMP7:%.*]], [[BB9:%.*]] ], [ poison, [[BB2_LOOPEXIT:%.*]] ]
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ [[TMP4:%.*]], [[BB6:%.*]] ], [ poison, [[BB1:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ [[TMP3:%.*]], [[BB6:%.*]] ], [ poison, [[BB1:%.*]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = invoke i32 poison(ptr addrspace(1) nonnull poison, i32 0, i32 0, i32 poison) [ "deopt"() ]
 ; CHECK-NEXT:            to label [[BB4:%.*]] unwind label [[BB10:%.*]]
 ; CHECK:       bb4:
@@ -21,32 +23,35 @@ define void @foo() personality ptr @bar {
 ; CHECK:       bb5:
 ; CHECK-NEXT:    br label [[BB7:%.*]]
 ; CHECK:       bb6:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x i32> [ <i32 0, i32 poison>, [[BB8:%.*]] ]
-; CHECK-NEXT:    [[TMP4]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <2 x i32> <i32 1, i32 poison>
+; CHECK-NEXT:    [[TMP3]] = phi <2 x i32> [ <i32 0, i32 poison>, [[BB8:%.*]] ]
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    [[LOCAL_5_84111:%.*]] = phi i32 [ poison, [[BB8]] ], [ poison, [[BB5]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[LOCAL_5_84111]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = invoke i32 poison(ptr addrspace(1) nonnull poison, i32 poison, i32 poison, i32 poison) [ "deopt"() ]
+; CHECK-NEXT:    [[TMP5:%.*]] = invoke i32 poison(ptr addrspace(1) nonnull poison, i32 poison, i32 poison, i32 poison) [ "deopt"() ]
 ; CHECK-NEXT:            to label [[BB8]] unwind label [[BB12:%.*]]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    br i1 poison, label [[BB7]], label [[BB6]]
 ; CHECK:       bb9:
 ; CHECK-NEXT:    [[INDVARS_IV528799:%.*]] = phi i64 [ poison, [[BB10]] ], [ poison, [[BB12]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x i32> [ [[TMP9:%.*]], [[BB10]] ], [ [[TMP10:%.*]], [[BB12]] ]
-; CHECK-NEXT:    [[TMP8]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> poison, <2 x i32> [[TMP7]], i64 2)
+; CHECK-NEXT:    [[TMP7]] = phi <4 x i32> [ [[TMP9:%.*]], [[BB10]] ], [ [[TMP11:%.*]], [[BB12]] ]
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[TMP9]] = phi <2 x i32> [ [[TMP1]], [[BB3]] ]
+; CHECK-NEXT:    [[LOCAL_10_38123_LCSSA:%.*]] = phi i32 [ [[TMP10]], [[BB3]] ]
+; CHECK-NEXT:    [[LOCAL_5_33118_LCSSA:%.*]] = phi i32 [ [[TMP4]], [[BB3]] ]
 ; CHECK-NEXT:    [[LANDING_PAD68:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> poison, i32 [[LOCAL_10_38123_LCSSA]], i32 2
+; CHECK-NEXT:    [[TMP9]] = insertelement <4 x i32> [[TMP8]], i32 [[LOCAL_5_33118_LCSSA]], i32 3
 ; CHECK-NEXT:    br label [[BB9]]
 ; CHECK:       bb11:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb12:
-; CHECK-NEXT:    [[TMP10]] = phi <2 x i32> [ [[TMP5]], [[BB7]] ]
+; CHECK-NEXT:    [[LOCAL_10_89113_LCSSA:%.*]] = phi i32 [ poison, [[BB7]] ]
+; CHECK-NEXT:    [[LOCAL_5_84111_LCSSA:%.*]] = phi i32 [ [[LOCAL_5_84111]], [[BB7]] ]
 ; CHECK-NEXT:    [[LANDING_PAD149:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> poison, i32 [[LOCAL_10_89113_LCSSA]], i32 2
+; CHECK-NEXT:    [[TMP11]] = insertelement <4 x i32> [[TMP12]], i32 [[LOCAL_5_84111_LCSSA]], i32 3
 ; CHECK-NEXT:    br label [[BB9]]
 ;
 bb1:

@@ -13,8 +13,6 @@
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
@@ -35,6 +33,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectMemory.h"
 
 #include <vector>
 

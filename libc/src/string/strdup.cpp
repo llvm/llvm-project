@@ -7,14 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strdup.h"
+#include "hdr/stdlib_macros.h"
 #include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include "src/string/allocating_string_utils.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 
 #include "src/__support/common.h"
-
-#include <stdlib.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

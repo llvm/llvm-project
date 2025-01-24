@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -verify %s \
 // RUN:   -triple x86_64-linux-gnu  \
-// RUN:   -analyzer-checker=core,unix.Stream,alpha.security.taint \
+// RUN:   -analyzer-checker=core,unix.Stream,optin.taint \
 // RUN:   -analyzer-checker=debug.ExprInspection
 
 #include "Inputs/system-header-simulator-for-simple-stream.h"
@@ -439,6 +439,36 @@ void test_unaligned_start_read(void) {
       clang_analyzer_dump_char(asChar[3]); // expected-warning{{conj_}} 3
       clang_analyzer_dump_char(asChar[4]); // expected-warning{{conj_}} 4
       clang_analyzer_dump_char(asChar[5]); // expected-warning{{1st function call argument is an uninitialized value}}
+    }
+    fclose(fp);
+  }
+}
+
+void no_crash_if_count_is_negative(long l, long r, unsigned char *buffer) {
+  FILE *fp = fopen("path", "r");
+  if (fp) {
+    if (l * r == -1) {
+      fread(buffer, 1, l * r, fp); // no-crash
+    }
+    fclose(fp);
+  }
+}
+
+void no_crash_if_size_is_negative(long l, long r, unsigned char *buffer) {
+  FILE *fp = fopen("path", "r");
+  if (fp) {
+    if (l * r == -1) {
+      fread(buffer, l * r, 1, fp); // no-crash
+    }
+    fclose(fp);
+  }
+}
+
+void no_crash_if_size_and_count_are_negative(long l, long r, unsigned char *buffer) {
+  FILE *fp = fopen("path", "r");
+  if (fp) {
+    if (l * r == -1) {
+      fread(buffer, l * r, l * r, fp); // no-crash
     }
     fclose(fp);
   }

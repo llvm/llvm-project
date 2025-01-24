@@ -329,6 +329,16 @@ public:
   /// \returns The unique 32 bit offset into the string table.
   uint32_t insertString(StringRef S, bool Copy = true);
 
+  /// Retrieve a string from the GSYM string table given its offset.
+  ///
+  /// The offset is assumed to be a valid offset into the string table.
+  /// otherwise an assert will be triggered.
+  ///
+  /// \param Offset The offset of the string to retrieve, previously returned by
+  /// insertString.
+  /// \returns The string at the given offset in the string table.
+  StringRef getString(uint32_t Offset);
+
   /// Insert a file into this GSYM creator.
   ///
   /// Inserts a file by adding a FileEntry into the "Files" member variable if
@@ -352,13 +362,22 @@ public:
   /// \param   FI The function info object to emplace into our functions list.
   void addFunctionInfo(FunctionInfo &&FI);
 
+  /// Load call site information from a YAML file.
+  ///
+  /// This function reads call site information from a specified YAML file and
+  /// adds it to the GSYM data.
+  ///
+  /// \param YAMLFile The path to the YAML file containing call site
+  /// information.
+  llvm::Error loadCallSitesFromYAML(StringRef YAMLFile);
+
   /// Organize merged FunctionInfo's
   ///
   /// This method processes the list of function infos (Funcs) to identify and
   /// group functions with overlapping address ranges.
   ///
   /// \param  Out Output stream to report information about how merged
-  /// FunctionInfo's were handeled.
+  /// FunctionInfo's were handled.
   void prepareMergedFunctions(OutputAggregator &Out);
 
   /// Finalize the data in the GSYM creator prior to saving the data out.

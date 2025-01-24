@@ -16,7 +16,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/MemoryBufferRef.h"
-#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
@@ -32,6 +31,16 @@ StructType *offloading::getEntryTy(Module &M) {
         PointerType::getUnqual(C), M.getDataLayout().getIntPtrType(C),
         Type::getInt32Ty(C), Type::getInt32Ty(C));
   return EntryTy;
+}
+
+StructType *offloading::getManagedTy(Module &M) {
+  LLVMContext &C = M.getContext();
+  StructType *StructTy = StructType::getTypeByName(C, "struct.__managed_var");
+  if (!StructTy)
+    StructTy = llvm::StructType::create("struct.__managed_var",
+                                        PointerType::getUnqual(M.getContext()),
+                                        PointerType::getUnqual(M.getContext()));
+  return StructTy;
 }
 
 // TODO: Rework this interface to be more generic.
@@ -53,7 +62,15 @@ offloading::getOffloadingEntryInitializer(Module &M, Constant *Addr,
   auto *Str =
       new GlobalVariable(M, AddrName->getType(), /*isConstant=*/true,
                          GlobalValue::InternalLinkage, AddrName, Prefix);
+  StringRef SectionName = ".llvm.rodata.offloading";
   Str->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+  Str->setSection(SectionName);
+  Str->setAlignment(Align(1));
+
+  // Make a metadata node for these constants so it can be queried from IR.
+  NamedMDNode *MD = M.getOrInsertNamedMetadata("llvm.offloading.symbols");
+  Metadata *MDVals[] = {ConstantAsMetadata::get(Str)};
+  MD->addOperand(llvm::MDNode::get(M.getContext(), MDVals));
 
   // Construct the offloading entry.
   Constant *EntryData[] = {

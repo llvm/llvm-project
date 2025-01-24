@@ -76,13 +76,15 @@ declare <32 x i1> @llvm.x86.avx10.fpclass.nepbf16.512(<32 x bfloat>, i32)
 define i32 @test_int_x86_avx512_fpclass_nepbf16_512(<32 x bfloat> %x0) {
 ; CHECK-LABEL: test_int_x86_avx512_fpclass_nepbf16_512:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfpclasspbf16 $2, %zmm0, %k1 # encoding: [0x62,0xf3,0x7f,0x48,0x66,0xc8,0x02]
-; CHECK-NEXT:    vfpclasspbf16 $4, %zmm0, %k0 {%k1} # encoding: [0x62,0xf3,0x7f,0x49,0x66,0xc0,0x04]
+; CHECK-NEXT:    vfpclasspbf16 $6, %zmm0, %k1 # encoding: [0x62,0xf3,0x7f,0x48,0x66,0xc8,0x06]
+; CHECK-NEXT:    # k1 = isPositiveZero(zmm0) | isNegativeZero(zmm0)
+; CHECK-NEXT:    vfpclasspbf16 $0, %zmm0, %k0 {%k1} # encoding: [0x62,0xf3,0x7f,0x49,0x66,0xc0,0x00]
+; CHECK-NEXT:    # k0 {%k1} = false
 ; CHECK-NEXT:    kmovd %k0, %eax # encoding: [0xc5,0xfb,0x93,0xc0]
 ; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <32 x i1> @llvm.x86.avx10.fpclass.nepbf16.512(<32 x bfloat> %x0, i32 4)
-  %res1 = call <32 x i1> @llvm.x86.avx10.fpclass.nepbf16.512(<32 x bfloat> %x0, i32 2)
+  %res = call <32 x i1> @llvm.x86.avx10.fpclass.nepbf16.512(<32 x bfloat> %x0, i32 0)
+  %res1 = call <32 x i1> @llvm.x86.avx10.fpclass.nepbf16.512(<32 x bfloat> %x0, i32 6)
   %1 = and <32 x i1> %res1, %res
   %2 = bitcast <32 x i1> %1 to i32
   ret i32 %2

@@ -21,7 +21,7 @@ class Register {
 
 public:
   constexpr Register(unsigned Val = 0) : Reg(Val) {}
-  constexpr Register(MCRegister Val) : Reg(Val) {}
+  constexpr Register(MCRegister Val) : Reg(Val.id()) {}
 
   // Register numbers can represent physical registers, virtual registers, and
   // sometimes stack slots. The unsigned values are divided into these ranges:
@@ -51,7 +51,7 @@ public:
   /// Compute the frame index from a register value representing a stack slot.
   static int stackSlot2Index(Register Reg) {
     assert(Reg.isStack() && "Not a stack slot");
-    return int(Reg - MCRegister::FirstStackSlot);
+    return int(Reg.id() - MCRegister::FirstStackSlot);
   }
 
   /// Convert a non-negative frame index to a stack slot register value.
@@ -76,7 +76,7 @@ public:
   /// The first virtual register in a function will get the index 0.
   static unsigned virtReg2Index(Register Reg) {
     assert(Reg.isVirtual() && "Not a virtual register");
-    return Reg & ~MCRegister::VirtualRegFlag;
+    return Reg.id() & ~MCRegister::VirtualRegFlag;
   }
 
   /// Convert a 0-based index to a virtual register number.
@@ -108,8 +108,7 @@ public:
   /// expected to have already validated that this Register is, indeed,
   /// physical.
   MCRegister asMCReg() const {
-    assert(Reg == MCRegister::NoRegister ||
-           MCRegister::isPhysicalRegister(Reg));
+    assert(!isValid() || isPhysical());
     return MCRegister(Reg);
   }
 
@@ -132,7 +131,6 @@ public:
   /// Comparisons against register constants. E.g.
   /// * R == AArch64::WZR
   /// * R == 0
-  /// * R == VirtRegMap::NO_PHYS_REG
   constexpr bool operator==(unsigned Other) const { return Reg == Other; }
   constexpr bool operator!=(unsigned Other) const { return Reg != Other; }
   constexpr bool operator==(int Other) const { return Reg == unsigned(Other); }
@@ -148,17 +146,17 @@ public:
 
 // Provide DenseMapInfo for Register
 template <> struct DenseMapInfo<Register> {
-  static inline unsigned getEmptyKey() {
+  static inline Register getEmptyKey() {
     return DenseMapInfo<unsigned>::getEmptyKey();
   }
-  static inline unsigned getTombstoneKey() {
+  static inline Register getTombstoneKey() {
     return DenseMapInfo<unsigned>::getTombstoneKey();
   }
   static unsigned getHashValue(const Register &Val) {
     return DenseMapInfo<unsigned>::getHashValue(Val.id());
   }
   static bool isEqual(const Register &LHS, const Register &RHS) {
-    return DenseMapInfo<unsigned>::isEqual(LHS.id(), RHS.id());
+    return LHS == RHS;
   }
 };
 

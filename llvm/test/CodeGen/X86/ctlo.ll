@@ -44,30 +44,27 @@ define i8 @ctlo_i8(i8 %x) {
 ; X64-LABEL: ctlo_i8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    notb %dil
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    bsrl %eax, %ecx
+; X64-NEXT:    movzbl %dil, %ecx
 ; X64-NEXT:    movl $15, %eax
-; X64-NEXT:    cmovnel %ecx, %eax
+; X64-NEXT:    bsrl %ecx, %eax
 ; X64-NEXT:    xorl $7, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
 ; X86-CLZ-LABEL: ctlo_i8:
 ; X86-CLZ:       # %bb.0:
-; X86-CLZ-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-CLZ-NEXT:    notb %al
-; X86-CLZ-NEXT:    movzbl %al, %eax
+; X86-CLZ-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-CLZ-NEXT:    shll $24, %eax
+; X86-CLZ-NEXT:    notl %eax
 ; X86-CLZ-NEXT:    lzcntl %eax, %eax
-; X86-CLZ-NEXT:    addl $-24, %eax
 ; X86-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-CLZ-NEXT:    retl
 ;
 ; X64-CLZ-LABEL: ctlo_i8:
 ; X64-CLZ:       # %bb.0:
-; X64-CLZ-NEXT:    notb %dil
-; X64-CLZ-NEXT:    movzbl %dil, %eax
-; X64-CLZ-NEXT:    lzcntl %eax, %eax
-; X64-CLZ-NEXT:    addl $-24, %eax
+; X64-CLZ-NEXT:    shll $24, %edi
+; X64-CLZ-NEXT:    notl %edi
+; X64-CLZ-NEXT:    lzcntl %edi, %eax
 ; X64-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-CLZ-NEXT:    retq
   %tmp1 = xor i8 %x, -1
@@ -148,9 +145,8 @@ define i16 @ctlo_i16(i16 %x) {
 ; X64-LABEL: ctlo_i16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    notl %edi
-; X64-NEXT:    bsrw %di, %cx
 ; X64-NEXT:    movw $31, %ax
-; X64-NEXT:    cmovnew %cx, %ax
+; X64-NEXT:    bsrw %di, %ax
 ; X64-NEXT:    xorl $15, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
@@ -234,9 +230,8 @@ define i32 @ctlo_i32(i32 %x) {
 ; X64-LABEL: ctlo_i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    notl %edi
-; X64-NEXT:    bsrl %edi, %ecx
 ; X64-NEXT:    movl $63, %eax
-; X64-NEXT:    cmovnel %ecx, %eax
+; X64-NEXT:    bsrl %edi, %eax
 ; X64-NEXT:    xorl $31, %eax
 ; X64-NEXT:    retq
 ;
@@ -337,9 +332,8 @@ define i64 @ctlo_i64(i64 %x) {
 ; X64-LABEL: ctlo_i64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    notq %rdi
-; X64-NEXT:    bsrq %rdi, %rcx
 ; X64-NEXT:    movl $127, %eax
-; X64-NEXT:    cmovneq %rcx, %rax
+; X64-NEXT:    bsrq %rdi, %rax
 ; X64-NEXT:    xorq $63, %rax
 ; X64-NEXT:    retq
 ;

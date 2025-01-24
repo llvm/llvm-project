@@ -21,9 +21,11 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/OptBisect.h"
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Passes/DroppedVariableStatsIR.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
@@ -171,7 +173,7 @@ public:
                     FunctionAnalysisManager::Invalidator &);
   };
 
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   SmallVector<StringRef, 8> PassStack;
 #endif
 
@@ -595,6 +597,7 @@ class StandardInstrumentations {
   PrintCrashIRInstrumentation PrintCrashIR;
   IRChangedTester ChangeTester;
   VerifyInstrumentation Verify;
+  DroppedVariableStatsIR DroppedStatsIR;
 
   bool VerifyEach;
 

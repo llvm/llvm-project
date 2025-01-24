@@ -56,6 +56,9 @@ class ParamNativeTypeTrait<string prop, string params>
 class GenInternalTypeTrait<string prop> : GenInternalTrait<prop, "Type">;
 class PredTypeTrait<string descr, Pred pred> : PredTrait<descr, pred>;
 
+// Trait required to be added to any type which is mutable.
+def MutableType : NativeTypeTrait<"IsMutable">;
+
 //===----------------------------------------------------------------------===//
 // Builders
 //===----------------------------------------------------------------------===//
@@ -280,6 +283,12 @@ class AttrDef<Dialect dialect, string name, list<Trait> traits = [],
   // The predicate for when this def is used as a constraint.
   let predicate = CPred<"::llvm::isa<" # cppType # ">($_self)">;
 }
+
+// Provide a LocationAttrDef for dialects to provide their own locations
+// that subclass LocationAttr.
+class LocationAttrDef<Dialect dialect, string name, list<Trait> traits = []>
+    : AttrDef<dialect, name, traits # [NativeAttrTrait<"IsLocation">],
+              "::mlir::LocationAttr">;
 
 // Define a new type, named `name`, belonging to `dialect` that inherits from
 // the given C++ base class.

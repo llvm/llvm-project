@@ -32,6 +32,10 @@ MCXCOFFStreamer::MCXCOFFStreamer(MCContext &Context,
     : MCObjectStreamer(Context, std::move(MAB), std::move(OW),
                        std::move(Emitter)) {}
 
+XCOFFObjectWriter &MCXCOFFStreamer::getWriter() {
+  return static_cast<XCOFFObjectWriter &>(getAssembler().getWriter());
+}
+
 bool MCXCOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
                                           MCSymbolAttr Attribute) {
   auto *Symbol = cast<MCSymbolXCOFF>(Sym);
@@ -109,14 +113,12 @@ void MCXCOFFStreamer::emitXCOFFExceptDirective(const MCSymbol *Symbol,
                                                unsigned Lang, unsigned Reason,
                                                unsigned FunctionSize,
                                                bool hasDebug) {
-  // TODO: Export XCOFFObjectWriter to llvm/MC/MCXCOFFObjectWriter.h and access
-  // it from MCXCOFFStreamer.
-  XCOFF::addExceptionEntry(getAssembler().getWriter(), Symbol, Trap, Lang,
-                           Reason, FunctionSize, hasDebug);
+  getWriter().addExceptionEntry(Symbol, Trap, Lang, Reason, FunctionSize,
+                                hasDebug);
 }
 
 void MCXCOFFStreamer::emitXCOFFCInfoSym(StringRef Name, StringRef Metadata) {
-  XCOFF::addCInfoSymEntry(getAssembler().getWriter(), Name, Metadata);
+  getWriter().addCInfoSymEntry(Name, Metadata);
 }
 
 void MCXCOFFStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -159,7 +161,7 @@ void MCXCOFFStreamer::emitInstToData(const MCInst &Inst,
   }
 
   DF->setHasInstructions(STI);
-  DF->getContents().append(Code.begin(), Code.end());
+  DF->appendContents(Code);
 }
 
 void MCXCOFFStreamer::emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym,

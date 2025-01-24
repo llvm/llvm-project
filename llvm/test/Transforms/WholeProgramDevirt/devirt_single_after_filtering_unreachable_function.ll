@@ -1,11 +1,15 @@
+; Test that static devirtualization doesn't happen because there are two
+; devirtualizable targets. Unreachable functions are kept in the devirtualizable
+; target set by default.
+; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt %s 2>&1 | FileCheck %s  --implicit-check-not="single-impl"
+
 ; Test that regular LTO will analyze IR, detect unreachable functions and discard unreachable functions
-; when finding virtual call targets.
+; when finding virtual call targets under `wholeprogramdevirt-keep-unreachable-function=false` option.
 ; In this test case, the unreachable function is the virtual deleting destructor of an abstract class.
+; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-keep-unreachable-function=false %s 2>&1 | FileCheck %s --check-prefix=DEVIRT
 
-; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility -pass-remarks=wholeprogramdevirt %s 2>&1 | FileCheck %s
-
-; CHECK: remark: tmp.cc:21:3: single-impl: devirtualized a call to _ZN7DerivedD0Ev
-; CHECK: remark: <unknown>:0:0: devirtualized _ZN7DerivedD0Ev
+; DEVIRT: remark: tmp.cc:21:3: single-impl: devirtualized a call to _ZN7DerivedD0Ev
+; DEVIRT: remark: <unknown>:0:0: devirtualized _ZN7DerivedD0Ev
 
 source_filename = "tmp.cc"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

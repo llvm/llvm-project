@@ -412,30 +412,20 @@ declare <1 x half> @llvm.experimental.constrained.sitofp.v1f16.v1i7(<1 x i7>, me
 define <1 x half> @vsitofp_v1i7_v1f16(<1 x i7> %va) strictfp {
 ; RV32-LABEL: vsitofp_v1i7_v1f16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    slli a0, a0, 25
 ; RV32-NEXT:    srai a0, a0, 25
 ; RV32-NEXT:    fcvt.h.w fa5, a0
-; RV32-NEXT:    fsh fa5, 14(sp)
-; RV32-NEXT:    addi a0, sp, 14
-; RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV32-NEXT:    vle16.v v8, (a0)
-; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; RV32-NEXT:    vfmv.s.f v8, fa5
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vsitofp_v1i7_v1f16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-NEXT:    slli a0, a0, 57
 ; RV64-NEXT:    srai a0, a0, 57
 ; RV64-NEXT:    fcvt.h.w fa5, a0
-; RV64-NEXT:    fsh fa5, 14(sp)
-; RV64-NEXT:    addi a0, sp, 14
-; RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV64-NEXT:    vle16.v v8, (a0)
-; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; RV64-NEXT:    vfmv.s.f v8, fa5
 ; RV64-NEXT:    ret
   %evec = call <1 x half> @llvm.experimental.constrained.sitofp.v1f16.v1i7(<1 x i7> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <1 x half> %evec
@@ -445,15 +435,10 @@ declare <1 x half> @llvm.experimental.constrained.uitofp.v1f16.v1i7(<1 x i7>, me
 define <1 x half> @vuitofp_v1i7_v1f16(<1 x i7> %va) strictfp {
 ; CHECK-LABEL: vuitofp_v1i7_v1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    andi a0, a0, 127
 ; CHECK-NEXT:    fcvt.h.wu fa5, a0
-; CHECK-NEXT:    fsh fa5, 14(sp)
-; CHECK-NEXT:    addi a0, sp, 14
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
+; CHECK-NEXT:    vfmv.s.f v8, fa5
 ; CHECK-NEXT:    ret
   %evec = call <1 x half> @llvm.experimental.constrained.uitofp.v1f16.v1i7(<1 x i7> %va, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <1 x half> %evec

@@ -306,21 +306,7 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
                                                      Module &M) const {
   auto &C = getContext();
 
-  if (NamedMDNode *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
-    auto *S = C.getELFSection(".linker-options", ELF::SHT_LLVM_LINKER_OPTIONS,
-                              ELF::SHF_EXCLUDE);
-
-    Streamer.switchSection(S);
-
-    for (const auto *Operand : LinkerOptions->operands()) {
-      if (cast<MDNode>(Operand)->getNumOperands() != 2)
-        report_fatal_error("invalid llvm.linker.options");
-      for (const auto &Option : cast<MDNode>(Operand)->operands()) {
-        Streamer.emitBytes(cast<MDString>(Option)->getString());
-        Streamer.emitInt8(0);
-      }
-    }
-  }
+  emitLinkerDirectives(Streamer, M);
 
   if (NamedMDNode *DependentLibraries = M.getNamedMetadata("llvm.dependent-libraries")) {
     auto *S = C.getELFSection(".deplibs", ELF::SHT_LLVM_DEPENDENT_LIBRARIES,
@@ -400,6 +386,26 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
   emitCGProfileMetadata(Streamer, M);
 }
 
+void TargetLoweringObjectFileELF::emitLinkerDirectives(MCStreamer &Streamer,
+                                                       Module &M) const {
+  auto &C = getContext();
+  if (NamedMDNode *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
+    auto *S = C.getELFSection(".linker-options", ELF::SHT_LLVM_LINKER_OPTIONS,
+                              ELF::SHF_EXCLUDE);
+
+    Streamer.switchSection(S);
+
+    for (const auto *Operand : LinkerOptions->operands()) {
+      if (cast<MDNode>(Operand)->getNumOperands() != 2)
+        report_fatal_error("invalid llvm.linker.options");
+      for (const auto &Option : cast<MDNode>(Operand)->operands()) {
+        Streamer.emitBytes(cast<MDString>(Option)->getString());
+        Streamer.emitInt8(0);
+      }
+    }
+  }
+}
+
 MCSymbol *TargetLoweringObjectFileELF::getCFIPersonalitySymbol(
     const GlobalValue *GV, const TargetMachine &TM,
     MachineModuleInfo *MMI) const {
@@ -413,7 +419,8 @@ MCSymbol *TargetLoweringObjectFileELF::getCFIPersonalitySymbol(
 }
 
 void TargetLoweringObjectFileELF::emitPersonalityValue(
-    MCStreamer &Streamer, const DataLayout &DL, const MCSymbol *Sym) const {
+    MCStreamer &Streamer, const DataLayout &DL, const MCSymbol *Sym,
+    const MachineModuleInfo *MMI) const {
   SmallString<64> NameData("DW.ref.");
   NameData += Sym->getName();
   MCSymbolELF *Label =
@@ -431,7 +438,13 @@ void TargetLoweringObjectFileELF::emitPersonalityValue(
   Streamer.emitELFSize(Label, E);
   Streamer.emitLabel(Label);
 
-  Streamer.emitSymbolValue(Sym, Size);
+  emitPersonalityValueImpl(Streamer, DL, Sym, MMI);
+}
+
+void TargetLoweringObjectFileELF::emitPersonalityValueImpl(
+    MCStreamer &Streamer, const DataLayout &DL, const MCSymbol *Sym,
+    const MachineModuleInfo *MMI) const {
+  Streamer.emitSymbolValue(Sym, DL.getPointerSize());
 }
 
 const MCExpr *TargetLoweringObjectFileELF::getTTypeGlobalReference(
@@ -781,28 +794,34 @@ getGlobalObjectInfo(const GlobalObject *GO, const TargetMachine &TM) {
   return {Group, IsComdat, Flags};
 }
 
-static MCSection *selectExplicitSectionGlobal(
-    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM,
-    MCContext &Ctx, Mangler &Mang, unsigned &NextUniqueID,
-    bool Retain, bool ForceUnique) {
-  StringRef SectionName = GO->getSection();
-
+static StringRef handlePragmaClangSection(const GlobalObject *GO,
+                                          SectionKind Kind) {
   // Check if '#pragma clang section' name is applicable.
   // Note that pragma directive overrides -ffunction-section, -fdata-section
   // and so section name is exactly as user specified and not uniqued.
   const GlobalVariable *GV = dyn_cast<GlobalVariable>(GO);
   if (GV && GV->hasImplicitSection()) {
     auto Attrs = GV->getAttributes();
-    if (Attrs.hasAttribute("bss-section") && Kind.isBSS()) {
-      SectionName = Attrs.getAttribute("bss-section").getValueAsString();
-    } else if (Attrs.hasAttribute("rodata-section") && Kind.isReadOnly()) {
-      SectionName = Attrs.getAttribute("rodata-section").getValueAsString();
-    } else if (Attrs.hasAttribute("relro-section") && Kind.isReadOnlyWithRel()) {
-      SectionName = Attrs.getAttribute("relro-section").getValueAsString();
-    } else if (Attrs.hasAttribute("data-section") && Kind.isData()) {
-      SectionName = Attrs.getAttribute("data-section").getValueAsString();
-    }
+    if (Attrs.hasAttribute("bss-section") && Kind.isBSS())
+      return Attrs.getAttribute("bss-section").getValueAsString();
+    else if (Attrs.hasAttribute("rodata-section") && Kind.isReadOnly())
+      return Attrs.getAttribute("rodata-section").getValueAsString();
+    else if (Attrs.hasAttribute("relro-section") && Kind.isReadOnlyWithRel())
+      return Attrs.getAttribute("relro-section").getValueAsString();
+    else if (Attrs.hasAttribute("data-section") && Kind.isData())
+      return Attrs.getAttribute("data-section").getValueAsString();
   }
+
+  return GO->getSection();
+}
+
+static MCSection *selectExplicitSectionGlobal(const GlobalObject *GO,
+                                              SectionKind Kind,
+                                              const TargetMachine &TM,
+                                              MCContext &Ctx, Mangler &Mang,
+                                              unsigned &NextUniqueID,
+                                              bool Retain, bool ForceUnique) {
+  StringRef SectionName = handlePragmaClangSection(GO, Kind);
 
   // Infer section flags from the section name if we can.
   Kind = getELFKindForNamedSection(SectionName, Kind);
@@ -1231,14 +1250,7 @@ MCSection *TargetLoweringObjectFileMachO::getStaticDtorSection(
 void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
                                                        Module &M) const {
   // Emit the linker options if present.
-  if (auto *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
-    for (const auto *Option : LinkerOptions->operands()) {
-      SmallVector<std::string, 4> StrOptions;
-      for (const auto &Piece : cast<MDNode>(Option)->operands())
-        StrOptions.push_back(std::string(cast<MDString>(Piece)->getString()));
-      Streamer.emitLinkerOptions(StrOptions);
-    }
-  }
+  emitLinkerDirectives(Streamer, M);
 
   unsigned VersionVal = 0;
   unsigned ImageInfoFlags = 0;
@@ -1272,6 +1284,18 @@ void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
   Streamer.addBlankLine();
 }
 
+void TargetLoweringObjectFileMachO::emitLinkerDirectives(MCStreamer &Streamer,
+                                                         Module &M) const {
+  if (auto *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
+    for (const auto *Option : LinkerOptions->operands()) {
+      SmallVector<std::string, 4> StrOptions;
+      for (const auto &Piece : cast<MDNode>(Option)->operands())
+        StrOptions.push_back(std::string(cast<MDString>(Piece)->getString()));
+      Streamer.emitLinkerOptions(StrOptions);
+    }
+  }
+}
+
 static void checkMachOComdat(const GlobalValue *GV) {
   const Comdat *C = GV->getComdat();
   if (!C)
@@ -1284,21 +1308,7 @@ static void checkMachOComdat(const GlobalValue *GV) {
 MCSection *TargetLoweringObjectFileMachO::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
 
-  StringRef SectionName = GO->getSection();
-
-  const GlobalVariable *GV = dyn_cast<GlobalVariable>(GO);
-  if (GV && GV->hasImplicitSection()) {
-    auto Attrs = GV->getAttributes();
-    if (Attrs.hasAttribute("bss-section") && Kind.isBSS()) {
-      SectionName = Attrs.getAttribute("bss-section").getValueAsString();
-    } else if (Attrs.hasAttribute("rodata-section") && Kind.isReadOnly()) {
-      SectionName = Attrs.getAttribute("rodata-section").getValueAsString();
-    } else if (Attrs.hasAttribute("relro-section") && Kind.isReadOnlyWithRel()) {
-      SectionName = Attrs.getAttribute("relro-section").getValueAsString();
-    } else if (Attrs.hasAttribute("data-section") && Kind.isData()) {
-      SectionName = Attrs.getAttribute("data-section").getValueAsString();
-    }
-  }
+  StringRef SectionName = handlePragmaClangSection(GO, Kind);
 
   // Parse the section specifier and create it if valid.
   StringRef Segment, Section;
@@ -1667,7 +1677,7 @@ static int getSelectionForCOFF(const GlobalValue *GV) {
 
 MCSection *TargetLoweringObjectFileCOFF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
-  StringRef Name = GO->getSection();
+  StringRef Name = handlePragmaClangSection(GO, Kind);
   if (Name == getInstrProfSectionName(IPSK_covmap, Triple::COFF,
                                       /*AddSegmentInfo=*/false) ||
       Name == getInstrProfSectionName(IPSK_covfun, Triple::COFF,
@@ -2171,7 +2181,11 @@ MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(
   // This could be avoided if all data segements (the wasm sense) were
   // represented as their own sections (in the llvm sense).
   // TODO(sbc): https://github.com/WebAssembly/tool-conventions/issues/138
-  if (Name == ".llvmcmd" || Name == ".llvmbc")
+  if (Name == getInstrProfSectionName(IPSK_covmap, Triple::Wasm,
+                                      /*AddSegmentInfo=*/false) ||
+      Name == getInstrProfSectionName(IPSK_covfun, Triple::Wasm,
+                                      /*AddSegmentInfo=*/false) ||
+      Name == ".llvmbc" || Name == ".llvmcmd")
     Kind = SectionKind::getMetadata();
 
   StringRef Group = "";

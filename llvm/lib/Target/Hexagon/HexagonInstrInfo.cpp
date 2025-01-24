@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonInstrInfo.h"
-#include "Hexagon.h"
 #include "HexagonFrameLowering.h"
 #include "HexagonHazardRecognizer.h"
 #include "HexagonRegisterInfo.h"
@@ -22,6 +21,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -30,7 +30,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -46,7 +45,6 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -798,7 +796,11 @@ public:
     Loop->getOperand(1).setReg(NewLoopCount);
   }
 
-  void disposed() override { Loop->eraseFromParent(); }
+  void disposed(LiveIntervals *LIS) override {
+    if (LIS)
+      LIS->RemoveMachineInstrFromMaps(*Loop);
+    Loop->eraseFromParent();
+  }
 };
 } // namespace
 
@@ -962,7 +964,8 @@ void HexagonInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                            Register SrcReg, bool isKill, int FI,
                                            const TargetRegisterClass *RC,
                                            const TargetRegisterInfo *TRI,
-                                           Register VReg) const {
+                                           Register VReg,
+                                           MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -1005,12 +1008,10 @@ void HexagonInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   }
 }
 
-void HexagonInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                            MachineBasicBlock::iterator I,
-                                            Register DestReg, int FI,
-                                            const TargetRegisterClass *RC,
-                                            const TargetRegisterInfo *TRI,
-                                            Register VReg) const {
+void HexagonInstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DestReg,
+    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    Register VReg, MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();

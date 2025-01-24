@@ -7,19 +7,33 @@
 //===----------------------------------------------------------------------===//
 
 #include "SourceBreakpoint.h"
+#include "BreakpointBase.h"
 #include "DAP.h"
+#include "JSONUtils.h"
+#include "lldb/API/SBBreakpoint.h"
+#include "lldb/API/SBFileSpecList.h"
+#include "lldb/API/SBFrame.h"
+#include "lldb/API/SBTarget.h"
+#include "lldb/API/SBThread.h"
+#include "lldb/API/SBValue.h"
+#include "lldb/lldb-enumerations.h"
+#include <cassert>
+#include <cctype>
+#include <cstdlib>
+#include <utility>
 
 namespace lldb_dap {
 
-SourceBreakpoint::SourceBreakpoint(const llvm::json::Object &obj)
-    : Breakpoint(obj), logMessage(std::string(GetString(obj, "logMessage"))),
+SourceBreakpoint::SourceBreakpoint(DAP &dap, const llvm::json::Object &obj)
+    : Breakpoint(dap, obj),
+      logMessage(std::string(GetString(obj, "logMessage"))),
       line(GetUnsigned(obj, "line", 0)), column(GetUnsigned(obj, "column", 0)) {
 }
 
 void SourceBreakpoint::SetBreakpoint(const llvm::StringRef source_path) {
   lldb::SBFileSpecList module_list;
-  bp = g_dap.target.BreakpointCreateByLocation(source_path.str().c_str(), line,
-                                               column, 0, module_list);
+  bp = dap.target.BreakpointCreateByLocation(source_path.str().c_str(), line,
+                                             column, 0, module_list);
   if (!logMessage.empty())
     SetLogMessage();
   Breakpoint::SetBreakpoint();
@@ -135,7 +149,7 @@ lldb::SBError SourceBreakpoint::FormatLogText(llvm::StringRef text,
         return error;
       }
       // hex number in the text
-      if (isxdigit(text[0])) {
+      if (std::isxdigit(text[0])) {
         // Make a string that can hold onto two hex chars plus a
         // NULL terminator
         char hex_str[3] = {0, 0, 0};
@@ -143,7 +157,7 @@ lldb::SBError SourceBreakpoint::FormatLogText(llvm::StringRef text,
 
         text = text.drop_front();
 
-        if (!text.empty() && isxdigit(text[0])) {
+        if (!text.empty() && std::isxdigit(text[0])) {
           hex_str[1] = text[0];
           text = text.drop_front();
         }
@@ -278,7 +292,7 @@ void SourceBreakpoint::SetLogMessage() {
 void SourceBreakpoint::NotifyLogMessageError(llvm::StringRef error) {
   std::string message = "Log message has error: ";
   message += error;
-  g_dap.SendOutput(OutputType::Console, message);
+  dap.SendOutput(OutputType::Console, message);
 }
 
 /*static*/
@@ -303,14 +317,16 @@ bool SourceBreakpoint::BreakpointHitCallback(
           frame.GetValueForVariablePath(expr, lldb::eDynamicDontRunTarget);
       if (value.GetError().Fail())
         value = frame.EvaluateExpression(expr);
-      output += VariableDescription(value).display_value;
+      output +=
+          VariableDescription(value, bp->dap.enable_auto_variable_summaries)
+              .display_value;
     } else {
       output += messagePart.text;
     }
   }
   if (!output.empty() && output.back() != '\n')
     output.push_back('\n'); // Ensure log message has line break.
-  g_dap.SendOutput(OutputType::Console, output.c_str());
+  bp->dap.SendOutput(OutputType::Console, output.c_str());
 
   // Do not stop.
   return false;

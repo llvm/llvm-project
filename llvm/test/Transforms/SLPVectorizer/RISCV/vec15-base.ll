@@ -8,7 +8,7 @@ define void @v15_load_i8_mul_by_constant_store(ptr %src, ptr noalias %dst) {
 ; NON-POW2-NEXT:  entry:
 ; NON-POW2-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 0
 ; NON-POW2-NEXT:    [[TMP0:%.*]] = load <15 x i8>, ptr [[GEP_SRC_0]], align 4
-; NON-POW2-NEXT:    [[TMP1:%.*]] = mul nsw <15 x i8> [[TMP0]], <i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10>
+; NON-POW2-NEXT:    [[TMP1:%.*]] = mul nsw <15 x i8> [[TMP0]], splat (i8 10)
 ; NON-POW2-NEXT:    store <15 x i8> [[TMP1]], ptr [[DST]], align 1
 ; NON-POW2-NEXT:    ret void
 ;
@@ -17,17 +17,17 @@ define void @v15_load_i8_mul_by_constant_store(ptr %src, ptr noalias %dst) {
 ; POW2-ONLY-NEXT:  entry:
 ; POW2-ONLY-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 0
 ; POW2-ONLY-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[GEP_SRC_0]], align 4
-; POW2-ONLY-NEXT:    [[TMP1:%.*]] = mul nsw <8 x i8> [[TMP0]], <i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10>
+; POW2-ONLY-NEXT:    [[TMP1:%.*]] = mul nsw <8 x i8> [[TMP0]], splat (i8 10)
 ; POW2-ONLY-NEXT:    store <8 x i8> [[TMP1]], ptr [[DST]], align 1
 ; POW2-ONLY-NEXT:    [[GEP_SRC_8:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 8
 ; POW2-ONLY-NEXT:    [[DST_8:%.*]] = getelementptr i8, ptr [[DST]], i8 8
 ; POW2-ONLY-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr [[GEP_SRC_8]], align 4
-; POW2-ONLY-NEXT:    [[TMP3:%.*]] = mul nsw <4 x i8> [[TMP2]], <i8 10, i8 10, i8 10, i8 10>
+; POW2-ONLY-NEXT:    [[TMP3:%.*]] = mul nsw <4 x i8> [[TMP2]], splat (i8 10)
 ; POW2-ONLY-NEXT:    store <4 x i8> [[TMP3]], ptr [[DST_8]], align 1
 ; POW2-ONLY-NEXT:    [[GEP_SRC_12:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 12
 ; POW2-ONLY-NEXT:    [[DST_12:%.*]] = getelementptr i8, ptr [[DST]], i8 12
 ; POW2-ONLY-NEXT:    [[TMP4:%.*]] = load <2 x i8>, ptr [[GEP_SRC_12]], align 4
-; POW2-ONLY-NEXT:    [[TMP5:%.*]] = mul nsw <2 x i8> [[TMP4]], <i8 10, i8 10>
+; POW2-ONLY-NEXT:    [[TMP5:%.*]] = mul nsw <2 x i8> [[TMP4]], splat (i8 10)
 ; POW2-ONLY-NEXT:    store <2 x i8> [[TMP5]], ptr [[DST_12]], align 1
 ; POW2-ONLY-NEXT:    [[GEP_SRC_14:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i8 14
 ; POW2-ONLY-NEXT:    [[L_SRC_14:%.*]] = load i8, ptr [[GEP_SRC_14]], align 4

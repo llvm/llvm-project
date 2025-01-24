@@ -43,7 +43,7 @@ namespace {
 /// ignored by the default lowering but should be propagated by any custom
 /// lowering.
 struct AssertOpLowering : public ConvertOpToLLVMPattern<cf::AssertOp> {
-  explicit AssertOpLowering(LLVMTypeConverter &typeConverter,
+  explicit AssertOpLowering(const LLVMTypeConverter &typeConverter,
                             bool abortOnFailedAssert = true)
       : ConvertOpToLLVMPattern<cf::AssertOp>(typeConverter, /*benefit=*/1),
         abortOnFailedAssert(abortOnFailedAssert) {}
@@ -94,60 +94,57 @@ private:
   bool abortOnFailedAssert = true;
 };
 
-/// The cf->LLVM lowerings for branching ops require that the blocks they jump
-/// to first have updated types which should be handled by a pattern operating
-/// on the parent op.
-static LogicalResult verifyMatchingValues(ConversionPatternRewriter &rewriter,
-                                          ValueRange operands,
-                                          ValueRange blockArgs, Location loc,
-                                          llvm::StringRef messagePrefix) {
-  for (const auto &idxAndTypes :
-       llvm::enumerate(llvm::zip(blockArgs, operands))) {
-    int64_t i = idxAndTypes.index();
-    Value argValue =
-        rewriter.getRemappedValue(std::get<0>(idxAndTypes.value()));
-    Type operandType = std::get<1>(idxAndTypes.value()).getType();
-    // In the case of an invalid jump, the block argument will have been
-    // remapped to an UnrealizedConversionCast. In the case of a valid jump,
-    // there might still be a no-op conversion cast with both types being equal.
-    // Consider both of these details to see if the jump would be invalid.
-    if (auto op = dyn_cast_or_null<UnrealizedConversionCastOp>(
-            argValue.getDefiningOp())) {
-      if (op.getOperandTypes().front() != operandType) {
-        return rewriter.notifyMatchFailure(loc, [&](Diagnostic &diag) {
-          diag << messagePrefix;
-          diag << "mismatched types from operand # " << i << " ";
-          diag << operandType;
-          diag << " not compatible with destination block argument type ";
-          diag << op.getOperandTypes().front();
-          diag << " which should be converted with the parent op.";
-        });
-      }
-    }
-  }
-  return success();
+/// Helper function for converting branch ops. This function converts the
+/// signature of the given block. If the new block signature is different from
+/// `expectedTypes`, returns "failure".
+static FailureOr<Block *> getConvertedBlock(ConversionPatternRewriter &rewriter,
+                                            const TypeConverter *converter,
+                                            Operation *branchOp, Block *block,
+                                            TypeRange expectedTypes) {
+  assert(converter && "expected non-null type converter");
+  assert(!block->isEntryBlock() && "entry blocks have no predecessors");
+
+  // There is nothing to do if the types already match.
+  if (block->getArgumentTypes() == expectedTypes)
+    return block;
+
+  // Compute the new block argument types and convert the block.
+  std::optional<TypeConverter::SignatureConversion> conversion =
+      converter->convertBlockSignature(block);
+  if (!conversion)
+    return rewriter.notifyMatchFailure(branchOp,
+                                       "could not compute block signature");
+  if (expectedTypes != conversion->getConvertedTypes())
+    return rewriter.notifyMatchFailure(
+        branchOp,
+        "mismatch between adaptor operand types and computed block signature");
+  return rewriter.applySignatureConversion(block, *conversion, converter);
 }
 
-/// Ensure that all block types were updated and then create an LLVM::BrOp
+/// Convert the destination block signature (if necessary) and lower the branch
+/// op to llvm.br.
 struct BranchOpLowering : public ConvertOpToLLVMPattern<cf::BranchOp> {
   using ConvertOpToLLVMPattern<cf::BranchOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(cf::BranchOp op, typename cf::BranchOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (failed(verifyMatchingValues(rewriter, adaptor.getDestOperands(),
-                                    op.getSuccessor()->getArguments(),
-                                    op.getLoc(),
-                                    /*messagePrefix=*/"")))
+    FailureOr<Block *> convertedBlock =
+        getConvertedBlock(rewriter, getTypeConverter(), op, op.getSuccessor(),
+                          TypeRange(adaptor.getOperands()));
+    if (failed(convertedBlock))
       return failure();
-
-    rewriter.replaceOpWithNewOp<LLVM::BrOp>(
-        op, adaptor.getOperands(), op->getSuccessors(), op->getAttrs());
+    Operation *newOp = rewriter.replaceOpWithNewOp<LLVM::BrOp>(
+        op, adaptor.getOperands(), *convertedBlock);
+    // TODO: We should not just forward all attributes like that. But there are
+    // existing Flang tests that depend on this behavior.
+    newOp->setAttrs(op->getAttrDictionary());
     return success();
   }
 };
 
-/// Ensure that all block types were updated and then create an LLVM::CondBrOp
+/// Convert the destination block signatures (if necessary) and lower the
+/// branch op to llvm.cond_br.
 struct CondBranchOpLowering : public ConvertOpToLLVMPattern<cf::CondBranchOp> {
   using ConvertOpToLLVMPattern<cf::CondBranchOp>::ConvertOpToLLVMPattern;
 
@@ -155,45 +152,59 @@ struct CondBranchOpLowering : public ConvertOpToLLVMPattern<cf::CondBranchOp> {
   matchAndRewrite(cf::CondBranchOp op,
                   typename cf::CondBranchOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (failed(verifyMatchingValues(rewriter, adaptor.getFalseDestOperands(),
-                                    op.getFalseDest()->getArguments(),
-                                    op.getLoc(), "in false case branch ")))
+    FailureOr<Block *> convertedTrueBlock =
+        getConvertedBlock(rewriter, getTypeConverter(), op, op.getTrueDest(),
+                          TypeRange(adaptor.getTrueDestOperands()));
+    if (failed(convertedTrueBlock))
       return failure();
-    if (failed(verifyMatchingValues(rewriter, adaptor.getTrueDestOperands(),
-                                    op.getTrueDest()->getArguments(),
-                                    op.getLoc(), "in true case branch ")))
+    FailureOr<Block *> convertedFalseBlock =
+        getConvertedBlock(rewriter, getTypeConverter(), op, op.getFalseDest(),
+                          TypeRange(adaptor.getFalseDestOperands()));
+    if (failed(convertedFalseBlock))
       return failure();
-
-    rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
-        op, adaptor.getOperands(), op->getSuccessors(), op->getAttrs());
+    Operation *newOp = rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
+        op, adaptor.getCondition(), *convertedTrueBlock,
+        adaptor.getTrueDestOperands(), *convertedFalseBlock,
+        adaptor.getFalseDestOperands());
+    // TODO: We should not just forward all attributes like that. But there are
+    // existing Flang tests that depend on this behavior.
+    newOp->setAttrs(op->getAttrDictionary());
     return success();
   }
 };
 
-/// Ensure that all block types were updated and then create an LLVM::SwitchOp
+/// Convert the destination block signatures (if necessary) and lower the
+/// switch op to llvm.switch.
 struct SwitchOpLowering : public ConvertOpToLLVMPattern<cf::SwitchOp> {
   using ConvertOpToLLVMPattern<cf::SwitchOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(cf::SwitchOp op, typename cf::SwitchOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (failed(verifyMatchingValues(rewriter, adaptor.getDefaultOperands(),
-                                    op.getDefaultDestination()->getArguments(),
-                                    op.getLoc(), "in switch default case ")))
+    // Get or convert default block.
+    FailureOr<Block *> convertedDefaultBlock = getConvertedBlock(
+        rewriter, getTypeConverter(), op, op.getDefaultDestination(),
+        TypeRange(adaptor.getDefaultOperands()));
+    if (failed(convertedDefaultBlock))
       return failure();
 
-    for (const auto &i : llvm::enumerate(
-             llvm::zip(adaptor.getCaseOperands(), op.getCaseDestinations()))) {
-      if (failed(verifyMatchingValues(
-              rewriter, std::get<0>(i.value()),
-              std::get<1>(i.value())->getArguments(), op.getLoc(),
-              "in switch case " + std::to_string(i.index()) + " "))) {
+    // Get or convert all case blocks.
+    SmallVector<Block *> caseDestinations;
+    SmallVector<ValueRange> caseOperands = adaptor.getCaseOperands();
+    for (auto it : llvm::enumerate(op.getCaseDestinations())) {
+      Block *b = it.value();
+      FailureOr<Block *> convertedBlock =
+          getConvertedBlock(rewriter, getTypeConverter(), op, b,
+                            TypeRange(caseOperands[it.index()]));
+      if (failed(convertedBlock))
         return failure();
-      }
+      caseDestinations.push_back(*convertedBlock);
     }
 
     rewriter.replaceOpWithNewOp<LLVM::SwitchOp>(
-        op, adaptor.getOperands(), op->getSuccessors(), op->getAttrs());
+        op, adaptor.getFlag(), *convertedDefaultBlock,
+        adaptor.getDefaultOperands(), adaptor.getCaseValuesAttr(),
+        caseDestinations, caseOperands);
     return success();
   }
 };
@@ -201,10 +212,9 @@ struct SwitchOpLowering : public ConvertOpToLLVMPattern<cf::SwitchOp> {
 } // namespace
 
 void mlir::cf::populateControlFlowToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   // clang-format off
   patterns.add<
-      AssertOpLowering,
       BranchOpLowering,
       CondBranchOpLowering,
       SwitchOpLowering>(converter);
@@ -212,7 +222,7 @@ void mlir::cf::populateControlFlowToLLVMConversionPatterns(
 }
 
 void mlir::cf::populateAssertToLLVMConversionPattern(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
     bool abortOnFailure) {
   patterns.add<AssertOpLowering>(converter, abortOnFailure);
 }
@@ -230,15 +240,24 @@ struct ConvertControlFlowToLLVM
 
   /// Run the dialect converter on the module.
   void runOnOperation() override {
-    LLVMConversionTarget target(getContext());
-    RewritePatternSet patterns(&getContext());
+    MLIRContext *ctx = &getContext();
+    LLVMConversionTarget target(*ctx);
+    // This pass lowers only CF dialect ops, but it also modifies block
+    // signatures inside other ops. These ops should be treated as legal. They
+    // are lowered by other passes.
+    target.markUnknownOpDynamicallyLegal([&](Operation *op) {
+      return op->getDialect() !=
+             ctx->getLoadedDialect<cf::ControlFlowDialect>();
+    });
 
-    LowerToLLVMOptions options(&getContext());
+    LowerToLLVMOptions options(ctx);
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
 
-    LLVMTypeConverter converter(&getContext(), options);
+    LLVMTypeConverter converter(ctx, options);
+    RewritePatternSet patterns(ctx);
     mlir::cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
+    mlir::cf::populateAssertToLLVMConversionPattern(converter, patterns);
 
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
@@ -267,6 +286,7 @@ struct ControlFlowToLLVMDialectInterface
       RewritePatternSet &patterns) const final {
     mlir::cf::populateControlFlowToLLVMConversionPatterns(typeConverter,
                                                           patterns);
+    mlir::cf::populateAssertToLLVMConversionPattern(typeConverter, patterns);
   }
 };
 } // namespace

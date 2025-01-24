@@ -193,10 +193,8 @@ class X86TypeInfo<ValueType vt, string instrsuffix, RegisterClass regclass,
   bit HasREX_W = hasREX_W;
 }
 
-def invalid_node : SDNode<"<<invalid_node>>", SDTIntLeaf,[],"<<invalid_node>>">;
-
 def Xi8  : X86TypeInfo<i8, "b", GR8, loadi8, i8mem, Imm8, i8imm,
-                       imm_su, imm, i8imm, invalid_node, invalid_node,
+                       imm_su, imm, i8imm, null_frag, null_frag,
                        1, 0>;
 def Xi16 : X86TypeInfo<i16, "w", GR16, loadi16, i16mem, Imm16, i16imm,
                        imm_su, imm, i16i8imm, i16immSExt8_su, i16immSExt8,
@@ -1147,8 +1145,7 @@ class BinOpMR_M<bits<8> o, string m, X86TypeInfo t>
 // BinOpMR_MF - Instructions that read "[mem], reg" and write "[mem]", EFLAGS.
 class BinOpMR_MF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node>
   : BinOpMR<o, m, binop_args, t, (outs),
-            [(store (node (load addr:$src1), t.RegClass:$src2), addr:$src1),
-             (implicit EFLAGS)]>,
+            [(store (node (load addr:$src1), t.RegClass:$src2), addr:$src1)]>,
     Sched<[WriteALURMW,
            // base, scale, index, offset, segment
            ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
@@ -1168,7 +1165,7 @@ class BinOpMRF_RF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node>
 class BinOpMRF_MF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node>
   : BinOpMR<o, m, binop_args, t, (outs),
             [(store (node (load addr:$src1), t.RegClass:$src2, EFLAGS),
-             addr:$src1), (implicit EFLAGS)]>,
+             addr:$src1)]>,
     Sched<[WriteADCRMW,
           // base, scale, index, offset, segment
           ReadDefault, ReadDefault, ReadDefault,
@@ -1211,7 +1208,7 @@ class BinOpMI_M<bits<8> o, string m, X86TypeInfo t, Format f>
 class BinOpMI_MF<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node, Format f>
   : BinOpMI<o, m, binop_args, t, f, (outs),
             [(store (node (t.VT (load addr:$src1)),
-             t.ImmOperator:$src2), addr:$src1), (implicit EFLAGS)]>,
+             t.ImmOperator:$src2), addr:$src1)]>,
     Sched<[WriteALURMW]>, DefEFLAGS {
   let mayStore = 1;
 }
@@ -1227,7 +1224,7 @@ class BinOpMIF_RF<bits<8> o, string m, X86TypeInfo t, SDNode node, Format f>
 class BinOpMIF_MF<bits<8> o, string m, X86TypeInfo t, SDNode node, Format f>
   : BinOpMI<o, m, binop_args, t, f, (outs),
             [(store (node (t.VT (load addr:$src1)),
-             t.ImmOperator:$src2, EFLAGS), addr:$src1), (implicit EFLAGS)]>,
+             t.ImmOperator:$src2, EFLAGS), addr:$src1)]>,
     Sched<[WriteADCRMW]>, DefEFLAGS, UseEFLAGS {
   let mayStore = 1;
 }
@@ -1348,8 +1345,8 @@ class UnaryOpR_RF<bits<8> o, Format f, string m, X86TypeInfo t,
                   SDPatternOperator node = null_frag, bit ndd = 0>
   : UnaryOpR<o, f, m, !if(!eq(ndd, 0), unaryop_args, unaryop_ndd_args), t,
              (outs t.RegClass:$dst),
-             [(set t.RegClass:$dst, (node t.RegClass:$src1)),
-              (implicit EFLAGS)]>, DefEFLAGS, NDD<ndd>;
+             [(set t.RegClass:$dst, (node t.RegClass:$src1))]>,
+    DefEFLAGS, NDD<ndd>;
 
 // UnaryOpM - Instructions that read "[mem]".
 class UnaryOpM<bits<8> o, Format f, string m, string args, X86TypeInfo t,
@@ -1381,7 +1378,7 @@ class UnaryOpM_M<bits<8> o, Format f, string m, X86TypeInfo t,
 class UnaryOpM_MF<bits<8> o, Format f, string m, X86TypeInfo t,
                   SDPatternOperator node = null_frag>
   : UnaryOpM<o, f, m, unaryop_args, t, (outs),
-             [(store (node (t.LoadNode addr:$src1)), addr:$src1),
-              (implicit EFLAGS)]>, Sched<[WriteALURMW]>, DefEFLAGS {
+             [(store (node (t.LoadNode addr:$src1)), addr:$src1)]>,
+    Sched<[WriteALURMW]>, DefEFLAGS {
   let mayStore = 1;
 }

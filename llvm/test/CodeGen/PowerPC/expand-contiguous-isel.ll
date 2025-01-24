@@ -110,11 +110,12 @@ define i64 @_Z3fn1N4llvm9StringRefE([2 x i64] %Str.coerce) {
 ; CHECK-GEN-ISEL-TRUE-NEXT:    mtlr r0
 ; CHECK-GEN-ISEL-TRUE-NEXT:    blr
 ; CHECK-GEN-ISEL-TRUE-NEXT:  .LBB0_15: # %cond.false.i
-; CHECK-GEN-ISEL-TRUE-NEXT:    addis r3, r2, .L__ModuleStringPool@toc@ha
+; CHECK-GEN-ISEL-TRUE-NEXT:    addis r3, r2, .L_MergedGlobals@toc@ha
+; CHECK-GEN-ISEL-TRUE-NEXT:    addi r5, r3, .L_MergedGlobals@toc@l
+; CHECK-GEN-ISEL-TRUE-NEXT:    addi r3, r5, 3
+; CHECK-GEN-ISEL-TRUE-NEXT:    addi r4, r5, 134
+; CHECK-GEN-ISEL-TRUE-NEXT:    addi r6, r5, 38
 ; CHECK-GEN-ISEL-TRUE-NEXT:    li r5, 225
-; CHECK-GEN-ISEL-TRUE-NEXT:    addi r4, r3, .L__ModuleStringPool@toc@l
-; CHECK-GEN-ISEL-TRUE-NEXT:    addi r3, r4, 53
-; CHECK-GEN-ISEL-TRUE-NEXT:    addi r6, r4, 88
 ; CHECK-GEN-ISEL-TRUE-NEXT:    bl __assert_fail
 ; CHECK-GEN-ISEL-TRUE-NEXT:    nop
 ; CHECK-GEN-ISEL-TRUE-NEXT:  .LBB0_16: # %if.then9
@@ -226,11 +227,12 @@ define i64 @_Z3fn1N4llvm9StringRefE([2 x i64] %Str.coerce) {
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB0_20: # %cond.false.i
-; CHECK-NEXT:    addis r3, r2, .L__ModuleStringPool@toc@ha
+; CHECK-NEXT:    addis r3, r2, .L_MergedGlobals@toc@ha
+; CHECK-NEXT:    addi r5, r3, .L_MergedGlobals@toc@l
+; CHECK-NEXT:    addi r3, r5, 3
+; CHECK-NEXT:    addi r4, r5, 134
+; CHECK-NEXT:    addi r6, r5, 38
 ; CHECK-NEXT:    li r5, 225
-; CHECK-NEXT:    addi r4, r3, .L__ModuleStringPool@toc@l
-; CHECK-NEXT:    addi r3, r4, 53
-; CHECK-NEXT:    addi r6, r4, 88
 ; CHECK-NEXT:    bl __assert_fail
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  .LBB0_21: # %if.then9

@@ -840,8 +840,10 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
       FatBinStr = new llvm::GlobalVariable(
           CGM.getModule(), CGM.Int8Ty,
           /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage, nullptr,
-          "__hip_fatbin_" + CGM.getContext().getCUIDHash(), nullptr,
-          llvm::GlobalVariable::NotThreadLocal);
+          "__hip_fatbin" + (CGM.getLangOpts().CUID.empty()
+                                ? ""
+                                : "_" + CGM.getContext().getCUIDHash()),
+          nullptr, llvm::GlobalVariable::NotThreadLocal);
       cast<llvm::GlobalVariable>(FatBinStr)->setSection(FatbinConstantName);
     }
 
@@ -894,8 +896,8 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
   // thread safety of the loaded program. Therefore we can assume sequential
   // execution of constructor functions here.
   if (IsHIP) {
-    auto Linkage = CudaGpuBinary ? llvm::GlobalValue::InternalLinkage
-                                 : llvm::GlobalValue::ExternalLinkage;
+    auto Linkage = RelocatableDeviceCode ? llvm::GlobalValue::ExternalLinkage
+                                         : llvm::GlobalValue::InternalLinkage;
     llvm::BasicBlock *IfBlock =
         llvm::BasicBlock::Create(Context, "if", ModuleCtorFunc);
     llvm::BasicBlock *ExitBlock =
@@ -905,10 +907,11 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     GpuBinaryHandle = new llvm::GlobalVariable(
         TheModule, PtrTy, /*isConstant=*/false, Linkage,
         /*Initializer=*/
-        CudaGpuBinary ? llvm::ConstantPointerNull::get(PtrTy) : nullptr,
-        CudaGpuBinary
-            ? "__hip_gpubin_handle"
-            : "__hip_gpubin_handle_" + CGM.getContext().getCUIDHash());
+        !RelocatableDeviceCode ? llvm::ConstantPointerNull::get(PtrTy)
+                               : nullptr,
+        "__hip_gpubin_handle" + (CGM.getLangOpts().CUID.empty()
+                                     ? ""
+                                     : "_" + CGM.getContext().getCUIDHash()));
     GpuBinaryHandle->setAlignment(CGM.getPointerAlign().getAsAlign());
     // Prevent the weak symbol in different shared libraries being merged.
     if (Linkage != llvm::GlobalValue::InternalLinkage)
@@ -1218,12 +1221,34 @@ void CGNVCUDARuntime::createOffloadingEntries() {
              ? static_cast<int32_t>(llvm::offloading::OffloadGlobalNormalized)
              : 0);
     if (I.Flags.getKind() == DeviceVarFlags::Variable) {
-      llvm::offloading::emitOffloadingEntry(
-          M, I.Var, getDeviceSideName(I.D), VarSize,
-          (I.Flags.isManaged() ? llvm::offloading::OffloadGlobalManagedEntry
-                               : llvm::offloading::OffloadGlobalEntry) |
-              Flags,
-          /*Data=*/0, Section);
+      // TODO: Update the offloading entries struct to avoid this indirection.
+      if (I.Flags.isManaged()) {
+        assert(I.Var->getName().ends_with(".managed") &&
+               "HIP managed variables not transformed");
+
+        // Create a struct to contain the two variables.
+        auto *ManagedVar = M.getNamedGlobal(
+            I.Var->getName().drop_back(StringRef(".managed").size()));
+        llvm::Constant *StructData[] = {ManagedVar, I.Var};
+        llvm::Constant *Initializer = llvm::ConstantStruct::get(
+            llvm::offloading::getManagedTy(M), StructData);
+        auto *Struct = new llvm::GlobalVariable(
+            M, llvm::offloading::getManagedTy(M),
+            /*IsConstant=*/true, llvm::GlobalValue::PrivateLinkage, Initializer,
+            I.Var->getName(), /*InsertBefore=*/nullptr,
+            llvm::GlobalVariable::NotThreadLocal,
+            M.getDataLayout().getDefaultGlobalsAddressSpace());
+
+        llvm::offloading::emitOffloadingEntry(
+            M, Struct, getDeviceSideName(I.D), VarSize,
+            llvm::offloading::OffloadGlobalManagedEntry | Flags,
+            /*Data=*/static_cast<uint32_t>(I.Var->getAlignment()), Section);
+      } else {
+        llvm::offloading::emitOffloadingEntry(
+            M, I.Var, getDeviceSideName(I.D), VarSize,
+            llvm::offloading::OffloadGlobalEntry | Flags,
+            /*Data=*/0, Section);
+      }
     } else if (I.Flags.getKind() == DeviceVarFlags::Surface) {
       llvm::offloading::emitOffloadingEntry(
           M, I.Var, getDeviceSideName(I.D), VarSize,

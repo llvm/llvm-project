@@ -19,11 +19,9 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
 using namespace llvm;

@@ -13,8 +13,9 @@
 // template <class T, class ...Args>
 // constexpr T* construct_at(T* location, Args&& ...args);
 
-#include <memory>
 #include <cassert>
+#include <cstddef>
+#include <memory>
 #include <utility>
 
 #include "test_iterators.h"
@@ -78,21 +79,6 @@ constexpr bool test()
         p->~Counted();
         assert(count == 0);
         a.deallocate(p, 2);
-    }
-
-    {
-        std::allocator<Counted> a;
-        Counted const* p = a.allocate(2);
-        int count = 0;
-        std::construct_at(p, count);
-        assert(count == 1);
-        std::construct_at(p+1, count);
-        assert(count == 2);
-        (p+1)->~Counted();
-        assert(count == 1);
-        p->~Counted();
-        assert(count == 0);
-        a.deallocate(const_cast<Counted*>(p), 2);
     }
 
     return true;

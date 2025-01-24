@@ -30,7 +30,7 @@ static bool isThumbFunc(object::symbol_iterator Symbol,
     std::string Buf;
     raw_string_ostream OS(Buf);
     logAllUnhandledErrors(SymTypeOrErr.takeError(), OS);
-    report_fatal_error(Twine(OS.str()));
+    report_fatal_error(Twine(Buf));
   }
 
   if (*SymTypeOrErr != object::SymbolRef::ST_Function)

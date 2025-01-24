@@ -391,9 +391,8 @@ Value *Mapper::mapValue(const Value *V) {
       // ensures metadata operands only reference defined SSA values.
       return (Flags & RF_IgnoreMissingLocals)
                  ? nullptr
-                 : MetadataAsValue::get(
-                       V->getContext(),
-                       MDTuple::get(V->getContext(), std::nullopt));
+                 : MetadataAsValue::get(V->getContext(),
+                                        MDTuple::get(V->getContext(), {}));
     }
     if (auto *AL = dyn_cast<DIArgList>(MD)) {
       SmallVector<ValueAsMetadata *, 4> MappedArgs;
@@ -411,9 +410,9 @@ Value *Mapper::mapValue(const Value *V) {
         } else if ((Flags & RF_IgnoreMissingLocals) && isa<LocalAsMetadata>(VAM)) {
             MappedArgs.push_back(VAM);
         } else {
-          // If we cannot map the value, set the argument as undef.
+          // If we cannot map the value, set the argument as poison.
           MappedArgs.push_back(ValueAsMetadata::get(
-              UndefValue::get(VAM->getValue()->getType())));
+              PoisonValue::get(VAM->getValue()->getType())));
         }
       }
       return MetadataAsValue::get(V->getContext(),

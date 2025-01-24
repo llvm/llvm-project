@@ -136,8 +136,8 @@ define float @float_sel(i32 %a, i32 %b, float %x, float %y) {
 ;
 ; CHECK-V8-LABEL: float_sel:
 ; CHECK-V8:       @ %bb.0: @ %entry
-; CHECK-V8-NEXT:    vmov s0, r3
 ; CHECK-V8-NEXT:    subs r0, r0, r1
+; CHECK-V8-NEXT:    vmov s0, r3
 ; CHECK-V8-NEXT:    vmov s2, r2
 ; CHECK-V8-NEXT:    vseleq.f32 s0, s2, s0
 ; CHECK-V8-NEXT:    vmov r0, s0

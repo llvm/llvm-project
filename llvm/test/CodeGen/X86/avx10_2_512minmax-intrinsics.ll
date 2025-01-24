@@ -2,57 +2,57 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-unknown-unknown --show-mc-encoding -mattr=+avx10.2-512 | FileCheck %s --check-prefixes=X64
 ; RUN: llc < %s -verify-machineinstrs -mtriple=i686-unknown-unknown --show-mc-encoding -mattr=+avx10.2-512 | FileCheck %s --check-prefixes=X86
 
-define <32 x bfloat> @test_int_x86_avx10_vminmaxnepbf16512(<32 x bfloat> %A, <32 x bfloat> %B) nounwind {
-; X64-LABEL: test_int_x86_avx10_vminmaxnepbf16512:
+define <32 x bfloat> @test_int_x86_avx10_vminmaxbf16512(<32 x bfloat> %A, <32 x bfloat> %B) nounwind {
+; X64-LABEL: test_int_x86_avx10_vminmaxbf16512:
 ; X64:       # %bb.0:
-; X64-NEXT:    vminmaxnepbf16 $127, %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf3,0x7f,0x48,0x52,0xc1,0x7f]
+; X64-NEXT:    vminmaxbf16 $127, %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf3,0x7f,0x48,0x52,0xc1,0x7f]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_int_x86_avx10_vminmaxnepbf16512:
+; X86-LABEL: test_int_x86_avx10_vminmaxbf16512:
 ; X86:       # %bb.0:
-; X86-NEXT:    vminmaxnepbf16 $127, %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf3,0x7f,0x48,0x52,0xc1,0x7f]
+; X86-NEXT:    vminmaxbf16 $127, %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf3,0x7f,0x48,0x52,0xc1,0x7f]
 ; X86-NEXT:    retl # encoding: [0xc3]
-  %ret = call <32 x bfloat> @llvm.x86.avx10.vminmaxnepbf16512(<32 x bfloat> %A, <32 x bfloat> %B, i32 127)
+  %ret = call <32 x bfloat> @llvm.x86.avx10.vminmaxbf16512(<32 x bfloat> %A, <32 x bfloat> %B, i32 127)
   ret <32 x bfloat> %ret
 }
 
-define <32 x bfloat> @test_int_x86_avx10_mask_vminmaxnepbf16512(<32 x bfloat> %A, <32 x bfloat> %B, <32 x bfloat> %C, i32 %D) nounwind {
-; X64-LABEL: test_int_x86_avx10_mask_vminmaxnepbf16512:
+define <32 x bfloat> @test_int_x86_avx10_mask_vminmaxbf16512(<32 x bfloat> %A, <32 x bfloat> %B, <32 x bfloat> %C, i32 %D) nounwind {
+; X64-LABEL: test_int_x86_avx10_mask_vminmaxbf16512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vminmaxnepbf16 $127, %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf3,0x7f,0x49,0x52,0xd1,0x7f]
+; X64-NEXT:    vminmaxbf16 $127, %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf3,0x7f,0x49,0x52,0xd1,0x7f]
 ; X64-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_int_x86_avx10_mask_vminmaxnepbf16512:
+; X86-LABEL: test_int_x86_avx10_mask_vminmaxbf16512:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vminmaxnepbf16 $127, %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf3,0x7f,0x49,0x52,0xd1,0x7f]
+; X86-NEXT:    vminmaxbf16 $127, %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf3,0x7f,0x49,0x52,0xd1,0x7f]
 ; X86-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
-  %0 = call <32 x bfloat> @llvm.x86.avx10.vminmaxnepbf16512(<32 x bfloat> %A, <32 x bfloat> %B, i32 127)
+  %0 = call <32 x bfloat> @llvm.x86.avx10.vminmaxbf16512(<32 x bfloat> %A, <32 x bfloat> %B, i32 127)
   %1 = bitcast i32 %D to <32 x i1>
   %2 = select reassoc nsz arcp contract afn <32 x i1> %1, <32 x bfloat> %0, <32 x bfloat> %C
   ret <32 x bfloat> %2
 }
 
-declare <32 x bfloat> @llvm.x86.avx10.vminmaxnepbf16512(<32 x bfloat> %A, <32 x bfloat> %B, i32 %C)
+declare <32 x bfloat> @llvm.x86.avx10.vminmaxbf16512(<32 x bfloat> %A, <32 x bfloat> %B, i32 %C)
 
-define <32 x bfloat> @test_int_x86_avx10_maskz_vminmaxnepbf16512(<32 x bfloat> %A, <32 x bfloat> %B, i32 %C) nounwind {
-; X64-LABEL: test_int_x86_avx10_maskz_vminmaxnepbf16512:
+define <32 x bfloat> @test_int_x86_avx10_maskz_vminmaxbf16512(<32 x bfloat> %A, <32 x bfloat> %B, i32 %C) nounwind {
+; X64-LABEL: test_int_x86_avx10_maskz_vminmaxbf16512:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vminmaxnepbf16 $127, %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf3,0x7f,0xc9,0x52,0xc1,0x7f]
+; X64-NEXT:    vminmaxbf16 $127, %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf3,0x7f,0xc9,0x52,0xc1,0x7f]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
-; X86-LABEL: test_int_x86_avx10_maskz_vminmaxnepbf16512:
+; X86-LABEL: test_int_x86_avx10_maskz_vminmaxbf16512:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vminmaxnepbf16 $127, %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf3,0x7f,0xc9,0x52,0xc1,0x7f]
+; X86-NEXT:    vminmaxbf16 $127, %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf3,0x7f,0xc9,0x52,0xc1,0x7f]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
-  %0 = call <32 x bfloat> @llvm.x86.avx10.vminmaxnepbf16512(<32 x bfloat> %A, <32 x bfloat> %B, i32 127)
+  %0 = call <32 x bfloat> @llvm.x86.avx10.vminmaxbf16512(<32 x bfloat> %A, <32 x bfloat> %B, i32 127)
   %1 = bitcast i32 %C to <32 x i1>
   %2 = select reassoc nsz arcp contract afn <32 x i1> %1, <32 x bfloat> %0, <32 x bfloat> zeroinitializer
   ret <32 x bfloat> %2

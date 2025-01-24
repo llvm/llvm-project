@@ -91,15 +91,6 @@ public:
   /// their default state.
   void Clear(bool clear_target);
 
-  /// Dump a description of this object to a Stream.
-  ///
-  /// Dump a description of the contents of this object to the supplied stream
-  /// \a s.
-  ///
-  /// \param[in] s
-  ///     The stream to which to dump the object description.
-  void Dump(Stream *s, Target *target) const;
-
   /// Dump the stop context in this object to a Stream.
   ///
   /// Dump the best description of this object to the stream. The information
@@ -201,8 +192,8 @@ public:
   bool GetAddressRange(uint32_t scope, uint32_t range_idx,
                        bool use_inline_block_range, AddressRange &range) const;
 
-  bool GetAddressRangeFromHereToEndLine(uint32_t end_line, AddressRange &range,
-                                        Status &error);
+  llvm::Error GetAddressRangeFromHereToEndLine(uint32_t end_line,
+                                               AddressRange &range);
 
   /// Find the best global data symbol visible from this context.
   ///

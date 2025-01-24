@@ -1204,6 +1204,11 @@ public:
   /// Get instruction size specified via annotation.
   std::optional<uint32_t> getSize(const MCInst &Inst) const;
 
+  /// Get target-specific instruction size.
+  virtual std::optional<uint32_t> getInstructionSize(const MCInst &Inst) const {
+    return std::nullopt;
+  }
+
   /// Set instruction size.
   void setSize(MCInst &Inst, uint32_t Size) const;
 
@@ -1533,6 +1538,14 @@ public:
                                      MCInst *&TargetHiBits,
                                      MCInst *&TargetLowBits,
                                      uint64_t &Target) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Match function \p BF to a long veneer for absolute code. Return true if
+  /// the match was successful and populate \p TargetAddress with an address of
+  /// the function veneer jumps to.
+  virtual bool matchAbsLongVeneer(const BinaryFunction &BF,
+                                  uint64_t &TargetAddress) const {
     llvm_unreachable("not implemented");
   }
 

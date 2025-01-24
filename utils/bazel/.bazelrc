@@ -9,7 +9,10 @@
 
 # Flip off to disable MODULE.bazel until we're ready.
 # https://github.com/llvm/llvm-project/issues/55924
-common --enable_bzlmod=false
+common --enable_bzlmod=false --enable_workspace
+
+# TODO: Remove lit test reliance on this
+common --legacy_external_runfiles
 
 # Prevent invalid caching if input files are modified during a build.
 build --experimental_guard_against_concurrent_changes
@@ -47,6 +50,13 @@ common --incompatible_disallow_empty_glob
 
 # TODO: Remove once we move to bazel 7.x
 build --experimental_cc_shared_library
+
+# Disabling runfiles links drastically increases performance in slow disk IO
+# situations Do not build runfile trees by default. If an execution strategy
+# relies on runfile symlink tree, the tree is created on-demand. See:
+# https://github.com/bazelbuild/bazel/issues/6627 and
+# https://github.com/bazelbuild/bazel/commit/03246077f948f2790a83520e7dccc2625650e6df
+build --build_runfile_links=false
 
 ###############################################################################
 # Options to select different strategies for linking potential dependent

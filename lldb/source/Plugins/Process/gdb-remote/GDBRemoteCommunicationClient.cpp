@@ -38,6 +38,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_ZLIB
 #include "llvm/Support/JSON.h"
 
 #if defined(HAVE_LIBCOMPRESSION)
@@ -1620,6 +1621,7 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
           region_info.SetName(name.c_str());
         } else if (name == "flags") {
           region_info.SetMemoryTagged(MemoryRegionInfo::eNo);
+          region_info.SetIsShadowStack(MemoryRegionInfo::eNo);
 
           llvm::StringRef flags = value;
           llvm::StringRef flag;
@@ -1628,10 +1630,10 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
             std::tie(flag, flags) = flags.split(' ');
             // To account for trailing whitespace
             if (flag.size()) {
-              if (flag == "mt") {
+              if (flag == "mt")
                 region_info.SetMemoryTagged(MemoryRegionInfo::eYes);
-                break;
-              }
+              else if (flag == "ss")
+                region_info.SetIsShadowStack(MemoryRegionInfo::eYes);
             }
           }
         } else if (name == "type") {
@@ -3667,7 +3669,6 @@ GDBRemoteCommunicationClient::SendTraceStop(const TraceStopRequest &request,
   std::string json_string;
   llvm::raw_string_ostream os(json_string);
   os << toJSON(request);
-  os.flush();
 
   escaped_packet.PutEscapedBytes(json_string.c_str(), json_string.size());
 
@@ -3702,7 +3703,6 @@ GDBRemoteCommunicationClient::SendTraceStart(const llvm::json::Value &params,
   std::string json_string;
   llvm::raw_string_ostream os(json_string);
   os << params;
-  os.flush();
 
   escaped_packet.PutEscapedBytes(json_string.c_str(), json_string.size());
 
@@ -3737,7 +3737,6 @@ GDBRemoteCommunicationClient::SendTraceGetState(llvm::StringRef type,
   std::string json_string;
   llvm::raw_string_ostream os(json_string);
   os << toJSON(TraceGetStateRequest{type.str()});
-  os.flush();
 
   escaped_packet.PutEscapedBytes(json_string.c_str(), json_string.size());
 
@@ -3771,7 +3770,6 @@ GDBRemoteCommunicationClient::SendTraceGetBinaryData(
   std::string json_string;
   llvm::raw_string_ostream os(json_string);
   os << toJSON(request);
-  os.flush();
 
   escaped_packet.PutEscapedBytes(json_string.c_str(), json_string.size());
 
@@ -4044,7 +4042,7 @@ GDBRemoteCommunicationClient::ReadExtFeature(llvm::StringRef object,
     }
   }
 
-  return output_stream.str();
+  return output;
 }
 
 // Notify the target that gdb is prepared to serve symbol lookup requests.

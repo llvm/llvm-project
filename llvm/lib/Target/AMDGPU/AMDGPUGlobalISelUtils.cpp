@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUGlobalISelUtils.h"
-#include "GCNSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"

@@ -38,7 +38,7 @@ DataSharingProcessor::DataSharingProcessor(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
     const List<Clause> &clauses, lower::pft::Evaluation &eval,
     bool shouldCollectPreDeterminedSymbols, bool useDelayedPrivatization,
-    lower::SymMap *symTable)
+    lower::SymMap &symTable)
     : converter(converter), semaCtx(semaCtx),
       firOpBuilder(converter.getFirOpBuilder()), clauses(clauses), eval(eval),
       shouldCollectPreDeterminedSymbols(shouldCollectPreDeterminedSymbols),
@@ -93,8 +93,7 @@ void DataSharingProcessor::insertDeallocs() {
       fir::ExtendedValue symExV = converter.getSymbolExtendedValue(*sym);
       mlir::omp::PrivateClauseOp privatizer = symToPrivatizer.at(sym);
 
-      symTable->pushScope();
-
+      lower::SymMapScope scope(symTable);
       mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
 
       mlir::Region &deallocRegion = privatizer.getDeallocRegion();
@@ -103,25 +102,38 @@ void DataSharingProcessor::insertDeallocs() {
           &deallocRegion, /*insertPt=*/{}, symType, symLoc);
 
       firOpBuilder.setInsertionPointToEnd(deallocEntryBlock);
-      symTable->addSymbol(*sym,
-                          fir::substBase(symExV, deallocRegion.getArgument(0)));
+      symTable.addSymbol(*sym,
+                         fir::substBase(symExV, deallocRegion.getArgument(0)));
 
       converter.createHostAssociateVarCloneDealloc(*sym);
       firOpBuilder.create<mlir::omp::YieldOp>(hsb.getAddr().getLoc());
-
-      symTable->popScope();
     }
 }
 
 void DataSharingProcessor::cloneSymbol(const semantics::Symbol *sym) {
-  bool success = converter.createHostAssociateVarClone(*sym);
+  bool isFirstPrivate = sym->test(semantics::Symbol::Flag::OmpFirstPrivate);
+  bool success = converter.createHostAssociateVarClone(
+      *sym, /*skipDefaultInit=*/isFirstPrivate);
   (void)success;
   assert(success && "Privatization failed due to existing binding");
 
-  bool isFirstPrivate = sym->test(semantics::Symbol::Flag::OmpFirstPrivate);
-  if (!isFirstPrivate &&
-      Fortran::lower::hasDefaultInitialization(sym->GetUltimate()))
-    Fortran::lower::defaultInitializeAtRuntime(converter, *sym, *symTable);
+  // Initialize clone from original object if it has any allocatable member.
+  auto needInitClone = [&] {
+    if (isFirstPrivate)
+      return false;
+
+    SymbolBox sb = symTable.lookupSymbol(sym);
+    assert(sb);
+    mlir::Value addr = sb.getAddr();
+    assert(addr);
+    return !fir::isPointerType(addr.getType()) &&
+           hlfir::mayHaveAllocatableComponent(addr.getType());
+  };
+
+  if (needInitClone()) {
+    Fortran::lower::initializeCloneAtRuntime(converter, *sym, symTable);
+    callsInitClone = true;
+  }
 }
 
 void DataSharingProcessor::copyFirstPrivateSymbol(
@@ -133,7 +145,7 @@ void DataSharingProcessor::copyFirstPrivateSymbol(
 void DataSharingProcessor::copyLastPrivateSymbol(
     const semantics::Symbol *sym, mlir::OpBuilder::InsertPoint *lastPrivIP) {
   if (sym->test(semantics::Symbol::Flag::OmpLastPrivate))
-    converter.copyHostAssociateVar(*sym, lastPrivIP);
+    converter.copyHostAssociateVar(*sym, lastPrivIP, /*hostIsSource=*/false);
 }
 
 void DataSharingProcessor::collectOmpObjectListSymbol(
@@ -154,6 +166,8 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
                                  explicitlyPrivatizedSymbols);
     } else if (const auto &lastPrivateClause =
                    std::get_if<omp::clause::Lastprivate>(&clause.u)) {
+      lastprivateModifierNotSupported(*lastPrivateClause,
+                                      converter.getCurrentLocation());
       const ObjectList &objects = std::get<ObjectList>(lastPrivateClause->t);
       collectOmpObjectListSymbol(objects, explicitlyPrivatizedSymbols);
     }
@@ -169,8 +183,8 @@ bool DataSharingProcessor::needBarrier() {
   // variables.
   // Emit implicit barrier for linear clause. Maybe on somewhere else.
   for (const semantics::Symbol *sym : allPrivatizedSymbols) {
-    if (sym->test(semantics::Symbol::Flag::OmpFirstPrivate) &&
-        sym->test(semantics::Symbol::Flag::OmpLastPrivate))
+    if (sym->test(semantics::Symbol::Flag::OmpLastPrivate) &&
+        (sym->test(semantics::Symbol::Flag::OmpFirstPrivate) || callsInitClone))
       return true;
   }
   return false;
@@ -191,25 +205,24 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
   for (const omp::Clause &clause : clauses) {
     if (clause.id != llvm::omp::OMPC_lastprivate)
       continue;
-    // TODO: Add lastprivate support for simd construct
-    if (mlir::isa<mlir::omp::WsloopOp>(op)) {
+    if (mlir::isa<mlir::omp::WsloopOp>(op) ||
+        mlir::isa<mlir::omp::SimdOp>(op)) {
       // Update the original variable just before exiting the worksharing
       // loop. Conversion as follows:
       //
-      // omp.wsloop {             omp.wsloop {
-      //   omp.loop_nest {          omp.loop_nest {
-      //     ...                      ...
-      //     store          ===>      store
-      //     omp.yield                %v = arith.addi %iv, %step
-      //   }                          %cmp = %step < 0 ? %v < %ub : %v > %ub
-      //   omp.terminator             fir.if %cmp {
-      // }                              fir.store %v to %loopIV
-      //                                ^%lpv_update_blk:
+      // omp.wsloop / omp.simd {    omp.wsloop / omp.simd {
+      //   omp.loop_nest {            omp.loop_nest {
+      //     ...                        ...
+      //     store          ===>        store
+      //     omp.yield                  %v = arith.addi %iv, %step
+      //   }                            %cmp = %step < 0 ? %v < %ub : %v > %ub
+      // }                              fir.if %cmp {
+      //                                  fir.store %v to %loopIV
+      //                                  ^%lpv_update_blk:
+      //                                }
+      //                                omp.yield
       //                              }
-      //                              omp.yield
       //                            }
-      //                            omp.terminator
-      //                          }
 
       // Only generate the compare once in presence of multiple LastPrivate
       // clauses.
@@ -353,15 +366,6 @@ void DataSharingProcessor::collectSymbols(
                              /*collectSymbols=*/true,
                              /*collectHostAssociatedSymbols=*/true);
 
-  // Add implicitly referenced symbols from statement functions.
-  if (curScope) {
-    for (const auto &sym : curScope->GetSymbols()) {
-      if (sym->test(semantics::Symbol::Flag::OmpFromStmtFunction) &&
-          sym->test(flag))
-        allSymbols.insert(&*sym);
-    }
-  }
-
   llvm::SetVector<const semantics::Symbol *> symbolsInNestedRegions;
   collectSymbolsInNestedRegions(eval, flag, symbolsInNestedRegions);
 
@@ -377,7 +381,8 @@ void DataSharingProcessor::collectSymbols(
     return !semantics::IsProcedure(sym) &&
            !sym.GetUltimate().has<semantics::DerivedTypeDetails>() &&
            !sym.GetUltimate().has<semantics::NamelistDetails>() &&
-           !semantics::IsImpliedDoIndex(sym.GetUltimate());
+           !semantics::IsImpliedDoIndex(sym.GetUltimate()) &&
+           !semantics::IsStmtFunction(sym);
   };
 
   auto shouldCollectSymbol = [&](const semantics::Symbol *sym) {
@@ -481,15 +486,13 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
       return existingPrivatizer;
 
     mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
-    firOpBuilder.setInsertionPoint(&moduleOp.getBodyRegion().front(),
-                                   moduleOp.getBodyRegion().front().begin());
+    firOpBuilder.setInsertionPointToStart(moduleOp.getBody());
     auto result = firOpBuilder.create<mlir::omp::PrivateClauseOp>(
         symLoc, uniquePrivatizerName, symType,
         isFirstPrivate ? mlir::omp::DataSharingClauseType::FirstPrivate
                        : mlir::omp::DataSharingClauseType::Private);
     fir::ExtendedValue symExV = converter.getSymbolExtendedValue(*sym);
-
-    symTable->pushScope();
+    lower::SymMapScope outerScope(symTable);
 
     // Populate the `alloc` region.
     {
@@ -506,10 +509,10 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
               evaluate::IsSimplyContiguous(*sym, converter.getFoldingContext()))
               .first;
 
-      symTable->addSymbol(*sym, localExV);
-      symTable->pushScope();
+      symTable.addSymbol(*sym, localExV);
+      lower::SymMapScope innerScope(symTable);
       cloneSymbol(sym);
-      mlir::Value cloneAddr = symTable->shallowLookupSymbol(*sym).getAddr();
+      mlir::Value cloneAddr = symTable.shallowLookupSymbol(*sym).getAddr();
       mlir::Type cloneType = cloneAddr.getType();
 
       // A `convert` op is required for variables that are storage associated
@@ -523,7 +526,6 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
 
       firOpBuilder.create<mlir::omp::YieldOp>(hsb.getAddr().getLoc(),
                                               yieldedValue);
-      symTable->popScope();
     }
 
     // Populate the `copy` region if this is a `firstprivate`.
@@ -538,29 +540,26 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
       auto addSymbol = [&](unsigned argIdx, bool force = false) {
         symExV.match(
             [&](const fir::MutableBoxValue &box) {
-              symTable->addSymbol(
+              symTable.addSymbol(
                   *sym, fir::substBase(box, copyRegion.getArgument(argIdx)),
                   force);
             },
             [&](const auto &box) {
-              symTable->addSymbol(*sym, copyRegion.getArgument(argIdx), force);
+              symTable.addSymbol(*sym, copyRegion.getArgument(argIdx), force);
             });
       };
 
       addSymbol(0, true);
-      symTable->pushScope();
+      lower::SymMapScope innerScope(symTable);
       addSymbol(1);
 
       auto ip = firOpBuilder.saveInsertionPoint();
       copyFirstPrivateSymbol(sym, &ip);
 
       firOpBuilder.create<mlir::omp::YieldOp>(
-          hsb.getAddr().getLoc(),
-          symTable->shallowLookupSymbol(*sym).getAddr());
-      symTable->popScope();
+          hsb.getAddr().getLoc(), symTable.shallowLookupSymbol(*sym).getAddr());
     }
 
-    symTable->popScope();
     return result;
   }();
 

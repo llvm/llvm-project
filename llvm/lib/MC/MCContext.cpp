@@ -43,7 +43,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -757,6 +756,11 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind K,
   if (!Group.isTriviallyEmpty() && !Group.str().empty()) {
     GroupSym = cast<MCSymbolWasm>(getOrCreateSymbol(Group));
     GroupSym->setComdat(true);
+    if (K.isMetadata() && !GroupSym->getType().has_value()) {
+      // Comdat group symbol associated with a custom section is a section
+      // symbol (not a data symbol).
+      GroupSym->setType(wasm::WASM_SYMBOL_TYPE_SECTION);
+    }
   }
 
   return getWasmSection(Section, K, Flags, GroupSym, UniqueID);

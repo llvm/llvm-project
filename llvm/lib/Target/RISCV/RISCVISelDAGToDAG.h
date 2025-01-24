@@ -46,7 +46,6 @@ public:
                                     std::vector<SDValue> &OutOps) override;
 
   bool SelectAddrFrameIndex(SDValue Addr, SDValue &Base, SDValue &Offset);
-  bool SelectFrameAddrRegImm(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectAddrRegImm(SDValue Addr, SDValue &Base, SDValue &Offset,
                         bool IsRV32Zdinx = false);
   bool SelectAddrRegImmRV32Zdinx(SDValue Addr, SDValue &Base, SDValue &Offset) {
@@ -119,6 +118,8 @@ public:
     return selectSHXADD_UWOp(N, ShAmt, Val);
   }
 
+  bool selectInvLogicImm(SDValue N, SDValue &Val);
+
   bool hasAllNBitUsers(SDNode *Node, unsigned Bits,
                        const unsigned Depth = 0) const;
   bool hasAllBUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 8); }
@@ -140,7 +141,7 @@ public:
   // Matches the splat of a value which can be extended or truncated, such that
   // only the bottom 8 bits are preserved.
   bool selectLow8BitsVSplat(SDValue N, SDValue &SplatVal);
-  bool selectFPImm(SDValue N, SDValue &Imm);
+  bool selectScalarFPAsInt(SDValue N, SDValue &Imm);
 
   bool selectRVVSimm5(SDValue N, unsigned Width, SDValue &Imm);
   template <unsigned Width> bool selectRVVSimm5(SDValue N, SDValue &Imm) {

@@ -151,6 +151,10 @@ Options to Control Error and Warning Messages
   instantiation backtrace for a single warning or error. The default is 10, and
   the limit can be disabled with `-ftemplate-backtrace-limit=0`.
 
+.. option:: --warning-suppression-mappings=foo.txt
+
+   :ref:`Suppress certain diagnostics for certain files. <warning_suppression_mappings>`
+
 .. _cl_diag_formatting:
 
 Formatting of Diagnostics
@@ -1055,6 +1059,17 @@ In this way, the user may only need to specify a root configuration file with
     -L <CFGDIR>/lib
     -T <CFGDIR>/ldscripts/link.ld
 
+Usually, config file options are placed before command-line options, regardless
+of the actual operation to be performed. The exception is being made for the
+options prefixed with the ``$`` character. These will be used only when linker
+is being invoked, and added after all of the command-line specified linker
+inputs. Here is some example of ``$``-prefixed options:
+
+::
+
+    $-Wl,-Bstatic $-lm
+    $-Wl,-Bshared
+
 Language and Target-Independent Features
 ========================================
 
@@ -1315,16 +1330,42 @@ with its corresponding `Wno-` option.
 Note that when combined with :option:`-w` (which disables all warnings),
 disabling all warnings wins.
 
+.. _warning_suppression_mappings:
+
+Controlling Diagnostics via Suppression Mappings
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning suppression mappings enable users to suppress Clang's diagnostics at a
+per-file granularity. This allows enforcing diagnostics in specific parts of the
+project even if there are violations in some headers.
+
+.. code-block:: console
+
+  $ cat mappings.txt
+  [unused]
+  src:foo/*
+
+  $ clang --warning-suppression-mappings=mapping.txt -Wunused foo/bar.cc
+  # This compilation won't emit any unused findings for sources under foo/
+  # directory. But it'll still complain for all the other sources, e.g:
+  $ cat foo/bar.cc
+  #include "dir/include.h" // Clang flags unused declarations here.
+  #include "foo/include.h" // but unused warnings under this source is omitted.
+  #include "next_to_bar_cc.h" // as are unused warnings from this header file.
+  // Further, unused warnings in the remainder of bar.cc are also omitted.
+
+
+See :doc:`WarningSuppressionMappings` for details about the file format and
+functionality.
+
 Controlling Static Analyzer Diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While not strictly part of the compiler, the diagnostics from Clang's
 `static analyzer <https://clang-analyzer.llvm.org>`_ can also be
 influenced by the user via changes to the source code. See the available
-`annotations <https://clang-analyzer.llvm.org/annotations.html>`_ and the
-analyzer's `FAQ
-page <https://clang-analyzer.llvm.org/faq.html#exclude_code>`_ for more
-information.
+`annotations <analyzer/user-docs/Annotations.html>`_ and the analyzer's
+`FAQ page <analyzer/user-docs/FAQ.html#exclude-code>`_ for more information.
 
 .. _usersmanual-precompiled-headers:
 
@@ -2369,14 +2410,16 @@ are listed below.
      $ cd $P/bar && clang -c -funique-internal-linkage-names name_conflict.c
      $ cd $P && clang foo/name_conflict.o && bar/name_conflict.o
 
-.. option:: -fbasic-block-sections=[labels, all, list=<arg>, none]
+.. option:: -f[no]-basic-block-address-map:
+  Emits a ``SHT_LLVM_BB_ADDR_MAP`` section which includes address offsets for each
+  basic block in the program, relative to the parent function address.
+
+
+.. option:: -fbasic-block-sections=[all, list=<arg>, none]
 
   Controls how Clang emits text sections for basic blocks. With values ``all``
   and ``list=<arg>``, each basic block or a subset of basic blocks can be placed
-  in its own unique section. With the "labels" value, normal text sections are
-  emitted, but a ``.bb_addr_map`` section is emitted which includes address
-  offsets for each basic block in the program, relative to the parent function
-  address.
+  in its own unique section.
 
   With the ``list=<arg>`` option, a file containing the subset of basic blocks
   that need to placed in unique sections can be specified.  The format of the
@@ -2409,6 +2452,39 @@ are listed below.
   Basic block sections allow the linker to reorder basic blocks and enables
   link-time optimizations like whole program inter-procedural basic block
   reordering.
+
+.. option:: -fcodegen-data-generate[=<path>]
+
+  Emit the raw codegen (CG) data into custom sections in the object file.
+  Currently, this option also combines the raw CG data from the object files
+  into an indexed CG data file specified by the <path>, for LLD MachO only.
+  When the <path> is not specified, `default.cgdata` is created.
+  The CG data file combines all the outlining instances that occurred locally
+  in each object file.
+
+  .. code-block:: console
+
+    $ clang -fuse-ld=lld -Oz -fcodegen-data-generate code.cc
+
+  For linkers that do not yet support this feature, `llvm-cgdata` can be used
+  manually to merge this CG data in object files.
+
+  .. code-block:: console
+
+    $ clang -c -fuse-ld=lld -Oz -fcodegen-data-generate code.cc
+    $ llvm-cgdata --merge -o default.cgdata code.o
+
+.. option:: -fcodegen-data-use[=<path>]
+
+  Read the codegen data from the specified path to more effectively outline
+  functions across compilation units. When the <path> is not specified,
+  `default.cgdata` is used. This option can create many identically outlined
+  functions that can be optimized by the conventional linker’s identical code
+  folding (ICF).
+
+  .. code-block:: console
+
+    $ clang -fuse-ld=lld -Oz -Wl,--icf=safe -fcodegen-data-use code.cc
 
 Profile Guided Optimization
 ---------------------------
@@ -2593,7 +2669,7 @@ usual build cycle when using sample profilers for optimization:
 
      > clang-cl /O2 -gdwarf -gline-tables-only ^
        /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
-       /fprofile-sample-use=code.prof code.cc /Fe:code /fuse-ld=lld /link /debug:dwarf
+       -fprofile-sample-use=code.prof code.cc /Fe:code -fuse-ld=lld /link /debug:dwarf
 
    [OPTIONAL] Sampling-based profiles can have inaccuracies or missing block/
    edge counters. The profile inference algorithm (profi) can be used to infer
@@ -2612,7 +2688,7 @@ usual build cycle when using sample profilers for optimization:
 
      > clang-cl /clang:-fsample-profile-use-profi /O2 -gdwarf -gline-tables-only ^
        /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
-       /fprofile-sample-use=code.prof code.cc /Fe:code /fuse-ld=lld /link /debug:dwarf
+       -fprofile-sample-use=code.prof code.cc /Fe:code -fuse-ld=lld /link /debug:dwarf
 
 Sample Profile Formats
 """"""""""""""""""""""
@@ -2956,6 +3032,38 @@ indexed format, regardeless whether it is produced by frontend or the IR pass.
   contention. ``atomic`` uses atomic increments which is accurate but has
   overhead. ``prefer-atomic`` will be transformed to ``atomic`` when supported
   by the target, or ``single`` otherwise.
+
+.. option:: -ftemporal-profile
+
+  Enables the temporal profiling extension for IRPGO to improve startup time by
+  reducing ``.text`` section page faults. To do this, we instrument function
+  timestamps to measure when each function is called for the first time and use
+  this data to generate a function order to improve startup.
+
+  The profile is generated as normal.
+
+  .. code-block:: console
+
+    $ clang++ -O2 -fprofile-generate -ftemporal-profile code.cc -o code
+    $ ./code
+    $ llvm-profdata merge -o code.profdata yyy/zzz
+
+  Using the resulting profile, we can generate a function order to pass to the
+  linker via ``--symbol-ordering-file`` for ELF or ``-order_file`` for Mach-O.
+
+  .. code-block:: console
+
+    $ llvm-profdata order code.profdata -o code.orderfile
+    $ clang++ -O2 -Wl,--symbol-ordering-file=code.orderfile code.cc -o code
+
+  Or the profile can be passed to LLD directly.
+
+  .. code-block:: console
+
+    $ clang++ -O2 -fuse-ld=lld -Wl,--irpgo-profile=code.profdata,--bp-startup-sort=function code.cc -o code
+
+  For more information, please read the RFC:
+  https://discourse.llvm.org/t/rfc-temporal-profiling-extension-for-irpgo/68068
 
 Fine Tuning Profile Collection
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

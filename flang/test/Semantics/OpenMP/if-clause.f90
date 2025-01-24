@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=52
 ! Check OpenMP 'if' clause validity for all directives that can have it
 
 program main
@@ -18,7 +18,7 @@ program main
   end do
   !$omp end distribute parallel do
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the DISTRIBUTE PARALLEL DO directive
   !$omp distribute parallel do if(target: .true.)
   do i = 1, 10
   end do
@@ -45,7 +45,7 @@ program main
   end do
   !$omp end distribute parallel do simd
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the DISTRIBUTE PARALLEL DO SIMD directive
   !$omp distribute parallel do simd if(target: .true.)
   do i = 1, 10
   end do
@@ -66,7 +66,7 @@ program main
   end do
   !$omp end distribute simd
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the DISTRIBUTE SIMD directive
   !$omp distribute simd if(target: .true.)
   do i = 1, 10
   end do
@@ -92,7 +92,7 @@ program main
   end do
   !$omp end do simd
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the DO SIMD directive
   !$omp do simd if(target: .true.)
   do i = 1, 10
   end do
@@ -113,7 +113,7 @@ program main
   !$omp parallel if(parallel: .true.)
   !$omp end parallel
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the PARALLEL directive
   !$omp parallel if(target: .true.)
   !$omp end parallel
 
@@ -134,7 +134,7 @@ program main
   end do
   !$omp end parallel do
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the PARALLEL DO directive
   !$omp parallel do if(target: .true.)
   do i = 1, 10
   end do
@@ -159,7 +159,7 @@ program main
   end do
   !$omp end parallel do simd
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the PARALLEL DO SIMD directive
   !$omp parallel do simd if(target: .true.)
   do i = 1, 10
   end do
@@ -174,7 +174,7 @@ program main
   !$omp parallel sections if(parallel: .true.)
   !$omp end parallel sections
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the PARALLEL SECTIONS directive
   !$omp parallel sections if(target: .true.)
   !$omp end parallel sections
 
@@ -191,7 +191,7 @@ program main
   !$omp parallel workshare if(parallel: .true.)
   !$omp end parallel workshare
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the PARALLEL WORKSHARE directive
   !$omp parallel workshare if(target: .true.)
   !$omp end parallel workshare
 
@@ -212,7 +212,7 @@ program main
   end do
   !$omp end simd
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the SIMD directive
   !$omp simd if(target: .true.)
   do i = 1, 10
   end do
@@ -233,7 +233,7 @@ program main
   !$omp target if(target: .true.)
   !$omp end target
 
-  !ERROR: Unmatched directive name modifier PARALLEL on the IF clause
+  !ERROR: PARALLEL is not a constituent of the TARGET directive
   !$omp target if(parallel: .true.)
   !$omp end target
 
@@ -250,7 +250,7 @@ program main
   !$omp target data map(tofrom: i) if(target data: .true.)
   !$omp end target data
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the TARGET DATA directive
   !$omp target data map(tofrom: i) if(target: .true.)
   !$omp end target data
 
@@ -265,7 +265,7 @@ program main
 
   !$omp target enter data map(to: i) if(target enter data: .true.)
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the TARGET ENTER DATA directive
   !$omp target enter data map(to: i) if(target: .true.)
 
   !ERROR: At most one IF clause can appear on the TARGET ENTER DATA directive
@@ -278,7 +278,7 @@ program main
 
   !$omp target exit data map(from: i) if(target exit data: .true.)
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the TARGET EXIT DATA directive
   !$omp target exit data map(from: i) if(target: .true.)
   
   !ERROR: At most one IF clause can appear on the TARGET EXIT DATA directive
@@ -293,7 +293,7 @@ program main
   !$omp target parallel if(target: .true.) if(parallel: .false.)
   !$omp end target parallel
 
-  !ERROR: Unmatched directive name modifier SIMD on the IF clause
+  !ERROR: SIMD is not a constituent of the TARGET PARALLEL directive
   !$omp target parallel if(simd: .true.)
   !$omp end target parallel
 
@@ -310,7 +310,7 @@ program main
   end do
   !$omp end target parallel do
 
-  !ERROR: Unmatched directive name modifier SIMD on the IF clause
+  !ERROR: SIMD is not a constituent of the TARGET PARALLEL DO directive
   !$omp target parallel do if(simd: .true.)
   do i = 1, 10
   end do
@@ -330,7 +330,7 @@ program main
   end do
   !$omp end target parallel do simd
 
-  !ERROR: Unmatched directive name modifier TEAMS on the IF clause
+  !ERROR: TEAMS is not a constituent of the TARGET PARALLEL DO SIMD directive
   !$omp target parallel do simd if(teams: .true.)
   do i = 1, 10
   end do
@@ -349,7 +349,7 @@ program main
   end do
   !$omp end target simd
 
-  !ERROR: Unmatched directive name modifier PARALLEL on the IF clause
+  !ERROR: PARALLEL is not a constituent of the TARGET SIMD directive
   !$omp target simd if(parallel: .true.)
   do i = 1, 10
   end do
@@ -364,7 +364,7 @@ program main
   !$omp target teams if(target: .true.) if(teams: .false.)
   !$omp end target teams
 
-  !ERROR: Unmatched directive name modifier PARALLEL on the IF clause
+  !ERROR: PARALLEL is not a constituent of the TARGET TEAMS directive
   !$omp target teams if(parallel: .true.)
   !$omp end target teams
 
@@ -381,7 +381,7 @@ program main
   end do
   !$omp end target teams distribute
 
-  !ERROR: Unmatched directive name modifier PARALLEL on the IF clause
+  !ERROR: PARALLEL is not a constituent of the TARGET TEAMS DISTRIBUTE directive
   !$omp target teams distribute if(parallel: .true.)
   do i = 1, 10
   end do
@@ -401,7 +401,7 @@ program main
   end do
   !$omp end target teams distribute parallel do
 
-  !ERROR: Unmatched directive name modifier SIMD on the IF clause
+  !ERROR: SIMD is not a constituent of the TARGET TEAMS DISTRIBUTE PARALLEL DO directive
   !$omp target teams distribute parallel do if(simd: .true.)
   do i = 1, 10
   end do
@@ -422,7 +422,7 @@ program main
   end do
   !$omp end target teams distribute parallel do simd
 
-  !ERROR: Unmatched directive name modifier TASK on the IF clause
+  !ERROR: TASK is not a constituent of the TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD directive
   !$omp target teams distribute parallel do simd if(task: .true.)
   do i = 1, 10
   end do
@@ -442,7 +442,7 @@ program main
   end do
   !$omp end target teams distribute simd
 
-  !ERROR: Unmatched directive name modifier PARALLEL on the IF clause
+  !ERROR: PARALLEL is not a constituent of the TARGET TEAMS DISTRIBUTE SIMD directive
   !$omp target teams distribute simd if(parallel: .true.)
   do i = 1, 10
   end do
@@ -455,7 +455,7 @@ program main
   
   !$omp target update to(i) if(target update: .true.)
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the TARGET UPDATE directive
   !$omp target update to(i) if(target: .true.)
 
   !ERROR: At most one IF clause can appear on the TARGET UPDATE directive
@@ -470,7 +470,7 @@ program main
   !$omp task if(task: .true.)
   !$omp end task
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the TASK directive
   !$omp task if(target: .true.)
   !$omp end task
 
@@ -491,7 +491,7 @@ program main
   end do
   !$omp end taskloop
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the TASKLOOP directive
   !$omp taskloop if(target: .true.)
   do i = 1, 10
   end do
@@ -516,7 +516,7 @@ program main
   end do
   !$omp end taskloop simd
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the TASKLOOP SIMD directive
   !$omp taskloop simd if(target: .true.)
   do i = 1, 10
   end do
@@ -531,7 +531,7 @@ program main
   !$omp teams if(teams: .true.)
   !$omp end teams
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the TEAMS directive
   !$omp teams if(target: .true.)
   !$omp end teams
 
@@ -552,7 +552,7 @@ program main
   end do
   !$omp end teams distribute
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the TEAMS DISTRIBUTE directive
   !$omp teams distribute if(target: .true.)
   do i = 1, 10
   end do
@@ -577,7 +577,7 @@ program main
   end do
   !$omp end teams distribute parallel do
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the TEAMS DISTRIBUTE PARALLEL DO directive
   !$omp teams distribute parallel do if(target: .true.)
   do i = 1, 10
   end do
@@ -597,7 +597,7 @@ program main
   end do
   !$omp end teams distribute parallel do simd
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the TEAMS DISTRIBUTE PARALLEL DO SIMD directive
   !$omp teams distribute parallel do simd if(target: .true.)
   do i = 1, 10
   end do
@@ -616,7 +616,7 @@ program main
   end do
   !$omp end teams distribute simd
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the TEAMS DISTRIBUTE SIMD directive
   !$omp teams distribute simd if(target: .true.)
   do i = 1, 10
   end do

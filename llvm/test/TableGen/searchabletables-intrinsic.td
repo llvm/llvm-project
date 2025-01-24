@@ -2,7 +2,9 @@
 // XFAIL: vg_leak
 
 include "llvm/TableGen/SearchableTable.td"
-include "llvm/IR/Intrinsics.td"
+include "llvm/Target/Target.td"
+
+def DummyTarget : Target;
 
 def int_abc : Intrinsic<[llvm_anyint_ty]>;
 def int_xyz : Intrinsic<[llvm_anyint_ty]>;

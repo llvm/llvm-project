@@ -74,8 +74,8 @@ define i32 @poison_does_not_freeze_signed(ptr %p, i32 noundef %x, i32 noundef %y
 define <4 x i8> @poison_does_not_freeze_vector(ptr %p, <4 x i8> noundef %x, <4 x i8> noundef %y) {
 ; CHECK-LABEL: define <4 x i8> @poison_does_not_freeze_vector(
 ; CHECK-SAME: ptr [[P:%.*]], <4 x i8> noundef [[X:%.*]], <4 x i8> noundef [[Y:%.*]]) {
-; CHECK-NEXT:    [[X2:%.*]] = shl nuw nsw <4 x i8> [[X]], <i8 5, i8 5, i8 5, i8 5>
-; CHECK-NEXT:    [[Y2:%.*]] = add nuw nsw <4 x i8> [[Y]], <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[X2:%.*]] = shl nuw nsw <4 x i8> [[X]], splat (i8 5)
+; CHECK-NEXT:    [[Y2:%.*]] = add nuw nsw <4 x i8> [[Y]], splat (i8 1)
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv <4 x i8> [[X2]], [[Y2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i8> [[DIV]], [[Y2]]
 ; CHECK-NEXT:    [[REM_DECOMPOSED:%.*]] = sub <4 x i8> [[X2]], [[TMP1]]

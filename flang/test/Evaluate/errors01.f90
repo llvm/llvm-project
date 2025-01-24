@@ -168,10 +168,13 @@ module m
     print *, ibits(0, 33, n)
   end
   subroutine warnings
+    use ieee_arithmetic, only: ieee_scalb
     real, parameter :: ok1 = scale(0.0, 99999) ! 0.0
     real, parameter :: ok2 = scale(1.0, -99999) ! 0.0
-    !CHECK: SCALE intrinsic folding overflow
+    !CHECK: SCALE/IEEE_SCALB intrinsic folding overflow
     real, parameter :: bad1 = scale(1.0, 99999)
+    !CHECK: SCALE/IEEE_SCALB intrinsic folding overflow
+    real, parameter :: bad1a = ieee_scalb(1.0, 99999)
     !CHECK: complex ABS intrinsic folding overflow
     real, parameter :: bad2 = abs(cmplx(huge(0.),huge(0.)))
     !CHECK: warning: DIM intrinsic folding overflow
@@ -192,6 +195,8 @@ module m
     real, parameter :: bad10 = product([huge(1.),huge(1.)])
     !CHECK: warning: PRODUCT() of COMPLEX(4) data overflowed
     complex, parameter :: bad11 = product([(huge(1.),0.),(huge(1.),0.)])
+    !CHECK: warning: conversion of 111111111111111111111_16 to INTEGER(8) overflowed; result is 430646668853801415
+    integer(8), parameter :: bad12 = int(111111111111111111111, 8)
     !CHECK: warning: overflow on REAL(8) to REAL(4) conversion
     x = 1.D40
     !CHECK-NOT: warning: invalid argument

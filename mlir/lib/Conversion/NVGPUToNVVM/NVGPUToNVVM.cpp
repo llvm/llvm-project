@@ -495,7 +495,6 @@ static std::string buildMmaSparseAsmConstraintString(unsigned matASize,
   // The final operand is for the sparsity metadata.
   // The sparsity selector appears as direct literal.
   ss << "r";
-  ss.flush();
   return str;
 }
 
@@ -535,7 +534,6 @@ static std::string buildMmaSparseAsmString(
   ss << "$" << asmArgIdx++ << ",";
   assert(metaDataSelector <= 1);
   ss << "0x" << metaDataSelector << ";";
-  ss.flush();
   return asmStr;
 }
 
@@ -1256,8 +1254,8 @@ struct NVGPUWarpgroupMmaOpLowering
         wgmmaK = 8;
       } else if (inputElemType.isF16() || inputElemType.isBF16()) {
         wgmmaK = 16;
-      } else if (inputElemType.isFloat8E4M3FN() ||
-                 inputElemType.isFloat8E5M2() || inputElemType.isInteger(16)) {
+      } else if (isa<Float8E4M3FNType, Float8E5M2Type>(inputElemType) ||
+                 inputElemType.isInteger(16)) {
         wgmmaK = 32;
       } else if (inputElemType.isInteger(1)) {
         wgmmaK = 256;
@@ -1278,9 +1276,9 @@ struct NVGPUWarpgroupMmaOpLowering
           return NVVM::WGMMATypes::f16;
         if (elemType.isBF16())
           return NVVM::WGMMATypes::bf16;
-        if (elemType.isFloat8E4M3FN())
+        if (isa<Float8E4M3FNType>(elemType))
           return NVVM::WGMMATypes::e4m3;
-        if (elemType.isFloat8E5M2())
+        if (isa<Float8E5M2Type>(elemType))
           return NVVM::WGMMATypes::e5m2;
         if (elemType.isInteger(1))
           return NVVM::WGMMATypes::b1;
@@ -1703,8 +1701,8 @@ struct NVGPURcpOpLowering : public ConvertOpToLLVMPattern<nvgpu::RcpOp> {
 };
 } // namespace
 
-void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
-                                                 RewritePatternSet &patterns) {
+void mlir::populateNVGPUToNVVMConversionPatterns(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<
       NVGPUMBarrierCreateLowering,           // nvgpu.mbarrier.create
       NVGPUMBarrierInitLowering,             // nvgpu.mbarrier.init

@@ -405,8 +405,8 @@ define <4 x i32> @sadd_satv4i4(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @sadd_satv4i4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[ADD]], <4 x i32> <i32 15, i32 15, i32 15, i32 15>)
-; CHECK-NEXT:    [[SPEC_STORE_SELECT8:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[SPEC_STORE_SELECT]], <4 x i32> <i32 -16, i32 -16, i32 -16, i32 -16>)
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[ADD]], <4 x i32> splat (i32 15))
+; CHECK-NEXT:    [[SPEC_STORE_SELECT8:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[SPEC_STORE_SELECT]], <4 x i32> splat (i32 -16))
 ; CHECK-NEXT:    ret <4 x i32> [[SPEC_STORE_SELECT8]]
 ;
 entry:
@@ -422,8 +422,8 @@ define <4 x i32> @ssub_satv4i4(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @ssub_satv4i4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD:%.*]] = sub <4 x i32> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[ADD]], <4 x i32> <i32 15, i32 15, i32 15, i32 15>)
-; CHECK-NEXT:    [[SPEC_STORE_SELECT8:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[SPEC_STORE_SELECT]], <4 x i32> <i32 -16, i32 -16, i32 -16, i32 -16>)
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[ADD]], <4 x i32> splat (i32 15))
+; CHECK-NEXT:    [[SPEC_STORE_SELECT8:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[SPEC_STORE_SELECT]], <4 x i32> splat (i32 -16))
 ; CHECK-NEXT:    ret <4 x i32> [[SPEC_STORE_SELECT8]]
 ;
 entry:
@@ -785,8 +785,8 @@ define <2 x i8> @ashrv2i8(<2 x i16> %a, <2 x i8> %b) {
 ; CHECK-NEXT:    [[CONV:%.*]] = ashr <2 x i16> [[A:%.*]], <i16 8, i16 12>
 ; CHECK-NEXT:    [[CONV1:%.*]] = sext <2 x i8> [[B:%.*]] to <2 x i16>
 ; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i16> [[CONV]], [[CONV1]]
-; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = call <2 x i16> @llvm.smax.v2i16(<2 x i16> [[ADD]], <2 x i16> <i16 -128, i16 -128>)
-; CHECK-NEXT:    [[SPEC_STORE_SELECT8:%.*]] = call <2 x i16> @llvm.smin.v2i16(<2 x i16> [[SPEC_STORE_SELECT]], <2 x i16> <i16 127, i16 127>)
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = call <2 x i16> @llvm.smax.v2i16(<2 x i16> [[ADD]], <2 x i16> splat (i16 -128))
+; CHECK-NEXT:    [[SPEC_STORE_SELECT8:%.*]] = call <2 x i16> @llvm.smin.v2i16(<2 x i16> [[SPEC_STORE_SELECT]], <2 x i16> splat (i16 127))
 ; CHECK-NEXT:    [[CONV7:%.*]] = trunc nsw <2 x i16> [[SPEC_STORE_SELECT8]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[CONV7]]
 ;
@@ -805,7 +805,7 @@ entry:
 define <2 x i8> @ashrv2i8_s(<2 x i16> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @ashrv2i8_s(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i16> [[A:%.*]], <i16 8, i16 8>
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i16> [[A:%.*]], splat (i16 8)
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw <2 x i16> [[TMP0]] to <2 x i8>
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[TMP1]], <2 x i8> [[B:%.*]])
 ; CHECK-NEXT:    ret <2 x i8> [[TMP2]]

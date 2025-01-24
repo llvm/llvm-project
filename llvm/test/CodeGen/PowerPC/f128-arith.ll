@@ -1365,45 +1365,33 @@ define dso_local fp128 @qpFREXP(ptr %a, ptr %b) {
 ; CHECK-LABEL: qpFREXP:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    .cfi_offset r30, -16
-; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    stdu r1, -64(r1)
-; CHECK-NEXT:    std r0, 80(r1)
-; CHECK-NEXT:    addi r5, r1, 44
-; CHECK-NEXT:    mr r30, r4
 ; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    mr r5, r4
 ; CHECK-NEXT:    bl frexpf128
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    lwz r3, 44(r1)
-; CHECK-NEXT:    stw r3, 0(r30)
-; CHECK-NEXT:    addi r1, r1, 64
+; CHECK-NEXT:    addi r1, r1, 32
 ; CHECK-NEXT:    ld r0, 16(r1)
-; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: qpFREXP:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    .cfi_offset r30, -16
-; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    stdu r1, -64(r1)
-; CHECK-P8-NEXT:    std r0, 80(r1)
-; CHECK-P8-NEXT:    addi r5, r1, 44
-; CHECK-P8-NEXT:    mr r30, r4
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    mr r5, r4
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl frexpf128
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    lwz r3, 44(r1)
-; CHECK-P8-NEXT:    stw r3, 0(r30)
-; CHECK-P8-NEXT:    addi r1, r1, 64
+; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
-; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:

@@ -5,7 +5,7 @@
 
 ; CHECK-LABEL: foo
 ; CHECK: LV: IC is 2
-; CHECK: %{{.*}} = add <8 x i32> %{{.*}}, <i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
+; CHECK: %{{.*}} = add <8 x i32> %{{.*}}, splat (i32 8)
 ; CHECK: %{{.*}} = add {{.*}}, 16
 
 ; Function Attrs: nofree norecurse nosync nounwind writeonly

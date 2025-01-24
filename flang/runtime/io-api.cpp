@@ -623,6 +623,7 @@ bool IODEF(SetRec)(Cookie cookie, std::int64_t rec) {
       handler.SignalError(
           IostatBadOpOnChildUnit, "REC= specifier on child I/O");
     } else {
+      handler.HasRec();
       unit->SetDirectRec(rec, handler);
     }
   } else if (!io.get_if<ErroneousIoStatementState>()) {
@@ -948,7 +949,7 @@ bool IODEF(SetRecl)(Cookie cookie, std::size_t n) {
     io.GetIoErrorHandler().Crash(
         "SetRecl() called after GetNewUnit() for an OPEN statement");
   }
-  if (n <= 0) {
+  if (static_cast<std::int64_t>(n) <= 0) {
     io.GetIoErrorHandler().SignalError("RECL= must be greater than zero");
     return false;
   } else if (open->wasExtant() &&

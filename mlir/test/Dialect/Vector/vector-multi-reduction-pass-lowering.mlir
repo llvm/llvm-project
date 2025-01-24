@@ -9,16 +9,14 @@ func.func @vector_multi_reduction(%arg0: vector<2x4xf32>, %acc: vector<2xf32>) -
 //           ALL-LABEL: func @vector_multi_reduction
 //            ALL-SAME: %[[INPUT:.+]]: vector<2x4xf32>, %[[ACC:.*]]: vector<2xf32>)
 // INNER-REDUCTION-DAG: %[[RESULT_VEC_0:.+]] = arith.constant dense<{{.*}}> : vector<2xf32>
-// INNER-REDUCTION-DAG: %[[C0:.+]] = arith.constant 0 : index
-// INNER-REDUCTION-DAG: %[[C1:.+]] = arith.constant 1 : index
 //     INNER-REDUCTION: %[[V0:.+]] = vector.extract %[[INPUT]][0]
 //     INNER-REDUCTION: %[[ACC0:.+]] = vector.extract %[[ACC]][0]
 //     INNER-REDUCTION: %[[RV0:.+]] = vector.reduction <mul>, %[[V0]], %[[ACC0]] : vector<4xf32> into f32
-//     INNER-REDUCTION: %[[RESULT_VEC_1:.+]] = vector.insertelement %[[RV0:.+]], %[[RESULT_VEC_0]][%[[C0]] : index] : vector<2xf32>
+//     INNER-REDUCTION: %[[RESULT_VEC_1:.+]] = vector.insert %[[RV0:.+]], %[[RESULT_VEC_0]] [0] : f32 into vector<2xf32>
 //     INNER-REDUCTION: %[[V1:.+]] = vector.extract %[[INPUT]][1]
 //     INNER-REDUCTION: %[[ACC1:.+]] = vector.extract %[[ACC]][1]
 //     INNER-REDUCTION: %[[RV1:.+]] = vector.reduction <mul>, %[[V1]], %[[ACC1]] : vector<4xf32> into f32
-//     INNER-REDUCTION: %[[RESULT_VEC:.+]] = vector.insertelement %[[RV1:.+]], %[[RESULT_VEC_1]][%[[C1]] : index] : vector<2xf32>
+//     INNER-REDUCTION: %[[RESULT_VEC:.+]] = vector.insert %[[RV1:.+]], %[[RESULT_VEC_1]] [1] : f32 into vector<2xf32>
 //     INNER-REDUCTION: return %[[RESULT_VEC]]
 
 //      INNER-PARALLEL: %[[TRANSPOSED:.+]] = vector.transpose %[[INPUT]], [1, 0] : vector<2x4xf32> to vector<4x2xf32>

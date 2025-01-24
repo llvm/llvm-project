@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
+#include "llvm/Analysis/DXILResource.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Constants.h"
@@ -40,6 +41,7 @@ class DXContainerGlobals : public llvm::ModulePass {
   GlobalVariable *buildSignature(Module &M, Signature &Sig, StringRef Name,
                                  StringRef SectionName);
   void addSignature(Module &M, SmallVector<GlobalValue *> &Globals);
+  void addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV);
   void addPipelineStateValidationInfo(Module &M,
                                       SmallVector<GlobalValue *> &Globals);
 
@@ -59,6 +61,8 @@ public:
     AU.setPreservesAll();
     AU.addRequired<ShaderFlagsAnalysisWrapper>();
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
+    AU.addRequired<DXILResourceTypeWrapperPass>();
+    AU.addRequired<DXILResourceBindingWrapperPass>();
   }
 };
 
@@ -75,13 +79,13 @@ bool DXContainerGlobals::runOnModule(Module &M) {
 }
 
 GlobalVariable *DXContainerGlobals::getFeatureFlags(Module &M) {
-  const uint64_t FeatureFlags =
-      static_cast<uint64_t>(getAnalysis<ShaderFlagsAnalysisWrapper>()
-                                .getShaderFlags()
-                                .getFeatureFlags());
+  uint64_t CombinedFeatureFlags = getAnalysis<ShaderFlagsAnalysisWrapper>()
+                                      .getShaderFlags()
+                                      .getCombinedFlags()
+                                      .getFeatureFlags();
 
   Constant *FeatureFlagsConstant =
-      ConstantInt::get(M.getContext(), APInt(64, FeatureFlags));
+      ConstantInt::get(M.getContext(), APInt(64, CombinedFeatureFlags));
   return buildContainerGlobal(M, FeatureFlagsConstant, "dx.sfi0", "SFI0");
 }
 
@@ -140,6 +144,60 @@ void DXContainerGlobals::addSignature(Module &M,
   Globals.emplace_back(buildSignature(M, OutputSig, "dx.osg1", "OSG1"));
 }
 
+void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
+  const DXILBindingMap &DBM =
+      getAnalysis<DXILResourceBindingWrapperPass>().getBindingMap();
+  DXILResourceTypeMap &DRTM =
+      getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
+
+  for (const dxil::ResourceBindingInfo &RBI : DBM) {
+    const dxil::ResourceBindingInfo::ResourceBinding &Binding =
+        RBI.getBinding();
+    dxbc::PSV::v2::ResourceBindInfo BindInfo;
+    BindInfo.LowerBound = Binding.LowerBound;
+    BindInfo.UpperBound = Binding.LowerBound + Binding.Size - 1;
+    BindInfo.Space = Binding.Space;
+
+    dxil::ResourceTypeInfo &TypeInfo = DRTM[RBI.getHandleTy()];
+    dxbc::PSV::ResourceType ResType = dxbc::PSV::ResourceType::Invalid;
+    bool IsUAV = TypeInfo.getResourceClass() == dxil::ResourceClass::UAV;
+    switch (TypeInfo.getResourceKind()) {
+    case dxil::ResourceKind::Sampler:
+      ResType = dxbc::PSV::ResourceType::Sampler;
+      break;
+    case dxil::ResourceKind::CBuffer:
+      ResType = dxbc::PSV::ResourceType::CBV;
+      break;
+    case dxil::ResourceKind::StructuredBuffer:
+      ResType = IsUAV ? dxbc::PSV::ResourceType::UAVStructured
+                      : dxbc::PSV::ResourceType::SRVStructured;
+      if (IsUAV && TypeInfo.getUAV().HasCounter)
+        ResType = dxbc::PSV::ResourceType::UAVStructuredWithCounter;
+      break;
+    case dxil::ResourceKind::RTAccelerationStructure:
+      ResType = dxbc::PSV::ResourceType::SRVRaw;
+      break;
+    case dxil::ResourceKind::RawBuffer:
+      ResType = IsUAV ? dxbc::PSV::ResourceType::UAVRaw
+                      : dxbc::PSV::ResourceType::SRVRaw;
+      break;
+    default:
+      ResType = IsUAV ? dxbc::PSV::ResourceType::UAVTyped
+                      : dxbc::PSV::ResourceType::SRVTyped;
+      break;
+    }
+    BindInfo.Type = ResType;
+
+    BindInfo.Kind =
+        static_cast<dxbc::PSV::ResourceKind>(TypeInfo.getResourceKind());
+    // TODO: Add support for dxbc::PSV::ResourceFlag::UsedByAtomic64, tracking
+    // with https://github.com/llvm/llvm-project/issues/104392
+    BindInfo.Flags.Flags = 0u;
+
+    PSV.Resources.emplace_back(BindInfo);
+  }
+}
+
 void DXContainerGlobals::addPipelineStateValidationInfo(
     Module &M, SmallVector<GlobalValue *> &Globals) {
   SmallString<256> Data;
@@ -151,16 +209,18 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
   dxil::ModuleMetadataInfo &MMI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
   assert(MMI.EntryPropertyVec.size() == 1 ||
-         MMI.ShaderStage == Triple::Library);
+         MMI.ShaderProfile == Triple::Library);
   PSV.BaseData.ShaderStage =
-      static_cast<uint8_t>(MMI.ShaderStage - Triple::Pixel);
+      static_cast<uint8_t>(MMI.ShaderProfile - Triple::Pixel);
+
+  addResourcesForPSV(M, PSV);
 
   // Hardcoded values here to unblock loading the shader into D3D.
   //
   // TODO: Lots more stuff to do here!
   //
   // See issue https://github.com/llvm/llvm-project/issues/96674.
-  switch (MMI.ShaderStage) {
+  switch (MMI.ShaderProfile) {
   case Triple::Compute:
     PSV.BaseData.NumThreadsX = MMI.EntryPropertyVec[0].NumThreadsX;
     PSV.BaseData.NumThreadsY = MMI.EntryPropertyVec[0].NumThreadsY;
@@ -170,10 +230,10 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
     break;
   }
 
-  if (MMI.ShaderStage != Triple::Library)
+  if (MMI.ShaderProfile != Triple::Library)
     PSV.EntryName = MMI.EntryPropertyVec[0].Entry->getName();
 
-  PSV.finalize(MMI.ShaderStage);
+  PSV.finalize(MMI.ShaderProfile);
   PSV.write(OS);
   Constant *Constant =
       ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);
@@ -185,6 +245,8 @@ INITIALIZE_PASS_BEGIN(DXContainerGlobals, "dxil-globals",
                       "DXContainer Global Emitter", false, true)
 INITIALIZE_PASS_DEPENDENCY(ShaderFlagsAnalysisWrapper)
 INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceBindingWrapperPass)
 INITIALIZE_PASS_END(DXContainerGlobals, "dxil-globals",
                     "DXContainer Global Emitter", false, true)
 

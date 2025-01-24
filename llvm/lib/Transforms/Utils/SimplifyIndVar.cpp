@@ -1024,7 +1024,7 @@ bool simplifyLoopIVs(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
                      LoopInfo *LI, const TargetTransformInfo *TTI,
                      SmallVectorImpl<WeakTrackingVH> &Dead) {
   SCEVExpander Rewriter(*SE, SE->getDataLayout(), "indvars");
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   Rewriter.setDebugType(DEBUG_TYPE);
 #endif
   bool Changed = false;
@@ -2164,16 +2164,14 @@ void WidenIV::calculatePostIncRange(Instruction *NarrowDef,
       !NarrowDefRHS->isNonNegative())
     return;
 
-  auto UpdateRangeFromCondition = [&] (Value *Condition,
-                                       bool TrueDest) {
-    CmpInst::Predicate Pred;
+  auto UpdateRangeFromCondition = [&](Value *Condition, bool TrueDest) {
+    CmpPredicate Pred;
     Value *CmpRHS;
     if (!match(Condition, m_ICmp(Pred, m_Specific(NarrowDefLHS),
                                  m_Value(CmpRHS))))
       return;
 
-    CmpInst::Predicate P =
-            TrueDest ? Pred : CmpInst::getInversePredicate(Pred);
+    CmpPredicate P = TrueDest ? Pred : ICmpInst::getInverseCmpPredicate(Pred);
 
     auto CmpRHSRange = SE->getSignedRange(SE->getSCEV(CmpRHS));
     auto CmpConstrainedLHSRange =

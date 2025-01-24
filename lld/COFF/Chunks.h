@@ -185,6 +185,13 @@ public:
   // bytes, so this is used only for logging or debugging.
   virtual StringRef getDebugName() const { return ""; }
 
+  // Verify that chunk relocations are within their ranges.
+  virtual bool verifyRanges() { return true; };
+
+  // If needed, extend the chunk to ensure all relocations are within the
+  // allowed ranges. Return the additional space required for the extension.
+  virtual uint32_t extendRanges() { return 0; };
+
   static bool classof(const Chunk *c) { return c->kind() >= OtherKind; }
 
 protected:
@@ -544,14 +551,25 @@ static const uint8_t importThunkARM64[] = {
     0x00, 0x02, 0x1f, 0xd6, // br   x16
 };
 
+static const uint8_t importThunkARM64EC[] = {
+    0x0b, 0x00, 0x00, 0x90, // adrp x11, 0x0
+    0x6b, 0x01, 0x40, 0xf9, // ldr  x11, [x11]
+    0x0a, 0x00, 0x00, 0x90, // adrp x10, 0x0
+    0x4a, 0x01, 0x00, 0x91, // add  x10, x10, #0x0
+    0x00, 0x00, 0x00, 0x14  // b    0x0
+};
+
 // Windows-specific.
 // A chunk for DLL import jump table entry. In a final output, its
 // contents will be a JMP instruction to some __imp_ symbol.
 class ImportThunkChunk : public NonSectionCodeChunk {
 public:
-  ImportThunkChunk(COFFLinkerContext &ctx, Defined *s)
-      : NonSectionCodeChunk(ImportThunkKind), impSymbol(s), ctx(ctx) {}
+  ImportThunkChunk(COFFLinkerContext &ctx, Defined *s);
   static bool classof(const Chunk *c) { return c->kind() == ImportThunkKind; }
+
+  // We track the usage of the thunk symbol separately from the import file
+  // to avoid generating unnecessary thunks.
+  bool live;
 
 protected:
   Defined *impSymbol;
@@ -590,13 +608,37 @@ public:
 
 class ImportThunkChunkARM64 : public ImportThunkChunk {
 public:
-  explicit ImportThunkChunkARM64(COFFLinkerContext &ctx, Defined *s)
-      : ImportThunkChunk(ctx, s) {
+  explicit ImportThunkChunkARM64(COFFLinkerContext &ctx, Defined *s,
+                                 MachineTypes machine)
+      : ImportThunkChunk(ctx, s), machine(machine) {
     setAlignment(4);
   }
   size_t getSize() const override { return sizeof(importThunkARM64); }
   void writeTo(uint8_t *buf) const override;
-  MachineTypes getMachine() const override { return ARM64; }
+  MachineTypes getMachine() const override { return machine; }
+
+private:
+  MachineTypes machine;
+};
+
+// ARM64EC __impchk_* thunk implementation.
+// Performs an indirect call to an imported function pointer
+// using the __icall_helper_arm64ec helper function.
+class ImportThunkChunkARM64EC : public ImportThunkChunk {
+public:
+  explicit ImportThunkChunkARM64EC(ImportFile *file);
+  size_t getSize() const override;
+  MachineTypes getMachine() const override { return ARM64EC; }
+  void writeTo(uint8_t *buf) const override;
+  bool verifyRanges() override;
+  uint32_t extendRanges() override;
+
+  Defined *exitThunk;
+  Defined *sym = nullptr;
+  bool extended = false;
+
+private:
+  ImportFile *file;
 };
 
 class RangeExtensionThunkARM : public NonSectionCodeChunk {
@@ -791,6 +833,59 @@ public:
   MachineTypes getMachine() const override { return AMD64; }
 
   Defined *target;
+};
+
+// ARM64X relocation value, potentially relative to a symbol.
+class Arm64XRelocVal {
+public:
+  Arm64XRelocVal(uint64_t value = 0) : value(value) {}
+  Arm64XRelocVal(Defined *sym, int32_t offset = 0) : sym(sym), value(offset) {}
+  Arm64XRelocVal(Chunk *chunk, int32_t offset = 0)
+      : chunk(chunk), value(offset) {}
+  uint64_t get() const;
+
+private:
+  Defined *sym = nullptr;
+  Chunk *chunk = nullptr;
+  uint64_t value;
+};
+
+// ARM64X entry for dynamic relocations.
+class Arm64XDynamicRelocEntry {
+public:
+  Arm64XDynamicRelocEntry(llvm::COFF::Arm64XFixupType type, uint8_t size,
+                          Arm64XRelocVal offset, Arm64XRelocVal value)
+      : offset(offset), value(value), type(type), size(size) {}
+
+  size_t getSize() const;
+  void writeTo(uint8_t *buf) const;
+
+  Arm64XRelocVal offset;
+  Arm64XRelocVal value;
+
+private:
+  llvm::COFF::Arm64XFixupType type;
+  uint8_t size;
+};
+
+// Dynamic relocation chunk containing ARM64X relocations for the hybrid image.
+class DynamicRelocsChunk : public NonSectionChunk {
+public:
+  DynamicRelocsChunk() {}
+  size_t getSize() const override { return size; }
+  void writeTo(uint8_t *buf) const override;
+  void finalize();
+
+  void add(llvm::COFF::Arm64XFixupType type, uint8_t size,
+           Arm64XRelocVal offset, Arm64XRelocVal value = Arm64XRelocVal()) {
+    arm64xRelocs.emplace_back(type, size, offset, value);
+  }
+
+  void set(uint32_t rva, Arm64XRelocVal value);
+
+private:
+  std::vector<Arm64XDynamicRelocEntry> arm64xRelocs;
+  size_t size;
 };
 
 // MinGW specific, for the "automatic import of variables from DLLs" feature.

@@ -341,9 +341,9 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   diagnostics.Clear();
   if (!invocation->WriteFunctionArguments(context, injected_parameters,
                                           parameters, diagnostics)) {
-    error = Status::FromErrorStringWithFormat(
-        "LoadLibrary error: unable to write function parameters: %s",
-        diagnostics.GetString().c_str());
+    error = Status::FromError(diagnostics.GetAsError(
+        eExpressionSetupError,
+        "LoadLibrary error: unable to write function parameters:"));
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 
@@ -384,9 +384,9 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
       invocation->ExecuteFunction(context, &injected_parameters, options,
                                   diagnostics, value);
   if (result != eExpressionCompleted) {
-    error = Status::FromErrorStringWithFormat(
-        "LoadLibrary error: failed to execute LoadLibrary helper: %s",
-        diagnostics.GetString().c_str());
+    error = Status::FromError(diagnostics.GetAsError(
+        eExpressionSetupError,
+        "LoadLibrary error: failed to execute LoadLibrary helper:"));
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 
@@ -798,13 +798,12 @@ extern "C" {
   options.SetTrapExceptions(false);
   options.SetTimeout(process->GetUtilityExpressionTimeout());
 
-  Status error;
   ExpressionResults result = UserExpression::Evaluate(
-      context, options, expression, kLoaderDecls, value, error);
+      context, options, expression, kLoaderDecls, value);
   if (result != eExpressionCompleted)
-    return error;
+    return value ? value->GetError().Clone() : Status("unknown error");
 
-  if (value->GetError().Fail())
+  if (value && value->GetError().Fail())
     return value->GetError().Clone();
 
   return Status();

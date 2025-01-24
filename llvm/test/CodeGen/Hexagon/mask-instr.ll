@@ -1,5 +1,5 @@
 ; Enable Utlilize mask instruction pass only on v66 and above.
-; RUN: llc -mv60 -march=hexagon < %s -o /dev/null
+; RUN: llc -mv60 -mtriple=hexagon < %s -o /dev/null
 
 target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
 target triple = "hexagon"

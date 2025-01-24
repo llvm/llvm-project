@@ -28,6 +28,7 @@
 #include "lldb/Utility/StreamBuffer.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_ZLIB
 #include "llvm/Support/MemoryBuffer.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangASTMetadata.h"
@@ -828,7 +829,7 @@ size_t SymbolFileCTF::ParseFunctions(CompileUnit &cu) {
       lldb::user_id_t func_uid = m_functions.size();
       FunctionSP function_sp = std::make_shared<Function>(
           &cu, func_uid, function_type_uid, symbol->GetMangled(), type_sp.get(),
-          func_range);
+          AddressRanges{func_range});
       m_functions.emplace_back(function_sp);
       cu.AddFunction(function_sp);
     }

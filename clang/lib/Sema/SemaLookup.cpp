@@ -21,7 +21,6 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/Builtins.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/ModuleLoader.h"
@@ -928,8 +927,13 @@ bool Sema::LookupBuiltin(LookupResult &R) {
         if (II == getASTContext().getMakeIntegerSeqName()) {
           R.addDecl(getASTContext().getMakeIntegerSeqDecl());
           return true;
-        } else if (II == getASTContext().getTypePackElementName()) {
+        }
+        if (II == getASTContext().getTypePackElementName()) {
           R.addDecl(getASTContext().getTypePackElementDecl());
+          return true;
+        }
+        if (II == getASTContext().getBuiltinCommonTypeName()) {
+          R.addDecl(getASTContext().getBuiltinCommonTypeDecl());
           return true;
         }
       }
@@ -1195,7 +1199,7 @@ static bool LookupDirect(Sema &S, LookupResult &R, const DeclContext *DC) {
     EPI.ExtInfo = EPI.ExtInfo.withCallingConv(CC_C);
     EPI.ExceptionSpec = EST_None;
     QualType ExpectedType = R.getSema().Context.getFunctionType(
-        R.getLookupName().getCXXNameType(), std::nullopt, EPI);
+        R.getLookupName().getCXXNameType(), {}, EPI);
 
     // Perform template argument deduction against the type that we would
     // expect the function to have.
@@ -1610,7 +1614,7 @@ bool Sema::isUsableModule(const Module *M) {
 
   // Otherwise, the global module fragment from other translation unit is not
   // directly usable.
-  if (M->isGlobalModule())
+  if (M->isExplicitGlobalModule())
     return false;
 
   Module *Current = getCurrentModule();
@@ -1619,6 +1623,13 @@ bool Sema::isUsableModule(const Module *M) {
   // another module easily.
   if (!Current)
     return false;
+
+  // For implicit global module, the decls in the same modules with the parent
+  // module should be visible to the decls in the implicit global module.
+  if (Current->isImplicitGlobalModule())
+    Current = Current->getTopLevelModule();
+  if (M->isImplicitGlobalModule())
+    M = M->getTopLevelModule();
 
   // If M is the module we're parsing or M and the current module unit lives in
   // the same module, M should be usable.
@@ -3210,6 +3221,9 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     // Array parameter types are treated as fundamental types.
     case Type::ArrayParameter:
       break;
+
+    case Type::HLSLAttributedResource:
+      T = cast<HLSLAttributedResourceType>(T)->getWrappedType().getTypePtr();
     }
 
     if (Queue.empty())
@@ -3661,7 +3675,9 @@ Sema::LookupLiteralOperator(Scope *S, LookupResult &R,
           TemplateArgumentLoc Arg(TemplateArgument(StringLit), StringLit);
           if (CheckTemplateArgument(
                   Params->getParam(0), Arg, FD, R.getNameLoc(), R.getNameLoc(),
-                  0, SugaredChecked, CanonicalChecked, CTAK_Specified) ||
+                  0, SugaredChecked, CanonicalChecked, CTAK_Specified,
+                  /*PartialOrdering=*/false,
+                  /*MatchedPackOnParmToNonPackOnArg=*/nullptr) ||
               Trap.hasErrorOccurred())
             IsTemplate = false;
         }
@@ -3845,8 +3861,9 @@ void Sema::ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
             // exports are only valid in module purview and outside of any
             // PMF (although a PMF should not even be present in a module
             // with an import).
-            assert(FM && FM->isNamedModule() && !FM->isPrivateModule() &&
-                   "bad export context");
+            assert(FM &&
+                   (FM->isNamedModule() || FM->isImplicitGlobalModule()) &&
+                   !FM->isPrivateModule() && "bad export context");
             // .. are attached to a named module M, do not appear in the
             // translation unit containing the point of the lookup..
             if (D->isInAnotherModuleUnit() &&
@@ -4880,7 +4897,6 @@ void TypoCorrectionConsumer::NamespaceSpecifierSet::addNameSpecifier(
       SmallVector<const IdentifierInfo *, 4> NewNameSpecifierIdentifiers;
       getNestedNameSpecifierIdentifiers(NNS, NewNameSpecifierIdentifiers);
       NNS->print(SpecifierOStream, Context.getPrintingPolicy());
-      SpecifierOStream.flush();
       SameNameSpecifier = NewNameSpecifier == CurNameSpecifier;
     }
     if (SameNameSpecifier || llvm::is_contained(CurContextIdentifiers, Name)) {

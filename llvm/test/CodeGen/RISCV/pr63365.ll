@@ -14,6 +14,7 @@ define void @f() {
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 BB:
   %A1 = alloca ptr, align 8

@@ -138,7 +138,8 @@ bool hasPromisedInterface(Dialect &dialect) {
 /// encountered.
 class DialectRegistry {
   using MapTy =
-      std::map<std::string, std::pair<TypeID, DialectAllocatorFunction>>;
+      std::map<std::string, std::pair<TypeID, DialectAllocatorFunction>,
+               std::less<>>;
 
 public:
   explicit DialectRegistry();

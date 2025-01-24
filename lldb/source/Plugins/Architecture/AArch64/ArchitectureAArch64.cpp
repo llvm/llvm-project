@@ -100,6 +100,25 @@ bool ArchitectureAArch64::ReconfigureRegisterInfo(DynamicRegisterInfo &reg_info,
     if (reg_value != fail_value && reg_value <= 32)
       svg_reg_value = reg_value;
   }
+  if (!svg_reg_value) {
+    const RegisterInfo *darwin_svg_reg_info = reg_info.GetRegisterInfo("svl");
+    if (darwin_svg_reg_info) {
+      uint32_t svg_reg_num = darwin_svg_reg_info->kinds[eRegisterKindLLDB];
+      uint64_t reg_value =
+          reg_context.ReadRegisterAsUnsigned(svg_reg_num, fail_value);
+      // UpdateARM64SVERegistersInfos and UpdateARM64SMERegistersInfos
+      // expect the number of 8-byte granules; darwin provides number of
+      // bytes.
+      if (reg_value != fail_value && reg_value <= 256) {
+        svg_reg_value = reg_value / 8;
+        // Apple hardware only implements Streaming SVE mode, so
+        // the non-streaming Vector Length is not reported by the
+        // kernel. Set both svg and vg to this svl value.
+        if (!vg_reg_value)
+          vg_reg_value = reg_value / 8;
+      }
+    }
+  }
 
   if (!vg_reg_value && !svg_reg_value)
     return false;

@@ -118,7 +118,7 @@ void ScheduleDAGFast::Schedule() {
   LiveRegCycles.resize(TRI->getNumRegs(), 0);
 
   // Build the scheduling graph.
-  BuildSchedGraph(nullptr);
+  BuildSchedGraph();
 
   LLVM_DEBUG(dump());
 
@@ -756,7 +756,7 @@ void ScheduleDAGLinearize::Schedule() {
     // Glue user must be scheduled together with the glue operand. So other
     // users of the glue operand must be treated as its users.
     SDNode *ImmGUser = Glue->getGluedUser();
-    for (const SDNode *U : Glue->uses())
+    for (const SDNode *U : Glue->users())
       if (U == ImmGUser)
         --Degree;
     GUser->setNodeId(UDegree + Degree);
@@ -770,7 +770,7 @@ void ScheduleDAGLinearize::Schedule() {
 MachineBasicBlock*
 ScheduleDAGLinearize::EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
   InstrEmitter Emitter(DAG->getTarget(), BB, InsertPos);
-  DenseMap<SDValue, Register> VRBaseMap;
+  InstrEmitter::VRBaseMapType VRBaseMap;
 
   LLVM_DEBUG({ dbgs() << "\n*** Final schedule ***\n"; });
 

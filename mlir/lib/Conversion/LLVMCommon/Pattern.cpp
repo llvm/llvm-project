@@ -62,7 +62,7 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
     Location loc, MemRefType type, Value memRefDesc, ValueRange indices,
     ConversionPatternRewriter &rewriter) const {
 
-  auto [strides, offset] = getStridesAndOffset(type);
+  auto [strides, offset] = type.getStridesAndOffset();
 
   MemRefDescriptor memRefDescriptor(memRefDesc);
   // Use a canonical representation of the start address so that later
@@ -139,8 +139,6 @@ void ConvertToLLVMPattern::getMemRefDescriptorSizes(
     strides[i] = runningStride;
 
     int64_t staticSize = memRefType.getShape()[i];
-    if (staticSize == 0)
-      continue;
     bool useSizeAsStride = stride == 1;
     if (staticSize == ShapedType::kDynamic)
       stride = ShapedType::kDynamic;
