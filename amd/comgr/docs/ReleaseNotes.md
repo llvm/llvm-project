@@ -219,6 +219,7 @@ New Targets
  - gfx940
  - gfx941
  - gfx942
+ - gfx950
  - gfx1036
  - gfx1150
  - gfx1151
