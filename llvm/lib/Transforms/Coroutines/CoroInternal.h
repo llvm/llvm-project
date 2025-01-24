@@ -26,6 +26,7 @@ bool isSuspendBlock(BasicBlock *BB);
 bool declaresAnyIntrinsic(const Module &M);
 bool declaresIntrinsics(const Module &M,
                         const std::initializer_list<StringRef>);
+bool declaresIntrinsics(const Module &M, const DenseSet<llvm::Intrinsic::ID> &);
 void replaceCoroFree(CoroIdInst *CoroId, bool Elide);
 
 /// Replaces all @llvm.coro.alloc intrinsics calls associated with a given

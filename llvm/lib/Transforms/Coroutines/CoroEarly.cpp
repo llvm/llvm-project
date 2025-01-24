@@ -148,8 +148,7 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
   }
 
   Builder.SetInsertPoint(II);
-  auto *NoopCoroVoidPtr = Builder.CreateBitCast(NoopCoro, Int8Ptr);
-  II->replaceAllUsesWith(NoopCoroVoidPtr);
+  II->replaceAllUsesWith(NoopCoro);
   II->eraseFromParent();
 }
 
@@ -245,11 +244,13 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
 
 static bool declaresCoroEarlyIntrinsics(const Module &M) {
   return coro::declaresIntrinsics(
-      M, {"llvm.coro.id", "llvm.coro.id.retcon", "llvm.coro.id.retcon.once",
-          "llvm.coro.id.async", "llvm.coro.destroy", "llvm.coro.done",
-          "llvm.coro.end", "llvm.coro.end.async", "llvm.coro.noop",
-          "llvm.coro.free", "llvm.coro.promise", "llvm.coro.resume",
-          "llvm.coro.suspend"});
+      M, DenseSet<Intrinsic::ID>{
+             Intrinsic::coro_id, Intrinsic::coro_id_retcon,
+             Intrinsic::coro_id_retcon_once, Intrinsic::coro_id_async,
+             Intrinsic::coro_destroy, Intrinsic::coro_done, Intrinsic::coro_end,
+             Intrinsic::coro_end_async, Intrinsic::coro_noop,
+             Intrinsic::coro_free, Intrinsic::coro_promise,
+             Intrinsic::coro_resume, Intrinsic::coro_suspend});
 }
 
 PreservedAnalyses CoroEarlyPass::run(Module &M, ModuleAnalysisManager &) {
