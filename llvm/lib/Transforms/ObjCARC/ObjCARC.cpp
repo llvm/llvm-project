@@ -32,9 +32,9 @@ CallInst *objcarc::createCallInstWithColors(
   if (!BlockColors.empty()) {
     const ColorVector &CV = BlockColors.find(InsertBefore->getParent())->second;
     assert(CV.size() == 1 && "non-unique color for block!");
-    Instruction *EHPad = CV.front()->getFirstNonPHI();
+    BasicBlock::iterator EHPad = CV.front()->getFirstNonPHIIt();
     if (EHPad->isEHPad())
-      OpBundles.emplace_back("funclet", EHPad);
+      OpBundles.emplace_back("funclet", &*EHPad);
   }
 
   return CallInst::Create(FTy, Callee, Args, OpBundles, NameStr, InsertBefore);

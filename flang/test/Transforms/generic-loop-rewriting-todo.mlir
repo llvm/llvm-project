@@ -1,18 +1,5 @@
 // RUN: fir-opt --omp-generic-loop-conversion -verify-diagnostics %s
 
-func.func @_QPtarget_loop() {
-  %c0 = arith.constant 0 : i32
-  %c10 = arith.constant 10 : i32
-  %c1 = arith.constant 1 : i32
-  // expected-error@below {{not yet implemented: Standalone `omp loop` directive}}
-  omp.loop {
-    omp.loop_nest (%arg3) : i32 = (%c0) to (%c10) inclusive step (%c1) {
-      omp.yield
-    }
-  }
-  return
-}
-
 func.func @_QPtarget_parallel_loop() {
   omp.target {
     omp.parallel {

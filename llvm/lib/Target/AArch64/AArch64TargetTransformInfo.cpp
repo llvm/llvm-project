@@ -1204,7 +1204,7 @@ static std::optional<Instruction *> instCombineSVEDup(InstCombiner &IC,
   auto *IdxTy = Type::getInt64Ty(II.getContext());
   auto *Insert = InsertElementInst::Create(
       II.getArgOperand(0), II.getArgOperand(2), ConstantInt::get(IdxTy, 0));
-  Insert->insertBefore(&II);
+  Insert->insertBefore(II.getIterator());
   Insert->takeName(&II);
 
   return IC.replaceInstUsesWith(II, Insert);
@@ -1357,7 +1357,7 @@ static std::optional<Instruction *> instCombineSVELast(InstCombiner &IC,
     // The intrinsic is extracting lane 0 so use an extract instead.
     auto *IdxTy = Type::getInt64Ty(II.getContext());
     auto *Extract = ExtractElementInst::Create(Vec, ConstantInt::get(IdxTy, 0));
-    Extract->insertBefore(&II);
+    Extract->insertBefore(II.getIterator());
     Extract->takeName(&II);
     return IC.replaceInstUsesWith(II, Extract);
   }
@@ -1393,7 +1393,7 @@ static std::optional<Instruction *> instCombineSVELast(InstCombiner &IC,
   // The intrinsic is extracting a fixed lane so use an extract instead.
   auto *IdxTy = Type::getInt64Ty(II.getContext());
   auto *Extract = ExtractElementInst::Create(Vec, ConstantInt::get(IdxTy, Idx));
-  Extract->insertBefore(&II);
+  Extract->insertBefore(II.getIterator());
   Extract->takeName(&II);
   return IC.replaceInstUsesWith(II, Extract);
 }
@@ -1954,10 +1954,8 @@ instCombineLD1GatherIndex(InstCombiner &IC, IntrinsicInst &II) {
     Align Alignment =
         BasePtr->getPointerAlignment(II.getDataLayout());
 
-    Type *VecPtrTy = PointerType::getUnqual(Ty);
     Value *Ptr = IC.Builder.CreateGEP(cast<VectorType>(Ty)->getElementType(),
                                       BasePtr, IndexBase);
-    Ptr = IC.Builder.CreateBitCast(Ptr, VecPtrTy);
     CallInst *MaskedLoad =
         IC.Builder.CreateMaskedLoad(Ty, Ptr, Alignment, Mask, PassThru);
     MaskedLoad->takeName(&II);
@@ -1986,9 +1984,6 @@ instCombineST1ScatterIndex(InstCombiner &IC, IntrinsicInst &II) {
 
     Value *Ptr = IC.Builder.CreateGEP(cast<VectorType>(Ty)->getElementType(),
                                       BasePtr, IndexBase);
-    Type *VecPtrTy = PointerType::getUnqual(Ty);
-    Ptr = IC.Builder.CreateBitCast(Ptr, VecPtrTy);
-
     (void)IC.Builder.CreateMaskedStore(Val, Ptr, Alignment, Mask);
 
     return IC.eraseInstFromFunction(II);
@@ -3623,7 +3618,13 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     // so the cost can be cheaper (smull or umull).
     if (LT.second != MVT::v2i64 || isWideningInstruction(Ty, Opcode, Args))
       return LT.first;
-    return LT.first * 14;
+    return cast<VectorType>(Ty)->getElementCount().getKnownMinValue() *
+           (getArithmeticInstrCost(Opcode, Ty->getScalarType(), CostKind) +
+            getVectorInstrCost(Instruction::ExtractElement, Ty, CostKind, -1,
+                               nullptr, nullptr) *
+                2 +
+            getVectorInstrCost(Instruction::InsertElement, Ty, CostKind, -1,
+                               nullptr, nullptr));
   case ISD::ADD:
   case ISD::XOR:
   case ISD::OR:
@@ -4662,6 +4663,66 @@ InstructionCost AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index) {
   assert(Entry && "Illegal Type for Splice");
   LegalizationCost += Entry->Cost;
   return LegalizationCost * LT.first;
+}
+
+InstructionCost AArch64TTIImpl::getPartialReductionCost(
+    unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+    ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+    TTI::PartialReductionExtendKind OpBExtend,
+    std::optional<unsigned> BinOp) const {
+  InstructionCost Invalid = InstructionCost::getInvalid();
+  InstructionCost Cost(TTI::TCC_Basic);
+
+  if (Opcode != Instruction::Add)
+    return Invalid;
+
+  if (InputTypeA != InputTypeB)
+    return Invalid;
+
+  EVT InputEVT = EVT::getEVT(InputTypeA);
+  EVT AccumEVT = EVT::getEVT(AccumType);
+
+  if (VF.isScalable() && !ST->isSVEorStreamingSVEAvailable())
+    return Invalid;
+  if (VF.isFixed() && (!ST->isNeonAvailable() || !ST->hasDotProd()))
+    return Invalid;
+
+  if (InputEVT == MVT::i8) {
+    switch (VF.getKnownMinValue()) {
+    default:
+      return Invalid;
+    case 8:
+      if (AccumEVT == MVT::i32)
+        Cost *= 2;
+      else if (AccumEVT != MVT::i64)
+        return Invalid;
+      break;
+    case 16:
+      if (AccumEVT == MVT::i64)
+        Cost *= 2;
+      else if (AccumEVT != MVT::i32)
+        return Invalid;
+      break;
+    }
+  } else if (InputEVT == MVT::i16) {
+    // FIXME: Allow i32 accumulator but increase cost, as we would extend
+    //        it to i64.
+    if (VF.getKnownMinValue() != 8 || AccumEVT != MVT::i64)
+      return Invalid;
+  } else
+    return Invalid;
+
+  // AArch64 supports lowering mixed extensions to a usdot but only if the
+  // i8mm or sve/streaming features are available.
+  if (OpAExtend == TTI::PR_None || OpBExtend == TTI::PR_None ||
+      (OpAExtend != OpBExtend && !ST->hasMatMulInt8() &&
+       !ST->isSVEorStreamingSVEAvailable()))
+    return Invalid;
+
+  if (!BinOp || *BinOp != Instruction::Mul)
+    return Invalid;
+
+  return Cost;
 }
 
 InstructionCost AArch64TTIImpl::getShuffleCost(

@@ -96,6 +96,12 @@ STATISTIC(NumGlobalArraysPadded,
           "Number of global arrays padded to alignment boundary");
 
 static cl::opt<bool>
+    OptimizeNonFMVCallers("optimize-non-fmv-callers",
+                          cl::desc("Statically resolve calls to versioned "
+                                   "functions from non-versioned callers."),
+                          cl::init(true), cl::Hidden);
+
+static cl::opt<bool>
     EnableColdCCStressTest("enable-coldcc-stress-test",
                            cl::desc("Enable stress test of coldcc by adding "
                                     "calling conv to all internal functions."),
@@ -2715,6 +2721,9 @@ static bool OptimizeNonTrivialIFuncs(
 
     assert(!Callees.empty() && "Expecting successful collection of versions");
 
+    LLVM_DEBUG(dbgs() << "Statically resolving calls to function "
+                      << Resolver->getName() << "\n");
+
     // Cache the feature mask for each callee.
     for (Function *Callee : Callees) {
       auto [It, Inserted] = FeatureMask.try_emplace(Callee);
@@ -2785,12 +2794,15 @@ static bool OptimizeNonTrivialIFuncs(
       } else {
         // We can't reason much about non-FMV callers. Just pick the highest
         // priority callee if it matches, otherwise bail.
-        if (I > 0 || !implies(CallerBits, CalleeBits))
+        if (!OptimizeNonFMVCallers || I > 0 || !implies(CallerBits, CalleeBits))
           continue;
       }
       auto &Calls = CallSites[Caller];
-      for (CallBase *CS : Calls)
+      for (CallBase *CS : Calls) {
+        LLVM_DEBUG(dbgs() << "Redirecting call " << Caller->getName() << " -> "
+                          << Callee->getName() << "\n");
         CS->setCalledOperand(Callee);
+      }
       Changed = true;
     }
     if (IF.use_empty() ||

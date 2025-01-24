@@ -8,8 +8,7 @@ define void @PR95278(ptr %p0, ptr %p1) {
 ; CHECK-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
 ; CHECK-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; CHECK-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-NEXT:    vmovd %xmm0, %eax
-; CHECK-NEXT:    movw %ax, (%rsi)
+; CHECK-NEXT:    vpextrw $0, %xmm0, (%rsi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %load = load <1024 x half>, ptr %p0, align 2

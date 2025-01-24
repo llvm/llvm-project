@@ -609,6 +609,113 @@ static void addSymbol(Object &Obj, const NewSymbolInfo &SymInfo,
       Sec ? (uint16_t)SYMBOL_SIMPLE_INDEX : (uint16_t)SHN_ABS, 0);
 }
 
+namespace {
+struct RemoveNoteDetail {
+  struct DeletedRange {
+    uint64_t OldFrom;
+    uint64_t OldTo;
+  };
+
+  template <class ELFT>
+  static std::vector<DeletedRange>
+  findNotesToRemove(ArrayRef<uint8_t> Data, size_t Align,
+                    ArrayRef<RemoveNoteInfo> NotesToRemove);
+  static std::vector<uint8_t> updateData(ArrayRef<uint8_t> OldData,
+                                         ArrayRef<DeletedRange> ToRemove);
+};
+} // namespace
+
+template <class ELFT>
+std::vector<RemoveNoteDetail::DeletedRange>
+RemoveNoteDetail::findNotesToRemove(ArrayRef<uint8_t> Data, size_t Align,
+                                    ArrayRef<RemoveNoteInfo> NotesToRemove) {
+  using Elf_Nhdr = typename ELFT::Nhdr;
+  using Elf_Note = typename ELFT::Note;
+  std::vector<DeletedRange> ToRemove;
+  uint64_t CurPos = 0;
+  while (CurPos + sizeof(Elf_Nhdr) <= Data.size()) {
+    auto Nhdr = reinterpret_cast<const Elf_Nhdr *>(Data.data() + CurPos);
+    size_t FullSize = Nhdr->getSize(Align);
+    if (CurPos + FullSize > Data.size())
+      break;
+    Elf_Note Note(*Nhdr);
+    bool ShouldRemove =
+        llvm::any_of(NotesToRemove, [&Note](const RemoveNoteInfo &NoteInfo) {
+          return NoteInfo.TypeId == Note.getType() &&
+                 (NoteInfo.Name.empty() || NoteInfo.Name == Note.getName());
+        });
+    if (ShouldRemove)
+      ToRemove.push_back({CurPos, CurPos + FullSize});
+    CurPos += FullSize;
+  }
+  return ToRemove;
+}
+
+std::vector<uint8_t>
+RemoveNoteDetail::updateData(ArrayRef<uint8_t> OldData,
+                             ArrayRef<DeletedRange> ToRemove) {
+  std::vector<uint8_t> NewData;
+  NewData.reserve(OldData.size());
+  uint64_t CurPos = 0;
+  for (const DeletedRange &RemRange : ToRemove) {
+    if (CurPos < RemRange.OldFrom) {
+      auto Slice = OldData.slice(CurPos, RemRange.OldFrom - CurPos);
+      NewData.insert(NewData.end(), Slice.begin(), Slice.end());
+    }
+    CurPos = RemRange.OldTo;
+  }
+  if (CurPos < OldData.size()) {
+    auto Slice = OldData.slice(CurPos);
+    NewData.insert(NewData.end(), Slice.begin(), Slice.end());
+  }
+  return NewData;
+}
+
+static Error removeNotes(Object &Obj, endianness Endianness,
+                         ArrayRef<RemoveNoteInfo> NotesToRemove,
+                         function_ref<Error(Error)> ErrorCallback) {
+  // TODO: Support note segments.
+  if (ErrorCallback) {
+    for (Segment &Seg : Obj.segments()) {
+      if (Seg.Type == PT_NOTE) {
+        if (Error E = ErrorCallback(createStringError(
+                errc::not_supported, "note segments are not supported")))
+          return E;
+        break;
+      }
+    }
+  }
+  for (auto &Sec : Obj.sections()) {
+    if (Sec.Type != SHT_NOTE || !Sec.hasContents())
+      continue;
+    // TODO: Support note sections in segments.
+    if (Sec.ParentSegment) {
+      if (ErrorCallback)
+        if (Error E = ErrorCallback(createStringError(
+                errc::not_supported,
+                "cannot remove note(s) from " + Sec.Name +
+                    ": sections in segments are not supported")))
+          return E;
+      continue;
+    }
+    ArrayRef<uint8_t> OldData = Sec.getContents();
+    size_t Align = std::max<size_t>(4, Sec.Align);
+    // Note: notes for both 32-bit and 64-bit ELF files use 4-byte words in the
+    // header, so the parsers are the same.
+    auto ToRemove = (Endianness == endianness::little)
+                        ? RemoveNoteDetail::findNotesToRemove<ELF64LE>(
+                              OldData, Align, NotesToRemove)
+                        : RemoveNoteDetail::findNotesToRemove<ELF64BE>(
+                              OldData, Align, NotesToRemove);
+    if (!ToRemove.empty()) {
+      if (Error E = Obj.updateSectionData(
+              Sec, RemoveNoteDetail::updateData(OldData, ToRemove)))
+        return E;
+    }
+  }
+  return Error::success();
+}
+
 static Error
 handleUserSection(const NewSectionInfo &NewSection,
                   function_ref<Error(StringRef, ArrayRef<uint8_t>)> F) {
@@ -798,6 +905,12 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
   endianness E = OutputElfType == ELFT_ELF32LE || OutputElfType == ELFT_ELF64LE
                      ? endianness::little
                      : endianness::big;
+
+  if (!ELFConfig.NotesToRemove.empty()) {
+    if (Error Err =
+            removeNotes(Obj, E, ELFConfig.NotesToRemove, Config.ErrorCallback))
+      return Err;
+  }
 
   for (const NewSectionInfo &AddedSection : Config.AddSection) {
     auto AddSection = [&](StringRef Name, ArrayRef<uint8_t> Data) -> Error {

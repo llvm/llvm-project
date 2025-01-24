@@ -134,7 +134,7 @@ TEST(StripTest, LoopMetadata) {
   // we update the terminator's metadata correctly, we should be able to
   // observe the change in emission kind for the CU.
   auto getEmissionKind = [&]() {
-    Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHI();
+    Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHIIt();
     MDNode *LoopMD = I.getMetadata(LLVMContext::MD_loop);
     return cast<DILocation>(LoopMD->getOperand(1))
         ->getScope()
@@ -183,7 +183,7 @@ TEST(MetadataTest, DeleteInstUsedByDbgRecord) {
 )");
 
   // Find %b = add ...
-  Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHI();
+  Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHIIt();
 
   // Find the dbg.value using %b.
   SmallVector<DbgValueInst *, 1> DVIs;
@@ -268,7 +268,7 @@ TEST(MetadataTest, DeleteInstUsedByDbgVariableRecord) {
     !11 = !DILocation(line: 1, column: 1, scope: !6)
 )");
 
-  Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHI();
+  Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHIIt();
 
   // Find the DbgVariableRecords using %b.
   SmallVector<DbgValueInst *, 2> DVIs;
@@ -319,7 +319,7 @@ TEST(MetadataTest, OrderingOfDbgVariableRecords) {
     !12 = !DILocalVariable(name: "bar", scope: !6, file: !1, line: 1, type: !10)
 )");
 
-  Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHI();
+  Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHIIt();
 
   SmallVector<DbgValueInst *, 2> DVIs;
   SmallVector<DbgVariableRecord *, 2> DVRs;
@@ -902,7 +902,7 @@ TEST(MetadataTest, ConvertDbgToDbgVariableRecord) {
 )");
 
   // Find the first dbg.value,
-  Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHI();
+  Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHIIt();
   const DILocalVariable *Var = nullptr;
   const DIExpression *Expr = nullptr;
   const DILocation *Loc = nullptr;

@@ -980,6 +980,10 @@ module std [system] {
       export std.string // public data member of type std::string
       export std.vector // public data members of type std::vector
     }
+    module utc_clock {
+      header "__chrono/utc_clock.h"
+      export std.chrono.time_point
+    }
     module weekday                    { header "__chrono/weekday.h" }
     module year_month_day             { header "__chrono/year_month_day.h" }
     module year_month_weekday         { header "__chrono/year_month_weekday.h" }
