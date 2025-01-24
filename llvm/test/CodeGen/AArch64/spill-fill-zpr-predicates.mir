@@ -10,7 +10,7 @@
 
   define aarch64_sve_vector_pcs void @zpr_predicate_spill__save_restore_nzcv() #0 { entry: unreachable }
 
-  define aarch64_sve_vector_pcs void @zpr_predicate_spill__save_restore_nzcv__spill_gpr() #0 { entry: unreachable }
+  define aarch64_sve_vector_pcs void @zpr_predicate_spill__save_restore_nzcv__scavenge_csr_gpr() #0 { entry: unreachable }
 
   define aarch64_sve_vector_pcs void @zpr_predicate_spill__spill_zpr() #0 { entry: unreachable }
 
@@ -31,6 +31,7 @@ body:             |
     liveins: $p0
 
     ; CHECK-LABEL: name: zpr_predicate_spill
+    ; CHECK: stack:
     ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 16, alignment: 16,
     ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register:
     ; CHECK: liveins: $p0
@@ -145,17 +146,17 @@ body:             |
     ; EXPAND-NEXT: $p1 = frame-destroy PTRUE_B 31, implicit $vg
     ; EXPAND-NEXT: $p8 = frame-destroy CMPNE_PPzZI_B $p1, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $z0 = frame-destroy LDR_ZXI $sp, 8 :: (load (s128) from %stack.5)
-    ; EXPAND-NEXT: $p7 = frame-destroy PTRUE_B 31, implicit $vg
-    ; EXPAND-NEXT: $p7 = frame-destroy CMPNE_PPzZI_B $p7, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
+    ; EXPAND-NEXT: $p1 = frame-destroy PTRUE_B 31, implicit $vg
+    ; EXPAND-NEXT: $p7 = frame-destroy CMPNE_PPzZI_B $p1, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $z0 = frame-destroy LDR_ZXI $sp, 9 :: (load (s128) from %stack.4)
-    ; EXPAND-NEXT: $p6 = frame-destroy PTRUE_B 31, implicit $vg
-    ; EXPAND-NEXT: $p6 = frame-destroy CMPNE_PPzZI_B $p6, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
+    ; EXPAND-NEXT: $p1 = frame-destroy PTRUE_B 31, implicit $vg
+    ; EXPAND-NEXT: $p6 = frame-destroy CMPNE_PPzZI_B $p1, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $z0 = frame-destroy LDR_ZXI $sp, 10 :: (load (s128) from %stack.3)
-    ; EXPAND-NEXT: $p5 = frame-destroy PTRUE_B 31, implicit $vg
-    ; EXPAND-NEXT: $p5 = frame-destroy CMPNE_PPzZI_B $p5, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
+    ; EXPAND-NEXT: $p1 = frame-destroy PTRUE_B 31, implicit $vg
+    ; EXPAND-NEXT: $p5 = frame-destroy CMPNE_PPzZI_B $p1, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $z0 = frame-destroy LDR_ZXI $sp, 11 :: (load (s128) from %stack.2)
-    ; EXPAND-NEXT: $p4 = frame-destroy PTRUE_B 31, implicit $vg
-    ; EXPAND-NEXT: $p4 = frame-destroy CMPNE_PPzZI_B $p4, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
+    ; EXPAND-NEXT: $p1 = frame-destroy PTRUE_B 31, implicit $vg
+    ; EXPAND-NEXT: $p4 = frame-destroy CMPNE_PPzZI_B $p1, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 12, implicit $vg
     ; EXPAND-NEXT: $fp = frame-destroy LDRXui $sp, 128 :: (load (s64) from %stack.14)
     ; EXPAND-NEXT: $sp = frame-destroy ADDXri $sp, 1040, 0
@@ -194,6 +195,7 @@ body:             |
     liveins: $p0
 
     ; CHECK-LABEL: name: zpr_predicate_spill__save_restore_nzcv
+    ; CHECK: stack:
     ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 16, alignment: 16,
     ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register:
     ; CHECK: liveins: $p0
@@ -284,10 +286,10 @@ body:             |
     ; EXPAND-NEXT: $p15 = IMPLICIT_DEF
     ;
     ; EXPAND-NEXT: $z0 = LDR_ZXI killed $x8, 0 :: (load (s128) from %stack.0)
-    ; EXPAND-NEXT: $x0 = MRS 55824, implicit-def $nzcv, implicit $nzcv
+    ; EXPAND-NEXT: $fp = MRS 55824, implicit-def $nzcv, implicit $nzcv
     ; EXPAND-NEXT: $p0 = PTRUE_B 31, implicit $vg
     ; EXPAND-NEXT: $p0 = CMPNE_PPzZI_B $p0, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
-    ; EXPAND-NEXT: MSR 55824, $x0, implicit-def $nzcv
+    ; EXPAND-NEXT: MSR 55824, $fp, implicit-def $nzcv
     ;
     ; EXPAND-NEXT: FAKE_USE implicit $nzcv
     ;
@@ -318,17 +320,17 @@ body:             |
     ; EXPAND-NEXT: $p1 = frame-destroy PTRUE_B 31, implicit $vg
     ; EXPAND-NEXT: $p8 = frame-destroy CMPNE_PPzZI_B $p1, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $z0 = frame-destroy LDR_ZXI $sp, 8 :: (load (s128) from %stack.5)
-    ; EXPAND-NEXT: $p7 = frame-destroy PTRUE_B 31, implicit $vg
-    ; EXPAND-NEXT: $p7 = frame-destroy CMPNE_PPzZI_B $p7, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
+    ; EXPAND-NEXT: $p1 = frame-destroy PTRUE_B 31, implicit $vg
+    ; EXPAND-NEXT: $p7 = frame-destroy CMPNE_PPzZI_B $p1, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $z0 = frame-destroy LDR_ZXI $sp, 9 :: (load (s128) from %stack.4)
-    ; EXPAND-NEXT: $p6 = frame-destroy PTRUE_B 31, implicit $vg
-    ; EXPAND-NEXT: $p6 = frame-destroy CMPNE_PPzZI_B $p6, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
+    ; EXPAND-NEXT: $p1 = frame-destroy PTRUE_B 31, implicit $vg
+    ; EXPAND-NEXT: $p6 = frame-destroy CMPNE_PPzZI_B $p1, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $z0 = frame-destroy LDR_ZXI $sp, 10 :: (load (s128) from %stack.3)
-    ; EXPAND-NEXT: $p5 = frame-destroy PTRUE_B 31, implicit $vg
-    ; EXPAND-NEXT: $p5 = frame-destroy CMPNE_PPzZI_B $p5, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
+    ; EXPAND-NEXT: $p1 = frame-destroy PTRUE_B 31, implicit $vg
+    ; EXPAND-NEXT: $p5 = frame-destroy CMPNE_PPzZI_B $p1, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $z0 = frame-destroy LDR_ZXI $sp, 11 :: (load (s128) from %stack.2)
-    ; EXPAND-NEXT: $p4 = frame-destroy PTRUE_B 31, implicit $vg
-    ; EXPAND-NEXT: $p4 = frame-destroy CMPNE_PPzZI_B $p4, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
+    ; EXPAND-NEXT: $p1 = frame-destroy PTRUE_B 31, implicit $vg
+    ; EXPAND-NEXT: $p4 = frame-destroy CMPNE_PPzZI_B $p1, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 12, implicit $vg
     ; EXPAND-NEXT: $fp = frame-destroy LDRXui $sp, 128 :: (load (s64) from %stack.14)
     ; EXPAND-NEXT: $sp = frame-destroy ADDXri $sp, 1040, 0
@@ -361,7 +363,7 @@ body:             |
     RET_ReallyLR implicit $p0
 ...
 ---
-name: zpr_predicate_spill__save_restore_nzcv__spill_gpr
+name: zpr_predicate_spill__save_restore_nzcv__scavenge_csr_gpr
 tracksRegLiveness: true
 stack:
 liveins:
@@ -378,13 +380,15 @@ body:             |
   bb.0.entry:
     liveins: $p0, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7
 
-    ; CHECK-LABEL: name: zpr_predicate_spill__save_restore_nzcv__spill_gpr
+    ; CHECK-LABEL: name: zpr_predicate_spill__save_restore_nzcv__scavenge_csr_gpr
+    ; CHECK: stack:
     ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 16, alignment: 16,
     ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register:
     ; CHECK: liveins: $p0, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7
     ; CHECK-NEXT: {{  $}}
     ;
     ; CHECK-NEXT: $nzcv = IMPLICIT_DEF
+    ;
     ; CHECK-NEXT: $x8 = IMPLICIT_DEF
     ; CHECK-NEXT: $x9 = IMPLICIT_DEF
     ; CHECK-NEXT: $x10 = IMPLICIT_DEF
@@ -422,7 +426,7 @@ body:             |
     ;
     ; CHECK-NEXT: RET_ReallyLR implicit $p0, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $x18
 
-    ; EXPAND-LABEL: name: zpr_predicate_spill__save_restore_nzcv__spill_gpr
+    ; EXPAND-LABEL: name: zpr_predicate_spill__save_restore_nzcv__scavenge_csr_gpr
     ; EXPAND: liveins: $p0, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $fp, $p15, $p14, $p13, $p12, $p11, $p10, $p9, $p8, $p7, $p6, $p5, $p4
     ; EXPAND-NEXT: {{  $}}
     ;
@@ -453,10 +457,11 @@ body:             |
     ; EXPAND-NEXT: frame-setup STR_ZXI $z0, $sp, 10 :: (store (s128) into %stack.3)
     ; EXPAND-NEXT: $z0 = frame-setup CPY_ZPzI_B killed $p4, 1, 0
     ; EXPAND-NEXT: frame-setup STR_ZXI $z0, $sp, 11 :: (store (s128) into %stack.2)
-    ; EXPAND-NEXT: $sp = frame-setup SUBXri $sp, 1040, 0
+    ; EXPAND-NEXT: $sp = frame-setup SUBXri $sp, 1024, 0
     ; EXPAND-NEXT: $sp = frame-setup ADDVL_XXI $sp, -1, implicit $vg
     ;
     ; EXPAND-NEXT: $nzcv = IMPLICIT_DEF
+    ;
     ; EXPAND-NEXT: $x8 = IMPLICIT_DEF
     ; EXPAND-NEXT: $x9 = IMPLICIT_DEF
     ; EXPAND-NEXT: $x10 = IMPLICIT_DEF
@@ -470,7 +475,7 @@ body:             |
     ; EXPAND-NEXT: $x18 = IMPLICIT_DEF
     ;
     ; EXPAND-NEXT: $z0 = CPY_ZPzI_B $p0, 1, 0
-    ; EXPAND-NEXT: $fp = ADDXri $sp, 1040, 0
+    ; EXPAND-NEXT: $fp = ADDXri $sp, 1024, 0
     ; EXPAND-NEXT: STR_ZXI $z0, $fp, 0 :: (store (s128) into %stack.0)
     ;
     ; EXPAND-NEXT: $p0 = IMPLICIT_DEF
@@ -490,17 +495,15 @@ body:             |
     ; EXPAND-NEXT: $p14 = IMPLICIT_DEF
     ; EXPAND-NEXT: $p15 = IMPLICIT_DEF
     ;
-    ; EXPAND-NEXT: STRXui $x0, $sp, 1 :: (store (s64) into %stack.16)
     ; EXPAND-NEXT: $z0 = LDR_ZXI killed $fp, 0 :: (load (s128) from %stack.0)
-    ; EXPAND-NEXT: $x0 = MRS 55824, implicit-def $nzcv, implicit $nzcv
+    ; EXPAND-NEXT: $fp = MRS 55824, implicit-def $nzcv, implicit $nzcv
     ; EXPAND-NEXT: $p0 = PTRUE_B 31, implicit $vg
     ; EXPAND-NEXT: $p0 = CMPNE_PPzZI_B $p0, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
-    ; EXPAND-NEXT: MSR 55824, $x0, implicit-def $nzcv
-    ; EXPAND-NEXT: $x0 = LDRXui $sp, 1 :: (load (s64) from %stack.16)
+    ; EXPAND-NEXT: MSR 55824, $fp, implicit-def $nzcv
     ;
     ; EXPAND-NEXT: FAKE_USE implicit $nzcv, implicit $x8, implicit $x9, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit $x18
     ;
-    ; EXPAND-NEXT: $sp = frame-destroy ADDXri $sp, 1040, 0
+    ; EXPAND-NEXT: $sp = frame-destroy ADDXri $sp, 1024, 0
     ; EXPAND-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 1, implicit $vg
     ; EXPAND-NEXT: $z0 = frame-destroy LDR_ZXI $sp, 0 :: (load (s128) from %stack.13)
     ; EXPAND-NEXT: $p1 = frame-destroy PTRUE_B 31, implicit $vg
@@ -527,17 +530,17 @@ body:             |
     ; EXPAND-NEXT: $p1 = frame-destroy PTRUE_B 31, implicit $vg
     ; EXPAND-NEXT: $p8 = frame-destroy CMPNE_PPzZI_B $p1, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $z0 = frame-destroy LDR_ZXI $sp, 8 :: (load (s128) from %stack.5)
-    ; EXPAND-NEXT: $p7 = frame-destroy PTRUE_B 31, implicit $vg
-    ; EXPAND-NEXT: $p7 = frame-destroy CMPNE_PPzZI_B $p7, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
+    ; EXPAND-NEXT: $p1 = frame-destroy PTRUE_B 31, implicit $vg
+    ; EXPAND-NEXT: $p7 = frame-destroy CMPNE_PPzZI_B $p1, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $z0 = frame-destroy LDR_ZXI $sp, 9 :: (load (s128) from %stack.4)
-    ; EXPAND-NEXT: $p6 = frame-destroy PTRUE_B 31, implicit $vg
-    ; EXPAND-NEXT: $p6 = frame-destroy CMPNE_PPzZI_B $p6, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
+    ; EXPAND-NEXT: $p1 = frame-destroy PTRUE_B 31, implicit $vg
+    ; EXPAND-NEXT: $p6 = frame-destroy CMPNE_PPzZI_B $p1, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $z0 = frame-destroy LDR_ZXI $sp, 10 :: (load (s128) from %stack.3)
-    ; EXPAND-NEXT: $p5 = frame-destroy PTRUE_B 31, implicit $vg
-    ; EXPAND-NEXT: $p5 = frame-destroy CMPNE_PPzZI_B $p5, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
+    ; EXPAND-NEXT: $p1 = frame-destroy PTRUE_B 31, implicit $vg
+    ; EXPAND-NEXT: $p5 = frame-destroy CMPNE_PPzZI_B $p1, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $z0 = frame-destroy LDR_ZXI $sp, 11 :: (load (s128) from %stack.2)
-    ; EXPAND-NEXT: $p4 = frame-destroy PTRUE_B 31, implicit $vg
-    ; EXPAND-NEXT: $p4 = frame-destroy CMPNE_PPzZI_B $p4, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
+    ; EXPAND-NEXT: $p1 = frame-destroy PTRUE_B 31, implicit $vg
+    ; EXPAND-NEXT: $p4 = frame-destroy CMPNE_PPzZI_B $p1, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 12, implicit $vg
     ; EXPAND-NEXT: $fp = frame-destroy LDRXui $sp, 128 :: (load (s64) from %stack.14)
     ; EXPAND-NEXT: $sp = frame-destroy ADDXri $sp, 1040, 0
@@ -599,6 +602,7 @@ body:             |
     liveins: $p0, $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
 
     ; CHECK-LABEL: name: zpr_predicate_spill__spill_zpr
+    ; CHECK: stack:
     ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 16, alignment: 16,
     ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register:
     ; CHECK: liveins: $p0, $z0, $z1, $z2, $z3, $z4, $z5, $z6, $z7
@@ -771,17 +775,17 @@ body:             |
     ; EXPAND-NEXT: $p1 = frame-destroy PTRUE_B 31, implicit $vg
     ; EXPAND-NEXT: $p8 = frame-destroy CMPNE_PPzZI_B $p1, $z24, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $z24 = frame-destroy LDR_ZXI $sp, 8 :: (load (s128) from %stack.13)
-    ; EXPAND-NEXT: $p7 = frame-destroy PTRUE_B 31, implicit $vg
-    ; EXPAND-NEXT: $p7 = frame-destroy CMPNE_PPzZI_B $p7, $z24, 0, implicit-def $nzcv, implicit-def $nzcv
+    ; EXPAND-NEXT: $p1 = frame-destroy PTRUE_B 31, implicit $vg
+    ; EXPAND-NEXT: $p7 = frame-destroy CMPNE_PPzZI_B $p1, $z24, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $z24 = frame-destroy LDR_ZXI $sp, 9 :: (load (s128) from %stack.12)
-    ; EXPAND-NEXT: $p6 = frame-destroy PTRUE_B 31, implicit $vg
-    ; EXPAND-NEXT: $p6 = frame-destroy CMPNE_PPzZI_B $p6, $z24, 0, implicit-def $nzcv, implicit-def $nzcv
+    ; EXPAND-NEXT: $p1 = frame-destroy PTRUE_B 31, implicit $vg
+    ; EXPAND-NEXT: $p6 = frame-destroy CMPNE_PPzZI_B $p1, $z24, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $z24 = frame-destroy LDR_ZXI $sp, 10 :: (load (s128) from %stack.11)
-    ; EXPAND-NEXT: $p5 = frame-destroy PTRUE_B 31, implicit $vg
-    ; EXPAND-NEXT: $p5 = frame-destroy CMPNE_PPzZI_B $p5, $z24, 0, implicit-def $nzcv, implicit-def $nzcv
+    ; EXPAND-NEXT: $p1 = frame-destroy PTRUE_B 31, implicit $vg
+    ; EXPAND-NEXT: $p5 = frame-destroy CMPNE_PPzZI_B $p1, $z24, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $z24 = frame-destroy LDR_ZXI $sp, 11 :: (load (s128) from %stack.10)
-    ; EXPAND-NEXT: $p4 = frame-destroy PTRUE_B 31, implicit $vg
-    ; EXPAND-NEXT: $p4 = frame-destroy CMPNE_PPzZI_B $p4, $z24, 0, implicit-def $nzcv, implicit-def $nzcv
+    ; EXPAND-NEXT: $p1 = frame-destroy PTRUE_B 31, implicit $vg
+    ; EXPAND-NEXT: $p4 = frame-destroy CMPNE_PPzZI_B $p1, $z24, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 20, implicit $vg
     ; EXPAND-NEXT: $fp = frame-destroy LDRXui $sp, 128 :: (load (s64) from %stack.22)
     ; EXPAND-NEXT: $sp = frame-destroy ADDXri $sp, 1040, 0
@@ -842,6 +846,7 @@ body:             |
     liveins: $p0, $p1, $p2, $p3
 
     ; CHECK-LABEL: name: zpr_predicate_spill_above_p7
+    ; CHECK: stack:
     ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 16, alignment: 16,
     ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register:
     ; CHECK: liveins: $p0, $p1, $p2, $p3
@@ -969,14 +974,14 @@ body:             |
     ; EXPAND-NEXT: $p4 = frame-destroy PTRUE_B 31, implicit $vg
     ; EXPAND-NEXT: $p8 = frame-destroy CMPNE_PPzZI_B $p4, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $z0 = frame-destroy LDR_ZXI $sp, 8 :: (load (s128) from %stack.5)
-    ; EXPAND-NEXT: $p7 = frame-destroy PTRUE_B 31, implicit $vg
-    ; EXPAND-NEXT: $p7 = frame-destroy CMPNE_PPzZI_B $p7, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
+    ; EXPAND-NEXT: $p4 = frame-destroy PTRUE_B 31, implicit $vg
+    ; EXPAND-NEXT: $p7 = frame-destroy CMPNE_PPzZI_B $p4, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $z0 = frame-destroy LDR_ZXI $sp, 9 :: (load (s128) from %stack.4)
-    ; EXPAND-NEXT: $p6 = frame-destroy PTRUE_B 31, implicit $vg
-    ; EXPAND-NEXT: $p6 = frame-destroy CMPNE_PPzZI_B $p6, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
+    ; EXPAND-NEXT: $p4 = frame-destroy PTRUE_B 31, implicit $vg
+    ; EXPAND-NEXT: $p6 = frame-destroy CMPNE_PPzZI_B $p4, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $z0 = frame-destroy LDR_ZXI $sp, 10 :: (load (s128) from %stack.3)
-    ; EXPAND-NEXT: $p5 = frame-destroy PTRUE_B 31, implicit $vg
-    ; EXPAND-NEXT: $p5 = frame-destroy CMPNE_PPzZI_B $p5, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
+    ; EXPAND-NEXT: $p4 = frame-destroy PTRUE_B 31, implicit $vg
+    ; EXPAND-NEXT: $p5 = frame-destroy CMPNE_PPzZI_B $p4, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
     ; EXPAND-NEXT: $z0 = frame-destroy LDR_ZXI $sp, 11 :: (load (s128) from %stack.2)
     ; EXPAND-NEXT: $p4 = frame-destroy PTRUE_B 31, implicit $vg
     ; EXPAND-NEXT: $p4 = frame-destroy CMPNE_PPzZI_B $p4, $z0, 0, implicit-def $nzcv, implicit-def $nzcv
@@ -1026,9 +1031,11 @@ body:             |
     ; CHECK-LABEL: name: zpr_predicate_spill_p4_saved
     ; CHECK: liveins: $p0, $p1, $p2, $p3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $p8 = IMPLICIT_DEF
-    ; CHECK-NEXT: RET_ReallyLR implicit $p0, implicit $p1, implicit $p2, implicit $p3
     ;
+    ; CHECK-NEXT: $p8 = IMPLICIT_DEF
+    ;
+    ; CHECK-NEXT: RET_ReallyLR implicit $p0, implicit $p1, implicit $p2, implicit $p3
+
     ; EXPAND-LABEL: name: zpr_predicate_spill_p4_saved
     ; EXPAND: liveins: $p0, $p1, $p2, $p3, $fp, $p8, $p4
     ; EXPAND-NEXT: {{  $}}
