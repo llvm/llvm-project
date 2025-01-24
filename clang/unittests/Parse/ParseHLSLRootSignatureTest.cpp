@@ -150,7 +150,26 @@ TEST_F(ParseHLSLRootSignatureTest, ValidLexAllTokensTest) {
 
     DescriptorTable
 
+    CBV SRV UAV Sampler
+    space visibility flags
+    numDescriptors offset
+
     DESCRIPTOR_RANGE_OFFSET_APPEND
+
+    DATA_VOLATILE
+    DATA_STATIC_WHILE_SET_AT_EXECUTE
+    DATA_STATIC
+    DESCRIPTORS_VOLATILE
+    DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS
+
+    shader_visibility_all
+    shader_visibility_vertex
+    shader_visibility_hull
+    shader_visibility_domain
+    shader_visibility_geometry
+    shader_visibility_pixel
+    shader_visibility_amplification
+    shader_visibility_mesh
   )cc";
 
   TrivialModuleLoader ModLoader;
