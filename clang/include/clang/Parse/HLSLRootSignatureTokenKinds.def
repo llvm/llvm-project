@@ -1,0 +1,35 @@
+//===--- HLSLRootSignature.def - Tokens and Enum Database -------*- C++ -*-===//
+
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the TokenKinds used in the Root Signature DSL. This
+// includes keywords, enums and a small subset of punctuators. Users of this
+// file must optionally #define the TOK, KEYWORD, ENUM or specific ENUM macros
+// to make use of this file.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef TOK
+#define TOK(X)
+#endif
+#ifndef PUNCTUATOR
+#define PUNCTUATOR(X,Y) TOK(pu_ ## X)
+#endif
+
+// General Tokens:
+TOK(invalid)
+
+// Punctuators:
+PUNCTUATOR(l_paren, '(')
+PUNCTUATOR(r_paren, ')')
+PUNCTUATOR(comma,   ',')
+PUNCTUATOR(or,      '|')
+PUNCTUATOR(equal,   '=')
+
+#undef PUNCTUATOR
+#undef TOK

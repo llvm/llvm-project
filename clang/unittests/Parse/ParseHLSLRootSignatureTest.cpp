@@ -1,0 +1,167 @@
+//=== ParseHLSLRootSignatureTest.cpp - Parse Root Signature tests ---------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Basic/FileManager.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TargetInfo.h"
+#include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/HeaderSearchOptions.h"
+#include "clang/Lex/Lexer.h"
+#include "clang/Lex/ModuleLoader.h"
+#include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/PreprocessorOptions.h"
+
+#include "clang/Parse/ParseHLSLRootSignature.h"
+#include "gtest/gtest.h"
+
+using namespace clang;
+
+namespace {
+
+// Diagnostic helper for helper tests
+class ExpectedDiagConsumer : public DiagnosticConsumer {
+  virtual void anchor() {}
+
+  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                        const Diagnostic &Info) override {
+    if (!FirstDiag || !ExpectedDiagID.has_value()) {
+      Satisfied = false;
+      return;
+    }
+    FirstDiag = false;
+
+    Satisfied = ExpectedDiagID.value() == Info.getID();
+  }
+
+  bool FirstDiag = true;
+  bool Satisfied = false;
+  std::optional<unsigned> ExpectedDiagID;
+
+public:
+  void SetNoDiag() {
+    Satisfied = true;
+    ExpectedDiagID = std::nullopt;
+  }
+
+  void SetExpected(unsigned DiagID) {
+    Satisfied = false;
+    ExpectedDiagID = DiagID;
+  }
+
+  bool IsSatisfied() { return Satisfied; }
+};
+
+// The test fixture.
+class ParseHLSLRootSignatureTest : public ::testing::Test {
+protected:
+  ParseHLSLRootSignatureTest()
+      : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
+        Consumer(new ExpectedDiagConsumer()),
+        Diags(DiagID, new DiagnosticOptions, Consumer),
+        SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
+    TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
+    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+  }
+
+  std::unique_ptr<Preprocessor> CreatePP(StringRef Source,
+                                         TrivialModuleLoader &ModLoader) {
+    std::unique_ptr<llvm::MemoryBuffer> Buf =
+        llvm::MemoryBuffer::getMemBuffer(Source);
+    SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
+
+    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                            Diags, LangOpts, Target.get());
+    std::unique_ptr<Preprocessor> PP = std::make_unique<Preprocessor>(
+        std::make_shared<PreprocessorOptions>(), Diags, LangOpts, SourceMgr,
+        HeaderInfo, ModLoader,
+        /*IILookup =*/nullptr,
+        /*OwnsHeaderSearch =*/false);
+    PP->Initialize(*Target);
+    PP->EnterMainSourceFile();
+    return PP;
+  }
+
+  void CheckTokens(SmallVector<hlsl::RootSignatureToken> &Computed,
+                   SmallVector<hlsl::TokenKind> &Expected) {
+    ASSERT_EQ(Computed.size(), Expected.size());
+    for (unsigned I = 0, E = Expected.size(); I != E; ++I) {
+      ASSERT_EQ(Computed[I].Kind, Expected[I]);
+    }
+  }
+
+  FileSystemOptions FileMgrOpts;
+  FileManager FileMgr;
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
+  ExpectedDiagConsumer *Consumer;
+  DiagnosticsEngine Diags;
+  SourceManager SourceMgr;
+  LangOptions LangOpts;
+  std::shared_ptr<TargetOptions> TargetOpts;
+  IntrusiveRefCntPtr<TargetInfo> Target;
+};
+
+// Valid Lexing Tests
+
+TEST_F(ParseHLSLRootSignatureTest, ValidLexAllTokensTest) {
+  // This test will check that we can lex all defined tokens as defined in
+  // HLSLRootSignatureTokenKinds.def, plus some additional integer variations
+  const llvm::StringLiteral Source = R"cc(
+    (),|=
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  // Test no diagnostics produced
+  Consumer->SetNoDiag();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
+
+  SmallVector<hlsl::RootSignatureToken> Tokens = {
+      hlsl::RootSignatureToken(
+          SourceLocation()) // invalid token for completeness
+  };
+  ASSERT_FALSE(Lexer.Lex(Tokens));
+  ASSERT_TRUE(Consumer->IsSatisfied());
+
+  SmallVector<hlsl::TokenKind> Expected = {
+#define TOK(NAME) hlsl::TokenKind::NAME,
+#include "clang/Parse/HLSLRootSignatureTokenKinds.def"
+  };
+
+  CheckTokens(Tokens, Expected);
+}
+
+// Invalid Lexing Tests
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidLexIdentifierTest) {
+  // This test will check that the lexing fails due to no valid token
+  const llvm::StringLiteral Source = R"cc(
+    notAToken
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  // Test correct diagnostic produced
+  Consumer->SetExpected(diag::err_hlsl_invalid_token);
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
+
+  SmallVector<hlsl::RootSignatureToken> Tokens;
+  ASSERT_TRUE(Lexer.Lex(Tokens));
+  ASSERT_TRUE(Consumer->IsSatisfied());
+}
+
+} // anonymous namespace

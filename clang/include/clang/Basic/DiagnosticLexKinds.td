@@ -1017,4 +1017,10 @@ Error<"'#pragma unsafe_buffer_usage' was not ended">;
 
 def err_pp_pragma_unsafe_buffer_usage_syntax :
 Error<"expected 'begin' or 'end'">;
+
+// HLSL Root Signature Lexing Errors
+let CategoryName = "Root Signature Lexical Issue" in {
+  def err_hlsl_invalid_token: Error<"unable to lex a valid Root Signature token">;
+}
+
 }
