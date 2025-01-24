@@ -975,7 +975,7 @@ void VPlan::execute(VPTransformState *State) {
   BasicBlock *MiddleBB = State->CFG.ExitBB;
   BasicBlock *ScalarPh = MiddleBB->getSingleSuccessor();
   auto *BrInst = new UnreachableInst(MiddleBB->getContext());
-  BrInst->insertBefore(MiddleBB->getTerminator());
+  BrInst->insertBefore(MiddleBB->getTerminator()->getIterator());
   MiddleBB->getTerminator()->eraseFromParent();
   State->CFG.DTU.applyUpdates({{DominatorTree::Delete, MiddleBB, ScalarPh}});
   // Disconnect scalar preheader and scalar header, as the dominator tree edge
