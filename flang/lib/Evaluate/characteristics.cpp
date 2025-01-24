@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/characteristics.h"
-#include "flang/Common/indirection.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/intrinsics.h"
@@ -17,6 +16,7 @@
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/indirection.h"
 #include "llvm/Support/raw_ostream.h"
 #include <initializer_list>
 

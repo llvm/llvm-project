@@ -46,7 +46,7 @@ add_flang_library(FIRTransforms
   FIRDialect
   FIRDialectSupport
   FIRSupport
-  FortranCommon
+  FortranSupport
   HLFIRDialect
 
   MLIR_LIBS

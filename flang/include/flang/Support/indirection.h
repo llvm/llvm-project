@@ -1,4 +1,4 @@
-//===-- include/flang/Common/indirection.h ----------------------*- C++ -*-===//
+//===-- include/flang/Support/indirection.h ---------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_COMMON_INDIRECTION_H_
-#define FORTRAN_COMMON_INDIRECTION_H_
+#ifndef FORTRAN_SUPPORT_INDIRECTION_H_
+#define FORTRAN_SUPPORT_INDIRECTION_H_
 
 // Define a smart pointer class template that is rather like
 // non-nullable std::unique_ptr<>.  Indirection<> is, like a C++ reference
@@ -20,7 +20,7 @@
 //    template class Fortran::common::Indirection<FORWARD_TYPE>;
 // in one C++ source file later where a definition of the type is visible.
 
-#include "idioms.h"
+#include "flang/Common/idioms.h"
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -171,4 +171,4 @@ private:
   void (*deleter_)(A *){nullptr};
 };
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_INDIRECTION_H_
+#endif /* FORTRAN_SUPPORT_INDIRECTION_H_ */

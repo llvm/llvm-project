@@ -1,4 +1,4 @@
-//===-- include/flang/Common/template.h -------------------------*- C++ -*-===//
+//===-- include/flang/Support/template.h ------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_COMMON_TEMPLATE_H_
-#define FORTRAN_COMMON_TEMPLATE_H_
+#ifndef FORTRAN_SUPPORT_TEMPLATE_H_
+#define FORTRAN_SUPPORT_TEMPLATE_H_
 
-#include "variant.h"
 #include "flang/Common/idioms.h"
+#include "flang/Common/variant.h"
 #include <functional>
 #include <optional>
 #include <tuple>
@@ -322,4 +322,4 @@ common::IfNoLvalue<typename VISITOR::Result, VISITOR> SearchTypes(
       std::move(visitor), std::move(defaultResult));
 }
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_TEMPLATE_H_
+#endif /* FORTRAN_SUPPORT_TEMPLATE_H_ */

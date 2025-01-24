@@ -1,4 +1,4 @@
-//===-- lib/Common/Fortran.cpp --------------------------------------------===//
+//===-- lib/Support/Fortran.cpp ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Common/Fortran.h"
-#include "flang/Common/Fortran-features.h"
+#include "flang/Support/Fortran.h"
+#include "flang/Support/Fortran-features.h"
 
 namespace Fortran::common {
 

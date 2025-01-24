@@ -1,4 +1,4 @@
-//===------ LangOptions.h ---------------------------------------*- C++ -*-===//
+//===-- include/flang/Support/LangOptions.h ---------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_COMMON_LANGOPTIONS_H
-#define FORTRAN_COMMON_LANGOPTIONS_H
+#ifndef FORTRAN_SUPPORT_LANGOPTIONS_H_
+#define FORTRAN_SUPPORT_LANGOPTIONS_H_
 
 #include <string>
 #include <vector>
@@ -45,12 +45,12 @@ public:
 
 #define LANGOPT(Name, Bits, Default) unsigned Name : Bits;
 #define ENUM_LANGOPT(Name, Type, Bits, Default)
-#include "flang/Common/LangOptions.def"
+#include "flang/Support/LangOptions.def"
 
 protected:
 #define LANGOPT(Name, Bits, Default)
 #define ENUM_LANGOPT(Name, Type, Bits, Default) unsigned Name : Bits;
-#include "flang/Common/LangOptions.def"
+#include "flang/Support/LangOptions.def"
 };
 
 /// Tracks various options which control the dialect of Fortran that is
@@ -63,7 +63,7 @@ public:
 #define ENUM_LANGOPT(Name, Type, Bits, Default) \
   Type get##Name() const { return static_cast<Type>(Name); } \
   void set##Name(Type Value) { Name = static_cast<unsigned>(Value); }
-#include "flang/Common/LangOptions.def"
+#include "flang/Support/LangOptions.def"
 
   /// Name of the IR file that contains the result of the OpenMP target
   /// host code generation.
@@ -77,4 +77,4 @@ public:
 
 } // end namespace Fortran::common
 
-#endif // FORTRAN_COMMON_LANGOPTIONS_H
+#endif /* FORTRAN_SUPPORT_LANGOPTIONS_H_ */

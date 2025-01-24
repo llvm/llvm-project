@@ -1,4 +1,4 @@
-//===-- include/flang/Common/Fortran-features.h -----------------*- C++ -*-===//
+//===-- include/flang/Support/Fortran-features.h ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_COMMON_FORTRAN_FEATURES_H_
-#define FORTRAN_COMMON_FORTRAN_FEATURES_H_
+#ifndef FORTRAN_SUPPORT_FORTRAN_FEATURES_H_
+#define FORTRAN_SUPPORT_FORTRAN_FEATURES_H_
 
-#include "flang/Common/Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
+#include "flang/Support/Fortran.h"
 #include <optional>
 #include <vector>
 
@@ -125,4 +125,4 @@ private:
   bool warnAllUsage_{false};
 };
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_FORTRAN_FEATURES_H_
+#endif /* FORTRAN_SUPPORT_FORTRAN_FEATURES_H_ */

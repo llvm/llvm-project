@@ -1,4 +1,4 @@
-//===-- include/flang/Common/reference-counted.h ----------------*- C++ -*-===//
+//===-- include/flang/Support/reference-counted.h ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_COMMON_REFERENCE_COUNTED_H_
-#define FORTRAN_COMMON_REFERENCE_COUNTED_H_
+#ifndef FORTRAN_SUPPORT_REFERENCE_COUNTED_H_
+#define FORTRAN_SUPPORT_REFERENCE_COUNTED_H_
 
 // A class template of smart pointers to objects with their own
 // reference counting object lifetimes that's lighter weight
@@ -74,4 +74,4 @@ private:
   type *p_{nullptr};
 };
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_REFERENCE_COUNTED_H_
+#endif /* FORTRAN_SUPPORT_REFERENCE_COUNTED_H_ */

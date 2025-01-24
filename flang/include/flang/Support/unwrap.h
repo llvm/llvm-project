@@ -1,4 +1,4 @@
-//===-- include/flang/Common/unwrap.h ---------------------------*- C++ -*-===//
+//===-- include/flang/Support/unwrap.h --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_COMMON_UNWRAP_H_
-#define FORTRAN_COMMON_UNWRAP_H_
+#ifndef FORTRAN_SUPPORT_UNWRAP_H_
+#define FORTRAN_SUPPORT_UNWRAP_H_
 
 #include "indirection.h"
 #include "reference-counted.h"
 #include "reference.h"
-#include "variant.h"
-#include "visit.h"
+#include "flang/Common/variant.h"
+#include "flang/Common/visit.h"
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -155,4 +155,4 @@ template <typename A, typename B> std::optional<A> UnwrapCopy(const B &x) {
   }
 }
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_UNWRAP_H_
+#endif /* FORTRAN_SUPPORT_UNWRAP_H_ */

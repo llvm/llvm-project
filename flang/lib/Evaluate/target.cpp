@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/target.h"
-#include "flang/Common/template.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/type.h"
+#include "flang/Support/template.h"
 
 namespace Fortran::evaluate {
 

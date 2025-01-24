@@ -1,4 +1,4 @@
-//===- Timing.h - Execution time measurement facilities ---------*- C++ -*-===//
+//===-- include/flang/Support/Timing.h --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_SUPPORT_TIMING_H
-#define FORTRAN_SUPPORT_TIMING_H
+#ifndef FORTRAN_SUPPORT_TIMING_H_
+#define FORTRAN_SUPPORT_TIMING_H_
 
 #include "mlir/Support/Timing.h"
 
@@ -24,4 +24,4 @@ std::unique_ptr<mlir::OutputStrategy> createTimingFormatterText(
 
 } // namespace Fortran::support
 
-#endif // FORTRAN_SUPPORT_TIMING_H
+#endif /* FORTRAN_SUPPORT_TIMING_H_ */

@@ -27,8 +27,8 @@
 #ifndef FORTRAN_LOWER_CALLINTERFACE_H
 #define FORTRAN_LOWER_CALLINTERFACE_H
 
-#include "flang/Common/reference.h"
 #include "flang/Evaluate/characteristics.h"
+#include "flang/Support/reference.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include <memory>

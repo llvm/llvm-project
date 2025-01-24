@@ -1,4 +1,4 @@
-//===-- include/flang/Common/default-kinds.h --------------------*- C++ -*-===//
+//===-- include/flang/Support/default-kinds.h -------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_COMMON_DEFAULT_KINDS_H_
-#define FORTRAN_COMMON_DEFAULT_KINDS_H_
+#ifndef FORTRAN_SUPPORT_DEFAULT_KINDS_H_
+#define FORTRAN_SUPPORT_DEFAULT_KINDS_H_
 
-#include "flang/Common/Fortran.h"
+#include "flang/Support/Fortran.h"
 #include <cstdint>
 
 namespace Fortran::common {
@@ -58,4 +58,4 @@ private:
   int defaultLogicalKind_{defaultIntegerKind_};
 };
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_DEFAULT_KINDS_H_
+#endif /* FORTRAN_SUPPORT_DEFAULT_KINDS_H_ */

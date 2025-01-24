@@ -1,4 +1,4 @@
-//===-- include/flang/Common/OpenMP-features.h -----------------*- C++ -*-====//
+//===-- include/flang/Support/OpenMP-features.h -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_COMMON_OPENMP_FEATURES_H_
-#define FORTRAN_COMMON_OPENMP_FEATURES_H_
+#ifndef FORTRAN_SUPPORT_OPENMP_FEATURES_H_
+#define FORTRAN_SUPPORT_OPENMP_FEATURES_H_
 
 namespace Fortran::common {
 
@@ -49,4 +49,4 @@ void setOpenMPMacro(int version, FortranPredefinitions &predefinitions) {
   }
 }
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_OPENMP_FEATURES_H_
+#endif /* FORTRAN_SUPPORT_OPENMP_FEATURES_H_ */

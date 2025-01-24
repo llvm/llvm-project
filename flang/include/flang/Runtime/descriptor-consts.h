@@ -9,8 +9,8 @@
 #ifndef FORTRAN_RUNTIME_DESCRIPTOR_CONSTS_H_
 #define FORTRAN_RUNTIME_DESCRIPTOR_CONSTS_H_
 
+#include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Common/api-attrs.h"
-#include "flang/ISO_Fortran_binding_wrapper.h"
 #include <cstddef>
 #include <cstdint>
 

@@ -1,4 +1,4 @@
-//===-- include/flang/Common/interval.h -------------------------*- C++ -*-===//
+//===-- include/flang/Support/interval.h ------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_COMMON_INTERVAL_H_
-#define FORTRAN_COMMON_INTERVAL_H_
+#ifndef FORTRAN_SUPPORT_INTERVAL_H_
+#define FORTRAN_SUPPORT_INTERVAL_H_
 
 // Defines a generalized template class Interval<A> to represent
 // the half-open interval [x .. x+n).
 
-#include "idioms.h"
+#include "flang/Common/idioms.h"
 #include <algorithm>
 #include <cstddef>
 #include <utility>
@@ -126,4 +126,4 @@ private:
   std::size_t size_{0};
 };
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_INTERVAL_H_
+#endif /* FORTRAN_SUPPORT_INTERVAL_H_ */

@@ -8,13 +8,13 @@
 
 #include "check-case.h"
 #include "flang/Common/idioms.h"
-#include "flang/Common/reference.h"
-#include "flang/Common/template.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/reference.h"
+#include "flang/Support/template.h"
 #include <tuple>
 
 namespace Fortran::semantics {

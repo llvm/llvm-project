@@ -1,4 +1,4 @@
-//===-- lib/Common/default-kinds.cpp --------------------------------------===//
+//===-- lib/Support/default-kinds.cpp ---------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Common/default-kinds.h"
+#include "flang/Support/default-kinds.h"
 #include "flang/Common/idioms.h"
 
 namespace Fortran::common {

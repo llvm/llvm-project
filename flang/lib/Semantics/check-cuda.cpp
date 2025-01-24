@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-cuda.h"
-#include "flang/Common/template.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/traverse.h"
@@ -17,6 +16,7 @@
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/template.h"
 
 // Once labeled DO constructs have been canonicalized and their parse subtrees
 // transformed into parser::DoConstructs, scan the parser::Blocks of the program

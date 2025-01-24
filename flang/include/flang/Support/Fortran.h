@@ -1,4 +1,4 @@
-//===-- include/flang/Common/Fortran.h --------------------------*- C++ -*-===//
+//===-- include/flang/Support/Fortran.h -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_COMMON_FORTRAN_H_
-#define FORTRAN_COMMON_FORTRAN_H_
+#ifndef FORTRAN_SUPPORT_FORTRAN_H_
+#define FORTRAN_SUPPORT_FORTRAN_H_
 
 // Fortran language concepts that are used in many phases are defined
 // once here to avoid redundancy and needless translation.
 
-#include "enum-set.h"
-#include "idioms.h"
 #include "flang/Common/Fortran-consts.h"
+#include "flang/Common/enum-set.h"
+#include "flang/Common/idioms.h"
 #include <cinttypes>
 #include <optional>
 #include <string>
@@ -109,4 +109,4 @@ inline std::string GetExternalAssemblyName(
 }
 
 } // namespace Fortran::common
-#endif // FORTRAN_COMMON_FORTRAN_H_
+#endif /* FORTRAN_SUPPORT_FORTRAN_H_ */

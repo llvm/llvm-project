@@ -12,11 +12,11 @@
 #ifndef FORTRAN_EVALUATE_TARGET_H_
 #define FORTRAN_EVALUATE_TARGET_H_
 
-#include "flang/Common/Fortran.h"
 #include "flang/Common/enum-class.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/target-rounding.h"
 #include "flang/Evaluate/common.h"
+#include "flang/Support/Fortran.h"
 #include <cstdint>
 
 namespace Fortran::evaluate {

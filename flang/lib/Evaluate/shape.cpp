@@ -8,7 +8,6 @@
 
 #include "flang/Evaluate/shape.h"
 #include "flang/Common/idioms.h"
-#include "flang/Common/template.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/fold.h"
@@ -17,6 +16,7 @@
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/message.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Support/template.h"
 #include <functional>
 
 using namespace std::placeholders; // _1, _2, &c. for std::bind()

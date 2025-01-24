@@ -1,4 +1,4 @@
-//===- MathOptionsBase.h - Math options config ------------------*- C++ -*-===//
+//===-- include/flang/Support/MathOptionsBase.h -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,8 +14,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_COMMON_MATHOPTIONSBASE_H
-#define FORTRAN_COMMON_MATHOPTIONSBASE_H
+#ifndef FORTRAN_SUPPORT_MATHOPTIONSBASE_H_
+#define FORTRAN_SUPPORT_MATHOPTIONSBASE_H_
 
 namespace Fortran::common {
 
@@ -27,18 +27,18 @@ public:
     Name = static_cast<unsigned>(Value); \
     return *this; \
   }
-#include "flang/Common/MathOptionsBase.def"
+#include "flang/Support/MathOptionsBase.def"
 
   MathOptionsBase() {
 #define ENUM_MATHOPT(Name, Type, Bits, Default) set##Name(Default);
-#include "flang/Common/MathOptionsBase.def"
+#include "flang/Support/MathOptionsBase.def"
   }
 
 private:
 #define ENUM_MATHOPT(Name, Type, Bits, Default) unsigned Name : Bits;
-#include "flang/Common/MathOptionsBase.def"
+#include "flang/Support/MathOptionsBase.def"
 };
 
 } // namespace Fortran::common
 
-#endif // FORTRAN_COMMON_MATHOPTIONSBASE_H
+#endif /* FORTRAN_SUPPORT_MATHOPTIONSBASE_H_ */
