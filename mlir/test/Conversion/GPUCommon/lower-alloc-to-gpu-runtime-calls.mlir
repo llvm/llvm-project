@@ -29,12 +29,10 @@ module attributes {gpu.container_module} {
     // CHECK: %[[isHostShared:.*]] = llvm.mlir.constant 
     // CHECK: llvm.call @mgpuMemAlloc(%[[size_bytes]], %[[nullptr]], %[[isHostShared]])
     %0 = gpu.alloc host_shared (%size) : memref<?xf32>
-    // CHECK: %[[stream:.*]] = llvm.call @mgpuStreamCreate()
-    %1 = gpu.wait async
-    %2 = gpu.dealloc async [%1] %0 : memref<?xf32>
-    // CHECK: llvm.call @mgpuStreamSynchronize(%[[stream]])
-    // CHECK: llvm.call @mgpuStreamDestroy(%[[stream]])
-    gpu.wait [%2]
+    // CHECK: %[[float_ptr:.*]] = llvm.extractvalue {{.*}}[0]
+    // CHECK: %[[stream:.*]] = llvm.mlir.zero : !llvm.ptr
+    // CHECK: llvm.call @mgpuMemFree(%[[float_ptr]], %[[stream]])
+    gpu.dealloc %0 : memref<?xf32>
     return
   }
 }

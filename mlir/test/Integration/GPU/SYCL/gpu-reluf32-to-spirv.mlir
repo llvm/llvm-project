@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline='builtin.module(spirv-attach-target{ver=v1.0 caps=Addresses,Int64,Kernel},convert-gpu-to-spirv{use-64bit-index=true},gpu.module(spirv.module(spirv-lower-abi-attrs,spirv-update-vce)),func.func(llvm-request-c-wrappers),convert-scf-to-cf,convert-cf-to-llvm,convert-arith-to-llvm,convert-math-to-llvm,convert-func-to-llvm,gpu-to-llvm{use-bare-pointers-for-kernels=true},gpu-module-to-binary,expand-strided-metadata,lower-affine,finalize-memref-to-llvm,reconcile-unrealized-casts)' \
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(spirv-attach-target{ver=v1.0 caps=Addresses,Int64,Kernel},func.func(gpu-async-region),convert-gpu-to-spirv{use-64bit-index=true},gpu.module(spirv.module(spirv-lower-abi-attrs,spirv-update-vce)),func.func(llvm-request-c-wrappers),convert-scf-to-cf,convert-cf-to-llvm,convert-arith-to-llvm,convert-math-to-llvm,convert-func-to-llvm,gpu-to-llvm{use-bare-pointers-for-kernels=true},gpu-module-to-binary,expand-strided-metadata,lower-affine,finalize-memref-to-llvm,reconcile-unrealized-casts)' \
 // RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_sycl_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
@@ -40,19 +40,14 @@ module @relu attributes {gpu.container_module} {
     %memref = gpu.alloc host_shared () : memref<4x5xf32>
     memref.copy %arg0, %memref : memref<4x5xf32> to memref<4x5xf32>
     %memref_0 = gpu.alloc host_shared () : memref<4x5xi1>
-    %2 = gpu.wait async
-    %3 = gpu.launch_func async [%2]  @test_kernel::@test_kernel blocks in (%c4, %c5, %c1) threads in (%c1, %c1, %c1) args(%memref : memref<4x5xf32>, %cst : f32, %memref_0 : memref<4x5xi1>)
-    gpu.wait [%3]
+    gpu.launch_func @test_kernel::@test_kernel blocks in (%c4, %c5, %c1) threads in (%c1, %c1, %c1) args(%memref : memref<4x5xf32>, %cst : f32, %memref_0 : memref<4x5xi1>)
     %memref_1 = gpu.alloc host_shared () : memref<4x5xf32>
-    %4 = gpu.wait async
-    %5 = gpu.launch_func async [%4]  @test_kernel_0::@test_kernel blocks in (%c4, %c5, %c1) threads in (%c1, %c1, %c1) args(%memref_0 : memref<4x5xi1>, %memref : memref<4x5xf32>, %cst : f32, %memref_1 : memref<4x5xf32>)
-    gpu.wait [%5]
+    gpu.launch_func @test_kernel_0::@test_kernel blocks in (%c4, %c5, %c1) threads in (%c1, %c1, %c1) args(%memref_0 : memref<4x5xi1>, %memref : memref<4x5xf32>, %cst : f32, %memref_1 : memref<4x5xf32>)
     %alloc = memref.alloc() : memref<4x5xf32>
     memref.copy %memref_1, %alloc : memref<4x5xf32> to memref<4x5xf32>
-    %6 = gpu.wait async
-    %7 = gpu.dealloc async [%6] %memref_1 : memref<4x5xf32>
-    %8 = gpu.dealloc async [%7] %memref_0 : memref<4x5xi1>
-    %9 = gpu.dealloc async [%8] %memref : memref<4x5xf32>
+    gpu.dealloc %memref_1 : memref<4x5xf32>
+    gpu.dealloc %memref_0 : memref<4x5xi1>
+    gpu.dealloc %memref : memref<4x5xf32>
     return %alloc : memref<4x5xf32>
   }
   gpu.module @test_kernel attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Addresses, Int64, Int8, Kernel], []>, api=OpenCL, #spirv.resource_limits<>>} {
