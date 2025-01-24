@@ -27,6 +27,6 @@ cbuffer A {
 // AST-NEXT: TextComment {{.*}} Text=" CBuffer decl."
 // AST-NEXT: VarDecl {{.*}} a 'hlsl_constant float'
 // AST-NEXT: VarDecl {{.*}} b 'hlsl_constant int'
-// AST-NEXT: CXXRecordDecl {{.*}} implicit class __layout.A definition
+// AST-NEXT: CXXRecordDecl {{.*}} implicit class __layout_A definition
 // AST: FieldDecl {{.*}} a 'float'
 // AST-NEXT: FieldDecl {{.*}} b 'int'
