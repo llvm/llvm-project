@@ -1914,12 +1914,14 @@ public:
       MemCheckBlock->replaceAllUsesWith(Preheader);
 
     if (SCEVCheckBlock) {
-      SCEVCheckBlock->getTerminator()->moveBefore(Preheader->getTerminator());
+      SCEVCheckBlock->getTerminator()->moveBefore(
+          Preheader->getTerminator()->getIterator());
       new UnreachableInst(Preheader->getContext(), SCEVCheckBlock);
       Preheader->getTerminator()->eraseFromParent();
     }
     if (MemCheckBlock) {
-      MemCheckBlock->getTerminator()->moveBefore(Preheader->getTerminator());
+      MemCheckBlock->getTerminator()->moveBefore(
+          Preheader->getTerminator()->getIterator());
       new UnreachableInst(Preheader->getContext(), MemCheckBlock);
       Preheader->getTerminator()->eraseFromParent();
     }
@@ -2998,7 +3000,7 @@ void InnerLoopVectorizer::sinkScalarOperands(Instruction *PredInst) {
 
       // Move the instruction to the beginning of the predicated block, and add
       // it's operands to the worklist.
-      I->moveBefore(&*PredBB->getFirstInsertionPt());
+      I->moveBefore(PredBB->getFirstInsertionPt());
       Worklist.insert(I->op_begin(), I->op_end());
 
       // The sinking may have enabled other instructions to be sunk, so we will

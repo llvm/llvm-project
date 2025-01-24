@@ -1184,8 +1184,8 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
         PHINode::Create(Builder.getInt32Ty(), 2, "polly.subregion.iv");
     Instruction *LoopPHIInc = BinaryOperator::CreateAdd(
         LoopPHI, Builder.getInt32(1), "polly.subregion.iv.inc");
-    LoopPHI->insertBefore(&BBCopy->front());
-    LoopPHIInc->insertBefore(BBCopy->getTerminator());
+    LoopPHI->insertBefore(BBCopy->begin());
+    LoopPHIInc->insertBefore(BBCopy->getTerminator()->getIterator());
 
     for (auto *PredBB : predecessors(BB)) {
       if (!R->contains(PredBB))
