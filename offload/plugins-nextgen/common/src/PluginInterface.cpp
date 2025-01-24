@@ -376,24 +376,24 @@ setupIndirectCallTable(GenericPluginTy &Plugin, GenericDeviceTy &Device,
                        DeviceImageTy &Image) {
   GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
 
-  llvm::ArrayRef<__tgt_offload_entry> Entries(Image.getTgtImage()->EntriesBegin,
-                                              Image.getTgtImage()->EntriesEnd);
+  llvm::ArrayRef<llvm::offloading::EntryTy> Entries(
+      Image.getTgtImage()->EntriesBegin, Image.getTgtImage()->EntriesEnd);
   llvm::SmallVector<std::pair<void *, void *>> IndirectCallTable;
   for (const auto &Entry : Entries) {
-    if (Entry.size == 0 || !(Entry.flags & OMP_DECLARE_TARGET_INDIRECT))
+    if (Entry.Size == 0 || !(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT))
       continue;
 
-    assert(Entry.size == sizeof(void *) && "Global not a function pointer?");
+    assert(Entry.Size == sizeof(void *) && "Global not a function pointer?");
     auto &[HstPtr, DevPtr] = IndirectCallTable.emplace_back();
 
-    GlobalTy DeviceGlobal(Entry.name, Entry.size);
+    GlobalTy DeviceGlobal(Entry.SymbolName, Entry.Size);
     if (auto Err =
             Handler.getGlobalMetadataFromDevice(Device, Image, DeviceGlobal))
       return std::move(Err);
 
-    HstPtr = Entry.addr;
+    HstPtr = Entry.Address;
     if (auto Err = Device.dataRetrieve(&DevPtr, DeviceGlobal.getPtr(),
-                                       Entry.size, nullptr))
+                                       Entry.Size, nullptr))
       return std::move(Err);
   }
 
@@ -1057,6 +1057,9 @@ Error GenericDeviceTy::setupRPCServer(GenericPluginTy &Plugin,
   if (auto Err = Server.initDevice(*this, Plugin.getGlobalHandler(), Image))
     return Err;
 
+  if (auto Err = Server.startThread())
+    return Err;
+
   RPCServer = &Server;
   DP("Running an RPC server on device %d\n", getDeviceId());
   return Plugin::success();
@@ -1630,8 +1633,11 @@ Error GenericPluginTy::deinit() {
   if (GlobalHandler)
     delete GlobalHandler;
 
-  if (RPCServer)
+  if (RPCServer) {
+    if (Error Err = RPCServer->shutDown())
+      return Err;
     delete RPCServer;
+  }
 
   if (RecordReplay)
     delete RecordReplay;

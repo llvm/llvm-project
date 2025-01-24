@@ -237,9 +237,13 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     }
   };
   auto checkReduction = [&todo](auto op, LogicalResult &result) {
-    if (!op.getReductionVars().empty() || op.getReductionByref() ||
-        op.getReductionSyms())
-      result = todo("reduction");
+    if (isa<omp::TeamsOp>(op) || isa<omp::SimdOp>(op))
+      if (!op.getReductionVars().empty() || op.getReductionByref() ||
+          op.getReductionSyms())
+        result = todo("reduction");
+    if (op.getReductionMod() &&
+        op.getReductionMod().value() != omp::ReductionModifier::defaultmod)
+      result = todo("reduction with modifier");
   };
   auto checkTaskReduction = [&todo](auto op, LogicalResult &result) {
     if (!op.getTaskReductionVars().empty() || op.getTaskReductionByref() ||
@@ -257,6 +261,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::SectionsOp op) {
         checkAllocate(op, result);
         checkPrivate(op, result);
+        checkReduction(op, result);
       })
       .Case([&](omp::SingleOp op) {
         checkAllocate(op, result);
@@ -270,7 +275,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::TaskOp op) {
         checkAllocate(op, result);
         checkInReduction(op, result);
-        checkUntied(op, result);
       })
       .Case([&](omp::TaskgroupOp op) {
         checkAllocate(op, result);
@@ -282,14 +286,19 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::TaskloopOp op) {
         // TODO: Add other clauses check
+        checkUntied(op, result);
         checkPriority(op, result);
       })
       .Case([&](omp::WsloopOp op) {
         checkAllocate(op, result);
         checkLinear(op, result);
         checkOrder(op, result);
+        checkReduction(op, result);
       })
-      .Case([&](omp::ParallelOp op) { checkAllocate(op, result); })
+      .Case([&](omp::ParallelOp op) {
+        checkAllocate(op, result);
+        checkReduction(op, result);
+      })
       .Case([&](omp::SimdOp op) {
         checkLinear(op, result);
         checkNontemporal(op, result);
@@ -1888,59 +1897,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   collectReductionDecls(wsloopOp, reductionDecls);
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
-
-  // The following loop is workaround until we private ops' alloca regions to be
-  // "pure". See
-  // https://discourse.llvm.org/t/rfc-openmp-supporting-delayed-task-execution-with-firstprivate-variables/83084/7
-  // and https://discourse.llvm.org/t/delayed-privatization-for-omp-wsloop/83989
-  // for more info.
-  for (auto [privateVar, privateDeclOp] :
-       llvm::zip_equal(mlirPrivateVars, privateDecls)) {
-    llvm::Value *llvmValue = moduleTranslation.lookupValue(privateVar);
-    bool isAllocArgUsed =
-        !privateDeclOp.getAllocRegion().args_begin()->use_empty();
-
-    // If the alloc region argument is not used, we can skip the workaround.
-    if (!isAllocArgUsed)
-      continue;
-
-    llvm::Instruction *definingInst =
-        llvm::dyn_cast<llvm::Instruction>(llvmValue);
-
-    // If the alloc region argument is not defined by an op, it has to dominate
-    // the current alloc IP. So we skip the workaround.
-    if (!definingInst)
-      continue;
-
-    llvm::BasicBlock *definingBlock = definingInst->getParent();
-    llvm::Function *definingFun = definingBlock->getParent();
-    llvm::Function *allocaFun = allocaIP.getBlock()->getParent();
-
-    // If the alloc region argument is defined in a different function that
-    // current one where allocs are being inserted (for example, we are building
-    // the outlined function of a target region), we skip the workaround.
-    if (definingFun != allocaFun)
-      continue;
-
-    llvm::DominatorTree dt(*definingFun);
-    // If the defining instruction of the alloc region argument dominates the
-    // alloca insertion point already, we can skip the workaround.
-    if (dt.dominates(definingInst, allocaIP.getPoint()))
-      continue;
-
-    // If all the above conditions are violated, then we have to move the alloca
-    // insertion point below the defining instruction.
-
-    if (definingBlock->getTerminator() == nullptr) {
-      assert(builder.GetInsertBlock() == definingBlock);
-      builder.SetInsertPoint(splitBB(llvm::OpenMPIRBuilder::InsertPointTy(
-                                         definingBlock, definingBlock->end()),
-                                     true, "omp.region.after_defining_block"));
-    }
-
-    allocaIP = llvm::OpenMPIRBuilder::InsertPointTy(
-        definingBlock, definingBlock->getTerminator()->getIterator());
-  }
 
   SmallVector<llvm::Value *> privateReductionVariables(
       wsloopOp.getNumReductionVars());

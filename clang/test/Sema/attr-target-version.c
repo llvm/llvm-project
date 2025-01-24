@@ -78,7 +78,7 @@ void __attribute__((target_version("rdm+rng+crc"))) redef(void) {}
 
 int def(void);
 void __attribute__((target_version("dit"))) nodef(void);
-void __attribute__((target_version("ls64"))) nodef(void);
+void __attribute__((target_version("wfxt"))) nodef(void);
 void __attribute__((target_version("aes"))) ovl(void);
 void __attribute__((target_version("default"))) ovl(void);
 int bar() {

@@ -71,7 +71,8 @@ LogicalResult registerKernel(cuf::RegisterKernelOp op,
   llvm::Function *fctSym =
       moduleTranslation.lookupFunction(op.getKernelName().str());
   if (!fctSym)
-    return op.emitError() << "Couldn't find kernel name symbol";
+    return op.emitError() << "Couldn't find kernel name symbol: "
+                          << op.getKernelName().str();
   builder.CreateCall(fct, {modulePtr, fctSym,
                            getOrCreateFunctionName(
                                module, builder, op.getKernelModuleName().str(),

@@ -43,7 +43,7 @@ TEST(LlvmLibcBlockTest, CanCreateSingleAlignedBlock) {
       reinterpret_cast<uintptr_t>(last) - reinterpret_cast<uintptr_t>(block);
   EXPECT_EQ(block->outer_size(), block_outer_size);
   EXPECT_EQ(block->inner_size(),
-            block_outer_size - sizeof(Block) + sizeof(size_t));
+            block_outer_size - sizeof(Block) + Block::PREV_FIELD_SIZE);
   EXPECT_EQ(block->prev_free(), static_cast<Block *>(nullptr));
   EXPECT_FALSE(block->used());
 }
@@ -75,9 +75,11 @@ TEST(LlvmLibcBlockTest, CannotCreateTooSmallBlock) {
 
 TEST(LlvmLibcBlockTest, CanSplitBlock) {
   constexpr size_t kN = 1024;
-  constexpr size_t prev_field_size = sizeof(size_t);
-  // Give the split position a large alignment.
-  constexpr size_t kSplitN = 512 + prev_field_size;
+
+  // Choose a split position such that the next block's usable space is 512
+  // bytes from this one's. This should be sufficient for any machine's
+  // alignment.
+  const size_t kSplitN = Block::inner_size(512);
 
   array<byte, kN> bytes;
   auto result = Block::init(bytes);
@@ -90,7 +92,8 @@ TEST(LlvmLibcBlockTest, CanSplitBlock) {
   auto *block2 = *result;
 
   EXPECT_EQ(block1->inner_size(), kSplitN);
-  EXPECT_EQ(block1->outer_size(), kSplitN - prev_field_size + sizeof(Block));
+  EXPECT_EQ(block1->outer_size(),
+            kSplitN - Block::PREV_FIELD_SIZE + sizeof(Block));
 
   EXPECT_EQ(block2->outer_size(), orig_size - block1->outer_size());
   EXPECT_FALSE(block2->used());
@@ -223,7 +226,7 @@ TEST(LlvmLibcBlockTest, CanMakeMinimalSizeSecondBlock) {
   result = block1->split(Block::prev_possible_block_start(
                              reinterpret_cast<uintptr_t>(block1->next())) -
                          reinterpret_cast<uintptr_t>(block1->usable_space()) +
-                         sizeof(size_t));
+                         Block::PREV_FIELD_SIZE);
   ASSERT_TRUE(result.has_value());
   EXPECT_LE((*result)->outer_size(), sizeof(Block) + alignof(max_align_t));
 }
@@ -387,8 +390,7 @@ TEST(LlvmLibcBlockTest, AllocateAlreadyAligned) {
   Block *block = *result;
   uintptr_t orig_end = reinterpret_cast<uintptr_t>(block) + block->outer_size();
 
-  // Request a size one byte more than the prev_ field.
-  constexpr size_t SIZE = sizeof(size_t) + 1;
+  constexpr size_t SIZE = Block::PREV_FIELD_SIZE + 1;
 
   auto [aligned_block, prev, next] =
       Block::allocate(block, alignof(max_align_t), SIZE);
