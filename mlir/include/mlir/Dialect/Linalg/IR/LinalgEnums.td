@@ -55,6 +55,50 @@ def TernaryFn : I32EnumAttr<"TernaryFn", "", [
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::linalg";
 }
+
+// Join two I32EnumAttrCase lists. This joining takes care that the
+// 'int enum values' in the combined list do not overlap. It does this
+// by adding to each element of second list the offset '!size(a)'.
+class JoinTwoI32EnumAttrCaseList< list<I32EnumAttrCase> a,
+                                  list<I32EnumAttrCase> b> {
+  int aSize = !size(a);
+  list<I32EnumAttrCase> result =
+             !foldl(a, b, acc, var,
+                    acc # [I32EnumAttrCase<var.symbol,
+                                           !add(var.value, aSize)
+                                           >]);
+}
+
+// Flatten 'list of list of I32EnumAttrCase' to 'list of I32EnumAttrCase'.
+// The flattening (via call to 'join') ensures no overlap in enum values.
+class ConcatI32EnumAtrCaseList< list<list<I32EnumAttrCase>> l> {
+  list<I32EnumAttrCase> result =
+             !foldl([]<I32EnumAttrCase>, l, acc, var,
+                    JoinTwoI32EnumAttrCaseList<acc, var>.result);
+}
+
+// Define a unified `enum class : i32` for all element-wise op functions.
+def ElementwiseFn :
+            I32EnumAttr<"ElementwiseFn",
+                        "",
+                        ConcatI32EnumAtrCaseList<[UnaryFn.enumerants,
+                                                  BinaryFn.enumerants,
+                                                  TernaryFn.enumerants]>.result
+                      > {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::linalg";
+}
+
+// Define an `enum class : i32` to categorise elementwise ops.
+def ElementwiseNAryCategory : I32EnumAttr<"ElementwiseNAryCategory", "", [
+  I32EnumAttrCase<"Unary", 0>,
+  I32EnumAttrCase<"Binary", 1>,
+  I32EnumAttrCase<"Ternary", 2>
+]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::linalg";
+}
+
 def TypeFn : I32EnumAttr<"TypeFn", "", [
   I32EnumAttrCase<"cast_signed", 0>,
   I32EnumAttrCase<"cast_unsigned", 1>
