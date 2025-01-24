@@ -2786,7 +2786,7 @@ static BranchInst *turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
   if (MSSAU)
     MSSAU->moveAllAfterSpliceBlocks(CheckBB, GuardedBlock, GI);
 
-  GI->moveBefore(DeoptBlockTerm);
+  GI->moveBefore(DeoptBlockTerm->getIterator());
   GI->setArgOperand(0, ConstantInt::getFalse(GI->getContext()));
 
   if (MSSAU) {

@@ -128,7 +128,7 @@ bool BPFAdjustOptImpl::adjustICmpToBuiltin() {
         Function *Fn = Intrinsic::getOrInsertDeclaration(
             M, Intrinsic::bpf_compare, {Op0->getType(), ConstOp1->getType()});
         auto *NewInst = CallInst::Create(Fn, {Opcode, Op0, ConstOp1});
-        NewInst->insertBefore(&I);
+        NewInst->insertBefore(I.getIterator());
         Icmp->replaceAllUsesWith(NewInst);
         Changed = true;
         ToBeDeleted = Icmp;
