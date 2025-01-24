@@ -1847,8 +1847,9 @@ int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
     return ISD::FEXP;
   case Intrinsic::exp2:
     return ISD::FEXP2;
+  default:
+    return ISD::DELETED_NODE;
   }
-  llvm_unreachable("Unsupported Intrinsic ID encountered!");
 }
 
 Value *
