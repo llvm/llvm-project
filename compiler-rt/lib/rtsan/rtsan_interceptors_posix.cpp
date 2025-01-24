@@ -46,6 +46,9 @@ void OSSpinLockLock(volatile OSSpinLock *__lock);
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
+#if SANITIZER_LINUX
+#include <sys/inotify.h>
+#endif
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -1174,6 +1177,39 @@ INTERCEPTOR(int, kevent64, int kq, const struct kevent64_s *changelist,
 #define RTSAN_MAYBE_INTERCEPT_KEVENT64
 #endif // SANITIZER_INTERCEPT_KQUEUE
 
+#if SANITIZER_LINUX
+INTERCEPTOR(int, inotify_init) {
+  __rtsan_notify_intercepted_call("inotify_init");
+  return REAL(inotify_init)();
+}
+
+INTERCEPTOR(int, inotify_init1, int flags) {
+  __rtsan_notify_intercepted_call("inotify_init1");
+  return REAL(inotify_init1)(flags);
+}
+
+INTERCEPTOR(int, inotify_add_watch, int fd, const char *path, uint32_t mask) {
+  __rtsan_notify_intercepted_call("inotify_add_watch");
+  return REAL(inotify_add_watch)(fd, path, mask);
+}
+
+INTERCEPTOR(int, inotify_rm_watch, int fd, int wd) {
+  __rtsan_notify_intercepted_call("inotify_rm_watch");
+  return REAL(inotify_rm_watch)(fd, wd);
+}
+#define RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT INTERCEPT_FUNCTION(inotify_init)
+#define RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT1 INTERCEPT_FUNCTION(inotify_init1)
+#define RTSAN_MAYBE_INTERCEPT_INOTIFY_ADD_WATCH                                \
+  INTERCEPT_FUNCTION(inotify_add_watch)
+#define RTSAN_MAYBE_INTERCEPT_INOTIFY_RM_WATCH                                 \
+  INTERCEPT_FUNCTION(inotify_rm_watch)
+#else
+#define RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT
+#define RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT1
+#define RTSAN_MAYBE_INTERCEPT_INOTIFY_ADD_WATCH
+#define RTSAN_MAYBE_INTERCEPT_INOTIFY_RM_WATCH
+#endif
+
 INTERCEPTOR(int, pipe, int pipefd[2]) {
   __rtsan_notify_intercepted_call("pipe");
   return REAL(pipe)(pipefd);
@@ -1414,6 +1450,11 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_KQUEUE;
   RTSAN_MAYBE_INTERCEPT_KEVENT;
   RTSAN_MAYBE_INTERCEPT_KEVENT64;
+
+  RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT;
+  RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT1;
+  RTSAN_MAYBE_INTERCEPT_INOTIFY_ADD_WATCH;
+  RTSAN_MAYBE_INTERCEPT_INOTIFY_RM_WATCH;
 
   INTERCEPT_FUNCTION(pipe);
   INTERCEPT_FUNCTION(mkfifo);
