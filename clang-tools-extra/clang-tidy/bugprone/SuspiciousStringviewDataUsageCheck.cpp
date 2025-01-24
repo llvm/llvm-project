@@ -73,7 +73,8 @@ void SuspiciousStringviewDataUsageCheck::registerMatchers(MatchFinder *Finder) {
                   hasAnyArgument(
                       ignoringParenImpCasts(equalsBoundNode("data-call"))),
                   unless(hasAnyArgument(ignoringParenImpCasts(SizeCall))),
-                  unless(hasAnyArgument(DescendantSizeCall)),
+                  unless(hasAnyArgument(
+                      ignoringParenImpCasts(DescendantSizeCall))),
                   hasDeclaration(namedDecl(
                       unless(matchers::matchesAnyListedName(AllowedCallees))))),
               initListExpr(expr().bind("parent"),
