@@ -624,27 +624,27 @@ for.end:                                          ; preds = %for.body
 
 
 
-; PR9815 - This is a partial overlap case that cannot be safely transformed
-; into a memcpy.
+; This is a partial overlap case that needs alias checks to be safely
+; transformed into a memcpy.
 @g_50 = global [7 x i32] [i32 0, i32 0, i32 0, i32 0, i32 1, i32 0, i32 0], align 16
 
 define i32 @test14() nounwind {
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK-NEXT:    br label [[FOR_BODY1:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[T5:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[T5]], 4
-; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[ADD]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [7 x i32], ptr @g_50, i32 0, i64 [[IDXPROM]]
-; CHECK-NEXT:    [[T2:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ADD4:%.*]] = add nsw i32 [[T5]], 5
-; CHECK-NEXT:    [[IDXPROM5:%.*]] = sext i32 [[ADD4]] to i64
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [7 x i32], ptr @g_50, i32 0, i64 [[IDXPROM5]]
-; CHECK-NEXT:    store i32 [[T2]], ptr [[ARRAYIDX6]], align 4
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[T5]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], 2
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
+; CHECK-NEXT:    [[T6:%.*]] = phi i32 [ [[INC1:%.*]], [[FOR_BODY1]] ], [ 0, [[FOR_BODY_PH:%.*]] ]
+; CHECK-NEXT:    [[ADD1:%.*]] = add nsw i32 [[T6]], 4
+; CHECK-NEXT:    [[IDXPROM1:%.*]] = sext i32 [[ADD1]] to i64
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [7 x i32], ptr @g_50, i32 0, i64 [[IDXPROM1]]
+; CHECK-NEXT:    [[T3:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[ADD5:%.*]] = add nsw i32 [[T6]], 5
+; CHECK-NEXT:    [[IDXPROM6:%.*]] = sext i32 [[ADD5]] to i64
+; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds [7 x i32], ptr @g_50, i32 0, i64 [[IDXPROM6]]
+; CHECK-NEXT:    store i32 [[T3]], ptr [[ARRAYIDX7]], align 4
+; CHECK-NEXT:    [[INC1]] = add nsw i32 [[T6]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[INC1]], 2
+; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY1]], label [[FOR_END_LOOPEXIT1:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[T8:%.*]] = load i32, ptr getelementptr inbounds ([7 x i32], ptr @g_50, i32 0, i64 6), align 4
 ; CHECK-NEXT:    ret i32 [[T8]]

@@ -80,9 +80,11 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/LoopVersioning.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <algorithm>
 #include <cassert>
@@ -132,6 +134,16 @@ static cl::opt<bool> UseLIRCodeSizeHeurs(
              "with -Os/-Oz"),
     cl::init(true), cl::Hidden);
 
+static cl::opt<bool> EnableLoopVersioning(
+    "enable-" DEBUG_TYPE "-version",
+    cl::desc("Allow loop idiom recognize to version loop(s) when converting"),
+    cl::init(true), cl::ReallyHidden);
+
+static cl::opt<int> LoopVersioningLengthLimit(
+    DEBUG_TYPE "-lv-lenght-limit",
+    cl::desc("Lower length limit for loop versioning"), cl::init(12),
+    cl::ReallyHidden);
+
 namespace {
 
 class LoopIdiomRecognize {
@@ -146,6 +158,7 @@ class LoopIdiomRecognize {
   OptimizationRemarkEmitter &ORE;
   bool ApplyCodeSizeHeuristics;
   std::unique_ptr<MemorySSAUpdater> MSSAU;
+  const LoopAccessInfo &LAI;
 
 public:
   explicit LoopIdiomRecognize(AliasAnalysis *AA, DominatorTree *DT,
@@ -153,8 +166,10 @@ public:
                               TargetLibraryInfo *TLI,
                               const TargetTransformInfo *TTI, MemorySSA *MSSA,
                               const DataLayout *DL,
-                              OptimizationRemarkEmitter &ORE)
-      : AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI), TTI(TTI), DL(DL), ORE(ORE) {
+                              OptimizationRemarkEmitter &ORE,
+                              const LoopAccessInfo &LAI)
+      : AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI), TTI(TTI), DL(DL), ORE(ORE),
+        LAI(LAI) {
     if (MSSA)
       MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
   }
@@ -220,6 +235,9 @@ private:
                                   const SCEV *BECount);
   bool avoidLIRForMultiBlockLoop(bool IsMemset = false,
                                  bool IsLoopMemset = false);
+  bool shouldVersionLoopForMemCpy(Instruction *TheStore,
+                                  Instruction *TheLoad) const;
+  void versionLoop(const SCEV *BECount, SCEVExpander &Expander);
 
   /// @}
   /// \name Noncountable Loop Idiom Handling
@@ -264,8 +282,9 @@ PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L, LoopAnalysisManager &AM,
   // but ORE cannot be preserved (see comment before the pass definition).
   OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
 
+  LoopAccessInfoManager LAIs(AR.SE, AR.AA, AR.DT, AR.LI, &AR.TTI, &AR.TLI);
   LoopIdiomRecognize LIR(&AR.AA, &AR.DT, &AR.LI, &AR.SE, &AR.TLI, &AR.TTI,
-                         AR.MSSA, DL, ORE);
+                         AR.MSSA, DL, ORE, LAIs.getInfo(L));
   if (!LIR.runOnLoop(&L))
     return PreservedAnalyses::all();
 
@@ -1359,13 +1378,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   }
 
   bool IsAtomic = TheStore->isAtomic() || TheLoad->isAtomic();
-  bool UseMemMove = IsMemCpy ? Verifier.IsSameObject : LoopAccessStore;
-
   if (IsAtomic) {
-    // For now don't support unordered atomic memmove.
-    if (UseMemMove)
-      return Changed;
-
     // We cannot allow unaligned ops for unordered load/store, so reject
     // anything where the alignment isn't at least the element size.
     assert((StoreAlign && LoadAlign) &&
@@ -1381,13 +1394,28 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
       return Changed;
   }
 
-  if (UseMemMove)
-    if (!Verifier.loadAndStoreMayFormMemmove(StoreSize, IsNegStride, *TheLoad,
-                                             IsMemCpy))
-      return Changed;
-
   if (avoidLIRForMultiBlockLoop())
     return Changed;
+
+  bool MayOverlap = IsMemCpy ? Verifier.IsSameObject : LoopAccessStore;
+  bool UseMemMove = false;
+
+  // First, see if it is possible to use memmove. If not, determine whether we
+  // should version the loops to replace the instructions with memcpy. If both
+  // are rejected, then bail out.
+  // TODO: It may be better to perform the versioning at first, then use memcpy
+  // in the versioned loop and memmove in the original loop.
+  if (MayOverlap) {
+    // For now don't support unordered atomic memmove.
+    if (!IsAtomic && Verifier.loadAndStoreMayFormMemmove(StoreSize, IsNegStride,
+                                                         *TheLoad, IsMemCpy)) {
+      UseMemMove = true;
+    } else if (shouldVersionLoopForMemCpy(TheStore, TheLoad)) {
+      versionLoop(BECount, Expander);
+    } else {
+      return Changed;
+    }
+  }
 
   // Okay, everything is safe, we can transform this!
 
@@ -1484,6 +1512,83 @@ bool LoopIdiomRecognize::avoidLIRForMultiBlockLoop(bool IsMemset,
   }
 
   return false;
+}
+
+// Returns true if we should version the loop and make sure that there is no
+// alias between the store and the load. This allows us to use `memcpy` instead
+// of `memmove`. However, versioning increases the code size. In the worst case,
+// if there are multiple load/store pairs, the code size increases
+// exponentially. Therefore, versioning is supported only if the loop only does
+// transfers related to this store and load. That is, we will version the loop
+// as follows:
+//
+//   ```
+//   for (i=0; i<len; i++)
+//     dst[i] = src[i];
+//   ```
+//
+// But we don't want to do this if there are other processes inside the loop,
+// e.g.,
+//
+//   ```
+//   acc = 0;
+//   for (i=0; i<len; i++) {
+//     dst[i] = src[i];
+//     acc += ...;
+//   }
+//   ```
+bool LoopIdiomRecognize::shouldVersionLoopForMemCpy(
+    Instruction *TheStore, Instruction *TheLoad) const {
+  if (ApplyCodeSizeHeuristics || !EnableLoopVersioning)
+    return false;
+
+  // There are cases where the load and store always overlap. Avoid versioning
+  // in these situations.
+  auto *Checking = LAI.getRuntimePointerChecking();
+  if (Checking->getNumberOfChecks() == 0)
+    return false;
+
+  BasicBlock *Cur = TheStore->getParent();
+  for (auto &I : *Cur) {
+    if (I.isDebugOrPseudoInst() || I.isTerminator())
+      continue;
+
+    // If there is a memory instruction other then `TheStore` and `TheLoad`,
+    // then bail out.
+    if (I.mayReadOrWriteMemory() && (&I) != TheStore && (&I) != TheLoad)
+      return false;
+
+    // We also abandon the versioning if there is an instruction other than
+    // `TheStore`, `TheLoad`, and anything related to loop control.
+    for (const auto &U : I.uses()) {
+      const Instruction *UseI = cast<Instruction>(U.getUser());
+      if (UseI->getParent() != Cur)
+        return false;
+    }
+  }
+  return true;
+}
+
+void LoopIdiomRecognize::versionLoop(const SCEV *BECount,
+                                     SCEVExpander &Expander) {
+  BasicBlock *Preheader = CurLoop->getLoopPreheader();
+  LoopVersioning LVer(LAI, LAI.getRuntimePointerChecking()->getChecks(),
+                      CurLoop, LI, DT, SE);
+  LVer.versionLoop();
+
+  // If the loop trip count is small, the overhead of function calls may not be
+  // negligible. In this case, avoid function calls and run the loop as is.
+  BranchInst *Branch = cast<BranchInst>(Preheader->getTerminator());
+  if (!Branch)
+    return;
+  Type *IntTy = BECount->getType();
+  Value *Cond = Branch->getCondition();
+  Value *TripCount = Expander.expandCodeFor(BECount, IntTy, Branch);
+  IRBuilder<> Builder(Branch);
+  Value *BoundCond = Builder.CreateICmpSLT(
+      TripCount, ConstantInt::get(IntTy, LoopVersioningLengthLimit));
+  Value *NewCond = Builder.CreateOr(Cond, BoundCond);
+  Branch->setCondition(NewCond);
 }
 
 bool LoopIdiomRecognize::runOnNoncountableLoop() {
