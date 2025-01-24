@@ -12,6 +12,7 @@
 #include <limits>
 #include <sstream>
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -644,7 +645,7 @@ void ABISysV_loongarch::AugmentRegisterInfo(
     std::vector<lldb_private::DynamicRegisterInfo::Register> &regs) {
   lldb_private::RegInfoBasedABI::AugmentRegisterInfo(regs);
 
-  static const std::unordered_map<std::string, std::string> reg_aliases = {
+  static const llvm::StringMap<llvm::StringRef> isa_to_abi_alias_map = {
       {"r0", "zero"}, {"r1", "ra"},  {"r2", "tp"},  {"r3", "sp"},
       {"r4", "a0"},   {"r5", "a1"},  {"r6", "a2"},  {"r7", "a3"},
       {"r8", "a4"},   {"r9", "a5"},  {"r10", "a6"}, {"r11", "a7"},
@@ -655,13 +656,14 @@ void ABISysV_loongarch::AugmentRegisterInfo(
       {"r29", "s6"},  {"r30", "s7"}, {"r31", "s8"}};
 
   for (auto it : llvm::enumerate(regs)) {
+    llvm::StringRef reg_name = it.value().name.GetStringRef();
+
     // Set alt name for certain registers for convenience
-    std::string reg_name = it.value().name.GetStringRef().str();
-    if (auto alias = reg_aliases.find(reg_name); alias != reg_aliases.end()) {
-      it.value().alt_name.SetCString(alias->second.c_str());
-    }
+    llvm::StringRef alias_name = isa_to_abi_alias_map.lookup(reg_name);
+    if (!alias_name.empty())
+      it.value().alt_name.SetString(alias_name);
 
     // Set generic regnum so lldb knows what the PC, etc is
-    it.value().regnum_generic = GetGenericNum(it.value().name.GetStringRef());
+    it.value().regnum_generic = GetGenericNum(reg_name);
   }
 }

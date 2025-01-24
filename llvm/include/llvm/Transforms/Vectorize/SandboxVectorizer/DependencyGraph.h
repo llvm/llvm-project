@@ -417,6 +417,13 @@ public:
     DAGInterval = {};
   }
 #ifndef NDEBUG
+  /// \Returns true if the DAG's state is clear. Used in assertions.
+  bool empty() const {
+    bool IsEmpty = InstrToNodeMap.empty();
+    assert(IsEmpty == DAGInterval.empty() &&
+           "Interval and InstrToNodeMap out of sync!");
+    return IsEmpty;
+  }
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
 #endif // NDEBUG

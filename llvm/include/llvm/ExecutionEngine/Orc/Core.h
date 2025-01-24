@@ -1204,8 +1204,13 @@ private:
 
   JITDylib(ExecutionSession &ES, std::string Name);
 
-  std::pair<AsynchronousSymbolQuerySet, std::shared_ptr<SymbolDependenceMap>>
-  IL_removeTracker(ResourceTracker &RT);
+  struct RemoveTrackerResult {
+    AsynchronousSymbolQuerySet QueriesToFail;
+    std::shared_ptr<SymbolDependenceMap> FailedSymbols;
+    std::vector<std::unique_ptr<MaterializationUnit>> DefunctMUs;
+  };
+
+  RemoveTrackerResult IL_removeTracker(ResourceTracker &RT);
 
   void transferTracker(ResourceTracker &DstRT, ResourceTracker &SrcRT);
 

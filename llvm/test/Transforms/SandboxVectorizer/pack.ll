@@ -14,3 +14,77 @@ define void @pack_constants(ptr %ptr) {
   store i8 1, ptr %ptr1
   ret void
 }
+
+; Make sure we don't generate bad IR when packing PHIs.
+; NOTE: This test may become obsolete once we start vectorizing PHIs.
+define void @packPHIs(ptr %ptr) {
+; CHECK-LABEL: define void @packPHIs(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[PHI0:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
+; CHECK-NEXT:    [[PHI3:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x i8> poison, i8 [[PHI0]], i32 0
+; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x i8> [[PACK]], i8 [[PHI1]], i32 1
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i8, ptr [[PTR]], i64 0
+; CHECK-NEXT:    store <2 x i8> [[PACK1]], ptr [[GEP0]], align 1
+; CHECK-NEXT:    br label %[[LOOP]]
+; CHECK:       [[EXIT:.*:]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %phi0 = phi i8 [0, %entry], [1, %loop]
+  %phi1 = phi i8 [0, %entry], [1, %loop]
+  %phi2 = phi i8 [0, %entry], [1, %loop]
+  %phi3 = phi i8 [0, %entry], [1, %loop]
+  %gep0 = getelementptr i8, ptr %ptr, i64 0
+  %gep1 = getelementptr i8, ptr %ptr, i64 1
+  store i8 %phi0, ptr %gep0
+  store i8 %phi1, ptr %gep1
+  br label %loop
+
+exit:
+  ret void
+}
+
+define void @packFromOtherBB(ptr %ptr, i8 %val) {
+; CHECK-LABEL: define void @packFromOtherBB(
+; CHECK-SAME: ptr [[PTR:%.*]], i8 [[VAL:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[ADD0:%.*]] = add i8 [[VAL]], 0
+; CHECK-NEXT:    [[MUL1:%.*]] = mul i8 [[VAL]], 1
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x i8> poison, i8 [[ADD0]], i32 0
+; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x i8> [[PACK]], i8 [[MUL1]], i32 1
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[PHI0:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i8, ptr [[PTR]], i64 0
+; CHECK-NEXT:    store <2 x i8> [[PACK1]], ptr [[GEP0]], align 1
+; CHECK-NEXT:    br label %[[LOOP]]
+; CHECK:       [[EXIT:.*:]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %add0 = add i8 %val, 0
+  %mul1 = mul i8 %val, 1
+  br label %loop
+
+loop:
+  %phi0 = phi i8 [0, %entry], [1, %loop]
+  %phi1 = phi i8 [0, %entry], [1, %loop]
+  %gep0 = getelementptr i8, ptr %ptr, i64 0
+  %gep1 = getelementptr i8, ptr %ptr, i64 1
+  store i8 %add0, ptr %gep0
+  store i8 %mul1, ptr %gep1
+  br label %loop
+
+exit:
+  ret void
+}
