@@ -313,6 +313,18 @@ bool GCNTTIImpl::hasBranchDivergence(const Function *F) const {
   return !F || !ST->isSingleLaneExecution(*F);
 }
 
+unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
+  if (FixedVectorType *VTy = dyn_cast<FixedVectorType>(Tp)) {
+    if (DL.getTypeSizeInBits(VTy->getElementType()) == 8) {
+      unsigned ElCount = VTy->getElementCount().getFixedValue();
+      return ElCount / 4;
+    }
+  }
+
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
+  return LT.first.isValid() ? *LT.first.getValue() : 0;
+}
+
 unsigned GCNTTIImpl::getNumberOfRegisters(unsigned RCID) const {
   // NB: RCID is not an RCID. In fact it is 0 or 1 for scalar or vector
   // registers. See getRegisterClassForType for the implementation.
@@ -344,9 +356,11 @@ unsigned GCNTTIImpl::getMinVectorRegisterBitWidth() const {
 unsigned GCNTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
   if (Opcode == Instruction::Load || Opcode == Instruction::Store)
     return 32 * 4 / ElemWidth;
-  return (ElemWidth == 16 && ST->has16BitInsts()) ? 2
-       : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
-       : 1;
+
+  return (ElemWidth == 8)                              ? 4
+         : (ElemWidth == 16 && ST->has16BitInsts())    ? 2
+         : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
+                                                       : 1;
 }
 
 unsigned GCNTTIImpl::getLoadVectorFactor(unsigned VF, unsigned LoadSize,
