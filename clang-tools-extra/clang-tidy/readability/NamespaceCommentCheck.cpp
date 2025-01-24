@@ -27,11 +27,13 @@ NamespaceCommentCheck::NamespaceCommentCheck(StringRef Name,
           "namespace( +(((inline )|([a-zA-Z0-9_:]))+))?\\.? *(\\*/)?$",
           llvm::Regex::IgnoreCase),
       ShortNamespaceLines(Options.get("ShortNamespaceLines", 1U)),
-      SpacesBeforeComments(Options.get("SpacesBeforeComments", 1U)) {}
+      SpacesBeforeComments(Options.get("SpacesBeforeComments", 1U)),
+      AllowOmittingNamespaceComments(Options.get("AllowOmittingNamespaceComments", false)) {}
 
 void NamespaceCommentCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "ShortNamespaceLines", ShortNamespaceLines);
   Options.store(Opts, "SpacesBeforeComments", SpacesBeforeComments);
+  Options.store(Opts, "AllowOmittingNamespaceComments", AllowOmittingNamespaceComments);
 }
 
 void NamespaceCommentCheck::registerMatchers(MatchFinder *Finder) {
@@ -140,6 +142,7 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
 
   SourceRange OldCommentRange(AfterRBrace, AfterRBrace);
   std::string Message = "%0 not terminated with a closing comment";
+  bool hasComment = false;
 
   // Try to find existing namespace closing comment on the same line.
   if (Tok.is(tok::comment) && NextTokenIsOnSameLine) {
@@ -157,6 +160,8 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
         // comments with different format.
         return;
       }
+
+      hasComment = true;
 
       // Otherwise we need to fix the comment.
       NeedLineBreak = Comment.starts_with("/*");
@@ -182,6 +187,11 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
   std::string NamespaceNameForDiag =
       ND->isAnonymousNamespace() ? "anonymous namespace"
                                  : ("namespace '" + *NamespaceNameAsWritten + "'");
+
+  // If no namespace comment is allowed
+  if(!hasComment && AllowOmittingNamespaceComments) {
+    return;
+  }
 
   std::string Fix(SpacesBeforeComments, ' ');
   Fix.append("// namespace");
