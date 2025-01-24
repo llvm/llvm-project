@@ -5,9 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "llvm/Support/Mustache.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Mustache.h"
 #include "llvm/Support/raw_ostream.h"
 #include <sstream>
 
@@ -66,11 +66,11 @@ public:
   StringRef getTokenBody() const { return TokenBody; };
 
   StringRef getRawBody() const { return RawBody; };
-  
+
   std::string takeTokenBody() { return std::move(TokenBody); }
-  
+
   std::string takeRawBody() { return std::move(TokenBody); }
-  
+
   void setTokenBody(std::string NewBody) { TokenBody = std::move(NewBody); };
 
   Accessor getAccessor() const { return Accessor; };
@@ -196,8 +196,8 @@ ASTNode *createTextNode(void *Node, std::string Body, ASTNode *Parent,
                         llvm::StringMap<Lambda> &Lambdas,
                         llvm::StringMap<SectionLambda> &SectionLambdas,
                         llvm::DenseMap<char, std::string> &Escapes) {
-  return new (Node)
-      ASTNode(std::move(Body), Parent, Alloc, Partials, Lambdas, SectionLambdas, Escapes);
+  return new (Node) ASTNode(std::move(Body), Parent, Alloc, Partials, Lambdas,
+                            SectionLambdas, Escapes);
 };
 
 // Function to check if there is meaningful text behind.
@@ -507,28 +507,29 @@ void Parser::parseMustache(ASTNode *Parent, llvm::BumpPtrAllocator &Alloc,
     switch (CurrentToken.getType()) {
     case Token::Type::Text: {
       CurrentNode =
-          createTextNode(Node, std::move(CurrentToken.takeTokenBody()), Parent, 
+          createTextNode(Node, std::move(CurrentToken.takeTokenBody()), Parent,
                          Alloc, Partials, Lambdas, SectionLambdas, Escapes);
       Parent->addChild(CurrentNode);
       break;
     }
     case Token::Type::Variable: {
-      CurrentNode = createNode(Node, ASTNode::Variable, std::move(A), Parent,
-                               Alloc, Partials, Lambdas, SectionLambdas, 
-                               Escapes);
+      CurrentNode =
+          createNode(Node, ASTNode::Variable, std::move(A), Parent, Alloc,
+                     Partials, Lambdas, SectionLambdas, Escapes);
       Parent->addChild(CurrentNode);
       break;
     }
     case Token::Type::UnescapeVariable: {
       CurrentNode =
-          createNode(Node, ASTNode::UnescapeVariable, std::move(A), Parent, Alloc,
-                     Partials, Lambdas, SectionLambdas, Escapes);
+          createNode(Node, ASTNode::UnescapeVariable, std::move(A), Parent,
+                     Alloc, Partials, Lambdas, SectionLambdas, Escapes);
       Parent->addChild(CurrentNode);
       break;
     }
     case Token::Type::Partial: {
-      CurrentNode = createNode(Node, ASTNode::Partial, std::move(A), Parent, Alloc,
-                               Partials, Lambdas, SectionLambdas, Escapes);
+      CurrentNode =
+          createNode(Node, ASTNode::Partial, std::move(A), Parent, Alloc,
+                     Partials, Lambdas, SectionLambdas, Escapes);
       CurrentNode->setIndentation(CurrentToken.getIndentation());
       Parent->addChild(CurrentNode);
       break;
