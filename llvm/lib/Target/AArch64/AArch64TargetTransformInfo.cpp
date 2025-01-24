@@ -1204,7 +1204,7 @@ static std::optional<Instruction *> instCombineSVEDup(InstCombiner &IC,
   auto *IdxTy = Type::getInt64Ty(II.getContext());
   auto *Insert = InsertElementInst::Create(
       II.getArgOperand(0), II.getArgOperand(2), ConstantInt::get(IdxTy, 0));
-  Insert->insertBefore(&II);
+  Insert->insertBefore(II.getIterator());
   Insert->takeName(&II);
 
   return IC.replaceInstUsesWith(II, Insert);
@@ -1357,7 +1357,7 @@ static std::optional<Instruction *> instCombineSVELast(InstCombiner &IC,
     // The intrinsic is extracting lane 0 so use an extract instead.
     auto *IdxTy = Type::getInt64Ty(II.getContext());
     auto *Extract = ExtractElementInst::Create(Vec, ConstantInt::get(IdxTy, 0));
-    Extract->insertBefore(&II);
+    Extract->insertBefore(II.getIterator());
     Extract->takeName(&II);
     return IC.replaceInstUsesWith(II, Extract);
   }
@@ -1393,7 +1393,7 @@ static std::optional<Instruction *> instCombineSVELast(InstCombiner &IC,
   // The intrinsic is extracting a fixed lane so use an extract instead.
   auto *IdxTy = Type::getInt64Ty(II.getContext());
   auto *Extract = ExtractElementInst::Create(Vec, ConstantInt::get(IdxTy, Idx));
-  Extract->insertBefore(&II);
+  Extract->insertBefore(II.getIterator());
   Extract->takeName(&II);
   return IC.replaceInstUsesWith(II, Extract);
 }
@@ -1954,10 +1954,8 @@ instCombineLD1GatherIndex(InstCombiner &IC, IntrinsicInst &II) {
     Align Alignment =
         BasePtr->getPointerAlignment(II.getDataLayout());
 
-    Type *VecPtrTy = PointerType::getUnqual(Ty);
     Value *Ptr = IC.Builder.CreateGEP(cast<VectorType>(Ty)->getElementType(),
                                       BasePtr, IndexBase);
-    Ptr = IC.Builder.CreateBitCast(Ptr, VecPtrTy);
     CallInst *MaskedLoad =
         IC.Builder.CreateMaskedLoad(Ty, Ptr, Alignment, Mask, PassThru);
     MaskedLoad->takeName(&II);
@@ -1986,9 +1984,6 @@ instCombineST1ScatterIndex(InstCombiner &IC, IntrinsicInst &II) {
 
     Value *Ptr = IC.Builder.CreateGEP(cast<VectorType>(Ty)->getElementType(),
                                       BasePtr, IndexBase);
-    Type *VecPtrTy = PointerType::getUnqual(Ty);
-    Ptr = IC.Builder.CreateBitCast(Ptr, VecPtrTy);
-
     (void)IC.Builder.CreateMaskedStore(Val, Ptr, Alignment, Mask);
 
     return IC.eraseInstFromFunction(II);

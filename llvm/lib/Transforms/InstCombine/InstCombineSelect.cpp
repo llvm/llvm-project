@@ -428,10 +428,10 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
     CmpPredicate TPred, FPred;
     if (match(TI, m_ICmp(TPred, m_Value(), m_Value())) &&
         match(FI, m_ICmp(FPred, m_Value(), m_Value()))) {
-      bool Swapped = ICmpInst::isRelational(FPred) &&
-                     CmpPredicate::getMatching(
-                         TPred, ICmpInst::getSwappedCmpPredicate(FPred));
-      if (CmpPredicate::getMatching(TPred, FPred) || Swapped) {
+      // FIXME: Use CmpPredicate::getMatching here.
+      CmpInst::Predicate T = TPred, F = FPred;
+      if (T == F || T == ICmpInst::getSwappedCmpPredicate(F)) {
+        bool Swapped = T != F;
         if (Value *MatchOp =
                 getCommonOp(TI, FI, ICmpInst::isEquality(TPred), Swapped)) {
           Value *NewSel = Builder.CreateSelect(Cond, OtherOpT, OtherOpF,

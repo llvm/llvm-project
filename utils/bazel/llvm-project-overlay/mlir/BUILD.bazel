@@ -5545,10 +5545,26 @@ gentbl_cc_library(
 
 cc_library(
     name = "LLVMIRTransforms",
-    srcs = glob([
-        "lib/Dialect/LLVMIR/Transforms/*.cpp",
-    ]),
-    hdrs = glob(["include/mlir/Dialect/LLVMIR/Transforms/*.h"]),
+    srcs = glob(
+        [
+            "lib/Dialect/LLVMIR/Transforms/*.cpp",
+        ],
+        exclude = [
+            "lib/Dialect/LLVMIR/Transforms/DIExpressionLegalization.cpp",
+            "lib/Dialect/LLVMIR/Transforms/DIExpressionRewriter.cpp",
+            "lib/Dialect/LLVMIR/Transforms/LegalizeForExport.cpp",
+        ],
+    ),
+    hdrs = glob(
+        [
+            "include/mlir/Dialect/LLVMIR/Transforms/*.h",
+        ],
+        exclude = [
+            "include/mlir/Dialect/LLVMIR/Transforms/DIExpressionLegalization.h",
+            "include/mlir/Dialect/LLVMIR/Transforms/DIExpressionRewriter.h",
+            "include/mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h",
+        ],
+    ),
     includes = ["include"],
     deps = [
         ":Analysis",
@@ -5557,12 +5573,50 @@ cc_library(
         ":IR",
         ":InliningUtils",
         ":LLVMDialect",
+        ":LLVMIRTransformsLegalizeForExport",
         ":LLVMPassIncGen",
         ":NVVMDialect",
         ":Pass",
         ":TransformUtils",
         ":ViewLikeInterface",
         "//llvm:BinaryFormat",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "LLVMIRTransformsLegalizeForExport",
+    srcs = ["lib/Dialect/LLVMIR/Transforms/LegalizeForExport.cpp"],
+    hdrs = ["include/mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":LLVMDialect",
+        ":LLVMPassIncGen",
+        ":LLVMIRTransformsDIExpressionLegalization",
+        ":Pass",
+    ],
+)
+
+cc_library(
+    name = "LLVMIRTransformsDIExpressionLegalization",
+    srcs = ["lib/Dialect/LLVMIR/Transforms/DIExpressionLegalization.cpp"],
+    hdrs = ["include/mlir/Dialect/LLVMIR/Transforms/DIExpressionLegalization.h"],
+    includes = ["include"],
+    deps = [
+        ":LLVMIRTransformsDIExpressionRewriter",
+        "//llvm:BinaryFormat",
+    ],
+)
+
+cc_library(
+    name = "LLVMIRTransformsDIExpressionRewriter",
+    srcs = ["lib/Dialect/LLVMIR/Transforms/DIExpressionRewriter.cpp"],
+    hdrs = ["include/mlir/Dialect/LLVMIR/Transforms/DIExpressionRewriter.h"],
+    includes = ["include"],
+    deps = [
+        ":LLVMDialect",
+        ":TransformUtils",
         "//llvm:Support",
     ],
 )
@@ -6459,6 +6513,7 @@ cc_library(
         ":NVVMOpsIncGen",
         ":SideEffectInterfaces",
         ":Support",
+        ":ToLLVMIRTranslation",
         "//llvm:AsmParser",
         "//llvm:Core",
         "//llvm:Support",
@@ -9212,8 +9267,9 @@ cc_library(
         ":IR",
         ":LLVMConversionIncGen",
         ":LLVMDialect",
-        ":LLVMIRTransforms",
         ":LLVMIntrinsicConversionIncGen",
+        ":LLVMIRTransformsDIExpressionLegalization",
+        ":LLVMIRTransformsLegalizeForExport",
         ":OpenMPDialect",
         ":Support",
         ":TransformUtils",
