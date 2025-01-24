@@ -7642,22 +7642,22 @@ def int_x86_avx10_vminpbf16256 : ClangBuiltin<"__builtin_ia32_vminpbf16256">,
 def int_x86_avx10_vminpbf16128 : ClangBuiltin<"__builtin_ia32_vminpbf16128">,
         DefaultAttrsIntrinsic<[llvm_v8bf16_ty], [llvm_v8bf16_ty, llvm_v8bf16_ty],
                               [IntrNoMem]>;
-def int_x86_avx10_vcomsbf16eq : ClangBuiltin<"__builtin_ia32_vcomsbf16eq">,
+def int_x86_avx10_vcomisbf16eq : ClangBuiltin<"__builtin_ia32_vcomisbf16eq">,
         DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_v8bf16_ty, llvm_v8bf16_ty],
                               [IntrNoMem]>;
-def int_x86_avx10_vcomsbf16lt : ClangBuiltin<"__builtin_ia32_vcomsbf16lt">,
+def int_x86_avx10_vcomisbf16lt : ClangBuiltin<"__builtin_ia32_vcomisbf16lt">,
         DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_v8bf16_ty,llvm_v8bf16_ty],
                               [IntrNoMem]>;
-def int_x86_avx10_vcomsbf16le : ClangBuiltin<"__builtin_ia32_vcomsbf16le">,
+def int_x86_avx10_vcomisbf16le : ClangBuiltin<"__builtin_ia32_vcomisbf16le">,
         DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_v8bf16_ty, llvm_v8bf16_ty],
                               [IntrNoMem]>;
-def int_x86_avx10_vcomsbf16gt : ClangBuiltin<"__builtin_ia32_vcomsbf16gt">,
+def int_x86_avx10_vcomisbf16gt : ClangBuiltin<"__builtin_ia32_vcomisbf16gt">,
         DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_v8bf16_ty, llvm_v8bf16_ty],
                               [IntrNoMem]>;
-def int_x86_avx10_vcomsbf16ge : ClangBuiltin<"__builtin_ia32_vcomsbf16ge">,
+def int_x86_avx10_vcomisbf16ge : ClangBuiltin<"__builtin_ia32_vcomisbf16ge">,
         DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_v8bf16_ty, llvm_v8bf16_ty],
                               [IntrNoMem]>;
-def int_x86_avx10_vcomsbf16neq : ClangBuiltin<"__builtin_ia32_vcomsbf16neq">,
+def int_x86_avx10_vcomisbf16neq : ClangBuiltin<"__builtin_ia32_vcomisbf16neq">,
         DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_v8bf16_ty, llvm_v8bf16_ty],
                               [IntrNoMem]>;
 def int_x86_avx10_mask_rsqrt_nepbf16_128 : ClangBuiltin<"__builtin_ia32_vrsqrtpbf16128_mask">,
