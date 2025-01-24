@@ -4088,15 +4088,12 @@ SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
         DAG.getTargetConstant(Intrinsic::amdgcn_wave_reduce_umax, dl, MVT::i32);
     Size = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::i32, WaveReduction,
                        Size, DAG.getConstant(0, dl, MVT::i32));
-    SDValue ScaledSize = DAG.getNode(
-        ISD::SHL, dl, VT, Size,
+    SDNode *ScaledSize = DAG.getMachineNode(
+        AMDGPU::S_LSHL_B32, dl, VT, Size,
         DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
-    NewSP =
-        DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value in vgpr.
-    SDValue ReadFirstLaneID =
-        DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, dl, MVT::i32);
-    NewSP = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::i32, ReadFirstLaneID,
-                        NewSP);
+    NewSP = {DAG.getMachineNode(AMDGPU::S_ADD_I32, dl, VT, BaseAddr,
+                                SDValue(ScaledSize, 0)),
+             0};
   }
 
   Chain = DAG.getCopyToReg(Chain, dl, SPReg, NewSP); // Output chain
