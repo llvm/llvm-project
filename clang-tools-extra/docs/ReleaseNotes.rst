@@ -248,6 +248,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unchecked-optional-access>` to support
   ``bsl::optional`` and ``bdlb::NullableValue`` from
   <https://github.com/bloomberg/bde>_.
+  Fixed false positives from smart pointer accessors repeated in checking
+  ``has_value`` and accessing ``value``. The option
+  `IgnoreSmartPointerDereference` should no longer be needed and will be
+  removed.
 
 - Improved :doc:`bugprone-unhandled-self-assignment
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by fixing smart
