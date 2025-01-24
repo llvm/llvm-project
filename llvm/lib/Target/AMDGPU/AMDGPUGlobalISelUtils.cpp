@@ -7,12 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUGlobalISelUtils.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 
 using namespace llvm;
+using namespace AMDGPU;
 using namespace MIPatternMatch;
 
 std::pair<Register, unsigned>
@@ -67,4 +71,38 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
   }
 
   return std::pair(Reg, 0);
+}
+
+IntrinsicLaneMaskAnalyzer::IntrinsicLaneMaskAnalyzer(MachineFunction &MF)
+    : MRI(MF.getRegInfo()) {
+  initLaneMaskIntrinsics(MF);
+}
+
+bool IntrinsicLaneMaskAnalyzer::isS32S64LaneMask(Register Reg) const {
+  return S32S64LaneMask.contains(Reg);
+}
+
+void IntrinsicLaneMaskAnalyzer::initLaneMaskIntrinsics(MachineFunction &MF) {
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB) {
+      GIntrinsic *GI = dyn_cast<GIntrinsic>(&MI);
+      if (GI && GI->is(Intrinsic::amdgcn_if_break)) {
+        S32S64LaneMask.insert(MI.getOperand(3).getReg());
+        findLCSSAPhi(MI.getOperand(0).getReg());
+      }
+
+      if (MI.getOpcode() == AMDGPU::SI_IF ||
+          MI.getOpcode() == AMDGPU::SI_ELSE) {
+        findLCSSAPhi(MI.getOperand(0).getReg());
+      }
+    }
+  }
+}
+
+void IntrinsicLaneMaskAnalyzer::findLCSSAPhi(Register Reg) {
+  S32S64LaneMask.insert(Reg);
+  for (const MachineInstr &LCSSAPhi : MRI.use_instructions(Reg)) {
+    if (LCSSAPhi.isPHI())
+      S32S64LaneMask.insert(LCSSAPhi.getOperand(0).getReg());
+  }
 }
