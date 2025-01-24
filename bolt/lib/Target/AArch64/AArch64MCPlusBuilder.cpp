@@ -1263,7 +1263,7 @@ public:
     return true;
   }
 
-  InstructionListType createIndirectPltCall(const MCInst &DirectCall,
+  InstructionListType createIndirectPLTCall(MCInst &&DirectCall,
                                             const MCSymbol *TargetLocation,
                                             MCContext *Ctx) override {
     const bool IsTailCall = isTailCall(DirectCall);
@@ -1297,8 +1297,7 @@ public:
     MCInst InstCall;
     InstCall.setOpcode(IsTailCall ? AArch64::BR : AArch64::BLR);
     InstCall.addOperand(MCOperand::createReg(AArch64::X17));
-    if (IsTailCall)
-      setTailCall(InstCall);
+    moveAnnotations(std::move(DirectCall), InstCall);
     Code.emplace_back(InstCall);
 
     return Code;
