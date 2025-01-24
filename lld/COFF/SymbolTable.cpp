@@ -56,6 +56,8 @@ static void forceLazy(Symbol *s) {
   }
   case Symbol::Kind::LazyObjectKind: {
     InputFile *file = cast<LazyObject>(s)->file;
+    if (!file->lazy)
+      return;
     file->lazy = false;
     file->symtab.ctx.driver.addFile(file);
     break;
