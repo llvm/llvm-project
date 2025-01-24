@@ -50,7 +50,7 @@ mlir::Location CIRGenModule::getLoc(SourceRange cRange) {
   return mlir::FusedLoc::get({begin, end}, metadata, builder.getContext());
 }
 
-void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
+void CIRGenModule::buildGlobal(clang::GlobalDecl gd) {
   const auto *global = cast<ValueDecl>(gd.getDecl());
 
   if (const auto *fd = dyn_cast<FunctionDecl>(global)) {
@@ -71,19 +71,19 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
   }
 
   // TODO(CIR): Defer emitting some global definitions until later
-  emitGlobalDefinition(gd);
+  buildGlobalDefinition(gd);
 }
 
-void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
-                                                mlir::Operation *op) {
+void CIRGenModule::buildGlobalFunctionDefinition(clang::GlobalDecl gd,
+                                                 mlir::Operation *op) {
   auto const *funcDecl = cast<FunctionDecl>(gd.getDecl());
   auto funcOp = builder.create<cir::FuncOp>(
       getLoc(funcDecl->getSourceRange()), funcDecl->getIdentifier()->getName());
   theModule.push_back(funcOp);
 }
 
-void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
-                                        mlir::Operation *op) {
+void CIRGenModule::buildGlobalDefinition(clang::GlobalDecl gd,
+                                         mlir::Operation *op) {
   const auto *decl = cast<ValueDecl>(gd.getDecl());
   if (const auto *fd = dyn_cast<FunctionDecl>(decl)) {
     // TODO(CIR): Skip generation of CIR for functions with available_externally
@@ -99,15 +99,15 @@ void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
 
     if (fd->isMultiVersion())
       errorNYI(fd->getSourceRange(), "multiversion functions");
-    emitGlobalFunctionDefinition(gd, op);
+    buildGlobalFunctionDefinition(gd, op);
     return;
   }
 
-  llvm_unreachable("Invalid argument to CIRGenModule::emitGlobalDefinition");
+  llvm_unreachable("Invalid argument to CIRGenModule::buildGlobalDefinition");
 }
 
 // Emit code for a single top level declaration.
-void CIRGenModule::emitTopLevelDecl(Decl *decl) {
+void CIRGenModule::buildTopLevelDecl(Decl *decl) {
 
   // Ignore dependent declarations.
   if (decl->isTemplated())
@@ -123,7 +123,7 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     auto *fd = cast<FunctionDecl>(decl);
     // Consteval functions shouldn't be emitted.
     if (!fd->isConsteval())
-      emitGlobal(fd);
+      buildGlobal(fd);
     break;
   }
   }

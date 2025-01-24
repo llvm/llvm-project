@@ -45,7 +45,7 @@ mlir::ModuleOp CIRGenerator::getModule() const { return cgm->getModule(); }
 bool CIRGenerator::HandleTopLevelDecl(DeclGroupRef group) {
 
   for (Decl *decl : group)
-    cgm->emitTopLevelDecl(decl);
+    cgm->buildTopLevelDecl(decl);
 
   return true;
 }

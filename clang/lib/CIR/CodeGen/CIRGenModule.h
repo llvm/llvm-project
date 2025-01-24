@@ -72,15 +72,15 @@ public:
   mlir::Location getLoc(clang::SourceLocation cLoc);
   mlir::Location getLoc(clang::SourceRange cRange);
 
-  void emitTopLevelDecl(clang::Decl *decl);
+  void buildTopLevelDecl(clang::Decl *decl);
 
   /// Emit code for a single global function or variable declaration. Forward
   /// declarations are emitted lazily.
-  void emitGlobal(clang::GlobalDecl gd);
+  void buildGlobal(clang::GlobalDecl gd);
 
-  void emitGlobalDefinition(clang::GlobalDecl gd,
-                            mlir::Operation *op = nullptr);
-  void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
+  void buildGlobalDefinition(clang::GlobalDecl gd,
+                             mlir::Operation *op = nullptr);
+  void buildGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
 
   /// Helpers to emit "not yet implemented" error diagnostics
   DiagnosticBuilder errorNYI(llvm::StringRef);
