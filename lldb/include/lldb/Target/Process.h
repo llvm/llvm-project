@@ -1440,6 +1440,20 @@ public:
   /// platforms where there is a difference (only Arm Thumb at this time).
   lldb::addr_t FixAnyAddress(lldb::addr_t pc);
 
+  /// Retrieve the actual address masks for high memory code/data,
+  /// without the normal fallbacks of returning the low-memory masks
+  /// or the user settings.  Needed by SBProcess to determine if
+  /// the high address masks have actually been set, and should
+  /// be updated when "set all masks" is requested.  In most cases,
+  /// the highmem masks should be left to have LLDB_INVALID_ADDRESS_MASK,
+  /// unset.
+  lldb::addr_t GetConcreteHighmemCodeAddressMask() {
+    return m_highmem_code_address_mask;
+  }
+  lldb::addr_t GetConcreteHighmemDataAddressMask() {
+    return m_highmem_data_address_mask;
+  }
+
   /// Get the Modification ID of the process.
   ///
   /// \return
