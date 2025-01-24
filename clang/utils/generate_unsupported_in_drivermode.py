@@ -13,12 +13,15 @@ provided on the command line. See clang/include/clang/Driver/Options.td
 The path to the TableGen executable can optionally be provided. Otherwise, the
 script will search for it.
 
+The primary maintenance task for this script would be updating the expected return message for a driver mode if
+there are changes over time. See the instantiations of DriverController, specifically the check_string.
+
 Logic:
 1) For each option, (records of class "Option"), and for each driver, (records of class "OptionVisibility")
     a. if the option's "Visibility" field includes the driver flavour, skip processing this option for this driver
     b. if the option is part of an option group, (the record has the "Group" property),
-       and the group's "Visibility" field includes the driver flavor, skip processing this option for this driver
-    c. otherwise this option is not supported by this driver flavor, and this pairing is saved for testing
+       and the group's "Visibility" field includes the driver flavour, skip processing this option for this driver
+    c. otherwise this option is not supported by this driver flavour, and this pairing is saved for testing
 2) For each unsupported pairing, generate a Lit RUN line, and a CHECK line to parse for expected output. Ex: "error: unknown argument"
 """
 
@@ -66,9 +69,8 @@ OPTION_T = "/T lib_6_7"
 SLASH_SLASH = "// "
 EXCLAMATION = "! "
 
-# A few options need to be explicitly skipped for a variety of reasons
+# Invalid usage of the driver options below causes unique output, so skip testing
 exceptions_sequence = [
-    # Invalid usage of the driver options below causes unique output
     "cc1",
     "cc1as",
 ]
@@ -165,6 +167,10 @@ def find_tablegen():
 def find_groups(group_sequence, options_json, option):
     """Find the groups for a given option
     Note that groups can themselves be part of groups, hence the recursion
+
+    group_sequence: A sequence to which group names will be appended.
+    options_json: The converted Python dictionary from the Options.td json string
+    option: The option object from Options.td
     """
     group_json = options_json[option]["Group"]
 
@@ -172,12 +178,180 @@ def find_groups(group_sequence, options_json, option):
         return
 
     # Prevent circular group membership lookup
-    for group in group_sequence:
-        if group_json["def"] == group:
-            return
+    if len(group_sequence) > 0:
+        for group in group_sequence:
+            if group_json["def"] == group:
+                return
 
     group_sequence.append(group_json["def"])
     return find_groups(group_sequence, options_json, option)
+
+
+def get_index(driver_vis):
+    """Get the driver controller index for a given driver
+    driver_vis: The visibility string from OptionVisibility in Options.td
+    """
+    for index, driver_ctrl in enumerate(driver_controller):
+        if driver_vis == driver_ctrl.visibility_str:
+            return index
+
+
+def get_visibility(option, filtered_visibility):
+    """Get a list of drivers that a given option is exposed to
+    option: The option object from Options.td
+    filtered_visibility: Sequence in which the visibility will be stored
+    """
+    group_sequence = []
+
+    # Check for the option's explicit visibility
+    for visibility in options_json[option]["Visibility"]:
+        if visibility is not None:
+            filtered_visibility.append(visibility["def"])
+
+    # Check for the option's group's visibility
+    find_groups(group_sequence, options_json, option)
+    if len(group_sequence) > 0:
+        for group_name in group_sequence:
+            for visibility in options_json[group_name]["Visibility"]:
+                filtered_visibility.append(visibility["def"])
+
+
+def find_supported_seq_cmp_start(supported_sequence, low, high, search_option):
+    """Return the index corresponding to where to start comparisons in the supported sequence
+    Modified binary search for the first element of supported_sequence
+    that has an option that is of equal or lesser length than the search option
+    from the unsupported sequence
+    The supported sequence must be reverse sorted by option name length
+    """
+    middle = math.floor(low + (high - low) / 2)
+
+    if low > high:
+        return -1
+    # If the start of the list is reached
+    if middle - 1 == -1:
+        return middle
+    # If the end of the list is reached
+    if middle == len(supported_sequence) - 1:
+        return middle
+
+    if (
+            len(supported_sequence[middle].option_name)
+            <= len(search_option)
+            < len(supported_sequence[middle - 1].option_name)
+    ):
+        return middle
+    elif len(supported_sequence[middle].option_name) <= len(search_option):
+        return find_supported_seq_cmp_start(
+            supported_sequence, low, middle - 1, search_option
+        )
+    elif len(supported_sequence[middle].option_name) > len(search_option):
+        return find_supported_seq_cmp_start(
+            supported_sequence, middle + 1, high, search_option
+        )
+    else:
+        # No-op
+        return -1
+
+
+def get_lit_test_note(test_visibility):
+    """Return the note to be included at the start of the Lit test file
+    test_visibility: Any VISIBILITY_* variable. VISIBILITY_FLANG will return the .f90 formatted test note.
+    All other will return the .c formatted test note
+    """
+    test_prefix = EXCLAMATION if test_visibility == VISIBILITY_FLANG else SLASH_SLASH
+
+    return (
+            f"{test_prefix}UNSUPPORTED: system-windows\n"
+            f"{test_prefix}NOTE: This lit test was automatically generated to validate "
+            "unintentionally exposed arguments to various driver flavours.\n"
+            f"{test_prefix}NOTE: To make changes, see "
+            + Path(__file__).resolve().as_posix()
+            + " from which it was generated.\n\n"
+    )
+
+
+def write_lit_test(test_path, test_visibility, unsupported_list):
+    """Write the Lit tests to file
+    test_path: File write path
+    test_visibility: VISIBILITY_DEFAULT or VISIBILITY_FLANG, which indicates whether to write
+    to the main Lit test file or flang Lit test file respectively
+    unsupported_list: List of UnsupportedDriverOption objects
+    """
+    try:
+        with open(test_path, "w") as lit_file:
+            try:
+                lit_file.write(get_lit_test_note(test_visibility))
+
+                for index, unsupported_pair in enumerate(unsupported_list):
+                    is_flang_pair = (
+                            unsupported_pair.driver == VISIBILITY_FLANG
+                            or unsupported_pair.driver == VISIBILITY_FC1
+                    )
+                    if (test_visibility == VISIBILITY_FLANG and not is_flang_pair) or (
+                            test_visibility == VISIBILITY_DEFAULT and is_flang_pair
+                    ):
+                        continue
+
+                    # In testing, return codes cannot be relied on consistently for assessing command failure.
+                    # Leaving this handling here in case things change, but for now, Lit tests will accept pass or fail
+                    # lit_not = "not " if unsupported_pair.is_error else ""
+                    lit_not = "not not --crash "
+
+                    prefix_str = SLASH_SLASH
+                    if (
+                            unsupported_pair.driver == VISIBILITY_FLANG
+                            or unsupported_pair.driver == VISIBILITY_FC1
+                    ):
+                        prefix_str = EXCLAMATION
+
+                    CMD_START = f"{prefix_str}RUN: " + lit_not
+
+                    lit_file.write(
+                        CMD_START
+                        + driver_controller[
+                            get_index(unsupported_pair.driver)
+                        ].lit_cmd_prefix
+                        + " "
+                        + unsupported_pair.prefix
+                        + unsupported_pair.option_name
+                        + driver_controller[
+                            get_index(unsupported_pair.driver)
+                        ].shell_cmd_suffix
+                        + driver_controller[
+                            get_index(unsupported_pair.driver)
+                        ].lit_cmd_end
+                        + unsupported_pair.driver
+                        + " %s\n"
+                    )
+
+                # CHECK statements. Instead of writing custom CHECK statements for each option-driver pair,
+                # create one statement per driver. Not all options return error messages that include their option name
+                for driver in driver_controller:
+                    is_flang_driver = (
+                            driver.visibility_str == VISIBILITY_FLANG
+                            or driver.visibility_str == VISIBILITY_FC1
+                    )
+
+                    if test_visibility == VISIBILITY_FLANG and not is_flang_driver:
+                        continue
+                    elif test_visibility == VISIBILITY_DEFAULT and is_flang_driver:
+                        continue
+
+                    check_prefix = EXCLAMATION if is_flang_driver else SLASH_SLASH
+
+                    lit_file.write(
+                        check_prefix
+                        + driver.visibility_str
+                        + ": "
+                        + driver.check_string
+                        + "\n"
+                    )
+            except (IOError, OSError):
+                sys.exit("Error writing to " + "LIT_TEST_PATH. Exiting")
+    except (FileNotFoundError, PermissionError, OSError):
+        sys.exit("Error opening " + "LIT_TEST_PATH" + ". Exiting")
+    else:
+        lit_file.close()
 
 
 # Validate the number of arguments have been passed
@@ -304,175 +478,6 @@ driver_controller = [
     # driver_flang,
 ]
 
-
-def get_index(driver_vis):
-    """Get the driver controller index for a given driver
-    driver_vis: The visibility string from OptionVisibility in Options.td
-    """
-    for index, driver_ctrl in enumerate(driver_controller):
-        if driver_vis == driver_ctrl.visibility_str:
-            return index
-
-
-def get_visibility(option, filtered_visibility):
-    """Get a list of drivers that a given option exposed to
-    option: The option object from Options.td
-    filtered_visibility: Sequence in which the visibility will be stored
-
-    Return true if this option should be skipped
-    """
-    group_sequence = []
-    should_skip = False
-
-    # Check for the option's explicit visibility
-    for visibility in options_json[option]["Visibility"]:
-        if visibility is not None:
-            filtered_visibility.append(visibility["def"])
-
-    # Check for the option's group's visibility
-    find_groups(group_sequence, options_json, option)
-    if len(group_sequence) > 0:
-        for group_name in group_sequence:
-            for visibility in options_json[group_name]["Visibility"]:
-                filtered_visibility.append(visibility["def"])
-    if should_skip:
-        untested_sequence.append(
-            UnsupportedDriverOption("All", option, options_json[option]["Name"], "")
-        )
-
-    return should_skip
-
-
-def find_supported_seq_cmp_start(supported_sequence, low, high, search_option):
-    """Return the index where to start comparisons in the supported sequence
-    Modified binary search for the first element of supported_sequence
-    that has an option that is of equal or lesser length than the search option
-    from the unsupported sequence
-    The supported sequence must be reverse sorted by option name length
-    """
-    middle = math.floor(low + (high - low) / 2)
-
-    if low > high:
-        return -1
-    # If the start of the list is reached
-    if middle - 1 == -1:
-        return middle
-    # If the end of the list is reached
-    if middle == len(supported_sequence) - 1:
-        return middle
-
-    if (
-        len(supported_sequence[middle].option_name)
-        <= len(search_option)
-        < len(supported_sequence[middle - 1].option_name)
-    ):
-        return middle
-    elif len(supported_sequence[middle].option_name) <= len(search_option):
-        return find_supported_seq_cmp_start(
-            supported_sequence, low, middle - 1, search_option
-        )
-    elif len(supported_sequence[middle].option_name) > len(search_option):
-        return find_supported_seq_cmp_start(
-            supported_sequence, middle + 1, high, search_option
-        )
-    else:
-        # No-op
-        return -1
-
-
-def get_lit_test_note(test_visibility):
-    """Return the note to be included at the start of the Lit test file"""
-    test_prefix = EXCLAMATION if test_visibility == VISIBILITY_FLANG else SLASH_SLASH
-
-    return (
-        f"{test_prefix}UNSUPPORTED: system-windows\n"
-        f"{test_prefix}NOTE: This lit test was automatically generated to validate "
-        "unintentionally exposed arguments to various driver flavours.\n"
-        f"{test_prefix}NOTE: To make changes, see "
-        + Path(__file__).resolve().as_posix()
-        + " from which it was generated.\n\n"
-    )
-
-
-def write_lit_test(test_path, test_visibility, unsupported_list):
-    """Write the lit tests to file"""
-    try:
-        with open(test_path, "w") as lit_file:
-            try:
-                lit_file.write(get_lit_test_note(test_visibility))
-
-                for index, unsupported_pair in enumerate(unsupported_list):
-                    is_flang_pair = (
-                        unsupported_pair.driver == VISIBILITY_FLANG
-                        or unsupported_pair.driver == VISIBILITY_FC1
-                    )
-                    if (test_visibility == VISIBILITY_FLANG and not is_flang_pair) or (
-                        test_visibility == VISIBILITY_DEFAULT and is_flang_pair
-                    ):
-                        continue
-
-                    # In testing, return codes cannot be relied on for consistently for assessing command failure.
-                    # Leaving this handling here in case things change, but for now, Lit tests will accept pass or fail
-                    # lit_not = "not " if unsupported_pair.is_error else ""
-
-                    lit_not = "not not --crash "
-
-                    prefix_str = SLASH_SLASH
-                    if (
-                        unsupported_pair.driver == VISIBILITY_FLANG
-                        or unsupported_pair.driver == VISIBILITY_FC1
-                    ):
-                        prefix_str = EXCLAMATION
-
-                    CMD_START = f"{prefix_str}RUN: " + lit_not
-
-                    lit_file.write(
-                        CMD_START
-                        + driver_controller[
-                            get_index(unsupported_pair.driver)
-                        ].lit_cmd_prefix
-                        + " "
-                        + unsupported_pair.prefix
-                        + unsupported_pair.option_name
-                        + driver_controller[
-                            get_index(unsupported_pair.driver)
-                        ].shell_cmd_suffix
-                        + driver_controller[
-                            get_index(unsupported_pair.driver)
-                        ].lit_cmd_end
-                        + unsupported_pair.driver
-                        + " %s\n"
-                    )
-                # CHECK statements. Instead of writing custom CHECK statements for each option-driver pair,
-                # create one statement per driver. Not all options return error messages that include their option name
-                for driver in driver_controller:
-                    is_flang_driver = (
-                        driver.visibility_str == VISIBILITY_FLANG
-                        or driver.visibility_str == VISIBILITY_FC1
-                    )
-
-                    if test_visibility == VISIBILITY_FLANG and not is_flang_driver:
-                        continue
-                    elif test_visibility == VISIBILITY_DEFAULT and is_flang_driver:
-                        continue
-
-                    check_prefix = EXCLAMATION if is_flang_driver else SLASH_SLASH
-
-                    lit_file.write(
-                        check_prefix
-                        + driver.visibility_str
-                        + ": "
-                        + driver.check_string
-                        + "\n"
-                    )
-            except (IOError, OSError):
-                sys.exit("Error writing to " + "LIT_TEST_PATH. Exiting")
-    except (FileNotFoundError, PermissionError, OSError):
-        sys.exit("Error opening " + "LIT_TEST_PATH" + ". Exiting")
-    else:
-        lit_file.close()
-
-
 # Gather list of driver flavours
 for visibility in options_json["!instanceof"]["OptionVisibility"]:
     if visibility == VISIBILITY_FLANG:
@@ -482,8 +487,7 @@ for visibility in options_json["!instanceof"]["OptionVisibility"]:
 # Iterate the options list and find which drivers shouldn't be visible to each option
 for option in options_json["!instanceof"]["Option"]:
     kind = options_json[option]["Kind"]["def"]
-    should_skip = False
-    tmp_vis_list = []
+    tmp_visibility_list = []
     group_sequence = []
     option_name = options_json[option]["Name"]
 
@@ -508,7 +512,7 @@ for option in options_json["!instanceof"]["Option"]:
         # Assuming the first prefix is the preferred prefix
         prefix = prefixes[0]
 
-    should_skip = get_visibility(option, tmp_vis_list)
+    get_visibility(option, tmp_visibility_list)
 
     # Check visibility of direct and indirect aliases
     # A given option may list only one "primary" alias, but that alias
@@ -518,18 +522,15 @@ for option in options_json["!instanceof"]["Option"]:
     if options_json[option]["Alias"] is not None:
         primary_alias = options_json[option]["Alias"]["def"]
 
-        should_skip = get_visibility(primary_alias, tmp_vis_list)
+        get_visibility(primary_alias, tmp_visibility_list)
 
         for alias in alias_sequence:
             if options_json[alias]["Alias"]["def"] == primary_alias:
-                should_skip = get_visibility(alias, tmp_vis_list)
+                get_visibility(alias, tmp_visibility_list)
 
     for alias in alias_sequence:
         if options_json[alias]["Alias"]["def"] == option:
-            should_skip = get_visibility(alias, tmp_vis_list)
-
-    if should_skip:
-        continue
+            get_visibility(alias, tmp_visibility_list)
 
     # KIND_JOINED* options that are supported need to be saved for checking
     # which options cannot be validated with this script
@@ -537,7 +538,7 @@ for option in options_json["!instanceof"]["Option"]:
 
     # Append to the unsupported list, and the various supported lists
     for driver in driver_sequence:
-        if driver not in tmp_vis_list:
+        if driver not in tmp_visibility_list:
             unsupported_sequence.append(
                 UnsupportedDriverOption(driver, option, option_name, prefix)
             )
@@ -606,13 +607,13 @@ for unsupported_pair in unsupported_sequence:
 
             # Options corresponding to driver flavours may be added automatically, in which case,
             # their visibility should be considered as well.
-            tmp_vis_list = []
-            get_visibility(unsupported_pair.option, tmp_vis_list)
+            tmp_visibility_list = []
+            get_visibility(unsupported_pair.option, tmp_visibility_list)
             out_file.seek(0)
             out = out_file.read()
-            if b"-cc1" in out and VISIBILITY_CC1 in tmp_vis_list:
+            if b"-cc1" in out and VISIBILITY_CC1 in tmp_visibility_list:
                 skipped_sequence.append(unsupported_pair)
-            elif b"-cc1as" in out and VISIBILITY_CC1AS in tmp_vis_list:
+            elif b"-cc1as" in out and VISIBILITY_CC1AS in tmp_visibility_list:
                 skipped_sequence.append(unsupported_pair)
 
         os.remove(tmp_file)
