@@ -49,6 +49,127 @@ LLVM_DUMP_METHOD void ProgramPoint::dump() const {
   return printJson(llvm::errs());
 }
 
+const char *ProgramPoint::kindToStr(Kind K) {
+  switch (K) {
+  case BlockEdgeKind:
+    return "BlockEdge";
+  case BlockEntranceKind:
+    return "BlockEntrance";
+  case BlockExitKind:
+    return "BlockExit";
+  case PreStmtKind:
+    return "PreStmt";
+  case PreStmtPurgeDeadSymbolsKind:
+    return "PreStmtPurgeDeadSymbols";
+  case PostStmtPurgeDeadSymbolsKind:
+    return "PostStmtPurgeDeadSymbols";
+  case PostStmtKind:
+    return "PostStmt";
+  case PreLoadKind:
+    return "PreLoad";
+  case PostLoadKind:
+    return "PostLoad";
+  case PreStoreKind:
+    return "PreStore";
+  case PostStoreKind:
+    return "PostStore";
+  case PostConditionKind:
+    return "PostCondition";
+  case PostLValueKind:
+    return "PostLValue";
+  case PostAllocatorCallKind:
+    return "PostAllocatorCall";
+  case PostInitializerKind:
+    return "PostInitializer";
+  case CallEnterKind:
+    return "CallEnter";
+  case CallExitBeginKind:
+    return "CallExitBegin";
+  case CallExitEndKind:
+    return "CallExitEnd";
+  case FunctionExitKind:
+    return "FunctionExit";
+  case PreImplicitCallKind:
+    return "PreImplicitCall";
+  case PostImplicitCallKind:
+    return "PostImplicitCall";
+  case LoopExitKind:
+    return "LoopExit";
+  case EpsilonKind:
+    return "Epsilon";
+  }
+  llvm_unreachable("Unknown ProgramPoint kind");
+}
+
+std::optional<SourceLocation> ProgramPoint::getSourceLocation() const {
+  switch (getKind()) {
+  case BlockEdgeKind:
+    // return castAs<BlockEdge>().getSrc()->getTerminatorStmt()->getBeginLoc();
+    return std::nullopt;
+  case BlockEntranceKind:
+    // return castAs<BlockEntrance>().getBlock()->getLabel()->getBeginLoc();
+    return std::nullopt;
+  case BlockExitKind:
+    // return
+    // castAs<BlockExit>().getBlock()->getTerminatorStmt()->getBeginLoc();
+    return std::nullopt;
+  case PreStmtKind:
+    [[fallthrough]];
+  case PreStmtPurgeDeadSymbolsKind:
+    [[fallthrough]];
+  case PostStmtPurgeDeadSymbolsKind:
+    [[fallthrough]];
+  case PostStmtKind:
+    [[fallthrough]];
+  case PreLoadKind:
+    [[fallthrough]];
+  case PostLoadKind:
+    [[fallthrough]];
+  case PreStoreKind:
+    [[fallthrough]];
+  case PostStoreKind:
+    [[fallthrough]];
+  case PostConditionKind:
+    [[fallthrough]];
+  case PostLValueKind:
+    [[fallthrough]];
+  case PostAllocatorCallKind:
+    if (const Stmt *S = castAs<StmtPoint>().getStmt())
+      return S->getBeginLoc();
+    return std::nullopt;
+  case PostInitializerKind:
+    if (const auto *Init = castAs<PostInitializer>().getInitializer())
+      return Init->getSourceLocation();
+    return std::nullopt;
+  case CallEnterKind:
+    if (const Stmt *S = castAs<CallEnter>().getCallExpr())
+      return S->getBeginLoc();
+    return std::nullopt;
+  case CallExitBeginKind:
+    if (const Stmt *S = castAs<CallExitBegin>().getReturnStmt())
+      return S->getBeginLoc();
+    return std::nullopt;
+  case CallExitEndKind:
+    return std::nullopt;
+  case FunctionExitKind:
+    if (const auto *B = castAs<FunctionExitPoint>().getBlock();
+        B && B->getTerminatorStmt())
+      return B->getTerminatorStmt()->getBeginLoc();
+    return std::nullopt;
+  case PreImplicitCallKind:
+    return castAs<ImplicitCallPoint>().getLocation();
+  case PostImplicitCallKind:
+    return castAs<ImplicitCallPoint>().getLocation();
+  case LoopExitKind:
+    if (const Stmt *S = castAs<LoopExit>().getLoopStmt())
+      return S->getBeginLoc();
+    return std::nullopt;
+  case EpsilonKind:
+    return std::nullopt;
+  }
+  llvm_unreachable("Unknown ProgramPoint kind");
+}
+
 void ProgramPoint::printJson(llvm::raw_ostream &Out, const char *NL) const {
   const ASTContext &Context =
       getLocationContext()->getAnalysisDeclContext()->getASTContext();
