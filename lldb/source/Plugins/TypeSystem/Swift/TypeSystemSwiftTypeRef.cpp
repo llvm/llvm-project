@@ -943,13 +943,6 @@ IsClangImportedType(NodePointer node,
   }
 }
 
-/// Resolve a type alias node and return a demangle tree for the
-/// resolved type. If the type alias resolves to a Clang type, return
-/// a Clang CompilerType.
-///
-/// \param prefer_clang_types if this is true, type aliases in the
-///                           __C module are resolved as Clang types.
-///
 std::pair<swift::Demangle::NodePointer, CompilerType>
 TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
                                          swift::Demangle::NodePointer node,
@@ -1202,7 +1195,7 @@ TypeSystemSwiftTypeRef::Canonicalize(swift::Demangle::Demangler &dem,
                    Node::Kind::Structure, "Array");
   }
   case Node::Kind::SugaredDictionary:
-    // FIXME: This isnt covered by any test.
+    // FIXME: This isn't covered by any test.
     assert(node->getNumChildren() == 2);
     if (node->getNumChildren() != 2)
       return node;
@@ -1216,15 +1209,27 @@ TypeSystemSwiftTypeRef::Canonicalize(swift::Demangle::Demangler &dem,
 
   case Node::Kind::BoundGenericTypeAlias:
   case Node::Kind::TypeAlias: {
-    auto node_clangtype = ResolveTypeAlias(dem, node, flavor);
-    if (CompilerType clang_type = node_clangtype.second) {
-      if (auto result = GetClangTypeNode(clang_type, dem))
-        return result;
-      else
+    // Safeguard against cyclic aliases.
+    for (unsigned alias_depth = 0; alias_depth < 64; ++alias_depth) {
+      auto node_clangtype = ResolveTypeAlias(dem, node, flavor);
+      if (CompilerType clang_type = node_clangtype.second) {
+        if (auto result = GetClangTypeNode(clang_type, dem))
+          return result;
+        // Failed to convert that clang type into a demangle node.
         return node;
+      }
+      if (!node_clangtype.first)
+        return node;
+      if (node_clangtype.first == node)
+        return node;
+      node = node_clangtype.first;
+      if (node->getKind() != Node::Kind::BoundGenericTypeAlias &&
+          node->getKind() != Node::Kind::TypeAlias)
+        // Resolve any type aliases in the resolved type.
+        return GetCanonicalNode(dem, node);
+      // This type alias resolved to another type alias.
     }
-    if (node_clangtype.first)
-      return node_clangtype.first;
+    // Hit the safeguard limit.
     return node;
   }
   default:
