@@ -17,7 +17,7 @@ func.func @foo0(%arg0 : i32) -> i32 {
 
 // CHECK-LABEL: func.func @foo1
 func.func @foo1(%arg0 : i32) -> i32 {
-  // CHECK:    call @foo1
+  // CHECK:    call @foo0
   %0 = arith.constant 1 : i32
   %1 = arith.subi %arg0, %0 : i32
   %2 = call @foo0(%1) : (i32) -> i32
