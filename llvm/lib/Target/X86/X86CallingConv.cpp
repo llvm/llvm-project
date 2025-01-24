@@ -357,7 +357,8 @@ static bool CC_X86_64_I128(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   unsigned NumRegs = PendingMembers.size();
   assert(NumRegs == 2 && "Should have two parts");
 
-  MCPhysReg Regs[] = {X86::RDI, X86::RSI, X86::RDX, X86::RCX, X86::R8, X86::R9};
+  static const MCPhysReg Regs[] = {X86::RDI, X86::RSI, X86::RDX,
+                                   X86::RCX, X86::R8,  X86::R9};
   ArrayRef<MCPhysReg> Allocated = State.AllocateRegBlock(Regs, NumRegs);
   if (!Allocated.empty()) {
     PendingMembers[0].convertToReg(Allocated[0]);
