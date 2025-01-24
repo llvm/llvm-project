@@ -56,6 +56,10 @@ static void forceLazy(Symbol *s) {
   }
   case Symbol::Kind::LazyObjectKind: {
     InputFile *file = cast<LazyObject>(s)->file;
+    // FIXME: Remove this once we resolve all defineds before all undefineds in
+    //        ObjFile::initializeSymbols().
+    if (!file->lazy)
+      return;
     file->lazy = false;
     file->symtab.ctx.driver.addFile(file);
     break;
