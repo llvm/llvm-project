@@ -172,18 +172,22 @@ struct CUFAllocateOpConversion
         isPointer = true;
 
     if (hasDoubleDescriptors(op)) {
-      if (isPointer)
-        TODO(loc, "pointer allocation with double descriptors");
       // Allocation for module variable are done with custom runtime entry point
       // so the descriptors can be synchronized.
       mlir::func::FuncOp func;
-      if (op.getSource())
-        func = fir::runtime::getRuntimeFunc<mkRTKey(
-            CUFAllocatableAllocateSourceSync)>(loc, builder);
-      else
+      if (op.getSource()) {
+        func = isPointer ? fir::runtime::getRuntimeFunc<mkRTKey(
+                               CUFPointerAllocateSourceSync)>(loc, builder)
+                         : fir::runtime::getRuntimeFunc<mkRTKey(
+                               CUFAllocatableAllocateSourceSync)>(loc, builder);
+      } else {
         func =
-            fir::runtime::getRuntimeFunc<mkRTKey(CUFAllocatableAllocateSync)>(
-                loc, builder);
+            isPointer
+                ? fir::runtime::getRuntimeFunc<mkRTKey(CUFPointerAllocateSync)>(
+                      loc, builder)
+                : fir::runtime::getRuntimeFunc<mkRTKey(
+                      CUFAllocatableAllocateSync)>(loc, builder);
+      }
       return convertOpToCall<cuf::AllocateOp>(op, rewriter, func);
     }
 

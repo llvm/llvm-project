@@ -167,13 +167,17 @@ script which is built as part of LLVM. For example, to run the
 
 .. code-block:: bash
 
-    % llvm-lit ~/llvm/test/Integer/BitPacked.ll
+    % llvm-lit <path to llvm-project>/llvm/test/Integer/BitPacked.ll
 
-or to run all of the ARM CodeGen tests:
+.. note::
+   The test files are in the ``llvm-project`` directory, not the directory you
+   are building LLVM in.
+
+Or you can run a whole folder of tests. To run all of the ARM CodeGen tests:
 
 .. code-block:: bash
 
-    % llvm-lit ~/llvm/test/CodeGen/ARM
+    % llvm-lit <path to llvm-project>/llvm/test/CodeGen/ARM
 
 The regression tests will use the Python psutil module only if installed in a
 **non-user** location. Under Linux, install with sudo or within a virtual

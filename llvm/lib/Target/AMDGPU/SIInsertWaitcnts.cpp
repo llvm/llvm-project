@@ -1079,7 +1079,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
     // but none with memory instructions.
     for (const MachineOperand &Op : Inst.defs()) {
       RegInterval Interval = getRegInterval(&Inst, MRI, TRI, Op);
-      if (T == LOAD_CNT || T == SAMPLE_CNT || T == BVH_CNT) {
+      if (T == LOAD_CNT || T == SAMPLE_CNT || T == BVH_CNT || T == STORE_CNT) {
         if (Interval.first >= NUM_ALL_VGPRS)
           continue;
         if (updateVMCntOnly(Inst)) {
@@ -2165,6 +2165,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
                                                      getVmemType(MI)) ||
               !ST->hasVmemWriteVgprInOrder()) {
             ScoreBrackets.determineWait(LOAD_CNT, Interval, Wait);
+            ScoreBrackets.determineWait(STORE_CNT, Interval, Wait);
             ScoreBrackets.determineWait(SAMPLE_CNT, Interval, Wait);
             ScoreBrackets.determineWait(BVH_CNT, Interval, Wait);
             ScoreBrackets.clearVgprVmemTypes(Interval);
@@ -2357,7 +2358,7 @@ SIInsertWaitcnts::getSoftwareHazardEventType(const MachineInstr &Inst) const {
 bool SIInsertWaitcnts::mayAccessVMEMThroughFlat(const MachineInstr &MI) const {
   assert(TII->isFLAT(MI));
 
-  // All flat instructions use the VMEM counter except prefetch.
+  // All flat instructions use the VMEM counter except prefetch and RTS instructions.
   if (!TII->usesVM_CNT(MI))
     return false;
 
@@ -2468,12 +2469,17 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     if (isCacheInvOrWBInst(Inst))
       return;
 
-    // TODO-GFX13: Insert correct waitcnts for RTS instructions.
-    if (Inst.getOpcode() == AMDGPU::RTS_FLUSH)
-      return;
-
     assert(Inst.mayLoadOrStore());
 
+    if (Inst.getOpcode() == AMDGPU::RTS_RAY_SAVE)
+      ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_WRITE_ACCESS, Inst);
+    if (Inst.getOpcode() == AMDGPU::RTS_FLUSH)
+      return;
+    if (Inst.getOpcode() == AMDGPU::RTS_READ_RESULT_ALL_STOP ||
+        Inst.getOpcode() == AMDGPU::RTS_READ_RESULT_ONGOING ||
+        Inst.getOpcode() == AMDGPU::RTS_UPDATE_RAY) {
+      ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_BVH_READ_ACCESS, Inst);
+    }
     int FlatASCount = 0;
 
     if (mayAccessVMEMThroughFlat(Inst)) {
