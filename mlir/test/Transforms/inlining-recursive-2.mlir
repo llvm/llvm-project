@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -inline='default-pipeline=''' | FileCheck %s
-// RUN: mlir-opt %s --mlir-disable-threading -inline='default-pipeline=''' | FileCheck %s
+// RUN: mlir-opt %s -inline='default-pipeline=' | FileCheck %s
+// RUN: mlir-opt %s --mlir-disable-threading -inline='default-pipeline=' | FileCheck %s
 
 module {
   // CHECK-LABEL: func.func @parent1
