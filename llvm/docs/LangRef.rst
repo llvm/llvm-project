@@ -16734,7 +16734,7 @@ so arithmetic feeding into a minnum can produce inconsistent results. For exampl
 ``minnum(fadd(sNaN, -0.0), 1.0)`` can produce qNaN or 1.0 depending on whether ``fadd`` is folded.
 
 IEEE-754-2008 defines minNum, and it was removed in IEEE-754-2019. As the replacement, IEEE-754-2019
-defines :ref:`minimumNumber <llvm-minimumnum-intrinsic>`.
+defines :ref:`minimumNumber <i_minimumnum>`.
 
 If the intrinsic is marked with the nsz attribute, then the effect is as in the definition in C
 and IEEE-754-2008: the result of ``minnum(-0.0, +0.0)`` may be either -0.0 or +0.0.
@@ -16794,7 +16794,7 @@ so arithmetic feeding into a maxnum can produce inconsistent results. For exampl
 ``maxnum(fadd(sNaN, -0.0), 1.0)`` can produce qNaN or 1.0 depending on whether ``fadd`` is folded.
 
 IEEE-754-2008 defines maxNum, and it was removed in IEEE-754-2019. As the replacement, IEEE-754-2019
-defines :ref:`maximumNumber <llvm-maximumnum-intrinsic>`.
+defines :ref:`maximumNumber <i_maximumnum>`.
 
 If the intrinsic is marked with the nsz attribute, then the effect is as in the definition in C
 and IEEE-754-2008: the result of maxnum(-0.0, +0.0) may be either -0.0 or +0.0.
