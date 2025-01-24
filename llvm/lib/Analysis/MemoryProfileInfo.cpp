@@ -42,6 +42,11 @@ cl::opt<unsigned> MemProfMinAveLifetimeAccessDensityHotThreshold(
     cl::desc("The minimum TotalLifetimeAccessDensity / AllocCount for an "
              "allocation to be considered hot"));
 
+cl::opt<bool>
+    MemProfUseHotHints("memprof-use-hot-hints", cl::init(false), cl::Hidden,
+                       cl::desc("Enable use of hot hints (only supported for "
+                                "unambigously hot allocations)"));
+
 cl::opt<bool> MemProfReportHintedSizes(
     "memprof-report-hinted-sizes", cl::init(false), cl::Hidden,
     cl::desc("Report total allocation sizes of hinted allocations"));
@@ -60,8 +65,9 @@ AllocationType llvm::memprof::getAllocType(uint64_t TotalLifetimeAccessDensity,
 
   // The access densities are multiplied by 100 to hold 2 decimal places of
   // precision, so need to divide by 100.
-  if (((float)TotalLifetimeAccessDensity) / AllocCount / 100 >
-      MemProfMinAveLifetimeAccessDensityHotThreshold)
+  if (MemProfUseHotHints &&
+      ((float)TotalLifetimeAccessDensity) / AllocCount / 100 >
+          MemProfMinAveLifetimeAccessDensityHotThreshold)
     return AllocationType::Hot;
 
   return AllocationType::NotCold;
