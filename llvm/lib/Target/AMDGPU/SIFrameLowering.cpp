@@ -1257,14 +1257,15 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   bool FPSaved = FuncInfo->hasPrologEpilogSGPRSpillEntry(FramePtrReg);
 
   if (RoundedSize != 0) {
-    if (TRI.hasBasePointer(MF))
+    if (TRI.hasBasePointer(MF)) {
       BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::COPY), StackPtrReg)
           .addReg(TRI.getBaseRegister())
           .setMIFlag(MachineInstr::FrameDestroy);
-    else if (hasFP(MF))
+    } else if (hasFP(MF)) {
       BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::COPY), StackPtrReg)
           .addReg(FramePtrReg)
           .setMIFlag(MachineInstr::FrameDestroy);
+    }  
   }
 
   Register FramePtrRegScratchCopy;
