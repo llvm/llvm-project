@@ -60,46 +60,49 @@ ABISysV_arm64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) 
   return ABISP();
 }
 
-static bool PushToLinuxGuardedControlStack(addr_t return_addr,
-                                           RegisterContext *reg_ctx,
-                                           Thread &thread) {
-  // If the Guarded Control Stack extension is enabled we need to put the return
-  // address onto that stack.
+static Status PushToLinuxGuardedControlStack(addr_t return_addr,
+                                             RegisterContext *reg_ctx,
+                                             Thread &thread) {
+  Status err;
+
+  // If the Guarded Control Stack extension is present we may need to put the
+  // return address onto that stack.
   const RegisterInfo *gcs_features_enabled_info =
       reg_ctx->GetRegisterInfoByName("gcs_features_enabled");
   if (!gcs_features_enabled_info)
-    return false;
+    return err;
 
   uint64_t gcs_features_enabled = reg_ctx->ReadRegisterAsUnsigned(
       gcs_features_enabled_info, LLDB_INVALID_ADDRESS);
   if (gcs_features_enabled == LLDB_INVALID_ADDRESS)
-    return false;
+    return Status("Could not read GCS features enabled register.");
 
   // Only attempt this if GCS is enabled. If it's not enabled then gcspr_el0
   // may point to unmapped memory.
   if ((gcs_features_enabled & 1) == 0)
-    return false;
+    return err;
 
   const RegisterInfo *gcspr_el0_info =
       reg_ctx->GetRegisterInfoByName("gcspr_el0");
   if (!gcspr_el0_info)
-    return false;
+    return Status("Could not get register info for gcspr_el0.");
 
   uint64_t gcspr_el0 =
       reg_ctx->ReadRegisterAsUnsigned(gcspr_el0_info, LLDB_INVALID_ADDRESS);
   if (gcspr_el0 == LLDB_INVALID_ADDRESS)
-    return false;
+    return Status("Could not read gcspr_el0.");
 
   // A link register entry on the GCS is 8 bytes.
   gcspr_el0 -= 8;
   if (!reg_ctx->WriteRegisterFromUnsigned(gcspr_el0_info, gcspr_el0))
-    return false;
+    return Status(
+        "Attempted to decrement gcspr_el0, but could not write to it.");
 
   Status error;
   size_t wrote = thread.GetProcess()->WriteMemory(gcspr_el0, &return_addr,
                                                   sizeof(return_addr), error);
   if ((wrote != sizeof(return_addr) || error.Fail()))
-    return false;
+    return Status("Failed to write new Guarded Control Stack entry.");
 
   Log *log = GetLog(LLDBLog::Expressions);
   LLDB_LOGF(log,
@@ -110,7 +113,7 @@ static bool PushToLinuxGuardedControlStack(addr_t return_addr,
   // gcspr_el0 will be restored to the original value by lldb-server after
   // the call has finished, which serves as the "pop".
 
-  return true;
+  return err;
 }
 
 bool ABISysV_arm64::PrepareTrivialCall(Thread &thread, addr_t sp,
@@ -156,8 +159,15 @@ bool ABISysV_arm64::PrepareTrivialCall(Thread &thread, addr_t sp,
           return_addr))
     return false;
 
-  if (GetProcessSP()->GetTarget().GetArchitecture().GetTriple().isOSLinux())
-    PushToLinuxGuardedControlStack(return_addr, reg_ctx, thread);
+  if (GetProcessSP()->GetTarget().GetArchitecture().GetTriple().isOSLinux()) {
+    Status err = PushToLinuxGuardedControlStack(return_addr, reg_ctx, thread);
+    // If we could not manage the GCS, the expression will certainly fail,
+    // and if we just carried on, that failure would be a lot more cryptic.
+    if (err.Fail()) {
+      LLDB_LOGF(log, "Failed to setup Guarded Call Stack: %s", err.AsCString());
+      return false;
+    }
+  }
 
   // Set "sp" to the requested value
   if (!reg_ctx->WriteRegisterFromUnsigned(
