@@ -205,11 +205,19 @@ def Tosa_FloatAttr : Attr<CPred<"::llvm::isa<::mlir::FloatAttr>($_self)">,
 //===----------------------------------------------------------------------===//
 // Iterable attributes.
 //===----------------------------------------------------------------------===//
+// Defined in `section 3. Enumerations` of the TOSA specification.
+
 // Supported regimes for tosa.resize.
 def Tosa_ResizeTypeAttr : StringBasedAttr<
     CPred<"::llvm::cast<StringAttr>($_self).getValue() == \"BILINEAR\"  || " #
           "::llvm::cast<StringAttr>($_self).getValue() == \"NEAREST_NEIGHBOR\"">,
     "Supported resize/upsampling strategies">;
+
+// Supported NaN propagation strategies.
+def Tosa_NanPropagationAttr : StringBasedAttr<
+    CPred<"::llvm::cast<StringAttr>($_self).getValue() == \"PROPAGATE\"  || " #
+          "::llvm::cast<StringAttr>($_self).getValue() == \"IGNORE\"">,
+    "Supported NaN propagation strategies">;
 
 def Tosa_TensorTypeAttr : TypeAttrBase<"TensorType", "Tensor type attribute">;
 
