@@ -1,4 +1,4 @@
-# RUN: not --crash llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -run-pass=none %s -filetype=null 2>&1 | FileCheck %s
+# RUN: not --crash llc -o - -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -run-pass=none %s 2>&1 | FileCheck %s
 --- |
   define void @mismatched_range_type() {
     ret void
@@ -21,10 +21,8 @@ body:             |
     ; CHECK: Bad machine code: range is incompatible with the result type
     %3:_(<2 x s32>) = G_LOAD %0(p1) :: (volatile load (s64), align 4, !range !0, addrspace 1)
 
-    ; CHECK: Bad machine code: range is incompatible with the result type
     %4:_(p0) = G_LOAD %0(p1) :: (volatile load (s64), align 4, !range !0, addrspace 1)
 
-    ; CHECK: Bad machine code: range is incompatible with the result type
     %5:_(<2 x p0>) = G_LOAD %0(p1) :: (volatile load (s64), align 4, !range !0, addrspace 1)
 
     $vgpr0_vgpr1 = COPY %3

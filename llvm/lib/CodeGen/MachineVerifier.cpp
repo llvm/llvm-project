@@ -1279,7 +1279,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
           ConstantInt *i =
               mdconst::extract<ConstantInt>(MMO.getRanges()->getOperand(0));
           if (i->getIntegerType()->getBitWidth() !=
-              MMO.getMemoryType().getScalarSizeInBits()) {
+              ValTy.getScalarType().getSizeInBits()) {
             report("range is incompatible with the result type", MI);
           }
         }
