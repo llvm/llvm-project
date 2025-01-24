@@ -218,9 +218,13 @@ getReservedRegs(const MachineFunction &MF) const {
     markSuperRegs(Reserved, STI.getFramePointerReg());
   if (hasBasePointer(MF))
     markSuperRegs(Reserved, BasePtr);
-  // Some targets reserve R9.
+  // Some targets reserve R4,R5 or R9.
   if (STI.isR9Reserved())
     markSuperRegs(Reserved, ARM::R9);
+  if (STI.isR4Reserved()) 
+    markSuperRegs(Reserved, ARM::R4);
+  if (STI.isR5Reserved()) 
+    markSuperRegs(Reserved, ARM::R5);
   // Reserve D16-D31 if the subtarget doesn't support them.
   if (!STI.hasD32()) {
     static_assert(ARM::D31 == ARM::D16 + 15, "Register list not consecutive!");
