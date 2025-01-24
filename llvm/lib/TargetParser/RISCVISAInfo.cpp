@@ -743,7 +743,8 @@ Error RISCVISAInfo::checkDependency() {
   bool HasZcmt = Exts.count("zcmt") != 0;
   static constexpr StringLiteral XqciExts[] = {
       {"xqcia"},   {"xqciac"},  {"xqcicli"}, {"xqcicm"},  {"xqcics"},
-      {"xqcicsr"}, {"xqciint"}, {"xqcilo"},  {"xqcilsm"}, {"xqcisls"}};
+      {"xqcicsr"}, {"xqciint"}, {"xqcilia"}, {"xqcilo"},  {"xqcilsm"},
+      {"xqcisls"}};
 
   if (HasI && HasE)
     return getIncompatibleError("i", "e");

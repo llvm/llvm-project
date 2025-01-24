@@ -245,6 +245,25 @@ class QCIRVInstESStore<bits<3> funct3, bits<2> funct2, string opcodestr>
                       (ins GPRMem:$rs2, GPR:$rs1, simm26:$imm),
                       opcodestr, "$rs2, ${imm}(${rs1})">;
 
+class QCIRVInstEAI<bits<3> funct3, bits<1> funct1, string opcodestr>
+    : RVInst48<(outs GPRNoX0:$rd_wb), (ins GPRNoX0:$rd, imm32:$imm),
+                opcodestr, "$rd, $imm", [], InstFormatOther> {
+  bits<5> rd;
+  bits<32> imm;
+
+  let Constraints = "$rd = $rd_wb";
+  let Inst{47-16} = imm{31-0};
+  let Inst{15} = funct1;
+  let Inst{14-12} = funct3;
+  let Inst{11-7} = rd;
+  let Inst{6-0} = 0b0011111;
+}
+
+class QCIRVInstEI<bits<3> funct3, bits<2> funct2, string opcodestr>
+    : QCIRVInstEIBase<funct3, funct2, (outs GPRNoX0:$rd),
+                      (ins GPRNoX0:$rs1, simm26:$imm), opcodestr,
+                      "$rd, $rs1, $imm">;
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -434,6 +453,20 @@ let Predicates = [HasVendorXqcilo, IsRV32], DecoderNamespace = "Xqcilo" in {
   def QC_E_SH    : QCIRVInstESStore<0b110, 0b10, "qc.e.sh">;
   def QC_E_SW    : QCIRVInstESStore<0b110, 0b11, "qc.e.sw">;
 } // Predicates = [HasVendorXqcilo, IsRV32], DecoderNamespace = "Xqcilo"
+
+let Predicates = [HasVendorXqcilia, IsRV32], DecoderNamespace = "Xqcilia" in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+  def QC_E_XORAI : QCIRVInstEAI<0b001, 0b0, "qc.e.xorai">;
+  def QC_E_ORAI  : QCIRVInstEAI<0b001, 0b1, "qc.e.orai" >;
+  def QC_E_ADDAI : QCIRVInstEAI<0b010, 0b0, "qc.e.addai">;
+  def QC_E_ANDAI : QCIRVInstEAI<0b010, 0b1, "qc.e.andai">;
+
+  def QC_E_XORI  : QCIRVInstEI<0b011, 0b00, "qc.e.xori">;
+  def QC_E_ORI   : QCIRVInstEI<0b011, 0b01, "qc.e.ori" >;
+  def QC_E_ADDI  : QCIRVInstEI<0b011, 0b10, "qc.e.addi">;
+  def QC_E_ANDI  : QCIRVInstEI<0b011, 0b11, "qc.e.andi">;
+} // hasSideEffects = 0, mayLoad = 0, mayStore = 0
+} // Predicates = [HasVendorXqcilia, IsRV32], DecoderNamespace = "Xqcilia"
 
 //===----------------------------------------------------------------------===//
 // Aliases

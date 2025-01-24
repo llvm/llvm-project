@@ -766,7 +766,9 @@ DecodeStatus RISCVDisassembler::getInstruction48(MCInst &MI, uint64_t &Size,
   TRY_TO_DECODE_FEATURE(
       RISCV::FeatureVendorXqcilo, DecoderTableXqcilo48,
       "Qualcomm uC Large Offset Load Store custom 48bit opcode table");
-
+  TRY_TO_DECODE_FEATURE(
+      RISCV::FeatureVendorXqcilia, DecoderTableXqcilia48,
+      "Qualcomm uC Large Immediate Arithmetic custom 48bit opcode table");
   return MCDisassembler::Fail;
 }
 

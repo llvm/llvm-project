@@ -296,6 +296,8 @@ Changes to the RISC-V Backend
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcilo` (Large Offset Load Store)
   extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqcilia` (Large Immediate Arithmetic)
+  extension.
 * Added ``Sdext`` and ``Sdtrig`` extensions.
 
 Changes to the WebAssembly Backend
