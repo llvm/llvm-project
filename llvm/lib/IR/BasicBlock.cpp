@@ -372,9 +372,16 @@ const Instruction* BasicBlock::getFirstNonPHI() const {
 }
 
 BasicBlock::const_iterator BasicBlock::getFirstNonPHIIt() const {
-  const Instruction *I = getFirstNonPHI();
+  const Instruction *I = [&]() -> const Instruction * {
+    for (const Instruction &I : *this)
+      if (!isa<PHINode>(I))
+        return &I;
+    return nullptr;
+  }();
+
   if (!I)
     return end();
+
   BasicBlock::const_iterator It = I->getIterator();
   // Set the head-inclusive bit to indicate that this iterator includes
   // any debug-info at the start of the block. This is a no-op unless the
@@ -414,11 +421,10 @@ BasicBlock::getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp) const {
 }
 
 BasicBlock::const_iterator BasicBlock::getFirstInsertionPt() const {
-  const Instruction *FirstNonPHI = getFirstNonPHI();
-  if (!FirstNonPHI)
+  const_iterator InsertPt = getFirstNonPHIIt();
+  if (InsertPt == end())
     return end();
 
-  const_iterator InsertPt = FirstNonPHI->getIterator();
   if (InsertPt->isEHPad()) ++InsertPt;
   // Set the head-inclusive bit to indicate that this iterator includes
   // any debug-info at the start of the block. This is a no-op unless the
