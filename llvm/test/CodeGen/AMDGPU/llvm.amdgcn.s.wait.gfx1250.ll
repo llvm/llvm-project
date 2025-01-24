@@ -5,9 +5,7 @@
 define amdgpu_ps void @test_asynccnt() {
 ; GFX12-LABEL: test_asynccnt:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_asynccnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.wait.asynccnt(i16 0)
   ret void
@@ -16,9 +14,7 @@ define amdgpu_ps void @test_asynccnt() {
 define amdgpu_ps void @test_tensorcnt() {
 ; GFX12-LABEL: test_tensorcnt:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_tensorcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.wait.tensorcnt(i16 0)
   ret void
