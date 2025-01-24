@@ -360,18 +360,15 @@ static bool CC_X86_64_I128(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   MCPhysReg Regs[] = {X86::RDI, X86::RSI, X86::RDX, X86::RCX, X86::R8, X86::R9};
   ArrayRef<MCPhysReg> Allocated = State.AllocateRegBlock(Regs, NumRegs);
   if (!Allocated.empty()) {
-    for (const auto &[Pending, Reg] : zip(PendingMembers, Allocated)) {
-      Pending.convertToReg(Reg);
-      State.addLoc(Pending);
-    }
+    PendingMembers[0].convertToReg(Allocated[0]);
+    PendingMembers[1].convertToReg(Allocated[1]);
   } else {
     int64_t Offset = State.AllocateStack(16, Align(16));
-    for (auto &Pending : PendingMembers) {
-      Pending.convertToMem(Offset);
-      State.addLoc(Pending);
-      Offset += 8;
-    }
+    PendingMembers[0].convertToMem(Offset);
+    PendingMembers[1].convertToMem(Offset + 8);
   }
+  State.addLoc(PendingMembers[0]);
+  State.addLoc(PendingMembers[1]);
   PendingMembers.clear();
   return true;
 }
