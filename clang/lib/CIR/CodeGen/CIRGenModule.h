@@ -31,8 +31,10 @@ class LangOptions;
 class SourceLocation;
 class SourceRange;
 class TargetInfo;
+} // namespace clang
 
-namespace CIRGen {
+using namespace clang;
+namespace cir {
 
 /// This class organizes the cross-function state that is used while generating
 /// CIR code.
@@ -89,8 +91,6 @@ public:
   DiagnosticBuilder errorNYI(SourceRange, llvm::StringRef);
   DiagnosticBuilder errorNYI(SourceRange, llvm::StringRef, llvm::StringRef);
 };
-} // namespace CIRGen
-
-} // namespace clang
+} // namespace cir
 
 #endif // LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENMODULE_H

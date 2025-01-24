@@ -25,15 +25,14 @@
 namespace clang {
 class DeclGroupRef;
 class DiagnosticsEngine;
-namespace CIRGen {
-class CIRGenModule;
-} // namespace CIRGen
 } // namespace clang
 
 namespace mlir {
 class MLIRContext;
 } // namespace mlir
 namespace cir {
+class CIRGenModule;
+
 class CIRGenerator : public clang::ASTConsumer {
   virtual void anchor();
   clang::DiagnosticsEngine &diags;
@@ -45,7 +44,7 @@ class CIRGenerator : public clang::ASTConsumer {
 
 protected:
   std::unique_ptr<mlir::MLIRContext> mlirCtx;
-  std::unique_ptr<clang::CIRGen::CIRGenModule> cgm;
+  std::unique_ptr<CIRGenModule> cgm;
 
 public:
   CIRGenerator(clang::DiagnosticsEngine &diags,

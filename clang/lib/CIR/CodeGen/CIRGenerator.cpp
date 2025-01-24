@@ -36,8 +36,8 @@ void CIRGenerator::Initialize(ASTContext &astCtx) {
 
   mlirCtx = std::make_unique<mlir::MLIRContext>();
   mlirCtx->loadDialect<mlir::cir::CIRDialect>();
-  cgm = std::make_unique<clang::CIRGen::CIRGenModule>(*mlirCtx.get(), astCtx,
-                                                      codeGenOpts, diags);
+  cgm = std::make_unique<CIRGenModule>(*mlirCtx.get(), astCtx, codeGenOpts,
+                                       diags);
 }
 
 mlir::ModuleOp CIRGenerator::getModule() const { return cgm->getModule(); }
