@@ -321,6 +321,7 @@ StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_OFFLOADING);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_LTO);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_JT_SIZES)
+    STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_FUNC_MAP);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_ATTRIBUTES);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_HASH);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_verdef);
@@ -937,6 +938,104 @@ ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec, const Elf_Shdr *RelaSec,
   if (!AddrMapsOrErr && PGOAnalyses)
     PGOAnalyses->resize(OriginalPGOSize);
   return std::move(AddrMapsOrErr);
+}
+
+template <class ELFT>
+Expected<std::vector<FuncMap>>
+ELFFile<ELFT>::decodeFuncMap(const Elf_Shdr &Sec,
+                             const Elf_Shdr *RelaSec) const {
+  bool IsRelocatable = this->getHeader().e_type == ELF::ET_REL;
+
+  // This DenseMap maps the offset of each function (the location of the
+  // reference to the function in the SHT_LLVM_FUNC_ADDR_MAP section) to the
+  // addend (the location of the function in the text section).
+  llvm::DenseMap<uint64_t, uint64_t> FunctionOffsetTranslations;
+  if (IsRelocatable && RelaSec) {
+    assert(RelaSec &&
+           "Can't read a SHT_LLVM_FUNC_ADDR_MAP section in a relocatable "
+           "object file without providing a relocation section.");
+    Expected<typename ELFFile<ELFT>::Elf_Rela_Range> Relas =
+        this->relas(*RelaSec);
+    if (!Relas)
+      return createError("unable to read relocations for section " +
+                         describe(*this, Sec) + ": " +
+                         toString(Relas.takeError()));
+    for (typename ELFFile<ELFT>::Elf_Rela Rela : *Relas)
+      FunctionOffsetTranslations[Rela.r_offset] = Rela.r_addend;
+  }
+  auto GetAddressForRelocation =
+      [&](unsigned RelocationOffsetInSection) -> Expected<unsigned> {
+    auto FOTIterator =
+        FunctionOffsetTranslations.find(RelocationOffsetInSection);
+    if (FOTIterator == FunctionOffsetTranslations.end()) {
+      return createError("failed to get relocation data for offset: " +
+                         Twine::utohexstr(RelocationOffsetInSection) +
+                         " in section " + describe(*this, Sec));
+    }
+    return FOTIterator->second;
+  };
+  Expected<ArrayRef<uint8_t>> ContentsOrErr = this->getSectionContents(Sec);
+  if (!ContentsOrErr)
+    return ContentsOrErr.takeError();
+  ArrayRef<uint8_t> Content = *ContentsOrErr;
+  DataExtractor Data(Content, this->isLE(), ELFT::Is64Bits ? 8 : 4);
+  std::vector<FuncMap> FunctionEntries;
+
+  DataExtractor::Cursor Cur(0);
+  Error ULEBSizeErr = Error::success();
+
+  // Helper lampda to extract the (possiblly relocatable) address stored at Cur.
+  auto ExtractAddress = [&]() -> Expected<typename ELFFile<ELFT>::uintX_t> {
+    uint64_t RelocationOffsetInSection = Cur.tell();
+    auto Address =
+        static_cast<typename ELFFile<ELFT>::uintX_t>(Data.getAddress(Cur));
+    if (!Cur)
+      return Cur.takeError();
+    if (!IsRelocatable)
+      return Address;
+    assert(Address == 0);
+    Expected<unsigned> AddressOrErr =
+        GetAddressForRelocation(RelocationOffsetInSection);
+    if (!AddressOrErr)
+      return AddressOrErr.takeError();
+    return *AddressOrErr;
+  };
+
+  uint8_t Version = 0;
+  uint8_t Feature = 0;
+  FuncMap::Features FeatEnable{};
+  while (!ULEBSizeErr && Cur && Cur.tell() < Content.size()) {
+    if (Sec.sh_type == ELF::SHT_LLVM_FUNC_MAP) {
+      Version = Data.getU8(Cur);
+      if (!Cur)
+        break;
+      if (Version > 1)
+        return createError("unsupported SHT_LLVM_FUNC_MAP version: " +
+                           Twine(static_cast<int>(Version)));
+      Feature = Data.getU8(Cur); // Feature byte
+      if (!Cur)
+        break;
+      auto FeatEnableOrErr = FuncMap::Features::decode(Feature);
+      if (!FeatEnableOrErr)
+        return FeatEnableOrErr.takeError();
+      FeatEnable = *FeatEnableOrErr;
+    }
+    typename ELFFile<ELFT>::uintX_t FunctionAddress = 0;
+    auto AddressOrErr = ExtractAddress();
+    if (!AddressOrErr)
+      return AddressOrErr.takeError();
+    FunctionAddress = *AddressOrErr;
+    uint64_t DynamicInstCount =
+        FeatEnable.DynamicInstCount
+            ? readULEB128As<uint64_t>(Data, Cur, ULEBSizeErr)
+            : 0;
+    FunctionEntries.push_back({FunctionAddress, DynamicInstCount, FeatEnable});
+  }
+  // Either Cur is in the error state, or we have an error in ULEBSizeErr, but
+  // we join all errors here to be safe.
+  if (!Cur || ULEBSizeErr)
+    return joinErrors(Cur.takeError(), std::move(ULEBSizeErr));
+  return FunctionEntries;
 }
 
 template <class ELFT>
