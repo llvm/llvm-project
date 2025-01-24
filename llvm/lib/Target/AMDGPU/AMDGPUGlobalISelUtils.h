@@ -9,6 +9,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUGLOBALISELUTILS_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUGLOBALISELUTILS_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/Register.h"
 #include <utility>
 
@@ -21,6 +22,7 @@ class MachineRegisterInfo;
 class GCNSubtarget;
 class GISelKnownBits;
 class LLT;
+class MachineFunction;
 #if LLPC_BUILD_NPI
 class MachineMemOperand;
 #endif /* LLPC_BUILD_NPI */
@@ -32,13 +34,34 @@ std::pair<Register, unsigned>
 getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
                           GISelKnownBits *KnownBits = nullptr,
                           bool CheckNUW = false);
-#if LLPC_BUILD_NPI
 
+#if LLPC_BUILD_NPI
 bool IsLaneSharedInVGPR(const MachineMemOperand *MemOpnd);
 
 bool IsPromotablePrivate(const AllocaInst &Alloca);
 bool IsPromotablePrivate(const MachineMemOperand *MemOpnd);
 
+#endif /* LLPC_BUILD_NPI */
+// Currently finds S32/S64 lane masks that can be declared as divergent by
+// uniformity analysis (all are phis at the moment).
+// These are defined as i32/i64 in some IR intrinsics (not as i1).
+// Tablegen forces(via telling that lane mask IR intrinsics are uniform) most of
+// S32/S64 lane masks to be uniform, as this results in them ending up with sgpr
+// reg class after instruction-select, don't search for all of them.
+class IntrinsicLaneMaskAnalyzer {
+  SmallDenseSet<Register, 8> S32S64LaneMask;
+  MachineRegisterInfo &MRI;
+
+public:
+  IntrinsicLaneMaskAnalyzer(MachineFunction &MF);
+  bool isS32S64LaneMask(Register Reg) const;
+
+private:
+  void initLaneMaskIntrinsics(MachineFunction &MF);
+  // This will not be needed when we turn off LCSSA for global-isel.
+  void findLCSSAPhi(Register Reg);
+};
+#if LLPC_BUILD_NPI
 } // namespace AMDGPU
 } // namespace llvm
 #else /* LLPC_BUILD_NPI */

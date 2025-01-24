@@ -584,6 +584,10 @@ gentbl(
             "-gen-clang-regular-keyword-attr-info",
             "include/clang/Basic/RegularKeywordAttrInfo.inc",
         ),
+        (
+            "-gen-cxx11-attribute-info",
+            "include/clang/Basic/CXX11AttributeInfo.inc",
+        ),
     ],
     tblgen = ":clang-tblgen",
     td_file = "include/clang/Basic/Attr.td",

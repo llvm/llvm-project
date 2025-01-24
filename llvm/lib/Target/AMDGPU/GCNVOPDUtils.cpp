@@ -198,6 +198,12 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
       if (!Src2.isImm() || Src2.getImm())
         return false;
     }
+    if (AMDGPU::hasNamedOperand(FirstMI.getOpcode(), AMDGPU::OpName::bitop3)) {
+      const MachineOperand &Src2 =
+          *TII.getNamedOperand(FirstMI, AMDGPU::OpName::src2);
+      if (!Src2.isImm() || Src2.getImm())
+        return false;
+    }
   }
 
 #endif /* LLPC_BUILD_NPI */

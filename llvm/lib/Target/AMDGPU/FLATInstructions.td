@@ -533,7 +533,7 @@ class FLAT_RTS<string opName, bit HasVdst, bit HasData, bit isStore, bit isLoad,
   !if(HasVdst, (outs vdstClass:$vdst), (outs)),
   !con(!if(HasData, !if(HasVdst, (ins VReg_64:$vdata), (ins VGPR_32:$vdata)), (ins)),(ins CPol:$cpol)),
   !if(!and(HasVdst, HasData), " $vdst, $vdata", !if(HasVdst, " $vdst", !if(HasData, " $vdata", "")))#"$cpol">{
-
+  let VM_CNT = 0;
   let hasSideEffects = 1;
   let is_flat_global = 1;
   let has_offset = 0;
@@ -1741,11 +1741,6 @@ class FlatLoadSaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> 
 class FlatLoadSignedPat_M0 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), (i32 timm:$cpol), M0)),
   (inst $vaddr, $offset, $cpol)
->;
-
-class GlobalLoadSaddrPat_M0 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (GlobalSAddrCPolM0 (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), (i32 timm), M0)),
-  (inst $saddr, $voffset, $offset, $cpol)
 #else /* LLPC_BUILD_NPI */
 class GlobalLoadSaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset))),
@@ -1754,9 +1749,9 @@ class GlobalLoadSaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt
 >;
 
 #ifdef LLPC_BUILD_NPI
-class FlatLoadSignedPat_CPOL <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), (i32 timm:$cpol))),
-  (inst $vaddr, $offset, $cpol)
+class GlobalLoadSaddrPat_M0 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (GlobalSAddrCPolM0 (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), (i32 timm), M0)),
+  (inst $saddr, $voffset, $offset, $cpol)
 #else /* LLPC_BUILD_NPI */
 class GlobalStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
                            ValueType vt> : GCNPat <
@@ -1766,6 +1761,11 @@ class GlobalStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
 >;
 
 #ifdef LLPC_BUILD_NPI
+class FlatLoadSignedPat_CPOL <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (GlobalOffset (i64 VReg_64:$vaddr), i32:$offset), (i32 timm:$cpol))),
+  (inst $vaddr, $offset, $cpol)
+>;
+
 class GlobalLoadSaddrPat_CPOL <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (GlobalSAddrCPol (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), (i32 timm))),
   (inst $saddr, $voffset, $offset, $cpol)
@@ -2422,9 +2422,6 @@ let SubtargetPredicate = isGFX12Plus in {
 
 #ifdef LLPC_BUILD_NPI
 } // End OtherPredicates = [HasFlatAddressSpace]
-
-let OtherPredicates = [isGFX12Plus] in
-defm : FlatAtomicRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
 #else /* LLPC_BUILD_NPI */
   let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
     defm : FlatAtomicNoRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
@@ -2432,6 +2429,9 @@ defm : FlatAtomicRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_ato
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
+let OtherPredicates = [isGFX12Plus] in
+defm : FlatAtomicRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
+
 let OtherPredicates = [isGFX12Plus, HasAtomicCSubNoRtnInsts] in
 defm : FlatAtomicNoRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
 #else /* LLPC_BUILD_NPI */
