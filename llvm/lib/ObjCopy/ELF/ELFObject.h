@@ -549,7 +549,6 @@ public:
   virtual void
   replaceSectionReferences(const DenseMap<SectionBase *, SectionBase *> &);
   virtual bool hasContents() const { return false; }
-  virtual ArrayRef<uint8_t> getContents() const { return {}; }
   // Notify the section that it is subject to removal.
   virtual void onRemove();
 
@@ -620,8 +619,6 @@ public:
   bool hasContents() const override {
     return Type != ELF::SHT_NOBITS && Type != ELF::SHT_NULL;
   }
-  ArrayRef<uint8_t> getContents() const override { return Contents; }
-
   void restoreSymTabLink(SymbolTableSection &SymTab) override;
 };
 
@@ -657,7 +654,6 @@ public:
   Error accept(SectionVisitor &Sec) const override;
   Error accept(MutableSectionVisitor &Visitor) override;
   bool hasContents() const override { return true; }
-  ArrayRef<uint8_t> getContents() const override { return Data; }
 };
 
 class CompressedSection : public SectionBase {
@@ -1168,8 +1164,6 @@ private:
     return Sec.Flags & ELF::SHF_ALLOC;
   };
 
-  Error updateSectionData(SecPtr &Sec, ArrayRef<uint8_t> Data);
-
 public:
   template <class T>
   using ConstRange = iterator_range<pointee_iterator<
@@ -1212,7 +1206,6 @@ public:
 
   const auto &getUpdatedSections() const { return UpdatedSections; }
   Error updateSection(StringRef Name, ArrayRef<uint8_t> Data);
-  Error updateSectionData(SectionBase &S, ArrayRef<uint8_t> Data);
 
   SectionBase *findSection(StringRef Name) {
     auto SecIt =
