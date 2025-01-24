@@ -473,7 +473,7 @@ func.func @vector_store_i2_const_index_one_partial_store(%arg0: vector<1xi2>) {
     %0 = memref.alloc() : memref<4x1xi2>
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
-    vector.store %arg0, %0[%c1, %c0] :memref<4x1xi2>, vector<1xi2>
+    vector.store %arg0, %0[%c1, %c0] : memref<4x1xi2>, vector<1xi2>
     return
 }
 
