@@ -432,7 +432,7 @@ static bool AsanInitInternal() {
 
   CacheBinaryName();
 
-  // Initialize flags and register weak function callbacks for windows.
+  // Initialize flags. On Windows it also also register weak function callbacks.
   // This must be done early, because most of the initialization steps look at
   // flags().
   InitializeFlags();
