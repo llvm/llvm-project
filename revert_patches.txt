@@ -28,7 +28,3 @@ revert: breaks build of rccl __cpuidex
 1c28b92373 [Clang] __has_builtin should return false for aux triple builtins (#121839) 
 Ron and Saiyed
 ---
-revert: breaks openmp  swdev 511608
-11b040192640 - [AMDGPU] Restore SP from saved-FP or saved-BP (#124007)
-Saiyed and Aditya
----

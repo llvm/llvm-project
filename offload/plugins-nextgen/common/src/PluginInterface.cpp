@@ -1132,10 +1132,6 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
     } else if (auto Err = setupDeviceMemoryPool(Plugin, *Image, HeapSize))
       return std::move(Err);
   }
-
-  if (auto Err = setupRPCServer(Plugin, *Image))
-    return std::move(Err);
-
 #ifdef OMPT_SUPPORT
   if (ompt::Initialized) {
     size_t Bytes =
@@ -1247,30 +1243,6 @@ Error GenericDeviceTy::setupDeviceMemoryPool(GenericPluginTy &Plugin,
 
   // Write device environment values to the device.
   return GHandler.writeGlobalToDevice(*this, Image, DevEnvGlobal);
-}
-
-Error GenericDeviceTy::setupRPCServer(GenericPluginTy &Plugin,
-                                      DeviceImageTy &Image) {
-  // The plugin either does not need an RPC server or it is unavailible.
-  if (!shouldSetupRPCServer())
-    return Plugin::success();
-
-  // Check if this device needs to run an RPC server.
-  RPCServerTy &Server = Plugin.getRPCServer();
-  auto UsingOrErr =
-      Server.isDeviceUsingRPC(*this, Plugin.getGlobalHandler(), Image);
-  if (!UsingOrErr)
-    return UsingOrErr.takeError();
-
-  if (!UsingOrErr.get())
-    return Plugin::success();
-
-  if (auto Err = Server.initDevice(*this, Plugin.getGlobalHandler(), Image))
-    return Err;
-
-  RPCServer = &Server;
-  DP("Running an RPC server on device %d\n", getDeviceId());
-  return Plugin::success();
 }
 
 Error PinnedAllocationMapTy::insertEntry(void *HstPtr, void *DevAccessiblePtr,
@@ -1892,8 +1864,11 @@ Error GenericPluginTy::deinit() {
     delete GlobalHandler;
 
 #if RPC_FIXME
-  if (RPCServer)
+  if (RPCServer) {
+    if (Error Err = RPCServer->shutDown())
+      return Err;
     delete RPCServer;
+  }
 #endif
 
   if (RecordReplay)

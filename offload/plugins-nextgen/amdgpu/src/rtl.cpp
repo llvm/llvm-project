@@ -1382,9 +1382,9 @@ struct AMDGPUSignalTy {
   }
 
   /// Wait until the signal gets a zero value.
-  Error wait(const uint64_t ActiveTimeout = 0, RPCServerTy *RPCServer = nullptr,
+  Error wait(const uint64_t ActiveTimeout = 0,
              GenericDeviceTy *Device = nullptr) const {
-    if (ActiveTimeout && !RPCServer) {
+    if (ActiveTimeout) {
       hsa_signal_value_t Got = 1;
       Got = hsa_signal_wait_scacquire(HSASignal, HSA_SIGNAL_CONDITION_EQ, 0,
                                       ActiveTimeout, HSA_WAIT_STATE_ACTIVE);
@@ -1393,14 +1393,11 @@ struct AMDGPUSignalTy {
     }
 
     // If there is an RPC device attached to this stream we run it as a server.
-    uint64_t Timeout = RPCServer ? 8192 : UINT64_MAX;
-    auto WaitState = RPCServer ? HSA_WAIT_STATE_ACTIVE : HSA_WAIT_STATE_BLOCKED;
+    uint64_t Timeout = UINT64_MAX;
+    auto WaitState = HSA_WAIT_STATE_BLOCKED;
     while (hsa_signal_wait_scacquire(HSASignal, HSA_SIGNAL_CONDITION_EQ, 0,
-                                     Timeout, WaitState) != 0) {
-      if (RPCServer && Device)
-        if (auto Err = RPCServer->runServer(*Device))
-          return Err;
-    }
+                                     Timeout, WaitState) != 0)
+      ;
     return Plugin::success();
   }
 
@@ -1895,11 +1892,6 @@ private:
   /// operation that was already finalized in a previous stream sycnhronize.
   uint32_t SyncCycle;
 
-  /// A pointer associated with an RPC server running on the given device. If
-  /// RPC is not being used this will be a null pointer. Otherwise, this
-  /// indicates that an RPC server is expected to be run on this stream.
-  RPCServerTy *RPCServer;
-
   /// Mutex to protect stream's management.
   mutable std::mutex Mutex;
 
@@ -2136,9 +2128,6 @@ public:
 
   hsa_queue_t *getHsaQueue() { return Queue->getHsaQueue(); }
 
-  /// Attach an RPC server to this stream.
-  void setRPCServer(RPCServerTy *Server) { RPCServer = Server; }
-
   /// Push a asynchronous kernel to the stream. The kernel arguments must be
   /// placed in a special allocation for kernel args and must keep alive until
   /// the kernel finalizes. Once the kernel is finished, the stream will release
@@ -2194,9 +2183,30 @@ public:
 
     // Push the kernel with the output signal and an input signal (optional)
     DP("Using Queue: %p with HSA Queue: %p\n", Queue, Queue->getHsaQueue());
-    return Queue->pushKernelLaunch(Kernel, KernelArgs, NumThreads, NumBlocks,
-                                   GroupSize, StackSize, OutputSignal,
-                                   InputSignal);
+    // If we are running an RPC server we want to wake up the server thread
+    // whenever there is a kernel running and let it sleep otherwise.
+    if (Device.getRPCServer())
+      Device.Plugin.getRPCServer().Thread->notify();
+
+    // Push the kernel with the output signal and an input signal (optional)
+    if (auto Err = Queue->pushKernelLaunch(Kernel, KernelArgs, NumThreads,
+                                           NumBlocks, GroupSize, StackSize,
+                                           OutputSignal, InputSignal))
+      return Err;
+
+    // Register a callback to indicate when the kernel is complete.
+    if (Device.getRPCServer()) {
+      if (auto Err = Slots[Curr].schedCallback(
+              [](void *Data) -> llvm::Error {
+                GenericPluginTy &Plugin =
+                    *reinterpret_cast<GenericPluginTy *>(Data);
+                Plugin.getRPCServer().Thread->finish();
+                return Error::success();
+              },
+              &Device.Plugin))
+        return Err;
+    }
+    return Plugin::success();
   }
 
   /// Push an asynchronous memory copy between pinned memory buffers.
@@ -2268,9 +2278,8 @@ public:
 
     // Wait for kernel to finish before scheduling the asynchronous copy.
     if (UseSyncCopyBack && InputSignal && InputSignal->load())
-      if (auto Err = InputSignal->wait(StreamBusyWaitMicroseconds, RPCServer, &Device))
+      if (auto Err = InputSignal->wait(StreamBusyWaitMicroseconds, &Device))
         return Err;
-
 #ifdef OMPT_SUPPORT
 
     if (OmptInfo) {
@@ -2457,8 +2466,8 @@ public:
       return Plugin::success();
 
     // Wait until all previous operations on the stream have completed.
-    if (auto Err = Slots[last()].Signal->wait(StreamBusyWaitMicroseconds,
-                                              RPCServer, &Device))
+    if (auto Err =
+            Slots[last()].Signal->wait(StreamBusyWaitMicroseconds, &Device))
       return Err;
 
     // Reset the stream and perform all pending post actions.
@@ -4701,7 +4710,7 @@ AMDGPUStreamTy::AMDGPUStreamTy(AMDGPUDeviceTy &Device)
     : Agent(Device.getAgent()), Queue(nullptr),
       SignalManager(Device.getSignalManager()), Device(Device),
       // Initialize the std::deque with some empty positions.
-      Slots(32), NextSlot(0), SyncCycle(0), RPCServer(nullptr),
+      Slots(32), NextSlot(0), SyncCycle(0),
       StreamBusyWaitMicroseconds(Device.getStreamBusyWaitMicroseconds()),
       UseMultipleSdmaEngines(Device.useMultipleSdmaEngines()),
       UseSyncCopyBack(Device.syncCopyBack()) {}
@@ -5116,10 +5125,6 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   } else {
     DP("No hostrpc buffer or service thread required\n");
   }
-
-  // If this kernel requires an RPC server we attach its pointer to the stream.
-  if (GenericDevice.getRPCServer())
-    Stream->setRPCServer(GenericDevice.getRPCServer());
 
   // Only COV5 implicitargs needs to be set. COV4 implicitargs are not used.
   if (ImplArgs &&
