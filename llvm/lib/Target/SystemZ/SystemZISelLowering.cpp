@@ -4708,15 +4708,19 @@ SDValue SystemZTargetLowering::lowerXALUO(SDValue Op,
 }
 
 static bool isAddCarryChain(SDValue Carry) {
-  while (Carry.getOpcode() == ISD::UADDO_CARRY)
+  while (Carry.getOpcode() == ISD::UADDO_CARRY &&
+         Carry->getValueType(0) != MVT::i128)
     Carry = Carry.getOperand(2);
-  return Carry.getOpcode() == ISD::UADDO;
+  return Carry.getOpcode() == ISD::UADDO &&
+         Carry->getValueType(0) != MVT::i128;
 }
 
 static bool isSubBorrowChain(SDValue Carry) {
-  while (Carry.getOpcode() == ISD::USUBO_CARRY)
+  while (Carry.getOpcode() == ISD::USUBO_CARRY &&
+         Carry->getValueType(0) != MVT::i128)
     Carry = Carry.getOperand(2);
-  return Carry.getOpcode() == ISD::USUBO;
+  return Carry.getOpcode() == ISD::USUBO &&
+         Carry->getValueType(0) != MVT::i128;
 }
 
 // Lower UADDO_CARRY/USUBO_CARRY nodes.
