@@ -183,11 +183,11 @@ namespace {
 // respecting the maximum specified.
 class PhiAnalyzer {
 public:
-  PhiAnalyzer(const Loop &L, unsigned MaxIterations);
+  PhiAnalyzer(const Loop &L, unsigned MaxIterations, ScalarEvolution &SE);
 
   // Calculate the sufficient minimum number of iterations of the loop to peel
   // such that phi instructions become determined (subject to allowable limits)
-  std::optional<unsigned> calculateIterationsToPeel(ScalarEvolution &SE);
+  std::optional<unsigned> calculateIterationsToPeel();
 
 protected:
   using PeelCounter = std::optional<unsigned>;
@@ -202,26 +202,28 @@ protected:
 
   // Calculate the number of iterations after which the given value
   // becomes an invariant.
-  PeelCounter calculate(Value &, ScalarEvolution &SE);
+  PeelCounter calculate(Value &);
 
   // Returns true if the \p Phi is an induction in the target loop. This
   // function is a wrapper of `InductionDescriptor::isInductionPHI`.
-  bool isInductionPHI(PHINode *Phi, ScalarEvolution &SE) const;
+  bool isInductionPHI(PHINode *Phi) const;
 
   const Loop &L;
   const unsigned MaxIterations;
+  ScalarEvolution &SE;
 
   // Map of Values to number of iterations to invariance or induction
   SmallDenseMap<const Value *, PeelCounter> IterationsToInvarianceOrInduction;
 };
 
-PhiAnalyzer::PhiAnalyzer(const Loop &L, unsigned MaxIterations)
-    : L(L), MaxIterations(MaxIterations) {
+PhiAnalyzer::PhiAnalyzer(const Loop &L, unsigned MaxIterations,
+                         ScalarEvolution &SE)
+    : L(L), MaxIterations(MaxIterations), SE(SE) {
   assert(canPeel(&L) && "loop is not suitable for peeling");
   assert(MaxIterations > 0 && "no peeling is allowed?");
 }
 
-bool PhiAnalyzer::isInductionPHI(PHINode *Phi, ScalarEvolution &SE) const {
+bool PhiAnalyzer::isInductionPHI(PHINode *Phi) const {
   if (!SE.isSCEVable(Phi->getType()))
     return false;
 
@@ -268,7 +270,7 @@ bool PhiAnalyzer::isInductionPHI(PHINode *Phi, ScalarEvolution &SE) const {
 //           %y = phi(0, 5)
 //           %a = %y + 1
 //   G(%y) = Unknown otherwise (including phi not in header block)
-PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(Value &V, ScalarEvolution &SE) {
+PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(Value &V) {
   // If we already know the answer, take it from the map.
   // Otherwise, place Unknown to map to avoid infinite recursion. Such
   // cycles can never stop on an invariant.
@@ -289,12 +291,12 @@ PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(Value &V, ScalarEvolution &SE) {
     }
 
     // If Phi is an induction, register it as a starting point.
-    if (isInductionPHI(Phi, SE))
+    if (isInductionPHI(Phi))
       return (IterationsToInvarianceOrInduction[&V] = 0);
 
     // We need to analyze the input from the back edge and add 1.
     Value *Input = Phi->getIncomingValueForBlock(L.getLoopLatch());
-    PeelCounter Iterations = calculate(*Input, SE);
+    PeelCounter Iterations = calculate(*Input);
     assert(IterationsToInvarianceOrInduction[Input] == Iterations &&
            "unexpected value saved");
     return (IterationsToInvarianceOrInduction[Phi] = addOne(Iterations));
@@ -302,10 +304,10 @@ PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(Value &V, ScalarEvolution &SE) {
   if (const Instruction *I = dyn_cast<Instruction>(&V)) {
     if (isa<CmpInst>(I) || I->isBinaryOp()) {
       // Binary instructions get the max of the operands.
-      PeelCounter LHS = calculate(*I->getOperand(0), SE);
+      PeelCounter LHS = calculate(*I->getOperand(0));
       if (LHS == Unknown)
         return Unknown;
-      PeelCounter RHS = calculate(*I->getOperand(1), SE);
+      PeelCounter RHS = calculate(*I->getOperand(1));
       if (RHS == Unknown)
         return Unknown;
       return (IterationsToInvarianceOrInduction[I] = {std::max(*LHS, *RHS)});
@@ -313,7 +315,7 @@ PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(Value &V, ScalarEvolution &SE) {
     if (I->isCast())
       // Cast instructions get the value of the operand.
       return (IterationsToInvarianceOrInduction[I] =
-                  calculate(*I->getOperand(0), SE));
+                  calculate(*I->getOperand(0)));
   }
   // TODO: handle more expressions
 
@@ -323,11 +325,10 @@ PhiAnalyzer::PeelCounter PhiAnalyzer::calculate(Value &V, ScalarEvolution &SE) {
   return Unknown;
 }
 
-std::optional<unsigned>
-PhiAnalyzer::calculateIterationsToPeel(ScalarEvolution &SE) {
+std::optional<unsigned> PhiAnalyzer::calculateIterationsToPeel() {
   unsigned Iterations = 0;
   for (auto &PHI : L.getHeader()->phis()) {
-    PeelCounter ToInvarianceOrInduction = calculate(PHI, SE);
+    PeelCounter ToInvarianceOrInduction = calculate(PHI);
     if (ToInvarianceOrInduction != Unknown) {
       assert(*ToInvarianceOrInduction <= MaxIterations &&
              "bad result in phi analysis");
@@ -667,7 +668,8 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   // values, thus turning all those Phis into invariants or inductions.
   if (MaxPeelCount > DesiredPeelCount) {
     // Check how many iterations are useful for resolving Phis
-    auto NumPeels = PhiAnalyzer(*L, MaxPeelCount).calculateIterationsToPeel(SE);
+    auto NumPeels =
+        PhiAnalyzer(*L, MaxPeelCount, SE).calculateIterationsToPeel();
     if (NumPeels)
       DesiredPeelCount = std::max(DesiredPeelCount, *NumPeels);
   }
