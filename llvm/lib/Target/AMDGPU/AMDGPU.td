@@ -1355,6 +1355,12 @@ def FeatureLdsBarrierArriveAtomic : SubtargetFeature< "lds-barrier-arrive-atomic
   "Has LDS barrier-arrive atomic instructions"
 >;
 
+def FeatureWholeWaveFunction : SubtargetFeature<"whole-wave-function",
+  "IsWholeWaveFunction",
+  "true",
+  "Current function is a whole wave function (runs with all lanes enabled)"
+  >;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
