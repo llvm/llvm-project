@@ -924,6 +924,186 @@ if (CLANG_BOLT AND NOT LLVM_BUILD_INSTRUMENTED)
   )
 endif()
 
+if (CLANG_PROPELLER_INSTRUMENT AND NOT LLVM_BUILD_INSTRUMENTED)
+  set(CLANG_PATH ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang)
+  set(CLANGXX_PATH ${CLANG_PATH}++)
+  set(PROPELLER_ARTIFACTS_DIR ${CMAKE_CURRENT_BINARY_DIR}/propeller-artifacts)
+  set(PROPELLER_INSTRUMENTED_BINARY_DIR ${PROPELLER_ARTIFACTS_DIR}/propeller-instrumented-clang/)
+  set(PROPELLER_PROFILING_BINARY_DIR ${PROPELLER_ARTIFACTS_DIR}/propeller-profile-collection-run/)
+  set(PROPELLER_OPTIMIZED_BINARY_DIR ${PROPELLER_ARTIFACTS_DIR}/propeller-optimized-clang/)
+  set(CLANG_PROPELLER_LABELS ${PROPELLER_INSTRUMENTED_BINARY_DIR}/bin/clang)
+  set(CLANG_PROPELLER_LABELS_BINARY ${CLANG_PROPELLER_LABELS}-${CLANG_VERSION_MAJOR})
+  set(CLANGXX_PROPELLER_LABELS ${CLANG_PROPELLER_LABELS}++)
+  set(PROPELLER_PERF_DATA ${PROPELLER_ARTIFACTS_DIR}/profiles/propeller_perf.data)
+  set(PROPELLER_CLUSTER_FILE ${PROPELLER_ARTIFACTS_DIR}/profiles/cluster.txt)
+  set(PROPELLER_SYMORDER_FILE ${PROPELLER_ARTIFACTS_DIR}/profiles/symorder.txt)
+
+  #  Check if perf is available on the system and supports LBR, otherwise
+  #  abort as Propeller cannot be applied here.
+  set(perf_args "${PROPELLER_PERF_PROFILE_COLLECTION_PREFIX}")
+  separate_arguments(perf_args UNIX_COMMAND "${perf_args}")
+  execute_process(
+     COMMAND perf ${perf_args} -- ls
+     RESULT_VARIABLE perf_status
+     OUTPUT_VARIABLE perf_stats
+     ERROR_QUIET
+  )
+  if (perf_status)
+     message(FATAL_ERROR "perf with LBR is not available on this system")
+  else()
+     message(STATUS "perf is available and supports LBR")
+  endif()
+
+  #  Check if create_llvm_prof is available, otherwise abort as Propeller
+  #  cannot be applied here.
+  execute_process(
+     COMMAND sh -c "${PATH_TO_CREATE_LLVM_PROF} --version"
+     RESULT_VARIABLE create_llvm_prof_status
+     OUTPUT_VARIABLE create_llvm_prof_out
+     ERROR_QUIET
+  )
+  if (create_llvm_prof_status)
+     message(FATAL_ERROR "create_llvm_prof is not installed/available at: ${PATH_TO_CREATE_LLVM_PROF}. "
+                         "Use -DPATH_TO_CREATE_LLVM_PROF= during cmake to specify its location.")
+  else()
+     message(STATUS "create_llvm_prof is available")
+  endif()
+
+  #  Build an "instrumented" Propeller binary with Propeller labels.  This adds
+  #  a metadata section to the clang binary.
+  add_custom_target(propeller-labels
+     COMMENT "Creating Propeller Labels Binary"
+     DEPENDS clang clang-propeller-labels-build
+  )
+
+  # This command converts hardware profiles to the propeller format.
+  add_custom_command(OUTPUT ${PROPELLER_CLUSTER_FILE}
+     DEPENDS ${PROPELLER_PERF_DATA}
+     COMMAND ${PATH_TO_CREATE_LLVM_PROF} --format=propeller
+         --binary=${CLANG_PROPELLER_LABELS_BINARY}
+     	 --profile=${PROPELLER_PERF_DATA}
+         --out=${PROPELLER_CLUSTER_FILE}
+     	 --propeller_symorder=${PROPELLER_SYMORDER_FILE}
+     	 --propeller_call_chain_clustering
+	 --propeller_chain_split
+     VERBATIM
+  )
+
+  # Generate Propeller profiles by first hardware sampling a build of clang and
+  # then converting it using create_llvm_prof.
+  add_custom_target(propeller-gen-profiles
+     COMMENT "Generating Propeller Profiles"
+     DEPENDS ${PROPELLER_CLUSTER_FILE}
+  )
+
+  #  This uses the generated Propeller layout files to build the final optimized
+  #  clang binary.
+  add_custom_target(propeller-opt-binary
+     COMMENT "Generating Propeller Optimized Clang"
+     DEPENDS clang-propeller-optimized-build
+  )
+
+  # This project is setup to build a propeller "instrumented" labels binary.
+  set(STAMP_DIR ${PROPELLER_ARTIFACTS_DIR}/stamps/propeller-instrumented-clang-stamps/)
+  set(build_configuration "$<CONFIG>")
+  include(ExternalProject)
+  set(CLANG_PROPELLER_INSTRUMENT_CMAKE_CC_FLAGS "-fbasic-block-address-map ${CLANG_PROPELLER_EXTRA_CMAKE_CC_FLAGS}")
+  set(CLANG_PROPELLER_INSTRUMENT_CMAKE_LINKER_FLAGS "-Wl,--lto-basic-block-address-map ${CLANG_PROPELLER_EXTRA_CMAKE_LINKER_FLAGS}")
+  ExternalProject_Add(clang-propeller-labels
+     DEPENDS clang
+     PREFIX clang-propeller-labels
+     SOURCE_DIR ${CMAKE_SOURCE_DIR}
+     STAMP_DIR ${STAMP_DIR}
+     BINARY_DIR ${PROPELLER_INSTRUMENTED_BINARY_DIR}
+     EXCLUDE_FROM_ALL 1
+     CMAKE_ARGS
+                -DCMAKE_C_FLAGS=${CLANG_PROPELLER_INSTRUMENT_CMAKE_CC_FLAGS}
+                -DCMAKE_CXX_FLAGS=${CLANG_PROPELLER_INSTRUMENT_CMAKE_CC_FLAGS}
+		-DCMAKE_EXE_LINKER_FLAGS=${CLANG_PROPELLER_INSTRUMENT_CMAKE_LINKER_FLAGS}
+		-DCMAKE_SHARED_LINKER_FLAGS=${CLANG_PROPELLER_INSTRUMENT_CMAKE_LINKER_FLAGS}
+		-DCMAKE_MODULE_LINKER_FLAGS=${CLANG_PROPELLER_INSTRUMENT_CMAKE_LINKER_FLAGS}
+                -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+		-DCMAKE_C_COMPILER=${CLANG_PATH}
+		-DCMAKE_CXX_COMPILER=${CLANGXX_PATH}
+		-DCMAKE_ASM_COMPILER=${CLANG_PATH}
+		-DCMAKE_BUILD_TYPE=Release
+		-DLLVM_ENABLE_PROJECTS=${CLANG_PROPELLER_INSTRUMENT_PROJECTS}
+		-DLLVM_TARGETS_TO_BUILD=${CLANG_PROPELLER_TARGETS_TO_BUILD}
+    BUILD_COMMAND ${CMAKE_COMMAND} --build ${PROPELLER_INSTRUMENTED_BINARY_DIR}
+                                   --config ${build_configuration}
+                                   --target ${CLANG_PROPELLER_INSTRUMENT_PROJECTS}
+    INSTALL_COMMAND ""
+    STEP_TARGETS configure build
+    USES_TERMINAL_CONFIGURE 1
+    USES_TERMINAL_BUILD 1
+    USES_TERMINAL_INSTALL 1
+  )
+
+  # This project is to collect profiles while building clang.
+  set(STAMP_DIR ${PROPELLER_ARTIFACTS_DIR}/stamps/propeller-profiles-clang-stamps/)
+  set(build_configuration "$<CONFIG>")
+  include(ExternalProject)
+  ExternalProject_Add(clang-propeller-profiles
+     DEPENDS propeller-labels
+     PREFIX clang-propeller-profiles
+     SOURCE_DIR ${CMAKE_SOURCE_DIR}
+     STAMP_DIR ${STAMP_DIR}
+     BINARY_DIR ${PROPELLER_PROFILING_BINARY_DIR}
+     EXCLUDE_FROM_ALL 1
+     CMAKE_ARGS
+                -DCMAKE_C_COMPILER=${CLANG_PROPELLER_LABELS}
+		-DCMAKE_CXX_COMPILER=${CLANGXX_PROPELLER_LABELS}
+		-DCMAKE_ASM_COMPILER=${CLANG_PATH}
+		-DCMAKE_BUILD_TYPE=Release
+		-DLLVM_ENABLE_PROJECTS=${CLANG_PROPELLER_INSTRUMENT_PROJECTS}
+		-DLLVM_TARGETS_TO_BUILD=${CLANG_PROPELLER_TARGETS_TO_BUILD}
+    BUILD_COMMAND perf ${perf_args} -o ${PROPELLER_PERF_DATA} -- ${CMAKE_COMMAND}
+		       --build ${PROPELLER_PROFILING_BINARY_DIR}
+		       --config ${build_configuration}
+		       --target ${CLANG_PROPELLER_INSTRUMENT_PROJECTS}
+    BUILD_BYPRODUCTS ${PROPELLER_PERF_DATA}
+    STEP_TARGETS configure build
+    USES_TERMINAL_CONFIGURE 1
+    USES_TERMINAL_BUILD 1
+  )
+
+  # This project builds the final optimized propeller binary.
+  set(STAMP_DIR ${PROPELLER_ARTIFACTS_DIR}/stamps/propeller-optimized-clang-stamps/)
+  set(CLANG_PROPELLER_OPTIMIZED_CMAKE_CC_FLAGS "-fbasic-block-sections=list=${PROPELLER_CLUSTER_FILE} ${CLANG_PROPELLER_EXTRA_CMAKE_CC_FLAGS}")
+  set(CLANG_PROPELLER_OPTIMIZED_CMAKE_LINKER_FLAGS "-Wl,--lto-basic-block-sections=${PROPELLER_CLUSTER_FILE} -Wl,--symbol-ordering-file=${PROPELLER_SYMORDER_FILE} ${CLANG_PROPELLER_EXTRA_CMAKE_LINKER_FLAGS}")
+  set(build_configuration "$<CONFIG>")
+  include(ExternalProject)
+  ExternalProject_Add(clang-propeller-optimized
+     DEPENDS clang propeller-gen-profiles
+     PREFIX clang-propeller-optimized
+     SOURCE_DIR ${CMAKE_SOURCE_DIR}
+     STAMP_DIR ${STAMP_DIR}
+     BINARY_DIR ${PROPELLER_OPTIMIZED_BINARY_DIR}
+     EXCLUDE_FROM_ALL 1
+     CMAKE_ARGS
+                -DCMAKE_C_FLAGS=${CLANG_PROPELLER_OPTIMIZED_CMAKE_CC_FLAGS}
+                -DCMAKE_CXX_FLAGS=${CLANG_PROPELLER_OPTIMIZED_CMAKE_CC_FLAGS}
+		-DCMAKE_EXE_LINKER_FLAGS=${CLANG_PROPELLER_OPTIMIZED_CMAKE_LINKER_FLAGS}
+		-DCMAKE_SHARED_LINKER_FLAGS=${CLANG_PROPELLER_OPTIMIZED_CMAKE_LINKER_FLAGS}
+		-DCMAKE_MODULE_LINKER_FLAGS=${CLANG_PROPELLER_OPTIMIZED_CMAKE_LINKER_FLAGS}
+                -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+		-DCMAKE_C_COMPILER=${CLANG_PATH}
+		-DCMAKE_CXX_COMPILER=${CLANGXX_PATH}
+		-DCMAKE_ASM_COMPILER=${CLANG_PATH}
+		-DCMAKE_BUILD_TYPE=Release
+		-DLLVM_ENABLE_PROJECTS=${CLANG_PROPELLER_INSTRUMENT_PROJECTS}
+		-DLLVM_TARGETS_TO_BUILD=${CLANG_PROPELLER_TARGETS_TO_BUILD}
+    BUILD_COMMAND ${CMAKE_COMMAND} --build ${PROPELLER_OPTIMIZED_BINARY_DIR}
+                                   --config ${build_configuration}
+                                   --target ${CLANG_PROPELLER_INSTRUMENT_PROJECTS}
+    INSTALL_COMMAND ""
+    STEP_TARGETS configure build
+    USES_TERMINAL_CONFIGURE 1
+    USES_TERMINAL_BUILD 1
+    USES_TERMINAL_INSTALL 1
+  )
+endif()
+
 if (LLVM_ADD_NATIVE_VISUALIZERS_TO_SOLUTION)
   add_subdirectory(utils/ClangVisualizers)
 endif()
