@@ -147,7 +147,7 @@ void CallStackTrie::addCallStack(
       First = false;
       if (Alloc) {
         assert(AllocStackId == StackId);
-        Alloc->AllocTypes |= static_cast<uint8_t>(AllocType);
+        Alloc->addAllocType(AllocType);
       } else {
         AllocStackId = StackId;
         Alloc = new CallStackTrieNode(AllocType);
@@ -159,7 +159,7 @@ void CallStackTrie::addCallStack(
     auto Next = Curr->Callers.find(StackId);
     if (Next != Curr->Callers.end()) {
       Curr = Next->second;
-      Curr->AllocTypes |= static_cast<uint8_t>(AllocType);
+      Curr->addAllocType(AllocType);
       continue;
     }
     // Otherwise add a new caller node.
@@ -226,6 +226,15 @@ void CallStackTrie::collectContextSizeInfo(
                          Node->ContextSizeInfo.end());
   for (auto &Caller : Node->Callers)
     collectContextSizeInfo(Caller.second, ContextSizeInfo);
+}
+
+void CallStackTrie::convertHotToNotCold(CallStackTrieNode *Node) {
+  if (Node->hasAllocType(AllocationType::Hot)) {
+    Node->removeAllocType(AllocationType::Hot);
+    Node->addAllocType(AllocationType::NotCold);
+  }
+  for (auto &Caller : Node->Callers)
+    convertHotToNotCold(Caller.second);
 }
 
 // Recursive helper to trim contexts and create metadata nodes.
@@ -306,6 +315,22 @@ bool CallStackTrie::buildAndAttachMIBMetadata(CallBase *CI) {
     addSingleAllocTypeAttribute(CI, (AllocationType)Alloc->AllocTypes,
                                 "single");
     return false;
+  }
+  // If there were any hot allocation contexts, the Alloc trie node would have
+  // the Hot type set. If so, because we don't currently support cloning for hot
+  // contexts, they should be converted to NotCold. This happens in the cloning
+  // support anyway, however, doing this now enables more aggressive context
+  // trimming when building the MIB metadata (and possibly may make the
+  // allocation have a single NotCold allocation type), greatly reducing
+  // overheads in bitcode, cloning memory and cloning time.
+  if (Alloc->hasAllocType(AllocationType::Hot)) {
+    convertHotToNotCold(Alloc);
+    // Check whether we now have a single alloc type.
+    if (hasSingleAllocType(Alloc->AllocTypes)) {
+      addSingleAllocTypeAttribute(CI, (AllocationType)Alloc->AllocTypes,
+                                  "single");
+      return false;
+    }
   }
   auto &Ctx = CI->getContext();
   std::vector<uint64_t> MIBCallStack;
