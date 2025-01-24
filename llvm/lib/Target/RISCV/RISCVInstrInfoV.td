@@ -67,7 +67,6 @@ def VMaskOp : RegisterOperand<VMV0> {
 def VMaskCarryInOp : RegisterOperand<VMV0> {
   let ParserMatchClass = VMaskCarryInAsmOperand;
   let EncoderMethod = "getVMaskReg";
-  let DecoderMethod = "decodeVMaskReg";
 }
 
 def simm5 : RISCVSImmLeafOp<5> {
