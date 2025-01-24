@@ -16,16 +16,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/StringMap.h"
 
-#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-
-namespace mlir {
-namespace link {
-
-using SelectionKind = LLVM::comdat::ComdatAttr;
-using Linkage = LLVM::Linkage;
-
-} // namespace link
-} // namespace mlir
+#include "mlir/Linker/Linkage.h"
 
 /// Include the generated interface declarations.
 #include "mlir/Interfaces/LinkageInterfaces.h.inc"
