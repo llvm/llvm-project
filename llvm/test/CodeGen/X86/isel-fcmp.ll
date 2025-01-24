@@ -3,10 +3,10 @@
 ; RUN: llc < %s -fast-isel -fast-isel-abort=1 -mtriple=x86_64-apple-darwin10 -mattr=+sse,+sse2,-x87 -verify-machineinstrs | FileCheck %s --check-prefix=FAST-X64
 ; RUN: llc < %s -global-isel -global-isel-abort=1 -mtriple=x86_64-apple-darwin10 -mattr=+sse,+sse2,-x87 -verify-machineinstrs | FileCheck %s --check-prefixes=GISEL-X64
 ; i686 with 64 bit store is issue.
-; COM: RUN: llc < %s                               -mtriple=i686-apple-darwin10 -mattr=-sse,-sse2,+x87 -verify-machineinstrs | FileCheck %s --check-prefixes=SDAG-X86
+; RUN: llc < %s                               -mtriple=i686-apple-darwin10 -mattr=-sse,-sse2,+x87 -verify-machineinstrs | FileCheck %s --check-prefixes=SDAG-X86
 ; Allow fast-isel to fallback to selection dag on x86
-; COM: RUN: llc < %s -fast-isel -mtriple=i686-apple-darwin10 -mattr=+sse,+sse2,+x87 -verify-machineinstrs | FileCheck %s --check-prefixes=FAST-X86
-; RUN: llc < %s -global-isel -global-isel-abort=1 -mtriple=i686-apple-darwin10 -mattr=+x87 -verify-machineinstrs | FileCheck %s --check-prefixes=GISEL-X86
+; RUN: llc < %s -fast-isel -mtriple=i686-apple-darwin10 -mattr=-sse,-sse2,+x87 -verify-machineinstrs | FileCheck %s --check-prefixes=FAST-X86
+; llc < %s -global-isel -global-isel-abort=1 -mtriple=i686-apple-darwin10 -mattr=-sse,-sse2,+x87 -verify-machineinstrs | FileCheck %s --check-prefixes=GISEL-X86
 
   define i1 @fcmp_float_oeq(float %x, float %y) nounwind {
 ; SDAG-X64-LABEL: fcmp_float_oeq:
@@ -32,6 +32,32 @@
 ; GISEL-X64-NEXT:    setnp %al
 ; GISEL-X64-NEXT:    andb %cl, %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_float_oeq:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setnp %cl
+; SDAG-X86-NEXT:    sete %al
+; SDAG-X86-NEXT:    andb %cl, %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_float_oeq:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    setnp %cl
+; FAST-X86-NEXT:    sete %al
+; FAST-X86-NEXT:    andb %cl, %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp oeq float %x, %y
     ret i1 %1
   }
@@ -54,6 +80,28 @@
 ; GISEL-X64-NEXT:    ucomiss %xmm1, %xmm0
 ; GISEL-X64-NEXT:    seta %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_float_ogt:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    seta %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_float_ogt:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    seta %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp ogt float %x, %y
     ret i1 %1
   }
@@ -76,6 +124,28 @@
 ; GISEL-X64-NEXT:    ucomiss %xmm1, %xmm0
 ; GISEL-X64-NEXT:    setae %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_float_oge:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setae %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_float_oge:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    setae %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp oge float %x, %y
     ret i1 %1
   }
@@ -98,6 +168,29 @@
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm1
 ; GISEL-X64-NEXT:    seta %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_float_olt:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    seta %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_float_olt:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fxch %st(1)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    seta %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp olt float %x, %y
     ret i1 %1
   }
@@ -120,6 +213,29 @@
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm1
 ; GISEL-X64-NEXT:    setae %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_float_ole:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setae %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_float_ole:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fxch %st(1)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    setae %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp ole float %x, %y
     ret i1 %1
   }
@@ -142,6 +258,28 @@
 ; GISEL-X64-NEXT:    ucomiss %xmm1, %xmm0
 ; GISEL-X64-NEXT:    setne %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_float_one:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setne %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_float_one:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    setne %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp one float %x, %y
     ret i1 %1
   }
@@ -164,6 +302,28 @@
 ; GISEL-X64-NEXT:    ucomiss %xmm1, %xmm0
 ; GISEL-X64-NEXT:    setnp %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_float_ord:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setnp %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_float_ord:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    setnp %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp ord float %x, %y
     ret i1 %1
   }
@@ -186,6 +346,28 @@
 ; GISEL-X64-NEXT:    ucomiss %xmm1, %xmm0
 ; GISEL-X64-NEXT:    setp %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_float_uno:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setp %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_float_uno:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    setp %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp uno float %x, %y
     ret i1 %1
   }
@@ -208,6 +390,28 @@
 ; GISEL-X64-NEXT:    ucomiss %xmm1, %xmm0
 ; GISEL-X64-NEXT:    sete %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_float_ueq:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    sete %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_float_ueq:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    sete %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp ueq float %x, %y
     ret i1 %1
   }
@@ -230,6 +434,29 @@
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm1
 ; GISEL-X64-NEXT:    setb %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_float_ugt:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setb %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_float_ugt:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fxch %st(1)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    setb %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp ugt float %x, %y
     ret i1 %1
   }
@@ -252,6 +479,29 @@
 ; GISEL-X64-NEXT:    ucomiss %xmm0, %xmm1
 ; GISEL-X64-NEXT:    setbe %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_float_uge:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setbe %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_float_uge:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fxch %st(1)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    setbe %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp uge float %x, %y
     ret i1 %1
   }
@@ -274,6 +524,28 @@
 ; GISEL-X64-NEXT:    ucomiss %xmm1, %xmm0
 ; GISEL-X64-NEXT:    setb %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_float_ult:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setb %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_float_ult:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    setb %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp ult float %x, %y
     ret i1 %1
   }
@@ -296,6 +568,28 @@
 ; GISEL-X64-NEXT:    ucomiss %xmm1, %xmm0
 ; GISEL-X64-NEXT:    setbe %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_float_ule:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setbe %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_float_ule:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    setbe %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp ule float %x, %y
     ret i1 %1
   }
@@ -324,6 +618,32 @@
 ; GISEL-X64-NEXT:    setp %al
 ; GISEL-X64-NEXT:    orb %cl, %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_float_une:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setp %cl
+; SDAG-X86-NEXT:    setne %al
+; SDAG-X86-NEXT:    orb %cl, %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_float_une:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    setp %cl
+; FAST-X86-NEXT:    setne %al
+; FAST-X86-NEXT:    orb %cl, %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp une float %x, %y
     ret i1 %1
   }
@@ -352,6 +672,32 @@
 ; GISEL-X64-NEXT:    setnp %al
 ; GISEL-X64-NEXT:    andb %cl, %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_double_oeq:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setnp %cl
+; SDAG-X86-NEXT:    sete %al
+; SDAG-X86-NEXT:    andb %cl, %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_double_oeq:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    setnp %cl
+; FAST-X86-NEXT:    sete %al
+; FAST-X86-NEXT:    andb %cl, %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp oeq double %x, %y
     ret i1 %1
   }
@@ -374,6 +720,28 @@
 ; GISEL-X64-NEXT:    ucomisd %xmm1, %xmm0
 ; GISEL-X64-NEXT:    seta %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_double_ogt:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    seta %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_double_ogt:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    seta %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp ogt double %x, %y
     ret i1 %1
   }
@@ -396,6 +764,28 @@
 ; GISEL-X64-NEXT:    ucomisd %xmm1, %xmm0
 ; GISEL-X64-NEXT:    setae %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_double_oge:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setae %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_double_oge:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    setae %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp oge double %x, %y
     ret i1 %1
   }
@@ -418,6 +808,29 @@
 ; GISEL-X64-NEXT:    ucomisd %xmm0, %xmm1
 ; GISEL-X64-NEXT:    seta %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_double_olt:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    seta %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_double_olt:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fxch %st(1)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    seta %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp olt double %x, %y
     ret i1 %1
   }
@@ -440,6 +853,29 @@
 ; GISEL-X64-NEXT:    ucomisd %xmm0, %xmm1
 ; GISEL-X64-NEXT:    setae %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_double_ole:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setae %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_double_ole:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fxch %st(1)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    setae %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp ole double %x, %y
     ret i1 %1
   }
@@ -462,6 +898,28 @@
 ; GISEL-X64-NEXT:    ucomisd %xmm1, %xmm0
 ; GISEL-X64-NEXT:    setne %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_double_one:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setne %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_double_one:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    setne %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp one double %x, %y
     ret i1 %1
   }
@@ -484,6 +942,28 @@
 ; GISEL-X64-NEXT:    ucomisd %xmm1, %xmm0
 ; GISEL-X64-NEXT:    setnp %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_double_ord:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setnp %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_double_ord:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    setnp %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp ord double %x, %y
     ret i1 %1
   }
@@ -506,6 +986,28 @@
 ; GISEL-X64-NEXT:    ucomisd %xmm1, %xmm0
 ; GISEL-X64-NEXT:    setp %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_double_uno:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setp %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_double_uno:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    setp %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp uno double %x, %y
     ret i1 %1
   }
@@ -528,6 +1030,28 @@
 ; GISEL-X64-NEXT:    ucomisd %xmm1, %xmm0
 ; GISEL-X64-NEXT:    sete %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_double_ueq:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    sete %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_double_ueq:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    sete %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp ueq double %x, %y
     ret i1 %1
   }
@@ -550,6 +1074,29 @@
 ; GISEL-X64-NEXT:    ucomisd %xmm0, %xmm1
 ; GISEL-X64-NEXT:    setb %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_double_ugt:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setb %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_double_ugt:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fxch %st(1)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    setb %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp ugt double %x, %y
     ret i1 %1
   }
@@ -572,6 +1119,29 @@
 ; GISEL-X64-NEXT:    ucomisd %xmm0, %xmm1
 ; GISEL-X64-NEXT:    setbe %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_double_uge:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setbe %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_double_uge:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fxch %st(1)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    setbe %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp uge double %x, %y
     ret i1 %1
   }
@@ -594,6 +1164,28 @@
 ; GISEL-X64-NEXT:    ucomisd %xmm1, %xmm0
 ; GISEL-X64-NEXT:    setb %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_double_ult:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setb %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_double_ult:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    setb %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp ult double %x, %y
     ret i1 %1
   }
@@ -616,6 +1208,28 @@
 ; GISEL-X64-NEXT:    ucomisd %xmm1, %xmm0
 ; GISEL-X64-NEXT:    setbe %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_double_ule:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setbe %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_double_ule:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    setbe %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp ule double %x, %y
     ret i1 %1
   }
@@ -644,6 +1258,32 @@
 ; GISEL-X64-NEXT:    setp %al
 ; GISEL-X64-NEXT:    orb %cl, %al
 ; GISEL-X64-NEXT:    retq
+;
+; SDAG-X86-LABEL: fcmp_double_une:
+; SDAG-X86:       ## %bb.0:
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SDAG-X86-NEXT:    fucompp
+; SDAG-X86-NEXT:    fnstsw %ax
+; SDAG-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; SDAG-X86-NEXT:    sahf
+; SDAG-X86-NEXT:    setp %cl
+; SDAG-X86-NEXT:    setne %al
+; SDAG-X86-NEXT:    orb %cl, %al
+; SDAG-X86-NEXT:    retl
+;
+; FAST-X86-LABEL: fcmp_double_une:
+; FAST-X86:       ## %bb.0:
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; FAST-X86-NEXT:    fucompp
+; FAST-X86-NEXT:    fnstsw %ax
+; FAST-X86-NEXT:    ## kill: def $ah killed $ah killed $ax
+; FAST-X86-NEXT:    sahf
+; FAST-X86-NEXT:    setp %cl
+; FAST-X86-NEXT:    setne %al
+; FAST-X86-NEXT:    orb %cl, %al
+; FAST-X86-NEXT:    retl
     %1 = fcmp une double %x, %y
     ret i1 %1
   }
