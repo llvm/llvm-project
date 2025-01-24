@@ -12,6 +12,7 @@
 
 #include "SwiftLanguageRuntime.h"
 #include "Plugins/LanguageRuntime/Swift/LLDBMemoryReader.h"
+#include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 #include "ReflectionContextInterface.h"
 #include "SwiftMetadataCache.h"
 
@@ -34,6 +35,7 @@
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/FuncUnwinders.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/VariableList.h"
@@ -63,6 +65,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Memory.h"
 
 // FIXME: we should not need this
@@ -2183,6 +2187,61 @@ private:
   }
 };
 
+class CommandObjectLanguageSwiftTaskInfo final : public CommandObjectParsed {
+public:
+  CommandObjectLanguageSwiftTaskInfo(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "info",
+                            "Print the Task being run on the current thread.") {
+  }
+
+private:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    if (!m_exe_ctx.GetThreadPtr()) {
+      result.AppendError("must be run from a running process and valid thread");
+      return;
+    }
+
+    auto task_addr_or_err =
+        GetTaskAddrFromThreadLocalStorage(m_exe_ctx.GetThreadRef());
+    if (auto error = task_addr_or_err.takeError()) {
+      result.AppendError(toString(std::move(error)));
+      return;
+    }
+
+    auto ts_or_err = m_exe_ctx.GetTargetRef().GetScratchTypeSystemForLanguage(
+        eLanguageTypeSwift);
+    if (auto error = ts_or_err.takeError()) {
+      result.AppendErrorWithFormatv("could not get Swift type system: {0}",
+                                    llvm::fmt_consume(std::move(error)));
+      return;
+    }
+
+    auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(ts_or_err->get());
+    if (!ts) {
+      result.AppendError("could not get Swift type system");
+      return;
+    }
+
+    addr_t task_addr = task_addr_or_err.get();
+    // TypeMangling for "Swift.UnsafeCurrentTask"
+    CompilerType task_type =
+        ts->GetTypeFromMangledTypename(ConstString("$sSctD"));
+    auto task_sp = ValueObject::CreateValueObjectFromAddress(
+        "current_task", task_addr, m_exe_ctx, task_type, false);
+    if (auto synthetic_sp = task_sp->GetSyntheticValue())
+      task_sp = synthetic_sp;
+
+    auto error = task_sp->Dump(result.GetOutputStream());
+    if (error) {
+      result.AppendErrorWithFormatv("failed to print current task: {0}",
+                                    toString(std::move(error)));
+      return;
+    }
+
+    result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
+  }
+};
+
 class CommandObjectLanguageSwiftTask final : public CommandObjectMultiword {
 public:
   CommandObjectLanguageSwiftTask(CommandInterpreter &interpreter)
@@ -2195,6 +2254,9 @@ public:
     LoadSubCommand(
         "select",
         CommandObjectSP(new CommandObjectLanguageSwiftTaskSelect(interpreter)));
+    LoadSubCommand(
+        "info",
+        CommandObjectSP(new CommandObjectLanguageSwiftTaskInfo(interpreter)));
   }
 };
 
@@ -2658,7 +2720,7 @@ std::optional<lldb::addr_t> SwiftLanguageRuntime::TrySkipVirtualParentProlog(
 }
 
 llvm::Expected<lldb::addr_t> GetTaskAddrFromThreadLocalStorage(Thread &thread) {
-#if SWIFT_THREADING_USE_DIRECT_TSD
+#if !SWIFT_THREADING_USE_RESERVED_TLS_KEYS
   return llvm::createStringError(
       "getting the current task from a thread is not supported");
 #else
