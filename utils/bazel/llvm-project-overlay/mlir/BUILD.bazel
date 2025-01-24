@@ -10174,8 +10174,8 @@ cc_binary(
 )
 
 cc_binary(
-    name = "mlir-cpu-runner",
-    srcs = ["tools/mlir-cpu-runner/mlir-cpu-runner.cpp"],
+    name = "mlir-runner",
+    srcs = ["tools/mlir-runner/mlir-runner.cpp"],
     deps = [
         ":AllToLLVMIRTranslations",
         ":BuiltinToLLVMIRTranslation",
