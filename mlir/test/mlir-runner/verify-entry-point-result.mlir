@@ -1,4 +1,4 @@
-// RUN: not mlir-cpu-runner %s -e entry -entry-point-result=void 2>&1 | FileCheck %s
+// RUN: not mlir-runner %s -e entry -entry-point-result=void 2>&1 | FileCheck %s
 
 // CHECK: Error: expected void function
 llvm.func @entry() -> (i32) {
