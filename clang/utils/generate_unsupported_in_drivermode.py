@@ -235,9 +235,9 @@ def find_supported_seq_cmp_start(supported_sequence, low, high, search_option):
         return middle
 
     if (
-            len(supported_sequence[middle].option_name)
-            <= len(search_option)
-            < len(supported_sequence[middle - 1].option_name)
+        len(supported_sequence[middle].option_name)
+        <= len(search_option)
+        < len(supported_sequence[middle - 1].option_name)
     ):
         return middle
     elif len(supported_sequence[middle].option_name) <= len(search_option):
@@ -261,12 +261,12 @@ def get_lit_test_note(test_visibility):
     test_prefix = EXCLAMATION if test_visibility == VISIBILITY_FLANG else SLASH_SLASH
 
     return (
-            f"{test_prefix}UNSUPPORTED: system-windows\n"
-            f"{test_prefix}NOTE: This lit test was automatically generated to validate "
-            "unintentionally exposed arguments to various driver flavours.\n"
-            f"{test_prefix}NOTE: To make changes, see "
-            + Path(__file__).resolve().as_posix()
-            + " from which it was generated.\n\n"
+        f"{test_prefix}UNSUPPORTED: system-windows\n"
+        f"{test_prefix}NOTE: This lit test was automatically generated to validate "
+        "unintentionally exposed arguments to various driver flavours.\n"
+        f"{test_prefix}NOTE: To make changes, see "
+        + Path(__file__).resolve().as_posix()
+        + " from which it was generated.\n\n"
     )
 
 
@@ -284,11 +284,11 @@ def write_lit_test(test_path, test_visibility, unsupported_list):
 
                 for index, unsupported_pair in enumerate(unsupported_list):
                     is_flang_pair = (
-                            unsupported_pair.driver == VISIBILITY_FLANG
-                            or unsupported_pair.driver == VISIBILITY_FC1
+                        unsupported_pair.driver == VISIBILITY_FLANG
+                        or unsupported_pair.driver == VISIBILITY_FC1
                     )
                     if (test_visibility == VISIBILITY_FLANG and not is_flang_pair) or (
-                            test_visibility == VISIBILITY_DEFAULT and is_flang_pair
+                        test_visibility == VISIBILITY_DEFAULT and is_flang_pair
                     ):
                         continue
 
@@ -299,8 +299,8 @@ def write_lit_test(test_path, test_visibility, unsupported_list):
 
                     prefix_str = SLASH_SLASH
                     if (
-                            unsupported_pair.driver == VISIBILITY_FLANG
-                            or unsupported_pair.driver == VISIBILITY_FC1
+                        unsupported_pair.driver == VISIBILITY_FLANG
+                        or unsupported_pair.driver == VISIBILITY_FC1
                     ):
                         prefix_str = EXCLAMATION
 
@@ -328,8 +328,8 @@ def write_lit_test(test_path, test_visibility, unsupported_list):
                 # create one statement per driver. Not all options return error messages that include their option name
                 for driver in driver_controller:
                     is_flang_driver = (
-                            driver.visibility_str == VISIBILITY_FLANG
-                            or driver.visibility_str == VISIBILITY_FC1
+                        driver.visibility_str == VISIBILITY_FLANG
+                        or driver.visibility_str == VISIBILITY_FC1
                     )
 
                     if test_visibility == VISIBILITY_FLANG and not is_flang_driver:
