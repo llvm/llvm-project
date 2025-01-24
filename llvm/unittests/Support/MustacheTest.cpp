@@ -1043,7 +1043,7 @@ TEST(MustacheLambdas, Sections) {
   Value D = Object{};
   auto T = Template("<{{#lambda}}{{x}}{{/lambda}}>");
   SectionLambda L = [](StringRef Text) -> llvm::json::Value {
-    if (Text == "{{x}}") {
+git    if (Text == "{{x}}") {
       return "yes";
     }
     return "no";

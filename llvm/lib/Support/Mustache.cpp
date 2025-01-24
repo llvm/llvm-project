@@ -69,7 +69,7 @@ public:
 
   std::string takeTokenBody() { return std::move(TokenBody); }
 
-  std::string takeRawBody() { return std::move(TokenBody); }
+  std::string takeRawBody() { return std::move(RawBody); }
 
   void setTokenBody(std::string NewBody) { TokenBody = std::move(NewBody); };
 
