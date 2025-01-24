@@ -281,11 +281,26 @@ class AArch64LinuxGCSTestCase(TestBase):
             substrs=["stopped", "stop reason = breakpoint"],
         )
 
+        # If we fail to setup the GCS entry, we should not leave any of the GCS registers
+        # changed. The last thing we do is write a new GCS entry to memory and
+        # to simulate the failure of that, temporarily point the GCS to the zero page.
+        #
+        # We use the value 8 here because LLDB will decrement it by 8 so it points to
+        # what we think will be an empty entry on the guarded control stack.
+        _, _, original_gcspr = self.check_gcs_registers()
+        self.runCmd("register write gcspr_el0 8")
+        before = self.check_gcs_registers()
+        self.expect(expr_cmd, error=True)
+        self.check_gcs_registers(*before)
+        # Point to the valid shadow stack region again.
+        self.runCmd(f"register write gcspr_el0 {original_gcspr}")
+
         # This time we do need to push to the GCS and having done so, we can
         # return from this expression without causing a fault.
         before = self.check_gcs_registers()
         self.expect(expr_cmd, substrs=["(unsigned long) 1"])
         self.check_gcs_registers(*before)
+
 
     @skipUnlessPlatform(["linux"])
     def test_gcs_expression_disable_gcs(self):

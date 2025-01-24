@@ -101,14 +101,21 @@ static Status PushToLinuxGuardedControlStack(addr_t return_addr,
   Status error;
   size_t wrote = thread.GetProcess()->WriteMemory(gcspr_el0, &return_addr,
                                                   sizeof(return_addr), error);
-  if ((wrote != sizeof(return_addr) || error.Fail()))
+  if ((wrote != sizeof(return_addr) || error.Fail())) {
+    // When PrepareTrivialCall fails, the register context is not restored,
+    // unlike when an expression fails to execute. This is arguably a bug,
+    // see https://github.com/llvm/llvm-project/issues/124269.
+    // For now we are handling this here specifically. We can assume this
+    // write will work as the one to decrement the register did.
+    reg_ctx->WriteRegisterFromUnsigned(gcspr_el0_info, gcspr_el0 + 8);
     return Status("Failed to write new Guarded Control Stack entry.");
+  }
 
   Log *log = GetLog(LLDBLog::Expressions);
   LLDB_LOGF(log,
-            "Pushed return address 0x%" PRIx64 "to Guarded Control Stack. "
+            "Pushed return address 0x%" PRIx64 " to Guarded Control Stack. "
             "gcspr_el0 was 0%" PRIx64 ", is now 0x%" PRIx64 ".",
-            return_addr, gcspr_el0 + 8, gcspr_el0);
+            return_addr, gcspr_el0 - 8, gcspr_el0);
 
   // gcspr_el0 will be restored to the original value by lldb-server after
   // the call has finished, which serves as the "pop".
@@ -143,6 +150,18 @@ bool ABISysV_arm64::PrepareTrivialCall(Thread &thread, addr_t sp,
   if (args.size() > 8)
     return false;
 
+  // Do this first, as it's got the most chance of failing (though still very
+  // low).
+  if (GetProcessSP()->GetTarget().GetArchitecture().GetTriple().isOSLinux()) {
+    Status err = PushToLinuxGuardedControlStack(return_addr, reg_ctx, thread);
+    // If we could not manage the GCS, the expression will certainly fail,
+    // and if we just carried on, that failure would be a lot more cryptic.
+    if (err.Fail()) {
+      LLDB_LOGF(log, "Failed to setup Guarded Call Stack: %s", err.AsCString());
+      return false;
+    }
+  }
+
   for (size_t i = 0; i < args.size(); ++i) {
     const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo(
         eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1 + i);
@@ -158,16 +177,6 @@ bool ABISysV_arm64::PrepareTrivialCall(Thread &thread, addr_t sp,
                                    LLDB_REGNUM_GENERIC_RA),
           return_addr))
     return false;
-
-  if (GetProcessSP()->GetTarget().GetArchitecture().GetTriple().isOSLinux()) {
-    Status err = PushToLinuxGuardedControlStack(return_addr, reg_ctx, thread);
-    // If we could not manage the GCS, the expression will certainly fail,
-    // and if we just carried on, that failure would be a lot more cryptic.
-    if (err.Fail()) {
-      LLDB_LOGF(log, "Failed to setup Guarded Call Stack: %s", err.AsCString());
-      return false;
-    }
-  }
 
   // Set "sp" to the requested value
   if (!reg_ctx->WriteRegisterFromUnsigned(
