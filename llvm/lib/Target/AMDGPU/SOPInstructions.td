@@ -1812,6 +1812,7 @@ let SubtargetPredicate = isGFX1250Plus, hasSideEffects = 1 in {
                 [(int_amdgcn_s_wait_asynccnt timm:$simm16)]> {
       let mayLoad = 1;
       let mayStore = 1;
+      let maybeAtomic = 0;
       let Uses = [ASYNCcnt];
       let Defs = [ASYNCcnt];
     }
@@ -1820,6 +1821,7 @@ let SubtargetPredicate = isGFX1250Plus, hasSideEffects = 1 in {
                 [(int_amdgcn_s_wait_tensorcnt timm:$simm16)]> {
       let mayLoad = 1;
       let mayStore = 1;
+      let maybeAtomic = 0;
       let Uses = [TENSORcnt];
       let Defs = [TENSORcnt];
     }
