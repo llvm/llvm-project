@@ -632,6 +632,12 @@ InstructionCost TargetTransformInfo::getScalarizationOverhead(
                                            CostKind, VL);
 }
 
+bool TargetTransformInfo::hasScalarizationOverhead(
+    ArrayRef<Value *> VL, FixedVectorType *VTy,
+    std::pair<bool, bool> &ScalarizeKind) const {
+  return TTIImpl->hasScalarizationOverhead(VL, VTy, ScalarizeKind);
+}
+
 InstructionCost TargetTransformInfo::getOperandsScalarizationOverhead(
     ArrayRef<const Value *> Args, ArrayRef<Type *> Tys,
     TTI::TargetCostKind CostKind) const {
