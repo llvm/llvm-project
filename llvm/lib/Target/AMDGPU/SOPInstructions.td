@@ -1905,7 +1905,7 @@ def s_sema_wait_imm : ImmLeaf<
   [{}],
   SDNodeXForm<imm, [{
     unsigned ID = (N->getZExtValue() >> 4) & 15;
-    return CurDAG->getConstant(1u << ID >> 1, SDLoc(N), MVT::i16);
+    return CurDAG->getTargetConstant(1u << ID >> 1, SDLoc(N), MVT::i16);
   }]>
 >;
 

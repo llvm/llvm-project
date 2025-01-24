@@ -39,3 +39,20 @@ define amdgpu_kernel void @test_sema(i32 %arg) {
   call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem3)
   ret void
 }
+
+; Regression test for generating illegal MIR.
+define amdgpu_ps <2 x half> @test_sema_tensor() {
+; GFX13-LABEL: test_sema_tensor:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    v_mov_b32_e32 v0, 0
+; GFX13-NEXT:    s_sema_wait 0
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v2, v0
+; GFX13-NEXT:    v_mov_b32_e32 v3, v0
+; GFX13-NEXT:    v_cvt_to_tensor_f16_f32 v0, v1, v[0:3], 0 aux_data:3
+; GFX13-NEXT:    ; return to shader part epilog
+  tail call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) null)
+  %i = tail call { <2 x half>, <2 x half> } @llvm.amdgcn.cvt.to.tensor.f16.f32.scatter2.v4f32(<4 x float> zeroinitializer, i8 0, i32 3, i1 false)
+  %i1 = extractvalue { <2 x half>, <2 x half> } %i, 0
+  ret <2 x half> %i1
+}
