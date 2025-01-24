@@ -2843,7 +2843,22 @@ private:
 
   /// Detect if current architecture is an APU.
   Error checkIfAPU() {
-    // TODO: replace with ROCr API once it becomes available.
+#if (HSA_AMD_INTERFACE_VERSION_MAJOR >= 1 &&                                   \
+     HSA_AMD_INTERFACE_VERSION_MINOR >= 5)
+
+    uint8_t MemoryProperties[8];
+
+    hsa_status_t Stat = hsa_agent_get_info(
+        getAgent(), (hsa_agent_info_t)HSA_AMD_AGENT_INFO_MEMORY_PROPERTIES,
+        MemoryProperties);
+
+    if (auto Err = Plugin::check(Stat, "Error: Unable to fetch the memory "
+                                       "properties of the GPU. (%s)\n"))
+      return Err;
+
+    IsAPU = hsa_flag_isset64(MemoryProperties,
+                             HSA_AMD_MEMORY_PROPERTY_AGENT_IS_APU);
+#else
     llvm::StringRef StrGfxName(ComputeUnitKind);
     IsAPU = llvm::StringSwitch<bool>(StrGfxName)
                 .Case("gfx940", true)
@@ -2866,6 +2881,7 @@ private:
       IsAPU = true;
       return Plugin::success();
     }
+#endif
     return Plugin::success();
   }
 
