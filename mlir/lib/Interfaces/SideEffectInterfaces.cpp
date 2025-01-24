@@ -47,11 +47,11 @@ static bool wouldOpBeTriviallyDeadImpl(Operation *rootOp) {
   SmallVector<std::pair<Block::iterator, Block::iterator>, 1> effectingOps = {
       std::make_pair(Block::iterator(rootOp), ++Block::iterator(rootOp))};
   while (!effectingOps.empty()) {
+    Block::iterator &it = effectingOps.back().first;
+    Block::iterator end = effectingOps.back().second;
     if (it == end) {
       effectingOps.pop_back();
     }
-    Block::iterator &it = effectingOps.back().first;
-    Block::iterator end = effectingOps.back().second;
     mlir::Operation *op = &*(it++);
 
     // If the operation has recursive effects, push all of the nested operations
