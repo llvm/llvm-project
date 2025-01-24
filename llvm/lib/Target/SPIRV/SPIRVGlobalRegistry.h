@@ -547,6 +547,11 @@ public:
       SPIRVType *BaseType, MachineInstr &I, const SPIRVInstrInfo &TII,
       SPIRV::StorageClass::StorageClass SClass = SPIRV::StorageClass::Function);
 
+  SPIRVType *getOrCreateVulkanBufferType(MachineIRBuilder &MIRBuilder,
+                                         Type *ElemType,
+                                         SPIRV::StorageClass::StorageClass SC,
+                                         bool IsWritable, bool EmitIr = false);
+
   SPIRVType *
   getOrCreateOpTypeImage(MachineIRBuilder &MIRBuilder, SPIRVType *SampledType,
                          SPIRV::Dim::Dim Dim, uint32_t Depth, uint32_t Arrayed,

@@ -3090,6 +3090,22 @@ static SPIRVType *getInlineSpirvType(const TargetExtType *ExtensionType,
                                     Operands);
 }
 
+static SPIRVType *getVulkanBufferType(const TargetExtType *ExtensionType,
+                                      MachineIRBuilder &MIRBuilder,
+                                      SPIRVGlobalRegistry *GR) {
+  assert(ExtensionType->getNumTypeParameters() == 1 &&
+         "Vulkan buffers have exactly one type for the type of the buffer.");
+  assert(ExtensionType->getNumIntParameters() == 2 &&
+         "Vulkan buffer have 2 integer parameters: storage class and is "
+         "writable.");
+
+  auto *T = ExtensionType->getTypeParameter(0);
+  auto SC = static_cast<SPIRV::StorageClass::StorageClass>(
+      ExtensionType->getIntParameter(0));
+  bool IsWritable = ExtensionType->getIntParameter(1);
+  return GR->getOrCreateVulkanBufferType(MIRBuilder, T, SC, IsWritable);
+}
+
 namespace SPIRV {
 TargetExtType *parseBuiltinTypeNameToTargetExtType(std::string TypeName,
                                                    LLVMContext &Context) {
@@ -3165,6 +3181,8 @@ SPIRVType *lowerBuiltinType(const Type *OpaqueType,
   SPIRVType *TargetType;
   if (Name == "spirv.Type") {
     TargetType = getInlineSpirvType(BuiltinType, MIRBuilder, GR);
+  } else if (Name == "spirv.VulkanBuffer") {
+    TargetType = getVulkanBufferType(BuiltinType, MIRBuilder, GR);
   } else {
     // Lookup the demangled builtin type in the TableGen records.
     const SPIRV::BuiltinType *TypeRecord = SPIRV::lookupBuiltinType(Name);
