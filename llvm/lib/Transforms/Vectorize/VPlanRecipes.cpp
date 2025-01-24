@@ -329,6 +329,12 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
 
   Type *RetTy = PhiVal->getType();
 
+  VPValue *Mask = getMask();
+  if (Mask) {
+    Value *MaskVal = State.get(Mask);
+    Value *Zero = ConstantInt::get(BinOpVal->getType(), 0);
+    BinOpVal = Builder.CreateSelect(MaskVal, BinOpVal, Zero);
+  }
   CallInst *V = Builder.CreateIntrinsic(
       RetTy, Intrinsic::experimental_vector_partial_reduce_add,
       {PhiVal, BinOpVal}, nullptr, "partial.reduce");

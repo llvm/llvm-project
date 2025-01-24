@@ -1596,7 +1596,7 @@ define i32 @not_dotp_predicated_pragma(i64 %N, ptr %a, ptr %b) {
 ; CHECK-INTERLEAVE1:       vector.body:
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE62:%.*]] ]
 ; CHECK-INTERLEAVE1-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_LOAD_CONTINUE62]] ]
-; CHECK-INTERLEAVE1-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP180:%.*]], [[PRED_LOAD_CONTINUE62]] ]
+; CHECK-INTERLEAVE1-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], [[PRED_LOAD_CONTINUE62]] ]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
@@ -1905,14 +1905,14 @@ define i32 @not_dotp_predicated_pragma(i64 %N, ptr %a, ptr %b) {
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP177:%.*]] = phi <16 x i8> [ [[TMP172]], [[PRED_LOAD_CONTINUE60]] ], [ [[TMP176]], [[PRED_LOAD_IF61]] ]
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP178:%.*]] = sext <16 x i8> [[TMP177]] to <16 x i32>
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP179:%.*]] = mul nsw <16 x i32> [[TMP178]], [[TMP97]]
-; CHECK-INTERLEAVE1-NEXT:    [[TMP180]] = add <16 x i32> [[TMP179]], [[VEC_PHI]]
-; CHECK-INTERLEAVE1-NEXT:    [[TMP181:%.*]] = select <16 x i1> [[TMP16]], <16 x i32> [[TMP180]], <16 x i32> [[VEC_PHI]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP180:%.*]] = select <16 x i1> [[TMP16]], <16 x i32> [[TMP179]], <16 x i32> zeroinitializer
+; CHECK-INTERLEAVE1-NEXT:    [[PARTIAL_REDUCE]] = call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI]], <16 x i32> [[TMP180]])
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
 ; CHECK-INTERLEAVE1-NEXT:    [[VEC_IND_NEXT]] = add <16 x i64> [[VEC_IND]], splat (i64 16)
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP182:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[TMP182]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK-INTERLEAVE1:       middle.block:
-; CHECK-INTERLEAVE1-NEXT:    [[TMP183:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP181]])
+; CHECK-INTERLEAVE1-NEXT:    [[TMP183:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE]])
 ; CHECK-INTERLEAVE1-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-INTERLEAVE1:       scalar.ph:
 ; CHECK-INTERLEAVE1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
@@ -1951,7 +1951,7 @@ define i32 @not_dotp_predicated_pragma(i64 %N, ptr %a, ptr %b) {
 ; CHECK-INTERLEAVED:       vector.body:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE62:%.*]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_LOAD_CONTINUE62]] ]
-; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP180:%.*]], [[PRED_LOAD_CONTINUE62]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], [[PRED_LOAD_CONTINUE62]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
@@ -2260,14 +2260,14 @@ define i32 @not_dotp_predicated_pragma(i64 %N, ptr %a, ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP177:%.*]] = phi <16 x i8> [ [[TMP172]], [[PRED_LOAD_CONTINUE60]] ], [ [[TMP176]], [[PRED_LOAD_IF61]] ]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP178:%.*]] = sext <16 x i8> [[TMP177]] to <16 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP179:%.*]] = mul nsw <16 x i32> [[TMP178]], [[TMP97]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP180]] = add <16 x i32> [[TMP179]], [[VEC_PHI]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP181:%.*]] = select <16 x i1> [[TMP16]], <16 x i32> [[TMP180]], <16 x i32> [[VEC_PHI]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP180:%.*]] = select <16 x i1> [[TMP16]], <16 x i32> [[TMP179]], <16 x i32> zeroinitializer
+; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE]] = call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI]], <16 x i32> [[TMP180]])
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
 ; CHECK-INTERLEAVED-NEXT:    [[VEC_IND_NEXT]] = add <16 x i64> [[VEC_IND]], splat (i64 16)
 ; CHECK-INTERLEAVED-NEXT:    [[TMP182:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP182]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK-INTERLEAVED:       middle.block:
-; CHECK-INTERLEAVED-NEXT:    [[TMP183:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP181]])
+; CHECK-INTERLEAVED-NEXT:    [[TMP183:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE]])
 ; CHECK-INTERLEAVED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-INTERLEAVED:       scalar.ph:
 ; CHECK-INTERLEAVED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
@@ -2306,7 +2306,7 @@ define i32 @not_dotp_predicated_pragma(i64 %N, ptr %a, ptr %b) {
 ; CHECK-MAXBW:       vector.body:
 ; CHECK-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_LOAD_CONTINUE62:%.*]] ]
 ; CHECK-MAXBW-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_LOAD_CONTINUE62]] ]
-; CHECK-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP180:%.*]], [[PRED_LOAD_CONTINUE62]] ]
+; CHECK-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], [[PRED_LOAD_CONTINUE62]] ]
 ; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
@@ -2615,14 +2615,14 @@ define i32 @not_dotp_predicated_pragma(i64 %N, ptr %a, ptr %b) {
 ; CHECK-MAXBW-NEXT:    [[TMP177:%.*]] = phi <16 x i8> [ [[TMP172]], [[PRED_LOAD_CONTINUE60]] ], [ [[TMP176]], [[PRED_LOAD_IF61]] ]
 ; CHECK-MAXBW-NEXT:    [[TMP178:%.*]] = sext <16 x i8> [[TMP177]] to <16 x i32>
 ; CHECK-MAXBW-NEXT:    [[TMP179:%.*]] = mul nsw <16 x i32> [[TMP178]], [[TMP97]]
-; CHECK-MAXBW-NEXT:    [[TMP180]] = add <16 x i32> [[TMP179]], [[VEC_PHI]]
-; CHECK-MAXBW-NEXT:    [[TMP181:%.*]] = select <16 x i1> [[TMP16]], <16 x i32> [[TMP180]], <16 x i32> [[VEC_PHI]]
+; CHECK-MAXBW-NEXT:    [[TMP180:%.*]] = select <16 x i1> [[TMP16]], <16 x i32> [[TMP179]], <16 x i32> zeroinitializer
+; CHECK-MAXBW-NEXT:    [[PARTIAL_REDUCE]] = call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI]], <16 x i32> [[TMP180]])
 ; CHECK-MAXBW-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
 ; CHECK-MAXBW-NEXT:    [[VEC_IND_NEXT]] = add <16 x i64> [[VEC_IND]], splat (i64 16)
 ; CHECK-MAXBW-NEXT:    [[TMP182:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-MAXBW-NEXT:    br i1 [[TMP182]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK-MAXBW:       middle.block:
-; CHECK-MAXBW-NEXT:    [[TMP183:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP181]])
+; CHECK-MAXBW-NEXT:    [[TMP183:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE]])
 ; CHECK-MAXBW-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-MAXBW:       scalar.ph:
 ; CHECK-MAXBW-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]

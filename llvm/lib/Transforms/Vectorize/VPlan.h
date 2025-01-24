@@ -2104,16 +2104,18 @@ public:
 /// A recipe for forming partial reductions. In the loop, an accumulator and
 /// vector operand are added together and passed to the next iteration as the
 /// next accumulator. After the loop body, the accumulator is reduced to a
-/// scalar value.
+/// scalar value. If the mask operand is not nullptr then it is applied to the
+/// vector operand on each iteration.
 class VPPartialReductionRecipe : public VPSingleDefRecipe {
   unsigned Opcode;
 
 public:
   VPPartialReductionRecipe(Instruction *ReductionInst, VPValue *Op0,
-                           VPValue *Op1)
-      : VPPartialReductionRecipe(ReductionInst->getOpcode(), Op0, Op1,
+                           VPValue *Op1, VPValue *Mask = nullptr)
+      : VPPartialReductionRecipe(ReductionInst->getOpcode(), Op0, Op1, Mask,
                                  ReductionInst) {}
   VPPartialReductionRecipe(unsigned Opcode, VPValue *Op0, VPValue *Op1,
+                           VPValue *Mask = nullptr,
                            Instruction *ReductionInst = nullptr)
       : VPSingleDefRecipe(VPDef::VPPartialReductionSC,
                           ArrayRef<VPValue *>({Op0, Op1}), ReductionInst),
@@ -2123,12 +2125,23 @@ public:
     assert((isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
             isa<VPPartialReductionRecipe>(AccumulatorRecipe)) &&
            "Unexpected operand order for partial reduction recipe");
+    if (Mask)
+      addOperand(Mask);
   }
   ~VPPartialReductionRecipe() override = default;
 
   VPPartialReductionRecipe *clone() override {
-    return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1),
-                                        getUnderlyingInstr());
+    return getNumOperands() == 3
+               ? new VPPartialReductionRecipe(Opcode, getOperand(0),
+                                              getOperand(1), getOperand(2),
+                                              getUnderlyingInstr())
+               : new VPPartialReductionRecipe(Opcode, getOperand(0),
+                                              getOperand(1), nullptr,
+                                              getUnderlyingInstr());
+  }
+
+  VPValue *getMask() const {
+    return getNumOperands() == 3 ? getOperand(2) : nullptr;
   }
 
   VP_CLASSOF_IMPL(VPDef::VPPartialReductionSC)
