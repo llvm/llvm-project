@@ -145,7 +145,7 @@ static void InitializeDefaultFlags() {
 }
 
 // Validate flags and report incompatible configurations
-static void ValidateFlags() {
+static void ProcessFlags() {
   Flags *f = flags();
 
   // Flag validation:
@@ -215,7 +215,7 @@ static void ValidateFlags() {
 
 void InitializeFlags() {
   InitializeDefaultFlags();
-  ValidateFlags();
+  ProcessFlags();
 
 #if SANITIZER_WINDOWS
   // On Windows, weak symbols (such as the `__asan_default_options` function)
@@ -241,7 +241,7 @@ void InitializeFlags() {
         asan_parser.ParseString(__asan_default_options());
 
         DisplayHelpMessages(&asan_parser);
-        ValidateFlags();
+        ProcessFlags();
         ApplyFlags();
       });
 
@@ -255,7 +255,7 @@ void InitializeFlags() {
         ubsan_parser.ParseString(__ubsan_default_options());
 
         // To match normal behavior, do not print UBSan help.
-        ValidateFlags();
+        ProcessFlags();
       });
 #  endif
 
@@ -269,7 +269,7 @@ void InitializeFlags() {
         lsan_parser.ParseString(__lsan_default_options());
 
         // To match normal behavior, do not print LSan help.
-        ValidateFlags();
+        ProcessFlags();
       });
 #  endif
 
