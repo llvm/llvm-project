@@ -2304,9 +2304,10 @@ class VPWidenPHIRecipe : public VPSingleDefRecipe {
   SmallVector<VPBasicBlock *, 2> IncomingBlocks;
 
 public:
-  /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start.
-  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr)
-      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi) {
+  /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start and
+  /// debug location \p DL.
+  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr, DebugLoc DL = {})
+      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi, DL) {
     if (Start)
       addOperand(Start);
   }
