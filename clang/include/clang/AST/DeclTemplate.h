@@ -1365,8 +1365,6 @@ class NonTypeTemplateParmDecl final
       DefaultArgStorage<NonTypeTemplateParmDecl, TemplateArgumentLoc *>;
   DefArgStorage DefaultArgument;
 
-  bool PlaceholderTypeConstraintInitialized = false;
-
   // FIXME: Collapse this into TemplateParamPosition; or, just move depth/index
   // down here to save memory.
 
@@ -1535,11 +1533,13 @@ public:
   /// Return the constraint introduced by the placeholder type of this non-type
   /// template parameter (if any).
   Expr *getPlaceholderTypeConstraint() const {
-    return PlaceholderTypeConstraintInitialized ? *getTrailingObjects<Expr *>()
-                                                : nullptr;
+    return hasPlaceholderTypeConstraint() ? *getTrailingObjects<Expr *>() :
+        nullptr;
   }
 
-  void setPlaceholderTypeConstraint(Expr *E);
+  void setPlaceholderTypeConstraint(Expr *E) {
+    *getTrailingObjects<Expr *>() = E;
+  }
 
   /// Determine whether this non-type template parameter's type has a
   /// placeholder with a type-constraint.

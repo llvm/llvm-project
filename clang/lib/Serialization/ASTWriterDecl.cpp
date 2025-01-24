@@ -2020,13 +2020,8 @@ void ASTDeclWriter::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
   Record.push_back(D->getDepth());
   Record.push_back(D->getPosition());
 
-  if (D->hasPlaceholderTypeConstraint()) {
-    Expr *TypeConstraint = D->getPlaceholderTypeConstraint();
-    Record.push_back(/*PlaceholderTypeConstraintInitialized=*/TypeConstraint !=
-                     nullptr);
-    if (TypeConstraint)
-      Record.AddStmt(TypeConstraint);
-  }
+  if (D->hasPlaceholderTypeConstraint())
+    Record.AddStmt(D->getPlaceholderTypeConstraint());
 
   if (D->isExpandedParameterPack()) {
     for (unsigned I = 0, N = D->getNumExpansionTypes(); I != N; ++I) {
