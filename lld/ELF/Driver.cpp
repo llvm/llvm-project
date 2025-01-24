@@ -414,8 +414,18 @@ static void checkOptions(Ctx &ctx) {
           << "--pcrel-optimize is only supported on PowerPC64 targets";
   }
 
-  if (ctx.arg.relaxGP && ctx.arg.emachine != EM_RISCV)
-    ErrAlways(ctx) << "--relax-gp is only supported on RISC-V targets";
+  if (ctx.arg.emachine != EM_RISCV) {
+    if (ctx.arg.relaxGP)
+      ErrAlways(ctx) << "--relax-gp is only supported on RISC-V targets";
+    if (ctx.arg.zZicfilpUnlabeledReport != "none")
+      ErrAlways(ctx) << "-z zicfilip-unlabeled-report is only supported on "
+                        "RISC-V targets";
+    if (ctx.arg.zZicfilpFuncSigReport != "none")
+      ErrAlways(ctx) << "-z zicfilip-func-sig-report is only supported on "
+                        "RISC-V targets";
+    if (ctx.arg.zZicfissReport != "none")
+      ErrAlways(ctx) << "-z zicfiss-report is only supported on RISC-V targets";
+  }
 
   if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64 &&
       ctx.arg.zCetReport != "none")
@@ -1623,7 +1633,12 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   auto reports = {std::make_pair("bti-report", &ctx.arg.zBtiReport),
                   std::make_pair("cet-report", &ctx.arg.zCetReport),
                   std::make_pair("gcs-report", &ctx.arg.zGcsReport),
-                  std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
+                  std::make_pair("pauth-report", &ctx.arg.zPauthReport),
+                  std::make_pair("zicfilp-unlabeled-report",
+                                 &ctx.arg.zZicfilpUnlabeledReport),
+                  std::make_pair("zicfilp-func-sig-report",
+                                 &ctx.arg.zZicfilpFuncSigReport),
+                  std::make_pair("zicfiss-report", &ctx.arg.zZicfissReport)};
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
@@ -2796,7 +2811,7 @@ static void redirectSymbols(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
 // ones can be allowed (see -z pauth-report).
 static void readSecurityNotes(Ctx &ctx) {
   if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64 &&
-      ctx.arg.emachine != EM_AARCH64)
+      ctx.arg.emachine != EM_AARCH64 && ctx.arg.emachine != EM_RISCV)
     return;
 
   ctx.arg.andFeatures = -1;
@@ -2851,6 +2866,33 @@ static void readSecurityNotes(Ctx &ctx) {
         << f
         << ": -z cet-report: file does not have "
            "GNU_PROPERTY_X86_FEATURE_1_SHSTK property";
+
+    if (ctx.arg.emachine == EM_RISCV) {
+      reportUnless(ctx.arg.zZicfilpUnlabeledReport,
+                   features & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED)
+          << f
+          << ": -z zicfilp-unlabeled-report: file does not have "
+             "GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED property";
+
+      reportUnless(ctx.arg.zZicfilpFuncSigReport,
+                   features & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG)
+          << f
+          << ": -z zicfilp-func-sig-report: file does not have "
+             "GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG property";
+
+      if ((features & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED) &&
+          (features & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG))
+        Err(ctx) << f
+                 << ": file has conflicting properties: "
+                    "GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED and "
+                    "GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG";
+
+      reportUnless(ctx.arg.zZicfissReport,
+                   features & GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS)
+          << f
+          << ": -z zicfiss-report: file does not have "
+             "GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS property";
+    }
 
     if (ctx.arg.zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
