@@ -10,11 +10,11 @@
 # RUN: not ld.lld -shared %t.64.o -o /dev/null 2>&1 | FileCheck --check-prefix=ERR %s
 
 ## __global_pointer$ = .sdata+0x800 = 0x39c0
-# SEC32: [ [[#SDATA:]]] .sdata PROGBITS {{0*}}000031c0
-# SEC32: {{0*}}000039c0 0 NOTYPE GLOBAL DEFAULT [[#SDATA]] __global_pointer$
+# SEC32: [ [[#SDATA:]]] .sdata PROGBITS {{0*}}000301c0
+# SEC32: {{0*}}000309c0 0 NOTYPE GLOBAL DEFAULT [[#SDATA]] __global_pointer$
 
-# SEC64: [ [[#SDATA:]]] .sdata PROGBITS {{0*}}000032e0
-# SEC64: {{0*}}00003ae0 0 NOTYPE GLOBAL DEFAULT [[#SDATA]] __global_pointer$
+# SEC64: [ [[#SDATA:]]] .sdata PROGBITS {{0*}}000302e0
+# SEC64: {{0*}}00030ae0 0 NOTYPE GLOBAL DEFAULT [[#SDATA]] __global_pointer$
 
 # ERR: error: relocation R_RISCV_PCREL_HI20 cannot be used against symbol '__global_pointer$'; recompile with -fPIC
 

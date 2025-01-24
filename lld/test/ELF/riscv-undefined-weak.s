@@ -34,11 +34,11 @@ absolute:
 
 ## 1048559 should be -0x11.
 # CHECK-LABEL: <relative>:
-# CHECK-NEXT:  11{{...}}: auipc a1, 0xfffef
+# CHECK-NEXT:  20{{...}}: auipc a1, 0xfffe0
 # PC-NEXT:     addi a1, a1, -0x160
 # PLT-NEXT:    addi a1, a1, -0x290
 # CHECK-LABEL: <.Lpcrel_hi1>:
-# CHECK-NEXT:  11{{...}}: auipc t1, 0xfffef
+# CHECK-NEXT:  20{{...}}: auipc t1, 0xfffe0
 # PC-NEXT:     sd a2, -0x166(t1)
 # PLT-NEXT:    sd a2, -0x296(t1)
 relative:
@@ -87,7 +87,7 @@ branch:
 ## plt entry and this address.
 ##
 ##   S - A + P = -0x0x20ec = 0xffffdf14
-# HEX-WITH-PLT-SAME: 14dfffff
+# HEX-WITH-PLT-SAME: 14fffdff
 
 .data
 .p2align 3
