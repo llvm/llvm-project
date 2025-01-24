@@ -592,7 +592,8 @@ define hidden void @addUsesOr(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i8 %
 ; GFX9-NEXT:    v_add_u16_sdwa v0, v4, v7 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_3
 ; GFX9-NEXT:    v_add_u16_sdwa v1, v4, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX9-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GFX9-NEXT:    v_add_u16_sdwa v0, v4, v7 dst_sel:BYTE_1 dst_unused:UNUSED_PRESERVE src0_sel:DWORD src1_sel:BYTE_1
+; GFX9-NEXT:    v_add_u16_sdwa v1, v4, v7 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_1
+; GFX9-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX9-NEXT:    global_store_dword v[5:6], v0, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
