@@ -553,6 +553,34 @@ it must be a multiple of 16.
 For more information, refer PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
 
+'``llvm.nvvm.cp.async.bulk.prefetch.L2``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.prefetch.L2(ptr addrspace(1) %src, i32 %size, i64 %ch, i1 %flag_ch)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.prefetch.L2``' intrinsic
+corresponds to the ``cp.async.bulk.prefetch.L2.*`` family
+of PTX instructions. These instructions initiate an asynchronous
+prefetch of bulk data from global memory to the L2 cache.
+The 32-bit operand ``%size`` specifies the amount of memory to be
+prefetched in terms of bytes and it must be a multiple of 16.
+
+* The last argument to these intrinsics is boolean flag indicating
+  support for cache_hint. These flag argument must be compile-time
+  constant. When set, it indicates a valid cache_hint (``i64 %ch``)
+  and generates the ``.L2::cache_hint`` variant of the PTX instruction.
+
+For more information, refer PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch>`_.
+
 '``llvm.nvvm.cp.async.bulk.tensor.g2s.tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -910,6 +938,29 @@ including that ``wgmma.mma_async`` instruction is undefined behavior.
 
 For more information, refer PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-wait-group>`_.
+
+'``llvm.nvvm.griddepcontrol.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.griddepcontrol.launch_dependents()
+  declare void @llvm.nvvm.griddepcontrol.wait()
+
+Overview:
+"""""""""
+
+The ``griddepcontrol`` intrinsics allows the dependent grids and prerequisite grids as defined by the runtime, to control execution in the following way:
+
+``griddepcontrol.launch_dependents`` intrinsic signals that the dependents can be scheduled, before the current grid completes. The intrinsic can be invoked by multiple threads in the current CTA and repeated invocations of the intrinsic will have no additional side effects past that of the first invocation.
+
+``griddepcontrol.wait`` intrinsic causes the executing thread to wait until all prerequisite grids in flight have completed and all the memory operations from the prerequisite grids are performed and made visible to the current grid.
+
+For more information, refer 
+`PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-griddepcontrol>`__.
 
 Other Intrinsics
 ----------------

@@ -410,8 +410,8 @@ CodeExtractor::findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock) {
   assert(!getFirstPHI(CommonExitBlock) && "Phi not expected");
 #endif
 
-  BasicBlock *NewExitBlock = CommonExitBlock->splitBasicBlock(
-      CommonExitBlock->getFirstNonPHI()->getIterator());
+  BasicBlock *NewExitBlock =
+      CommonExitBlock->splitBasicBlock(CommonExitBlock->getFirstNonPHIIt());
 
   for (BasicBlock *Pred :
        llvm::make_early_inc_range(predecessors(CommonExitBlock))) {
@@ -701,7 +701,7 @@ void CodeExtractor::severSplitPHINodesOfEntry(BasicBlock *&Header) {
   // containing PHI nodes merging values from outside of the region, and a
   // second that contains all of the code for the block and merges back any
   // incoming values from inside of the region.
-  BasicBlock *NewBB = SplitBlock(Header, Header->getFirstNonPHI(), DT);
+  BasicBlock *NewBB = SplitBlock(Header, Header->getFirstNonPHIIt(), DT);
 
   // We only want to code extract the second block now, and it becomes the new
   // header of the region.
@@ -1124,9 +1124,9 @@ static void insertLifetimeMarkersSurroundingCall(
           Intrinsic::getOrInsertDeclaration(M, MarkerFunc, Mem->getType());
       auto Marker = CallInst::Create(Func, {NegativeOne, Mem});
       if (InsertBefore)
-        Marker->insertBefore(TheCall);
+        Marker->insertBefore(TheCall->getIterator());
       else
-        Marker->insertBefore(Term);
+        Marker->insertBefore(Term->getIterator());
     }
   };
 
@@ -1441,7 +1441,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     auto *HoistToBlock = findOrCreateBlockForHoisting(CommonExit);
     Instruction *TI = HoistToBlock->getTerminator();
     for (auto *II : HoistingCands)
-      cast<Instruction>(II)->moveBefore(TI);
+      cast<Instruction>(II)->moveBefore(TI->getIterator());
     computeExtractedFuncRetVals();
   }
 
@@ -1815,7 +1815,7 @@ CallInst *CodeExtractor::emitReplacerCall(
     if (ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
       auto *StructSpaceCast = new AddrSpaceCastInst(
           Struct, PointerType ::get(Context, 0), "structArg.ascast");
-      StructSpaceCast->insertAfter(Struct);
+      StructSpaceCast->insertAfter(Struct->getIterator());
       params.push_back(StructSpaceCast);
     } else {
       params.push_back(Struct);

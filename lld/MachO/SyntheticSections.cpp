@@ -1541,7 +1541,14 @@ StringTableSection::StringTableSection()
 
 uint32_t StringTableSection::addString(StringRef str) {
   uint32_t strx = size;
-  strings.push_back(str); // TODO: consider deduplicating strings
+  if (config->dedupSymbolStrings) {
+    llvm::CachedHashStringRef hashedStr(str);
+    auto [it, inserted] = stringMap.try_emplace(hashedStr, strx);
+    if (!inserted)
+      return it->second;
+  }
+
+  strings.push_back(str);
   size += str.size() + 1; // account for null terminator
   return strx;
 }

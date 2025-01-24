@@ -1641,8 +1641,8 @@ static bool detectShiftUntilLessThanIdiom(Loop *CurLoop, const DataLayout &DL,
   //       plus "cnt0". Currently it is not optimized.
   //       This step could be used to detect POPCNT instruction:
   //       cnt.next = cnt + (x.next & 1)
-  for (Instruction &Inst : llvm::make_range(
-           LoopEntry->getFirstNonPHI()->getIterator(), LoopEntry->end())) {
+  for (Instruction &Inst :
+       llvm::make_range(LoopEntry->getFirstNonPHIIt(), LoopEntry->end())) {
     if (Inst.getOpcode() != Instruction::Add)
       continue;
 
@@ -1745,8 +1745,8 @@ static bool detectPopcountIdiom(Loop *CurLoop, BasicBlock *PreCondBB,
   // step 4: Find the instruction which count the population: cnt2 = cnt1 + 1
   {
     CountInst = nullptr;
-    for (Instruction &Inst : llvm::make_range(
-             LoopEntry->getFirstNonPHI()->getIterator(), LoopEntry->end())) {
+    for (Instruction &Inst :
+         llvm::make_range(LoopEntry->getFirstNonPHIIt(), LoopEntry->end())) {
       if (Inst.getOpcode() != Instruction::Add)
         continue;
 
@@ -1869,8 +1869,8 @@ static bool detectShiftUntilZeroIdiom(Loop *CurLoop, const DataLayout &DL,
   //       plus "cnt0". Currently it is not optimized.
   //       This step could be used to detect POPCNT instruction:
   //       cnt.next = cnt + (x.next & 1)
-  for (Instruction &Inst : llvm::make_range(
-           LoopEntry->getFirstNonPHI()->getIterator(), LoopEntry->end())) {
+  for (Instruction &Inst :
+       llvm::make_range(LoopEntry->getFirstNonPHIIt(), LoopEntry->end())) {
     if (Inst.getOpcode() != Instruction::Add)
       continue;
 

@@ -639,6 +639,9 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(
       Args.MakeArgString("--plugin-opt=-mattr=" + llvm::join(Features, ",")));
 
+  // Enable ctor / dtor lowering for the direct / freestanding NVPTX target.
+  CmdArgs.append({"-mllvm", "--nvptx-lower-global-ctor-dtor"});
+
   // Add paths for the default clang library path.
   SmallString<256> DefaultLibPath =
       llvm::sys::path::parent_path(TC.getDriver().Dir);
@@ -783,7 +786,7 @@ void NVPTXToolChain::addClangTargetOptions(
   // If we are compiling with a standalone NVPTX toolchain we want to try to
   // mimic a standard environment as much as possible. So we enable lowering
   // ctor / dtor functions to global symbols that can be registered.
-  if (Freestanding)
+  if (Freestanding && !getDriver().isUsingLTO())
     CC1Args.append({"-mllvm", "--nvptx-lower-global-ctor-dtor"});
 }
 

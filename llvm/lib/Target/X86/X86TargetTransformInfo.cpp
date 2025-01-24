@@ -4482,15 +4482,13 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   case Intrinsic::lrint:
-  case Intrinsic::llrint:
+  case Intrinsic::llrint: {
     // X86 can use the CVTP2SI instructions to lower lrint/llrint calls, which
     // have the same costs as the CVTTP2SI (fptosi) instructions
-    if (!ICA.isTypeBasedOnly()) {
-      const SmallVectorImpl<Type *> &ArgTys = ICA.getArgTypes();
-      return getCastInstrCost(Instruction::FPToSI, RetTy, ArgTys[0],
-                              TTI::CastContextHint::None, CostKind);
-    }
-    break;
+    const SmallVectorImpl<Type *> &ArgTys = ICA.getArgTypes();
+    return getCastInstrCost(Instruction::FPToSI, RetTy, ArgTys[0],
+                            TTI::CastContextHint::None, CostKind);
+  }
   case Intrinsic::maxnum:
   case Intrinsic::minnum:
     // FMINNUM has same costs so don't duplicate.
@@ -4721,6 +4719,24 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (const auto *Entry = CostTableLookup(X86CostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
         return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
+
+    // Without arg data, we need to compute the expanded costs of custom lowered
+    // intrinsics to prevent use of the (very low) default costs.
+    if (ICA.isTypeBasedOnly() &&
+        (IID == Intrinsic::fshl || IID == Intrinsic::fshr)) {
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      InstructionCost Cost = 0;
+      Cost += getArithmeticInstrCost(BinaryOperator::Or, RetTy, CostKind);
+      Cost += getArithmeticInstrCost(BinaryOperator::Sub, RetTy, CostKind);
+      Cost += getArithmeticInstrCost(BinaryOperator::Shl, RetTy, CostKind);
+      Cost += getArithmeticInstrCost(BinaryOperator::LShr, RetTy, CostKind);
+      Cost += getArithmeticInstrCost(BinaryOperator::And, RetTy, CostKind);
+      Cost += getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
+                                 CmpInst::ICMP_EQ, CostKind);
+      Cost += getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                 CmpInst::ICMP_EQ, CostKind);
+      return Cost;
+    }
   }
 
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
