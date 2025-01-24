@@ -12,15 +12,6 @@ set(link_libs
   clangRewriteFrontend
   )
 
-set(deps)
-
-if(CLANG_ENABLE_CIR)
-  list(APPEND link_libs
-    clangCIRFrontendAction
-    MLIRIR
-    )
-endif()
-
 if(CLANG_ENABLE_ARCMT)
   list(APPEND link_libs
     clangARCMigrate
@@ -38,13 +29,7 @@ add_clang_library(clangFrontendTool
 
   DEPENDS
   ClangDriverOptions
-  ${deps}
 
   LINK_LIBS
   ${link_libs}
   )
-
-if(CLANG_ENABLE_CIR)
-  target_include_directories(clangFrontendTool PRIVATE ${LLVM_MAIN_SRC_DIR}/../mlir/include)
-  target_include_directories(clangFrontendTool PRIVATE ${CMAKE_BINARY_DIR}/tools/mlir/include)
-endif()

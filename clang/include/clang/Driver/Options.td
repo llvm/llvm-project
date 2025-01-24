@@ -3038,7 +3038,7 @@ defm clangir : BoolFOption<"clangir",
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use the ClangIR pipeline to compile">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Use the AST -> LLVM pipeline to compile">,
   BothFlags<[], [ClangOption, CC1Option], "">>;
-def emit_cir : Flag<["-"], "emit-cir">, Visibility<[ClangOption, CC1Option]>,
+def emit_cir : Flag<["-"], "emit-cir">, Visibility<[CC1Option]>,
   Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR">;
 /// ClangIR-specific options - END
 
