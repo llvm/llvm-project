@@ -688,21 +688,15 @@ bool BPFMIPreEmitPeephole::insertMissingCallerSavedSpills() {
 bool BPFMIPreEmitPeephole::removeMayGotoZero() {
   bool Changed = false;
   MachineBasicBlock *Prev_MBB, *Curr_MBB = nullptr;
-  MachineBasicBlock *ToErase = nullptr;
 
-  for (MachineBasicBlock &MBB : reverse(*MF)) {
-    if (ToErase) {
-      ToErase->eraseFromParent();
-      ToErase = nullptr;
-    }
-
+  for (MachineBasicBlock &MBB : make_early_inc_range(reverse(*MF))) {
     Prev_MBB = Curr_MBB;
     Curr_MBB = &MBB;
     if (Prev_MBB == nullptr)
       continue;
 
     MachineInstr &MI = MBB.back();
-    if (!MI.isInlineAsm())
+    if (MI.getOpcode() != TargetOpcode::INLINEASM_BR)
       continue;
 
     const char *AsmStr = MI.getOperand(0).getSymbolName();
@@ -727,19 +721,16 @@ bool BPFMIPreEmitPeephole::removeMayGotoZero() {
     Changed = true;
     if (MBB.begin() == MI) {
       // Single 'may_goto' insn in the same basic block.
-      ToErase = Curr_MBB;
       Curr_MBB->removeSuccessor(Prev_MBB);
       for (MachineBasicBlock *Pred : Curr_MBB->predecessors())
         Pred->replaceSuccessor(Curr_MBB, Prev_MBB);
+      Curr_MBB->eraseFromParent();
       Curr_MBB = Prev_MBB;
     } else {
       // Remove 'may_goto' insn.
       MI.eraseFromParent();
     }
   }
-
-  if (ToErase)
-    ToErase->eraseFromParent();
 
   return Changed;
 }
