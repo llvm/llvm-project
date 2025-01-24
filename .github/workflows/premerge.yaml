@@ -76,7 +76,7 @@ jobs:
     if: >-
       github.repository_owner == 'llvm' &&
       (startswith(github.ref_name, 'release/') ||
-       startswith(github.base_ref, 'refs/heads/release/')
+       startswith(github.base_ref, 'refs/heads/release/'))
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@v4
