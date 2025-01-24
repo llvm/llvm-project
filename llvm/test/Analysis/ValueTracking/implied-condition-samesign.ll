@@ -299,7 +299,9 @@ define i1 @gt_sub_nsw_ult(i8 %L0, i8 %L1, i1 %V) {
 ; CHECK-NEXT:    [[LHS:%.*]] = icmp samesign ugt i8 [[L0]], [[L1]]
 ; CHECK-NEXT:    br i1 [[LHS]], label %[[LHS_TRUE:.*]], label %[[LHS_FALSE:.*]]
 ; CHECK:       [[LHS_TRUE]]:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[R0:%.*]] = sub nsw i8 [[L0]], [[L1]]
+; CHECK-NEXT:    [[RHS:%.*]] = icmp ult i8 [[R0]], -1
+; CHECK-NEXT:    ret i1 [[RHS]]
 ; CHECK:       [[LHS_FALSE]]:
 ; CHECK-NEXT:    ret i1 [[V]]
 ;
@@ -321,7 +323,9 @@ define i1 @ul_sub_nsw_ult(i8 %L0, i8 %L1, i1 %V) {
 ; CHECK-NEXT:    [[LHS:%.*]] = icmp samesign ult i8 [[L0]], [[L1]]
 ; CHECK-NEXT:    br i1 [[LHS]], label %[[LHS_TRUE:.*]], label %[[LHS_FALSE:.*]]
 ; CHECK:       [[LHS_TRUE]]:
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[R0:%.*]] = sub nsw i8 [[L0]], [[L1]]
+; CHECK-NEXT:    [[RHS:%.*]] = icmp ult i8 [[R0]], 1
+; CHECK-NEXT:    ret i1 [[RHS]]
 ; CHECK:       [[LHS_FALSE]]:
 ; CHECK-NEXT:    ret i1 [[V]]
 ;
