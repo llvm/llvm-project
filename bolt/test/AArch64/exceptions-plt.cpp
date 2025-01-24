@@ -2,7 +2,7 @@
 
 // REQUIRES: system-linux
 
-// RUN: %clangxx %cflags -O1 -Wl,-q,-znow %s -o %t.exe
+// RUN: %clangxx %cxxflags -O1 -Wl,-q,-znow %s -o %t.exe
 // RUN: llvm-bolt %t.exe -o %t.bolt.exe --plt=all --print-only=.*main.* \
 // RUN:   --print-finalized 2>&1 | FileCheck %s
 
