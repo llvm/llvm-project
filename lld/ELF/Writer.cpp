@@ -931,9 +931,7 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
 // countLeadingZeros.
 static int getRankProximity(OutputSection *a, SectionCommand *b) {
   auto *osd = dyn_cast<OutputDesc>(b);
-  return (osd && osd->osec.hasInputSections)
-             ? llvm::countl_zero(a->sortRank ^ osd->osec.sortRank)
-             : -1;
+  return osd ? llvm::countl_zero(a->sortRank ^ osd->osec.sortRank) : -1;
 }
 
 // When placing orphan sections, we want to place them after symbol assignments
@@ -999,11 +997,6 @@ findOrphanPos(Ctx &ctx, SmallVectorImpl<SectionCommand *>::iterator b,
   if (i == e)
     return e;
 
-  auto isOutputSecWithInputSections = [](SectionCommand *cmd) {
-    auto *osd = dyn_cast<OutputDesc>(cmd);
-    return osd && osd->osec.hasInputSections;
-  };
-
   // Then, scan backward or forward through the script for a suitable insertion
   // point. If i's rank is larger, the orphan section can be placed before i.
   //
@@ -1016,7 +1009,7 @@ findOrphanPos(Ctx &ctx, SmallVectorImpl<SectionCommand *>::iterator b,
       ctx.script->hasPhdrsCommands() || !ctx.script->memoryRegions.empty();
   if (cast<OutputDesc>(*i)->osec.sortRank <= sec->sortRank || mustAfter) {
     for (auto j = ++i; j != e; ++j) {
-      if (!isOutputSecWithInputSections(*j))
+      if (!isa<OutputDesc>(*j))
         continue;
       if (getRankProximity(sec, *j) != maxP)
         break;
@@ -1024,7 +1017,7 @@ findOrphanPos(Ctx &ctx, SmallVectorImpl<SectionCommand *>::iterator b,
     }
   } else {
     for (; i != b; --i)
-      if (isOutputSecWithInputSections(i[-1]))
+      if (isa<OutputDesc>(i[-1]))
         break;
   }
 
@@ -1033,7 +1026,8 @@ findOrphanPos(Ctx &ctx, SmallVectorImpl<SectionCommand *>::iterator b,
   // This matches bfd's behavior and is convenient when the linker script fully
   // specifies the start of the file, but doesn't care about the end (the non
   // alloc sections for example).
-  if (std::find_if(i, e, isOutputSecWithInputSections) == e)
+  if (std::find_if(
+          i, e, [](SectionCommand *cmd) { return isa<OutputDesc>(cmd); }) == e)
     return e;
 
   while (i != e && shouldSkip(*i))
