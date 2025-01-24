@@ -137,6 +137,19 @@ public:
     }
     return LowestI;
   }
+
+  /// If \p I is not a PHI it returns it. Else it walks down the instruction
+  /// chain looking for the last PHI and returns it. \Returns nullptr if \p I is
+  /// nullptr.
+  static Instruction *getLastPHIOrSelf(Instruction *I) {
+    Instruction *LastI = I;
+    while (I != nullptr && isa<PHINode>(I)) {
+      LastI = I;
+      I = I->getNextNode();
+    }
+    return LastI;
+  }
+
   /// If all values in \p Bndl are of the same scalar type then return it,
   /// otherwise return nullptr.
   static Type *tryGetCommonScalarType(ArrayRef<Value *> Bndl) {
