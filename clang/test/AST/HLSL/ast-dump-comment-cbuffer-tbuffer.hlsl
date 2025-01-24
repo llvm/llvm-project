@@ -37,19 +37,26 @@ tbuffer B {
     int d;
 }
 
-// AST:HLSLBufferDecl {{.*}}:11:1, line:20:1> line:11:9 cbuffer A
-// AST-NEXT:-HLSLResourceClassAttr {{.*}} <<invalid sloc>> Implicit CBuffer
-// AST-NEXT:-HLSLResourceAttr {{.*}} <<invalid sloc>> Implicit CBuffer
-// AST-NEXT:FullComment {{.*}}<line:10:4, col:17>
-// AST-NEXT:`-ParagraphComment {{.*}}<col:4, col:17>
-// AST-NEXT:`-TextComment {{.*}}<col:4, col:17> Text=" CBuffer decl."
-// AST-NEXT:-VarDecl {{.*}}<line:15:5, col:11> col:11 a 'float'
-// AST-NEXT:`-VarDecl {{.*}}<line:19:5, col:9> col:9 b 'int'
-// AST-NEXT:HLSLBufferDecl {{.*}}<line:29:1, line:38:1> line:29:9 tbuffer B
-// AST-NEXT:-HLSLResourceClassAttr {{.*}} <<invalid sloc>> Implicit SRV
-// AST-NEXT:-HLSLResourceAttr {{.*}} <<invalid sloc>> Implicit TBuffer
-// AST-NEXT:-FullComment {{.*}}<line:28:4, col:17>
-// AST-NEXT: `-ParagraphComment {{.*}}<col:4, col:17>
-// AST-NEXT:  `-TextComment {{.*}}<col:4, col:17> Text=" TBuffer decl."
-// AST-NEXT:-VarDecl {{.*}}<line:33:5, col:11> col:11 c 'float'
-// AST-NEXT:`-VarDecl {{.*}} <line:37:5, col:9> col:9 d 'int'
+// AST: HLSLBufferDecl {{.*}} line:11:9 cbuffer A
+// AST-NEXT: HLSLResourceClassAttr {{.*}} Implicit CBuffer
+// AST-NEXT: HLSLResourceAttr {{.*}} Implicit CBuffer
+// AST-NEXT: FullComment
+// AST-NEXT: ParagraphComment
+// AST-NEXT: TextComment {{.*}} Text=" CBuffer decl."
+// AST-NEXT: VarDecl {{.*}} a 'float'
+// AST-NEXT: VarDecl {{.*}} b 'int'
+// AST-NEXT: CXXRecordDecl {{.*}} implicit class __layout_A definition
+// AST: FieldDecl {{.*}} a 'float'
+// AST-NEXT: FieldDecl {{.*}} b 'int'
+
+// AST-NEXT: HLSLBufferDecl {{.*}} line:29:9 tbuffer B
+// AST-NEXT: HLSLResourceClassAttr {{.*}} Implicit SRV
+// AST-NEXT: HLSLResourceAttr {{.*}} Implicit TBuffer
+// AST-NEXT: FullComment
+// AST-NEXT: ParagraphComment
+// AST-NEXT: TextComment {{.*}} Text=" TBuffer decl."
+// AST-NEXT: VarDecl {{.*}} c 'float'
+// AST-NEXT: VarDecl {{.*}} d 'int'
+// AST-NEXT: CXXRecordDecl {{.*}} implicit class __layout_B definition
+// AST: FieldDecl {{.*}} c 'float'
+// AST-NEXT: FieldDecl {{.*}} d 'int'
