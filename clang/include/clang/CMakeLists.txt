@@ -1,8 +1,5 @@
 add_subdirectory(AST)
 add_subdirectory(Basic)
-if(CLANG_ENABLE_CIR)
-  add_subdirectory(CIR)
-endif()
 add_subdirectory(Driver)
 add_subdirectory(Parse)
 add_subdirectory(Sema)
