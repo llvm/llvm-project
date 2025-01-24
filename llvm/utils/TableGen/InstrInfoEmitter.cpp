@@ -283,7 +283,6 @@ void InstrInfoEmitter::emitOperandNameMappings(
     raw_ostream &OS, const CodeGenTarget &Target,
     ArrayRef<const CodeGenInstruction *> NumberedInstructions) {
   StringRef Namespace = Target.getInstNamespace();
-  std::string OpNameNS = "OpName";
   // Map of operand names to their enumeration value.  This will be used to
   // generate the OpName enum.
   std::map<std::string, unsigned> Operands;
@@ -293,24 +292,19 @@ void InstrInfoEmitter::emitOperandNameMappings(
 
   OS << "#ifdef GET_INSTRINFO_OPERAND_ENUM\n";
   OS << "#undef GET_INSTRINFO_OPERAND_ENUM\n";
-  OS << "namespace llvm {\n";
-  OS << "namespace " << Namespace << " {\n";
-  OS << "namespace " << OpNameNS << " {\n";
+  OS << "namespace llvm::" << Namespace << "::OpName {\n";
   OS << "enum {\n";
   for (const auto &Op : Operands)
     OS << "  " << Op.first << " = " << Op.second << ",\n";
 
   OS << "  OPERAND_LAST";
   OS << "\n};\n";
-  OS << "} // end namespace OpName\n";
-  OS << "} // end namespace " << Namespace << "\n";
-  OS << "} // end namespace llvm\n";
+  OS << "} // end namespace llvm::" << Namespace << "::OpName\n";
   OS << "#endif //GET_INSTRINFO_OPERAND_ENUM\n\n";
 
   OS << "#ifdef GET_INSTRINFO_NAMED_OPS\n";
   OS << "#undef GET_INSTRINFO_NAMED_OPS\n";
-  OS << "namespace llvm {\n";
-  OS << "namespace " << Namespace << " {\n";
+  OS << "namespace llvm::" << Namespace << " {\n";
   OS << "LLVM_READONLY\n";
   OS << "int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIdx) {\n";
   if (!Operands.empty()) {
@@ -343,8 +337,7 @@ void InstrInfoEmitter::emitOperandNameMappings(
     OS << "  return -1;\n";
   }
   OS << "}\n";
-  OS << "} // end namespace " << Namespace << "\n";
-  OS << "} // end namespace llvm\n";
+  OS << "} // end namespace llvm::" << Namespace << "\n";
   OS << "#endif //GET_INSTRINFO_NAMED_OPS\n\n";
 }
 
@@ -365,9 +358,7 @@ void InstrInfoEmitter::emitOperandTypeMappings(
 
   OS << "#ifdef GET_INSTRINFO_OPERAND_TYPES_ENUM\n";
   OS << "#undef GET_INSTRINFO_OPERAND_TYPES_ENUM\n";
-  OS << "namespace llvm {\n";
-  OS << "namespace " << Namespace << " {\n";
-  OS << "namespace OpTypes {\n";
+  OS << "namespace llvm::" << Namespace << "::OpTypes {\n";
   OS << "enum OperandType {\n";
 
   unsigned EnumVal = 0;
@@ -382,15 +373,12 @@ void InstrInfoEmitter::emitOperandTypeMappings(
 
   OS << "  OPERAND_TYPE_LIST_END"
      << "\n};\n";
-  OS << "} // end namespace OpTypes\n";
-  OS << "} // end namespace " << Namespace << "\n";
-  OS << "} // end namespace llvm\n";
+  OS << "} // end namespace llvm::" << Namespace << "::OpTypes\n";
   OS << "#endif // GET_INSTRINFO_OPERAND_TYPES_ENUM\n\n";
 
   OS << "#ifdef GET_INSTRINFO_OPERAND_TYPE\n";
   OS << "#undef GET_INSTRINFO_OPERAND_TYPE\n";
-  OS << "namespace llvm {\n";
-  OS << "namespace " << Namespace << " {\n";
+  OS << "namespace llvm::" << Namespace << " {\n";
   OS << "LLVM_READONLY\n";
   OS << "static int getOperandType(uint16_t Opcode, uint16_t OpIdx) {\n";
   auto getInstrName = [&](int I) -> StringRef {
@@ -465,14 +453,12 @@ void InstrInfoEmitter::emitOperandTypeMappings(
     OS << "  llvm_unreachable(\"No instructions defined\");\n";
   }
   OS << "}\n";
-  OS << "} // end namespace " << Namespace << "\n";
-  OS << "} // end namespace llvm\n";
+  OS << "} // end namespace llvm::" << Namespace << "\n";
   OS << "#endif // GET_INSTRINFO_OPERAND_TYPE\n\n";
 
   OS << "#ifdef GET_INSTRINFO_MEM_OPERAND_SIZE\n";
   OS << "#undef GET_INSTRINFO_MEM_OPERAND_SIZE\n";
-  OS << "namespace llvm {\n";
-  OS << "namespace " << Namespace << " {\n";
+  OS << "namespace llvm::" << Namespace << " {\n";
   OS << "LLVM_READONLY\n";
   OS << "static int getMemOperandSize(int OpType) {\n";
   OS << "  switch (OpType) {\n";
@@ -490,8 +476,7 @@ void InstrInfoEmitter::emitOperandTypeMappings(
     OS << "    return " << KV.first << ";\n\n";
   }
   OS << "  }\n}\n";
-  OS << "} // end namespace " << Namespace << "\n";
-  OS << "} // end namespace llvm\n";
+  OS << "} // end namespace llvm::" << Namespace << "\n";
   OS << "#endif // GET_INSTRINFO_MEM_OPERAND_SIZE\n\n";
 }
 
@@ -526,8 +511,7 @@ void InstrInfoEmitter::emitLogicalOperandSizeMappings(
 
   OS << "#ifdef GET_INSTRINFO_LOGICAL_OPERAND_SIZE_MAP\n";
   OS << "#undef GET_INSTRINFO_LOGICAL_OPERAND_SIZE_MAP\n";
-  OS << "namespace llvm {\n";
-  OS << "namespace " << Namespace << " {\n";
+  OS << "namespace llvm::" << Namespace << " {\n";
   OS << "LLVM_READONLY static unsigned\n";
   OS << "getLogicalOperandSize(uint16_t Opcode, uint16_t LogicalOpIdx) {\n";
   if (!InstMap.empty()) {
@@ -577,8 +561,7 @@ void InstrInfoEmitter::emitLogicalOperandSizeMappings(
   OS << "  return S;\n";
   OS << "}\n";
 
-  OS << "} // end namespace " << Namespace << "\n";
-  OS << "} // end namespace llvm\n";
+  OS << "} // end namespace llvm::" << Namespace << "\n";
   OS << "#endif // GET_INSTRINFO_LOGICAL_OPERAND_SIZE_MAP\n\n";
 }
 
@@ -619,8 +602,7 @@ void InstrInfoEmitter::emitLogicalOperandTypeMappings(
 
   OS << "#ifdef GET_INSTRINFO_LOGICAL_OPERAND_TYPE_MAP\n";
   OS << "#undef GET_INSTRINFO_LOGICAL_OPERAND_TYPE_MAP\n";
-  OS << "namespace llvm {\n";
-  OS << "namespace " << Namespace << " {\n";
+  OS << "namespace llvm::" << Namespace << " {\n";
   OS << "LLVM_READONLY static int\n";
   OS << "getLogicalOperandType(uint16_t Opcode, uint16_t LogicalOpIdx) {\n";
   if (!InstMap.empty()) {
@@ -666,8 +648,7 @@ void InstrInfoEmitter::emitLogicalOperandTypeMappings(
     OS << "  return -1;\n";
   }
   OS << "}\n";
-  OS << "} // end namespace " << Namespace << "\n";
-  OS << "} // end namespace llvm\n";
+  OS << "} // end namespace llvm::" << Namespace << "\n";
   OS << "#endif // GET_INSTRINFO_LOGICAL_OPERAND_TYPE_MAP\n\n";
 }
 
@@ -701,8 +682,7 @@ void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS,
   OS << "#ifdef GET_INSTRINFO_MC_HELPERS\n";
   OS << "#undef GET_INSTRINFO_MC_HELPERS\n\n";
 
-  OS << "namespace llvm {\n";
-  OS << "namespace " << TargetName << "_MC {\n\n";
+  OS << "namespace llvm::" << TargetName << "_MC {\n";
 
   PredicateExpander PE(TargetName);
   PE.setExpandForMC(true);
@@ -716,8 +696,7 @@ void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS,
     OS << "\n}\n\n";
   }
 
-  OS << "} // end namespace " << TargetName << "_MC\n";
-  OS << "} // end namespace llvm\n\n";
+  OS << "} // end namespace llvm::" << TargetName << "_MC\n";
 
   OS << "#endif // GET_GENISTRINFO_MC_HELPERS\n\n";
 }
@@ -743,8 +722,7 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
      << "#endif\n";
   OS << "#ifdef GET_COMPUTE_FEATURES\n"
      << "#undef GET_COMPUTE_FEATURES\n"
-     << "namespace llvm {\n"
-     << "namespace " << Target.getName() << "_MC {\n\n";
+     << "namespace llvm::" << Target.getName() << "_MC {\n";
 
   // Emit the subtarget feature enumeration.
   SubtargetFeatureInfo::emitSubtargetFeatureBitEnumeration(SubtargetFeatures,
@@ -827,14 +805,12 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
      << "  return FeatureBitsets[RequiredFeaturesRefs[Opcode]];\n"
      << "}\n\n";
 
-  OS << "} // end namespace " << Target.getName() << "_MC\n"
-     << "} // end namespace llvm\n"
+  OS << "} // end namespace llvm::" << Target.getName() << "_MC\n"
      << "#endif // GET_COMPUTE_FEATURES\n\n";
 
   OS << "#ifdef GET_AVAILABLE_OPCODE_CHECKER\n"
      << "#undef GET_AVAILABLE_OPCODE_CHECKER\n"
-     << "namespace llvm {\n"
-     << "namespace " << Target.getName() << "_MC {\n";
+     << "namespace llvm::" << Target.getName() << "_MC {\n";
   OS << "bool isOpcodeAvailable("
      << "unsigned Opcode, const FeatureBitset &Features) {\n"
      << "  FeatureBitset AvailableFeatures = "
@@ -846,16 +822,14 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
      << "      RequiredFeatures;\n"
      << "  return !MissingFeatures.any();\n"
      << "}\n";
-  OS << "} // end namespace " << Target.getName() << "_MC\n"
-     << "} // end namespace llvm\n"
+  OS << "} // end namespace llvm::" << Target.getName() << "_MC\n"
      << "#endif // GET_AVAILABLE_OPCODE_CHECKER\n\n";
 
   OS << "#ifdef ENABLE_INSTR_PREDICATE_VERIFIER\n"
      << "#undef ENABLE_INSTR_PREDICATE_VERIFIER\n"
      << "#include <sstream>\n\n";
 
-  OS << "namespace llvm {\n";
-  OS << "namespace " << Target.getName() << "_MC {\n\n";
+  OS << "namespace llvm::" << Target.getName() << "_MC {\n";
 
   // Emit the name table for error messages.
   OS << "#ifndef NDEBUG\n";
@@ -886,8 +860,7 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
      << "  }\n"
      << "#endif // NDEBUG\n";
   OS << "}\n";
-  OS << "} // end namespace " << Target.getName() << "_MC\n";
-  OS << "} // end namespace llvm\n";
+  OS << "} // end namespace llvm::" << Target.getName() << "_MC\n";
   OS << "#endif // ENABLE_INSTR_PREDICATE_VERIFIER\n\n";
 }
 
@@ -1318,17 +1291,14 @@ void InstrInfoEmitter::emitEnums(raw_ostream &OS) {
   OS << "#ifdef GET_INSTRINFO_ENUM\n";
   OS << "#undef GET_INSTRINFO_ENUM\n";
 
-  OS << "namespace llvm {\n\n";
-
   const CodeGenTarget &Target = CDP.getTargetInfo();
-
-  // We must emit the PHI opcode first...
   StringRef Namespace = Target.getInstNamespace();
 
   if (Namespace.empty())
     PrintFatalError("No instructions defined!");
 
-  OS << "namespace " << Namespace << " {\n";
+  OS << "namespace llvm::" << Namespace << " {\n";
+
   OS << "  enum {\n";
   unsigned Num = 0;
   for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue())
@@ -1336,24 +1306,19 @@ void InstrInfoEmitter::emitEnums(raw_ostream &OS) {
        << "\t= " << (Num = Target.getInstrIntValue(Inst->TheDef)) << ",\n";
   OS << "    INSTRUCTION_LIST_END = " << Num + 1 << "\n";
   OS << "  };\n\n";
-  OS << "} // end namespace " << Namespace << "\n";
-  OS << "} // end namespace llvm\n";
+  OS << "} // end namespace llvm::" << Namespace << "\n";
   OS << "#endif // GET_INSTRINFO_ENUM\n\n";
 
   OS << "#ifdef GET_INSTRINFO_SCHED_ENUM\n";
   OS << "#undef GET_INSTRINFO_SCHED_ENUM\n";
-  OS << "namespace llvm {\n\n";
-  OS << "namespace " << Namespace << " {\n";
-  OS << "namespace Sched {\n";
+  OS << "namespace llvm::" << Namespace << "::Sched {\n\n";
   OS << "  enum {\n";
   Num = 0;
   for (const auto &Class : SchedModels.explicit_classes())
     OS << "    " << Class.Name << "\t= " << Num++ << ",\n";
   OS << "    SCHED_LIST_END = " << Num << "\n";
   OS << "  };\n";
-  OS << "} // end namespace Sched\n";
-  OS << "} // end namespace " << Namespace << "\n";
-  OS << "} // end namespace llvm\n";
+  OS << "} // end namespace llvm::" << Namespace << "::Sched\n";
 
   OS << "#endif // GET_INSTRINFO_SCHED_ENUM\n\n";
 }
