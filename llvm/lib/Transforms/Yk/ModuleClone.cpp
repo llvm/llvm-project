@@ -151,7 +151,7 @@ struct YkModuleClone : public ModulePass {
    */
   void updateFunctionCalls(Module &FinalModule) {
     for (Function &F : FinalModule) {
-      if (F.getName().startswith(YK_CLONE_PREFIX)) {
+      if (F.getName().startswith(YK_UNOPT_PREFIX)) {
         continue;
       }
       for (BasicBlock &BB : F) {
@@ -159,9 +159,9 @@ struct YkModuleClone : public ModulePass {
           if (CallInst *CI = dyn_cast<CallInst>(&I)) {
             Function *CalledFunc = CI->getCalledFunction();
             if (CalledFunc &&
-                CalledFunc->getName().startswith(YK_CLONE_PREFIX)) {
+                CalledFunc->getName().startswith(YK_UNOPT_PREFIX)) {
               std::string OriginalName =
-                  CalledFunc->getName().str().substr(strlen(YK_CLONE_PREFIX));
+                  CalledFunc->getName().str().substr(strlen(YK_UNOPT_PREFIX));
               Function *OriginalFunc = FinalModule.getFunction(OriginalName);
               if (OriginalFunc) {
                 CI->setCalledFunction(OriginalFunc);

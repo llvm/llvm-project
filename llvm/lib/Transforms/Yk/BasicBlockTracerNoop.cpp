@@ -27,7 +27,7 @@ struct YkBasicBlockTracerNoop : public ModulePass {
     // Iterate over each function in the module
     for (Function &F : M) {
       // Skip non cloned functions
-      if (F.getName().startswith(YK_CLONE_PREFIX) == false)
+      if (F.getName().startswith(YK_UNOPT_PREFIX) == false)
         continue;
       for (BasicBlock &BB : F) {
         for (auto it = BB.begin(); it != BB.end(); ) {

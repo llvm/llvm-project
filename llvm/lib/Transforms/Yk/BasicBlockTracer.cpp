@@ -50,7 +50,7 @@ struct YkBasicBlockTracer : public ModulePass {
       for (auto &BB : F) {
         builder.SetInsertPoint(&*BB.getFirstInsertionPt());
 
-        if (F.getName().startswith(YK_CLONE_PREFIX)) {
+        if (F.getName().startswith(YK_UNOPT_PREFIX)) {
           // Add dummy tracing calls to unoptimised functions
           // TODO: remove these calls once we get rid of the error:
           // #0  core::sync::atomic::AtomicUsize::fetch_sub (self=0xfffffffffffffff0) at /home/pd/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/sync/atomic.rs:2720
