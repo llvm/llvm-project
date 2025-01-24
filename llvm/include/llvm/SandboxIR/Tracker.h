@@ -473,6 +473,8 @@ public:
 
   ~Tracker();
   Context &getContext() const { return Ctx; }
+  /// \Returns true if there are no changes tracked.
+  bool empty() const { return Changes.empty(); }
   /// Record \p Change and take ownership. This is the main function used to
   /// track Sandbox IR changes.
   void track(std::unique_ptr<IRChangeBase> &&Change) {
