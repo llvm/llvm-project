@@ -3072,7 +3072,9 @@ static void emitUsed(CodeGenModule &CGM, StringRef Name,
   for (unsigned i = 0, e = List.size(); i != e; ++i) {
     UsedArray[i] = llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
         cast<llvm::Constant>(&*List[i]),
-        llvm::PointerType::getUnqual(CGM.getLLVMContext()));
+        CGM.getTarget().getTriple().isAMDGCN() ?
+          llvm::PointerType::getUnqual(CGM.getLLVMContext()) :
+          CGM.Int8PtrTy);
   }
 
   if (UsedArray.empty())
