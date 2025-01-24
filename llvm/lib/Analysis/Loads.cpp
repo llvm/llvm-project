@@ -284,7 +284,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
                 DL.getTypeStoreSize(LI->getType()).getFixedValue());
   const Align Alignment = LI->getAlign();
 
-  Instruction *HeaderFirstNonPHI = L->getHeader()->getFirstNonPHI();
+  Instruction *HeaderFirstNonPHI = &*L->getHeader()->getFirstNonPHIIt();
 
   // If given a uniform (i.e. non-varying) address, see if we can prove the
   // access is safe within the loop w/o needing predication.
