@@ -68,10 +68,63 @@ static cl::opt<bool> NoWarnOnUnusedTemplateArgs(
     "no-warn-on-unused-template-args",
     cl::desc("Disable unused template argument warnings."));
 
+static cl::opt<bool> Preprocess("E", cl::desc("Write preprocessed output"));
+
 static int reportError(const char *ProgName, Twine Msg) {
   errs() << ProgName << ": " << Msg;
   errs().flush();
   return 1;
+}
+
+/// Encapsulate file, line and column numbers from SourceMgr.
+struct SMCoords {
+  unsigned Buf = 0;
+  unsigned Line = 0;
+  unsigned Col = 0;
+  SMCoords() = default;
+  SMCoords(const SourceMgr &Mgr, SMLoc Loc) {
+    Buf = Mgr.FindBufferContainingLoc(Loc);
+    // TODO: SourceMgr::getLineAndColumn is not a fast method. Find a better way
+    // to do this. For example we don't need the column number for every token,
+    // only the first token on each output line.
+    std::tie(Line, Col) = Mgr.getLineAndColumn(Loc, Buf);
+  }
+};
+
+/// Create preprocessed output for `-E` option.
+static int preprocessInput(raw_ostream &OS) {
+  TGLexer Lex(SrcMgr, MacroNames);
+  SMCoords Last;
+  bool Any = false;
+  while (true) {
+    Lex.Lex();
+    if (Lex.getCode() == tgtok::Eof || Lex.getCode() == tgtok::Error)
+      break;
+    SMCoords This(SrcMgr, Lex.getLoc());
+    if (This.Buf == Last.Buf && This.Line == Last.Line) {
+      // Add a single space between tokens on the same line. This is overkill in
+      // many cases but at least it will parse correctly.
+      OS << ' ';
+    } else if (Last.Buf) {
+      // Always start a new line when including a new file or popping back out
+      // to the previous file. This is just a heuristic to make the output look
+      // reasonably pretty.
+      OS << '\n';
+      // Indent the first token on a line to its original indentation, to make
+      // the output look pretty.
+      OS.indent(This.Col - 1);
+    }
+
+    const char *Start = Lex.getLoc().getPointer();
+    const char *End = Lex.getLocRange().End.getPointer();
+    OS << StringRef(Start, End - Start);
+    Any = true;
+
+    Last = This;
+  }
+  if (Any)
+    OS << '\n';
+  return Lex.getCode() == tgtok::Error;
 }
 
 /// Create a dependency file for `-d` option.
@@ -122,32 +175,37 @@ int llvm::TableGenMain(const char *argv0,
   // it later.
   SrcMgr.setIncludeDirs(IncludeDirs);
 
-  TGParser Parser(SrcMgr, MacroNames, Records, NoWarnOnUnusedTemplateArgs);
-
-  if (Parser.ParseFile())
-    return 1;
-  Timer.stopTimer();
-
-  // Write output to memory.
-  Timer.startBackendTimer("Backend overall");
   std::string OutString;
   raw_string_ostream Out(OutString);
-  unsigned status = 0;
-  // ApplyCallback will return true if it did not apply any callback. In that
-  // case, attempt to apply the MainFn.
-  if (TableGen::Emitter::ApplyCallback(Records, Out))
-    status = MainFn ? MainFn(Out, Records) : 1;
-  Timer.stopBackendTimer();
-  if (status)
-    return 1;
+  if (Preprocess) {
+    if (preprocessInput(Out))
+      return 1;
+  } else {
+    TGParser Parser(SrcMgr, MacroNames, Records, NoWarnOnUnusedTemplateArgs);
 
-  // Always write the depfile, even if the main output hasn't changed.
-  // If it's missing, Ninja considers the output dirty.  If this was below
-  // the early exit below and someone deleted the .inc.d file but not the .inc
-  // file, tablegen would never write the depfile.
-  if (!DependFilename.empty()) {
-    if (int Ret = createDependencyFile(Parser, argv0))
-      return Ret;
+    if (Parser.ParseFile())
+      return 1;
+    Timer.stopTimer();
+
+    // Write output to memory.
+    Timer.startBackendTimer("Backend overall");
+    unsigned status = 0;
+    // ApplyCallback will return true if it did not apply any callback. In that
+    // case, attempt to apply the MainFn.
+    if (TableGen::Emitter::ApplyCallback(Records, Out))
+      status = MainFn ? MainFn(Out, Records) : 1;
+    Timer.stopBackendTimer();
+    if (status)
+      return 1;
+
+    // Always write the depfile, even if the main output hasn't changed.
+    // If it's missing, Ninja considers the output dirty.  If this was below
+    // the early exit below and someone deleted the .inc.d file but not the .inc
+    // file, tablegen would never write the depfile.
+    if (!DependFilename.empty()) {
+      if (int Ret = createDependencyFile(Parser, argv0))
+        return Ret;
+    }
   }
 
   Timer.startTimer("Write output");
