@@ -8687,7 +8687,8 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
   SmallVector<std::pair<PartialReductionChain, unsigned>>
       PartialReductionChains;
   for (const auto &[Phi, RdxDesc] : Legal->getReductionVars()) {
-    getScaledReductions(Phi, RdxDesc.getLoopExitInstr(), Range, PartialReductionChains);
+    getScaledReductions(Phi, RdxDesc.getLoopExitInstr(), Range,
+                        PartialReductionChains);
   }
 
   // A partial reduction is invalid if any of its extends are used by
@@ -8716,9 +8717,9 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
   }
 }
 
-bool
-VPRecipeBuilder::getScaledReductions(Instruction *PHI, Instruction *RdxExitInstr,
-                                    VFRange &Range, SmallVector<std::pair<PartialReductionChain, unsigned>> &Chains) {
+bool VPRecipeBuilder::getScaledReductions(
+    Instruction *PHI, Instruction *RdxExitInstr, VFRange &Range,
+    SmallVector<std::pair<PartialReductionChain, unsigned>> &Chains) {
 
   if (!CM.TheLoop->contains(RdxExitInstr))
     return false;
@@ -8738,7 +8739,6 @@ VPRecipeBuilder::getScaledReductions(Instruction *PHI, Instruction *RdxExitInstr
   Value *PhiOp = Update->getOperand(1);
   if (Op == PHI)
     std::swap(Op, PhiOp);
-
 
   // Try and get a scaled reduction from the first non-phi operand.
   // If one is found, we use the discovered reduction instruction in
