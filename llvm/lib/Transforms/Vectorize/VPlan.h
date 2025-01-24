@@ -2467,7 +2467,8 @@ public:
   ~VPPartialReductionRecipe() override = default;
 
   VPPartialReductionRecipe *clone() override {
-    return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1));
+    return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1),
+                                        getUnderlyingInstr());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPPartialReductionSC)
