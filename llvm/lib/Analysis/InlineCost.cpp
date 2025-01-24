@@ -1032,6 +1032,11 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
             InlineConstants::FunctionInlineCostMultiplierAttributeName))
       Cost *= *AttrCostMult;
 
+    if (std::optional<int> AttrAdditonalCost = getStringFnAttrAsInt(
+            CandidateCall,
+            InlineConstants::FunctionInlineAdditionalCostAttributeName))
+      Cost += *AttrAdditonalCost;
+
     if (std::optional<int> AttrThreshold =
             getStringFnAttrAsInt(CandidateCall, "function-inline-threshold"))
       Threshold = *AttrThreshold;
