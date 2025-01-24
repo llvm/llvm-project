@@ -6969,9 +6969,9 @@ def fno_automatic : Flag<["-"], "fno-automatic">, Group<f_Group>,
   HelpText<"Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE">;
 
 defm save_main_program : BoolOptionWithoutMarshalling<"f", "save-main-program",
-  PosFlag<SetTrue, [], [ClangOption],
+  PosFlag<SetTrue, [], [],
     "Place all main program variables in static memory (otherwise scalars may be placed on the stack)">,
-  NegFlag<SetFalse, [], [ClangOption],
+  NegFlag<SetFalse, [], [],
     "Allow placing main program variables on the stack (default)">>;
 
 defm stack_arrays : BoolOptionWithoutMarshalling<"f", "stack-arrays",
