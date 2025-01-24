@@ -39,4 +39,39 @@ def GlobalValueLinkageOpInterface : OpInterface<"GlobalValueLinkageOpInterface">
   ];
 }
 
+def GlobalAliasLinkageOpInterface
+  : OpInterface<"GlobalAliasLinkageOpInterface",
+                [GlobalValueLinkageOpInterface]> {
+  let description = [{ WIP }];
+  let cppNamespace = "::mlir";
+}
+
+def GlobalObjectLinkageOpInterface
+  : OpInterface<"GlobalObjectLinkageOpInterface",
+                [GlobalValueLinkageOpInterface]> {
+  let description = [{ WIP }];
+  let cppNamespace = "::mlir";
+}
+
+def FunctionLinkageOpInterface
+  : OpInterface<"FunctionLinkageOpInterface",
+                [GlobalObjectLinkageOpInterface]> {
+  let description = [{ WIP }];
+  let cppNamespace = "::mlir";
+}
+
+def GlobalFuncLinkageOpInterface
+  : OpInterface<"GlobalFuncLinkageOpInterface",
+                [GlobalObjectLinkageOpInterface]> {
+  let description = [{ WIP }];
+  let cppNamespace = "::mlir";
+}
+
+def GlobalVariableLinkageOpInterface
+  : OpInterface<"GlobalVariableLinkageOpInterface",
+                [GlobalObjectLinkageOpInterface]> {
+  let description = [{ WIP }];
+  let cppNamespace = "::mlir";
+}
+
 #endif // MLIR_INTERFACES_LINKAGEINTERFACES
