@@ -60,7 +60,7 @@ config.arm_emulator_executable = "@ARM_EMULATOR_EXECUTABLE@"
 if config.arm_emulator_executable:
     config.available_features.add("mlir_arm_emulator")
 config.arm_emulator_options = "@ARM_EMULATOR_OPTIONS@"
-config.arm_emulator_mlir_cpu_runner_executable = "@ARM_EMULATOR_MLIR_CPU_RUNNER_EXECUTABLE@"
+config.arm_emulator_mlir_runner_executable = "@ARM_EMULATOR_MLIR_RUNNER_EXECUTABLE@"
 config.arm_emulator_lli_executable = "@ARM_EMULATOR_LLI_EXECUTABLE@"
 config.arm_emulator_utils_lib_dir = "@ARM_EMULATOR_UTILS_LIB_DIR@"
 config.arm_sme_abi_routines_shlib = "@ARM_SME_ABI_ROUTINES_SHLIB@"

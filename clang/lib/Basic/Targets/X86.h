@@ -534,6 +534,14 @@ public:
   }
 };
 
+class LLVM_LIBRARY_VISIBILITY AppleMachOI386TargetInfo
+    : public AppleMachOTargetInfo<X86_32TargetInfo> {
+public:
+  AppleMachOI386TargetInfo(const llvm::Triple &Triple,
+                           const TargetOptions &Opts)
+      : AppleMachOTargetInfo<X86_32TargetInfo>(Triple, Opts) {}
+};
+
 class LLVM_LIBRARY_VISIBILITY DarwinI386TargetInfo
     : public DarwinTargetInfo<X86_32TargetInfo> {
 public:

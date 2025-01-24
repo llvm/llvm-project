@@ -25,6 +25,8 @@
 
 using namespace llvm;
 
+extern cl::opt<bool> UseDerefAtPointSemantics;
+
 static bool isAligned(const Value *Base, Align Alignment,
                       const DataLayout &DL) {
   return Base->getPointerAlignment(DL) >= Alignment;
@@ -168,11 +170,12 @@ static bool isDereferenceableAndAlignedPointer(
                                               Size, DL, CtxI, AC, DT, TLI,
                                               Visited, MaxDepth);
 
-  if (CtxI) {
+  if (CtxI && (!UseDerefAtPointSemantics || !V->canBeFreed())) {
     /// Look through assumes to see if both dereferencability and alignment can
-    /// be provent by an assume
+    /// be proven by an assume if needed.
     RetainedKnowledge AlignRK;
     RetainedKnowledge DerefRK;
+    bool IsAligned = V->getPointerAlignment(DL) >= Alignment;
     if (getKnowledgeForValue(
             V, {Attribute::Dereferenceable, Attribute::Alignment}, AC,
             [&](RetainedKnowledge RK, Instruction *Assume, auto) {
@@ -182,7 +185,8 @@ static bool isDereferenceableAndAlignedPointer(
                 AlignRK = std::max(AlignRK, RK);
               if (RK.AttrKind == Attribute::Dereferenceable)
                 DerefRK = std::max(DerefRK, RK);
-              if (AlignRK && DerefRK && AlignRK.ArgValue >= Alignment.value() &&
+              IsAligned |= AlignRK && AlignRK.ArgValue >= Alignment.value();
+              if (IsAligned && DerefRK &&
                   DerefRK.ArgValue >= Size.getZExtValue())
                 return true; // We have found what we needed so we stop looking
               return false;  // Other assumes may have better information. so
@@ -280,7 +284,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
                 DL.getTypeStoreSize(LI->getType()).getFixedValue());
   const Align Alignment = LI->getAlign();
 
-  Instruction *HeaderFirstNonPHI = L->getHeader()->getFirstNonPHI();
+  Instruction *HeaderFirstNonPHI = &*L->getHeader()->getFirstNonPHIIt();
 
   // If given a uniform (i.e. non-varying) address, see if we can prove the
   // access is safe within the loop w/o needing predication.

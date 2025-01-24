@@ -284,7 +284,7 @@ void Sema::inferLifetimeCaptureByAttribute(FunctionDecl *FD) {
       // We only apply the lifetime_capture_by attribute to parameters of
       // pointer-like reference types (`const T&`, `T&&`).
       if (PVD->getType()->isReferenceType() &&
-          sema::isPointerLikeType(PVD->getType().getNonReferenceType())) {
+          sema::isGLSPointerType(PVD->getType().getNonReferenceType())) {
         int CaptureByThis[] = {LifetimeCaptureByAttr::THIS};
         PVD->addAttr(
             LifetimeCaptureByAttr::CreateImplicit(Context, CaptureByThis, 1));

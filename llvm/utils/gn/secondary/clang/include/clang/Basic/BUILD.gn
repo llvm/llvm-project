@@ -40,6 +40,14 @@ foreach(diag_group, diag_groups) {
     ]
     td_file = "Diagnostic.td"
   }
+
+  clang_tablegen("Diagnostic${diag_group}Enums") {
+    args = [
+      "-gen-clang-diags-enums",
+      "-clang-component=${diag_group}",
+    ]
+    td_file = "Diagnostic.td"
+  }
 }
 group("diags_tablegen") {
   # DiagnosticGroups and DiagnosticIndexName are intentionally not part of this
@@ -47,7 +55,10 @@ group("diags_tablegen") {
   # but almost nothing needs DiagnosticGroups.inc or DiagnosticIndexName.inc.
   public_deps = []
   foreach(diag_group, diag_groups) {
-    public_deps += [ ":Diagnostic${diag_group}Kinds" ]
+    public_deps += [
+        ":Diagnostic${diag_group}Kinds",
+        ":Diagnostic${diag_group}Enums",
+    ]
   }
 }
 
@@ -68,6 +79,11 @@ clang_tablegen("AttrList") {
   td_file = "Attr.td"
 }
 
+clang_tablegen("AttrParsedAttrList") {
+  args = [ "-gen-clang-attr-parsed-attr-list" ]
+  td_file = "../Basic/Attr.td"
+}
+
 clang_tablegen("AttrSubMatchRulesList") {
   args = [ "-gen-clang-attr-subject-match-rule-list" ]
   td_file = "Attr.td"
@@ -81,6 +97,11 @@ clang_tablegen("RegularKeywordAttrInfo") {
 clang_tablegen("AttrHasAttributeImpl") {
   args = [ "-gen-clang-attr-has-attribute-impl" ]
   td_file = "Attr.td"
+}
+
+clang_tablegen("CXX11AttributeInfo") {
+  args = [ "-gen-cxx11-attribute-info" ]
+  td_file = "../Basic/Attr.td"
 }
 
 clang_tablegen("Builtins") {

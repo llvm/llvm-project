@@ -28,6 +28,7 @@
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/CapturedStmt.h"
@@ -614,6 +615,10 @@ public:
 
   /// True if the current statement has noconvergent attribute.
   bool InNoConvergentAttributedStmt = false;
+
+  /// HLSL Branch attribute.
+  HLSLControlFlowHintAttr::Spelling HLSLControlFlowAttr =
+      HLSLControlFlowHintAttr::SpellingNotCalculated;
 
   // The CallExpr within the current statement that the musttail attribute
   // applies to.  nullptr if there is no 'musttail' on the current statement.
@@ -1620,6 +1625,13 @@ private:
                                             uint64_t LoopCount) const;
 
 public:
+  auto getIsCounterPair(const Stmt *S) const { return PGO.getIsCounterPair(S); }
+
+  void markStmtAsUsed(bool Skipped, const Stmt *S) {
+    PGO.markStmtAsUsed(Skipped, S);
+  }
+  void markStmtMaybeUsed(const Stmt *S) { PGO.markStmtMaybeUsed(S); }
+
   /// Increment the profiler's counter for the given statement by \p StepV.
   /// If \p StepV is null, the default increment is 1.
   void incrementProfileCounter(const Stmt *S, llvm::Value *StepV = nullptr) {
@@ -3863,12 +3875,19 @@ public:
   void EmitOMPTaskLoopDirective(const OMPTaskLoopDirective &S);
   void EmitOMPTaskLoopSimdDirective(const OMPTaskLoopSimdDirective &S);
   void EmitOMPMasterTaskLoopDirective(const OMPMasterTaskLoopDirective &S);
+  void EmitOMPMaskedTaskLoopDirective(const OMPMaskedTaskLoopDirective &S);
   void
   EmitOMPMasterTaskLoopSimdDirective(const OMPMasterTaskLoopSimdDirective &S);
+  void
+  EmitOMPMaskedTaskLoopSimdDirective(const OMPMaskedTaskLoopSimdDirective &S);
   void EmitOMPParallelMasterTaskLoopDirective(
       const OMPParallelMasterTaskLoopDirective &S);
+  void EmitOMPParallelMaskedTaskLoopDirective(
+      const OMPParallelMaskedTaskLoopDirective &S);
   void EmitOMPParallelMasterTaskLoopSimdDirective(
       const OMPParallelMasterTaskLoopSimdDirective &S);
+  void EmitOMPParallelMaskedTaskLoopSimdDirective(
+      const OMPParallelMaskedTaskLoopSimdDirective &S);
   void EmitOMPDistributeDirective(const OMPDistributeDirective &S);
   void EmitOMPDistributeParallelForDirective(
       const OMPDistributeParallelForDirective &S);
@@ -5176,14 +5195,17 @@ public:
   /// Create a basic block that will either trap or call a handler function in
   /// the UBSan runtime with the provided arguments, and create a conditional
   /// branch to it.
-  void EmitCheck(ArrayRef<std::pair<llvm::Value *, SanitizerMask>> Checked,
-                 SanitizerHandler Check, ArrayRef<llvm::Constant *> StaticArgs,
-                 ArrayRef<llvm::Value *> DynamicArgs);
+  void
+  EmitCheck(ArrayRef<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>>
+                Checked,
+            SanitizerHandler Check, ArrayRef<llvm::Constant *> StaticArgs,
+            ArrayRef<llvm::Value *> DynamicArgs);
 
   /// Emit a slow path cross-DSO CFI check which calls __cfi_slowpath
   /// if Cond if false.
-  void EmitCfiSlowPathCheck(SanitizerMask Kind, llvm::Value *Cond,
-                            llvm::ConstantInt *TypeId, llvm::Value *Ptr,
+  void EmitCfiSlowPathCheck(SanitizerKind::SanitizerOrdinal Ordinal,
+                            llvm::Value *Cond, llvm::ConstantInt *TypeId,
+                            llvm::Value *Ptr,
                             ArrayRef<llvm::Constant *> StaticArgs);
 
   /// Emit a reached-unreachable diagnostic if \p Loc is valid and runtime

@@ -55,7 +55,8 @@ Improvements and New Features
 - The ``_LIBCPP_ENABLE_CXX20_REMOVED_TEMPORARY_BUFFER`` macro has been added to make ``std::get_temporary_buffer`` and
   ``std::return_temporary_buffer`` available.
 
-- The ``_LIBCPP_ENABLE_CXX20_REMOVED_UNCAUGHT_EXCEPTION`` macro has been added to make ``std::uncaught_exception``
+- The ``std::uncaught_exception`` function was marked as deprecated since C++17 and removed since C++20. The
+  ``_LIBCPP_ENABLE_CXX20_REMOVED_UNCAUGHT_EXCEPTION`` macro has been added to make ``std::uncaught_exception``
   available in C++20 and later modes.
 
 - The internal structure ``__compressed_pair`` has been replaced with ``[[no_unique_address]]``, resulting in reduced
@@ -69,9 +70,13 @@ Improvements and New Features
 - The ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY`` ABI configuration was added, which allows storing valid bounds
   in ``std::array::iterator`` and detecting OOB accesses when the appropriate hardening mode is enabled.
 
-- The input iterator overload of `assign(_InputIterator, _InputIterator)` in `std::vector<_Tp, _Allocator>` has been
-  optimized, resulting in a performance improvement of up to 2x for trivial element types (e.g., `std::vector<int>`),
-  and up to 3.4x for non-trivial element types (e.g., `std::vector<std::vector<int>>`).
+- The ``input_iterator``-pair overload of ``void assign(InputIt, InputIt)`` has been optimized for ``std::vector``,
+  resulting in a performance improvement of up to 2x for trivial element types (e.g., ``std::vector<int>``), and up
+  to 3.4x for non-trivial element types (e.g., ``std::vector<std::vector<int>>``).
+
+- The ``input_iterator``-pair overload of ``iterator insert(const_iterator, InputIt, InputIt)`` has been optimized
+  for ``std::vector``, resulting in a performance improvement of up to 10x for ``std::vector<int>``, and up to 2.3x
+  for ``std::vector<std::vector<int>>``.
 
 - On Windows, ``<system_error>``'s ``std::system_category`` is now distinct from ``std::generic_category``. The behavior
   on other operating systems is unchanged.
@@ -117,17 +122,17 @@ Deprecations and Removals
   removed in language modes prior to C++20. If you are using these features prior to C++20, you will need to
   update to ``-std=c++20``.
 
-- TODO: The relational operators for ``std::chrono::weekday`` will be removed entirely, and the
-  ``_LIBCPP_ENABLE_REMOVED_WEEKDAY_RELATIONAL_OPERATORS`` macro that was used to re-enable this extension will be
-  ignored in LLVM 20.
+- The relational operators for ``std::chrono::weekday`` has been removed entirely, and the
+  ``_LIBCPP_ENABLE_REMOVED_WEEKDAY_RELATIONAL_OPERATORS`` macro is now ignored.
 
 - The ``_LIBCPP_ENABLE_REMOVED_ALLOCATOR_CONST`` macro no longer has any effect. ``std::allocator<const T>`` is not
   supported as an extension anymore, please migrate any code that uses e.g. ``std::vector<const T>`` to be
   standards conforming.
 
-- Non-conforming member typedefs ``base``, ``iterator`` and ``const_iterator`` of ``std::bitset``, and member typedef
-  ``base`` of ``std::forward_list`` and ``std::list`` are removed. Previously, they were private but could cause
-  ambiguity in name lookup. Code that expects such ambiguity will possibly not compile in LLVM 20.
+- Non-conforming member typedefs ``base``, ``iterator``, ``const_iterator``, and ``const_reference`` of ``std::bitset``,
+  and member typedef ``base`` of ``std::forward_list`` and ``std::list`` are removed. Previously, these member typedefs
+  (except ``const_reference``) were private but could cause ambiguity in name lookup. Code that expects such ambiguity
+  will possibly not compile in LLVM 20.
 
 - The function ``__libcpp_verbose_abort()`` is now ``noexcept``, to match ``std::terminate()``. (The combination of
   ``noexcept`` and ``[[noreturn]]`` has special significance for function effects analysis.) For backwards compatibility,
@@ -146,6 +151,8 @@ Deprecations and Removals
   ``__undeclare_reachable`` have been removed from the library. These functions were never implemented in a non-trivial
   way, making it very unlikely that any binary depends on them.
 
+- Non-conforming extension ``packaged_task::result_type`` is deprecated. It will be removed in LLVM 21.
+
 Upcoming Deprecations and Removals
 ----------------------------------
 
@@ -163,6 +170,8 @@ LLVM 21
 
 - The ``_LIBCPP_VERBOSE_ABORT_NOT_NOEXCEPT`` macro will be removed in LLVM 21, making ``std::__libcpp_verbose_abort``
   unconditionally ``noexcept``.
+
+- Non-conforming extension ``packaged_task::result_type`` will be removed in LLVM 21.
 
 
 ABI Affecting Changes
