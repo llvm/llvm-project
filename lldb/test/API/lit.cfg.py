@@ -230,6 +230,11 @@ for env_var in ("ASAN_OPTIONS", "DYLD_INSERT_LIBRARIES"):
 if is_configured("test_arch"):
     dotest_cmd += ["--arch", config.test_arch]
 
+lldb_test_arch_param = lit_config.params.get("test_arch")
+if lldb_test_arch_param:
+    dotest_cmd += ["--arch", lldb_test_arch_param]
+
+
 if is_configured("lldb_build_directory"):
     dotest_cmd += ["--build-dir", config.lldb_build_directory]
 
@@ -246,6 +251,11 @@ if is_configured("lldb_executable"):
 
 if is_configured("test_compiler"):
     dotest_cmd += ["--compiler", config.test_compiler]
+
+lldb_test_compiler_param = lit_config.params.get("test_compiler")
+if lldb_test_compiler_param:
+    dotest_cmd += ["--compiler", lldb_test_compiler_param]
+
 
 if is_configured("dsymutil"):
     dotest_cmd += ["--dsymutil", config.dsymutil]
@@ -316,6 +326,24 @@ if is_configured("dotest_lit_args_str"):
     # list. Pass there arguments last so they can override anything that was
     # already configured.
     dotest_cmd.extend(shlex.split(config.dotest_lit_args_str))
+
+lldb_test_extra_flags = lit_config.params.get("extra_flags")
+if lldb_test_extra_flags:
+    # FIXME: dotest does not support several -E options.
+    # FIXME: start in the beginning is a workaround to make sure argument does not start with '--'.
+    dotest_cmd += ["-E", rf"start:{lldb_test_extra_flags}"]
+
+
+lldb_test_skip_categories = lit_config.params.get("skip_categories")
+if lldb_test_skip_categories:
+    for skip_category in lldb_test_skip_categories.split(":"):
+        print(skip_category)
+        dotest_cmd += ["--skip-category", skip_category]
+
+lldb_test_xfail_categories = lit_config.params.get("xfail_categories")
+if lldb_test_xfail_categories:
+    for xfail_category in lldb_test_xfail_categories.split(":"):
+        dotest_cmd += ["--xfail-category", xfail_category]
 
 # Load LLDB test format.
 sys.path.append(os.path.join(config.lldb_src_root, "test", "API"))
