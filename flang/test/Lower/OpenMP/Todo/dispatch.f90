@@ -5,5 +5,8 @@ program p
   integer r
   r = 1
 !$omp dispatch nowait
-  print *,r
+  call foo()
+contains
+  subroutine foo
+  end subroutine
 end program p
