@@ -24,3 +24,7 @@ Ron and Vigneshwar
 revert: breaks rocBLAS build
 d57230c7 [AMDGPU][MC] Disallow op_sel in some VOP3P dot instructions (#100485)
 ---
+revert: breaks build of rccl __cpuidex
+1c28b92373 [Clang] __has_builtin should return false for aux triple builtins (#121839) 
+Ron and Saiyed
+---

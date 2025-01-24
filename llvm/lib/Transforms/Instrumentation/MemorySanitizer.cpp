@@ -1724,13 +1724,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return ConstantInt::get(MS.IntptrTy, C);
   }
 
-  /// Compute the integer shadow offset that corresponds to a given
-  /// application address.
+  /// Returns the integer shadow offset that corresponds to a given
+  /// application address, whereby:
   ///
-  /// Offset = (Addr & ~AndMask) ^ XorMask
-  /// Addr can be a ptr or <N x ptr>. In both cases ShadowTy the shadow type of
-  /// a single pointee.
-  /// Returns <shadow_ptr, origin_ptr> or <<N x shadow_ptr>, <N x origin_ptr>>.
+  ///     Offset = (Addr & ~AndMask) ^ XorMask
+  ///     Shadow = ShadowBase + Offset
+  ///     Origin = (OriginBase + Offset) & ~Alignment
+  ///
+  /// Note: for efficiency, many shadow mappings only require use the XorMask
+  ///       and OriginBase; the AndMask and ShadowBase are often zero.
   Value *getShadowPtrOffset(Value *Addr, IRBuilder<> &IRB) {
     Type *IntptrTy = ptrToIntPtrType(Addr->getType());
     Value *OffsetLong = IRB.CreatePointerCast(Addr, IntptrTy);
