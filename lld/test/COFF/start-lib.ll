@@ -173,3 +173,72 @@ target triple = "x86_64-pc-windows-msvc"
 define void @baz() {
   ret void
 }
+
+
+; Check cycles between symbols in two /start-lib files.
+; If the links succeed and does not emit duplicate symbol diagnostics,
+; that's enough.
+
+; RUN: llc -filetype=obj %t.dir/main3.ll -o %t-main3.obj
+; RUN: llc -filetype=obj %t.dir/cycle1.ll -o %t-cycle1.obj
+; RUN: llc -filetype=obj %t.dir/cycle2.ll -o %t-cycle2.obj
+; RUN: opt -thinlto-bc %t.dir/main3.ll -o %t-main3.bc
+; RUN: opt -thinlto-bc %t.dir/cycle1.ll -o %t-cycle1.bc
+; RUN: opt -thinlto-bc %t.dir/cycle2.ll -o %t-cycle2.bc
+
+; RUN: lld-link -out:%t3.exe -entry:main \
+; RUN:     %t-main3.obj %t-cycle1.obj %t-cycle2.obj
+; RUN: lld-link -out:%t3.exe -entry:main \
+; RUN:     %t-main3.obj /start-lib %t-cycle1.obj %t-cycle2.obj /end-lib
+; RUN: lld-link -out:%t3.exe -entry:main \
+; RUN:     /start-lib %t-cycle1.obj %t-cycle2.obj /end-lib %t-main3.obj
+
+; RUN: lld-link -out:%t3.exe -entry:main \
+; RUN:     %t-main3.bc %t-cycle1.bc %t-cycle2.bc
+; RUN: lld-link -out:%t3.exe -entry:main \
+; RUN:     %t-main3.bc /start-lib %t-cycle1.bc %t-cycle2.bc /end-lib
+; RUN: lld-link -out:%t3.exe -entry:main \
+; RUN:     /start-lib %t-cycle1.bc %t-cycle2.bc /end-lib %t-main3.bc
+
+#--- main3.ll
+
+target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-windows-msvc"
+
+declare void @foo1()
+
+define void @main() {
+  call void () @foo1()
+  ret void
+}
+
+#--- cycle1.ll
+
+target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-windows-msvc"
+
+declare void @bar()
+
+define void @foo1() {
+  ; cycle1.ll pulls in cycle2.ll for bar(), and cycle2.ll then pulls in
+  ; cycle1.ll again for foo2().
+  call void () @bar()
+  ret void
+}
+
+define void @foo2() {
+  ret void
+}
+
+
+#--- cycle2.ll
+
+target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-windows-msvc"
+
+declare void @foo2()
+
+define void @bar() {
+  call void () @foo2()
+  ret void
+}
