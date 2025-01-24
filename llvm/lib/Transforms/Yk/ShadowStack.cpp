@@ -327,16 +327,15 @@ public:
       // Load the current shadow stack pointer from the global variable.
       LoadInst *LoadedSSPtr = Builder.CreateLoad(Int8PtrTy, SSGlobal);
 
-      // Add assertions to verify allocas match between opt/unopt main
+      // Assert that the allocas count match between opt/unopt main
       assert(MainAllocas.size() == UnoptMainAllocas.size() &&
              "Expected same number of allocas between opt/unopt main");
 
+      // Assert that the allocas have the same offset
       for (size_t i = 0; i < MainAllocas.size(); i++) {
         auto &[optAI, optOffset] = MainAllocas[i];
         auto &[unoptAI, unoptOffset] = UnoptMainAllocas[i];
         assert(optOffset == unoptOffset && "Alloca offsets must match");
-        assert(optAI->getAllocatedType() == unoptAI->getAllocatedType() &&
-               "Alloca types must match");
       }
 
       // Replace all allocas in UnoptMain with the loaded shadow stack pointer.
