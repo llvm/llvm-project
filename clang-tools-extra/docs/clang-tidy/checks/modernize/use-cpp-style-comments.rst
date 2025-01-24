@@ -14,27 +14,27 @@ Examples:
 
 Input:
 .. code-block::c++
+ 
+  /* This is a single-line comment */
+  int x = 42;  /* Inline comment */
 
-    /* This is a single-line comment */
-    int x = 42;  /* Inline comment */
-
-    /* This is a
-    multi-line comment */
+  /* This is a
+  multi-line comment */
 
 
 Output:
 .. code-block::c++
 
-    // This is a single-line comment
-    int x = 42;  // Inline comment
+  // This is a single-line comment
+  int x = 42;  // Inline comment
 
-    // This is a
-    // multi-line comment
+  // This is a
+  // multi-line comment
 
 .. note::
 
-    Inline Comments are neither fixed nor warned.
-    Example:
-    .. code-block:: c++
-        int a = /* this is a comment */ 5;
+  Inline Comments are neither fixed nor warned.
+  Example:
+  .. code-block:: c++
+    int a = /* this is a comment */ 5;
 
