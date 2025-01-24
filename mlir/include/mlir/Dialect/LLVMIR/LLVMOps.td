@@ -1443,6 +1443,92 @@ def LLVM_GlobalDtorsOp : LLVM_Op<"mlir.global_dtors", [
   let hasVerifier = 1;
 }
 
+def LLVM_AliasOp : LLVM_Op<"mlir.alias",
+    [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, Symbol]> {
+  let arguments = (ins
+    TypeAttr:$alias_type,
+    StrAttr:$sym_name,
+    Linkage:$linkage,
+    UnitAttr:$dso_local,
+    UnitAttr:$thread_local_,
+    UnitAttr:$externally_initialized,
+    DefaultValuedAttr<ConfinedAttr<I32Attr, [IntNonNegative]>, "0">:$addr_space,
+    OptionalAttr<UnnamedAddr>:$unnamed_addr,
+    OptionalAttr<StrAttr>:$section,
+    OptionalAttr<SymbolRefAttr>:$comdat,
+    DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_
+  );
+  let summary = "LLVM dialect alias.";
+  let description = [{
+    `llvm.mlir.alias` is a top level operation that defines a global alias for
+    global variables and functions. The operation is always initialized by
+    using a initializer region which could be a direct map to another global
+    value or contain some address computation on top of it.
+
+    It uses an @-identifier for its value, which will be uniqued by the module
+    with respect to other @-identifiers in it.
+
+    Similarly to functions and globals, they can also have a linkage attribute.
+    This attribute is placed between `llvm.mlir.alias` and the symbol name. If
+    the attribute is omitted, `external` linkage is assumed by default.
+
+    Examples:
+
+    ```mlir
+    // Global alias use @-identifiers.
+    llvm.mlir.alias external @foo_alias {addr_space = 0 : i32} : !llvm.ptr {
+      %0 = llvm.mlir.addressof @some_function : !llvm.ptr
+      llvm.return %0 : !llvm.ptr
+    }
+
+    // More complex initialization.
+    llvm.mlir.alias linkonce_odr hidden @glob
+    {addr_space = 0 : i32, dso_local} : !llvm.array<32 x i32> {
+      %0 = llvm.mlir.constant(1234 : i64) : i64
+      %1 = llvm.mlir.addressof @glob.private : !llvm.ptr
+      %2 = llvm.ptrtoint %1 : !llvm.ptr to i64
+      %3 = llvm.add %2, %0 : i64
+      %4 = llvm.inttoptr %3 : i64 to !llvm.ptr
+      llvm.return %4 : !llvm.ptr
+    }
+    ```
+  }];
+  let regions = (region AnyRegion:$initializer);
+
+  let builders = [
+    OpBuilder<(ins "Type":$type, "Linkage":$linkage,
+      "StringRef":$name,
+      CArg<"unsigned", "0">:$addrSpace,
+      CArg<"bool", "false">:$dsoLocal,
+      CArg<"bool", "false">:$thread_local_,
+      CArg<"SymbolRefAttr", "{}">:$comdat,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
+      CArg<"ArrayRef<Attribute>", "{}">:$dbgExprs)>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Return the LLVM type of the global alias.
+    Type getType() {
+      return getAliasType();
+    }
+    /// Return the initializer region. This may be empty, but if it is not it
+    /// terminates in an `llvm.return` op with the initializer value.
+    Region &getInitializerRegion() {
+      return getOperation()->getRegion(0);
+    }
+    /// Return the initializer block. The initializer region always exist
+    /// (differently from llvm.global) and it terminates with an `llvm.return`
+    /// op with the aliasee value.
+    Block *getInitializerBlock() {
+      return &getInitializerRegion().front();
+    }
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
+}
+
 def LLVM_ComdatSelectorOp : LLVM_Op<"comdat_selector", [Symbol]> {
   let arguments = (ins
     SymbolNameAttr:$sym_name,

@@ -647,6 +647,16 @@ LogicalResult ModuleImport::convertGlobals() {
   return success();
 }
 
+LogicalResult ModuleImport::convertAliases() {
+  for (llvm::GlobalAlias &alias : llvmModule->aliases()) {
+    if (failed(convertAlias(&alias))) {
+      return emitError(UnknownLoc::get(context))
+             << "unhandled global alias: " << diag(alias);
+    }
+  }
+  return success();
+}
+
 LogicalResult ModuleImport::convertDataLayout() {
   Location loc = mlirModule.getLoc();
   DataLayoutImporter dataLayoutImporter(context, llvmModule->getDataLayout());
@@ -950,6 +960,53 @@ ModuleImport::getOrCreateNamelessSymbolName(llvm::GlobalVariable *globalVar) {
   auto symbolRef = FlatSymbolRefAttr::get(context, globalName);
   it->getSecond() = symbolRef;
   return symbolRef;
+}
+
+LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
+  // Insert the global after the last one or at the start of the module.
+  OpBuilder::InsertionGuard guard(builder);
+  if (!aliasInsertionOp)
+    builder.setInsertionPointToStart(mlirModule.getBody());
+  else
+    builder.setInsertionPointAfter(aliasInsertionOp);
+
+  Type type = convertType(alias->getValueType());
+
+  // Workaround to support LLVM's nameless globals. MLIR, in contrast to LLVM,
+  // always requires a symbol name.
+  StringRef aliasName = alias->getName();
+  if (aliasName.empty())
+    return emitError(UnknownLoc::get(builder.getContext()))
+           << "expects valid name";
+
+  AliasOp aliasOp = builder.create<AliasOp>(
+      mlirModule.getLoc(), type, convertLinkageFromLLVM(alias->getLinkage()),
+      StringRef(aliasName),
+      /*addr_space=*/alias->getAddressSpace(),
+      /*dso_local=*/alias->isDSOLocal(),
+      /*thread_local=*/alias->isThreadLocal(), /*comdat=*/SymbolRefAttr(),
+      /*attrs=*/ArrayRef<NamedAttribute>());
+  aliasInsertionOp = aliasOp;
+
+  clearRegionState();
+  Block *block = builder.createBlock(&aliasOp.getInitializerRegion());
+  setConstantInsertionPointToStart(block);
+  FailureOr<Value> initializer = convertConstantExpr(alias->getAliasee());
+  if (failed(initializer))
+    return failure();
+  builder.create<ReturnOp>(aliasOp.getLoc(), *initializer);
+
+  if (alias->hasAtLeastLocalUnnamedAddr()) {
+    aliasOp.setUnnamedAddr(convertUnnamedAddrFromLLVM(alias->getUnnamedAddr()));
+  }
+  if (alias->hasSection())
+    aliasOp.setSection(alias->getSection());
+  aliasOp.setVisibility_(convertVisibilityFromLLVM(alias->getVisibility()));
+
+  if (alias->hasComdat())
+    aliasOp.setComdatAttr(comdatMapping.lookup(alias->getComdat()));
+
+  return success();
 }
 
 LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
@@ -2456,6 +2513,7 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
     return {};
   if (failed(moduleImport.convertFunctions()))
     return {};
-  moduleImport.convertTargetTriple();
+  if (failed(moduleImport.convertAliases()))
+    return {};
   return module;
 }

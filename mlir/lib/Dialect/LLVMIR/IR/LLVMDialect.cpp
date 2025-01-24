@@ -2423,6 +2423,178 @@ LogicalResult GlobalDtorsOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// Builder, printer and verifier for LLVM::GlobalOp.
+//===----------------------------------------------------------------------===//
+
+void AliasOp::build(OpBuilder &builder, OperationState &result, Type type,
+                    Linkage linkage, StringRef name, unsigned addrSpace,
+                    bool dsoLocal, bool threadLocal, SymbolRefAttr comdat,
+                    ArrayRef<NamedAttribute> attrs,
+                    ArrayRef<Attribute> dbgExprs) {
+  result.addAttribute(getSymNameAttrName(result.name),
+                      builder.getStringAttr(name));
+  result.addAttribute(getAliasTypeAttrName(result.name), TypeAttr::get(type));
+  if (dsoLocal)
+    result.addAttribute(getDsoLocalAttrName(result.name),
+                        builder.getUnitAttr());
+  if (threadLocal)
+    result.addAttribute(getThreadLocal_AttrName(result.name),
+                        builder.getUnitAttr());
+  if (comdat)
+    result.addAttribute(getComdatAttrName(result.name), comdat);
+
+  result.addAttribute(getLinkageAttrName(result.name),
+                      LinkageAttr::get(builder.getContext(), linkage));
+  if (addrSpace != 0)
+    result.addAttribute(getAddrSpaceAttrName(result.name),
+                        builder.getI32IntegerAttr(addrSpace));
+  result.attributes.append(attrs.begin(), attrs.end());
+
+  result.addRegion();
+}
+
+void AliasOp::print(OpAsmPrinter &p) {
+  p << ' ' << stringifyLinkage(getLinkage()) << ' ';
+  StringRef visibility = stringifyVisibility(getVisibility_());
+  if (!visibility.empty())
+    p << visibility << ' ';
+  if (getThreadLocal_())
+    p << "thread_local ";
+  if (auto unnamedAddr = getUnnamedAddr()) {
+    StringRef str = stringifyUnnamedAddr(*unnamedAddr);
+    if (!str.empty())
+      p << str << ' ';
+  }
+  p.printSymbolName(getSymName());
+  if (auto comdat = getComdat())
+    p << " comdat(" << *comdat << ')';
+
+  // Note that the alignment attribute is printed using the
+  // default syntax here, even though it is an inherent attribute
+  // (as defined in https://mlir.llvm.org/docs/LangRef/#attributes)
+  p.printOptionalAttrDict((*this)->getAttrs(),
+                          {SymbolTable::getSymbolAttrName(),
+                           getAliasTypeAttrName(), getLinkageAttrName(),
+                           getUnnamedAddrAttrName(), getThreadLocal_AttrName(),
+                           getVisibility_AttrName(), getComdatAttrName(),
+                           getUnnamedAddrAttrName()});
+
+  // Print the trailing type
+  p << " : " << getType();
+
+  Region &initializer = getInitializerRegion();
+  if (!initializer.empty()) {
+    p << ' ';
+    p.printRegion(initializer, /*printEntryBlockArgs=*/false);
+  }
+}
+
+// operation ::= `llvm.mlir.alias` linkage? visibility?
+//               (`unnamed_addr` | `local_unnamed_addr`)?
+//               `thread_local`? `@` identifier
+//               `(` attribute? `)` (`comdat(` symbol-ref-id `)`)?
+//               attribute-list? (`:` type)? region
+//
+// The type can be omitted for string attributes, in which case it will be
+// inferred from the value of the string as [strlen(value) x i8].
+ParseResult AliasOp::parse(OpAsmParser &parser, OperationState &result) {
+  MLIRContext *ctx = parser.getContext();
+  // Parse optional linkage, default to External.
+  result.addAttribute(getLinkageAttrName(result.name),
+                      LLVM::LinkageAttr::get(
+                          ctx, parseOptionalLLVMKeyword<Linkage>(
+                                   parser, result, LLVM::Linkage::External)));
+
+  // Parse optional visibility, default to Default.
+  result.addAttribute(getVisibility_AttrName(result.name),
+                      parser.getBuilder().getI64IntegerAttr(
+                          parseOptionalLLVMKeyword<LLVM::Visibility, int64_t>(
+                              parser, result, LLVM::Visibility::Default)));
+
+  // Parse optional UnnamedAddr, default to None.
+  result.addAttribute(getUnnamedAddrAttrName(result.name),
+                      parser.getBuilder().getI64IntegerAttr(
+                          parseOptionalLLVMKeyword<UnnamedAddr, int64_t>(
+                              parser, result, LLVM::UnnamedAddr::None)));
+
+  if (succeeded(parser.parseOptionalKeyword("thread_local")))
+    result.addAttribute(getThreadLocal_AttrName(result.name),
+                        parser.getBuilder().getUnitAttr());
+
+  StringAttr name;
+  if (parser.parseSymbolName(name, getSymNameAttrName(result.name),
+                             result.attributes))
+    return failure();
+
+  if (succeeded(parser.parseOptionalKeyword("comdat"))) {
+    SymbolRefAttr comdat;
+    if (parser.parseLParen() || parser.parseAttribute(comdat) ||
+        parser.parseRParen())
+      return failure();
+
+    result.addAttribute(getComdatAttrName(result.name), comdat);
+  }
+
+  SmallVector<Type, 1> types;
+  if (parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseOptionalColonTypeList(types))
+    return failure();
+
+  if (types.size() > 1)
+    return parser.emitError(parser.getNameLoc(), "expected zero or one type");
+
+  Region &initRegion = *result.addRegion();
+  if (parser.parseRegion(initRegion).failed())
+    return failure();
+
+  result.addAttribute(getAliasTypeAttrName(result.name),
+                      TypeAttr::get(types[0]));
+  return success();
+}
+
+LogicalResult AliasOp::verify() {
+  bool validType = isCompatibleOuterType(getType())
+                       ? !llvm::isa<LLVMVoidType, LLVMTokenType,
+                                    LLVMMetadataType, LLVMLabelType>(getType())
+                       : llvm::isa<PointerElementTypeInterface>(getType());
+  if (!validType)
+    return emitOpError(
+        "expects type to be a valid element type for an LLVM global");
+  if ((*this)->getParentOp() && !satisfiesLLVMModule((*this)->getParentOp()))
+    return emitOpError("must appear at the module level");
+
+  if (getLinkage() == Linkage::Appending) {
+    if (!llvm::isa<LLVMArrayType>(getType())) {
+      return emitOpError() << "expected array type for '"
+                           << stringifyLinkage(Linkage::Appending)
+                           << "' linkage";
+    }
+  }
+
+  if (failed(verifyComdat(*this, getComdat())))
+    return failure();
+
+  return success();
+}
+
+LogicalResult AliasOp::verifyRegions() {
+  if (Block *b = getInitializerBlock()) {
+    ReturnOp ret = cast<ReturnOp>(b->getTerminator());
+    if (ret.operand_type_begin() == ret.operand_type_end())
+      return emitOpError("initializer region cannot return void");
+
+    for (Operation &op : *b) {
+      auto iface = dyn_cast<MemoryEffectOpInterface>(op);
+      if (!iface || !iface.hasNoEffect())
+        return op.emitError()
+               << "ops with side effects not allowed in aliases initializers";
+    }
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ShuffleVectorOp
 //===----------------------------------------------------------------------===//
 
