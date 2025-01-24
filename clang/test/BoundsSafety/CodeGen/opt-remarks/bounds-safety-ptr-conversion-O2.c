@@ -103,28 +103,6 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT: ...
 
 // OPT-REM-NEXT: --- !Analysis
-// // OPT-REM-NEXT: Pass:            annotation-remarks
-// // OPT-REM-NEXT: Name:            BoundsSafetyCheck
-// // OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}bounds-safety-ptr-conversion-O2.c',
-// // OPT-REM-NEXT:                    Line: 0, Column: 0 }
-// // OPT-REM-NEXT: Function:        main
-// // OPT-REM-NEXT: Args:
-// // OPT-REM-NEXT:   - String:          'Inserted '
-// // OPT-REM-NEXT:   - count:           '2'
-// // OPT-REM-NEXT:   - String:          ' LLVM IR instruction'
-// // OPT-REM-NEXT:   - String:          s
-// // OPT-REM-NEXT:   - String:          "\n"
-// // OPT-REM-NEXT:   - String:          "used for:\n"
-// // OPT-REM-NEXT:   - String:          bounds-safety-generic, bounds-safety-check-ptr-lt-upper-bound, bounds-safety-check-ptr-ge-lower-bound
-// // OPT-REM-NEXT:   - String:           |
-// // OPT-REM-NEXT: {{^[     ]+$}}
-// // OPT-REM-NEXT: {{^[     ]+$}}
-// // OPT-REM-NEXT:       instructions:
-// // OPT-REM-EMPTY:
-// // OPT-REM-NEXT:   - String:          "trap (LLVM IR 'call')\nother (LLVM IR 'unreachable')"
-// // OPT-REM-NEXT: ...
-//
-// OPT-REM-NEXT: --- !Analysis
 // OPT-REM-NEXT: Pass:            annotation-remarks
 // OPT-REM-NEXT: Name:            BoundsSafetyCheck
 // OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}bounds-safety-ptr-conversion-O2.c',
@@ -144,6 +122,28 @@ int main(int argc, char **argv) {
 // OPT-REM-NEXT:       instructions:
 // OPT-REM-EMPTY:
 // OPT-REM-NEXT:   - String:          "cmp eq (LLVM IR 'icmp')\ncond branch (LLVM IR 'br')"
+// OPT-REM-NEXT: ...
+
+// OPT-REM-NEXT: --- !Analysis
+// OPT-REM-NEXT: Pass:            annotation-remarks
+// OPT-REM-NEXT: Name:            BoundsSafetyCheck
+// OPT-REM-NEXT: DebugLoc:        { File: '{{.*}}bounds-safety-ptr-conversion-O2.c',
+// OPT-REM-NEXT:                    Line: 0, Column: 0 }
+// OPT-REM-NEXT: Function:        main
+// OPT-REM-NEXT: Args:
+// OPT-REM-NEXT:   - String:          'Inserted '
+// OPT-REM-NEXT:   - count:           '2'
+// OPT-REM-NEXT:   - String:          ' LLVM IR instruction'
+// OPT-REM-NEXT:   - String:          s
+// OPT-REM-NEXT:   - String:          "\n"
+// OPT-REM-NEXT:   - String:          "used for:\n"
+// OPT-REM-NEXT:   - String:          bounds-safety-generic, bounds-safety-check-ptr-lt-upper-bound, bounds-safety-check-ptr-ge-lower-bound
+// OPT-REM-NEXT:   - String:           |
+// OPT-REM-NEXT: {{^[ 	]+$}}
+// OPT-REM-NEXT: {{^[ 	]+$}}
+// OPT-REM-NEXT:       instructions:
+// OPT-REM-EMPTY:
+// OPT-REM-NEXT:   - String:          "trap (LLVM IR 'call')\nother (LLVM IR 'unreachable')"
 // OPT-REM-NEXT: ...
 
 // OPT-REM-NOT: --- !Analysis

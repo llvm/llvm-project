@@ -1,4 +1,4 @@
-// XFAIL: *
+
 
 // RUN: %clang_cc1 -triple x86_64-apple-macos -Wno-bounds-safety-init-list -fbounds-safety -O0 %s -emit-llvm -o %t-O0.s -opt-record-file %t-O0.opt.yaml -opt-record-format yaml
 // RUN: FileCheck --input-file %t-O0.s --check-prefixes IR %s
