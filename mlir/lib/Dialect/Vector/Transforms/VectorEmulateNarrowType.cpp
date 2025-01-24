@@ -311,17 +311,17 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
                                          "only 1-D vectors are supported ATM");
 
     auto loc = op.getLoc();
-    auto convertedType = cast<MemRefType>(adaptor.getBase().getType());
-    Type oldElementType = op.getValueToStore().getType().getElementType();
-    Type newElementType = convertedType.getElementType();
-    int oldBits = oldElementType.getIntOrFloatBitWidth();
-    int newBits = newElementType.getIntOrFloatBitWidth();
+    auto containerElemTy = cast<MemRefType>(adaptor.getBase().getType());
+    Type emulatedElemTy = op.getValueToStore().getType().getElementType();
+    Type newElementType = containerElemTy.getElementType();
+    int emulatedBits = emulatedElemTy.getIntOrFloatBitWidth();
+    int containerBits = newElementType.getIntOrFloatBitWidth();
 
     // Check per-element alignment.
-    if (newBits % oldBits != 0) {
+    if (containerBits % emulatedBits != 0) {
       return rewriter.notifyMatchFailure(op, "unalagined element types");
     }
-    int scale = newBits / oldBits;
+    int scale = containerBits / emulatedBits;
 
     // Adjust the number of elements to store when emulating narrow types.
     // Here only the 1-D vector store is considered, and the N-D memref types
@@ -346,7 +346,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
     OpFoldResult linearizedIndices;
     std::tie(std::ignore, linearizedIndices) =
         memref::getLinearizedMemRefOffsetAndSize(
-            rewriter, loc, oldBits, newBits,
+            rewriter, loc, emulatedBits, containerBits,
             stridedMetadata.getConstifiedMixedOffset(),
             stridedMetadata.getConstifiedMixedSizes(),
             stridedMetadata.getConstifiedMixedStrides(),
@@ -382,18 +382,18 @@ struct ConvertVectorMaskedStore final
                                          "only 1-D vectors are supported ATM");
 
     auto loc = op.getLoc();
-    auto convertedType = cast<MemRefType>(adaptor.getBase().getType());
-    Type oldElementType = op.getValueToStore().getType().getElementType();
-    Type newElementType = convertedType.getElementType();
-    int oldBits = oldElementType.getIntOrFloatBitWidth();
-    int newBits = newElementType.getIntOrFloatBitWidth();
+    auto containerElemTy = cast<MemRefType>(adaptor.getBase().getType());
+    Type emulatedElemTy = op.getValueToStore().getType().getElementType();
+    Type newElementType = containerElemTy.getElementType();
+    int emulatedBits = emulatedElemTy.getIntOrFloatBitWidth();
+    int containerBits = newElementType.getIntOrFloatBitWidth();
 
     // Check per-element alignment.
-    if (newBits % oldBits != 0) {
+    if (containerBits % emulatedBits != 0) {
       return rewriter.notifyMatchFailure(op, "unalagined element types");
     }
 
-    int scale = newBits / oldBits;
+    int scale = containerBits / emulatedBits;
     int origElements = op.getValueToStore().getType().getNumElements();
     if (origElements % scale != 0)
       return failure();
@@ -404,7 +404,7 @@ struct ConvertVectorMaskedStore final
     memref::LinearizedMemRefInfo linearizedInfo;
     std::tie(linearizedInfo, linearizedIndicesOfr) =
         memref::getLinearizedMemRefOffsetAndSize(
-            rewriter, loc, oldBits, newBits,
+            rewriter, loc, emulatedBits, containerBits,
             stridedMetadata.getConstifiedMixedOffset(),
             stridedMetadata.getConstifiedMixedSizes(),
             stridedMetadata.getConstifiedMixedStrides(),
@@ -458,7 +458,7 @@ struct ConvertVectorMaskedStore final
         loc, newType, adaptor.getBase(), linearizedIndices,
         newMask.value()->getResult(0), passThru);
 
-    auto newBitCastType = VectorType::get(numElements * scale, oldElementType);
+    auto newBitCastType = VectorType::get(numElements * scale, emulatedElemTy);
     Value valueToStore =
         rewriter.create<vector::BitCastOp>(loc, newBitCastType, newLoad);
     valueToStore = rewriter.create<arith::SelectOp>(
@@ -490,17 +490,17 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
                                          "only 1-D vectors are supported ATM");
 
     auto loc = op.getLoc();
-    auto convertedType = cast<MemRefType>(adaptor.getBase().getType());
-    Type oldElementType = op.getType().getElementType();
-    Type newElementType = convertedType.getElementType();
-    int oldBits = oldElementType.getIntOrFloatBitWidth();
-    int newBits = newElementType.getIntOrFloatBitWidth();
+    auto containerElemTy = cast<MemRefType>(adaptor.getBase().getType());
+    Type emulatedElemTy = op.getType().getElementType();
+    Type newElementType = containerElemTy.getElementType();
+    int emulatedBits = emulatedElemTy.getIntOrFloatBitWidth();
+    int containerBits = newElementType.getIntOrFloatBitWidth();
 
     // Check per-element alignment.
-    if (newBits % oldBits != 0) {
+    if (containerBits % emulatedBits != 0) {
       return rewriter.notifyMatchFailure(op, "unalagined element types");
     }
-    int scale = newBits / oldBits;
+    int scale = containerBits / emulatedBits;
 
     // Adjust the number of elements to load when emulating narrow types,
     // and then cast back to the original type with vector.bitcast op.
@@ -541,7 +541,7 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
     memref::LinearizedMemRefInfo linearizedInfo;
     std::tie(linearizedInfo, linearizedIndices) =
         memref::getLinearizedMemRefOffsetAndSize(
-            rewriter, loc, oldBits, newBits,
+            rewriter, loc, emulatedBits, containerBits,
             stridedMetadata.getConstifiedMixedOffset(),
             stridedMetadata.getConstifiedMixedSizes(),
             stridedMetadata.getConstifiedMixedStrides(),
@@ -558,7 +558,7 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
         llvm::divideCeil(maxintraDataOffset + origElements, scale);
     Value result =
         emulatedVectorLoad(rewriter, loc, adaptor.getBase(), linearizedIndices,
-                           numElements, oldElementType, newElementType);
+                           numElements, emulatedElemTy, newElementType);
 
     if (!foldedIntraVectorOffset) {
       auto resultVector = rewriter.create<arith::ConstantOp>(
@@ -593,17 +593,17 @@ struct ConvertVectorMaskedLoad final
                                          "only 1-D vectors are supported ATM");
 
     auto loc = op.getLoc();
-    auto convertedType = cast<MemRefType>(adaptor.getBase().getType());
-    Type oldElementType = op.getType().getElementType();
-    Type newElementType = convertedType.getElementType();
-    int oldBits = oldElementType.getIntOrFloatBitWidth();
-    int newBits = newElementType.getIntOrFloatBitWidth();
+    auto containerElemTy = cast<MemRefType>(adaptor.getBase().getType());
+    Type emulatedElemTy = op.getType().getElementType();
+    Type newElementType = containerElemTy.getElementType();
+    int emulatedBits = emulatedElemTy.getIntOrFloatBitWidth();
+    int containerBits = newElementType.getIntOrFloatBitWidth();
 
     // Check per-element alignment.
-    if (newBits % oldBits != 0) {
+    if (containerBits % emulatedBits != 0) {
       return rewriter.notifyMatchFailure(op, "unalagined element types");
     }
-    int scale = newBits / oldBits;
+    int scale = containerBits / emulatedBits;
 
     // Adjust the number of elements to load when emulating narrow types,
     // and then cast back to the original type with vector.bitcast op.
@@ -657,7 +657,7 @@ struct ConvertVectorMaskedLoad final
     memref::LinearizedMemRefInfo linearizedInfo;
     std::tie(linearizedInfo, linearizedIndices) =
         memref::getLinearizedMemRefOffsetAndSize(
-            rewriter, loc, oldBits, newBits,
+            rewriter, loc, emulatedBits, containerBits,
             stridedMetadata.getConstifiedMixedOffset(),
             stridedMetadata.getConstifiedMixedSizes(),
             stridedMetadata.getConstifiedMixedStrides(),
@@ -679,7 +679,7 @@ struct ConvertVectorMaskedLoad final
     auto numElements =
         llvm::divideCeil(maxIntraDataOffset + origElements, scale);
     auto loadType = VectorType::get(numElements, newElementType);
-    auto newBitcastType = VectorType::get(numElements * scale, oldElementType);
+    auto newBitcastType = VectorType::get(numElements * scale, emulatedElemTy);
 
     auto emptyVector = rewriter.create<arith::ConstantOp>(
         loc, newBitcastType, rewriter.getZeroAttr(newBitcastType));
@@ -755,17 +755,17 @@ struct ConvertVectorTransferRead final
                                          "only 1-D vectors are supported ATM");
 
     auto loc = op.getLoc();
-    auto convertedType = cast<MemRefType>(adaptor.getSource().getType());
-    Type oldElementType = op.getType().getElementType();
-    Type newElementType = convertedType.getElementType();
-    int oldBits = oldElementType.getIntOrFloatBitWidth();
-    int newBits = newElementType.getIntOrFloatBitWidth();
+    auto containerElemTy = cast<MemRefType>(adaptor.getSource().getType());
+    Type emulatedElemTy = op.getType().getElementType();
+    Type newElementType = containerElemTy.getElementType();
+    int emulatedBits = emulatedElemTy.getIntOrFloatBitWidth();
+    int containerBits = newElementType.getIntOrFloatBitWidth();
 
     // Check per-element alignment.
-    if (newBits % oldBits != 0) {
+    if (containerBits % emulatedBits != 0) {
       return rewriter.notifyMatchFailure(op, "unalagined element types");
     }
-    int scale = newBits / oldBits;
+    int scale = containerBits / emulatedBits;
 
     auto origElements = op.getVectorType().getNumElements();
 
@@ -781,7 +781,7 @@ struct ConvertVectorTransferRead final
     memref::LinearizedMemRefInfo linearizedInfo;
     std::tie(linearizedInfo, linearizedIndices) =
         memref::getLinearizedMemRefOffsetAndSize(
-            rewriter, loc, oldBits, newBits,
+            rewriter, loc, emulatedBits, containerBits,
             stridedMetadata.getConstifiedMixedOffset(),
             stridedMetadata.getConstifiedMixedSizes(),
             stridedMetadata.getConstifiedMixedStrides(),
@@ -802,7 +802,7 @@ struct ConvertVectorTransferRead final
         newPadding);
 
     auto bitCast = rewriter.create<vector::BitCastOp>(
-        loc, VectorType::get(numElements * scale, oldElementType), newRead);
+        loc, VectorType::get(numElements * scale, emulatedElemTy), newRead);
 
     Value result = bitCast->getResult(0);
     if (!foldedIntraVectorOffset) {
