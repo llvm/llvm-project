@@ -1188,44 +1188,41 @@ DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
 void DwarfCompileUnit::constructAbstractSubprogramScopeDIE(
     LexicalScope *Scope) {
   auto *SP = cast<DISubprogram>(Scope->getScopeNode());
-  if (getAbstractScopeDIEs().count(SP))
+  DIE *&AbsDef = getAbstractScopeDIEs()[SP];
+  if (AbsDef)
     return;
 
-  DIE *ContextDIE;
-  DwarfCompileUnit *ContextCU = this;
+  DIE *ContextDIE =
+      getOrCreateSubprogramContextDIE(SP, includeMinimalInlineScopes());
 
-  if (includeMinimalInlineScopes())
-    ContextDIE = &getUnitDie();
-  // Some of this is duplicated from DwarfUnit::getOrCreateSubprogramDIE, with
-  // the important distinction that the debug node is not associated with the
-  // DIE (since the debug node will be associated with the concrete DIE, if
-  // any). It could be refactored to some common utility function.
-  else if (auto *SPDecl = SP->getDeclaration()) {
-    ContextDIE = &getUnitDie();
-    getOrCreateSubprogramDIE(SPDecl);
-  } else {
-    ContextDIE = getOrCreateContextDIE(SP->getScope());
-    // The scope may be shared with a subprogram that has already been
-    // constructed in another CU, in which case we need to construct this
-    // subprogram in the same CU.
-    ContextCU = DD->lookupCU(ContextDIE->getUnitDie());
-  }
+  if (auto *SPDecl = SP->getDeclaration())
+    if (!includeMinimalInlineScopes())
+      // Build the decl now to ensure it precedes the definition.
+      getOrCreateSubprogramDIE(SPDecl);
 
-  // Passing null as the associated node because the abstract definition
-  // shouldn't be found by lookup.
-  DIE &AbsDef = ContextCU->createAndAddDIE(dwarf::DW_TAG_subprogram,
-                                           *ContextDIE, nullptr);
+  // The scope may be shared with a subprogram that has already been
+  // constructed in another CU, in which case we need to construct this
+  // subprogram in the same CU.
+  auto *ContextCU = (includeMinimalInlineScopes() || SP->getDeclaration())
+                        ? this
+                        : DD->lookupCU(ContextDIE->getUnitDie());
 
-  // Store the DIE before creating children.
-  ContextCU->getAbstractScopeDIEs()[SP] = &AbsDef;
+  // The abstract definition can only be looked up from the associated node if
+  // the subprogram does not have a concrete function.
+  if (!ContextCU->DD->isConcrete(SP))
+    AbsDef = ContextCU->getDIE(SP);
+  if (!AbsDef)
+    AbsDef = &ContextCU->createAndAddDIE(dwarf::DW_TAG_subprogram, *ContextDIE,
+                                         nullptr);
 
-  ContextCU->applySubprogramAttributesToDefinition(SP, AbsDef);
-  ContextCU->addSInt(AbsDef, dwarf::DW_AT_inline,
+  ContextCU->applySubprogramAttributesToDefinition(SP, *AbsDef);
+  ContextCU->addSInt(*AbsDef, dwarf::DW_AT_inline,
                      DD->getDwarfVersion() <= 4 ? std::optional<dwarf::Form>()
                                                 : dwarf::DW_FORM_implicit_const,
                      dwarf::DW_INL_inlined);
-  if (DIE *ObjectPointer = ContextCU->createAndAddScopeChildren(Scope, AbsDef))
-    ContextCU->addDIEEntry(AbsDef, dwarf::DW_AT_object_pointer, *ObjectPointer);
+  if (DIE *ObjectPointer = ContextCU->createAndAddScopeChildren(Scope, *AbsDef))
+    ContextCU->addDIEEntry(*AbsDef, dwarf::DW_AT_object_pointer,
+                           *ObjectPointer);
 }
 
 bool DwarfCompileUnit::useGNUAnalogForDwarf5Feature() const {
@@ -1437,7 +1434,7 @@ DIE *DwarfCompileUnit::getOrCreateImportedEntityDIE(
 void DwarfCompileUnit::finishSubprogramDefinition(const DISubprogram *SP) {
   DIE *D = getDIE(SP);
   if (DIE *AbsSPDIE = getAbstractScopeDIEs().lookup(SP)) {
-    if (D)
+    if (D && D != AbsSPDIE)
       // If this subprogram has an abstract definition, reference that
       addDIEEntry(*D, dwarf::DW_AT_abstract_origin, *AbsSPDIE);
   } else {

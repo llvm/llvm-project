@@ -1155,6 +1155,10 @@ void DwarfDebug::beginModule(Module *M) {
 
   assert(NumDebugCUs > 0 && "Asm unexpectedly initialized");
   SingleCU = NumDebugCUs == 1;
+  for (const auto &F : M->functions())
+    if (!F.isDeclaration())
+      if (const auto *SP = F.getSubprogram())
+        ConcreteSPs.insert(SP);
   DenseMap<DIGlobalVariable *, SmallVector<DwarfCompileUnit::GlobalExpr, 1>>
       GVMap;
   for (const GlobalVariable &Global : M->globals()) {
