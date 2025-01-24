@@ -1,5 +1,5 @@
 # See docs/CMake.html for instructions about how to build LLVM with CMake.
-# comment
+
 cmake_minimum_required(VERSION 3.20.0)
 
 include(CMakeDependentOption)
