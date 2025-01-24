@@ -25,6 +25,7 @@ using namespace llvm::memprof;
 extern cl::opt<float> MemProfLifetimeAccessDensityColdThreshold;
 extern cl::opt<unsigned> MemProfAveLifetimeColdThreshold;
 extern cl::opt<unsigned> MemProfMinAveLifetimeAccessDensityHotThreshold;
+extern cl::opt<bool> MemProfUseHotHints;
 
 namespace {
 
@@ -81,14 +82,23 @@ TEST_F(MemoryProfileInfoTest, GetAllocType) {
   //    MemProfMinAveLifetimeAccessDensityHotThreshold
   // so compute the HotTotalLifetimeAccessDensityThreshold  at the threshold.
   const uint64_t HotTotalLifetimeAccessDensityThreshold =
-      (uint64_t)(MemProfMinAveLifetimeAccessDensityHotThreshold * AllocCount * 100);  
-   
-  
+      (uint64_t)(MemProfMinAveLifetimeAccessDensityHotThreshold * AllocCount *
+                 100);
+
+  // Make sure the option for detecting hot allocations is set.
+  MemProfUseHotHints = true;
   // Test Hot
   // More accesses per byte per sec than hot threshold is hot.
   EXPECT_EQ(getAllocType(HotTotalLifetimeAccessDensityThreshold + 1, AllocCount,
                          ColdTotalLifetimeThreshold + 1),
-            AllocationType::Hot);  
+            AllocationType::Hot);
+  // Undo the manual set of the option above.
+  cl::ResetAllOptionOccurrences();
+
+  // Without MemProfUseHotHints (default) we should treat simply as NotCold.
+  EXPECT_EQ(getAllocType(HotTotalLifetimeAccessDensityThreshold + 1, AllocCount,
+                         ColdTotalLifetimeThreshold + 1),
+            AllocationType::NotCold);
 
   // Test Cold
   // Long lived with less accesses per byte per sec than cold threshold is cold.
