@@ -13,7 +13,7 @@ include_directories(${CUDAToolkit_INCLUDE_DIRS})
 # added to the library name.
 set(CUFRT_LIBNAME CufRuntime_cuda_${CUDAToolkit_VERSION_MAJOR})
 
-add_flang_library(${CUFRT_LIBNAME}
+set(sources
   allocator.cpp
   allocatable.cpp
   descriptor.cpp
@@ -21,6 +21,11 @@ add_flang_library(${CUFRT_LIBNAME}
   memmove-function.cpp
   memory.cpp
   registration.cpp
+)
+runtime_source_files(sources SUBDIR "CUDA")
+
+add_flang_library(${CUFRT_LIBNAME}
+  ${sources}
 )
 
 if (BUILD_SHARED_LIBS)

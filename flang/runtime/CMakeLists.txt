@@ -16,6 +16,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(CMAKE_CXX_EXTENSIONS OFF)
 
   set(FLANG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
+  set(FLANG_RT_SOURCE_DIR "${FLANG_SOURCE_DIR}/../flang-rt")
 
   set(LLVM_COMMON_CMAKE_UTILS "${FLANG_SOURCE_DIR}/../cmake")
   set(LLVM_CMAKE_UTILS "${FLANG_SOURCE_DIR}/../llvm/cmake")
@@ -57,7 +58,30 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     REAL(16) is mapped to __float128, or libm for targets where REAL(16) \
     is mapped to long double, etc."
     )
+
+  option(FLANG_CUF_RUNTIME
+    "Compile CUDA Fortran runtime sources" OFF)
+  if (FLANG_CUF_RUNTIME)
+    find_package(CUDAToolkit REQUIRED)
+  endif()
 endif()
+
+# Runtime files are in Flang-RT's source dir.
+function (runtime_source_files outvar)
+  cmake_parse_arguments(ARG "" "SUBDIR" "" ${ARGN})
+
+  set(new_sources "")
+  foreach (source IN LISTS "${outvar}")
+    set(new_source "${FLANG_RT_SOURCE_DIR}/lib/flang_rt")
+    cmake_path(APPEND new_source "${ARG_SUBDIR}")
+    cmake_path(APPEND new_source "${source}")
+    list(APPEND new_sources "${new_source}")
+  endforeach ()
+  set("${outvar}" ${new_sources} PARENT_SCOPE)
+endfunction ()
+
+# Runtime includes are in Flang-RT's source dir.
+include_directories(BEFORE "${FLANG_RT_SOURCE_DIR}/include")
 
 # function checks
 find_package(Backtrace)
@@ -94,7 +118,7 @@ else()
   set(NO_LTO_FLAGS "")
 endif()
 
-configure_file(config.h.cmake config.h)
+configure_file("${FLANG_RT_SOURCE_DIR}/cmake/config.h.cmake.in" config.h)
 # include_directories is used here instead of target_include_directories
 # because add_flang_library creates multiple objects (STATIC/SHARED, OBJECT)
 # with different names
@@ -236,6 +260,7 @@ set(supported_files
   utf.cpp
   )
 
+runtime_source_files(supported_files)
 enable_cuda_compilation(flang_rt "${supported_files}")
 enable_omp_offload_compilation("${supported_files}")
 
@@ -268,6 +293,9 @@ if (NOT TARGET FortranFloat128Math)
     list(APPEND sources ${f128_sources})
   endif()
 endif()
+
+runtime_source_files(sources)
+
 
 if (NOT DEFINED MSVC)
   add_flang_library(flang_rt
