@@ -37,3 +37,21 @@ void f() {
   f3(0);
   f3(0, 0);
 }
+
+#define P_10(x) x, x, x, x, x, x, x, x, x, x,
+#define P_100(x) P_10(x) P_10(x) P_10(x) P_10(x) P_10(x) \
+                 P_10(x) P_10(x) P_10(x) P_10(x) P_10(x)
+#define P_1000(x) P_100(x) P_100(x) P_100(x) P_100(x) P_100(x) \
+                  P_100(x) P_100(x) P_100(x) P_100(x) P_100(x)
+#define P_10000(x) P_1000(x) P_1000(x) P_1000(x) P_1000(x) P_1000(x) \
+                   P_1000(x) P_1000(x) P_1000(x) P_1000(x) P_1000(x)
+
+namespace C1 {
+extern "C" int g( 
+  P_10000(int = 0) P_10000(int = 0) P_10000(int = 0) P_10000(int = 0) P_10000(int = 0) P_10000(int = 0) P_10000(int = 0) int = 0
+  // expected-error@-1 {{too many function parameters; subsequent parameters will be ignored}}
+);
+} // namespace C1
+
+using C1::g;
+int h = g();
