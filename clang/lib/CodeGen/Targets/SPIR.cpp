@@ -386,13 +386,30 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
     if (ContainedTy.isNull())
       return nullptr;
 
-    assert(!ResAttrs.RawBuffer &&
-           "Raw buffers handles are not implemented for SPIR-V yet");
     assert(!ResAttrs.IsROV &&
            "Rasterizer order views not implemented for SPIR-V yet");
 
-    // convert element type
     llvm::Type *ElemType = CGM.getTypes().ConvertType(ContainedTy);
+    if (ResAttrs.RawBuffer) {
+      // TODO: Handle types with layout information.
+      assert((ElemType->isIntegerTy() || ElemType->isFloatingPointTy() ||
+              ElemType->isVectorTy()) &&
+             "The element type for a SPIR-V resource must be a types that does "
+             "not require layout information.");
+      llvm::ArrayType *RuntimeArrayType = llvm::ArrayType::get(ElemType, 0);
+
+      uint32_t StorageClass = /* StorageBuffer storage class */ 12;
+      bool IsWritable =
+          ResAttrs.ResourceClass == llvm::dxil::ResourceClass::UAV;
+      assert(!IsWritable && "Writable buffers require a corresponding counter "
+                            "variable. Not implemented yet.");
+      bool IsRov = ResAttrs.IsROV;
+      return llvm::TargetExtType::get(Ctx, "spirv.VulkanBuffer",
+                                      {RuntimeArrayType},
+                                      {StorageClass, IsWritable, IsRov});
+    }
+
+    // convert element type
     return getSPIRVImageTypeFromHLSLResource(ResAttrs, ElemType, Ctx);
   }
   case llvm::dxil::ResourceClass::CBuffer:
