@@ -282,6 +282,10 @@ enum NodeType : unsigned {
   UMIN_VL,
   UMAX_VL,
 
+  // Vector Absolute Difference.
+  ABDS_VL,
+  ABDU_VL,
+
   BITREVERSE_VL,
   BSWAP_VL,
   CTLZ_VL,
