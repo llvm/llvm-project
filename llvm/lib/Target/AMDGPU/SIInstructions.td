@@ -10,7 +10,10 @@
 // that are not yet supported remain commented out.
 //===----------------------------------------------------------------------===//
 
-class GCNPat<dag pattern, dag result> : Pat<pattern, result>, PredicateControl;
+class GCNPat<dag pattern, dag result> : Pat<pattern, result>, PredicateControl, GISelFlags;
+
+let GIIgnoreCopies = 1 in
+class GCNPatIgnoreCopies<dag pattern, dag result> : GCNPat<pattern, result>;
 
 class UniformSextInreg<ValueType VT> : PatFrag<
   (ops node:$src),
@@ -3323,6 +3326,34 @@ def : GCNPat <
   (v2i16 (DivergentBinFrag<build_vector> (i16 VGPR_32:$src0), (i16 VGPR_32:$src1))),
   (v2i16 (V_LSHL_OR_B32_e64 $src1, (i32 16), (i32 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), $src0))))
 >;
+
+multiclass V_SAT_PK_Pat<Instruction inst> {
+  def: GCNPatIgnoreCopies<
+    (i16 (conc_lo_u8_i16 (clamp_s16_u8 i16:$lo), (clamp_s16_u8 i16:$hi))),
+    (inst
+      (V_LSHL_OR_B32_e64 VRegSrc_32:$hi, (S_MOV_B32 (i32 16)),
+      VRegSrc_32:$lo))
+  >;
+
+  def: GCNPatIgnoreCopies<
+    (i16 (conc_lo_u8_i16 (clamp_s16_u8 i16:$lo), (smax i16:$hi, (i16 0)))),
+    (inst
+      (V_LSHL_OR_B32_e64 VRegSrc_32:$hi, (S_MOV_B32 (i32 16)),
+      VRegSrc_32:$lo))
+  >;
+
+  def: GCNPatIgnoreCopies<
+    (i16 (conc_lo_v2i16_i16 (clamp_v2i16_u8 v2i16:$src))),
+    (inst VRegSrc_32:$src)
+  >;
+}
+
+let OtherPredicates = [NotHasTrue16BitInsts] in {
+  defm : V_SAT_PK_Pat<V_SAT_PK_U8_I16_e64>;
+} // End OtherPredicates = [NotHasTrue16BitInsts]
+let True16Predicate = UseFakeTrue16Insts in {
+  defm : V_SAT_PK_Pat<V_SAT_PK_U8_I16_fake16_e64>;
+}
 
 // With multiple uses of the shift, this will duplicate the shift and
 // increase register pressure.
