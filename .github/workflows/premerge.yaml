@@ -27,6 +27,10 @@ jobs:
         uses: hendrikmuhs/ccache-action@v1.2.14
         with:
           max-size: "2000M"
+      - name: Restore ccache from previous PR run
+        uses: ./.github/workflows/pr-ccache-restore
+        with:
+          artifact-name-suffix: Linux-x86
       - name: Build and Test
         # Mark the job as a success even if the step fails so that people do
         # not get notified while the new premerge pipeline is in an
@@ -70,3 +74,9 @@ jobs:
           export CXX=/opt/llvm/bin/clang++
 
           ./.ci/monolithic-linux.sh "$(echo ${linux_projects} | tr ' ' ';')" "$(echo ${linux_check_targets})" "$(echo ${linux_runtimes} | tr ' ' ';')" "$(echo ${linux_runtime_check_targets})"
+
+      - name: Save ccache for next PR run
+        if: always()
+        uses: ./.github/workflows/pr-ccache-save
+        with:
+          artifact-name-suffix: Linux-x86

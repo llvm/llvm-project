@@ -1,0 +1,25 @@
+name: PR ccache restore
+
+inputs:
+  artifact-name-suffix:
+    desciption: The suffix to append to the artifict name (ccache-pr#)
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - uses: ./.github/workflows/unprivileged-download-artifact
+      id: download-artifact
+      with:
+        artifact-name: ccache-pr${{ github.event.pull_request.number }}-${{ inputs.artifact-name-suffix }}
+
+    - shell: bash
+      if: steps.download-artifact.outputs.filename != ''
+      run: |
+        # Is this the best way to clear the cache?
+        rm -Rf .ccache/
+        unzip ${{ steps.download-artifact.outputs.filename }}
+        rm ${{ steps.download-artifact.outputs.filename }}
+        tar --zstd -xf ccache.tar.zst
+        rm ccache.tar.zst
+        ls -altr
