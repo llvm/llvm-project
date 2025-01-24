@@ -4870,9 +4870,9 @@ def note_ovl_candidate_inconsistent_deduction_types : Note<
     "candidate template ignored: deduced values %diff{"
     "of conflicting types for parameter %0 (%1 of type $ vs. %3 of type $)|"
     "%1 and %3 of conflicting types for parameter %0}2,4">;
-def note_ovl_candidate_explicit_arg_mismatch_named : Note<
+def note_ovl_candidate_explicit_arg_mismatch_named_temptemppd : Note<
     "candidate template ignored: invalid explicitly-specified argument "
-    "for template parameter %0: ">;
+    "for template parameter %0">;
 def note_ovl_candidate_explicit_arg_mismatch_named_ttpd : Note<
     "candidate template ignored: invalid explicitly-specified argument "
     "for template parameter %0: "

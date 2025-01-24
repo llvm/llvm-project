@@ -11728,31 +11728,30 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
               << ParamD->getDeclName() << FirstArg << SecondArg << ParamName
               << "type";
         else {
-          if (TTPD->getTypeConstraint())
-            llvm_unreachable("ill-formed program");
-          else
-            S.Diag(Templated->getLocation(),
-                   diag::note_ovl_candidate_explicit_arg_mismatch_named_ttpd)
-                << ParamD->getDeclName() << FirstArg << SecondArg << ParamName
-                << "class";
+          // Concept satisfied but not modeled => ill-formed
+          assert(!TTPD->getTypeConstraint() &&
+                 "Concept satisfied but not modeled");
+
+          S.Diag(Templated->getLocation(),
+                 diag::note_ovl_candidate_explicit_arg_mismatch_named_ttpd)
+              << ParamD->getDeclName() << FirstArg << SecondArg << ParamName
+              << "class";
         }
       } else if (auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(ParamD)) {
         if (SecondArg.isNull()) {
-          // Expected constant of type 'int', got type 'int'
           S.Diag(Templated->getLocation(),
                  diag::note_ovl_candidate_explicit_arg_mismatch_named_nttpd_a)
               << ParamD->getDeclName() << FirstArg << NTTPD->getType();
         } else {
-          // Could not convert A from B to C
           S.Diag(Templated->getLocation(),
                  diag::note_ovl_candidate_explicit_arg_mismatch_named_nttpd_b)
               << ParamD->getDeclName() << FirstArg << SecondArg
               << NTTPD->getType();
         }
       } else if (auto *TTempPD = dyn_cast<TemplateTemplateParmDecl>(ParamD)) {
-        TTempPD->dump();
+        // FIXME: Emit a better message here
         S.Diag(Templated->getLocation(),
-               diag::note_ovl_candidate_explicit_arg_mismatch_named)
+               diag::note_ovl_candidate_explicit_arg_mismatch_named_temptemppd)
             << ParamD->getDeclName();
       } else
         llvm_unreachable("unexpected case");

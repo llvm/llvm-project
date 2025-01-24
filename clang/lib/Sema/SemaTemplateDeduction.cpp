@@ -3577,7 +3577,6 @@ TemplateDeductionResult Sema::SubstituteExplicitTemplateArguments(
       return TemplateDeductionResult::SubstitutionFailure;
     Info.Param = makeTemplateParameter(TemplateParams->getParam(Index));
     Info.FirstArg = ExplicitTemplateArgs[Index].getArgument();
-    Info.SecondArg = TemplateArgument();
     if (ExplicitTemplateArgs[Index].getArgument().getKind() ==
         TemplateArgument::Expression)
       Info.SecondArg =
