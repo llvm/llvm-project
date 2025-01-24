@@ -59,12 +59,12 @@ define void @packFromOtherBB(ptr %ptr, i8 %val) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[ADD0:%.*]] = add i8 [[VAL]], 0
 ; CHECK-NEXT:    [[MUL1:%.*]] = mul i8 [[VAL]], 1
-; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x i8> poison, i8 [[ADD0]], i32 0
-; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x i8> [[PACK]], i8 [[MUL1]], i32 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[PHI0:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
 ; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ 1, %[[LOOP]] ]
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x i8> poison, i8 [[ADD0]], i32 0
+; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x i8> [[PACK]], i8 [[MUL1]], i32 1
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i8, ptr [[PTR]], i64 0
 ; CHECK-NEXT:    store <2 x i8> [[PACK1]], ptr [[GEP0]], align 1
 ; CHECK-NEXT:    br label %[[LOOP]]
