@@ -21,4 +21,3 @@ runs:
         rm ${{ steps.download-artifact.outputs.filename }}
         tar --zstd -xf ccache.tar.zst
         rm ccache.tar.zst
-        ls -altr
