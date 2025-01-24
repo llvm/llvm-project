@@ -4,8 +4,8 @@ modernize-use-cpp-style-comments
 ================================
 
 Replace C-style comments with C++-style comments.
-C-style comments (`/* ... */`) are inherited from C, while C++ introduces 
-`//` as a more concise, readable, and less error-prone alternative. Modern C++ 
+C-style comments (``/* ... */``) are inherited from C, while C++ introduces 
+``//`` as a more concise, readable, and less error-prone alternative. Modern C++ 
 guidelines recommend using C++-style comments for consistency and 
 maintainability. This check identifies and replaces C-style comments with 
 equivalent C++-style comments.
