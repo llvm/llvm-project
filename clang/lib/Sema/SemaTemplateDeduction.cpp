@@ -3907,7 +3907,7 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     unsigned NumExplicitlySpecified, FunctionDecl *&Specialization,
     TemplateDeductionInfo &Info,
     SmallVectorImpl<OriginalCallArg> const *OriginalCallArgs,
-    bool PartialOverloading, llvm::function_ref<bool()> CheckNonDependent) {
+    bool PartialOverloading, llvm::function_ref<bool(bool)> CheckNonDependent) {
   // Unevaluated SFINAE context.
   EnterExpressionEvaluationContext Unevaluated(
       *this, Sema::ExpressionEvaluationContext::Unevaluated);
@@ -3965,6 +3965,9 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     FD = const_cast<FunctionDecl *>(FDFriend);
     Owner = FD->getLexicalDeclContext();
   }
+
+  if (CheckNonDependent(/*NonInstOnly=*/true))
+    return TemplateDeductionResult::NonDependentConversionFailure;
   // C++20 [temp.deduct.general]p5: [CWG2369]
   //   If the function template has associated constraints, those constraints
   //   are checked for satisfaction. If the constraints are not satisfied, type
@@ -3995,7 +3998,7 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   //   P with a type that was non-dependent before substitution of any
   //   explicitly-specified template arguments, if the corresponding argument
   //   A cannot be implicitly converted to P, deduction fails.
-  if (CheckNonDependent())
+  if (CheckNonDependent(/*NonInstOnly=*/false))
     return TemplateDeductionResult::NonDependentConversionFailure;
 
   MultiLevelTemplateArgumentList SubstArgs(
@@ -4485,7 +4488,7 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
     FunctionDecl *&Specialization, TemplateDeductionInfo &Info,
     bool PartialOverloading, bool AggregateDeductionCandidate,
     QualType ObjectType, Expr::Classification ObjectClassification,
-    llvm::function_ref<bool(ArrayRef<QualType>)> CheckNonDependent) {
+    llvm::function_ref<bool(ArrayRef<QualType>, bool)> CheckNonDependent) {
   if (FunctionTemplate->isInvalidDecl())
     return TemplateDeductionResult::Invalid;
 
@@ -4699,9 +4702,10 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
   runWithSufficientStackSpace(Info.getLocation(), [&] {
     Result = FinishTemplateArgumentDeduction(
         FunctionTemplate, Deduced, NumExplicitlySpecified, Specialization, Info,
-        &OriginalCallArgs, PartialOverloading, [&, CallingCtx]() {
+        &OriginalCallArgs, PartialOverloading,
+        [&, CallingCtx](bool NonInstOnly) {
           ContextRAII SavedContext(*this, CallingCtx);
-          return CheckNonDependent(ParamTypesForArgChecking);
+          return CheckNonDependent(ParamTypesForArgChecking, NonInstOnly);
         });
   });
   return Result;
