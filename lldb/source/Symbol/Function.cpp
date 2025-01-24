@@ -278,11 +278,11 @@ AddressRange CollapseRanges(llvm::ArrayRef<AddressRange> ranges) {
 //
 Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
                    lldb::user_id_t type_uid, const Mangled &mangled, Type *type,
-                   AddressRanges ranges, bool canThrow, bool is_generic_trampoline)
+                   Address address, AddressRanges ranges, bool canThrow, bool is_generic_trampoline)
     : UserID(func_uid), m_comp_unit(comp_unit), m_type_uid(type_uid),
       m_type(type), m_mangled(mangled), m_is_generic_trampoline(is_generic_trampoline),
       m_block(*this, func_uid), m_range(CollapseRanges(ranges)),
-      m_address(m_range.GetBaseAddress()),
+      m_address(std::move(address)),
       m_frame_base(), m_flags(), m_prologue_byte_size(0) {
   if (canThrow)
     m_flags.Set(flagsFunctionCanThrow);

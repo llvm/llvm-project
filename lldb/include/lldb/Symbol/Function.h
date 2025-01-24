@@ -431,8 +431,8 @@ public:
   ///     Pass in true if this is a function know to throw
   Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
            lldb::user_id_t func_type_uid, const Mangled &mangled,
-           Type *func_type, AddressRanges ranges, bool can_throw = false,
-           bool generic_trampoline = false);
+           Type *func_type, Address address, AddressRanges ranges,
+           bool can_throw = false, bool generic_trampoline = false);
 
   /// Destructor.
   ~Function() override;
