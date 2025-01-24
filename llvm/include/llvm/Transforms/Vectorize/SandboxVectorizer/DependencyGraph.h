@@ -218,12 +218,14 @@ class MemDGNode final : public DGNode {
   friend class PredIterator; // For MemPreds.
   /// Creates both edges: this<->N.
   void setNextNode(MemDGNode *N) {
+    assert(N != this && "About to point to self!");
     NextMemN = N;
     if (NextMemN != nullptr)
       NextMemN->PrevMemN = this;
   }
   /// Creates both edges: N<->this.
   void setPrevNode(MemDGNode *N) {
+    assert(N != this && "About to point to self!");
     PrevMemN = N;
     if (PrevMemN != nullptr)
       PrevMemN->NextMemN = this;
@@ -348,13 +350,15 @@ private:
   void createNewNodes(const Interval<Instruction> &NewInterval);
 
   /// Helper for `notify*Instr()`. \Returns the first MemDGNode that comes
-  /// before \p N, including or excluding \p N based on \p IncludingN, or
-  /// nullptr if not found.
-  MemDGNode *getMemDGNodeBefore(DGNode *N, bool IncludingN) const;
+  /// before \p N, skipping \p SkipN, including or excluding \p N based on
+  /// \p IncludingN, or nullptr if not found.
+  MemDGNode *getMemDGNodeBefore(DGNode *N, bool IncludingN,
+                                MemDGNode *SkipN = nullptr) const;
   /// Helper for `notifyMoveInstr()`. \Returns the first MemDGNode that comes
-  /// after \p N, including or excluding \p N based on \p IncludingN, or nullptr
-  /// if not found.
-  MemDGNode *getMemDGNodeAfter(DGNode *N, bool IncludingN) const;
+  /// after \p N, skipping \p SkipN, including or excluding \p N based on \p
+  /// IncludingN, or nullptr if not found.
+  MemDGNode *getMemDGNodeAfter(DGNode *N, bool IncludingN,
+                               MemDGNode *SkipN = nullptr) const;
 
   /// Called by the callbacks when a new instruction \p I has been created.
   void notifyCreateInstr(Instruction *I);
