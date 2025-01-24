@@ -5375,14 +5375,9 @@ let Features = "avx10.2-512", Attributes = [NoThrow, Const, RequiredVectorWidth<
   def vsubnepbf16512 : X86Builtin<"_Vector<32, __bf16>(_Vector<32, __bf16>, _Vector<32, __bf16>)">;
 }
 
-let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vcomsbf16eq : X86Builtin<"int(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
-  def vcomsbf16lt : X86Builtin<"int(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
-  def vcomsbf16neq : X86Builtin<"int(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
-  def vcomsbf16ge : X86Builtin<"int(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
-  def vcomsbf16gt : X86Builtin<"int(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
-  def vcomsbf16le : X86Builtin<"int(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
-}
+let Features = "avx10.2-256", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in
+  foreach Cmp = ["eq", "lt", "le", "gt", "ge", "neq"] in
+    def vcomisbf16#Cmp : X86Builtin<"int(_Vector<8, __bf16>, _Vector<8, __bf16>)">;
 
 let Features = "avx10.2-512", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
   def vcmppbf16512_mask : X86Builtin<"unsigned int(_Vector<32, __bf16>, _Vector<32, __bf16>, _Constant int, unsigned int)">;
