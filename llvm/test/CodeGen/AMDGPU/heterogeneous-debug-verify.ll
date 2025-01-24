@@ -19,7 +19,6 @@
 ; RUN: llc -O3 --mcpu=gfx900 --filetype=obj < %s 2>/dev/null | llvm-dwarfdump --all - 2>/dev/null | FileCheck --check-prefixes=DWARFDUMP-COMMON,DWARFDUMP-STRIPPED %s
 ; RUN: llc -disable-heterogeneous-debug-verify -O3 --mcpu=gfx900 --filetype=obj < %s 2>/dev/null | llvm-dwarfdump --all - 2>/dev/null | FileCheck --check-prefixes=DWARFDUMP-COMMON,DWARFDUMP-RETAINED %s
 
-
 target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7"
 target triple = "amdgcn-amd-amdhsa"
 
@@ -107,7 +106,7 @@ attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memo
 ; DWARFDUMP-COMMON: .debug_line contents:
 ; DWARFDUMP-COMMON-NEXT: debug_line[0x00000000]
 ; DWARFDUMP-COMMON-NEXT: Line table prologue:
-; DWARFDUMP-COMMON-NEXT:     total_length: 0x00000048
+; DWARFDUMP-COMMON-NEXT:     total_length: 0x00000047
 ; DWARFDUMP-COMMON-NEXT:           format: DWARF32
 ; DWARFDUMP-COMMON-NEXT:          version: 5
 ; DWARFDUMP-COMMON-NEXT:     address_size: 8
@@ -142,5 +141,5 @@ attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memo
 ; DWARFDUMP-COMMON-NEXT: Address            Line   Column File   ISA Discriminator OpIndex  Flags
 ; DWARFDUMP-COMMON-NEXT: ------------------ ------ ------ ------ --- -------------  ------- -------------
 ; DWARFDUMP-COMMON-NEXT: 0x[[#%x,]]              1      0      1   0             0 0  is_stmt
-; DWARFDUMP-COMMON-NEXT: 0x[[#%x,]]              1     88      1   0             0 0  is_stmt prologue_end epilogue_begin
+; DWARFDUMP-COMMON-NEXT: 0x[[#%x,]]              1     88      1   0             0 0  is_stmt prologue_end
 ; DWARFDUMP-COMMON-NEXT: 0x[[#%x,]]              1     88      1   0             0 0  is_stmt end_sequence

@@ -542,11 +542,11 @@ define weak_odr void @test(i32 %0) !dbg !34 {
 ; CHECK-NEXT:    v_readlane_b32 s36, v41, 2
 ; CHECK-NEXT:    v_readlane_b32 s35, v41, 1
 ; CHECK-NEXT:    v_readlane_b32 s34, v41, 0
+; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    v_readlane_b32 s4, v41, 16
 ; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; CHECK-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[6:7]
-; CHECK-NEXT:    s_addk_i32 s32, 0xfc00
 ; CHECK-NEXT:    .cfi_def_cfa_register 64
 ; CHECK-NEXT:    s_mov_b32 s33, s4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

@@ -221,11 +221,11 @@ define fastcc i32 @foo() {
   ; CHECK-NEXT: bb.2.DummyReturnBlock:
   ; CHECK-NEXT:   $sgpr30 = V_READLANE_B32 $vgpr40, 0, implicit-def $sgpr30_sgpr31
   ; CHECK-NEXT:   $sgpr31 = V_READLANE_B32 $vgpr40, 1
+  ; CHECK-NEXT:   $sgpr32 = S_MOV_B32 $sgpr33
   ; CHECK-NEXT:   $sgpr4 = V_READLANE_B32 $vgpr40, 2
   ; CHECK-NEXT:   $sgpr5 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   $vgpr40 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %stack.1, addrspace 5)
   ; CHECK-NEXT:   $exec_lo = S_MOV_B32 killed $sgpr5
-  ; CHECK-NEXT:   $sgpr32 = frame-destroy S_ADDK_I32 $sgpr32, -512, implicit-def dead $scc
   ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION def_cfa_register $sgpr32
   ; CHECK-NEXT:   $sgpr33 = S_MOV_B32 killed $sgpr4
   ; CHECK-NEXT:   S_WAITCNT 16240
