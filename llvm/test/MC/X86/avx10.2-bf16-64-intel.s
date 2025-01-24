@@ -204,33 +204,33 @@
 // CHECK: encoding: [0x62,0xf3,0x47,0x37,0xc2,0x6a,0x80,0x7b]
           vcmppbf16 k5 {k7}, ymm23, word ptr [rdx - 256]{1to16}, 123
 
-// CHECK: vcomsbf16 xmm22, xmm23
+// CHECK: vcomisbf16 xmm22, xmm23
 // CHECK: encoding: [0x62,0xa5,0x7d,0x08,0x2f,0xf7]
-          vcomsbf16 xmm22, xmm23
+          vcomisbf16 xmm22, xmm23
 
-// CHECK: vcomsbf16 xmm22, word ptr [rbp + 8*r14 + 268435456]
+// CHECK: vcomisbf16 xmm22, word ptr [rbp + 8*r14 + 268435456]
 // CHECK: encoding: [0x62,0xa5,0x7d,0x08,0x2f,0xb4,0xf5,0x00,0x00,0x00,0x10]
-          vcomsbf16 xmm22, word ptr [rbp + 8*r14 + 268435456]
+          vcomisbf16 xmm22, word ptr [rbp + 8*r14 + 268435456]
 
-// CHECK: vcomsbf16 xmm22, word ptr [r8 + 4*rax + 291]
+// CHECK: vcomisbf16 xmm22, word ptr [r8 + 4*rax + 291]
 // CHECK: encoding: [0x62,0xc5,0x7d,0x08,0x2f,0xb4,0x80,0x23,0x01,0x00,0x00]
-          vcomsbf16 xmm22, word ptr [r8 + 4*rax + 291]
+          vcomisbf16 xmm22, word ptr [r8 + 4*rax + 291]
 
-// CHECK: vcomsbf16 xmm22, word ptr [rip]
+// CHECK: vcomisbf16 xmm22, word ptr [rip]
 // CHECK: encoding: [0x62,0xe5,0x7d,0x08,0x2f,0x35,0x00,0x00,0x00,0x00]
-          vcomsbf16 xmm22, word ptr [rip]
+          vcomisbf16 xmm22, word ptr [rip]
 
-// CHECK: vcomsbf16 xmm22, word ptr [2*rbp - 64]
+// CHECK: vcomisbf16 xmm22, word ptr [2*rbp - 64]
 // CHECK: encoding: [0x62,0xe5,0x7d,0x08,0x2f,0x34,0x6d,0xc0,0xff,0xff,0xff]
-          vcomsbf16 xmm22, word ptr [2*rbp - 64]
+          vcomisbf16 xmm22, word ptr [2*rbp - 64]
 
-// CHECK: vcomsbf16 xmm22, word ptr [rcx + 254]
+// CHECK: vcomisbf16 xmm22, word ptr [rcx + 254]
 // CHECK: encoding: [0x62,0xe5,0x7d,0x08,0x2f,0x71,0x7f]
-          vcomsbf16 xmm22, word ptr [rcx + 254]
+          vcomisbf16 xmm22, word ptr [rcx + 254]
 
-// CHECK: vcomsbf16 xmm22, word ptr [rdx - 256]
+// CHECK: vcomisbf16 xmm22, word ptr [rdx - 256]
 // CHECK: encoding: [0x62,0xe5,0x7d,0x08,0x2f,0x72,0x80]
-          vcomsbf16 xmm22, word ptr [rdx - 256]
+          vcomisbf16 xmm22, word ptr [rdx - 256]
 
 // CHECK: vdivnepbf16 ymm22, ymm23, ymm24
 // CHECK: encoding: [0x62,0x85,0x45,0x20,0x5e,0xf0]
