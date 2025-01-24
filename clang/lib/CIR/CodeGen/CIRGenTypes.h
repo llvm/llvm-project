@@ -36,7 +36,7 @@ class CIRGenModule;
 /// AST types to CIR types.
 class CIRGenTypes {
   CIRGenModule &cgm;
-  clang::ASTContext &astContext;
+  clang::ASTContext &context;
   CIRGenBuilderTy &builder;
 
 public:

@@ -25,14 +25,13 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
-                           clang::ASTContext &astContext,
+CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
+                           clang::ASTContext &astctx,
                            const clang::CodeGenOptions &cgo,
                            DiagnosticsEngine &diags)
-    : builder(mlirContext, *this), astContext(astContext),
-      langOpts(astContext.getLangOpts()),
-      theModule{mlir::ModuleOp::create(mlir::UnknownLoc::get(&mlirContext))},
-      diags(diags), target(astContext.getTargetInfo()), genTypes(*this) {
+    : builder(context, *this), astCtx(astctx), langOpts(astctx.getLangOpts()),
+      theModule{mlir::ModuleOp::create(mlir::UnknownLoc::get(&context))},
+      diags(diags), target(astctx.getTargetInfo()), genTypes(*this) {
 
   // Initialize cached types
   SInt8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/true);
@@ -49,7 +48,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
 
 mlir::Location CIRGenModule::getLoc(SourceLocation cLoc) {
   assert(cLoc.isValid() && "expected valid source location");
-  const SourceManager &sm = astContext.getSourceManager();
+  const SourceManager &sm = astCtx.getSourceManager();
   PresumedLoc pLoc = sm.getPresumedLoc(cLoc);
   StringRef filename = pLoc.getFilename();
   return mlir::FileLineColLoc::get(builder.getStringAttr(filename),
