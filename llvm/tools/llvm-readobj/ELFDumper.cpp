@@ -606,6 +606,7 @@ public:
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
   void printCGProfile() override;
   void printBBAddrMaps(bool PrettyPGOAnalysis) override;
+  void printFuncMaps() override;
   void printAddrsig() override;
   void printNotes() override;
   void printELFLinkerOptions() override;
@@ -717,6 +718,7 @@ public:
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
   void printCGProfile() override;
   void printBBAddrMaps(bool PrettyPGOAnalysis) override;
+  void printFuncMaps() override;
   void printAddrsig() override;
   void printNotes() override;
   void printELFLinkerOptions() override;
@@ -5199,6 +5201,10 @@ void GNUELFDumper<ELFT>::printBBAddrMaps(bool /*PrettyPGOAnalysis*/) {
   OS << "GNUStyle::printBBAddrMaps not implemented\n";
 }
 
+template <class ELFT> void GNUELFDumper<ELFT>::printFuncMaps() {
+  OS << "GNUStyle::printFuncMaps not implemented\n";
+}
+
 static Expected<std::vector<uint64_t>> toULEB128Array(ArrayRef<uint8_t> Data) {
   std::vector<uint64_t> Ret;
   const uint8_t *Cur = Data.begin();
@@ -7891,6 +7897,60 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
           }
         }
       }
+    }
+  }
+}
+
+template <class ELFT> void LLVMELFDumper<ELFT>::printFuncMaps() {
+  bool IsRelocatable = this->Obj.getHeader().e_type == ELF::ET_REL;
+  using Elf_Shdr = typename ELFT::Shdr;
+  auto IsMatch = [](const Elf_Shdr &Sec) -> bool {
+    return Sec.sh_type == ELF::SHT_LLVM_FUNC_MAP;
+  };
+  Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> SecRelocMapOrErr =
+      this->Obj.getSectionAndRelocations(IsMatch);
+  if (!SecRelocMapOrErr) {
+    this->reportUniqueWarning("failed to get SHT_LLVM_FUNC_MAP section(s): " +
+                              toString(SecRelocMapOrErr.takeError()));
+    return;
+  }
+
+  for (auto const &[Sec, RelocSec] : *SecRelocMapOrErr) {
+    std::optional<const Elf_Shdr *> FunctionSec;
+    if (IsRelocatable)
+      FunctionSec =
+          unwrapOrError(this->FileName, this->Obj.getSection(Sec->sh_link));
+    ListScope L(W, "FuncMap");
+    if (IsRelocatable && !RelocSec) {
+      this->reportUniqueWarning("unable to get relocation section for " +
+                                this->describe(*Sec));
+      continue;
+    }
+    Expected<std::vector<FuncMap>> FuncMapOrErr =
+        this->Obj.decodeFuncMap(*Sec, RelocSec);
+    if (!FuncMapOrErr) {
+      this->reportUniqueWarning("unable to dump " + this->describe(*Sec) +
+                                ": " + toString(FuncMapOrErr.takeError()));
+      continue;
+    }
+    for (const auto &AM : *FuncMapOrErr) {
+      DictScope D(W, "Function");
+      W.printHex("At", AM.getFunctionAddress());
+      SmallVector<uint32_t> FuncSymIndex =
+          this->getSymbolIndexesForFunctionAddress(AM.getFunctionAddress(),
+                                                   FunctionSec);
+      std::string FuncName = "<?>";
+      if (FuncSymIndex.empty())
+        this->reportUniqueWarning(
+            "could not identify function symbol for address (0x" +
+            Twine::utohexstr(AM.getFunctionAddress()) + ") in " +
+            this->describe(*Sec));
+      else
+        FuncName = this->getStaticSymbolName(FuncSymIndex.front());
+
+      W.printString("Name", FuncName);
+      if (AM.FeatEnable.DynamicInstCount)
+        W.printNumber("DynamicInstCount", AM.DynamicInstCount);
     }
   }
 }

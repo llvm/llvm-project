@@ -535,6 +535,30 @@ Example of BBAddrMap with PGO data:
    .uleb128  1000                         # BB_3 basic block frequency (only when enabled)
    .uleb128  0                            # BB_3 successors count (only enabled with branch probabilities)
 
+``SHT_LLVM_FUNC_MAP`` Section (function address map)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This section stores the mapping from the binary address of function to its
+related metadata features. It is used to emit function-level analysis data and
+can be enabled through ``--func-map=<feature>`` option.
+
+Three fields are stored at the beginning: a version number byte for backward
+compatibility, a feature byte where each bit represents a specific feature, and
+the function's entry address. The encodings for each enabled feature come after
+these fields. The currently supported feature is:
+
+#. Dynamic Instruction Count - Total PGO counts for all instructions within the function.
+
+Example:
+
+.. code-block:: gas
+
+  .section  ".llvm_func_map","",@llvm_func_map
+  .byte     1                             # version number
+  .byte     1                             # feature
+  .quad     .Lfunc_begin1                 # function address
+  .uleb128  333                           # dynamic instruction count
+
+
 ``SHT_LLVM_OFFLOADING`` Section (offloading data)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 This section stores the binary data used to perform offloading device linking
@@ -725,4 +749,3 @@ follows:
   add x16, x16, :lo12:__chkstk
   blr x16
   sub sp, sp, x15, lsl #4
-

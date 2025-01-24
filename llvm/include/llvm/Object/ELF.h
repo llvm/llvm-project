@@ -513,6 +513,13 @@ public:
   decodeBBAddrMap(const Elf_Shdr &Sec, const Elf_Shdr *RelaSec = nullptr,
                   std::vector<PGOAnalysisMap> *PGOAnalyses = nullptr) const;
 
+  /// Returns a vector of FuncMap structs corresponding to each function
+  /// within the text section that the SHT_LLVM_FUNC_MAP section \p Sec
+  /// is associated with. If the current ELFFile is relocatable, a corresponding
+  /// \p RelaSec must be passed in as an argument.
+  Expected<std::vector<FuncMap>>
+  decodeFuncMap(const Elf_Shdr &Sec, const Elf_Shdr *RelaSec = nullptr) const;
+
   /// Returns a map from every section matching \p IsMatch to its relocation
   /// section, or \p nullptr if it has no relocation section. This function
   /// returns an error if any of the \p IsMatch calls fail or if it fails to
