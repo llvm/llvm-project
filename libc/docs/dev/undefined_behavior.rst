@@ -78,8 +78,8 @@ POSIX.1 leaves that when the name of a shared memory object does not begin with 
 Handling of NULL arguments to the 's' format specifier
 ------------------------------------------------------
 The C standard does not specify behavior for ``printf("%s", NULL)``. We will
-print the string literal ``(null)`` unless using the 
-``LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS`` option described in :ref:`printf 
+print the string literal ``(null)`` unless using the
+``LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS`` option described in :ref:`printf
 behavior<printf_behavior>`.
 
 Unknown Math Rounding Direction
@@ -116,8 +116,12 @@ there.
 
 If a struct tm with values out of the normal range is passed, the standard says
 the result is undefined. For LLVM-libc, the result may be either the normalized
-value (e.g. weekday % 7) or the actual, out of range value. This behavior is not
-necessarily consistent between conversions, even similar ones. For conversions
+value (e.g. weekday % 7) or the actual, out of range value. For any numeric
+conversion where the result is just printing a value out of the struct
+(e.g. "%w" prints the day of the week), no normalization occurs ("%w" on a
+tm_wday of 32 prints "32"). For any numeric conversion where the value is
+calculated (e.g. "%u" prints the day of the week, starting on monday), the
+value is normalized (e.g. "%u" on a tm_wday of 32 prints "4"). For conversions
 that result in strings, passing an out of range value will result in "?".
 
 Posix adds padding support to strftime, but says "the default padding character
