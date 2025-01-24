@@ -61,7 +61,7 @@ jobs:
       - name: Build and Test
         shell: cmd
         run: |
-          echo "$ {{ steps.vars.outputs.windows-projects }}"
-          echo "$ {{ steps.vars.outputs.windows-check-targets }}"
+          echo "${{ steps.vars.outputs.windows-projects }}"
+          echo "${{ steps.vars.outputs.windows-check-targets }}"
           #call C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64
           #bash .ci/monolithic-windows.sh "llvm;clang" "check-llvm check-clang"
