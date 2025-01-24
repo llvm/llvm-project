@@ -18,6 +18,7 @@
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/MCPlusBuilder.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCFixupKindInfo.h"
@@ -246,6 +247,34 @@ public:
             Inst.getOpcode() == AArch64::ADDXrs ||
             Inst.getOpcode() == AArch64::ADDXrx ||
             Inst.getOpcode() == AArch64::ADDXrx64);
+  }
+
+  bool isSUB(const MCInst &Inst) const override {
+    const unsigned opcode = Inst.getOpcode();
+    switch (opcode) {
+    case AArch64::SUBSWri:
+    case AArch64::SUBSWrr:
+    case AArch64::SUBSWrs:
+    case AArch64::SUBSWrx:
+    case AArch64::SUBSXri:
+    case AArch64::SUBSXrr:
+    case AArch64::SUBSXrs:
+    case AArch64::SUBSXrx:
+    case AArch64::SUBSXrx64:
+    case AArch64::SUBWri:
+    case AArch64::SUBWrr:
+    case AArch64::SUBWrs:
+    case AArch64::SUBWrx:
+    case AArch64::SUBXri:
+    case AArch64::SUBXrr:
+    case AArch64::SUBXrs:
+    case AArch64::SUBXrx:
+    case AArch64::SUBXrx64:
+      return true;
+    default:
+      return false;
+    }
+    llvm_unreachable("");
   }
 
   bool isLDRB(const MCInst &Inst) const {
@@ -834,13 +863,45 @@ public:
   ///                                   #  of this BB)
   ///   br      x0                      # Indirect jump instruction
   ///
+  /// adrp + ldr pair instructions of JT
+  ///   adrp    x3, :got:jump_table
+  ///   ldr     x1, [x1, #value]
+  ///   ldrh    w1, [x1, w3, uxtw #1]
+  ///   adr     x3, 573ae4
+  ///   add     x1, x3, w1, sxth #2
+  ///   br      x1
+  ///
+  /// lld/test/ELF/aarch64-adrp-ldr-got.s
+  /// if .rodata and .text are sufficiently (<1M)
+  /// close to each other so that the adrp + ldr pair can be relaxed to
+  /// nop + adr.
+  ///   nop                             #
+  ///   adr     x0, #6d8f8              # Get JT table address
+  ///   ldrh    w0, [x0, w4, uxtw #1]   # Loads JT entry
+  ///   adr     x2, 1479b0              # Get PC first instruction for next BB
+  ///   add     x0, x2, w0, sxth #2     # Finish building branch target
+  ///                                   # (entries in JT are relative to the end
+  ///                                   #  of this BB)
+  ///   br      x0                      # Indirect jump instruction
+  ///
+  /// sub + ldr pair instructions of JT, JT address on the stack and other BB
+  ///   sub     x1, x29, #0x4, lsl #12
+  ///   ldr     x1, [x1, #14352]
+  ///   ldrh    w1, [x1, w3, uxtw #1]
+  ///   adr     x3, 573ae4
+  ///   add     x1, x3, w1, sxth #2
+  ///   br      x1
   bool analyzeIndirectBranchFragment(
       const MCInst &Inst,
       DenseMap<const MCInst *, SmallVector<MCInst *, 4>> &UDChain,
       const MCExpr *&JumpTable, int64_t &Offset, int64_t &ScaleValue,
       MCInst *&PCRelBase) const {
-    // Expect AArch64 BR
-    assert(Inst.getOpcode() == AArch64::BR && "Unexpected opcode");
+
+    if (Inst.getOpcode() != AArch64::BR) {
+      if (opts::Verbosity > 1)
+        outs() << "BOLT-WARNING: Unexpected opcode\n";
+      return false;
+    }
 
     // Match the indirect branch pattern for aarch64
     SmallVector<MCInst *, 4> &UsesRoot = UDChain[&Inst];
@@ -879,8 +940,12 @@ public:
       // Parsed as ADDXrs reg:x8 reg:x8 reg:x12 imm:0
       return false;
     }
-    assert(DefAdd->getOpcode() == AArch64::ADDXrx &&
-           "Failed to match indirect branch!");
+
+    if (DefAdd->getOpcode() != AArch64::ADDXrx) {
+      if (opts::Verbosity > 1)
+        outs() << "BOLT-WARNING: Failed to match indirect branch!\n";
+      return false;
+    }
 
     // Validate ADD operands
     int64_t OperandExtension = DefAdd->getOperand(3).getImm();
@@ -919,61 +984,129 @@ public:
       // This was observed in the wild in HHVM code (dispatchImpl).
       return false;
     }
+
     MCInst *DefBaseAddr = UsesAdd[1];
-    assert(DefBaseAddr->getOpcode() == AArch64::ADR &&
-           "Failed to match indirect branch pattern! (fragment 3)");
+    if (DefBaseAddr->getOpcode() != AArch64::ADR) {
+      if (opts::Verbosity > 1)
+        outs() << "BOLT-WARNING: "
+               << "Failed to match indirect branch pattern! (fragment 3)\n";
+      return false;
+    }
 
     PCRelBase = DefBaseAddr;
     // Match LOAD to load the jump table (relative) target
     const MCInst *DefLoad = UsesAdd[2];
-    assert(mayLoad(*DefLoad) &&
-           "Failed to match indirect branch load pattern! (1)");
-    assert((ScaleValue != 1LL || isLDRB(*DefLoad)) &&
-           "Failed to match indirect branch load pattern! (2)");
-    assert((ScaleValue != 2LL || isLDRH(*DefLoad)) &&
-           "Failed to match indirect branch load pattern! (3)");
+    if (!mayLoad(*DefLoad)) {
+      if (opts::Verbosity > 1)
+        outs() << "BOLT-WARNING: "
+               << "Failed to match indirect branch load pattern! (1)\n";
+      return false;
+    }
+
+    if (isLDRB(*DefLoad) && ScaleValue != 1LL) {
+      if (opts::Verbosity > 1)
+        outs() << "BOLT-WARNING: "
+               << "Failed to match indirect branch load pattern! (2)\n";
+      return false;
+    } else if (isLDRH(*DefLoad) && ScaleValue != 2LL) {
+      if (opts::Verbosity > 1)
+        outs() << "BOLT-WARNING: "
+               << "Failed to match indirect branch load pattern! (3)\n";
+      return false;
+    } else if (isLDRW(*DefLoad) && ScaleValue != 4LL) {
+      if (opts::Verbosity > 1)
+        outs() << "BOLT-WARNING: "
+               << "Failed to match indirect branch load pattern! (4)\n";
+      return false;
+    }
 
     // Match ADD that calculates the JumpTable Base Address (not the offset)
     SmallVector<MCInst *, 4> &UsesLoad = UDChain[DefLoad];
-    const MCInst *DefJTBaseAdd = UsesLoad[1];
+    const MCInst *DefJTPageBias = UsesLoad[1];
     MCPhysReg From, To;
-    if (DefJTBaseAdd == nullptr || isLoadFromStack(*DefJTBaseAdd) ||
-        isRegToRegMove(*DefJTBaseAdd, From, To)) {
+    JumpTable = nullptr;
+    if (DefJTPageBias == nullptr || isLoadFromStack(*DefJTPageBias) ||
+        isRegToRegMove(*DefJTPageBias, From, To)) {
       // Sometimes base address may have been defined in another basic block
       // (hoisted). Return with no jump table info.
-      JumpTable = nullptr;
       return true;
     }
 
-    if (DefJTBaseAdd->getOpcode() == AArch64::ADR) {
+    if (isAddXri(*DefJTPageBias)) {
+      if (DefJTPageBias->getOperand(2).isImm())
+        Offset = DefJTPageBias->getOperand(2).getImm();
+      SmallVector<MCInst *, 4> &UsesJTBaseAdd = UDChain[DefJTPageBias];
+      const MCInst *DefJTBasePage = UsesJTBaseAdd[1];
+      if (DefJTBasePage == nullptr || isLoadFromStack(*DefJTBasePage)) {
+        return true;
+      }
+
+      if (DefJTBasePage->getOpcode() != AArch64::ADRP) {
+        if (opts::Verbosity > 1)
+          outs() << "BOLT-WARNING: "
+                 << "Failed to match jump table base page pattern! (2)\n";
+        return false;
+      }
+
+      if (DefJTBasePage->getOperand(1).isExpr())
+        JumpTable = DefJTBasePage->getOperand(1).getExpr();
+      return true;
+    } else if (isADR(*DefJTPageBias)) {
       // TODO: Handle the pattern where there is no adrp/add pair.
       // It also occurs when the binary is static.
-      //  adr     x13, 0x215a18 <_nl_value_type_LC_COLLATE+0x50>
+      //  nop
+      //  *adr     x13, 0x215a18 <_nl_value_type_LC_COLLATE+0x50>
       //  ldrh    w13, [x13, w12, uxtw #1]
       //  adr     x12, 0x247b30 <__gettextparse+0x5b0>
       //  add     x13, x12, w13, sxth #2
       //  br      x13
-      errs() << "BOLT-WARNING: Failed to match indirect branch: "
-                "nop/adr instead of adrp/add \n";
-      return false;
+      SmallVector<MCInst *, 4> &UsesJTNop = UDChain[DefJTPageBias];
+      if (UsesJTNop.size() == 1 && UsesJTNop[0] != nullptr) {
+        if (opts::Verbosity > 1)
+          outs() << "BOLT-WARNING: "
+                 << "Failed to match jump table pattern! (2)\n";
+        return false;
+      }
+
+      if (DefJTPageBias->getOperand(1).isExpr()) {
+        JumpTable = DefJTPageBias->getOperand(1).getExpr();
+        return true;
+      }
+    } else if (mayLoad(*DefJTPageBias)) {
+      if (isLoadFromStack(*DefJTPageBias))
+        return true;
+
+      SmallVector<MCInst *, 4> &UsesJTBase = UDChain[DefJTPageBias];
+      const MCInst *DefJTBasePage = UsesJTBase[1];
+      if (DefJTBasePage == nullptr)
+        return true;
+      if (DefJTBasePage->getOpcode() == AArch64::ADRP) {
+        // test jmp-table-pattern-matching.s (3)
+        if (DefJTBasePage->getOperand(1).isExpr())
+          JumpTable = DefJTBasePage->getOperand(1).getExpr();
+        return true;
+      } else {
+        // Base address may have been defined in another basic block
+        // and sub instruction can be used to get base page address
+        // jmp-table-pattern-matching.s (2)
+        if (isSUB(*DefJTBasePage)) {
+          for (const MCOperand &Operand : useOperands(*DefJTBasePage)) {
+            if (!Operand.isReg())
+              continue;
+            const unsigned Reg = Operand.getReg();
+            if (Reg == AArch64::SP || Reg == AArch64::WSP ||
+                Reg == AArch64::FP || Reg == AArch64::W29)
+              return true;
+          }
+        }
+      }
     }
 
-    assert(DefJTBaseAdd->getOpcode() == AArch64::ADDXri &&
-           "Failed to match jump table base address pattern! (1)");
+    if (opts::Verbosity > 1)
+      outs() << "BOLT-WARNING: "
+             << "Failed to match jump table pattern! (4)\n";
 
-    if (DefJTBaseAdd->getOperand(2).isImm())
-      Offset = DefJTBaseAdd->getOperand(2).getImm();
-    SmallVector<MCInst *, 4> &UsesJTBaseAdd = UDChain[DefJTBaseAdd];
-    const MCInst *DefJTBasePage = UsesJTBaseAdd[1];
-    if (DefJTBasePage == nullptr || isLoadFromStack(*DefJTBasePage)) {
-      JumpTable = nullptr;
-      return true;
-    }
-    assert(DefJTBasePage->getOpcode() == AArch64::ADRP &&
-           "Failed to match jump table base page pattern! (2)");
-    if (DefJTBasePage->getOperand(1).isExpr())
-      JumpTable = DefJTBasePage->getOperand(1).getExpr();
-    return true;
+    return false;
   }
 
   DenseMap<const MCInst *, SmallVector<MCInst *, 4>>

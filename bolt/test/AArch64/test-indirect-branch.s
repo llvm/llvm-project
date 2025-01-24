@@ -56,28 +56,9 @@ test1_1:
 test1_2:
    ret
 
-// Pattern 2
-// CHECK: BOLT-WARNING: Failed to match indirect branch: nop/adr instead of adrp/add
-  .globl test2
-  .type  test2, %function
-test2:
-  nop
-  adr     x3, jump_table
-  ldrh    w3, [x3, x1, lsl #1]
-  adr     x1, test2_0
-  add     x3, x1, w3, sxth #2
-  br      x3
-test2_0:
-  ret
-test2_1:
-  ret
-
   .section .rodata,"a",@progbits
 datatable:
   .word test1_0-datatable
   .word test1_1-datatable
   .word test1_2-datatable
 
-jump_table:
-  .hword  (test2_0-test2_0)>>2
-  .hword  (test2_1-test2_0)>>2
