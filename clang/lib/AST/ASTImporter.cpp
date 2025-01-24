@@ -4756,6 +4756,15 @@ ExpectedDecl ASTNodeImporter::VisitParmVarDecl(ParmVarDecl *D) {
                               /*DefaultArg*/ nullptr))
     return ToParm;
 
+  if (D->isExplicitObjectParameter()) {
+    auto ToExplicitObjectParameterLoc =
+        importChecked(Err, D->getExplicitObjectParamThisLoc());
+    if (Err)
+      return std::move(Err);
+
+    ToParm->setExplicitObjectParameterLoc(ToExplicitObjectParameterLoc);
+  }
+
   // Set the default argument. It should be no problem if it was already done.
   // Do not import the default expression before GetImportedOrCreateDecl call
   // to avoid possible infinite import loop because circular dependency.
