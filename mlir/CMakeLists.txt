@@ -63,6 +63,7 @@ list(INSERT CMAKE_MODULE_PATH 0
   )
 
 include(AddMLIR)
+include(IRDLToCpp)
 
 # -BSymbolic is incompatible with TypeID
 if("${CMAKE_SHARED_LINKER_FLAGS}" MATCHES "-Bsymbolic[^-]")
