@@ -32,10 +32,10 @@ body: |
     ; GPRIDX-NEXT: $m0 = COPY [[COPY1]]
     ; GPRIDX-NEXT: [[S_MOVRELS_B32_:%[0-9]+]]:sreg_32 = S_MOVRELS_B32 [[COPY]].sub0, implicit $m0, implicit [[COPY]]
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B32_]]
-    %0:sgpr(<2 x s32>) = COPY $sgpr0_sgpr1
-    %1:sgpr(s32) = COPY $sgpr2
-    %2:sgpr(s32) = G_EXTRACT_VECTOR_ELT %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:sgpr(<2 x i32>) = COPY $sgpr0_sgpr1
+    %1:sgpr(i32) = COPY $sgpr2
+    %2:sgpr(i32) = G_EXTRACT_VECTOR_ELT %0(<2 x i32>), %1(i32)
+    S_ENDPGM 0, implicit %2(i32)
 ...
 
 ---
@@ -64,10 +64,10 @@ body: |
     ; GPRIDX-NEXT: $m0 = COPY [[COPY1]]
     ; GPRIDX-NEXT: [[S_MOVRELS_B32_:%[0-9]+]]:sreg_32 = S_MOVRELS_B32 [[COPY]].sub0, implicit $m0, implicit [[COPY]]
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B32_]]
-    %0:sgpr(<3 x s32>) = COPY $sgpr0_sgpr1_sgpr2
-    %1:sgpr(s32) = COPY $sgpr2
-    %2:sgpr(s32) = G_EXTRACT_VECTOR_ELT %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:sgpr(<3 x i32>) = COPY $sgpr0_sgpr1_sgpr2
+    %1:sgpr(i32) = COPY $sgpr2
+    %2:sgpr(i32) = G_EXTRACT_VECTOR_ELT %0(<3 x i32>), %1(i32)
+    S_ENDPGM 0, implicit %2(i32)
 ...
 
 ---
@@ -96,10 +96,10 @@ body: |
     ; GPRIDX-NEXT: $m0 = COPY [[COPY1]]
     ; GPRIDX-NEXT: [[S_MOVRELS_B32_:%[0-9]+]]:sreg_32 = S_MOVRELS_B32 [[COPY]].sub0, implicit $m0, implicit [[COPY]]
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B32_]]
-    %0:sgpr(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    %1:sgpr(s32) = COPY $sgpr4
-    %2:sgpr(s32) = G_EXTRACT_VECTOR_ELT %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:sgpr(<4 x i32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %1:sgpr(i32) = COPY $sgpr4
+    %2:sgpr(i32) = G_EXTRACT_VECTOR_ELT %0(<4 x i32>), %1(i32)
+    S_ENDPGM 0, implicit %2(i32)
 ...
 
 ---
@@ -128,10 +128,10 @@ body: |
     ; GPRIDX-NEXT: $m0 = COPY [[COPY1]]
     ; GPRIDX-NEXT: [[S_MOVRELS_B32_:%[0-9]+]]:sreg_32 = S_MOVRELS_B32 [[COPY]].sub0, implicit $m0, implicit [[COPY]]
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B32_]]
-    %0:sgpr(<8 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
-    %1:sgpr(s32) = COPY $sgpr8
-    %2:sgpr(s32) = G_EXTRACT_VECTOR_ELT %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:sgpr(<8 x i32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    %1:sgpr(i32) = COPY $sgpr8
+    %2:sgpr(i32) = G_EXTRACT_VECTOR_ELT %0(<8 x i32>), %1(i32)
+    S_ENDPGM 0, implicit %2(i32)
 ...
 
 ---
@@ -160,10 +160,10 @@ body: |
     ; GPRIDX-NEXT: $m0 = COPY [[COPY1]]
     ; GPRIDX-NEXT: [[S_MOVRELS_B32_:%[0-9]+]]:sreg_32 = S_MOVRELS_B32 [[COPY]].sub0, implicit $m0, implicit [[COPY]]
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B32_]]
-    %0:sgpr(<16 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-    %1:sgpr(s32) = COPY $sgpr8
-    %2:sgpr(s32) = G_EXTRACT_VECTOR_ELT %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:sgpr(<16 x i32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    %1:sgpr(i32) = COPY $sgpr8
+    %2:sgpr(i32) = G_EXTRACT_VECTOR_ELT %0(<16 x i32>), %1(i32)
+    S_ENDPGM 0, implicit %2(i32)
 ...
 
 ---
@@ -192,10 +192,10 @@ body: |
     ; GPRIDX-NEXT: $m0 = COPY [[COPY1]]
     ; GPRIDX-NEXT: [[S_MOVRELS_B32_:%[0-9]+]]:sreg_32 = S_MOVRELS_B32 [[COPY]].sub0, implicit $m0, implicit [[COPY]]
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B32_]]
-    %0:sgpr(<32 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31
-    %1:sgpr(s32) = COPY $sgpr40
-    %2:sgpr(s32) = G_EXTRACT_VECTOR_ELT %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:sgpr(<32 x i32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31
+    %1:sgpr(i32) = COPY $sgpr40
+    %2:sgpr(i32) = G_EXTRACT_VECTOR_ELT %0(<32 x i32>), %1(i32)
+    S_ENDPGM 0, implicit %2(i32)
 ...
 
 ---
@@ -224,10 +224,10 @@ body: |
     ; GPRIDX-NEXT: $m0 = COPY [[COPY1]]
     ; GPRIDX-NEXT: [[S_MOVRELS_B64_:%[0-9]+]]:sreg_64 = S_MOVRELS_B64 [[COPY]].sub0_sub1, implicit $m0, implicit [[COPY]]
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B64_]]
-    %0:sgpr(<2 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    %1:sgpr(s32) = COPY $sgpr4
-    %2:sgpr(s64) = G_EXTRACT_VECTOR_ELT %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:sgpr(<2 x i64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %1:sgpr(i32) = COPY $sgpr4
+    %2:sgpr(i64) = G_EXTRACT_VECTOR_ELT %0(<2 x i64>), %1(i32)
+    S_ENDPGM 0, implicit %2(i64)
 ...
 
 ---
@@ -256,10 +256,10 @@ body: |
     ; GPRIDX-NEXT: $m0 = COPY [[COPY1]]
     ; GPRIDX-NEXT: [[S_MOVRELS_B64_:%[0-9]+]]:sreg_64 = S_MOVRELS_B64 [[COPY]].sub0_sub1, implicit $m0, implicit [[COPY]]
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B64_]]
-    %0:sgpr(<4 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
-    %1:sgpr(s32) = COPY $sgpr8
-    %2:sgpr(s64) = G_EXTRACT_VECTOR_ELT %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:sgpr(<4 x i64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    %1:sgpr(i32) = COPY $sgpr8
+    %2:sgpr(i64) = G_EXTRACT_VECTOR_ELT %0(<4 x i64>), %1(i32)
+    S_ENDPGM 0, implicit %2(i64)
 ...
 
 ---
@@ -288,10 +288,10 @@ body: |
     ; GPRIDX-NEXT: $m0 = COPY [[COPY1]]
     ; GPRIDX-NEXT: [[S_MOVRELS_B64_:%[0-9]+]]:sreg_64 = S_MOVRELS_B64 [[COPY]].sub0_sub1, implicit $m0, implicit [[COPY]]
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B64_]]
-    %0:sgpr(<8 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-    %1:sgpr(s32) = COPY $sgpr8
-    %2:sgpr(s64) = G_EXTRACT_VECTOR_ELT %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:sgpr(<8 x i64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    %1:sgpr(i32) = COPY $sgpr8
+    %2:sgpr(i64) = G_EXTRACT_VECTOR_ELT %0(<8 x i64>), %1(i32)
+    S_ENDPGM 0, implicit %2(i64)
 ...
 
 ---
@@ -320,10 +320,10 @@ body: |
     ; GPRIDX-NEXT: $m0 = COPY [[COPY1]]
     ; GPRIDX-NEXT: [[S_MOVRELS_B64_:%[0-9]+]]:sreg_64 = S_MOVRELS_B64 [[COPY]].sub0_sub1, implicit $m0, implicit [[COPY]]
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B64_]]
-    %0:sgpr(<16 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31
-    %1:sgpr(s32) = COPY $sgpr40
-    %2:sgpr(s64) = G_EXTRACT_VECTOR_ELT %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:sgpr(<16 x i64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27_sgpr28_sgpr29_sgpr30_sgpr31
+    %1:sgpr(i32) = COPY $sgpr40
+    %2:sgpr(i64) = G_EXTRACT_VECTOR_ELT %0(<16 x i64>), %1(i32)
+    S_ENDPGM 0, implicit %2(i64)
 ...
 
 ---
@@ -352,12 +352,12 @@ body: |
     ; GPRIDX-NEXT: $m0 = COPY [[COPY1]]
     ; GPRIDX-NEXT: [[S_MOVRELS_B32_:%[0-9]+]]:sreg_32 = S_MOVRELS_B32 [[COPY]].sub1, implicit $m0, implicit [[COPY]]
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B32_]]
-    %0:sgpr(<8 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
-    %1:sgpr(s32) = COPY $sgpr8
-    %2:sgpr(s32) = G_CONSTANT i32 1
-    %3:sgpr(s32) = G_ADD %1, %2
-    %4:sgpr(s32) = G_EXTRACT_VECTOR_ELT %0, %3
-    S_ENDPGM 0, implicit %4
+    %0:sgpr(<8 x i32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    %1:sgpr(i32) = COPY $sgpr8
+    %2:sgpr(i32) = G_CONSTANT i32 1
+    %3:sgpr(i32) = G_ADD %1, %2
+    %4:sgpr(i32) = G_EXTRACT_VECTOR_ELT %0(<8 x i32>), %3(i32)
+    S_ENDPGM 0, implicit %4(i32)
 ...
 
 ---
@@ -390,12 +390,12 @@ body: |
     ; GPRIDX-NEXT: $m0 = COPY [[S_ADD_I32_]]
     ; GPRIDX-NEXT: [[S_MOVRELS_B32_:%[0-9]+]]:sreg_32 = S_MOVRELS_B32 [[COPY]].sub0, implicit $m0, implicit [[COPY]]
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B32_]]
-    %0:sgpr(<8 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
-    %1:sgpr(s32) = COPY $sgpr8
-    %2:sgpr(s32) = G_CONSTANT i32 -1
-    %3:sgpr(s32) = G_ADD %1, %2
-    %4:sgpr(s32) = G_EXTRACT_VECTOR_ELT %0, %3
-    S_ENDPGM 0, implicit %4
+    %0:sgpr(<8 x i32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    %1:sgpr(i32) = COPY $sgpr8
+    %2:sgpr(i32) = G_CONSTANT i32 -1
+    %3:sgpr(i32) = G_ADD %1, %2
+    %4:sgpr(i32) = G_EXTRACT_VECTOR_ELT %0(<8 x i32>), %3(i32)
+    S_ENDPGM 0, implicit %4(i32)
 ...
 
 ---
@@ -424,12 +424,12 @@ body: |
     ; GPRIDX-NEXT: $m0 = COPY [[COPY1]]
     ; GPRIDX-NEXT: [[S_MOVRELS_B32_:%[0-9]+]]:sreg_32 = S_MOVRELS_B32 [[COPY]].sub7, implicit $m0, implicit [[COPY]]
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B32_]]
-    %0:sgpr(<8 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
-    %1:sgpr(s32) = COPY $sgpr8
-    %2:sgpr(s32) = G_CONSTANT i32 7
-    %3:sgpr(s32) = G_ADD %1, %2
-    %4:sgpr(s32) = G_EXTRACT_VECTOR_ELT %0, %3
-    S_ENDPGM 0, implicit %4
+    %0:sgpr(<8 x i32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    %1:sgpr(i32) = COPY $sgpr8
+    %2:sgpr(i32) = G_CONSTANT i32 7
+    %3:sgpr(i32) = G_ADD %1, %2
+    %4:sgpr(i32) = G_EXTRACT_VECTOR_ELT %0(<8 x i32>), %3(i32)
+    S_ENDPGM 0, implicit %4(i32)
 ...
 
 ---
@@ -462,12 +462,12 @@ body: |
     ; GPRIDX-NEXT: $m0 = COPY [[S_ADD_I32_]]
     ; GPRIDX-NEXT: [[S_MOVRELS_B32_:%[0-9]+]]:sreg_32 = S_MOVRELS_B32 [[COPY]].sub0, implicit $m0, implicit [[COPY]]
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B32_]]
-    %0:sgpr(<8 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
-    %1:sgpr(s32) = COPY $sgpr8
-    %2:sgpr(s32) = G_CONSTANT i32 8
-    %3:sgpr(s32) = G_ADD %1, %2
-    %4:sgpr(s32) = G_EXTRACT_VECTOR_ELT %0, %3
-    S_ENDPGM 0, implicit %4
+    %0:sgpr(<8 x i32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    %1:sgpr(i32) = COPY $sgpr8
+    %2:sgpr(i32) = G_CONSTANT i32 8
+    %3:sgpr(i32) = G_ADD %1, %2
+    %4:sgpr(i32) = G_EXTRACT_VECTOR_ELT %0(<8 x i32>), %3(i32)
+    S_ENDPGM 0, implicit %4(i32)
 ...
 
 ---
@@ -496,12 +496,12 @@ body: |
     ; GPRIDX-NEXT: $m0 = COPY [[COPY1]]
     ; GPRIDX-NEXT: [[S_MOVRELS_B64_:%[0-9]+]]:sreg_64 = S_MOVRELS_B64 [[COPY]].sub2_sub3, implicit $m0, implicit [[COPY]]
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B64_]]
-    %0:sgpr(<8 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-    %1:sgpr(s32) = COPY $sgpr8
-    %2:sgpr(s32) = G_CONSTANT i32 1
-    %3:sgpr(s32) = G_ADD %1, %2
-    %4:sgpr(s64) = G_EXTRACT_VECTOR_ELT %0, %3
-    S_ENDPGM 0, implicit %4
+    %0:sgpr(<8 x i64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    %1:sgpr(i32) = COPY $sgpr8
+    %2:sgpr(i32) = G_CONSTANT i32 1
+    %3:sgpr(i32) = G_ADD %1, %2
+    %4:sgpr(i64) = G_EXTRACT_VECTOR_ELT %0(<8 x i64>), %3(i32)
+    S_ENDPGM 0, implicit %4(i64)
 ...
 
 ---
@@ -530,12 +530,12 @@ body: |
     ; GPRIDX-NEXT: $m0 = COPY [[COPY1]]
     ; GPRIDX-NEXT: [[S_MOVRELS_B64_:%[0-9]+]]:sreg_64 = S_MOVRELS_B64 [[COPY]].sub4_sub5, implicit $m0, implicit [[COPY]]
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B64_]]
-    %0:sgpr(<8 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-    %1:sgpr(s32) = COPY $sgpr8
-    %2:sgpr(s32) = G_CONSTANT i32 2
-    %3:sgpr(s32) = G_ADD %1, %2
-    %4:sgpr(s64) = G_EXTRACT_VECTOR_ELT %0, %3
-    S_ENDPGM 0, implicit %4
+    %0:sgpr(<8 x i64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    %1:sgpr(i32) = COPY $sgpr8
+    %2:sgpr(i32) = G_CONSTANT i32 2
+    %3:sgpr(i32) = G_ADD %1, %2
+    %4:sgpr(i64) = G_EXTRACT_VECTOR_ELT %0(<8 x i64>), %3(i32)
+    S_ENDPGM 0, implicit %4(i64)
 ...
 
 ---
@@ -568,12 +568,12 @@ body: |
     ; GPRIDX-NEXT: $m0 = COPY [[S_ADD_I32_]]
     ; GPRIDX-NEXT: [[S_MOVRELS_B64_:%[0-9]+]]:sreg_64 = S_MOVRELS_B64 [[COPY]].sub0_sub1, implicit $m0, implicit [[COPY]]
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B64_]]
-    %0:sgpr(<8 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
-    %1:sgpr(s32) = COPY $sgpr8
-    %2:sgpr(s32) = G_CONSTANT i32 -1
-    %3:sgpr(s32) = G_ADD %1, %2
-    %4:sgpr(s64) = G_EXTRACT_VECTOR_ELT %0, %3
-    S_ENDPGM 0, implicit %4
+    %0:sgpr(<8 x i64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    %1:sgpr(i32) = COPY $sgpr8
+    %2:sgpr(i32) = G_CONSTANT i32 -1
+    %3:sgpr(i32) = G_ADD %1, %2
+    %4:sgpr(i64) = G_EXTRACT_VECTOR_ELT %0(<8 x i64>), %3(i32)
+    S_ENDPGM 0, implicit %4(i64)
 ...
 
 ---
@@ -601,10 +601,10 @@ body: |
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr2
     ; GPRIDX-NEXT: [[V_INDIRECT_REG_READ_GPR_IDX_B32_V2_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V2 [[COPY]], [[COPY1]], 3, implicit-def $m0, implicit $m0, implicit $exec
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[V_INDIRECT_REG_READ_GPR_IDX_B32_V2_]]
-    %0:vgpr(<2 x s32>) = COPY $vgpr0_vgpr1
-    %1:sgpr(s32) = COPY $sgpr2
-    %2:vgpr(s32) = G_EXTRACT_VECTOR_ELT %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:vgpr(<2 x i32>) = COPY $vgpr0_vgpr1
+    %1:sgpr(i32) = COPY $sgpr2
+    %2:vgpr(i32) = G_EXTRACT_VECTOR_ELT %0(<2 x i32>), %1(i32)
+    S_ENDPGM 0, implicit %2(i32)
 ...
 
 ---
@@ -632,10 +632,10 @@ body: |
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr2
     ; GPRIDX-NEXT: [[V_INDIRECT_REG_READ_GPR_IDX_B32_V3_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V3 [[COPY]], [[COPY1]], 3, implicit-def $m0, implicit $m0, implicit $exec
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[V_INDIRECT_REG_READ_GPR_IDX_B32_V3_]]
-    %0:vgpr(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
-    %1:sgpr(s32) = COPY $sgpr2
-    %2:vgpr(s32) = G_EXTRACT_VECTOR_ELT %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:vgpr(<3 x i32>) = COPY $vgpr0_vgpr1_vgpr2
+    %1:sgpr(i32) = COPY $sgpr2
+    %2:vgpr(i32) = G_EXTRACT_VECTOR_ELT %0(<3 x i32>), %1(i32)
+    S_ENDPGM 0, implicit %2(i32)
 ...
 
 ---
@@ -663,10 +663,10 @@ body: |
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr4
     ; GPRIDX-NEXT: [[V_INDIRECT_REG_READ_GPR_IDX_B32_V4_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V4 [[COPY]], [[COPY1]], 3, implicit-def $m0, implicit $m0, implicit $exec
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[V_INDIRECT_REG_READ_GPR_IDX_B32_V4_]]
-    %0:vgpr(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    %1:sgpr(s32) = COPY $sgpr4
-    %2:vgpr(s32) = G_EXTRACT_VECTOR_ELT %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:vgpr(<4 x i32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:sgpr(i32) = COPY $sgpr4
+    %2:vgpr(i32) = G_EXTRACT_VECTOR_ELT %0(<4 x i32>), %1(i32)
+    S_ENDPGM 0, implicit %2(i32)
 ...
 
 ---
@@ -694,10 +694,10 @@ body: |
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr8
     ; GPRIDX-NEXT: [[V_INDIRECT_REG_READ_GPR_IDX_B32_V8_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V8 [[COPY]], [[COPY1]], 3, implicit-def $m0, implicit $m0, implicit $exec
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[V_INDIRECT_REG_READ_GPR_IDX_B32_V8_]]
-    %0:vgpr(<8 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    %1:sgpr(s32) = COPY $sgpr8
-    %2:vgpr(s32) = G_EXTRACT_VECTOR_ELT %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:vgpr(<8 x i32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    %1:sgpr(i32) = COPY $sgpr8
+    %2:vgpr(i32) = G_EXTRACT_VECTOR_ELT %0(<8 x i32>), %1(i32)
+    S_ENDPGM 0, implicit %2(i32)
 ...
 
 ---
@@ -725,10 +725,10 @@ body: |
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr8
     ; GPRIDX-NEXT: [[V_INDIRECT_REG_READ_GPR_IDX_B32_V16_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V16 [[COPY]], [[COPY1]], 3, implicit-def $m0, implicit $m0, implicit $exec
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[V_INDIRECT_REG_READ_GPR_IDX_B32_V16_]]
-    %0:vgpr(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    %1:sgpr(s32) = COPY $sgpr8
-    %2:vgpr(s32) = G_EXTRACT_VECTOR_ELT %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:vgpr(<16 x i32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    %1:sgpr(i32) = COPY $sgpr8
+    %2:vgpr(i32) = G_EXTRACT_VECTOR_ELT %0(<16 x i32>), %1(i32)
+    S_ENDPGM 0, implicit %2(i32)
 ...
 
 ---
@@ -756,10 +756,10 @@ body: |
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr40
     ; GPRIDX-NEXT: [[V_INDIRECT_REG_READ_GPR_IDX_B32_V32_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V32 [[COPY]], [[COPY1]], 3, implicit-def $m0, implicit $m0, implicit $exec
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[V_INDIRECT_REG_READ_GPR_IDX_B32_V32_]]
-    %0:vgpr(<32 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
-    %1:sgpr(s32) = COPY $sgpr40
-    %2:vgpr(s32) = G_EXTRACT_VECTOR_ELT %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:vgpr(<32 x i32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    %1:sgpr(i32) = COPY $sgpr40
+    %2:vgpr(i32) = G_EXTRACT_VECTOR_ELT %0(<32 x i32>), %1(i32)
+    S_ENDPGM 0, implicit %2(i32)
 ...
 
 ---
@@ -787,12 +787,12 @@ body: |
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr8
     ; GPRIDX-NEXT: [[V_INDIRECT_REG_READ_GPR_IDX_B32_V8_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V8 [[COPY]], [[COPY1]], 11, implicit-def $m0, implicit $m0, implicit $exec
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[V_INDIRECT_REG_READ_GPR_IDX_B32_V8_]]
-    %0:vgpr(<8 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    %1:sgpr(s32) = COPY $sgpr8
-    %2:sgpr(s32) = G_CONSTANT i32 1
-    %3:sgpr(s32) = G_ADD %1, %2
-    %4:vgpr(s32) = G_EXTRACT_VECTOR_ELT %0, %3
-    S_ENDPGM 0, implicit %4
+    %0:vgpr(<8 x i32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    %1:sgpr(i32) = COPY $sgpr8
+    %2:sgpr(i32) = G_CONSTANT i32 1
+    %3:sgpr(i32) = G_ADD %1, %2
+    %4:vgpr(i32) = G_EXTRACT_VECTOR_ELT %0(<8 x i32>), %3(i32)
+    S_ENDPGM 0, implicit %4(i32)
 ...
 
 ---
@@ -824,12 +824,12 @@ body: |
     ; GPRIDX-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
     ; GPRIDX-NEXT: [[V_INDIRECT_REG_READ_GPR_IDX_B32_V8_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V8 [[COPY]], [[S_ADD_I32_]], 3, implicit-def $m0, implicit $m0, implicit $exec
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[V_INDIRECT_REG_READ_GPR_IDX_B32_V8_]]
-    %0:vgpr(<8 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    %1:sgpr(s32) = COPY $sgpr8
-    %2:sgpr(s32) = G_CONSTANT i32 -1
-    %3:sgpr(s32) = G_ADD %1, %2
-    %4:vgpr(s32) = G_EXTRACT_VECTOR_ELT %0, %3
-    S_ENDPGM 0, implicit %4
+    %0:vgpr(<8 x i32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    %1:sgpr(i32) = COPY $sgpr8
+    %2:sgpr(i32) = G_CONSTANT i32 -1
+    %3:sgpr(i32) = G_ADD %1, %2
+    %4:vgpr(i32) = G_EXTRACT_VECTOR_ELT %0(<8 x i32>), %3(i32)
+    S_ENDPGM 0, implicit %4(i32)
 ...
 
 ---
@@ -857,12 +857,12 @@ body: |
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr8
     ; GPRIDX-NEXT: [[V_INDIRECT_REG_READ_GPR_IDX_B32_V8_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V8 [[COPY]], [[COPY1]], 71, implicit-def $m0, implicit $m0, implicit $exec
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[V_INDIRECT_REG_READ_GPR_IDX_B32_V8_]]
-    %0:vgpr(<8 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    %1:sgpr(s32) = COPY $sgpr8
-    %2:sgpr(s32) = G_CONSTANT i32 7
-    %3:sgpr(s32) = G_ADD %1, %2
-    %4:vgpr(s32) = G_EXTRACT_VECTOR_ELT %0, %3
-    S_ENDPGM 0, implicit %4
+    %0:vgpr(<8 x i32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    %1:sgpr(i32) = COPY $sgpr8
+    %2:sgpr(i32) = G_CONSTANT i32 7
+    %3:sgpr(i32) = G_ADD %1, %2
+    %4:vgpr(i32) = G_EXTRACT_VECTOR_ELT %0(<8 x i32>), %3(i32)
+    S_ENDPGM 0, implicit %4(i32)
 ...
 
 ---
@@ -894,12 +894,12 @@ body: |
     ; GPRIDX-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
     ; GPRIDX-NEXT: [[V_INDIRECT_REG_READ_GPR_IDX_B32_V8_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V8 [[COPY]], [[S_ADD_I32_]], 3, implicit-def $m0, implicit $m0, implicit $exec
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[V_INDIRECT_REG_READ_GPR_IDX_B32_V8_]]
-    %0:vgpr(<8 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    %1:sgpr(s32) = COPY $sgpr8
-    %2:sgpr(s32) = G_CONSTANT i32 8
-    %3:sgpr(s32) = G_ADD %1, %2
-    %4:vgpr(s32) = G_EXTRACT_VECTOR_ELT %0, %3
-    S_ENDPGM 0, implicit %4
+    %0:vgpr(<8 x i32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    %1:sgpr(i32) = COPY $sgpr8
+    %2:sgpr(i32) = G_CONSTANT i32 8
+    %3:sgpr(i32) = G_ADD %1, %2
+    %4:vgpr(i32) = G_EXTRACT_VECTOR_ELT %0(<8 x i32>), %3(i32)
+    S_ENDPGM 0, implicit %4(i32)
 ...
 
 ---
@@ -928,10 +928,10 @@ body: |
     ; GPRIDX-NEXT: $m0 = COPY [[S_MOV_B32_]]
     ; GPRIDX-NEXT: [[S_MOVRELS_B32_:%[0-9]+]]:sreg_32 = S_MOVRELS_B32 [[COPY]].sub0, implicit $m0, implicit [[COPY]]
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[S_MOVRELS_B32_]]
-    %0:sgpr(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    %1:sgpr(s32) = G_CONSTANT i32 0
-    %2:sgpr(s32) = G_EXTRACT_VECTOR_ELT %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:sgpr(<4 x i32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %1:sgpr(i32) = G_CONSTANT i32 0
+    %2:sgpr(i32) = G_EXTRACT_VECTOR_ELT %0(<4 x i32>), %1(i32)
+    S_ENDPGM 0, implicit %2(i32)
 ...
 
 ---
@@ -959,8 +959,8 @@ body: |
     ; GPRIDX-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; GPRIDX-NEXT: [[V_INDIRECT_REG_READ_GPR_IDX_B32_V4_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V4 [[COPY]], [[S_MOV_B32_]], 3, implicit-def $m0, implicit $m0, implicit $exec
     ; GPRIDX-NEXT: S_ENDPGM 0, implicit [[V_INDIRECT_REG_READ_GPR_IDX_B32_V4_]]
-    %0:vgpr(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    %1:sgpr(s32) = G_CONSTANT i32 0
-    %2:vgpr(s32) = G_EXTRACT_VECTOR_ELT %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:vgpr(<4 x i32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    %1:sgpr(i32) = G_CONSTANT i32 0
+    %2:vgpr(i32) = G_EXTRACT_VECTOR_ELT %0(<4 x i32>), %1(i32)
+    S_ENDPGM 0, implicit %2(i32)
 ...

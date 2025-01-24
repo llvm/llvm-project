@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=amdgcn -mcpu=tahiti -run-pass=instruction-select -verify-machineinstrs -global-isel-abort=2 -pass-remarks-missed='gisel*' %s -o - 2> %t | FileCheck -check-prefix=GCN %s
 # RUN: FileCheck -check-prefix=ERR %s < %t
 
-# ERR: remark: <unknown>:0:0: cannot select: %1:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %0:sgpr(s32) (in function: readfirstlane_s)
+# ERR: remark: <unknown>:0:0: cannot select: %1:sgpr(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %0:sgpr(i32) (in function: readfirstlane_s)
 
 ---
 name: readfirstlane_v
@@ -19,9 +19,9 @@ body: |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
     ; GCN-NEXT: S_ENDPGM 0, implicit [[V_READFIRSTLANE_B32_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %0
-    S_ENDPGM 0, implicit %1
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %0(i32)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 
 ---
@@ -38,9 +38,9 @@ body: |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY [[V_MOV_B32_e32_]]
     ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 [[COPY]]
     ; GCN-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_]]
-    %0:vgpr(s32) = G_CONSTANT i32 123
-    %1:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %0
-    S_ENDPGM 0, implicit %1
+    %0:vgpr(i32) = G_CONSTANT i32 123
+    %1:sgpr(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %0(i32)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 
 # Make sure this fails to select
@@ -56,10 +56,10 @@ body: |
     ; GCN-LABEL: name: readfirstlane_s
     ; GCN: liveins: $sgpr0
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; GCN-NEXT: [[INT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY]](s32)
-    ; GCN-NEXT: S_ENDPGM 0, implicit [[INT]](s32)
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %0
-    S_ENDPGM 0, implicit %1
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; GCN-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:sgpr(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY]](i32)
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[INTRINSIC_CONVERGENT]](i32)
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:sgpr(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %0(i32)
+    S_ENDPGM 0, implicit %1(i32)
 ...

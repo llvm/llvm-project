@@ -4,8 +4,8 @@
 # RUN: llc -mtriple=amdgcn -mcpu=fiji -run-pass=instruction-select -verify-machineinstrs -global-isel-abort=2 -pass-remarks-missed='gisel*'  %s -o /dev/null 2>&1 | FileCheck -check-prefix=VI-ERR %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -run-pass=instruction-select -verify-machineinstrs -global-isel-abort=2 -pass-remarks-missed='gisel*'  %s -o /dev/null 2>&1 | FileCheck -check-prefix=VI-ERR %s
 
-# VI-ERR: remark: <unknown>:0:0: cannot select: %1:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp.legacy), %0:sgpr(s32) (in function: rcp_legacy_s32_vs)
-# VI-ERR-NEXT: remark: <unknown>:0:0: cannot select: %1:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp.legacy), %0:vgpr(s32) (in function: rcp_legacy_s32_vv)
+# VI-ERR: remark: <unknown>:0:0: cannot select: %2:vgpr_32(f32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp.legacy), %1:sgpr(f32) (in function: rcp_legacy_s32_vs)
+# VI-ERR-NEXT: remark: <unknown>:0:0: cannot select: %2:vgpr_32(f32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp.legacy), %1:vgpr(f32) (in function: rcp_legacy_s32_vv)
 
 ---
 name: rcp_legacy_s32_vs
@@ -19,12 +19,15 @@ body: |
 
     ; CHECK-LABEL: name: rcp_legacy_s32_vs
     ; CHECK: liveins: $sgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK: %1:vgpr_32 = nofpexcept V_RCP_LEGACY_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK: S_ENDPGM 0, implicit %1
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp.legacy), %0
-    S_ENDPGM 0, implicit %1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; CHECK-NEXT: [[V_RCP_LEGACY_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_RCP_LEGACY_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_RCP_LEGACY_F32_e64_]]
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:sgpr(f32) = G_BITCAST %0(i32)
+    %2:vgpr(f32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp.legacy), %1(f32)
+    %3:vgpr(i32) = G_BITCAST %2(f32)
+    S_ENDPGM 0, implicit %3(i32)
 ...
 
 ---
@@ -39,10 +42,13 @@ body: |
 
     ; CHECK-LABEL: name: rcp_legacy_s32_vv
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: %1:vgpr_32 = nofpexcept V_RCP_LEGACY_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK: S_ENDPGM 0, implicit %1
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp.legacy), %0
-    S_ENDPGM 0, implicit %1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: [[V_RCP_LEGACY_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_RCP_LEGACY_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_RCP_LEGACY_F32_e64_]]
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(f32) = G_BITCAST %0(i32)
+    %2:vgpr(f32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rcp.legacy), %1(f32)
+    %3:vgpr(i32) = G_BITCAST %2(f32)
+    S_ENDPGM 0, implicit %3(i32)
 ...

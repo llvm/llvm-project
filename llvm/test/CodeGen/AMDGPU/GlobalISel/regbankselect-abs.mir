@@ -12,14 +12,14 @@ body: |
     ; CHECK-LABEL: name: abs_sgpr_s16
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:sgpr(s32) = G_SEXT [[TRUNC]](s16)
-    ; CHECK-NEXT: [[ABS:%[0-9]+]]:sgpr(s32) = G_ABS [[SEXT]]
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:sgpr(s16) = G_TRUNC [[ABS]](s32)
-    %1:_(s32) = COPY $sgpr0
-    %2:_(s16) = G_TRUNC %1
-    %5:_(s16) = G_ABS %2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(i16) = G_TRUNC [[COPY]](i32)
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:sgpr(i32) = G_SEXT [[TRUNC]](i16)
+    ; CHECK-NEXT: [[ABS:%[0-9]+]]:sgpr(i32) = G_ABS [[SEXT]]
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:sgpr(i16) = G_TRUNC [[ABS]](i32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i16) = G_TRUNC %0(i32)
+    %2:_(i16) = G_ABS %1
 ...
 
 ---
@@ -33,14 +33,14 @@ body: |
     ; CHECK-LABEL: name: abs_vgpr_s16
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:vgpr(s16) = G_CONSTANT i16 0
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:vgpr(s16) = G_SUB [[C]], [[TRUNC]]
-    ; CHECK-NEXT: [[SMAX:%[0-9]+]]:vgpr(s16) = G_SMAX [[TRUNC]], [[SUB]]
-    %1:_(s32) = COPY $vgpr0
-    %2:_(s16) = G_TRUNC %1
-    %5:_(s16) = G_ABS %2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(i16) = G_TRUNC [[COPY]](i32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:vgpr(i16) = G_CONSTANT i16 0
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:vgpr(i16) = G_SUB [[C]], [[TRUNC]]
+    ; CHECK-NEXT: [[SMAX:%[0-9]+]]:vgpr(i16) = G_SMAX [[TRUNC]], [[SUB]]
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i16) = G_TRUNC %0(i32)
+    %2:_(i16) = G_ABS %1
 ...
 
 ---
@@ -54,16 +54,16 @@ body: |
     ; CHECK-LABEL: name: abs_sgpr_v2i16
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(s32) = G_BITCAST [[COPY]](<2 x s16>)
-    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[BITCAST]], 16
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:sgpr(s32) = G_ASHR [[BITCAST]], [[C]](s32)
-    ; CHECK-NEXT: [[ABS:%[0-9]+]]:sgpr(s32) = G_ABS [[SEXT_INREG]]
-    ; CHECK-NEXT: [[ABS1:%[0-9]+]]:sgpr(s32) = G_ABS [[ASHR]]
-    ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ABS]](s32), [[ABS1]](s32)
-    %1:_(<2 x s16>) = COPY $sgpr0
-    %5:_(<2 x s16>) = G_ABS %1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(<2 x i16>) = COPY $sgpr0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i32) = G_BITCAST [[COPY]](<2 x i16>)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:sgpr(i32) = G_SEXT_INREG [[BITCAST]], 16
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:sgpr(i32) = G_ASHR [[BITCAST]], [[C]](i32)
+    ; CHECK-NEXT: [[ABS:%[0-9]+]]:sgpr(i32) = G_ABS [[SEXT_INREG]]
+    ; CHECK-NEXT: [[ABS1:%[0-9]+]]:sgpr(i32) = G_ABS [[ASHR]]
+    ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC [[ABS]](i32), [[ABS1]](i32)
+    %0:_(<2 x i16>) = COPY $sgpr0
+    %1:_(<2 x i16>) = G_ABS %0
 ...
 
 ---
@@ -77,11 +77,11 @@ body: |
     ; CHECK-LABEL: name: abs_vgpr_v2i16
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:vgpr(s16) = G_CONSTANT i16 0
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:vgpr(<2 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16)
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:vgpr(<2 x s16>) = G_SUB [[BUILD_VECTOR]], [[COPY]]
-    ; CHECK-NEXT: [[SMAX:%[0-9]+]]:vgpr(<2 x s16>) = G_SMAX [[COPY]], [[SUB]]
-    %1:_(<2 x s16>) = COPY $vgpr0
-    %5:_(<2 x s16>) = G_ABS %1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(<2 x i16>) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:vgpr(i16) = G_CONSTANT i16 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:vgpr(<2 x i16>) = G_BUILD_VECTOR [[C]](i16), [[C]](i16)
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:vgpr(<2 x i16>) = G_SUB [[BUILD_VECTOR]], [[COPY]]
+    ; CHECK-NEXT: [[SMAX:%[0-9]+]]:vgpr(<2 x i16>) = G_SMAX [[COPY]], [[SUB]]
+    %0:_(<2 x i16>) = COPY $vgpr0
+    %1:_(<2 x i16>) = G_ABS %0
 ...

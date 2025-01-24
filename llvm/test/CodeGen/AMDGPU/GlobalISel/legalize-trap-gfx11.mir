@@ -10,15 +10,15 @@ body: |
     ; GFX1100-LABEL: name: test_trap
     ; GFX1100: successors: %bb.1(0x40000000), %bb.2(0x40000000)
     ; GFX1100-NEXT: {{  $}}
-    ; GFX1100-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; GFX1100-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
     ; GFX1100-NEXT: [[C1:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
-    ; GFX1100-NEXT: G_STORE [[C]](s32), [[C1]](p1) :: (store (s8), addrspace 1)
+    ; GFX1100-NEXT: G_STORE [[C]](i32), [[C1]](p1) :: (store (i8), addrspace 1)
     ; GFX1100-NEXT: S_CBRANCH_EXECNZ %bb.2, implicit $exec
     ; GFX1100-NEXT: {{  $}}
     ; GFX1100-NEXT: .1:
     ; GFX1100-NEXT: successors:
     ; GFX1100-NEXT: {{  $}}
-    ; GFX1100-NEXT: G_STORE [[C]](s32), [[C1]](p1) :: (store (s8), addrspace 1)
+    ; GFX1100-NEXT: G_STORE [[C]](i32), [[C1]](p1) :: (store (i8), addrspace 1)
     ; GFX1100-NEXT: {{  $}}
     ; GFX1100-NEXT: .2:
     ; GFX1100-NEXT: successors: %bb.3(0x80000000)
@@ -40,16 +40,16 @@ body: |
     ; GFX1100-NEXT: S_BRANCH %bb.3
     ;
     ; GFX1150-LABEL: name: test_trap
-    ; GFX1150: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; GFX1150: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
     ; GFX1150-NEXT: [[C1:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
-    ; GFX1150-NEXT: G_STORE [[C]](s32), [[C1]](p1) :: (store (s8), addrspace 1)
+    ; GFX1150-NEXT: G_STORE [[C]](i32), [[C1]](p1) :: (store (i8), addrspace 1)
     ; GFX1150-NEXT: S_TRAP 2
-    ; GFX1150-NEXT: G_STORE [[C]](s32), [[C1]](p1) :: (store (s8), addrspace 1)
-    %0:_(s8) = G_CONSTANT i8 0
+    ; GFX1150-NEXT: G_STORE [[C]](i32), [[C1]](p1) :: (store (i8), addrspace 1)
+    %0:_(i8) = G_CONSTANT i8 0
     %1:_(p1) = G_CONSTANT i64 0
-    G_STORE %0, %1 :: (store 1, addrspace 1)
+    G_STORE %0(i8), %1(p1) :: (store (i8), addrspace 1)
     G_TRAP
-    G_STORE %0, %1 :: (store 1, addrspace 1)
+    G_STORE %0(i8), %1(p1) :: (store (i8), addrspace 1)
 ...
 
 ---
@@ -59,15 +59,15 @@ body: |
   ; GFX1100: bb.0:
   ; GFX1100-NEXT:   successors: %bb.1(0x80000000), %bb.2(0x00000000)
   ; GFX1100-NEXT: {{  $}}
-  ; GFX1100-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; GFX1100-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
   ; GFX1100-NEXT:   [[C1:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
-  ; GFX1100-NEXT:   G_STORE [[C]](s32), [[C1]](p1) :: (store (s8), addrspace 1)
+  ; GFX1100-NEXT:   G_STORE [[C]](i32), [[C1]](p1) :: (store (i8), addrspace 1)
   ; GFX1100-NEXT:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
   ; GFX1100-NEXT: {{  $}}
   ; GFX1100-NEXT: bb.1:
   ; GFX1100-NEXT:   successors:
   ; GFX1100-NEXT: {{  $}}
-  ; GFX1100-NEXT:   G_STORE [[C]](s32), [[C1]](p1) :: (store (s8), addrspace 1)
+  ; GFX1100-NEXT:   G_STORE [[C]](i32), [[C1]](p1) :: (store (i8), addrspace 1)
   ; GFX1100-NEXT: {{  $}}
   ; GFX1100-NEXT: bb.2:
   ; GFX1100-NEXT:   successors: %bb.3(0x80000000)
@@ -92,21 +92,23 @@ body: |
   ; GFX1150: bb.0:
   ; GFX1150-NEXT:   successors: %bb.1(0x80000000)
   ; GFX1150-NEXT: {{  $}}
-  ; GFX1150-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; GFX1150-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
   ; GFX1150-NEXT:   [[C1:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
-  ; GFX1150-NEXT:   G_STORE [[C]](s32), [[C1]](p1) :: (store (s8), addrspace 1)
+  ; GFX1150-NEXT:   G_STORE [[C]](i32), [[C1]](p1) :: (store (i8), addrspace 1)
   ; GFX1150-NEXT:   S_TRAP 2
   ; GFX1150-NEXT: {{  $}}
   ; GFX1150-NEXT: bb.1:
-  ; GFX1150-NEXT:   G_STORE [[C]](s32), [[C1]](p1) :: (store (s8), addrspace 1)
+  ; GFX1150-NEXT:   G_STORE [[C]](i32), [[C1]](p1) :: (store (i8), addrspace 1)
   bb.0:
-    successors: %bb.1
+    successors: %bb.1(0x80000000)
 
-    %0:_(s8) = G_CONSTANT i8 0
+    %0:_(i8) = G_CONSTANT i8 0
     %1:_(p1) = G_CONSTANT i64 0
-    G_STORE %0, %1 :: (store 1, addrspace 1)
+    G_STORE %0(i8), %1(p1) :: (store (i8), addrspace 1)
     G_TRAP
 
   bb.1:
-    G_STORE %0, %1 :: (store 1, addrspace 1)
+    G_STORE %0(i8), %1(p1) :: (store (i8), addrspace 1)
+
+
 ...

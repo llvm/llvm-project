@@ -23,10 +23,10 @@ body: |
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GCN-NEXT: [[V_ALIGNBIT_B32_e64_:%[0-9]+]]:vgpr_32 = V_ALIGNBIT_B32_e64 [[COPY]], [[COPY1]], [[COPY2]], implicit $exec
     ; GCN-NEXT: S_ENDPGM 0, implicit [[V_ALIGNBIT_B32_e64_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vgpr(s32) = COPY $vgpr2
-    %3:vgpr(s32) = G_FSHR %0, %1, %2
-    S_ENDPGM 0, implicit %3
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(i32) = COPY $vgpr2
+    %3:vgpr(i32) = G_FSHR %0, %1, %2(i32)
+    S_ENDPGM 0, implicit %3(i32)
 
 ...

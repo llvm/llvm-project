@@ -23,20 +23,23 @@ body: |
     ; GFX9-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[V_MAD_MIX_F32_]], implicit $exec
     ; GFX9-NEXT: $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
     ; GFX9-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:sgpr(s32) = COPY $sgpr1
-    %2:sgpr(s32) = G_CONSTANT i32 16
-    %3:sgpr(s32) = G_LSHR %0:sgpr, %2:sgpr(s32)
-    %4:sgpr(s16) = G_TRUNC %3:sgpr(s32)
-    %5:sgpr(s32) = G_LSHR %1:sgpr, %2:sgpr(s32)
-    %6:sgpr(s16) = G_TRUNC %5:sgpr(s32)
-    %7:vgpr(s16) = COPY %4:sgpr(s16)
-    %8:vgpr(s32) = G_FPEXT %7:vgpr(s16)
-    %9:vgpr(s16) = COPY %6:sgpr(s16)
-    %10:vgpr(s32) = G_FPEXT %9:vgpr(s16)
-    %11:vgpr(s32) = G_FNEG %10:vgpr
-    %12:vgpr(s32) = G_FMAD %11:vgpr, %10:vgpr, %8:vgpr
-    %13:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %12:vgpr(s32)
-    $sgpr0 = COPY %13:sgpr(s32)
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:sgpr(i32) = COPY $sgpr1
+    %2:sgpr(i32) = G_CONSTANT i32 16
+    %3:sgpr(i32) = G_LSHR %0, %2(i32)
+    %4:sgpr(i16) = G_TRUNC %3(i32)
+    %5:sgpr(i32) = G_LSHR %1, %2(i32)
+    %6:sgpr(i16) = G_TRUNC %5(i32)
+    %7:vgpr(i16) = COPY %4(i16)
+    %8:vgpr(f16) = G_BITCAST %7(i16)
+    %9:vgpr(f32) = G_FPEXT %8(f16)
+    %10:vgpr(i16) = COPY %6(i16)
+    %11:vgpr(f16) = G_BITCAST %10(i16)
+    %12:vgpr(f32) = G_FPEXT %11(f16)
+    %13:vgpr(f32) = G_FNEG %12
+    %14:vgpr(f32) = G_FMAD %13, %12, %9
+    %15:vgpr(i32) = G_BITCAST %14(f32)
+    %16:sgpr(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %15(i32)
+    $sgpr0 = COPY %16(i32)
     SI_RETURN_TO_EPILOG implicit $sgpr0
 ...
