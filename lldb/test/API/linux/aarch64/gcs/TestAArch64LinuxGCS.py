@@ -108,6 +108,8 @@ class AArch64LinuxGCSTestCase(TestBase):
 
         self.expect("register read --all", substrs=["Guarded Control Stack Registers:"])
 
+        # This helper reads all the GCS registers and optionally compares them
+        # against a previous state, then returns the current register values.
         def check_gcs_registers(
             expected_gcs_features_enabled=None,
             expected_gcs_features_locked=None,
@@ -142,7 +144,8 @@ class AArch64LinuxGCSTestCase(TestBase):
         enabled, locked, spr_el0 = check_gcs_registers()
 
         # Features enabled should have at least the enable bit set, it could have
-        # others depending on what the C library did.
+        # others depending on what the C library did, but we can't rely on always
+        # having them.
         self.assertTrue(enabled & 1, "Expected GCS enable bit to be set.")
 
         # Features locked we cannot predict, we will just assert that it remains
@@ -163,15 +166,44 @@ class AArch64LinuxGCSTestCase(TestBase):
 
         _, _, spr_el0 = check_gcs_registers(enabled, locked, spr_el0 - 8)
 
-        # Modify the control stack pointer to cause a fault.
+        # Any combination of GCS feature lock bits might have been set by the C
+        # library, and could be set to 0 or 1. To check that we can modify them,
+        # invert one of those bits then write it back to the lock register.
+        # The stack pushing feature is bit 2 of that register.
+        STACK_PUSH = 2
+        # Get the original value of the stack push lock bit.
+        stack_push = bool((locked >> STACK_PUSH) & 1)
+        # Invert the value and put it back into the set of lock bits.
+        new_locked = (locked & ~(1 << STACK_PUSH)) | (int(not stack_push) << STACK_PUSH)
+        # Write the new lock bits, which are the same as before, only with stack
+        # push locked (if it was previously unlocked), or unlocked (if it was
+        # previously locked).
+        self.runCmd(f"register write gcs_features_locked 0x{new_locked:x}")
+        # We should be able to read back this new set of lock bits.
+        self.expect(
+            f"register read gcs_features_locked",
+            substrs=[f"gcs_features_locked = 0x{new_locked:016x}"],
+        )
+
+        # We could prove the write made it to hardware by trying to prctl() to
+        # enable or disable the stack push feature here, but because the libc
+        # may or may not have locked it, it's tricky to coordinate this. Given
+        # that we know the other registers can be written and their values are
+        # seen by the process, we can assume this is too.
+
+        # Restore the original lock bits, as the libc may rely on being able
+        # to use certain features during program execution.
+        self.runCmd(f"register write gcs_features_locked 0x{locked:x}")
+
+        # Modify the guarded control stack pointer to cause a fault.
         spr_el0 += 8
         self.runCmd(f"register write gcspr_el0 {spr_el0}")
         self.expect(
             "register read gcspr_el0", substrs=[f"gcspr_el0 = 0x{spr_el0:016x}"]
         )
 
-        # If we wrote it back correctly, we will now fault but don't pass this
-        # signal to the application.
+        # If we wrote it back correctly, we will now fault. Don't pass this signal
+        # to the application, as we will continue past it later.
         self.runCmd("process handle SIGSEGV --pass false")
         self.runCmd("continue")
 
@@ -184,32 +216,18 @@ class AArch64LinuxGCSTestCase(TestBase):
             ],
         )
 
-        # Any combination of lock bits could be set. Flip then restore one of them.
-        STACK_PUSH = 2
-        stack_push = bool((locked >> STACK_PUSH) & 1)
-        new_locked = (locked & ~(1 << STACK_PUSH)) | (int(not stack_push) << STACK_PUSH)
-        self.runCmd(f"register write gcs_features_locked 0x{new_locked:x}")
-        self.expect(
-            f"register read gcs_features_locked",
-            substrs=[f"gcs_features_locked = 0x{new_locked:016x}"],
-        )
-
-        # We could prove the write made it to hardware by trying to prctl to change
-        # the feature here, but we cannot know if the libc locked it or not.
-        # Given that we know the other registers in the set write correctly, we
-        # can assume this one does.
-
-        self.runCmd(f"register write gcs_features_locked 0x{locked:x}")
-
         # Now to prove we can write gcs_features_enabled, disable GCS and continue
-        # past the fault.
-        enabled &= ~1
-        self.runCmd(f"register write gcs_features_enabled {enabled}")
+        # past the fault we caused. Note that although the libc likely locked the
+        # ability to disable GCS, ptrace bypasses the lock bits.
+        gcs_enabled &= ~1
+        self.runCmd(f"register write gcs_features_enabled {gcs_enabled}")
         self.expect(
             "register read gcs_features_enabled",
-            substrs=[f"gcs_features_enabled = 0x{enabled:016x}"],
+            substrs=[f"gcs_features_enabled = 0x{gcs_enabled:016x}"],
         )
 
+        # With GCS disabled, the invalid guarded control stack pointer is not
+        # checked, so the program can finish normally.
         self.runCmd("continue")
         self.expect(
             "process status",
