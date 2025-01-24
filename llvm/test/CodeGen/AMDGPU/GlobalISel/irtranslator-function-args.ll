@@ -2,7 +2,7 @@
 ; Note update_mir_test_checks does not support generating checks for
 ; the frame info, so some functions have manually added stack object
 ; checks.
-; RUN: llc -mtriple=amdgcn -mcpu=fiji -O0 -stop-after=irtranslator -global-isel -verify-machineinstrs -o - %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -O0 -stop-after=irtranslator -global-isel -global-isel-abort=2 -verify-machineinstrs -o - %s | FileCheck %s
 ; FIXME: pre-VI should have same ABI without legal i16 operations.
 
 define void @void_func_empty_arg({} %arg0, i32 %arg1) #0 {
@@ -97,8 +97,8 @@ define void @i1_arg_i1_use(i1 %arg) #0 {
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[XOR:%[0-9]+]]:_(s1) = G_XOR [[TRUNC]], [[C]]
-  ; CHECK-NEXT:   [[INTRINSIC_W_SIDE_EFFECTS:%[0-9]+]]:_(s1), [[INTRINSIC_W_SIDE_EFFECTS1:%[0-9]+]]:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), [[XOR]](s1)
-  ; CHECK-NEXT:   G_BRCOND [[INTRINSIC_W_SIDE_EFFECTS]](s1), %bb.2
+  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s1), [[INT1:%[0-9]+]]:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), [[XOR]](s1)
+  ; CHECK-NEXT:   G_BRCOND [[INT]](s1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.bb1:
@@ -108,7 +108,7 @@ define void @i1_arg_i1_use(i1 %arg) #0 {
   ; CHECK-NEXT:   G_BR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.bb2:
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INTRINSIC_W_SIDE_EFFECTS1]](s64)
+  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT1]](s64)
   ; CHECK-NEXT:   SI_RETURN
 bb:
   br i1 %arg, label %bb2, label %bb1
@@ -2913,14 +2913,14 @@ define void @void_func_f16_inreg(half inreg %arg0) #0 {
 
 define void @void_func_bf16_inreg(bfloat inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_bf16_inreg
-  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   G_STORE [[TRUNC]](s16), [[DEF]](p1) :: (store (s16) into `ptr addrspace(1) undef`, addrspace 1)
-  ; CHECK-NEXT:   SI_RETURN
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1 (%ir-block.0):
   store bfloat %arg0, ptr addrspace(1) undef
   ret void
 }
@@ -3018,14 +3018,14 @@ define void @void_func_v2f16_inreg(<2 x half> inreg %arg0) #0 {
 
 define void @void_func_v2bf16_inreg(<2 x bfloat> inreg %arg0) #0 {
   ; CHECK-LABEL: name: void_func_v2bf16_inreg
-  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr16
   ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   G_STORE [[BITCAST]](<2 x s16>), [[DEF]](p1) :: (store (<2 x s16>) into `ptr addrspace(1) undef`, addrspace 1)
-  ; CHECK-NEXT:   SI_RETURN
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1 (%ir-block.0):
   store <2 x bfloat> %arg0, ptr addrspace(1) undef
   ret void
 }

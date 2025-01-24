@@ -1553,10 +1553,6 @@ bool IRTranslator::translateBitCast(const User &U,
 
 bool IRTranslator::translateCast(unsigned Opcode, const User &U,
                                  MachineIRBuilder &MIRBuilder) {
-  if (U.getType()->getScalarType()->isBFloatTy() ||
-      U.getOperand(0)->getType()->getScalarType()->isBFloatTy())
-    return false;
-
   uint32_t Flags = 0;
   if (const Instruction *I = dyn_cast<Instruction>(&U))
     Flags = MachineInstr::copyFlagsFromInstruction(*I);
@@ -3617,6 +3613,15 @@ bool IRTranslator::translate(const Instruction &Inst) {
   CurBuilder->setDebugLoc(Inst.getDebugLoc());
   CurBuilder->setPCSections(Inst.getMetadata(LLVMContext::MD_pcsections));
   CurBuilder->setMMRAMetadata(Inst.getMetadata(LLVMContext::MD_mmra));
+
+  // BF16 cannot currently be represented by LLT, to avoid miscompiles we
+  // prevent any instructions using them. FIXME: This can be removed once LLT
+  // supports bfloat.
+  if (Inst.getType()->getScalarType()->isBFloatTy() ||
+      any_of(Inst.operands(), [](Value *V) {
+        return V->getType()->getScalarType()->isBFloatTy();
+      }))
+    return false;
 
   if (TLI->fallBackToDAGISel(Inst))
     return false;
