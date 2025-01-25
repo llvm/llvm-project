@@ -27,7 +27,7 @@ entry:
   invoke void @test2( )
   to label %N unwind label %U
 U:
-  %res = landingpad { ptr }
+  %res = landingpad { ptr, i32 }
   cleanup
   unreachable
 N:

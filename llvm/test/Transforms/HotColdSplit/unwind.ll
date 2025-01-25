@@ -16,7 +16,7 @@ entry:
   invoke void @llvm.donothing() to label %normal unwind label %exception
 
 exception:
-  %cleanup = landingpad i32 cleanup
+  %cleanup = landingpad { ptr, i32 } cleanup
   br i1 undef, label %normal, label %continue_exception
 
 continue_exception:
@@ -25,7 +25,7 @@ continue_exception:
   br label %resume-eh
 
 resume-eh:
-  resume i32 undef
+  resume { ptr, i32 } undef
 
 normal:
   br i1 undef, label %continue_exception, label %exit

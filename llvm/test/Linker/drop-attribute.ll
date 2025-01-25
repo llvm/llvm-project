@@ -22,7 +22,7 @@ entry:
   invoke void @test_nocallback_call_site() nocallback
           to label %ret unwind label %unw
 unw:
-  %tmp = landingpad i8 cleanup
+  %tmp = landingpad { ptr, i8 } cleanup
   br label %ret
 ret:
   ret i32 0

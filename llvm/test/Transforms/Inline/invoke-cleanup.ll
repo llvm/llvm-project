@@ -14,9 +14,9 @@ define internal void @inner() personality ptr null {
 cont:
   ret void
 lpad:
-  %lp = landingpad i32
+  %lp = landingpad { ptr, i32 }
       catch ptr @exception_type1
-  resume i32 %lp
+  resume {ptr, i32} %lp
 }
 
 ; Test that the "cleanup" clause is kept when inlining @inner() into
@@ -29,10 +29,10 @@ define void @outer() personality ptr null {
 cont:
   ret void
 lpad:
-  %lp = landingpad i32
+  %lp = landingpad { ptr, i32 }
       cleanup
       catch ptr @exception_type2
-  resume i32 %lp
+  resume {ptr, i32} %lp
 }
 ; CHECK: define void @outer
 ; CHECK: landingpad

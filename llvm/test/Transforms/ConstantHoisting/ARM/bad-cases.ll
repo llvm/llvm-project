@@ -123,7 +123,7 @@ define i32 @inline_asm_invoke() personality ptr null {
 L:
   ret i32 %X
 lpad:
-  %lp = landingpad i32
+  %lp = landingpad { ptr, i32 }
       cleanup
       catch ptr @exception_type
   ret i32 1

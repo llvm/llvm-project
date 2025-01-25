@@ -8,7 +8,7 @@ declare void @llvm.donothing() nounwind readnone
 define void @f.no_personality1() personality i8 0 {
   invoke void @llvm.donothing() to label %normal unwind label %exception
 exception:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   br label %normal
 normal:
   ret void
@@ -21,7 +21,7 @@ normal:
 define void @f.no_personality2() personality i8 -1 {
   invoke void @llvm.donothing() to label %normal unwind label %exception
 exception:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   br label %normal
 normal:
   ret void

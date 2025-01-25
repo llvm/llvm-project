@@ -44,7 +44,7 @@ define i32 @f.invoke() personality i8 3 {
   ret i32 %v0
 
  exception:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   ret i32 0
 }
 
@@ -59,6 +59,6 @@ define i32 @g.invoke() personality i8 3 {
   ret i32 %v0
 
  exception:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   ret i32 0
 }

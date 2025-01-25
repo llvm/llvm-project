@@ -1005,7 +1005,7 @@ define void @i32_red_invoke(i32 %val) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[RES:%.*]] = invoke i32 @foobar(i32 [[TMP1]])
 ; CHECK-NEXT:            to label [[NORMAL:%.*]] unwind label [[EXCEPTION:%.*]]
 ; CHECK:       exception:
-; CHECK-NEXT:    [[CLEANUP:%.*]] = landingpad i8
+; CHECK-NEXT:    [[CLEANUP:%.*]] = landingpad { ptr, i8 }
 ; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    br label [[NORMAL]]
 ; CHECK:       normal:
@@ -1029,7 +1029,7 @@ entry:
   %add.6 = add nsw i32 %7, %add.5
   %res = invoke i32 @foobar(i32 %add.6) to label %normal unwind label %exception
 exception:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   br label %normal
 normal:
   ret void

@@ -19,14 +19,14 @@ define internal void @inner_multiple_resume() personality ptr null {
 cont:
   ret void
 lpad:
-  %lp = landingpad i32
+  %lp = landingpad { ptr, i32 }
       catch ptr @exception_inner
   %cond = load i1, ptr @condition
   br i1 %cond, label %resume1, label %resume2
 resume1:
-  resume i32 1
+  resume { ptr, i32 } { ptr null, i32 1 }
 resume2:
-  resume i32 2
+  resume { ptr, i32 } { ptr null, i32 2 }
 }
 
 define void @outer_multiple_resume() personality ptr null {
@@ -35,9 +35,9 @@ define void @outer_multiple_resume() personality ptr null {
 cont:
   ret void
 lpad:
-  %lp = landingpad i32
+  %lp = landingpad { ptr, i32 }
       catch ptr @exception_outer
-  resume i32 %lp
+  resume { ptr, i32 } %lp
 }
 ; CHECK: define void @outer_multiple_resume()
 ; CHECK: %lp.i = landingpad
@@ -58,9 +58,9 @@ define internal void @inner_resume_and_call() personality ptr null {
 cont:
   ret void
 lpad:
-  %lp = landingpad i32
+  %lp = landingpad { ptr, i32 }
       catch ptr @exception_inner
-  resume i32 %lp
+  resume {i8*, i32} %lp
 }
 
 define void @outer_resume_and_call() personality ptr null {
@@ -69,9 +69,9 @@ define void @outer_resume_and_call() personality ptr null {
 cont:
   ret void
 lpad:
-  %lp = landingpad i32
+  %lp = landingpad { ptr, i32 }
       catch ptr @exception_outer
-  resume i32 %lp
+  resume {i8*, i32} %lp
 }
 ; CHECK: define void @outer_resume_and_call()
 ; CHECK: %lp.i = landingpad
@@ -93,7 +93,7 @@ define internal void @inner_no_resume_or_call() personality ptr null {
 cont:
   ret void
 lpad:
-  %lp = landingpad i32
+  %lp = landingpad { ptr, i32 }
       catch ptr @exception_inner
   ; A landingpad might have no "resume" if a C++ destructor aborts.
   call void @abort() noreturn nounwind
@@ -106,9 +106,9 @@ define void @outer_no_resume_or_call() personality ptr null {
 cont:
   ret void
 lpad:
-  %lp = landingpad i32
+  %lp = landingpad { ptr, i32 }
       catch ptr @exception_outer
-  resume i32 %lp
+  resume { ptr, i32 } %lp
 }
 ; CHECK: define void @outer_no_resume_or_call()
 ; CHECK: %lp.i = landingpad

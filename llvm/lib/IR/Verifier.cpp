@@ -4517,6 +4517,29 @@ void Verifier::visitEHPadPredecessors(Instruction &I) {
   }
 }
 
+// Recursively extract types from the LandingPad type
+// Based on ComputeValueVTs
+static void linearizeLandingPadTypes(Type *Ty,
+                                     SmallVectorImpl<Type *> &LPITypes) {
+  if (StructType *STy = dyn_cast<StructType>(Ty)) {
+    for (unsigned I = 0, E = STy->getNumElements(); I != E; ++I) {
+      linearizeLandingPadTypes(STy->getElementType(I), LPITypes);
+    }
+    return;
+  }
+  // Given an array type, recursively traverse the elements.
+  if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
+    Type *EltTy = ATy->getElementType();
+    for (unsigned i = 0, e = ATy->getNumElements(); i != e; ++i)
+      linearizeLandingPadTypes(EltTy, LPITypes);
+    return;
+  }
+  // Interpret void as zero return values.
+  if (Ty->isVoidTy())
+    return;
+  LPITypes.push_back(Ty);
+}
+
 void Verifier::visitLandingPadInst(LandingPadInst &LPI) {
   // The landingpad instruction is ill-formed if it doesn't have any clauses and
   // isn't a cleanup.
@@ -4532,6 +4555,13 @@ void Verifier::visitLandingPadInst(LandingPadInst &LPI) {
           "The landingpad instruction should have a consistent result type "
           "inside a function.",
           &LPI);
+
+  if (!LandingPadResultTy->isTokenTy()) {
+    SmallVector<Type *, 4> linearizedLPITypes;
+    linearizeLandingPadTypes(LandingPadResultTy, linearizedLPITypes);
+    Check(linearizedLPITypes.size() == 2,
+          "Only two-valued landingpads are supported.", &LPI);
+  }
 
   Function *F = LPI.getParent()->getParent();
   Check(F->hasPersonalityFn(),

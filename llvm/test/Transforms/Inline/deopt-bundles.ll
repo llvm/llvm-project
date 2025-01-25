@@ -73,7 +73,7 @@ define i32 @caller_3() personality i8 3 {
   ret i32 %x
 
  unwind:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   ret i32 101
 }
 
@@ -85,7 +85,7 @@ define i32 @callee_4() alwaysinline personality i8 3 {
   ret i32 %v
 
  unwind:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   ret i32 100
 }
 
@@ -105,7 +105,7 @@ define i32 @callee_5() alwaysinline personality i8 3 {
   ret i32 %v
 
  unwind:
-  %cleanup = landingpad i8 cleanup
+  %cleanup = landingpad { ptr, i8 } cleanup
   ret i32 100
 }
 
