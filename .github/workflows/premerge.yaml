@@ -124,7 +124,7 @@ jobs:
         # TODO(boomanaiden154): Remove this once the pipeline is stable and we
         # are ready for people to start recieving notifications.
         continue-on-error: true
-        if: ${{ steps.vars.outputs.windows-projects == '' }}
+        if: ${{ steps.vars.outputs.windows-projects != '' }}
         shell: cmd
         run: |
           set MAX_PARALLEL_COMPILE_JOBS=64
