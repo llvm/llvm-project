@@ -990,6 +990,7 @@ Bug Fixes to C++ Support
 - Fix immediate escalation not propagating through inherited constructors.  (#GH112677)
 - Fixed assertions or false compiler diagnostics in the case of C++ modules for
   lambda functions or inline friend functions defined inside templates (#GH122493).
+- Clang now permits the use of immediate-escalating expressions in ``constexpr`` if conditions. (#GH123524)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
