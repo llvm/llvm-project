@@ -1069,11 +1069,12 @@ entry:
   ret <2 x i31>  %res
 }
 
+;; Issue #124387 Range attribute no longer holds after operands changed.
 define i8 @fshl_range_trunc(i1 %x) {
 ; CHECK-LABEL: @fshl_range_trunc(
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[ZEXT]], 126
-; CHECK-NEXT:    [[FSHL:%.*]] = call range(i32 -4, 2) i32 @llvm.fshl.i32(i32 [[OR]], i32 -2, i32 1)
+; CHECK-NEXT:    [[FSHL:%.*]] = call i32 @llvm.fshl.i32(i32 [[OR]], i32 -2, i32 1)
 ; CHECK-NEXT:    [[TR:%.*]] = trunc nuw i32 [[FSHL]] to i8
 ; CHECK-NEXT:    ret i8 [[TR]]
 ;
