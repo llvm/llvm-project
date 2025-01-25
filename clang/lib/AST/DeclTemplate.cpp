@@ -1801,8 +1801,7 @@ TemplateParameterList *clang::getReplacedTemplateParameterList(Decl *D) {
   case Decl::Kind::VarTemplateSpecialization: {
     const auto *VTSD = cast<VarTemplateSpecializationDecl>(D);
     auto P = VTSD->getSpecializedTemplateOrPartial();
-    if (const auto *VTPSD =
-            P.dyn_cast<VarTemplatePartialSpecializationDecl *>())
+    if (const auto *VTPSD = dyn_cast<VarTemplatePartialSpecializationDecl *>(P))
       return VTPSD->getTemplateParameters();
     return cast<VarTemplateDecl *>(P)->getTemplateParameters();
   }
