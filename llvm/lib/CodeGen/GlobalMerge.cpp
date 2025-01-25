@@ -423,12 +423,24 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
     }
   }
 
+  // Now we found a bunch of sets of globals used together.  We accumulated
+  // the number of times we encountered the sets (i.e., the number of functions
+  // that use that exact set of globals).
+  //
+  // Multiply that by the size of the set to give us a crude profitability
+  // metric.
+  llvm::stable_sort(UsedGlobalSets,
+                    [](const UsedGlobalSet &UGS1, const UsedGlobalSet &UGS2) {
+                      return UGS1.Globals.count() * UGS1.UsageCount <
+                             UGS2.Globals.count() * UGS2.UsageCount;
+                    });
+
   // We can choose to merge all globals together, but ignore globals never used
   // with another global.  This catches the obviously non-profitable cases of
   // having a single global, but is aggressive enough for any other case.
   if (GlobalMergeIgnoreSingleUse) {
     BitVector AllGlobals(Globals.size());
-    for (const UsedGlobalSet &UGS : UsedGlobalSets) {
+    for (const UsedGlobalSet &UGS : llvm::reverse(UsedGlobalSets)) {
       if (UGS.UsageCount == 0)
         continue;
       if (UGS.Globals.count() > 1)
@@ -436,16 +448,6 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
     }
     return doMerge(Globals, AllGlobals, M, isConst, AddrSpace);
   }
-
-  // Now we found a bunch of sets of globals used together. We accumulated
-  // the number of times we encountered the sets (i.e., the number of functions
-  // that use that exact set of globals). Multiply that by the size of the set
-  // to give us a crude profitability metric.
-  llvm::stable_sort(UsedGlobalSets,
-                    [](const UsedGlobalSet &UGS1, const UsedGlobalSet &UGS2) {
-                      return UGS1.Globals.count() * UGS1.UsageCount >=
-                             UGS2.Globals.count() * UGS2.UsageCount;
-                    });
 
   // Starting from the sets with the best (=biggest) profitability, find a
   // good combination.
@@ -456,7 +458,7 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
   BitVector PickedGlobals(Globals.size());
   bool Changed = false;
 
-  for (const UsedGlobalSet &UGS : UsedGlobalSets) {
+  for (const UsedGlobalSet &UGS : llvm::reverse(UsedGlobalSets)) {
     if (UGS.UsageCount == 0)
       continue;
     if (PickedGlobals.anyCommon(UGS.Globals))
