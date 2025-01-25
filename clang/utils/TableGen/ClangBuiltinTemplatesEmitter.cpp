@@ -14,10 +14,12 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
+#include <sstream>
+
 using namespace llvm;
 
-std::string TemplateNameList;
-std::string CreateBuiltinTemplateParameterList;
+static std::string TemplateNameList;
+static std::string CreateBuiltinTemplateParameterList;
 
 namespace {
 struct ParserState {
@@ -29,9 +31,9 @@ struct ParserState {
 std::pair<std::string, std::string>
 ParseTemplateParameterList(ParserState &PS, StringRef &TemplateParmList) {
   auto Alphabetic = [](char c) { return std::isalpha(c); };
-  auto BoolToStr = [](bool b) { return b ? "true" : "false"; };
 
-  std::string Generator;
+  std::ostringstream Generator;
+  Generator << std::boolalpha;
   std::vector<std::string> Params;
   std::unordered_map<std::string, std::string> TemplateNameToParmName;
   TemplateParmList = TemplateParmList.ltrim();
@@ -44,26 +46,26 @@ ParseTemplateParameterList(ParserState &PS, StringRef &TemplateParmList) {
     if (TemplateParmList.consume_front("size_t")) {
       if (!PS.EmittedSizeTInfo) {
         PS.EmittedSizeTInfo = true;
-        Generator += R"C++(
+        Generator << R"C++(
   TypeSourceInfo *SizeTInfo = C.getTrivialTypeSourceInfo(C.getSizeType());
 )C++";
       }
 
-      Generator += "  auto *" + ParmName + R"C++(
+      Generator << "  auto *" << ParmName << R"C++(
     = NonTypeTemplateParmDecl::Create(C, DC, SourceLocation(), SourceLocation(),
-        )C++" + std::to_string(PS.CurrentDepth) +
-                   ", " + std::to_string(Position++) + R"C++(, /*Id=*/nullptr,
+        )C++" << PS.CurrentDepth
+                << ", " << Position++ << R"C++(, /*Id=*/nullptr,
         SizeTInfo->getType(), /*ParameterPack=*/false, SizeTInfo);
 )C++";
     } else if (TemplateParmList.consume_front("class")) {
       bool ParameterPack = TemplateParmList.consume_front("...");
 
-      Generator += "  auto *" + ParmName + R"C++(
+      Generator << "  auto *" << ParmName << R"C++(
     = TemplateTypeParmDecl::Create(C, DC, SourceLocation(), SourceLocation(),
-      )C++" + std::to_string(PS.CurrentDepth) +
-                   ", " + std::to_string(Position++) +
-                   R"C++(, /*Id=*/nullptr, /*Typename=*/false, )C++" +
-                   BoolToStr(ParameterPack) + ");\n";
+      )C++" << PS.CurrentDepth
+                << ", " << Position++
+                << R"C++(, /*Id=*/nullptr, /*Typename=*/false, )C++"
+                << ParameterPack << ");\n";
     } else if (TemplateParmList.consume_front("template")) {
       ++PS.CurrentDepth;
       auto [Code, TPLName] = ParseTemplateParameterList(PS, TemplateParmList);
@@ -72,13 +74,13 @@ ParseTemplateParameterList(ParserState &PS, StringRef &TemplateParmList) {
       if (!TemplateParmList.consume_front("class")) {
         PrintFatalError("Expected 'class' after template template list");
       }
-      Generator += Code;
-      Generator +=
-          "  auto *" + ParmName + R"C++(
-    = TemplateTemplateParmDecl::Create(C, DC, SourceLocation(), )C++" +
-          std::to_string(PS.CurrentDepth) + ", " + std::to_string(Position++) +
-          ", /*ParameterPack=*/false, /*Id=*/nullptr, /*Typename=*/false, " +
-          TPLName + ");\n";
+      Generator << Code;
+      Generator
+          << "  auto *" << ParmName << R"C++(
+    = TemplateTemplateParmDecl::Create(C, DC, SourceLocation(), )C++"
+          << PS.CurrentDepth << ", " << Position++
+          << ", /*ParameterPack=*/false, /*Id=*/nullptr, /*Typename=*/false, "
+          << TPLName << ");\n";
     } else {
       auto Name = TemplateParmList.take_while(Alphabetic).str();
       if (TemplateNameToParmName.find(Name) != TemplateNameToParmName.end()) {
@@ -86,17 +88,17 @@ ParseTemplateParameterList(ParserState &PS, StringRef &TemplateParmList) {
         bool ParameterPack = TemplateParmList.consume_front("...");
 
         auto TSIName = "TSI" + std::to_string(PS.UniqueCounter++);
-        Generator += "  auto *" + TSIName + R"C++(
-    = C.getTrivialTypeSourceInfo(QualType()C++" +
-                     TemplateNameToParmName[Name] +
-                     R"C++(->getTypeForDecl(), 0));
-  auto *)C++" + ParmName +
-                     R"C++( = NonTypeTemplateParmDecl::Create(
-      C, DC, SourceLocation(), SourceLocation(), )C++" +
-                     std::to_string(PS.CurrentDepth) + ", " +
-                     std::to_string(Position++) + ", /*Id=*/nullptr, " +
-                     TSIName + "->getType(), " + BoolToStr(ParameterPack) +
-                     ", " + TSIName + ");\n";
+        Generator << "  auto *" << TSIName << R"C++(
+    = C.getTrivialTypeSourceInfo(QualType()C++"
+                  << TemplateNameToParmName[Name] <<
+            R"C++(->getTypeForDecl(), 0));
+  auto *)C++" << ParmName
+                  <<
+            R"C++( = NonTypeTemplateParmDecl::Create(
+      C, DC, SourceLocation(), SourceLocation(), )C++"
+                  << PS.CurrentDepth << ", " << Position++
+                  << ", /*Id=*/nullptr, " << TSIName << "->getType(), "
+                  << ParameterPack << ", " << TSIName << ");\n";
       } else {
         PrintFatalError("Unknown argument");
       }
@@ -121,7 +123,7 @@ ParseTemplateParameterList(ParserState &PS, StringRef &TemplateParmList) {
   }
 
   auto TPLName = "TPL" + std::to_string(PS.UniqueCounter++);
-  Generator += "  auto *" + TPLName + R"C++( = TemplateParameterList::Create(
+  Generator << "  auto *" << TPLName << R"C++( = TemplateParameterList::Create(
       C, SourceLocation(), SourceLocation(), {)C++";
 
   if (Params.empty())
@@ -132,14 +134,14 @@ ParseTemplateParameterList(ParserState &PS, StringRef &TemplateParmList) {
   for (auto e : Params) {
     if (First) {
       First = false;
-      Generator += e;
+      Generator << e;
     } else {
-      Generator += ", " + e;
+      Generator << ", " << e;
     }
   }
-  Generator += "}, SourceLocation(), nullptr);\n";
+  Generator << "}, SourceLocation(), nullptr);\n";
 
-  return {std::move(Generator), std::move(TPLName)};
+  return {std::move(Generator).str(), std::move(TPLName)};
 }
 
 void EmitCreateBuiltinTemplateParameterList(StringRef Prototype,

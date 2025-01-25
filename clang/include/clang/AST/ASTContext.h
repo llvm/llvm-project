@@ -2057,12 +2057,6 @@ public:
   }
 #include "clang/Basic/BuiltinTemplates.inc"
 
-  IdentifierInfo *getBuiltinCommonTypeName() const {
-    if (!BuiltinCommonTypeName)
-      BuiltinCommonTypeName = &Idents.get("__builtin_common_type");
-    return BuiltinCommonTypeName;
-  }
-
   /// Retrieve the Objective-C "instancetype" type, if already known;
   /// otherwise, returns a NULL type;
   QualType getObjCInstanceType() {
