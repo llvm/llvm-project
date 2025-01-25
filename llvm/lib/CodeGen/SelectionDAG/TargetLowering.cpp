@@ -10906,7 +10906,7 @@ void TargetLowering::forceExpandMultiply(SelectionDAG &DAG, const SDLoc &dl,
                    DAG.getNode(ISD::ADD, dl, VT, UH, VH));
 
   // If HiLHS and HiRHS are set, multiply them by the opposite low part and add
-  // them to products to Hi.
+  // the products to Hi.
   if (HiLHS) {
     Hi = DAG.getNode(ISD::ADD, dl, VT, Hi,
                      DAG.getNode(ISD::ADD, dl, VT,
