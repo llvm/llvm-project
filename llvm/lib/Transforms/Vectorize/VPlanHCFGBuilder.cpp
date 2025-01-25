@@ -292,6 +292,11 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
            "Instruction shouldn't have been visited.");
 
     if (auto *Br = dyn_cast<BranchInst>(Inst)) {
+      if (TheLoop->getLoopLatch() == BB ||
+          any_of(successors(BB),
+                 [this](BasicBlock *Succ) { return !TheLoop->contains(Succ); }))
+        continue;
+
       // Conditional branch instruction are represented using BranchOnCond
       // recipes.
       if (Br->isConditional()) {
@@ -356,11 +361,6 @@ void PlainCFGBuilder::buildPlainCFG() {
   VPBasicBlock *VectorLatchVPBB = TheRegion->getExitingBasicBlock();
   BB2VPBB[TheLoop->getHeader()] = VectorHeaderVPBB;
   VectorHeaderVPBB->clearSuccessors();
-  VectorLatchVPBB->clearPredecessors();
-  if (TheLoop->getHeader() != TheLoop->getLoopLatch())
-    BB2VPBB[TheLoop->getLoopLatch()] = VectorLatchVPBB;
-  else
-    TheRegion->setExiting(VectorHeaderVPBB);
 
   // 1. Scan the body of the loop in a topological order to visit each basic
   // block after having visited its predecessor basic blocks. Create a VPBB for
@@ -396,6 +396,13 @@ void PlainCFGBuilder::buildPlainCFG() {
       assert(isHeaderVPBB(VPBB) && "isHeaderBB and isHeaderVPBB disagree");
       if (TheRegion != Region)
         setRegionPredsFromBB(Region, BB);
+    }
+
+    if (TheLoop->getLoopLatch() == BB) {
+      VPBB->setOneSuccessor(VectorLatchVPBB);
+      VectorLatchVPBB->clearPredecessors();
+      VectorLatchVPBB->setPredecessors({VPBB});
+      continue;
     }
 
     // Set VPBB successors. We create empty VPBBs for successors if they don't

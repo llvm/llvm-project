@@ -9509,12 +9509,6 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
       [this](PHINode *P) { return Legal->getIntOrFpInductionDescriptor(P); },
       *PSE.getSE(), *TLI);
 
-  // Remove the existing terminator of the exiting block of the top-most region.
-  // A BranchOnCount will be added instead when adding the canonical IV recipes.
-  auto *Term =
-      Plan->getVectorLoopRegion()->getExitingBasicBlock()->getTerminator();
-  Term->eraseFromParent();
-
   // Tail folding is not supported for outer loops, so the induction increment
   // is guaranteed to not wrap.
   bool HasNUW = true;
