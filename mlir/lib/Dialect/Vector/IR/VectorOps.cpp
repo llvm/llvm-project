@@ -1688,7 +1688,7 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
           broadcastVecType.getShape().take_back(extractResultRank))
     return Value();
 
-  // The dim-1 broadcast -> ExtractOp folder requires in place operation
+  // The dim-1 broadcast -> ExtractOp folder requires in-place operation
   // modifications. For dynamic position, this means we have to change the
   // number of operands. This cannot be done in place since it changes the
   // operation storage. For dynamic dimensions, the dim-1 broadcasting should
