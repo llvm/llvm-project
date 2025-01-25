@@ -16,3 +16,6 @@
 // CHECK: crc32ch  w13, w17, w25           // encoding: [0x2d,0x56,0xd9,0x1a]
 // CHECK: crc32cw  wzr, w3, w5             // encoding: [0x7f,0x58,0xc5,0x1a]
 // CHECK: crc32cx  w18, w16, xzr           // encoding: [0x12,0x5e,0xdf,0x9a]
+
+        .equ	p4_low_b0, 0x0000
+        movk x1, p4_low_b0, lsl 16
