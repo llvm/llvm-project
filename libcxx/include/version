@@ -101,6 +101,8 @@ __cpp_lib_execution                                     201902L <execution>
                                                         201603L // C++17
 __cpp_lib_expected                                      202211L <expected>
 __cpp_lib_filesystem                                    201703L <filesystem>
+__cpp_lib_flat_map                                      202207L <flat_map>
+__cpp_lib_flat_set                                      202207L <flat_set>
 __cpp_lib_format                                        202110L <format>
 __cpp_lib_format_path                                   202403L <filesystem>
 __cpp_lib_format_ranges                                 202207L <format>
@@ -480,6 +482,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_constexpr_typeinfo                   202106L
 # define __cpp_lib_containers_ranges                    202202L
 # define __cpp_lib_expected                             202211L
+# define __cpp_lib_flat_map                             202207L
+// # define __cpp_lib_flat_set                             202207L
 # define __cpp_lib_format_ranges                        202207L
 // # define __cpp_lib_formatters                           202302L
 # define __cpp_lib_forward_like                         202207L
