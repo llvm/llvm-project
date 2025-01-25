@@ -527,7 +527,7 @@ define void @fixed_m1_in_m2_notail(<8 x i32> %src, <8 x i32> %passthru) vscale_r
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = shufflevector <8 x i32> %src, <8 x i32> %passthru, <8 x i32> <i32 0, i32 8, i32 9, i32 10, i32 11, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %3 = shufflevector <8 x i32> %src, <8 x i32> %passthru, <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 10, i32 11, i32 6, i32 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %4 = shufflevector <8 x i32> %src, <8 x i32> %passthru, <8 x i32> <i32 0, i32 1, i32 2, i32 8, i32 9, i32 10, i32 11, i32 7>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %5 = shufflevector <8 x i32> %src, <8 x i32> %passthru, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %5 = shufflevector <8 x i32> %src, <8 x i32> %passthru, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'fixed_m1_in_m2_notail'
@@ -535,7 +535,7 @@ define void @fixed_m1_in_m2_notail(<8 x i32> %src, <8 x i32> %passthru) vscale_r
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %2 = shufflevector <8 x i32> %src, <8 x i32> %passthru, <8 x i32> <i32 0, i32 8, i32 9, i32 10, i32 11, i32 5, i32 6, i32 7>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %3 = shufflevector <8 x i32> %src, <8 x i32> %passthru, <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 10, i32 11, i32 6, i32 7>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %4 = shufflevector <8 x i32> %src, <8 x i32> %passthru, <8 x i32> <i32 0, i32 1, i32 2, i32 8, i32 9, i32 10, i32 11, i32 7>
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %5 = shufflevector <8 x i32> %src, <8 x i32> %passthru, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %5 = shufflevector <8 x i32> %src, <8 x i32> %passthru, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   shufflevector <8 x i32> %src, <8 x i32> %passthru, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
