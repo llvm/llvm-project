@@ -901,8 +901,8 @@ public:
       //   ldr     w7, [x6]
       //   add     x6, x6, w7, sxtw => no shift amount
       //   br      x6
-      dbgs() << "BOLT-DEBUG: "
-                "failed to match indirect branch: ShiftVAL != 2\n";
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: "
+                           "failed to match indirect branch: ShiftVAL != 2\n");
       return false;
     }
 
@@ -953,14 +953,14 @@ public:
       //  adr     x12, 0x247b30 <__gettextparse+0x5b0>
       //  add     x13, x12, w13, sxth #2
       //  br      x13
-      dbgs() << "BOLT-DEBUG: failed to match indirect branch: "
-                "nop/adr instead of adrp/add\n";
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: failed to match indirect branch: "
+                           "nop/adr instead of adrp/add\n");
       return false;
     }
 
     if (DefJTBaseAdd->getOpcode() != AArch64::ADDXri) {
-      dbgs() << "BOLT-DEBUG: "
-                "failed to match jump table base address pattern! (1)\n";
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: failed to match jump table base "
+                           "address pattern! (1)\n");
       return false;
     }
 
