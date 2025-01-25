@@ -924,15 +924,25 @@ SDValue DAGTypeLegalizer::LowerBitcastInRegister(SDNode *N) const {
 
   if (FromVT.isVector() && ToVT.isScalarInteger()) {
 
+    if (!IsBigEndian) {
+
+      EVT ToVecVT = EVT::getVectorVT(*DAG.getContext(), ToVT, 1);
+      // If ISD::EXTRACT_VECTOR_ELT is a legal or custom op then return
+      if (TLI.isOperationLegalOrCustom(ISD::EXTRACT_VECTOR_ELT, ToVecVT))
+        return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ToVT,
+                           DAG.getBitcast(ToVecVT, N->getOperand(0)),
+                           DAG.getVectorIdxConstant(0, DL));
+    }
+
     EVT ElemVT = FromVT.getVectorElementType();
     unsigned NumElems = FromVT.getVectorNumElements();
     unsigned ElemBits = ElemVT.getSizeInBits();
-
+    unsigned NeededBits = ElemBits * NumElems;
     unsigned PackedBits = ToVT.getSizeInBits();
-    assert(PackedBits >= ElemBits * NumElems &&
-           "Scalar type does not have enough bits to pack vector values.");
 
-    EVT PackVT = EVT::getIntegerVT(*DAG.getContext(), ElemBits * NumElems);
+    assert(PackedBits >= NeededBits && "Scalar type does not have enough bits to pack vector values.");
+
+    EVT PackVT = EVT::getIntegerVT(*DAG.getContext(), PackedBits);
     SDValue Packed = DAG.getConstant(0, DL, PackVT);
 
     EVT IdxTy = TLI.getVectorIdxTy(DAG.getDataLayout());
