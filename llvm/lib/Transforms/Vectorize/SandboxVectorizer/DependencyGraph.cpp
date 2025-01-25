@@ -267,10 +267,10 @@ void DependencyGraph::setDefUseUnscheduledSuccs(
       auto *OpI = dyn_cast<Instruction>(Op);
       if (OpI == nullptr)
         continue;
-      if (!TopInterval.contains(OpI))
-        continue;
       auto *OpN = getNode(OpI);
       if (OpN == nullptr)
+        continue;
+      if (!TopInterval.contains(OpI))
         continue;
       ++OpN->UnscheduledSuccs;
     }
