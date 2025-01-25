@@ -1,5 +1,5 @@
-! RUN: %flang_fc1 %openmp_flags -fdebug-dump-parse-tree %s | FileCheck %s
-! RUN: %flang_fc1 %openmp_flags -fdebug-unparse %s | FileCheck %s --check-prefix="UNPARSE"
+! RUN: %flang_fc1 -fopenmp -fdebug-dump-parse-tree %s | FileCheck %s
+! RUN: %flang_fc1 -fopenmp -fdebug-unparse %s | FileCheck %s --check-prefix="UNPARSE"
 
 integer function func(a, b, c)
   integer  :: a, b, c
