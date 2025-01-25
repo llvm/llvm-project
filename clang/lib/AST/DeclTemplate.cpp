@@ -1049,7 +1049,7 @@ ClassTemplateSpecializationDecl::getSourceRange() const {
     assert(!Pattern.isNull() &&
            "Class template specialization without pattern?");
     if (const auto *CTPSD =
-            Pattern.dyn_cast<ClassTemplatePartialSpecializationDecl *>())
+            dyn_cast<ClassTemplatePartialSpecializationDecl *>(Pattern))
       return CTPSD->getSourceRange();
     return cast<ClassTemplateDecl *>(Pattern)->getSourceRange();
   }
@@ -1773,7 +1773,7 @@ TemplateParameterList *clang::getReplacedTemplateParameterList(Decl *D) {
     const auto *CTSD = cast<ClassTemplateSpecializationDecl>(D);
     auto P = CTSD->getSpecializedTemplateOrPartial();
     if (const auto *CTPSD =
-            P.dyn_cast<ClassTemplatePartialSpecializationDecl *>())
+            dyn_cast<ClassTemplatePartialSpecializationDecl *>(P))
       return CTPSD->getTemplateParameters();
     return cast<ClassTemplateDecl *>(P)->getTemplateParameters();
   }
