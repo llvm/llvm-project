@@ -246,8 +246,7 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
             //    this is a destination of a catch_ref.
             if (MO.getTargetFlags() == WebAssemblyII::MO_CATCH_BLOCK_SIG) {
               Returns = {PtrTy, wasm::ValType::EXNREF};
-            }
-            else
+            } else
               getFunctionReturns(MI, Returns);
             MCOp = lowerTypeIndexOperand(std::move(Returns),
                                          SmallVector<wasm::ValType, 4>());
