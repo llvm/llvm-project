@@ -42,6 +42,7 @@ static const unsigned WebAssemblyAddrSpaceMap[] = {
     0,  // ptr32_uptr
     0,  // ptr64
     0,  // hlsl_groupshared
+    0,  // hlsl_constant
     20, // wasm_funcref
 };
 
