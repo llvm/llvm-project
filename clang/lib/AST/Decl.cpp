@@ -2447,7 +2447,7 @@ bool VarDecl::isOutOfLine() const {
 }
 
 void VarDecl::setInit(Expr *I) {
-  if (auto *Eval = Init.dyn_cast<EvaluatedStmt *>()) {
+  if (auto *Eval = dyn_cast_if_present<EvaluatedStmt *>(Init)) {
     Eval->~EvaluatedStmt();
     getASTContext().Deallocate(Eval);
   }
@@ -2527,7 +2527,7 @@ bool VarDecl::isUsableInConstantExpressions(const ASTContext &Context) const {
 /// form, which contains extra information on the evaluated value of the
 /// initializer.
 EvaluatedStmt *VarDecl::ensureEvaluatedStmt() const {
-  auto *Eval = Init.dyn_cast<EvaluatedStmt *>();
+  auto *Eval = dyn_cast_if_present<EvaluatedStmt *>(Init);
   if (!Eval) {
     // Note: EvaluatedStmt contains an APValue, which usually holds
     // resources not allocated from the ASTContext.  We need to do some
@@ -2541,7 +2541,7 @@ EvaluatedStmt *VarDecl::ensureEvaluatedStmt() const {
 }
 
 EvaluatedStmt *VarDecl::getEvaluatedStmt() const {
-  return Init.dyn_cast<EvaluatedStmt *>();
+  return dyn_cast_if_present<EvaluatedStmt *>(Init);
 }
 
 APValue *VarDecl::evaluateValue() const {
@@ -2784,8 +2784,8 @@ SourceLocation VarDecl::getPointOfInstantiation() const {
 }
 
 VarTemplateDecl *VarDecl::getDescribedVarTemplate() const {
-  return getASTContext().getTemplateOrSpecializationInfo(this)
-      .dyn_cast<VarTemplateDecl *>();
+  return dyn_cast_if_present<VarTemplateDecl *>(
+      getASTContext().getTemplateOrSpecializationInfo(this));
 }
 
 void VarDecl::setDescribedVarTemplate(VarTemplateDecl *Template) {
@@ -2875,8 +2875,8 @@ MemberSpecializationInfo *VarDecl::getMemberSpecializationInfo() const {
   if (isStaticDataMember())
     // FIXME: Remove ?
     // return getASTContext().getInstantiatedFromStaticDataMember(this);
-    return getASTContext().getTemplateOrSpecializationInfo(this)
-        .dyn_cast<MemberSpecializationInfo *>();
+    return dyn_cast_if_present<MemberSpecializationInfo *>(
+        getASTContext().getTemplateOrSpecializationInfo(this));
   return nullptr;
 }
 
@@ -4040,11 +4040,11 @@ FunctionDecl *FunctionDecl::getInstantiatedFromMemberFunction() const {
 }
 
 MemberSpecializationInfo *FunctionDecl::getMemberSpecializationInfo() const {
-  if (auto *MSI =
-          TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>())
+  if (auto *MSI = dyn_cast_if_present<MemberSpecializationInfo *>(
+          TemplateOrSpecialization))
     return MSI;
-  if (auto *FTSI = TemplateOrSpecialization
-                       .dyn_cast<FunctionTemplateSpecializationInfo *>())
+  if (auto *FTSI = dyn_cast_if_present<FunctionTemplateSpecializationInfo *>(
+          TemplateOrSpecialization))
     return FTSI->getMemberSpecializationInfo();
   return nullptr;
 }
@@ -4062,7 +4062,7 @@ FunctionDecl::setInstantiationOfMemberFunction(ASTContext &C,
 
 FunctionTemplateDecl *FunctionDecl::getDescribedFunctionTemplate() const {
   return dyn_cast_if_present<FunctionTemplateDecl>(
-      TemplateOrSpecialization.dyn_cast<NamedDecl *>());
+      dyn_cast_if_present<NamedDecl *>(TemplateOrSpecialization));
 }
 
 void FunctionDecl::setDescribedFunctionTemplate(
@@ -4181,9 +4181,9 @@ FunctionDecl::getTemplateInstantiationPattern(bool ForDefinition) const {
 }
 
 FunctionTemplateDecl *FunctionDecl::getPrimaryTemplate() const {
-  if (FunctionTemplateSpecializationInfo *Info
-        = TemplateOrSpecialization
-            .dyn_cast<FunctionTemplateSpecializationInfo*>()) {
+  if (FunctionTemplateSpecializationInfo *Info =
+          dyn_cast_if_present<FunctionTemplateSpecializationInfo *>(
+              TemplateOrSpecialization)) {
     return Info->getTemplate();
   }
   return nullptr;
@@ -4191,15 +4191,15 @@ FunctionTemplateDecl *FunctionDecl::getPrimaryTemplate() const {
 
 FunctionTemplateSpecializationInfo *
 FunctionDecl::getTemplateSpecializationInfo() const {
-  return TemplateOrSpecialization
-      .dyn_cast<FunctionTemplateSpecializationInfo *>();
+  return dyn_cast_if_present<FunctionTemplateSpecializationInfo *>(
+      TemplateOrSpecialization);
 }
 
 const TemplateArgumentList *
 FunctionDecl::getTemplateSpecializationArgs() const {
-  if (FunctionTemplateSpecializationInfo *Info
-        = TemplateOrSpecialization
-            .dyn_cast<FunctionTemplateSpecializationInfo*>()) {
+  if (FunctionTemplateSpecializationInfo *Info =
+          dyn_cast_if_present<FunctionTemplateSpecializationInfo *>(
+              TemplateOrSpecialization)) {
     return Info->TemplateArguments;
   }
   return nullptr;
@@ -4207,14 +4207,14 @@ FunctionDecl::getTemplateSpecializationArgs() const {
 
 const ASTTemplateArgumentListInfo *
 FunctionDecl::getTemplateSpecializationArgsAsWritten() const {
-  if (FunctionTemplateSpecializationInfo *Info
-        = TemplateOrSpecialization
-            .dyn_cast<FunctionTemplateSpecializationInfo*>()) {
+  if (FunctionTemplateSpecializationInfo *Info =
+          dyn_cast_if_present<FunctionTemplateSpecializationInfo *>(
+              TemplateOrSpecialization)) {
     return Info->TemplateArgumentsAsWritten;
   }
   if (DependentFunctionTemplateSpecializationInfo *Info =
-          TemplateOrSpecialization
-              .dyn_cast<DependentFunctionTemplateSpecializationInfo *>()) {
+          dyn_cast_if_present<DependentFunctionTemplateSpecializationInfo *>(
+              TemplateOrSpecialization)) {
     return Info->TemplateArgumentsAsWritten;
   }
   return nullptr;
@@ -4239,7 +4239,8 @@ void FunctionDecl::setFunctionTemplateSpecialization(
       FunctionTemplateSpecializationInfo::Create(
           C, this, Template, TSK, TemplateArgs, TemplateArgsAsWritten,
           PointOfInstantiation,
-          TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>());
+          dyn_cast_if_present<MemberSpecializationInfo *>(
+              TemplateOrSpecialization));
   TemplateOrSpecialization = Info;
   Template->addSpecialization(Info, InsertPos);
 }
@@ -4256,8 +4257,8 @@ void FunctionDecl::setDependentTemplateSpecialization(
 
 DependentFunctionTemplateSpecializationInfo *
 FunctionDecl::getDependentSpecializationInfo() const {
-  return TemplateOrSpecialization
-      .dyn_cast<DependentFunctionTemplateSpecializationInfo *>();
+  return dyn_cast_if_present<DependentFunctionTemplateSpecializationInfo *>(
+      TemplateOrSpecialization);
 }
 
 DependentFunctionTemplateSpecializationInfo *
@@ -4288,12 +4289,13 @@ TemplateSpecializationKind FunctionDecl::getTemplateSpecializationKind() const {
   // For a function template specialization, query the specialization
   // information object.
   if (FunctionTemplateSpecializationInfo *FTSInfo =
-          TemplateOrSpecialization
-              .dyn_cast<FunctionTemplateSpecializationInfo *>())
+          dyn_cast_if_present<FunctionTemplateSpecializationInfo *>(
+              TemplateOrSpecialization))
     return FTSInfo->getTemplateSpecializationKind();
 
   if (MemberSpecializationInfo *MSInfo =
-          TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>())
+          dyn_cast_if_present<MemberSpecializationInfo *>(
+              TemplateOrSpecialization))
     return MSInfo->getTemplateSpecializationKind();
 
   // A dependent function template specialization is an explicit specialization,
@@ -4331,15 +4333,16 @@ FunctionDecl::getTemplateSpecializationKindForInstantiation() const {
   // of A<int>::f, and that A<int>::f<int> should be implicitly instantiated
   // from A::f<int> if a definition is needed.
   if (FunctionTemplateSpecializationInfo *FTSInfo =
-          TemplateOrSpecialization
-              .dyn_cast<FunctionTemplateSpecializationInfo *>()) {
+          dyn_cast_if_present<FunctionTemplateSpecializationInfo *>(
+              TemplateOrSpecialization)) {
     if (auto *MSInfo = FTSInfo->getMemberSpecializationInfo())
       return MSInfo->getTemplateSpecializationKind();
     return FTSInfo->getTemplateSpecializationKind();
   }
 
   if (MemberSpecializationInfo *MSInfo =
-          TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>())
+          dyn_cast_if_present<MemberSpecializationInfo *>(
+              TemplateOrSpecialization))
     return MSInfo->getTemplateSpecializationKind();
 
   if (isa<DependentFunctionTemplateSpecializationInfo *>(

@@ -1987,7 +1987,8 @@ CXXRecordDecl *CXXRecordDecl::getInstantiatedFromMemberClass() const {
 }
 
 MemberSpecializationInfo *CXXRecordDecl::getMemberSpecializationInfo() const {
-  return TemplateOrInstantiation.dyn_cast<MemberSpecializationInfo *>();
+  return dyn_cast_if_present<MemberSpecializationInfo *>(
+      TemplateOrInstantiation);
 }
 
 void
@@ -2001,7 +2002,7 @@ CXXRecordDecl::setInstantiationOfMemberClass(CXXRecordDecl *RD,
 }
 
 ClassTemplateDecl *CXXRecordDecl::getDescribedClassTemplate() const {
-  return TemplateOrInstantiation.dyn_cast<ClassTemplateDecl *>();
+  return dyn_cast_if_present<ClassTemplateDecl *>(TemplateOrInstantiation);
 }
 
 void CXXRecordDecl::setDescribedClassTemplate(ClassTemplateDecl *Template) {
@@ -2045,7 +2046,7 @@ const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
   // specialization from which it was instantiated.
   if (auto *TD = dyn_cast<ClassTemplateSpecializationDecl>(this)) {
     auto From = TD->getInstantiatedFrom();
-    if (auto *CTD = From.dyn_cast<ClassTemplateDecl *>()) {
+    if (auto *CTD = dyn_cast_if_present<ClassTemplateDecl *>(From)) {
       while (auto *NewCTD = CTD->getInstantiatedFromMemberTemplate()) {
         if (NewCTD->isMemberSpecialization())
           break;
@@ -2054,7 +2055,8 @@ const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
       return GetDefinitionOrSelf(CTD->getTemplatedDecl());
     }
     if (auto *CTPSD =
-            From.dyn_cast<ClassTemplatePartialSpecializationDecl *>()) {
+            dyn_cast_if_present<ClassTemplatePartialSpecializationDecl *>(
+                From)) {
       while (auto *NewCTPSD = CTPSD->getInstantiatedFromMember()) {
         if (NewCTPSD->isMemberSpecialization())
           break;

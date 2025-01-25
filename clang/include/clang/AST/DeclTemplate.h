@@ -2009,7 +2009,8 @@ public:
   /// Retrieve the template argument list as written in the sources,
   /// if any.
   const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
-    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
+    if (auto *Info =
+            dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo))
       return Info->TemplateArgsAsWritten;
     return cast<const ASTTemplateArgumentListInfo *>(ExplicitInfo);
   }
@@ -2041,7 +2042,8 @@ public:
 
   /// Gets the location of the template keyword, if present.
   SourceLocation getTemplateKeywordLoc() const {
-    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
+    if (auto *Info =
+            dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo))
       return Info->TemplateKeywordLoc;
     return SourceLocation();
   }
@@ -2786,7 +2788,8 @@ public:
   /// Set the template argument list as written in the sources.
   void
   setTemplateArgsAsWritten(const ASTTemplateArgumentListInfo *ArgsWritten) {
-    if (auto *Info = ExplicitInfo.dyn_cast<ExplicitInstantiationInfo *>())
+    if (auto *Info =
+            dyn_cast_if_present<ExplicitInstantiationInfo *>(ExplicitInfo))
       Info->TemplateArgsAsWritten = ArgsWritten;
     else
       ExplicitInfo = ArgsWritten;
