@@ -220,6 +220,7 @@ on support follow.
      ``Ztso``          Supported
      ``Zvbb``          Supported
      ``Zvbc``          Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvbc32e``       Supported (`See note <#riscv-vector-crypto-note>`__)
      ``Zve32x``        (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zve32f``        (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zve64x``        Supported
@@ -231,6 +232,7 @@ on support follow.
      ``Zvfhmin``       Supported
      ``Zvkb``          Supported
      ``Zvkg``          Supported (`See note <#riscv-vector-crypto-note>`__)
+     ``Zvkgs``         Supported (`See note <#riscv-vector-crypto-note>`__)
      ``Zvkn``          Supported (`See note <#riscv-vector-crypto-note>`__)
      ``Zvknc``         Supported (`See note <#riscv-vector-crypto-note>`__)
      ``Zvkned``        Supported (`See note <#riscv-vector-crypto-note>`__)

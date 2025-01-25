@@ -1044,7 +1044,9 @@ constexpr static RISCVExtBit RISCVBitPositions[] = {
     {"zimop", 1, 1},      {"zca", 1, 2},
     {"zcb", 1, 3},        {"zcd", 1, 4},
     {"zcf", 1, 5},        {"zcmop", 1, 6},
-    {"zawrs", 1, 7}};
+    {"zawrs", 1, 7},      {"zvbc32e", 1, 8},
+    {"zvkgs", 1, 9}
+  };
 
 std::pair<int, int> RISCVISAInfo::getRISCVFeaturesBitsInfo(StringRef Ext) {
   // Note that this code currently accepts mixed case extension names, but

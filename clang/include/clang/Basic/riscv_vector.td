@@ -2791,6 +2791,17 @@ multiclass RVVSignedWidenBinBuiltinSetVwsll
                          [["vv", "Uw", "UwUvUv"],
                           ["vx", "Uw", "UwUvz"]]>;
 
+// intrinsic class for an instruction with integer operand up
+// up to 32-bit wide
+multiclass RVVIntMax32BinBuiltinSet
+    : RVVOutOp1BuiltinSet<NAME, "csi",
+                          [["vv", "v", "vvv"],
+                           ["vx", "v", "vve"]]>,
+      RVVOutOp1BuiltinSet<NAME, "csi",
+                          [["vv", "Uv", "UvUvUv"],
+                           ["vx", "Uv", "UvUvUe"]]>;
+
+
 let UnMaskedPolicyScheme = HasPassthruOperand in {
   // zvkb
   let RequiredFeatures = ["Zvkb"] in {
@@ -2816,6 +2827,12 @@ let UnMaskedPolicyScheme = HasPassthruOperand in {
   let RequiredFeatures = ["Zvbc"] in {
     defm vclmul  : RVVInt64BinBuiltinSet;
     defm vclmulh : RVVInt64BinBuiltinSet;
+  }
+
+  // zvbc32e
+  let RequiredFeatures = ["Zvbc32e", "Experimental"] in {
+    defm vclmul  : RVVIntMax32BinBuiltinSet  ;
+    defm vclmulh : RVVIntMax32BinBuiltinSet;
   }
 }
 
