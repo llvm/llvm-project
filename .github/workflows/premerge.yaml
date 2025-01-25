@@ -21,6 +21,7 @@ jobs:
     defaults:
       run:
         shell: bash
+        working-directory: C:\build
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@v4
