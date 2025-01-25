@@ -1977,6 +1977,46 @@ static Value foldScalarExtractFromFromElements(ExtractOp extractOp) {
   return fromElementsOp.getElements()[flatIndex];
 }
 
+// If the dynamic operands of `extractOp` or `insertOp` is result of
+// `constantOp`, then fold it.
+template <typename T>
+static void foldConstantOp(T op, SmallVectorImpl<Value> &operands) {
+  auto staticPosition = op.getStaticPosition().vec();
+  OperandRange dynamicPosition = op.getDynamicPosition();
+
+  // If the dynamic operands is empty, it is returned directly.
+  if (!dynamicPosition.size())
+    return;
+  unsigned index = 0;
+
+  // `opChange` is a flog. If it is true, it means to update `op` in place.
+  bool opChange = false;
+  for (unsigned i = 0, e = staticPosition.size(); i < e; ++i) {
+    if (!ShapedType::isDynamic(staticPosition[i]))
+      continue;
+    Value position = dynamicPosition[index++];
+
+    // If it is a block parameter, proceed to the next iteration.
+    if (!position.getDefiningOp()) {
+      operands.push_back(position);
+      continue;
+    }
+
+    if (auto constantOp =
+            mlir::dyn_cast<arith::ConstantIndexOp>(position.getDefiningOp())) {
+      opChange = true;
+      staticPosition[i] = constantOp.value();
+      continue;
+    }
+    operands.push_back(position);
+  }
+
+  if (opChange) {
+    op.setStaticPosition(staticPosition);
+    op.getOperation()->setOperands(operands);
+  }
+}
+
 OpFoldResult ExtractOp::fold(FoldAdaptor) {
   // Fold "vector.extract %v[] : vector<2x2xf32> from vector<2x2xf32>" to %v.
   // Note: Do not fold "vector.extract %v[] : f32 from vector<f32>" (type
@@ -1999,6 +2039,8 @@ OpFoldResult ExtractOp::fold(FoldAdaptor) {
     return val;
   if (auto val = foldScalarExtractFromFromElements(*this))
     return val;
+  SmallVector<Value> operands = {getVector()};
+  foldConstantOp(*this, operands);
   return OpFoldResult();
 }
 
@@ -3028,6 +3070,8 @@ OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
   // (type mismatch).
   if (getNumIndices() == 0 && getSourceType() == getType())
     return getSource();
+  SmallVector<Value> operands = {getSource(), getDest()};
+  foldConstantOp(*this, operands);
   return {};
 }
 
