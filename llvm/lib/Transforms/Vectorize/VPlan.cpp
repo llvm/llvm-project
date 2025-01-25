@@ -1628,6 +1628,9 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
     VFRange SubRange = {VF, MaxVFTimes2};
     auto Plan = buildVPlan(SubRange);
     VPlanTransforms::optimize(*Plan);
+    // Update the name of the latch of the top-level vector loop region region
+    // after optimizations which includes block folding.
+    Plan->getVectorLoopRegion()->getExiting()->setName("vector.latch");
     VPlans.push_back(std::move(Plan));
     VF = SubRange.End;
   }
