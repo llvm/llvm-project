@@ -3,7 +3,7 @@
 // RUN: %env_asan_opts=alloc_dealloc_mismatch=0 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-SUCCESS
 
 // RUN: %clangxx_asan -O0 %s -o %t -DUSER_FUNCTION
-// RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-SUCCESS
+// RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-MISMATCH
 
 #if USER_FUNCTION
 // It's important to test the `alloc_dealloc_mismatch` flag set through the user function because, on Windows,
