@@ -710,7 +710,10 @@ bool BPFMIPreEmitPeephole::removeMayGotoZero() {
     // The asm insn must be a may_goto insn.
     SmallVector<StringRef, 4> AsmOpPieces;
     SplitString(AsmPieces[0], AsmOpPieces, " ");
-    if (AsmOpPieces[0] != "may_goto")
+    if (AsmOpPieces.size() != 2 || AsmOpPieces[0] != "may_goto")
+      continue;
+    // Enforce the format of 'may_goto <label>'.
+    if (AsmOpPieces[1] != "${0:l}" && AsmOpPieces[1] != "$0")
       continue;
 
     // Get the may_goto branch target.
