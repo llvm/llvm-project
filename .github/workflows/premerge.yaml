@@ -102,7 +102,9 @@ jobs:
           all_projects="clang clang-tools-extra lld lldb llvm mlir"
           modified_projects="$(keep-modified-projects ${all_projects})"
 
-          mac_check_targets=$(check-targets ${modified_projects} | sort | uniq | tr '\n' ' ')
+          # We have to disable the runtimes builds due to https://github.com/llvm/llvm-project/issues/90568
+          # and the lldb tests depend on libcxx, so we need to skip them.
+          mac_check_targets=$(check-targets ${modified_projects} | sort | uniq | tr '\n' ' ' | sed -e 's/check-lldb //g')
           mac_projects=$(add-dependencies ${modified_projects} | sort | uniq | tr '\n' ' ')
 
           mac_runtimes_to_test=$(compute-runtimes-to-test ${modified_projects})
