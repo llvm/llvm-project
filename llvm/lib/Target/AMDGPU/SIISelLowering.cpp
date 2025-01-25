@@ -5685,8 +5685,8 @@ MVT SITargetLowering::getScalarShiftAmountTy(const DataLayout &, EVT VT) const {
 
 LLT SITargetLowering::getPreferredShiftAmountTy(LLT Ty) const {
   return (Ty.getScalarSizeInBits() <= 16 && Subtarget->has16BitInsts())
-             ? Ty.changeElementSize(16)
-             : Ty.changeElementSize(32);
+             ? Ty.changeElementType(LLT::scalar(16))
+             : Ty.changeElementType(LLT::scalar(32));
 }
 
 // Answering this is somewhat tricky and depends on the specific device which

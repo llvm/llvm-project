@@ -53,26 +53,25 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   const LLT s80 = LLT::scalar(80);
   const LLT s128 = LLT::scalar(128);
   const LLT sMaxScalar = Subtarget.is64Bit() ? s64 : s32;
-  const LLT v2s32 = LLT::fixed_vector(2, 32);
-  const LLT v4s8 = LLT::fixed_vector(4, 8);
+  const LLT v2s32 = LLT::fixed_vector(2, s32);
+  const LLT v4s8 = LLT::fixed_vector(4, s8);
 
-
-  const LLT v16s8 = LLT::fixed_vector(16, 8);
-  const LLT v8s16 = LLT::fixed_vector(8, 16);
-  const LLT v4s32 = LLT::fixed_vector(4, 32);
-  const LLT v2s64 = LLT::fixed_vector(2, 64);
+  const LLT v16s8 = LLT::fixed_vector(16, s8);
+  const LLT v8s16 = LLT::fixed_vector(8, s16);
+  const LLT v4s32 = LLT::fixed_vector(4, s32);
+  const LLT v2s64 = LLT::fixed_vector(2, s64);
   const LLT v2p0 = LLT::fixed_vector(2, p0);
 
-  const LLT v32s8 = LLT::fixed_vector(32, 8);
-  const LLT v16s16 = LLT::fixed_vector(16, 16);
-  const LLT v8s32 = LLT::fixed_vector(8, 32);
-  const LLT v4s64 = LLT::fixed_vector(4, 64);
+  const LLT v32s8 = LLT::fixed_vector(32, s8);
+  const LLT v16s16 = LLT::fixed_vector(16, s16);
+  const LLT v8s32 = LLT::fixed_vector(8, s32);
+  const LLT v4s64 = LLT::fixed_vector(4, s64);
   const LLT v4p0 = LLT::fixed_vector(4, p0);
 
-  const LLT v64s8 = LLT::fixed_vector(64, 8);
-  const LLT v32s16 = LLT::fixed_vector(32, 16);
-  const LLT v16s32 = LLT::fixed_vector(16, 32);
-  const LLT v8s64 = LLT::fixed_vector(8, 64);
+  const LLT v64s8 = LLT::fixed_vector(64, s8);
+  const LLT v32s16 = LLT::fixed_vector(32, s16);
+  const LLT v16s32 = LLT::fixed_vector(16, s32);
+  const LLT v8s64 = LLT::fixed_vector(8, s64);
 
   const LLT s8MaxVector = HasAVX512 ? v64s8 : HasAVX ? v32s8 : v16s8;
   const LLT s16MaxVector = HasAVX512 ? v32s16 : HasAVX ? v16s16 : v8s16;

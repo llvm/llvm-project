@@ -1083,12 +1083,12 @@ public:
                                           int64_t Offset, LLT Ty);
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
                                           int64_t Offset, LocationSize Size) {
-    return getMachineMemOperand(
-        MMO, Offset,
-        !Size.hasValue() ? LLT()
-        : Size.isScalable()
-            ? LLT::scalable_vector(1, 8 * Size.getValue().getKnownMinValue())
-            : LLT::scalar(8 * Size.getValue().getKnownMinValue()));
+    if (!Size.hasValue())
+      return getMachineMemOperand(MMO, Offset, LLT());
+
+    ElementCount EC = ElementCount::get(1, Size.isScalable());
+    LLT Ty = LLT::scalar(8 * Size.getValue().getKnownMinValue());
+    return getMachineMemOperand(MMO, Offset, LLT::scalarOrVector(EC, Ty));
   }
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
                                           int64_t Offset, uint64_t Size) {

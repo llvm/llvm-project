@@ -2630,7 +2630,7 @@ bool AArch64TargetLowering::allowsMisalignedMemoryAccesses(
 
             // Disregard v2i64. Memcpy lowering produces those and splitting
             // them regresses performance on micro-benchmarks and olden/bh.
-            Ty == LLT::fixed_vector(2, 64);
+            Ty == LLT::fixed_vector(2, LLT::scalar(64));
   }
   return true;
 }
@@ -17652,7 +17652,7 @@ LLT AArch64TargetLowering::getOptimalMemOpLLT(
 
   if (CanUseNEON && Op.isMemset() && !IsSmallMemset &&
       AlignmentIsAcceptable(MVT::v2i64, Align(16)))
-    return LLT::fixed_vector(2, 64);
+    return LLT::fixed_vector(2, LLT::scalar(64));
   if (CanUseFP && !IsSmallMemset && AlignmentIsAcceptable(MVT::f128, Align(16)))
     return LLT::scalar(128);
   if (Op.size() >= 8 && AlignmentIsAcceptable(MVT::i64, Align(8)))

@@ -2591,7 +2591,7 @@ static LLT getMidVTForTruncRightShiftCombine(LLT ShiftTy, LLT TruncTy) {
 
   // ShiftTy > 32 > TruncTy -> 32
   if (ShiftSize > 32 && TruncSize < 32)
-    return ShiftTy.changeElementSize(32);
+    return ShiftTy.changeElementType(LLT::scalar(32));
 
   // TODO: We could also reduce to 16 bits, but that's more target-dependent.
   //  Some targets like it, some don't, some only like it under certain
@@ -5397,9 +5397,8 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) const {
 
   Q = MIB.buildLShr(Ty, Q, PostShift).getReg(0);
   auto One = MIB.buildConstant(Ty, 1);
-  auto IsOne = MIB.buildICmp(
-      CmpInst::Predicate::ICMP_EQ,
-      Ty.isScalar() ? LLT::scalar(1) : Ty.changeElementSize(1), RHS, One);
+  auto IsOne = MIB.buildICmp(CmpInst::Predicate::ICMP_EQ,
+                             Ty.changeElementType(LLT::scalar(1)), RHS, One);
   return MIB.buildSelect(Ty, IsOne, LHS, Q);
 }
 
@@ -5438,8 +5437,7 @@ bool CombinerHelper::matchUDivByConst(MachineInstr &MI) const {
       return false;
     if (!isLegalOrBeforeLegalizer(
             {TargetOpcode::G_ICMP,
-             {DstTy.isVector() ? DstTy.changeElementSize(1) : LLT::scalar(1),
-              DstTy}}))
+             {DstTy.changeElementType(LLT::scalar(1)), DstTy}}))
       return false;
   }
 
@@ -5571,8 +5569,7 @@ void CombinerHelper::applySDivByPow2(MachineInstr &MI) const {
   Register RHS = SDiv.getReg(2);
   LLT Ty = MRI.getType(Dst);
   LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
-  LLT CCVT =
-      Ty.isVector() ? LLT::vector(Ty.getElementCount(), 1) : LLT::scalar(1);
+  LLT CCVT = Ty.changeElementType(LLT::scalar(1));
 
   // Effectively we want to lower G_SDIV %lhs, %rhs, where %rhs is a power of 2,
   // to the following version:

@@ -92,7 +92,8 @@ AMDGPUFunctionArgInfo::getPreloadedValue(
   switch (Value) {
   case AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_BUFFER: {
     return std::tuple(PrivateSegmentBuffer ? &PrivateSegmentBuffer : nullptr,
-                      &AMDGPU::SGPR_128RegClass, LLT::fixed_vector(4, 32));
+                      &AMDGPU::SGPR_128RegClass,
+                      LLT::fixed_vector(4, LLT::scalar(32)));
   }
   case AMDGPUFunctionArgInfo::IMPLICIT_BUFFER_PTR:
     return std::tuple(ImplicitBufferPtr ? &ImplicitBufferPtr : nullptr,

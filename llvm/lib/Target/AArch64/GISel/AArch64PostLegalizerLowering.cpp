@@ -1209,7 +1209,7 @@ bool matchExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI) {
       return true;
     }
     // If result type is v2s64, scalarise the instruction
-    else if (DstTy == LLT::fixed_vector(2, 64)) {
+    else if (DstTy == LLT::fixed_vector(2, LLT::scalar(64))) {
       return true;
     }
   }
@@ -1244,7 +1244,7 @@ void applyExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
     MI.eraseFromParent();
   }
   // If result type is v2s64, scalarise the instruction
-  else if (DstTy == LLT::fixed_vector(2, 64)) {
+  else if (DstTy == LLT::fixed_vector(2, LLT::scalar(64))) {
     LegalizerHelper Helper(*MI.getMF(), Observer, B);
     B.setInstrAndDebugLoc(MI);
     Helper.fewerElementsVector(

@@ -101,9 +101,8 @@ static LegalityPredicate isWideVec16(unsigned TypeIdx) {
 static LegalizeMutation oneMoreElement(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT Ty = Query.Types[TypeIdx];
-    const LLT EltTy = Ty.getElementType();
-    return std::pair(TypeIdx,
-                     LLT::fixed_vector(Ty.getNumElements() + 1, EltTy));
+    return std::pair(TypeIdx, LLT::fixed_vector(Ty.getNumElements() + 1,
+                                                Ty.getElementType()));
   };
 }
 
@@ -182,7 +181,8 @@ static LLT getBitcastRegisterType(const LLT Ty) {
     return LLT::scalar(Size);
   }
 
-  return LLT::scalarOrVector(ElementCount::getFixed(Size / 32), 32);
+  return LLT::scalarOrVector(ElementCount::getFixed(Size / 32),
+                             LLT::scalar(32));
 }
 
 static LegalizeMutation bitcastToRegisterType(unsigned TypeIdx) {
@@ -197,8 +197,9 @@ static LegalizeMutation bitcastToVectorElement32(unsigned TypeIdx) {
     const LLT Ty = Query.Types[TypeIdx];
     unsigned Size = Ty.getSizeInBits();
     assert(Size % 32 == 0);
-    return std::pair(
-        TypeIdx, LLT::scalarOrVector(ElementCount::getFixed(Size / 32), 32));
+    return std::pair(TypeIdx,
+                     LLT::scalarOrVector(ElementCount::getFixed(Size / 32),
+                                         LLT::scalar(32)));
   };
 }
 
@@ -296,43 +297,43 @@ static const LLT S512 = LLT::scalar(512);
 static const LLT S1024 = LLT::scalar(1024);
 static const LLT MaxScalar = LLT::scalar(MaxRegisterSize);
 
-static const LLT V2S8 = LLT::fixed_vector(2, 8);
-static const LLT V2S16 = LLT::fixed_vector(2, 16);
-static const LLT V4S16 = LLT::fixed_vector(4, 16);
-static const LLT V6S16 = LLT::fixed_vector(6, 16);
-static const LLT V8S16 = LLT::fixed_vector(8, 16);
-static const LLT V10S16 = LLT::fixed_vector(10, 16);
-static const LLT V12S16 = LLT::fixed_vector(12, 16);
-static const LLT V16S16 = LLT::fixed_vector(16, 16);
+static const LLT V2S8 = LLT::fixed_vector(2, S8);
+static const LLT V2S16 = LLT::fixed_vector(2, S16);
+static const LLT V4S16 = LLT::fixed_vector(4, S16);
+static const LLT V6S16 = LLT::fixed_vector(6, S16);
+static const LLT V8S16 = LLT::fixed_vector(8, S16);
+static const LLT V10S16 = LLT::fixed_vector(10, S16);
+static const LLT V12S16 = LLT::fixed_vector(12, S16);
+static const LLT V16S16 = LLT::fixed_vector(16, S16);
 
 static const LLT V2F16 = LLT::fixed_vector(2, LLT::float16());
 static const LLT V2BF16 = V2F16; // FIXME
 
-static const LLT V2S32 = LLT::fixed_vector(2, 32);
-static const LLT V3S32 = LLT::fixed_vector(3, 32);
-static const LLT V4S32 = LLT::fixed_vector(4, 32);
-static const LLT V5S32 = LLT::fixed_vector(5, 32);
-static const LLT V6S32 = LLT::fixed_vector(6, 32);
-static const LLT V7S32 = LLT::fixed_vector(7, 32);
-static const LLT V8S32 = LLT::fixed_vector(8, 32);
-static const LLT V9S32 = LLT::fixed_vector(9, 32);
-static const LLT V10S32 = LLT::fixed_vector(10, 32);
-static const LLT V11S32 = LLT::fixed_vector(11, 32);
-static const LLT V12S32 = LLT::fixed_vector(12, 32);
-static const LLT V16S32 = LLT::fixed_vector(16, 32);
-static const LLT V32S32 = LLT::fixed_vector(32, 32);
+static const LLT V2S32 = LLT::fixed_vector(2, S32);
+static const LLT V3S32 = LLT::fixed_vector(3, S32);
+static const LLT V4S32 = LLT::fixed_vector(4, S32);
+static const LLT V5S32 = LLT::fixed_vector(5, S32);
+static const LLT V6S32 = LLT::fixed_vector(6, S32);
+static const LLT V7S32 = LLT::fixed_vector(7, S32);
+static const LLT V8S32 = LLT::fixed_vector(8, S32);
+static const LLT V9S32 = LLT::fixed_vector(9, S32);
+static const LLT V10S32 = LLT::fixed_vector(10, S32);
+static const LLT V11S32 = LLT::fixed_vector(11, S32);
+static const LLT V12S32 = LLT::fixed_vector(12, S32);
+static const LLT V16S32 = LLT::fixed_vector(16, S32);
+static const LLT V32S32 = LLT::fixed_vector(32, S32);
 
-static const LLT V2S64 = LLT::fixed_vector(2, 64);
-static const LLT V3S64 = LLT::fixed_vector(3, 64);
-static const LLT V4S64 = LLT::fixed_vector(4, 64);
-static const LLT V5S64 = LLT::fixed_vector(5, 64);
-static const LLT V6S64 = LLT::fixed_vector(6, 64);
-static const LLT V7S64 = LLT::fixed_vector(7, 64);
-static const LLT V8S64 = LLT::fixed_vector(8, 64);
-static const LLT V16S64 = LLT::fixed_vector(16, 64);
+static const LLT V2S64 = LLT::fixed_vector(2, S64);
+static const LLT V3S64 = LLT::fixed_vector(3, S64);
+static const LLT V4S64 = LLT::fixed_vector(4, S64);
+static const LLT V5S64 = LLT::fixed_vector(5, S64);
+static const LLT V6S64 = LLT::fixed_vector(6, S64);
+static const LLT V7S64 = LLT::fixed_vector(7, S64);
+static const LLT V8S64 = LLT::fixed_vector(8, S64);
+static const LLT V16S64 = LLT::fixed_vector(16, S64);
 
-static const LLT V2S128 = LLT::fixed_vector(2, 128);
-static const LLT V4S128 = LLT::fixed_vector(4, 128);
+static const LLT V2S128 = LLT::fixed_vector(2, S128);
+static const LLT V4S128 = LLT::fixed_vector(4, S128);
 
 static std::initializer_list<LLT> AllScalarTypes = {
     S32, S64, S96, S128, S160, S192, S224, S256, S512, S1024};
@@ -1815,9 +1816,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           const unsigned VecSize = VecTy.getSizeInBits();
 
           const unsigned TargetEltSize = DstEltSize % 64 == 0 ? 64 : 32;
+          LLT TargetEltTy =
+              DstEltSize % 64 == 0 ? LLT::scalar(64) : LLT::scalar(32);
           return std::pair(
               VecTypeIdx,
-              LLT::fixed_vector(VecSize / TargetEltSize, TargetEltSize));
+              LLT::fixed_vector(VecSize / TargetEltSize, TargetEltTy));
         })
       .clampScalar(EltTypeIdx, S32, S64)
       .clampScalar(VecTypeIdx, S32, S64)
@@ -3856,7 +3859,7 @@ bool AMDGPULegalizerInfo::legalizeBuildVector(
   Register Dst = MI.getOperand(0).getReg();
   const LLT S32 = LLT::scalar(32);
   const LLT S16 = LLT::scalar(16);
-  assert(MRI.getType(Dst) == LLT::fixed_vector(2, 16));
+  assert(MRI.getType(Dst) == LLT::fixed_vector(2, S16));
 
   Register Src0 = MI.getOperand(1).getReg();
   Register Src1 = MI.getOperand(2).getReg();
@@ -6118,7 +6121,7 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
     B.setInsertPt(B.getMBB(), ++B.getInsertPt());
     B.buildTrunc(Dst, LoadDstReg);
   } else if (Unpacked && IsD16 && Ty.isVector()) {
-    LLT UnpackedTy = Ty.changeElementSize(32);
+    LLT UnpackedTy = Ty.changeElementType(S32);
     Register LoadDstReg = B.getMRI()->createGenericVirtualRegister(UnpackedTy);
     buildBufferLoad(Opc, LoadDstReg, RSrc, VIndex, VOffset, SOffset, ImmOffset,
                     Format, AuxiliaryData, MMO, IsTyped, HasVIndex, B);
@@ -6301,7 +6304,7 @@ static void packImage16bitOpsToDwords(MachineIRBuilder &B, MachineInstr &MI,
                                       const AMDGPU::ImageDimIntrinsicInfo *Intr,
                                       bool IsA16, bool IsG16) {
   const LLT S16 = LLT::scalar(16);
-  const LLT V2S16 = LLT::fixed_vector(2, 16);
+  const LLT V2S16 = LLT::fixed_vector(2, S16);
   auto EndIdx = Intr->VAddrEnd;
 
   for (unsigned I = Intr->VAddrStart; I < EndIdx; I++) {
@@ -6372,7 +6375,7 @@ static void convertImageAddrToPacked(MachineIRBuilder &B, MachineInstr &MI,
   int NumAddrRegs = AddrRegs.size();
   if (NumAddrRegs != 1) {
     auto VAddr =
-        B.buildBuildVector(LLT::fixed_vector(NumAddrRegs, 32), AddrRegs);
+        B.buildBuildVector(LLT::fixed_vector(NumAddrRegs, S32), AddrRegs);
     MI.getOperand(DimIdx).setReg(VAddr.getReg(0));
   }
 
@@ -6414,7 +6417,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   MachineRegisterInfo *MRI = B.getMRI();
   const LLT S32 = LLT::scalar(32);
   const LLT S16 = LLT::scalar(16);
-  const LLT V2S16 = LLT::fixed_vector(2, 16);
+  const LLT V2S16 = LLT::fixed_vector(2, S16);
 
   unsigned DMask = 0;
   Register VData;
@@ -6530,13 +6533,13 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     if (UsePartialNSA) {
       // Pack registers that would go over NSAMaxSize into last VAddr register
       LLT PackedAddrTy =
-          LLT::fixed_vector(2 * (PackedRegs.size() - NSAMaxSize + 1), 16);
+          LLT::fixed_vector(2 * (PackedRegs.size() - NSAMaxSize + 1), S16);
       auto Concat = B.buildConcatVectors(
           PackedAddrTy, ArrayRef(PackedRegs).slice(NSAMaxSize - 1));
       PackedRegs[NSAMaxSize - 1] = Concat.getReg(0);
       PackedRegs.resize(NSAMaxSize);
     } else if (!UseNSA && PackedRegs.size() > 1) {
-      LLT PackedAddrTy = LLT::fixed_vector(2 * PackedRegs.size(), 16);
+      LLT PackedAddrTy = LLT::fixed_vector(2 * PackedRegs.size(), S16);
       auto Concat = B.buildConcatVectors(PackedAddrTy, PackedRegs);
       PackedRegs[0] = Concat.getReg(0);
       PackedRegs.resize(1);
@@ -6645,15 +6648,15 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
 
   if (IsD16 && ST.hasUnpackedD16VMem()) {
     RoundedTy =
-        LLT::scalarOrVector(ElementCount::getFixed(AdjustedNumElts), 32);
-    TFETy = LLT::fixed_vector(AdjustedNumElts + 1, 32);
+        LLT::scalarOrVector(ElementCount::getFixed(AdjustedNumElts), S32);
+    TFETy = LLT::fixed_vector(AdjustedNumElts + 1, S32);
     RegTy = S32;
   } else {
     unsigned EltSize = EltTy.getSizeInBits();
     unsigned RoundedElts = (AdjustedTy.getSizeInBits() + 31) / 32;
     unsigned RoundedSize = 32 * RoundedElts;
-    RoundedTy = LLT::scalarOrVector(
-        ElementCount::getFixed(RoundedSize / EltSize), EltSize);
+    RoundedTy =
+        EltTy.changeElementCount(ElementCount::getFixed(RoundedSize / EltSize));
     TFETy = LLT::fixed_vector(RoundedSize / 32 + 1, S32);
     RegTy = !IsTFE && EltSize == 16 ? V2S16 : S32;
   }
@@ -6768,13 +6771,13 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   const int RegsToCover = (Ty.getSizeInBits() + 31) / 32;
 
   // Deal with the one annoying legal case.
-  const LLT V3S16 = LLT::fixed_vector(3, 16);
+  const LLT V3S16 = LLT::fixed_vector(3, S16);
   if (Ty == V3S16) {
     if (IsTFE) {
       if (ResultRegs.size() == 1) {
         NewResultReg = ResultRegs[0];
       } else if (ResultRegs.size() == 2) {
-        LLT V4S16 = LLT::fixed_vector(4, 16);
+        LLT V4S16 = LLT::fixed_vector(4, S16);
         NewResultReg = B.buildConcatVectors(V4S16, ResultRegs).getReg(0);
       } else {
         return false;
@@ -7025,8 +7028,8 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
   MachineRegisterInfo &MRI = *B.getMRI();
   const LLT S16 = LLT::scalar(16);
   const LLT S32 = LLT::scalar(32);
-  const LLT V2S16 = LLT::fixed_vector(2, 16);
-  const LLT V3S32 = LLT::fixed_vector(3, 32);
+  const LLT V2S16 = LLT::fixed_vector(2, S16);
+  const LLT V3S32 = LLT::fixed_vector(3, S32);
 
   Register DstReg = MI.getOperand(0).getReg();
   Register NodePtr = MI.getOperand(2).getReg();
@@ -7151,7 +7154,7 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
 
   if (!UseNSA) {
     // Build a single vector containing all the operands so far prepared.
-    LLT OpTy = LLT::fixed_vector(Ops.size(), 32);
+    LLT OpTy = LLT::fixed_vector(Ops.size(), S32);
     Register MergedOps = B.buildMergeLikeInstr(OpTy, Ops).getReg(0);
     Ops.clear();
     Ops.push_back(MergedOps);

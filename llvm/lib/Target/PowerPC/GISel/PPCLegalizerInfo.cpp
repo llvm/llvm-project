@@ -44,10 +44,10 @@ PPCLegalizerInfo::PPCLegalizerInfo(const PPCSubtarget &ST) {
   const LLT S16 = LLT::scalar(16);
   const LLT S32 = LLT::scalar(32);
   const LLT S64 = LLT::scalar(64);
-  const LLT V16S8 = LLT::fixed_vector(16, 8);
-  const LLT V8S16 = LLT::fixed_vector(8, 16);
-  const LLT V4S32 = LLT::fixed_vector(4, 32);
-  const LLT V2S64 = LLT::fixed_vector(2, 64);
+  const LLT V16S8 = LLT::fixed_vector(16, S8);
+  const LLT V8S16 = LLT::fixed_vector(8, S16);
+  const LLT V4S32 = LLT::fixed_vector(4, S32);
+  const LLT V2S64 = LLT::fixed_vector(2, S64);
   getActionDefinitionsBuilder(G_IMPLICIT_DEF).legalFor({S64});
   getActionDefinitionsBuilder(G_CONSTANT)
       .legalFor({S32, S64})

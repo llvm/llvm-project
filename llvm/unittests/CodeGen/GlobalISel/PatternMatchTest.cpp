@@ -537,7 +537,7 @@ TEST_F(AArch64GISelMITest, MatchSpecificType) {
                        m_GAdd(m_SpecificType(s64), m_Reg())));
 
   // Try to match the destination type of a bitcast.
-  LLT v2s32 = LLT::fixed_vector(2, 32);
+  LLT v2s32 = LLT::fixed_vector(2, s32);
   auto MIBCast = B.buildCast(v2s32, Copies[0]);
   EXPECT_TRUE(
       mi_match(MIBCast.getReg(0), *MRI, m_GBitcast(m_Reg())));
@@ -755,8 +755,8 @@ TEST_F(AArch64GISelMITest, MatchConstantSplat) {
     GTEST_SKIP();
 
   LLT s64 = LLT::scalar(64);
-  LLT v2s64 = LLT::fixed_vector(2, 64);
-  LLT v4s64 = LLT::fixed_vector(4, 64);
+  LLT v2s64 = LLT::fixed_vector(2, s64);
+  LLT v4s64 = LLT::fixed_vector(4, s64);
 
   Register FPOne = B.buildFConstant(s64, 1.0).getReg(0);
   Register FPZero = B.buildFConstant(s64, 0.0).getReg(0);

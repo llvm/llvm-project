@@ -60,13 +60,6 @@ public:
                ElementCount::getFixed(0), SizeInBits, AddressSpace};
   }
 
-  /// Get a low-level vector of some number of elements and element width.
-  static constexpr LLT vector(ElementCount EC, unsigned ScalarSizeInBits) {
-    assert(!EC.isScalar() && "invalid number of vector elements");
-    return LLT{/*isPointer=*/false, /*isVector=*/true, /*isScalar=*/false,
-               EC, ScalarSizeInBits, /*AddressSpace=*/0};
-  }
-
   /// Get a low-level vector of some number of elements and element type.
   static constexpr LLT vector(ElementCount EC, LLT ScalarTy) {
     assert(!EC.isScalar() && "invalid number of vector elements");
@@ -96,23 +89,9 @@ public:
   }
 
   /// Get a low-level fixed-width vector of some number of elements and element
-  /// width.
-  static constexpr LLT fixed_vector(unsigned NumElements,
-                                    unsigned ScalarSizeInBits) {
-    return vector(ElementCount::getFixed(NumElements), ScalarSizeInBits);
-  }
-
-  /// Get a low-level fixed-width vector of some number of elements and element
   /// type.
   static constexpr LLT fixed_vector(unsigned NumElements, LLT ScalarTy) {
     return vector(ElementCount::getFixed(NumElements), ScalarTy);
-  }
-
-  /// Get a low-level scalable vector of some number of elements and element
-  /// width.
-  static constexpr LLT scalable_vector(unsigned MinNumElements,
-                                       unsigned ScalarSizeInBits) {
-    return vector(ElementCount::getScalable(MinNumElements), ScalarSizeInBits);
   }
 
   /// Get a low-level scalable vector of some number of elements and element
@@ -123,12 +102,6 @@ public:
 
   static constexpr LLT scalarOrVector(ElementCount EC, LLT ScalarTy) {
     return EC.isScalar() ? ScalarTy : LLT::vector(EC, ScalarTy);
-  }
-
-  static constexpr LLT scalarOrVector(ElementCount EC, uint64_t ScalarSize) {
-    assert(ScalarSize <= std::numeric_limits<unsigned>::max() &&
-           "Not enough bits in LLT to represent size");
-    return scalarOrVector(EC, LLT::scalar(static_cast<unsigned>(ScalarSize)));
   }
 
   explicit constexpr LLT(bool isPointer, bool isVector, bool isScalar,
@@ -210,16 +183,6 @@ public:
   /// but the new element type. Otherwise, return the new element type.
   constexpr LLT changeElementType(LLT NewEltTy) const {
     return isVector() ? LLT::vector(getElementCount(), NewEltTy) : NewEltTy;
-  }
-
-  /// If this type is a vector, return a vector with the same number of elements
-  /// but the new element size. Otherwise, return the new element type. Invalid
-  /// for pointer types. For pointer types, use changeElementType.
-  constexpr LLT changeElementSize(unsigned NewEltSize) const {
-    assert(!isPointerOrPointerVector() &&
-           "invalid to directly change element size for pointers");
-    return isVector() ? LLT::vector(getElementCount(), NewEltSize)
-                      : LLT::scalar(NewEltSize);
   }
 
   /// Return a vector or scalar with the same element type and the new element

@@ -14,11 +14,13 @@ TEST_F(AArch64GISelMITest, TestBuildConstantFConstant) {
   if (!TM)
     GTEST_SKIP();
 
-  B.buildConstant(LLT::scalar(32), 42);
-  B.buildFConstant(LLT::scalar(32), 1.0);
+  LLT S32 = LLT::scalar(32);
 
-  B.buildConstant(LLT::fixed_vector(2, 32), 99);
-  B.buildFConstant(LLT::fixed_vector(2, 32), 2.0);
+  B.buildConstant(S32, 42);
+  B.buildFConstant(S32, 1.0);
+
+  B.buildConstant(LLT::fixed_vector(2, S32), 99);
+  B.buildFConstant(LLT::fixed_vector(2, S32), 2.0);
 
   // Test APFloat overload.
   APFloat KVal(APFloat::IEEEdouble(), "4.0");
@@ -51,21 +53,21 @@ TEST_F(AArch64GISelMITest, TestBuildConstantFConstantDeath) {
   // Test APInt version breaks
   EXPECT_DEATH(B.buildConstant(LLT::scalar(16), APV32),
                "creating constant with the wrong size");
-  EXPECT_DEATH(B.buildConstant(LLT::fixed_vector(2, 16), APV32),
+  EXPECT_DEATH(B.buildConstant(LLT::fixed_vector(2, LLT::scalar(16)), APV32),
                "creating constant with the wrong size");
 
   // Test ConstantInt version breaks
   ConstantInt *CI = ConstantInt::get(Ctx, APV32);
   EXPECT_DEATH(B.buildConstant(LLT::scalar(16), *CI),
                "creating constant with the wrong size");
-  EXPECT_DEATH(B.buildConstant(LLT::fixed_vector(2, 16), *CI),
+  EXPECT_DEATH(B.buildConstant(LLT::fixed_vector(2, LLT::scalar(16)), *CI),
                "creating constant with the wrong size");
 
   APFloat DoubleVal(APFloat::IEEEdouble());
   ConstantFP *CF = ConstantFP::get(Ctx, DoubleVal);
   EXPECT_DEATH(B.buildFConstant(LLT::scalar(16), *CF),
                "creating fconstant with the wrong size");
-  EXPECT_DEATH(B.buildFConstant(LLT::fixed_vector(2, 16), *CF),
+  EXPECT_DEATH(B.buildFConstant(LLT::fixed_vector(2, LLT::scalar(16)), *CF),
                "creating fconstant with the wrong size");
 }
 
@@ -337,11 +339,11 @@ TEST_F(AArch64GISelMITest, BuildMergeLikeInstr) {
   // G_MERGE_VALUES.
   B.buildMergeLikeInstr(LLT::scalar(128), {RegC0, RegC1, RegC2, RegC3});
   // Merging plain constants to a vector should produce a G_BUILD_VECTOR.
-  LLT V2x32 = LLT::fixed_vector(2, 32);
+  LLT V2x32 = LLT::fixed_vector(2, S32);
   Register RegC0C1 = B.buildMergeLikeInstr(V2x32, {RegC0, RegC1}).getReg(0);
   Register RegC2C3 = B.buildMergeLikeInstr(V2x32, {RegC2, RegC3}).getReg(0);
   // Merging vector constants to a vector should produce a G_CONCAT_VECTORS.
-  B.buildMergeLikeInstr(LLT::fixed_vector(4, 32), {RegC0C1, RegC2C3});
+  B.buildMergeLikeInstr(LLT::fixed_vector(4, S32), {RegC0C1, RegC2C3});
   // Merging vector constants to a plain type is not allowed.
   // Nothing else to test.
 
@@ -376,7 +378,7 @@ TEST_F(MachineIRBuilderDeathTest, BuildMergeValues) {
   B.buildMergeValues(LLT::scalar(128), {RegC0, RegC1, RegC2, RegC3});
 
   // Using a vector destination type should assert.
-  LLT V2x32 = LLT::fixed_vector(2, 32);
+  LLT V2x32 = LLT::fixed_vector(2, S32);
   EXPECT_DEBUG_DEATH(
       B.buildMergeValues(V2x32, {RegC0, RegC1}),
       "vectors should be built with G_CONCAT_VECTOR or G_BUILD_VECTOR");
@@ -486,13 +488,15 @@ TEST_F(AArch64GISelMITest, BuildExtractSubvector) {
   if (!TM)
     GTEST_SKIP();
 
-  LLT VecTy = LLT::fixed_vector(4, 32);
-  LLT SubVecTy = LLT::fixed_vector(2, 32);
+  LLT S32 = LLT::scalar(32);
+
+  LLT VecTy = LLT::fixed_vector(4, S32);
+  LLT SubVecTy = LLT::fixed_vector(2, S32);
   auto Vec = B.buildUndef(VecTy);
   B.buildExtractSubvector(SubVecTy, Vec, 0);
 
-  VecTy = LLT::scalable_vector(4, 32);
-  SubVecTy = LLT::scalable_vector(2, 32);
+  VecTy = LLT::scalable_vector(4, S32);
+  SubVecTy = LLT::scalable_vector(2, S32);
   Vec = B.buildUndef(VecTy);
   B.buildExtractSubvector(SubVecTy, Vec, 0);
 

@@ -27,6 +27,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
@@ -1118,10 +1119,11 @@ MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags F,
                                      AtomicOrdering FailureOrdering)
     : MachineMemOperand(
           ptrinfo, F,
-          !TS.hasValue() ? LLT()
-          : TS.isScalable()
-              ? LLT::scalable_vector(1, 8 * TS.getValue().getKnownMinValue())
-              : LLT::scalar(8 * TS.getValue().getKnownMinValue()),
+          !TS.hasValue()
+              ? LLT()
+              : LLT::scalarOrVector(
+                    ElementCount::get(1, TS.isScalable()),
+                    LLT::scalar(8 * TS.getValue().getKnownMinValue())),
           BaseAlignment, AAInfo, Ranges, SSID, Ordering, FailureOrdering) {}
 
 void MachineMemOperand::refineAlignment(const MachineMemOperand *MMO) {

@@ -1911,19 +1911,19 @@ bool AArch64InstructionSelector::selectVectorSHL(MachineInstr &I,
   std::optional<int64_t> ImmVal = getVectorSHLImm(Ty, Src2Reg, MRI);
 
   unsigned Opc = 0;
-  if (Ty == LLT::fixed_vector(2, 64)) {
+  if (Ty == LLT::fixed_vector(2, LLT::scalar(64))) {
     Opc = ImmVal ? AArch64::SHLv2i64_shift : AArch64::USHLv2i64;
-  } else if (Ty == LLT::fixed_vector(4, 32)) {
+  } else if (Ty == LLT::fixed_vector(4, LLT::scalar(32))) {
     Opc = ImmVal ? AArch64::SHLv4i32_shift : AArch64::USHLv4i32;
-  } else if (Ty == LLT::fixed_vector(2, 32)) {
+  } else if (Ty == LLT::fixed_vector(2, LLT::scalar(32))) {
     Opc = ImmVal ? AArch64::SHLv2i32_shift : AArch64::USHLv2i32;
-  } else if (Ty == LLT::fixed_vector(4, 16)) {
+  } else if (Ty == LLT::fixed_vector(4, LLT::scalar(16))) {
     Opc = ImmVal ? AArch64::SHLv4i16_shift : AArch64::USHLv4i16;
-  } else if (Ty == LLT::fixed_vector(8, 16)) {
+  } else if (Ty == LLT::fixed_vector(8, LLT::scalar(16))) {
     Opc = ImmVal ? AArch64::SHLv8i16_shift : AArch64::USHLv8i16;
-  } else if (Ty == LLT::fixed_vector(16, 8)) {
+  } else if (Ty == LLT::fixed_vector(16, LLT::scalar(8))) {
     Opc = ImmVal ? AArch64::SHLv16i8_shift : AArch64::USHLv16i8;
-  } else if (Ty == LLT::fixed_vector(8, 8)) {
+  } else if (Ty == LLT::fixed_vector(8, LLT::scalar(8))) {
     Opc = ImmVal ? AArch64::SHLv8i8_shift : AArch64::USHLv8i8;
   } else {
     LLVM_DEBUG(dbgs() << "Unhandled G_SHL type");
@@ -1965,25 +1965,25 @@ bool AArch64InstructionSelector::selectVectorAshrLshr(
   unsigned NegOpc = 0;
   const TargetRegisterClass *RC =
       getRegClassForTypeOnBank(Ty, RBI.getRegBank(AArch64::FPRRegBankID));
-  if (Ty == LLT::fixed_vector(2, 64)) {
+  if (Ty == LLT::fixed_vector(2, LLT::scalar(64))) {
     Opc = IsASHR ? AArch64::SSHLv2i64 : AArch64::USHLv2i64;
     NegOpc = AArch64::NEGv2i64;
-  } else if (Ty == LLT::fixed_vector(4, 32)) {
+  } else if (Ty == LLT::fixed_vector(4, LLT::scalar(32))) {
     Opc = IsASHR ? AArch64::SSHLv4i32 : AArch64::USHLv4i32;
     NegOpc = AArch64::NEGv4i32;
-  } else if (Ty == LLT::fixed_vector(2, 32)) {
+  } else if (Ty == LLT::fixed_vector(2, LLT::scalar(32))) {
     Opc = IsASHR ? AArch64::SSHLv2i32 : AArch64::USHLv2i32;
     NegOpc = AArch64::NEGv2i32;
-  } else if (Ty == LLT::fixed_vector(4, 16)) {
+  } else if (Ty == LLT::fixed_vector(4, LLT::scalar(16))) {
     Opc = IsASHR ? AArch64::SSHLv4i16 : AArch64::USHLv4i16;
     NegOpc = AArch64::NEGv4i16;
-  } else if (Ty == LLT::fixed_vector(8, 16)) {
+  } else if (Ty == LLT::fixed_vector(8, LLT::scalar(16))) {
     Opc = IsASHR ? AArch64::SSHLv8i16 : AArch64::USHLv8i16;
     NegOpc = AArch64::NEGv8i16;
-  } else if (Ty == LLT::fixed_vector(16, 8)) {
+  } else if (Ty == LLT::fixed_vector(16, LLT::scalar(8))) {
     Opc = IsASHR ? AArch64::SSHLv16i8 : AArch64::USHLv16i8;
     NegOpc = AArch64::NEGv16i8;
-  } else if (Ty == LLT::fixed_vector(8, 8)) {
+  } else if (Ty == LLT::fixed_vector(8, LLT::scalar(8))) {
     Opc = IsASHR ? AArch64::SSHLv8i8 : AArch64::USHLv8i8;
     NegOpc = AArch64::NEGv8i8;
   } else {
@@ -2280,8 +2280,8 @@ bool AArch64InstructionSelector::convertPtrAddToAdd(
   if (PtrTy.getAddressSpace() != 0)
     return false;
 
-  const LLT CastPtrTy =
-      PtrTy.isVector() ? LLT::fixed_vector(2, 64) : LLT::scalar(64);
+  const LLT CastPtrTy = PtrTy.isVector() ? LLT::fixed_vector(2, LLT::scalar(64))
+                                         : LLT::scalar(64);
   auto PtrToInt = MIB.buildPtrToInt(CastPtrTy, AddOp1Reg);
   // Set regbanks on the registers.
   if (PtrTy.isVector())
@@ -3315,8 +3315,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       I.setDesc(TII.get(TargetOpcode::COPY));
       return true;
     } else if (DstRB.getID() == AArch64::FPRRegBankID) {
-      if (DstTy == LLT::fixed_vector(4, 16) &&
-          SrcTy == LLT::fixed_vector(4, 32)) {
+      if (DstTy == LLT::fixed_vector(4, LLT::scalar(16)) &&
+          SrcTy == LLT::fixed_vector(4, LLT::scalar(32))) {
         I.setDesc(TII.get(AArch64::XTNv4i16));
         constrainSelectedInstRegOperands(I, TII, TRI, RBI);
         return true;
@@ -3645,13 +3645,13 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         AArch64::GPRRegBankID)
       return false; // We expect the fpr regbank case to be imported.
     LLT VecTy = MRI.getType(I.getOperand(0).getReg());
-    if (VecTy == LLT::fixed_vector(8, 8))
+    if (VecTy == LLT::fixed_vector(8, LLT::scalar(8)))
       I.setDesc(TII.get(AArch64::DUPv8i8gpr));
-    else if (VecTy == LLT::fixed_vector(16, 8))
+    else if (VecTy == LLT::fixed_vector(16, LLT::scalar(8)))
       I.setDesc(TII.get(AArch64::DUPv16i8gpr));
-    else if (VecTy == LLT::fixed_vector(4, 16))
+    else if (VecTy == LLT::fixed_vector(4, LLT::scalar(16)))
       I.setDesc(TII.get(AArch64::DUPv4i16gpr));
-    else if (VecTy == LLT::fixed_vector(8, 16))
+    else if (VecTy == LLT::fixed_vector(8, LLT::scalar(16)))
       I.setDesc(TII.get(AArch64::DUPv8i16gpr));
     else
       return false;
@@ -4187,7 +4187,7 @@ bool AArch64InstructionSelector::selectUnmergeValues(MachineInstr &I,
     // No. We have to perform subregister inserts. For each insert, create an
     // implicit def and a subregister insert, and save the register we create.
     const TargetRegisterClass *RC = getRegClassForTypeOnBank(
-        LLT::fixed_vector(NumElts, WideTy.getScalarSizeInBits()),
+        LLT::fixed_vector(NumElts, WideTy.getScalarType()),
         *RBI.getRegBank(SrcReg, MRI, TRI));
     unsigned SubReg = 0;
     bool Found = getSubRegForClass(RC, TRI, SubReg);
@@ -6981,7 +6981,8 @@ void AArch64InstructionSelector::SelectTable(MachineInstr &I,
                                              unsigned NumVec, unsigned Opc1,
                                              unsigned Opc2, bool isExt) {
   Register DstReg = I.getOperand(0).getReg();
-  unsigned Opc = MRI.getType(DstReg) == LLT::fixed_vector(8, 8) ? Opc1 : Opc2;
+  unsigned Opc =
+      MRI.getType(DstReg) == LLT::fixed_vector(8, LLT::scalar(8)) ? Opc1 : Opc2;
 
   // Create the REG_SEQUENCE
   SmallVector<Register, 4> Regs;
@@ -7878,7 +7879,7 @@ AArch64InstructionSelector::selectExtractHigh(MachineOperand &Root) const {
     LLT SrcTy = MRI.getType(Extract->MI->getOperand(1).getReg());
     auto LaneIdx = getIConstantVRegValWithLookThrough(
         Extract->MI->getOperand(2).getReg(), MRI);
-    if (LaneIdx && SrcTy == LLT::fixed_vector(2, 64) &&
+    if (LaneIdx && SrcTy == LLT::fixed_vector(2, LLT::scalar(64)) &&
         LaneIdx->Value.getSExtValue() == 1) {
       Register ExtReg = Extract->MI->getOperand(1).getReg();
       return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(ExtReg); }}};

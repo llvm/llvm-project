@@ -2512,9 +2512,12 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       return;
     }
 
+    const LLT S16 = LLT::scalar(16);
+    const LLT S32 = LLT::scalar(32);
+
     // 16-bit operations are VALU only, but can be promoted to 32-bit SALU.
     // Packed 16-bit operations need to be scalarized and promoted.
-    if (DstTy != LLT::scalar(16) && DstTy != LLT::fixed_vector(2, 16))
+    if (DstTy != LLT::scalar(16) && DstTy != LLT::fixed_vector(2, S16))
       break;
 
     const RegisterBank *DstBank =
@@ -2522,7 +2525,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     if (DstBank == &AMDGPU::VGPRRegBank)
       break;
 
-    const LLT S32 = LLT::scalar(32);
     MachineBasicBlock *MBB = MI.getParent();
     MachineFunction *MF = MBB->getParent();
     ApplyRegBankMapping ApplySALU(B, *this, MRI, &AMDGPU::SGPRRegBank);
@@ -2889,7 +2891,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     assert(DstTy.getSizeInBits() == 64);
 
-    LLT Vec32 = LLT::fixed_vector(2 * SrcTy.getNumElements(), 32);
+    LLT Vec32 = LLT::fixed_vector(2 * SrcTy.getNumElements(), S32);
 
     auto CastSrc = B.buildBitcast(Vec32, SrcReg);
     auto One = B.buildConstant(S32, 1);
@@ -3004,7 +3006,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     assert(InsTy.getSizeInBits() == 64);
 
     const LLT S32 = LLT::scalar(32);
-    LLT Vec32 = LLT::fixed_vector(2 * VecTy.getNumElements(), 32);
+    LLT Vec32 = LLT::fixed_vector(2 * VecTy.getNumElements(), S32);
 
     auto CastSrc = B.buildBitcast(Vec32, SrcReg);
     auto One = B.buildConstant(S32, 1);
@@ -4154,7 +4156,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_BUILD_VECTOR:
   case AMDGPU::G_BUILD_VECTOR_TRUNC: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
-    if (DstTy == LLT::fixed_vector(2, 16)) {
+    if (DstTy == LLT::fixed_vector(2, LLT::scalar(16))) {
       unsigned DstSize = DstTy.getSizeInBits();
       unsigned SrcSize = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
       unsigned Src0BankID = getRegBankID(MI.getOperand(1).getReg(), MRI);

@@ -733,7 +733,7 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR(MachineInstr &MI) const {
   // Selection logic below is for V2S16 only.
   // For G_BUILD_VECTOR_TRUNC, additionally check that the operands are s32.
   Register Dst = MI.getOperand(0).getReg();
-  if (MRI->getType(Dst) != LLT::fixed_vector(2, 16) ||
+  if (MRI->getType(Dst) != LLT::fixed_vector(2, LLT::scalar(16)) ||
       (MI.getOpcode() == AMDGPU::G_BUILD_VECTOR_TRUNC &&
        SrcTy != LLT::scalar(32)))
     return selectImpl(MI, *CoverageInfo);
@@ -2429,7 +2429,8 @@ bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
     return true;
   }
 
-  if (DstTy == LLT::fixed_vector(2, 16) && SrcTy == LLT::fixed_vector(2, 32)) {
+  if (DstTy == LLT::fixed_vector(2, LLT::scalar(16)) &&
+      SrcTy == LLT::fixed_vector(2, LLT::scalar(32))) {
     MachineBasicBlock *MBB = I.getParent();
     const DebugLoc &DL = I.getDebugLoc();
 
@@ -2722,7 +2723,7 @@ static bool isExtractHiElt(MachineRegisterInfo &MRI, Register In,
     return false;
 
   assert(MRI.getType(Shuffle->getOperand(0).getReg()) ==
-         LLT::fixed_vector(2, 16));
+         LLT::fixed_vector(2, LLT::scalar(16)));
 
   ArrayRef<int> Mask = Shuffle->getOperand(3).getShuffleMask();
   assert(Mask.size() == 2);
@@ -4287,7 +4288,7 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(
   if (MI->getOpcode() == AMDGPU::G_FNEG &&
       // It's possible to see an f32 fneg here, but unlikely.
       // TODO: Treat f32 fneg as only high bit.
-      MRI.getType(Src) == LLT::fixed_vector(2, 16)) {
+      MRI.getType(Src) == LLT::fixed_vector(2, LLT::scalar(16))) {
     Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
     Src = MI->getOperand(1).getReg();
     MI = MRI.getVRegDef(Src);

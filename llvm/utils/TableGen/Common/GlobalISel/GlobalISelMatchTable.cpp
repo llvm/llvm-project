@@ -376,8 +376,10 @@ void LLTCodeGen::emitCxxConstructorCall(raw_ostream &OS) const {
     OS << "LLT::vector("
        << (Ty.isScalable() ? "ElementCount::getScalable("
                            : "ElementCount::getFixed(")
-       << Ty.getElementCount().getKnownMinValue() << "), "
-       << Ty.getScalarSizeInBits() << ")";
+       << Ty.getElementCount().getKnownMinValue() << "), ";
+    LLTCodeGen ScalarTy = LLTCodeGen(Ty.getElementType());
+    ScalarTy.emitCxxConstructorCall(OS);
+    OS << ")";
     return;
   }
   if (Ty.isPointer() && Ty.getSizeInBits() > 0) {
@@ -430,8 +432,8 @@ std::optional<LLTCodeGen> MVTToLLT(MVT::SimpleValueType SVT) {
   MVT VT(SVT);
 
   if (VT.isVector() && !VT.getVectorElementCount().isScalar())
-    return LLTCodeGen(
-        LLT::vector(VT.getVectorElementCount(), VT.getScalarSizeInBits()));
+    return LLTCodeGen(LLT::vector(VT.getVectorElementCount(),
+                                  LLT::scalar(VT.getScalarSizeInBits())));
 
   if (VT.isInteger() || VT.isFloatingPoint())
     return LLTCodeGen(LLT::scalar(VT.getSizeInBits()));

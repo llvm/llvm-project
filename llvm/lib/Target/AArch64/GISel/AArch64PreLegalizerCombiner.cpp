@@ -316,10 +316,10 @@ void applyExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
   unsigned NumOfDotMI;
   if (SrcTy.getNumElements() % 16 == 0) {
     NumOfDotMI = SrcTy.getNumElements() / 16;
-    MidTy = LLT::fixed_vector(4, 32);
+    MidTy = LLT::fixed_vector(4, LLT::scalar(32));
   } else if (SrcTy.getNumElements() % 8 == 0) {
     NumOfDotMI = SrcTy.getNumElements() / 8;
-    MidTy = LLT::fixed_vector(2, 32);
+    MidTy = LLT::fixed_vector(2, LLT::scalar(32));
   } else {
     llvm_unreachable("Source type number of elements is not multiple of 8");
   }
@@ -339,7 +339,7 @@ void applyExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
       SmallVector<Register> Leftover2;
 
       // Split the elements into v16i8 and v8i8
-      LLT MainTy = LLT::fixed_vector(16, 8);
+      LLT MainTy = LLT::fixed_vector(16, LLT::scalar(8));
       LLT LeftoverTy1, LeftoverTy2;
       if ((!extractParts(Ext1SrcReg, MRI.getType(Ext1SrcReg), MainTy,
                          LeftoverTy1, Ext1UnmergeReg, Leftover1, Builder,
@@ -351,28 +351,29 @@ void applyExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
       }
 
       // Pad the leftover v8i8 vector with register of 0s of type v8i8
-      Register v8Zeroes = Builder.buildConstant(LLT::fixed_vector(8, 8), 0)
-                              ->getOperand(0)
-                              .getReg();
+      Register v8Zeroes =
+          Builder.buildConstant(LLT::fixed_vector(8, LLT::scalar(8)), 0)
+              ->getOperand(0)
+              .getReg();
 
       Ext1UnmergeReg.push_back(
           Builder
-              .buildMergeLikeInstr(LLT::fixed_vector(16, 8),
+              .buildMergeLikeInstr(LLT::fixed_vector(16, LLT::scalar(8)),
                                    {Leftover1[0], v8Zeroes})
               .getReg(0));
       Ext2UnmergeReg.push_back(
           Builder
-              .buildMergeLikeInstr(LLT::fixed_vector(16, 8),
+              .buildMergeLikeInstr(LLT::fixed_vector(16, LLT::scalar(8)),
                                    {Leftover2[0], v8Zeroes})
               .getReg(0));
 
     } else {
       // Unmerge the source vectors to v16i8
       unsigned SrcNumElts = SrcTy.getNumElements();
-      extractParts(Ext1SrcReg, LLT::fixed_vector(16, 8), SrcNumElts / 16,
-                   Ext1UnmergeReg, Builder, MRI);
-      extractParts(Ext2SrcReg, LLT::fixed_vector(16, 8), SrcNumElts / 16,
-                   Ext2UnmergeReg, Builder, MRI);
+      extractParts(Ext1SrcReg, LLT::fixed_vector(16, LLT::scalar(8)),
+                   SrcNumElts / 16, Ext1UnmergeReg, Builder, MRI);
+      extractParts(Ext2SrcReg, LLT::fixed_vector(16, LLT::scalar(8)),
+                   SrcNumElts / 16, Ext2UnmergeReg, Builder, MRI);
     }
 
     // Build the UDOT instructions
@@ -382,10 +383,10 @@ void applyExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
       LLT ZeroesLLT;
       // Check if it is 16 or 8 elements. Set Zeroes to the according size
       if (MRI.getType(Ext1UnmergeReg[i]).getNumElements() == 16) {
-        ZeroesLLT = LLT::fixed_vector(4, 32);
+        ZeroesLLT = LLT::fixed_vector(4, LLT::scalar(32));
         NumElements += 4;
       } else {
-        ZeroesLLT = LLT::fixed_vector(2, 32);
+        ZeroesLLT = LLT::fixed_vector(2, LLT::scalar(32));
         NumElements += 2;
       }
       auto Zeroes = Builder.buildConstant(ZeroesLLT, 0)->getOperand(0).getReg();
@@ -397,8 +398,8 @@ void applyExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
     }
 
     // Merge the output
-    auto ConcatMI =
-        Builder.buildConcatVectors(LLT::fixed_vector(NumElements, 32), DotReg);
+    auto ConcatMI = Builder.buildConcatVectors(
+        LLT::fixed_vector(NumElements, LLT::scalar(32)), DotReg);
 
     // Put it through a vector reduction
     Builder.buildVecReduceAdd(MI.getOperand(0).getReg(),
@@ -468,11 +469,11 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
     LLT LeftoverTy;
     SmallVector<Register, 4> LeftoverRegs;
     if (SrcScalSize == 8)
-      MainTy = LLT::fixed_vector(16, 8);
+      MainTy = LLT::fixed_vector(16, LLT::scalar(8));
     else if (SrcScalSize == 16)
-      MainTy = LLT::fixed_vector(8, 16);
+      MainTy = LLT::fixed_vector(8, LLT::scalar(16));
     else if (SrcScalSize == 32)
-      MainTy = LLT::fixed_vector(4, 32);
+      MainTy = LLT::fixed_vector(4, LLT::scalar(32));
     else
       llvm_unreachable("Source's Scalar Size not supported");
 
@@ -500,14 +501,15 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
       WorkingRegisters[I] =
           B.buildInstr(std::get<1>(MatchInfo) ? TargetOpcode::G_SEXT
                                               : TargetOpcode::G_ZEXT,
-                       {LLT::fixed_vector(4, 16)}, {WorkingRegisters[I]})
+                       {LLT::fixed_vector(4, LLT::scalar(16))},
+                       {WorkingRegisters[I]})
               .getReg(0);
     }
 
     // Generate the {U/S}ADDLV instruction, whose output is always double of the
     // Src's Scalar size
-    LLT addlvTy = MidScalarSize <= 32 ? LLT::fixed_vector(4, 32)
-                                      : LLT::fixed_vector(2, 64);
+    LLT addlvTy = MidScalarSize <= 32 ? LLT::fixed_vector(4, LLT::scalar(32))
+                                      : LLT::fixed_vector(2, LLT::scalar(64));
     Register addlvReg =
         B.buildInstr(Opc, {addlvTy}, {WorkingRegisters[I]}).getReg(0);
 
@@ -586,7 +588,8 @@ void applyPushAddSubExt(MachineInstr &MI, MachineRegisterInfo &MRI,
                         MachineIRBuilder &B, bool isSExt, Register DstReg,
                         Register SrcReg1, Register SrcReg2) {
   LLT SrcTy = MRI.getType(SrcReg1);
-  LLT MidTy = SrcTy.changeElementSize(SrcTy.getScalarSizeInBits() * 2);
+  LLT MidTy =
+      SrcTy.changeElementType(LLT::scalar(SrcTy.getScalarSizeInBits() * 2));
   unsigned Opc = isSExt ? TargetOpcode::G_SEXT : TargetOpcode::G_ZEXT;
   Register Ext1Reg = B.buildInstr(Opc, {MidTy}, {SrcReg1}).getReg(0);
   Register Ext2Reg = B.buildInstr(Opc, {MidTy}, {SrcReg2}).getReg(0);

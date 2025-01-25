@@ -47,16 +47,16 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
   const LLT s128 = LLT::scalar(128);
-  const LLT v16s8 = LLT::fixed_vector(16, 8);
-  const LLT v8s8 = LLT::fixed_vector(8, 8);
-  const LLT v4s8 = LLT::fixed_vector(4, 8);
-  const LLT v2s8 = LLT::fixed_vector(2, 8);
-  const LLT v8s16 = LLT::fixed_vector(8, 16);
-  const LLT v4s16 = LLT::fixed_vector(4, 16);
-  const LLT v2s16 = LLT::fixed_vector(2, 16);
-  const LLT v2s32 = LLT::fixed_vector(2, 32);
-  const LLT v4s32 = LLT::fixed_vector(4, 32);
-  const LLT v2s64 = LLT::fixed_vector(2, 64);
+  const LLT v16s8 = LLT::fixed_vector(16, s8);
+  const LLT v8s8 = LLT::fixed_vector(8, s8);
+  const LLT v4s8 = LLT::fixed_vector(4, s8);
+  const LLT v2s8 = LLT::fixed_vector(2, s8);
+  const LLT v8s16 = LLT::fixed_vector(8, s16);
+  const LLT v4s16 = LLT::fixed_vector(4, s16);
+  const LLT v2s16 = LLT::fixed_vector(2, s16);
+  const LLT v2s32 = LLT::fixed_vector(2, s32);
+  const LLT v4s32 = LLT::fixed_vector(4, s32);
+  const LLT v2s64 = LLT::fixed_vector(2, s64);
   const LLT v2p0 = LLT::fixed_vector(2, p0);
 
   const LLT nxv16s8 = LLT::scalable_vector(16, s8);
@@ -1105,7 +1105,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .bitcastIf(isPointerVector(0), [=](const LegalityQuery &Query) {
         // Bitcast pointers vector to i64.
         const LLT DstTy = Query.Types[0];
-        return std::pair(0, LLT::vector(DstTy.getElementCount(), 64));
+        return std::pair(0, DstTy.changeElementType(LLT::scalar(64)));
       });
 
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
@@ -1119,10 +1119,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
             const LLT DstTy = Query.Types[0];
             const LLT SrcTy = Query.Types[1];
             return std::pair(
-                0, DstTy.changeElementSize(SrcTy.getSizeInBits())
-                       .changeElementCount(
-                           DstTy.getElementCount().divideCoefficientBy(
-                               SrcTy.getNumElements())));
+                0, DstTy.changeElementType(LLT::scalar(SrcTy.getSizeInBits()))
+                       .divide(SrcTy.getNumElements()));
           });
 
   getActionDefinitionsBuilder(G_JUMP_TABLE).legalFor({p0});
@@ -1723,10 +1721,10 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
     LLT MidTy, ExtTy;
     if (DstTy.isScalar() && DstTy.getScalarSizeInBits() <= 32) {
-      MidTy = LLT::fixed_vector(4, 32);
+      MidTy = LLT::fixed_vector(4, LLT::scalar(32));
       ExtTy = LLT::scalar(32);
     } else {
-      MidTy = LLT::fixed_vector(2, 64);
+      MidTy = LLT::fixed_vector(2, LLT::scalar(64));
       ExtTy = LLT::scalar(64);
     }
 
@@ -1899,7 +1897,7 @@ bool AArch64LegalizerInfo::legalizeLoadStore(
   }
 
   unsigned PtrSize = ValTy.getElementType().getSizeInBits();
-  const LLT NewTy = LLT::vector(ValTy.getElementCount(), PtrSize);
+  const LLT NewTy = ValTy.changeElementType(LLT::scalar(PtrSize));
   auto &MMO = **MI.memoperands_begin();
   MMO.setType(NewTy);
 
@@ -2026,7 +2024,8 @@ bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,
   // Pre-conditioning: widen Val up to the nearest vector type.
   // s32,s64,v4s16,v2s32 -> v8i8
   // v8s16,v4s32,v2s64 -> v16i8
-  LLT VTy = Size == 128 ? LLT::fixed_vector(16, 8) : LLT::fixed_vector(8, 8);
+  LLT VTy = Size == 128 ? LLT::fixed_vector(16, LLT::scalar(8))
+                        : LLT::fixed_vector(8, LLT::scalar(8));
   if (Ty.isScalar()) {
     assert((Size == 32 || Size == 64 || Size == 128) && "Expected only 32, 64, or 128 bit scalars!");
     if (Size == 32) {
@@ -2042,18 +2041,20 @@ bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,
 
   if (ST->hasDotProd() && Ty.isVector() && Ty.getNumElements() >= 2 &&
       Ty.getScalarSizeInBits() != 16) {
-    LLT Dt = Ty == LLT::fixed_vector(2, 64) ? LLT::fixed_vector(4, 32) : Ty;
+    LLT Dt = Ty == LLT::fixed_vector(2, LLT::scalar(64))
+                 ? LLT::fixed_vector(4, LLT::scalar(32))
+                 : Ty;
     auto Zeros = MIRBuilder.buildConstant(Dt, 0);
     auto Ones = MIRBuilder.buildConstant(VTy, 1);
     MachineInstrBuilder Sum;
 
-    if (Ty == LLT::fixed_vector(2, 64)) {
+    if (Ty == LLT::fixed_vector(2, LLT::scalar(64))) {
       auto UDOT =
           MIRBuilder.buildInstr(AArch64::G_UDOT, {Dt}, {Zeros, Ones, CTPOP});
       Sum = MIRBuilder.buildInstr(AArch64::G_UADDLP, {Ty}, {UDOT});
-    } else if (Ty == LLT::fixed_vector(4, 32)) {
+    } else if (Ty == LLT::fixed_vector(4, LLT::scalar(32))) {
       Sum = MIRBuilder.buildInstr(AArch64::G_UDOT, {Dt}, {Zeros, Ones, CTPOP});
-    } else if (Ty == LLT::fixed_vector(2, 32)) {
+    } else if (Ty == LLT::fixed_vector(2, LLT::scalar(32))) {
       Sum = MIRBuilder.buildInstr(AArch64::G_UDOT, {Dt}, {Zeros, Ones, CTPOP});
     } else {
       llvm_unreachable("unexpected vector shape");
@@ -2070,25 +2071,25 @@ bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,
   if (Ty.isScalar()) {
     Opc = Intrinsic::aarch64_neon_uaddlv;
     HAddTys.push_back(LLT::scalar(32));
-  } else if (Ty == LLT::fixed_vector(8, 16)) {
+  } else if (Ty == LLT::fixed_vector(8, LLT::scalar(16))) {
     Opc = Intrinsic::aarch64_neon_uaddlp;
-    HAddTys.push_back(LLT::fixed_vector(8, 16));
-  } else if (Ty == LLT::fixed_vector(4, 32)) {
+    HAddTys.push_back(LLT::fixed_vector(8, LLT::scalar(16)));
+  } else if (Ty == LLT::fixed_vector(4, LLT::scalar(32))) {
     Opc = Intrinsic::aarch64_neon_uaddlp;
-    HAddTys.push_back(LLT::fixed_vector(8, 16));
-    HAddTys.push_back(LLT::fixed_vector(4, 32));
-  } else if (Ty == LLT::fixed_vector(2, 64)) {
+    HAddTys.push_back(LLT::fixed_vector(8, LLT::scalar(16)));
+    HAddTys.push_back(LLT::fixed_vector(4, LLT::scalar(32)));
+  } else if (Ty == LLT::fixed_vector(2, LLT::scalar(64))) {
     Opc = Intrinsic::aarch64_neon_uaddlp;
-    HAddTys.push_back(LLT::fixed_vector(8, 16));
-    HAddTys.push_back(LLT::fixed_vector(4, 32));
-    HAddTys.push_back(LLT::fixed_vector(2, 64));
-  } else if (Ty == LLT::fixed_vector(4, 16)) {
+    HAddTys.push_back(LLT::fixed_vector(8, LLT::scalar(16)));
+    HAddTys.push_back(LLT::fixed_vector(4, LLT::scalar(32)));
+    HAddTys.push_back(LLT::fixed_vector(2, LLT::scalar(64)));
+  } else if (Ty == LLT::fixed_vector(4, LLT::scalar(16))) {
     Opc = Intrinsic::aarch64_neon_uaddlp;
-    HAddTys.push_back(LLT::fixed_vector(4, 16));
-  } else if (Ty == LLT::fixed_vector(2, 32)) {
+    HAddTys.push_back(LLT::fixed_vector(4, LLT::scalar(16)));
+  } else if (Ty == LLT::fixed_vector(2, LLT::scalar(32))) {
     Opc = Intrinsic::aarch64_neon_uaddlp;
-    HAddTys.push_back(LLT::fixed_vector(4, 16));
-    HAddTys.push_back(LLT::fixed_vector(2, 32));
+    HAddTys.push_back(LLT::fixed_vector(4, LLT::scalar(16)));
+    HAddTys.push_back(LLT::fixed_vector(2, LLT::scalar(32)));
   } else
     llvm_unreachable("unexpected vector shape");
   MachineInstrBuilder UADD;

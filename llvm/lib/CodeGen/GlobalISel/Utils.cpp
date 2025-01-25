@@ -1283,7 +1283,7 @@ LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
     // Cannot produce original element type, but both have vscale in common.
     if (GCD < OrigElt.getSizeInBits())
       return LLT::scalarOrVector(ElementCount::get(1, OrigTy.isScalable()),
-                                 GCD);
+                                 LLT::scalar(GCD));
 
     return LLT::vector(
         ElementCount::get(GCD / OrigElt.getSizeInBits().getFixedValue(),
