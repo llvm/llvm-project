@@ -31,6 +31,8 @@ static std::string asArgString(ArgKind kind) {
     return "Matcher";
   case ArgKind::String:
     return "String";
+  case ArgKind::Unsigned:
+    return "unsigned";
   }
   llvm_unreachable("Unhandled ArgKind");
 }
