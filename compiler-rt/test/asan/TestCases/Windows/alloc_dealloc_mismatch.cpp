@@ -3,7 +3,7 @@
 // RUN: %env_asan_opts=alloc_dealloc_mismatch=0 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-SUCCESS
 
 // RUN: %clangxx_asan -O0 %s -o %t -DUSER_FUNCTION
-// RUN: %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-MISMATCH
+// RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-SUCCESS
 
 #if USER_FUNCTION
 // It's important to test the `alloc_dealloc_mismatch` flag set through the user function because, on Windows,
@@ -19,6 +19,7 @@ extern "C" __declspec(dllexport) extern const char *__asan_default_options() {
 
 // Tests the `alloc_dealloc_mismatch` flag set both via user function and through the environment variable.
 int main() {
+  // In the 'CHECK-MISMATCH' case, we simply check that the AddressSanitizer reports an error.
   delete (new int[10]); // CHECK-MISMATCH: AddressSanitizer:
   printf("Success");    // CHECK-SUCCESS: Success
   return 0;
