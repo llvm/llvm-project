@@ -350,10 +350,25 @@ void PlainCFGBuilder::buildPlainCFG() {
   // new vector preheader); here we're interested in setting BB2VPBB to the
   // latter.
   BB2VPBB[ThePreheaderBB] = VectorPreheaderVPBB;
-  BasicBlock *LoopExitBB = TheLoop->getUniqueExitBlock();
   Loop2Region[LI->getLoopFor(TheLoop->getHeader())] = TheRegion;
-  assert(LoopExitBB && "Loops with multiple exits are not supported.");
-  BB2VPBB[LoopExitBB] = cast<VPBasicBlock>(TheRegion->getSingleSuccessor());
+  BasicBlock *ExitBB = TheLoop->getUniqueExitBlock();
+  if (!ExitBB) {
+    // If there is no unique exit block, we must exit via the latch. This exit
+    // is mapped to the middle block in the input plan.
+    BasicBlock *Latch = TheLoop->getLoopLatch();
+    auto *Br = cast<BranchInst>(Latch->getTerminator());
+    if (TheLoop->contains(Br->getSuccessor(0))) {
+      assert(!TheLoop->contains(Br->getSuccessor(1)) &&
+             "latch must exit the loop");
+      ExitBB = Br->getSuccessor(1);
+    } else {
+      assert(!TheLoop->contains(Br->getSuccessor(0)) &&
+             "latch must exit the loop");
+      ExitBB = Br->getSuccessor(0);
+    }
+  }
+  assert(ExitBB && "Must have a unique exit block or also exit via the latch.");
+  BB2VPBB[ExitBB] = cast<VPBasicBlock>(TheRegion->getSingleSuccessor());
 
   // The existing vector region's entry and exiting VPBBs correspond to the loop
   // header and latch.
@@ -423,21 +438,38 @@ void PlainCFGBuilder::buildPlainCFG() {
     // representing the condition bit in VPlan (which may be in another VPBB).
     assert(IRDef2VPValue.contains(BI->getCondition()) &&
            "Missing condition bit in IRDef2VPValue!");
-    VPBasicBlock *Successor0 = getOrCreateVPBB(BI->getSuccessor(0));
-    VPBasicBlock *Successor1 = getOrCreateVPBB(BI->getSuccessor(1));
-    if (!LoopForBB || BB != LoopForBB->getLoopLatch()) {
-      VPBB->setTwoSuccessors(Successor0, Successor1);
-      continue;
-    }
-    // For a latch we need to set the successor of the region rather than that
-    // of VPBB and it should be set to the exit, i.e., non-header successor,
-    // except for the top region, whose successor was set when creating VPlan's
-    // skeleton.
-    if (TheRegion != Region) {
+
+    BasicBlock *IRSucc0 = BI->getSuccessor(0);
+    BasicBlock *IRSucc1 = BI->getSuccessor(1);
+    VPBasicBlock *Successor0 = getOrCreateVPBB(IRSucc0);
+    VPBasicBlock *Successor1 = getOrCreateVPBB(IRSucc1);
+    if (BB == LoopForBB->getLoopLatch()) {
+      // For a latch we need to set the successor of the region rather than that
+      // of VPBB and it should be set to the exit, i.e., non-header successor,
+      // except for the top region, whose successor was set when creating
+      // VPlan's skeleton.
+      assert(TheRegion != Region &&
+             "Latch of the top region should have been handled earlier");
       Region->setOneSuccessor(isHeaderVPBB(Successor0) ? Successor1
                                                        : Successor0);
       Region->setExiting(VPBB);
+      continue;
     }
+
+    // Don't connect any blocks outside the current loop except the latch for
+    // now. The latch is handled above.
+    if (LoopForBB) {
+      if (!LoopForBB->contains(IRSucc0)) {
+        VPBB->setOneSuccessor(Successor1);
+        continue;
+      }
+      if (!LoopForBB->contains(IRSucc1)) {
+        VPBB->setOneSuccessor(Successor0);
+        continue;
+      }
+    }
+
+    VPBB->setTwoSuccessors(Successor0, Successor1);
   }
 
   // 2. The whole CFG has been built at this point so all the input Values must
