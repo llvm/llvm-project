@@ -2556,6 +2556,8 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "__funcref";
   case LangAS::hlsl_groupshared:
     return "groupshared";
+  case LangAS::hlsl_private:
+    return "hlsl_private";
   default:
     return std::to_string(toTargetAddressSpace(AS));
   }
