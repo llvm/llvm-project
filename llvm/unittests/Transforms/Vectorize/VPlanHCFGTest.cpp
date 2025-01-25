@@ -48,15 +48,18 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   EXPECT_EQ(0u, Entry->getNumPredecessors());
   EXPECT_EQ(1u, Entry->getNumSuccessors());
 
-  // Check that the region following the preheader is a single basic-block
-  // region (loop).
+  // Check that the region following the preheader consists of a block for the
+  // original header and a separate latch.
   VPBasicBlock *VecBB = Plan->getVectorLoopRegion()->getEntryBasicBlock();
-  EXPECT_EQ(8u, VecBB->size());
+  EXPECT_EQ(7u, VecBB->size());
   EXPECT_EQ(0u, VecBB->getNumPredecessors());
-  EXPECT_EQ(0u, VecBB->getNumSuccessors());
+  EXPECT_EQ(1u, VecBB->getNumSuccessors());
   EXPECT_EQ(VecBB->getParent()->getEntryBasicBlock(), VecBB);
-  EXPECT_EQ(VecBB->getParent()->getExitingBasicBlock(), VecBB);
   EXPECT_EQ(&*Plan, VecBB->getPlan());
+
+  VPBlockBase *VecLatch = VecBB->getSingleSuccessor();
+  EXPECT_EQ(VecLatch->getParent()->getExitingBasicBlock(), VecLatch);
+  EXPECT_EQ(0u, VecLatch->getNumSuccessors());
 
   auto Iter = VecBB->begin();
   VPWidenPHIRecipe *Phi = dyn_cast<VPWidenPHIRecipe>(&*Iter++);
@@ -127,29 +130,33 @@ compound=true
       "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
       "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\>, ir\<1\>\l" +
       "  EMIT ir\<%exitcond\> = icmp ir\<%indvars.iv.next\>, ir\<%N\>\l" +
-      "  EMIT branch-on-cond ir\<%exitcond\>\l" +
+      "Successor(s): vector.latch\l"
+    ]
+    N2 -> N4 [ label=""]
+    N4 [label =
+      "vector.latch:\l" +
       "No successors\l"
     ]
   }
-  N2 -> N4 [ label="" ltail=cluster_N3]
-  N4 [label =
+  N4 -> N5 [ label="" ltail=cluster_N3]
+  N5 [label =
     "middle.block:\l" +
     "  EMIT vp\<%cmp.n\> = icmp eq ir\<%N\>, vp\<%0\>\l" +
     "  EMIT branch-on-cond vp\<%cmp.n\>\l" +
     "Successor(s): ir-bb\<for.end\>, scalar.ph\l"
   ]
-  N4 -> N5 [ label="T"]
-  N4 -> N6 [ label="F"]
-  N5 [label =
+  N5 -> N6 [ label="T"]
+  N5 -> N7 [ label="F"]
+  N6 [label =
     "ir-bb\<for.end\>:\l" +
     "No successors\l"
   ]
-  N6 [label =
+  N7 [label =
     "scalar.ph:\l" +
     "Successor(s): ir-bb\<for.body\>\l"
   ]
-  N6 -> N7 [ label=""]
-  N7 [label =
+  N7 -> N8 [ label=""]
+  N8 [label =
     "ir-bb\<for.body\>:\l" +
     "  IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]\l" +
     "  IR   %arr.idx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv\l" +
@@ -204,14 +211,17 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   EXPECT_EQ(0u, Entry->getNumPredecessors());
   EXPECT_EQ(1u, Entry->getNumSuccessors());
 
-  // Check that the region following the preheader is a single basic-block
-  // region (loop).
+  // Check that the region following the preheader consists of a block for the
+  // original header and a separate latch.
   VPBasicBlock *VecBB = Plan->getVectorLoopRegion()->getEntryBasicBlock();
-  EXPECT_EQ(8u, VecBB->size());
+  EXPECT_EQ(7u, VecBB->size());
   EXPECT_EQ(0u, VecBB->getNumPredecessors());
-  EXPECT_EQ(0u, VecBB->getNumSuccessors());
+  EXPECT_EQ(1u, VecBB->getNumSuccessors());
   EXPECT_EQ(VecBB->getParent()->getEntryBasicBlock(), VecBB);
-  EXPECT_EQ(VecBB->getParent()->getExitingBasicBlock(), VecBB);
+
+  VPBlockBase *VecLatch = VecBB->getSingleSuccessor();
+  EXPECT_EQ(VecLatch->getParent()->getExitingBasicBlock(), VecLatch);
+  EXPECT_EQ(0u, VecLatch->getNumSuccessors());
 
   auto Iter = VecBB->begin();
   EXPECT_NE(nullptr, dyn_cast<VPWidenPHIRecipe>(&*Iter++));
@@ -221,7 +231,6 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
-  EXPECT_NE(nullptr, dyn_cast<VPInstruction>(&*Iter++));
   EXPECT_EQ(VecBB->end(), Iter);
 }
 
