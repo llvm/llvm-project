@@ -737,10 +737,8 @@ bool GlobalMergeImpl::run(Module &M) {
       else
         Globals[{AddressSpace, Section}].push_back(&GV);
     }
-    LLVM_DEBUG(dbgs() << "GV "
-                      << (CanMerge ? "" : "not ")
-                      << "to merge: "
-                      << GV << "\n");
+    LLVM_DEBUG(dbgs() << "GV " << (CanMerge ? "" : "not ") << "to merge: " << GV
+                      << "\n");
   }
 
   for (auto &P : Globals)
