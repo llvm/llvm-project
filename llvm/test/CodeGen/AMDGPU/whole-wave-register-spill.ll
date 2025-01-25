@@ -53,6 +53,7 @@ define void @test() #0 {
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readlane_b32 s31, v40, 1
+; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 4
 ; GCN-NEXT:    v_readlane_b32 s28, v40, 2
 ; GCN-NEXT:    v_readlane_b32 s29, v40, 3
@@ -113,6 +114,7 @@ define void @test() #0 {
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-O0-NEXT:    v_readlane_b32 s30, v40, 0
 ; GCN-O0-NEXT:    v_readlane_b32 s31, v40, 1
+; GCN-O0-NEXT:    s_mov_b32 s32, s33
 ; GCN-O0-NEXT:    v_readlane_b32 s4, v40, 4
 ; GCN-O0-NEXT:    v_readlane_b32 s28, v40, 2
 ; GCN-O0-NEXT:    v_readlane_b32 s29, v40, 3

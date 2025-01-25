@@ -1584,6 +1584,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   // Walk up the call stack to find the appropriate caller and get the
   // element type from it.
   QualType ElemType;
+  const CallExpr *NewCall = nullptr;
 
   for (const InterpFrame *F = Frame; F; F = F->Caller) {
     const Function *Func = F->getFunction();
@@ -1606,6 +1607,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
     if (CTSD->isInStdNamespace() && ClassII && ClassII->isStr("allocator") &&
         TAL.size() >= 1 && TAL[0].getKind() == TemplateArgument::Type) {
       ElemType = TAL[0].getAsType();
+      NewCall = cast<CallExpr>(F->Caller->getExpr(F->getRetPC()));
       break;
     }
   }
@@ -1616,6 +1618,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
                        : diag::note_constexpr_new);
     return false;
   }
+  assert(NewCall);
 
   if (ElemType->isIncompleteType() || ElemType->isFunctionType()) {
     S.FFDiag(Call, diag::note_constexpr_new_not_complete_object_type)
@@ -1654,7 +1657,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   if (ElemT) {
     if (NumElems.ule(1)) {
       const Descriptor *Desc =
-          S.P.createDescriptor(Call, *ElemT, Descriptor::InlineDescMD,
+          S.P.createDescriptor(NewCall, *ElemT, Descriptor::InlineDescMD,
                                /*IsConst=*/false, /*IsTemporary=*/false,
                                /*IsMutable=*/false);
       Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
@@ -1667,7 +1670,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
     assert(NumElems.ugt(1));
 
     Block *B =
-        Allocator.allocate(Call, *ElemT, NumElems.getZExtValue(),
+        Allocator.allocate(NewCall, *ElemT, NumElems.getZExtValue(),
                            S.Ctx.getEvalID(), DynamicAllocator::Form::Operator);
     assert(B);
     S.Stk.push<Pointer>(B);

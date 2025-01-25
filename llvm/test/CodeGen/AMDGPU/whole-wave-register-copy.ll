@@ -47,6 +47,7 @@ define void @vector_reg_liverange_split() #0 {
 ; GFX90A-NEXT:    ; use s20
 ; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    v_readlane_b32 s31, v40, 1
+; GFX90A-NEXT:    s_mov_b32 s32, s33
 ; GFX90A-NEXT:    v_readlane_b32 s4, v40, 4
 ; GFX90A-NEXT:    v_readlane_b32 s28, v40, 2
 ; GFX90A-NEXT:    v_readlane_b32 s29, v40, 3

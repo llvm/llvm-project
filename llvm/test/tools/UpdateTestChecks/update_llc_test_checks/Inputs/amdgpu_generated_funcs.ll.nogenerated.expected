@@ -55,6 +55,7 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:  .LBB0_4:
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_addk_i32 s32, 0xfa00
 ; CHECK-NEXT:    .cfi_def_cfa_register 64
 ; CHECK-NEXT:    s_mov_b32 s33, s8
@@ -141,6 +142,7 @@ define dso_local i32 @main() #0 {
 ; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s33 offset:12
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    buffer_store_dword v5, off, s[0:3], s33 offset:16
+; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_addk_i32 s32, 0xfa00
 ; CHECK-NEXT:    .cfi_def_cfa_register 64
 ; CHECK-NEXT:    s_mov_b32 s33, s6

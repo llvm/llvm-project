@@ -315,6 +315,7 @@ body:             |
   ; GCN-NEXT:   $sgpr6 = SI_RESTORE_S32_FROM_VGPR $vgpr2, 2
   ; GCN-NEXT:   $sgpr5 = SI_RESTORE_S32_FROM_VGPR $vgpr2, 1
   ; GCN-NEXT:   $sgpr4 = SI_RESTORE_S32_FROM_VGPR $vgpr2, 0
+  ; GCN-NEXT:   $sgpr32 = frame-destroy COPY $sgpr33
   ; GCN-NEXT:   $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   $vgpr1 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.68, addrspace 5)
   ; GCN-NEXT:   $vgpr2 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.69, addrspace 5)
