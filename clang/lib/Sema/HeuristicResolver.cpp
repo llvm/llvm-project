@@ -227,6 +227,7 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveMemberExpr(
   }
 
   // Try resolving the member inside the expression's base type.
+  Expr *Base = ME->isImplicitAccess() ? nullptr : ME->getBase();
   QualType BaseType = ME->getBaseType();
   if (ME->isArrow()) {
     BaseType = getPointeeType(BaseType);
@@ -237,9 +238,23 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveMemberExpr(
     // If BaseType is the type of a dependent expression, it's just
     // represented as BuiltinType::Dependent which gives us no information. We
     // can get further by analyzing the dependent expression.
-    Expr *Base = ME->isImplicitAccess() ? nullptr : ME->getBase();
     if (Base && BT->getKind() == BuiltinType::Dependent) {
       BaseType = resolveExprToType(Base);
+    }
+  }
+  if (const auto *AT = BaseType->getContainedAutoType()) {
+    // If BaseType contains a dependent `auto` type, deduction will not have
+    // been performed on it yet. In simple cases (e.g. `auto` variable with
+    // initializer), get the approximate type that would result from deduction.
+    // FIXME: A more accurate implementation would propagate things like the
+    // `const` in `const auto`.
+    if (AT->isUndeducedAutoType()) {
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
+        if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+          if (VD->hasInit())
+            BaseType = resolveExprToType(VD->getInit());
+        }
+      }
     }
   }
   return resolveDependentMember(BaseType, ME->getMember(), NoFilter);

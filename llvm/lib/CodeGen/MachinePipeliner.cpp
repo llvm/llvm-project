@@ -1981,7 +1981,7 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
                             NodeSet &NS) {
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  SmallVector<RegisterMaskPair, 8> LiveOutRegs;
+  SmallVector<VRegMaskOrUnit, 8> LiveOutRegs;
   SmallSet<unsigned, 4> Uses;
   for (SUnit *SU : NS) {
     const MachineInstr *MI = SU->getInstr();
@@ -2002,13 +2002,11 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
         Register Reg = MO.getReg();
         if (Reg.isVirtual()) {
           if (!Uses.count(Reg))
-            LiveOutRegs.push_back(RegisterMaskPair(Reg,
-                                                   LaneBitmask::getNone()));
+            LiveOutRegs.emplace_back(Reg, LaneBitmask::getNone());
         } else if (MRI.isAllocatable(Reg)) {
           for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
             if (!Uses.count(Unit))
-              LiveOutRegs.push_back(
-                  RegisterMaskPair(Unit, LaneBitmask::getNone()));
+              LiveOutRegs.emplace_back(Unit, LaneBitmask::getNone());
         }
       }
   RPTracker.addLiveRegs(LiveOutRegs);

@@ -105,6 +105,18 @@ static bool ignoredSymbolName(StringRef name) {
   return name == "@feat.00" || name == "@comp.id";
 }
 
+static coff_symbol_generic *cloneSymbol(COFFSymbolRef sym) {
+  if (sym.isBigObj()) {
+    auto *copy = make<coff_symbol32>(
+        *reinterpret_cast<const coff_symbol32 *>(sym.getRawPtr()));
+    return reinterpret_cast<coff_symbol_generic *>(copy);
+  } else {
+    auto *copy = make<coff_symbol16>(
+        *reinterpret_cast<const coff_symbol16 *>(sym.getRawPtr()));
+    return reinterpret_cast<coff_symbol_generic *>(copy);
+  }
+}
+
 ArchiveFile::ArchiveFile(COFFLinkerContext &ctx, MemoryBufferRef m)
     : InputFile(ctx.symtab, ArchiveKind, m) {}
 
@@ -139,6 +151,8 @@ void ArchiveFile::addMember(const Archive::Symbol &sym) {
                                  toCOFFString(symtab.ctx, sym));
 
   // Return an empty buffer if we have already returned the same buffer.
+  // FIXME: Remove this once we resolve all defineds before all undefineds in
+  //        ObjFile::initializeSymbols().
   if (!seen.insert(c.getChildOffset()).second)
     return;
 
@@ -461,7 +475,7 @@ Symbol *ObjFile::createRegular(COFFSymbolRef sym) {
   if (sc) {
     const coff_symbol_generic *symGen = sym.getGeneric();
     if (sym.isSection()) {
-      auto *customSymGen = make<coff_symbol_generic>(*symGen);
+      auto *customSymGen = cloneSymbol(sym);
       customSymGen->Value = 0;
       symGen = customSymGen;
     }
@@ -774,7 +788,7 @@ std::optional<Symbol *> ObjFile::createDefined(
     auto *sc = make<SectionChunk>(this, hdr);
     chunks.push_back(sc);
 
-    coff_symbol_generic *symGen = make<coff_symbol_generic>(*sym.getGeneric());
+    auto *symGen = cloneSymbol(sym);
     // Ignore the Value offset of these symbols, as it may be a bitmask.
     symGen->Value = 0;
     return make<DefinedRegular>(this, /*name=*/"", /*isCOMDAT=*/false,

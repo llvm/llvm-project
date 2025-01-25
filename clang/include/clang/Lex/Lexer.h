@@ -557,6 +557,12 @@ public:
                                             const LangOptions &LangOpts,
                                             bool IncludeComments = false);
 
+  /// Finds the token that comes before the given location.
+  static std::optional<Token> findPreviousToken(SourceLocation Loc,
+                                                const SourceManager &SM,
+                                                const LangOptions &LangOpts,
+                                                bool IncludeComments);
+
   /// Checks that the given token is the first token that occurs after
   /// the given location (this excludes comments and whitespace). Returns the
   /// location immediately after the specified token. If the token is not found
