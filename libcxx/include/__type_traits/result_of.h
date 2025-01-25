@@ -22,7 +22,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS)
 template <class _Callable>
-struct _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_NO_SPECIALIZATIONS result_of;
+struct _LIBCPP_DEPRECATED_IN_CXX17 result_of;
 
 template <class _Fp, class... _Args>
 struct _LIBCPP_TEMPLATE_VIS result_of<_Fp(_Args...)> : __invoke_result<_Fp, _Args...> {};
