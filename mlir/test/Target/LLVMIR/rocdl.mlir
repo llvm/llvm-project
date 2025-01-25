@@ -395,6 +395,38 @@ llvm.func @rocdl.xdlops(%arg0 : f32, %arg1 : f32,
                                (vector<8xf16>, vector<8xf16>, vector<16xf32>,
                                 i32, i32, i32) -> vector<16xf32>
 
+  // CHECK: call <4 x float> @llvm.amdgcn.smfmac.f32.16x16x32.f16(<4 x half> %{{.*}}, <8 x half> %{{.*}}, <4 x float> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  %r34 = rocdl.smfmac.f32.16x16x32.f16 %arg14, %arg14, %arg5, %csti32, %csti32, %csti32 :
+                                (vector<4xf16>, vector<8xf16>, vector<4xf32>,
+                                 i32, i32, i32) -> vector<16xf32>
+
+  // CHECK: call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x16.f16(<4 x half> %a, <8 x half> %b, <16 x float> %c, i32 %idx, i32 0, i32 0)
+  %r35 = rocdl.smfmac.f32.32x32x16.f16 %arg14, %arg14, %arg5, %csti32, %csti32, %csti32 :
+                                (vector<4xf16>, vector<8xf16>, vector<16xf32>,
+                                 i32, i32, i32) -> vector<16xf32>
+
+  // CHECK: call <4 x float> @llvm.amdgcn.smfmac.f32.16x16x32.bf16(<4 x i16> %a, <8 x i16> %b, <4 x float> %c, i32 %idx, i32 0, i32 0)
+  %r36 = rocdl.smfmac.f32.16x16x32.bf16 %arg14, %arg14, %arg5, %csti32, %csti32, %csti32 :
+                                (vector<4xi16>, vector<8xi16>, vector<4xi16>,
+                                 i32, i32, i32) -> vector<4xf32>
+
+  // CHECK: call <16 x float> @llvm.amdgcn.smfmac.f32.32x32x16.bf16(<4 x i16> %a, <8 x i16> %b, <16 x float> %c, i32 %idx, i32 0, i32 0)
+  %r37 = rocdl.smfmac.f32.16x16x32.bf16 %arg14, %arg14, %arg5, %csti32, %csti32, %csti32 :
+                                (vector<4xi16>, vector<8xi16>, vector<16xf32>,
+                                 i32, i32, i32) -> vector<16xf32>
+
+
+//def ROCDL_smfmac_i32_16x16x64_i8 : ROCDL_Mfma_IntrOp<"smfmac.i32.16x16x64.i8">;
+//def ROCDL_smfmac_i32_32x32x32_i8 : ROCDL_Mfma_IntrOp<"smfmac.i32.32x32x32.i8">;
+//def ROCDL_smfmac_f32_16x16x64_bf8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x64.bf8.bf8">;
+//def ROCDL_smfmac_f32_16x16x64_bf8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x64.bf8.fp8">;
+//def ROCDL_smfmac_f32_16x16x64_fp8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x64.fp8.bf8">;
+//def ROCDL_smfmac_f32_16x16x64_fp8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.16x16x64.fp8.fp8">;
+//def ROCDL_smfmac_f32_32x32x32_bf8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.bf8.bf8">;
+//def ROCDL_smfmac_f32_32x32x32_bf8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.bf8.fp8">;
+//def ROCDL_smfmac_f32_32x32x32_fp8_bf8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.fp8.bf8">;
+//def ROCDL_smfmac_f32_32x32x32_fp8_fp8 : ROCDL_Mfma_IntrOp<"smfmac.f32.32x32x32.fp8.fp8">;
+
   llvm.return %r0 : vector<32 x f32>
 }
 
