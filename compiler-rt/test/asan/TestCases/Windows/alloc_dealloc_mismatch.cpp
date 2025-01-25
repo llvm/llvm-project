@@ -20,6 +20,6 @@ extern "C" __declspec(dllexport) extern const char *__asan_default_options() {
 // Tests the `alloc_dealloc_mismatch` flag set both via user function and through the environment variable.
 int main() {
   delete (new int[10]); // CHECK-MISMATCH: AddressSanitizer:
-  printf("Success"); // CHECK-SUCCESS: Success
+  printf("Success");    // CHECK-SUCCESS: Success
   return 0;
 }
