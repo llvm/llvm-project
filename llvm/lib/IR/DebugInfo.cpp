@@ -798,7 +798,8 @@ private:
 
       return getReplacementMDNode(N);
     };
-    Replacements[N] = doRemap(N);
+    auto value = doRemap(N);
+    Replacements[N] = value;
   }
 
   /// Do the remapping traversal.
