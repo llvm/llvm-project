@@ -23,6 +23,7 @@
 #include <__chrono/statically_widen.h>
 #include <__chrono/sys_info.h>
 #include <__chrono/system_clock.h>
+#include <__chrono/tai_clock.h>
 #include <__chrono/time_point.h>
 #include <__chrono/utc_clock.h>
 #include <__chrono/weekday.h>
@@ -112,6 +113,16 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(chrono::utc_time<_Duration> __tp) {
   return __result;
 }
 
+template <class _Tm, class _Duration>
+_LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(chrono::tai_time<_Duration> __tp) {
+  using _Rp = common_type_t<_Duration, chrono::seconds>;
+  // The time between the TAI epoch (1958-01-01) and UNIX epoch (1970-01-01).
+  // This avoids leap second conversion when going from TAI to UTC.
+  // (It also avoids issues when the date is before the UTC epoch.)
+  constexpr chrono::seconds __offset{4383 * 24 * 60 * 60};
+  return std::__convert_to_tm<_Tm>(chrono::sys_time<_Rp>{__tp.time_since_epoch() - __offset});
+}
+
 #    endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
 #  endif   // _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 
@@ -130,6 +141,8 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
 #  if _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 #    if _LIBCPP_HAS_EXPERIMENTAL_TZDB
     else if constexpr (same_as<typename _ChronoT::clock, chrono::utc_clock>)
+      return std::__convert_to_tm<_Tm>(__value);
+    else if constexpr (same_as<typename _ChronoT::clock, chrono::tai_clock>)
       return std::__convert_to_tm<_Tm>(__value);
 #    endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
 #  endif   // _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
