@@ -13855,8 +13855,7 @@ void Sema::setupImplicitSpecialMemberType(CXXMethodDecl *SpecialMem,
   // During template instantiation of implicit special member functions we need
   // a reliable TypeSourceInfo for the function prototype in order to allow
   // functions to be substituted.
-  if (inTemplateInstantiation() &&
-      cast<CXXRecordDecl>(SpecialMem->getParent())->isLambda()) {
+  if (inTemplateInstantiation() && isLambdaMethod(SpecialMem)) {
     TypeSourceInfo *TSI =
         Context.getTrivialTypeSourceInfo(SpecialMem->getType());
     SpecialMem->setTypeSourceInfo(TSI);
