@@ -1304,8 +1304,6 @@ struct KernelRunRecord {
   struct TuningMetadata {
     uint32_t IdxThread = 0;
     uint32_t IdxCUMultiplier = 0;
-    // Tuning history.
-    std::vector<KernelRunEntry> RunEntries;
     // Run counters.
     uint32_t RunCounters;
     // Entry with minimum running time.
@@ -1316,7 +1314,6 @@ struct KernelRunRecord {
   void addEntry(std::string KernelName, uint32_t NumTeams, uint32_t NumThreads,
                 uint64_t RunDuration) {
     KernelRunEntry NewRunEnry = {KernelName, NumTeams, NumThreads, RunDuration};
-    TuningData[KernelName].RunEntries.push_back(NewRunEnry);
     TuningData[KernelName].RunCounters++;
 
     // Update min entries.

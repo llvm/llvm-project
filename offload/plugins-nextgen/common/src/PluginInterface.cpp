@@ -1109,9 +1109,10 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
 
   // Delete autotuning related resources if the option is on.
   if (OMPX_EnableRuntimeAutotuning) {
-    if (KernelRunRecords)
+    if (KernelRunRecords) {
       delete KernelRunRecords;
-    KernelRunRecords = nullptr;
+      KernelRunRecords = nullptr;
+    }
   }
 
 #ifdef OMPT_SUPPORT
