@@ -940,7 +940,8 @@ SDValue DAGTypeLegalizer::LowerBitcastInRegister(SDNode *N) const {
     unsigned NeededBits = ElemBits * NumElems;
     unsigned PackedBits = ToVT.getSizeInBits();
 
-    assert(PackedBits >= NeededBits && "Scalar type does not have enough bits to pack vector values.");
+    assert(PackedBits >= NeededBits &&
+           "Scalar type does not have enough bits to pack vector values.");
 
     EVT PackVT = EVT::getIntegerVT(*DAG.getContext(), PackedBits);
     SDValue Packed = DAG.getConstant(0, DL, PackVT);
