@@ -425,6 +425,7 @@ static CXXRecordDecl *createHostLayoutStruct(Sema &S,
   // copy base struct, create HLSL Buffer compatible version if needed
   if (unsigned NumBases = StructDecl->getNumBases()) {
     assert(NumBases == 1 && "HLSL supports only one base type");
+    (void)NumBases;
     CXXBaseSpecifier Base = *StructDecl->bases_begin();
     CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
     if (requiresImplicitBufferLayoutStructure(BaseDecl)) {
