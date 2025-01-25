@@ -31,13 +31,7 @@ define void @s172(i32 noundef %xa, i32 noundef %xb, ptr noundef %a, ptr noundef 
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl nsw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = add nsw i64 [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[SMAX:%.*]] = tail call i64 @llvm.smax.i64(i64 [[TMP10]], i64 32000)
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp slt i64 [[TMP10]], 32000
-; CHECK-NEXT:    [[UMIN:%.*]] = zext i1 [[TMP11]] to i64
-; CHECK-NEXT:    [[TMP12:%.*]] = add nsw i64 [[TMP10]], [[UMIN]]
-; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 [[SMAX]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[TMP13]], [[UMIN]]
+; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[TMP5]], [[UMIN8]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = shl i64 [[TMP15]], 2
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[TMP16]], 4

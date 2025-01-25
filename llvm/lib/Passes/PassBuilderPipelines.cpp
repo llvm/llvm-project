@@ -1306,16 +1306,19 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
   }
   // Cleanup after the loop optimization passes.
   FPM.addPass(InstCombinePass());
+  // InstCombine can create CSE opportunities when it cleans the result of loop
+  // vectorization. They occur when combines use replaceOperand, which happens
+  // most often when combining the boolean operations created by if-conversion.
+  ExtraFunctionPassManager<ShouldRunExtraVectorPasses> ExtraPasses;
+  ExtraPasses.addPass(EarlyCSEPass());
 
   if (Level.getSpeedupLevel() > 1 && ExtraVectorizerPasses) {
-    ExtraFunctionPassManager<ShouldRunExtraVectorPasses> ExtraPasses;
     // At higher optimization levels, try to clean up any runtime overlap and
     // alignment checks inserted by the vectorizer. We want to track correlated
     // runtime checks for two inner loops in the same outer loop, fold any
     // common computations, hoist loop-invariant aspects out of any outer loop,
     // and unswitch the runtime checks if possible. Once hoisted, we may have
     // dead (or speculatable) control flows or more combining opportunities.
-    ExtraPasses.addPass(EarlyCSEPass());
     ExtraPasses.addPass(CorrelatedValuePropagationPass());
     ExtraPasses.addPass(InstCombinePass());
     LoopPassManager LPM;
@@ -1329,8 +1332,9 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     ExtraPasses.addPass(
         SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
     ExtraPasses.addPass(InstCombinePass());
-    FPM.addPass(std::move(ExtraPasses));
   }
+
+  FPM.addPass(std::move(ExtraPasses));
 
   // Now that we've formed fast to execute loop structures, we do further
   // optimizations. These are run afterward as they might block doing complex

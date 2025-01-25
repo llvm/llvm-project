@@ -54,9 +54,6 @@ define void @fp_iv_loop1(ptr noalias nocapture %A, i32 %N) #0 {
 ; AUTO_VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[ZEXT]]
 ; AUTO_VEC-NEXT:    br i1 [[CMP_N]], label [[FOR_END]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; AUTO_VEC:       vec.epilog.iter.check:
-; AUTO_VEC-NEXT:    [[DOTCAST7:%.*]] = uitofp nneg i64 [[N_VEC]] to float
-; AUTO_VEC-NEXT:    [[TMP6:%.*]] = fmul fast float [[DOTCAST7]], 5.000000e-01
-; AUTO_VEC-NEXT:    [[IND_END8:%.*]] = fadd fast float [[TMP6]], 1.000000e+00
 ; AUTO_VEC-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[ZEXT]], 28
 ; AUTO_VEC-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
 ; AUTO_VEC-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[FOR_BODY]], label [[VEC_EPILOG_PH]]
@@ -85,7 +82,7 @@ define void @fp_iv_loop1(ptr noalias nocapture %A, i32 %N) #0 {
 ; AUTO_VEC-NEXT:    br i1 [[CMP_N14]], label [[FOR_END]], label [[FOR_BODY]]
 ; AUTO_VEC:       for.body:
 ; AUTO_VEC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ], [ [[N_VEC3]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
-; AUTO_VEC-NEXT:    [[X_06:%.*]] = phi float [ [[CONV1:%.*]], [[FOR_BODY]] ], [ [[IND_END8]], [[VEC_EPILOG_ITER_CHECK]] ], [ 1.000000e+00, [[ITER_CHECK]] ], [ [[IND_END6]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; AUTO_VEC-NEXT:    [[X_06:%.*]] = phi float [ [[CONV1:%.*]], [[FOR_BODY]] ], [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ 1.000000e+00, [[ITER_CHECK]] ], [ [[IND_END6]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; AUTO_VEC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDVARS_IV]]
 ; AUTO_VEC-NEXT:    store float [[X_06]], ptr [[ARRAYIDX]], align 4
 ; AUTO_VEC-NEXT:    [[CONV1]] = fadd fast float [[X_06]], 5.000000e-01
@@ -434,9 +431,6 @@ define void @fadd_reassoc_FMF(ptr nocapture %p, i32 %N) {
 ; AUTO_VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[TMP0]]
 ; AUTO_VEC-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; AUTO_VEC:       vec.epilog.iter.check:
-; AUTO_VEC-NEXT:    [[DOTCAST10:%.*]] = uitofp nneg i64 [[N_VEC]] to float
-; AUTO_VEC-NEXT:    [[TMP11:%.*]] = fmul reassoc float [[DOTCAST10]], 4.200000e+01
-; AUTO_VEC-NEXT:    [[IND_END11:%.*]] = fadd reassoc float [[TMP11]], 1.000000e+00
 ; AUTO_VEC-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[TMP0]], 28
 ; AUTO_VEC-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
 ; AUTO_VEC-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[FOR_BODY]], label [[VEC_EPILOG_PH]]
@@ -469,7 +463,7 @@ define void @fadd_reassoc_FMF(ptr nocapture %p, i32 %N) {
 ; AUTO_VEC-NEXT:    ret void
 ; AUTO_VEC:       for.body:
 ; AUTO_VEC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ], [ [[N_VEC6]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
-; AUTO_VEC-NEXT:    [[X_012:%.*]] = phi float [ [[ADD3:%.*]], [[FOR_BODY]] ], [ [[IND_END11]], [[VEC_EPILOG_ITER_CHECK]] ], [ 1.000000e+00, [[ITER_CHECK]] ], [ [[IND_END9]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; AUTO_VEC-NEXT:    [[X_012:%.*]] = phi float [ [[ADD3:%.*]], [[FOR_BODY]] ], [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ 1.000000e+00, [[ITER_CHECK]] ], [ [[IND_END9]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; AUTO_VEC-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[P]], i64 [[INDVARS_IV]]
 ; AUTO_VEC-NEXT:    [[TMP16:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; AUTO_VEC-NEXT:    [[ADD:%.*]] = fadd reassoc float [[X_012]], [[TMP16]]
