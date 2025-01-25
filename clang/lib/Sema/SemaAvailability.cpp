@@ -1458,9 +1458,13 @@ bool DiagnoseUnguardedAvailability::TraverseIfStmt(IfStmt *If) {
     return DynamicRecursiveASTVisitor::TraverseIfStmt(If);
   }
   CondVersion = IfCond.E->getVersion();
+  VariantCondVersion = IfCond.E->getVariantVersion();
   // If we're using the '*' case here or if this check is redundant, then we
   // use the enclosing version to check both branches.
-  if (CondVersion.empty() || CondVersion <= AvailabilityStack.back().Version) {
+  if ((CondVersion.empty() ||
+       CondVersion <= AvailabilityStack.back().Version) &&
+      (VariantCondVersion.empty() ||
+       VariantCondVersion <= AvailabilityStack.back().VariantVersion)) {
     return TraverseStmt(If->getThen()) && TraverseStmt(If->getElse());
   }
 
