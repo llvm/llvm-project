@@ -51,6 +51,7 @@ static bool wouldOpBeTriviallyDeadImpl(Operation *rootOp) {
     Block::iterator end = effectingOps.back().second;
     if (it == end) {
       effectingOps.pop_back();
+      continue;
     }
     mlir::Operation *op = &*(it++);
 
