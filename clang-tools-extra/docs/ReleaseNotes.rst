@@ -174,6 +174,12 @@ New checks
   Replace comparisons between signed and unsigned integers with their safe
   C++20 ``std::cmp_*`` alternative, if available.
 
+- New :doc:`performance-explicit-move-constructor
+  <clang-tidy/checks/performance/explicit-move-constructor>` check.
+
+  Warns when a class defines an explicit move constructor, which may cause
+  the copy constructor to get called instead.
+
 - New :doc:`portability-template-virtual-member-function
   <clang-tidy/checks/portability/template-virtual-member-function>` check.
 

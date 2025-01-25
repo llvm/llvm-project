@@ -331,6 +331,7 @@ Clang-Tidy Checks
    :doc:`openmp-use-default-none <openmp/use-default-none>`,
    :doc:`performance-avoid-endl <performance/avoid-endl>`, "Yes"
    :doc:`performance-enum-size <performance/enum-size>`,
+   :doc:`performance-explicit-move-constructor <performance/explicit-move-constructor>`, "Yes"
    :doc:`performance-faster-string-find <performance/faster-string-find>`, "Yes"
    :doc:`performance-for-range-copy <performance/for-range-copy>`, "Yes"
    :doc:`performance-implicit-conversion-in-loop <performance/implicit-conversion-in-loop>`,
