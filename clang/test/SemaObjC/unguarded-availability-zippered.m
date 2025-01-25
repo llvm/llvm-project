@@ -2,7 +2,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-ios13.1-macabi -darwin-target-variant-triple x86_64-apple-macos10.15 -fblocks -fsyntax-only -ftarget-variant-availability-checks -Wno-ignored-availability-without-sdk-settings -verify -D INVERTED %s
 
 
-// XFAIL: *
 #define AVAILABLE_PREV_MAC __attribute__((availability(macos, introduced = 10.13)))
 #define AVAILABLE_CURRENT_MAC __attribute__((availability(macos, introduced = 10.15)))
 #define AVAILABLE_NEXT_MAC __attribute__((availability(macos, introduced = 11.0)))
