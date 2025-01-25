@@ -991,6 +991,7 @@ Bug Fixes to C++ Support
 - Fixed assertions or false compiler diagnostics in the case of C++ modules for
   lambda functions or inline friend functions defined inside templates (#GH122493).
 - Clang now rejects declaring an alias template with the same name as its template parameter. (#GH123423)
+- Fix that some dependent immediate expressions did not cause immediate escalation (#GH119046)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
