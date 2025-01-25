@@ -3890,6 +3890,7 @@ functionList: list[LibFunc] = [
     ("clang_getCanonicalCursor", [Cursor], Cursor),
     ("clang_getCanonicalType", [Type], Type),
     ("clang_getChildDiagnostics", [Diagnostic], c_object_p),
+    ("clang_getClangVersion", [], _CXString, _CXString.from_result),
     ("clang_getCompletionAvailability", [c_void_p], c_int),
     ("clang_getCompletionBriefComment", [c_void_p], _CXString),
     ("clang_getCompletionChunkCompletionString", [c_void_p, c_int], c_object_p),
@@ -4194,6 +4195,9 @@ class Config:
             return False
 
         return True
+ 
+    def get_version(self):
+        return self.lib.clang_getClangVersion()
 
 
 conf = Config()
