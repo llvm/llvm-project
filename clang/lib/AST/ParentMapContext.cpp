@@ -103,9 +103,9 @@ class ParentMapContext::ParentMap {
 
   static DynTypedNode
   getSingleDynTypedNodeFromParentMap(ParentMapPointers::mapped_type U) {
-    if (const auto *D = U.dyn_cast<const Decl *>())
+    if (const auto *D = dyn_cast<const Decl *>(U))
       return DynTypedNode::create(*D);
-    if (const auto *S = U.dyn_cast<const Stmt *>())
+    if (const auto *S = dyn_cast<const Stmt *>(U))
       return DynTypedNode::create(*S);
     return *cast<DynTypedNode *>(U);
   }
