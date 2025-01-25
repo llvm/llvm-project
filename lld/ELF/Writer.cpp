@@ -381,9 +381,11 @@ template <class ELFT> void Writer<ELFT>::run() {
     if (errCount(ctx))
       return;
 
-    if (auto e = buffer->commit())
-      Err(ctx) << "failed to write output '" << buffer->getPath()
-               << "': " << std::move(e);
+    if (!ctx.e.disableOutput) {
+      if (auto e = buffer->commit())
+        Err(ctx) << "failed to write output '" << buffer->getPath()
+                 << "': " << std::move(e);
+    }
 
     if (!ctx.arg.cmseOutputLib.empty())
       writeARMCmseImportLib<ELFT>(ctx);
