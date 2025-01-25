@@ -748,11 +748,6 @@ static Value *simplifySubInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
   if (isa<PoisonValue>(Op0) || isa<PoisonValue>(Op1))
     return PoisonValue::get(Op0->getType());
 
-  // X - undef -> undef
-  // undef - X -> undef
-  if (Q.isUndefValue(Op0) || Q.isUndefValue(Op1))
-    return UndefValue::get(Op0->getType());
-
   // X - 0 -> X
   if (match(Op1, m_Zero()))
     return Op0;
@@ -5037,10 +5032,6 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
       any_of(Indices, [](const auto *V) { return isa<PoisonValue>(V); }))
     return PoisonValue::get(GEPTy);
 
-  // getelementptr undef, idx -> undef
-  if (Q.isUndefValue(Ptr))
-    return UndefValue::get(GEPTy);
-
   bool IsScalableVec =
       SrcTy->isScalableTy() || any_of(Indices, [](const Value *V) {
         return isa<ScalableVectorType>(V->getType());
@@ -5258,13 +5249,13 @@ static Value *simplifyExtractElementInst(Value *Vec, Value *Idx,
     if (auto *CIdx = dyn_cast<Constant>(Idx))
       return ConstantExpr::getExtractElement(CVec, CIdx);
 
-    if (Q.isUndefValue(Vec))
-      return UndefValue::get(VecVTy->getElementType());
+    if (isa<PoisonValue>(Vec))
+      return PoisonValue::get(VecVTy->getElementType());
   }
 
-  // An undef extract index can be arbitrarily chosen to be an out-of-range
+  // A poison extract index can be arbitrarily chosen to be an out-of-range
   // index value, which would result in the instruction being poison.
-  if (Q.isUndefValue(Idx))
+  if (isa<PoisonValue>(Idx))
     return PoisonValue::get(VecVTy->getElementType());
 
   // If extracting a specified index from the vector, see if we can recursively
@@ -6708,8 +6699,6 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       return ConstantInt::get(ReturnType, true);
     if ((Mask & fcAllFlags) == 0)
       return ConstantInt::get(ReturnType, false);
-    if (Q.isUndefValue(Op0))
-      return UndefValue::get(ReturnType);
     break;
   }
   case Intrinsic::maxnum:
@@ -6834,13 +6823,10 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   case Intrinsic::fshr: {
     Value *Op0 = Args[0], *Op1 = Args[1], *ShAmtArg = Args[2];
 
-    // If both operands are undef, the result is undef.
-    if (Q.isUndefValue(Op0) && Q.isUndefValue(Op1))
-      return UndefValue::get(F->getReturnType());
-
-    // If shift amount is undef, assume it is zero.
-    if (Q.isUndefValue(ShAmtArg))
-      return Args[IID == Intrinsic::fshl ? 0 : 1];
+    // If any of the operands is poison, the result is poison.
+    if (isa<PoisonValue>(Op0) || isa<PoisonValue>(Op1) ||
+        isa<PoisonValue>(ShAmtArg))
+      return PoisonValue::get(F->getReturnType());
 
     const APInt *ShAmtC;
     if (match(ShAmtArg, m_APInt(ShAmtC))) {
