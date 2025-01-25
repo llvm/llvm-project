@@ -1391,7 +1391,9 @@ public:
   const_iterator end() const { return iterator(); }
 
   bool empty() const { return Result.isNull();  }
-  bool isSingleResult() const { return Result.dyn_cast<NamedDecl*>(); }
+  bool isSingleResult() const {
+    return dyn_cast_if_present<NamedDecl *>(Result);
+  }
   reference front() const { return *begin(); }
 
   // Find the first declaration of the given type in the list. Note that this
