@@ -144,27 +144,27 @@ ParseTemplateParameterList(ParserState &PS, StringRef &TemplateParmList) {
   return {std::move(Generator).str(), std::move(TPLName)};
 }
 
-void EmitCreateBuiltinTemplateParameterList(StringRef Prototype,
+void EmitCreateBuiltinTemplateParameterList(StringRef TemplateHead,
                                             StringRef Name) {
   using namespace std::string_literals;
   CreateBuiltinTemplateParameterList +=
       "case BTK"s + std::string{Name} + ": {\n"s;
-  if (!Prototype.consume_front("template"))
+  if (!TemplateHead.consume_front("template"))
     PrintFatalError(
-        "Expected template prototype to start with 'template' keyword");
+        "Expected template head to start with 'template' keyword");
 
   ParserState PS;
-  auto [Code, TPLName] = ParseTemplateParameterList(PS, Prototype);
+  auto [Code, TPLName] = ParseTemplateParameterList(PS, TemplateHead);
   CreateBuiltinTemplateParameterList += Code + "\n  return " + TPLName + ";\n";
 
   CreateBuiltinTemplateParameterList += "  }\n";
 }
 
 void EmitBuiltinTemplate(raw_ostream &OS, const Record *BuiltinTemplate) {
-  auto Prototype = BuiltinTemplate->getValueAsString("Prototype");
+  auto TemplateHead = BuiltinTemplate->getValueAsString("TemplateHead");
   auto Name = BuiltinTemplate->getName();
 
-  EmitCreateBuiltinTemplateParameterList(Prototype, Name);
+  EmitCreateBuiltinTemplateParameterList(TemplateHead, Name);
 
   TemplateNameList += "BuiltinTemplate(";
   TemplateNameList += Name;

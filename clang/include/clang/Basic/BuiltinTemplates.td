@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-class BuiltinTemplate<string prototype> {
-  string Prototype = prototype;
+class BuiltinTemplate<string template_head> {
+  string TemplateHead = template_head;
 }
 
 def __make_integer_seq : BuiltinTemplate<
