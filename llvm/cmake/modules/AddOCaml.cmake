@@ -38,13 +38,6 @@ function(add_ocaml_library name)
   set(ocaml_inputs)
 
   set(ocaml_outputs "${bin}/${name}.cma")
-  # Always use -custom when building in-tree
-  if( (NOT LLVM_OCAML_OUT_OF_TREE) OR LLVM_OCAML_CUSTOM )
-    set(ocaml_custom TRUE)
-  else()
-    set(ocaml_custom FALSE)
-  endif()
-
   if( ARG_C )
     # ocamlmklib outputs .a and .so
     list(APPEND ocaml_outputs
@@ -75,7 +68,14 @@ function(add_ocaml_library name)
     list(APPEND ocaml_flags ${dep_ocaml_flags})
   endforeach()
 
-  if( ocaml_custom )
+  # Not passing the -custom flag is necessary for the bytecode to work when
+  # installing the bindings for an out-of-tree build.
+  #
+  # However, the -custom flag is necessary when running the in-tree
+  # test suite, otherwise multiple libraries will link to the same libLLVM and
+  # runtime errors of the form
+  # "CommandLine Error: Option *opt* registered more than once!" will occur.
+  if( NOT LLVM_OCAML_OUT_OF_TREE AND NOT BUILD_SHARED_LIBS )
     list(APPEND ocaml_flags "-custom")
   endif()
 
