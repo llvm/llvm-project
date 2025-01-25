@@ -172,6 +172,8 @@ void Scheduler::trimSchedule(ArrayRef<Instruction *> Instrs) {
   for (auto *I = LowestI, *E = TopI->getPrevNode(); I != E;
        I = I->getPrevNode()) {
     auto *N = DAG.getNode(I);
+    if (N == nullptr)
+      continue;
     if (auto *SB = N->getSchedBundle())
       eraseBundle(SB);
   }
