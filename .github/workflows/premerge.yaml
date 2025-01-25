@@ -102,9 +102,7 @@ jobs:
           all_projects="clang clang-tools-extra lld lldb llvm mlir"
           modified_projects="$(keep-modified-projects ${all_projects})"
 
-          # check-clang-tools is failing currently:
-          # weak-def symbol not found '__ZnwmSt19__type_descriptor_t'weak-def symbol not found '__ZnamSt19__type_descriptor_t'
-          mac_check_targets=$(check-targets ${modified_projects} | sort | uniq | tr '\n' ' ' | sed -e 's/check-clang-tools//g')
+          mac_check_targets=$(check-targets ${modified_projects} | sort | uniq | tr '\n' ' ')
           mac_projects=$(add-dependencies ${modified_projects} | sort | uniq | tr '\n' ' ')
 
           mac_runtimes_to_test=$(compute-runtimes-to-test ${modified_projects})
