@@ -1025,6 +1025,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsOverloadedOperators) {
   EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_OverloadedOperatorLParen);
   EXPECT_TOKEN(Tokens[8], tok::amp, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[12], tok::amp, TT_PointerOrReference);
+
+  Tokens = annotate("SomeLoooooooooooooooooType::Awaitable\n"
+                    "SomeLoooooooooooooooooType::operator co_await();");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[7], tok::l_paren, TT_OverloadedOperatorLParen);
 }
 
 TEST_F(TokenAnnotatorTest, OverloadedOperatorInTemplate) {
