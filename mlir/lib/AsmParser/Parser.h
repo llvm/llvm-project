@@ -146,6 +146,9 @@ public:
   /// output a diagnostic and return failure.
   ParseResult parseToken(Token::Kind expectedToken, const Twine &message);
 
+  /// Parses a quoted string token if present.
+  ParseResult parseOptionalString(std::string *string);
+
   /// Parse an optional integer value from the stream.
   OptionalParseResult parseOptionalInteger(APInt &result);
 

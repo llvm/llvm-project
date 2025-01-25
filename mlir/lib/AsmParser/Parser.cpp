@@ -271,6 +271,17 @@ ParseResult Parser::parseToken(Token::Kind expectedToken,
   return emitWrongTokenError(message);
 }
 
+/// Parses a quoted string token if present.
+ParseResult Parser::parseOptionalString(std::string *string) {
+  if (!getToken().is(Token::string))
+    return failure();
+
+  if (string)
+    *string = getToken().getStringValue();
+  consumeToken();
+  return success();
+}
+
 /// Parse an optional integer value from the stream.
 OptionalParseResult Parser::parseOptionalInteger(APInt &result) {
   // Parse `false` and `true` keywords as 0 and 1 respectively.
@@ -419,14 +430,7 @@ ParseResult Parser::parseOptionalKeywordOrString(std::string *result) {
     return success();
   }
 
-  // Parse a quoted string token if present.
-  if (!getToken().is(Token::string))
-    return failure();
-
-  if (result)
-    *result = getToken().getStringValue();
-  consumeToken();
-  return success();
+  return parseOptionalString(result);
 }
 
 //===----------------------------------------------------------------------===//
