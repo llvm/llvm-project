@@ -5461,9 +5461,9 @@ ExpectedDecl ASTNodeImporter::VisitUnresolvedUsingTypenameDecl(
 ExpectedDecl ASTNodeImporter::VisitBuiltinTemplateDecl(BuiltinTemplateDecl *D) {
   Decl* ToD = nullptr;
   switch (D->getBuiltinTemplateKind()) {
-#define BuiltinTemplate(Name)                                                  \
-  case BuiltinTemplateKind::BTK##Name:                                         \
-    ToD = Importer.getToContext().get##Name##Decl();                           \
+#define BuiltinTemplate(BTName)                                                \
+  case BuiltinTemplateKind::BTK##BTName:                                       \
+    ToD = Importer.getToContext().get##BTName##Decl();                         \
     break;
 #include "clang/Basic/BuiltinTemplates.inc"
   }

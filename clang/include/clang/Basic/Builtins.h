@@ -306,7 +306,7 @@ bool evaluateRequiredTargetFeatures(
 
 /// Kinds of BuiltinTemplateDecl.
 enum BuiltinTemplateKind : int {
-#define BuiltinTemplate(Name) BTK##Name,
+#define BuiltinTemplate(BTName) BTK##BTName,
 #include "clang/Basic/BuiltinTemplates.inc"
 };
 

@@ -8017,11 +8017,11 @@ Decl *ASTReader::getPredefinedDecl(PredefinedDeclIDs ID) {
     NewLoaded = Context.getCFConstantStringTagDecl();
     break;
 
-#define BuiltinTemplate(Name)                                                  \
-  case PREDEF_DECL##Name##_ID:                                                 \
-    if (Context.Decl##Name)                                                    \
-      return Context.Decl##Name;                                               \
-    NewLoaded = Context.get##Name##Decl();                                     \
+#define BuiltinTemplate(BTName)                                                \
+  case PREDEF_DECL##BTName##_ID:                                               \
+    if (Context.Decl##BTName)                                                  \
+      return Context.Decl##BTName;                                             \
+    NewLoaded = Context.get##BTName##Decl();                                   \
     break;
 #include "clang/Basic/BuiltinTemplates.inc"
 

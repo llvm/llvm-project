@@ -413,9 +413,6 @@ class ASTContext : public RefCountedBase<ASTContext> {
 #define BuiltinTemplate(BTName) mutable IdentifierInfo *Name##BTName = nullptr;
 #include "clang/Basic/BuiltinTemplates.inc"
 
-  /// The identifier '__builtin_common_type'.
-  mutable IdentifierInfo *BuiltinCommonTypeName = nullptr;
-
   QualType ObjCConstantStringType;
   mutable RecordDecl *CFConstantStringTagDecl = nullptr;
   mutable TypedefDecl *CFConstantStringTypeDecl = nullptr;
@@ -622,7 +619,8 @@ private:
   TranslationUnitDecl *TUDecl = nullptr;
   mutable ExternCContextDecl *ExternCContext = nullptr;
 
-#define BuiltinTemplate(Name) mutable BuiltinTemplateDecl *Decl##Name = nullptr;
+#define BuiltinTemplate(BTName)                                                \
+  mutable BuiltinTemplateDecl *Decl##BTName = nullptr;
 #include "clang/Basic/BuiltinTemplates.inc"
 
   /// The associated SourceManager object.
@@ -1150,7 +1148,7 @@ public:
 
   ExternCContextDecl *getExternCContextDecl() const;
 
-#define BuiltinTemplate(Name) BuiltinTemplateDecl *get##Name##Decl() const;
+#define BuiltinTemplate(BTName) BuiltinTemplateDecl *get##BTName##Decl() const;
 #include "clang/Basic/BuiltinTemplates.inc"
 
   // Builtin Types.
