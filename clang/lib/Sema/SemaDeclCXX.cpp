@@ -13406,8 +13406,6 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
                                   SourceLocation UsingLoc, UnqualifiedId &Name,
                                   const ParsedAttributesView &AttrList,
                                   TypeResult Type, Decl *DeclFromDeclSpec) {
-  // Get the innermost enclosing declaration scope.
-  S = S->getDeclParent();
 
   if (Type.isInvalid())
     return nullptr;
@@ -13457,6 +13455,9 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
 
   CheckTypedefForVariablyModifiedType(S, NewTD);
   Invalid |= NewTD->isInvalidDecl();
+
+  // Get the innermost enclosing declaration scope.
+  S = S->getDeclParent();
 
   bool Redeclaration = false;
 
