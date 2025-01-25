@@ -727,7 +727,8 @@ bool GlobalMergeImpl::run(Module &M) {
 
     Type *Ty = GV.getValueType();
     TypeSize AllocSize = DL.getTypeAllocSize(Ty);
-    if (AllocSize < Opt.MaxOffset && AllocSize >= Opt.MinSize) {
+    bool CanMerge = AllocSize < Opt.MaxOffset && AllocSize >= Opt.MinSize;
+    if (CanMerge) {
       if (TM &&
           TargetLoweringObjectFile::getKindForGlobal(&GV, *TM).isBSS())
         BSSGlobals[{AddressSpace, Section}].push_back(&GV);
@@ -737,9 +738,8 @@ bool GlobalMergeImpl::run(Module &M) {
         Globals[{AddressSpace, Section}].push_back(&GV);
     }
     LLVM_DEBUG(dbgs() << "GV "
-                      << ((DL.getTypeAllocSize(Ty) < Opt.MaxOffset)
-                              ? "to merge: "
-                              : "not to merge: ")
+                      << (CanMerge ? "" : "not ")
+                      << "to merge: "
                       << GV << "\n");
   }
 
