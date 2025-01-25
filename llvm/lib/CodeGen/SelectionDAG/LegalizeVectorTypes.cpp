@@ -7040,8 +7040,11 @@ SDValue DAGTypeLegalizer::WidenVecOp_INSERT_SUBVECTOR(SDNode *N) {
   SDValue SubVec = N->getOperand(1);
   SDValue InVec = N->getOperand(0);
 
-  if (getTypeAction(SubVec.getValueType()) == TargetLowering::TypeWidenVector)
-    SubVec = GetWidenedVector(SubVec);
+  SDValue OrigSubVec;
+  if (getTypeAction(SubVec.getValueType()) == TargetLowering::TypeWidenVector) {
+    OrigSubVec = std::move(SubVec);
+    SubVec = GetWidenedVector(OrigSubVec);
+  }
 
   EVT SubVT = SubVec.getValueType();
 
@@ -7070,8 +7073,23 @@ SDValue DAGTypeLegalizer::WidenVecOp_INSERT_SUBVECTOR(SDNode *N) {
     return DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), VT, InVec, SubVec,
                        N->getOperand(2));
 
-  report_fatal_error("Don't know how to widen the operands for "
-                     "INSERT_SUBVECTOR");
+  // If the operands can't be widened legally, just replace the INSERT_SUBVECTOR
+  // with a series of INSERT_VECTOR_ELT
+  EVT OrigVT = OrigSubVec.getValueType();
+  unsigned Idx = N->getConstantOperandVal(2);
+
+  SDValue InsertVecElt;
+  SDLoc DL(N);
+  for (unsigned I = 0; I < OrigVT.getVectorNumElements(); ++I) {
+    SDValue Extract =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT.getScalarType(), SubVec,
+                    DAG.getIntPtrConstant(I, DL, /*isTarget*/ true));
+    InsertVecElt = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT,
+                               I != 0 ? InsertVecElt : InVec, Extract,
+                               DAG.getIntPtrConstant(I + Idx, DL, true));
+  }
+
+  return InsertVecElt;
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_EXTRACT_SUBVECTOR(SDNode *N) {
