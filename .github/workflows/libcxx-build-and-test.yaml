@@ -39,6 +39,8 @@ env:
   LLVM_VERSION_RELEASE_1: 17
   LLVM_VERSION_RELEASE_2: 16
   GCC_VERSION_RELEASE: 14
+  CLANG_CC_HEAD: 'clang-19'
+  CLANG_CXX_HEAD: 'clang++-19'
 
 jobs:
   stage1:
@@ -52,12 +54,16 @@ jobs:
         config: [
           'generic-cxx26'
         ]
-        cc: [ 'clang-19' ]
-        cxx: [ 'clang++-19' ]
+        cc: [ ${{ env.CLANG_CC_HEAD }} ]
+        cxx: [ ${{ env.CLANG_CXX_HEAD }} ]
+
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
-        run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+        run: |
+          echo "1. clang++-${{ env.LLVM_VERSION_HEAD }}"
+          echo "2. clang++-$LLVM_VERSION_HEAD"
+          libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
