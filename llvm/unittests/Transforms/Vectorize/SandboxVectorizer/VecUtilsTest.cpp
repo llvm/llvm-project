@@ -461,24 +461,63 @@ bb1:
 
   // Check getLowest(ArrayRef<Value *>)
   SmallVector<sandboxir::Value *> C1Only({C1});
-  EXPECT_EQ(sandboxir::VecUtils::getLowest(C1Only), nullptr);
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(C1Only, &BB), nullptr);
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(C1Only, &BB0), nullptr);
   SmallVector<sandboxir::Value *> AOnly({IA});
-  EXPECT_EQ(sandboxir::VecUtils::getLowest(AOnly), IA);
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(AOnly, &BB), IA);
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(AOnly, &BB0), nullptr);
   SmallVector<sandboxir::Value *> AC1({IA, C1});
-  EXPECT_EQ(sandboxir::VecUtils::getLowest(AC1), IA);
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(AC1, &BB), IA);
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(AC1, &BB0), nullptr);
   SmallVector<sandboxir::Value *> C1A({C1, IA});
-  EXPECT_EQ(sandboxir::VecUtils::getLowest(C1A), IA);
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(C1A, &BB), IA);
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(C1A, &BB0), nullptr);
   SmallVector<sandboxir::Value *> AC1B({IA, C1, IB});
-  EXPECT_EQ(sandboxir::VecUtils::getLowest(AC1B), IB);
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(AC1B, &BB), IB);
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(AC1B, &BB0), nullptr);
   SmallVector<sandboxir::Value *> ABC1({IA, IB, C1});
-  EXPECT_EQ(sandboxir::VecUtils::getLowest(ABC1), IB);
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(ABC1, &BB), IB);
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(ABC1, &BB0), nullptr);
   SmallVector<sandboxir::Value *> AC1C2({IA, C1, C2});
-  EXPECT_EQ(sandboxir::VecUtils::getLowest(AC1C2), IA);
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(AC1C2, &BB), IA);
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(AC1C2, &BB0), nullptr);
   SmallVector<sandboxir::Value *> C1C2C3({C1, C2, C3});
-  EXPECT_EQ(sandboxir::VecUtils::getLowest(C1C2C3), nullptr);
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(C1C2C3, &BB), nullptr);
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(C1C2C3, &BB0), nullptr);
 
   SmallVector<sandboxir::Value *> DiffBBs({BB0I, IA});
-  EXPECT_EQ(sandboxir::VecUtils::getLowest(DiffBBs), nullptr);
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(DiffBBs, &BB0), BB0I);
+  EXPECT_EQ(sandboxir::VecUtils::getLowest(DiffBBs, &BB), IA);
+}
+
+TEST_F(VecUtilsTest, GetLastPHIOrSelf) {
+  parseIR(R"IR(
+define void @foo(i8 %v) {
+entry:
+  br label %bb1
+
+bb1:
+  %phi1 = phi i8 [0, %entry], [1, %bb1]
+  %phi2 = phi i8 [0, %entry], [1, %bb1]
+  br label %bb1
+
+bb2:
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = getBasicBlockByName(F, "bb1");
+  auto It = BB.begin();
+  auto *PHI1 = cast<sandboxir::PHINode>(&*It++);
+  auto *PHI2 = cast<sandboxir::PHINode>(&*It++);
+  auto *Br = cast<sandboxir::BranchInst>(&*It++);
+  EXPECT_EQ(sandboxir::VecUtils::getLastPHIOrSelf(PHI1), PHI2);
+  EXPECT_EQ(sandboxir::VecUtils::getLastPHIOrSelf(PHI2), PHI2);
+  EXPECT_EQ(sandboxir::VecUtils::getLastPHIOrSelf(Br), Br);
+  EXPECT_EQ(sandboxir::VecUtils::getLastPHIOrSelf(nullptr), nullptr);
 }
 
 TEST_F(VecUtilsTest, GetCommonScalarType) {

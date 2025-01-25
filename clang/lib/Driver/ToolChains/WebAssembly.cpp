@@ -344,9 +344,15 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
     }
   }
 
+  bool HasBannedIncompatibleOptionsForWasmEHSjLj = false;
+  bool HasEnabledFeaturesForWasmEHSjLj = false;
+
   // Bans incompatible options for Wasm EH / SjLj. We don't allow using
   // different modes for EH and SjLj.
   auto BanIncompatibleOptionsForWasmEHSjLj = [&](StringRef CurOption) {
+    if (HasBannedIncompatibleOptionsForWasmEHSjLj)
+      return;
+    HasBannedIncompatibleOptionsForWasmEHSjLj = true;
     if (DriverArgs.hasFlag(options::OPT_mno_exception_handing,
                            options::OPT_mexception_handing, false))
       getDriver().Diag(diag::err_drv_argument_not_allowed_with)
@@ -374,6 +380,9 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
 
   // Enable necessary features for Wasm EH / SjLj in the backend.
   auto EnableFeaturesForWasmEHSjLj = [&]() {
+    if (HasEnabledFeaturesForWasmEHSjLj)
+      return;
+    HasEnabledFeaturesForWasmEHSjLj = true;
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+exception-handling");
     // The standardized Wasm EH spec requires multivalue and reference-types.
