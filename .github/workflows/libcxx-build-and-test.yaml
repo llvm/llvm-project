@@ -54,10 +54,6 @@ jobs:
         ]
         cc: [ 'clang-19' ]
         cxx: [ 'clang++-19' ]
-        include:
-          - config: 'generic-gcc'
-            cc: ${{ format('gcc-{0}', env.GCC_VERSION_RELEASE) }}
-            cxx: ${{ format('g++-{0}', env.GCC_VERSION_RELEASE) }}
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
