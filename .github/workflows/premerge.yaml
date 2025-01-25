@@ -129,9 +129,9 @@ jobs:
                 -B build \
                 -S llvm \
                 -DLLVM_ENABLE_PROJECTS="$(echo ${mac_projects} | tr ' ' ';')" \
-                -DLLVM_ENABLE_RUNTIMES="$(echo ${mac_runtimes} | tr ' ' ';')" \
                 -DLLVM_DISABLE_ASSEMBLY_FILES=ON \
                 -DCMAKE_BUILD_TYPE=Release \
+                -DLLDB_INCLUDE_TESTS=OFF \
                 -DLLVM_ENABLE_ASSERTIONS=ON \
                 -DCMAKE_C_COMPILER_LAUNCHER=ccache \
                 -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
