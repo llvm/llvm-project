@@ -1,4 +1,4 @@
-// RUN: mlir-query %s -c "m hasOpName(\"arith.mulf\").extract(\"testmul\")" | FileCheck %s
+// RUN: mlir-query %s -c "m hasOpName("arith.mulf").extract("testmul")" | FileCheck %s
 
 // CHECK: func.func @testmul({{.*}}) -> (f32, f32, f32) {
 // CHECK:       %[[MUL0:.*]] = arith.mulf {{.*}} : f32
