@@ -1253,7 +1253,10 @@ module std [system] {
   }
 
   module format {
-    module buffer                             { header "__format/buffer.h" }
+    module buffer                             {
+      header "__format/buffer.h"
+      export std.iterator.back_insert_iterator
+    }
     module concepts                           { header "__format/concepts.h" }
     module container_adaptor                  { header "__format/container_adaptor.h" }
     module enable_insertable                  { header "__format/enable_insertable.h" }
