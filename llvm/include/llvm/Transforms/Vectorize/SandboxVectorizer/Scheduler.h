@@ -122,6 +122,8 @@ class Scheduler {
   std::optional<BasicBlock::iterator> ScheduleTopItOpt;
   // TODO: This is wasting memory in exchange for fast removal using a raw ptr.
   DenseMap<SchedBundle *, std::unique_ptr<SchedBundle>> Bndls;
+  /// The BB that we are currently scheduling.
+  BasicBlock *ScheduledBB = nullptr;
 
   /// \Returns a scheduling bundle containing \p Instrs.
   SchedBundle *createBundle(ArrayRef<Instruction *> Instrs);
@@ -166,8 +168,10 @@ public:
     DAG.clear();
     ReadyList.clear();
     ScheduleTopItOpt = std::nullopt;
+    ScheduledBB = nullptr;
     assert(Bndls.empty() && DAG.empty() && ReadyList.empty() &&
-           !ScheduleTopItOpt && "Expected empty state!");
+           !ScheduleTopItOpt && ScheduledBB == nullptr &&
+           "Expected empty state!");
   }
 
 #ifndef NDEBUG
