@@ -25,6 +25,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/ParsedAttr.h"
@@ -475,14 +476,20 @@ void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
   LS->setImplicit(true);
   LS->startDefinition();
 
-  for (const Decl *D : BufDecl->decls()) {
-    const VarDecl *VD = dyn_cast<VarDecl>(D);
+  for (Decl *D : BufDecl->decls()) {
+    VarDecl *VD = dyn_cast<VarDecl>(D);
     if (!VD || VD->getStorageClass() == SC_Static)
       continue;
     const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
     if (FieldDecl *FD =
-            createFieldForHostLayoutStruct(S, Ty, VD->getIdentifier(), LS))
+            createFieldForHostLayoutStruct(S, Ty, VD->getIdentifier(), LS)) {
+      // add the field decl to the layout struct
       LS->addDecl(FD);
+      // update address space of the original decl to hlsl_constant
+      QualType NewTy =
+          AST.getAddrSpaceQualType(VD->getType(), LangAS::hlsl_constant);
+      VD->setType(NewTy);
+    }
   }
   LS->completeDefinition();
   BufDecl->addDecl(LS);
