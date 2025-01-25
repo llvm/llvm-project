@@ -78,9 +78,6 @@ body:             |
   ; MUBUF-NEXT:   $exec = S_MOV_B64 killed $sgpr6_sgpr7
   ; MUBUF-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, undef $vgpr2
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr33, $vgpr2, 0, 32
-  ; MUBUF-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr34, 1, undef $vgpr2
-  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr34, $vgpr2, 1, 32
-  ; MUBUF-NEXT:   $sgpr34 = frame-setup COPY $sgpr32
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_register $sgpr33
   ; MUBUF-NEXT:   $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 11010048, implicit-def dead $scc
   ; MUBUF-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
@@ -102,9 +99,7 @@ body:             |
   ; MUBUF-NEXT: bb.2:
   ; MUBUF-NEXT:   liveins: $vgpr2
   ; MUBUF-NEXT: {{  $}}
-  ; MUBUF-NEXT:   $sgpr32 = frame-destroy COPY $sgpr34
   ; MUBUF-NEXT:   $sgpr4 = SI_RESTORE_S32_FROM_VGPR $vgpr2, 0
-  ; MUBUF-NEXT:   $sgpr34 = SI_RESTORE_S32_FROM_VGPR $vgpr2, 1
   ; MUBUF-NEXT:   $sgpr6_sgpr7 = S_XOR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; MUBUF-NEXT:   $sgpr5 = S_ADD_I32 $sgpr33, 9961728, implicit-def dead $scc
   ; MUBUF-NEXT:   $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, killed $sgpr5, 0, 0, 0, implicit $exec :: (load (s32) from %stack.20, addrspace 5)
@@ -158,9 +153,6 @@ body:             |
   ; FLATSCR-NEXT:   $exec = S_MOV_B64 killed $sgpr6_sgpr7
   ; FLATSCR-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, undef $vgpr2
   ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr33, $vgpr2, 0, 32
-  ; FLATSCR-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr34, 1, undef $vgpr2
-  ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr34, $vgpr2, 1, 32
-  ; FLATSCR-NEXT:   $sgpr34 = frame-setup COPY $sgpr32
   ; FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x41, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
   ; FLATSCR-NEXT:   $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 172032, implicit-def dead $scc
   ; FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
@@ -191,9 +183,7 @@ body:             |
   ; FLATSCR-NEXT: bb.2:
   ; FLATSCR-NEXT:   liveins: $vgpr2
   ; FLATSCR-NEXT: {{  $}}
-  ; FLATSCR-NEXT:   $sgpr32 = frame-destroy COPY $sgpr34
   ; FLATSCR-NEXT:   $sgpr4 = SI_RESTORE_S32_FROM_VGPR $vgpr2, 0
-  ; FLATSCR-NEXT:   $sgpr34 = SI_RESTORE_S32_FROM_VGPR $vgpr2, 1
   ; FLATSCR-NEXT:   $sgpr6_sgpr7 = S_XOR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; FLATSCR-NEXT:   $sgpr5 = S_ADD_I32 $sgpr33, 155652, implicit-def dead $scc
   ; FLATSCR-NEXT:   $vgpr2 = SCRATCH_LOAD_DWORD_SADDR killed $sgpr5, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.20, addrspace 5)

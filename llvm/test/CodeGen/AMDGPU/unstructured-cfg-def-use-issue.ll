@@ -110,7 +110,6 @@ define hidden void @widget() {
 ; GCN-NEXT:    v_readlane_b32 s35, v41, 1
 ; GCN-NEXT:    v_readlane_b32 s34, v41, 0
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
-; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    v_readlane_b32 s4, v41, 16
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
@@ -459,7 +458,6 @@ define hidden void @blam() {
 ; GCN-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:16 ; 4-byte Folded Reload
-; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    v_readlane_b32 s4, v45, 26
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_load_dword v45, off, s[0:3], s33 offset:20 ; 4-byte Folded Reload

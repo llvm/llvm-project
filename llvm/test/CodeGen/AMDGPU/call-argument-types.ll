@@ -5873,7 +5873,6 @@ define void @stack_12xv3i32() #0 {
 ; VI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; VI-NEXT:    v_readlane_b32 s30, v40, 0
 ; VI-NEXT:    v_readlane_b32 s31, v40, 1
-; VI-NEXT:    s_mov_b32 s32, s33
 ; VI-NEXT:    v_readlane_b32 s4, v40, 2
 ; VI-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; VI-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -5942,7 +5941,6 @@ define void @stack_12xv3i32() #0 {
 ; CI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; CI-NEXT:    v_readlane_b32 s30, v40, 0
 ; CI-NEXT:    v_readlane_b32 s31, v40, 1
-; CI-NEXT:    s_mov_b32 s32, s33
 ; CI-NEXT:    v_readlane_b32 s4, v40, 2
 ; CI-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; CI-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -6011,7 +6009,6 @@ define void @stack_12xv3i32() #0 {
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX9-NEXT:    v_readlane_b32 s30, v40, 0
 ; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
-; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -6062,7 +6059,6 @@ define void @stack_12xv3i32() #0 {
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-NEXT:    v_readlane_b32 s30, v40, 0
 ; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
-; GFX11-NEXT:    s_mov_b32 s32, s33
 ; GFX11-NEXT:    v_readlane_b32 s0, v40, 2
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
 ; GFX11-NEXT:    scratch_load_b32 v40, off, s33 ; 4-byte Folded Reload
@@ -6131,7 +6127,6 @@ define void @stack_12xv3i32() #0 {
 ; HSA-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; HSA-NEXT:    v_readlane_b32 s30, v40, 0
 ; HSA-NEXT:    v_readlane_b32 s31, v40, 1
-; HSA-NEXT:    s_mov_b32 s32, s33
 ; HSA-NEXT:    v_readlane_b32 s4, v40, 2
 ; HSA-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; HSA-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -6217,7 +6212,6 @@ define void @stack_12xv3f32() #0 {
 ; VI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; VI-NEXT:    v_readlane_b32 s30, v40, 0
 ; VI-NEXT:    v_readlane_b32 s31, v40, 1
-; VI-NEXT:    s_mov_b32 s32, s33
 ; VI-NEXT:    v_readlane_b32 s4, v40, 2
 ; VI-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; VI-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -6286,7 +6280,6 @@ define void @stack_12xv3f32() #0 {
 ; CI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; CI-NEXT:    v_readlane_b32 s30, v40, 0
 ; CI-NEXT:    v_readlane_b32 s31, v40, 1
-; CI-NEXT:    s_mov_b32 s32, s33
 ; CI-NEXT:    v_readlane_b32 s4, v40, 2
 ; CI-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; CI-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -6355,7 +6348,6 @@ define void @stack_12xv3f32() #0 {
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX9-NEXT:    v_readlane_b32 s30, v40, 0
 ; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
-; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -6410,7 +6402,6 @@ define void @stack_12xv3f32() #0 {
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-NEXT:    v_readlane_b32 s30, v40, 0
 ; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
-; GFX11-NEXT:    s_mov_b32 s32, s33
 ; GFX11-NEXT:    v_readlane_b32 s0, v40, 2
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
 ; GFX11-NEXT:    scratch_load_b32 v40, off, s33 ; 4-byte Folded Reload
@@ -6479,7 +6470,6 @@ define void @stack_12xv3f32() #0 {
 ; HSA-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; HSA-NEXT:    v_readlane_b32 s30, v40, 0
 ; HSA-NEXT:    v_readlane_b32 s31, v40, 1
-; HSA-NEXT:    s_mov_b32 s32, s33
 ; HSA-NEXT:    v_readlane_b32 s4, v40, 2
 ; HSA-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; HSA-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -6573,7 +6563,6 @@ define void @stack_8xv5i32() #0 {
 ; VI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; VI-NEXT:    v_readlane_b32 s30, v40, 0
 ; VI-NEXT:    v_readlane_b32 s31, v40, 1
-; VI-NEXT:    s_mov_b32 s32, s33
 ; VI-NEXT:    v_readlane_b32 s4, v40, 2
 ; VI-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; VI-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -6650,7 +6639,6 @@ define void @stack_8xv5i32() #0 {
 ; CI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; CI-NEXT:    v_readlane_b32 s30, v40, 0
 ; CI-NEXT:    v_readlane_b32 s31, v40, 1
-; CI-NEXT:    s_mov_b32 s32, s33
 ; CI-NEXT:    v_readlane_b32 s4, v40, 2
 ; CI-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; CI-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -6727,7 +6715,6 @@ define void @stack_8xv5i32() #0 {
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX9-NEXT:    v_readlane_b32 s30, v40, 0
 ; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
-; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -6783,7 +6770,6 @@ define void @stack_8xv5i32() #0 {
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-NEXT:    v_readlane_b32 s30, v40, 0
 ; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
-; GFX11-NEXT:    s_mov_b32 s32, s33
 ; GFX11-NEXT:    v_readlane_b32 s0, v40, 2
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
 ; GFX11-NEXT:    scratch_load_b32 v40, off, s33 ; 4-byte Folded Reload
@@ -6860,7 +6846,6 @@ define void @stack_8xv5i32() #0 {
 ; HSA-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; HSA-NEXT:    v_readlane_b32 s30, v40, 0
 ; HSA-NEXT:    v_readlane_b32 s31, v40, 1
-; HSA-NEXT:    s_mov_b32 s32, s33
 ; HSA-NEXT:    v_readlane_b32 s4, v40, 2
 ; HSA-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; HSA-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -6950,7 +6935,6 @@ define void @stack_8xv5f32() #0 {
 ; VI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; VI-NEXT:    v_readlane_b32 s30, v40, 0
 ; VI-NEXT:    v_readlane_b32 s31, v40, 1
-; VI-NEXT:    s_mov_b32 s32, s33
 ; VI-NEXT:    v_readlane_b32 s4, v40, 2
 ; VI-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; VI-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -7027,7 +7011,6 @@ define void @stack_8xv5f32() #0 {
 ; CI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; CI-NEXT:    v_readlane_b32 s30, v40, 0
 ; CI-NEXT:    v_readlane_b32 s31, v40, 1
-; CI-NEXT:    s_mov_b32 s32, s33
 ; CI-NEXT:    v_readlane_b32 s4, v40, 2
 ; CI-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; CI-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -7104,7 +7087,6 @@ define void @stack_8xv5f32() #0 {
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX9-NEXT:    v_readlane_b32 s30, v40, 0
 ; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
-; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -7163,7 +7145,6 @@ define void @stack_8xv5f32() #0 {
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-NEXT:    v_readlane_b32 s30, v40, 0
 ; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
-; GFX11-NEXT:    s_mov_b32 s32, s33
 ; GFX11-NEXT:    v_readlane_b32 s0, v40, 2
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
 ; GFX11-NEXT:    scratch_load_b32 v40, off, s33 ; 4-byte Folded Reload
@@ -7240,7 +7221,6 @@ define void @stack_8xv5f32() #0 {
 ; HSA-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; HSA-NEXT:    v_readlane_b32 s30, v40, 0
 ; HSA-NEXT:    v_readlane_b32 s31, v40, 1
-; HSA-NEXT:    s_mov_b32 s32, s33
 ; HSA-NEXT:    v_readlane_b32 s4, v40, 2
 ; HSA-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; HSA-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload

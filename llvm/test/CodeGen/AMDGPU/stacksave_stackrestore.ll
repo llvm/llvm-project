@@ -1282,13 +1282,12 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() {
 ; WAVE32-OPT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; WAVE32-OPT-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4
 ; WAVE32-OPT-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; WAVE32-OPT-NEXT:    s_mov_b32 s32, s18
 ; WAVE32-OPT-NEXT:    v_readlane_b32 s30, v32, 0
 ; WAVE32-OPT-NEXT:    ;;#ASMSTART
 ; WAVE32-OPT-NEXT:    ; use s19
 ; WAVE32-OPT-NEXT:    ;;#ASMEND
+; WAVE32-OPT-NEXT:    s_mov_b32 s32, s18
 ; WAVE32-OPT-NEXT:    v_readlane_b32 s31, v32, 1
-; WAVE32-OPT-NEXT:    s_mov_b32 s32, s33
 ; WAVE32-OPT-NEXT:    s_xor_saveexec_b32 s4, -1
 ; WAVE32-OPT-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:128 ; 4-byte Folded Reload
 ; WAVE32-OPT-NEXT:    s_mov_b32 exec_lo, s4
@@ -1318,13 +1317,12 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() {
 ; WAVE64-OPT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; WAVE64-OPT-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4
 ; WAVE64-OPT-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; WAVE64-OPT-NEXT:    s_mov_b32 s32, s18
 ; WAVE64-OPT-NEXT:    v_readlane_b32 s30, v32, 0
 ; WAVE64-OPT-NEXT:    ;;#ASMSTART
 ; WAVE64-OPT-NEXT:    ; use s19
 ; WAVE64-OPT-NEXT:    ;;#ASMEND
+; WAVE64-OPT-NEXT:    s_mov_b32 s32, s18
 ; WAVE64-OPT-NEXT:    v_readlane_b32 s31, v32, 1
-; WAVE64-OPT-NEXT:    s_mov_b32 s32, s33
 ; WAVE64-OPT-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; WAVE64-OPT-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:128 ; 4-byte Folded Reload
 ; WAVE64-OPT-NEXT:    s_mov_b64 exec, s[4:5]
@@ -1435,7 +1433,6 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() {
 ; WAVE32-O0-NEXT:    s_mov_b32 s32, s4
 ; WAVE32-O0-NEXT:    v_readlane_b32 s30, v32, 0
 ; WAVE32-O0-NEXT:    v_readlane_b32 s31, v32, 1
-; WAVE32-O0-NEXT:    s_mov_b32 s32, s33
 ; WAVE32-O0-NEXT:    s_xor_saveexec_b32 s4, -1
 ; WAVE32-O0-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:128 ; 4-byte Folded Reload
 ; WAVE32-O0-NEXT:    buffer_load_dword v33, off, s[0:3], s33 offset:132 ; 4-byte Folded Reload
@@ -1547,7 +1544,6 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() {
 ; WAVE64-O0-NEXT:    s_mov_b32 s32, s4
 ; WAVE64-O0-NEXT:    v_readlane_b32 s30, v32, 0
 ; WAVE64-O0-NEXT:    v_readlane_b32 s31, v32, 1
-; WAVE64-O0-NEXT:    s_mov_b32 s32, s33
 ; WAVE64-O0-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; WAVE64-O0-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:128 ; 4-byte Folded Reload
 ; WAVE64-O0-NEXT:    buffer_load_dword v33, off, s[0:3], s33 offset:132 ; 4-byte Folded Reload
@@ -1659,7 +1655,6 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() {
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s4
 ; WAVE32-WWM-PREALLOC-NEXT:    v_readlane_b32 s30, v33, 0
 ; WAVE32-WWM-PREALLOC-NEXT:    v_readlane_b32 s31, v33, 1
-; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, s33
 ; WAVE32-WWM-PREALLOC-NEXT:    s_xor_saveexec_b32 s4, -1
 ; WAVE32-WWM-PREALLOC-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:128 ; 4-byte Folded Reload
 ; WAVE32-WWM-PREALLOC-NEXT:    buffer_load_dword v33, off, s[0:3], s33 offset:132 ; 4-byte Folded Reload

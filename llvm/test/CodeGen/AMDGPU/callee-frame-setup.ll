@@ -2,9 +2,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck  -enable-var-scope -check-prefixes=GCN,MUBUF %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+enable-flat-scratch < %s | FileCheck  -enable-var-scope -check-prefixes=GCN,FLATSCR %s
 
-; needs to be autogen
-; XFAIL: *
-
 ; GCN-LABEL: {{^}}callee_no_stack:
 ; GCN: ; %bb.0:
 ; GCN-NEXT: s_waitcnt
