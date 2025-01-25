@@ -40,7 +40,10 @@ def MPI_Retval : MPI_Type<"Retval", "retval"> {
   }];
 }
 
-// TODO
+//===----------------------------------------------------------------------===//
+// mpi::CommType
+//===----------------------------------------------------------------------===//
+
 def MPI_Comm : MPI_Type<"Comm", "comm"> {
   let summary = "..."
   let description = [{
@@ -48,25 +51,36 @@ def MPI_Comm : MPI_Type<"Comm", "comm"> {
   }]
 }
 
-// TODO
+//===----------------------------------------------------------------------===//
+// mpi::RequestType
+//===----------------------------------------------------------------------===//
+
 def MPI_Request : MPI_Type<"Request", "request"> {
   let summary = "..."
   let description = [{
-    This type represents a handler to an asynchronous requests.
+    This type represents a handler to an asynchronous request.
   }]
 }
 
-// TODO
+//===----------------------------------------------------------------------===//
+// mpi::StatusType
+//===----------------------------------------------------------------------===//
+
 def MPI_Status : MPI_Type<"Status", "status"> {
   let summary = "";
   let description = [{
+    This type represents the status of a reception operation.
   }];
 }
 
-// TODO
+//===----------------------------------------------------------------------===//
+// mpi::OpType
+//===----------------------------------------------------------------------===//
+
 def MPI_Op : MPI_Type<"Op", "op"> {
   let summary = "";
   let description = [{
+    This type represents a handle to a operation that can be used in MPI reduce and scan routines.
   }];
 }
 
