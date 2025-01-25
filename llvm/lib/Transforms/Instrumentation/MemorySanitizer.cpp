@@ -2997,7 +2997,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// fine).
   ///
   /// Caller guarantees that this intrinsic does not access memory.
-  bool maybeHandleSimpleNomemIntrinsic(IntrinsicInst &I, unsigned int trailingFlags) {
+  bool maybeHandleSimpleNomemIntrinsic(IntrinsicInst &I,
+                                       unsigned int trailingFlags) {
     Type *RetTy = I.getType();
     if (!(RetTy->isIntOrIntVectorTy() || RetTy->isFPOrFPVectorTy()))
       return false;
