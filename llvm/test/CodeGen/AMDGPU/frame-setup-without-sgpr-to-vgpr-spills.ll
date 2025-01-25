@@ -31,7 +31,6 @@ define void @callee_with_stack_and_call() #0 {
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_readlane_b32 s30, v40, 0
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_readlane_b32 s31, v40, 1
-; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_mov_b32 s32, s33
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_readlane_b32 s4, v40, 2
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
@@ -64,7 +63,6 @@ define void @callee_with_stack_and_call() #0 {
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_readlane_b32 s30, v40, 0
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_readlane_b32 s31, v40, 1
-; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_mov_b32 s32, s33
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_readlane_b32 s4, v40, 4
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
@@ -109,7 +107,6 @@ define void @callee_with_stack_and_call() #0 {
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, s[4:5]
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
-; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_mov_b32 s32, s33
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_addk_i32 s32, 0xf800
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    v_readfirstlane_b32 s4, v0
@@ -155,7 +152,6 @@ define void @callee_with_stack_and_call() #0 {
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, s[4:5]
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:20 ; 4-byte Folded Reload
-; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_mov_b32 s32, s33
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_addk_i32 s32, 0xf800
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    v_readfirstlane_b32 s4, v0
