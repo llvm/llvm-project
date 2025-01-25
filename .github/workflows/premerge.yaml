@@ -16,7 +16,7 @@ jobs:
     if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-linux-runners
     concurrency:
-      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+      group: ${{ github.workflow }}-linux-${{ github.event.pull_request.number || github.sha }}
       cancel-in-progress: true
     steps:
       - name: Checkout LLVM
