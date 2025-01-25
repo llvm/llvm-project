@@ -29,6 +29,10 @@
 #include <sys/utsname.h>
 #include <unistd.h>
 
+#ifdef __ANDROID__
+#include <android/api-level.h>
+#endif
+
 using namespace lldb_private;
 
 namespace {
