@@ -1,6 +1,6 @@
 ! Test for correct forwarding of fast-math flags from the compiler driver to the
 ! frontend driver
-
+! REQUIRES: StableDriver
 ! -Ofast => -ffast-math -O3 -fstack-arrays
 ! RUN: %flang -Ofast -fsyntax-only -### %s -o %t 2>&1 \
 ! RUN:     | FileCheck --check-prefix=CHECK-OFAST %s
