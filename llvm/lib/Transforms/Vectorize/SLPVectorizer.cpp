@@ -9031,9 +9031,7 @@ getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
   FastMathFlags FMF;
   if (auto *FPCI = dyn_cast<FPMathOperator>(CI))
     FMF = FPCI->getFastMathFlags();
-  SmallVector<const Value *> Arguments(CI->args());
-  IntrinsicCostAttributes CostAttrs(ID, VecTy, Arguments, ArgTys, FMF,
-                                    dyn_cast<IntrinsicInst>(CI));
+  IntrinsicCostAttributes CostAttrs(ID, VecTy, ArgTys, FMF);
   auto IntrinsicCost =
     TTI->getIntrinsicInstrCost(CostAttrs, TTI::TCK_RecipThroughput);
 
@@ -12176,7 +12174,7 @@ bool BoUpSLP::isTreeNotExtendable() const {
         (!E.hasState() &&
          all_of(E.Scalars, IsaPred<ExtractElementInst, LoadInst>)) ||
         (isa<ExtractElementInst>(E.Scalars.front()) &&
-         getSameOpcode(ArrayRef(E.Scalars).drop_front(), *TLI).getOpcode()))
+         getSameOpcode(ArrayRef(E.Scalars).drop_front(), *TLI).valid()))
       return false;
     if (isSplat(E.Scalars) || allConstant(E.Scalars))
       continue;
