@@ -189,7 +189,13 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
                 [Instrs](Instruction *I) {
                   return I->getParent() == (*Instrs.begin())->getParent();
                 }) &&
-         "Instrs not in the same BB!");
+         "Instrs not in the same BB, should have been rejected by Legality!");
+  if (ScheduledBB == nullptr)
+    ScheduledBB = Instrs[0]->getParent();
+  // We don't support crossing BBs for now.
+  if (any_of(Instrs,
+             [this](Instruction *I) { return I->getParent() != ScheduledBB; }))
+    return false;
   auto SchedState = getBndlSchedState(Instrs);
   switch (SchedState) {
   case BndlSchedState::FullyScheduled:
