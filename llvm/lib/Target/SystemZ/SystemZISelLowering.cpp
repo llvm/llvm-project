@@ -1410,8 +1410,9 @@ bool SystemZTargetLowering::findOptimalMemOpLowering(
                                                   SrcAS, FuncAttributes);
 }
 
-EVT SystemZTargetLowering::getOptimalMemOpType(const MemOp &Op,
-                                   const AttributeList &FuncAttributes) const {
+EVT SystemZTargetLowering::getOptimalMemOpType(
+    const MemOp &Op, const AttributeList &FuncAttributes,
+    bool PreferIntScalar) const {
   return Subtarget.hasVector() ? MVT::v2i64 : MVT::Other;
 }
 

@@ -204,9 +204,15 @@ bool TargetLowering::findOptimalMemOpLowering(
       Op.getSrcAlign() < Op.getDstAlign())
     return false;
 
-  EVT VT = getOptimalMemOpType(Op, FuncAttributes);
+  bool WantIntScalar =
+      useSoftFloat() || FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat);
+  EVT VT = getOptimalMemOpType(Op, FuncAttributes, WantIntScalar);
 
-  if (VT == MVT::Other) {
+  // The target may well report supporting float/vector operations to do the
+  // operation, but we don't want to use those as a matter of policy if we're
+  // using soft float or if implicit float operations are disallowed.
+  if (VT == MVT::Other ||
+      (WantIntScalar && (VT.isVector() || VT.isFloatingPoint()))) {
     // Use the largest integer type whose alignment constraints are satisfied.
     // We only need to check DstAlign here as SrcAlign is always greater or
     // equal to DstAlign (or zero).

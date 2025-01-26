@@ -9462,9 +9462,14 @@ static bool findGISelOptimalMemOpLowering(std::vector<LLT> &MemOps,
   if (Op.isMemcpyWithFixedDstAlign() && Op.getSrcAlign() < Op.getDstAlign())
     return false;
 
-  LLT Ty = TLI.getOptimalMemOpLLT(Op, FuncAttributes);
+  bool WantIntScalar = TLI.useSoftFloat() ||
+                       FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat);
+  LLT Ty = TLI.getOptimalMemOpLLT(Op, FuncAttributes, WantIntScalar);
 
-  if (Ty == LLT()) {
+  // The target may well report supporting vector operations to do the
+  // operation, but we don't want to use those as a matter of policy if we're
+  // using soft float or if implicit float operations are disallowed.
+  if (Ty == LLT() || (WantIntScalar && Ty.isVector())) {
     // Use the largest scalar type whose alignment constraints are satisfied.
     // We only need to check DstAlign here as SrcAlign is always greater or
     // equal to DstAlign (or zero).
