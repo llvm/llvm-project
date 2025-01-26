@@ -11,8 +11,10 @@
 
 namespace mlir {
 class RewritePatternSet;
+class TypeConverter;
 
-void populateFuncToEmitCPatterns(RewritePatternSet &patterns);
+void populateFuncToEmitCPatterns(const TypeConverter &typeConverter,
+                                 RewritePatternSet &patterns);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_FUNCTOEMITC_FUNCTOEMITC_H
