@@ -87,7 +87,7 @@ static void vTtoGetLlvmTyString(raw_ostream &OS, const Record *VT) {
 }
 
 void VTEmitter::run(raw_ostream &OS) {
-  emitSourceFileHeader("ValueTypes Source Fragment", OS, Records);
+  emitSourceFileHeader("ValueTypes Source Fragment", OS, &Records);
 
   std::vector<const Record *> VTsByNumber{512};
   for (auto *VT : Records.getAllDerivedDefinitions("ValueType")) {

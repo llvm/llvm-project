@@ -1928,7 +1928,7 @@ class RecordKeeper {
   using GlobalMap = std::map<std::string, const Init *, std::less<>>;
 
 public:
-  RecordKeeper();
+  RecordKeeper(TGTimer &Timer);
   ~RecordKeeper();
 
   /// Return the internal implementation of the RecordKeeper.
@@ -1992,7 +1992,7 @@ public:
 
   const Init *getNewAnonymousName();
 
-  TGTimer &getTimer() const { return *Timer; }
+  TGTimer &getTimer() const { return Timer; }
 
   //===--------------------------------------------------------------------===//
   // High-level helper methods, useful for tablegen backends.
@@ -2028,7 +2028,7 @@ private:
 
   /// The internal uniquer implementation of the RecordKeeper.
   std::unique_ptr<detail::RecordKeeperImpl> Impl;
-  std::unique_ptr<TGTimer> Timer;
+  TGTimer &Timer;
 };
 
 /// Sorting predicate to sort record pointers by name.

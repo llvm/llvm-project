@@ -53,7 +53,7 @@ bool ApplyCallback(const RecordKeeper &Records, raw_ostream &OS);
 /// emitSourceFileHeader - Output an LLVM style file header to the specified
 /// raw_ostream.
 void emitSourceFileHeader(StringRef Desc, raw_ostream &OS,
-                          const RecordKeeper &Record = RecordKeeper());
+                          const RecordKeeper *Record = nullptr);
 
 } // namespace llvm
 

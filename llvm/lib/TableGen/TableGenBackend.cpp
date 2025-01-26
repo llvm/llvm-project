@@ -82,7 +82,7 @@ static void printLine(raw_ostream &OS, const Twine &Prefix, char Fill,
 }
 
 void llvm::emitSourceFileHeader(StringRef Desc, raw_ostream &OS,
-                                const RecordKeeper &Record) {
+                                const RecordKeeper *Record) {
   printLine(OS, "/*===- TableGen'erated file ", '-', "*- C++ -*-===*\\");
   StringRef Prefix("|* ");
   StringRef Suffix(" *|");
@@ -100,9 +100,9 @@ void llvm::emitSourceFileHeader(StringRef Desc, raw_ostream &OS,
             Suffix);
 
   // Print the filename of source file.
-  if (!Record.getInputFilename().empty())
+  if (Record)
     printLine(
-        OS, Prefix + "From: " + sys::path::filename(Record.getInputFilename()),
+        OS, Prefix + "From: " + sys::path::filename(Record->getInputFilename()),
         ' ', Suffix);
   printLine(OS, Prefix, ' ', Suffix);
   printLine(OS, "\\*===", '-', "===*/");

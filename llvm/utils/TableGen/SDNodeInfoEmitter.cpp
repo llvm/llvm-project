@@ -352,7 +352,7 @@ void SDNodeInfoEmitter::emitDescs(raw_ostream &OS) const {
 }
 
 void SDNodeInfoEmitter::run(raw_ostream &OS) const {
-  emitSourceFileHeader("Target SDNode descriptions", OS, RK);
+  emitSourceFileHeader("Target SDNode descriptions", OS, &RK);
   emitEnum(OS);
   emitDescs(OS);
 }

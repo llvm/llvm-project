@@ -98,56 +98,62 @@ static int createDependencyFile(const TGParser &Parser, const char *argv0) {
 
 int llvm::TableGenMain(const char *argv0,
                        std::function<TableGenMainFn> MainFn) {
-  RecordKeeper Records;
-  TGTimer &Timer = Records.getTimer();
+  TGTimer Timer;
 
-  if (TimePhases)
-    Timer.startPhaseTiming();
-
-  // Parse the input file.
-
-  Timer.startTimer("Parse, build records");
-  ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
-      MemoryBuffer::getFileOrSTDIN(InputFilename, /*IsText=*/true);
-  if (std::error_code EC = FileOrErr.getError())
-    return reportError(argv0, "Could not open input file '" + InputFilename +
-                                  "': " + EC.message() + "\n");
-
-  Records.saveInputFilename(InputFilename);
-
-  // Tell SrcMgr about this buffer, which is what TGParser will pick up.
-  SrcMgr.AddNewSourceBuffer(std::move(*FileOrErr), SMLoc());
-
-  // Record the location of the include directory so that the lexer can find
-  // it later.
-  SrcMgr.setIncludeDirs(IncludeDirs);
-
-  TGParser Parser(SrcMgr, MacroNames, Records, NoWarnOnUnusedTemplateArgs);
-
-  if (Parser.ParseFile())
-    return 1;
-  Timer.stopTimer();
-
-  // Write output to memory.
-  Timer.startBackendTimer("Backend overall");
   std::string OutString;
   raw_string_ostream Out(OutString);
-  unsigned status = 0;
-  // ApplyCallback will return true if it did not apply any callback. In that
-  // case, attempt to apply the MainFn.
-  if (TableGen::Emitter::ApplyCallback(Records, Out))
-    status = MainFn ? MainFn(Out, Records) : 1;
-  Timer.stopBackendTimer();
-  if (status)
-    return 1;
 
-  // Always write the depfile, even if the main output hasn't changed.
-  // If it's missing, Ninja considers the output dirty.  If this was below
-  // the early exit below and someone deleted the .inc.d file but not the .inc
-  // file, tablegen would never write the depfile.
-  if (!DependFilename.empty()) {
-    if (int Ret = createDependencyFile(Parser, argv0))
-      return Ret;
+  // Scope the declaration of the RecordKeeper and TGParser to control where
+  // they are destroyed.
+  {
+    RecordKeeper Records(Timer);
+
+    if (TimePhases)
+      Timer.startPhaseTiming();
+
+    // Parse the input file.
+
+    Timer.startTimer("Parse, build records");
+    ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
+        MemoryBuffer::getFileOrSTDIN(InputFilename, /*IsText=*/true);
+    if (std::error_code EC = FileOrErr.getError())
+      return reportError(argv0, "Could not open input file '" + InputFilename +
+                                    "': " + EC.message() + "\n");
+
+    Records.saveInputFilename(InputFilename);
+
+    // Tell SrcMgr about this buffer, which is what TGParser will pick up.
+    SrcMgr.AddNewSourceBuffer(std::move(*FileOrErr), SMLoc());
+
+    // Record the location of the include directory so that the lexer can find
+    // it later.
+    SrcMgr.setIncludeDirs(IncludeDirs);
+
+    TGParser Parser(SrcMgr, MacroNames, Records, NoWarnOnUnusedTemplateArgs);
+
+    if (Parser.ParseFile())
+      return 1;
+    Timer.stopTimer();
+
+    // Write output to memory.
+    Timer.startBackendTimer("Backend overall");
+    unsigned status = 0;
+    // ApplyCallback will return true if it did not apply any callback. In that
+    // case, attempt to apply the MainFn.
+    if (TableGen::Emitter::ApplyCallback(Records, Out))
+      status = MainFn ? MainFn(Out, Records) : 1;
+    Timer.stopBackendTimer();
+    if (status)
+      return 1;
+
+    // Always write the depfile, even if the main output hasn't changed.
+    // If it's missing, Ninja considers the output dirty.  If this was below
+    // the early exit below and someone deleted the .inc.d file but not the .inc
+    // file, tablegen would never write the depfile.
+    if (!DependFilename.empty()) {
+      if (int Ret = createDependencyFile(Parser, argv0))
+        return Ret;
+    }
   }
 
   Timer.startTimer("Write output");

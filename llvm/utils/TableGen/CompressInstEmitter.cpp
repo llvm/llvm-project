@@ -906,7 +906,7 @@ void CompressInstEmitter::run(raw_ostream &OS) {
     evaluateCompressPat(Pat);
 
   // Emit file header.
-  emitSourceFileHeader("Compress instruction Source Fragment", OS, Records);
+  emitSourceFileHeader("Compress instruction Source Fragment", OS, &Records);
   // Generate compressInst() function.
   emitCompressInstEmitter(OS, EmitterType::Compress);
   // Generate uncompressInst() function.
