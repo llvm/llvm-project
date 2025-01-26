@@ -1061,8 +1061,11 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
     CI->getOperandBundlesAsDefs(OpBundles);
 
   CallInst *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
-
-  setFlags(V);
+  // vector-predication intrinsics only accept FMF flags, while vector intrinsic
+  // can support all flags.
+  bool VPIntrinsic = VPIntrinsic::isVPIntrinsic(VectorIntrinsicID);
+  if ((VPIntrinsic && isa<FPMathOperator>(V)) || !VPIntrinsic)
+    setFlags(V);
 
   if (!V->getType()->isVoidTy())
     State.set(this, V);
