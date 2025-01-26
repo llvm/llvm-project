@@ -17,10 +17,8 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, memcmp,
                    (const void *lhs, const void *rhs, size_t count)) {
-  const unsigned char *left = (const unsigned char *)lhs;
-  const unsigned char *right = (const unsigned char *)rhs;
-  LIBC_CRASH_ON_NULLPTR(left);
-  LIBC_CRASH_ON_NULLPTR(right);
+  LIBC_CRASH_ON_NULLPTR(lhs);
+  LIBC_CRASH_ON_NULLPTR(rhs);
   return inline_memcmp(lhs, rhs, count);
 }
 

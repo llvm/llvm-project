@@ -17,10 +17,8 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void *, memmove,
                    (void *dst, const void *src, size_t count)) {
-  const unsigned char *dst_cpy = (const unsigned char *)dst;
-  const unsigned char *src_cpy = (const unsigned char *)src;
-  LIBC_CRASH_ON_NULLPTR(dst_cpy);
-  LIBC_CRASH_ON_NULLPTR(src_cpy);
+  LIBC_CRASH_ON_NULLPTR(dst);
+  LIBC_CRASH_ON_NULLPTR(src);
 
   // Memmove may handle some small sizes as efficiently as inline_memcpy.
   // For these sizes we may not do is_disjoint check.

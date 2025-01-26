@@ -18,8 +18,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 // TODO: Look at performance benefits of comparing words.
 LLVM_LIBC_FUNCTION(void *, memchr, (const void *src, int c, size_t n)) {
-  const unsigned char *src_cpy = (const unsigned char *)src;
-  LIBC_CRASH_ON_NULLPTR(src_cpy);
+  LIBC_CRASH_ON_NULLPTR(src);
   return internal::find_first_character(
       reinterpret_cast<const unsigned char *>(src),
       static_cast<unsigned char>(c), n);
