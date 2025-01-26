@@ -144,6 +144,7 @@ function generate-cmake() {
     generate-cmake-base \
           -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
           -DLIBCXX_CXX_ABI=libcxxabi \
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=On \
           "${@}"
 }
 
@@ -328,6 +329,8 @@ generic-cxx26)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx26.cmake"
     check-runtimes
     check-abi-list
+    python3 $MONOREPO_ROOT/clang-tools-extra/clang-tidy/tool/run-clang-tidy.py \
+        -clang-tidy-binary clang-tidy-20 -warnings-as-errors \* -source-filter ".*libcxx/src.*" -p "${BUILD_DIR}"
 ;;
 #
 # Other compiler support
