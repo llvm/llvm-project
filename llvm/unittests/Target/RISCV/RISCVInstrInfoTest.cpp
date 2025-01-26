@@ -274,11 +274,9 @@ TEST_P(RISCVInstrInfoTest, DescribeLoadedValue) {
   std::optional<ParamLoadedValue> MI2Res =
       TII->describeLoadedValue(*MI2, RISCV::X3);
   ASSERT_TRUE(MI2Res.has_value());
-  ASSERT_TRUE(MI2Res->first.isReg());
-  EXPECT_EQ(MI2Res->first.getReg(), RISCV::X0);
-  // TODO: Could be a DW_OP_constu if this is recognised as a immediate load
-  // rather than just an addi.
-  expectDIEPrintResult(MI2Res->second, "!DIExpression(DW_OP_plus_uconst, 111)");
+  ASSERT_TRUE(MI2Res->first.isImm());
+  EXPECT_EQ(MI2Res->first.getImm(), 111);
+  expectDIEPrintResult(MI2Res->second, "!DIExpression()");
 
   // Add immediate.
   auto *MI3 = BuildMI(*MBB, MBB->begin(), DL, TII->get(RISCV::ADDI), RISCV::X2)
