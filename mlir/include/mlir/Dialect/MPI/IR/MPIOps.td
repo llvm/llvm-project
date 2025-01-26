@@ -232,6 +232,25 @@ def MPI_IRecvOp : MPI_Op<"irecv", []> {
   let hasCanonicalizer = 1;
 }
 
+def MPI_Barrier : MPI_Op<"barrier", []> {
+  let summary = "Equivalent to `MPI_Barrier(comm)`";
+  let description = [{
+    MPI_Barrier blocks execution until all processes in the communicator have
+    reached this routine.
+
+    If communicator is not specified, `MPI_COMM_WORLD` is used by default.
+
+    This operation can optionally return an `!mpi.retval` value that can be used
+    to check for errors.
+  }];
+
+  let arguments = (ins Optional<MPI_Comm> : $comm);
+
+  let results = (outs Optional<MPI_Retval>:$retval);
+
+  let assemblyFormat = "attr-dict `:` type($retval)^";
+}
+
 //===----------------------------------------------------------------------===//
 // FinalizeOp
 //===----------------------------------------------------------------------===//
