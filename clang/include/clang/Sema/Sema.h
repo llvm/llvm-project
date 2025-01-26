@@ -13109,8 +13109,8 @@ public:
               ? ExpressionEvaluationContext::ImmediateFunctionContext
               : ExpressionEvaluationContext::PotentiallyEvaluated);
       if (FD) {
-        auto &Current = S.currentEvaluationContext(),
-             Parent = S.parentEvaluationContext();
+        auto &Current = S.currentEvaluationContext();
+        const auto &Parent = S.parentEvaluationContext();
 
         FD->setWillHaveBody(true);
         Current.InImmediateFunctionContext =

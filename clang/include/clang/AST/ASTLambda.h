@@ -37,7 +37,7 @@ inline bool isLambdaCallOperator(const DeclContext *DC) {
 }
 
 inline bool isLambdaMethod(const DeclContext *DC) {
-  if (auto *MD = dyn_cast_or_null<CXXMethodDecl>(DC); MD)
+  if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(DC))
     return MD->getParent()->isLambda();
   return false;
 }
