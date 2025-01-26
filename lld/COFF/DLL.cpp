@@ -716,6 +716,63 @@ private:
 void IdataContents::create(COFFLinkerContext &ctx) {
   std::vector<std::vector<DefinedImportData *>> v = binImports(ctx, imports);
 
+  // In hybrid images, EC and native code are usually very similar,
+  // resulting in a highly similar set of imported symbols. Consequently,
+  // their import tables can be shared, with ARM64X relocations handling any
+  // differences. Identify matching import files used by EC and native code, and
+  // merge them into a single hybrid import entry.
+  if (ctx.hybridSymtab) {
+    for (std::vector<DefinedImportData *> &syms : v) {
+      std::vector<DefinedImportData *> hybridSyms;
+      ImportFile *prev = nullptr;
+      for (DefinedImportData *sym : syms) {
+        ImportFile *file = sym->file;
+        // At this stage, symbols are sorted by base name, ensuring that
+        // compatible import files, if present, are adjacent. Check if the
+        // current symbol's file imports the same symbol as the previously added
+        // one (if any and if it was not already merged). Additionally, verify
+        // that one of them is native while the other is EC. In rare cases,
+        // separate matching import entries may exist within the same namespace,
+        // which cannot be merged.
+        if (!prev || file->isEC() == prev->isEC() ||
+            !file->isSameImport(prev)) {
+          // We can't merge the import file, just add it to hybridSyms
+          // and set prev to its file so that we can try to match the next
+          // symbol.
+          hybridSyms.push_back(sym);
+          prev = file;
+          continue;
+        }
+
+        // A matching symbol may appear in syms in any order. The native variant
+        // exposes a subset of EC symbols and chunks, so always use the EC
+        // variant as the hybrid import file. If the native file was already
+        // added, replace it with the EC symbol in hybridSyms. Otherwise, the EC
+        // variant is already pushed, so we can simply merge it.
+        if (file->isEC()) {
+          hybridSyms.pop_back();
+          hybridSyms.push_back(sym);
+        }
+
+        // Merge import files by storing their hybrid form in the corresponding
+        // file class.
+        prev->hybridFile = file;
+        file->hybridFile = prev;
+        prev = nullptr; // A hybrid import file cannot be merged again.
+      }
+
+      // Sort symbols by type: native-only files first, followed by merged
+      // hybrid files, and then EC-only files.
+      llvm::stable_sort(hybridSyms,
+                        [](DefinedImportData *a, DefinedImportData *b) {
+                          if (a->file->hybridFile)
+                            return !b->file->hybridFile && b->file->isEC();
+                          return !a->file->isEC() && b->file->isEC();
+                        });
+      syms = std::move(hybridSyms);
+    }
+  }
+
   // Create .idata contents for each DLL.
   for (std::vector<DefinedImportData *> &syms : v) {
     // Create lookup and address tables. If they have external names,
@@ -723,19 +780,56 @@ void IdataContents::create(COFFLinkerContext &ctx) {
     // If they don't (if they are import-by-ordinals), we store only
     // ordinal values to the table.
     size_t base = lookups.size();
+    Chunk *lookupsTerminator = nullptr, *addressesTerminator = nullptr;
     for (DefinedImportData *s : syms) {
       uint16_t ord = s->getOrdinal();
+      HintNameChunk *hintChunk = nullptr;
+      Chunk *lookupsChunk, *addressesChunk;
+
       if (s->getExternalName().empty()) {
-        lookups.push_back(make<OrdinalOnlyChunk>(ctx, ord));
-        addresses.push_back(make<OrdinalOnlyChunk>(ctx, ord));
+        lookupsChunk = make<OrdinalOnlyChunk>(ctx, ord);
+        addressesChunk = make<OrdinalOnlyChunk>(ctx, ord);
       } else {
-        auto *c = make<HintNameChunk>(s->getExternalName(), ord);
-        lookups.push_back(make<LookupChunk>(ctx, c));
-        addresses.push_back(make<LookupChunk>(ctx, c));
-        hints.push_back(c);
+        hintChunk = make<HintNameChunk>(s->getExternalName(), ord);
+        lookupsChunk = make<LookupChunk>(ctx, hintChunk);
+        addressesChunk = make<LookupChunk>(ctx, hintChunk);
+        hints.push_back(hintChunk);
       }
 
-      if (s->file->impECSym) {
+      // Detect the first EC-only import in the hybrid IAT. Emit null chunk
+      // as a terminator for the native view, and add an ARM64X relocation to
+      // replace it with the correct import for the EC view.
+      //
+      // Additionally, for MSVC compatibility, store the lookup and address
+      // chunks and append them at the end of EC-only imports, where a null
+      // terminator chunk would typically be placed. Since they appear after
+      // the native terminator, they will be ignored in the native view.
+      // In the EC view, they should act as terminators, so emit ZEROFILL
+      // relocations overriding them.
+      if (ctx.hybridSymtab && !lookupsTerminator && s->file->isEC() &&
+          !s->file->hybridFile) {
+        lookupsTerminator = lookupsChunk;
+        addressesTerminator = addressesChunk;
+        lookupsChunk = make<NullChunk>(ctx);
+        addressesChunk = make<NullChunk>(ctx);
+
+        Arm64XRelocVal relocVal = hintChunk;
+        if (!hintChunk)
+          relocVal = (1ULL << 63) | ord;
+        ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE,
+                               sizeof(uint64_t), lookupsChunk, relocVal);
+        ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE,
+                               sizeof(uint64_t), addressesChunk, relocVal);
+        ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL,
+                               sizeof(uint64_t), lookupsTerminator);
+        ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_ZEROFILL,
+                               sizeof(uint64_t), addressesTerminator);
+      }
+
+      lookups.push_back(lookupsChunk);
+      addresses.push_back(addressesChunk);
+
+      if (s->file->isEC()) {
         auto chunk = make<AuxImportChunk>(s->file);
         auxIat.push_back(chunk);
         s->file->impECSym->setLocation(chunk);
@@ -743,18 +837,27 @@ void IdataContents::create(COFFLinkerContext &ctx) {
         chunk = make<AuxImportChunk>(s->file);
         auxIatCopy.push_back(chunk);
         s->file->auxImpCopySym->setLocation(chunk);
+      } else if (ctx.hybridSymtab) {
+        // Fill the auxiliary IAT with null chunks for native-only imports.
+        auxIat.push_back(make<NullChunk>(ctx));
+        auxIatCopy.push_back(make<NullChunk>(ctx));
       }
     }
     // Terminate with null values.
-    lookups.push_back(make<NullChunk>(ctx));
-    addresses.push_back(make<NullChunk>(ctx));
-    if (ctx.config.machine == ARM64EC) {
+    lookups.push_back(lookupsTerminator ? lookupsTerminator
+                                        : make<NullChunk>(ctx));
+    addresses.push_back(addressesTerminator ? addressesTerminator
+                                            : make<NullChunk>(ctx));
+    if (ctx.symtabEC) {
       auxIat.push_back(make<NullChunk>(ctx));
       auxIatCopy.push_back(make<NullChunk>(ctx));
     }
 
-    for (int i = 0, e = syms.size(); i < e; ++i)
+    for (int i = 0, e = syms.size(); i < e; ++i) {
       syms[i]->setLocation(addresses[base + i]);
+      if (syms[i]->file->hybridFile)
+        syms[i]->file->hybridFile->impSym->setLocation(addresses[base + i]);
+    }
 
     // Create the import table header.
     dllNames.push_back(make<StringChunk>(syms[0]->getDLLName()));
@@ -762,6 +865,27 @@ void IdataContents::create(COFFLinkerContext &ctx) {
     dir->lookupTab = lookups[base];
     dir->addressTab = addresses[base];
     dirs.push_back(dir);
+
+    if (ctx.hybridSymtab) {
+      // If native-only imports exist, they will appear as a prefix to all
+      // imports. Emit ARM64X relocations to skip them in the EC view.
+      uint32_t nativeOnly =
+          llvm::find_if(syms,
+                        [](DefinedImportData *s) { return s->file->isEC(); }) -
+          syms.begin();
+      if (nativeOnly) {
+        ctx.dynamicRelocs->add(
+            IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA, 0,
+            Arm64XRelocVal(
+                dir, offsetof(ImportDirectoryTableEntry, ImportLookupTableRVA)),
+            nativeOnly * sizeof(uint64_t));
+        ctx.dynamicRelocs->add(
+            IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA, 0,
+            Arm64XRelocVal(dir, offsetof(ImportDirectoryTableEntry,
+                                         ImportAddressTableRVA)),
+            nativeOnly * sizeof(uint64_t));
+      }
+    }
   }
   // Add null terminator.
   dirs.push_back(make<NullChunk>(sizeof(ImportDirectoryTableEntry), 4));
