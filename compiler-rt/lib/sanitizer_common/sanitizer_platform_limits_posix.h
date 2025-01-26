@@ -658,7 +658,7 @@ struct __sanitizer_sigaction {
 };
 #else // !SANITIZER_ANDROID
 struct __sanitizer_sigaction {
-#if defined(__mips__) && !SANITIZER_FREEBSD
+#if defined(__mips__) && !SANITIZER_FREEBSD && !SANITIZER_MUSL
   unsigned int sa_flags;
 #endif
   union {
@@ -674,7 +674,7 @@ struct __sanitizer_sigaction {
 #else
   __sanitizer_sigset_t sa_mask;
 #endif
-#ifndef __mips__
+#if !defined(__mips__) || SANITIZER_MUSL
 #if defined(__sparc__)
 #if __GLIBC_PREREQ (2, 20)
   // On sparc glibc 2.19 and earlier sa_flags was unsigned long.
@@ -695,7 +695,7 @@ struct __sanitizer_sigaction {
 #if SANITIZER_LINUX
   void (*sa_restorer)();
 #endif
-#if defined(__mips__) && (SANITIZER_WORDSIZE == 32)
+#if defined(__mips__) && (SANITIZER_WORDSIZE == 32) && !SANITIZER_MUSL
   int sa_resv[1];
 #endif
 #if defined(__s390x__)
