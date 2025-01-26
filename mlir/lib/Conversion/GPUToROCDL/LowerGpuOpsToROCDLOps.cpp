@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Pass/Pass.h"
@@ -19,8 +18,8 @@
 #include "mlir/Transforms/Passes.h"
 
 #include "mlir/Conversion/AMDGPUToROCDL/AMDGPUToROCDL.h"
-#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
-#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMPass.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
@@ -28,8 +27,6 @@
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 #include "mlir/Conversion/MathToROCDL/MathToROCDL.h"
-#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
-#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -218,6 +215,11 @@ struct LowerGpuOpsToROCDLOpsPass
       this->runtime = runtime;
   }
 
+  void getDependentDialects(DialectRegistry &registry) const override final {
+    Base::getDependentDialects(registry);
+    registerConvertToLLVMDependentDialectLoading(registry);
+  }
+
   void runOnOperation() override {
     gpu::GPUModuleOp m = getOperation();
     MLIRContext *ctx = m.getContext();
@@ -289,18 +291,20 @@ struct LowerGpuOpsToROCDLOpsPass
         });
 
     RewritePatternSet llvmPatterns(ctx);
+    LLVMConversionTarget target(getContext());
 
-    mlir::arith::populateArithToLLVMConversionPatterns(converter, llvmPatterns);
+    for (Dialect *dialect : ctx->getLoadedDialects()) {
+      auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+      if (!iface)
+        continue;
+
+      iface->populateConvertToLLVMConversionPatterns(target, converter,
+                                                     llvmPatterns);
+    }
+
     populateAMDGPUToROCDLConversionPatterns(converter, llvmPatterns,
                                             *maybeChipset);
-    populateVectorToLLVMConversionPatterns(converter, llvmPatterns);
-    populateMathToLLVMConversionPatterns(converter, llvmPatterns);
-    cf::populateControlFlowToLLVMConversionPatterns(converter, llvmPatterns);
-    cf::populateAssertToLLVMConversionPattern(converter, llvmPatterns);
-    populateFuncToLLVMConversionPatterns(converter, llvmPatterns);
-    populateFinalizeMemRefToLLVMConversionPatterns(converter, llvmPatterns);
     populateGpuToROCDLConversionPatterns(converter, llvmPatterns, runtime);
-    LLVMConversionTarget target(getContext());
     configureGpuToROCDLConversionLegality(target);
     if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
       signalPassFailure();
