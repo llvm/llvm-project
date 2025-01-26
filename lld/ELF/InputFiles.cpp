@@ -700,13 +700,12 @@ bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &sec, StringRef name) {
   if (entSize == 0)
     return false;
   if (sec.sh_size % entSize)
-    Fatal(ctx) << this << ":(" << name << "): SHF_MERGE section size ("
-               << uint64_t(sec.sh_size)
-               << ") must be a multiple of sh_entsize (" << entSize << ")";
-
+    ErrAlways(ctx) << this << ":(" << name << "): SHF_MERGE section size ("
+                   << uint64_t(sec.sh_size)
+                   << ") must be a multiple of sh_entsize (" << entSize << ")";
   if (sec.sh_flags & SHF_WRITE)
-    Fatal(ctx) << this << ":(" << name
-               << "): writable SHF_MERGE section is not supported";
+    Err(ctx) << this << ":(" << name
+             << "): writable SHF_MERGE section is not supported";
 
   return true;
 }
@@ -891,9 +890,11 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     InputSectionBase *linkSec = nullptr;
     if (sec.sh_link < size)
       linkSec = this->sections[sec.sh_link];
-    if (!linkSec)
-      Fatal(ctx) << this
-                 << ": invalid sh_link index: " << uint32_t(sec.sh_link);
+    if (!linkSec) {
+      ErrAlways(ctx) << this
+                     << ": invalid sh_link index: " << uint32_t(sec.sh_link);
+      continue;
+    }
 
     // A SHF_LINK_ORDER section is discarded if its linked-to section is
     // discarded.
@@ -922,17 +923,18 @@ static void readGnuProperty(Ctx &ctx, const InputSection &sec,
   using Elf_Note = typename ELFT::Note;
 
   ArrayRef<uint8_t> data = sec.content();
-  auto reportFatal = [&](const uint8_t *place, const Twine &msg) {
-    Fatal(ctx) << sec.file << ":(" << sec.name << "+0x"
-               << Twine::utohexstr(place - sec.content().data())
-               << "): " << msg;
+  auto err = [&](const uint8_t *place) -> ELFSyncStream {
+    auto diag = Err(ctx);
+    diag << sec.file << ":(" << sec.name << "+0x"
+         << Twine::utohexstr(place - sec.content().data()) << "): ";
+    return diag;
   };
   while (!data.empty()) {
     // Read one NOTE record.
     auto *nhdr = reinterpret_cast<const Elf_Nhdr *>(data.data());
     if (data.size() < sizeof(Elf_Nhdr) ||
         data.size() < nhdr->getSize(sec.addralign))
-      reportFatal(data.data(), "data is too short");
+      return void(err(data.data()) << "data is too short");
 
     Elf_Note note(*nhdr);
     if (nhdr->n_type != NT_GNU_PROPERTY_TYPE_0 || note.getName() != "GNU") {
@@ -949,30 +951,32 @@ static void readGnuProperty(Ctx &ctx, const InputSection &sec,
     while (!desc.empty()) {
       const uint8_t *place = desc.data();
       if (desc.size() < 8)
-        reportFatal(place, "program property is too short");
+        return void(err(place) << "program property is too short");
       uint32_t type = read32<ELFT::Endianness>(desc.data());
       uint32_t size = read32<ELFT::Endianness>(desc.data() + 4);
       desc = desc.slice(8);
       if (desc.size() < size)
-        reportFatal(place, "program property is too short");
+        return void(err(place) << "program property is too short");
 
       if (type == featureAndType) {
         // We found a FEATURE_1_AND field. There may be more than one of these
         // in a .note.gnu.property section, for a relocatable object we
         // accumulate the bits set.
         if (size < 4)
-          reportFatal(place, "FEATURE_1_AND entry is too short");
+          return void(err(place) << "FEATURE_1_AND entry is too short");
         f.andFeatures |= read32<ELFT::Endianness>(desc.data());
       } else if (ctx.arg.emachine == EM_AARCH64 &&
                  type == GNU_PROPERTY_AARCH64_FEATURE_PAUTH) {
         if (!f.aarch64PauthAbiCoreInfo.empty()) {
-          reportFatal(data.data(),
-                      "multiple GNU_PROPERTY_AARCH64_FEATURE_PAUTH entries are "
-                      "not supported");
+          return void(
+              err(data.data())
+              << "multiple GNU_PROPERTY_AARCH64_FEATURE_PAUTH entries are "
+                 "not supported");
         } else if (size != 16) {
-          reportFatal(data.data(), "GNU_PROPERTY_AARCH64_FEATURE_PAUTH entry "
-                                   "is invalid: expected 16 bytes, but got " +
-                                       Twine(size));
+          return void(err(data.data())
+                      << "GNU_PROPERTY_AARCH64_FEATURE_PAUTH entry "
+                         "is invalid: expected 16 bytes, but got "
+                      << size);
         }
         f.aarch64PauthAbiCoreInfo = desc;
       }
@@ -1174,8 +1178,10 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
       secIdx = check(getExtendedSymbolTableIndex<ELFT>(eSym, i, shndxTable));
     else if (secIdx >= SHN_LORESERVE)
       secIdx = 0;
-    if (LLVM_UNLIKELY(secIdx >= sections.size()))
-      Fatal(ctx) << this << ": invalid section index: " << secIdx;
+    if (LLVM_UNLIKELY(secIdx >= sections.size())) {
+      Err(ctx) << this << ": invalid section index: " << secIdx;
+      secIdx = 0;
+    }
     if (LLVM_UNLIKELY(eSym.getBinding() != STB_LOCAL))
       ErrAlways(ctx) << this << ": non-local symbol (" << i
                      << ") found at index < .symtab's sh_info (" << end << ")";
@@ -1184,9 +1190,12 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
     uint8_t type = eSym.getType();
     if (type == STT_FILE)
       sourceFile = CHECK2(eSym.getName(stringTable), this);
-    if (LLVM_UNLIKELY(stringTable.size() <= eSym.st_name))
-      Fatal(ctx) << this << ": invalid symbol name offset";
-    StringRef name(stringTable.data() + eSym.st_name);
+    unsigned stName = eSym.st_name;
+    if (LLVM_UNLIKELY(stringTable.size() <= stName)) {
+      Err(ctx) << this << ": invalid symbol name offset";
+      stName = 0;
+    }
+    StringRef name(stringTable.data() + stName);
 
     symbols[i] = reinterpret_cast<Symbol *>(locals + i);
     if (eSym.st_shndx == SHN_UNDEF || sec == &InputSection::discarded)
@@ -1237,8 +1246,10 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
         secIdx = 0;
     }
 
-    if (LLVM_UNLIKELY(secIdx >= sections.size()))
-      Fatal(ctx) << this << ": invalid section index: " << secIdx;
+    if (LLVM_UNLIKELY(secIdx >= sections.size())) {
+      Err(ctx) << this << ": invalid section index: " << secIdx;
+      continue;
+    }
     InputSectionBase *sec = sections[secIdx];
     if (sec == &InputSection::discarded) {
       if (sym.traced) {

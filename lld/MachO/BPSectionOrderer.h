@@ -57,17 +57,13 @@ public:
 
 class BPSectionMacho : public BPSectionBase {
   const InputSection *isec;
-  uint64_t sectionIdx;
 
 public:
-  explicit BPSectionMacho(const InputSection *sec, uint64_t sectionIdx)
-      : isec(sec), sectionIdx(sectionIdx) {}
+  explicit BPSectionMacho(const InputSection *sec) : isec(sec) {}
 
   const void *getSection() const override { return isec; }
 
   uint64_t getSize() const override { return isec->getSize(); }
-
-  uint64_t getSectionIdx() const { return sectionIdx; }
 
   bool isCodeSection() const override { return macho::isCodeSection(isec); }
 
@@ -117,8 +113,6 @@ public:
     llvm::sort(hashes);
     hashes.erase(std::unique(hashes.begin(), hashes.end()), hashes.end());
   }
-
-  static bool classof(const BPSectionBase *s) { return true; }
 
 private:
   static uint64_t
