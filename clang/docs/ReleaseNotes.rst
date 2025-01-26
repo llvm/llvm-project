@@ -992,6 +992,10 @@ Bug Fixes to C++ Support
   lambda functions or inline friend functions defined inside templates (#GH122493).
 - Clang now rejects declaring an alias template with the same name as its template parameter. (#GH123423)
 
+- Emit an error when the same identifier appears with both internal and
+  external linkage in a translation unit Fixes:
+  (`#54215 <https://github.com/llvm/llvm-project/issues/54215>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
