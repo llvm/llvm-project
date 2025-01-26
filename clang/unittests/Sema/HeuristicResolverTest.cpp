@@ -213,6 +213,48 @@ TEST(HeuristicResolver, MemberExpr_Chained) {
       cxxMethodDecl(hasName("foo")).bind("output"));
 }
 
+TEST(HeuristicResolver, MemberExpr_ReferenceType) {
+  std::string Code = R"cpp(
+    struct B {
+      int waldo;
+    };
+    template <typename T>
+    struct A {
+      B &b;
+    };
+    template <typename T>
+    void foo(A<T> &a) {
+      a.b.waldo;
+    }
+  )cpp";
+  // Test resolution of "waldo" in "a.b.waldo".
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("waldo")).bind("input"),
+      fieldDecl(hasName("waldo")).bind("output"));
+}
+
+TEST(HeuristicResolver, MemberExpr_PointerType) {
+  std::string Code = R"cpp(
+    struct B {
+      int waldo;
+    };
+    template <typename T>
+    struct A {
+      B *b;
+    };
+    template <typename T>
+    void foo(A<T> &a) {
+      a.b->waldo;
+    }
+  )cpp";
+  // Test resolution of "waldo" in "a.b->waldo".
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("waldo")).bind("input"),
+      fieldDecl(hasName("waldo")).bind("output"));
+}
+
 TEST(HeuristicResolver, MemberExpr_TemplateArgs) {
   std::string Code = R"cpp(
     struct Foo {
