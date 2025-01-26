@@ -265,12 +265,10 @@ def main():
                 "Ignoring the following files (wrong extension, symlink, or "
                 "ignored by clang-format):"
             )
-            for filename in ignored_files:
-                print_filename(filename, opts.print0)
+            print_filenames(ignored_files, opts.print0)
         if changed_lines:
             print("Running clang-format on the following files:")
-            for filename in changed_lines:
-                print_filename(filename, opts.print0)
+            print_filenames(changed_lines, opts.print0)
 
     if not changed_lines:
         if opts.verbose >= 0 and not opts.print0:
@@ -309,8 +307,7 @@ def main():
     if (opts.verbose >= 0 and not opts.patch) or opts.verbose >= 1:
         if not opts.print0:
             print("changed files:")
-        for filename in changed_files:
-            print_filename(filename, opts.print0)
+        print_filenames(changed_files, opts.print0)
 
     return 1
 
