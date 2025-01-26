@@ -300,7 +300,7 @@ struct __locale_guard {
     if (std::strcmp(__l.__get_locale(), __lc) != 0) {
       __locale_all = _strdup(__lc);
       if (__locale_all == nullptr)
-        __throw_bad_alloc();
+        std::__throw_bad_alloc();
       __setlocale(__l.__get_locale());
     }
   }
@@ -318,7 +318,7 @@ struct __locale_guard {
   _LIBCPP_HIDE_FROM_ABI static const char* __setlocale(const char* __locale) {
     const char* __new_locale = setlocale(LC_ALL, __locale);
     if (__new_locale == nullptr)
-      __throw_bad_alloc();
+      std::__throw_bad_alloc();
     return __new_locale;
   }
   int __status;

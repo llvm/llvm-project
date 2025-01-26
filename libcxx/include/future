@@ -541,7 +541,7 @@ public:
     lock_guard<mutex> __lk(__mut_);
     bool __has_future_attached = (__state_ & __future_attached) != 0;
     if (__has_future_attached)
-      __throw_future_error(future_errc::future_already_retrieved);
+      std::__throw_future_error(future_errc::future_already_retrieved);
     this->__add_shared();
     __state_ |= __future_attached;
   }
@@ -621,7 +621,7 @@ template <class _Arg>
 void __assoc_state<_Rp>::set_value(_Arg&& __arg) {
   unique_lock<mutex> __lk(this->__mut_);
   if (this->__has_value())
-    __throw_future_error(future_errc::promise_already_satisfied);
+    std::__throw_future_error(future_errc::promise_already_satisfied);
   ::new ((void*)&__value_) _Rp(std::forward<_Arg>(__arg));
   this->__state_ |= base::__constructed | base::ready;
   __cv_.notify_all();
@@ -632,7 +632,7 @@ template <class _Arg>
 void __assoc_state<_Rp>::set_value_at_thread_exit(_Arg&& __arg) {
   unique_lock<mutex> __lk(this->__mut_);
   if (this->__has_value())
-    __throw_future_error(future_errc::promise_already_satisfied);
+    std::__throw_future_error(future_errc::promise_already_satisfied);
   ::new ((void*)&__value_) _Rp(std::forward<_Arg>(__arg));
   this->__state_ |= base::__constructed;
   __thread_local_data()->__make_ready_at_thread_exit(this);
@@ -682,7 +682,7 @@ template <class _Rp>
 void __assoc_state<_Rp&>::set_value(_Rp& __arg) {
   unique_lock<mutex> __lk(this->__mut_);
   if (this->__has_value())
-    __throw_future_error(future_errc::promise_already_satisfied);
+    std::__throw_future_error(future_errc::promise_already_satisfied);
   __value_ = std::addressof(__arg);
   this->__state_ |= base::__constructed | base::ready;
   __cv_.notify_all();
@@ -692,7 +692,7 @@ template <class _Rp>
 void __assoc_state<_Rp&>::set_value_at_thread_exit(_Rp& __arg) {
   unique_lock<mutex> __lk(this->__mut_);
   if (this->__has_value())
-    __throw_future_error(future_errc::promise_already_satisfied);
+    std::__throw_future_error(future_errc::promise_already_satisfied);
   __value_ = std::addressof(__arg);
   this->__state_ |= base::__constructed;
   __thread_local_data()->__make_ready_at_thread_exit(this);
@@ -1185,21 +1185,21 @@ promise<_Rp>::~promise() {
 template <class _Rp>
 future<_Rp> promise<_Rp>::get_future() {
   if (__state_ == nullptr)
-    __throw_future_error(future_errc::no_state);
+    std::__throw_future_error(future_errc::no_state);
   return future<_Rp>(__state_);
 }
 
 template <class _Rp>
 void promise<_Rp>::set_value(const _Rp& __r) {
   if (__state_ == nullptr)
-    __throw_future_error(future_errc::no_state);
+    std::__throw_future_error(future_errc::no_state);
   __state_->set_value(__r);
 }
 
 template <class _Rp>
 void promise<_Rp>::set_value(_Rp&& __r) {
   if (__state_ == nullptr)
-    __throw_future_error(future_errc::no_state);
+    std::__throw_future_error(future_errc::no_state);
   __state_->set_value(std::move(__r));
 }
 
@@ -1207,21 +1207,21 @@ template <class _Rp>
 void promise<_Rp>::set_exception(exception_ptr __p) {
   _LIBCPP_ASSERT_NON_NULL(__p != nullptr, "promise::set_exception: received nullptr");
   if (__state_ == nullptr)
-    __throw_future_error(future_errc::no_state);
+    std::__throw_future_error(future_errc::no_state);
   __state_->set_exception(__p);
 }
 
 template <class _Rp>
 void promise<_Rp>::set_value_at_thread_exit(const _Rp& __r) {
   if (__state_ == nullptr)
-    __throw_future_error(future_errc::no_state);
+    std::__throw_future_error(future_errc::no_state);
   __state_->set_value_at_thread_exit(__r);
 }
 
 template <class _Rp>
 void promise<_Rp>::set_value_at_thread_exit(_Rp&& __r) {
   if (__state_ == nullptr)
-    __throw_future_error(future_errc::no_state);
+    std::__throw_future_error(future_errc::no_state);
   __state_->set_value_at_thread_exit(std::move(__r));
 }
 
@@ -1229,7 +1229,7 @@ template <class _Rp>
 void promise<_Rp>::set_exception_at_thread_exit(exception_ptr __p) {
   _LIBCPP_ASSERT_NON_NULL(__p != nullptr, "promise::set_exception_at_thread_exit: received nullptr");
   if (__state_ == nullptr)
-    __throw_future_error(future_errc::no_state);
+    std::__throw_future_error(future_errc::no_state);
   __state_->set_exception_at_thread_exit(__p);
 }
 
@@ -1300,14 +1300,14 @@ promise<_Rp&>::~promise() {
 template <class _Rp>
 future<_Rp&> promise<_Rp&>::get_future() {
   if (__state_ == nullptr)
-    __throw_future_error(future_errc::no_state);
+    std::__throw_future_error(future_errc::no_state);
   return future<_Rp&>(__state_);
 }
 
 template <class _Rp>
 void promise<_Rp&>::set_value(_Rp& __r) {
   if (__state_ == nullptr)
-    __throw_future_error(future_errc::no_state);
+    std::__throw_future_error(future_errc::no_state);
   __state_->set_value(__r);
 }
 
@@ -1315,14 +1315,14 @@ template <class _Rp>
 void promise<_Rp&>::set_exception(exception_ptr __p) {
   _LIBCPP_ASSERT_NON_NULL(__p != nullptr, "promise::set_exception: received nullptr");
   if (__state_ == nullptr)
-    __throw_future_error(future_errc::no_state);
+    std::__throw_future_error(future_errc::no_state);
   __state_->set_exception(__p);
 }
 
 template <class _Rp>
 void promise<_Rp&>::set_value_at_thread_exit(_Rp& __r) {
   if (__state_ == nullptr)
-    __throw_future_error(future_errc::no_state);
+    std::__throw_future_error(future_errc::no_state);
   __state_->set_value_at_thread_exit(__r);
 }
 
@@ -1330,7 +1330,7 @@ template <class _Rp>
 void promise<_Rp&>::set_exception_at_thread_exit(exception_ptr __p) {
   _LIBCPP_ASSERT_NON_NULL(__p != nullptr, "promise::set_exception_at_thread_exit: received nullptr");
   if (__state_ == nullptr)
-    __throw_future_error(future_errc::no_state);
+    std::__throw_future_error(future_errc::no_state);
   __state_->set_exception_at_thread_exit(__p);
 }
 
@@ -1665,9 +1665,9 @@ public:
 template <class _Rp, class... _ArgTypes>
 void packaged_task<_Rp(_ArgTypes...)>::operator()(_ArgTypes... __args) {
   if (__p_.__state_ == nullptr)
-    __throw_future_error(future_errc::no_state);
+    std::__throw_future_error(future_errc::no_state);
   if (__p_.__state_->__has_value())
-    __throw_future_error(future_errc::promise_already_satisfied);
+    std::__throw_future_error(future_errc::promise_already_satisfied);
 #    if _LIBCPP_HAS_EXCEPTIONS
   try {
 #    endif // _LIBCPP_HAS_EXCEPTIONS
@@ -1682,9 +1682,9 @@ void packaged_task<_Rp(_ArgTypes...)>::operator()(_ArgTypes... __args) {
 template <class _Rp, class... _ArgTypes>
 void packaged_task<_Rp(_ArgTypes...)>::make_ready_at_thread_exit(_ArgTypes... __args) {
   if (__p_.__state_ == nullptr)
-    __throw_future_error(future_errc::no_state);
+    std::__throw_future_error(future_errc::no_state);
   if (__p_.__state_->__has_value())
-    __throw_future_error(future_errc::promise_already_satisfied);
+    std::__throw_future_error(future_errc::promise_already_satisfied);
 #    if _LIBCPP_HAS_EXCEPTIONS
   try {
 #    endif // _LIBCPP_HAS_EXCEPTIONS
@@ -1699,7 +1699,7 @@ void packaged_task<_Rp(_ArgTypes...)>::make_ready_at_thread_exit(_ArgTypes... __
 template <class _Rp, class... _ArgTypes>
 void packaged_task<_Rp(_ArgTypes...)>::reset() {
   if (!valid())
-    __throw_future_error(future_errc::no_state);
+    std::__throw_future_error(future_errc::no_state);
   __p_ = promise<_Rp>();
 }
 
@@ -1767,9 +1767,9 @@ packaged_task(_Fp) -> packaged_task<_Stripped>;
 template <class... _ArgTypes>
 void packaged_task<void(_ArgTypes...)>::operator()(_ArgTypes... __args) {
   if (__p_.__state_ == nullptr)
-    __throw_future_error(future_errc::no_state);
+    std::__throw_future_error(future_errc::no_state);
   if (__p_.__state_->__has_value())
-    __throw_future_error(future_errc::promise_already_satisfied);
+    std::__throw_future_error(future_errc::promise_already_satisfied);
 #    if _LIBCPP_HAS_EXCEPTIONS
   try {
 #    endif // _LIBCPP_HAS_EXCEPTIONS
@@ -1785,9 +1785,9 @@ void packaged_task<void(_ArgTypes...)>::operator()(_ArgTypes... __args) {
 template <class... _ArgTypes>
 void packaged_task<void(_ArgTypes...)>::make_ready_at_thread_exit(_ArgTypes... __args) {
   if (__p_.__state_ == nullptr)
-    __throw_future_error(future_errc::no_state);
+    std::__throw_future_error(future_errc::no_state);
   if (__p_.__state_->__has_value())
-    __throw_future_error(future_errc::promise_already_satisfied);
+    std::__throw_future_error(future_errc::promise_already_satisfied);
 #    if _LIBCPP_HAS_EXCEPTIONS
   try {
 #    endif // _LIBCPP_HAS_EXCEPTIONS
@@ -1803,7 +1803,7 @@ void packaged_task<void(_ArgTypes...)>::make_ready_at_thread_exit(_ArgTypes... _
 template <class... _ArgTypes>
 void packaged_task<void(_ArgTypes...)>::reset() {
   if (!valid())
-    __throw_future_error(future_errc::no_state);
+    std::__throw_future_error(future_errc::no_state);
   __p_ = promise<void>();
 }
 
