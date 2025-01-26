@@ -148,7 +148,6 @@ NativeRegisterContextWindows_arm64::NativeRegisterContextWindows_arm64(
   // breakpoints and watchpoints on Windows. The values set below are based
   // on tests conducted on Windows 11 with Snapdragon Elite X hardware.
   m_max_hwp_supported = 1;
-  m_max_hbp_supported = 0;
 }
 
 bool NativeRegisterContextWindows_arm64::IsGPR(uint32_t reg_index) const {

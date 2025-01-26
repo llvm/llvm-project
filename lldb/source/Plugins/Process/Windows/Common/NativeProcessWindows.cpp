@@ -502,13 +502,17 @@ NativeProcessWindows::OnDebugException(bool first_chance,
       if (FindSoftwareBreakpoint(exception_addr)) {
         LLDB_LOG(log, "Hit non-loader breakpoint at address {0:x}.",
                  exception_addr);
-
+        // The current PC is AFTER the BP opcode, on all architectures.
         reg_ctx.SetPC(reg_ctx.GetPC() - GetSoftwareBreakpointPCOffset());
         StopThread(thread_id, StopReason::eStopReasonBreakpoint);
         SetState(eStateStopped, true);
         return ExceptionResult::MaskException;
       } else {
         const std::vector<ULONG_PTR> &args = record.GetExceptionArguments();
+        // Check that the ExceptionInformation array of EXCEPTION_RECORD
+        // contains at least two elements: the first is a read-write flag
+        // indicating the type of data access operation (read or write) while
+        // the second contains the virtual address of the accessed data.
         if (args.size() >= 2) {
           uint32_t hw_id = LLDB_INVALID_INDEX32;
           reg_ctx.GetWatchpointHitIndex(hw_id, args[1]);
