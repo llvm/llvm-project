@@ -6465,7 +6465,7 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
     if (!DT.isReachableFromEntry(Pred))
       return FullSet;
 
-  BinaryOperator *BO;
+  Instruction*BO;
   Value *Start, *Step;
   if (!matchSimpleRecurrence(P, BO, Start, Step))
     return FullSet;

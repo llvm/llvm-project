@@ -18,6 +18,7 @@ class AssumptionCache;
 class DomConditionCache;
 class DominatorTree;
 class TargetLibraryInfo;
+class GetElementPtrInst;
 
 /// InstrInfoQuery provides an interface to query additional information for
 /// instructions like metadata or keywords like nsw, which provides conservative
@@ -42,6 +43,12 @@ struct InstrInfoQuery {
   template <class InstT> bool hasNoSignedWrap(const InstT *Op) const {
     if (UseInstrInfo)
       return Op->hasNoSignedWrap();
+    return false;
+  }
+
+  template <class InstT> bool isInBounds(const InstT *Op) const {
+    if (UseInstrInfo)
+      return Op->isInBounds();
     return false;
   }
 
