@@ -13,6 +13,7 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve2 -mvscale-min=1 -mvscale-max=0 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-UNBOUNDED
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -mvscale-min=1 -mvscale-max=0 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-UNBOUNDED
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-NONE
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-NONE
 
 // CHECK-LABEL: @func() #0
 // CHECK: attributes #0 = { {{.*}} vscale_range([[#VBITS]],[[#VBITS]]) {{.*}} }

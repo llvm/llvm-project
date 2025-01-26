@@ -708,7 +708,7 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
     return std::pair<unsigned, unsigned>(
         LangOpts.VScaleMin ? LangOpts.VScaleMin : 1, LangOpts.VScaleMax);
 
-  if (hasFeature("sve"))
+  if (hasFeature("sve") || hasFeature("sme"))
     return std::pair<unsigned, unsigned>(1, 16);
 
   return std::nullopt;
