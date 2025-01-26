@@ -40,10 +40,38 @@ void UncheckedOptionalAccessCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
+void UncheckedOptionalAccessCheck::onStartOfTranslationUnit() {
+  // Reset the flag for each TU.
+  IsTestTu = false;
+}
+
 void UncheckedOptionalAccessCheck::check(
     const MatchFinder::MatchResult &Result) {
-  if (Result.SourceManager->getDiagnostics().hasUncompilableErrorOccurred())
+  // The googletest assertion macros are not currently recognized, so we have
+  // many false positives in tests. So, do not check functions in a test TU
+  // if the option ignore_test_tus_ is set.
+  if ((IgnoreTestTus && IsTestTu) ||
+      Result.SourceManager->getDiagnostics().hasUncompilableErrorOccurred())
     return;
+
+  // Look for some public test library macros; if found, we'll mark this TU as a
+  // test TU. We look for two macros from each library to help disambiguate
+  // (otherwise "ASSERT_TRUE" or "REQUIRE" could be macros for non-test code).
+  IdentifierTable &Idents = Result.Context->Idents;
+  if (
+      // googletest
+      (Idents.get("ASSERT_TRUE").hasMacroDefinition() &&
+       Idents.get("GTEST_TEST").hasMacroDefinition()) ||
+      // catch2 w/out prefix
+      (Idents.get("REQUIRE_FALSE").hasMacroDefinition() &&
+       Idents.get("METHOD_AS_TEST_CASE").hasMacroDefinition()) ||
+      // catch2 w/ prefix
+      (Idents.get("CATCH_REQUIRE_FALSE").hasMacroDefinition() &&
+       Idents.get("CATCH_METHOD_AS_TEST_CASE").hasMacroDefinition())) {
+    IsTestTu = true;
+    if (IgnoreTestTus)
+      return;
+  }
 
   const auto *FuncDecl = Result.Nodes.getNodeAs<FunctionDecl>(FuncID);
   if (FuncDecl->isTemplated())

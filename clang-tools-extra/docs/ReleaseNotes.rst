@@ -248,6 +248,13 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unchecked-optional-access>` to support
   ``bsl::optional`` and ``bdlb::NullableValue`` from
   <https://github.com/bloomberg/bde>_.
+  Added option `IgnoreTestTUs` to suppress all warnings in Googletest and Catch2
+  translation units. This is useful (a) if projects don't have separate folders
+  for test code (otherwise, one can just add a .clang-tidy config in test
+  folders to exclude the check) (b) until false positives due to the analysis
+  seeing values of checks propagate through a variety of complex macros and
+  wrapper functions is fixed (general problem
+  https://github.com/llvm/llvm-project/issues/62600).
 
 - Improved :doc:`bugprone-unhandled-self-assignment
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by fixing smart
