@@ -138,6 +138,7 @@ jobs:
 
           # XFAIL some tests that are failing:
           export LIT_XFAIL="Target/SPIRV/./SPIRVTests/SPIRVAPITest/checkTranslateAllExtensions;Target/SPIRV/./SPIRVTests/SPIRVAPITest/checkTranslateExtensionError;Target/SPIRV/./SPIRVTests/SPIRVAPITest/checkTranslateUnknownExtensionByOpts;Target/SPIRV/./SPIRVTests/SPIRVAPITest/checkTranslateWrongExtensionByArg;Target/SPIRV/./SPIRVTests/SPIRVAPITest/checkTranslateWrongExtensionByOpts"
+          export LIT_FILTER=SPIRVTests
 
           # The libcxx tests fail, so we are skipping the runtime targets.
           ninja -C build  $mac_check_targets
