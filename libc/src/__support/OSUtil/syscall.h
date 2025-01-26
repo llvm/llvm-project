@@ -13,6 +13,8 @@
 #include "darwin/syscall.h"
 #elif defined(__linux__)
 #include "linux/syscall.h"
+#elif defined(__FreeBSD__)
+#include "freebsd/syscall.h"
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_H
