@@ -2,30 +2,38 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -amdgpu-attributor -amdgpu-lower-kernel-arguments -S < %s | FileCheck -check-prefix=NO-PRELOAD %s
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -amdgpu-attributor -amdgpu-lower-kernel-arguments -amdgpu-kernarg-preload-count=100 -S < %s | FileCheck -check-prefix=PRELOAD %s
 
-define amdgpu_kernel void @incompatible_attribute_block_count_x(ptr addrspace(1) byref(i32) %out) {
+define amdgpu_kernel void @incompatible_attribute_block_count_x(ptr addrspace(1) %out, ptr addrspace(1) byref(i32) %arg) {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@incompatible_attribute_block_count_x
-; NO-PRELOAD-SAME: (ptr addrspace(1) byref(i32) [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
-; NO-PRELOAD-NEXT:    [[INCOMPATIBLE_ATTRIBUTE_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
-; NO-PRELOAD-NEXT:    [[OUT_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[INCOMPATIBLE_ATTRIBUTE_BLOCK_COUNT_X_KERNARG_SEGMENT]], i64 0
-; NO-PRELOAD-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(4) [[OUT_BYVAL_KERNARG_OFFSET]] to ptr addrspace(1)
+; NO-PRELOAD-SAME: (ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) byref(i32) [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
+; NO-PRELOAD-NEXT:    [[INCOMPATIBLE_ATTRIBUTE_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; NO-PRELOAD-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[INCOMPATIBLE_ATTRIBUTE_BLOCK_COUNT_X_KERNARG_SEGMENT]], i64 0
+; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0:![0-9]+]]
+; NO-PRELOAD-NEXT:    [[ARG_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[INCOMPATIBLE_ATTRIBUTE_BLOCK_COUNT_X_KERNARG_SEGMENT]], i64 8
+; NO-PRELOAD-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(4) [[ARG_BYVAL_KERNARG_OFFSET]] to ptr addrspace(1)
 ; NO-PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; NO-PRELOAD-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(4) [[IMP_ARG_PTR]], align 4
-; NO-PRELOAD-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[TMP1]], align 4
+; NO-PRELOAD-NEXT:    [[LOAD0:%.*]] = load i32, ptr addrspace(4) [[IMP_ARG_PTR]], align 4
+; NO-PRELOAD-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[TMP1]], align 4
+; NO-PRELOAD-NEXT:    [[ADD:%.*]] = add i32 [[LOAD0]], [[LOAD1]]
+; NO-PRELOAD-NEXT:    store i32 [[ADD]], ptr addrspace(1) [[OUT_LOAD]], align 4
 ; NO-PRELOAD-NEXT:    ret void
 ;
 ; PRELOAD-LABEL: define {{[^@]+}}@incompatible_attribute_block_count_x
-; PRELOAD-SAME: (ptr addrspace(1) byref(i32) [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
-; PRELOAD-NEXT:    [[INCOMPATIBLE_ATTRIBUTE_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
-; PRELOAD-NEXT:    [[OUT_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[INCOMPATIBLE_ATTRIBUTE_BLOCK_COUNT_X_KERNARG_SEGMENT]], i64 0
-; PRELOAD-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(4) [[OUT_BYVAL_KERNARG_OFFSET]] to ptr addrspace(1)
+; PRELOAD-SAME: (ptr addrspace(1) inreg [[OUT:%.*]], ptr addrspace(1) byref(i32) [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
+; PRELOAD-NEXT:    [[INCOMPATIBLE_ATTRIBUTE_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-NEXT:    [[ARG_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[INCOMPATIBLE_ATTRIBUTE_BLOCK_COUNT_X_KERNARG_SEGMENT]], i64 8
+; PRELOAD-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(4) [[ARG_BYVAL_KERNARG_OFFSET]] to ptr addrspace(1)
 ; PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-; PRELOAD-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(4) [[IMP_ARG_PTR]], align 4
-; PRELOAD-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[TMP1]], align 4
+; PRELOAD-NEXT:    [[LOAD0:%.*]] = load i32, ptr addrspace(4) [[IMP_ARG_PTR]], align 4
+; PRELOAD-NEXT:    [[LOAD1:%.*]] = load i32, ptr addrspace(1) [[TMP1]], align 4
+; PRELOAD-NEXT:    [[ADD:%.*]] = add i32 [[LOAD0]], [[LOAD1]]
+; PRELOAD-NEXT:    store i32 [[ADD]], ptr addrspace(1) [[OUT]], align 4
 ; PRELOAD-NEXT:    ret void
 ;
   %imp_arg_ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
-  %load = load i32, ptr addrspace(4) %imp_arg_ptr
-  store i32 %load, ptr addrspace(1) %out
+  %load0 = load i32, ptr addrspace(4) %imp_arg_ptr
+  %load1 = load i32, ptr addrspace(1) %arg
+  %add = add i32 %load0, %load1
+  store i32 %add, ptr addrspace(1) %out
   ret void
 }
 
@@ -34,7 +42,7 @@ define amdgpu_kernel void @preload_aggregate_arg_block_count_x(ptr addrspace(1) 
 ; NO-PRELOAD-SAME: (ptr addrspace(1) [[OUT:%.*]], { i32, i32 } inreg [[TMP0:%.*]]) #[[ATTR0]] {
 ; NO-PRELOAD-NEXT:    [[PRELOAD_AGGREGATE_ARG_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; NO-PRELOAD-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[PRELOAD_AGGREGATE_ARG_BLOCK_COUNT_X_KERNARG_SEGMENT]], i64 0
-; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0:![0-9]+]]
+; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; NO-PRELOAD-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(4) [[IMP_ARG_PTR]], align 4
 ; NO-PRELOAD-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT_LOAD]], align 4
@@ -104,10 +112,10 @@ define amdgpu_kernel void @preload_unused_arg_block_count_x(ptr addrspace(1) %ou
   ret void
 }
 
-define amdgpu_kernel void @no_free_sgprs_block_count_x(ptr addrspace(1) %out, i512 inreg) {
+define amdgpu_kernel void @no_free_sgprs_block_count_x(ptr addrspace(1) %out, <16 x i32> inreg) {
 ; NO-PRELOAD-LABEL: define {{[^@]+}}@no_free_sgprs_block_count_x
-; NO-PRELOAD-SAME: (ptr addrspace(1) [[OUT:%.*]], i512 inreg [[TMP0:%.*]]) #[[ATTR0]] {
-; NO-PRELOAD-NEXT:    [[NO_FREE_SGPRS_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(328) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; NO-PRELOAD-SAME: (ptr addrspace(1) [[OUT:%.*]], <16 x i32> inreg [[TMP0:%.*]]) #[[ATTR0]] {
+; NO-PRELOAD-NEXT:    [[NO_FREE_SGPRS_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nonnull align 64 dereferenceable(384) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; NO-PRELOAD-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_FREE_SGPRS_BLOCK_COUNT_X_KERNARG_SEGMENT]], i64 0
 ; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -116,8 +124,8 @@ define amdgpu_kernel void @no_free_sgprs_block_count_x(ptr addrspace(1) %out, i5
 ; NO-PRELOAD-NEXT:    ret void
 ;
 ; PRELOAD-LABEL: define {{[^@]+}}@no_free_sgprs_block_count_x
-; PRELOAD-SAME: (ptr addrspace(1) inreg [[OUT:%.*]], i512 inreg [[TMP0:%.*]]) #[[ATTR0]] {
-; PRELOAD-NEXT:    [[NO_FREE_SGPRS_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(328) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-SAME: (ptr addrspace(1) inreg [[OUT:%.*]], <16 x i32> inreg [[TMP0:%.*]]) #[[ATTR0]] {
+; PRELOAD-NEXT:    [[NO_FREE_SGPRS_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nonnull align 64 dereferenceable(384) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; PRELOAD-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(4) [[IMP_ARG_PTR]], align 4
 ; PRELOAD-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT]], align 4
