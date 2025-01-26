@@ -209,7 +209,7 @@ def main():
         "-0",
         "--null",
         action="store_true",
-        help="print the affected paths with null-terminated characters",
+        help="end each printed filename with a null character",
     )
     # We gather all the remaining positional arguments into 'args' since we need
     # to use some heuristics to determine whether or not <commit> was present.
