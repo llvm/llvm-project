@@ -1463,7 +1463,7 @@ SourceRange VarTemplateSpecializationDecl::getSourceRange() const {
     assert(!Pattern.isNull() &&
            "Variable template specialization without pattern?");
     if (const auto *VTPSD =
-            Pattern.dyn_cast<VarTemplatePartialSpecializationDecl *>())
+            dyn_cast<VarTemplatePartialSpecializationDecl *>(Pattern))
       return VTPSD->getSourceRange();
     VarTemplateDecl *VTD = cast<VarTemplateDecl *>(Pattern);
     if (hasInit()) {
