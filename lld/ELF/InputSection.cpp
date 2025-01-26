@@ -71,8 +71,10 @@ InputSectionBase::InputSectionBase(InputFile *file, StringRef name,
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraints.
   uint32_t v = std::max<uint32_t>(addralign, 1);
-  if (!isPowerOf2_64(v))
-    Fatal(getCtx()) << this << ": sh_addralign is not a power of 2";
+  if (!isPowerOf2_64(v)) {
+    Err(getCtx()) << this << ": sh_addralign is not a power of 2";
+    v = 1;
+  }
   this->addralign = v;
 
   // If SHF_COMPRESSED is set, parse the header. The legacy .zdebug format is no
@@ -104,8 +106,10 @@ InputSectionBase::InputSectionBase(ObjFile<ELFT> &file,
   // We reject object files having insanely large alignments even though
   // they are allowed by the spec. I think 4GB is a reasonable limitation.
   // We might want to relax this in the future.
-  if (hdr.sh_addralign > UINT32_MAX)
-    Fatal(getCtx()) << &file << ": section sh_addralign is too large";
+  if (hdr.sh_addralign > UINT32_MAX) {
+    Err(getCtx()) << &file << ": section sh_addralign is too large";
+    addralign = 1;
+  }
 }
 
 size_t InputSectionBase::getSize() const {
@@ -123,7 +127,7 @@ static void decompressAux(Ctx &ctx, const InputSectionBase &sec, uint8_t *out,
   if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
                     ? compression::zlib::decompress(compressed, out, size)
                     : compression::zstd::decompress(compressed, out, size))
-    Fatal(ctx) << &sec << ": decompress failed: " << std::move(e);
+    Err(ctx) << &sec << ": decompress failed: " << std::move(e);
 }
 
 void InputSectionBase::decompress() const {
@@ -649,9 +653,11 @@ static uint64_t getRISCVUndefinedRelativeWeakVA(uint64_t type, uint64_t p) {
 // of the RW segment.
 static uint64_t getARMStaticBase(const Symbol &sym) {
   OutputSection *os = sym.getOutputSection();
-  if (!os || !os->ptLoad || !os->ptLoad->firstSec)
-    Fatal(os->ctx) << "SBREL relocation to " << sym.getName()
-                   << " without static base";
+  if (!os || !os->ptLoad || !os->ptLoad->firstSec) {
+    Err(os->ctx) << "SBREL relocation to " << sym.getName()
+                 << " without static base";
+    return 0;
+  }
   return os->ptLoad->firstSec->addr;
 }
 
@@ -1304,7 +1310,7 @@ template <class ELFT> void InputSection::writeTo(Ctx &ctx, uint8_t *buf) {
     if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
                       ? compression::zlib::decompress(compressed, buf, size)
                       : compression::zstd::decompress(compressed, buf, size))
-      Fatal(ctx) << this << ": decompress failed: " << std::move(e);
+      Err(ctx) << this << ": decompress failed: " << std::move(e);
     uint8_t *bufEnd = buf + size;
     relocate<ELFT>(ctx, buf, bufEnd);
     return;
