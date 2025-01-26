@@ -1956,7 +1956,7 @@ void MveEmitter::EmitBuiltinDef(raw_ostream &OS) {
        << ", \"\", \"n\")\n";
   }
 
-  StringSet<> ShortNamesSeen;
+  DenseSet<StringRef> ShortNamesSeen;
 
   for (const auto &kv : ACLEIntrinsics) {
     const ACLEIntrinsic &Int = *kv.second;
