@@ -1980,13 +1980,13 @@ static Value foldScalarExtractFromFromElements(ExtractOp extractOp) {
 // If the dynamic operands of `extractOp` or `insertOp` is result of
 // `constantOp`, then fold it.
 template <typename T>
-static void foldConstantOp(T op, SmallVectorImpl<Value> &operands) {
+static LogicalResult foldConstantOp(T op, SmallVectorImpl<Value> &operands) {
   auto staticPosition = op.getStaticPosition().vec();
   OperandRange dynamicPosition = op.getDynamicPosition();
 
   // If the dynamic operands is empty, it is returned directly.
   if (!dynamicPosition.size())
-    return;
+    return failure();
   unsigned index = 0;
 
   // `opChange` is a flog. If it is true, it means to update `op` in place.
@@ -2002,10 +2002,10 @@ static void foldConstantOp(T op, SmallVectorImpl<Value> &operands) {
       continue;
     }
 
-    if (auto constantOp =
-            mlir::dyn_cast<arith::ConstantIndexOp>(position.getDefiningOp())) {
+    APInt pos;
+    if (matchPattern(position, m_ConstantInt(&pos))) {
       opChange = true;
-      staticPosition[i] = constantOp.value();
+      staticPosition[i] = pos.getSExtValue();
       continue;
     }
     operands.push_back(position);
@@ -2014,7 +2014,9 @@ static void foldConstantOp(T op, SmallVectorImpl<Value> &operands) {
   if (opChange) {
     op.setStaticPosition(staticPosition);
     op.getOperation()->setOperands(operands);
+    return success();
   }
+  return failure();
 }
 
 OpFoldResult ExtractOp::fold(FoldAdaptor) {
@@ -2040,7 +2042,8 @@ OpFoldResult ExtractOp::fold(FoldAdaptor) {
   if (auto val = foldScalarExtractFromFromElements(*this))
     return val;
   SmallVector<Value> operands = {getVector()};
-  foldConstantOp(*this, operands);
+  if (succeeded(foldConstantOp(*this, operands)))
+    return getResult();
   return OpFoldResult();
 }
 
@@ -3071,7 +3074,8 @@ OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
   if (getNumIndices() == 0 && getSourceType() == getType())
     return getSource();
   SmallVector<Value> operands = {getSource(), getDest()};
-  foldConstantOp(*this, operands);
+  if (succeeded(foldConstantOp(*this, operands)))
+    return getResult();
   return {};
 }
 
