@@ -14,6 +14,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   EliminateEmptyTensors.cpp
   EraseUnusedOperandsAndResults.cpp
   FoldAddIntoDest.cpp
+  FunctionCalls.cpp
   FusePadOpWithLinalgProducer.cpp
   Fusion.cpp
   Generalization.cpp
@@ -68,6 +69,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRMeshTransforms
   MLIRLinalgDialect
   MLIRLinalgUtils
+  MLIRLLVMDialect
   MLIRSCFDialect
   MLIRSCFTransforms
   MLIRPass

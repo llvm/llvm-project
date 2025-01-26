@@ -1885,6 +1885,32 @@ void populateDecomposeWinogradOpsPatterns(RewritePatternSet &patterns);
 /// convert to a `linalg.dot`.
 void populateContractionOpRankReducingPatterns(RewritePatternSet &patterns);
 
+//===----------------------------------------------------------------------===//
+// Patterns to convert a LinalgOp to func.call @external library implementation.
+//
+// These patterns are exposed individually because they are expected to be
+// typically used individually.
+//===----------------------------------------------------------------------===//
+
+// Creates a new call to the type-canonicalized `LinalgOp::getLibraryCallName()`
+// function. The implementation of the function can be either in the same module
+// or in an externally linked library.
+// This is a generic entry point for all LinalgOp, except for CopyOp, for which
+// more specialized patterns are provided.
+class LinalgOpToLibraryCallRewrite
+    : public OpInterfaceRewritePattern<LinalgOp> {
+public:
+  using OpInterfaceRewritePattern<LinalgOp>::OpInterfaceRewritePattern;
+
+  LogicalResult matchAndRewrite(LinalgOp op,
+                                PatternRewriter &rewriter) const override;
+};
+
+/// Populates the given list with patterns that convert from Linalg to library
+/// calls using the `func` dialect.
+void populateLinalgToFunctionCallsConversionPatterns(
+    RewritePatternSet &patterns);
+
 } // namespace linalg
 } // namespace mlir
 
