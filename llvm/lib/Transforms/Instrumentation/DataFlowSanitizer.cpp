@@ -1150,9 +1150,9 @@ bool DataFlowSanitizer::initializeModule(Module &M) {
   Ctx = &M.getContext();
   Int8Ptr = PointerType::getUnqual(*Ctx);
   OriginTy = IntegerType::get(*Ctx, OriginWidthBits);
-  OriginPtrTy = PointerType::getUnqual(OriginTy);
+  OriginPtrTy = PointerType::getUnqual(*Ctx);
   PrimitiveShadowTy = IntegerType::get(*Ctx, ShadowWidthBits);
-  PrimitiveShadowPtrTy = PointerType::getUnqual(PrimitiveShadowTy);
+  PrimitiveShadowPtrTy = PointerType::getUnqual(*Ctx);
   IntptrTy = DL.getIntPtrType(*Ctx);
   ZeroPrimitiveShadow = ConstantInt::getSigned(PrimitiveShadowTy, 0);
   ZeroOrigin = ConstantInt::getSigned(OriginTy, 0);

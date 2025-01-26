@@ -4630,8 +4630,9 @@ ExprResult Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
 
   // Adds overload of TransformToPotentiallyEvaluated for TypeSourceInfo to
   // properly deal with VLAs in nested calls of sizeof and typeof.
-  if (isUnevaluatedContext() && ExprKind == UETT_SizeOf &&
-      TInfo->getType()->isVariablyModifiedType())
+  if (currentEvaluationContext().isUnevaluated() &&
+      currentEvaluationContext().InConditionallyConstantEvaluateContext &&
+      ExprKind == UETT_SizeOf && TInfo->getType()->isVariablyModifiedType())
     TInfo = TransformToPotentiallyEvaluated(TInfo);
 
   // C99 6.5.3.4p4: the type (an unsigned integer type) is size_t.
@@ -8387,6 +8388,11 @@ OpenCLCheckVectorConditional(Sema &S, ExprResult &Cond,
 
 /// Return true if the Expr is block type
 static bool checkBlockType(Sema &S, const Expr *E) {
+  if (E->getType()->isBlockPointerType()) {
+    S.Diag(E->getExprLoc(), diag::err_opencl_ternary_with_block);
+    return true;
+  }
+
   if (const CallExpr *CE = dyn_cast<CallExpr>(E)) {
     QualType Ty = CE->getCallee()->getType();
     if (Ty->isBlockPointerType()) {

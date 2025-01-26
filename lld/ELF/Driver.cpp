@@ -105,6 +105,13 @@ llvm::raw_fd_ostream Ctx::openAuxiliaryFile(llvm::StringRef filename,
   using namespace llvm::sys::fs;
   OpenFlags flags =
       auxiliaryFiles.insert(filename).second ? OF_None : OF_Append;
+  if (e.disableOutput && filename == "-") {
+#ifdef _WIN32
+    filename = "NUL";
+#else
+    filename = "/dev/null";
+#endif
+  }
   return {filename, ec, flags};
 }
 
@@ -2418,8 +2425,10 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
         unsigned size;
         const char *err = nullptr;
         uint64_t symIndex = decodeULEB128(cur, &size, contents.end(), &err);
-        if (err)
-          Fatal(ctx) << f << ": could not decode addrsig section: " << err;
+        if (err) {
+          Err(ctx) << f << ": could not decode addrsig section: " << err;
+          break;
+        }
         markAddrsig(icfSafe, syms[symIndex]);
         cur += size;
       }

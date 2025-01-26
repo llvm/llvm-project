@@ -408,8 +408,8 @@ for.end:                                          ; preds = %for.cond
 ; MEMPROFRAND2: !"cold"
 ; MEMPROFRAND2: !"cold"
 ; MEMPROFRAND2: !"cold"
-; MEMPROFRAND2: !"hot"
-; MEMPROFRAND2: !"hot"
+; MEMPROFRAND2: !"notcold"
+; MEMPROFRAND2: !"notcold"
 
 ; MEMPROFSTATS:  8 memprof - Number of alloc contexts in memory profile.
 ; MEMPROFSTATS: 10 memprof - Number of callsites in memory profile.

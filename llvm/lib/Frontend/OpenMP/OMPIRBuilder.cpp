@@ -1488,12 +1488,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
     // Add additional casts to enforce pointers in zero address space
     TIDAddr = new AddrSpaceCastInst(
         TIDAddrAlloca, PointerType ::get(M.getContext(), 0), "tid.addr.ascast");
-    TIDAddr->insertAfter(TIDAddrAlloca);
+    TIDAddr->insertAfter(TIDAddrAlloca->getIterator());
     ToBeDeleted.push_back(TIDAddr);
     ZeroAddr = new AddrSpaceCastInst(ZeroAddrAlloca,
                                      PointerType ::get(M.getContext(), 0),
                                      "zero.addr.ascast");
-    ZeroAddr->insertAfter(ZeroAddrAlloca);
+    ZeroAddr->insertAfter(ZeroAddrAlloca->getIterator());
     ToBeDeleted.push_back(ZeroAddr);
   }
 
@@ -6468,6 +6468,8 @@ void OpenMPIRBuilder::setOutlinedTargetRegionFunctionAttributes(
     OutlinedFn->setVisibility(GlobalValue::ProtectedVisibility);
     if (T.isAMDGCN())
       OutlinedFn->setCallingConv(CallingConv::AMDGPU_KERNEL);
+    else if (T.isNVPTX())
+      OutlinedFn->setCallingConv(CallingConv::PTX_Kernel);
   }
 }
 
@@ -9177,16 +9179,16 @@ void OpenMPIRBuilder::initializeTypes(Module &M) {
 #define OMP_TYPE(VarName, InitValue) VarName = InitValue;
 #define OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)                             \
   VarName##Ty = ArrayType::get(ElemTy, ArraySize);                             \
-  VarName##PtrTy = PointerType::getUnqual(VarName##Ty);
+  VarName##PtrTy = PointerType::getUnqual(Ctx);
 #define OMP_FUNCTION_TYPE(VarName, IsVarArg, ReturnType, ...)                  \
   VarName = FunctionType::get(ReturnType, {__VA_ARGS__}, IsVarArg);            \
-  VarName##Ptr = PointerType::getUnqual(VarName);
+  VarName##Ptr = PointerType::getUnqual(Ctx);
 #define OMP_STRUCT_TYPE(VarName, StructName, Packed, ...)                      \
   T = StructType::getTypeByName(Ctx, StructName);                              \
   if (!T)                                                                      \
     T = StructType::create(Ctx, {__VA_ARGS__}, StructName, Packed);            \
   VarName = T;                                                                 \
-  VarName##Ptr = PointerType::getUnqual(T);
+  VarName##Ptr = PointerType::getUnqual(Ctx);
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 }
 
@@ -9223,20 +9225,8 @@ void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
   if (!Fn)
     return;
 
-  Module &M = *(Fn->getParent());
-  LLVMContext &Ctx = M.getContext();
-
-  // Get "nvvm.annotations" metadata node.
-  NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
-
-  Metadata *MDVals[] = {
-      ConstantAsMetadata::get(Fn), MDString::get(Ctx, "kernel"),
-      ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(Ctx), 1))};
-  // Append metadata to nvvm.annotations.
-  MD->addOperand(MDNode::get(Ctx, MDVals));
-
   // Add a function attribute for the kernel.
-  Fn->addFnAttr(Attribute::get(Ctx, "kernel"));
+  Fn->addFnAttr("kernel");
   if (T.isAMDGCN())
     Fn->addFnAttr("uniform-work-group-size", "true");
   Fn->addFnAttr(Attribute::MustProgress);
