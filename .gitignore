@@ -28,6 +28,7 @@
 
 # Nested build directory
 /build*
+/local-tests
 
 #==============================================================================#
 # Explicit files to ignore (only matches one).
