@@ -2725,6 +2725,15 @@ public:
     Walk(x.v);
     return false;
   }
+  void Unparse(const OmpDispatchDirective &x) {
+    Word("!$OMP DISPATCH");
+    Walk(x.t);
+    Put("\n");
+  }
+  void Unparse(const OmpEndDispatchDirective &) {
+    Word("!$OMP END DISPATCH");
+    Put("\n");
+  }
   void Unparse(const OmpErrorDirective &x) {
     Word("!$OMP ERROR ");
     Walk(x.t);
