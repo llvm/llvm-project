@@ -19,6 +19,8 @@ func.func @generalize_pad_tensor_static_shape(%arg0: tensor<1x28x28x1xf32>) -> t
   return %0 : tensor<1x32x32x1xf32>
 }
 
+// -----
+
 // CHECK-LABEL:   func @generalize_pad_tensor_dynamic_shape(
 // CHECK-SAME:                                              %[[IN:.*]]: tensor<4x?x2x?xf32>,
 // CHECK-SAME:                                              %[[OFFSET:.*]]: index) -> tensor<4x?x?x?xf32> {
@@ -43,4 +45,27 @@ func.func @generalize_pad_tensor_dynamic_shape(%arg0: tensor<4x?x2x?xf32>, %arg1
     tensor.yield %cst : f32
   } : tensor<4x?x2x?xf32> to tensor<4x?x?x?xf32>
   return %out : tensor<4x?x?x?xf32>
+}
+
+// -----
+
+// Ensure that the constant value inside the PadOp block does not cause a crash.
+
+// CHECK-LABEL:   func.func @generalize_pad_tensor_constant_inside(
+// CHECK-SAME:                                                     %[[VAL_0:.*]]: tensor<1x28x28x1xf32>) -> tensor<1x32x32x1xf32> {
+// CHECK:           %[[VAL_1:.*]] = tensor.generate  {
+// CHECK:           ^bb0(%[[VAL_2:.*]]: index, %[[VAL_3:.*]]: index, %[[VAL_4:.*]]: index, %[[VAL_5:.*]]: index):
+// CHECK:             %[[VAL_6:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:             tensor.yield %[[VAL_6]] : f32
+// CHECK:           } : tensor<1x32x32x1xf32>
+// CHECK:           %[[VAL_7:.*]] = tensor.insert_slice %[[VAL_0]] into %[[VAL_8:.*]][0, 2, 2, 0] [1, 28, 28, 1] [1, 1, 1, 1] : tensor<1x28x28x1xf32> into tensor<1x32x32x1xf32>
+// CHECK:           return %[[VAL_7]] : tensor<1x32x32x1xf32>
+// CHECK:         }
+func.func @generalize_pad_tensor_constant_inside(%arg0: tensor<1x28x28x1xf32>) -> tensor<1x32x32x1xf32> {
+  %0 = tensor.pad %arg0 low[0, 2, 2, 0] high[0, 2, 2, 0]  {
+  ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):
+    %cst = arith.constant 0.000000e+00 : f32
+    tensor.yield %cst : f32
+  } : tensor<1x28x28x1xf32> to tensor<1x32x32x1xf32>
+  return %0 : tensor<1x32x32x1xf32>
 }

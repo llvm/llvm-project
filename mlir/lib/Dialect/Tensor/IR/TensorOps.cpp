@@ -3638,12 +3638,12 @@ Value PadOp::getConstantPaddingValue() {
   if (!yieldOp)
     return {};
   Value padValue = yieldOp.getValue();
-  // Check if yield value is a constant.
-  if (matchPattern(padValue, m_Constant()))
-    return padValue;
   // Check if yield value is defined inside the PadOp block.
   if (padValue.getParentBlock() == &getRegion().front())
     return {};
+  // Check if yield value is a constant.
+  if (matchPattern(padValue, m_Constant()))
+    return padValue;
   // Else: Yield value defined outside of the PadOp block.
   return padValue;
 }
