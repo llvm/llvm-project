@@ -438,6 +438,9 @@ ProgramHeaders:
 # RUN: yaml2obj --docnum=4 %s -o %t4
 # RUN: llvm-objdump -p %t4 | FileCheck %s --strict-whitespace --check-prefix=INDENT
 
+# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: llvm-objdump -p %t5 | FileCheck %s --strict-whitespace --check-prefix=INDENT
+
 # INDENT: {{^}}Dynamic Section:
 # INDENT: {{^}}  NEEDED 0x
 
@@ -470,3 +473,34 @@ Sections:
        Value: 0x1
      - Tag:   DT_NULL
        Value: 0x0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Address: 0x1000
+    Size:    0x10
+    Content: "004400550066007700"
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+     - Tag:   DT_NEEDED
+       Value: 0x1245657656
+     - Tag:   DT_STRTAB
+       Value: 0x1000
+     - Tag:   DT_NULL
+       Value: 0x0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynstr
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    VAddr:    0x101D
+    FirstSec: .dynamic
+    LastSec:  .dynamic

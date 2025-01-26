@@ -14,8 +14,11 @@
 #include "ELFDump.h"
 
 #include "llvm-objdump.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Object/ELFTypes.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -221,6 +224,20 @@ template <class ELFT> void ELFDumper<ELFT>::printDynamicSection() {
   std::string TagFmt = "  %-" + std::to_string(MaxLen) + "s ";
 
   outs() << "\nDynamic Section:\n";
+  auto StringTableSize = (typename ELFT::Xword)0;
+  for (const auto &Sec : cantFail(Elf.sections())) {
+    if (Sec.sh_type == ELF::SHT_STRTAB)
+      StringTableSize =
+          StringTableSize < Sec.sh_size ? Sec.sh_size : StringTableSize;
+  }
+  for (const typename ELFT::Dyn &Dyn : DynamicEntries) {
+    if (Dyn.d_tag == ELF::DT_STRSZ) {
+      StringTableSize =
+          StringTableSize < Dyn.getVal() ? Dyn.getVal() : StringTableSize;
+      break;
+    }
+  }
+
   for (const typename ELFT::Dyn &Dyn : DynamicEntries) {
     if (Dyn.d_tag == ELF::DT_NULL)
       continue;
@@ -235,6 +252,12 @@ template <class ELFT> void ELFDumper<ELFT>::printDynamicSection() {
       Expected<StringRef> StrTabOrErr = getDynamicStrTab(Elf);
       if (StrTabOrErr) {
         const char *Data = StrTabOrErr->data();
+        if (Dyn.getVal() >= StringTableSize) {
+          reportWarning("invalid string table offset", Obj.getFileName());
+          outs() << format(TagFmt.c_str(), Str.c_str())
+                 << format(Fmt, (uint64_t)Dyn.getVal());
+          continue;
+        }
         outs() << format(TagFmt.c_str(), Str.c_str()) << Data + Dyn.getVal()
                << "\n";
         continue;
