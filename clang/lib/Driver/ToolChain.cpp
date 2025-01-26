@@ -858,6 +858,26 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   if (auto Path = getPathForTriple(getTriple()))
     return *Path;
 
+  // Treat "pc" and "unknown" vendors interchangeable
+  switch (getTriple().getVendor()) {
+  case Triple::UnknownVendor: {
+    llvm::Triple TripleFallback = Triple;
+    TripleFallback.setVendor(Triple::PC);
+    if (auto Path = getPathForTriple(TripleFallback))
+      return *Path;
+    break;
+  }
+  case Triple::PC: {
+    llvm::Triple TripleFallback = Triple;
+    TripleFallback.setVendor(Triple::UnknownVendor);
+    if (auto Path = getPathForTriple(TripleFallback))
+      return *Path;
+    break;
+  }
+  default:
+    break;
+  }
+
   // When building with per target runtime directories, various ways of naming
   // the Arm architecture may have been normalised to simply "arm".
   // For example "armv8l" (Armv8 AArch32 little endian) is replaced with "arm".
