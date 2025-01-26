@@ -8,7 +8,7 @@
 #ifndef LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_BCMP_H
 #define LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_BCMP_H
 
-#include "src/__support/macros/config.h"       // LIBC_NAMESPACE_DECL
+#include "src/__support/macros/attributes.h"   // LIBC_INLINE, LIBC_NAMESPACE_DECL
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_generic.h"
