@@ -1433,8 +1433,11 @@ static size_t findNull(StringRef s, size_t entSize) {
 void MergeInputSection::splitStrings(StringRef s, size_t entSize) {
   const bool live = !(flags & SHF_ALLOC) || !getCtx().arg.gcSections;
   const char *p = s.data(), *end = s.data() + s.size();
-  if (!std::all_of(end - entSize, end, [](char c) { return c == 0; }))
-    Fatal(getCtx()) << this << ": string is not null terminated";
+  if (!std::all_of(end - entSize, end, [](char c) { return c == 0; })) {
+    Err(getCtx()) << this << ": string is not null terminated";
+    pieces.emplace_back(entSize, 0, false);
+    return;
+  }
   if (entSize == 1) {
     // Optimize the common case.
     do {
@@ -1494,8 +1497,10 @@ void MergeInputSection::splitIntoPieces() {
 }
 
 SectionPiece &MergeInputSection::getSectionPiece(uint64_t offset) {
-  if (content().size() <= offset)
-    Fatal(getCtx()) << this << ": offset is outside the section";
+  if (content().size() <= offset) {
+    Err(getCtx()) << this << ": offset is outside the section";
+    return pieces[0];
+  }
   return partition_point(
       pieces, [=](SectionPiece p) { return p.inputOff <= offset; })[-1];
 }
