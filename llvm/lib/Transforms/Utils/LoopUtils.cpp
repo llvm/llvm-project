@@ -897,6 +897,21 @@ bool llvm::setLoopEstimatedTripCount(Loop *L, unsigned EstimatedTripCount,
   return true;
 }
 
+bool llvm::isInfiniteTripCount(Loop *L) {
+  if (BranchInst *ExitingBranch = getExpectedExitLoopLatchBranch(L)) {
+    uint64_t LoopWeight, ExitWeight;
+    if (!extractBranchWeights(*ExitingBranch, LoopWeight, ExitWeight))
+      return false;
+
+    if (L->contains(ExitingBranch->getSuccessor(1)))
+      std::swap(LoopWeight, ExitWeight);
+
+    if (!ExitWeight)
+      return true;
+  }
+  return false;
+}
+
 bool llvm::hasIterationCountInvariantInParent(Loop *InnerLoop,
                                               ScalarEvolution &SE) {
   Loop *OuterL = InnerLoop->getParentLoop();
