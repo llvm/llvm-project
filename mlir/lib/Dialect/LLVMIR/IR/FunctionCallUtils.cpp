@@ -58,15 +58,12 @@ mlir::LLVM::lookupOrCreateFn(Operation *moduleOp, StringRef name,
   if (func) {
     if (funcT != func.getFunctionType()) {
       if (isReserved) {
-        func.emitError("redefinition of reserved function '" + name +
-                       "' of different type ")
-            .append(func.getFunctionType())
-            .append(" is prohibited");
+        func.emitError("redefinition of reserved function '")
+            << name << "' of different type " << func.getFunctionType()
+            << " is prohibited";
       } else {
-        func.emitError("redefinition of function '" + name +
-                       "' of different type ")
-            .append(funcT)
-            .append(" is prohibited");
+        func.emitError("redefinition of function '")
+            << name << "' of different type " << funcT << " is prohibited";
       }
       return failure();
     }
@@ -78,15 +75,12 @@ mlir::LLVM::lookupOrCreateFn(Operation *moduleOp, StringRef name,
       LLVM::LLVMFunctionType::get(resultType, paramTypes, isVarArg));
 }
 
-namespace {
-FailureOr<LLVM::LLVMFuncOp> lookupOrCreateReservedFn(Operation *moduleOp,
-                                                     StringRef name,
-                                                     ArrayRef<Type> paramTypes,
-                                                     Type resultType) {
+static FailureOr<LLVM::LLVMFuncOp>
+lookupOrCreateReservedFn(Operation *moduleOp, StringRef name,
+                         ArrayRef<Type> paramTypes, Type resultType) {
   return lookupOrCreateFn(moduleOp, name, paramTypes, resultType,
                           /*isVarArg=*/false, /*isReserved=*/true);
 }
-} // namespace
 
 FailureOr<LLVM::LLVMFuncOp>
 mlir::LLVM::lookupOrCreatePrintI64Fn(Operation *moduleOp) {

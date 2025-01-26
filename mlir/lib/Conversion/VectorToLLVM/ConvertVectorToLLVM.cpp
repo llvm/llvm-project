@@ -1553,25 +1553,23 @@ public:
         return failure();
       }
     } else if (punct != PrintPunctuation::NoPunctuation) {
-      if (auto op = [&] -> FailureOr<LLVM::LLVMFuncOp> {
-            switch (punct) {
-            case PrintPunctuation::Close:
-              return LLVM::lookupOrCreatePrintCloseFn(parent);
-            case PrintPunctuation::Open:
-              return LLVM::lookupOrCreatePrintOpenFn(parent);
-            case PrintPunctuation::Comma:
-              return LLVM::lookupOrCreatePrintCommaFn(parent);
-            case PrintPunctuation::NewLine:
-              return LLVM::lookupOrCreatePrintNewlineFn(parent);
-            default:
-              llvm_unreachable("unexpected punctuation");
-            }
-          }();
-          succeeded(op))
-        emitCall(rewriter, printOp->getLoc(), op.value());
-      else {
+      FailureOr<LLVM::LLVMFuncOp> op = [&]() {
+        switch (punct) {
+        case PrintPunctuation::Close:
+          return LLVM::lookupOrCreatePrintCloseFn(parent);
+        case PrintPunctuation::Open:
+          return LLVM::lookupOrCreatePrintOpenFn(parent);
+        case PrintPunctuation::Comma:
+          return LLVM::lookupOrCreatePrintCommaFn(parent);
+        case PrintPunctuation::NewLine:
+          return LLVM::lookupOrCreatePrintNewlineFn(parent);
+        default:
+          llvm_unreachable("unexpected punctuation");
+        }
+      }();
+      if (failed(op))
         return failure();
-      }
+      emitCall(rewriter, printOp->getLoc(), op.value());
     }
 
     rewriter.eraseOp(printOp);

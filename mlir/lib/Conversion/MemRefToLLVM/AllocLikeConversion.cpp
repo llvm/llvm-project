@@ -14,8 +14,7 @@
 
 using namespace mlir;
 
-namespace {
-FailureOr<LLVM::LLVMFuncOp>
+static FailureOr<LLVM::LLVMFuncOp>
 getNotalignedAllocFn(const LLVMTypeConverter *typeConverter, Operation *module,
                      Type indexType) {
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
@@ -25,7 +24,7 @@ getNotalignedAllocFn(const LLVMTypeConverter *typeConverter, Operation *module,
   return LLVM::lookupOrCreateMallocFn(module, indexType);
 }
 
-FailureOr<LLVM::LLVMFuncOp>
+static FailureOr<LLVM::LLVMFuncOp>
 getAlignedAllocFn(const LLVMTypeConverter *typeConverter, Operation *module,
                   Type indexType) {
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
@@ -35,8 +34,6 @@ getAlignedAllocFn(const LLVMTypeConverter *typeConverter, Operation *module,
 
   return LLVM::lookupOrCreateAlignedAllocFn(module, indexType);
 }
-
-} // end namespace
 
 Value AllocationOpLLVMLowering::createAligned(
     ConversionPatternRewriter &rewriter, Location loc, Value input,

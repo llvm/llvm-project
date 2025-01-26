@@ -59,13 +59,11 @@ LogicalResult mlir::LLVM::createPrintStrCall(
   SmallVector<LLVM::GEPArg> indices(1, 0);
   Value gep =
       builder.create<LLVM::GEPOp>(loc, ptrTy, arrayTy, msgAddr, indices);
-  if (auto printer =
+  FailureOr<LLVM::LLVMFuncOp> printer =
           LLVM::lookupOrCreatePrintStringFn(moduleOp, runtimeFunctionName);
-      succeeded(printer)) {
-    builder.create<LLVM::CallOp>(loc, TypeRange(),
-                                 SymbolRefAttr::get(printer.value()), gep);
-  } else {
+  if(failed(printer))
     return failure();
-  }
+  builder.create<LLVM::CallOp>(loc, TypeRange(),
+                                 SymbolRefAttr::get(printer.value()), gep);
   return success();
 }
