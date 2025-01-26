@@ -719,7 +719,8 @@ bool VPInstruction::isFPMathOp() const {
   return Opcode == Instruction::FAdd || Opcode == Instruction::FMul ||
          Opcode == Instruction::FNeg || Opcode == Instruction::FSub ||
          Opcode == Instruction::FDiv || Opcode == Instruction::FRem ||
-         Opcode == Instruction::FCmp || Opcode == Instruction::Select;
+         Opcode == Instruction::FCmp || Opcode == Instruction::Select ||
+         Opcode == VPInstruction::WideIVStep;
 }
 #endif
 
@@ -772,6 +773,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::LogicalAnd:
   case VPInstruction::Not:
   case VPInstruction::PtrAdd:
+  case VPInstruction::WideIVStep:
     return false;
   default:
     return true;
