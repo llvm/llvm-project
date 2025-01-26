@@ -4357,8 +4357,8 @@ Instruction *InstCombinerImpl::foldSelectICmp(CmpPredicate Pred, SelectInst *SI,
 }
 
 // Returns whether V is a Mask ((X + 1) & X == 0) or ~Mask (-Pow2OrZero)
-static bool isMaskOrZero(const Value *V, bool Not, const SimplifyQuery &Q,
-                         unsigned Depth = 0) {
+bool InstCombiner::isMaskOrZero(const Value *V, bool Not,
+                                const SimplifyQuery &Q, unsigned Depth) {
   if (Not ? match(V, m_NegatedPower2OrZero()) : match(V, m_LowBitMaskOrZero()))
     return true;
   if (V->getType()->getScalarSizeInBits() == 1)
@@ -4412,14 +4412,14 @@ static bool isMaskOrZero(const Value *V, bool Not, const SimplifyQuery &Q,
   case Instruction::Add:
     // Pow2 - 1 is a Mask.
     if (!Not && match(I->getOperand(1), m_AllOnes()))
-      return isKnownToBeAPowerOfTwo(I->getOperand(0), Q.DL, /*OrZero*/ true,
-                                    Depth, Q.AC, Q.CxtI, Q.DT);
+      return ::isKnownToBeAPowerOfTwo(I->getOperand(0), Q.DL, /*OrZero*/ true,
+                                      Depth, Q.AC, Q.CxtI, Q.DT);
     break;
   case Instruction::Sub:
     // -Pow2 is a ~Mask.
     if (Not && match(I->getOperand(0), m_Zero()))
-      return isKnownToBeAPowerOfTwo(I->getOperand(1), Q.DL, /*OrZero*/ true,
-                                    Depth, Q.AC, Q.CxtI, Q.DT);
+      return ::isKnownToBeAPowerOfTwo(I->getOperand(1), Q.DL, /*OrZero*/ true,
+                                      Depth, Q.AC, Q.CxtI, Q.DT);
     break;
   case Instruction::Call: {
     if (auto *II = dyn_cast<IntrinsicInst>(I)) {
@@ -4528,13 +4528,13 @@ static Value *foldICmpWithLowBitMaskedVal(CmpPredicate Pred, Value *Op0,
     if (match(Op0, m_c_And(m_Specific(Op1), m_Value(M)))) {
       X = Op1;
       // Look for: x & Mask pred x
-      if (isMaskOrZero(M, /*Not=*/false, Q)) {
+      if (IC.isMaskOrZero(M, /*Not=*/false, Q)) {
         return !ICmpInst::isSigned(Pred) ||
                (match(M, m_NonNegative()) || isKnownNonNegative(M, Q));
       }
 
       // Look for: x & ~Mask pred ~Mask
-      if (isMaskOrZero(X, /*Not=*/true, Q)) {
+      if (IC.isMaskOrZero(X, /*Not=*/true, Q)) {
         return !ICmpInst::isSigned(Pred) || isKnownNonZero(X, Q);
       }
       return false;
@@ -4544,7 +4544,7 @@ static Value *foldICmpWithLowBitMaskedVal(CmpPredicate Pred, Value *Op0,
 
       auto Check = [&]() {
         // Look for: ~x | Mask == -1
-        if (isMaskOrZero(M, /*Not=*/false, Q)) {
+        if (IC.isMaskOrZero(M, /*Not=*/false, Q)) {
           if (Value *NotX =
                   IC.getFreelyInverted(X, X->hasOneUse(), &IC.Builder)) {
             X = NotX;
@@ -4562,7 +4562,7 @@ static Value *foldICmpWithLowBitMaskedVal(CmpPredicate Pred, Value *Op0,
         match(Op0, m_OneUse(m_And(m_Value(X), m_Value(M))))) {
       auto Check = [&]() {
         // Look for: x & ~Mask == 0
-        if (isMaskOrZero(M, /*Not=*/true, Q)) {
+        if (IC.isMaskOrZero(M, /*Not=*/true, Q)) {
           if (Value *NotM =
                   IC.getFreelyInverted(M, M->hasOneUse(), &IC.Builder)) {
             M = NotM;
