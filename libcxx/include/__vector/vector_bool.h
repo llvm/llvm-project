@@ -851,7 +851,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::reserve(size_type _
       this->__throw_length_error();
     vector __v(this->get_allocator());
     __v.__vallocate(__n);
-    __v.__construct_at_end(this->begin(), this->end(), this->size());
+    std::copy(__begin_, __begin_ + __external_cap_to_internal(size()), __v.__begin_);
+    __v.__size_ = size();
     swap(__v);
   }
 }
