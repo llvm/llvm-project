@@ -895,7 +895,7 @@ struct NVGPUMBarrierArriveNoCompleteLowering
   }
 };
 
-/// Lowers `nvgpu.mbarrier.test.wait` to `nvvm.mbarrier.test.wait`
+/// Lowers `nvgpu.mbarrier.test.wait` to `nvvm.mbarrier.test_wait`
 struct NVGPUMBarrierTestWaitLowering
     : public MBarrierBasePattern<nvgpu::MBarrierTestWaitOp> {
   using MBarrierBasePattern<nvgpu::MBarrierTestWaitOp>::MBarrierBasePattern;
