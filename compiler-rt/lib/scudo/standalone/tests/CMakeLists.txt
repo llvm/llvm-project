@@ -1,5 +1,7 @@
 include_directories(..)
 
+include(CompilerRTCompile)
+
 add_custom_target(ScudoUnitTests)
 set_target_properties(ScudoUnitTests PROPERTIES
   FOLDER "Compiler-RT Tests")

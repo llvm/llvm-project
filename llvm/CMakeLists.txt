@@ -3,6 +3,8 @@
 cmake_minimum_required(VERSION 3.20.0)
 
 include(CMakeDependentOption)
+include(CheckCCompilerFlag)
+include(CheckCXXCompilerFlag)
 
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
@@ -707,8 +709,17 @@ endif( LLVM_USE_PERF )
 set(LLVM_USE_SANITIZER "" CACHE STRING
   "Define the sanitizer used to build binaries and tests.")
 option(LLVM_OPTIMIZE_SANITIZED_BUILDS "Pass -O1 on debug sanitizer builds" ON)
+
+check_c_compiler_flag(-fno-sanitize=function C_SUPPORTS_FNO_SANITIZE_FUNCTION_FLAG)
+check_cxx_compiler_flag(-fno-sanitize=function CXX_SUPPORTS_FNO_SANITIZE_FUNCTION_FLAG)
+if( C_SUPPORTS_FNO_SANITIZE_FUNCTION_FLAG AND CXX_SUPPORTS_FNO_SANITIZE_FUNCTION_FLAG )
+  set(FNO_SANITIZE_FUNCTION_FLAG "-fno-sanitize=function")
+else()
+  # some compiler (for example gcc) doesn't know about -fsanitize=function
+  set(FNO_SANITIZE_FUNCTION_FLAG)
+endif()
 set(LLVM_UBSAN_FLAGS
-    "-fsanitize=undefined -fno-sanitize=vptr,function -fno-sanitize-recover=all"
+    "-fsanitize=undefined -fno-sanitize=vptr ${FNO_SANITIZE_FUNCTION_FLAG} -fno-sanitize-recover=all"
     CACHE STRING
     "Compile flags set to enable UBSan. Only used if LLVM_USE_SANITIZER contains 'Undefined'.")
 set(LLVM_LIB_FUZZING_ENGINE "" CACHE PATH
