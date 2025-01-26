@@ -260,9 +260,9 @@ def main():
 
         for workflow_metric in reversed(current_metrics):
             if isinstance(workflow_metric, JobMetrics):
-                workflows_to_track[workflow_metric.job_name] = (
-                    workflow_metric.workflow_id
-                )
+                workflows_to_track[
+                    workflow_metric.job_name
+                ] = workflow_metric.workflow_id
 
         time.sleep(SCRAPE_INTERVAL_SECONDS)
 
