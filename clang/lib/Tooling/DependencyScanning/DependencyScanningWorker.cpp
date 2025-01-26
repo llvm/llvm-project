@@ -439,7 +439,7 @@ public:
     else if (ModuleName)
       Action = std::make_unique<GetDependenciesByModuleNameAction>(*ModuleName);
     else
-      Action = std::make_unique<ReadPCHAndPreprocessAction>();
+      Action = std::make_unique<DependencyScanningFrontendAction>();
 
     if (ScanInstance.getDiagnostics().hasErrorOccurred())
       return false;
