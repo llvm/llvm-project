@@ -260,25 +260,65 @@ struct HostRuntimeLibrary<HostT, LibraryVersion::Libm> {
   static_assert(map.Verify(), "map must be sorted");
 };
 
-enum trigFunc {
-  Cacos,
-  Cacosh,
-  Casin,
-  Casinh,
-  Catan,
-  Catanh,
-  Ccos,
-  Ccosh,
-  Cexp,
-  Clog,
-  Csin,
-  Csinh,
-  Csqrt,
-  Ctan,
-  Ctanh
-};
+#define COMPLEX_SIGNATURES(HOST_T) \
+  using F = FuncPointer<std::complex<HOST_T>, const std::complex<HOST_T> &>; \
+  using F2 = FuncPointer<std::complex<HOST_T>, const std::complex<HOST_T> &, \
+      const std::complex<HOST_T> &>; \
+  using F2A = FuncPointer<std::complex<HOST_T>, const HOST_T &, \
+      const std::complex<HOST_T> &>; \
+  using F2B = FuncPointer<std::complex<HOST_T>, const std::complex<HOST_T> &, \
+      const HOST_T &>;
 
-#ifdef _AIX
+#ifndef _AIX
+// Helpers to map complex std::pow whose resolution in F2{std::pow} is
+// ambiguous as of clang++ 20.
+template <typename HostT>
+static std::complex<HostT> StdPowF2(
+    const std::complex<HostT> &x, const std::complex<HostT> &y) {
+  return std::pow(x, y);
+}
+
+template <typename HostT>
+static std::complex<HostT> StdPowF2A(
+    const HostT &x, const std::complex<HostT> &y) {
+  return std::pow(x, y);
+}
+
+template <typename HostT>
+static std::complex<HostT> StdPowF2B(
+    const std::complex<HostT> &x, const HostT &y) {
+  return std::pow(x, y);
+}
+
+template <typename HostT>
+struct HostRuntimeLibrary<std::complex<HostT>, LibraryVersion::Libm> {
+  COMPLEX_SIGNATURES(HostT)
+  static constexpr HostRuntimeFunction table[]{
+      FolderFactory<F, F{std::acos}>::Create("acos"),
+      FolderFactory<F, F{std::acosh}>::Create("acosh"),
+      FolderFactory<F, F{std::asin}>::Create("asin"),
+      FolderFactory<F, F{std::asinh}>::Create("asinh"),
+      FolderFactory<F, F{std::atan}>::Create("atan"),
+      FolderFactory<F, F{std::atanh}>::Create("atanh"),
+      FolderFactory<F, F{std::cos}>::Create("cos"),
+      FolderFactory<F, F{std::cosh}>::Create("cosh"),
+      FolderFactory<F, F{std::exp}>::Create("exp"),
+      FolderFactory<F, F{std::log}>::Create("log"),
+      FolderFactory<F2, F2{StdPowF2}>::Create("pow"),
+      FolderFactory<F2A, F2A{StdPowF2A}>::Create("pow"),
+      FolderFactory<F2B, F2B{StdPowF2B}>::Create("pow"),
+      FolderFactory<F, F{std::sin}>::Create("sin"),
+      FolderFactory<F, F{std::sinh}>::Create("sinh"),
+      FolderFactory<F, F{std::sqrt}>::Create("sqrt"),
+      FolderFactory<F, F{std::tan}>::Create("tan"),
+      FolderFactory<F, F{std::tanh}>::Create("tanh"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+#else
+// On AIX, call libm routines to preserve consistent value between
+// runtime and compile time evaluation.
 #ifdef __clang_major__
 #pragma clang diagnostic ignored "-Wc99-extensions"
 #endif
@@ -318,193 +358,80 @@ float _Complex ctanhf(float _Complex);
 double _Complex ctanh(double _Complex);
 }
 
-enum CRI { Real, Imag };
-template <typename TR, typename TA> static TR &reIm(TA &x, CRI n) {
-  return reinterpret_cast<TR(&)[2]>(x)[n];
-}
-template <typename TR, typename T> static TR CppToC(const std::complex<T> &x) {
-  TR r;
-  reIm<T, TR>(r, CRI::Real) = x.real();
-  reIm<T, TR>(r, CRI::Imag) = x.imag();
-  return r;
-}
-template <typename T, typename TA> static std::complex<T> CToCpp(const TA &x) {
-  TA &z{const_cast<TA &>(x)};
-  return std::complex<T>(reIm<T, TA>(z, CRI::Real), reIm<T, TA>(z, CRI::Imag));
-}
-
-using FTypeCmplxFlt = _Complex float (*)(_Complex float);
-using FTypeCmplxDble = _Complex double (*)(_Complex double);
-template <typename T>
-using FTypeStdCmplx = std::complex<T> (*)(const std::complex<T> &);
-
-std::map<trigFunc, std::tuple<FTypeCmplxFlt, FTypeCmplxDble>> mapLibmTrigFunc{
-    {Cacos, {&cacosf, &cacos}}, {Cacosh, {&cacoshf, &cacosh}},
-    {Casin, {&casinf, &casin}}, {Casinh, {&casinhf, &casinh}},
-    {Catan, {&catanf, &catan}}, {Catanh, {&catanhf, &catanh}},
-    {Ccos, {&ccosf, &ccos}}, {Ccosh, {&ccoshf, &ccosh}},
-    {Cexp, {&cexpf, &cexp}}, {Clog, {&clogf, &__clog}}, {Csin, {&csinf, &csin}},
-    {Csinh, {&csinhf, &csinh}}, {Csqrt, {&csqrtf, &csqrt}},
-    {Ctan, {&ctanf, &ctan}}, {Ctanh, {&ctanhf, &ctanh}}};
-
-template <trigFunc TF, typename HostT>
-std::complex<HostT> LibmTrigFunc(const std::complex<HostT> &x) {
-  if constexpr (std::is_same_v<HostT, float>) {
-    float _Complex r{std::get<FTypeCmplxFlt>(mapLibmTrigFunc[TF])(
-        CppToC<float _Complex, float>(x))};
-    return CToCpp<float, float _Complex>(r);
-  } else if constexpr (std::is_same_v<HostT, double>) {
-    double _Complex r{std::get<FTypeCmplxDble>(mapLibmTrigFunc[TF])(
-        CppToC<double _Complex, double>(x))};
-    return CToCpp<double, double _Complex>(r);
-  }
-  DIE("bad complex component type");
-}
-#endif
-
-template <trigFunc TF, typename HostT>
-std::complex<HostT> StdTrigFunc(const std::complex<HostT> &x) {
-  if constexpr (TF == Cacos) {
-    return std::acos(x);
-  } else if constexpr (TF == Cacosh) {
-    return std::acosh(x);
-  } else if constexpr (TF == Casin) {
-    return std::asin(x);
-  } else if constexpr (TF == Casinh) {
-    return std::asinh(x);
-  } else if constexpr (TF == Catan) {
-    return std::atan(x);
-  } else if constexpr (TF == Catanh) {
-    return std::atanh(x);
-  } else if constexpr (TF == Ccos) {
-    return std::cos(x);
-  } else if constexpr (TF == Ccosh) {
-    return std::cosh(x);
-  } else if constexpr (TF == Cexp) {
-    return std::exp(x);
-  } else if constexpr (TF == Clog) {
-    return std::log(x);
-  } else if constexpr (TF == Csin) {
-    return std::sin(x);
-  } else if constexpr (TF == Csinh) {
-    return std::sinh(x);
-  } else if constexpr (TF == Csqrt) {
-    return std::sqrt(x);
-  } else if constexpr (TF == Ctan) {
-    return std::tan(x);
-  } else if constexpr (TF == Ctanh) {
-    return std::tanh(x);
-  }
-  DIE("unknown function");
-}
-
-template <trigFunc TF> struct X {
-  template <typename HostT>
-  static std::complex<HostT> f(const std::complex<HostT> &x) {
-    std::complex<HostT> res;
-#ifdef _AIX
-    // On AIX, the implementation in libm is different from that of the STL
-    // routines, use the libm routines here in folding for consistent results.
-    res = LibmTrigFunc<TF>(x);
-#else
-    res = StdTrigFunc<TF, HostT>(x);
-#endif
-    return res;
-  }
+template <typename T> struct ToStdComplex {
+  using Type = T;
+  using AType = Type;
+};
+template <> struct ToStdComplex<float _Complex> {
+  using Type = std::complex<float>;
+  using AType = const Type &;
+};
+template <> struct ToStdComplex<double _Complex> {
+  using Type = std::complex<double>;
+  using AType = const Type &;
 };
 
-// Helpers to map complex std::pow whose resolution in F2{std::pow} is
-// ambiguous as of clang++ 20.
-template <typename HostT>
-static std::complex<HostT> StdPowF2(
-    const std::complex<HostT> &x, const std::complex<HostT> &y) {
-#ifdef _AIX
-  if constexpr (std::is_same_v<HostT, float>) {
-    float _Complex r{cpowf(
-        CppToC<float _Complex, float>(x), CppToC<float _Complex, float>(y))};
-    return CToCpp<float, float _Complex>(r);
-  } else if constexpr (std::is_same_v<HostT, double>) {
-    double _Complex r{cpow(CppToC<double _Complex, double>(x),
-        CppToC<double _Complex, double>(y))};
-    return CToCpp<double, double _Complex>(r);
+template <typename F, F func> struct CComplexFunc {};
+template <typename R, typename... A, FuncPointer<R, A...> func>
+struct CComplexFunc<FuncPointer<R, A...>, func> {
+  static typename ToStdComplex<R>::Type wrapper(
+      typename ToStdComplex<A>::AType... args) {
+    R res{func(*reinterpret_cast<const A *>(&args)...)};
+    return *reinterpret_cast<typename ToStdComplex<R>::Type *>(&res);
   }
-#else
-  return std::pow(x, y);
-#endif
-}
+};
+#define C_COMPLEX_FUNC(func) CComplexFunc<decltype(&func), &func>::wrapper
 
-template <typename HostT>
-static std::complex<HostT> StdPowF2A(
-    const HostT &x, const std::complex<HostT> &y) {
-#ifdef _AIX
-  constexpr HostT zero{0.0};
-  std::complex<HostT> z(x, zero);
-  if constexpr (std::is_same_v<HostT, float>) {
-    float _Complex r{cpowf(
-        CppToC<float _Complex, float>(z), CppToC<float _Complex, float>(y))};
-    return CToCpp<float, float _Complex>(r);
-  } else if constexpr (std::is_same_v<HostT, double>) {
-    double _Complex r{cpow(CppToC<double _Complex, double>(z),
-        CppToC<double _Complex, double>(y))};
-    return CToCpp<double, double _Complex>(r);
-  }
-#else
-  return std::pow(x, y);
-#endif
-}
-
-template <typename HostT>
-static std::complex<HostT> StdPowF2B(
-    const std::complex<HostT> &x, const HostT &y) {
-#ifdef _AIX
-  constexpr HostT zero{0.0};
-  std::complex<HostT> z(y, zero);
-  if constexpr (std::is_same_v<HostT, float>) {
-    float _Complex r{cpowf(
-        CppToC<float _Complex, float>(x), CppToC<float _Complex, float>(z))};
-    return CToCpp<float, float _Complex>(r);
-  } else if constexpr (std::is_same_v<HostT, double>) {
-    double _Complex r{cpow(CppToC<double _Complex, double>(x),
-        CppToC<double _Complex, double>(z))};
-    return CToCpp<double, double _Complex>(r);
-  }
-#else
-  return std::pow(x, y);
-#endif
-}
-
-template <typename HostT>
-struct HostRuntimeLibrary<std::complex<HostT>, LibraryVersion::Libm> {
-  using F = FuncPointer<std::complex<HostT>, const std::complex<HostT> &>;
-  using F2 = FuncPointer<std::complex<HostT>, const std::complex<HostT> &,
-      const std::complex<HostT> &>;
-  using F2A = FuncPointer<std::complex<HostT>, const HostT &,
-      const std::complex<HostT> &>;
-  using F2B = FuncPointer<std::complex<HostT>, const std::complex<HostT> &,
-      const HostT &>;
+template <>
+struct HostRuntimeLibrary<std::complex<float>, LibraryVersion::Libm> {
+  COMPLEX_SIGNATURES(float)
   static constexpr HostRuntimeFunction table[]{
-      FolderFactory<F, F{X<Cacos>::f}>::Create("acos"),
-      FolderFactory<F, F{X<Cacosh>::f}>::Create("acosh"),
-      FolderFactory<F, F{X<Casin>::f}>::Create("asin"),
-      FolderFactory<F, F{X<Casinh>::f}>::Create("asinh"),
-      FolderFactory<F, F{X<Catan>::f}>::Create("atan"),
-      FolderFactory<F, F{X<Catanh>::f}>::Create("atanh"),
-      FolderFactory<F, F{X<Ccos>::f}>::Create("cos"),
-      FolderFactory<F, F{X<Ccosh>::f}>::Create("cosh"),
-      FolderFactory<F, F{X<Cexp>::f}>::Create("exp"),
-      FolderFactory<F, F{X<Clog>::f}>::Create("log"),
-      FolderFactory<F2, F2{StdPowF2}>::Create("pow"),
-      FolderFactory<F2A, F2A{StdPowF2A}>::Create("pow"),
-      FolderFactory<F2B, F2B{StdPowF2B}>::Create("pow"),
-      FolderFactory<F, F{X<Csin>::f}>::Create("sin"),
-      FolderFactory<F, F{X<Csinh>::f}>::Create("sinh"),
-      FolderFactory<F, F{X<Csqrt>::f}>::Create("sqrt"),
-      FolderFactory<F, F{X<Ctan>::f}>::Create("tan"),
-      FolderFactory<F, F{X<Ctanh>::f}>::Create("tanh"),
+    FolderFactory<F, C_COMPLEX_FUNC(cacosf)>::Create("acos"),
+    FolderFactory<F, C_COMPLEX_FUNC(cacoshf)>::Create("acosh"),
+    FolderFactory<F, C_COMPLEX_FUNC(casinf)>::Create("asin"),
+    FolderFactory<F, C_COMPLEX_FUNC(casinhf)>::Create("asinh"),
+    FolderFactory<F, C_COMPLEX_FUNC(catanf)>::Create("atan"),
+    FolderFactory<F, C_COMPLEX_FUNC(catanhf)>::Create("atanh"),
+    FolderFactory<F, C_COMPLEX_FUNC(ccosf)>::Create("cos"),
+    FolderFactory<F, C_COMPLEX_FUNC(ccoshf)>::Create("cosh"),
+    FolderFactory<F, C_COMPLEX_FUNC(cexpf)>::Create("exp"),
+    FolderFactory<F, C_COMPLEX_FUNC(clogf)>::Create("log"),
+    FolderFactory<F2, C_COMPLEX_FUNC(cpowf)>::Create("pow"),
+    FolderFactory<F, C_COMPLEX_FUNC(csinf)>::Create("sin"),
+    FolderFactory<F, C_COMPLEX_FUNC(csinhf)>::Create("sinh"),
+    FolderFactory<F, C_COMPLEX_FUNC(csqrtf)>::Create("sqrt"),
+    FolderFactory<F, C_COMPLEX_FUNC(ctanf)>::Create("tan"),
+    FolderFactory<F, C_COMPLEX_FUNC(ctanhf)>::Create("tanh"),
   };
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
 };
+template <>
+struct HostRuntimeLibrary<std::complex<double>, LibraryVersion::Libm> {
+  COMPLEX_SIGNATURES(double)
+  static constexpr HostRuntimeFunction table[]{
+    FolderFactory<F, C_COMPLEX_FUNC(cacos)>::Create("acos"),
+    FolderFactory<F, C_COMPLEX_FUNC(cacosh)>::Create("acosh"),
+    FolderFactory<F, C_COMPLEX_FUNC(casin)>::Create("asin"),
+    FolderFactory<F, C_COMPLEX_FUNC(casinh)>::Create("asinh"),
+    FolderFactory<F, C_COMPLEX_FUNC(catan)>::Create("atan"),
+    FolderFactory<F, C_COMPLEX_FUNC(catanh)>::Create("atanh"),
+    FolderFactory<F, C_COMPLEX_FUNC(ccos)>::Create("cos"),
+    FolderFactory<F, C_COMPLEX_FUNC(ccosh)>::Create("cosh"),
+    FolderFactory<F, C_COMPLEX_FUNC(cexp)>::Create("exp"),
+    FolderFactory<F, C_COMPLEX_FUNC(__clog)>::Create("log"),
+    FolderFactory<F2, C_COMPLEX_FUNC(cpow)>::Create("pow"),
+    FolderFactory<F, C_COMPLEX_FUNC(csin)>::Create("sin"),
+    FolderFactory<F, C_COMPLEX_FUNC(csinh)>::Create("sinh"),
+    FolderFactory<F, C_COMPLEX_FUNC(csqrt)>::Create("sqrt"),
+    FolderFactory<F, C_COMPLEX_FUNC(ctan)>::Create("tan"),
+    FolderFactory<F, C_COMPLEX_FUNC(ctanh)>::Create("tanh"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+#endif // _AIX
+
 // Note regarding cmath:
 //  - cmath does not have modulo and erfc_scaled equivalent
 //  - C++17 defined standard Bessel math functions std::cyl_bessel_j
