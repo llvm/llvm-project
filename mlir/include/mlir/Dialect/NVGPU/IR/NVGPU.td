@@ -788,17 +788,21 @@ def NVGPU_WarpgroupMmaStoreOp : NVGPU_Op<"warpgroup.mma.store"> {
     The `nvgpu.warpgroup.mma.store` op performs the store of fragmented result 
     in $matrixD to given memref. 
 
+    Note that, the op must be run with warp group. The operand `warpgroupId` 
+    allow to select the warp group to run the operation. When it is not present,
+    the first warp group runs the operation.
+
     [See the details of register fragment layout for accumulator matrix D]
     (https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#wgmma-64n16-d) 
-
-    Note that, the op must be run with warp group.
   }];
 
   let arguments = (ins NVGPU_WarpgroupAccumulator:$matrixD,
-                       Arg<AnyMemRef, "", [MemWrite]>:$dstMemref);
+                       Arg<AnyMemRef, "", [MemWrite]>:$dstMemref,
+                       Optional<I32>:$warpgroupId);
   
   let assemblyFormat = [{
-    $matrixD `,` $dstMemref attr-dict `:` type($matrixD) `to` type($dstMemref)
+    $matrixD `,` $dstMemref (`,` `warpgroup_id` `=` $warpgroupId^)? 
+    attr-dict `:` type($matrixD) `to` type($dstMemref)
   }];
   let hasVerifier = 1;
 }
