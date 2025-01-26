@@ -101,7 +101,7 @@ TEST_F(FormatTestTableGen, BangOperators) {
                "                                  \"zerozero\",\n"
                "                                  true:  // default\n"
                "                                  \"positivepositive\");\n"
-               "  let Foo = !cond(\n"
+               "  let CondOpe3WithCommentAfterLParen = !cond(\n"
                "      // comment\n"
                "      !eq(/* comment */ x, 0): \"zero\");\n"
                "}");
