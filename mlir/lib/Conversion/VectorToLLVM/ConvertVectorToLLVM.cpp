@@ -1546,12 +1546,13 @@ public:
 
     auto punct = printOp.getPunctuation();
     if (auto stringLiteral = printOp.getStringLiteral()) {
-      if (LLVM::createPrintStrCall(rewriter, loc, parent, "vector_print_str",
+      auto createResult =
+          LLVM::createPrintStrCall(rewriter, loc, parent, "vector_print_str",
                                    *stringLiteral, *getTypeConverter(),
-                                   /*addNewline=*/false)
-              .failed()) {
+                                   /*addNewline=*/false);
+      if (createResult.failed())
         return failure();
-      }
+
     } else if (punct != PrintPunctuation::NoPunctuation) {
       FailureOr<LLVM::LLVMFuncOp> op = [&]() {
         switch (punct) {
