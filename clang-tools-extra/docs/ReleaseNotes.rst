@@ -331,6 +331,11 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-integer-sign-comparison
   <clang-tidy/checks/modernize/use-integer-sign-comparison>` check to
+  ignore comparisons between signed wide and unsigned narrow integer types,
+  configurable via the ``CheckIntegerSize`` option.
+
+- Improved :doc:`modernize-use-integer-sign-comparison
+  <clang-tidy/checks/modernize/use-integer-sign-comparison>` check to
   add an option ``EnableQtSupport``, that makes C++17 ``q20::cmp_*`` alternative
   available for Qt-based applications.
 
