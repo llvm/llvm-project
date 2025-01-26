@@ -8106,6 +8106,8 @@ TEST_P(ImportFunctions, CTADImplicit) {
   ASSERT_TRUE(ToD);
   EXPECT_EQ(ToD->getDeductionCandidateKind(), DeductionCandidate::Copy);
   EXPECT_EQ(ToD->getSourceDeductionGuide(), nullptr);
+  EXPECT_EQ(ToD->getSourceDeductionGuideKind(),
+            CXXDeductionGuideDecl::SourceDeductionGuideKind::None);
   // Check that the deduced class template is also imported.
   EXPECT_TRUE(findFromTU(FromD)->Importer->GetAlreadyImportedOrNull(
       FromD->getDeducedTemplate()));
@@ -8131,6 +8133,8 @@ TEST_P(ImportFunctions, CTADUserDefinedExplicit) {
   EXPECT_FALSE(FromD->isImplicit());
   EXPECT_TRUE(ToD->isExplicit());
   EXPECT_EQ(ToD->getSourceDeductionGuide(), nullptr);
+  EXPECT_EQ(ToD->getSourceDeductionGuideKind(),
+            CXXDeductionGuideDecl::SourceDeductionGuideKind::None);
 }
 
 TEST_P(ImportFunctions, CTADWithLocalTypedef) {
