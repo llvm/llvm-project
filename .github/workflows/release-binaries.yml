@@ -58,7 +58,6 @@ jobs:
       target-cmake-flags: ${{ steps.vars.outputs.target-cmake-flags }}
       ccache: ${{ steps.vars.outputs.ccache }}
       build-flang: ${{ steps.vars.outputs.build-flang }}
-      enable-pgo: ${{ steps.vars.outputs.enable-pgo }}
       release-binary-basename: ${{ steps.vars.outputs.release-binary-basename }}
       release-binary-filename: ${{ steps.vars.outputs.release-binary-filename }}
       build-runs-on: ${{ steps.vars.outputs.build-runs-on }}
@@ -130,9 +129,6 @@ jobs:
           echo ccache=sccache >> $GITHUB_OUTPUT
         fi
 
-        # Detect necessary CMake flags
-        echo "enable-pgo=false" >> $GITHUB_OUTPUT
-        target_cmake_flags="-DLLVM_RELEASE_ENABLE_PGO=OFF"
         # The macOS builds try to cross compile some libraries so we need to
         # add extra CMake args to disable them.
         # See https://github.com/llvm/llvm-project/issues/99767
