@@ -249,6 +249,38 @@ def MPI_IRecvOp : MPI_Op<"irecv", []> {
 }
 
 //===----------------------------------------------------------------------===//
+// AllReduceOp
+//===----------------------------------------------------------------------===//
+
+def MPI_AllReduceOp : MPI_Op<"allreduce", []> {
+  let summary = "Equivalent to `MPI_Allreduce(sendbuf, recvbuf, op, comm)`";
+  let description = [{
+    MPI_Allreduce performs a reduction operation on the values in the sendbuf
+    array and stores the result in the recvbuf array. The operation is 
+    performed across all processes in the communicator.
+
+    If communicator is not specified, `MPI_COMM_WORLD` is used by default.
+
+    This operation can optionally return an `!mpi.retval` value that can be used
+    to check for errors.
+  }];
+
+  let arguments = (
+    ins AnyMemRef : $sendbuf,
+    AnyMemRef : $recvbuf,
+    MPI_Op : $op,
+    Optional<MPI_Comm> : $comm
+  );
+
+  let results = (outs Optional<MPI_Retval>:$retval);
+
+  let assemblyFormat = "`(` $sendbuf `,` $recvbuf `,` $op (`,` $comm)?`)` "
+                       "attr-dict `:` type($sendbuf) `,` type($recvbuf) `,` "
+                       "type($op) (`->` type($retval)^)?";
+  let hasCanonicalizer = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // BarrierOp
 //===----------------------------------------------------------------------===//
 
