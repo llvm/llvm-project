@@ -43,13 +43,15 @@ def MPI_InitOp : MPI_Op<"init", []> {
 
 def MPI_CommRankOp : MPI_Op<"comm_rank", []> {
   let summary = "Get the current rank, equivalent to "
-                "`MPI_Comm_rank(MPI_COMM_WORLD, &rank)`";
+                "`MPI_Comm_rank(comm, &rank)`";
   let description = [{
-    Communicators other than `MPI_COMM_WORLD` are not supported for now.
+    If communicator is not specified, `MPI_COMM_WORLD` is used by default.
 
     This operation can optionally return an `!mpi.retval` value that can be used
     to check for errors.
   }];
+
+  let arguments = (ins Optional<MPI_Comm> : $comm);
 
   let results = (
     outs Optional<MPI_Retval> : $retval,
@@ -65,13 +67,15 @@ def MPI_CommRankOp : MPI_Op<"comm_rank", []> {
 
 def MPI_CommSizeOp : MPI_Op<"comm_size", []> {
   let summary = "Get the size of the group associated to the communicator, equivalent to "
-                "`MPI_Comm_size(MPI_COMM_WORLD, &size)`";
+                "`MPI_Comm_size(comm, &size)`";
   let description = [{
-    Communicators other than `MPI_COMM_WORLD` are not supported for now.
+    If communicator is not specified, `MPI_COMM_WORLD` is used by default.
 
     This operation can optionally return an `!mpi.retval` value that can be used
     to check for errors.
   }];
+
+  let arguments = (ins Optional<MPI_Comm> : $comm);
 
   let results = (
     outs Optional<MPI_Retval> : $retval,
@@ -87,19 +91,19 @@ def MPI_CommSizeOp : MPI_Op<"comm_size", []> {
 
 def MPI_SendOp : MPI_Op<"send", []> {
   let summary =
-      "Equivalent to `MPI_Send(ptr, size, dtype, dest, tag, MPI_COMM_WORLD)`";
+      "Equivalent to `MPI_Send(ptr, size, dtype, dest, tag, comm)`";
   let description = [{
     MPI_Send performs a blocking send of `size` elements of type `dtype` to rank
     `dest`. The `tag` value and communicator enables the library to determine 
     the matching of multiple sends and receives between the same ranks.
 
-    Communicators other than `MPI_COMM_WORLD` are not supprted for now.
+    If communicator is not specified, `MPI_COMM_WORLD` is used by default.
 
     This operation can optionally return an `!mpi.retval` value that can be used
     to check for errors.
   }];
 
-  let arguments = (ins AnyMemRef : $ref, I32 : $tag, I32 : $rank);
+  let arguments = (ins AnyMemRef : $ref, I32 : $tag, I32 : $rank, Optional<MPI_Comm> : $comm);
 
   let results = (outs Optional<MPI_Retval>:$retval);
 
@@ -115,22 +119,21 @@ def MPI_SendOp : MPI_Op<"send", []> {
 
 // TODO what about request handler?
 // NOTE datatype & count args are implicit by the type of the first argument (i.e. memref of eltype)
-// NOTE other communicators not yet supported by the `mpi` dialect
 def MPI_ISendOp : MPI_Op<"isend", []> {
   let summary =
-      "Equivalent to `MPI_Isend(ptr, size, dtype, dest, tag, MPI_COMM_WORLD)`";
+      "Equivalent to `MPI_Isend(ptr, size, dtype, dest, tag, comm)`";
   let description = [{
     MPI_Isend begins a non-blocking send of `size` elements of type `dtype` to rank
     `dest`. The `tag` value and communicator enables the library to determine 
     the matching of multiple sends and receives between the same ranks.
 
-    Communicators other than `MPI_COMM_WORLD` are not supprted for now.
+    If communicator is not specified, `MPI_COMM_WORLD` is used by default.
 
     This operation can optionally return an `!mpi.retval` value that can be used
     to check for errors.
   }];
 
-  let arguments = (ins AnyMemRef : $ref, I32 : $tag, I32 : $rank);
+  let arguments = (ins AnyMemRef : $ref, I32 : $tag, I32 : $rank, Optional<MPI_Comm> : $comm);
 
   let results = (outs Optional<MPI_Retval>:$retval);
 
@@ -146,14 +149,14 @@ def MPI_ISendOp : MPI_Op<"isend", []> {
 
 def MPI_RecvOp : MPI_Op<"recv", []> {
   let summary = "Equivalent to `MPI_Recv(ptr, size, dtype, dest, tag, "
-                "MPI_COMM_WORLD, MPI_STATUS_IGNORE)`";
+                "comm, MPI_STATUS_IGNORE)`";
   let description = [{
     MPI_Recv performs a blocking receive of `size` elements of type `dtype` 
     from rank `dest`. The `tag` value and communicator enables the library to 
     determine the matching of multiple sends and receives between the same 
     ranks.
 
-    Communicators other than `MPI_COMM_WORLD` are not supprted for now.
+    If communicator is not specified, `MPI_COMM_WORLD` is used by default.
     The MPI_Status is set to `MPI_STATUS_IGNORE`, as the status object 
     is not yet ported to MLIR.
 
@@ -161,7 +164,7 @@ def MPI_RecvOp : MPI_Op<"recv", []> {
     to check for errors.
   }];
 
-  let arguments = (ins AnyMemRef : $ref, I32 : $tag, I32 : $rank);
+  let arguments = (ins AnyMemRef : $ref, I32 : $tag, I32 : $rank, Optional<MPI_Comm> : $comm);
 
   let results = (outs Optional<MPI_Retval>:$retval);
 
@@ -175,17 +178,16 @@ def MPI_RecvOp : MPI_Op<"recv", []> {
 // IRecvOp
 //===----------------------------------------------------------------------===//
 
-// TODO same as MPI_ISendOp
 def MPI_IRecvOp : MPI_Op<"irecv", []> {
   let summary = "Equivalent to `MPI_Irecv(ptr, size, dtype, dest, tag, "
-                "MPI_COMM_WORLD, MPI_STATUS_IGNORE)`";
+                "comm, MPI_STATUS_IGNORE)`";
   let description = [{
     MPI_Irecv begins a non-blocking receive of `size` elements of type `dtype` 
     from rank `dest`. The `tag` value and communicator enables the library to 
     determine the matching of multiple sends and receives between the same 
     ranks.
 
-    Communicators other than `MPI_COMM_WORLD` are not supprted for now.
+    If communicator is not specified, `MPI_COMM_WORLD` is used by default.
     The MPI_Status is set to `MPI_STATUS_IGNORE`, as the status object 
     is not yet ported to MLIR.
 
@@ -193,7 +195,7 @@ def MPI_IRecvOp : MPI_Op<"irecv", []> {
     to check for errors.
   }];
 
-  let arguments = (ins AnyMemRef : $ref, I32 : $tag, I32 : $rank);
+  let arguments = (ins AnyMemRef : $ref, I32 : $tag, I32 : $rank, Optional<MPI_Comm> : $comm);
 
   let results = (outs Optional<MPI_Retval>:$retval);
 
