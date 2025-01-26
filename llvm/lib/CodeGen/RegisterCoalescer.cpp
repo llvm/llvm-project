@@ -1038,6 +1038,19 @@ RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
   return { true, ShrinkB };
 }
 
+// Replace the given MachineInstr * with nullptr inside a work list. Used to
+// remove an instruction when its pointer is reused. Returns true if replaced,
+// false otherwise.
+static bool removeFromWorkList(MutableArrayRef<MachineInstr *> WorkList,
+                               MachineInstr *MI) {
+  auto It = std::find(WorkList.begin(), WorkList.end(), MI);
+  if (It != WorkList.end()) {
+    *It = nullptr;
+    return true;
+  }
+  return false;
+}
+
 /// For copy B = A in BB2, if A is defined by A = B in BB0 which is a
 /// predecessor of BB2, and if B is not redefined on the way from A = B
 /// in BB0 to B = A in BB2, B = A in BB2 is partially redundant if the
@@ -1197,7 +1210,15 @@ bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
     // If the newly created Instruction has an address of an instruction that was
     // deleted before (object recycled by the allocator) it needs to be removed from
     // the deleted list.
-    ErasedInstrs.erase(NewCopyMI);
+    bool WasErased = ErasedInstrs.erase(NewCopyMI);
+    // Also remove the deleted instruction from work lists. There shouldn't be
+    // duplicate instructions there.
+    if (WasErased) {
+      // Attempt to remove from WorkList. If not found, it could be in
+      // LocalWorkList.
+      if (!removeFromWorkList(WorkList, NewCopyMI))
+        removeFromWorkList(LocalWorkList, NewCopyMI);
+    }
   } else {
     LLVM_DEBUG(dbgs() << "\tremovePartialRedundancy: Remove the copy from "
                       << printMBBReference(MBB) << '\t' << CopyMI);
