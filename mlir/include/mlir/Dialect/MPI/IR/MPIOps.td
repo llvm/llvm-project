@@ -248,6 +248,10 @@ def MPI_IRecvOp : MPI_Op<"irecv", []> {
   let hasCanonicalizer = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// BarrierOp
+//===----------------------------------------------------------------------===//
+
 def MPI_Barrier : MPI_Op<"barrier", []> {
   let summary = "Equivalent to `MPI_Barrier(comm)`";
   let description = [{
@@ -261,6 +265,29 @@ def MPI_Barrier : MPI_Op<"barrier", []> {
   }];
 
   let arguments = (ins Optional<MPI_Comm> : $comm);
+
+  let results = (outs Optional<MPI_Retval>:$retval);
+
+  let assemblyFormat = "attr-dict `:` type($retval)^";
+}
+
+//===----------------------------------------------------------------------===//
+// WaitOp
+//===----------------------------------------------------------------------===//
+
+def MPI_Wait : MPI_Op<"wait", []> {
+  let summary = "Equivalent to `MPI_Wait(req, MPI_STATUS_IGNORE)`";
+  let description = [{
+    MPI_Wait blocks execution until the request has completed.
+
+    The MPI_Status is set to `MPI_STATUS_IGNORE`, as the status object 
+    is not yet ported to MLIR.
+
+    This operation can optionally return an `!mpi.retval` value that can be used
+    to check for errors.
+  }];
+
+  let arguments = (MPI_Request : $req);
 
   let results = (outs Optional<MPI_Retval>:$retval);
 
