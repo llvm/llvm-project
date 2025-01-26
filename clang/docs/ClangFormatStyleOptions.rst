@@ -3732,6 +3732,11 @@ the configuration (without a prefix: ``Auto``).
     namespace Extra {
     }}}
 
+.. _ConfigFile:
+
+**ConfigFile** (``String``) :versionbadge:`clang-format 20` :ref:`¶ <ConfigFile>`
+  Specify the absolute or relative path of another config file to process.
+
 .. _ConstructorInitializerAllOnOneLineOrOnePerLine:
 
 **ConstructorInitializerAllOnOneLineOrOnePerLine** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <ConstructorInitializerAllOnOneLineOrOnePerLine>`
