@@ -782,6 +782,22 @@ uint32_t Serializer::prepareConstant(Location loc, Type constType,
     SmallVector<uint64_t, 4> index(rank);
     resultID = prepareDenseElementsConstant(loc, constType, attr,
                                             /*dim=*/0, index);
+  } else if (isa<spirv::MatrixType>(constType)) {
+    if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
+      resultID = getNextID();
+      SmallVector<uint32_t, 4> operands = {typeID, resultID};
+      operands.reserve(arrayAttr.size() + 2);
+      for (Attribute elementAttr : arrayAttr) {
+        if (auto elementID = prepareConstant(loc, 
+            cast<spirv::MatrixType>(constType).getColumnType(), elementAttr)) {
+          operands.push_back(elementID);
+        } else {
+          return 0;
+        }
+      }
+      spirv::Opcode opcode = spirv::Opcode::OpConstantComposite;
+      encodeInstructionInto(typesGlobalValues, opcode, operands);
+    }
   } else if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
     resultID = prepareArrayConstant(loc, constType, arrayAttr);
   }

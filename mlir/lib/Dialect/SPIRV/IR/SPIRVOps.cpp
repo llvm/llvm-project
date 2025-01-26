@@ -579,7 +579,7 @@ ParseResult spirv::ConstantOp::parse(OpAsmParser &parser,
 
 void spirv::ConstantOp::print(OpAsmPrinter &printer) {
   printer << ' ' << getValue();
-  if (llvm::isa<spirv::ArrayType>(getType()))
+  if (llvm::isa<spirv::ArrayType, spirv::MatrixType>(getType()))
     printer << " : " << getType();
 }
 
@@ -626,18 +626,49 @@ static LogicalResult verifyConstantType(spirv::ConstantOp op, Attribute value,
     }
     return success();
   }
-  if (auto arrayAttr = llvm::dyn_cast<ArrayAttr>(value)) {
-    auto arrayType = llvm::dyn_cast<spirv::ArrayType>(opType);
-    if (!arrayType)
-      return op.emitOpError(
-          "must have spirv.array result type for array value");
-    Type elemType = arrayType.getElementType();
-    for (Attribute element : arrayAttr.getValue()) {
-      // Verify array elements recursively.
-      if (failed(verifyConstantType(op, element, elemType)))
-        return failure();
+  if (auto arrayAttr = mlir::dyn_cast<ArrayAttr>(value)) {
+    // Case for Matrix result type
+    if (auto matrixType = mlir::dyn_cast<spirv::MatrixType>(opType)) {
+      unsigned numColumns = matrixType.getNumColumns();
+      unsigned numRows    = matrixType.getNumRows();
+      if (arrayAttr.size() != numColumns)
+        return op.emitOpError("expected ")
+              << numColumns << " columns in matrix constant, but got "
+              << arrayAttr.size();
+
+      Type elementTy = matrixType.getElementType();
+      for (auto [colIndex, colAttr] : llvm::enumerate(arrayAttr)) {
+        // Ensure each column is a dense array of the right shape/type
+        auto denseAttr = mlir::dyn_cast<DenseElementsAttr>(colAttr);
+        if (!denseAttr)
+          return op.emitOpError("matrix column #")
+                << colIndex << " must be a DenseElementsAttr";
+
+        auto shapedTy = mlir::dyn_cast<ShapedType>(denseAttr.getType());
+        if (!shapedTy || shapedTy.getNumElements() != numRows)
+          return op.emitOpError("matrix column #")
+                << colIndex << " has incorrect size: expected "
+                << numRows << " elements";
+
+        if (shapedTy.getElementType() != elementTy)
+          return op.emitOpError("matrix column #")
+                << colIndex << " has incorrect element type: expected "
+                << elementTy << ", got " << shapedTy.getElementType();
+      }
+      return success();
     }
-    return success();
+    // Case for Array result type
+    if (auto arrayType = mlir::dyn_cast<spirv::ArrayType>(opType)) {
+      Type elemType = arrayType.getElementType();
+      for (Attribute element : arrayAttr.getValue()) {
+        // Verify array elements recursively.
+        if (failed(verifyConstantType(op, element, elemType)))
+          return failure();
+      }
+      return success();
+    }
+    return op.emitOpError(
+        "must have spirv.array or spirv.matrix result type for array value");
   }
   return op.emitOpError("cannot have attribute: ") << value;
 }
