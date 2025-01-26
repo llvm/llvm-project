@@ -23,14 +23,18 @@
 template <class T1, class T2>
 concept CanCompare = requires(T1 t1, T2 t2) { t1 == t2; };
 
-struct Foo{};
-static_assert(!CanCompare<Foo, Foo>);
+struct NonComparable {};
+static_assert(!CanCompare<NonComparable, NonComparable>);
 
 static_assert(CanCompare<std::expected<int, int>, std::expected<int, int>>);
 static_assert(CanCompare<std::expected<int, int>, std::expected<short, short>>);
 
-// Note this is true because other overloads are unconstrained
-static_assert(CanCompare<std::expected<int, int>, std::expected<void, int>>);
+#if _LIBCPP_STD_VER >= 26
+static_assert(!CanCompare<std::expected<int, int>, std::expected<void, int>>);
+static_assert(!CanCompare<std::expected<NonComparable, int>, std::expected<NonComparable, int>>);
+static_assert(!CanCompare<std::expected<int, NonComparable>, std::expected<int, NonComparable>>);
+static_assert(!CanCompare<std::expected<NonComparable, NonComparable>, std::expected<NonComparable, NonComparable>>);
+#endif
 
 constexpr bool test() {
   // x.has_value() && y.has_value()

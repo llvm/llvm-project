@@ -10,6 +10,7 @@
 #define _LIBCPP___EXPECTED_EXPECTED_H
 
 #include <__assert>
+#include <__concepts/convertible_to.h>
 #include <__config>
 #include <__expected/bad_expected_access.h>
 #include <__expected/unexpect.h>
@@ -1139,7 +1140,15 @@ public:
 
   // [expected.object.eq], equality operators
   template <class _T2, class _E2>
+#  if _LIBCPP_STD_VER >= 26
+    requires(!is_void_v<_T2> &&
+             requires(const _Tp& __tp, const _T2& __t2, const _Err& __err, const _E2& __e2) {
+               { __tp == __t2 } -> convertible_to<bool>;
+               { __err == __e2 } -> convertible_to<bool>;
+             })
+#  else
     requires(!is_void_v<_T2>)
+#  endif
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const expected<_T2, _E2>& __y) {
     if (__x.__has_val() != __y.__has_val()) {
       return false;
@@ -1153,11 +1162,22 @@ public:
   }
 
   template <class _T2>
+#  if _LIBCPP_STD_VER >= 26
+    requires(!__is_std_expected<_T2>::value &&
+             requires(const _Tp& __tp, const _T2& __t2) {
+               { __tp == __t2 } -> convertible_to<bool>;
+             })
+#  endif
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const _T2& __v) {
     return __x.__has_val() && static_cast<bool>(__x.__val() == __v);
   }
 
   template <class _E2>
+#  if _LIBCPP_STD_VER >= 26
+    requires requires(const _Err& __err, const _E2& __e2) {
+      { __err == __e2 } -> convertible_to<bool>;
+    }
+#  endif
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const unexpected<_E2>& __e) {
     return !__x.__has_val() && static_cast<bool>(__x.__unex() == __e.error());
   }
@@ -1850,7 +1870,14 @@ public:
 
   // [expected.void.eq], equality operators
   template <class _T2, class _E2>
+#  if _LIBCPP_STD_VER >= 26
+    requires(is_void_v<_T2> &&
+             requires(const _Err& __err, const _E2& __e2) {
+               { __err == __e2 } -> convertible_to<bool>;
+             })
+#  else
     requires is_void_v<_T2>
+#  endif
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const expected<_T2, _E2>& __y) {
     if (__x.__has_val() != __y.__has_val()) {
       return false;
@@ -1860,6 +1887,11 @@ public:
   }
 
   template <class _E2>
+#  if _LIBCPP_STD_VER >= 26
+    requires requires(const _Err& __err, const _E2& __e2) {
+      { __err == __e2 } -> convertible_to<bool>;
+    }
+#  endif
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const unexpected<_E2>& __y) {
     return !__x.__has_val() && static_cast<bool>(__x.__unex() == __y.error());
   }
