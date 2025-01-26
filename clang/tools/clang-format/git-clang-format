@@ -150,6 +150,15 @@ def main():
         help="print a diff instead of applying the changes",
     )
     p.add_argument(
+        "--diff_from_common_commit",
+        action="store_true",
+        help=(
+            "diff from the last common commit for commits in "
+            "separate branches rather than the exact point of the "
+            "commits"
+        ),
+    )
+    p.add_argument(
         "--diffstat",
         action="store_true",
         help="print a diffstat instead of applying the changes",
@@ -170,6 +179,11 @@ def main():
     )
     p.add_argument(
         "-p", "--patch", action="store_true", help="select hunks interactively"
+    )
+    p.add_argument(
+        "--print0",
+        action="store_true",
+        help="end each printed filename with a null character",
     )
     p.add_argument(
         "-q",
@@ -195,20 +209,6 @@ def main():
         action="count",
         default=0,
         help="print extra information",
-    )
-    p.add_argument(
-        "--diff_from_common_commit",
-        action="store_true",
-        help=(
-            "diff from the last common commit for commits in "
-            "separate branches rather than the exact point of the "
-            "commits"
-        ),
-    )
-    p.add_argument(
-        "--print0",
-        action="store_true",
-        help="end each printed filename with a null character",
     )
     # We gather all the remaining positional arguments into 'args' since we need
     # to use some heuristics to determine whether or not <commit> was present.
