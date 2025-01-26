@@ -439,6 +439,14 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ufromfpxl
 )
 
+if(LLVM_LIBC_FULL_BUILD)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # compiler entrypoints (no corresponding header)
+    libc.src.compiler.__stack_chk_fail
+    libc.src.compiler.__stack_chk_guard
+  )
+endif()
+
 set(TARGET_LLVMLIBC_ENTRYPOINTS
   ${TARGET_LIBC_ENTRYPOINTS}
   ${TARGET_LIBM_ENTRYPOINTS}

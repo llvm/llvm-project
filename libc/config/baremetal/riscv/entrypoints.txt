@@ -22,6 +22,7 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # compiler entrypoints (no corresponding header)
     libc.src.compiler.__stack_chk_fail
+    libc.src.compiler.__stack_chk_guard
 
     # errno.h entrypoints
     libc.src.errno.errno
