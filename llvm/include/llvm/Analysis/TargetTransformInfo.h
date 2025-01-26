@@ -622,6 +622,9 @@ public:
     /// Don't allow runtime unrolling if expanding the trip count takes more
     /// than SCEVExpansionBudget.
     unsigned SCEVExpansionBudget;
+    /// Allow runtime unrolling multi-exit loops. Should only be set if the
+    /// target determined that multi-exit unrolling is profitable for the loop.
+    bool UnrollMultiExit;
   };
 
   /// Get target-customized preferences for the generic loop unrolling

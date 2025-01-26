@@ -583,7 +583,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     bool UseEpilogRemainder, bool UnrollRemainder, bool ForgetAllSCEV,
     LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
     const TargetTransformInfo *TTI, bool PreserveLCSSA,
-    unsigned SCEVExpansionBudget, Loop **ResultLoop) {
+    unsigned SCEVExpansionBudget, bool UnrollMultiExit, Loop **ResultLoop) {
   LLVM_DEBUG(dbgs() << "Trying runtime unrolling on Loop: \n");
   LLVM_DEBUG(L->dump());
   LLVM_DEBUG(UseEpilogRemainder ? dbgs() << "Using epilog remainder.\n"
@@ -632,8 +632,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
     if (!PreserveLCSSA)
       return false;
 
-    if (!canProfitablyUnrollMultiExitLoop(L, OtherExits, LatchExit,
-                                          UseEpilogRemainder)) {
+    if (!UnrollMultiExit && !canProfitablyUnrollMultiExitLoop(
+                                L, OtherExits, LatchExit, UseEpilogRemainder)) {
       LLVM_DEBUG(
           dbgs()
           << "Multiple exit/exiting blocks in loop and multi-exit unrolling not "
