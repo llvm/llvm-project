@@ -48,10 +48,8 @@ enum class RecurKind {
   FMinimum, ///< FP min with llvm.minimum semantics
   FMaximum, ///< FP max with llvm.maximum semantics
   FMulAdd,  ///< Sum of float products with llvm.fmuladd(a * b + sum).
-  IAnyOf,   ///< Any_of reduction with select(icmp(),x,y) where one of (x,y) is
-            ///< loop invariant, and both x and y are integer type.
-  FAnyOf,   ///< Any_of reduction with select(fcmp(),x,y) where one of (x,y) is
-            ///< loop invariant, and both x and y are integer type.
+  AnyOf,    ///< Any_of reduction with select(icmp(),x,y) where one of (x,y) is
+            ///< loop invariant.
   IFindLastIV, ///< FindLast reduction with select(icmp(),x,y) where one of
                ///< (x,y) is increasing loop induction, and both x and y are
                ///< integer type.
@@ -173,7 +171,7 @@ public:
   static InstDesc isConditionalRdxPattern(RecurKind Kind, Instruction *I);
 
   /// Returns the opcode corresponding to the RecurrenceKind.
-  static unsigned getOpcode(RecurKind Kind);
+  static unsigned getOpcode(RecurKind Kind, Type *Ty);
 
   /// Returns true if Phi is a reduction of type Kind and adds it to the
   /// RecurrenceDescriptor. If either \p DB is non-null or \p AC and \p DT are
@@ -209,7 +207,9 @@ public:
 
   RecurKind getRecurrenceKind() const { return Kind; }
 
-  unsigned getOpcode() const { return getOpcode(getRecurrenceKind()); }
+  unsigned getOpcode() const {
+    return getOpcode(getRecurrenceKind(), getRecurrenceType());
+  }
 
   FastMathFlags getFastMathFlags() const { return FMF; }
 
@@ -250,7 +250,7 @@ public:
   /// Returns true if the recurrence kind is of the form
   ///   select(cmp(),x,y) where one of (x,y) is loop invariant.
   static bool isAnyOfRecurrenceKind(RecurKind Kind) {
-    return Kind == RecurKind::IAnyOf || Kind == RecurKind::FAnyOf;
+    return Kind == RecurKind::AnyOf;
   }
 
   /// Returns true if the recurrence kind is of the form
