@@ -23,7 +23,7 @@ struct F {
 };
 F f;
 
-void Test() {
+void Test(int (&arr)[10]) {
   constexpr int *pi = &i;
   // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pi 'int *const' constexpr cinit
   // CHECK-NEXT:  |   |-value: LValue Base=VarDecl {{.*}}, Null=0, Offset=0, HasPath=1, PathLength=0, Path=()
@@ -43,6 +43,10 @@ void Test() {
   constexpr char *pc = &f.padding[2];
   // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pf 'char *const' constexpr cinit
   // CHECK-NEXT:  |   |-value: LValue Base=VarDecl {{.*}}, Null=0, Offset=2, HasPath=1, PathLength=2, Path=({{.*}}, 2)
+
+  constexpr const int *parr = arr + 10;
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} parr 'char *const' constexpr cinit
+  // CHECK-NEXT:  |   |-value: LValue Base=VarDecl {{.*}}, Null=0, Offset=41, HasPath=0
 
   constexpr const int *n = nullptr;
   // CHECK:    `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} n 'const int *const' constexpr cinit
