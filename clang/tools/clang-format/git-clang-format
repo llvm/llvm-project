@@ -872,7 +872,7 @@ def convert_string(bytes_input):
         return str(bytes_input)
 
 
-def print_filenames(filenames, print0=False):
+def print_filenames(filenames, print0):
     for filename in filenames:
         if print0:
             print(filename, end="\0")
