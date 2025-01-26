@@ -473,7 +473,24 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
     // If the current declaration is not a free standing declaration, save it
     // so we can merge it with the subsequent declaration(s) using it.
     if (isa<TagDecl>(*D) && !cast<TagDecl>(*D)->isFreeStanding()) {
-      Decls.push_back(*D);
+
+      // Here we try to filter out the implicitly inserted tag declarations.
+      // E.g.:
+      //   struct Class {
+      //     struct foo *p1;
+      //   ;
+      //
+      //   CXXRecordDecl ... Class ...
+      //   |-CXXRecordDecl ... parent ... struct foo <-- ignore this
+      //   `-FieldDecl ... p1 'struct foo *'
+      //
+      // If `struct foo` has a definition, it will be modeled as a nested record
+      // inside `Class`, so the first condition will be true, unless we are in
+      // C, where `struct foo` will be a child of the translation unit node. In
+      // both cases if there is a definition, we want to print it.
+      if (cast<TagDecl>(*D)->getParent() == DC ||
+          cast<TagDecl>(*D)->getDefinition())
+        Decls.push_back(*D);
       continue;
     }
 
