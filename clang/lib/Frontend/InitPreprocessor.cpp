@@ -935,6 +935,28 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
                       Twine(getClangFullCPPVersion()) + "\"");
 
   // Initialize language-specific preprocessor defines.
+  if (LangOpts.getStdlibHardeningMode()) {
+    const char *StdlibHardeningStr;
+
+    switch (LangOpts.getStdlibHardeningMode()) {
+    case clang::LangOptions::STDLIB_HARDENING_MODE_NOT_SPECIFIED:
+      llvm_unreachable("Unexpected libc++ hardening mode value");
+    case clang::LangOptions::STDLIB_HARDENING_MODE_NONE:
+      StdlibHardeningStr = "_LIBCPP_HARDENING_MODE_NONE";
+      break;
+    case clang::LangOptions::STDLIB_HARDENING_MODE_FAST:
+      StdlibHardeningStr = "_LIBCPP_HARDENING_MODE_FAST";
+      break;
+    case clang::LangOptions::STDLIB_HARDENING_MODE_EXTENSIVE:
+      StdlibHardeningStr = "_LIBCPP_HARDENING_MODE_EXTENSIVE";
+      break;
+    case clang::LangOptions::STDLIB_HARDENING_MODE_DEBUG:
+      StdlibHardeningStr = "_LIBCPP_HARDENING_MODE_DEBUG";
+      break;
+    }
+
+    Builder.defineMacro("_LIBCPP_HARDENING_MODE", StdlibHardeningStr);
+  }
 
   // Standard conforming mode?
   if (!LangOpts.GNUMode && !LangOpts.MSVCCompat)

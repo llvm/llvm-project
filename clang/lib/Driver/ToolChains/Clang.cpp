@@ -1240,6 +1240,14 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   if (Arg *A = Args.getLastArg(options::OPT_I_))
     D.Diag(diag::err_drv_I_dash_not_supported) << A->getAsString(Args);
 
+  if (Arg *A = Args.getLastArg(options::OPT_stdlib_hardening_EQ)) {
+    if (types::isCXX(Inputs[0].getType()) &&
+        getToolChain().GetCXXStdlibType(Args) == ToolChain::CST_Libcxx)
+      A->render(Args, CmdArgs);
+    else
+      D.Diag(diag::err_drv_stdlib_hardening_unavailable);
+  }
+
   // If we have a --sysroot, and don't have an explicit -isysroot flag, add an
   // -isysroot to the CC1 invocation.
   StringRef sysroot = C.getSysRoot();

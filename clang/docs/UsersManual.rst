@@ -3789,6 +3789,17 @@ Controlling implementation limits
   Sets the limit for iterative calls to 'operator->' functions to N.  The
   default is 256.
 
+Enabling standard library hardening
+-----------------------------------
+
+.. option:: -fstdlib-hardening=[none, fast, extensive, debug]
+
+  Enables `standard library hardening <https://libcxx.llvm.org/Hardening.html>`.
+  When the option is used, clang sets macro ``_LIBCPP_HARDENING_MODE`` to
+  ``_LIBCPP_HARDENING_MODE_{NONE,FAST,EXTENSIVE,DEBUG}`` based on the hardening
+  mode chosen by the user. This feature is currently available only when libc++
+  is used.
+
 .. _objc:
 
 Objective-C Language Features
