@@ -60,7 +60,6 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
