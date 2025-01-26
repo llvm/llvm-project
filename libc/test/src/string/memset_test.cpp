@@ -64,7 +64,7 @@ TEST(LlvmLibcMemsetTest, CheckAccess) {
 
 TEST(LlvmLibcMemsetTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::memset(nullptr, 0, 1); },
-               WITH_SIGNAL(SIGSEGV));
+               WITH_SIGNAL(SIGILL));
 }
 
 #endif // defined(LIBC_TARGET_OS_IS_LINUX)
