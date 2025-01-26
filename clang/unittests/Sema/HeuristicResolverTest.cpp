@@ -155,6 +155,46 @@ TEST(HeuristicResolver, MemberExpr_SmartPointer_Qualified) {
       cxxMethodDecl(hasName("find"), isConst()).bind("output"));
 }
 
+TEST(HeuristicResolver, MemberExpr_AutoTypeDeduction1) {
+  std::string Code = R"cpp(
+    template <typename T>
+    struct A {
+      int waldo;
+    };
+    template <typename T>
+    void foo(A<T> a) {
+      auto copy = a;
+      copy.waldo;
+    }
+  )cpp";
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("waldo")).bind("input"),
+      fieldDecl(hasName("waldo")).bind("output"));
+}
+
+TEST(HeuristicResolver, MemberExpr_AutoTypeDeduction2) {
+  std::string Code = R"cpp(
+    struct B {
+      int waldo;
+    };
+
+    template <typename T>
+    struct A {
+      B b;
+    };
+    template <typename T>
+    void foo(A<T> a) {
+      auto b = a.b;
+      b.waldo;
+    }
+  )cpp";
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("waldo")).bind("input"),
+      fieldDecl(hasName("waldo")).bind("output"));
+}
+
 TEST(HeuristicResolver, MemberExpr_Chained) {
   std::string Code = R"cpp(
     struct A { void foo() {} };
