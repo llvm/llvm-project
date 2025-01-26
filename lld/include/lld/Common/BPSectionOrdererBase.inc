@@ -48,13 +48,20 @@ template <class D> struct BPOrderer {
   using Section = typename BPOrdererTraits<D>::Section;
   using Symbol = typename BPOrdererTraits<D>::Symbol;
 
-  // Reorder sections using balanced partitioning algorithm based on profile.
+  // Compute a section order using the Balanced Partitioning algorithm.
+  //
+  // * for*Compresion: Improve Lempel-Ziv compression by grouping
+  //   similar sections together.
+  // * profilePath: Utilize a temporal profile file to reduce page faults during
+  //   program startup.
+  // * compressionSortStartupFunctions: if profilePath is specified, allocate
+  //   extra utility vertices to prioritize nearby function similarity.
   static auto
-  reorderSections(llvm::StringRef profilePath, bool forFunctionCompression,
-                  bool forDataCompression, bool compressionSortStartupFunctions,
-                  bool verbose, llvm::ArrayRef<Section *> sections,
-                  const DenseMap<CachedHashStringRef, DenseSet<unsigned>>
-                      &rootSymbolToSectionIdxs)
+  computeOrder(llvm::StringRef profilePath, bool forFunctionCompression,
+               bool forDataCompression, bool compressionSortStartupFunctions,
+               bool verbose, llvm::ArrayRef<Section *> sections,
+               const DenseMap<CachedHashStringRef, DenseSet<unsigned>>
+                   &rootSymbolToSectionIdxs)
       -> llvm::DenseMap<const Section *, int>;
 };
 } // namespace lld
@@ -145,7 +152,7 @@ inline StringRef getRootSymbol(StringRef name) {
 }
 
 template <class D>
-auto BPOrderer<D>::reorderSections(
+auto BPOrderer<D>::computeOrder(
     StringRef profilePath, bool forFunctionCompression, bool forDataCompression,
     bool compressionSortStartupFunctions, bool verbose,
     ArrayRef<Section *> sections,

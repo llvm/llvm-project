@@ -118,32 +118,31 @@ private:
 DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     StringRef profilePath, bool forFunctionCompression, bool forDataCompression,
     bool compressionSortStartupFunctions, bool verbose) {
+  // Collect candidate sections and associated symbols.
   SmallVector<InputSection *> sections;
-  DenseMap<StringRef, DenseSet<unsigned>> symbolToSectionIdxs;
+  DenseMap<CachedHashStringRef, DenseSet<unsigned>> rootSymbolToSectionIdxs;
   for (const auto *file : inputFiles) {
     for (auto *sec : file->sections) {
       for (auto &subsec : sec->subsections) {
         auto *isec = subsec.isec;
         if (!isec || isec->data.empty())
           continue;
-        for (auto *sym : BPOrdererMachO::getSymbols(*isec))
-          symbolToSectionIdxs[sym->getName()].insert(sections.size());
+        size_t idx = sections.size();
         sections.emplace_back(isec);
+        for (auto *sym : BPOrdererMachO::getSymbols(*isec)) {
+          auto rootName = getRootSymbol(sym->getName());
+          rootSymbolToSectionIdxs[CachedHashStringRef(rootName)].insert(idx);
+          if (auto linkageName =
+                  BPOrdererMachO::getResolvedLinkageName(rootName))
+            rootSymbolToSectionIdxs[CachedHashStringRef(*linkageName)].insert(
+                idx);
+        }
       }
     }
   }
 
-  DenseMap<CachedHashStringRef, DenseSet<unsigned>> rootSymbolToSectionIdxs;
-  for (auto &[name, sectionIdxs] : symbolToSectionIdxs) {
-    auto rootName = getRootSymbol(name);
-    rootSymbolToSectionIdxs[CachedHashStringRef(rootName)].insert(
-        sectionIdxs.begin(), sectionIdxs.end());
-    if (auto linkageName = BPOrdererMachO::getResolvedLinkageName(rootName))
-      rootSymbolToSectionIdxs[CachedHashStringRef(*linkageName)].insert(
-          sectionIdxs.begin(), sectionIdxs.end());
-  }
-  return BPOrdererMachO::reorderSections(
-      profilePath, forFunctionCompression, forDataCompression,
-      compressionSortStartupFunctions, verbose, sections,
-      rootSymbolToSectionIdxs);
+  return BPOrdererMachO::computeOrder(profilePath, forFunctionCompression,
+                                      forDataCompression,
+                                      compressionSortStartupFunctions, verbose,
+                                      sections, rootSymbolToSectionIdxs);
 }
