@@ -707,7 +707,7 @@ static void IntroduceControlFlow(Function *F, Random &R) {
     BasicBlock *Curr = Instr->getParent();
     BasicBlock::iterator Loc = Instr->getIterator();
     BasicBlock *Next = Curr->splitBasicBlock(Loc, "CF");
-    Instr->moveBefore(Curr->getTerminator());
+    Instr->moveBefore(Curr->getTerminator()->getIterator());
     if (Curr != &F->getEntryBlock()) {
       BranchInst::Create(Curr, Next, Instr,
                          Curr->getTerminator()->getIterator());
