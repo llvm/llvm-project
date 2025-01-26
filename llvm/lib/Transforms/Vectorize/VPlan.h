@@ -67,6 +67,7 @@ class VPlanSlp;
 class Value;
 class LoopVectorizationCostModel;
 class LoopVersioning;
+class VPDominatorTree;
 
 struct VPCostContext;
 
@@ -232,6 +233,7 @@ struct VPTransformState {
                    LoopInfo *LI, DominatorTree *DT, IRBuilderBase &Builder,
                    InnerLoopVectorizer *ILV, VPlan *Plan,
                    Loop *CurrentParentLoop, Type *CanonicalIVTy);
+  ~VPTransformState();
   /// Target Transform Info.
   const TargetTransformInfo *TTI;
 
@@ -384,6 +386,9 @@ struct VPTransformState {
 
   /// VPlan-based type analysis.
   VPTypeAnalysis TypeAnalysis;
+
+  /// VPlan-based dominator tree.
+  VPDominatorTree *VPDT = nullptr;
 };
 
 /// VPBlockBase is the building block of the Hierarchical Control-Flow Graph.

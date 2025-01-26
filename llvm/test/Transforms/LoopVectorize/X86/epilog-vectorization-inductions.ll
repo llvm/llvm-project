@@ -147,15 +147,15 @@ define void @test_induction_step_needs_expansion(ptr noalias %j, ptr %k, i64 %l,
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[L]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i16
 ; CHECK-NEXT:    [[IND_END:%.*]] = mul i16 [[DOTCAST]], [[TMP0]]
-; CHECK-NEXT:    [[DOTSPLATINSERT2:%.*]] = insertelement <16 x i16> poison, i16 [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i16> [[DOTSPLATINSERT2]], <16 x i16> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i16> poison, i16 [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i16> [[BROADCAST_SPLATINSERT]], <16 x i16> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <16 x i16> splat (i16 16), [[TMP2]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <16 x i16> poison, i16 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <16 x i16> [[DOTSPLATINSERT]], <16 x i16> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>, [[DOTSPLAT]]
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <16 x i16> zeroinitializer, [[TMP11]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i16> poison, i16 [[OFF]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <16 x i16> [[BROADCAST_SPLATINSERT]], <16 x i16> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <16 x i16> poison, i16 [[OFF]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <16 x i16> [[BROADCAST_SPLATINSERT2]], <16 x i16> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
