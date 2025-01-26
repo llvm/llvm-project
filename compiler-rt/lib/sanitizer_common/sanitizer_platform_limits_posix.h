@@ -872,6 +872,7 @@ struct __sanitizer_glob_t {
   int (*gl_lstat)(const char *, void *);
   int (*gl_stat)(const char *, void *);
 };
+#      define __SANITIZER_GLOB_DOOFFS (1 << 3)
 #    endif  // SANITIZER_LINUX
 
 #    if SANITIZER_LINUX
