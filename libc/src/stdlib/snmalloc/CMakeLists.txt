@@ -6,7 +6,7 @@ set(SNMALLOC_HEADER_ONLY_LIBRARY ON CACHE BOOL "use snmalloc as header only libr
 macro (install)
 endmacro ()
 
-add_subdirectory(${LLVM_LIBC_INCLUDE_SNMALLOC} ${CMAKE_CURRENT_BINARY_DIR}/snmalloc EXCLUDE_FROM_ALL)
+add_subdirectory(${LIBC_INCLUDE_SNMALLOC} ${CMAKE_CURRENT_BINARY_DIR}/snmalloc EXCLUDE_FROM_ALL)
 
 target_compile_options(
   snmalloc 

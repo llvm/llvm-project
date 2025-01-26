@@ -71,7 +71,7 @@ add_header_library(
     libc.src.__support.threads.mutex_common
 )
 
-if (NOT "${LLVM_LIBC_INCLUDE_SNMALLOC}" STREQUAL "")
+if (NOT "${LIBC_INCLUDE_SNMALLOC}" STREQUAL "")
   set (libc_malloc_thread_cleanup_flag "-DLIBC_USE_MALLOC_THREAD_CLEANUP")
 endif()
 
