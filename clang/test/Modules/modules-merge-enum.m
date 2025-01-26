@@ -38,11 +38,21 @@ typedef enum { MyVal_C } MyEnum3;
 // CHECK-NEXT: |   `-EnumType 0x{{.*}} 'MyEnum3' imported
 // CHECK-NEXT: |     `-Enum 0x{{.*}} ''
 
+struct MyStruct {
+  enum MyEnum5 { MyVal_D } Field;
+};
+
+// CHECK:      |-RecordDecl 0x{{.*}} imported in ModA.ModAFile1 <undeserialized declarations> struct MyStruct definition
+// CHECK-NEXT: | |-also in ModB
+// CHECK-NEXT: | |-EnumDecl 0x{{.*}} imported in ModA.ModAFile1 <undeserialized declarations> MyEnum5
+// CHECK-NEXT: | | |-also in ModB
+// CHECK-NEXT: | | `-EnumConstantDecl 0x{{.*}} imported in ModA.ModAFile1 referenced MyVal_D 'int'
+// CHECK-NEXT: | `-FieldDecl 0x{{.*}} imported in ModA.ModAFile1 hidden Field 'enum MyEnum5'
 
 // In this case, no merging happens on the EnumDecl in Objective-C, and ASTWriter writes both EnumConstantDecls when building ModB.
-enum { MyVal_D };
+enum { MyVal_E };
 // CHECK:      |-EnumDecl 0x{{.*}} imported in ModA.ModAFile1 hidden <undeserialized declarations>
-// CHECK-NEXT: | `-EnumConstantDecl 0x{{.*}} imported in ModA.ModAFile1 hidden MyVal_D 'int'
+// CHECK-NEXT: | `-EnumConstantDecl 0x{{.*}} imported in ModA.ModAFile1 hidden MyVal_E 'int'
 
 
 // Redeclarations coming from ModB.
@@ -60,7 +70,9 @@ enum { MyVal_D };
 // CHECK-NEXT: |     `-Enum 0x{{.*}} ''
 
 // CHECK:      |-EnumDecl 0x{{.*}} imported in ModB <undeserialized declarations>
-// CHECK-NEXT: | `-EnumConstantDecl 0x{{.*}} first 0x{{.*}} imported in ModB referenced MyVal_D 'int'
+// CHECK-NEXT: | `-EnumConstantDecl 0x{{.*}} first 0x{{.*}} imported in ModB referenced MyVal_E 'int'
+
+
 
 //--- module.modulemap
 module ModA {
@@ -96,4 +108,4 @@ module ModB {
 //--- source.m
 #include "ModBFile.h"
 
-int main() { return MyVal_A + MyVal_B + MyVal_C + MyVal_D; }
+int main() { return MyVal_A + MyVal_B + MyVal_C + MyVal_D + MyVal_E; }
