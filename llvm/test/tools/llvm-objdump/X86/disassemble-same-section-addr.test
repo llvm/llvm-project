@@ -27,7 +27,7 @@
 
 ## Print no target if no symbol in section/absolute symbol found.
 # RUN: llvm-objcopy %p/../ELF/Inputs/call-absolute-symbol.elf-x86_64 %t7 -N foo
-# RUN llvm-objdump -d %t7 | FileCheck %s --check-prefix=FAIL
+# RUN: llvm-objdump -d %t7 | FileCheck %s --check-prefix=FAIL
 
 # TARGET:   callq 0x5 <target>
 # ABSOLUTE: callq 0x5 <other+0x5>
