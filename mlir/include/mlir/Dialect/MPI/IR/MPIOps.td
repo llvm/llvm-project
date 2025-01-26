@@ -149,7 +149,6 @@ def MPI_SendOp : MPI_Op<"send", []> {
 // ISendOp
 //===----------------------------------------------------------------------===//
 
-// TODO what about request handler?
 def MPI_ISendOp : MPI_Op<"isend", []> {
   let summary =
       "Equivalent to `MPI_Isend(ptr, size, dtype, dest, tag, comm)`";
@@ -172,11 +171,11 @@ def MPI_ISendOp : MPI_Op<"isend", []> {
     Optional<MPI_Comm> : $comm
   );
 
-  let results = (outs Optional<MPI_Retval>:$retval);
+  let results = (outs Optional<MPI_Retval>:$retval, MPI_Request : $req);
 
   let assemblyFormat = "`(` $ref `,` $tag `,` $rank `)` attr-dict `:` "
                        "type($ref) `,` type($tag) `,` type($rank)"
-                       "(`->` type($retval)^)?";
+                       "`->` (type($retval) `,` ^)? type($req)";
   let hasCanonicalizer = 1;
 }
 
@@ -245,7 +244,7 @@ def MPI_IRecvOp : MPI_Op<"irecv", []> {
 
   let assemblyFormat = "`(` $ref `,` $tag `,` $rank `)` attr-dict `:` "
                        "type($ref) `,` type($tag) `,` type($rank)"
-                       "(`->` type($retval)^)?";
+                       "`->` (type($retval) `,` ^)? type($req)";
   let hasCanonicalizer = 1;
 }
 
