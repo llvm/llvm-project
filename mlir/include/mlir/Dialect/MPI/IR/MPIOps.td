@@ -86,6 +86,33 @@ def MPI_CommSizeOp : MPI_Op<"comm_size", []> {
 }
 
 //===----------------------------------------------------------------------===//
+// CommSplitOp
+//===----------------------------------------------------------------------===//
+
+def MPI_CommSplit : MPI_Op<"comm_split", []> {
+  let summary = "Partition the group associated to the given communicator into "
+                "disjoint subgroups";
+  let description = [{
+    This operation splits the communicator into multiple sub-communicators.
+    The color value determines the group of processes that will be part of the
+    new communicator. The key value determines the rank of the calling process
+    in the new communicator.
+
+    This operation can optionally return an `!mpi.retval` value that can be used
+    to check for errors.
+  }];
+
+  let arguments = (MPI_Comm : $comm, I32 : $color, I32 : $key);
+
+  let results = (
+    outs Optional<MPI_Retval> : $retval,
+    MPI_Comm : $newcomm
+  );
+
+  let assemblyFormat = "`(` $color `,` $key `)` attr-dict `:` type(results)";
+}
+
+//===----------------------------------------------------------------------===//
 // SendOp
 //===----------------------------------------------------------------------===//
 
