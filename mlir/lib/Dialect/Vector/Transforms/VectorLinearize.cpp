@@ -25,34 +25,44 @@
 
 using namespace mlir;
 
-static bool isLessThanTargetBitWidth(Operation *op, unsigned targetBitWidth) {
+static bool isLessThanTargetBitWidth(Operation *op, unsigned indexBitWidth,
+                                     unsigned targetBitWidth) {
   auto resultTypes = op->getResultTypes();
   for (auto resType : resultTypes) {
     VectorType vecType = dyn_cast<VectorType>(resType);
-    // Reject index since getElementTypeBitWidth will abort for Index types.
-    if (!vecType || vecType.getElementType().isIndex())
+    if (!vecType)
+      return false;
+    bool isIndexTy = vecType.getElementType().isIndex();
+    // Reject index if `indexBitWidth` is not supplied.
+    if (isIndexTy && indexBitWidth == 0)
       return false;
     // There are no dimension to fold if it is a 0-D vector.
     if (vecType.getRank() == 0)
       return false;
     unsigned trailingVecDimBitWidth =
-        vecType.getShape().back() * vecType.getElementTypeBitWidth();
+        vecType.getShape().back() *
+        (isIndexTy ? indexBitWidth : vecType.getElementTypeBitWidth());
     if (trailingVecDimBitWidth >= targetBitWidth)
       return false;
   }
   return true;
 }
 
-static bool isLessThanOrEqualTargetBitWidth(Type t, unsigned targetBitWidth) {
+static bool isLessThanOrEqualTargetBitWidth(Type t, unsigned indexBitWidth,
+                                            unsigned targetBitWidth) {
   VectorType vecType = dyn_cast<VectorType>(t);
-  // Reject index since getElementTypeBitWidth will abort for Index types.
-  if (!vecType || vecType.getElementType().isIndex())
+  if (!vecType)
+    return false;
+  bool isIndexTy = vecType.getElementType().isIndex();
+  // Reject index if `indexBitWidth` is not supplied.
+  if (isIndexTy && indexBitWidth == 0)
     return false;
   // There are no dimension to fold if it is a 0-D vector.
   if (vecType.getRank() == 0)
     return false;
   unsigned trailingVecDimBitWidth =
-      vecType.getShape().back() * vecType.getElementTypeBitWidth();
+      vecType.getShape().back() *
+      (isIndexTy ? indexBitWidth : vecType.getElementTypeBitWidth());
   return trailingVecDimBitWidth <= targetBitWidth;
 }
 
@@ -61,10 +71,12 @@ struct LinearizeConstant final : OpConversionPattern<arith::ConstantOp> {
   using OpConversionPattern::OpConversionPattern;
   LinearizeConstant(
       const TypeConverter &typeConverter, MLIRContext *context,
+      unsigned indexBitWidth = 0,
       unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
       PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit),
-        targetVectorBitWidth(targetVectBitWidth) {}
+        indexBitWidth(indexBitWidth), targetVectorBitWidth(targetVectBitWidth) {
+  }
   LogicalResult
   matchAndRewrite(arith::ConstantOp constOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -79,7 +91,7 @@ struct LinearizeConstant final : OpConversionPattern<arith::ConstantOp> {
 
     if (!resType)
       return rewriter.notifyMatchFailure(loc, "can't convert return type");
-    if (!isLessThanTargetBitWidth(constOp, targetVectorBitWidth))
+    if (!isLessThanTargetBitWidth(constOp, indexBitWidth, targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
           loc, "Can't flatten since targetBitWidth <= OpSize");
     auto dstElementsAttr = dyn_cast<DenseElementsAttr>(constOp.getValue());
@@ -93,6 +105,7 @@ struct LinearizeConstant final : OpConversionPattern<arith::ConstantOp> {
   }
 
 private:
+  unsigned indexBitWidth;
   unsigned targetVectorBitWidth;
 };
 
@@ -103,14 +116,16 @@ struct LinearizeVectorizable final
 public:
   LinearizeVectorizable(
       const TypeConverter &typeConverter, MLIRContext *context,
+      unsigned indexBitWidth = 0,
       unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
       PatternBenefit benefit = 1)
       : OpTraitConversionPattern(typeConverter, context, benefit),
-        targetVectorBitWidth(targetVectBitWidth) {}
+        indexBitWidth(indexBitWidth), targetVectorBitWidth(targetVectBitWidth) {
+  }
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    if (!isLessThanTargetBitWidth(op, targetVectorBitWidth))
+    if (!isLessThanTargetBitWidth(op, indexBitWidth, targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
           op->getLoc(), "Can't flatten since targetBitWidth <= OpSize");
     FailureOr<Operation *> newOp =
@@ -123,6 +138,7 @@ public:
   }
 
 private:
+  unsigned indexBitWidth;
   unsigned targetVectorBitWidth;
 };
 
@@ -142,10 +158,12 @@ struct LinearizeVectorExtractStridedSlice final
   using OpConversionPattern::OpConversionPattern;
   LinearizeVectorExtractStridedSlice(
       const TypeConverter &typeConverter, MLIRContext *context,
+      unsigned indexBitWidth = 0,
       unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
       PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit),
-        targetVectorBitWidth(targetVectBitWidth) {}
+        indexBitWidth(indexBitWidth), targetVectorBitWidth(targetVectBitWidth) {
+  }
 
   LogicalResult
   matchAndRewrite(vector::ExtractStridedSliceOp extractOp, OpAdaptor adaptor,
@@ -156,7 +174,8 @@ struct LinearizeVectorExtractStridedSlice final
     if (extractOp.getVector().getType().isScalable() || dstType.isScalable())
       return rewriter.notifyMatchFailure(extractOp,
                                          "scalable vectors are not supported.");
-    if (!isLessThanTargetBitWidth(extractOp, targetVectorBitWidth))
+    if (!isLessThanTargetBitWidth(extractOp, indexBitWidth,
+                                  targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
           extractOp, "Can't flatten since targetBitWidth <= OpSize");
 
@@ -237,6 +256,7 @@ struct LinearizeVectorExtractStridedSlice final
   }
 
 private:
+  unsigned indexBitWidth;
   unsigned targetVectorBitWidth;
 };
 
@@ -256,10 +276,12 @@ struct LinearizeVectorShuffle final
   using OpConversionPattern::OpConversionPattern;
   LinearizeVectorShuffle(
       const TypeConverter &typeConverter, MLIRContext *context,
+      unsigned indexBitWidth = 0,
       unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
       PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit),
-        targetVectorBitWidth(targetVectBitWidth) {}
+        indexBitWidth(indexBitWidth), targetVectorBitWidth(targetVectBitWidth) {
+  }
 
   LogicalResult
   matchAndRewrite(vector::ShuffleOp shuffleOp, OpAdaptor adaptor,
@@ -273,7 +295,8 @@ struct LinearizeVectorShuffle final
              shuffleOp.getV2VectorType().isScalable() ||
              dstType.isScalable()) &&
            "scalable vectors are not supported.");
-    if (!isLessThanTargetBitWidth(shuffleOp, targetVectorBitWidth))
+    if (!isLessThanTargetBitWidth(shuffleOp, indexBitWidth,
+                                  targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
           shuffleOp, "Can't flatten since targetBitWidth <= OpSize");
 
@@ -312,6 +335,7 @@ struct LinearizeVectorShuffle final
   }
 
 private:
+  unsigned indexBitWidth;
   unsigned targetVectorBitWidth;
 };
 
@@ -329,10 +353,12 @@ struct LinearizeVectorExtract final
   using OpConversionPattern::OpConversionPattern;
   LinearizeVectorExtract(
       const TypeConverter &typeConverter, MLIRContext *context,
+      unsigned indexBitWidth = 0,
       unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
       PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit),
-        targetVectorBitWidth(targetVectBitWidth) {}
+        indexBitWidth(indexBitWidth), targetVectorBitWidth(targetVectBitWidth) {
+  }
   LogicalResult
   matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -345,7 +371,8 @@ struct LinearizeVectorExtract final
         cast<VectorType>(dstTy).isScalable())
       return rewriter.notifyMatchFailure(extractOp,
                                          "scalable vectors are not supported.");
-    if (!isLessThanTargetBitWidth(extractOp, targetVectorBitWidth))
+    if (!isLessThanTargetBitWidth(extractOp, indexBitWidth,
+                                  targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
           extractOp, "Can't flatten since targetBitWidth <= OpSize");
 
@@ -374,6 +401,7 @@ struct LinearizeVectorExtract final
   }
 
 private:
+  unsigned indexBitWidth;
   unsigned targetVectorBitWidth;
 };
 
@@ -392,10 +420,12 @@ struct LinearizeVectorInsert final
   using OpConversionPattern::OpConversionPattern;
   LinearizeVectorInsert(
       const TypeConverter &typeConverter, MLIRContext *context,
+      unsigned indexBitWidth = 0,
       unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
       PatternBenefit benefit = 1)
       : OpConversionPattern(typeConverter, context, benefit),
-        targetVectorBitWidth(targetVectBitWidth) {}
+        indexBitWidth(indexBitWidth), targetVectorBitWidth(targetVectBitWidth) {
+  }
   LogicalResult
   matchAndRewrite(vector::InsertOp insertOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -407,7 +437,7 @@ struct LinearizeVectorInsert final
                                          "scalable vectors are not supported.");
 
     if (!isLessThanOrEqualTargetBitWidth(insertOp.getSourceType(),
-                                         targetVectorBitWidth))
+                                         indexBitWidth, targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
           insertOp, "Can't flatten since targetBitWidth < OpSize");
 
@@ -457,13 +487,14 @@ struct LinearizeVectorInsert final
   }
 
 private:
+  unsigned indexBitWidth;
   unsigned targetVectorBitWidth;
 };
 } // namespace
 
 void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
-    ConversionTarget &target, unsigned targetBitWidth) {
+    ConversionTarget &target, unsigned indexBitWidth, unsigned targetBitWidth) {
 
   typeConverter.addConversion([](VectorType type) -> std::optional<Type> {
     if (!isLinearizableVector(type))
@@ -487,7 +518,7 @@ void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
       [=](Operation *op) -> std::optional<bool> {
         if ((isa<arith::ConstantOp>(op) ||
              op->hasTrait<OpTrait::Vectorizable>())) {
-          return (isLessThanTargetBitWidth(op, targetBitWidth)
+          return (isLessThanTargetBitWidth(op, indexBitWidth, targetBitWidth)
                       ? typeConverter.isLegal(op)
                       : true);
         }
@@ -495,15 +526,17 @@ void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
       });
 
   patterns.add<LinearizeConstant, LinearizeVectorizable>(
-      typeConverter, patterns.getContext(), targetBitWidth);
+      typeConverter, patterns.getContext(), indexBitWidth, targetBitWidth);
 }
 
 void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(
     const TypeConverter &typeConverter, RewritePatternSet &patterns,
-    ConversionTarget &target, unsigned int targetBitWidth) {
+    ConversionTarget &target, unsigned indexBitWidth,
+    unsigned int targetBitWidth) {
   target.addDynamicallyLegalOp<vector::ShuffleOp>(
       [=](vector::ShuffleOp shuffleOp) -> bool {
-        return isLessThanTargetBitWidth(shuffleOp, targetBitWidth)
+        return isLessThanTargetBitWidth(shuffleOp, indexBitWidth,
+                                        targetBitWidth)
                    ? (typeConverter.isLegal(shuffleOp) &&
                       cast<mlir::VectorType>(shuffleOp.getResult().getType())
                               .getRank() == 1)
@@ -511,5 +544,5 @@ void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(
       });
   patterns.add<LinearizeVectorShuffle, LinearizeVectorExtract,
                LinearizeVectorInsert, LinearizeVectorExtractStridedSlice>(
-      typeConverter, patterns.getContext(), targetBitWidth);
+      typeConverter, patterns.getContext(), indexBitWidth, targetBitWidth);
 }
