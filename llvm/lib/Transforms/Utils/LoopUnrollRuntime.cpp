@@ -461,7 +461,7 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool UseEpilogRemainder,
 
 /// Returns true if we can profitably unroll the multi-exit loop L. Currently,
 /// we return true only if UnrollRuntimeMultiExit is set to true.
-static bool canProfitablyUnrollMultiExitLoop(
+static bool canProfitablyRuntimeUnrollMultiExitLoop(
     Loop *L, SmallVectorImpl<BasicBlock *> &OtherExits, BasicBlock *LatchExit,
     bool UseEpilogRemainder) {
 
@@ -583,7 +583,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     bool UseEpilogRemainder, bool UnrollRemainder, bool ForgetAllSCEV,
     LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
     const TargetTransformInfo *TTI, bool PreserveLCSSA,
-    unsigned SCEVExpansionBudget, bool UnrollMultiExit, Loop **ResultLoop) {
+    unsigned SCEVExpansionBudget, bool RuntimeUnrollMultiExit, Loop **ResultLoop) {
   LLVM_DEBUG(dbgs() << "Trying runtime unrolling on Loop: \n");
   LLVM_DEBUG(L->dump());
   LLVM_DEBUG(UseEpilogRemainder ? dbgs() << "Using epilog remainder.\n"
@@ -632,7 +632,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     if (!PreserveLCSSA)
       return false;
 
-    if (!UnrollMultiExit && !canProfitablyUnrollMultiExitLoop(
+    if (!RuntimeUnrollMultiExit && !canProfitablyRuntimeUnrollMultiExitLoop(
                                 L, OtherExits, LatchExit, UseEpilogRemainder)) {
       LLVM_DEBUG(
           dbgs()
