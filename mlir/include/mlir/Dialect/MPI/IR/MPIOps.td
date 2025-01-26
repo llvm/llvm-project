@@ -205,7 +205,6 @@ def MPI_IRecvOp : MPI_Op<"irecv", []> {
   let hasCanonicalizer = 1;
 }
 
-
 //===----------------------------------------------------------------------===//
 // FinalizeOp
 //===----------------------------------------------------------------------===//
@@ -225,7 +224,6 @@ def MPI_FinalizeOp : MPI_Op<"finalize", []> {
 
   let assemblyFormat = "attr-dict (`:` type($retval)^)?";
 }
-
 
 //===----------------------------------------------------------------------===//
 // RetvalCheckOp
@@ -249,8 +247,6 @@ def MPI_RetvalCheckOp : MPI_Op<"retval_check", []> {
 
   let assemblyFormat = "$val `=` $errclass attr-dict `:` type($res)";
 }
-
-
 
 //===----------------------------------------------------------------------===//
 // ErrorClassOp
