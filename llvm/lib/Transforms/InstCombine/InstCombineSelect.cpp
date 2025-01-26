@@ -3776,6 +3776,25 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       return &SI;
   }
 
+  {
+    // A pred C ? (A >> BW - 1) : 1 --> ZExt(A pred C ? A < 0 : 1)
+    CmpInst::Predicate Pred;
+    Value *A;
+    const APInt *C;
+    if (match(CondVal, m_ICmp(Pred, m_Value(A), m_APInt(C))) &&
+        match(TrueVal,
+              m_LShr(m_Specific(A),
+                     m_SpecificInt(A->getType()->getScalarSizeInBits() - 1))) &&
+        match(FalseVal, m_One()) && TrueVal->hasOneUse()) {
+      auto *NewTrue =
+          Builder.CreateICmpSLT(A, ConstantInt::getNullValue(A->getType()));
+      auto *NewFalse = ConstantInt::get(NewTrue->getType(), 1);
+      auto *NewSelect = Builder.CreateSelect(CondVal, NewTrue, NewFalse);
+      auto *ZExt = Builder.CreateZExt(NewSelect, A->getType());
+      return replaceInstUsesWith(SI, ZExt);
+    }
+  }
+
   if (Instruction *R = foldSelectOfBools(SI))
     return R;
 
