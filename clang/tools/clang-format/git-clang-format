@@ -876,11 +876,12 @@ def convert_string(bytes_input):
         return str(bytes_input)
 
 
-def print_filename(filename, null=False):
-    if null:
-        print(filename + "\0", end="")
-    else:
-        print("    %s" % filename)
+def print_filenames(filenames, print0=False):
+    for filename in filenames:
+        if print0:
+            print(filename, end="\0")
+        else:
+            print(" " * 4 + filename)
 
 
 if __name__ == "__main__":
