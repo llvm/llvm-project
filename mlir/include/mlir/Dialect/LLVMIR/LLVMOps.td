@@ -1228,7 +1228,8 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
 
 def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, Symbol,
-     GlobalVariableLinkageOpInterface]> {
+    GlobalVariableLinkageOpInterface,
+    DeclareOpInterfaceMethods<GlobalValueLinkageOpInterface>]> {
   let arguments = (ins
     TypeAttr:$global_type,
     UnitAttr:$constant,
@@ -1496,7 +1497,8 @@ def LLVM_ComdatOp : LLVM_Op<"comdat", [NoTerminator, NoRegionArguments, SymbolTa
 
 def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     AutomaticAllocationScope, IsolatedFromAbove, FunctionOpInterface,
-    FunctionLinkageOpInterface]> {
+    FunctionLinkageOpInterface,
+    DeclareOpInterfaceMethods<GlobalValueLinkageOpInterface>]> {
   let summary = "LLVM dialect function.";
 
   let description = [{

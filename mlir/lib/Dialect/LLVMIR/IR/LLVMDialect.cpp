@@ -298,6 +298,24 @@ static std::optional<ParseResult> parseOpBundles(
 }
 
 //===----------------------------------------------------------------------===//
+// Linkage helpers.
+//===----------------------------------------------------------------------===//
+
+static std::optional<::mlir::link::ComdatSelectionKind>
+getComdatSelectionKindImpl(SymbolOpInterface op) {
+  auto mod = op->getParentOfType<LinkableModuleOpInterface>();
+  auto &moduleBody = mod->getRegion(0).front();
+  for (auto comdatOp : moduleBody.getOps<ComdatOp>()) {
+    for (auto selectorOp : comdatOp.getOps<ComdatSelectorOp>()) {
+      if (selectorOp.getSymName() == op.getName()) {
+        return selectorOp.getComdat();
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+//===----------------------------------------------------------------------===//
 // Printing, parsing, folding and builder for LLVM::CmpOp.
 //===----------------------------------------------------------------------===//
 
@@ -2380,6 +2398,11 @@ LogicalResult GlobalOp::verifyRegions() {
   return success();
 }
 
+std::optional<::mlir::link::ComdatSelectionKind>
+GlobalOp::getComdatSelectionKind() {
+  return getComdatSelectionKindImpl(*this);
+}
+
 //===----------------------------------------------------------------------===//
 // LLVM::GlobalCtorsOp
 //===----------------------------------------------------------------------===//
@@ -2797,6 +2820,11 @@ Region *LLVMFuncOp::getCallableRegion() {
   if (isExternal())
     return nullptr;
   return &getBody();
+}
+
+std::optional<::mlir::link::ComdatSelectionKind>
+LLVMFuncOp::getComdatSelectionKind() {
+  return getComdatSelectionKindImpl(*this);
 }
 
 //===----------------------------------------------------------------------===//

@@ -89,10 +89,6 @@ def ModuleOp : Builtin_Op<"module", [
       return "builtin";
     }
 
-    //===------------------------------------------------------------------===//
-    // LinkableModuleOpInterface Methods
-    //===------------------------------------------------------------------===//
-
   }];
   let hasVerifier = 1;
 
