@@ -423,25 +423,28 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
       }
     }
 
+    auto CreateCmpSel = [&](CmpPredicate P, Value *MatchOp) {
+      Value *NewSel = Builder.CreateSelect(Cond, OtherOpT, OtherOpF,
+                                           SI.getName() + ".v", &SI);
+      return new ICmpInst(MatchIsOpZero ? P
+                                        : ICmpInst::getSwappedCmpPredicate(P),
+                          MatchOp, NewSel);
+    };
+
     // icmp with a common operand also can have the common operand
     // pulled after the select.
     CmpPredicate TPred, FPred;
     if (match(TI, m_ICmp(TPred, m_Value(), m_Value())) &&
         match(FI, m_ICmp(FPred, m_Value(), m_Value()))) {
-      auto P = CmpPredicate::getMatching(TPred, FPred);
-      bool Swapped = !P;
-      if (Swapped)
-        P = CmpPredicate::getMatching(TPred,
-                                      ICmpInst::getSwappedCmpPredicate(FPred));
-      if (P) {
+      if (auto P = CmpPredicate::getMatching(TPred, FPred)) {
         if (Value *MatchOp =
-                getCommonOp(TI, FI, ICmpInst::isEquality(*P), Swapped)) {
-          Value *NewSel = Builder.CreateSelect(Cond, OtherOpT, OtherOpF,
-                                               SI.getName() + ".v", &SI);
-          return new ICmpInst(
-              MatchIsOpZero ? *P : ICmpInst::getSwappedCmpPredicate(*P),
-              MatchOp, NewSel);
-        }
+                getCommonOp(TI, FI, ICmpInst::isEquality(*P), false))
+          return CreateCmpSel(*P, MatchOp);
+      } else if (auto P = CmpPredicate::getMatching(
+                     TPred, ICmpInst::getSwappedCmpPredicate(FPred))) {
+        if (Value *MatchOp =
+                getCommonOp(TI, FI, ICmpInst::isEquality(*P), true))
+          return CreateCmpSel(*P, MatchOp);
       }
     }
   }
