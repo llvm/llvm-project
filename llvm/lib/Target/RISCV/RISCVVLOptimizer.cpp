@@ -52,7 +52,9 @@ public:
 
 private:
   MachineOperand getMinimumVLForUser(MachineOperand &UserOp);
-  /// Computes the VL of \p MI that is actually used by its users.
+  /// Computes the minimum demanded VL of \p MI, i.e. the minimum VL that's used
+  /// by its users downstream.
+  /// Returns 0 if MI has no users.
   MachineOperand computeDemandedVL(const MachineInstr &MI);
   bool tryReduceVL(MachineInstr &MI);
   bool isCandidate(const MachineInstr &MI) const;
@@ -1208,13 +1210,10 @@ MachineOperand RISCVVLOptimizer::getMinimumVLForUser(MachineOperand &UserOp) {
   // If we know the demanded VL of UserMI, then we can reduce the VL it
   // requires.
   if (DemandedVLs.contains(&UserMI)) {
-    // We can only shrink the demanded VL if the elementwise result doesn't
-    // depend on VL (i.e. not vredsum/viota etc.)
-    // Also conservatively restrict to supported instructions for now.
-    // TODO: Can we remove the isSupportedInstr check?
+    // We can only shrink the VL used if the elementwise result doesn't depend
+    // on VL (i.e. not vredsum/viota etc.)
     if (!RISCVII::elementsDependOnVL(
-            TII->get(RISCV::getRVVMCOpcode(UserMI.getOpcode())).TSFlags) &&
-        isSupportedInstr(UserMI)) {
+            TII->get(RISCV::getRVVMCOpcode(UserMI.getOpcode())).TSFlags)) {
       const MachineOperand &DemandedVL = DemandedVLs.at(&UserMI);
       if (RISCV::isVLKnownLE(DemandedVL, VLOp))
         return DemandedVL;
@@ -1244,13 +1243,14 @@ MachineOperand RISCVVLOptimizer::computeDemandedVL(const MachineInstr &MI) {
 
     const MachineOperand &VLOp = getMinimumVLForUser(UserOp);
 
-    // Use the largest VL among all the users. If we cannot determine this
-    // statically, then we cannot optimize the VL.
+    // The minimum demanded VL is the largest VL read amongst all the users. If
+    // we cannot determine this statically, then we cannot optimize the VL.
     if (RISCV::isVLKnownLE(DemandedVL, VLOp)) {
       DemandedVL = VLOp;
       LLVM_DEBUG(dbgs() << "    Demanded VL is: " << VLOp << "\n");
     } else if (!RISCV::isVLKnownLE(VLOp, DemandedVL)) {
-      LLVM_DEBUG(dbgs() << "    Abort because cannot determine a common VL\n");
+      LLVM_DEBUG(
+          dbgs() << "    Abort because cannot determine the demanded VL\n");
       return VLMAX;
     }
 
@@ -1305,7 +1305,7 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) {
   if (!CommonVL)
     return false;
 
-  assert((CommonVL.isImm() || CommonVL.getReg().isVirtual()) &&
+  assert((DemandedVL.isImm() || DemandedVL.getReg().isVirtual()) &&
          "Expected VL to be an Imm or virtual Reg");
 
   if (!RISCV::isVLKnownLE(*CommonVL, VLOp)) {
@@ -1313,28 +1313,29 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI) {
     return false;
   }
 
-  if (CommonVL.isIdenticalTo(VLOp)) {
+  if (DemandedVL.isIdenticalTo(VLOp)) {
     LLVM_DEBUG(
         dbgs()
         << "    Abort due to DemandedVL == VLOp, no point in reducing.\n");
     return false;
   }
 
-  if (CommonVL.isImm()) {
+  if (DemandedVL.isImm()) {
     LLVM_DEBUG(dbgs() << "  Reduce VL from " << VLOp << " to "
-                      << CommonVL.getImm() << " for " << MI << "\n");
-    VLOp.ChangeToImmediate(CommonVL.getImm());
+                      << DemandedVL.getImm() << " for " << MI << "\n");
+    VLOp.ChangeToImmediate(DemandedVL.getImm());
     return true;
   }
-  const MachineInstr *VLMI = MRI->getVRegDef(CommonVL.getReg());
+  const MachineInstr *VLMI = MRI->getVRegDef(DemandedVL.getReg());
   if (!MDT->dominates(VLMI, &MI))
     return false;
-  LLVM_DEBUG(dbgs() << "  Reduce VL from " << VLOp << " to "
-                    << printReg(CommonVL.getReg(), MRI->getTargetRegisterInfo())
-                    << " for " << MI << "\n");
+  LLVM_DEBUG(
+      dbgs() << "  Reduce VL from " << VLOp << " to "
+             << printReg(DemandedVL.getReg(), MRI->getTargetRegisterInfo())
+             << " for " << MI << "\n");
 
   // All our checks passed. We can reduce VL.
-  VLOp.ChangeToRegister(CommonVL.getReg(), false);
+  VLOp.ChangeToRegister(DemandedVL.getReg(), false);
   return true;
 }
 
