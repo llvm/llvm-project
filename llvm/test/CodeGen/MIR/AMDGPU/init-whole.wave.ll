@@ -15,3 +15,21 @@ bb.1:
 bb.2:
   ret void
 }
+
+; GCN-LABEL: name: wwm
+; GCN: hasInitWholeWave: true
+define void @wwm(ptr addrspace(1) inreg %p) {
+  %val = load i32, ptr addrspace(1) %p
+  %wwm = tail call i32 @llvm.amdgcn.wwm.i32(i32 %val)
+  store i32 %wwm, ptr addrspace(1) %p
+  ret void
+}
+
+; GCN-LABEL: name: strict_wwm
+; GCN: hasInitWholeWave: true
+define void @strict_wwm(ptr addrspace(1) inreg %p) {
+  %val = load i32, ptr addrspace(1) %p
+  %wwm = tail call i32 @llvm.amdgcn.strict.wwm.i32(i32 %val)
+  store i32 %wwm, ptr addrspace(1) %p
+  ret void
+}
