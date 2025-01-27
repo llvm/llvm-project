@@ -26,6 +26,8 @@
 namespace clang {
 class AttributeCommonInfo;
 class IdentifierInfo;
+class InitializedEntity;
+class InitializationKind;
 class ParsedAttr;
 class Scope;
 class VarDecl;
@@ -144,6 +146,9 @@ public:
   ExprResult ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg);
 
   QualType getInoutParameterType(QualType Ty);
+
+  bool TransformInitList(const InitializedEntity &Entity,
+                         const InitializationKind &Kind, InitListExpr *Init);
 
 private:
   // HLSL resource type attributes need to be processed all at once.
