@@ -534,7 +534,6 @@ FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
       FileSystem::Instance().Resolve(module_filespec);
     }
   }
-#endif
   return module_filespec;
 }
 

@@ -37,23 +37,41 @@ v_cmpx_class_f16_e32 v255.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
 v_cmpx_class_f16_e32 v255.l, v2.l quad_perm:[3,2,1,0]
 // GFX11: :[[@LINE-1]]:22: error: invalid operand for instruction
 
-v_cmpx_eq_f16_e32 v1, v255
-// GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmpx_eq_f16_e32 v1.h, v255.h
+// GFX11: :[[@LINE-1]]:25: error: invalid operand for instruction
 
-v_cmpx_eq_f16_e32 v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX11: :[[@LINE-1]]:28: error: invalid operand for instruction
+v_cmpx_eq_f16_e32 v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:25: error: invalid operand for instruction
 
-v_cmpx_eq_f16_e32 v1, v255 quad_perm:[3,2,1,0]
-// GFX11: :[[@LINE-1]]:28: error: invalid operand for instruction
+v_cmpx_eq_f16_e32 v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:25: error: invalid operand for instruction
 
-v_cmpx_eq_f16_e32 v255, v2
-// GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+v_cmpx_eq_f16_e32 v1.l, v255.l
+// GFX11: :[[@LINE-1]]:25: error: invalid operand for instruction
 
-v_cmpx_eq_f16_e32 v255, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX11: :[[@LINE-1]]:28: error: invalid operand for instruction
+v_cmpx_eq_f16_e32 v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:25: error: invalid operand for instruction
 
-v_cmpx_eq_f16_e32 v255, v2 quad_perm:[3,2,1,0]
-// GFX11: :[[@LINE-1]]:28: error: invalid operand for instruction
+v_cmpx_eq_f16_e32 v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:25: error: invalid operand for instruction
+
+v_cmpx_eq_f16_e32 v255.h, v2.h
+// GFX11: :[[@LINE-1]]:19: error: invalid operand for instruction
+
+v_cmpx_eq_f16_e32 v255.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:19: error: invalid operand for instruction
+
+v_cmpx_eq_f16_e32 v255.h, v2.h quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:19: error: invalid operand for instruction
+
+v_cmpx_eq_f16_e32 v255.l, v2.l
+// GFX11: :[[@LINE-1]]:19: error: invalid operand for instruction
+
+v_cmpx_eq_f16_e32 v255.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:19: error: invalid operand for instruction
+
+v_cmpx_eq_f16_e32 v255.l, v2.l quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:19: error: invalid operand for instruction
 
 v_cmpx_eq_i16_e32 v1.h, v255.h
 // GFX11: :[[@LINE-1]]:25: error: invalid operand for instruction

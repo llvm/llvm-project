@@ -43,6 +43,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/GlobalValue.h"
@@ -76,6 +77,24 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "coro-split"
+
+namespace {
+/// Collect (a known) subset of global debug info metadata potentially used by
+/// the function \p F.
+///
+/// This metadata set can be used to avoid cloning debug info not owned by \p F
+/// and is shared among all potential clones \p F.
+MetadataSetTy collectCommonDebugInfo(Function &F) {
+  TimeTraceScope FunctionScope("CollectCommonDebugInfo");
+
+  DebugInfoFinder DIFinder;
+  DISubprogram *SPClonedWithinModule = CollectDebugInfoForCloning(
+      F, CloneFunctionChangeType::LocalChangesOnly, DIFinder);
+
+  return FindDebugInfoToIdentityMap(CloneFunctionChangeType::LocalChangesOnly,
+                                    DIFinder, SPClonedWithinModule);
+}
+} // end anonymous namespace
 
 // FIXME:
 // Lower the intrinisc in CoroEarly phase if coroutine frame doesn't escape
@@ -891,8 +910,11 @@ void coro::BaseCloner::create() {
   auto savedLinkage = NewF->getLinkage();
   NewF->setLinkage(llvm::GlobalValue::ExternalLinkage);
 
-  CloneFunctionInto(NewF, &OrigF, VMap,
-                    CloneFunctionChangeType::LocalChangesOnly, Returns);
+  CloneFunctionAttributesInto(NewF, &OrigF, VMap, false);
+  CloneFunctionMetadataInto(*NewF, OrigF, VMap, RF_None, nullptr, nullptr,
+                            &CommonDebugInfo);
+  CloneFunctionBodyInto(*NewF, OrigF, VMap, RF_None, Returns, "", nullptr,
+                        nullptr, nullptr, &CommonDebugInfo);
 
   auto &Context = NewF->getContext();
 
@@ -1374,16 +1396,21 @@ struct SwitchCoroutineSplitter {
                     TargetTransformInfo &TTI) {
     assert(Shape.ABI == coro::ABI::Switch);
 
+    MetadataSetTy CommonDebugInfo{collectCommonDebugInfo(F)};
+
     // Create a resume clone by cloning the body of the original function,
     // setting new entry block and replacing coro.suspend an appropriate value
     // to force resume or cleanup pass for every suspend point.
     createResumeEntryBlock(F, Shape);
     auto *ResumeClone = coro::SwitchCloner::createClone(
-        F, ".resume", Shape, coro::CloneKind::SwitchResume, TTI);
+        F, ".resume", Shape, coro::CloneKind::SwitchResume, TTI,
+        CommonDebugInfo);
     auto *DestroyClone = coro::SwitchCloner::createClone(
-        F, ".destroy", Shape, coro::CloneKind::SwitchUnwind, TTI);
+        F, ".destroy", Shape, coro::CloneKind::SwitchUnwind, TTI,
+        CommonDebugInfo);
     auto *CleanupClone = coro::SwitchCloner::createClone(
-        F, ".cleanup", Shape, coro::CloneKind::SwitchCleanup, TTI);
+        F, ".cleanup", Shape, coro::CloneKind::SwitchCleanup, TTI,
+        CommonDebugInfo);
 
     postSplitCleanup(*ResumeClone);
     postSplitCleanup(*DestroyClone);
@@ -1768,12 +1795,15 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
   }
 
   assert(Clones.size() == Shape.CoroSuspends.size());
+
+  MetadataSetTy CommonDebugInfo{collectCommonDebugInfo(F)};
+
   for (auto [Idx, CS] : llvm::enumerate(Shape.CoroSuspends)) {
     auto *Suspend = CS;
     auto *Clone = Clones[Idx];
 
     coro::BaseCloner::createClone(F, "resume." + Twine(Idx), Shape, Clone,
-                                  Suspend, TTI);
+                                  Suspend, TTI, CommonDebugInfo);
   }
 }
 
@@ -1899,12 +1929,15 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
   }
 
   assert(Clones.size() == Shape.CoroSuspends.size());
+
+  MetadataSetTy CommonDebugInfo{collectCommonDebugInfo(F)};
+
   for (auto [Idx, CS] : llvm::enumerate(Shape.CoroSuspends)) {
     auto Suspend = CS;
     auto Clone = Clones[Idx];
 
     coro::BaseCloner::createClone(F, "resume." + Twine(Idx), Shape, Clone,
-                                  Suspend, TTI);
+                                  Suspend, TTI, CommonDebugInfo);
   }
 }
 

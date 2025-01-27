@@ -452,6 +452,10 @@ def warn_drv_deprecated_arg_ofast : Warning<
   "argument '-Ofast' is deprecated; use '-O3 -ffast-math' for the same behavior,"
   " or '-O3' to enable only conforming optimizations">,
   InGroup<DeprecatedOFast>;
+def warn_drv_deprecated_arg_ofast_for_flang : Warning<
+  "argument '-Ofast' is deprecated; use '-O3 -ffast-math -fstack-arrays' for the same behavior,"
+  " or '-O3 -fstack-arrays' to enable only conforming optimizations">,
+  InGroup<DeprecatedOFast>;
 def warn_drv_deprecated_custom : Warning<
   "argument '%0' is deprecated, %1">, InGroup<Deprecated>;
 def warn_drv_assuming_mfloat_abi_is : Warning<
