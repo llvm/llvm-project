@@ -14228,9 +14228,17 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
     const FunctionDecl *FDecl = Best->Function;
     if (FDecl && FDecl->isTemplateInstantiation() &&
         FDecl->getReturnType()->isUndeducedType()) {
+
+      // UnresolvedLookupExpr will not be resolved again inside non-dependent
+      // function (i.e non-templated function in this case).
+      const FunctionDecl *EnclosingFn = getCurFunctionDecl();
+      const bool Resolvable =
+          EnclosingFn && EnclosingFn->getTemplatedKind() ==
+                             FunctionDecl::TemplatedKind::TK_FunctionTemplate;
+
       if (const auto *TP =
               FDecl->getTemplateInstantiationPattern(/*ForDefinition=*/false);
-          TP && TP->willHaveBody()) {
+          TP && TP->willHaveBody() && Resolvable) {
         return CallExpr::Create(Context, Fn, Args, Context.DependentTy,
                                 VK_PRValue, RParenLoc, CurFPFeatureOverrides());
       }
