@@ -542,7 +542,7 @@ related metadata features. It is used to emit function-level analysis data and
 can be enabled through ``--func-map`` option. The fields are encoded in the
 following format:
 
-#. A version number byte used for backward compatibility
+#. A version number byte used for backward compatibility.
 #. The function's entry address.
 #. Dynamic Instruction Count, which is calculated as the total PGO counts for all
    instructions within the function.
