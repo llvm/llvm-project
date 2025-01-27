@@ -20,8 +20,7 @@ struct RootSignatureHeader {
   uint32_t Flags;
 
   void swapBytes();
-  void write(raw_ostream &OS,
-             uint32_t Version = std::numeric_limits<uint32_t>::max());
+  void write(raw_ostream &OS);
 };
 } // namespace mcdxbc
 } // namespace llvm

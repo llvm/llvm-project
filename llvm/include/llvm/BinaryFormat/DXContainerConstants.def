@@ -53,8 +53,31 @@ SHADER_FEATURE_FLAG(31, 36, NextUnusedBit, "Next reserved shader flag bit (not a
 #undef SHADER_FEATURE_FLAG
 #endif // SHADER_FEATURE_FLAG
 
-#ifdef ROOT_ELEMENT_FLAG
+#ifdef ROOT_PARAMETER
 
+ROOT_PARAMETER(DescriptorTable)
+ROOT_PARAMETER(Constants32Bit)
+ROOT_PARAMETER(CBV)
+ROOT_PARAMETER(SRV)
+ROOT_PARAMETER(UAV)
+#undef ROOT_PARAMETER
+#endif // ROOT_PARAMETER
+
+
+#ifdef SHADER_VISIBILITY
+
+SHADER_VISIBILITY(All)
+SHADER_VISIBILITY(Vertex)
+SHADER_VISIBILITY(Hull)
+SHADER_VISIBILITY(Domain)
+SHADER_VISIBILITY(Geometry)
+SHADER_VISIBILITY(Pixel)
+SHADER_VISIBILITY(Amplification)
+SHADER_VISIBILITY(Mesh)
+#undef SHADER_VISIBILITY
+#endif // SHADER_VISIBILITY
+
+#ifdef ROOT_ELEMENT_FLAG
 
 ROOT_ELEMENT_FLAG(0, AllowInputAssemblerInputLayout, "The app is opting in to using the Input Assembler")
 ROOT_ELEMENT_FLAG(1, DenyVertexShaderRootAccess, "Denies the vertex shader access to the root signature.")
