@@ -11,29 +11,25 @@
 #include <climits>
 #include <cstdlib>
 #include <sys/types.h>
+
 #ifndef _WIN32
 #include <dlfcn.h>
 #include <grp.h>
 #include <netdb.h>
 #include <pwd.h>
 #include <sys/stat.h>
+#include <sys/syscall.h>
+#include <sys/wait.h>
 #include <unistd.h>
+#if !defined(__ANDROID__)
+#include <spawn.h>
+#endif
 #endif
 
 #if defined(__APPLE__)
 #include <mach-o/dyld.h>
 #include <mach/mach_init.h>
 #include <mach/mach_port.h>
-#endif
-
-#if defined(__linux__) || defined(__FreeBSD__) ||                              \
-    defined(__FreeBSD_kernel__) || defined(__APPLE__) ||                       \
-    defined(__NetBSD__) || defined(__OpenBSD__) || defined(__EMSCRIPTEN__)
-#if !defined(__ANDROID__)
-#include <spawn.h>
-#endif
-#include <sys/syscall.h>
-#include <sys/wait.h>
 #endif
 
 #if defined(__FreeBSD__)
