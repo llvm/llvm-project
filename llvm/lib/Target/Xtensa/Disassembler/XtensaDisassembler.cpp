@@ -73,17 +73,23 @@ static DecodeStatus DecodeARRegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
-static const unsigned SRDecoderTable[] = {Xtensa::SAR, 3};
+static const unsigned SRDecoderTable[] = {
+    Xtensa::SAR, 3, Xtensa::WINDOWBASE, 72, Xtensa::WINDOWSTART, 73};
 
 static DecodeStatus DecodeSRRegisterClass(MCInst &Inst, uint64_t RegNo,
                                           uint64_t Address,
-                                          const void *Decoder) {
+                                          const MCDisassembler *Decoder) {
   if (RegNo > 255)
     return MCDisassembler::Fail;
 
   for (unsigned i = 0; i < std::size(SRDecoderTable); i += 2) {
     if (SRDecoderTable[i + 1] == RegNo) {
       unsigned Reg = SRDecoderTable[i];
+
+      if (!Xtensa::checkRegister(Reg,
+                                 Decoder->getSubtargetInfo().getFeatureBits()))
+        return MCDisassembler::Fail;
+
       Inst.addOperand(MCOperand::createReg(Reg));
       return MCDisassembler::Success;
     }
@@ -207,6 +213,29 @@ static DecodeStatus decodeImm32n_95Operand(MCInst &Inst, uint64_t Imm,
     Inst.addOperand(MCOperand::createImm((~0x1f) | Imm));
   else
     Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeImm8n_7Operand(MCInst &Inst, uint64_t Imm,
+                                         int64_t Address, const void *Decoder) {
+  assert(isUInt<4>(Imm) && "Invalid immediate");
+  Inst.addOperand(MCOperand::createImm(Imm > 7 ? Imm - 16 : Imm));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeImm64n_4nOperand(MCInst &Inst, uint64_t Imm,
+                                           int64_t Address,
+                                           const void *Decoder) {
+  assert(isUInt<6>(Imm) && ((Imm & 0x3) == 0) && "Invalid immediate");
+  Inst.addOperand(MCOperand::createImm((~0x3f) | (Imm)));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeEntry_Imm12OpValue(MCInst &Inst, uint64_t Imm,
+                                             int64_t Address,
+                                             const void *Decoder) {
+  assert(isUInt<15>(Imm) && ((Imm & 0x7) == 0) && "Invalid immediate");
+  Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
 

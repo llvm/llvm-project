@@ -1,0 +1,12 @@
+# RUN: llvm-mc -triple=xtensa -mattr=+windowed,+density -disassemble %s | FileCheck -check-prefixes=CHECK-WINDOWED-DENSITY %s
+# RUN: not llvm-mc -triple=xtensa -disassemble %s 2>&1 | FileCheck --implicit-check-not=warning: -check-prefixes=CHECK-CORE %s
+
+#------------------------------------------------------------------------------
+# Verify that binary code is correctly disassembled with windowed register
+# and code density options enabled. Also verify that
+# dissasembling without these options generates warnings.
+#------------------------------------------------------------------------------
+
+[0x1d,0xf0]
+# CHECK-WINDOWED-DENSITY: retw.n
+# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
