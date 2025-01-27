@@ -1100,6 +1100,11 @@ bool AArch64RegisterInfo::getRegAllocationHints(
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
+  auto &ST = MF.getSubtarget<AArch64Subtarget>();
+  if (!ST.hasSME() || !ST.isStreaming())
+    return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
+                                                     VRM);
+
   // The SVE calling convention preserves registers Z8-Z23. As a result, there
   // are no ZPR2Strided or ZPR4Strided registers that do not overlap with the
   // callee-saved registers and so by default these will be pushed to the back
@@ -1109,94 +1114,82 @@ bool AArch64RegisterInfo::getRegAllocationHints(
   // instructions over reducing the number of clobbered callee-save registers,
   // so we add the strided registers as a hint.
   unsigned RegID = MRI.getRegClass(VirtReg)->getID();
-  // Look through uses of the register for FORM_TRANSPOSED_REG_TUPLE.
-  for (const MachineInstr &Use : MRI.use_nodbg_instructions(VirtReg)) {
-    if ((RegID != AArch64::ZPR2StridedOrContiguousRegClassID &&
-         RegID != AArch64::ZPR4StridedOrContiguousRegClassID) ||
-        (Use.getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO &&
-         Use.getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO))
-      continue;
+  if (RegID == AArch64::ZPR2StridedOrContiguousRegClassID ||
+      RegID == AArch64::ZPR4StridedOrContiguousRegClassID) {
 
-    unsigned LdOps = Use.getNumOperands() - 1;
-    const TargetRegisterClass *StridedRC = LdOps == 2
-                                               ? &AArch64::ZPR2StridedRegClass
-                                               : &AArch64::ZPR4StridedRegClass;
+    // Look through uses of the register for FORM_TRANSPOSED_REG_TUPLE.
+    for (const MachineInstr &Use : MRI.use_nodbg_instructions(VirtReg)) {
+      if (Use.getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO &&
+          Use.getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO)
+        continue;
 
-    SmallVector<MCPhysReg, 4> StridedOrder;
-    for (MCPhysReg Reg : Order)
-      if (StridedRC->contains(Reg))
-        StridedOrder.push_back(Reg);
+      unsigned LdOps = Use.getNumOperands() - 1;
+      const TargetRegisterClass *StridedRC =
+          LdOps == 2 ? &AArch64::ZPR2StridedRegClass
+                     : &AArch64::ZPR4StridedRegClass;
 
-    auto GetRegStartingAt = [&](MCPhysReg FirstReg) -> MCPhysReg {
-      for (MCPhysReg Strided : StridedOrder)
-        if (getSubReg(Strided, AArch64::zsub0) == FirstReg)
-          return Strided;
-      return (MCPhysReg)AArch64::NoRegister;
-    };
+      SmallVector<MCPhysReg, 4> StridedOrder;
+      for (MCPhysReg Reg : Order)
+        if (StridedRC->contains(Reg))
+          StridedOrder.push_back(Reg);
 
-    int OpIdx = Use.findRegisterUseOperandIdx(VirtReg, this);
-    assert(OpIdx != -1 && "Expected operand index from register use.");
+      int OpIdx = Use.findRegisterUseOperandIdx(VirtReg, this);
+      assert(OpIdx != -1 && "Expected operand index from register use.");
 
-    unsigned TupleID = MRI.getRegClass(Use.getOperand(0).getReg())->getID();
-    bool IsMulZPR = TupleID == AArch64::ZPR2Mul2RegClassID ||
-                    TupleID == AArch64::ZPR4Mul4RegClassID;
+      unsigned TupleID = MRI.getRegClass(Use.getOperand(0).getReg())->getID();
+      bool IsMulZPR = TupleID == AArch64::ZPR2Mul2RegClassID ||
+                      TupleID == AArch64::ZPR4Mul4RegClassID;
 
-    unsigned AssignedOp = 0;
-    if (!any_of(make_range(Use.operands_begin() + 1, Use.operands_end()),
-                [&](const MachineOperand &Op) {
-                  if (!VRM->hasPhys(Op.getReg()))
-                    return false;
-                  AssignedOp = Op.getOperandNo();
-                  return true;
-                })) {
-      // There are no registers already assigned to any of the pseudo operands.
-      // Look for a valid starting register for the group.
-      for (unsigned I = 0; I < StridedOrder.size(); ++I) {
-        MCPhysReg Reg = StridedOrder[I];
-        unsigned FirstReg = getSubReg(Reg, AArch64::zsub0);
+      const MachineOperand *AssignedRegOp = llvm::find_if(
+          make_range(Use.operands_begin() + 1, Use.operands_end()),
+          [&VRM](const MachineOperand &Op) {
+            return VRM->hasPhys(Op.getReg());
+          });
 
-        // If the FORM_TRANSPOSE nodes use the ZPRMul classes, the starting
-        // register of the first load should be a multiple of 2 or 4.
-        if (IsMulZPR && (FirstReg - AArch64::Z0) % LdOps != 0)
-          continue;
-        // Skip this register if it has any live intervals assigned.
-        if (Matrix->isPhysRegUsed(Reg))
-          continue;
+      if (AssignedRegOp == Use.operands_end()) {
+        // There are no registers already assigned to any of the pseudo
+        // operands. Look for a valid starting register for the group.
+        for (unsigned I = 0; I < StridedOrder.size(); ++I) {
+          MCPhysReg Reg = StridedOrder[I];
+          SmallVector<MCPhysReg> Regs;
+          unsigned FirstStridedReg = Reg - OpIdx + 1;
 
-        // Look for registers in StridedOrder which start with sub-registers
-        // following sequentially from FirstReg. If all are found and none are
-        // already live, add Reg to Hints.
-        MCPhysReg RegToAssign = Reg;
-        for (unsigned Next = 1; Next < LdOps; ++Next) {
-          MCPhysReg Strided = GetRegStartingAt(FirstReg + Next);
-          if (Strided == AArch64::NoRegister ||
-              Matrix->isPhysRegUsed(Strided)) {
-            RegToAssign = AArch64::NoRegister;
-            break;
+          // If the FORM_TRANSPOSE nodes use the ZPRMul classes, the starting
+          // register of the first load should be a multiple of 2 or 4.
+          unsigned FirstSubReg = getSubReg(FirstStridedReg, AArch64::zsub0);
+          if (IsMulZPR && (FirstSubReg - AArch64::Z0) % LdOps != 0)
+            continue;
+
+          for (unsigned Op = 0; Op < LdOps; ++Op) {
+            if (!is_contained(StridedOrder, FirstStridedReg + Op) ||
+                getSubReg(FirstStridedReg + Op, AArch64::zsub0) !=
+                    FirstSubReg + Op)
+              break;
+            Regs.push_back(FirstStridedReg + Op);
           }
-          if (Next == (unsigned)OpIdx - 1)
-            RegToAssign = Strided;
+
+          if (Regs.size() == LdOps && all_of(Regs, [&](MCPhysReg R) {
+                return !Matrix->isPhysRegUsed(R);
+              }))
+            Hints.push_back(FirstStridedReg + OpIdx - 1);
         }
-        if (RegToAssign != AArch64::NoRegister)
-          Hints.push_back(RegToAssign);
+      } else {
+        // At least one operand already has a physical register assigned.
+        // Find the starting sub-register of this and use it to work out the
+        // correct strided register to suggest based on the current op index.
+        MCPhysReg TargetStartReg =
+            getSubReg(VRM->getPhys(AssignedRegOp->getReg()), AArch64::zsub0) +
+            (OpIdx - AssignedRegOp->getOperandNo());
+
+        for (unsigned I = 0; I < StridedOrder.size(); ++I)
+          if (getSubReg(StridedOrder[I], AArch64::zsub0) == TargetStartReg)
+            Hints.push_back(StridedOrder[I]);
       }
-    } else {
-      // At least one operand already has a physical register assigned.
-      // Find the starting sub-register of this and use it to work out the
-      // correct strided register to suggest based on the current op index.
-      MCPhysReg TargetStartReg =
-          getSubReg(VRM->getPhys(Use.getOperand(AssignedOp).getReg()),
-                    AArch64::zsub0) +
-          (OpIdx - AssignedOp);
 
-      for (unsigned I = 0; I < StridedOrder.size(); ++I)
-        if (getSubReg(StridedOrder[I], AArch64::zsub0) == TargetStartReg)
-          Hints.push_back(StridedOrder[I]);
+      if (!Hints.empty())
+        return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints,
+                                                         MF, VRM);
     }
-
-    if (!Hints.empty())
-      return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints,
-                                                       MF, VRM);
   }
 
   for (MachineInstr &MI : MRI.def_instructions(VirtReg)) {

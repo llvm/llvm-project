@@ -4,11 +4,6 @@
 ---
 name:            form_4x_tuple_many_live
 tracksRegLiveness: true
-liveins:
-  - { reg: '$x0', virtual-reg: '%0' }
-  - { reg: '$x1', virtual-reg: '%1' }
-  - { reg: '$z0', virtual-reg: '%2' }
-  - { reg: '$z17', virtual-reg: '%3' }
 stack:
   - { id: 0, name: '', type: default, offset: 0, size: 32, alignment: 16,
       stack-id: scalable-vector, callee-saved-register: '', callee-saved-restored: true,
@@ -87,13 +82,11 @@ body:             |
     ST1B_IMM %3, %7, %0, 0 :: (store (<vscale x 1 x s128>) into %stack.0)
     RET_ReallyLR
 ...
+
+# First multi-vector load to be allocated is not the first operand of the FORM_TRANSPOSED pseudo
 ---
 name:            form_4x_tuple_allocation_order
 tracksRegLiveness: true
-liveins:
-  - { reg: '$x0', virtual-reg: '%0' }
-  - { reg: '$x1', virtual-reg: '%1' }
-  - { reg: '$z0', virtual-reg: '%2' }
 stack:
   - { id: 0, name: '', type: default, offset: 0, size: 32, alignment: 16,
       stack-id: scalable-vector, callee-saved-register: '', callee-saved-restored: true,
@@ -146,4 +139,46 @@ body:             |
     $za = UDOT_VG4_M4ZZI_BtoS $za, %5, 0, %16, undef %34:zpr_4b, 0
     ST1B_IMM %2, %7, %0, 0 :: (store (<vscale x 1 x s128>) into %stack.0)
     RET_ReallyLR
+...
+
+# Strided order is [ $z16_z24 $z17_z25 $z18_z26 $z19_z27 $z20_z28 $z21_z29 $z22_z30 $z23_z31 $z0_z8 $z1_z9 $z2_z10 $z3_z11 $z4_z12 $z5_z13 $z6_z14 $z7_z15 ]
+# Ensure we don't allocate $z23_z31 & $z0_z8 although they are consecutive
+---
+ name:            udot_form_2x_tuple_live_reg_order
+ tracksRegLiveness: true
+ body:             |
+   bb.0.entry:
+     liveins: $x0, $x1, $z16, $z17, $z18, $z19, $z20, $z21, $z22
+
+    ; CHECK: stp d9, d8, [sp, #-16]!
+    ; CHECK-NEXT: .cfi_def_cfa_offset 16
+    ; CHECK-NEXT: .cfi_offset b8, -8
+    ; CHECK-NEXT: .cfi_offset b9, -16
+    ; CHECK-NEXT: ptrue	pn8.b
+    ; CHECK-NEXT: mov w8, wzr
+    ; CHECK-NEXT: ld1b { z0.b, z8.b }, pn8/z, [x0]
+    ; CHECK-NEXT: ld1b { z1.b, z9.b }, pn8/z, [x0, x1]
+    ; CHECK-NEXT: udot za.s[w8, 0, vgx2], { z0.b, z1.b }, z0.b
+    ; CHECK-NEXT: udot za.s[w8, 0, vgx2], { z8.b, z9.b }, z0.b
+    ; CHECK-NEXT: ldp d9, d8, [sp], #16
+    ; CHECK-NEXT: ret
+
+     %0:gpr64 = COPY $x1
+     %1:gpr64common = COPY $x0
+     %2:zpr = COPY $z16
+     %3:zpr = COPY $z17
+     %4:zpr = COPY $z18
+     %5:zpr = COPY $z19
+     %6:zpr = COPY $z20
+     %7:zpr = COPY $z21
+     %8:zpr = COPY $z22
+     %9:matrixindexgpr32_8_11 = COPY $wzr
+     %10:pnr_p8to15 = PTRUE_C_B implicit $vg
+     %11:zpr2stridedorcontiguous = LD1B_2Z_IMM_PSEUDO %10, %1, 0
+     %12:zpr2stridedorcontiguous = LD1B_2Z_PSEUDO %10, %1, %0
+     %13:zpr2 = FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO %11.zsub0, %12.zsub0
+     %14:zpr2 = FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO %11.zsub1, %12.zsub1
+     $za = UDOT_VG2_M2ZZ_BtoS $za, %9, 0, %13, undef %15:zpr_4b
+     $za = UDOT_VG2_M2ZZ_BtoS $za, %9, 0, %14, undef %16:zpr_4b
+     RET_ReallyLR
 ...
