@@ -128,7 +128,9 @@ branch that's the root of the Pull Request during the review. This action will
 make the context of the old changes and comments harder to find and read.
 
 Sometimes, a rebase might be needed to update your branch with a fix for a test
-or in some dependent code.
+or in some dependent code. This is especially encouraged if it turns out that
+the upstream base commit used for your branch had test failures, meaning the
+pre-commit CI results can't be shown as cleanly passing.
 
 After your PR is reviewed and accepted, you want to rebase your branch to ensure
 you won't encounter merge conflicts when landing the PR.
