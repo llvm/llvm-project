@@ -7,8 +7,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Interfaces/LinkageInterfaces.h"
+#include "mlir/IR/SymbolTable.h"
 
 using namespace mlir;
+using namespace mlir::link;
 
 /// Include the definitions of the interface.
 #include "mlir/Interfaces/LinkageInterfaces.cpp.inc"
+
+ComdatSymbolTable LinkableModuleOpInterface::getComdatSymbolTable() {
+  ComdatSymbolTable table;
+  this->walk([&](GlobalValueLinkageOpInterface op) {
+    if (auto comdat = op.getComdatSelectionKind()) {
+      auto symbol = cast<SymbolOpInterface>(op.getOperation());
+      table[symbol.getName()] = *comdat;
+    }
+
+    return WalkResult::skip();
+  });
+
+  return table;
+}

@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringMap.h"
 
 #include "mlir/Linker/Linkage.h"
+#include "mlir/Linker/Comdat.h"
 
 /// Include the generated interface declarations.
 #include "mlir/Interfaces/LinkageInterfaces.h.inc"

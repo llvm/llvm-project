@@ -23,6 +23,10 @@ include "mlir/IR/OpBase.td"
 def LinkableModuleOpInterface : OpInterface<"LinkableModuleOpInterface"> {
   let description = [{ WIP }];
   let cppNamespace = "::mlir";
+
+  let extraClassDeclaration = [{
+    ::mlir::link::ComdatSymbolTable getComdatSymbolTable();
+  }];
 }
 
 def GlobalValueLinkageOpInterface : OpInterface<"GlobalValueLinkageOpInterface"> {
@@ -175,6 +179,22 @@ def GlobalValueLinkageOpInterface : OpInterface<"GlobalValueLinkageOpInterface">
       /*defaultImplementation=*/[{
         return ::mlir::link::isCommonLinkage($_op.getLinkage());
       }]
+    >,
+    InterfaceMethod<
+      /*desc=*/        "Returns true if the operation has a comdat",
+      /*returnType=*/  "bool",
+      /*methodName=*/  "hasComdat",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImplementation=*/[{
+        return $_op.getComdatSelectionKind().has_value();
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/        "Returns comdat selection kind of the operation",
+      /*returnType=*/  "std::optional<::mlir::link::ComdatSelectionKind>",
+      /*methodName=*/  "getComdatSelectionKind",
+      /*args=*/        (ins)
     >
   ];
 }
