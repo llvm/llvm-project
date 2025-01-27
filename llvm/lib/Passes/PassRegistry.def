@@ -307,6 +307,8 @@ FUNCTION_ANALYSIS("scalar-evolution", ScalarEvolutionAnalysis())
 FUNCTION_ANALYSIS("should-not-run-function-passes",
                   ShouldNotRunFunctionPassesAnalysis())
 FUNCTION_ANALYSIS("should-run-extra-vector-passes",
+                  ShouldRunExtraMatrixPasses())
+FUNCTION_ANALYSIS("should-run-extra-matrix-passes",
                   ShouldRunExtraVectorPasses())
 FUNCTION_ANALYSIS("ssp-layout", SSPLayoutAnalysis())
 FUNCTION_ANALYSIS("stack-safety-local", StackSafetyAnalysis())

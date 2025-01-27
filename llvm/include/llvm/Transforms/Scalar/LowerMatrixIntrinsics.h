@@ -14,6 +14,7 @@
 #define LLVM_TRANSFORMS_SCALAR_LOWERMATRIXINTRINSICS_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Transforms/Utils/ExtraPassManager.h"
 
 namespace llvm {
 class LowerMatrixIntrinsicsPass
@@ -27,6 +28,15 @@ public:
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
   static bool isRequired() { return true; }
 };
+
+/// A marker analysis to signal if extra passes should be run after lowering
+/// matrix intrinsics.
+struct ShouldRunExtraMatrixPasses
+    : public ShouldRunExtraPasses<ShouldRunExtraMatrixPasses>,
+      public AnalysisInfoMixin<ShouldRunExtraMatrixPasses> {
+  static AnalysisKey Key;
+};
+
 } // namespace llvm
 
 #endif
