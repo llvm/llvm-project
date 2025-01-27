@@ -4280,7 +4280,7 @@ let Predicates = [HasSVE2p2_or_SME2p2] in {
   defm SCVTF_ZPzZ  : sve_fp_z2op_p_zd_c<0b0, "scvtf", "int_aarch64_sve_scvtf", AArch64scvtf_mt>;
   defm UCVTF_ZPzZ  : sve_fp_z2op_p_zd_c<0b1, "ucvtf", "int_aarch64_sve_ucvtf", AArch64ucvtf_mt>;
   // Signed integer base 2 logarithm of fp value, zeroing predicate
-  defm FLOGB_ZPzZ : sve_fp_z2op_p_zd_d_flogb<"flogb">;
+  defm FLOGB_ZPzZ : sve_fp_z2op_p_zd_d_flogb<"flogb", int_aarch64_sve_flogb>;
 
   // SVE2 integer unary operations, zeroing predicate
   def URECPE_ZPzZ  : sve2_int_un_pred_arit_z<0b10, 0b00, "urecpe", ZPR32>;
