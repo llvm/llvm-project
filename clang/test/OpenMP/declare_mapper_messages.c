@@ -82,9 +82,16 @@ int fun(int arg) {
 #pragma omp target map(mapper(aa) :vv)                                  // omp50-error {{missing map type}} omp51-error {{missing map type}} omp52-error {{missing map type}} omp51-simd-error {{missing map type}}
       {}
 #endif
-#pragma omp target map(mapper(aa) to:d)                                 // expected-error {{mapper type must be of struct, union or class type}} omp52-error{{missing ',' after map type modifier}} omp60-error{{missing ',' after map type modifier}} omp60-simd-error{{missing ',' after map type modifier}}
+// expected-error@+4 {{mapper type must be of struct, union or class type}}
+// omp52-error@+3 {{missing ',' after map type modifier}}
+// omp60-error@+2 {{missing ',' after map type modifier}}
+// omp60-simd-error@+1 {{missing ',' after map type modifier}}
+#pragma omp target map(mapper(aa) to:d)
       {}
-#pragma omp target map(mapper(aa) to:vv) map(close mapper(aa) from:v1) map(mapper(aa) to:arr[0]) // omp52-error 4 {{missing ',' after map type modifier}} omp60-error 4 {{missing ',' after map type modifier}} omp60-simd-error 4 {{missing ',' after map type modifier}}
+// omp52-error@+3 4 {{missing ',' after map type modifier}}
+// omp60-error@+2 4 {{missing ',' after map type modifier}}
+// omp60-simd-error@+1 4 {{missing ',' after map type modifier}}
+#pragma omp target map(mapper(aa) to:vv) map(close mapper(aa) from:v1) map(mapper(aa) to:arr[0])
       {}
 
 #pragma omp target update to(mapper)                                    // expected-error {{expected '(' after 'mapper'}} expected-error {{expected expression}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}

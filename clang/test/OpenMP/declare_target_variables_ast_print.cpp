@@ -124,3 +124,4 @@ target *S1 = &S;
 // CHECK-NEXT: #pragma omp declare target
 // CHECK-NEXT: target *S1 = &S;
 // CHECK-NEXT: #pragma omp end declare target
+
