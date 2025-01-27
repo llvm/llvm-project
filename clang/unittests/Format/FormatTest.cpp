@@ -12415,6 +12415,18 @@ TEST_F(FormatTest, UnderstandsAttributes) {
   verifyFormat("SomeType s __unused{InitValue};", CustomAttrs);
   verifyFormat("SomeType *__capability s(InitValue);", CustomAttrs);
   verifyFormat("SomeType *__capability s{InitValue};", CustomAttrs);
+
+  FormatStyle Style = getLLVMStyle(FormatStyle::LK_Cpp);
+  verifyFormat(
+      "template <>\n"
+      "struct __declspec(uuid(\"3895C200-8F26-4F5A-B29D-2B5D72E68F99\"))\n"
+      "IAsyncOperation<IUnknown *> : IAsyncOperation_impl<IUnknown *> {};",
+      Style);
+  verifyFormat(
+      "template <>\n"
+      "class __declspec(uuid(\"3895C200-8F26-4F5A-B29D-2B5D72E68F99\"))\n"
+      "IAsyncOperation<IUnknown *> : IAsyncOperation_impl<IUnknown *> {};",
+      Style);
 }
 
 TEST_F(FormatTest, UnderstandsPointerQualifiersInCast) {

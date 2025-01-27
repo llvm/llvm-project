@@ -2633,11 +2633,19 @@ private:
              PreviousNotConst->MatchingParen->Previous->isNot(tok::kw_template);
     }
 
-    if ((PreviousNotConst->is(tok::r_paren) &&
-         PreviousNotConst->is(TT_TypeDeclarationParen)) ||
-        PreviousNotConst->is(TT_AttributeRParen)) {
+    if (PreviousNotConst->is(tok::r_paren) &&
+        PreviousNotConst->is(TT_TypeDeclarationParen)) {
       return true;
     }
+
+    auto InTypeDecl = [&]() {
+      for (auto Next = Tok.Next; Next; Next = Next->Next)
+        if (Next->isOneOf(TT_ClassLBrace, TT_StructLBrace))
+          return true;
+      return false;
+    };
+    if (PreviousNotConst->is(TT_AttributeRParen) && (!IsCpp || !InTypeDecl()))
+      return true;
 
     // If is a preprocess keyword like #define.
     if (IsPPKeyword)
