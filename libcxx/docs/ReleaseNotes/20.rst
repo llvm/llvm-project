@@ -111,6 +111,9 @@ Improvements and New Features
   std::errc::not_a_directory``, or use ``err.default_error_condition()`` to map to an ``error_condition``, and then test
   its ``value()`` and ``category()``.
 
+- ``ofstream::write`` has been optimized to pass through large strings to system calls directly instead of copying them
+  in chunks into a buffer.
+
 Deprecations and Removals
 -------------------------
 
