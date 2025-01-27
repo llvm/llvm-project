@@ -572,12 +572,16 @@ public:
     }
     return true;
   }
+  static bool isEqual(const Fortran::evaluate::SubscriptInteger &x,
+                      const Fortran::evaluate::SubscriptInteger &y) {
+  return x == y;
+  }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::ArrayConstructor<A> &x,
                       const Fortran::evaluate::ArrayConstructor<A> &y) {
     bool checkCharacterType = true;
     if constexpr (A::category == Fortran::common::TypeCategory::Character) {
-      checkCharacterType = x.LEN() == y.LEN();
+      checkCharacterType = isEqual(*x.LEN(), *y.LEN());
     }
     using Base = Fortran::evaluate::ArrayConstructorValues<A>;
     return isEqual((Base)x, (Base)y) &&
