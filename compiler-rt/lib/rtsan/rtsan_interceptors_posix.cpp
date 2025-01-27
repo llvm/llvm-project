@@ -1088,6 +1088,11 @@ INTERCEPTOR(int, setsockopt, int socket, int level, int option,
 #define RTSAN_MAYBE_INTERCEPT_SETSOCKOPT
 #endif
 
+INTERCEPTOR(int, socketpair, int domain, int type, int protocol, int pair[2]) {
+  __rtsan_notify_intercepted_call("socketpair");
+  return REAL(socketpair)(domain, type, protocol, pair);
+}
+
 // I/O Multiplexing
 
 INTERCEPTOR(int, poll, struct pollfd *fds, nfds_t nfds, int timeout) {
@@ -1459,6 +1464,7 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_GETPEERNAME;
   RTSAN_MAYBE_INTERCEPT_GETSOCKOPT;
   RTSAN_MAYBE_INTERCEPT_SETSOCKOPT;
+  INTERCEPT_FUNCTION(socketpair);
 
   RTSAN_MAYBE_INTERCEPT_SELECT;
   INTERCEPT_FUNCTION(pselect);
