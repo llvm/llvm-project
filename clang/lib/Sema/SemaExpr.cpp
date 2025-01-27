@@ -17881,6 +17881,9 @@ void Sema::PopExpressionEvaluationContext() {
   WarnOnPendingNoDerefs(Rec);
   HandleImmediateInvocations(*this, Rec);
 
+  if (auto *FD = dyn_cast<FunctionDecl>(CurContext); FD && getCurFunction())
+    CheckImmediateEscalatingFunctionDefinition(FD, getCurFunction());
+
   // Warn on any volatile-qualified simple-assignments that are not discarded-
   // value expressions nor unevaluated operands (those cases get removed from
   // this list by CheckUnusedVolatileAssignment).
