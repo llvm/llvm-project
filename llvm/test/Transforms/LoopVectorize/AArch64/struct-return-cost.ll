@@ -8,9 +8,20 @@ target triple = "aarch64--linux-gnu"
 
 ; CHECK-COST-LABEL: struct_return_widen
 ; CHECK-COST: LV: Found an estimated cost of 10 for VF 1 For instruction:   %call = tail call { half, half } @foo(half %in_val)
+; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %extract_a = extractvalue { half, half } %call, 0
+; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %extract_b = extractvalue { half, half } %call, 1
+;
 ; CHECK-COST: Cost of 10 for VF 2: WIDEN-CALL ir<%call> = call  @foo(ir<%in_val>) (using library function: fixed_vec_foo)
+; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
+;
 ; CHECK-COST: Cost of 58 for VF 4: REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-COST: Cost of 0 for VF 4: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of 0 for VF 4: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
+;
 ; CHECK-COST: Cost of 122 for VF 8: REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-COST: Cost of 0 for VF 8: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of 0 for VF 8: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
 
 define void @struct_return_widen(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
 ; CHECK-LABEL: define void @struct_return_widen(
@@ -50,9 +61,20 @@ exit:
 
 ; CHECK-COST-LABEL: struct_return_replicate
 ; CHECK-COST: LV: Found an estimated cost of 10 for VF 1 For instruction:   %call = tail call { half, half } @foo(half %in_val)
+; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %extract_a = extractvalue { half, half } %call, 0
+; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %extract_b = extractvalue { half, half } %call, 1
+;
 ; CHECK-COST: Cost of 26 for VF 2: REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
+;
 ; CHECK-COST: Cost of 58 for VF 4: REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-COST: Cost of 0 for VF 4: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of 0 for VF 4: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
+;
 ; CHECK-COST: Cost of 122 for VF 8: REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-COST: Cost of 0 for VF 8: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of 0 for VF 8: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
 
 define void @struct_return_replicate(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
 ; CHECK-LABEL: define void @struct_return_replicate(
@@ -93,13 +115,36 @@ exit:
 
 ; CHECK-COST-LABEL: struct_return_scalable
 ; CHECK-COST: LV: Found an estimated cost of 10 for VF 1 For instruction:   %call = tail call { half, half } @foo(half %in_val)
+; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %extract_a = extractvalue { half, half } %call, 0
+; CHECK-COST: LV: Found an estimated cost of 0 for VF 1 For instruction:   %extract_b = extractvalue { half, half } %call, 1
+;
 ; CHECK-COST: Cost of 26 for VF 2: REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of 0 for VF 2: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
+;
 ; CHECK-COST: Cost of 58 for VF 4: REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-COST: Cost of 0 for VF 4: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of 0 for VF 4: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
+;
 ; CHECK-COST: Cost of 122 for VF 8: REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-COST: Cost of 0 for VF 8: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of 0 for VF 8: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
+;
 ; CHECK-COST: Cost of Invalid for VF vscale x 1: REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-COST: Cost of 0 for VF vscale x 1: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of 0 for VF vscale x 1: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
+;
 ; CHECK-COST: Cost of Invalid for VF vscale x 2: REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-COST: Cost of 0 for VF vscale x 2: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of 0 for VF vscale x 2: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
+;
 ; CHECK-COST: Cost of Invalid for VF vscale x 4: REPLICATE ir<%call> = call @foo(ir<%in_val>)
+; CHECK-COST: Cost of 0 for VF vscale x 4: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of 0 for VF vscale x 4: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
+;
 ; CHECK-COST: Cost of 10 for VF vscale x 8: WIDEN-CALL ir<%call> = call  @foo(ir<%in_val>, ir<true>) (using library function: scalable_vec_masked_foo)
+; CHECK-COST: Cost of 0 for VF vscale x 8: WIDEN ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-COST: Cost of 0 for VF vscale x 8: WIDEN ir<%extract_b> = extractvalue ir<%call>, ir<1>
 
 define void @struct_return_scalable(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) #2 {
 ; CHECK-LABEL: define void @struct_return_scalable(
