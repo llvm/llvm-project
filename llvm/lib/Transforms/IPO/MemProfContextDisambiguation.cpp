@@ -3598,10 +3598,9 @@ IndexCallsiteContextGraph::cloneFunctionForCallsite(
   // The next clone number is the current size of versions array.
   // Confirm this matches the CloneNo provided by the caller, which is based on
   // the number of function clones we have.
-  assert(CloneNo ==
-         (isa<AllocInfo *>(Call.call())
-              ? Call.call().dyn_cast<AllocInfo *>()->Versions.size()
-              : Call.call().dyn_cast<CallsiteInfo *>()->Clones.size()));
+  assert(CloneNo == (isa<AllocInfo *>(Call.call())
+                         ? cast<AllocInfo *>(Call.call())->Versions.size()
+                         : cast<CallsiteInfo *>(Call.call())->Clones.size()));
   // Walk all the instructions in this function. Create a new version for
   // each (by adding an entry to the Versions/Clones summary array), and copy
   // over the version being called for the function clone being cloned here.
