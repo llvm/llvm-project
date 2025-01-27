@@ -5242,8 +5242,8 @@ SDValue AArch64TargetLowering::LowerALIAS_LANE_MASK(SDValue Op,
                                                     SelectionDAG &DAG) const {
   SDLoc DL(Op);
   unsigned IntrinsicID = 0;
-  uint64_t EltSize = Op.getOperand(2)->getAsZExtVal();
-  bool IsWriteAfterRead = Op.getOperand(3)->getAsZExtVal() == 1;
+  uint64_t EltSize = Op.getConstantOperandVal(2);
+  bool IsWriteAfterRead = Op.getConstantOperandVal(3) == 1;
   EVT VT = Op.getValueType();
   MVT SimpleVT = VT.getSimpleVT();
   // Make sure that the promoted mask size and element size match
