@@ -1,4 +1,4 @@
-//===-- runtime/CUDA/pointer.cpp ------------------------------------------===//
+//===-- lib/flang_rt/CUDA/pointer.cpp ---------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/CUDA/pointer.h"
-#include "../assign-impl.h"
-#include "../stat.h"
-#include "../terminator.h"
+#include "flang-rt/assign-impl.h"
+#include "flang-rt/descriptor.h"
+#include "flang-rt/stat.h"
+#include "flang-rt/terminator.h"
 #include "flang/Runtime/CUDA/descriptor.h"
 #include "flang/Runtime/CUDA/memmove-function.h"
 #include "flang/Runtime/pointer.h"
