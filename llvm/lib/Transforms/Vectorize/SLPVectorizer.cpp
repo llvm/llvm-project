@@ -20761,8 +20761,8 @@ private:
             Vec = Builder.CreateIntCast(
                 Vec, getWidenedType(DestTy, getNumElements(Vec->getType())),
                 IsSigned);
-          Value *Scale =
-              ConstantVector::getSplat(EC, ConstantInt::get(DestTy->getScalarType(), Cnt));
+          Value *Scale = ConstantVector::getSplat(
+              EC, ConstantInt::get(DestTy->getScalarType(), Cnt));
           LLVM_DEBUG(dbgs() << "SLP: Add (to-mul) " << Cnt << "of " << Vec
                             << ". (HorRdx)\n");
           ++NumVectorInstructions;
@@ -20827,7 +20827,7 @@ private:
         }
         if (VecRes->getType()->getScalarType() != DestTy->getScalarType())
           VecRes = Builder.CreateIntCast(
-              VecRes, getWidenedType(DestTy, getNumElements(Vec->getType())),
+              VecRes, getWidenedType(DestTy, getNumElements(VecRes->getType())),
               VecResSignedness);
         if (ScalarTy != DestTy->getScalarType())
           Vec = Builder.CreateIntCast(
