@@ -151,4 +151,69 @@ void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
   CUDA_REPORT_IF_ERROR(cudaLaunchKernelExC(&config, kernel, params));
 }
 
+void RTDEF(CUFLaunchCooperativeKernel)(const void *kernel, intptr_t gridX,
+    intptr_t gridY, intptr_t gridZ, intptr_t blockX, intptr_t blockY,
+    intptr_t blockZ, int32_t smem, void **params, void **extra) {
+  dim3 gridDim;
+  gridDim.x = gridX;
+  gridDim.y = gridY;
+  gridDim.z = gridZ;
+  dim3 blockDim;
+  blockDim.x = blockX;
+  blockDim.y = blockY;
+  blockDim.z = blockZ;
+  unsigned nbNegGridDim{0};
+  if (gridX < 0) {
+    ++nbNegGridDim;
+  }
+  if (gridY < 0) {
+    ++nbNegGridDim;
+  }
+  if (gridZ < 0) {
+    ++nbNegGridDim;
+  }
+  if (nbNegGridDim == 1) {
+    int maxBlocks, nbBlocks, dev, multiProcCount;
+    cudaError_t err1, err2;
+    nbBlocks = blockDim.x * blockDim.y * blockDim.z;
+    cudaGetDevice(&dev);
+    err1 = cudaDeviceGetAttribute(
+        &multiProcCount, cudaDevAttrMultiProcessorCount, dev);
+    err2 = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &maxBlocks, kernel, nbBlocks, smem);
+    if (err1 == cudaSuccess && err2 == cudaSuccess) {
+      maxBlocks = multiProcCount * maxBlocks;
+    }
+    if (maxBlocks > 0) {
+      if (gridX > 0) {
+        maxBlocks = maxBlocks / gridDim.x;
+      }
+      if (gridY > 0) {
+        maxBlocks = maxBlocks / gridDim.y;
+      }
+      if (gridZ > 0) {
+        maxBlocks = maxBlocks / gridDim.z;
+      }
+      if (maxBlocks < 1) {
+        maxBlocks = 1;
+      }
+      if (gridX < 0) {
+        gridDim.x = maxBlocks;
+      }
+      if (gridY < 0) {
+        gridDim.y = maxBlocks;
+      }
+      if (gridZ < 0) {
+        gridDim.z = maxBlocks;
+      }
+    }
+  } else if (nbNegGridDim > 1) {
+    Fortran::runtime::Terminator terminator{__FILE__, __LINE__};
+    terminator.Crash("Too many invalid grid dimensions");
+  }
+  cudaStream_t stream = 0; // TODO stream managment
+  CUDA_REPORT_IF_ERROR(cudaLaunchCooperativeKernel(
+      kernel, gridDim, blockDim, params, smem, stream));
+}
+
 } // extern "C"
