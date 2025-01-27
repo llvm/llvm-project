@@ -1002,8 +1002,6 @@ ELFFile<ELFT>::decodeFuncMap(const Elf_Shdr &Sec,
   };
 
   uint8_t Version = 0;
-  uint8_t Feature = 0;
-  FuncMap::Features FeatEnable{};
   while (!ULEBSizeErr && Cur && Cur.tell() < Content.size()) {
     if (Sec.sh_type == ELF::SHT_LLVM_FUNC_MAP) {
       Version = Data.getU8(Cur);
@@ -1012,24 +1010,14 @@ ELFFile<ELFT>::decodeFuncMap(const Elf_Shdr &Sec,
       if (Version > 1)
         return createError("unsupported SHT_LLVM_FUNC_MAP version: " +
                            Twine(static_cast<int>(Version)));
-      Feature = Data.getU8(Cur); // Feature byte
-      if (!Cur)
-        break;
-      auto FeatEnableOrErr = FuncMap::Features::decode(Feature);
-      if (!FeatEnableOrErr)
-        return FeatEnableOrErr.takeError();
-      FeatEnable = *FeatEnableOrErr;
     }
     typename ELFFile<ELFT>::uintX_t FunctionAddress = 0;
     auto AddressOrErr = ExtractAddress();
     if (!AddressOrErr)
       return AddressOrErr.takeError();
     FunctionAddress = *AddressOrErr;
-    uint64_t DynamicInstCount =
-        FeatEnable.DynamicInstCount
-            ? readULEB128As<uint64_t>(Data, Cur, ULEBSizeErr)
-            : 0;
-    FunctionEntries.push_back({FunctionAddress, DynamicInstCount, FeatEnable});
+    uint64_t DynamicInstCount = readULEB128As<uint64_t>(Data, Cur, ULEBSizeErr);
+    FunctionEntries.push_back({FunctionAddress, DynamicInstCount});
   }
   // Either Cur is in the error state, or we have an error in ULEBSizeErr, but
   // we join all errors here to be safe.

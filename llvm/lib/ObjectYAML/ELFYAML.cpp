@@ -1865,9 +1865,8 @@ void MappingTraits<ELFYAML::FuncMapEntry>::mapping(IO &IO,
                                                    ELFYAML::FuncMapEntry &E) {
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapRequired("Version", E.Version);
-  IO.mapOptional("Feature", E.Feature, Hex8(0));
   IO.mapOptional("Address", E.Address, Hex64(0));
-  IO.mapOptional("DynInstCnt", E.DynamicInstCount, Hex64(0));
+  IO.mapOptional("DynInstCnt", E.DynamicInstCount, 0);
 }
 
 void MappingTraits<ELFYAML::BBAddrMapEntry>::mapping(

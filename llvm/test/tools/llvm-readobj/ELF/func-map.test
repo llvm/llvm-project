@@ -19,19 +19,19 @@
 # CHECK-NEXT:     At: [[ADDR]]
 # CHECK-NEXT: warning: '[[FILE]]': could not identify function symbol for address ([[ADDR]]) in SHT_LLVM_FUNC_MAP section with index 3
 # CHECK-NEXT:     Name: <?>
-# CHECK-NEXT:     DynamicInstCount: 10
+# CHECK-NEXT:     DynamicInstCount: 100
 # CHECK-NEXT:  }
 # CHECK-NEXT:   Function {
 # CHECK-NEXT:     At: 0x22222
 # CHECK-NEXT:     Name: foo
-# CHECK-NEXT:     DynamicInstCount: 16
+# CHECK-NEXT:     DynamicInstCount: 200
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 # CHECK-NEXT: FuncMap [
 # CHECK-NEXT:   Function {
 # CHECK-NEXT:     At: 0x33333
 # CHECK-NEXT:     Name: bar
-# CHECK-NEXT:     DynamicInstCount: 10
+# CHECK-NEXT:     DynamicInstCount: 300
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
@@ -45,7 +45,7 @@
 # TRUNCATED-NEXT:   Function {
 # TRUNCATED-NEXT:     At: 0x33333
 # TRUNCATED-NEXT:     Name: bar
-# TRUNCATED-NEXT:     DynamicInstCount: 10
+# TRUNCATED-NEXT:     DynamicInstCount: 300
 # TRUNCATED-NEXT:   }
 # TRUNCATED-NEXT: ]
 
@@ -67,13 +67,11 @@ Sections:
     Link:   .text
     Entries:
       - Version: 1
-        Feature: 0x1
         Address: [[ADDR=0x11111]]
-        DynInstCnt: 0xA
+        DynInstCnt: 100
       - Version: 1
-        Feature: 0x1
         Address: 0x22222
-        DynInstCnt: 0x10
+        DynInstCnt: 200
   - Name: dummy_section
     Type: SHT_PROGBITS
     Size: 16
@@ -82,9 +80,8 @@ Sections:
     Link: .text.bar
     Entries:
       - Version: 1
-        Feature: 0x1
         Address: 0x33333
-        DynInstCnt: 0xA
+        DynInstCnt: 300
 Symbols:
   - Name:    foo
     Section: .text
