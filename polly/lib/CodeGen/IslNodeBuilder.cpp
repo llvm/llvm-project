@@ -1103,7 +1103,7 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
   Domain = nullptr;
 
   ExprBuilder.setTrackOverflow(true);
-  Value *Cond = ExprBuilder.create(DomainCond);
+  Value *Cond = ExprBuilder.createBool(DomainCond);
   Value *OverflowHappened = Builder.CreateNot(ExprBuilder.getOverflowState(),
                                               "polly.preload.cond.overflown");
   Cond = Builder.CreateAnd(Cond, OverflowHappened, "polly.preload.cond.result");
