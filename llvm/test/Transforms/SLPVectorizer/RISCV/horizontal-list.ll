@@ -45,19 +45,13 @@ define float @test(ptr %x) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[ARRAYIDX_28]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX_29:%.*]] = getelementptr inbounds float, ptr [[X]], i64 30
 ; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[ARRAYIDX_29]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = call fast <4 x float> @llvm.vector.extract.v4f32.v16f32(<16 x float> [[TMP0]], i64 0)
-; CHECK-NEXT:    [[TMP6:%.*]] = call fast <4 x float> @llvm.vector.extract.v4f32.v16f32(<16 x float> [[TMP0]], i64 4)
-; CHECK-NEXT:    [[RDX_OP:%.*]] = fadd fast <4 x float> [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = call fast <4 x float> @llvm.vector.extract.v4f32.v16f32(<16 x float> [[TMP0]], i64 8)
-; CHECK-NEXT:    [[RDX_OP1:%.*]] = fadd fast <4 x float> [[RDX_OP]], [[TMP7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = call fast <4 x float> @llvm.vector.extract.v4f32.v16f32(<16 x float> [[TMP0]], i64 12)
-; CHECK-NEXT:    [[RDX_OP2:%.*]] = fadd fast <4 x float> [[RDX_OP1]], [[TMP8]]
-; CHECK-NEXT:    [[TMP9:%.*]] = call fast <4 x float> @llvm.vector.extract.v4f32.v8f32(<8 x float> [[TMP1]], i64 0)
-; CHECK-NEXT:    [[RDX_OP3:%.*]] = fadd fast <4 x float> [[RDX_OP2]], [[TMP9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = call fast <4 x float> @llvm.vector.extract.v4f32.v8f32(<8 x float> [[TMP1]], i64 4)
-; CHECK-NEXT:    [[RDX_OP4:%.*]] = fadd fast <4 x float> [[RDX_OP3]], [[TMP10]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call fast <8 x float> @llvm.vector.extract.v8f32.v16f32(<16 x float> [[TMP0]], i64 0)
+; CHECK-NEXT:    [[RDX_OP:%.*]] = fadd fast <8 x float> [[TMP5]], [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call fast <16 x float> @llvm.vector.insert.v16f32.v8f32(<16 x float> [[TMP0]], <8 x float> [[RDX_OP]], i64 0)
+; CHECK-NEXT:    [[RDX_OP4:%.*]] = call fast <4 x float> @llvm.vector.extract.v4f32.v16f32(<16 x float> [[TMP6]], i64 0)
 ; CHECK-NEXT:    [[RDX_OP5:%.*]] = fadd fast <4 x float> [[RDX_OP4]], [[TMP2]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[RDX_OP5]])
+; CHECK-NEXT:    [[TMP8:%.*]] = call fast <16 x float> @llvm.vector.insert.v16f32.v4f32(<16 x float> [[TMP6]], <4 x float> [[RDX_OP5]], i64 0)
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = call fast float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> [[TMP8]])
 ; CHECK-NEXT:    [[OP_RDX2:%.*]] = fadd fast float [[OP_RDX1]], [[TMP3]]
 ; CHECK-NEXT:    [[OP_RDX3:%.*]] = fadd fast float [[OP_RDX2]], [[TMP4]]
 ; CHECK-NEXT:    ret float [[OP_RDX3]]

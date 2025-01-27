@@ -848,7 +848,6 @@ public:
 
   // Assume that we have a register of the right size for the type.
   unsigned getNumberOfParts(Type *Tp) const { return 1; }
-  bool isFullSingleRegisterType(Type *Tp) const { return false; }
 
   InstructionCost getAddressComputationCost(Type *Tp, ScalarEvolution *,
                                             const SCEV *) const {

@@ -2710,23 +2710,6 @@ public:
     return *LT.first.getValue();
   }
 
-  bool isFullSingleRegisterType(Type *Tp) const {
-    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
-    if (!LT.first.isValid() || LT.first > 1)
-      return false;
-
-    if (auto *FTp = dyn_cast<FixedVectorType>(Tp);
-        Tp && LT.second.isFixedLengthVector()) {
-      // Check if the n x i1 fits fully into largest integer.
-      if (LT.second.getVectorElementType() == MVT::i1) {
-        unsigned VF = LT.second.getVectorNumElements();
-        return DL.isLegalInteger(VF) && !DL.isLegalInteger(VF * 2);
-      }
-      return FTp == EVT(LT.second).getTypeForEVT(Tp->getContext());
-    }
-    return false;
-  }
-
   InstructionCost getAddressComputationCost(Type *Ty, ScalarEvolution *,
                                             const SCEV *) {
     return 0;

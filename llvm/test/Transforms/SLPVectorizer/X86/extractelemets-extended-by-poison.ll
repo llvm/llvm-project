@@ -19,18 +19,10 @@ define i32 @test() {
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <16 x i32> [[TMP7]], zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i64> [[TMP0]], i32 0
 ; CHECK-NEXT:    [[INC_3_3_I_1:%.*]] = or i64 [[TMP9]], 0
-; CHECK-NEXT:    [[TMP20:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v16i32(<16 x i32> [[TMP8]], i64 0)
-; CHECK-NEXT:    [[TMP21:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v16i32(<16 x i32> [[TMP8]], i64 4)
-; CHECK-NEXT:    [[TMP16:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v16i32(<16 x i32> [[TMP8]], i64 8)
-; CHECK-NEXT:    [[TMP17:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v16i32(<16 x i32> [[TMP8]], i64 12)
-; CHECK-NEXT:    [[RDX_OP:%.*]] = or <4 x i32> [[TMP20]], [[TMP21]]
-; CHECK-NEXT:    [[RDX_OP1:%.*]] = or <4 x i32> [[RDX_OP]], [[TMP16]]
-; CHECK-NEXT:    [[RDX_OP2:%.*]] = or <4 x i32> [[RDX_OP1]], [[TMP17]]
-; CHECK-NEXT:    [[TMP18:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v8i32(<8 x i32> [[TMP15]], i64 0)
-; CHECK-NEXT:    [[TMP19:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v8i32(<8 x i32> [[TMP15]], i64 4)
-; CHECK-NEXT:    [[RDX_OP3:%.*]] = or <4 x i32> [[RDX_OP2]], [[TMP18]]
-; CHECK-NEXT:    [[RDX_OP4:%.*]] = or <4 x i32> [[RDX_OP3]], [[TMP19]]
-; CHECK-NEXT:    [[OP_RDX:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[RDX_OP4]])
+; CHECK-NEXT:    [[TMP16:%.*]] = call <8 x i32> @llvm.vector.extract.v8i32.v16i32(<16 x i32> [[TMP8]], i64 0)
+; CHECK-NEXT:    [[RDX_OP:%.*]] = or <8 x i32> [[TMP16]], [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = call <16 x i32> @llvm.vector.insert.v16i32.v8i32(<16 x i32> [[TMP8]], <8 x i32> [[RDX_OP]], i64 0)
+; CHECK-NEXT:    [[OP_RDX:%.*]] = call i32 @llvm.vector.reduce.or.v16i32(<16 x i32> [[TMP17]])
 ; CHECK-NEXT:    ret i32 [[OP_RDX]]
 ;
 entry:

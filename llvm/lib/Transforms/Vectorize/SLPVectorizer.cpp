@@ -3643,6 +3643,8 @@ private:
     }
     if (!Last->isGather()) {
       for (Value *V : VL) {
+        if (isa<PoisonValue>(V))
+          continue;
         const TreeEntry *TE = getTreeEntry(V);
         assert((!TE || TE == Last || doesNotNeedToBeScheduled(V)) &&
                "Scalar already in tree!");
@@ -20545,12 +20547,6 @@ public:
   }
 
 private:
-  /// Checks if the given type \p Ty is a vector type, which does not occupy the
-  /// whole vector register or is expensive for extraction.
-  static bool isNotFullVectorType(const TargetTransformInfo &TTI, Type *Ty) {
-    return TTI.getNumberOfParts(Ty) == 1 && !TTI.isFullSingleRegisterType(Ty);
-  }
-
   /// Creates the reduction from the given \p Vec vector value with the given
   /// scale \p Scale and signedness \p IsSigned.
   Value *createSingleOp(IRBuilderBase &Builder, const TargetTransformInfo &TTI,
@@ -20614,17 +20610,7 @@ private:
     // same type in the storage (first vector with small type).
     // 2. The storage does not have any vector with full vector use (first
     // vector with full register use).
-    bool DoesRequireReductionOp =
-        !AllConsts &&
-        (VectorValuesAndScales.empty() ||
-         (isNotFullVectorType(*TTI, VectorTy) &&
-          none_of(VectorValuesAndScales,
-                  [&](const auto &P) {
-                    return std::get<0>(P)->getType() == VectorTy;
-                  })) ||
-         all_of(VectorValuesAndScales, [&](const auto &P) {
-           return isNotFullVectorType(*TTI, std::get<0>(P)->getType());
-         }));
+    bool DoesRequireReductionOp = !AllConsts && VectorValuesAndScales.empty();
     switch (RdxKind) {
     case RecurKind::Add:
     case RecurKind::Mul:
@@ -20661,13 +20647,19 @@ private:
                 FMF, CostKind);
           }
         } else {
-          unsigned NumParts = TTI->getNumberOfParts(VectorTy);
-          unsigned RegVF = getPartNumElems(getNumElements(VectorTy), NumParts);
+          Type *RedTy = VectorTy->getElementType();
+          auto [RType, IsSigned] = R.getRootNodeTypeWithNoCast().value_or(
+              std::make_pair(RedTy, true));
+          VectorType *RVecTy = getWidenedType(RType, ReduxWidth);
           VectorCost +=
-              NumParts * TTI->getArithmeticInstrCost(
-                             RdxOpcode,
-                             getWidenedType(VectorTy->getScalarType(), RegVF),
-                             CostKind);
+              TTI->getArithmeticInstrCost(RdxOpcode, RVecTy, CostKind);
+          if (RType != RedTy) {
+            unsigned Opcode = Instruction::Trunc;
+            if (RedTy->getScalarSizeInBits() > RType->getScalarSizeInBits())
+              Opcode = IsSigned ? Instruction::SExt : Instruction::ZExt;
+            VectorCost += TTI->getCastInstrCost(
+                Opcode, VectorTy, RVecTy, TTI::CastContextHint::None, CostKind);
+          }
         }
       }
       ScalarCost = EvaluateScalarCost([&]() {
@@ -20690,11 +20682,19 @@ private:
         } else {
           // Check if the previous reduction already exists and account it as
           // series of operations + single reduction.
-          unsigned NumParts = TTI->getNumberOfParts(VectorTy);
-          unsigned RegVF = getPartNumElems(getNumElements(VectorTy), NumParts);
-          auto *RegVecTy = getWidenedType(VectorTy->getScalarType(), RegVF);
-          IntrinsicCostAttributes ICA(Id, RegVecTy, {RegVecTy, RegVecTy}, FMF);
-          VectorCost += NumParts * TTI->getIntrinsicInstrCost(ICA, CostKind);
+          Type *RedTy = VectorTy->getElementType();
+          auto [RType, IsSigned] = R.getRootNodeTypeWithNoCast().value_or(
+              std::make_pair(RedTy, true));
+          VectorType *RVecTy = getWidenedType(RType, ReduxWidth);
+          IntrinsicCostAttributes ICA(Id, RVecTy, {RVecTy, RVecTy}, FMF);
+          VectorCost += TTI->getIntrinsicInstrCost(ICA, CostKind);
+          if (RType != RedTy) {
+            unsigned Opcode = Instruction::Trunc;
+            if (RedTy->getScalarSizeInBits() > RType->getScalarSizeInBits())
+              Opcode = IsSigned ? Instruction::SExt : Instruction::ZExt;
+            VectorCost += TTI->getCastInstrCost(
+                Opcode, VectorTy, RVecTy, TTI::CastContextHint::None, CostKind);
+          }
         }
       }
       ScalarCost = EvaluateScalarCost([&]() {
@@ -20733,24 +20733,12 @@ private:
       CreateSingleOp(Vec, Scale, IsSigned);
       return ReducedSubTree;
     }
-    // Splits multivector value into per-register values.
-    auto SplitVector = [&](Value *Vec) {
-      unsigned Sz = getNumElements(Vec->getType());
-      unsigned NumParts = TTI.getNumberOfParts(Vec->getType());
-      if (NumParts <= 1 || NumParts >= Sz ||
-          isNotFullVectorType(TTI, Vec->getType()))
-        return SmallVector<Value *>(1, Vec);
-      unsigned RegSize = getPartNumElems(Sz, NumParts);
-      SmallVector<Value *> Regs(NumParts);
-      for (unsigned Part : seq<unsigned>(NumParts))
-        Regs[Part] = createExtractVector(Builder, Vec, RegSize, Part * RegSize);
-      return Regs;
-    };
-    SmallMapVector<Type *, Value *, 4> VecOps;
     // Scales Vec using given Cnt scale factor and then performs vector combine
     // with previous value of VecOp.
-    auto CreateVecOp = [&](Value *Vec, unsigned Cnt) {
-      Type *ScalarTy = cast<VectorType>(Vec->getType())->getElementType();
+    Value *VecRes = nullptr;
+    bool VecResSignedness = false;
+    auto CreateVecOp = [&](Value *Vec, unsigned Cnt, bool IsSigned) {
+      Type *ScalarTy = Vec->getType()->getScalarType();
       // Scale Vec using given Cnt scale factor.
       if (Cnt > 1) {
         ElementCount EC = cast<VectorType>(Vec->getType())->getElementCount();
@@ -20769,8 +20757,12 @@ private:
             break;
           }
           // res = mul vv, n
+          if (ScalarTy != DestTy->getScalarType())
+            Vec = Builder.CreateIntCast(
+                Vec, getWidenedType(DestTy, getNumElements(Vec->getType())),
+                IsSigned);
           Value *Scale =
-              ConstantVector::getSplat(EC, ConstantInt::get(ScalarTy, Cnt));
+              ConstantVector::getSplat(EC, ConstantInt::get(DestTy->getScalarType(), Cnt));
           LLVM_DEBUG(dbgs() << "SLP: Add (to-mul) " << Cnt << "of " << Vec
                             << ". (HorRdx)\n");
           ++NumVectorInstructions;
@@ -20819,77 +20811,48 @@ private:
         }
       }
       // Combine Vec with the previous VecOp.
-      Value *&VecOp = VecOps[Vec->getType()];
-      if (!VecOp) {
-        VecOp = Vec;
+      if (!VecRes) {
+        VecRes = Vec;
+        VecResSignedness = IsSigned;
       } else {
         ++NumVectorInstructions;
         if (ScalarTy == Builder.getInt1Ty() && ScalarTy != DestTy) {
           // Handle ctpop.
-          SmallVector<int> Mask(getNumElements(VecOp->getType()) +
+          SmallVector<int> Mask(getNumElements(VecRes->getType()) +
                                     getNumElements(Vec->getType()),
                                 PoisonMaskElem);
           std::iota(Mask.begin(), Mask.end(), 0);
-          VecOp = Builder.CreateShuffleVector(VecOp, Vec, Mask, "rdx.op");
+          VecRes = Builder.CreateShuffleVector(VecRes, Vec, Mask, "rdx.op");
           return;
         }
-        VecOp = createOp(Builder, RdxKind, VecOp, Vec, "rdx.op", ReductionOps);
-      }
-    };
-    for (auto [Vec, Scale, IsSigned] : VectorValuesAndScales) {
-      Value *V = Vec;
-      SmallVector<Value *> Regs = SplitVector(V);
-      for (Value *RegVec : Regs)
-        CreateVecOp(RegVec, Scale);
-    }
-    // Find minimal vector types.
-    SmallVector<std::pair<unsigned, SmallVector<Value *>>> MinVectors;
-    auto AddToMinVectors = [&](unsigned VF, Value *V) {
-      for (auto &P : MinVectors) {
-        if (VF == P.first) {
-          P.second.push_back(V);
-          return;
-        }
-        if (VF < P.first && P.first % VF == 0) {
-          P.first = VF;
-          P.second.push_back(V);
-          return;
-        }
-      }
-      MinVectors.emplace_back(VF, SmallVector<Value *>()).second.push_back(V);
-    };
-    for (auto &P : VecOps) {
-      Value *V = P.second;
-      unsigned VF = getNumElements(P.first);
-      if (isNotFullVectorType(TTI, P.first)) {
-        auto *It =
-            find_if(MinVectors, [&](const auto &P) { return P.first == VF; });
-        if (It == MinVectors.end())
-          MinVectors.emplace_back(VF, SmallVector<Value *>())
-              .second.push_back(V);
-        else
-          It->second.push_back(V);
-        continue;
-      }
-      AddToMinVectors(VF, V);
-    }
-    VecOps.clear();
-    for (auto &P : MinVectors) {
-      const unsigned VF = P.first;
-      for (Value *Vec : P.second) {
+        if (VecRes->getType()->getScalarType() != DestTy->getScalarType())
+          VecRes = Builder.CreateIntCast(
+              VecRes, getWidenedType(DestTy, getNumElements(Vec->getType())),
+              VecResSignedness);
+        if (ScalarTy != DestTy->getScalarType())
+          Vec = Builder.CreateIntCast(
+              Vec, getWidenedType(DestTy, getNumElements(Vec->getType())),
+              IsSigned);
+        unsigned VecResVF = getNumElements(VecRes->getType());
         unsigned VecVF = getNumElements(Vec->getType());
-        if (VecVF == VF) {
-          CreateVecOp(Vec, /*Cnt=*/1);
-          continue;
+        // Ensure that VecRes is always larger than Vec
+        if (VecResVF < VecVF) {
+          std::swap(VecRes, Vec);
+          std::swap(VecResVF, VecVF);
         }
-        for (unsigned Part : seq<unsigned>(VecVF / VF)) {
-          Value *Ex = createExtractVector(Builder, Vec, VF, Part * VF);
-          CreateVecOp(Ex, /*Cnt=*/1);
-        }
+        // extract + op + insert
+        Value *Op = VecRes;
+        if (VecResVF != VecVF)
+          Op = createExtractVector(Builder, VecRes, VecVF, /*Index=*/0);
+        Op = createOp(Builder, RdxKind, Op, Vec, "rdx.op", ReductionOps);
+        if (VecResVF != VecVF)
+          Op = createInsertVector(Builder, VecRes, Op, /*Index=*/0);
+        VecRes = Op;
       }
-    }
-    for (auto &P : VecOps)
-      CreateSingleOp(P.second, /*Scale=*/1, /*IsSigned=*/false);
+    };
+    for (auto [Vec, Scale, IsSigned] : VectorValuesAndScales)
+      CreateVecOp(Vec, Scale, IsSigned);
+    CreateSingleOp(VecRes, /*Scale=*/1, /*IsSigned=*/false);
 
     return ReducedSubTree;
   }
