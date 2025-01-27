@@ -78,7 +78,7 @@ static cl::opt<std::string> TrainingLog(
     "regalloc-training-log", cl::Hidden,
     cl::desc("Training log for the register allocator eviction model"));
 
-static cl::opt<std::string> ModelUnderTraining(
+cl::opt<std::string> ModelUnderTraining(
     "regalloc-model", cl::Hidden,
     cl::desc("The model being trained for register allocation eviction"));
 
