@@ -2387,6 +2387,10 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
     }
   }
 
+  // If we have an empty set of enumerators we still need one bit.
+  // From [dcl.enum]p8
+  // If the enumerator-list is empty, the values of the enumeration are as if
+  // the enumeration had a single enumerator with value 0
   if (!NumPositiveBits && !NumNegativeBits)
     NumPositiveBits = 1;
 
@@ -2398,7 +2402,7 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
   clang::QualType BestPromotionType;
   clang::QualType BestType;
   m_ast.getASTContext().computeBestEnumTypes(
-      false, NumNegativeBits, NumPositiveBits, BestType, BestPromotionType);
+      /*IsPacked=*/false, NumNegativeBits, NumPositiveBits, BestType, BestPromotionType);
   enum_decl->setPromotionType(BestPromotionType);
 
   return enumerators_added;
