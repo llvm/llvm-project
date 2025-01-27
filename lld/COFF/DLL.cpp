@@ -132,7 +132,6 @@ public:
 class NullChunk : public NonSectionChunk {
 public:
   explicit NullChunk(size_t n, uint32_t align) : size(n) {
-    hasData = false;
     setAlignment(align);
   }
   explicit NullChunk(COFFLinkerContext &ctx)
