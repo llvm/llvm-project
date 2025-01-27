@@ -653,7 +653,6 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
                            const MachineJumpTableEntry *JTE) {
   SmallString<128> Name =
       getSectionPrefixForGlobal(Kind, TM.isLargeGlobalValue(GO));
-
   if (Kind.isMergeableCString()) {
     // We also need alignment here.
     // FIXME: this is getting the alignment of the character, not the

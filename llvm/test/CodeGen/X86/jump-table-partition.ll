@@ -60,7 +60,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @case2 = private constant [7 x i8] c"case 2\00"
 @case1 = private constant [7 x i8] c"case 1\00"
 @default = private constant [8 x i8] c"default\00"
-@jt3 = private constant [3 x i8] c"jt\00"
+@jt3 = private constant [4 x i8] c"jt3\00"
 
 ; jt0 and jt2 are hot. jt1 and jt3 are cold.
 define i32 @foo(i32 %num) !prof !13 {

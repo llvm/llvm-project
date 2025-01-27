@@ -122,7 +122,6 @@ bool StaticDataSplitter::splitJumpTables(MachineFunction &MF) {
 
   const bool ProfileAvailable = PSI && PSI->hasProfileSummary() && MBFI &&
                                 MF.getFunction().hasProfileData();
-
   auto statOnExit = llvm::make_scope_exit([&] {
     if (!AreStatisticsEnabled())
       return;
@@ -149,7 +148,7 @@ bool StaticDataSplitter::splitJumpTables(MachineFunction &MF) {
   if (ProfileAvailable)
     return splitJumpTablesWithProfiles(MF, *MJTI);
 
-  return false;
+  return true;
 }
 
 char StaticDataSplitter::ID = 0;

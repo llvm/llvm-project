@@ -2890,7 +2890,6 @@ void AsmPrinter::emitJumpTableInfo() {
 
   emitJumpTableImpl(*MJTI, HotJumpTableIndices, JTInDiffSection);
   emitJumpTableImpl(*MJTI, ColdJumpTableIndices, JTInDiffSection);
-  return;
 }
 
 void AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
