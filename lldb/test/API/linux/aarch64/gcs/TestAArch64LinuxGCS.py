@@ -3,7 +3,6 @@ Check that lldb features work when the AArch64 Guarded Control Stack (GCS)
 extension is enabled.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -300,7 +299,6 @@ class AArch64LinuxGCSTestCase(TestBase):
         before = self.check_gcs_registers()
         self.expect(expr_cmd, substrs=["(unsigned long) 1"])
         self.check_gcs_registers(*before)
-
 
     @skipUnlessPlatform(["linux"])
     def test_gcs_expression_disable_gcs(self):
