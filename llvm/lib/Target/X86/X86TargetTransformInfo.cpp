@@ -1565,19 +1565,26 @@ InstructionCost X86TTIImpl::getShuffleCost(
 
   // Attempt to detect a cheaper inlane shuffle, avoiding 128-bit subvector
   // permutation.
+  // Attempt to detect a shuffle mask with a single defined element.
   bool IsInLaneShuffle = false;
+  bool IsSingleElementMask = false;
   if (BaseTp->getPrimitiveSizeInBits() > 0 &&
       (BaseTp->getPrimitiveSizeInBits() % 128) == 0 &&
       BaseTp->getScalarSizeInBits() == LT.second.getScalarSizeInBits() &&
       Mask.size() == BaseTp->getElementCount().getKnownMinValue()) {
     unsigned NumLanes = BaseTp->getPrimitiveSizeInBits() / 128;
     unsigned NumEltsPerLane = Mask.size() / NumLanes;
-    if ((Mask.size() % NumLanes) == 0)
+    if ((Mask.size() % NumLanes) == 0) {
       IsInLaneShuffle = all_of(enumerate(Mask), [&](const auto &P) {
         return P.value() == PoisonMaskElem ||
                ((P.value() % Mask.size()) / NumEltsPerLane) ==
                    (P.index() / NumEltsPerLane);
       });
+      IsSingleElementMask =
+          (Mask.size() - 1) == static_cast<unsigned>(count_if(Mask, [](int M) {
+            return M == PoisonMaskElem;
+          }));
+    }
   }
 
   // Treat <X x bfloat> shuffles as <X x half>.
@@ -1790,6 +1797,11 @@ InstructionCost X86TTIImpl::getShuffleCost(
 
     return BaseT::getShuffleCost(Kind, BaseTp, Mask, CostKind, Index, SubTp);
   }
+
+  // If we're just moving a single element around (probably as an alternative to
+  // extracting it), we can assume this is cheap.
+  if (LT.first == 1 && IsInLaneShuffle && IsSingleElementMask)
+    return TTI::TCC_Basic;
 
   static const CostTblEntry AVX512VBMIShuffleTbl[] = {
       {TTI::SK_Reverse, MVT::v64i8, 1}, // vpermb

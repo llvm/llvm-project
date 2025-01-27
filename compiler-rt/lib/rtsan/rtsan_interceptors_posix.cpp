@@ -740,6 +740,26 @@ INTERCEPTOR(int, sched_yield, void) {
   return REAL(sched_yield)();
 }
 
+#if SANITIZER_LINUX
+INTERCEPTOR(int, sched_getaffinity, pid_t pid, size_t len, cpu_set_t *set) {
+  __rtsan_notify_intercepted_call("sched_getaffinity");
+  return REAL(sched_getaffinity)(pid, len, set);
+}
+
+INTERCEPTOR(int, sched_setaffinity, pid_t pid, size_t len,
+            const cpu_set_t *set) {
+  __rtsan_notify_intercepted_call("sched_setaffinity");
+  return REAL(sched_setaffinity)(pid, len, set);
+}
+#define RTSAN_MAYBE_INTERCEPT_SCHED_GETAFFINITY                                \
+  INTERCEPT_FUNCTION(sched_getaffinity)
+#define RTSAN_MAYBE_INTERCEPT_SCHED_SETAFFINITY                                \
+  INTERCEPT_FUNCTION(sched_setaffinity)
+#else
+#define RTSAN_MAYBE_INTERCEPT_SCHED_GETAFFINITY
+#define RTSAN_MAYBE_INTERCEPT_SCHED_SETAFFINITY
+#endif
+
 // Memory
 
 INTERCEPTOR(void *, calloc, SIZE_T num, SIZE_T size) {
@@ -1067,6 +1087,11 @@ INTERCEPTOR(int, setsockopt, int socket, int level, int option,
 #define RTSAN_MAYBE_INTERCEPT_GETSOCKOPT
 #define RTSAN_MAYBE_INTERCEPT_SETSOCKOPT
 #endif
+
+INTERCEPTOR(int, socketpair, int domain, int type, int protocol, int pair[2]) {
+  __rtsan_notify_intercepted_call("socketpair");
+  return REAL(socketpair)(domain, type, protocol, pair);
+}
 
 // I/O Multiplexing
 
@@ -1415,6 +1440,8 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(usleep);
   INTERCEPT_FUNCTION(nanosleep);
   INTERCEPT_FUNCTION(sched_yield);
+  RTSAN_MAYBE_INTERCEPT_SCHED_GETAFFINITY;
+  RTSAN_MAYBE_INTERCEPT_SCHED_SETAFFINITY;
 
   INTERCEPT_FUNCTION(accept);
   INTERCEPT_FUNCTION(bind);
@@ -1437,6 +1464,7 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_GETPEERNAME;
   RTSAN_MAYBE_INTERCEPT_GETSOCKOPT;
   RTSAN_MAYBE_INTERCEPT_SETSOCKOPT;
+  INTERCEPT_FUNCTION(socketpair);
 
   RTSAN_MAYBE_INTERCEPT_SELECT;
   INTERCEPT_FUNCTION(pselect);
