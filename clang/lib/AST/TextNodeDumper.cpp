@@ -730,14 +730,11 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
     if (Value.hasLValuePath()) {
       OS << ", PathLength=" << Value.getLValuePath().size();
       OS << ", Path=(";
-      bool First = true;
+      llvm::ListSeparator Sep;
       for (const auto &PathEntry : Value.getLValuePath()) {
         // We're printing all entries as array indices because don't have the
         // type information here to do anything else.
-        OS << PathEntry.getAsArrayIndex();
-        if (First && Value.getLValuePath().size() > 1)
-          OS << ", ";
-        First = false;
+        OS << PathEntry.getAsArrayIndex() << Sep;
       }
       OS << ")";
     }
