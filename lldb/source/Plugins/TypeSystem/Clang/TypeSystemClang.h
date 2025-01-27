@@ -489,9 +489,6 @@ public:
                              const char *name, const CompilerType &param_type,
                              int storage, bool add_decl = false);
 
-  void SetFunctionParameters(clang::FunctionDecl *function_decl,
-                             llvm::ArrayRef<clang::ParmVarDecl *> params);
-
   CompilerType CreateBlockPointerType(const CompilerType &function_type);
 
   // Array Types
@@ -975,6 +972,24 @@ public:
   static void
   SetFloatingInitializerForVariable(clang::VarDecl *var,
                                     const llvm::APFloat &init_value);
+
+  /// For each parameter type of \c prototype, creates a \c clang::ParmVarDecl
+  /// whose \c clang::DeclContext is \c context.
+  ///
+  /// \param[in] context Non-null \c clang::FunctionDecl which will be the \c
+  /// clang::DeclContext of each parameter created/returned by this function.
+  /// \param[in] prototype The \c clang::FunctionProtoType of \c context.
+  /// \param[in] param_names The ith element of this vector contains the name
+  /// of the ith parameter. This parameter may be unnamed, in which case the
+  /// ith entry in \c param_names is an empty string. This vector is either
+  /// empty, or will have an entry for *each* parameter of the prototype
+  /// regardless of whether a parameter is unnamed or not.
+  ///
+  /// \returns A list of newly created of non-null \c clang::ParmVarDecl (one
+  /// for each parameter of \c prototype).
+  llvm::SmallVector<clang::ParmVarDecl *> CreateParameterDeclarations(
+      clang::FunctionDecl *context, const clang::FunctionProtoType &prototype,
+      const llvm::SmallVector<llvm::StringRef> &param_names);
 
   clang::CXXMethodDecl *AddMethodToCXXRecordType(
       lldb::opaque_compiler_type_t type, llvm::StringRef name,
