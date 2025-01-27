@@ -56,9 +56,6 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
     N->dump(&DAG); dbgs() << "\n";
 #endif
     report_fatal_error("Do not know how to promote this operator!");
-  case ISD::EXPERIMENTAL_ALIAS_LANE_MASK:
-    Res = PromoteIntRes_EXPERIMENTAL_ALIAS_LANE_MASK(N);
-    break;
   case ISD::MERGE_VALUES:Res = PromoteIntRes_MERGE_VALUES(N, ResNo); break;
   case ISD::AssertSext:  Res = PromoteIntRes_AssertSext(N); break;
   case ISD::AssertZext:  Res = PromoteIntRes_AssertZext(N); break;
@@ -325,6 +322,10 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_REDUCE_UMAX:
   case ISD::VP_REDUCE_UMIN:
     Res = PromoteIntRes_VP_REDUCE(N);
+    break;
+
+  case ISD::EXPERIMENTAL_ALIAS_LANE_MASK:
+    Res = PromoteIntRes_EXPERIMENTAL_ALIAS_LANE_MASK(N);
     break;
 
   case ISD::FREEZE:
