@@ -3441,6 +3441,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportParmVarDecl) {
   ASSERT_TRUE(FromVar);
   ASSERT_TRUE(FromVar->hasUninstantiatedDefaultArg());
   ASSERT_TRUE(FromVar->getUninstantiatedDefaultArg());
+  ASSERT_FALSE(FromVar->isExplicitObjectParameter());
 
   const auto *ToVar = Import(FromVar, Lang_CXX11);
   EXPECT_TRUE(ToVar);
@@ -3448,6 +3449,25 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportParmVarDecl) {
   EXPECT_TRUE(ToVar->getUninstantiatedDefaultArg());
   EXPECT_NE(FromVar->getUninstantiatedDefaultArg(),
             ToVar->getUninstantiatedDefaultArg());
+  EXPECT_FALSE(ToVar->isExplicitObjectParameter());
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportParmVarDecl_Explicit) {
+  const auto *Code = R"(
+    struct Wrapper {
+      void func(this Wrapper) {}
+    };
+    )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX23);
+  auto *FromVar = FirstDeclMatcher<ParmVarDecl>().match(FromTU, parmVarDecl());
+  ASSERT_TRUE(FromVar);
+  ASSERT_TRUE(FromVar->isExplicitObjectParameter());
+
+  const auto *ToVar = Import(FromVar, Lang_CXX23);
+  EXPECT_TRUE(ToVar);
+  EXPECT_TRUE(ToVar->isExplicitObjectParameter());
+  EXPECT_NE(ToVar->getExplicitObjectParamThisLoc(),
+            FromVar->getExplicitObjectParamThisLoc());
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase, ImportOfNonEquivalentField) {
