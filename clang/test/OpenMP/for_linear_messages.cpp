@@ -256,3 +256,4 @@ int main(int argc, char **argv) {
   foomain<int,char>(argc,argv); // expected-note {{n instantiation of function template specialization 'foomain<int, char>' requested here}}
   return 0;
 }
+
