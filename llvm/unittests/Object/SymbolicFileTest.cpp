@@ -10,7 +10,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
-
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <sstream>
 
@@ -44,7 +44,7 @@ TEST(Object, DataRefImplOstream) {
 struct ProxyContent {
   unsigned Index = 0;
   ProxyContent(unsigned Index) : Index(Index) {};
-  void moveNext() { Index++; }
+  void moveNext() { ++Index; }
 
   bool operator==(const ProxyContent &Another) const {
     return Index == Another.Index;
@@ -57,7 +57,5 @@ TEST(Object, ContentIterator) {
   auto EvenSequence = llvm::make_filter_range(
       Sequence, [](auto &&PC) { return PC.Index % 2 == 0; });
 
-  for (auto &&[I, Value] : llvm::enumerate(EvenSequence)) {
-    EXPECT_EQ(I * 2u, Value.Index);
-  }
+  EXPECT_THAT(EvenSequence, testing::ElementsAre(0u, 2u, 4u, 6u, 8u));
 }
