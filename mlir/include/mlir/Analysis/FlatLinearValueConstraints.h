@@ -387,8 +387,9 @@ public:
   unsigned insertSymbolVar(unsigned pos, ValueRange vals);
   using FlatLinearConstraints::insertSymbolVar;
 
-  unsigned insertVar(presburger::VarKind kind, unsigned pos,
-                     unsigned num = 1) override;
+  unsigned
+  insertVar(presburger::VarKind kind, unsigned pos, unsigned num = 1,
+            presburger::Identifier id = presburger::Identifier()) override;
   unsigned insertVar(presburger::VarKind kind, unsigned pos, ValueRange vals);
 
   /// Removes variables in the column range [varStart, varLimit), and copies any
