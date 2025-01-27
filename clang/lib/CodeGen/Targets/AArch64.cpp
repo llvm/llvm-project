@@ -244,6 +244,7 @@ AArch64ABIInfo::convertFixedToScalableVectorType(const VectorType *VT) const {
 
     case BuiltinType::SChar:
     case BuiltinType::UChar:
+    case BuiltinType::MFloat8:
       return llvm::ScalableVectorType::get(
           llvm::Type::getInt8Ty(getVMContext()), 16);
 
@@ -776,8 +777,10 @@ bool AArch64ABIInfo::passAsPureScalableType(
     NPred += Info.NumVectors;
   else
     NVec += Info.NumVectors;
-  auto VTy = llvm::ScalableVectorType::get(CGT.ConvertType(Info.ElementType),
-                                           Info.EC.getKnownMinValue());
+  llvm::Type *EltTy = Info.ElementType->isMFloat8Type()
+                          ? llvm::Type::getInt8Ty(getVMContext())
+                          : CGT.ConvertType(Info.ElementType);
+  auto *VTy = llvm::ScalableVectorType::get(EltTy, Info.EC.getKnownMinValue());
 
   if (CoerceToSeq.size() + Info.NumVectors > 12)
     return false;
