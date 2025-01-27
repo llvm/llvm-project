@@ -446,6 +446,9 @@ multiclass Ternary_i16_Pats_gfx9<SDPatternOperator op1, SDPatternOperator op2,
   >;
 }
 
+let True16Predicate = UseRealTrue16Insts in {
+  defm: Ternary_i16_Pats_gfx9<mul, add, V_MAD_U16_gfx9_t16_e64>;
+} // End True16Predicates = UseRealTrue16Insts
 let True16Predicate = UseFakeTrue16Insts in {
   defm: Ternary_i16_Pats_gfx9<mul, add, V_MAD_U16_gfx9_fake16_e64>;
 } // End True16Predicates = UseFakeTrue16Insts
