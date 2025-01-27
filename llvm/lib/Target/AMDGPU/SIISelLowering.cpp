@@ -1763,7 +1763,10 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   }
   case Intrinsic::amdgcn_rts_trace_ray:
   case Intrinsic::amdgcn_rts_trace_ray_nonblock:
-  case Intrinsic::amdgcn_rts_read_vertex: {
+  case Intrinsic::amdgcn_rts_read_vertex:
+  case Intrinsic::amdgcn_rts_read_packet_info:
+  case Intrinsic::amdgcn_rts_read_vertex_coords:
+  case Intrinsic::amdgcn_rts_read_prim_info: {
     if (IntrID == Intrinsic::amdgcn_rts_trace_ray) {
       Info.opc = ISD::INTRINSIC_VOID;
       Info.memVT = MVT::i32;
@@ -1772,7 +1775,10 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Info.memVT = MVT::getVT(CI.getType());
     }
     Info.flags |= MachineMemOperand::MOLoad;
-    if (IntrID != Intrinsic::amdgcn_rts_read_vertex)
+    if (IntrID != Intrinsic::amdgcn_rts_read_vertex &&
+        IntrID != Intrinsic::amdgcn_rts_read_vertex_coords &&
+        IntrID != Intrinsic::amdgcn_rts_read_prim_info &&
+        IntrID != Intrinsic::amdgcn_rts_read_packet_info)
       Info.flags |= MachineMemOperand::MOStore;
     return true;
   }
