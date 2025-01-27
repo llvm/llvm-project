@@ -560,9 +560,16 @@ TEST_F(TokenAnnotatorTest, UnderstandsStructs) {
   ASSERT_EQ(Tokens.size(), 15u) << Tokens;
   EXPECT_TOKEN(Tokens[11], tok::l_brace, TT_StructLBrace);
 
+  constexpr StringRef Code{"struct EXPORT StructName {};"};
+
+  Tokens = annotate(Code);
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::l_brace, TT_StructLBrace);
+  EXPECT_TOKEN(Tokens[4], tok::r_brace, TT_StructRBrace);
+
   auto Style = getLLVMStyle();
   Style.AttributeMacros.push_back("EXPORT");
-  Tokens = annotate("struct EXPORT StructName {};", Style);
+  Tokens = annotate(Code, Style);
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_AttributeMacro);
   EXPECT_TOKEN(Tokens[3], tok::l_brace, TT_StructLBrace);
