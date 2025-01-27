@@ -269,3 +269,31 @@ define void @diamondMultiInput(ptr %ptr, ptr %ptrX) {
   store float %sub1, ptr %ptr1
   ret void
 }
+
+define void @diamondWithConstantVector(ptr %ptr) {
+; CHECK-LABEL: define void @diamondWithConstantVector(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[GEPA0:%.*]] = getelementptr i32, ptr [[PTR]], i64 0
+; CHECK-NEXT:    [[GEPB0:%.*]] = getelementptr i32, ptr [[PTR]], i64 10
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[GEPA0]], align 4
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[GEPB0]], align 4
+; CHECK-NEXT:    ret void
+;
+  %gepA0 = getelementptr i32, ptr %ptr, i64 0
+  %gepA1 = getelementptr i32, ptr %ptr, i64 1
+
+  %gepB0 = getelementptr i32, ptr %ptr, i64 10
+  %gepB1 = getelementptr i32, ptr %ptr, i64 11
+
+  %zext0 = zext i16 0 to i32
+  %zext1 = zext i16 0 to i32
+
+  store i32 %zext0, ptr %gepA0
+  store i32 %zext1, ptr %gepA1
+
+  %orB0 = or i32 0, %zext0
+  %orB1 = or i32 0, %zext1
+  store i32 %orB0, ptr %gepB0
+  store i32 %orB1, ptr %gepB1
+  ret void
+}

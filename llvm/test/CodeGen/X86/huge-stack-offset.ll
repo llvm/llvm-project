@@ -13,11 +13,9 @@ define void @foo() nounwind {
 ; CHECK-64-NEXT: addq    [[RAX]], %rsp
 
 ; CHECK-32-LABEL: foo:
-; CHECK-32:      movl    $50000000{{..}}, %eax
-; CHECK-32-NEXT: subl    %eax, %esp
+; CHECK-32:      ud2
 ; CHECK-32-NOT:  subl    $2147483647, %esp
-; CHECK-32:      movl    $50000000{{..}}, [[EAX:%e..]]
-; CHECK-32-NEXT: addl    [[EAX]], %esp
+; CHECK-32:      ud2
   %1 = alloca [5000000000 x i8], align 16
   call void @bar(ptr %1)
   ret void
@@ -46,7 +44,7 @@ define i32 @foo3(i32 inreg %x) nounwind {
 ; CHECK-64-NEXT: subq    %rax, %rsp
 
 ; CHECK-32-LABEL: foo3:
-; CHECK-32:      subl $2147483647, %esp
+; CHECK-32:      ud2
 ; CHECK-32-NOT:  movl ${{.*}}, %eax
   %1 = alloca [5000000000 x i8], align 16
   call void @bar(ptr %1)

@@ -678,7 +678,7 @@ public:
   }*/
 
   reference operator*() const {
-    if (const NamedDecl *ND = DeclOrIterator.dyn_cast<const NamedDecl *>())
+    if (const NamedDecl *ND = dyn_cast<const NamedDecl *>(DeclOrIterator))
       return reference(ND, SingleDeclIndex);
 
     return *cast<const DeclIndexPair *>(DeclOrIterator);

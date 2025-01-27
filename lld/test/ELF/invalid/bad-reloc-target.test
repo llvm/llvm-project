@@ -51,7 +51,7 @@ Symbols:
 ## Relocation refers to a symbol with index larger than
 ## symbol table size. Check we report it.
 # RUN: yaml2obj --docnum=3 %s -o %t2.o
-# RUN: not ld.lld %t2.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR3
+# RUN: env LLD_IN_TEST=1 not ld.lld %t2.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR3
 # ERR3: error: {{.*}}.o: invalid symbol index
 
 --- !ELF

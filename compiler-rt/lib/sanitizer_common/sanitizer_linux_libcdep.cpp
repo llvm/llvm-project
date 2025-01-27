@@ -773,11 +773,6 @@ static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *arg) {
   return 0;
 }
 
-#  if SANITIZER_ANDROID && __ANDROID_API__ < 21
-extern "C" __attribute__((weak)) int dl_iterate_phdr(
-    int (*)(struct dl_phdr_info *, size_t, void *), void *);
-#  endif
-
 static bool requiresProcmaps() {
 #  if SANITIZER_ANDROID && __ANDROID_API__ <= 22
   // Fall back to /proc/maps if dl_iterate_phdr is unavailable or broken.
@@ -940,11 +935,8 @@ extern "C" SANITIZER_WEAK_ATTRIBUTE int __android_log_write(int prio,
 void WriteOneLineToSyslog(const char *s) {
   if (&async_safe_write_log) {
     async_safe_write_log(SANITIZER_ANDROID_LOG_INFO, GetProcessName(), s);
-  } else if (AndroidGetApiLevel() > ANDROID_KITKAT) {
-    syslog(LOG_INFO, "%s", s);
   } else {
-    CHECK(&__android_log_write);
-    __android_log_write(SANITIZER_ANDROID_LOG_INFO, nullptr, s);
+    syslog(LOG_INFO, "%s", s);
   }
 }
 

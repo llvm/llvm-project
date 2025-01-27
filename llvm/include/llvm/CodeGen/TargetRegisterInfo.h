@@ -466,9 +466,9 @@ public:
   }
 
   /// Returns true if Reg contains RegUnit.
-  bool hasRegUnit(MCRegister Reg, Register RegUnit) const {
+  bool hasRegUnit(MCRegister Reg, MCRegUnit RegUnit) const {
     for (MCRegUnit Unit : regunits(Reg))
-      if (Register(Unit) == RegUnit)
+      if (Unit == RegUnit)
         return true;
     return false;
   }

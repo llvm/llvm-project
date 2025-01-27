@@ -1495,15 +1495,22 @@ LogicalResult ModuleImport::convertCallTypeAndOperands(
   if (!callInst->getType()->isVoidTy())
     types.push_back(convertType(callInst->getType()));
 
-  if (!callInst->getCalledFunction()) {
-    if (!allowInlineAsm ||
-        !isa<llvm::InlineAsm>(callInst->getCalledOperand())) {
-      FailureOr<Value> called = convertValue(callInst->getCalledOperand());
-      if (failed(called))
-        return failure();
-      operands.push_back(*called);
-    }
+  bool isInlineAsm = callInst->isInlineAsm();
+  if (isInlineAsm && !allowInlineAsm)
+    return failure();
+
+  // Cannot use isIndirectCall() here because we need to handle Constant callees
+  // that are not considered indirect calls by LLVM. However, in MLIR, they are
+  // treated as indirect calls to constant operands that need to be converted.
+  // Skip the callee operand if it's inline assembly, as it's handled separately
+  // in InlineAsmOp.
+  if (!isa<llvm::Function>(callInst->getCalledOperand()) && !isInlineAsm) {
+    FailureOr<Value> called = convertValue(callInst->getCalledOperand());
+    if (failed(called))
+      return failure();
+    operands.push_back(*called);
   }
+
   SmallVector<llvm::Value *> args(callInst->args());
   FailureOr<SmallVector<Value>> arguments = convertValues(args);
   if (failed(arguments))
@@ -1593,7 +1600,8 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     return success();
   }
   if (inst->getOpcode() == llvm::Instruction::Call) {
-    auto *callInst = cast<llvm::CallInst>(inst);
+    auto callInst = cast<llvm::CallInst>(inst);
+    llvm::Value *calledOperand = callInst->getCalledOperand();
 
     SmallVector<Type> types;
     SmallVector<Value> operands;
@@ -1601,15 +1609,12 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                                           /*allowInlineAsm=*/true)))
       return failure();
 
-    auto funcTy =
-        dyn_cast<LLVMFunctionType>(convertType(callInst->getFunctionType()));
-    if (!funcTy)
-      return failure();
-
-    if (auto asmI = dyn_cast<llvm::InlineAsm>(callInst->getCalledOperand())) {
+    if (auto asmI = dyn_cast<llvm::InlineAsm>(calledOperand)) {
+      Type resultTy = convertType(callInst->getType());
+      if (!resultTy)
+        return failure();
       auto callOp = builder.create<InlineAsmOp>(
-          loc, funcTy.getReturnType(), operands,
-          builder.getStringAttr(asmI->getAsmString()),
+          loc, resultTy, operands, builder.getStringAttr(asmI->getAsmString()),
           builder.getStringAttr(asmI->getConstraintString()),
           /*has_side_effects=*/true,
           /*is_align_stack=*/false, /*asm_dialect=*/nullptr,
@@ -1619,27 +1624,35 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       else
         mapNoResultOp(inst, callOp);
     } else {
-      CallOp callOp;
+      auto funcTy = dyn_cast<LLVMFunctionType>([&]() -> Type {
+        // Retrieve the real function type. For direct calls, use the callee's
+        // function type, as it may differ from the operand type in the case of
+        // variadic functions. For indirect calls, use the call function type.
+        if (auto callee = dyn_cast<llvm::Function>(calledOperand))
+          return convertType(callee->getFunctionType());
+        return convertType(callInst->getFunctionType());
+      }());
 
-      if (llvm::Function *callee = callInst->getCalledFunction()) {
-        callOp = builder.create<CallOp>(
-            loc, funcTy, SymbolRefAttr::get(context, callee->getName()),
-            operands);
-      } else {
-        callOp = builder.create<CallOp>(loc, funcTy, operands);
-      }
+      if (!funcTy)
+        return failure();
+
+      auto callOp = [&]() -> CallOp {
+        if (auto callee = dyn_cast<llvm::Function>(calledOperand)) {
+          auto name = SymbolRefAttr::get(context, callee->getName());
+          return builder.create<CallOp>(loc, funcTy, name, operands);
+        }
+        return builder.create<CallOp>(loc, funcTy, operands);
+      }();
+
+      // Handle function attributes.
       callOp.setCConv(convertCConvFromLLVM(callInst->getCallingConv()));
       callOp.setTailCallKind(
           convertTailCallKindFromLLVM(callInst->getTailCallKind()));
       setFastmathFlagsAttr(inst, callOp);
 
-      // Handle function attributes.
-      if (callInst->hasFnAttr(llvm::Attribute::Convergent))
-        callOp.setConvergent(true);
-      if (callInst->hasFnAttr(llvm::Attribute::NoUnwind))
-        callOp.setNoUnwind(true);
-      if (callInst->hasFnAttr(llvm::Attribute::WillReturn))
-        callOp.setWillReturn(true);
+      callOp.setConvergent(callInst->isConvergent());
+      callOp.setNoUnwind(callInst->doesNotThrow());
+      callOp.setWillReturn(callInst->hasFnAttr(llvm::Attribute::WillReturn));
 
       llvm::MemoryEffects memEffects = callInst->getMemoryEffects();
       ModRefInfo othermem = convertModRefInfoFromLLVM(

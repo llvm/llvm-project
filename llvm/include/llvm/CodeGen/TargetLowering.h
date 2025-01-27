@@ -2123,6 +2123,10 @@ public:
   /// Get the ISD node that corresponds to the Instruction class opcode.
   int InstructionOpcodeToISD(unsigned Opcode) const;
 
+  /// Get the ISD node that corresponds to the Intrinsic ID. Returns
+  /// ISD::DELETED_NODE by default for an unsupported Intrinsic ID.
+  int IntrinsicIDToISD(Intrinsic::ID ID) const;
+
   /// @}
 
   //===--------------------------------------------------------------------===//
@@ -3156,13 +3160,11 @@ public:
   /// Return true on success. Currently only supports
   /// llvm.vector.deinterleave2
   ///
-  /// \p DI is the deinterleave intrinsic.
-  /// \p LI is the accompanying load instruction
-  /// \p DeadInsts is a reference to a vector that keeps track of dead
-  /// instruction during transformations.
-  virtual bool lowerDeinterleaveIntrinsicToLoad(
-      IntrinsicInst *DI, LoadInst *LI,
-      SmallVectorImpl<Instruction *> &DeadInsts) const {
+  /// \p LI is the accompanying load instruction.
+  /// \p DeinterleaveValues contains the deinterleaved values.
+  virtual bool
+  lowerDeinterleaveIntrinsicToLoad(LoadInst *LI,
+                                   ArrayRef<Value *> DeinterleaveValues) const {
     return false;
   }
 
@@ -3170,13 +3172,11 @@ public:
   /// Return true on success. Currently only supports
   /// llvm.vector.interleave2
   ///
-  /// \p II is the interleave intrinsic.
   /// \p SI is the accompanying store instruction
-  /// \p DeadInsts is a reference to a vector that keeps track of dead
-  /// instruction during transformations.
-  virtual bool lowerInterleaveIntrinsicToStore(
-      IntrinsicInst *II, StoreInst *SI,
-      SmallVectorImpl<Instruction *> &DeadInsts) const {
+  /// \p InterleaveValues contains the interleaved values.
+  virtual bool
+  lowerInterleaveIntrinsicToStore(StoreInst *SI,
+                                  ArrayRef<Value *> InterleaveValues) const {
     return false;
   }
 
@@ -5502,6 +5502,15 @@ public:
   /// expansion was successful and populates the Result and Overflow arguments.
   bool expandMULO(SDNode *Node, SDValue &Result, SDValue &Overflow,
                   SelectionDAG &DAG) const;
+
+  /// Calculate the product twice the width of LHS and RHS. If HiLHS/HiRHS are
+  /// non-null they will be included in the multiplication. The expansion works
+  /// by splitting the 2 inputs into 4 pieces that we can multiply and add
+  /// together without neding MULH or MUL_LOHI.
+  void forceExpandMultiply(SelectionDAG &DAG, const SDLoc &dl, bool Signed,
+                           SDValue &Lo, SDValue &Hi, SDValue LHS, SDValue RHS,
+                           SDValue HiLHS = SDValue(),
+                           SDValue HiRHS = SDValue()) const;
 
   /// forceExpandWideMUL - Unconditionally expand a MUL into either a libcall or
   /// brute force via a wide multiplication. The expansion works by

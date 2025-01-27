@@ -18,7 +18,7 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
+#if _LIBCPP_HAS_EXPERIMENTAL_PSTL && _LIBCPP_STD_VER >= 17
 
 #  include <__functional/operations.h>
 #  include <__iterator/cpp17_iterator_concepts.h>
@@ -656,7 +656,7 @@ _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator transform(
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
+#endif // _LIBCPP_HAS_EXPERIMENTAL_PSTL && _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
 

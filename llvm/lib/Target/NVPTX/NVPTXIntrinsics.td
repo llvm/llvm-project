@@ -7569,4 +7569,16 @@ def INT_NVVM_WGMMA_WAIT_GROUP_SYNC_ALIGNED : NVPTXInst<(outs), (ins i64imm:$n), 
                              [(int_nvvm_wgmma_wait_group_sync_aligned timm:$n)]>, Requires<[hasSM90a, hasPTX<80>]>;
 } // isConvergent = true
 
+def GRIDDEPCONTROL_LAUNCH_DEPENDENTS :
+      NVPTXInst<(outs), (ins),
+                "griddepcontrol.launch_dependents;",
+                [(int_nvvm_griddepcontrol_launch_dependents)]>,
+                Requires<[hasSM<90>, hasPTX<78>]>;
+
+def GRIDDEPCONTROL_WAIT :
+      NVPTXInst<(outs), (ins),
+                "griddepcontrol.wait;",
+                [(int_nvvm_griddepcontrol_wait)]>,
+                Requires<[hasSM<90>, hasPTX<78>]>;
+
 def INT_EXIT : NVPTXInst<(outs), (ins), "exit;", [(int_nvvm_exit)]>;

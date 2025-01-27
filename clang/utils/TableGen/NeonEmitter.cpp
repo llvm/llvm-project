@@ -102,7 +102,7 @@ enum EltType {
   Float32,
   Float64,
   BFloat16,
-  MFloat8 // Not used by Sema or CodeGen in Clang
+  MFloat8
 };
 
 } // end namespace NeonTypeFlags
@@ -1592,24 +1592,10 @@ Intrinsic::DagEmitter::emitDagCast(const DagInit *DI, bool IsBitCast) {
   }
 
   std::string S;
-  if (IsBitCast) {
-    // Emit a reinterpret cast. The second operand must be an lvalue, so create
-    // a temporary.
-    std::string N = "reint";
-    unsigned I = 0;
-    while (Intr.Variables.find(N) != Intr.Variables.end())
-      N = "reint" + utostr(++I);
-    Intr.Variables[N] = Variable(R.first, N + Intr.VariablePostfix);
-
-    Intr.OS << R.first.str() << " " << Intr.Variables[N].getName() << " = "
-            << R.second << ";";
-    Intr.emitNewLine();
-
-    S = "*(" + castToType.str() + " *) &" + Intr.Variables[N].getName() + "";
-  } else {
-    // Emit a normal (static) cast.
+  if (IsBitCast)
+    S = "__builtin_bit_cast(" + castToType.str() + ", " + R.second + ")";
+  else
     S = "(" + castToType.str() + ")(" + R.second + ")";
-  }
 
   return std::make_pair(castToType, S);
 }
@@ -2295,9 +2281,7 @@ static void emitNeonTypeDefs(const std::string& types, raw_ostream &OS) {
       InIfdef = true;
     }
 
-    if (T.isMFloat8())
-      OS << "typedef __MFloat8x";
-    else if (T.isPoly())
+    if (T.isPoly())
       OS << "typedef __attribute__((neon_polyvector_type(";
     else
       OS << "typedef __attribute__((neon_vector_type(";
@@ -2305,10 +2289,7 @@ static void emitNeonTypeDefs(const std::string& types, raw_ostream &OS) {
     Type T2 = T;
     T2.makeScalar();
     OS << T.getNumElements();
-    if (T.isMFloat8())
-      OS << "_t ";
-    else
-      OS << "))) " << T2.str();
+    OS << "))) " << T2.str();
     OS << " " << T.str() << ";\n";
   }
   if (InIfdef)

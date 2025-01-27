@@ -87,6 +87,9 @@ private:
 
   bool constrainCopyLikeIntrin(MachineInstr &MI, unsigned NewOpc) const;
   bool selectCOPY(MachineInstr &I) const;
+  bool selectCOPY_SCC_VCC(MachineInstr &I) const;
+  bool selectCOPY_VCC_SCC(MachineInstr &I) const;
+  bool selectReadAnyLane(MachineInstr &I) const;
   bool selectPHI(MachineInstr &I) const;
   bool selectG_TRUNC(MachineInstr &I) const;
   bool selectG_SZA_EXT(MachineInstr &I) const;

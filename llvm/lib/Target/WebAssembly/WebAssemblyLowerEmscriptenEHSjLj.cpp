@@ -1199,7 +1199,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
 
   // Look for orphan landingpads, can occur in blocks with no predecessors
   for (BasicBlock &BB : F) {
-    Instruction *I = BB.getFirstNonPHI();
+    BasicBlock::iterator I = BB.getFirstNonPHIIt();
     if (auto *LPI = dyn_cast<LandingPadInst>(I))
       LandingPads.insert(LPI);
   }
@@ -1739,7 +1739,7 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
 
   SmallVector<Instruction *, 16> ToErase;
   for (auto &BB : F) {
-    if (auto *CSI = dyn_cast<CatchSwitchInst>(BB.getFirstNonPHI())) {
+    if (auto *CSI = dyn_cast<CatchSwitchInst>(BB.getFirstNonPHIIt())) {
       if (CSI != CatchSwitchLongjmp && CSI->unwindsToCaller()) {
         IRB.SetInsertPoint(CSI);
         ToErase.push_back(CSI);

@@ -143,50 +143,65 @@ v_cmpx_class_f64 src_scc, v2
 v_cmpx_class_f64 0xaf123456, v255
 // GFX11: v_cmpx_class_f64_e32 0xaf123456, v255   ; encoding: [0xff,0xfe,0xff,0x7d,0x56,0x34,0x12,0xaf]
 
-v_cmpx_eq_f16 v1, v2
-// GFX11: v_cmpx_eq_f16_e32 v1, v2                ; encoding: [0x01,0x05,0x04,0x7d]
+v_cmpx_eq_f16 v1.l, v2.l
+// GFX11: v_cmpx_eq_f16_e32 v1.l, v2.l            ; encoding: [0x01,0x05,0x04,0x7d]
 
-v_cmpx_eq_f16 v127, v2
-// GFX11: v_cmpx_eq_f16_e32 v127, v2              ; encoding: [0x7f,0x05,0x04,0x7d]
+v_cmpx_eq_f16 v127.l, v2.l
+// GFX11: v_cmpx_eq_f16_e32 v127.l, v2.l          ; encoding: [0x7f,0x05,0x04,0x7d]
 
-v_cmpx_eq_f16 s1, v2
-// GFX11: v_cmpx_eq_f16_e32 s1, v2                ; encoding: [0x01,0x04,0x04,0x7d]
+v_cmpx_eq_f16 s1, v2.l
+// GFX11: v_cmpx_eq_f16_e32 s1, v2.l              ; encoding: [0x01,0x04,0x04,0x7d]
 
-v_cmpx_eq_f16 s105, v2
-// GFX11: v_cmpx_eq_f16_e32 s105, v2              ; encoding: [0x69,0x04,0x04,0x7d]
+v_cmpx_eq_f16 s105, v2.l
+// GFX11: v_cmpx_eq_f16_e32 s105, v2.l            ; encoding: [0x69,0x04,0x04,0x7d]
 
-v_cmpx_eq_f16 vcc_lo, v2
-// GFX11: v_cmpx_eq_f16_e32 vcc_lo, v2            ; encoding: [0x6a,0x04,0x04,0x7d]
+v_cmpx_eq_f16 vcc_lo, v2.l
+// GFX11: v_cmpx_eq_f16_e32 vcc_lo, v2.l          ; encoding: [0x6a,0x04,0x04,0x7d]
 
-v_cmpx_eq_f16 vcc_hi, v2
-// GFX11: v_cmpx_eq_f16_e32 vcc_hi, v2            ; encoding: [0x6b,0x04,0x04,0x7d]
+v_cmpx_eq_f16 vcc_hi, v2.l
+// GFX11: v_cmpx_eq_f16_e32 vcc_hi, v2.l          ; encoding: [0x6b,0x04,0x04,0x7d]
 
-v_cmpx_eq_f16 ttmp15, v2
-// GFX11: v_cmpx_eq_f16_e32 ttmp15, v2            ; encoding: [0x7b,0x04,0x04,0x7d]
+v_cmpx_eq_f16 ttmp15, v2.l
+// GFX11: v_cmpx_eq_f16_e32 ttmp15, v2.l          ; encoding: [0x7b,0x04,0x04,0x7d]
 
-v_cmpx_eq_f16 m0, v2
-// GFX11: v_cmpx_eq_f16_e32 m0, v2                ; encoding: [0x7d,0x04,0x04,0x7d]
+v_cmpx_eq_f16 m0, v2.l
+// GFX11: v_cmpx_eq_f16_e32 m0, v2.l              ; encoding: [0x7d,0x04,0x04,0x7d]
 
-v_cmpx_eq_f16 exec_lo, v2
-// GFX11: v_cmpx_eq_f16_e32 exec_lo, v2           ; encoding: [0x7e,0x04,0x04,0x7d]
+v_cmpx_eq_f16 exec_lo, v2.l
+// GFX11: v_cmpx_eq_f16_e32 exec_lo, v2.l         ; encoding: [0x7e,0x04,0x04,0x7d]
 
-v_cmpx_eq_f16 exec_hi, v2
-// GFX11: v_cmpx_eq_f16_e32 exec_hi, v2           ; encoding: [0x7f,0x04,0x04,0x7d]
+v_cmpx_eq_f16 exec_hi, v2.l
+// GFX11: v_cmpx_eq_f16_e32 exec_hi, v2.l         ; encoding: [0x7f,0x04,0x04,0x7d]
 
-v_cmpx_eq_f16 null, v2
-// GFX11: v_cmpx_eq_f16_e32 null, v2              ; encoding: [0x7c,0x04,0x04,0x7d]
+v_cmpx_eq_f16 null, v2.l
+// GFX11: v_cmpx_eq_f16_e32 null, v2.l            ; encoding: [0x7c,0x04,0x04,0x7d]
 
-v_cmpx_eq_f16 -1, v2
-// GFX11: v_cmpx_eq_f16_e32 -1, v2                ; encoding: [0xc1,0x04,0x04,0x7d]
+v_cmpx_eq_f16 -1, v2.l
+// GFX11: v_cmpx_eq_f16_e32 -1, v2.l              ; encoding: [0xc1,0x04,0x04,0x7d]
 
-v_cmpx_eq_f16 0.5, v2
-// GFX11: v_cmpx_eq_f16_e32 0.5, v2               ; encoding: [0xf0,0x04,0x04,0x7d]
+v_cmpx_eq_f16 0.5, v2.l
+// GFX11: v_cmpx_eq_f16_e32 0.5, v2.l             ; encoding: [0xf0,0x04,0x04,0x7d]
 
-v_cmpx_eq_f16 src_scc, v2
-// GFX11: v_cmpx_eq_f16_e32 src_scc, v2           ; encoding: [0xfd,0x04,0x04,0x7d]
+v_cmpx_eq_f16 src_scc, v2.l
+// GFX11: v_cmpx_eq_f16_e32 src_scc, v2.l         ; encoding: [0xfd,0x04,0x04,0x7d]
 
-v_cmpx_eq_f16 0xfe0b, v127
-// GFX11: v_cmpx_eq_f16_e32 0xfe0b, v127          ; encoding: [0xff,0xfe,0x04,0x7d,0x0b,0xfe,0x00,0x00]
+v_cmpx_eq_f16 0xfe0b, v127.l
+// GFX11: v_cmpx_eq_f16_e32 0xfe0b, v127.l        ; encoding: [0xff,0xfe,0x04,0x7d,0x0b,0xfe,0x00,0x00]
+
+v_cmpx_eq_f16 v1.h, v2.l
+// GFX11: v_cmpx_eq_f16_e32 v1.h, v2.l            ; encoding: [0x81,0x05,0x04,0x7d]
+
+v_cmpx_eq_f16 v127.h, v2.l
+// GFX11: v_cmpx_eq_f16_e32 v127.h, v2.l          ; encoding: [0xff,0x05,0x04,0x7d]
+
+v_cmpx_eq_f16 0.5, v127.l
+// GFX11: v_cmpx_eq_f16_e32 0.5, v127.l           ; encoding: [0xf0,0xfe,0x04,0x7d]
+
+v_cmpx_eq_f16 src_scc, v2.h
+// GFX11: v_cmpx_eq_f16_e32 src_scc, v2.h         ; encoding: [0xfd,0x04,0x05,0x7d]
+
+v_cmpx_eq_f16 0xfe0b, v127.h
+// GFX11: v_cmpx_eq_f16_e32 0xfe0b, v127.h        ; encoding: [0xff,0xfe,0x05,0x7d,0x0b,0xfe,0x00,0x00]
 
 v_cmpx_eq_f32 v1, v2
 // GFX11: v_cmpx_eq_f32_e32 v1, v2                ; encoding: [0x01,0x05,0x24,0x7d]

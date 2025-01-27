@@ -150,9 +150,15 @@ void test_P1361() {
   assert_is_formattable<std::chrono::microseconds, CharT>();
 
   assert_is_formattable<std::chrono::sys_time<std::chrono::microseconds>, CharT>();
-  //assert_is_formattable<std::chrono::utc_time<std::chrono::microseconds>, CharT>();
+#  if !defined(TEST_HAS_NO_EXPERIMENTAL_TZDB) && !defined(TEST_HAS_NO_TIME_ZONE_DATABASE) &&                           \
+      !defined(TEST_HAS_NO_FILESYSTEM)
+  assert_is_formattable<std::chrono::utc_time<std::chrono::microseconds>, CharT>();
   //assert_is_formattable<std::chrono::tai_time<std::chrono::microseconds>, CharT>();
   //assert_is_formattable<std::chrono::gps_time<std::chrono::microseconds>, CharT>();
+
+#  endif // !defined(TEST_HAS_NO_EXPERIMENTAL_TZDB) && !defined(TEST_HAS_NO_TIME_ZONE_DATABASE) &&
+         // !defined(TEST_HAS_NO_FILESYSTEM)
+
   assert_is_formattable<std::chrono::file_time<std::chrono::microseconds>, CharT>();
   assert_is_formattable<std::chrono::local_time<std::chrono::microseconds>, CharT>();
 

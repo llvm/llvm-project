@@ -732,7 +732,7 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
   // that section can be assigned an incorrect entry size. To avoid this we
   // usually put symbols of the same size into distinct mergeable sections with
   // the same name. Doing so relies on the ",unique ," assembly feature. This
-  // feature is not avalible until bintuils version 2.35
+  // feature is not available until binutils version 2.35
   // (https://sourceware.org/bugzilla/show_bug.cgi?id=25380).
   const bool SupportsUnique = Ctx.getAsmInfo()->useIntegratedAssembler() ||
                               Ctx.getAsmInfo()->binutilsIsAtLeast(2, 35);
@@ -745,7 +745,7 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
   const bool SymbolMergeable = Flags & ELF::SHF_MERGE;
   const bool SeenSectionNameBefore =
       Ctx.isELFGenericMergeableSection(SectionName);
-  // If this is the first ocurrence of this section name, treat it as the
+  // If this is the first occurrence of this section name, treat it as the
   // generic section
   if (!SymbolMergeable && !SeenSectionNameBefore) {
     if (TM.getSeparateNamedSections())

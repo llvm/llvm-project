@@ -254,10 +254,9 @@ void Symbol::parseSymbolVersion(Ctx &ctx) {
 }
 
 void Symbol::extract(Ctx &ctx) const {
-  if (file->lazy) {
-    file->lazy = false;
-    parseFile(ctx, file);
-  }
+  assert(file->lazy);
+  file->lazy = false;
+  parseFile(ctx, file);
 }
 
 uint8_t Symbol::computeBinding(Ctx &ctx) const {

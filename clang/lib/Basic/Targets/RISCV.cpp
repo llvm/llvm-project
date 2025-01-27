@@ -102,7 +102,7 @@ bool RISCVTargetInfo::validateAsmConstraint(
     return true;
   case 'c':
     // A RVC register - GPR or FPR
-    if (Name[1] == 'r' || Name[1] == 'f') {
+    if (Name[1] == 'r' || Name[1] == 'R' || Name[1] == 'f') {
       Info.setAllowsRegister();
       Name += 1;
       return true;

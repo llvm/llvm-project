@@ -325,6 +325,10 @@ C++20 Feature Support
 
 - Implemented module level lookup for C++20 modules. (#GH90154)
 
+C++17 Feature Support
+^^^^^^^^^^^^^^^^^^^^^
+- The implementation of the relaxed template template argument matching rules is
+  more complete and reliable, and should provide more accurate diagnostics.
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -351,7 +355,8 @@ Resolutions to C++ Defect Reports
   (`CWG2351: void{} <https://cplusplus.github.io/CWG/issues/2351.html>`_).
 
 - Clang now has improved resolution to CWG2398, allowing class templates to have
-  default arguments deduced when partial ordering.
+  default arguments deduced when partial ordering, and better backwards compatibility
+  in overload resolution.
 
 - Clang now allows comparing unequal object pointers that have been cast to ``void *``
   in constant expressions. These comparisons always worked in non-constant expressions.
@@ -473,6 +478,17 @@ Non-comprehensive list of changes in this release
   ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
   ``__builtin_elementwise_sub_sat``, ``__builtin_reduce_min`` (For integral element type),
   ``__builtin_reduce_max`` (For integral element type).
+
+- The builtin macros ``__INT8_C``, ``__INT16_C``, ``__INT32_C``, ``__INT64_C``,
+  ``__INTMAX_C``, ``__UINT8_C``, ``__UINT16_C``, ``__UINT32_C``, ``__UINT64_C``
+  and ``__UINTMAX_C`` have been introduced to ease the implementaton of section
+  7.18.4 of ISO/IEC 9899:1999. These macros are also defined by GCC and should
+  be used instead of others that expand and paste the suffixes provided by
+  ``__INT8_C_SUFFIX__``, ``__INT16_C_SUFFIX__``, ``__INT32_C_SUFFIX__``,
+  ``__INT64_C_SUFFIX__``, ``__INTMAX_C_SUFFIX__``, ``__UINT8_C_SUFFIX__``,
+  ``__UINT16_C_SUFFIX__``, ``__UINT32_C_SUFFIX__``, ``__UINT64_C_SUFFIX__`` and
+  ``__UINTMAX_C_SUFFIX__``. Pasting suffixes after the expansion of their
+  respective macros is unsafe, as users can define the suffixes as macros.
 
 - Clang now rejects ``_BitInt`` matrix element types if the bit width is less than ``CHAR_WIDTH`` or
   not a power of two, matching preexisting behaviour for vector types.
@@ -635,6 +651,10 @@ Improvements to Clang's diagnostics
 - Clang now diagnoses the use of ``main`` in an ``extern`` context as invalid according to [basic.start.main] p3. Fixes #GH101512.
 
 - Clang now diagnoses when the result of a [[nodiscard]] function is discarded after being cast in C. Fixes #GH104391.
+
+- Clang now properly explains the reason a template template argument failed to
+  match a template template parameter, in terms of the C++17 relaxed matching rules
+  instead of the old ones.
 
 - Don't emit duplicated dangling diagnostics. (#GH93386).
 
@@ -807,6 +827,8 @@ Improvements to Clang's diagnostics
 
 - Clang now emits a ``-Wignored-qualifiers`` diagnostic when a base class includes cv-qualifiers (#GH55474).
 
+- Clang now diagnoses the use of attribute names reserved by the C++ standard (#GH92196).
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -885,6 +907,8 @@ Bug Fixes to C++ Support
 - Correctly check constraints of explicit instantiations of member functions. (#GH46029)
 - When performing partial ordering of function templates, clang now checks that
   the deduction was consistent. Fixes (#GH18291).
+- Fixes to several issues in partial ordering of template template parameters, which
+  were documented in the test suite.
 - Fixed an assertion failure about a constraint of a friend function template references to a value with greater
   template depth than the friend function template. (#GH98258)
 - Clang now rebuilds the template parameters of out-of-line declarations and specializations in the context
@@ -977,6 +1001,10 @@ Bug Fixes to C++ Support
 - Fix immediate escalation not propagating through inherited constructors.  (#GH112677)
 - Fixed assertions or false compiler diagnostics in the case of C++ modules for
   lambda functions or inline friend functions defined inside templates (#GH122493).
+- Clang now rejects declaring an alias template with the same name as its template parameter. (#GH123423)
+- Fix type of expression when calling a template which returns an ``__array_rank`` querying a type depending on a
+  template parameter. Now, such expression can be used with ``static_assert`` and ``constexpr``. (#GH123498)
+- Correctly determine the implicit constexprness of lambdas in dependent contexts. (#GH97958) (#GH114234)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

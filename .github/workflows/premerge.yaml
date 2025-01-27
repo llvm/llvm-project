@@ -16,7 +16,7 @@ jobs:
     if: github.repository_owner == 'llvm'
     runs-on: llvm-premerge-linux-runners
     concurrency:
-      group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+      group: ${{ github.workflow }}-linux-${{ github.event.pull_request.number || github.sha }}
       cancel-in-progress: true
     steps:
       - name: Checkout LLVM
@@ -70,3 +70,65 @@ jobs:
           export CXX=/opt/llvm/bin/clang++
 
           ./.ci/monolithic-linux.sh "$(echo ${linux_projects} | tr ' ' ';')" "$(echo ${linux_check_targets})" "$(echo ${linux_runtimes} | tr ' ' ';')" "$(echo ${linux_runtime_check_targets})"
+
+  premerge-checks-windows:
+    if: github.repository_owner == 'llvm'
+    runs-on: llvm-premerge-windows-runners
+    concurrency:
+      group: ${{ github.workflow }}-windows-${{ github.event.pull_request.number || github.sha }}
+      cancel-in-progress: true
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2.14
+        with:
+          variant: "sccache"
+          max-size: "2000M"
+      - name: Compute Projects
+        id: vars
+        run: |
+          modified_files=$(git diff --name-only HEAD~1...HEAD)
+          modified_dirs=$(echo "$modified_files" | cut -d'/' -f1 | sort | uniq)
+
+          echo $modified_files
+          echo $modified_dirs
+
+          . ./.ci/compute-projects.sh
+
+          all_projects="bolt clang clang-tools-extra compiler-rt cross-project-tests flang libc libclc lld lldb llvm mlir openmp polly pstl"
+          modified_projects="$(keep-modified-projects ${all_projects})"
+
+          windows_projects_to_test=$(exclude-windows $(compute-projects-to-test 1 ${modified_projects}))
+          windows_check_targets=$(check-targets ${windows_projects_to_test} | sort | uniq | tr -d '\r' | tr '\n' ' ')
+          windows_projects=$(add-dependencies ${windows_projects_to_test} | sort | uniq | tr -d '\r' | tr '\n' ';')
+
+          if [[ "${windows_projects}" == "" ]]; then
+            echo "No projects to build"
+          fi
+
+          echo "Building projects: ${windows_projects}"
+          echo "Running project checks targets: ${windows_check_targets}"
+
+          echo "windows-projects=${windows_projects}" >> $GITHUB_OUTPUT
+          echo "windows-check-targets=${windows_check_targets}" >> $GITHUB_OUTPUT
+      - name: Build and Test
+        # Mark the job as a success even if the step fails so that people do
+        # not get notified while the new premerge pipeline is in an
+        # experimental state.
+        # TODO(boomanaiden154): Remove this once the pipeline is stable and we
+        # are ready for people to start recieving notifications.
+        continue-on-error: true
+        if: ${{ steps.vars.outputs.windows-projects != '' }}
+        shell: cmd
+        run: |
+          set MAX_PARALLEL_COMPILE_JOBS=64
+          set MAX_PARALLEL_LINK_JOBS=64
+          call C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64
+          bash .ci/monolithic-windows.sh "${{ steps.vars.outputs.windows-projects }}" "${{ steps.vars.outputs.windows-check-targets }}"
+

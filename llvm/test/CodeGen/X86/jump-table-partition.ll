@@ -1,8 +1,5 @@
 ; -stats requires asserts
-; requires: asserts
-
-; COM: Investigate test failure with fuchsia environment and re-enable the test.
-; UNSUPPORTED: target={{.*}}-fuchsia
+; REQUIRES: asserts
 
 ; Stop after 'finalize-isel' for simpler MIR, and lower the minimum number of
 ; jump table entries so 'switch' needs fewer cases to generate a jump table.
@@ -13,9 +10,9 @@
 ; COM: Update test to verify section suffixes when target-lowering and assembler changes are implemented.
 ; COM: Also run static-data-splitter pass with -static-data-default-hotness=cold and check data section suffix.
  
-; STAT-DAG: 2 static-data-splitter - Number of cold jump tables seen
-; STAT-DAG: 2 static-data-splitter - Number of hot jump tables seen
-; STAT-DAG: 1 static-data-splitter - Number of jump tables with unknown hotness
+; STAT: 2 static-data-splitter - Number of cold jump tables seen
+; STAT: 2 static-data-splitter - Number of hot jump tables seen
+; STAT: 1 static-data-splitter - Number of jump tables with unknown hotness
 
 ; In function @foo, the 2 switch instructions to jt0.* and jt1.* get lowered to hot jump tables,
 ; and the 2 switch instructions to jt2.* and jt3.* get lowered to cold jump tables.

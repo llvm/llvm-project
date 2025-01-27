@@ -130,7 +130,6 @@ program main
   do
     exit
   end do
-  !ERROR: !$CUF KERNEL DO (1) must be followed by a DO construct with tightly nested outer levels of counted DO loops
   !$cuf kernel do <<< 1, 2 >>>
   do concurrent (j=1:10)
   end do

@@ -139,20 +139,26 @@ struct GPULaunchKernelConversion
                            adaptor.getBlockSizeY(), adaptor.getBlockSizeZ(),
                            dynamicMemorySize, kernelArgs, nullPtr});
     } else {
-      auto funcOp = mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
-          RTNAME_STRING(CUFLaunchKernel));
+      auto procAttr =
+          op->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName());
+      bool isGridGlobal =
+          procAttr && procAttr.getValue() == cuf::ProcAttribute::GridGlobal;
+      llvm::StringRef fctName = isGridGlobal
+                                    ? RTNAME_STRING(CUFLaunchCooperativeKernel)
+                                    : RTNAME_STRING(CUFLaunchKernel);
+      auto funcOp = mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>(fctName);
       auto funcTy = mlir::LLVM::LLVMFunctionType::get(
           voidTy,
           {ptrTy, llvmIntPtrType, llvmIntPtrType, llvmIntPtrType,
            llvmIntPtrType, llvmIntPtrType, llvmIntPtrType, i32Ty, ptrTy, ptrTy},
           /*isVarArg=*/false);
-      auto cufLaunchKernel = mlir::SymbolRefAttr::get(
-          mod.getContext(), RTNAME_STRING(CUFLaunchKernel));
+      auto cufLaunchKernel =
+          mlir::SymbolRefAttr::get(mod.getContext(), fctName);
       if (!funcOp) {
         mlir::OpBuilder::InsertionGuard insertGuard(rewriter);
         rewriter.setInsertionPointToStart(mod.getBody());
-        auto launchKernelFuncOp = rewriter.create<mlir::LLVM::LLVMFuncOp>(
-            loc, RTNAME_STRING(CUFLaunchKernel), funcTy);
+        auto launchKernelFuncOp =
+            rewriter.create<mlir::LLVM::LLVMFuncOp>(loc, fctName, funcTy);
         launchKernelFuncOp.setVisibility(
             mlir::SymbolTable::Visibility::Private);
       }

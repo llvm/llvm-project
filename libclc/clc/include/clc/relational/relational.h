@@ -142,4 +142,30 @@
   _CLC_DEFINE_RELATIONAL_BINARY_VEC_ALL(RET_TYPE, FUNCTION, ARG0_TYPE,         \
                                         ARG1_TYPE)
 
+#define _CLC_DEFINE_SIMPLE_RELATIONAL_BINARY(RET_TYPE, RET_TYPE_VEC, FUNCTION, \
+                                             ARG1_TYPE, ARG2_TYPE)             \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE FUNCTION(ARG1_TYPE x, ARG2_TYPE y) {         \
+    return _CLC_RELATIONAL_OP(x, y);                                           \
+  }                                                                            \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE_VEC##2 FUNCTION(ARG1_TYPE##2 x,              \
+                                                  ARG2_TYPE##2 y) {            \
+    return _CLC_RELATIONAL_OP(x, y);                                           \
+  }                                                                            \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE_VEC##3 FUNCTION(ARG1_TYPE##3 x,              \
+                                                  ARG2_TYPE##3 y) {            \
+    return _CLC_RELATIONAL_OP(x, y);                                           \
+  }                                                                            \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE_VEC##4 FUNCTION(ARG1_TYPE##4 x,              \
+                                                  ARG2_TYPE##4 y) {            \
+    return _CLC_RELATIONAL_OP(x, y);                                           \
+  }                                                                            \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE_VEC##8 FUNCTION(ARG1_TYPE##8 x,              \
+                                                  ARG2_TYPE##8 y) {            \
+    return _CLC_RELATIONAL_OP(x, y);                                           \
+  }                                                                            \
+  _CLC_DEF _CLC_OVERLOAD RET_TYPE_VEC##16 FUNCTION(ARG1_TYPE##16 x,            \
+                                                   ARG2_TYPE##16 y) {          \
+    return _CLC_RELATIONAL_OP(x, y);                                           \
+  }
+
 #endif // __CLC_RELATIONAL_RELATIONAL_H__

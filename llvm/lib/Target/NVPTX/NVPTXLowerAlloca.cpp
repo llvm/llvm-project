@@ -92,14 +92,14 @@ bool NVPTXLowerAlloca::runOnFunction(Function &F) {
           auto ASCastToLocalAS = new AddrSpaceCastInst(
               allocaInst,
               PointerType::get(ETy->getContext(), ADDRESS_SPACE_LOCAL), "");
-          ASCastToLocalAS->insertAfter(allocaInst);
+          ASCastToLocalAS->insertAfter(allocaInst->getIterator());
           AllocaInLocalAS = ASCastToLocalAS;
         }
 
         auto AllocaInGenericAS = new AddrSpaceCastInst(
             AllocaInLocalAS,
             PointerType::get(ETy->getContext(), ADDRESS_SPACE_GENERIC), "");
-        AllocaInGenericAS->insertAfter(AllocaInLocalAS);
+        AllocaInGenericAS->insertAfter(AllocaInLocalAS->getIterator());
 
         for (Use &AllocaUse : llvm::make_early_inc_range(allocaInst->uses())) {
           // Check Load, Store, GEP, and BitCast Uses on alloca and make them

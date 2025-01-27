@@ -400,8 +400,8 @@ struct ClampClampOptimization : public OpRewritePattern<tosa::ClampOp> {
     const auto opMaxFloat = op.getMaxFp();
     const auto clampOpMinFloat = clampOp.getMinFp();
     const auto clampOpMaxFloat = clampOp.getMaxFp();
-    ClampRange opRangeFloatRange(opMinFloat, opMaxFloat);
-    ClampRange clampRangeFloatRange(clampOpMinFloat, clampOpMaxFloat);
+    ClampRange<APFloat> opRangeFloatRange(opMinFloat, opMaxFloat);
+    ClampRange<APFloat> clampRangeFloatRange(clampOpMinFloat, clampOpMaxFloat);
     if (!opRangeFloatRange.intersects(clampRangeFloatRange))
       return failure();
 

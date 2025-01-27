@@ -381,6 +381,9 @@ extractOmpDirective(const parser::OpenMPConstruct &ompConstruct) {
           [](const parser::OpenMPDeclarativeAllocate &c) {
             return llvm::omp::OMPD_allocate;
           },
+          [](const parser::OpenMPDispatchConstruct &c) {
+            return llvm::omp::OMPD_dispatch;
+          },
           [](const parser::OpenMPExecutableAllocate &c) {
             return llvm::omp::OMPD_allocate;
           },
@@ -3386,6 +3389,13 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPUtilityConstruct &) {
   TODO(converter.getCurrentLocation(), "OpenMPUtilityConstruct");
+}
+
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OpenMPDispatchConstruct &) {
+  TODO(converter.getCurrentLocation(), "OpenMPDispatchConstruct");
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

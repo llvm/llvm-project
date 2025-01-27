@@ -1204,7 +1204,7 @@ static std::optional<Instruction *> instCombineSVEDup(InstCombiner &IC,
   auto *IdxTy = Type::getInt64Ty(II.getContext());
   auto *Insert = InsertElementInst::Create(
       II.getArgOperand(0), II.getArgOperand(2), ConstantInt::get(IdxTy, 0));
-  Insert->insertBefore(&II);
+  Insert->insertBefore(II.getIterator());
   Insert->takeName(&II);
 
   return IC.replaceInstUsesWith(II, Insert);
@@ -1357,7 +1357,7 @@ static std::optional<Instruction *> instCombineSVELast(InstCombiner &IC,
     // The intrinsic is extracting lane 0 so use an extract instead.
     auto *IdxTy = Type::getInt64Ty(II.getContext());
     auto *Extract = ExtractElementInst::Create(Vec, ConstantInt::get(IdxTy, 0));
-    Extract->insertBefore(&II);
+    Extract->insertBefore(II.getIterator());
     Extract->takeName(&II);
     return IC.replaceInstUsesWith(II, Extract);
   }
@@ -1393,7 +1393,7 @@ static std::optional<Instruction *> instCombineSVELast(InstCombiner &IC,
   // The intrinsic is extracting a fixed lane so use an extract instead.
   auto *IdxTy = Type::getInt64Ty(II.getContext());
   auto *Extract = ExtractElementInst::Create(Vec, ConstantInt::get(IdxTy, Idx));
-  Extract->insertBefore(&II);
+  Extract->insertBefore(II.getIterator());
   Extract->takeName(&II);
   return IC.replaceInstUsesWith(II, Extract);
 }

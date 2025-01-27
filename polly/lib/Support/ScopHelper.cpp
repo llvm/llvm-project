@@ -321,7 +321,7 @@ private:
     }
 
     InstClone->setName(Name + Inst->getName());
-    InstClone->insertBefore(IP);
+    InstClone->insertBefore(IP->getIterator());
     return GenSE.getSCEV(InstClone);
   }
 

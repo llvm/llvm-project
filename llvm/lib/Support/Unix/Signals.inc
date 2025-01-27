@@ -149,6 +149,24 @@ public:
     }
   }
 
+  static void removeFile(char *path) {
+    // Get the status so we can determine if it's a file or directory. If we
+    // can't stat the file, ignore it.
+    struct stat buf;
+    if (stat(path, &buf) != 0)
+      return;
+
+    // If this is not a regular file, ignore it. We want to prevent removal
+    // of special files like /dev/null, even if the compiler is being run
+    // with the super-user permissions.
+    if (!S_ISREG(buf.st_mode))
+      return;
+
+    // Otherwise, remove the file. We ignore any errors here as there is
+    // nothing else we can do.
+    unlink(path);
+  }
+
   // Signal-safe.
   static void removeAllFiles(std::atomic<FileToRemoveList *> &Head) {
     // If cleanup were to occur while we're removing files we'd have a bad time.
@@ -162,21 +180,7 @@ public:
       // If erasing was occuring while we're trying to remove files we'd look
       // at free'd data. Take away the path and put it back when done.
       if (char *path = currentFile->Filename.exchange(nullptr)) {
-        // Get the status so we can determine if it's a file or directory. If we
-        // can't stat the file, ignore it.
-        struct stat buf;
-        if (stat(path, &buf) != 0)
-          continue;
-
-        // If this is not a regular file, ignore it. We want to prevent removal
-        // of special files like /dev/null, even if the compiler is being run
-        // with the super-user permissions.
-        if (!S_ISREG(buf.st_mode))
-          continue;
-
-        // Otherwise, remove the file. We ignore any errors here as there is
-        // nothing else we can do.
-        unlink(path);
+        removeFile(path);
 
         // We're done removing the file, erasing can safely proceed.
         currentFile->Filename.exchange(path);
