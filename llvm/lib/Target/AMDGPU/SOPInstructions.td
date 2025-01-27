@@ -2655,6 +2655,12 @@ multiclass SOPP_Real_32_gfx12<bits<7> op, string name = !tolower(NAME)> {
     }
 }
 
+multiclass SOPP_Real_32_gfx12_not_1250<bits<7> op, string name = !tolower(NAME)> {
+  defvar ps = !cast<SOPP_Pseudo>(NAME);
+  def _gfx12_not_1250 : SOPP_Real_32<op, ps, name>,
+               Select<GFX12Not12_50Gen, ps.PseudoInstr>;
+}
+
 defm S_BARRIER_WAIT         : SOPP_Real_32_gfx12<0x014>;
 defm S_BARRIER_LEAVE        : SOPP_Real_32_gfx12<0x015>;
 defm S_WAIT_LOADCNT         : SOPP_Real_32_gfx12<0x040>;
@@ -2707,6 +2713,9 @@ multiclass SOPP_Real_64_gfx11<bits<7> op> {
 multiclass SOPP_Real_32_gfx11_gfx12<bits<7> op> :
   SOPP_Real_32_gfx11<op>, SOPP_Real_32_gfx12<op>;
 
+multiclass SOPP_Real_32_gfx11_gfx12_not_1250<bits<7> op> :
+  SOPP_Real_32_gfx11<op>, SOPP_Real_32_gfx12_not_1250<op>;
+
 multiclass SOPP_Real_32_gfx11_Renamed_gfx12<bits<7> op, string gfx12_name> :
   SOPP_Real_32_gfx11<op>, SOPP_Real_32_gfx12<op, gfx12_name>;
 
@@ -2732,7 +2741,7 @@ defm S_INST_PREFETCH              : SOPP_Real_32_gfx11<0x004, "s_set_inst_prefet
 defm S_CLAUSE                     : SOPP_Real_32_gfx11_gfx12<0x005>;
 defm S_DELAY_ALU                  : SOPP_Real_32_gfx11_gfx12<0x007>;
 defm S_WAITCNT_DEPCTR             : SOPP_Real_32_gfx11_Renamed_gfx12<0x008, "s_wait_alu">;
-defm S_WAITCNT                    : SOPP_Real_32_gfx11_gfx12<0x009>;
+defm S_WAITCNT                    : SOPP_Real_32_gfx11_gfx12_not_1250<0x009>;
 defm S_WAIT_IDLE                  : SOPP_Real_32_gfx11_gfx12<0x00a>;
 defm S_WAIT_EVENT                 : SOPP_Real_32_gfx11_gfx12<0x00b>;
 defm S_TRAP                       : SOPP_Real_32_gfx11_gfx12<0x010>;
