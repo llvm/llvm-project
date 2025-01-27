@@ -766,8 +766,14 @@ Error SymbolTableSection::removeSymbols(
     function_ref<bool(const Symbol &)> ToRemove) {
   Symbols.erase(
       std::remove_if(std::begin(Symbols) + 1, std::end(Symbols),
-                     [ToRemove](const SymPtr &Sym) { return ToRemove(*Sym); }),
-      std::end(Symbols));
+               [ToRemove](const SymPtr &Sym) {
+                   if (ToRemove(*Sym)) {
+                       dbgs()<<"Symbols Removed:"<<Sym->Name<< "\n";
+                       return true;
+                   }
+                   return false;
+               }));
+
   auto PrevSize = Size;
   Size = Symbols.size() * EntrySize;
   if (Size < PrevSize)
@@ -2240,10 +2246,18 @@ Error Object::removeSections(
 
   // Transfer removed sections into the Object RemovedSections container for use
   // later.
-  std::move(Iter, Sections.end(), std::back_inserter(RemovedSections));
-  // Now finally get rid of them all together.
-  Sections.erase(Iter, std::end(Sections));
-  return Error::success();
+  for(auto &KeepSec : make_range(std::begin(Sections) , Iter))
+  {
+    
+    if (Error E = KeepSec->removeSectionReferences(
+            AllowBrokenLinks, [&RemoveSections](const SectionBase *Sec) {
+              return RemoveSections.find(Sec) != RemoveSections.end();
+            }))
+      std::move(Iter, Sections.end(), std::back_inserter(RemovedSections));
+      dbgs()<<"Sections Removed:"<<KeepSec->Name<<'\n';
+      Sections.erase(Iter, std::end(Sections));
+      return Error::success();
+  }
 }
 
 Error Object::replaceSections(
