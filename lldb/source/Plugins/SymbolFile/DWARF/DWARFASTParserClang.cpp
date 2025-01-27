@@ -2399,7 +2399,8 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
   clang::QualType BestPromotionType;
   clang::QualType BestType;
   m_ast.getASTContext().computeBestEnumTypes(
-      /*IsPacked=*/false, NumNegativeBits, NumPositiveBits, BestType, BestPromotionType);
+      /*IsPacked=*/false, NumNegativeBits, NumPositiveBits, BestType,
+      BestPromotionType);
   enum_decl->setPromotionType(BestPromotionType);
 
   return enumerators_added;
