@@ -19,6 +19,7 @@
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Compiler.h"
 #include <optional>
+#include <version>
 
 #if defined(_MSC_VER)
 // MSVC's call_once implementation worked since VS 2015, which is the minimum
