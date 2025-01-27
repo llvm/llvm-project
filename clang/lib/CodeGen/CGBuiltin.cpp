@@ -19105,6 +19105,51 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return nullptr;
 
   switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_adduint64: {
+    Value *OpA = EmitScalarExpr(E->getArg(0));
+    Value *OpB = EmitScalarExpr(E->getArg(1));
+    assert(E->getArg(0)->getType()->hasIntegerRepresentation() &&
+           E->getArg(1)->getType()->hasIntegerRepresentation() &&
+           "AddUint64 operands must have an integer representation");
+    assert(((E->getArg(0)->getType()->castAs<VectorType>()->getNumElements() ==
+                 2 &&
+             E->getArg(1)->getType()->castAs<VectorType>()->getNumElements() ==
+                 2) ||
+            (E->getArg(0)->getType()->castAs<VectorType>()->getNumElements() ==
+                 4 &&
+             E->getArg(1)->getType()->castAs<VectorType>()->getNumElements() ==
+                 4)) &&
+           "input vectors must have 2 or 4 elements each");
+
+    llvm::Value *Result = PoisonValue::get(OpA->getType());
+    uint64_t NumElements =
+        E->getArg(0)->getType()->castAs<VectorType>()->getNumElements();
+    for (uint64_t i = 0; i < NumElements / 2; ++i) {
+
+      // Obtain low and high words of inputs A and B
+      llvm::Value *LowA = Builder.CreateExtractElement(OpA, 2 * i + 0);
+      llvm::Value *HighA = Builder.CreateExtractElement(OpA, 2 * i + 1);
+      llvm::Value *LowB = Builder.CreateExtractElement(OpB, 2 * i + 0);
+      llvm::Value *HighB = Builder.CreateExtractElement(OpB, 2 * i + 1);
+
+      // Use an uadd_with_overflow to compute the sum of low words and obtain a
+      // carry value
+      llvm::Value *Carry;
+      llvm::Value *LowSum = EmitOverflowIntrinsic(
+          *this, llvm::Intrinsic::uadd_with_overflow, LowA, LowB, Carry);
+      llvm::Value *ZExtCarry = Builder.CreateZExt(Carry, HighA->getType());
+
+      // Sum the high words and the carry
+      llvm::Value *HighSum = Builder.CreateAdd(HighA, HighB);
+      llvm::Value *HighSumPlusCarry = Builder.CreateAdd(HighSum, ZExtCarry);
+
+      // Insert the low and high word sums into the result vector
+      Result = Builder.CreateInsertElement(Result, LowSum, 2 * i + 0);
+      Result = Builder.CreateInsertElement(Result, HighSumPlusCarry, 2 * i + 1,
+                                           "hlsl.AddUint64");
+    }
+    return Result;
+  }
   case Builtin::BI__builtin_hlsl_resource_getpointer: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *IndexOp = EmitScalarExpr(E->getArg(1));

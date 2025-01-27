@@ -10623,7 +10623,7 @@ def err_second_argument_to_cwsc_not_pointer : Error<
   "second argument to __builtin_call_with_static_chain must be of pointer type">;
 
 def err_vector_incorrect_num_elements : Error<
-  "%select{too many|too few}0 elements in vector %select{initialization|operand}3 (expected %1 elements, have %2)">;
+  "%select{too many|too few|incorrect number of}0 elements in vector %select{initialization|operand}3 (expected %1 elements, have %2)">;
 def err_altivec_empty_initializer : Error<"expected initializer">;
 
 def err_invalid_neon_type_code : Error<

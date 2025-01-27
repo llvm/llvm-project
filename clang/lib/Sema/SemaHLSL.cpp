@@ -21,6 +21,7 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
@@ -2023,6 +2024,18 @@ static bool CheckAllArgsHaveFloatRepresentation(Sema *S, CallExpr *TheCall) {
                                     checkAllFloatTypes);
 }
 
+static bool CheckUnsignedIntegerRepresentation(Sema *S, CallExpr *TheCall) {
+  auto checkUnsignedInteger = [](clang::QualType PassedType) -> bool {
+    clang::QualType BaseType =
+        PassedType->isVectorType()
+            ? PassedType->getAs<clang::VectorType>()->getElementType()
+            : PassedType;
+    return !BaseType->isUnsignedIntegerType();
+  };
+  return CheckAllArgTypesAreCorrect(S, TheCall, S->Context.UnsignedIntTy,
+                                    checkUnsignedInteger);
+}
+
 static bool CheckFloatOrHalfRepresentations(Sema *S, CallExpr *TheCall) {
   auto checkFloatorHalf = [](clang::QualType PassedType) -> bool {
     clang::QualType BaseType =
@@ -2214,6 +2227,42 @@ static bool CheckResourceHandle(
 // returning an ExprError
 bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_adduint64: {
+    if (SemaRef.checkArgCount(TheCall, 2))
+      return true;
+    if (CheckVectorElementCallArgs(&SemaRef, TheCall))
+      return true;
+    if (CheckUnsignedIntegerRepresentation(&SemaRef, TheCall))
+      return true;
+
+    // CheckVectorElementCallArgs(...) guarantees both args are the same type.
+    assert(TheCall->getArg(0)->getType() == TheCall->getArg(1)->getType() &&
+           "Both args must be of the same type");
+
+    // ensure both args are vectors
+    auto *VTy = TheCall->getArg(0)->getType()->getAs<VectorType>();
+    if (!VTy) {
+      SemaRef.Diag(TheCall->getBeginLoc(),
+                   diag::err_vector_incorrect_num_elements)
+          << 2 << "2 or 4" << 1 << /*operand*/ 1;
+      return true;
+    }
+
+    // ensure both args have 2 elements, or both args have 4 elements
+    int NumElementsArg1 = VTy->getNumElements();
+    if (NumElementsArg1 != 2 && NumElementsArg1 != 4) {
+      SemaRef.Diag(TheCall->getBeginLoc(),
+                   diag::err_vector_incorrect_num_elements)
+          << 2 << "2 or 4" << NumElementsArg1 << /*operand*/ 1;
+      return true;
+    }
+
+    ExprResult A = TheCall->getArg(0);
+    QualType ArgTyA = A.get()->getType();
+    // return type is the same as the input type
+    TheCall->setType(ArgTyA);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_resource_getpointer: {
     if (SemaRef.checkArgCount(TheCall, 2) ||
         CheckResourceHandle(&SemaRef, TheCall, 0) ||
