@@ -14619,14 +14619,6 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
     QualType IVTy = NumIterations->getType();
     Stmt *LoopStmt = LoopStmts[I];
 
-    // Commonly used variables. One of the constraints of an AST is that every
-    // node object must appear at most once, hence we define a lamda that
-    // creates a new AST node at every use.
-    auto MakeStripeIVRef = [&]() {
-      return buildDeclRefExpr(SemaRef, StripeIndVars[I], IVTy,
-                              OrigCntVar->getExprLoc());
-    };
-
     // For init-statement: auto .stripe.iv = .floor.iv
     SemaRef.AddInitializerToDecl(
         StripeIndVars[I],
@@ -14660,15 +14652,17 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
         IsPartialStripe.get(), NumIterations, EndOfStripe.get());
     if (!MinStripeAndIterSpace.isUsable())
       return StmtError();
-    ExprResult CondExpr =
-        SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_LT,
-                           MakeStripeIVRef(), MinStripeAndIterSpace.get());
+    ExprResult CondExpr = SemaRef.BuildBinOp(
+        CurScope, LoopHelper.Cond->getExprLoc(), BO_LT,
+        makeFloorIVRef(SemaRef, StripeIndVars, I, IVTy, OrigCntVar),
+        MinStripeAndIterSpace.get());
     if (!CondExpr.isUsable())
       return StmtError();
 
     // For incr-statement: ++.stripe.iv
     ExprResult IncrStmt = SemaRef.BuildUnaryOp(
-        CurScope, LoopHelper.Inc->getExprLoc(), UO_PreInc, MakeStripeIVRef());
+        CurScope, LoopHelper.Inc->getExprLoc(), UO_PreInc,
+        makeFloorIVRef(SemaRef, StripeIndVars, I, IVTy, OrigCntVar));
     if (!IncrStmt.isUsable())
       return StmtError();
 
