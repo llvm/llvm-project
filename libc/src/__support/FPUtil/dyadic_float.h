@@ -42,10 +42,9 @@ template <size_t Bits>
 LIBC_INLINE constexpr int
 rounding_direction(const LIBC_NAMESPACE::UInt<Bits> &value, size_t rshift,
                    Sign logical_sign) {
-  if (rshift == 0 ||
-      (rshift < Bits && (value << (Bits - rshift)) == 0) ||
+  if (rshift == 0 || (rshift < Bits && (value << (Bits - rshift)) == 0) ||
       (rshift >= Bits && value == 0))
-    return 0;                          // exact
+    return 0; // exact
 
   switch (quick_get_round()) {
   case FE_TONEAREST:
@@ -53,7 +52,9 @@ rounding_direction(const LIBC_NAMESPACE::UInt<Bits> &value, size_t rshift,
       // We round up, unless the value is an exact halfway case and
       // the bit that will end up in the units place is 0, in which
       // case tie-break-to-even says round down.
-      return value.get_bit(rshift) != 0 || (value << (Bits - rshift + 1)) != 0 ? +1 : -1;
+      return value.get_bit(rshift) != 0 || (value << (Bits - rshift + 1)) != 0
+                 ? +1
+                 : -1;
     } else {
       return -1;
     }
@@ -440,16 +441,14 @@ template <size_t Bits> struct DyadicFloat {
 
   LIBC_INLINE constexpr MantissaType
   as_mantissa_type_rounded(int *round_dir_out = nullptr) const {
-    int round_dir;
+    int round_dir = 0;
     MantissaType new_mant;
     if (mantissa.is_zero()) {
-      round_dir = 0;
       new_mant = 0;
     } else {
       new_mant = mantissa;
       if (exponent > 0) {
         new_mant <<= exponent;
-        round_dir = 0;
       } else if (exponent < 0) {
         size_t shift = -exponent;
         new_mant >>= shift;
