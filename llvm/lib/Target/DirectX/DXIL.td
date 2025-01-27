@@ -1018,7 +1018,7 @@ def WaveActiveOp : DXILOp<119, waveActiveOp> {
     Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int16Ty, Int32Ty, Int64Ty]>
   ];
   let stages = [Stages<DXIL1_0, [all_stages]>];
-  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+  let attributes = [Attributes<DXIL1_0, []>];
 }
 
 def WaveAllBitCount : DXILOp<135, waveAllOp> {
