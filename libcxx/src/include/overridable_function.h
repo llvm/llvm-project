@@ -56,6 +56,15 @@
 // with this macro must be defined at global scope.
 //
 
+// When -funique-internal-linkage-names option is enabled, Clang will append a unique suffix
+// `.uniq.<MD5 hash of the source file>` to all internal symbols. Since we cannot detect when
+// this option is enabled or compute the source file hash from within the source file itself,
+// the unique suffix needs to be supplied by the build system. The `_LIBCPP_SYMBOL_SUFFIX` can
+// be used for that purpose.
+#ifndef _LIBCPP_SYMBOL_SUFFIX
+#define _LIBCPP_SYMBOL_SUFFIX
+#endif
+
 #if defined(_LIBCPP_OBJECT_FORMAT_MACHO)
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -68,8 +77,8 @@ _LIBCPP_END_NAMESPACE_STD
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
 #  define _LIBCPP_OVERRIDABLE_FUNCTION(symbol, type, name, arglist)                                                    \
     static __attribute__((used)) type symbol##_impl__ arglist __asm__("_" _LIBCPP_TOSTRING(symbol));                   \
-    __asm__(".globl _" _LIBCPP_TOSTRING(symbol));                                                                      \
-    __asm__(".weak_definition _" _LIBCPP_TOSTRING(symbol));                                                            \
+    __asm__(".globl _" _LIBCPP_TOSTRING(symbol) _LIBCPP_SYMBOL_SUFFIX);                                                \
+    __asm__(".weak_definition _" _LIBCPP_TOSTRING(symbol) _LIBCPP_SYMBOL_SUFFIX);                                      \
     extern __typeof(symbol##_impl__) name __attribute__((weak_import));                                                \
     _LIBCPP_BEGIN_NAMESPACE_STD                                                                                        \
     template <>                                                                                                        \
@@ -90,8 +99,8 @@ _LIBCPP_END_NAMESPACE_STD
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
 #  define _LIBCPP_OVERRIDABLE_FUNCTION(symbol, type, name, arglist)                                                    \
-    static type symbol##_impl__ arglist __asm__(_LIBCPP_TOSTRING(symbol##_impl__));                                    \
-    [[gnu::weak, gnu::alias(_LIBCPP_TOSTRING(symbol##_impl__))]] type name arglist;                                    \
+    static type symbol##_impl__ arglist __asm__(_LIBCPP_TOSTRING(symbol##_impl__) _LIBCPP_SYMBOL_SUFFIX);              \
+    [[gnu::weak, gnu::alias(_LIBCPP_TOSTRING(symbol##_impl__) _LIBCPP_SYMBOL_SUFFIX)]] type name arglist;              \
     _LIBCPP_BEGIN_NAMESPACE_STD                                                                                        \
     template <>                                                                                                        \
     inline bool __is_function_overridden<static_cast<type(*) arglist>(name)>() {                                       \
