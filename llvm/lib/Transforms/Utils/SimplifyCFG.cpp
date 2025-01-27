@@ -2004,11 +2004,11 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
         // We've just hoisted DbgVariableRecords; move I1 after them (before TI)
         // and leave any that were not hoisted behind (by calling moveBefore
         // rather than moveBeforePreserving).
-        I1->moveBefore(TI);
+        I1->moveBefore(TI->getIterator());
         for (auto &SuccIter : OtherSuccIterRange) {
           auto *I2 = &*SuccIter++;
           assert(isa<DbgInfoIntrinsic>(I2));
-          I2->moveBefore(TI);
+          I2->moveBefore(TI->getIterator());
         }
       } else {
         // For a normal instruction, we just move one to right before the
@@ -2018,7 +2018,7 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
         // We've just hoisted DbgVariableRecords; move I1 after them (before TI)
         // and leave any that were not hoisted behind (by calling moveBefore
         // rather than moveBeforePreserving).
-        I1->moveBefore(TI);
+        I1->moveBefore(TI->getIterator());
         for (auto &SuccIter : OtherSuccIterRange) {
           Instruction *I2 = &*SuccIter++;
           assert(I2 != I1);

@@ -1115,7 +1115,7 @@ private:
       }
       if (!CurrentToken || CurrentToken->isNot(tok::l_paren))
         return false;
-      skipToNextNonComment();
+      next();
       // FIXME: Hack using inheritance to child context
       Contexts.back().IsTableGenBangOpe = true;
       bool Result = parseParens();
@@ -1124,12 +1124,10 @@ private:
     }
     // SimpleValue 9: Cond operator
     if (Tok->is(TT_TableGenCondOperator)) {
-      Tok = CurrentToken;
-      skipToNextNonComment();
-      if (!Tok || Tok->isNot(tok::l_paren))
+      if (!CurrentToken || CurrentToken->isNot(tok::l_paren))
         return false;
-      bool Result = parseParens();
-      return Result;
+      next();
+      return parseParens();
     }
     // We have to check identifier at the last because the kind of bang/cond
     // operators are also identifier.
@@ -3784,7 +3782,7 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
         return Next;
       if (Next->is(TT_OverloadedOperator))
         continue;
-      if (Next->isOneOf(tok::kw_new, tok::kw_delete)) {
+      if (Next->isOneOf(tok::kw_new, tok::kw_delete, tok::kw_co_await)) {
         // For 'new[]' and 'delete[]'.
         if (Next->Next &&
             Next->Next->startsSequence(tok::l_square, tok::r_square)) {
@@ -5488,8 +5486,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   }
   if ((Left.is(TT_TemplateOpener)) != (Right.is(TT_TemplateCloser)))
     return ShouldAddSpacesInAngles();
-  if (Left.is(tok::r_paren) && Right.is(TT_PointerOrReference) &&
-      Right.isOneOf(tok::amp, tok::ampamp)) {
+  if (Left.is(tok::r_paren) && Left.isNot(TT_TypeDeclarationParen) &&
+      Right.is(TT_PointerOrReference) && Right.isOneOf(tok::amp, tok::ampamp)) {
     return true;
   }
   // Space before TT_StructuredBindingLSquare.
