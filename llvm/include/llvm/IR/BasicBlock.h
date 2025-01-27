@@ -299,22 +299,24 @@ public:
   /// Returns a pointer to the first instruction in this block that is not a
   /// PHINode or a debug intrinsic, or any pseudo operation if \c SkipPseudoOp
   /// is true.
-  const Instruction *getFirstNonPHIOrDbg(bool SkipPseudoOp = true) const;
-  Instruction *getFirstNonPHIOrDbg(bool SkipPseudoOp = true) {
-    return const_cast<Instruction *>(
-        static_cast<const BasicBlock *>(this)->getFirstNonPHIOrDbg(
-            SkipPseudoOp));
+  InstListType::const_iterator
+  getFirstNonPHIOrDbg(bool SkipPseudoOp = true) const;
+  InstListType::iterator getFirstNonPHIOrDbg(bool SkipPseudoOp = true) {
+    return static_cast<const BasicBlock *>(this)
+        ->getFirstNonPHIOrDbg(SkipPseudoOp)
+        .getNonConst();
   }
 
   /// Returns a pointer to the first instruction in this block that is not a
   /// PHINode, a debug intrinsic, or a lifetime intrinsic, or any pseudo
   /// operation if \c SkipPseudoOp is true.
-  const Instruction *
+  InstListType::const_iterator
   getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp = true) const;
-  Instruction *getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp = true) {
-    return const_cast<Instruction *>(
-        static_cast<const BasicBlock *>(this)->getFirstNonPHIOrDbgOrLifetime(
-            SkipPseudoOp));
+  InstListType::iterator
+  getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp = true) {
+    return static_cast<const BasicBlock *>(this)
+        ->getFirstNonPHIOrDbgOrLifetime(SkipPseudoOp)
+        .getNonConst();
   }
 
   /// Returns an iterator to the first instruction in this block that is
