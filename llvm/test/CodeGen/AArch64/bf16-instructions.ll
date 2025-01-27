@@ -9,15 +9,11 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_fmadd
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_fdiv
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_frem
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_store
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_load
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_call
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_call_flipped
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_tailcall_flipped
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_select
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_select_cc
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_select_cc_f32_f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_select_cc_f16_f32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_une
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_ueq
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_ugt
@@ -34,7 +30,6 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_fcmp_ord
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_fccmp
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_br_cc
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_phi
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_i32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_fptosi_i64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_fptoui_i32
@@ -49,8 +44,6 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_fptrunc_double
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_fpext_float
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_fpext_double
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_bitcast_bfloattoi16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_bitcast_i16tobfloat
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_sqrt
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_powi
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_sin
@@ -373,8 +366,14 @@ define bfloat @test_select(bfloat %a, bfloat %b, i1 zeroext %c) #0 {
 ;
 ; CHECK-GI-LABEL: test_select:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    fcsel h0, h0, h1, ne
+; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-GI-NEXT:    // kill: def $h1 killed $h1 def $s1
+; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    fmov w9, s1
+; CHECK-GI-NEXT:    tst w0, #0x1
+; CHECK-GI-NEXT:    csel w8, w8, w9, ne
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-GI-NEXT:    ret
   %r = select i1 %c, bfloat %a, bfloat %b
   ret bfloat %r
@@ -457,8 +456,14 @@ define bfloat @test_select_cc_f16_f32(bfloat %a, bfloat %b, float %c, float %d) 
 ;
 ; CHECK-GI-LABEL: test_select_cc_f16_f32:
 ; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-GI-NEXT:    // kill: def $h1 killed $h1 def $s1
 ; CHECK-GI-NEXT:    fcmp s2, s3
-; CHECK-GI-NEXT:    fcsel h0, h0, h1, ne
+; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    fmov w9, s1
+; CHECK-GI-NEXT:    csel w8, w8, w9, ne
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-GI-NEXT:    ret
   %cc = fcmp une float %c, %d
   %r = select i1 %cc, bfloat %a, bfloat %b

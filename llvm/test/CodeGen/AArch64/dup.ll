@@ -5,21 +5,6 @@
 ; CHECK-GI:       warning: Instruction selection used fallback path for dup_v2i8
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for duplane0_v2i8
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for loaddup_v2i8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for dup_v2bfloat
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for duplane0_v2bfloat
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for loaddup_v2bfloat
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for dup_v3bfloat
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for duplane0_v3bfloat
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for loaddup_v3bfloat
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for dup_v4bfloat
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for duplane0_v4bfloat
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for loaddup_v4bfloat
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for dup_v8bfloat
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for duplane0_v8bfloat
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for loaddup_v8bfloat
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for dup_v16bfloat
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for duplane0_v16bfloat
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for loaddup_v16bfloat
 
 define <2 x i8> @dup_v2i8(i8 %a) {
 ; CHECK-LABEL: dup_v2i8:
@@ -1263,12 +1248,20 @@ entry:
 }
 
 define <16 x bfloat> @dup_v16bfloat(bfloat %a) {
-; CHECK-LABEL: dup_v16bfloat:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $q0
-; CHECK-NEXT:    dup v0.8h, v0.h[0]
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: dup_v16bfloat:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $h0 killed $h0 def $q0
+; CHECK-SD-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: dup_v16bfloat:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 def $q0
+; CHECK-GI-NEXT:    dup v2.8h, v0.h[0]
+; CHECK-GI-NEXT:    dup v1.8h, v0.h[0]
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    ret
 entry:
   %b = insertelement <16 x bfloat> poison, bfloat %a, i64 0
   %c = shufflevector <16 x bfloat> %b, <16 x bfloat> poison, <16 x i32> zeroinitializer
@@ -1287,11 +1280,17 @@ entry:
 }
 
 define <16 x bfloat> @loaddup_v16bfloat(ptr %p) {
-; CHECK-LABEL: loaddup_v16bfloat:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ld1r { v0.8h }, [x0]
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: loaddup_v16bfloat:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ld1r { v0.8h }, [x0]
+; CHECK-SD-NEXT:    mov v1.16b, v0.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: loaddup_v16bfloat:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ld1r { v0.8h }, [x0]
+; CHECK-GI-NEXT:    ld1r { v1.8h }, [x0]
+; CHECK-GI-NEXT:    ret
 entry:
   %a = load bfloat, ptr %p
   %b = insertelement <16 x bfloat> poison, bfloat %a, i64 0
