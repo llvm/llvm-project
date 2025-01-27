@@ -4283,10 +4283,10 @@ let Predicates = [HasSVE2p2_or_SME2p2] in {
   defm FLOGB_ZPzZ : sve_fp_z2op_p_zd_d_flogb<"flogb", int_aarch64_sve_flogb>;
 
   // SVE2 integer unary operations, zeroing predicate
-  def URECPE_ZPzZ  : sve2_int_un_pred_arit_z<0b10, 0b00, "urecpe", ZPR32>;
-  def URSQRTE_ZPzZ : sve2_int_un_pred_arit_z<0b10, 0b01, "ursqrte", ZPR32>;
-  defm SQABS_ZPzZ  : sve2_int_un_pred_arit_z<0b10, "sqabs">;
-  defm SQNEG_ZPzZ  : sve2_int_un_pred_arit_z<0b11, "sqneg">;
+  defm URECPE_ZPzZ  : sve2_int_un_pred_arit_z_S<0b00, "urecpe",  int_aarch64_sve_urecpe>;
+  defm URSQRTE_ZPzZ : sve2_int_un_pred_arit_z_S<0b01, "ursqrte", int_aarch64_sve_ursqrte>;
+  defm SQABS_ZPzZ   : sve2_int_un_pred_arit_z<  0b10, "sqabs",   int_aarch64_sve_sqabs>;
+  defm SQNEG_ZPzZ   : sve2_int_un_pred_arit_z<  0b11, "sqneg",   int_aarch64_sve_sqneg>;
 
   // Floating point round to integral fp value in integer size range
   // Merging
@@ -4339,11 +4339,11 @@ let Predicates = [HasSVE2p2_or_SME2p2] in {
   defm LASTP_XPP  : sve_int_pcount_pred_tmp<0b010, "lastp">;
 
   // SVE reverse within elements, zeroing predicate
-  defm RBIT_ZPzZ : sve_int_perm_rev_rbit_z<"rbit">;
-  defm REVB_ZPzZ : sve_int_perm_rev_revb_z<"revb">;
-  defm REVH_ZPzZ : sve_int_perm_rev_revh_z<"revh">;
-  def  REVW_ZPzZ : sve_int_perm_rev_z<0b11, 0b0110, "revw", ZPR64>;
-  def  REVD_ZPzZ : sve_int_perm_rev_z<0b00, 0b1110, "revd", ZPR128>;
+  defm RBIT_ZPzZ : sve_int_perm_rev_rbit_z<"rbit", AArch64rbit_mt>;
+  defm REVB_ZPzZ : sve_int_perm_rev_revb_z<"revb", AArch64revb_mt>;
+  defm REVH_ZPzZ : sve_int_perm_rev_revh_z<"revh", AArch64revh_mt>;
+  defm REVW_ZPzZ : sve_int_perm_rev_revw_z<"revw", AArch64revw_mt>;
+  defm REVD_ZPzZ : sve_int_perm_rev_revd_z<"revd", AArch64revd_mt>;
 } // End HasSME2p2orSVE2p2
 
 //===----------------------------------------------------------------------===//
