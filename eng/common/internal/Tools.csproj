@@ -15,16 +15,6 @@
     <PackageReference Include="Microsoft.DotNet.IBCMerge" Version="$(MicrosoftDotNetIBCMergeVersion)" Condition="'$(UsingToolIbcOptimization)' == 'true'" />
     <PackageReference Include="Drop.App" Version="$(DropAppVersion)" ExcludeAssets="all" Condition="'$(UsingToolVisualStudioIbcTraining)' == 'true'"/>
   </ItemGroup>
-  <PropertyGroup>
-    <RestoreSources></RestoreSources>
-    <RestoreSources Condition="'$(UsingToolIbcOptimization)' == 'true'">
-      https://devdiv.pkgs.visualstudio.com/_packaging/dotnet-core-internal-tooling/nuget/v3/index.json;
-    </RestoreSources>
-    <RestoreSources Condition="'$(UsingToolVisualStudioIbcTraining)' == 'true'">
-      $(RestoreSources);
-      https://devdiv.pkgs.visualstudio.com/_packaging/VS/nuget/v3/index.json;
-    </RestoreSources>
-  </PropertyGroup>
 
   <!-- Repository extensibility point -->
   <Import Project="$(RepositoryEngineeringDir)InternalTools.props" Condition="Exists('$(RepositoryEngineeringDir)InternalTools.props')" />
