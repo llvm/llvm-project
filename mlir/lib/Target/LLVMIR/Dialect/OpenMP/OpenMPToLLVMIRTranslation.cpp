@@ -3828,7 +3828,7 @@ handleDeclareTargetMapVar(MapInfoData &mapData,
           if (insn->getFunction() == func) {
             auto *load = builder.CreateLoad(mapData.BasePointers[i]->getType(),
                                             mapData.BasePointers[i]);
-            load->moveBefore(insn);
+            load->moveBefore(insn->getIterator());
             user->replaceUsesOfWith(mapData.OriginalValue[i], load);
           }
         }
