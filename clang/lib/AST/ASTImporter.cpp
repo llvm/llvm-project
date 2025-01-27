@@ -4702,11 +4702,11 @@ ExpectedDecl ASTNodeImporter::VisitImplicitParamDecl(ImplicitParamDecl *D) {
 Error ASTNodeImporter::ImportDefaultArgOfParmVarDecl(
     const ParmVarDecl *FromParam, ParmVarDecl *ToParam) {
 
-  auto LocOrErr = import(FromParam->getExplicitObjectParamThisLoc());
-  if (!LocOrErr)
+  if (auto LocOrErr = import(FromParam->getExplicitObjectParamThisLoc()))
+    ToParam->setExplicitObjectParameterLoc(*LocOrErr);
+  else
     return LocOrErr.takeError();
 
-  ToParam->setExplicitObjectParameterLoc(*LocOrErr);
   ToParam->setHasInheritedDefaultArg(FromParam->hasInheritedDefaultArg());
   ToParam->setKNRPromoted(FromParam->isKNRPromoted());
 
