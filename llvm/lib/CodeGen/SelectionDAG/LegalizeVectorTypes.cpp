@@ -7078,18 +7078,18 @@ SDValue DAGTypeLegalizer::WidenVecOp_INSERT_SUBVECTOR(SDNode *N) {
   EVT OrigVT = OrigSubVec.getValueType();
   unsigned Idx = N->getConstantOperandVal(2);
 
-  SDValue InsertVecElt;
+  SDValue InsertElt;
   SDLoc DL(N);
   for (unsigned I = 0; I < OrigVT.getVectorNumElements(); ++I) {
-    SDValue Extract =
+    SDValue ExtractElt =
         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT.getScalarType(), SubVec,
-                    DAG.getIntPtrConstant(I, DL, /*isTarget*/ true));
-    InsertVecElt = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT,
-                               I != 0 ? InsertVecElt : InVec, Extract,
-                               DAG.getIntPtrConstant(I + Idx, DL, true));
+                    DAG.getVectorIdxConstant(I, DL));
+    InsertElt =
+        DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, I != 0 ? InsertElt : InVec,
+                    ExtractElt, DAG.getVectorIdxConstant(I + Idx, DL));
   }
 
-  return InsertVecElt;
+  return InsertElt;
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_EXTRACT_SUBVECTOR(SDNode *N) {
