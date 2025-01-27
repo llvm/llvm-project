@@ -91,6 +91,7 @@ define i64 @lsl_zext_i16_i64(i16 %b) {
 ; that exposed infinite loop in DAGCombiner.
 define void @_f(ptr %0, ptr %1, i64 %2) {
 ; CHECK-LABEL: @_f
+; CHECK-NOT: ubfiz
   store i64 -2401053089408754003, ptr %1, align 8
   %4 = and i64 %2, -2401053089408754003
   %5 = shl i64 %4, 1
