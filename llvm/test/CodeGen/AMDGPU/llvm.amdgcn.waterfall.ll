@@ -4091,11 +4091,11 @@ define amdgpu_gfx i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, i32 %fp
 ; PRE-GFX10-NEXT:    v_readlane_b32 s6, v40, 2
 ; PRE-GFX10-NEXT:    v_readlane_b32 s5, v40, 1
 ; PRE-GFX10-NEXT:    v_readlane_b32 s4, v40, 0
+; PRE-GFX10-NEXT:    s_mov_b32 s32, s33
 ; PRE-GFX10-NEXT:    v_readlane_b32 s34, v40, 8
 ; PRE-GFX10-NEXT:    s_or_saveexec_b64 s[36:37], -1
 ; PRE-GFX10-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; PRE-GFX10-NEXT:    s_mov_b64 exec, s[36:37]
-; PRE-GFX10-NEXT:    s_addk_i32 s32, 0xfc00
 ; PRE-GFX10-NEXT:    s_mov_b32 s33, s34
 ; PRE-GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; PRE-GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -4138,12 +4138,12 @@ define amdgpu_gfx i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, i32 %fp
 ; GFX10-32-NEXT:    v_readlane_b32 s6, v40, 2
 ; GFX10-32-NEXT:    v_readlane_b32 s5, v40, 1
 ; GFX10-32-NEXT:    v_readlane_b32 s4, v40, 0
+; GFX10-32-NEXT:    s_mov_b32 s32, s33
 ; GFX10-32-NEXT:    v_readlane_b32 s34, v40, 6
 ; GFX10-32-NEXT:    s_or_saveexec_b32 s35, -1
 ; GFX10-32-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GFX10-32-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-32-NEXT:    s_mov_b32 exec_lo, s35
-; GFX10-32-NEXT:    s_addk_i32 s32, 0xfe00
 ; GFX10-32-NEXT:    s_mov_b32 s33, s34
 ; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-32-NEXT:    s_setpc_b64 s[30:31]
@@ -4190,12 +4190,12 @@ define amdgpu_gfx i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, i32 %fp
 ; GFX10-64-NEXT:    v_readlane_b32 s6, v40, 2
 ; GFX10-64-NEXT:    v_readlane_b32 s5, v40, 1
 ; GFX10-64-NEXT:    v_readlane_b32 s4, v40, 0
+; GFX10-64-NEXT:    s_mov_b32 s32, s33
 ; GFX10-64-NEXT:    v_readlane_b32 s34, v40, 8
 ; GFX10-64-NEXT:    s_or_saveexec_b64 s[36:37], -1
 ; GFX10-64-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GFX10-64-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-64-NEXT:    s_mov_b64 exec, s[36:37]
-; GFX10-64-NEXT:    s_addk_i32 s32, 0xfc00
 ; GFX10-64-NEXT:    s_mov_b32 s33, s34
 ; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-64-NEXT:    s_setpc_b64 s[30:31]
@@ -4243,11 +4243,11 @@ define amdgpu_gfx i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, i32 %fp
 ; GFX1150-NEXT:    v_readlane_b32 s6, v40, 2
 ; GFX1150-NEXT:    v_readlane_b32 s5, v40, 1
 ; GFX1150-NEXT:    v_readlane_b32 s4, v40, 0
+; GFX1150-NEXT:    s_mov_b32 s32, s33
 ; GFX1150-NEXT:    v_readlane_b32 s0, v40, 8
 ; GFX1150-NEXT:    s_or_saveexec_b64 s[2:3], -1
 ; GFX1150-NEXT:    scratch_load_b32 v40, off, s33 ; 4-byte Folded Reload
 ; GFX1150-NEXT:    s_mov_b64 exec, s[2:3]
-; GFX1150-NEXT:    s_add_i32 s32, s32, -16
 ; GFX1150-NEXT:    s_mov_b32 s33, s0
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1150-NEXT:    s_setpc_b64 s[30:31]

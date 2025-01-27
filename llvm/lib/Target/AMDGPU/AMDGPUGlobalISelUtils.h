@@ -21,6 +21,8 @@ class GCNSubtarget;
 class GISelKnownBits;
 class LLT;
 class MachineFunction;
+class MachineIRBuilder;
+class RegisterBankInfo;
 class MachineMemOperand;
 
 namespace AMDGPU {
@@ -55,6 +57,9 @@ private:
   // This will not be needed when we turn off LCSSA for global-isel.
   void findLCSSAPhi(Register Reg);
 };
+
+void buildReadAnyLane(MachineIRBuilder &B, Register SgprDst, Register VgprSrc,
+                      const RegisterBankInfo &RBI);
 } // namespace AMDGPU
 } // namespace llvm
 
