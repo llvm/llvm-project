@@ -82,3 +82,62 @@ void remainder_with_adjustment_of_composit_lhs(int x, int y) {
   clang_analyzer_eval(x + y != -1);    // expected-warning{{TRUE}}
   (void)(x * y); // keep the constraints alive.
 }
+
+void gh_62215(int x, int y, int z) {
+  if (x != y) return; // x == y
+  if (z <= x) return; // z > x
+  if (z >= y) return; // z < y
+  clang_analyzer_warnIfReached(); // no-warning: This should be dead code.
+  (void)(x + y + z); // keep the constraints alive.
+}
+
+void gh_62215_contradicting_right_equivalent(int x, int y, int z) {
+  if (x == y && z > x) {
+    clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
+
+    // `z < y` should mean the same thing as `z < x`, which would contradict with `z > x`
+    if (z < y) {
+      clang_analyzer_warnIfReached(); // no-warning: dead code
+    }
+  }
+  (void)(x + y + z); // keep the constraints alive.
+}
+
+void gh_62215_contradicting_left_equivalent(int x, int y, int z) {
+  if (x == y && z > x) {
+    clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
+
+    // `y > z` should mean the same thing as `x > z`, which would contradict with `z > x`
+    if (y > z) {
+      clang_analyzer_warnIfReached(); // no-warning
+    }
+  }
+  (void)(x + y + z); // keep the constraints alive.
+}
+
+void gh_62215_left_and_right(int x, int y, int z, int w) {
+  if (x != y) return; // x == y
+  if (z != w) return; // z == w
+  if (z <= x) return; // z > x
+  if (w >= y) return; // w < y
+  // FIXME: We fail to recognize that `w` and `y` are equivalent with `x` and `z`
+  // respectively and recognize the contradiction.
+  clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}} should be dead code
+  (void)(x + y + z + w);
+}
+
+void gh_62215_contradicting_nested_right_equivalent(int x, int y, int z) {
+  if (y > 1 && y < 10) { // y: [2,9]
+    if (x == y && z > x) {
+      clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
+
+      // `z < (y - 1)` should mean the same thing as `z < (x - 1)`, which
+      // should contradict with `z > x` (assuming x,y: [2,9])
+      if (z < (y - 1)) {
+        // FIXME: This should be dead code.
+        clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}} Z3 crosscheck eliminate this btw
+      }
+    }
+  }
+  (void)(x + y + z); // keep the constraints alive.
+}
