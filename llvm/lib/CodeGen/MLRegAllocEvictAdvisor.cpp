@@ -376,9 +376,8 @@ private:
 
   unsigned getEvictionCount(Register Reg) const {
     auto EvictionCountIt = VirtRegEvictionCounts.find(Reg.id());
-    if (EvictionCountIt != VirtRegEvictionCounts.end()) {
+    if (EvictionCountIt != VirtRegEvictionCounts.end())
       return EvictionCountIt->second;
-    }
     return 0;
   }
 };
