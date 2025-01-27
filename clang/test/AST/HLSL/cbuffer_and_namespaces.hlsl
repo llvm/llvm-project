@@ -35,11 +35,11 @@ struct Foo {
 // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
 // CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
 cbuffer CB1 {
-  // CHECK: VarDecl {{.*}} foo1 'Foo'
+  // CHECK: VarDecl {{.*}} foo1 'hlsl_constant Foo'
   Foo foo1;
-  // CHECK: VarDecl {{.*}} foo2 'NS1::Foo'
+  // CHECK: VarDecl {{.*}} foo2 'hlsl_constant NS1::Foo'
   NS1::Foo foo2;
-  // CHECK: VarDecl {{.*}} foo3 'NS1::Bar::Foo'
+  // CHECK: VarDecl {{.*}} foo3 'hlsl_constant NS1::Bar::Foo'
   NS1::Bar::Foo foo3;
   // CHECK: CXXRecordDecl {{.*}} implicit referenced class __layout_CB1 definition
   // CHECK: FieldDecl {{.*}} foo1 '__layout_Foo'
@@ -65,13 +65,13 @@ namespace NS2 {
   // CHECK: HLSLResourceClassAttr {{.*}} Implicit CBuffer
   // CHECK: HLSLResourceAttr {{.*}} Implicit CBuffer
   cbuffer CB2 {
-    // CHECK: VarDecl {{.*}} foo0 '::Foo':'Foo'
+    // CHECK: VarDecl {{.*}} foo0 'hlsl_constant ::Foo':'hlsl_constant Foo'
     ::Foo foo0;
-    // CHECK: VarDecl {{.*}} foo1 'Foo':'NS2::Foo'
+    // CHECK: VarDecl {{.*}} foo1 'hlsl_constant Foo':'hlsl_constant NS2::Foo'
     Foo foo1;
-    // CHECK: VarDecl {{.*}} foo2 'NS1::Foo'
+    // CHECK: VarDecl {{.*}} foo2 'hlsl_constant NS1::Foo'
     NS1::Foo foo2;
-    // CHECK: VarDecl {{.*}} foo3 'NS1::Bar::Foo'
+    // CHECK: VarDecl {{.*}} foo3 'hlsl_constant NS1::Bar::Foo'
     NS1::Bar::Foo foo3;
     // CHECK: CXXRecordDecl {{.*}} implicit referenced class __layout_CB2 definition
     // CHECK: FieldDecl {{.*}} foo0 '__layout_Foo'
