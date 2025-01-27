@@ -3466,7 +3466,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportParmVarDecl_Explicit) {
   const auto *ToVar = Import(FromVar, Lang_CXX23);
   EXPECT_TRUE(ToVar);
   EXPECT_TRUE(ToVar->isExplicitObjectParameter());
-  EXPECT_EQ(ToVar->getExplicitObjectParamThisLoc(),
+  EXPECT_NE(ToVar->getExplicitObjectParamThisLoc(),
             FromVar->getExplicitObjectParamThisLoc());
 }
 
