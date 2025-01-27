@@ -1037,8 +1037,9 @@ bool PeepholeOptimizer::findNextSource(RegSubRegPair RegSubReg,
       // Insert the Def -> Use entry for the recently found source.
       auto [InsertPt, WasInserted] = RewriteMap.try_emplace(CurSrcPair, Res);
 
-      ValueTrackerResult CurSrcRes = InsertPt->second;
       if (!WasInserted) {
+        ValueTrackerResult CurSrcRes = InsertPt->second;
+
         assert(CurSrcRes == Res && "ValueTrackerResult found must match");
         // An existent entry with multiple sources is a PHI cycle we must avoid.
         // Otherwise it's an entry with a valid next source we already found.
