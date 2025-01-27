@@ -852,13 +852,11 @@ INTERCEPTOR(void *, mmap64, void *addr, size_t length, int prot, int flags,
 #endif // SANITIZER_INTERCEPT_MMAP64
 
 #if SANITIZER_LINUX
-// Note that even if rtsan is ported to netbsd, it has a different signature
-// still
+// Note that even if rtsan is ported to netbsd, it has a slighty different
+// and non-variadic signature
 INTERCEPTOR(void *, mremap, void *oaddr, size_t olength, size_t nlength,
             int flags, ...) {
   __rtsan_notify_intercepted_call("mremap");
-
-  void *naddr = nullptr;
 
   // the last optional argument is only used in this case
   // as the new page region will be assigned to. Is ignored otherwise.
@@ -866,11 +864,13 @@ INTERCEPTOR(void *, mremap, void *oaddr, size_t olength, size_t nlength,
     va_list args;
 
     va_start(args, flags);
-    naddr = va_arg(args, void *);
+    void *naddr = va_arg(args, void *);
     va_end(args);
+
+    return REAL(mremap)(oaddr, olength, nlength, flags, naddr);
   }
 
-  return REAL(mremap)(oaddr, olength, nlength, flags, naddr);
+  return REAL(mremap)(oaddr, olength, nlength, flags);
 }
 #define RTSAN_MAYBE_INTERCEPT_MREMAP INTERCEPT_FUNCTION(mremap)
 #else
