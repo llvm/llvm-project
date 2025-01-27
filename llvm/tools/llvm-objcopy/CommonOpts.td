@@ -117,6 +117,8 @@ def regex
 
 def version : Flag<["--"], "version">,
               HelpText<"Print the version and exit.">;
+def verbose : Flag<["--"], "verbose">,
+              HelpText<"Prints the removed symbols and sections">;
 def V : Flag<["-"], "V">,
         Alias<version>,
         HelpText<"Alias for --version">;
