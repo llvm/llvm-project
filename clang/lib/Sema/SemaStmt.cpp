@@ -4571,10 +4571,10 @@ buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
 static std::optional<int>
 isOpenMPCapturedRegionInArmSMEFunction(Sema const &S, CapturedRegionKind Kind) {
   if (!S.getLangOpts().OpenMP || Kind != CR_OpenMP)
-    return false;
+    return {};
   FunctionDecl *FD = S.getCurFunctionDecl(/*AllowLambda=*/true);
   if (!FD)
-    return false;
+    return {};
   if (IsArmStreamingFunction(FD, /*IncludeLocallyStreaming=*/true))
     return /* in streaming functions */ 0;
   if (hasArmZAState(FD))
