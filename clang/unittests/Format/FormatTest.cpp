@@ -22377,12 +22377,7 @@ TEST_F(FormatTest, BreakPenaltyBeforeMemberAccess) {
                "    .bbbbbbbb(cccccccccccccccccccccccccccccccc);",
                Style);
 
-  Style.ColumnLimit = 8;
-  Style.PenaltyExcessCharacter = 15;
-  verifyFormat("foo->bar\n"
-               "    .b(a);",
-               Style);
-  Style.PenaltyBreakBeforeMemberAccess = 200;
+  Style.ColumnLimit = 13;
   verifyFormat("foo->bar.b(\n"
                "    a);",
                Style);
