@@ -673,7 +673,7 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
       // large amount of compile time being spent in regalloc. If we hit the
       // threshold, prevent the range from being evicted. We still let the
       // range through if it is urgent as we are required to produce an
-      // eviction if the candidate is not spillable. 
+      // eviction if the candidate is not spillable.
       if (getEvictionCount(Intf->reg()) > MaxEvictionCount && !Urgent)
         return false;
 
