@@ -123,7 +123,7 @@ llvm.func @parallel_op_private_multi_block(%arg0: !llvm.ptr) {
 // Check that the privatizer's continuation block yileds the private clone's
 // address.
 // CHECK: [[PRIV_CONT]]:
-// CHECK-NEXT:   %[[ORIG_PTR3:.*]] = phi ptr [ %[[ORIG_PTR2]], %[[PRIV_BB2]] ]
+// CHECK-NEXT:   %[[PRIV_ALLOC3:.*]] = phi ptr [ %[[PRIV_ALLOC2]], %[[PRIV_BB2]] ]
 // CHECK-NEXT:   br label %[[PAR_REG:.*]]
 
 // CHECK: [[PAR_REG]]:
@@ -131,7 +131,7 @@ llvm.func @parallel_op_private_multi_block(%arg0: !llvm.ptr) {
 
 // Check that the body of the parallel region loads from the private clone.
 // CHECK: [[PAR_REG2]]:
-// CHECK:        %{{.*}} = load float, ptr %[[ORIG_PTR3]], align 4
+// CHECK:        %{{.*}} = load float, ptr %[[PRIV_ALLOC3]], align 4
 
 omp.private {type = private} @multi_block.privatizer : f32 init {
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
@@ -140,7 +140,7 @@ omp.private {type = private} @multi_block.privatizer : f32 init {
 ^bb1(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
   %1 = llvm.load %arg2 : !llvm.ptr -> f32
   llvm.store %1, %arg3 : f32, !llvm.ptr
-  omp.yield(%arg2 : !llvm.ptr)
+  omp.yield(%arg3 : !llvm.ptr)
 }
 
 // Tests fix for Fujitsu test suite test: 0007_0019.f90: the
