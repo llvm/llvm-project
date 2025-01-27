@@ -127,11 +127,11 @@ public:
   BitVector &getPreservedRegUnits(const MachineOperand &RegMaskOp,
                                   const TargetRegisterInfo &TRI) {
     const uint32_t *RegMask = RegMaskOp.getRegMask();
-    auto Existing = RegMaskToPreservedRegUnits.find(RegMask);
-    if (Existing != RegMaskToPreservedRegUnits.end()) {
-      return Existing->second;
+    auto [It, Inserted] = RegMaskToPreservedRegUnits.try_emplace(RegMask);
+    if (!Inserted) {
+      return It->second;
     } else {
-      BitVector &PreservedRegUnits = RegMaskToPreservedRegUnits[RegMask];
+      BitVector &PreservedRegUnits = It->second;
 
       PreservedRegUnits.resize(TRI.getNumRegUnits());
       for (unsigned SafeReg = 0, E = TRI.getNumRegs(); SafeReg < E; ++SafeReg)
