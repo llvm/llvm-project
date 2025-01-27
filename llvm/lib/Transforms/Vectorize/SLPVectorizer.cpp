@@ -20818,10 +20818,20 @@ private:
         ++NumVectorInstructions;
         if (ScalarTy == Builder.getInt1Ty() && ScalarTy != DestTy) {
           // Handle ctpop.
-          SmallVector<int> Mask(getNumElements(VecRes->getType()) +
-                                    getNumElements(Vec->getType()),
-                                PoisonMaskElem);
+          unsigned VecResVF = getNumElements(VecRes->getType());
+          unsigned VecVF = getNumElements(Vec->getType());
+          SmallVector<int> Mask(VecResVF + VecVF, PoisonMaskElem);
           std::iota(Mask.begin(), Mask.end(), 0);
+          // Ensure that VecRes is always larger than Vec
+          if (VecResVF < VecVF) {
+            std::swap(VecRes, Vec);
+            std::swap(VecResVF, VecVF);
+          }
+          if (VecResVF != VecVF) {
+            SmallVector<int> ResizeMask(VecResVF, PoisonMaskElem);
+            std::iota(Mask.begin(), std::next(Mask.begin(), VecVF), 0);
+            Vec = Builder.CreateShuffleVector(Vec, ResizeMask);
+          }
           VecRes = Builder.CreateShuffleVector(VecRes, Vec, Mask, "rdx.op");
           return;
         }
