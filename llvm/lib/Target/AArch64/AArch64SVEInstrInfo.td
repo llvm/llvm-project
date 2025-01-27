@@ -4132,7 +4132,7 @@ let Predicates = [HasSVE2_or_SME] in {
   // SVE2 pointer conflict compare
   defm WHILEWR_PXX : sve2_int_while_rr<0b0, "whilewr", AArch64whilewr>;
   defm WHILERW_PXX : sve2_int_while_rr<0b1, "whilerw", AArch64whilerw>;
-} // End HasSVE2orSME
+} // End HasSVE2_or_SME
 
 let Predicates = [HasSVEAES, HasNonStreamingSVE_or_SSVE_AES] in {
   // SVE2 crypto destructive binary operations
