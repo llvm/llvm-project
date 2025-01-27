@@ -259,11 +259,6 @@ def OP_VCVT_F32_BF16_LO
 def OP_VCVT_F32_BF16_HI
     : Op<(call "vcvt_f32_bf16", (call "vget_high", $p0))>;
 
-def OP_VCVT_BF16_F32_LO_A64
-    : Op<(call "__a64_vcvtq_low_bf16", $p0)>;
-def OP_VCVT_BF16_F32_A64
-    : Op<(call "vget_low", (call "__a64_vcvtq_low_bf16", $p0))>;
-
 def OP_VCVT_BF16_F32_A32
     : Op<(call "__a32_vcvt_bf16", $p0)>;
 
@@ -2061,10 +2056,9 @@ let ArchGuard = "!defined(__aarch64__) && !defined(__arm64ec__)", TargetGuard = 
 }
 
 let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "bf16,neon" in {
-  def VCVT_LOW_BF16_F32_A64_INTERNAL : WInst<"__a64_vcvtq_low_bf16", "BQ", "Hf">;
-  def VCVT_LOW_BF16_F32_A64 : SOpInst<"vcvt_low_bf16", "BQ", "Qf", OP_VCVT_BF16_F32_LO_A64>;
+  def VCVT_LOW_BF16_F32_A64 : SInst<"vcvt_low_bf16", "BQ", "Qf">;
   def VCVT_HIGH_BF16_F32_A64 : SInst<"vcvt_high_bf16", "BBQ", "Qf">;
-  def VCVT_BF16_F32 : SOpInst<"vcvt_bf16",    "BQ", "f", OP_VCVT_BF16_F32_A64>;
+  def VCVT_BF16_F32 : SInst<"vcvt_bf16", "BQ", "f">;
 
   def COPY_LANE_BF16 : IOpInst<"vcopy_lane", "..I.I", "b", OP_COPY_LN>;
   def COPYQ_LANE_BF16 : IOpInst<"vcopy_lane", "..IqI", "Qb", OP_COPY_LN>;

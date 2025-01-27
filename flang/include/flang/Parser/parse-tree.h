@@ -4685,6 +4685,31 @@ struct OpenMPDepobjConstruct {
   std::tuple<Verbatim, OmpObject, OmpClause> t;
 };
 
+// Ref: [5.2: 200-201]
+//
+// dispatch-construct -> DISPATCH dispatch-clause
+// dispatch-clause -> depend-clause |
+//                    device-clause |
+//                    is_device_ptr-clause |
+//                    nocontext-clause |
+//                    novariants-clause |
+//                    nowait-clause
+struct OmpDispatchDirective {
+  TUPLE_CLASS_BOILERPLATE(OmpDispatchDirective);
+  CharBlock source;
+  std::tuple<Verbatim, OmpClauseList> t;
+};
+
+EMPTY_CLASS(OmpEndDispatchDirective);
+
+struct OpenMPDispatchConstruct {
+  TUPLE_CLASS_BOILERPLATE(OpenMPDispatchConstruct);
+  CharBlock source;
+  std::tuple<OmpDispatchDirective, Block,
+      std::optional<OmpEndDispatchDirective>>
+      t;
+};
+
 // 2.17.8 flush -> FLUSH [memory-order-clause] [(variable-name-list)]
 struct OpenMPFlushConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPFlushConstruct);
@@ -4757,9 +4782,9 @@ struct OpenMPConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPConstruct);
   std::variant<OpenMPStandaloneConstruct, OpenMPSectionsConstruct,
       OpenMPSectionConstruct, OpenMPLoopConstruct, OpenMPBlockConstruct,
-      OpenMPAtomicConstruct, OpenMPDeclarativeAllocate, OpenMPUtilityConstruct,
-      OpenMPExecutableAllocate, OpenMPAllocatorsConstruct,
-      OpenMPCriticalConstruct>
+      OpenMPAtomicConstruct, OpenMPDeclarativeAllocate, OpenMPDispatchConstruct,
+      OpenMPUtilityConstruct, OpenMPExecutableAllocate,
+      OpenMPAllocatorsConstruct, OpenMPCriticalConstruct>
       u;
 };
 

@@ -154,8 +154,7 @@ Value *GenericToNVVM::remapConstant(Module *M, Function *F, Constant *C,
     if (I != GVMap.end()) {
       GlobalVariable *GV = I->second;
       NewValue = Builder.CreateAddrSpaceCast(
-          GV,
-          PointerType::get(GV->getValueType(), llvm::ADDRESS_SPACE_GENERIC));
+          GV, PointerType::get(GV->getContext(), llvm::ADDRESS_SPACE_GENERIC));
     }
   } else if (isa<ConstantAggregate>(C)) {
     // If any element in the constant vector or aggregate C is or uses a global

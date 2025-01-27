@@ -91,15 +91,6 @@ public:
   /// their default state.
   void Clear(bool clear_target);
 
-  /// Dump a description of this object to a Stream.
-  ///
-  /// Dump a description of the contents of this object to the supplied stream
-  /// \a s.
-  ///
-  /// \param[in] s
-  ///     The stream to which to dump the object description.
-  void Dump(Stream *s, Target *target) const;
-
   /// Dump the stop context in this object to a Stream.
   ///
   /// Dump the best description of this object to the stream. The information

@@ -1286,7 +1286,7 @@ struct TestTypeConverter : public TypeConverter {
 
     // Convert I64 to F64.
     if (t.isSignlessInteger(64)) {
-      results.push_back(FloatType::getF64(t.getContext()));
+      results.push_back(Float64Type::get(t.getContext()));
       return success();
     }
 
@@ -1298,7 +1298,7 @@ struct TestTypeConverter : public TypeConverter {
 
     // Split F32 into F16,F16.
     if (t.isF32()) {
-      results.assign(2, FloatType::getF16(t.getContext()));
+      results.assign(2, Float16Type::get(t.getContext()));
       return success();
     }
 
@@ -1826,7 +1826,7 @@ struct TestTypeConversionDriver
         return type;
       // Allow converting BF16/F16/F32 to F64.
       if (type.isBF16() || type.isF16() || type.isF32())
-        return FloatType::getF64(type.getContext());
+        return Float64Type::get(type.getContext());
       // Otherwise, the type is illegal.
       return nullptr;
     });
