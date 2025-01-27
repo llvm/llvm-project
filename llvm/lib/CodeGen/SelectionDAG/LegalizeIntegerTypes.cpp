@@ -2089,7 +2089,7 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
     Res = PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(N, OpNo);
     break;
   case ISD::EXPERIMENTAL_ALIAS_LANE_MASK:
-    Res = DAGTypeLegalizer::PromoteIntOp_EXPERIMENTAL_ALIAS_LANE_MASK(N, OpNo);
+    Res = PromoteIntOp_EXPERIMENTAL_ALIAS_LANE_MASK(N, OpNo);
     break;
   }
 
