@@ -5017,7 +5017,9 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
       return true;
     E = SMLoc::getFromPointer(getLoc().getPointer() - 1);
     Operands.push_back(AArch64Operand::CreateImm(IdVal, S, E, getContext()));
-    return false;
+
+    // Parse an optional shift/extend modifier.
+    return parseOptionalShiftExtend(getTok());
   }
   case AsmToken::Integer:
   case AsmToken::Real:

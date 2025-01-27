@@ -6,50 +6,49 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -stop-after=finalize-isel -min-jump-table-entries=2 %s -o %t.mir
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu --run-pass=static-data-splitter -stats -x mir %t.mir -o - 2>&1 | FileCheck %s --check-prefix=STAT
 
+; In function @foo, the 2 switch instructions to jt0.* and jt1.* get lowered to
+; hot jump tables, and the 2 switch instructions to jt2.* and jt3.* get lowered
+; to cold jump tables.
+
+; @func_without_entry_count simulates the functions without profile information
+; (e.g., not instrumented or not profiled), it's jump table hotness is unknown.
+
  ; Tests stat messages are expected.
 ; STAT: 2 static-data-splitter - Number of cold jump tables seen
 ; STAT: 2 static-data-splitter - Number of hot jump tables seen
 ; STAT: 1 static-data-splitter - Number of jump tables with unknown hotness
 
-; When 'partition-static-data-sections' is enabled, static data splitter pass will
-; categorize jump tables and assembly printer will place hot jump tables in the
-; `.rodata.hot`-prefixed section, and cold ones in the `.rodata.unlikely`-prefixed section.
+; Hot jump tables are in the `.rodata.hot`-prefixed section, and cold ones in
+; the `.rodata.unlikely`-prefixed section. In the function without profile
+; information, jump table section is `rodata` without hot or unlikely prefix.
+
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions \
+; RUN:     -partition-static-data-sections=true -function-sections=true \
+; RUN:     -min-jump-table-entries=2 -unique-section-names=false \
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=NUM,JT
+
 ; Section names will optionally have `.<func>` if -function-sections is enabled.
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions -partition-static-data-sections=true -function-sections=true -min-jump-table-entries=2 -unique-section-names=false  %s -o - 2>&1 | FileCheck %s --check-prefixes=LINEAR,JT
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions -partition-static-data-sections=true -function-sections=true -min-jump-table-entries=2  %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNC,JT,DEFAULTHOT
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions -partition-static-data-sections=true -function-sections=false -min-jump-table-entries=2 %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNCLESS,JT --implicit-check-not=unique
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions \
+; RUN:     -partition-static-data-sections=true -function-sections=true \
+; RUN:     -min-jump-table-entries=2  %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNC,JT
 
-; Tests that `-static-data-default-hotness` can override hotness for data with
-; unknown hotness.
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions -partition-static-data-sections=true -min-jump-table-entries=2 -static-data-default-hotness=cold -function-sections=true %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNC,JT,DEFAULTCOLD
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions \
+; RUN:     -partition-static-data-sections=true -function-sections=false \
+; RUN:     -min-jump-table-entries=2 %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNCLESS,JT
 
-; LINEAR:    .section .rodata.hot,"a",@progbits,unique,2
+; NUM:    .section .rodata.hot,"a",@progbits,unique,2
 ; FUNC:     .section .rodata.hot.foo,"a",@progbits
 ; FUNCLESS: .section .rodata.hot,"a",@progbits
 ; JT: .LJTI0_0:
 ; JT: .LJTI0_2:
-; LINEAR:    	.section	.rodata.unlikely,"a",@progbits,unique,3
+; NUM:    	.section	.rodata.unlikely,"a",@progbits,unique,3
 ; FUNC:       .section .rodata.unlikely.foo,"a",@progbits
 ; FUNCLESS:   .section .rodata.unlikely,"a",@progbits
 ; JT: .LJTI0_1:
 ; JT: .LJTI0_3:
-; DEFAULTHOT: .section .rodata.hot.func_without_entry_count,"a",@progbits
-; DEFAULTHOT: .LJTI1_0:
-; FUNCLESS: .section .rodata.hot,"a",@progbits
-; FUNCLESS: .LJTI1_0:
-
-; DEFAULTCOLD: .section .rodata.unlikely.func_without_entry_count,"a",@progbits
-; DEFAULTCOLD: .LJTI1_0:
-
-; @foo has four jump tables, jt0, jt1, jt2 and jt3 in the input basic block
-; order; jt0 and jt2 are hot, and jt1 and jt3 are cold.
-;
-; @func_with_hot_jt is a function with one entry count, and a hot loop using a
-; jump table.
-
-; @func_without_entry_count simulates the functions without profile information
-; (e.g., not instrumented or not profiled), it's jump table hotness is unknown
-; and regarded as hot conservatively.
+; FUNC: .section .rodata.func_without_entry_count,"a",@progbits
+; FUNCLESS: .section .rodata,"a",@progbits
+; JT: .LJTI1_0:
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

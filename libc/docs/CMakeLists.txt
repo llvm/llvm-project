@@ -37,6 +37,7 @@ if (SPHINX_FOUND)
       aio
       arpa/inet
       assert
+      cpio
       ctype
       errno
       fenv

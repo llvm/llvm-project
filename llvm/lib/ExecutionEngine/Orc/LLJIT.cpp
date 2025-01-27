@@ -21,7 +21,6 @@
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
-#include "llvm/ExecutionEngine/Orc/UnwindInfoRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
@@ -834,7 +833,14 @@ Error LLJITBuilderState::prepareForConstruction() {
       CreateObjectLinkingLayer =
           [](ExecutionSession &ES,
              const Triple &) -> Expected<std::unique_ptr<ObjectLayer>> {
-        return std::make_unique<ObjectLinkingLayer>(ES);
+        auto ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(ES);
+        if (auto EHFrameRegistrar = EPCEHFrameRegistrar::Create(ES))
+          ObjLinkingLayer->addPlugin(
+              std::make_unique<EHFrameRegistrationPlugin>(
+                  ES, std::move(*EHFrameRegistrar)));
+        else
+          return EHFrameRegistrar.takeError();
+        return std::move(ObjLinkingLayer);
       };
     }
   }
@@ -1218,32 +1224,6 @@ Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J) {
 
   auto &PlatformJD = J.getExecutionSession().createBareJITDylib("<Platform>");
   PlatformJD.addToLinkOrder(*ProcessSymbolsJD);
-
-  if (auto *OLL = dyn_cast<ObjectLinkingLayer>(&J.getObjLinkingLayer())) {
-
-    bool CompactUnwindInfoSupported = false;
-
-    // Enable compact-unwind support if possible.
-    if (J.getTargetTriple().isOSDarwin() ||
-        J.getTargetTriple().isOSBinFormatMachO()) {
-      if (auto UIRP = UnwindInfoRegistrationPlugin::Create(
-              J.getIRCompileLayer(), PlatformJD)) {
-        CompactUnwindInfoSupported = true;
-        OLL->addPlugin(std::move(*UIRP));
-      } else
-        consumeError(UIRP.takeError());
-    }
-
-    // Otherwise fall back to standard unwind registration.
-    if (!CompactUnwindInfoSupported) {
-      auto &ES = J.getExecutionSession();
-      if (auto EHFrameRegistrar = EPCEHFrameRegistrar::Create(ES))
-        OLL->addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
-            ES, std::move(*EHFrameRegistrar)));
-      else
-        return EHFrameRegistrar.takeError();
-    }
-  }
 
   J.setPlatformSupport(
       std::make_unique<GenericLLVMIRPlatformSupport>(J, PlatformJD));
