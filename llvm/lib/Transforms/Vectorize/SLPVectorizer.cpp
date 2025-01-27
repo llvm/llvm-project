@@ -3643,6 +3643,8 @@ private:
     }
     if (!Last->isGather()) {
       for (Value *V : VL) {
+        if (isa<PoisonValue>(V))
+          continue;
         const TreeEntry *TE = getTreeEntry(V);
         assert((!TE || TE == Last || doesNotNeedToBeScheduled(V)) &&
                "Scalar already in tree!");
