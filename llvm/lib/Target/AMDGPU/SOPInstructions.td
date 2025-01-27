@@ -507,6 +507,12 @@ def S_BARRIER_JOIN_M0 : SOP1_Pseudo <"s_barrier_join m0", (outs), (ins),
   let isConvergent = 1;
 }
 
+def S_WAKEUP_BARRIER_M0 : SOP1_Pseudo <"s_wakeup_barrier m0", (outs), (ins),
+  "", []>{
+  let SchedRW = [WriteBarrier];
+  let isConvergent = 1;
+}
+
 } // End Uses = [M0]
 
 def S_BARRIER_SIGNAL_IMM : SOP1_Pseudo <"s_barrier_signal", (outs),
@@ -523,6 +529,12 @@ def S_BARRIER_SIGNAL_ISFIRST_IMM : SOP1_Pseudo <"s_barrier_signal_isfirst", (out
 }
 
 def S_BARRIER_JOIN_IMM : SOP1_Pseudo <"s_barrier_join", (outs),
+  (ins SplitBarrier:$src0), "$src0", []>{
+  let SchedRW = [WriteBarrier];
+  let isConvergent = 1;
+}
+
+def S_WAKEUP_BARRIER_IMM : SOP1_Pseudo <"s_wakeup_barrier", (outs),
   (ins SplitBarrier:$src0), "$src0", []>{
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
@@ -2157,7 +2169,22 @@ multiclass SOP1_Real_gfx13<bits<8> op, string name = !tolower(NAME)> {
     def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
 }
 
+multiclass SOP1_M0_Real_gfx13<bits<8> op> {
+  defvar ps = !cast<SOP1_Pseudo>(NAME);
+  def _gfx13 : SOP1_Real<op, ps>, Select<GFX13Gen, ps.PseudoInstr> {
+    let Inst{7-0} = M0_gfx11plus.HWEncoding{7-0}; // Set Src0 encoding to M0
+  }
+}
+
+multiclass SOP1_IMM_Real_gfx13<bits<8> op> {
+  defvar ps = !cast<SOP1_Pseudo>(NAME);
+  def _gfx13 : SOP1_Real<op, ps>,
+               Select<GFX13Gen, ps.PseudoInstr>;
+}
+
 defm S_GET_SHADER_CYCLES_U64 : SOP1_Real_gfx13<0x011>;
+defm S_WAKEUP_BARRIER_M0     : SOP1_M0_Real_gfx13<0x057>;
+defm S_WAKEUP_BARRIER_IMM    : SOP1_IMM_Real_gfx13<0x057>;
 defm S_MOV_FROM_GLOBAL_B32   : SOP1_Real_gfx13<0x05b>;
 defm S_MOV_FROM_GLOBAL_B64   : SOP1_Real_gfx13<0x05c>;
 defm S_MOV_TO_GLOBAL_B32     : SOP1_Real_gfx13<0x05d>;
@@ -2189,23 +2216,25 @@ multiclass SOP1_Real_gfx12<bits<8> op, string name = !tolower(NAME)> {
     }
 }
 
-multiclass SOP1_M0_Real_gfx12_gfx13<bits<8> op> {
+multiclass SOP1_M0_Real_gfx12<bits<8> op> {
   defvar ps = !cast<SOP1_Pseudo>(NAME);
   def _gfx12 : SOP1_Real<op, ps>, Select<GFX12Gen, ps.PseudoInstr> {
     let Inst{7-0} = M0_gfx11plus.HWEncoding{7-0}; // Set Src0 encoding to M0
   }
-  def _gfx13 : SOP1_Real<op, ps>, Select<GFX13Gen, ps.PseudoInstr> {
-    let Inst{7-0} = M0_gfx11plus.HWEncoding{7-0}; // Set Src0 encoding to M0
-  }
 }
 
-multiclass SOP1_IMM_Real_gfx12_gfx13<bits<8> op> {
+multiclass SOP1_M0_Real_gfx12_gfx13<bits<8> op> :
+  SOP1_M0_Real_gfx12<op>, SOP1_M0_Real_gfx13<op>;
+
+multiclass SOP1_IMM_Real_gfx12<bits<8> op> {
   defvar ps = !cast<SOP1_Pseudo>(NAME);
   def _gfx12 : SOP1_Real<op, ps>,
                Select<GFX12Gen, ps.PseudoInstr>;
-  def _gfx13 : SOP1_Real<op, ps>,
-               Select<GFX13Gen, ps.PseudoInstr>;
 }
+
+multiclass SOP1_IMM_Real_gfx12_gfx13<bits<8> op> :
+  SOP1_IMM_Real_gfx12<op>, SOP1_IMM_Real_gfx13<op>;
+
 
 multiclass SOP1_Real_gfx11_gfx12<bits<8> op, string name = !tolower(NAME)> :
   SOP1_Real_gfx11<op, name>, SOP1_Real_gfx12<op, name>;
