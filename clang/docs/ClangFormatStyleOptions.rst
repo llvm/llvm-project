@@ -4213,6 +4213,21 @@ the configuration (without a prefix: ``Auto``).
        plop();                                  plop();
      }                                      }
 
+.. _IndentExportBlock:
+
+**IndentExportBlock** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <IndentExportBlock>`
+  If ``true``, clang-format will indent the body of an ``export { ... }``
+  block. This doesn't affect the formatting of anything else related to
+  exported declarations.
+
+  .. code-block:: c++
+
+     true:                     false:
+     export {          vs.     export {
+       void foo();             void foo();
+       void bar();             void bar();
+     }                         }
+
 .. _IndentExternBlock:
 
 **IndentExternBlock** (``IndentExternBlockStyle``) :versionbadge:`clang-format 11` :ref:`¶ <IndentExternBlock>`

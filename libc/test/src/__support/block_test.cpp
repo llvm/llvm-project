@@ -75,8 +75,11 @@ TEST(LlvmLibcBlockTest, CannotCreateTooSmallBlock) {
 
 TEST(LlvmLibcBlockTest, CanSplitBlock) {
   constexpr size_t kN = 1024;
-  // Give the split position a large alignment.
-  constexpr size_t kSplitN = 512 + Block::PREV_FIELD_SIZE;
+
+  // Choose a split position such that the next block's usable space is 512
+  // bytes from this one's. This should be sufficient for any machine's
+  // alignment.
+  const size_t kSplitN = Block::inner_size(512);
 
   array<byte, kN> bytes;
   auto result = Block::init(bytes);

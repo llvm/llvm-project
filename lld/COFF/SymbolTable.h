@@ -14,6 +14,7 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -149,11 +150,25 @@ public:
   // A list of EC EXP+ symbols.
   std::vector<Symbol *> expSymbols;
 
+  // A list of DLL exports.
+  std::vector<Export> exports;
+  llvm::DenseSet<StringRef> directivesExports;
+  bool hadExplicitExports;
+
+  Chunk *edataStart = nullptr;
+  Chunk *edataEnd = nullptr;
+
+  void fixupExports();
+  void assignExportOrdinals();
+  void parseModuleDefs(StringRef path);
+
   // Iterates symbols in non-determinstic hash table order.
   template <typename T> void forEachSymbol(T callback) {
     for (auto &pair : symMap)
       callback(pair.second);
   }
+
+  std::vector<BitcodeFile *> bitcodeFileInstances;
 
   DefinedRegular *loadConfigSym = nullptr;
   uint32_t loadConfigSize = 0;
@@ -175,6 +190,11 @@ private:
   std::unique_ptr<BitcodeCompiler> lto;
   std::vector<std::pair<Symbol *, Symbol *>> entryThunks;
   llvm::DenseMap<Symbol *, Symbol *> exitThunks;
+
+  void
+  reportProblemSymbols(const llvm::SmallPtrSetImpl<Symbol *> &undefs,
+                       const llvm::DenseMap<Symbol *, Symbol *> *localImports,
+                       bool needBitcodeFiles);
 };
 
 std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex);

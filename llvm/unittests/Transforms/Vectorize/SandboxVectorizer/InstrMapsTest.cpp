@@ -53,7 +53,7 @@ define void @foo(i8 %v0, i8 %v1, i8 %v2, i8 %v3, <2 x i8> %vec) {
   auto *VAdd0 = cast<sandboxir::BinaryOperator>(&*It++);
   [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
-  sandboxir::InstrMaps IMaps;
+  sandboxir::InstrMaps IMaps(Ctx);
   // Check with empty IMaps.
   EXPECT_EQ(IMaps.getVectorForOrig(Add0), nullptr);
   EXPECT_EQ(IMaps.getVectorForOrig(Add1), nullptr);
@@ -75,4 +75,13 @@ define void @foo(i8 %v0, i8 %v1, i8 %v2, i8 %v3, <2 x i8> %vec) {
 #ifndef NDEBUG
   EXPECT_DEATH(IMaps.registerVector({Add1, Add0}, VAdd0), ".*exists.*");
 #endif // NDEBUG
+  // Check callbacks: erase original instr.
+  Add0->eraseFromParent();
+  EXPECT_FALSE(IMaps.getOrigLane(VAdd0, Add0));
+  EXPECT_EQ(*IMaps.getOrigLane(VAdd0, Add1), 1U);
+  EXPECT_EQ(IMaps.getVectorForOrig(Add0), nullptr);
+  // Check callbacks: erase vector instr.
+  VAdd0->eraseFromParent();
+  EXPECT_FALSE(IMaps.getOrigLane(VAdd0, Add1));
+  EXPECT_EQ(IMaps.getVectorForOrig(Add1), nullptr);
 }

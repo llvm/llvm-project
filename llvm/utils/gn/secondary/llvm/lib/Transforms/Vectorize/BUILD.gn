@@ -23,6 +23,7 @@ static_library("Vectorize") {
     "SandboxVectorizer/SandboxVectorizerPassBuilder.cpp",
     "SandboxVectorizer/Scheduler.cpp",
     "SandboxVectorizer/SeedCollector.cpp",
+    "SandboxVectorizer/VecUtils.cpp",
     "VPlan.cpp",
     "VPlanAnalysis.cpp",
     "VPlanHCFGBuilder.cpp",

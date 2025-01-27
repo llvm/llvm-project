@@ -227,15 +227,17 @@ public:
     *new (&next()->prev_) size_t = outer_size();
   }
 
-  /// Marks this block as the last one in the chain. Makes next() return
-  /// nullptr.
-  LIBC_INLINE void mark_last() { next_ |= LAST_MASK; }
-
-  LIBC_INLINE Block(size_t outer_size) : next_(outer_size) {
-    LIBC_ASSERT(outer_size % alignof(max_align_t) == 0 &&
-                "block sizes must be aligned");
+  LIBC_INLINE Block(size_t outer_size, bool is_last) : next_(outer_size) {
+    // Last blocks are not usable, so they need not have sizes aligned to
+    // max_align_t. Their lower bits must still be free, so they must be aligned
+    // to Block.
+    LIBC_ASSERT(
+        outer_size % (is_last ? alignof(Block) : alignof(max_align_t)) == 0 &&
+        "block sizes must be aligned");
     LIBC_ASSERT(is_usable_space_aligned(alignof(max_align_t)) &&
                 "usable space must be aligned to a multiple of max_align_t");
+    if (is_last)
+      next_ |= LAST_MASK;
   }
 
   LIBC_INLINE bool is_usable_space_aligned(size_t alignment) const {
@@ -325,7 +327,13 @@ private:
     LIBC_ASSERT(reinterpret_cast<uintptr_t>(bytes.data()) % alignof(Block) ==
                     0 &&
                 "block start must be suitably aligned");
-    return ::new (bytes.data()) Block(bytes.size());
+    return ::new (bytes.data()) Block(bytes.size(), /*is_last=*/false);
+  }
+
+  LIBC_INLINE static void make_last_block(cpp::byte *start) {
+    LIBC_ASSERT(reinterpret_cast<uintptr_t>(start) % alignof(Block) == 0 &&
+                "block start must be suitably aligned");
+    ::new (start) Block(sizeof(Block), /*is_last=*/true);
   }
 
   /// Offset from this block to the previous block. 0 if this is the first
@@ -353,7 +361,7 @@ public:
   static constexpr size_t PREV_FIELD_SIZE = sizeof(prev_);
 };
 
-static_assert(alignof(max_align_t) >= 4,
+static_assert(alignof(Block) >= 4,
               "at least 2 bits must be available in block sizes for flags");
 
 LIBC_INLINE
@@ -380,9 +388,8 @@ optional<Block *> Block::init(ByteSpan region) {
   auto *last_start_ptr = reinterpret_cast<cpp::byte *>(last_start);
   Block *block =
       as_block({reinterpret_cast<cpp::byte *>(block_start), last_start_ptr});
-  Block *last = as_block({last_start_ptr, sizeof(Block)});
+  make_last_block(last_start_ptr);
   block->mark_free();
-  last->mark_last();
   return block;
 }
 
