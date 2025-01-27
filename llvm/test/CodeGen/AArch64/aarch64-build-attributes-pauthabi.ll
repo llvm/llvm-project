@@ -1,8 +1,7 @@
 ; RUN: llc < %s | FileCheck %s --check-prefix=ASM
 ; RUN: llc %s -filetype=obj -o - | llvm-readelf --hex-dump=.ARM.attributes - | FileCheck %s --check-prefix=ELF
 
-; ASM: .text
-; ASM-NEXT: .aeabi_subsection	aeabi_pauthabi, required, uleb128
+; ASM: .aeabi_subsection	aeabi_pauthabi, required, uleb128
 ; ASM-NEXT: .aeabi_attribute	Tag_PAuth_Platform, 2
 ; ASM-NEXT: .aeabi_attribute	Tag_PAuth_Schema, 31
 

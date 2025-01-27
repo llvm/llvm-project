@@ -401,3 +401,19 @@ struct node {
   }
 };
 }
+
+namespace dependent_nested_class {
+template <typename T>
+struct Foo {
+  struct Bar {
+    int field;
+  };
+};
+template <typename T>
+void f() {
+  typename Foo<T>::Bar bar;
+  bar.field;
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:415:7 %s -o - | FileCheck -check-prefix=CHECK-DEPENDENT-NESTEDCLASS %s
+  // CHECK-DEPENDENT-NESTEDCLASS: [#int#]field
+}
+}

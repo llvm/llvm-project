@@ -28,6 +28,7 @@
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/CapturedStmt.h"
@@ -450,7 +451,7 @@ public:
              "EBB should be entry block of the current code gen function");
       PostAllocaInsertPt = AllocaInsertPt->clone();
       PostAllocaInsertPt->setName("postallocapt");
-      PostAllocaInsertPt->insertAfter(AllocaInsertPt);
+      PostAllocaInsertPt->insertAfter(AllocaInsertPt->getIterator());
     }
 
     return PostAllocaInsertPt;

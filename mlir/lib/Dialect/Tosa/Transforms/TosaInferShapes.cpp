@@ -315,6 +315,7 @@ void validateSameOperandsAndResultRankTrait(Region &region) {
       if (op.hasTrait<OpTrait::SameOperandsAndResultRank>()) {
         if (OpTrait::impl::verifySameOperandsAndResultRank(&op).failed()) {
           errs++;
+          (void)errs;
         }
       }
       WhileOp whileOp = dyn_cast<WhileOp>(op);

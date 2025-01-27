@@ -1057,6 +1057,9 @@ Error GenericDeviceTy::setupRPCServer(GenericPluginTy &Plugin,
   if (auto Err = Server.initDevice(*this, Plugin.getGlobalHandler(), Image))
     return Err;
 
+  if (auto Err = Server.startThread())
+    return Err;
+
   RPCServer = &Server;
   DP("Running an RPC server on device %d\n", getDeviceId());
   return Plugin::success();
@@ -1629,6 +1632,10 @@ Error GenericPluginTy::deinit() {
   // There is no global handler if no device is available.
   if (GlobalHandler)
     delete GlobalHandler;
+
+  if (RPCServer->Thread->Running.load(std::memory_order_relaxed))
+    if (Error Err = RPCServer->shutDown())
+      return Err;
 
   if (RPCServer)
     delete RPCServer;

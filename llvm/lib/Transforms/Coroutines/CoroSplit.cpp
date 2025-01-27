@@ -43,6 +43,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/GlobalValue.h"
@@ -76,6 +77,24 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "coro-split"
+
+namespace {
+/// Collect (a known) subset of global debug info metadata potentially used by
+/// the function \p F.
+///
+/// This metadata set can be used to avoid cloning debug info not owned by \p F
+/// and is shared among all potential clones \p F.
+MetadataSetTy collectCommonDebugInfo(Function &F) {
+  TimeTraceScope FunctionScope("CollectCommonDebugInfo");
+
+  DebugInfoFinder DIFinder;
+  DISubprogram *SPClonedWithinModule = CollectDebugInfoForCloning(
+      F, CloneFunctionChangeType::LocalChangesOnly, DIFinder);
+
+  return FindDebugInfoToIdentityMap(CloneFunctionChangeType::LocalChangesOnly,
+                                    DIFinder, SPClonedWithinModule);
+}
+} // end anonymous namespace
 
 // FIXME:
 // Lower the intrinisc in CoroEarly phase if coroutine frame doesn't escape
@@ -891,8 +910,11 @@ void coro::BaseCloner::create() {
   auto savedLinkage = NewF->getLinkage();
   NewF->setLinkage(llvm::GlobalValue::ExternalLinkage);
 
-  CloneFunctionInto(NewF, &OrigF, VMap,
-                    CloneFunctionChangeType::LocalChangesOnly, Returns);
+  CloneFunctionAttributesInto(NewF, &OrigF, VMap, false);
+  CloneFunctionMetadataInto(*NewF, OrigF, VMap, RF_None, nullptr, nullptr,
+                            &CommonDebugInfo);
+  CloneFunctionBodyInto(*NewF, OrigF, VMap, RF_None, Returns, "", nullptr,
+                        nullptr, nullptr, &CommonDebugInfo);
 
   auto &Context = NewF->getContext();
 
@@ -1199,8 +1221,8 @@ static void handleNoSuspendCoroutine(coro::Shape &Shape) {
 // SimplifySuspendPoint needs to check that there is no calls between
 // coro_save and coro_suspend, since any of the calls may potentially resume
 // the coroutine and if that is the case we cannot eliminate the suspend point.
-static bool hasCallsInBlockBetween(Instruction *From, Instruction *To) {
-  for (Instruction *I = From; I != To; I = I->getNextNode()) {
+static bool hasCallsInBlockBetween(iterator_range<BasicBlock::iterator> R) {
+  for (Instruction &I : R) {
     // Assume that no intrinsic can resume the coroutine.
     if (isa<IntrinsicInst>(I))
       continue;
@@ -1234,7 +1256,7 @@ static bool hasCallsInBlocksBetween(BasicBlock *SaveBB, BasicBlock *ResDesBB) {
   Set.erase(ResDesBB);
 
   for (auto *BB : Set)
-    if (hasCallsInBlockBetween(BB->getFirstNonPHI(), nullptr))
+    if (hasCallsInBlockBetween({BB->getFirstNonPHIIt(), BB->end()}))
       return true;
 
   return false;
@@ -1243,17 +1265,19 @@ static bool hasCallsInBlocksBetween(BasicBlock *SaveBB, BasicBlock *ResDesBB) {
 static bool hasCallsBetween(Instruction *Save, Instruction *ResumeOrDestroy) {
   auto *SaveBB = Save->getParent();
   auto *ResumeOrDestroyBB = ResumeOrDestroy->getParent();
+  BasicBlock::iterator SaveIt = Save->getIterator();
+  BasicBlock::iterator ResumeOrDestroyIt = ResumeOrDestroy->getIterator();
 
   if (SaveBB == ResumeOrDestroyBB)
-    return hasCallsInBlockBetween(Save->getNextNode(), ResumeOrDestroy);
+    return hasCallsInBlockBetween({std::next(SaveIt), ResumeOrDestroyIt});
 
   // Any calls from Save to the end of the block?
-  if (hasCallsInBlockBetween(Save->getNextNode(), nullptr))
+  if (hasCallsInBlockBetween({std::next(SaveIt), SaveBB->end()}))
     return true;
 
   // Any calls from begging of the block up to ResumeOrDestroy?
-  if (hasCallsInBlockBetween(ResumeOrDestroyBB->getFirstNonPHI(),
-                             ResumeOrDestroy))
+  if (hasCallsInBlockBetween(
+          {ResumeOrDestroyBB->getFirstNonPHIIt(), ResumeOrDestroyIt}))
     return true;
 
   // Any calls in all of the blocks between SaveBB and ResumeOrDestroyBB?
@@ -1374,16 +1398,21 @@ struct SwitchCoroutineSplitter {
                     TargetTransformInfo &TTI) {
     assert(Shape.ABI == coro::ABI::Switch);
 
+    MetadataSetTy CommonDebugInfo{collectCommonDebugInfo(F)};
+
     // Create a resume clone by cloning the body of the original function,
     // setting new entry block and replacing coro.suspend an appropriate value
     // to force resume or cleanup pass for every suspend point.
     createResumeEntryBlock(F, Shape);
     auto *ResumeClone = coro::SwitchCloner::createClone(
-        F, ".resume", Shape, coro::CloneKind::SwitchResume, TTI);
+        F, ".resume", Shape, coro::CloneKind::SwitchResume, TTI,
+        CommonDebugInfo);
     auto *DestroyClone = coro::SwitchCloner::createClone(
-        F, ".destroy", Shape, coro::CloneKind::SwitchUnwind, TTI);
+        F, ".destroy", Shape, coro::CloneKind::SwitchUnwind, TTI,
+        CommonDebugInfo);
     auto *CleanupClone = coro::SwitchCloner::createClone(
-        F, ".cleanup", Shape, coro::CloneKind::SwitchCleanup, TTI);
+        F, ".cleanup", Shape, coro::CloneKind::SwitchCleanup, TTI,
+        CommonDebugInfo);
 
     postSplitCleanup(*ResumeClone);
     postSplitCleanup(*DestroyClone);
@@ -1419,7 +1448,7 @@ struct SwitchCoroutineSplitter {
     SmallVector<Type *> NewParams;
     NewParams.reserve(OldParams.size() + 1);
     NewParams.append(OldParams.begin(), OldParams.end());
-    NewParams.push_back(PointerType::getUnqual(Shape.FrameTy));
+    NewParams.push_back(PointerType::getUnqual(Shape.FrameTy->getContext()));
 
     auto *NewFnTy = FunctionType::get(OrigFnTy->getReturnType(), NewParams,
                                       OrigFnTy->isVarArg());
@@ -1768,12 +1797,15 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
   }
 
   assert(Clones.size() == Shape.CoroSuspends.size());
+
+  MetadataSetTy CommonDebugInfo{collectCommonDebugInfo(F)};
+
   for (auto [Idx, CS] : llvm::enumerate(Shape.CoroSuspends)) {
     auto *Suspend = CS;
     auto *Clone = Clones[Idx];
 
     coro::BaseCloner::createClone(F, "resume." + Twine(Idx), Shape, Clone,
-                                  Suspend, TTI);
+                                  Suspend, TTI, CommonDebugInfo);
   }
 }
 
@@ -1899,12 +1931,15 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
   }
 
   assert(Clones.size() == Shape.CoroSuspends.size());
+
+  MetadataSetTy CommonDebugInfo{collectCommonDebugInfo(F)};
+
   for (auto [Idx, CS] : llvm::enumerate(Shape.CoroSuspends)) {
     auto Suspend = CS;
     auto Clone = Clones[Idx];
 
     coro::BaseCloner::createClone(F, "resume." + Twine(Idx), Shape, Clone,
-                                  Suspend, TTI);
+                                  Suspend, TTI, CommonDebugInfo);
   }
 }
 

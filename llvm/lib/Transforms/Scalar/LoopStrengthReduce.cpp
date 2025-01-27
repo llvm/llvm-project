@@ -2719,7 +2719,7 @@ LSRInstance::OptimizeLoopTermCond() {
     // the exiting block branch, move it.
     if (Cond->getNextNonDebugInstruction() != TermBr) {
       if (Cond->hasOneUse()) {
-        Cond->moveBefore(TermBr);
+        Cond->moveBefore(TermBr->getIterator());
       } else {
         // Clone the terminating condition and insert into the loopend.
         ICmpInst *OldCond = Cond;
@@ -6138,7 +6138,7 @@ void LSRInstance::ImplementSolution(
     if (!llvm::all_of(BO->uses(),
                       [&](Use &U) {return DT.dominates(IVIncInsertPos, U);}))
       continue;
-    BO->moveBefore(IVIncInsertPos);
+    BO->moveBefore(IVIncInsertPos->getIterator());
     Changed = true;
   }
 
