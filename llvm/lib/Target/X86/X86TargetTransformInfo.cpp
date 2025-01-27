@@ -55,6 +55,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include <cstddef>
 #include <optional>
 
 using namespace llvm;
@@ -1580,9 +1581,10 @@ InstructionCost X86TTIImpl::getShuffleCost(
                ((P.value() % Mask.size()) / NumEltsPerLane) ==
                    (P.index() / NumEltsPerLane);
       });
-      IsSingleElementMask = (Mask.size() - 1) == count_if(Mask, [](int M) {
-                              return M == PoisonMaskElem;
-                            });
+      IsSingleElementMask =
+          (Mask.size() - 1) == static_cast<size_t>(count_if(Mask, [](int M) {
+            return M == PoisonMaskElem;
+          }));
     }
   }
 
