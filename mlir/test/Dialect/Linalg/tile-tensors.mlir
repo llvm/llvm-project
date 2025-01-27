@@ -40,13 +40,16 @@ module attributes {transform.with_named_sequence} {
 // CHECK:       #[[$MAP0:.*]] = affine_map<(d0, d1, d2) -> (d0, d2)>
 // CHECK-NEXT:  #[[$MAP1:.*]] = affine_map<(d0, d1, d2) -> (d2, d1)>
 // CHECK-NEXT:  #[[$MAP2:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+#access_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>,
+                affine_map<(d0, d1, d2) -> (d2, d1)>,
+                affine_map<(d0, d1, d2) -> (d0, d1)>]
 
 // CHECK-LABEL: func @matmul_as_contract_tensors(
 // CHECK-SAME:    %[[TA:[0-9a-z]+]]: tensor<?x?xf32>
 // CHECK-SAME:    %[[TB:[0-9a-z]+]]: tensor<?x?xf32>
 // CHECK-SAME:    %[[TC:[0-9a-z]+]]: tensor<?x?xf32>) -> tensor<?x?xf32> {
 func.func @matmul_as_contract_tensors(
-  %arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tensor<?x?xf32>)
+  %A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tensor<?x?xf32>)
     -> tensor<?x?xf32> {
 //      CHECK: %[[TD0:.*]] = scf.for {{.*}} to {{.*}} step {{.*}} iter_args(%[[TC0:.*]] = %[[TC]]) -> (tensor<?x?xf32>) {
 //      CHECK:   %[[TD1:.*]] = scf.for {{.*}} to {{.*}} step {{.*}} iter_args(%[[TC1:.*]] = %[[TC0]]) -> (tensor<?x?xf32>) {
@@ -54,19 +57,17 @@ func.func @matmul_as_contract_tensors(
 //      CHECK:       %[[sTA:.*]] = tensor.extract_slice %[[TA]][{{.*}}] : tensor<?x?xf32> to tensor<?x?xf32>
 //      CHECK:       %[[sTB:.*]] = tensor.extract_slice %[[TB]][{{.*}}] : tensor<?x?xf32> to tensor<?x?xf32>
 //      CHECK:       %[[sTC:.*]] = tensor.extract_slice %[[TC2]][{{.*}}] : tensor<?x?xf32> to tensor<?x?xf32>
-//      CHECK:       %[[sTD:.*]] = linalg.contract indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP2]]] ins(%[[sTA]], %[[sTB]] : tensor<?x?xf32>, tensor<?x?xf32>)
-// CHECK-SAME:                                  outs(%[[sTC]] : tensor<?x?xf32>)  -> tensor<?x?xf32>
+//      CHECK:       %[[sTD:.*]] = linalg.contract
+// CHECK-SAME:          indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP2]]]
+// CHECK-SAME:          ins(%[[sTA]], %[[sTB]] : tensor<?x?xf32>, tensor<?x?xf32>)
+// CHECK-SAME:          outs(%[[sTC]] : tensor<?x?xf32>)  -> tensor<?x?xf32>
 //      CHECK:       %[[TD:.*]] = tensor.insert_slice %[[sTD]] into %[[TC2]][{{.*}}]  : tensor<?x?xf32> into tensor<?x?xf32>
 //      CHECK:       scf.yield %[[TD]] : tensor<?x?xf32>
 //      CHECK:     scf.yield %[[TD2]] : tensor<?x?xf32>
 //      CHECK:   scf.yield %[[TD1]] : tensor<?x?xf32>
-  %0 = linalg.contract indexing_maps = [
-                         affine_map<(d0, d1, d2) -> (d0, d2)>,
-                         affine_map<(d0, d1, d2) -> (d2, d1)>,
-                         affine_map<(d0, d1, d2) -> (d0, d1)>
-                       ]
-                       ins(%arg0, %arg1: tensor<?x?xf32>, tensor<?x?xf32>)
-                       outs(%arg2: tensor<?x?xf32>)
+  %0 = linalg.contract indexing_maps = #access_maps
+                       ins(%A, %B: tensor<?x?xf32>, tensor<?x?xf32>)
+                       outs(%C: tensor<?x?xf32>)
     -> tensor<?x?xf32>
 
 //      CHECK: return %[[TD0]] : tensor<?x?xf32>

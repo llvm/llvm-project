@@ -688,7 +688,7 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
                AttrSizedOperandSegments,
                LinalgContractionOpInterface]> {
   let summary = [{
-    Perform a contraction on two inputs, accumulating on top of a third.
+    Perform a contraction on two inputs, accumulating into the third.
   }];
   let description = [{
     The semantics of contracting inputs `A` and `B` on top of `C` to produce

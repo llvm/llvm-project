@@ -3535,22 +3535,16 @@ FailureOr<ArrayAttr> parseIndexingMapsAttr(OpAsmParser &parser) {
   if (parser.parseOptionalKeyword("indexing_maps"))
     return {nullptr}; // Success in case indexing_maps was not provided.
 
-  SmallVector<Attribute> indexingMaps;
-
-  auto parseIndexingMap = [&]() -> ParseResult {
-    AffineMapAttr affineMapAttr;
-    if (parser.parseAttribute(affineMapAttr))
-      return failure();
-    indexingMaps.push_back(affineMapAttr);
-    return success();
-  };
-
-  if (parser.parseEqual() ||
-      parser.parseCommaSeparatedList(AsmParser::Delimiter::Square,
-                                     parseIndexingMap))
+  ArrayAttr arrayAttr;
+  if (parser.parseEqual() || parser.parseAttribute(arrayAttr))
     return failure();
 
-  return parser.getBuilder().getArrayAttr(indexingMaps);
+  if (llvm::any_of(arrayAttr,
+                   [](auto elt) { return !dyn_cast<AffineMapAttr>(elt); }))
+    return parser.emitError(parser.getCurrentLocation())
+           << "element of indexing_maps array is not an affine_map";
+
+  return arrayAttr;
 }
 
 ParseResult MatmulOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -3680,7 +3674,7 @@ ParseResult ContractOp::parse(OpAsmParser &parser, OperationState &result) {
   FailureOr<ArrayAttr> indexingMapsAttr = parseIndexingMapsAttr(parser);
   if (failed(indexingMapsAttr) || *indexingMapsAttr == nullptr)
     return parser.emitError(parser.getCurrentLocation(),
-                            "expected 'indexing_map' attribute");
+                            "expected 'indexing_maps' attribute");
   result.addAttribute("indexing_maps", *indexingMapsAttr);
 
   return parseNamedStructuredOp(parser, result, getNumRegionArgs(),

@@ -999,193 +999,206 @@ func.func @matmul_transpose_a_b_explicit(%arg0: memref<5x3xf32>, %arg1: memref<7
 
 // -----
 
-// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
-// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
-// CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK: #[[$ACCESS_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK: #[[$ACCESS_B:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
+// CHECK: #[[$ACCESS_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 
-// CHECK-LABEL:   func.func @contract_matmul(
-// CHECK-SAME:                                             %[[VAL_0:.*]]: memref<3x5xf32>,
-// CHECK-SAME:                                             %[[VAL_1:.*]]: memref<5x7xf32>,
-// CHECK-SAME:                                             %[[VAL_2:.*]]: memref<3x7xf32>) {
+// CHECK-LABEL: func.func @contract_matmul(
+// CHECK-SAME:      %[[A:.*]]: memref<3x5xf32>,
+// CHECK-SAME:      %[[B:.*]]: memref<5x7xf32>,
+// CHECK-SAME:      %[[C:.*]]: memref<3x7xf32>) {
 
-// CHECK:           linalg.generic {indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]], iterator_types = ["parallel", "parallel", "reduction"]}
-// CHECK-NEXT:     ^{{.+}}(
+// CHECK:         linalg.generic
+// CHECK-SAME:        indexing_maps = [#[[$ACCESS_A]], #[[$ACCESS_B]], #[[$ACCESS_C]]]
+// CHECK-SAME:        iterator_types = ["parallel", "parallel", "reduction"]
+// CHECK-NEXT:    ^{{.+}}(
 // CHECK-NEXT:      arith.mulf
 // CHECK-NEXT:      arith.addf
 // CHECK-NEXT:      linalg.yield
 
 func.func @contract_matmul(%arg0: memref<3x5xf32>, %arg1: memref<5x7xf32>, %arg2: memref<3x7xf32>) {
-  linalg.contract indexing_maps = [
-                    affine_map<(d0, d1, d2) -> (d0, d2)>,
-                    affine_map<(d0, d1, d2) -> (d2, d1)>,
-                    affine_map<(d0, d1, d2) -> (d0, d1)>
-                  ]
-                  ins(%arg0, %arg1 : memref<3x5xf32>, memref<5x7xf32>)
-                  outs(%arg2: memref<3x7xf32>)
+  linalg.contract
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>,
+                       affine_map<(d0, d1, d2) -> (d2, d1)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1)>]
+      ins(%arg0, %arg1 : memref<3x5xf32>, memref<5x7xf32>)
+      outs(%arg2: memref<3x7xf32>)
 
   return
 }
 
 // -----
 
-// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2) -> (d2, d0)>
-// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
-// CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK: #[[$ACCESS_A:.+]] = affine_map<(d0, d1, d2) -> (d2, d0)>
+// CHECK: #[[$ACCESS_B:.+]] = affine_map<(d0, d1, d2) -> (d1, d2)>
+// CHECK: #[[$ACCESS_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 
-// CHECK-LABEL:   func.func @contract_matmul_transpose_a_b(
-// CHECK-SAME:                                             %[[VAL_0:.*]]: memref<5x3xf32>,
-// CHECK-SAME:                                             %[[VAL_1:.*]]: memref<7x5xf32>,
-// CHECK-SAME:                                             %[[VAL_2:.*]]: memref<3x7xf32>) {
+// CHECK-LABEL: func.func @contract_matmul_transpose_a_b(
+// CHECK-SAME:      %[[A:.*]]: memref<5x3xf32>,
+// CHECK-SAME:      %[[B:.*]]: memref<7x5xf32>,
+// CHECK-SAME:      %[[C:.*]]: memref<3x7xf32>) {
 
-// CHECK:           linalg.generic {indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]], iterator_types = ["parallel", "parallel", "reduction"]}
-// CHECK-NEXT:     ^{{.+}}(
+// CHECK:         linalg.generic
+// CHECK-SAME:        indexing_maps = [#[[$ACCESS_A]], #[[$ACCESS_B]], #[[$ACCESS_C]]]
+// CHECK-SAME:        iterator_types = ["parallel", "parallel", "reduction"]
+// CHECK-NEXT:    ^{{.+}}(
 // CHECK-NEXT:      arith.mulf
 // CHECK-NEXT:      arith.addf
 // CHECK-NEXT:      linalg.yield
 
 func.func @contract_matmul_transpose_a_b(%arg0: memref<5x3xf32>, %arg1: memref<7x5xf32>, %arg2: memref<3x7xf32>) {
-  linalg.contract indexing_maps = [
-                    affine_map<(d0, d1, d2) -> (d2, d0)>,
-                    affine_map<(d0, d1, d2) -> (d1, d2)>,
-                    affine_map<(d0, d1, d2) -> (d0, d1)>
-                  ]
-                  ins(%arg0, %arg1 : memref<5x3xf32>, memref<7x5xf32>)
-                  outs(%arg2: memref<3x7xf32>)
-
+  linalg.contract
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d2, d0)>,
+                       affine_map<(d0, d1, d2) -> (d1, d2)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1)>]
+      ins(%arg0, %arg1 : memref<5x3xf32>, memref<7x5xf32>)
+      outs(%arg2: memref<3x7xf32>)
   return
 }
 
 // -----
 
-// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
-// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
-// CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+// CHECK: #[[$ACCESS_A:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+// CHECK: #[[$ACCESS_B:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
+// CHECK: #[[$ACCESS_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
 
-// CHECK-LABEL:   func.func @contract_batch_matmul(
-// CHECK-SAME:                                             %[[VAL_0:.*]]: memref<9x3x5xf32>,
-// CHECK-SAME:                                             %[[VAL_1:.*]]: memref<9x5x7xf32>,
-// CHECK-SAME:                                             %[[VAL_2:.*]]: memref<9x3x7xf32>) {
+// CHECK-LABEL: func.func @contract_batch_matmul(
+// CHECK-SAME:      %[[A:.*]]: memref<9x3x5xf32>,
+// CHECK-SAME:      %[[B:.*]]: memref<9x5x7xf32>,
+// CHECK-SAME:      %[[C:.*]]: memref<9x3x7xf32>) {
 
-// CHECK:           linalg.generic {indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]], iterator_types = ["parallel", "parallel", "parallel", "reduction"]}
-// CHECK-NEXT:     ^{{.+}}(
+// CHECK:         linalg.generic
+// CHECK-SAME:        indexing_maps = [#[[$ACCESS_A]], #[[$ACCESS_B]], #[[$ACCESS_C]]]
+// CHECK-SAME:        iterator_types = ["parallel", "parallel", "parallel", "reduction"]
+// CHECK-NEXT:    ^{{.+}}(
 // CHECK-NEXT:      arith.mulf
 // CHECK-NEXT:      arith.addf
 // CHECK-NEXT:      linalg.yield
 
 func.func @contract_batch_matmul(%arg0: memref<9x3x5xf32>, %arg1: memref<9x5x7xf32>, %arg2: memref<9x3x7xf32>) {
-  linalg.contract indexing_maps = [
-                    affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>,
-                    affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
-                    affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-                  ]
-                  ins(%arg0, %arg1 : memref<9x3x5xf32>, memref<9x5x7xf32>)
-                  outs(%arg2: memref<9x3x7xf32>)
-
+  linalg.contract
+      indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
+                       affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>]
+      ins(%arg0, %arg1 : memref<9x3x5xf32>, memref<9x5x7xf32>)
+      outs(%arg2: memref<9x3x7xf32>)
   return
 }
 
 // -----
 
-// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
-// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
-// CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+// CHECK: #[[$ACCESS_A:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+// CHECK: #[[$ACCESS_B:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
+// CHECK: #[[$ACCESS_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
 
-// CHECK-LABEL:   func.func @contract_batch_reduce_matmul(
-// CHECK-SAME:                                             %[[VAL_0:.*]]: memref<9x3x5xf32>,
-// CHECK-SAME:                                             %[[VAL_1:.*]]: memref<9x5x7xf32>,
-// CHECK-SAME:                                             %[[VAL_2:.*]]: memref<3x7xf32>) {
+// CHECK-LABEL: func.func @contract_batch_reduce_matmul(
+// CHECK-SAME:      %[[A:.*]]: memref<9x3x5xf32>,
+// CHECK-SAME:      %[[B:.*]]: memref<9x5x7xf32>,
+// CHECK-SAME:      %[[C:.*]]: memref<3x7xf32>) {
 
-// CHECK:           linalg.generic {indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]], iterator_types = ["reduction", "parallel", "parallel", "reduction"]}
-// CHECK-NEXT:     ^{{.+}}(
+// CHECK:         linalg.generic
+// CHECK-SAME:        indexing_maps = [#[[$ACCESS_A]], #[[$ACCESS_B]], #[[$ACCESS_C]]]
+// CHECK-SAME:        iterator_types = ["reduction", "parallel", "parallel", "reduction"]
+// CHECK-NEXT:    ^{{.+}}(
 // CHECK-NEXT:      arith.mulf
 // CHECK-NEXT:      arith.addf
 // CHECK-NEXT:      linalg.yield
 
-func.func @contract_batch_reduce_matmul(%arg0: memref<9x3x5xf32>, %arg1: memref<9x5x7xf32>, %arg2: memref<3x7xf32>) {
-  linalg.contract indexing_maps = [
-                    affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>,
-                    affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
-                    affine_map<(d0, d1, d2, d3) -> (d1, d2)>
-                  ]
-                  ins(%arg0, %arg1 : memref<9x3x5xf32>, memref<9x5x7xf32>)
-                  outs(%arg2: memref<3x7xf32>)
+#accessA = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+#accessB = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
+#accessC = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+func.func @contract_batch_reduce_matmul(
+    %A: memref<9x3x5xf32>, %B: memref<9x5x7xf32>, %C: memref<3x7xf32>) {
+  linalg.contract
+      indexing_maps = [#accessA, #accessB, #accessC]
+      ins(%A, %B : memref<9x3x5xf32>, memref<9x5x7xf32>)
+      outs(%C: memref<3x7xf32>)
   return
 }
 
 // -----
 
-// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d1)>
-// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
-// CHECK: #[[$ATTR_2:.+]] = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+// CHECK: #[[$ACCESS_A:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d1)>
+// CHECK: #[[$ACCESS_B:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
+// CHECK: #[[$ACCESS_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
 
-// CHECK-LABEL:   func.func @contract_batch_reduce_matmul_permute_m_with_k_and_k_with_n(
-// CHECK-SAME:                                             %[[VAL_0:.*]]: memref<9x5x3xf32>,
-// CHECK-SAME:                                             %[[VAL_1:.*]]: memref<9x7x5xf32>,
-// CHECK-SAME:                                             %[[VAL_2:.*]]: memref<3x7xf32>) {
+// CHECK-LABEL: func.func @contract_batch_reduce_matmul_permute_m_with_k_and_k_with_n(
+// CHECK-SAME:      %[[A:.*]]: memref<9x5x3xf32>,
+// CHECK-SAME:      %[[B:.*]]: memref<9x7x5xf32>,
+// CHECK-SAME:      %[[C:.*]]: memref<3x7xf32>) {
 
-// CHECK:           linalg.generic {indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_2]]], iterator_types = ["reduction", "parallel", "parallel", "reduction"]}
-// CHECK-NEXT:     ^{{.+}}(
+// CHECK:         linalg.generic
+// CHECK-SAME:        indexing_maps = [#[[$ACCESS_A]], #[[$ACCESS_B]], #[[$ACCESS_C]]]
+// CHECK-SAME:        iterator_types = ["reduction", "parallel", "parallel", "reduction"]
+// CHECK-NEXT:    ^{{.+}}(
 // CHECK-NEXT:      arith.mulf
 // CHECK-NEXT:      arith.addf
 // CHECK-NEXT:      linalg.yield
 
-func.func @contract_batch_reduce_matmul_permute_m_with_k_and_k_with_n(%arg0: memref<9x5x3xf32>, %arg1: memref<9x7x5xf32>, %arg2: memref<3x7xf32>) {
-  linalg.contract indexing_maps = [
-                    affine_map<(d0, d1, d2, d3) -> (d0, d3, d1)>,
-                    affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>,
-                    affine_map<(d0, d1, d2, d3) -> (d1, d2)>
-                  ]
-                  ins(%arg0, %arg1 : memref<9x5x3xf32>, memref<9x7x5xf32>)
-                  outs(%arg2: memref<3x7xf32>)
+#accessA = affine_map<(d0, d1, d2, d3) -> (d0, d3, d1)>
+#accessB = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
+#accessC = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
+func.func @contract_batch_reduce_matmul_permute_m_with_k_and_k_with_n(
+    %A: memref<9x5x3xf32>, %B: memref<9x7x5xf32>, %C: memref<3x7xf32>) {
+  linalg.contract
+      indexing_maps = [#accessA, #accessB, #accessC]
+      ins(%A, %B : memref<9x5x3xf32>, memref<9x7x5xf32>)
+      outs(%C: memref<3x7xf32>)
   return
 }
 
 // -----
 
-// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0) -> (d0)>
-// CHECK: #[[$ATTR_2:.+]] = affine_map<(d0) -> ()>
+// CHECK: #[[$ACCESS_A_B:.+]] = affine_map<(d0) -> (d0)>
+// CHECK: #[[$ACCESS_C:.+]] = affine_map<(d0) -> ()>
 
-// CHECK-LABEL:   func.func @contract_dot
-// CHECK-SAME:                           (%[[VAL_0:.*]]: memref<9xf32>, %[[VAL_1:.*]]: memref<9xf32>, %[[VAL_2:.*]]: memref<f32>) {
+// CHECK-LABEL: func.func @contract_dot(
+// CHECK-SAME:      %[[A:.*]]: memref<9xf32>, %[[B:.*]]: memref<9xf32>,
+// CHECK-SAME:      %[[C:.*]]: memref<f32>) {
 
-// CHECK:           linalg.generic {indexing_maps = [#[[$ATTR_0]], #[[$ATTR_0]], #[[$ATTR_2]]], iterator_types = ["reduction"]}
-// CHECK-NEXT:     ^{{.+}}(
+// CHECK:         linalg.generic
+// CHECK-SAME:        indexing_maps = [#[[$ACCESS_A_B]], #[[$ACCESS_A_B]], #[[$ACCESS_C]]]
+// CHECK-SAME:        iterator_types = ["reduction"]
+// CHECK-NEXT:    ^{{.+}}(
 // CHECK-NEXT:      arith.mulf
 // CHECK-NEXT:      arith.addf
 // CHECK-NEXT:      linalg.yield
 
-func.func @contract_dot(%arg0: memref<9xf32>, %arg1: memref<9xf32>, %arg2: memref<f32>) {
-  linalg.contract indexing_maps = [
-                    affine_map<(d0) -> (d0)>,
-                    affine_map<(d0) -> (d0)>,
-                    affine_map<(d0) -> ()>
-                  ]
-                  ins(%arg0, %arg1 : memref<9xf32>, memref<9xf32>)
-                  outs(%arg2: memref<f32>)
+#accessAB = affine_map<(d0) -> (d0)>
+#accessC = affine_map<(d0) -> ()>
+func.func @contract_dot(
+    %A: memref<9xf32>, %B: memref<9xf32>, %C: memref<f32>) {
+  linalg.contract
+      indexing_maps = [#accessAB, #accessAB, #accessC]
+      ins(%A, %B : memref<9xf32>, memref<9xf32>)
+      outs(%C: memref<f32>)
   return
 }
 
 // -----
 
-// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2) -> (d2)>
-// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK: #[[$ACCESS_A_B:.+]] = affine_map<(d0, d1, d2) -> (d2)>
+// CHECK: #[[$ACCESS_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 
-// CHECK-LABEL:   func.func @contract_matmul_bcast_a_b
-// CHECK-SAME:                           (%[[VAL_0:.*]]: memref<5xf32>, %[[VAL_1:.*]]: memref<5xf32>, %[[VAL_2:.*]]: memref<3x7xf32>) {
+// CHECK-LABEL: func.func @contract_matmul_bcast_a_b(
+// CHECK-SAME:      %[[A:.*]]: memref<5xf32>, %[[B:.*]]: memref<5xf32>,
+// CHECK-SAME:      %[[C:.*]]: memref<3x7xf32>) {
 
-// CHECK:           linalg.generic {indexing_maps = [#[[$ATTR_0]], #[[$ATTR_0]], #[[$ATTR_2]]], iterator_types = ["parallel", "parallel", "reduction"]}
-// CHECK-NEXT:     ^{{.+}}(
+// CHECK:         linalg.generic
+// CHECK-SAME:        indexing_maps = [#[[$ACCESS_A_B]], #[[$ACCESS_A_B]], #[[$ACCESS_C]]]
+// CHECK-SAME:        iterator_types = ["parallel", "parallel", "reduction"]
+// CHECK-NEXT:    ^{{.+}}(
 // CHECK-NEXT:      arith.mulf
 // CHECK-NEXT:      arith.addf
 // CHECK-NEXT:      linalg.yield
 
-func.func @contract_matmul_bcast_a_b(%arg0: memref<5xf32>, %arg1: memref<5xf32>, %arg2: memref<3x7xf32>) {
-  linalg.contract indexing_maps = [
-                    affine_map<(d0, d1, d2) -> (d2)>,
-                    affine_map<(d0, d1, d2) -> (d2)>,
-                    affine_map<(d0, d1, d2) -> (d0, d1)>
-                  ]
-                  ins(%arg0, %arg1 : memref<5xf32>, memref<5xf32>)
-                  outs(%arg2: memref<3x7xf32>)
+#accessAB = affine_map<(d0, d1, d2) -> (d2)>
+#accessC = affine_map<(d0, d1, d2) -> (d0, d1)>
+func.func @contract_matmul_bcast_a_b(
+    %A: memref<5xf32>, %B: memref<5xf32>, %C: memref<3x7xf32>) {
+  linalg.contract
+      indexing_maps = [#accessAB, #accessAB, #accessC]
+      ins(%A, %B : memref<5xf32>, memref<5xf32>)
+      outs(%C: memref<3x7xf32>)
   return
 }
