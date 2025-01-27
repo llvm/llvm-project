@@ -131,9 +131,8 @@ program p
   ! CHECK:     %[[V_106:[0-9]+]] = arith.bitcast %[[V_104]] : f32 to i32
   ! CHECK:     %[[V_107:[0-9]+]] = arith.shrui %[[V_106]], %c31{{.*}} : i32
   ! CHECK:     %[[V_108:[0-9]+]] = fir.convert %[[V_107]] : (i32) -> i1
-  ! CHECK:     %[[V_109:[0-9]+]] = arith.cmpi ne, %[[V_108]], %false{{[_0-9]*}} : i1
   ! CHECK:     %[[V_110:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_104]]) <{bit = 516 : i32}> : (f32) -> i1
-  ! CHECK:     %[[V_111:[0-9]+]] = arith.andi %[[V_110]], %[[V_109]] : i1
+  ! CHECK:     %[[V_111:[0-9]+]] = arith.andi %[[V_110]], %[[V_108]] : i1
   ! CHECK:     %[[V_112:[0-9]+]] = arith.ori %[[V_105]], %[[V_111]] : i1
   ! CHECK:     %[[V_113:[0-9]+]] = fir.if %[[V_112]] -> (f32) {
   ! CHECK:       %[[V_202:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_104]]) <{bit = 1 : i32}> : (f32) -> i1
@@ -149,7 +148,7 @@ program p
   ! CHECK:       } else {
   ! CHECK-DAG:     %[[V_204:[0-9]+]] = arith.subi %[[V_106]], %c1{{.*}} : i32
   ! CHECK-DAG:     %[[V_205:[0-9]+]] = arith.addi %[[V_106]], %c1{{.*}} : i32
-  ! CHECK:         %[[V_206:[0-9]+]] = arith.select %[[V_109]], %[[V_205]], %[[V_204]] : i32
+  ! CHECK:         %[[V_206:[0-9]+]] = arith.select %[[V_108]], %[[V_205]], %[[V_204]] : i32
   ! CHECK:         %[[V_207:[0-9]+]] = arith.bitcast %[[V_206]] : i32 to f32
   ! CHECK:         fir.result %[[V_207]] : f32
   ! CHECK:       }
@@ -253,9 +252,8 @@ program p
   ! CHECK:     %[[V_182:[0-9]+]] = arith.bitcast %[[V_180]] : f128 to i128
   ! CHECK:     %[[V_183:[0-9]+]] = arith.shrui %[[V_182]], %c127{{.*}} : i128
   ! CHECK:     %[[V_184:[0-9]+]] = fir.convert %[[V_183]] : (i128) -> i1
-  ! CHECK:     %[[V_185:[0-9]+]] = arith.cmpi ne, %[[V_184]], %false{{[_0-9]*}} : i1
   ! CHECK:     %[[V_186:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_180]]) <{bit = 516 : i32}> : (f128) -> i1
-  ! CHECK:     %[[V_187:[0-9]+]] = arith.andi %[[V_186]], %[[V_185]] : i1
+  ! CHECK:     %[[V_187:[0-9]+]] = arith.andi %[[V_186]], %[[V_184]] : i1
   ! CHECK:     %[[V_188:[0-9]+]] = arith.ori %[[V_181]], %[[V_187]] : i1
   ! CHECK:     %[[V_189:[0-9]+]] = fir.if %[[V_188]] -> (f128) {
   ! CHECK:       %[[V_202:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_180]]) <{bit = 1 : i32}> : (f128) -> i1
@@ -271,7 +269,7 @@ program p
   ! CHECK:       } else {
   ! CHECK-DAG:     %[[V_204:[0-9]+]] = arith.subi %[[V_182]], %c1{{.*}} : i128
   ! CHECK-DAG:     %[[V_205:[0-9]+]] = arith.addi %[[V_182]], %c1{{.*}} : i128
-  ! CHECK:         %[[V_206:[0-9]+]] = arith.select %[[V_185]], %[[V_205]], %[[V_204]] : i128
+  ! CHECK:         %[[V_206:[0-9]+]] = arith.select %[[V_184]], %[[V_205]], %[[V_204]] : i128
   ! CHECK:         %[[V_207:[0-9]+]] = arith.bitcast %[[V_206]] : i128 to f128
   ! CHECK:         fir.result %[[V_207]] : f128
   ! CHECK:       }
