@@ -3,8 +3,8 @@ add_mlir_library(MLIRTestMathToVCIX
   TestMathToVCIXConversion.cpp
 
   EXCLUDE_FROM_LIBMLIR
-
-  LINK_LIBS PUBLIC
+)
+mlir_target_link_libraries(MLIRTestMathToVCIX PUBLIC
   MLIRArithDialect
   MLIRFuncDialect
   MLIRMathDialect
