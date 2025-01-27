@@ -10,6 +10,7 @@
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
@@ -99,10 +100,9 @@ Error DXContainer::parseHash(StringRef Part) {
 Error DXContainer::parseRootSignature(StringRef Part) {
   if (RootSignature)
     return parseFailed("More than one RTS0 part is present in the file");
-  DirectX::RootSignature Desc(Part);
-  if (Error Err = Desc.parse())
+  RootSignature = DirectX::RootSignature(Part);
+  if (Error Err = RootSignature->parse())
     return Err;
-  RootSignature = Desc;
   return Error::success();
 }
 
@@ -248,15 +248,16 @@ void DXContainer::PartIterator::updateIteratorImpl(const uint32_t Offset) {
 
 Error DirectX::RootSignature::parse() {
   const char *Current = Data.begin();
-  dxbc::RootSignatureDesc Desc;
-  if (Error Err = readStruct(Data, Current, Desc))
-    return Err;
 
-  if (sys::IsBigEndianHost)
-    Desc.swapBytes();
+  Size = support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Current += sizeof(uint32_t);
 
-  Version = Desc.Version;
-  Flags = Desc.Flags;
+  Version = support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Current += sizeof(uint32_t);
+
+  Flags = support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Current += sizeof(uint32_t);
+
   return Error::success();
 }
 
