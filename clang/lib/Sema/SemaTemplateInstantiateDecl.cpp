@@ -1627,12 +1627,17 @@ Decl *TemplateDeclInstantiator::VisitEnumDecl(EnumDecl *D) {
   // specialization causes the implicit instantiation of the declarations, but
   // not the definitions of scoped member enumerations.
   //
-  // DR1484 clarifies that enumeration definitions inside of a template
+  // DR1484 clarifies that enumeration definitions inside a template
   // declaration aren't considered entities that can be separately instantiated
-  // from the rest of the entity they are declared inside of.
+  // from the rest of the entity they are declared inside.
   if (isDeclWithinFunction(D) ? D == Def : Def && !Enum->isScoped()) {
-    SemaRef.CurrentInstantiationScope->InstantiatedLocal(D, Enum);
-    InstantiateEnumDefinition(Enum, Def);
+    // Prevent redundant instantiation of the enumerator-definition if the
+    // definition has already been instantiated due to a prior
+    // opaque-enum-declaration.
+    if (PrevDecl == nullptr) {
+      SemaRef.CurrentInstantiationScope->InstantiatedLocal(D, Enum);
+      InstantiateEnumDefinition(Enum, Def);
+    }
   }
 
   return Enum;
@@ -2606,8 +2611,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   // conditionally populate the TSI without breaking non-template related use
   // cases. Populate TSIs prior to calling SubstFunctionType to make sure we get
   // a proper transformation.
-  if (cast<CXXRecordDecl>(D->getParent())->isLambda() &&
-      !D->getTypeSourceInfo() &&
+  if (isLambdaMethod(D) && !D->getTypeSourceInfo() &&
       isa<CXXConstructorDecl, CXXDestructorDecl>(D)) {
     TypeSourceInfo *TSI =
         SemaRef.Context.getTrivialTypeSourceInfo(D->getType());
