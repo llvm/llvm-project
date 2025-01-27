@@ -216,7 +216,7 @@ name: passthru_not_demanded
 body: |
   bb.0:
     ; CHECK-LABEL: name: passthru_not_demanded
-    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 %x, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
     %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
@@ -242,7 +242,7 @@ name: passthru_not_demanded_passthru_chain
 body: |
   bb.0:
     ; CHECK-LABEL: name: passthru_not_demanded_passthru_chain
-    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 %x, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: %z:vr = PseudoVADD_VV_M1 %y, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
     ; CHECK-NEXT: %a:vr = PseudoVADD_VV_M1 %z, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
