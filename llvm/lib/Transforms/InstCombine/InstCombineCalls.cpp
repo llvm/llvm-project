@@ -3389,17 +3389,34 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Vec = II->getArgOperand(0);
     Value *SubVec = II->getArgOperand(1);
     Value *Idx = II->getArgOperand(2);
-    auto *DstTy = dyn_cast<FixedVectorType>(II->getType());
-    auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
-    auto *SubVecTy = dyn_cast<FixedVectorType>(SubVec->getType());
+    auto *DstTy = cast<VectorType>(II->getType());
+    auto *VecTy = cast<VectorType>(Vec->getType());
+    auto *SubVecTy = cast<VectorType>(SubVec->getType());
+    unsigned IdxN = cast<ConstantInt>(Idx)->getZExtValue();
+
+    // Try store-to-load forwarding where the stored value has the same
+    // type as this intrinsic, and the loaded value is the inserted
+    // vector. This has to be done here because a temporary insert of
+    // a scalable vector (the available value) into a fixed-sized one
+    // (the second operand of this intrinisc) cannot be created.
+    if (auto *LI = dyn_cast<LoadInst>(SubVec);
+        LI && IdxN == 0 && DstTy->isScalableTy() && !SubVecTy->isScalableTy()) {
+      bool IsVectorKindChange = false;
+      BatchAAResults BatchAA(*AA);
+      if (Value *AvilVal = FindAvailableLoadedValue(LI, BatchAA, nullptr,
+                                                    &IsVectorKindChange);
+          AvilVal && IsVectorKindChange && AvilVal->getType() == DstTy) {
+        return replaceInstUsesWith(CI, AvilVal);
+      }
+    }
 
     // Only canonicalize if the destination vector, Vec, and SubVec are all
     // fixed vectors.
-    if (DstTy && VecTy && SubVecTy) {
-      unsigned DstNumElts = DstTy->getNumElements();
-      unsigned VecNumElts = VecTy->getNumElements();
-      unsigned SubVecNumElts = SubVecTy->getNumElements();
-      unsigned IdxN = cast<ConstantInt>(Idx)->getZExtValue();
+    if (!DstTy->isScalableTy() && !VecTy->isScalableTy() &&
+        !SubVecTy->isScalableTy()) {
+      unsigned DstNumElts = DstTy->getElementCount().getFixedValue();
+      unsigned VecNumElts = VecTy->getElementCount().getFixedValue();
+      unsigned SubVecNumElts = SubVecTy->getElementCount().getFixedValue();
 
       // An insert that entirely overwrites Vec with SubVec is a nop.
       if (VecNumElts == SubVecNumElts)

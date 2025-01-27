@@ -538,7 +538,8 @@ static bool areNonOverlapSameBaseLoadAndStore(const Value *LoadPtr,
 
 static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
                                     Type *AccessTy, bool AtLeastAtomic,
-                                    const DataLayout &DL, bool *IsLoadCSE) {
+                                    const DataLayout &DL, bool *IsLoadCSE,
+                                    bool *IsVectorKindChange) {
   // If this is a load of Ptr, the loaded value is available.
   // (This is true even if the load is volatile or atomic, although
   // those cases are unlikely.)
@@ -584,6 +585,25 @@ static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
     if (TypeSize::isKnownLE(LoadSize, StoreSize))
       if (auto *C = dyn_cast<Constant>(Val))
         return ConstantFoldLoadFromConst(C, AccessTy, DL);
+
+    if (IsVectorKindChange && Val->getType()->isVectorTy() &&
+        AccessTy->isVectorTy()) {
+      auto Attrs = Inst->getFunction()->getAttributes().getFnAttrs();
+      unsigned VScale = Attrs.getVScaleRangeMin();
+      if (Attrs.getVScaleRangeMax() != VScale)
+        return nullptr;
+
+      unsigned FixedStoreSize =
+          (StoreSize.isFixed() ? StoreSize : StoreSize * VScale)
+              .getKnownMinValue();
+      unsigned FixedLoadSize =
+          (LoadSize.isFixed() ? LoadSize : LoadSize * VScale)
+              .getKnownMinValue();
+      if (FixedStoreSize == FixedLoadSize) {
+        *IsVectorKindChange = true;
+        return Val;
+      }
+    }
   }
 
   if (auto *MSI = dyn_cast<MemSetInst>(Inst)) {
@@ -655,8 +675,8 @@ Value *llvm::findAvailablePtrLoadStore(
 
     --ScanFrom;
 
-    if (Value *Available = getAvailableLoadStore(Inst, StrippedPtr, AccessTy,
-                                                 AtLeastAtomic, DL, IsLoadCSE))
+    if (Value *Available = getAvailableLoadStore(
+            Inst, StrippedPtr, AccessTy, AtLeastAtomic, DL, IsLoadCSE, nullptr))
       return Available;
 
     // Try to get the store size for the type.
@@ -711,7 +731,7 @@ Value *llvm::findAvailablePtrLoadStore(
 }
 
 Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
-                                      bool *IsLoadCSE,
+                                      bool *IsLoadCSE, bool *IsVectorKindChange,
                                       unsigned MaxInstsToScan) {
   const DataLayout &DL = Load->getDataLayout();
   Value *StrippedPtr = Load->getPointerOperand()->stripPointerCasts();
@@ -734,8 +754,9 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
     if (MaxInstsToScan-- == 0)
       return nullptr;
 
-    Available = getAvailableLoadStore(&Inst, StrippedPtr, AccessTy,
-                                      AtLeastAtomic, DL, IsLoadCSE);
+    Available =
+        getAvailableLoadStore(&Inst, StrippedPtr, AccessTy, AtLeastAtomic, DL,
+                              IsLoadCSE, IsVectorKindChange);
     if (Available)
       break;
 

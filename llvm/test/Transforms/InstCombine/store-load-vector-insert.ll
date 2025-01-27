@@ -7,12 +7,8 @@ define <vscale x 4 x float> @store_to_vector_load_different_type(<vscale x 4 x f
 ; CHECK-LABEL: define <vscale x 4 x float> @store_to_vector_load_different_type(
 ; CHECK-SAME: <vscale x 4 x float> [[DOTCOERCE:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_SVFLOAT32_WRAPPED_T:%.*]], align 64
 ; CHECK-NEXT:    [[TMP0:%.*]] = fadd <vscale x 4 x float> [[DOTCOERCE]], [[DOTCOERCE]]
-; CHECK-NEXT:    store <vscale x 4 x float> [[TMP0]], ptr [[RETVAL]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x float>, ptr [[RETVAL]], align 64
-; CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v16f32(<vscale x 4 x float> poison, <16 x float> [[TMP1]], i64 0)
-; CHECK-NEXT:    ret <vscale x 4 x float> [[CAST_SCALABLE]]
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 ;
 entry:
   %retval = alloca %struct.svfloat32_wrapped_t

@@ -154,8 +154,12 @@ Value *FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
 /// FindAvailableLoadedValue() for the case where we are not interested in
 /// finding the closest clobbering instruction if no available load is found.
 /// This overload cannot be used to scan across multiple blocks.
+/// If \p VectorKindChange is not nullptr, this is a out parameter that is true
+/// if a value was found, but it is a scalable vector instead of a requested
+/// fixed-sized one (or the other way round).
 Value *FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
                                 bool *IsLoadCSE,
+                                bool *IsVectorKindChange = nullptr,
                                 unsigned MaxInstsToScan = DefMaxInstsToScan);
 
 /// Scan backwards to see if we have the value of the given pointer available
