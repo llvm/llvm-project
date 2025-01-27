@@ -257,7 +257,7 @@ LogicalResult TensorDescType::verify(
                            << wiData[i] << " tiles";
     }
 
-    if (llvm::isa_and_nonnull<ScatterTensorDescAttr>(encoding)) {
+    if (mlir::isa_and_nonnull<ScatterTensorDescAttr>(encoding)) {
       auto scatterAttr = llvm::dyn_cast<ScatterTensorDescAttr>(encoding);
       if (wiData[0] != 1)
         return emitError()
