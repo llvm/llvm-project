@@ -2,10 +2,10 @@
 ; RUN: mkdir -p %t && cd %t
 ; RUN: opt < %s -S -passes=insert-gcov-profiling \
 ; RUN:  -mtriple=x86_64-unknown-linux-gnu | FileCheck \
-; RUN:  --check-prefixes=CHECK,CHECK-CTOR-INIT %s
+; RUN:  --check-prefixes=CHECK,CHECK-CTOR-INIT,CHECK-X86 %s
 ; RUN: opt < %s -S -passes=insert-gcov-profiling \
 ; RUN:  -mtriple=powerpc64-ibm-aix | FileCheck \
-; RUN:  --check-prefixes=CHECK,CHECK-RT-INIT %s
+; RUN:  --check-prefixes=CHECK,CHECK-RT-INIT,CHECK-PPC %s
 
 ; Check for gcov initialization function pointers when we initialize
 ; the writeout and reset functions in the runtime.
@@ -37,4 +37,5 @@ entry:
 ; CHECK-CTOR-INIT: define internal void @__llvm_gcov_init()
 ; CHECK-CTOR-INIT-SAME: !kcfi_type ![[#TYPE]]
 
-; CHECK: ![[#TYPE]] = !{i32 -1522505972}
+; CHECK-PPC: ![[#TYPE]] = !{i32 -1522505972}
+; CHECK-X86: ![[#TYPE]] = !{i32 704854112}
