@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_USECPPSTYLECOMMENTSCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include <memory>
 
 namespace clang::tidy::readability {
 /// Detects C Style comments and suggests to use C++ style comments instead.

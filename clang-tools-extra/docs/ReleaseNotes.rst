@@ -174,17 +174,17 @@ New checks
   Replace comparisons between signed and unsigned integers with their safe
   C++20 ``std::cmp_*`` alternative, if available.
   
-- New :doc:`modernize-use-cpp-style-comments
-  <clang-tidy/checks/modernize/use-cpp-style-comments>` check.
-
-  Detects C Style comments and suggests to use C++ style comments instead.
-
 - New :doc:`portability-template-virtual-member-function
   <clang-tidy/checks/portability/template-virtual-member-function>` check.
 
   Finds cases when an uninstantiated virtual member function in a template class
   causes cross-compiler incompatibility.
 
+- New :doc:`readability-use-cpp-style-comments
+  <clang-tidy/checks/readability/use-cpp-style-comments>` check.
+
+  Replace C-style comments with C++-style comments.
+  
 New check aliases
 ^^^^^^^^^^^^^^^^^
 

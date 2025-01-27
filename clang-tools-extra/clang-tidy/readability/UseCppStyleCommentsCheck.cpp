@@ -1,5 +1,4 @@
 //===--- UseCppStyleCommentsCheck.cpp - clang-tidy-------------------------===//
-
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +10,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
-#include <sstream.h>
+#include <sstream>
 
 using namespace clang::ast_matchers;
 
@@ -67,17 +66,20 @@ public:
     unsigned StartLine = SM.getSpellingLineNumber(CommentStart);
     unsigned EndLine = SM.getSpellingLineNumber(CommentEnd);
 
+    const StringRef Text = Lexer::getSourceText(
+        CharSourceRange::getCharRange(Range), SM, PP.getLangOpts());
+    
     if (StartLine == EndLine) {
-      SourceLocation LineBegin =
+      const SourceLocation LineBegin =
           SM.translateLineCol(SM.getFileID(CommentStart), StartLine, 1);
-      SourceLocation LineEnd =
+      const SourceLocation LineEnd =
           SM.translateLineCol(SM.getFileID(CommentEnd), EndLine,
                               std::numeric_limits<unsigned>::max());
-      StringRef LineContent = Lexer::getSourceText(
+      const StringRef LineContent = Lexer::getSourceText(
           CharSourceRange::getCharRange(LineBegin, LineEnd), SM,
           PP.getLangOpts());
-      size_t CommentStartOffset = SM.getSpellingColumnNumber(CommentStart) - 1;
-      StringRef AfterComment =
+      const size_t CommentStartOffset = SM.getSpellingColumnNumber(CommentStart) - 1;
+      const StringRef AfterComment =
           LineContent.drop_front(CommentStartOffset + Text.size());
 
       if (!AfterComment.trim().empty()) {
