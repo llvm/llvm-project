@@ -423,6 +423,20 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
     }
   }
 
+  // We can choose to merge all globals together, but ignore globals never used
+  // with another global.  This catches the obviously non-profitable cases of
+  // having a single global, but is aggressive enough for any other case.
+  if (GlobalMergeIgnoreSingleUse) {
+    BitVector AllGlobals(Globals.size());
+    for (const UsedGlobalSet &UGS : UsedGlobalSets) {
+      if (UGS.UsageCount == 0)
+        continue;
+      if (UGS.Globals.count() > 1)
+        AllGlobals |= UGS.Globals;
+    }
+    return doMerge(Globals, AllGlobals, M, isConst, AddrSpace);
+  }
+
   // Now we found a bunch of sets of globals used together.  We accumulated
   // the number of times we encountered the sets (i.e., the number of functions
   // that use that exact set of globals).
@@ -434,20 +448,6 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
                       return UGS1.Globals.count() * UGS1.UsageCount <
                              UGS2.Globals.count() * UGS2.UsageCount;
                     });
-
-  // We can choose to merge all globals together, but ignore globals never used
-  // with another global.  This catches the obviously non-profitable cases of
-  // having a single global, but is aggressive enough for any other case.
-  if (GlobalMergeIgnoreSingleUse) {
-    BitVector AllGlobals(Globals.size());
-    for (const UsedGlobalSet &UGS : llvm::reverse(UsedGlobalSets)) {
-      if (UGS.UsageCount == 0)
-        continue;
-      if (UGS.Globals.count() > 1)
-        AllGlobals |= UGS.Globals;
-    }
-    return doMerge(Globals, AllGlobals, M, isConst, AddrSpace);
-  }
 
   // Starting from the sets with the best (=biggest) profitability, find a
   // good combination.
