@@ -1015,6 +1015,27 @@ def int_aarch64_st64bv0: Intrinsic<[llvm_i64_ty], !listconcat([llvm_ptr_ty], dat
                              llvm_anyvector_ty,
                              LLVMMatchType<1>],
                             [IntrReadMem, IntrInaccessibleMemOnly]>;
+
+  // Dot-product
+  class AdvSIMD_FP8_DOT_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>,
+                             llvm_anyvector_ty,
+                             LLVMMatchType<1>],
+                             [IntrReadMem, IntrInaccessibleMemOnly]>;
+  class AdvSIMD_FP8_DOT_LANE_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>,
+                             llvm_anyvector_ty,
+                             llvm_v16i8_ty,
+                             llvm_i32_ty],
+                             [IntrReadMem, IntrInaccessibleMemOnly, ImmArg<ArgIndex<3>>]>;
+
+  def int_aarch64_neon_fp8_fdot2 : AdvSIMD_FP8_DOT_Intrinsic;
+  def int_aarch64_neon_fp8_fdot2_lane : AdvSIMD_FP8_DOT_LANE_Intrinsic;
+
+  def int_aarch64_neon_fp8_fdot4 : AdvSIMD_FP8_DOT_Intrinsic;
+  def int_aarch64_neon_fp8_fdot4_lane : AdvSIMD_FP8_DOT_LANE_Intrinsic;
 }
 
 def llvm_nxv1i1_ty  : LLVMType<nxv1i1>;
