@@ -288,7 +288,8 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   // access is safe within the loop w/o needing predication.
   if (L->isLoopInvariant(Ptr))
     return isDereferenceableAndAlignedPointer(
-        Ptr, Alignment, EltSize, DL, &*L->getHeader()->getFirstNonPHIIt(), AC, &DT);
+        Ptr, Alignment, EltSize, DL, &*L->getHeader()->getFirstNonPHIIt(), AC,
+        &DT);
 
   const SCEV *PtrScev = SE.getSCEV(Ptr);
   auto *AddRec = dyn_cast<SCEVAddRecExpr>(PtrScev);
