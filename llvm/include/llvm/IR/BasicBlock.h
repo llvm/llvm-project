@@ -299,7 +299,7 @@ public:
   /// which might be PHI. Returns end() if there's no non-PHI instruction.
   ///
   /// Avoid unwrapping the iterator to an Instruction* before inserting here,
-  /// as debug-info relevant information is preserved in the iterator.
+  /// as important debug-info is preserved in the iterator.
   InstListType::const_iterator getFirstNonPHIIt() const;
   InstListType::iterator getFirstNonPHIIt() {
     BasicBlock::iterator It =
