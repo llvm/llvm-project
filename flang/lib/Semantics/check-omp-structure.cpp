@@ -3697,6 +3697,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
 
   SymbolSourceMap symbols;
   auto &objects{std::get<parser::OmpObjectList>(x.v.t)};
+  CheckCrayPointee(objects, "LINEAR", false);
   GetSymbolsInObjectList(objects, symbols);
 
   auto CheckIntegerNoRef{[&](const Symbol *symbol, parser::CharBlock source) {
@@ -4142,6 +4143,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
   const auto &objectList{std::get<parser::OmpObjectList>(x.v.t)};
   CheckIsVarPartOfAnotherVar(
       GetContext().clauseSource, objectList, "LASTPRIVATE");
+  CheckCrayPointee(objectList, "LASTPRIVATE");
 
   DirectivesClauseTriple dirClauseTriple;
   SymbolSourceMap currSymbols;
@@ -4560,17 +4562,21 @@ void OmpStructureChecker::CheckProcedurePointer(
 }
 
 void OmpStructureChecker::CheckCrayPointee(
-    const parser::OmpObjectList &objectList, llvm::StringRef clause) {
+    const parser::OmpObjectList &objectList, llvm::StringRef clause,
+    bool suggestToUseCrayPointer) {
   SymbolSourceMap symbols;
   GetSymbolsInObjectList(objectList, symbols);
   for (auto it{symbols.begin()}; it != symbols.end(); ++it) {
     const auto *symbol{it->first};
     const auto source{it->second};
     if (symbol->test(Symbol::Flag::CrayPointee)) {
+      std::string suggestionMsg = "";
+      if (suggestToUseCrayPointer)
+        suggestionMsg = ", use Cray Pointer '" +
+            semantics::GetCrayPointer(*symbol).name().ToString() + "' instead";
       context_.Say(source,
-          "Cray Pointee '%s' may not appear in %s clause, use Cray Pointer '%s' instead"_err_en_US,
-          symbol->name(), clause.str(),
-          semantics::GetCrayPointer(*symbol).name());
+          "Cray Pointee '%s' may not appear in %s clause%s"_err_en_US,
+          symbol->name(), clause.str(), suggestionMsg);
     }
   }
 }
