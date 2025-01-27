@@ -102,7 +102,7 @@ def MPI_CommSplit : MPI_Op<"comm_split", []> {
     to check for errors.
   }];
 
-  let arguments = (MPI_Comm : $comm, I32 : $color, I32 : $key);
+  let arguments = (ins MPI_Comm : $comm, I32 : $color, I32 : $key);
 
   let results = (
     outs Optional<MPI_Retval> : $retval,
@@ -319,7 +319,7 @@ def MPI_Wait : MPI_Op<"wait", []> {
     to check for errors.
   }];
 
-  let arguments = (MPI_Request : $req);
+  let arguments = (ins MPI_Request : $req);
 
   let results = (outs Optional<MPI_Retval>:$retval);
 
