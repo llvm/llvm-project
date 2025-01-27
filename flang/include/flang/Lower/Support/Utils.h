@@ -574,7 +574,7 @@ public:
   }
   static bool isEqual(const Fortran::evaluate::SubscriptInteger &x,
                       const Fortran::evaluate::SubscriptInteger &y) {
-  return x == y;
+    return x == y;
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::ArrayConstructor<A> &x,
