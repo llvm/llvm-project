@@ -83,6 +83,9 @@ Code actions
 - Improved the extract-to-function code action to allow extracting statements
   with overloaded operators like ``<<`` of ``std::ostream``.
 
+- The inline concept requirement tweak was introduced.
+  It allows inlining of simple require clauses into the template declaration.
+
 Signature help
 ^^^^^^^^^^^^^^
 
