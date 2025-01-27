@@ -22378,8 +22378,8 @@ TEST_F(FormatTest, BreakPenaltyBeforeMemberAccess) {
                Style);
 
   Style.ColumnLimit = 13;
-  verifyFormat("foo->bar.b(\n"
-               "    a);",
+  verifyFormat("foo->bar\n"
+               "    .b(a);",
                Style);
 }
 
