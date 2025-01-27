@@ -1842,14 +1842,22 @@ bool PreRARematStage::sinkTriviallyRematInsts(const GCNSubtarget &ST,
   return true;
 }
 
-// Copied from MachineLICM
 bool PreRARematStage::isTriviallyReMaterializable(const MachineInstr &MI) {
   if (!DAG.TII->isTriviallyReMaterializable(MI))
     return false;
 
-  for (const MachineOperand &MO : MI.all_uses())
+  for (const MachineOperand &MO : MI.all_uses()) {
     if (MO.getReg().isVirtual())
       return false;
+
+    // We can't remat physreg uses, unless it is a constant or an ignorable
+    // use (e.g. implicit exec use on VALU instructions)
+    if (MO.getReg().isPhysical()) {
+      if (DAG.MRI.isConstantPhysReg(MO.getReg()) || DAG.TII->isIgnorableUse(MO))
+        continue;
+      return false;
+    }
+  }
 
   return true;
 }
