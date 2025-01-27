@@ -1747,23 +1747,6 @@ namespace {
       return inherited::TransformLambdaBody(E, Body);
     }
 
-    ExprResult TransformSizeOfPackExpr(SizeOfPackExpr *E) {
-      ExprResult Transformed = inherited::TransformSizeOfPackExpr(E);
-      if (!Transformed.isUsable())
-        return Transformed;
-      auto *TransformedExpr = cast<SizeOfPackExpr>(Transformed.get());
-      if (SemaRef.CodeSynthesisContexts.back().Kind ==
-              Sema::CodeSynthesisContext::ConstraintNormalization &&
-          TransformedExpr->getPack() == E->getPack()) {
-        Decl *NewPack =
-            TransformDecl(E->getPackLoc(), TransformedExpr->getPack());
-        if (!NewPack)
-          return ExprError();
-        TransformedExpr->setPack(cast<NamedDecl>(NewPack));
-      }
-      return TransformedExpr;
-    }
-
     ExprResult TransformRequiresExpr(RequiresExpr *E) {
       LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
       ExprResult TransReq = inherited::TransformRequiresExpr(E);

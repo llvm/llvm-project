@@ -720,6 +720,34 @@ template <typename... Ts> struct d {
 template struct c<int>;
 template struct d<int, int>;
 
+namespace Regression_123441 {
+
+struct buf {
+  constexpr buf(auto&&... initList) requires (sizeof...(initList) <= 8);
+};
+
+constexpr buf::buf(auto&&... initList) requires (sizeof...(initList) <= 8) {}
+
+template <class>
+struct buffer {
+  constexpr buffer(auto&&... initList) requires (sizeof...(initList) <= 8);
+};
+
+template <class T>
+constexpr buffer<T>::buffer(auto&&... initList) requires (sizeof...(initList) <= 8) {}
+
+template <class...>
+struct foo { // expected-note {{foo defined here}}
+  constexpr foo(auto&&... initList)
+    requires (sizeof...(initList) <= 8);
+};
+
+template <class... T>
+constexpr foo<T...>::foo(auto&&... initList) // expected-error {{does not match any declaration}}
+  requires (sizeof...(T) <= 8) {}
+
+}
+
 } // namespace GH115098
 
 namespace GH114685 {
