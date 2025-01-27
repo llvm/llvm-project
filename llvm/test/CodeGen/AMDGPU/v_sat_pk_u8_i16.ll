@@ -1552,16 +1552,20 @@ define <4 x i16> @basic_smax_smin_v8i16_input_1(<8 x i16> %src) {
 ; GISEL-GFX9-NEXT:    v_pk_min_i16 v3, v4, v3
 ; GISEL-GFX9-NEXT:    v_pk_max_i16 v0, 0, v0
 ; GISEL-GFX9-NEXT:    v_mov_b32_e32 v4, 0xff
+; GISEL-GFX9-NEXT:    v_and_b32_sdwa v5, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GISEL-GFX9-NEXT:    v_pk_max_i16 v1, 0, v1
-; GISEL-GFX9-NEXT:    v_and_b32_sdwa v5, v0, v4 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GISEL-GFX9-NEXT:    v_pk_max_i16 v2, 0, v2
+; GISEL-GFX9-NEXT:    v_lshlrev_b16_e32 v5, 8, v5
 ; GISEL-GFX9-NEXT:    v_or_b32_sdwa v0, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GISEL-GFX9-NEXT:    v_and_b32_sdwa v5, v1, v4 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GISEL-GFX9-NEXT:    v_and_b32_sdwa v5, v1, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GISEL-GFX9-NEXT:    v_pk_max_i16 v2, 0, v2
+; GISEL-GFX9-NEXT:    v_lshlrev_b16_e32 v5, 8, v5
 ; GISEL-GFX9-NEXT:    v_pk_max_i16 v3, 0, v3
 ; GISEL-GFX9-NEXT:    v_or_b32_sdwa v1, v1, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GISEL-GFX9-NEXT:    v_and_b32_sdwa v5, v2, v4 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GISEL-GFX9-NEXT:    v_and_b32_sdwa v5, v2, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GISEL-GFX9-NEXT:    v_lshlrev_b16_e32 v5, 8, v5
+; GISEL-GFX9-NEXT:    v_and_b32_sdwa v4, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GISEL-GFX9-NEXT:    v_or_b32_sdwa v2, v2, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GISEL-GFX9-NEXT:    v_and_b32_sdwa v4, v3, v4 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GISEL-GFX9-NEXT:    v_lshlrev_b16_e32 v4, 8, v4
 ; GISEL-GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GISEL-GFX9-NEXT:    v_or_b32_sdwa v3, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GISEL-GFX9-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
@@ -2208,9 +2212,11 @@ define <2 x i16> @basic_smax_smin_v4i16_input_1(<4 x i16> %src) {
 ; GISEL-GFX9-NEXT:    v_pk_max_i16 v0, 0, v0
 ; GISEL-GFX9-NEXT:    v_mov_b32_e32 v2, 0xff
 ; GISEL-GFX9-NEXT:    v_pk_max_i16 v1, 0, v1
-; GISEL-GFX9-NEXT:    v_and_b32_sdwa v3, v0, v2 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GISEL-GFX9-NEXT:    v_and_b32_sdwa v3, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GISEL-GFX9-NEXT:    v_lshlrev_b16_e32 v3, 8, v3
+; GISEL-GFX9-NEXT:    v_and_b32_sdwa v2, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GISEL-GFX9-NEXT:    v_or_b32_sdwa v0, v0, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GISEL-GFX9-NEXT:    v_and_b32_sdwa v2, v1, v2 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GISEL-GFX9-NEXT:    v_lshlrev_b16_e32 v2, 8, v2
 ; GISEL-GFX9-NEXT:    v_or_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GISEL-GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GISEL-GFX9-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
@@ -2535,7 +2541,8 @@ define i24 @basic_smax_smin_vec_v3i16(<3 x i16> %src) {
 ; GISEL-VI-NEXT:    v_max_i16_e32 v1, 0, v1
 ; GISEL-VI-NEXT:    v_or_b32_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v2, 0xffff
-; GISEL-VI-NEXT:    v_and_b32_sdwa v1, v2, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GISEL-VI-NEXT:    v_and_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GISEL-VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GISEL-VI-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GISEL-VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2547,7 +2554,8 @@ define i24 @basic_smax_smin_vec_v3i16(<3 x i16> %src) {
 ; GISEL-GFX9-NEXT:    v_mov_b32_e32 v2, 0xff
 ; GISEL-GFX9-NEXT:    v_pk_max_i16 v0, 0, v0
 ; GISEL-GFX9-NEXT:    v_med3_i16 v1, v1, 0, v2
-; GISEL-GFX9-NEXT:    v_and_b32_sdwa v2, v0, v2 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GISEL-GFX9-NEXT:    v_and_b32_sdwa v2, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GISEL-GFX9-NEXT:    v_lshlrev_b16_e32 v2, 8, v2
 ; GISEL-GFX9-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GISEL-GFX9-NEXT:    s_mov_b32 s4, 0xffff
 ; GISEL-GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
