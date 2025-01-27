@@ -159,11 +159,11 @@ void call_interface_impl::addArgAndResultAttrs(
     return builder.getArrayAttr(attrs);
   };
 
-  // Add the attributes to the function arguments.
+  // Add the attributes to the operation arguments.
   if (llvm::any_of(argAttrs, nonEmptyAttrsFn))
     result.addAttribute(argAttrsName, getArrayAttr(argAttrs));
 
-  // Add the attributes to the function results.
+  // Add the attributes to the operation results.
   if (llvm::any_of(resultAttrs, nonEmptyAttrsFn))
     result.addAttribute(resAttrsName, getArrayAttr(resultAttrs));
 }
