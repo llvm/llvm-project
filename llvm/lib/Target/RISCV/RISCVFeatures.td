@@ -1240,7 +1240,7 @@ def UseCCMovInsn : Predicate<"Subtarget->useCCMovInsn()">;
 def FeatureVendorXMIPSLSP
     : RISCVExtension<1, 0, "MIPS optimization for hardware load-store bonding">;
 def HasVendorXMIPSLSP
-    : Predicate<"Subtarget->hasVendorXMIPSCMove()">,
+    : Predicate<"Subtarget->hasVendorXMIPSLSP()">,
       AssemblerPredicate<(all_of FeatureVendorXMIPSLSP),
                          "'Xmipslsp' (load and store pair instructions)">;
 
