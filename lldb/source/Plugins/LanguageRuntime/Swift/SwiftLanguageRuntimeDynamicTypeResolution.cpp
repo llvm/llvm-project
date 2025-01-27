@@ -3143,6 +3143,15 @@ SwiftLanguageRuntime::ResolveTypeAlias(CompilerType alias) {
   ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
   if (!reflection_ctx)
     return llvm::createStringError("no reflection context");
+
+  // FIXME: The current implementation that loads all conformances
+  // up-front creates too much small memory traffic. As a stop-gap,
+  // disable the feature on remote devices.
+  auto &triple = GetProcess().GetTarget().GetArchitecture().GetTriple();
+  if (triple.isOSDarwin() && !triple.isTargetMachineMac())
+    return llvm::createStringError("conformance loading disabled on remote "
+                                   "devices for performance reasons");
+  
   for (const std::string &protocol : GetConformances(in_type)) {
     auto *type_ref =
         reflection_ctx->LookupTypeWitness(in_type, member, protocol);
