@@ -30,6 +30,7 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugProgramInstruction.h"
@@ -453,6 +454,15 @@ static void addAssumeNonNull(AssumptionCache *AC, LoadInst *LI) {
   AC->registerAssumption(cast<AssumeInst>(CI));
 }
 
+
+static void addAssumeAlign(const DataLayout &DL, LoadInst *LI, Value *Val) {
+    auto *AlignMD = LI->getMetadata(LLVMContext::MD_align);
+    auto *B = mdconst::extract<ConstantInt>(AlignMD->getOperand(0));
+  IRBuilder Builder(LI);
+	Builder.CreateAlignmentAssumption(DL, Val, B);
+}
+
+
 static void convertMetadataToAssumes(LoadInst *LI, Value *Val,
                                      const DataLayout &DL, AssumptionCache *AC,
                                      const DominatorTree *DT) {
@@ -473,6 +483,19 @@ static void convertMetadataToAssumes(LoadInst *LI, Value *Val,
       LI->getMetadata(LLVMContext::MD_noundef) &&
       !isKnownNonZero(Val, SimplifyQuery(DL, DT, AC, LI)))
     addAssumeNonNull(AC, LI);
+
+  if (AC && LI->getMetadata(LLVMContext::MD_align) &&
+      (LI->getMetadata(LLVMContext::MD_noundef) ||
+       programUndefinedIfPoison(LI))) {
+    auto *AlignMD = LI->getMetadata(LLVMContext::MD_align);
+    auto *B = mdconst::extract<ConstantInt>(AlignMD->getOperand(0));
+
+    auto KB = computeKnownBits(Val, 3, SimplifyQuery(DL, DT, AC, LI));
+   unsigned AlignFromKB = 1 << KB.countMinTrailingZeros();
+   if (AlignFromKB < B->getZExtValue()) {
+      addAssumeAlign(DL, LI, Val);
+}
+  }
 }
 
 static void removeIntrinsicUsers(AllocaInst *AI) {

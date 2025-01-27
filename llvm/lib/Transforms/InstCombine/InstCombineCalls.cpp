@@ -3226,12 +3226,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // TODO: apply range metadata for range check patterns?
     }
 
-    // Separate storage assumptions apply to the underlying allocations, not any
-    // particular pointer within them. When evaluating the hints for AA purposes
-    // we getUnderlyingObject them; by precomputing the answers here we can
-    // avoid having to do so repeatedly there.
     for (unsigned Idx = 0; Idx < II->getNumOperandBundles(); Idx++) {
       OperandBundleUse OBU = II->getOperandBundleAt(Idx);
+
+      // Separate storage assumptions apply to the underlying allocations, not
+      // any particular pointer within them. When evaluating the hints for AA
+      // purposes we getUnderlyingObject them; by precomputing the answers here
+      // we can avoid having to do so repeatedly there.
       if (OBU.getTagName() == "separate_storage") {
         assert(OBU.Inputs.size() == 2);
         auto MaybeSimplifyHint = [&](const Use &U) {
@@ -3244,6 +3245,110 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         };
         MaybeSimplifyHint(OBU.Inputs[0]);
         MaybeSimplifyHint(OBU.Inputs[1]);
+      }
+
+      // Try to fold alignment assumption into a load's !align metadata, if the
+      // assumption is valid in the load's context and remove redundant ones.
+      if (OBU.getTagName() == "align" && OBU.Inputs.size() == 2) {
+        RetainedKnowledge RK = getKnowledgeFromBundle(
+            *cast<AssumeInst>(II), II->bundle_op_info_begin()[Idx]);
+        if (!RK || RK.AttrKind != Attribute::Alignment ||
+            !isPowerOf2_64(RK.ArgValue))
+          continue;
+        auto *LI = dyn_cast<LoadInst>(OBU.Inputs[0]);
+        if (LI &&
+            isValidAssumeForContext(II, LI, &DT, /*AllowEphemerals=*/true)) {
+
+/*        if (!CleanupAssumptions && isa<Argument>(LI->getPointerOperand()))*/
+          /*continue;*/
+
+          LI->setMetadata(
+              LLVMContext::MD_align,
+              MDNode::get(II->getContext(), ValueAsMetadata::getConstant(
+                                                Builder.getInt64(RK.ArgValue))));
+          MDNode *MD = MDNode::get(II->getContext(), {});
+          LI->setMetadata(LLVMContext::MD_noundef, MD);
+        } else {
+          auto *C = dyn_cast<Constant>(RK.WasOn);
+          if (C && C->isNullValue()) {
+          } else {
+            Value *UO = getUnderlyingObject(RK.WasOn);
+
+            bool CanUseAlign = false;
+            SetVector<const Instruction *> WorkList;
+            for (const User *U : RK.WasOn->users())
+              if (auto *I = dyn_cast<Instruction>(U))
+                WorkList.insert(I);
+
+            for (unsigned I = 0; I != WorkList.size(); ++I) {
+              auto *Curr = WorkList[I];
+              if (!DT.dominates(II, Curr))
+                continue;
+              if (auto *LI = dyn_cast<LoadInst>(Curr)) {
+                if (LI->getAlign().value() < RK.ArgValue) {
+                  CanUseAlign = true;
+                  break;
+                }
+                continue;
+              }
+              if (auto *SI = dyn_cast<StoreInst>(Curr)) {
+                auto *PtrOpI = dyn_cast<Instruction>(SI->getPointerOperand());
+                if ((SI->getPointerOperand() == RK.WasOn || (PtrOpI && WorkList.contains(PtrOpI))) &&
+                    SI->getAlign().value() < RK.ArgValue) {
+                  CanUseAlign = true;
+                  break;
+                }
+                continue;
+              }
+              if (auto *II = dyn_cast<IntrinsicInst>(Curr)) {
+                for (const auto &[Idx, Arg] : enumerate(II->args())) {
+                  if (Arg != RK.WasOn)
+                    continue;
+                  if (II->getParamAlign(Idx) >= RK.ArgValue)
+                    continue;
+                  CanUseAlign = true;
+                  break;
+                }
+                if (CanUseAlign)
+                  break;
+                continue;
+              }
+              if (isa<ReturnInst, CallBase>(Curr)) {
+                CanUseAlign = true;
+                break;
+              }
+              if (isa<ICmpInst>(Curr) &&
+                  !isa<Constant>(cast<Instruction>(Curr)->getOperand(0)) &&
+                  !isa<Constant>(cast<Instruction>(Curr)->getOperand(1))) {
+                CanUseAlign = true;
+                break;
+              }
+              if (!Curr->getType()->isPointerTy())
+                continue;
+
+              if (WorkList.size() > 16) {
+                CanUseAlign = true;
+                break;
+              }
+              for (const User *U : Curr->users())
+                WorkList.insert(cast<Instruction>(U));
+            }
+            if (CanUseAlign && (!UO || isa<Argument>(UO)))
+              continue;
+            // Try to get the instruction before the assumption to use as
+            // context.
+            Instruction *CtxI = nullptr;
+            if (CtxI && II->getParent()->begin() != II->getIterator())
+              CtxI = II->getPrevNode();
+
+            auto Known = computeKnownBits(RK.WasOn, 1, CtxI);
+            unsigned KnownAlign = 1 << Known.countMinTrailingZeros();
+            if (CanUseAlign && KnownAlign < RK.ArgValue)
+              continue;
+          }
+        }
+        auto *New = CallBase::removeOperandBundle(II, OBU.getTagID());
+        return New;
       }
     }
 
