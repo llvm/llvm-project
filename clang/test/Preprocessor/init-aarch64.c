@@ -772,7 +772,7 @@
 // AARCH64-MSVC: #define __WINT_WIDTH__ 16
 // AARCH64-MSVC: #define __aarch64__ 1
 
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm64ec-windows-msvc < /dev/null | FileCheck -match-full-lines -check-prefix ARM64EC-MSVC %s
+// RUN: %clang_cc1 -E -dM -fms-compatibility-version=19.33 -ffreestanding -triple=arm64ec-windows-msvc < /dev/null | FileCheck -match-full-lines -check-prefix ARM64EC-MSVC %s
 
 // ARM64EC-MSVC: #define _INTEGRAL_MAX_BITS 64
 // ARM64EC-MSVC: #define _M_AMD64 100
