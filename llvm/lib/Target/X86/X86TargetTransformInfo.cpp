@@ -1580,9 +1580,10 @@ InstructionCost X86TTIImpl::getShuffleCost(
                ((P.value() % Mask.size()) / NumEltsPerLane) ==
                    (P.index() / NumEltsPerLane);
       });
-      IsSingleElementMask = (Mask.size() - 1) == count_if(Mask, [](int M) {
-                              return M == PoisonMaskElem;
-                            });
+      IsSingleElementMask =
+          (Mask.size() - 1) == static_cast<unsigned>(count_if(Mask, [](int M) {
+            return M == PoisonMaskElem;
+          }));
     }
   }
 
