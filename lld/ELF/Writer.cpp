@@ -149,6 +149,7 @@ static Defined *addOptionalRegular(Ctx &ctx, StringRef name, SectionBase *sec,
   if (!s || s->isDefined() || s->isCommon())
     return nullptr;
 
+  ctx.synthesizedSymbols.push_back(s);
   s->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
                           stOther, STT_NOTYPE, val,
                           /*size=*/0, sec});
@@ -282,6 +283,7 @@ static void demoteDefined(Defined &sym, DenseMap<SectionBase *, size_t> &map) {
 static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Demote symbols");
   DenseMap<InputFile *, DenseMap<SectionBase *, size_t>> sectionIndexMap;
+  bool hasDynSymTab = ctx.arg.hasDynSymTab;
   for (Symbol *sym : ctx.symtab->getSymbols()) {
     if (auto *d = dyn_cast<Defined>(sym)) {
       if (d->section && !d->section->isLive())
@@ -294,11 +296,12 @@ static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
                   sym->type)
             .overwrite(*sym);
         sym->versionId = VER_NDX_GLOBAL;
+        if (sym->includeInDynsym(ctx))
+          sym->isExported = true;
       }
     }
 
-    sym->isExported = sym->includeInDynsym(ctx);
-    if (ctx.arg.hasDynSymTab)
+    if (hasDynSymTab)
       sym->isPreemptible = sym->isExported && computeIsPreemptible(ctx, *sym);
   }
 }
@@ -647,7 +650,6 @@ static bool isRelroSection(Ctx &ctx, const OutputSection *sec) {
 enum RankFlags {
   RF_NOT_ADDR_SET = 1 << 27,
   RF_NOT_ALLOC = 1 << 26,
-  RF_HIP_FATBIN = 1 << 19,
   RF_PARTITION = 1 << 18, // Partition number (8 bits)
   RF_LARGE_ALT = 1 << 15,
   RF_WRITE = 1 << 14,
@@ -744,15 +746,6 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
   // sections, place non-NOBITS sections first.
   if (osec.type == SHT_NOBITS)
     rank |= RF_BSS;
-
-  // Put HIP fatbin related sections further away to avoid wasting relocation
-  // range to jump over them.  Make sure .hip_fatbin is the furthest.
-  if (osec.name == ".hipFatBinSegment")
-    rank |= RF_HIP_FATBIN;
-  if (osec.name == ".hip_gpubin_handle")
-    rank |= RF_HIP_FATBIN | 2;
-  if (osec.name == ".hip_fatbin")
-    rank |= RF_HIP_FATBIN | RF_WRITE | 3;
 
   // Some architectures have additional ordering restrictions for sections
   // within the same PT_LOAD.
@@ -1845,6 +1838,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
         finalizeSynthetic(ctx, part.ehFrame.get());
     }
   }
+
+  // If the previous code block defines any non-hidden symbols (e.g.
+  // __global_pointer$), they may be exported.
+  for (Symbol *sym : ctx.synthesizedSymbols)
+    sym->isExported = sym->includeInDynsym(ctx);
 
   demoteSymbolsAndComputeIsPreemptible(ctx);
 
