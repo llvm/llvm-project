@@ -284,11 +284,12 @@ public:
   /// Deprecated in favour of getFirstNonPHIIt, which returns an iterator that
   /// preserves some debugging information.
   LLVM_DEPRECATED("Use iterators as instruction positions", "getFirstNonPHIIt")
-  const Instruction* getFirstNonPHI() const;
-  LLVM_DEPRECATED("Use iterators as instruction positions instead", "getFirstNonPHIIt")
-  Instruction* getFirstNonPHI() {
+  const Instruction *getFirstNonPHI() const;
+  LLVM_DEPRECATED("Use iterators as instruction positions instead",
+                  "getFirstNonPHIIt")
+  Instruction *getFirstNonPHI() {
     return const_cast<Instruction *>(
-                       static_cast<const BasicBlock *>(this)->getFirstNonPHI());
+        static_cast<const BasicBlock *>(this)->getFirstNonPHI());
   }
 
   /// Returns an iterator to the first instruction in this block that is not a
