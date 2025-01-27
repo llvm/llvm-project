@@ -38,7 +38,7 @@ define void @fshr(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <vscale x 1 x i3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; TYPEBASED-LABEL: 'fshr'
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %1 = call <vscale x 1 x i32> @llvm.fshr.nxv1i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <vscale x 1 x i32> %c)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %1 = call <vscale x 1 x i32> @llvm.fshr.nxv1i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <vscale x 1 x i32> %c)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <vscale x 1 x i32> @llvm.fshr.nxv4i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <vscale x 1 x i32> %c)
@@ -51,7 +51,7 @@ define void @fshl(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <vscale x 1 x i3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; TYPEBASED-LABEL: 'fshl'
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %1 = call <vscale x 1 x i32> @llvm.fshl.nxv1i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <vscale x 1 x i32> %c)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %1 = call <vscale x 1 x i32> @llvm.fshl.nxv1i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <vscale x 1 x i32> %c)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call <vscale x 1 x i32> @llvm.fshl.nxv4i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <vscale x 1 x i32> %c)

@@ -321,15 +321,15 @@ define void @v_shuffle_v2p0_v4p0__7_0(ptr addrspace(1) inreg %ptr) {
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def v[0:7]
 ; GFX900-NEXT:    ;;#ASMEND
+; GFX900-NEXT:    v_mov_b32_e32 v12, 0
+; GFX900-NEXT:    v_mov_b32_e32 v8, v6
+; GFX900-NEXT:    v_mov_b32_e32 v9, v7
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; def v[2:9]
+; GFX900-NEXT:    ; def v[0:7]
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_mov_b32_e32 v10, 0
-; GFX900-NEXT:    v_mov_b32_e32 v2, v8
-; GFX900-NEXT:    v_mov_b32_e32 v3, v9
-; GFX900-NEXT:    v_mov_b32_e32 v4, v0
-; GFX900-NEXT:    v_mov_b32_e32 v5, v1
-; GFX900-NEXT:    global_store_dwordx4 v10, v[2:5], s[16:17]
+; GFX900-NEXT:    v_mov_b32_e32 v10, v0
+; GFX900-NEXT:    v_mov_b32_e32 v11, v1
+; GFX900-NEXT:    global_store_dwordx4 v12, v[8:11], s[16:17]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;

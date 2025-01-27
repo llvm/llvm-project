@@ -546,11 +546,18 @@ private:
 
   /// Mapping from main decl ID to the related decls IDs.
   ///
-  /// These related decls have to be loaded right after the main decl.
-  /// It is required to have canonical declaration for related decls from the
-  /// same module as the enclosing main decl. Without this, due to lazy
-  /// deserialization, canonical declarations for the main decl and related can
-  /// be selected from different modules.
+  /// The key is the main decl ID, and the value is a vector of related decls
+  /// that must be loaded immediately after the main decl. This is necessary
+  /// to ensure that the definition for related decls comes from the same module
+  /// as the enclosing main decl. Without this, due to lazy deserialization,
+  /// the definition for the main decl and related decls may come from different
+  /// modules. It is used for the following cases:
+  /// - Lambda inside a template function definition: The main declaration is
+  ///   the enclosing function, and the related declarations are the lambda
+  ///   declarations.
+  /// - Friend function defined inside a template CXXRecord declaration: The
+  ///   main declaration is the enclosing record, and the related declarations
+  ///   are the friend functions.
   llvm::DenseMap<GlobalDeclID, SmallVector<GlobalDeclID, 4>> RelatedDeclsMap;
 
   struct PendingUpdateRecord {

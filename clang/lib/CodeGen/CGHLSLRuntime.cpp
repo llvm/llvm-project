@@ -100,22 +100,6 @@ GlobalVariable *replaceBuffer(CGHLSLRuntime::Buffer &Buf) {
       llvm::formatv("{0}{1}", Buf.Name, Buf.IsCBuffer ? ".cb." : ".tb."),
       GlobalValue::NotThreadLocal);
 
-  IRBuilder<> B(CBGV->getContext());
-  Value *ZeroIdx = B.getInt32(0);
-  // Replace Const use with CB use.
-  for (auto &[GV, Offset] : Buf.Constants) {
-    Value *GEP =
-        B.CreateGEP(Buf.LayoutStruct, CBGV, {ZeroIdx, B.getInt32(Offset)});
-
-    assert(Buf.LayoutStruct->getElementType(Offset) == GV->getValueType() &&
-           "constant type mismatch");
-
-    // Replace.
-    GV->replaceAllUsesWith(GEP);
-    // Erase GV.
-    GV->removeDeadConstantUsers();
-    GV->eraseFromParent();
-  }
   return CBGV;
 }
 
@@ -144,6 +128,7 @@ void CGHLSLRuntime::addConstant(VarDecl *D, Buffer &CB) {
   }
 
   auto *GV = cast<GlobalVariable>(CGM.GetAddrOfGlobalVar(D));
+  GV->setExternallyInitialized(true);
   // Add debug info for constVal.
   if (CGDebugInfo *DI = CGM.getModuleDebugInfo())
     if (CGM.getCodeGenOpts().getDebugInfo() >=

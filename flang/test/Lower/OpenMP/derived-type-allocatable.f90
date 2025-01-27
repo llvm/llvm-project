@@ -24,6 +24,9 @@ contains
 !CHECK-LABEL: omp.private {type = private} @_QMm1Ftest_array_of_allocs
 !CHECK:       fir.call @_FortranAInitializeClone
 !CHECK-NEXT:  omp.yield
+!CHECK:       } dealloc {
+!CHECK:       fir.call @_FortranAAllocatableDeallocate
+!CHECK:       omp.yield
 
 !CHECK-LABEL: omp.private {type = firstprivate} @_QMm1Ftest_array
 !CHECK-NOT:   fir.call @_FortranAInitializeClone

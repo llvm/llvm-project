@@ -740,11 +740,15 @@ TYPE_PARSER(
     "MERGEABLE" >> construct<OmpClause>(construct<OmpClause::Mergeable>()) ||
     "MESSAGE" >> construct<OmpClause>(construct<OmpClause::Message>(
                      parenthesized(Parser<OmpMessageClause>{}))) ||
+    "NOCONTEXT" >> construct<OmpClause>(construct<OmpClause::Nocontext>(
+                       parenthesized(scalarLogicalExpr))) ||
     "NOGROUP" >> construct<OmpClause>(construct<OmpClause::Nogroup>()) ||
     "NONTEMPORAL" >> construct<OmpClause>(construct<OmpClause::Nontemporal>(
                          parenthesized(nonemptyList(name)))) ||
     "NOTINBRANCH" >>
         construct<OmpClause>(construct<OmpClause::Notinbranch>()) ||
+    "NOVARIANTS" >> construct<OmpClause>(construct<OmpClause::Novariants>(
+                        parenthesized(scalarLogicalExpr))) ||
     "NOWAIT" >> construct<OmpClause>(construct<OmpClause::Nowait>()) ||
     "NUM_TASKS" >> construct<OmpClause>(construct<OmpClause::NumTasks>(
                        parenthesized(Parser<OmpNumTasksClause>{}))) ||
@@ -1119,6 +1123,16 @@ TYPE_PARSER(sourced(construct<OmpCriticalDirective>(verbatim("CRITICAL"_tok),
 TYPE_PARSER(construct<OpenMPCriticalConstruct>(
     Parser<OmpCriticalDirective>{}, block, Parser<OmpEndCriticalDirective>{}))
 
+TYPE_PARSER(sourced(construct<OmpDispatchDirective>(
+    verbatim("DISPATCH"_tok), Parser<OmpClauseList>{})))
+
+TYPE_PARSER(
+    construct<OmpEndDispatchDirective>(startOmpLine >> "END DISPATCH"_tok))
+
+TYPE_PARSER(sourced(construct<OpenMPDispatchConstruct>(
+    Parser<OmpDispatchDirective>{} / endOmpLine, block,
+    maybe(Parser<OmpEndDispatchDirective>{} / endOmpLine))))
+
 // 2.11.3 Executable Allocate directive
 TYPE_PARSER(
     sourced(construct<OpenMPExecutableAllocate>(verbatim("ALLOCATE"_tok),
@@ -1219,6 +1233,7 @@ TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
                 construct<OpenMPConstruct>(Parser<OpenMPStandaloneConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPAtomicConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPUtilityConstruct>{}),
+                construct<OpenMPConstruct>(Parser<OpenMPDispatchConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPExecutableAllocate>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPAllocatorsConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPDeclarativeAllocate>{}),

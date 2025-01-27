@@ -37,6 +37,7 @@ if (SPHINX_FOUND)
       aio
       arpa/inet
       assert
+      cpio
       ctype
       errno
       fenv
@@ -62,6 +63,7 @@ if (SPHINX_FOUND)
       termios
       threads
       uchar
+      unistd
       wchar
       wctype
     )

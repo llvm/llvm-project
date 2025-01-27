@@ -233,6 +233,14 @@ EVT X86TargetLowering::getSetCCResultType(const DataLayout &DL,
   return VT.changeVectorElementTypeToInteger();
 }
 
+bool X86TargetLowering::functionArgumentNeedsConsecutiveRegisters(
+    Type *Ty, CallingConv::ID CallConv, bool isVarArg,
+    const DataLayout &DL) const {
+  // i128 split into i64 needs to be allocated to two consecutive registers,
+  // or spilled to the stack as a whole.
+  return Ty->isIntegerTy(128);
+}
+
 /// Helper for getByValTypeAlignment to determine
 /// the desired ByVal argument alignment.
 static void getMaxByValAlign(Type *Ty, Align &MaxAlign) {

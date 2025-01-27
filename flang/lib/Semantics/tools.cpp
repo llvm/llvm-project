@@ -1365,12 +1365,22 @@ void ComponentIterator<componentKind>::const_iterator::Increment() {
 }
 
 template <ComponentKind componentKind>
+SymbolVector
+ComponentIterator<componentKind>::const_iterator::GetComponentPath() const {
+  SymbolVector result;
+  for (const auto &node : componentPath_) {
+    result.push_back(DEREF(node.component()));
+  }
+  return result;
+}
+
+template <ComponentKind componentKind>
 std::string
 ComponentIterator<componentKind>::const_iterator::BuildResultDesignatorName()
     const {
   std::string designator;
-  for (const auto &node : componentPath_) {
-    designator += "%"s + DEREF(node.component()).name().ToString();
+  for (const Symbol &component : GetComponentPath()) {
+    designator += "%"s + component.name().ToString();
   }
   return designator;
 }
@@ -1396,16 +1406,29 @@ UltimateComponentIterator::const_iterator FindPointerUltimateComponent(
 }
 
 PotentialComponentIterator::const_iterator FindEventOrLockPotentialComponent(
-    const DerivedTypeSpec &derived) {
+    const DerivedTypeSpec &derived, bool ignoreCoarrays) {
   PotentialComponentIterator potentials{derived};
-  return std::find_if(
-      potentials.begin(), potentials.end(), [](const Symbol &component) {
-        if (const auto *details{component.detailsIf<ObjectEntityDetails>()}) {
-          const DeclTypeSpec *type{details->type()};
-          return type && IsEventTypeOrLockType(type->AsDerived());
+  auto iter{potentials.begin()};
+  for (auto end{potentials.end()}; iter != end; ++iter) {
+    const Symbol &component{*iter};
+    if (const auto *object{component.detailsIf<ObjectEntityDetails>()}) {
+      if (const DeclTypeSpec * type{object->type()}) {
+        if (IsEventTypeOrLockType(type->AsDerived())) {
+          if (!ignoreCoarrays) {
+            break; // found one
+          }
+          auto path{iter.GetComponentPath()};
+          path.pop_back();
+          if (std::find_if(path.begin(), path.end(), [](const Symbol &sym) {
+                return evaluate::IsCoarray(sym);
+              }) == path.end()) {
+            break; // found one not in a coarray
+          }
         }
-        return false;
-      });
+      }
+    }
+  }
+  return iter;
 }
 
 UltimateComponentIterator::const_iterator FindAllocatableUltimateComponent(
@@ -1764,9 +1787,19 @@ bool HadUseError(
           symbol ? symbol->detailsIf<UseErrorDetails>() : nullptr}) {
     auto &msg{context.Say(
         at, "Reference to '%s' is ambiguous"_err_en_US, symbol->name())};
-    for (const auto &[location, module] : details->occurrences()) {
-      msg.Attach(location, "'%s' was use-associated from module '%s'"_en_US, at,
-          module->GetName().value());
+    for (const auto &[location, sym] : details->occurrences()) {
+      const Symbol &ultimate{sym->GetUltimate()};
+      auto &attachment{
+          msg.Attach(location, "'%s' was use-associated from module '%s'"_en_US,
+              at, sym->owner().GetName().value())};
+      if (&*sym != &ultimate) {
+        // For incompatible definitions where one comes from a hermetic
+        // module file's incorporated dependences and the other from another
+        // module of the same name.
+        attachment.Attach(ultimate.name(),
+            "ultimately from '%s' in module '%s'"_en_US, ultimate.name(),
+            ultimate.owner().GetName().value());
+      }
     }
     context.SetError(*symbol);
     return true;

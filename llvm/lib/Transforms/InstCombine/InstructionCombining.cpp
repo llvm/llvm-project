@@ -732,7 +732,7 @@ static Value *tryFactorization(BinaryOperator &I, const SimplifyQuery &SQ,
   RetVal->takeName(&I);
 
   // Try to add no-overflow flags to the final value.
-  if (isa<OverflowingBinaryOperator>(RetVal)) {
+  if (isa<BinaryOperator>(RetVal)) {
     bool HasNSW = false;
     bool HasNUW = false;
     if (isa<OverflowingBinaryOperator>(&I)) {
@@ -3517,7 +3517,7 @@ static Instruction *tryToMoveFreeBeforeNullTest(CallInst &FI,
   for (Instruction &Instr : llvm::make_early_inc_range(*FreeInstrBB)) {
     if (&Instr == FreeInstrBBTerminator)
       break;
-    Instr.moveBeforePreserving(TI);
+    Instr.moveBeforePreserving(TI->getIterator());
   }
   assert(FreeInstrBB->size() == 1 &&
          "Only the branch instruction should remain");
@@ -4980,7 +4980,7 @@ void InstCombinerImpl::tryToSinkInstructionDbgValues(
     // The clones are in reverse order of original appearance, reverse again to
     // maintain the original order.
     for (auto &DIIClone : llvm::reverse(DIIClones)) {
-      DIIClone->insertBefore(&*InsertPos);
+      DIIClone->insertBefore(InsertPos);
       LLVM_DEBUG(dbgs() << "SINK: " << *DIIClone << '\n');
     }
   }

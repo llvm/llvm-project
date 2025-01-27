@@ -228,12 +228,12 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
     break;
   }
 
-  unsigned RegResult = State.AllocateRegBlock(RegList, PendingMembers.size());
-  if (RegResult) {
-    for (CCValAssign &PendingMember : PendingMembers) {
-      PendingMember.convertToReg(RegResult);
+  ArrayRef<MCPhysReg> RegResult =
+      State.AllocateRegBlock(RegList, PendingMembers.size());
+  if (!RegResult.empty()) {
+    for (const auto &[PendingMember, Reg] : zip(PendingMembers, RegResult)) {
+      PendingMember.convertToReg(Reg);
       State.addLoc(PendingMember);
-      ++RegResult;
     }
     PendingMembers.clear();
     return true;

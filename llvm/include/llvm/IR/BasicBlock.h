@@ -194,6 +194,7 @@ public:
   // debug-info attachments.
   friend void Instruction::insertBefore(BasicBlock::iterator InsertPos);
   friend void Instruction::insertAfter(Instruction *InsertPos);
+  friend void Instruction::insertAfter(BasicBlock::iterator InsertPos);
   friend void Instruction::insertBefore(BasicBlock &BB,
                                         InstListType::iterator InsertPos);
   friend void Instruction::moveBeforeImpl(BasicBlock &BB,
@@ -298,22 +299,24 @@ public:
   /// Returns a pointer to the first instruction in this block that is not a
   /// PHINode or a debug intrinsic, or any pseudo operation if \c SkipPseudoOp
   /// is true.
-  const Instruction *getFirstNonPHIOrDbg(bool SkipPseudoOp = true) const;
-  Instruction *getFirstNonPHIOrDbg(bool SkipPseudoOp = true) {
-    return const_cast<Instruction *>(
-        static_cast<const BasicBlock *>(this)->getFirstNonPHIOrDbg(
-            SkipPseudoOp));
+  InstListType::const_iterator
+  getFirstNonPHIOrDbg(bool SkipPseudoOp = true) const;
+  InstListType::iterator getFirstNonPHIOrDbg(bool SkipPseudoOp = true) {
+    return static_cast<const BasicBlock *>(this)
+        ->getFirstNonPHIOrDbg(SkipPseudoOp)
+        .getNonConst();
   }
 
   /// Returns a pointer to the first instruction in this block that is not a
   /// PHINode, a debug intrinsic, or a lifetime intrinsic, or any pseudo
   /// operation if \c SkipPseudoOp is true.
-  const Instruction *
+  InstListType::const_iterator
   getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp = true) const;
-  Instruction *getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp = true) {
-    return const_cast<Instruction *>(
-        static_cast<const BasicBlock *>(this)->getFirstNonPHIOrDbgOrLifetime(
-            SkipPseudoOp));
+  InstListType::iterator
+  getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp = true) {
+    return static_cast<const BasicBlock *>(this)
+        ->getFirstNonPHIOrDbgOrLifetime(SkipPseudoOp)
+        .getNonConst();
   }
 
   /// Returns an iterator to the first instruction in this block that is
@@ -672,7 +675,7 @@ public:
   void replaceSuccessorsPhiUsesWith(BasicBlock *New);
 
   /// Return true if this basic block is an exception handling block.
-  bool isEHPad() const { return getFirstNonPHI()->isEHPad(); }
+  bool isEHPad() const { return getFirstNonPHIIt()->isEHPad(); }
 
   /// Return true if this basic block is a landing pad.
   ///

@@ -26,8 +26,7 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
         auto *isec = subsec.isec;
         if (!isec || isec->data.empty() || !isec->data.data())
           continue;
-        sections.emplace_back(
-            std::make_unique<BPSectionMacho>(isec, sections.size()));
+        sections.emplace_back(std::make_unique<BPSectionMacho>(isec));
       }
     }
   }
@@ -38,11 +37,10 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
 
   DenseMap<const InputSection *, int> result;
   for (const auto &[sec, priority] : reorderedSections) {
-    if (auto *machoSection = dyn_cast<BPSectionMacho>(sec)) {
-      result.try_emplace(
-          static_cast<const InputSection *>(machoSection->getSection()),
-          priority);
-    }
+    result.try_emplace(
+        static_cast<const InputSection *>(
+            static_cast<const BPSectionMacho *>(sec)->getSection()),
+        priority);
   }
   return result;
 }

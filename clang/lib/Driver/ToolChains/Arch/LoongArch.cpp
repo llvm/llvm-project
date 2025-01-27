@@ -286,6 +286,8 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
                    options::OPT_mno_ld_seq_sa, "ld-seq-sa");
   AddTargetFeature(Args, Features, options::OPT_mdiv32,
                    options::OPT_mno_div32, "div32");
+  AddTargetFeature(Args, Features, options::OPT_mscq, options::OPT_mno_scq,
+                   "scq");
 }
 
 std::string loongarch::postProcessTargetCPUString(const std::string &CPU,

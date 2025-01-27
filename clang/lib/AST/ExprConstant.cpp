@@ -1136,6 +1136,7 @@ namespace {
     struct StdAllocatorCaller {
       unsigned FrameIndex;
       QualType ElemType;
+      const Expr *Call;
       explicit operator bool() const { return FrameIndex != 0; };
     };
 
@@ -1159,7 +1160,7 @@ namespace {
         if (CTSD->isInStdNamespace() && ClassII &&
             ClassII->isStr("allocator") && TAL.size() >= 1 &&
             TAL[0].getKind() == TemplateArgument::Type)
-          return {Call->Index, TAL[0].getAsType()};
+          return {Call->Index, TAL[0].getAsType(), Call->CallExpr};
       }
 
       return {};
@@ -1960,7 +1961,7 @@ APValue &
 CallStackFrame::createConstexprUnknownAPValues(const VarDecl *Key,
                                                APValue::LValueBase Base) {
   APValue &Result = ConstexprUnknownAPValues[MapKeyTy(Key, Base.getVersion())];
-  Result = APValue(Base, CharUnits::One(), APValue::ConstexprUnknown{});
+  Result = APValue(Base, CharUnits::Zero(), APValue::ConstexprUnknown{});
 
   return Result;
 }
@@ -7113,7 +7114,7 @@ static bool HandleOperatorNewCall(EvalInfo &Info, const CallExpr *E,
 
   QualType AllocType = Info.Ctx.getConstantArrayType(
       ElemType, Size, nullptr, ArraySizeModifier::Normal, 0);
-  APValue *Val = Info.createHeapAlloc(E, AllocType, Result);
+  APValue *Val = Info.createHeapAlloc(Caller.Call, AllocType, Result);
   *Val = APValue(APValue::UninitArray(), 0, Size.getZExtValue());
   Result.addArray(Info, E, cast<ConstantArrayType>(AllocType));
   return true;

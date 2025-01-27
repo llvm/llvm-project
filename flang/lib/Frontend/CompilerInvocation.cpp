@@ -770,10 +770,11 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     opts.features.Enable(Fortran::common::LanguageFeature::DefaultSave);
   }
 
-  // -fsave-main-program
-  if (args.hasArg(clang::driver::options::OPT_fsave_main_program)) {
-    opts.features.Enable(Fortran::common::LanguageFeature::SaveMainProgram);
-  }
+  // -f{no}-save-main-program
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::SaveMainProgram,
+      args.hasFlag(clang::driver::options::OPT_fsave_main_program,
+                   clang::driver::options::OPT_fno_save_main_program, false));
 
   if (args.hasArg(
           clang::driver::options::OPT_falternative_parameter_statement)) {

@@ -133,9 +133,6 @@ static void CheckEventVariable(
     if (!IsEventType(evaluate::GetDerivedTypeSpec(expr->GetType()))) { // C1176
       context.Say(parser::FindSourceLocation(eventVar),
           "The event-variable must be of type EVENT_TYPE from module ISO_FORTRAN_ENV"_err_en_US);
-    } else if (!evaluate::IsCoarray(*expr)) { // C1604
-      context.Say(parser::FindSourceLocation(eventVar),
-          "The event-variable must be a coarray"_err_en_US);
     }
   }
 }

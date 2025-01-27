@@ -1008,7 +1008,7 @@ class Selector {
   }
 
   const IdentifierInfo *getAsIdentifierInfo() const {
-    return InfoPtr.getPointer().dyn_cast<const IdentifierInfo *>();
+    return dyn_cast_if_present<const IdentifierInfo *>(InfoPtr.getPointer());
   }
 
   MultiKeywordSelector *getMultiKeywordSelector() const {

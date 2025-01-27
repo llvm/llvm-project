@@ -1311,6 +1311,14 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
 
 static const IntrinsicInterface intrinsicSubroutine[]{
     {"abort", {}, {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"atomic_add",
+        {{"atom", AtomicInt, Rank::atom, Optionality::required,
+             common::Intent::InOut},
+            {"value", AnyInt, Rank::scalar, Optionality::required,
+                common::Intent::In},
+            {"stat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::atomicSubroutine},
     {"atomic_and",
         {{"atom", AtomicInt, Rank::atom, Optionality::required,
              common::Intent::InOut},
@@ -1585,7 +1593,6 @@ static const IntrinsicInterface intrinsicSubroutine[]{
 };
 
 // TODO: Intrinsic subroutine EVENT_QUERY
-// TODO: Atomic intrinsic subroutines: ATOMIC_ADD
 // TODO: Collective intrinsic subroutines: co_reduce
 
 // Finds a built-in derived type and returns it as a DynamicType.
@@ -1713,8 +1720,8 @@ static bool CheckAndPushMinMaxArgument(ActualArgument &arg,
 }
 
 static bool CheckAtomicKind(const ActualArgument &arg,
-    const semantics::Scope *builtinsScope,
-    parser::ContextualMessages &messages) {
+    const semantics::Scope *builtinsScope, parser::ContextualMessages &messages,
+    const char *keyword) {
   std::string atomicKindStr;
   std::optional<DynamicType> type{arg.GetType()};
 
@@ -1727,11 +1734,12 @@ static bool CheckAtomicKind(const ActualArgument &arg,
                 "must be used with IntType or LogicalType");
   }
 
-  bool argOk = type->kind() ==
-      GetBuiltinKind(builtinsScope, ("__builtin_" + atomicKindStr).c_str());
+  bool argOk{type->kind() ==
+      GetBuiltinKind(builtinsScope, ("__builtin_" + atomicKindStr).c_str())};
   if (!argOk) {
     messages.Say(arg.sourceLocation(),
-        "Actual argument for 'atom=' must have kind=atomic_int_kind or atomic_logical_kind, but is '%s'"_err_en_US,
+        "Actual argument for '%s=' must have kind=atomic_%s_kind, but is '%s'"_err_en_US,
+        keyword, type->category() == TypeCategory::Integer ? "int" : "logical",
         type->AsFortran());
   }
   return argOk;
@@ -2052,7 +2060,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::sameAtom:
       if (!sameArg) {
         sameArg = arg;
-        argOk = CheckAtomicKind(DEREF(arg), builtinsScope, messages);
+        argOk = CheckAtomicKind(DEREF(arg), builtinsScope, messages, d.keyword);
       } else {
         argOk = type->IsTkCompatibleWith(sameArg->GetType().value());
         if (!argOk) {
@@ -2061,23 +2069,21 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
               d.keyword, type->AsFortran());
         }
       }
-      if (!argOk)
+      if (!argOk) {
         return std::nullopt;
+      }
       break;
     case KindCode::atomicIntKind:
-      argOk = type->kind() ==
-          GetBuiltinKind(builtinsScope, "__builtin_atomic_int_kind");
+      argOk = CheckAtomicKind(DEREF(arg), builtinsScope, messages, d.keyword);
       if (!argOk) {
-        messages.Say(arg->sourceLocation(),
-            "Actual argument for '%s=' must have kind=atomic_int_kind, but is '%s'"_err_en_US,
-            d.keyword, type->AsFortran());
         return std::nullopt;
       }
       break;
     case KindCode::atomicIntOrLogicalKind:
-      argOk = CheckAtomicKind(DEREF(arg), builtinsScope, messages);
-      if (!argOk)
+      argOk = CheckAtomicKind(DEREF(arg), builtinsScope, messages, d.keyword);
+      if (!argOk) {
         return std::nullopt;
+      }
       break;
     default:
       CRASH_NO_CASE;
@@ -3232,8 +3238,8 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
           arg ? arg->sourceLocation() : context.messages().at(),
           "Argument of ALLOCATED() must be an ALLOCATABLE object or component"_err_en_US);
     }
-  } else if (name == "atomic_and" || name == "atomic_or" ||
-      name == "atomic_xor") {
+  } else if (name == "atomic_add" || name == "atomic_and" ||
+      name == "atomic_or" || name == "atomic_xor") {
     return CheckForCoindexedObject(
         context.messages(), call.arguments[2], name, "stat");
   } else if (name == "atomic_cas") {

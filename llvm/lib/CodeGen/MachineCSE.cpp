@@ -187,8 +187,6 @@ bool MachineCSEImpl::PerformTrivialCopyPropagation(MachineInstr *MI,
     Register SrcReg = DefMI->getOperand(1).getReg();
     if (!SrcReg.isVirtual())
       continue;
-    if (DefMI->getOperand(0).getSubReg())
-      continue;
     // FIXME: We should trivially coalesce subregister copies to expose CSE
     // opportunities on instructions with truncated operands (see
     // cse-add-with-overflow.ll). This can be done here as follows:

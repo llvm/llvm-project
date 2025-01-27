@@ -92,7 +92,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_bind
 subroutine test_bind()
   integer :: i, dummy = 1
-  ! CHECK: omp.loop bind(thread) private(@{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
+  ! CHECK: omp.simd private(@{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
   ! CHECK: }
   !$omp loop bind(thread)
   do i=1,10
@@ -138,4 +138,44 @@ subroutine test_nested_directives
     end do
   end do
   !$omp end target teams
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_standalone_bind_teams
+subroutine test_standalone_bind_teams
+  implicit none
+  integer, parameter :: N = 100000
+  integer a(N), b(N), c(N)
+  integer j,i, num, flag;
+  num = N
+
+  ! CHECK:     omp.distribute
+  ! CHECK-SAME:  private(@{{.*}}Ea_private_ref_100000xi32 {{[^,]*}},
+  ! CHECK-SAME:          @{{.*}}Ei_private_ref_i32 {{.*}} : {{.*}}) {
+  ! CHECK:       omp.loop_nest {{.*}} {
+  ! CHECK:       }
+  ! CHECK:     }
+  !$omp loop bind(teams) private(a)
+  do i=1,N
+    c(i) = a(i) * b(i)
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_standalone_bind_parallel
+subroutine test_standalone_bind_parallel
+  implicit none
+  integer, parameter :: N = 100000
+  integer a(N), b(N), c(N)
+  integer j,i, num, flag;
+  num = N
+
+  ! CHECK:     omp.wsloop
+  ! CHECK-SAME:  private(@{{.*}}Ea_private_ref_100000xi32 {{[^,]*}},
+  ! CHECK-SAME:          @{{.*}}Ei_private_ref_i32 {{.*}} : {{.*}}) {
+  ! CHECK:       omp.loop_nest {{.*}} {
+  ! CHECK:       }
+  ! CHECK:     }
+  !$omp loop bind(parallel) private(a)
+  do i=1,N
+    c(i) = a(i) * b(i)
+  end do
 end subroutine

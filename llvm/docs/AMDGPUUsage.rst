@@ -1327,7 +1327,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    with the fifth i32 operand. The i1 sixth operand is used to clamp
                                                    the output. The i1s preceding the vector operands decide the signedness.
 
-  llvm.amdgcn.sched_barrier                        Controls the types of instructions that may be allowed to cross the intrinsic
+  llvm.amdgcn.sched.barrier                        Controls the types of instructions that may be allowed to cross the intrinsic
                                                    during instruction scheduling. The parameter is a mask for the instruction types
                                                    that can cross the intrinsic.
 
@@ -1345,7 +1345,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    - 0x0200: All DS write instructions may be scheduled across sched_barrier.
                                                    - 0x0400: All Transcendental (e.g. V_EXP) instructions may be scheduled across sched_barrier.
 
-  llvm.amdgcn.sched_group_barrier                  Creates schedule groups with specific properties to create custom scheduling
+  llvm.amdgcn.sched.group.barrier                  Creates schedule groups with specific properties to create custom scheduling
                                                    pipelines. The ordering between groups is enforced by the instruction scheduler.
                                                    The intrinsic applies to the code that preceeds the intrinsic. The intrinsic
                                                    takes three values that control the behavior of the schedule groups.
@@ -1369,7 +1369,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    |  ``// 5 MFMA``
                                                    |  ``__builtin_amdgcn_sched_group_barrier(8, 5, 0)``
 
-  llvm.amdgcn.iglp_opt                             An **experimental** intrinsic for instruction group level parallelism. The intrinsic
+  llvm.amdgcn.iglp.opt                             An **experimental** intrinsic for instruction group level parallelism. The intrinsic
                                                    implements predefined intruction scheduling orderings. The intrinsic applies to the
                                                    surrounding scheduling region. The intrinsic takes a value that specifies the
                                                    strategy.  The compiler implements two strategies.
@@ -1421,6 +1421,19 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    swapped with rows 0 and 1 of the second operand (one row is 16 lanes).
                                                    Returns a pair for the swapped registers. The first element of the return
                                                    corresponds to the swapped element of the first argument.
+
+  llvm.amdgcn.mov.dpp                              The llvm.amdgcn.mov.dpp.`<type>` intrinsic represents the mov.dpp operation in AMDGPU.
+                                                   This operation is being deprecated and can be replaced with llvm.amdgcn.update.dpp.
+
+  llvm.amdgcn.update.dpp                           The llvm.amdgcn.update.dpp.`<type>` intrinsic represents the update.dpp operation in AMDGPU.
+                                                   It takes an old value, a source operand, a DPP control operand, a row mask, a bank mask, and a bound control.
+                                                   Various data types are supported, including, bf16, f16, f32, f64, i16, i32, i64, p0, p3, p5, v2f16, v2f32, v2i16, v2i32, v2p0, v3i32, v4i32, v8f16.
+                                                   This operation is equivalent to a sequence of v_mov_b32 operations.
+                                                   It is preferred over llvm.amdgcn.mov.dpp.`<type>` for future use.
+                                                   `llvm.amdgcn.update.dpp.<type> <old> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>`
+                                                   Should be equivalent to:
+                                                   - `v_mov_b32 <dest> <old>`
+                                                   - `v_mov_b32 <dest> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>`
 
   ==============================================   ==========================================================
 

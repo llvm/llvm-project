@@ -57,11 +57,24 @@ struct LegalityTest : public testing::Test {
   }
 };
 
+static sandboxir::BasicBlock *getBasicBlockByName(sandboxir::Function *F,
+                                                  StringRef Name) {
+  for (sandboxir::BasicBlock &BB : *F)
+    if (BB.getName() == Name)
+      return &BB;
+  llvm_unreachable("Expected to find basic block!");
+}
+
 TEST_F(LegalityTest, LegalitySkipSchedule) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg, float %farg0, float %farg1, i64 %v0, i64 %v1, i32 %v2) {
+entry:
   %gep0 = getelementptr float, ptr %ptr, i32 0
   %gep1 = getelementptr float, ptr %ptr, i32 1
+  store float %farg0, ptr %gep1
+  br label %bb
+
+bb:
   %gep3 = getelementptr float, ptr %ptr, i32 3
   %ld0 = load float, ptr %gep0
   %ld0b = load float, ptr %gep0
@@ -89,10 +102,14 @@ define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg, float 
 
   sandboxir::Context Ctx(C);
   auto *F = Ctx.createFunction(LLVMF);
-  auto *BB = &*F->begin();
-  auto It = BB->begin();
+  auto *EntryBB = getBasicBlockByName(F, "entry");
+  auto It = EntryBB->begin();
   [[maybe_unused]] auto *Gep0 = cast<sandboxir::GetElementPtrInst>(&*It++);
   [[maybe_unused]] auto *Gep1 = cast<sandboxir::GetElementPtrInst>(&*It++);
+  auto *St1Entry = cast<sandboxir::StoreInst>(&*It++);
+
+  auto *BB = getBasicBlockByName(F, "bb");
+  It = BB->begin();
   [[maybe_unused]] auto *Gep3 = cast<sandboxir::GetElementPtrInst>(&*It++);
   auto *Ld0 = cast<sandboxir::LoadInst>(&*It++);
   auto *Ld0b = cast<sandboxir::LoadInst>(&*It++);
@@ -161,6 +178,14 @@ define void @foo(ptr %ptr, <2 x float> %vec2, <3 x float> %vec3, i8 %arg, float 
     EXPECT_TRUE(isa<sandboxir::Pack>(Result));
     EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
               sandboxir::ResultReason::DiffWrapFlags);
+  }
+  {
+    // Check DiffBBs
+    const auto &Result =
+        Legality.canVectorize({St0, St1Entry}, /*SkipScheduling=*/true);
+    EXPECT_TRUE(isa<sandboxir::Pack>(Result));
+    EXPECT_EQ(cast<sandboxir::Pack>(Result).getReason(),
+              sandboxir::ResultReason::DiffBBs);
   }
   {
     // Check DiffTypes for unary operands that have a different type.

@@ -190,31 +190,20 @@ RuntimeCheckingPtrGroup::RuntimeCheckingPtrGroup(
   Members.push_back(Index);
 }
 
-/// Calculate Start and End points of memory access.
-/// Let's assume A is the first access and B is a memory access on N-th loop
-/// iteration. Then B is calculated as:
-///   B = A + Step*N .
-/// Step value may be positive or negative.
-/// N is a calculated back-edge taken count:
-///     N = (TripCount > 0) ? RoundDown(TripCount -1 , VF) : 0
-/// Start and End points are calculated in the following way:
-/// Start = UMIN(A, B) ; End = UMAX(A, B) + SizeOfElt,
-/// where SizeOfElt is the size of single memory access in bytes.
-///
-/// There is no conflict when the intervals are disjoint:
-/// NoConflict = (P2.Start >= P1.End) || (P1.Start >= P2.End)
-static std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
-    const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy,
-    PredicatedScalarEvolution &PSE,
+std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
+    const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *MaxBECount,
+    ScalarEvolution *SE,
     DenseMap<std::pair<const SCEV *, Type *>,
-             std::pair<const SCEV *, const SCEV *>> &PointerBounds) {
-  ScalarEvolution *SE = PSE.getSE();
-
-  auto [Iter, Ins] = PointerBounds.insert(
-      {{PtrExpr, AccessTy},
-       {SE->getCouldNotCompute(), SE->getCouldNotCompute()}});
-  if (!Ins)
-    return Iter->second;
+             std::pair<const SCEV *, const SCEV *>> *PointerBounds) {
+  std::pair<const SCEV *, const SCEV *> *PtrBoundsPair;
+  if (PointerBounds) {
+    auto [Iter, Ins] = PointerBounds->insert(
+        {{PtrExpr, AccessTy},
+         {SE->getCouldNotCompute(), SE->getCouldNotCompute()}});
+    if (!Ins)
+      return Iter->second;
+    PtrBoundsPair = &Iter->second;
+  }
 
   const SCEV *ScStart;
   const SCEV *ScEnd;
@@ -222,10 +211,8 @@ static std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
   if (SE->isLoopInvariant(PtrExpr, Lp)) {
     ScStart = ScEnd = PtrExpr;
   } else if (auto *AR = dyn_cast<SCEVAddRecExpr>(PtrExpr)) {
-    const SCEV *Ex = PSE.getSymbolicMaxBackedgeTakenCount();
-
     ScStart = AR->getStart();
-    ScEnd = AR->evaluateAtIteration(Ex, *SE);
+    ScEnd = AR->evaluateAtIteration(MaxBECount, *SE);
     const SCEV *Step = AR->getStepRecurrence(*SE);
 
     // For expressions with negative step, the upper bound is ScStart and the
@@ -244,7 +231,7 @@ static std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
     return {SE->getCouldNotCompute(), SE->getCouldNotCompute()};
 
   assert(SE->isLoopInvariant(ScStart, Lp) && "ScStart needs to be invariant");
-  assert(SE->isLoopInvariant(ScEnd, Lp)&& "ScEnd needs to be invariant");
+  assert(SE->isLoopInvariant(ScEnd, Lp) && "ScEnd needs to be invariant");
 
   // Add the size of the pointed element to ScEnd.
   auto &DL = Lp->getHeader()->getDataLayout();
@@ -252,8 +239,10 @@ static std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
   const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(IdxTy, AccessTy);
   ScEnd = SE->getAddExpr(ScEnd, EltSizeSCEV);
 
-  Iter->second = {ScStart, ScEnd};
-  return Iter->second;
+  std::pair<const SCEV *, const SCEV *> Res = {ScStart, ScEnd};
+  if (PointerBounds)
+    *PtrBoundsPair = Res;
+  return Res;
 }
 
 /// Calculate Start and End points of memory access using
@@ -263,8 +252,9 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
                                     unsigned DepSetId, unsigned ASId,
                                     PredicatedScalarEvolution &PSE,
                                     bool NeedsFreeze) {
+  const SCEV *MaxBECount = PSE.getSymbolicMaxBackedgeTakenCount();
   const auto &[ScStart, ScEnd] = getStartAndEndForAccess(
-      Lp, PtrExpr, AccessTy, PSE, DC.getPointerBounds());
+      Lp, PtrExpr, AccessTy, MaxBECount, PSE.getSE(), &DC.getPointerBounds());
   assert(!isa<SCEVCouldNotCompute>(ScStart) &&
          !isa<SCEVCouldNotCompute>(ScEnd) &&
          "must be able to compute both start and end expressions");
@@ -1448,7 +1438,7 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
                    bool Assume, bool ShouldCheckWrap) {
   const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
   if (PSE.getSE()->isLoopInvariant(PtrScev, Lp))
-    return {0};
+    return 0;
 
   Type *Ty = Ptr->getType();
   assert(Ty->isPointerTy() && "Unexpected non-ptr");
@@ -1938,10 +1928,11 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   // required for correctness.
   if (SE.isLoopInvariant(Src, InnermostLoop) ||
       SE.isLoopInvariant(Sink, InnermostLoop)) {
-    const auto &[SrcStart_, SrcEnd_] =
-        getStartAndEndForAccess(InnermostLoop, Src, ATy, PSE, PointerBounds);
-    const auto &[SinkStart_, SinkEnd_] =
-        getStartAndEndForAccess(InnermostLoop, Sink, BTy, PSE, PointerBounds);
+    const SCEV *MaxBECount = PSE.getSymbolicMaxBackedgeTakenCount();
+    const auto &[SrcStart_, SrcEnd_] = getStartAndEndForAccess(
+        InnermostLoop, Src, ATy, MaxBECount, PSE.getSE(), &PointerBounds);
+    const auto &[SinkStart_, SinkEnd_] = getStartAndEndForAccess(
+        InnermostLoop, Sink, BTy, MaxBECount, PSE.getSE(), &PointerBounds);
     if (!isa<SCEVCouldNotCompute>(SrcStart_) &&
         !isa<SCEVCouldNotCompute>(SrcEnd_) &&
         !isa<SCEVCouldNotCompute>(SinkStart_) &&
@@ -2602,7 +2593,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     bool IsReadOnlyPtr = false;
     Type *AccessTy = getLoadStoreType(LD);
     if (Seen.insert({Ptr, AccessTy}).second ||
-        !getPtrStride(*PSE, LD->getType(), Ptr, TheLoop, SymbolicStrides).value_or(0)) {
+        !getPtrStride(*PSE, AccessTy, Ptr, TheLoop, SymbolicStrides)) {
       ++NumReads;
       IsReadOnlyPtr = true;
     }

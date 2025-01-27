@@ -75,8 +75,10 @@ def Tensor_BitcastOp : Tensor_Op<"bitcast", [
     ```
   }];
 
-  let arguments = (ins AnyTensor:$source);
-  let results = (outs AnyTensor:$dest);
+  let arguments = (ins TensorOf<[AnySignlessInteger, AnyUnsignedInteger, 
+                                 AnySignedInteger, AnyFloat]>:$source);
+  let results = (outs TensorOf<[AnySignlessInteger, AnyUnsignedInteger,
+                                AnySignedInteger, AnyFloat]>:$dest);
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 
   let hasCanonicalizer = 1;
@@ -1162,6 +1164,9 @@ def Tensor_ExpandShapeOp : Tensor_ReassociativeReshapeOp<"expand_shape"> {
 
   let extraClassDeclaration = commonExtraClassDeclaration # [{
     int64_t getCorrespondingSourceDim(int64_t resultDim);
+
+    // Return output shape as mixes static/dynamic shapes.
+    SmallVector<OpFoldResult> getMixedOutputShape();
 
     // Infer the output shape for a tensor.expand_shape when it is possible
     // to do so.

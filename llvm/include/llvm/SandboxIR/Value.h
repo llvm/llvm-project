@@ -167,6 +167,7 @@ protected:
   // Region needs to manipulate metadata in the underlying LLVM Value, we don't
   // expose metadata in sandboxir.
   friend class Region;
+  friend class ScoreBoard; // Needs access to `Val` for the instruction cost.
 
   /// All values point to the context.
   Context &Ctx;

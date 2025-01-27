@@ -300,6 +300,41 @@ template<class charT, class traits>                    // C++20
   basic_ostream<charT, traits>&
     operator<<(basic_ostream<charT, traits>& os, const sys_days& dp);
 
+// [time.clock.utc], class utc_clock
+class utc_clock {                                      // C++20
+public:
+    using rep                       = a signed arithmetic type;
+    using period                    = ratio<unspecified, unspecified>;
+    using duration                  = chrono::duration<rep, period>;
+    using time_point                = chrono::time_point<utc_clock>;
+    static constexpr bool is_steady = unspecified;
+
+    static time_point now();
+
+    template<class Duration>
+      static sys_time<common_type_t<Duration, seconds>>
+        to_sys(const utc_time<Duration>& t);
+    template<class Duration>
+      static utc_time<common_type_t<Duration, seconds>>
+        from_sys(const sys_time<Duration>& t);
+};
+
+template<class Duration>
+using utc_time  = time_point<utc_clock, Duration>;      // C++20
+using utc_seconds = utc_time<seconds>;                  // C++20
+
+template<class charT, class traits, class Duration>     // C++20
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const utc_time<Duration>& t);
+
+struct leap_second_info {                               // C++20
+  bool    is_leap_second;
+  seconds elapsed;
+};
+
+template<class Duration>                                // C++20
+  leap_second_info get_leap_second_info(const utc_time<Duration>& ut);
+
 class file_clock                                        // C++20
 {
 public:
@@ -862,6 +897,8 @@ namespace std {
   template<class Duration, class charT>
     struct formatter<chrono::sys_time<Duration>, charT>;                          // C++20
   template<class Duration, class charT>
+    struct formatter<chrono::utc_time<Duration>, charT>;                          // C++20
+  template<class Duration, class charT>
     struct formatter<chrono::filetime<Duration>, charT>;                          // C++20
   template<class Duration, class charT>
     struct formatter<chrono::local_time<Duration>, charT>;                        // C++20
@@ -981,6 +1018,7 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 #      include <__chrono/time_zone_link.h>
 #      include <__chrono/tzdb.h>
 #      include <__chrono/tzdb_list.h>
+#      include <__chrono/utc_clock.h>
 #      include <__chrono/zoned_time.h>
 #    endif
 

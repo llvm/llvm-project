@@ -993,6 +993,28 @@ def int_aarch64_st64b: Intrinsic<[], !listconcat([llvm_ptr_ty], data512)>;
 def int_aarch64_st64bv: Intrinsic<[llvm_i64_ty], !listconcat([llvm_ptr_ty], data512)>;
 def int_aarch64_st64bv0: Intrinsic<[llvm_i64_ty], !listconcat([llvm_ptr_ty], data512)>;
 
+  //
+  // Neon FP8 intrinsics
+  //
+
+  // Conversions
+  class AdvSIMD_FP8_1VectorArg_Long_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty], [llvm_anyvector_ty], [IntrReadMem, IntrInaccessibleMemOnly]>;
+
+  def int_aarch64_neon_fp8_cvtl1   : AdvSIMD_FP8_1VectorArg_Long_Intrinsic;
+  def int_aarch64_neon_fp8_cvtl2   : AdvSIMD_FP8_1VectorArg_Long_Intrinsic;
+
+  def int_aarch64_neon_fp8_fcvtn
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [llvm_anyvector_ty,
+                             LLVMMatchType<1>],
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+  def int_aarch64_neon_fp8_fcvtn2
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>,
+                             llvm_anyvector_ty,
+                             LLVMMatchType<1>],
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
 }
 
 def llvm_nxv1i1_ty  : LLVMType<nxv1i1>;

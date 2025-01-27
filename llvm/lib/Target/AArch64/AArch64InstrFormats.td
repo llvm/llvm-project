@@ -6559,17 +6559,30 @@ class BaseSIMDThreeVectors<bit Q, bit U, bits<2> size, bits<4> op,
 
 
 // FCVTN (FP16 to FP8)
-multiclass SIMDThreeSameSizeVectorCvt<string asm> {
-   def v8f8 : BaseSIMDThreeVectors<0b0, 0b0, 0b01, 0b1110, V64, V64, asm, ".8b",".4h">;
-   def v16f8 : BaseSIMDThreeVectors<0b1, 0b0, 0b01, 0b1110,  V128, V128, asm, ".16b", ".8h">;
+multiclass SIMD_FP8_CVTN_F16<string asm, SDPatternOperator Op> {
+  let Uses = [FPMR, FPCR], mayLoad = 1 in {
+    def v8f8 : BaseSIMDThreeVectors<0b0, 0b0, 0b01, 0b1110, V64, V64, asm, ".8b",".4h">;
+    def v16f8 : BaseSIMDThreeVectors<0b1, 0b0, 0b01, 0b1110,  V128, V128, asm, ".16b", ".8h">;
+  }
+  def : Pat<(v8i8 (Op (v4f16 V64:$Rn), (v4f16 V64:$Rm))),
+            (!cast<Instruction>(NAME # v8f8) V64:$Rn, V64:$Rm)>;
+  def : Pat<(v16i8 (Op (v8f16 V128:$Rn), (v8f16 V128:$Rm))),
+            (!cast<Instruction>(NAME # v16f8) V128:$Rn, V128:$Rm)>;
 }
 
-// TODO : Create v16f8 value type
 // FCVTN, FCVTN2 (FP32 to FP8)
-multiclass SIMDThreeVectorCvt<string asm> {
-   def v8f8 : BaseSIMDThreeVectors<0b0, 0b0, 0b00, 0b1110, V64, V128, asm, ".8b", ".4s">;
-   def 2v16f8 : BaseSIMDThreeSameVectorDot<0b1, 0b0, 0b00, 0b1110, asm#2, ".16b", ".4s",
-                                           V128, v16i8, v4f32, null_frag>;
+multiclass SIMD_FP8_CVTN_F32<string asm, SDPatternOperator Op> {
+  let Uses = [FPMR, FPCR], mayLoad = 1 in {
+    def v8f8 : BaseSIMDThreeVectors<0b0, 0b0, 0b00, 0b1110, V64, V128, asm, ".8b", ".4s">;
+    def 2v16f8 : BaseSIMDThreeSameVectorDot<0b1, 0b0, 0b00, 0b1110, asm#2, ".16b", ".4s",
+                                            V128, v16i8, v4f32, null_frag>;
+  }
+
+  def : Pat<(v8i8 (Op (v4f32 V128:$Rn), (v4f32 V128:$Rm))),
+            (!cast<Instruction>(NAME # v8f8) V128:$Rn, V128:$Rm)>;
+
+  def : Pat<(v16i8 (!cast<SDPatternOperator>(Op # 2) (v16i8 V128:$_Rd), (v4f32 V128:$Rn), (v4f32 V128:$Rm))),
+            (!cast<Instruction>(NAME # 2v16f8) V128:$_Rd, V128:$Rn, V128:$Rm)>;
 }
 
 // TODO: Create a new Value Type v8f8 and v16f8
@@ -7033,11 +7046,18 @@ multiclass SIMDMixedTwoVector<bit U, bits<5> opc, string asm,
 //----------------------------------------------------------------------------
 // FP8 Advanced SIMD two-register miscellaneous
 //----------------------------------------------------------------------------
-multiclass SIMDMixedTwoVectorFP8<bits<2>sz, string asm> {
-  def v8f16 : BaseSIMDMixedTwoVector<0b0, 0b1, sz, 0b10111, V64, V128,
-                                     asm, ".8h", ".8b", []>;
-  def 2v8f16 : BaseSIMDMixedTwoVector<0b1, 0b1, sz, 0b10111, V128, V128,
-                                     asm#2, ".8h", ".16b", []>;
+multiclass SIMD_FP8_CVTL<bits<2>sz, string asm, ValueType dty, SDPatternOperator Op> {
+  let Uses=[FPMR, FPCR], mayLoad = 1 in {
+    def NAME : BaseSIMDMixedTwoVector<0b0, 0b1, sz, 0b10111, V64, V128,
+                                      asm, ".8h", ".8b", []>;
+    def NAME#2 : BaseSIMDMixedTwoVector<0b1, 0b1, sz, 0b10111, V128, V128,
+                                        asm#2, ".8h", ".16b", []>;
+  }
+  def : Pat<(dty (Op (v8i8 V64:$Rn))),
+            (!cast<Instruction>(NAME) V64:$Rn)>;
+
+  def : Pat<(dty (Op (v16i8 V128:$Rn))),
+            (!cast<Instruction>(NAME#2) V128:$Rn)>;
 }
 
 class BaseSIMDCmpTwoVector<bit Q, bit U, bits<2> size, bits<2> size2,

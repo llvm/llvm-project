@@ -543,7 +543,7 @@ void HexagonVectorLoopCarriedReuse::reuseValue() {
     }
     InstsInPreheader.push_back(InstInPreheader);
     InstInPreheader->setName(Inst2Replace->getName() + ".hexagon.vlcr");
-    InstInPreheader->insertBefore(LoopPH->getTerminator());
+    InstInPreheader->insertBefore(LoopPH->getTerminator()->getIterator());
     LLVM_DEBUG(dbgs() << "Added " << *InstInPreheader << " to "
                       << LoopPH->getName() << "\n");
   }

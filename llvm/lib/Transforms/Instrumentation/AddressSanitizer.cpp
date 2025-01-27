@@ -689,11 +689,11 @@ public:
       }
 
       BasicBlock *Color = Colors.front();
-      Instruction *EHPad = Color->getFirstNonPHI();
+      BasicBlock::iterator EHPadIt = Color->getFirstNonPHIIt();
 
-      if (EHPad && EHPad->isEHPad()) {
+      if (EHPadIt != Color->end() && EHPadIt->isEHPad()) {
         // Replace CI with a clone with an added funclet OperandBundle
-        OperandBundleDef OB("funclet", EHPad);
+        OperandBundleDef OB("funclet", &*EHPadIt);
         auto *NewCall = CallBase::addOperandBundle(CI, LLVMContext::OB_funclet,
                                                    OB, CI->getIterator());
         NewCall->copyMetadata(*CI);
@@ -1661,7 +1661,7 @@ void AddressSanitizer::instrumentMaskedLoadOrStore(
   if (Stride)
     Stride = IB.CreateZExtOrTrunc(Stride, IntptrTy);
 
-  SplitBlockAndInsertForEachLane(EVL, LoopInsertBefore,
+  SplitBlockAndInsertForEachLane(EVL, LoopInsertBefore->getIterator(),
                                  [&](IRBuilderBase &IRB, Value *Index) {
     Value *MaskElem = IRB.CreateExtractElement(Mask, Index);
     if (auto *MaskElemC = dyn_cast<ConstantInt>(MaskElem)) {
@@ -3414,7 +3414,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
   assert(InsBeforeB == &F.getEntryBlock());
   for (auto *AI : StaticAllocasToMoveUp)
     if (AI->getParent() == InsBeforeB)
-      AI->moveBefore(InsBefore);
+      AI->moveBefore(InsBefore->getIterator());
 
   // Move stores of arguments into entry-block allocas as well. This prevents
   // extra stack slots from being generated (to house the argument values until
@@ -3423,10 +3423,11 @@ void FunctionStackPoisoner::processStaticAllocas() {
   SmallVector<Instruction *, 8> ArgInitInsts;
   findStoresToUninstrumentedArgAllocas(ASan, *InsBefore, ArgInitInsts);
   for (Instruction *ArgInitInst : ArgInitInsts)
-    ArgInitInst->moveBefore(InsBefore);
+    ArgInitInst->moveBefore(InsBefore->getIterator());
 
   // If we have a call to llvm.localescape, keep it in the entry block.
-  if (LocalEscapeCall) LocalEscapeCall->moveBefore(InsBefore);
+  if (LocalEscapeCall)
+    LocalEscapeCall->moveBefore(InsBefore->getIterator());
 
   SmallVector<ASanStackVariableDescription, 16> SVD;
   SVD.reserve(AllocaVec.size());

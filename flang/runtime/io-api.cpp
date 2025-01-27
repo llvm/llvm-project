@@ -770,18 +770,18 @@ bool IODEF(SetAsynchronous)(
           "SetAsynchronous() called after GetNewUnit() for an OPEN statement");
     }
     open->unit().set_mayAsynchronous(isYes);
+  } else if (!isYes) {
+    // ASYNCHRONOUS='NO' is the default, so this is a no-op
   } else if (auto *ext{io.get_if<ExternalIoStatementBase>()}) {
-    if (isYes) {
-      if (ext->unit().mayAsynchronous()) {
-        ext->SetAsynchronous();
-      } else {
-        handler.SignalError(IostatBadAsynchronous);
-      }
+    if (ext->unit().mayAsynchronous()) {
+      ext->SetAsynchronous();
+    } else {
+      handler.SignalError(IostatBadAsynchronous);
     }
   } else if (!io.get_if<NoopStatementState>() &&
       !io.get_if<ErroneousIoStatementState>()) {
-    handler.Crash("SetAsynchronous() called when not in an OPEN or external "
-                  "I/O statement");
+    handler.Crash("SetAsynchronous('YES') called when not in an OPEN or "
+                  "external I/O statement");
   }
   return !handler.InError();
 }
