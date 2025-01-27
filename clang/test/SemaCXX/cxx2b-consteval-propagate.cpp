@@ -544,5 +544,19 @@ void g() {
    tfn<int>(a); // expected-error {{call to immediate function 'GH123405::tfn<int>' is not a constant expression}}\
                 // expected-note {{read of non-const variable 'a' is not allowed in a constant expression}}
 }
+} // namespace GH123405
 
+namespace GH118000 {
+consteval int baz() { return 0;}
+struct S {
+    int mSize = baz();
+};
+
+consteval void bar() {
+    S s;
 }
+
+void foo() {
+    S s;
+}
+} // namespace GH118000
