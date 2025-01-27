@@ -53,6 +53,9 @@ public:
   /// Get the `%dx.types.splitdouble` type.
   StructType *getSplitDoubleType(LLVMContext &Context);
 
+  /// Get the `%dx.types.i32c` type.
+  StructType *getBinaryWithCarryType(LLVMContext &Context);
+
   /// Get the `%dx.types.Handle` type.
   StructType *getHandleType();
 

@@ -359,17 +359,16 @@ public:
     return lowerToBindAndAnnotateHandle(F);
   }
 
-  Error replaceSplitDoubleCallUsages(CallInst *Intrin, CallInst *Op) {
+  Error replaceAggregateTypeOfCallUsages(CallInst *Intrin, CallInst *Op) {
     for (Use &U : make_early_inc_range(Intrin->uses())) {
       if (auto *EVI = dyn_cast<ExtractValueInst>(U.getUser())) {
-
-        if (EVI->getNumIndices() != 1)
-          return createStringError(std::errc::invalid_argument,
-                                   "Splitdouble has only 2 elements");
         EVI->setOperand(0, Op);
+      } else if (auto *IVI = dyn_cast<InsertValueInst>(U.getUser())) {
+        IVI->setOperand(0, Op);
       } else {
         return make_error<StringError>(
-            "Splitdouble use is not ExtractValueInst",
+            (Intrin->getCalledFunction()->getName() +
+             " use is not a ExtractValueInst or InsertValueInst"),
             inconvertibleErrorCode());
       }
     }
@@ -821,7 +820,16 @@ public:
             F, OpCode::SplitDouble,
             OpBuilder.getSplitDoubleType(M.getContext()),
             [&](CallInst *CI, CallInst *Op) {
-              return replaceSplitDoubleCallUsages(CI, Op);
+              return replaceAggregateTypeOfCallUsages(CI, Op);
+            });
+        break;
+      // TODO: this can be removed when
+      // https://github.com/llvm/llvm-project/issues/113192 is fixed
+      case Intrinsic::uadd_with_overflow:
+        HasErrors |= replaceFunctionWithNamedStructOp(
+            F, OpCode::UAddc, OpBuilder.getBinaryWithCarryType(M.getContext()),
+            [&](CallInst *CI, CallInst *Op) {
+              return replaceAggregateTypeOfCallUsages(CI, Op);
             });
         break;
       case Intrinsic::ctpop:

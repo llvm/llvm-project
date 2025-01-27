@@ -10655,6 +10655,8 @@ def err_second_argument_to_cwsc_not_pointer : Error<
 
 def err_vector_incorrect_num_elements : Error<
   "%select{too many|too few}0 elements in vector %select{initialization|operand}3 (expected %1 elements, have %2)">;
+def err_invalid_even_odd_vector_element_count : Error<
+  "invalid element count of %0 in vector %select{initialization|operand}4 (expected an %select{even|odd}3 element count in the range of %1 and %2)">;
 def err_altivec_empty_initializer : Error<"expected initializer">;
 
 def err_invalid_neon_type_code : Error<
