@@ -90,7 +90,10 @@ llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
       // TODO: Test this error.
       return AddrOrErr.takeError();
 
-    if (SymType.get() != SymbolRef::Type::ST_Function ||
+    if ((SymType.get() != SymbolRef::Type::ST_Function &&
+         // We allow unknown (yet with valid text address) symbols,
+         // since these are common with handwritten assembly in the wild.
+         SymType.get() != SymbolRef::Type::ST_Unknown) ||
         !Gsym.IsValidTextAddress(*AddrOrErr))
       continue;
     // Function size for MachO files will be 0
@@ -105,6 +108,9 @@ llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
         consumeError(Name.takeError());
       continue;
     }
+    // Could happen with ST_Unknown symbols.
+    if (Name->empty())
+      continue;
     // Remove the leading '_' character in any symbol names if there is one
     // for mach-o files.
     if (IsMachO)
