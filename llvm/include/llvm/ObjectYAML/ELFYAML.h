@@ -197,9 +197,8 @@ struct PGOAnalysisMapEntry {
 
 struct FuncMapEntry {
   uint8_t Version;
-  llvm::yaml::Hex8 Feature;
   llvm::yaml::Hex64 Address;
-  llvm::yaml::Hex64 DynamicInstCount;
+  uint64_t DynamicInstCount;
 };
 
 struct StackSizeEntry {
