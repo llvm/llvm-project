@@ -18,10 +18,6 @@
 // because those must calculate a potentially large power of 10 per 9-digit
 // output block, whereas this computes just one, which does the whole job.
 //
-// (OK, not quite. It computes one power of 10 per _attempt_. It must start by
-// guessing the decimal exponent of the output, and if it guesses too high or
-// too low then it adjusts the guess and tries again from scratch.)
-//
 // The calculation is done in 320-bit DyadicFloat, which provides enough
 // precision to generate 39 correct digits of output from any floating-point
 // size up to and including 128-bit long double, because the rounding errors in
@@ -144,133 +140,217 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
   }
 
   // Estimate log10 of the input value, by multiplying its binary exponent by
-  // 19728/65536, which is a good approximation to log10(2).
+  // 1292913986/2^32. That is a rounded-down approximation to log10(2),
+  // accurate enough that for any binary exponent in the range of float128 it
+  // will give the correct value of floor(log10(2^n)).
   //
-  // If this turns out to be wrong, we'll find out when we get the wrong number
-  // of digits from the conversion in the loop below, and we can adjust the
-  // value and try again.
-  int log10_input = ((input.exponent - 1) * 19728) >> 16;
+  // This estimate is correct for deciding how many decimal digits we end up
+  // producing, unless a power of 10 falls in the interval corresponding to
+  // this binary exponent, in which case there might be one more decimal digit
+  // for larger mantissas. To detect this, we do the same computation for the
+  // next exponent up.
+  int log10_input_min = ((input.exponent - 1) * 1292913986LL) >> 32;
+  int log10_input_max = (input.exponent * 1292913986LL) >> 32;
 
   // Make a DyadicFloat containing the value 10, to use as the base for
   // exponentation inside the following loop, potentially more than once if we
   // need to iterate.
   fputil::DyadicFloat<DF_BITS> ten(Sign::POS, 1, 5);
 
-  while (true) {
-    // Compute the exponent of the lowest-order digit we want as output. In F
-    // mode this depends only on the desired precision. In E mode it's based on
-    // log10_input, which is (an estimate of) the exponent corresponding to the
-    // _high_-order decimal digit of the number.
-    int log10_low_digit = e_mode ? log10_input + 1 - precision : -precision;
+  // Compute the exponent of the lowest-order digit we want as output. In F
+  // mode this depends only on the desired precision. In E mode it's based on
+  // log10_input, which is (an estimate of) the exponent corresponding to the
+  // _high_-order decimal digit of the number.
+  int log10_low_digit = e_mode ? log10_input_min + 1 - precision : -precision;
 
-    // Calculate an integer whose decimal representation is precisely the
-    // string of output digits, by doing a DyadicFloat computation of
-    // (input_mantissa / 10^(log10_low_digit)) and then rounding that to an
-    // integer.
+  // The general plan is to calculate an integer whose decimal representation
+  // is precisely the string of output digits, by doing a DyadicFloat
+  // computation of (input_mantissa / 10^(log10_low_digit)) and then rounding
+  // that to an integer.
+  //
+  // The number of output decimal digits (if the mathematical result of this
+  // operation were computed without overflow) will be one of these:
+  //   (log10_input_min - log10_low_digit + 1)
+  //   (log10_input_max - log10_low_digit + 1)
+  //
+  // In E mode, this means we'll either get the correct number of output digits
+  // immediately, or else one too many (in which case we can correct for that
+  // at the rounding stage). But in F mode, if the number is very large
+  // compared to the number of decimal places the user asked for, we might be
+  // about to generate far too many digits and overflow our float format. In
+  // that case, reset to E mode immediately, to avoid having to detect the
+  // overflow _after_ the multiplication and retry. So if even the smaller
+  // number of possible output digits is too many, we might as well change our
+  // mind right now and switch into E mode.
+  if (log10_input_max - log10_low_digit + 1 > MAX_DIGITS) {
+    precision = MAX_DIGITS;
+    e_mode = true;
+    log10_low_digit = log10_input_min + 1 - precision;
+  }
+
+  // Now actually calculate (input_mantissa / 10^(log10_low_digit)).
+  //
+  // If log10_low_digit < 0, then we calculate 10^(-log10_low_digit) and
+  // multiply by it instead, so that the exponent is non-negative in all cases.
+  // This ensures that the power of 10 is always mathematically speaking an
+  // integer, so that it can be represented exactly in binary (without a
+  // recurring fraction), and when it's small enough to fit in DF_BITS,
+  // fputil::pow_n should return the exact answer, and then
+  // fputil::rounded_{div,mul} will introduce only the unavoidable rounding
+  // error of up to 1/2 ULP.
+  //
+  // Beyond that point, pow_n will be imprecise. But DF_BITS is set high enough
+  // that even for the most difficult cases in 128-bit long double, the extra
+  // precision in the calculation is enough to ensure we still get the right
+  // answer.
+  //
+  // If the output integer doesn't fit in DF_BITS, we set the `overflow` flag.
+
+  // Calculate the power of 10 to divide or multiply by.
+  fputil::DyadicFloat<DF_BITS> power_of_10 =
+      fputil::pow_n(ten, cpp::abs(log10_low_digit));
+
+  // Convert the mantissa into a DyadicFloat, making sure it has the right
+  // sign, so that directed rounding will go in the right direction, if
+  // enabled.
+  fputil::DyadicFloat<DF_BITS> flt_mantissa(input.sign, input.exponent - 127,
+                                            input.mantissa);
+
+  // Divide or multiply, depending on whether log10_low_digit was positive
+  // or negative.
+  fputil::DyadicFloat<DF_BITS> flt_quotient =
+      log10_low_digit > 0 ? fputil::rounded_div(flt_mantissa, power_of_10)
+                          : fputil::rounded_mul(flt_mantissa, power_of_10);
+
+  // Convert to an integer.
+  int round_dir;
+  UInt<DF_BITS> integer = flt_quotient.as_mantissa_type_rounded(&round_dir);
+
+  // And take the absolute value.
+  if (flt_quotient.sign.is_neg())
+    integer = -integer;
+
+  // Convert the mantissa integer into a string of decimal digits, and check
+  // to see if it's the right size.
+  const IntegerToString<decltype(integer), radix::Dec> buf{integer};
+  cpp::string_view view = buf.view();
+
+  // Start making the output struct, by copying in the digits from the above
+  // object. At this stage we may also have one digit too many (but that's OK,
+  // there's space for it in the DigitsOutput buffer).
+  DigitsOutput output;
+  output.ndigits = view.size();
+  __builtin_memcpy(output.digits, view.data(), output.ndigits);
+
+  // Set up the output exponent, which is done differently depending on mode.
+  // Also, figure out whether we have one digit too many, and if so, set the
+  // `need_reround` flag and adjust the exponent appropriately.
+  bool need_reround = false;
+  if (e_mode) {
+    // In E mode, the output exponent is the exponent of the first decimal
+    // digit, which we already calculated.
+    output.exponent = log10_input_min;
+
+    // In E mode, we're returning a fixed number of digits, given by
+    // `precision`, so if we have more than that, then we must shorten the
+    // buffer by one digit.
     //
-    // If log10_low_digit < 0 then we calculate 10^(-log10_low_digit) and
-    // multiply by it instead, so that the exponent is non-negative in all
-    // cases. This ensures that the power of 10 is always mathematically
-    // speaking an integer, so that it can be represented exactly in binary
-    // (without a recurring fraction), and when it's small enough to fit in
-    // DF_BITS, fputil::pow_n should return the exact answer, and then
-    // fputil::rounded_{div,mul} will introduce only the unavoidable rounding
-    // error of up to 1/2 ULP.
-    //
-    // Beyond that point, pow_n will be imprecise. But DF_BITS is set high
-    // enough that even for the most difficult cases in 128-bit long double,
-    // the extra precision in the calculation is enough to ensure we still get
-    // the right answer.
-    //
-    // If the output integer doesn't fit in DF_BITS, we set the `overflow`
-    // flag.
-    UInt<DF_BITS> integer;
-    bool overflow;
-    {
-      // Calculate the power of 10 to divide or multiply by.
-      fputil::DyadicFloat<DF_BITS> power_of_10 =
-          fputil::pow_n(ten, cpp::abs(log10_low_digit));
-
-      // Convert the mantissa into a DyadicFloat, making sure it has the right
-      // sign, so that directed rounding will go in the right direction, if
-      // enabled.
-      fputil::DyadicFloat<DF_BITS> flt_mantissa(
-          input.sign, input.exponent - 127, input.mantissa);
-
-      // Divide or multiply, depending on whether log10_low_digit was positive
-      // or negative.
-      fputil::DyadicFloat<DF_BITS> flt_quotient =
-          log10_low_digit > 0 ? fputil::rounded_div(flt_mantissa, power_of_10)
-                              : fputil::rounded_mul(flt_mantissa, power_of_10);
-
-      // Convert to an integer.
-      integer = flt_quotient.as_mantissa_type_rounded(&overflow);
-
-      // And take the absolute value.
-      if (flt_quotient.sign.is_neg())
-        integer = -integer;
+    // If this happens, it's because the actual log10 of the input is
+    // log10_input_min + 1. Equivalently, we guessed we'd see something like
+    // X.YZe+NN and instead got WX.YZe+NN. So when we shorten the digit string
+    // by one, we'll also need to increment the output exponent.
+    if (output.ndigits > size_t(precision)) {
+      assert(output.ndigits == size_t(precision) + 1);
+      need_reround = true;
+      output.exponent++;
     }
+  } else {
+    // In F mode, the output exponent is based on the place value of the _last_
+    // digit, so we must recover the exponent of the first digit by adding
+    // the number of digits.
+    //
+    // Because this takes the length of the buffer into account, it sets the
+    // correct decimal exponent even if this digit string is one too long. So
+    // we don't need to adjust the exponent if we reround.
+    output.exponent = int(output.ndigits) - precision - 1;
 
-    // If the conversion to an integer overflowed, then we certainly can't use
-    // it.
-    if (overflow) {
-      if (e_mode) {
-        // In E mode, just try again with the exponent one higher.
-        log10_input++;
-      } else {
-        // In F mode, if the number would generate too many digits to fit, then
-        // reset to E mode, so that we generate the most significant digits of
-        // the number, and rely on our caller to append zeroes at the end.
-        precision = MAX_DIGITS;
-        e_mode = true;
-      }
-      continue;
-    }
-
-    // Convert the mantissa integer into a string of decimal digits, and check
-    // to see if it's the right size.
-    const IntegerToString<decltype(integer), radix::Dec> buf{integer};
-    cpp::string_view view = buf.view();
-
-    if (e_mode) {
-      // In E mode, we expect exactly the right number of output digits, so we
-      // must increment or decrement the exponent if we had too many or too
-      // few.
-      if (view.size() > size_t(precision)) { /* too big */
-        log10_input++;
-        continue;
-      } else if (view.size() < size_t(precision)) { /* too small */
-        log10_input--;
-        continue;
-      }
-
-      // Otherwise, return the digit string, with the exponent of its first
-      // digit that we already calculated.
-      DigitsOutput output;
-      output.ndigits = view.size();
-      __builtin_memcpy(output.digits, view.data(), output.ndigits);
-      output.exponent = log10_input;
-      return output;
-    } else {
-      // In F mode, we don't mind how many digits we get as long as it isn't
-      // beyond the limit MAX_DIGITS. But if it is, we flip into E mode as
-      // above.
-      if (view.size() > MAX_DIGITS) {
-        precision = MAX_DIGITS;
-        e_mode = true;
-        continue;
-      }
-
-      // Otherwise, return the digit string. In this case we calculated it
-      // based on the desired exponent of its _last_ digit, so we must recover
-      // the exponent of the first digit by adding view.size().
-      DigitsOutput output;
-      output.ndigits = view.size();
-      __builtin_memcpy(output.digits, view.data(), output.ndigits);
-      output.exponent = int(view.size()) - precision - 1;
-      return output;
+    // In F mode, the number of returned digits isn't based on `precision`:
+    // it's variable, and we don't mind how many digits we get as long as it
+    // isn't beyond the limit MAX_DIGITS. If it is, we expect that it's only
+    // one digit too long, or else we'd have spotted the problem in advance and
+    // flipped into E mode already.
+    if (output.ndigits > MAX_DIGITS) {
+      assert(output.ndigits == MAX_DIGITS + 1);
+      need_reround = true;
     }
   }
+
+  if (need_reround) {
+    // If either of the branches above decided that we had one digit too many,
+    // we must now shorten the digit buffer by one. But we can't just truncate:
+    // we need to make sure the remaining n-1 digits are correctly rounded, as
+    // if we'd rounded just once from the original `flt_quotient`.
+    //
+    // In directed rounding modes this can't go wrong. If you had a real number
+    // x, and the first rounding produced floor(x), then the second rounding
+    // wants floor(x/10), and it doesn't matter if you actually compute
+    // floor(floor(x)/10): the result is the same, because each rounding
+    // boundary in the second rounding aligns with one in the first rounding,
+    // which nothing could have crossed. Similarly for rounding away from zero,
+    // with 'floor' replaced with 'ceil' throughout.
+    //
+    // In rounding to nearest, the danger is in the boundary case where the
+    // final digit of the original output is 5. Then if we just rerounded the
+    // digit string to remove the last digit, it would look like an exact
+    // halfway case, and we'd break the tie by choosing the even one of the two
+    // outputs. But if the original value before the first rounding was on one
+    // side or the other of 5, then that supersedes the 'round to even' tie
+    // break. So we need to consult `round_dir` from above, which tells us
+    // which way (if either) the value was adjusted during the first rounding.
+    // Effectively, we treat the last digit as 5+ε or 5-ε.
+    //
+    // To make this work in both directed modes and round-to-nearest mode
+    // without having to look up the rounding direction, a simple rule is: take
+    // account of round_dir if and only if the round digit (the one we're
+    // removing when shortening the buffer) is 5. In directed rounding modes
+    // this makes no difference.
+
+    // Extract the two relevant digits. round_digit is the one we're removing;
+    // new_low_digit is the last one we're keeping, so we need to know if it's
+    // even or odd to handle exact tie cases (when round_dir == 0).
+    int round_digit = output.digits[--output.ndigits] - '0';
+    int new_low_digit =
+        output.ndigits == 0 ? 0 : output.digits[output.ndigits - 1] - '0';
+
+    // Make a binary number that we can pass to `fputil::rounding_direction`.
+    // We put new_low_digit at bit 8, and imagine that we're rounding away the
+    // bottom 8 bits. Therefore round_digit must be "just below" bit 8, in the
+    // sense that we set the bottom 8 bits to (256/10 * round_digit) so that
+    // round_digit==5 corresponds to the binary half-way case of 0x80.
+    //
+    // Then we adjust by +1 or -1 based on round_dir if the round digit is 5,
+    // as described above.
+    LIBC_NAMESPACE::UInt<64> round_word = (new_low_digit * 256) +
+                                          ((round_digit * 0x19a) >> 4) +
+                                          (round_digit == 5 ? -round_dir : 0);
+
+    // Now we can call the existing binary rounding helper function, which
+    // takes account of the rounding mode.
+    if (fputil::rounding_direction(round_word, 8, flt_quotient.sign) > 0) {
+      // If that returned a positive answer, we must round the number up.
+      //
+      // The number is already in decimal, so we need to increment it one digit
+      // at a time. (A bit painful, but better than going back to the integer
+      // we made it from and doing the decimal conversion all over again.)
+      for (size_t i = output.ndigits; i-- > 0;) {
+        if (output.digits[i]++ != '9')
+          break;
+        output.digits[i] = '0';
+      }
+    }
+  }
+
+  return output;
 }
 
 LIBC_INLINE int convert_float_inner(Writer *writer,

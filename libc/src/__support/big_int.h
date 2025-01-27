@@ -980,7 +980,7 @@ private:
   }
 
   LIBC_INLINE constexpr void decrement() {
-    multiword::add_with_carry(val, cpp::array<WordType, 1>{1});
+    multiword::sub_with_borrow(val, cpp::array<WordType, 1>{1});
   }
 
   LIBC_INLINE constexpr void extend(size_t index, bool is_neg) {

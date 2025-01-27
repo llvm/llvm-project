@@ -26,35 +26,43 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
-// Decide whether to round up a UInt at a given bit position, based on
-// the current rounding mode. The assumption is that the caller is
-// going to make the integer `value >> rshift`, and then might need to
-// round it up by 1 depending on the value of the bits shifted off the
+// Decide whether to round a UInt up, down or not at all at a given bit
+// position, based on the current rounding mode. The assumption is that the
+// caller is going to make the integer `value >> rshift`, and then might need
+// to round it up by 1 depending on the value of the bits shifted off the
 // bottom.
 //
 // `logical_sign` causes the behavior of FE_DOWNWARD and FE_UPWARD to
 // be reversed, which is what you'd want if this is the mantissa of a
 // negative floating-point number.
+//
+// Return value is +1 if the value should be rounded up; -1 if it should be
+// rounded down; 0 if it's exact and needs no rounding.
 template <size_t Bits>
-LIBC_INLINE constexpr bool
-need_to_round_up(const LIBC_NAMESPACE::UInt<Bits> &value, size_t rshift,
-                 Sign logical_sign) {
+LIBC_INLINE constexpr int
+rounding_direction(const LIBC_NAMESPACE::UInt<Bits> &value, size_t rshift,
+                   Sign logical_sign) {
+  if (rshift == 0 ||
+      (rshift < Bits && (value << (Bits - rshift)) == 0) ||
+      (rshift >= Bits && value == 0))
+    return 0;                          // exact
+
   switch (quick_get_round()) {
   case FE_TONEAREST:
     if (rshift > 0 && rshift <= Bits && value.get_bit(rshift - 1)) {
       // We round up, unless the value is an exact halfway case and
       // the bit that will end up in the units place is 0, in which
       // case tie-break-to-even says round down.
-      return value.get_bit(rshift) != 0 || (value << (Bits - rshift + 1)) != 0;
+      return value.get_bit(rshift) != 0 || (value << (Bits - rshift + 1)) != 0 ? +1 : -1;
     } else {
-      return false;
+      return -1;
     }
   case FE_TOWARDZERO:
-    return false;
+    return -1;
   case FE_DOWNWARD:
-    return logical_sign.is_neg() && (value << (Bits - rshift)) != 0;
+    return logical_sign.is_neg() && (value << (Bits - rshift)) != 0 ? +1 : -1;
   case FE_UPWARD:
-    return logical_sign.is_pos() && (value << (Bits - rshift)) != 0;
+    return logical_sign.is_pos() && (value << (Bits - rshift)) != 0 ? +1 : -1;
   default:
     __builtin_unreachable();
   }
@@ -143,7 +151,7 @@ template <size_t Bits> struct DyadicFloat {
         const LIBC_NAMESPACE::UInt<MantissaBits> &input_mantissa,
         size_t rshift) {
     MantissaType result_mantissa(input_mantissa >> rshift);
-    if (need_to_round_up(input_mantissa, rshift, result_sign)) {
+    if (rounding_direction(input_mantissa, rshift, result_sign) > 0) {
       ++result_mantissa;
       if (result_mantissa == 0) {
         // Rounding up made the mantissa integer wrap round to 0,
@@ -431,25 +439,32 @@ template <size_t Bits> struct DyadicFloat {
   }
 
   LIBC_INLINE constexpr MantissaType
-  as_mantissa_type_rounded(bool *overflowed = nullptr) const {
-    if (mantissa.is_zero())
-      return 0;
+  as_mantissa_type_rounded(int *round_dir_out = nullptr) const {
+    int round_dir;
+    MantissaType new_mant;
+    if (mantissa.is_zero()) {
+      round_dir = 0;
+      new_mant = 0;
+    } else {
+      new_mant = mantissa;
+      if (exponent > 0) {
+        new_mant <<= exponent;
+        round_dir = 0;
+      } else if (exponent < 0) {
+        size_t shift = -exponent;
+        new_mant >>= shift;
+        round_dir = rounding_direction(mantissa, shift, sign);
+        if (round_dir > 0)
+          ++new_mant;
+      }
 
-    MantissaType new_mant = mantissa;
-    if (exponent > 0) {
-      new_mant <<= exponent;
-      if (overflowed)
-        *overflowed = (new_mant >> exponent) != mantissa;
-    } else if (exponent < 0) {
-      size_t shift = -exponent;
-      new_mant >>= shift;
-      if (need_to_round_up(mantissa, shift, sign))
-        ++new_mant;
+      if (sign.is_neg()) {
+        new_mant = (~new_mant) + 1;
+      }
     }
 
-    if (sign.is_neg()) {
-      new_mant = (~new_mant) + 1;
-    }
+    if (round_dir_out)
+      *round_dir_out = round_dir;
 
     return new_mant;
   }
