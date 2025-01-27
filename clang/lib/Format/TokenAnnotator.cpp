@@ -252,10 +252,10 @@ private:
       // parameters.
       // FIXME: This is getting out of hand, write a decent parser.
       if (MaybeAngles && InExpr && !Line.startsWith(tok::kw_template) &&
-          Prev.is(TT_BinaryOperator)) {
-        const auto Precedence = Prev.getPrecedence();
-        if (Precedence > prec::Conditional && Precedence < prec::Relational)
-          MaybeAngles = false;
+          Prev.is(TT_BinaryOperator) &&
+          (Prev.isOneOf(tok::pipepipe, tok::ampamp) ||
+           Prev.getPrecedence() == prec::Equality)) {
+        MaybeAngles = false;
       }
       if (Prev.isOneOf(tok::question, tok::colon) && !Style.isProto())
         SeenTernaryOperator = true;
@@ -1115,7 +1115,7 @@ private:
       }
       if (!CurrentToken || CurrentToken->isNot(tok::l_paren))
         return false;
-      skipToNextNonComment();
+      next();
       // FIXME: Hack using inheritance to child context
       Contexts.back().IsTableGenBangOpe = true;
       bool Result = parseParens();
@@ -1124,12 +1124,10 @@ private:
     }
     // SimpleValue 9: Cond operator
     if (Tok->is(TT_TableGenCondOperator)) {
-      Tok = CurrentToken;
-      skipToNextNonComment();
-      if (!Tok || Tok->isNot(tok::l_paren))
+      if (!CurrentToken || CurrentToken->isNot(tok::l_paren))
         return false;
-      bool Result = parseParens();
-      return Result;
+      next();
+      return parseParens();
     }
     // We have to check identifier at the last because the kind of bang/cond
     // operators are also identifier.
@@ -3784,7 +3782,7 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
         return Next;
       if (Next->is(TT_OverloadedOperator))
         continue;
-      if (Next->isOneOf(tok::kw_new, tok::kw_delete)) {
+      if (Next->isOneOf(tok::kw_new, tok::kw_delete, tok::kw_co_await)) {
         // For 'new[]' and 'delete[]'.
         if (Next->Next &&
             Next->Next->startsSequence(tok::l_square, tok::r_square)) {
