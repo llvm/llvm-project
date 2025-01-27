@@ -1351,6 +1351,13 @@ TEST(TestRtsanInterceptors, SetsockoptOnASocketDiesWhenRealtime) {
 }
 #endif
 
+TEST(TestRtsanInterceptors, SocketpairDiesWhenRealtime) {
+  int pair[2]{};
+  auto Func = [&pair]() { socketpair(0, 0, 0, pair); };
+  ExpectRealtimeDeath(Func, "socketpair");
+  ExpectNonRealtimeSurvival(Func);
+}
+
 /*
     I/O Multiplexing
 */
