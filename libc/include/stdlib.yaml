@@ -12,6 +12,7 @@ types:
   - type_name: lldiv_t
   - type_name: ldiv_t
   - type_name: div_t
+  - type_name: locale_t
 enums: []
 objects: []
 functions:

@@ -3,6 +3,7 @@ header_template: string.h.def
 macros: []
 types:
   - type_name: size_t
+  - type_name: locale_t
 enums: []
 objects: []
 functions:
