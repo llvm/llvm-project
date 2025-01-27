@@ -3997,14 +3997,16 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
         importExplicitSpecifier(Err, Guide->getExplicitSpecifier());
     CXXConstructorDecl *Ctor =
         importChecked(Err, Guide->getCorrespondingConstructor());
+    const CXXDeductionGuideDecl *SourceDG =
+        importChecked(Err, Guide->getSourceDeductionGuide());
     if (Err)
       return std::move(Err);
     if (GetImportedOrCreateDecl<CXXDeductionGuideDecl>(
             ToFunction, D, Importer.getToContext(), DC, ToInnerLocStart, ESpec,
-            NameInfo, T, TInfo, ToEndLoc, Ctor))
+            NameInfo, T, TInfo, ToEndLoc, Ctor,
+            Guide->getDeductionCandidateKind(), TrailingRequiresClause,
+            SourceDG, Guide->getSourceDeductionGuideKind()))
       return ToFunction;
-    cast<CXXDeductionGuideDecl>(ToFunction)
-        ->setDeductionCandidateKind(Guide->getDeductionCandidateKind());
   } else {
     if (GetImportedOrCreateDecl(
             ToFunction, D, Importer.getToContext(), DC, ToInnerLocStart,
