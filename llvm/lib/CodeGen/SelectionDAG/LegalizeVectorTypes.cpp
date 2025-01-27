@@ -7080,13 +7080,14 @@ SDValue DAGTypeLegalizer::WidenVecOp_INSERT_SUBVECTOR(SDNode *N) {
 
   SDValue InsertElt;
   SDLoc DL(N);
+  EVT VectorIdxTy = TLI.getVectorIdxTy(DAG.getDataLayout());
   for (unsigned I = 0; I < OrigVT.getVectorNumElements(); ++I) {
     SDValue ExtractElt =
         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT.getScalarType(), SubVec,
-                    DAG.getVectorIdxConstant(I, DL));
+                    DAG.getConstant(I, DL, VectorIdxTy));
     InsertElt =
         DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, I != 0 ? InsertElt : InVec,
-                    ExtractElt, DAG.getVectorIdxConstant(I + Idx, DL));
+                    ExtractElt, DAG.getConstant(I + Idx, DL, VectorIdxTy));
   }
 
   return InsertElt;
