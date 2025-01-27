@@ -329,7 +329,8 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
 
   // Move any instructions from fore phi operands from AftBlocks into Fore.
   moveHeaderPhiOperandsToForeBlocks(
-      Header, LatchBlock, ForeBlocksLast[0]->getTerminator()->getIterator(), AftBlocks);
+      Header, LatchBlock, ForeBlocksLast[0]->getTerminator()->getIterator(),
+      AftBlocks);
 
   // The current on-the-fly SSA update requires blocks to be processed in
   // reverse postorder so that LastValueMap contains the correct value at each

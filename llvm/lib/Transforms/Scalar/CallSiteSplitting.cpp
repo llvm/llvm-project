@@ -218,8 +218,8 @@ static bool canSplitCallSite(CallBase &CB, TargetTransformInfo &TTI) {
   return true;
 }
 
-static Instruction *cloneInstForMustTail(Instruction *I, BasicBlock::iterator Before,
-                                         Value *V) {
+static Instruction *
+cloneInstForMustTail(Instruction *I, BasicBlock::iterator Before, Value *V) {
   Instruction *Copy = I->clone();
   Copy->setName(I->getName());
   Copy->insertBefore(Before);

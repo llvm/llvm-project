@@ -3426,7 +3426,8 @@ void FunctionStackPoisoner::processStaticAllocas() {
     ArgInitInst->moveBefore(InsBefore->getIterator());
 
   // If we have a call to llvm.localescape, keep it in the entry block.
-  if (LocalEscapeCall) LocalEscapeCall->moveBefore(InsBefore->getIterator());
+  if (LocalEscapeCall)
+    LocalEscapeCall->moveBefore(InsBefore->getIterator());
 
   SmallVector<ASanStackVariableDescription, 16> SVD;
   SVD.reserve(AllocaVec.size());

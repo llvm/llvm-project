@@ -5297,8 +5297,8 @@ bool SimplifyCFGOpt::simplifyCommonResume(ResumeInst *RI) {
 
   // Check that there are no other instructions except for debug and lifetime
   // intrinsics between the phi's and resume instruction.
-  if (!isCleanupBlockEmpty(
-          make_range(RI->getParent()->getFirstNonPHIIt(), BB->getTerminator()->getIterator())))
+  if (!isCleanupBlockEmpty(make_range(RI->getParent()->getFirstNonPHIIt(),
+                                      BB->getTerminator()->getIterator())))
     return false;
 
   SmallSetVector<BasicBlock *, 4> TrivialUnwindBlocks;

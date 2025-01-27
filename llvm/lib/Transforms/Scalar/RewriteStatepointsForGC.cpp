@@ -2499,8 +2499,9 @@ static void rematerializeLiveValuesAtUses(
     //   statepoint between uses in the block.
     while (!Cand->user_empty()) {
       Instruction *UserI = cast<Instruction>(*Cand->user_begin());
-      Instruction *RematChain = rematerializeChain(
-          Record.ChainToBase, UserI->getIterator(), Record.RootOfChain, PointerToBase[Cand]);
+      Instruction *RematChain =
+          rematerializeChain(Record.ChainToBase, UserI->getIterator(),
+                             Record.RootOfChain, PointerToBase[Cand]);
       UserI->replaceUsesOfWith(Cand, RematChain);
       PointerToBase[RematChain] = PointerToBase[Cand];
     }
