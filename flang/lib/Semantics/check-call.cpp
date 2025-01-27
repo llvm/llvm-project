@@ -1616,6 +1616,36 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
   }
 }
 
+// EVENT_QUERY (F'2023 16.9.82)
+static void CheckEvent_Query(evaluate::ActualArguments &arguments,
+    evaluate::FoldingContext &foldingContext) {
+  if (arguments.size() > 0 && arguments[0] &&
+      ExtractCoarrayRef(*arguments[0]).has_value()) {
+    foldingContext.messages().Say(arguments[0]->sourceLocation(),
+        "EVENT= argument to EVENT_QUERY must not be coindexed"_err_en_US);
+  }
+  if (arguments.size() > 1 && arguments[1]) {
+    if (auto dyType{arguments[1]->GetType()}) {
+      int defaultInt{
+          foldingContext.defaults().GetDefaultKind(TypeCategory::Integer)};
+      if (dyType->category() == TypeCategory::Integer &&
+          dyType->kind() < defaultInt) {
+        foldingContext.messages().Say(arguments[1]->sourceLocation(),
+            "COUNT= argument to EVENT_QUERY must be an integer with kind >= %d"_err_en_US,
+            defaultInt);
+      }
+    }
+  }
+  if (arguments.size() > 2 && arguments[2]) {
+    if (auto dyType{arguments[2]->GetType()}) {
+      if (dyType->category() == TypeCategory::Integer && dyType->kind() < 2) {
+        foldingContext.messages().Say(arguments[2]->sourceLocation(),
+            "STAT= argument to EVENT_QUERY must be an integer with kind >= 2 when present"_err_en_US);
+      }
+    }
+  }
+}
+
 // IMAGE_INDEX (F'2023 16.9.107)
 static void CheckImage_Index(evaluate::ActualArguments &arguments,
     parser::ContextualMessages &messages) {
@@ -1952,6 +1982,8 @@ static void CheckSpecificIntrinsic(const characteristics::Procedure &proc,
     const Scope *scope, const evaluate::SpecificIntrinsic &intrinsic) {
   if (intrinsic.name == "associated") {
     CheckAssociated(arguments, context, scope);
+  } else if (intrinsic.name == "event_query") {
+    CheckEvent_Query(arguments, context.foldingContext());
   } else if (intrinsic.name == "image_index") {
     CheckImage_Index(arguments, context.foldingContext().messages());
   } else if (intrinsic.name == "max" || intrinsic.name == "min") {

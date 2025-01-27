@@ -96,6 +96,7 @@ ENUM_CLASS(KindCode, none, defaultIntegerKind,
     typeless, // BOZ literals are INTEGER with this kind
     ieeeFlagType, // IEEE_FLAG_TYPE from ISO_FORTRAN_EXCEPTION
     ieeeRoundType, // IEEE_ROUND_TYPE from ISO_FORTRAN_ARITHMETIC
+    eventType, // EVENT_TYPE from module ISO_FORTRAN_ENV (for coarrays)
     teamType, // TEAM_TYPE from module ISO_FORTRAN_ENV (for coarrays)
     kindArg, // this argument is KIND=
     effectiveKind, // for function results: "kindArg" value, possibly defaulted
@@ -129,6 +130,7 @@ static constexpr TypePattern DefaultChar{CharType, KindCode::defaultCharKind};
 static constexpr TypePattern DefaultLogical{
     LogicalType, KindCode::defaultLogicalKind};
 static constexpr TypePattern BOZ{IntType, KindCode::typeless};
+static constexpr TypePattern EventType{DerivedType, KindCode::eventType};
 static constexpr TypePattern IeeeFlagType{DerivedType, KindCode::ieeeFlagType};
 static constexpr TypePattern IeeeRoundType{
     DerivedType, KindCode::ieeeRoundType};
@@ -1471,6 +1473,13 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"time", TypePattern{RealType, KindCode::exactKind, 4},
                 Rank::scalar, Optionality::required, common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"event_query",
+        {{"event", EventType, Rank::scalar},
+            {"count", AnyInt, Rank::scalar, Optionality::required,
+                common::Intent::Out},
+            {"stat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"execute_command_line",
         {{"command", DefaultChar, Rank::scalar},
             {"wait", AnyLogical, Rank::scalar, Optionality::optional},
@@ -1592,7 +1601,6 @@ static const IntrinsicInterface intrinsicSubroutine[]{
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
 };
 
-// TODO: Intrinsic subroutine EVENT_QUERY
 // TODO: Collective intrinsic subroutines: co_reduce
 
 // Finds a built-in derived type and returns it as a DynamicType.
@@ -1967,6 +1975,11 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::none:
     case KindCode::typeless:
       argOk = false;
+      break;
+    case KindCode::eventType:
+      argOk = !type->IsUnlimitedPolymorphic() &&
+          type->category() == TypeCategory::Derived &&
+          semantics::IsEventType(&type->GetDerivedTypeSpec());
       break;
     case KindCode::ieeeFlagType:
       argOk = !type->IsUnlimitedPolymorphic() &&
@@ -3239,7 +3252,7 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
           "Argument of ALLOCATED() must be an ALLOCATABLE object or component"_err_en_US);
     }
   } else if (name == "atomic_add" || name == "atomic_and" ||
-      name == "atomic_or" || name == "atomic_xor") {
+      name == "atomic_or" || name == "atomic_xor" || name == "event_query") {
     return CheckForCoindexedObject(
         context.messages(), call.arguments[2], name, "stat");
   } else if (name == "atomic_cas") {
