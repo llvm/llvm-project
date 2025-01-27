@@ -99,7 +99,7 @@ private:
     /// Initialize the worker thread to run in the background.
     ServerThread(void *Buffers[], plugin::GenericDeviceTy *Devices[],
                  size_t Length)
-        : Running(true), NumUsers(0), CV(), Mutex(), Buffers(Buffers, Length),
+        : Running(false), NumUsers(0), CV(), Mutex(), Buffers(Buffers, Length),
           Devices(Devices, Length) {}
 
     ~ServerThread() { assert(!Running && "Thread not shut down explicitly\n"); }
