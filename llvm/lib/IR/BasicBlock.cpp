@@ -419,7 +419,6 @@ BasicBlock::getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp) const {
     assert(!It.getHeadBit());
 
     return It;
-
   }
   return end();
 }
