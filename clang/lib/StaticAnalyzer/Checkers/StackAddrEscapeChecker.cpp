@@ -20,6 +20,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SValVisitor.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
@@ -233,6 +234,43 @@ void StackAddrEscapeChecker::checkReturnedBlockCaptures(
   }
 }
 
+class FindEscapingStackAddrsVisitor : public FullSValVisitor<FindEscapingStackAddrsVisitor, bool>
+{
+  const StackFrameContext *Ctxt;
+
+  SmallVector<const MemRegion *> Escaped;
+
+  bool IsTopFrame;
+
+public:
+  explicit FindEscapingStackAddrsVisitor(CheckerContext &CC, bool IsTopFrame) : 
+    Ctxt(CC.getStackFrame()), IsTopFrame(IsTopFrame) {}
+
+  bool CheckForEscapes(SVal V) { return Visit(V); }
+
+  bool VisitSymbolVal(nonloc::SymbolVal SymV) {
+    return Visit(SymV.getSymbol());
+  }
+
+  bool VisitLocAsInteger(nonloc::LocAsInteger LAI) {
+    return Visit(LAI.getAsRegion());
+  }
+
+  bool VisitMemRegionVal(loc::MemRegionVal MRVal) {
+    return Visit(MRVal.getRegion());
+  }
+
+  bool VisitMemRegion(const MemRegion *R) {
+    const MemSpaceRegion *MS = R->getMemorySpace();
+    const StackSpaceRegion *SSR = dyn_cast<StackSpaceRegion>(MS);
+    if (SSR && Ctxt == SSR->getStackFrame()) {
+      Escaped.push_back(R);
+      return true;
+    }
+    return false;
+  }
+};
+
 void StackAddrEscapeChecker::checkPreCall(const CallEvent &Call,
                                           CheckerContext &C) const {
   if (!ChecksEnabled[CK_StackAddrAsyncEscapeChecker])
@@ -257,7 +295,12 @@ void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS,
     return;
   RetE = RetE->IgnoreParens();
 
+  FindEscapingStackAddrsVisitor EscapeFinder(C, C.getPredecessor()->getLocationContext()->inTopFrame());
+
   SVal V = C.getSVal(RetE);
+
+  bool AnyEscapes = EscapeFinder.CheckForEscapes(V);
+
   const MemRegion *R = V.getAsRegion();
   if (!R)
     return;
@@ -402,7 +445,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
     bool checkForDanglingStackVariable(const MemRegion *Referrer,
                                        const MemRegion *Referred) {
       const auto *ReferrerMemSpace = getStackOrGlobalSpaceRegion(Referrer);
-      const auto *ReferredMemSpace =
+      const auto *ReferredMemSpace = 
           Referred->getMemorySpace()->getAs<StackSpaceRegion>();
 
       if (!ReferrerMemSpace || !ReferredMemSpace)
