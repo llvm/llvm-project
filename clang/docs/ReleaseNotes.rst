@@ -1002,6 +1002,8 @@ Bug Fixes to C++ Support
 - Fixed assertions or false compiler diagnostics in the case of C++ modules for
   lambda functions or inline friend functions defined inside templates (#GH122493).
 - Clang now rejects declaring an alias template with the same name as its template parameter. (#GH123423)
+- Fix type of expression when calling a template which returns an ``__array_rank`` querying a type depending on a
+  template parameter. Now, such expression can be used with ``static_assert`` and ``constexpr``. (#GH123498)
 - Correctly determine the implicit constexprness of lambdas in dependent contexts. (#GH97958) (#GH114234)
 
 Bug Fixes to AST Handling
