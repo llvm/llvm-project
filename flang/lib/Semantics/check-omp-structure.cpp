@@ -213,6 +213,30 @@ private:
   std::map<std::string, std::int64_t> constructNamesAndLevels_;
 };
 
+// `OmpUnitedTaskDesignatorChecker` is used to check if the designator
+// can appear within the TASK construct
+class OmpUnitedTaskDesignatorChecker {
+public:
+  OmpUnitedTaskDesignatorChecker(SemanticsContext &context)
+      : context_{context} {}
+
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
+
+  bool Pre(const parser::Name &name) {
+    if (name.symbol->test(Symbol::Flag::OmpThreadprivate)) {
+      // OpenMP 5.2: 5.2 threadprivate directive restriction
+      context_.Say(name.source,
+          "A THREADPRIVATE variable `%s` cannot appear in an UNTIED TASK region"_err_en_US,
+          name.source);
+    }
+    return true;
+  }
+
+private:
+  SemanticsContext &context_;
+};
+
 bool OmpStructureChecker::CheckAllowedClause(llvmOmpClause clause) {
   unsigned version{context_.langOptions().OpenMPVersion};
   DirectiveContext &dirCtx = GetContext();
@@ -1172,6 +1196,16 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
     HasInvalidWorksharingNesting(
         beginDir.source, llvm::omp::nestedWorkshareErrSet);
     break;
+  case llvm::omp::Directive::OMPD_task: {
+    const auto &clauses{std::get<parser::OmpClauseList>(beginBlockDir.t)};
+    for (const auto &clause : clauses.v) {
+      if (std::get_if<parser::OmpClause::Untied>(&clause.u)) {
+        OmpUnitedTaskDesignatorChecker check{context_};
+        parser::Walk(block, check);
+      }
+    }
+    break;
+  }
   default:
     break;
   }
@@ -1712,6 +1746,36 @@ void OmpStructureChecker::Leave(const parser::OpenMPDeclareTargetConstruct &x) {
 void OmpStructureChecker::Enter(const parser::OmpErrorDirective &x) {
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_error);
+}
+
+void OmpStructureChecker::Enter(const parser::OpenMPDispatchConstruct &x) {
+  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_dispatch);
+  const auto &block{std::get<parser::Block>(x.t)};
+  if (block.empty() || block.size() > 1) {
+    context_.Say(x.source,
+        "The DISPATCH construct is empty or contains more than one statement"_err_en_US);
+    return;
+  }
+
+  auto it{block.begin()};
+  bool passChecks{false};
+  if (const parser::AssignmentStmt *
+      assignStmt{parser::Unwrap<parser::AssignmentStmt>(*it)}) {
+    if (parser::Unwrap<parser::FunctionReference>(assignStmt->t)) {
+      passChecks = true;
+    }
+  } else if (parser::Unwrap<parser::CallStmt>(*it)) {
+    passChecks = true;
+  }
+
+  if (!passChecks) {
+    context_.Say(x.source,
+        "The DISPATCH construct does not contain a SUBROUTINE or FUNCTION"_err_en_US);
+  }
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPDispatchConstruct &x) {
+  dirContext_.pop_back();
 }
 
 void OmpStructureChecker::Leave(const parser::OmpErrorDirective &x) {
