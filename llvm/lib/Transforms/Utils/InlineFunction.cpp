@@ -184,14 +184,14 @@ namespace {
 } // end anonymous namespace
 
 static IntrinsicInst *getConvergenceEntry(BasicBlock &BB) {
-  auto *I = BB.getFirstNonPHI();
-  while (I) {
-    if (auto *IntrinsicCall = dyn_cast<ConvergenceControlInst>(I)) {
+  BasicBlock::iterator It = BB.getFirstNonPHIIt();
+  while (It != BB.end()) {
+    if (auto *IntrinsicCall = dyn_cast<ConvergenceControlInst>(It)) {
       if (IntrinsicCall->isEntry()) {
         return IntrinsicCall;
       }
     }
-    I = I->getNextNode();
+    It = std::next(It);
   }
   return nullptr;
 }

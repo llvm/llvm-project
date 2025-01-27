@@ -1661,7 +1661,7 @@ void AddressSanitizer::instrumentMaskedLoadOrStore(
   if (Stride)
     Stride = IB.CreateZExtOrTrunc(Stride, IntptrTy);
 
-  SplitBlockAndInsertForEachLane(EVL, LoopInsertBefore,
+  SplitBlockAndInsertForEachLane(EVL, LoopInsertBefore->getIterator(),
                                  [&](IRBuilderBase &IRB, Value *Index) {
     Value *MaskElem = IRB.CreateExtractElement(Mask, Index);
     if (auto *MaskElemC = dyn_cast<ConstantInt>(MaskElem)) {
