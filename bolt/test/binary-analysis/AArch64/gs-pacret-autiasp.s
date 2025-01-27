@@ -183,6 +183,40 @@ f_nonx30_ret_ok:
         ret     x16
         .size f_nonx30_ret_ok, .-f_nonx30_ret_ok
 
+        .globl  f_detect_clobbered_x30_passed_to_other
+        .type   f_detect_clobbered_x30_passed_to_other,@function
+f_detect_clobbered_x30_passed_to_other:
+        str x30, [sp]
+        ldr x30, [sp]
+// FIXME: Ideally, the pac-ret scanner would report on the following instruction, which
+// performs a tail call, that x30 might be attacker-controlled.
+// CHECK-NOT: function f_detect_clobbered_x30_passed_to_other
+        b   f_tail_called
+        .size f_callclobbered_x30, .-f_callclobbered_x30
+
+        .globl  f_tail_called
+        .type   f_tail_called,@function
+f_tail_called:
+        ret
+        .size f_tail_called, .-f_tail_called
+
+        .globl  f_nonx30_ret_non_auted
+        .type   f_nonx30_ret_non_auted,@function
+f_nonx30_ret_non_auted:
+// FIXME: x1 is not authenticated, so should this be reported?
+//        Note that we assume it's fine for x30 to not be authenticated before
+//        returning to, as assuming that x30 is not attacker controlled at function
+//        entry is part (implicitly) of the pac-ret hardening scheme.
+//        It's probably an open question whether for other hardening schemes, such as
+//        PAuthABI, which registers should be considered "clean" or not at function entry.
+//        In other words, which registers have to be authenticated before being used as
+//        a pointer and which ones not?
+//        For a more detailed discussion, see
+//        https://github.com/llvm/llvm-project/pull/122304#discussion_r1923662744
+// CHECK-NOT: f_nonx30_ret_non_auted
+        ret     x1
+        .size f_nonx30_ret_non_auted, .-f_nonx30_ret_non_auted
+
 
         .globl  f_callclobbered_x30
         .type   f_callclobbered_x30,@function
