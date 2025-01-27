@@ -8,7 +8,7 @@
 ;      }
 ;    }
 ;
-; FIXME: The truncated value should be a paramter.
+; FIXME: The truncated value should be a parameter.
 ; CHECK:         Assumed Context:
 ; CHECK-NEXT:    [N, tmp, M] -> { : }
 ; CHECK-NEXT:    Invalid Context:

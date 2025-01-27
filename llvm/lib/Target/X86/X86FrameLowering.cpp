@@ -234,6 +234,14 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
   MachineInstr::MIFlag Flag =
       isSub ? MachineInstr::FrameSetup : MachineInstr::FrameDestroy;
 
+  if (!Uses64BitFramePtr && !isUInt<32>(Offset)) {
+    // We're being asked to adjust a 32-bit stack pointer by 4 GiB or more.
+    // This might be unreachable code, so don't complain now; just trap if
+    // it's reached at runtime.
+    BuildMI(MBB, MBBI, DL, TII.get(X86::TRAP));
+    return;
+  }
+
   uint64_t Chunk = (1LL << 31) - 1;
 
   MachineFunction &MF = *MBB.getParent();
@@ -829,10 +837,7 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
           .addReg(StackPtr)
           .setMIFlag(MachineInstr::FrameSetup);
     } else {
-      // We're being asked to probe a stack frame that's 4 GiB or larger,
-      // but our stack pointer is only 32 bits.  This might be unreachable
-      // code, so don't complain now; just trap if it's reached at runtime.
-      BuildMI(MBB, MBBI, DL, TII.get(X86::TRAP));
+      llvm_unreachable("Offset too large for 32-bit stack pointer");
     }
 
     // while in the loop, use loop-invariant reg for CFI,
