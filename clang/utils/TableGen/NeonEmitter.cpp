@@ -74,6 +74,7 @@ enum ClassKind {
   ClassI,     // generic integer instruction, e.g., "i8" suffix
   ClassS,     // signed/unsigned/poly, e.g., "s8", "u8" or "p8" suffix
   ClassW,     // width-specific instruction, e.g., "8" suffix
+  ClassV,     // void-suffix instruction, no suffix
   ClassB,     // bitcast arguments with enum argument to specify type
   ClassL,     // Logical instructions which are op instructions
               // but we need to not emit any suffix for in our
@@ -144,7 +145,7 @@ class Type {
 private:
   TypeSpec TS;
 
-  enum TypeKind { Void, Float, SInt, UInt, Poly, BFloat16, MFloat8 };
+  enum TypeKind { Void, Float, SInt, UInt, Poly, BFloat16, MFloat8, FPM };
   TypeKind Kind;
   bool Immediate, Constant, Pointer;
   // ScalarForMangling and NoManglingQ are really not suited to live here as
@@ -198,6 +199,7 @@ public:
   bool isVoid() const { return Kind == Void; }
   bool isBFloat16() const { return Kind == BFloat16; }
   bool isMFloat8() const { return Kind == MFloat8; }
+  bool isFPM() const { return Kind == FPM; }
   unsigned getNumElements() const { return Bitwidth / ElementBitwidth; }
   unsigned getSizeInBits() const { return Bitwidth; }
   unsigned getElementSizeInBits() const { return ElementBitwidth; }
@@ -600,6 +602,7 @@ public:
     const Record *SI = R.getClass("SInst");
     const Record *II = R.getClass("IInst");
     const Record *WI = R.getClass("WInst");
+    const Record *VI = R.getClass("VInst");
     const Record *SOpI = R.getClass("SOpInst");
     const Record *IOpI = R.getClass("IOpInst");
     const Record *WOpI = R.getClass("WOpInst");
@@ -609,6 +612,7 @@ public:
     ClassMap[SI] = ClassS;
     ClassMap[II] = ClassI;
     ClassMap[WI] = ClassW;
+    ClassMap[VI] = ClassV;
     ClassMap[SOpI] = ClassS;
     ClassMap[IOpI] = ClassI;
     ClassMap[WOpI] = ClassW;
@@ -641,6 +645,9 @@ public:
 std::string Type::str() const {
   if (isVoid())
     return "void";
+  if (isFPM())
+    return "fpm_t";
+
   std::string S;
 
   if (isInteger() && !isSigned())
@@ -699,6 +706,8 @@ std::string Type::builtin_str() const {
   } else if (isMFloat8()) {
     assert(ElementBitwidth == 8 && "MFloat8 can only be 8 bits");
     S += "m";
+  } else if (isFPM()) {
+    S += "UWi";
   } else
     switch (ElementBitwidth) {
     case 16: S += "h"; break;
@@ -925,6 +934,13 @@ void Type::applyModifiers(StringRef Mods) {
     case 'P':
       Kind = Poly;
       break;
+    case 'V':
+      Kind = FPM;
+      Bitwidth = ElementBitwidth = 64;
+      NumVectors = 0;
+      Immediate = Constant = Pointer = false;
+      ScalarForMangling = NoManglingQ = true;
+      break;
     case '>':
       assert(ElementBitwidth < 128);
       ElementBitwidth *= 2;
@@ -998,6 +1014,9 @@ std::string Intrinsic::getInstTypeCode(Type T, ClassKind CK) const {
   bool printNumber = true;
 
   if (CK == ClassB && TargetGuard == "neon")
+    return "";
+
+  if (this->CK == ClassV)
     return "";
 
   if (T.isBFloat16())
