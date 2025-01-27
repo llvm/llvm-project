@@ -5,12 +5,8 @@ class basic_string;
 }
 template <typename, typename> class basic_istream;
 template <typename> struct __get_first_arg;
-template <typename _Ptr> using __ptr_traits_elem_t = __get_first_arg<_Ptr>;
-template <typename> struct __ptr_traits_impl;
-template <typename _Ptr>
-struct pointer_traits : __ptr_traits_impl<__ptr_traits_elem_t<_Ptr>> {};
 struct allocator_traits {
-  using type = pointer_traits<int>;
+  using type = __get_first_arg<int>;
 };
 } // namespace std
 namespace std {

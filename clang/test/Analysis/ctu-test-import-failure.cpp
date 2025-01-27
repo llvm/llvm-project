@@ -28,7 +28,7 @@ namespace CommandLine {
 extern const int RootExamples[];
 }
 
-// expected-warning@Inputs/ctu-test-import-failure-import.cpp:18{{incompatible definitions}}
-// expected-warning@Inputs/ctu-test-import-failure-import.cpp:18{{incompatible definitions}}
-// expected-note@Inputs/ctu-test-import-failure-import.cpp:18{{no corresponding field here}}
-// expected-note@Inputs/ctu-test-import-failure-import.cpp:18{{no corresponding field here}}
+// expected-warning@Inputs/ctu-test-import-failure-import.cpp:14{{incompatible definitions}}
+// expected-warning@Inputs/ctu-test-import-failure-import.cpp:14{{incompatible definitions}}
+// expected-note@Inputs/ctu-test-import-failure-import.cpp:14{{no corresponding field here}}
+// expected-note@Inputs/ctu-test-import-failure-import.cpp:14{{no corresponding field here}}
