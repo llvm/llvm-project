@@ -1159,7 +1159,7 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   // For an equivalence class of invariant loads we pre-load the representing
   // element with the unified execution context. However, we have to map all
   // elements of the class to the one preloaded load as they are referenced
-  // during the code generation and therefor need to be mapped.
+  // during the code generation and therefore need to be mapped.
   const MemoryAccessList &MAs = IAClass.InvariantAccesses;
   if (MAs.empty())
     return true;
