@@ -134,14 +134,14 @@ namespace partial_full_mix {
   template<typename ...T> struct tuple {};
   template<typename ...T> struct A {
     template<typename ...U> static pair<tuple<T...>, tuple<U...>> f(pair<T, U> ...p);
-    // expected-note@-1 {{[with U = <char, double, long>]: pack expansion contains parameter pack 'U' that has a different length (2 vs. 3) from outer parameter packs}}
+    // expected-note@-1 {{[with U = <char, double, long>]: pack expansion contains parameter packs 'T' and 'U' that have different lengths (2 vs. 3)}}
     // expected-note@-2 {{[with U = <char, double, void>]: pack expansion contains parameter pack 'U' that has a different length (at least 3 vs. 2) from outer parameter packs}}
 
     template<typename ...U> static pair<tuple<T...>, tuple<U...>> g(pair<T, U> ...p, ...);
-    // expected-note@-1 {{[with U = <char, double, long>]: pack expansion contains parameter pack 'U' that has a different length (2 vs. 3) from outer parameter packs}}
+    // expected-note@-1 {{[with U = <char, double, long>]: pack expansion contains parameter packs 'T' and 'U' that have different lengths (2 vs. 3)}}
 
     template<typename ...U> static tuple<U...> h(tuple<pair<T, U>..., pair<int, int>>);
-    // expected-note@-1 {{[with U = <int[2]>]: pack expansion contains parameter pack 'U' that has a different length (2 vs. 1) from outer parameter packs}}
+    // expected-note@-1 {{[with U = <int[2]>]: pack expansion contains parameter packs 'T' and 'U' that have different lengths (2 vs. 1)}}
   };
 
   pair<tuple<int, float>, tuple<char, double>> k1 = A<int, float>().f<char>(pair<int, char>(), pair<float, double>());
@@ -211,7 +211,7 @@ using any_pairs_list = X<int, int>::Y<T...>; // #any_pairs_list
 
 template <class... T>
 using any_pairs_list_2 = X<int, int>::Y<>;
-// expected-error@#GH17042_Y {{different length (2 vs. 0)}} \
+// expected-error@#GH17042_Y {{different lengths (2 vs. 0)}} \
 // expected-note@-1 {{requested here}}
 
 template <class A, class B, class... P>
@@ -219,20 +219,20 @@ using any_pairs_list_3 = X<int, int>::Y<A, B, P...>; // #any_pairs_list_3
 
 template <class A, class B, class C, class... P>
 using any_pairs_list_4 = X<int, int>::Y<A, B, C, P...>;
-// expected-error@#GH17042_Y {{different length (2 vs. at least 3)}} \
+// expected-error@#GH17042_Y {{different lengths (2 vs. at least 3)}} \
 // expected-note@-1 {{requested here}}
 
 static_assert(__is_same(any_pairs_list<char, char>, X<void(int, char), void(int, char)>), "");
 
 static_assert(!__is_same(any_pairs_list<char, char, char>, X<void(int, char), void(int, char)>), "");
-// expected-error@#GH17042_Y {{different length (2 vs. 3)}} \
+// expected-error@#GH17042_Y {{different lengths (2 vs. 3)}} \
 // expected-note@#any_pairs_list {{requested here}} \
 // expected-note@-1 {{requested here}}
 
 static_assert(__is_same(any_pairs_list_3<char, char>, X<void(int, char), void(int, char)>), "");
 
 static_assert(!__is_same(any_pairs_list_3<char, char, float>, X<void(int, char), void(int, char)>), "");
-// expected-error@#GH17042_Y {{different length (2 vs. 3)}} \
+// expected-error@#GH17042_Y {{different lengths (2 vs. 3)}} \
 // expected-note@#any_pairs_list_3 {{requested here}} \
 // expected-note@-1 {{requested here}}
 
@@ -255,6 +255,43 @@ template <int... Args1> struct Nttp {
 };
 
 template <int... Args> using Alias = Nttp<1, 2, 3>::B<Args...>;
+}
+
+// This test case comes from https://bugs.llvm.org/show_bug.cgi?id=16668
+namespace PR16668 {
+  template<int, typename> struct P {};
+
+  template<int ...A> struct S {
+     template<int ...B> using sum = S<A + B ...>; // expected-error {{different lengths (3 vs. 4)}}
+
+     template<typename ...Ts> void f(P<A, Ts> ...);
+
+#if 0
+     // FIXME: Substituting into Fn resulted in rejects-valid.
+     template<typename ...Ts> using Fn = void(S::*)(P<A, Ts>...);
+     template<typename ...Ts> void g(Fn<Ts...>);
+#endif
+   };
+
+   template<int ...C> using X = S<1, 2, 3>::sum<4, C ...>; // expected-note {{here}}
+
+   using Y = X<5, 6>;
+   using Y = S<5, 7, 9>;
+
+   using Z = X<5, 6, 7>; // expected-note {{here}}
+
+   void g() {
+     P<0, int> p0;
+     P<1, char> p1;
+     P<2, double> p2;
+     using S = S<0, 1, 2>;
+     S s;
+     s.f(p0, p1, p2);
+#if 0
+     s.g(&S::f<int, char, double>);
+     s.g<int, char, double>(&S::f);
+#endif
+   }
 }
 
 }
