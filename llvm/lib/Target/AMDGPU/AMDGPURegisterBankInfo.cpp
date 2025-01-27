@@ -3366,6 +3366,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(B, MI, 1);
       return;
     case Intrinsic::amdgcn_s_barrier_join:
+    case Intrinsic::amdgcn_s_wakeup_barrier:
       constrainOpWithReadfirstlane(B, MI, 1);
       return;
     case Intrinsic::amdgcn_s_barrier_init:
@@ -5370,6 +5371,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_rts_ray_restore:
     case Intrinsic::amdgcn_rts_update_ray:
     case Intrinsic::amdgcn_rts_read_vertex:
+    case Intrinsic::amdgcn_rts_read_vertex_coords:
+    case Intrinsic::amdgcn_rts_read_packet_info:
+    case Intrinsic::amdgcn_rts_read_prim_info:
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_ds_ordered_add:
     case Intrinsic::amdgcn_ds_ordered_swap: {
@@ -5702,6 +5706,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       break;
     case Intrinsic::amdgcn_s_barrier_join:
+    case Intrinsic::amdgcn_s_wakeup_barrier:
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       break;
     case Intrinsic::amdgcn_s_barrier_init:

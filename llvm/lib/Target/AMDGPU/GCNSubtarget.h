@@ -1560,7 +1560,7 @@ public:
   bool hasMadU64U32NoCarry() const { return GFX1250Insts && !GFX13Insts; }
 
   // \returns true if the target has V_{MIN|MAX}_{I|U}64 instructions.
-  bool hasIntMinMax64() const { return GFX1250Insts; }
+  bool hasIntMinMax64() const { return GFX1250Insts && !GFX13Insts; }
 
   // \returns true if the target has V_ADD_{MIN|MAX}_{I|U}32 instructions.
   bool hasAddMinMaxInsts() const { return GFX1250Insts; }

@@ -120,3 +120,35 @@ define amdgpu_cs <9 x float> @rts_read_vertex_test(ptr addrspace(1) %gaddr, i32 
   %ret = call <9 x float> @llvm.amdgcn.rts.read.vertex(ptr addrspace(1) %gaddr, i32 %addr2)
   ret  <9 x float> %ret
 }
+
+define amdgpu_cs void @test_rts_read_packet_info(ptr addrspace(1) %gaddr){
+; GFX13-LABEL: test_rts_read_packet_info:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    rts_read_packet_info v0, [v0, v1], null r128
+; GFX13-NEXT:    s_wait_rtscnt 0x0
+; GFX13-NEXT:    export prim v0, v0, v0, v0 done
+; GFX13-NEXT:    s_endpgm
+  %ret = call i32 @llvm.amdgcn.rts.read.packet.info(ptr addrspace(1) %gaddr)
+  call void @llvm.amdgcn.exp.i32(i32 20, i32 15, i32 %ret, i32 undef, i32 undef, i32 undef, i1 true, i1 false)
+  ret void
+}
+
+define amdgpu_cs <3 x float>  @rts_read_vertex_coords(ptr addrspace(1) %gaddr, i32 %addr2){
+; GFX13-LABEL: rts_read_vertex_coords:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    rts_read_vertex_coords v[0:2], [v0, v1, v2], null r128
+; GFX13-NEXT:    s_wait_rtscnt 0x0
+; GFX13-NEXT:    ; return to shader part epilog
+  %ret = call <3 x float> @llvm.amdgcn.rts.read.vertex.coords(ptr addrspace(1) %gaddr, i32 %addr2)
+  ret <3 x float> %ret
+}
+
+define amdgpu_cs <3 x float>  @rts_read_prim_info(ptr addrspace(1) %gaddr, i32 %addr2){
+; GFX13-LABEL: rts_read_prim_info:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    rts_read_prim_info v[0:2], [v0, v1, v2], null r128
+; GFX13-NEXT:    s_wait_rtscnt 0x0
+; GFX13-NEXT:    ; return to shader part epilog
+  %ret = call <3 x float> @llvm.amdgcn.rts.read.prim.info(ptr addrspace(1) %gaddr, i32 %addr2)
+  ret <3 x float> %ret
+}
