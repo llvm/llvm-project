@@ -22366,7 +22366,17 @@ TEST_F(FormatTest, BreakPenaltyAfterForLoopLParen) {
 }
 
 TEST_F(FormatTest, BreakPenaltyBeforeMemberAccess) {
-  FormatStyle Style = getLLVMStyle();
+  auto Style = getLLVMStyle();
+  EXPECT_EQ(Style.PenaltyBreakBeforeMemberAccess, 150u);
+
+  Style.ColumnLimit = 60;
+  Style.PenaltyBreakBeforeMemberAccess = 110;
+  verifyFormat("aaaaaaaa.aaaaaaaa.bbbbbbbb()\n"
+               "    .ccccccccccccccccccccc(dddddddd);\n"
+               "aaaaaaaa.aaaaaaaa\n"
+               "    .bbbbbbbb(cccccccccccccccccccccccccccccccc);",
+               Style);
+
   Style.ColumnLimit = 8;
   Style.PenaltyExcessCharacter = 15;
   verifyFormat("foo->bar\n"
