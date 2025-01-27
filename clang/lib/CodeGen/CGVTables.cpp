@@ -772,23 +772,6 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
   case VTableComponent::CK_DeletingDtorPointer: {
     GlobalDecl GD = component.getGlobalDecl();
 
-    if (CGM.getLangOpts().CUDA) {
-      // Emit NULL for methods we can't codegen on this
-      // side. Otherwise we'd end up with vtable with unresolved
-      // references.
-      const CXXMethodDecl *MD = cast<CXXMethodDecl>(GD.getDecl());
-      // OK on device side: functions w/ __device__ attribute
-      // OK on host side: anything except __device__-only functions.
-      bool CanEmitMethod =
-          CGM.getLangOpts().CUDAIsDevice
-              ? MD->hasAttr<CUDADeviceAttr>()
-              : (MD->hasAttr<CUDAHostAttr>() || !MD->hasAttr<CUDADeviceAttr>());
-      if (!CanEmitMethod)
-        return builder.add(
-            llvm::ConstantExpr::getNullValue(CGM.GlobalsInt8PtrTy));
-      // Method is acceptable, continue processing as usual.
-    }
-
     auto getSpecialVirtualFn = [&](StringRef name) -> llvm::Constant * {
       // FIXME(PR43094): When merging comdat groups, lld can select a local
       // symbol as the signature symbol even though it cannot be accessed
@@ -845,6 +828,24 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
 
     // Otherwise we can use the method definition directly.
     } else {
+
+      if (CGM.getLangOpts().CUDA) {
+        // Emit NULL for methods we can't codegen on this
+        // side. Otherwise we'd end up with vtable with unresolved
+        // references.
+        const CXXMethodDecl *MD = cast<CXXMethodDecl>(GD.getDecl());
+        // OK on device side: functions w/ __device__ attribute
+        // OK on host side: anything except __device__-only functions.
+        bool CanEmitMethod =
+            CGM.getLangOpts().CUDAIsDevice
+                ? MD->hasAttr<CUDADeviceAttr>()
+                : (MD->hasAttr<CUDAHostAttr>() || !MD->hasAttr<CUDADeviceAttr>());
+        if (!CanEmitMethod)
+          return builder.add(
+              llvm::ConstantExpr::getNullValue(CGM.GlobalsInt8PtrTy));
+        // Method is acceptable, continue processing as usual.
+      }
+
       llvm::Type *fnTy = CGM.getTypes().GetFunctionTypeForVTable(GD);
       fnPtr = CGM.GetAddrOfFunction(GD, fnTy, /*ForVTable=*/true);
       if (CGM.getCodeGenOpts().PointerAuth.CXXVirtualFunctionPointers)
