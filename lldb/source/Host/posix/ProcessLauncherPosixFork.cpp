@@ -24,10 +24,6 @@
 #include <csignal>
 #include <sstream>
 
-#ifdef __ANDROID__
-#define PT_TRACE_ME PTRACE_TRACEME
-#endif
-
 #if defined(__linux__)
 #include <sys/personality.h>
 #endif

@@ -1664,8 +1664,7 @@ bool MachineSinking::aggressivelySinkIntoCycle(
     return false;
 
   LLVM_DEBUG(dbgs() << "AggressiveCycleSink: Finding sink block for: " << I);
-  MachineBasicBlock *Preheader = Cycle->getCyclePreheader();
-  assert(Preheader && "Cycle sink needs a preheader block");
+  assert(Cycle->getCyclePreheader() && "Cycle sink needs a preheader block");
   SmallVector<std::pair<RegSubRegPair, MachineInstr *>> Uses;
 
   MachineOperand &DefMO = I.getOperand(0);
