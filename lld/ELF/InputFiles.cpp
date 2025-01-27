@@ -1131,8 +1131,8 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
     sym->isUsedInRegularObj = true;
     if (LLVM_UNLIKELY(eSym.st_shndx == SHN_COMMON)) {
       if (value == 0 || value >= UINT32_MAX)
-        Fatal(ctx) << this << ": common symbol '" << sym->getName()
-                   << "' has invalid alignment: " << value;
+        Err(ctx) << this << ": common symbol '" << sym->getName()
+                 << "' has invalid alignment: " << value;
       hasCommonSyms = true;
       sym->resolve(ctx, CommonSymbol{ctx, this, StringRef(), binding, stOther,
                                      type, value, size});
@@ -1384,16 +1384,22 @@ std::vector<uint32_t> SharedFile::parseVerneed(const ELFFile<ELFT> &obj,
   ArrayRef<uint8_t> data = CHECK2(obj.getSectionContents(*sec), this);
   const uint8_t *verneedBuf = data.begin();
   for (unsigned i = 0; i != sec->sh_info; ++i) {
-    if (verneedBuf + sizeof(typename ELFT::Verneed) > data.end())
-      Fatal(ctx) << this << " has an invalid Verneed";
+    if (verneedBuf + sizeof(typename ELFT::Verneed) > data.end()) {
+      Err(ctx) << this << " has an invalid Verneed";
+      break;
+    }
     auto *vn = reinterpret_cast<const typename ELFT::Verneed *>(verneedBuf);
     const uint8_t *vernauxBuf = verneedBuf + vn->vn_aux;
     for (unsigned j = 0; j != vn->vn_cnt; ++j) {
-      if (vernauxBuf + sizeof(typename ELFT::Vernaux) > data.end())
-        Fatal(ctx) << this << " has an invalid Vernaux";
+      if (vernauxBuf + sizeof(typename ELFT::Vernaux) > data.end()) {
+        Err(ctx) << this << " has an invalid Vernaux";
+        break;
+      }
       auto *aux = reinterpret_cast<const typename ELFT::Vernaux *>(vernauxBuf);
-      if (aux->vna_name >= this->stringTable.size())
-        Fatal(ctx) << this << " has a Vernaux with an invalid vna_name";
+      if (aux->vna_name >= this->stringTable.size()) {
+        Err(ctx) << this << " has a Vernaux with an invalid vna_name";
+        break;
+      }
       uint16_t version = aux->vna_other & VERSYM_VERSION;
       if (version >= verneeds.size())
         verneeds.resize(version + 1);
@@ -1481,13 +1487,17 @@ template <class ELFT> void SharedFile::parse() {
   for (const Elf_Dyn &dyn : dynamicTags) {
     if (dyn.d_tag == DT_NEEDED) {
       uint64_t val = dyn.getVal();
-      if (val >= this->stringTable.size())
-        Fatal(ctx) << this << ": invalid DT_NEEDED entry";
+      if (val >= this->stringTable.size()) {
+        Err(ctx) << this << ": invalid DT_NEEDED entry";
+        return;
+      }
       dtNeeded.push_back(this->stringTable.data() + val);
     } else if (dyn.d_tag == DT_SONAME) {
       uint64_t val = dyn.getVal();
-      if (val >= this->stringTable.size())
-        Fatal(ctx) << this << ": invalid DT_SONAME entry";
+      if (val >= this->stringTable.size()) {
+        Err(ctx) << this << ": invalid DT_SONAME entry";
+        return;
+      }
       soName = this->stringTable.data() + val;
     }
   }
