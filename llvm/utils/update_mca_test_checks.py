@@ -12,6 +12,7 @@ import glob
 import os
 import sys
 import warnings
+import re
 
 from UpdateTestChecks import common
 
@@ -63,6 +64,18 @@ def _get_parser():
         metavar="<path>",
         default="llvm-mca",
         help="the binary to use to generate the test case " "(default: llvm-mca)",
+    )
+    parser.add_argument(
+        "--check-sched-info",
+        action="store_true",
+        help="check scheduling info if references are given "
+        "in comment after each instruction",
+    )
+    parser.add_argument(
+        "--update-sched-info",
+        action="store_true",
+        help="updating scheduling info references given "
+        "in comment after each instruction",
     )
     parser.add_argument("tests", metavar="<test-path>", nargs="+")
     return parser
@@ -245,6 +258,156 @@ def _align_matching_blocks(all_blocks, farthest_indexes):
     return False
 
 
+def _check_sched_values(line, scheds, units, err, updates):
+    """Check for scheduling values differences
+    between values reported by llvm-mca with -scheduling-info option
+    and values in comment at the end of assembly instruction line (//).
+    Reference units must be included in the list reported by llvm-mca.
+    """
+
+    _err = []
+    # Got zip of llvm output and values from comment
+    infos = ["MicroOps", "Latency", "Forward latency", "Throughput"]
+    sched_info = zip(infos, scheds[0].split(), scheds[1].split())
+    for si in sched_info:
+        if float(si[1]) != float(si[2]):
+            updates.add("sched")
+            _err.append(
+                "\t=> {} LLVM value {} != reference value in comment {}\n".format(
+                    si[0], si[1], si[2]
+                )
+            )
+
+    for u in units[1]:
+        if not u in units[0]:
+            updates.add("units")
+            _err.append(
+                "\t=>  LLVM units {} != reference units in comment {}\n".format(
+                    units[0], units[1]
+                )
+            )
+            break
+
+    if len(_err) > 0:
+        err.append("{}\n{}".format(line, "".join(_err)))
+        return True
+
+    return False
+
+
+def _replace_values(oldvalue, newvalue):
+    """Replacing values with the same format (spaces)
+    than oldvalue
+    """
+
+    fmt = re.sub("[0-9.]+", "{}", oldvalue)
+    return fmt.format(*newvalue.split())
+
+
+def _has_comment(line, cmt_format):
+    """Returns True if line contains C++ or C style
+    comment. Set cmt_format first and optional second
+    comment caracters.
+    """
+
+    cpp_comment = re.search("\/\/", line)
+    c_comment = re.search("\/\*", line)
+    if "//" in line:
+        cmt_format.append("//")
+        return True
+
+    if "/*" in line:
+        cmt_format.append("/*")
+        cmt_format.append("*/")
+        return True
+
+    return False
+
+
+def _sched_info(raw_tool_output, test_path, check_sched_info, update_sched_info):
+    """Check scheduling info if passed in assembly comment after each
+    instructions.
+
+    Recognized form is:
+     1 | 2 | 2 | 4.00 | ABSv1i64 | V1UnitV, | abs   d15, d23
+            // ABS <V><d>, <V><n> \\ ASIMD arith, basic  \\ 1 2  2  4.0 V1UnitV
+
+    Format:
+    [1] // [2] \\ [3] \\ [4]
+    [1]: <llvm-mca output> <asm instruction>
+    [2]: <Architecture description>
+    [3]: <Scheduling info reference>
+    [4]: <micro ops> <latency> <forward latency> <throughput> <units>
+
+    <llvm-mca output> with -scheduling-info option:
+    <MicroOps> | <latency> | <fwd latency> | <throughput> |
+                                          <side effect> | <llvm opcode> <units>
+
+    The goal is to check [4] regarding llvm-mca output with -scheduling-info [1]
+    option. It will allow to check scheduling info easily when
+    doing code review of scheduling info merge requests.
+    If a difference is found, the comment should be fixed and checked
+    against documentation.
+    """
+
+    scheduling_info = re.compile(
+        "(^\s+|\\\\\s+)([0-9]+[\s|]+[0-9]+" "[\s|]+[0-9]+[\s|]+\s+[0-9.]+)"
+    )
+    units_info = re.compile(
+        "(^\s+|\\\\\s+)[0-9]+[\s|]+[0-9]+" "[\s|]+[0-9]+[\s|]+\s+[0-9.]+[\s|]+([^|*/]+)"
+    )
+
+    fixes = {}
+    err = []
+    instr_idx = 0
+    for b in raw_tool_output.split("\n\n"):
+        for line in b.splitlines():
+            cmt_format = []
+            if _has_comment(line, cmt_format):
+                scheds = scheduling_info.findall(line)
+                scheds = [s[1].replace("|", "") for s in scheds]
+                if len(scheds) == 2:
+                    cmt = cmt_format[0] + line.split(cmt_format[0])[1]
+                    units = units_info.findall(line)
+                    c_units = [re.sub("\s", "", u[1]).split(",") for u in units]
+                    updates = set()
+                    if _check_sched_values(line, scheds, c_units, err, updates):
+                        if update_sched_info:
+                            if "sched" in updates:
+                                cmt = cmt.replace(
+                                    scheds[1], _replace_values(scheds[1], scheds[0])
+                                )
+                            if "units" in updates:
+                                cmt = cmt.replace(units[1][1], units[0][1])
+
+                            fixes[instr_idx] = cmt
+                instr_idx = instr_idx + 1
+
+    if update_sched_info:
+        with open(test_path) as f:
+            # Overwrite test with new fixed comments if any.
+            # Test file will be read again just before writing final checking
+            output_lines = []
+            instr_idx = 0
+
+            for line in f:
+                out = line.rstrip()
+                cmt_format = []
+                if _has_comment(line, cmt_format) and not re.match("^#", line):
+                    if fixes.get(instr_idx) is not None:
+                        out = line.split(cmt_format[0])[0] + fixes[instr_idx]
+
+                    instr_idx = instr_idx + 1
+
+                output_lines.append(out)
+
+            with open(test_path, "wb") as f:
+                f.writelines(["{}\n".format(l).encode("utf-8") for l in output_lines])
+
+    if check_sched_info:
+        if len(err) > 0:
+            raise Error("{}".format("".join(err)))
+
 def _get_block_infos(run_infos, test_path, args, common_prefix):  # noqa
     """For each run line, run the tool with the specified args and collect the
     output. We use the concept of 'blocks' for uniquing, where a block is
@@ -288,6 +451,20 @@ def _get_block_infos(run_infos, test_path, args, common_prefix):  # noqa
         raw_tool_output = "\n".join(
             line if line.strip() else "" for line in raw_tool_output.splitlines()
         )
+
+        # Check if -scheduling-info passed to llvm-mca to check comments if any
+        if "-scheduling-info" in tool_args:
+            _sched_info(
+                raw_tool_output,
+                test_path,
+                args.check_sched_info,
+                args.update_sched_info,
+            )
+        else:
+            if args.check_sched_info:
+                _warn("--check-sched-info: ignored: need llvm-mca -scheduling-info")
+            if args.update_sched_info:
+                _warn("--update-sched-info: ignored: need llvm-mca -scheduling-info")
 
         # Split blocks, stripping all trailing whitespace, but keeping preceding
         # whitespace except for newlines so that columns will line up visually.
@@ -550,6 +727,12 @@ def update_test_file(args, test_path, autogenerated_note):
     run_infos = _get_run_infos(run_lines, args)
     common_prefix, prefix_pad = _get_useful_prefix_info(run_infos)
     block_infos = _get_block_infos(run_infos, test_path, args, common_prefix)
+
+    if args.update_sched_info:
+        # Read again input lines in case of changes (scheduling info updates in comments)
+        with open(test_path) as f:
+            input_lines = [l.rstrip() for l in f]
+
     _write_output(
         test_path,
         input_lines,
