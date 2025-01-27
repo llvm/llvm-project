@@ -2384,12 +2384,6 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
     }
   }
 
-  /// The following code follows the same logic as in Sema::ActOnEnumBody
-  /// clang/lib/Sema/SemaDecl.cpp
-  // If we have an empty set of enumerators we still need one bit.
-  // From [dcl.enum]p8
-  // If the enumerator-list is empty, the values of the enumeration are as if
-  // the enumeration had a single enumerator with value 0
   if (!NumPositiveBits && !NumNegativeBits)
     NumPositiveBits = 1;
 
@@ -2398,20 +2392,10 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
   enum_decl->setNumPositiveBits(NumPositiveBits);
   enum_decl->setNumNegativeBits(NumNegativeBits);
 
-  auto ts_ptr = clang_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
-  if (!ts_ptr)
-    return enumerators_added;
-
   clang::QualType BestPromotionType;
   clang::QualType BestType;
-  unsigned BestWidth;
-
-  auto &Context = m_ast.getASTContext();
-  bool is_cpp = Language::LanguageIsCPlusPlus(
-      SymbolFileDWARF::GetLanguage(*parent_die.GetCU()));
-  ts_ptr->getSema()->ComputeBestEnumProperties(
-      Context, enum_decl, is_cpp, false, NumNegativeBits, NumPositiveBits,
-      BestWidth, BestType, BestPromotionType);
+  m_ast.getASTContext().computeBestEnumTypes(
+      false, NumNegativeBits, NumPositiveBits, BestType, BestPromotionType);
   enum_decl->setPromotionType(BestPromotionType);
 
   return enumerators_added;
