@@ -173,7 +173,7 @@ New checks
 
   Replace comparisons between signed and unsigned integers with their safe
   C++20 ``std::cmp_*`` alternative, if available.
-  
+
 - New :doc:`portability-template-virtual-member-function
   <clang-tidy/checks/portability/template-virtual-member-function>` check.
 
@@ -184,7 +184,7 @@ New checks
   <clang-tidy/checks/readability/use-cpp-style-comments>` check.
 
   Replace C-style comments with C++-style comments.
-  
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
