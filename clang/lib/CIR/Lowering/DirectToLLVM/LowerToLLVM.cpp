@@ -2274,7 +2274,7 @@ void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     return mlir::IntegerType::get(type.getContext(), type.getWidth());
   });
   converter.addConversion([&](mlir::cir::SingleType type) -> mlir::Type {
-    return mlir::Float64Type::get(type.getContext());
+    return mlir::Float32Type::get(type.getContext());
   });
   converter.addConversion([&](mlir::cir::DoubleType type) -> mlir::Type {
     return mlir::Float64Type::get(type.getContext());
