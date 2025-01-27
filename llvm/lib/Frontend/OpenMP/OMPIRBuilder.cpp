@@ -678,7 +678,7 @@ void OpenMPIRBuilder::initialize() { initializeTypes(M); }
 static void raiseUserConstantDataAllocasToEntryBlock(IRBuilderBase &Builder,
                                                      Function *Function) {
   BasicBlock &EntryBlock = Function->getEntryBlock();
-  Instruction *MoveLocInst = EntryBlock.getFirstNonPHI();
+  BasicBlock::iterator MoveLocInst = EntryBlock.getFirstNonPHIIt();
 
   // Loop over blocks looking for constant allocas, skipping the entry block
   // as any allocas there are already in the desired location.
@@ -6918,7 +6918,7 @@ static Expected<Function *> createOutlinedFunction(
   Builder.CreateRetVoid();
 
   // New Alloca IP at entry point of created device function.
-  Builder.SetInsertPoint(EntryBB->getFirstNonPHI());
+  Builder.SetInsertPoint(EntryBB->getFirstNonPHIIt());
   auto AllocaIP = Builder.saveIP();
 
   Builder.SetInsertPoint(UserCodeEntryBB->getFirstNonPHIOrDbg());
