@@ -7704,14 +7704,20 @@ void TypeSystemClang::SetFloatingInitializerForVariable(
 
 llvm::SmallVector<clang::ParmVarDecl *>
 TypeSystemClang::CreateParameterDeclarations(
-    clang::FunctionDecl *func, const clang::FunctionProtoType &prototype) {
+    clang::FunctionDecl *func, const clang::FunctionProtoType &prototype,
+    const llvm::SmallVector<llvm::StringRef> &parameter_names) {
   assert(func);
+  assert(parameter_names.empty() ||
+         parameter_names.size() == prototype.getNumParams());
 
   llvm::SmallVector<clang::ParmVarDecl *, 12> params;
   for (unsigned param_index = 0; param_index < prototype.getNumParams();
        ++param_index) {
+    llvm::StringRef name =
+        !parameter_names.empty() ? parameter_names[param_index] : "";
+
     auto *param =
-        CreateParameterDeclaration(func, /*owning_module=*/{}, /*name=*/nullptr,
+        CreateParameterDeclaration(func, /*owning_module=*/{}, name.data(),
                                    GetType(prototype.getParamType(param_index)),
                                    clang::SC_None, /*add_decl=*/false);
     assert(param);
@@ -7862,8 +7868,10 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
         getASTContext(), mangled_name, /*literal=*/false));
   }
 
-  cxx_method_decl->setParams(
-      CreateParameterDeclarations(cxx_method_decl, *method_function_prototype));
+  // Parameters on member function declarations in DWARF generally don't
+  // have names, so we omit them when creating the ParmVarDecls.
+  cxx_method_decl->setParams(CreateParameterDeclarations(
+      cxx_method_decl, *method_function_prototype, /*parameter_names=*/{}));
 
   AddAccessSpecifierDecl(cxx_record_decl, getASTContext(),
                          GetCXXRecordDeclAccess(cxx_record_decl),

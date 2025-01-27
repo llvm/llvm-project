@@ -1086,6 +1086,9 @@ DWARF:
 TEST_F(DWARFASTParserClangTests, TestParseSubroutine_ParameterCreation) {
   // Tests parsing of a C++ free function will create clang::ParmVarDecls with
   // the correct clang::DeclContext.
+  //
+  // Also ensures we attach names to the ParmVarDecls (even when DWARF contains
+  // a mix of named/unnamed parameters).
 
   const char *yamldata = R"(
 --- !ELF
@@ -1099,6 +1102,7 @@ DWARF:
     - func
     - int
     - short
+    - namedParam
   debug_abbrev:
     - ID:              0
       Table:
@@ -1131,6 +1135,14 @@ DWARF:
             - Attribute:       DW_AT_type
               Form:            DW_FORM_ref4
         - Code:            0x5
+          Tag:             DW_TAG_formal_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x6
           Tag:             DW_TAG_base_type
           Children:        DW_CHILDREN_no
           Attributes:
@@ -1165,13 +1177,15 @@ DWARF:
 #         DW_AT_type [DW_FORM_ref4] (int)
         - AbbrCode:        0x4
           Values:
-            - Value: 0x1f
+            - Value: 0x23
 
 #       DW_TAG_formal_parameter
 #         DW_AT_type [DW_FORM_ref4] (short)
-        - AbbrCode:        0x4
+#         DW_AT_name [DW_FORM_strp] ("namedParam")
+        - AbbrCode:        0x5
           Values:
-            - Value: 0x26
+            - Value: 0x2a
+            - Value: 0xf
 
         - AbbrCode: 0x0
 
@@ -1180,7 +1194,7 @@ DWARF:
 #     DW_AT_encoding  [DW_FORM_data1]
 #     DW_AT_byte_size [DW_FORM_data1]
 
-        - AbbrCode:        0x5
+        - AbbrCode:        0x6
           Values:
             - Value:           0x0000000000000005
             - Value:           0x0000000000000005 # DW_ATE_signed
@@ -1191,7 +1205,7 @@ DWARF:
 #     DW_AT_encoding  [DW_FORM_data1]
 #     DW_AT_byte_size [DW_FORM_data1]
 
-        - AbbrCode:        0x5
+        - AbbrCode:        0x6
           Values:
             - Value:           0x0000000000000009
             - Value:           0x0000000000000005 # DW_ATE_signed
@@ -1230,9 +1244,11 @@ DWARF:
       clang_utils::getDeclarationName(*ts, "func"));
   ASSERT_TRUE(result.isSingleResult());
 
-  auto func = llvm::cast<clang::FunctionDecl>(result.front());
+  auto const *func = llvm::cast<clang::FunctionDecl>(result.front());
 
   EXPECT_EQ(func->getNumParams(), 2U);
   EXPECT_EQ(func->getParamDecl(0)->getDeclContext(), func);
+  EXPECT_TRUE(func->getParamDecl(0)->getName().empty());
   EXPECT_EQ(func->getParamDecl(1)->getDeclContext(), func);
+  EXPECT_EQ(func->getParamDecl(1)->getName(), "namedParam");
 }
