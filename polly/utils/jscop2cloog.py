@@ -1,33 +1,36 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import argparse, os
 import json
 
+
 def getDomains(scop):
-  statements = scop['statements'];
-  numStatements = len(statements)
+    statements = scop["statements"]
+    numStatements = len(statements)
 
-  output = "%s\n\n" % str(numStatements)
+    output = "%s\n\n" % str(numStatements)
 
-  for statement in scop['statements']:
-    output += "%s\n\n" % statement['domain']
-    output += "0  0  0               # for future options\n\n"
+    for statement in scop["statements"]:
+        output += "%s\n\n" % statement["domain"]
+        output += "0  0  0               # for future options\n\n"
 
+    return output
 
-  return output
 
 def getSchedules(scop):
-  statements = scop['statements'];
-  numStatements = len(statements)
+    statements = scop["statements"]
+    numStatements = len(statements)
 
-  output = "%s\n\n" % str(numStatements)
+    output = "%s\n\n" % str(numStatements)
 
-  for statement in scop['statements']:
-    output += "%s\n\n" % statement['schedule']
+    for statement in scop["statements"]:
+        output += "%s\n\n" % statement["schedule"]
 
-  return output
+    return output
+
 
 def writeCloog(scop):
-  template = """
+    template = """
 # ---------------------- CONTEXT ----------------------
 c # language is C
 
@@ -47,22 +50,22 @@ c # language is C
 0 # We do not want to set manually the schedule dimension names
 """
 
-  context = scop['context']
-  domains = getDomains(scop)
-  schedules = getSchedules(scop)
-  print template % (context, domains, schedules)
+    context = scop["context"]
+    domains = getDomains(scop)
+    schedules = getSchedules(scop)
+    print(template % (context, domains, schedules))
+
 
 def __main__():
-  description = 'Translate JSCoP into iscc input'
-  parser = argparse.ArgumentParser(description)
-  parser.add_argument('inputFile', metavar='N', type=file,
-                      help='The JSCoP file')
+    description = "Translate JSCoP into iscc input"
+    parser = argparse.ArgumentParser(description)
+    parser.add_argument("inputFile", metavar="N", type=file, help="The JSCoP file")
 
-  args = parser.parse_args()
-  inputFile = args.inputFile
-  scop = json.load(inputFile)
+    args = parser.parse_args()
+    inputFile = args.inputFile
+    scop = json.load(inputFile)
 
-  writeCloog(scop)
+    writeCloog(scop)
+
 
 __main__()
-
