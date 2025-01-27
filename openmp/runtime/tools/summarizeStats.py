@@ -38,7 +38,7 @@ def radar_factory(num_vars, frame='circle'):
 
     frame_dict = {'polygon': draw_poly_frame, 'circle': draw_circle_frame}
     if frame not in frame_dict:
-        raise ValueError('unknown value for `frame`: %s' % frame)
+        raise ValueError("unknown value for `frame`: %s" % frame)
 
     class RadarAxes(PolarAxes):
         """
@@ -300,10 +300,10 @@ def main():
                 chartType = "radar"
                 drawRadarChart(data, s, filebase, params, colors[n])
                 """radar Charts finish here"""
-                plt.savefig(filebase+"_"+s+"_"+chartType, bbox_inches='tight')
-            elif s == 'timers':
-                print("overheads in "+filebase)
-                numThreads = tmp[s]['SampleCount']['Total_OMP_parallel']
+                plt.savefig(filebase + "_" + s + "_" + chartType, bbox_inches="tight")
+            elif s == "timers":
+                print("overheads in " + filebase)
+                numThreads = tmp[s]["SampleCount"]["Total_OMP_parallel"]
                 for key in data.keys():
                     if key[0:5] == 'Total':
                         del data[key]
