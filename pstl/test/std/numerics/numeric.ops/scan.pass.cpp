@@ -191,7 +191,7 @@ main()
                                                             Matrix2x2<int32_t>(-666, 666));
 #endif
 
-        // Since the implict "+" forms of the scan delegate to the generic forms,
+        // Since the implicit "+" forms of the scan delegate to the generic forms,
         // there's little point in using a highly restricted type, so just use double.
         test_with_plus<float64_t>(inclusive ? 0.0 : -1.0, -666.0,
                                   [](uint32_t k) { return float64_t((k % 991 + 1) ^ (k % 997 + 2)); });

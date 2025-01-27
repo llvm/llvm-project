@@ -44,7 +44,7 @@ namespace __omp_backend
 inline void
 __cancel_execution()
 {
-    // TODO: Figure out how to make cancelation work.
+    // TODO: Figure out how to make cancellation work.
 }
 
 //------------------------------------------------------------------------
