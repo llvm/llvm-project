@@ -3405,9 +3405,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(ExpandInsertToVectorThroughStack(SDValue(Node, 0)));
     break;
   case ISD::CONCAT_VECTORS:
-    if (Node->getValueType().isScalableVector() ||
-        TLI.isOperationExpand(ISD::EXTRACT_VECTOR_ELT,
-                              Node->getOperand(0).getValueType()))
+    if (EVT VectorValueType = Node->getOperand(0).getValueType();
+        VectorValueType.isScalableVector() ||
+        TLI.isOperationExpand(ISD::EXTRACT_VECTOR_ELT, VectorValueType))
       Results.push_back(ExpandVectorBuildThroughStack(Node));
     else
       Results.push_back(ExpandConcatVectors(Node));
