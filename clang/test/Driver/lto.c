@@ -114,3 +114,9 @@
 //
 // CHECK-GISEL:         "-plugin-opt=-global-isel=1"
 // CHECK-DISABLE-GISEL: "-plugin-opt=-global-isel=0"
+
+// -flto passes -time-passes when -ftime-report is passed
+// RUN: %clang --target=x86_64-unknown-linux-gnu -### %s -flto -ftime-report 2> %t
+// RUN: FileCheck --check-prefix=CHECK-TIME-REPORT < %t %s
+
+// CHECK-TIME-REPORT: "-plugin-opt=-time-passes"

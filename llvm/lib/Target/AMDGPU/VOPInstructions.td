@@ -2033,7 +2033,7 @@ def VOP2InfoTable : VOPInfoTable<"VOP2">;
 def VOP3InfoTable : VOPInfoTable<"VOP3">;
 
 class VOPC64Table <string Format> : GenericTable {
-  let FilterClass = "VOPC64_" # Format # "_Base";
+  let FilterClass = "VOPC64_" # Format;
   let CppTypeName = "VOPC64DPPInfo";
   let Fields = ["Opcode"];
 

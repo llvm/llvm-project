@@ -126,10 +126,10 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(__exception_guard_noexceptions);
 
 #if !_LIBCPP_HAS_EXCEPTIONS
 template <class _Rollback>
-using __exception_guard = __exception_guard_noexceptions<_Rollback>;
+using __exception_guard _LIBCPP_NODEBUG = __exception_guard_noexceptions<_Rollback>;
 #else
 template <class _Rollback>
-using __exception_guard = __exception_guard_exceptions<_Rollback>;
+using __exception_guard _LIBCPP_NODEBUG = __exception_guard_exceptions<_Rollback>;
 #endif
 
 template <class _Rollback>

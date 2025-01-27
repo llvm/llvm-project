@@ -1,4 +1,5 @@
 header: stdbit.h
+header_template: stdbit.h.def
 macros: []
 types: []
 enums: []

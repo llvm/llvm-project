@@ -32,17 +32,17 @@ public:
                        MachineDominatorTree *MDT, const LegalizerInfo *LI,
                        const GCNSubtarget &STI);
 
-  bool matchFoldableFneg(MachineInstr &MI, MachineInstr *&MatchInfo);
-  void applyFoldableFneg(MachineInstr &MI, MachineInstr *&MatchInfo);
+  bool matchFoldableFneg(MachineInstr &MI, MachineInstr *&MatchInfo) const;
+  void applyFoldableFneg(MachineInstr &MI, MachineInstr *&MatchInfo) const;
 
   bool matchExpandPromotedF16FMed3(MachineInstr &MI, Register Src0,
-                                   Register Src1, Register Src2);
+                                   Register Src1, Register Src2) const;
   void applyExpandPromotedF16FMed3(MachineInstr &MI, Register Src0,
-                                   Register Src1, Register Src2);
+                                   Register Src1, Register Src2) const;
 
   bool matchCombineFmulWithSelectToFldexp(
       MachineInstr &MI, MachineInstr &Sel,
-      std::function<void(MachineIRBuilder &)> &MatchInfo);
+      std::function<void(MachineIRBuilder &)> &MatchInfo) const;
 };
 
 } // namespace llvm

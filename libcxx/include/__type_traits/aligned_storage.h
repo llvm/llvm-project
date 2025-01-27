@@ -12,7 +12,6 @@
 #include <__config>
 #include <__cstddef/size_t.h>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/nat.h>
 #include <__type_traits/type_list.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -34,7 +33,7 @@ struct __struct_double4 {
   double __lx[4];
 };
 
-using __all_types =
+using __all_types _LIBCPP_NODEBUG =
     __type_list<__align_type<unsigned char>,
                 __align_type<unsigned short>,
                 __align_type<unsigned int>,
@@ -69,7 +68,7 @@ struct __find_max_align<__type_list<_Head, _Tail...>, _Len>
           __select_align<_Len, _Head::value, __find_max_align<__type_list<_Tail...>, _Len>::value>::value> {};
 
 template <size_t _Len, size_t _Align = __find_max_align<__all_types, _Len>::value>
-struct _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_TEMPLATE_VIS aligned_storage {
+struct _LIBCPP_DEPRECATED_IN_CXX23 _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS aligned_storage {
   union _ALIGNAS(_Align) type {
     unsigned char __data[(_Len + _Align - 1) / _Align * _Align];
   };

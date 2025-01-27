@@ -15,13 +15,9 @@
 #include <xmmintrin.h>
 #endif
 
-// When not supported, these macro are undefined in cfenv.h,
-// set them to zero in that case.
+// fenv.h may not define exception macros.
 #ifndef FE_INVALID
 #define FE_INVALID 0
-#endif
-#ifndef __FE_DENORM
-#define __FE_DENORM 0 // denorm is nonstandard
 #endif
 #ifndef FE_DIVBYZERO
 #define FE_DIVBYZERO 0
@@ -46,7 +42,11 @@ uint32_t RTNAME(MapException)(uint32_t excepts) {
   Terminator terminator{__FILE__, __LINE__};
 
   static constexpr uint32_t v{FE_INVALID};
-  static constexpr uint32_t s{__FE_DENORM}; // subnormal
+#if __x86_64__
+  static constexpr uint32_t s{__FE_DENORM}; // nonstandard, not a #define
+#else
+  static constexpr uint32_t s{0};
+#endif
   static constexpr uint32_t z{FE_DIVBYZERO};
   static constexpr uint32_t o{FE_OVERFLOW};
   static constexpr uint32_t u{FE_UNDERFLOW};
@@ -62,24 +62,12 @@ uint32_t RTNAME(MapException)(uint32_t excepts) {
   static constexpr uint32_t map[]{xm};
   static constexpr uint32_t mapSize{sizeof(map) / sizeof(uint32_t)};
   static_assert(mapSize == 64);
-  if (excepts == 0 || excepts >= mapSize) {
+  if (excepts >= mapSize) {
     terminator.Crash("Invalid excepts value: %d", excepts);
   }
   uint32_t except_value = map[excepts];
-  if (except_value == 0) {
-    terminator.Crash(
-        "Excepts value %d not supported by flang runtime", excepts);
-  }
   return except_value;
 }
-
-// Verify that the size of ieee_modes_type and ieee_status_type objects from
-// intrinsic module file __fortran_ieee_exceptions.f90 are large enough to
-// hold fenv_t object.
-// TODO: fenv_t can be way larger than
-//	sizeof(int) * _FORTRAN_RUNTIME_IEEE_FENV_T_EXTENT
-// on some systems, e.g. Solaris, so omit object size comparison for now.
-// TODO: consider femode_t object size comparison once its more mature.
 
 // Check if the processor has the ability to control whether to halt or
 // continue execution when a given exception is raised.
@@ -103,7 +91,7 @@ bool RTNAME(SupportHalting)([[maybe_unused]] uint32_t except) {
 }
 
 bool RTNAME(GetUnderflowMode)(void) {
-#if __x86_64__
+#if _MM_FLUSH_ZERO_MASK
   // The MXCSR Flush to Zero flag is the negation of the ieee_get_underflow_mode
   // GRADUAL argument. It affects real computations of kinds 3, 4, and 8.
   return _MM_GET_FLUSH_ZERO_MODE() == _MM_FLUSH_ZERO_OFF;
@@ -112,11 +100,22 @@ bool RTNAME(GetUnderflowMode)(void) {
 #endif
 }
 void RTNAME(SetUnderflowMode)(bool flag) {
-#if __x86_64__
+#if _MM_FLUSH_ZERO_MASK
   // The MXCSR Flush to Zero flag is the negation of the ieee_set_underflow_mode
   // GRADUAL argument. It affects real computations of kinds 3, 4, and 8.
   _MM_SET_FLUSH_ZERO_MODE(flag ? _MM_FLUSH_ZERO_OFF : _MM_FLUSH_ZERO_ON);
 #endif
+}
+
+size_t RTNAME(GetModesTypeSize)(void) {
+#ifdef __GLIBC_USE_IEC_60559_BFP_EXT
+  return sizeof(femode_t); // byte size of ieee_modes_type data
+#else
+  return 8; // femode_t is not defined
+#endif
+}
+size_t RTNAME(GetStatusTypeSize)(void) {
+  return sizeof(fenv_t); // byte size of ieee_status_type data
 }
 
 } // extern "C"

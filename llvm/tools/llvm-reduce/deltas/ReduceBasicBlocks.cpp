@@ -52,7 +52,7 @@ static void replaceBranchTerminator(BasicBlock &BB,
   bool IsBranch = isa<BranchInst>(Term);
   if (InvokeInst *Invoke = dyn_cast<InvokeInst>(Term)) {
     BasicBlock *UnwindDest = Invoke->getUnwindDest();
-    Instruction *LP = UnwindDest->getFirstNonPHI();
+    BasicBlock::iterator LP = UnwindDest->getFirstNonPHIIt();
 
     // Remove landingpad instruction if the containing block isn't used by other
     // invokes.

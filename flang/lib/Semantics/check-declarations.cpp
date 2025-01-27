@@ -683,7 +683,20 @@ void CheckHelper::CheckObjectEntity(
   const DeclTypeSpec *type{details.type()};
   const DerivedTypeSpec *derived{type ? type->AsDerived() : nullptr};
   bool isComponent{symbol.owner().IsDerivedType()};
-  if (!details.coshape().empty()) {
+  if (details.coshape().empty()) { // not a coarray
+    if (!isComponent && !IsPointer(symbol) && derived) {
+      if (IsEventTypeOrLockType(derived)) {
+        messages_.Say(
+            "Variable '%s' with EVENT_TYPE or LOCK_TYPE must be a coarray"_err_en_US,
+            symbol.name());
+      } else if (auto component{FindEventOrLockPotentialComponent(
+                     *derived, /*ignoreCoarrays=*/true)}) {
+        messages_.Say(
+            "Variable '%s' with EVENT_TYPE or LOCK_TYPE potential component '%s' must be a coarray"_err_en_US,
+            symbol.name(), component.BuildResultDesignatorName());
+      }
+    }
+  } else { // it's a coarray
     bool isDeferredCoshape{details.coshape().CanBeDeferredShape()};
     if (IsAllocatable(symbol)) {
       if (!isDeferredCoshape) { // C827
@@ -2742,6 +2755,9 @@ void CheckHelper::CheckBlockData(const Scope &scope) {
 void CheckHelper::CheckGenericOps(const Scope &scope) {
   DistinguishabilityHelper helper{context_};
   auto addSpecifics{[&](const Symbol &generic) {
+    if (!IsAccessible(generic, scope)) {
+      return;
+    }
     const auto *details{generic.GetUltimate().detailsIf<GenericDetails>()};
     if (!details) {
       // Not a generic; ensure characteristics are defined if a function.

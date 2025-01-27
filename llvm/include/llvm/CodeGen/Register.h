@@ -21,7 +21,7 @@ class Register {
 
 public:
   constexpr Register(unsigned Val = 0) : Reg(Val) {}
-  constexpr Register(MCRegister Val) : Reg(Val) {}
+  constexpr Register(MCRegister Val) : Reg(Val.id()) {}
 
   // Register numbers can represent physical registers, virtual registers, and
   // sometimes stack slots. The unsigned values are divided into these ranges:
@@ -108,8 +108,7 @@ public:
   /// expected to have already validated that this Register is, indeed,
   /// physical.
   MCRegister asMCReg() const {
-    assert(Reg == MCRegister::NoRegister ||
-           MCRegister::isPhysicalRegister(Reg));
+    assert(!isValid() || isPhysical());
     return MCRegister(Reg);
   }
 
@@ -158,6 +157,37 @@ template <> struct DenseMapInfo<Register> {
   }
   static bool isEqual(const Register &LHS, const Register &RHS) {
     return LHS == RHS;
+  }
+};
+
+/// Wrapper class representing a virtual register or register unit.
+class VirtRegOrUnit {
+  unsigned VRegOrUnit;
+
+public:
+  constexpr explicit VirtRegOrUnit(MCRegUnit Unit) : VRegOrUnit(Unit) {
+    assert(!Register::isVirtualRegister(VRegOrUnit));
+  }
+  constexpr explicit VirtRegOrUnit(Register Reg) : VRegOrUnit(Reg.id()) {
+    assert(Reg.isVirtual());
+  }
+
+  constexpr bool isVirtualReg() const {
+    return Register::isVirtualRegister(VRegOrUnit);
+  }
+
+  constexpr MCRegUnit asMCRegUnit() const {
+    assert(!isVirtualReg() && "Not a register unit");
+    return VRegOrUnit;
+  }
+
+  constexpr Register asVirtualReg() const {
+    assert(isVirtualReg() && "Not a virtual register");
+    return Register(VRegOrUnit);
+  }
+
+  constexpr bool operator==(const VirtRegOrUnit &Other) const {
+    return VRegOrUnit == Other.VRegOrUnit;
   }
 };
 

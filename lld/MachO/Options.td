@@ -82,8 +82,12 @@ def print_dylib_search: Flag<["--"], "print-dylib-search">,
     HelpText<"Print which paths lld searched when trying to find dylibs">,
     Group<grp_lld>;
 def icf_eq: Joined<["--"], "icf=">,
-    HelpText<"Set level for identical code folding (default: none)">,
-    MetaVarName<"[none,safe,all]">,
+    HelpText<"Set level for identical code folding (default: none). Possible values:\n"
+            "  none        - Disable ICF\n"
+            "  safe        - Only folds non-address significant functions (as described by `__addrsig` section)\n"
+            "  safe_thunks - Like safe, but replaces address-significant functions with thunks\n"
+            "  all         - Fold all identical functions">,
+    MetaVarName<"[none,safe,safe_thunks,all]">,
     Group<grp_lld>;
 def keep_icf_stabs: Joined<["--"], "keep-icf-stabs">,
     HelpText<"Generate STABS entries for symbols folded by ICF. These entries can then be used by dsymutil to discover the address range where folded symbols are located.">,
@@ -129,7 +133,7 @@ def print_symbol_order_eq: Joined<["--"], "print-symbol-order=">,
 def irpgo_profile: Separate<["--"], "irpgo-profile">, Group<grp_lld>;
 def irpgo_profile_eq: Joined<["--"], "irpgo-profile=">,
     Alias<!cast<Separate>(irpgo_profile)>, MetaVarName<"<profile>">,
-    HelpText<"Read the IRPGO <profile> for use with -bp-startup-sort and other profile-guided optimizations">,
+    HelpText<"Read the IRPGO <profile> for use with --bp-startup-sort and other profile-guided optimizations">,
     Group<grp_lld>;
 def bp_startup_sort: Joined<["--"], "bp-startup-sort=">,
     MetaVarName<"[none,function]">,
@@ -1472,3 +1476,8 @@ def no_warn_duplicate_libraries : Flag<["-"], "no_warn_duplicate_libraries">,
     HelpText<"Do not warn if the input contains duplicate library options.">,
     Flags<[HelpHidden]>,
     Group<grp_ignored_silently>;
+
+// Add this with the other flags in the rare options group
+def no_deduplicate_symbol_strings : Flag<["-"], "no-deduplicate-symbol-strings">,
+    HelpText<"Do not deduplicate strings in the symbol string table. Might result in larger binaries but slightly faster link times.">,
+    Group<grp_rare>;

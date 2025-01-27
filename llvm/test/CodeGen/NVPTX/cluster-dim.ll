@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_90 | FileCheck -check-prefixes=CHECK90 %s
 ; RUN: %if ptxas-12.0 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_90 | %ptxas-verify -arch=sm_90 %}
 
-define void @kernel_func_clusterxyz() {
+define ptx_kernel void @kernel_func_clusterxyz() {
 ; CHECK80-LABEL: kernel_func_clusterxyz(
 ; CHECK80:       {
 ; CHECK80-EMPTY:
@@ -23,7 +23,6 @@ define void @kernel_func_clusterxyz() {
 }
 
 
-!nvvm.annotations = !{!1, !2}
+!nvvm.annotations = !{!1}
 
-!1 = !{ptr @kernel_func_clusterxyz, !"kernel", i32 1}
-!2 = !{ptr @kernel_func_clusterxyz, !"cluster_dim_x", i32 3, !"cluster_dim_y", i32 5, !"cluster_dim_z", i32 7}
+!1 = !{ptr @kernel_func_clusterxyz, !"cluster_dim_x", i32 3, !"cluster_dim_y", i32 5, !"cluster_dim_z", i32 7}
