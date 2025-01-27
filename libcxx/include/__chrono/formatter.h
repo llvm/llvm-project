@@ -32,6 +32,7 @@
 #  include <__chrono/sys_info.h>
 #  include <__chrono/system_clock.h>
 #  include <__chrono/time_point.h>
+#  include <__chrono/utc_clock.h>
 #  include <__chrono/weekday.h>
 #  include <__chrono/year.h>
 #  include <__chrono/year_month.h>
@@ -718,6 +719,23 @@ public:
     return _Base::__parse(__ctx, __format_spec::__fields_chrono, __format_spec::__flags::__clock);
   }
 };
+
+#    if _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
+#      if _LIBCPP_HAS_EXPERIMENTAL_TZDB
+
+template <class _Duration, __fmt_char_type _CharT>
+struct _LIBCPP_TEMPLATE_VIS formatter<chrono::utc_time<_Duration>, _CharT> : public __formatter_chrono<_CharT> {
+public:
+  using _Base _LIBCPP_NODEBUG = __formatter_chrono<_CharT>;
+
+  template <class _ParseContext>
+  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+    return _Base::__parse(__ctx, __format_spec::__fields_chrono, __format_spec::__flags::__clock);
+  }
+};
+
+#      endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
+#    endif   // _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
 
 template <class _Duration, __fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS formatter<chrono::file_time<_Duration>, _CharT> : public __formatter_chrono<_CharT> {
