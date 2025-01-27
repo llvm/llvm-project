@@ -7843,10 +7843,10 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
 
   // Consume the name (subsection name)
   StringRef SubsectionName;
-  AArch64BuildAttributes::VendorID SubsectionNameID;
+  AArch64BuildAttrs::VendorID SubsectionNameID;
   if (Parser.getTok().is(AsmToken::Identifier)) {
     SubsectionName = Parser.getTok().getIdentifier();
-    SubsectionNameID = AArch64BuildAttributes::getVendorID(SubsectionName);
+    SubsectionNameID = AArch64BuildAttrs::getVendorID(SubsectionName);
   } else {
     Error(Parser.getTok().getLoc(), "subsection name not found");
     return true;
@@ -7863,14 +7863,14 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
       getTargetStreamer().getAtributesSubsectionByName(SubsectionName);
 
   // Consume the first parameter (optionality parameter)
-  AArch64BuildAttributes::SubsectionOptional IsOptional;
+  AArch64BuildAttrs::SubsectionOptional IsOptional;
   // options: optional/required
   if (Parser.getTok().is(AsmToken::Identifier)) {
     StringRef Optionality = Parser.getTok().getIdentifier();
-    IsOptional = AArch64BuildAttributes::getOptionalID(Optionality);
-    if (AArch64BuildAttributes::OPTIONAL_NOT_FOUND == IsOptional) {
+    IsOptional = AArch64BuildAttrs::getOptionalID(Optionality);
+    if (AArch64BuildAttrs::OPTIONAL_NOT_FOUND == IsOptional) {
       Error(Parser.getTok().getLoc(),
-            AArch64BuildAttributes::getSubsectionOptionalUnknownError() + ": " +
+            AArch64BuildAttrs::getSubsectionOptionalUnknownError() + ": " +
                 Optionality);
       return true;
     }
@@ -7879,10 +7879,10 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
         Error(Parser.getTok().getLoc(),
               "optionality mismatch! subsection '" + SubsectionName +
                   "' already exists with optionality defined as '" +
-                  AArch64BuildAttributes::getOptionalStr(
+                  AArch64BuildAttrs::getOptionalStr(
                       SubsectionExists->IsOptional) +
                   "' and not '" +
-                  AArch64BuildAttributes::getOptionalStr(IsOptional) + "'");
+                  AArch64BuildAttrs::getOptionalStr(IsOptional) + "'");
         return true;
       }
     }
@@ -7892,15 +7892,15 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
     return true;
   }
   // Check for possible IsOptional unaccepted values for known subsections
-  if (AArch64BuildAttributes::AEABI_FEATURE_AND_BITS == SubsectionNameID) {
-    if (AArch64BuildAttributes::REQUIRED == IsOptional) {
+  if (AArch64BuildAttrs::AEABI_FEATURE_AND_BITS == SubsectionNameID) {
+    if (AArch64BuildAttrs::REQUIRED == IsOptional) {
       Error(Parser.getTok().getLoc(),
             "aeabi_feature_and_bits must be marked as optional");
       return true;
     }
   }
-  if (AArch64BuildAttributes::AEABI_PAUTHABI == SubsectionNameID) {
-    if (AArch64BuildAttributes::OPTIONAL == IsOptional) {
+  if (AArch64BuildAttrs::AEABI_PAUTHABI == SubsectionNameID) {
+    if (AArch64BuildAttrs::OPTIONAL == IsOptional) {
       Error(Parser.getTok().getLoc(),
             "aeabi_pauthabi must be marked as required");
       return true;
@@ -7913,25 +7913,23 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
   }
 
   // Consume the second parameter (type parameter)
-  AArch64BuildAttributes::SubsectionType Type;
+  AArch64BuildAttrs::SubsectionType Type;
   if (Parser.getTok().is(AsmToken::Identifier)) {
     StringRef Name = Parser.getTok().getIdentifier();
-    Type = AArch64BuildAttributes::getTypeID(Name);
-    if (AArch64BuildAttributes::TYPE_NOT_FOUND == Type) {
+    Type = AArch64BuildAttrs::getTypeID(Name);
+    if (AArch64BuildAttrs::TYPE_NOT_FOUND == Type) {
       Error(Parser.getTok().getLoc(),
-            AArch64BuildAttributes::getSubsectionTypeUnknownError() + ": " +
-                Name);
+            AArch64BuildAttrs::getSubsectionTypeUnknownError() + ": " + Name);
       return true;
     }
     if (SubsectionExists) {
       if (Type != SubsectionExists->ParameterType) {
-        Error(Parser.getTok().getLoc(),
-              "type mismatch! subsection '" + SubsectionName +
-                  "' already exists with type defined as '" +
-                  AArch64BuildAttributes::getTypeStr(
-                      SubsectionExists->ParameterType) +
-                  "' and not '" + AArch64BuildAttributes::getTypeStr(Type) +
-                  "'");
+        Error(
+            Parser.getTok().getLoc(),
+            "type mismatch! subsection '" + SubsectionName +
+                "' already exists with type defined as '" +
+                AArch64BuildAttrs::getTypeStr(SubsectionExists->ParameterType) +
+                "' and not '" + AArch64BuildAttrs::getTypeStr(Type) + "'");
         return true;
       }
     }
@@ -7941,9 +7939,9 @@ bool AArch64AsmParser::parseDirectiveAeabiSubSectionHeader(SMLoc L) {
     return true;
   }
   // Check for possible unaccepted 'type' values for known subsections
-  if (AArch64BuildAttributes::AEABI_FEATURE_AND_BITS == SubsectionNameID ||
-      AArch64BuildAttributes::AEABI_PAUTHABI == SubsectionNameID) {
-    if (AArch64BuildAttributes::NTBS == Type) {
+  if (AArch64BuildAttrs::AEABI_FEATURE_AND_BITS == SubsectionNameID ||
+      AArch64BuildAttrs::AEABI_PAUTHABI == SubsectionNameID) {
+    if (AArch64BuildAttrs::NTBS == Type) {
       Error(Parser.getTok().getLoc(),
             SubsectionName + " must be marked as ULEB128");
       return true;
@@ -7978,14 +7976,13 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
   StringRef ActiveSubsectionName = ActiveSubsection->VendorName;
   unsigned ActiveSubsectionType = ActiveSubsection->ParameterType;
 
-  unsigned ActiveSubsectionID = AArch64BuildAttributes::VENDOR_UNKNOWN;
-  if (AArch64BuildAttributes::getVendorName(
-          AArch64BuildAttributes::AEABI_PAUTHABI) == ActiveSubsectionName)
-    ActiveSubsectionID = AArch64BuildAttributes::AEABI_PAUTHABI;
-  if (AArch64BuildAttributes::getVendorName(
-          AArch64BuildAttributes::AEABI_FEATURE_AND_BITS) ==
+  unsigned ActiveSubsectionID = AArch64BuildAttrs::VENDOR_UNKNOWN;
+  if (AArch64BuildAttrs::getVendorName(AArch64BuildAttrs::AEABI_PAUTHABI) ==
       ActiveSubsectionName)
-    ActiveSubsectionID = AArch64BuildAttributes::AEABI_FEATURE_AND_BITS;
+    ActiveSubsectionID = AArch64BuildAttrs::AEABI_PAUTHABI;
+  if (AArch64BuildAttrs::getVendorName(
+          AArch64BuildAttrs::AEABI_FEATURE_AND_BITS) == ActiveSubsectionName)
+    ActiveSubsectionID = AArch64BuildAttrs::AEABI_FEATURE_AND_BITS;
 
   StringRef TagStr = "";
   unsigned Tag;
@@ -7995,21 +7992,21 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
     default:
       assert(0 && "Subsection name error");
       break;
-    case AArch64BuildAttributes::VENDOR_UNKNOWN:
+    case AArch64BuildAttrs::VENDOR_UNKNOWN:
       // Private subsection, accept any tag.
       break;
-    case AArch64BuildAttributes::AEABI_PAUTHABI:
-      Tag = AArch64BuildAttributes::getPauthABITagsID(TagStr);
-      if (AArch64BuildAttributes::PAUTHABI_TAG_NOT_FOUND == Tag) {
+    case AArch64BuildAttrs::AEABI_PAUTHABI:
+      Tag = AArch64BuildAttrs::getPauthABITagsID(TagStr);
+      if (AArch64BuildAttrs::PAUTHABI_TAG_NOT_FOUND == Tag) {
         Error(Parser.getTok().getLoc(), "unknown AArch64 build attribute '" +
                                             TagStr + "' for subsection '" +
                                             ActiveSubsectionName + "'");
         return true;
       }
       break;
-    case AArch64BuildAttributes::AEABI_FEATURE_AND_BITS:
-      Tag = AArch64BuildAttributes::getFeatureAndBitsTagsID(TagStr);
-      if (AArch64BuildAttributes::FEATURE_AND_BITS_TAG_NOT_FOUND == Tag) {
+    case AArch64BuildAttrs::AEABI_FEATURE_AND_BITS:
+      Tag = AArch64BuildAttrs::getFeatureAndBitsTagsID(TagStr);
+      if (AArch64BuildAttrs::FEATURE_AND_BITS_TAG_NOT_FOUND == Tag) {
         Error(Parser.getTok().getLoc(), "unknown AArch64 build attribute '" +
                                             TagStr + "' for subsection '" +
                                             ActiveSubsectionName + "'");
@@ -8035,7 +8032,7 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
   unsigned ValueInt = unsigned(-1);
   std::string ValueStr = "";
   if (Parser.getTok().is(AsmToken::Integer)) {
-    if (AArch64BuildAttributes::NTBS == ActiveSubsectionType) {
+    if (AArch64BuildAttrs::NTBS == ActiveSubsectionType) {
       Error(
           Parser.getTok().getLoc(),
           "active subsection type is NTBS (string), found ULEB128 (unsigned)");
@@ -8043,7 +8040,7 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
     }
     ValueInt = getTok().getIntVal();
   } else if (Parser.getTok().is(AsmToken::Identifier)) {
-    if (AArch64BuildAttributes::ULEB128 == ActiveSubsectionType) {
+    if (AArch64BuildAttrs::ULEB128 == ActiveSubsectionType) {
       Error(
           Parser.getTok().getLoc(),
           "active subsection type is ULEB128 (unsigned), found NTBS (string)");
@@ -8051,7 +8048,7 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
     }
     ValueStr = Parser.getTok().getIdentifier();
   } else if (Parser.getTok().is(AsmToken::String)) {
-    if (AArch64BuildAttributes::ULEB128 == ActiveSubsectionType) {
+    if (AArch64BuildAttrs::ULEB128 == ActiveSubsectionType) {
       Error(
           Parser.getTok().getLoc(),
           "active subsection type is ULEB128 (unsigned), found NTBS (string)");
@@ -8064,7 +8061,7 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
   }
   // Check for possible unaccepted values for known tags (AEABI_PAUTHABI,
   // AEABI_FEATURE_AND_BITS)
-  if (!(ActiveSubsectionID == AArch64BuildAttributes::VENDOR_UNKNOWN) &&
+  if (!(ActiveSubsectionID == AArch64BuildAttrs::VENDOR_UNKNOWN) &&
       TagStr != "") { // TagStr was a recognized string
     if (0 != ValueInt && 1 != ValueInt) {
       Error(Parser.getTok().getLoc(),
