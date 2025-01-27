@@ -456,7 +456,7 @@ private:
 
     // FIXME: This emits a SCEV for GenSE (since GenLRepl will refer to the
     // induction variable of a generated loop), so we should not use SCEVVisitor
-    // with it. Howver, it still contains references to the SCoP region.
+    // with it. However, it still contains references to the SCoP region.
     return visit(Evaluated);
   }
   ///}
