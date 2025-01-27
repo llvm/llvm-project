@@ -14,7 +14,7 @@ all: libdylib.dylib a.out
 include Makefile.rules
 
 libdylib.dylib: dylib.swift
-	$(MAKE) MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
+	"$(MAKE)" MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		DYLIB_NAME=$(shell basename $< .swift) \
 		VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/dylib.mk all

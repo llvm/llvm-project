@@ -11,7 +11,7 @@ MOD5_FLAGS = -swift-version 5
 MOD4_FLAGS = -swift-version 4
 
 libmod%.dylib: mod%.swift
-	$(MAKE) MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
+	"$(MAKE)" MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
 		SWIFTFLAGS_EXTRAS="$(MOD$*_FLAGS)" \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		BASENAME=$(shell basename $< .swift) \

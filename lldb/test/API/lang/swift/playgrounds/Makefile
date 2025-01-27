@@ -11,12 +11,12 @@ PlaygroundStub: libPlaygroundsRuntime.dylib Dylib.framework
 include Makefile.rules
 
 libPlaygroundsRuntime.dylib: PlaygroundsRuntime.swift
-	$(MAKE) -f $(MAKEFILE_RULES) \
+	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		DYLIB_SWIFT_SOURCES=PlaygroundsRuntime.swift \
 		DYLIB_NAME=PlaygroundsRuntime
 
 Dylib.framework: Dylib.swift
-	$(MAKE) -f $(MAKEFILE_RULES) \
+	"$(MAKE)" -f $(MAKEFILE_RULES) \
 		FRAMEWORK=Dylib \
 		DYLIB_SWIFT_SOURCES=Dylib.swift \
 		DYLIB_NAME=Dylib \

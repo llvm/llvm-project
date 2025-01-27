@@ -13,7 +13,7 @@ endif
 
 lib%.dylib: %.swift
 	mkdir -p $(BUILDDIR)/$(shell basename $< .swift)
-	$(MAKE) MAKE_DSYM=YES \
+	"$(MAKE)" MAKE_DSYM=YES \
 		DYLIB_NAME=$(shell basename $< .swift) \
 		VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/dylib.mk all
 

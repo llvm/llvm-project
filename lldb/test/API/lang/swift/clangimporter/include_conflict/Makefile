@@ -14,7 +14,7 @@ include Makefile.rules
 SWIFTFLAGS += -Xcc -I$(SRCDIR)/Bar -I. -Xcc -I$(SRCDIR)/Foo
 
 libdylib.dylib: dylib.swift
-	$(MAKE) MAKE_DSYM=YES X=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
+	"$(MAKE)" MAKE_DSYM=YES X=$(MAKE_DSYM) CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		DYLIB_NAME=$(shell basename $< .swift) \
 		VPATH=$(SRCDIR) -I $(SRCDIR) -f $(SRCDIR)/dylib.mk all

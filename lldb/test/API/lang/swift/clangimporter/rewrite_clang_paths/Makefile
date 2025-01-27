@@ -16,7 +16,7 @@ endif
 libFoo.dylib: Foo.swift
 	mkdir -p $(BOTDIR)
 	cp -r $(SRCDIR)/Foo $(BOTDIR)/
-	$(MAKE) MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
+	"$(MAKE)" MAKE_DSYM=YES CC=$(CC) SWIFTC=$(SWIFTC) \
 		ARCH=$(ARCH) DSYMUTIL=$(DSYMUTIL) \
 		BASENAME=$(shell basename $< .swift) \
 		BOTDIR=$(BOTDIR) \
