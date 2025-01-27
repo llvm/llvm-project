@@ -188,7 +188,7 @@ public:
   /// Run all of the passes in this manager over the given unit of IR.
   /// ExtraArgs are passed to each pass.
   PreservedAnalyses run(IRUnitT &IR, AnalysisManagerT &AM,
-                        ExtraArgTs... ExtraArgs);
+                        ExtraArgTs &&... ExtraArgs);
 
   template <typename PassT>
   LLVM_ATTRIBUTE_MINSIZE std::enable_if_t<!std::is_same_v<PassT, PassManager>>
@@ -407,11 +407,11 @@ public:
   ///
   /// Runs the analysis if a cached result is not available.
   template <typename PassT>
-  typename PassT::Result &getResult(IRUnitT &IR, ExtraArgTs... ExtraArgs) {
+  typename PassT::Result &getResult(IRUnitT &IR, ExtraArgTs &&... ExtraArgs) {
     assert(AnalysisPasses.count(PassT::ID()) &&
            "This analysis pass was not registered prior to being queried");
     ResultConceptT &ResultConcept =
-        getResultImpl(PassT::ID(), IR, ExtraArgs...);
+        getResultImpl(PassT::ID(), IR, std::forward<ExtraArgTs>(ExtraArgs)...);
 
     using ResultModelT =
         detail::AnalysisResultModel<IRUnitT, PassT, typename PassT::Result,
@@ -508,7 +508,7 @@ private:
 
   /// Get an analysis result, running the pass if necessary.
   ResultConceptT &getResultImpl(AnalysisKey *ID, IRUnitT &IR,
-                                ExtraArgTs... ExtraArgs);
+                                ExtraArgTs &&... ExtraArgs);
 
   /// Get a cached analysis result or return null.
   ResultConceptT *getCachedResultImpl(AnalysisKey *ID, IRUnitT &IR) const {
@@ -778,7 +778,7 @@ public:
   /// Nothing to see here, it just forwards the \c OuterAM reference into the
   /// result.
   Result run(IRUnitT &, AnalysisManager<IRUnitT, ExtraArgTs...> &,
-             ExtraArgTs...) {
+             ExtraArgTs &&...) {
     return Result(*OuterAM);
   }
 

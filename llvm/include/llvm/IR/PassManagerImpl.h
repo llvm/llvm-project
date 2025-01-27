@@ -27,7 +27,7 @@ namespace llvm {
 
 template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
 PreservedAnalyses PassManager<IRUnitT, AnalysisManagerT, ExtraArgTs...>::run(
-    IRUnitT &IR, AnalysisManagerT &AM, ExtraArgTs... ExtraArgs) {
+    IRUnitT &IR, AnalysisManagerT &AM, ExtraArgTs &&... ExtraArgs) {
   class StackTraceEntry : public PrettyStackTraceEntry {
     const PassInstrumentation &PI;
     IRUnitT &IR;
@@ -62,7 +62,7 @@ PreservedAnalyses PassManager<IRUnitT, AnalysisManagerT, ExtraArgTs...>::run(
   // AnalysisManager's arguments out of the whole ExtraArgs set.
   PassInstrumentation PI =
       detail::getAnalysisResult<PassInstrumentationAnalysis>(
-          AM, IR, std::tuple<ExtraArgTs...>(ExtraArgs...));
+          AM, IR, std::forward_as_tuple(std::forward<ExtraArgTs>(ExtraArgs)...));
 
   // RemoveDIs: if requested, convert debug-info to DbgRecord representation
   // for duration of these passes.
@@ -78,7 +78,7 @@ PreservedAnalyses PassManager<IRUnitT, AnalysisManagerT, ExtraArgTs...>::run(
     if (!PI.runBeforePass<IRUnitT>(*Pass, IR))
       continue;
 
-    PreservedAnalyses PassPA = Pass->run(IR, AM, ExtraArgs...);
+    PreservedAnalyses PassPA = Pass->run(IR, AM, std::forward<ExtraArgTs>(ExtraArgs)...);
 
     // Update the analysis manager as each pass runs and potentially
     // invalidates analyses.
@@ -135,7 +135,7 @@ AnalysisManager<IRUnitT, ExtraArgTs...>::clear(IRUnitT &IR,
 template <typename IRUnitT, typename... ExtraArgTs>
 inline typename AnalysisManager<IRUnitT, ExtraArgTs...>::ResultConceptT &
 AnalysisManager<IRUnitT, ExtraArgTs...>::getResultImpl(
-    AnalysisKey *ID, IRUnitT &IR, ExtraArgTs... ExtraArgs) {
+    AnalysisKey *ID, IRUnitT &IR, ExtraArgTs &&... ExtraArgs) {
   typename AnalysisResultMapT::iterator RI;
   bool Inserted;
   std::tie(RI, Inserted) = AnalysisResults.insert(std::make_pair(
@@ -148,12 +148,12 @@ AnalysisManager<IRUnitT, ExtraArgTs...>::getResultImpl(
 
     PassInstrumentation PI;
     if (ID != PassInstrumentationAnalysis::ID()) {
-      PI = getResult<PassInstrumentationAnalysis>(IR, ExtraArgs...);
+      PI = getResult<PassInstrumentationAnalysis>(IR, std::forward<ExtraArgTs>(ExtraArgs)...);
       PI.runBeforeAnalysis(P, IR);
     }
 
     AnalysisResultListT &ResultList = AnalysisResultLists[&IR];
-    ResultList.emplace_back(ID, P.run(IR, *this, ExtraArgs...));
+    ResultList.emplace_back(ID, P.run(IR, *this, std::forward<ExtraArgTs>(ExtraArgs)...));
 
     PI.runAfterAnalysis(P, IR);
 
