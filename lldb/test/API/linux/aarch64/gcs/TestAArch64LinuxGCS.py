@@ -3,7 +3,6 @@ Check that lldb features work when the AArch64 Guarded Control Stack (GCS)
 extension is enabled.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -84,6 +83,40 @@ class AArch64LinuxGCSTestCase(TestBase):
             ],
         )
 
+    # This helper reads all the GCS registers and optionally compares them
+    # against a previous state, then returns the current register values.
+    def check_gcs_registers(
+        self,
+        expected_gcs_features_enabled=None,
+        expected_gcs_features_locked=None,
+        expected_gcspr_el0=None,
+    ):
+        thread = self.dbg.GetSelectedTarget().process.GetThreadAtIndex(0)
+        registerSets = thread.GetFrameAtIndex(0).GetRegisters()
+        gcs_registers = registerSets.GetFirstValueByName(
+            r"Guarded Control Stack Registers"
+        )
+
+        gcs_features_enabled = gcs_registers.GetChildMemberWithName(
+            "gcs_features_enabled"
+        ).GetValueAsUnsigned()
+        if expected_gcs_features_enabled is not None:
+            self.assertEqual(expected_gcs_features_enabled, gcs_features_enabled)
+
+        gcs_features_locked = gcs_registers.GetChildMemberWithName(
+            "gcs_features_locked"
+        ).GetValueAsUnsigned()
+        if expected_gcs_features_locked is not None:
+            self.assertEqual(expected_gcs_features_locked, gcs_features_locked)
+
+        gcspr_el0 = gcs_registers.GetChildMemberWithName(
+            "gcspr_el0"
+        ).GetValueAsUnsigned()
+        if expected_gcspr_el0 is not None:
+            self.assertEqual(expected_gcspr_el0, gcspr_el0)
+
+        return gcs_features_enabled, gcs_features_locked, gcspr_el0
+
     @skipUnlessArch("aarch64")
     @skipUnlessPlatform(["linux"])
     def test_gcs_registers(self):
@@ -108,40 +141,7 @@ class AArch64LinuxGCSTestCase(TestBase):
 
         self.expect("register read --all", substrs=["Guarded Control Stack Registers:"])
 
-        # This helper reads all the GCS registers and optionally compares them
-        # against a previous state, then returns the current register values.
-        def check_gcs_registers(
-            expected_gcs_features_enabled=None,
-            expected_gcs_features_locked=None,
-            expected_gcspr_el0=None,
-        ):
-            thread = self.dbg.GetSelectedTarget().process.GetThreadAtIndex(0)
-            registerSets = thread.GetFrameAtIndex(0).GetRegisters()
-            gcs_registers = registerSets.GetFirstValueByName(
-                r"Guarded Control Stack Registers"
-            )
-
-            gcs_features_enabled = gcs_registers.GetChildMemberWithName(
-                "gcs_features_enabled"
-            ).GetValueAsUnsigned()
-            if expected_gcs_features_enabled is not None:
-                self.assertEqual(expected_gcs_features_enabled, gcs_features_enabled)
-
-            gcs_features_locked = gcs_registers.GetChildMemberWithName(
-                "gcs_features_locked"
-            ).GetValueAsUnsigned()
-            if expected_gcs_features_locked is not None:
-                self.assertEqual(expected_gcs_features_locked, gcs_features_locked)
-
-            gcspr_el0 = gcs_registers.GetChildMemberWithName(
-                "gcspr_el0"
-            ).GetValueAsUnsigned()
-            if expected_gcspr_el0 is not None:
-                self.assertEqual(expected_gcspr_el0, gcspr_el0)
-
-            return gcs_features_enabled, gcs_features_locked, gcspr_el0
-
-        enabled, locked, spr_el0 = check_gcs_registers()
+        enabled, locked, spr_el0 = self.check_gcs_registers()
 
         # Features enabled should have at least the enable bit set, it could have
         # others depending on what the C library did, but we can't rely on always
@@ -164,7 +164,7 @@ class AArch64LinuxGCSTestCase(TestBase):
             substrs=["stopped", "stop reason = breakpoint"],
         )
 
-        _, _, spr_el0 = check_gcs_registers(enabled, locked, spr_el0 - 8)
+        _, _, spr_el0 = self.check_gcs_registers(enabled, locked, spr_el0 - 8)
 
         # Any combination of GCS feature lock bits might have been set by the C
         # library, and could be set to 0 or 1. To check that we can modify them,
@@ -235,3 +235,142 @@ class AArch64LinuxGCSTestCase(TestBase):
                 "exited with status = 0",
             ],
         )
+
+    @skipUnlessPlatform(["linux"])
+    def test_gcs_expression_simple(self):
+        if not self.isAArch64GCS():
+            self.skipTest("Target must support GCS.")
+
+        self.build()
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
+
+        # Break before GCS has been enabled.
+        self.runCmd("b main")
+        # And after it has been enabled.
+        lldbutil.run_break_set_by_file_and_line(
+            self,
+            "main.c",
+            line_number("main.c", "// Set break point at this line."),
+            num_expected_locations=1,
+        )
+
+        self.runCmd("run", RUN_SUCCEEDED)
+
+        if self.process().GetState() == lldb.eStateExited:
+            self.fail("Test program failed to run.")
+
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
+
+        # GCS has not been enabled yet and the ABI plugin should know not to
+        # attempt pushing to the control stack.
+        before = self.check_gcs_registers()
+        expr_cmd = "p get_gcs_status()"
+        self.expect(expr_cmd, substrs=["(unsigned long) 0"])
+        self.check_gcs_registers(*before)
+
+        # Continue to when GCS has been enabled.
+        self.runCmd("continue")
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
+
+        # If we fail to setup the GCS entry, we should not leave any of the GCS registers
+        # changed. The last thing we do is write a new GCS entry to memory and
+        # to simulate the failure of that, temporarily point the GCS to the zero page.
+        #
+        # We use the value 8 here because LLDB will decrement it by 8 so it points to
+        # what we think will be an empty entry on the guarded control stack.
+        _, _, original_gcspr = self.check_gcs_registers()
+        self.runCmd("register write gcspr_el0 8")
+        before = self.check_gcs_registers()
+        self.expect(expr_cmd, error=True)
+        self.check_gcs_registers(*before)
+        # Point to the valid shadow stack region again.
+        self.runCmd(f"register write gcspr_el0 {original_gcspr}")
+
+        # This time we do need to push to the GCS and having done so, we can
+        # return from this expression without causing a fault.
+        before = self.check_gcs_registers()
+        self.expect(expr_cmd, substrs=["(unsigned long) 1"])
+        self.check_gcs_registers(*before)
+
+    @skipUnlessPlatform(["linux"])
+    def test_gcs_expression_disable_gcs(self):
+        if not self.isAArch64GCS():
+            self.skipTest("Target must support GCS.")
+
+        self.build()
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
+
+        # Break after GCS is enabled.
+        lldbutil.run_break_set_by_file_and_line(
+            self,
+            "main.c",
+            line_number("main.c", "// Set break point at this line."),
+            num_expected_locations=1,
+        )
+
+        self.runCmd("run", RUN_SUCCEEDED)
+
+        if self.process().GetState() == lldb.eStateExited:
+            self.fail("Test program failed to run.")
+
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
+
+        # Unlock all features so the expression can enable them again.
+        self.runCmd("register write gcs_features_locked 0")
+        # Disable all features, but keep GCS itself enabled.
+        PR_SHADOW_STACK_ENABLE = 1
+        self.runCmd(f"register write gcs_features_enabled 0x{PR_SHADOW_STACK_ENABLE:x}")
+
+        enabled, locked, spr_el0 = self.check_gcs_registers()
+        # We restore everything apart GCS being enabled, as we are not allowed to
+        # go from disabled -> enabled via ptrace.
+        self.expect("p change_gcs_config(false)", substrs=["true"])
+        enabled &= ~1
+        self.check_gcs_registers(enabled, locked, spr_el0)
+
+    @skipUnlessPlatform(["linux"])
+    def test_gcs_expression_enable_gcs(self):
+        if not self.isAArch64GCS():
+            self.skipTest("Target must support GCS.")
+
+        self.build()
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
+
+        # Break before GCS is enabled.
+        self.runCmd("b main")
+
+        self.runCmd("run", RUN_SUCCEEDED)
+
+        if self.process().GetState() == lldb.eStateExited:
+            self.fail("Test program failed to run.")
+
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
+
+        # Unlock all features so the expression can enable them again.
+        self.runCmd("register write gcs_features_locked 0")
+        # Disable all features. The program needs PR_SHADOW_STACK_PUSH, but it
+        # will enable that itself.
+        self.runCmd(f"register write gcs_features_enabled 0")
+
+        enabled, locked, spr_el0 = self.check_gcs_registers()
+        self.expect("p change_gcs_config(true)", substrs=["true"])
+        # Though we could disable GCS with ptrace, we choose not to to be
+        # consistent with the disabled -> enabled behaviour.
+        enabled |= 1
+        self.check_gcs_registers(enabled, locked, spr_el0)
