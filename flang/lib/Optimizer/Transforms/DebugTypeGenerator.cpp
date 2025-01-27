@@ -48,7 +48,8 @@ DebugTypeGenerator::DebugTypeGenerator(mlir::ModuleOp m,
                                        mlir::SymbolTable *symbolTable_,
                                        const mlir::DataLayout &dl)
     : module(m), symbolTable(symbolTable_), dataLayout{&dl},
-      kindMapping(getKindMapping(m)), llvmTypeConverter(m, false, false, dl) {
+      kindMapping(getKindMapping(m)), llvmTypeConverter(m, false, false, dl),
+      derivedTypeDepth(0) {
   LLVM_DEBUG(llvm::dbgs() << "DITypeAttr generator\n");
 
   mlir::MLIRContext *context = module.getContext();
@@ -407,7 +408,10 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
       /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, offset * 8,
       /*alignInBits=*/0, elements, /*dataLocation=*/nullptr, /*rank=*/nullptr,
       /*allocated=*/nullptr, /*associated=*/nullptr);
-  if (canCacheThisType) {
+
+  // derivedTypeDepth == 1 means that it is a top level type which is safe to
+  // cache.
+  if (canCacheThisType || derivedTypeDepth == 1) {
     typeCache[Ty] = finalAttr;
   } else {
     auto iter = typeCache.find(Ty);
@@ -663,7 +667,27 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
     return convertCharacterType(charTy, fileAttr, scope, declOp,
                                 /*hasDescriptor=*/false);
   } else if (auto recTy = mlir::dyn_cast_if_present<fir::RecordType>(Ty)) {
-    return convertRecordType(recTy, fileAttr, scope, declOp);
+    // For nested derived types like shown below, the call sequence of the
+    // convertRecordType will look something like as follows:
+    // convertRecordType (t1)
+    //  convertRecordType (t2)
+    //    convertRecordType (t3)
+    // We need to recognize when we are processing the top level type like t1
+    // to make caching decision. The variable `derivedTypeDepth` is used for
+    // this purpose and maintains the current depth of derived type processing.
+    //  type t1
+    //   type(t2), pointer :: p1
+    // end type
+    // type t2
+    //   type(t3), pointer :: p2
+    // end type
+    // type t2
+    //   integer a
+    // end type
+    derivedTypeDepth++;
+    auto result = convertRecordType(recTy, fileAttr, scope, declOp);
+    derivedTypeDepth--;
+    return result;
   } else if (auto tupleTy = mlir::dyn_cast_if_present<mlir::TupleType>(Ty)) {
     return convertTupleType(tupleTy, fileAttr, scope, declOp);
   } else if (auto refTy = mlir::dyn_cast_if_present<fir::ReferenceType>(Ty)) {
