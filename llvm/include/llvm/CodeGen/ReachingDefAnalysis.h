@@ -142,7 +142,7 @@ private:
 
   MBBReachingDefsInfo MBBReachingDefs;
   using MBBFrameObjsReachingDefsInfo =
-      std::vector<std::vector<SmallVector<int>>>;
+      DenseMap<unsigned, DenseMap<int, SmallVector<int>>>;
   // MBBFrameObjsReachingDefs[i][j] is a list of instruction indices (relative
   // to begining of MBB) that define frame index (j +
   // MF->getFrameInfo().getObjectIndexBegin()) in MBB i. This is used in
@@ -188,7 +188,7 @@ public:
 
   /// Provides the instruction id of the closest reaching def instruction of
   /// Reg that reaches MI, relative to the begining of MI's basic block.
-  // Note that Reg may represent a stack slot.
+  /// Note that Reg may represent a stack slot.
   int getReachingDef(MachineInstr *MI, Register Reg) const;
 
   /// Return whether A and B use the same def of Reg.
@@ -317,7 +317,7 @@ private:
 
   /// Provides the instruction of the closest reaching def instruction of
   /// Reg that reaches MI, relative to the begining of MI's basic block.
-  // Note that Reg may represent a stack slot.
+  /// Note that Reg may represent a stack slot.
   MachineInstr *getReachingLocalMIDef(MachineInstr *MI, Register Reg) const;
 };
 

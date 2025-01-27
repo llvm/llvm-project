@@ -59,9 +59,8 @@ static bool isFIDef(const MachineInstr &MI, int FrameIndex,
   int DefFrameIndex = 0;
   int SrcFrameIndex = 0;
   if (TII->isStoreToStackSlot(MI, DefFrameIndex) ||
-      TII->isStackSlotCopy(MI, DefFrameIndex, SrcFrameIndex)) {
+      TII->isStackSlotCopy(MI, DefFrameIndex, SrcFrameIndex))
     return DefFrameIndex == FrameIndex;
-  }
   return false;
 }
 
@@ -70,8 +69,6 @@ void ReachingDefAnalysis::enterBasicBlock(MachineBasicBlock *MBB) {
   assert(MBBNumber < MBBReachingDefs.numBlockIDs() &&
          "Unexpected basic block number.");
   MBBReachingDefs.startBasicBlock(MBBNumber, NumRegUnits);
-
-  MBBFrameObjsReachingDefs[MBBNumber].resize(NumStackObjects, {-1});
 
   // Reset instruction counter in each basic block.
   CurInstr = 0;
@@ -150,8 +147,16 @@ void ReachingDefAnalysis::processDefs(MachineInstr *MI) {
       assert(FrameIndex >= 0 && "Can't handle negative frame indicies yet!");
       if (!isFIDef(*MI, FrameIndex, TII))
         continue;
-      MBBFrameObjsReachingDefs[MBBNumber][FrameIndex - ObjectIndexBegin]
-          .push_back(CurInstr);
+      if (MBBFrameObjsReachingDefs.contains(MBBNumber)) {
+        auto Frame2InstrIdx = MBBFrameObjsReachingDefs[MBBNumber];
+        if (Frame2InstrIdx.count(FrameIndex - ObjectIndexBegin) > 0)
+          Frame2InstrIdx[FrameIndex - ObjectIndexBegin].push_back(CurInstr);
+        else
+          Frame2InstrIdx[FrameIndex - ObjectIndexBegin] = {CurInstr};
+      } else {
+        MBBFrameObjsReachingDefs[MBBNumber] = {
+            {FrameIndex - ObjectIndexBegin, {CurInstr}}};
+      }
     }
     if (!isValidRegDef(MO))
       continue;
@@ -307,7 +312,6 @@ void ReachingDefAnalysis::init() {
   NumStackObjects = MF->getFrameInfo().getNumObjects();
   ObjectIndexBegin = MF->getFrameInfo().getObjectIndexBegin();
   MBBReachingDefs.init(MF->getNumBlockIDs());
-  MBBFrameObjsReachingDefs.resize(MF->getNumBlockIDs());
   // Initialize the MBBOutRegsInfos
   MBBOutRegsInfos.resize(MF->getNumBlockIDs());
   LoopTraversal Traversal;
@@ -344,8 +348,8 @@ int ReachingDefAnalysis::getReachingDef(MachineInstr *MI, Register Reg) const {
 
   if (Register::isStackSlot(Reg)) {
     int FrameIndex = Register::stackSlot2Index(Reg);
-    for (int Def :
-         MBBFrameObjsReachingDefs[MBBNumber][FrameIndex - ObjectIndexBegin]) {
+    for (int Def : MBBFrameObjsReachingDefs.lookup(MBBNumber).lookup(
+             FrameIndex - ObjectIndexBegin)) {
       if (Def >= InstId)
         break;
       DefRes = Def;
