@@ -407,14 +407,22 @@ bool CombinerHelper::matchCombineShuffleExtract(MachineInstr &MI, int64_t &Idx) 
     return false;
   }
 
+  LLT ExtractTy =  MaxValue < Width ? MRI.getType(SrcVec1) : MRI.getType(SrcVec2);
+
   // Check that the extractee length is power of 2.
   if ((MaxValue < Width && !llvm::isPowerOf2_32(Width)) ||
       (MinValue >= Width && !llvm::isPowerOf2_32(Width2))) {
     return false;
   }
 
-  // Check if the extractee's order is kept:
-  if (!std::is_sorted(Mask.begin(), Mask.end())) {
+  // Check if the extractee's order is kept, and they should be conscecutive.
+  for (size_t i = 1; i < Mask.size(); ++i) {
+    if (Mask[i] != Mask[i - 1] + 1 || Mask[i] == -1) {
+      return false; // Not consecutive
+    }
+  }
+
+  if (!LI->isLegalOrCustom({TargetOpcode::G_EXTRACT_SUBVECTOR, {ExtractTy}})) {
     return false;
   }
 

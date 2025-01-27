@@ -1834,8 +1834,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   getActionDefinitionsBuilder(G_EXTRACT_SUBVECTOR)
-    //.fewerElementsIf(isWideVec16(0), changeTo(0, V2S16))
-    .customFor({V8S16, V4S16})
+    .widenScalarOrEltToNextPow2(0)
+    .customFor(AllS16Vectors)
     .lower();
 
   getActionDefinitionsBuilder(G_EXTRACT_VECTOR_ELT)
