@@ -112,9 +112,9 @@ static bool CanAssociateWithStorageSequence(
              characteristics::TypeAndShape::Attr::AssumedRank) &&
       !dummy.type.attrs().test(
           characteristics::TypeAndShape::Attr::AssumedShape) &&
-      !dummy.type.attrs().test(characteristics::TypeAndShape::Attr::Coarray) &&
       !dummy.attrs.test(characteristics::DummyDataObject::Attr::Allocatable) &&
-      !dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer);
+      !dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer) &&
+      dummy.type.corank() == 0;
 }
 
 // When a CHARACTER actual argument is known to be short,

@@ -2576,6 +2576,10 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             // Dummy procedures are never elemental.
             dummyProc->procedure.value().attrs.reset(
                 characteristics::Procedure::Attr::Elemental);
+          } else if (auto *dummyObject{
+                         std::get_if<characteristics::DummyDataObject>(
+                             &dc->u)}) {
+            dummyObject->type.set_corank(0);
           }
           dummyArgs.emplace_back(std::move(*dc));
           if (d.typePattern.kindCode == KindCode::same && !sameDummyArg) {
