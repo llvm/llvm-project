@@ -393,8 +393,9 @@ BasicBlock::getFirstNonPHIOrDbg(bool SkipPseudoOp) const {
       continue;
 
     BasicBlock::const_iterator It = I.getIterator();
-    // Signal that this comes after any debug records.
-    It.setHeadBit(false);
+    // This position comes after any debug records, the head bit should remain
+    // unset.
+    assert(!It.getHeadBit());
     return It;
   }
   return end();
@@ -413,8 +414,10 @@ BasicBlock::getFirstNonPHIOrDbgOrLifetime(bool SkipPseudoOp) const {
       continue;
 
     BasicBlock::const_iterator It = I.getIterator();
-    // Signal that this comes after any debug records.
-    It.setHeadBit(false);
+    // This position comes after any debug records, the head bit should remain
+    // unset.
+    assert(!It.getHeadBit());
+
     return It;
 
   }

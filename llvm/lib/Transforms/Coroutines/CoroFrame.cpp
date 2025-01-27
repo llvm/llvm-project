@@ -1656,8 +1656,7 @@ static Value *emitSetAndGetSwiftErrorValueAround(Instruction *Call,
     Builder.SetInsertPoint(Call->getNextNode());
   } else {
     auto Invoke = cast<InvokeInst>(Call);
-    BasicBlock::iterator It = Invoke->getNormalDest()->getFirstNonPHIOrDbg();
-    Builder.SetInsertPoint(It);
+    Builder.SetInsertPoint(Invoke->getNormalDest()->getFirstNonPHIOrDbg());
   }
 
   // Get the current swifterror value and store it to the alloca.
