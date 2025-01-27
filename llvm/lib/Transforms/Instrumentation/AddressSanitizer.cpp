@@ -3414,7 +3414,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
   assert(InsBeforeB == &F.getEntryBlock());
   for (auto *AI : StaticAllocasToMoveUp)
     if (AI->getParent() == InsBeforeB)
-      AI->moveBefore(InsBefore);
+      AI->moveBefore(InsBefore->getIterator());
 
   // Move stores of arguments into entry-block allocas as well. This prevents
   // extra stack slots from being generated (to house the argument values until
@@ -3423,10 +3423,11 @@ void FunctionStackPoisoner::processStaticAllocas() {
   SmallVector<Instruction *, 8> ArgInitInsts;
   findStoresToUninstrumentedArgAllocas(ASan, *InsBefore, ArgInitInsts);
   for (Instruction *ArgInitInst : ArgInitInsts)
-    ArgInitInst->moveBefore(InsBefore);
+    ArgInitInst->moveBefore(InsBefore->getIterator());
 
   // If we have a call to llvm.localescape, keep it in the entry block.
-  if (LocalEscapeCall) LocalEscapeCall->moveBefore(InsBefore);
+  if (LocalEscapeCall)
+    LocalEscapeCall->moveBefore(InsBefore->getIterator());
 
   SmallVector<ASanStackVariableDescription, 16> SVD;
   SVD.reserve(AllocaVec.size());
