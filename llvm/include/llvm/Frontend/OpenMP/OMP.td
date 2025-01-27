@@ -525,6 +525,8 @@ def OMPC_Weak : Clause<"weak"> {
 }
 def OMPC_When: Clause<"when"> {
 }
+def OMPC_Otherwise: Clause<"otherwise"> {
+}
 def OMPC_Write : Clause<"write"> {
   let clangClass = "OMPWriteClause";
 }
@@ -843,6 +845,9 @@ def OMP_Master : Directive<"master"> {
 def OMP_Metadirective : Directive<"metadirective"> {
   let allowedClauses = [
     VersionedClause<OMPC_When>,
+  ];
+  let allowedClauses = [
+    VersionedClause<OMPC_Otherwise>,
   ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_Default>,
