@@ -285,7 +285,7 @@ public:
   /// preserves some debugging information.
   LLVM_DEPRECATED("Use iterators as instruction positions", "getFirstNonPHIIt")
   const Instruction* getFirstNonPHI() const;
-  LLVM_DEPRECATED("Use iterators as instruction positions", "getFirstNonPHIIt")
+  LLVM_DEPRECATED("Use iterators as instruction positions instead", "getFirstNonPHIIt")
   Instruction* getFirstNonPHI() {
     return const_cast<Instruction *>(
                        static_cast<const BasicBlock *>(this)->getFirstNonPHI());
