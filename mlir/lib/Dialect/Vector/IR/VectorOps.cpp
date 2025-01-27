@@ -25,7 +25,6 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/IRMapping.h"
@@ -463,10 +462,148 @@ void vector::MultiDimReductionOp::build(OpBuilder &builder,
   build(builder, result, kind, source, acc, reductionDims);
 }
 
+/// TODO: Move to APFloat/APInt.
+/// Computes the result of reducing a constant vector where the accumulator
+/// value, `acc`, is also constant. `times` is the number of times the operation
+/// is applied.
+static APFloat computePowerOf(const APFloat &a, int64_t exponent) {
+  assert(exponent >= 0 && "negative exponents not supported.");
+  if (exponent == 0) {
+    return APFloat::getOne(a.getSemantics());
+  }
+  APFloat acc = a;
+  int64_t remainingExponent = exponent;
+  while (remainingExponent > 1) {
+    if (remainingExponent % 2 == 0) {
+      acc = acc * acc;
+      remainingExponent /= 2;
+    } else {
+      acc = acc * a;
+      --remainingExponent;
+    }
+  }
+  return acc;
+};
+
+static APInt computePowerOf(const APInt &a, int64_t exponent) {
+  assert(exponent >= 0 && "negative exponents not supported.");
+  if (exponent == 0) {
+    return APInt(a.getBitWidth(), 1);
+  }
+  APInt acc = a;
+  int64_t remainingExponent = exponent;
+  while (remainingExponent > 1) {
+    if (remainingExponent % 2 == 0) {
+      acc = acc * acc;
+      remainingExponent /= 2;
+    } else {
+      acc = acc * a;
+      remainingExponent--;
+    }
+  }
+  return acc;
+};
+
+static OpFoldResult computeConstantReduction(FloatAttr src, FloatAttr acc,
+                                             int64_t times, CombiningKind kind,
+                                             ShapedType dstType) {
+  APFloat srcVal = src.getValue();
+  APFloat accVal = acc.getValue();
+  switch (kind) {
+  case CombiningKind::ADD: {
+    APFloat n = APFloat(srcVal.getSemantics());
+    n.convertFromAPInt(APInt(64, times, true), true,
+                       APFloat::rmNearestTiesToEven);
+    return DenseElementsAttr::get(dstType, {accVal + srcVal * n});
+  }
+  case CombiningKind::MUL: {
+    return DenseElementsAttr::get(dstType,
+                                  {accVal * computePowerOf(srcVal, times)});
+  }
+  case CombiningKind::MINIMUMF:
+    return DenseElementsAttr::get(dstType, {llvm::minimum(accVal, srcVal)});
+  case CombiningKind::MAXIMUMF:
+    return DenseElementsAttr::get(dstType, {llvm::maximum(accVal, srcVal)});
+  case CombiningKind::MINNUMF:
+    return DenseElementsAttr::get(dstType, {llvm::minnum(accVal, srcVal)});
+  case CombiningKind::MAXNUMF:
+    return DenseElementsAttr::get(dstType, {llvm::maxnum(accVal, srcVal)});
+  default:
+    return {};
+  }
+}
+
+static OpFoldResult computeConstantReduction(IntegerAttr src, IntegerAttr acc,
+                                             int64_t times, CombiningKind kind,
+                                             ShapedType dstType) {
+  APInt srcVal = src.getValue();
+  APInt accVal = acc.getValue();
+
+  switch (kind) {
+  case CombiningKind::ADD:
+    return DenseElementsAttr::get(dstType, {accVal + srcVal * times});
+  case CombiningKind::MUL: {
+    return DenseElementsAttr::get(dstType,
+                                  {accVal * computePowerOf(srcVal, times)});
+  }
+  case CombiningKind::MINSI:
+    return DenseElementsAttr::get(dstType,
+                                  {accVal.slt(srcVal) ? accVal : srcVal});
+  case CombiningKind::MAXSI:
+    return DenseElementsAttr::get(dstType,
+                                  {accVal.ugt(srcVal) ? accVal : srcVal});
+  case CombiningKind::MINUI:
+    return DenseElementsAttr::get(dstType,
+                                  {accVal.ult(srcVal) ? accVal : srcVal});
+  case CombiningKind::MAXUI:
+    return DenseElementsAttr::get(dstType,
+                                  {accVal.ugt(srcVal) ? accVal : srcVal});
+  case CombiningKind::AND:
+    return DenseElementsAttr::get(dstType, {accVal & srcVal});
+  case CombiningKind::OR:
+    return DenseElementsAttr::get(dstType, {accVal | srcVal});
+  case CombiningKind::XOR:
+    return DenseElementsAttr::get(dstType,
+                                  {times & 0x1 ? accVal ^ srcVal : accVal});
+  default:
+    return {};
+  }
+}
+
 OpFoldResult MultiDimReductionOp::fold(FoldAdaptor adaptor) {
   // Single parallel dim, this is a noop.
   if (getSourceVectorType().getRank() == 1 && !isReducedDim(0))
     return getSource();
+
+  auto srcAttr = dyn_cast_or_null<DenseElementsAttr>(adaptor.getSource());
+  auto accAttr = dyn_cast_or_null<DenseElementsAttr>(adaptor.getAcc());
+  if (!srcAttr || !accAttr || !srcAttr.isSplat() || !accAttr.isSplat())
+    return {};
+
+  ArrayRef<int64_t> reductionDims = getReductionDims();
+  auto srcType = cast<ShapedType>(getSourceVectorType());
+  ArrayRef<int64_t> srcDims = srcType.getShape();
+
+  int64_t times = 1;
+  for (int64_t dim : reductionDims) {
+    times *= srcDims[dim];
+  }
+
+  CombiningKind kind = getKind();
+  auto dstType = cast<ShapedType>(getDestType());
+  Type dstEltType = dstType.getElementType();
+
+  if (mlir::dyn_cast_or_null<FloatType>(dstEltType)) {
+    return computeConstantReduction(srcAttr.getSplatValue<FloatAttr>(),
+                                    accAttr.getSplatValue<FloatAttr>(), times,
+                                    kind, dstType);
+  }
+  if (mlir::dyn_cast_or_null<IntegerType>(dstEltType)) {
+    return computeConstantReduction(srcAttr.getSplatValue<IntegerAttr>(),
+                                    accAttr.getSplatValue<IntegerAttr>(), times,
+                                    kind, dstType);
+  }
+
   return {};
 }
 
