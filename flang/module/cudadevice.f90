@@ -75,4 +75,48 @@ implicit none
   end interface
   public :: threadfence_system
 
+  ! Math API
+
+  interface
+    attributes(device) function __fadd_rd(x, y) bind(c, name='__nv_fadd_rd')
+      real, intent(in), value :: x, y
+      real :: __fadd_rd
+    end function
+  end interface
+  public :: __fadd_rd
+
+  interface
+    attributes(device) function __fadd_ru(x, y) bind(c, name='__nv_fadd_ru')
+      real, intent(in), value :: x, y
+      real :: __fadd_ru
+    end function
+  end interface
+  public :: __fadd_ru
+
+  ! Atomic Operations
+
+  interface atomicadd
+    attributes(device) pure integer function atomicaddi(address, val)
+  !dir$ ignore_tkr (d) address, (d) val
+    integer, intent(inout) :: address
+    integer, value :: val
+    end function
+    attributes(device) pure real function atomicaddf(address, val)
+  !dir$ ignore_tkr (d) address, (d) val
+    real, intent(inout) :: address
+    real, value :: val
+    end function
+    attributes(device) pure real*8 function atomicaddd(address, val)
+  !dir$ ignore_tkr (d) address, (d) val
+    real*8, intent(inout) :: address
+    real*8, value :: val
+    end function
+    attributes(device) pure integer(8) function atomicaddl(address, val)
+  !dir$ ignore_tkr (d) address, (d) val
+    integer(8), intent(inout) :: address
+    integer(8), value :: val
+    end function
+  end interface 
+public :: atomicadd
+
 end module

@@ -1592,24 +1592,10 @@ Intrinsic::DagEmitter::emitDagCast(const DagInit *DI, bool IsBitCast) {
   }
 
   std::string S;
-  if (IsBitCast) {
-    // Emit a reinterpret cast. The second operand must be an lvalue, so create
-    // a temporary.
-    std::string N = "reint";
-    unsigned I = 0;
-    while (Intr.Variables.find(N) != Intr.Variables.end())
-      N = "reint" + utostr(++I);
-    Intr.Variables[N] = Variable(R.first, N + Intr.VariablePostfix);
-
-    Intr.OS << R.first.str() << " " << Intr.Variables[N].getName() << " = "
-            << R.second << ";";
-    Intr.emitNewLine();
-
-    S = "*(" + castToType.str() + " *) &" + Intr.Variables[N].getName() + "";
-  } else {
-    // Emit a normal (static) cast.
+  if (IsBitCast)
+    S = "__builtin_bit_cast(" + castToType.str() + ", " + R.second + ")";
+  else
     S = "(" + castToType.str() + ")(" + R.second + ")";
-  }
 
   return std::make_pair(castToType, S);
 }

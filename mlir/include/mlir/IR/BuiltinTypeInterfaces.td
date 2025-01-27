@@ -46,26 +46,6 @@ def FloatTypeInterface : TypeInterface<"FloatType"> {
   ];
 
   let extraClassDeclaration = [{
-    // Convenience factories.
-    static FloatType getBF16(MLIRContext *ctx);
-    static FloatType getF16(MLIRContext *ctx);
-    static FloatType getF32(MLIRContext *ctx);
-    static FloatType getTF32(MLIRContext *ctx);
-    static FloatType getF64(MLIRContext *ctx);
-    static FloatType getF80(MLIRContext *ctx);
-    static FloatType getF128(MLIRContext *ctx);
-    static FloatType getFloat8E5M2(MLIRContext *ctx);
-    static FloatType getFloat8E4M3(MLIRContext *ctx);
-    static FloatType getFloat8E4M3FN(MLIRContext *ctx);
-    static FloatType getFloat8E5M2FNUZ(MLIRContext *ctx);
-    static FloatType getFloat8E4M3FNUZ(MLIRContext *ctx);
-    static FloatType getFloat8E4M3B11FNUZ(MLIRContext *ctx);
-    static FloatType getFloat8E3M4(MLIRContext *ctx);
-    static FloatType getFloat4E2M1FN(MLIRContext *ctx);
-    static FloatType getFloat6E2M3FN(MLIRContext *ctx);
-    static FloatType getFloat6E3M2FN(MLIRContext *ctx);
-    static FloatType getFloat8E8M0FNU(MLIRContext *ctx);
-
     /// Return the bitwidth of this float type.
     unsigned getWidth();
 

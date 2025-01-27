@@ -237,9 +237,13 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     }
   };
   auto checkReduction = [&todo](auto op, LogicalResult &result) {
-    if (!op.getReductionVars().empty() || op.getReductionByref() ||
-        op.getReductionSyms())
-      result = todo("reduction");
+    if (isa<omp::TeamsOp>(op) || isa<omp::SimdOp>(op))
+      if (!op.getReductionVars().empty() || op.getReductionByref() ||
+          op.getReductionSyms())
+        result = todo("reduction");
+    if (op.getReductionMod() &&
+        op.getReductionMod().value() != omp::ReductionModifier::defaultmod)
+      result = todo("reduction with modifier");
   };
   auto checkTaskReduction = [&todo](auto op, LogicalResult &result) {
     if (!op.getTaskReductionVars().empty() || op.getTaskReductionByref() ||
@@ -257,6 +261,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::SectionsOp op) {
         checkAllocate(op, result);
         checkPrivate(op, result);
+        checkReduction(op, result);
       })
       .Case([&](omp::SingleOp op) {
         checkAllocate(op, result);
@@ -270,7 +275,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       .Case([&](omp::TaskOp op) {
         checkAllocate(op, result);
         checkInReduction(op, result);
-        checkUntied(op, result);
       })
       .Case([&](omp::TaskgroupOp op) {
         checkAllocate(op, result);
@@ -282,14 +286,19 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::TaskloopOp op) {
         // TODO: Add other clauses check
+        checkUntied(op, result);
         checkPriority(op, result);
       })
       .Case([&](omp::WsloopOp op) {
         checkAllocate(op, result);
         checkLinear(op, result);
         checkOrder(op, result);
+        checkReduction(op, result);
       })
-      .Case([&](omp::ParallelOp op) { checkAllocate(op, result); })
+      .Case([&](omp::ParallelOp op) {
+        checkAllocate(op, result);
+        checkReduction(op, result);
+      })
       .Case([&](omp::SimdOp op) {
         checkLinear(op, result);
         checkNontemporal(op, result);
@@ -1350,11 +1359,9 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
   // Allocate private vars
   llvm::BranchInst *allocaTerminator =
       llvm::cast<llvm::BranchInst>(allocaIP.getBlock()->getTerminator());
-  if (allocaTerminator->getNumSuccessors() != 1) {
-    splitBB(llvm::OpenMPIRBuilder::InsertPointTy(
-                allocaIP.getBlock(), allocaTerminator->getIterator()),
-            true, "omp.region.after_alloca");
-  }
+  splitBB(llvm::OpenMPIRBuilder::InsertPointTy(allocaIP.getBlock(),
+                                               allocaTerminator->getIterator()),
+          true, "omp.region.after_alloca");
 
   llvm::IRBuilderBase::InsertPointGuard guard(builder);
   // Update the allocaTerminator in case the alloca block was split above.

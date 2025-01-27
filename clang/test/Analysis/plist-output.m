@@ -177,7 +177,7 @@ void RDar13295437_f(void *i) __attribute__((__nonnull__));
 
 struct  RDar13295437_S { int *i; };
 
-int  RDar13295437(void) {
+void RDar13295437(void) {
   struct RDar13295437_S s = {0};
   struct RDar13295437_S *sp = &s;
   RDar13295437_f(sp->i);

@@ -1025,6 +1025,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsOverloadedOperators) {
   EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_OverloadedOperatorLParen);
   EXPECT_TOKEN(Tokens[8], tok::amp, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[12], tok::amp, TT_PointerOrReference);
+
+  Tokens = annotate("SomeLoooooooooooooooooType::Awaitable\n"
+                    "SomeLoooooooooooooooooType::operator co_await();");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[7], tok::l_paren, TT_OverloadedOperatorLParen);
 }
 
 TEST_F(TokenAnnotatorTest, OverloadedOperatorInTemplate) {
@@ -3413,13 +3419,26 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   EXPECT_BRACE_KIND(Tokens[0], BK_Block);
   EXPECT_TOKEN(Tokens[1], tok::l_brace, TT_BlockLBrace);
   EXPECT_BRACE_KIND(Tokens[1], BK_Block);
-#if 0
-  // FIXME:
   EXPECT_BRACE_KIND(Tokens[11], BK_BracedInit);
   EXPECT_BRACE_KIND(Tokens[14], BK_BracedInit);
-#endif
   EXPECT_BRACE_KIND(Tokens[20], BK_Block);
   EXPECT_BRACE_KIND(Tokens[21], BK_Block);
+
+  Tokens = annotate("{\n"
+                    "#define FOO \\\n"
+                    "  { \\\n"
+                    "    case bar: { \\\n"
+                    "      break; \\\n"
+                    "    } \\\n"
+                    "  }\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_BlockLBrace);
+  EXPECT_BRACE_KIND(Tokens[4], BK_Block);
+  EXPECT_TOKEN(Tokens[7], tok::colon, TT_CaseLabelColon);
+  EXPECT_BRACE_KIND(Tokens[8], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[11], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[12], BK_Block);
 
   Tokens = annotate("a = class extends goog.a {};",
                     getGoogleStyle(FormatStyle::LK_JavaScript));

@@ -321,9 +321,18 @@ Changes in existing checks
   a false positive when only an implicit conversion happened inside an
   initializer list.
 
+- Improved :doc:`modernize-raw-string-literal
+  <clang-tidy/checks/modernize/raw-string-literal>` check to fix incorrect
+  fix-it when the string contains a user-defined suffix.
+
 - Improved :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check to fix a
   crash when a class is declared but not defined.
+
+- Improved :doc:`modernize-use-integer-sign-comparison
+  <clang-tidy/checks/modernize/use-integer-sign-comparison>` check to
+  add an option ``EnableQtSupport``, that makes C++17 ``q20::cmp_*`` alternative
+  available for Qt-based applications.
 
 - Improved :doc:`modernize-use-nullptr
   <clang-tidy/checks/modernize/use-nullptr>` check to also recognize

@@ -300,7 +300,7 @@ if(FUCHSIA_SDK)
   set(LLVM_RUNTIME_MULTILIB_hwasan+noexcept_TARGETS "aarch64-unknown-fuchsia;riscv64-unknown-fuchsia" CACHE STRING "")
 endif()
 
-foreach(target armv6m-none-eabi;armv7m-none-eabi;armv8m.main-none-eabi;armv8.1m.main-none-eabi;aarch64-none-elf)
+foreach(target armv6m-none-eabi;armv7m-none-eabi;armv7em-none-eabi;armv8m.main-none-eabi;armv8.1m.main-none-eabi;aarch64-none-elf)
   list(APPEND BUILTIN_TARGETS "${target}")
   set(BUILTINS_${target}_CMAKE_SYSTEM_NAME Generic CACHE STRING "")
   set(BUILTINS_${target}_CMAKE_SYSTEM_PROCESSOR arm CACHE STRING "")

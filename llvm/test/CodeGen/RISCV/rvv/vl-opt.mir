@@ -140,4 +140,12 @@ body: |
     %x:vr = nofpexcept PseudoVFNCVTBF16_F_F_W_M1_E16 $noreg, $noreg, 7, -1, 4 /* e16 */, 0 /* tu, mu */, implicit $frm
     %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 4 /* e16 */, 0
 ...
-
+---
+name: vwadd_tied_vs1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vwadd_tied_vs1
+    ; CHECK: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 1, 3 /* e8 */, 0 /* tu, mu */
+    ; CHECK-NEXT: early-clobber %y:vrm2 = PseudoVWADD_WV_M1_TIED $noreg, %x, 1, 3 /* e8 */, 0 /* tu, mu */
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 3 /* e8 */, 0 /* tu, mu */
+    %y:vrm2 = PseudoVWADD_WV_M1_TIED $noreg, %x, 1, 3 /* e8 */, 0 /* tu, mu */
