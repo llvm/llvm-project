@@ -389,6 +389,8 @@ def NoUseScalarIncVL : Predicate<"!Subtarget->useScalarIncVL()">;
 
 def UseSVEFPLD1R : Predicate<"!Subtarget->noSVEFPLD1R()">;
 
+def UseLDAPUR : Predicate<"!Subtarget->avoidLDAPUR()">;
+
 def AArch64LocalRecover : SDNode<"ISD::LOCAL_RECOVER",
                                   SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
                                                        SDTCisInt<1>]>>;

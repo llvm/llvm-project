@@ -805,9 +805,13 @@ def FeatureLdpAlignedOnly : SubtargetFeature<"ldp-aligned-only", "HasLdpAlignedO
 def FeatureStpAlignedOnly : SubtargetFeature<"stp-aligned-only", "HasStpAlignedOnly",
     "true", "In order to emit stp, first check if the store will be aligned to 2 * element_size">;
 
-def FeatureUseFixedOverScalableIfEqualCost: SubtargetFeature<"use-fixed-over-scalable-if-equal-cost",
+def FeatureUseFixedOverScalableIfEqualCost : SubtargetFeature<"use-fixed-over-scalable-if-equal-cost",
   "UseFixedOverScalableIfEqualCost", "true",
   "Prefer fixed width loop vectorization over scalable if the cost-model assigns equal costs">;
+
+// For performance reasons we prefer to use ldapr to ldapur on certain cores.
+def FeatureAvoidLDAPUR : SubtargetFeature<"avoid-ldapur", "AvoidLDAPUR", "true",
+  "Prefer add+ldapr to offset ldapur">;
 
 //===----------------------------------------------------------------------===//
 // Architectures.
