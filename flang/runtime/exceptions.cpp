@@ -95,9 +95,9 @@ bool RTNAME(SupportHalting)([[maybe_unused]] uint32_t except) {
 // A hardware FZ (flush to zero) bit is the negation of the
 // ieee_[get|set]_underflow_mode GRADUAL argument.
 #if defined(_MM_FLUSH_ZERO_MASK)
-// The MXCSR FZ bit affects computations of real kinds 3, 4, and 8.
+// The x86_64 MXCSR FZ bit affects computations of real kinds 3, 4, and 8.
 #elif defined(_FPU_GETCW)
-// The FPCR FZ bit affects computations of real kinds 3, 4, and 8.
+// The aarch64 FPCR FZ bit affects computations of real kinds 3, 4, and 8.
 // bit 24: FZ   -- single, double precision flush to zero bit
 // bit 19: FZ16 -- half precision flush to zero bit [not currently relevant]
 #define _FPU_FPCR_FZ_MASK_ 0x01080000
@@ -107,9 +107,9 @@ bool RTNAME(GetUnderflowMode)(void) {
 #if defined(_MM_FLUSH_ZERO_MASK)
   return _MM_GET_FLUSH_ZERO_MODE() == _MM_FLUSH_ZERO_OFF;
 #elif defined(_FPU_GETCW)
-  uint32_t fpcr;
+  uint64_t fpcr;
   _FPU_GETCW(fpcr);
-  return (fpcr & _FPU_FPCR_FZ_MASK_) != _FPU_FPCR_FZ_MASK_;
+  return (fpcr & _FPU_FPCR_FZ_MASK_) == 0;
 #else
   return false;
 #endif
@@ -118,7 +118,7 @@ void RTNAME(SetUnderflowMode)(bool flag) {
 #if defined(_MM_FLUSH_ZERO_MASK)
   _MM_SET_FLUSH_ZERO_MODE(flag ? _MM_FLUSH_ZERO_OFF : _MM_FLUSH_ZERO_ON);
 #elif defined(_FPU_GETCW)
-  uint32_t fpcr;
+  uint64_t fpcr;
   _FPU_GETCW(fpcr);
   if (flag) {
     fpcr &= ~_FPU_FPCR_FZ_MASK_;

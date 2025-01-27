@@ -7,7 +7,6 @@
 
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
-load("//llvm:binary_alias.bzl", "binary_alias")
 load(
     ":build_defs.bzl",
     "cc_headers_only",
@@ -5593,8 +5592,8 @@ cc_library(
     deps = [
         ":IR",
         ":LLVMDialect",
-        ":LLVMPassIncGen",
         ":LLVMIRTransformsDIExpressionLegalization",
+        ":LLVMPassIncGen",
         ":Pass",
     ],
 )
@@ -9268,9 +9267,9 @@ cc_library(
         ":IR",
         ":LLVMConversionIncGen",
         ":LLVMDialect",
-        ":LLVMIntrinsicConversionIncGen",
         ":LLVMIRTransformsDIExpressionLegalization",
         ":LLVMIRTransformsLegalizeForExport",
+        ":LLVMIntrinsicConversionIncGen",
         ":OpenMPDialect",
         ":Support",
         ":TransformUtils",
@@ -10194,12 +10193,6 @@ cc_binary(
         "//llvm:Support",
         "//llvm:X86AsmParser",
     ],
-)
-
-# TODO: Remove this alias.
-binary_alias(
-    name = "mlir-cpu-runner",
-    binary = ":mlir-runner",
 )
 
 # This target provides the headers from LLVM's Support target without any of
