@@ -1017,7 +1017,7 @@ bool TargetPassConfig::addCoreISelPasses() {
   if (Selector != SelectorType::GlobalISel || !isGlobalISelAbortEnabled())
     DebugifyIsSafe = false;
 
-  // Add instruction selector passes.
+  // Add instruction selector passes for global isel if enabled.
   if (Selector == SelectorType::GlobalISel) {
     SaveAndRestore SavedAddingMachinePasses(AddingMachinePasses, true);
     if (addIRTranslator())
@@ -1043,14 +1043,13 @@ bool TargetPassConfig::addCoreISelPasses() {
     // Pass to reset the MachineFunction if the ISel failed.
     addPass(createResetMachineFunctionPass(
         reportDiagnosticWhenGlobalISelFallback(), isGlobalISelAbortEnabled()));
+  }
 
-    // Provide a fallback path when we do not want to abort on
-    // not-yet-supported input.
-    if (!isGlobalISelAbortEnabled() && addInstSelector())
+  // Run the SDAG InstSelector, providing a fallback path when we do not want to
+  // abort on not-yet-supported input.
+  if (Selector != SelectorType::GlobalISel || !isGlobalISelAbortEnabled())
+    if (addInstSelector())
       return true;
-
-  } else if (addInstSelector())
-    return true;
 
   // Expand pseudo-instructions emitted by ISel. Don't run the verifier before
   // FinalizeISel.
