@@ -13140,8 +13140,10 @@ public:
       if (PushedCodeSynthesisContext)
         S.popCodeSynthesisContext();
 
-      if (auto *FD = dyn_cast<FunctionDecl>(S.CurContext))
+      if (auto *FD = dyn_cast<FunctionDecl>(S.CurContext)) {
         FD->setWillHaveBody(false);
+        S.CheckImmediateEscalatingFunctionDefinition(FD, S.getCurFunction());
+      }
 
       S.PopExpressionEvaluationContext();
       S.PopFunctionScopeInfo();
