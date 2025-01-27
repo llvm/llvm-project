@@ -100,8 +100,7 @@ void DataSharingProcessor::cloneSymbol(const semantics::Symbol *sym) {
   // If we are doing eager-privatization on a symbol created using delayed
   // privatization there could be incompatible types here e.g.
   // fir.ref<fir.box<fir.array<>>>
-  bool success = false;
-  [&]() {
+  bool success = [&]() -> bool {
     const auto *details =
         sym->detailsIf<Fortran::semantics::HostAssocDetails>();
     assert(details && "No host-association found");
@@ -134,20 +133,19 @@ void DataSharingProcessor::cloneSymbol(const semantics::Symbol *sym) {
                                               nullptr, {}, nullptr);
 
           // This can't be a CharArrayBoxValue because otherwise
-          // boxTy.getElementType() would be a charcater type.
+          // boxTy.getElementType() would be a character type.
           // Assume the array element type isn't polymorphic because we are
           // privatizing.
           fir::ExtendedValue newExv = fir::ArrayBoxValue{box, extents};
 
           converter.bindSymbol(*sym, newExv);
-          success = true;
-          return;
+          return true;
         }
       }
     }
 
     // Normal case:
-    success = converter.createHostAssociateVarClone(
+    return converter.createHostAssociateVarClone(
         *sym, /*skipDefaultInit=*/isFirstPrivate);
   }();
   (void)success;

@@ -1344,9 +1344,9 @@ findAssociatedValue(Value privateVar, llvm::IRBuilderBase &builder,
   return moduleTranslation.lookupValue(privateVar);
 }
 
-/// Allocate delayed private variables. Returns the basic block which comes
-/// after all of these allocations. llvm::Value * for each of these private
-/// variables are populated in llvmPrivateVars.
+/// Allocate and initialize delayed private variables. Returns the basic block
+/// which comes after all of these allocations. llvm::Value * for each of these
+/// private variables are populated in llvmPrivateVars.
 static llvm::Expected<llvm::BasicBlock *> allocateAndInitPrivateVars(
     llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation,
     MutableArrayRef<BlockArgument> privateBlockArgs,

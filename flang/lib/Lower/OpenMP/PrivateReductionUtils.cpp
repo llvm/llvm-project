@@ -167,11 +167,7 @@ static void initializeIfDerivedTypeBox(fir::FirOpBuilder &builder,
     return;
 
   // remove pointer and array types in the middle
-  mlir::Type eleTy;
-  if (boxTy)
-    eleTy = boxTy.getElementType();
-  if (classTy)
-    eleTy = classTy.getEleTy();
+  mlir::Type eleTy = boxTy ? boxTy.getElementType() : classTy.getEleTy();
   mlir::Type derivedTy = fir::unwrapRefType(eleTy);
   if (auto array = mlir::dyn_cast<fir::SequenceType>(derivedTy))
     derivedTy = array.getElementType();
@@ -231,7 +227,7 @@ static mlir::Value generateZeroShapeForRank(fir::FirOpBuilder &builder,
   fir::SequenceType seqTy =
       mlir::dyn_cast_if_present<fir::SequenceType>(eleType);
   if (!seqTy)
-    return nullptr;
+    return mlir::Value{};
 
   unsigned rank = seqTy.getShape().size();
   mlir::Value zero =
@@ -289,9 +285,9 @@ void Fortran::lower::omp::populateByRefInitAndCleanupRegions(
     fir::IfOp ifOp = builder.create<fir::IfOp>(loc, isNotAllocated,
                                                /*withElseRegion=*/true);
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-    // just embox the null address and return
-    // we have to give the embox a shape so that the LLVM box structure has the
-    // right rank. This returns nullptr if the types don't match.
+    // Just embox the null address and return.
+    // We have to give the embox a shape so that the LLVM box structure has the
+    // right rank. This returns an empty value if the types don't match.
     mlir::Value shape = generateZeroShapeForRank(builder, loc, moldArg);
 
     mlir::Value nullBox =
