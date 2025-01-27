@@ -2009,31 +2009,31 @@ multiclass MIMG_MSAA_Load <mimgopc op, string asm> {
 }
 
 #ifdef LLPC_BUILD_NPI
-class VIMAGE_RTS_Helper<bit HasVdst, bit IsTraceRay> {
-  list<RegisterClass> addr_types = !if(IsTraceRay, [VGPR_32, VReg_96, VGPR_32, VReg_96, VReg_96], [VGPR_32, VGPR_32, VGPR_32]);
+class VIMAGE_RTS_Helper<bit HasVdst, bit IsTraceRay, bit isPacket, bit isPrimOrCoords> {
+  list<RegisterClass> addr_types = !if(IsTraceRay, [VGPR_32, VReg_96, VGPR_32, VReg_96, VReg_96], !if(isPacket, [VGPR_32, VGPR_32], [VGPR_32, VGPR_32, VGPR_32]));
   int num_addrs = !size(addr_types);
-  int VAddrDwords = !if(IsTraceRay, 11, 3);
-  int VDataDwords = !if(HasVdst, !if(IsTraceRay, 1, 9), 0);
+  int VAddrDwords = !if(IsTraceRay, 11, !if(isPacket, 2, 3));
+  int VDataDwords = !if(HasVdst, !if(IsTraceRay, 1, !if(isPacket, 1, !if(isPrimOrCoords, 3, 9))), 0);
 }
 
 class VIMAGE_RTS<int op, string opcode, int num_addrs, dag RsrcIns, GFXGen gfxGen, MIMGEncoding encoding,
-                 list<RegisterClass> addr_types, bit HasVdst, bit IsTraceRay>
-    : VIMAGE<op, !if(HasVdst, !if(IsTraceRay, (outs VGPR_32:$vdata), (outs VReg_288:$vdata)), (outs)),
+                 list<RegisterClass> addr_types, bit HasVdst, bit IsTraceRay, bit isPacket, bit isPrimOrCoords>
+    : VIMAGE<op, !if(HasVdst, !if(IsTraceRay, (outs VGPR_32:$vdata), !if(isPacket, (outs VGPR_32:$vdata), !if(isPrimOrCoords, (outs VReg_96:$vdata), (outs VReg_288:$vdata)))), (outs)),
              num_addrs, gfxGen.AssemblerPredicate, encoding, gfxGen.DecoderNamespace, addr_types>{
   let InOperandList = !con(nsah.AddrIns, RsrcIns, (ins R128A16:$r128));
   let AsmString = opcode#!if(HasVdst, " $vdata, ", " ")#nsah.AddrAsm#!if(IsTraceRay, ", $rsrc", ", null")#"$r128";
 }
 
-multiclass MIMG_RTS<mimgopc op, string opcode, bit HasVdst, bit IsTraceRay, bit isStore>{
-  defvar info = VIMAGE_RTS_Helper<HasVdst, IsTraceRay>;
+multiclass MIMG_RTS<mimgopc op, string opcode, bit HasVdst, bit IsTraceRay, bit isPacket, bit isPrimOrCoords>{
+  defvar info = VIMAGE_RTS_Helper<HasVdst, IsTraceRay, isPacket, isPrimOrCoords>;
   def "" : MIMGBaseOpcode {
     let NoReturn = !not(HasVdst);
     let BVH = 1;
   }
   let BaseOpcode = !cast<MIMGBaseOpcode>(NAME),
       mayLoad = 1,
-      hasSideEffects = 1,
-      mayStore = isStore,
+      hasSideEffects = IsTraceRay,
+      mayStore = IsTraceRay,
       d16 = 0,
       dmask = 0x0,
       cpol = 0,
@@ -2045,7 +2045,7 @@ multiclass MIMG_RTS<mimgopc op, string opcode, bit HasVdst, bit IsTraceRay, bit 
       VDataDwords = info.VDataDwords,
       VAddrDwords = info.VAddrDwords in
         def _gfx13 : VIMAGE_RTS<op.GFX13, opcode, info.num_addrs, !if(IsTraceRay, (ins RsrcReg128Op:$rsrc), (ins)),
-                                GFX13Gen, MIMGEncGfx13, info.addr_types, HasVdst, IsTraceRay>;
+                                GFX13Gen, MIMGEncGfx13, info.addr_types, HasVdst, IsTraceRay, isPacket, isPrimOrCoords>;
 }
 
 #endif /* LLPC_BUILD_NPI */
@@ -2139,9 +2139,12 @@ def IMAGE_ATOMIC_MAX_FLT : MIMGBaseOpcodeAtomic;
 defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic_With_Alias <mimgopc<MIMG.NOP, 0x85, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_flt", "image_atomic_max_num_flt", 0, 1>;
 defm IMAGE_ATOMIC_MAX_FLT       : MIMG_Atomic_With_Alias <mimgopc<0x1f, MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "image_atomic_max_num_flt", "image_atomic_max_flt", 0, 1>;
 
-defm RTS_TRACE_RAY          : MIMG_RTS<mimgopc<0x0f2, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_trace_ray", 0, 1, 1>;
-defm RTS_TRACE_RAY_NONBLOCK : MIMG_RTS<mimgopc<0x0f3, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_trace_ray_nonblock", 1, 1, 1>;
-defm RTS_READ_VERTEX        : MIMG_RTS<mimgopc<0x0f4, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_read_vertex", 1, 0, 0>;
+defm RTS_TRACE_RAY          : MIMG_RTS<mimgopc<0x0f2, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_trace_ray", 0, 1, 0, 0>;
+defm RTS_TRACE_RAY_NONBLOCK : MIMG_RTS<mimgopc<0x0f3, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_trace_ray_nonblock", 1, 1, 0, 0>;
+defm RTS_READ_VERTEX        : MIMG_RTS<mimgopc<0x0f4, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_read_vertex", 1, 0, 0, 0>;
+defm RTS_READ_VERTEX_COORDS : MIMG_RTS<mimgopc<0x0f5, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_read_vertex_coords", 1, 0, 0, 1>;
+defm RTS_READ_PACKET_INFO   : MIMG_RTS<mimgopc<0x0f6, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_read_packet_info", 1, 0, 1, 0>;
+defm RTS_READ_PRIM_INFO     : MIMG_RTS<mimgopc<0x0f7, MIMG.NOP, MIMG.NOP, MIMG.NOP>, "rts_read_prim_info", 1, 0, 0, 1>;
 
 defm IMAGE_SAMPLE               : MIMG_Sampler_WQM <mimgopc<0x20, 0x1b, 0x1b, 0x20>, AMDGPUSample>;
 #else /* LLPC_BUILD_NPI */
@@ -2396,6 +2399,23 @@ def : GCNPat<
                          (i32 (EXTRACT_SUBREG VReg_64:$vaddr, sub1)), $vaddr2, (i1 1))
 >;
 
+def : GCNPat<
+  (v3f32:$vdata (int_amdgcn_rts_read_vertex_coords i64:$vaddr, i32:$vaddr2)),
+  (RTS_READ_VERTEX_COORDS_gfx13 (i32 (EXTRACT_SUBREG VReg_64:$vaddr, sub0)),
+                                (i32 (EXTRACT_SUBREG VReg_64:$vaddr, sub1)), $vaddr2, (i1 1))
+>;
+
+def : GCNPat<
+  (i32:$vdata (int_amdgcn_rts_read_packet_info i64:$vaddr)),
+  (RTS_READ_PACKET_INFO_gfx13 (i32 (EXTRACT_SUBREG VReg_64:$vaddr, sub0)),
+                              (i32 (EXTRACT_SUBREG VReg_64:$vaddr, sub1)), (i1 1))>;
+
+
+def : GCNPat<
+  (v3f32:$vdata (int_amdgcn_rts_read_prim_info i64:$vaddr, i32:$vaddr2)),
+  (RTS_READ_PRIM_INFO_gfx13 (i32 (EXTRACT_SUBREG VReg_64:$vaddr, sub0)),
+                            (i32 (EXTRACT_SUBREG VReg_64:$vaddr, sub1)), $vaddr2, (i1 1))
+>;
 #endif /* LLPC_BUILD_NPI */
 /********** ========================================= **********/
 /********** Table of dimension-aware image intrinsics **********/

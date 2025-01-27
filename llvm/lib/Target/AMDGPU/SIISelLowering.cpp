@@ -1838,7 +1838,10 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   }
   case Intrinsic::amdgcn_rts_trace_ray:
   case Intrinsic::amdgcn_rts_trace_ray_nonblock:
-  case Intrinsic::amdgcn_rts_read_vertex: {
+  case Intrinsic::amdgcn_rts_read_vertex:
+  case Intrinsic::amdgcn_rts_read_packet_info:
+  case Intrinsic::amdgcn_rts_read_vertex_coords:
+  case Intrinsic::amdgcn_rts_read_prim_info: {
     if (IntrID == Intrinsic::amdgcn_rts_trace_ray) {
       Info.opc = ISD::INTRINSIC_VOID;
       Info.memVT = MVT::i32;
@@ -1847,7 +1850,10 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Info.memVT = MVT::getVT(CI.getType());
     }
     Info.flags |= MachineMemOperand::MOLoad;
-    if (IntrID != Intrinsic::amdgcn_rts_read_vertex)
+    if (IntrID != Intrinsic::amdgcn_rts_read_vertex &&
+        IntrID != Intrinsic::amdgcn_rts_read_vertex_coords &&
+        IntrID != Intrinsic::amdgcn_rts_read_prim_info &&
+        IntrID != Intrinsic::amdgcn_rts_read_packet_info)
       Info.flags |= MachineMemOperand::MOStore;
     return true;
   }
@@ -11898,7 +11904,12 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     auto *NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
     return SDValue(NewMI, 0);
   }
+#if LLPC_BUILD_NPI
+  case Intrinsic::amdgcn_s_barrier_join:
+  case Intrinsic::amdgcn_s_wakeup_barrier: {
+#else /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_s_barrier_join: {
+#endif /* LLPC_BUILD_NPI */
     // these three intrinsics have one operand: barrier pointer
     SDValue Chain = Op->getOperand(0);
     SmallVector<SDValue, 2> Ops;
@@ -11907,16 +11918,42 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     if (isa<ConstantSDNode>(BarOp)) {
       uint64_t BarVal = cast<ConstantSDNode>(BarOp)->getZExtValue();
+#if LLPC_BUILD_NPI
+      switch (IntrinsicID) {
+      default:
+        return SDValue();
+      case Intrinsic::amdgcn_s_barrier_join:
+        Opc = AMDGPU::S_BARRIER_JOIN_IMM;
+        break;
+      case Intrinsic::amdgcn_s_wakeup_barrier:
+        Opc = AMDGPU::S_WAKEUP_BARRIER_IMM;
+        break;
+      }
+#else /* LLPC_BUILD_NPI */
       Opc = AMDGPU::S_BARRIER_JOIN_IMM;
 
+#endif /* LLPC_BUILD_NPI */
       // extract the BarrierID from bits 4-9 of the immediate
       unsigned BarID = (BarVal >> 4) & 0x3F;
       SDValue K = DAG.getTargetConstant(BarID, DL, MVT::i32);
       Ops.push_back(K);
       Ops.push_back(Chain);
     } else {
+#if LLPC_BUILD_NPI
+      switch (IntrinsicID) {
+      default:
+        return SDValue();
+      case Intrinsic::amdgcn_s_barrier_join:
+        Opc = AMDGPU::S_BARRIER_JOIN_M0;
+        break;
+      case Intrinsic::amdgcn_s_wakeup_barrier:
+        Opc = AMDGPU::S_WAKEUP_BARRIER_M0;
+        break;
+      }
+#else /* LLPC_BUILD_NPI */
       Opc = AMDGPU::S_BARRIER_JOIN_M0;
 
+#endif /* LLPC_BUILD_NPI */
       // extract the BarrierID from bits 4-9 of BarOp, copy to M0[5:0]
       SDValue M0Val;
       M0Val = DAG.getNode(ISD::SRL, DL, MVT::i32, BarOp,

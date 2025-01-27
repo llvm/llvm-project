@@ -834,6 +834,8 @@ TARGET_BUILTIN(__builtin_amdgcn_s_sema_set_limit, "vv*Ui", "n", "gfx13-insts")
 TARGET_BUILTIN(__builtin_amdgcn_s_sema_signal, "vv*", "n", "gfx13-insts")
 TARGET_BUILTIN(__builtin_amdgcn_s_sema_wait, "vv*", "n", "gfx13-insts")
 
+TARGET_BUILTIN(__builtin_amdgcn_s_wakeup_barrier, "vv*", "n", "gfx13-insts")
+
 // The convolve builtins are overloaded and support multiple variants driven by filter type and iteration count,
 // both provided in aux_data. Only return types are listed.
 //

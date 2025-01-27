@@ -294,6 +294,14 @@ def int_amdgcn_s_barrier_join : ClangBuiltin<"__builtin_amdgcn_s_barrier_join">,
   Intrinsic<[], [local_ptr_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
                                 IntrNoCallback, IntrNoFree]>;
 
+#ifdef LLPC_BUILD_NPI
+// void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3) %barrier)
+// The %barrier argument must be uniform, otherwise behavior is undefined.
+def int_amdgcn_s_wakeup_barrier : ClangBuiltin<"__builtin_amdgcn_s_wakeup_barrier">,
+  Intrinsic<[], [local_ptr_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
+                                IntrNoCallback, IntrNoFree]>;
+
+#endif /* LLPC_BUILD_NPI */
 // void @llvm.amdgcn.s.barrier.wait(i16 %barrierType)
 def int_amdgcn_s_barrier_wait : ClangBuiltin<"__builtin_amdgcn_s_barrier_wait">,
   Intrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrConvergent,
@@ -4110,7 +4118,22 @@ def int_amdgcn_rts_trace_ray_nonblock : Intrinsic<[llvm_i32_ty],
 // <vdata> llvm.amdgcn_rts_read_vertex <vaddr0> <vaddr1> <vaddr2>
 def int_amdgcn_rts_read_vertex: Intrinsic<[llvm_v9f32_ty],
     [global_ptr_ty, llvm_i32_ty],
-    [IntrReadMem, IntrHasSideEffects, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]>;
+    [IntrReadMem, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]>;
+
+// <vdata> llvm.amdgcn.rts.read.vertex.coords <vaddr0> <vaddr1> <vaddr2>
+def int_amdgcn_rts_read_vertex_coords: Intrinsic<[llvm_v3f32_ty],
+    [global_ptr_ty, llvm_i32_ty],
+    [IntrReadMem, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]>;
+
+// <vdata> llvm.amdgcn.rts.read.packet.info <vaddr0> <vaddr1>
+def int_amdgcn_rts_read_packet_info: Intrinsic<[llvm_i32_ty],
+    [global_ptr_ty],
+    [IntrReadMem, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]>;
+
+// <vdata> llvm.amdgcn.rts.read.prim.info <vaddr0> <vaddr1> <vaddr2>
+def int_amdgcn_rts_read_prim_info: Intrinsic<[llvm_v3f32_ty],
+    [global_ptr_ty, llvm_i32_ty],
+    [IntrReadMem, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]>;
 
 #endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//

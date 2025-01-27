@@ -479,6 +479,17 @@ Non-comprehensive list of changes in this release
   ``__builtin_elementwise_sub_sat``, ``__builtin_reduce_min`` (For integral element type),
   ``__builtin_reduce_max`` (For integral element type).
 
+- The builtin macros ``__INT8_C``, ``__INT16_C``, ``__INT32_C``, ``__INT64_C``,
+  ``__INTMAX_C``, ``__UINT8_C``, ``__UINT16_C``, ``__UINT32_C``, ``__UINT64_C``
+  and ``__UINTMAX_C`` have been introduced to ease the implementaton of section
+  7.18.4 of ISO/IEC 9899:1999. These macros are also defined by GCC and should
+  be used instead of others that expand and paste the suffixes provided by
+  ``__INT8_C_SUFFIX__``, ``__INT16_C_SUFFIX__``, ``__INT32_C_SUFFIX__``,
+  ``__INT64_C_SUFFIX__``, ``__INTMAX_C_SUFFIX__``, ``__UINT8_C_SUFFIX__``,
+  ``__UINT16_C_SUFFIX__``, ``__UINT32_C_SUFFIX__``, ``__UINT64_C_SUFFIX__`` and
+  ``__UINTMAX_C_SUFFIX__``. Pasting suffixes after the expansion of their
+  respective macros is unsafe, as users can define the suffixes as macros.
+
 - Clang now rejects ``_BitInt`` matrix element types if the bit width is less than ``CHAR_WIDTH`` or
   not a power of two, matching preexisting behaviour for vector types.
 
@@ -990,6 +1001,10 @@ Bug Fixes to C++ Support
 - Fix immediate escalation not propagating through inherited constructors.  (#GH112677)
 - Fixed assertions or false compiler diagnostics in the case of C++ modules for
   lambda functions or inline friend functions defined inside templates (#GH122493).
+- Clang now rejects declaring an alias template with the same name as its template parameter. (#GH123423)
+- Fix type of expression when calling a template which returns an ``__array_rank`` querying a type depending on a
+  template parameter. Now, such expression can be used with ``static_assert`` and ``constexpr``. (#GH123498)
+- Correctly determine the implicit constexprness of lambdas in dependent contexts. (#GH97958) (#GH114234)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

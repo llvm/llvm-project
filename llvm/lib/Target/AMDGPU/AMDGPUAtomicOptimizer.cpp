@@ -790,7 +790,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
     // Record I's new position as the exit block.
     PixelExitBB = I.getParent();
 
-    I.moveBefore(NonHelperTerminator);
+    I.moveBefore(NonHelperTerminator->getIterator());
     B.SetInsertPoint(&I);
   }
 

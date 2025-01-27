@@ -217,6 +217,74 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
   return true;
 }
 
+bool AMDGPUInstructionSelector::selectCOPY_SCC_VCC(MachineInstr &I) const {
+  const DebugLoc &DL = I.getDebugLoc();
+  MachineBasicBlock *BB = I.getParent();
+
+  unsigned CmpOpc =
+      STI.isWave64() ? AMDGPU::S_CMP_LG_U64 : AMDGPU::S_CMP_LG_U32;
+  MachineInstr *Cmp = BuildMI(*BB, &I, DL, TII.get(CmpOpc))
+                          .addReg(I.getOperand(1).getReg())
+                          .addImm(0);
+  if (!constrainSelectedInstRegOperands(*Cmp, TII, TRI, RBI))
+    return false;
+
+  Register DstReg = I.getOperand(0).getReg();
+  BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), DstReg).addReg(AMDGPU::SCC);
+
+  I.eraseFromParent();
+  return RBI.constrainGenericRegister(DstReg, AMDGPU::SReg_32RegClass, *MRI);
+}
+
+bool AMDGPUInstructionSelector::selectCOPY_VCC_SCC(MachineInstr &I) const {
+  const DebugLoc &DL = I.getDebugLoc();
+  MachineBasicBlock *BB = I.getParent();
+
+  Register DstReg = I.getOperand(0).getReg();
+  Register SrcReg = I.getOperand(1).getReg();
+  std::optional<ValueAndVReg> Arg =
+      getIConstantVRegValWithLookThrough(I.getOperand(1).getReg(), *MRI);
+
+  if (Arg) {
+    const int64_t Value = Arg->Value.getZExtValue();
+    if (Value == 0) {
+      unsigned Opcode = STI.isWave64() ? AMDGPU::S_MOV_B64 : AMDGPU::S_MOV_B32;
+      BuildMI(*BB, &I, DL, TII.get(Opcode), DstReg).addImm(0);
+    } else {
+      assert(Value == 1);
+      BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), DstReg).addReg(TRI.getExec());
+    }
+    I.eraseFromParent();
+    return RBI.constrainGenericRegister(DstReg, *TRI.getBoolRC(), *MRI);
+  }
+
+  // RegBankLegalize ensures that SrcReg is bool in reg (high bits are 0).
+  BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), AMDGPU::SCC).addReg(SrcReg);
+
+  unsigned SelectOpcode =
+      STI.isWave64() ? AMDGPU::S_CSELECT_B64 : AMDGPU::S_CSELECT_B32;
+  MachineInstr *Select = BuildMI(*BB, &I, DL, TII.get(SelectOpcode), DstReg)
+                             .addReg(TRI.getExec())
+                             .addImm(0);
+
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*Select, TII, TRI, RBI);
+}
+
+bool AMDGPUInstructionSelector::selectReadAnyLane(MachineInstr &I) const {
+  Register DstReg = I.getOperand(0).getReg();
+  Register SrcReg = I.getOperand(1).getReg();
+
+  const DebugLoc &DL = I.getDebugLoc();
+  MachineBasicBlock *BB = I.getParent();
+
+  auto RFL = BuildMI(*BB, &I, DL, TII.get(AMDGPU::V_READFIRSTLANE_B32), DstReg)
+                 .addReg(SrcReg);
+
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*RFL, TII, TRI, RBI);
+}
+
 bool AMDGPUInstructionSelector::selectPHI(MachineInstr &I) const {
   const Register DefReg = I.getOperand(0).getReg();
   const LLT DefTy = MRI->getType(DefReg);
@@ -249,7 +317,21 @@ bool AMDGPUInstructionSelector::selectPHI(MachineInstr &I) const {
     }
   }
 
-  // TODO: Verify that all registers have the same bank
+  // If inputs have register bank, assign corresponding reg class.
+  // Note: registers don't need to have the same reg bank.
+  for (unsigned i = 1; i != I.getNumOperands(); i += 2) {
+    const Register SrcReg = I.getOperand(i).getReg();
+
+    const RegisterBank *RB = MRI->getRegBankOrNull(SrcReg);
+    if (RB) {
+      const LLT SrcTy = MRI->getType(SrcReg);
+      const TargetRegisterClass *SrcRC =
+          TRI.getRegClassForTypeOnBank(SrcTy, *RB);
+      if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI))
+        return false;
+    }
+  }
+
   I.setDesc(TII.get(TargetOpcode::PHI));
   return RBI.constrainGenericRegister(DefReg, *DefRC, *MRI);
 }
@@ -2300,6 +2382,9 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_s_barrier_signal_var:
     return selectNamedBarrierInit(I, IntrinsicID);
   case Intrinsic::amdgcn_s_barrier_join:
+#if LLPC_BUILD_NPI
+  case Intrinsic::amdgcn_s_wakeup_barrier:
+#endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_s_get_named_barrier_state:
     return selectNamedBarrierInst(I, IntrinsicID);
   case Intrinsic::amdgcn_s_get_barrier_state:
@@ -4154,6 +4239,12 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectStackRestore(I);
   case AMDGPU::G_PHI:
     return selectPHI(I);
+  case AMDGPU::G_AMDGPU_COPY_SCC_VCC:
+    return selectCOPY_SCC_VCC(I);
+  case AMDGPU::G_AMDGPU_COPY_VCC_SCC:
+    return selectCOPY_VCC_SCC(I);
+  case AMDGPU::G_AMDGPU_READANYLANE:
+    return selectReadAnyLane(I);
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_FCONSTANT:
   default:
@@ -6302,6 +6393,10 @@ unsigned getNamedBarrierOp(bool HasInlineConst, Intrinsic::ID IntrID) {
       llvm_unreachable("not a named barrier op");
     case Intrinsic::amdgcn_s_barrier_join:
       return AMDGPU::S_BARRIER_JOIN_IMM;
+#if LLPC_BUILD_NPI
+    case Intrinsic::amdgcn_s_wakeup_barrier:
+      return AMDGPU::S_WAKEUP_BARRIER_IMM;
+#endif /* LLPC_BUILD_NPI */
     case Intrinsic::amdgcn_s_get_named_barrier_state:
       return AMDGPU::S_GET_BARRIER_STATE_IMM;
     };
@@ -6311,6 +6406,10 @@ unsigned getNamedBarrierOp(bool HasInlineConst, Intrinsic::ID IntrID) {
       llvm_unreachable("not a named barrier op");
     case Intrinsic::amdgcn_s_barrier_join:
       return AMDGPU::S_BARRIER_JOIN_M0;
+#if LLPC_BUILD_NPI
+    case Intrinsic::amdgcn_s_wakeup_barrier:
+      return AMDGPU::S_WAKEUP_BARRIER_M0;
+#endif /* LLPC_BUILD_NPI */
     case Intrinsic::amdgcn_s_get_named_barrier_state:
       return AMDGPU::S_GET_BARRIER_STATE_M0;
     };

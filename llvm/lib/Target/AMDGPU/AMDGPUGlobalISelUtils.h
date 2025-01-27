@@ -23,6 +23,8 @@ class GCNSubtarget;
 class GISelKnownBits;
 class LLT;
 class MachineFunction;
+class MachineIRBuilder;
+class RegisterBankInfo;
 #if LLPC_BUILD_NPI
 class MachineMemOperand;
 #endif /* LLPC_BUILD_NPI */
@@ -61,6 +63,9 @@ private:
   // This will not be needed when we turn off LCSSA for global-isel.
   void findLCSSAPhi(Register Reg);
 };
+
+void buildReadAnyLane(MachineIRBuilder &B, Register SgprDst, Register VgprSrc,
+                      const RegisterBankInfo &RBI);
 #if LLPC_BUILD_NPI
 } // namespace AMDGPU
 } // namespace llvm

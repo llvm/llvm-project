@@ -2552,10 +2552,12 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "__uptr __ptr32";
   case LangAS::ptr64:
     return "__ptr64";
-  case LangAS::wasm_funcref:
-    return "__funcref";
   case LangAS::hlsl_groupshared:
     return "groupshared";
+  case LangAS::hlsl_constant:
+    return "hlsl_constant";
+  case LangAS::wasm_funcref:
+    return "__funcref";
 #if LLPC_BUILD_NPI
   case LangAS::hip_lane_shared:
     return "__lane_shared__";

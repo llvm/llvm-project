@@ -515,6 +515,14 @@ def S_BARRIER_JOIN_M0 : SOP1_Pseudo <"s_barrier_join m0", (outs), (ins),
   let isConvergent = 1;
 }
 
+#ifdef LLPC_BUILD_NPI
+def S_WAKEUP_BARRIER_M0 : SOP1_Pseudo <"s_wakeup_barrier m0", (outs), (ins),
+  "", []>{
+  let SchedRW = [WriteBarrier];
+  let isConvergent = 1;
+}
+
+#endif /* LLPC_BUILD_NPI */
 } // End Uses = [M0]
 
 def S_BARRIER_SIGNAL_IMM : SOP1_Pseudo <"s_barrier_signal", (outs),
@@ -536,6 +544,14 @@ def S_BARRIER_JOIN_IMM : SOP1_Pseudo <"s_barrier_join", (outs),
   let isConvergent = 1;
 }
 
+#ifdef LLPC_BUILD_NPI
+def S_WAKEUP_BARRIER_IMM : SOP1_Pseudo <"s_wakeup_barrier", (outs),
+  (ins SplitBarrier:$src0), "$src0", []>{
+  let SchedRW = [WriteBarrier];
+  let isConvergent = 1;
+}
+
+#endif /* LLPC_BUILD_NPI */
 } // End has_sdst = 0
 
 def S_GET_BARRIER_STATE_IMM : SOP1_Pseudo <"s_get_barrier_state", (outs SSrc_b32:$sdst),
@@ -1902,6 +1918,7 @@ let SubtargetPredicate = isGFX1250Plus, hasSideEffects = 1 in {
                 [(int_amdgcn_s_wait_asynccnt timm:$simm16)]> {
       let mayLoad = 1;
       let mayStore = 1;
+      let maybeAtomic = 0;
       let Uses = [ASYNCcnt];
       let Defs = [ASYNCcnt];
     }
@@ -1910,6 +1927,7 @@ let SubtargetPredicate = isGFX1250Plus, hasSideEffects = 1 in {
                 [(int_amdgcn_s_wait_tensorcnt timm:$simm16)]> {
       let mayLoad = 1;
       let mayStore = 1;
+      let maybeAtomic = 0;
       let Uses = [TENSORcnt];
       let Defs = [TENSORcnt];
     }
@@ -1946,7 +1964,7 @@ def s_sema_wait_imm : ImmLeaf<
   [{}],
   SDNodeXForm<imm, [{
     unsigned ID = (N->getZExtValue() >> 4) & 15;
-    return CurDAG->getConstant(1u << ID >> 1, SDLoc(N), MVT::i16);
+    return CurDAG->getTargetConstant(1u << ID >> 1, SDLoc(N), MVT::i16);
   }]>
 >;
 
@@ -2200,7 +2218,22 @@ multiclass SOP1_Real_gfx13<bits<8> op, string name = !tolower(NAME)> {
     def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
 }
 
+multiclass SOP1_M0_Real_gfx13<bits<8> op> {
+  defvar ps = !cast<SOP1_Pseudo>(NAME);
+  def _gfx13 : SOP1_Real<op, ps>, Select<GFX13Gen, ps.PseudoInstr> {
+    let Inst{7-0} = M0_gfx11plus.HWEncoding{7-0}; // Set Src0 encoding to M0
+  }
+}
+
+multiclass SOP1_IMM_Real_gfx13<bits<8> op> {
+  defvar ps = !cast<SOP1_Pseudo>(NAME);
+  def _gfx13 : SOP1_Real<op, ps>,
+               Select<GFX13Gen, ps.PseudoInstr>;
+}
+
 defm S_GET_SHADER_CYCLES_U64 : SOP1_Real_gfx13<0x011>;
+defm S_WAKEUP_BARRIER_M0     : SOP1_M0_Real_gfx13<0x057>;
+defm S_WAKEUP_BARRIER_IMM    : SOP1_IMM_Real_gfx13<0x057>;
 defm S_MOV_FROM_GLOBAL_B32   : SOP1_Real_gfx13<0x05b>;
 defm S_MOV_FROM_GLOBAL_B64   : SOP1_Real_gfx13<0x05c>;
 defm S_MOV_TO_GLOBAL_B32     : SOP1_Real_gfx13<0x05d>;
@@ -2237,15 +2270,11 @@ multiclass SOP1_Real_gfx12<bits<8> op, string name = !tolower(NAME)> {
     }
 }
 
+multiclass SOP1_M0_Real_gfx12<bits<8> op> {
 #ifdef LLPC_BUILD_NPI
-multiclass SOP1_M0_Real_gfx12_gfx13<bits<8> op> {
   defvar ps = !cast<SOP1_Pseudo>(NAME);
   def _gfx12 : SOP1_Real<op, ps>, Select<GFX12Gen, ps.PseudoInstr> {
-    let Inst{7-0} = M0_gfx11plus.HWEncoding{7-0}; // Set Src0 encoding to M0
-  }
-  def _gfx13 : SOP1_Real<op, ps>, Select<GFX13Gen, ps.PseudoInstr> {
 #else /* LLPC_BUILD_NPI */
-multiclass SOP1_M0_Real_gfx12<bits<8> op> {
   def _gfx12 : SOP1_Real<op, !cast<SOP1_Pseudo>(NAME)>,
                Select<GFX12Gen, !cast<SOP1_Pseudo>(NAME).PseudoInstr> {
 #endif /* LLPC_BUILD_NPI */
@@ -2254,19 +2283,22 @@ multiclass SOP1_M0_Real_gfx12<bits<8> op> {
 }
 
 #ifdef LLPC_BUILD_NPI
-multiclass SOP1_IMM_Real_gfx12_gfx13<bits<8> op> {
-#else /* LLPC_BUILD_NPI */
-multiclass SOP1_IMM_Real_gfx12<bits<8> op> {
+multiclass SOP1_M0_Real_gfx12_gfx13<bits<8> op> :
+  SOP1_M0_Real_gfx12<op>, SOP1_M0_Real_gfx13<op>;
+
 #endif /* LLPC_BUILD_NPI */
+multiclass SOP1_IMM_Real_gfx12<bits<8> op> {
   defvar ps = !cast<SOP1_Pseudo>(NAME);
   def _gfx12 : SOP1_Real<op, ps>,
                Select<GFX12Gen, ps.PseudoInstr>;
-#ifdef LLPC_BUILD_NPI
-  def _gfx13 : SOP1_Real<op, ps>,
-               Select<GFX13Gen, ps.PseudoInstr>;
-#endif /* LLPC_BUILD_NPI */
 }
 
+#ifdef LLPC_BUILD_NPI
+multiclass SOP1_IMM_Real_gfx12_gfx13<bits<8> op> :
+  SOP1_IMM_Real_gfx12<op>, SOP1_IMM_Real_gfx13<op>;
+
+
+#endif /* LLPC_BUILD_NPI */
 multiclass SOP1_Real_gfx11_gfx12<bits<8> op, string name = !tolower(NAME)> :
   SOP1_Real_gfx11<op, name>, SOP1_Real_gfx12<op, name>;
 
@@ -2588,6 +2620,20 @@ defm S_MOVRELS_B64        : SOP1_Real_gfx6_gfx7_gfx10_gfx13<0x02f>;
 defm S_MOVRELD_B32        : SOP1_Real_gfx6_gfx7_gfx10_gfx13<0x030>;
 defm S_MOVRELD_B64        : SOP1_Real_gfx6_gfx7_gfx10_gfx13<0x031>;
 defm S_ABS_I32            : SOP1_Real_gfx6_gfx7_gfx10_gfx13<0x034>;
+
+//===----------------------------------------------------------------------===//
+// SOP2 - GFX13.
+//===----------------------------------------------------------------------===//
+
+multiclass SOP2_Real_gfx13<bits<7> op, string name = !tolower(NAME)> {
+  defvar ps = !cast<SOP2_Pseudo>(NAME);
+  def _gfx13 : SOP2_Real32<op, ps, name>,
+               Select<GFX13Gen, ps.Mnemonic>;
+  if !ne(ps.Mnemonic, name) then
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
+}
+
+defm S_PACK_HL_B32_B16 : SOP2_Real_gfx13<0x37>;
 #else /* LLPC_BUILD_NPI */
 defm S_FF1_I32_B32        : SOP1_Real_gfx6_gfx7_gfx10<0x013>;
 defm S_FF1_I32_B64        : SOP1_Real_gfx6_gfx7_gfx10<0x014>;
@@ -2624,20 +2670,6 @@ defm S_ABS_I32            : SOP1_Real_gfx6_gfx7_gfx10<0x034>;
 
 //===----------------------------------------------------------------------===//
 #ifdef LLPC_BUILD_NPI
-// SOP2 - GFX13.
-//===----------------------------------------------------------------------===//
-
-multiclass SOP2_Real_gfx13<bits<7> op, string name = !tolower(NAME)> {
-  defvar ps = !cast<SOP2_Pseudo>(NAME);
-  def _gfx13 : SOP2_Real32<op, ps, name>,
-               Select<GFX13Gen, ps.Mnemonic>;
-  if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
-}
-
-defm S_PACK_HL_B32_B16 : SOP2_Real_gfx13<0x37>;
-
-//===----------------------------------------------------------------------===//
 // SOP2 - GFX12.
 #else /* LLPC_BUILD_NPI */
 // SOP2 - GFX12

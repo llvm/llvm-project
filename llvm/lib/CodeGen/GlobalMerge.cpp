@@ -633,7 +633,7 @@ void GlobalMergeImpl::setMustKeepGlobalVariables(Module &M) {
 
   for (Function &F : M) {
     for (BasicBlock &BB : F) {
-      Instruction *Pad = BB.getFirstNonPHI();
+      BasicBlock::iterator Pad = BB.getFirstNonPHIIt();
       auto *II = dyn_cast<IntrinsicInst>(Pad);
       if (!Pad->isEHPad() &&
           !(II && II->getIntrinsicID() == Intrinsic::eh_typeid_for))
