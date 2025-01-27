@@ -43,14 +43,14 @@ if(FLANG_VENDOR)
 endif()
 
 add_flang_library(FortranSupport
+  default-kinds.cpp
   Fortran.cpp
   Fortran-features.cpp
-  default-kinds.cpp
   idioms.cpp
   LangOptions.cpp
   OpenMP-utils.cpp
-  Version.cpp
   Timing.cpp
+  Version.cpp
   ${version_inc}
 
   LINK_COMPONENTS

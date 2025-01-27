@@ -1849,11 +1849,6 @@ int internal_uname(struct utsname *buf) {
 #  endif
 
 #  if SANITIZER_ANDROID
-#    if __ANDROID_API__ < 21
-extern "C" __attribute__((weak)) int dl_iterate_phdr(
-    int (*)(struct dl_phdr_info *, size_t, void *), void *);
-#    endif
-
 static int dl_iterate_phdr_test_cb(struct dl_phdr_info *info, size_t size,
                                    void *data) {
   // Any name starting with "lib" indicates a bug in L where library base names
@@ -1869,9 +1864,7 @@ static int dl_iterate_phdr_test_cb(struct dl_phdr_info *info, size_t size,
 static atomic_uint32_t android_api_level;
 
 static AndroidApiLevel AndroidDetectApiLevelStatic() {
-#    if __ANDROID_API__ <= 19
-  return ANDROID_KITKAT;
-#    elif __ANDROID_API__ <= 22
+#    if __ANDROID_API__ <= 22
   return ANDROID_LOLLIPOP_MR1;
 #    else
   return ANDROID_POST_LOLLIPOP;
@@ -1879,8 +1872,6 @@ static AndroidApiLevel AndroidDetectApiLevelStatic() {
 }
 
 static AndroidApiLevel AndroidDetectApiLevel() {
-  if (!&dl_iterate_phdr)
-    return ANDROID_KITKAT;  // K or lower
   bool base_name_seen = false;
   dl_iterate_phdr(dl_iterate_phdr_test_cb, &base_name_seen);
   if (base_name_seen)
