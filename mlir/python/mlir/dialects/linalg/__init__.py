@@ -111,6 +111,7 @@ def _IteratorTypeArrayAttr(x, context):
     return ArrayAttr.get([_iteratortypeenum(v, context) for v in x])
 
 
+# The underscore is needed here so that there's no collision with opdsl generation.
 class GenericOp_(GenericOp):
     def __init__(
         self,
