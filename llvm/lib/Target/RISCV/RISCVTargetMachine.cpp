@@ -144,6 +144,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVDAGToDAGISelLegacyPass(*PR);
   initializeRISCVMoveMergePass(*PR);
   initializeRISCVPushPopOptPass(*PR);
+  initializeRISCVLoadStoreOptPass(*PR);
 }
 
 static StringRef computeDataLayout(const Triple &TT,
@@ -310,7 +311,12 @@ RISCVTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
 ScheduleDAGInstrs *
 RISCVTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
   ScheduleDAGMI *DAG = nullptr;
-  if (EnablePostMISchedLoadStoreClustering) {
+  const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
+  bool EnableLoadStoreClusteringForLoadStorePairOpt =
+      !ST.getMacroFusions().empty() && ST.useLoadStorePairs();
+
+  if (EnablePostMISchedLoadStoreClustering ||
+      EnableLoadStoreClusteringForLoadStorePairOpt) {
     DAG = createGenericSchedPostRA(C);
     DAG->addMutation(createLoadClusterDAGMutation(
         DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
@@ -550,6 +556,8 @@ void RISCVPassConfig::addPreSched2() {
 
   // Emit KCFI checks for indirect calls.
   addPass(createKCFIPass());
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createRISCVLoadStoreOptPass());
 }
 
 void RISCVPassConfig::addPreEmitPass() {
@@ -563,6 +571,11 @@ void RISCVPassConfig::addPreEmitPass() {
     addPass(createMachineCopyPropagationPass(true));
   addPass(&BranchRelaxationPassID);
   addPass(createRISCVMakeCompressibleOptPass());
+
+  // LoadStoreOptimizer creates bundles for load-store bonding.
+  addPass(createUnpackMachineBundles([](const MachineFunction &MF) {
+    return MF.getSubtarget<RISCVSubtarget>().useLoadStorePairs();
+  }));
 }
 
 void RISCVPassConfig::addPreEmitPass2() {

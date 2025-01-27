@@ -248,6 +248,10 @@ void RISCVSubtarget::overridePostRASchedPolicy(MachineSchedPolicy &Policy,
   }
 }
 
+bool RISCVSubtarget::useLoadStorePairs() const {
+  return UseMIPSLoadStorePairsOpt && HasVendorXMIPSLSP;
+}
+
 bool RISCVSubtarget::useCCMovInsn() const {
   return UseCCMovInsn && HasVendorXMIPSCMove;
 }
