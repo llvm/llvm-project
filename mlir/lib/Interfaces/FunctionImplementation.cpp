@@ -70,7 +70,7 @@ parseFunctionArgumentList(OpAsmParser &parser, bool allowVariadic,
       });
 }
 
-ParseResult function_interface_impl::parseFunctionSignature(
+ParseResult function_interface_impl::parseFunctionSignatureWithArguments(
     OpAsmParser &parser, bool allowVariadic,
     SmallVectorImpl<OpAsmParser::Argument> &arguments, bool &isVariadic,
     SmallVectorImpl<Type> &resultTypes,
@@ -104,8 +104,8 @@ ParseResult function_interface_impl::parseFunctionOp(
   // Parse the function signature.
   SMLoc signatureLocation = parser.getCurrentLocation();
   bool isVariadic = false;
-  if (parseFunctionSignature(parser, allowVariadic, entryArgs, isVariadic,
-                             resultTypes, resultAttrs))
+  if (parseFunctionSignatureWithArguments(parser, allowVariadic, entryArgs,
+                                          isVariadic, resultTypes, resultAttrs))
     return failure();
 
   std::string errorMessage;

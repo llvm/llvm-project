@@ -45,11 +45,11 @@ using FuncTypeBuilder = function_ref<Type(
 /// indicates whether functions with variadic arguments are supported. The
 /// trailing arguments are populated by this function with names, types,
 /// attributes and locations of the arguments and those of the results.
-ParseResult
-parseFunctionSignature(OpAsmParser &parser, bool allowVariadic,
-                       SmallVectorImpl<OpAsmParser::Argument> &arguments,
-                       bool &isVariadic, SmallVectorImpl<Type> &resultTypes,
-                       SmallVectorImpl<DictionaryAttr> &resultAttrs);
+ParseResult parseFunctionSignatureWithArguments(
+    OpAsmParser &parser, bool allowVariadic,
+    SmallVectorImpl<OpAsmParser::Argument> &arguments, bool &isVariadic,
+    SmallVectorImpl<Type> &resultTypes,
+    SmallVectorImpl<DictionaryAttr> &resultAttrs);
 
 /// Parser implementation for function-like operations.  Uses
 /// `funcTypeBuilder` to construct the custom function type given lists of
