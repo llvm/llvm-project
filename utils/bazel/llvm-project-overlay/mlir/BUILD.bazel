@@ -8022,6 +8022,7 @@ cc_library(
         "include/mlir/Transforms/CFGToSCF.h",
         "include/mlir/Transforms/CommutativityUtils.h",
         "include/mlir/Transforms/ControlFlowSinkUtils.h",
+        "include/mlir/Transforms/DCEUtils.h",
         "include/mlir/Transforms/DialectConversion.h",
         "include/mlir/Transforms/FoldUtils.h",
         "include/mlir/Transforms/GreedyPatternRewriteDriver.h",
