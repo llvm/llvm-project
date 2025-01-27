@@ -28,7 +28,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include <optional>
 
 using namespace llvm;
 using namespace llvm::dxil;
