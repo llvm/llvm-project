@@ -15,6 +15,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ASTImporterSharedState.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
@@ -3729,10 +3730,7 @@ bool ASTNodeImporter::hasReturnTypeDeclaredInside(FunctionDecl *D) {
     if (Importer.FromContext.getLangOpts().CPlusPlus14) // C++14 or later
       return false;
 
-    if (const auto *MD = dyn_cast<CXXMethodDecl>(D))
-      return cast<CXXRecordDecl>(MD->getDeclContext())->isLambda();
-
-    return false;
+    return isLambdaMethod(D);
   };
 
   QualType RetT = FromFPT->getReturnType();
