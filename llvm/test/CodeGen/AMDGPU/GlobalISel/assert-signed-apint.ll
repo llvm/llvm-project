@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs -stop-after=instruction-select -o - %s | FileCheck %s
 
-; 
+; Check that APInt doesn't assert on creation from -2147483648 value.
 
 ; CHECK-LABEL: @test
 ; CHECK: S_BUFFER_LOAD_DWORD_SGPR_IMM
