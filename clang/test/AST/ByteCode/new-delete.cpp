@@ -602,8 +602,7 @@ namespace std {
   using size_t = decltype(sizeof(0));
   template<typename T> struct allocator {
     constexpr T *allocate(size_t N) {
-      return (T*)__builtin_operator_new(sizeof(T) * N); // expected-note 2{{allocation performed here}} \
-                                                        // #alloc
+      return (T*)__builtin_operator_new(sizeof(T) * N); // #alloc
     }
     constexpr void deallocate(void *p) {
       __builtin_operator_delete(p); // both-note 2{{std::allocator<...>::deallocate' used to delete pointer to object allocated with 'new'}} \
@@ -641,7 +640,7 @@ namespace OperatorNewDelete {
       p = new int[1]; // both-note {{heap allocation performed here}}
       break;
     case 2:
-      p = std::allocator<int>().allocate(1); // ref-note 2{{heap allocation performed here}}
+      p = std::allocator<int>().allocate(1); // both-note 2{{heap allocation performed here}}
       break;
     }
     switch (dealloc_kind) {
@@ -837,6 +836,26 @@ namespace ToplevelScopeInTemplateArg {
       static_assert(string().size() == 4);
   }
 }
+
+template <typename T>
+struct SS {
+    constexpr SS(unsigned long long N)
+    : data(nullptr){
+        data = alloc.allocate(N);  // #call
+        for(std::size_t i = 0; i < N; i ++)
+            std::construct_at<T>(data + i, i); // #construct_call
+    }
+    constexpr T operator[](std::size_t i) const {
+      return data[i];
+    }
+
+    constexpr ~SS() {
+        alloc.deallocate(data);
+    }
+    std::allocator<T> alloc;
+    T* data;
+};
+constexpr unsigned short ssmall = SS<unsigned short>(100)[42];
 
 #else
 /// Make sure we reject this prior to C++20
