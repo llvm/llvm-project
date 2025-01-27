@@ -55,6 +55,13 @@ RUN:          loadconfig-arm64.obj loadconfig-arm64ec.obj arm64ec-drectve.obj -n
 RUN: llvm-objdump -d out-drectve-ec.dll | FileCheck --check-prefix=DISASM-EC %s
 RUN: llvm-readobj --headers --coff-exports out-drectve-ec.dll | FileCheck --check-prefix=EXPORTS-EC %s
 
+# A command-line def file applies only to EC exports.
+
+RUN: lld-link -machine:arm64x -dll -out:out-def-ec.dll arm64ec-func.obj arm64-func.obj \
+RUN:          loadconfig-arm64.obj loadconfig-arm64ec.obj -def:func.def -noentry
+RUN: llvm-objdump -d out-def-ec.dll | FileCheck --check-prefix=DISASM-EC %s
+RUN: llvm-readobj --headers --coff-exports out-def-ec.dll | FileCheck --check-prefix=EXPORTS-EC %s
+
 # Export using the EC .edata section.
 
 RUN: lld-link -machine:arm64x -dll -out:out-edata-ec.dll arm64ec-func.obj arm64-func.obj \
@@ -155,6 +162,29 @@ EXPORTS-BOTH-NEXT:     RVA: 0x3000
 EXPORTS-BOTH-NEXT:   }
 EXPORTS-BOTH-NEXT: }
 
+# Export using both the -def and -defarm64native arguments.
+
+RUN: lld-link -machine:arm64x -dll -out:out-def-both.dll arm64ec-func.obj arm64-func.obj \
+RUN:          loadconfig-arm64.obj loadconfig-arm64ec.obj -def:func.def -defarm64native:func.def -noentry
+RUN: llvm-objdump -d out-def-both.dll | FileCheck --check-prefix=DISASM-BOTH %s
+RUN: llvm-readobj --headers --coff-exports out-def-both.dll | FileCheck --check-prefix=EXPORTS-BOTH %s
+
+# -defarm64native is ignored if -def is not specified.
+
+RUN: lld-link -machine:arm64x -dll -out:out-def-native.dll arm64ec-func.obj arm64-func.obj \
+RUN:          loadconfig-arm64.obj loadconfig-arm64ec.obj -defarm64native:func.def -noentry
+RUN: llvm-readobj --headers --coff-exports out-def-native.dll | FileCheck --check-prefix=NO-EXPORT %s
+NO-EXPORT:  ExportTableRVA: 0x0
+NO-EXPORT:  ExportTableSize: 0x0
+NO-EXPORT:  HybridObject {
+NO-EXPORT:    ExportTableRVA: 0x0
+NO-EXPORT:    ExportTableSize: 0x0
+NO-EXPORT:  }
+
+# -defarm64native is ignored on ARM64 target.
+
+RUN: lld-link -machine:arm64 -dll -out:out-arm64-def.dll arm64-func.obj -defarm64native:invalid.def -def:func.def -noentry 2>&1 | count 0
+
 # Export using both the native and EC .edata sections.
 
 RUN: lld-link -machine:arm64x -dll -out:out-edata-both.dll arm64ec-func.obj arm64-func.obj \
@@ -227,3 +257,8 @@ funcname_func:
 
 name:
     .asciz "out-edata.dll"
+
+#--- func.def
+LIBRARY out.dll
+EXPORTS
+        func

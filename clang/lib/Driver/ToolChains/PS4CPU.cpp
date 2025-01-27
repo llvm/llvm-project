@@ -262,7 +262,10 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // index the symbols. `uuid` is the cheapest fool-proof method.
     // (The non-determinism and alternative methods are noted in the downstream
     // PlayStation docs).
-    CmdArgs.push_back("--build-id=uuid");
+    // Static executables are only used for a handful of specialized components,
+    // where the extra section is not wanted.
+    if (!Static)
+      CmdArgs.push_back("--build-id=uuid");
 
     // All references are expected to be resolved at static link time for both
     // executables and dynamic libraries. This has been the default linking

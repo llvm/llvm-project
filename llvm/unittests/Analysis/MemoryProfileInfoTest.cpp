@@ -25,6 +25,7 @@ using namespace llvm::memprof;
 extern cl::opt<float> MemProfLifetimeAccessDensityColdThreshold;
 extern cl::opt<unsigned> MemProfAveLifetimeColdThreshold;
 extern cl::opt<unsigned> MemProfMinAveLifetimeAccessDensityHotThreshold;
+extern cl::opt<bool> MemProfUseHotHints;
 
 namespace {
 
@@ -81,14 +82,23 @@ TEST_F(MemoryProfileInfoTest, GetAllocType) {
   //    MemProfMinAveLifetimeAccessDensityHotThreshold
   // so compute the HotTotalLifetimeAccessDensityThreshold  at the threshold.
   const uint64_t HotTotalLifetimeAccessDensityThreshold =
-      (uint64_t)(MemProfMinAveLifetimeAccessDensityHotThreshold * AllocCount * 100);  
-   
-  
+      (uint64_t)(MemProfMinAveLifetimeAccessDensityHotThreshold * AllocCount *
+                 100);
+
+  // Make sure the option for detecting hot allocations is set.
+  MemProfUseHotHints = true;
   // Test Hot
   // More accesses per byte per sec than hot threshold is hot.
   EXPECT_EQ(getAllocType(HotTotalLifetimeAccessDensityThreshold + 1, AllocCount,
                          ColdTotalLifetimeThreshold + 1),
-            AllocationType::Hot);  
+            AllocationType::Hot);
+  // Undo the manual set of the option above.
+  cl::ResetAllOptionOccurrences();
+
+  // Without MemProfUseHotHints (default) we should treat simply as NotCold.
+  EXPECT_EQ(getAllocType(HotTotalLifetimeAccessDensityThreshold + 1, AllocCount,
+                         ColdTotalLifetimeThreshold + 1),
+            AllocationType::NotCold);
 
   // Test Cold
   // Long lived with less accesses per byte per sec than cold threshold is cold.
@@ -155,6 +165,8 @@ entry:
   %1 = bitcast i8* %call2 to i32*
   %call3 = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
   %2 = bitcast i8* %call3 to i32*  
+  %call4 = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
+  %3 = bitcast i8* %call4 to i32*
   ret i32* %1
 }
 declare dso_local noalias noundef i8* @malloc(i64 noundef)
@@ -194,6 +206,18 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
   EXPECT_FALSE(Call3->hasMetadata(LLVMContext::MD_memprof));
   EXPECT_TRUE(Call3->hasFnAttr("memprof"));
   EXPECT_EQ(Call3->getFnAttr("memprof").getValueAsString(), "hot");
+
+  // Fourth call has hot and non-cold contexts. These should be treated as
+  // notcold and given a notcold attribute.
+  CallStackTrie Trie4;
+  Trie4.addCallStack(AllocationType::Hot, {5, 6});
+  Trie4.addCallStack(AllocationType::NotCold, {5, 7, 8});
+  CallBase *Call4 = findCall(*Func, "call4");
+  Trie4.buildAndAttachMIBMetadata(Call4);
+
+  EXPECT_FALSE(Call4->hasMetadata(LLVMContext::MD_memprof));
+  EXPECT_TRUE(Call4->hasFnAttr("memprof"));
+  EXPECT_EQ(Call4->getFnAttr("memprof").getValueAsString(), "notcold");
 }
 
 // Test CallStackTrie::addCallStack interface taking allocation type and list of
@@ -289,56 +313,8 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
       EXPECT_EQ(getMIBAllocType(MIB), AllocationType::Cold);
     else {
       ASSERT_EQ(StackId->getZExtValue(), 3u);
-      EXPECT_EQ(getMIBAllocType(MIB), AllocationType::Hot);
-    }
-  }
-}
-
-// Test CallStackTrie::addCallStack interface taking allocation type and list of
-// call stack ids.
-// Test that an allocation call reached by both non cold and hot call stacks
-// gets memprof metadata representing the different allocation type contexts.
-TEST_F(MemoryProfileInfoTest, NotColdAndHotMIB) {
-  LLVMContext C;
-  std::unique_ptr<Module> M = makeLLVMModule(C,
-                                             R"IR(
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-pc-linux-gnu"
-define i32* @test() {
-entry:
-  %call = call noalias dereferenceable_or_null(40) i8* @malloc(i64 noundef 40)
-  %0 = bitcast i8* %call to i32*
-  ret i32* %0
-}
-declare dso_local noalias noundef i8* @malloc(i64 noundef)
-)IR");
-
-  Function *Func = M->getFunction("test");
-
-  CallStackTrie Trie;
-  Trie.addCallStack(AllocationType::NotCold, {1, 2});
-  Trie.addCallStack(AllocationType::Hot, {1, 3});
-
-  CallBase *Call = findCall(*Func, "call");
-  Trie.buildAndAttachMIBMetadata(Call);
-
-  EXPECT_FALSE(Call->hasFnAttr("memprof"));
-  EXPECT_TRUE(Call->hasMetadata(LLVMContext::MD_memprof));
-  MDNode *MemProfMD = Call->getMetadata(LLVMContext::MD_memprof);
-  ASSERT_EQ(MemProfMD->getNumOperands(), 2u);
-  for (auto &MIBOp : MemProfMD->operands()) {
-    MDNode *MIB = dyn_cast<MDNode>(MIBOp);
-    MDNode *StackMD = getMIBStackNode(MIB);
-    ASSERT_NE(StackMD, nullptr);
-    ASSERT_EQ(StackMD->getNumOperands(), 2u);
-    auto *StackId = mdconst::dyn_extract<ConstantInt>(StackMD->getOperand(0));
-    ASSERT_EQ(StackId->getZExtValue(), 1u);
-    StackId = mdconst::dyn_extract<ConstantInt>(StackMD->getOperand(1));
-    if (StackId->getZExtValue() == 2u)
+      // Hot contexts are converted to NotCold when building the metadata.
       EXPECT_EQ(getMIBAllocType(MIB), AllocationType::NotCold);
-    else {
-      ASSERT_EQ(StackId->getZExtValue(), 3u);
-      EXPECT_EQ(getMIBAllocType(MIB), AllocationType::Hot);
     }
   }
 }
@@ -391,7 +367,8 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
       EXPECT_EQ(getMIBAllocType(MIB), AllocationType::NotCold);
     } else {
       ASSERT_EQ(StackId->getZExtValue(), 4u);
-      EXPECT_EQ(getMIBAllocType(MIB), AllocationType::Hot);
+      // Hot contexts are converted to NotCold when building the metadata.
+      EXPECT_EQ(getMIBAllocType(MIB), AllocationType::NotCold);
     }
   }
 }
@@ -453,7 +430,8 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
       EXPECT_EQ(getMIBAllocType(MIB), AllocationType::NotCold);
     else {
       ASSERT_EQ(StackId->getZExtValue(), 8u);
-      EXPECT_EQ(getMIBAllocType(MIB), AllocationType::Hot);
+      // Hot contexts are converted to NotCold when building the metadata.
+      EXPECT_EQ(getMIBAllocType(MIB), AllocationType::NotCold);
     }
   }
 }
@@ -596,7 +574,8 @@ declare dso_local noalias noundef i8* @malloc(i64 noundef)
       EXPECT_EQ(getMIBAllocType(MIB), AllocationType::NotCold);
     else {
       ASSERT_EQ(StackId->getZExtValue(), 8u);
-      EXPECT_EQ(getMIBAllocType(MIB), AllocationType::Hot);
+      // Hot contexts are converted to NotCold when building the new metadata.
+      EXPECT_EQ(getMIBAllocType(MIB), AllocationType::NotCold);
     }
   }
 }

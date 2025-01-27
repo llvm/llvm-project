@@ -10,7 +10,6 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Error.h"
 
@@ -182,10 +181,7 @@ MachineInstr *GISelCSEInfo::getMachineInstrIfExists(FoldingSetNodeID &ID,
 
 void GISelCSEInfo::countOpcodeHit(unsigned Opc) {
 #ifndef NDEBUG
-  if (OpcodeHitTable.count(Opc))
-    OpcodeHitTable[Opc] += 1;
-  else
-    OpcodeHitTable[Opc] = 1;
+  ++OpcodeHitTable[Opc];
 #endif
   // Else do nothing.
 }

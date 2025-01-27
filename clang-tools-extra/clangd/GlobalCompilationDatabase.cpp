@@ -837,7 +837,7 @@ OverlayCDB::getProjectModules(PathRef File) const {
                                               PathRef CommandPath) {
     Mangler(Command, CommandPath);
   });
-  return std::move(MDB);
+  return MDB;
 }
 
 DelegatingCDB::DelegatingCDB(const GlobalCompilationDatabase *Base)
