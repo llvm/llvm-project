@@ -1035,8 +1035,10 @@ bool PeepholeOptimizer::findNextSource(RegSubRegPair RegSubReg,
         return false;
 
       // Insert the Def -> Use entry for the recently found source.
-      ValueTrackerResult CurSrcRes = RewriteMap.lookup(CurSrcPair);
-      if (CurSrcRes.isValid()) {
+      auto [InsertPt, WasInserted] = RewriteMap.try_emplace(CurSrcPair, Res);
+
+      ValueTrackerResult CurSrcRes = InsertPt->second;
+      if (!WasInserted) {
         assert(CurSrcRes == Res && "ValueTrackerResult found must match");
         // An existent entry with multiple sources is a PHI cycle we must avoid.
         // Otherwise it's an entry with a valid next source we already found.
@@ -1047,7 +1049,6 @@ bool PeepholeOptimizer::findNextSource(RegSubRegPair RegSubReg,
         }
         break;
       }
-      RewriteMap.insert(std::make_pair(CurSrcPair, Res));
 
       // ValueTrackerResult usually have one source unless it's the result from
       // a PHI instruction. Add the found PHI edges to be looked up further.
