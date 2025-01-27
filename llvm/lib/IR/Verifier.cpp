@@ -6521,7 +6521,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       const ColorVector &CV = BlockEHFuncletColors.find(CallBB)->second;
       assert(CV.size() > 0 && "Uncolored block");
       for (BasicBlock *ColorFirstBB : CV)
-        if (auto It = ColorFirstBB->getFirstNonPHIIt(); It != ColorFirstBB->end())
+        if (auto It = ColorFirstBB->getFirstNonPHIIt();
+            It != ColorFirstBB->end())
           if (dyn_cast_or_null<FuncletPadInst>(&*It))
             InEHFunclet = true;
 

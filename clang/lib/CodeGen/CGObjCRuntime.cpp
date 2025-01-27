@@ -230,7 +230,8 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
     CodeGenFunction::LexicalScope Cleanups(CGF, Handler.Body->getSourceRange());
     SaveAndRestore RevertAfterScope(CGF.CurrentFuncletPad);
     if (useFunclets) {
-      llvm::BasicBlock::iterator CPICandidate = Handler.Block->getFirstNonPHIIt();
+      llvm::BasicBlock::iterator CPICandidate =
+          Handler.Block->getFirstNonPHIIt();
       if (CPICandidate != Handler.Block->end()) {
         if (auto *CPI = dyn_cast_or_null<llvm::CatchPadInst>(CPICandidate)) {
           CGF.CurrentFuncletPad = CPI;

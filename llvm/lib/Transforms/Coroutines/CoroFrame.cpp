@@ -1469,7 +1469,8 @@ static void rewritePHIs(BasicBlock &BB) {
   LandingPadInst *LandingPad = nullptr;
   PHINode *ReplPHI = nullptr;
   if (!BB.empty()) {
-    if ((LandingPad = dyn_cast_or_null<LandingPadInst>(BB.getFirstNonPHIIt()))) {
+    if ((LandingPad =
+             dyn_cast_or_null<LandingPadInst>(BB.getFirstNonPHIIt()))) {
       // ehAwareSplitEdge will clone the LandingPad in all the edge blocks.
       // We replace the original landing pad with a PHINode that will collect the
       // results from all of them.
