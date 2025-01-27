@@ -35,6 +35,13 @@ def main():
         except (IOError, json.JSONDecodeError) as e:
             continue
 
+    # LLVM passes this argument by default but it is not supported by clang,
+    # causing annoying errors in the generated compile_commands.json file.
+    # Remove it here before we deduplicate the entries.
+    for entry in merged_data:
+        if isinstance(entry, dict) and "command" in entry:
+            entry["command"] = entry["command"].replace("-fno-lifetime-dse ", "")
+
     # Deduplicate by converting each entry to a tuple of sorted key-value pairs
     unique_data = list({json.dumps(entry, sort_keys=True) for entry in merged_data})
     unique_data = [json.loads(entry) for entry in unique_data]
