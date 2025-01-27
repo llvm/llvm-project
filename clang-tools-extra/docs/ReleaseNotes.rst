@@ -287,6 +287,11 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/pro-type-union-access>` check to
   report a location even when the member location is not valid.
 
+- Improved :doc:`google-readability-namespace-comments
+  <clang-tidy/checks/google/readability-namespace-comments>` check to add an
+  option `AllowNoNamespaceComments`, that permits omitting namespace comments
+  entirely.
+
 - Improved :doc:`misc-definitions-in-headers
   <clang-tidy/checks/misc/definitions-in-headers>` check by rewording the
   diagnostic note that suggests adding ``inline``.
