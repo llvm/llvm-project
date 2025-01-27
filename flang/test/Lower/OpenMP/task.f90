@@ -150,11 +150,17 @@ subroutine task_depend_multi_task()
   x = x - 12
   !CHECK: omp.terminator
   !$omp end task
-    !CHECK: omp.task depend(taskdependinoutset -> %{{.+}} : !fir.ref<i32>)
+  !CHECK: omp.task depend(taskdependinoutset -> %{{.+}} : !fir.ref<i32>)
   !$omp task depend(inoutset : x)
   !CHECK: arith.subi
   x = x - 12
   !CHECK: omp.terminator
+  !$omp end task
+  !CHECK: omp.task depend(taskdependdepobj -> %{{.+}} : !fir.ref<i32>)
+  !$omp task depend(depobj: obj)
+  ! CHECK: arith.addi
+      x = x + 73
+  ! CHECK:   omp.terminator
   !$omp end task
 end subroutine task_depend_multi_task
 

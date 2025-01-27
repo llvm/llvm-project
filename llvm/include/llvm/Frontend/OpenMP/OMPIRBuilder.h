@@ -1241,10 +1241,12 @@ public:
     omp::RTLDependenceKindTy DepKind = omp::RTLDependenceKindTy::DepUnknown;
     Type *DepValueType;
     Value *DepVal;
+    bool isTypeDepObj;
     explicit DependData() = default;
     DependData(omp::RTLDependenceKindTy DepKind, Type *DepValueType,
-               Value *DepVal)
-        : DepKind(DepKind), DepValueType(DepValueType), DepVal(DepVal) {}
+               Value *DepVal, bool isTypeDepObj = false)
+        : DepKind(DepKind), DepValueType(DepValueType), DepVal(DepVal),
+          isTypeDepObj(isTypeDepObj) {}
   };
 
   /// Generator for `#omp task`

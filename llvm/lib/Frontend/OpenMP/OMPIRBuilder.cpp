@@ -2049,19 +2049,61 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
       Builder.CreateStore(Priority, CmplrData);
     }
 
-    Value *DepArray = nullptr;
+    Value *DepAlloca = nullptr;
+    Value *stackSave = nullptr;
+    Value *depSize = Builder.getInt32(Dependencies.size());
     if (Dependencies.size()) {
       InsertPointTy OldIP = Builder.saveIP();
       Builder.SetInsertPoint(
           &OldIP.getBlock()->getParent()->getEntryBlock().back());
 
       Type *DepArrayTy = ArrayType::get(DependInfo, Dependencies.size());
-      DepArray = Builder.CreateAlloca(DepArrayTy, nullptr, ".dep.arr.addr");
+
+      // Used to keep a count of other dependence type apart from DEPOBJ
+      size_t otherDepTypeCount = 0;
+      SmallVector<Value *> objsVal;
+      // Load all the value of DEPOBJ object from omp_depend_t object
+      for (const DependData &dep : Dependencies) {
+        if (dep.isTypeDepObj) {
+          Value *loadDepVal = Builder.CreateLoad(VoidPtr, dep.DepVal);
+          Value *depValGEP =
+              Builder.CreateGEP(DependInfo, loadDepVal, Builder.getInt64(-1));
+          Value *obj =
+              Builder.CreateConstInBoundsGEP2_64(DependInfo, depValGEP, 0, 0);
+          Value *objVal = Builder.CreateLoad(Builder.getInt64Ty(), obj);
+          objsVal.push_back(objVal);
+        } else {
+          otherDepTypeCount++;
+        }
+      }
+
+      // Add all the values and use it as the size for DependInfo alloca
+      if (objsVal.size() > 0) {
+        depSize = objsVal[0];
+        for (size_t i = 1; i < objsVal.size(); i++)
+          depSize = Builder.CreateAdd(depSize, objsVal[i]);
+        if (otherDepTypeCount > 0)
+          depSize =
+              Builder.CreateAdd(depSize, Builder.getInt64(otherDepTypeCount));
+      }
+
+      if (!isa<ConstantInt>(depSize)) {
+        // stackSave to save the stack pointer
+        if (!stackSave)
+          stackSave = Builder.CreateStackSave();
+        DepAlloca = Builder.CreateAlloca(DependInfo, depSize, "dep.addr");
+        ((AllocaInst *)DepAlloca)->setAlignment(Align(16));
+        depSize = Builder.CreateTrunc(depSize, Builder.getInt32Ty());
+      } else {
+        DepAlloca = Builder.CreateAlloca(DepArrayTy, nullptr, ".dep.arr.addr");
+      }
 
       unsigned P = 0;
       for (const DependData &Dep : Dependencies) {
+        if (Dep.isTypeDepObj)
+          continue;
         Value *Base =
-            Builder.CreateConstInBoundsGEP2_64(DepArrayTy, DepArray, 0, P);
+            Builder.CreateGEP(DependInfo, DepAlloca, Builder.getInt64(P));
         // Store the pointer to the variable
         Value *Addr = Builder.CreateStructGEP(
             DependInfo, Base,
@@ -2085,6 +2127,23 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
                              static_cast<unsigned int>(Dep.DepKind)),
             Flags);
         ++P;
+      }
+
+      P = 0;
+      Value *depAllocaIdx = Builder.getInt64(otherDepTypeCount);
+      for (const DependData &dep : Dependencies) {
+        if (dep.isTypeDepObj) {
+          Value *depAllocaPtr =
+              Builder.CreateGEP(DependInfo, DepAlloca, depAllocaIdx);
+          Align alignment = Align(8);
+          Value *loadDepVal = Builder.CreateLoad(VoidPtr, dep.DepVal);
+          Value *memCpySize =
+              Builder.CreateMul(Builder.getInt64(24), objsVal[P]);
+          Builder.CreateMemCpy(depAllocaPtr, alignment, loadDepVal, alignment,
+                               memCpySize);
+          depAllocaIdx = Builder.CreateAdd(depAllocaIdx, objsVal[P]);
+          ++P;
+        }
       }
 
       Builder.restoreIP(OldIP);
@@ -2124,7 +2183,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
             getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_wait_deps);
         Builder.CreateCall(
             TaskWaitFn,
-            {Ident, ThreadID, Builder.getInt32(Dependencies.size()), DepArray,
+            {Ident, ThreadID, Builder.getInt32(Dependencies.size()), DepAlloca,
              ConstantInt::get(Builder.getInt32Ty(), 0),
              ConstantPointerNull::get(PointerType::getUnqual(M.getContext()))});
       }
@@ -2146,12 +2205,13 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
     if (Dependencies.size()) {
       Function *TaskFn =
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_with_deps);
-      Builder.CreateCall(
-          TaskFn,
-          {Ident, ThreadID, TaskData, Builder.getInt32(Dependencies.size()),
-           DepArray, ConstantInt::get(Builder.getInt32Ty(), 0),
-           ConstantPointerNull::get(PointerType::getUnqual(M.getContext()))});
-
+      Builder.CreateCall(TaskFn, {Ident, ThreadID, TaskData, depSize, DepAlloca,
+                                  ConstantInt::get(Builder.getInt32Ty(), 0),
+                                  ConstantPointerNull::get(
+                                      PointerType::getUnqual(M.getContext()))});
+      // stackSave is used by depend(depobj: x) clause to save the stack pointer
+      if (stackSave)
+        Builder.CreateStackRestore(stackSave);
     } else {
       // Emit the @__kmpc_omp_task runtime call to spawn the task
       Function *TaskFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task);
