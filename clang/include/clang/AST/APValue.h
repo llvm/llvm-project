@@ -260,7 +260,7 @@ public:
     template <class T> EnableIfDAOrForged<T> get() const;
 
     template <class T> EnableIfNotDANorForged<T> dyn_cast() const {
-      return Ptr.dyn_cast<T>();
+      return dyn_cast_if_present<T>(Ptr);
     }
 
     template <class T> EnableIfDAOrForged<T> dyn_cast() const;
