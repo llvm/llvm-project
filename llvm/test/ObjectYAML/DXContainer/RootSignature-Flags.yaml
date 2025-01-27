@@ -12,33 +12,13 @@ Parts:
   - Name:            RTS0
     Size:            8
     RootSignature:
+      Size: 8
       Version:         1
       AllowInputAssemblerInputLayout: true
-      DenyVertexShaderRootAccess: false
-      DenyHullShaderRootAccess: false
-      DenyDomainShaderRootAccess: false
-      DenyGeometryShaderRootAccess: false
-      DenyPixelShaderRootAccess: false
-      AllowStreamOutput: false
-      LocalRootSignature: false
-      DenyAmplificationShaderRootAccess: false
-      DenyMeshShaderRootAccess: false
-      CBVSRVUAVHeapDirectlyIndexed: false
-      SamplerHeapDirectlyIndexed: false
-      
+  
 #CHECK:    - Name: RTS0
 #CHECK-NEXT: Size: 8
 #CHECK-NEXT: RootSignature:
+#CHECK-NEXT:   Size: 8
 #CHECK-NEXT:   Version: 1
 #CHECK-NEXT:   AllowInputAssemblerInputLayout: true
-#CHECK-NEXT:   DenyVertexShaderRootAccess: false
-#CHECK-NEXT:   DenyHullShaderRootAccess: false
-#CHECK-NEXT:   DenyDomainShaderRootAccess: false
-#CHECK-NEXT:   DenyGeometryShaderRootAccess: false
-#CHECK-NEXT:   DenyPixelShaderRootAccess: false
-#CHECK-NEXT:   AllowStreamOutput: false
-#CHECK-NEXT:   LocalRootSignature: false
-#CHECK-NEXT:   DenyAmplificationShaderRootAccess: false
-#CHECK-NEXT:   DenyMeshShaderRootAccess: false
-#CHECK-NEXT:   CBVSRVUAVHeapDirectlyIndexed: false
-#CHECK-NEXT:   SamplerHeapDirectlyIndexed: false
