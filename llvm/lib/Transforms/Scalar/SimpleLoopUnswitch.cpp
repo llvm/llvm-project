@@ -3303,8 +3303,8 @@ static bool isSafeForNoNTrivialUnswitching(Loop &L, LoopInfo &LI) {
   // FIXME: We should teach SplitBlock to handle this and remove this
   // restriction.
   for (auto *ExitBB : ExitBlocks) {
-    auto *I = ExitBB->getFirstNonPHI();
-    if (isa<CleanupPadInst>(I) || isa<CatchSwitchInst>(I)) {
+    auto It = ExitBB->getFirstNonPHIIt();
+    if (isa<CleanupPadInst>(It) || isa<CatchSwitchInst>(It)) {
       LLVM_DEBUG(dbgs() << "Cannot unswitch because of cleanuppad/catchswitch "
                            "in exit block\n");
       return false;
