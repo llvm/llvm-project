@@ -2117,7 +2117,7 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
     Res = PromoteIntOp_PARTIAL_REDUCE_MLA(N);
     break;
   case ISD::EXPERIMENTAL_ALIAS_LANE_MASK:
-    Res = DAGTypeLegalizer::PromoteIntOp_EXPERIMENTAL_ALIAS_LANE_MASK(N, OpNo);
+    Res = PromoteIntOp_EXPERIMENTAL_ALIAS_LANE_MASK(N, OpNo);
     break;
   }
 
