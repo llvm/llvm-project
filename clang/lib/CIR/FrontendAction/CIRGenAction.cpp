@@ -8,8 +8,10 @@
 
 #include "clang/CIR/FrontendAction/CIRGenAction.h"
 #include "clang/CIR/CIRGenerator.h"
+#include "clang/CIR/LowerToLLVM.h"
+#include "clang/CodeGen/BackendUtil.h"
 #include "clang/Frontend/CompilerInstance.h"
-
+#include "llvm/IR/Module.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
 
@@ -18,11 +20,29 @@ using namespace clang;
 
 namespace cir {
 
+static BackendAction
+getBackendActionFromOutputType(CIRGenAction::OutputType Action) {
+  switch (Action) {
+  case CIRGenAction::OutputType::EmitLLVM:
+    return BackendAction::Backend_EmitLL;
+  default:
+    llvm_unreachable("Unsupported action");
+  }
+}
+
+static std::unique_ptr<llvm::Module> lowerFromCIRToLLVMIR(
+    const clang::FrontendOptions &FEOpts, mlir::ModuleOp MLIRModule,
+    std::unique_ptr<mlir::MLIRContext> MLIRCtx, llvm::LLVMContext &LLVMCtx) {
+  return direct::lowerDirectlyFromCIRToLLVMIR(MLIRModule, LLVMCtx);
+}
+
 class CIRGenConsumer : public clang::ASTConsumer {
 
   virtual void anchor();
 
   CIRGenAction::OutputType Action;
+
+  CompilerInstance &CI;
 
   std::unique_ptr<raw_pwrite_stream> OutputStream;
 
@@ -32,17 +52,12 @@ class CIRGenConsumer : public clang::ASTConsumer {
 
 public:
   CIRGenConsumer(CIRGenAction::OutputType Action,
-                 DiagnosticsEngine &DiagnosticsEngine,
-                 IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                 const HeaderSearchOptions &HeaderSearchOptions,
-                 const CodeGenOptions &CodeGenOptions,
-                 const TargetOptions &TargetOptions,
-                 const LangOptions &LangOptions,
-                 const FrontendOptions &FEOptions,
+                 CompilerInstance &CI,
                  std::unique_ptr<raw_pwrite_stream> OS)
-      : Action(Action), OutputStream(std::move(OS)), FS(VFS),
-        Gen(std::make_unique<CIRGenerator>(DiagnosticsEngine, std::move(VFS),
-                                           CodeGenOptions)) {}
+      : Action(Action), CI(CI), OutputStream(std::move(OS)),
+        FS(&CI.getVirtualFileSystem()),
+        Gen(std::make_unique<CIRGenerator>(CI.getDiagnostics(), std::move(FS),
+                                           CI.getCodeGenOpts())) {}
 
   void Initialize(ASTContext &Ctx) override {
     assert(!Context && "initialized multiple times");
@@ -58,6 +73,7 @@ public:
   void HandleTranslationUnit(ASTContext &C) override {
     Gen->HandleTranslationUnit(C);
     mlir::ModuleOp MlirModule = Gen->getModule();
+    auto MLIRCtx = Gen->takeContext();
     switch (Action) {
     case CIRGenAction::OutputType::EmitCIR:
       if (OutputStream && MlirModule) {
@@ -66,6 +82,18 @@ public:
         MlirModule->print(*OutputStream, Flags);
       }
       break;
+    case CIRGenAction::OutputType::EmitLLVM: {
+      llvm::LLVMContext LLVMCtx;
+      auto LLVMModule = lowerFromCIRToLLVMIR(CI.getFrontendOpts(), MlirModule,
+                                             std::move(MLIRCtx), LLVMCtx);
+
+      BackendAction BEAction = getBackendActionFromOutputType(Action);
+      emitBackendOutput(CI, CI.getCodeGenOpts(),
+                        C.getTargetInfo().getDataLayoutString(),
+                        LLVMModule.get(), BEAction, FS,
+                        std::move(OutputStream));
+      break;
+    }
     }
   }
 };
@@ -84,6 +112,8 @@ getOutputStream(CompilerInstance &CI, StringRef InFile,
   switch (Action) {
   case CIRGenAction::OutputType::EmitCIR:
     return CI.createDefaultOutputFile(false, InFile, "cir");
+  case CIRGenAction::OutputType::EmitLLVM:
+    return CI.createDefaultOutputFile(false, InFile, "ll");
   }
   llvm_unreachable("Invalid CIRGenAction::OutputType");
 }
@@ -96,9 +126,7 @@ CIRGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
     Out = getOutputStream(CI, InFile, Action);
 
   auto Result = std::make_unique<cir::CIRGenConsumer>(
-      Action, CI.getDiagnostics(), &CI.getVirtualFileSystem(),
-      CI.getHeaderSearchOpts(), CI.getCodeGenOpts(), CI.getTargetOpts(),
-      CI.getLangOpts(), CI.getFrontendOpts(), std::move(Out));
+      Action, CI, std::move(Out));
 
   return Result;
 }
@@ -106,3 +134,7 @@ CIRGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 void EmitCIRAction::anchor() {}
 EmitCIRAction::EmitCIRAction(mlir::MLIRContext *MLIRCtx)
     : CIRGenAction(OutputType::EmitCIR, MLIRCtx) {}
+
+void EmitLLVMAction::anchor() {}
+EmitLLVMAction::EmitLLVMAction(mlir::MLIRContext *MLIRCtx)
+    : CIRGenAction(OutputType::EmitLLVM, MLIRCtx) {}
