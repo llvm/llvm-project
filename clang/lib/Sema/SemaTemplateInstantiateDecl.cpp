@@ -2606,8 +2606,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   // conditionally populate the TSI without breaking non-template related use
   // cases. Populate TSIs prior to calling SubstFunctionType to make sure we get
   // a proper transformation.
-  if (cast<CXXRecordDecl>(D->getParent())->isLambda() &&
-      !D->getTypeSourceInfo() &&
+  if (isLambdaMethod(D) && !D->getTypeSourceInfo() &&
       isa<CXXConstructorDecl, CXXDestructorDecl>(D)) {
     TypeSourceInfo *TSI =
         SemaRef.Context.getTrivialTypeSourceInfo(D->getType());
