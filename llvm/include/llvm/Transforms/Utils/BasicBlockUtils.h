@@ -550,9 +550,9 @@ SplitBlockAndInsertSimpleForLoop(Value *End, BasicBlock::iterator SplitBefore);
 /// IRBuilder whose insert point is correctly set for instantiating the
 /// given index, and a value which is (at runtime) the index to access.
 /// This index *may* be a constant.
-void SplitBlockAndInsertForEachLane(ElementCount EC, Type *IndexTy,
-    BasicBlock::iterator InsertBefore,
-    std::function<void(IRBuilderBase&, Value*)> Func);
+void SplitBlockAndInsertForEachLane(
+    ElementCount EC, Type *IndexTy, BasicBlock::iterator InsertBefore,
+    std::function<void(IRBuilderBase &, Value *)> Func);
 
 /// Utility function for performing a given action on each lane of a vector
 /// with \p EVL effective length. EVL is assumed > 0. To simplify porting legacy

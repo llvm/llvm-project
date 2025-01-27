@@ -342,7 +342,8 @@ private:
   MoveList createLoadGroups(const AddrList &Group) const;
   MoveList createStoreGroups(const AddrList &Group) const;
   bool moveTogether(MoveGroup &Move) const;
-  template <typename T> InstMap cloneBefore(BasicBlock::iterator To, T &&Insts) const;
+  template <typename T>
+  InstMap cloneBefore(BasicBlock::iterator To, T &&Insts) const;
 
   void realignLoadGroup(IRBuilderBase &Builder, const ByteSpan &VSpan,
                         int ScLen, Value *AlignVal, Value *AlignAddr) const;
@@ -1076,7 +1077,8 @@ auto AlignVectors::moveTogether(MoveGroup &Move) const -> bool {
 }
 
 template <typename T>
-auto AlignVectors::cloneBefore(BasicBlock::iterator To, T &&Insts) const -> InstMap {
+auto AlignVectors::cloneBefore(BasicBlock::iterator To, T &&Insts) const
+    -> InstMap {
   InstMap Map;
 
   for (Instruction *I : Insts) {

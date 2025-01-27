@@ -1276,8 +1276,8 @@ static bool hasCallsBetween(Instruction *Save, Instruction *ResumeOrDestroy) {
     return true;
 
   // Any calls from begging of the block up to ResumeOrDestroy?
-  if (hasCallsInBlockBetween({ResumeOrDestroyBB->getFirstNonPHIIt(),
-                             ResumeOrDestroyIt}))
+  if (hasCallsInBlockBetween(
+          {ResumeOrDestroyBB->getFirstNonPHIIt(), ResumeOrDestroyIt}))
     return true;
 
   // Any calls in all of the blocks between SaveBB and ResumeOrDestroyBB?
