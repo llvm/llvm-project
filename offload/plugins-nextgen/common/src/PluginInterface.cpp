@@ -1633,7 +1633,7 @@ Error GenericPluginTy::deinit() {
   if (GlobalHandler)
     delete GlobalHandler;
 
-  if (RPCServer->Thread->Running.load(std::memory_order_relaxed))
+  if (RPCServer && RPCServer->Thread->Running.load(std::memory_order_relaxed))
     if (Error Err = RPCServer->shutDown())
       return Err;
 
