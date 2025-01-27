@@ -268,9 +268,10 @@ def MPI_AllReduceOp : MPI_Op<"allreduce", []> {
   let arguments = (
     ins AnyMemRef : $sendbuf,
     AnyMemRef : $recvbuf,
-    MPI_Op : $op,
     Optional<MPI_Comm> : $comm
   );
+
+  let regions = (region SizedRegion<1>:$op);
 
   let results = (outs Optional<MPI_Retval>:$retval);
 

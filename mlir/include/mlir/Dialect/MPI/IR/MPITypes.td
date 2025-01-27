@@ -77,11 +77,11 @@ def MPI_Status : MPI_Type<"Status", "status"> {
 // mpi::OpType
 //===----------------------------------------------------------------------===//
 
-def MPI_Op : MPI_Type<"Op", "op"> {
-  let summary = "MPI operation handler";
-  let description = [{
-    This type represents a handle to a operation that can be used in MPI reduce and scan routines.
-  }];
-}
+// def MPI_Op : MPI_Type<"Op", "op"> {
+//   let summary = "MPI operation handler";
+//   let description = [{
+//     This type represents a handle to a operation that can be used in MPI reduce and scan routines.
+//   }];
+// }
 
 #endif // MLIR_DIALECT_MPI_IR_MPITYPES_TD
