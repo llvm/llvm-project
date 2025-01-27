@@ -325,7 +325,7 @@ public:
 
   bool isTargetUEFI64() const { return Is64Bit && isUEFI(); }
 
-  bool isTargetWin64() const { return Is64Bit && (isOSWindows() || isUEFI()); }
+  bool isTargetWin64() const { return Is64Bit && isOSWindows(); }
 
   bool isTargetWin32() const { return !Is64Bit && isOSWindows(); }
 
