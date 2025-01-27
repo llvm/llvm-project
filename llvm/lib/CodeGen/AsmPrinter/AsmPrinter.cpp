@@ -2868,59 +2868,34 @@ void AsmPrinter::emitJumpTableInfo() {
           MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference64,
       F);
 
-  std::vector<unsigned> JumpTableIndices;
   if (!TM.Options.EnableStaticDataPartitioning) {
+    SmallVector<unsigned> JumpTableIndices;
     for (unsigned JTI = 0, JTSize = JT.size(); JTI < JTSize; ++JTI)
       JumpTableIndices.push_back(JTI);
-    emitJumpTableImpl(
-        *MJTI,
-        llvm::make_range(JumpTableIndices.begin(), JumpTableIndices.end()),
-        JTInDiffSection);
+    emitJumpTableImpl(*MJTI, JumpTableIndices, JTInDiffSection);
     return;
   }
 
+  SmallVector<unsigned> HotJumpTableIndices, ColdJumpTableIndices;
   // When static data partitioning is enabled, collect jump table entries that
   // go into the same section together to reduce the amount of section switch
   // statements.
-  //
-  // Iterate all jump tables, put hot jump table indices towards the beginning
-  // of the vector, and cold jump table indices towards the end. Meanwhile
-  // retain the relative orders of original jump tables.
-  int NumHotJumpTables = 0, NextColdJumpTableIndex = JT.size() - 1;
-  JumpTableIndices.resize(JT.size());
   for (unsigned JTI = 0, JTSize = JT.size(); JTI < JTSize; ++JTI) {
     if (JT[JTI].Hotness == MachineFunctionDataHotness::Cold) {
-      JumpTableIndices[NextColdJumpTableIndex--] = JTI;
+      ColdJumpTableIndices.push_back(JTI);
     } else {
-      JumpTableIndices[NumHotJumpTables++] = JTI;
+      HotJumpTableIndices.push_back(JTI);
     }
   }
 
-  emitJumpTableImpl(
-      *MJTI,
-      llvm::make_range(JumpTableIndices.begin(),
-                       JumpTableIndices.begin() + NumHotJumpTables),
-
-      JTInDiffSection);
-
-  const int NumColdJumpTables = JT.size() - NumHotJumpTables;
-  assert(NumColdJumpTables >= 0 && "Invalid number of cold jump tables.");
-
-  // Reverse iterating cold jump table indices to emit in the original order.
-  emitJumpTableImpl(
-      *MJTI,
-      llvm::make_range(JumpTableIndices.rbegin(),
-                       JumpTableIndices.rbegin() + NumColdJumpTables),
-      JTInDiffSection);
-
+  emitJumpTableImpl(*MJTI, HotJumpTableIndices, JTInDiffSection);
+  emitJumpTableImpl(*MJTI, ColdJumpTableIndices, JTInDiffSection);
   return;
 }
 
-template <typename Iterator>
-void AsmPrinter::emitJumpTableImpl(
-    const MachineJumpTableInfo &MJTI,
-    const llvm::iterator_range<Iterator> &JumpTableIndices,
-    bool JTInDiffSection) {
+void AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
+                                   ArrayRef<unsigned> JumpTableIndices,
+                                   bool JTInDiffSection) {
   if (JumpTableIndices.empty())
     return;
 

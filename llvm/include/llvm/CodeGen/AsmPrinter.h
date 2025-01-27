@@ -893,9 +893,8 @@ private:
   // Internal Implementation Details
   //===------------------------------------------------------------------===//
 
-  template <typename Iterator>
   void emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
-                         const llvm::iterator_range<Iterator> &JumpTableIndices,
+                         ArrayRef<unsigned> JumpTableIndices,
                          bool JTInDiffSection);
   void emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
                           const MachineBasicBlock *MBB, unsigned uid) const;
