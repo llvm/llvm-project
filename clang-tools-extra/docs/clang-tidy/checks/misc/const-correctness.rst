@@ -197,7 +197,7 @@ Options
     int *changing_pointee = &value;
     changing_pointee = &result;
 
-.. option:: AllowedTypes (default = '')
+.. option:: AllowedTypes
 
   A semicolon-separated list of names of types that will be excluded from
   const-correctness checking. Regular expressions are accepted, e.g.
@@ -205,3 +205,4 @@ Options
   and `reference`. If a name in the list contains the sequence `::`, it is
   matched against the qualified type name (i.e. ``namespace::Type``),
   otherwise it is matched against only the type name (i.e. ``Type``).
+  Default is empty.
