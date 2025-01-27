@@ -1012,22 +1012,18 @@ ELFDumper<ELFT>::dumpFuncMapSection(const Elf_Shdr *Shdr) {
   std::vector<ELFYAML::FuncMapEntry> Entries;
   DataExtractor::Cursor Cur(0);
   uint8_t Version = 0;
-  uint8_t Feature = 0;
   uint64_t Address = 0;
   while (Cur && Cur.tell() < Content.size()) {
     if (Shdr->sh_type == ELF::SHT_LLVM_FUNC_MAP) {
       Version = Data.getU8(Cur);
-      Feature = Data.getU8(Cur);
+      if (Cur && Version > 1)
+        return createStringError(errc::invalid_argument,
+                                 "invalid SHT_LLVM_FUNC_MAP section version: " +
+                                     Twine(static_cast<int>(Version)));
     }
-    auto FeatureOrErr = llvm::object::FuncMap::Features::decode(Feature);
-    if (!FeatureOrErr)
-      return FeatureOrErr.takeError();
-
     Address = Data.getAddress(Cur);
-
-    uint64_t DynamicInstCount =
-        FeatureOrErr->DynamicInstCount ? Data.getULEB128(Cur) : 0;
-    Entries.push_back({Version, Feature, Address, DynamicInstCount});
+    uint64_t DynamicInstCount = Data.getULEB128(Cur);
+    Entries.push_back({Version, Address, DynamicInstCount});
   }
 
   if (!Cur) {

@@ -36,7 +36,7 @@
 # Case 4: Specify Entries.
 # CHECK:        Name: .llvm_func_map (1)
 # CHECK:        SectionData (
-# CHECK-NEXT:     0000: 01012222 02000000 000010
+# CHECK-NEXT:     0000: 01222202 00000000 0010
 # CHECK-NEXT:   )
 
 
@@ -75,7 +75,6 @@ Sections:
     Type: SHT_LLVM_FUNC_MAP
     Entries:
       - Version: 1
-        Feature: 0x1
         Address: 0x22222
         DynInstCnt: 0x10
 

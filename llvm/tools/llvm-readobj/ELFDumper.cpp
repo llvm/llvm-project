@@ -7949,8 +7949,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFuncMaps() {
         FuncName = this->getStaticSymbolName(FuncSymIndex.front());
 
       W.printString("Name", FuncName);
-      if (AM.FeatEnable.DynamicInstCount)
-        W.printNumber("DynamicInstCount", AM.DynamicInstCount);
+      W.printNumber("DynamicInstCount", AM.DynamicInstCount);
     }
   }
 }

@@ -148,10 +148,6 @@ enum class PGOMapFeaturesEnum {
   All,
 };
 
-enum class FuncMapFeaturesEnum {
-  DynamicInstCount,
-};
-
 static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
     "pgo-analysis-map", cl::Hidden, cl::CommaSeparated,
     cl::values(
@@ -166,12 +162,12 @@ static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
         "Enable extended information within the SHT_LLVM_BB_ADDR_MAP that is "
         "extracted from PGO related analysis."));
 
-static cl::bits<FuncMapFeaturesEnum> FuncMapFeatures(
-    "func-map", cl::Hidden, cl::CommaSeparated,
-    cl::values(clEnumValN(FuncMapFeaturesEnum::DynamicInstCount,
-                          "dyn-inst-count", "Dynamic instruction count")),
+static cl::opt<bool> EmitFuncMap(
+    "func-map",
     cl::desc(
-        "Emit features of function address map in SHT_LLVM_FUNC_MAP section"));
+        "Emit features of function address map in SHT_LLVM_FUNC_MAP "
+        "section(Currently only support dynamic instruction count feature)."),
+    cl::Hidden, cl::init(false));
 
 static cl::opt<bool> BBAddrMapSkipEmitBBEntries(
     "basic-block-address-map-skip-bb-entries",
@@ -1436,12 +1432,6 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
           static_cast<bool>(BBAddrMapSkipEmitBBEntries)};
 }
 
-static llvm::object::FuncMap::Features getFuncMapFeature() {
-  return {FuncMapFeatures.isSet(FuncMapFeaturesEnum::DynamicInstCount)};
-}
-
-static bool isAnyFuncMapFeature() { return FuncMapFeatures.getBits() != 0; }
-
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   MCSection *BBAddrMapSection =
       getObjFileLowering().getBBAddrMapSection(*MF.getSection());
@@ -1567,7 +1557,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
 }
 
 void AsmPrinter::emitFuncMapSection(const MachineFunction &MF) {
-  if (!isAnyFuncMapFeature())
+  if (!EmitFuncMap)
     return;
 
   MCSection *FuncMapSection =
@@ -1579,26 +1569,23 @@ void AsmPrinter::emitFuncMapSection(const MachineFunction &MF) {
   OutStreamer->AddComment("version");
   uint8_t FuncMapVersion = OutStreamer->getContext().getFuncMapVersion();
   OutStreamer->emitInt8(FuncMapVersion);
-  OutStreamer->AddComment("feature");
-  auto Features = getFuncMapFeature();
-  OutStreamer->emitInt8(Features.encode());
 
   OutStreamer->AddComment("function address");
   OutStreamer->emitSymbolValue(FunctionSymbol, getPointerSize());
-  if (Features.DynamicInstCount) {
-    const MachineBlockFrequencyInfo *MBFI =
-        &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI();
-    uint64_t DynInstCount = 0;
-    for (const MachineBasicBlock &MBB : MF) {
-      for (const MachineInstr &MI : MBB) {
-        if (MI.isDebugValue() || MI.isPseudoProbe())
-          continue;
-        DynInstCount += MBFI->getBlockProfileCount(&MBB).value_or(0);
-      }
+
+  const MachineBlockFrequencyInfo *MBFI =
+      &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI();
+  uint64_t DynInstCount = 0;
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB) {
+      if (MI.isDebugValue() || MI.isPseudoProbe())
+        continue;
+      DynInstCount += MBFI->getBlockProfileCount(&MBB).value_or(0);
     }
-    OutStreamer->AddComment("dynamic instruction count");
-    OutStreamer->emitULEB128IntValue(DynInstCount);
   }
+
+  OutStreamer->AddComment("dynamic instruction count");
+  OutStreamer->emitULEB128IntValue(DynInstCount);
   OutStreamer->popSection();
 }
 
@@ -2804,7 +2791,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
       F.hasFnAttribute("xray-instruction-threshold") ||
       needFuncLabels(MF, *this) || NeedsLocalForSize ||
       MF.getTarget().Options.EmitStackSizeSection ||
-      MF.getTarget().Options.BBAddrMap || isAnyFuncMapFeature()) {
+      MF.getTarget().Options.BBAddrMap || EmitFuncMap) {
     CurrentFnBegin = createTempSymbol("func_begin");
     if (NeedsLocalForSize)
       CurrentFnSymForSize = CurrentFnBegin;

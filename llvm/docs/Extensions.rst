@@ -539,25 +539,21 @@ Example of BBAddrMap with PGO data:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 This section stores the mapping from the binary address of function to its
 related metadata features. It is used to emit function-level analysis data and
-can be enabled through ``--func-map=<feature>`` option.
+can be enabled through ``--func-map`` option. The fields are encoded in the
+following format:
 
-Three fields are stored at the beginning: a version number byte for backward
-compatibility, a feature byte where each bit represents a specific feature, and
-the function's entry address. The encodings for each enabled feature come after
-these fields. The currently supported feature is:
-
-#. Dynamic Instruction Count - Total PGO counts for all instructions within the function.
+#. A version number byte used for backward compatibility.
+#. The function's entry address.
+#. Dynamic Instruction Count, which is calculated as the total PGO counts for all
+   instructions within the function.
 
 Example:
 
 .. code-block:: gas
-
   .section  ".llvm_func_map","",@llvm_func_map
   .byte     1                             # version number
-  .byte     1                             # feature
   .quad     .Lfunc_begin1                 # function address
   .uleb128  333                           # dynamic instruction count
-
 
 ``SHT_LLVM_OFFLOADING`` Section (offloading data)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

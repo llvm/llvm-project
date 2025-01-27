@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64 -function-sections -func-map=dyn-inst-count | FileCheck %s
-
+; Test emitting dynamic instruction count feature in .llvm_func_map section.
+; RUN: llc < %s -mtriple=x86_64 -function-sections -func-map | FileCheck %s
 
 ;; Check we add SHF_LINK_ORDER for .llvm_func_map and link it with the corresponding .text sections.
 ; CHECK:  .section .text.foo,"ax",@progbits
@@ -7,7 +7,6 @@
 ; CHECK-NEXT:  [[FOO_BEGIN:.Lfunc_begin[0-9]+]]:
 ; CHECK:	.section .llvm_func_map,"o",@llvm_func_map,.text.foo{{$}}
 ; CHECK-NEXT:  .byte 1			            # version
-; CHECK-NEXT:  .byte 1			            # feature
 ; CHECK-NEXT:  .quad [[FOO_BEGIN]]	    # function address
 ; CHECK-NEXT:  .ascii  "\252\001"       # dynamic instruction count
 
@@ -17,7 +16,6 @@
 ; CHECK-NEXT:  [[MAIN_BEGIN:.Lfunc_begin[0-9]+]]:
 ; CHECK:  .section .llvm_func_map,"o",@llvm_func_map,.text.main{{$}}
 ; CHECK-NEXT:  .byte 1			            # version
-; CHECK-NEXT:  .byte 1			            # feature
 ; CHECK-NEXT:  .quad [[MAIN_BEGIN]]	    # function address
 ; CHECK-NEXT:  .ascii  "\265\003"       # dynamic instruction count
 
