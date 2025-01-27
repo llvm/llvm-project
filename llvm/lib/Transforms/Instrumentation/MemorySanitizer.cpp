@@ -2997,8 +2997,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// fine).
   ///
   /// Caller guarantees that this intrinsic does not access memory.
-  bool maybeHandleSimpleNomemIntrinsic(IntrinsicInst &I,
-                                       unsigned int trailingFlags) {
+  [[maybe_unused]] bool
+  maybeHandleSimpleNomemIntrinsic(IntrinsicInst &I,
+                                  unsigned int trailingFlags) {
     Type *RetTy = I.getType();
     if (!(RetTy->isIntOrIntVectorTy() || RetTy->isFPOrFPVectorTy()))
       return false;
@@ -3049,7 +3050,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
 
     if (I.doesNotAccessMemory())
-      if (maybeHandleSimpleNomemIntrinsic(I, /* trailingFlags */ 0))
+      if (maybeHandleSimpleNomemIntrinsic(I, /*trailingFlags=*/0))
         return true;
 
     // FIXME: detect and handle SSE maskstore/maskload?
@@ -4690,6 +4691,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx2_maskload_d_256:
     case Intrinsic::x86_avx2_maskload_q_256: {
       handleAVXMaskedLoad(I);
+      break;
+    }
 
     // Packed
     case Intrinsic::x86_avx512_min_ps_512:
@@ -4699,9 +4702,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // These AVX512 variants contain the rounding mode as a trailing flag.
       // Earlier variants do not have a trailing flag and are already handled
       // by maybeHandleSimpleNomemIntrinsic(I, 0) via handleUnknownIntrinsic.
-      bool success = maybeHandleSimpleNomemIntrinsic(I, /* trailingFlags */ 1);
-      (void)success;
-      assert(success);
+      bool Success = maybeHandleSimpleNomemIntrinsic(I, /*trailingFlags=*/1);
+      assert(Success);
       break;
     }
 
