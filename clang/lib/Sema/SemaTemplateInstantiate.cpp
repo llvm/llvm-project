@@ -1870,15 +1870,6 @@ Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
       TemplateArgument Arg = TemplateArgs(TTP->getDepth(), TTP->getPosition());
 
       if (TTP->isParameterPack()) {
-        // We might not have an index for pack expansion when normalizing
-        // constraint expressions. In that case, resort to instantiation scopes
-        // for the transformed declarations.
-        if (SemaRef.ArgumentPackSubstitutionIndex == -1 &&
-            SemaRef.CodeSynthesisContexts.back().Kind ==
-                Sema::CodeSynthesisContext::ConstraintNormalization) {
-          return SemaRef.FindInstantiatedDecl(Loc, cast<NamedDecl>(D),
-                                              TemplateArgs);
-        }
         assert(Arg.getKind() == TemplateArgument::Pack &&
                "Missing argument pack");
         Arg = getPackSubstitutedTemplateArgument(getSema(), Arg);
