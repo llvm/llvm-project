@@ -195,6 +195,26 @@ def GlobalValueLinkageOpInterface : OpInterface<"GlobalValueLinkageOpInterface">
       /*returnType=*/  "std::optional<::mlir::link::ComdatSelectionKind>",
       /*methodName=*/  "getComdatSelectionKind",
       /*args=*/        (ins)
+    >,
+    InterfaceMethod<
+      /*desc=*/        "Returns whether the operation is a declaration",
+      /*returnType=*/  "bool",
+      /*methodName=*/  "isDeclarationForLinkage",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImplementation=*/[{
+        return cast<SymbolOpInterface>($_op.getOperation()).isDeclaration();
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/        "Returns linked name of the operation",
+      /*returnType=*/  "StringRef",
+      /*methodName=*/  "getLinkedName",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImplementation=*/[{
+        return cast<SymbolOpInterface>($_op.getOperation()).getName();
+      }]
     >
   ];
 }
