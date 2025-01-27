@@ -20,6 +20,7 @@ set(sources
   kernel.cpp
   memmove-function.cpp
   memory.cpp
+  pointer.cpp
   registration.cpp
 )
 runtime_source_files(sources SUBDIR "CUDA")

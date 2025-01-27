@@ -560,9 +560,16 @@ TEST_F(TokenAnnotatorTest, UnderstandsStructs) {
   ASSERT_EQ(Tokens.size(), 15u) << Tokens;
   EXPECT_TOKEN(Tokens[11], tok::l_brace, TT_StructLBrace);
 
+  constexpr StringRef Code{"struct EXPORT StructName {};"};
+
+  Tokens = annotate(Code);
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::l_brace, TT_StructLBrace);
+  EXPECT_TOKEN(Tokens[4], tok::r_brace, TT_StructRBrace);
+
   auto Style = getLLVMStyle();
   Style.AttributeMacros.push_back("EXPORT");
-  Tokens = annotate("struct EXPORT StructName {};", Style);
+  Tokens = annotate(Code, Style);
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_AttributeMacro);
   EXPECT_TOKEN(Tokens[3], tok::l_brace, TT_StructLBrace);
@@ -1025,6 +1032,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsOverloadedOperators) {
   EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_OverloadedOperatorLParen);
   EXPECT_TOKEN(Tokens[8], tok::amp, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[12], tok::amp, TT_PointerOrReference);
+
+  Tokens = annotate("SomeLoooooooooooooooooType::Awaitable\n"
+                    "SomeLoooooooooooooooooType::operator co_await();");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[7], tok::l_paren, TT_OverloadedOperatorLParen);
 }
 
 TEST_F(TokenAnnotatorTest, OverloadedOperatorInTemplate) {

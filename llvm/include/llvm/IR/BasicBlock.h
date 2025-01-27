@@ -194,6 +194,7 @@ public:
   // debug-info attachments.
   friend void Instruction::insertBefore(BasicBlock::iterator InsertPos);
   friend void Instruction::insertAfter(Instruction *InsertPos);
+  friend void Instruction::insertAfter(BasicBlock::iterator InsertPos);
   friend void Instruction::insertBefore(BasicBlock &BB,
                                         InstListType::iterator InsertPos);
   friend void Instruction::moveBeforeImpl(BasicBlock &BB,
@@ -672,7 +673,7 @@ public:
   void replaceSuccessorsPhiUsesWith(BasicBlock *New);
 
   /// Return true if this basic block is an exception handling block.
-  bool isEHPad() const { return getFirstNonPHI()->isEHPad(); }
+  bool isEHPad() const { return getFirstNonPHIIt()->isEHPad(); }
 
   /// Return true if this basic block is a landing pad.
   ///
