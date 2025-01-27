@@ -147,6 +147,7 @@ multicore performance. Please refer to ``SnMalloc``'s repositories for more info
 To setup ``SnMalloc``, use the following ``cmake`` configuration instead:
 
 .. code-block:: sh
+
    $> git clone https://github.com/microsoft/snmalloc
    $> export SNMALLOC_DIR=$(realpath snmalloc)
    $> cd /path/to/llvm-project
