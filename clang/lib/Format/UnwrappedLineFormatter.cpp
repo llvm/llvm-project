@@ -638,7 +638,7 @@ private:
 
     // The merging code is relative to the opening namespace brace, which could
     // be either on the first or second line due to the brace wrapping rules.
-    const size_t OpeningBraceLineOffset = OpenBraceWrapped ? 1 : 0;
+    const auto OpeningBraceLineOffset = OpenBraceWrapped ? 1 : 0;
     const auto BraceOpenLine = I + OpeningBraceLineOffset;
 
     if (std::distance(BraceOpenLine, E) <= 2)
