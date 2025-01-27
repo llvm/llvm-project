@@ -700,13 +700,12 @@ bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &sec, StringRef name) {
   if (entSize == 0)
     return false;
   if (sec.sh_size % entSize)
-    Fatal(ctx) << this << ":(" << name << "): SHF_MERGE section size ("
-               << uint64_t(sec.sh_size)
-               << ") must be a multiple of sh_entsize (" << entSize << ")";
-
+    ErrAlways(ctx) << this << ":(" << name << "): SHF_MERGE section size ("
+                   << uint64_t(sec.sh_size)
+                   << ") must be a multiple of sh_entsize (" << entSize << ")";
   if (sec.sh_flags & SHF_WRITE)
-    Fatal(ctx) << this << ":(" << name
-               << "): writable SHF_MERGE section is not supported";
+    Err(ctx) << this << ":(" << name
+             << "): writable SHF_MERGE section is not supported";
 
   return true;
 }
