@@ -1386,21 +1386,15 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
       Value *Mul = Builder.CreateMul(Index, FieldBaseSize, "field_offset",
                                      !IsSigned, IsSigned);
       FieldOffset = Builder.CreateAdd(FieldOffset, Mul);
-
-      //  size_t offset_diff = flexible_array_member_offset - field_offset;
-      Value *OffsetDiff = Builder.CreateSub(SizeofStruct, FieldOffset,
-                                            "offset_diff", !IsSigned, IsSigned);
-
-      //  return offset_diff + flexible_array_member_size;
-      Res = Builder.CreateAdd(FlexibleArrayMemberSize, OffsetDiff, "result");
-    } else { // Option (3) '&ptr->field'
-      //  size_t offset_diff = flexible_array_member_offset - field_offset;
-      Value *OffsetDiff = Builder.CreateSub(SizeofStruct, FieldOffset,
-                                            "offset_diff", !IsSigned, IsSigned);
-
-      //  return flexible_array_member_size + offset_diff;
-      Res = Builder.CreateAdd(FlexibleArrayMemberSize, OffsetDiff, "result");
     }
+    // Option (3) '&ptr->field', and Option (4) continuation.
+
+    //  size_t offset_diff = flexible_array_member_offset - field_offset;
+    Value *OffsetDiff = Builder.CreateSub(SizeofStruct, FieldOffset,
+                                          "offset_diff", !IsSigned, IsSigned);
+
+    //  return offset_diff + flexible_array_member_size;
+    Res = Builder.CreateAdd(FlexibleArrayMemberSize, OffsetDiff, "result");
   }
 
   Value *Cmp = Builder.CreateIsNotNeg(Res);
