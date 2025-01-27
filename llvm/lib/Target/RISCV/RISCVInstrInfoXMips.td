@@ -30,13 +30,87 @@ def uimm7_lsb000 : RISCVOp,
 }
 
 //===----------------------------------------------------------------------===//
+// MIPS custom instruction formats
+//===----------------------------------------------------------------------===//
+
+// Load double pair format.
+class LDPFormat<dag outs, dag ins, string opcodestr, string argstr>
+    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
+  bits<7> imm7;
+  bits<5> rs1;
+  bits<5> rd1;
+  bits<5> rd2;
+
+  let Inst{31-27} = rd2;
+  let Inst{26-23} = imm7{6-3};
+  let Inst{22-20} = 0b000;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = 0b100;
+  let Inst{11-7} = rd1;
+  let Inst{6-0} = OPC_CUSTOM_0.Value;
+}
+
+// Load word pair format.
+class LWPFormat<dag outs, dag ins, string opcodestr, string argstr>
+    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
+  bits<7> imm7;
+  bits<5> rs1;
+  bits<5> rd1;
+  bits<5> rd2;
+
+  let Inst{31-27} = rd2;
+  let Inst{26-22} = imm7{6-2};
+  let Inst{21-20} = 0b01;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = 0b100;
+  let Inst{11-7} = rd1;
+  let Inst{6-0} = OPC_CUSTOM_0.Value;
+}
+
+// Store double pair format.
+class SDPFormat<dag outs, dag ins, string opcodestr, string argstr>
+    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
+  bits<7> imm7;
+  bits<5> rs3;
+  bits<5> rs2;
+  bits<5> rs1;
+
+  let Inst{31-27} = rs3;
+  let Inst{26-25} = imm7{6-5};
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = 0b101;
+  let Inst{11-10} = imm7{4-3};
+  let Inst{9-7} = 0b000;
+  let Inst{6-0} = OPC_CUSTOM_0.Value;
+}
+
+// Store word pair format.
+class SWPFormat<dag outs, dag ins, string opcodestr, string argstr>
+    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
+  bits<7> imm7;
+  bits<5> rs3;
+  bits<5> rs2;
+  bits<5> rs1;
+
+  let Inst{31-27} = rs3;
+  let Inst{26-25} = imm7{6-5};
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = 0b101;
+  let Inst{11-9} = imm7{4-2};
+  let Inst{8-7} = 0b01;
+  let Inst{6-0} = OPC_CUSTOM_0.Value;
+}
+
+//===----------------------------------------------------------------------===//
 // MIPS extensions
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasVendorXMIPSCMove], hasSideEffects = 0, mayLoad = 0, mayStore = 0,
                  DecoderNamespace = "Xmipscmove" in {
 def CCMOV : RVInstR4<0b11, 0b011, OPC_CUSTOM_0, (outs GPR:$rd),
-                    (ins GPR:$rs1, GPR:$rs2, GPR:$rs3),
+                     (ins GPR:$rs1, GPR:$rs2, GPR:$rs3),
                     "mips.ccmov", "$rd, $rs2, $rs1, $rs3">,
            Sched<[]>;
 }
