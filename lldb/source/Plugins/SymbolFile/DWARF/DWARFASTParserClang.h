@@ -191,7 +191,7 @@ protected:
       const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
       bool &is_variadic, bool &has_template_params,
       std::vector<lldb_private::CompilerType> &function_param_types,
-      llvm::SmallVector<llvm::StringRef> &function_param_names);
+      llvm::SmallVectorImpl<llvm::StringRef> &function_param_names);
 
   size_t ParseChildEnumerators(
       const lldb_private::CompilerType &compiler_type, bool is_signed,

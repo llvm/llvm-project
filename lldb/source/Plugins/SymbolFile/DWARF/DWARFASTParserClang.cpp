@@ -3159,7 +3159,7 @@ void DWARFASTParserClang::ParseChildParameters(
     clang::DeclContext *containing_decl_ctx, const DWARFDIE &parent_die,
     bool &is_variadic, bool &has_template_params,
     std::vector<CompilerType> &function_param_types,
-    llvm::SmallVector<llvm::StringRef> &function_param_names) {
+    llvm::SmallVectorImpl<llvm::StringRef> &function_param_names) {
   if (!parent_die)
     return;
 
