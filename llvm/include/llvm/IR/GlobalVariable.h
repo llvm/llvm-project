@@ -267,6 +267,13 @@ public:
            getAttributes().hasAttribute("rodata-section");
   }
 
+  MaybeAlign getRequiredGlobalAlignment() {
+    return isTagged() && getAlign().valueOrOne() < 16 ? MaybeAlign(16)
+                                                      : std::nullopt;
+  }
+
+  std::optional<uint64_t> getRequiredGlobalSize();
+
   /// Get the custom code model raw value of this global.
   ///
   unsigned getCodeModelRaw() const {

@@ -2400,17 +2400,23 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   OutStreamer->emitBinaryData(Buf);
 }
 
-static void tagGlobalDefinition(Module &M, GlobalVariable *G) {
-  Constant *Initializer = G->getInitializer();
+static uint64_t globalSize(const GlobalVariable &G) {
+  const Constant *Initializer = G.getInitializer();
   uint64_t SizeInBytes =
-      M.getDataLayout().getTypeAllocSize(Initializer->getType());
+      G.getParent()->getDataLayout().getTypeAllocSize(Initializer->getType());
 
-  uint64_t NewSize = alignTo(SizeInBytes, 16);
-  if (SizeInBytes != NewSize) {
+  return SizeInBytes;
+}
+
+static void tagGlobalDefinition(GlobalVariable *G) {
+  Module &M = *G->getParent();
+  uint64_t SizeInBytes = globalSize(*G);
+  if (auto NewSize = G->getRequiredGlobalSize()) {
+    assert(*NewSize > SizeInBytes);
     // Pad the initializer out to the next multiple of 16 bytes.
-    llvm::SmallVector<uint8_t> Init(NewSize - SizeInBytes, 0);
+    llvm::SmallVector<uint8_t> Init(*NewSize - SizeInBytes, 0);
     Constant *Padding = ConstantDataArray::get(M.getContext(), Init);
-    Initializer = ConstantStruct::getAnon({Initializer, Padding});
+    auto *Initializer = ConstantStruct::getAnon({G->getInitializer(), Padding});
     auto *NewGV = new GlobalVariable(
         M, Initializer->getType(), G->isConstant(), G->getLinkage(),
         Initializer, "", G, G->getThreadLocalMode(), G->getAddressSpace());
@@ -2424,8 +2430,10 @@ static void tagGlobalDefinition(Module &M, GlobalVariable *G) {
     G = NewGV;
   }
 
-  if (G->getAlign().valueOrOne() < 16)
-    G->setAlignment(Align(16));
+  if (auto Align = G->getRequiredGlobalAlignment()) {
+    assert(*Align > G->getAlign().valueOrOne());
+    G->setAlignment(*Align);
+  }
 
   // Ensure that tagged globals don't get merged by ICF - as they should have
   // different tags at runtime.
@@ -2440,12 +2448,14 @@ bool AsmPrinter::doFinalization(Module &M) {
 
   std::vector<GlobalVariable *> GlobalsToTag;
   for (GlobalVariable &G : M.globals()) {
-    if (G.isDeclaration() || !G.isTagged())
+    if (G.isDeclaration())
       continue;
-    GlobalsToTag.push_back(&G);
+    if (G.getRequiredGlobalAlignment().has_value() ||
+        G.getRequiredGlobalSize().has_value())
+      GlobalsToTag.push_back(&G);
   }
   for (GlobalVariable *G : GlobalsToTag)
-    tagGlobalDefinition(M, G);
+    tagGlobalDefinition(G);
 
   // Gather all GOT equivalent globals in the module. We really need two
   // passes over the globals: one to compute and another to avoid its emission

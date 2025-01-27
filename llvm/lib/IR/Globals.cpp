@@ -540,6 +540,16 @@ void GlobalVariable::setCodeModel(CodeModel::Model CM) {
   assert(getCodeModel() == CM && "Code model representation error!");
 }
 
+std::optional<uint64_t> GlobalVariable::getRequiredGlobalSize() {
+  if (!isTagged())
+    return std::nullopt;
+  Constant *Initializer = getInitializer();
+  uint64_t SizeInBytes =
+      getParent()->getDataLayout().getTypeAllocSize(Initializer->getType());
+  uint64_t Aligned = alignTo(SizeInBytes, 16);
+  return Aligned != SizeInBytes ? std::optional(Aligned) : std::nullopt;
+}
+
 //===----------------------------------------------------------------------===//
 // GlobalAlias Implementation
 //===----------------------------------------------------------------------===//
