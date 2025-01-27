@@ -886,7 +886,7 @@ BasicBlock *llvm::ehAwareSplitEdge(BasicBlock *BB, BasicBlock *Succ,
   if (LandingPadReplacement) {
     auto *NewLP = OriginalPad->clone();
     auto *Terminator = BranchInst::Create(Succ, NewBB);
-    NewLP->insertBefore(Terminator);
+    NewLP->insertBefore(Terminator->getIterator());
     LandingPadReplacement->addIncoming(NewLP, NewBB);
   } else {
     Value *ParentPad = nullptr;

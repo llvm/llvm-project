@@ -4784,7 +4784,8 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
 void X86InstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
     bool isKill, int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    const TargetRegisterInfo *TRI, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   assert(MFI.getObjectSize(FrameIdx) >= TRI->getSpillSize(*RC) &&
@@ -4803,12 +4804,10 @@ void X86InstrInfo::storeRegToStackSlot(
         .addReg(SrcReg, getKillRegState(isKill));
 }
 
-void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                        MachineBasicBlock::iterator MI,
-                                        Register DestReg, int FrameIdx,
-                                        const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI,
-                                        Register VReg) const {
+void X86InstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
+    int FrameIdx, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    Register VReg, MachineInstr::MIFlag Flags) const {
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   assert(MFI.getObjectSize(FrameIdx) >= TRI->getSpillSize(*RC) &&
@@ -5221,42 +5220,43 @@ inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag,
 }
 
 /// Check whether the use can be converted to remove a comparison against zero.
-static X86::CondCode isUseDefConvertible(const MachineInstr &MI) {
+/// Returns the EFLAGS condition and the operand that we are comparing against zero.
+static std::pair<X86::CondCode, unsigned> isUseDefConvertible(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
-    return X86::COND_INVALID;
+    return std::make_pair(X86::COND_INVALID, ~0U);
   CASE_ND(NEG8r)
   CASE_ND(NEG16r)
   CASE_ND(NEG32r)
   CASE_ND(NEG64r)
-    return X86::COND_AE;
+    return std::make_pair(X86::COND_AE, 1U);
   case X86::LZCNT16rr:
   case X86::LZCNT32rr:
   case X86::LZCNT64rr:
-    return X86::COND_B;
+    return std::make_pair(X86::COND_B, 1U);
   case X86::POPCNT16rr:
   case X86::POPCNT32rr:
   case X86::POPCNT64rr:
-    return X86::COND_E;
+    return std::make_pair(X86::COND_E, 1U);
   case X86::TZCNT16rr:
   case X86::TZCNT32rr:
   case X86::TZCNT64rr:
-    return X86::COND_B;
+    return std::make_pair(X86::COND_B, 1U);
   case X86::BSF16rr:
   case X86::BSF32rr:
   case X86::BSF64rr:
   case X86::BSR16rr:
   case X86::BSR32rr:
   case X86::BSR64rr:
-    return X86::COND_E;
+    return std::make_pair(X86::COND_E, 2U);
   case X86::BLSI32rr:
   case X86::BLSI64rr:
-    return X86::COND_AE;
+    return std::make_pair(X86::COND_AE, 1U);
   case X86::BLSR32rr:
   case X86::BLSR64rr:
   case X86::BLSMSK32rr:
   case X86::BLSMSK64rr:
-    return X86::COND_B;
+    return std::make_pair(X86::COND_B, 1U);
     // TODO: TBM instructions.
   }
 }
@@ -5337,6 +5337,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   bool ClearsOverflowFlag = false;
   bool ShouldUpdateCC = false;
   bool IsSwapped = false;
+  unsigned OpNo = 0;
   X86::CondCode NewCC = X86::COND_INVALID;
   int64_t ImmDelta = 0;
 
@@ -5392,9 +5393,9 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         //      ...                 // EFLAGS not changed
         //      testl %eax, %eax    // <-- can be removed
         if (IsCmpZero) {
-          NewCC = isUseDefConvertible(Inst);
-          if (NewCC != X86::COND_INVALID && Inst.getOperand(1).isReg() &&
-              Inst.getOperand(1).getReg() == SrcReg) {
+          std::tie(NewCC, OpNo) = isUseDefConvertible(Inst);
+          if (NewCC != X86::COND_INVALID && Inst.getOperand(OpNo).isReg() &&
+              Inst.getOperand(OpNo).getReg() == SrcReg) {
             ShouldUpdateCC = true;
             MI = &Inst;
             break;

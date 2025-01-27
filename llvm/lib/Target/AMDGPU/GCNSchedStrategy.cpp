@@ -1089,9 +1089,8 @@ bool PreRARematStage::initGCNSchedStage() {
     return false;
 
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  // Check maximum occupancy
-  if (ST.computeOccupancy(MF.getFunction(), MFI.getLDSSize()) ==
-      DAG.MinOccupancy)
+  // Rematerialization will not help if occupancy is not limited by reg usage.
+  if (ST.getOccupancyWithWorkGroupSizes(MF).second == DAG.MinOccupancy)
     return false;
 
   // FIXME: This pass will invalidate cached MBBLiveIns for regions
@@ -1272,8 +1271,8 @@ void GCNSchedStage::checkScheduling() {
     return;
   }
 
-  unsigned TargetOccupancy =
-      std::min(S.getTargetOccupancy(), ST.getOccupancyWithLocalMemSize(MF));
+  unsigned TargetOccupancy = std::min(
+      S.getTargetOccupancy(), ST.getOccupancyWithWorkGroupSizes(MF).second);
   unsigned WavesAfter =
       std::min(TargetOccupancy, PressureAfter.getOccupancy(ST));
   unsigned WavesBefore =
