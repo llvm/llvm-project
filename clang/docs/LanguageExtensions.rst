@@ -515,8 +515,7 @@ __nullptr
 ---------
 
 ``__nullptr`` is an alternate spelling for ``nullptr``, but is also available in
-C++ modes prior to C++11. Note that it's currently not availbale in C despite
-C23 having support for ``nullptr``.
+C++ modes prior to C++11. It is available in C++ modes prior to C++11 and is available in C as of C23. 
 
 __signed, __signed__
 --------------------
