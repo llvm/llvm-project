@@ -1,4 +1,4 @@
-//===-- Host.cpp ----------------------------------------------------------===//
+
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -516,7 +516,6 @@ static int dladdr(const void *ptr, Dl_info *dl)
 
 FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
   FileSpec module_filespec;
-#if !defined(__ANDROID__)
 #ifdef _AIX
   if (host_addr == reinterpret_cast<void *>(HostInfoBase::ComputeSharedLibraryDirectory)) {
     // FIXME: AIX dladdr return "lldb" for this case
@@ -527,6 +526,7 @@ FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
     }
   }
 #endif
+#if !defined(__ANDROID__)
   Dl_info info;
   if (::dladdr(host_addr, &info)) {
     if (info.dli_fname) {
@@ -534,6 +534,7 @@ FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
       FileSystem::Instance().Resolve(module_filespec);
     }
   }
+#endif
   return module_filespec;
 }
 
