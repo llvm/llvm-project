@@ -10324,13 +10324,13 @@ let Predicates = [HasD128] in {
 // 2023 Architecture Extensions:
 //===----------------------------===//
 
-let Uses = [FPMR, FPCR], Predicates = [HasFP8] in {
-  defm F1CVTL  : SIMDMixedTwoVectorFP8<0b00, "f1cvtl">;
-  defm F2CVTL  : SIMDMixedTwoVectorFP8<0b01, "f2cvtl">;
-  defm BF1CVTL : SIMDMixedTwoVectorFP8<0b10, "bf1cvtl">;
-  defm BF2CVTL : SIMDMixedTwoVectorFP8<0b11, "bf2cvtl">;
-  defm FCVTN_F16_F8 : SIMDThreeSameSizeVectorCvt<"fcvtn">;
-  defm FCVTN_F32_F8 : SIMDThreeVectorCvt<"fcvtn">;
+let Predicates = [HasFP8] in {
+  defm F1CVTL  : SIMD_FP8_CVTL<0b00, "f1cvtl", v8f16, int_aarch64_neon_fp8_cvtl1>;
+  defm F2CVTL  : SIMD_FP8_CVTL<0b01, "f2cvtl", v8f16, int_aarch64_neon_fp8_cvtl2>;
+  defm BF1CVTL : SIMD_FP8_CVTL<0b10, "bf1cvtl", v8bf16, int_aarch64_neon_fp8_cvtl1>;
+  defm BF2CVTL : SIMD_FP8_CVTL<0b11, "bf2cvtl", v8bf16, int_aarch64_neon_fp8_cvtl2>;
+  defm FCVTN_F16 : SIMD_FP8_CVTN_F16<"fcvtn", int_aarch64_neon_fp8_fcvtn>;
+  defm FCVTN_F32 : SIMD_FP8_CVTN_F32<"fcvtn", int_aarch64_neon_fp8_fcvtn>;
   defm FSCALE : SIMDThreeVectorFscale<0b1, 0b1, 0b111, "fscale", int_aarch64_neon_fp8_fscale>;
 } // End let Predicates = [HasFP8]
 

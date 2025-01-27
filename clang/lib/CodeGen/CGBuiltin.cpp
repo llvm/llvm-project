@@ -6759,10 +6759,34 @@ Value *CodeGenFunction::EmitNeonCall(Function *F, SmallVectorImpl<Value*> &Ops,
     return Builder.CreateCall(F, Ops, name);
 }
 
+Value *CodeGenFunction::EmitFP8NeonCall(Function *F,
+                                        SmallVectorImpl<Value *> &Ops,
+                                        Value *FPM, const char *name) {
+  Builder.CreateCall(CGM.getIntrinsic(Intrinsic::aarch64_set_fpmr), FPM);
+  return EmitNeonCall(F, Ops, name);
+}
+
 Value *CodeGenFunction::EmitNeonShiftVector(Value *V, llvm::Type *Ty,
                                             bool neg) {
   int SV = cast<ConstantInt>(V)->getSExtValue();
   return ConstantInt::get(Ty, neg ? -SV : SV);
+}
+
+Value *CodeGenFunction::EmitFP8NeonCvtCall(unsigned IID, llvm::Type *Ty0,
+                                           llvm::Type *Ty1, bool Extract,
+                                           SmallVectorImpl<llvm::Value *> &Ops,
+                                           const CallExpr *E,
+                                           const char *name) {
+  llvm::Type *Tys[] = {Ty0, Ty1};
+  if (Extract) {
+    // Op[0] is mfloat8x16_t, but the intrinsic converts only the lower part of
+    // the vector.
+    Tys[1] = llvm::FixedVectorType::get(Int8Ty, 8);
+    Ops[0] = Builder.CreateExtractVector(Tys[1], Ops[0], Builder.getInt64(0));
+  }
+  llvm::Value *FPM =
+      EmitScalarOrConstFoldImmArg(/* ICEArguments */ 0, E->getNumArgs() - 1, E);
+  return EmitFP8NeonCall(CGM.getIntrinsic(IID, Tys), Ops, FPM, name);
 }
 
 // Right-shift a vector by a constant.
@@ -12736,6 +12760,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return V;
 
   unsigned Int;
+  bool ExtractLow = false;
   switch (BuiltinID) {
   default: return nullptr;
   case NEON::BI__builtin_neon_vbsl_v:
@@ -13950,7 +13975,59 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Int = Intrinsic::aarch64_neon_vluti4q_laneq_x2;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vluti4q_laneq_x2");
   }
-
+  case NEON::BI__builtin_neon_vcvt1_low_bf16_mf8_fpm:
+    ExtractLow = true;
+    LLVM_FALLTHROUGH;
+  case NEON::BI__builtin_neon_vcvt1_bf16_mf8_fpm:
+  case NEON::BI__builtin_neon_vcvt1_high_bf16_mf8_fpm:
+    return EmitFP8NeonCvtCall(Intrinsic::aarch64_neon_fp8_cvtl1,
+                              llvm::FixedVectorType::get(BFloatTy, 8),
+                              Ops[0]->getType(), ExtractLow, Ops, E, "vbfcvt1");
+  case NEON::BI__builtin_neon_vcvt2_low_bf16_mf8_fpm:
+    ExtractLow = true;
+    LLVM_FALLTHROUGH;
+  case NEON::BI__builtin_neon_vcvt2_bf16_mf8_fpm:
+  case NEON::BI__builtin_neon_vcvt2_high_bf16_mf8_fpm:
+    return EmitFP8NeonCvtCall(Intrinsic::aarch64_neon_fp8_cvtl2,
+                              llvm::FixedVectorType::get(BFloatTy, 8),
+                              Ops[0]->getType(), ExtractLow, Ops, E, "vbfcvt2");
+  case NEON::BI__builtin_neon_vcvt1_low_f16_mf8_fpm:
+    ExtractLow = true;
+    LLVM_FALLTHROUGH;
+  case NEON::BI__builtin_neon_vcvt1_f16_mf8_fpm:
+  case NEON::BI__builtin_neon_vcvt1_high_f16_mf8_fpm:
+    return EmitFP8NeonCvtCall(Intrinsic::aarch64_neon_fp8_cvtl1,
+                              llvm::FixedVectorType::get(HalfTy, 8),
+                              Ops[0]->getType(), ExtractLow, Ops, E, "vbfcvt1");
+  case NEON::BI__builtin_neon_vcvt2_low_f16_mf8_fpm:
+    ExtractLow = true;
+    LLVM_FALLTHROUGH;
+  case NEON::BI__builtin_neon_vcvt2_f16_mf8_fpm:
+  case NEON::BI__builtin_neon_vcvt2_high_f16_mf8_fpm:
+    return EmitFP8NeonCvtCall(Intrinsic::aarch64_neon_fp8_cvtl2,
+                              llvm::FixedVectorType::get(HalfTy, 8),
+                              Ops[0]->getType(), ExtractLow, Ops, E, "vbfcvt2");
+  case NEON::BI__builtin_neon_vcvt_mf8_f32_fpm:
+    return EmitFP8NeonCvtCall(Intrinsic::aarch64_neon_fp8_fcvtn,
+                              llvm::FixedVectorType::get(Int8Ty, 8),
+                              Ops[0]->getType(), false, Ops, E, "vfcvtn");
+  case NEON::BI__builtin_neon_vcvt_mf8_f16_fpm:
+    return EmitFP8NeonCvtCall(Intrinsic::aarch64_neon_fp8_fcvtn,
+                              llvm::FixedVectorType::get(Int8Ty, 8),
+                              llvm::FixedVectorType::get(HalfTy, 4), false, Ops,
+                              E, "vfcvtn");
+  case NEON::BI__builtin_neon_vcvtq_mf8_f16_fpm:
+    return EmitFP8NeonCvtCall(Intrinsic::aarch64_neon_fp8_fcvtn,
+                              llvm::FixedVectorType::get(Int8Ty, 16),
+                              llvm::FixedVectorType::get(HalfTy, 8), false, Ops,
+                              E, "vfcvtn");
+  case NEON::BI__builtin_neon_vcvt_high_mf8_f32_fpm: {
+    llvm::Type *Ty = llvm::FixedVectorType::get(Int8Ty, 16);
+    Ops[0] = Builder.CreateInsertVector(Ty, PoisonValue::get(Ty), Ops[0],
+                                        Builder.getInt64(0));
+    return EmitFP8NeonCvtCall(Intrinsic::aarch64_neon_fp8_fcvtn2, Ty,
+                              Ops[1]->getType(), false, Ops, E, "vfcvtn2");
+  }
   case NEON::BI__builtin_neon_vamin_f16:
   case NEON::BI__builtin_neon_vaminq_f16:
   case NEON::BI__builtin_neon_vamin_f32:
