@@ -1,4 +1,4 @@
-REQUIRES: aarch64
+REQUIRES: aarch64, x86
 RUN: split-file %s %t.dir && cd %t.dir
 
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows func12-thunks-arm64ec.s -o func12-thunks-arm64ec.obj
