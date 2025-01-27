@@ -83,6 +83,9 @@ Code actions
 - Improved the extract-to-function code action to allow extracting statements
   with overloaded operators like ``<<`` of ``std::ostream``.
 
+- The abbreviate function template tweak was introduced.
+  It allows converting function templates to their abbreviated form using auto parameters.
+
 Signature help
 ^^^^^^^^^^^^^^
 
