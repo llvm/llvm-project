@@ -605,12 +605,12 @@ private:
 class UseErrorDetails {
 public:
   UseErrorDetails(const UseDetails &);
-  UseErrorDetails &add_occurrence(const SourceName &, const Scope &);
-  using listType = std::list<std::pair<SourceName, const Scope *>>;
-  const listType occurrences() const { return occurrences_; };
+  UseErrorDetails &add_occurrence(const SourceName &, const Symbol &);
+  using ListType = std::list<std::pair<SourceName, const Symbol *>>;
+  const ListType occurrences() const { return occurrences_; };
 
 private:
-  listType occurrences_;
+  ListType occurrences_;
 };
 
 // A symbol host-associated from an enclosing scope.
