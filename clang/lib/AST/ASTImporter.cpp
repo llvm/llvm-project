@@ -4701,7 +4701,7 @@ ExpectedDecl ASTNodeImporter::VisitImplicitParamDecl(ImplicitParamDecl *D) {
 
 Error ASTNodeImporter::ImportDefaultArgOfParmVarDecl(
     const ParmVarDecl *FromParam, ParmVarDecl *ToParam) {
-  
+
   auto LocOrErr = import(FromParam->getExplicitObjectParamThisLoc());
   if (!LocOrErr)
     return LocOrErr.takeError();
