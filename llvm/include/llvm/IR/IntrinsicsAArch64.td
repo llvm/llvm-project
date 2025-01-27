@@ -538,17 +538,6 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
   def int_aarch64_neon_bfmlalb : AdvSIMD_BF16FML_Intrinsic;
   def int_aarch64_neon_bfmlalt : AdvSIMD_BF16FML_Intrinsic;
 
-
-  // v8.6-A Bfloat Intrinsics
-  def int_aarch64_neon_bfcvt
-    : DefaultAttrsIntrinsic<[llvm_bfloat_ty], [llvm_float_ty], [IntrNoMem]>;
-  def int_aarch64_neon_bfcvtn
-    : DefaultAttrsIntrinsic<[llvm_v8bf16_ty], [llvm_v4f32_ty], [IntrNoMem]>;
-  def int_aarch64_neon_bfcvtn2
-    : DefaultAttrsIntrinsic<[llvm_v8bf16_ty],
-                [llvm_v8bf16_ty, llvm_v4f32_ty],
-                [IntrNoMem]>;
-
   // v8.2-A FP16 Fused Multiply-Add Long
   def int_aarch64_neon_fmlal : AdvSIMD_FP16FML_Intrinsic;
   def int_aarch64_neon_fmlsl : AdvSIMD_FP16FML_Intrinsic;
@@ -1004,6 +993,28 @@ def int_aarch64_st64b: Intrinsic<[], !listconcat([llvm_ptr_ty], data512)>;
 def int_aarch64_st64bv: Intrinsic<[llvm_i64_ty], !listconcat([llvm_ptr_ty], data512)>;
 def int_aarch64_st64bv0: Intrinsic<[llvm_i64_ty], !listconcat([llvm_ptr_ty], data512)>;
 
+  //
+  // Neon FP8 intrinsics
+  //
+
+  // Conversions
+  class AdvSIMD_FP8_1VectorArg_Long_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty], [llvm_anyvector_ty], [IntrReadMem, IntrInaccessibleMemOnly]>;
+
+  def int_aarch64_neon_fp8_cvtl1   : AdvSIMD_FP8_1VectorArg_Long_Intrinsic;
+  def int_aarch64_neon_fp8_cvtl2   : AdvSIMD_FP8_1VectorArg_Long_Intrinsic;
+
+  def int_aarch64_neon_fp8_fcvtn
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [llvm_anyvector_ty,
+                             LLVMMatchType<1>],
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+  def int_aarch64_neon_fp8_fcvtn2
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>,
+                             llvm_anyvector_ty,
+                             LLVMMatchType<1>],
+                            [IntrReadMem, IntrInaccessibleMemOnly]>;
 }
 
 def llvm_nxv1i1_ty  : LLVMType<nxv1i1>;
@@ -2974,6 +2985,7 @@ let TargetPrefix = "aarch64" in {
 
 
   def int_aarch64_sme_zero : DefaultAttrsIntrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
+  def int_aarch64_sme_in_streaming_mode : DefaultAttrsIntrinsic<[llvm_i1_ty], [], [IntrNoMem]>, ClangBuiltin<"__builtin_arm_in_streaming_mode">;
 
   class SME_OuterProduct_Intrinsic
       : DefaultAttrsIntrinsic<[],

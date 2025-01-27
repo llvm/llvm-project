@@ -1006,11 +1006,11 @@ define i32 @select_i32_from_icmp_same_inputs(i32 %a, i32 %b, i64 %n) {
 ; CHECK-VF4IC1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
 ; CHECK-VF4IC1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-VF4IC1-NEXT:    [[TMP0:%.*]] = icmp eq <4 x i32> [[BROADCAST_SPLAT]], splat (i32 3)
+; CHECK-VF4IC1-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[TMP0]], splat (i1 true)
 ; CHECK-VF4IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_BODY]]:
 ; CHECK-VF4IC1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4IC1-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-VF4IC1-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[TMP0]], splat (i1 true)
 ; CHECK-VF4IC1-NEXT:    [[TMP2]] = or <4 x i1> [[VEC_PHI]], [[TMP1]]
 ; CHECK-VF4IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-VF4IC1-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -1048,6 +1048,7 @@ define i32 @select_i32_from_icmp_same_inputs(i32 %a, i32 %b, i64 %n) {
 ; CHECK-VF4IC4-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
 ; CHECK-VF4IC4-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-VF4IC4-NEXT:    [[TMP0:%.*]] = icmp eq <4 x i32> [[BROADCAST_SPLAT]], splat (i32 3)
+; CHECK-VF4IC4-NEXT:    [[TMP4:%.*]] = xor <4 x i1> [[TMP0]], splat (i1 true)
 ; CHECK-VF4IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_BODY]]:
 ; CHECK-VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -1055,13 +1056,9 @@ define i32 @select_i32_from_icmp_same_inputs(i32 %a, i32 %b, i64 %n) {
 ; CHECK-VF4IC4-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4IC4-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4IC4-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-VF4IC4-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[TMP0]], splat (i1 true)
-; CHECK-VF4IC4-NEXT:    [[TMP2:%.*]] = xor <4 x i1> [[TMP0]], splat (i1 true)
-; CHECK-VF4IC4-NEXT:    [[TMP3:%.*]] = xor <4 x i1> [[TMP0]], splat (i1 true)
-; CHECK-VF4IC4-NEXT:    [[TMP4:%.*]] = xor <4 x i1> [[TMP0]], splat (i1 true)
-; CHECK-VF4IC4-NEXT:    [[TMP5]] = or <4 x i1> [[VEC_PHI]], [[TMP1]]
-; CHECK-VF4IC4-NEXT:    [[TMP6]] = or <4 x i1> [[VEC_PHI1]], [[TMP2]]
-; CHECK-VF4IC4-NEXT:    [[TMP7]] = or <4 x i1> [[VEC_PHI2]], [[TMP3]]
+; CHECK-VF4IC4-NEXT:    [[TMP5]] = or <4 x i1> [[VEC_PHI]], [[TMP4]]
+; CHECK-VF4IC4-NEXT:    [[TMP6]] = or <4 x i1> [[VEC_PHI1]], [[TMP4]]
+; CHECK-VF4IC4-NEXT:    [[TMP7]] = or <4 x i1> [[VEC_PHI2]], [[TMP4]]
 ; CHECK-VF4IC4-NEXT:    [[TMP8]] = or <4 x i1> [[VEC_PHI3]], [[TMP4]]
 ; CHECK-VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-VF4IC4-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -1100,6 +1097,7 @@ define i32 @select_i32_from_icmp_same_inputs(i32 %a, i32 %b, i64 %n) {
 ; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
 ; CHECK-VF1IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF1IC4-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[A]], 3
+; CHECK-VF1IC4-NEXT:    [[TMP4:%.*]] = xor i1 [[TMP0]], true
 ; CHECK-VF1IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_BODY]]:
 ; CHECK-VF1IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -1107,13 +1105,9 @@ define i32 @select_i32_from_icmp_same_inputs(i32 %a, i32 %b, i64 %n) {
 ; CHECK-VF1IC4-NEXT:    [[VEC_PHI1:%.*]] = phi i1 [ false, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF1IC4-NEXT:    [[VEC_PHI2:%.*]] = phi i1 [ false, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF1IC4-NEXT:    [[VEC_PHI3:%.*]] = phi i1 [ false, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-VF1IC4-NEXT:    [[TMP1:%.*]] = xor i1 [[TMP0]], true
-; CHECK-VF1IC4-NEXT:    [[TMP2:%.*]] = xor i1 [[TMP0]], true
-; CHECK-VF1IC4-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP0]], true
-; CHECK-VF1IC4-NEXT:    [[TMP4:%.*]] = xor i1 [[TMP0]], true
-; CHECK-VF1IC4-NEXT:    [[TMP5]] = or i1 [[VEC_PHI]], [[TMP1]]
-; CHECK-VF1IC4-NEXT:    [[TMP6]] = or i1 [[VEC_PHI1]], [[TMP2]]
-; CHECK-VF1IC4-NEXT:    [[TMP7]] = or i1 [[VEC_PHI2]], [[TMP3]]
+; CHECK-VF1IC4-NEXT:    [[TMP5]] = or i1 [[VEC_PHI]], [[TMP4]]
+; CHECK-VF1IC4-NEXT:    [[TMP6]] = or i1 [[VEC_PHI1]], [[TMP4]]
+; CHECK-VF1IC4-NEXT:    [[TMP7]] = or i1 [[VEC_PHI2]], [[TMP4]]
 ; CHECK-VF1IC4-NEXT:    [[TMP8]] = or i1 [[VEC_PHI3]], [[TMP4]]
 ; CHECK-VF1IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-VF1IC4-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

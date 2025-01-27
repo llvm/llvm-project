@@ -30,6 +30,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
@@ -580,6 +581,10 @@ void StmtPrinter::VisitMSAsmStmt(MSAsmStmt *Node) {
 
 void StmtPrinter::VisitCapturedStmt(CapturedStmt *Node) {
   PrintStmt(Node->getCapturedDecl()->getBody());
+}
+
+void StmtPrinter::VisitSYCLKernelCallStmt(SYCLKernelCallStmt *Node) {
+  PrintStmt(Node->getOutlinedFunctionDecl()->getBody());
 }
 
 void StmtPrinter::VisitObjCAtTryStmt(ObjCAtTryStmt *Node) {
@@ -1202,6 +1207,12 @@ void StmtPrinter::VisitOpenACCInitConstruct(OpenACCInitConstruct *S) {
   PrintOpenACCConstruct(S);
 }
 void StmtPrinter::VisitOpenACCShutdownConstruct(OpenACCShutdownConstruct *S) {
+  PrintOpenACCConstruct(S);
+}
+void StmtPrinter::VisitOpenACCSetConstruct(OpenACCSetConstruct *S) {
+  PrintOpenACCConstruct(S);
+}
+void StmtPrinter::VisitOpenACCUpdateConstruct(OpenACCUpdateConstruct *S) {
   PrintOpenACCConstruct(S);
 }
 

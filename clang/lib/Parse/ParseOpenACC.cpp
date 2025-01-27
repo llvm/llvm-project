@@ -1000,13 +1000,16 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
     }
     case OpenACCClauseKind::Self:
       // The 'self' clause is a var-list instead of a 'condition' in the case of
-      // the 'update' clause, so we have to handle it here.  U se an assert to
+      // the 'update' clause, so we have to handle it here.  Use an assert to
       // make sure we get the right differentiator.
       assert(DirKind == OpenACCDirectiveKind::Update);
       [[fallthrough]];
     case OpenACCClauseKind::Device:
-    case OpenACCClauseKind::DeviceResident:
     case OpenACCClauseKind::Host:
+      ParsedClause.setVarListDetails(ParseOpenACCVarList(ClauseKind),
+                                     /*IsReadOnly=*/false, /*IsZero=*/false);
+      break;
+    case OpenACCClauseKind::DeviceResident:
     case OpenACCClauseKind::Link:
       ParseOpenACCVarList(ClauseKind);
       break;
@@ -1082,13 +1085,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
         return OpenACCCanContinue();
       }
 
-      // TODO OpenACC: as we implement the 'rest' of the above, this 'if' should
-      // be removed leaving just the 'setIntExprDetails'.
-      if (ClauseKind == OpenACCClauseKind::NumWorkers ||
-          ClauseKind == OpenACCClauseKind::DeviceNum ||
-          ClauseKind == OpenACCClauseKind::VectorLength)
-        ParsedClause.setIntExprDetails(IntExpr.get());
-
+      ParsedClause.setIntExprDetails(IntExpr.get());
       break;
     }
     case OpenACCClauseKind::DType:

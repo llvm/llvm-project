@@ -88,11 +88,14 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUPerfHintAnalysis.cpp
   AMDGPUPostLegalizerCombiner.cpp
   AMDGPUPreLegalizerCombiner.cpp
+  AMDGPUPreloadKernArgProlog.cpp
   AMDGPUPrintfRuntimeBinding.cpp
   AMDGPUPromoteAlloca.cpp
   AMDGPUPromoteKernelArguments.cpp
   AMDGPURegBankCombiner.cpp
   AMDGPURegBankLegalize.cpp
+  AMDGPURegBankLegalizeHelper.cpp
+  AMDGPURegBankLegalizeRules.cpp
   AMDGPURegBankSelect.cpp
   AMDGPURegisterBankInfo.cpp
   AMDGPURemoveIncompatibleFunctions.cpp

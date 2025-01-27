@@ -625,6 +625,15 @@ Sema::ActOnLabelStmt(SourceLocation IdentLoc, LabelDecl *TheDecl,
   if (getCurScope()->isInOpenACCComputeConstructScope())
     setFunctionHasBranchProtectedScope();
 
+  // OpenACC3.3 2.14.4:
+  // The update directive is executable.  It must not appear in place of the
+  // statement following an 'if', 'while', 'do', 'switch', or 'label' in C or
+  // C++.
+  if (isa<OpenACCUpdateConstruct>(SubStmt)) {
+    Diag(SubStmt->getBeginLoc(), diag::err_acc_update_as_body) << /*Label*/ 4;
+    SubStmt = new (Context) NullStmt(SubStmt->getBeginLoc());
+  }
+
   // Otherwise, things are good.  Fill in the declaration and return it.
   LabelStmt *LS = new (Context) LabelStmt(IdentLoc, TheDecl, SubStmt);
   TheDecl->setStmt(LS);
@@ -1019,6 +1028,15 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc,
       Diags.Report(IfLoc, diag::warn_consteval_if_always_true) << Immediate;
   }
 
+  // OpenACC3.3 2.14.4:
+  // The update directive is executable.  It must not appear in place of the
+  // statement following an 'if', 'while', 'do', 'switch', or 'label' in C or
+  // C++.
+  if (isa<OpenACCUpdateConstruct>(thenStmt)) {
+    Diag(thenStmt->getBeginLoc(), diag::err_acc_update_as_body) << /*if*/ 0;
+    thenStmt = new (Context) NullStmt(thenStmt->getBeginLoc());
+  }
+
   return BuildIfStmt(IfLoc, StatementKind, LParenLoc, InitStmt, Cond, RParenLoc,
                      thenStmt, ElseLoc, elseStmt);
 }
@@ -1297,6 +1315,16 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
   getCurFunction()->SwitchStack.pop_back();
 
   if (!BodyStmt) return StmtError();
+
+  // OpenACC3.3 2.14.4:
+  // The update directive is executable.  It must not appear in place of the
+  // statement following an 'if', 'while', 'do', 'switch', or 'label' in C or
+  // C++.
+  if (isa<OpenACCUpdateConstruct>(BodyStmt)) {
+    Diag(BodyStmt->getBeginLoc(), diag::err_acc_update_as_body) << /*switch*/ 3;
+    BodyStmt = new (Context) NullStmt(BodyStmt->getBeginLoc());
+  }
+
   SS->setBody(BodyStmt, SwitchLoc);
 
   Expr *CondExpr = SS->getCond();
@@ -1774,6 +1802,15 @@ StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
       !Diags.isIgnored(diag::warn_comma_operator, CondVal.second->getExprLoc()))
     CommaVisitor(*this).Visit(CondVal.second);
 
+  // OpenACC3.3 2.14.4:
+  // The update directive is executable.  It must not appear in place of the
+  // statement following an 'if', 'while', 'do', 'switch', or 'label' in C or
+  // C++.
+  if (isa<OpenACCUpdateConstruct>(Body)) {
+    Diag(Body->getBeginLoc(), diag::err_acc_update_as_body) << /*while*/ 1;
+    Body = new (Context) NullStmt(Body->getBeginLoc());
+  }
+
   if (isa<NullStmt>(Body))
     getCurCompoundScope().setHasEmptyLoopBodies();
 
@@ -1802,6 +1839,15 @@ Sema::ActOnDoStmt(SourceLocation DoLoc, Stmt *Body,
   if (Cond && !getLangOpts().C99 && !getLangOpts().CPlusPlus &&
       !Diags.isIgnored(diag::warn_comma_operator, Cond->getExprLoc()))
     CommaVisitor(*this).Visit(Cond);
+
+  // OpenACC3.3 2.14.4:
+  // The update directive is executable.  It must not appear in place of the
+  // statement following an 'if', 'while', 'do', 'switch', or 'label' in C or
+  // C++.
+  if (isa<OpenACCUpdateConstruct>(Body)) {
+    Diag(Body->getBeginLoc(), diag::err_acc_update_as_body) << /*do*/ 2;
+    Body = new (Context) NullStmt(Body->getBeginLoc());
+  }
 
   return new (Context) DoStmt(Body, Cond, DoLoc, WhileLoc, CondRParen);
 }

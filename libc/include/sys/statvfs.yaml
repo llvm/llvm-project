@@ -1,4 +1,5 @@
-header: sys-statvfs.h
+header: sys/statvfs.h
+header_template: statvfs.h.def
 macros: []
 types:
   - type_name: struct_statvfs

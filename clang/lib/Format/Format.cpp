@@ -1051,6 +1051,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("IndentAccessModifiers", Style.IndentAccessModifiers);
     IO.mapOptional("IndentCaseBlocks", Style.IndentCaseBlocks);
     IO.mapOptional("IndentCaseLabels", Style.IndentCaseLabels);
+    IO.mapOptional("IndentExportBlock", Style.IndentExportBlock);
     IO.mapOptional("IndentExternBlock", Style.IndentExternBlock);
     IO.mapOptional("IndentGotoLabels", Style.IndentGotoLabels);
     IO.mapOptional("IndentPPDirectives", Style.IndentPPDirectives);
@@ -1565,6 +1566,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.IndentAccessModifiers = false;
   LLVMStyle.IndentCaseBlocks = false;
   LLVMStyle.IndentCaseLabels = false;
+  LLVMStyle.IndentExportBlock = true;
   LLVMStyle.IndentExternBlock = FormatStyle::IEBS_AfterExternBlock;
   LLVMStyle.IndentGotoLabels = true;
   LLVMStyle.IndentPPDirectives = FormatStyle::PPDIS_None;

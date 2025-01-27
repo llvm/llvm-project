@@ -1565,19 +1565,25 @@ InstructionCost X86TTIImpl::getShuffleCost(
 
   // Attempt to detect a cheaper inlane shuffle, avoiding 128-bit subvector
   // permutation.
+  // Attempt to detect a shuffle mask with a single defined element.
   bool IsInLaneShuffle = false;
+  bool IsSingleElementMask = false;
   if (BaseTp->getPrimitiveSizeInBits() > 0 &&
       (BaseTp->getPrimitiveSizeInBits() % 128) == 0 &&
       BaseTp->getScalarSizeInBits() == LT.second.getScalarSizeInBits() &&
       Mask.size() == BaseTp->getElementCount().getKnownMinValue()) {
     unsigned NumLanes = BaseTp->getPrimitiveSizeInBits() / 128;
     unsigned NumEltsPerLane = Mask.size() / NumLanes;
-    if ((Mask.size() % NumLanes) == 0)
+    if ((Mask.size() % NumLanes) == 0) {
       IsInLaneShuffle = all_of(enumerate(Mask), [&](const auto &P) {
         return P.value() == PoisonMaskElem ||
                ((P.value() % Mask.size()) / NumEltsPerLane) ==
                    (P.index() / NumEltsPerLane);
       });
+      IsSingleElementMask = (Mask.size() - 1) == count_if(Mask, [](int M) {
+                              return M == PoisonMaskElem;
+                            });
+    }
   }
 
   // Treat <X x bfloat> shuffles as <X x half>.
@@ -1649,6 +1655,13 @@ InstructionCost X86TTIImpl::getShuffleCost(
       if ((Index % NumSubElts) == 0 && (NumElts % NumSubElts) == 0)
         return MatchingTypes ? TTI::TCC_Free : SubLT.first;
     }
+
+    // Attempt to match MOVSS (Idx == 0) or INSERTPS pattern. This will have
+    // been matched by improveShuffleKindFromMask as a SK_InsertSubvector of
+    // v1f32 (legalised to f32) into a v4f32.
+    if (LT.first == 1 && LT.second == MVT::v4f32 && SubLT.first == 1 &&
+        SubLT.second == MVT::f32 && (Index == 0 || ST->hasSSE41()))
+      return 1;
 
     // If the insertion isn't aligned, treat it like a 2-op shuffle.
     Kind = TTI::SK_PermuteTwoSrc;
@@ -1767,9 +1780,9 @@ InstructionCost X86TTIImpl::getShuffleCost(
               PrevSrcReg = SrcReg;
               PrevRegMask = RegMask;
             },
-            [this, SingleOpTy, CostKind, &Cost](ArrayRef<int> RegMask,
-                                                unsigned /*Unused*/,
-                                                unsigned /*Unused*/) {
+            [this, SingleOpTy, CostKind,
+             &Cost](ArrayRef<int> RegMask, unsigned /*Unused*/,
+                    unsigned /*Unused*/, bool /*Unused*/) {
               Cost += getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy, RegMask,
                                      CostKind, 0, nullptr);
             });
@@ -1783,6 +1796,11 @@ InstructionCost X86TTIImpl::getShuffleCost(
 
     return BaseT::getShuffleCost(Kind, BaseTp, Mask, CostKind, Index, SubTp);
   }
+
+  // If we're just moving a single element around (probably as an alternative to
+  // extracting it), we can assume this is cheap.
+  if (LT.first == 1 && IsInLaneShuffle && IsSingleElementMask)
+    return TTI::TCC_Basic;
 
   static const CostTblEntry AVX512VBMIShuffleTbl[] = {
       {TTI::SK_Reverse, MVT::v64i8, 1}, // vpermb
@@ -2226,9 +2244,18 @@ InstructionCost X86TTIImpl::getShuffleCost(
     { TTI::SK_PermuteTwoSrc,    MVT::v4f32, 2 }, // 2*shufps
   };
 
-  if (ST->hasSSE1())
+  if (ST->hasSSE1()) {
+    if (LT.first == 1 && LT.second == MVT::v4f32 && Mask.size() == 4) {
+      // SHUFPS: both pairs must come from the same source register.
+      auto MatchSHUFPS = [](int X, int Y) {
+        return X < 0 || Y < 0 || ((X & 4) == (Y & 4));
+      };
+      if (MatchSHUFPS(Mask[0], Mask[1]) && MatchSHUFPS(Mask[2], Mask[3]))
+        return 1;
+    }
     if (const auto *Entry = CostTableLookup(SSE1ShuffleTbl, Kind, LT.second))
       return LT.first * Entry->Cost;
+  }
 
   return BaseT::getShuffleCost(Kind, BaseTp, Mask, CostKind, Index, SubTp);
 }
@@ -4313,9 +4340,15 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::ABS,        MVT::i64,     {  1,  2,  3,  3 } }, // SUB+CMOV
     { ISD::BITREVERSE, MVT::i64,     { 10, 12, 20, 22 } },
     { ISD::BSWAP,      MVT::i64,     {  1,  2,  1,  2 } },
-    { ISD::CTLZ,       MVT::i64,     {  2,  2,  4,  5 } }, // BSR+XOR or BSR+XOR+CMOV
+    { ISD::CTLZ,       MVT::i64,     {  1,  2,  3,  3 } }, // MOV+BSR+XOR
+    { ISD::CTLZ,       MVT::i32,     {  1,  2,  3,  3 } }, // MOV+BSR+XOR
+    { ISD::CTLZ,       MVT::i16,     {  2,  2,  3,  3 } }, // MOV+BSR+XOR
+    { ISD::CTLZ,       MVT::i8,      {  2,  2,  4,  3 } }, // MOV+BSR+XOR
     { ISD::CTLZ_ZERO_UNDEF, MVT::i64,{  1,  2,  2,  2 } }, // BSR+XOR
-    { ISD::CTTZ,       MVT::i64,     {  2,  2,  3,  4 } }, // TEST+BSF+CMOV/BRANCH
+    { ISD::CTTZ,       MVT::i64,     {  1,  2,  2,  2 } }, // MOV+BSF
+    { ISD::CTTZ,       MVT::i32,     {  1,  2,  2,  2 } }, // MOV+BSF
+    { ISD::CTTZ,       MVT::i16,     {  2,  2,  2,  2 } }, // MOV+BSF
+    { ISD::CTTZ,       MVT::i8,      {  2,  2,  2,  2 } }, // MOV+BSF
     { ISD::CTTZ_ZERO_UNDEF, MVT::i64,{  1,  2,  1,  2 } }, // BSF
     { ISD::CTPOP,      MVT::i64,     { 10,  6, 19, 19 } },
     { ISD::ROTL,       MVT::i64,     {  2,  3,  1,  3 } },
@@ -4466,15 +4499,13 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   case Intrinsic::lrint:
-  case Intrinsic::llrint:
+  case Intrinsic::llrint: {
     // X86 can use the CVTP2SI instructions to lower lrint/llrint calls, which
     // have the same costs as the CVTTP2SI (fptosi) instructions
-    if (!ICA.isTypeBasedOnly()) {
-      const SmallVectorImpl<Type *> &ArgTys = ICA.getArgTypes();
-      return getCastInstrCost(Instruction::FPToSI, RetTy, ArgTys[0],
-                              TTI::CastContextHint::None, CostKind);
-    }
-    break;
+    const SmallVectorImpl<Type *> &ArgTys = ICA.getArgTypes();
+    return getCastInstrCost(Instruction::FPToSI, RetTy, ArgTys[0],
+                            TTI::CastContextHint::None, CostKind);
+  }
   case Intrinsic::maxnum:
   case Intrinsic::minnum:
     // FMINNUM has same costs so don't duplicate.
@@ -4705,6 +4736,24 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (const auto *Entry = CostTableLookup(X86CostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
         return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
+
+    // Without arg data, we need to compute the expanded costs of custom lowered
+    // intrinsics to prevent use of the (very low) default costs.
+    if (ICA.isTypeBasedOnly() &&
+        (IID == Intrinsic::fshl || IID == Intrinsic::fshr)) {
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      InstructionCost Cost = 0;
+      Cost += getArithmeticInstrCost(BinaryOperator::Or, RetTy, CostKind);
+      Cost += getArithmeticInstrCost(BinaryOperator::Sub, RetTy, CostKind);
+      Cost += getArithmeticInstrCost(BinaryOperator::Shl, RetTy, CostKind);
+      Cost += getArithmeticInstrCost(BinaryOperator::LShr, RetTy, CostKind);
+      Cost += getArithmeticInstrCost(BinaryOperator::And, RetTy, CostKind);
+      Cost += getCmpSelInstrCost(BinaryOperator::ICmp, RetTy, CondTy,
+                                 CmpInst::ICMP_EQ, CostKind);
+      Cost += getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                                 CmpInst::ICMP_EQ, CostKind);
+      return Cost;
+    }
   }
 
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
@@ -4788,9 +4837,12 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     MVT MScalarTy = LT.second.getScalarType();
     auto IsCheapPInsrPExtrInsertPS = [&]() {
       // Assume pinsr/pextr XMM <-> GPR is relatively cheap on all targets.
+      // Inserting f32 into index0 is just movss.
       // Also, assume insertps is relatively cheap on all >= SSE41 targets.
       return (MScalarTy == MVT::i16 && ST->hasSSE2()) ||
              (MScalarTy.isInteger() && ST->hasSSE41()) ||
+             (MScalarTy == MVT::f32 && ST->hasSSE1() && Index == 0 &&
+              Opcode == Instruction::InsertElement) ||
              (MScalarTy == MVT::f32 && ST->hasSSE41() &&
               Opcode == Instruction::InsertElement);
     };

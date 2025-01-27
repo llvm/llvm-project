@@ -19,16 +19,16 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if !defined(_LIBCPP_WORKAROUND_OBJCXX_COMPILER_INTRINSICS) && __has_builtin(__remove_pointer)
 template <class _Tp>
-struct remove_pointer {
+struct _LIBCPP_NO_SPECIALIZATIONS remove_pointer {
   using type _LIBCPP_NODEBUG = __remove_pointer(_Tp);
 };
 
 #  ifdef _LIBCPP_COMPILER_GCC
 template <class _Tp>
-using __remove_pointer_t = typename remove_pointer<_Tp>::type;
+using __remove_pointer_t _LIBCPP_NODEBUG = typename remove_pointer<_Tp>::type;
 #  else
 template <class _Tp>
-using __remove_pointer_t = __remove_pointer(_Tp);
+using __remove_pointer_t _LIBCPP_NODEBUG = __remove_pointer(_Tp);
 #  endif
 #else
 // clang-format off

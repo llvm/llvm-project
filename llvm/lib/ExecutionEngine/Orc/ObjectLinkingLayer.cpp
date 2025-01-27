@@ -16,8 +16,6 @@ namespace llvm::orc {
 
 char ObjectLinkingLayer::ID;
 
-using BaseObjectLayer = RTTIExtends<ObjectLinkingLayer, ObjectLayer>;
-
 void ObjectLinkingLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
                               std::unique_ptr<MemoryBuffer> O) {
   assert(O && "Object must not be null");

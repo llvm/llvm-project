@@ -259,11 +259,6 @@ def OP_VCVT_F32_BF16_LO
 def OP_VCVT_F32_BF16_HI
     : Op<(call "vcvt_f32_bf16", (call "vget_high", $p0))>;
 
-def OP_VCVT_BF16_F32_LO_A64
-    : Op<(call "__a64_vcvtq_low_bf16", $p0)>;
-def OP_VCVT_BF16_F32_A64
-    : Op<(call "vget_low", (call "__a64_vcvtq_low_bf16", $p0))>;
-
 def OP_VCVT_BF16_F32_A32
     : Op<(call "__a32_vcvt_bf16", $p0)>;
 
@@ -2061,10 +2056,9 @@ let ArchGuard = "!defined(__aarch64__) && !defined(__arm64ec__)", TargetGuard = 
 }
 
 let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "bf16,neon" in {
-  def VCVT_LOW_BF16_F32_A64_INTERNAL : WInst<"__a64_vcvtq_low_bf16", "BQ", "Hf">;
-  def VCVT_LOW_BF16_F32_A64 : SOpInst<"vcvt_low_bf16", "BQ", "Qf", OP_VCVT_BF16_F32_LO_A64>;
+  def VCVT_LOW_BF16_F32_A64 : SInst<"vcvt_low_bf16", "BQ", "Qf">;
   def VCVT_HIGH_BF16_F32_A64 : SInst<"vcvt_high_bf16", "BBQ", "Qf">;
-  def VCVT_BF16_F32 : SOpInst<"vcvt_bf16",    "BQ", "f", OP_VCVT_BF16_F32_A64>;
+  def VCVT_BF16_F32 : SInst<"vcvt_bf16", "BQ", "f">;
 
   def COPY_LANE_BF16 : IOpInst<"vcopy_lane", "..I.I", "b", OP_COPY_LN>;
   def COPYQ_LANE_BF16 : IOpInst<"vcopy_lane", "..IqI", "Qb", OP_COPY_LN>;
@@ -2123,6 +2117,28 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "lut" in {
     def VLUTI4_BF_X2_Q   : SInst<"vluti4_laneq_x2", ".2(<U)I", "Qb",
                               [ImmCheck<3, ImmCheck0_3>]>;
   }
+}
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8,neon" in {
+  def VBF1CVT_BF16_MF8        : VInst<"vcvt1_bf16_mf8_fpm",      "(QB).V", "m">;
+  def VBF1CVT_LOW_BF16_MF8    : VInst<"vcvt1_low_bf16_mf8_fpm",  "B.V",    "Hm">;
+  def VBF2CVTL_BF16_MF8       : VInst<"vcvt2_bf16_mf8_fpm",      "(QB).V", "m">;
+  def VBF2CVTL_LOW_BF16_MF8   : VInst<"vcvt2_low_bf16_mf8_fpm",  "B.V",    "Hm">;
+  def VBF1CVTL2_HIGH_BF16_MF8 : VInst<"vcvt1_high_bf16_mf8_fpm", "B.V",    "Hm">;
+  def VBF2CVTL2_HIGH_BF16_MF8 : VInst<"vcvt2_high_bf16_mf8_fpm", "B.V",    "Hm">;
+}
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8,neon" in {
+  def VF1CVT_F16_MF8        : VInst<"vcvt1_f16_mf8_fpm",      "(>QF).V", "m">;
+  def VF1CVT_LOW_F16_MF8    : VInst<"vcvt1_low_f16_mf8_fpm",  "(>F).V",  "Hm">;
+  def VF2CVTL_F16_MF8       : VInst<"vcvt2_f16_mf8_fpm",      "(>QF).V", "m">;
+  def VF2CVTL_LOW_F16_MF8   : VInst<"vcvt2_low_f16_mf8_fpm",  "(>F).V",  "Hm">;
+  def VF1CVTL2_HIGH_F16_MF8 : VInst<"vcvt1_high_f16_mf8_fpm", "(>F).V",  "Hm">;
+  def VF2CVTL2_HIGH_F16_MF8 : VInst<"vcvt2_high_f16_mf8_fpm", "(>F).V",  "Hm">;
+
+  def VCVTN_LOW_F8_F32  : VInst<"vcvt_mf8_f32_fpm",      ".(>>QF)(>>QF)V",  "m">;
+  def VCVTN_HIGH_F8_F32 : VInst<"vcvt_high_mf8_f32_fpm", ".(q)(>>F)(>>F)V", "Hm">;
+  def VCVTN_F8_F16      : VInst<"vcvt_mf8_f16_fpm",      ".(>F)(>F)V",      "mQm">;
 }
 
 let ArchGuard = "defined(__aarch64__)", TargetGuard = "neon,faminmax" in {

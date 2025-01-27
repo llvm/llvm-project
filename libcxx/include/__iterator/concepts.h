@@ -67,10 +67,10 @@ template <class _In>
 concept indirectly_readable = __indirectly_readable_impl<remove_cvref_t<_In>>;
 
 template <class _Tp>
-using __projected_iterator_t = typename _Tp::__projected_iterator;
+using __projected_iterator_t _LIBCPP_NODEBUG = typename _Tp::__projected_iterator;
 
 template <class _Tp>
-using __projected_projection_t = typename _Tp::__projected_projection;
+using __projected_projection_t _LIBCPP_NODEBUG = typename _Tp::__projected_projection;
 
 template <class _Tp>
 concept __specialization_of_projected = requires {
@@ -89,7 +89,7 @@ struct __indirect_value_t_impl<_Tp> {
 };
 
 template <indirectly_readable _Tp>
-using __indirect_value_t = typename __indirect_value_t_impl<_Tp>::type;
+using __indirect_value_t _LIBCPP_NODEBUG = typename __indirect_value_t_impl<_Tp>::type;
 
 template <indirectly_readable _Tp>
 using iter_common_reference_t = common_reference_t<iter_reference_t<_Tp>, __indirect_value_t<_Tp>>;
@@ -274,7 +274,7 @@ concept indirectly_copyable_storable =
 #endif // _LIBCPP_STD_VER >= 20
 
 template <class _Tp>
-using __has_random_access_iterator_category_or_concept
+using __has_random_access_iterator_category_or_concept _LIBCPP_NODEBUG
 #if _LIBCPP_STD_VER >= 20
     = integral_constant<bool, random_access_iterator<_Tp>>;
 #else  // _LIBCPP_STD_VER < 20

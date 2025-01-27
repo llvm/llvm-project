@@ -61,6 +61,7 @@ add_subdirectory(string)
 add_subdirectory(strings)
 add_subdirectory(wchar)
 add_subdirectory(time)
+add_subdirectory(unistd)
 
 # Depends on utilities in stdlib
 add_subdirectory(inttypes)
@@ -70,7 +71,6 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(sched)
   add_subdirectory(sys)
   add_subdirectory(termios)
-  add_subdirectory(unistd)
 endif()
 
 if(NOT LLVM_LIBC_FULL_BUILD)

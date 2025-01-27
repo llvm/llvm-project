@@ -573,3 +573,9 @@ v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,0]
 
 v_dot8_u32_u4 v0, v1, v2, v3 op_sel:[1,1] op_sel_hi:[1,1]
 // GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+
+image_bvh_intersect_ray v[4:7], v[9:19], null
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_bvh64_intersect_ray v[4:7], v[9:20], null
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

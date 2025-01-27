@@ -57,3 +57,7 @@ module Templates {
 module SwiftImportAs {
   header "SwiftImportAs.h"
 }
+
+module SwiftReturnOwnershipForObjC {
+  header "SwiftReturnOwnershipForObjC.h"
+}

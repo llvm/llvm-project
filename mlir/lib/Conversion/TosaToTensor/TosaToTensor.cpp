@@ -306,7 +306,16 @@ public:
                   ConversionPatternRewriter &rewriter) const final {
     auto loc = padOp.getLoc();
     auto input = padOp.getInput1();
-    auto padding = padOp.getPadding();
+
+    ElementsAttr paddingElems;
+    if (!matchPattern(padOp.getPadding(), m_Constant(&paddingElems))) {
+      return rewriter.notifyMatchFailure(
+          padOp, "padding must be a static shape value");
+    }
+    llvm::SmallVector<int64_t> paddingVals;
+    for (auto idx : paddingElems.getValues<IntegerAttr>()) {
+      paddingVals.push_back(static_cast<int64_t>(idx.getInt()));
+    }
 
     ShapedType inputTy = cast<ShapedType>(input.getType());
     Type elementTy = inputTy.getElementType();
@@ -338,11 +347,6 @@ public:
           padOp, "tosa.pad was unable to determine the pad constant value.");
     }
 
-    Value lowIndex =
-        rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(0));
-    Value highIndex =
-        rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(1));
-
     SmallVector<OpFoldResult, 3> lowValues;
     SmallVector<OpFoldResult, 3> highValues;
 
@@ -350,17 +354,10 @@ public:
     highValues.reserve(rank);
 
     for (int i = 0; i < rank; i++) {
-      Value inputIndex = rewriter.create<arith::ConstantIndexOp>(loc, i);
-      Value lowVal = rewriter.createOrFold<tensor::ExtractOp>(
-          loc, padding, ValueRange({inputIndex, lowIndex}));
-      Value highVal = rewriter.createOrFold<tensor::ExtractOp>(
-          loc, padding, ValueRange({inputIndex, highIndex}));
-
-      lowVal = rewriter.createOrFold<arith::IndexCastOp>(
-          loc, rewriter.getIndexType(), lowVal);
-      highVal = rewriter.createOrFold<arith::IndexCastOp>(
-          loc, rewriter.getIndexType(), highVal);
-
+      Value lowVal = rewriter.create<arith::ConstantOp>(
+          loc, rewriter.getIndexAttr(paddingVals[2 * i]));
+      Value highVal = rewriter.create<arith::ConstantOp>(
+          loc, rewriter.getIndexAttr(paddingVals[2 * i + 1]));
       lowValues.push_back(lowVal);
       highValues.push_back(highVal);
     }

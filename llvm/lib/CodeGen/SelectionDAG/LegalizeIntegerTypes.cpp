@@ -155,6 +155,10 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::ZERO_EXTEND_VECTOR_INREG:
                          Res = PromoteIntRes_EXTEND_VECTOR_INREG(N); break;
 
+  case ISD::VECTOR_FIND_LAST_ACTIVE:
+    Res = PromoteIntRes_VECTOR_FIND_LAST_ACTIVE(N);
+    break;
+
   case ISD::SIGN_EXTEND:
   case ISD::VP_SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
@@ -2069,6 +2073,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     Res = PromoteIntOp_VECTOR_HISTOGRAM(N, OpNo);
     break;
+  case ISD::VECTOR_FIND_LAST_ACTIVE:
+    Res = PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(N, OpNo);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -2807,6 +2814,13 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_HISTOGRAM(SDNode *N,
   assert(OpNo == 1 && "Unexpected operand for promotion");
   SmallVector<SDValue, 7> NewOps(N->ops());
   NewOps[1] = GetPromotedInteger(N->getOperand(1));
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N,
+                                                               unsigned OpNo) {
+  SmallVector<SDValue, 1> NewOps(N->ops());
+  NewOps[OpNo] = GetPromotedInteger(N->getOperand(OpNo));
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
@@ -5084,13 +5098,9 @@ void DAGTypeLegalizer::ExpandIntRes_XMULO(SDNode *N,
   if (LC == RTLIB::UNKNOWN_LIBCALL || !TLI.getLibcallName(LC) ||
       TLI.getLibcallName(LC) == DAG.getMachineFunction().getName()) {
     // FIXME: This is not an optimal expansion, but better than crashing.
-    EVT WideVT =
-        EVT::getIntegerVT(*DAG.getContext(), VT.getScalarSizeInBits() * 2);
-    SDValue LHS = DAG.getNode(ISD::SIGN_EXTEND, dl, WideVT, N->getOperand(0));
-    SDValue RHS = DAG.getNode(ISD::SIGN_EXTEND, dl, WideVT, N->getOperand(1));
-    SDValue Mul = DAG.getNode(ISD::MUL, dl, WideVT, LHS, RHS);
     SDValue MulLo, MulHi;
-    SplitInteger(Mul, MulLo, MulHi);
+    TLI.forceExpandWideMUL(DAG, dl, /*Signed=*/true, N->getOperand(0),
+                           N->getOperand(1), MulLo, MulHi);
     SDValue SRA =
         DAG.getNode(ISD::SRA, dl, VT, MulLo,
                     DAG.getConstant(VT.getScalarSizeInBits() - 1, dl, VT));
@@ -6122,6 +6132,12 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTEND_VECTOR_INREG(SDNode *N) {
 
   // Directly extend to the appropriate transform-to type.
   return DAG.getNode(N->getOpcode(), dl, NVT, N->getOperand(0));
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_FIND_LAST_ACTIVE(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  return DAG.getNode(ISD::VECTOR_FIND_LAST_ACTIVE, SDLoc(N), NVT, N->ops());
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_INSERT_VECTOR_ELT(SDNode *N) {

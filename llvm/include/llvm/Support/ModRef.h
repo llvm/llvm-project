@@ -273,6 +273,107 @@ raw_ostream &operator<<(raw_ostream &OS, MemoryEffects RMRB);
 // Legacy alias.
 using FunctionModRefBehavior = MemoryEffects;
 
+/// Components of the pointer that may be captured.
+enum class CaptureComponents : uint8_t {
+  None = 0,
+  AddressIsNull = (1 << 0),
+  Address = (1 << 1) | AddressIsNull,
+  ReadProvenance = (1 << 2),
+  Provenance = (1 << 3) | ReadProvenance,
+  All = Address | Provenance,
+  LLVM_MARK_AS_BITMASK_ENUM(Provenance),
+};
+
+inline bool capturesNothing(CaptureComponents CC) {
+  return CC == CaptureComponents::None;
+}
+
+inline bool capturesAnything(CaptureComponents CC) {
+  return CC != CaptureComponents::None;
+}
+
+inline bool capturesAddressIsNullOnly(CaptureComponents CC) {
+  return (CC & CaptureComponents::Address) == CaptureComponents::AddressIsNull;
+}
+
+inline bool capturesAddress(CaptureComponents CC) {
+  return (CC & CaptureComponents::Address) != CaptureComponents::None;
+}
+
+inline bool capturesReadProvenanceOnly(CaptureComponents CC) {
+  return (CC & CaptureComponents::Provenance) ==
+         CaptureComponents::ReadProvenance;
+}
+
+inline bool capturesFullProvenance(CaptureComponents CC) {
+  return (CC & CaptureComponents::Provenance) == CaptureComponents::Provenance;
+}
+
+raw_ostream &operator<<(raw_ostream &OS, CaptureComponents CC);
+
+/// Represents which components of the pointer may be captured in which
+/// location. This represents the captures(...) attribute in IR.
+///
+/// For more information on the precise semantics see LangRef.
+class CaptureInfo {
+  CaptureComponents OtherComponents;
+  CaptureComponents RetComponents;
+
+public:
+  CaptureInfo(CaptureComponents OtherComponents,
+              CaptureComponents RetComponents)
+      : OtherComponents(OtherComponents), RetComponents(RetComponents) {}
+
+  CaptureInfo(CaptureComponents Components)
+      : OtherComponents(Components), RetComponents(Components) {}
+
+  /// Create CaptureInfo that may capture all components of the pointer.
+  static CaptureInfo all() { return CaptureInfo(CaptureComponents::All); }
+
+  /// Get components potentially captured by the return value.
+  CaptureComponents getRetComponents() const { return RetComponents; }
+
+  /// Get components potentially captured through locations other than the
+  /// return value.
+  CaptureComponents getOtherComponents() const { return OtherComponents; }
+
+  /// Get the potentially captured components of the pointer (regardless of
+  /// location).
+  operator CaptureComponents() const { return OtherComponents | RetComponents; }
+
+  bool operator==(CaptureInfo Other) const {
+    return OtherComponents == Other.OtherComponents &&
+           RetComponents == Other.RetComponents;
+  }
+
+  bool operator!=(CaptureInfo Other) const { return !(*this == Other); }
+
+  /// Compute union of CaptureInfos.
+  CaptureInfo operator|(CaptureInfo Other) const {
+    return CaptureInfo(OtherComponents | Other.OtherComponents,
+                       RetComponents | Other.RetComponents);
+  }
+
+  /// Compute intersection of CaptureInfos.
+  CaptureInfo operator&(CaptureInfo Other) const {
+    return CaptureInfo(OtherComponents & Other.OtherComponents,
+                       RetComponents & Other.RetComponents);
+  }
+
+  static CaptureInfo createFromIntValue(uint32_t Data) {
+    return CaptureInfo(CaptureComponents(Data >> 4),
+                       CaptureComponents(Data & 0xf));
+  }
+
+  /// Convert CaptureInfo into an encoded integer value (used by captures
+  /// attribute).
+  uint32_t toIntValue() const {
+    return (uint32_t(OtherComponents) << 4) | uint32_t(RetComponents);
+  }
+};
+
+raw_ostream &operator<<(raw_ostream &OS, CaptureInfo Info);
+
 } // namespace llvm
 
 #endif

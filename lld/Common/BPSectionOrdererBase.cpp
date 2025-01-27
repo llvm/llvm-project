@@ -96,11 +96,10 @@ static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
   return sectionUns;
 }
 
-llvm::DenseMap<const BPSectionBase *, size_t>
+llvm::DenseMap<const BPSectionBase *, int>
 BPSectionBase::reorderSectionsByBalancedPartitioning(
-    size_t &highestAvailablePriority, llvm::StringRef profilePath,
-    bool forFunctionCompression, bool forDataCompression,
-    bool compressionSortStartupFunctions, bool verbose,
+    llvm::StringRef profilePath, bool forFunctionCompression,
+    bool forDataCompression, bool compressionSortStartupFunctions, bool verbose,
     SmallVector<std::unique_ptr<BPSectionBase>> &inputSections) {
   TimeTraceScope timeScope("Setup Balanced Partitioning");
   SmallVector<const BPSectionBase *> sections;
@@ -364,8 +363,9 @@ BPSectionBase::reorderSectionsByBalancedPartitioning(
     }
   }
 
-  DenseMap<const BPSectionBase *, size_t> sectionPriorities;
+  DenseMap<const BPSectionBase *, int> sectionPriorities;
+  int prio = -orderedSections.size();
   for (const auto *isec : orderedSections)
-    sectionPriorities[isec] = --highestAvailablePriority;
+    sectionPriorities[isec] = prio++;
   return sectionPriorities;
 }
