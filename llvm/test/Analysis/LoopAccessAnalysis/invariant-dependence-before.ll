@@ -795,8 +795,12 @@ define void @stores_to_invariant_address(i32 %offset, ptr noalias %dst.1, ptr %d
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      Equal predicate: %offset == 1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:      [PSE] %gep = getelementptr i32, ptr %dst.2, i32 %iv.2.mul:
+; CHECK-NEXT:        ((4 * (sext i32 {0,+,%offset}<%loop> to i64))<nsw> + %dst.2)
+; CHECK-NEXT:        --> {%dst.2,+,4}<nw><%loop>
 ;
 entry:
   %add = add i32 %offset, 3

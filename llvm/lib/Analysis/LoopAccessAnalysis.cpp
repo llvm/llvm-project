@@ -2545,7 +2545,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   for (StoreInst *ST : Stores) {
     Value *Ptr = ST->getPointerOperand();
 
-    if (isInvariant(Ptr)) {
+    const SCEV *PtrScev = replaceSymbolicStrideSCEV(*PSE, SymbolicStrides, Ptr);
+    if (PSE->getSE()->isLoopInvariant(PtrScev, TheLoop)) {
       // Record store instructions to loop invariant addresses
       StoresToInvariantAddresses.push_back(ST);
       HasStoreStoreDependenceInvolvingLoopInvariantAddress |=
