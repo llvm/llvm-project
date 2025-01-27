@@ -14947,9 +14947,6 @@ TreeTransform<Derived>::TransformArrayTypeTraitExpr(ArrayTypeTraitExpr *E) {
     SubExpr = getDerived().TransformExpr(E->getDimensionExpression());
     if (SubExpr.isInvalid())
       return ExprError();
-
-    if (!getDerived().AlwaysRebuild() && SubExpr.get() == E->getDimensionExpression())
-      return E;
   }
 
   return getDerived().RebuildArrayTypeTrait(E->getTrait(), E->getBeginLoc(), T,
