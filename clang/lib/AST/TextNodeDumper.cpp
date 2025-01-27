@@ -734,7 +734,7 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
       for (const auto &PathEntry : Value.getLValuePath()) {
         // We're printing all entries as array indices because don't have the
         // type information here to do anything else.
-        OS << PathEntry.getAsArrayIndex() << Sep;
+        OS << Sep << PathEntry.getAsArrayIndex();
       }
       OS << ")";
     }

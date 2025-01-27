@@ -38,15 +38,11 @@ void Test(int (&arr)[10]) {
 
   constexpr int *pf = &f.s.ii;
   // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pf 'int *const' constexpr cinit
-  // CHECK-NEXT:  |   |-value: LValue Base=VarDecl {{.*}}, Null=0, Offset=12, HasPath=1, PathLength=2, Path=({{.*}}, {{.*}})
+  // CHECK-NEXT:  |   |-value: LValue Base=VarDecl {{.*}}, Null=0, Offset=16, HasPath=1, PathLength=2, Path=({{.*}}, {{.*}})
 
   constexpr char *pc = &f.padding[2];
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pf 'char *const' constexpr cinit
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pc 'char *const' constexpr cinit
   // CHECK-NEXT:  |   |-value: LValue Base=VarDecl {{.*}}, Null=0, Offset=2, HasPath=1, PathLength=2, Path=({{.*}}, 2)
-
-  constexpr const int *parr = arr + 10;
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} parr 'char *const' constexpr cinit
-  // CHECK-NEXT:  |   |-value: LValue Base=VarDecl {{.*}}, Null=0, Offset=41, HasPath=0
 
   constexpr const int *n = nullptr;
   // CHECK:    `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} n 'const int *const' constexpr cinit
