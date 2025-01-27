@@ -1351,6 +1351,7 @@ static bool isExemptAtStart(StringRef Text) {
       .Case("Fuchsia", true)
       .Case("GNUstep", true)
       .Case("IBOutletCollection", true)
+      .Case("Itanium", true)
       .Case("Microsoft", true)
       .Case("Neon", true)
       .StartsWith("NSInvocation", true) // NSInvocation, NSInvocation's

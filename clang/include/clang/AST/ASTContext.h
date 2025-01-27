@@ -2617,6 +2617,14 @@ public:
   /// runtime, such as those using the Itanium C++ ABI.
   CharUnits getExnObjectAlignment() const;
 
+  /// Return whether getASTRecordLayout will use MicrosoftRecordLayoutBuilder
+  /// or ItaniumRecordLayoutBuilder.
+  bool isMicrosoftLayout() const;
+
+  /// Return whether unannotated records are treated as if they have
+  /// [[gnu::ms_struct]].
+  bool defaultsToMsStruct() const;
+
   /// Get or compute information about the layout of the specified
   /// record (struct/union/class) \p D, which indicates its size and field
   /// position information.

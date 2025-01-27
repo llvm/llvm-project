@@ -151,7 +151,8 @@ LANGOPT(AssumeNothrowExceptionDtor , 1, 0, "Assume exception object's destructor
 LANGOPT(TraditionalCPP    , 1, 0, "traditional CPP emulation")
 LANGOPT(RTTI              , 1, 1, "run-time type information")
 LANGOPT(RTTIData          , 1, 1, "emit run-time type information data")
-LANGOPT(MSBitfields       , 1, 0, "Microsoft-compatible structure layout")
+ENUM_LANGOPT(LayoutCompatibility, LayoutCompatibilityKind, 2,
+             LayoutCompatibilityKind::Default, "Microsoft-compatible structure layout")
 LANGOPT(MSVolatile        , 1, 0, "Microsoft-compatible volatile loads and stores")
 LANGOPT(Freestanding, 1, 0, "freestanding implementation")
 LANGOPT(NoBuiltin         , 1, 0, "disable builtin functions")

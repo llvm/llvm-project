@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -mms-bitfields -fsyntax-only -verify -triple x86_64-apple-darwin9 %s
+// RUN: %clang_cc1 -fms-layout-compatibility=microsoft -fsyntax-only -verify -triple x86_64-apple-darwin9 %s
 // expected-no-diagnostics
 
 // The -mms-bitfields commandline parameter should behave the same
