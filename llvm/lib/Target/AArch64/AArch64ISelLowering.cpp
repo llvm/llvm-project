@@ -26372,8 +26372,15 @@ static SDValue performSHLCombine(SDNode *N,
 
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
-  SDValue X = Op0->getOperand(0);
+
+  // Don't combine unless (shl C1, C2) can be constant folded. Otherwise,
+  // DAGCombiner will simplify (and (op x...), (op y...)) -> (op (and x, y))
+  // causing infinite loop. Result may also be worse.
   SDValue NewRHS = DAG.getNode(ISD::SHL, DL, VT, C1, C2);
+  if (!isa<ConstantSDNode>(NewRHS))
+    return SDValue();
+
+  SDValue X = Op0->getOperand(0);
   SDValue NewShift = DAG.getNode(ISD::SHL, DL, VT, X, C2);
   return DAG.getNode(ISD::AND, DL, VT, NewShift, NewRHS);
 }
