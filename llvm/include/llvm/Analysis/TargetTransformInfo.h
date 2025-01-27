@@ -624,6 +624,8 @@ public:
     unsigned SCEVExpansionBudget;
     /// Allow runtime unrolling multi-exit loops. Should only be set if the
     /// target determined that multi-exit unrolling is profitable for the loop.
+    /// Fall back to the generic logic to determine whether multi-exit unrolling
+    /// is profitable if set to false.
     bool RuntimeUnrollMultiExit;
   };
 
