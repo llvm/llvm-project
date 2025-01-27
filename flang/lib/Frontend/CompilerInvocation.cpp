@@ -770,10 +770,11 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     opts.features.Enable(Fortran::common::LanguageFeature::DefaultSave);
   }
 
-  // -fsave-main-program
-  if (args.hasArg(clang::driver::options::OPT_fsave_main_program)) {
-    opts.features.Enable(Fortran::common::LanguageFeature::SaveMainProgram);
-  }
+  // -f{no}-save-main-program
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::SaveMainProgram,
+      args.hasFlag(clang::driver::options::OPT_fsave_main_program,
+                   clang::driver::options::OPT_fno_save_main_program, false));
 
   if (args.hasArg(
           clang::driver::options::OPT_falternative_parameter_statement)) {
@@ -1376,6 +1377,14 @@ bool CompilerInvocation::createFromArgs(
   if (args.hasArg(clang::driver::options::OPT_fno_ppc_native_vec_elem_order)) {
     invoc.loweringOpts.setNoPPCNativeVecElemOrder(true);
   }
+
+  // -f[no-]init-global-zero
+  if (args.hasFlag(clang::driver::options::OPT_finit_global_zero,
+                   clang::driver::options::OPT_fno_init_global_zero,
+                   /*default=*/true))
+    invoc.loweringOpts.setInitGlobalZero(true);
+  else
+    invoc.loweringOpts.setInitGlobalZero(false);
 
   // Preserve all the remark options requested, i.e. -Rpass, -Rpass-missed or
   // -Rpass-analysis. This will be used later when processing and outputting the

@@ -93,6 +93,7 @@ private:
   void SelectI128toV2I64(SDNode *N);
   void SelectCpAsyncBulkG2S(SDNode *N);
   void SelectCpAsyncBulkS2G(SDNode *N);
+  void SelectCpAsyncBulkPrefetchL2(SDNode *N);
   void SelectCpAsyncBulkTensorG2SCommon(SDNode *N, bool IsIm2Col = false);
   void SelectCpAsyncBulkTensorS2GCommon(SDNode *N, bool IsIm2Col = false);
   void SelectCpAsyncBulkTensorPrefetchCommon(SDNode *N, bool IsIm2Col = false);

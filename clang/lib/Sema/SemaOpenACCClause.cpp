@@ -1360,7 +1360,6 @@ ExprResult CheckGangKernelsExpr(SemaOpenACC &S,
   }
   case OpenACCGangKind::Static:
     return CheckGangStaticExpr(S, E);
-    return ExprError();
   }
   llvm_unreachable("Unknown gang kind in gang kernels check");
 }
