@@ -118,13 +118,13 @@ entry:
   br label %for.body
 
 for.body:
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, ptr %p, i64 %indvars.iv
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %p, i64 %iv
   %0 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %0, %x
   store i32 %add, ptr %arrayidx, align 4
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 4
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 
 for.cond.cleanup:
@@ -214,13 +214,13 @@ entry:
   br label %for.body
 
 for.body:
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, ptr %p, i64 %indvars.iv
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %p, i64 %iv
   %0 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %0, %x
   store i32 %add, ptr %arrayidx, align 4
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, %n
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 
 for.cond.cleanup:
@@ -647,8 +647,8 @@ entry:
   br label %for.body
 
 for.body:
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %0 = trunc nuw nsw i64 %indvars.iv to i8
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %0 = trunc nuw nsw i64 %iv to i8
   %mul = mul i8 %a, %0
   %shr = lshr i8 %0, 1
   %mul5 = mul i8 %shr, %b
@@ -656,10 +656,10 @@ for.body:
   %shr7 = lshr i8 %0, 2
   %mul9 = mul i8 %shr7, %c
   %add10 = add i8 %add, %mul9
-  %arrayidx = getelementptr inbounds i8, ptr %p, i64 %indvars.iv
+  %arrayidx = getelementptr inbounds i8, ptr %p, i64 %iv
   store i8 %add10, ptr %arrayidx, align 1
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, 15
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 15
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 
 for.cond.cleanup:
@@ -830,19 +830,19 @@ entry:
   br label %for.body
 
 for.body:
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 %indvars.iv
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 %iv
   %bval = load i32, ptr %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 %indvars.iv
+  %arrayidx2 = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 %iv
   %cval = load i32, ptr %arrayidx2, align 4
   %mul = mul nsw i32 %bval, %cval
-  %arrayidx4 = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 %indvars.iv
+  %arrayidx4 = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 %iv
   %aval = load i16, ptr %arrayidx4, align 2
   %trunc = trunc i32 %mul to i16
   %add = add i16 %trunc, %aval
   store i16 %add, ptr %arrayidx4, align 2
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, 64
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 64
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 
 for.cond.cleanup:
@@ -1012,19 +1012,19 @@ entry:
   br label %for.body
 
 for.body:
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 %indvars.iv
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds nuw [1000 x i32], ptr @B, i64 0, i64 %iv
   %bval = load i32, ptr %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 %indvars.iv
+  %arrayidx2 = getelementptr inbounds nuw [1000 x i32], ptr @C, i64 0, i64 %iv
   %cval = load i32, ptr %arrayidx2, align 4
   %mul = mul nsw i32 %bval, %cval
-  %arrayidx4 = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 %indvars.iv
+  %arrayidx4 = getelementptr inbounds nuw [1000 x i16], ptr @A, i64 0, i64 %iv
   %aval = load i16, ptr %arrayidx4, align 2
   %trunc = trunc i32 %mul to i16
   %add = add i16 %trunc, %aval
   store i16 %add, ptr %arrayidx4, align 2
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, 64
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 64
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !0
 
 for.cond.cleanup:
