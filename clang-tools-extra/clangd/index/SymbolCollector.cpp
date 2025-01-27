@@ -160,18 +160,23 @@ Symbol::IncludeDirective shouldCollectIncludePath(index::SymbolKind Kind) {
   }
 }
 
+SymbolPosition sourceLocToSymbolPosition(SourceLocation Loc,
+                                         const SourceManager &SM,
+                                         const LangOptions &LangOpts) {
+  auto LSPLoc = sourceLocToPosition(SM, Loc);
+  SymbolPosition Pos;
+  Pos.setLine(LSPLoc.line);
+  Pos.setColumn(LSPLoc.character);
+  return Pos;
+}
+
 // Return the symbol range of the token at \p TokLoc.
-std::pair<SymbolLocation::Position, SymbolLocation::Position>
+std::pair<SymbolPosition, SymbolPosition>
 getTokenRange(SourceLocation TokLoc, const SourceManager &SM,
               const LangOptions &LangOpts) {
-  auto CreatePosition = [&SM](SourceLocation Loc) {
-    auto LSPLoc = sourceLocToPosition(SM, Loc);
-    SymbolLocation::Position Pos;
-    Pos.setLine(LSPLoc.line);
-    Pos.setColumn(LSPLoc.character);
-    return Pos;
+  auto CreatePosition = [&](SourceLocation Loc) {
+    return sourceLocToSymbolPosition(Loc, SM, LangOpts);
   };
-
   auto TokenLength = clang::Lexer::MeasureTokenLength(TokLoc, SM, LangOpts);
   return {CreatePosition(TokLoc),
           CreatePosition(TokLoc.getLocWithOffset(TokenLength))};
@@ -474,19 +479,52 @@ private:
   }
 };
 
-// Return the symbol location of the token at \p TokLoc.
-std::optional<SymbolLocation>
-SymbolCollector::getTokenLocation(SourceLocation TokLoc) {
+// Return the location of the given symbol.
+std::optional<SymbolDeclDefLocation> SymbolCollector::getSymbolLocation(
+    const std::variant<const Decl *, const MacroInfo *> &Symbol) {
   const auto &SM = ASTCtx->getSourceManager();
-  const auto FE = SM.getFileEntryRefForID(SM.getFileID(TokLoc));
+  const MacroInfo *MI = nullptr;
+  const Decl *D = nullptr;
+  if (auto MIP = std::get_if<const MacroInfo *>(&Symbol))
+    MI = *MIP;
+  else
+    D = std::get<const Decl *>(Symbol);
+  const SourceLocation NameLoc =
+      MI ? MI->getDefinitionLoc() : nameLocation(*D, SM);
+  const auto FE = SM.getFileEntryRefForID(SM.getFileID(NameLoc));
   if (!FE)
     return std::nullopt;
 
-  SymbolLocation Result;
-  Result.FileURI = HeaderFileURIs->toURI(*FE).c_str();
-  auto Range = getTokenRange(TokLoc, SM, ASTCtx->getLangOpts());
-  Result.Start = Range.first;
-  Result.End = Range.second;
+  SymbolDeclDefLocation Result;
+  Result.NameLocation.FileURI = HeaderFileURIs->toURI(*FE).c_str();
+  auto NameRange = getTokenRange(NameLoc, SM, ASTCtx->getLangOpts());
+  Result.NameLocation.Start = NameRange.first;
+  Result.NameLocation.End = NameRange.second;
+
+  if (MI) {
+    Result.DeclDefStart = Result.NameLocation.Start;
+    Result.DeclDefEnd = sourceLocToSymbolPosition(MI->getDefinitionEndLoc(), SM,
+                                                  ASTCtx->getLangOpts());
+  } else {
+    // TODO: Comments.
+    Result.DeclDefStart =
+        sourceLocToSymbolPosition(D->getBeginLoc(), SM, ASTCtx->getLangOpts());
+    SourceLocation EndLoc = D->getEndLoc();
+    bool ExtendEndLoc = false;
+    if (llvm::isa<RecordDecl>(D)) {
+      ExtendEndLoc = true;
+    } else if (auto *FD = llvm::dyn_cast_or_null<FunctionDecl>(D);
+               FD && !FD->hasBody()) {
+      ExtendEndLoc = true;
+    }
+    if (ExtendEndLoc) {
+      auto NextTok = Lexer::findNextToken(EndLoc, SM, ASTCtx->getLangOpts());
+      if (NextTok && NextTok->is(tok::semi))
+        EndLoc = NextTok->getEndLoc();
+    }
+    Result.DeclDefEnd =
+        sourceLocToSymbolPosition(EndLoc, SM, ASTCtx->getLangOpts());
+  }
 
   return Result;
 }
@@ -655,6 +693,7 @@ bool SymbolCollector::handleDeclOccurrence(
   processRelations(*ND, ID, Relations);
 
   bool CollectRef = static_cast<bool>(Opts.RefFilter & toRefKind(Roles));
+
   // Unlike other fields, e.g. Symbols (which use spelling locations), we use
   // file locations for references (as it aligns the behavior of clangd's
   // AST-based xref).
@@ -724,6 +763,14 @@ void SymbolCollector::handleMacros(const MainFileMacros &MacroRefsToIndex) {
       R.Kind = IsDefinition ? RefKind::Definition : RefKind::Reference;
       Refs.insert(IDToRefs.first, R);
       if (IsDefinition) {
+        SymbolDeclDefLocation DeclDefLoc;
+        DeclDefLoc.NameLocation = R.Location;
+
+        // FIXME: How does this function relate to handleMacroOccurrence(),
+        // where we retrieve the full definition location?
+        DeclDefLoc.DeclDefStart = R.Location.Start;
+        DeclDefLoc.DeclDefEnd = R.Location.End;
+
         Symbol S;
         S.ID = IDToRefs.first;
         auto StartLoc = cantFail(sourceLocationInMainFile(SM, Range.start));
@@ -734,7 +781,7 @@ void SymbolCollector::handleMacros(const MainFileMacros &MacroRefsToIndex) {
         S.SymInfo.Properties = index::SymbolPropertySet();
         S.SymInfo.Lang = index::SymbolLanguage::C;
         S.Origin = Opts.Origin;
-        S.CanonicalDeclaration = R.Location;
+        S.CanonicalDeclaration = DeclDefLoc;
         // Make the macro visible for code completion if main file is an
         // include-able header.
         if (!HeaderFileURIs->getIncludeHeader(SM.getMainFileID()).empty()) {
@@ -823,7 +870,7 @@ bool SymbolCollector::handleMacroOccurrence(const IdentifierInfo *Name,
   S.Origin = Opts.Origin;
   // FIXME: use the result to filter out symbols.
   shouldIndexFile(SM.getFileID(Loc));
-  if (auto DeclLoc = getTokenLocation(DefLoc))
+  if (auto DeclLoc = getSymbolLocation(MI))
     S.CanonicalDeclaration = *DeclLoc;
 
   CodeCompletionResult SymbolCompletion(Name);
@@ -1064,7 +1111,7 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
   // FIXME: use the result to filter out symbols.
   auto FID = SM.getFileID(Loc);
   shouldIndexFile(FID);
-  if (auto DeclLoc = getTokenLocation(Loc))
+  if (auto DeclLoc = getSymbolLocation(&ND))
     S.CanonicalDeclaration = *DeclLoc;
 
   S.Origin = Opts.Origin;
@@ -1132,7 +1179,7 @@ void SymbolCollector::addDefinition(const NamedDecl &ND, const Symbol &DeclSym,
   const auto &SM = ND.getASTContext().getSourceManager();
   auto Loc = nameLocation(ND, SM);
   shouldIndexFile(SM.getFileID(Loc));
-  auto DefLoc = getTokenLocation(Loc);
+  auto DefLoc = getSymbolLocation(&ND);
   // If we saw some forward declaration, we end up copying the symbol.
   // This is not ideal, but avoids duplicating the "is this a definition" check
   // in clang::index. We should only see one definition.

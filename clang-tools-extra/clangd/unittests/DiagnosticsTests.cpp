@@ -1250,8 +1250,8 @@ buildIndexWithSymbol(llvm::ArrayRef<SymbolWithHeader> Syms) {
   for (const auto &S : Syms) {
     Symbol Sym = cls(S.QName);
     Sym.Flags |= Symbol::IndexedForCodeCompletion;
-    Sym.CanonicalDeclaration.FileURI = S.DeclaringFile.c_str();
-    Sym.Definition.FileURI = S.DeclaringFile.c_str();
+    Sym.CanonicalDeclaration.NameLocation.FileURI = S.DeclaringFile.c_str();
+    Sym.Definition.NameLocation.FileURI = S.DeclaringFile.c_str();
     Sym.IncludeHeaders.emplace_back(S.IncludeHeader, 1, Symbol::Include);
     Slab.insert(Sym);
   }
@@ -1309,7 +1309,8 @@ TEST(IncludeFixerTest, IncompleteType) {
 TEST(IncludeFixerTest, IncompleteEnum) {
   Symbol Sym = enm("X");
   Sym.Flags |= Symbol::IndexedForCodeCompletion;
-  Sym.CanonicalDeclaration.FileURI = Sym.Definition.FileURI = "unittest:///x.h";
+  Sym.CanonicalDeclaration.NameLocation.FileURI =
+      Sym.Definition.NameLocation.FileURI = "unittest:///x.h";
   Sym.IncludeHeaders.emplace_back("\"x.h\"", 1, Symbol::Include);
   SymbolSlab::Builder Slab;
   Slab.insert(Sym);
@@ -1351,8 +1352,8 @@ int main() {
   auto TU = TestTU::withCode(Test.code());
   Symbol Sym = cls("ns::X");
   Sym.Flags |= Symbol::IndexedForCodeCompletion;
-  Sym.CanonicalDeclaration.FileURI = "unittest:///x.h";
-  Sym.Definition.FileURI = "unittest:///x.cc";
+  Sym.CanonicalDeclaration.NameLocation.FileURI = "unittest:///x.h";
+  Sym.Definition.NameLocation.FileURI = "unittest:///x.cc";
   Sym.IncludeHeaders.emplace_back("\"x.h\"", 1, Symbol::Include);
 
   SymbolSlab::Builder Slab;
@@ -1683,7 +1684,7 @@ TEST(IncludeFixerTest, CImplicitFunctionDecl) {
 
   Symbol Sym = func("foo");
   Sym.Flags |= Symbol::IndexedForCodeCompletion;
-  Sym.CanonicalDeclaration.FileURI = "unittest:///foo.h";
+  Sym.CanonicalDeclaration.NameLocation.FileURI = "unittest:///foo.h";
   Sym.IncludeHeaders.emplace_back("\"foo.h\"", 1, Symbol::Include);
 
   SymbolSlab::Builder Slab;

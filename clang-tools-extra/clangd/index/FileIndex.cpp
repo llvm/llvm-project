@@ -132,13 +132,13 @@ FileShardedIndex::FileShardedIndex(IndexFileIn Input)
   // Attribute each Symbol to both their declaration and definition locations.
   if (Index.Symbols) {
     for (const auto &S : *Index.Symbols) {
-      auto It = Shards.try_emplace(S.CanonicalDeclaration.FileURI);
+      auto It = Shards.try_emplace(S.CanonicalDeclaration.fileURI());
       It.first->getValue().Symbols.insert(&S);
       SymbolIDToFile[S.ID] = &It.first->getValue();
       // Only bother if definition file is different than declaration file.
       if (S.Definition &&
-          S.Definition.FileURI != S.CanonicalDeclaration.FileURI) {
-        auto It = Shards.try_emplace(S.Definition.FileURI);
+          S.Definition.fileURI() != S.CanonicalDeclaration.fileURI()) {
+        auto It = Shards.try_emplace(S.Definition.fileURI());
         It.first->getValue().Symbols.insert(&S);
       }
     }

@@ -281,7 +281,7 @@ computeScope(const NamedDecl *D) {
 }
 
 void SymbolRelevanceSignals::merge(const Symbol &IndexResult) {
-  SymbolURI = IndexResult.CanonicalDeclaration.FileURI;
+  SymbolURI = IndexResult.CanonicalDeclaration.fileURI();
   SymbolScope = IndexResult.Scope;
   IsInstanceMember |= isInstanceMember(IndexResult.SymInfo);
   if (!(IndexResult.Flags & Symbol::VisibleOutsideFile)) {
