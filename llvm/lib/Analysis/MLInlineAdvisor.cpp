@@ -189,7 +189,10 @@ MLInlineAdvisor::MLInlineAdvisor(
 }
 
 unsigned MLInlineAdvisor::getInitialFunctionLevel(const Function &F) const {
-  return CG.lookup(F) ? FunctionLevels.at(CG.lookup(F)) : 0;
+  auto It = FunctionLevels.find(CG.lookup(F));
+  if (It == FunctionLevels.end())
+    return 0;
+  return *It;
 }
 
 void MLInlineAdvisor::onPassEntry(LazyCallGraph::SCC *CurSCC) {
