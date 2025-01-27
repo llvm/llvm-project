@@ -51,6 +51,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <thread>
+#include <tuple>
 #include <vector>
 
 #if defined(_WIN32)
@@ -128,16 +129,27 @@ static void PrintWelcomeMessage(DAP &dap) {
 }
 
 lldb::SBValueList *GetTopLevelScope(DAP &dap, int64_t variablesReference) {
-  switch (variablesReference) {
-  case VARREF_LOCALS:
-    return &dap.variables.locals;
-  case VARREF_GLOBALS:
-    return &dap.variables.globals;
-  case VARREF_REGS:
-    return &dap.variables.registers;
-  default:
+  auto iter = dap.scope_kinds.find(variablesReference);
+  if (iter == dap.scope_kinds.end()) {
     return nullptr;
   }
+
+  ScopeKind scope_kind = iter->second.first;
+  uint32_t frame_id = iter->second.second;
+
+  if (!dap.variables.SwitchFrame(frame_id)) {
+    return nullptr;
+  }
+
+  switch (scope_kind) {
+  case lldb_dap::ScopeKind::Locals:
+    return &dap.variables.locals;
+  case lldb_dap::ScopeKind::Globals:
+    return &dap.variables.globals;
+  case lldb_dap::ScopeKind::Registers:
+    return &dap.variables.registers;
+  }
+  return nullptr;
 }
 
 SOCKET AcceptConnection(DAP &dap, int portno) {
@@ -2559,16 +2571,31 @@ void request_scopes(DAP &dap, const llvm::json::Object &request) {
     frame.GetThread().SetSelectedFrame(frame.GetFrameID());
   }
 
-  dap.variables.locals = frame.GetVariables(/*arguments=*/true,
-                                            /*locals=*/true,
-                                            /*statics=*/false,
-                                            /*in_scope_only=*/true);
-  dap.variables.globals = frame.GetVariables(/*arguments=*/false,
-                                             /*locals=*/false,
-                                             /*statics=*/true,
-                                             /*in_scope_only=*/true);
-  dap.variables.registers = frame.GetRegisters();
-  body.try_emplace("scopes", dap.CreateTopLevelScopes());
+  uint32_t frame_id = frame.GetFrameID();
+
+  if (dap.variables.frames.find(frame_id) == dap.variables.frames.end()) {
+
+    auto locals = frame.GetVariables(/*arguments=*/true,
+                                     /*locals=*/true,
+                                     /*statics=*/false,
+                                     /*in_scope_only=*/true);
+
+    auto globals = frame.GetVariables(/*arguments=*/false,
+                                      /*locals=*/false,
+                                      /*statics=*/true,
+                                      /*in_scope_only=*/true);
+
+    auto registers = frame.GetRegisters();
+
+    dap.variables.frames.insert(
+        std::make_pair(frame_id, std::make_tuple(locals, globals, registers)));
+
+    dap.variables.locals = locals;
+    dap.variables.globals = globals;
+    dap.variables.registers = registers;
+  }
+
+  body.try_emplace("scopes", dap.CreateTopLevelScopes(frame_id));
   response.try_emplace("body", std::move(body));
   dap.SendJSON(llvm::json::Value(std::move(response)));
 }
@@ -3945,7 +3972,7 @@ void request_variables(DAP &dap, const llvm::json::Object &request) {
     int64_t start_idx = 0;
     int64_t num_children = 0;
 
-    if (variablesReference == VARREF_REGS) {
+    if (dap.ScopeKind(variablesReference) == ScopeKind::Registers) {
       // Change the default format of any pointer sized registers in the first
       // register set to be the lldb::eFormatAddressInfo so we show the pointer
       // and resolve what the pointer resolves to. Only change the format if the
@@ -3965,7 +3992,8 @@ void request_variables(DAP &dap, const llvm::json::Object &request) {
     }
 
     num_children = top_scope->GetSize();
-    if (num_children == 0 && variablesReference == VARREF_LOCALS) {
+    if (num_children == 0 &&
+        dap.ScopeKind(variablesReference) == ScopeKind::Locals) {
       // Check for an error in the SBValueList that might explain why we don't
       // have locals. If we have an error display it as the sole value in the
       // the locals.
