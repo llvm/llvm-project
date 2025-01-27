@@ -56,3 +56,37 @@ void t() {
   B b;
   b.construct(&b);
 }
+
+
+void t_new_constant_size() {
+  auto p = new double[16];
+}
+
+// In this test, NUM_ELEMENTS isn't used because no cookie is needed and there
+//   are no constructor calls needed.
+
+// CHECK:   cir.func @_Z19t_new_constant_sizev()
+// CHECK:    %0 = cir.alloca !cir.ptr<!cir.double>, !cir.ptr<!cir.ptr<!cir.double>>, ["p", init] {alignment = 8 : i64}
+// CHECK:    %[[#NUM_ELEMENTS:]] = cir.const #cir.int<16> : !u64i
+// CHECK:    %[[#ALLOCATION_SIZE:]] = cir.const #cir.int<128> : !u64i
+// CHECK:    %3 = cir.call @_Znam(%[[#ALLOCATION_SIZE]]) : (!u64i) -> !cir.ptr<!void>
+// CHECK:    %4 = cir.cast(bitcast, %3 : !cir.ptr<!void>), !cir.ptr<!cir.double>
+// CHECK:    cir.store %4, %0 : !cir.ptr<!cir.double>, !cir.ptr<!cir.ptr<!cir.double>>
+// CHECK:    cir.return
+// CHECK:  }
+
+void t_new_multidim_constant_size() {
+  auto p = new double[2][3][4];
+}
+
+// As above, NUM_ELEMENTS isn't used.
+
+// CHECK:   cir.func @_Z28t_new_multidim_constant_sizev()
+// CHECK:    %0 = cir.alloca !cir.ptr<!cir.array<!cir.array<!cir.double x 4> x 3>>, !cir.ptr<!cir.ptr<!cir.array<!cir.array<!cir.double x 4> x 3>>>, ["p", init] {alignment = 8 : i64}
+// CHECK:    %[[#NUM_ELEMENTS:]] = cir.const #cir.int<24> : !u64i
+// CHECK:    %[[#ALLOCATION_SIZE:]] = cir.const #cir.int<192> : !u64i
+// CHECK:    %3 = cir.call @_Znam(%[[#ALLOCATION_SIZE]]) : (!u64i) -> !cir.ptr<!void>
+// CHECK:    %4 = cir.cast(bitcast, %3 : !cir.ptr<!void>), !cir.ptr<!cir.double>
+// CHECK:    %5 = cir.cast(bitcast, %0 : !cir.ptr<!cir.ptr<!cir.array<!cir.array<!cir.double x 4> x 3>>>), !cir.ptr<!cir.ptr<!cir.double>>
+// CHECK:    cir.store %4, %5 : !cir.ptr<!cir.double>, !cir.ptr<!cir.ptr<!cir.double>>
+// CHECK:  }

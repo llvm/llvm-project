@@ -726,6 +726,11 @@ public:
   mlir::Value emitCXXNewExpr(const CXXNewExpr *E);
   void emitCXXDeleteExpr(const CXXDeleteExpr *E);
 
+  void emitNewArrayInitializer(const CXXNewExpr *E, QualType ElementType,
+                               mlir::Type ElementTy, Address BeginPtr,
+                               mlir::Value NumElements,
+                               mlir::Value AllocSizeWithoutCookie);
+
   void emitCXXAggrConstructorCall(const CXXConstructorDecl *D,
                                   const clang::ArrayType *ArrayTy,
                                   Address ArrayPtr, const CXXConstructExpr *E,

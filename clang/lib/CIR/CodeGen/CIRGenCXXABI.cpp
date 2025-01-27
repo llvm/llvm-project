@@ -85,3 +85,18 @@ bool CIRGenCXXABI::isZeroInitializable(const MemberPointerType *MPT) {
   // Fake answer.
   return true;
 }
+
+CharUnits CIRGenCXXABI::getArrayCookieSize(const CXXNewExpr *E) {
+  if (!requiresArrayCookie(E))
+    return CharUnits::Zero();
+  llvm_unreachable("NYI");
+}
+
+bool CIRGenCXXABI::requiresArrayCookie(const CXXNewExpr *E) {
+  // If the class's usual deallocation function takes two arguments,
+  // it needs a cookie.
+  if (E->doesUsualArrayDeleteWantSize())
+    return true;
+
+  return E->getAllocatedType().isDestructedType();
+}

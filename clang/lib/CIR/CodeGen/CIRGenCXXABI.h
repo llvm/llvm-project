@@ -38,6 +38,8 @@ protected:
 
   clang::ASTContext &getContext() const { return CGM.getASTContext(); }
 
+  virtual bool requiresArrayCookie(const CXXNewExpr *E);
+
 public:
   /// Similar to AddedStructorArgs, but only notes the number of additional
   /// arguments.
@@ -347,6 +349,19 @@ public:
 
   virtual cir::MethodAttr buildVirtualMethodAttr(cir::MethodType MethodTy,
                                                  const CXXMethodDecl *MD) = 0;
+
+  /**************************** Array cookies ******************************/
+
+  /// Returns the extra size required in order to store the array
+  /// cookie for the given new-expression.  May return 0 to indicate that no
+  /// array cookie is required.
+  ///
+  /// Several cases are filtered out before this method is called:
+  ///   - non-array allocations never need a cookie
+  ///   - calls to \::operator new(size_t, void*) never need a cookie
+  ///
+  /// \param E - the new-expression being allocated.
+  virtual CharUnits getArrayCookieSize(const CXXNewExpr *E);
 };
 
 /// Creates and Itanium-family ABI
