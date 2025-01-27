@@ -80,9 +80,10 @@ This limitation affects the capability to add ``const`` to methods which is not 
 Options
 -------
 
-.. option:: AnalyzeValues (default = true)
+.. option:: AnalyzeValues
 
-  Enable or disable the analysis of ordinary value variables, like ``int i = 42;``
+  Enable or disable the analysis of ordinary value variables, like
+  ``int i = 42;``. Default is `true`.
 
   .. code-block:: c++
 
@@ -96,9 +97,10 @@ Options
     // No warning
     int const a[] = {42, 42, 42};
 
-.. option:: AnalyzeReferences (default = true)
+.. option:: AnalyzeReferences
 
-  Enable or disable the analysis of reference variables, like ``int &ref = i;``
+  Enable or disable the analysis of reference variables, like
+  ``int &ref = i;``. Default is `true`.
 
   .. code-block:: c++
 
@@ -108,11 +110,11 @@ Options
     // No warning
     int const& ref = i;
 
-.. option:: WarnPointersAsValues (default = false)
+.. option:: WarnPointersAsValues
 
   This option enables the suggestion for ``const`` of the pointer itself.
   Pointer values have two possibilities to be ``const``, the pointer
-  and the value pointing to.
+  and the value pointing to. Default is `false`.
 
   .. code-block:: c++
 
@@ -123,9 +125,10 @@ Options
     // No warning
     const int *const pointer_variable = &value;
 
-.. option:: TransformValues (default = true)
+.. option:: TransformValues
 
-  Provides fixit-hints for value types that automatically add ``const`` if its a single declaration.
+  Provides fixit-hints for value types that automatically add ``const`` if
+  its a single declaration. Default is `true`.
 
   .. code-block:: c++
 
@@ -143,10 +146,10 @@ Options
     int result = value * 3;
     result -= 10;
 
-.. option:: TransformReferences (default = true)
+.. option:: TransformReferences
 
-  Provides fixit-hints for reference types that automatically add ``const`` if its a single
-  declaration.
+  Provides fixit-hints for reference types that automatically add ``const`` if
+  its a single declaration. Default is `true`.
 
   .. code-block:: c++
 
@@ -163,10 +166,10 @@ Options
     int result = ref_value * 3;
     result -= 10;
 
-.. option:: TransformPointersAsValues (default = false)
+.. option:: TransformPointersAsValues
 
-  Provides fixit-hints for pointers if their pointee is not changed. This does not analyze if the
-  value-pointed-to is unchanged!
+  Provides fixit-hints for pointers if their pointee is not changed. This does
+  not analyze if the value-pointed-to is unchanged! Default is `false`.
 
   Requires 'WarnPointersAsValues' to be 'true'.
 
