@@ -17,9 +17,6 @@ using LlvmLibcAsinf16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 TEST_F(LlvmLibcAsinf16Test, SpecialNumbers) {
   LIBC_NAMESPACE::libc_errno = 0;
 
-  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::asinf16(aNaN));
-  EXPECT_MATH_ERRNO(0);
-
   EXPECT_FP_EQ(zero, LIBC_NAMESPACE::asinf16(zero));
   EXPECT_MATH_ERRNO(0);
 

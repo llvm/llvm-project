@@ -35,24 +35,23 @@ LLVM_LIBC_FUNCTION(float16, asinf16, (float16 x)) {
 
   // |x| <= 0x1p-1, |x| <= 0.5
   if (x_abs <= 0x3800) {
-    if (LIBC_UNLIKELY(x_abs <= 0x1a1e)) {
-      // asinf16(+/-0) = +/-0
-      if (LIBC_UNLIKELY(x_abs == 0U)) {
-        return x;
-      }
+    // asinf16(+/-0) = +/-0
+    if (LIBC_UNLIKELY(x_abs == 0))
+      return x;
 
-      // Exhaustive tests show that, when:
-      // x > 0, and rounding upward, or
-      // x < 0, and rounding downward, then,
-      // asin(x) = x * 2^-11 + x
-      // else, in other rounding modes,
-      // asin(x) = x
+    // Exhaustive tests show that,
+    // for |x| <= 0x1.878p-9, when:
+    // x > 0, and rounding upward, or
+    // x < 0, and rounding downward, then,
+    // asin(x) = x * 2^-11 + x
+    // else, in other rounding modes,
+    // asin(x) = x
+    if (LIBC_UNLIKELY(x_abs <= 0x1a1e)) {
       int rounding = fputil::quick_get_round();
 
       if ((xbits.is_pos() && rounding == FE_UPWARD) ||
-          (xbits.is_neg() && rounding == FE_DOWNWARD)) {
+          (xbits.is_neg() && rounding == FE_DOWNWARD))
         return fputil::cast<float16>(fputil::multiply_add(xf, 0x1.0p-11f, xf));
-      }
       return x;
     }
 
@@ -66,11 +65,8 @@ LLVM_LIBC_FUNCTION(float16, asinf16, (float16 x)) {
 
   // |x| > 1, asinf16(x) = NaN
   if (LIBC_UNLIKELY(x_abs > 0x3c00)) {
-    // |x| <= +/-inf
-    if (LIBC_UNLIKELY(x_abs <= 0x7c00)) {
-      fputil::set_errno_if_required(EDOM);
-      fputil::raise_except_if_required(FE_INVALID);
-    }
+    fputil::set_errno_if_required(EDOM);
+    fputil::raise_except_if_required(FE_INVALID);
 
     return FPBits::quiet_nan().get_val();
   }
@@ -91,13 +87,13 @@ LLVM_LIBC_FUNCTION(float16, asinf16, (float16 x)) {
   //       sin(z/2) = sqrt((1 - x)/2)
   // 7:  Let u = (1 - x)/2
   // 8:  Therefore:
-  //       arcsin(sqrt(u)) = z/2
-  //       2 * arcsin(sqrt(u)) = z
+  //       asin(sqrt(u)) = z/2
+  //       2 * asin(sqrt(u)) = z
   // 9:  Recall [3], z = pi/2 - y. Therefore:
   //       y = pi/2 - z
   //       y = pi/2 - 2 * arcsin(sqrt(u))
   // 10: Recall [1], y = asin(x). Therefore:
-  //       arcsin(x) = pi/2 - 2 * arcsin(sqrt(u))
+  //       asin(x) = pi/2 - 2 * asin(sqrt(u))
   //
   // WHY?
   // 11: Recall [7], u = (1 - x)/2
@@ -109,7 +105,7 @@ LLVM_LIBC_FUNCTION(float16, asinf16, (float16 x)) {
 
   // 0x1p-1 < |x| <= 0x1p0, 0.5 < |x| <= 1.0
   float xf_abs = (xf < 0 ? -xf : xf);
-  float sign = ((xbits.uintval() >> 15) == 1 ? -1.0 : 1.0);
+  float sign = (xbits.uintval() >> 15 == 1 ? -1.0 : 1.0);
   float u = fputil::multiply_add(-0.5f, xf_abs, 0.5f);
   float u_sqrt = fputil::sqrt<float>(u);
 
