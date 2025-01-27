@@ -366,9 +366,21 @@ private:
   mutable DenseMap<RegID, LIFeatureComponents> CachedFeatures;
 
   mutable std::unordered_map<unsigned, unsigned> VirtRegEvictionCounts;
-  void incrementEvictionCount(const CandidateRegList &Regs,
-                              const LiveInterval &VirtReg,
-                              size_t CandidatePosition) const;
+
+  void onEviction(Register RegBeingEvicted) const {
+    // If we cannot find the virtual register in the map, we just assume it has
+    // not been evicted before and thus has a value of zero (which is what the
+    // subscript operator returns by default).
+    ++VirtRegEvictionCounts[RegBeingEvicted.id()];
+  }
+
+  unsigned getEvictionCount(Register Reg) const {
+    auto EvictionCountIt = VirtRegEvictionCounts.find(Reg.id());
+    if (EvictionCountIt != VirtRegEvictionCounts.end()) {
+      return EvictionCountIt->second;
+    }
+    return 0;
+  }
 };
 
 #define _DECL_FEATURES(type, name, shape, _)                                   \
@@ -661,11 +673,8 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
       // large amount of compile time being spent in regalloc. If we hit the
       // threshold, prevent the range from being evicted. We still let the
       // range through if it is urgent as we are required to produce an
-      // eviction if the candidate is not spillable. If we cannot find the
-      // virtual register in the map, we just assume it has not been evicted
-      // before and thus has a value of zero (which is what the subscript
-      // operator returns by default).
-      if (VirtRegEvictionCounts[Intf->reg().id()] > MaxEvictionCount && !Urgent)
+      // eviction if the candidate is not spillable. 
+      if (getEvictionCount(Intf->reg()) > MaxEvictionCount && !Urgent)
         return false;
 
       // Only evict older cascades or live ranges without a cascade.
@@ -684,22 +693,6 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
   extractFeatures(InterferingIntervals, Largest, Pos, IsHint, LocalIntfs,
                   NumUrgent, LRPosInfo);
   return true;
-}
-
-void MLEvictAdvisor::incrementEvictionCount(const CandidateRegList &Regs,
-                                            const LiveInterval &VirtReg,
-                                            size_t CandidatePosition) const {
-  if (CandidatePosition == CandidateVirtRegPos) {
-    VirtRegEvictionCounts[VirtReg.reg()] += 1;
-  } else {
-    for (MCRegUnit Unit : TRI->regunits(Regs[CandidatePosition].first)) {
-      LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, Unit);
-      const auto &IFIntervals = Q.interferingVRegs(EvictInterferenceCutoff);
-      for (const LiveInterval *Intf : reverse(IFIntervals)) {
-        VirtRegEvictionCounts[Intf->reg()] += 1;
-      }
-    }
-  }
 }
 
 MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
@@ -831,7 +824,17 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   // Update information about how many times the virtual registers being
   // evicted have been evicted so that we can prevent the model from evicting
   // the same ranges continually and eating compile time.
-  incrementEvictionCount(Regs, VirtReg, CandidatePos);
+  if (CandidatePos == CandidateVirtRegPos) {
+    onEviction(VirtReg.reg());
+  } else {
+    for (MCRegUnit Unit : TRI->regunits(Regs[CandidatePos].first)) {
+      LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, Unit);
+      const auto &IFIntervals = Q.interferingVRegs(EvictInterferenceCutoff);
+      for (const LiveInterval *Intf : reverse(IFIntervals)) {
+        onEviction(Intf->reg());
+      }
+    }
+  }
 
   return Regs[CandidatePos].first;
 }
