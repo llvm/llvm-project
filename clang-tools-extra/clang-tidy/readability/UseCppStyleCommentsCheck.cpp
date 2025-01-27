@@ -68,7 +68,7 @@ public:
 
     const StringRef Text = Lexer::getSourceText(
         CharSourceRange::getCharRange(Range), SM, PP.getLangOpts());
-    
+
     if (StartLine == EndLine) {
       const SourceLocation LineBegin =
           SM.translateLineCol(SM.getFileID(CommentStart), StartLine, 1);
@@ -78,7 +78,8 @@ public:
       const StringRef LineContent = Lexer::getSourceText(
           CharSourceRange::getCharRange(LineBegin, LineEnd), SM,
           PP.getLangOpts());
-      const size_t CommentStartOffset = SM.getSpellingColumnNumber(CommentStart) - 1;
+      const size_t CommentStartOffset =
+          SM.getSpellingColumnNumber(CommentStart) - 1;
       const StringRef AfterComment =
           LineContent.drop_front(CommentStartOffset + Text.size());
 
