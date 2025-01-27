@@ -637,7 +637,7 @@ getVectorDeinterleaveFactor(IntrinsicInst *II,
 /// - if a value within the option is nullptr, the value corresponds to all-true
 ///   mask
 /// - return nullopt if mask cannot be deinterleaved
-static std::optional<Value *> getMask(Value *WideMask, unsigned Factor) {
+static Value *getMask(Value *WideMask, unsigned Factor) {
   using namespace llvm::PatternMatch;
   if (auto *IMI = dyn_cast<IntrinsicInst>(WideMask)) {
     SmallVector<Value *, 8> Operands;
@@ -650,8 +650,9 @@ static std::optional<Value *> getMask(Value *WideMask, unsigned Factor) {
     }
   }
   if (match(WideMask, m_AllOnes()))
-    return nullptr;
-  return std::nullopt;
+    return WideMask;
+
+  return nullptr;
 }
 
 bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
@@ -673,7 +674,7 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
       return false;
     // Check mask operand. Handle both all-true and interleaved mask.
     Value *WideMask = VPLoad->getOperand(1);
-    std::optional<Value *> Mask = getMask(WideMask, Factor);
+    Value *Mask = getMask(WideMask, Factor);
     if (!Mask)
       return false;
 
@@ -682,8 +683,8 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
 
     // Since lowerInterleaveLoad expects Shuffles and LoadInst, use special
     // TLI function to emit target-specific interleaved instruction.
-    if (!TLI->lowerInterleavedScalableLoad(VPLoad, *Mask, DI,
-                                           DeinterleaveValues))
+    if (!TLI->lowerDeinterleavedIntrinsicToVPLoad(VPLoad, Mask,
+                                                  DeinterleaveValues))
       return false;
 
   } else {
@@ -725,7 +726,7 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
       return false;
 
     Value *WideMask = VPStore->getOperand(2);
-    std::optional<Value *> Mask = getMask(WideMask, Factor);
+    Value *Mask = getMask(WideMask, Factor);
     if (!Mask)
       return false;
 
@@ -734,8 +735,8 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
 
     // Since lowerInterleavedStore expects Shuffle and StoreInst, use special
     // TLI function to emit target-specific interleaved instruction.
-    if (!TLI->lowerInterleavedScalableStore(VPStore, *Mask, II,
-                                            InterleaveValues))
+    if (!TLI->lowerInterleavedIntrinsicToVPStore(VPStore, Mask,
+                                                 InterleaveValues))
       return false;
   } else {
     auto *SI = cast<StoreInst>(StoredBy);

@@ -22555,15 +22555,20 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
 ///
 /// NOTE: the deinterleave2 intrinsic won't be touched and is expected to be
 /// removed by the caller
-bool RISCVTargetLowering::lowerInterleavedScalableLoad(
-    VPIntrinsic *Load, Value *Mask, IntrinsicInst *DeinterleaveIntrin,
+bool RISCVTargetLowering::lowerDeinterleavedIntrinsicToVPLoad(
+    VPIntrinsic *Load, Value *Mask,
     ArrayRef<Value *> DeInterleaveResults) const {
+  assert(Mask && "Expect a valid mask");
   assert(Load->getIntrinsicID() == Intrinsic::vp_load &&
          "Unexpected intrinsic");
 
   const unsigned Factor = DeInterleaveResults.size();
 
-  auto *WideVTy = cast<VectorType>(Load->getType());
+  auto *WideVTy = dyn_cast<ScalableVectorType>(Load->getType());
+  // TODO: Support fixed vectors.
+  if (!WideVTy)
+    return false;
+
   unsigned WideNumElements = WideVTy->getElementCount().getKnownMinValue();
   assert(WideNumElements % Factor == 0 &&
          "ElementCount of a wide load must be divisible by interleave factor");
@@ -22604,10 +22609,6 @@ bool RISCVTargetLowering::lowerInterleavedScalableLoad(
   Value *PoisonVal = PoisonValue::get(VecTupTy);
   SmallVector<Value *> Operands;
   Operands.append({PoisonVal, Load->getArgOperand(0)});
-
-  if (!Mask)
-    Mask = ConstantVector::getSplat(VTy->getElementCount(),
-                                    ConstantInt::getTrue(Load->getContext()));
 
   Function *VlsegNFunc = Intrinsic::getOrInsertDeclaration(
       Load->getModule(), IntrMaskIds[Factor - 2],
@@ -22653,16 +22654,12 @@ bool RISCVTargetLowering::lowerInterleavedScalableLoad(
 /// into
 /// `<vscale x 8 x i32>`. This will resuling a simple unit stride store rather
 /// than a segment store, which is more expensive in this case.
-static Value *foldInterleaved2OfConstSplats(IntrinsicInst *InterleaveIntrin,
+static Value *foldInterleaved2OfConstSplats(Value *Op0, Value *Op1,
                                             VectorType *VTy,
                                             const TargetLowering *TLI,
                                             Instruction *VPStore) {
-  // We only handle Factor = 2 for now.
-  assert(InterleaveIntrin->arg_size() == 2);
-  auto *SplatVal0 = dyn_cast_or_null<ConstantInt>(
-      getSplatValue(InterleaveIntrin->getArgOperand(0)));
-  auto *SplatVal1 = dyn_cast_or_null<ConstantInt>(
-      getSplatValue(InterleaveIntrin->getArgOperand(1)));
+  auto *SplatVal0 = dyn_cast_or_null<ConstantInt>(getSplatValue(Op0));
+  auto *SplatVal1 = dyn_cast_or_null<ConstantInt>(getSplatValue(Op1));
   if (!SplatVal0 || !SplatVal1)
     return nullptr;
 
@@ -22711,15 +22708,19 @@ static Value *foldInterleaved2OfConstSplats(IntrinsicInst *InterleaveIntrin,
 ///                               <vscale x 32 x i8> %load2, ptr %ptr,
 ///                               %mask,
 ///                               i64 %rvl)
-bool RISCVTargetLowering::lowerInterleavedScalableStore(
-    VPIntrinsic *Store, Value *Mask, IntrinsicInst *InterleaveIntrin,
+bool RISCVTargetLowering::lowerInterleavedIntrinsicToVPStore(
+    VPIntrinsic *Store, Value *Mask,
     ArrayRef<Value *> InterleaveOperands) const {
+  assert(Mask && "Expect a valid mask");
   assert(Store->getIntrinsicID() == Intrinsic::vp_store &&
          "Unexpected intrinsic");
 
   const unsigned Factor = InterleaveOperands.size();
 
-  VectorType *VTy = cast<VectorType>(InterleaveOperands[0]->getType());
+  auto *VTy = dyn_cast<ScalableVectorType>(InterleaveOperands[0]->getType());
+  // TODO: Support fixed vectors.
+  if (!VTy)
+    return false;
 
   // FIXME: Should pass alignment attribute from pointer, but vectorizer needs
   // to emit it first.
@@ -22731,9 +22732,10 @@ bool RISCVTargetLowering::lowerInterleavedScalableStore(
     return false;
 
   if (Factor == 2)
-    if (Value *BC =
-            foldInterleaved2OfConstSplats(InterleaveIntrin, VTy, this, Store)) {
-      InterleaveIntrin->replaceAllUsesWith(BC);
+    if (Value *BC = foldInterleaved2OfConstSplats(
+            InterleaveOperands[0], InterleaveOperands[1], VTy, this, Store)) {
+      // Store is guranteed to be the only user of the interleaved intrinsic.
+      Store->getOperand(0)->replaceAllUsesWith(BC);
       return true;
     }
 
@@ -22769,10 +22771,6 @@ bool RISCVTargetLowering::lowerInterleavedScalableStore(
   SmallVector<Value *, 5> Operands;
   Operands.push_back(StoredVal);
   Operands.push_back(Store->getArgOperand(1));
-
-  if (!Mask)
-    Mask = ConstantVector::getSplat(VTy->getElementCount(),
-                                    ConstantInt::getTrue(Store->getContext()));
 
   Function *VssegNFunc = Intrinsic::getOrInsertDeclaration(
       Store->getModule(), IntrMaskIds[Factor - 2],
