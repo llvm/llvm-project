@@ -2538,6 +2538,8 @@ def HasXF32Insts : Predicate<"Subtarget->hasXF32Insts()">,
 def HasAshrPkInsts : Predicate<"Subtarget->hasAshrPkInsts()">,
   AssemblerPredicate<(all_of FeatureAshrPkInsts)>;
 
+def IsWholeWaveFunction : Predicate<"Subtarget->isWholeWaveFunction()">;
+
 // Include AMDGPU TD files
 include "SISchedule.td"
 include "GCNProcessors.td"

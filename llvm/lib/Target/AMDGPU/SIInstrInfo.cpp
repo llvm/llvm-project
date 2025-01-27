@@ -2509,6 +2509,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64));
     break;
   }
+  case AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN:
   case AMDGPU::SI_RETURN: {
     const MachineFunction *MF = MBB.getParent();
     const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
@@ -5771,6 +5772,16 @@ void SIInstrInfo::restoreExec(MachineFunction &MF, MachineBasicBlock &MBB,
       BuildMI(MBB, MBBI, DL, get(ExecMov), Exec).addReg(Reg, RegState::Kill);
   if (Indexes)
     Indexes->insertMachineInstrInMaps(*ExecRestoreMI);
+}
+
+MachineInstr *
+SIInstrInfo::getWholeWaveFunctionSetup(MachineBasicBlock &MBB) const {
+  assert(ST.isWholeWaveFunction() && "Not a whole wave func");
+  for (MachineInstr &MI : MBB)
+    if (MI.getOpcode() == AMDGPU::SI_SETUP_WHOLE_WAVE_FUNC)
+      return &MI;
+
+  llvm_unreachable("Couldn't find instruction. Wrong MBB?");
 }
 
 static const TargetRegisterClass *
