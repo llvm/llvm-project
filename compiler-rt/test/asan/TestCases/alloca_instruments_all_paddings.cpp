@@ -5,7 +5,6 @@
 // MSVC does not support asan-instrament-dynamic-allocas yet
 // UNSUPPORTED: msvc
 
-
 #include "sanitizer/asan_interface.h"
 #include <assert.h>
 #include <stdint.h>
