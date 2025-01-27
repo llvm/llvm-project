@@ -39,6 +39,9 @@ class ModuleLinker {
     return cast<LinkableModuleOpInterface>(src.get());
   }
 
+  bool shouldOverrideFromSrc() { return flags & Linker::OverrideFromSrc; }
+  bool shouldLinkOnlyNeeded() { return flags & Linker::LinkOnlyNeeded; }
+
   DenseMap<StringRef, std::pair<ComdatSelectionKind, LinkFrom>> comdatsChosen;
 
   bool getComdatResult(StringRef srcSymbol,
@@ -59,6 +62,32 @@ class ModuleLinker {
 
   bool linkIfNeeded(GlobalValueLinkageOpInterface gv,
                     std::vector<Operation *> &gvToClone);
+
+  /// Given a global in the source module, return the global in the
+  /// destination module that is being linked to, if any.
+  GlobalValueLinkageOpInterface
+  getLinkedToGlobal(GlobalValueLinkageOpInterface gv) {
+    auto dst = mover.getComposite();
+    // If the source has no name it can't link.  If it has local linkage,
+    // there is no name match-up going on.
+    if (gv.hasLocalLinkage())
+      return nullptr;
+
+    // Otherwise see if we have a matching symbol in the destination module.
+    SymbolTable dstSymbolTable(dst.getOperation());
+    auto dstGlobalValue = dstSymbolTable.lookup<GlobalValueLinkageOpInterface>(
+        gv.getLinkedName());
+    if (!dstGlobalValue)
+      return nullptr;
+
+    // If we found a global with the same name in the dest module, but it has
+    // internal linkage, we are really not doing any linkage here.
+    if (dstGlobalValue.hasLocalLinkage())
+      return nullptr;
+
+    // Otherwise, we do in fact link to the destination global.
+    return dstGlobalValue;
+  }
 
 public:
   ModuleLinker(IRMover &mover, OwningOpRef<Operation *> src, unsigned flags,
@@ -150,6 +179,25 @@ void ModuleLinker::dropReplacedComdat(
 
 bool ModuleLinker::linkIfNeeded(GlobalValueLinkageOpInterface gv,
                                 std::vector<Operation *> &gvToClone) {
+
+  GlobalValueLinkageOpInterface dgv = getLinkedToGlobal(gv);
+
+  if (shouldLinkOnlyNeeded()) {
+    // Always import variables with appending linkage.
+    if (!gv.hasAppendingLinkage()) {
+      // Don't import globals unless they are referenced by the destination
+      // module.
+      if (!dgv)
+        return false;
+      // Don't import globals that are already defined in the destination module
+      if (!dgv.isDeclarationForLinkage())
+        return false;
+    }
+  }
+
+  // TBD: Implement the rest of the function
+
+  valuesToLink.insert(gv.getOperation());
   return false;
 }
 
@@ -208,11 +256,12 @@ LogicalResult ModuleLinker::run() {
 
   if (internalizeCallback) {
     for (auto gv : valuesToLink) {
-      internalize.insert(cast<SymbolOpInterface>(gv).getName());
+      auto gvl = cast<GlobalValueLinkageOpInterface>(gv);
+      internalize.insert(gvl.getLinkedName());
     }
   }
 
-  // TODO deal with errors
+  // TODO integrate Mover
 
   if (internalizeCallback) {
     internalizeCallback(dst, internalize);
