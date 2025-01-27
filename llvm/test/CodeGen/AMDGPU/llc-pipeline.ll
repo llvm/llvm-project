@@ -86,6 +86,7 @@
 ; GCN-O0-NEXT:        SI annotate control flow
 ; GCN-O0-NEXT:        Cycle Info Analysis
 ; GCN-O0-NEXT:        Uniformity Analysis
+; GCN-O0-NEXT:        AMDGPU Annotate Varying Branch Weights
 ; GCN-O0-NEXT:        AMDGPU Rewrite Undef for PHI
 ; GCN-O0-NEXT:        LCSSA Verifier
 ; GCN-O0-NEXT:        Loop-Closed SSA Form Pass
@@ -282,6 +283,7 @@
 ; GCN-O1-NEXT:        SI annotate control flow
 ; GCN-O1-NEXT:        Cycle Info Analysis
 ; GCN-O1-NEXT:        Uniformity Analysis
+; GCN-O1-NEXT:        AMDGPU Annotate Varying Branch Weights
 ; GCN-O1-NEXT:        AMDGPU Rewrite Undef for PHI
 ; GCN-O1-NEXT:        LCSSA Verifier
 ; GCN-O1-NEXT:        Loop-Closed SSA Form Pass
@@ -586,6 +588,7 @@
 ; GCN-O1-OPTS-NEXT:        SI annotate control flow
 ; GCN-O1-OPTS-NEXT:        Cycle Info Analysis
 ; GCN-O1-OPTS-NEXT:        Uniformity Analysis
+; GCN-O1-OPTS-NEXT:        AMDGPU Annotate Varying Branch Weights
 ; GCN-O1-OPTS-NEXT:        AMDGPU Rewrite Undef for PHI
 ; GCN-O1-OPTS-NEXT:        LCSSA Verifier
 ; GCN-O1-OPTS-NEXT:        Loop-Closed SSA Form Pass
@@ -902,6 +905,7 @@
 ; GCN-O2-NEXT:        SI annotate control flow
 ; GCN-O2-NEXT:        Cycle Info Analysis
 ; GCN-O2-NEXT:        Uniformity Analysis
+; GCN-O2-NEXT:        AMDGPU Annotate Varying Branch Weights
 ; GCN-O2-NEXT:        AMDGPU Rewrite Undef for PHI
 ; GCN-O2-NEXT:        LCSSA Verifier
 ; GCN-O2-NEXT:        Loop-Closed SSA Form Pass
@@ -1233,6 +1237,7 @@
 ; GCN-O3-NEXT:        SI annotate control flow
 ; GCN-O3-NEXT:        Cycle Info Analysis
 ; GCN-O3-NEXT:        Uniformity Analysis
+; GCN-O3-NEXT:        AMDGPU Annotate Varying Branch Weights
 ; GCN-O3-NEXT:        AMDGPU Rewrite Undef for PHI
 ; GCN-O3-NEXT:        LCSSA Verifier
 ; GCN-O3-NEXT:        Loop-Closed SSA Form Pass

@@ -390,6 +390,10 @@ FunctionPass *createAMDGPURewriteUndefForPHILegacyPass();
 void initializeAMDGPURewriteUndefForPHILegacyPass(PassRegistry &);
 extern char &AMDGPURewriteUndefForPHILegacyPassID;
 
+FunctionPass *createAMDGPUAnnotateVaryingBranchWeightsLegacyPass();
+void initializeAMDGPUAnnotateVaryingBranchWeightsLegacyPass(PassRegistry &);
+extern char &AMDGPUAnnotateVaryingBranchWeightsLegacyPassID;
+
 class AMDGPURewriteUndefForPHIPass
     : public PassInfoMixin<AMDGPURewriteUndefForPHIPass> {
 public:
@@ -404,6 +408,17 @@ private:
 
 public:
   SIAnnotateControlFlowPass(const AMDGPUTargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+class AMDGPUAnnotateVaryingBranchWeightsPass
+    : public PassInfoMixin<AMDGPUAnnotateVaryingBranchWeightsPass> {
+private:
+  const AMDGPUTargetMachine &TM;
+
+public:
+  AMDGPUAnnotateVaryingBranchWeightsPass(const AMDGPUTargetMachine &TM)
+      : TM(TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
