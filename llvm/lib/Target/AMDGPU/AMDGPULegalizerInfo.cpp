@@ -2758,16 +2758,12 @@ bool AMDGPULegalizerInfo::legalizeExtractSubvector(
     // Extract 32-bit registers at a time.
     LLT NewSrcTy =
         UseScalar ? S32 : LLT::fixed_vector(SrcTy.getNumElements() / 2, S32);
-    auto Bitcasted = B.buildBitcast(NewSrcTy, Src).getReg(0);
     LLT NewDstTy = LLT::fixed_vector(DstTy.getNumElements() / 2, S32);
+    auto Bitcasted = B.buildBitcast(NewSrcTy, Src);
 
-    SmallVector<Register, 8> Subvectors;
-    for (unsigned i = Start / 2, e = (Start + Count) / 2; i != e; ++i) {
-      auto Subvec = B.buildExtractVectorElementConstant(S32, Bitcasted, i);
-      Subvectors.push_back(Subvec.getReg(0));
-    }
-
-    auto BuildVec = B.buildBuildVector(NewDstTy, Subvectors);
+    auto BuildVec =
+        UseScalar ? Bitcasted
+                  : buildExtractSubvector(B, Bitcasted, NewDstTy, Start / 2);
     B.buildBitcast(Dst, BuildVec.getReg(0));
     MI.eraseFromParent();
     return true;

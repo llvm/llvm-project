@@ -388,13 +388,16 @@ bool CombinerHelper::matchCombineShuffleExtract(MachineInstr &MI, int64_t &Idx) 
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR &&
          "Invalid instruction");
   auto &Shuffle = cast<GShuffleVector>(MI);
-  const auto &TLI = getTargetLowering();
   
   auto SrcVec1 = Shuffle.getSrc1Reg();
-  auto SrcVec2 = Shuffle.getSrc2Reg();
+  int SrcVec2 = Shuffle.getSrc2Reg();
   auto Mask = Shuffle.getMask();
 
   int Width = MRI.getType(SrcVec1).getNumElements();
+  int Width2 = MRI.getType(SrcVec2).getNumElements();
+
+  if (!llvm::isPowerOf2_32(Width))
+    return false;
 
   // Check if all elements are extracted from the same vector, or within single
   // vector.
@@ -403,6 +406,13 @@ bool CombinerHelper::matchCombineShuffleExtract(MachineInstr &MI, int64_t &Idx) 
   if (MaxValue >= Width && MinValue < Width) {
     return false;
   }
+
+  // Check that the extractee length is power of 2.
+  if ((MaxValue < Width && !llvm::isPowerOf2_32(Width)) ||
+      (MinValue >= Width && !llvm::isPowerOf2_32(Width2))) {
+    return false;
+  }
+
   // Check if the extractee's order is kept:
   if (!std::is_sorted(Mask.begin(), Mask.end())) {
     return false;
