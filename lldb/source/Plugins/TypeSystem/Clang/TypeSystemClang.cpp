@@ -7710,7 +7710,7 @@ TypeSystemClang::CreateParameterDeclarations(
   assert(parameter_names.empty() ||
          parameter_names.size() == prototype.getNumParams());
 
-  llvm::SmallVector<clang::ParmVarDecl *, 12> params;
+  llvm::SmallVector<clang::ParmVarDecl *> params;
   for (unsigned param_index = 0; param_index < prototype.getNumParams();
        ++param_index) {
     llvm::StringRef name =
