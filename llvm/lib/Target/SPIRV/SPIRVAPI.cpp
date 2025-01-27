@@ -47,12 +47,22 @@ static cl::opt<char> SpirvOptLevel("spirv-O", cl::Hidden, cl::Prefix,
 static cl::opt<std::string> SpirvTargetTriple("spirv-mtriple", cl::Hidden,
                                               cl::init(""));
 
+std::once_flag InitOnceOpts;
 // Utility to accept options in a command line style.
 void parseSPIRVCommandLineOptions(const std::vector<std::string> &Options,
                                   raw_ostream *Errs) {
   static constexpr const char *Origin = "SPIRVTranslateModule";
+  // Initialize command line parser dependencies just once and in a
+  // thread-safe manner.
+  std::call_once(InitOnceOpts, []() {
+    std::vector<const char *> Argv(1, Origin);
+    cl::ParseCommandLineOptions(Argv.size(), Argv.data(), Origin,
+                                &llvm::nulls());
+  });
+  cl::ResetAllOptionOccurrences();
   if (!Options.empty()) {
     std::vector<const char *> Argv(1, Origin);
+    // Parse options.
     for (const auto &Arg : Options)
       Argv.push_back(Arg.c_str());
     cl::ParseCommandLineOptions(Argv.size(), Argv.data(), Origin, Errs);

@@ -92,18 +92,29 @@ TEST_F(SPIRVAPITest, checkTranslateOk) {
 }
 
 TEST_F(SPIRVAPITest, checkTranslateError) {
-  std::string Result, Error;
-  bool Status = toSpirv(OkAssembly, Result, Error, {},
-                        {"-mtriple=spirv32-unknown-unknown"});
-  EXPECT_FALSE(Status);
-  EXPECT_TRUE(Result.empty());
-  EXPECT_THAT(Error,
-              StartsWith("SPIRVTranslateModule: Unknown command line argument "
-                         "'-mtriple=spirv32-unknown-unknown'"));
-  Status = toSpirv(OkAssembly, Result, Error, {}, {"--spirv-O 5"});
-  EXPECT_FALSE(Status);
-  EXPECT_TRUE(Result.empty());
-  EXPECT_EQ(Error, "Invalid optimization level!");
+  {
+    std::string Result, Error;
+    bool Status = toSpirv(OkAssembly, Result, Error, {},
+                          {"-mtriple=spirv32-unknown-unknown"});
+    EXPECT_FALSE(Status);
+    EXPECT_TRUE(Result.empty());
+    EXPECT_THAT(
+        Error, StartsWith("SPIRVTranslateModule: Unknown command line argument "
+                          "'-mtriple=spirv32-unknown-unknown'"));
+  }
+  {
+    std::string Result, Error;
+    bool Status = toSpirv(OkAssembly, Result, Error, {}, {"--spirv-O 5"});
+    EXPECT_FALSE(Status);
+    EXPECT_TRUE(Result.empty());
+    EXPECT_EQ(Error, "Invalid optimization level!");
+  }
+  {
+    std::string Result, Error;
+    bool Status = toSpirv(OkAssembly, Result, Error, {}, {});
+    EXPECT_TRUE(Status && Error.empty() && !Result.empty());
+    EXPECT_EQ(identify_magic(Result), file_magic::spirv_object);
+  }
 }
 
 TEST_F(SPIRVAPITest, checkTranslateSupportExtensionByOpts) {
