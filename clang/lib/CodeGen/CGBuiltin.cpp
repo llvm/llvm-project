@@ -1246,10 +1246,10 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
   //
   // 1) 'ptr->array':
   //
-  //    size_t count = (size_t) ptr->count;
+  //    count = ptr->count;
   //
-  //    size_t flexible_array_member_base_size = sizeof (*ptr->array);
-  //    size_t flexible_array_member_size =
+  //    flexible_array_member_base_size = sizeof (*ptr->array);
+  //    flexible_array_member_size =
   //            count * flexible_array_member_base_size;
   //
   //    if (flexible_array_member_size < 0)
@@ -1258,14 +1258,14 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
   //
   // 2) '&ptr->array[idx]':
   //
-  //    size_t count = (size_t) ptr->count;
-  //    size_t index = (size_t) idx;
+  //    count = ptr->count;
+  //    index = idx;
   //
-  //    size_t flexible_array_member_base_size = sizeof (*ptr->array);
-  //    size_t flexible_array_member_size =
+  //    flexible_array_member_base_size = sizeof (*ptr->array);
+  //    flexible_array_member_size =
   //            count * flexible_array_member_base_size;
   //
-  //    size_t index_size = index * flexible_array_member_base_size;
+  //    index_size = index * flexible_array_member_base_size;
   //
   //    if (flexible_array_member_size < 0 || index < 0)
   //        return 0;
@@ -1273,15 +1273,15 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
   //
   // 3) '&ptr->field':
   //
-  //    size_t count = (size_t) ptr->count;
-  //    size_t sizeof_struct = sizeof (struct s);
+  //    count = ptr->count;
+  //    sizeof_struct = sizeof (struct s);
   //
-  //    size_t flexible_array_member_base_size = sizeof (*ptr->array);
-  //    size_t flexible_array_member_size =
+  //    flexible_array_member_base_size = sizeof (*ptr->array);
+  //    flexible_array_member_size =
   //            count * flexible_array_member_base_size;
   //
-  //    size_t field_offset = offsetof (struct s, field);
-  //    size_t offset_diff = sizeof_struct - field_offset;
+  //    field_offset = offsetof (struct s, field);
+  //    offset_diff = sizeof_struct - field_offset;
   //
   //    if (flexible_array_member_size < 0)
   //        return 0;
@@ -1289,19 +1289,19 @@ CodeGenFunction::emitCountedByMemberSize(const Expr *E, llvm::Value *EmittedE,
   //
   // 4) '&ptr->field_array[idx]':
   //
-  //    size_t count = (size_t) ptr->count;
-  //    size_t index = (size_t) idx;
-  //    size_t sizeof_struct = sizeof (struct s);
+  //    count = ptr->count;
+  //    index = idx;
+  //    sizeof_struct = sizeof (struct s);
   //
-  //    size_t flexible_array_member_base_size = sizeof (*ptr->array);
-  //    size_t flexible_array_member_size =
+  //    flexible_array_member_base_size = sizeof (*ptr->array);
+  //    flexible_array_member_size =
   //            count * flexible_array_member_base_size;
   //
-  //    size_t field_base_size = sizeof (*ptr->field_array);
-  //    size_t field_offset = offsetof (struct s, field)
+  //    field_base_size = sizeof (*ptr->field_array);
+  //    field_offset = offsetof (struct s, field)
   //    field_offset += index * field_base_size;
   //
-  //    size_t offset_diff = sizeof_struct - field_offset;
+  //    offset_diff = sizeof_struct - field_offset;
   //
   //    if (flexible_array_member_size < 0 || index < 0)
   //        return 0;
