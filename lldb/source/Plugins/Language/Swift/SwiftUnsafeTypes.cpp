@@ -546,8 +546,7 @@ lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::
 
   m_unsafe_ptr = ::SwiftUnsafeType::Create(*valobj_sp.get());
 
-  lldb_assert(m_unsafe_ptr != nullptr, "Could not create Swift Unsafe Type",
-              __FUNCTION__, __FILE__, __LINE__);
+  lldbassert(m_unsafe_ptr != nullptr && "Could not create Swift Unsafe Type");
 
   if (valobj_sp)
     Update();
