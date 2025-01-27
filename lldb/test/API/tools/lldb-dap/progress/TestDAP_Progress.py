@@ -41,8 +41,13 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
         for event in self.dap_server.progress_events:
             event_type = event["event"]
             if "progressStart" in event_type:
+                title = event["body"]["title"]
+                self.assertIn("Progress tester", title)
                 start_found = True
             if "progressUpdate" in event_type:
+                message = event["body"]["message"]
+                print(f"Progress update: {message}")
+                self.assertNotIn("Progres tester", message)
                 update_found = True
 
         self.assertTrue(start_found)
