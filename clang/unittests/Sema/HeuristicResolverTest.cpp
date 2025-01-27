@@ -385,6 +385,27 @@ TEST(HeuristicResolver, DeclRefExpr_RespectScope) {
       dependentScopeDeclRefExpr(hasDependentName("getPointer")).bind("input"));
 }
 
+TEST(HeuristicResolver, DeclRefExpr_Nested) {
+  std::string Code = R"cpp(
+    struct S {
+      static int Waldo;
+    };
+    template <typename T>
+    struct Meta {
+      using Type = S;
+    };
+    template <typename T>
+    void foo() {
+      Meta<T>::Type::Waldo;
+    }
+  )cpp";
+  // Test resolution of "Waldo" in "Meta<T>::Type::Waldo".
+  expectResolution(
+      Code, &HeuristicResolver::resolveDeclRefExpr,
+      dependentScopeDeclRefExpr(hasDependentName("Waldo")).bind("input"),
+      varDecl(hasName("Waldo")).bind("output"));
+}
+
 TEST(HeuristicResolver, DependentNameType) {
   std::string Code = R"cpp(
     template <typename>
