@@ -48464,7 +48464,7 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
                            TargetLowering::DAGCombinerInfo &DCI,
                            const X86Subtarget &Subtarget) {
   SDLoc DL(N);
-
+  EVT VT = N->getValueType(0);
   SDValue FalseOp = N->getOperand(0);
   SDValue TrueOp = N->getOperand(1);
   X86::CondCode CC = (X86::CondCode)N->getConstantOperandVal(2);
@@ -48483,7 +48483,7 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
         !Subtarget.canUseCMOV() || hasFPCMov(CC)) {
       SDValue Ops[] = {FalseOp, TrueOp, DAG.getTargetConstant(CC, DL, MVT::i8),
                        Flags};
-      return DAG.getNode(X86ISD::CMOV, DL, N->getValueType(0), Ops);
+      return DAG.getNode(X86ISD::CMOV, DL, VT, Ops);
     }
   }
 
@@ -48530,9 +48530,9 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
 
       // Optimize cases that will turn into an LEA instruction.  This requires
       // an i32 or i64 and an efficient multiplier (1, 2, 3, 4, 5, 8, 9).
-      if (N->getValueType(0) == MVT::i32 || N->getValueType(0) == MVT::i64) {
+      if (VT == MVT::i32 || VT == MVT::i64) {
         APInt Diff = TrueC->getAPIntValue() - FalseC->getAPIntValue();
-        assert(Diff.getBitWidth() == N->getValueType(0).getSizeInBits() &&
+        assert(Diff.getBitWidth() == VT.getSizeInBits() &&
                "Implicit constant truncation");
 
         bool isFastMultiplier = false;
@@ -48600,11 +48600,10 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
         std::swap(TrueOp, FalseOp);
       }
 
-      if (CC == X86::COND_E &&
-          CmpAgainst == dyn_cast<ConstantSDNode>(TrueOp)) {
+      if (CC == X86::COND_E && CmpAgainst == dyn_cast<ConstantSDNode>(TrueOp)) {
         SDValue Ops[] = {FalseOp, Cond.getOperand(0),
                          DAG.getTargetConstant(CC, DL, MVT::i8), Cond};
-        return DAG.getNode(X86ISD::CMOV, DL, N->getValueType(0), Ops);
+        return DAG.getNode(X86ISD::CMOV, DL, VT, Ops);
       }
     }
   }
@@ -48624,14 +48623,13 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
     auto *Sub1C = dyn_cast<ConstantSDNode>(Cond.getOperand(1));
     if (Cond0 == TrueOp && Sub1C && Sub1C->getZExtValue() == 2) {
       EVT CondVT = Cond->getValueType(0);
-      EVT OuterVT = N->getValueType(0);
       // Subtract 1 and generate a carry.
       SDValue NewSub =
           DAG.getNode(X86ISD::SUB, DL, Cond->getVTList(), Cond.getOperand(0),
                       DAG.getConstant(1, DL, CondVT));
       SDValue EFLAGS(NewSub.getNode(), 1);
-      return DAG.getNode(X86ISD::ADC, DL, DAG.getVTList(OuterVT, MVT::i32),
-                         TrueOp, DAG.getConstant(0, DL, OuterVT), EFLAGS);
+      return DAG.getNode(X86ISD::ADC, DL, DAG.getVTList(VT, MVT::i32), TrueOp,
+                         DAG.getConstant(0, DL, VT), EFLAGS);
     }
   }
 
@@ -48665,10 +48663,10 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
 
       SDValue LOps[] = {FalseOp, TrueOp,
                         DAG.getTargetConstant(CC0, DL, MVT::i8), Flags};
-      SDValue LCMOV = DAG.getNode(X86ISD::CMOV, DL, N->getValueType(0), LOps);
+      SDValue LCMOV = DAG.getNode(X86ISD::CMOV, DL, VT, LOps);
       SDValue Ops[] = {LCMOV, TrueOp, DAG.getTargetConstant(CC1, DL, MVT::i8),
                        Flags};
-      SDValue CMOV = DAG.getNode(X86ISD::CMOV, DL, N->getValueType(0), Ops);
+      SDValue CMOV = DAG.getNode(X86ISD::CMOV, DL, VT, Ops);
       return CMOV;
     }
   }
@@ -48696,7 +48694,6 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
         (Add.getOperand(0).getOpcode() == ISD::CTTZ_ZERO_UNDEF ||
          Add.getOperand(0).getOpcode() == ISD::CTTZ) &&
         Add.getOperand(0).getOperand(0) == Cond.getOperand(0)) {
-      EVT VT = N->getValueType(0);
       // This should constant fold.
       SDValue Diff = DAG.getNode(ISD::SUB, DL, VT, Const, Add.getOperand(1));
       SDValue CMov =
