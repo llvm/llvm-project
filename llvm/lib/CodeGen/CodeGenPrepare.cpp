@@ -2935,13 +2935,13 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
 
   // Make sure there are no instructions between the first instruction
   // and return.
-  const Instruction *BI = BB->getFirstNonPHI();
+  BasicBlock::const_iterator BI = BB->getFirstNonPHIIt();
   // Skip over debug and the bitcast.
-  while (isa<DbgInfoIntrinsic>(BI) || BI == BCI || BI == EVI ||
-         isa<PseudoProbeInst>(BI) || isLifetimeEndOrBitCastFor(BI) ||
-         isFakeUse(BI))
-    BI = BI->getNextNode();
-  if (BI != RetI)
+  while (isa<DbgInfoIntrinsic>(BI) || &*BI == BCI || &*BI == EVI ||
+         isa<PseudoProbeInst>(BI) || isLifetimeEndOrBitCastFor(&*BI) ||
+         isFakeUse(&*BI))
+    BI = std::next(BI);
+  if (&*BI != RetI)
     return false;
 
   /// Only dup the ReturnInst if the CallInst is likely to be emitted as a tail
@@ -3265,8 +3265,8 @@ class TypePromotionTransaction {
     /// Either an instruction:
     /// - Is the first in a basic block: BB is used.
     /// - Has a previous instruction: PrevInst is used.
-    union {
-      Instruction *PrevInst;
+    struct {
+      BasicBlock::iterator PrevInst;
       BasicBlock *BB;
     } Point;
     std::optional<DbgRecord::self_iterator> BeforeDbgRecord = std::nullopt;
@@ -3286,7 +3286,7 @@ class TypePromotionTransaction {
         BeforeDbgRecord = Inst->getDbgReinsertionPosition();
 
       if (HasPrevInstruction) {
-        Point.PrevInst = &*std::prev(Inst->getIterator());
+        Point.PrevInst = std::prev(Inst->getIterator());
       } else {
         Point.BB = BB;
       }
@@ -3297,7 +3297,7 @@ class TypePromotionTransaction {
       if (HasPrevInstruction) {
         if (Inst->getParent())
           Inst->removeFromParent();
-        Inst->insertAfter(&*Point.PrevInst);
+        Inst->insertAfter(Point.PrevInst);
       } else {
         BasicBlock::iterator Position = Point.BB->getFirstInsertionPt();
         if (Inst->getParent())
@@ -3317,7 +3317,7 @@ class TypePromotionTransaction {
 
   public:
     /// Move \p Inst before \p Before.
-    InstructionMoveBefore(Instruction *Inst, Instruction *Before)
+    InstructionMoveBefore(Instruction *Inst, BasicBlock::iterator Before)
         : TypePromotionAction(Inst), Position(Inst) {
       LLVM_DEBUG(dbgs() << "Do: move: " << *Inst << "\nbefore: " << *Before
                         << "\n");
