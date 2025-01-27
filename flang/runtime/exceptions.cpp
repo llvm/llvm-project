@@ -108,7 +108,7 @@ bool RTNAME(GetUnderflowMode)(void) {
   return _MM_GET_FLUSH_ZERO_MODE() == _MM_FLUSH_ZERO_OFF;
 #elif defined(_FPU_GETCW)
   uint32_t fpcr;
-  __asm__ __volatile__("mrs    %w0, fpcr" : "=r"(fpcr));
+  _FPU_GETCW(fpcr);
   return (fpcr & _FPU_FPCR_FZ_MASK_) != _FPU_FPCR_FZ_MASK_;
 #else
   return false;
@@ -119,13 +119,13 @@ void RTNAME(SetUnderflowMode)(bool flag) {
   _MM_SET_FLUSH_ZERO_MODE(flag ? _MM_FLUSH_ZERO_OFF : _MM_FLUSH_ZERO_ON);
 #elif defined(_FPU_GETCW)
   uint32_t fpcr;
-  __asm__ __volatile__("mrs    %w0, fpcr" : "=r"(fpcr));
+  _FPU_GETCW(fpcr);
   if (flag) {
     fpcr &= ~_FPU_FPCR_FZ_MASK_;
   } else {
     fpcr |= _FPU_FPCR_FZ_MASK_;
   }
-  __asm__ __volatile__("msr    fpcr, %w0" : : "r"(fpcr));
+  _FPU_SETCW(fpcr);
 #endif
 }
 
