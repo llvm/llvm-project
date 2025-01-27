@@ -148,7 +148,7 @@ class VPRecipeBuilder {
   /// but the top-level call does not.
   bool getScaledReductions(
       Instruction *PHI, Instruction *RdxExitInstr, VFRange &Range,
-      SmallVector<std::pair<PartialReductionChain, unsigned>> &Chains);
+      SmallVectorImpl<std::pair<PartialReductionChain, unsigned>> &Chains);
 
 public:
   VPRecipeBuilder(VPlan &Plan, Loop *OrigLoop, const TargetLibraryInfo *TLI,

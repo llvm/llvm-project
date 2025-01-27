@@ -8719,7 +8719,7 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
 
 bool VPRecipeBuilder::getScaledReductions(
     Instruction *PHI, Instruction *RdxExitInstr, VFRange &Range,
-    SmallVector<std::pair<PartialReductionChain, unsigned>> &Chains) {
+    SmallVectorImpl<std::pair<PartialReductionChain, unsigned>> &Chains) {
 
   if (!CM.TheLoop->contains(RdxExitInstr))
     return false;
