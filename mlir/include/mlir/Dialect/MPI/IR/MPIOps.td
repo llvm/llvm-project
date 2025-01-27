@@ -58,7 +58,7 @@ def MPI_CommRankOp : MPI_Op<"comm_rank", []> {
     I32 : $rank
   );
 
-  let assemblyFormat = "attr-dict `:` type(results)";
+  let assemblyFormat = "(`(` $comm `)`)? attr-dict `:` type(results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -82,7 +82,7 @@ def MPI_CommSizeOp : MPI_Op<"comm_size", []> {
     I32 : $size
   );
 
-  let assemblyFormat = "attr-dict `:` type(results)";
+  let assemblyFormat = "(`(` $comm `)`)? attr-dict `:` type(results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -109,7 +109,7 @@ def MPI_CommSplit : MPI_Op<"comm_split", []> {
     MPI_Comm : $newcomm
   );
 
-  let assemblyFormat = "`(` $color `,` $key `)` attr-dict `:` type(results)";
+  let assemblyFormat = "`(` $comm `,` $color `,` $key `)` attr-dict `:` type(results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -139,7 +139,7 @@ def MPI_SendOp : MPI_Op<"send", []> {
 
   let results = (outs Optional<MPI_Retval>:$retval);
 
-  let assemblyFormat = "`(` $ref `,` $tag `,` $rank `)` attr-dict `:` "
+  let assemblyFormat = "`(` $ref `,` $tag `,` $rank (`,` $comm)? `)` attr-dict `:` "
                        "type($ref) `,` type($tag) `,` type($rank)"
                        "(`->` type($retval)^)?";
   let hasCanonicalizer = 1;
@@ -173,9 +173,9 @@ def MPI_ISendOp : MPI_Op<"isend", []> {
 
   let results = (outs Optional<MPI_Retval>:$retval, MPI_Request : $req);
 
-  let assemblyFormat = "`(` $ref `,` $tag `,` $rank `)` attr-dict `:` "
-                       "type($ref) `,` type($tag) `,` type($rank)"
-                       "`->` (type($retval) `,` ^)? type($req)";
+  let assemblyFormat = "`(` $ref `,` $tag `,` $rank (`,` $comm)?`)` attr-dict "
+                       "`:` type($ref) `,` type($tag) `,` type($rank) "
+                       "(`,` type($comm))? `->` (type($retval) `,` ^)? type($req)";
   let hasCanonicalizer = 1;
 }
 
@@ -208,9 +208,9 @@ def MPI_RecvOp : MPI_Op<"recv", []> {
 
   let results = (outs Optional<MPI_Retval>:$retval);
 
-  let assemblyFormat = "`(` $ref `,` $tag `,` $rank `)` attr-dict `:` "
-                       "type($ref) `,` type($tag) `,` type($rank)"
-                       "(`->` type($retval)^)?";
+  let assemblyFormat = "`(` $ref `,` $tag `,` $rank (`,` $comm)?`)` attr-dict "
+                       "`:` type($ref) `,` type($tag) `,` type($rank) "
+                       "(`,` type($comm))? (`->` type($retval)^)?";
   let hasCanonicalizer = 1;
 }
 
@@ -242,9 +242,9 @@ def MPI_IRecvOp : MPI_Op<"irecv", []> {
 
   let results = (outs Optional<MPI_Retval>:$retval, MPI_Request : $req);
 
-  let assemblyFormat = "`(` $ref `,` $tag `,` $rank `)` attr-dict `:` "
-                       "type($ref) `,` type($tag) `,` type($rank)"
-                       "`->` (type($retval) `,` ^)? type($req)";
+  let assemblyFormat = "`(` $ref `,` $tag `,` $rank (`,` $comm)?`)` attr-dict "
+                       "`:` type($ref) `,` type($tag) `,` type($rank)"
+                       "(`,` type($comm))? `->` (type($retval) `,` ^)? type($req)";
   let hasCanonicalizer = 1;
 }
 
@@ -276,7 +276,7 @@ def MPI_AllReduceOp : MPI_Op<"allreduce", []> {
 
   let assemblyFormat = "`(` $sendbuf `,` $recvbuf `,` $op (`,` $comm)?`)` "
                        "attr-dict `:` type($sendbuf) `,` type($recvbuf) `,` "
-                       "type($op) (`->` type($retval)^)?";
+                       "type($op) (`,` type($comm))? (`->` type($retval)^)?";
   let hasCanonicalizer = 1;
 }
 
@@ -300,7 +300,7 @@ def MPI_Barrier : MPI_Op<"barrier", []> {
 
   let results = (outs Optional<MPI_Retval>:$retval);
 
-  let assemblyFormat = "attr-dict `:` type($retval)^";
+  let assemblyFormat = "(`(` $comm `)`)? attr-dict `:` type($retval)^";
 }
 
 //===----------------------------------------------------------------------===//
@@ -323,7 +323,7 @@ def MPI_Wait : MPI_Op<"wait", []> {
 
   let results = (outs Optional<MPI_Retval>:$retval);
 
-  let assemblyFormat = "attr-dict `:` type($retval)^";
+  let assemblyFormat = "`(` $req `)` attr-dict `:` type($req) `->` type($retval)^";
 }
 
 //===----------------------------------------------------------------------===//
