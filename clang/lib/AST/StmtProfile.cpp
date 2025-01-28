@@ -2270,13 +2270,13 @@ void StmtProfiler::VisitPackExpansionExpr(const PackExpansionExpr *S) {
 
 void StmtProfiler::VisitSizeOfPackExpr(const SizeOfPackExpr *S) {
   VisitExpr(S);
-  VisitDecl(S->getPack());
   if (S->isPartiallySubstituted()) {
     auto Args = S->getPartialArguments();
     ID.AddInteger(Args.size());
     for (const auto &TA : Args)
       VisitTemplateArgument(TA);
   } else {
+    VisitDecl(S->getPack());
     ID.AddInteger(0);
   }
 }
