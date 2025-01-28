@@ -837,8 +837,8 @@ parseLowerAllowCheckPassOptions(StringRef Params) {
       StringRef IndicesStr;
       StringRef CutoffStr;
 
-      std::tie(IndicesStr, CutoffStr) = ParamName.split('=');
-      //       cutoffs[1,2,3]
+      std::tie(IndicesStr, CutoffStr) = ParamName.split("]=");
+      //       cutoffs[1,2,3
       //                   70000
 
       int cutoff;
@@ -850,8 +850,7 @@ parseLowerAllowCheckPassOptions(StringRef Params) {
                 .str(),
             inconvertibleErrorCode());
 
-      if (!IndicesStr.consume_front("cutoffs[") ||
-          !IndicesStr.consume_back("]") || IndicesStr == "")
+      if (!IndicesStr.consume_front("cutoffs[") || IndicesStr == "")
         return make_error<StringError>(
             formatv("invalid LowerAllowCheck pass index parameter '{0}' "
                     "({1})",
