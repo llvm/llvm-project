@@ -245,7 +245,7 @@ bool PHINode::hasConstantOrUndefValue() const {
 
 LandingPadInst::LandingPadInst(Type *RetTy, unsigned NumReservedValues,
                                const Twine &NameStr,
-                               InsertPosition InsertBefore)
+                               const InsertPosition &InsertBefore)
     : Instruction(RetTy, Instruction::LandingPad, AllocMarker, InsertBefore) {
   init(NumReservedValues, NameStr);
 }
@@ -265,7 +265,7 @@ LandingPadInst::LandingPadInst(const LandingPadInst &LP)
 
 LandingPadInst *LandingPadInst::Create(Type *RetTy, unsigned NumReservedClauses,
                                        const Twine &NameStr,
-                                       InsertPosition InsertBefore) {
+                                       const InsertPosition &InsertBefore) {
   return new LandingPadInst(RetTy, NumReservedClauses, NameStr, InsertBefore);
 }
 
@@ -299,21 +299,21 @@ void LandingPadInst::addClause(Constant *Val) {
 //===----------------------------------------------------------------------===//
 
 CallBase *CallBase::Create(CallBase *CB, ArrayRef<OperandBundleDef> Bundles,
-                           InsertPosition InsertPt) {
+                           const InsertPosition &InsertBefore) {
   switch (CB->getOpcode()) {
   case Instruction::Call:
-    return CallInst::Create(cast<CallInst>(CB), Bundles, InsertPt);
+    return CallInst::Create(cast<CallInst>(CB), Bundles, InsertBefore);
   case Instruction::Invoke:
-    return InvokeInst::Create(cast<InvokeInst>(CB), Bundles, InsertPt);
+    return InvokeInst::Create(cast<InvokeInst>(CB), Bundles, InsertBefore);
   case Instruction::CallBr:
-    return CallBrInst::Create(cast<CallBrInst>(CB), Bundles, InsertPt);
+    return CallBrInst::Create(cast<CallBrInst>(CB), Bundles, InsertBefore);
   default:
     llvm_unreachable("Unknown CallBase sub-class!");
   }
 }
 
 CallBase *CallBase::Create(CallBase *CI, OperandBundleDef OpB,
-                           InsertPosition InsertPt) {
+                           const InsertPosition &InsertBefore) {
   SmallVector<OperandBundleDef, 2> OpDefs;
   for (unsigned i = 0, e = CI->getNumOperandBundles(); i < e; ++i) {
     auto ChildOB = CI->getOperandBundleAt(i);
@@ -321,7 +321,7 @@ CallBase *CallBase::Create(CallBase *CI, OperandBundleDef OpB,
       OpDefs.emplace_back(ChildOB);
   }
   OpDefs.emplace_back(OpB);
-  return CallBase::Create(CI, OpDefs, InsertPt);
+  return CallBase::Create(CI, OpDefs, InsertBefore);
 }
 
 Function *CallBase::getCaller() { return getParent()->getParent(); }
@@ -560,19 +560,19 @@ CallBase::BundleOpInfo &CallBase::getBundleOpInfoForOperand(unsigned OpIdx) {
 }
 
 CallBase *CallBase::addOperandBundle(CallBase *CB, uint32_t ID,
-                                     OperandBundleDef OB,
-                                     InsertPosition InsertPt) {
+                                     const OperandBundleDef &OB,
+                                     const InsertPosition &InsertBefore) {
   if (CB->getOperandBundle(ID))
     return CB;
 
   SmallVector<OperandBundleDef, 1> Bundles;
   CB->getOperandBundlesAsDefs(Bundles);
   Bundles.push_back(OB);
-  return Create(CB, Bundles, InsertPt);
+  return Create(CB, Bundles, InsertBefore);
 }
 
 CallBase *CallBase::removeOperandBundle(CallBase *CB, uint32_t ID,
-                                        InsertPosition InsertPt) {
+                                        const InsertPosition &InsertBefore) {
   SmallVector<OperandBundleDef, 1> Bundles;
   bool CreateNew = false;
 
@@ -585,7 +585,7 @@ CallBase *CallBase::removeOperandBundle(CallBase *CB, uint32_t ID,
     Bundles.emplace_back(Bundle);
   }
 
-  return CreateNew ? Create(CB, Bundles, InsertPt) : CB;
+  return CreateNew ? Create(CB, Bundles, InsertBefore) : CB;
 }
 
 bool CallBase::hasReadingOperandBundles() const {
@@ -719,7 +719,7 @@ void CallInst::init(FunctionType *FTy, Value *Func, const Twine &NameStr) {
 }
 
 CallInst::CallInst(FunctionType *Ty, Value *Func, const Twine &Name,
-                   AllocInfo AllocInfo, InsertPosition InsertBefore)
+                   AllocInfo AllocInfo, const InsertPosition &InsertBefore)
     : CallBase(Ty->getReturnType(), Instruction::Call, AllocInfo,
                InsertBefore) {
   init(Ty, Func, Name);
@@ -739,11 +739,11 @@ CallInst::CallInst(const CallInst &CI, AllocInfo AllocInfo)
 }
 
 CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
-                           InsertPosition InsertPt) {
+                           const InsertPosition &InsertBefore) {
   std::vector<Value *> Args(CI->arg_begin(), CI->arg_end());
 
   auto *NewCI = CallInst::Create(CI->getFunctionType(), CI->getCalledOperand(),
-                                 Args, OpB, CI->getName(), InsertPt);
+                                 Args, OpB, CI->getName(), InsertBefore);
   NewCI->setTailCallKind(CI->getTailCallKind());
   NewCI->setCallingConv(CI->getCallingConv());
   NewCI->SubclassOptionalData = CI->SubclassOptionalData;
@@ -818,12 +818,12 @@ InvokeInst::InvokeInst(const InvokeInst &II, AllocInfo AllocInfo)
 }
 
 InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
-                               InsertPosition InsertPt) {
+                               const InsertPosition &InsertBefore) {
   std::vector<Value *> Args(II->arg_begin(), II->arg_end());
 
   auto *NewII = InvokeInst::Create(
       II->getFunctionType(), II->getCalledOperand(), II->getNormalDest(),
-      II->getUnwindDest(), Args, OpB, II->getName(), InsertPt);
+      II->getUnwindDest(), Args, OpB, II->getName(), InsertBefore);
   NewII->setCallingConv(II->getCallingConv());
   NewII->SubclassOptionalData = II->SubclassOptionalData;
   NewII->setAttributes(II->getAttributes());
@@ -904,12 +904,12 @@ CallBrInst::CallBrInst(const CallBrInst &CBI, AllocInfo AllocInfo)
 }
 
 CallBrInst *CallBrInst::Create(CallBrInst *CBI, ArrayRef<OperandBundleDef> OpB,
-                               InsertPosition InsertPt) {
+                               const InsertPosition &InsertBefore) {
   std::vector<Value *> Args(CBI->arg_begin(), CBI->arg_end());
 
   auto *NewCBI = CallBrInst::Create(
       CBI->getFunctionType(), CBI->getCalledOperand(), CBI->getDefaultDest(),
-      CBI->getIndirectDests(), Args, OpB, CBI->getName(), InsertPt);
+      CBI->getIndirectDests(), Args, OpB, CBI->getName(), InsertBefore);
   NewCBI->setCallingConv(CBI->getCallingConv());
   NewCBI->SubclassOptionalData = CBI->SubclassOptionalData;
   NewCBI->setAttributes(CBI->getAttributes());
@@ -933,7 +933,7 @@ ReturnInst::ReturnInst(const ReturnInst &RI, AllocInfo AllocInfo)
 }
 
 ReturnInst::ReturnInst(LLVMContext &C, Value *retVal, AllocInfo AllocInfo,
-                       InsertPosition InsertBefore)
+                       const InsertPosition &InsertBefore)
     : Instruction(Type::getVoidTy(C), Instruction::Ret, AllocInfo,
                   InsertBefore) {
   if (retVal)
@@ -950,7 +950,7 @@ ResumeInst::ResumeInst(const ResumeInst &RI)
   Op<0>() = RI.Op<0>();
 }
 
-ResumeInst::ResumeInst(Value *Exn, InsertPosition InsertBefore)
+ResumeInst::ResumeInst(Value *Exn, const InsertPosition &InsertBefore)
     : Instruction(Type::getVoidTy(Exn->getContext()), Instruction::Resume,
                   AllocMarker, InsertBefore) {
   Op<0>() = Exn;
@@ -983,7 +983,7 @@ void CleanupReturnInst::init(Value *CleanupPad, BasicBlock *UnwindBB) {
 
 CleanupReturnInst::CleanupReturnInst(Value *CleanupPad, BasicBlock *UnwindBB,
                                      AllocInfo AllocInfo,
-                                     InsertPosition InsertBefore)
+                                     const InsertPosition &InsertBefore)
     : Instruction(Type::getVoidTy(CleanupPad->getContext()),
                   Instruction::CleanupRet, AllocInfo, InsertBefore) {
   init(CleanupPad, UnwindBB);
@@ -1005,7 +1005,7 @@ CatchReturnInst::CatchReturnInst(const CatchReturnInst &CRI)
 }
 
 CatchReturnInst::CatchReturnInst(Value *CatchPad, BasicBlock *BB,
-                                 InsertPosition InsertBefore)
+                                 const InsertPosition &InsertBefore)
     : Instruction(Type::getVoidTy(BB->getContext()), Instruction::CatchRet,
                   AllocMarker, InsertBefore) {
   init(CatchPad, BB);
@@ -1018,7 +1018,7 @@ CatchReturnInst::CatchReturnInst(Value *CatchPad, BasicBlock *BB,
 CatchSwitchInst::CatchSwitchInst(Value *ParentPad, BasicBlock *UnwindDest,
                                  unsigned NumReservedValues,
                                  const Twine &NameStr,
-                                 InsertPosition InsertBefore)
+                                 const InsertPosition &InsertBefore)
     : Instruction(ParentPad->getType(), Instruction::CatchSwitch, AllocMarker,
                   InsertBefore) {
   if (UnwindDest)
@@ -1105,7 +1105,7 @@ FuncletPadInst::FuncletPadInst(const FuncletPadInst &FPI, AllocInfo AllocInfo)
 FuncletPadInst::FuncletPadInst(Instruction::FuncletPadOps Op, Value *ParentPad,
                                ArrayRef<Value *> Args, AllocInfo AllocInfo,
                                const Twine &NameStr,
-                               InsertPosition InsertBefore)
+                               const InsertPosition &InsertBefore)
     : Instruction(ParentPad->getType(), Op, AllocInfo, InsertBefore) {
   init(ParentPad, Args, NameStr);
 }
@@ -1115,7 +1115,7 @@ FuncletPadInst::FuncletPadInst(Instruction::FuncletPadOps Op, Value *ParentPad,
 //===----------------------------------------------------------------------===//
 
 UnreachableInst::UnreachableInst(LLVMContext &Context,
-                                 InsertPosition InsertBefore)
+                                 const InsertPosition &InsertBefore)
     : Instruction(Type::getVoidTy(Context), Instruction::Unreachable,
                   AllocMarker, InsertBefore) {}
 
@@ -1130,7 +1130,7 @@ void BranchInst::AssertOK() {
 }
 
 BranchInst::BranchInst(BasicBlock *IfTrue, AllocInfo AllocInfo,
-                       InsertPosition InsertBefore)
+                       const InsertPosition &InsertBefore)
     : Instruction(Type::getVoidTy(IfTrue->getContext()), Instruction::Br,
                   AllocInfo, InsertBefore) {
   assert(IfTrue && "Branch destination may not be null!");
@@ -1138,7 +1138,7 @@ BranchInst::BranchInst(BasicBlock *IfTrue, AllocInfo AllocInfo,
 }
 
 BranchInst::BranchInst(BasicBlock *IfTrue, BasicBlock *IfFalse, Value *Cond,
-                       AllocInfo AllocInfo, InsertPosition InsertBefore)
+                       AllocInfo AllocInfo, const InsertPosition &InsertBefore)
     : Instruction(Type::getVoidTy(IfTrue->getContext()), Instruction::Br,
                   AllocInfo, InsertBefore) {
   // Assign in order of operand index to make use-list order predictable.
@@ -1202,18 +1202,18 @@ static Align computeAllocaDefaultAlign(Type *Ty, InsertPosition Pos) {
 }
 
 AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, const Twine &Name,
-                       InsertPosition InsertBefore)
+                       const InsertPosition &InsertBefore)
     : AllocaInst(Ty, AddrSpace, /*ArraySize=*/nullptr, Name, InsertBefore) {}
 
 AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
-                       const Twine &Name, InsertPosition InsertBefore)
+                       const Twine &Name, const InsertPosition &InsertBefore)
     : AllocaInst(Ty, AddrSpace, ArraySize,
                  computeAllocaDefaultAlign(Ty, InsertBefore), Name,
                  InsertBefore) {}
 
 AllocaInst::AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
                        Align Align, const Twine &Name,
-                       InsertPosition InsertBefore)
+                       const InsertPosition &InsertBefore)
     : UnaryInstruction(PointerType::get(Ty->getContext(), AddrSpace), Alloca,
                        getAISize(Ty->getContext(), ArraySize), InsertBefore),
       AllocatedType(Ty) {
@@ -1260,23 +1260,23 @@ static Align computeLoadStoreDefaultAlign(Type *Ty, InsertPosition Pos) {
 }
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name,
-                   InsertPosition InsertBef)
-    : LoadInst(Ty, Ptr, Name, /*isVolatile=*/false, InsertBef) {}
+                   const InsertPosition &InsertBefore)
+    : LoadInst(Ty, Ptr, Name, /*isVolatile=*/false, InsertBefore) {}
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
-                   InsertPosition InsertBef)
+                   const InsertPosition &InsertBefore)
     : LoadInst(Ty, Ptr, Name, isVolatile,
-               computeLoadStoreDefaultAlign(Ty, InsertBef), InsertBef) {}
+               computeLoadStoreDefaultAlign(Ty, InsertBefore), InsertBefore) {}
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
-                   Align Align, InsertPosition InsertBef)
+                   Align Align, const InsertPosition &InsertBefore)
     : LoadInst(Ty, Ptr, Name, isVolatile, Align, AtomicOrdering::NotAtomic,
-               SyncScope::System, InsertBef) {}
+               SyncScope::System, InsertBefore) {}
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    Align Align, AtomicOrdering Order, SyncScope::ID SSID,
-                   InsertPosition InsertBef)
-    : UnaryInstruction(Ty, Load, Ptr, InsertBef) {
+                   const InsertPosition &InsertBefore)
+    : UnaryInstruction(Ty, Load, Ptr, InsertBefore) {
   setVolatile(isVolatile);
   setAlignment(Align);
   setAtomic(Order, SSID);
@@ -1294,23 +1294,23 @@ void StoreInst::AssertOK() {
          "Ptr must have pointer type!");
 }
 
-StoreInst::StoreInst(Value *val, Value *addr, InsertPosition InsertBefore)
+StoreInst::StoreInst(Value *val, Value *addr, const InsertPosition &InsertBefore)
     : StoreInst(val, addr, /*isVolatile=*/false, InsertBefore) {}
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile,
-                     InsertPosition InsertBefore)
+                     const InsertPosition &InsertBefore)
     : StoreInst(val, addr, isVolatile,
                 computeLoadStoreDefaultAlign(val->getType(), InsertBefore),
                 InsertBefore) {}
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
-                     InsertPosition InsertBefore)
+                     const InsertPosition &InsertBefore)
     : StoreInst(val, addr, isVolatile, Align, AtomicOrdering::NotAtomic,
                 SyncScope::System, InsertBefore) {}
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, Align Align,
                      AtomicOrdering Order, SyncScope::ID SSID,
-                     InsertPosition InsertBefore)
+                     const InsertPosition &InsertBefore)
     : Instruction(Type::getVoidTy(val->getContext()), Store, AllocMarker,
                   InsertBefore) {
   Op<0>() = val;
@@ -1350,7 +1350,7 @@ AtomicCmpXchgInst::AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal,
                                      AtomicOrdering SuccessOrdering,
                                      AtomicOrdering FailureOrdering,
                                      SyncScope::ID SSID,
-                                     InsertPosition InsertBefore)
+                                     const InsertPosition &InsertBefore)
     : Instruction(
           StructType::get(Cmp->getType(), Type::getInt1Ty(Cmp->getContext())),
           AtomicCmpXchg, AllocMarker, InsertBefore) {
@@ -1384,7 +1384,7 @@ void AtomicRMWInst::Init(BinOp Operation, Value *Ptr, Value *Val,
 
 AtomicRMWInst::AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val,
                              Align Alignment, AtomicOrdering Ordering,
-                             SyncScope::ID SSID, InsertPosition InsertBefore)
+                             SyncScope::ID SSID, const InsertPosition &InsertBefore)
     : Instruction(Val->getType(), AtomicRMW, AllocMarker, InsertBefore) {
   Init(Operation, Ptr, Val, Alignment, Ordering, SSID);
 }
@@ -1441,7 +1441,7 @@ StringRef AtomicRMWInst::getOperationName(BinOp Op) {
 //===----------------------------------------------------------------------===//
 
 FenceInst::FenceInst(LLVMContext &C, AtomicOrdering Ordering,
-                     SyncScope::ID SSID, InsertPosition InsertBefore)
+                     SyncScope::ID SSID, const InsertPosition &InsertBefore)
     : Instruction(Type::getVoidTy(C), Fence, AllocMarker, InsertBefore) {
   setOrdering(Ordering);
   setSyncScopeID(SSID);
@@ -1599,9 +1599,9 @@ bool GetElementPtrInst::collectOffset(
 
 ExtractElementInst::ExtractElementInst(Value *Val, Value *Index,
                                        const Twine &Name,
-                                       InsertPosition InsertBef)
+                                       const InsertPosition &InsertBefore)
     : Instruction(cast<VectorType>(Val->getType())->getElementType(),
-                  ExtractElement, AllocMarker, InsertBef) {
+                  ExtractElement, AllocMarker, InsertBefore) {
   assert(isValidOperands(Val, Index) &&
          "Invalid extractelement instruction operands!");
   Op<0>() = Val;
@@ -1621,8 +1621,8 @@ bool ExtractElementInst::isValidOperands(const Value *Val, const Value *Index) {
 
 InsertElementInst::InsertElementInst(Value *Vec, Value *Elt, Value *Index,
                                      const Twine &Name,
-                                     InsertPosition InsertBef)
-    : Instruction(Vec->getType(), InsertElement, AllocMarker, InsertBef) {
+                                     const InsertPosition &InsertBefore)
+    : Instruction(Vec->getType(), InsertElement, AllocMarker, InsertBefore) {
   assert(isValidOperands(Vec, Elt, Index) &&
          "Invalid insertelement instruction operands!");
   Op<0>() = Vec;
@@ -1654,19 +1654,19 @@ static Value *createPlaceholderForShuffleVector(Value *V) {
 }
 
 ShuffleVectorInst::ShuffleVectorInst(Value *V1, Value *Mask, const Twine &Name,
-                                     InsertPosition InsertBefore)
+                                     const InsertPosition &InsertBefore)
     : ShuffleVectorInst(V1, createPlaceholderForShuffleVector(V1), Mask, Name,
                         InsertBefore) {}
 
 ShuffleVectorInst::ShuffleVectorInst(Value *V1, ArrayRef<int> Mask,
                                      const Twine &Name,
-                                     InsertPosition InsertBefore)
+                                     const InsertPosition &InsertBefore)
     : ShuffleVectorInst(V1, createPlaceholderForShuffleVector(V1), Mask, Name,
                         InsertBefore) {}
 
 ShuffleVectorInst::ShuffleVectorInst(Value *V1, Value *V2, Value *Mask,
                                      const Twine &Name,
-                                     InsertPosition InsertBefore)
+                                     const InsertPosition &InsertBefore)
     : Instruction(
           VectorType::get(cast<VectorType>(V1->getType())->getElementType(),
                           cast<VectorType>(Mask->getType())->getElementCount()),
@@ -1684,7 +1684,7 @@ ShuffleVectorInst::ShuffleVectorInst(Value *V1, Value *V2, Value *Mask,
 
 ShuffleVectorInst::ShuffleVectorInst(Value *V1, Value *V2, ArrayRef<int> Mask,
                                      const Twine &Name,
-                                     InsertPosition InsertBefore)
+                                     const InsertPosition &InsertBefore)
     : Instruction(
           VectorType::get(cast<VectorType>(V1->getType())->getElementType(),
                           Mask.size(), isa<ScalableVectorType>(V1->getType())),
@@ -2526,7 +2526,7 @@ Type *ExtractValueInst::getIndexedType(Type *Agg,
 //===----------------------------------------------------------------------===//
 
 UnaryOperator::UnaryOperator(UnaryOps iType, Value *S, Type *Ty,
-                             const Twine &Name, InsertPosition InsertBefore)
+                             const Twine &Name, const InsertPosition &InsertBefore)
     : UnaryInstruction(Ty, iType, S, InsertBefore) {
   Op<0>() = S;
   setName(Name);
@@ -2534,7 +2534,7 @@ UnaryOperator::UnaryOperator(UnaryOps iType, Value *S, Type *Ty,
 }
 
 UnaryOperator *UnaryOperator::Create(UnaryOps Op, Value *S, const Twine &Name,
-                                     InsertPosition InsertBefore) {
+                                     const InsertPosition &InsertBefore) {
   return new UnaryOperator(Op, S, S->getType(), Name, InsertBefore);
 }
 
@@ -2560,7 +2560,7 @@ void UnaryOperator::AssertOK() {
 //===----------------------------------------------------------------------===//
 
 BinaryOperator::BinaryOperator(BinaryOps iType, Value *S1, Value *S2, Type *Ty,
-                               const Twine &Name, InsertPosition InsertBefore)
+                               const Twine &Name, const InsertPosition &InsertBefore)
     : Instruction(Ty, iType, AllocMarker, InsertBefore) {
   Op<0>() = S1;
   Op<1>() = S2;
@@ -2638,27 +2638,27 @@ void BinaryOperator::AssertOK() {
 
 BinaryOperator *BinaryOperator::Create(BinaryOps Op, Value *S1, Value *S2,
                                        const Twine &Name,
-                                       InsertPosition InsertBefore) {
+                                       const InsertPosition &InsertBefore) {
   assert(S1->getType() == S2->getType() &&
          "Cannot create binary operator with two operands of differing type!");
   return new BinaryOperator(Op, S1, S2, S1->getType(), Name, InsertBefore);
 }
 
 BinaryOperator *BinaryOperator::CreateNeg(Value *Op, const Twine &Name,
-                                          InsertPosition InsertBefore) {
+                                          const InsertPosition &InsertBefore) {
   Value *Zero = ConstantInt::get(Op->getType(), 0);
   return new BinaryOperator(Instruction::Sub, Zero, Op, Op->getType(), Name,
                             InsertBefore);
 }
 
 BinaryOperator *BinaryOperator::CreateNSWNeg(Value *Op, const Twine &Name,
-                                             InsertPosition InsertBefore) {
+                                             const InsertPosition &InsertBefore) {
   Value *Zero = ConstantInt::get(Op->getType(), 0);
   return BinaryOperator::CreateNSWSub(Zero, Op, Name, InsertBefore);
 }
 
 BinaryOperator *BinaryOperator::CreateNot(Value *Op, const Twine &Name,
-                                          InsertPosition InsertBefore) {
+                                          const InsertPosition &InsertBefore) {
   Constant *C = Constant::getAllOnesValue(Op->getType());
   return new BinaryOperator(Instruction::Xor, Op, C,
                             Op->getType(), Name, InsertBefore);
@@ -2970,7 +2970,7 @@ unsigned CastInst::isEliminableCastPair(
 }
 
 CastInst *CastInst::Create(Instruction::CastOps op, Value *S, Type *Ty,
-                           const Twine &Name, InsertPosition InsertBefore) {
+                           const Twine &Name, const InsertPosition &InsertBefore) {
   assert(castIsValid(op, S, Ty) && "Invalid cast!");
   // Construct and return the appropriate CastInst subclass
   switch (op) {
@@ -2995,21 +2995,21 @@ CastInst *CastInst::Create(Instruction::CastOps op, Value *S, Type *Ty,
 }
 
 CastInst *CastInst::CreateZExtOrBitCast(Value *S, Type *Ty, const Twine &Name,
-                                        InsertPosition InsertBefore) {
+                                        const InsertPosition &InsertBefore) {
   if (S->getType()->getScalarSizeInBits() == Ty->getScalarSizeInBits())
     return Create(Instruction::BitCast, S, Ty, Name, InsertBefore);
   return Create(Instruction::ZExt, S, Ty, Name, InsertBefore);
 }
 
 CastInst *CastInst::CreateSExtOrBitCast(Value *S, Type *Ty, const Twine &Name,
-                                        InsertPosition InsertBefore) {
+                                        const InsertPosition &InsertBefore) {
   if (S->getType()->getScalarSizeInBits() == Ty->getScalarSizeInBits())
     return Create(Instruction::BitCast, S, Ty, Name, InsertBefore);
   return Create(Instruction::SExt, S, Ty, Name, InsertBefore);
 }
 
 CastInst *CastInst::CreateTruncOrBitCast(Value *S, Type *Ty, const Twine &Name,
-                                         InsertPosition InsertBefore) {
+                                         const InsertPosition &InsertBefore) {
   if (S->getType()->getScalarSizeInBits() == Ty->getScalarSizeInBits())
     return Create(Instruction::BitCast, S, Ty, Name, InsertBefore);
   return Create(Instruction::Trunc, S, Ty, Name, InsertBefore);
@@ -3017,7 +3017,7 @@ CastInst *CastInst::CreateTruncOrBitCast(Value *S, Type *Ty, const Twine &Name,
 
 /// Create a BitCast or a PtrToInt cast instruction
 CastInst *CastInst::CreatePointerCast(Value *S, Type *Ty, const Twine &Name,
-                                      InsertPosition InsertBefore) {
+                                      const InsertPosition &InsertBefore) {
   assert(S->getType()->isPtrOrPtrVectorTy() && "Invalid cast");
   assert((Ty->isIntOrIntVectorTy() || Ty->isPtrOrPtrVectorTy()) &&
          "Invalid cast");
@@ -3034,7 +3034,7 @@ CastInst *CastInst::CreatePointerCast(Value *S, Type *Ty, const Twine &Name,
 }
 
 CastInst *CastInst::CreatePointerBitCastOrAddrSpaceCast(
-    Value *S, Type *Ty, const Twine &Name, InsertPosition InsertBefore) {
+    Value *S, Type *Ty, const Twine &Name, const InsertPosition &InsertBefore) {
   assert(S->getType()->isPtrOrPtrVectorTy() && "Invalid cast");
   assert(Ty->isPtrOrPtrVectorTy() && "Invalid cast");
 
@@ -3046,7 +3046,7 @@ CastInst *CastInst::CreatePointerBitCastOrAddrSpaceCast(
 
 CastInst *CastInst::CreateBitOrPointerCast(Value *S, Type *Ty,
                                            const Twine &Name,
-                                           InsertPosition InsertBefore) {
+                                           const InsertPosition &InsertBefore) {
   if (S->getType()->isPointerTy() && Ty->isIntegerTy())
     return Create(Instruction::PtrToInt, S, Ty, Name, InsertBefore);
   if (S->getType()->isIntegerTy() && Ty->isPointerTy())
@@ -3057,7 +3057,7 @@ CastInst *CastInst::CreateBitOrPointerCast(Value *S, Type *Ty,
 
 CastInst *CastInst::CreateIntegerCast(Value *C, Type *Ty, bool isSigned,
                                       const Twine &Name,
-                                      InsertPosition InsertBefore) {
+                                      const InsertPosition &InsertBefore) {
   assert(C->getType()->isIntOrIntVectorTy() && Ty->isIntOrIntVectorTy() &&
          "Invalid integer cast");
   unsigned SrcBits = C->getType()->getScalarSizeInBits();
@@ -3070,7 +3070,7 @@ CastInst *CastInst::CreateIntegerCast(Value *C, Type *Ty, bool isSigned,
 }
 
 CastInst *CastInst::CreateFPCast(Value *C, Type *Ty, const Twine &Name,
-                                 InsertPosition InsertBefore) {
+                                 const InsertPosition &InsertBefore) {
   assert(C->getType()->isFPOrFPVectorTy() && Ty->isFPOrFPVectorTy() &&
          "Invalid cast");
   unsigned SrcBits = C->getType()->getScalarSizeInBits();
@@ -3338,79 +3338,79 @@ CastInst::castIsValid(Instruction::CastOps op, Type *SrcTy, Type *DstTy) {
 }
 
 TruncInst::TruncInst(Value *S, Type *Ty, const Twine &Name,
-                     InsertPosition InsertBefore)
+                     const InsertPosition &InsertBefore)
     : CastInst(Ty, Trunc, S, Name, InsertBefore) {
   assert(castIsValid(getOpcode(), S, Ty) && "Illegal Trunc");
 }
 
 ZExtInst::ZExtInst(Value *S, Type *Ty, const Twine &Name,
-                   InsertPosition InsertBefore)
+                   const InsertPosition &InsertBefore)
     : CastInst(Ty, ZExt, S, Name, InsertBefore) {
   assert(castIsValid(getOpcode(), S, Ty) && "Illegal ZExt");
 }
 
 SExtInst::SExtInst(Value *S, Type *Ty, const Twine &Name,
-                   InsertPosition InsertBefore)
+                   const InsertPosition &InsertBefore)
     : CastInst(Ty, SExt, S, Name, InsertBefore) {
   assert(castIsValid(getOpcode(), S, Ty) && "Illegal SExt");
 }
 
 FPTruncInst::FPTruncInst(Value *S, Type *Ty, const Twine &Name,
-                         InsertPosition InsertBefore)
+                         const InsertPosition &InsertBefore)
     : CastInst(Ty, FPTrunc, S, Name, InsertBefore) {
   assert(castIsValid(getOpcode(), S, Ty) && "Illegal FPTrunc");
 }
 
 FPExtInst::FPExtInst(Value *S, Type *Ty, const Twine &Name,
-                     InsertPosition InsertBefore)
+                     const InsertPosition &InsertBefore)
     : CastInst(Ty, FPExt, S, Name, InsertBefore) {
   assert(castIsValid(getOpcode(), S, Ty) && "Illegal FPExt");
 }
 
 UIToFPInst::UIToFPInst(Value *S, Type *Ty, const Twine &Name,
-                       InsertPosition InsertBefore)
+                       const InsertPosition &InsertBefore)
     : CastInst(Ty, UIToFP, S, Name, InsertBefore) {
   assert(castIsValid(getOpcode(), S, Ty) && "Illegal UIToFP");
 }
 
 SIToFPInst::SIToFPInst(Value *S, Type *Ty, const Twine &Name,
-                       InsertPosition InsertBefore)
+                       const InsertPosition &InsertBefore)
     : CastInst(Ty, SIToFP, S, Name, InsertBefore) {
   assert(castIsValid(getOpcode(), S, Ty) && "Illegal SIToFP");
 }
 
 FPToUIInst::FPToUIInst(Value *S, Type *Ty, const Twine &Name,
-                       InsertPosition InsertBefore)
+                       const InsertPosition &InsertBefore)
     : CastInst(Ty, FPToUI, S, Name, InsertBefore) {
   assert(castIsValid(getOpcode(), S, Ty) && "Illegal FPToUI");
 }
 
 FPToSIInst::FPToSIInst(Value *S, Type *Ty, const Twine &Name,
-                       InsertPosition InsertBefore)
+                       const InsertPosition &InsertBefore)
     : CastInst(Ty, FPToSI, S, Name, InsertBefore) {
   assert(castIsValid(getOpcode(), S, Ty) && "Illegal FPToSI");
 }
 
 PtrToIntInst::PtrToIntInst(Value *S, Type *Ty, const Twine &Name,
-                           InsertPosition InsertBefore)
+                           const InsertPosition &InsertBefore)
     : CastInst(Ty, PtrToInt, S, Name, InsertBefore) {
   assert(castIsValid(getOpcode(), S, Ty) && "Illegal PtrToInt");
 }
 
 IntToPtrInst::IntToPtrInst(Value *S, Type *Ty, const Twine &Name,
-                           InsertPosition InsertBefore)
+                           const InsertPosition &InsertBefore)
     : CastInst(Ty, IntToPtr, S, Name, InsertBefore) {
   assert(castIsValid(getOpcode(), S, Ty) && "Illegal IntToPtr");
 }
 
 BitCastInst::BitCastInst(Value *S, Type *Ty, const Twine &Name,
-                         InsertPosition InsertBefore)
+                         const InsertPosition &InsertBefore)
     : CastInst(Ty, BitCast, S, Name, InsertBefore) {
   assert(castIsValid(getOpcode(), S, Ty) && "Illegal BitCast");
 }
 
 AddrSpaceCastInst::AddrSpaceCastInst(Value *S, Type *Ty, const Twine &Name,
-                                     InsertPosition InsertBefore)
+                                     const InsertPosition &InsertBefore)
     : CastInst(Ty, AddrSpaceCast, S, Name, InsertBefore) {
   assert(castIsValid(getOpcode(), S, Ty) && "Illegal AddrSpaceCast");
 }
@@ -3420,7 +3420,7 @@ AddrSpaceCastInst::AddrSpaceCastInst(Value *S, Type *Ty, const Twine &Name,
 //===----------------------------------------------------------------------===//
 
 CmpInst::CmpInst(Type *ty, OtherOps op, Predicate predicate, Value *LHS,
-                 Value *RHS, const Twine &Name, InsertPosition InsertBefore,
+                 Value *RHS, const Twine &Name, const InsertPosition &InsertBefore,
                  Instruction *FlagsSource)
     : Instruction(ty, op, AllocMarker, InsertBefore) {
   Op<0>() = LHS;
@@ -3432,7 +3432,7 @@ CmpInst::CmpInst(Type *ty, OtherOps op, Predicate predicate, Value *LHS,
 }
 
 CmpInst *CmpInst::Create(OtherOps Op, Predicate predicate, Value *S1, Value *S2,
-                         const Twine &Name, InsertPosition InsertBefore) {
+                         const Twine &Name, const InsertPosition &InsertBefore) {
   if (Op == Instruction::ICmp) {
     if (InsertBefore.isValid())
       return new ICmpInst(InsertBefore, CmpInst::Predicate(predicate),
@@ -3454,7 +3454,7 @@ CmpInst *CmpInst::CreateWithCopiedFlags(OtherOps Op, Predicate Pred, Value *S1,
                                         Value *S2,
                                         const Instruction *FlagsSource,
                                         const Twine &Name,
-                                        InsertPosition InsertBefore) {
+                                        const InsertPosition &InsertBefore) {
   CmpInst *Inst = Create(Op, Pred, S1, S2, Name, InsertBefore);
   Inst->copyIRFlags(FlagsSource);
   return Inst;
@@ -3987,7 +3987,7 @@ void SwitchInst::init(Value *Value, BasicBlock *Default, unsigned NumReserved) {
 /// be specified here to make memory allocation more efficient.  This
 /// constructor can also autoinsert before another instruction.
 SwitchInst::SwitchInst(Value *Value, BasicBlock *Default, unsigned NumCases,
-                       InsertPosition InsertBefore)
+                       const InsertPosition &InsertBefore)
     : Instruction(Type::getVoidTy(Value->getContext()), Instruction::Switch,
                   AllocMarker, InsertBefore) {
   init(Value, Default, 2+NumCases*2);
@@ -4194,7 +4194,7 @@ void IndirectBrInst::growOperands() {
 }
 
 IndirectBrInst::IndirectBrInst(Value *Address, unsigned NumCases,
-                               InsertPosition InsertBefore)
+                               const InsertPosition &InsertBefore)
     : Instruction(Type::getVoidTy(Address->getContext()),
                   Instruction::IndirectBr, AllocMarker, InsertBefore) {
   init(Address, NumCases);
@@ -4244,7 +4244,7 @@ void IndirectBrInst::removeDestination(unsigned idx) {
 //                            FreezeInst Implementation
 //===----------------------------------------------------------------------===//
 
-FreezeInst::FreezeInst(Value *S, const Twine &Name, InsertPosition InsertBefore)
+FreezeInst::FreezeInst(Value *S, const Twine &Name, const InsertPosition &InsertBefore)
     : UnaryInstruction(S->getType(), Freeze, S, InsertBefore) {
   setName(Name);
 }
