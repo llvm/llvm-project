@@ -72,6 +72,10 @@ clang_tablegen(BuiltinsBPF.inc -gen-clang-builtins
   SOURCE BuiltinsBPF.td
   TARGET ClangBuiltinsBPF)
 
+clang_tablegen(BuiltinsNVPTX.inc -gen-clang-builtins
+  SOURCE BuiltinsNVPTX.td
+  TARGET ClangBuiltinsNVPTX)
+
 clang_tablegen(BuiltinsRISCV.inc -gen-clang-builtins
   SOURCE BuiltinsRISCV.td
   TARGET ClangBuiltinsRISCV)
