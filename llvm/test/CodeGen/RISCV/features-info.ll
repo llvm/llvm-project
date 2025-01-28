@@ -31,6 +31,7 @@
 ; CHECK:   experimental-zvbc32e             - 'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements).
 ; CHECK:   experimental-zvkgs               - 'Zvkgs' (Vector-Scalar GCM instructions for Cryptography).
 ; CHECK:   f                                - 'F' (Single-Precision Floating-Point).
+; CHECK:   fast-vrgather                    - Has vrgather.vv with LMUL*log2(LMUL) latency
 ; CHECK:   forced-atomics                   - Assume that lock-free native-width atomics are available.
 ; CHECK:   h                                - 'H' (Hypervisor).
 ; CHECK:   i                                - 'I' (Base Integer Instruction Set).

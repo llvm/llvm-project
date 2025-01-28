@@ -2872,6 +2872,11 @@ InstructionCost RISCVTargetLowering::getLMULCost(MVT VT) const {
 /// is generally quadratic in the number of vreg implied by LMUL.  Note that
 /// operand (index and possibly mask) are handled separately.
 InstructionCost RISCVTargetLowering::getVRGatherVVCost(MVT VT) const {
+  auto LMULCost = getLMULCost(VT);
+  if (true && Subtarget.hasFastVRGather() && LMULCost.isValid()) {
+    unsigned Log = Log2_64(*LMULCost.getValue());
+    return LMULCost * Log;
+  }
   return getLMULCost(VT) * getLMULCost(VT);
 }
 
