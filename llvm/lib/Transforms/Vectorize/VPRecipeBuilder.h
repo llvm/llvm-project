@@ -139,12 +139,16 @@ class VPRecipeBuilder {
 
   /// Examines reduction operations to see if the target can use a cheaper
   /// operation with a wider per-iteration input VF and narrower PHI VF.
-  /// Returns null if no scaled reduction was found, otherwise a pair with a
-  /// struct containing reduction information and the scaling factor between the
-  /// number of elements in the input and output.
-  std::optional<std::pair<PartialReductionChain, unsigned>>
-  getScaledReduction(PHINode *PHI, const RecurrenceDescriptor &Rdx,
-                     VFRange &Range);
+  /// Each element within Chains is a pair with a struct containing reduction
+  /// information and the scaling factor between the number of elements in
+  /// the input and output.
+  /// Recursively calls itself to identify chained scaled reductions.
+  /// Returns true if this invocation added an entry to Chains, otherwise false.
+  /// i.e. returns false in the case that a subcall adds an entry to Chains,
+  /// but the top-level call does not.
+  bool getScaledReductions(
+      Instruction *PHI, Instruction *RdxExitInstr, VFRange &Range,
+      SmallVectorImpl<std::pair<PartialReductionChain, unsigned>> &Chains);
 
 public:
   VPRecipeBuilder(VPlan &Plan, Loop *OrigLoop, const TargetLibraryInfo *TLI,
