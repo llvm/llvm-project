@@ -9857,16 +9857,13 @@ void BoUpSLP::transformNodes() {
           // Do not try to vectorize small splats (less than vector register and
           // only with the single non-undef element).
           bool IsSplat = isSplat(Slice);
-          if (Slices.empty() || !IsSplat ||
-              (VF <= 2 &&
-               2 * std::clamp(
-                       ::getNumberOfParts(
-                           *TTI, getWidenedType(Slice.front()->getType(), VF)),
-                       1U, VF - 1) !=
-                   std::clamp(::getNumberOfParts(
-                                  *TTI, getWidenedType(Slice.front()->getType(),
-                                                       2 * VF)),
-                              1U, 2 * VF)) ||
+          bool IsTwoRegisterSplat = true;
+          if (IsSplat && VF == 2) {
+            unsigned NumRegs2VF = ::getNumberOfParts(
+                *TTI, getWidenedType(Slice.front()->getType(), 2 * VF));
+            IsTwoRegisterSplat = NumRegs2VF == 2;
+          }
+          if (Slices.empty() || !IsSplat || !IsTwoRegisterSplat ||
               count(Slice, Slice.front()) ==
                   static_cast<long>(isa<UndefValue>(Slice.front()) ? VF - 1
                                                                    : 1)) {
