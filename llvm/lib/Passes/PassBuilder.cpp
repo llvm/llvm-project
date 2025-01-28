@@ -850,14 +850,14 @@ parseLowerAllowCheckPassOptions(StringRef Params) {
                 .str(),
             inconvertibleErrorCode());
 
-      if (!IndicesStr.consume_front("cutoffs[") || !IndicesStr.consume_back("]")
-          || IndicesStr == "")
-          return make_error<StringError>(
-              formatv("invalid LowerAllowCheck pass index parameter '{0}' "
-                      "({1})",
-                      IndicesStr, CutoffStr)
-                  .str(),
-              inconvertibleErrorCode());
+      if (!IndicesStr.consume_front("cutoffs[") ||
+          !IndicesStr.consume_back("]") || IndicesStr == "")
+        return make_error<StringError>(
+            formatv("invalid LowerAllowCheck pass index parameter '{0}' "
+                    "({1})",
+                    IndicesStr, CutoffStr)
+                .str(),
+            inconvertibleErrorCode());
 
       while (IndicesStr != "") {
         StringRef firstIndexStr;
