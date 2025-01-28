@@ -1747,6 +1747,10 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
       }
     }
 
+    // Suppress transparent contexts like export or HLSLBufferDecl context
+    if (Ctx->isTransparentContext())
+      continue;
+
     // Skip non-named contexts such as linkage specifications and ExportDecls.
     const NamedDecl *ND = dyn_cast<NamedDecl>(Ctx);
     if (!ND)
@@ -5713,7 +5717,7 @@ HLSLBufferDecl::HLSLBufferDecl(DeclContext *DC, bool CBuffer,
                                SourceLocation IDLoc, SourceLocation LBrace)
     : NamedDecl(Decl::Kind::HLSLBuffer, DC, IDLoc, DeclarationName(ID)),
       DeclContext(Decl::Kind::HLSLBuffer), LBraceLoc(LBrace), KwLoc(KwLoc),
-      IsCBuffer(CBuffer) {}
+      IsCBuffer(CBuffer), HasPackoffset(false) {}
 
 HLSLBufferDecl *HLSLBufferDecl::Create(ASTContext &C,
                                        DeclContext *LexicalParent, bool CBuffer,
@@ -5741,6 +5745,17 @@ HLSLBufferDecl *HLSLBufferDecl::CreateDeserialized(ASTContext &C,
                                                    GlobalDeclID ID) {
   return new (C, ID) HLSLBufferDecl(nullptr, false, SourceLocation(), nullptr,
                                     SourceLocation(), SourceLocation());
+}
+
+const CXXRecordDecl *HLSLBufferDecl::getLayoutStruct() const {
+  // Layout struct is the last decl in the HLSLBufferDecl.
+  if (CXXRecordDecl *RD = llvm::dyn_cast_or_null<CXXRecordDecl>(LastDecl)) {
+    assert(RD->getName().starts_with(
+               ("__cblayout_" + getIdentifier()->getName()).str()) &&
+           "expected buffer layout struct");
+    return RD;
+  }
+  llvm_unreachable("HLSL buffer is missing a layout struct");
 }
 
 //===----------------------------------------------------------------------===//

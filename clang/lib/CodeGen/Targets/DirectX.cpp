@@ -44,6 +44,7 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(CodeGenModule &CGM,
       return nullptr;
 
     // convert element type
+    // llvm::Type *ElemType = CGM.getTypes().ConvertTypeForMem(ContainedTy);
     llvm::Type *ElemType = CGM.getTypes().ConvertType(ContainedTy);
 
     llvm::StringRef TypeName =
@@ -56,9 +57,13 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(CodeGenModule &CGM,
 
     return llvm::TargetExtType::get(Ctx, TypeName, {ElemType}, Ints);
   }
-  case llvm::dxil::ResourceClass::CBuffer:
-    llvm_unreachable("dx.CBuffer handles are not implemented yet");
-    break;
+  case llvm::dxil::ResourceClass::CBuffer: {
+    QualType StructTy = ResType->getContainedType();
+    if (StructTy.isNull())
+      return nullptr;
+    llvm::Type *Ty = CGM.getTypes().ConvertType(StructTy);
+    return llvm::TargetExtType::get(Ctx, "dx.CBuffer", {Ty});
+  }
   case llvm::dxil::ResourceClass::Sampler:
     llvm_unreachable("dx.Sampler handles are not implemented yet");
     break;
