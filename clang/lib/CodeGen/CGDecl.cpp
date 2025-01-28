@@ -1423,7 +1423,7 @@ void CodeGenFunction::EmitAndRegisterVariableArrayDimensions(
 }
 
 /// Return the maximum size of an aggregate for which we generate a fake use
-/// intrinsic when -fextend-lifetimes is in effect.
+/// intrinsic when -fextend-variable-liveness is in effect.
 static uint64_t maxFakeUseAggregateSize(const ASTContext &C) {
   return 4 * C.getTypeSize(C.UnsignedIntTy);
 }
@@ -2587,9 +2587,10 @@ llvm::Function *CodeGenModule::getLLVMLifetimeEndFn() {
 
 /// Lazily declare the @llvm.fake.use intrinsic.
 llvm::Function *CodeGenModule::getLLVMFakeUseFn() {
-  if (!FakeUseFn)
-    FakeUseFn = llvm::Intrinsic::getDeclaration(&getModule(),
-                                                llvm::Intrinsic::fake_use);
+  if (FakeUseFn)
+    return FakeUseFn;
+  FakeUseFn = llvm::Intrinsic::getOrInsertDeclaration(
+      &getModule(), llvm::Intrinsic::fake_use);
   return FakeUseFn;
 }
 

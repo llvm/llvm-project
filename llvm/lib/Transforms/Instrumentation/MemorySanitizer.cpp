@@ -3046,7 +3046,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       if (maybeHandleSimpleNomemIntrinsic(I))
         return true;
 
-    // FIXME: detect and handle SSE maskstore/maskload
+    // FIXME: detect and handle SSE maskstore/maskload?
+    // Some cases are now handled in handleAVXMasked{Load,Store}.
     return false;
   }
 
@@ -3683,6 +3684,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // TODO: Store origin.
   }
 
+  // Intrinsic::masked_store
+  //
+  // Note: handleAVXMaskedStore handles AVX/AVX2 variants, though AVX512 masked
+  //       stores are lowered to Intrinsic::masked_store.
   void handleMaskedStore(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *V = I.getArgOperand(0);
@@ -3713,6 +3718,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                 std::max(Alignment, kMinOriginAlignment));
   }
 
+  // Intrinsic::masked_load
+  //
+  // Note: handleAVXMaskedLoad handles AVX/AVX2 variants, though AVX512 masked
+  //       loads are lowered to Intrinsic::masked_load.
   void handleMaskedLoad(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *Ptr = I.getArgOperand(0);
@@ -3752,6 +3761,125 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *Origin = IRB.CreateSelect(NotNull, getOrigin(PassThru), PtrOrigin);
 
     setOrigin(&I, Origin);
+  }
+
+  // e.g., void @llvm.x86.avx.maskstore.ps.256(ptr, <8 x i32>, <8 x float>)
+  //                                           dst  mask       src
+  //
+  // AVX512 masked stores are lowered to Intrinsic::masked_load and are handled
+  // by handleMaskedStore.
+  //
+  // This function handles AVX and AVX2 masked stores; these use the MSBs of a
+  // vector of integers, unlike the LLVM masked intrinsics, which require a
+  // vector of booleans. X86InstCombineIntrinsic.cpp::simplifyX86MaskedLoad
+  // mentions that the x86 backend does not know how to efficiently convert
+  // from a vector of booleans back into the AVX mask format; therefore, they
+  // (and we) do not reduce AVX/AVX2 masked intrinsics into LLVM masked
+  // intrinsics.
+  void handleAVXMaskedStore(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+
+    Value *Dst = I.getArgOperand(0);
+    assert(Dst->getType()->isPointerTy() && "Destination is not a pointer!");
+
+    Value *Mask = I.getArgOperand(1);
+    assert(isa<VectorType>(Mask->getType()) && "Mask is not a vector!");
+
+    Value *Src = I.getArgOperand(2);
+    assert(isa<VectorType>(Src->getType()) && "Source is not a vector!");
+
+    const Align Alignment = Align(1);
+
+    Value *SrcShadow = getShadow(Src);
+
+    if (ClCheckAccessAddress) {
+      insertShadowCheck(Dst, &I);
+      insertShadowCheck(Mask, &I);
+    }
+
+    Value *DstShadowPtr;
+    Value *DstOriginPtr;
+    std::tie(DstShadowPtr, DstOriginPtr) = getShadowOriginPtr(
+        Dst, IRB, SrcShadow->getType(), Alignment, /*isStore*/ true);
+
+    SmallVector<Value *, 2> ShadowArgs;
+    ShadowArgs.append(1, DstShadowPtr);
+    ShadowArgs.append(1, Mask);
+    // The intrinsic may require floating-point but shadows can be arbitrary
+    // bit patterns, of which some would be interpreted as "invalid"
+    // floating-point values (NaN etc.); we assume the intrinsic will happily
+    // copy them.
+    ShadowArgs.append(1, IRB.CreateBitCast(SrcShadow, Src->getType()));
+
+    CallInst *CI =
+        IRB.CreateIntrinsic(IRB.getVoidTy(), I.getIntrinsicID(), ShadowArgs);
+    setShadow(&I, CI);
+
+    if (!MS.TrackOrigins)
+      return;
+
+    // Approximation only
+    auto &DL = F.getDataLayout();
+    paintOrigin(IRB, getOrigin(Src), DstOriginPtr,
+                DL.getTypeStoreSize(SrcShadow->getType()),
+                std::max(Alignment, kMinOriginAlignment));
+  }
+
+  // e.g., <8 x float> @llvm.x86.avx.maskload.ps.256(ptr, <8 x i32>)
+  //       return                                    src  mask
+  //
+  // Masked-off values are replaced with 0, which conveniently also represents
+  // initialized memory.
+  //
+  // AVX512 masked stores are lowered to Intrinsic::masked_load and are handled
+  // by handleMaskedStore.
+  //
+  // We do not combine this with handleMaskedLoad; see comment in
+  // handleAVXMaskedStore for the rationale.
+  //
+  // This is subtly different than handleIntrinsicByApplyingToShadow(I, 1)
+  // because we need to apply getShadowOriginPtr, not getShadow, to the first
+  // parameter.
+  void handleAVXMaskedLoad(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+
+    Value *Src = I.getArgOperand(0);
+    assert(Src->getType()->isPointerTy() && "Source is not a pointer!");
+
+    Value *Mask = I.getArgOperand(1);
+    assert(isa<VectorType>(Mask->getType()) && "Mask is not a vector!");
+
+    const Align Alignment = Align(1);
+
+    if (ClCheckAccessAddress) {
+      insertShadowCheck(Mask, &I);
+    }
+
+    Type *SrcShadowTy = getShadowTy(Src);
+    Value *SrcShadowPtr, *SrcOriginPtr;
+    std::tie(SrcShadowPtr, SrcOriginPtr) =
+        getShadowOriginPtr(Src, IRB, SrcShadowTy, Alignment, /*isStore*/ false);
+
+    SmallVector<Value *, 2> ShadowArgs;
+    ShadowArgs.append(1, SrcShadowPtr);
+    ShadowArgs.append(1, Mask);
+
+    CallInst *CI =
+        IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(), ShadowArgs);
+    // The intrinsic may require floating-point but shadows can be arbitrary
+    // bit patterns, of which some would be interpreted as "invalid"
+    // floating-point values (NaN etc.); we assume the intrinsic will happily
+    // copy them.
+    setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
+
+    if (!MS.TrackOrigins)
+      return;
+
+    // The "pass-through" value is always zero (initialized). To the extent
+    // that that results in initialized aligned 4-byte chunks, the origin value
+    // is ignored. It is therefore correct to simply copy the origin from src.
+    Value *PtrSrcOrigin = IRB.CreateLoad(MS.OriginTy, SrcOriginPtr);
+    setOrigin(&I, PtrSrcOrigin);
   }
 
   // Instrument BMI / BMI2 intrinsics.
@@ -3921,7 +4049,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //   consider this an acceptable tradeoff for performance.
     // To make shadow propagation precise, we want the equivalent of
     // "horizontal OR", but this is not available.
-    return handleIntrinsicByApplyingToShadow(I, /* trailingVerbatimArgs */ 0);
+    return handleIntrinsicByApplyingToShadow(
+        I, /*shadowIntrinsicID=*/I.getIntrinsicID(),
+        /*trailingVerbatimArgs*/ 0);
   }
 
   /// Handle Arm NEON vector store intrinsics (vst{2,3,4}, vst1x_{2,3,4},
@@ -4028,6 +4158,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///     shadow[out] =
   ///         intrinsic(shadow[var1], shadow[var2], opType) | shadow[opType]
   ///
+  /// Typically, shadowIntrinsicID will be specified by the caller to be
+  /// I.getIntrinsicID(), but the caller can choose to replace it with another
+  /// intrinsic of the same type.
+  ///
   /// CAUTION: this assumes that the intrinsic will handle arbitrary
   ///          bit-patterns (for example, if the intrinsic accepts floats for
   ///          var1, we require that it doesn't care if inputs are NaNs).
@@ -4037,6 +4171,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// The origin is approximated using setOriginForNaryOp.
   void handleIntrinsicByApplyingToShadow(IntrinsicInst &I,
+                                         Intrinsic::ID shadowIntrinsicID,
                                          unsigned int trailingVerbatimArgs) {
     IRBuilder<> IRB(&I);
 
@@ -4060,7 +4195,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
 
     CallInst *CI =
-        IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(), ShadowArgs);
+        IRB.CreateIntrinsic(I.getType(), shadowIntrinsicID, ShadowArgs);
     Value *CombinedShadow = CI;
 
     // Combine the computed shadow with the shadow of trailing args
@@ -4466,6 +4601,30 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     }
 
+    case Intrinsic::x86_avx_maskstore_ps:
+    case Intrinsic::x86_avx_maskstore_pd:
+    case Intrinsic::x86_avx_maskstore_ps_256:
+    case Intrinsic::x86_avx_maskstore_pd_256:
+    case Intrinsic::x86_avx2_maskstore_d:
+    case Intrinsic::x86_avx2_maskstore_q:
+    case Intrinsic::x86_avx2_maskstore_d_256:
+    case Intrinsic::x86_avx2_maskstore_q_256: {
+      handleAVXMaskedStore(I);
+      break;
+    }
+
+    case Intrinsic::x86_avx_maskload_ps:
+    case Intrinsic::x86_avx_maskload_pd:
+    case Intrinsic::x86_avx_maskload_ps_256:
+    case Intrinsic::x86_avx_maskload_pd_256:
+    case Intrinsic::x86_avx2_maskload_d:
+    case Intrinsic::x86_avx2_maskload_q:
+    case Intrinsic::x86_avx2_maskload_d_256:
+    case Intrinsic::x86_avx2_maskload_q_256: {
+      handleAVXMaskedLoad(I);
+      break;
+    }
+
     case Intrinsic::fshl:
     case Intrinsic::fshr:
       handleFunnelShift(I);
@@ -4512,7 +4671,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_tbx3:
     case Intrinsic::aarch64_neon_tbx4: {
       // The last trailing argument (index register) should be handled verbatim
-      handleIntrinsicByApplyingToShadow(I, 1);
+      handleIntrinsicByApplyingToShadow(
+          I, /*shadowIntrinsicID=*/I.getIntrinsicID(),
+          /*trailingVerbatimArgs*/ 1);
       break;
     }
 
