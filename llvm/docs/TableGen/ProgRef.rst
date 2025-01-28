@@ -488,7 +488,7 @@ See `Using Classes as Subroutines`_ for more information.
 
 .. productionlist::
    SimpleValue9: `BangOperator` ["<" `Type` ">"] "(" `ValueListNE` ")"
-              :| `CondOperator` "(" `CondClause` ("," `CondClause`)* ")"
+              :| `CondOperator` "(" `CondClause` ("," `CondClause`)* [","] ")"
    CondClause: `Value` ":" `Value`
 
 The bang operators provide functions that are not available with the other
