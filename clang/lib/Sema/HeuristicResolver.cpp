@@ -231,15 +231,17 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveMemberExpr(
   QualType BaseType = ME->getBaseType();
   if (ME->isArrow()) {
     BaseType = getPointeeType(BaseType);
+    if (BaseType.isNull())
+      return {};
   }
-  if (BaseType.isNull())
-    return {};
   if (const auto *BT = BaseType->getAs<BuiltinType>()) {
     // If BaseType is the type of a dependent expression, it's just
     // represented as BuiltinType::Dependent which gives us no information. We
     // can get further by analyzing the dependent expression.
     if (Base && BT->getKind() == BuiltinType::Dependent) {
       BaseType = resolveExprToType(Base);
+      if (BaseType.isNull())
+        return {};
     }
   }
   if (const auto *AT = BaseType->getContainedAutoType()) {
@@ -262,8 +264,9 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveMemberExpr(
 
 std::vector<const NamedDecl *>
 HeuristicResolverImpl::resolveDeclRefExpr(const DependentScopeDeclRefExpr *RE) {
-  return resolveDependentMember(QualType(RE->getQualifier()->getAsType(), 0),
-                                RE->getDeclName(), StaticFilter);
+  return resolveDependentMember(
+      resolveNestedNameSpecifierToType(RE->getQualifier()), RE->getDeclName(),
+      StaticFilter);
 }
 
 std::vector<const NamedDecl *>

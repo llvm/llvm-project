@@ -1024,7 +1024,7 @@ void VPlan::execute(VPTransformState *State) {
       // Move the last step to the end of the latch block. This ensures
       // consistent placement of all induction updates.
       Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
-      Inc->moveBefore(VectorLatchBB->getTerminator()->getPrevNode());
+      Inc->moveBefore(std::prev(VectorLatchBB->getTerminator()->getIterator()));
 
       // Use the steps for the last part as backedge value for the induction.
       if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
@@ -1628,6 +1628,9 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
     VFRange SubRange = {VF, MaxVFTimes2};
     auto Plan = buildVPlan(SubRange);
     VPlanTransforms::optimize(*Plan);
+    // Update the name of the latch of the top-level vector loop region region
+    // after optimizations which includes block folding.
+    Plan->getVectorLoopRegion()->getExiting()->setName("vector.latch");
     VPlans.push_back(std::move(Plan));
     VF = SubRange.End;
   }

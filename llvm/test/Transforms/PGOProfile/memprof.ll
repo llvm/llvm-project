@@ -84,8 +84,14 @@
 ; RUN: llvm-profdata merge -memprof-random-hotness -memprof-random-hotness-seed=1730170724 %S/Inputs/memprof.memprofraw --profiled-binary %S/Inputs/memprof.exe -o %t.memprofdatarand2 2>&1 | FileCheck %s --check-prefix=RAND2
 ; RAND2: random hotness seed = 1730170724
 ; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdatarand2>' -pgo-warn-missing-function -S -stats 2>&1 | FileCheck %s --check-prefixes=MEMPROFRAND2,ALL,MEMPROFONLY,MEMPROFSTATS
-;; Check with hot hints enabled
-; RUN: opt < %s -memprof-use-hot-hints -passes='memprof-use<profile-filename=%t.memprofdatarand2>' -pgo-warn-missing-function -S -stats 2>&1 | FileCheck %s --check-prefixes=MEMPROFRAND2HOT
+
+;; With the hot access density threshold set to 0, and hot hints enabled,
+;; the unconditionally notcold call to new should instead get a hot attribute.
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-print-match-info -stats -memprof-min-ave-lifetime-access-density-hot-threshold=0 -memprof-use-hot-hints 2>&1 | FileCheck %s --check-prefixes=MEMPROFHOT,ALL
+
+;; However, with the same threshold, but hot hints not enabled, it should be
+;; notcold again.
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S -memprof-min-ave-lifetime-access-density-hot-threshold=0 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL
 
 ; MEMPROFMATCHINFO: MemProf notcold context with id 1093248920606587996 has total profiled size 10 is matched
 ; MEMPROFMATCHINFO: MemProf notcold context with id 5725971306423925017 has total profiled size 10 is matched
@@ -194,6 +200,7 @@ entry:
   store ptr %argv, ptr %argv.addr, align 8
   ; MEMPROF: call {{.*}} @_Znam{{.*}} #[[A1:[0-9]+]]
   ; MEMPROFNOCOLINFO: call {{.*}} @_Znam{{.*}} #[[A1:[0-9]+]]
+  ; MEMPROFHOT: call {{.*}} @_Znam{{.*}} #[[A1:[0-9]+]]
   %call = call noalias noundef nonnull ptr @_Znam(i64 noundef 10) #6, !dbg !35
   store ptr %call, ptr %a, align 8, !dbg !36
   ; MEMPROF: call {{.*}} @_Znam{{.*}} #[[A2:[0-9]+]]
@@ -406,19 +413,14 @@ for.end:                                          ; preds = %for.cond
 ; MEMPROFNOCOLINFO: ![[C10]] = !{i64 -4535090212904553409}
 ; MEMPROFNOCOLINFO: ![[C11]] = !{i64 3577763375057267810}
 
+; MEMPROFHOT: #[[A1]] = { builtin allocsize(0) "memprof"="hot" }
+
 ;; For the specific random seed, this is the expected order of hotness
 ; MEMPROFRAND2: !"cold"
 ; MEMPROFRAND2: !"cold"
 ; MEMPROFRAND2: !"cold"
 ; MEMPROFRAND2: !"notcold"
 ; MEMPROFRAND2: !"notcold"
-
-;; With hot hints enabled the last 2 should be hot.
-; MEMPROFRAND2HOT: !"cold"
-; MEMPROFRAND2HOT: !"cold"
-; MEMPROFRAND2HOT: !"cold"
-; MEMPROFRAND2HOT: !"hot"
-; MEMPROFRAND2HOT: !"hot"
 
 ; MEMPROFSTATS:  8 memprof - Number of alloc contexts in memory profile.
 ; MEMPROFSTATS: 10 memprof - Number of callsites in memory profile.
