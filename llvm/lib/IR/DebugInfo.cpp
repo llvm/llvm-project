@@ -798,6 +798,9 @@ private:
 
       return getReplacementMDNode(N);
     };
+
+    // Intentionally separate rvalue and lvalue that may access the same memory
+    // location to guarantee the evaluation order.
     auto value = doRemap(N);
     Replacements[N] = value;
   }
