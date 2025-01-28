@@ -1139,7 +1139,7 @@ def FeatureBitOp3Insts : SubtargetFeature<"bitop3-insts",
 def FeatureTanhInsts : SubtargetFeature<"tanh-insts",
   "HasTanhInsts",
   "true",
-  "Has v_tanh_f32/f16/b16 instructions"
+  "Has v_tanh_f32/f16 instructions"
 >;
 
 def FeaturePrngInst : SubtargetFeature<"prng-inst",
