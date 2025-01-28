@@ -524,7 +524,7 @@ New Compiler Flags
   Clang to generate code that tries to preserve the liveness of source variables
   through optimizations, meaning that variables will typically be visible in a
   debugger more often. The flag has two levels: ``-fextend-variable-liveness``,
-  or ``-fextend-variable-liveness=all``, extendes the liveness of all user
+  or ``-fextend-variable-liveness=all``, extends the liveness of all user
   variables and the ``this`` pointer. Alternatively
   ``-fextend-variable-liveness=this`` has the same behaviour but applies only to
   the ``this`` variable in C++ class member functions, meaning its effect is a
