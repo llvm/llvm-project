@@ -1557,26 +1557,16 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaInst &I,
     case Intrinsic::invariant_end:
     case Intrinsic::launder_invariant_group:
     case Intrinsic::strip_invariant_group: {
-      SmallVector<Type *> ArgTy;
       SmallVector<Value *> Args;
       if (Intr->getIntrinsicID() == Intrinsic::invariant_start) {
-        Value *Size = Intr->getArgOperand(0);
-        ArgTy.emplace_back(Offset->getType());
-        Args.emplace_back(Size);
-        Args.emplace_back(Offset);
+        Args.emplace_back(Intr->getArgOperand(0));
       } else if (Intr->getIntrinsicID() == Intrinsic::invariant_end) {
-        Value *InvariantPtr = Intr->getArgOperand(0);
-        Value *Size = Intr->getArgOperand(1);
-        ArgTy.emplace_back(Offset->getType());
-        Args.emplace_back(InvariantPtr);
-        Args.emplace_back(Size);
-        Args.emplace_back(Offset);
-      } else {
-        ArgTy.emplace_back(Offset->getType());
-        Args.emplace_back(Offset);
+        Args.emplace_back(Intr->getArgOperand(0));
+        Args.emplace_back(Intr->getArgOperand(1));
       }
+      Args.emplace_back(Offset);
       Function *F = Intrinsic::getOrInsertDeclaration(
-          Intr->getModule(), Intr->getIntrinsicID(), ArgTy);
+          Intr->getModule(), Intr->getIntrinsicID(), Offset->getType());
       CallInst *NewIntr =
           CallInst::Create(F, Args, Intr->getName(), Intr->getIterator());
       Intr->mutateType(NewIntr->getType());
