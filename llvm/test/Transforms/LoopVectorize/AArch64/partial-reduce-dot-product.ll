@@ -2003,7 +2003,7 @@ define i32 @not_dotp_extend_user(ptr %a, ptr %b) #0 {
 ; CHECK-MAXBW-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-MAXBW:       vector.body:
 ; CHECK-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-MAXBW-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP24:%.*]], [[VECTOR_BODY]] ]
+; CHECK-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP23:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-MAXBW-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-MAXBW-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP6]]
 ; CHECK-MAXBW-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP7]], i32 0
@@ -2014,12 +2014,12 @@ define i32 @not_dotp_extend_user(ptr %a, ptr %b) #0 {
 ; CHECK-MAXBW-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 8 x i8>, ptr [[TMP15]], align 1
 ; CHECK-MAXBW-NEXT:    [[TMP20:%.*]] = zext <vscale x 8 x i8> [[WIDE_LOAD4]] to <vscale x 8 x i32>
 ; CHECK-MAXBW-NEXT:    [[TMP22:%.*]] = mul <vscale x 8 x i32> [[TMP20]], [[TMP13]]
-; CHECK-MAXBW-NEXT:    [[TMP24]] = add <vscale x 8 x i32> [[TMP22]], [[VEC_PHI1]]
+; CHECK-MAXBW-NEXT:    [[TMP23]] = add <vscale x 8 x i32> [[TMP22]], [[VEC_PHI]]
 ; CHECK-MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; CHECK-MAXBW-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-MAXBW-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK-MAXBW:       middle.block:
-; CHECK-MAXBW-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32> [[TMP24]])
+; CHECK-MAXBW-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32> [[TMP23]])
 ; CHECK-MAXBW-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-MAXBW-NEXT:    [[TMP18:%.*]] = mul i32 [[TMP17]], 8
 ; CHECK-MAXBW-NEXT:    [[TMP19:%.*]] = sub i32 [[TMP18]], 1

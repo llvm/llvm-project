@@ -8743,8 +8743,9 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
 
   // Build up a set of partial reduction bin ops for efficient use checking.
   SmallSet<User *, 4> PartialReductionBinOps;
-  for (const auto &[PartialRdx, _] : PartialReductionChains)
+  for (const auto &[PartialRdx, _] : PartialReductionChains) {
     PartialReductionBinOps.insert(PartialRdx.BinOp);
+  }
 
   auto ExtendIsOnlyUsedByPartialReductions =
       [&PartialReductionBinOps](Instruction *Extend) {
@@ -8800,20 +8801,23 @@ bool VPRecipeBuilder::getScaledReductions(
     return false;
 
   using namespace llvm::PatternMatch;
+  BinaryOperator *ExtendedBinOp = BinOp;
+  match(BinOp, m_Neg(m_BinOp(ExtendedBinOp)));
+
   Value *A, *B;
-  if (!match(BinOp->getOperand(0), m_ZExtOrSExt(m_Value(A))) ||
-      !match(BinOp->getOperand(1), m_ZExtOrSExt(m_Value(B))))
+  if (!match(ExtendedBinOp->getOperand(0), m_ZExtOrSExt(m_Value(A))) ||
+      !match(ExtendedBinOp->getOperand(1), m_ZExtOrSExt(m_Value(B))))
     return false;
 
-  Instruction *ExtA = cast<Instruction>(BinOp->getOperand(0));
-  Instruction *ExtB = cast<Instruction>(BinOp->getOperand(1));
+  Instruction *ExtA = cast<Instruction>(ExtendedBinOp->getOperand(0));
+  Instruction *ExtB = cast<Instruction>(ExtendedBinOp->getOperand(1));
 
   TTI::PartialReductionExtendKind OpAExtend =
       TargetTransformInfo::getPartialReductionExtendKind(ExtA);
   TTI::PartialReductionExtendKind OpBExtend =
       TargetTransformInfo::getPartialReductionExtendKind(ExtB);
 
-  PartialReductionChain Chain(RdxExitInstr, ExtA, ExtB, BinOp);
+  PartialReductionChain Chain(RdxExitInstr, ExtA, ExtB, ExtendedBinOp);
 
   unsigned TargetScaleFactor =
       PHI->getType()->getPrimitiveSizeInBits().getKnownScalarFactor(
@@ -8824,7 +8828,7 @@ bool VPRecipeBuilder::getScaledReductions(
             InstructionCost Cost = TTI->getPartialReductionCost(
                 Update->getOpcode(), A->getType(), B->getType(), PHI->getType(),
                 VF, OpAExtend, OpBExtend,
-                std::make_optional(BinOp->getOpcode()));
+                std::make_optional(ExtendedBinOp->getOpcode()));
             return Cost.isValid();
           },
           Range)) {

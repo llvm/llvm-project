@@ -27,6 +27,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/VectorBuilder.h"
@@ -292,6 +293,14 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
   if (match(getOperand(0), m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
     BinOpR = BinOpR->getOperand(1)->getDefiningRecipe();
 
+  using namespace llvm::PatternMatch;
+  if (auto *UnderInst =
+          dyn_cast_if_present<Instruction>(getOperand(0)->getUnderlyingValue())) {
+    if (PatternMatch::match(UnderInst, m_Neg(m_BinOp()))) {
+      BinOpR = BinOpR->getOperand(1)->getDefiningRecipe();
+    }
+  }
+
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(BinOpR))
     Opcode = std::make_optional(WidenR->getOpcode());
 
@@ -327,12 +336,19 @@ void VPPartialReductionRecipe::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
   auto &Builder = State.Builder;
 
-  assert(getOpcode() == Instruction::Add &&
-         "Unhandled partial reduction opcode");
-
   Value *BinOpVal = State.get(getOperand(0));
   Value *PhiVal = State.get(getOperand(1));
   assert(PhiVal && BinOpVal && "Phi and Mul must be set");
+
+  unsigned Opcode = getOpcode();
+
+  if (Opcode == Instruction::Sub) {
+    bool HasNSW = cast<Instruction>(BinOpVal)->hasNoSignedWrap();
+    BinOpVal = Builder.CreateNeg(BinOpVal, "", HasNSW);
+    Opcode = Instruction::Add;
+  }
+
+  assert(Opcode == Instruction::Add && "Unhandled partial reduction opcode");
 
   Type *RetTy = PhiVal->getType();
 
