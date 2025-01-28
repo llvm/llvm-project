@@ -71,13 +71,27 @@ private:
   ///
   /// EnumMap provides a mapping from the unique TokenKind to the in-memory
   /// enum value
-  template <typename EnumType>
+  ///
+  /// If AllowZero is true, then the Enum is used as a flag and can also have
+  /// the value of '0' to denote no flag
+  template <bool AllowZero = false, typename EnumType>
   bool ParseEnum(llvm::SmallDenseMap<TokenKind, EnumType> &EnumMap,
                  EnumType *Enum);
 
   /// Helper methods that define the mappings and invoke ParseEnum for
   /// different enum types
   bool ParseShaderVisibility(llvm::hlsl::rootsig::ShaderVisibility *Enum);
+
+  /// A wrapper method around ParseEnum that will parse an 'or' chain of
+  /// enums, with AllowZero = true
+  template <typename FlagType>
+  bool ParseFlags(llvm::SmallDenseMap<TokenKind, FlagType> &EnumMap,
+                  FlagType *Enum);
+
+  /// Helper methods that define the mappings and invoke ParseFlags for
+  /// different enum types
+  bool
+  ParseDescriptorRangeFlags(llvm::hlsl::rootsig::DescriptorRangeFlags *Enum);
 
   /// Invoke the Lexer to consume a token and update CurToken with the result
   void ConsumeNextToken() { CurToken = Lexer.ConsumeToken(); }

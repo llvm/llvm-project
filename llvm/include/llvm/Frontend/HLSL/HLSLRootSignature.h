@@ -21,9 +21,42 @@ namespace llvm {
 namespace hlsl {
 namespace rootsig {
 
+#define RS_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(Class)                            \
+  inline Class operator|(Class a, Class b) {                                   \
+    return static_cast<Class>(llvm::to_underlying(a) |                         \
+                              llvm::to_underlying(b));                         \
+  }                                                                            \
+  inline Class operator&(Class a, Class b) {                                   \
+    return static_cast<Class>(llvm::to_underlying(a) &                         \
+                              llvm::to_underlying(b));                         \
+  }                                                                            \
+  inline Class operator~(Class a) {                                            \
+    return static_cast<Class>(~llvm::to_underlying(a));                        \
+  }                                                                            \
+  inline Class &operator|=(Class &a, Class b) {                                \
+    a = a | b;                                                                 \
+    return a;                                                                  \
+  }                                                                            \
+  inline Class &operator&=(Class &a, Class b) {                                \
+    a = a & b;                                                                 \
+    return a;                                                                  \
+  }
+
 // Definition of the various enumerations and flags
 
 enum class DescriptorRangeOffset : uint32_t;
+
+enum class DescriptorRangeFlags : unsigned {
+  None = 0,
+  DescriptorsVolatile = 0x1,
+  DataVolatile = 0x2,
+  DataStaticWhileSetAtExecute = 0x4,
+  DataStatic = 0x8,
+  DescriptorsStaticKeepingBufferBoundsChecks = 0x10000,
+  ValidFlags = 0x1000f,
+  ValidSamplerFlags = DescriptorsVolatile,
+};
+RS_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(DescriptorRangeFlags)
 
 enum class ShaderVisibility {
   All = 0,
@@ -61,6 +94,24 @@ struct DescriptorTableClause {
   uint32_t NumDescriptors = 1;
   uint32_t Space = 0;
   DescriptorRangeOffset Offset = DescriptorTableOffsetAppend;
+  DescriptorRangeFlags Flags;
+
+  void SetDefaultFlags() {
+    switch (Type) {
+    case ClauseType::CBuffer:
+      Flags = DescriptorRangeFlags::DataStaticWhileSetAtExecute;
+      break;
+    case ClauseType::SRV:
+      Flags = DescriptorRangeFlags::DataStaticWhileSetAtExecute;
+      break;
+    case ClauseType::UAV:
+      Flags = DescriptorRangeFlags::DataVolatile;
+      break;
+    case ClauseType::Sampler:
+      Flags = DescriptorRangeFlags::None;
+      break;
+    }
+  }
 };
 
 // Models RootElement : DescriptorTable | DescriptorTableClause
@@ -69,7 +120,7 @@ using RootElement = std::variant<DescriptorTable, DescriptorTableClause>;
 // Models a reference to all assignment parameter types that any RootElement
 // may have. Things of the form: Keyword = Param
 using ParamType = std::variant<uint32_t *, DescriptorRangeOffset *,
-                               ShaderVisibility *>;
+                               DescriptorRangeFlags *, ShaderVisibility *>;
 
 } // namespace rootsig
 } // namespace hlsl

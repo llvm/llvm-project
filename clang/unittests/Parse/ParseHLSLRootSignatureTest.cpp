@@ -131,9 +131,13 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
     DescriptorTable(
       visibility = SHADER_VISIBILITY_PIXEL,
       CBV(b0),
-      SRV(t42, space = 3, offset = 32, numDescriptors = +4),
+      SRV(t42, space = 3, offset = 32, numDescriptors = +4, flags = 0),
       Sampler(s987, space = 2, offset = DESCRIPTOR_RANGE_OFFSET_APPEND),
-      UAV(u987234)
+      UAV(u987234,
+        flags = Descriptors_Volatile | Data_Volatile
+                      | Data_Static_While_Set_At_Execute | Data_Static
+                      | Descriptors_Static_Keeping_Buffer_Bounds_Checks
+      )
     ),
     DescriptorTable()
   )cc";
@@ -160,6 +164,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, (uint32_t)0);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
             DescriptorRangeOffset(DescriptorTableOffsetAppend));
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
+            DescriptorRangeFlags::DataStaticWhileSetAtExecute);
 
   Elem = Elements[1];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
@@ -172,6 +178,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, (uint32_t)3);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
             DescriptorRangeOffset(32));
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
+            DescriptorRangeFlags::None);
 
   Elem = Elements[2];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
@@ -184,6 +192,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, (uint32_t)2);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
             DescriptorRangeOffset(DescriptorTableOffsetAppend));
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
+            DescriptorRangeFlags::None);
 
   Elem = Elements[3];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
@@ -196,6 +206,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, (uint32_t)0);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
             DescriptorRangeOffset(DescriptorTableOffsetAppend));
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
+            DescriptorRangeFlags::ValidFlags);
 
   Elem = Elements[4];
   ASSERT_TRUE(std::holds_alternative<DescriptorTable>(Elem));
@@ -336,6 +348,28 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseRepeatedVisibilityTest) {
 
   // Test correct diagnostic produced
   Consumer->SetExpected(diag::err_hlsl_rootsig_repeat_param);
+  ASSERT_TRUE(Parser.Parse());
+
+  ASSERT_TRUE(Consumer->IsSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidParseNonZeroFlagTest) {
+  const llvm::StringLiteral Source = R"cc(
+    DescriptorTable(
+      CBV(b0, flags = 3)
+    )
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->SetExpected(diag::err_hlsl_rootsig_non_zero_flag);
   ASSERT_TRUE(Parser.Parse());
 
   ASSERT_TRUE(Consumer->IsSatisfied());
