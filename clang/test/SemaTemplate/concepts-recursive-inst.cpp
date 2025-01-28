@@ -76,7 +76,7 @@ auto it = begin(rng); // #BEGIN_CALL
 // expected-note@#INF_BEGIN {{while checking the satisfaction of concept 'Inf<DirectRecursiveCheck::my_range>' requested here}}
 // expected-note@#INF_BEGIN {{while substituting template arguments into constraint expression here}}
 // expected-note@#BEGIN_CALL {{while checking constraint satisfaction for template 'begin<DirectRecursiveCheck::my_range>' required here}}
-// expected-note@#BEGIN_CALL {{in instantiation of function template specialization}}
+// expected-note@#BEGIN_CALL {{while substituting deduced template arguments into function template}}
 
 // Fallout of the failure is failed lookup, which is necessary to stop odd
 // cascading errors.
@@ -103,7 +103,7 @@ namespace GH50891 {
   // expected-note@#OP_TO {{while checking the satisfaction of concept 'Numeric<GH50891::Deferred>' requested here}}
   // expected-note@#OP_TO {{while substituting template arguments into constraint expression here}}
   // expected-note@#FOO_CALL {{while checking constraint satisfaction for template}}
-  // expected-note@#FOO_CALL {{in instantiation of function template specialization}}
+  // expected-note@#FOO_CALL {{while substituting deduced template arguments into function template}}
   // expected-note@#FOO_CALL {{in instantiation of requirement here}}
   // expected-note@#NUMERIC {{while substituting template arguments into constraint expression here}}
 

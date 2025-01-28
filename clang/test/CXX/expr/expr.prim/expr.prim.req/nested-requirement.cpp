@@ -154,7 +154,7 @@ void func() {
 
   bar<int>();
   // expected-note@-1 {{while checking constraint satisfaction for template 'bar<int>' required here}} \
-  // expected-note@-1 {{in instantiation of function template specialization}}
+  // expected-note@-1 {{while substituting deduced template arguments into function template 'bar' [with T = int]}}
   // expected-note@#bar {{in instantiation of static data member}}
   // expected-note@#bar {{in instantiation of requirement here}}
   // expected-note@#bar {{while checking the satisfaction of nested requirement requested here}}
