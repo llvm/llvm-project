@@ -2661,3 +2661,13 @@ func.func @missing_workshare(%idx : index) {
   }
   return
 }
+
+// -----
+llvm.func @invalid_mapper(%0 : !llvm.ptr) {
+  %1 = omp.map.info var_ptr(%0 : !llvm.ptr, !llvm.struct<"my_type", (i32)>) mapper(@my_mapper) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+  // expected-error @below {{invalid mapper id}}
+  omp.target_data map_entries(%1 : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
+}
