@@ -48,6 +48,7 @@
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/integer_to_string.h"
+#include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/float_inf_nan_converter.h"
@@ -107,6 +108,14 @@ struct DigitsOutput {
   char digits[MAX_DIGITS + 1];
 };
 
+// Estimate log10 of a power of 2, by multiplying its exponent by
+// 1292913986/2^32. That is a rounded-down approximation to log10(2), accurate
+// enough that for any binary exponent in the range of float128 it will give
+// the correct value of floor(log10(2^n)).
+int estimate_log10(int exponent_of_2) {
+  return (exponent_of_2 * 1292913986LL) >> 32;
+}
+
 // Calculate the actual digits of a decimal representation of an FP number.
 //
 // If `e_mode` is true, then `precision` indicates the desired number of output
@@ -139,22 +148,20 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
     return output;
   }
 
-  // Estimate log10 of the input value, by multiplying its binary exponent by
-  // 1292913986/2^32. That is a rounded-down approximation to log10(2),
-  // accurate enough that for any binary exponent in the range of float128 it
-  // will give the correct value of floor(log10(2^n)).
+  // Calculate bounds on log10 of the input value. Its binary exponent bounds
+  // the value between two powers of 2, and we use estimate_log10 to determine
+  // log10 of each of those.
   //
-  // This estimate is correct for deciding how many decimal digits we end up
-  // producing, unless a power of 10 falls in the interval corresponding to
-  // this binary exponent, in which case there might be one more decimal digit
-  // for larger mantissas. To detect this, we do the same computation for the
-  // next exponent up.
-  int log10_input_min = ((input.exponent - 1) * 1292913986LL) >> 32;
-  int log10_input_max = (input.exponent * 1292913986LL) >> 32;
+  // If a power of 10 falls in the interval between those powers of 2, then
+  // log10_input_min and log10_input_max will differ by 1, and the correct
+  // decimal exponent of the output will be one of those two values. If no
+  // power of 10 is in the interval, then these two values will be equal and
+  // there is only one choice for the decimal exponent.
+  int log10_input_min = estimate_log10(input.exponent - 1);
+  int log10_input_max = estimate_log10(input.exponent);
 
   // Make a DyadicFloat containing the value 10, to use as the base for
-  // exponentation inside the following loop, potentially more than once if we
-  // need to iterate.
+  // exponentiation.
   fputil::DyadicFloat<DF_BITS> ten(Sign::POS, 1, 5);
 
   // Compute the exponent of the lowest-order digit we want as output. In F
@@ -213,6 +220,9 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
   // Convert the mantissa into a DyadicFloat, making sure it has the right
   // sign, so that directed rounding will go in the right direction, if
   // enabled.
+  //
+  // (The fixed -127 adjustment on the exponent is because input.mantissa is a
+  // UInt128, and the leading 1 bit has been aligned to the top of it.)
   fputil::DyadicFloat<DF_BITS> flt_mantissa(input.sign, input.exponent - 127,
                                             input.mantissa);
 
@@ -260,7 +270,7 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
     // X.YZe+NN and instead got WX.YZe+NN. So when we shorten the digit string
     // by one, we'll also need to increment the output exponent.
     if (output.ndigits > size_t(precision)) {
-      assert(output.ndigits == size_t(precision) + 1);
+      LIBC_ASSERT(output.ndigits == size_t(precision) + 1);
       need_reround = true;
       output.exponent++;
     }
@@ -280,7 +290,7 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
     // one digit too long, or else we'd have spotted the problem in advance and
     // flipped into E mode already.
     if (output.ndigits > MAX_DIGITS) {
-      assert(output.ndigits == MAX_DIGITS + 1);
+      LIBC_ASSERT(output.ndigits == MAX_DIGITS + 1);
       need_reround = true;
     }
   }
@@ -318,9 +328,12 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
     // Extract the two relevant digits. round_digit is the one we're removing;
     // new_low_digit is the last one we're keeping, so we need to know if it's
     // even or odd to handle exact tie cases (when round_dir == 0).
-    int round_digit = output.digits[--output.ndigits] - '0';
+    --output.ndigits;
+    int round_digit = internal::b36_char_to_int(output.digits[output.ndigits]);
     int new_low_digit =
-        output.ndigits == 0 ? 0 : output.digits[output.ndigits - 1] - '0';
+        output.ndigits == 0
+            ? 0
+            : internal::b36_char_to_int(output.digits[output.ndigits - 1]);
 
     // Make a binary number that we can pass to `fputil::rounding_direction`.
     // We put new_low_digit at bit 8, and imagine that we're rounding away the
@@ -330,6 +343,11 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
     //
     // Then we adjust by +1 or -1 based on round_dir if the round digit is 5,
     // as described above.
+    //
+    // The subexpression `(round_digit * 0x19a) >> 4` is computing the
+    // expression (256/10 * round_digit) mentioned above, accurately enough to
+    // map 5 to exactly 128 but avoiding an integer division (for platforms
+    // where it's slow, e.g. not in hardware).
     LIBC_NAMESPACE::UInt<64> round_word = (new_low_digit * 256) +
                                           ((round_digit * 0x19a) >> 4) +
                                           (round_digit == 5 ? -round_dir : 0);
@@ -343,9 +361,12 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
       // at a time. (A bit painful, but better than going back to the integer
       // we made it from and doing the decimal conversion all over again.)
       for (size_t i = output.ndigits; i-- > 0;) {
-        if (output.digits[i]++ != '9')
+        if (output.digits[i] != '9') {
+          output.digits[i]++;
           break;
-        output.digits[i] = '0';
+        } else {
+          output.digits[i] = '0';
+        }
       }
     }
   }
@@ -527,7 +548,7 @@ LIBC_INLINE int convert_float_inner(Writer *writer,
                           radix::Dec::WithWidth<2>::WithSign>
         expcvt{output.exponent};
     cpp::string_view expview = expcvt.view();
-    expbuf[0] = (to_conv.conv_name & 32) | 'E';
+    expbuf[0] = internal::islower(to_conv.conv_name) ? 'e' : 'E';
     explen = expview.size() + 1;
     __builtin_memcpy(expbuf + 1, expview.data(), expview.size());
   }
