@@ -14898,6 +14898,12 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
             Resized = true;
             GatheredScalars.append(VF - GatheredScalars.size(),
                                    PoisonValue::get(OrigScalarTy));
+            NumParts = TTI->getNumberOfParts(getWidenedType(OrigScalarTy, VF));
+            if (NumParts == 0 || NumParts >= GatheredScalars.size() ||
+                VecTy->getNumElements() % NumParts != 0 ||
+                !hasFullVectorsOrPowerOf2(*TTI, VecTy->getElementType(),
+                                          VecTy->getNumElements() / NumParts))
+              NumParts = 1;
           }
       }
     }
