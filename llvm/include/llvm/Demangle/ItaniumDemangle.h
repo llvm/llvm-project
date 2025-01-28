@@ -1521,6 +1521,27 @@ public:
   }
 };
 
+class PackIndexing final : public Node {
+  const Node *Pattern;
+  const Node *Index;
+
+public:
+  PackIndexing(const Node *Pattern_, const Node *Index_)
+      : Node(KPackIndexing), Pattern(Pattern_), Index(Index_) {}
+
+  template <typename Fn> void match(Fn F) const { F(Pattern, Index); }
+
+  void printLeft(OutputBuffer &OB) const override {
+    OB.printOpen('(');
+    ParameterPackExpansion PPE(Pattern);
+    PPE.printLeft(OB);
+    OB.printClose(')');
+    OB.printOpen('[');
+    Index->printLeft(OB);
+    OB.printClose(']');
+  }
+};
+
 class TemplateArgs final : public Node {
   NodeArray Params;
   Node *Requires;
@@ -4510,6 +4531,18 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
       Result = make<ParameterPackExpansion>(Child);
       break;
     }
+    //           ::= Dy <type> <expression> # pack indexing (C++26)
+    case 'y': {
+      First += 2;
+      Node *Pattern = getDerived().parseType();
+      if (!Pattern)
+        return nullptr;
+      Node *Index = getDerived().parseExpr();
+      if (!Index)
+        return nullptr;
+      Result = make<PackIndexing>(Pattern, Index);
+      break;
+    }
     // Exception specifier on a function type.
     case 'o':
     case 'O':
@@ -5353,6 +5386,16 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
     if (Child == nullptr)
       return nullptr;
     return make<ParameterPackExpansion>(Child);
+  }
+  if (consumeIf("sy")) {
+    Node *Pattern = look() == 'T' ? getDerived().parseTemplateParam()
+                                  : getDerived().parseFunctionParam();
+    if (Pattern == nullptr)
+      return nullptr;
+    Node *Index = getDerived().parseExpr();
+    if (Index == nullptr)
+      return nullptr;
+    return make<PackIndexing>(Pattern, Index);
   }
   if (consumeIf("sZ")) {
     if (look() == 'T') {
