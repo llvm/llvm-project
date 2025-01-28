@@ -704,39 +704,105 @@ class LinuxCoreTestCase(TestBase):
         process = target.LoadCore("linux-riscv64.gpr_fpr.core")
 
         values = {}
+        alias = {}
         values["pc"] = "0x000000000001016e"
+
         values["ra"] = "0x00000000000101a4"
+        alias["x1"] = "ra"
+
         values["sp"] = "0x0000003fffc1d2d0"
+        alias["x2"] = "sp"
+
         values["gp"] = "0x0000002ae6eccf50"
+        alias["x3"] = "gp"
+
         values["tp"] = "0x0000003ff3cb5400"
+        alias["x4"] = "tp"
+
         values["t0"] = "0x7f7f7f7fffffffff"
+        alias["x5"] = "t0"
+
         values["t1"] = "0x0000002ae6eb9b1c"
+        alias["x6"] = "t1"
+
         values["t2"] = "0xffffffffffffffff"
+        alias["x7"] = "t2"
+
         values["fp"] = "0x0000003fffc1d300"
+        alias["x8"] = "fp"
+
         values["s1"] = "0x0000002ae6eced98"
+        alias["x9"] = "s1"
+
         values["a0"] = "0x0"
+        alias["x10"] = "a0"
+
         values["a1"] = "0x0000000000010144"
+        alias["x11"] = "a1"
+
         values["a2"] = "0x0000002ae6ecedb0"
+        alias["x12"] = "a2"
+
         values["a3"] = "0xafdbdbff81cf7f81"
+        alias["x13"] = "a3"
+
         values["a4"] = "0x00000000000101e4"
+        alias["x14"] = "a4"
+
         values["a5"] = "0x0"
+        alias["x15"] = "a5"
+
         values["a6"] = "0x2f5b5a40014e0001"
+        alias["x16"] = "a6"
+
         values["a7"] = "0x00000000000000dd"
+        alias["x17"] = "a7"
+
         values["s2"] = "0x0000002ae6ec8860"
+        alias["x18"] = "s2"
+
         values["s3"] = "0x0000002ae6ecedb0"
+        alias["x19"] = "s3"
+
         values["s4"] = "0x0000003fff886c18"
+        alias["x20"] = "s4"
+
         values["s5"] = "0x0000002ae6eceb78"
+        alias["x21"] = "s5"
+
         values["s6"] = "0x0000002ae6ec8860"
+        alias["x22"] = "s6"
+
         values["s7"] = "0x0000002ae6ec8860"
+        alias["x23"] = "s7"
+
         values["s8"] = "0x0"
+        alias["x24"] = "s8"
+
         values["s9"] = "0x000000000000000f"
+        alias["x25"] = "s9"
+
         values["s10"] = "0x0000002ae6ecc8d0"
+        alias["x26"] = "s10"
+
         values["s11"] = "0x0000000000000008"
+        alias["x27"] = "s11"
+
         values["t3"] = "0x0000003ff3be3728"
+        alias["x28"] = "t3"
+
         values["t4"] = "0x0"
+        alias["x29"] = "t4"
+
         values["t5"] = "0x0000000000000002"
+        alias["x30"] = "t5"
+
         values["t6"] = "0x0000002ae6ed08b9"
+        alias["x31"] = "t6"
+
         values["zero"] = "0x0"
+        alias["x0"] = "zero"
+
         values["fa5"] = "0xffffffff423c0000"
         values["fcsr"] = "0x00000000"
 
@@ -788,6 +854,13 @@ class LinuxCoreTestCase(TestBase):
                 substrs=["{} = {}".format(regname, fpr_value)],
             )
 
+        for aliasname, regname in alias.items():
+            value = values[regname]
+            self.expect(
+                "register read {}".format(aliasname),
+                substrs=["{} = {}".format(regname, value)],
+            )
+
         self.expect("register read --all")
 
     @skipIfLLVMTargetMissing("RISCV")
@@ -798,43 +871,115 @@ class LinuxCoreTestCase(TestBase):
         process = target.LoadCore("linux-riscv64.gpr_only.core")
 
         values = {}
+        alias = {}
         values["pc"] = "0x0000000000010164"
+
         values["ra"] = "0x0000000000010194"
+        alias["x1"] = "ra"
+
         values["sp"] = "0x00fffffff4d5fcc0"
+        alias["x2"] = "sp"
+
         values["gp"] = "0x0000000000157678"
+        alias["x3"] = "gp"
+
         values["tp"] = "0x00ffffff99c43400"
+        alias["x4"] = "tp"
+
         values["t0"] = "0x00ffffff99c6b260"
+        alias["x5"] = "t0"
+
         values["t1"] = "0x00ffffff99b7bd54"
+        alias["x6"] = "t1"
+
         values["t2"] = "0x0000000003f0b27f"
+        alias["x7"] = "t2"
+
         values["fp"] = "0x00fffffff4d5fcf0"
+        alias["x8"] = "fp"
+
         values["s1"] = "0x0000000000000003"
+        alias["x9"] = "s1"
+
         values["a0"] = "0x0"
+        alias["x10"] = "a0"
+
         values["a1"] = "0x0000000000010144"
+        alias["x11"] = "a1"
+
         values["a2"] = "0x0000000000176460"
+        alias["x12"] = "a2"
+
         values["a3"] = "0x000000000015ee38"
+        alias["x13"] = "a3"
+
         values["a4"] = "0x00000000423c0000"
+        alias["x14"] = "a4"
+
         values["a5"] = "0x0"
+        alias["x15"] = "a5"
+
         values["a6"] = "0x0"
+        alias["x16"] = "a6"
+
         values["a7"] = "0x00000000000000dd"
+        alias["x17"] = "a7"
+
         values["s2"] = "0x0"
+        alias["x18"] = "s2"
+
         values["s3"] = "0x000000000014ddf8"
+        alias["x19"] = "s3"
+
         values["s4"] = "0x000000000003651c"
+        alias["x20"] = "s4"
+
         values["s5"] = "0x00fffffffccd8d28"
+        alias["x21"] = "s5"
+
         values["s6"] = "0x000000000014ddf8"
+        alias["x22"] = "s6"
+
         values["s7"] = "0x00ffffff99c69d48"
+        alias["x23"] = "s7"
+
         values["s8"] = "0x00ffffff99c6a008"
+        alias["x24"] = "s8"
+
         values["s9"] = "0x0"
+        alias["x25"] = "s9"
+
         values["s10"] = "0x0"
+        alias["x26"] = "s10"
+
         values["s11"] = "0x0"
+        alias["x27"] = "s11"
+
         values["t3"] = "0x00ffffff99c42000"
+        alias["x28"] = "t3"
+
         values["t4"] = "0x00ffffff99af8e20"
+        alias["x29"] = "t4"
+
         values["t5"] = "0x0000000000000005"
+        alias["x30"] = "t5"
+
         values["t6"] = "0x44760bdd8d5f6381"
+        alias["x31"] = "t6"
+
         values["zero"] = "0x0"
+        alias["x0"] = "zero"
 
         for regname, value in values.items():
             self.expect(
                 "register read {}".format(regname),
+                substrs=["{} = {}".format(regname, value)],
+            )
+
+        for aliasname, regname in alias.items():
+            value = values[regname]
+            self.expect(
+                "register read {}".format(aliasname),
                 substrs=["{} = {}".format(regname, value)],
             )
 
