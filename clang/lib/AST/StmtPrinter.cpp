@@ -1257,11 +1257,12 @@ void StmtPrinter::VisitConstantExpr(ConstantExpr *Node) {
 }
 
 void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
-  if (const auto *OCED = dyn_cast<OMPCapturedExprDecl>(Node->getDecl())) {
+  ValueDecl *VD = Node->getDecl();
+  if (const auto *OCED = dyn_cast<OMPCapturedExprDecl>(VD)) {
     OCED->getInit()->IgnoreImpCasts()->printPretty(OS, nullptr, Policy);
     return;
   }
-  if (const auto *TPOD = dyn_cast<TemplateParamObjectDecl>(Node->getDecl())) {
+  if (const auto *TPOD = dyn_cast<TemplateParamObjectDecl>(VD)) {
     TPOD->printAsExpr(OS, Policy);
     return;
   }
@@ -1269,16 +1270,29 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
     Qualifier->print(OS, Policy);
   if (Node->hasTemplateKeyword())
     OS << "template ";
-  if (Policy.CleanUglifiedParameters &&
-      isa<ParmVarDecl, NonTypeTemplateParmDecl>(Node->getDecl()) &&
-      Node->getDecl()->getIdentifier())
-    OS << Node->getDecl()->getIdentifier()->deuglifiedName();
-  else
-    Node->getNameInfo().printName(OS, Policy);
+  DeclarationNameInfo NameInfo = Node->getNameInfo();
+  if (IdentifierInfo *ID = NameInfo.getName().getAsIdentifierInfo();
+      ID || NameInfo.getName().getNameKind() != DeclarationName::Identifier) {
+    if (Policy.CleanUglifiedParameters &&
+        isa<ParmVarDecl, NonTypeTemplateParmDecl>(VD) && ID)
+      OS << ID->deuglifiedName();
+    else
+      NameInfo.printName(OS, Policy);
+  } else {
+    switch (VD->getKind()) {
+    case Decl::NonTypeTemplateParm: {
+      auto *TD = cast<NonTypeTemplateParmDecl>(VD);
+      OS << "value-parameter-" << TD->getDepth() << '-' << TD->getIndex() << "";
+      break;
+    }
+    default:
+      llvm_unreachable("Unhandled anonymous declaration kind");
+    }
+  }
   if (Node->hasExplicitTemplateArgs()) {
     const TemplateParameterList *TPL = nullptr;
     if (!Node->hadMultipleCandidates())
-      if (auto *TD = dyn_cast<TemplateDecl>(Node->getDecl()))
+      if (auto *TD = dyn_cast<TemplateDecl>(VD))
         TPL = TD->getTemplateParameters();
     printTemplateArgumentList(OS, Node->template_arguments(), Policy, TPL);
   }
