@@ -44,6 +44,7 @@ static const unsigned ARM64AddrSpaceMap[] = {
     static_cast<unsigned>(AArch64AddrSpace::ptr32_uptr),
     static_cast<unsigned>(AArch64AddrSpace::ptr64),
     0, // hlsl_groupshared
+    0, // hlsl_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -82,7 +83,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasSVE2SHA3 = false;
   bool HasSVE2SM4 = false;
   bool HasSVEB16B16 = false;
-  bool HasSVE2BitPerm = false;
+  bool HasSVEBitPerm = false;
   bool HasMatmulFP64 = false;
   bool HasMatmulFP32 = false;
   bool HasLSE = false;

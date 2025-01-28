@@ -4507,7 +4507,7 @@ void CodeGenFunction::EmitCallArgs(
   // First, if a prototype was provided, use those argument types.
   bool IsVariadic = false;
   if (Prototype.P) {
-    const auto *MD = Prototype.P.dyn_cast<const ObjCMethodDecl *>();
+    const auto *MD = dyn_cast<const ObjCMethodDecl *>(Prototype.P);
     if (MD) {
       IsVariadic = MD->isVariadic();
       ExplicitCC = getCallingConventionForDecl(

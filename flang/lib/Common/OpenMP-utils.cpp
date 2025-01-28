@@ -18,10 +18,10 @@ mlir::Block *genEntryBlock(mlir::OpBuilder &builder, const EntryBlockArgs &args,
 
   llvm::SmallVector<mlir::Type> types;
   llvm::SmallVector<mlir::Location> locs;
-  unsigned numVars = args.inReduction.vars.size() + args.map.vars.size() +
-      args.priv.vars.size() + args.reduction.vars.size() +
-      args.taskReduction.vars.size() + args.useDeviceAddr.vars.size() +
-      args.useDevicePtr.vars.size();
+  unsigned numVars = args.hostEvalVars.size() + args.inReduction.vars.size() +
+      args.map.vars.size() + args.priv.vars.size() +
+      args.reduction.vars.size() + args.taskReduction.vars.size() +
+      args.useDeviceAddr.vars.size() + args.useDevicePtr.vars.size();
   types.reserve(numVars);
   locs.reserve(numVars);
 
@@ -34,6 +34,7 @@ mlir::Block *genEntryBlock(mlir::OpBuilder &builder, const EntryBlockArgs &args,
 
   // Populate block arguments in clause name alphabetical order to match
   // expected order by the BlockArgOpenMPOpInterface.
+  extractTypeLoc(args.hostEvalVars);
   extractTypeLoc(args.inReduction.vars);
   extractTypeLoc(args.map.vars);
   extractTypeLoc(args.priv.vars);

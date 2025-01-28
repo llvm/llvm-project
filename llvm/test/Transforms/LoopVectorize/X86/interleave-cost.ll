@@ -8,78 +8,7 @@ define void @test_free_instructions_feeding_geps_for_interleave_groups(ptr noali
 ; CHECK-LABEL: define void @test_free_instructions_feeding_geps_for_interleave_groups(
 ; CHECK-SAME: ptr noalias [[P_INVAR:%.*]], ptr noalias [[DST_1:%.*]], ptr noalias [[DST_2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br i1 true, label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST_1]], i64 8
-; CHECK-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 -1)
-; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 0, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult ptr [[TMP1]], [[SCEVGEP]]
-; CHECK-NEXT:    [[TMP3:%.*]] = or i1 [[TMP2]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[DST_1]], i64 12
-; CHECK-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 -1)
-; CHECK-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 0, [[MUL_RESULT3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[SCEVGEP1]], i64 [[MUL_RESULT3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult ptr [[TMP5]], [[SCEVGEP1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP6]], [[MUL_OVERFLOW4]]
-; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[DST_1]], i64 4
-; CHECK-NEXT:    [[MUL6:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 -1)
-; CHECK-NEXT:    [[MUL_RESULT7:%.*]] = extractvalue { i64, i1 } [[MUL6]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW8:%.*]] = extractvalue { i64, i1 } [[MUL6]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 0, [[MUL_RESULT7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[SCEVGEP5]], i64 [[MUL_RESULT7]]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult ptr [[TMP9]], [[SCEVGEP5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = or i1 [[TMP10]], [[MUL_OVERFLOW8]]
-; CHECK-NEXT:    [[MUL9:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 -1)
-; CHECK-NEXT:    [[MUL_RESULT10:%.*]] = extractvalue { i64, i1 } [[MUL9]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW11:%.*]] = extractvalue { i64, i1 } [[MUL9]], 1
-; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 0, [[MUL_RESULT10]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[DST_1]], i64 [[MUL_RESULT10]]
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp ult ptr [[TMP13]], [[DST_1]]
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP14]], [[MUL_OVERFLOW11]]
-; CHECK-NEXT:    [[SCEVGEP12:%.*]] = getelementptr i8, ptr [[DST_2]], i64 8
-; CHECK-NEXT:    [[MUL13:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 -1)
-; CHECK-NEXT:    [[MUL_RESULT14:%.*]] = extractvalue { i64, i1 } [[MUL13]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW15:%.*]] = extractvalue { i64, i1 } [[MUL13]], 1
-; CHECK-NEXT:    [[TMP16:%.*]] = sub i64 0, [[MUL_RESULT14]]
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[SCEVGEP12]], i64 [[MUL_RESULT14]]
-; CHECK-NEXT:    [[TMP18:%.*]] = icmp ult ptr [[TMP17]], [[SCEVGEP12]]
-; CHECK-NEXT:    [[TMP19:%.*]] = or i1 [[TMP18]], [[MUL_OVERFLOW15]]
-; CHECK-NEXT:    [[SCEVGEP16:%.*]] = getelementptr i8, ptr [[DST_2]], i64 12
-; CHECK-NEXT:    [[MUL17:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 -1)
-; CHECK-NEXT:    [[MUL_RESULT18:%.*]] = extractvalue { i64, i1 } [[MUL17]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW19:%.*]] = extractvalue { i64, i1 } [[MUL17]], 1
-; CHECK-NEXT:    [[TMP20:%.*]] = sub i64 0, [[MUL_RESULT18]]
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[SCEVGEP16]], i64 [[MUL_RESULT18]]
-; CHECK-NEXT:    [[TMP22:%.*]] = icmp ult ptr [[TMP21]], [[SCEVGEP16]]
-; CHECK-NEXT:    [[TMP23:%.*]] = or i1 [[TMP22]], [[MUL_OVERFLOW19]]
-; CHECK-NEXT:    [[SCEVGEP20:%.*]] = getelementptr i8, ptr [[DST_2]], i64 4
-; CHECK-NEXT:    [[MUL21:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 -1)
-; CHECK-NEXT:    [[MUL_RESULT22:%.*]] = extractvalue { i64, i1 } [[MUL21]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW23:%.*]] = extractvalue { i64, i1 } [[MUL21]], 1
-; CHECK-NEXT:    [[TMP24:%.*]] = sub i64 0, [[MUL_RESULT22]]
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[SCEVGEP20]], i64 [[MUL_RESULT22]]
-; CHECK-NEXT:    [[TMP26:%.*]] = icmp ult ptr [[TMP25]], [[SCEVGEP20]]
-; CHECK-NEXT:    [[TMP27:%.*]] = or i1 [[TMP26]], [[MUL_OVERFLOW23]]
-; CHECK-NEXT:    [[MUL24:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 -1)
-; CHECK-NEXT:    [[MUL_RESULT25:%.*]] = extractvalue { i64, i1 } [[MUL24]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW26:%.*]] = extractvalue { i64, i1 } [[MUL24]], 1
-; CHECK-NEXT:    [[TMP28:%.*]] = sub i64 0, [[MUL_RESULT25]]
-; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[DST_2]], i64 [[MUL_RESULT25]]
-; CHECK-NEXT:    [[TMP30:%.*]] = icmp ult ptr [[TMP29]], [[DST_2]]
-; CHECK-NEXT:    [[TMP31:%.*]] = or i1 [[TMP30]], [[MUL_OVERFLOW26]]
-; CHECK-NEXT:    [[TMP32:%.*]] = or i1 [[TMP3]], [[TMP7]]
-; CHECK-NEXT:    [[TMP33:%.*]] = or i1 [[TMP32]], [[TMP11]]
-; CHECK-NEXT:    [[TMP34:%.*]] = or i1 [[TMP33]], [[TMP15]]
-; CHECK-NEXT:    [[TMP35:%.*]] = or i1 [[TMP34]], [[TMP19]]
-; CHECK-NEXT:    [[TMP36:%.*]] = or i1 [[TMP35]], [[TMP23]]
-; CHECK-NEXT:    [[TMP37:%.*]] = or i1 [[TMP36]], [[TMP27]]
-; CHECK-NEXT:    [[TMP38:%.*]] = or i1 [[TMP37]], [[TMP31]]
-; CHECK-NEXT:    br i1 [[TMP38]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -106,12 +35,12 @@ define void @test_free_instructions_feeding_geps_for_interleave_groups(ptr noali
 ; CHECK-NEXT:    [[INTERLEAVED_VEC31:%.*]] = shufflevector <8 x float> [[TMP51]], <8 x float> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
 ; CHECK-NEXT:    store <8 x float> [[INTERLEAVED_VEC31]], ptr [[TMP49]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP53:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP53]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -139,7 +68,7 @@ define void @test_free_instructions_feeding_geps_for_interleave_groups(ptr noali
 ; CHECK-NEXT:    [[GEP_DST_276:%.*]] = getelementptr float, ptr [[DST_2]], i64 [[ADD_3]]
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[GEP_DST_276]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 0
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -173,7 +102,7 @@ loop:
   %gep.dst.276 = getelementptr float, ptr %dst.2, i64 %add.3
   store float 0.000000e+00, ptr %gep.dst.276, align 4
   %iv.next = add i64 %iv, 1
-  %ec = icmp eq i64 %iv.next, 0
+  %ec = icmp eq i64 %iv.next, 1024
   br i1 %ec, label %exit, label %loop
 
 exit:
@@ -771,7 +700,7 @@ attributes #1 = { "min-legal-vector-width"="0" "target-cpu"="cascadelake" }
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
 ; CHECK: [[META6]] = !{[[META7:![0-9]+]]}

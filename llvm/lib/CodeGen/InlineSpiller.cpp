@@ -997,9 +997,9 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
       HSpiller.rmFromMergeableSpills(*MI, FI))
     --NumSpills;
   LIS.ReplaceMachineInstrInMaps(*MI, *FoldMI);
-  // Update the call site info.
-  if (MI->isCandidateForCallSiteEntry())
-    MI->getMF()->moveCallSiteInfo(MI, FoldMI);
+  // Update the call info.
+  if (MI->isCandidateForAdditionalCallInfo())
+    MI->getMF()->moveAdditionalCallInfo(MI, FoldMI);
 
   // If we've folded a store into an instruction labelled with debug-info,
   // record a substitution from the old operand to the memory operand. Handle
@@ -1578,7 +1578,8 @@ void HoistSpillHelper::runHoistSpills(
       for (auto *const SpillBB : SpillsInSubTree) {
         // When SpillBB is a BB contains original spill, insert the spill
         // to SpillsToRm.
-        if (SpillsToKeep.contains(SpillBB) && !SpillsToKeep[SpillBB]) {
+        if (auto It = SpillsToKeep.find(SpillBB);
+            It != SpillsToKeep.end() && !It->second) {
           MachineInstr *SpillToRm = SpillBBToSpill[SpillBB];
           SpillsToRm.push_back(SpillToRm);
         }
