@@ -11,7 +11,7 @@
 // cxx98-error@-1 {{variadic macros are a C99 feature}}
 #endif
 
-namespace cwg1 { // cwg1: 20
+namespace cwg1 { // cwg1: 21
   namespace X { extern "C" void cwg1_f(int a = 1); } // #cwg1-X
   namespace Y { extern "C" void cwg1_f(int a = 1); } // #cwg1-Y
   using X::cwg1_f; using Y::cwg1_f;

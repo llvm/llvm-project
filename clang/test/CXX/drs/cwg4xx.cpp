@@ -369,7 +369,7 @@ namespace cwg417 { // cwg417: no
   }
 } // namespace cwg417
 
-namespace cwg418 { // cwg418: 20
+namespace cwg418 { // cwg418: 21
 namespace example1 {
 void f1(int, int = 0);
 void f1(int = 0, int);
