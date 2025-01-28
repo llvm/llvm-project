@@ -1,31 +1,76 @@
-//===- BPSectionOrdererBase.cpp -------------------------------------------===//
+//===- BPSectionOrdererBase.inc ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file defines the common BPSectionOrderer interface using the Curiously
+// Recurring Template Pattern and dispatches to the BalancedPartitioning
+// algorithm implemented in LLVMSupport. The optimized section layout attempts
+// to group similar sections together (resulting in a smaller compressed app
+// size) and utilize a temporal profile file to reduce page faults during
+// program startup.
+//
+// Clients should derive from BPOrderer, providing concrete implementations for
+// section and symbol representations. Include this file in a .cpp file to
+// specialize the template for the derived class.
+//
+//===----------------------------------------------------------------------===//
 
-#include "lld/Common/BPSectionOrdererBase.h"
 #include "lld/Common/ErrorHandler.h"
+#include "llvm/ADT/CachedHashString.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/BalancedPartitioning.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include <memory>
+#include <optional>
 
 #define DEBUG_TYPE "bp-section-orderer"
 
 using namespace llvm;
 using namespace lld;
 
+namespace lld {
+template <class D> struct BPOrdererTraits;
+
+template <class D> struct BPOrderer {
+  using Section = typename BPOrdererTraits<D>::Section;
+  using Symbol = typename BPOrdererTraits<D>::Symbol;
+
+  // Compute a section order using the Balanced Partitioning algorithm.
+  //
+  // * for*Compresion: Improve Lempel-Ziv compression by grouping
+  //   similar sections together.
+  // * profilePath: Utilize a temporal profile file to reduce page faults during
+  //   program startup.
+  // * compressionSortStartupFunctions: if profilePath is specified, allocate
+  //   extra utility vertices to prioritize nearby function similarity.
+  static auto
+  computeOrder(llvm::StringRef profilePath, bool forFunctionCompression,
+               bool forDataCompression, bool compressionSortStartupFunctions,
+               bool verbose, llvm::ArrayRef<Section *> sections,
+               const DenseMap<CachedHashStringRef, DenseSet<unsigned>>
+                   &rootSymbolToSectionIdxs)
+      -> llvm::DenseMap<const Section *, int>;
+};
+} // namespace lld
+
 using UtilityNodes = SmallVector<BPFunctionNode::UtilityNodeT>;
 
+template <class D>
 static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
-    ArrayRef<const BPSectionBase *> sections,
+    ArrayRef<const typename D::Section *> sections,
     const DenseMap<const void *, uint64_t> &sectionToIdx,
     ArrayRef<unsigned> sectionIdxs,
     DenseMap<unsigned, SmallVector<unsigned>> *duplicateSectionIdxs,
@@ -38,7 +83,7 @@ static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
 
   for (unsigned sectionIdx : sectionIdxs) {
     const auto *isec = sections[sectionIdx];
-    isec->getSectionHashes(hashes, sectionToIdx);
+    D::getSectionHashes(*isec, hashes, sectionToIdx);
     sectionHashes.emplace_back(sectionIdx, std::move(hashes));
     hashes.clear();
   }
@@ -96,36 +141,27 @@ static SmallVector<std::pair<unsigned, UtilityNodes>> getUnsForCompression(
   return sectionUns;
 }
 
-llvm::DenseMap<const BPSectionBase *, int>
-BPSectionBase::reorderSectionsByBalancedPartitioning(
-    llvm::StringRef profilePath, bool forFunctionCompression,
-    bool forDataCompression, bool compressionSortStartupFunctions, bool verbose,
-    SmallVector<std::unique_ptr<BPSectionBase>> &inputSections) {
-  TimeTraceScope timeScope("Setup Balanced Partitioning");
-  SmallVector<const BPSectionBase *> sections;
-  DenseMap<const void *, uint64_t> sectionToIdx;
-  StringMap<DenseSet<unsigned>> symbolToSectionIdxs;
+/// Symbols can be appended with "(.__uniq.xxxx)?.llvm.yyyy" where "xxxx" and
+/// "yyyy" are numbers that could change between builds. We need to use the
+/// root symbol name before this suffix so these symbols can be matched with
+/// profiles which may have different suffixes.
+inline StringRef getRootSymbol(StringRef name) {
+  auto [P0, S0] = name.rsplit(".llvm.");
+  auto [P1, S1] = P0.rsplit(".__uniq.");
+  return P1;
+}
 
-  // Process input sections
-  for (const auto &isec : inputSections) {
-    unsigned sectionIdx = sections.size();
-    sectionToIdx.try_emplace(isec->getSection(), sectionIdx);
-    sections.emplace_back(isec.get());
-    for (auto &sym : isec->getSymbols())
-      symbolToSectionIdxs[sym->getName()].insert(sectionIdx);
-  }
-  StringMap<DenseSet<unsigned>> rootSymbolToSectionIdxs;
-  for (auto &entry : symbolToSectionIdxs) {
-    StringRef name = entry.getKey();
-    auto &sectionIdxs = entry.getValue();
-    name = BPSectionBase::getRootSymbol(name);
-    rootSymbolToSectionIdxs[name].insert(sectionIdxs.begin(),
-                                         sectionIdxs.end());
-    if (auto resolvedLinkageName =
-            sections[*sectionIdxs.begin()]->getResolvedLinkageName(name))
-      rootSymbolToSectionIdxs[resolvedLinkageName.value()].insert(
-          sectionIdxs.begin(), sectionIdxs.end());
-  }
+template <class D>
+auto BPOrderer<D>::computeOrder(
+    StringRef profilePath, bool forFunctionCompression, bool forDataCompression,
+    bool compressionSortStartupFunctions, bool verbose,
+    ArrayRef<Section *> sections,
+    const DenseMap<CachedHashStringRef, DenseSet<unsigned>>
+        &rootSymbolToSectionIdxs) -> DenseMap<const Section *, int> {
+  TimeTraceScope timeScope("Setup Balanced Partitioning");
+  DenseMap<const void *, uint64_t> sectionToIdx;
+  for (auto [i, isec] : llvm::enumerate(sections))
+    sectionToIdx.try_emplace(isec, i);
 
   BPFunctionNode::UtilityNodeT maxUN = 0;
   DenseMap<unsigned, UtilityNodes> startupSectionIdxUNs;
@@ -150,17 +186,18 @@ BPSectionBase::reorderSectionsByBalancedPartitioning(
       size_t cutoffTimestamp = 1;
       auto &trace = traces[traceIdx].FunctionNameRefs;
       for (size_t timestamp = 0; timestamp < trace.size(); timestamp++) {
-        auto [Filename, ParsedFuncName] = getParsedIRPGOName(
+        auto [_, parsedFuncName] = getParsedIRPGOName(
             reader->getSymtab().getFuncOrVarName(trace[timestamp]));
-        ParsedFuncName = BPSectionBase::getRootSymbol(ParsedFuncName);
+        parsedFuncName = getRootSymbol(parsedFuncName);
 
-        auto sectionIdxsIt = rootSymbolToSectionIdxs.find(ParsedFuncName);
+        auto sectionIdxsIt =
+            rootSymbolToSectionIdxs.find(CachedHashStringRef(parsedFuncName));
         if (sectionIdxsIt == rootSymbolToSectionIdxs.end())
           continue;
-        auto &sectionIdxs = sectionIdxsIt->getValue();
+        auto &sectionIdxs = sectionIdxsIt->second;
         // If the same symbol is found in multiple sections, they might be
         // identical, so we arbitrarily use the size from the first section.
-        currentSize += sections[*sectionIdxs.begin()]->getSize();
+        currentSize += D::getSize(*sections[*sectionIdxs.begin()]);
 
         // Since BalancedPartitioning is sensitive to the initial order, we need
         // to explicitly define it to be ordered by earliest timestamp.
@@ -193,7 +230,7 @@ BPSectionBase::reorderSectionsByBalancedPartitioning(
     if (startupSectionIdxUNs.count(sectionIdx))
       continue;
     const auto *isec = sections[sectionIdx];
-    if (isec->isCodeSection()) {
+    if (D::isCodeSection(*isec)) {
       if (forFunctionCompression)
         sectionIdxsForFunctionCompression.push_back(sectionIdx);
     } else {
@@ -207,8 +244,8 @@ BPSectionBase::reorderSectionsByBalancedPartitioning(
     for (auto &[sectionIdx, uns] : startupSectionIdxUNs)
       startupIdxs.push_back(sectionIdx);
     auto unsForStartupFunctionCompression =
-        getUnsForCompression(sections, sectionToIdx, startupIdxs,
-                             /*duplicateSectionIdxs=*/nullptr, maxUN);
+        getUnsForCompression<D>(sections, sectionToIdx, startupIdxs,
+                                /*duplicateSectionIdxs=*/nullptr, maxUN);
     for (auto &[sectionIdx, compressionUns] :
          unsForStartupFunctionCompression) {
       auto &uns = startupSectionIdxUNs[sectionIdx];
@@ -221,10 +258,10 @@ BPSectionBase::reorderSectionsByBalancedPartitioning(
   // Map a section index (order directly) to a list of duplicate section indices
   // (not ordered directly).
   DenseMap<unsigned, SmallVector<unsigned>> duplicateSectionIdxs;
-  auto unsForFunctionCompression = getUnsForCompression(
+  auto unsForFunctionCompression = getUnsForCompression<D>(
       sections, sectionToIdx, sectionIdxsForFunctionCompression,
       &duplicateSectionIdxs, maxUN);
-  auto unsForDataCompression = getUnsForCompression(
+  auto unsForDataCompression = getUnsForCompression<D>(
       sections, sectionToIdx, sectionIdxsForDataCompression,
       &duplicateSectionIdxs, maxUN);
 
@@ -263,7 +300,7 @@ BPSectionBase::reorderSectionsByBalancedPartitioning(
   unsigned numDuplicateCodeSections = 0;
   unsigned numDataCompressionSections = 0;
   unsigned numDuplicateDataSections = 0;
-  SetVector<const BPSectionBase *> orderedSections;
+  SetVector<const Section *> orderedSections;
   // Order startup functions,
   for (auto &node : nodesForStartup) {
     const auto *isec = sections[node.Id];
@@ -320,23 +357,22 @@ BPSectionBase::reorderSectionsByBalancedPartitioning(
       const uint64_t pageSize = (1 << 14);
       uint64_t currentAddress = 0;
       for (const auto *isec : orderedSections) {
-        for (auto &sym : isec->getSymbols()) {
-          uint64_t startAddress = currentAddress + sym->getValue().value_or(0);
-          uint64_t endAddress = startAddress + sym->getSize().value_or(0);
+        for (auto *sym : D::getSymbols(*isec)) {
+          uint64_t startAddress = currentAddress + D::getSymValue(*sym);
+          uint64_t endAddress = startAddress + D::getSymSize(*sym);
           uint64_t firstPage = startAddress / pageSize;
           // I think the kernel might pull in a few pages when one it touched,
           // so it might be more accurate to force lastPage to be aligned by
           // 4?
           uint64_t lastPage = endAddress / pageSize;
-          StringRef rootSymbol = sym->getName();
-          rootSymbol = BPSectionBase::getRootSymbol(rootSymbol);
+          StringRef rootSymbol = D::getSymName(*sym);
+          rootSymbol = getRootSymbol(rootSymbol);
           symbolToPageNumbers.try_emplace(rootSymbol, firstPage, lastPage);
-          if (auto resolvedLinkageName =
-                  isec->getResolvedLinkageName(rootSymbol))
+          if (auto resolvedLinkageName = D::getResolvedLinkageName(rootSymbol))
             symbolToPageNumbers.try_emplace(resolvedLinkageName.value(),
                                             firstPage, lastPage);
         }
-        currentAddress += isec->getSize();
+        currentAddress += D::getSize(*isec);
       }
 
       // The area under the curve F where F(t) is the total number of page
@@ -348,7 +384,7 @@ BPSectionBase::reorderSectionsByBalancedPartitioning(
           auto traceId = trace.FunctionNameRefs[step];
           auto [Filename, ParsedFuncName] =
               getParsedIRPGOName(reader->getSymtab().getFuncOrVarName(traceId));
-          ParsedFuncName = BPSectionBase::getRootSymbol(ParsedFuncName);
+          ParsedFuncName = getRootSymbol(ParsedFuncName);
           auto it = symbolToPageNumbers.find(ParsedFuncName);
           if (it != symbolToPageNumbers.end()) {
             auto &[firstPage, lastPage] = it->getValue();
@@ -363,7 +399,7 @@ BPSectionBase::reorderSectionsByBalancedPartitioning(
     }
   }
 
-  DenseMap<const BPSectionBase *, int> sectionPriorities;
+  DenseMap<const Section *, int> sectionPriorities;
   int prio = -orderedSections.size();
   for (const auto *isec : orderedSections)
     sectionPriorities[isec] = prio++;
