@@ -11722,21 +11722,9 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
       TemplateArgument SecondArg = *DeductionFailure.getSecondArg();
 
       if (auto *TTPD = dyn_cast<TemplateTypeParmDecl>(ParamD)) {
-        if (TTPD->wasDeclaredWithTypename())
-          S.Diag(Templated->getLocation(),
-                 diag::note_ovl_candidate_explicit_arg_mismatch_named_ttpd)
-              << ParamD->getDeclName() << FirstArg << SecondArg << ParamName
-              << "type";
-        else {
-          // Concept satisfied but not modeled => ill-formed
-          assert(!TTPD->getTypeConstraint() &&
-                 "Concept satisfied but not modeled");
-
-          S.Diag(Templated->getLocation(),
-                 diag::note_ovl_candidate_explicit_arg_mismatch_named_ttpd)
-              << ParamD->getDeclName() << FirstArg << SecondArg << ParamName
-              << "class";
-        }
+        S.Diag(Templated->getLocation(),
+               diag::note_ovl_candidate_explicit_arg_mismatch_named_ttpd)
+            << ParamD->getDeclName() << FirstArg << SecondArg;
       } else if (auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(ParamD)) {
         if (SecondArg.isNull()) {
           S.Diag(Templated->getLocation(),

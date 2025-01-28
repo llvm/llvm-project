@@ -4876,7 +4876,7 @@ def note_ovl_candidate_explicit_arg_mismatch_named_temptemppd : Note<
 def note_ovl_candidate_explicit_arg_mismatch_named_ttpd : Note<
     "candidate template ignored: invalid explicitly-specified argument "
     "for template parameter %0: "
-    "could not convert '%1' from %2 to %4 '%3' (expected a %4, but got '%1')">;
+    "expectd a type, but got value '%1' (of type %2)">;
 def note_ovl_candidate_explicit_arg_mismatch_named_nttpd_b : Note<
     "candidate template ignored: invalid explicitly-specified argument "
     "for template parameter %0: "
