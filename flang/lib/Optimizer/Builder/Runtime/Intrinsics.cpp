@@ -385,3 +385,13 @@ void fir::runtime::genSleep(fir::FirOpBuilder &builder, mlir::Location loc,
       fir::runtime::getRuntimeFunc<mkRTKey(Sleep)>(loc, builder)};
   builder.create<fir::CallOp>(loc, func, seconds);
 }
+
+/// generate chdir runtime call
+mlir::Value fir::runtime::genChdir(fir::FirOpBuilder &builder,
+                                   mlir::Location loc, mlir::Value name) {
+  mlir::func::FuncOp func{
+      fir::runtime::getRuntimeFunc<mkRTKey(Chdir)>(loc, builder)};
+  llvm::SmallVector<mlir::Value> args =
+      fir::runtime::createArguments(builder, loc, func.getFunctionType(), name);
+  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
