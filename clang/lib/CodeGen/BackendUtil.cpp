@@ -799,7 +799,8 @@ static void addSanitizers(const Triple &TargetTriple,
   // Is there a non-zero cutoff?
   static constexpr double SanitizerMaskCutoffsEps = 0.000000001f;
   for (unsigned int i = 0; i < SanitizerKind::SO_Count; ++i) {
-    lowerAllowCheck |= (CodeGenOpts.SanitizeSkipHotCutoffs[i].value_or(0) > SanitizerMaskCutoffsEps);
+    lowerAllowCheck |= (CodeGenOpts.SanitizeSkipHotCutoffs[i].value_or(0) >
+                        SanitizerMaskCutoffsEps);
   }
 
   if (lowerAllowCheck) {
@@ -813,7 +814,8 @@ static void addSanitizers(const Triple &TargetTriple,
       // Opts.cutoffs: ints with range [0, 1000000]
       static_assert(static_cast<int>(SanitizerMaskCutoffsEps * 1000000) == 0);
       for (unsigned int i = 0; i < SanitizerKind::SO_Count; ++i) {
-        Opts.cutoffs.push_back(CodeGenOpts.SanitizeSkipHotCutoffs[i].value_or(0) * 1000000);
+        Opts.cutoffs.push_back(
+            CodeGenOpts.SanitizeSkipHotCutoffs[i].value_or(0) * 1000000);
       }
 
       MPM.addPass(createModuleToFunctionPassAdaptor(LowerAllowCheckPass(Opts)));
