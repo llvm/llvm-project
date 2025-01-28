@@ -19295,6 +19295,25 @@ static Intrinsic::ID getWaveActiveSumIntrinsic(llvm::Triple::ArchType Arch,
   }
 }
 
+// Return wave active sum that corresponds to the QT scalar type
+static Intrinsic::ID getWaveActiveMaxIntrinsic(llvm::Triple::ArchType Arch,
+                                               CGHLSLRuntime &RT, QualType QT) {
+  switch (Arch) {
+  case llvm::Triple::spirv:
+    if (QT->isUnsignedIntegerType())
+      return llvm::Intrinsic::spv_wave_reduce_umax;
+    return llvm::Intrinsic::spv_wave_reduce_max;
+  case llvm::Triple::dxil: {
+    if (QT->isUnsignedIntegerType())
+      return llvm::Intrinsic::dx_wave_reduce_umax;
+    return llvm::Intrinsic::dx_wave_reduce_max;
+  }
+  default:
+    llvm_unreachable("Intrinsic WaveActiveMax"
+                     " not supported by target architecture");
+  }
+}
+
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                             const CallExpr *E,
                                             ReturnValueSlot ReturnValue) {
@@ -19668,6 +19687,23 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
                                                      /*Local=*/false,
                                                      /*AssumeConvergent=*/true),
                            ArrayRef{OpExpr}, "hlsl.wave.active.sum");
+  }
+  case Builtin::BI__builtin_hlsl_wave_active_max: {
+    // Due to the use of variadic arguments, explicitly retreive argument
+    Value *OpExpr = EmitScalarExpr(E->getArg(0));
+    llvm::FunctionType *FT = llvm::FunctionType::get(
+        OpExpr->getType(), ArrayRef{OpExpr->getType()}, false);
+    Intrinsic::ID IID = getWaveActiveMaxIntrinsic(
+        getTarget().getTriple().getArch(), CGM.getHLSLRuntime(),
+        E->getArg(0)->getType());
+
+    // Get overloaded name
+    std::string Name =
+        Intrinsic::getName(IID, ArrayRef{OpExpr->getType()}, &CGM.getModule());
+    return EmitRuntimeCall(CGM.CreateRuntimeFunction(FT, Name, {},
+                                                     /*Local=*/false,
+                                                     /*AssumeConvergent=*/true),
+                           ArrayRef{OpExpr}, "hlsl.wave.active.max");
   }
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
     // We don't define a SPIR-V intrinsic, instead it is a SPIR-V built-in
