@@ -140,13 +140,13 @@ concept viewable_range =
 #  if _LIBCPP_STD_VER >= 23
 
 template <class... _Rs>
-using __concat_reference_t = common_reference_t<range_reference_t<_Rs>...>;
+using __concat_reference_t _LIBCPP_NODEBUG = common_reference_t<range_reference_t<_Rs>...>;
 
 template <class... _Rs>
-using __concat_value_t = common_type_t<range_value_t<_Rs>...>;
+using __concat_value_t _LIBCPP_NODEBUG = common_type_t<range_value_t<_Rs>...>;
 
 template <class... _Rs>
-using __concat_rvalue_reference_t = common_reference_t<range_rvalue_reference_t<_Rs>...>;
+using __concat_rvalue_reference_t _LIBCPP_NODEBUG = common_reference_t<range_rvalue_reference_t<_Rs>...>;
 
 template <class _Ref, class _RRef, class _It>
 concept __concat_indirectly_readable_impl = requires(const _It __it) {
