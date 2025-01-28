@@ -13,6 +13,7 @@ equivalent C++-style comments.
 Examples:
 
 Input:
+
 .. code-block::c++
 
   /* This is a single-line comment */
@@ -22,6 +23,7 @@ Input:
   multi-line comment */
 
 Output:
+
 .. code-block::c++
 
   // This is a single-line comment
@@ -35,6 +37,7 @@ Output:
   Inline Comments are neither fixed nor warned.
 
   Example:
+  
   .. code-block:: c++
 
     int a = /* this is a comment */ 5;
