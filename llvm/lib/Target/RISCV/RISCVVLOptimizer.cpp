@@ -1353,7 +1353,6 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
   // For each instruction that defines a vector, compute what VL its
   // downstream users demand.
   for (MachineBasicBlock *MBB : post_order(&MF)) {
-    // Avoid unreachable blocks as they have degenerate dominance
     assert(MDT->isReachableFromEntry(MBB));
     for (MachineInstr &MI : reverse(*MBB)) {
       if (!isCandidate(MI))
@@ -1363,11 +1362,15 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
+  // Then go through and see if we can reduce the VL of any instructions to
+  // only what's demanded.
   bool MadeChange = false;
   for (MachineBasicBlock &MBB : MF) {
-    // Then go through and see if we can reduce the VL of any instructions to
-    // only what's demanded.
-    for (auto &MI : MBB) {
+    // Avoid unreachable blocks as they have degenerate dominance
+    if (!MDT->isReachableFromEntry(&MBB))
+      continue;
+
+    for (auto &MI : reverse(MBB)) {
       if (!isCandidate(MI))
         continue;
       if (!tryReduceVL(MI))
