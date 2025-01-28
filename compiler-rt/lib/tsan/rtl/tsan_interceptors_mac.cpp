@@ -14,10 +14,6 @@
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_APPLE
 
-// clang-format off
-#  include "tsan_spinlock_defs_mac.h"
-// clang-format on
-
 #  include <errno.h>
 #  include <libkern/OSAtomic.h>
 #  include <objc/objc-sync.h>
