@@ -5,5 +5,5 @@
 
 int f0(int, unsigned);
 int f0(int x, unsigned y) {
-  return x < y; // expected-warning {{comparison of integers}}
+  return x < y; // expected-warning {{comparison of integers}} expected-note{{}}
 }
