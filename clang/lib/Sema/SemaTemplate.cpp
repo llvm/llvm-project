@@ -5199,7 +5199,7 @@ convertTypeTemplateArgumentToTemplate(ASTContext &Context, TypeLoc TLoc) {
 }
 
 bool Sema::CheckTemplateArgument(
-    NamedDecl *Param, TemplateArgumentLoc &Arg, NamedDecl *Template,
+    NamedDecl *Param, TemplateArgumentLoc &ArgLoc, NamedDecl *Template,
     SourceLocation TemplateLoc, SourceLocation RAngleLoc,
     unsigned ArgumentPackIndex,
     SmallVectorImpl<TemplateArgument> &SugaredConverted,
@@ -5208,9 +5208,10 @@ bool Sema::CheckTemplateArgument(
     bool PartialOrderingTTP, bool *MatchedPackOnParmToNonPackOnArg) {
   // Check template type parameters.
   if (TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(Param))
-    return CheckTemplateTypeArgument(TTP, Arg, SugaredConverted,
+    return CheckTemplateTypeArgument(TTP, ArgLoc, SugaredConverted,
                                      CanonicalConverted);
 
+  const TemplateArgument &Arg = ArgLoc.getArgument();
   // Check non-type template parameters.
   if (NonTypeTemplateParmDecl *NTTP =dyn_cast<NonTypeTemplateParmDecl>(Param)) {
     // Do substitution on the type of the non-type template parameter
@@ -5252,63 +5253,73 @@ bool Sema::CheckTemplateArgument(
         return true;
     }
 
-    switch (Arg.getArgument().getKind()) {
-    case TemplateArgument::Null:
-      llvm_unreachable("Should never see a NULL template argument here");
-
-    case TemplateArgument::Expression: {
-      Expr *E = Arg.getArgument().getAsExpr();
+    auto checkExpr = [&](Expr *E) -> Expr * {
       TemplateArgument SugaredResult, CanonicalResult;
       unsigned CurSFINAEErrors = NumSFINAEErrors;
       ExprResult Res =
           CheckTemplateArgument(NTTP, NTTPType, E, SugaredResult,
                                 CanonicalResult, PartialOrderingTTP, CTAK);
-      if (Res.isInvalid())
-        return true;
       // If the current template argument causes an error, give up now.
-      if (CurSFINAEErrors < NumSFINAEErrors)
-        return true;
-
-      // If the resulting expression is new, then use it in place of the
-      // old expression in the template argument.
-      if (Res.get() != E) {
-        TemplateArgument TA(Res.get());
-        Arg = TemplateArgumentLoc(TA, Res.get());
-      }
-
+      if (Res.isInvalid() || CurSFINAEErrors < NumSFINAEErrors)
+        return nullptr;
       SugaredConverted.push_back(SugaredResult);
       CanonicalConverted.push_back(CanonicalResult);
+      return Res.get();
+    };
+
+    switch (Arg.getKind()) {
+    case TemplateArgument::Null:
+      llvm_unreachable("Should never see a NULL template argument here");
+
+    case TemplateArgument::Expression: {
+      Expr *E = Arg.getAsExpr();
+      Expr *R = checkExpr(E);
+      if (!R)
+        return true;
+      // If the resulting expression is new, then use it in place of the
+      // old expression in the template argument.
+      if (R != E) {
+        TemplateArgument TA(R);
+        ArgLoc = TemplateArgumentLoc(TA, R);
+      }
       break;
     }
 
-    case TemplateArgument::Declaration:
+    // As for the converted NTTP kinds, they still might need another
+    // conversion, as the new corresponding parameter might be different.
+    // Ideally, we would always perform substitution starting with sugared types
+    // and never need these, as we would still have expressions. Since these are
+    // needed so rarely, it's probably a better tradeoff to just convert them
+    // back to expressions.
     case TemplateArgument::Integral:
-    case TemplateArgument::StructuralValue:
+    case TemplateArgument::Declaration:
     case TemplateArgument::NullPtr:
-      // We've already checked this template argument, so just copy
-      // it to the list of converted arguments.
-      SugaredConverted.push_back(Arg.getArgument());
-      CanonicalConverted.push_back(
-          Context.getCanonicalTemplateArgument(Arg.getArgument()));
+    case TemplateArgument::StructuralValue: {
+      // FIXME: StructuralValue is untested here.
+      ExprResult R =
+          BuildExpressionFromNonTypeTemplateArgument(Arg, SourceLocation());
+      assert(R.isUsable());
+      if (!checkExpr(R.get()))
+        return true;
       break;
+    }
 
     case TemplateArgument::Template:
     case TemplateArgument::TemplateExpansion:
       // We were given a template template argument. It may not be ill-formed;
       // see below.
-      if (DependentTemplateName *DTN
-            = Arg.getArgument().getAsTemplateOrTemplatePattern()
-                                              .getAsDependentTemplateName()) {
+      if (DependentTemplateName *DTN = Arg.getAsTemplateOrTemplatePattern()
+                                           .getAsDependentTemplateName()) {
         // We have a template argument such as \c T::template X, which we
         // parsed as a template template argument. However, since we now
         // know that we need a non-type template argument, convert this
         // template name into an expression.
 
         DeclarationNameInfo NameInfo(DTN->getIdentifier(),
-                                     Arg.getTemplateNameLoc());
+                                     ArgLoc.getTemplateNameLoc());
 
         CXXScopeSpec SS;
-        SS.Adopt(Arg.getTemplateQualifierLoc());
+        SS.Adopt(ArgLoc.getTemplateQualifierLoc());
         // FIXME: the template-template arg was a DependentTemplateName,
         // so it was provided with a template keyword. However, its source
         // location is not stored in the template argument structure.
@@ -5319,8 +5330,8 @@ bool Sema::CheckTemplateArgument(
 
         // If we parsed the template argument as a pack expansion, create a
         // pack expansion expression.
-        if (Arg.getArgument().getKind() == TemplateArgument::TemplateExpansion){
-          E = ActOnPackExpansion(E.get(), Arg.getTemplateEllipsisLoc());
+        if (Arg.getKind() == TemplateArgument::TemplateExpansion) {
+          E = ActOnPackExpansion(E.get(), ArgLoc.getTemplateEllipsisLoc());
           if (E.isInvalid())
             return true;
         }
@@ -5340,8 +5351,8 @@ bool Sema::CheckTemplateArgument(
       // We have a template argument that actually does refer to a class
       // template, alias template, or template template parameter, and
       // therefore cannot be a non-type template argument.
-      Diag(Arg.getLocation(), diag::err_template_arg_must_be_expr)
-        << Arg.getSourceRange();
+      Diag(ArgLoc.getLocation(), diag::err_template_arg_must_be_expr)
+          << ArgLoc.getSourceRange();
       NoteTemplateParameterLocation(*Param);
 
       return true;
@@ -5357,8 +5368,8 @@ bool Sema::CheckTemplateArgument(
       //
       // We warn specifically about this case, since it can be rather
       // confusing for users.
-      QualType T = Arg.getArgument().getAsType();
-      SourceRange SR = Arg.getSourceRange();
+      QualType T = Arg.getAsType();
+      SourceRange SR = ArgLoc.getSourceRange();
       if (T->isFunctionType())
         Diag(SR.getBegin(), diag::err_template_arg_nontype_ambig) << SR << T;
       else
@@ -5409,34 +5420,33 @@ bool Sema::CheckTemplateArgument(
   //   When [the injected-class-name] is used [...] as a template-argument for
   //   a template template-parameter [...] it refers to the class template
   //   itself.
-  if (Arg.getArgument().getKind() == TemplateArgument::Type) {
+  if (Arg.getKind() == TemplateArgument::Type) {
     TemplateArgumentLoc ConvertedArg = convertTypeTemplateArgumentToTemplate(
-        Context, Arg.getTypeSourceInfo()->getTypeLoc());
+        Context, ArgLoc.getTypeSourceInfo()->getTypeLoc());
     if (!ConvertedArg.getArgument().isNull())
-      Arg = ConvertedArg;
+      ArgLoc = ConvertedArg;
   }
 
-  switch (Arg.getArgument().getKind()) {
+  switch (Arg.getKind()) {
   case TemplateArgument::Null:
     llvm_unreachable("Should never see a NULL template argument here");
 
   case TemplateArgument::Template:
   case TemplateArgument::TemplateExpansion:
-    if (CheckTemplateTemplateArgument(TempParm, Params, Arg, PartialOrdering,
+    if (CheckTemplateTemplateArgument(TempParm, Params, ArgLoc, PartialOrdering,
                                       MatchedPackOnParmToNonPackOnArg))
       return true;
 
-    SugaredConverted.push_back(Arg.getArgument());
-    CanonicalConverted.push_back(
-        Context.getCanonicalTemplateArgument(Arg.getArgument()));
+    SugaredConverted.push_back(Arg);
+    CanonicalConverted.push_back(Context.getCanonicalTemplateArgument(Arg));
     break;
 
   case TemplateArgument::Expression:
   case TemplateArgument::Type:
     // We have a template template parameter but the template
     // argument does not refer to a template.
-    Diag(Arg.getLocation(), diag::err_template_arg_must_be_template)
-      << getLangOpts().CPlusPlus11;
+    Diag(ArgLoc.getLocation(), diag::err_template_arg_must_be_template)
+        << getLangOpts().CPlusPlus11;
     return true;
 
   case TemplateArgument::Declaration:

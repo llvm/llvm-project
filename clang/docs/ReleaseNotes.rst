@@ -1034,6 +1034,9 @@ Bug Fixes to C++ Support
 - Fix immediate escalation not propagating through inherited constructors.  (#GH112677)
 - Fixed assertions or false compiler diagnostics in the case of C++ modules for
   lambda functions or inline friend functions defined inside templates (#GH122493).
+- Fix template argument checking so that converted template arguments are
+  converted again. This fixes some issues with partial ordering involving
+  template template parameters with non-type template parameters.
 - Clang now rejects declaring an alias template with the same name as its template parameter. (#GH123423)
 - Fixed the rejection of valid code when referencing an enumerator of an unscoped enum member with a prior declaration. (#GH124405)
 - Fixed immediate escalation of non-dependent expressions. (#GH123405)

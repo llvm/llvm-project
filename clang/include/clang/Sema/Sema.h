@@ -11780,6 +11780,9 @@ public:
   /// declaration and the type of its corresponding non-type template
   /// parameter, produce an expression that properly refers to that
   /// declaration.
+  /// FIXME: This is used in some contexts where the resulting expression
+  /// doesn't need to live too long. It would be useful if this function
+  /// could return a temporary expression.
   ExprResult BuildExpressionFromDeclTemplateArgument(
       const TemplateArgument &Arg, QualType ParamType, SourceLocation Loc,
       NamedDecl *TemplateParam = nullptr);
