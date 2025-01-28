@@ -963,8 +963,9 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
       return InstructionsState::invalid();
   }
   bool AnyPoison = InstCnt != VL.size();
-  // Skip MainOp.
-  for (Value *V : iterator_range(It + 1, VL.end())) {
+  // Check MainOp too to be sure that it matches the requirements for the
+  // instructions.
+  for (Value *V : iterator_range(It, VL.end())) {
     auto *I = dyn_cast<Instruction>(V);
     if (!I)
       continue;
