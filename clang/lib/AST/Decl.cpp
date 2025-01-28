@@ -4377,9 +4377,9 @@ FunctionDecl::getTemplateSpecializationKindForInstantiation() const {
 void
 FunctionDecl::setTemplateSpecializationKind(TemplateSpecializationKind TSK,
                                           SourceLocation PointOfInstantiation) {
-  if (FunctionTemplateSpecializationInfo *FTSInfo
-        = TemplateOrSpecialization.dyn_cast<
-                                    FunctionTemplateSpecializationInfo*>()) {
+  if (FunctionTemplateSpecializationInfo *FTSInfo =
+          dyn_cast<FunctionTemplateSpecializationInfo *>(
+              TemplateOrSpecialization)) {
     FTSInfo->setTemplateSpecializationKind(TSK);
     if (TSK != TSK_ExplicitSpecialization &&
         PointOfInstantiation.isValid() &&
@@ -4388,8 +4388,9 @@ FunctionDecl::setTemplateSpecializationKind(TemplateSpecializationKind TSK,
       if (ASTMutationListener *L = getASTContext().getASTMutationListener())
         L->InstantiationRequested(this);
     }
-  } else if (MemberSpecializationInfo *MSInfo
-             = TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo*>()) {
+  } else if (MemberSpecializationInfo *MSInfo =
+                 dyn_cast<MemberSpecializationInfo *>(
+                     TemplateOrSpecialization)) {
     MSInfo->setTemplateSpecializationKind(TSK);
     if (TSK != TSK_ExplicitSpecialization &&
         PointOfInstantiation.isValid() &&
