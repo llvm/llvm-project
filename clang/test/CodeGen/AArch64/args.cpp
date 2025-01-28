@@ -54,7 +54,7 @@ struct SortOfEmpty {
 // CHECK: define{{.*}} i32 @sort_of_empty_arg(i32 noundef %a)
 // CHECK-GNU-C: define{{.*}} i32 @sort_of_empty_arg(i32 noundef %a)
 // CHECK-GNU-CXX: define{{.*}} i32 @sort_of_empty_arg(i8 %e.coerce, i32 noundef %a)
-EXTERNC int sort_of_empty_arg(struct Empty e, int a) {
+EXTERNC int sort_of_empty_arg(struct SortOfEmpty e, int a) {
   return a;
 }
 
