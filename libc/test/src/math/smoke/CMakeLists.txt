@@ -2993,7 +2993,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -3007,7 +3007,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -3021,7 +3021,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
@@ -3038,7 +3038,7 @@ add_fp_unittest(
     libc.src.math.sqrtf128
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
 )
 
 add_fp_unittest(
