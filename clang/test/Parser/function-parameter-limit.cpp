@@ -27,3 +27,23 @@ extern double(*func2)(
   P_10000(int u)
   P_10000(int v) // expected-error {{too many function parameters; subsequent parameters will be ignored}}
   int w);
+
+#define PD_10(x) x, x, x, x, x, x, x, x, x, x,
+#define PD_100(x) PD_10(x) PD_10(x) PD_10(x) PD_10(x) PD_10(x) \
+                  PD_10(x) PD_10(x) PD_10(x) PD_10(x) PD_10(x)
+#define PD_1000(x) PD_100(x) PD_100(x) PD_100(x) PD_100(x) PD_100(x) \
+                   PD_100(x) PD_100(x) PD_100(x) PD_100(x) PD_100(x)
+#define PD_10000(x) PD_1000(x) PD_1000(x) PD_1000(x) PD_1000(x) PD_1000(x) \
+                    PD_1000(x) PD_1000(x) PD_1000(x) PD_1000(x) PD_1000(x)
+
+extern "C" int func3( 
+  PD_10000(int = 0)
+  PD_10000(int = 0)
+  PD_10000(int = 0)
+  PD_10000(int = 0)
+  PD_10000(int = 0)
+  PD_10000(int = 0)
+  PD_10000(int = 0) // expected-error {{too many function parameters; subsequent parameters will be ignored}} 
+  int = 0);
+
+int h = func3();
