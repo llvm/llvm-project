@@ -665,7 +665,18 @@ OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
   auto rhsAttr =
       llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput2());
 
-  const int64_t shift = llvm::isa<IntegerType>(resultETy) ? getShift() : 0;
+  // Result right shift on i32_t data type only. For simplification, synthesize
+  // a zero shift for other data type.
+  int32_t shift = 0;
+  if (resultETy.isInteger(32)) {
+    ElementsAttr shift_elem;
+    if (getShift().getImpl()) {
+      if (!matchPattern(getShift(), m_Constant(&shift_elem)))
+        // cannot be folded when the shift value is unknown.
+        return {};
+      shift = shift_elem.getValues<IntegerAttr>()[0].getInt();
+    }
+  }
 
   if (rhsTy == resultTy) {
     if (isSplatZero(resultETy, lhsAttr))
@@ -680,7 +691,7 @@ OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
       return lhs;
   }
 
-  return mulBinaryFolder(lhsAttr, rhsAttr, resultTy, getShift());
+  return mulBinaryFolder(lhsAttr, rhsAttr, resultTy, shift);
 }
 
 OpFoldResult SubOp::fold(FoldAdaptor adaptor) {

@@ -90,43 +90,54 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   }
 
   // tosa::MulOp
-  if (isa<tosa::MulOp>(op) && isa<FloatType>(elementTy))
-    return rewriter.create<arith::MulFOp>(loc, resultTypes, args);
+  if (isa<tosa::MulOp>(op)) {
+    auto shift_val = cast<tosa::MulOp>(op).getShift();
 
-  if (isa<tosa::MulOp>(op) && isa<IntegerType>(elementTy)) {
-    Value a = args[0];
-    Value b = args[1];
-    auto shift =
-        cast<IntegerAttr>(op->getAttr("shift")).getValue().getSExtValue();
-    if (shift > 0) {
-      auto shiftConst =
-          rewriter.create<arith::ConstantIntOp>(loc, shift, /*bitwidth=*/8);
-      if (!a.getType().isInteger(32))
-        a = rewriter.create<arith::ExtSIOp>(loc, rewriter.getI32Type(), a);
-
-      if (!b.getType().isInteger(32))
-        b = rewriter.create<arith::ExtSIOp>(loc, rewriter.getI32Type(), b);
-
-      auto result = rewriter.create<tosa::ApplyScaleOp>(
-          loc, rewriter.getI32Type(), a, b, shiftConst,
-          rewriter.getBoolAttr(false));
-
-      if (elementTy.isInteger(32))
-        return result;
-
-      return rewriter.create<arith::TruncIOp>(loc, elementTy, result);
+    if (isa<FloatType>(elementTy)) {
+      return rewriter.create<arith::MulFOp>(loc, resultTypes, args[0], args[1]);
     }
 
-    int aWidth = a.getType().getIntOrFloatBitWidth();
-    int bWidth = b.getType().getIntOrFloatBitWidth();
-    int cWidth = resultTypes[0].getIntOrFloatBitWidth();
+    if (isa<IntegerType>(elementTy)) {
+      int32_t shift = 0;
+      ElementsAttr shift_elem;
+      if (shift_val.getImpl() &&
+          matchPattern(shift_val, m_Constant(&shift_elem))) {
+        // Explicit shift is set.
+        shift = shift_elem.getValues<IntegerAttr>()[0].getInt();
+      }
 
-    if (aWidth < cWidth)
-      a = rewriter.create<arith::ExtSIOp>(loc, resultTypes[0], a);
-    if (bWidth < cWidth)
-      b = rewriter.create<arith::ExtSIOp>(loc, resultTypes[0], b);
+      Value a = args[0];
+      Value b = args[1];
+      if (shift > 0) {
+        auto shiftConst =
+            rewriter.create<arith::ConstantIntOp>(loc, shift, /*bitwidth=*/8);
+        if (!a.getType().isInteger(32))
+          a = rewriter.create<arith::ExtSIOp>(loc, rewriter.getI32Type(), a);
 
-    return rewriter.create<arith::MulIOp>(loc, resultTypes, a, b);
+        if (!b.getType().isInteger(32))
+          b = rewriter.create<arith::ExtSIOp>(loc, rewriter.getI32Type(), b);
+
+        auto result = rewriter.create<tosa::ApplyScaleOp>(
+            loc, rewriter.getI32Type(), a, b, shiftConst,
+            rewriter.getBoolAttr(false));
+
+        if (elementTy.isInteger(32))
+          return result;
+
+        return rewriter.create<arith::TruncIOp>(loc, elementTy, result);
+      }
+
+      int aWidth = a.getType().getIntOrFloatBitWidth();
+      int bWidth = b.getType().getIntOrFloatBitWidth();
+      int cWidth = resultTypes[0].getIntOrFloatBitWidth();
+
+      if (aWidth < cWidth)
+        a = rewriter.create<arith::ExtSIOp>(loc, resultTypes[0], a);
+      if (bWidth < cWidth)
+        b = rewriter.create<arith::ExtSIOp>(loc, resultTypes[0], b);
+
+      return rewriter.create<arith::MulIOp>(loc, resultTypes, a, b);
+    }
   }
 
   // tosa::NegateOp
@@ -940,7 +951,13 @@ elementwiseMatchAndRewriteHelper(Operation *operation, ValueRange operands,
   auto loc = operation->getLoc();
   auto rank =
       cast<RankedTensorType>(operation->getResultTypes().front()).getRank();
-  auto expandedOperands = expandInputRanks(rewriter, loc, operands, rank);
+  // For the mul op we need to avoid expanding the rank of the optional shift
+  // input.
+  auto operandsToExpand =
+      isa<tosa::MulOp>(operation) ? operands.take_front(2) : operands;
+
+  auto expandedOperands =
+      expandInputRanks(rewriter, loc, operandsToExpand, rank);
   auto [targetShape, masterOperands] =
       computeTargetShape(rewriter, loc, indexPool, expandedOperands);
   auto broadcastOperands = broadcastDynamicDimensions(
