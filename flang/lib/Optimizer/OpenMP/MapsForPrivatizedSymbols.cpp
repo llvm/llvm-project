@@ -55,8 +55,6 @@ class MapsForPrivatizedSymbolsPass
         std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
     Operation *definingOp = var.getDefiningOp();
-    assert(definingOp &&
-           "Privatizing a block argument without any hlfir.declare");
 
     Value varPtr = var;
     // We want the first result of the hlfir.declare op because our goal
@@ -66,7 +64,7 @@ class MapsForPrivatizedSymbolsPass
     // Some types are boxed immediately before privatization. These have other
     // operations in between the privatization and the declaration. It is safe
     // to use var directly here because they will be boxed anyway.
-    if (auto declOp = llvm::dyn_cast<hlfir::DeclareOp>(definingOp))
+    if (auto declOp = llvm::dyn_cast_if_present<hlfir::DeclareOp>(definingOp))
       varPtr = declOp.getBase();
 
     // If we do not have a reference to descritor, but the descriptor itself
