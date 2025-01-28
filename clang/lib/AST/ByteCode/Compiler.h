@@ -248,7 +248,7 @@ protected:
 
   /// Returns a function for the given FunctionDecl.
   /// If the function does not exist yet, it is compiled.
-  const Function *getFunction(const FunctionDecl *FD);
+  const Function *getFunction(const FunctionDecl *FD, SourceLocation Loc = {});
 
   std::optional<PrimType> classify(const Expr *E) const {
     return Ctx.classify(E);

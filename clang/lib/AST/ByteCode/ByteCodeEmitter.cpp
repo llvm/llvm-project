@@ -20,7 +20,8 @@
 using namespace clang;
 using namespace clang::interp;
 
-Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
+Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
+                                       SourceLocation Loc) {
 
   // Manually created functions that haven't been assigned proper
   // parameters yet.
@@ -143,6 +144,15 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   }
 
   assert(Func);
+
+  if (Ctx.getLangOpts().CPlusPlus23 && !FuncDecl->isDefined() &&
+      FuncDecl->isImplicitlyInstantiable()) {
+    assert(Loc.isValid() && "Implicitly instantiating from the new constant "
+                            "interpreter without a valid source location!");
+    Ctx.getASTContext().getSemaProxy().InstantiateFunctionDefinition(
+        Loc, const_cast<FunctionDecl *>(FuncDecl));
+  }
+
   // For not-yet-defined functions, we only create a Function instance and
   // compile their body later.
   if (!FuncDecl->isDefined() ||

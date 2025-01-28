@@ -206,6 +206,13 @@ public:
 } // end namespace sema
 } // end namespace clang
 
+void clang::injectSemaProxyIntoASTContext(ASTContext &Context,
+                                          std::unique_ptr<SemaProxy> ProxyPtr) {
+  Context.SemaProxyPtr = std::move(ProxyPtr);
+}
+
+SemaProxyImpl::SemaProxyImpl(Sema &SemaRef) : SemaRef(SemaRef) {}
+
 const unsigned Sema::MaxAlignmentExponent;
 const uint64_t Sema::MaximumAlignment;
 
@@ -297,6 +304,12 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
   SemaPPCallbackHandler->set(*this);
 
   CurFPFeatures.setFPEvalMethod(PP.getCurrentFPEvalMethod());
+
+  /// Initialize SemaProxyPtr within ASTContext.
+  /// This is very intentionally not a part of public interface
+  /// of ASTContext.
+  injectSemaProxyIntoASTContext(Context,
+                                std::make_unique<SemaProxyImpl>(*this));
 }
 
 // Anchor Sema's type info to this TU.
@@ -2805,4 +2818,13 @@ Attr *Sema::CreateAnnotationAttr(const ParsedAttr &AL) {
   }
 
   return CreateAnnotationAttr(AL, Str, Args);
+}
+
+void SemaProxyImpl::InstantiateFunctionDefinition(
+    SourceLocation PointOfInstantiation, FunctionDecl *Function) {
+  if (getIgnoreSideEffectsOnAST())
+    return;
+  SemaRef.InstantiateFunctionDefinition(
+      PointOfInstantiation, Function, /*Recursive=*/true,
+      /*DefinitionRequired=*/true, /*AtEndOfTU=*/false);
 }

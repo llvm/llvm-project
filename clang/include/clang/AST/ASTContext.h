@@ -183,6 +183,22 @@ struct TypeInfoChars {
   }
 };
 
+/// Interface that allows constant evaluator to call Sema
+/// and mutate the AST.
+struct SemaProxy {
+  virtual ~SemaProxy() = default;
+
+  bool getIgnoreSideEffectsOnAST();
+  void setIgnoreSideEffectsOnAST(bool ignore = true);
+
+  virtual void
+  InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
+                                FunctionDecl *Function) = 0;
+
+private:
+  bool IgnoreSideEffectsOnAST = false;
+};
+
 /// Holds long-lived AST nodes (such as types and decls) that can be
 /// referred to throughout the semantic analysis of a file.
 class ASTContext : public RefCountedBase<ASTContext> {
@@ -676,7 +692,19 @@ private:
   /// Keeps track of the deallocated DeclListNodes for future reuse.
   DeclListNode *ListNodeFreeList = nullptr;
 
+  /// Implementation of the interface that Sema provides during its
+  /// construction.
+  std::unique_ptr<SemaProxy> SemaProxyPtr;
+
 public:
+  /// Returns an object that is capable of modifying AST,
+  /// or nullptr if it's not available. The latter happens when
+  /// Sema is not available.
+  SemaProxy &getSemaProxy() const {
+    assert(SemaProxyPtr);
+    return *SemaProxyPtr;
+  }
+
   IdentifierTable &Idents;
   SelectorTable &Selectors;
   Builtin::Context &BuiltinInfo;
@@ -3550,6 +3578,12 @@ private:
 
   void ReleaseDeclContextMaps();
 
+  /// This is a function that is implemented in the Sema layer,
+  /// that needs friendship to initialize SemaProxy without this capability
+  /// being exposed in the public interface of ASTContext.
+  friend void injectSemaProxyIntoASTContext(ASTContext &,
+                                            std::unique_ptr<SemaProxy>);
+
 public:
   enum PragmaSectionFlag : unsigned {
     PSF_None = 0,
@@ -3616,6 +3650,14 @@ inline Selector GetUnarySelector(StringRef name, ASTContext &Ctx) {
   const IdentifierInfo *II = &Ctx.Idents.get(name);
   return Ctx.Selectors.getSelector(1, &II);
 }
+
+/// Placeholder implementation that issues a diagnostic on any usage.
+struct UnimplementedSemaProxy final : SemaProxy {
+  virtual ~UnimplementedSemaProxy() = default;
+
+  void InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
+                                     FunctionDecl *Function) override;
+};
 
 } // namespace clang
 

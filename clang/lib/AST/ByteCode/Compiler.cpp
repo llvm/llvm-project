@@ -3000,7 +3000,7 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
         return true;
     }
 
-    const Function *Func = getFunction(Ctor);
+    const Function *Func = getFunction(Ctor, E->getExprLoc());
 
     if (!Func)
       return false;
@@ -4209,8 +4209,9 @@ Record *Compiler<Emitter>::getRecord(const RecordDecl *RD) {
 }
 
 template <class Emitter>
-const Function *Compiler<Emitter>::getFunction(const FunctionDecl *FD) {
-  return Ctx.getOrCreateFunction(FD);
+const Function *Compiler<Emitter>::getFunction(const FunctionDecl *FD,
+                                               SourceLocation Loc) {
+  return Ctx.getOrCreateFunction(FD, Loc);
 }
 
 template <class Emitter>
@@ -4737,7 +4738,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
   }
 
   if (FuncDecl) {
-    const Function *Func = getFunction(FuncDecl);
+    const Function *Func = getFunction(FuncDecl, E->getExprLoc());
     if (!Func)
       return false;
     assert(HasRVO == Func->hasRVO());

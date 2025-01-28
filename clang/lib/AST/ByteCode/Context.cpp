@@ -29,7 +29,8 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   assert(Stk.empty());
   Function *Func = P->getFunction(FD);
   if (!Func || !Func->hasBody())
-    Func = Compiler<ByteCodeEmitter>(*this, *P).compileFunc(FD);
+    Func =
+        Compiler<ByteCodeEmitter>(*this, *P).compileFunc(FD, SourceLocation{});
 
   if (!Func)
     return false;
@@ -269,7 +270,8 @@ Context::getOverridingFunction(const CXXRecordDecl *DynamicDecl,
   return nullptr;
 }
 
-const Function *Context::getOrCreateFunction(const FunctionDecl *FD) {
+const Function *Context::getOrCreateFunction(const FunctionDecl *FD,
+                                             SourceLocation Loc) {
   assert(FD);
   const Function *Func = P->getFunction(FD);
   bool IsBeingCompiled = Func && Func->isDefined() && !Func->isFullyCompiled();
@@ -279,7 +281,7 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FD) {
     return Func;
 
   if (!Func || WasNotDefined) {
-    if (auto F = Compiler<ByteCodeEmitter>(*this, *P).compileFunc(FD))
+    if (auto F = Compiler<ByteCodeEmitter>(*this, *P).compileFunc(FD, Loc))
       Func = F;
   }
 

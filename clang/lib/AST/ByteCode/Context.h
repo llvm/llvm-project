@@ -91,7 +91,8 @@ public:
                         const CXXRecordDecl *StaticDecl,
                         const CXXMethodDecl *InitialFunction) const;
 
-  const Function *getOrCreateFunction(const FunctionDecl *FD);
+  const Function *getOrCreateFunction(const FunctionDecl *FD,
+                                      SourceLocation Loc = {});
 
   /// Returns whether we should create a global variable for the
   /// given ValueDecl.

@@ -49,6 +49,7 @@
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CommentOptions.h"
+#include "clang/Basic/DiagnosticAST.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
@@ -929,9 +930,11 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
                                         LangOpts.XRayNeverInstrumentFiles,
                                         LangOpts.XRayAttrListFiles, SM)),
       ProfList(new ProfileList(LangOpts.ProfileListFiles, SM)),
-      PrintingPolicy(LOpts), Idents(idents), Selectors(sels),
-      BuiltinInfo(builtins), TUKind(TUKind), DeclarationNames(*this),
-      Comments(SM), CommentCommandTraits(BumpAlloc, LOpts.CommentOpts),
+      PrintingPolicy(LOpts),
+      SemaProxyPtr(std::make_unique<UnimplementedSemaProxy>()),
+      Idents(idents), Selectors(sels), BuiltinInfo(builtins), TUKind(TUKind),
+      DeclarationNames(*this), Comments(SM),
+      CommentCommandTraits(BumpAlloc, LOpts.CommentOpts),
       CompCategories(this_()), LastSDM(nullptr, 0) {
   addTranslationUnitDecl();
 }
@@ -14743,4 +14746,20 @@ bool ASTContext::useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
   bool Result = SimplifiedThunkNames.contains(MangledName);
   ThunksToBeAbbreviated[VirtualMethodDecl] = std::move(SimplifiedThunkNames);
   return Result;
+}
+
+bool SemaProxy::getIgnoreSideEffectsOnAST() { return IgnoreSideEffectsOnAST; }
+
+void SemaProxy::setIgnoreSideEffectsOnAST(bool Ignore) {
+  IgnoreSideEffectsOnAST = Ignore;
+}
+
+void UnimplementedSemaProxy::InstantiateFunctionDefinition(
+    SourceLocation PointOfInstantiation, FunctionDecl *Function) {
+  if (getIgnoreSideEffectsOnAST())
+    return;
+  llvm_unreachable(
+      "AST mutation was requested without clang::Sema available. "
+      "Consider providing it, or disabling side effects on AST via "
+      "ASTContext.getSemaProxy().setIgnoreSideEffectsOnAST(true).");
 }
