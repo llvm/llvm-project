@@ -667,6 +667,10 @@ static AArch64_AM::ShiftExtendType getShiftTypeForNode(SDValue N) {
   }
 }
 
+static bool isMemOpOrPrefetch(SDNode *N) {
+  return isa<MemSDNode>(*N) || N->getOpcode() == AArch64ISD::PREFETCH;
+}
+
 /// Determine whether it is worth it to fold SHL into the addressing
 /// mode.
 static bool isWorthFoldingSHL(SDValue V) {
@@ -684,9 +688,9 @@ static bool isWorthFoldingSHL(SDValue V) {
   // computation, since the computation will be kept.
   const SDNode *Node = V.getNode();
   for (SDNode *UI : Node->users())
-    if (!isa<MemSDNode>(*UI))
+    if (!isMemOpOrPrefetch(UI))
       for (SDNode *UII : UI->users())
-        if (!isa<MemSDNode>(*UII))
+        if (!isMemOpOrPrefetch(UII))
           return false;
   return true;
 }
@@ -1250,7 +1254,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeWRO(SDValue N, unsigned Size,
   // computation, since the computation will be kept.
   const SDNode *Node = N.getNode();
   for (SDNode *UI : Node->users()) {
-    if (!isa<MemSDNode>(*UI))
+    if (!isMemOpOrPrefetch(UI))
       return false;
   }
 
@@ -1334,7 +1338,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeXRO(SDValue N, unsigned Size,
   // computation, since the computation will be kept.
   const SDNode *Node = N.getNode();
   for (SDNode *UI : Node->users()) {
-    if (!isa<MemSDNode>(*UI))
+    if (!isMemOpOrPrefetch(UI))
       return false;
   }
 
