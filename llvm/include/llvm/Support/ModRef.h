@@ -235,11 +235,6 @@ public:
     return isModOrRefSet(getModRef(Location::ArgMem));
   }
 
-  /// Whether this function may access errno memory.
-  bool doesAccessErrnoMem() const {
-    return isModOrRefSet(getModRef(Location::ErrnoMem));
-  }
-
   /// Whether this function only (at most) accesses inaccessible memory.
   bool onlyAccessesInaccessibleMem() const {
     return getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
