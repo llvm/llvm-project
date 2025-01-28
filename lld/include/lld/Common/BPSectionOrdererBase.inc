@@ -357,7 +357,7 @@ auto BPOrderer<D>::computeOrder(
       const uint64_t pageSize = (1 << 14);
       uint64_t currentAddress = 0;
       for (const auto *isec : orderedSections) {
-        for (auto &sym : D::getSymbols(*isec)) {
+        for (auto *sym : D::getSymbols(*isec)) {
           uint64_t startAddress = currentAddress + D::getSymValue(*sym);
           uint64_t endAddress = startAddress + D::getSymSize(*sym);
           uint64_t firstPage = startAddress / pageSize;

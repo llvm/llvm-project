@@ -24,6 +24,7 @@
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/NSAPI.h"
@@ -1809,8 +1810,7 @@ CodeGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
   if (CGM.getLangOpts().CUDAIsDevice && result.Val.isLValue() &&
       refExpr->refersToEnclosingVariableOrCapture()) {
     auto *MD = dyn_cast_or_null<CXXMethodDecl>(CurCodeDecl);
-    if (MD && MD->getParent()->isLambda() &&
-        MD->getOverloadedOperator() == OO_Call) {
+    if (isLambdaMethod(MD) && MD->getOverloadedOperator() == OO_Call) {
       const APValue::LValueBase &base = result.Val.getLValueBase();
       if (const ValueDecl *D = base.dyn_cast<const ValueDecl *>()) {
         if (const VarDecl *VD = dyn_cast<const VarDecl>(D)) {
@@ -2414,8 +2414,15 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
         Vec = Builder.CreateBitCast(Vec, IRVecTy);
         // iN --> <N x i1>.
       }
-      Vec = Builder.CreateInsertElement(Vec, Src.getScalarVal(),
-                                        Dst.getVectorIdx(), "vecins");
+      llvm::Value *SrcVal = Src.getScalarVal();
+      // Allow inserting `<1 x T>` into an `<N x T>`. It can happen with scalar
+      // types which are mapped to vector LLVM IR types (e.g. for implementing
+      // an ABI).
+      if (auto *EltTy = dyn_cast<llvm::FixedVectorType>(SrcVal->getType());
+          EltTy && EltTy->getNumElements() == 1)
+        SrcVal = Builder.CreateBitCast(SrcVal, EltTy->getElementType());
+      Vec = Builder.CreateInsertElement(Vec, SrcVal, Dst.getVectorIdx(),
+                                        "vecins");
       if (IRStoreTy) {
         // <N x i1> --> <iN>.
         Vec = Builder.CreateBitCast(Vec, IRStoreTy);

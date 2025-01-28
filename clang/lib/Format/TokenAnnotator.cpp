@@ -252,10 +252,10 @@ private:
       // parameters.
       // FIXME: This is getting out of hand, write a decent parser.
       if (MaybeAngles && InExpr && !Line.startsWith(tok::kw_template) &&
-          Prev.is(TT_BinaryOperator)) {
-        const auto Precedence = Prev.getPrecedence();
-        if (Precedence > prec::Conditional && Precedence < prec::Relational)
-          MaybeAngles = false;
+          Prev.is(TT_BinaryOperator) &&
+          (Prev.isOneOf(tok::pipepipe, tok::ampamp) ||
+           Prev.getPrecedence() == prec::Equality)) {
+        MaybeAngles = false;
       }
       if (Prev.isOneOf(tok::question, tok::colon) && !Style.isProto())
         SeenTernaryOperator = true;
