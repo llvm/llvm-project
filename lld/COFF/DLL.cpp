@@ -921,54 +921,89 @@ void DelayLoadContents::create() {
     auto *dir = make<DelayDirectoryChunk>(dllNames.back());
 
     size_t base = addresses.size();
-    Chunk *tm = newTailMergeChunk(ctx.symtab, dir);
-    Chunk *pdataChunk = newTailMergePDataChunk(ctx.symtab, tm);
-    for (DefinedImportData *s : syms) {
-      Chunk *t = newThunkChunk(s, tm);
-      auto *a = make<DelayAddressChunk>(ctx, t);
-      addresses.push_back(a);
-      thunks.push_back(t);
-      StringRef extName = s->getExternalName();
-      if (extName.empty()) {
-        names.push_back(make<OrdinalOnlyChunk>(ctx, s->getOrdinal()));
-      } else {
-        auto *c = make<HintNameChunk>(extName, 0);
-        names.push_back(make<LookupChunk>(ctx, c));
-        hintNames.push_back(c);
-        // Add a synthetic symbol for this load thunk, using the "__imp___load"
-        // prefix, in case this thunk needs to be added to the list of valid
-        // call targets for Control Flow Guard.
-        StringRef symName = saver().save("__imp___load_" + extName);
-        s->loadThunkSym =
-            cast<DefinedSynthetic>(ctx.symtab.addSynthetic(symName, t));
+    ctx.forEachSymtab([&](SymbolTable &symtab) {
+      if (ctx.hybridSymtab && symtab.isEC()) {
+        // For hybrid images, emit null-terminated native import entries
+        // followed by null-terminated EC entries. If a view is missing imports
+        // for a given module, only terminators are emitted. Emit ARM64X
+        // relocations to skip native entries in the EC view.
+        ctx.dynamicRelocs->add(
+            IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA, 0,
+            Arm64XRelocVal(dir, offsetof(delay_import_directory_table_entry,
+                                         DelayImportAddressTable)),
+            (addresses.size() - base) * sizeof(uint64_t));
+        ctx.dynamicRelocs->add(
+            IMAGE_DVRT_ARM64X_FIXUP_TYPE_DELTA, 0,
+            Arm64XRelocVal(dir, offsetof(delay_import_directory_table_entry,
+                                         DelayImportNameTable)),
+            (addresses.size() - base) * sizeof(uint64_t));
       }
 
-      if (s->file->impECSym) {
-        auto chunk = make<AuxImportChunk>(s->file);
-        auxIat.push_back(chunk);
-        s->file->impECSym->setLocation(chunk);
+      Chunk *tm = nullptr;
 
-        chunk = make<AuxImportChunk>(s->file);
-        auxIatCopy.push_back(chunk);
-        s->file->auxImpCopySym->setLocation(chunk);
+      for (DefinedImportData *s : syms) {
+        // Process only the symbols belonging to the current symtab.
+        if (symtab.isEC() != s->file->isEC())
+          continue;
+
+        if (!tm) {
+          tm = newTailMergeChunk(symtab, dir);
+          Chunk *pdataChunk = newTailMergePDataChunk(symtab, tm);
+          if (pdataChunk)
+            pdata.push_back(pdataChunk);
+        }
+
+        Chunk *t = newThunkChunk(s, tm);
+        auto *a = make<DelayAddressChunk>(ctx, t);
+        addresses.push_back(a);
+        s->setLocation(a);
+        thunks.push_back(t);
+        StringRef extName = s->getExternalName();
+        if (extName.empty()) {
+          names.push_back(make<OrdinalOnlyChunk>(ctx, s->getOrdinal()));
+        } else {
+          auto *c = make<HintNameChunk>(extName, 0);
+          names.push_back(make<LookupChunk>(ctx, c));
+          hintNames.push_back(c);
+          // Add a synthetic symbol for this load thunk, using the
+          // "__imp___load" prefix, in case this thunk needs to be added to the
+          // list of valid call targets for Control Flow Guard.
+          StringRef symName = saver().save("__imp___load_" + extName);
+          s->loadThunkSym =
+              cast<DefinedSynthetic>(symtab.addSynthetic(symName, t));
+        }
+
+        if (symtab.isEC()) {
+          auto chunk = make<AuxImportChunk>(s->file);
+          auxIat.push_back(chunk);
+          s->file->impECSym->setLocation(chunk);
+
+          chunk = make<AuxImportChunk>(s->file);
+          auxIatCopy.push_back(chunk);
+          s->file->auxImpCopySym->setLocation(chunk);
+        } else if (ctx.hybridSymtab) {
+          // Fill the auxiliary IAT with null chunks for native imports.
+          auxIat.push_back(make<NullChunk>(ctx));
+          auxIatCopy.push_back(make<NullChunk>(ctx));
+        }
       }
-    }
-    thunks.push_back(tm);
-    if (pdataChunk)
-      pdata.push_back(pdataChunk);
-    StringRef tmName =
-        saver().save("__tailMerge_" + syms[0]->getDLLName().lower());
-    ctx.symtab.addSynthetic(tmName, tm);
-    // Terminate with null values.
-    addresses.push_back(make<NullChunk>(ctx, 8));
-    names.push_back(make<NullChunk>(ctx, 8));
-    if (ctx.config.machine == ARM64EC) {
-      auxIat.push_back(make<NullChunk>(ctx, 8));
-      auxIatCopy.push_back(make<NullChunk>(ctx, 8));
-    }
 
-    for (int i = 0, e = syms.size(); i < e; ++i)
-      syms[i]->setLocation(addresses[base + i]);
+      if (tm) {
+        thunks.push_back(tm);
+        StringRef tmName =
+            saver().save("__tailMerge_" + syms[0]->getDLLName().lower());
+        symtab.addSynthetic(tmName, tm);
+      }
+
+      // Terminate with null values.
+      addresses.push_back(make<NullChunk>(ctx, 8));
+      names.push_back(make<NullChunk>(ctx, 8));
+      if (ctx.symtabEC) {
+        auxIat.push_back(make<NullChunk>(ctx, 8));
+        auxIatCopy.push_back(make<NullChunk>(ctx, 8));
+      }
+    });
+
     auto *mh = make<NullChunk>(8, 8);
     moduleHandles.push_back(mh);
 
