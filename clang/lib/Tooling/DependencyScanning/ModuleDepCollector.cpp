@@ -481,8 +481,7 @@ static bool isSafeToIgnoreCWD(const CowCompilerInvocation &CI) {
 
 static std::string getModuleContextHash(const ModuleDeps &MD,
                                         const CowCompilerInvocation &CI,
-                                        bool EagerLoadModules,
-                                        bool IgnoreCWD,
+                                        bool EagerLoadModules, bool IgnoreCWD,
                                         llvm::vfs::FileSystem &VFS) {
   llvm::HashBuilder<llvm::TruncatedBLAKE3<16>, llvm::endianness::native>
       HashBuilder;
