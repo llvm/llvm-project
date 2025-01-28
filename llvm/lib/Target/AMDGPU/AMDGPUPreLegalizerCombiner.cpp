@@ -45,8 +45,7 @@ class AMDGPUPreLegalizerCombinerImpl : public Combiner {
 protected:
   const AMDGPUPreLegalizerCombinerImplRuleConfig &RuleConfig;
   const GCNSubtarget &STI;
-  // TODO: Make CombinerHelper methods const.
-  mutable AMDGPUCombinerHelper Helper;
+  const AMDGPUCombinerHelper Helper;
 
 public:
   AMDGPUPreLegalizerCombinerImpl(
@@ -94,7 +93,7 @@ AMDGPUPreLegalizerCombinerImpl::AMDGPUPreLegalizerCombinerImpl(
     const AMDGPUPreLegalizerCombinerImplRuleConfig &RuleConfig,
     const GCNSubtarget &STI, MachineDominatorTree *MDT, const LegalizerInfo *LI)
     : Combiner(MF, CInfo, TPC, &KB, CSEInfo), RuleConfig(RuleConfig), STI(STI),
-      Helper(Observer, B, /*IsPreLegalize*/ true, &KB, MDT, LI),
+      Helper(Observer, B, /*IsPreLegalize*/ true, &KB, MDT, LI, STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "AMDGPUGenPreLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_CONSTRUCTOR_INITS
@@ -276,6 +275,12 @@ bool AMDGPUPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
                 : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      nullptr, EnableOpt, F.hasOptSize(), F.hasMinSize());
+  // Disable fixed-point iteration to reduce compile-time
+  CInfo.MaxIterations = 1;
+  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
+  // This is the first Combiner, so the input IR might contain dead
+  // instructions.
+  CInfo.EnableFullDCE = true;
   AMDGPUPreLegalizerCombinerImpl Impl(MF, CInfo, TPC, *KB, CSEInfo, RuleConfig,
                                       STI, MDT, STI.getLegalizerInfo());
   return Impl.combineMachineInstrs();

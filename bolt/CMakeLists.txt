@@ -82,7 +82,7 @@ endforeach()
 
 set(BOLT_ENABLE_RUNTIME_default OFF)
 if ((CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64"
-    OR CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
+    OR CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
     AND (CMAKE_SYSTEM_NAME STREQUAL "Linux"
       OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     AND (NOT CMAKE_CROSSCOMPILING))
@@ -163,8 +163,8 @@ if (BOLT_ENABLE_RUNTIME)
   add_llvm_install_targets(install-bolt_rt
     DEPENDS bolt_rt bolt
     COMPONENT bolt)
-  set(LIBBOLT_RT_INSTR "${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins/lib/libbolt_rt_instr.a")
-  set(LIBBOLT_RT_HUGIFY "${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins/lib/libbolt_rt_hugify.a")
+  set(LIBBOLT_RT_INSTR "${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins/lib${LLVM_LIBDIR_SUFFIX}/libbolt_rt_instr.a")
+  set(LIBBOLT_RT_HUGIFY "${CMAKE_CURRENT_BINARY_DIR}/bolt_rt-bins/lib${LLVM_LIBDIR_SUFFIX}/libbolt_rt_hugify.a")
 endif()
 
 find_program(GNU_LD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.bfd ld.bfd DOC "GNU ld")

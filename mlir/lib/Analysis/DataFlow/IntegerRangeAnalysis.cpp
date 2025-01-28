@@ -19,6 +19,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
@@ -42,7 +43,7 @@ void IntegerValueRangeLattice::onUpdate(DataFlowSolver *solver) const {
   // If the integer range can be narrowed to a constant, update the constant
   // value of the SSA value.
   std::optional<APInt> constant = getValue().getValue().getConstantValue();
-  auto value = point.get<Value>();
+  auto value = cast<Value>(anchor);
   auto *cv = solver->getOrCreateState<Lattice<ConstantValue>>(value);
   if (!constant)
     return solver->propagateIfChanged(
@@ -53,17 +54,20 @@ void IntegerValueRangeLattice::onUpdate(DataFlowSolver *solver) const {
     dialect = parent->getDialect();
   else
     dialect = value.getParentBlock()->getParentOp()->getDialect();
+
+  Type type = getElementTypeOrSelf(value);
   solver->propagateIfChanged(
-      cv, cv->join(ConstantValue(IntegerAttr::get(value.getType(), *constant),
-                                 dialect)));
+      cv, cv->join(ConstantValue(IntegerAttr::get(type, *constant), dialect)));
 }
 
-void IntegerRangeAnalysis::visitOperation(
+LogicalResult IntegerRangeAnalysis::visitOperation(
     Operation *op, ArrayRef<const IntegerValueRangeLattice *> operands,
     ArrayRef<IntegerValueRangeLattice *> results) {
   auto inferrable = dyn_cast<InferIntRangeInterface>(op);
-  if (!inferrable)
-    return setAllToEntryStates(results);
+  if (!inferrable) {
+    setAllToEntryStates(results);
+    return success();
+  }
 
   LLVM_DEBUG(llvm::dbgs() << "Inferring ranges for " << *op << "\n");
   auto argRanges = llvm::map_to_vector(
@@ -99,6 +103,7 @@ void IntegerRangeAnalysis::visitOperation(
   };
 
   inferrable.inferResultRangesFromOptional(argRanges, joinCallback);
+  return success();
 }
 
 void IntegerRangeAnalysis::visitNonControlFlowArguments(
@@ -108,7 +113,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
     LLVM_DEBUG(llvm::dbgs() << "Inferring ranges for " << *op << "\n");
 
     auto argRanges = llvm::map_to_vector(op->getOperands(), [&](Value value) {
-      return getLatticeElementFor(op, value)->getValue();
+      return getLatticeElementFor(getProgramPointAfter(op), value)->getValue();
     });
 
     auto joinCallback = [&](Value v, const IntegerValueRange &attrs) {
@@ -150,13 +155,12 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
                                   Type boundType, bool getUpper) {
     unsigned int width = ConstantIntRanges::getStorageBitwidth(boundType);
     if (loopBound.has_value()) {
-      if (loopBound->is<Attribute>()) {
-        if (auto bound =
-                dyn_cast_or_null<IntegerAttr>(loopBound->get<Attribute>()))
+      if (auto attr = dyn_cast<Attribute>(*loopBound)) {
+        if (auto bound = dyn_cast_or_null<IntegerAttr>(attr))
           return bound.getValue();
       } else if (auto value = llvm::dyn_cast_if_present<Value>(*loopBound)) {
         const IntegerValueRangeLattice *lattice =
-            getLatticeElementFor(op, value);
+            getLatticeElementFor(getProgramPointAfter(op), value);
         if (lattice != nullptr && !lattice->getValue().isUninitialized())
           return getUpper ? lattice->getValue().getValue().smax()
                           : lattice->getValue().getValue().smin();

@@ -167,18 +167,12 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
     }
   }
 
-  assert(getBackendPtr() && "Expected assembler backend");
-  bool IsTarget = getBackendPtr()->getFixupKindInfo(Fixup.getKind()).Flags &
-                  MCFixupKindInfo::FKF_IsTarget;
-
-  if (IsTarget)
+  unsigned FixupFlags = getBackend().getFixupKindInfo(Fixup.getKind()).Flags;
+  if (FixupFlags & MCFixupKindInfo::FKF_IsTarget)
     return getBackend().evaluateTargetFixup(*this, Fixup, DF, Target, STI,
                                             Value, WasForced);
 
-  unsigned FixupFlags = getBackendPtr()->getFixupKindInfo(Fixup.getKind()).Flags;
-  bool IsPCRel = getBackendPtr()->getFixupKindInfo(Fixup.getKind()).Flags &
-                 MCFixupKindInfo::FKF_IsPCRel;
-
+  bool IsPCRel = FixupFlags & MCFixupKindInfo::FKF_IsPCRel;
   bool IsResolved = false;
   if (IsPCRel) {
     if (Target.getSymB()) {
@@ -213,8 +207,7 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
       Value -= getSymbolOffset(Sym);
   }
 
-  bool ShouldAlignPC = getBackend().getFixupKindInfo(Fixup.getKind()).Flags &
-                       MCFixupKindInfo::FKF_IsAlignedDownTo32Bits;
+  bool ShouldAlignPC = FixupFlags & MCFixupKindInfo::FKF_IsAlignedDownTo32Bits;
   assert((ShouldAlignPC ? IsPCRel : true) &&
     "FKF_IsAlignedDownTo32Bits is only allowed on PC-relative fixups!");
 
@@ -229,7 +222,7 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
 
   // Let the backend force a relocation if needed.
   if (IsResolved &&
-      getBackend().shouldForceRelocation(*this, Fixup, Target, STI)) {
+      getBackend().shouldForceRelocation(*this, Fixup, Target, Value, STI)) {
     IsResolved = false;
     WasForced = true;
   }
@@ -836,7 +829,7 @@ void MCAssembler::writeSectionData(raw_ostream &OS,
         // into a virtual section. This is to support clients which use standard
         // directives to fill the contents of virtual sections.
         const MCDataFragment &DF = cast<MCDataFragment>(F);
-        if (DF.fixup_begin() != DF.fixup_end())
+        if (DF.getFixups().size())
           getContext().reportError(SMLoc(), Sec->getVirtualSectionKind() +
                                                 " section '" + Sec->getName() +
                                                 "' cannot have fixups");

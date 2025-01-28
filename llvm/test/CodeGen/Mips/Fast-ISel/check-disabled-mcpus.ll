@@ -1,39 +1,39 @@
 ; Targets where we should not enable FastISel.
-; RUN: llc -march=mips -mcpu=mips2 -O0 -relocation-model=pic \
+; RUN: llc -mtriple=mips -mcpu=mips2 -O0 -relocation-model=pic \
 ; RUN:     -pass-remarks-missed=isel <%s 2>&1 | FileCheck %s
-; RUN: llc -march=mips -mcpu=mips3 -O0 -relocation-model=pic -target-abi n64 \
+; RUN: llc -mtriple=mips -mcpu=mips3 -O0 -relocation-model=pic -target-abi n64 \
 ; RUN:     -pass-remarks-missed=isel <%s 2>&1 | FileCheck %s
-; RUN: llc -march=mips -mcpu=mips4 -O0 -relocation-model=pic -target-abi n64 \
-; RUN:     -pass-remarks-missed=isel <%s 2>&1 | FileCheck %s
-
-; RUN: llc -march=mips -mcpu=mips32r6 -O0 -relocation-model=pic \
+; RUN: llc -mtriple=mips -mcpu=mips4 -O0 -relocation-model=pic -target-abi n64 \
 ; RUN:     -pass-remarks-missed=isel <%s 2>&1 | FileCheck %s
 
-; RUN: llc -march=mips -mattr=mips16 -O0 -relocation-model=pic \
+; RUN: llc -mtriple=mips -mcpu=mips32r6 -O0 -relocation-model=pic \
 ; RUN:     -pass-remarks-missed=isel <%s 2>&1 | FileCheck %s
 
-; RUN: llc -march=mips -mcpu=mips32r2 -mattr=+micromips -O0 -relocation-model=pic \
-; RUN:     -pass-remarks-missed=isel <%s 2>&1 | FileCheck %s
-; RUN: llc -march=mips -mcpu=mips32r3 -mattr=+micromips -O0 -relocation-model=pic \
-; RUN:     -pass-remarks-missed=isel <%s 2>&1 | FileCheck %s
-; RUN: llc -march=mips -mcpu=mips32r5 -mattr=+micromips -O0 -relocation-model=pic \
+; RUN: llc -mtriple=mips -mattr=mips16 -O0 -relocation-model=pic \
 ; RUN:     -pass-remarks-missed=isel <%s 2>&1 | FileCheck %s
 
-; RUN: llc -march=mips -mcpu=mips64 -O0 -relocation-model=pic -target-abi n64 \
+; RUN: llc -mtriple=mips -mcpu=mips32r2 -mattr=+micromips -O0 -relocation-model=pic \
 ; RUN:     -pass-remarks-missed=isel <%s 2>&1 | FileCheck %s
-; RUN: llc -march=mips -mcpu=mips64r2 -O0 -relocation-model=pic -target-abi n64 \
+; RUN: llc -mtriple=mips -mcpu=mips32r3 -mattr=+micromips -O0 -relocation-model=pic \
 ; RUN:     -pass-remarks-missed=isel <%s 2>&1 | FileCheck %s
-; RUN: llc -march=mips -mcpu=mips64r3 -O0 -relocation-model=pic -target-abi n64 \
+; RUN: llc -mtriple=mips -mcpu=mips32r5 -mattr=+micromips -O0 -relocation-model=pic \
 ; RUN:     -pass-remarks-missed=isel <%s 2>&1 | FileCheck %s
-; RUN: llc -march=mips -mcpu=mips64r5 -O0 -relocation-model=pic -target-abi n64 \
+
+; RUN: llc -mtriple=mips -mcpu=mips64 -O0 -relocation-model=pic -target-abi n64 \
 ; RUN:     -pass-remarks-missed=isel <%s 2>&1 | FileCheck %s
-; RUN: llc -march=mips -mcpu=mips32r6 -O0 -relocation-model=pic \
+; RUN: llc -mtriple=mips -mcpu=mips64r2 -O0 -relocation-model=pic -target-abi n64 \
+; RUN:     -pass-remarks-missed=isel <%s 2>&1 | FileCheck %s
+; RUN: llc -mtriple=mips -mcpu=mips64r3 -O0 -relocation-model=pic -target-abi n64 \
+; RUN:     -pass-remarks-missed=isel <%s 2>&1 | FileCheck %s
+; RUN: llc -mtriple=mips -mcpu=mips64r5 -O0 -relocation-model=pic -target-abi n64 \
+; RUN:     -pass-remarks-missed=isel <%s 2>&1 | FileCheck %s
+; RUN: llc -mtriple=mips -mcpu=mips32r6 -O0 -relocation-model=pic \
 ; RUN:     -pass-remarks-missed=isel <%s 2>&1 | FileCheck %s
 
 ; Valid targets for FastISel.
-; RUN: llc -march=mips -mcpu=mips32r0 -O0 -relocation-model=pic \
+; RUN: llc -mtriple=mips -mcpu=mips32r0 -O0 -relocation-model=pic \
 ; RUN:     -pass-remarks-missed=isel <%s 2>&1 | FileCheck %s -check-prefix=FISEL
-; RUN: llc -march=mips -mcpu=mips32r2 -O0 -relocation-model=pic \
+; RUN: llc -mtriple=mips -mcpu=mips32r2 -O0 -relocation-model=pic \
 ; RUN:     -pass-remarks-missed=isel <%s 2>&1 | FileCheck %s -check-prefix=FISEL
 
 ; The CHECK prefix is being used by those targets that do not support FastISel.

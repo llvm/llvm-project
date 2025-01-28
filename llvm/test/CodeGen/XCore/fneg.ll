@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore | FileCheck %s
+; RUN: llc < %s -mtriple=xcore | FileCheck %s
 define i1 @test(double %F, double %G) nounwind {
 entry:
 ; CHECK-LABEL: test:

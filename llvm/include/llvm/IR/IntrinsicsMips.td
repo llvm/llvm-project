@@ -236,7 +236,7 @@ def int_mips_extpdp: ClangBuiltin<"__builtin_mips_extpdp">,
 def int_mips_wrdsp: ClangBuiltin<"__builtin_mips_wrdsp">,
   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty], [ImmArg<ArgIndex<1>>]>;
 def int_mips_rddsp: ClangBuiltin<"__builtin_mips_rddsp">,
-  Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrReadMem, ImmArg<ArgIndex<0>>]>;
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrReadMem, ImmArg<ArgIndex<0>>]>;
 
 def int_mips_insv: ClangBuiltin<"__builtin_mips_insv">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrReadMem]>;
@@ -252,22 +252,22 @@ def int_mips_repl_ph: ClangBuiltin<"__builtin_mips_repl_ph">,
   Intrinsic<[mips_v2q15_ty], [llvm_i32_ty], [IntrNoMem]>;
 
 def int_mips_pick_qb: ClangBuiltin<"__builtin_mips_pick_qb">,
-  Intrinsic<[llvm_v4i8_ty], [llvm_v4i8_ty, llvm_v4i8_ty], [IntrReadMem]>;
+  DefaultAttrsIntrinsic<[llvm_v4i8_ty], [llvm_v4i8_ty, llvm_v4i8_ty], [IntrReadMem]>;
 def int_mips_pick_ph: ClangBuiltin<"__builtin_mips_pick_ph">,
-  Intrinsic<[mips_v2q15_ty], [mips_v2q15_ty, mips_v2q15_ty], [IntrReadMem]>;
+  DefaultAttrsIntrinsic<[mips_v2q15_ty], [mips_v2q15_ty, mips_v2q15_ty], [IntrReadMem]>;
 
 def int_mips_mthlip: ClangBuiltin<"__builtin_mips_mthlip">,
   Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i32_ty], []>;
 
 def int_mips_bposge32: ClangBuiltin<"__builtin_mips_bposge32">,
-  Intrinsic<[llvm_i32_ty], [], [IntrReadMem]>;
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrReadMem]>;
 
 def int_mips_lbux: ClangBuiltin<"__builtin_mips_lbux">,
-  Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty], [IntrReadMem, IntrArgMemOnly]>;
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty], [IntrReadMem, IntrArgMemOnly]>;
 def int_mips_lhx: ClangBuiltin<"__builtin_mips_lhx">,
-  Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty], [IntrReadMem, IntrArgMemOnly]>;
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty], [IntrReadMem, IntrArgMemOnly]>;
 def int_mips_lwx: ClangBuiltin<"__builtin_mips_lwx">,
-  Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty], [IntrReadMem, IntrArgMemOnly]>;
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty], [IntrReadMem, IntrArgMemOnly]>;
 
 //===----------------------------------------------------------------------===//
 // MIPS DSP Rev 2
@@ -1259,23 +1259,23 @@ def int_mips_insve_d : ClangBuiltin<"__builtin_msa_insve_d">,
             [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_mips_ld_b : ClangBuiltin<"__builtin_msa_ld_b">,
-  Intrinsic<[llvm_v16i8_ty], [llvm_ptr_ty, llvm_i32_ty],
+  DefaultAttrsIntrinsic<[llvm_v16i8_ty], [llvm_ptr_ty, llvm_i32_ty],
   [IntrReadMem, IntrArgMemOnly]>;
 def int_mips_ld_h : ClangBuiltin<"__builtin_msa_ld_h">,
-  Intrinsic<[llvm_v8i16_ty], [llvm_ptr_ty, llvm_i32_ty],
+  DefaultAttrsIntrinsic<[llvm_v8i16_ty], [llvm_ptr_ty, llvm_i32_ty],
   [IntrReadMem, IntrArgMemOnly]>;
 def int_mips_ld_w : ClangBuiltin<"__builtin_msa_ld_w">,
-  Intrinsic<[llvm_v4i32_ty], [llvm_ptr_ty, llvm_i32_ty],
+  DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_ptr_ty, llvm_i32_ty],
   [IntrReadMem, IntrArgMemOnly]>;
 def int_mips_ld_d : ClangBuiltin<"__builtin_msa_ld_d">,
-  Intrinsic<[llvm_v2i64_ty], [llvm_ptr_ty, llvm_i32_ty],
+  DefaultAttrsIntrinsic<[llvm_v2i64_ty], [llvm_ptr_ty, llvm_i32_ty],
   [IntrReadMem, IntrArgMemOnly]>;
 
 def int_mips_ldr_d : ClangBuiltin<"__builtin_msa_ldr_d">,
-  Intrinsic<[llvm_v2i64_ty], [llvm_ptr_ty, llvm_i32_ty],
+  DefaultAttrsIntrinsic<[llvm_v2i64_ty], [llvm_ptr_ty, llvm_i32_ty],
   [IntrReadMem, IntrArgMemOnly]>;
 def int_mips_ldr_w : ClangBuiltin<"__builtin_msa_ldr_w">,
-  Intrinsic<[llvm_v4i32_ty], [llvm_ptr_ty, llvm_i32_ty],
+  DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_ptr_ty, llvm_i32_ty],
   [IntrReadMem, IntrArgMemOnly]>;
 
 def int_mips_ldi_b : ClangBuiltin<"__builtin_msa_ldi_b">,

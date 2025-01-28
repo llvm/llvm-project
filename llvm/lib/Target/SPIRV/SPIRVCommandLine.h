@@ -17,8 +17,10 @@
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include <set>
+#include <string>
 
 namespace llvm {
+class StringRef;
 
 /// Command line parser for toggling SPIR-V extensions.
 struct SPIRVExtensionsParser
@@ -32,6 +34,14 @@ public:
   /// \return Returns true on error.
   bool parse(cl::Option &O, StringRef ArgName, StringRef ArgValue,
              std::set<SPIRV::Extension::Extension> &Vals);
+
+  /// Validates and converts extension names into internal enum values.
+  ///
+  /// \return Returns a reference to the unknown SPIR-V extension name from the
+  /// list if present, or an empty StringRef on success.
+  static llvm::StringRef
+  checkExtensions(const std::vector<std::string> &ExtNames,
+                  std::set<SPIRV::Extension::Extension> &AllowedExtensions);
 };
 
 } // namespace llvm

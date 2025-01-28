@@ -12,6 +12,7 @@
 #include "support/Logger.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"

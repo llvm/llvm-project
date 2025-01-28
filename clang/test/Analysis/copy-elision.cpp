@@ -158,19 +158,19 @@ ClassWithoutDestructor make1(AddressVector<ClassWithoutDestructor> &v) {
   return ClassWithoutDestructor(v);
   // no-elide-warning@-1 {{Address of stack memory associated with temporary \
 object of type 'ClassWithoutDestructor' is still \
-referred to by the stack variable 'v' upon returning to the caller}}
+referred to by the caller variable 'v' upon returning to the caller}}
 }
 ClassWithoutDestructor make2(AddressVector<ClassWithoutDestructor> &v) {
   return make1(v);
   // no-elide-warning@-1 {{Address of stack memory associated with temporary \
 object of type 'ClassWithoutDestructor' is still \
-referred to by the stack variable 'v' upon returning to the caller}}
+referred to by the caller variable 'v' upon returning to the caller}}
 }
 ClassWithoutDestructor make3(AddressVector<ClassWithoutDestructor> &v) {
   return make2(v);
   // no-elide-warning@-1 {{Address of stack memory associated with temporary \
 object of type 'ClassWithoutDestructor' is still \
-referred to by the stack variable 'v' upon returning to the caller}}
+referred to by the caller variable 'v' upon returning to the caller}}
 }
 
 void testMultipleReturns() {
@@ -193,7 +193,7 @@ void testMultipleReturns() {
 void consume(ClassWithoutDestructor c) {
   c.push();
   // expected-warning@-1 {{Address of stack memory associated with local \
-variable 'c' is still referred to by the stack variable 'v' upon returning \
+variable 'c' is still referred to by the caller variable 'v' upon returning \
 to the caller}}
 }
 
@@ -263,17 +263,17 @@ void testVariable() {
 
 struct TestCtorInitializer {
   ClassWithDestructor c;
-  TestCtorInitializer(AddressVector<ClassWithDestructor> &v)
-    : c(ClassWithDestructor(v)) {}
-  // no-elide-warning@-1 {{Address of stack memory associated with temporary \
-object of type 'ClassWithDestructor' is still referred \
-to by the stack variable 'v' upon returning to the caller}}
+  TestCtorInitializer(AddressVector<ClassWithDestructor> &refParam)
+    : c(ClassWithDestructor(refParam)) {}
 };
 
 void testCtorInitializer() {
   AddressVector<ClassWithDestructor> v;
   {
     TestCtorInitializer t(v);
+    // no-elide-warning@-1 {{Address of stack memory associated with temporary \
+object of type 'ClassWithDestructor' is still referred \
+to by the caller variable 'v' upon returning to the caller}}
     // Check if the last destructor is an automatic destructor.
     // A temporary destructor would have fired by now.
 #if ELIDE
@@ -303,19 +303,19 @@ ClassWithDestructor make1(AddressVector<ClassWithDestructor> &v) {
   return ClassWithDestructor(v);
   // no-elide-warning@-1 {{Address of stack memory associated with temporary \
 object of type 'ClassWithDestructor' is still referred \
-to by the stack variable 'v' upon returning to the caller}}
+to by the caller variable 'v' upon returning to the caller}}
 }
 ClassWithDestructor make2(AddressVector<ClassWithDestructor> &v) {
   return make1(v);
   // no-elide-warning@-1 {{Address of stack memory associated with temporary \
 object of type 'ClassWithDestructor' is still referred \
-to by the stack variable 'v' upon returning to the caller}}
+to by the caller variable 'v' upon returning to the caller}}
 }
 ClassWithDestructor make3(AddressVector<ClassWithDestructor> &v) {
   return make2(v);
   // no-elide-warning@-1 {{Address of stack memory associated with temporary \
 object of type 'ClassWithDestructor' is still referred \
-to by the stack variable 'v' upon returning to the caller}}
+to by the caller variable 'v' upon returning to the caller}}
 }
 
 void testMultipleReturnsWithDestructors() {
@@ -360,7 +360,7 @@ void testMultipleReturnsWithDestructors() {
 void consume(ClassWithDestructor c) {
   c.push();
   // expected-warning@-1 {{Address of stack memory associated with local \
-variable 'c' is still referred to by the stack variable 'v' upon returning \
+variable 'c' is still referred to by the caller variable 'v' upon returning \
 to the caller}}
 }
 
@@ -407,7 +407,7 @@ struct Foo {
 Foo make1(Foo **r) {
   return Foo(r);
   // no-elide-warning@-1 {{Address of stack memory associated with temporary \
-object of type 'Foo' is still referred to by the stack \
+object of type 'Foo' is still referred to by the caller \
 variable 'z' upon returning to the caller}}
 }
 

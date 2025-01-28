@@ -41,6 +41,8 @@ bool CheckArguments(const evaluate::characteristics::Procedure &,
 bool CheckPPCIntrinsic(const Symbol &generic, const Symbol &specific,
     const evaluate::ActualArguments &actuals,
     evaluate::FoldingContext &context);
+bool CheckWindowsIntrinsic(
+    const Symbol &intrinsic, evaluate::FoldingContext &context);
 bool CheckArgumentIsConstantExprInRange(
     const evaluate::ActualArguments &actuals, int index, int lowerBound,
     int upperBound, parser::ContextualMessages &messages);

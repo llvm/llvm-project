@@ -366,6 +366,8 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
           case eSectionTypeDWARFAppleObjC:
           case eSectionTypeDWARFGNUDebugAltLink:
           case eSectionTypeCTF:
+          case eSectionTypeLLDBFormatters:
+          case eSectionTypeLLDBTypeSummaries:
           case eSectionTypeSwiftModules:
             return AddressClass::eDebug;
           case eSectionTypeEHFrame:
@@ -454,9 +456,10 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
   return AddressClass::eUnknown;
 }
 
-DataBufferSP ObjectFile::ReadMemory(const ProcessSP &process_sp,
-                                    lldb::addr_t addr, size_t byte_size) {
-  DataBufferSP data_sp;
+WritableDataBufferSP ObjectFile::ReadMemory(const ProcessSP &process_sp,
+                                            lldb::addr_t addr,
+                                            size_t byte_size) {
+  WritableDataBufferSP data_sp;
   if (process_sp) {
     std::unique_ptr<DataBufferHeap> data_up(new DataBufferHeap(byte_size, 0));
     Status error;
@@ -643,8 +646,7 @@ ObjectFile::GetLoadableData(Target &target) {
   for (size_t i = 0; i < section_count; ++i) {
     LoadableData loadable;
     SectionSP section_sp = section_list->GetSectionAtIndex(i);
-    loadable.Dest =
-        target.GetSectionLoadList().GetSectionLoadAddress(section_sp);
+    loadable.Dest = target.GetSectionLoadAddress(section_sp);
     if (loadable.Dest == LLDB_INVALID_ADDRESS)
       continue;
     // We can skip sections like bss

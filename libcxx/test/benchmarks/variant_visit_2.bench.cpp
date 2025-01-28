@@ -6,25 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14
+
 #include "benchmark/benchmark.h"
 
 #include "VariantBenchmarks.h"
 
 using namespace VariantBenchmarks;
 
-BENCHMARK_TEMPLATE(BM_Visit, 2, 1);
-BENCHMARK_TEMPLATE(BM_Visit, 2, 2);
-BENCHMARK_TEMPLATE(BM_Visit, 2, 3);
-BENCHMARK_TEMPLATE(BM_Visit, 2, 4);
-BENCHMARK_TEMPLATE(BM_Visit, 2, 5);
-BENCHMARK_TEMPLATE(BM_Visit, 2, 6);
-BENCHMARK_TEMPLATE(BM_Visit, 2, 7);
-BENCHMARK_TEMPLATE(BM_Visit, 2, 8);
-BENCHMARK_TEMPLATE(BM_Visit, 2, 9);
-BENCHMARK_TEMPLATE(BM_Visit, 2, 10);
-BENCHMARK_TEMPLATE(BM_Visit, 2, 20);
-BENCHMARK_TEMPLATE(BM_Visit, 2, 30);
-BENCHMARK_TEMPLATE(BM_Visit, 2, 40);
-BENCHMARK_TEMPLATE(BM_Visit, 2, 50);
+BENCHMARK(BM_Visit<2, 1>);
+BENCHMARK(BM_Visit<2, 2>);
+BENCHMARK(BM_Visit<2, 3>);
+BENCHMARK(BM_Visit<2, 4>);
+BENCHMARK(BM_Visit<2, 5>);
+BENCHMARK(BM_Visit<2, 6>);
+BENCHMARK(BM_Visit<2, 7>);
+BENCHMARK(BM_Visit<2, 8>);
+BENCHMARK(BM_Visit<2, 9>);
+BENCHMARK(BM_Visit<2, 10>);
+BENCHMARK(BM_Visit<2, 20>);
+BENCHMARK(BM_Visit<2, 30>);
+BENCHMARK(BM_Visit<2, 40>);
+BENCHMARK(BM_Visit<2, 50>);
 
 BENCHMARK_MAIN();

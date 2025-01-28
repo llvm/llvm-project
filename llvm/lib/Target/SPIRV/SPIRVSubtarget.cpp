@@ -38,6 +38,13 @@ static cl::opt<std::set<SPIRV::Extension::Extension>, false,
     Extensions("spirv-ext",
                cl::desc("Specify list of enabled SPIR-V extensions"));
 
+// Provides access to the cl::opt<...> `Extensions` variable from outside of the
+// module.
+void SPIRVSubtarget::addExtensionsToClOpt(
+    const std::set<SPIRV::Extension::Extension> &AllowList) {
+  Extensions.insert(AllowList.begin(), AllowList.end());
+}
+
 // Compare version numbers, but allow 0 to mean unspecified.
 static bool isAtLeastVer(VersionTuple Target, VersionTuple VerToCompareTo) {
   return Target.empty() || Target >= VerToCompareTo;
@@ -104,6 +111,14 @@ bool SPIRVSubtarget::canUseExtInstSet(
   return AvailableExtInstSets.contains(E);
 }
 
+SPIRV::InstructionSet::InstructionSet
+SPIRVSubtarget::getPreferredInstructionSet() const {
+  if (isOpenCLEnv())
+    return SPIRV::InstructionSet::OpenCL_std;
+  else
+    return SPIRV::InstructionSet::GLSL_std_450;
+}
+
 bool SPIRVSubtarget::isAtLeastSPIRVVer(VersionTuple VerToCompareTo) const {
   return isAtLeastVer(SPIRVVersion, VerToCompareTo);
 }
@@ -122,9 +137,6 @@ bool SPIRVSubtarget::canDirectlyComparePointers() const {
 
 void SPIRVSubtarget::initAvailableExtensions() {
   AvailableExtensions.clear();
-  if (!isOpenCLEnv())
-    return;
-
   AvailableExtensions.insert(Extensions.begin(), Extensions.end());
 }
 

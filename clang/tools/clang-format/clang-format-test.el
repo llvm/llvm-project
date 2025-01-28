@@ -58,16 +58,16 @@
        (should-not delete)
        (should-not display)
        (should (equal args
-                      '("-output-replacements-xml" "-assume-filename" "foo.cpp"
-                        "-fallback-style" "none"
+                      '("--output-replacements-xml" "--assume-filename" "foo.cpp"
+                        "--fallback-style" "none"
                         ;; Beginning of buffer, no byte-order mark.
-                        "-offset" "0"
+                        "--offset" "0"
                         ;; We have two lines with 2×2 bytes for the umlauts,
                         ;; 1 byte for the line ending, and 3 bytes for the
                         ;; other ASCII characters each.
-                        "-length" "16"
+                        "--length" "16"
                         ;; Length of a single line (without line ending).
-                        "-cursor" "7")))))))
+                        "--cursor" "7")))))))
 
 (ert-deftest clang-format-buffer--process-encoding ()
   "Tests that text is sent to the clang-format process in the

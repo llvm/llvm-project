@@ -55,7 +55,7 @@ static inline const MCExpr *lowerAddrSpaceCast(const TargetMachine &TM,
   // Clang generates addrspacecast for null pointers in private and local
   // address space, which needs to be lowered.
   if (CE && CE->getOpcode() == Instruction::AddrSpaceCast) {
-    auto Op = CE->getOperand(0);
+    auto *Op = CE->getOperand(0);
     auto SrcAddr = Op->getType()->getPointerAddressSpace();
     if (Op->isNullValue() && AT.getNullPointerValue(SrcAddr) == 0) {
       auto DstAddr = CE->getType()->getPointerAddressSpace();

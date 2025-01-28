@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass postra-machine-sink,postrapseudos,if-converter -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass postra-machine-sink,postrapseudos,if-converter -verify-machineinstrs -o - %s | FileCheck %s
 
 # 1. Post-RA machine sinking moves the copy (1) to block %bb.1. The
 #    subregisters $r2 and $r3 of $d1 are not removed from the live-ins.

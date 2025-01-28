@@ -90,8 +90,8 @@
 // RUN:   %s 2>&1 | FileCheck -check-prefix=CHK-ENV-BCLIB %s
 
 // CHK-BCLIB: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-builtin-bitcode{{.*}}libomptarget-nvptx-test.bc
-// CHK-BCLIB-DIR: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-builtin-bitcode{{.*}}libomptarget{{/|\\\\}}libomptarget-nvptx-sm_52.bc
-// CHK-ENV-BCLIB: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-builtin-bitcode{{.*}}subdir{{/|\\\\}}libomptarget-nvptx-sm_52.bc
+// CHK-BCLIB-DIR: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-builtin-bitcode{{.*}}libomptarget{{/|\\\\}}libomptarget-nvptx.bc
+// CHK-ENV-BCLIB: clang{{.*}}-triple{{.*}}nvptx64-nvidia-cuda{{.*}}-mlink-builtin-bitcode{{.*}}subdir{{/|\\\\}}libomptarget-nvptx.bc
 // CHK-BCLIB-NOT: {{error:|warning:}}
 
 /// ###########################################################################
@@ -377,4 +377,4 @@
 // RUN:      --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
 // RUN:      --offload-arch=sm_52 -nogpulibc -nogpuinc %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=LIBC-GPU %s
-// LIBC-GPU: clang-linker-wrapper{{.*}}"--device-compiler=-nolibc"
+// LIBC-GPU-NOT: clang-linker-wrapper{{.*}}"--device-linker"

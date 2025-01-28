@@ -75,9 +75,9 @@ framework module FW { umbrella header "FW.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
+// CHECK-NEXT:         "[[PREFIX]]/frameworks-symlink/FW.framework/Modules/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/copy/FW.h",
-// CHECK-NEXT:         "[[PREFIX]]/copy/Header.h",
-// CHECK-NEXT:         "[[PREFIX]]/frameworks-symlink/FW.framework/Modules/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/copy/Header.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [
 // CHECK-NEXT:         {

@@ -64,7 +64,6 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -236,7 +235,7 @@ static ArrayRef<Use> GetDeoptBundleOperands(const CallBase *Call) {
   if (!DeoptBundle) {
     assert(AllowStatepointWithNoDeoptInfo &&
            "Found non-leaf call without deopt info!");
-    return std::nullopt;
+    return {};
   }
 
   return DeoptBundle->Inputs;
@@ -578,8 +577,15 @@ static Value *findBaseDefiningValue(Value *I, DefiningValueMapTy &Cache,
     return I;
   }
 
-  assert(!isa<AtomicRMWInst>(I) && "Xchg handled above, all others are "
-                                   "binary ops which don't apply to pointers");
+  if (isa<AtomicRMWInst>(I)) {
+    assert(cast<AtomicRMWInst>(I)->getOperation() == AtomicRMWInst::Xchg &&
+           "Only Xchg is allowed for pointer values");
+    // A RMW Xchg is a combined atomic load and store, so we can treat the
+    // loaded value as a base pointer.
+    Cache[I] = I;
+    setKnownBase(I, /* IsKnownBase */ true, KnownBases);
+    return I;
+  }
 
   // The aggregate ops.  Aggregates can either be in the heap or on the
   // stack, but in either case, this is simply a field load.  As a result,
@@ -1109,7 +1115,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
     };
 
     Instruction *BaseInst = I->clone();
-    BaseInst->insertBefore(I);
+    BaseInst->insertBefore(I->getIterator());
     BaseInst->setName(getMangledName(I));
     // Add metadata marking this as a base value
     BaseInst->setMetadata("is_base_value", MDNode::get(I->getContext(), {}));
@@ -1365,7 +1371,7 @@ static void recomputeLiveInValues(
 // and inserts them before "InsertBefore". Returns rematerialized value
 // which should be used after statepoint.
 static Instruction *rematerializeChain(ArrayRef<Instruction *> ChainToBase,
-                                       Instruction *InsertBefore,
+                                       BasicBlock::iterator InsertBefore,
                                        Value *RootOfChain,
                                        Value *AlternateLiveBase) {
   Instruction *LastClonedValue = nullptr;
@@ -1525,8 +1531,8 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
     if (auto *VT = dyn_cast<VectorType>(Ty))
       NewTy = FixedVectorType::get(NewTy,
                                    cast<FixedVectorType>(VT)->getNumElements());
-    return Intrinsic::getDeclaration(M, Intrinsic::experimental_gc_relocate,
-                                     {NewTy});
+    return Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::experimental_gc_relocate, {NewTy});
   };
 
   // Lazily populated map from input types to the canonicalized form mentioned
@@ -1654,7 +1660,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
   // be replacing a terminator.
   IRBuilder<> Builder(Call);
 
-  ArrayRef<Value *> GCArgs(LiveVariables);
+  ArrayRef<Value *> GCLive(LiveVariables);
   uint64_t StatepointID = StatepointDirectives::DefaultStatepointID;
   uint32_t NumPatchBytes = 0;
   uint32_t Flags = uint32_t(StatepointFlags::None);
@@ -1827,7 +1833,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
   if (auto *CI = dyn_cast<CallInst>(Call)) {
     CallInst *SPCall = Builder.CreateGCStatepointCall(
         StatepointID, NumPatchBytes, CallTarget, Flags, CallArgs,
-        TransitionArgs, DeoptArgs, GCArgs, "safepoint_token");
+        TransitionArgs, DeoptArgs, GCLive, "safepoint_token");
 
     SPCall->setTailCallKind(CI->getTailCallKind());
     SPCall->setCallingConv(CI->getCallingConv());
@@ -1852,8 +1858,8 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
     // original block.
     InvokeInst *SPInvoke = Builder.CreateGCStatepointInvoke(
         StatepointID, NumPatchBytes, CallTarget, II->getNormalDest(),
-        II->getUnwindDest(), Flags, CallArgs, TransitionArgs, DeoptArgs, GCArgs,
-        "statepoint_token");
+        II->getUnwindDest(), Flags, CallArgs, TransitionArgs, DeoptArgs,
+        GCLive, "statepoint_token");
 
     SPInvoke->setCallingConv(II->getCallingConv());
 
@@ -2179,16 +2185,16 @@ static void relocationViaAlloca(
         // InvokeInst is a terminator so the store need to be inserted into its
         // normal destination block.
         BasicBlock *NormalDest = Invoke->getNormalDest();
-        Store->insertBefore(NormalDest->getFirstNonPHI());
+        Store->insertBefore(NormalDest->getFirstNonPHIIt());
       } else {
         assert(!Inst->isTerminator() &&
                "The only terminator that can produce a value is "
                "InvokeInst which is handled above.");
-        Store->insertAfter(Inst);
+        Store->insertAfter(Inst->getIterator());
       }
     } else {
       assert(isa<Argument>(Def));
-      Store->insertAfter(cast<Instruction>(Alloca));
+      Store->insertAfter(cast<Instruction>(Alloca)->getIterator());
     }
   }
 
@@ -2493,8 +2499,9 @@ static void rematerializeLiveValuesAtUses(
     //   statepoint between uses in the block.
     while (!Cand->user_empty()) {
       Instruction *UserI = cast<Instruction>(*Cand->user_begin());
-      Instruction *RematChain = rematerializeChain(
-          Record.ChainToBase, UserI, Record.RootOfChain, PointerToBase[Cand]);
+      Instruction *RematChain =
+          rematerializeChain(Record.ChainToBase, UserI->getIterator(),
+                             Record.RootOfChain, PointerToBase[Cand]);
       UserI->replaceUsesOfWith(Cand, RematChain);
       PointerToBase[RematChain] = PointerToBase[Cand];
     }
@@ -2567,16 +2574,16 @@ static void rematerializeLiveValues(CallBase *Call,
       Instruction *InsertBefore = Call->getNextNode();
       assert(InsertBefore);
       Instruction *RematerializedValue =
-          rematerializeChain(Record.ChainToBase, InsertBefore,
+          rematerializeChain(Record.ChainToBase, InsertBefore->getIterator(),
                              Record.RootOfChain, PointerToBase[LiveValue]);
       Info.RematerializedValues[RematerializedValue] = LiveValue;
     } else {
       auto *Invoke = cast<InvokeInst>(Call);
 
-      Instruction *NormalInsertBefore =
-          &*Invoke->getNormalDest()->getFirstInsertionPt();
-      Instruction *UnwindInsertBefore =
-          &*Invoke->getUnwindDest()->getFirstInsertionPt();
+      BasicBlock::iterator NormalInsertBefore =
+          Invoke->getNormalDest()->getFirstInsertionPt();
+      BasicBlock::iterator UnwindInsertBefore =
+          Invoke->getUnwindDest()->getFirstInsertionPt();
 
       Instruction *NormalRematerializedValue =
           rematerializeChain(Record.ChainToBase, NormalInsertBefore,
@@ -2839,7 +2846,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
     // That Value* no longer exists and we need to use the new gc_result.
     // Thankfully, the live set is embedded in the statepoint (and updated), so
     // we just grab that.
-    llvm::append_range(Live, Info.StatepointToken->gc_args());
+    llvm::append_range(Live, Info.StatepointToken->gc_live());
 #ifndef NDEBUG
     // Do some basic validation checking on our liveness results before
     // performing relocation.  Relocation can and will turn mistakes in liveness
@@ -2847,7 +2854,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
     // TODO: It would be nice to test consistency as well
     assert(DT.isReachableFromEntry(Info.StatepointToken->getParent()) &&
            "statepoint must be reachable or liveness is meaningless");
-    for (Value *V : Info.StatepointToken->gc_args()) {
+    for (Value *V : Info.StatepointToken->gc_live()) {
       if (!isa<Instruction>(V))
         // Non-instruction values trivial dominate all possible uses
         continue;
@@ -3125,7 +3132,7 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
       // most instructions without side effects or memory access.
       if (isa<ICmpInst>(Cond) && Cond->hasOneUse()) {
         MadeChange = true;
-        Cond->moveBefore(TI);
+        Cond->moveBefore(TI->getIterator());
       }
   }
 

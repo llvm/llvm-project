@@ -31,7 +31,7 @@ bb1:                                              ; preds = %bb
   br label %bb2
 
 bb2:                                              ; preds = %bb1, %bb
-  %tmp = phi i1 [ true, %bb ], [ undef, %bb1 ]
+  %tmp = phi i1 [ true, %bb ], [ poison, %bb1 ]
   br label %bb3
 
 bb3:                                              ; preds = %bb13, %bb2

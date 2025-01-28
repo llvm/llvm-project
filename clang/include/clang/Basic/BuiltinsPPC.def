@@ -515,6 +515,16 @@ TARGET_BUILTIN(__builtin_altivec_vctzh, "V8UsV8Us", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vctzw, "V4UiV4Ui", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vctzd, "V2ULLiV2ULLi", "", "power9-vector")
 
+// P7 BCD builtins.
+TARGET_BUILTIN(__builtin_cdtbcd, "UiUi", "", "isa-v206-instructions")
+TARGET_BUILTIN(__builtin_cbcdtd, "UiUi", "", "isa-v206-instructions")
+TARGET_BUILTIN(__builtin_addg6s, "UiUiUi", "", "isa-v206-instructions")
+
+// P7 XL Compat BCD builtins.
+TARGET_BUILTIN(__builtin_ppc_cdtbcd, "LLiLLi", "", "isa-v206-instructions")
+TARGET_BUILTIN(__builtin_ppc_cbcdtd, "LLiLLi", "", "isa-v206-instructions")
+TARGET_BUILTIN(__builtin_ppc_addg6s, "LLiLLiLLi", "", "isa-v206-instructions")
+
 // P8 BCD builtins.
 TARGET_BUILTIN(__builtin_ppc_bcdadd, "V16UcV16UcV16UcIi", "",
                "isa-v207-instructions")
@@ -530,12 +540,6 @@ TARGET_BUILTIN(__builtin_altivec_vctzlsbb, "SiV16Uc", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vprtybw, "V4UiV4Ui", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vprtybd, "V2ULLiV2ULLi", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vprtybq, "V1ULLLiV1ULLLi", "", "power9-vector")
-
-// Vector population count built-ins
-TARGET_BUILTIN(__builtin_altivec_vpopcntb, "V16UcV16Uc", "", "power8-vector")
-TARGET_BUILTIN(__builtin_altivec_vpopcnth, "V8UsV8Us", "", "power8-vector")
-TARGET_BUILTIN(__builtin_altivec_vpopcntw, "V4UiV4Ui", "", "power8-vector")
-TARGET_BUILTIN(__builtin_altivec_vpopcntd, "V2ULLiV2ULLi", "", "power8-vector")
 
 // Absolute difference built-ins
 TARGET_BUILTIN(__builtin_altivec_vabsdub, "V16UcV16UcV16Uc", "",

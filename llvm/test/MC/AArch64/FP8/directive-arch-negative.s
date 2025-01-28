@@ -51,5 +51,5 @@ luti2  z0.h, { z0.h }, z0[0]
 .arch armv9-a+sme-lutv2
 .arch armv9-a+nosme-lutv2
 luti4  { z0.b - z3.b }, zt0, { z0, z1 }
-// CHECK: error: instruction requires: sme2 sme-lutv2
+// CHECK: error: instruction requires: sme-lutv2
 // CHECK: luti4  { z0.b - z3.b }, zt0, { z0, z1 }

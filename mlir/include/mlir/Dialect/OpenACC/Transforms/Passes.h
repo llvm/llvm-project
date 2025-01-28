@@ -11,9 +11,6 @@
 
 #include "mlir/Pass/Pass.h"
 
-#define GEN_PASS_DECL
-#include "mlir/Dialect/OpenACC/Transforms/Passes.h.inc"
-
 namespace mlir {
 
 namespace func {
@@ -22,8 +19,8 @@ class FuncOp;
 
 namespace acc {
 
-/// Create a pass to replace ssa values in region with device/host values.
-std::unique_ptr<OperationPass<func::FuncOp>> createLegalizeDataInRegion();
+#define GEN_PASS_DECL
+#include "mlir/Dialect/OpenACC/Transforms/Passes.h.inc"
 
 /// Generate the code for registering conversion passes.
 #define GEN_PASS_REGISTRATION

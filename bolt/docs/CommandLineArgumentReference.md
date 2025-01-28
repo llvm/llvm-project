@@ -113,6 +113,10 @@
 
   Prints out offsets for abbrev and debug_info of Skeleton CUs that get patched.
 
+- `--debug-thread-count=<uint>`
+
+  Specifies the number of threads to be used when processing DWO debug information.
+
 - `--dot-tooltip-code`
 
   Add basic block instructions as tool tips on nodes
@@ -494,9 +498,12 @@
   Automatically put hot code on 2MB page(s) (hugify) at runtime. No manual call
   to hugify is needed in the binary (which is what --hot-text relies on).
 
-- `--icf`
+- `--icf=<value>`
 
   Fold functions with identical code
+  - `all`:  Enable identical code folding
+  - `none`: Disable identical code folding (default)
+  - `safe`: Enable safe identical code folding
 
 - `--icp`
 
@@ -923,15 +930,6 @@
 - `--x86-strip-redundant-address-size`
 
   Remove redundant Address-Size override prefix
-
-### BOLT options in relocation mode:
-
-- `--align-macro-fusion=<value>`
-
-  Fix instruction alignment for macro-fusion (x86 relocation mode)
-  - `none`: do not insert alignment no-ops for macro-fusion
-  - `hot`: only insert alignment no-ops on hot execution paths (default)
-  - `all`: always align instructions to allow macro-fusion
 
 ### BOLT instrumentation options:
 

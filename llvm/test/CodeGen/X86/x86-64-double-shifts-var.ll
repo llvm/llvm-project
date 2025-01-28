@@ -16,6 +16,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver2 | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver3 | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver4 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver5 | FileCheck %s
 
 ; Verify that for the X86_64 processors that are known to have poor latency
 ; double precision shift instructions we do not generate 'shld' or 'shrd'

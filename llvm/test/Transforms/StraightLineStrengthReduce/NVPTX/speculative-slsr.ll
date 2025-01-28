@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 | FileCheck %s
+; RUN: llc < %s -mcpu=sm_35 | FileCheck %s
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
@@ -11,7 +11,7 @@ target triple = "nvptx64-nvidia-cuda"
 ;       use((b + i) * s);
 ;   }
 ; }
-define void @foo(i32 %b, i32 %s) {
+define ptx_kernel void @foo(i32 %b, i32 %s) {
 ; CHECK-LABEL: .visible .entry foo(
 entry:
 ; CHECK: ld.param.u32 [[s:%r[0-9]+]], [foo_param_1];
@@ -65,7 +65,3 @@ for.inc.3:                                        ; preds = %if.then.3, %for.inc
 declare zeroext i1 @cond(i32)
 
 declare void @use(i32)
-
-!nvvm.annotations = !{!0}
-
-!0 = !{ptr @foo, !"kernel", i32 1}

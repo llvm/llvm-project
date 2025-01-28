@@ -159,6 +159,28 @@ protected:
   hlfir::CharExtremumPredicate pred;
 };
 
+class HlfirCShiftLowering : public HlfirTransformationalIntrinsic {
+public:
+  using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
+
+protected:
+  mlir::Value
+  lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
+            const fir::IntrinsicArgumentLoweringRules *argLowering,
+            mlir::Type stmtResultType) override;
+};
+
+class HlfirReshapeLowering : public HlfirTransformationalIntrinsic {
+public:
+  using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
+
+protected:
+  mlir::Value
+  lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
+            const fir::IntrinsicArgumentLoweringRules *argLowering,
+            mlir::Type stmtResultType) override;
+};
+
 } // namespace
 
 mlir::Value HlfirTransformationalIntrinsic::loadBoxAddress(
@@ -270,11 +292,12 @@ HlfirTransformationalIntrinsic::computeResultType(mlir::Value argArray,
         hlfir::ExprType::Shape{array.getShape()};
     mlir::Type elementType = array.getEleTy();
     return hlfir::ExprType::get(builder.getContext(), resultShape, elementType,
-                                /*polymorphic=*/false);
+                                fir::isPolymorphicType(stmtResultType));
   } else if (auto resCharType =
                  mlir::dyn_cast<fir::CharacterType>(stmtResultType)) {
     normalisedResult = hlfir::ExprType::get(
-        builder.getContext(), hlfir::ExprType::Shape{}, resCharType, false);
+        builder.getContext(), hlfir::ExprType::Shape{}, resCharType,
+        /*polymorphic=*/false);
   }
   return normalisedResult;
 }
@@ -387,6 +410,37 @@ mlir::Value HlfirCharExtremumLowering::lowerImpl(
   return createOp<hlfir::CharExtremumOp>(pred, mlir::ValueRange{operands});
 }
 
+mlir::Value HlfirCShiftLowering::lowerImpl(
+    const Fortran::lower::PreparedActualArguments &loweredActuals,
+    const fir::IntrinsicArgumentLoweringRules *argLowering,
+    mlir::Type stmtResultType) {
+  auto operands = getOperandVector(loweredActuals, argLowering);
+  assert(operands.size() == 3);
+  mlir::Value dim = operands[2];
+  if (!dim) {
+    // If DIM is not present, drop the last element which is a null Value.
+    operands.truncate(2);
+  } else {
+    // If DIM is present, then dereference it if it is a ref.
+    dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
+    operands[2] = dim;
+  }
+
+  mlir::Type resultType = computeResultType(operands[0], stmtResultType);
+  return createOp<hlfir::CShiftOp>(resultType, operands);
+}
+
+mlir::Value HlfirReshapeLowering::lowerImpl(
+    const Fortran::lower::PreparedActualArguments &loweredActuals,
+    const fir::IntrinsicArgumentLoweringRules *argLowering,
+    mlir::Type stmtResultType) {
+  auto operands = getOperandVector(loweredActuals, argLowering);
+  assert(operands.size() == 4);
+  mlir::Type resultType = computeResultType(operands[0], stmtResultType);
+  return createOp<hlfir::ReshapeOp>(resultType, operands[0], operands[1],
+                                    operands[2], operands[3]);
+}
+
 std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
     fir::FirOpBuilder &builder, mlir::Location loc, const std::string &name,
     const Fortran::lower::PreparedActualArguments &loweredActuals,
@@ -432,6 +486,12 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
   if (name == "maxloc")
     return HlfirMaxlocLowering{builder, loc}.lower(loweredActuals, argLowering,
                                                    stmtResultType);
+  if (name == "cshift")
+    return HlfirCShiftLowering{builder, loc}.lower(loweredActuals, argLowering,
+                                                   stmtResultType);
+  if (name == "reshape")
+    return HlfirReshapeLowering{builder, loc}.lower(loweredActuals, argLowering,
+                                                    stmtResultType);
   if (mlir::isa<fir::CharacterType>(stmtResultType)) {
     if (name == "min")
       return HlfirCharExtremumLowering{builder, loc,

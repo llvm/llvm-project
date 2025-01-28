@@ -329,10 +329,10 @@ define amdgpu_cs_chain_preserve void @chain_preserve_to_chain_wwm(<3 x i32> inre
 ; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-GFX11-NEXT:    scratch_store_b32 off, v16, off ; 4-byte Folded Spill
 ; GISEL-GFX11-NEXT:    s_mov_b32 s3, s0
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 3
-; GISEL-GFX11-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 4
-; GISEL-GFX11-NEXT:    s_not_b32 exec_lo, exec_lo
+; GISEL-GFX11-NEXT:    s_or_saveexec_b32 s0, -1
+; GISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL-GFX11-NEXT:    v_cndmask_b32_e64 v1, 4, 3, s0
+; GISEL-GFX11-NEXT:    s_mov_b32 exec_lo, s0
 ; GISEL-GFX11-NEXT:    ;;#ASMSTART
 ; GISEL-GFX11-NEXT:    s_nop
 ; GISEL-GFX11-NEXT:    ;;#ASMEND
@@ -351,10 +351,9 @@ define amdgpu_cs_chain_preserve void @chain_preserve_to_chain_wwm(<3 x i32> inre
 ; GISEL-GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-GFX10-NEXT:    buffer_store_dword v16, off, s[48:51], 0 ; 4-byte Folded Spill
 ; GISEL-GFX10-NEXT:    s_mov_b32 s3, s0
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 3
-; GISEL-GFX10-NEXT:    s_not_b32 exec_lo, exec_lo
-; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 4
-; GISEL-GFX10-NEXT:    s_not_b32 exec_lo, exec_lo
+; GISEL-GFX10-NEXT:    s_or_saveexec_b32 s0, -1
+; GISEL-GFX10-NEXT:    v_cndmask_b32_e64 v1, 4, 3, s0
+; GISEL-GFX10-NEXT:    s_mov_b32 exec_lo, s0
 ; GISEL-GFX10-NEXT:    ;;#ASMSTART
 ; GISEL-GFX10-NEXT:    s_nop
 ; GISEL-GFX10-NEXT:    ;;#ASMEND
@@ -371,11 +370,10 @@ define amdgpu_cs_chain_preserve void @chain_preserve_to_chain_wwm(<3 x i32> inre
 ; DAGISEL-GFX11:       ; %bb.0:
 ; DAGISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; DAGISEL-GFX11-NEXT:    scratch_store_b32 off, v16, off ; 4-byte Folded Spill
+; DAGISEL-GFX11-NEXT:    s_or_saveexec_b32 s4, -1
 ; DAGISEL-GFX11-NEXT:    s_mov_b32 s3, s0
-; DAGISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 3
-; DAGISEL-GFX11-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 4
-; DAGISEL-GFX11-NEXT:    s_not_b32 exec_lo, exec_lo
+; DAGISEL-GFX11-NEXT:    v_cndmask_b32_e64 v1, 4, 3, s4
+; DAGISEL-GFX11-NEXT:    s_mov_b32 exec_lo, s4
 ; DAGISEL-GFX11-NEXT:    ;;#ASMSTART
 ; DAGISEL-GFX11-NEXT:    s_nop
 ; DAGISEL-GFX11-NEXT:    ;;#ASMEND
@@ -393,11 +391,10 @@ define amdgpu_cs_chain_preserve void @chain_preserve_to_chain_wwm(<3 x i32> inre
 ; DAGISEL-GFX10:       ; %bb.0:
 ; DAGISEL-GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; DAGISEL-GFX10-NEXT:    buffer_store_dword v16, off, s[48:51], 0 ; 4-byte Folded Spill
+; DAGISEL-GFX10-NEXT:    s_or_saveexec_b32 s4, -1
 ; DAGISEL-GFX10-NEXT:    s_mov_b32 s3, s0
-; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 3
-; DAGISEL-GFX10-NEXT:    s_not_b32 exec_lo, exec_lo
-; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 4
-; DAGISEL-GFX10-NEXT:    s_not_b32 exec_lo, exec_lo
+; DAGISEL-GFX10-NEXT:    v_cndmask_b32_e64 v1, 4, 3, s4
+; DAGISEL-GFX10-NEXT:    s_mov_b32 exec_lo, s4
 ; DAGISEL-GFX10-NEXT:    ;;#ASMSTART
 ; DAGISEL-GFX10-NEXT:    s_nop
 ; DAGISEL-GFX10-NEXT:    ;;#ASMEND
@@ -592,7 +589,7 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_dont_realign_stac
 ; GISEL-GFX11-NEXT:    s_mov_b32 s0, 1
 ; GISEL-GFX11-NEXT:    v_lshlrev_b32_e32 v0, 4, v8
 ; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_add_nc_u32_e32 v4, 0, v0
+; GISEL-GFX11-NEXT:    v_mov_b32_e32 v4, v0
 ; GISEL-GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
 ; GISEL-GFX11-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v2, s2
 ; GISEL-GFX11-NEXT:    scratch_store_b128 v4, v[0:3], off dlc
@@ -607,7 +604,6 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_dont_realign_stac
 ; GISEL-GFX10-NEXT:    v_mov_b32_e32 v2, 2
 ; GISEL-GFX10-NEXT:    v_mov_b32_e32 v3, 3
 ; GISEL-GFX10-NEXT:    v_mov_b32_e32 v4, 4
-; GISEL-GFX10-NEXT:    v_add_nc_u32_e32 v0, 0, v0
 ; GISEL-GFX10-NEXT:    buffer_store_dword v1, v0, s[48:51], 0 offen
 ; GISEL-GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GISEL-GFX10-NEXT:    buffer_store_dword v2, v0, s[48:51], 0 offen offset:4

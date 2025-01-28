@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: llvm/actions/issue-labeler@main
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: ${{ secrets.ISSUE_SUBSCRIBER_TOKEN }}
           configuration-path: .github/new-issues-labeler.yml
           include-title: 1
           include-body: 0

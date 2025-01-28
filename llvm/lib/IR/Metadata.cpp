@@ -29,6 +29,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
@@ -47,7 +48,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -82,7 +82,7 @@ static Metadata *canonicalizeMetadataForValue(LLVMContext &Context,
                                               Metadata *MD) {
   if (!MD)
     // !{}
-    return MDNode::get(Context, std::nullopt);
+    return MDNode::get(Context, {});
 
   // Return early if this isn't a single-operand MDNode.
   auto *N = dyn_cast<MDNode>(MD);
@@ -91,7 +91,7 @@ static Metadata *canonicalizeMetadataForValue(LLVMContext &Context,
 
   if (!N->getOperand(0))
     // !{}
-    return MDNode::get(Context, std::nullopt);
+    return MDNode::get(Context, {});
 
   if (auto *C = dyn_cast<ConstantAsMetadata>(N->getOperand(0)))
     // Look through the MDNode.
@@ -275,7 +275,7 @@ ReplaceableMetadataImpl::getAllDbgVariableRecordUsers() {
     OwnerTy Owner = Pair.second.first;
     if (Owner.isNull())
       continue;
-    if (!Owner.is<DebugValueUser *>())
+    if (!isa<DebugValueUser *>(Owner))
       continue;
     DVRUsersWithID.push_back(&UseMap[Pair.first]);
   }
@@ -289,7 +289,7 @@ ReplaceableMetadataImpl::getAllDbgVariableRecordUsers() {
   });
   SmallVector<DbgVariableRecord *> DVRUsers;
   for (auto UserWithID : DVRUsersWithID)
-    DVRUsers.push_back(UserWithID->first.get<DebugValueUser *>()->getUser());
+    DVRUsers.push_back(cast<DebugValueUser *>(UserWithID->first)->getUser());
   return DVRUsers;
 }
 
@@ -346,6 +346,12 @@ void ReplaceableMetadataImpl::SalvageDebugInfo(const Constant &C) {
     MetadataTracking::OwnerTy Owner = Pair.second.first;
     if (!Owner)
       continue;
+    // Check for MetadataAsValue.
+    if (isa<MetadataAsValue *>(Owner)) {
+      cast<MetadataAsValue *>(Owner)->handleChangedMetadata(
+          ValueAsMetadata::get(UndefValue::get(C.getType())));
+      continue;
+    }
     if (!isa<Metadata *>(Owner))
       continue;
     auto *OwnerMD = dyn_cast_if_present<MDNode>(cast<Metadata *>(Owner));
@@ -391,8 +397,8 @@ void ReplaceableMetadataImpl::replaceAllUsesWith(Metadata *MD) {
       continue;
     }
 
-    if (Owner.is<DebugValueUser *>()) {
-      Owner.get<DebugValueUser *>()->handleChangedValue(Pair.first, MD);
+    if (auto *DVU = dyn_cast<DebugValueUser *>(Owner)) {
+      DVU->handleChangedValue(Pair.first, MD);
       continue;
     }
 
@@ -431,7 +437,7 @@ void ReplaceableMetadataImpl::resolveAllUses(bool ResolveUsers) {
     auto Owner = Pair.second.first;
     if (!Owner)
       continue;
-    if (!Owner.is<Metadata *>())
+    if (!isa<Metadata *>(Owner))
       continue;
 
     // Resolve MDNodes that point at this.
@@ -1250,8 +1256,8 @@ static bool tryMergeRange(SmallVectorImpl<ConstantInt *> &EndPoints,
                           ConstantInt *Low, ConstantInt *High) {
   ConstantRange NewRange(Low->getValue(), High->getValue());
   unsigned Size = EndPoints.size();
-  APInt LB = EndPoints[Size - 2]->getValue();
-  APInt LE = EndPoints[Size - 1]->getValue();
+  const APInt &LB = EndPoints[Size - 2]->getValue();
+  const APInt &LE = EndPoints[Size - 1]->getValue();
   ConstantRange LastRange(LB, LE);
   if (canBeMerged(NewRange, LastRange)) {
     ConstantRange Union = LastRange.unionWith(NewRange);
@@ -1318,10 +1324,11 @@ MDNode *MDNode::getMostGenericRange(MDNode *A, MDNode *B) {
     ++BI;
   }
 
-  // If we have more than 2 ranges (4 endpoints) we have to try to merge
+  // We haven't handled wrap in the previous merge,
+  // if we have at least 2 ranges (4 endpoints) we have to try to merge
   // the last and first ones.
   unsigned Size = EndPoints.size();
-  if (Size > 4) {
+  if (Size > 2) {
     ConstantInt *FB = EndPoints[0];
     ConstantInt *FE = EndPoints[1];
     if (tryMergeRange(EndPoints, FB, FE)) {
@@ -1344,6 +1351,43 @@ MDNode *MDNode::getMostGenericRange(MDNode *A, MDNode *B) {
   MDs.reserve(EndPoints.size());
   for (auto *I : EndPoints)
     MDs.push_back(ConstantAsMetadata::get(I));
+  return MDNode::get(A->getContext(), MDs);
+}
+
+MDNode *MDNode::getMostGenericNoaliasAddrspace(MDNode *A, MDNode *B) {
+  if (!A || !B)
+    return nullptr;
+
+  if (A == B)
+    return A;
+
+  SmallVector<ConstantRange> RangeListA, RangeListB;
+  for (unsigned I = 0, E = A->getNumOperands() / 2; I != E; ++I) {
+    auto *LowA = mdconst::extract<ConstantInt>(A->getOperand(2 * I + 0));
+    auto *HighA = mdconst::extract<ConstantInt>(A->getOperand(2 * I + 1));
+    RangeListA.push_back(ConstantRange(LowA->getValue(), HighA->getValue()));
+  }
+
+  for (unsigned I = 0, E = B->getNumOperands() / 2; I != E; ++I) {
+    auto *LowB = mdconst::extract<ConstantInt>(B->getOperand(2 * I + 0));
+    auto *HighB = mdconst::extract<ConstantInt>(B->getOperand(2 * I + 1));
+    RangeListB.push_back(ConstantRange(LowB->getValue(), HighB->getValue()));
+  }
+
+  ConstantRangeList CRLA(RangeListA);
+  ConstantRangeList CRLB(RangeListB);
+  ConstantRangeList Result = CRLA.intersectWith(CRLB);
+  if (Result.empty())
+    return nullptr;
+
+  SmallVector<Metadata *> MDs;
+  for (const ConstantRange &CR : Result) {
+    MDs.push_back(ConstantAsMetadata::get(
+        ConstantInt::get(A->getContext(), CR.getLower())));
+    MDs.push_back(ConstantAsMetadata::get(
+        ConstantInt::get(A->getContext(), CR.getUpper())));
+  }
+
   return MDNode::get(A->getContext(), MDs);
 }
 
@@ -1726,7 +1770,7 @@ void Instruction::setAAMetadata(const AAMDNodes &N) {
 
 void Instruction::setNoSanitizeMetadata() {
   setMetadata(llvm::LLVMContext::MD_nosanitize,
-              llvm::MDNode::get(getContext(), std::nullopt));
+              llvm::MDNode::get(getContext(), {}));
 }
 
 void Instruction::getAllMetadataImpl(

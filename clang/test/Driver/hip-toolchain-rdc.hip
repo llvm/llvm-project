@@ -20,6 +20,29 @@
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck -check-prefixes=CHECK,MSVC %s
 
+// Test fatbin symbol search for -l libraries.
+
+// RUN: touch librdctest.a rdctest2.bin
+// RUN: %clang -### --target=x86_64-linux-gnu -v \
+// RUN:   -fgpu-rdc -nogpuinc -nogpulib \
+// RUN:   --no-offload-new-driver -L. -lrdctest -l:rdctest2.bin \
+// RUN:   %s \
+// RUN: 2>&1 | FileCheck -check-prefixes=LIB,LNX-LIB %s
+// RUN: rm librdctest.a rdctest2.bin
+
+// RUN: touch rdctest.lib rdctest2.bin
+// RUN: %clang -### --target=x86_64-pc-windows-msvc -v \
+// RUN:   -fgpu-rdc -nogpuinc -nogpulib \
+// RUN:   --no-offload-new-driver -L. -lrdctest -l:rdctest2.bin \
+// RUN:   %s \
+// RUN: 2>&1 | FileCheck -check-prefixes=LIB,MSVC-LIB %s
+// RUN: rm rdctest.lib rdctest2.bin
+
+// LIB: HIP fatbin symbol search uses library path: .
+// LIB: HIP fatbin symbol search found library: .{{/|\\}}rdctest2.bin
+// LNX-LIB: HIP fatbin symbol search found library: .{{/|\\}}librdctest.a
+// MSVC-LIB: HIP fatbin symbol search found library: .{{/|\\}}rdctest.lib
+
 // check HIP fatbin and gpubin handle symbols and code object alignment in dumped llvm-mc input
 // CHECK: Found undefined HIP fatbin symbol: __hip_fatbin_[[ID1:[0-9a-f]+]]
 // CHECK: Found undefined HIP fatbin symbol: __hip_fatbin_[[ID2:[0-9a-f]+]]
@@ -70,7 +93,7 @@
 // CHECK-SAME: "-aux-triple" [[HOST:"x86_64-[^"]+"]]
 // CHECK-SAME: "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
-// CHECK-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
+// CHECK-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
 // CHECK-SAME: "-target-cpu" "gfx803"
@@ -82,7 +105,7 @@
 // CHECK-SAME: "-aux-triple" [[HOST]]
 // CHECK-SAME: "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
-// CHECK-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
+// CHECK-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
 // CHECK-SAME: "-target-cpu" "gfx803"
@@ -132,7 +155,7 @@
 // CHECK-SAME: "-targets={{.*}},hipv4-amdgcn-amd-amdhsa--gfx803,hipv4-amdgcn-amd-amdhsa--gfx900"
 // CHECK-SAME: "-input={{.*}}" "-input=[[IMG_DEV1]]" "-input=[[IMG_DEV2]]" "-output=[[BUNDLE]]"
 
-// CHECK: [[MC:".*llvm-mc.*"]] "-triple" [[HOST]] "-o" [[OBJBUNDLE:".*o"]] "{{.*}}.mcin" "--filetype=obj"
+// CHECK: [[MC:".*clang.*"]] "-target" [[HOST]] "-o" [[OBJBUNDLE:".*o"]] "{{.*}}.mcin"
 
 // output the executable
 // LNX: [[LD:".*ld.*"]] {{.*}}"-o" "a.out" {{.*}} [[A_OBJ_HOST]] [[B_OBJ_HOST]] [[OBJBUNDLE]]

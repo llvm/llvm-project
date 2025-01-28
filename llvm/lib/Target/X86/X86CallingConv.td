@@ -13,14 +13,14 @@
 
 /// CCIfSubtarget - Match if the current subtarget has a feature F.
 class CCIfSubtarget<string F, CCAction A>
-    : CCIf<!strconcat("static_cast<const X86Subtarget&>"
-                       "(State.getMachineFunction().getSubtarget()).", F),
+    : CCIf<!strconcat("State.getMachineFunction()."
+                      "getSubtarget<X86Subtarget>().", F),
            A>;
 
 /// CCIfNotSubtarget - Match if the current subtarget doesn't has a feature F.
 class CCIfNotSubtarget<string F, CCAction A>
-    : CCIf<!strconcat("!static_cast<const X86Subtarget&>"
-                       "(State.getMachineFunction().getSubtarget()).", F),
+    : CCIf<!strconcat("!State.getMachineFunction()."
+                      "getSubtarget<X86Subtarget>().", F),
            A>;
 
 /// CCIfRegCallv4 - Match if RegCall ABIv4 is respected.
@@ -548,11 +548,9 @@ def CC_X86_64_C : CallingConv<[
   CCIfType<[i32], CCAssignToReg<[EDI, ESI, EDX, ECX, R8D, R9D]>>,
 
   // i128 can be either passed in two i64 registers, or on the stack, but
-  // not split across register and stack. As such, do not allow using R9
-  // for a split i64.
+  // not split across register and stack. Handle this with a custom function.
   CCIfType<[i64],
-           CCIfSplit<CCAssignToReg<[RDI, RSI, RDX, RCX, R8]>>>,
-  CCIfType<[i64], CCIfSplit<CCAssignToStackWithShadow<8, 16, [R9]>>>,
+           CCIfConsecutiveRegs<CCCustom<"CC_X86_64_I128">>>,
 
   CCIfType<[i64], CCAssignToReg<[RDI, RSI, RDX, RCX, R8 , R9 ]>>,
 
@@ -1103,6 +1101,9 @@ def CC_X86 : CallingConv<[
 //===----------------------------------------------------------------------===//
 
 def CSR_NoRegs : CalleeSavedRegs<(add)>;
+
+def CSR_IPRA_32 : CalleeSavedRegs<(add EBP, ESI)>;
+def CSR_IPRA_64 : CalleeSavedRegs<(add RBP, RBX)>;
 
 def CSR_32 : CalleeSavedRegs<(add ESI, EDI, EBX, EBP)>;
 def CSR_64 : CalleeSavedRegs<(add RBX, R12, R13, R14, R15, RBP)>;

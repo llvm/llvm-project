@@ -87,8 +87,6 @@ CodeModel::Model getEffectiveCodeModel(std::optional<CodeModel::Model> CM,
                                        bool JIT) {
   if (!CM) {
     return CodeModel::Small;
-  } else if (CM == CodeModel::Large) {
-    llvm_unreachable("Large code model is not supported");
   } else if (CM == CodeModel::Kernel) {
     llvm_unreachable("Kernel code model is not implemented yet");
   }
@@ -102,9 +100,9 @@ M68kTargetMachine::M68kTargetMachine(const Target &T, const Triple &TT,
                                      std::optional<Reloc::Model> RM,
                                      std::optional<CodeModel::Model> CM,
                                      CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options), TT, CPU, FS,
-                        Options, getEffectiveRelocModel(TT, RM),
-                        ::getEffectiveCodeModel(CM, JIT), OL),
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, CPU, Options), TT, CPU,
+                               FS, Options, getEffectiveRelocModel(TT, RM),
+                               ::getEffectiveCodeModel(CM, JIT), OL),
       TLOF(std::make_unique<M68kELFTargetObjectFile>()),
       Subtarget(TT, CPU, FS, *this) {
   initAsmInfo();

@@ -293,7 +293,7 @@ public:
   /// Returns the number of dimensions which have dynamic sizes.
   /// The return type is `int64_t` to maintain consistency with
   /// `ShapedType::Trait<T>::getNumDynamicDims`.
-  int64_t getNumDynamicDims() const { return rtp.getNumDynamicDims(); }
+  size_t getNumDynamicDims() const { return rtp.getNumDynamicDims(); }
 
   ArrayRef<LevelType> getLvlTypes() const { return enc.getLvlTypes(); }
   LevelType getLvlType(Level l) const {

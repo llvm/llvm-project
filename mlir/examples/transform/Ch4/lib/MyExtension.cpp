@@ -31,6 +31,9 @@
 class MyExtension
     : public ::mlir::transform::TransformDialectExtension<MyExtension> {
 public:
+  // The TypeID of this extension.
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(MyExtension)
+
   // The extension must derive the base constructor.
   using Base::Base;
 

@@ -73,14 +73,14 @@ protected:
   Module M;
   int Counter;
 
-  MDNode *getNode() { return MDNode::get(Context, std::nullopt); }
+  MDNode *getNode() { return MDNode::get(Context, {}); }
   MDNode *getNode(Metadata *MD) { return MDNode::get(Context, MD); }
   MDNode *getNode(Metadata *MD1, Metadata *MD2) {
     Metadata *MDs[] = {MD1, MD2};
     return MDNode::get(Context, MDs);
   }
 
-  MDTuple *getTuple() { return MDTuple::getDistinct(Context, std::nullopt); }
+  MDTuple *getTuple() { return MDTuple::getDistinct(Context, {}); }
   DISubroutineType *getSubroutineType() {
     return DISubroutineType::getDistinct(Context, DINode::FlagZero, 0,
                                          getNode(nullptr));
@@ -121,7 +121,7 @@ protected:
   }
   Function *getFunction(StringRef Name) {
     return Function::Create(
-        FunctionType::get(Type::getVoidTy(Context), std::nullopt, false),
+        FunctionType::get(Type::getVoidTy(Context), {}, false),
         Function::ExternalLinkage, Name, M);
   }
 };
@@ -157,7 +157,7 @@ TEST_F(MDStringTest, PrintingSimple) {
   std::string Str;
   raw_string_ostream oss(Str);
   s->print(oss);
-  EXPECT_STREQ("!\"testing 1 2 3\"", oss.str().c_str());
+  EXPECT_STREQ("!\"testing 1 2 3\"", Str.c_str());
 }
 
 // Test printing of MDString with non-printable characters.
@@ -167,7 +167,7 @@ TEST_F(MDStringTest, PrintingComplex) {
   std::string Str;
   raw_string_ostream oss(Str);
   s->print(oss);
-  EXPECT_STREQ("!\"\\00\\0A\\22\\\\\\FF\"", oss.str().c_str());
+  EXPECT_STREQ("!\"\\00\\0A\\22\\\\\\FF\"", Str.c_str());
 }
 
 typedef MetadataTest MDNodeTest;
@@ -227,7 +227,7 @@ TEST_F(MDNodeTest, SelfReference) {
   // !0 = !{!0}
   // !1 = !{!0}
   {
-    auto Temp = MDNode::getTemporary(Context, std::nullopt);
+    auto Temp = MDNode::getTemporary(Context, {});
     Metadata *Args[] = {Temp.get()};
     MDNode *Self = MDNode::get(Context, Args);
     Self->replaceOperandWith(0, Self);
@@ -245,8 +245,8 @@ TEST_F(MDNodeTest, SelfReference) {
   // !0 = !{!0, !{}}
   // !1 = !{!0, !{}}
   {
-    auto Temp = MDNode::getTemporary(Context, std::nullopt);
-    Metadata *Args[] = {Temp.get(), MDNode::get(Context, std::nullopt)};
+    auto Temp = MDNode::getTemporary(Context, {});
+    Metadata *Args[] = {Temp.get(), MDNode::get(Context, {})};
     MDNode *Self = MDNode::get(Context, Args);
     Self->replaceOperandWith(0, Self);
     ASSERT_EQ(Self, Self->getOperand(0));
@@ -299,7 +299,6 @@ TEST_F(MDNodeTest, Print) {
     std::string Actual_;                                                       \
     raw_string_ostream OS(Actual_);                                            \
     PRINT;                                                                     \
-    OS.flush();                                                                \
     std::string Expected_(EXPECTED);                                           \
     EXPECT_EQ(Expected_, Actual_);                                             \
   } while (false)
@@ -355,8 +354,8 @@ TEST_F(MDNodeTest, PrintFromFunction) {
   auto *BB1 = BasicBlock::Create(Context, "entry", F1);
   auto *R0 = ReturnInst::Create(Context, BB0);
   auto *R1 = ReturnInst::Create(Context, BB1);
-  auto *N0 = MDNode::getDistinct(Context, std::nullopt);
-  auto *N1 = MDNode::getDistinct(Context, std::nullopt);
+  auto *N0 = MDNode::getDistinct(Context, {});
+  auto *N1 = MDNode::getDistinct(Context, {});
   R0->setMetadata("md", N0);
   R1->setMetadata("md", N1);
 
@@ -381,8 +380,8 @@ TEST_F(MDNodeTest, PrintFromMetadataAsValue) {
   auto *F1 = Function::Create(FTy, GlobalValue::ExternalLinkage, "F1", &M);
   auto *BB0 = BasicBlock::Create(Context, "entry", F0);
   auto *BB1 = BasicBlock::Create(Context, "entry", F1);
-  auto *N0 = MDNode::getDistinct(Context, std::nullopt);
-  auto *N1 = MDNode::getDistinct(Context, std::nullopt);
+  auto *N0 = MDNode::getDistinct(Context, {});
+  auto *N1 = MDNode::getDistinct(Context, {});
   auto *MAV0 = MetadataAsValue::get(Context, N0);
   auto *MAV1 = MetadataAsValue::get(Context, N1);
   CallInst::Create(Intrinsic, MAV0, "", BB0);
@@ -416,7 +415,7 @@ TEST_F(MDNodeTest, PrintWithDroppedCallOperand) {
   CI0->dropAllReferences();
 
   auto *R0 = ReturnInst::Create(Context, BB0);
-  auto *N0 = MDNode::getDistinct(Context, std::nullopt);
+  auto *N0 = MDNode::getDistinct(Context, {});
   R0->setMetadata("md", N0);
 
   // Printing the metadata node would previously result in a failed assertion
@@ -489,7 +488,7 @@ TEST_F(MDNodeTest, PrintTree) {
 
 TEST_F(MDNodeTest, NullOperand) {
   // metadata !{}
-  MDNode *Empty = MDNode::get(Context, std::nullopt);
+  MDNode *Empty = MDNode::get(Context, {});
 
   // metadata !{metadata !{}}
   Metadata *Ops[] = {Empty};
@@ -509,7 +508,7 @@ TEST_F(MDNodeTest, NullOperand) {
 
 TEST_F(MDNodeTest, DistinctOnUniquingCollision) {
   // !{}
-  MDNode *Empty = MDNode::get(Context, std::nullopt);
+  MDNode *Empty = MDNode::get(Context, {});
   ASSERT_TRUE(Empty->isResolved());
   EXPECT_FALSE(Empty->isDistinct());
 
@@ -536,7 +535,7 @@ TEST_F(MDNodeTest, DistinctOnUniquingCollision) {
 
 TEST_F(MDNodeTest, UniquedOnDeletedOperand) {
   // temp !{}
-  TempMDTuple T = MDTuple::getTemporary(Context, std::nullopt);
+  TempMDTuple T = MDTuple::getTemporary(Context, {});
 
   // !{temp !{}}
   Metadata *Ops[] = {T.get()};
@@ -570,14 +569,14 @@ TEST_F(MDNodeTest, DistinctOnDeletedValueOperand) {
 
 TEST_F(MDNodeTest, getDistinct) {
   // !{}
-  MDNode *Empty = MDNode::get(Context, std::nullopt);
+  MDNode *Empty = MDNode::get(Context, {});
   ASSERT_TRUE(Empty->isResolved());
   ASSERT_FALSE(Empty->isDistinct());
-  ASSERT_EQ(Empty, MDNode::get(Context, std::nullopt));
+  ASSERT_EQ(Empty, MDNode::get(Context, {}));
 
   // distinct !{}
-  MDNode *Distinct1 = MDNode::getDistinct(Context, std::nullopt);
-  MDNode *Distinct2 = MDNode::getDistinct(Context, std::nullopt);
+  MDNode *Distinct1 = MDNode::getDistinct(Context, {});
+  MDNode *Distinct2 = MDNode::getDistinct(Context, {});
   EXPECT_TRUE(Distinct1->isResolved());
   EXPECT_TRUE(Distinct2->isDistinct());
   EXPECT_NE(Empty, Distinct1);
@@ -585,31 +584,31 @@ TEST_F(MDNodeTest, getDistinct) {
   EXPECT_NE(Distinct1, Distinct2);
 
   // !{}
-  ASSERT_EQ(Empty, MDNode::get(Context, std::nullopt));
+  ASSERT_EQ(Empty, MDNode::get(Context, {}));
 }
 
 TEST_F(MDNodeTest, isUniqued) {
-  MDNode *U = MDTuple::get(Context, std::nullopt);
-  MDNode *D = MDTuple::getDistinct(Context, std::nullopt);
-  auto T = MDTuple::getTemporary(Context, std::nullopt);
+  MDNode *U = MDTuple::get(Context, {});
+  MDNode *D = MDTuple::getDistinct(Context, {});
+  auto T = MDTuple::getTemporary(Context, {});
   EXPECT_TRUE(U->isUniqued());
   EXPECT_FALSE(D->isUniqued());
   EXPECT_FALSE(T->isUniqued());
 }
 
 TEST_F(MDNodeTest, isDistinct) {
-  MDNode *U = MDTuple::get(Context, std::nullopt);
-  MDNode *D = MDTuple::getDistinct(Context, std::nullopt);
-  auto T = MDTuple::getTemporary(Context, std::nullopt);
+  MDNode *U = MDTuple::get(Context, {});
+  MDNode *D = MDTuple::getDistinct(Context, {});
+  auto T = MDTuple::getTemporary(Context, {});
   EXPECT_FALSE(U->isDistinct());
   EXPECT_TRUE(D->isDistinct());
   EXPECT_FALSE(T->isDistinct());
 }
 
 TEST_F(MDNodeTest, isTemporary) {
-  MDNode *U = MDTuple::get(Context, std::nullopt);
-  MDNode *D = MDTuple::getDistinct(Context, std::nullopt);
-  auto T = MDTuple::getTemporary(Context, std::nullopt);
+  MDNode *U = MDTuple::get(Context, {});
+  MDNode *D = MDTuple::getDistinct(Context, {});
+  auto T = MDTuple::getTemporary(Context, {});
   EXPECT_FALSE(U->isTemporary());
   EXPECT_FALSE(D->isTemporary());
   EXPECT_TRUE(T->isTemporary());
@@ -617,7 +616,7 @@ TEST_F(MDNodeTest, isTemporary) {
 
 TEST_F(MDNodeTest, getDistinctWithUnresolvedOperands) {
   // temporary !{}
-  auto Temp = MDTuple::getTemporary(Context, std::nullopt);
+  auto Temp = MDTuple::getTemporary(Context, {});
   ASSERT_FALSE(Temp->isResolved());
 
   // distinct !{temporary !{}}
@@ -627,17 +626,17 @@ TEST_F(MDNodeTest, getDistinctWithUnresolvedOperands) {
   EXPECT_EQ(Temp.get(), Distinct->getOperand(0));
 
   // temporary !{} => !{}
-  MDNode *Empty = MDNode::get(Context, std::nullopt);
+  MDNode *Empty = MDNode::get(Context, {});
   Temp->replaceAllUsesWith(Empty);
   EXPECT_EQ(Empty, Distinct->getOperand(0));
 }
 
 TEST_F(MDNodeTest, handleChangedOperandRecursion) {
   // !0 = !{}
-  MDNode *N0 = MDNode::get(Context, std::nullopt);
+  MDNode *N0 = MDNode::get(Context, {});
 
   // !1 = !{!3, null}
-  auto Temp3 = MDTuple::getTemporary(Context, std::nullopt);
+  auto Temp3 = MDTuple::getTemporary(Context, {});
   Metadata *Ops1[] = {Temp3.get(), nullptr};
   MDNode *N1 = MDNode::get(Context, Ops1);
 
@@ -701,7 +700,7 @@ TEST_F(MDNodeTest, replaceResolvedOperand) {
   // a global value that gets RAUW'ed.
   //
   // Use a temporary node to keep N from being resolved.
-  auto Temp = MDTuple::getTemporary(Context, std::nullopt);
+  auto Temp = MDTuple::getTemporary(Context, {});
   Metadata *Ops[] = {nullptr, Temp.get()};
 
   MDNode *Empty = MDTuple::get(Context, ArrayRef<Metadata *>());
@@ -722,7 +721,7 @@ TEST_F(MDNodeTest, replaceResolvedOperand) {
 }
 
 TEST_F(MDNodeTest, replaceWithUniqued) {
-  auto *Empty = MDTuple::get(Context, std::nullopt);
+  auto *Empty = MDTuple::get(Context, {});
   MDTuple *FirstUniqued;
   {
     Metadata *Ops[] = {Empty};
@@ -748,7 +747,7 @@ TEST_F(MDNodeTest, replaceWithUniqued) {
     EXPECT_EQ(FirstUniqued, Uniqued);
   }
   {
-    auto Unresolved = MDTuple::getTemporary(Context, std::nullopt);
+    auto Unresolved = MDTuple::getTemporary(Context, {});
     Metadata *Ops[] = {Unresolved.get()};
     auto Temp = MDTuple::getTemporary(Context, Ops);
     EXPECT_TRUE(Temp->isTemporary());
@@ -770,7 +769,7 @@ TEST_F(MDNodeTest, replaceWithUniqued) {
 
 TEST_F(MDNodeTest, replaceWithUniquedResolvingOperand) {
   // temp !{}
-  MDTuple *Op = MDTuple::getTemporary(Context, std::nullopt).release();
+  MDTuple *Op = MDTuple::getTemporary(Context, {}).release();
   EXPECT_FALSE(Op->isResolved());
 
   // temp !{temp !{}}
@@ -837,7 +836,7 @@ TEST_F(MDNodeTest, replaceWithUniquedChangedOperand) {
 
 TEST_F(MDNodeTest, replaceWithDistinct) {
   {
-    auto *Empty = MDTuple::get(Context, std::nullopt);
+    auto *Empty = MDTuple::get(Context, {});
     Metadata *Ops[] = {Empty};
     auto Temp = MDTuple::getTemporary(Context, Ops);
     EXPECT_TRUE(Temp->isTemporary());
@@ -850,7 +849,7 @@ TEST_F(MDNodeTest, replaceWithDistinct) {
     EXPECT_EQ(Current, Distinct);
   }
   {
-    auto Unresolved = MDTuple::getTemporary(Context, std::nullopt);
+    auto Unresolved = MDTuple::getTemporary(Context, {});
     Metadata *Ops[] = {Unresolved.get()};
     auto Temp = MDTuple::getTemporary(Context, Ops);
     EXPECT_TRUE(Temp->isTemporary());
@@ -909,7 +908,7 @@ TEST_F(MDNodeTest, deleteTemporaryWithTrackingRef) {
   TrackingMDRef Ref;
   EXPECT_EQ(nullptr, Ref.get());
   {
-    auto Temp = MDTuple::getTemporary(Context, std::nullopt);
+    auto Temp = MDTuple::getTemporary(Context, {});
     Ref.reset(Temp.get());
     EXPECT_EQ(Temp.get(), Ref.get());
   }
@@ -1254,14 +1253,14 @@ TEST_F(DILocationTest, getDistinct) {
 }
 
 TEST_F(DILocationTest, getTemporary) {
-  MDNode *N = MDNode::get(Context, std::nullopt);
+  MDNode *N = MDNode::get(Context, {});
   auto L = DILocation::getTemporary(Context, 2, 7, N);
   EXPECT_TRUE(L->isTemporary());
   EXPECT_FALSE(L->isResolved());
 }
 
 TEST_F(DILocationTest, cloneTemporary) {
-  MDNode *N = MDNode::get(Context, std::nullopt);
+  MDNode *N = MDNode::get(Context, {});
   auto L = DILocation::getTemporary(Context, 2, 7, N);
   EXPECT_TRUE(L->isTemporary());
   auto L2 = L->clone();
@@ -1371,7 +1370,7 @@ typedef MetadataTest GenericDINodeTest;
 
 TEST_F(GenericDINodeTest, get) {
   StringRef Header = "header";
-  auto *Empty = MDNode::get(Context, std::nullopt);
+  auto *Empty = MDNode::get(Context, {});
   Metadata *Ops1[] = {Empty};
   auto *N = GenericDINode::get(Context, 15, Header, Ops1);
   EXPECT_EQ(15u, N->getTag());
@@ -1407,7 +1406,7 @@ TEST_F(GenericDINodeTest, get) {
 
 TEST_F(GenericDINodeTest, getEmptyHeader) {
   // Canonicalize !"" to null.
-  auto *N = GenericDINode::get(Context, 15, StringRef(), std::nullopt);
+  auto *N = GenericDINode::get(Context, 15, StringRef(), {});
   EXPECT_EQ(StringRef(), N->getHeader());
   EXPECT_EQ(nullptr, N->getOperand(0));
 }
@@ -1773,44 +1772,48 @@ TEST_F(DIEnumeratorTest, getWithLargeValues) {
 typedef MetadataTest DIBasicTypeTest;
 
 TEST_F(DIBasicTypeTest, get) {
-  auto *N =
-      DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33, 26, 7,
-                        DINode::FlagZero);
+  auto *N = DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
+                             26, 7, 100, DINode::FlagZero);
   EXPECT_EQ(dwarf::DW_TAG_base_type, N->getTag());
   EXPECT_EQ("special", N->getName());
   EXPECT_EQ(33u, N->getSizeInBits());
   EXPECT_EQ(26u, N->getAlignInBits());
   EXPECT_EQ(7u, N->getEncoding());
   EXPECT_EQ(0u, N->getLine());
+  EXPECT_EQ(100u, N->getNumExtraInhabitants());
   EXPECT_EQ(DINode::FlagZero, N->getFlags());
   EXPECT_EQ(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
-                                26, 7, DINode::FlagZero));
+                                26, 7, 100, DINode::FlagZero));
 
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_unspecified_type,
-                                "special", 33, 26, 7, DINode::FlagZero));
-  EXPECT_NE(N,
-            DIBasicType::get(Context, dwarf::DW_TAG_base_type, "s", 33, 26, 7,
-                              DINode::FlagZero));
+                                "special", 33, 26, 7, 100, DINode::FlagZero));
+  EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "s", 33, 26,
+                                7, 100, DINode::FlagZero));
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 32,
-                                26, 7, DINode::FlagZero));
+                                26, 7, 100, DINode::FlagZero));
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
-                                25, 7, DINode::FlagZero));
+                                25, 7, 100, DINode::FlagZero));
+
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
-                                26, 6, DINode::FlagZero));
+                                26, 7, 99, DINode::FlagZero));
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
-                                26, 7, DINode::FlagBigEndian));
+                                26, 6, 100, DINode::FlagZero));
   EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
-                                26, 7, DINode::FlagLittleEndian));
+                                26, 7, 100, DINode::FlagBigEndian));
+  EXPECT_NE(N, DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", 33,
+                                26, 7, 100, DINode::FlagLittleEndian));
 
   TempDIBasicType Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
 }
 
 TEST_F(DIBasicTypeTest, getWithLargeValues) {
-  auto *N = DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special",
-                             UINT64_MAX, UINT32_MAX - 1, 7, DINode::FlagZero);
+  auto *N =
+      DIBasicType::get(Context, dwarf::DW_TAG_base_type, "special", UINT64_MAX,
+                       UINT32_MAX - 1, 7, UINT32_MAX, DINode::FlagZero);
   EXPECT_EQ(UINT64_MAX, N->getSizeInBits());
   EXPECT_EQ(UINT32_MAX - 1, N->getAlignInBits());
+  EXPECT_EQ(UINT32_MAX, N->getNumExtraInhabitants());
 }
 
 TEST_F(DIBasicTypeTest, getUnspecified) {
@@ -1830,7 +1833,7 @@ typedef MetadataTest DITypeTest;
 TEST_F(DITypeTest, clone) {
   // Check that DIType has a specialized clone that returns TempDIType.
   DIType *N = DIBasicType::get(Context, dwarf::DW_TAG_base_type, "int", 32, 32,
-                               dwarf::DW_ATE_signed, DINode::FlagZero);
+                               0, dwarf::DW_ATE_signed, DINode::FlagZero);
 
   TempDIType Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
@@ -2146,7 +2149,7 @@ TEST_F(DICompositeTypeTest, replaceOperands) {
       Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
       OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier);
 
-  auto *Elements = MDTuple::getDistinct(Context, std::nullopt);
+  auto *Elements = MDTuple::getDistinct(Context, {});
   EXPECT_EQ(nullptr, N->getElements().get());
   N->replaceElements(Elements);
   EXPECT_EQ(Elements, N->getElements().get());
@@ -2165,7 +2168,7 @@ TEST_F(DICompositeTypeTest, replaceOperands) {
   N->replaceVTableHolder(nullptr);
   EXPECT_EQ(nullptr, N->getVTableHolder());
 
-  auto *TemplateParams = MDTuple::getDistinct(Context, std::nullopt);
+  auto *TemplateParams = MDTuple::getDistinct(Context, {});
   EXPECT_EQ(nullptr, N->getTemplateParams().get());
   N->replaceTemplateParams(TemplateParams);
   EXPECT_EQ(TemplateParams, N->getTemplateParams().get());
@@ -2497,9 +2500,9 @@ TEST_F(DICompileUnitTest, replaceArrays) {
   unsigned RuntimeVersion = 2;
   StringRef SplitDebugFilename = "another/file";
   auto EmissionKind = DICompileUnit::FullDebug;
-  MDTuple *EnumTypes = MDTuple::getDistinct(Context, std::nullopt);
-  MDTuple *RetainedTypes = MDTuple::getDistinct(Context, std::nullopt);
-  MDTuple *ImportedEntities = MDTuple::getDistinct(Context, std::nullopt);
+  MDTuple *EnumTypes = MDTuple::getDistinct(Context, {});
+  MDTuple *RetainedTypes = MDTuple::getDistinct(Context, {});
+  MDTuple *ImportedEntities = MDTuple::getDistinct(Context, {});
   uint64_t DWOId = 0xc0ffee;
   StringRef SysRoot = "/";
   StringRef SDK = "MacOSX.sdk";
@@ -2509,14 +2512,14 @@ TEST_F(DICompileUnitTest, replaceArrays) {
       RetainedTypes, nullptr, ImportedEntities, nullptr, DWOId, true, false,
       DICompileUnit::DebugNameTableKind::Default, false, SysRoot, SDK);
 
-  auto *GlobalVariables = MDTuple::getDistinct(Context, std::nullopt);
+  auto *GlobalVariables = MDTuple::getDistinct(Context, {});
   EXPECT_EQ(nullptr, N->getGlobalVariables().get());
   N->replaceGlobalVariables(GlobalVariables);
   EXPECT_EQ(GlobalVariables, N->getGlobalVariables().get());
   N->replaceGlobalVariables(nullptr);
   EXPECT_EQ(nullptr, N->getGlobalVariables().get());
 
-  auto *Macros = MDTuple::getDistinct(Context, std::nullopt);
+  auto *Macros = MDTuple::getDistinct(Context, {});
   EXPECT_EQ(nullptr, N->getMacros().get());
   N->replaceMacros(Macros);
   EXPECT_EQ(Macros, N->getMacros().get());
@@ -3538,12 +3541,12 @@ TEST_F(DIExpressionTest, Fold) {
   ResExpr = DIExpression::get(Context, ResOps);
   EXPECT_EQ(E, ResExpr);
 
-  // Test a left shift greater than 64.
+  // Test a left shift greater than 63.
   Ops.clear();
   Ops.push_back(dwarf::DW_OP_constu);
   Ops.push_back(1);
   Ops.push_back(dwarf::DW_OP_constu);
-  Ops.push_back(65);
+  Ops.push_back(64);
   Ops.push_back(dwarf::DW_OP_shl);
   Expr = DIExpression::get(Context, Ops);
   E = Expr->foldConstantMath();
@@ -3551,17 +3554,17 @@ TEST_F(DIExpressionTest, Fold) {
   ResOps.push_back(dwarf::DW_OP_constu);
   ResOps.push_back(1);
   ResOps.push_back(dwarf::DW_OP_constu);
-  ResOps.push_back(65);
+  ResOps.push_back(64);
   ResOps.push_back(dwarf::DW_OP_shl);
   ResExpr = DIExpression::get(Context, ResOps);
   EXPECT_EQ(E, ResExpr);
 
-  // Test a right shift greater than 64.
+  // Test a right shift greater than 63.
   Ops.clear();
   Ops.push_back(dwarf::DW_OP_constu);
   Ops.push_back(1);
   Ops.push_back(dwarf::DW_OP_constu);
-  Ops.push_back(65);
+  Ops.push_back(64);
   Ops.push_back(dwarf::DW_OP_shr);
   Expr = DIExpression::get(Context, Ops);
   E = Expr->foldConstantMath();
@@ -3569,7 +3572,7 @@ TEST_F(DIExpressionTest, Fold) {
   ResOps.push_back(dwarf::DW_OP_constu);
   ResOps.push_back(1);
   ResOps.push_back(dwarf::DW_OP_constu);
-  ResOps.push_back(65);
+  ResOps.push_back(64);
   ResOps.push_back(dwarf::DW_OP_shr);
   ResExpr = DIExpression::get(Context, ResOps);
   EXPECT_EQ(E, ResExpr);
@@ -3761,7 +3764,7 @@ TEST_F(DIExpressionTest, isValid) {
   } while (false)
 
   // Empty expression should be valid.
-  EXPECT_TRUE(DIExpression::get(Context, std::nullopt)->isValid());
+  EXPECT_TRUE(DIExpression::get(Context, {})->isValid());
 
   // Valid constructions.
   EXPECT_VALID(dwarf::DW_OP_plus_uconst, 6);
@@ -4224,16 +4227,18 @@ TEST_F(DIExpressionTest, foldConstant) {
   DIExpression *Expr;
   DIExpression *NewExpr;
 
-#define EXPECT_FOLD_CONST(StartWidth, StartValue, EndWidth, EndValue, NumElts)  \
-  Int = ConstantInt::get(Context, APInt(StartWidth, StartValue));               \
-  std::tie(NewExpr, NewInt) = Expr->constantFold(Int);                          \
-  ASSERT_EQ(NewInt->getBitWidth(), EndWidth##u);                                \
-  EXPECT_EQ(NewInt->getValue(), APInt(EndWidth, EndValue));                     \
+#define EXPECT_FOLD_CONST(StartWidth, StartValue, StartIsSigned, EndWidth,     \
+                          EndValue, EndIsSigned, NumElts)                      \
+  Int =                                                                        \
+      ConstantInt::get(Context, APInt(StartWidth, StartValue, StartIsSigned)); \
+  std::tie(NewExpr, NewInt) = Expr->constantFold(Int);                         \
+  ASSERT_EQ(NewInt->getBitWidth(), EndWidth##u);                               \
+  EXPECT_EQ(NewInt->getValue(), APInt(EndWidth, EndValue, EndIsSigned));       \
   EXPECT_EQ(NewExpr->getNumElements(), NumElts##u)
 
   // Unfoldable expression should return the original unmodified Int/Expr.
   Expr = DIExpression::get(Context, {dwarf::DW_OP_deref});
-  EXPECT_FOLD_CONST(32, 117, 32, 117, 1);
+  EXPECT_FOLD_CONST(32, 117, false, 32, 117, false, 1);
   EXPECT_EQ(NewExpr, Expr);
   EXPECT_EQ(NewInt, Int);
   EXPECT_TRUE(NewExpr->startsWithDeref());
@@ -4241,18 +4246,18 @@ TEST_F(DIExpressionTest, foldConstant) {
   // One unsigned bit-width conversion.
   Expr = DIExpression::get(
       Context, {dwarf::DW_OP_LLVM_convert, 72, dwarf::DW_ATE_unsigned});
-  EXPECT_FOLD_CONST(8, 12, 72, 12, 0);
+  EXPECT_FOLD_CONST(8, 12, false, 72, 12, false, 0);
 
   // Two unsigned bit-width conversions (mask truncation).
   Expr = DIExpression::get(
       Context, {dwarf::DW_OP_LLVM_convert, 8, dwarf::DW_ATE_unsigned,
                 dwarf::DW_OP_LLVM_convert, 16, dwarf::DW_ATE_unsigned});
-  EXPECT_FOLD_CONST(32, -1, 16, 0xff, 0);
+  EXPECT_FOLD_CONST(32, -1, true, 16, 0xff, false, 0);
 
   // Sign extension.
   Expr = DIExpression::get(
       Context, {dwarf::DW_OP_LLVM_convert, 32, dwarf::DW_ATE_signed});
-  EXPECT_FOLD_CONST(16, -1, 32, -1, 0);
+  EXPECT_FOLD_CONST(16, -1, true, 32, -1, true, 0);
 
   // Get non-foldable operations back in the new Expr.
   uint64_t Elements[] = {dwarf::DW_OP_deref, dwarf::DW_OP_stack_value};
@@ -4261,7 +4266,7 @@ TEST_F(DIExpressionTest, foldConstant) {
       Context, {dwarf::DW_OP_LLVM_convert, 32, dwarf::DW_ATE_signed});
   Expr = DIExpression::append(Expr, Expected);
   ASSERT_EQ(Expr->getNumElements(), 5u);
-  EXPECT_FOLD_CONST(16, -1, 32, -1, 2);
+  EXPECT_FOLD_CONST(16, -1, true, 32, -1, true, 2);
   EXPECT_EQ(NewExpr->getElements(), Expected);
 
 #undef EXPECT_FOLD_CONST
@@ -4395,7 +4400,7 @@ TEST_F(DIImportedEntityTest, get) {
 typedef MetadataTest MetadataAsValueTest;
 
 TEST_F(MetadataAsValueTest, MDNode) {
-  MDNode *N = MDNode::get(Context, std::nullopt);
+  MDNode *N = MDNode::get(Context, {});
   auto *V = MetadataAsValue::get(Context, N);
   EXPECT_TRUE(V->getType()->isMetadataTy());
   EXPECT_EQ(N, V->getMetadata());
@@ -4405,7 +4410,7 @@ TEST_F(MetadataAsValueTest, MDNode) {
 }
 
 TEST_F(MetadataAsValueTest, MDNodeMDNode) {
-  MDNode *N = MDNode::get(Context, std::nullopt);
+  MDNode *N = MDNode::get(Context, {});
   Metadata *Ops[] = {N};
   MDNode *N2 = MDNode::get(Context, Ops);
   auto *V = MetadataAsValue::get(Context, N2);
@@ -4476,7 +4481,7 @@ TEST_F(ValueAsMetadataTest, TempTempReplacement) {
   ConstantAsMetadata *CI =
       ConstantAsMetadata::get(ConstantInt::get(Context, APInt(8, 0)));
 
-  auto Temp1 = MDTuple::getTemporary(Context, std::nullopt);
+  auto Temp1 = MDTuple::getTemporary(Context, {});
   auto Temp2 = MDTuple::getTemporary(Context, {CI});
   auto *N = MDTuple::get(Context, {Temp1.get()});
 
@@ -4494,7 +4499,7 @@ TEST_F(ValueAsMetadataTest, CollidingDoubleUpdates) {
       ConstantAsMetadata::get(ConstantInt::get(Context, APInt(8, 0)));
 
   // Create a temporary to prevent nodes from resolving.
-  auto Temp = MDTuple::getTemporary(Context, std::nullopt);
+  auto Temp = MDTuple::getTemporary(Context, {});
 
   // When the first operand of N1 gets reset to nullptr, it'll collide with N2.
   Metadata *Ops1[] = {CI, CI, Temp.get()};
@@ -4604,8 +4609,7 @@ TEST(NamedMDNodeTest, Search) {
   std::string Str;
   raw_string_ostream oss(Str);
   NMD->print(oss);
-  EXPECT_STREQ("!llvm.NMD1 = !{!0, !1}\n",
-               oss.str().c_str());
+  EXPECT_STREQ("!llvm.NMD1 = !{!0, !1}\n", Str.c_str());
 }
 
 typedef MetadataTest FunctionAttachmentTest;
@@ -4760,7 +4764,7 @@ TEST_F(DistinctMDOperandPlaceholderTest, replaceUseWith) {
   ASSERT_EQ(&PH2, D->getOperand(2));
 
   // Replace them.
-  auto *N0 = MDTuple::get(Context, std::nullopt);
+  auto *N0 = MDTuple::get(Context, {});
   auto *N1 = MDTuple::get(Context, N0);
   PH0.replaceUseWith(N0);
   PH1.replaceUseWith(N1);
@@ -4772,8 +4776,7 @@ TEST_F(DistinctMDOperandPlaceholderTest, replaceUseWith) {
 
 TEST_F(DistinctMDOperandPlaceholderTest, replaceUseWithNoUser) {
   // There is no user, but we can still call replace.
-  DistinctMDOperandPlaceholder(7).replaceUseWith(
-      MDTuple::get(Context, std::nullopt));
+  DistinctMDOperandPlaceholder(7).replaceUseWith(MDTuple::get(Context, {}));
 }
 
 // Test various assertions in metadata tracking. Don't run these tests if gtest
@@ -4939,7 +4942,7 @@ TEST_F(MDTupleAllocationTest, Resize) {
   EXPECT_EQ(B->getOperand(3), Value5);
 
   // Check that we can resize temporary nodes as well.
-  auto Temp1 = MDTuple::getTemporary(Context, std::nullopt);
+  auto Temp1 = MDTuple::getTemporary(Context, {});
   EXPECT_EQ(Temp1->getNumOperands(), 0u);
 
   Temp1->push_back(Value1);

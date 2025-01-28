@@ -59,4 +59,14 @@ TEST(FunctionRefTest, SFINAE) {
   EXPECT_EQ("string", returns([] { return "hello"; }));
 }
 
+TEST(FunctionRefTest, Equality) {
+  const auto Lambda = []() { return 0; };
+  function_ref<int()> X = Lambda;
+  function_ref<int()> Y = X;
+  EXPECT_EQ(X, Y);
+
+  function_ref<int()> A(Lambda), B(Lambda);
+  EXPECT_EQ(A, B);
+}
+
 } // namespace

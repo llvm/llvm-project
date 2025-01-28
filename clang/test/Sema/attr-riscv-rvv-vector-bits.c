@@ -232,15 +232,9 @@ typedef vbool1_t fixed_bool1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fi
 typedef vbool2_t fixed_bool2_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 2)));
 typedef vbool4_t fixed_bool4_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 4)));
 typedef vbool8_t fixed_bool8_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 8)));
-#if __riscv_v_fixed_vlen / 16 >= 8
 typedef vbool16_t fixed_bool16_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 16)));
-#endif
-#if __riscv_v_fixed_vlen / 32 >= 8
 typedef vbool32_t fixed_bool32_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 32)));
-#endif
-#if __riscv_v_fixed_vlen / 64 >= 8
 typedef vbool64_t fixed_bool64_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen / 64)));
-#endif
 
 // Attribute must be attached to a single RVV vector or predicate type.
 typedef void *badtype1 __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));         // expected-error {{'riscv_rvv_vector_bits' attribute applied to non-RVV type 'void *'}}
@@ -418,12 +412,18 @@ _Static_assert(sizeof(fixed_bool4_t) == VECTOR_SIZE / 4, "");
 _Static_assert(sizeof(fixed_bool8_t) == VECTOR_SIZE / 8, "");
 #if __riscv_v_fixed_vlen / 16 >= 8
 _Static_assert(sizeof(fixed_bool16_t) == VECTOR_SIZE / 16, "");
+#else
+_Static_assert(sizeof(fixed_bool16_t) == 1, "");
 #endif
 #if __riscv_v_fixed_vlen / 32 >= 8
 _Static_assert(sizeof(fixed_bool32_t) == VECTOR_SIZE / 32, "");
+#else
+_Static_assert(sizeof(fixed_bool32_t) == 1, "");
 #endif
 #if __riscv_v_fixed_vlen / 64 >= 8
 _Static_assert(sizeof(fixed_bool64_t) == VECTOR_SIZE / 64, "");
+#else
+_Static_assert(sizeof(fixed_bool64_t) == 1, "");
 #endif
 
 // --------------------------------------------------------------------------//
@@ -507,15 +507,9 @@ _Static_assert(__alignof__(fixed_bool1_t) == VECTOR_ALIGN, "");
 _Static_assert(__alignof__(fixed_bool2_t) == (sizeof(fixed_bool2_t) < VECTOR_ALIGN ? sizeof(fixed_bool2_t) : VECTOR_ALIGN), "");
 _Static_assert(__alignof__(fixed_bool4_t) == (sizeof(fixed_bool4_t) < VECTOR_ALIGN ? sizeof(fixed_bool4_t) : VECTOR_ALIGN), "");
 _Static_assert(__alignof__(fixed_bool8_t) == (sizeof(fixed_bool8_t) < VECTOR_ALIGN ? sizeof(fixed_bool8_t) : VECTOR_ALIGN), "");
-#if __riscv_v_fixed_vlen / 16 >= 8
 _Static_assert(__alignof__(fixed_bool16_t) == (sizeof(fixed_bool16_t) < VECTOR_ALIGN ? sizeof(fixed_bool16_t) : VECTOR_ALIGN), "");
-#endif
-#if __riscv_v_fixed_vlen / 32 >= 8
 _Static_assert(__alignof__(fixed_bool32_t) == (sizeof(fixed_bool32_t) < VECTOR_ALIGN ? sizeof(fixed_bool32_t) : VECTOR_ALIGN), "");
-#endif
-#if __riscv_v_fixed_vlen / 64 >= 8
 _Static_assert(__alignof__(fixed_bool64_t) == (sizeof(fixed_bool64_t) < VECTOR_ALIGN ? sizeof(fixed_bool64_t) : VECTOR_ALIGN), "");
-#endif
 
 // --------------------------------------------------------------------------//
 // Structs

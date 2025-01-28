@@ -5,8 +5,8 @@
 # it. The save exec path clobbers SCC, so we currently don't have a
 # path which satisfies both these constraints.
 
-# CHECK: error: unhandled SGPR spill to memory
-# CHECK: error: unhandled SGPR spill to memory
+# CHECK: error: <unknown>:0:0: in function sgpr32_save_clobber_scc_no_sgprs void (): unhandled SGPR spill to memory
+# CHECK: error: <unknown>:0:0: in function sgpr32_save_clobber_scc_no_sgprs void (): unhandled SGPR spill to memory
 # CHECK: *** Bad machine code: Using an undefined physical register ***
 # CHECK: - instruction: S_CBRANCH_SCC1 %bb.2, implicit $scc
 # CHECK-NEXT: - operand 1:   implicit $scc

@@ -123,10 +123,10 @@ struct IncludeStyle {
   /// When guessing whether a #include is the "main" include (to assign
   /// category 0, see above), use this regex of allowed suffixes to the header
   /// stem. A partial match is done, so that:
-  /// - "" means "arbitrary suffix"
-  /// - "$" means "no suffix"
+  /// * ``""`` means "arbitrary suffix"
+  /// * ``"$"`` means "no suffix"
   ///
-  /// For example, if configured to "(_test)?$", then a header a.h would be seen
+  /// For example, if configured to ``"(_test)?$"``, then a header a.h would be seen
   /// as the "main" include in both a.cc and a_test.cc.
   /// \version 3.9
   std::string IncludeIsMainRegex;

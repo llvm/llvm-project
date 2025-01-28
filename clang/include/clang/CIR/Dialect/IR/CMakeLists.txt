@@ -14,3 +14,6 @@ mlir_tablegen(CIROpsDialect.cpp.inc -gen-dialect-defs)
 add_public_tablegen_target(MLIRCIROpsIncGen)
 add_dependencies(mlir-headers MLIRCIROpsIncGen)
 
+mlir_tablegen(CIROpsAttributes.h.inc -gen-attrdef-decls)
+mlir_tablegen(CIROpsAttributes.cpp.inc -gen-attrdef-defs)
+add_public_tablegen_target(MLIRCIRAttrsEnumsGen)

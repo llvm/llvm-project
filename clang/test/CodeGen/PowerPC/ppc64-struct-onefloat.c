@@ -13,15 +13,15 @@ void bar(Sf a, Sd b, SSf d, SSd e) {}
 // CHECK:  %b = alloca %struct.s2, align 8
 // CHECK:  %d = alloca %struct.s4, align 4
 // CHECK:  %e = alloca %struct.s5, align 8
-// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds %struct.s1, ptr %a, i32 0, i32 0
+// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds nuw %struct.s1, ptr %a, i32 0, i32 0
 // CHECK:  store float %a.coerce, ptr %{{[a-zA-Z0-9.]+}}, align 4
-// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds %struct.s2, ptr %b, i32 0, i32 0
+// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds nuw %struct.s2, ptr %b, i32 0, i32 0
 // CHECK:  store double %b.coerce, ptr %{{[a-zA-Z0-9.]+}}, align 8
-// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds %struct.s4, ptr %d, i32 0, i32 0
-// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds %struct.s1, ptr %{{[a-zA-Z0-9.]+}}, i32 0, i32 0
+// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds nuw %struct.s4, ptr %d, i32 0, i32 0
+// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds nuw %struct.s1, ptr %{{[a-zA-Z0-9.]+}}, i32 0, i32 0
 // CHECK:  store float %d.coerce, ptr %{{[a-zA-Z0-9.]+}}, align 4
-// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds %struct.s5, ptr %e, i32 0, i32 0
-// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds %struct.s2, ptr %{{[a-zA-Z0-9.]+}}, i32 0, i32 0
+// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds nuw %struct.s5, ptr %e, i32 0, i32 0
+// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds nuw %struct.s2, ptr %{{[a-zA-Z0-9.]+}}, i32 0, i32 0
 // CHECK:  store double %e.coerce, ptr %{{[a-zA-Z0-9.]+}}, align 8
 // CHECK:  ret void
 
@@ -35,15 +35,15 @@ void foo(void)
 }
 
 // CHECK-LABEL: define{{.*}} void @foo
-// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds %struct.s1, ptr %p1, i32 0, i32 0
+// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds nuw %struct.s1, ptr %p1, i32 0, i32 0
 // CHECK:  %{{[0-9]+}} = load float, ptr %{{[a-zA-Z0-9.]+}}, align 4
-// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds %struct.s2, ptr %p2, i32 0, i32 0
+// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds nuw %struct.s2, ptr %p2, i32 0, i32 0
 // CHECK:  %{{[0-9]+}} = load double, ptr %{{[a-zA-Z0-9.]+}}, align 8
-// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds %struct.s4, ptr %p4, i32 0, i32 0
-// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds %struct.s1, ptr %{{[a-zA-Z0-9.]+}}, i32 0, i32 0
+// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds nuw %struct.s4, ptr %p4, i32 0, i32 0
+// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds nuw %struct.s1, ptr %{{[a-zA-Z0-9.]+}}, i32 0, i32 0
 // CHECK:  %{{[0-9]+}} = load float, ptr %{{[a-zA-Z0-9.]+}}, align 4
-// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds %struct.s5, ptr %p5, i32 0, i32 0
-// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds %struct.s2, ptr %{{[a-zA-Z0-9.]+}}, i32 0, i32 0
+// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds nuw %struct.s5, ptr %p5, i32 0, i32 0
+// CHECK:  %{{[a-zA-Z0-9.]+}} = getelementptr inbounds nuw %struct.s2, ptr %{{[a-zA-Z0-9.]+}}, i32 0, i32 0
 // CHECK:  %{{[0-9]+}} = load double, ptr %{{[a-zA-Z0-9.]+}}, align 8
 // CHECK:  call void @bar(float inreg %{{[0-9]+}}, double inreg %{{[0-9]+}}, float inreg %{{[0-9]+}}, double inreg %{{[0-9]+}})
 // CHECK:  ret void

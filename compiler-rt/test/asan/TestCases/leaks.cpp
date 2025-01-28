@@ -6,12 +6,9 @@
 // RUN: not %run %t 1 2>&1 | FileCheck %s
 // RUN: not %run %t 1000 2>&1 | FileCheck %s
 // RUN: not %run %t 1000000 2>&1 | FileCheck %s
-// RUN: not %run %t 10000000 2>&1 | FileCheck %s
 
 #include <cstdlib>
-#include <stdio.h>
 #include <thread>
-int *t;
 
 __attribute__((noopt)) void leak(int n) {
 #if defined(__ANDROID__) || defined(__BIONIC__)
@@ -25,9 +22,8 @@ __attribute__((noopt)) void leak(int n) {
   // Repeat few times to make sure that at least one pointer is
   // not somewhere on the stack.
   for (int i = 0; i < 10; ++i) {
-    t = new int[n];
-    printf("t: %p\n", t);
-    t = 0;
+    volatile int *t = new int[n];
+    t = nullptr;
   }
 }
 

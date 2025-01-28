@@ -184,13 +184,11 @@ define <32 x i8> @vls_sve_and_32xi8(<32 x i8> %ap) nounwind {
 define <2 x i16> @vls_sve_and_2xi16(<2 x i16> %b) nounwind {
 ; CHECK-LABEL: vls_sve_and_2xi16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    fmov s1, wzr
 ; CHECK-NEXT:    mov z0.s, z0.s[1]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    stp wzr, w8, [sp, #8]
-; CHECK-NEXT:    ldr d0, [sp, #8]
-; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    zip1 z0.s, z1.s, z0.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: vls_sve_and_2xi16:

@@ -14,6 +14,7 @@
 #include <cassert>
 #include <concepts>
 #include <type_traits>
+#include <utility>
 
 #include "atomic_helpers.h"
 #include "test_macros.h"

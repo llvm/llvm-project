@@ -59,12 +59,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -74,7 +75,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class ReadobjOptTable : public opt::GenericOptTable {
 public:
-  ReadobjOptTable() : opt::GenericOptTable(InfoTable) {
+  ReadobjOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -580,6 +582,22 @@ static void dumpMachOUniversalBinary(const MachOUniversalBinary *UBinary,
   }
 }
 
+/// Dumps \a COFF file;
+static void dumpCOFFObject(COFFObjectFile *Obj, ScopedPrinter &Writer) {
+  dumpObject(*Obj, Writer);
+
+  // Dump a hybrid object when available.
+  std::unique_ptr<MemoryBuffer> HybridView = Obj->getHybridObjectView();
+  if (!HybridView)
+    return;
+  Expected<std::unique_ptr<COFFObjectFile>> HybridObjOrErr =
+      COFFObjectFile::create(*HybridView);
+  if (!HybridObjOrErr)
+    reportError(HybridObjOrErr.takeError(), Obj->getFileName().str());
+  DictScope D(Writer, "HybridObject");
+  dumpObject(**HybridObjOrErr, Writer);
+}
+
 /// Dumps \a WinRes, Windows Resource (.res) file;
 static void dumpWindowsResourceFile(WindowsResource *WinRes,
                                     ScopedPrinter &Printer) {
@@ -617,6 +635,8 @@ static void dumpInput(StringRef File, ScopedPrinter &Writer) {
   else if (MachOUniversalBinary *UBinary =
                dyn_cast<MachOUniversalBinary>(Bin.get()))
     dumpMachOUniversalBinary(UBinary, Writer);
+  else if (COFFObjectFile *Obj = dyn_cast<COFFObjectFile>(Bin.get()))
+    dumpCOFFObject(Obj, Writer);
   else if (ObjectFile *Obj = dyn_cast<ObjectFile>(Bin.get()))
     dumpObject(*Obj, Writer);
   else if (COFFImportFile *Import = dyn_cast<COFFImportFile>(Bin.get()))

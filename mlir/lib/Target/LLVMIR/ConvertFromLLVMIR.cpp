@@ -50,7 +50,7 @@ void registerFromLLVMIRTranslation() {
           std::string errStr;
           llvm::raw_string_ostream errStream(errStr);
           err.print(/*ProgName=*/"", errStream);
-          emitError(UnknownLoc::get(context)) << errStream.str();
+          emitError(UnknownLoc::get(context)) << errStr;
           return {};
         }
         if (llvm::verifyModule(*llvmModule, &llvm::errs()))

@@ -32,7 +32,9 @@
 /* 18.5.4 */
 #define CFI_VERSION 20240719
 
+#if !defined CFI_MAX_RANK || !defined __OVERRIDE_CFI_MAX_RANK
 #define CFI_MAX_RANK 15
+#endif
 typedef unsigned char CFI_rank_t;
 
 /* This type is probably larger than a default Fortran INTEGER
@@ -94,7 +96,12 @@ typedef signed char CFI_type_t;
 #define CFI_type_struct 42
 #define CFI_type_char16_t 43 /* extension kind=2 */
 #define CFI_type_char32_t 44 /* extension kind=4 */
-#define CFI_TYPE_LAST CFI_type_char32_t
+#define CFI_type_uint8_t 45 /* extension: unsigned */
+#define CFI_type_uint16_t 46
+#define CFI_type_uint32_t 47
+#define CFI_type_uint64_t 48
+#define CFI_type_uint128_t 49
+#define CFI_TYPE_LAST CFI_type_uint128_t
 #define CFI_type_other (-1) // must be negative
 
 /* Error code macros - skip some of the small values to avoid conflicts with

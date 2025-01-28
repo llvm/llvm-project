@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpName [[ADD:%.*]] "test_add"
@@ -13,8 +13,8 @@
 
 ; CHECK-DAG: [[I32Ty:%.*]] = OpTypeInt 32 0
 ; CHECK-DAG: [[PtrI32Ty:%.*]] = OpTypePointer Function [[I32Ty]]
-;; Device scope is encoded with constant 1
-; CHECK-DAG: [[SCOPE:%.*]] = OpConstant [[I32Ty]] 1
+;; AllSvmDevices scope is encoded with constant 0
+; CHECK-DAG: [[SCOPE:%.*]] = OpConstantNull [[I32Ty]]
 ;; "acq_rel" maps to the constant 8
 ; CHECK-DAG: [[ACQREL:%.*]] = OpConstant [[I32Ty]] 8
 

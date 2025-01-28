@@ -6,7 +6,6 @@ target triple = "aarch64--linux-gnu"
 
 ; CHECK-LABEL: all_scalar
 ; CHECK:       LV: Found scalar instruction: %i.next = add nuw nsw i64 %i, 2
-; CHECK:       LV: Found an estimated cost of 1 for VF 2 For instruction: %i.next = add nuw nsw i64 %i, 2
 ; CHECK:       LV: Not considering vector loop of width 2 because it will not generate any vector instructions
 ;
 define void @all_scalar(ptr %a, i64 %n) {
@@ -27,7 +26,6 @@ for.end:
 
 ; CHECK-LABEL: PR33193
 ; CHECK:       LV: Found scalar instruction: %i.next = zext i32 %j.next to i64
-; CHECK:       LV: Found an estimated cost of 0 for VF 8 For instruction: %i.next = zext i32 %j.next to i64
 ; CHECK:       LV: Not considering vector loop of width 8 because it will not generate any vector instructions
 %struct.a = type { i32, i8 }
 define void @PR33193(ptr %a, i64 %n) {

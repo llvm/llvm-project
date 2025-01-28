@@ -12,11 +12,9 @@
 
 // is_nothrow_invocable
 
+#include <cstddef>
 #include <type_traits>
-#include <functional>
 #include <vector>
-
-#include "test_macros.h"
 
 struct Tag {};
 

@@ -641,6 +641,12 @@ public:
   /// Parse a '+' token if present.
   virtual ParseResult parseOptionalPlus() = 0;
 
+  /// Parse a '-' token.
+  virtual ParseResult parseMinus() = 0;
+
+  /// Parse a '-' token if present.
+  virtual ParseResult parseOptionalMinus() = 0;
+
   /// Parse a '*' token.
   virtual ParseResult parseStar() = 0;
 
@@ -728,7 +734,7 @@ public:
   virtual OptionalParseResult parseOptionalInteger(APInt &result) = 0;
   virtual OptionalParseResult parseOptionalDecimalInteger(APInt &result) = 0;
 
- private:
+private:
   template <typename IntT, typename ParseFn>
   OptionalParseResult parseOptionalIntegerAndCheck(IntT &result,
                                                    ParseFn &&parseFn) {
@@ -743,12 +749,14 @@ public:
     // zero for non-negated integers.
     result =
         (IntT)uintResult.sextOrTrunc(sizeof(IntT) * CHAR_BIT).getLimitedValue();
-    if (APInt(uintResult.getBitWidth(), result) != uintResult)
+    if (APInt(uintResult.getBitWidth(), result,
+              /*isSigned=*/std::is_signed_v<IntT>,
+              /*implicitTrunc=*/true) != uintResult)
       return emitError(loc, "integer value too large");
     return success();
   }
 
- public:
+public:
   template <typename IntT>
   OptionalParseResult parseOptionalInteger(IntT &result) {
     return parseOptionalIntegerAndCheck(
@@ -1596,7 +1604,8 @@ public:
     size_t typeSize = llvm::range_size(types);
     if (operandSize != typeSize)
       return emitError(loc)
-             << operandSize << " operands present, but expected " << typeSize;
+             << "number of operands and types do not match: got " << operandSize
+             << " operands and " << typeSize << " types";
 
     for (auto [operand, type] : llvm::zip_equal(operands, types))
       if (resolveOperand(operand, type, result))
@@ -1718,6 +1727,10 @@ public:
 // Dialect OpAsm interface.
 //===--------------------------------------------------------------------===//
 
+/// A functor used to set the name of the result. See 'getAsmResultNames' below
+/// for more details.
+using OpAsmSetNameFn = function_ref<void(StringRef)>;
+
 /// A functor used to set the name of the start of a result group of an
 /// operation. See 'getAsmResultNames' below for more details.
 using OpAsmSetValueNameFn = function_ref<void(Value, StringRef)>;
@@ -1811,7 +1824,8 @@ ParseResult parseDimensionList(OpAsmParser &parser,
 //===--------------------------------------------------------------------===//
 
 /// The OpAsmOpInterface, see OpAsmInterface.td for more details.
-#include "mlir/IR/OpAsmInterface.h.inc"
+#include "mlir/IR/OpAsmOpInterface.h.inc"
+#include "mlir/IR/OpAsmTypeInterface.h.inc"
 
 namespace llvm {
 template <>

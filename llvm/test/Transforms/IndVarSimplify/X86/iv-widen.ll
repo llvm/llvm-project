@@ -13,10 +13,10 @@ declare void @use(i64 %x)
 ; Only one phi now.
 ; One trunc for the gep.
 ; One trunc for the dummy() call.
-define void @loop_0(ptr %a) {
+define void @loop_0(ptr %a, i1 %arg) {
 ; CHECK-LABEL: @loop_0(
 ; CHECK-NEXT:  Prologue:
-; CHECK-NEXT:    br i1 undef, label [[B18_PREHEADER:%.*]], label [[B6:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[B18_PREHEADER:%.*]], label [[B6:%.*]]
 ; CHECK:       B18.preheader:
 ; CHECK-NEXT:    br label [[B18:%.*]]
 ; CHECK:       B18:
@@ -42,7 +42,7 @@ define void @loop_0(ptr %a) {
 ; CHECK-NEXT:    unreachable
 ;
 Prologue:
-  br i1 undef, label %B18, label %B6
+  br i1 %arg, label %B18, label %B6
 
 B18:                                        ; preds = %B24, %Prologue
   %.02 = phi i32 [ 0, %Prologue ], [ %tmp33, %B24 ]
@@ -67,10 +67,10 @@ exit24:                      ; preds = %B18
 }
 
 ; Make sure that dead zext is removed and no widening happens.
-define void @loop_0_dead(ptr %a) {
+define void @loop_0_dead(ptr %a, i1 %arg) {
 ; CHECK-LABEL: @loop_0_dead(
 ; CHECK-NEXT:  Prologue:
-; CHECK-NEXT:    br i1 undef, label [[B18_PREHEADER:%.*]], label [[B6:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[B18_PREHEADER:%.*]], label [[B6:%.*]]
 ; CHECK:       B18.preheader:
 ; CHECK-NEXT:    br label [[B18:%.*]]
 ; CHECK:       B18:
@@ -93,7 +93,7 @@ define void @loop_0_dead(ptr %a) {
 ; CHECK-NEXT:    unreachable
 ;
 Prologue:
-  br i1 undef, label %B18, label %B6
+  br i1 %arg, label %B18, label %B6
 
 B18:                                        ; preds = %B24, %Prologue
   %.02 = phi i32 [ 0, %Prologue ], [ %tmp33, %B24 ]

@@ -53,6 +53,7 @@ add_lldb_library(lldbCommands NO_PLUGIN_DEPENDENCIES
     lldbSymbol
     lldbTarget
     lldbUtility
+    lldbValueObject
     lldbVersion
 
   LINK_COMPONENTS

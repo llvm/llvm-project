@@ -116,12 +116,12 @@ static json::Array exportArrays(const Scop &S) {
     }
     for (; i < SAI->getNumberOfDimensions(); i++) {
       SAI->getDimensionSize(i)->print(RawStringOstream);
-      Sizes.push_back(RawStringOstream.str());
+      Sizes.push_back(Buffer);
       Buffer.clear();
     }
     Array["sizes"] = std::move(Sizes);
     SAI->getElementType()->print(RawStringOstream);
-    Array["type"] = RawStringOstream.str();
+    Array["type"] = Buffer;
     Buffer.clear();
     Arrays.push_back(std::move(Array));
   }
@@ -575,14 +575,14 @@ static bool areArraysEqual(ScopArrayInfo *SAI, const json::Object &Array) {
   for (unsigned i = 1; i < Array.getArray("sizes")->size(); i++) {
     SAI->getDimensionSize(i)->print(RawStringOstream);
     const json::Array &SizesArray = *Array.getArray("sizes");
-    if (RawStringOstream.str() != SizesArray[i].getAsString().value())
+    if (Buffer != SizesArray[i].getAsString().value())
       return false;
     Buffer.clear();
   }
 
   // Check if key 'type' differs from the current one or is not valid.
   SAI->getElementType()->print(RawStringOstream);
-  if (RawStringOstream.str() != Array.getString("type").value()) {
+  if (Buffer != Array.getString("type").value()) {
     errs() << "Array has not a valid type.\n";
     return false;
   }

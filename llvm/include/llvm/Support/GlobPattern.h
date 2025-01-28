@@ -34,8 +34,8 @@ namespace llvm {
 ///   expansions are not supported. If \p MaxSubPatterns is empty then
 ///   brace expansions are not supported and characters \p "{,}" are treated as
 ///   literals.
-/// * \p "\" escapes the next character so it is treated as a literal.
-///
+/// * \p "\\" (a single backslash) escapes the next character so it is treated
+///   as a literal.
 ///
 /// Some known edge cases are:
 /// * \p "]" is allowed as the first character in a character class, i.e.,
@@ -45,9 +45,8 @@ namespace llvm {
 /// * \p "}" and \p "," that are not inside a brace expansion are taken as
 ///   literals, e.g., \p ",}" is valid but \p "{" is not.
 ///
-///
-/// For example, \p "*[/\\]foo.{c,cpp}" will match (unix or windows) paths to
-/// all files named \p "foo.c" or \p "foo.cpp".
+/// For example, \p "*[/\\\\]foo.{c,cpp}" (with two backslashes) will match
+/// (unix or windows) paths to all files named \p "foo.c" or \p "foo.cpp".
 class GlobPattern {
 public:
   /// \param Pat the pattern to match against

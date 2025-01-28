@@ -15,8 +15,7 @@
 #define LLVM_ANALYSIS_LOOPACCESSANALYSIS_H
 
 #include "llvm/ADT/EquivalenceClasses.h"
-#include "llvm/Analysis/LoopAnalysisManager.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include <optional>
 #include <variant>
@@ -26,11 +25,8 @@ namespace llvm {
 class AAResults;
 class DataLayout;
 class Loop;
-class LoopAccessInfo;
 class raw_ostream;
-class SCEV;
-class SCEVUnionPredicate;
-class Value;
+class TargetTransformInfo;
 
 /// Collection of parameters shared beetween the Loop Vectorizer and the
 /// Loop Access Analysis.
@@ -338,6 +334,9 @@ private:
            std::pair<const SCEV *, const SCEV *>>
       PointerBounds;
 
+  /// Cache for the loop guards of InnermostLoop.
+  std::optional<ScalarEvolution::LoopGuards> LoopGuards;
+
   /// Check whether there is a plausible dependence between the two
   /// accesses.
   ///
@@ -367,16 +366,26 @@ private:
 
   struct DepDistanceStrideAndSizeInfo {
     const SCEV *Dist;
-    uint64_t StrideA;
-    uint64_t StrideB;
+
+    /// Strides could either be scaled (in bytes, taking the size of the
+    /// underlying type into account), or unscaled (in indexing units; unscaled
+    /// stride = scaled stride / size of underlying type). Here, strides are
+    /// unscaled.
+    uint64_t MaxStride;
+    std::optional<uint64_t> CommonStride;
+
+    bool ShouldRetryWithRuntimeCheck;
     uint64_t TypeByteSize;
     bool AIsWrite;
     bool BIsWrite;
 
-    DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t StrideA,
-                                 uint64_t StrideB, uint64_t TypeByteSize,
-                                 bool AIsWrite, bool BIsWrite)
-        : Dist(Dist), StrideA(StrideA), StrideB(StrideB),
+    DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t MaxStride,
+                                 std::optional<uint64_t> CommonStride,
+                                 bool ShouldRetryWithRuntimeCheck,
+                                 uint64_t TypeByteSize, bool AIsWrite,
+                                 bool BIsWrite)
+        : Dist(Dist), MaxStride(MaxStride), CommonStride(CommonStride),
+          ShouldRetryWithRuntimeCheck(ShouldRetryWithRuntimeCheck),
           TypeByteSize(TypeByteSize), AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
   };
 
@@ -484,8 +493,10 @@ public:
   /// Reset the state of the pointer runtime information.
   void reset() {
     Need = false;
+    CanUseDiffCheck = true;
     Pointers.clear();
     Checks.clear();
+    DiffChecks.clear();
   }
 
   /// Insert a pointer and calculate the start and end SCEVs.
@@ -841,6 +852,25 @@ bool sortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy, const DataLayout &DL,
 /// This is a simple API that does not depend on the analysis pass.
 bool isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
                          ScalarEvolution &SE, bool CheckType = true);
+
+/// Calculate Start and End points of memory access.
+/// Let's assume A is the first access and B is a memory access on N-th loop
+/// iteration. Then B is calculated as:
+///   B = A + Step*N .
+/// Step value may be positive or negative.
+/// N is a calculated back-edge taken count:
+///     N = (TripCount > 0) ? RoundDown(TripCount -1 , VF) : 0
+/// Start and End points are calculated in the following way:
+/// Start = UMIN(A, B) ; End = UMAX(A, B) + SizeOfElt,
+/// where SizeOfElt is the size of single memory access in bytes.
+///
+/// There is no conflict when the intervals are disjoint:
+/// NoConflict = (P2.Start >= P1.End) || (P1.Start >= P2.End)
+std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
+    const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *MaxBECount,
+    ScalarEvolution *SE,
+    DenseMap<std::pair<const SCEV *, Type *>,
+             std::pair<const SCEV *, const SCEV *>> *PointerBounds);
 
 class LoopAccessInfoManager {
   /// The cache.

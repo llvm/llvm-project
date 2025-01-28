@@ -1,17 +1,9 @@
 # UNSUPPORTED: system-windows
 
-# RUN: rm -rf %t
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c++ %s -### -o %t.out --target=thumbv7em-none-unknown-eabi --sysroot= 2>%t.err
 
-# RUN: mkdir -p %t/baremetal_multilib/bin
-# RUN: ln -s %clang %t/baremetal_multilib/bin/clang
-
-# RUN: mkdir -p %t/baremetal_multilib/lib/clang-runtimes
-# RUN: ln -s %s %t/baremetal_multilib/lib/clang-runtimes/multilib.yaml
-
-# RUN: %t/baremetal_multilib/bin/clang -no-canonical-prefixes -x c++ %s -### -o %t.out --target=thumbv7em-none-unknown-eabi --sysroot= 2>%t.err
-
-# RUN: FileCheck -DSYSROOT=%t/baremetal_multilib %s < %t.err --check-prefix=POS
-# RUN: FileCheck -DSYSROOT=%t/baremetal_multilib %s < %t.err --check-prefix=NEG
+# RUN: FileCheck %s < %t.err --check-prefix=POS
+# RUN: FileCheck %s < %t.err --check-prefix=NEG
 
 # Expected results:
 #
@@ -25,14 +17,14 @@
 # So we expect five of these seven directories to show up in the clang-cc1
 # command line, but not testdir1_exclusive or testdir2_exclusive.
 
-# POS-DAG: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/testdir1_non_exclusive/include/c++/v1"
+# POS-DAG: "-internal-isystem" "[[SYSROOT:[^"]*]]/bin/../lib/clang-runtimes/testdir1_non_exclusive/include/c++/v1"
 # POS-DAG: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/testdir2_non_exclusive/include/c++/v1"
 # POS-DAG: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/testdir3_exclusive/include/c++/v1"
 # POS-DAG: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/testdir1_own_group/include/c++/v1"
 # POS-DAG: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/testdir2_own_group/include/c++/v1"
 
-# NEG-NOT: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/testdir1_exclusive/include/c++/v1"
-# NEG-NOT: "-internal-isystem" "[[SYSROOT]]/bin/../lib/clang-runtimes/testdir2_exclusive/include/c++/v1"
+# NEG-NOT: "-internal-isystem" "{{[^"]*}}/bin/../lib/clang-runtimes/testdir1_exclusive/include/c++/v1"
+# NEG-NOT: "-internal-isystem" "{{[^"]*}}/bin/../lib/clang-runtimes/testdir2_exclusive/include/c++/v1"
 
 ---
 MultilibVersion: 1.0

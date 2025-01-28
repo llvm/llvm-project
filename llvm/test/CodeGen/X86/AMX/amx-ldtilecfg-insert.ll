@@ -241,7 +241,7 @@ define dso_local void @test5(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    movl $32, %edx
 ; CHECK-NEXT:    leal -1(%rsi), %r8d
 ; CHECK-NEXT:    jmp .LBB4_1
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB4_3: # %if.false
 ; CHECK-NEXT:    # in Loop: Header=BB4_1 Depth=1
 ; CHECK-NEXT:    movl %r8d, %esi
@@ -301,7 +301,7 @@ define dso_local void @test6(i16 signext %0) nounwind {
 ; CHECK-NEXT:    movl $32, %edx
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    jmp .LBB5_1
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB5_3: # %if.false
 ; CHECK-NEXT:    # in Loop: Header=BB5_1 Depth=1
 ; CHECK-NEXT:    decl %esi

@@ -725,8 +725,7 @@ projectDimsPosIntoReassocPos(ArrayRef<int64_t> dimsPos,
       // If the dimension is present in the current indices group, the group
       // position within the reassociation map is the desired projected
       // dimension position.
-      if (llvm::any_of(indices,
-                       [&](int64_t expandDim) { return expandDim == pos; })) {
+      if (llvm::is_contained(indices, pos)) {
         projectedPos.push_back(idx);
         break;
       }
@@ -1106,23 +1105,11 @@ pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp,
   auto innerDimsPos = destPack.getInnerDimsPos();
   auto outerDimsPerm = destPack.getOuterDimsPerm();
 
-  // If the output type for the generic differs from the source
-  // unpack op, we need to create a new destination tensor. In the
-  // dynamic case we always need a new destination.
-  auto loc = genericOp.getLoc();
-  Value unPackDest = producerUnPackOp.getDest();
-  auto genericOutType =
-      cast<RankedTensorType>(genericOp.getDpsInitOperand(0)->get().getType());
-  if (producerUnPackOp.getDestType() != genericOutType ||
-      !genericOutType.hasStaticShape()) {
-    unPackDest = tensor::UnPackOp::createDestinationTensor(
-        rewriter, loc, newResult, mixedTiles, innerDimsPos, outerDimsPerm);
-  }
-
   // Insert an unPackOp right after the packed generic.
   Value unPackOpRes =
       rewriter
-          .create<tensor::UnPackOp>(loc, newResult, unPackDest, innerDimsPos,
+          .create<tensor::UnPackOp>(genericOp.getLoc(), newResult,
+                                    destPack.getSource(), innerDimsPos,
                                     mixedTiles, outerDimsPerm)
           .getResult();
 

@@ -21,7 +21,6 @@
 
 #include "AMDGPUUnifyDivergentExitNodes.h"
 #include "AMDGPU.h"
-#include "SIDefines.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -295,8 +294,8 @@ bool AMDGPUUnifyDivergentExitNodesImpl::run(Function &F, DominatorTree *DT,
       // Remove and delete the unreachable inst.
       UnreachableBlock->getTerminator()->eraseFromParent();
 
-      Function *UnreachableIntrin =
-        Intrinsic::getDeclaration(F.getParent(), Intrinsic::amdgcn_unreachable);
+      Function *UnreachableIntrin = Intrinsic::getOrInsertDeclaration(
+          F.getParent(), Intrinsic::amdgcn_unreachable);
 
       // Insert a call to an intrinsic tracking that this is an unreachable
       // point, in case we want to kill the active lanes or something later.

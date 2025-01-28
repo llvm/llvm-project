@@ -217,7 +217,7 @@ define void @f4(ptr noalias %A, ptr noalias %B, ptr noalias %C, i64 %N) {
 ; CHECK-NEXT:    [[STORE_FORWARD_CAST]] = bitcast i32 [[A_P1]] to <2 x half>
 ; CHECK-NEXT:    store i32 [[A_P1]], ptr [[AIDX_NEXT]], align 4
 ; CHECK-NEXT:    [[A:%.*]] = load <2 x half>, ptr [[AIDX]], align 4
-; CHECK-NEXT:    [[C:%.*]] = fmul <2 x half> [[STORE_FORWARDED]], <half 0xH4000, half 0xH4000>
+; CHECK-NEXT:    [[C:%.*]] = fmul <2 x half> [[STORE_FORWARDED]], splat (half 0xH4000)
 ; CHECK-NEXT:    [[C_INT:%.*]] = bitcast <2 x half> [[C]] to i32
 ; CHECK-NEXT:    store i32 [[C_INT]], ptr [[CIDX]], align 4
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N:%.*]]

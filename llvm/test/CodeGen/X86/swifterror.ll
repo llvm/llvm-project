@@ -1014,7 +1014,7 @@ define void @swifterror_isel(ptr) {
 ; CHECK-i386-NEXT:    retl
 entry:
   %swifterror = alloca swifterror ptr, align 8
-  br i1 undef, label %5, label %1
+  br i1 poison, label %5, label %1
 
   %2 = phi i16 [ %4, %1 ], [ undef, %entry ]
   %3 = call i1 undef(i16 %2, ptr swiftself %0, ptr nocapture swifterror %swifterror)

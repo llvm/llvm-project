@@ -1,5 +1,6 @@
 add_llvm_component_library(LLVMPasses
   CodeGenPassBuilder.cpp
+  DroppedVariableStatsIR.cpp
   OptimizationLevel.cpp
   PassBuilder.cpp
   PassBuilderBindings.cpp
@@ -21,7 +22,6 @@ add_llvm_component_library(LLVMPasses
   CodeGen
   Core
   Coroutines
-  Demangle
   HipStdPar
   IPO
   InstCombine

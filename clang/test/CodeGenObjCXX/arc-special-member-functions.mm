@@ -152,10 +152,10 @@ void test_ObjCBlockMember_copy_assign(ObjCBlockMember m1, ObjCBlockMember m2) {
 
 // Implicitly-generated copy assignment operator for ObjCBlockMember
 // CHECK:    define linkonce_odr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN15ObjCBlockMemberaSERKS_(
-// CHECK:      [[T0:%.*]] = getelementptr inbounds [[T:%.*]], ptr {{%.*}}, i32 0, i32 0
+// CHECK:      [[T0:%.*]] = getelementptr inbounds nuw [[T:%.*]], ptr {{%.*}}, i32 0, i32 0
 // CHECK-NEXT: [[T1:%.*]] = load ptr, ptr [[T0]], align 8
 // CHECK-NEXT: [[T3:%.*]] = call ptr @llvm.objc.retainBlock(ptr [[T1]])
-// CHECK-NEXT: [[T5:%.*]] = getelementptr inbounds [[T]], ptr {{%.*}}, i32 0, i32 0
+// CHECK-NEXT: [[T5:%.*]] = getelementptr inbounds nuw [[T]], ptr {{%.*}}, i32 0, i32 0
 // CHECK-NEXT: [[T6:%.*]] = load ptr, ptr [[T5]], align 8
 // CHECK-NEXT: store ptr [[T3]], ptr [[T5]]
 // CHECK-NEXT: call void @llvm.objc.release(ptr [[T6]])

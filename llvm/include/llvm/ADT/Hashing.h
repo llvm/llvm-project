@@ -311,10 +311,7 @@ struct hash_state {
 /// depend on the particular hash values. On platforms without ASLR, this is
 /// still likely non-deterministic per build.
 inline uint64_t get_execution_seed() {
-  // Work around x86-64 negative offset folding for old Clang -fno-pic
-  // https://reviews.llvm.org/D93931
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS &&                                         \
-    (!defined(__clang__) || __clang_major__ > 11)
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   return static_cast<uint64_t>(
       reinterpret_cast<uintptr_t>(&install_fatal_error_handler));
 #else

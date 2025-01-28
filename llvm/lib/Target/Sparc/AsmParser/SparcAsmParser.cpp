@@ -9,7 +9,6 @@
 #include "MCTargetDesc/SparcMCExpr.h"
 #include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "TargetInfo/SparcTargetInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmMacro.h"
@@ -70,14 +69,14 @@ class SparcAsmParser : public MCTargetAsmParser {
   /// }
 
   // public interface of the MCTargetAsmParser.
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
   bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                SMLoc &EndLoc) override;
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
   ParseStatus parseDirective(AsmToken DirectiveID) override;
 
@@ -221,6 +220,7 @@ private:
     k_MemoryImm,
     k_ASITag,
     k_PrefetchTag,
+    k_TailRelocSym, // Special kind of immediate for TLS relocation purposes.
   } Kind;
 
   SMLoc StartLoc, EndLoc;
@@ -266,7 +266,7 @@ public:
   bool isMembarTag() const { return Kind == k_Immediate; }
   bool isASITag() const { return Kind == k_ASITag; }
   bool isPrefetchTag() const { return Kind == k_PrefetchTag; }
-  bool isTailRelocSym() const { return Kind == k_Immediate; }
+  bool isTailRelocSym() const { return Kind == k_TailRelocSym; }
 
   bool isCallTarget() const {
     if (!isImm())
@@ -355,6 +355,11 @@ public:
     return Prefetch;
   }
 
+  const MCExpr *getTailRelocSym() const {
+    assert((Kind == k_TailRelocSym) && "Invalid access!");
+    return Imm.Val;
+  }
+
   /// getStartLoc - Get the location of the first token of this operand.
   SMLoc getStartLoc() const override {
     return StartLoc;
@@ -380,6 +385,9 @@ public:
       break;
     case k_PrefetchTag:
       OS << "Prefetch tag: " << getPrefetchTag() << "\n";
+      break;
+    case k_TailRelocSym:
+      OS << "TailReloc: " << getTailRelocSym() << "\n";
       break;
     }
   }
@@ -455,7 +463,7 @@ public:
 
   void addTailRelocSymOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    addExpr(Inst, getImm());
+    addExpr(Inst, getTailRelocSym());
   }
 
   static std::unique_ptr<SparcOperand> CreateToken(StringRef Str, SMLoc S) {
@@ -499,6 +507,15 @@ public:
                                                          SMLoc E) {
     auto Op = std::make_unique<SparcOperand>(k_PrefetchTag);
     Op->Prefetch = Val;
+    Op->StartLoc = S;
+    Op->EndLoc = E;
+    return Op;
+  }
+
+  static std::unique_ptr<SparcOperand> CreateTailRelocSym(const MCExpr *Val,
+                                                          SMLoc S, SMLoc E) {
+    auto Op = std::make_unique<SparcOperand>(k_TailRelocSym);
+    Op->Imm.Val = Val;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
@@ -789,7 +806,7 @@ bool SparcAsmParser::expandSETX(MCInst &Inst, SMLoc IDLoc,
   return false;
 }
 
-bool SparcAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+bool SparcAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                              OperandVector &Operands,
                                              MCStreamer &Out,
                                              uint64_t &ErrorInfo,
@@ -871,14 +888,14 @@ ParseStatus SparcAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
   return ParseStatus::NoMatch;
 }
 
-bool SparcAsmParser::ParseInstruction(ParseInstructionInfo &Info,
+bool SparcAsmParser::parseInstruction(ParseInstructionInfo &Info,
                                       StringRef Name, SMLoc NameLoc,
                                       OperandVector &Operands) {
   // Validate and reject unavailable mnemonics early before
   // running any operand parsing.
   // This is needed because some operands (mainly memory ones)
   // differ between V8 and V9 ISA and so any operand parsing errors
-  // will cause IAS to bail out before it reaches MatchAndEmitInstruction
+  // will cause IAS to bail out before it reaches matchAndEmitInstruction
   // (where the instruction as a whole, including the mnemonic, is validated
   // once again just before emission).
   // As a nice side effect this also allows us to reject unknown
@@ -1071,7 +1088,7 @@ ParseStatus SparcAsmParser::parseTailRelocSym(OperandVector &Operands) {
   };
 
   if (getLexer().getKind() != AsmToken::Percent)
-    return Error(getLoc(), "expected '%' for operand modifier");
+    return ParseStatus::NoMatch;
 
   const AsmToken Tok = Parser.getTok();
   getParser().Lex(); // Eat '%'
@@ -1100,7 +1117,7 @@ ParseStatus SparcAsmParser::parseTailRelocSym(OperandVector &Operands) {
     return ParseStatus::Failure;
 
   const MCExpr *Val = adjustPICRelocation(VK, SubExpr);
-  Operands.push_back(SparcOperand::CreateImm(Val, S, E));
+  Operands.push_back(SparcOperand::CreateTailRelocSym(Val, S, E));
   return ParseStatus::Success;
 }
 

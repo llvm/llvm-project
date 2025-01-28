@@ -48,10 +48,13 @@ GetPtrauthInstructionInfo(Target &target, const ArchSpec &arch,
                           const Address &at_addr) {
   const char *plugin_name = nullptr;
   const char *flavor = nullptr;
+  const char *cpu = nullptr;
+  const char *features = nullptr;
   AddressRange range_bounds(at_addr, 4);
   const bool prefer_file_cache = true;
-  DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
-      arch, plugin_name, flavor, target, range_bounds, prefer_file_cache);
+  DisassemblerSP disassembler_sp =
+      Disassembler::DisassembleRange(arch, plugin_name, flavor, cpu, features,
+                                     target, range_bounds, prefer_file_cache);
   if (!disassembler_sp)
     return std::nullopt;
 
@@ -777,13 +780,8 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
         // but if it is for another thread, we can just report no reason.  We
         // don't need to worry about stepping over the breakpoint here, that
         // will be taken care of when the thread resumes and notices that
-        // there's a breakpoint under the pc. If we have an operating system
-        // plug-in, we might have set a thread specific breakpoint using the
-        // operating system thread ID, so we can't make any assumptions about
-        // the thread ID so we must always report the breakpoint regardless
-        // of the thread.
-        if (bp_site_sp->ValidForThisThread(thread) ||
-            thread.GetProcess()->GetOperatingSystem() != nullptr)
+        // there's a breakpoint under the pc.
+        if (bp_site_sp->ValidForThisThread(thread))
           return StopInfo::CreateStopReasonWithBreakpointSiteID(
               thread, bp_site_sp->GetID());
         else if (is_trace_if_actual_breakpoint_missing)

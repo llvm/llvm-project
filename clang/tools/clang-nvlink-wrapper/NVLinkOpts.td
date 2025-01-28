@@ -1,3 +1,6 @@
+// We try to create options similar to lld's.  That way, options passed to clang
+// -Xoffload-linker can be the same whether offloading to nvptx or amdgpu.
+
 include "llvm/Option/OptParser.td"
 
 def WrapperOnlyOption : OptionFlag;
@@ -36,21 +39,24 @@ def library_S : Separate<["--", "-"], "library">, Flags<[HelpHidden]>,
 def library_EQ : Joined<["--", "-"], "library=">, Flags<[HelpHidden]>,
   Alias<library_path>;
 
+def plugin : JoinedOrSeparate<["--", "-"], "plugin">,
+  Flags<[HelpHidden, WrapperOnlyOption]>;
+
 def arch : Separate<["--", "-"], "arch">,
-  HelpText<"Specify the 'sm_' name of the target architecture.">;
+  HelpText<"Specify the 'sm_' name of the target architecture">;
 def : Joined<["--", "-"], "plugin-opt=mcpu=">,
   Flags<[HelpHidden, WrapperOnlyOption]>, Alias<arch>;
 
-def feature : Separate<["--", "-"], "feature">, Flags<[WrapperOnlyOption]>,
-  HelpText<"Specify the '+ptx' freature to use for LTO.">;
-
-def g : Flag<["-"], "g">, HelpText<"Specify that this was a debug compile.">;
+def g : Flag<["-"], "g">, HelpText<"Specify that this was a debug compile">;
 def debug : Flag<["--"], "debug">, Alias<g>;
 
 def lto_emit_llvm : Flag<["--"], "lto-emit-llvm">, Flags<[WrapperOnlyOption]>,
   HelpText<"Emit LLVM-IR bitcode">;
 def lto_emit_asm : Flag<["--"], "lto-emit-asm">, Flags<[WrapperOnlyOption]>,
   HelpText<"Emit assembly code">;
+
+def u : JoinedOrSeparate<["-"], "u">, HelpText<"Force undefined symbol during linking">;
+def undefined : JoinedOrSeparate<["--"], "undefined">, Alias<u>;
 
 def O : Joined<["--", "-"], "plugin-opt=O">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<O0, O1, O2, or O3>">,
@@ -69,6 +75,11 @@ def : Joined<["--", "-"], "plugin-opt=emit-asm">,
 def plugin_opt : Joined<["--", "-"], "plugin-opt=">, Flags<[WrapperOnlyOption]>,
   HelpText<"Options passed to LLVM, not including the Clang invocation. Use "
            "'--plugin-opt=--help' for a list of options.">;
+
+def lto_newpm_passes : Joined<["--"], "lto-newpm-passes=">,
+  Flags<[WrapperOnlyOption]>, HelpText<"Passes to run during LTO">;
+def lto_debug_pass_manager : Flag<["--"], "lto-debug-pass-manager">,
+  Flags<[WrapperOnlyOption]>,   HelpText<"Debug new pass manager">;
 
 def save_temps : Flag<["--", "-"], "save-temps">,
   Flags<[WrapperOnlyOption]>, HelpText<"Save intermediate results">;

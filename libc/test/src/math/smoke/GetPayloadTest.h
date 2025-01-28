@@ -13,6 +13,8 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Sign;
+
 template <typename T>
 class GetPayloadTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
@@ -39,10 +41,10 @@ public:
     EXPECT_FP_EQ(T(0.0), funcWrapper(func, neg_aNaN));
 
     // Essentially this:
-    //   T default_snan_payload = StorageType(1) << (FPBits::SIG_LEN - 2);
+    //   T default_snan_payload = StorageType(1) << (FPBits::FRACTION_LEN - 2);
     // but supports StorageType being a BigInt.
     FPBits default_snan_payload_bits = FPBits::one();
-    default_snan_payload_bits.set_biased_exponent(FPBits::SIG_LEN - 2 +
+    default_snan_payload_bits.set_biased_exponent(FPBits::FRACTION_LEN - 2 +
                                                   FPBits::EXP_BIAS);
     T default_snan_payload = default_snan_payload_bits.get_val();
 

@@ -11,13 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/PragmaKinds.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Lex/Token.h"
 #include "clang/Parse/LoopHint.h"
-#include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
@@ -412,19 +411,6 @@ private:
   Sema &Actions;
 };
 
-struct PragmaMCFuncHandler : public PragmaHandler {
-  PragmaMCFuncHandler(bool ReportError)
-      : PragmaHandler("mc_func"), ReportError(ReportError) {}
-  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
-                    Token &Tok) override {
-    if (ReportError)
-      PP.Diag(Tok, diag::err_pragma_mc_func_not_supported);
-  }
-
-private:
-  bool ReportError = false;
-};
-
 void markAsReinjectedForRelexing(llvm::MutableArrayRef<clang::Token> Toks) {
   for (auto &T : Toks)
     T.setFlag(clang::Token::IsReinjected);
@@ -582,12 +568,6 @@ void Parser::initializePragmaHandlers() {
     RISCVPragmaHandler = std::make_unique<PragmaRISCVHandler>(Actions);
     PP.AddPragmaHandler("clang", RISCVPragmaHandler.get());
   }
-
-  if (getTargetInfo().getTriple().isOSAIX()) {
-    MCFuncPragmaHandler = std::make_unique<PragmaMCFuncHandler>(
-        PP.getPreprocessorOpts().ErrorOnPragmaMcfuncOnAIX);
-    PP.AddPragmaHandler(MCFuncPragmaHandler.get());
-  }
 }
 
 void Parser::resetPragmaHandlers() {
@@ -721,11 +701,6 @@ void Parser::resetPragmaHandlers() {
   if (getTargetInfo().getTriple().isRISCV()) {
     PP.RemovePragmaHandler("clang", RISCVPragmaHandler.get());
     RISCVPragmaHandler.reset();
-  }
-
-  if (getTargetInfo().getTriple().isOSAIX()) {
-    PP.RemovePragmaHandler(MCFuncPragmaHandler.get());
-    MCFuncPragmaHandler.reset();
   }
 }
 
@@ -2151,6 +2126,7 @@ void PragmaGCCVisibilityHandler::HandlePragma(Preprocessor &PP,
 //   pack '(' [integer] ')'
 //   pack '(' 'show' ')'
 //   pack '(' ('push' | 'pop') [',' identifier] [, integer] ')'
+//   pack '(' 'packed' | 'full' | 'twobyte' | 'reset' ')' with -fzos-extensions
 void PragmaPackHandler::HandlePragma(Preprocessor &PP,
                                      PragmaIntroducer Introducer,
                                      Token &PackTok) {
@@ -2180,9 +2156,34 @@ void PragmaPackHandler::HandlePragma(Preprocessor &PP,
                  ? Sema::PSK_Push_Set
                  : Sema::PSK_Set;
   } else if (Tok.is(tok::identifier)) {
+    // Map pragma pack options to pack (integer).
+    auto MapPack = [&](const char *Literal) {
+      Action = Sema::PSK_Push_Set;
+      Alignment = Tok;
+      Alignment.setKind(tok::numeric_constant);
+      Alignment.setLiteralData(Literal);
+      Alignment.setLength(1);
+    };
+
     const IdentifierInfo *II = Tok.getIdentifierInfo();
     if (II->isStr("show")) {
       Action = Sema::PSK_Show;
+      PP.Lex(Tok);
+    } else if (II->isStr("packed") && PP.getLangOpts().ZOSExt) {
+      // #pragma pack(packed) is the same as #pragma pack(1)
+      MapPack("1");
+      PP.Lex(Tok);
+    } else if (II->isStr("full") && PP.getLangOpts().ZOSExt) {
+      // #pragma pack(full) is the same as #pragma pack(4)
+      MapPack("4");
+      PP.Lex(Tok);
+    } else if (II->isStr("twobyte") && PP.getLangOpts().ZOSExt) {
+      // #pragma pack(twobyte) is the same as #pragma pack(2)
+      MapPack("2");
+      PP.Lex(Tok);
+    } else if (II->isStr("reset") && PP.getLangOpts().ZOSExt) {
+      // #pragma pack(reset) is the same as #pragma pack(pop) on XL
+      Action = Sema::PSK_Pop;
       PP.Lex(Tok);
     } else {
       if (II->isStr("push")) {

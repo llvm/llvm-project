@@ -93,6 +93,7 @@ extern "C" void foo7() {
 
 #endif /* HEADER */
 
+
 // CHECK1-LABEL: define {{[^@]+}}@body
 // CHECK1-SAME: (...) #[[ATTR0:[0-9]+]] {
 // CHECK1-NEXT:  entry:
@@ -125,9 +126,9 @@ extern "C" void foo7() {
 // CHECK1-NEXT:    [[DOTREVERSED_IV_I:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK1-NEXT:    [[I:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK1-NEXT:    [[I:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 7, ptr [[I]], align 4
-// CHECK1-NEXT:    [[I3:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[THIS1]], i32 0, i32 0
+// CHECK1-NEXT:    [[I3:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    store ptr [[I3]], ptr [[I2]], align 8
 // CHECK1-NEXT:    store i32 0, ptr [[DOTFORWARD_IV_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND:%.*]]
@@ -849,9 +850,9 @@ extern "C" void foo7() {
 // CHECK2-NEXT:    [[DOTREVERSED_IV_I:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK2-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK2-NEXT:    [[I:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK2-NEXT:    [[I:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK2-NEXT:    store i32 7, ptr [[I]], align 4
-// CHECK2-NEXT:    [[I3:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[THIS1]], i32 0, i32 0
+// CHECK2-NEXT:    [[I3:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[THIS1]], i32 0, i32 0
 // CHECK2-NEXT:    store ptr [[I3]], ptr [[I2]], align 8
 // CHECK2-NEXT:    store i32 0, ptr [[DOTFORWARD_IV_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND:%.*]]
@@ -1551,4 +1552,4 @@ extern "C" void foo7() {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    call void @__cxx_global_var_init()
 // CHECK2-NEXT:    ret void
-
+//

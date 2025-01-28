@@ -10,13 +10,13 @@
 // IMPRVD-NEXT:    [[B:%.*]] = alloca { float, float }, align 4
 // IMPRVD-NEXT:    store <2 x float> [[A_COERCE]], ptr [[A]], align 4
 // IMPRVD-NEXT:    store <2 x float> [[B_COERCE]], ptr [[B]], align 4
-// IMPRVD-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds { float, float }, ptr [[A]], i32 0, i32 0
+// IMPRVD-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 0
 // IMPRVD-NEXT:    [[A_REAL:%.*]] = load float, ptr [[A_REALP]], align 4
-// IMPRVD-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds { float, float }, ptr [[A]], i32 0, i32 1
+// IMPRVD-NEXT:    [[A_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[A]], i32 0, i32 1
 // IMPRVD-NEXT:    [[A_IMAG:%.*]] = load float, ptr [[A_IMAGP]], align 4
-// IMPRVD-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds { float, float }, ptr [[B]], i32 0, i32 0
+// IMPRVD-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 0
 // IMPRVD-NEXT:    [[B_REAL:%.*]] = load float, ptr [[B_REALP]], align 4
-// IMPRVD-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds { float, float }, ptr [[B]], i32 0, i32 1
+// IMPRVD-NEXT:    [[B_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B]], i32 0, i32 1
 // IMPRVD-NEXT:    [[B_IMAG:%.*]] = load float, ptr [[B_IMAGP]], align 4
 // IMPRVD-NEXT:    [[TMP0:%.*]] = call float @llvm.fabs.f32(float [[B_REAL]])
 // IMPRVD-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[B_IMAG]])
@@ -47,8 +47,8 @@
 // IMPRVD:       complex_div:
 // IMPRVD-NEXT:    [[TMP20:%.*]] = phi float [ [[TMP7]], [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI]] ], [ [[TMP16]], [[ABS_RHSR_LESS_THAN_ABS_RHSI]] ]
 // IMPRVD-NEXT:    [[TMP21:%.*]] = phi float [ [[TMP10]], [[ABS_RHSR_GREATER_OR_EQUAL_ABS_RHSI]] ], [ [[TMP19]], [[ABS_RHSR_LESS_THAN_ABS_RHSI]] ]
-// IMPRVD-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds { float, float }, ptr [[RETVAL]], i32 0, i32 0
-// IMPRVD-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds { float, float }, ptr [[RETVAL]], i32 0, i32 1
+// IMPRVD-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 0
+// IMPRVD-NEXT:    [[RETVAL_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[RETVAL]], i32 0, i32 1
 // IMPRVD-NEXT:    store float [[TMP20]], ptr [[RETVAL_REALP]], align 4
 // IMPRVD-NEXT:    store float [[TMP21]], ptr [[RETVAL_IMAGP]], align 4
 // IMPRVD-NEXT:    [[TMP22:%.*]] = load <2 x float>, ptr [[RETVAL]], align 4

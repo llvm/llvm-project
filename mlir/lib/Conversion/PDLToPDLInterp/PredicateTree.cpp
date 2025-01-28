@@ -818,7 +818,7 @@ std::unique_ptr<MatcherNode> &getOrCreateChild(SwitchNode *node,
   auto it = predicate->patternToAnswer.find(pattern);
   assert(it != predicate->patternToAnswer.end() &&
          "expected pattern to exist in predicate");
-  return node->getChildren().insert({it->second, nullptr}).first->second;
+  return node->getChildren()[it->second];
 }
 
 /// Build the matcher CFG by "pushing" patterns through by sorted predicate

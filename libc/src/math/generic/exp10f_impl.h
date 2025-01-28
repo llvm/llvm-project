@@ -10,18 +10,13 @@
 #define LLVM_LIBC_SRC_MATH_GENERIC_EXP10F_IMPL_H
 
 #include "explogxf.h"
-#include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
-#include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-
-#include <errno.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace generic {

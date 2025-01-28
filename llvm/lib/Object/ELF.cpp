@@ -9,6 +9,7 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 
 using namespace llvm;
@@ -319,6 +320,7 @@ StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_BB_ADDR_MAP);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_OFFLOADING);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_LTO);
+    STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_JT_SIZES)
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_ATTRIBUTES);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_HASH);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_verdef);
@@ -821,7 +823,6 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     uint32_t NumBlocksInBBRange = 0;
     uint32_t NumBBRanges = 1;
     typename ELFFile<ELFT>::uintX_t RangeBaseAddress = 0;
-    std::vector<BBAddrMap::BBEntry> BBEntries;
     if (FeatEnable.MultiBBRange) {
       NumBBRanges = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
       if (!Cur || ULEBSizeErr)
@@ -849,29 +850,32 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
         RangeBaseAddress = *AddressOrErr;
         NumBlocksInBBRange = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
       }
-      for (uint32_t BlockIndex = 0; !MetadataDecodeErr && !ULEBSizeErr && Cur &&
-                                    (BlockIndex < NumBlocksInBBRange);
-           ++BlockIndex) {
-        uint32_t ID = Version >= 2
-                          ? readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr)
-                          : BlockIndex;
-        uint32_t Offset = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-        uint32_t Size = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-        uint32_t MD = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-        if (Version >= 1) {
-          // Offset is calculated relative to the end of the previous BB.
-          Offset += PrevBBEndOffset;
-          PrevBBEndOffset = Offset + Size;
+      std::vector<BBAddrMap::BBEntry> BBEntries;
+      if (!FeatEnable.OmitBBEntries) {
+        for (uint32_t BlockIndex = 0; !MetadataDecodeErr && !ULEBSizeErr &&
+                                      Cur && (BlockIndex < NumBlocksInBBRange);
+             ++BlockIndex) {
+          uint32_t ID = Version >= 2
+                            ? readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr)
+                            : BlockIndex;
+          uint32_t Offset = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+          uint32_t Size = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+          uint32_t MD = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+          if (Version >= 1) {
+            // Offset is calculated relative to the end of the previous BB.
+            Offset += PrevBBEndOffset;
+            PrevBBEndOffset = Offset + Size;
+          }
+          Expected<BBAddrMap::BBEntry::Metadata> MetadataOrErr =
+              BBAddrMap::BBEntry::Metadata::decode(MD);
+          if (!MetadataOrErr) {
+            MetadataDecodeErr = MetadataOrErr.takeError();
+            break;
+          }
+          BBEntries.push_back({ID, Offset, Size, *MetadataOrErr});
         }
-        Expected<BBAddrMap::BBEntry::Metadata> MetadataOrErr =
-            BBAddrMap::BBEntry::Metadata::decode(MD);
-        if (!MetadataOrErr) {
-          MetadataDecodeErr = MetadataOrErr.takeError();
-          break;
-        }
-        BBEntries.push_back({ID, Offset, Size, *MetadataOrErr});
+        TotalNumBlocks += BBEntries.size();
       }
-      TotalNumBlocks += BBEntries.size();
       BBRangeEntries.push_back({RangeBaseAddress, std::move(BBEntries)});
     }
     FunctionEntries.push_back({std::move(BBRangeEntries)});
@@ -979,7 +983,7 @@ ELFFile<ELFT>::getSectionAndRelocations(
   return SecToRelocMap;
 }
 
-template class llvm::object::ELFFile<ELF32LE>;
-template class llvm::object::ELFFile<ELF32BE>;
-template class llvm::object::ELFFile<ELF64LE>;
-template class llvm::object::ELFFile<ELF64BE>;
+template class LLVM_EXPORT_TEMPLATE llvm::object::ELFFile<ELF32LE>;
+template class LLVM_EXPORT_TEMPLATE llvm::object::ELFFile<ELF32BE>;
+template class LLVM_EXPORT_TEMPLATE llvm::object::ELFFile<ELF64LE>;
+template class LLVM_EXPORT_TEMPLATE llvm::object::ELFFile<ELF64BE>;

@@ -10,8 +10,10 @@ For example (from test/python_api/hello_world/TestHelloWorld.py), ::
 
         # Spawn a new process and don't display the stdout if not in TraceOn() mode.
         import subprocess
-        popen = subprocess.Popen([self.exe, 'abc', 'xyz'],
-                                 stdout = open(os.devnull, 'w') if not self.TraceOn() else None)
+        popen = subprocess.Popen(
+            [self.exe, 'abc', 'xyz'],
+            stdout=subprocess.DEVNULL if not self.TraceOn() else None,
+        )
 
         listener = lldb.SBListener('my.attach.listener')
         error = lldb.SBError()

@@ -184,8 +184,8 @@ define float @extract_element_load(<4 x float> %x, ptr %ptr) {
 ;
 ; CHECK-LABEL: @extract_element_load(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x float>, ptr [[PTR:%.*]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[LOAD]], i64 2
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[X:%.*]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[X:%.*]], i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[LOAD]], i64 2
 ; CHECK-NEXT:    [[R:%.*]] = fadd float [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -200,7 +200,7 @@ define float @extract_element_multi_Use_load(<4 x float> %x, ptr %ptr0, ptr %ptr
 ; CHECK-LABEL: @extract_element_multi_Use_load(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x float>, ptr [[PTR0:%.*]], align 16
 ; CHECK-NEXT:    store <4 x float> [[LOAD]], ptr [[PTR1:%.*]], align 16
-; CHECK-NEXT:    [[ADD:%.*]] = fadd <4 x float> [[LOAD]], [[X:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd <4 x float> [[X:%.*]], [[LOAD]]
 ; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x float> [[ADD]], i64 2
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -227,7 +227,7 @@ define float @extelt_binop_insertelt(<4 x float> %A, <4 x float> %B, float %f) {
 ;
 ; CHECK-LABEL: @extelt_binop_insertelt(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[B:%.*]], i64 0
-; CHECK-NEXT:    [[E:%.*]] = fmul nnan float [[TMP1]], [[F:%.*]]
+; CHECK-NEXT:    [[E:%.*]] = fmul nnan float [[F:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret float [[E]]
 ;
   %C = insertelement <4 x float> %A, float %f, i32 0
@@ -243,7 +243,7 @@ define i32 @extelt_binop_binop_insertelt(<4 x i32> %A, <4 x i32> %B, i32 %f) {
 ;
 ; CHECK-LABEL: @extelt_binop_binop_insertelt(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[B:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], [[F:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[F:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[B]], i64 0
 ; CHECK-NEXT:    [[E:%.*]] = mul nsw i32 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[E]]
@@ -348,7 +348,7 @@ define i1 @extractelt_vector_fcmp_not_cheap_to_scalarize_multi_use(<2 x float> %
 ; CHECK-LABEL: @extractelt_vector_fcmp_not_cheap_to_scalarize_multi_use(
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd <2 x float> [[ARG1:%.*]], [[ARG2:%.*]]
 ; CHECK-NEXT:    store volatile <2 x float> [[ADD]], ptr undef, align 8
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <2 x float> [[ADD]], [[ARG0:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <2 x float> [[ARG0:%.*]], [[ADD]]
 ; CHECK-NEXT:    [[EXT:%.*]] = extractelement <2 x i1> [[CMP]], i64 0
 ; CHECK-NEXT:    ret i1 [[EXT]]
 ;

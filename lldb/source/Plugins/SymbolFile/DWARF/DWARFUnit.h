@@ -13,6 +13,7 @@
 #include "DWARFDebugInfoEntry.h"
 #include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
 #include "llvm/Support/RWMutex.h"
@@ -33,7 +34,6 @@ enum DWARFProducer {
   eProducerInvalid = 0,
   eProducerClang,
   eProducerGCC,
-  eProducerLLVMGCC,
   eProducerSwift,
   eProducerOther
 };
@@ -170,11 +170,7 @@ public:
   /// both cases correctly and avoids crashes.
   DWARFCompileUnit *GetSkeletonUnit();
 
-  void SetSkeletonUnit(DWARFUnit *skeleton_unit);
-
-  bool Supports_DW_AT_APPLE_objc_complete_type();
-
-  bool DW_AT_decl_file_attributes_are_invalid();
+  bool LinkToSkeletonUnit(DWARFUnit &skeleton_unit);
 
   bool Supports_unnamed_objc_bitfields();
 
@@ -213,12 +209,14 @@ public:
 
   /// Return a list of address ranges resulting from a (possibly encoded)
   /// range list starting at a given offset in the appropriate ranges section.
-  llvm::Expected<DWARFRangeList> FindRnglistFromOffset(dw_offset_t offset);
+  llvm::Expected<llvm::DWARFAddressRangesVector>
+  FindRnglistFromOffset(dw_offset_t offset);
 
   /// Return a list of address ranges retrieved from an encoded range
   /// list whose offset is found via a table lookup given an index (DWARF v5
   /// and later).
-  llvm::Expected<DWARFRangeList> FindRnglistFromIndex(uint32_t index);
+  llvm::Expected<llvm::DWARFAddressRangesVector>
+  FindRnglistFromIndex(uint32_t index);
 
   /// Return a rangelist's offset based on an index. The index designates
   /// an entry in the rangelist table's offset array and is supplied by
@@ -268,7 +266,7 @@ public:
   /// .dwo file. Things like a missing .dwo file, DWO ID mismatch, and other
   /// .dwo errors can be stored in each compile unit so the issues can be
   /// communicated to the user.
-  void SetDwoError(const Status &error) { m_dwo_error = error; }
+  void SetDwoError(Status &&error) { m_dwo_error = std::move(error); }
 
 protected:
   DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
@@ -308,7 +306,7 @@ protected:
   const llvm::DWARFAbbreviationDeclarationSet *m_abbrevs = nullptr;
   lldb_private::CompileUnit *m_lldb_cu = nullptr;
   // If this is a DWO file, we have a backlink to our skeleton compile unit.
-  DWARFUnit *m_skeleton_unit = nullptr;
+  std::atomic<DWARFUnit *> m_skeleton_unit = nullptr;
   // The compile unit debug information entry item
   DWARFDebugInfoEntry::collection m_die_array;
   mutable llvm::sys::RWMutex m_die_array_mutex;

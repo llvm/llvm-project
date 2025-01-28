@@ -194,10 +194,22 @@ private:
 
 public:
   // Constructor to create an MCDwarfLineEntry given a symbol and the dwarf loc.
-  MCDwarfLineEntry(MCSymbol *label, const MCDwarfLoc loc)
-      : MCDwarfLoc(loc), Label(label) {}
+  MCDwarfLineEntry(MCSymbol *label, const MCDwarfLoc loc,
+                   MCSymbol *lineStreamLabel = nullptr,
+                   SMLoc streamLabelDefLoc = {})
+      : MCDwarfLoc(loc), Label(label), LineStreamLabel(lineStreamLabel),
+        StreamLabelDefLoc(streamLabelDefLoc) {}
 
   MCSymbol *getLabel() const { return Label; }
+
+  // This is the label that is to be emitted into the line stream. If this is
+  // non-null and we need to emit a label, also make sure to restart the current
+  // line sequence.
+  MCSymbol *LineStreamLabel;
+
+  // Location where LineStreamLabel was defined. If there is an error emitting
+  // LineStreamLabel, we can use the SMLoc to report an error.
+  SMLoc StreamLabelDefLoc;
 
   // This indicates the line entry is synthesized for an end entry.
   bool IsEndEntry = false;
@@ -365,6 +377,9 @@ public:
   emitOne(MCStreamer *MCOS, MCSection *Section,
           const MCLineSection::MCDwarfLineEntryCollection &LineEntries);
 
+  void endCurrentSeqAndEmitLineStreamLabel(MCStreamer *MCOS, SMLoc DefLoc,
+                                           StringRef Name);
+
   Expected<unsigned> tryGetFile(StringRef &Directory, StringRef &FileName,
                                 std::optional<MD5::MD5Result> Checksum,
                                 std::optional<StringRef> Source,
@@ -500,8 +515,10 @@ public:
     OpRegister,
     OpWindowSave,
     OpNegateRAState,
+    OpNegateRAStateWithPC,
     OpGnuArgsSize,
     OpLabel,
+    OpValOffset,
   };
 
 private:
@@ -627,6 +644,12 @@ public:
     return MCCFIInstruction(OpNegateRAState, L, 0, INT64_C(0), Loc);
   }
 
+  /// .cfi_negate_ra_state_with_pc AArch64 negate RA state with PC.
+  static MCCFIInstruction createNegateRAStateWithPC(MCSymbol *L,
+                                                    SMLoc Loc = {}) {
+    return MCCFIInstruction(OpNegateRAStateWithPC, L, 0, INT64_C(0), Loc);
+  }
+
   /// .cfi_restore says that the rule for Register is now the same as it
   /// was at the beginning of the function, after all initial instructions added
   /// by .cfi_startproc were executed.
@@ -677,6 +700,13 @@ public:
     return MCCFIInstruction(OpLabel, L, CfiLabel, Loc);
   }
 
+  /// .cfi_val_offset Previous value of Register is offset Offset from the
+  /// current CFA register.
+  static MCCFIInstruction createValOffset(MCSymbol *L, unsigned Register,
+                                          int64_t Offset, SMLoc Loc = {}) {
+    return MCCFIInstruction(OpValOffset, L, Register, Offset, Loc);
+  }
+
   OpType getOperation() const { return Operation; }
   MCSymbol *getLabel() const { return Label; }
 
@@ -688,7 +718,7 @@ public:
     assert(Operation == OpDefCfa || Operation == OpOffset ||
            Operation == OpRestore || Operation == OpUndefined ||
            Operation == OpSameValue || Operation == OpDefCfaRegister ||
-           Operation == OpRelOffset);
+           Operation == OpRelOffset || Operation == OpValOffset);
     return U.RI.Register;
   }
 
@@ -707,7 +737,8 @@ public:
       return U.RIA.Offset;
     assert(Operation == OpDefCfa || Operation == OpOffset ||
            Operation == OpRelOffset || Operation == OpDefCfaOffset ||
-           Operation == OpAdjustCfaOffset || Operation == OpGnuArgsSize);
+           Operation == OpAdjustCfaOffset || Operation == OpGnuArgsSize ||
+           Operation == OpValOffset);
     return U.RI.Offset;
   }
 

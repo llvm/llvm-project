@@ -16,9 +16,8 @@
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
 
-using namespace llvm;
+namespace llvm {
 
-namespace {
 class EmptyMatchContext {
   SelectionDAG &DAG;
   const TargetLowering &TLI;
@@ -46,6 +45,8 @@ public:
                                 bool LegalOnly = false) const {
     return TLI.isOperationLegalOrCustom(Op, VT, LegalOnly);
   }
+
+  unsigned getNumOperands(SDValue N) const { return N->getNumOperands(); }
 };
 
 class VPMatchContext {
@@ -109,7 +110,7 @@ public:
   // SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT) { return
   // DAG.getNode(Opcode, DL, VT); }
   SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue Operand) {
-    unsigned VPOpcode = ISD::getVPForBaseOpcode(Opcode);
+    unsigned VPOpcode = *ISD::getVPForBaseOpcode(Opcode);
     assert(ISD::getVPMaskIdx(VPOpcode) == 1 &&
            ISD::getVPExplicitVectorLengthIdx(VPOpcode) == 2);
     return DAG.getNode(VPOpcode, DL, VT,
@@ -118,7 +119,7 @@ public:
 
   SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
                   SDValue N2) {
-    unsigned VPOpcode = ISD::getVPForBaseOpcode(Opcode);
+    unsigned VPOpcode = *ISD::getVPForBaseOpcode(Opcode);
     assert(ISD::getVPMaskIdx(VPOpcode) == 2 &&
            ISD::getVPExplicitVectorLengthIdx(VPOpcode) == 3);
     return DAG.getNode(VPOpcode, DL, VT, {N1, N2, RootMaskOp, RootVectorLenOp});
@@ -126,7 +127,7 @@ public:
 
   SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
                   SDValue N2, SDValue N3) {
-    unsigned VPOpcode = ISD::getVPForBaseOpcode(Opcode);
+    unsigned VPOpcode = *ISD::getVPForBaseOpcode(Opcode);
     assert(ISD::getVPMaskIdx(VPOpcode) == 3 &&
            ISD::getVPExplicitVectorLengthIdx(VPOpcode) == 4);
     return DAG.getNode(VPOpcode, DL, VT,
@@ -135,7 +136,7 @@ public:
 
   SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue Operand,
                   SDNodeFlags Flags) {
-    unsigned VPOpcode = ISD::getVPForBaseOpcode(Opcode);
+    unsigned VPOpcode = *ISD::getVPForBaseOpcode(Opcode);
     assert(ISD::getVPMaskIdx(VPOpcode) == 1 &&
            ISD::getVPExplicitVectorLengthIdx(VPOpcode) == 2);
     return DAG.getNode(VPOpcode, DL, VT, {Operand, RootMaskOp, RootVectorLenOp},
@@ -144,7 +145,7 @@ public:
 
   SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
                   SDValue N2, SDNodeFlags Flags) {
-    unsigned VPOpcode = ISD::getVPForBaseOpcode(Opcode);
+    unsigned VPOpcode = *ISD::getVPForBaseOpcode(Opcode);
     assert(ISD::getVPMaskIdx(VPOpcode) == 2 &&
            ISD::getVPExplicitVectorLengthIdx(VPOpcode) == 3);
     return DAG.getNode(VPOpcode, DL, VT, {N1, N2, RootMaskOp, RootVectorLenOp},
@@ -153,7 +154,7 @@ public:
 
   SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT, SDValue N1,
                   SDValue N2, SDValue N3, SDNodeFlags Flags) {
-    unsigned VPOpcode = ISD::getVPForBaseOpcode(Opcode);
+    unsigned VPOpcode = *ISD::getVPForBaseOpcode(Opcode);
     assert(ISD::getVPMaskIdx(VPOpcode) == 3 &&
            ISD::getVPExplicitVectorLengthIdx(VPOpcode) == 4);
     return DAG.getNode(VPOpcode, DL, VT,
@@ -161,15 +162,21 @@ public:
   }
 
   bool isOperationLegal(unsigned Op, EVT VT) const {
-    unsigned VPOp = ISD::getVPForBaseOpcode(Op);
+    unsigned VPOp = *ISD::getVPForBaseOpcode(Op);
     return TLI.isOperationLegal(VPOp, VT);
   }
 
   bool isOperationLegalOrCustom(unsigned Op, EVT VT,
                                 bool LegalOnly = false) const {
-    unsigned VPOp = ISD::getVPForBaseOpcode(Op);
+    unsigned VPOp = *ISD::getVPForBaseOpcode(Op);
     return TLI.isOperationLegalOrCustom(VPOp, VT, LegalOnly);
   }
+
+  unsigned getNumOperands(SDValue N) const {
+    return N->isVPOpcode() ? N->getNumOperands() - 2 : N->getNumOperands();
+  }
 };
-} // end anonymous namespace
-#endif
+
+} // namespace llvm
+
+#endif // LLVM_LIB_CODEGEN_SELECTIONDAG_MATCHCONTEXT_H

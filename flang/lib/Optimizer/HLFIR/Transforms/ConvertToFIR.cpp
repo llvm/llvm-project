@@ -411,7 +411,8 @@ class DesignateOpConversion
     llvm::SmallVector<mlir::Value> firstElementIndices;
     auto indices = designate.getIndices();
     int i = 0;
-    for (auto isTriplet : designate.getIsTripletAttr().asArrayRef()) {
+    auto attrs = designate.getIsTripletAttr();
+    for (auto isTriplet : attrs.asArrayRef()) {
       // Coordinate of the first element are the index and triplets lower
       // bounds
       firstElementIndices.push_back(indices[i]);

@@ -763,3 +763,475 @@ define zeroext i1 @vreduce_add_v64i1(<64 x i1> %v) {
   %red = call i1 @llvm.vector.reduce.add.v64i1(<64 x i1> %v)
   ret i1 %red
 }
+
+declare i1 @llvm.vector.reduce.or.v128i1(<128 x i1>)
+
+define zeroext i1 @vreduce_or_v128i1(<128 x i1> %v) {
+; CHECK-LABEL: vreduce_or_v128i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vcpop.m a0, v0
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.or.v128i1(<128 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.xor.v128i1(<128 x i1>)
+
+define zeroext i1 @vreduce_xor_v128i1(<128 x i1> %v) {
+; CHECK-LABEL: vreduce_xor_v128i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vcpop.m a0, v0
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.xor.v128i1(<128 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.and.v128i1(<128 x i1>)
+
+define zeroext i1 @vreduce_and_v128i1(<128 x i1> %v) {
+; CHECK-LABEL: vreduce_and_v128i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmnot.m v8, v0
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.and.v128i1(<128 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.umax.v128i1(<128 x i1>)
+
+define zeroext i1 @vreduce_umax_v128i1(<128 x i1> %v) {
+; CHECK-LABEL: vreduce_umax_v128i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vcpop.m a0, v0
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.umax.v128i1(<128 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.smax.v128i1(<128 x i1>)
+
+define zeroext i1 @vreduce_smax_v128i1(<128 x i1> %v) {
+; CHECK-LABEL: vreduce_smax_v128i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmnot.m v8, v0
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.smax.v128i1(<128 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.umin.v128i1(<128 x i1>)
+
+define zeroext i1 @vreduce_umin_v128i1(<128 x i1> %v) {
+; CHECK-LABEL: vreduce_umin_v128i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmnot.m v8, v0
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.umin.v128i1(<128 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.smin.v128i1(<128 x i1>)
+
+define zeroext i1 @vreduce_smin_v128i1(<128 x i1> %v) {
+; CHECK-LABEL: vreduce_smin_v128i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vcpop.m a0, v0
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.smin.v128i1(<128 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.or.v256i1(<256 x i1>)
+
+define zeroext i1 @vreduce_or_v256i1(<256 x i1> %v) {
+; CHECK-LABEL: vreduce_or_v256i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmor.mm v8, v0, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.or.v256i1(<256 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.xor.v256i1(<256 x i1>)
+
+define zeroext i1 @vreduce_xor_v256i1(<256 x i1> %v) {
+; CHECK-LABEL: vreduce_xor_v256i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmxor.mm v8, v0, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.xor.v256i1(<256 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.and.v256i1(<256 x i1>)
+
+define zeroext i1 @vreduce_and_v256i1(<256 x i1> %v) {
+; CHECK-LABEL: vreduce_and_v256i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmnand.mm v8, v0, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.and.v256i1(<256 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.umax.v256i1(<256 x i1>)
+
+define zeroext i1 @vreduce_umax_v256i1(<256 x i1> %v) {
+; CHECK-LABEL: vreduce_umax_v256i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmor.mm v8, v0, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.umax.v256i1(<256 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.smax.v256i1(<256 x i1>)
+
+define zeroext i1 @vreduce_smax_v256i1(<256 x i1> %v) {
+; CHECK-LABEL: vreduce_smax_v256i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmnand.mm v8, v0, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.smax.v256i1(<256 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.umin.v256i1(<256 x i1>)
+
+define zeroext i1 @vreduce_umin_v256i1(<256 x i1> %v) {
+; CHECK-LABEL: vreduce_umin_v256i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmnand.mm v8, v0, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.umin.v256i1(<256 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.smin.v256i1(<256 x i1>)
+
+define zeroext i1 @vreduce_smin_v256i1(<256 x i1> %v) {
+; CHECK-LABEL: vreduce_smin_v256i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmor.mm v8, v0, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.smin.v256i1(<256 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.or.v512i1(<512 x i1>)
+
+define zeroext i1 @vreduce_or_v512i1(<512 x i1> %v) {
+; CHECK-LABEL: vreduce_or_v512i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmor.mm v8, v8, v10
+; CHECK-NEXT:    vmor.mm v9, v0, v9
+; CHECK-NEXT:    vmor.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.or.v512i1(<512 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.xor.v512i1(<512 x i1>)
+
+define zeroext i1 @vreduce_xor_v512i1(<512 x i1> %v) {
+; CHECK-LABEL: vreduce_xor_v512i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmxor.mm v8, v8, v10
+; CHECK-NEXT:    vmxor.mm v9, v0, v9
+; CHECK-NEXT:    vmxor.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.xor.v512i1(<512 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.and.v512i1(<512 x i1>)
+
+define zeroext i1 @vreduce_and_v512i1(<512 x i1> %v) {
+; CHECK-LABEL: vreduce_and_v512i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmand.mm v8, v8, v10
+; CHECK-NEXT:    vmand.mm v9, v0, v9
+; CHECK-NEXT:    vmnand.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.and.v512i1(<512 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.umax.v512i1(<512 x i1>)
+
+define zeroext i1 @vreduce_umax_v512i1(<512 x i1> %v) {
+; CHECK-LABEL: vreduce_umax_v512i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmor.mm v8, v8, v10
+; CHECK-NEXT:    vmor.mm v9, v0, v9
+; CHECK-NEXT:    vmor.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.umax.v512i1(<512 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.smax.v512i1(<512 x i1>)
+
+define zeroext i1 @vreduce_smax_v512i1(<512 x i1> %v) {
+; CHECK-LABEL: vreduce_smax_v512i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmand.mm v8, v8, v10
+; CHECK-NEXT:    vmand.mm v9, v0, v9
+; CHECK-NEXT:    vmnand.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.smax.v512i1(<512 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.umin.v512i1(<512 x i1>)
+
+define zeroext i1 @vreduce_umin_v512i1(<512 x i1> %v) {
+; CHECK-LABEL: vreduce_umin_v512i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmand.mm v8, v8, v10
+; CHECK-NEXT:    vmand.mm v9, v0, v9
+; CHECK-NEXT:    vmnand.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.umin.v512i1(<512 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.smin.v512i1(<512 x i1>)
+
+define zeroext i1 @vreduce_smin_v512i1(<512 x i1> %v) {
+; CHECK-LABEL: vreduce_smin_v512i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmor.mm v8, v8, v10
+; CHECK-NEXT:    vmor.mm v9, v0, v9
+; CHECK-NEXT:    vmor.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.smin.v512i1(<512 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.or.v1024i1(<1024 x i1>)
+
+define zeroext i1 @vreduce_or_v1024i1(<1024 x i1> %v) {
+; CHECK-LABEL: vreduce_or_v1024i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmor.mm v10, v10, v14
+; CHECK-NEXT:    vmor.mm v8, v8, v12
+; CHECK-NEXT:    vmor.mm v9, v9, v13
+; CHECK-NEXT:    vmor.mm v11, v0, v11
+; CHECK-NEXT:    vmor.mm v8, v8, v10
+; CHECK-NEXT:    vmor.mm v9, v11, v9
+; CHECK-NEXT:    vmor.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.or.v1024i1(<1024 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.xor.v1024i1(<1024 x i1>)
+
+define zeroext i1 @vreduce_xor_v1024i1(<1024 x i1> %v) {
+; CHECK-LABEL: vreduce_xor_v1024i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmxor.mm v10, v10, v14
+; CHECK-NEXT:    vmxor.mm v8, v8, v12
+; CHECK-NEXT:    vmxor.mm v9, v9, v13
+; CHECK-NEXT:    vmxor.mm v11, v0, v11
+; CHECK-NEXT:    vmxor.mm v8, v8, v10
+; CHECK-NEXT:    vmxor.mm v9, v11, v9
+; CHECK-NEXT:    vmxor.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.xor.v1024i1(<1024 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.and.v1024i1(<1024 x i1>)
+
+define zeroext i1 @vreduce_and_v1024i1(<1024 x i1> %v) {
+; CHECK-LABEL: vreduce_and_v1024i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmand.mm v10, v10, v14
+; CHECK-NEXT:    vmand.mm v8, v8, v12
+; CHECK-NEXT:    vmand.mm v9, v9, v13
+; CHECK-NEXT:    vmand.mm v11, v0, v11
+; CHECK-NEXT:    vmand.mm v8, v8, v10
+; CHECK-NEXT:    vmand.mm v9, v11, v9
+; CHECK-NEXT:    vmnand.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.and.v1024i1(<1024 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.umax.v1024i1(<1024 x i1>)
+
+define zeroext i1 @vreduce_umax_v1024i1(<1024 x i1> %v) {
+; CHECK-LABEL: vreduce_umax_v1024i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmor.mm v10, v10, v14
+; CHECK-NEXT:    vmor.mm v8, v8, v12
+; CHECK-NEXT:    vmor.mm v9, v9, v13
+; CHECK-NEXT:    vmor.mm v11, v0, v11
+; CHECK-NEXT:    vmor.mm v8, v8, v10
+; CHECK-NEXT:    vmor.mm v9, v11, v9
+; CHECK-NEXT:    vmor.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.umax.v1024i1(<1024 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.smax.v1024i1(<1024 x i1>)
+
+define zeroext i1 @vreduce_smax_v1024i1(<1024 x i1> %v) {
+; CHECK-LABEL: vreduce_smax_v1024i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmand.mm v10, v10, v14
+; CHECK-NEXT:    vmand.mm v8, v8, v12
+; CHECK-NEXT:    vmand.mm v9, v9, v13
+; CHECK-NEXT:    vmand.mm v11, v0, v11
+; CHECK-NEXT:    vmand.mm v8, v8, v10
+; CHECK-NEXT:    vmand.mm v9, v11, v9
+; CHECK-NEXT:    vmnand.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.smax.v1024i1(<1024 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.umin.v1024i1(<1024 x i1>)
+
+define zeroext i1 @vreduce_umin_v1024i1(<1024 x i1> %v) {
+; CHECK-LABEL: vreduce_umin_v1024i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmand.mm v10, v10, v14
+; CHECK-NEXT:    vmand.mm v8, v8, v12
+; CHECK-NEXT:    vmand.mm v9, v9, v13
+; CHECK-NEXT:    vmand.mm v11, v0, v11
+; CHECK-NEXT:    vmand.mm v8, v8, v10
+; CHECK-NEXT:    vmand.mm v9, v11, v9
+; CHECK-NEXT:    vmnand.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.umin.v1024i1(<1024 x i1> %v)
+  ret i1 %red
+}
+
+declare i1 @llvm.vector.reduce.smin.v1024i1(<1024 x i1>)
+
+define zeroext i1 @vreduce_smin_v1024i1(<1024 x i1> %v) {
+; CHECK-LABEL: vreduce_smin_v1024i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmor.mm v10, v10, v14
+; CHECK-NEXT:    vmor.mm v8, v8, v12
+; CHECK-NEXT:    vmor.mm v9, v9, v13
+; CHECK-NEXT:    vmor.mm v11, v0, v11
+; CHECK-NEXT:    vmor.mm v8, v8, v10
+; CHECK-NEXT:    vmor.mm v9, v11, v9
+; CHECK-NEXT:    vmor.mm v8, v9, v8
+; CHECK-NEXT:    vcpop.m a0, v8
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    ret
+  %red = call i1 @llvm.vector.reduce.smin.v1024i1(<1024 x i1> %v)
+  ret i1 %red
+}

@@ -17,6 +17,8 @@
 
 #include "hdr/math_macros.h"
 
+using LIBC_NAMESPACE::Sign;
+
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 template <typename T>

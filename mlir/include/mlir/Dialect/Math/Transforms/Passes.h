@@ -31,7 +31,6 @@ void populateExpandAsinhPattern(RewritePatternSet &patterns);
 void populateExpandAcoshPattern(RewritePatternSet &patterns);
 void populateExpandAtanhPattern(RewritePatternSet &patterns);
 void populateExpandFmaFPattern(RewritePatternSet &patterns);
-void populateExpandFloorFPattern(RewritePatternSet &patterns);
 void populateExpandCeilFPattern(RewritePatternSet &patterns);
 void populateExpandExp2FPattern(RewritePatternSet &patterns);
 void populateExpandPowFPattern(RewritePatternSet &patterns);
@@ -56,11 +55,13 @@ void populateMathPolynomialApproximationPatterns(
 void populateUpliftToFMAPatterns(RewritePatternSet &patterns);
 
 namespace math {
-void populateLegalizeToF32TypeConverter(TypeConverter &typeConverter);
-void populateLegalizeToF32ConversionTarget(ConversionTarget &target,
-                                           TypeConverter &typeConverter);
-void populateLegalizeToF32Patterns(RewritePatternSet &patterns,
-                                   TypeConverter &typeConverter);
+void populateExtendToSupportedTypesTypeConverter(
+    TypeConverter &typeConverter, const SetVector<Type> &sourceTypes,
+    Type targetType);
+void populateExtendToSupportedTypesConversionTarget(
+    ConversionTarget &target, TypeConverter &typeConverter);
+void populateExtendToSupportedTypesPatterns(RewritePatternSet &patterns,
+                                            const TypeConverter &typeConverter);
 } // namespace math
 } // namespace mlir
 

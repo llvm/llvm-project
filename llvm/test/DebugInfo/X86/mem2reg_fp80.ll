@@ -4,11 +4,11 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define dso_local x86_fp80 @powixf2() !dbg !1 {
+define dso_local x86_fp80 @powixf2(i1 %arg) !dbg !1 {
 entry:
   %r = alloca x86_fp80, align 16
   call void @llvm.dbg.declare(metadata ptr %r, metadata !14, metadata !DIExpression()), !dbg !15
-  br i1 undef, label %if.then, label %if.end, !dbg !16
+  br i1 %arg, label %if.then, label %if.end, !dbg !16
 
 if.then:                                          ; preds = %entry
 ; CHECK-LABEL: if.then:

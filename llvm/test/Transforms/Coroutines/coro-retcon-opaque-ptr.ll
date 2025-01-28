@@ -33,9 +33,11 @@ cleanup:                                          ; preds = %loop
 define i32 @main() {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @print(i32 4)
-; CHECK-NEXT:    call void @print(i32 5), !noalias !0
-; CHECK-NEXT:    call void @print(i32 6), !noalias !3
+; CHECK-NEXT:    tail call void @print(i32 4)
+; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META0:![0-9]+]])
+; CHECK-NEXT:    tail call void @print(i32 5), !noalias [[META0]]
+; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META3:![0-9]+]])
+; CHECK-NEXT:    tail call void @print(i32 6), !noalias [[META3]]
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:

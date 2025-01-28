@@ -61,7 +61,7 @@ static Expr<T> FoldMatmul(FoldingContext &context, FunctionRef<T> &&funcRef) {
           auto product{aElt.Multiply(bElt)};
           overflow |= product.flags.test(RealFlag::Overflow);
           if constexpr (useKahanSummation) {
-            auto next{correction.Add(product.value, rounding)};
+            auto next{product.value.Subtract(correction, rounding)};
             overflow |= next.flags.test(RealFlag::Overflow);
             auto added{sum.Add(next.value, rounding)};
             overflow |= added.flags.test(RealFlag::Overflow);
@@ -75,13 +75,13 @@ static Expr<T> FoldMatmul(FoldingContext &context, FunctionRef<T> &&funcRef) {
             sum = std::move(added.value);
           }
         } else if constexpr (T::category == TypeCategory::Integer) {
-          // Don't use Kahan summation in numeric MATMUL folding;
-          // the runtime doesn't use it, and results should match.
           auto product{aElt.MultiplySigned(bElt)};
           overflow |= product.SignedMultiplicationOverflowed();
           auto added{sum.AddSigned(product.lower)};
           overflow |= added.overflow;
           sum = std::move(added.value);
+        } else if constexpr (T::category == TypeCategory::Unsigned) {
+          sum = sum.AddUnsigned(aElt.MultiplyUnsigned(bElt).lower).value;
         } else {
           static_assert(T::category == TypeCategory::Logical);
           sum = sum.OR(aElt.AND(bElt));
@@ -95,7 +95,7 @@ static Expr<T> FoldMatmul(FoldingContext &context, FunctionRef<T> &&funcRef) {
   if (overflow &&
       context.languageFeatures().ShouldWarn(
           common::UsageWarning::FoldingException)) {
-    context.messages().Say(
+    context.messages().Say(common::UsageWarning::FoldingException,
         "MATMUL of %s data overflowed during computation"_warn_en_US,
         T::AsFortran());
   }

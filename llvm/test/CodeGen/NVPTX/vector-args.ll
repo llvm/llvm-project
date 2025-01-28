@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 define float @foo(<2 x float> %a) {
 ; CHECK: .func (.param .b32 func_retval0) foo
@@ -29,7 +29,7 @@ define <4 x float> @baz(<4 x float> %a) {
 ; CHECK: .func  (.param .align 16 .b8 func_retval0[16]) baz
 ; CHECK: .param .align 16 .b8 baz_param_0[16]
 ; CHECK: ld.param.v4.f32 {%f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}}
-; CHECK: st.param.v4.f32 [func_retval0+0], {%f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}}
+; CHECK: st.param.v4.f32 [func_retval0], {%f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}, %f{{[0-9]+}}}
   %t1 = fmul <4 x float> %a, %a
   ret <4 x float> %t1
 }

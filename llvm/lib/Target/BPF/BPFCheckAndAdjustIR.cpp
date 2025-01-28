@@ -21,9 +21,7 @@
 
 #include "BPF.h"
 #include "BPFCORE.h"
-#include "BPFTargetMachine.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -31,7 +29,6 @@
 #include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -164,7 +161,7 @@ bool BPFCheckAndAdjustIR::removeCompareBuiltin(Module &M) {
         CmpInst::Predicate Opcode = (CmpInst::Predicate)OpVal;
 
         auto *ICmp = new ICmpInst(Opcode, Arg1, Arg2);
-        ICmp->insertBefore(Call);
+        ICmp->insertBefore(Call->getIterator());
 
         Call->replaceAllUsesWith(ICmp);
         ToBeDeleted = Call;
@@ -370,16 +367,16 @@ void BPFCheckAndAdjustIR::getAnalysisUsage(AnalysisUsage &AU) const {
 
 static void unrollGEPLoad(CallInst *Call) {
   auto [GEP, Load] = BPFPreserveStaticOffsetPass::reconstructLoad(Call);
-  GEP->insertBefore(Call);
-  Load->insertBefore(Call);
+  GEP->insertBefore(Call->getIterator());
+  Load->insertBefore(Call->getIterator());
   Call->replaceAllUsesWith(Load);
   Call->eraseFromParent();
 }
 
 static void unrollGEPStore(CallInst *Call) {
   auto [GEP, Store] = BPFPreserveStaticOffsetPass::reconstructStore(Call);
-  GEP->insertBefore(Call);
-  Store->insertBefore(Call);
+  GEP->insertBefore(Call->getIterator());
+  Store->insertBefore(Call->getIterator());
   Call->eraseFromParent();
 }
 
@@ -439,8 +436,8 @@ static Value *aspaceWrapValue(DenseMap<Value *, Value *> &Cache, Function *F,
     Value *WrappedPtr = aspaceWrapValue(Cache, F, Ptr);
     auto *GEPTy = cast<PointerType>(GEP->getType());
     auto *NewGEP = GEP->clone();
-    NewGEP->insertAfter(GEP);
-    NewGEP->mutateType(GEPTy->getPointerTo(0));
+    NewGEP->insertAfter(GEP->getIterator());
+    NewGEP->mutateType(PointerType::getUnqual(GEPTy->getContext()));
     NewGEP->setOperand(GEP->getPointerOperandIndex(), WrappedPtr);
     NewGEP->setName(GEP->getName());
     Cache[ToWrap] = NewGEP;
@@ -452,8 +449,7 @@ static Value *aspaceWrapValue(DenseMap<Value *, Value *> &Cache, Function *F,
     IB.SetInsertPoint(*InsnPtr->getInsertionPointAfterDef());
   else
     IB.SetInsertPoint(F->getEntryBlock().getFirstInsertionPt());
-  auto *PtrTy = cast<PointerType>(ToWrap->getType());
-  auto *ASZeroPtrTy = PtrTy->getPointerTo(0);
+  auto *ASZeroPtrTy = IB.getPtrTy(0);
   auto *ACast = IB.CreateAddrSpaceCast(ToWrap, ASZeroPtrTy, ToWrap->getName());
   Cache[ToWrap] = ACast;
   return ACast;

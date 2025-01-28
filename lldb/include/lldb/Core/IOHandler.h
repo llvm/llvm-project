@@ -9,7 +9,6 @@
 #ifndef LLDB_CORE_IOHANDLER_H
 #define LLDB_CORE_IOHANDLER_H
 
-#include "lldb/Core/ValueObjectList.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/Flags.h"

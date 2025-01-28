@@ -23,7 +23,7 @@ end subroutine
 ! CHECK: } copy {
 ! CHECK: ^bb0(%[[PRIV_ORIG_ARG:.*]]: !fir.ref<i32>, %[[PRIV_PRIV_ARG:.*]]: !fir.ref<i32>):
 ! CHECK:    %[[ORIG_VAL:.*]] = fir.load %[[PRIV_ORIG_ARG]] : !fir.ref<i32>
-! CHECK:    hlfir.assign %[[ORIG_VAL]] to %[[PRIV_PRIV_ARG]] temporary_lhs : i32, !fir.ref<i32>
+! CHECK:    hlfir.assign %[[ORIG_VAL]] to %[[PRIV_PRIV_ARG]] : i32, !fir.ref<i32>
 ! CHECK:    omp.yield(%[[PRIV_PRIV_ARG]] : !fir.ref<i32>)
 ! CHECK: }
 

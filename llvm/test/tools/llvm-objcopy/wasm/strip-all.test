@@ -7,6 +7,12 @@
 # CHECK:      Sections:
 # CHECK-NEXT:   - Type: TYPE
 # CHECK:        - Type: CUSTOM
+# CHECK-NEXT:        Name: .objcopy.removed
+# CHECK:        - Type: CUSTOM
+# CHECK-NEXT:        Name: .objcopy.removed
+# CHECK:        - Type: CUSTOM
+# CHECK-NEXT:        Name: .objcopy.removed
+# CHECK:        - Type: CUSTOM
 # CHECK-NEXT:        Name: foo
 
 --- !WASM

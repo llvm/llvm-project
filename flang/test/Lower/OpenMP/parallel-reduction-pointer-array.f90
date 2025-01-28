@@ -19,18 +19,20 @@ deallocate(r)
 
 end program
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_ptr_Uxi32 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> init {
-! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>):
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_ptr_Uxi32 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> alloc {
+! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>>
+! CHECK:           omp.yield(%[[VAL_3]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+! CHECK-LABEL:   } init {
+! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, %[[ALLOC:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>):
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>>
 ! CHECK:           %[[VAL_4:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>
 ! CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.ptr<!fir.array<?xi32>>) -> i64
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_7:.*]] = arith.cmpi eq, %[[VAL_5]], %[[VAL_6]] : i64
 ! CHECK:           fir.if %[[VAL_7]] {
 ! CHECK:             %[[VAL_8:.*]] = fir.embox %[[VAL_4]] : (!fir.ptr<!fir.array<?xi32>>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
-! CHECK:             fir.store %[[VAL_8]] to %[[VAL_3]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:             fir.store %[[VAL_8]] to %[[ALLOC]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:           } else {
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 0 : index
 ! CHECK:             %[[VAL_10:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_9]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -43,9 +45,9 @@ end program
 ! CHECK:             %[[VAL_17:.*]] = fir.shape_shift %[[VAL_16]]#0, %[[VAL_16]]#1 : (index, index) -> !fir.shapeshift<1>
 ! CHECK:             %[[VAL_18:.*]] = fir.rebox %[[VAL_14]]#0(%[[VAL_17]]) : (!fir.box<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
 ! CHECK:             hlfir.assign %[[VAL_1]] to %[[VAL_18]] : i32, !fir.box<!fir.ptr<!fir.array<?xi32>>>
-! CHECK:             fir.store %[[VAL_18]] to %[[VAL_3]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:             fir.store %[[VAL_18]] to %[[ALLOC]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:           }
-! CHECK:           omp.yield(%[[VAL_3]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+! CHECK:           omp.yield(%[[ALLOC]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 ! CHECK-LABEL:   } combiner {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>):
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
@@ -97,7 +99,7 @@ end program
 ! CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_3]]#1 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_12]] : (index) -> i64
 ! CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_13]] : (i32) -> i64
-! CHECK:           %[[VAL_18:.*]] = fir.call @_FortranAPointerSetBounds(%[[VAL_15]], %[[VAL_14]], %[[VAL_16]], %[[VAL_17]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
+! CHECK:           fir.call @_FortranAPointerSetBounds(%[[VAL_15]], %[[VAL_14]], %[[VAL_16]], %[[VAL_17]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_3]]#1 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_20:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<!fir.char<{{.*}}>>) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_21:.*]] = fir.call @_FortranAPointerAllocate(%[[VAL_19]], %[[VAL_4]], %[[VAL_5]], %[[VAL_20]], %[[VAL_7]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
@@ -125,7 +127,6 @@ end program
 ! CHECK:                 hlfir.assign %[[VAL_36]] to %[[VAL_39]] : i32, !fir.ref<i32>
 ! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }

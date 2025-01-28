@@ -22,6 +22,7 @@
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/Passes.h"
@@ -46,6 +47,7 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include <cassert>
@@ -111,8 +113,6 @@ static cl::opt<bool> EnableImplicitNullChecks(
 static cl::opt<bool> DisableMergeICmps("disable-mergeicmps",
     cl::desc("Disable MergeICmps Pass"),
     cl::init(false), cl::Hidden);
-static cl::opt<bool> PrintLSR("print-lsr-output", cl::Hidden,
-    cl::desc("Print LLVM IR produced by the loop-reduce pass"));
 static cl::opt<bool>
     PrintISelInput("print-isel-input", cl::Hidden,
                    cl::desc("Print LLVM IR input to isel pass"));
@@ -140,6 +140,9 @@ static cl::opt<RunOutliner> EnableMachineOutliner(
                           "Disable all outlining"),
                // Sentinel value for unspecified option.
                clEnumValN(RunOutliner::AlwaysOutline, "", "")));
+static cl::opt<bool> EnableGlobalMergeFunc(
+    "enable-global-merge-func", cl::Hidden,
+    cl::desc("Enable global merge functions that are based on hash function"));
 // Disable the pass to fix unwind information. Whether the pass is included in
 // the pipeline is controlled via the target options, this option serves as
 // manual override.
@@ -258,6 +261,11 @@ static cl::opt<bool>
     GCEmptyBlocks("gc-empty-basic-blocks", cl::init(false), cl::Hidden,
                   cl::desc("Enable garbage-collecting empty basic blocks"));
 
+static cl::opt<bool>
+    SplitStaticData("split-static-data", cl::Hidden, cl::init(false),
+                    cl::desc("Split static data sections into hot and cold "
+                             "sections using profile information"));
+
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
 /// i.e. -disable-mypass=false has no effect.
@@ -289,10 +297,10 @@ static IdentifyingPassPtr overridePass(AnalysisID StandardID,
   if (StandardID == &BranchFolderPassID)
     return applyDisable(TargetID, DisableBranchFold);
 
-  if (StandardID == &TailDuplicateID)
+  if (StandardID == &TailDuplicateLegacyID)
     return applyDisable(TargetID, DisableTailDuplicate);
 
-  if (StandardID == &EarlyTailDuplicateID)
+  if (StandardID == &EarlyTailDuplicateLegacyID)
     return applyDisable(TargetID, DisableEarlyTailDup);
 
   if (StandardID == &MachineBlockPlacementID)
@@ -304,13 +312,13 @@ static IdentifyingPassPtr overridePass(AnalysisID StandardID,
   if (StandardID == &DeadMachineInstructionElimID)
     return applyDisable(TargetID, DisableMachineDCE);
 
-  if (StandardID == &EarlyIfConverterID)
+  if (StandardID == &EarlyIfConverterLegacyID)
     return applyDisable(TargetID, DisableEarlyIfConversion);
 
   if (StandardID == &EarlyMachineLICMID)
     return applyDisable(TargetID, DisableMachineLICM);
 
-  if (StandardID == &MachineCSEID)
+  if (StandardID == &MachineCSELegacyID)
     return applyDisable(TargetID, DisableMachineCSE);
 
   if (StandardID == &MachineLICMID)
@@ -488,6 +496,7 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
 
   SET_BOOLEAN_OPTION(EarlyLiveIntervals)
   SET_BOOLEAN_OPTION(EnableBlockPlacementStats)
+  SET_BOOLEAN_OPTION(EnableGlobalMergeFunc)
   SET_BOOLEAN_OPTION(EnableImplicitNullChecks)
   SET_BOOLEAN_OPTION(EnableMachineOutliner)
   SET_BOOLEAN_OPTION(MISchedPostRA)
@@ -497,7 +506,6 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_BOOLEAN_OPTION(DisableCGP)
   SET_BOOLEAN_OPTION(DisablePartialLibcallInlining)
   SET_BOOLEAN_OPTION(DisableSelectOptimize)
-  SET_BOOLEAN_OPTION(PrintLSR)
   SET_BOOLEAN_OPTION(PrintISelInput)
   SET_BOOLEAN_OPTION(DebugifyAndStripAll)
   SET_BOOLEAN_OPTION(DebugifyCheckAndStripAll)
@@ -509,7 +517,7 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
 }
 
 void llvm::registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
-                                   LLVMTargetMachine &LLVMTM) {
+                                   TargetMachine &TM) {
 
   // Register a callback for disabling passes.
   PIC.registerShouldRunOptionalPassCallback([](StringRef P, Any) {
@@ -520,9 +528,9 @@ void llvm::registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
     DISABLE_PASS(DisableBlockPlacement, MachineBlockPlacementPass)
     DISABLE_PASS(DisableBranchFold, BranchFolderPass)
     DISABLE_PASS(DisableCopyProp, MachineCopyPropagationPass)
-    DISABLE_PASS(DisableEarlyIfConversion, EarlyIfConverterPass)
+    DISABLE_PASS(DisableEarlyIfConversion, EarlyIfConverterLegacyPass)
     DISABLE_PASS(DisableEarlyTailDup, EarlyTailDuplicatePass)
-    DISABLE_PASS(DisableMachineCSE, MachineCSEPass)
+    DISABLE_PASS(DisableMachineCSE, MachineCSELegacyPass)
     DISABLE_PASS(DisableMachineDCE, DeadMachineInstructionElimPass)
     DISABLE_PASS(DisableMachineLICM, EarlyMachineLICMPass)
     DISABLE_PASS(DisableMachineSink, MachineSinkingPass)
@@ -572,8 +580,8 @@ TargetPassConfig::getStartStopInfo(PassInstrumentationCallbacks &PIC) {
 
 // Out of line constructor provides default values for pass options and
 // registers all common codegen passes.
-TargetPassConfig::TargetPassConfig(LLVMTargetMachine &TM, PassManagerBase &pm)
-    : ImmutablePass(ID), PM(&pm), TM(&TM) {
+TargetPassConfig::TargetPassConfig(TargetMachine &TM, PassManagerBase &PM)
+    : ImmutablePass(ID), PM(&PM), TM(&TM) {
   Impl = new PassConfigImpl();
 
   // Register all target independent codegen passes to activate their PassIDs,
@@ -619,7 +627,8 @@ void TargetPassConfig::insertPass(AnalysisID TargetPassID,
 /// addPassToEmitX methods for generating a pipeline of CodeGen passes.
 ///
 /// Targets may override this to extend TargetPassConfig.
-TargetPassConfig *LLVMTargetMachine::createPassConfig(PassManagerBase &PM) {
+TargetPassConfig *
+CodeGenTargetMachineImpl::createPassConfig(PassManagerBase &PM) {
   return new TargetPassConfig(*this, PM);
 }
 
@@ -827,9 +836,8 @@ void TargetPassConfig::addIRPasses() {
     if (!DisableLSR) {
       addPass(createCanonicalizeFreezeInLoopsPass());
       addPass(createLoopStrengthReducePass());
-      if (PrintLSR)
-        addPass(createPrintFunctionPass(dbgs(),
-                                        "\n\n*** Code after LSR ***\n"));
+      if (EnableLoopTermFold)
+        addPass(createLoopTermFoldPass());
     }
 
     // The MergeICmpsPass tries to create memcmp calls by grouping sequences of
@@ -865,11 +873,6 @@ void TargetPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOptLevel::None && !DisablePartialLibcallInlining)
     addPass(createPartiallyInlineLibCallsPass());
 
-  // Expand vector predication intrinsics into standard IR instructions.
-  // This pass has to run before ScalarizeMaskedMemIntrin and ExpandReduction
-  // passes since it emits those kinds of intrinsics.
-  addPass(createExpandVectorPredicationPass());
-
   // Instrument function entry after all inlining.
   addPass(createPostInlineEntryExitInstrumenterPass());
 
@@ -883,12 +886,12 @@ void TargetPassConfig::addIRPasses() {
   if (!DisableExpandReductions)
     addPass(createExpandReductionsPass());
 
-  if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createTLSVariableHoistPass());
-
   // Convert conditional moves to conditional jumps when profitable.
   if (getOptLevel() != CodeGenOptLevel::None && !DisableSelectOptimize)
     addPass(createSelectOptimizePass());
+
+  if (EnableGlobalMergeFunc)
+    addPass(createGlobalMergeFuncPass());
 }
 
 /// Turn exception handling constructs into something the code generators can
@@ -952,6 +955,9 @@ void TargetPassConfig::addISelPrepare() {
   if (requiresCodeGenSCCOrder())
     addPass(new DummyCGSCCPass);
 
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createObjCARCContractPass());
+
   addPass(createCallBrPass());
 
   // Add both the safe stack and the stack protection passes: each of them will
@@ -1011,7 +1017,7 @@ bool TargetPassConfig::addCoreISelPasses() {
   if (Selector != SelectorType::GlobalISel || !isGlobalISelAbortEnabled())
     DebugifyIsSafe = false;
 
-  // Add instruction selector passes.
+  // Add instruction selector passes for global isel if enabled.
   if (Selector == SelectorType::GlobalISel) {
     SaveAndRestore SavedAddingMachinePasses(AddingMachinePasses, true);
     if (addIRTranslator())
@@ -1037,14 +1043,13 @@ bool TargetPassConfig::addCoreISelPasses() {
     // Pass to reset the MachineFunction if the ISel failed.
     addPass(createResetMachineFunctionPass(
         reportDiagnosticWhenGlobalISelFallback(), isGlobalISelAbortEnabled()));
+  }
 
-    // Provide a fallback path when we do not want to abort on
-    // not-yet-supported input.
-    if (!isGlobalISelAbortEnabled() && addInstSelector())
+  // Run the SDAG InstSelector, providing a fallback path when we do not want to
+  // abort on not-yet-supported input.
+  if (Selector != SelectorType::GlobalISel || !isGlobalISelAbortEnabled())
+    if (addInstSelector())
       return true;
-
-  } else if (addInstSelector())
-    return true;
 
   // Expand pseudo-instructions emitted by ISel. Don't run the verifier before
   // FinalizeISel.
@@ -1205,6 +1210,7 @@ void TargetPassConfig::addMachinePasses() {
   // addPreEmitPass.  Maybe only pass "false" here for those targets?
   addPass(&FuncletLayoutID);
 
+  addPass(&RemoveLoadsIntoFakeUsesID);
   addPass(&StackMapLivenessID);
   addPass(&LiveDebugValuesID);
   addPass(&MachineSanitizerBinaryMetadataID);
@@ -1227,13 +1233,13 @@ void TargetPassConfig::addMachinePasses() {
     addPass(createMIRAddFSDiscriminatorsPass(
         sampleprof::FSDiscriminatorPass::PassLast));
 
-  bool NeedsBBSections =
-      TM->getBBSectionsType() != llvm::BasicBlockSection::None;
-  // Machine function splitter uses the basic block sections feature. Both
-  // cannot be enabled at the same time. We do not apply machine function
-  // splitter if -basic-block-sections is requested.
-  if (!NeedsBBSections && (TM->Options.EnableMachineFunctionSplitter ||
-                           EnableMachineFunctionSplitter)) {
+  // Machine function splitter uses the basic block sections feature.
+  // When used along with `-basic-block-sections=`, the basic-block-sections
+  // feature takes precedence. This means functions eligible for
+  // basic-block-sections optimizations (`=all`, or `=list=` with function
+  // included in the list profile) will get that optimization instead.
+  if (TM->Options.EnableMachineFunctionSplitter ||
+      EnableMachineFunctionSplitter) {
     const std::string ProfileFile = getFSProfileFile(TM);
     if (!ProfileFile.empty()) {
       if (EnableFSDiscriminator) {
@@ -1249,10 +1255,13 @@ void TargetPassConfig::addMachinePasses() {
       }
     }
     addPass(createMachineFunctionSplitterPass());
+    if (SplitStaticData)
+      addPass(createStaticDataSplitterPass());
   }
   // We run the BasicBlockSections pass if either we need BB sections or BB
   // address map (or both).
-  if (NeedsBBSections || TM->Options.BBAddrMap) {
+  if (TM->getBBSectionsType() != llvm::BasicBlockSection::None ||
+      TM->Options.BBAddrMap) {
     if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
       addPass(llvm::createBasicBlockSectionsProfileReaderWrapperPass(
           TM->getBBSectionsFuncListBuf()));
@@ -1277,15 +1286,15 @@ void TargetPassConfig::addMachinePasses() {
 /// Add passes that optimize machine instructions in SSA form.
 void TargetPassConfig::addMachineSSAOptimization() {
   // Pre-ra tail duplication.
-  addPass(&EarlyTailDuplicateID);
+  addPass(&EarlyTailDuplicateLegacyID);
 
   // Optimize PHIs before DCE: removing dead PHI cycles may make more
   // instructions dead.
-  addPass(&OptimizePHIsID);
+  addPass(&OptimizePHIsLegacyID);
 
   // This pass merges large allocas. StackSlotColoring is a different pass
   // which merges spill slots.
-  addPass(&StackColoringID);
+  addPass(&StackColoringLegacyID);
 
   // If the target requests it, assign local variables to stack slots relative
   // to one another and simplify frame index references where possible.
@@ -1303,11 +1312,11 @@ void TargetPassConfig::addMachineSSAOptimization() {
   addILPOpts();
 
   addPass(&EarlyMachineLICMID);
-  addPass(&MachineCSEID);
+  addPass(&MachineCSELegacyID);
 
   addPass(&MachineSinkingID);
 
-  addPass(&PeepholeOptimizerID);
+  addPass(&PeepholeOptimizerLegacyID);
   // Clean-up the dead code that may have been generated by peephole
   // rewriting.
   addPass(&DeadMachineInstructionElimID);
@@ -1505,7 +1514,7 @@ void TargetPassConfig::addMachineLateOptimization() {
   // performance for targets that require Structured Control Flow.
   // In addition it can also make CFG irreducible. Thus we disable it.
   if (!TM->requiresStructuredCFG())
-    addPass(&TailDuplicateID);
+    addPass(&TailDuplicateLegacyID);
 
   // Copy propagation.
   addPass(&MachineCopyPropagationID);

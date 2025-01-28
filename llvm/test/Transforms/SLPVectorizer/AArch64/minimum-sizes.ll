@@ -8,10 +8,10 @@ target triple = "aarch64--linux-gnu"
 ; should not compute a smaller size for %k.13 since it is in a use-def cycle
 ; and cannot be demoted.
 ;
-define fastcc void @PR26364() {
+define fastcc void @PR26364(i1 %arg) {
 ; CHECK-LABEL: @PR26364(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[FOR_END11:%.*]], label [[FOR_COND4:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_END11:%.*]], label [[FOR_COND4:%.*]]
 ; CHECK:       for.cond4:
 ; CHECK-NEXT:    [[K_13:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ [[K_3:%.*]], [[FOR_COND4]] ]
 ; CHECK-NEXT:    [[E_02:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ 0, [[FOR_COND4]] ]
@@ -22,7 +22,7 @@ define fastcc void @PR26364() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  br i1 undef, label %for.end11, label %for.cond4
+  br i1 %arg, label %for.end11, label %for.cond4
 
 for.cond4:
   %k.13 = phi i32 [ undef, %entry ], [ %k.3, %for.cond4 ]
@@ -39,10 +39,10 @@ for.end11:
 ; every root in the vectorizable tree when computing minimum sizes since one
 ; root may require fewer bits than another.
 ;
-define void @PR26629(ptr %c) {
+define void @PR26629(ptr %c, i1 %arg) {
 ; CHECK-LABEL: @PR26629(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[FOR_PH:%.*]], label [[FOR_END:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[FOR_PH:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C:%.*]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -59,7 +59,7 @@ define void @PR26629(ptr %c) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  br i1 undef, label %for.ph, label %for.end
+  br i1 %arg, label %for.ph, label %for.end
 
 for.ph:
   %0 = load i32, ptr %c, align 4

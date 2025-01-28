@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_SERIALIZATION_OBJECTFILEPCHCONTAINERREADER_H
 #define LLVM_CLANG_SERIALIZATION_OBJECTFILEPCHCONTAINERREADER_H
 
-#include "clang/Frontend/PCHContainerOperations.h"
+#include "clang/Serialization/PCHContainerOperations.h"
 
 namespace clang {
 /// A PCHContainerReader implementation that uses LLVM to

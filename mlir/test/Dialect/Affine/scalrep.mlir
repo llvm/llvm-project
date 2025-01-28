@@ -5,6 +5,7 @@
 // CHECK-DAG: [[$MAP2:#map[0-9]*]] = affine_map<(d0, d1) -> (d1)>
 // CHECK-DAG: [[$MAP3:#map[0-9]*]] = affine_map<(d0, d1) -> (d0 - 1)>
 // CHECK-DAG: [[$MAP4:#map[0-9]*]] = affine_map<(d0) -> (d0 + 1)>
+// CHECK-DAG: [[$IDENT:#map[0-9]*]] = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL: func @simple_store_load() {
 func.func @simple_store_load() {
@@ -929,5 +930,25 @@ func.func @cross_block() {
 ^bb1(%35: memref<1x13xf32>):
   // CHECK: affine.load
   %69 = affine.load %alloc_99[%c10] : memref<13xi1>
+  return
+}
+
+#map1 = affine_map<(d0) -> (d0)>
+
+// CHECK-LABEL: func @consecutive_store
+func.func @consecutive_store() {
+  // CHECK: %[[CST:.*]] = arith.constant
+  %tmp = arith.constant 1.1 : f16
+  // CHECK: %[[ALLOC:.*]] = memref.alloc
+  %alloc_66 = memref.alloc() : memref<f16, 1>
+  affine.for %arg2 = 4 to 6 {
+    affine.for %arg3 = #map1(%arg2) to #map1(%arg2) step 4 {
+      // CHECK: affine.store %[[CST]], %[[ALLOC]][]
+      affine.store %tmp, %alloc_66[] : memref<f16, 1>
+      // CHECK-NOT: affine.store %[[CST]], %[[ALLOC]][]
+      affine.store %tmp, %alloc_66[] : memref<f16, 1>
+      %270 = affine.load %alloc_66[] : memref<f16, 1>
+    }
+  }
   return
 }

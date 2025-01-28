@@ -394,7 +394,7 @@ bool ClassDescriptorV2::relative_list_entry_t::Read(Process *process,
   lldb::offset_t cursor = 0;
   uint64_t raw_entry = extractor.GetU64_unchecked(&cursor);
   m_image_index = raw_entry & 0xFFFF;
-  m_list_offset = (int64_t)(raw_entry >> 16);
+  m_list_offset = llvm::SignExtend64<48>(raw_entry >> 16);
   return true;
 }
 

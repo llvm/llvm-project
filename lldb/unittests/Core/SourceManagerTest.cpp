@@ -8,6 +8,7 @@
 
 #include "lldb/Core/SourceManager.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Utility/SupportFile.h"
 #include "gtest/gtest.h"
 
 #include "TestingSupport/MockTildeExpressionResolver.h"
@@ -29,8 +30,8 @@ TEST_F(SourceFileCache, FindSourceFileFound) {
 
   // Insert: foo
   FileSpec foo_file_spec("foo");
-  auto foo_file_sp =
-      std::make_shared<SourceManager::File>(foo_file_spec, lldb::DebuggerSP());
+  auto foo_file_sp = std::make_shared<SourceManager::File>(
+      std::make_shared<SupportFile>(foo_file_spec), lldb::DebuggerSP());
   cache.AddSourceFile(foo_file_spec, foo_file_sp);
 
   // Query: foo, expect found.
@@ -43,8 +44,8 @@ TEST_F(SourceFileCache, FindSourceFileNotFound) {
 
   // Insert: foo
   FileSpec foo_file_spec("foo");
-  auto foo_file_sp =
-      std::make_shared<SourceManager::File>(foo_file_spec, lldb::DebuggerSP());
+  auto foo_file_sp = std::make_shared<SourceManager::File>(
+      std::make_shared<SupportFile>(foo_file_spec), lldb::DebuggerSP());
   cache.AddSourceFile(foo_file_spec, foo_file_sp);
 
   // Query: bar, expect not found.
@@ -63,7 +64,8 @@ TEST_F(SourceFileCache, FindSourceFileByUnresolvedPath) {
 
   // Create the file with the resolved file spec.
   auto foo_file_sp = std::make_shared<SourceManager::File>(
-      resolved_foo_file_spec, lldb::DebuggerSP());
+      std::make_shared<SupportFile>(resolved_foo_file_spec),
+      lldb::DebuggerSP());
 
   // Cache the result with the unresolved file spec.
   cache.AddSourceFile(foo_file_spec, foo_file_sp);

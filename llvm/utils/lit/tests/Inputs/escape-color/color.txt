@@ -1,0 +1,6 @@
+# RUN: cat %s
+[31mred
+still red(B[m
+plain
+[32mgreen
+still green (never terminated)

@@ -4,7 +4,7 @@
 define void @PR55648() #0 {
 ; CHECK-LABEL: PR55648:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb38
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jmp .LBB0_1

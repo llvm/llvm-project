@@ -55,7 +55,7 @@ define i16 @n2(i8 %x) {
 
 define <2 x i16> @t3_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @t3_vec(
-; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 4, i8 4>
+; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i8> [[X:%.*]], splat (i8 4)
 ; CHECK-NEXT:    call void @usevec(<2 x i8> [[A]])
 ; CHECK-NEXT:    [[C:%.*]] = sext <2 x i8> [[A]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[C]]

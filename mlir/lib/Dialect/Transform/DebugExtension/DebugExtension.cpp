@@ -20,6 +20,8 @@ namespace {
 class DebugExtension
     : public transform::TransformDialectExtension<DebugExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(DebugExtension)
+
   void init() {
     registerTransformOps<
 #define GET_OP_LIST

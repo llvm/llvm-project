@@ -1,4 +1,4 @@
-; RUN: llc -march=mips64 -mcpu=mips64r2 -mattr=+soft-float -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=mips64 -mcpu=mips64r2 -mattr=+soft-float -O2 < %s | FileCheck %s
 
 define void @foosf() #0 {
 entry:

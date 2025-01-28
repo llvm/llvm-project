@@ -1262,7 +1262,7 @@ public:
 //===----------------------------------------------------------------------===//
 
 void mlir::arith::populateArithToSPIRVPatterns(
-    SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
+    const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
   // clang-format off
   patterns.add<
     ConstantCompositeOpPattern,

@@ -227,11 +227,9 @@ void SIFormMemoryClauses::collectRegUses(const MachineInstr &MI,
                            : LaneBitmask::getAll();
     RegUse &Map = MO.isDef() ? Defs : Uses;
 
-    auto Loc = Map.find(Reg);
     unsigned State = getMopState(MO);
-    if (Loc == Map.end()) {
-      Map[Reg] = std::pair(State, Mask);
-    } else {
+    auto [Loc, Inserted] = Map.try_emplace(Reg, State, Mask);
+    if (!Inserted) {
       Loc->second.first |= State;
       Loc->second.second |= Mask;
     }
@@ -368,7 +366,7 @@ bool SIFormMemoryClauses::runOnMachineFunction(MachineFunction &MF) {
 
           SmallVector<unsigned> KilledIndexes;
           bool Success = TRI->getCoveringSubRegIndexes(
-              *MRI, MRI->getRegClass(Reg), KilledMask, KilledIndexes);
+              MRI->getRegClass(Reg), KilledMask, KilledIndexes);
           (void)Success;
           assert(Success && "Failed to find subregister mask to cover lanes");
           for (unsigned SubReg : KilledIndexes) {

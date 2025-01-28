@@ -19,15 +19,6 @@ class DXILIntrinsicExpansion : public PassInfoMixin<DXILIntrinsicExpansion> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
-
-class DXILIntrinsicExpansionLegacy : public ModulePass {
-
-public:
-  bool runOnModule(Module &M) override;
-  DXILIntrinsicExpansionLegacy() : ModulePass(ID) {}
-
-  static char ID; // Pass identification.
-};
 } // namespace llvm
 
 #endif // LLVM_TARGET_DIRECTX_DXILINTRINSICEXPANSION_H

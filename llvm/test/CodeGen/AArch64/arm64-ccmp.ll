@@ -457,20 +457,12 @@ sw.bb.i.i:
 }
 
 define i64 @select_and(i32 %w0, i32 %w1, i64 %x2, i64 %x3) {
-; SDISEL-LABEL: select_and:
-; SDISEL:       ; %bb.0:
-; SDISEL-NEXT:    cmp w1, #5
-; SDISEL-NEXT:    ccmp w0, w1, #0, ne
-; SDISEL-NEXT:    csel x0, x2, x3, lt
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: select_and:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    mov w8, #5 ; =0x5
-; GISEL-NEXT:    cmp w8, w1
-; GISEL-NEXT:    ccmp w0, w1, #0, ne
-; GISEL-NEXT:    csel x0, x2, x3, lt
-; GISEL-NEXT:    ret
+; CHECK-LABEL: select_and:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    cmp w1, #5
+; CHECK-NEXT:    ccmp w0, w1, #0, ne
+; CHECK-NEXT:    csel x0, x2, x3, lt
+; CHECK-NEXT:    ret
   %1 = icmp slt i32 %w0, %w1
   %2 = icmp ne i32 5, %w1
   %3 = and i1 %1, %2
@@ -479,20 +471,12 @@ define i64 @select_and(i32 %w0, i32 %w1, i64 %x2, i64 %x3) {
 }
 
 define i64 @select_or(i32 %w0, i32 %w1, i64 %x2, i64 %x3) {
-; SDISEL-LABEL: select_or:
-; SDISEL:       ; %bb.0:
-; SDISEL-NEXT:    cmp w1, #5
-; SDISEL-NEXT:    ccmp w0, w1, #8, eq
-; SDISEL-NEXT:    csel x0, x2, x3, lt
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: select_or:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    mov w8, #5 ; =0x5
-; GISEL-NEXT:    cmp w8, w1
-; GISEL-NEXT:    ccmp w0, w1, #8, eq
-; GISEL-NEXT:    csel x0, x2, x3, lt
-; GISEL-NEXT:    ret
+; CHECK-LABEL: select_or:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    cmp w1, #5
+; CHECK-NEXT:    ccmp w0, w1, #8, eq
+; CHECK-NEXT:    csel x0, x2, x3, lt
+; CHECK-NEXT:    ret
   %1 = icmp slt i32 %w0, %w1
   %2 = icmp ne i32 5, %w1
   %3 = or i1 %1, %2
@@ -501,20 +485,12 @@ define i64 @select_or(i32 %w0, i32 %w1, i64 %x2, i64 %x3) {
 }
 
 define float @select_or_float(i32 %w0, i32 %w1, float %x2, float %x3) {
-; SDISEL-LABEL: select_or_float:
-; SDISEL:       ; %bb.0:
-; SDISEL-NEXT:    cmp w1, #5
-; SDISEL-NEXT:    ccmp w0, w1, #8, eq
-; SDISEL-NEXT:    fcsel s0, s0, s1, lt
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: select_or_float:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    mov w8, #5 ; =0x5
-; GISEL-NEXT:    cmp w8, w1
-; GISEL-NEXT:    ccmp w0, w1, #8, eq
-; GISEL-NEXT:    fcsel s0, s0, s1, lt
-; GISEL-NEXT:    ret
+; CHECK-LABEL: select_or_float:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    cmp w1, #5
+; CHECK-NEXT:    ccmp w0, w1, #8, eq
+; CHECK-NEXT:    fcsel s0, s0, s1, lt
+; CHECK-NEXT:    ret
   %1 = icmp slt i32 %w0, %w1
   %2 = icmp ne i32 5, %w1
   %3 = or i1 %1, %2

@@ -307,15 +307,30 @@ struct DivModValue {
 DivModValue getDivMod(OpBuilder &b, Location loc, Value lhs, Value rhs);
 
 /// Generate the IR to delinearize `linearIndex` given the `basis` and return
-/// the multi-index.
+/// the multi-index. `hasOuterBound` indicates whether `basis` has an entry
+/// given the size of the first multi-index result - if it is true, the function
+/// will return `basis.size()` values, otherwise, it will return `basis.size() +
+/// 1`.
 FailureOr<SmallVector<Value>> delinearizeIndex(OpBuilder &b, Location loc,
                                                Value linearIndex,
-                                               ArrayRef<Value> basis);
+                                               ArrayRef<Value> basis,
+                                               bool hasOuterBound = true);
+
+FailureOr<SmallVector<Value>> delinearizeIndex(OpBuilder &b, Location loc,
+                                               Value linearIndex,
+                                               ArrayRef<OpFoldResult> basis,
+                                               bool hasOuterBound = true);
+
 // Generate IR that extracts the linear index from a multi-index according to
-// a basis/shape.
+// a basis/shape. The basis may contain either `multiIndex.size()` or
+// `multiIndex.size() - 1` elements.
 OpFoldResult linearizeIndex(ArrayRef<OpFoldResult> multiIndex,
                             ArrayRef<OpFoldResult> basis,
                             ImplicitLocOpBuilder &builder);
+
+OpFoldResult linearizeIndex(OpBuilder &builder, Location loc,
+                            ArrayRef<OpFoldResult> multiIndex,
+                            ArrayRef<OpFoldResult> basis);
 
 /// Ensure that all operations that could be executed after `start`
 /// (noninclusive) and prior to `memOp` (e.g. on a control flow/op path

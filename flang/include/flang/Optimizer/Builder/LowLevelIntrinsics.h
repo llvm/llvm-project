@@ -42,12 +42,6 @@ mlir::func::FuncOp getLlvmGetRounding(FirOpBuilder &builder);
 /// Get the `llvm.set.rounding` intrinsic.
 mlir::func::FuncOp getLlvmSetRounding(FirOpBuilder &builder);
 
-/// Get the `llvm.stacksave` intrinsic.
-mlir::func::FuncOp getLlvmStackSave(FirOpBuilder &builder);
-
-/// Get the `llvm.stackrestore` intrinsic.
-mlir::func::FuncOp getLlvmStackRestore(FirOpBuilder &builder);
-
 /// Get the `llvm.init.trampoline` intrinsic.
 mlir::func::FuncOp getLlvmInitTrampoline(FirOpBuilder &builder);
 

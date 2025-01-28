@@ -15,6 +15,8 @@
 #include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -99,6 +101,11 @@ llvm::LogicalResult cuf::AllocateOp::verify() {
 llvm::LogicalResult cuf::DataTransferOp::verify() {
   mlir::Type srcTy = getSrc().getType();
   mlir::Type dstTy = getDst().getType();
+  if (getShape()) {
+    if (!fir::isa_ref_type(srcTy) && !fir::isa_ref_type(dstTy))
+      return emitOpError()
+             << "shape can only be specified on data transfer with references";
+  }
   if ((fir::isa_ref_type(srcTy) && fir::isa_ref_type(dstTy)) ||
       (fir::isa_box_type(srcTy) && fir::isa_box_type(dstTy)) ||
       (fir::isa_ref_type(srcTy) && fir::isa_box_type(dstTy)) ||
@@ -107,9 +114,11 @@ llvm::LogicalResult cuf::DataTransferOp::verify() {
   if (fir::isa_trivial(srcTy) &&
       matchPattern(getSrc().getDefiningOp(), mlir::m_Constant()))
     return mlir::success();
+
   return emitOpError()
          << "expect src and dst to be references or descriptors or src to "
-            "be a constant";
+            "be a constant: "
+         << srcTy << " - " << dstTy;
 }
 
 //===----------------------------------------------------------------------===//
@@ -244,6 +253,50 @@ llvm::LogicalResult cuf::KernelOp::verify() {
     }
   }
   return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// RegisterKernelOp
+//===----------------------------------------------------------------------===//
+
+mlir::StringAttr cuf::RegisterKernelOp::getKernelModuleName() {
+  return getName().getRootReference();
+}
+
+mlir::StringAttr cuf::RegisterKernelOp::getKernelName() {
+  return getName().getLeafReference();
+}
+
+mlir::LogicalResult cuf::RegisterKernelOp::verify() {
+  if (getKernelName() == getKernelModuleName())
+    return emitOpError("expect a module and a kernel name");
+
+  auto mod = getOperation()->getParentOfType<mlir::ModuleOp>();
+  if (!mod)
+    return emitOpError("expect to be in a module");
+
+  mlir::SymbolTable symTab(mod);
+  auto gpuMod = symTab.lookup<mlir::gpu::GPUModuleOp>(getKernelModuleName());
+  if (!gpuMod) {
+    // If already a gpu.binary then stop the check here.
+    if (symTab.lookup<mlir::gpu::BinaryOp>(getKernelModuleName()))
+      return mlir::success();
+    return emitOpError("gpu module not found");
+  }
+
+  mlir::SymbolTable gpuSymTab(gpuMod);
+  if (auto func = gpuSymTab.lookup<mlir::gpu::GPUFuncOp>(getKernelName())) {
+    if (!func.isKernel())
+      return emitOpError("only kernel gpu.func can be registered");
+    return mlir::success();
+  } else if (auto func =
+                 gpuSymTab.lookup<mlir::LLVM::LLVMFuncOp>(getKernelName())) {
+    if (!func->getAttrOfType<mlir::UnitAttr>(
+            mlir::gpu::GPUDialect::getKernelFuncAttrName()))
+      return emitOpError("only gpu.kernel llvm.func can be registered");
+    return mlir::success();
+  }
+  return emitOpError("device function not found");
 }
 
 // Tablegen operators

@@ -14,7 +14,7 @@ void init(void * __attribute__((pass_dynamic_object_size(0))));
 // CHECK-LABEL: define dso_local void @test1(
 // CHECK-SAME: ptr noundef [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+// CHECK-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
 // CHECK-NEXT:    tail call void @init(ptr noundef nonnull [[ARRAY]], i64 noundef -1) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    ret void
 //

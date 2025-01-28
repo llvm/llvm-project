@@ -26,8 +26,8 @@ namespace mesh {
 // on the provided shardings for the op's operands and results.
 // Assumes that the indexingMaps are projected permutations.
 ShardingArray getMeshAxisAssignmentForLoopIterators(
-    ArrayRef<MeshShardingAttr> operandShardings,
-    ArrayRef<MeshShardingAttr> resultShardings,
+    ArrayRef<MeshSharding> operandShardings,
+    ArrayRef<MeshSharding> resultShardings,
     ArrayRef<utils::IteratorType> loopIteratorTypes,
     ArrayRef<AffineMap> indexingMaps);
 
@@ -42,11 +42,13 @@ SmallVector<MeshAxis> getReductionMeshAxes(
 
 // Inserts a clone of the operation that has all ranked tensor
 // arguments/results sharded.
-void spmdizeTriviallyShardableOperation(
-    Operation &op, ArrayRef<Value> spmdizedOperands,
-    ArrayRef<MeshShardingAttr> operandShardings,
-    ArrayRef<MeshShardingAttr> resultShardings, IRMapping &spmdizationMap,
-    SymbolTableCollection &symbolTable, OpBuilder &builder);
+void spmdizeTriviallyShardableOperation(Operation &op,
+                                        ArrayRef<Value> spmdizedOperands,
+                                        ArrayRef<MeshSharding> operandShardings,
+                                        ArrayRef<MeshSharding> resultShardings,
+                                        IRMapping &spmdizationMap,
+                                        SymbolTableCollection &symbolTable,
+                                        OpBuilder &builder);
 
 // All ranked tensor argument and result dimensions have
 // independent parallel loop iterators.
@@ -72,8 +74,8 @@ struct IndependentParallelIteratorDomainShardingInterface
   }
 
   LogicalResult spmdize(Operation *op, ArrayRef<Value> spmdizedOperands,
-                        ArrayRef<MeshShardingAttr> operandShardings,
-                        ArrayRef<MeshShardingAttr> resultShardings,
+                        ArrayRef<MeshSharding> operandShardings,
+                        ArrayRef<MeshSharding> resultShardings,
                         IRMapping &spmdizationMap,
                         SymbolTableCollection &symbolTable,
                         OpBuilder &builder) const {
@@ -128,8 +130,8 @@ struct ElementwiseShardingInterface
   }
 
   LogicalResult spmdize(Operation *op, ArrayRef<Value> spmdizedOperands,
-                        ArrayRef<MeshShardingAttr> operandShardings,
-                        ArrayRef<MeshShardingAttr> resultShardings,
+                        ArrayRef<MeshSharding> operandShardings,
+                        ArrayRef<MeshSharding> resultShardings,
                         IRMapping &spmdizationMap,
                         SymbolTableCollection &symbolTable,
                         OpBuilder &builder) const {

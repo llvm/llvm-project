@@ -219,12 +219,13 @@ bool GIMatchTableExecutor::executeMatchTable(
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       unsigned Opcode = State.MIs[InsnID]->getOpcode();
 
-      DEBUG_WITH_TYPE(TgtExecutor::getName(),
-                      dbgs() << CurrentIdx << ": GIM_CheckOpcode(MIs[" << InsnID
-                             << "], ExpectedOpcode=" << Expected0;
-                      if (MatcherOpcode == GIM_CheckOpcodeIsEither) dbgs()
-                      << " || " << Expected1;
-                      dbgs() << ") // Got=" << Opcode << "\n";);
+      DEBUG_WITH_TYPE(TgtExecutor::getName(), {
+        dbgs() << CurrentIdx << ": GIM_CheckOpcode(MIs[" << InsnID
+               << "], ExpectedOpcode=" << Expected0;
+        if (MatcherOpcode == GIM_CheckOpcodeIsEither)
+          dbgs() << " || " << Expected1;
+        dbgs() << ") // Got=" << Opcode << "\n";
+      });
 
       if (Opcode != Expected0 && Opcode != Expected1) {
         if (handleReject() == RejectAndGiveUp)
@@ -320,7 +321,7 @@ bool GIMatchTableExecutor::executeMatchTable(
                              << "], Expected=" << Expected << ")\n");
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       const unsigned NumOps = State.MIs[InsnID]->getNumOperands();
-      if (IsLE ? (NumOps <= Expected) : (NumOps >= Expected)) {
+      if (IsLE ? (NumOps > Expected) : (NumOps < Expected)) {
         if (handleReject() == RejectAndGiveUp)
           return false;
       }

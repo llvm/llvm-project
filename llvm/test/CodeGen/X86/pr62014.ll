@@ -50,7 +50,7 @@ define <2 x i64> @select_cast_cond_multiuse_v2i64(<2 x i64> %x, <2 x i64> %y, i2
 ; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512F-NEXT:    kmovw %edi, %k1
-; AVX512F-NEXT:    vpternlogq $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm2 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1}
 ; AVX512F-NEXT:    vmovdqa %xmm2, (%rsi)
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
@@ -115,7 +115,7 @@ define <4 x i32> @select_cast_cond_multiuse_v4i32(<4 x i32> %x, <4 x i32> %y, i4
 ; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512F-NEXT:    kmovw %edi, %k1
-; AVX512F-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpblendmd %zmm0, %zmm1, %zmm0 {%k1}
 ; AVX512F-NEXT:    vmovdqa %xmm2, (%rsi)
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
@@ -180,7 +180,7 @@ define <8 x i16> @select_cast_cond_multiuse_v8i16(<8 x i16> %x, <8 x i16> %y, i8
 ; AVX512F-LABEL: select_cast_cond_multiuse_v8i16:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    kmovw %edi, %k1
-; AVX512F-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpmovdw %zmm2, %ymm2
 ; AVX512F-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX512F-NEXT:    vmovdqa %xmm2, (%rsi)
@@ -193,7 +193,7 @@ define <8 x i16> @select_cast_cond_multiuse_v8i16(<8 x i16> %x, <8 x i16> %y, i8
 ; AVX512VL-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; AVX512VL-NEXT:    vmovdqa32 %ymm2, %ymm2 {%k1} {z}
 ; AVX512VL-NEXT:    vpmovdw %ymm2, %xmm2
-; AVX512VL-NEXT:    vpternlogq $226, %xmm1, %xmm2, %xmm0
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm1 ^ (xmm2 & (xmm0 ^ xmm1))
 ; AVX512VL-NEXT:    vmovdqa %xmm2, (%rsi)
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -247,7 +247,7 @@ define <16 x i8> @select_cast_cond_multiuse_v16i8(<16 x i8> %x, <16 x i8> %y, i1
 ; AVX512F-LABEL: select_cast_cond_multiuse_v16i8:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    kmovw %edi, %k1
-; AVX512F-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpmovdb %zmm2, %xmm2
 ; AVX512F-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX512F-NEXT:    vmovdqa %xmm2, (%rsi)
@@ -257,9 +257,9 @@ define <16 x i8> @select_cast_cond_multiuse_v16i8(<16 x i8> %x, <16 x i8> %y, i1
 ; AVX512VL-LABEL: select_cast_cond_multiuse_v16i8:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    kmovw %edi, %k1
-; AVX512VL-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} {z} = -1
 ; AVX512VL-NEXT:    vpmovdb %zmm2, %xmm2
-; AVX512VL-NEXT:    vpternlogq $226, %xmm1, %xmm2, %xmm0
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm1 ^ (xmm2 & (xmm0 ^ xmm1))
 ; AVX512VL-NEXT:    vmovdqa %xmm2, (%rsi)
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -340,7 +340,7 @@ define <8 x float> @select_cast_cond_multiuse_v8i16_v8f32(<8 x float> %x, <8 x f
 ; AVX512F-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; AVX512F-NEXT:    kmovw %edi, %k1
-; AVX512F-NEXT:    vpternlogd $255, %zmm2, %zmm2, %zmm2 {%k1} {z}
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpmovdw %zmm2, %ymm2
 ; AVX512F-NEXT:    vblendmps %zmm0, %zmm1, %zmm0 {%k1}
 ; AVX512F-NEXT:    vmovdqa %xmm2, (%rsi)

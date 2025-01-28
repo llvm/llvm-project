@@ -1,7 +1,7 @@
 # RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+neon  -mcpu=cortex-a55 %s -o - 2>&1 \
 # RUN:   -misched-dump-reserved-cycles=true \
 # RUN:   -run-pass=machine-scheduler -debug-only=machine-scheduler \
-# RUN:   -misched-bottomup=true -sched-print-cycles=true \
+# RUN:   -misched-prera-direction=bottomup -sched-print-cycles=true \
 # RUN:   -misched-detail-resource-booking=true \
 # RUN:   -misched-dump-schedule-trace=true -misched-dump-schedule-trace-col-header-width=21 \
 # RUN: | FileCheck  %s
@@ -1583,6 +1583,18 @@ body:             |
 # CHECK-NEXT: B0 [0B,48r:0)[192r,224r:1) 0@0B-phi 1@192r
 # CHECK-NEXT: B1 [0B,88r:0)[208r,224r:1) 0@0B-phi 1@208r
 # CHECK-NEXT: B2 [0B,96r:0) 0@0B-phi
+# CHECK-NEXT: B0_HI [0B,48r:0)[192r,224r:1) 0@0B-phi 1@192r
+# CHECK-NEXT: H0_HI [0B,48r:0)[192r,224r:1) 0@0B-phi 1@192r
+# CHECK-NEXT: S0_HI [0B,48r:0)[192r,224r:1) 0@0B-phi 1@192r
+# CHECK-NEXT: B1_HI [0B,88r:0)[208r,224r:1) 0@0B-phi 1@208r
+# CHECK-NEXT: H1_HI [0B,88r:0)[208r,224r:1) 0@0B-phi 1@208r
+# CHECK-NEXT: S1_HI [0B,88r:0)[208r,224r:1) 0@0B-phi 1@208r
+# CHECK-NEXT: B2_HI [0B,96r:0) 0@0B-phi
+# CHECK-NEXT: H2_HI [0B,96r:0) 0@0B-phi
+# CHECK-NEXT: S2_HI [0B,96r:0) 0@0B-phi
+# CHECK-NEXT: D0_HI [0B,48r:0)[192r,224r:1) 0@0B-phi 1@192r
+# CHECK-NEXT: D1_HI [0B,88r:0)[208r,224r:1) 0@0B-phi 1@208r
+# CHECK-NEXT: D2_HI [0B,96r:0) 0@0B-phi
 # CHECK-NEXT: %0 [48r,168r:0) 0@48r  weight:0.000000e+00
 # CHECK-NEXT: %1 [88r,120r:0) 0@88r  weight:0.000000e+00
 # CHECK-NEXT: %2 [96r,128r:0) 0@96r  weight:0.000000e+00

@@ -14,27 +14,28 @@ define dso_local void @hoge() local_unnamed_addr {
 ; CHECK-LABEL: @hoge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[N:%.*]] = sdiv exact i64 undef, 40
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 undef, [[N]]
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[IDX_NEXT:%.*]], [[LATCH:%.*]] ], [ undef, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LATCH:%.*]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[IDX_NEXT:%.*]], [[LATCH]] ], [ undef, [[ENTRY]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i64 [[N]], [[IDX]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[END:%.*]], label [[INNER_PREHEADER:%.*]]
 ; CHECK:       inner.preheader:
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[INNER]] ], [ 0, [[INNER_PREHEADER]] ]
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[J_NEXT:%.*]], [[INNER]] ], [ [[N]], [[INNER_PREHEADER]] ]
-; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
-; CHECK-NEXT:    [[J_NEXT]] = add nsw i64 [[J]], 1
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i64 [[I]], 1
 ; CHECK-NEXT:    store i64 undef, ptr @ptr, align 8
-; CHECK-NEXT:    [[COND1:%.*]] = icmp slt i64 [[J]], [[IDX]]
-; CHECK-NEXT:    br i1 [[COND1]], label [[INNER]], label [[INNER_EXIT:%.*]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[I_NEXT]], [[INDVARS_IV]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[INNER]], label [[INNER_EXIT:%.*]]
 ; CHECK:       inner_exit:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[I_NEXT]], [[INNER]] ]
 ; CHECK-NEXT:    [[INDVAR_USE:%.*]] = add i64 [[INDVAR]], 1
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[IDX_NEXT]] = add nsw i64 [[IDX]], -1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], -1
 ; CHECK-NEXT:    br label [[HEADER]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void

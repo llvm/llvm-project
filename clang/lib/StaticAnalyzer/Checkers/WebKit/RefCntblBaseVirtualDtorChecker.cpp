@@ -10,7 +10,7 @@
 #include "DiagOutputUtils.h"
 #include "PtrTypesSemantics.h"
 #include "clang/AST/CXXInheritance.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -67,6 +67,39 @@ public:
     const Decl *D = CE->getCalleeDecl();
     if (D && D->hasBody())
       return VisitBody(D->getBody());
+    else {
+      auto name = safeGetName(D);
+      if (name == "ensureOnMainThread" || name == "ensureOnMainRunLoop") {
+        for (unsigned i = 0; i < CE->getNumArgs(); ++i) {
+          auto *Arg = CE->getArg(i);
+          if (VisitLambdaArgument(Arg))
+            return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  bool VisitLambdaArgument(const Expr *E) {
+    E = E->IgnoreParenCasts();
+    if (auto *TempE = dyn_cast<CXXBindTemporaryExpr>(E))
+      E = TempE->getSubExpr();
+    E = E->IgnoreParenCasts();
+    if (auto *Ref = dyn_cast<DeclRefExpr>(E)) {
+      if (auto *VD = dyn_cast_or_null<VarDecl>(Ref->getDecl()))
+        return VisitLambdaArgument(VD->getInit());
+      return false;
+    }
+    if (auto *Lambda = dyn_cast<LambdaExpr>(E)) {
+      if (VisitBody(Lambda->getBody()))
+        return true;
+    }
+    if (auto *ConstructE = dyn_cast<CXXConstructExpr>(E)) {
+      for (unsigned i = 0; i < ConstructE->getNumArgs(); ++i) {
+        if (VisitLambdaArgument(ConstructE->getArg(i)))
+          return true;
+      }
+    }
     return false;
   }
 
@@ -140,17 +173,16 @@ public:
     // The calls to checkAST* from AnalysisConsumer don't
     // visit template instantiations or lambda classes. We
     // want to visit those, so we make our own RecursiveASTVisitor.
-    struct LocalVisitor : public RecursiveASTVisitor<LocalVisitor> {
+    struct LocalVisitor : DynamicRecursiveASTVisitor {
       const RefCntblBaseVirtualDtorChecker *Checker;
       explicit LocalVisitor(const RefCntblBaseVirtualDtorChecker *Checker)
           : Checker(Checker) {
         assert(Checker);
+        ShouldVisitTemplateInstantiations = true;
+        ShouldVisitImplicitCode = false;
       }
 
-      bool shouldVisitTemplateInstantiations() const { return true; }
-      bool shouldVisitImplicitCode() const { return false; }
-
-      bool VisitCXXRecordDecl(const CXXRecordDecl *RD) {
+      bool VisitCXXRecordDecl(CXXRecordDecl *RD) override {
         if (!RD->hasDefinition())
           return true;
 

@@ -164,7 +164,7 @@ LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
 
   if (LIBC_UNLIKELY(x_u < FPBits::min_normal().uintval() ||
                     x_u > FPBits::max_normal().uintval())) {
-    if (xbits.is_zero()) {
+    if (x == 0.0f) {
       // Return -inf and raise FE_DIVBYZERO
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_DIVBYZERO);

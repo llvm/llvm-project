@@ -1,0 +1,14 @@
+header: malloc.h
+header_template: malloc.h.def
+macros: []
+types: []
+enums: []
+objects: []
+functions:
+  - name: mallopt
+    standards:
+      - GNUExtensions
+    return_type: int
+    arguments:
+      - type: int
+      - type: int

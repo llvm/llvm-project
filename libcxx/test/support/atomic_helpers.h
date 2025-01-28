@@ -30,15 +30,15 @@
 #  define TEST_ATOMIC_LONG_LOCK_FREE __GCC_ATOMIC_LONG_LOCK_FREE
 #  define TEST_ATOMIC_LLONG_LOCK_FREE __GCC_ATOMIC_LLONG_LOCK_FREE
 #  define TEST_ATOMIC_POINTER_LOCK_FREE __GCC_ATOMIC_POINTER_LOCK_FREE
-#elif TEST_COMPILER_MSVC
+#elif defined(TEST_COMPILER_MSVC)
 // This is lifted from STL/stl/inc/atomic on github for the purposes of
 // keeping the tests compiling for MSVC's STL. It's not a perfect solution
 // but at least the tests will keep running.
 //
 // Note MSVC's STL never produces a type that is sometimes lock free, but not always lock free.
 template <class T, size_t Size = sizeof(T)>
-constexpr bool msvc_is_lock_free_macro_value() {
-  return (Size <= 8 && (Size & Size - 1) == 0) ? 2 : 0;
+constexpr int msvc_is_lock_free_macro_value() {
+  return (Size <= 8 && (Size & (Size - 1)) == 0) ? 2 : 0;
 }
 #  define TEST_ATOMIC_CHAR_LOCK_FREE ::msvc_is_lock_free_macro_value<char>()
 #  define TEST_ATOMIC_SHORT_LOCK_FREE ::msvc_is_lock_free_macro_value<short>()

@@ -11,12 +11,11 @@
 // to work reliably, inlining of all function call must be performed.
 //
 //===----------------------------------------------------------------------===//
-
+#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
-#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -1820,8 +1819,8 @@ findIndexForHandle(MachineOperand &Op, MachineFunction &MF, unsigned &Idx) {
       return false;
     }
 
-    assert(TexHandleDef.getOperand(6).isSymbol() && "Load is not a symbol!");
-    StringRef Sym = TexHandleDef.getOperand(6).getSymbolName();
+    assert(TexHandleDef.getOperand(7).isSymbol() && "Load is not a symbol!");
+    StringRef Sym = TexHandleDef.getOperand(7).getSymbolName();
     std::string ParamBaseName = std::string(MF.getName());
     ParamBaseName += "_param_";
     assert(Sym.starts_with(ParamBaseName) && "Invalid symbol reference");
@@ -1831,7 +1830,7 @@ findIndexForHandle(MachineOperand &Op, MachineFunction &MF, unsigned &Idx) {
     NewSymStr << MF.getName() << "_param_" << Param;
 
     InstrsToRemove.insert(&TexHandleDef);
-    Idx = MFI->getImageHandleSymbolIndex(NewSymStr.str().c_str());
+    Idx = MFI->getImageHandleSymbolIndex(NewSymStr.str());
     return true;
   }
   case NVPTX::texsurf_handles: {
@@ -1840,7 +1839,7 @@ findIndexForHandle(MachineOperand &Op, MachineFunction &MF, unsigned &Idx) {
     const GlobalValue *GV = TexHandleDef.getOperand(1).getGlobal();
     assert(GV->hasName() && "Global sampler must be named!");
     InstrsToRemove.insert(&TexHandleDef);
-    Idx = MFI->getImageHandleSymbolIndex(GV->getName().data());
+    Idx = MFI->getImageHandleSymbolIndex(GV->getName());
     return true;
   }
   case NVPTX::nvvm_move_i64:

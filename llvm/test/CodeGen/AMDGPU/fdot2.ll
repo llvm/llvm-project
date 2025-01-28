@@ -5,6 +5,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX906
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -denormal-fp-math=preserve-sign -fp-contract=fast -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX906-CONTRACT
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -denormal-fp-math=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX906-DENORM-CONTRACT
+; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -denormal-fp-math-f32=preserve-sign -enable-unsafe-fp-math -mattr="+dot7-insts,-dot10-insts" -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX906-DOT10-DISABLED
 ; (fadd (fmul S1.x, S2.x), (fadd (fmul (S1.y, S2.y), z))) -> (fdot2 S1, S2, z)
 
 ; Tests to make sure fdot2 is not generated when vector elements of dot-product expressions
@@ -21,6 +22,7 @@
 
 ; GFX906-CONTRACT: v_mac_f16_e32
 ; GFX906-DENORM-CONTRACT: v_fma_f16
+; GFX906-DOT10-DISABLED: v_fma_f16
 define amdgpu_kernel void @dotproduct_f16(ptr addrspace(1) %src1,
                                           ptr addrspace(1) %src2,
                                           ptr addrspace(1) nocapture %dst) {
@@ -44,8 +46,11 @@ entry:
 }
 
 
-; We only want to generate fdot2 if vector element of dot product is converted from f16 to f32
-; and the vectors are of type <2 x half>
+; We only want to generate fdot2 if:
+; - vector element of dot product is converted from f16 to f32, and
+; - the vectors are of type <2 x half>, and
+; - "dot10-insts" is enabled
+
 ; GCN-LABEL: {{^}}dotproduct_f16_f32
 ; GFX900: v_mad_mix_f32
 ; GFX900: v_mad_mix_f32
@@ -59,6 +64,7 @@ entry:
 ; GFX906-CONTRACT: v_dot2_f32_f16
 
 ; GFX906-DENORM-CONTRACT: v_dot2_f32_f16
+; GFX906-DOT10-DISABLED: v_fma_mix_f32
 define amdgpu_kernel void @dotproduct_f16_f32(ptr addrspace(1) %src1,
                                               ptr addrspace(1) %src2,
                                               ptr addrspace(1) nocapture %dst) {
@@ -85,8 +91,11 @@ entry:
   ret void
 }
 
-; We only want to generate fdot2 if vector element of dot product is converted from f16 to f32
-; and the vectors are of type <2 x half>
+; We only want to generate fdot2 if:
+; - vector element of dot product is converted from f16 to f32, and
+; - the vectors are of type <2 x half>, and
+; - "dot10-insts" is enabled
+
 ; GCN-LABEL: {{^}}dotproduct_diffvecorder
 ; GFX900: v_mad_mix_f32
 ; GFX900: v_mad_mix_f32
@@ -99,6 +108,7 @@ entry:
 
 ; GFX906-CONTRACT: v_dot2_f32_f16
 ; GFX906-DENORM-CONTRACT: v_dot2_f32_f16
+; GFX906-DOT10-DISABLED: v_fma_mix_f32
 define amdgpu_kernel void @dotproduct_diffvecorder(ptr addrspace(1) %src1,
                                                    ptr addrspace(1) %src2,
                                                    ptr addrspace(1) nocapture %dst) {
@@ -136,6 +146,7 @@ entry:
 
 ; GFX906-CONTRACT: v_fma_mix_f32
 ; GFX906-DENORM-CONTRACT: v_fma_mix_f32
+; GFX906-DOT10-DISABLED: v_fma_mix_f32
 define amdgpu_kernel void @dotproduct_v4f16(ptr addrspace(1) %src1,
                                             ptr addrspace(1) %src2,
                                             ptr addrspace(1) nocapture %dst) {
@@ -173,6 +184,7 @@ entry:
 
 ; GFX906-CONTRACT: v_fma_mix_f32
 ; GFX906-DENORM-CONTRACT: v_fma_mix_f32
+; GFX906-DOT10-DISABLED: v_fma_mix_f32
 define amdgpu_kernel void @NotAdotproduct(ptr addrspace(1) %src1,
                                           ptr addrspace(1) %src2,
                                           ptr addrspace(1) nocapture %dst) {
@@ -210,6 +222,7 @@ entry:
 
 ; GFX906-CONTRACT: v_fma_mix_f32
 ; GFX906-DENORM-CONTRACT: v_fma_mix_f32
+; GFX906-DOT10-DISABLED: v_fma_mix_f32
 define amdgpu_kernel void @Diff_Idx_NotAdotproduct(ptr addrspace(1) %src1,
                                                    ptr addrspace(1) %src2,
                                                    ptr addrspace(1) nocapture %dst) {

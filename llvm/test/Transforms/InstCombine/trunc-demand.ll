@@ -85,8 +85,8 @@ define i6 @trunc_lshr_use2(i8 %x) {
 define <2 x i7> @trunc_lshr_vec_splat(<2 x i16> %x) {
 ; CHECK-LABEL: @trunc_lshr_vec_splat(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i16> [[X:%.*]] to <2 x i7>
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i7> [[TMP1]], <i7 5, i7 5>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i7> [[TMP2]], <i7 1, i7 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i7> [[TMP1]], splat (i7 5)
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i7> [[TMP2]], splat (i7 1)
 ; CHECK-NEXT:    ret <2 x i7> [[R]]
 ;
   %s = lshr <2 x i16> %x, <i16 5, i16 5>
@@ -100,7 +100,7 @@ define <2 x i7> @trunc_lshr_vec_splat(<2 x i16> %x) {
 define <2 x i7> @trunc_lshr_vec_splat_exact_mask(<2 x i16> %x) {
 ; CHECK-LABEL: @trunc_lshr_vec_splat_exact_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i16> [[X:%.*]] to <2 x i7>
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i7> [[TMP1]], <i7 6, i7 6>
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i7> [[TMP1]], splat (i7 6)
 ; CHECK-NEXT:    ret <2 x i7> [[TMP2]]
 ;
   %s = lshr <2 x i16> %x, <i16 6, i16 6>
@@ -113,9 +113,9 @@ define <2 x i7> @trunc_lshr_vec_splat_exact_mask(<2 x i16> %x) {
 
 define <2 x i7> @trunc_lshr_big_shift(<2 x i16> %x) {
 ; CHECK-LABEL: @trunc_lshr_big_shift(
-; CHECK-NEXT:    [[S:%.*]] = lshr <2 x i16> [[X:%.*]], <i16 7, i16 7>
+; CHECK-NEXT:    [[S:%.*]] = lshr <2 x i16> [[X:%.*]], splat (i16 7)
 ; CHECK-NEXT:    [[T:%.*]] = trunc <2 x i16> [[S]] to <2 x i7>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i7> [[T]], <i7 1, i7 1>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i7> [[T]], splat (i7 1)
 ; CHECK-NEXT:    ret <2 x i7> [[R]]
 ;
   %s = lshr <2 x i16> %x, <i16 7, i16 7>

@@ -649,26 +649,10 @@ func.func @negative_transpose_store_scalable_via_za__bad_source_shape(%vec: vect
 
 // -----
 
-// CHECK-LABEL: @swap_shape_cast_of_transpose(
-// CHECK-SAME:                                %[[VEC:.*]]: vector<1x1x4x[4]xf32>)
-func.func @swap_shape_cast_of_transpose(%vector: vector<1x1x4x[4]xf32>) -> vector<[4]x4xf32> {
-  // CHECK: %[[SHAPE_CAST:.*]] = vector.shape_cast %[[VEC]] : vector<1x1x4x[4]xf32> to vector<4x[4]xf32>
-  // CHECK: %[[TRANSPOSE:.*]] = vector.transpose %[[SHAPE_CAST]], [1, 0] : vector<4x[4]xf32> to vector<[4]x4xf32>
-  // CHECK: return %[[TRANSPOSE]]
-  %0 = vector.transpose %vector, [3, 0, 1, 2] : vector<1x1x4x[4]xf32> to vector<[4]x1x1x4xf32>
-  %1 = vector.shape_cast %0 : vector<[4]x1x1x4xf32> to vector<[4]x4xf32>
-  return %1 : vector<[4]x4xf32>
-}
-
-// -----
-
-// CHECK-LABEL: @swap_shape_cast_of_transpose_units_dims_before_and_after(
-// CHECK-SAME:                                %[[VEC:.*]]: vector<1x1x1x4x[4]x1xf32>)
-func.func @swap_shape_cast_of_transpose_units_dims_before_and_after(%vector: vector<1x1x1x4x[4]x1xf32>) -> vector<[4]x4xf32> {
-  // CHECK: %[[SHAPE_CAST:.*]] = vector.shape_cast %[[VEC]] : vector<1x1x1x4x[4]x1xf32> to vector<4x[4]xf32>
-  // CHECK: %[[TRANSPOSE:.*]] = vector.transpose %[[SHAPE_CAST]], [1, 0] : vector<4x[4]xf32> to vector<[4]x4xf32>
-  // CHECK: return %[[TRANSPOSE]]
-  %0 = vector.transpose %vector, [4, 1, 0, 2, 3, 5] : vector<1x1x1x4x[4]x1xf32> to vector<[4]x1x1x1x4x1xf32>
-  %1 = vector.shape_cast %0 : vector<[4]x1x1x1x4x1xf32> to vector<[4]x4xf32>
-  return %1 : vector<[4]x4xf32>
+// From: https://github.com/llvm/llvm-project/issues/118449.
+// Check -arm-sme-vector-legalization does not crash when it encounters a `vector.mask` that
+// does not contain a maskable op.
+func.func @vector_mask_without_maskable_op(%mask: vector<16x2xi1>, %vec: vector<16x16xf32>) -> vector<16x16xf32> {
+  %0 = vector.mask %mask { vector.yield %vec : vector<16x16xf32> } : vector<16x2xi1> -> vector<16x16xf32>
+  return %0 : vector<16x16xf32>
 }

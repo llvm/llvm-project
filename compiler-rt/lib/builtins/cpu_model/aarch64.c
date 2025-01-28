@@ -14,7 +14,7 @@
 
 #include "aarch64.h"
 
-#if !defined(__aarch64__)
+#if !defined(__aarch64__) && !defined(__arm64__) && !defined(_M_ARM64)
 #error This file is intended only for aarch64-based targets
 #endif
 
@@ -45,9 +45,11 @@ _Bool __aarch64_have_lse_atomics
 #elif defined(__ANDROID__)
 #include "aarch64/hwcap.inc"
 #include "aarch64/lse_atomics/android.inc"
-#elif __has_include(<sys/auxv.h>)
+#elif defined(__linux__) && __has_include(<sys/auxv.h>)
 #include "aarch64/hwcap.inc"
-#include "aarch64/lse_atomics/sysauxv.inc"
+#include "aarch64/lse_atomics/getauxval.inc"
+#elif defined(_WIN32)
+#include "aarch64/lse_atomics/windows.inc"
 #else
 // When unimplemented, we leave __aarch64_have_lse_atomics initialized to false.
 #endif
@@ -73,9 +75,13 @@ struct {
 #elif defined(__ANDROID__)
 #include "aarch64/fmv/mrs.inc"
 #include "aarch64/fmv/android.inc"
-#elif __has_include(<sys/auxv.h>)
+#elif defined(__linux__) && __has_include(<sys/auxv.h>)
 #include "aarch64/fmv/mrs.inc"
-#include "aarch64/fmv/sysauxv.inc"
+#include "aarch64/fmv/getauxval.inc"
+#elif defined(_WIN32)
+#include "aarch64/fmv/windows.inc"
+#elif defined(ENABLE_BAREMETAL_AARCH64_FMV)
+#include "aarch64/fmv/baremetal.inc"
 #else
 #include "aarch64/fmv/unimplemented.inc"
 #endif

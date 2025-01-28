@@ -551,13 +551,13 @@ For Types, these methods will have the form:
 
 - `static Type MyType::parse(AsmParser &parser)`
 
-- `Type MyType::print(AsmPrinter &p) const`
+- `void MyType::print(AsmPrinter &p) const`
 
 For Attributes, these methods will have the form:
 
 - `static Attribute MyAttr::parse(AsmParser &parser, Type attrType)`
 
-- `Attribute MyAttr::print(AsmPrinter &p) const`
+- `void MyAttr::print(AsmPrinter &p) const`
 
 #### Using `assemblyFormat`
 
@@ -890,7 +890,7 @@ The `custom` directive `custom<Foo>($foo)` will in the parser and printer
 respectively generate calls to:
 
 ```c++
-LogicalResult parseFoo(AsmParser &parser, int &foo);
+ParseResult parseFoo(AsmParser &parser, int &foo);
 void printFoo(AsmPrinter &printer, int foo);
 ```
 
@@ -907,7 +907,7 @@ let assemblyFormat = "custom<Fizz>($foobar)";
 It will generate calls expecting the following signature for `parseFizz`:
 
 ```c++
-LogicalResult parseFizz(AsmParser &parser, FailureOr<NotDefaultConstructible> &foobar);
+ParseResult parseFizz(AsmParser &parser, FailureOr<NotDefaultConstructible> &foobar);
 ```
 
 A previously bound variable can be passed as a parameter to a `custom` directive
@@ -916,7 +916,7 @@ the first directive. The second directive references it and expects the
 following printer and parser signatures:
 
 ```c++
-LogicalResult parseBar(AsmParser &parser, int &bar, int foo);
+ParseResult parseBar(AsmParser &parser, int &bar, int foo);
 void printBar(AsmPrinter &printer, int bar, int foo);
 ```
 
@@ -925,7 +925,7 @@ is that the parameter for the parser must use the storage type of the parameter.
 For example, `StringRefParameter` expects the parser and printer signatures as:
 
 ```c++
-LogicalResult parseStringParam(AsmParser &parser, std::string &value);
+ParseResult parseStringParam(AsmParser &parser, std::string &value);
 void printStringParam(AsmPrinter &printer, StringRef value);
 ```
 

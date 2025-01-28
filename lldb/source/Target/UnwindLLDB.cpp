@@ -474,7 +474,8 @@ UnwindLLDB::GetRegisterContextForFrameNum(uint32_t frame_num) {
 }
 
 bool UnwindLLDB::SearchForSavedLocationForRegister(
-    uint32_t lldb_regnum, lldb_private::UnwindLLDB::RegisterLocation &regloc,
+    uint32_t lldb_regnum,
+    lldb_private::UnwindLLDB::ConcreteRegisterLocation &regloc,
     uint32_t starting_frame_num, bool pc_reg) {
   int64_t frame_num = starting_frame_num;
   if (static_cast<size_t>(frame_num) >= m_frames.size())
@@ -497,8 +498,8 @@ bool UnwindLLDB::SearchForSavedLocationForRegister(
     // We descended down to the live register context aka stack frame 0 and are
     // reading the value out of a live register.
     if (result == UnwindLLDB::RegisterSearchResult::eRegisterFound &&
-        regloc.type ==
-            UnwindLLDB::RegisterLocation::eRegisterInLiveRegisterContext) {
+        regloc.type == UnwindLLDB::ConcreteRegisterLocation::
+                           eRegisterInLiveRegisterContext) {
       return true;
     }
 
@@ -509,7 +510,8 @@ bool UnwindLLDB::SearchForSavedLocationForRegister(
     // down the stack, or an actual value from a live RegisterContext at frame
     // 0.
     if (result == UnwindLLDB::RegisterSearchResult::eRegisterFound &&
-        regloc.type == UnwindLLDB::RegisterLocation::eRegisterInRegister &&
+        regloc.type ==
+            UnwindLLDB::ConcreteRegisterLocation::eRegisterInRegister &&
         frame_num > 0) {
       result = UnwindLLDB::RegisterSearchResult::eRegisterNotFound;
       lldb_regnum = regloc.location.register_number;

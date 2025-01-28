@@ -22,9 +22,10 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineVerifier.h"
-#include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
@@ -139,6 +140,11 @@ static cl::opt<std::string> IRDumpDirectory(
              "files in this directory rather than written to stderr"),
     cl::Hidden, cl::value_desc("filename"));
 
+static cl::opt<bool>
+    DroppedVarStats("dropped-variable-stats", cl::Hidden,
+                    cl::desc("Dump dropped debug variables stats"),
+                    cl::init(false));
+
 template <typename IRUnitT> static const IRUnitT *unwrapIR(Any IR) {
   const IRUnitT **IRPtr = llvm::any_cast<const IRUnitT *>(&IR);
   return IRPtr ? *IRPtr : nullptr;
@@ -236,12 +242,12 @@ void printIR(raw_ostream &OS, const MachineFunction *MF) {
   MF->print(OS);
 }
 
-std::string getIRName(Any IR, bool demangled = false) {
+std::string getIRName(Any IR) {
   if (unwrapIR<Module>(IR))
     return "[module]";
 
   if (const auto *F = unwrapIR<Function>(IR))
-    return demangled ? demangle(F->getName()) : F->getName().str();
+    return F->getName().str();
 
   if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR))
     return C->getName();
@@ -251,7 +257,7 @@ std::string getIRName(Any IR, bool demangled = false) {
            L->getHeader()->getParent()->getName().str();
 
   if (const auto *MF = unwrapIR<MachineFunction>(IR))
-    return demangled ? demangle(MF->getName()) : MF->getName().str();
+    return MF->getName().str();
 
   llvm_unreachable("Unknown wrapped IR type");
 }
@@ -752,7 +758,8 @@ PrintIRInstrumentation::~PrintIRInstrumentation() {
 static SmallString<32> getIRFileDisplayName(Any IR) {
   SmallString<32> Result;
   raw_svector_ostream ResultStream(Result);
-  const Module *M = unwrapModule(IR);
+  const Module *M = unwrapModule(IR, /*Force=*/true);
+  assert(M && "should have unwrapped module");
   uint64_t NameHash = xxh3_64bits(M->getName());
   unsigned MaxHashWidth = sizeof(uint64_t) * 2;
   write_hex(ResultStream, NameHash, HexPrintStyle::Lower, MaxHashWidth);
@@ -1041,14 +1048,16 @@ void OptNoneInstrumentation::registerCallbacks(
 }
 
 bool OptNoneInstrumentation::shouldRun(StringRef PassID, Any IR) {
-  const auto *F = unwrapIR<Function>(IR);
-  if (!F) {
-    if (const auto *L = unwrapIR<Loop>(IR))
-      F = L->getHeader()->getParent();
-  }
-  bool ShouldRun = !(F && F->hasOptNone());
+  bool ShouldRun = true;
+  if (const auto *F = unwrapIR<Function>(IR))
+    ShouldRun = !F->hasOptNone();
+  else if (const auto *L = unwrapIR<Loop>(IR))
+    ShouldRun = !L->getHeader()->getParent()->hasOptNone();
+  else if (const auto *MF = unwrapIR<MachineFunction>(IR))
+    ShouldRun = !MF->getFunction().hasOptNone();
+
   if (!ShouldRun && DebugLogging) {
-    errs() << "Skipping pass " << PassID << " on " << F->getName()
+    errs() << "Skipping pass " << PassID << " on " << getIRName(IR)
            << " due to optnone attribute\n";
   }
   return ShouldRun;
@@ -1358,7 +1367,7 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
   bool Registered = false;
   PIC.registerBeforeNonSkippedPassCallback([this, &MAM, Registered](
                                                StringRef P, Any IR) mutable {
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     assert(&PassStack.emplace_back(P));
 #endif
     (void)this;
@@ -1387,7 +1396,7 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
 
   PIC.registerAfterPassInvalidatedCallback(
       [this](StringRef P, const PreservedAnalyses &PassPA) {
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
         assert(PassStack.pop_back_val() == P &&
                "Before and After callbacks must correspond");
 #endif
@@ -1396,7 +1405,7 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
 
   PIC.registerAfterPassCallback([this, &MAM](StringRef P, Any IR,
                                              const PreservedAnalyses &PassPA) {
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     assert(PassStack.pop_back_val() == P &&
            "Before and After callbacks must correspond");
 #endif
@@ -1588,7 +1597,7 @@ void TimeProfilingPassesHandler::registerCallbacks(
 }
 
 void TimeProfilingPassesHandler::runBeforePass(StringRef PassID, Any IR) {
-  timeTraceProfilerBegin(PassID, getIRName(IR, true));
+  timeTraceProfilerBegin(PassID, getIRName(IR));
 }
 
 void TimeProfilingPassesHandler::runAfterPass() { timeTraceProfilerEnd(); }
@@ -2040,13 +2049,14 @@ DotCfgDiff::DotCfgDiff(StringRef Title, const FuncDataT<DCData> &Before,
     StringRef Colour = E.second;
 
     // Look for an edge from Source to Sink
-    if (EdgeLabels.count(SourceSink) == 0)
-      EdgeLabels.insert({SourceSink, colourize(Value.str(), Colour)});
+    auto [It, Inserted] = EdgeLabels.try_emplace(SourceSink);
+    if (Inserted)
+      It->getValue() = colourize(Value.str(), Colour);
     else {
-      StringRef V = EdgeLabels.find(SourceSink)->getValue();
+      StringRef V = It->getValue();
       std::string NV = colourize(V.str() + " " + Value.str(), Colour);
       Colour = CommonColour;
-      EdgeLabels[SourceSink] = NV;
+      It->getValue() = NV;
     }
     SourceNode.addEdge(SinkNode, Value, Colour);
   }
@@ -2444,8 +2454,7 @@ void DotCfgChangeReporter::registerCallbacks(
 StandardInstrumentations::StandardInstrumentations(
     LLVMContext &Context, bool DebugLogging, bool VerifyEach,
     PrintPassOptions PrintPassOpts)
-    : PrintPass(DebugLogging, PrintPassOpts),
-      OptNone(DebugLogging),
+    : PrintPass(DebugLogging, PrintPassOpts), OptNone(DebugLogging),
       OptPassGate(Context),
       PrintChangedIR(PrintChanged == ChangePrinter::Verbose),
       PrintChangedDiff(PrintChanged == ChangePrinter::DiffVerbose ||
@@ -2453,7 +2462,8 @@ StandardInstrumentations::StandardInstrumentations(
                        PrintChanged == ChangePrinter::ColourDiffVerbose ||
                            PrintChanged == ChangePrinter::ColourDiffQuiet),
       WebsiteChangeReporter(PrintChanged == ChangePrinter::DotCfgVerbose),
-      Verify(DebugLogging), VerifyEach(VerifyEach) {}
+      Verify(DebugLogging), DroppedStatsIR(DroppedVarStats),
+      VerifyEach(VerifyEach) {}
 
 PrintCrashIRInstrumentation *PrintCrashIRInstrumentation::CrashReporter =
     nullptr;
@@ -2528,6 +2538,7 @@ void StandardInstrumentations::registerCallbacks(
   WebsiteChangeReporter.registerCallbacks(PIC);
   ChangeTester.registerCallbacks(PIC);
   PrintCrashIR.registerCallbacks(PIC);
+  DroppedStatsIR.registerCallbacks(PIC);
   if (MAM)
     PreservedCFGChecker.registerCallbacks(PIC, *MAM);
 

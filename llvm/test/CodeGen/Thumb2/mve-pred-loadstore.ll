@@ -105,7 +105,6 @@ define arm_aapcs_vfpcc <8 x i16> @load_v8i1(ptr %src, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    vcmp.i16 ne, q1, zr
 ; CHECK-BE-NEXT:    vrev64.16 q1, q0
 ; CHECK-BE-NEXT:    vmov.i32 q0, #0x0
-; CHECK-BE-NEXT:    vrev32.16 q0, q0
 ; CHECK-BE-NEXT:    vpsel q1, q1, q0
 ; CHECK-BE-NEXT:    vrev64.16 q0, q1
 ; CHECK-BE-NEXT:    bx lr
@@ -130,7 +129,6 @@ define arm_aapcs_vfpcc <16 x i8> @load_v16i1(ptr %src, <16 x i8> %a) {
 ; CHECK-BE-NEXT:    vrev64.8 q1, q0
 ; CHECK-BE-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-BE-NEXT:    rbit r0, r0
-; CHECK-BE-NEXT:    vrev32.8 q0, q0
 ; CHECK-BE-NEXT:    lsrs r0, r0, #16
 ; CHECK-BE-NEXT:    vmsr p0, r0
 ; CHECK-BE-NEXT:    vpsel q1, q1, q0
@@ -416,10 +414,9 @@ define arm_aapcs_vfpcc <8 x i16> @load_predcast8(ptr %i, <8 x i16> %a) {
 ;
 ; CHECK-BE-LABEL: load_predcast8:
 ; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    vldr p0, [r0]
 ; CHECK-BE-NEXT:    vrev64.16 q1, q0
 ; CHECK-BE-NEXT:    vmov.i32 q0, #0x0
-; CHECK-BE-NEXT:    vldr p0, [r0]
-; CHECK-BE-NEXT:    vrev32.16 q0, q0
 ; CHECK-BE-NEXT:    vpsel q1, q1, q0
 ; CHECK-BE-NEXT:    vrev64.16 q0, q1
 ; CHECK-BE-NEXT:    bx lr
@@ -439,10 +436,9 @@ define arm_aapcs_vfpcc <16 x i8> @load_predcast16(ptr %i, <16 x i8> %a) {
 ;
 ; CHECK-BE-LABEL: load_predcast16:
 ; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    vldr p0, [r0]
 ; CHECK-BE-NEXT:    vrev64.8 q1, q0
 ; CHECK-BE-NEXT:    vmov.i32 q0, #0x0
-; CHECK-BE-NEXT:    vldr p0, [r0]
-; CHECK-BE-NEXT:    vrev32.8 q0, q0
 ; CHECK-BE-NEXT:    vpsel q1, q1, q0
 ; CHECK-BE-NEXT:    vrev64.8 q0, q1
 ; CHECK-BE-NEXT:    bx lr

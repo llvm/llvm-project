@@ -150,12 +150,12 @@ TargetInstrInfo::ReplaceTailWithBranchTo(MachineBasicBlock::iterator Tail,
   // Save off the debug loc before erasing the instruction.
   DebugLoc DL = Tail->getDebugLoc();
 
-  // Update call site info and remove all the dead instructions
+  // Update call info and remove all the dead instructions
   // from the end of MBB.
   while (Tail != MBB->end()) {
     auto MI = Tail++;
-    if (MI->shouldUpdateCallSiteInfo())
-      MBB->getParent()->eraseCallSiteInfo(&*MI);
+    if (MI->shouldUpdateAdditionalCallInfo())
+      MBB->getParent()->eraseAdditionalCallInfo(&*MI);
     MBB->erase(MI);
   }
 
@@ -823,7 +823,9 @@ void TargetInstrInfo::lowerCopy(MachineInstr *MI,
   }
 
   copyPhysReg(*MI->getParent(), MI, MI->getDebugLoc(), DstMO.getReg(),
-              SrcMO.getReg(), SrcMO.isKill());
+              SrcMO.getReg(), SrcMO.isKill(),
+              DstMO.getReg().isPhysical() ? DstMO.isRenamable() : false,
+              SrcMO.getReg().isPhysical() ? SrcMO.isRenamable() : false);
 
   if (MI->getNumOperands() > 2)
     transferImplicitOperands(MI, TRI);
@@ -1914,4 +1916,9 @@ bool TargetInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
       return false;
   }
   return true;
+}
+
+bool TargetInstrInfo::isGlobalMemoryObject(const MachineInstr *MI) const {
+  return MI->isCall() || MI->hasUnmodeledSideEffects() ||
+         (MI->hasOrderedMemoryRef() && !MI->isDereferenceableInvariantLoad());
 }

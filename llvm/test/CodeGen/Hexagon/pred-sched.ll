@@ -1,4 +1,4 @@
-; RUN: llc -O3 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O3 -mtriple=hexagon < %s | FileCheck %s
 
 ; We want to see a .new instruction in this sequence.
 ; CHECK: p[[PRED:[0-3]]] = tstbit

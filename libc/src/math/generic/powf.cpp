@@ -25,8 +25,6 @@
 #include "exp10f_impl.h" // Speedup for powf(10, y) = exp10f(y)
 #include "exp2f_impl.h"  // Speedup for powf(2, y) = exp2f(y)
 
-#include <errno.h>
-
 namespace LIBC_NAMESPACE_DECL {
 
 using fputil::DoubleDouble;
@@ -531,10 +529,10 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   // Hence x^y will either overflow or underflow if x is not zero.
   if (LIBC_UNLIKELY((y_abs & 0x0007'ffff) == 0) || (y_abs > 0x4f170000)) {
     // Exceptional exponents.
-    switch (y_abs) {
-    case 0x0000'0000: { // y = +-0.0f
+    if (y == 0.0f)
       return 1.0f;
-    }
+
+    switch (y_abs) {
     case 0x7f80'0000: { // y = +-Inf
       if (x_abs > 0x7f80'0000) {
         // pow(NaN, +-Inf) = NaN
@@ -544,7 +542,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
         // pow(+-1, +-Inf) = 1.0f
         return 1.0f;
       }
-      if (x_abs == 0 && y_u == 0xff80'0000) {
+      if (x == 0.0f && y_u == 0xff80'0000) {
         // pow(+-0, -Inf) = +inf and raise FE_DIVBYZERO
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_DIVBYZERO);
@@ -563,7 +561,15 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
       switch (y_u) {
       case 0x3f00'0000: // y = 0.5f
         // pow(x, 1/2) = sqrt(x)
-        return fputil::sqrt<float>(x);
+        if (LIBC_UNLIKELY(x == 0.0f || x_u == 0xff80'0000)) {
+          // pow(-0, 1/2) = +0
+          // pow(-inf, 1/2) = +inf
+          // Make sure it is correct for FTZ/DAZ.
+          return x * x;
+        }
+        float r;
+        r = fputil::sqrt<float>(x);
+        return (FloatBits(r).uintval() != 0x8000'0000) ? r : 0.0f;
       case 0x3f80'0000: // y = 1.0f
         return x;
       case 0x4000'0000: // y = 2.0f
@@ -631,8 +637,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
 
     const bool x_is_neg = x_u >= FloatBits::SIGN_MASK;
 
-    switch (x_abs) {
-    case 0x0000'0000: { // x = +-0.0f
+    if (x == 0.0f) {
       const bool out_is_neg =
           x_is_neg && is_odd_integer(FloatBits(y_u).get_val());
       if (y_u > 0x8000'0000U) {
@@ -644,14 +649,15 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
       // pow(0, positive number) = 0
       return out_is_neg ? -0.0f : 0.0f;
     }
-    case 0x7f80'0000: { // x = +-Inf
+
+    if (x_abs == 0x7f80'0000) {
+      // x = +-Inf
       const bool out_is_neg =
           x_is_neg && is_odd_integer(FloatBits(y_u).get_val());
       if (y_u >= FloatBits::SIGN_MASK) {
         return out_is_neg ? -0.0f : 0.0f;
       }
       return FloatBits::inf(out_is_neg ? Sign::NEG : Sign::POS).get_val();
-    }
     }
 
     if (x_abs > 0x7f80'0000) {
@@ -852,9 +858,9 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
           : 0.0;
   exp2_hi_mid_dd.hi = exp2_hi_mid;
 
-  return static_cast<float>(
-             powf_double_double(idx_x, dx, y6, lo6_hi, exp2_hi_mid_dd)) +
-         0.0f;
+  double r_dd = powf_double_double(idx_x, dx, y6, lo6_hi, exp2_hi_mid_dd);
+
+  return static_cast<float>(r_dd);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

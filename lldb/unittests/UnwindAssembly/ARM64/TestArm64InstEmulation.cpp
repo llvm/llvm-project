@@ -62,7 +62,7 @@ TEST_F(TestArm64InstEmulation, TestSimpleDarwinFunction) {
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
 
   // 'int main() { }' compiled for arm64-apple-ios with clang
   uint8_t data[] = {
@@ -170,7 +170,7 @@ TEST_F(TestArm64InstEmulation, TestMediumDarwinFunction) {
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
 
   // disassembly of -[NSPlaceholderString initWithBytes:length:encoding:]
   // from Foundation for iOS.
@@ -332,7 +332,7 @@ TEST_F(TestArm64InstEmulation, TestFramelessThreeEpilogueFunction) {
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
 
   // disassembly of JSC::ARM64LogicalImmediate::findBitRange<16u>
   // from JavaScriptcore for iOS.
@@ -431,7 +431,7 @@ TEST_F(TestArm64InstEmulation, TestRegisterSavedTwice) {
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
 
   // disassembly of mach_msg_sever_once from libsystem_kernel.dylib for iOS.
   uint8_t data[] = {
@@ -533,7 +533,7 @@ TEST_F(TestArm64InstEmulation, TestRegisterDoubleSpills) {
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
 
   // this file built with clang for iOS arch arm64 optimization -Os
   // #include <stdio.h>
@@ -705,7 +705,7 @@ TEST_F(TestArm64InstEmulation, TestCFARegisterTrackedAcrossJumps) {
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
 
   uint8_t data[] = {
       // prologue
@@ -804,7 +804,7 @@ TEST_F(TestArm64InstEmulation, TestCFAResetToSP) {
   UnwindPlan::RowSP row_sp;
   AddressRange sample_range;
   UnwindPlan unwind_plan(eRegisterKindLLDB);
-  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
 
   // The called_from_nodebug() from TestStepNoDebug.py
   // Most of the previous unit tests have $sp being set as

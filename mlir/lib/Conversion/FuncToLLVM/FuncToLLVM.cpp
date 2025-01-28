@@ -267,6 +267,38 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
   }
 }
 
+/// Inserts `llvm.load` ops in the function body to restore the expected pointee
+/// value from `llvm.byval`/`llvm.byref` function arguments that were converted
+/// to LLVM pointer types.
+static void restoreByValRefArgumentType(
+    ConversionPatternRewriter &rewriter, const LLVMTypeConverter &typeConverter,
+    ArrayRef<std::optional<NamedAttribute>> byValRefNonPtrAttrs,
+    ArrayRef<BlockArgument> oldBlockArgs, LLVM::LLVMFuncOp funcOp) {
+  // Nothing to do for function declarations.
+  if (funcOp.isExternal())
+    return;
+
+  ConversionPatternRewriter::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPointToStart(&funcOp.getFunctionBody().front());
+
+  for (const auto &[arg, oldArg, byValRefAttr] :
+       llvm::zip(funcOp.getArguments(), oldBlockArgs, byValRefNonPtrAttrs)) {
+    // Skip argument if no `llvm.byval` or `llvm.byref` attribute.
+    if (!byValRefAttr)
+      continue;
+
+    // Insert load to retrieve the actual argument passed by value/reference.
+    assert(isa<LLVM::LLVMPointerType>(arg.getType()) &&
+           "Expected LLVM pointer type for argument with "
+           "`llvm.byval`/`llvm.byref` attribute");
+    Type resTy = typeConverter.convertType(
+        cast<TypeAttr>(byValRefAttr->getValue()).getValue());
+
+    auto valueArg = rewriter.create<LLVM::LoadOp>(arg.getLoc(), resTy, arg);
+    rewriter.replaceUsesOfBlockArgument(oldArg, valueArg);
+  }
+}
+
 FailureOr<LLVM::LLVMFuncOp>
 mlir::convertFuncOpToLLVMFuncOp(FunctionOpInterface funcOp,
                                 ConversionPatternRewriter &rewriter,
@@ -277,13 +309,21 @@ mlir::convertFuncOpToLLVMFuncOp(FunctionOpInterface funcOp,
     return rewriter.notifyMatchFailure(
         funcOp, "Only support FunctionOpInterface with FunctionType");
 
+  // Keep track of the entry block arguments. They will be needed later.
+  SmallVector<BlockArgument> oldBlockArgs =
+      llvm::to_vector(funcOp.getArguments());
+
   // Convert the original function arguments. They are converted using the
   // LLVMTypeConverter provided to this legalization pattern.
   auto varargsAttr = funcOp->getAttrOfType<BoolAttr>(varargsAttrName);
+  // Gather `llvm.byval` and `llvm.byref` arguments whose type convertion was
+  // overriden with an LLVM pointer type for later processing.
+  SmallVector<std::optional<NamedAttribute>> byValRefNonPtrAttrs;
   TypeConverter::SignatureConversion result(funcOp.getNumArguments());
   auto llvmType = converter.convertFunctionSignature(
-      funcTy, varargsAttr && varargsAttr.getValue(),
-      shouldUseBarePtrCallConv(funcOp, &converter), result);
+      funcOp, varargsAttr && varargsAttr.getValue(),
+      shouldUseBarePtrCallConv(funcOp, &converter), result,
+      byValRefNonPtrAttrs);
   if (!llvmType)
     return rewriter.notifyMatchFailure(funcOp, "signature conversion failed");
 
@@ -392,11 +432,17 @@ mlir::convertFuncOpToLLVMFuncOp(FunctionOpInterface funcOp,
 
   rewriter.inlineRegionBefore(funcOp.getFunctionBody(), newFuncOp.getBody(),
                               newFuncOp.end());
-  if (failed(rewriter.convertRegionTypes(&newFuncOp.getBody(), converter,
-                                         &result))) {
-    return rewriter.notifyMatchFailure(funcOp,
-                                       "region types conversion failed");
-  }
+  // Convert just the entry block. The remaining unstructured control flow is
+  // converted by ControlFlowToLLVM.
+  if (!newFuncOp.getBody().empty())
+    rewriter.applySignatureConversion(&newFuncOp.getBody().front(), result,
+                                      &converter);
+
+  // Fix the type mismatch between the materialized `llvm.ptr` and the expected
+  // pointee type in the function body when converting `llvm.byval`/`llvm.byref`
+  // function arguments.
+  restoreByValRefArgumentType(rewriter, converter, byValRefNonPtrAttrs,
+                              oldBlockArgs, newFuncOp);
 
   if (!shouldUseBarePtrCallConv(funcOp, &converter)) {
     if (funcOp->getAttrOfType<UnitAttr>(
@@ -501,6 +547,10 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
     auto newOp = rewriter.create<LLVM::CallOp>(
         callOp.getLoc(), packedResult ? TypeRange(packedResult) : TypeRange(),
         promoted, callOp->getAttrs());
+
+    newOp.getProperties().operandSegmentSizes = {
+        static_cast<int32_t>(promoted.size()), 0};
+    newOp.getProperties().op_bundle_sizes = rewriter.getDenseI32ArrayAttr({});
 
     SmallVector<Value, 4> results;
     if (numResults < 2) {
@@ -676,12 +726,12 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<func::ReturnOp> {
 } // namespace
 
 void mlir::populateFuncToLLVMFuncOpConversionPattern(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<FuncOpConversion>(converter);
 }
 
 void mlir::populateFuncToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
     const SymbolTable *symbolTable) {
   populateFuncToLLVMFuncOpConversionPattern(converter, patterns);
   patterns.add<CallIndirectOpLowering>(converter);
@@ -734,11 +784,6 @@ struct ConvertFuncToLLVMPass
 
     RewritePatternSet patterns(&getContext());
     populateFuncToLLVMConversionPatterns(typeConverter, patterns, symbolTable);
-
-    // TODO(https://github.com/llvm/llvm-project/issues/70982): Remove these in
-    // favor of their dedicated conversion passes.
-    arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
-    cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
 
     LLVMConversionTarget target(getContext());
     if (failed(applyPartialConversion(m, target, std::move(patterns))))

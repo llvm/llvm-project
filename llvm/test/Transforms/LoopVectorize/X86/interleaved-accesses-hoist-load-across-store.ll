@@ -27,8 +27,7 @@ define void @pr63602_1(ptr %arr) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX2]], 9
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nuw nsw i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i32 0
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <12 x i32>, ptr [[TMP9]], align 4
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <12 x i32>, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <12 x i32> [[WIDE_VEC]], <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP4]]
@@ -44,8 +43,7 @@ define void @pr63602_1(ptr %arr) {
 ; CHECK-NEXT:    store i32 [[TMP17]], ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = add nuw nsw i64 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP18]]
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[TMP19]], i32 0
-; CHECK-NEXT:    [[WIDE_VEC3:%.*]] = load <12 x i32>, ptr [[TMP20]], align 4
+; CHECK-NEXT:    [[WIDE_VEC3:%.*]] = load <12 x i32>, ptr [[TMP19]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <12 x i32> [[WIDE_VEC3]], <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <12 x i32> [[WIDE_VEC3]], <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
 ; CHECK-NEXT:    [[TMP21:%.*]] = add <4 x i32> [[STRIDED_VEC5]], [[STRIDED_VEC4]]
@@ -144,8 +142,7 @@ define void @pr63602_2(ptr %arr) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[OFFSET_IDX2]], 9
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nuw nsw i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP11]], i32 0
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <12 x i32>, ptr [[TMP12]], align 4
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <12 x i32>, ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <12 x i32> [[WIDE_VEC]], <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 [[TMP7]]

@@ -21,7 +21,7 @@ define i32 @ctpop1(i32 %0) {
 define <2 x i32> @ctpop1v(<2 x i32> %0) {
 ; CHECK-LABEL: @ctpop1v(
 ; CHECK-NEXT:    [[TMP2:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[TMP0:%.*]], i1 false)
-; CHECK-NEXT:    [[TMP3:%.*]] = sub nuw nsw <2 x i32> <i32 32, i32 32>, [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub nuw nsw <2 x i32> splat (i32 32), [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i32> [[TMP3]]
 ;
   %2 = sub <2 x i32> zeroinitializer, %0
@@ -33,7 +33,7 @@ define <2 x i32> @ctpop1v(<2 x i32> %0) {
 define i32 @ctpop1_multiuse(i32 %0) {
 ; CHECK-LABEL: @ctpop1_multiuse(
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 0, [[TMP0:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP3]], -1
 ; CHECK-NEXT:    [[TMP5:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[TMP4]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], [[TMP3]]

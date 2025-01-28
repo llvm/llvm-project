@@ -49,6 +49,8 @@ const char *MemoryWriteUInt64sWrapperName =
     "__llvm_orc_bootstrap_mem_write_uint64s_wrapper";
 const char *MemoryWriteBuffersWrapperName =
     "__llvm_orc_bootstrap_mem_write_buffers_wrapper";
+const char *MemoryWritePointersWrapperName =
+    "__llvm_orc_bootstrap_mem_write_pointers_wrapper";
 
 const char *RegisterEHFrameSectionWrapperName =
     "llvm_orc_registerEHFrameSectionWrapper";

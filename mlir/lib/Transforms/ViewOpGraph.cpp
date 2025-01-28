@@ -46,7 +46,7 @@ static std::string strFromOs(function_ref<void(raw_ostream &)> func) {
   std::string buf;
   llvm::raw_string_ostream os(buf);
   func(os);
-  return os.str();
+  return buf;
 }
 
 /// Escape special characters such as '\n' and quotation marks.
@@ -199,7 +199,7 @@ private:
     std::string buf;
     llvm::raw_string_ostream ss(buf);
     attr.print(ss);
-    os << truncateString(ss.str());
+    os << truncateString(buf);
   }
 
   /// Append an edge to the list of edges.
@@ -262,7 +262,7 @@ private:
         std::string buf;
         llvm::raw_string_ostream ss(buf);
         interleaveComma(op->getResultTypes(), ss);
-        os << truncateString(ss.str()) << ")";
+        os << truncateString(buf) << ")";
       }
 
       // Print attributes.

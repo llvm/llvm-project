@@ -190,6 +190,9 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 #if __opencl_c_ext_image_raw10_raw12 != 1
 #error "Incorrectly defined __opencl_c_ext_image_raw10_raw12"
 #endif
+#if __opencl_c_ext_image_unorm_int_2_101010 != 1
+#error "Incorrectly defined __opencl_c_ext_image_unorm_int_2_101010"
+#endif
 
 #else
 
@@ -276,6 +279,9 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 #endif
 #ifdef __opencl_c_ext_image_raw10_raw12
 #error "Incorrect __opencl_c_ext_image_raw10_raw12 define"
+#endif
+#ifdef __opencl_c_ext_image_unorm_int_2_101010
+#error "Incorrect __opencl_c_ext_image_unorm_int_2_101010 define"
 #endif
 
 #endif //(defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)

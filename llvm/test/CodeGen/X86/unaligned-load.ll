@@ -12,7 +12,7 @@ define void @func() nounwind ssp {
 ; I386-LABEL: func:
 ; I386:       ## %bb.0: ## %entry
 ; I386-NEXT:    subl $32, %esp
-; I386-NEXT:    .p2align 4, 0x90
+; I386-NEXT:    .p2align 4
 ; I386-NEXT:  LBB0_1: ## %bb
 ; I386-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; I386-NEXT:    movl $4673097, {{[0-9]+}}(%esp) ## imm = 0x474E49
@@ -31,7 +31,7 @@ define void @func() nounwind ssp {
 ; CORE2-NEXT:    movabsq $2325069237881678925, %rcx ## imm = 0x20444E2732202C4D
 ; CORE2-NEXT:    movabsq $4706902966564560965, %rdx ## imm = 0x4152474F52502045
 ; CORE2-NEXT:    movabsq $5642821575076104260, %rsi ## imm = 0x4E4F545359524844
-; CORE2-NEXT:    .p2align 4, 0x90
+; CORE2-NEXT:    .p2align 4
 ; CORE2-NEXT:  LBB0_1: ## %bb
 ; CORE2-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CORE2-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
@@ -44,7 +44,7 @@ define void @func() nounwind ssp {
 ; COREI7:       ## %bb.0: ## %entry
 ; COREI7-NEXT:    movups _.str3+15(%rip), %xmm0
 ; COREI7-NEXT:    movups _.str3(%rip), %xmm1
-; COREI7-NEXT:    .p2align 4, 0x90
+; COREI7-NEXT:    .p2align 4
 ; COREI7-NEXT:  LBB0_1: ## %bb
 ; COREI7-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; COREI7-NEXT:    movups %xmm0, -{{[0-9]+}}(%rsp)
@@ -67,7 +67,7 @@ define void @func_aligned() nounwind ssp {
 ; I386:       ## %bb.0: ## %entry
 ; I386-NEXT:    subl $44, %esp
 ; I386-NEXT:    movaps {{.*#+}} xmm0 = [1498564676,1313821779,1380982853,1095911247]
-; I386-NEXT:    .p2align 4, 0x90
+; I386-NEXT:    .p2align 4
 ; I386-NEXT:  LBB1_1: ## %bb
 ; I386-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; I386-NEXT:    movaps %xmm0, (%esp)
@@ -83,7 +83,7 @@ define void @func_aligned() nounwind ssp {
 ; CORE2-NEXT:    movabsq $2325069237881678925, %rcx ## imm = 0x20444E2732202C4D
 ; CORE2-NEXT:    movabsq $4706902966564560965, %rdx ## imm = 0x4152474F52502045
 ; CORE2-NEXT:    movabsq $5642821575076104260, %rsi ## imm = 0x4E4F545359524844
-; CORE2-NEXT:    .p2align 4, 0x90
+; CORE2-NEXT:    .p2align 4
 ; CORE2-NEXT:  LBB1_1: ## %bb
 ; CORE2-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CORE2-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
@@ -96,7 +96,7 @@ define void @func_aligned() nounwind ssp {
 ; COREI7:       ## %bb.0: ## %entry
 ; COREI7-NEXT:    movups _.str3+15(%rip), %xmm0
 ; COREI7-NEXT:    movups _.str3(%rip), %xmm1
-; COREI7-NEXT:    .p2align 4, 0x90
+; COREI7-NEXT:    .p2align 4
 ; COREI7-NEXT:  LBB1_1: ## %bb
 ; COREI7-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; COREI7-NEXT:    movups %xmm0, -{{[0-9]+}}(%rsp)

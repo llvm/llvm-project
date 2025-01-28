@@ -202,16 +202,16 @@ func.func @bad_designate_out_rank(%arg0 : !fir.ref<!fir.array<10xi32>>) {
 }
 
 // -----
-func.func @bad_designate_out_type(%arg0 : !fir.ref<!fir.complex<4>>) {
-  // expected-error@+1 {{'hlfir.designate' op result element type is not consistent with operands, expected '!fir.real<4>'}}
-  %0 = hlfir.designate %arg0 imag:  (!fir.ref<!fir.complex<4>>) -> !fir.ref<!fir.complex<4>>
+func.func @bad_designate_out_type(%arg0 : !fir.ref<complex<f32>>) {
+  // expected-error@+1 {{'hlfir.designate' op result element type is not consistent with operands, expected 'f32'}}
+  %0 = hlfir.designate %arg0 imag:  (!fir.ref<complex<f32>>) -> !fir.ref<complex<f64>>
   return
 }
 
 // -----
-func.func @bad_designate_out_type(%arg0 : !fir.ref<!fir.box<!fir.complex<4>>>) {
+func.func @bad_designate_out_type(%arg0 : !fir.ref<!fir.box<complex<f32>>>) {
   // expected-error@+1 {{'hlfir.designate' op result type must only be a box address type if it designates a component that is a fir.box or fir.class and if there are no indices, substrings, and complex part}}
-  %0 = hlfir.designate %arg0 imag:  (!fir.ref<!fir.box<!fir.complex<4>>>) -> !fir.ref<!fir.box<!fir.real<4>>>
+  %0 = hlfir.designate %arg0 imag:  (!fir.ref<!fir.box<complex<f32>>>) -> !fir.ref<!fir.box<f32>>
   return
 }
 
@@ -1312,5 +1312,246 @@ func.func @end_associate_with_alloc_comp(%var: !hlfir.expr<?x!fir.type<_QMtypesT
   %4:3 = hlfir.associate %var(%shape) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>, !fir.shape<1>) -> (!fir.box<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, !fir.ref<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, i1)
 // expected-error@+1 {{'hlfir.end_associate' op that requires components deallocation must have var operand that is a Fortran entity}}
   hlfir.end_associate %4#1, %4#2 : !fir.ref<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, i1
+  return
+}
+
+// -----
+
+func.func @bad_eval_in_mem_1() {
+  %c10 = arith.constant 10 : index
+  %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+// expected-error@+1 {{'hlfir.eval_in_mem' op result #0 must be The type of an array, character, or derived type Fortran expression, but got '!fir.array<10xf32>'}}
+  %2 = hlfir.eval_in_mem shape %1 : (!fir.shape<1>) -> !fir.array<10xf32> {
+  ^bb0(%arg0: !fir.ref<!fir.array<10xf32>>):
+  }
+  return
+}
+
+// -----
+
+func.func @bad_eval_in_mem_2() {
+  %c10 = arith.constant 10 : index
+  %1 = fir.shape %c10, %c10 : (index, index) -> !fir.shape<2>
+  // expected-error@+1 {{'hlfir.eval_in_mem' op `shape` rank must match the result rank}}
+  %2 = hlfir.eval_in_mem shape %1 : (!fir.shape<2>) -> !hlfir.expr<10xf32> {
+  ^bb0(%arg0: !fir.ref<!fir.array<10xf32>>):
+  }
+  return
+}
+
+// -----
+
+func.func @bad_eval_in_mem_3() {
+  // expected-error@+1 {{'hlfir.eval_in_mem' op must be provided one length parameter when the result is a character}}
+  %1 = hlfir.eval_in_mem  : () -> !hlfir.expr<!fir.char<1,?>> {
+  ^bb0(%arg0: !fir.ref<!fir.char<1,?>>):
+  }
+  return
+}
+
+// -----
+
+func.func @bad_cshift1(%arg0: !hlfir.expr<?x?xi32>, %arg1: i32) {
+  // expected-error@+1 {{'hlfir.cshift' op input and output arrays should have the same element type}}
+  %0 = hlfir.cshift %arg0 %arg1 : (!hlfir.expr<?x?xi32>, i32) -> !hlfir.expr<?x?xf32>
+  return
+}
+
+// -----
+
+func.func @bad_cshift2(%arg0: !hlfir.expr<?x?xi32>, %arg1: i32) {
+  // expected-error@+1 {{'hlfir.cshift' op input and output arrays should have the same rank}}
+  %0 = hlfir.cshift %arg0 %arg1 : (!hlfir.expr<?x?xi32>, i32) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_cshift3(%arg0: !hlfir.expr<2x2xi32>, %arg1: i32) {
+  // expected-error@+1 {{'hlfir.cshift' op output array's shape conflicts with the input array's shape}}
+  %0 = hlfir.cshift %arg0 %arg1 : (!hlfir.expr<2x2xi32>, i32) -> !hlfir.expr<2x3xi32>
+  return
+}
+
+// -----
+
+func.func @bad_cshift4(%arg0: !hlfir.expr<2x2xi32>, %arg1: i32) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{'hlfir.cshift' op DIM must be >= 1}}
+  %0 = hlfir.cshift %arg0 %arg1 dim %c0 : (!hlfir.expr<2x2xi32>, i32, index) -> !hlfir.expr<2x2xi32>
+  return
+}
+
+// -----
+
+func.func @bad_cshift5(%arg0: !hlfir.expr<2x2xi32>, %arg1: i32) {
+  %c10 = arith.constant 10 : index
+  // expected-error@+1 {{'hlfir.cshift' op DIM must be <= input array's rank}}
+  %0 = hlfir.cshift %arg0 %arg1 dim %c10 : (!hlfir.expr<2x2xi32>, i32, index) -> !hlfir.expr<2x2xi32>
+  return
+}
+
+// -----
+
+func.func @bad_cshift6(%arg0: !hlfir.expr<2x2xi32>, %arg1: !hlfir.expr<2x2xi32>) {
+  // expected-error@+1 {{'hlfir.cshift' op SHIFT's rank must be 1 less than the input array's rank}}
+  %0 = hlfir.cshift %arg0 %arg1 : (!hlfir.expr<2x2xi32>, !hlfir.expr<2x2xi32>) -> !hlfir.expr<2x2xi32>
+  return
+}
+
+// -----
+
+func.func @bad_cshift7(%arg0: !hlfir.expr<?x2xi32>, %arg1: !hlfir.expr<3xi32>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'hlfir.cshift' op SHAPE(ARRAY)(2) must be equal to SHAPE(SHIFT)(1): 2 != 3}}
+  %0 = hlfir.cshift %arg0 %arg1 dim %c1 : (!hlfir.expr<?x2xi32>, !hlfir.expr<3xi32>, index) -> !hlfir.expr<2x2xi32>
+  return
+}
+
+// -----
+
+func.func @bad_cshift8(%arg0: !hlfir.expr<?x!fir.char<1,?>>, %arg1: i32) {
+  // expected-error@+2 {{'hlfir.cshift' op character KIND mismatch}}
+  // expected-error@+1 {{'hlfir.cshift' op input and output arrays should have the same element type}}
+  %0 = hlfir.cshift %arg0 %arg1 : (!hlfir.expr<?x!fir.char<1,?>>, i32) -> !hlfir.expr<?x!fir.char<2,?>>
+  return
+}
+
+// -----
+
+func.func @bad_cshift9(%arg0: !hlfir.expr<?x!fir.char<1,1>>, %arg1: i32) {
+  // expected-error@+2 {{'hlfir.cshift' op character LEN mismatch}}
+  // expected-error@+1 {{'hlfir.cshift' op input and output arrays should have the same element type}}
+  %0 = hlfir.cshift %arg0 %arg1 : (!hlfir.expr<?x!fir.char<1,1>>, i32) -> !hlfir.expr<?x!fir.char<1,2>>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<1xi32>) {
+  // expected-error@+1 {{'hlfir.reshape' op ARRAY and the result must have the same element type}}
+  %0 = hlfir.reshape %arg0 %arg0 : (!hlfir.expr<1xi32>, !hlfir.expr<1xi32>) -> !hlfir.expr<?xf32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<?x!fir.type<whatever>?>, %arg1: !hlfir.expr<1xi32>) {
+  // expected-error@+1 {{'hlfir.reshape' op ARRAY must be polymorphic iff result is polymorphic}}
+  %0 = hlfir.reshape %arg0 %arg1 : (!hlfir.expr<?x!fir.type<whatever>?>, !hlfir.expr<1xi32>) -> !hlfir.expr<?x!fir.type<whatever>>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<?x!fir.type<whatever>>, %arg1: !hlfir.expr<1xi32>) {
+  // expected-error@+1 {{'hlfir.reshape' op ARRAY must be polymorphic iff result is polymorphic}}
+  %0 = hlfir.reshape %arg0 %arg1 : (!hlfir.expr<?x!fir.type<whatever>>, !hlfir.expr<1xi32>) -> !hlfir.expr<?x!fir.type<whatever>?>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<1x1xi32>) {
+  // expected-error@+1 {{'hlfir.reshape' op SHAPE must be an array of rank 1}}
+  %0 = hlfir.reshape %arg0 %arg0 : (!hlfir.expr<1x1xi32>, !hlfir.expr<1x1xi32>) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<1xf32>) {
+  // expected-error@+1 {{'hlfir.reshape' op SHAPE must be an integer array}}
+  %0 = hlfir.reshape %arg0 %arg0 : (!hlfir.expr<1xf32>, !hlfir.expr<1xf32>) -> !hlfir.expr<?xf32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<?xi32>) {
+  // expected-error@+1 {{'hlfir.reshape' op SHAPE must have known size}}
+  %0 = hlfir.reshape %arg0 %arg0 : (!hlfir.expr<?xi32>, !hlfir.expr<?xi32>) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<1xi32>) {
+  // expected-error@+1 {{'hlfir.reshape' op SHAPE's extent must match the result rank}}
+  %0 = hlfir.reshape %arg0 %arg0 : (!hlfir.expr<1xi32>, !hlfir.expr<1xi32>) -> !hlfir.expr<?x?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<1xi32>, %arg1: !hlfir.expr<?xi16>) {
+  // expected-error@+1 {{'hlfir.reshape' op ARRAY and PAD must be of the same type}}
+  %0 = hlfir.reshape %arg0 %arg0 pad %arg1 : (!hlfir.expr<1xi32>, !hlfir.expr<1xi32>, !hlfir.expr<?xi16>) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<1xi32>, %arg1: !hlfir.expr<?x?xi16>) {
+  // expected-error@+1 {{'hlfir.reshape' op ORDER must be an array of rank 1}}
+  %0 = hlfir.reshape %arg0 %arg0 order %arg1 : (!hlfir.expr<1xi32>, !hlfir.expr<1xi32>, !hlfir.expr<?x?xi16>) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<1xi32>, %arg1: !hlfir.expr<?xf16>) {
+  // expected-error@+1 {{'hlfir.reshape' op ORDER must be an integer array}}
+  %0 = hlfir.reshape %arg0 %arg0 order %arg1 : (!hlfir.expr<1xi32>, !hlfir.expr<1xi32>, !hlfir.expr<?xf16>) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !fir.ref<!fir.array<?xi32>>, %arg1: !hlfir.expr<1xi32>) {
+  // expected-error@+1 {{'hlfir.reshape' op operand #0 must be any array-like entity}}
+  %0 = hlfir.reshape %arg0 %arg1 : (!fir.ref<!fir.array<?xi32>>, !hlfir.expr<1xi32>) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !fir.ref<!fir.array<?xi32>>, %arg1: !hlfir.expr<?xi32>) {
+  // expected-error@+1 {{'hlfir.reshape' op operand #1 must be any array-like entity containing a numerical type}}
+  %0 = hlfir.reshape %arg1 %arg0 : (!hlfir.expr<?xi32>, !fir.ref<!fir.array<?xi32>>) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !fir.ref<!fir.array<?xi32>>, %arg1: !hlfir.expr<1xi32>) {
+  // expected-error@+1 {{'hlfir.reshape' op operand #2 must be any array-like entity}}
+  %0 = hlfir.reshape %arg1 %arg1 pad %arg0 : (!hlfir.expr<1xi32>, !hlfir.expr<1xi32>, !fir.ref<!fir.array<?xi32>>) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !fir.ref<!fir.array<?xi32>>, %arg1: !hlfir.expr<1xi32>) {
+  // expected-error@+1 {{'hlfir.reshape' op operand #3 must be any array-like entity containing a numerical type}}
+  %0 = hlfir.reshape %arg1 %arg1 pad %arg1 order %arg0 : (!hlfir.expr<1xi32>, !hlfir.expr<1xi32>, !hlfir.expr<1xi32>, !fir.ref<!fir.array<?xi32>>) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<1x!fir.char<1,2>>, %arg1: !hlfir.expr<1xi32>) {
+  // expected-error@+2 {{'hlfir.reshape' op character KIND mismatch}}
+  // expected-error@+1 {{'hlfir.reshape' op ARRAY and the result must have the same element type}}
+  %0 = hlfir.reshape %arg0 %arg1 : (!hlfir.expr<1x!fir.char<1,2>>, !hlfir.expr<1xi32>) -> !hlfir.expr<?x!fir.char<2,?>>
+  return
+}
+
+// -----
+
+func.func @bad_reshape(%arg0: !hlfir.expr<1x!fir.char<1,2>>, %arg1: !hlfir.expr<1xi32>, %arg2: !hlfir.expr<1x!fir.char<2,?>>) {
+  // expected-error@+2 {{'hlfir.reshape' op character KIND mismatch}}
+  // expected-error@+1 {{'hlfir.reshape' op ARRAY and PAD must be of the same type}}
+  %0 = hlfir.reshape %arg0 %arg1 pad %arg2 : (!hlfir.expr<1x!fir.char<1,2>>, !hlfir.expr<1xi32>, !hlfir.expr<1x!fir.char<2,?>>) -> !hlfir.expr<?x!fir.char<1,?>>
   return
 }

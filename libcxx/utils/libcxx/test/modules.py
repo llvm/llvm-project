@@ -52,13 +52,6 @@ SkipDeclarations["random"] = [
     "std::operator==",
 ]
 
-# TODO MODULES remove zombie names
-# https://libcxx.llvm.org/Status/Cxx20.html#note-p0619
-SkipDeclarations["memory"] = [
-    "std::return_temporary_buffer",
-    "std::get_temporary_buffer",
-]
-
 # include/__type_traits/is_swappable.h
 SkipDeclarations["type_traits"] = [
     "std::swap",
@@ -98,6 +91,10 @@ ExtraHeader["ranges"] = "v1/__fwd/subrange.h$"
 # The extra header is needed since two headers are required to provide the
 # same definition.
 ExtraHeader["functional"] = "v1/__compare/compare_three_way.h$"
+
+# Some C compatibility headers define std::size_t, which is in <__cstddef/size_t.h>
+for header in ("cstdio", "cstdlib", "cstring", "ctime", "cuchar", "cwchar"):
+    ExtraHeader[header] = "v1/__cstddef/size_t.h$"
 
 
 # newline needs to be escaped for the module partition output.

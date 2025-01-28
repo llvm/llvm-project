@@ -15,23 +15,23 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-NOT: = ptrtoint ptr undef to i64
 ; CHECK: .lr.ph
 ; CHECK: ret void
-define void @VerifyDiagnosticConsumerTest() unnamed_addr nounwind uwtable align 2 {
+define void @VerifyDiagnosticConsumerTest(i1 %arg) unnamed_addr nounwind uwtable align 2 {
 bb:
   %tmp3 = call ptr @getCharData() nounwind
   %tmp4 = call ptr @getCharData() nounwind
   %tmp5 = ptrtoint ptr %tmp4 to i64
   %tmp6 = ptrtoint ptr %tmp3 to i64
   %tmp7 = sub i64 %tmp5, %tmp6
-  br i1 undef, label %bb87, label %.preheader
+  br i1 false, label %bb87, label %.preheader
 
 .preheader:                                       ; preds = %bb10, %bb
-  br i1 undef, label %_ZNK4llvm9StringRef4findEcm.exit42.thread, label %bb10
+  br i1 false, label %_ZNK4llvm9StringRef4findEcm.exit42.thread, label %bb10
 
 bb10:                                             ; preds = %.preheader
-  br i1 undef, label %_ZNK4llvm9StringRef4findEcm.exit42, label %.preheader
+  br i1 true, label %_ZNK4llvm9StringRef4findEcm.exit42, label %.preheader
 
 _ZNK4llvm9StringRef4findEcm.exit42:               ; preds = %bb10
-  br i1 undef, label %_ZNK4llvm9StringRef4findEcm.exit42.thread, label %.lr.ph
+  br i1 false, label %_ZNK4llvm9StringRef4findEcm.exit42.thread, label %.lr.ph
 
 _ZNK4llvm9StringRef4findEcm.exit42.thread:        ; preds = %_ZNK4llvm9StringRef4findEcm.exit42, %.preheader
   unreachable
@@ -48,7 +48,7 @@ _ZNK4llvm9StringRef4findEcm.exit._crit_edge:      ; preds = %bb61, %_ZNK4llvm9St
 
 bb36:                                             ; preds = %_ZNK4llvm9StringRef4findEcm.exit.loopexit, %.lr.ph
   %loc.063 = phi i64 [ undef, %.lr.ph ], [ %i.0.i, %_ZNK4llvm9StringRef4findEcm.exit.loopexit ]
-  switch i8 undef, label %bb57 [
+  switch i8 10, label %bb57 [
     i8 10, label %bb48
     i8 13, label %bb48
   ]
@@ -73,7 +73,7 @@ bb63:                                             ; preds = %bb61
   %tmp64 = getelementptr inbounds i8, ptr %tmp3, i64 %i.0.i
   %tmp65 = load i8, ptr %tmp64, align 1
   %tmp67 = add i64 %i.0.i, 1
-  br i1 undef, label %_ZNK4llvm9StringRef4findEcm.exit.loopexit, label %bb61
+  br i1 %arg, label %_ZNK4llvm9StringRef4findEcm.exit.loopexit, label %bb61
 
 bb87:                                             ; preds = %bb
   ret void

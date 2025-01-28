@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/MemoryProfileInfo.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -41,6 +42,11 @@ cl::opt<unsigned> MemProfMinAveLifetimeAccessDensityHotThreshold(
     cl::desc("The minimum TotalLifetimeAccessDensity / AllocCount for an "
              "allocation to be considered hot"));
 
+cl::opt<bool>
+    MemProfUseHotHints("memprof-use-hot-hints", cl::init(false), cl::Hidden,
+                       cl::desc("Enable use of hot hints (only supported for "
+                                "unambigously hot allocations)"));
+
 cl::opt<bool> MemProfReportHintedSizes(
     "memprof-report-hinted-sizes", cl::init(false), cl::Hidden,
     cl::desc("Report total allocation sizes of hinted allocations"));
@@ -59,8 +65,9 @@ AllocationType llvm::memprof::getAllocType(uint64_t TotalLifetimeAccessDensity,
 
   // The access densities are multiplied by 100 to hold 2 decimal places of
   // precision, so need to divide by 100.
-  if (((float)TotalLifetimeAccessDensity) / AllocCount / 100 >
-      MemProfMinAveLifetimeAccessDensityHotThreshold)
+  if (MemProfUseHotHints &&
+      ((float)TotalLifetimeAccessDensity) / AllocCount / 100 >
+          MemProfMinAveLifetimeAccessDensityHotThreshold)
     return AllocationType::Hot;
 
   return AllocationType::NotCold;
@@ -68,7 +75,8 @@ AllocationType llvm::memprof::getAllocType(uint64_t TotalLifetimeAccessDensity,
 
 MDNode *llvm::memprof::buildCallstackMetadata(ArrayRef<uint64_t> CallStack,
                                               LLVMContext &Ctx) {
-  std::vector<Metadata *> StackVals;
+  SmallVector<Metadata *, 8> StackVals;
+  StackVals.reserve(CallStack.size());
   for (auto Id : CallStack) {
     auto *StackValMD =
         ValueAsMetadata::get(ConstantInt::get(Type::getInt64Ty(Ctx), Id));
@@ -96,12 +104,6 @@ AllocationType llvm::memprof::getMIBAllocType(const MDNode *MIB) {
     return AllocationType::Hot;
   }
   return AllocationType::NotCold;
-}
-
-uint64_t llvm::memprof::getMIBTotalSize(const MDNode *MIB) {
-  if (MIB->getNumOperands() < 3)
-    return 0;
-  return mdconst::dyn_extract<ConstantInt>(MIB->getOperand(2))->getZExtValue();
 }
 
 std::string llvm::memprof::getAllocTypeAttributeString(AllocationType Type) {
@@ -134,22 +136,21 @@ bool llvm::memprof::hasSingleAllocType(uint8_t AllocTypes) {
   return NumAllocTypes == 1;
 }
 
-void CallStackTrie::addCallStack(AllocationType AllocType,
-                                 ArrayRef<uint64_t> StackIds,
-                                 uint64_t TotalSize) {
+void CallStackTrie::addCallStack(
+    AllocationType AllocType, ArrayRef<uint64_t> StackIds,
+    std::vector<ContextTotalSize> ContextSizeInfo) {
   bool First = true;
   CallStackTrieNode *Curr = nullptr;
   for (auto StackId : StackIds) {
-    // If this is the first stack frame, add or update alloc node.
+    //  If this is the first stack frame, add or update alloc node.
     if (First) {
       First = false;
       if (Alloc) {
         assert(AllocStackId == StackId);
-        Alloc->AllocTypes |= static_cast<uint8_t>(AllocType);
-        Alloc->TotalSize += TotalSize;
+        Alloc->addAllocType(AllocType);
       } else {
         AllocStackId = StackId;
-        Alloc = new CallStackTrieNode(AllocType, TotalSize);
+        Alloc = new CallStackTrieNode(AllocType);
       }
       Curr = Alloc;
       continue;
@@ -158,16 +159,17 @@ void CallStackTrie::addCallStack(AllocationType AllocType,
     auto Next = Curr->Callers.find(StackId);
     if (Next != Curr->Callers.end()) {
       Curr = Next->second;
-      Curr->AllocTypes |= static_cast<uint8_t>(AllocType);
-      Curr->TotalSize += TotalSize;
+      Curr->addAllocType(AllocType);
       continue;
     }
     // Otherwise add a new caller node.
-    auto *New = new CallStackTrieNode(AllocType, TotalSize);
+    auto *New = new CallStackTrieNode(AllocType);
     Curr->Callers[StackId] = New;
     Curr = New;
   }
   assert(Curr);
+  Curr->ContextSizeInfo.insert(Curr->ContextSizeInfo.end(),
+                               ContextSizeInfo.begin(), ContextSizeInfo.end());
 }
 
 void CallStackTrie::addCallStack(MDNode *MIB) {
@@ -180,20 +182,59 @@ void CallStackTrie::addCallStack(MDNode *MIB) {
     assert(StackId);
     CallStack.push_back(StackId->getZExtValue());
   }
-  addCallStack(getMIBAllocType(MIB), CallStack, getMIBTotalSize(MIB));
+  std::vector<ContextTotalSize> ContextSizeInfo;
+  // Collect the context size information if it exists.
+  if (MIB->getNumOperands() > 2) {
+    for (unsigned I = 2; I < MIB->getNumOperands(); I++) {
+      MDNode *ContextSizePair = dyn_cast<MDNode>(MIB->getOperand(I));
+      assert(ContextSizePair->getNumOperands() == 2);
+      uint64_t FullStackId =
+          mdconst::dyn_extract<ConstantInt>(ContextSizePair->getOperand(0))
+              ->getZExtValue();
+      uint64_t TotalSize =
+          mdconst::dyn_extract<ConstantInt>(ContextSizePair->getOperand(1))
+              ->getZExtValue();
+      ContextSizeInfo.push_back({FullStackId, TotalSize});
+    }
+  }
+  addCallStack(getMIBAllocType(MIB), CallStack, std::move(ContextSizeInfo));
 }
 
-static MDNode *createMIBNode(LLVMContext &Ctx,
-                             std::vector<uint64_t> &MIBCallStack,
-                             AllocationType AllocType, uint64_t TotalSize) {
-  std::vector<Metadata *> MIBPayload(
+static MDNode *createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
+                             AllocationType AllocType,
+                             ArrayRef<ContextTotalSize> ContextSizeInfo) {
+  SmallVector<Metadata *> MIBPayload(
       {buildCallstackMetadata(MIBCallStack, Ctx)});
   MIBPayload.push_back(
       MDString::get(Ctx, getAllocTypeAttributeString(AllocType)));
-  if (TotalSize)
-    MIBPayload.push_back(ValueAsMetadata::get(
-        ConstantInt::get(Type::getInt64Ty(Ctx), TotalSize)));
+  if (!ContextSizeInfo.empty()) {
+    for (const auto &[FullStackId, TotalSize] : ContextSizeInfo) {
+      auto *FullStackIdMD = ValueAsMetadata::get(
+          ConstantInt::get(Type::getInt64Ty(Ctx), FullStackId));
+      auto *TotalSizeMD = ValueAsMetadata::get(
+          ConstantInt::get(Type::getInt64Ty(Ctx), TotalSize));
+      auto *ContextSizeMD = MDNode::get(Ctx, {FullStackIdMD, TotalSizeMD});
+      MIBPayload.push_back(ContextSizeMD);
+    }
+  }
   return MDNode::get(Ctx, MIBPayload);
+}
+
+void CallStackTrie::collectContextSizeInfo(
+    CallStackTrieNode *Node, std::vector<ContextTotalSize> &ContextSizeInfo) {
+  ContextSizeInfo.insert(ContextSizeInfo.end(), Node->ContextSizeInfo.begin(),
+                         Node->ContextSizeInfo.end());
+  for (auto &Caller : Node->Callers)
+    collectContextSizeInfo(Caller.second, ContextSizeInfo);
+}
+
+void CallStackTrie::convertHotToNotCold(CallStackTrieNode *Node) {
+  if (Node->hasAllocType(AllocationType::Hot)) {
+    Node->removeAllocType(AllocationType::Hot);
+    Node->addAllocType(AllocationType::NotCold);
+  }
+  for (auto &Caller : Node->Callers)
+    convertHotToNotCold(Caller.second);
 }
 
 // Recursive helper to trim contexts and create metadata nodes.
@@ -206,8 +247,10 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
   // Trim context below the first node in a prefix with a single alloc type.
   // Add an MIB record for the current call stack prefix.
   if (hasSingleAllocType(Node->AllocTypes)) {
+    std::vector<ContextTotalSize> ContextSizeInfo;
+    collectContextSizeInfo(Node, ContextSizeInfo);
     MIBNodes.push_back(createMIBNode(
-        Ctx, MIBCallStack, (AllocationType)Node->AllocTypes, Node->TotalSize));
+        Ctx, MIBCallStack, (AllocationType)Node->AllocTypes, ContextSizeInfo));
     return true;
   }
 
@@ -243,27 +286,53 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
   // non-cold allocation type.
   if (!CalleeHasAmbiguousCallerContext)
     return false;
+  std::vector<ContextTotalSize> ContextSizeInfo;
+  collectContextSizeInfo(Node, ContextSizeInfo);
   MIBNodes.push_back(createMIBNode(Ctx, MIBCallStack, AllocationType::NotCold,
-                                   Node->TotalSize));
+                                   ContextSizeInfo));
   return true;
+}
+
+void CallStackTrie::addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
+                                                StringRef Descriptor) {
+  addAllocTypeAttribute(CI->getContext(), CI, AT);
+  if (MemProfReportHintedSizes) {
+    std::vector<ContextTotalSize> ContextSizeInfo;
+    collectContextSizeInfo(Alloc, ContextSizeInfo);
+    for (const auto &[FullStackId, TotalSize] : ContextSizeInfo) {
+      errs() << "MemProf hinting: Total size for full allocation context hash "
+             << FullStackId << " and " << Descriptor << " alloc type "
+             << getAllocTypeAttributeString(AT) << ": " << TotalSize << "\n";
+    }
+  }
 }
 
 // Build and attach the minimal necessary MIB metadata. If the alloc has a
 // single allocation type, add a function attribute instead. Returns true if
 // memprof metadata attached, false if not (attribute added).
 bool CallStackTrie::buildAndAttachMIBMetadata(CallBase *CI) {
-  auto &Ctx = CI->getContext();
   if (hasSingleAllocType(Alloc->AllocTypes)) {
-    addAllocTypeAttribute(Ctx, CI, (AllocationType)Alloc->AllocTypes);
-    if (MemProfReportHintedSizes) {
-      assert(Alloc->TotalSize);
-      errs() << "Total size for allocation with location hash " << AllocStackId
-             << " and single alloc type "
-             << getAllocTypeAttributeString((AllocationType)Alloc->AllocTypes)
-             << ": " << Alloc->TotalSize << "\n";
-    }
+    addSingleAllocTypeAttribute(CI, (AllocationType)Alloc->AllocTypes,
+                                "single");
     return false;
   }
+  // If there were any hot allocation contexts, the Alloc trie node would have
+  // the Hot type set. If so, because we don't currently support cloning for hot
+  // contexts, they should be converted to NotCold. This happens in the cloning
+  // support anyway, however, doing this now enables more aggressive context
+  // trimming when building the MIB metadata (and possibly may make the
+  // allocation have a single NotCold allocation type), greatly reducing
+  // overheads in bitcode, cloning memory and cloning time.
+  if (Alloc->hasAllocType(AllocationType::Hot)) {
+    convertHotToNotCold(Alloc);
+    // Check whether we now have a single alloc type.
+    if (hasSingleAllocType(Alloc->AllocTypes)) {
+      addSingleAllocTypeAttribute(CI, (AllocationType)Alloc->AllocTypes,
+                                  "single");
+      return false;
+    }
+  }
+  auto &Ctx = CI->getContext();
   std::vector<uint64_t> MIBCallStack;
   MIBCallStack.push_back(AllocStackId);
   std::vector<Metadata *> MIBNodes;
@@ -280,8 +349,9 @@ bool CallStackTrie::buildAndAttachMIBMetadata(CallBase *CI) {
   // If there exists corner case that CallStackTrie has one chain to leaf
   // and all node in the chain have multi alloc type, conservatively give
   // it non-cold allocation type.
-  // FIXME: Avoid this case before memory profile created.
-  addAllocTypeAttribute(Ctx, CI, AllocationType::NotCold);
+  // FIXME: Avoid this case before memory profile created. Alternatively, select
+  // hint based on fraction cold.
+  addSingleAllocTypeAttribute(CI, AllocationType::NotCold, "indistinguishable");
   return false;
 }
 
@@ -307,4 +377,21 @@ template <> uint64_t CallStack<MDNode, MDNode::op_iterator>::back() const {
   assert(N);
   return mdconst::dyn_extract<ConstantInt>(N->operands().back())
       ->getZExtValue();
+}
+
+MDNode *MDNode::getMergedMemProfMetadata(MDNode *A, MDNode *B) {
+  // TODO: Support more sophisticated merging, such as selecting the one with
+  // more bytes allocated, or implement support for carrying multiple allocation
+  // leaf contexts. For now, keep the first one.
+  if (A)
+    return A;
+  return B;
+}
+
+MDNode *MDNode::getMergedCallsiteMetadata(MDNode *A, MDNode *B) {
+  // TODO: Support more sophisticated merging, which will require support for
+  // carrying multiple contexts. For now, keep the first one.
+  if (A)
+    return A;
+  return B;
 }

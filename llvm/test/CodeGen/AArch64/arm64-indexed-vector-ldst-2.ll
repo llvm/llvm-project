@@ -1,10 +1,10 @@
 ; RUN: llc < %s
 
-; This used to assert with "Overran sorted position" in AssignTopologicalOrder
-; due to a cycle created in performPostLD1Combine.
-
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-ios7.0.0"
+
+; This used to assert with "Overran sorted position" in AssignTopologicalOrder
+; due to a cycle created in performPostLD1Combine.
 
 ; Function Attrs: nounwind ssp
 define void @f(ptr %P1) #0 {
@@ -49,6 +49,37 @@ define <4 x i32> @f3(ptr %p, <4 x i1> %m, <4 x i32> %v1, <4 x i32> %v2) {
   %vret = insertelement <4 x i32> %v, i32 %L0, i32 %L1
   ret <4 x i32> %vret
 }
+
+; This test used to crash in performPostLD1Combine when the combine attempted to
+; replace a load that already had index writeback, resulting in an incorrect
+; CombineTo, which would have changed the number of SDValue results of the
+; instruction.
+define i32 @rdar138004275(ptr %arg, i1 %arg1) {
+bb:
+  br label %bb3
+
+bb2:                                              ; preds = %bb3
+  store volatile <8 x half> %shufflevector10, ptr null, align 16
+  ret i32 0
+
+bb3:                                              ; preds = %bb3, %bb
+  %phi = phi ptr [ null, %bb ], [ %getelementptr11, %bb3 ]
+  %load = load <2 x half>, ptr %phi, align 4
+  %shufflevector = shufflevector <2 x half> %load, <2 x half> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %getelementptr = getelementptr i8, ptr %phi, i64 4
+  %load4 = load half, ptr %getelementptr, align 2
+  %insertelement = insertelement <2 x half> zeroinitializer, half %load4, i64 0
+  %shufflevector5 = shufflevector <2 x half> %insertelement, <2 x half> zeroinitializer, <8 x i32> <i32 0, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %shufflevector6 = shufflevector <8 x half> %shufflevector, <8 x half> %shufflevector5, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 6, i32 7>
+  store <8 x half> %shufflevector6, ptr %arg, align 16
+  %getelementptr7 = getelementptr i8, ptr %phi, i64 6
+  %load8 = load <2 x half>, ptr %getelementptr7, align 4
+  %shufflevector9 = shufflevector <2 x half> %load8, <2 x half> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %shufflevector10 = shufflevector <8 x half> %shufflevector9, <8 x half> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 10, i32 11, i32 poison, i32 poison, i32 14, i32 15>
+  %getelementptr11 = getelementptr i8, ptr %phi, i64 6
+  br i1 %arg1, label %bb2, label %bb3
+}
+
 
 ; Function Attrs: nounwind readnone
 declare i64 @llvm.objectsize.i64.p0(ptr, i1) #1

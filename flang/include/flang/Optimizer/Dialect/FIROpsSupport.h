@@ -75,6 +75,16 @@ constexpr llvm::StringRef getOptionalAttrName() { return "fir.optional"; }
 /// Attribute to mark Fortran entities with the TARGET attribute.
 static constexpr llvm::StringRef getTargetAttrName() { return "fir.target"; }
 
+/// Attribute to mark Fortran entities with the ASYNCHRONOUS attribute.
+static constexpr llvm::StringRef getAsynchronousAttrName() {
+  return "fir.asynchronous";
+}
+
+/// Attribute to mark Fortran entities with the VOLATILE attribute.
+static constexpr llvm::StringRef getVolatileAttrName() {
+  return "fir.volatile";
+}
+
 /// Attribute to mark that a function argument is a character dummy procedure.
 /// Character dummy procedure have special ABI constraints.
 static constexpr llvm::StringRef getCharacterProcedureDummyAttrName() {
@@ -160,6 +170,10 @@ static constexpr llvm::StringRef getFuncRecursiveAttrName() {
   return "fir.func_recursive";
 }
 
+static constexpr llvm::StringRef getFortranProcedureFlagsAttrName() {
+  return "fir.proc_attrs";
+}
+
 // Attribute for an alloca that is a trivial adaptor for converting a value to
 // pass-by-ref semantics for a VALUE parameter. The optimizer may be able to
 // eliminate these.
@@ -173,6 +187,27 @@ inline mlir::NamedAttribute getAdaptToByRefAttr(Builder &builder) {
 }
 
 bool isDummyArgument(mlir::Value v);
+
+template <fir::FortranProcedureFlagsEnum Flag>
+inline bool hasProcedureAttr(fir::FortranProcedureFlagsEnumAttr flags) {
+  return flags && bitEnumContainsAny(flags.getValue(), Flag);
+}
+
+template <fir::FortranProcedureFlagsEnum Flag>
+inline bool hasProcedureAttr(mlir::Operation *op) {
+  if (auto firCallOp = mlir::dyn_cast<fir::CallOp>(op))
+    return hasProcedureAttr<Flag>(firCallOp.getProcedureAttrsAttr());
+  if (auto firCallOp = mlir::dyn_cast<fir::DispatchOp>(op))
+    return hasProcedureAttr<Flag>(firCallOp.getProcedureAttrsAttr());
+  return hasProcedureAttr<Flag>(
+      op->getAttrOfType<fir::FortranProcedureFlagsEnumAttr>(
+          getFortranProcedureFlagsAttrName()));
+}
+
+inline bool hasBindcAttr(mlir::Operation *op) {
+  return hasProcedureAttr<fir::FortranProcedureFlagsEnum::bind_c>(op);
+}
+
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIROPSSUPPORT_H

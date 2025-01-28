@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_86 -mattr=+ptx72 | FileCheck %s
-; RUN: %if ptxas-11.2 %{ llc < %s -march=nvptx64 -mcpu=sm_86 -mattr=+ptx72 | %ptxas-verify -arch=sm_86 %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_86 -mattr=+ptx72 | FileCheck %s
+; RUN: %if ptxas-11.2 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_86 -mattr=+ptx72 | %ptxas-verify -arch=sm_86 %}
 
 declare half @llvm.nvvm.fmin.xorsign.abs.f16(half, half)
 declare half @llvm.nvvm.fmin.ftz.xorsign.abs.f16(half, half)

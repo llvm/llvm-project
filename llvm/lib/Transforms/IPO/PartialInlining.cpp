@@ -170,11 +170,10 @@ struct FunctionOutliningMultiRegionInfo {
 
   // Container for outline regions
   struct OutlineRegionInfo {
-    OutlineRegionInfo(ArrayRef<BasicBlock *> Region,
-                      BasicBlock *EntryBlock, BasicBlock *ExitBlock,
-                      BasicBlock *ReturnBlock)
-        : Region(Region.begin(), Region.end()), EntryBlock(EntryBlock),
-          ExitBlock(ExitBlock), ReturnBlock(ReturnBlock) {}
+    OutlineRegionInfo(ArrayRef<BasicBlock *> Region, BasicBlock *EntryBlock,
+                      BasicBlock *ExitBlock, BasicBlock *ReturnBlock)
+        : Region(Region), EntryBlock(EntryBlock), ExitBlock(ExitBlock),
+          ReturnBlock(ReturnBlock) {}
     SmallVector<BasicBlock *, 8> Region;
     BasicBlock *EntryBlock;
     BasicBlock *ExitBlock;
@@ -1040,7 +1039,7 @@ void PartialInlinerImpl::FunctionCloner::normalizeReturnBlock() const {
   };
 
   ClonedOI->ReturnBlock = ClonedOI->ReturnBlock->splitBasicBlock(
-      ClonedOI->ReturnBlock->getFirstNonPHI()->getIterator());
+      ClonedOI->ReturnBlock->getFirstNonPHIIt());
   BasicBlock::iterator I = PreReturn->begin();
   BasicBlock::iterator Ins = ClonedOI->ReturnBlock->begin();
   SmallVector<Instruction *, 4> DeadPhis;

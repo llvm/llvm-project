@@ -6,7 +6,7 @@ frintm  z0.b, p0/m, z0.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 frintm  z0.s, p0/z, z0.s
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction requires: sme2p2 or sve2p2
 // CHECK-NEXT: frintm  z0.s, p0/z, z0.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

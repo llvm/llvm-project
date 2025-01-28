@@ -44,8 +44,8 @@ module User [no_undeclared_includes] { header "user.h" }
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/undeclared/module.modulemap",
-// CHECK-NEXT:         "[[PREFIX]]/user.h"
+// CHECK-NEXT:         "[[PREFIX]]/user.h",
+// CHECK-NEXT:         "[[PREFIX]]/undeclared/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "User"

@@ -192,6 +192,7 @@
         integer (kind=omp_pause_resource_kind), parameter, public :: omp_pause_resume = 0
         integer (kind=omp_pause_resource_kind), parameter, public :: omp_pause_soft = 1
         integer (kind=omp_pause_resource_kind), parameter, public :: omp_pause_hard = 2
+        integer (kind=omp_pause_resource_kind), parameter, public :: omp_pause_stop_tool = 3
 
         integer (kind=omp_interop_fr_kind), parameter, public :: omp_ifr_cuda = 1
         integer (kind=omp_interop_fr_kind), parameter, public :: omp_ifr_cuda_driver = 2

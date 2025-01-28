@@ -136,12 +136,18 @@ PreservedAnalyses CFGOnlyPrinterPass::run(Function &F,
 ///
 void Function::viewCFG() const { viewCFG(false, nullptr, nullptr); }
 
+void Function::viewCFG(const char *OutputFileName) const {
+  viewCFG(false, nullptr, nullptr, OutputFileName);
+}
+
 void Function::viewCFG(bool ViewCFGOnly, const BlockFrequencyInfo *BFI,
-                       const BranchProbabilityInfo *BPI) const {
+                       const BranchProbabilityInfo *BPI,
+                       const char *OutputFileName) const {
   if (!CFGFuncName.empty() && !getName().contains(CFGFuncName))
     return;
   DOTFuncInfo CFGInfo(this, BFI, BPI, BFI ? getMaxFreq(*this, BFI) : 0);
-  ViewGraph(&CFGInfo, "cfg" + getName(), ViewCFGOnly);
+  ViewGraph(&CFGInfo, OutputFileName ? OutputFileName : "cfg" + getName(),
+            ViewCFGOnly);
 }
 
 /// viewCFGOnly - This function is meant for use from the debugger.  It works
@@ -150,6 +156,10 @@ void Function::viewCFG(bool ViewCFGOnly, const BlockFrequencyInfo *BFI,
 /// this can make the graph smaller.
 ///
 void Function::viewCFGOnly() const { viewCFGOnly(nullptr, nullptr); }
+
+void Function::viewCFGOnly(const char *OutputFileName) const {
+  viewCFG(true, nullptr, nullptr, OutputFileName);
+}
 
 void Function::viewCFGOnly(const BlockFrequencyInfo *BFI,
                            const BranchProbabilityInfo *BPI) const {

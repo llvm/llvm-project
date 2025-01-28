@@ -8,8 +8,8 @@ define void @test_unconditional(i1 %c, ptr dereferenceable(8) align 8 %p) {
 ; CHECK-LABEL: define void @test_unconditional
 ; CHECK-SAME: (i1 [[C:%.*]], ptr align 8 dereferenceable(8) [[P:%.*]]) {
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    [[V2:%.*]] = load ptr, ptr [[P]], align 8, !nonnull !1, !noundef !1
-; CHECK-NEXT:    [[V3:%.*]] = load ptr, ptr [[P]], align 8, !dereferenceable !2, !align !2
+; CHECK-NEXT:    [[V2:%.*]] = load ptr, ptr [[P]], align 8, !nonnull [[META1:![0-9]+]], !noundef [[META1]]
+; CHECK-NEXT:    [[V3:%.*]] = load ptr, ptr [[P]], align 8, !dereferenceable [[META2:![0-9]+]], !align [[META2]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    call void @foo(i32 [[V1]], ptr [[V2]], ptr [[V3]])
@@ -36,8 +36,8 @@ define void @test_conditional(i1 %c, i1 %c2, ptr dereferenceable(8) align 8 %p) 
 ; CHECK-LABEL: define void @test_conditional
 ; CHECK-SAME: (i1 [[C:%.*]], i1 [[C2:%.*]], ptr align 8 dereferenceable(8) [[P:%.*]]) {
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG0]]
-; CHECK-NEXT:    [[V2:%.*]] = load ptr, ptr [[P]], align 8, !nonnull !1
-; CHECK-NEXT:    [[V3:%.*]] = load ptr, ptr [[P]], align 8, !align !2
+; CHECK-NEXT:    [[V2:%.*]] = load ptr, ptr [[P]], align 8, !nonnull [[META1]]
+; CHECK-NEXT:    [[V3:%.*]] = load ptr, ptr [[P]], align 8, !align [[META2]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[LATCH:%.*]]
@@ -67,10 +67,69 @@ latch:
 exit:
   ret void
 }
+
+declare i16 @e(i32)
+
+; FIXME: alias metadata violations are UB, so should not be set on the hoisted
+; load, as it may not execute.
+define void @noalias_metadata_load_may_not_execute() {
+; CHECK-LABEL: define void @noalias_metadata_load_may_not_execute() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 16
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[A]]
+; CHECK-NEXT:    [[GEP_PROMOTED:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[ADD1:%.*]] = phi i32 [ [[GEP_PROMOTED]], [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[CALL:%.*]] = call signext i16 @e(i32 [[IV]])
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i16 [[CALL]], 0
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP_LATCH]], label [[EXIT:%.*]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[ADD]] = add i32 [[ADD1]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IV]], 100
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_HEADER]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[ADD2:%.*]] = phi i32 [ [[ADD]], [[LOOP_LATCH]] ], [ [[ADD1]], [[LOOP_HEADER]] ]
+; CHECK-NEXT:    store i32 [[ADD2]], ptr [[GEP]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = alloca i32, align 16
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %call = call signext i16 @e(i32 %iv)
+  %c = icmp eq i16 %call, 0
+  br i1 %c, label %loop.latch, label %exit
+
+loop.latch:
+  %gep = getelementptr inbounds i32, ptr %a
+  %l = load i32, ptr %gep, !tbaa !0, !noalias !4
+  %add = add i32 %l, 1
+  store i32 %add, ptr %gep, align 4, !tbaa !0, !noalias !4
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp ult i32 %iv, 100
+  br i1 %cmp, label %loop.header, label %exit
+
+exit:
+  ret void
+}
+
+
+!0 = !{!1, !1, i64 0}
+!1 = !{!"short", !2, i64 0}
+!2 = !{!"omnipotent char", !3, i64 0}
+!3 = !{!"Simple C/C++ TBAA"}
+!4 = !{!5}
+!5 = distinct !{!5, !6}
+!6 = distinct !{!6}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { memory(none) }
 ;.
 ; CHECK: [[RNG0]] = !{i32 0, i32 10}
-; CHECK: [[META1:![0-9]+]] = !{}
-; CHECK: [[META2:![0-9]+]] = !{i64 4}
+; CHECK: [[META1]] = !{}
+; CHECK: [[META2]] = !{i64 4}
 ;.

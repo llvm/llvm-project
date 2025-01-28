@@ -37,7 +37,7 @@ entry:
   br label %for.body
 
 for.body:                                         ; preds = %entry
-  br i1 undef, label %for.end, label %for.body.1
+  br i1 poison, label %for.end, label %for.body.1
 
 for.end:                                          ; preds = %for.body
   store i16 %xor1, ptr @d.e, align 4

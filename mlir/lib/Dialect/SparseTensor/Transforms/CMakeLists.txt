@@ -40,6 +40,7 @@ add_mlir_dialect_library(MLIRSparseTensorTransforms
   MLIRLLVMDialect
   MLIRLinalgDialect
   MLIRLinalgTransforms
+  MLIRLLVMCommonConversion
   MLIRMemRefDialect
   MLIRPass
   MLIRSCFDialect

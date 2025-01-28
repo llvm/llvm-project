@@ -5,6 +5,7 @@
 # RUN: ld.lld -pie a.o b.o -o out
 # RUN: llvm-objdump -d out | FileCheck %s
 # RUN: llvm-readelf -Srs out | FileCheck %s --check-prefix=RELOC
+# RUN: llvm-dwarfdump --eh-frame out | FileCheck %s --check-prefix=UNWIND
 
 # CHECK:       <_start>:
 # CHECK-NEXT:    callq {{.*}} <foo>
@@ -17,6 +18,13 @@
 # RELOC:  .data             PROGBITS        {{0*}}[[#%x,DATA:]]
 
 # RELOC:  {{0*}}[[#DATA+8]]  0000000000000008 R_X86_64_RELATIVE [[#%x,DATA+0x8000000000000000]]
+
+# RELOC:      00000000000012f4     0 NOTYPE  GLOBAL DEFAULT [[#]] _start
+# RELOC-NEXT: 00000000000012fe     0 NOTYPE  GLOBAL DEFAULT [[#]] foo
+
+## initial_location fields in FDEs are correctly relocated.
+# UNWIND: 00000018 00000010 0000001c FDE cie=00000000 pc=000012f4...000012fe
+# UNWIND: 0000002c 00000010 00000030 FDE cie=00000000 pc=000012fe...0000130c
 
 # RUN: ld.lld -pie --emit-relocs a.o b.o -o out1
 # RUN: llvm-objdump -dr out1 | FileCheck %s --check-prefix=CHECKE

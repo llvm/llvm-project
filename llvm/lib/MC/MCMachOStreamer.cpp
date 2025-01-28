@@ -456,7 +456,7 @@ void MCMachOStreamer::emitInstToData(const MCInst &Inst,
     DF->getFixups().push_back(Fixup);
   }
   DF->setHasInstructions(STI);
-  DF->getContents().append(Code.begin(), Code.end());
+  DF->appendContents(Code);
 }
 
 void MCMachOStreamer::finishImpl() {
@@ -523,8 +523,7 @@ void MCMachOStreamer::finalizeCGProfile() {
   size_t SectionBytes =
       W.getCGProfile().size() * (2 * sizeof(uint32_t) + sizeof(uint64_t));
   cast<MCDataFragment>(*CGProfileSection->begin())
-      .getContents()
-      .resize(SectionBytes);
+      .appendContents(SectionBytes, 0);
 }
 
 MCStreamer *llvm::createMachOStreamer(MCContext &Context,
@@ -533,14 +532,8 @@ MCStreamer *llvm::createMachOStreamer(MCContext &Context,
                                       std::unique_ptr<MCCodeEmitter> &&CE,
                                       bool DWARFMustBeAtTheEnd,
                                       bool LabelSections) {
-  MCMachOStreamer *S = new MCMachOStreamer(
-      Context, std::move(MAB), std::move(OW), std::move(CE), LabelSections);
-  const Triple &Target = Context.getTargetTriple();
-  S->emitVersionForTarget(
-      Target, Context.getObjectFileInfo()->getSDKVersion(),
-      Context.getObjectFileInfo()->getDarwinTargetVariantTriple(),
-      Context.getObjectFileInfo()->getDarwinTargetVariantSDKVersion());
-  return S;
+  return new MCMachOStreamer(Context, std::move(MAB), std::move(OW),
+                             std::move(CE), LabelSections);
 }
 
 // The AddrSig section uses a series of relocations to refer to the symbols that
@@ -565,5 +558,5 @@ void MCMachOStreamer::createAddrSigSection() {
   // (instead of emitting a zero-sized section) so these relocations are
   // technically valid, even though we don't expect these relocations to
   // actually be applied by the linker.
-  Frag->getContents().resize(8);
+  Frag->appendContents(8, 0);
 }
