@@ -23,10 +23,10 @@ ConstantInitBuilderBase::ConstantInitBuilderBase(CIRGenModule &CGM)
 
 mlir::Type ConstantInitFuture::getType() const {
   assert(Data && "dereferencing null future");
-  if (Data.is<mlir::Attribute>()) {
-    auto attr = mlir::dyn_cast<mlir::TypedAttr>(Data.get<mlir::Attribute>());
-    assert(attr && "expected typed attribute");
-    return attr.getType();
+  if (auto attr = mlir::dyn_cast<mlir::Attribute>(Data)) {
+    auto typedAttr = mlir::dyn_cast<mlir::TypedAttr>(attr);
+    assert(typedAttr && "expected typed attribute");
+    return typedAttr.getType();
   } else {
     llvm_unreachable("Only sypport typed attributes here");
   }
@@ -42,8 +42,8 @@ void ConstantInitFuture::abandon() {
 
 void ConstantInitFuture::installInGlobal(cir::GlobalOp GV) {
   assert(Data && "installing null future");
-  if (Data.is<mlir::Attribute>()) {
-    CIRGenModule::setInitializer(GV, Data.get<mlir::Attribute>());
+  if (auto attr = mlir::dyn_cast<mlir::Attribute>(Data)) {
+    CIRGenModule::setInitializer(GV, attr);
   } else {
     llvm_unreachable("NYI");
     // auto &builder = *Data.get<ConstantInitBuilderBase *>();

@@ -70,8 +70,9 @@ public:
   /// Return the mlir::Value of the address of the aggregate.
   Address getAggregateAddress() const {
     assert(isAggregate() && "Not an aggregate!");
-    auto align = reinterpret_cast<uintptr_t>(V2.getPointer().get<int *>()) >>
-                 AggAlignShift;
+    auto align =
+        reinterpret_cast<uintptr_t>(mlir::cast<int *>(V2.getPointer())) >>
+        AggAlignShift;
     return Address(V1.getPointer(), ElementType,
                    clang::CharUnits::fromQuantity(align));
   }

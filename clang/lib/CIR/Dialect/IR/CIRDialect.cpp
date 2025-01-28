@@ -784,8 +784,8 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
       // create a new attribute that's capable of representing the source.
       llvm::SmallVector<mlir::OpFoldResult, 1> foldResults;
       auto foldOrder = getSrc().getDefiningOp()->fold(foldResults);
-      if (foldOrder.succeeded() && foldResults[0].is<mlir::Attribute>())
-        return foldResults[0].get<mlir::Attribute>();
+      if (foldOrder.succeeded() && mlir::isa<mlir::Attribute>(foldResults[0]))
+        return mlir::cast<mlir::Attribute>(foldResults[0]);
       return {};
     }
     case cir::CastKind::bitcast:

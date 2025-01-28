@@ -1053,7 +1053,7 @@ void CIRGenFunction::emitCallArgs(
     const auto *MD = mlir::dyn_cast<const ObjCMethodDecl *>(Prototype.P);
     assert(!MD && "ObjCMethodDecl NYI");
 
-    const auto *FPT = Prototype.P.get<const FunctionProtoType *>();
+    const auto *FPT = mlir::cast<const FunctionProtoType *>(Prototype.P);
     IsVariadic = FPT->isVariadic();
     ExplicitCC = FPT->getExtInfo().getCC();
     ArgTypes.assign(FPT->param_type_begin() + ParamsToSkip,

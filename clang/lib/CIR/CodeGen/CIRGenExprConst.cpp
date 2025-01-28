@@ -1456,8 +1456,8 @@ mlir::Attribute ConstantLValueEmitter::tryEmit() {
   // Convert to the appropriate type; this could be an lvalue for
   // an integer. FIXME: performAddrSpaceCast
   if (mlir::isa<cir::PointerType>(destTy)) {
-    if (value.is<mlir::Attribute>())
-      return value.get<mlir::Attribute>();
+    if (auto attr = mlir::dyn_cast<mlir::Attribute>(value))
+      return attr;
     llvm_unreachable("NYI");
   }
 

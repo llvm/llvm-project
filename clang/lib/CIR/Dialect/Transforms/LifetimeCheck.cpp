@@ -526,11 +526,11 @@ static Location getEndLocForHist(Region *R) {
 
 static Location getEndLocForHist(LifetimeCheckPass::LexicalScopeContext &lsc) {
   assert(!lsc.parent.isNull() && "shouldn't be null");
-  if (lsc.parent.is<Region *>())
-    return getEndLocForHist(lsc.parent.get<Region *>());
-  assert(lsc.parent.is<Operation *>() &&
+  if (auto r = mlir::dyn_cast<Region *>(lsc.parent))
+    return getEndLocForHist(r);
+  assert(mlir::isa<Operation *>(lsc.parent) &&
          "Only support operation beyond this point");
-  return getEndLocForHist(lsc.parent.get<Operation *>());
+  return getEndLocForHist(mlir::cast<Operation *>(lsc.parent));
 }
 
 void LifetimeCheckPass::killInPset(mlir::Value ptrKey, const State &s,

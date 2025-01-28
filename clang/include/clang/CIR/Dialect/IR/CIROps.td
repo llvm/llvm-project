@@ -3638,8 +3638,8 @@ class CIR_CallOp<string mnemonic, list<Trait> extra_traits = []> :
     void setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
       if (auto calling =
               (*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
-        (*this)->setAttr(getCalleeAttrName(), callee.get<mlir::SymbolRefAttr>());
-      setOperand(0, callee.get<mlir::Value>());
+        (*this)->setAttr(getCalleeAttrName(), mlir::cast<mlir::SymbolRefAttr>(callee));
+      setOperand(0, mlir::cast<mlir::Value>(callee));
     }
 
     bool isIndirect() { return !getCallee(); }
