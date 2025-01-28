@@ -1554,8 +1554,31 @@ public:
   /// trivially hoistable.
   bool shouldConsiderInvariant(Value *Op);
 
+  /// Return the value of vscale used for tuning the cost model.
+  std::optional<unsigned> getVScaleForTuning() const { return VScaleForTuning; }
+
 private:
   unsigned NumPredStores = 0;
+
+  std::optional<unsigned> VScaleForTuning;
+
+  /// Initializes the value of vscale used for tuning the cost model. If
+  /// vscale_range.min == vscale_range.max then return vscale_range.max, else
+  /// return the value returned by the corresponding TTI method.
+  void initializeVScaleForTuning() {
+    const Function *Fn = TheLoop->getHeader()->getParent();
+    if (Fn->hasFnAttribute(Attribute::VScaleRange)) {
+      auto Attr = Fn->getFnAttribute(Attribute::VScaleRange);
+      auto Min = Attr.getVScaleRangeMin();
+      auto Max = Attr.getVScaleRangeMax();
+      if (Max && Min == Max) {
+        VScaleForTuning = Max;
+        return;
+      }
+    }
+
+    VScaleForTuning = TTI.getVScaleForTuning();
+  }
 
   /// \return An upper bound for the vectorization factors for both
   /// fixed and scalable vectorization, where the minimum-known number of
@@ -3838,6 +3861,11 @@ FixedScalableVFPair LoopVectorizationCostModel::computeFeasibleMaxVF(
   if (!Legal->isSafeForAnyVectorWidth())
     this->MaxSafeElements = MaxSafeElements;
 
+  if (MaxSafeScalableVF != ElementCount::getScalable(0)) {
+    // Cache the value of vscale for tuning, since we'll need it.
+    initializeVScaleForTuning();
+  }
+
   LLVM_DEBUG(dbgs() << "LV: The max safe fixed VF is: " << MaxSafeFixedVF
                     << ".\n");
   LLVM_DEBUG(dbgs() << "LV: The max safe scalable VF is: " << MaxSafeScalableVF
@@ -4231,33 +4259,15 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
   return MaxVF;
 }
 
-/// Convenience function that returns the value of vscale_range iff
-/// vscale_range.min == vscale_range.max or otherwise returns the value
-/// returned by the corresponding TTI method.
-static std::optional<unsigned>
-getVScaleForTuning(const Loop *L, const TargetTransformInfo &TTI) {
-  const Function *Fn = L->getHeader()->getParent();
-  if (Fn->hasFnAttribute(Attribute::VScaleRange)) {
-    auto Attr = Fn->getFnAttribute(Attribute::VScaleRange);
-    auto Min = Attr.getVScaleRangeMin();
-    auto Max = Attr.getVScaleRangeMax();
-    if (Max && Min == Max)
-      return Max;
-  }
-
-  return TTI.getVScaleForTuning();
-}
-
 /// This function attempts to return a value that represents the vectorization
 /// factor at runtime. For fixed-width VFs we know this precisely at compile
 /// time, but for scalable VFs we calculate it based on an estimate of the
 /// vscale value.
-static unsigned getEstimatedRuntimeVF(const Loop *L,
-                                      const TargetTransformInfo &TTI,
-                                      ElementCount VF) {
+static unsigned getEstimatedRuntimeVF(ElementCount VF,
+                                      std::optional<unsigned> VScale) {
   unsigned EstimatedVF = VF.getKnownMinValue();
   if (VF.isScalable())
-    if (std::optional<unsigned> VScale = getVScaleForTuning(L, TTI))
+    if (VScale)
       EstimatedVF *= *VScale;
   assert(EstimatedVF >= 1 && "Estimated VF shouldn't be less than 1");
   return EstimatedVF;
@@ -4272,7 +4282,7 @@ bool LoopVectorizationPlanner::isMoreProfitable(
   // Improve estimate for the vector width if it is scalable.
   unsigned EstimatedWidthA = A.Width.getKnownMinValue();
   unsigned EstimatedWidthB = B.Width.getKnownMinValue();
-  if (std::optional<unsigned> VScale = getVScaleForTuning(OrigLoop, TTI)) {
+  if (std::optional<unsigned> VScale = CM.getVScaleForTuning()) {
     if (A.Width.isScalable())
       EstimatedWidthA *= *VScale;
     if (B.Width.isScalable())
@@ -4565,13 +4575,13 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
       InstructionCost C = CM.expectedCost(VF);
       VectorizationFactor Candidate(VF, C, ScalarCost.ScalarCost);
 
-      unsigned Width = getEstimatedRuntimeVF(OrigLoop, TTI, Candidate.Width);
+      unsigned Width =
+          getEstimatedRuntimeVF(Candidate.Width, CM.getVScaleForTuning());
       LLVM_DEBUG(dbgs() << "LV: Vector loop of width " << VF
                         << " costs: " << (Candidate.Cost / Width));
       if (VF.isScalable())
         LLVM_DEBUG(dbgs() << " (assuming a minimum vscale of "
-                          << getVScaleForTuning(OrigLoop, TTI).value_or(1)
-                          << ")");
+                          << CM.getVScaleForTuning().value_or(1) << ")");
       LLVM_DEBUG(dbgs() << ".\n");
 
       if (!ForceVectorization && !willGenerateVectors(*P, VF, TTI)) {
@@ -4660,7 +4670,8 @@ bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
   unsigned MinVFThreshold = EpilogueVectorizationMinVF.getNumOccurrences() > 0
                                 ? EpilogueVectorizationMinVF
                                 : TTI.getEpilogueVectorizationMinVF();
-  return getEstimatedRuntimeVF(TheLoop, TTI, VF * Multiplier) >= MinVFThreshold;
+  return getEstimatedRuntimeVF(VF * Multiplier, VScaleForTuning) >=
+         MinVFThreshold;
 }
 
 VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
@@ -4712,8 +4723,8 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
   // If MainLoopVF = vscale x 2, and vscale is expected to be 4, then we know
   // the main loop handles 8 lanes per iteration. We could still benefit from
   // vectorizing the epilogue loop with VF=4.
-  ElementCount EstimatedRuntimeVF =
-      ElementCount::getFixed(getEstimatedRuntimeVF(OrigLoop, TTI, MainLoopVF));
+  ElementCount EstimatedRuntimeVF = ElementCount::getFixed(
+      getEstimatedRuntimeVF(MainLoopVF, CM.getVScaleForTuning()));
 
   ScalarEvolution &SE = *PSE.getSE();
   Type *TCType = Legal->getWidestInductionType();
@@ -4959,7 +4970,7 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
       MaxInterleaveCount = ForceTargetMaxVectorInterleaveFactor;
   }
 
-  unsigned EstimatedVF = getEstimatedRuntimeVF(TheLoop, TTI, VF);
+  unsigned EstimatedVF = getEstimatedRuntimeVF(VF, VScaleForTuning);
   unsigned KnownTC = PSE.getSE()->getSmallConstantTripCount(TheLoop);
   if (KnownTC > 0) {
     // At least one iteration must be scalar when this constraint holds. So the
@@ -7388,7 +7399,7 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
   // Now compute and add the VPlan-based cost.
   Cost += Plan.cost(VF, CostCtx);
 #ifndef NDEBUG
-  unsigned EstimatedWidth = getEstimatedRuntimeVF(OrigLoop, CM.TTI, VF);
+  unsigned EstimatedWidth = getEstimatedRuntimeVF(VF, CM.getVScaleForTuning());
   LLVM_DEBUG(dbgs() << "Cost for VF " << VF << ": " << Cost
                     << " (Estimated cost per lane: ");
   if (Cost.isValid()) {
@@ -10033,9 +10044,9 @@ static void checkMixedPrecision(Loop *L, OptimizationRemarkEmitter *ORE) {
 
 static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
                                        VectorizationFactor &VF, Loop *L,
-                                       const TargetTransformInfo &TTI,
                                        PredicatedScalarEvolution &PSE,
-                                       ScalarEpilogueLowering SEL) {
+                                       ScalarEpilogueLowering SEL,
+                                       std::optional<unsigned> VScale) {
   InstructionCost CheckCost = Checks.getCost();
   if (!CheckCost.isValid())
     return false;
@@ -10085,7 +10096,7 @@ static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
   // For now we assume the epilogue cost EpiC = 0 for simplicity. Note that
   // the computations are performed on doubles, not integers and the result
   // is rounded up, hence we get an upper estimate of the TC.
-  unsigned IntVF = getEstimatedRuntimeVF(L, TTI, VF.Width);
+  unsigned IntVF = getEstimatedRuntimeVF(VF.Width, VScale);
   uint64_t RtC = *CheckCost.getValue();
   uint64_t Div = ScalarC * IntVF - *VF.Cost.getValue();
   uint64_t MinTC1 = Div == 0 ? 0 : divideCeil(RtC * IntVF, Div);
@@ -10522,7 +10533,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     bool ForceVectorization =
         Hints.getForce() == LoopVectorizeHints::FK_Enabled;
     if (!ForceVectorization &&
-        !areRuntimeChecksProfitable(Checks, VF, L, *TTI, PSE, SEL)) {
+        !areRuntimeChecksProfitable(Checks, VF, L, PSE, SEL,
+                                    CM.getVScaleForTuning())) {
       ORE->emit([&]() {
         return OptimizationRemarkAnalysisAliasing(
                    DEBUG_TYPE, "CantReorderMemOps", L->getStartLoc(),
