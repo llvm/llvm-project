@@ -115,6 +115,9 @@ private:
   bool ParseDescriptorTable();
   bool ParseDescriptorTableClause();
 
+  // Helper dispatch method
+  bool ParseRegister(llvm::hlsl::rootsig::Register *Reg);
+
   /// Invoke the lexer to consume a token and update CurToken with the result
   ///
   /// Return value denotes if we were already at the last token.
