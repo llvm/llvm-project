@@ -53,7 +53,7 @@ TapiUniversal::ObjectForArch::getAsObjectFile() const {
 Expected<std::unique_ptr<TapiUniversal>>
 TapiUniversal::create(MemoryBufferRef Source) {
   Error Err = Error::success();
-  std::unique_ptr<TapiUniversal> Ret(new TapiUniversal(Source, Err));
+  auto Ret = std::make_unique<TapiUniversal>(Source, Err);
   if (Err)
     return std::move(Err);
   return std::move(Ret);

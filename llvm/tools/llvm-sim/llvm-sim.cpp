@@ -63,8 +63,7 @@ exportToFile(const StringRef FilePath,
              const SimilarityGroupList &SimSections,
              const DenseMap<Instruction *, unsigned> &LLVMInstNum) {
   std::error_code EC;
-  std::unique_ptr<ToolOutputFile> Out(
-      new ToolOutputFile(FilePath, EC, sys::fs::OF_None));
+  auto Out = std::make_unique<ToolOutputFile>(FilePath, EC, sys::fs::OF_None);
   if (EC)
     return EC;
 

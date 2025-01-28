@@ -63,8 +63,7 @@ int main(int argc, char **argv) {
   }
 
   std::error_code EC;
-  std::unique_ptr<ToolOutputFile> Out(
-      new ToolOutputFile(OutputFilename, EC, sys::fs::OF_None));
+  auto Out = std::make_unique<ToolOutputFile>(OutputFilename, EC, sys::fs::OF_None);
   ExitOnErr(errorCodeToError(EC));
 
   if (BinaryExtract) {

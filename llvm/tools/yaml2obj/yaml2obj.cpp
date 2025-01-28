@@ -122,8 +122,7 @@ int main(int argc, char **argv) {
   };
 
   std::error_code EC;
-  std::unique_ptr<ToolOutputFile> Out(
-      new ToolOutputFile(OutputFilename, EC, sys::fs::OF_None));
+  auto Out = std::make_unique<ToolOutputFile>(OutputFilename, EC, sys::fs::OF_None);
   if (EC) {
     ErrHandler("failed to open '" + OutputFilename + "': " + EC.message());
     return 1;

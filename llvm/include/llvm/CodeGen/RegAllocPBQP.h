@@ -210,7 +210,7 @@ public:
 
   void setup(const Vector& Costs) {
     NumOpts = Costs.getLength() - 1;
-    OptUnsafeEdges = std::unique_ptr<unsigned[]>(new unsigned[NumOpts]());
+    OptUnsafeEdges = std::make_unique<unsigned[]>(NumOpts);
   }
 
   ReductionState getReductionState() const { return RS; }

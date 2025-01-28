@@ -178,7 +178,7 @@ bool usesTriple(StringRef Buf) {
 
 Expected<std::unique_ptr<IFSStub>> ifs::readIFSFromBuffer(StringRef Buf) {
   yaml::Input YamlIn(Buf);
-  std::unique_ptr<IFSStubTriple> Stub(new IFSStubTriple());
+  auto Stub = std::make_unique<IFSStubTriple>();
   if (usesTriple(Buf)) {
     YamlIn >> *Stub;
   } else {
