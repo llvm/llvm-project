@@ -53,7 +53,6 @@ module Clang_Basic {
   textual header "clang/Basic/BuiltinsLoongArchLSX.def"
   textual header "clang/Basic/BuiltinsMips.def"
   textual header "clang/Basic/BuiltinsNEON.def"
-  textual header "clang/Basic/BuiltinsNVPTX.def"
   textual header "clang/Basic/BuiltinsPPC.def"
   textual header "clang/Basic/BuiltinsRISCVVector.def"
   textual header "clang/Basic/BuiltinsSME.def"

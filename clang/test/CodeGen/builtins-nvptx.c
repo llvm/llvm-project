@@ -202,7 +202,7 @@ __device__ void exit() {
 // NVVM intrinsics
 
 // The idea is not to test all intrinsics, just that Clang is recognizing the
-// builtins defined in BuiltinsNVPTX.def
+// builtins defined in BuiltinsNVPTX.td
 __device__ void nvvm_math(float f1, float f2, double d1, double d2) {
 // CHECK: call float @llvm.nvvm.fmax.f
   float t1 = __nvvm_fmax_f(f1, f2);

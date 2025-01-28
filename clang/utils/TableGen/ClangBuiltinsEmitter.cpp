@@ -104,9 +104,39 @@ private:
 
   void ParseType(StringRef T) {
     T = T.trim();
+
+    auto ConsumeAddrSpace = [&]() -> std::optional<unsigned> {
+      T = T.trim();
+      if (!T.consume_back(">"))
+        return std::nullopt;
+
+      auto Open = T.find_last_of('<');
+      if (Open == StringRef::npos)
+        PrintFatalError(Loc, "Mismatched angle-brackets in type");
+
+      StringRef ArgStr = T.substr(Open + 1);
+      T = T.slice(0, Open);
+      if (!T.consume_back("address_space"))
+        PrintFatalError(Loc,
+                        "Only `address_space<N>` supported as a parameterized "
+                        "pointer or reference type qualifier");
+
+      unsigned Number = 0;
+      if (ArgStr.getAsInteger(10, Number))
+        PrintFatalError(
+            Loc, "Expected an integer argument to the address_space qualifier");
+      if (Number == 0)
+        PrintFatalError(Loc, "No need for a qualifier for address space `0`");
+      return Number;
+    };
+
     if (T.consume_back("*")) {
+      // Pointers may have an address space qualifier immediately before them.
+      std::optional<unsigned> AS = ConsumeAddrSpace();
       ParseType(T);
       Type += "*";
+      if (AS)
+        Type += std::to_string(*AS);
     } else if (T.consume_back("const")) {
       ParseType(T);
       Type += "C";
@@ -117,6 +147,13 @@ private:
       ParseType(T);
       Type += "R";
     } else if (T.consume_back("&")) {
+      // References may have an address space qualifier immediately before them.
+      std::optional<unsigned> AS = ConsumeAddrSpace();
+      ParseType(T);
+      Type += "&";
+      if (AS)
+        Type += std::to_string(*AS);
+    } else if (T.consume_back(")")) {
       ParseType(T);
       Type += "&";
     } else if (EnableOpenCLLong && T.consume_front("long long")) {
