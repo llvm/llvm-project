@@ -14229,12 +14229,10 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
     if (FDecl && FDecl->isTemplateInstantiation() &&
         FDecl->getReturnType()->isUndeducedType()) {
 
-      // UnresolvedLookupExpr will not be resolved again inside non-dependent
-      // function (i.e non-templated function in this case).
-      const FunctionDecl *EnclosingFn = getCurFunctionDecl();
-      const bool Resolvable =
-          EnclosingFn && EnclosingFn->getTemplatedKind() ==
-                             FunctionDecl::TemplatedKind::TK_FunctionTemplate;
+      // As there'll be no attempt to resolve UnresolvedLookupExpr again inside
+      // non-dependent context, skip considering it as type-dependent.
+      const DeclContext *DC = CurContext;
+      const bool Resolvable = DC && DC->isDependentContext();
 
       if (const auto *TP =
               FDecl->getTemplateInstantiationPattern(/*ForDefinition=*/false);
