@@ -12,7 +12,7 @@ define amdgpu_ps void @flat_atomic_fadd_f32_no_rtn_intrinsic(ptr %ptr, float %da
   ; GFX940-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX940-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX940-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-  ; GFX940-NEXT:   FLAT_ATOMIC_ADD_F32 [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("agent") seq_cst (s32) on %ir.ptr)
+  ; GFX940-NEXT:   FLAT_ATOMIC_ADD_F32 [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("agent") seq_cst (f32) on %ir.ptr)
   ; GFX940-NEXT:   S_ENDPGM 0
   ;
   ; GFX11-LABEL: name: flat_atomic_fadd_f32_no_rtn_intrinsic
@@ -23,7 +23,7 @@ define amdgpu_ps void @flat_atomic_fadd_f32_no_rtn_intrinsic(ptr %ptr, float %da
   ; GFX11-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX11-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-  ; GFX11-NEXT:   FLAT_ATOMIC_ADD_F32 [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("agent") seq_cst (s32) on %ir.ptr)
+  ; GFX11-NEXT:   FLAT_ATOMIC_ADD_F32 [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("agent") seq_cst (f32) on %ir.ptr)
   ; GFX11-NEXT:   S_ENDPGM 0
   %ret = call float @llvm.amdgcn.flat.atomic.fadd.f32.p1.f32(ptr %ptr, float %data)
   ret void
@@ -38,7 +38,7 @@ define amdgpu_ps float @flat_atomic_fadd_f32_rtn_intrinsic(ptr %ptr, float %data
   ; GFX940-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX940-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX940-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-  ; GFX940-NEXT:   [[FLAT_ATOMIC_ADD_F32_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_F32_RTN [[REG_SEQUENCE]], [[COPY2]], 0, 1, implicit $exec, implicit $flat_scr :: (load store syncscope("agent") seq_cst (s32) on %ir.ptr)
+  ; GFX940-NEXT:   [[FLAT_ATOMIC_ADD_F32_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_F32_RTN [[REG_SEQUENCE]], [[COPY2]], 0, 1, implicit $exec, implicit $flat_scr :: (load store syncscope("agent") seq_cst (f32) on %ir.ptr)
   ; GFX940-NEXT:   $vgpr0 = COPY [[FLAT_ATOMIC_ADD_F32_RTN]]
   ; GFX940-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ;
@@ -50,7 +50,7 @@ define amdgpu_ps float @flat_atomic_fadd_f32_rtn_intrinsic(ptr %ptr, float %data
   ; GFX11-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX11-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-  ; GFX11-NEXT:   [[FLAT_ATOMIC_ADD_F32_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_F32_RTN [[REG_SEQUENCE]], [[COPY2]], 0, 1, implicit $exec, implicit $flat_scr :: (load store syncscope("agent") seq_cst (s32) on %ir.ptr)
+  ; GFX11-NEXT:   [[FLAT_ATOMIC_ADD_F32_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_F32_RTN [[REG_SEQUENCE]], [[COPY2]], 0, 1, implicit $exec, implicit $flat_scr :: (load store syncscope("agent") seq_cst (f32) on %ir.ptr)
   ; GFX11-NEXT:   $vgpr0 = COPY [[FLAT_ATOMIC_ADD_F32_RTN]]
   ; GFX11-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %ret = call float @llvm.amdgcn.flat.atomic.fadd.f32.p1.f32(ptr %ptr, float %data)
@@ -66,7 +66,7 @@ define amdgpu_ps void @flat_atomic_fadd_f32_no_rtn_atomicrmw(ptr %ptr, float %da
   ; GFX940-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX940-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX940-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-  ; GFX940-NEXT:   FLAT_ATOMIC_ADD_F32 [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr)
+  ; GFX940-NEXT:   FLAT_ATOMIC_ADD_F32 [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("wavefront") monotonic (f32) on %ir.ptr)
   ; GFX940-NEXT:   S_ENDPGM 0
   ;
   ; GFX11-LABEL: name: flat_atomic_fadd_f32_no_rtn_atomicrmw
@@ -77,7 +77,7 @@ define amdgpu_ps void @flat_atomic_fadd_f32_no_rtn_atomicrmw(ptr %ptr, float %da
   ; GFX11-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX11-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-  ; GFX11-NEXT:   FLAT_ATOMIC_ADD_F32 [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr)
+  ; GFX11-NEXT:   FLAT_ATOMIC_ADD_F32 [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("wavefront") monotonic (f32) on %ir.ptr)
   ; GFX11-NEXT:   S_ENDPGM 0
   %ret = atomicrmw fadd ptr %ptr, float %data syncscope("wavefront") monotonic, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -92,7 +92,7 @@ define amdgpu_ps float @flat_atomic_fadd_f32_rtn_atomicrmw(ptr %ptr, float %data
   ; GFX940-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX940-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX940-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-  ; GFX940-NEXT:   [[FLAT_ATOMIC_ADD_F32_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_F32_RTN [[REG_SEQUENCE]], [[COPY2]], 0, 1, implicit $exec, implicit $flat_scr :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr)
+  ; GFX940-NEXT:   [[FLAT_ATOMIC_ADD_F32_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_F32_RTN [[REG_SEQUENCE]], [[COPY2]], 0, 1, implicit $exec, implicit $flat_scr :: (load store syncscope("wavefront") monotonic (f32) on %ir.ptr)
   ; GFX940-NEXT:   $vgpr0 = COPY [[FLAT_ATOMIC_ADD_F32_RTN]]
   ; GFX940-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ;
@@ -104,7 +104,7 @@ define amdgpu_ps float @flat_atomic_fadd_f32_rtn_atomicrmw(ptr %ptr, float %data
   ; GFX11-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX11-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-  ; GFX11-NEXT:   [[FLAT_ATOMIC_ADD_F32_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_F32_RTN [[REG_SEQUENCE]], [[COPY2]], 0, 1, implicit $exec, implicit $flat_scr :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr)
+  ; GFX11-NEXT:   [[FLAT_ATOMIC_ADD_F32_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_ADD_F32_RTN [[REG_SEQUENCE]], [[COPY2]], 0, 1, implicit $exec, implicit $flat_scr :: (load store syncscope("wavefront") monotonic (f32) on %ir.ptr)
   ; GFX11-NEXT:   $vgpr0 = COPY [[FLAT_ATOMIC_ADD_F32_RTN]]
   ; GFX11-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %ret = atomicrmw fadd ptr %ptr, float %data syncscope("wavefront") monotonic, !amdgpu.no.fine.grained.memory !0

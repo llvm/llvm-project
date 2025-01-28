@@ -563,7 +563,7 @@ MachineInstrBuilder MachineIRBuilder::buildExtOrTrunc(unsigned ExtOpc,
            Op.getLLTTy(*getMRI()).getSizeInBits())
     Opcode = TargetOpcode::G_TRUNC;
   else
-    assert(Res.getLLTTy(*getMRI()) == Op.getLLTTy(*getMRI()));
+    assert(Res.getLLTTy(*getMRI()).getSizeInBits() == Op.getLLTTy(*getMRI()).getSizeInBits());
 
   return buildInstr(Opcode, Res, Op);
 }

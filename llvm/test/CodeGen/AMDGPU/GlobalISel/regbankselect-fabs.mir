@@ -12,12 +12,16 @@ body: |
     ; CHECK-LABEL: name: fabs_s
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[FABS:%[0-9]+]]:sgpr(s32) = G_FABS [[COPY]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[FABS]](s32)
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s32) = G_FABS %0
-    $vgpr0 = COPY %1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[FABS:%[0-9]+]]:sgpr(f32) = G_FABS [[BITCAST]]
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:sgpr(i32) = G_BITCAST [[FABS]](f32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST1]](i32)
+    %0:_(i32) = COPY $sgpr0
+    %2:_(f32) = G_BITCAST %0(i32)
+    %1:_(f32) = G_FABS %2
+    %3:_(i32) = G_BITCAST %1(f32)
+    $vgpr0 = COPY %3(i32)
 ...
 
 ---
@@ -30,10 +34,14 @@ body: |
     ; CHECK-LABEL: name: fabs_v
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[FABS:%[0-9]+]]:vgpr(s32) = G_FABS [[COPY]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[FABS]](s32)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = G_FABS %0
-    $vgpr0 = COPY %1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[FABS:%[0-9]+]]:vgpr(f32) = G_FABS [[BITCAST]]
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(i32) = G_BITCAST [[FABS]](f32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST1]](i32)
+    %0:_(i32) = COPY $vgpr0
+    %2:_(f32) = G_BITCAST %0(i32)
+    %1:_(f32) = G_FABS %2
+    %3:_(i32) = G_BITCAST %1(f32)
+    $vgpr0 = COPY %3(i32)
 ...

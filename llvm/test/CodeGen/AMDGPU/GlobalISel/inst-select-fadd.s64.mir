@@ -15,12 +15,15 @@ body: |
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; GFX6-NEXT: %2:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX6-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vgpr(s64) = G_FADD %0, %1
-    S_ENDPGM 0, implicit %2
+    ; GFX6-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_ADD_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %3:vgpr(f64) = G_BITCAST %0(i64)
+    %4:vgpr(f64) = G_BITCAST %1(i64)
+    %2:vgpr(f64) = G_FADD %3, %4
+    %5:vgpr(i64) = G_BITCAST %2(f64)
+    S_ENDPGM 0, implicit %5(i64)
 
 ...
 
@@ -38,12 +41,15 @@ body: |
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GFX6-NEXT: %2:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX6-NEXT: S_ENDPGM 0, implicit %2
-    %0:sgpr(s64) = COPY $sgpr0_sgpr1
-    %1:vgpr(s64) = COPY $vgpr0_vgpr1
-    %2:vgpr(s64) = G_FADD %0, %1
-    S_ENDPGM 0, implicit %2
+    ; GFX6-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_ADD_F64_e64_]]
+    %0:sgpr(i64) = COPY $sgpr0_sgpr1
+    %1:vgpr(i64) = COPY $vgpr0_vgpr1
+    %3:sgpr(f64) = G_BITCAST %0(i64)
+    %4:vgpr(f64) = G_BITCAST %1(i64)
+    %2:vgpr(f64) = G_FADD %3, %4
+    %5:vgpr(i64) = G_BITCAST %2(f64)
+    S_ENDPGM 0, implicit %5(i64)
 
 ...
 
@@ -61,12 +67,15 @@ body: |
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX6-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX6-NEXT: %2:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX6-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:sgpr(s64) = COPY $sgpr0_sgpr1
-    %2:vgpr(s64) = G_FADD %0, %1
-    S_ENDPGM 0, implicit %2
+    ; GFX6-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_ADD_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:sgpr(i64) = COPY $sgpr0_sgpr1
+    %3:vgpr(f64) = G_BITCAST %0(i64)
+    %4:sgpr(f64) = G_BITCAST %1(i64)
+    %2:vgpr(f64) = G_FADD %3, %4
+    %5:vgpr(i64) = G_BITCAST %2(f64)
+    S_ENDPGM 0, implicit %5(i64)
 
 ...
 
@@ -84,13 +93,16 @@ body: |
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; GFX6-NEXT: %3:vreg_64 = nofpexcept V_ADD_F64_e64 2, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX6-NEXT: S_ENDPGM 0, implicit %3
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vgpr(s64) = G_FABS %0
-    %3:vgpr(s64) = G_FADD %2, %1
-    S_ENDPGM 0, implicit %3
+    ; GFX6-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 2, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_ADD_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %4:vgpr(f64) = G_BITCAST %0(i64)
+    %2:vgpr(f64) = G_FABS %4
+    %5:vgpr(f64) = G_BITCAST %1(i64)
+    %3:vgpr(f64) = G_FADD %2, %5
+    %6:vgpr(i64) = G_BITCAST %3(f64)
+    S_ENDPGM 0, implicit %6(i64)
 
 ...
 
@@ -107,13 +119,16 @@ body: |
     ; GFX6: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; GFX6-NEXT: %3:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY]], 2, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX6-NEXT: S_ENDPGM 0, implicit %3
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vgpr(s64) = G_FABS %1
-    %3:vgpr(s64) = G_FADD %1, %2
-    S_ENDPGM 0, implicit %3
+    ; GFX6-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY]], 2, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_ADD_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %4:vgpr(f64) = G_BITCAST %1(i64)
+    %2:vgpr(f64) = G_FABS %4
+    %5:vgpr(f64) = G_BITCAST %1(i64)
+    %3:vgpr(f64) = G_FADD %5, %2
+    %6:vgpr(i64) = G_BITCAST %3(f64)
+    S_ENDPGM 0, implicit %6(i64)
 
 ...
 
@@ -131,14 +146,17 @@ body: |
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; GFX6-NEXT: %4:vreg_64 = nofpexcept V_ADD_F64_e64 3, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX6-NEXT: S_ENDPGM 0, implicit %4
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vgpr(s64) = G_FABS %0
-    %3:vgpr(s64) = G_FNEG %2
-    %4:vgpr(s64) = G_FADD %3, %1
-    S_ENDPGM 0, implicit %4
+    ; GFX6-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 3, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_ADD_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %5:vgpr(f64) = G_BITCAST %0(i64)
+    %2:vgpr(f64) = G_FABS %5
+    %3:vgpr(f64) = G_FNEG %2
+    %6:vgpr(f64) = G_BITCAST %1(i64)
+    %4:vgpr(f64) = G_FADD %3, %6
+    %7:vgpr(i64) = G_BITCAST %4(f64)
+    S_ENDPGM 0, implicit %7(i64)
 
 ...
 
@@ -155,14 +173,17 @@ body: |
     ; GFX6: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GFX6-NEXT: %4:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY]], 3, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX6-NEXT: S_ENDPGM 0, implicit %4
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr0_vgpr1
-    %2:vgpr(s64) = G_FABS %1
-    %3:vgpr(s64) = G_FNEG %2
-    %4:vgpr(s64) = G_FADD %1, %3
-    S_ENDPGM 0, implicit %4
+    ; GFX6-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY]], 3, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_ADD_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(i64) = COPY $vgpr0_vgpr1
+    %5:vgpr(f64) = G_BITCAST %1(i64)
+    %2:vgpr(f64) = G_FABS %5
+    %3:vgpr(f64) = G_FNEG %2
+    %6:vgpr(f64) = G_BITCAST %1(i64)
+    %4:vgpr(f64) = G_FADD %6, %3
+    %7:vgpr(i64) = G_BITCAST %4(f64)
+    S_ENDPGM 0, implicit %7(i64)
 
 ...
 
@@ -182,15 +203,26 @@ body: |
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX6-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY [[COPY1]]
-    ; GFX6-NEXT: %4:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY]], 1, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GFX6-NEXT: S_ENDPGM 0, implicit %4
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:sgpr(s64) = COPY $sgpr0_sgpr1
-    %2:sgpr(s64) = G_FNEG %1
-    %3:vgpr(s64) = COPY %2
-    %4:vgpr(s64) = G_FADD %0, %3
-    S_ENDPGM 0, implicit %4
+    ; GFX6-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
+    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xm0 = COPY [[COPY1]].sub1
+    ; GFX6-NEXT: [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; GFX6-NEXT: [[COPY3:%[0-9]+]]:sreg_32_xm0 = COPY [[S_XOR_B32_]]
+    ; GFX6-NEXT: [[COPY4:%[0-9]+]]:sreg_32_xexec_hi_and_sreg_32_xm0 = COPY [[COPY1]].sub0
+    ; GFX6-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1
+    ; GFX6-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
+    ; GFX6-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY]], 0, [[COPY5]], 0, 0, implicit $mode, implicit $exec
+    ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_ADD_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:sgpr(i64) = COPY $sgpr0_sgpr1
+    %5:sgpr(f64) = G_BITCAST %1(i64)
+    %2:sgpr(f64) = G_FNEG %5
+    %6:sgpr(i64) = G_BITCAST %2(f64)
+    %3:vgpr(i64) = COPY %6(i64)
+    %7:vgpr(f64) = G_BITCAST %0(i64)
+    %8:vgpr(f64) = G_BITCAST %3(i64)
+    %4:vgpr(f64) = G_FADD %7, %8
+    %9:vgpr(i64) = G_BITCAST %4(f64)
+    S_ENDPGM 0, implicit %9(i64)
 
 ...
 
@@ -212,18 +244,37 @@ body: |
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; GFX6-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
-    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY [[COPY]]
-    ; GFX6-NEXT: [[COPY3:%[0-9]+]]:vreg_64 = COPY [[COPY1]]
-    ; GFX6-NEXT: %6:vreg_64 = nofpexcept V_ADD_F64_e64 2, [[COPY2]], 2, [[COPY3]], 0, 0, implicit $mode, implicit $exec
-    ; GFX6-NEXT: S_ENDPGM 0, implicit %6
-    %0:sgpr(s64) = COPY $sgpr0_sgpr1
-    %1:sgpr(s64) = COPY $sgpr2_sgpr3
-    %2:sgpr(s64) = G_FABS %0
-    %3:sgpr(s64) = G_FABS %1
-    %4:vgpr(s64) = COPY %2
-    %5:vgpr(s64) = COPY %3
-    %6:vgpr(s64) = G_FADD %4, %5
-    S_ENDPGM 0, implicit %6
+    ; GFX6-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483647
+    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xm0 = COPY [[COPY]].sub1
+    ; GFX6-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; GFX6-NEXT: [[COPY3:%[0-9]+]]:sreg_32_xm0 = COPY [[S_AND_B32_]]
+    ; GFX6-NEXT: [[COPY4:%[0-9]+]]:sreg_32_xexec_hi_and_sreg_32_xm0 = COPY [[COPY]].sub0
+    ; GFX6-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1
+    ; GFX6-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483647
+    ; GFX6-NEXT: [[COPY5:%[0-9]+]]:sreg_32_xm0 = COPY [[COPY1]].sub1
+    ; GFX6-NEXT: [[S_AND_B32_1:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY5]], [[S_MOV_B32_1]], implicit-def dead $scc
+    ; GFX6-NEXT: [[COPY6:%[0-9]+]]:sreg_32_xm0 = COPY [[S_AND_B32_1]]
+    ; GFX6-NEXT: [[COPY7:%[0-9]+]]:sreg_32_xexec_hi_and_sreg_32_xm0 = COPY [[COPY1]].sub0
+    ; GFX6-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY6]], %subreg.sub1
+    ; GFX6-NEXT: [[COPY8:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
+    ; GFX6-NEXT: [[COPY9:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]]
+    ; GFX6-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY8]], 0, [[COPY9]], 0, 0, implicit $mode, implicit $exec
+    ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_ADD_F64_e64_]]
+    %0:sgpr(i64) = COPY $sgpr0_sgpr1
+    %1:sgpr(i64) = COPY $sgpr2_sgpr3
+    %7:sgpr(f64) = G_BITCAST %0(i64)
+    %2:sgpr(f64) = G_FABS %7
+    %8:sgpr(f64) = G_BITCAST %1(i64)
+    %3:sgpr(f64) = G_FABS %8
+    %9:sgpr(i64) = G_BITCAST %2(f64)
+    %4:vgpr(i64) = COPY %9(i64)
+    %10:sgpr(i64) = G_BITCAST %3(f64)
+    %5:vgpr(i64) = COPY %10(i64)
+    %11:vgpr(f64) = G_BITCAST %4(i64)
+    %12:vgpr(f64) = G_BITCAST %5(i64)
+    %6:vgpr(f64) = G_FADD %11, %12
+    %13:vgpr(i64) = G_BITCAST %6(f64)
+    S_ENDPGM 0, implicit %13(i64)
 
 ...
 
@@ -241,18 +292,37 @@ body: |
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; GFX6-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
-    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY [[COPY]]
-    ; GFX6-NEXT: [[COPY3:%[0-9]+]]:vreg_64 = COPY [[COPY1]]
-    ; GFX6-NEXT: %6:vreg_64 = nofpexcept V_ADD_F64_e64 1, [[COPY2]], 1, [[COPY3]], 0, 0, implicit $mode, implicit $exec
-    ; GFX6-NEXT: S_ENDPGM 0, implicit %6
-    %0:sgpr(s64) = COPY $sgpr0_sgpr1
-    %1:sgpr(s64) = COPY $sgpr2_sgpr3
-    %2:sgpr(s64) = G_FNEG %0
-    %3:sgpr(s64) = G_FNEG %1
-    %4:vgpr(s64) = COPY %2
-    %5:vgpr(s64) = COPY %3
-    %6:vgpr(s64) = G_FADD %4, %5
-    S_ENDPGM 0, implicit %6
+    ; GFX6-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
+    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xm0 = COPY [[COPY]].sub1
+    ; GFX6-NEXT: [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; GFX6-NEXT: [[COPY3:%[0-9]+]]:sreg_32_xm0 = COPY [[S_XOR_B32_]]
+    ; GFX6-NEXT: [[COPY4:%[0-9]+]]:sreg_32_xexec_hi_and_sreg_32_xm0 = COPY [[COPY]].sub0
+    ; GFX6-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1
+    ; GFX6-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
+    ; GFX6-NEXT: [[COPY5:%[0-9]+]]:sreg_32_xm0 = COPY [[COPY1]].sub1
+    ; GFX6-NEXT: [[S_XOR_B32_1:%[0-9]+]]:sreg_32 = S_XOR_B32 [[COPY5]], [[S_MOV_B32_1]], implicit-def dead $scc
+    ; GFX6-NEXT: [[COPY6:%[0-9]+]]:sreg_32_xm0 = COPY [[S_XOR_B32_1]]
+    ; GFX6-NEXT: [[COPY7:%[0-9]+]]:sreg_32_xexec_hi_and_sreg_32_xm0 = COPY [[COPY1]].sub0
+    ; GFX6-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY6]], %subreg.sub1
+    ; GFX6-NEXT: [[COPY8:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
+    ; GFX6-NEXT: [[COPY9:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]]
+    ; GFX6-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY8]], 0, [[COPY9]], 0, 0, implicit $mode, implicit $exec
+    ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_ADD_F64_e64_]]
+    %0:sgpr(i64) = COPY $sgpr0_sgpr1
+    %1:sgpr(i64) = COPY $sgpr2_sgpr3
+    %7:sgpr(f64) = G_BITCAST %0(i64)
+    %2:sgpr(f64) = G_FNEG %7
+    %8:sgpr(f64) = G_BITCAST %1(i64)
+    %3:sgpr(f64) = G_FNEG %8
+    %9:sgpr(i64) = G_BITCAST %2(f64)
+    %4:vgpr(i64) = COPY %9(i64)
+    %10:sgpr(i64) = G_BITCAST %3(f64)
+    %5:vgpr(i64) = COPY %10(i64)
+    %11:vgpr(f64) = G_BITCAST %4(i64)
+    %12:vgpr(f64) = G_BITCAST %5(i64)
+    %6:vgpr(f64) = G_FADD %11, %12
+    %13:vgpr(i64) = G_BITCAST %6(f64)
+    S_ENDPGM 0, implicit %13(i64)
 
 ...
 
@@ -270,19 +340,38 @@ body: |
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; GFX6-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
-    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY [[COPY]]
-    ; GFX6-NEXT: [[COPY3:%[0-9]+]]:vreg_64 = COPY [[COPY1]]
-    ; GFX6-NEXT: %8:vreg_64 = nofpexcept V_ADD_F64_e64 3, [[COPY2]], 3, [[COPY3]], 0, 0, implicit $mode, implicit $exec
-    ; GFX6-NEXT: S_ENDPGM 0, implicit %8
-    %0:sgpr(s64) = COPY $sgpr0_sgpr1
-    %1:sgpr(s64) = COPY $sgpr2_sgpr3
-    %2:sgpr(s64) = G_FABS %0
-    %3:sgpr(s64) = G_FABS %1
-    %4:sgpr(s64) = G_FNEG %2
-    %5:sgpr(s64) = G_FNEG %3
-    %6:vgpr(s64) = COPY %4
-    %7:vgpr(s64) = COPY %5
-    %8:vgpr(s64) = G_FADD %6, %7
-    S_ENDPGM 0, implicit %8
+    ; GFX6-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
+    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:sreg_32_xm0 = COPY [[COPY]].sub1
+    ; GFX6-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; GFX6-NEXT: [[COPY3:%[0-9]+]]:sreg_32_xm0 = COPY [[S_OR_B32_]]
+    ; GFX6-NEXT: [[COPY4:%[0-9]+]]:sreg_32_xexec_hi_and_sreg_32_xm0 = COPY [[COPY]].sub0
+    ; GFX6-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1
+    ; GFX6-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
+    ; GFX6-NEXT: [[COPY5:%[0-9]+]]:sreg_32_xm0 = COPY [[COPY1]].sub1
+    ; GFX6-NEXT: [[S_OR_B32_1:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY5]], [[S_MOV_B32_1]], implicit-def dead $scc
+    ; GFX6-NEXT: [[COPY6:%[0-9]+]]:sreg_32_xm0 = COPY [[S_OR_B32_1]]
+    ; GFX6-NEXT: [[COPY7:%[0-9]+]]:sreg_32_xexec_hi_and_sreg_32_xm0 = COPY [[COPY1]].sub0
+    ; GFX6-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY6]], %subreg.sub1
+    ; GFX6-NEXT: [[COPY8:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
+    ; GFX6-NEXT: [[COPY9:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE1]]
+    ; GFX6-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY8]], 0, [[COPY9]], 0, 0, implicit $mode, implicit $exec
+    ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_ADD_F64_e64_]]
+    %0:sgpr(i64) = COPY $sgpr0_sgpr1
+    %1:sgpr(i64) = COPY $sgpr2_sgpr3
+    %9:sgpr(f64) = G_BITCAST %0(i64)
+    %2:sgpr(f64) = G_FABS %9
+    %10:sgpr(f64) = G_BITCAST %1(i64)
+    %3:sgpr(f64) = G_FABS %10
+    %4:sgpr(f64) = G_FNEG %2
+    %5:sgpr(f64) = G_FNEG %3
+    %11:sgpr(i64) = G_BITCAST %4(f64)
+    %6:vgpr(i64) = COPY %11(i64)
+    %12:sgpr(i64) = G_BITCAST %5(f64)
+    %7:vgpr(i64) = COPY %12(i64)
+    %13:vgpr(f64) = G_BITCAST %6(i64)
+    %14:vgpr(f64) = G_BITCAST %7(i64)
+    %8:vgpr(f64) = G_FADD %13, %14
+    %15:vgpr(i64) = G_BITCAST %8(f64)
+    S_ENDPGM 0, implicit %15(i64)
 
 ...

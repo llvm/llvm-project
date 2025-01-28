@@ -32,10 +32,19 @@ namespace {
 /// Wrapper around extendRegister to ensure we extend to a full 32-bit register.
 static Register extendRegisterMin32(CallLowering::ValueHandler &Handler,
                                     Register ValVReg, const CCValAssign &VA) {
-  if (VA.getLocVT().getSizeInBits() < 32) {
+  LLT SrcTy = LLT(VA.getLocVT(), /*EnableFPInfo*/ true);
+
+  if (SrcTy.getSizeInBits() < 32) {
+     LLT I32 = LLT::integer(32);
+     LLT DstTy = LLT::integer(SrcTy.getSizeInBits());
+
+    Register SrcReg = ValVReg;
+    if (SrcTy.isFloat())
+      SrcReg = Handler.MIRBuilder.buildBitcast(DstTy, ValVReg).getReg(0);
+    
     // 16-bit types are reported as legal for 32-bit registers. We need to
     // extend and do a 32-bit copy to avoid the verifier complaining about it.
-    return Handler.MIRBuilder.buildAnyExt(LLT::scalar(32), ValVReg).getReg(0);
+    return Handler.MIRBuilder.buildAnyExt(I32, SrcReg).getReg(0);
   }
 
   return Handler.extendRegister(ValVReg, VA);
@@ -72,7 +81,7 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
     if (TRI->isSGPRReg(MRI, PhysReg)) {
       LLT Ty = MRI.getType(ExtReg);
       LLT S32 = LLT::scalar(32);
-      if (Ty != S32) {
+      if (!Ty.isScalar(32)) {
         // FIXME: We should probably support readfirstlane intrinsics with all
         // legal 32-bit types.
         assert(Ty.getSizeInBits() == 32);
@@ -119,16 +128,28 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         const CCValAssign &VA) override {
     markPhysRegUsed(PhysReg);
+    LLT LocTy = LLT(VA.getLocVT(), /* EnableFPInfo */ true);
 
-    if (VA.getLocVT().getSizeInBits() < 32) {
+    if (LocTy.getSizeInBits() < 32) {
       // 16-bit types are reported as legal for 32-bit registers. We need to do
       // a 32-bit copy, and truncate to avoid the verifier complaining about it.
-      auto Copy = MIRBuilder.buildCopy(LLT::scalar(32), PhysReg);
+      Register CopyReg = MIRBuilder.buildCopy(LLT::scalar(32), PhysReg).getReg(0);
+
+      if (LocTy.getScalarType().isFloat()) {
+        LLT TruncTy = LocTy.isVector()
+                        ? LLT::vector(LocTy.getElementCount(),
+                                      LLT::integer(LocTy.getScalarSizeInBits()))
+                        : LLT::integer(LocTy.getScalarSizeInBits());
+
+        auto Extended = buildExtensionHint(VA, CopyReg, TruncTy);
+        auto Trunc = MIRBuilder.buildTrunc(TruncTy, Extended);
+        MIRBuilder.buildBitcast(ValVReg, Trunc.getReg(0));
+        return;
+      }
 
       // If we have signext/zeroext, it applies to the whole 32-bit register
       // before truncation.
-      auto Extended =
-          buildExtensionHint(VA, Copy.getReg(0), LLT(VA.getLocVT()));
+      auto Extended = buildExtensionHint(VA, CopyReg, LocTy);
       MIRBuilder.buildTrunc(ValVReg, Extended);
       return;
     }
@@ -332,7 +353,7 @@ bool AMDGPUCallLowering::lowerReturnVal(MachineIRBuilder &B,
                                           extOpcodeToISDExtOpcode(ExtendOp));
       if (ExtVT != VT) {
         RetInfo.Ty = ExtVT.getTypeForEVT(Ctx);
-        LLT ExtTy = getLLTForType(*RetInfo.Ty, DL);
+        LLT ExtTy = getLLTForType(*RetInfo.Ty, DL, /* EnableFPInfo */ true);
         Reg = B.buildInstr(ExtendOp, {ExtTy}, {Reg}).getReg(0);
       }
     }
@@ -422,7 +443,7 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, ArgInfo &OrigArg,
     Register PtrReg = B.getMRI()->createGenericVirtualRegister(PtrTy);
     lowerParameterPtr(PtrReg, B, Offset + FieldOffsets[Idx]);
 
-    LLT ArgTy = getLLTForType(*SplitArg.Ty, DL);
+    LLT ArgTy = getLLTForType(*SplitArg.Ty, DL, /* EnableFPInfo */ true);
     if (SplitArg.Flags[0].isPointer()) {
       // Compensate for losing pointeriness in splitValueTypes.
       LLT PtrTy = LLT::pointer(SplitArg.Flags[0].getPointerAddrSpace(),

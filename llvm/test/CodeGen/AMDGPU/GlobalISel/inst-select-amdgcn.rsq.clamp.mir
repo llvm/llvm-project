@@ -4,9 +4,8 @@
 # RUN: llc -mtriple=amdgcn -mcpu=fiji -run-pass=instruction-select -verify-machineinstrs -global-isel-abort=2 -pass-remarks-missed='gisel*'  %s -o /dev/null 2>&1 | FileCheck -check-prefix=VI-ERR %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -run-pass=instruction-select -verify-machineinstrs -global-isel-abort=2 -pass-remarks-missed='gisel*'  %s -o /dev/null 2>&1 | FileCheck -check-prefix=VI-ERR %s
 
-# VI-ERR: remark: <unknown>:0:0: cannot select: %1:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.clamp), %0:sgpr(s32) (in function: rsq_clamp_s32_vs)
-# VI-ERR-NEXT: remark: <unknown>:0:0: cannot select: %1:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.clamp), %0:vgpr(s32) (in function: rsq_clamp_s32_vv)
-
+# VI-ERR: remark: <unknown>:0:0: cannot select: %1:vgpr_32(f32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.clamp), %0:sgpr(f32) (in function: rsq_clamp_s32_vs)
+# VI-ERR-NEXT: remark: <unknown>:0:0: cannot select: %1:vgpr_32(f32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.clamp), %0:vgpr(f32) (in function: rsq_clamp_s32_vv)
 ---
 name: rsq_clamp_s32_vs
 legalized: true
@@ -22,9 +21,11 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK: %1:vgpr_32 = nofpexcept V_RSQ_CLAMP_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; CHECK: S_ENDPGM 0, implicit %1
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.clamp), %0
-    S_ENDPGM 0, implicit %1
+    %0:sgpr(i32) = COPY $sgpr0
+    %2:sgpr(f32) = G_BITCAST %0(i32)
+    %1:vgpr(f32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.clamp), %2(f32)
+    %3:vgpr(i32) = G_BITCAST %1(f32)
+    S_ENDPGM 0, implicit %3(i32)
 ...
 
 ---
@@ -42,7 +43,9 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK: %1:vgpr_32 = nofpexcept V_RSQ_CLAMP_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; CHECK: S_ENDPGM 0, implicit %1
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.clamp), %0
-    S_ENDPGM 0, implicit %1
+    %0:vgpr(i32) = COPY $vgpr0
+    %2:vgpr(f32) = G_BITCAST %0(i32)
+    %1:vgpr(f32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.clamp), %2(f32)
+    %3:vgpr(i32) = G_BITCAST %1(f32)
+    S_ENDPGM 0, implicit %3(i32)
 ...

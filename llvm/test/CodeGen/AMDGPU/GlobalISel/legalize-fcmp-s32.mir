@@ -10,14 +10,18 @@ body:             |
     ; GFX1150-LABEL: name: f32_olt
     ; GFX1150: liveins: $sgpr0, $sgpr1
     ; GFX1150-NEXT: {{  $}}
-    ; GFX1150-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; GFX1150-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
-    ; GFX1150-NEXT: [[FCMP:%[0-9]+]]:_(s32) = G_FCMP floatpred(olt), [[COPY]](s32), [[COPY1]]
-    ; GFX1150-NEXT: $sgpr0 = COPY [[FCMP]](s32)
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s32) = COPY $sgpr1
-    %2:_(s32) = G_FCMP floatpred(olt), %0(s32), %1
-    $sgpr0 = COPY %2
+    ; GFX1150-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+    ; GFX1150-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+    ; GFX1150-NEXT: [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST [[COPY]](i32)
+    ; GFX1150-NEXT: [[BITCAST1:%[0-9]+]]:_(f32) = G_BITCAST [[COPY1]](i32)
+    ; GFX1150-NEXT: [[FCMP:%[0-9]+]]:_(i32) = G_FCMP floatpred(olt), [[BITCAST]](f32), [[BITCAST1]]
+    ; GFX1150-NEXT: $sgpr0 = COPY [[FCMP]](i32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = COPY $sgpr1
+    %3:_(f32) = G_BITCAST %0(i32)
+    %4:_(f32) = G_BITCAST %1(i32)
+    %2:_(i32) = G_FCMP floatpred(olt), %3(f32), %4
+    $sgpr0 = COPY %2(i32)
 
 ...
 
@@ -30,17 +34,21 @@ body:             |
     ; GFX1150-LABEL: name: f16_olt
     ; GFX1150: liveins: $sgpr0, $sgpr1
     ; GFX1150-NEXT: {{  $}}
-    ; GFX1150-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; GFX1150-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; GFX1150-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
-    ; GFX1150-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
-    ; GFX1150-NEXT: [[FCMP:%[0-9]+]]:_(s32) = G_FCMP floatpred(olt), [[TRUNC]](s16), [[TRUNC1]]
-    ; GFX1150-NEXT: $sgpr0 = COPY [[FCMP]](s32)
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s16) = G_TRUNC %0(s32)
-    %2:_(s32) = COPY $sgpr1
-    %3:_(s16) = G_TRUNC %2(s32)
-    %4:_(s32) = G_FCMP floatpred(olt), %1(s16), %3
-    $sgpr0 = COPY %4
+    ; GFX1150-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+    ; GFX1150-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
+    ; GFX1150-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+    ; GFX1150-NEXT: [[TRUNC1:%[0-9]+]]:_(i16) = G_TRUNC [[COPY1]](i32)
+    ; GFX1150-NEXT: [[BITCAST:%[0-9]+]]:_(f16) = G_BITCAST [[TRUNC]](i16)
+    ; GFX1150-NEXT: [[BITCAST1:%[0-9]+]]:_(f16) = G_BITCAST [[TRUNC1]](i16)
+    ; GFX1150-NEXT: [[FCMP:%[0-9]+]]:_(i32) = G_FCMP floatpred(olt), [[BITCAST]](f16), [[BITCAST1]]
+    ; GFX1150-NEXT: $sgpr0 = COPY [[FCMP]](i32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i16) = G_TRUNC %0(i32)
+    %2:_(i32) = COPY $sgpr1
+    %3:_(i16) = G_TRUNC %2(i32)
+    %5:_(f16) = G_BITCAST %1(i16)
+    %6:_(f16) = G_BITCAST %3(i16)
+    %4:_(i32) = G_FCMP floatpred(olt), %5(f16), %6
+    $sgpr0 = COPY %4(i32)
 
 ...

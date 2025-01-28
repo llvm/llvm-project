@@ -187,19 +187,22 @@ define i32 @v_udot2_fneg_a(<2 x half> %a, <2 x i16> %b, i32 %c) {
 ; GFX906-LABEL: v_udot2_fneg_a:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2 neg_lo:[1,0,0] neg_hi:[1,0,0]
+; GFX906-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; GFX906-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: v_udot2_fneg_a:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2 neg_lo:[1,0,0] neg_hi:[1,0,0]
+; GFX908-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; GFX908-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_udot2_fneg_a:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2 neg_lo:[1,0,0] neg_hi:[1,0,0]
+; GFX10-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; GFX10-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = fneg <2 x half> %a
   %cast.neg.a = bitcast <2 x half> %neg.a to <2 x i16>
@@ -211,19 +214,22 @@ define i32 @v_udot2_fneg_b(<2 x i16> %a, <2 x half> %b, i32 %c) {
 ; GFX906-LABEL: v_udot2_fneg_b:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2 neg_lo:[0,1,0] neg_hi:[0,1,0]
+; GFX906-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
+; GFX906-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX908-LABEL: v_udot2_fneg_b:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX908-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2 neg_lo:[0,1,0] neg_hi:[0,1,0]
+; GFX908-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
+; GFX908-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_udot2_fneg_b:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2 neg_lo:[0,1,0] neg_hi:[0,1,0]
+; GFX10-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
+; GFX10-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.b = fneg <2 x half> %b
   %cast.neg.b = bitcast <2 x half> %neg.b to <2 x i16>

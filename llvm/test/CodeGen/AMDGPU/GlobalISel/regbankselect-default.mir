@@ -9,8 +9,8 @@ legalized:       true
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_fconstant_f32_1
-    ; CHECK: [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    %0:_(s32) = G_FCONSTANT float 1.0
+    ; CHECK: [[C:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    %0:_(f32) = G_FCONSTANT float 1.000000e+00
 ...
 ---
 name:            test_fconstant_f64_1
@@ -18,8 +18,8 @@ legalized:       true
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_fconstant_f64_1
-    ; CHECK: [[C:%[0-9]+]]:sgpr(s64) = G_FCONSTANT double 1.000000e+00
-    %0:_(s64) = G_FCONSTANT double 1.0
+    ; CHECK: [[C:%[0-9]+]]:sgpr(f64) = G_FCONSTANT double 1.000000e+00
+    %0:_(f64) = G_FCONSTANT double 1.000000e+00
 ...
 ---
 name:            test_fconstant_f16_1
@@ -27,10 +27,12 @@ legalized:       true
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_fconstant_f16_1
-    ; CHECK: [[C:%[0-9]+]]:sgpr(s16) = G_FCONSTANT half 0xH3C00
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[C]](s16)
-    %0:_(s16) = G_FCONSTANT half 1.0
-    %1:_(s32) = G_ANYEXT %0
+    ; CHECK: [[C:%[0-9]+]]:sgpr(f16) = G_FCONSTANT half 0xH3C00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i16) = G_BITCAST [[C]](f16)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:sgpr(i32) = G_ANYEXT [[BITCAST]](i16)
+    %0:_(f16) = G_FCONSTANT half 0xH3C00
+    %2:_(i16) = G_BITCAST %0(f16)
+    %1:_(i32) = G_ANYEXT %2(i16)
 ...
 
 ---
@@ -39,8 +41,8 @@ legalized:       true
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_implicit_def_s32
-    ; CHECK: [[DEF:%[0-9]+]]:sgpr(s32) = G_IMPLICIT_DEF
-    %0:_(s32) = G_IMPLICIT_DEF
+    ; CHECK: [[DEF:%[0-9]+]]:sgpr(f32) = G_IMPLICIT_DEF
+    %0:_(f32) = G_IMPLICIT_DEF
 ...
 
 ---
@@ -49,6 +51,6 @@ legalized:       true
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_implicit_def_s64
-    ; CHECK: [[DEF:%[0-9]+]]:sgpr(s64) = G_IMPLICIT_DEF
-    %0:_(s64) = G_IMPLICIT_DEF
+    ; CHECK: [[DEF:%[0-9]+]]:sgpr(f64) = G_IMPLICIT_DEF
+    %0:_(f64) = G_IMPLICIT_DEF
 ...

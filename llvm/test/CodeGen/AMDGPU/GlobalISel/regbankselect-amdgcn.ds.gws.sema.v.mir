@@ -13,10 +13,10 @@ body: |
     ; CHECK-LABEL: name: ds_gws_init_s
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.ds.gws.sema.v), [[COPY]](s32)
-    %0:_(s32) = COPY $sgpr0
-    G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.ds.gws.sema.v), %0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.ds.gws.sema.v), [[COPY]](i32)
+    %0:_(i32) = COPY $sgpr0
+    G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.ds.gws.sema.v), %0(i32)
 ...
 
 ---
@@ -30,10 +30,9 @@ body: |
     ; CHECK-LABEL: name: ds_gws_init_v
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[COPY]](s32), implicit $exec
-    ; CHECK-NEXT: G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.ds.gws.sema.v), [[V_READFIRSTLANE_B32_]](s32)
-    %0:_(s32) = COPY $vgpr0
-    G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.ds.gws.sema.v), %0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(i32) = V_READFIRSTLANE_B32 [[COPY]](i32), implicit $exec
+    ; CHECK-NEXT: G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.ds.gws.sema.v), [[V_READFIRSTLANE_B32_]](i32)
+    %0:_(i32) = COPY $vgpr0
+    G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.ds.gws.sema.v), %0(i32)
 ...
-

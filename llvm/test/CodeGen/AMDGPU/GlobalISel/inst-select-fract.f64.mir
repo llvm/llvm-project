@@ -16,57 +16,73 @@ body: |
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: early-clobber %3:sgpr_128 = S_LOAD_DWORDX4_IMM_ec [[COPY]], 36, 0 :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
+    ; GFX10-NEXT: early-clobber %3:sgpr_128 = S_LOAD_DWORDX4_IMM_ec [[COPY]], 36, 0 :: (dereferenceable invariant load (<2 x i64>), align 4, addrspace 4)
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY %3.sub0_sub1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY %3.sub2_sub3
-    ; GFX10-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY2]], 0, 0 :: (load (s64), addrspace 1)
+    ; GFX10-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY2]], 0, 0 :: (load (f64), addrspace 1)
     ; GFX10-NEXT: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -9223372036854775808
-    ; GFX10-NEXT: [[COPY3:%[0-9]+]]:vreg_64 = COPY [[S_MOV_B]]
-    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY [[S_LOAD_DWORDX2_IMM]]
-    ; GFX10-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY3]], 1, [[COPY4]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
+    ; GFX10-NEXT: [[COPY3:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
+    ; GFX10-NEXT: [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 [[COPY3]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:sreg_32_xm0 = COPY [[S_XOR_B32_]]
+    ; GFX10-NEXT: [[COPY5:%[0-9]+]]:sreg_32_xexec_hi_and_sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
+    ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+    ; GFX10-NEXT: [[COPY6:%[0-9]+]]:vreg_64 = COPY [[S_MOV_B]]
+    ; GFX10-NEXT: [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
+    ; GFX10-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY6]], 0, [[COPY7]], 0, 0, implicit $mode, implicit $exec
     ; GFX10-NEXT: [[V_FLOOR_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_FLOOR_F64_e64 0, [[V_ADD_F64_e64_]], 0, 0, implicit $mode, implicit $exec
     ; GFX10-NEXT: [[V_ADD_F64_e64_1:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[V_ADD_F64_e64_]], 1, [[V_FLOOR_F64_e64_]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10-NEXT: [[COPY5:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[COPY1]]
+    ; GFX10-NEXT: [[COPY8:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[COPY1]]
     ; GFX10-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX10-NEXT: GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], [[V_ADD_F64_e64_1]], [[COPY5]], 0, 0, implicit $exec :: (store (s64), addrspace 1)
+    ; GFX10-NEXT: GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], [[V_ADD_F64_e64_1]], [[COPY8]], 0, 0, implicit $exec :: (store (f64), addrspace 1)
     ; GFX10-NEXT: S_ENDPGM 0
     ;
     ; GFX11-LABEL: name: fract_f64_neg
     ; GFX11: liveins: $sgpr0_sgpr1
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX11-NEXT: [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 36, 0 :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
+    ; GFX11-NEXT: [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 36, 0 :: (dereferenceable invariant load (<2 x i64>), align 4, addrspace 4)
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY [[S_LOAD_DWORDX4_IMM]].sub0_sub1
     ; GFX11-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY [[S_LOAD_DWORDX4_IMM]].sub2_sub3
-    ; GFX11-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY2]], 0, 0 :: (load (s64), addrspace 1)
+    ; GFX11-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY2]], 0, 0 :: (load (f64), addrspace 1)
     ; GFX11-NEXT: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -9223372036854775808
-    ; GFX11-NEXT: [[COPY3:%[0-9]+]]:vreg_64 = COPY [[S_MOV_B]]
-    ; GFX11-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY [[S_LOAD_DWORDX2_IMM]]
-    ; GFX11-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY3]], 1, [[COPY4]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
+    ; GFX11-NEXT: [[COPY3:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
+    ; GFX11-NEXT: [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 [[COPY3]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; GFX11-NEXT: [[COPY4:%[0-9]+]]:sreg_32_xm0 = COPY [[S_XOR_B32_]]
+    ; GFX11-NEXT: [[COPY5:%[0-9]+]]:sreg_32_xexec_hi_and_sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
+    ; GFX11-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+    ; GFX11-NEXT: [[COPY6:%[0-9]+]]:vreg_64 = COPY [[S_MOV_B]]
+    ; GFX11-NEXT: [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
+    ; GFX11-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY6]], 0, [[COPY7]], 0, 0, implicit $mode, implicit $exec
     ; GFX11-NEXT: [[V_FLOOR_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_FLOOR_F64_e64 0, [[V_ADD_F64_e64_]], 0, 0, implicit $mode, implicit $exec
     ; GFX11-NEXT: [[V_ADD_F64_e64_1:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[V_ADD_F64_e64_]], 1, [[V_FLOOR_F64_e64_]], 0, 0, implicit $mode, implicit $exec
-    ; GFX11-NEXT: [[COPY5:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[COPY1]]
+    ; GFX11-NEXT: [[COPY8:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[COPY1]]
     ; GFX11-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX11-NEXT: GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], [[V_ADD_F64_e64_1]], [[COPY5]], 0, 0, implicit $exec :: (store (s64), addrspace 1)
+    ; GFX11-NEXT: GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], [[V_ADD_F64_e64_1]], [[COPY8]], 0, 0, implicit $exec :: (store (f64), addrspace 1)
     ; GFX11-NEXT: S_ENDPGM 0
-    %2:sgpr(p4) = COPY $sgpr0_sgpr1
-    %7:sgpr(s64) = G_CONSTANT i64 36
-    %8:sgpr(p4) = G_PTR_ADD %2, %7(s64)
-    %9:sgpr(<2 x s64>) = G_LOAD %8(p4) :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
-    %10:sgpr(s64), %13:sgpr(s64) = G_UNMERGE_VALUES %9(<2 x s64>)
-    %15:sgpr(p1) = G_INTTOPTR %13(s64)
-    %18:sgpr(s64) = G_LOAD %15(p1) :: (load (s64), addrspace 1)
-    %19:sgpr(s64) = G_FCONSTANT double -0.000000e+00
-    %24:sgpr(s64) = G_FNEG %18
-    %25:vgpr(s64) = COPY %19(s64)
-    %26:vgpr(s64) = COPY %24(s64)
-    %20:vgpr(s64) = G_FADD %25, %26
-    %21:vgpr(s64) = G_FFLOOR %20
-    %23:vgpr(s64) = G_FNEG %21
-    %22:vgpr(s64) = G_FADD %20, %23
-    %12:sgpr(p1) = G_INTTOPTR %10(s64)
-    %27:vgpr(p1) = COPY %12(p1)
-    G_STORE %22(s64), %27(p1) :: (store (s64), addrspace 1)
+    %0:sgpr(p4) = COPY $sgpr0_sgpr1
+    %1:sgpr(i64) = G_CONSTANT i64 36
+    %2:sgpr(p4) = G_PTR_ADD %0, %1(i64)
+    %3:sgpr(<2 x i64>) = G_LOAD %2(p4) :: (dereferenceable invariant load (<2 x i64>), align 4, addrspace 4)
+    %4:sgpr(i64), %5:sgpr(i64) = G_UNMERGE_VALUES %3(<2 x i64>)
+    %6:sgpr(p1) = G_INTTOPTR %5(i64)
+    %7:sgpr(f64) = G_LOAD %6(p1) :: (load (f64), addrspace 1)
+    %8:sgpr(f64) = G_FCONSTANT double -0.000000e+00
+    %9:sgpr(f64) = G_FNEG %7
+    %18:sgpr(i64) = G_BITCAST %8(f64)
+    %10:vgpr(i64) = COPY %18(i64)
+    %19:sgpr(i64) = G_BITCAST %9(f64)
+    %11:vgpr(i64) = COPY %19(i64)
+    %20:vgpr(f64) = G_BITCAST %10(i64)
+    %21:vgpr(f64) = G_BITCAST %11(i64)
+    %12:vgpr(f64) = G_FADD %20, %21
+    %13:vgpr(f64) = G_FFLOOR %12
+    %14:vgpr(f64) = G_FNEG %13
+    %15:vgpr(f64) = G_FADD %12, %14
+    %16:sgpr(p1) = G_INTTOPTR %4(i64)
+    %17:vgpr(p1) = COPY %16(p1)
+    G_STORE %15(f64), %17(p1) :: (store (f64), addrspace 1)
     S_ENDPGM 0
 ...
 
@@ -84,57 +100,73 @@ body: |
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: early-clobber %3:sgpr_128 = S_LOAD_DWORDX4_IMM_ec [[COPY]], 36, 0 :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
+    ; GFX10-NEXT: early-clobber %3:sgpr_128 = S_LOAD_DWORDX4_IMM_ec [[COPY]], 36, 0 :: (dereferenceable invariant load (<2 x i64>), align 4, addrspace 4)
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY %3.sub0_sub1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY %3.sub2_sub3
-    ; GFX10-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY2]], 0, 0 :: (load (s64), addrspace 1)
+    ; GFX10-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY2]], 0, 0 :: (load (f64), addrspace 1)
     ; GFX10-NEXT: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -9223372036854775808
-    ; GFX10-NEXT: [[COPY3:%[0-9]+]]:vreg_64 = COPY [[S_MOV_B]]
-    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY [[S_LOAD_DWORDX2_IMM]]
-    ; GFX10-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY3]], 3, [[COPY4]], 0, 0, implicit $mode, implicit $exec
+    ; GFX10-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
+    ; GFX10-NEXT: [[COPY3:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
+    ; GFX10-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY3]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:sreg_32_xm0 = COPY [[S_OR_B32_]]
+    ; GFX10-NEXT: [[COPY5:%[0-9]+]]:sreg_32_xexec_hi_and_sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
+    ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+    ; GFX10-NEXT: [[COPY6:%[0-9]+]]:vreg_64 = COPY [[S_MOV_B]]
+    ; GFX10-NEXT: [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
+    ; GFX10-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY6]], 0, [[COPY7]], 0, 0, implicit $mode, implicit $exec
     ; GFX10-NEXT: [[V_FLOOR_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_FLOOR_F64_e64 0, [[V_ADD_F64_e64_]], 0, 0, implicit $mode, implicit $exec
     ; GFX10-NEXT: [[V_ADD_F64_e64_1:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[V_ADD_F64_e64_]], 1, [[V_FLOOR_F64_e64_]], 0, 0, implicit $mode, implicit $exec
-    ; GFX10-NEXT: [[COPY5:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[COPY1]]
+    ; GFX10-NEXT: [[COPY8:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[COPY1]]
     ; GFX10-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX10-NEXT: GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], [[V_ADD_F64_e64_1]], [[COPY5]], 0, 0, implicit $exec :: (store (s64), addrspace 1)
+    ; GFX10-NEXT: GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], [[V_ADD_F64_e64_1]], [[COPY8]], 0, 0, implicit $exec :: (store (f64), addrspace 1)
     ; GFX10-NEXT: S_ENDPGM 0
     ;
     ; GFX11-LABEL: name: fract_f64_neg_abs
     ; GFX11: liveins: $sgpr0_sgpr1
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX11-NEXT: [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 36, 0 :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
+    ; GFX11-NEXT: [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 36, 0 :: (dereferenceable invariant load (<2 x i64>), align 4, addrspace 4)
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY [[S_LOAD_DWORDX4_IMM]].sub0_sub1
     ; GFX11-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY [[S_LOAD_DWORDX4_IMM]].sub2_sub3
-    ; GFX11-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY2]], 0, 0 :: (load (s64), addrspace 1)
+    ; GFX11-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY2]], 0, 0 :: (load (f64), addrspace 1)
     ; GFX11-NEXT: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -9223372036854775808
-    ; GFX11-NEXT: [[COPY3:%[0-9]+]]:vreg_64 = COPY [[S_MOV_B]]
-    ; GFX11-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY [[S_LOAD_DWORDX2_IMM]]
-    ; GFX11-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY3]], 3, [[COPY4]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
+    ; GFX11-NEXT: [[COPY3:%[0-9]+]]:sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
+    ; GFX11-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY3]], [[S_MOV_B32_]], implicit-def dead $scc
+    ; GFX11-NEXT: [[COPY4:%[0-9]+]]:sreg_32_xm0 = COPY [[S_OR_B32_]]
+    ; GFX11-NEXT: [[COPY5:%[0-9]+]]:sreg_32_xexec_hi_and_sreg_32_xm0 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
+    ; GFX11-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+    ; GFX11-NEXT: [[COPY6:%[0-9]+]]:vreg_64 = COPY [[S_MOV_B]]
+    ; GFX11-NEXT: [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
+    ; GFX11-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[COPY6]], 0, [[COPY7]], 0, 0, implicit $mode, implicit $exec
     ; GFX11-NEXT: [[V_FLOOR_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_FLOOR_F64_e64 0, [[V_ADD_F64_e64_]], 0, 0, implicit $mode, implicit $exec
     ; GFX11-NEXT: [[V_ADD_F64_e64_1:%[0-9]+]]:vreg_64 = nofpexcept V_ADD_F64_e64 0, [[V_ADD_F64_e64_]], 1, [[V_FLOOR_F64_e64_]], 0, 0, implicit $mode, implicit $exec
-    ; GFX11-NEXT: [[COPY5:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[COPY1]]
+    ; GFX11-NEXT: [[COPY8:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[COPY1]]
     ; GFX11-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX11-NEXT: GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], [[V_ADD_F64_e64_1]], [[COPY5]], 0, 0, implicit $exec :: (store (s64), addrspace 1)
+    ; GFX11-NEXT: GLOBAL_STORE_DWORDX2_SADDR [[V_MOV_B32_e32_]], [[V_ADD_F64_e64_1]], [[COPY8]], 0, 0, implicit $exec :: (store (f64), addrspace 1)
     ; GFX11-NEXT: S_ENDPGM 0
-    %2:sgpr(p4) = COPY $sgpr0_sgpr1
-    %7:sgpr(s64) = G_CONSTANT i64 36
-    %8:sgpr(p4) = G_PTR_ADD %2, %7(s64)
-    %9:sgpr(<2 x s64>) = G_LOAD %8(p4) :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
-    %10:sgpr(s64), %13:sgpr(s64) = G_UNMERGE_VALUES %9(<2 x s64>)
-    %15:sgpr(p1) = G_INTTOPTR %13(s64)
-    %18:sgpr(s64) = G_LOAD %15(p1) :: (load (s64), addrspace 1)
-    %19:sgpr(s64) = G_FABS %18
-    %20:sgpr(s64) = G_FCONSTANT double -0.000000e+00
-    %25:sgpr(s64) = G_FNEG %19
-    %26:vgpr(s64) = COPY %20(s64)
-    %27:vgpr(s64) = COPY %25(s64)
-    %21:vgpr(s64) = G_FADD %26, %27
-    %22:vgpr(s64) = G_FFLOOR %21
-    %24:vgpr(s64) = G_FNEG %22
-    %23:vgpr(s64) = G_FADD %21, %24
-    %12:sgpr(p1) = G_INTTOPTR %10(s64)
-    %28:vgpr(p1) = COPY %12(p1)
-    G_STORE %23(s64), %28(p1) :: (store (s64), addrspace 1)
+    %0:sgpr(p4) = COPY $sgpr0_sgpr1
+    %1:sgpr(i64) = G_CONSTANT i64 36
+    %2:sgpr(p4) = G_PTR_ADD %0, %1(i64)
+    %3:sgpr(<2 x i64>) = G_LOAD %2(p4) :: (dereferenceable invariant load (<2 x i64>), align 4, addrspace 4)
+    %4:sgpr(i64), %5:sgpr(i64) = G_UNMERGE_VALUES %3(<2 x i64>)
+    %6:sgpr(p1) = G_INTTOPTR %5(i64)
+    %7:sgpr(f64) = G_LOAD %6(p1) :: (load (f64), addrspace 1)
+    %8:sgpr(f64) = G_FABS %7
+    %9:sgpr(f64) = G_FCONSTANT double -0.000000e+00
+    %10:sgpr(f64) = G_FNEG %8
+    %19:sgpr(i64) = G_BITCAST %9(f64)
+    %11:vgpr(i64) = COPY %19(i64)
+    %20:sgpr(i64) = G_BITCAST %10(f64)
+    %12:vgpr(i64) = COPY %20(i64)
+    %21:vgpr(f64) = G_BITCAST %11(i64)
+    %22:vgpr(f64) = G_BITCAST %12(i64)
+    %13:vgpr(f64) = G_FADD %21, %22
+    %14:vgpr(f64) = G_FFLOOR %13
+    %15:vgpr(f64) = G_FNEG %14
+    %16:vgpr(f64) = G_FADD %13, %15
+    %17:sgpr(p1) = G_INTTOPTR %4(i64)
+    %18:vgpr(p1) = COPY %17(p1)
+    G_STORE %16(f64), %18(p1) :: (store (f64), addrspace 1)
     S_ENDPGM 0
 ...

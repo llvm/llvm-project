@@ -14,7 +14,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_no_rtn_atomicrmw(ptr addrspace(1) 
   ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-  ; GFX908-NEXT:   GLOBAL_ATOMIC_ADD_F32 [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr, addrspace 1)
+  ; GFX908-NEXT:   GLOBAL_ATOMIC_ADD_F32 [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec :: (load store syncscope("wavefront") monotonic (f32) on %ir.ptr, addrspace 1)
   ; GFX908-NEXT:   S_ENDPGM 0
   ;
   ; GFX90A-LABEL: name: global_atomic_fadd_f32_no_rtn_atomicrmw
@@ -25,7 +25,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_no_rtn_atomicrmw(ptr addrspace(1) 
   ; GFX90A-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX90A-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-  ; GFX90A-NEXT:   GLOBAL_ATOMIC_ADD_F32 [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr, addrspace 1)
+  ; GFX90A-NEXT:   GLOBAL_ATOMIC_ADD_F32 [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec :: (load store syncscope("wavefront") monotonic (f32) on %ir.ptr, addrspace 1)
   ; GFX90A-NEXT:   S_ENDPGM 0
   ;
   ; GFX940-LABEL: name: global_atomic_fadd_f32_no_rtn_atomicrmw
@@ -36,7 +36,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_no_rtn_atomicrmw(ptr addrspace(1) 
   ; GFX940-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX940-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX940-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-  ; GFX940-NEXT:   GLOBAL_ATOMIC_ADD_F32 [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr, addrspace 1)
+  ; GFX940-NEXT:   GLOBAL_ATOMIC_ADD_F32 [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec :: (load store syncscope("wavefront") monotonic (f32) on %ir.ptr, addrspace 1)
   ; GFX940-NEXT:   S_ENDPGM 0
   ;
   ; GFX11-LABEL: name: global_atomic_fadd_f32_no_rtn_atomicrmw
@@ -47,7 +47,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_no_rtn_atomicrmw(ptr addrspace(1) 
   ; GFX11-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX11-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-  ; GFX11-NEXT:   GLOBAL_ATOMIC_ADD_F32 [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr, addrspace 1)
+  ; GFX11-NEXT:   GLOBAL_ATOMIC_ADD_F32 [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec :: (load store syncscope("wavefront") monotonic (f32) on %ir.ptr, addrspace 1)
   ; GFX11-NEXT:   S_ENDPGM 0
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, float %data syncscope("wavefront") monotonic, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
   ret void
@@ -115,7 +115,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX908-NEXT:   successors: %bb.4(0x80000000)
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; GFX908-NEXT:   GLOBAL_ATOMIC_ADD_F32_SADDR [[V_MOV_B32_e32_]], [[STRICT_WWM]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr, addrspace 1)
+  ; GFX908-NEXT:   GLOBAL_ATOMIC_ADD_F32_SADDR [[V_MOV_B32_e32_]], [[STRICT_WWM]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load store syncscope("wavefront") monotonic (f32) on %ir.ptr, addrspace 1)
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.4.Flow:
   ; GFX908-NEXT:   successors: %bb.5(0x80000000)
@@ -187,7 +187,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX90A-NEXT:   successors: %bb.4(0x80000000)
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; GFX90A-NEXT:   GLOBAL_ATOMIC_ADD_F32_SADDR [[V_MOV_B32_e32_]], [[STRICT_WWM]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr, addrspace 1)
+  ; GFX90A-NEXT:   GLOBAL_ATOMIC_ADD_F32_SADDR [[V_MOV_B32_e32_]], [[STRICT_WWM]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load store syncscope("wavefront") monotonic (f32) on %ir.ptr, addrspace 1)
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.4.Flow:
   ; GFX90A-NEXT:   successors: %bb.5(0x80000000)
@@ -259,7 +259,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX940-NEXT:   successors: %bb.4(0x80000000)
   ; GFX940-NEXT: {{  $}}
   ; GFX940-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; GFX940-NEXT:   GLOBAL_ATOMIC_ADD_F32_SADDR [[V_MOV_B32_e32_]], [[STRICT_WWM]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr, addrspace 1)
+  ; GFX940-NEXT:   GLOBAL_ATOMIC_ADD_F32_SADDR [[V_MOV_B32_e32_]], [[STRICT_WWM]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load store syncscope("wavefront") monotonic (f32) on %ir.ptr, addrspace 1)
   ; GFX940-NEXT: {{  $}}
   ; GFX940-NEXT: bb.4.Flow:
   ; GFX940-NEXT:   successors: %bb.5(0x80000000)
@@ -321,7 +321,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX11-NEXT:   successors: %bb.4(0x80000000)
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; GFX11-NEXT:   GLOBAL_ATOMIC_ADD_F32_SADDR [[V_MOV_B32_e32_]], [[STRICT_WWM]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr, addrspace 1)
+  ; GFX11-NEXT:   GLOBAL_ATOMIC_ADD_F32_SADDR [[V_MOV_B32_e32_]], [[STRICT_WWM]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load store syncscope("wavefront") monotonic (f32) on %ir.ptr, addrspace 1)
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.4.Flow:
   ; GFX11-NEXT:   successors: %bb.5(0x80000000)

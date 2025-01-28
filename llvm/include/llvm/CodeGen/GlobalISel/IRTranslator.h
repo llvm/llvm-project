@@ -619,6 +619,8 @@ private:
 
   CodeGenOptLevel OptLevel;
 
+  bool EnableFPInfo;
+
   /// Current optimization remark emitter. Used to report failures.
   std::unique_ptr<OptimizationRemarkEmitter> ORE;
 
@@ -772,7 +774,7 @@ private:
       BranchProbability Prob = BranchProbability::getUnknown());
 
 public:
-  IRTranslator(CodeGenOptLevel OptLevel = CodeGenOptLevel::None);
+  IRTranslator(CodeGenOptLevel OptLevel = CodeGenOptLevel::None, bool EnableFPInfo = false);
 
   StringRef getPassName() const override { return "IRTranslator"; }
 

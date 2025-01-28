@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -158,7 +159,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
 
   if (const Function *F = dyn_cast<Function>(CalleeV)) {
     if (F->hasFnAttribute(Attribute::NonLazyBind)) {
-      LLT Ty = getLLTForType(*F->getType(), DL);
+      LLT Ty = getLLTForType(*F->getType(), DL, /* EnableFPInfo */ true);
       Register Reg = MIRBuilder.buildGlobalValue(Ty, F).getReg(0);
       Info.Callee = MachineOperand::CreateReg(Reg, false);
     } else {
@@ -573,8 +574,13 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
       TypeSize::isKnownGT(PartSize, SrcTy.getElementType().getSizeInBits())) {
     // Vector was scalarized, and the elements extended.
     auto UnmergeToEltTy = B.buildUnmerge(SrcTy.getElementType(), SrcReg);
-    for (int i = 0, e = DstRegs.size(); i != e; ++i)
-      B.buildAnyExt(DstRegs[i], UnmergeToEltTy.getReg(i));
+    for (int i = 0, e = DstRegs.size(); i != e; ++i) {
+      if (SrcTy.isFloatVector() && ExtendOp == TargetOpcode::G_FPEXT) {
+        B.buildFPExt(DstRegs[i], UnmergeToEltTy.getReg(i));
+      } else {
+        B.buildAnyExt(DstRegs[i], UnmergeToEltTy.getReg(i));
+      }
+    }
     return;
   }
 
@@ -599,9 +605,16 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
       SrcTy.getScalarSizeInBits() > PartTy.getSizeInBits()) {
     LLT ExtTy =
         LLT::vector(SrcTy.getElementCount(),
-                    LLT::scalar(PartTy.getScalarSizeInBits() * DstRegs.size() /
+                    LLT::integer(PartTy.getScalarSizeInBits() * DstRegs.size() /
                                 SrcTy.getNumElements()));
-    auto Ext = B.buildAnyExt(ExtTy, SrcReg);
+    Register Ext;
+    if (SrcTy.isFloatVector() && ExtendOp == TargetOpcode::G_FPEXT) {
+      auto Cast = B.buildBitcast(SrcTy.dropType(), SrcReg).getReg(0);
+      Ext = B.buildAnyExt(ExtTy, Cast).getReg(0);
+    } else {
+      Ext = B.buildAnyExt(ExtTy, SrcReg).getReg(0);
+    }
+
     B.buildUnmerge(DstRegs, Ext);
     return;
   }
@@ -780,11 +793,11 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
     const MVT ValVT = VA.getValVT();
     const MVT LocVT = VA.getLocVT();
 
-    const LLT LocTy(LocVT);
-    const LLT ValTy(ValVT);
+    const LLT LocTy(LocVT, /* EnableFPInfo */ true);
+    const LLT ValTy(ValVT, /* EnableFPInfo */ true);
     const LLT NewLLT = Handler.isIncomingArgumentHandler() ? LocTy : ValTy;
     const EVT OrigVT = EVT::getEVT(Args[i].Ty);
-    const LLT OrigTy = getLLTForType(*Args[i].Ty, DL);
+    const LLT OrigTy = getLLTForType(*Args[i].Ty, DL, /* EnableFPInfo */ true);
     const LLT PointerTy = LLT::pointer(
         AllocaAddressSpace, DL.getPointerSizeInBits(AllocaAddressSpace));
 
@@ -822,8 +835,11 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
     if (!Handler.isIncomingArgumentHandler() && OrigTy != ValTy &&
         VA.getLocInfo() != CCValAssign::Indirect) {
       assert(Args[i].OrigRegs.size() == 1);
+      unsigned ExtendOp = extendOpFromFlags(Args[i].Flags[0]);
+      if ((OrigTy.isFloat() || OrigTy.isFloatVector()) && ValTy.isFloat())
+        ExtendOp = TargetOpcode::G_FPEXT;
       buildCopyToRegs(MIRBuilder, Args[i].Regs, Args[i].OrigRegs[0], OrigTy,
-                      ValTy, extendOpFromFlags(Args[i].Flags[0]));
+                      ValTy, ExtendOp);
     }
 
     bool IndirectParameterPassingHandled = false;
@@ -1003,7 +1019,7 @@ void CallLowering::insertSRetLoads(MachineIRBuilder &MIRBuilder, Type *RetTy,
   Align BaseAlign = DL.getPrefTypeAlign(RetTy);
   Type *RetPtrTy =
       PointerType::get(RetTy->getContext(), DL.getAllocaAddrSpace());
-  LLT OffsetLLTy = getLLTForType(*DL.getIndexType(RetPtrTy), DL);
+  LLT OffsetLLTy = getLLTForType(*DL.getIndexType(RetPtrTy), DL, /* EnableFPInfo */ true);
 
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
 
@@ -1033,7 +1049,7 @@ void CallLowering::insertSRetStores(MachineIRBuilder &MIRBuilder, Type *RetTy,
   unsigned NumValues = SplitVTs.size();
   Align BaseAlign = DL.getPrefTypeAlign(RetTy);
   unsigned AS = DL.getAllocaAddrSpace();
-  LLT OffsetLLTy = getLLTForType(*DL.getIndexType(RetTy->getContext(), AS), DL);
+  LLT OffsetLLTy = getLLTForType(*DL.getIndexType(RetTy->getContext(), AS), DL, /* EnableFPInfo */ true);
 
   MachinePointerInfo PtrInfo(AS);
 
@@ -1291,8 +1307,8 @@ void CallLowering::ValueHandler::copyArgumentMemory(
 Register CallLowering::ValueHandler::extendRegister(Register ValReg,
                                                     const CCValAssign &VA,
                                                     unsigned MaxSizeBits) {
-  LLT LocTy{VA.getLocVT()};
-  LLT ValTy{VA.getValVT()};
+  LLT LocTy(VA.getLocVT(), /* EnableFPInfo */ true);
+  LLT ValTy(VA.getValVT(), /* EnableFPInfo */ true);
 
   if (LocTy.getSizeInBits() == ValTy.getSizeInBits())
     return ValReg;
@@ -1383,7 +1399,7 @@ static bool isCopyCompatibleType(LLT SrcTy, LLT DstTy) {
 void CallLowering::IncomingValueHandler::assignValueToReg(
     Register ValVReg, Register PhysReg, const CCValAssign &VA) {
   const MVT LocVT = VA.getLocVT();
-  const LLT LocTy(LocVT);
+  const LLT LocTy(LocVT, true);
   const LLT RegTy = MRI.getType(ValVReg);
 
   if (isCopyCompatibleType(RegTy, LocTy)) {

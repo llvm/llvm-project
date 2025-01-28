@@ -2,8 +2,8 @@
 # RUN: llc -mtriple=amdgcn -mcpu=fiji -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
 # RUN: llc -mtriple=amdgcn -mcpu=tahiti -run-pass=instruction-select -verify-machineinstrs -global-isel-abort=2 -pass-remarks-missed='gisel*'  %s -o /dev/null 2>&1 | FileCheck -check-prefix=SI-ERR %s
 
-# SI-ERR: remark: <unknown>:0:0: cannot select: %2:vgpr(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), %1:sgpr(s16) (in function: rsq_s16_vs)
-# SI-ERR: remark: <unknown>:0:0: cannot select: %2:vgpr(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), %1:vgpr(s16) (in function: rsq_s16_vv)
+# SI-ERR: remark: <unknown>:0:0: cannot select: %2:vgpr(f16) = G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), %1:sgpr(f16) (in function: rsq_s16_vs)
+# SI-ERR: remark: <unknown>:0:0: cannot select: %2:vgpr(f16) = G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), %1:vgpr(f16) (in function: rsq_s16_vv)
 
 ---
 name: rsq_s16_vs
@@ -21,10 +21,12 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: [[V_RSQ_F16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_RSQ_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_RSQ_F16_e64_]]
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:sgpr(s16) = G_TRUNC %0
-    %2:vgpr(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), %1
-    S_ENDPGM 0, implicit %2
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:sgpr(i16) = G_TRUNC %0(i32)
+    %3:sgpr(f16) = G_BITCAST %1(i16)
+    %2:vgpr(f16) = G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), %3(f16)
+    %4:vgpr(i16) = G_BITCAST %2(f16)
+    S_ENDPGM 0, implicit %4(i16)
 ...
 
 ---
@@ -43,8 +45,10 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[V_RSQ_F16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_RSQ_F16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_RSQ_F16_e64_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s16) = G_TRUNC %0
-    %2:vgpr(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), %1
-    S_ENDPGM 0, implicit %2
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i16) = G_TRUNC %0(i32)
+    %3:vgpr(f16) = G_BITCAST %1(i16)
+    %2:vgpr(f16) = G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), %3(f16)
+    %4:vgpr(i16) = G_BITCAST %2(f16)
+    S_ENDPGM 0, implicit %4(i16)
 ...

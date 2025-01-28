@@ -10,24 +10,24 @@ body: |
     ; CHECK-LABEL: name: no_fold_add_into_select_s32_0_multi_use
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %ten:_(s32) = G_CONSTANT i32 10
-    ; CHECK-NEXT: %twenty:_(s32) = G_CONSTANT i32 20
-    ; CHECK-NEXT: %select:_(s32) = G_SELECT %cond(s1), %ten, %twenty
-    ; CHECK-NEXT: %thirty:_(s32) = G_CONSTANT i32 30
-    ; CHECK-NEXT: %add:_(s32) = G_ADD %select, %thirty
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %add(s32), implicit %select(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %ten:_(s32) = G_CONSTANT i32 10
-    %twenty:_(s32) = G_CONSTANT i32 20
-    %select:_(s32) = G_SELECT %cond, %ten, %twenty
-    %thirty:_(s32) = G_CONSTANT i32 30
-    %add:_(s32) = G_ADD %select, %thirty
-    S_ENDPGM 0, implicit %add, implicit %select
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %ten:_(i32) = G_CONSTANT i32 10
+    ; CHECK-NEXT: %twenty:_(i32) = G_CONSTANT i32 20
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), %ten, %twenty
+    ; CHECK-NEXT: %thirty:_(i32) = G_CONSTANT i32 30
+    ; CHECK-NEXT: %add:_(i32) = G_ADD %select, %thirty
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %add(i32), implicit %select(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %ten:_(i32) = G_CONSTANT i32 10
+    %twenty:_(i32) = G_CONSTANT i32 20
+    %select:_(i32) = G_SELECT %cond(i1), %ten, %twenty
+    %thirty:_(i32) = G_CONSTANT i32 30
+    %add:_(i32) = G_ADD %select, %thirty
+    S_ENDPGM 0, implicit %add(i32), implicit %select(i32)
 ...
 
 ---
@@ -39,24 +39,24 @@ body: |
     ; CHECK-LABEL: name: no_fold_add_into_select_s32_1_multi_use
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %ten:_(s32) = G_CONSTANT i32 10
-    ; CHECK-NEXT: %twenty:_(s32) = G_CONSTANT i32 20
-    ; CHECK-NEXT: %select:_(s32) = G_SELECT %cond(s1), %ten, %twenty
-    ; CHECK-NEXT: %thirty:_(s32) = G_CONSTANT i32 30
-    ; CHECK-NEXT: %add:_(s32) = G_ADD %select, %thirty
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %add(s32), implicit %select(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %ten:_(s32) = G_CONSTANT i32 10
-    %twenty:_(s32) = G_CONSTANT i32 20
-    %select:_(s32) = G_SELECT %cond, %ten, %twenty
-    %thirty:_(s32) = G_CONSTANT i32 30
-    %add:_(s32) = G_ADD %thirty, %select
-    S_ENDPGM 0, implicit %add, implicit %select
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %ten:_(i32) = G_CONSTANT i32 10
+    ; CHECK-NEXT: %twenty:_(i32) = G_CONSTANT i32 20
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), %ten, %twenty
+    ; CHECK-NEXT: %thirty:_(i32) = G_CONSTANT i32 30
+    ; CHECK-NEXT: %add:_(i32) = G_ADD %select, %thirty
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %add(i32), implicit %select(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %ten:_(i32) = G_CONSTANT i32 10
+    %twenty:_(i32) = G_CONSTANT i32 20
+    %select:_(i32) = G_SELECT %cond(i1), %ten, %twenty
+    %thirty:_(i32) = G_CONSTANT i32 30
+    %add:_(i32) = G_ADD %thirty, %select
+    S_ENDPGM 0, implicit %add(i32), implicit %select(i32)
 ...
 
 ---
@@ -68,25 +68,25 @@ body: |
     ; CHECK-LABEL: name: no_fold_sub_into_select_s32_nonconst_rhs
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %variable:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %ten:_(s32) = G_CONSTANT i32 10
-    ; CHECK-NEXT: %twenty:_(s32) = G_CONSTANT i32 20
-    ; CHECK-NEXT: %select:_(s32) = G_SELECT %cond(s1), %ten, %twenty
-    ; CHECK-NEXT: %sub:_(s32) = G_SUB %select, %variable
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %sub(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %variable:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %ten:_(s32) = G_CONSTANT i32 10
-    %twenty:_(s32) = G_CONSTANT i32 20
-    %select:_(s32) = G_SELECT %cond, %ten, %twenty
-    %thirty:_(s32) = G_CONSTANT i32 30
-    %sub:_(s32) = G_SUB %select, %variable
-    S_ENDPGM 0, implicit %sub
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %variable:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %ten:_(i32) = G_CONSTANT i32 10
+    ; CHECK-NEXT: %twenty:_(i32) = G_CONSTANT i32 20
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), %ten, %twenty
+    ; CHECK-NEXT: %sub:_(i32) = G_SUB %select, %variable
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %sub(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %variable:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %ten:_(i32) = G_CONSTANT i32 10
+    %twenty:_(i32) = G_CONSTANT i32 20
+    %select:_(i32) = G_SELECT %cond(i1), %ten, %twenty
+    %thirty:_(i32) = G_CONSTANT i32 30
+    %sub:_(i32) = G_SUB %select, %variable
+    S_ENDPGM 0, implicit %sub(i32)
 ...
 
 ---
@@ -98,25 +98,25 @@ body: |
     ; CHECK-LABEL: name: no_fold_sub_into_select_s32_nonconst_lhs
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %variable:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %ten:_(s32) = G_CONSTANT i32 10
-    ; CHECK-NEXT: %twenty:_(s32) = G_CONSTANT i32 20
-    ; CHECK-NEXT: %select:_(s32) = G_SELECT %cond(s1), %ten, %twenty
-    ; CHECK-NEXT: %sub:_(s32) = G_SUB %variable, %select
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %sub(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %variable:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %ten:_(s32) = G_CONSTANT i32 10
-    %twenty:_(s32) = G_CONSTANT i32 20
-    %select:_(s32) = G_SELECT %cond, %ten, %twenty
-    %thirty:_(s32) = G_CONSTANT i32 30
-    %sub:_(s32) = G_SUB %variable, %select
-    S_ENDPGM 0, implicit %sub
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %variable:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %ten:_(i32) = G_CONSTANT i32 10
+    ; CHECK-NEXT: %twenty:_(i32) = G_CONSTANT i32 20
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), %ten, %twenty
+    ; CHECK-NEXT: %sub:_(i32) = G_SUB %variable, %select
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %sub(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %variable:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %ten:_(i32) = G_CONSTANT i32 10
+    %twenty:_(i32) = G_CONSTANT i32 20
+    %select:_(i32) = G_SELECT %cond(i1), %ten, %twenty
+    %thirty:_(i32) = G_CONSTANT i32 30
+    %sub:_(i32) = G_SUB %variable, %select
+    S_ENDPGM 0, implicit %sub(i32)
 ...
 
 ---
@@ -128,22 +128,22 @@ body: |
     ; CHECK-LABEL: name: fold_add_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 40
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 50
-    ; CHECK-NEXT: %add:_(s32) = G_SELECT %cond(s1), [[C]], [[C1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %add(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %ten:_(s32) = G_CONSTANT i32 10
-    %twenty:_(s32) = G_CONSTANT i32 20
-    %select:_(s32) = G_SELECT %cond, %ten, %twenty
-    %thirty:_(s32) = G_CONSTANT i32 30
-    %add:_(s32) = G_ADD %select, %thirty
-    S_ENDPGM 0, implicit %add
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 40
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 50
+    ; CHECK-NEXT: %add:_(i32) = G_SELECT %cond(i1), [[C]], [[C1]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %add(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %ten:_(i32) = G_CONSTANT i32 10
+    %twenty:_(i32) = G_CONSTANT i32 20
+    %select:_(i32) = G_SELECT %cond(i1), %ten, %twenty
+    %thirty:_(i32) = G_CONSTANT i32 30
+    %add:_(i32) = G_ADD %select, %thirty
+    S_ENDPGM 0, implicit %add(i32)
 ...
 
 ---
@@ -155,22 +155,22 @@ body: |
     ; CHECK-LABEL: name: fold_add_into_select_s32_1
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 40
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 50
-    ; CHECK-NEXT: %add:_(s32) = G_SELECT %cond(s1), [[C]], [[C1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %add(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %ten:_(s32) = G_CONSTANT i32 10
-    %twenty:_(s32) = G_CONSTANT i32 20
-    %select:_(s32) = G_SELECT %cond, %ten, %twenty
-    %thirty:_(s32) = G_CONSTANT i32 30
-    %add:_(s32) = G_ADD %thirty, %select
-    S_ENDPGM 0, implicit %add
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 40
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 50
+    ; CHECK-NEXT: %add:_(i32) = G_SELECT %cond(i1), [[C]], [[C1]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %add(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %ten:_(i32) = G_CONSTANT i32 10
+    %twenty:_(i32) = G_CONSTANT i32 20
+    %select:_(i32) = G_SELECT %cond(i1), %ten, %twenty
+    %thirty:_(i32) = G_CONSTANT i32 30
+    %add:_(i32) = G_ADD %thirty, %select
+    S_ENDPGM 0, implicit %add(i32)
 ...
 
 ---
@@ -182,27 +182,27 @@ body: |
     ; CHECK-LABEL: name: fold_add_into_select_v2s32_splat
     ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg0:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %reg1:_(<2 x s32>) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: %cond:_(<2 x s1>) = G_ICMP intpred(eq), %reg0(<2 x s32>), %reg1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 40
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 50
-    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C1]](s32), [[C1]](s32)
-    ; CHECK-NEXT: %add:_(<2 x s32>) = G_SELECT %cond(<2 x s1>), [[BUILD_VECTOR]], [[BUILD_VECTOR1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %add(<2 x s32>)
-    %reg0:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    %reg1:_(<2 x s32>) = COPY $vgpr2_vgpr3
-    %cond:_(<2 x s1>) = G_ICMP intpred(eq), %reg0, %reg1
-    %ten:_(s32) = G_CONSTANT i32 10
-    %twenty:_(s32) = G_CONSTANT i32 20
-    %ten_vec:_(<2 x s32>) = G_BUILD_VECTOR %ten, %ten
-    %twenty_vec:_(<2 x s32>) = G_BUILD_VECTOR %twenty, %twenty
-    %select:_(<2 x s32>) = G_SELECT %cond, %ten_vec, %twenty_vec
-    %thirty:_(s32) = G_CONSTANT i32 30
-    %thirty_vec:_(<2 x s32>) = G_BUILD_VECTOR %thirty, %thirty
-    %add:_(<2 x s32>) = G_ADD %select, %thirty_vec
-    S_ENDPGM 0, implicit %add
+    ; CHECK-NEXT: %reg0:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: %reg1:_(<2 x i32>) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: %cond:_(<2 x i1>) = G_ICMP intpred(eq), %reg0(<2 x i32>), %reg1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 40
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 50
+    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[C1]](i32), [[C1]](i32)
+    ; CHECK-NEXT: %add:_(<2 x i32>) = G_SELECT %cond(<2 x i1>), [[BUILD_VECTOR]], [[BUILD_VECTOR1]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %add(<2 x i32>)
+    %reg0:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    %reg1:_(<2 x i32>) = COPY $vgpr2_vgpr3
+    %cond:_(<2 x i1>) = G_ICMP intpred(eq), %reg0(<2 x i32>), %reg1
+    %ten:_(i32) = G_CONSTANT i32 10
+    %twenty:_(i32) = G_CONSTANT i32 20
+    %ten_vec:_(<2 x i32>) = G_BUILD_VECTOR %ten(i32), %ten(i32)
+    %twenty_vec:_(<2 x i32>) = G_BUILD_VECTOR %twenty(i32), %twenty(i32)
+    %select:_(<2 x i32>) = G_SELECT %cond(<2 x i1>), %ten_vec, %twenty_vec
+    %thirty:_(i32) = G_CONSTANT i32 30
+    %thirty_vec:_(<2 x i32>) = G_BUILD_VECTOR %thirty(i32), %thirty(i32)
+    %add:_(<2 x i32>) = G_ADD %select, %thirty_vec
+    S_ENDPGM 0, implicit %add(<2 x i32>)
 ...
 
 ---
@@ -214,29 +214,29 @@ body: |
     ; CHECK-LABEL: name: fold_add_into_select_v2s32_nonsplat
     ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg0:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %reg1:_(<2 x s32>) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: %cond:_(<2 x s1>) = G_ICMP intpred(eq), %reg0(<2 x s32>), %reg1
-    ; CHECK-NEXT: %twenty:_(s32) = G_CONSTANT i32 20
-    ; CHECK-NEXT: %thirty:_(s32) = G_CONSTANT i32 30
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 40
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), %thirty(s32)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 50
-    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C1]](s32), %twenty(s32)
-    ; CHECK-NEXT: %add:_(<2 x s32>) = G_SELECT %cond(<2 x s1>), [[BUILD_VECTOR]], [[BUILD_VECTOR1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %add(<2 x s32>)
-    %reg0:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    %reg1:_(<2 x s32>) = COPY $vgpr2_vgpr3
-    %cond:_(<2 x s1>) = G_ICMP intpred(eq), %reg0, %reg1
-    %ten:_(s32) = G_CONSTANT i32 10
-    %twenty:_(s32) = G_CONSTANT i32 20
-    %const_vec0:_(<2 x s32>) = G_BUILD_VECTOR %ten, %twenty
-    %const_vec1:_(<2 x s32>) = G_BUILD_VECTOR %twenty, %ten
-    %select:_(<2 x s32>) = G_SELECT %cond, %const_vec0, %const_vec1
-    %thirty:_(s32) = G_CONSTANT i32 30
-    %const_vec3:_(<2 x s32>) = G_BUILD_VECTOR %thirty, %ten
-    %add:_(<2 x s32>) = G_ADD %select, %const_vec3
-    S_ENDPGM 0, implicit %add
+    ; CHECK-NEXT: %reg0:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: %reg1:_(<2 x i32>) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: %cond:_(<2 x i1>) = G_ICMP intpred(eq), %reg0(<2 x i32>), %reg1
+    ; CHECK-NEXT: %twenty:_(i32) = G_CONSTANT i32 20
+    ; CHECK-NEXT: %thirty:_(i32) = G_CONSTANT i32 30
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 40
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[C]](i32), %thirty(i32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 50
+    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[C1]](i32), %twenty(i32)
+    ; CHECK-NEXT: %add:_(<2 x i32>) = G_SELECT %cond(<2 x i1>), [[BUILD_VECTOR]], [[BUILD_VECTOR1]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %add(<2 x i32>)
+    %reg0:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    %reg1:_(<2 x i32>) = COPY $vgpr2_vgpr3
+    %cond:_(<2 x i1>) = G_ICMP intpred(eq), %reg0(<2 x i32>), %reg1
+    %ten:_(i32) = G_CONSTANT i32 10
+    %twenty:_(i32) = G_CONSTANT i32 20
+    %const_vec0:_(<2 x i32>) = G_BUILD_VECTOR %ten(i32), %twenty(i32)
+    %const_vec1:_(<2 x i32>) = G_BUILD_VECTOR %twenty(i32), %ten(i32)
+    %select:_(<2 x i32>) = G_SELECT %cond(<2 x i1>), %const_vec0, %const_vec1
+    %thirty:_(i32) = G_CONSTANT i32 30
+    %const_vec3:_(<2 x i32>) = G_BUILD_VECTOR %thirty(i32), %ten(i32)
+    %add:_(<2 x i32>) = G_ADD %select, %const_vec3
+    S_ENDPGM 0, implicit %add(<2 x i32>)
 ...
 
 ---
@@ -248,32 +248,32 @@ body: |
     ; CHECK-LABEL: name: fold_add_into_select_v2s32_nonsplat_undef
     ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg0:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %reg1:_(<2 x s32>) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: %cond:_(<2 x s1>) = G_ICMP intpred(eq), %reg0(<2 x s32>), %reg1
-    ; CHECK-NEXT: %twenty:_(s32) = G_CONSTANT i32 20
-    ; CHECK-NEXT: %undef:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: %const_vec0:_(<2 x s32>) = G_BUILD_VECTOR %undef(s32), %twenty(s32)
-    ; CHECK-NEXT: %const_vec1:_(<2 x s32>) = G_BUILD_VECTOR %twenty(s32), %undef(s32)
-    ; CHECK-NEXT: %thirty:_(s32) = G_CONSTANT i32 30
-    ; CHECK-NEXT: %const_vec3:_(<2 x s32>) = G_BUILD_VECTOR %thirty(s32), %undef(s32)
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<2 x s32>) = G_ADD %const_vec0, %const_vec3
-    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(<2 x s32>) = G_ADD %const_vec1, %const_vec3
-    ; CHECK-NEXT: %add:_(<2 x s32>) = G_SELECT %cond(<2 x s1>), [[ADD]], [[ADD1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %add(<2 x s32>)
-    %reg0:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    %reg1:_(<2 x s32>) = COPY $vgpr2_vgpr3
-    %cond:_(<2 x s1>) = G_ICMP intpred(eq), %reg0, %reg1
-    %ten:_(s32) = G_CONSTANT i32 10
-    %twenty:_(s32) = G_CONSTANT i32 20
-    %undef:_(s32) = G_IMPLICIT_DEF
-    %const_vec0:_(<2 x s32>) = G_BUILD_VECTOR %undef, %twenty
-    %const_vec1:_(<2 x s32>) = G_BUILD_VECTOR %twenty, %undef
-    %select:_(<2 x s32>) = G_SELECT %cond, %const_vec0, %const_vec1
-    %thirty:_(s32) = G_CONSTANT i32 30
-    %const_vec3:_(<2 x s32>) = G_BUILD_VECTOR %thirty, %undef
-    %add:_(<2 x s32>) = G_ADD %select, %const_vec3
-    S_ENDPGM 0, implicit %add
+    ; CHECK-NEXT: %reg0:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: %reg1:_(<2 x i32>) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: %cond:_(<2 x i1>) = G_ICMP intpred(eq), %reg0(<2 x i32>), %reg1
+    ; CHECK-NEXT: %twenty:_(i32) = G_CONSTANT i32 20
+    ; CHECK-NEXT: %undef:_(i32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %const_vec0:_(<2 x i32>) = G_BUILD_VECTOR %undef(i32), %twenty(i32)
+    ; CHECK-NEXT: %const_vec1:_(<2 x i32>) = G_BUILD_VECTOR %twenty(i32), %undef(i32)
+    ; CHECK-NEXT: %thirty:_(i32) = G_CONSTANT i32 30
+    ; CHECK-NEXT: %const_vec3:_(<2 x i32>) = G_BUILD_VECTOR %thirty(i32), %undef(i32)
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<2 x i32>) = G_ADD %const_vec0, %const_vec3
+    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(<2 x i32>) = G_ADD %const_vec1, %const_vec3
+    ; CHECK-NEXT: %add:_(<2 x i32>) = G_SELECT %cond(<2 x i1>), [[ADD]], [[ADD1]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %add(<2 x i32>)
+    %reg0:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    %reg1:_(<2 x i32>) = COPY $vgpr2_vgpr3
+    %cond:_(<2 x i1>) = G_ICMP intpred(eq), %reg0(<2 x i32>), %reg1
+    %ten:_(i32) = G_CONSTANT i32 10
+    %twenty:_(i32) = G_CONSTANT i32 20
+    %undef:_(i32) = G_IMPLICIT_DEF
+    %const_vec0:_(<2 x i32>) = G_BUILD_VECTOR %undef(i32), %twenty(i32)
+    %const_vec1:_(<2 x i32>) = G_BUILD_VECTOR %twenty(i32), %undef(i32)
+    %select:_(<2 x i32>) = G_SELECT %cond(<2 x i1>), %const_vec0, %const_vec1
+    %thirty:_(i32) = G_CONSTANT i32 30
+    %const_vec3:_(<2 x i32>) = G_BUILD_VECTOR %thirty(i32), %undef(i32)
+    %add:_(<2 x i32>) = G_ADD %select, %const_vec3
+    S_ENDPGM 0, implicit %add(<2 x i32>)
 ...
 
 ---
@@ -285,22 +285,22 @@ body: |
     ; CHECK-LABEL: name: fold_sub_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -20
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -10
-    ; CHECK-NEXT: %sub:_(s32) = G_SELECT %cond(s1), [[C]], [[C1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %sub(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %ten:_(s32) = G_CONSTANT i32 10
-    %twenty:_(s32) = G_CONSTANT i32 20
-    %select:_(s32) = G_SELECT %cond, %ten, %twenty
-    %thirty:_(s32) = G_CONSTANT i32 30
-    %sub:_(s32) = G_SUB %select, %thirty
-    S_ENDPGM 0, implicit %sub
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -20
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 -10
+    ; CHECK-NEXT: %sub:_(i32) = G_SELECT %cond(i1), [[C]], [[C1]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %sub(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %ten:_(i32) = G_CONSTANT i32 10
+    %twenty:_(i32) = G_CONSTANT i32 20
+    %select:_(i32) = G_SELECT %cond(i1), %ten, %twenty
+    %thirty:_(i32) = G_CONSTANT i32 30
+    %sub:_(i32) = G_SUB %select, %thirty
+    S_ENDPGM 0, implicit %sub(i32)
 ...
 
 ---
@@ -312,22 +312,22 @@ body: |
     ; CHECK-LABEL: name: fold_sub_into_select_s32_1
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %ten:_(s32) = G_CONSTANT i32 10
-    ; CHECK-NEXT: %twenty:_(s32) = G_CONSTANT i32 20
-    ; CHECK-NEXT: %sub:_(s32) = G_SELECT %cond(s1), %twenty, %ten
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %sub(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %ten:_(s32) = G_CONSTANT i32 10
-    %twenty:_(s32) = G_CONSTANT i32 20
-    %select:_(s32) = G_SELECT %cond, %ten, %twenty
-    %thirty:_(s32) = G_CONSTANT i32 30
-    %sub:_(s32) = G_SUB %thirty, %select
-    S_ENDPGM 0, implicit %sub
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %ten:_(i32) = G_CONSTANT i32 10
+    ; CHECK-NEXT: %twenty:_(i32) = G_CONSTANT i32 20
+    ; CHECK-NEXT: %sub:_(i32) = G_SELECT %cond(i1), %twenty, %ten
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %sub(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %ten:_(i32) = G_CONSTANT i32 10
+    %twenty:_(i32) = G_CONSTANT i32 20
+    %select:_(i32) = G_SELECT %cond(i1), %ten, %twenty
+    %thirty:_(i32) = G_CONSTANT i32 30
+    %sub:_(i32) = G_SUB %thirty, %select
+    S_ENDPGM 0, implicit %sub(i32)
 ...
 
 ---
@@ -339,22 +339,22 @@ body: |
     ; CHECK-LABEL: name: fold_ptr_add_into_select_p3_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(p3) = G_CONSTANT i32 40
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(p3) = G_CONSTANT i32 50
-    ; CHECK-NEXT: %ptr_add:_(p3) = G_SELECT %cond(s1), [[C]], [[C1]]
+    ; CHECK-NEXT: %ptr_add:_(p3) = G_SELECT %cond(i1), [[C]], [[C1]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit %ptr_add(p3)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
     %ten:_(p3) = G_CONSTANT i32 10
     %twenty:_(p3) = G_CONSTANT i32 20
-    %select:_(p3) = G_SELECT %cond, %ten, %twenty
-    %thirty:_(s32) = G_CONSTANT i32 30
-    %ptr_add:_(p3) = G_PTR_ADD %select, %thirty
-    S_ENDPGM 0, implicit %ptr_add
+    %select:_(p3) = G_SELECT %cond(i1), %ten, %twenty
+    %thirty:_(i32) = G_CONSTANT i32 30
+    %ptr_add:_(p3) = G_PTR_ADD %select, %thirty(i32)
+    S_ENDPGM 0, implicit %ptr_add(p3)
 ...
 
 ---
@@ -366,22 +366,22 @@ body: |
     ; CHECK-LABEL: name: fold_ptr_add_into_select_p3_1
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(p3) = G_CONSTANT i32 40
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(p3) = G_CONSTANT i32 50
-    ; CHECK-NEXT: %ptr_add:_(p3) = G_SELECT %cond(s1), [[C]], [[C1]]
+    ; CHECK-NEXT: %ptr_add:_(p3) = G_SELECT %cond(i1), [[C]], [[C1]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit %ptr_add(p3)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %ten:_(s32) = G_CONSTANT i32 10
-    %twenty:_(s32) = G_CONSTANT i32 20
-    %select:_(s32) = G_SELECT %cond, %ten, %twenty
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %ten:_(i32) = G_CONSTANT i32 10
+    %twenty:_(i32) = G_CONSTANT i32 20
+    %select:_(i32) = G_SELECT %cond(i1), %ten, %twenty
     %thirty:_(p3) = G_CONSTANT i32 30
-    %ptr_add:_(p3) = G_PTR_ADD %thirty, %select
-    S_ENDPGM 0, implicit %ptr_add
+    %ptr_add:_(p3) = G_PTR_ADD %thirty, %select(i32)
+    S_ENDPGM 0, implicit %ptr_add(p3)
 ...
 
 ---
@@ -393,22 +393,22 @@ body: |
     ; CHECK-LABEL: name: fold_shl_into_select_s64_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1280
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 2560
-    ; CHECK-NEXT: %shl:_(s64) = G_SELECT %cond(s1), [[C]], [[C1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %shl(s64)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %ten:_(s64) = G_CONSTANT i64 10
-    %twenty:_(s64) = G_CONSTANT i64 20
-    %select:_(s64) = G_SELECT %cond, %ten, %twenty
-    %seven:_(s32) = G_CONSTANT i32 7
-    %shl:_(s64) = G_SHL %select, %seven
-    S_ENDPGM 0, implicit %shl
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1280
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 2560
+    ; CHECK-NEXT: %shl:_(i64) = G_SELECT %cond(i1), [[C]], [[C1]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %shl(i64)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %ten:_(i64) = G_CONSTANT i64 10
+    %twenty:_(i64) = G_CONSTANT i64 20
+    %select:_(i64) = G_SELECT %cond(i1), %ten, %twenty
+    %seven:_(i32) = G_CONSTANT i32 7
+    %shl:_(i64) = G_SHL %select, %seven(i32)
+    S_ENDPGM 0, implicit %shl(i64)
 ...
 
 ---
@@ -420,22 +420,22 @@ body: |
     ; CHECK-LABEL: name: fold_shl_into_select_s64_1
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8192
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 524288
-    ; CHECK-NEXT: %shl:_(s64) = G_SELECT %cond(s1), [[C]], [[C1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %shl(s64)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %ten:_(s32) = G_CONSTANT i32 10
-    %sixteen:_(s32) = G_CONSTANT i32 16
-    %select:_(s32) = G_SELECT %cond, %ten, %sixteen
-    %eight:_(s64) = G_CONSTANT i64 8
-    %shl:_(s64) = G_SHL %eight, %select
-    S_ENDPGM 0, implicit %shl
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 8192
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 524288
+    ; CHECK-NEXT: %shl:_(i64) = G_SELECT %cond(i1), [[C]], [[C1]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %shl(i64)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %ten:_(i32) = G_CONSTANT i32 10
+    %sixteen:_(i32) = G_CONSTANT i32 16
+    %select:_(i32) = G_SELECT %cond(i1), %ten, %sixteen
+    %eight:_(i64) = G_CONSTANT i64 8
+    %shl:_(i64) = G_SHL %eight, %select(i32)
+    S_ENDPGM 0, implicit %shl(i64)
 ...
 
 ---
@@ -447,21 +447,21 @@ body: |
     ; CHECK-LABEL: name: fold_and_variable_into_select_zero_neg1_s32
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %variable:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(ne), %reg(s32), %zero
-    ; CHECK-NEXT: %select:_(s32) = G_SEXT %cond(s1)
-    ; CHECK-NEXT: %and:_(s32) = G_AND %select, %variable
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %and(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %variable:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %neg1:_(s32) = G_CONSTANT i32 -1
-    %select:_(s32) = G_SELECT %cond, %zero, %neg1
-    %and:_(s32) = G_AND %select, %variable
-    S_ENDPGM 0, implicit %and
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %variable:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(ne), %reg(i32), %zero
+    ; CHECK-NEXT: %select:_(i32) = G_SEXT %cond(i1)
+    ; CHECK-NEXT: %and:_(i32) = G_AND %select, %variable
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %and(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %variable:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %neg1:_(i32) = G_CONSTANT i32 -1
+    %select:_(i32) = G_SELECT %cond(i1), %zero, %neg1
+    %and:_(i32) = G_AND %select, %variable
+    S_ENDPGM 0, implicit %and(i32)
 ...
 
 ---
@@ -473,21 +473,21 @@ body: |
     ; CHECK-LABEL: name: fold_and_variable_into_select_neg1_zero_s32
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %variable:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %select:_(s32) = G_SEXT %cond(s1)
-    ; CHECK-NEXT: %and:_(s32) = G_AND %select, %variable
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %and(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %variable:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %neg1:_(s32) = G_CONSTANT i32 -1
-    %select:_(s32) = G_SELECT %cond, %neg1, %zero
-    %and:_(s32) = G_AND %select, %variable
-    S_ENDPGM 0, implicit %and
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %variable:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %select:_(i32) = G_SEXT %cond(i1)
+    ; CHECK-NEXT: %and:_(i32) = G_AND %select, %variable
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %and(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %variable:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %neg1:_(i32) = G_CONSTANT i32 -1
+    %select:_(i32) = G_SELECT %cond(i1), %neg1, %zero
+    %and:_(i32) = G_AND %select, %variable
+    S_ENDPGM 0, implicit %and(i32)
 ...
 
 ---
@@ -499,21 +499,21 @@ body: |
     ; CHECK-LABEL: name: fold_or_variable_into_select_zero_neg1_s32
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %variable:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(ne), %reg(s32), %zero
-    ; CHECK-NEXT: %select:_(s32) = G_SEXT %cond(s1)
-    ; CHECK-NEXT: %or:_(s32) = G_OR %select, %variable
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %or(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %variable:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %neg1:_(s32) = G_CONSTANT i32 -1
-    %select:_(s32) = G_SELECT %cond, %zero, %neg1
-    %or:_(s32) = G_OR %select, %variable
-    S_ENDPGM 0, implicit %or
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %variable:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(ne), %reg(i32), %zero
+    ; CHECK-NEXT: %select:_(i32) = G_SEXT %cond(i1)
+    ; CHECK-NEXT: %or:_(i32) = G_OR %select, %variable
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %or(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %variable:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %neg1:_(i32) = G_CONSTANT i32 -1
+    %select:_(i32) = G_SELECT %cond(i1), %zero, %neg1
+    %or:_(i32) = G_OR %select, %variable
+    S_ENDPGM 0, implicit %or(i32)
 ...
 
 ---
@@ -525,21 +525,21 @@ body: |
     ; CHECK-LABEL: name: fold_or_variable_into_select_neg1_zero_s32
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %variable:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %select:_(s32) = G_SEXT %cond(s1)
-    ; CHECK-NEXT: %or:_(s32) = G_OR %select, %variable
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %or(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %variable:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %neg1:_(s32) = G_CONSTANT i32 -1
-    %select:_(s32) = G_SELECT %cond, %neg1, %zero
-    %or:_(s32) = G_OR %select, %variable
-    S_ENDPGM 0, implicit %or
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %variable:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %select:_(i32) = G_SEXT %cond(i1)
+    ; CHECK-NEXT: %or:_(i32) = G_OR %select, %variable
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %or(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %variable:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %neg1:_(i32) = G_CONSTANT i32 -1
+    %select:_(i32) = G_SELECT %cond(i1), %neg1, %zero
+    %or:_(i32) = G_OR %select, %variable
+    S_ENDPGM 0, implicit %or(i32)
 ...
 
 ---
@@ -551,24 +551,24 @@ body: |
     ; CHECK-LABEL: name: fold_and_variable_into_select_undef_neg1_s32
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %variable:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %undef:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: %neg1:_(s32) = G_CONSTANT i32 -1
-    ; CHECK-NEXT: %select:_(s32) = G_SELECT %cond(s1), %undef, %neg1
-    ; CHECK-NEXT: %and:_(s32) = G_AND %select, %variable
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %and(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %variable:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %undef:_(s32) = G_IMPLICIT_DEF
-    %neg1:_(s32) = G_CONSTANT i32 -1
-    %select:_(s32) = G_SELECT %cond, %undef, %neg1
-    %and:_(s32) = G_AND %select, %variable
-    S_ENDPGM 0, implicit %and
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %variable:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %undef:_(i32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %neg1:_(i32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), %undef, %neg1
+    ; CHECK-NEXT: %and:_(i32) = G_AND %select, %variable
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %and(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %variable:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %undef:_(i32) = G_IMPLICIT_DEF
+    %neg1:_(i32) = G_CONSTANT i32 -1
+    %select:_(i32) = G_SELECT %cond(i1), %undef, %neg1
+    %and:_(i32) = G_AND %select, %variable
+    S_ENDPGM 0, implicit %and(i32)
 ...
 
 ---
@@ -580,22 +580,22 @@ body: |
     ; CHECK-LABEL: name: fold_and_variable_into_select_undef_zero_s32
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %variable:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %undef:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: %select:_(s32) = G_SELECT %cond(s1), %undef, %zero
-    ; CHECK-NEXT: %and:_(s32) = G_AND %select, %variable
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %and(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %variable:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %undef:_(s32) = G_IMPLICIT_DEF
-    %select:_(s32) = G_SELECT %cond, %undef, %zero
-    %and:_(s32) = G_AND %select, %variable
-    S_ENDPGM 0, implicit %and
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %variable:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %undef:_(i32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), %undef, %zero
+    ; CHECK-NEXT: %and:_(i32) = G_AND %select, %variable
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %and(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %variable:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %undef:_(i32) = G_IMPLICIT_DEF
+    %select:_(i32) = G_SELECT %cond(i1), %undef, %zero
+    %and:_(i32) = G_AND %select, %variable
+    S_ENDPGM 0, implicit %and(i32)
 ...
 
 ---
@@ -607,24 +607,26 @@ body: |
     ; CHECK-LABEL: name: fold_or_variable_into_select_neg1_fpzero_s32
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %variable:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %neg1:_(s32) = G_CONSTANT i32 -1
-    ; CHECK-NEXT: %fpzero:_(s32) = G_FCONSTANT float 0.000000e+00
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR %fpzero, %variable
-    ; CHECK-NEXT: %or:_(s32) = G_SELECT %cond(s1), %neg1, [[OR]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %or(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %variable:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %neg1:_(s32) = G_CONSTANT i32 -1
-    %fpzero:_(s32) = G_FCONSTANT float 0.0
-    %select:_(s32) = G_SELECT %cond, %neg1, %fpzero
-    %or:_(s32) = G_OR %select, %variable
-    S_ENDPGM 0, implicit %or
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %variable:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %neg1:_(i32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: %fpzero:_(f32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST %fpzero(f32)
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), %neg1, [[BITCAST]]
+    ; CHECK-NEXT: %or:_(i32) = G_OR %select, %variable
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %or(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %variable:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %neg1:_(i32) = G_CONSTANT i32 -1
+    %fpzero:_(f32) = G_FCONSTANT float 0.000000e+00
+    %8:_(i32) = G_BITCAST %fpzero(f32)
+    %select:_(i32) = G_SELECT %cond(i1), %neg1, %8
+    %or:_(i32) = G_OR %select, %variable
+    S_ENDPGM 0, implicit %or(i32)
 ...
 
 ---
@@ -636,24 +638,26 @@ body: |
     ; CHECK-LABEL: name: no_fold_or_variable_into_select_neg1_fpnegzero_s32
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %variable:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %neg1:_(s32) = G_CONSTANT i32 -1
-    ; CHECK-NEXT: %fpzero:_(s32) = G_FCONSTANT float -0.000000e+00
-    ; CHECK-NEXT: %select:_(s32) = G_SELECT %cond(s1), %neg1, %fpzero
-    ; CHECK-NEXT: %or:_(s32) = G_OR %select, %variable
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %or(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %variable:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %neg1:_(s32) = G_CONSTANT i32 -1
-    %fpzero:_(s32) = G_FCONSTANT float -0.0
-    %select:_(s32) = G_SELECT %cond, %neg1, %fpzero
-    %or:_(s32) = G_OR %select, %variable
-    S_ENDPGM 0, implicit %or
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %variable:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %neg1:_(i32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: %fpzero:_(f32) = G_FCONSTANT float -0.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST %fpzero(f32)
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), %neg1, [[BITCAST]]
+    ; CHECK-NEXT: %or:_(i32) = G_OR %select, %variable
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %or(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %variable:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %neg1:_(i32) = G_CONSTANT i32 -1
+    %fpzero:_(f32) = G_FCONSTANT float -0.000000e+00
+    %8:_(i32) = G_BITCAST %fpzero(f32)
+    %select:_(i32) = G_SELECT %cond(i1), %neg1, %8
+    %or:_(i32) = G_OR %select, %variable
+    S_ENDPGM 0, implicit %or(i32)
 ...
 
 ---
@@ -665,24 +669,24 @@ body: |
     ; CHECK-LABEL: name: no_fold_or_variable_into_select_neg1_other_const_s32
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %variable:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %otherconst:_(s32) = G_CONSTANT i32 123
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT %cond(s1)
-    ; CHECK-NEXT: %select:_(s32) = G_OR [[SEXT]], %otherconst
-    ; CHECK-NEXT: %or:_(s32) = G_OR %select, %variable
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %or(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %variable:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %neg1:_(s32) = G_CONSTANT i32 -1
-    %otherconst:_(s32) = G_CONSTANT i32 123
-    %select:_(s32) = G_SELECT %cond, %neg1, %otherconst
-    %or:_(s32) = G_OR %select, %variable
-    S_ENDPGM 0, implicit %or
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %variable:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %otherconst:_(i32) = G_CONSTANT i32 123
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(i32) = G_SEXT %cond(i1)
+    ; CHECK-NEXT: %select:_(i32) = G_OR [[SEXT]], %otherconst
+    ; CHECK-NEXT: %or:_(i32) = G_OR %select, %variable
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %or(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %variable:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %neg1:_(i32) = G_CONSTANT i32 -1
+    %otherconst:_(i32) = G_CONSTANT i32 123
+    %select:_(i32) = G_SELECT %cond(i1), %neg1, %otherconst
+    %or:_(i32) = G_OR %select, %variable
+    S_ENDPGM 0, implicit %or(i32)
 ...
 
 ---
@@ -694,22 +698,22 @@ body: |
     ; CHECK-LABEL: name: fold_xor_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %ten:_(s32) = G_CONSTANT i32 10
-    ; CHECK-NEXT: %twenty:_(s32) = G_CONSTANT i32 20
-    ; CHECK-NEXT: %xor:_(s32) = G_SELECT %cond(s1), %twenty, %ten
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %xor(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %ten:_(s32) = G_CONSTANT i32 10
-    %twenty:_(s32) = G_CONSTANT i32 20
-    %select:_(s32) = G_SELECT %cond, %ten, %twenty
-    %thirty:_(s32) = G_CONSTANT i32 30
-    %xor:_(s32) = G_XOR %select, %thirty
-    S_ENDPGM 0, implicit %xor
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %ten:_(i32) = G_CONSTANT i32 10
+    ; CHECK-NEXT: %twenty:_(i32) = G_CONSTANT i32 20
+    ; CHECK-NEXT: %xor:_(i32) = G_SELECT %cond(i1), %twenty, %ten
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %xor(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %ten:_(i32) = G_CONSTANT i32 10
+    %twenty:_(i32) = G_CONSTANT i32 20
+    %select:_(i32) = G_SELECT %cond(i1), %ten, %twenty
+    %thirty:_(i32) = G_CONSTANT i32 30
+    %xor:_(i32) = G_XOR %select, %thirty
+    S_ENDPGM 0, implicit %xor(i32)
 ...
 
 ---
@@ -721,22 +725,22 @@ body: |
     ; CHECK-LABEL: name: fold_sdiv_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 50
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 21
-    ; CHECK-NEXT: %sdiv:_(s32) = G_SELECT %cond(s1), [[C]], [[C1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %sdiv(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %hundred:_(s32) = G_CONSTANT i32 100
-    %fortytwo:_(s32) = G_CONSTANT i32 42
-    %select:_(s32) = G_SELECT %cond, %hundred, %fortytwo
-    %two:_(s32) = G_CONSTANT i32 2
-    %sdiv:_(s32) = G_SDIV %select, %two
-    S_ENDPGM 0, implicit %sdiv
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 50
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 21
+    ; CHECK-NEXT: %sdiv:_(i32) = G_SELECT %cond(i1), [[C]], [[C1]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %sdiv(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %hundred:_(i32) = G_CONSTANT i32 100
+    %fortytwo:_(i32) = G_CONSTANT i32 42
+    %select:_(i32) = G_SELECT %cond(i1), %hundred, %fortytwo
+    %two:_(i32) = G_CONSTANT i32 2
+    %sdiv:_(i32) = G_SDIV %select, %two
+    S_ENDPGM 0, implicit %sdiv(i32)
 ...
 
 ---
@@ -748,20 +752,20 @@ body: |
     ; CHECK-LABEL: name: fold_srem_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %srem:_(s32) = G_ZEXT %cond(s1)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %srem(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %hundred:_(s32) = G_CONSTANT i32 100
-    %fortytwo:_(s32) = G_CONSTANT i32 42
-    %select:_(s32) = G_SELECT %cond, %hundred, %fortytwo
-    %three:_(s32) = G_CONSTANT i32 3
-    %srem:_(s32) = G_SREM %select, %three
-    S_ENDPGM 0, implicit %srem
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %srem:_(i32) = G_ZEXT %cond(i1)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %srem(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %hundred:_(i32) = G_CONSTANT i32 100
+    %fortytwo:_(i32) = G_CONSTANT i32 42
+    %select:_(i32) = G_SELECT %cond(i1), %hundred, %fortytwo
+    %three:_(i32) = G_CONSTANT i32 3
+    %srem:_(i32) = G_SREM %select, %three
+    S_ENDPGM 0, implicit %srem(i32)
 ...
 
 ---
@@ -773,22 +777,22 @@ body: |
     ; CHECK-LABEL: name: fold_udiv_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 50
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 21
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT %cond(s1), [[C]], [[C1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[SELECT]](s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %hundred:_(s32) = G_CONSTANT i32 100
-    %fortytwo:_(s32) = G_CONSTANT i32 42
-    %select:_(s32) = G_SELECT %cond, %hundred, %fortytwo
-    %two:_(s32) = G_CONSTANT i32 2
-    %udiv:_(s32) = G_UDIV %select, %two
-    S_ENDPGM 0, implicit %udiv
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 50
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 21
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT %cond(i1), [[C]], [[C1]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[SELECT]](i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %hundred:_(i32) = G_CONSTANT i32 100
+    %fortytwo:_(i32) = G_CONSTANT i32 42
+    %select:_(i32) = G_SELECT %cond(i1), %hundred, %fortytwo
+    %two:_(i32) = G_CONSTANT i32 2
+    %udiv:_(i32) = G_UDIV %select, %two
+    S_ENDPGM 0, implicit %udiv(i32)
 ...
 
 ---
@@ -800,20 +804,20 @@ body: |
     ; CHECK-LABEL: name: fold_urem_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %udiv:_(s32) = G_ZEXT %cond(s1)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %udiv(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %hundred:_(s32) = G_CONSTANT i32 100
-    %fortytwo:_(s32) = G_CONSTANT i32 42
-    %select:_(s32) = G_SELECT %cond, %hundred, %fortytwo
-    %three:_(s32) = G_CONSTANT i32 3
-    %udiv:_(s32) = G_UREM %select, %three
-    S_ENDPGM 0, implicit %udiv
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %udiv:_(i32) = G_ZEXT %cond(i1)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %udiv(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %hundred:_(i32) = G_CONSTANT i32 100
+    %fortytwo:_(i32) = G_CONSTANT i32 42
+    %select:_(i32) = G_SELECT %cond(i1), %hundred, %fortytwo
+    %three:_(i32) = G_CONSTANT i32 3
+    %udiv:_(i32) = G_UREM %select, %three
+    S_ENDPGM 0, implicit %udiv(i32)
 ...
 
 ---
@@ -825,22 +829,22 @@ body: |
     ; CHECK-LABEL: name: fold_lshr_into_select_s64_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
-    ; CHECK-NEXT: %lshr:_(s64) = G_SELECT %cond(s1), [[C]], [[C1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %lshr(s64)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %ten:_(s64) = G_CONSTANT i64 10
-    %twenty:_(s64) = G_CONSTANT i64 20
-    %select:_(s64) = G_SELECT %cond, %ten, %twenty
-    %two:_(s32) = G_CONSTANT i32 2
-    %lshr:_(s64) = G_LSHR %select, %two
-    S_ENDPGM 0, implicit %lshr
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 5
+    ; CHECK-NEXT: %lshr:_(i64) = G_SELECT %cond(i1), [[C]], [[C1]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %lshr(i64)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %ten:_(i64) = G_CONSTANT i64 10
+    %twenty:_(i64) = G_CONSTANT i64 20
+    %select:_(i64) = G_SELECT %cond(i1), %ten, %twenty
+    %two:_(i32) = G_CONSTANT i32 2
+    %lshr:_(i64) = G_LSHR %select, %two(i32)
+    S_ENDPGM 0, implicit %lshr(i64)
 ...
 
 ---
@@ -852,22 +856,22 @@ body: |
     ; CHECK-LABEL: name: fold_lshr_into_select_s64_1
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1012
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 253
-    ; CHECK-NEXT: %lshr:_(s64) = G_SELECT %cond(s1), [[C]], [[C1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %lshr(s64)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %three:_(s32) = G_CONSTANT i32 3
-    %five:_(s32) = G_CONSTANT i32 5
-    %select:_(s32) = G_SELECT %cond, %three, %five
-    %val:_(s64) = G_CONSTANT i64 8096
-    %lshr:_(s64) = G_LSHR %val, %select
-    S_ENDPGM 0, implicit %lshr
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1012
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 253
+    ; CHECK-NEXT: %lshr:_(i64) = G_SELECT %cond(i1), [[C]], [[C1]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %lshr(i64)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %three:_(i32) = G_CONSTANT i32 3
+    %five:_(i32) = G_CONSTANT i32 5
+    %select:_(i32) = G_SELECT %cond(i1), %three, %five
+    %val:_(i64) = G_CONSTANT i64 8096
+    %lshr:_(i64) = G_LSHR %val, %select(i32)
+    S_ENDPGM 0, implicit %lshr(i64)
 ...
 
 ---
@@ -879,22 +883,22 @@ body: |
     ; CHECK-LABEL: name: fold_ashr_into_select_s64_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 5
-    ; CHECK-NEXT: %ashr:_(s64) = G_SELECT %cond(s1), [[C]], [[C1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %ashr(s64)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %ten:_(s64) = G_CONSTANT i64 10
-    %twenty:_(s64) = G_CONSTANT i64 20
-    %select:_(s64) = G_SELECT %cond, %ten, %twenty
-    %two:_(s32) = G_CONSTANT i32 2
-    %ashr:_(s64) = G_ASHR %select, %two
-    S_ENDPGM 0, implicit %ashr
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 5
+    ; CHECK-NEXT: %ashr:_(i64) = G_SELECT %cond(i1), [[C]], [[C1]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %ashr(i64)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %ten:_(i64) = G_CONSTANT i64 10
+    %twenty:_(i64) = G_CONSTANT i64 20
+    %select:_(i64) = G_SELECT %cond(i1), %ten, %twenty
+    %two:_(i32) = G_CONSTANT i32 2
+    %ashr:_(i64) = G_ASHR %select, %two(i32)
+    S_ENDPGM 0, implicit %ashr(i64)
 ...
 
 ---
@@ -906,22 +910,22 @@ body: |
     ; CHECK-LABEL: name: fold_ashr_into_select_s64_1
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1012
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -253
-    ; CHECK-NEXT: %ashr:_(s64) = G_SELECT %cond(s1), [[C]], [[C1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %ashr(s64)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %three:_(s32) = G_CONSTANT i32 3
-    %five:_(s32) = G_CONSTANT i32 5
-    %select:_(s32) = G_SELECT %cond, %three, %five
-    %val:_(s64) = G_CONSTANT i64 -8096
-    %ashr:_(s64) = G_ASHR %val, %select
-    S_ENDPGM 0, implicit %ashr
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 -1012
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 -253
+    ; CHECK-NEXT: %ashr:_(i64) = G_SELECT %cond(i1), [[C]], [[C1]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %ashr(i64)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %three:_(i32) = G_CONSTANT i32 3
+    %five:_(i32) = G_CONSTANT i32 5
+    %select:_(i32) = G_SELECT %cond(i1), %three, %five
+    %val:_(i64) = G_CONSTANT i64 -8096
+    %ashr:_(i64) = G_ASHR %val, %select(i32)
+    S_ENDPGM 0, implicit %ashr(i64)
 ...
 
 ---
@@ -933,22 +937,22 @@ body: |
     ; CHECK-LABEL: name: fold_smin_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %ten:_(s32) = G_CONSTANT i32 10
-    ; CHECK-NEXT: %twenty:_(s32) = G_CONSTANT i32 20
-    ; CHECK-NEXT: %select:_(s32) = G_SELECT %cond(s1), %ten, %twenty
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %select(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %ten:_(s32) = G_CONSTANT i32 10
-    %twenty:_(s32) = G_CONSTANT i32 20
-    %select:_(s32) = G_SELECT %cond, %ten, %twenty
-    %thirty:_(s32) = G_CONSTANT i32 30
-    %smin:_(s32) = G_SMIN %select, %thirty
-    S_ENDPGM 0, implicit %smin
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %ten:_(i32) = G_CONSTANT i32 10
+    ; CHECK-NEXT: %twenty:_(i32) = G_CONSTANT i32 20
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), %ten, %twenty
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %select(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %ten:_(i32) = G_CONSTANT i32 10
+    %twenty:_(i32) = G_CONSTANT i32 20
+    %select:_(i32) = G_SELECT %cond(i1), %ten, %twenty
+    %thirty:_(i32) = G_CONSTANT i32 30
+    %smin:_(i32) = G_SMIN %select, %thirty
+    S_ENDPGM 0, implicit %smin(i32)
 ...
 
 ---
@@ -960,17 +964,17 @@ body: |
     ; CHECK-LABEL: name: fold_smax_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %thirty:_(s32) = G_CONSTANT i32 30
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %thirty(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %ten:_(s32) = G_CONSTANT i32 10
-    %twenty:_(s32) = G_CONSTANT i32 20
-    %select:_(s32) = G_SELECT %cond, %ten, %twenty
-    %thirty:_(s32) = G_CONSTANT i32 30
-    %smax:_(s32) = G_SMAX %select, %thirty
-    S_ENDPGM 0, implicit %smax
+    ; CHECK-NEXT: %thirty:_(i32) = G_CONSTANT i32 30
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %thirty(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %ten:_(i32) = G_CONSTANT i32 10
+    %twenty:_(i32) = G_CONSTANT i32 20
+    %select:_(i32) = G_SELECT %cond(i1), %ten, %twenty
+    %thirty:_(i32) = G_CONSTANT i32 30
+    %smax:_(i32) = G_SMAX %select, %thirty
+    S_ENDPGM 0, implicit %smax(i32)
 ...
 
 ---
@@ -982,22 +986,22 @@ body: |
     ; CHECK-LABEL: name: fold_umin_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %ten:_(s32) = G_CONSTANT i32 10
-    ; CHECK-NEXT: %twenty:_(s32) = G_CONSTANT i32 20
-    ; CHECK-NEXT: %select:_(s32) = G_SELECT %cond(s1), %ten, %twenty
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %select(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %ten:_(s32) = G_CONSTANT i32 10
-    %twenty:_(s32) = G_CONSTANT i32 20
-    %select:_(s32) = G_SELECT %cond, %ten, %twenty
-    %thirty:_(s32) = G_CONSTANT i32 30
-    %umin:_(s32) = G_UMIN %select, %thirty
-    S_ENDPGM 0, implicit %umin
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %ten:_(i32) = G_CONSTANT i32 10
+    ; CHECK-NEXT: %twenty:_(i32) = G_CONSTANT i32 20
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), %ten, %twenty
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %select(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %ten:_(i32) = G_CONSTANT i32 10
+    %twenty:_(i32) = G_CONSTANT i32 20
+    %select:_(i32) = G_SELECT %cond(i1), %ten, %twenty
+    %thirty:_(i32) = G_CONSTANT i32 30
+    %umin:_(i32) = G_UMIN %select, %thirty
+    S_ENDPGM 0, implicit %umin(i32)
 ...
 
 ---
@@ -1009,17 +1013,17 @@ body: |
     ; CHECK-LABEL: name: fold_umax_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %thirty:_(s32) = G_CONSTANT i32 30
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %thirty(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %ten:_(s32) = G_CONSTANT i32 10
-    %twenty:_(s32) = G_CONSTANT i32 20
-    %select:_(s32) = G_SELECT %cond, %ten, %twenty
-    %thirty:_(s32) = G_CONSTANT i32 30
-    %umax:_(s32) = G_UMAX %select, %thirty
-    S_ENDPGM 0, implicit %umax
+    ; CHECK-NEXT: %thirty:_(i32) = G_CONSTANT i32 30
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %thirty(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %ten:_(i32) = G_CONSTANT i32 10
+    %twenty:_(i32) = G_CONSTANT i32 20
+    %select:_(i32) = G_SELECT %cond(i1), %ten, %twenty
+    %thirty:_(i32) = G_CONSTANT i32 30
+    %umax:_(i32) = G_UMAX %select, %thirty
+    S_ENDPGM 0, implicit %umax(i32)
 ...
 
 ---
@@ -1031,22 +1035,32 @@ body: |
     ; CHECK-LABEL: name: fold_fadd_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.800000e+01
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 2.000000e+01
-    ; CHECK-NEXT: %fadd:_(s32) = nnan G_SELECT %cond(s1), [[C]], [[C1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %fadd(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %two:_(s32) = G_FCONSTANT float 2.0
-    %four:_(s32) = G_FCONSTANT float 4.0
-    %select:_(s32) = G_SELECT %cond, %two, %four
-    %sixteen:_(s32) = G_FCONSTANT float 16.0
-    %fadd:_(s32) = nnan G_FADD %select, %sixteen
-    S_ENDPGM 0, implicit %fadd
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST %two(f32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST %four(f32)
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), [[BITCAST]], [[BITCAST1]]
+    ; CHECK-NEXT: %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST %select(i32)
+    ; CHECK-NEXT: %fadd:_(f32) = nnan G_FADD [[BITCAST2]], %sixteen
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(i32) = G_BITCAST %fadd(f32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST3]](i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    %8:_(i32) = G_BITCAST %two(f32)
+    %9:_(i32) = G_BITCAST %four(f32)
+    %select:_(i32) = G_SELECT %cond(i1), %8, %9
+    %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    %10:_(f32) = G_BITCAST %select(i32)
+    %fadd:_(f32) = nnan G_FADD %10, %sixteen
+    %11:_(i32) = G_BITCAST %fadd(f32)
+    S_ENDPGM 0, implicit %11(i32)
 ...
 
 ---
@@ -1058,22 +1072,32 @@ body: |
     ; CHECK-LABEL: name: fold_fadd_into_select_s32_1
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.800000e+01
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 2.000000e+01
-    ; CHECK-NEXT: %fadd:_(s32) = nnan G_SELECT %cond(s1), [[C]], [[C1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %fadd(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %two:_(s32) = G_FCONSTANT float 2.0
-    %four:_(s32) = G_FCONSTANT float 4.0
-    %select:_(s32) = G_SELECT %cond, %two, %four
-    %sixteen:_(s32) = G_FCONSTANT float 16.0
-    %fadd:_(s32) = nnan G_FADD %sixteen, %select
-    S_ENDPGM 0, implicit %fadd
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST %two(f32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST %four(f32)
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), [[BITCAST]], [[BITCAST1]]
+    ; CHECK-NEXT: %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST %select(i32)
+    ; CHECK-NEXT: %fadd:_(f32) = nnan G_FADD [[BITCAST2]], %sixteen
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(i32) = G_BITCAST %fadd(f32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST3]](i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    %8:_(i32) = G_BITCAST %two(f32)
+    %9:_(i32) = G_BITCAST %four(f32)
+    %select:_(i32) = G_SELECT %cond(i1), %8, %9
+    %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    %10:_(f32) = G_BITCAST %select(i32)
+    %fadd:_(f32) = nnan G_FADD %sixteen, %10
+    %11:_(i32) = G_BITCAST %fadd(f32)
+    S_ENDPGM 0, implicit %11(i32)
 ...
 
 ---
@@ -1085,22 +1109,32 @@ body: |
     ; CHECK-LABEL: name: fold_fsub_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float -1.400000e+01
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float -1.200000e+01
-    ; CHECK-NEXT: %fsub:_(s32) = nnan G_SELECT %cond(s1), [[C]], [[C1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %fsub(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %two:_(s32) = G_FCONSTANT float 2.0
-    %four:_(s32) = G_FCONSTANT float 4.0
-    %select:_(s32) = G_SELECT %cond, %two, %four
-    %sixteen:_(s32) = G_FCONSTANT float 16.0
-    %fsub:_(s32) = nnan G_FSUB %select, %sixteen
-    S_ENDPGM 0, implicit %fsub
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST %two(f32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST %four(f32)
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), [[BITCAST]], [[BITCAST1]]
+    ; CHECK-NEXT: %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST %select(i32)
+    ; CHECK-NEXT: %fsub:_(f32) = nnan G_FSUB [[BITCAST2]], %sixteen
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(i32) = G_BITCAST %fsub(f32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST3]](i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    %8:_(i32) = G_BITCAST %two(f32)
+    %9:_(i32) = G_BITCAST %four(f32)
+    %select:_(i32) = G_SELECT %cond(i1), %8, %9
+    %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    %10:_(f32) = G_BITCAST %select(i32)
+    %fsub:_(f32) = nnan G_FSUB %10, %sixteen
+    %11:_(i32) = G_BITCAST %fsub(f32)
+    S_ENDPGM 0, implicit %11(i32)
 ...
 
 ---
@@ -1112,22 +1146,32 @@ body: |
     ; CHECK-LABEL: name: fold_fmul_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 3.200000e+01
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 6.400000e+01
-    ; CHECK-NEXT: %fmul:_(s32) = nnan G_SELECT %cond(s1), [[C]], [[C1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %fmul(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %two:_(s32) = G_FCONSTANT float 2.0
-    %four:_(s32) = G_FCONSTANT float 4.0
-    %select:_(s32) = G_SELECT %cond, %two, %four
-    %sixteen:_(s32) = G_FCONSTANT float 16.0
-    %fmul:_(s32) = nnan G_FMUL %select, %sixteen
-    S_ENDPGM 0, implicit %fmul
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST %two(f32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST %four(f32)
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), [[BITCAST]], [[BITCAST1]]
+    ; CHECK-NEXT: %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST %select(i32)
+    ; CHECK-NEXT: %fmul:_(f32) = nnan G_FMUL [[BITCAST2]], %sixteen
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(i32) = G_BITCAST %fmul(f32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST3]](i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    %8:_(i32) = G_BITCAST %two(f32)
+    %9:_(i32) = G_BITCAST %four(f32)
+    %select:_(i32) = G_SELECT %cond(i1), %8, %9
+    %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    %10:_(f32) = G_BITCAST %select(i32)
+    %fmul:_(f32) = nnan G_FMUL %10, %sixteen
+    %11:_(i32) = G_BITCAST %fmul(f32)
+    S_ENDPGM 0, implicit %11(i32)
 ...
 
 ---
@@ -1139,22 +1183,32 @@ body: |
     ; CHECK-LABEL: name: fold_fdiv_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.250000e-01
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 2.500000e-01
-    ; CHECK-NEXT: %fdiv:_(s32) = nnan G_SELECT %cond(s1), [[C]], [[C1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %fdiv(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %two:_(s32) = G_FCONSTANT float 2.0
-    %four:_(s32) = G_FCONSTANT float 4.0
-    %select:_(s32) = G_SELECT %cond, %two, %four
-    %sixteen:_(s32) = G_FCONSTANT float 16.0
-    %fdiv:_(s32) = nnan G_FDIV %select, %sixteen
-    S_ENDPGM 0, implicit %fdiv
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST %two(f32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST %four(f32)
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), [[BITCAST]], [[BITCAST1]]
+    ; CHECK-NEXT: %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST %select(i32)
+    ; CHECK-NEXT: %fdiv:_(f32) = nnan G_FDIV [[BITCAST2]], %sixteen
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(i32) = G_BITCAST %fdiv(f32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST3]](i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    %8:_(i32) = G_BITCAST %two(f32)
+    %9:_(i32) = G_BITCAST %four(f32)
+    %select:_(i32) = G_SELECT %cond(i1), %8, %9
+    %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    %10:_(f32) = G_BITCAST %select(i32)
+    %fdiv:_(f32) = nnan G_FDIV %10, %sixteen
+    %11:_(i32) = G_BITCAST %fdiv(f32)
+    S_ENDPGM 0, implicit %11(i32)
 ...
 
 ---
@@ -1166,22 +1220,32 @@ body: |
     ; CHECK-LABEL: name: fold_frem_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %two:_(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: %four:_(s32) = G_FCONSTANT float 4.000000e+00
-    ; CHECK-NEXT: %frem:_(s32) = nnan G_SELECT %cond(s1), %two, %four
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %frem(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %two:_(s32) = G_FCONSTANT float 2.0
-    %four:_(s32) = G_FCONSTANT float 4.0
-    %select:_(s32) = G_SELECT %cond, %two, %four
-    %sixteen:_(s32) = G_FCONSTANT float 16.0
-    %frem:_(s32) = nnan G_FREM %select, %sixteen
-    S_ENDPGM 0, implicit %frem
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST %two(f32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST %four(f32)
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), [[BITCAST]], [[BITCAST1]]
+    ; CHECK-NEXT: %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST %select(i32)
+    ; CHECK-NEXT: %frem:_(f32) = nnan G_FREM [[BITCAST2]], %sixteen
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(i32) = G_BITCAST %frem(f32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST3]](i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    %8:_(i32) = G_BITCAST %two(f32)
+    %9:_(i32) = G_BITCAST %four(f32)
+    %select:_(i32) = G_SELECT %cond(i1), %8, %9
+    %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    %10:_(f32) = G_BITCAST %select(i32)
+    %frem:_(f32) = nnan G_FREM %10, %sixteen
+    %11:_(i32) = G_BITCAST %frem(f32)
+    S_ENDPGM 0, implicit %11(i32)
 ...
 
 ---
@@ -1193,24 +1257,32 @@ body: |
     ; CHECK-LABEL: name: fold_fpow_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %two:_(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: %four:_(s32) = G_FCONSTANT float 4.000000e+00
-    ; CHECK-NEXT: %select:_(s32) = G_SELECT %cond(s1), %two, %four
-    ; CHECK-NEXT: %sixteen:_(s32) = G_FCONSTANT float 1.600000e+01
-    ; CHECK-NEXT: %fpow:_(s32) = nnan G_FPOW %select, %sixteen
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %fpow(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %two:_(s32) = G_FCONSTANT float 2.0
-    %four:_(s32) = G_FCONSTANT float 4.0
-    %select:_(s32) = G_SELECT %cond, %two, %four
-    %sixteen:_(s32) = G_FCONSTANT float 16.0
-    %fpow:_(s32) = nnan G_FPOW %select, %sixteen
-    S_ENDPGM 0, implicit %fpow
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST %two(f32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST %four(f32)
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), [[BITCAST]], [[BITCAST1]]
+    ; CHECK-NEXT: %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST %select(i32)
+    ; CHECK-NEXT: %fpow:_(f32) = nnan G_FPOW [[BITCAST2]], %sixteen
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(i32) = G_BITCAST %fpow(f32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST3]](i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    %8:_(i32) = G_BITCAST %two(f32)
+    %9:_(i32) = G_BITCAST %four(f32)
+    %select:_(i32) = G_SELECT %cond(i1), %8, %9
+    %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    %10:_(f32) = G_BITCAST %select(i32)
+    %fpow:_(f32) = nnan G_FPOW %10, %sixteen
+    %11:_(i32) = G_BITCAST %fpow(f32)
+    S_ENDPGM 0, implicit %11(i32)
 ...
 
 ---
@@ -1222,22 +1294,32 @@ body: |
     ; CHECK-LABEL: name: fold_fminnum_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %two:_(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: %four:_(s32) = G_FCONSTANT float 4.000000e+00
-    ; CHECK-NEXT: %fminnum:_(s32) = nnan G_SELECT %cond(s1), %two, %four
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %fminnum(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %two:_(s32) = G_FCONSTANT float 2.0
-    %four:_(s32) = G_FCONSTANT float 4.0
-    %select:_(s32) = G_SELECT %cond, %two, %four
-    %sixteen:_(s32) = G_FCONSTANT float 16.0
-    %fminnum:_(s32) = nnan G_FMINNUM %select, %sixteen
-    S_ENDPGM 0, implicit %fminnum
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST %two(f32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST %four(f32)
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), [[BITCAST]], [[BITCAST1]]
+    ; CHECK-NEXT: %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST %select(i32)
+    ; CHECK-NEXT: %fminnum:_(f32) = nnan G_FMINNUM [[BITCAST2]], %sixteen
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(i32) = G_BITCAST %fminnum(f32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST3]](i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    %8:_(i32) = G_BITCAST %two(f32)
+    %9:_(i32) = G_BITCAST %four(f32)
+    %select:_(i32) = G_SELECT %cond(i1), %8, %9
+    %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    %10:_(f32) = G_BITCAST %select(i32)
+    %fminnum:_(f32) = nnan G_FMINNUM %10, %sixteen
+    %11:_(i32) = G_BITCAST %fminnum(f32)
+    S_ENDPGM 0, implicit %11(i32)
 ...
 
 ---
@@ -1249,24 +1331,32 @@ body: |
     ; CHECK-LABEL: name: fold_fminnum_ieee_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %two:_(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: %four:_(s32) = G_FCONSTANT float 4.000000e+00
-    ; CHECK-NEXT: %select:_(s32) = G_SELECT %cond(s1), %two, %four
-    ; CHECK-NEXT: %sixteen:_(s32) = G_FCONSTANT float 1.600000e+01
-    ; CHECK-NEXT: %fminnum_ieee:_(s32) = nnan G_FMINNUM_IEEE %select, %sixteen
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %fminnum_ieee(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %two:_(s32) = G_FCONSTANT float 2.0
-    %four:_(s32) = G_FCONSTANT float 4.0
-    %select:_(s32) = G_SELECT %cond, %two, %four
-    %sixteen:_(s32) = G_FCONSTANT float 16.0
-    %fminnum_ieee:_(s32) = nnan G_FMINNUM_IEEE %select, %sixteen
-    S_ENDPGM 0, implicit %fminnum_ieee
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST %two(f32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST %four(f32)
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), [[BITCAST]], [[BITCAST1]]
+    ; CHECK-NEXT: %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST %select(i32)
+    ; CHECK-NEXT: %fminnum_ieee:_(f32) = nnan G_FMINNUM_IEEE [[BITCAST2]], %sixteen
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(i32) = G_BITCAST %fminnum_ieee(f32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST3]](i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    %8:_(i32) = G_BITCAST %two(f32)
+    %9:_(i32) = G_BITCAST %four(f32)
+    %select:_(i32) = G_SELECT %cond(i1), %8, %9
+    %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    %10:_(f32) = G_BITCAST %select(i32)
+    %fminnum_ieee:_(f32) = nnan G_FMINNUM_IEEE %10, %sixteen
+    %11:_(i32) = G_BITCAST %fminnum_ieee(f32)
+    S_ENDPGM 0, implicit %11(i32)
 ...
 
 ---
@@ -1278,22 +1368,32 @@ body: |
     ; CHECK-LABEL: name: fold_fmaxnum_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %four:_(s32) = G_FCONSTANT float 4.000000e+00
-    ; CHECK-NEXT: %three:_(s32) = G_FCONSTANT float 3.000000e+00
-    ; CHECK-NEXT: %fmaxnum:_(s32) = nnan G_SELECT %cond(s1), %three, %four
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %fmaxnum(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %two:_(s32) = G_FCONSTANT float 2.0
-    %four:_(s32) = G_FCONSTANT float 4.0
-    %select:_(s32) = G_SELECT %cond, %two, %four
-    %three:_(s32) = G_FCONSTANT float 3.0
-    %fmaxnum:_(s32) = nnan G_FMAXNUM %select, %three
-    S_ENDPGM 0, implicit %fmaxnum
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST %two(f32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST %four(f32)
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), [[BITCAST]], [[BITCAST1]]
+    ; CHECK-NEXT: %three:_(f32) = G_FCONSTANT float 3.000000e+00
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST %select(i32)
+    ; CHECK-NEXT: %fmaxnum:_(f32) = nnan G_FMAXNUM [[BITCAST2]], %three
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(i32) = G_BITCAST %fmaxnum(f32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST3]](i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    %8:_(i32) = G_BITCAST %two(f32)
+    %9:_(i32) = G_BITCAST %four(f32)
+    %select:_(i32) = G_SELECT %cond(i1), %8, %9
+    %three:_(f32) = G_FCONSTANT float 3.000000e+00
+    %10:_(f32) = G_BITCAST %select(i32)
+    %fmaxnum:_(f32) = nnan G_FMAXNUM %10, %three
+    %11:_(i32) = G_BITCAST %fmaxnum(f32)
+    S_ENDPGM 0, implicit %11(i32)
 ...
 
 ---
@@ -1305,24 +1405,32 @@ body: |
     ; CHECK-LABEL: name: fold_fmaxnum_ieee_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %two:_(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: %four:_(s32) = G_FCONSTANT float 4.000000e+00
-    ; CHECK-NEXT: %select:_(s32) = G_SELECT %cond(s1), %two, %four
-    ; CHECK-NEXT: %three:_(s32) = G_FCONSTANT float 3.000000e+00
-    ; CHECK-NEXT: %fmaxnum_ieee:_(s32) = nnan G_FMAXNUM_IEEE %select, %three
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %fmaxnum_ieee(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %two:_(s32) = G_FCONSTANT float 2.0
-    %four:_(s32) = G_FCONSTANT float 4.0
-    %select:_(s32) = G_SELECT %cond, %two, %four
-    %three:_(s32) = G_FCONSTANT float 3.0
-    %fmaxnum_ieee:_(s32) = nnan G_FMAXNUM_IEEE %select, %three
-    S_ENDPGM 0, implicit %fmaxnum_ieee
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST %two(f32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST %four(f32)
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), [[BITCAST]], [[BITCAST1]]
+    ; CHECK-NEXT: %three:_(f32) = G_FCONSTANT float 3.000000e+00
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST %select(i32)
+    ; CHECK-NEXT: %fmaxnum_ieee:_(f32) = nnan G_FMAXNUM_IEEE [[BITCAST2]], %three
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(i32) = G_BITCAST %fmaxnum_ieee(f32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST3]](i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    %8:_(i32) = G_BITCAST %two(f32)
+    %9:_(i32) = G_BITCAST %four(f32)
+    %select:_(i32) = G_SELECT %cond(i1), %8, %9
+    %three:_(f32) = G_FCONSTANT float 3.000000e+00
+    %10:_(f32) = G_BITCAST %select(i32)
+    %fmaxnum_ieee:_(f32) = nnan G_FMAXNUM_IEEE %10, %three
+    %11:_(i32) = G_BITCAST %fmaxnum_ieee(f32)
+    S_ENDPGM 0, implicit %11(i32)
 ...
 
 ---
@@ -1334,22 +1442,32 @@ body: |
     ; CHECK-LABEL: name: fold_fminimum_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %two:_(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: %four:_(s32) = G_FCONSTANT float 4.000000e+00
-    ; CHECK-NEXT: %fminimum:_(s32) = nnan G_SELECT %cond(s1), %two, %four
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %fminimum(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %two:_(s32) = G_FCONSTANT float 2.0
-    %four:_(s32) = G_FCONSTANT float 4.0
-    %select:_(s32) = G_SELECT %cond, %two, %four
-    %sixteen:_(s32) = G_FCONSTANT float 16.0
-    %fminimum:_(s32) = nnan G_FMINIMUM %select, %sixteen
-    S_ENDPGM 0, implicit %fminimum
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST %two(f32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST %four(f32)
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), [[BITCAST]], [[BITCAST1]]
+    ; CHECK-NEXT: %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST %select(i32)
+    ; CHECK-NEXT: %fminimum:_(f32) = nnan G_FMINIMUM [[BITCAST2]], %sixteen
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(i32) = G_BITCAST %fminimum(f32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST3]](i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    %8:_(i32) = G_BITCAST %two(f32)
+    %9:_(i32) = G_BITCAST %four(f32)
+    %select:_(i32) = G_SELECT %cond(i1), %8, %9
+    %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    %10:_(f32) = G_BITCAST %select(i32)
+    %fminimum:_(f32) = nnan G_FMINIMUM %10, %sixteen
+    %11:_(i32) = G_BITCAST %fminimum(f32)
+    S_ENDPGM 0, implicit %11(i32)
 ...
 
 ---
@@ -1361,22 +1479,32 @@ body: |
     ; CHECK-LABEL: name: fold_fmaximum_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %four:_(s32) = G_FCONSTANT float 4.000000e+00
-    ; CHECK-NEXT: %three:_(s32) = G_FCONSTANT float 3.000000e+00
-    ; CHECK-NEXT: %fmaximum:_(s32) = nnan G_SELECT %cond(s1), %three, %four
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %fmaximum(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %two:_(s32) = G_FCONSTANT float 2.0
-    %four:_(s32) = G_FCONSTANT float 4.0
-    %select:_(s32) = G_SELECT %cond, %two, %four
-    %three:_(s32) = G_FCONSTANT float 3.0
-    %fmaximum:_(s32) = nnan G_FMAXIMUM %select, %three
-    S_ENDPGM 0, implicit %fmaximum
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST %two(f32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST %four(f32)
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), [[BITCAST]], [[BITCAST1]]
+    ; CHECK-NEXT: %three:_(f32) = G_FCONSTANT float 3.000000e+00
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST %select(i32)
+    ; CHECK-NEXT: %fmaximum:_(f32) = nnan G_FMAXIMUM [[BITCAST2]], %three
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(i32) = G_BITCAST %fmaximum(f32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST3]](i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    %8:_(i32) = G_BITCAST %two(f32)
+    %9:_(i32) = G_BITCAST %four(f32)
+    %select:_(i32) = G_SELECT %cond(i1), %8, %9
+    %three:_(f32) = G_FCONSTANT float 3.000000e+00
+    %10:_(f32) = G_BITCAST %select(i32)
+    %fmaximum:_(f32) = nnan G_FMAXIMUM %10, %three
+    %11:_(i32) = G_BITCAST %fmaximum(f32)
+    S_ENDPGM 0, implicit %11(i32)
 ...
 
 ---
@@ -1388,24 +1516,32 @@ body: |
     ; CHECK-LABEL: name: fold_fcopysign_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %two:_(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: %four:_(s32) = G_FCONSTANT float 4.000000e+00
-    ; CHECK-NEXT: %select:_(s32) = G_SELECT %cond(s1), %two, %four
-    ; CHECK-NEXT: %sixteen:_(s32) = G_FCONSTANT float 1.600000e+01
-    ; CHECK-NEXT: %fcopysign:_(s32) = nnan G_FCOPYSIGN %select, %sixteen(s32)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %fcopysign(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %two:_(s32) = G_FCONSTANT float 2.0
-    %four:_(s32) = G_FCONSTANT float 4.0
-    %select:_(s32) = G_SELECT %cond, %two, %four
-    %sixteen:_(s32) = G_FCONSTANT float 16.0
-    %fcopysign:_(s32) = nnan G_FCOPYSIGN %select, %sixteen
-    S_ENDPGM 0, implicit %fcopysign
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST %two(f32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST %four(f32)
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), [[BITCAST]], [[BITCAST1]]
+    ; CHECK-NEXT: %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST %select(i32)
+    ; CHECK-NEXT: %fcopysign:_(f32) = nnan G_FCOPYSIGN [[BITCAST2]], %sixteen(f32)
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(i32) = G_BITCAST %fcopysign(f32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST3]](i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    %8:_(i32) = G_BITCAST %two(f32)
+    %9:_(i32) = G_BITCAST %four(f32)
+    %select:_(i32) = G_SELECT %cond(i1), %8, %9
+    %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    %10:_(f32) = G_BITCAST %select(i32)
+    %fcopysign:_(f32) = nnan G_FCOPYSIGN %10, %sixteen(f32)
+    %11:_(i32) = G_BITCAST %fcopysign(f32)
+    S_ENDPGM 0, implicit %11(i32)
 ...
 
 ---
@@ -1417,24 +1553,32 @@ body: |
     ; CHECK-LABEL: name: fold_fcopysign_into_select_s32_s64_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %two:_(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: %four:_(s32) = G_FCONSTANT float 4.000000e+00
-    ; CHECK-NEXT: %select:_(s32) = G_SELECT %cond(s1), %two, %four
-    ; CHECK-NEXT: %sixteen:_(s64) = G_FCONSTANT double 1.600000e+01
-    ; CHECK-NEXT: %fcopysign:_(s32) = nnan G_FCOPYSIGN %select, %sixteen(s64)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %fcopysign(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %two:_(s32) = G_FCONSTANT float 2.0
-    %four:_(s32) = G_FCONSTANT float 4.0
-    %select:_(s32) = G_SELECT %cond, %two, %four
-    %sixteen:_(s64) = G_FCONSTANT double 16.0
-    %fcopysign:_(s32) = nnan G_FCOPYSIGN %select, %sixteen
-    S_ENDPGM 0, implicit %fcopysign
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST %two(f32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST %four(f32)
+    ; CHECK-NEXT: %select:_(i32) = G_SELECT %cond(i1), [[BITCAST]], [[BITCAST1]]
+    ; CHECK-NEXT: %sixteen:_(f64) = G_FCONSTANT double 1.600000e+01
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST %select(i32)
+    ; CHECK-NEXT: %fcopysign:_(f32) = nnan G_FCOPYSIGN [[BITCAST2]], %sixteen(f64)
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(i32) = G_BITCAST %fcopysign(f32)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST3]](i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %two:_(f32) = G_FCONSTANT float 2.000000e+00
+    %four:_(f32) = G_FCONSTANT float 4.000000e+00
+    %8:_(i32) = G_BITCAST %two(f32)
+    %9:_(i32) = G_BITCAST %four(f32)
+    %select:_(i32) = G_SELECT %cond(i1), %8, %9
+    %sixteen:_(f64) = G_FCONSTANT double 1.600000e+01
+    %10:_(f32) = G_BITCAST %select(i32)
+    %fcopysign:_(f32) = nnan G_FCOPYSIGN %10, %sixteen(f64)
+    %11:_(i32) = G_BITCAST %fcopysign(f32)
+    S_ENDPGM 0, implicit %11(i32)
 ...
 
 ---
@@ -1446,24 +1590,32 @@ body: |
     ; CHECK-LABEL: name: fold_fcopysign_into_select_s64_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %two:_(s64) = G_FCONSTANT double 2.000000e+00
-    ; CHECK-NEXT: %four:_(s64) = G_FCONSTANT double 4.000000e+00
-    ; CHECK-NEXT: %select:_(s64) = G_SELECT %cond(s1), %two, %four
-    ; CHECK-NEXT: %sixteen:_(s32) = G_FCONSTANT float 1.600000e+01
-    ; CHECK-NEXT: %fcopysign:_(s64) = nnan G_FCOPYSIGN %select, %sixteen(s32)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %fcopysign(s64)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %two:_(s64) = G_FCONSTANT double 2.0
-    %four:_(s64) = G_FCONSTANT double 4.0
-    %select:_(s64) = G_SELECT %cond, %two, %four
-    %sixteen:_(s32) = G_FCONSTANT float 16.0
-    %fcopysign:_(s64) = nnan G_FCOPYSIGN %select, %sixteen
-    S_ENDPGM 0, implicit %fcopysign
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: %two:_(f64) = G_FCONSTANT double 2.000000e+00
+    ; CHECK-NEXT: %four:_(f64) = G_FCONSTANT double 4.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST %two(f64)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i64) = G_BITCAST %four(f64)
+    ; CHECK-NEXT: %select:_(i64) = G_SELECT %cond(i1), [[BITCAST]], [[BITCAST1]]
+    ; CHECK-NEXT: %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(f64) = G_BITCAST %select(i64)
+    ; CHECK-NEXT: %fcopysign:_(f64) = nnan G_FCOPYSIGN [[BITCAST2]], %sixteen(f32)
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(i64) = G_BITCAST %fcopysign(f64)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST3]](i64)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %two:_(f64) = G_FCONSTANT double 2.000000e+00
+    %four:_(f64) = G_FCONSTANT double 4.000000e+00
+    %8:_(i64) = G_BITCAST %two(f64)
+    %9:_(i64) = G_BITCAST %four(f64)
+    %select:_(i64) = G_SELECT %cond(i1), %8, %9
+    %sixteen:_(f32) = G_FCONSTANT float 1.600000e+01
+    %10:_(f64) = G_BITCAST %select(i64)
+    %fcopysign:_(f64) = nnan G_FCOPYSIGN %10, %sixteen(f32)
+    %11:_(i64) = G_BITCAST %fcopysign(f64)
+    S_ENDPGM 0, implicit %11(i64)
 ...
 
 # Test handling of intermediate copy between add and select.
@@ -1476,23 +1628,23 @@ body: |
     ; CHECK-LABEL: name: fold_add_copy_into_select_s32_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 40
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 50
-    ; CHECK-NEXT: %add:_(s32) = G_SELECT %cond(s1), [[C]], [[C1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %add(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %ten:_(s32) = G_CONSTANT i32 10
-    %twenty:_(s32) = G_CONSTANT i32 20
-    %select:_(s32) = G_SELECT %cond, %ten, %twenty
-    %thirty:_(s32) = G_CONSTANT i32 30
-    %copy_select:_(s32) = COPY %select
-    %add:_(s32) = G_ADD %copy_select, %thirty
-    S_ENDPGM 0, implicit %add
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 40
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 50
+    ; CHECK-NEXT: %add:_(i32) = G_SELECT %cond(i1), [[C]], [[C1]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %add(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %ten:_(i32) = G_CONSTANT i32 10
+    %twenty:_(i32) = G_CONSTANT i32 20
+    %select:_(i32) = G_SELECT %cond(i1), %ten, %twenty
+    %thirty:_(i32) = G_CONSTANT i32 30
+    %copy_select:_(i32) = COPY %select(i32)
+    %add:_(i32) = G_ADD %copy_select, %thirty
+    S_ENDPGM 0, implicit %add(i32)
 ...
 
 ---
@@ -1504,21 +1656,21 @@ body: |
     ; CHECK-LABEL: name: fold_add_copy_into_select_s32_1
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 40
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 50
-    ; CHECK-NEXT: %add:_(s32) = G_SELECT %cond(s1), [[C]], [[C1]]
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %add(s32)
-    %reg:_(s32) = COPY $vgpr0
-    %zero:_(s32) = G_CONSTANT i32 0
-    %cond:_(s1) = G_ICMP intpred(eq), %reg, %zero
-    %ten:_(s32) = G_CONSTANT i32 10
-    %twenty:_(s32) = G_CONSTANT i32 20
-    %select:_(s32) = G_SELECT %cond, %ten, %twenty
-    %thirty:_(s32) = G_CONSTANT i32 30
-    %copy_select:_(s32) = COPY %select
-    %add:_(s32) = G_ADD %thirty, %copy_select
-    S_ENDPGM 0, implicit %add
+    ; CHECK-NEXT: %reg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %zero:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 40
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 50
+    ; CHECK-NEXT: %add:_(i32) = G_SELECT %cond(i1), [[C]], [[C1]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %add(i32)
+    %reg:_(i32) = COPY $vgpr0
+    %zero:_(i32) = G_CONSTANT i32 0
+    %cond:_(i1) = G_ICMP intpred(eq), %reg(i32), %zero
+    %ten:_(i32) = G_CONSTANT i32 10
+    %twenty:_(i32) = G_CONSTANT i32 20
+    %select:_(i32) = G_SELECT %cond(i1), %ten, %twenty
+    %thirty:_(i32) = G_CONSTANT i32 30
+    %copy_select:_(i32) = COPY %select(i32)
+    %add:_(i32) = G_ADD %thirty, %copy_select
+    S_ENDPGM 0, implicit %add(i32)
 ...

@@ -22,11 +22,15 @@ body: |
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GCN-NEXT: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vgpr(s32) = COPY $vgpr2
-    %3:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmad.ftz), %0, %1, %2
-    S_ENDPGM 0, implicit %3
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(i32) = COPY $vgpr2
+    %4:vgpr(f32) = G_BITCAST %0(i32)
+    %5:vgpr(f32) = G_BITCAST %1(i32)
+    %6:vgpr(f32) = G_BITCAST %2(i32)
+    %3:vgpr(f32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmad.ftz), %4(f32), %5(f32), %6(f32)
+    %7:vgpr(i32) = G_BITCAST %3(f32)
+    S_ENDPGM 0, implicit %7(i32)
 ...
 
 ---
@@ -47,11 +51,15 @@ body: |
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GCN-NEXT: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:vgpr(s32) = COPY $vgpr0
-    %2:vgpr(s32) = COPY $vgpr1
-    %3:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmad.ftz), %0, %1, %2
-    S_ENDPGM 0, implicit %3
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:vgpr(i32) = COPY $vgpr0
+    %2:vgpr(i32) = COPY $vgpr1
+    %4:sgpr(f32) = G_BITCAST %0(i32)
+    %5:vgpr(f32) = G_BITCAST %1(i32)
+    %6:vgpr(f32) = G_BITCAST %2(i32)
+    %3:vgpr(f32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmad.ftz), %4(f32), %5(f32), %6(f32)
+    %7:vgpr(i32) = G_BITCAST %3(f32)
+    S_ENDPGM 0, implicit %7(i32)
 ...
 
 ---
@@ -72,11 +80,15 @@ body: |
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GCN-NEXT: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:sgpr(s32) = COPY $sgpr0
-    %2:vgpr(s32) = COPY $vgpr1
-    %3:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmad.ftz), %0, %1, %2
-    S_ENDPGM 0, implicit %3
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(i32) = COPY $sgpr0
+    %2:vgpr(i32) = COPY $vgpr1
+    %4:vgpr(f32) = G_BITCAST %0(i32)
+    %5:sgpr(f32) = G_BITCAST %1(i32)
+    %6:vgpr(f32) = G_BITCAST %2(i32)
+    %3:vgpr(f32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmad.ftz), %4(f32), %5(f32), %6(f32)
+    %7:vgpr(i32) = G_BITCAST %3(f32)
+    S_ENDPGM 0, implicit %7(i32)
 ...
 
 ---
@@ -98,11 +110,15 @@ body: |
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
     ; GCN-NEXT: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY3]], 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = COPY $sgpr0
-    %3:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmad.ftz), %0, %1, %2
-    S_ENDPGM 0, implicit %3
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr0
+    %2:sgpr(i32) = COPY $sgpr0
+    %4:vgpr(f32) = G_BITCAST %0(i32)
+    %5:vgpr(f32) = G_BITCAST %1(i32)
+    %6:sgpr(f32) = G_BITCAST %2(i32)
+    %3:vgpr(f32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmad.ftz), %4(f32), %5(f32), %6(f32)
+    %7:vgpr(i32) = G_BITCAST %3(f32)
+    S_ENDPGM 0, implicit %7(i32)
 ...
 
 
@@ -124,10 +140,14 @@ body: |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN-NEXT: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:vgpr(s32) = COPY $vgpr0
-    %2:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmad.ftz), %0, %0, %1
-    S_ENDPGM 0, implicit %2
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:vgpr(i32) = COPY $vgpr0
+    %3:sgpr(f32) = G_BITCAST %0(i32)
+    %4:sgpr(f32) = G_BITCAST %0(i32)
+    %5:vgpr(f32) = G_BITCAST %1(i32)
+    %2:vgpr(f32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmad.ftz), %3(f32), %4(f32), %5(f32)
+    %6:vgpr(i32) = G_BITCAST %2(f32)
+    S_ENDPGM 0, implicit %6(i32)
 ...
 
 ---
@@ -148,10 +168,14 @@ body: |
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
     ; GCN-NEXT: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:vgpr(s32) = COPY $vgpr0
-    %2:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmad.ftz), %0, %1, %0
-    S_ENDPGM 0, implicit %2
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:vgpr(i32) = COPY $vgpr0
+    %3:sgpr(f32) = G_BITCAST %0(i32)
+    %4:vgpr(f32) = G_BITCAST %1(i32)
+    %5:sgpr(f32) = G_BITCAST %0(i32)
+    %2:vgpr(f32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmad.ftz), %3(f32), %4(f32), %5(f32)
+    %6:vgpr(i32) = G_BITCAST %2(f32)
+    S_ENDPGM 0, implicit %6(i32)
 ...
 
 ---
@@ -172,10 +196,14 @@ body: |
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
     ; GCN-NEXT: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY1]], 0, [[COPY]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:vgpr(s32) = COPY $vgpr0
-    %2:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmad.ftz), %1, %0, %0
-    S_ENDPGM 0, implicit %2
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:vgpr(i32) = COPY $vgpr0
+    %3:vgpr(f32) = G_BITCAST %1(i32)
+    %4:sgpr(f32) = G_BITCAST %0(i32)
+    %5:sgpr(f32) = G_BITCAST %0(i32)
+    %2:vgpr(f32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmad.ftz), %3(f32), %4(f32), %5(f32)
+    %6:vgpr(i32) = G_BITCAST %2(f32)
+    S_ENDPGM 0, implicit %6(i32)
 ...
 
 ---
@@ -195,9 +223,13 @@ body: |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
     ; GCN-NEXT: [[V_MAC_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAC_F32_e64 0, [[COPY]], 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MAC_F32_e64_]]
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmad.ftz), %0, %0, %0
-    S_ENDPGM 0, implicit %1
+    %0:sgpr(i32) = COPY $sgpr0
+    %2:sgpr(f32) = G_BITCAST %0(i32)
+    %3:sgpr(f32) = G_BITCAST %0(i32)
+    %4:sgpr(f32) = G_BITCAST %0(i32)
+    %1:vgpr(f32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmad.ftz), %2(f32), %3(f32), %4(f32)
+    %5:vgpr(i32) = G_BITCAST %1(f32)
+    S_ENDPGM 0, implicit %5(i32)
 ...
 
 
@@ -237,10 +269,14 @@ body: |
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GCN-NEXT: [[V_MAD_F32_e64_:%[0-9]+]]:vgpr_32 = V_MAD_F32_e64 0, [[COPY]], 0, [[COPY1]], 1, [[COPY2]], 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MAD_F32_e64_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vgpr(s32) = COPY $vgpr2
-    %3:vgpr(s32) = G_FNEG %2
-    %4:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmad.ftz), %0, %1, %3
-    S_ENDPGM 0, implicit %4
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(i32) = COPY $vgpr2
+    %5:vgpr(f32) = G_BITCAST %2(i32)
+    %3:vgpr(f32) = G_FNEG %5
+    %6:vgpr(f32) = G_BITCAST %0(i32)
+    %7:vgpr(f32) = G_BITCAST %1(i32)
+    %4:vgpr(f32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmad.ftz), %6(f32), %7(f32), %3(f32)
+    %8:vgpr(i32) = G_BITCAST %4(f32)
+    S_ENDPGM 0, implicit %8(i32)
 ...

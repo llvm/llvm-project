@@ -6816,7 +6816,7 @@ bool CombinerHelper::tryFoldSelectOfConstants(GSelect *Select,
   LLT TrueTy = MRI.getType(Select->getTrueReg());
 
   // We only do this combine for scalar boolean conditions.
-  if (CondTy != LLT::scalar(1))
+  if (!CondTy.isScalar(1))
     return false;
 
   if (TrueTy.isPointer())

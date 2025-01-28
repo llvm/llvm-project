@@ -14,16 +14,20 @@ body: |
     ; CHECK-LABEL: name: interp_p2_f16_sss
     ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.interp.p2.f16), [[COPY3]](s32), [[COPY4]](s32), 1, 1, 1, [[COPY2]](s32)
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s32) = COPY $sgpr1
-    %2:_(s32) = COPY $sgpr2
-    %3:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.interp.p2.f16), %0, %1, 1, 1, 1, %2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(i32) = COPY $sgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sgpr(i32) = COPY $sgpr2
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:sgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(f32) = COPY [[BITCAST]](f32)
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(f32) = COPY [[BITCAST1]](f32)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(f16) = G_INTRINSIC intrinsic(@llvm.amdgcn.interp.p2.f16), [[COPY3]](f32), [[COPY4]](f32), 1, 1, 1, [[COPY2]](i32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = COPY $sgpr1
+    %2:_(i32) = COPY $sgpr2
+    %4:_(f32) = G_BITCAST %0(i32)
+    %5:_(f32) = G_BITCAST %1(i32)
+    %3:_(f16) = G_INTRINSIC intrinsic(@llvm.amdgcn.interp.p2.f16), %4(f32), %5(f32), 1, 1, 1, %2(i32)
 ...
 
 ---
@@ -37,15 +41,19 @@ body: |
     ; CHECK-LABEL: name: interp_p2_f16_ssv
     ; CHECK: liveins: $sgpr0, $sgpr1, $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-    ; CHECK-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[COPY2]](s32), implicit $exec
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.interp.p2.f16), [[COPY3]](s32), [[COPY4]](s32), 1, 1, 1, [[V_READFIRSTLANE_B32_]](s32)
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s32) = COPY $sgpr1
-    %2:_(s32) = COPY $vgpr0
-    %3:_(s16) = G_INTRINSIC intrinsic(@llvm.amdgcn.interp.p2.f16), %0, %1, 1, 1, 1, %2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(i32) = COPY $sgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:sgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(f32) = COPY [[BITCAST]](f32)
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(f32) = COPY [[BITCAST1]](f32)
+    ; CHECK-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(i32) = V_READFIRSTLANE_B32 [[COPY2]](i32), implicit $exec
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(f16) = G_INTRINSIC intrinsic(@llvm.amdgcn.interp.p2.f16), [[COPY3]](f32), [[COPY4]](f32), 1, 1, 1, [[V_READFIRSTLANE_B32_]](i32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = COPY $sgpr1
+    %2:_(i32) = COPY $vgpr0
+    %4:_(f32) = G_BITCAST %0(i32)
+    %5:_(f32) = G_BITCAST %1(i32)
+    %3:_(f16) = G_INTRINSIC intrinsic(@llvm.amdgcn.interp.p2.f16), %4(f32), %5(f32), 1, 1, 1, %2(i32)
 ...

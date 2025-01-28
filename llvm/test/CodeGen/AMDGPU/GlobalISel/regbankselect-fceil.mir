@@ -12,11 +12,13 @@ body: |
     ; CHECK-LABEL: name: fceil_s
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-    ; CHECK-NEXT: [[FCEIL:%[0-9]+]]:vgpr(s32) = G_FCEIL [[COPY1]]
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s32) = G_FCEIL %0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(f32) = COPY [[BITCAST]](f32)
+    ; CHECK-NEXT: [[FCEIL:%[0-9]+]]:vgpr(f32) = G_FCEIL [[COPY1]]
+    %0:_(i32) = COPY $sgpr0
+    %2:_(f32) = G_BITCAST %0(i32)
+    %1:_(f32) = G_FCEIL %2
 ...
 
 ---
@@ -29,8 +31,10 @@ body: |
     ; CHECK-LABEL: name: fceil_v
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[FCEIL:%[0-9]+]]:vgpr(s32) = G_FCEIL [[COPY]]
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = G_FCEIL %0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[FCEIL:%[0-9]+]]:vgpr(f32) = G_FCEIL [[BITCAST]]
+    %0:_(i32) = COPY $vgpr0
+    %2:_(f32) = G_BITCAST %0(i32)
+    %1:_(f32) = G_FCEIL %2
 ...

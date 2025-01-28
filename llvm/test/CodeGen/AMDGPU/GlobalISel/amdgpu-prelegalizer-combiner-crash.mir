@@ -10,17 +10,21 @@ body:             |
     ; GCN-LABEL: name: non_inlineable_imm_splat
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
-    ; GCN-NEXT: [[C:%[0-9]+]]:_(s16) = G_FCONSTANT half 0xH4200
-    ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16)
-    ; GCN-NEXT: [[SUB:%[0-9]+]]:_(<2 x s16>) = G_SUB [[COPY]], [[BUILD_VECTOR]]
-    ; GCN-NEXT: $vgpr0 = COPY [[SUB]](<2 x s16>)
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<2 x i16>) = COPY $vgpr0
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half 0xH4200
+    ; GCN-NEXT: [[BITCAST:%[0-9]+]]:_(i16) = G_BITCAST [[C]](f16)
+    ; GCN-NEXT: [[BITCAST1:%[0-9]+]]:_(i16) = G_BITCAST [[C]](f16)
+    ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i16>) = G_BUILD_VECTOR [[BITCAST]](i16), [[BITCAST1]](i16)
+    ; GCN-NEXT: [[SUB:%[0-9]+]]:_(<2 x i16>) = G_SUB [[COPY]], [[BUILD_VECTOR]]
+    ; GCN-NEXT: $vgpr0 = COPY [[SUB]](<2 x i16>)
     ; GCN-NEXT: SI_RETURN implicit $vgpr0
-    %0:_(<2 x s16>) = COPY $vgpr0
-    %2:_(s16) = G_FCONSTANT half 0xH4200
-    %1:_(<2 x s16>) = G_BUILD_VECTOR %2(s16), %2(s16)
-    %3:_(<2 x s16>) = G_SUB %0, %1
-    $vgpr0 = COPY %3(<2 x s16>)
+    %0:_(<2 x i16>) = COPY $vgpr0
+    %1:_(f16) = G_FCONSTANT half 0xH4200
+    %4:_(i16) = G_BITCAST %1(f16)
+    %5:_(i16) = G_BITCAST %1(f16)
+    %2:_(<2 x i16>) = G_BUILD_VECTOR %4(i16), %5(i16)
+    %3:_(<2 x i16>) = G_SUB %0, %2
+    $vgpr0 = COPY %3(<2 x i16>)
     SI_RETURN implicit $vgpr0
 
 ...

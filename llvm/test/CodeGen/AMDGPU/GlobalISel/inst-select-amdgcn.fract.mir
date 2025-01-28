@@ -16,11 +16,13 @@ body: |
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK-NEXT: %1:vgpr_32 = nofpexcept V_FRACT_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %1
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), %0
-    S_ENDPGM 0, implicit %1
+    ; CHECK-NEXT: [[V_FRACT_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_FRACT_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_FRACT_F32_e64_]]
+    %0:sgpr(i32) = COPY $sgpr0
+    %2:sgpr(f32) = G_BITCAST %0(i32)
+    %1:vgpr(f32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), %2(f32)
+    %3:vgpr(i32) = G_BITCAST %1(f32)
+    S_ENDPGM 0, implicit %3(i32)
 ...
 
 ---
@@ -37,11 +39,13 @@ body: |
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK-NEXT: %1:vgpr_32 = nofpexcept V_FRACT_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %1
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), %0
-    S_ENDPGM 0, implicit %1
+    ; CHECK-NEXT: [[V_FRACT_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_FRACT_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_FRACT_F32_e64_]]
+    %0:vgpr(i32) = COPY $vgpr0
+    %2:vgpr(f32) = G_BITCAST %0(i32)
+    %1:vgpr(f32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), %2(f32)
+    %3:vgpr(i32) = G_BITCAST %1(f32)
+    S_ENDPGM 0, implicit %3(i32)
 ...
 
 ---
@@ -58,11 +62,13 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: %1:vreg_64 = nofpexcept V_FRACT_F64_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %1
-    %0:sgpr(s64) = COPY $sgpr0_sgpr1
-    %1:vgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), %0
-    S_ENDPGM 0, implicit %1
+    ; CHECK-NEXT: [[V_FRACT_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_FRACT_F64_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_FRACT_F64_e64_]]
+    %0:sgpr(i64) = COPY $sgpr0_sgpr1
+    %2:sgpr(f64) = G_BITCAST %0(i64)
+    %1:vgpr(f64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), %2(f64)
+    %3:vgpr(i64) = G_BITCAST %1(f64)
+    S_ENDPGM 0, implicit %3(i64)
 ...
 
 ---
@@ -79,9 +85,11 @@ body: |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %1:vreg_64 = nofpexcept V_FRACT_F64_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: S_ENDPGM 0, implicit %1
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), %0
-    S_ENDPGM 0, implicit %1
+    ; CHECK-NEXT: [[V_FRACT_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_FRACT_F64_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_FRACT_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %2:vgpr(f64) = G_BITCAST %0(i64)
+    %1:vgpr(f64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), %2(f64)
+    %3:vgpr(i64) = G_BITCAST %1(f64)
+    S_ENDPGM 0, implicit %3(i64)
 ...

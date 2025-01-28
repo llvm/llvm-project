@@ -95,7 +95,7 @@ inline void ComputeValueVTs(const TargetLowering &TLI, const DataLayout &DL,
 /// with the in-memory offsets of each of the individual values.
 ///
 void computeValueLLTs(const DataLayout &DL, Type &Ty,
-                      SmallVectorImpl<LLT> &ValueTys,
+                      SmallVectorImpl<LLT> &ValueTys, bool EnableFPInfo,
                       SmallVectorImpl<uint64_t> *Offsets = nullptr,
                       uint64_t StartingOffset = 0);
 

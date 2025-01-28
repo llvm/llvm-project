@@ -129,8 +129,8 @@ static void reportTranslationError(MachineFunction &MF,
     ORE.emit(R);
 }
 
-IRTranslator::IRTranslator(CodeGenOptLevel optlevel)
-    : MachineFunctionPass(ID), OptLevel(optlevel) {}
+IRTranslator::IRTranslator(CodeGenOptLevel optlevel, bool EnableFPInfo)
+    : MachineFunctionPass(ID), OptLevel(optlevel), EnableFPInfo(EnableFPInfo) {}
 
 #ifndef NDEBUG
 namespace {
@@ -194,7 +194,7 @@ IRTranslator::allocateVRegs(const Value &Val) {
   auto *Regs = VMap.getVRegs(Val);
   auto *Offsets = VMap.getOffsets(Val);
   SmallVector<LLT, 4> SplitTys;
-  computeValueLLTs(*DL, *Val.getType(), SplitTys,
+  computeValueLLTs(*DL, *Val.getType(), SplitTys, EnableFPInfo,
                    Offsets->empty() ? Offsets : nullptr);
   for (unsigned i = 0; i < SplitTys.size(); ++i)
     Regs->push_back(0);
@@ -218,7 +218,7 @@ ArrayRef<Register> IRTranslator::getOrCreateVRegs(const Value &Val) {
            "Don't know how to create an empty vreg");
 
   SmallVector<LLT, 4> SplitTys;
-  computeValueLLTs(*DL, *Val.getType(), SplitTys,
+  computeValueLLTs(*DL, *Val.getType(), SplitTys, EnableFPInfo, 
                    Offsets->empty() ? Offsets : nullptr);
 
   if (!isa<Constant>(Val)) {
@@ -859,7 +859,7 @@ void IRTranslator::emitJumpTable(SwitchCG::JumpTable &JT,
   MIB.setDebugLoc(CurBuilder->getDebugLoc());
 
   Type *PtrIRTy = PointerType::getUnqual(MF->getFunction().getContext());
-  const LLT PtrTy = getLLTForType(*PtrIRTy, *DL);
+  const LLT PtrTy = getLLTForType(*PtrIRTy, *DL, EnableFPInfo);
 
   auto Table = MIB.buildJumpTable(PtrTy, JT.JTI);
   MIB.buildBrJT(Table.getReg(0), JT.JTI, JT.Reg);
@@ -874,7 +874,7 @@ bool IRTranslator::emitJumpTableHeader(SwitchCG::JumpTable &JT,
 
   const Value &SValue = *JTH.SValue;
   // Subtract the lowest switch case value from the value being switched on.
-  const LLT SwitchTy = getLLTForType(*SValue.getType(), *DL);
+  const LLT SwitchTy = getLLTForType(*SValue.getType(), *DL, EnableFPInfo);
   Register SwitchOpReg = getOrCreateVReg(SValue);
   auto FirstCst = MIB.buildConstant(SwitchTy, JTH.First);
   auto Sub = MIB.buildSub({SwitchTy}, SwitchOpReg, FirstCst);
@@ -882,7 +882,7 @@ bool IRTranslator::emitJumpTableHeader(SwitchCG::JumpTable &JT,
   // This value may be smaller or larger than the target's pointer type, and
   // therefore require extension or truncating.
   auto *PtrIRTy = PointerType::getUnqual(SValue.getContext());
-  const LLT PtrScalarTy = LLT::scalar(DL->getTypeSizeInBits(PtrIRTy));
+  const LLT PtrScalarTy = LLT::integer(DL->getTypeSizeInBits(PtrIRTy));
   Sub = MIB.buildZExtOrTrunc(PtrScalarTy, Sub);
 
   JT.Reg = Sub.getReg(0);
@@ -899,7 +899,8 @@ bool IRTranslator::emitJumpTableHeader(SwitchCG::JumpTable &JT,
   auto Cst = getOrCreateVReg(
       *ConstantInt::get(SValue.getType(), JTH.Last - JTH.First));
   Cst = MIB.buildZExtOrTrunc(PtrScalarTy, Cst).getReg(0);
-  auto Cmp = MIB.buildICmp(CmpInst::ICMP_UGT, LLT::scalar(1), Sub, Cst);
+  LLT CmpTy = LLT::integer(1);
+  auto Cmp = MIB.buildICmp(CmpInst::ICMP_UGT, CmpTy, Sub, Cst);
 
   auto BrCond = MIB.buildBrCond(Cmp.getReg(0), *JT.Default);
 
@@ -930,7 +931,7 @@ void IRTranslator::emitSwitchCase(SwitchCG::CaseBlock &CB,
     return;
   }
 
-  const LLT i1Ty = LLT::scalar(1);
+  const LLT i1Ty = LLT::integer(1);
   // Build the compare.
   if (!CB.CmpMHS) {
     const auto *CI = dyn_cast<ConstantInt>(CB.CmpRHS);
@@ -1107,19 +1108,19 @@ void IRTranslator::emitBitTestHeader(SwitchCG::BitTestBlock &B,
   auto RangeSub = MIB.buildSub(SwitchOpTy, SwitchOpReg, MinValReg);
 
   Type *PtrIRTy = PointerType::getUnqual(MF->getFunction().getContext());
-  const LLT PtrTy = getLLTForType(*PtrIRTy, *DL);
+  const LLT PtrTy = getLLTForType(*PtrIRTy, *DL, EnableFPInfo);
 
   LLT MaskTy = SwitchOpTy;
   if (MaskTy.getSizeInBits() > PtrTy.getSizeInBits() ||
       !llvm::has_single_bit<uint32_t>(MaskTy.getSizeInBits()))
-    MaskTy = LLT::scalar(PtrTy.getSizeInBits());
+    MaskTy = LLT::integer(PtrTy.getSizeInBits());
   else {
     // Ensure that the type will fit the mask value.
     for (unsigned I = 0, E = B.Cases.size(); I != E; ++I) {
       if (!isUIntN(SwitchOpTy.getSizeInBits(), B.Cases[I].Mask)) {
         // Switch table case range are encoded into series of masks.
         // Just use pointer type, it's guaranteed to fit.
-        MaskTy = LLT::scalar(PtrTy.getSizeInBits());
+        MaskTy = LLT::integer(PtrTy.getSizeInBits());
         break;
       }
     }
@@ -1128,7 +1129,7 @@ void IRTranslator::emitBitTestHeader(SwitchCG::BitTestBlock &B,
   if (SwitchOpTy != MaskTy)
     SubReg = MIB.buildZExtOrTrunc(MaskTy, SubReg).getReg(0);
 
-  B.RegVT = getMVTForLLT(MaskTy);
+  B.RegVT = getMVTForLLT(MaskTy, EnableFPInfo);
   B.Reg = SubReg;
 
   MachineBasicBlock *MBB = B.Cases[0].ThisBB;
@@ -1142,7 +1143,8 @@ void IRTranslator::emitBitTestHeader(SwitchCG::BitTestBlock &B,
   if (!B.FallthroughUnreachable) {
     // Conditional branch to the default block.
     auto RangeCst = MIB.buildConstant(SwitchOpTy, B.Range);
-    auto RangeCmp = MIB.buildICmp(CmpInst::Predicate::ICMP_UGT, LLT::scalar(1),
+    LLT CmpTy = LLT::integer(1);
+    auto RangeCmp = MIB.buildICmp(CmpInst::Predicate::ICMP_UGT, CmpTy,
                                   RangeSub, RangeCst);
     MIB.buildBrCond(RangeCmp, *B.Default);
   }
@@ -1160,7 +1162,8 @@ void IRTranslator::emitBitTestCase(SwitchCG::BitTestBlock &BB,
   MachineIRBuilder &MIB = *CurBuilder;
   MIB.setMBB(*SwitchBB);
 
-  LLT SwitchTy = getLLTForMVT(BB.RegVT);
+  LLT SwitchTy = getLLTForMVT(BB.RegVT, EnableFPInfo);
+  LLT I1 = LLT::integer(1);
   Register Cmp;
   unsigned PopCount = llvm::popcount(B.Mask);
   if (PopCount == 1) {
@@ -1169,13 +1172,13 @@ void IRTranslator::emitBitTestCase(SwitchCG::BitTestBlock &BB,
     auto MaskTrailingZeros =
         MIB.buildConstant(SwitchTy, llvm::countr_zero(B.Mask));
     Cmp =
-        MIB.buildICmp(ICmpInst::ICMP_EQ, LLT::scalar(1), Reg, MaskTrailingZeros)
+        MIB.buildICmp(ICmpInst::ICMP_EQ, I1, Reg, MaskTrailingZeros)
             .getReg(0);
   } else if (PopCount == BB.Range) {
     // There is only one zero bit in the range, test for it directly.
     auto MaskTrailingOnes =
         MIB.buildConstant(SwitchTy, llvm::countr_one(B.Mask));
-    Cmp = MIB.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Reg, MaskTrailingOnes)
+    Cmp = MIB.buildICmp(CmpInst::ICMP_NE, I1, Reg, MaskTrailingOnes)
               .getReg(0);
   } else {
     // Make desired shift.
@@ -1186,7 +1189,7 @@ void IRTranslator::emitBitTestCase(SwitchCG::BitTestBlock &BB,
     auto CstMask = MIB.buildConstant(SwitchTy, B.Mask);
     auto AndOp = MIB.buildAnd(SwitchTy, SwitchVal, CstMask);
     auto CstZero = MIB.buildConstant(SwitchTy, 0);
-    Cmp = MIB.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), AndOp, CstZero)
+    Cmp = MIB.buildICmp(CmpInst::ICMP_NE, I1, AndOp, CstZero)
               .getReg(0);
   }
 
@@ -1387,7 +1390,7 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
 
   const Value *Ptr = LI.getPointerOperand();
   Type *OffsetIRTy = DL->getIndexType(Ptr->getType());
-  LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
+  LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL, EnableFPInfo);
 
   if (CLI->supportSwiftError() && isSwiftError(Ptr)) {
     assert(Regs.size() == 1 && "swifterror should be single pointer");
@@ -1434,7 +1437,7 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
   Register Base = getOrCreateVReg(*SI.getPointerOperand());
 
   Type *OffsetIRTy = DL->getIndexType(SI.getPointerOperandType());
-  LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
+  LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL, EnableFPInfo);
 
   if (CLI->supportSwiftError() && isSwiftError(SI.getPointerOperand())) {
     assert(Vals.size() == 1 && "swifterror should be single pointer");
@@ -1557,8 +1560,8 @@ bool IRTranslator::translateCopy(const User &U, const Value &V,
 bool IRTranslator::translateBitCast(const User &U,
                                     MachineIRBuilder &MIRBuilder) {
   // If we're bitcasting to the source type, we can reuse the source vreg.
-  if (getLLTForType(*U.getOperand(0)->getType(), *DL) ==
-      getLLTForType(*U.getType(), *DL)) {
+  if (getLLTForType(*U.getOperand(0)->getType(), *DL, EnableFPInfo) ==
+      getLLTForType(*U.getType(), *DL, EnableFPInfo)) {
     // If the source is a ConstantInt then it was probably created by
     // ConstantHoisting and we should leave it alone.
     if (isa<ConstantInt>(U.getOperand(0)))
@@ -1572,9 +1575,6 @@ bool IRTranslator::translateBitCast(const User &U,
 
 bool IRTranslator::translateCast(unsigned Opcode, const User &U,
                                  MachineIRBuilder &MIRBuilder) {
-  if (containsBF16Type(U))
-    return false;
-
   uint32_t Flags = 0;
   if (const Instruction *I = dyn_cast<Instruction>(&U))
     Flags = MachineInstr::copyFlagsFromInstruction(*I);
@@ -1590,9 +1590,9 @@ bool IRTranslator::translateGetElementPtr(const User &U,
   Value &Op0 = *U.getOperand(0);
   Register BaseReg = getOrCreateVReg(Op0);
   Type *PtrIRTy = Op0.getType();
-  LLT PtrTy = getLLTForType(*PtrIRTy, *DL);
+  LLT PtrTy = getLLTForType(*PtrIRTy, *DL, EnableFPInfo);
   Type *OffsetIRTy = DL->getIndexType(PtrIRTy);
-  LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
+  LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL, EnableFPInfo);
 
   uint32_t Flags = 0;
   if (const Instruction *I = dyn_cast<Instruction>(&U))
@@ -1619,9 +1619,9 @@ bool IRTranslator::translateGetElementPtr(const User &U,
                                          BaseReg)
                   .getReg(0);
     PtrIRTy = FixedVectorType::get(PtrIRTy, VectorWidth);
-    PtrTy = getLLTForType(*PtrIRTy, *DL);
+    PtrTy = getLLTForType(*PtrIRTy, *DL, EnableFPInfo);
     OffsetIRTy = DL->getIndexType(PtrIRTy);
-    OffsetTy = getLLTForType(*OffsetIRTy, *DL);
+    OffsetTy = getLLTForType(*OffsetIRTy, *DL, EnableFPInfo);
   }
 
   int64_t Offset = 0;
@@ -1669,7 +1669,7 @@ bool IRTranslator::translateGetElementPtr(const User &U,
       Register GepOffsetReg;
       if (ElementSize != 1) {
         auto ElementSizeMIB = MIRBuilder.buildConstant(
-            getLLTForType(*OffsetIRTy, *DL), ElementSize);
+            getLLTForType(*OffsetIRTy, *DL, EnableFPInfo), ElementSize);
         GepOffsetReg =
             MIRBuilder.buildMul(OffsetTy, IdxReg, ElementSizeMIB).getReg(0);
       } else
@@ -1714,7 +1714,7 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
     SrcRegs.push_back(SrcReg);
   }
 
-  LLT SizeTy = LLT::scalar(MinPtrSize);
+  LLT SizeTy = LLT::integer(MinPtrSize);
 
   // The size operand should be the minimum of the pointer sizes.
   Register &SizeOpReg = SrcRegs[SrcRegs.size() - 1];
@@ -2331,7 +2331,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
       MIRBuilder.buildFMA(Dst, Op0, Op1, Op2,
                           MachineInstr::copyFlagsFromInstruction(CI));
     } else {
-      LLT Ty = getLLTForType(*CI.getType(), *DL);
+      LLT Ty = getLLTForType(*CI.getType(), *DL, EnableFPInfo);
       auto FMul = MIRBuilder.buildFMul(
           Ty, Op0, Op1, MachineInstr::copyFlagsFromInstruction(CI));
       MIRBuilder.buildFAdd(Dst, FMul, Op2,
@@ -2398,7 +2398,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     getStackGuard(getOrCreateVReg(CI), MIRBuilder);
     return true;
   case Intrinsic::stackprotector: {
-    LLT PtrTy = getLLTForType(*CI.getArgOperand(0)->getType(), *DL);
+    LLT PtrTy = getLLTForType(*CI.getArgOperand(0)->getType(), *DL, EnableFPInfo);
     Register GuardVal;
     if (TLI->useLoadStackGuardNode(*CI.getModule())) {
       GuardVal = MRI->createGenericVirtualRegister(PtrTy);
@@ -2441,7 +2441,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   }
   case Intrinsic::invariant_start: {
-    LLT PtrTy = getLLTForType(*CI.getArgOperand(0)->getType(), *DL);
+    LLT PtrTy = getLLTForType(*CI.getArgOperand(0)->getType(), *DL, EnableFPInfo);
     Register Undef = MRI->createGenericVirtualRegister(PtrTy);
     MIRBuilder.buildUndef(Undef);
     return true;
@@ -2640,7 +2640,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::vector_deinterleave2: {
     // Both intrinsics have at least one operand.
     Value *Op0 = CI.getOperand(0);
-    LLT ResTy = getLLTForType(*Op0->getType(), MIRBuilder.getDataLayout());
+    LLT ResTy = getLLTForType(*Op0->getType(), MIRBuilder.getDataLayout(), EnableFPInfo);
     if (!ResTy.isFixedVector())
       return false;
 
@@ -2690,7 +2690,7 @@ bool IRTranslator::translateCallBase(const CallBase &CB,
   for (const auto &Arg : CB.args()) {
     if (CLI->supportSwiftError() && isSwiftError(Arg)) {
       assert(SwiftInVReg == 0 && "Expected only one swift error argument");
-      LLT Ty = getLLTForType(*Arg->getType(), *DL);
+      LLT Ty = getLLTForType(*Arg->getType(), *DL, EnableFPInfo);
       SwiftInVReg = MRI->createGenericVirtualRegister(Ty);
       MIRBuilder.buildCopy(SwiftInVReg, SwiftError.getOrCreateVRegUseAt(
                                             &CB, &MIRBuilder.getMBB(), Arg));
@@ -2846,8 +2846,8 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
     Align Alignment = Info.align.value_or(
         DL->getABITypeAlign(Info.memVT.getTypeForEVT(F->getContext())));
     LLT MemTy = Info.memVT.isSimple()
-                    ? getLLTForMVT(Info.memVT.getSimpleVT())
-                    : LLT::scalar(Info.memVT.getStoreSizeInBits());
+                    ? getLLTForMVT(Info.memVT.getSimpleVT(), EnableFPInfo)
+                    : LLT::integer(Info.memVT.getStoreSizeInBits());
 
     // TODO: We currently just fallback to address space 0 if getTgtMemIntrinsic
     //       didn't yield anything useful.
@@ -3053,13 +3053,13 @@ bool IRTranslator::translateLandingPad(const User &U,
   if (auto *RegMask = TRI.getCustomEHPadPreservedMask(*MF))
     MF->getRegInfo().addPhysRegsUsedFromRegMask(RegMask);
 
-  LLT Ty = getLLTForType(*LP.getType(), *DL);
+  LLT Ty = getLLTForType(*LP.getType(), *DL, EnableFPInfo);
   Register Undef = MRI->createGenericVirtualRegister(Ty);
   MIRBuilder.buildUndef(Undef);
 
   SmallVector<LLT, 2> Tys;
   for (Type *Ty : cast<StructType>(LP.getType())->elements())
-    Tys.push_back(getLLTForType(*Ty, *DL));
+    Tys.push_back(getLLTForType(*Ty, *DL, EnableFPInfo));
   assert(Tys.size() == 2 && "Only two-valued landingpads are supported");
 
   // Mark exception register as live in.
@@ -3193,7 +3193,7 @@ bool IRTranslator::translateInsertElement(const User &U,
   if (!Idx)
     Idx = getOrCreateVReg(*U.getOperand(2));
   if (MRI->getType(Idx).getSizeInBits() != PreferredVecIdxWidth) {
-    const LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+    const LLT VecIdxTy = LLT::integer(PreferredVecIdxWidth);
     Idx = MIRBuilder.buildZExtOrTrunc(VecIdxTy, Idx).getReg(0);
   }
   MIRBuilder.buildInsertVectorElement(Res, Val, Elt, Idx);
@@ -3236,7 +3236,7 @@ bool IRTranslator::translateInsertVector(const User &U,
     if (isa<ScalableVectorType>(U.getOperand(0)->getType())) {
       // We are inserting an illegal fixed vector into a scalable
       // vector, use a scalar element insert.
-      LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+      LLT VecIdxTy = LLT::integer(PreferredVecIdxWidth);
       Register Idx = getOrCreateVReg(*CI);
       auto ScaledIndex = MIRBuilder.buildMul(
           VecIdxTy, MIRBuilder.buildVScale(VecIdxTy, 1), Idx);
@@ -3274,7 +3274,7 @@ bool IRTranslator::translateExtractElement(const User &U,
   if (!Idx)
     Idx = getOrCreateVReg(*U.getOperand(1));
   if (MRI->getType(Idx).getSizeInBits() != PreferredVecIdxWidth) {
-    const LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+    const LLT VecIdxTy = LLT::integer(PreferredVecIdxWidth);
     Idx = MIRBuilder.buildZExtOrTrunc(VecIdxTy, Idx).getReg(0);
   }
   MIRBuilder.buildExtractVectorElement(Res, Val, Idx);
@@ -3314,7 +3314,7 @@ bool IRTranslator::translateExtractVector(const User &U,
     if (isa<ScalableVectorType>(U.getOperand(0)->getType())) {
       // We are extracting an illegal fixed vector from a scalable
       // vector, use a scalar element extract.
-      LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+      LLT VecIdxTy = LLT::integer(PreferredVecIdxWidth);
       Register Idx = getOrCreateVReg(*CI);
       auto ScaledIndex = MIRBuilder.buildMul(
           VecIdxTy, MIRBuilder.buildVScale(VecIdxTy, 1), Idx);
@@ -3845,8 +3845,8 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
   CurBuilder->setInsertPt(*ParentBB, ParentBB->end());
   // First create the loads to the guard/stack slot for the comparison.
   Type *PtrIRTy = PointerType::getUnqual(MF->getFunction().getContext());
-  const LLT PtrTy = getLLTForType(*PtrIRTy, *DL);
-  LLT PtrMemTy = getLLTForMVT(TLI->getPointerMemTy(*DL));
+  const LLT PtrTy = getLLTForType(*PtrIRTy, *DL, EnableFPInfo);
+  LLT PtrMemTy = getLLTForMVT(TLI->getPointerMemTy(*DL), EnableFPInfo);
 
   MachineFrameInfo &MFI = ParentBB->getParent()->getFrameInfo();
   int FI = MFI.getStackProtectorIndex();
@@ -3906,8 +3906,9 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
   // If useLoadStackGuardNode returns true, generate LOAD_STACK_GUARD.
   // Otherwise, emit a volatile load to retrieve the stack guard value.
   if (TLI->useLoadStackGuardNode(*ParentBB->getBasicBlock()->getModule())) {
+    LLT RegTy = LLT::integer(PtrTy.getSizeInBits());
     Guard =
-        MRI->createGenericVirtualRegister(LLT::scalar(PtrTy.getSizeInBits()));
+        MRI->createGenericVirtualRegister(RegTy);
     getStackGuard(Guard, *CurBuilder);
   } else {
     // TODO: test using android subtarget when we support @llvm.thread.pointer.
@@ -3923,8 +3924,9 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
   }
 
   // Perform the comparison.
+  LLT I1 = LLT::integer(1);
   auto Cmp =
-      CurBuilder->buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Guard, GuardVal);
+      CurBuilder->buildICmp(CmpInst::ICMP_NE, I1, Guard, GuardVal);
   // If the guard/stackslot do not equal, branch to failure MBB.
   CurBuilder->buildBrCond(Cmp, *SPD.getFailureMBB());
   // Otherwise branch to success MBB.

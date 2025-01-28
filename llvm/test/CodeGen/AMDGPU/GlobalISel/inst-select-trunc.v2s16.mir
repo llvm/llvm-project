@@ -49,9 +49,9 @@ body: |
     ; GFX11-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
     ; GFX11-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_LSHL_B32_]], [[S_AND_B32_]], implicit-def dead $scc
     ; GFX11-NEXT: S_ENDPGM 0, implicit [[S_OR_B32_]]
-    %0:sgpr(<2 x s32>) = COPY $sgpr0_sgpr1
-    %1:sgpr(<2 x s16>) = G_TRUNC %0
-    S_ENDPGM 0, implicit %1
+    %0:sgpr(<2 x i32>) = COPY $sgpr0_sgpr1
+    %1:sgpr(<2 x i16>) = G_TRUNC %0(<2 x i32>)
+    S_ENDPGM 0, implicit %1(<2 x i16>)
 ...
 
 ---
@@ -95,7 +95,7 @@ body: |
     ; GFX11-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], [[V_MOV_B32_e32_]], implicit $exec
     ; GFX11-NEXT: [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[V_LSHLREV_B32_e64_]], [[V_AND_B32_e64_]], implicit $exec
     ; GFX11-NEXT: S_ENDPGM 0, implicit [[V_OR_B32_e64_]]
-    %0:vgpr(<2 x s32>) = COPY $vgpr0_vgpr1
-    %1:vgpr(<2 x s16>) = G_TRUNC %0
-    S_ENDPGM 0, implicit %1
+    %0:vgpr(<2 x i32>) = COPY $vgpr0_vgpr1
+    %1:vgpr(<2 x i16>) = G_TRUNC %0(<2 x i32>)
+    S_ENDPGM 0, implicit %1(<2 x i16>)
 ...

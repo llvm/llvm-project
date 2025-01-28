@@ -131,8 +131,8 @@ public:
       const RegisterBank *SrcBank = RBI.getRegBank(SrcReg, MRI, *RBI.TRI);
       if (SrcBank == &AMDGPU::VCCRegBank) {
         const LLT S32 = LLT::scalar(32);
-        assert(MRI.getType(SrcReg) == LLT::scalar(1));
-        assert(MRI.getType(DstReg) == S32);
+        assert(MRI.getType(SrcReg).isScalar(1));
+        assert(MRI.getType(DstReg).isScalar(32));
         assert(NewBank == &AMDGPU::VGPRRegBank);
 
         // Replace the extension with a select, which really uses the boolean
@@ -170,7 +170,7 @@ public:
         continue;
 
       const RegisterBank *RB = NewBank;
-      if (MRI.getType(Reg) == LLT::scalar(1)) {
+      if (MRI.getType(Reg).isScalar(1)) {
         assert(NewBank == &AMDGPU::VGPRRegBank &&
                "s1 operands should only be used for vector bools");
         assert((MI.getOpcode() != AMDGPU::G_TRUNC &&
@@ -298,7 +298,7 @@ AMDGPURegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
     if (!Ty.isValid())
       return AMDGPU::SGPRRegBank;
 
-    return Ty == LLT::scalar(1) ? AMDGPU::VCCRegBank : AMDGPU::SGPRRegBank;
+    return Ty.isScalar(1) ? AMDGPU::VCCRegBank : AMDGPU::SGPRRegBank;
   }
 
   return TRI->isAGPRClass(&RC) ? AMDGPU::AGPRRegBank : AMDGPU::VGPRRegBank;
@@ -1495,7 +1495,7 @@ bool AMDGPURegisterBankInfo::applyMappingBFE(MachineIRBuilder &B,
   const RegisterBank *DstBank =
     OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
   if (DstBank == &AMDGPU::VGPRRegBank) {
-    if (Ty == S32)
+    if (Ty.isScalar(32))
       return true;
 
     // There is no 64-bit vgpr bitfield extract instructions so the operation
@@ -1568,7 +1568,7 @@ bool AMDGPURegisterBankInfo::applyMappingBFE(MachineIRBuilder &B,
 
   // TODO: It might be worth using a pseudo here to avoid scc clobber and
   // register class constraints.
-  unsigned Opc = Ty == S32 ? (Signed ? AMDGPU::S_BFE_I32 : AMDGPU::S_BFE_U32) :
+  unsigned Opc = Ty.isScalar(32) ? (Signed ? AMDGPU::S_BFE_I32 : AMDGPU::S_BFE_U32) :
                              (Signed ? AMDGPU::S_BFE_I64 : AMDGPU::S_BFE_U64);
 
   auto MIB = B.buildInstr(Opc, {DstReg}, {SrcReg, MergedInputs});
@@ -1790,7 +1790,7 @@ Register AMDGPURegisterBankInfo::handleD16VData(MachineIRBuilder &B,
 
   const LLT S16 = LLT::scalar(16);
   LLT StoreVT = MRI.getType(Reg);
-  if (!StoreVT.isVector() || StoreVT.getElementType() != S16)
+  if (!StoreVT.isVector() || !StoreVT.getElementType().isScalar(16))
     return Reg;
 
   auto Unmerge = B.buildUnmerge(S16, Reg);
@@ -2213,7 +2213,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_IMPLICIT_DEF: {
     Register DstReg = MI.getOperand(0).getReg();
     LLT DstTy = MRI.getType(DstReg);
-    if (DstTy != LLT::scalar(1))
+    if (!DstTy.isScalar(1))
       break;
 
     const RegisterBank *DstBank =
@@ -2243,7 +2243,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_PHI: {
     Register DstReg = MI.getOperand(0).getReg();
     LLT DstTy = MRI.getType(DstReg);
-    if (DstTy != LLT::scalar(1))
+    if (!DstTy.isScalar(1))
       break;
 
     const LLT S32 = LLT::scalar(32);
@@ -2514,7 +2514,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     // 16-bit operations are VALU only, but can be promoted to 32-bit SALU.
     // Packed 16-bit operations need to be scalarized and promoted.
-    if (DstTy != LLT::scalar(16) && DstTy != LLT::fixed_vector(2, 16))
+    if (!DstTy.isScalar(16) && !DstTy.isFixedVector(2, 16))
       break;
 
     const RegisterBank *DstBank =
@@ -2588,7 +2588,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     Register SrcReg1 = MI.getOperand(2).getReg();
     const LLT S32 = LLT::scalar(32);
     const LLT S64 = LLT::scalar(64);
-    assert(MRI.getType(DstReg) == S64 && "This is a special case for s_mul_u64 "
+    assert(MRI.getType(DstReg).isScalar(64) && "This is a special case for s_mul_u64 "
                                          "that handles only 64-bit operands.");
     const RegisterBank *DstBank =
         OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
@@ -2684,7 +2684,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     Register SrcReg = MI.getOperand(1).getReg();
     const LLT S32 = LLT::scalar(32);
     LLT Ty = MRI.getType(SrcReg);
-    if (Ty == S32)
+    if (Ty.isScalar(32))
       break;
 
     ApplyRegBankMapping ApplyVALU(B, *this, MRI, &AMDGPU::VGPRRegBank);
@@ -2708,7 +2708,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     Register SrcReg = MI.getOperand(1).getReg();
     const LLT S32 = LLT::scalar(32);
     LLT Ty = MRI.getType(SrcReg);
-    if (Ty == S32)
+    if (Ty.isScalar(32))
       break;
 
     // We can narrow this more efficiently than Helper can by using ffbh/ffbl
@@ -2776,7 +2776,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       return;
     }
 
-    if (SrcTy != LLT::scalar(1))
+    if (!SrcTy.isScalar(1))
       return;
 
     // It is not legal to have a legalization artifact with a VCC source. Rather
@@ -3788,9 +3788,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // we need to take the virtual register's type as a hint on how to interpret
     // s1 values.
     if (!SrcReg.isVirtual() && !DstBank &&
-        MRI.getType(DstReg) == LLT::scalar(1))
+        MRI.getType(DstReg).isScalar(1))
       DstBank = &AMDGPU::VCCRegBank;
-    else if (!DstReg.isVirtual() && MRI.getType(SrcReg) == LLT::scalar(1))
+    else if (!DstReg.isVirtual() && MRI.getType(SrcReg).isScalar(1))
       DstBank = &AMDGPU::VCCRegBank;
 
     if (!DstBank)
@@ -4154,7 +4154,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_BUILD_VECTOR:
   case AMDGPU::G_BUILD_VECTOR_TRUNC: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
-    if (DstTy == LLT::fixed_vector(2, 16)) {
+    if (DstTy.isFixedVector(2, 16)) {
       unsigned DstSize = DstTy.getSizeInBits();
       unsigned SrcSize = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
       unsigned Src0BankID = getRegBankID(MI.getOperand(1).getReg(), MRI);

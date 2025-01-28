@@ -33,22 +33,23 @@ body: |
     ; GFX7: liveins: $sgpr0_sgpr1
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(<2 x s32>) = G_LOAD [[COPY]](p4) :: (load (<2 x s32>), addrspace 4)
-    ; GFX7-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 8
-    ; GFX7-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX7-NEXT: [[LOAD1:%[0-9]+]]:sgpr(s32) = G_LOAD [[PTR_ADD]](p4) :: (load (s32) from unknown-address + 8, align 8, addrspace 4)
-    ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
-    ; GFX7-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<3 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[LOAD1]](s32)
-    ; GFX7-NEXT: $sgpr0_sgpr1_sgpr2 = COPY [[BUILD_VECTOR]](<3 x s32>)
+    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(<2 x i32>) = G_LOAD [[COPY]](p4) :: (load (<2 x i32>), addrspace 4)
+    ; GFX7-NEXT: [[C:%[0-9]+]]:sgpr(i64) = G_CONSTANT i64 8
+    ; GFX7-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](i64)
+    ; GFX7-NEXT: [[LOAD1:%[0-9]+]]:sgpr(i32) = G_LOAD [[PTR_ADD]](p4) :: (load (i32) from unknown-address + 8, align 8, addrspace 4)
+    ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(i32), [[UV1:%[0-9]+]]:sgpr(i32) = G_UNMERGE_VALUES [[LOAD]](<2 x i32>)
+    ; GFX7-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<3 x i32>) = G_BUILD_VECTOR [[UV]](i32), [[UV1]](i32), [[LOAD1]](i32)
+    ; GFX7-NEXT: $sgpr0_sgpr1_sgpr2 = COPY [[BUILD_VECTOR]](<3 x i32>)
+    ;
     ; GFX12-LABEL: name: split_smrd_load_range
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(<3 x s32>) = G_LOAD [[COPY]](p4) :: (load (<3 x s32>), align 8, !range !0, addrspace 4)
-    ; GFX12-NEXT: $sgpr0_sgpr1_sgpr2 = COPY [[LOAD]](<3 x s32>)
+    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(<3 x i32>) = G_LOAD [[COPY]](p4) :: (load (<3 x i32>), align 8, !range !0, addrspace 4)
+    ; GFX12-NEXT: $sgpr0_sgpr1_sgpr2 = COPY [[LOAD]](<3 x i32>)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<3 x s32>) = G_LOAD %0 :: (load (<3 x s32>), align 8, addrspace 4, !range !0)
-    $sgpr0_sgpr1_sgpr2 = COPY %1
+    %1:_(<3 x i32>) = G_LOAD %0(p4) :: (load (<3 x i32>), align 8, !range !0, addrspace 4)
+    $sgpr0_sgpr1_sgpr2 = COPY %1(<3 x i32>)
 
 ...
 
@@ -63,21 +64,22 @@ body: |
     ; GFX7: liveins: $sgpr0_sgpr1
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(<2 x s32>) = G_LOAD [[COPY]](p4) :: (load (<2 x s32>), !tbaa !2, addrspace 4)
-    ; GFX7-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 8
-    ; GFX7-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX7-NEXT: [[LOAD1:%[0-9]+]]:sgpr(s32) = G_LOAD [[PTR_ADD]](p4) :: (load (s32) from unknown-address + 8, align 8, !tbaa !2, addrspace 4)
-    ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
-    ; GFX7-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<3 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[LOAD1]](s32)
-    ; GFX7-NEXT: $sgpr0_sgpr1_sgpr2 = COPY [[BUILD_VECTOR]](<3 x s32>)
+    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(<2 x i32>) = G_LOAD [[COPY]](p4) :: (load (<2 x i32>), !tbaa !3, addrspace 4)
+    ; GFX7-NEXT: [[C:%[0-9]+]]:sgpr(i64) = G_CONSTANT i64 8
+    ; GFX7-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](i64)
+    ; GFX7-NEXT: [[LOAD1:%[0-9]+]]:sgpr(i32) = G_LOAD [[PTR_ADD]](p4) :: (load (i32) from unknown-address + 8, align 8, !tbaa !3, addrspace 4)
+    ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(i32), [[UV1:%[0-9]+]]:sgpr(i32) = G_UNMERGE_VALUES [[LOAD]](<2 x i32>)
+    ; GFX7-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<3 x i32>) = G_BUILD_VECTOR [[UV]](i32), [[UV1]](i32), [[LOAD1]](i32)
+    ; GFX7-NEXT: $sgpr0_sgpr1_sgpr2 = COPY [[BUILD_VECTOR]](<3 x i32>)
+    ;
     ; GFX12-LABEL: name: split_smrd_load_tbaa
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(<3 x s32>) = G_LOAD [[COPY]](p4) :: (load (<3 x s32>), align 8, !tbaa !2, addrspace 4)
-    ; GFX12-NEXT: $sgpr0_sgpr1_sgpr2 = COPY [[LOAD]](<3 x s32>)
+    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(<3 x i32>) = G_LOAD [[COPY]](p4) :: (load (<3 x i32>), align 8, !tbaa !3, addrspace 4)
+    ; GFX12-NEXT: $sgpr0_sgpr1_sgpr2 = COPY [[LOAD]](<3 x i32>)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<3 x s32>) = G_LOAD %0 :: (load (<3 x s32>), align 8, addrspace 4, !tbaa !1)
-    $sgpr0_sgpr1_sgpr2 = COPY %1
+    %1:_(<3 x i32>) = G_LOAD %0(p4) :: (load (<3 x i32>), align 8, !tbaa !2, addrspace 4)
+    $sgpr0_sgpr1_sgpr2 = COPY %1(<3 x i32>)
 
 ...

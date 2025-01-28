@@ -10,7 +10,7 @@ define amdgpu_ps <2 x half> @flat_atomic_fadd_v2f16_rtn(ptr %ptr, <2 x half> %da
   ; GFX940-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX940-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX940-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-  ; GFX940-NEXT:   [[FLAT_ATOMIC_PK_ADD_F16_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_PK_ADD_F16_RTN [[REG_SEQUENCE]], [[COPY2]], 0, 1, implicit $exec, implicit $flat_scr :: (load store syncscope("agent") seq_cst (<2 x s16>) on %ir.ptr)
+  ; GFX940-NEXT:   [[FLAT_ATOMIC_PK_ADD_F16_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_PK_ADD_F16_RTN [[REG_SEQUENCE]], [[COPY2]], 0, 1, implicit $exec, implicit $flat_scr :: (load store syncscope("agent") seq_cst (<2 x f16>) on %ir.ptr)
   ; GFX940-NEXT:   $vgpr0 = COPY [[FLAT_ATOMIC_PK_ADD_F16_RTN]]
   ; GFX940-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %ret = atomicrmw fadd ptr %ptr, <2 x half> %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
@@ -27,7 +27,7 @@ define amdgpu_ps <2 x half> @flat_atomic_fadd_v2f16_saddr_rtn(ptr inreg %ptr, <2
   ; GFX940-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX940-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX940-NEXT:   [[COPY3:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]]
-  ; GFX940-NEXT:   [[FLAT_ATOMIC_PK_ADD_F16_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_PK_ADD_F16_RTN [[COPY3]], [[COPY2]], 0, 1, implicit $exec, implicit $flat_scr :: (load store syncscope("agent") seq_cst (<2 x s16>) on %ir.ptr)
+  ; GFX940-NEXT:   [[FLAT_ATOMIC_PK_ADD_F16_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_PK_ADD_F16_RTN [[COPY3]], [[COPY2]], 0, 1, implicit $exec, implicit $flat_scr :: (load store syncscope("agent") seq_cst (<2 x f16>) on %ir.ptr)
   ; GFX940-NEXT:   $vgpr0 = COPY [[FLAT_ATOMIC_PK_ADD_F16_RTN]]
   ; GFX940-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %ret = atomicrmw fadd ptr %ptr, <2 x half> %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
@@ -43,7 +43,7 @@ define amdgpu_ps void @flat_atomic_fadd_v2f16_no_rtn(ptr %ptr, <2 x half> %data)
   ; GFX940-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX940-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX940-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-  ; GFX940-NEXT:   FLAT_ATOMIC_PK_ADD_F16 [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("agent") seq_cst (<2 x s16>) on %ir.ptr)
+  ; GFX940-NEXT:   FLAT_ATOMIC_PK_ADD_F16 [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("agent") seq_cst (<2 x f16>) on %ir.ptr)
   ; GFX940-NEXT:   S_ENDPGM 0
   %ret = atomicrmw fadd ptr %ptr, <2 x half> %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
   ret void
@@ -59,7 +59,7 @@ define amdgpu_ps void @flat_atomic_fadd_v2f16_saddr_no_rtn(ptr inreg %ptr, <2 x 
   ; GFX940-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; GFX940-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX940-NEXT:   [[COPY3:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]]
-  ; GFX940-NEXT:   FLAT_ATOMIC_PK_ADD_F16 [[COPY3]], [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("agent") seq_cst (<2 x s16>) on %ir.ptr)
+  ; GFX940-NEXT:   FLAT_ATOMIC_PK_ADD_F16 [[COPY3]], [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr :: (load store syncscope("agent") seq_cst (<2 x f16>) on %ir.ptr)
   ; GFX940-NEXT:   S_ENDPGM 0
   %ret = atomicrmw fadd ptr %ptr, <2 x half> %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
   ret void

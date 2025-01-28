@@ -15,44 +15,57 @@ body: |
     ; SI-LABEL: name: test_intrinsic_trunc_s16
     ; SI: liveins: $vgpr0
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; SI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; SI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
-    ; SI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[FPEXT]]
-    ; SI-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[INTRINSIC_TRUNC]](s32)
-    ; SI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
-    ; SI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; SI-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
+    ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(f16) = G_BITCAST [[TRUNC]](i16)
+    ; SI-NEXT: [[FPEXT:%[0-9]+]]:_(f32) = G_FPEXT [[BITCAST]](f16)
+    ; SI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(f32) = G_INTRINSIC_TRUNC [[FPEXT]]
+    ; SI-NEXT: [[FPTRUNC:%[0-9]+]]:_(f16) = G_FPTRUNC [[INTRINSIC_TRUNC]](f32)
+    ; SI-NEXT: [[BITCAST1:%[0-9]+]]:_(i16) = G_BITCAST [[FPTRUNC]](f16)
+    ; SI-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST1]](i16)
+    ; SI-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
+    ;
     ; CI-LABEL: name: test_intrinsic_trunc_s16
     ; CI: liveins: $vgpr0
     ; CI-NEXT: {{  $}}
-    ; CI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; CI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
-    ; CI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[FPEXT]]
-    ; CI-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[INTRINSIC_TRUNC]](s32)
-    ; CI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
-    ; CI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; CI-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CI-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
+    ; CI-NEXT: [[BITCAST:%[0-9]+]]:_(f16) = G_BITCAST [[TRUNC]](i16)
+    ; CI-NEXT: [[FPEXT:%[0-9]+]]:_(f32) = G_FPEXT [[BITCAST]](f16)
+    ; CI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(f32) = G_INTRINSIC_TRUNC [[FPEXT]]
+    ; CI-NEXT: [[FPTRUNC:%[0-9]+]]:_(f16) = G_FPTRUNC [[INTRINSIC_TRUNC]](f32)
+    ; CI-NEXT: [[BITCAST1:%[0-9]+]]:_(i16) = G_BITCAST [[FPTRUNC]](f16)
+    ; CI-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST1]](i16)
+    ; CI-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
+    ;
     ; VI-LABEL: name: test_intrinsic_trunc_s16
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; VI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s16) = G_INTRINSIC_TRUNC [[TRUNC]]
-    ; VI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INTRINSIC_TRUNC]](s16)
-    ; VI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
+    ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(f16) = G_BITCAST [[TRUNC]](i16)
+    ; VI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(f16) = G_INTRINSIC_TRUNC [[BITCAST]]
+    ; VI-NEXT: [[BITCAST1:%[0-9]+]]:_(i16) = G_BITCAST [[INTRINSIC_TRUNC]](f16)
+    ; VI-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST1]](i16)
+    ; VI-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
+    ;
     ; GFX9-LABEL: name: test_intrinsic_trunc_s16
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; GFX9-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s16) = G_INTRINSIC_TRUNC [[TRUNC]]
-    ; GFX9-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[INTRINSIC_TRUNC]](s16)
-    ; GFX9-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s16) = G_TRUNC %0
-    %2:_(s16) = G_INTRINSIC_TRUNC %1
-    %3:_(s32) = G_ANYEXT %2
-    $vgpr0 = COPY %3
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
+    ; GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(f16) = G_BITCAST [[TRUNC]](i16)
+    ; GFX9-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(f16) = G_INTRINSIC_TRUNC [[BITCAST]]
+    ; GFX9-NEXT: [[BITCAST1:%[0-9]+]]:_(i16) = G_BITCAST [[INTRINSIC_TRUNC]](f16)
+    ; GFX9-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST1]](i16)
+    ; GFX9-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i16) = G_TRUNC %0(i32)
+    %4:_(f16) = G_BITCAST %1(i16)
+    %2:_(f16) = G_INTRINSIC_TRUNC %4
+    %5:_(i16) = G_BITCAST %2(f16)
+    %3:_(i32) = G_ANYEXT %5(i16)
+    $vgpr0 = COPY %3(i32)
 ...
 
 ---
@@ -64,30 +77,43 @@ body: |
     ; SI-LABEL: name: test_intrinsic_trunc_s32
     ; SI: liveins: $vgpr0
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; SI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[COPY]]
-    ; SI-NEXT: $vgpr0 = COPY [[INTRINSIC_TRUNC]](s32)
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST [[COPY]](i32)
+    ; SI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(f32) = G_INTRINSIC_TRUNC [[BITCAST]]
+    ; SI-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[INTRINSIC_TRUNC]](f32)
+    ; SI-NEXT: $vgpr0 = COPY [[BITCAST1]](i32)
+    ;
     ; CI-LABEL: name: test_intrinsic_trunc_s32
     ; CI: liveins: $vgpr0
     ; CI-NEXT: {{  $}}
-    ; CI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[COPY]]
-    ; CI-NEXT: $vgpr0 = COPY [[INTRINSIC_TRUNC]](s32)
+    ; CI-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CI-NEXT: [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST [[COPY]](i32)
+    ; CI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(f32) = G_INTRINSIC_TRUNC [[BITCAST]]
+    ; CI-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[INTRINSIC_TRUNC]](f32)
+    ; CI-NEXT: $vgpr0 = COPY [[BITCAST1]](i32)
+    ;
     ; VI-LABEL: name: test_intrinsic_trunc_s32
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; VI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[COPY]]
-    ; VI-NEXT: $vgpr0 = COPY [[INTRINSIC_TRUNC]](s32)
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST [[COPY]](i32)
+    ; VI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(f32) = G_INTRINSIC_TRUNC [[BITCAST]]
+    ; VI-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[INTRINSIC_TRUNC]](f32)
+    ; VI-NEXT: $vgpr0 = COPY [[BITCAST1]](i32)
+    ;
     ; GFX9-LABEL: name: test_intrinsic_trunc_s32
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GFX9-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[COPY]]
-    ; GFX9-NEXT: $vgpr0 = COPY [[INTRINSIC_TRUNC]](s32)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = G_INTRINSIC_TRUNC %0
-    $vgpr0 = COPY %1
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST [[COPY]](i32)
+    ; GFX9-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(f32) = G_INTRINSIC_TRUNC [[BITCAST]]
+    ; GFX9-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[INTRINSIC_TRUNC]](f32)
+    ; GFX9-NEXT: $vgpr0 = COPY [[BITCAST1]](i32)
+    %0:_(i32) = COPY $vgpr0
+    %2:_(f32) = G_BITCAST %0(i32)
+    %1:_(f32) = G_INTRINSIC_TRUNC %2
+    %3:_(i32) = G_BITCAST %1(f32)
+    $vgpr0 = COPY %3(i32)
 ...
 
 ---
@@ -99,49 +125,65 @@ body: |
     ; SI-LABEL: name: test_intrinsic_trunc_s64
     ; SI: liveins: $vgpr0_vgpr1
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; SI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
-    ; SI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 11
-    ; SI-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[UV1]](s32), [[C]](s32), [[C1]](s32)
-    ; SI-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1023
-    ; SI-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[INT]], [[C2]]
-    ; SI-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
-    ; SI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[UV1]], [[C3]]
-    ; SI-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 4503599627370495
-    ; SI-NEXT: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; SI-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C5]](s32), [[AND]](s32)
-    ; SI-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[C4]], [[SUB]](s32)
-    ; SI-NEXT: [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-    ; SI-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[ASHR]], [[C6]]
-    ; SI-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[XOR]]
-    ; SI-NEXT: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 51
-    ; SI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SUB]](s32), [[C5]]
-    ; SI-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB]](s32), [[C7]]
-    ; SI-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[MV]], [[AND1]]
-    ; SI-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[COPY]], [[SELECT]]
-    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[SELECT1]](s64)
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $vgpr0_vgpr1
+    ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(f64) = G_BITCAST [[COPY]](i64)
+    ; SI-NEXT: [[BITCAST1:%[0-9]+]]:_(i64) = G_BITCAST [[BITCAST]](f64)
+    ; SI-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[BITCAST1]](i64)
+    ; SI-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
+    ; SI-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 11
+    ; SI-NEXT: [[INT:%[0-9]+]]:_(i32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[UV1]](i32), [[C]](i32), [[C1]](i32)
+    ; SI-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 1023
+    ; SI-NEXT: [[SUB:%[0-9]+]]:_(i32) = G_SUB [[INT]], [[C2]]
+    ; SI-NEXT: [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 -2147483648
+    ; SI-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[UV1]], [[C3]]
+    ; SI-NEXT: [[C4:%[0-9]+]]:_(i64) = G_CONSTANT i64 4503599627370495
+    ; SI-NEXT: [[C5:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; SI-NEXT: [[MV:%[0-9]+]]:_(i64) = G_MERGE_VALUES [[C5]](i32), [[AND]](i32)
+    ; SI-NEXT: [[BITCAST2:%[0-9]+]]:_(f64) = G_BITCAST [[MV]](i64)
+    ; SI-NEXT: [[ASHR:%[0-9]+]]:_(i64) = G_ASHR [[C4]], [[SUB]](i32)
+    ; SI-NEXT: [[C6:%[0-9]+]]:_(i64) = G_CONSTANT i64 -1
+    ; SI-NEXT: [[XOR:%[0-9]+]]:_(i64) = G_XOR [[ASHR]], [[C6]]
+    ; SI-NEXT: [[AND1:%[0-9]+]]:_(i64) = G_AND [[BITCAST1]], [[XOR]]
+    ; SI-NEXT: [[BITCAST3:%[0-9]+]]:_(f64) = G_BITCAST [[AND1]](i64)
+    ; SI-NEXT: [[C7:%[0-9]+]]:_(i32) = G_CONSTANT i32 51
+    ; SI-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(slt), [[SUB]](i32), [[C5]]
+    ; SI-NEXT: [[ICMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(sgt), [[SUB]](i32), [[C7]]
+    ; SI-NEXT: [[SELECT:%[0-9]+]]:_(f64) = G_SELECT [[ICMP]](i1), [[BITCAST2]], [[BITCAST3]]
+    ; SI-NEXT: [[SELECT1:%[0-9]+]]:_(f64) = G_SELECT [[ICMP1]](i1), [[BITCAST]], [[SELECT]]
+    ; SI-NEXT: [[BITCAST4:%[0-9]+]]:_(i64) = G_BITCAST [[SELECT1]](f64)
+    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST4]](i64)
+    ;
     ; CI-LABEL: name: test_intrinsic_trunc_s64
     ; CI: liveins: $vgpr0_vgpr1
     ; CI-NEXT: {{  $}}
-    ; CI-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[COPY]]
-    ; CI-NEXT: $vgpr0_vgpr1 = COPY [[INTRINSIC_TRUNC]](s64)
+    ; CI-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $vgpr0_vgpr1
+    ; CI-NEXT: [[BITCAST:%[0-9]+]]:_(f64) = G_BITCAST [[COPY]](i64)
+    ; CI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(f64) = G_INTRINSIC_TRUNC [[BITCAST]]
+    ; CI-NEXT: [[BITCAST1:%[0-9]+]]:_(i64) = G_BITCAST [[INTRINSIC_TRUNC]](f64)
+    ; CI-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST1]](i64)
+    ;
     ; VI-LABEL: name: test_intrinsic_trunc_s64
     ; VI: liveins: $vgpr0_vgpr1
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; VI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[COPY]]
-    ; VI-NEXT: $vgpr0_vgpr1 = COPY [[INTRINSIC_TRUNC]](s64)
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $vgpr0_vgpr1
+    ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(f64) = G_BITCAST [[COPY]](i64)
+    ; VI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(f64) = G_INTRINSIC_TRUNC [[BITCAST]]
+    ; VI-NEXT: [[BITCAST1:%[0-9]+]]:_(i64) = G_BITCAST [[INTRINSIC_TRUNC]](f64)
+    ; VI-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST1]](i64)
+    ;
     ; GFX9-LABEL: name: test_intrinsic_trunc_s64
     ; GFX9: liveins: $vgpr0_vgpr1
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; GFX9-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[COPY]]
-    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[INTRINSIC_TRUNC]](s64)
-    %0:_(s64) = COPY $vgpr0_vgpr1
-    %1:_(s64) = G_INTRINSIC_TRUNC %0
-    $vgpr0_vgpr1 = COPY %1
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(f64) = G_BITCAST [[COPY]](i64)
+    ; GFX9-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(f64) = G_INTRINSIC_TRUNC [[BITCAST]]
+    ; GFX9-NEXT: [[BITCAST1:%[0-9]+]]:_(i64) = G_BITCAST [[INTRINSIC_TRUNC]](f64)
+    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST1]](i64)
+    %0:_(i64) = COPY $vgpr0_vgpr1
+    %2:_(f64) = G_BITCAST %0(i64)
+    %1:_(f64) = G_INTRINSIC_TRUNC %2
+    %3:_(i64) = G_BITCAST %1(f64)
+    $vgpr0_vgpr1 = COPY %3(i64)
 ...
 
 ---
@@ -153,78 +195,97 @@ body: |
     ; SI-LABEL: name: test_intrinsic_trunc_v2s16
     ; SI: liveins: $vgpr0
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
-    ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
-    ; SI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
-    ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; SI-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; SI-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; SI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
-    ; SI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[FPEXT]]
-    ; SI-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[INTRINSIC_TRUNC]](s32)
-    ; SI-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
-    ; SI-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[FPEXT1]]
-    ; SI-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[INTRINSIC_TRUNC1]](s32)
-    ; SI-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC]](s16)
-    ; SI-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
-    ; SI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; SI-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-    ; SI-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
-    ; SI-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x i16>) = COPY $vgpr0
+    ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x f16>) = G_BITCAST [[COPY]](<2 x i16>)
+    ; SI-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[BITCAST]](<2 x f16>)
+    ; SI-NEXT: [[TRUNC:%[0-9]+]]:_(f16) = G_TRUNC [[BITCAST1]](i32)
+    ; SI-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; SI-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST1]], [[C]](i32)
+    ; SI-NEXT: [[TRUNC1:%[0-9]+]]:_(f16) = G_TRUNC [[LSHR]](i32)
+    ; SI-NEXT: [[FPEXT:%[0-9]+]]:_(f32) = G_FPEXT [[TRUNC]](f16)
+    ; SI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(f32) = G_INTRINSIC_TRUNC [[FPEXT]]
+    ; SI-NEXT: [[FPTRUNC:%[0-9]+]]:_(f16) = G_FPTRUNC [[INTRINSIC_TRUNC]](f32)
+    ; SI-NEXT: [[FPEXT1:%[0-9]+]]:_(f32) = G_FPEXT [[TRUNC1]](f16)
+    ; SI-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(f32) = G_INTRINSIC_TRUNC [[FPEXT1]]
+    ; SI-NEXT: [[FPTRUNC1:%[0-9]+]]:_(f16) = G_FPTRUNC [[INTRINSIC_TRUNC1]](f32)
+    ; SI-NEXT: [[BITCAST2:%[0-9]+]]:_(i16) = G_BITCAST [[FPTRUNC]](f16)
+    ; SI-NEXT: [[BITCAST3:%[0-9]+]]:_(i16) = G_BITCAST [[FPTRUNC1]](f16)
+    ; SI-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[BITCAST2]](i16)
+    ; SI-NEXT: [[ZEXT1:%[0-9]+]]:_(i32) = G_ZEXT [[BITCAST3]](i16)
+    ; SI-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[ZEXT1]], [[C]](i32)
+    ; SI-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
+    ; SI-NEXT: [[BITCAST4:%[0-9]+]]:_(<2 x f16>) = G_BITCAST [[OR]](i32)
+    ; SI-NEXT: [[BITCAST5:%[0-9]+]]:_(<2 x i16>) = G_BITCAST [[BITCAST4]](<2 x f16>)
+    ; SI-NEXT: $vgpr0 = COPY [[BITCAST5]](<2 x i16>)
+    ;
     ; CI-LABEL: name: test_intrinsic_trunc_v2s16
     ; CI: liveins: $vgpr0
     ; CI-NEXT: {{  $}}
-    ; CI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
-    ; CI-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
-    ; CI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
-    ; CI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CI-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; CI-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; CI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
-    ; CI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[FPEXT]]
-    ; CI-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[INTRINSIC_TRUNC]](s32)
-    ; CI-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
-    ; CI-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[FPEXT1]]
-    ; CI-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[INTRINSIC_TRUNC1]](s32)
-    ; CI-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC]](s16)
-    ; CI-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
-    ; CI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; CI-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-    ; CI-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
-    ; CI-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
+    ; CI-NEXT: [[COPY:%[0-9]+]]:_(<2 x i16>) = COPY $vgpr0
+    ; CI-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x f16>) = G_BITCAST [[COPY]](<2 x i16>)
+    ; CI-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[BITCAST]](<2 x f16>)
+    ; CI-NEXT: [[TRUNC:%[0-9]+]]:_(f16) = G_TRUNC [[BITCAST1]](i32)
+    ; CI-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; CI-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST1]], [[C]](i32)
+    ; CI-NEXT: [[TRUNC1:%[0-9]+]]:_(f16) = G_TRUNC [[LSHR]](i32)
+    ; CI-NEXT: [[FPEXT:%[0-9]+]]:_(f32) = G_FPEXT [[TRUNC]](f16)
+    ; CI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(f32) = G_INTRINSIC_TRUNC [[FPEXT]]
+    ; CI-NEXT: [[FPTRUNC:%[0-9]+]]:_(f16) = G_FPTRUNC [[INTRINSIC_TRUNC]](f32)
+    ; CI-NEXT: [[FPEXT1:%[0-9]+]]:_(f32) = G_FPEXT [[TRUNC1]](f16)
+    ; CI-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(f32) = G_INTRINSIC_TRUNC [[FPEXT1]]
+    ; CI-NEXT: [[FPTRUNC1:%[0-9]+]]:_(f16) = G_FPTRUNC [[INTRINSIC_TRUNC1]](f32)
+    ; CI-NEXT: [[BITCAST2:%[0-9]+]]:_(i16) = G_BITCAST [[FPTRUNC]](f16)
+    ; CI-NEXT: [[BITCAST3:%[0-9]+]]:_(i16) = G_BITCAST [[FPTRUNC1]](f16)
+    ; CI-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[BITCAST2]](i16)
+    ; CI-NEXT: [[ZEXT1:%[0-9]+]]:_(i32) = G_ZEXT [[BITCAST3]](i16)
+    ; CI-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[ZEXT1]], [[C]](i32)
+    ; CI-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
+    ; CI-NEXT: [[BITCAST4:%[0-9]+]]:_(<2 x f16>) = G_BITCAST [[OR]](i32)
+    ; CI-NEXT: [[BITCAST5:%[0-9]+]]:_(<2 x i16>) = G_BITCAST [[BITCAST4]](<2 x f16>)
+    ; CI-NEXT: $vgpr0 = COPY [[BITCAST5]](<2 x i16>)
+    ;
     ; VI-LABEL: name: test_intrinsic_trunc_v2s16
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
-    ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
-    ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
-    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; VI-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; VI-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; VI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s16) = G_INTRINSIC_TRUNC [[TRUNC]]
-    ; VI-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s16) = G_INTRINSIC_TRUNC [[TRUNC1]]
-    ; VI-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[INTRINSIC_TRUNC]](s16)
-    ; VI-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[INTRINSIC_TRUNC1]](s16)
-    ; VI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; VI-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-    ; VI-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
-    ; VI-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x i16>) = COPY $vgpr0
+    ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x f16>) = G_BITCAST [[COPY]](<2 x i16>)
+    ; VI-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[BITCAST]](<2 x f16>)
+    ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(f16) = G_TRUNC [[BITCAST1]](i32)
+    ; VI-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; VI-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST1]], [[C]](i32)
+    ; VI-NEXT: [[TRUNC1:%[0-9]+]]:_(f16) = G_TRUNC [[LSHR]](i32)
+    ; VI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(f16) = G_INTRINSIC_TRUNC [[TRUNC]]
+    ; VI-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(f16) = G_INTRINSIC_TRUNC [[TRUNC1]]
+    ; VI-NEXT: [[BITCAST2:%[0-9]+]]:_(i16) = G_BITCAST [[INTRINSIC_TRUNC]](f16)
+    ; VI-NEXT: [[BITCAST3:%[0-9]+]]:_(i16) = G_BITCAST [[INTRINSIC_TRUNC1]](f16)
+    ; VI-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[BITCAST2]](i16)
+    ; VI-NEXT: [[ZEXT1:%[0-9]+]]:_(i32) = G_ZEXT [[BITCAST3]](i16)
+    ; VI-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[ZEXT1]], [[C]](i32)
+    ; VI-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
+    ; VI-NEXT: [[BITCAST4:%[0-9]+]]:_(<2 x f16>) = G_BITCAST [[OR]](i32)
+    ; VI-NEXT: [[BITCAST5:%[0-9]+]]:_(<2 x i16>) = G_BITCAST [[BITCAST4]](<2 x f16>)
+    ; VI-NEXT: $vgpr0 = COPY [[BITCAST5]](<2 x i16>)
+    ;
     ; GFX9-LABEL: name: test_intrinsic_trunc_v2s16
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
-    ; GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
-    ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
-    ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; GFX9-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s16) = G_INTRINSIC_TRUNC [[TRUNC]]
-    ; GFX9-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s16) = G_INTRINSIC_TRUNC [[TRUNC1]]
-    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[INTRINSIC_TRUNC]](s16), [[INTRINSIC_TRUNC1]](s16)
-    ; GFX9-NEXT: $vgpr0 = COPY [[BUILD_VECTOR]](<2 x s16>)
-    %0:_(<2 x s16>) = COPY $vgpr0
-    %1:_(<2 x s16>) = G_INTRINSIC_TRUNC %0
-    $vgpr0 = COPY %1
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x i16>) = COPY $vgpr0
+    ; GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x f16>) = G_BITCAST [[COPY]](<2 x i16>)
+    ; GFX9-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[BITCAST]](<2 x f16>)
+    ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(f16) = G_TRUNC [[BITCAST1]](i32)
+    ; GFX9-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST1]], [[C]](i32)
+    ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(f16) = G_TRUNC [[LSHR]](i32)
+    ; GFX9-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(f16) = G_INTRINSIC_TRUNC [[TRUNC]]
+    ; GFX9-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(f16) = G_INTRINSIC_TRUNC [[TRUNC1]]
+    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f16>) = G_BUILD_VECTOR [[INTRINSIC_TRUNC]](f16), [[INTRINSIC_TRUNC1]](f16)
+    ; GFX9-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x i16>) = G_BITCAST [[BUILD_VECTOR]](<2 x f16>)
+    ; GFX9-NEXT: $vgpr0 = COPY [[BITCAST2]](<2 x i16>)
+    %0:_(<2 x i16>) = COPY $vgpr0
+    %2:_(<2 x f16>) = G_BITCAST %0(<2 x i16>)
+    %1:_(<2 x f16>) = G_INTRINSIC_TRUNC %2
+    %3:_(<2 x i16>) = G_BITCAST %1(<2 x f16>)
+    $vgpr0 = COPY %3(<2 x i16>)
 ...
 
 ---
@@ -236,42 +297,55 @@ body: |
     ; SI-LABEL: name: test_intrinsic_trunc_v2s32
     ; SI: liveins: $vgpr0_vgpr1
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; SI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
-    ; SI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[UV]]
-    ; SI-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[UV1]]
-    ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[INTRINSIC_TRUNC]](s32), [[INTRINSIC_TRUNC1]](s32)
-    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x f32>) = G_BITCAST [[COPY]](<2 x i32>)
+    ; SI-NEXT: [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[BITCAST]](<2 x f32>)
+    ; SI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(f32) = G_INTRINSIC_TRUNC [[UV]]
+    ; SI-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(f32) = G_INTRINSIC_TRUNC [[UV1]]
+    ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f32>) = G_BUILD_VECTOR [[INTRINSIC_TRUNC]](f32), [[INTRINSIC_TRUNC1]](f32)
+    ; SI-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[BUILD_VECTOR]](<2 x f32>)
+    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST1]](<2 x i32>)
+    ;
     ; CI-LABEL: name: test_intrinsic_trunc_v2s32
     ; CI: liveins: $vgpr0_vgpr1
     ; CI-NEXT: {{  $}}
-    ; CI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
-    ; CI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[UV]]
-    ; CI-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[UV1]]
-    ; CI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[INTRINSIC_TRUNC]](s32), [[INTRINSIC_TRUNC1]](s32)
-    ; CI-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    ; CI-NEXT: [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    ; CI-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x f32>) = G_BITCAST [[COPY]](<2 x i32>)
+    ; CI-NEXT: [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[BITCAST]](<2 x f32>)
+    ; CI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(f32) = G_INTRINSIC_TRUNC [[UV]]
+    ; CI-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(f32) = G_INTRINSIC_TRUNC [[UV1]]
+    ; CI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f32>) = G_BUILD_VECTOR [[INTRINSIC_TRUNC]](f32), [[INTRINSIC_TRUNC1]](f32)
+    ; CI-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[BUILD_VECTOR]](<2 x f32>)
+    ; CI-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST1]](<2 x i32>)
+    ;
     ; VI-LABEL: name: test_intrinsic_trunc_v2s32
     ; VI: liveins: $vgpr0_vgpr1
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; VI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
-    ; VI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[UV]]
-    ; VI-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[UV1]]
-    ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[INTRINSIC_TRUNC]](s32), [[INTRINSIC_TRUNC1]](s32)
-    ; VI-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x f32>) = G_BITCAST [[COPY]](<2 x i32>)
+    ; VI-NEXT: [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[BITCAST]](<2 x f32>)
+    ; VI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(f32) = G_INTRINSIC_TRUNC [[UV]]
+    ; VI-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(f32) = G_INTRINSIC_TRUNC [[UV1]]
+    ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f32>) = G_BUILD_VECTOR [[INTRINSIC_TRUNC]](f32), [[INTRINSIC_TRUNC1]](f32)
+    ; VI-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[BUILD_VECTOR]](<2 x f32>)
+    ; VI-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST1]](<2 x i32>)
+    ;
     ; GFX9-LABEL: name: test_intrinsic_trunc_v2s32
     ; GFX9: liveins: $vgpr0_vgpr1
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
-    ; GFX9-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[UV]]
-    ; GFX9-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s32) = G_INTRINSIC_TRUNC [[UV1]]
-    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[INTRINSIC_TRUNC]](s32), [[INTRINSIC_TRUNC1]](s32)
-    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
-    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    %1:_(<2 x s32>) = G_INTRINSIC_TRUNC %0
-    $vgpr0_vgpr1 = COPY %1
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x f32>) = G_BITCAST [[COPY]](<2 x i32>)
+    ; GFX9-NEXT: [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[BITCAST]](<2 x f32>)
+    ; GFX9-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(f32) = G_INTRINSIC_TRUNC [[UV]]
+    ; GFX9-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(f32) = G_INTRINSIC_TRUNC [[UV1]]
+    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f32>) = G_BUILD_VECTOR [[INTRINSIC_TRUNC]](f32), [[INTRINSIC_TRUNC1]](f32)
+    ; GFX9-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[BUILD_VECTOR]](<2 x f32>)
+    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST1]](<2 x i32>)
+    %0:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    %2:_(<2 x f32>) = G_BITCAST %0(<2 x i32>)
+    %1:_(<2 x f32>) = G_INTRINSIC_TRUNC %2
+    %3:_(<2 x i32>) = G_BITCAST %1(<2 x f32>)
+    $vgpr0_vgpr1 = COPY %3(<2 x i32>)
 ...
 
 ---
@@ -283,70 +357,89 @@ body: |
     ; SI-LABEL: name: test_intrinsic_trunc_v2s64
     ; SI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; SI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
-    ; SI-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV]](s64)
-    ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
-    ; SI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 11
-    ; SI-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[UV3]](s32), [[C]](s32), [[C1]](s32)
-    ; SI-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1023
-    ; SI-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[INT]], [[C2]]
-    ; SI-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
-    ; SI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[UV3]], [[C3]]
-    ; SI-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 4503599627370495
-    ; SI-NEXT: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; SI-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C5]](s32), [[AND]](s32)
-    ; SI-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[C4]], [[SUB]](s32)
-    ; SI-NEXT: [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-    ; SI-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[ASHR]], [[C6]]
-    ; SI-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[UV]], [[XOR]]
-    ; SI-NEXT: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 51
-    ; SI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SUB]](s32), [[C5]]
-    ; SI-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB]](s32), [[C7]]
-    ; SI-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[MV]], [[AND1]]
-    ; SI-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[UV]], [[SELECT]]
-    ; SI-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV1]](s64)
-    ; SI-NEXT: [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[UV5]](s32), [[C]](s32), [[C1]](s32)
-    ; SI-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[INT1]], [[C2]]
-    ; SI-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[UV5]], [[C3]]
-    ; SI-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C5]](s32), [[AND2]](s32)
-    ; SI-NEXT: [[ASHR1:%[0-9]+]]:_(s64) = G_ASHR [[C4]], [[SUB1]](s32)
-    ; SI-NEXT: [[XOR1:%[0-9]+]]:_(s64) = G_XOR [[ASHR1]], [[C6]]
-    ; SI-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND [[UV1]], [[XOR1]]
-    ; SI-NEXT: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SUB1]](s32), [[C5]]
-    ; SI-NEXT: [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB1]](s32), [[C7]]
-    ; SI-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP2]](s1), [[MV1]], [[AND3]]
-    ; SI-NEXT: [[SELECT3:%[0-9]+]]:_(s64) = G_SELECT [[ICMP3]](s1), [[UV1]], [[SELECT2]]
-    ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[SELECT1]](s64), [[SELECT3]](s64)
-    ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY]](<2 x i64>)
+    ; SI-NEXT: [[UV:%[0-9]+]]:_(f64), [[UV1:%[0-9]+]]:_(f64) = G_UNMERGE_VALUES [[BITCAST]](<2 x f64>)
+    ; SI-NEXT: [[BITCAST1:%[0-9]+]]:_(i64) = G_BITCAST [[UV]](f64)
+    ; SI-NEXT: [[UV2:%[0-9]+]]:_(i32), [[UV3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[BITCAST1]](i64)
+    ; SI-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 20
+    ; SI-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 11
+    ; SI-NEXT: [[INT:%[0-9]+]]:_(i32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[UV3]](i32), [[C]](i32), [[C1]](i32)
+    ; SI-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 1023
+    ; SI-NEXT: [[SUB:%[0-9]+]]:_(i32) = G_SUB [[INT]], [[C2]]
+    ; SI-NEXT: [[C3:%[0-9]+]]:_(i32) = G_CONSTANT i32 -2147483648
+    ; SI-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[UV3]], [[C3]]
+    ; SI-NEXT: [[C4:%[0-9]+]]:_(i64) = G_CONSTANT i64 4503599627370495
+    ; SI-NEXT: [[C5:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; SI-NEXT: [[MV:%[0-9]+]]:_(i64) = G_MERGE_VALUES [[C5]](i32), [[AND]](i32)
+    ; SI-NEXT: [[BITCAST2:%[0-9]+]]:_(f64) = G_BITCAST [[MV]](i64)
+    ; SI-NEXT: [[ASHR:%[0-9]+]]:_(i64) = G_ASHR [[C4]], [[SUB]](i32)
+    ; SI-NEXT: [[C6:%[0-9]+]]:_(i64) = G_CONSTANT i64 -1
+    ; SI-NEXT: [[XOR:%[0-9]+]]:_(i64) = G_XOR [[ASHR]], [[C6]]
+    ; SI-NEXT: [[AND1:%[0-9]+]]:_(i64) = G_AND [[BITCAST1]], [[XOR]]
+    ; SI-NEXT: [[BITCAST3:%[0-9]+]]:_(f64) = G_BITCAST [[AND1]](i64)
+    ; SI-NEXT: [[C7:%[0-9]+]]:_(i32) = G_CONSTANT i32 51
+    ; SI-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(slt), [[SUB]](i32), [[C5]]
+    ; SI-NEXT: [[ICMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(sgt), [[SUB]](i32), [[C7]]
+    ; SI-NEXT: [[SELECT:%[0-9]+]]:_(f64) = G_SELECT [[ICMP]](i1), [[BITCAST2]], [[BITCAST3]]
+    ; SI-NEXT: [[SELECT1:%[0-9]+]]:_(f64) = G_SELECT [[ICMP1]](i1), [[UV]], [[SELECT]]
+    ; SI-NEXT: [[BITCAST4:%[0-9]+]]:_(i64) = G_BITCAST [[UV1]](f64)
+    ; SI-NEXT: [[UV4:%[0-9]+]]:_(i32), [[UV5:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[BITCAST4]](i64)
+    ; SI-NEXT: [[INT1:%[0-9]+]]:_(i32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[UV5]](i32), [[C]](i32), [[C1]](i32)
+    ; SI-NEXT: [[SUB1:%[0-9]+]]:_(i32) = G_SUB [[INT1]], [[C2]]
+    ; SI-NEXT: [[AND2:%[0-9]+]]:_(i32) = G_AND [[UV5]], [[C3]]
+    ; SI-NEXT: [[MV1:%[0-9]+]]:_(i64) = G_MERGE_VALUES [[C5]](i32), [[AND2]](i32)
+    ; SI-NEXT: [[BITCAST5:%[0-9]+]]:_(f64) = G_BITCAST [[MV1]](i64)
+    ; SI-NEXT: [[ASHR1:%[0-9]+]]:_(i64) = G_ASHR [[C4]], [[SUB1]](i32)
+    ; SI-NEXT: [[XOR1:%[0-9]+]]:_(i64) = G_XOR [[ASHR1]], [[C6]]
+    ; SI-NEXT: [[AND3:%[0-9]+]]:_(i64) = G_AND [[BITCAST4]], [[XOR1]]
+    ; SI-NEXT: [[BITCAST6:%[0-9]+]]:_(f64) = G_BITCAST [[AND3]](i64)
+    ; SI-NEXT: [[ICMP2:%[0-9]+]]:_(i1) = G_ICMP intpred(slt), [[SUB1]](i32), [[C5]]
+    ; SI-NEXT: [[ICMP3:%[0-9]+]]:_(i1) = G_ICMP intpred(sgt), [[SUB1]](i32), [[C7]]
+    ; SI-NEXT: [[SELECT2:%[0-9]+]]:_(f64) = G_SELECT [[ICMP2]](i1), [[BITCAST5]], [[BITCAST6]]
+    ; SI-NEXT: [[SELECT3:%[0-9]+]]:_(f64) = G_SELECT [[ICMP3]](i1), [[UV1]], [[SELECT2]]
+    ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f64>) = G_BUILD_VECTOR [[SELECT1]](f64), [[SELECT3]](f64)
+    ; SI-NEXT: [[BITCAST7:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[BUILD_VECTOR]](<2 x f64>)
+    ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST7]](<2 x i64>)
+    ;
     ; CI-LABEL: name: test_intrinsic_trunc_v2s64
     ; CI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
     ; CI-NEXT: {{  $}}
-    ; CI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
-    ; CI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[UV]]
-    ; CI-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[UV1]]
-    ; CI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[INTRINSIC_TRUNC]](s64), [[INTRINSIC_TRUNC1]](s64)
-    ; CI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
+    ; CI-NEXT: [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CI-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY]](<2 x i64>)
+    ; CI-NEXT: [[UV:%[0-9]+]]:_(f64), [[UV1:%[0-9]+]]:_(f64) = G_UNMERGE_VALUES [[BITCAST]](<2 x f64>)
+    ; CI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(f64) = G_INTRINSIC_TRUNC [[UV]]
+    ; CI-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(f64) = G_INTRINSIC_TRUNC [[UV1]]
+    ; CI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f64>) = G_BUILD_VECTOR [[INTRINSIC_TRUNC]](f64), [[INTRINSIC_TRUNC1]](f64)
+    ; CI-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[BUILD_VECTOR]](<2 x f64>)
+    ; CI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST1]](<2 x i64>)
+    ;
     ; VI-LABEL: name: test_intrinsic_trunc_v2s64
     ; VI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; VI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
-    ; VI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[UV]]
-    ; VI-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[UV1]]
-    ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[INTRINSIC_TRUNC]](s64), [[INTRINSIC_TRUNC1]](s64)
-    ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY]](<2 x i64>)
+    ; VI-NEXT: [[UV:%[0-9]+]]:_(f64), [[UV1:%[0-9]+]]:_(f64) = G_UNMERGE_VALUES [[BITCAST]](<2 x f64>)
+    ; VI-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(f64) = G_INTRINSIC_TRUNC [[UV]]
+    ; VI-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(f64) = G_INTRINSIC_TRUNC [[UV1]]
+    ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f64>) = G_BUILD_VECTOR [[INTRINSIC_TRUNC]](f64), [[INTRINSIC_TRUNC1]](f64)
+    ; VI-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[BUILD_VECTOR]](<2 x f64>)
+    ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST1]](<2 x i64>)
+    ;
     ; GFX9-LABEL: name: test_intrinsic_trunc_v2s64
     ; GFX9: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
-    ; GFX9-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[UV]]
-    ; GFX9-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[UV1]]
-    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[INTRINSIC_TRUNC]](s64), [[INTRINSIC_TRUNC1]](s64)
-    ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
-    %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    %1:_(<2 x s64>) = G_INTRINSIC_TRUNC %0
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY]](<2 x i64>)
+    ; GFX9-NEXT: [[UV:%[0-9]+]]:_(f64), [[UV1:%[0-9]+]]:_(f64) = G_UNMERGE_VALUES [[BITCAST]](<2 x f64>)
+    ; GFX9-NEXT: [[INTRINSIC_TRUNC:%[0-9]+]]:_(f64) = G_INTRINSIC_TRUNC [[UV]]
+    ; GFX9-NEXT: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(f64) = G_INTRINSIC_TRUNC [[UV1]]
+    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f64>) = G_BUILD_VECTOR [[INTRINSIC_TRUNC]](f64), [[INTRINSIC_TRUNC1]](f64)
+    ; GFX9-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[BUILD_VECTOR]](<2 x f64>)
+    ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST1]](<2 x i64>)
+    %0:_(<2 x i64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %2:_(<2 x f64>) = G_BITCAST %0(<2 x i64>)
+    %1:_(<2 x f64>) = G_INTRINSIC_TRUNC %2
+    %3:_(<2 x i64>) = G_BITCAST %1(<2 x f64>)
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %3(<2 x i64>)
 ...

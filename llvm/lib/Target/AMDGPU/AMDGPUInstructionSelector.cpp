@@ -105,7 +105,7 @@ bool AMDGPUInstructionSelector::constrainCopyLikeIntrin(MachineInstr &MI,
   MachineOperand &Src = MI.getOperand(1);
 
   // TODO: This should be legalized to s32 if needed
-  if (MRI->getType(Dst.getReg()) == LLT::scalar(1))
+  if (MRI->getType(Dst.getReg()).isScalar(1))
     return false;
 
   const TargetRegisterClass *DstRC
@@ -293,7 +293,7 @@ bool AMDGPUInstructionSelector::selectPHI(MachineInstr &I) const {
   // - divergent S1 G_PHI should go through lane mask merging algorithm
   //   and be fully inst-selected in AMDGPUGlobalISelDivergenceLowering
   // - uniform S1 G_PHI should be lowered into S32 G_PHI in AMDGPURegBankSelect
-  if (DefTy == LLT::scalar(1))
+  if (DefTy.isScalar(1))
     return false;
 
   // TODO: Verify this doesn't have insane operands (i.e. VGPR to SGPR copy)
@@ -733,9 +733,9 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR(MachineInstr &MI) const {
   // Selection logic below is for V2S16 only.
   // For G_BUILD_VECTOR_TRUNC, additionally check that the operands are s32.
   Register Dst = MI.getOperand(0).getReg();
-  if (MRI->getType(Dst) != LLT::fixed_vector(2, 16) ||
+  if (!MRI->getType(Dst).isFixedVector(2, 16) ||
       (MI.getOpcode() == AMDGPU::G_BUILD_VECTOR_TRUNC &&
-       SrcTy != LLT::scalar(32)))
+       !SrcTy.isScalar(32)))
     return selectImpl(MI, *CoverageInfo);
 
   const RegisterBank *DstBank = RBI.getRegBank(Dst, *MRI, TRI);
@@ -1073,9 +1073,9 @@ bool AMDGPUInstructionSelector::selectDivScale(MachineInstr &MI) const {
 
   LLT Ty = MRI->getType(Dst0);
   unsigned Opc;
-  if (Ty == LLT::scalar(32))
+  if (Ty.isScalar(32))
     Opc = AMDGPU::V_DIV_SCALE_F32_e64;
-  else if (Ty == LLT::scalar(64))
+  else if (Ty.isScalar(64))
     Opc = AMDGPU::V_DIV_SCALE_F64_e64;
   else
     return false;
@@ -2387,11 +2387,10 @@ bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
   Register SrcReg = I.getOperand(1).getReg();
   const LLT DstTy = MRI->getType(DstReg);
   const LLT SrcTy = MRI->getType(SrcReg);
-  const LLT S1 = LLT::scalar(1);
 
   const RegisterBank *SrcRB = RBI.getRegBank(SrcReg, *MRI, TRI);
   const RegisterBank *DstRB;
-  if (DstTy == S1) {
+  if (DstTy.isScalar(1)) {
     // This is a special case. We don't treat s1 for legalization artifacts as
     // vcc booleans.
     DstRB = SrcRB;
@@ -2429,7 +2428,7 @@ bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
     return true;
   }
 
-  if (DstTy == LLT::fixed_vector(2, 16) && SrcTy == LLT::fixed_vector(2, 32)) {
+  if (DstTy.isFixedVector(2, 16) && SrcTy.isFixedVector(2, 32)) {
     MachineBasicBlock *MBB = I.getParent();
     const DebugLoc &DL = I.getDebugLoc();
 
@@ -2721,8 +2720,7 @@ static bool isExtractHiElt(MachineRegisterInfo &MRI, Register In,
   if (Shuffle->getOpcode() != AMDGPU::G_SHUFFLE_VECTOR)
     return false;
 
-  assert(MRI.getType(Shuffle->getOperand(0).getReg()) ==
-         LLT::fixed_vector(2, 16));
+  assert(MRI.getType(Shuffle->getOperand(0).getReg()).isFixedVector(2, 16));
 
   ArrayRef<int> Mask = Shuffle->getOperand(3).getShuffleMask();
   assert(Mask.size() == 2);
@@ -2746,8 +2744,8 @@ bool AMDGPUInstructionSelector::selectG_FPEXT(MachineInstr &I) const {
 
   Register Src = I.getOperand(1).getReg();
 
-  if (MRI->getType(Dst) == LLT::scalar(32) &&
-      MRI->getType(Src) == LLT::scalar(16)) {
+  if (MRI->getType(Dst).isScalar(32) &&
+      MRI->getType(Src).isScalar(16)) {
     if (isExtractHiElt(*MRI, Src, Src)) {
       MachineBasicBlock *BB = I.getParent();
       BuildMI(*BB, &I, I.getDebugLoc(), TII.get(AMDGPU::S_CVT_HI_F32_F16), Dst)
@@ -2775,7 +2773,7 @@ bool AMDGPUInstructionSelector::selectG_FNEG(MachineInstr &MI) const {
   Register Dst = MI.getOperand(0).getReg();
   const RegisterBank *DstRB = RBI.getRegBank(Dst, *MRI, TRI);
   if (DstRB->getID() != AMDGPU::SGPRRegBankID ||
-      MRI->getType(Dst) != LLT::scalar(64))
+      !MRI->getType(Dst).isScalar(64))
     return false;
 
   Register Src = MI.getOperand(1).getReg();
@@ -2821,7 +2819,7 @@ bool AMDGPUInstructionSelector::selectG_FABS(MachineInstr &MI) const {
   Register Dst = MI.getOperand(0).getReg();
   const RegisterBank *DstRB = RBI.getRegBank(Dst, *MRI, TRI);
   if (DstRB->getID() != AMDGPU::SGPRRegBankID ||
-      MRI->getType(Dst) != LLT::scalar(64))
+      !MRI->getType(Dst).isScalar(64))
     return false;
 
   Register Src = MI.getOperand(1).getReg();
@@ -2993,7 +2991,7 @@ bool AMDGPUInstructionSelector::selectG_BRCOND(MachineInstr &I) const {
   // RegBankSelect knows what it's doing if the branch condition is scc, even
   // though it currently does not.
   if (!isVCC(CondReg, *MRI)) {
-    if (MRI->getType(CondReg) != LLT::scalar(32))
+    if (!MRI->getType(CondReg).isScalar(32))
       return false;
 
     CondPhysReg = AMDGPU::SCC;
@@ -3456,7 +3454,7 @@ bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
 static Register matchZeroExtendFromS32(MachineRegisterInfo &MRI, Register Reg) {
   Register ZExtSrc;
   if (mi_match(Reg, MRI, m_GZExt(m_Reg(ZExtSrc))))
-    return MRI.getType(ZExtSrc) == LLT::scalar(32) ? ZExtSrc : Register();
+    return MRI.getType(ZExtSrc).isScalar(32) ? ZExtSrc : Register();
 
   // Match legalized form %zext = G_MERGE_VALUES (s32 %x), (s32 0)
   const MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
@@ -3464,7 +3462,7 @@ static Register matchZeroExtendFromS32(MachineRegisterInfo &MRI, Register Reg) {
     return Register();
 
   assert(Def->getNumOperands() == 3 &&
-         MRI.getType(Def->getOperand(0).getReg()) == LLT::scalar(64));
+         MRI.getType(Def->getOperand(0).getReg()).isScalar(64));
   if (mi_match(Def->getOperand(2).getReg(), MRI, m_ZeroInt())) {
     return Def->getOperand(1).getReg();
   }
@@ -4054,7 +4052,7 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     // This is a workaround. For extension from type i1, `selectImpl()` uses
     // patterns from TD file and generates an illegal VGPR to SGPR COPY as type
     // i1 can only be hold in a SGPR class.
-    if (MRI->getType(I.getOperand(1).getReg()) != LLT::scalar(1) &&
+    if (!MRI->getType(I.getOperand(1).getReg()).isScalar(1) &&
         selectImpl(I, *CoverageInfo))
       return true;
     return selectG_SZA_EXT(I);
@@ -4287,7 +4285,7 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(
   if (MI->getOpcode() == AMDGPU::G_FNEG &&
       // It's possible to see an f32 fneg here, but unlikely.
       // TODO: Treat f32 fneg as only high bit.
-      MRI.getType(Src) == LLT::fixed_vector(2, 16)) {
+      MRI.getType(Src).isFixedVector(2, 16)) {
     Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
     Src = MI->getOperand(1).getReg();
     MI = MRI.getVRegDef(Src);
@@ -5785,7 +5783,7 @@ AMDGPUInstructionSelector::selectSMRDBufferSgprImm(MachineOperand &Root) const {
   if (!EncodedOffset)
     return std::nullopt;
 
-  assert(MRI->getType(SOffset) == LLT::scalar(32));
+  assert(MRI->getType(SOffset).isScalar(32));
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(SOffset); },
            [=](MachineInstrBuilder &MIB) { MIB.addImm(*EncodedOffset); }}};
 }
@@ -5800,7 +5798,7 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsImpl(MachineOperand &Root,
   std::tie(Src, Mods) = selectVOP3ModsImpl(Root.getReg());
 
   if (mi_match(Src, *MRI, m_GFPExt(m_Reg(Src)))) {
-    assert(MRI->getType(Src) == LLT::scalar(16));
+    assert(MRI->getType(Src).isScalar(16));
 
     // Only change Src if src modifier could be gained. In such cases new Src
     // could be sgpr but this does not violate constant bus restriction for

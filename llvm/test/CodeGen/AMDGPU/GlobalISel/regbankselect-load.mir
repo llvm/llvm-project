@@ -119,11 +119,11 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY1]](p1) :: (load (<4 x s32>) from %ir.global.not.uniform.v8i32, align 32, addrspace 1)
-    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY1]], [[C]](s64)
-    ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p1) :: (load (<4 x s32>) from %ir.global.not.uniform.v8i32 + 16, basealign 32, addrspace 1)
-    ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x s32>) = G_CONCAT_VECTORS [[LOAD]](<4 x s32>), [[LOAD1]](<4 x s32>)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x f32>) = G_LOAD [[COPY1]](p1) :: (load (<4 x f32>) from %ir.global.not.uniform.v8i32, align 32, addrspace 1)
+    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(i64) = G_CONSTANT i64 16
+    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY1]], [[C]](i64)
+    ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<4 x f32>) = G_LOAD [[PTR_ADD]](p1) :: (load (<4 x f32>) from %ir.global.not.uniform.v8i32 + 16, basealign 32, addrspace 1)
+    ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x f32>) = G_CONCAT_VECTORS [[LOAD]](<4 x f32>), [[LOAD1]](<4 x f32>)
     ; GCN-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<8 x s32>)
     ; GCN-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV]]
     ; GCN-NEXT: [[AMDGPU_READANYLANE1:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV1]]
@@ -135,7 +135,7 @@ body: |
     ; GCN-NEXT: [[AMDGPU_READANYLANE7:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV7]]
     ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<8 x s32>) = G_BUILD_VECTOR [[AMDGPU_READANYLANE]](s32), [[AMDGPU_READANYLANE1]](s32), [[AMDGPU_READANYLANE2]](s32), [[AMDGPU_READANYLANE3]](s32), [[AMDGPU_READANYLANE4]](s32), [[AMDGPU_READANYLANE5]](s32), [[AMDGPU_READANYLANE6]](s32), [[AMDGPU_READANYLANE7]](s32)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(<8 x s32>) = G_LOAD %0 :: (load (<8 x s32>) from %ir.global.not.uniform.v8i32)
+    %1:_(<8 x f32>) = G_LOAD %0(p1) :: (load (<8 x f32>) from %ir.global.not.uniform.v8i32, addrspace 1)
 ...
 
 ---
@@ -152,11 +152,11 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[COPY1]](p1) :: (load (<2 x s64>) from %ir.global.not.uniform.v4i64, align 32, addrspace 1)
-    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY1]], [[C]](s64)
-    ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD]](p1) :: (load (<2 x s64>) from %ir.global.not.uniform.v4i64 + 16, basealign 32, addrspace 1)
-    ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<4 x s64>) = G_CONCAT_VECTORS [[LOAD]](<2 x s64>), [[LOAD1]](<2 x s64>)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x f64>) = G_LOAD [[COPY1]](p1) :: (load (<2 x f64>) from %ir.global.not.uniform.v4i64, align 32, addrspace 1)
+    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(i64) = G_CONSTANT i64 16
+    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY1]], [[C]](i64)
+    ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<2 x f64>) = G_LOAD [[PTR_ADD]](p1) :: (load (<2 x f64>) from %ir.global.not.uniform.v4i64 + 16, basealign 32, addrspace 1)
+    ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<4 x f64>) = G_CONCAT_VECTORS [[LOAD]](<2 x f64>), [[LOAD1]](<2 x f64>)
     ; GCN-NEXT: [[UV:%[0-9]+]]:vgpr(s64), [[UV1:%[0-9]+]]:vgpr(s64), [[UV2:%[0-9]+]]:vgpr(s64), [[UV3:%[0-9]+]]:vgpr(s64) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<4 x s64>)
     ; GCN-NEXT: [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[UV]](s64)
     ; GCN-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV4]]
@@ -176,7 +176,7 @@ body: |
     ; GCN-NEXT: [[MV3:%[0-9]+]]:sgpr(s64) = G_MERGE_VALUES [[AMDGPU_READANYLANE6]](s32), [[AMDGPU_READANYLANE7]](s32)
     ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64), [[MV2]](s64), [[MV3]](s64)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(<4 x s64>) = G_LOAD %0 :: (load (<4 x s64>) from %ir.global.not.uniform.v4i64)
+    %1:_(<4 x f64>) = G_LOAD %0(p1) :: (load (<4 x f64>) from %ir.global.not.uniform.v4i64, addrspace 1)
 ...
 
 ---
@@ -192,17 +192,17 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY1]](p1) :: (load (<4 x s32>) from %ir.global.not.uniform.v16i32, align 64, addrspace 1)
-    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY1]], [[C]](s64)
-    ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p1) :: (load (<4 x s32>) from %ir.global.not.uniform.v16i32 + 16, basealign 64, addrspace 1)
-    ; GCN-NEXT: [[C1:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 32
-    ; GCN-NEXT: [[PTR_ADD1:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY1]], [[C1]](s64)
-    ; GCN-NEXT: [[LOAD2:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD1]](p1) :: (load (<4 x s32>) from %ir.global.not.uniform.v16i32 + 32, align 32, basealign 64, addrspace 1)
-    ; GCN-NEXT: [[C2:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 48
-    ; GCN-NEXT: [[PTR_ADD2:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY1]], [[C2]](s64)
-    ; GCN-NEXT: [[LOAD3:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD2]](p1) :: (load (<4 x s32>) from %ir.global.not.uniform.v16i32 + 48, basealign 64, addrspace 1)
-    ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<16 x s32>) = G_CONCAT_VECTORS [[LOAD]](<4 x s32>), [[LOAD1]](<4 x s32>), [[LOAD2]](<4 x s32>), [[LOAD3]](<4 x s32>)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x f32>) = G_LOAD [[COPY1]](p1) :: (load (<4 x f32>) from %ir.global.not.uniform.v16i32, align 64, addrspace 1)
+    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(i64) = G_CONSTANT i64 16
+    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY1]], [[C]](i64)
+    ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<4 x f32>) = G_LOAD [[PTR_ADD]](p1) :: (load (<4 x f32>) from %ir.global.not.uniform.v16i32 + 16, basealign 64, addrspace 1)
+    ; GCN-NEXT: [[C1:%[0-9]+]]:vgpr(i64) = G_CONSTANT i64 32
+    ; GCN-NEXT: [[PTR_ADD1:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY1]], [[C1]](i64)
+    ; GCN-NEXT: [[LOAD2:%[0-9]+]]:vgpr(<4 x f32>) = G_LOAD [[PTR_ADD1]](p1) :: (load (<4 x f32>) from %ir.global.not.uniform.v16i32 + 32, align 32, basealign 64, addrspace 1)
+    ; GCN-NEXT: [[C2:%[0-9]+]]:vgpr(i64) = G_CONSTANT i64 48
+    ; GCN-NEXT: [[PTR_ADD2:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY1]], [[C2]](i64)
+    ; GCN-NEXT: [[LOAD3:%[0-9]+]]:vgpr(<4 x f32>) = G_LOAD [[PTR_ADD2]](p1) :: (load (<4 x f32>) from %ir.global.not.uniform.v16i32 + 48, basealign 64, addrspace 1)
+    ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<16 x f32>) = G_CONCAT_VECTORS [[LOAD]](<4 x f32>), [[LOAD1]](<4 x f32>), [[LOAD2]](<4 x f32>), [[LOAD3]](<4 x f32>)
     ; GCN-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32), [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32), [[UV10:%[0-9]+]]:vgpr(s32), [[UV11:%[0-9]+]]:vgpr(s32), [[UV12:%[0-9]+]]:vgpr(s32), [[UV13:%[0-9]+]]:vgpr(s32), [[UV14:%[0-9]+]]:vgpr(s32), [[UV15:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<16 x s32>)
     ; GCN-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV]]
     ; GCN-NEXT: [[AMDGPU_READANYLANE1:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV1]]
@@ -222,7 +222,7 @@ body: |
     ; GCN-NEXT: [[AMDGPU_READANYLANE15:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV15]]
     ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<16 x s32>) = G_BUILD_VECTOR [[AMDGPU_READANYLANE]](s32), [[AMDGPU_READANYLANE1]](s32), [[AMDGPU_READANYLANE2]](s32), [[AMDGPU_READANYLANE3]](s32), [[AMDGPU_READANYLANE4]](s32), [[AMDGPU_READANYLANE5]](s32), [[AMDGPU_READANYLANE6]](s32), [[AMDGPU_READANYLANE7]](s32), [[AMDGPU_READANYLANE8]](s32), [[AMDGPU_READANYLANE9]](s32), [[AMDGPU_READANYLANE10]](s32), [[AMDGPU_READANYLANE11]](s32), [[AMDGPU_READANYLANE12]](s32), [[AMDGPU_READANYLANE13]](s32), [[AMDGPU_READANYLANE14]](s32), [[AMDGPU_READANYLANE15]](s32)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(<16 x s32>) = G_LOAD %0 :: (load (<16 x s32>) from %ir.global.not.uniform.v16i32)
+    %1:_(<16 x f32>) = G_LOAD %0(p1) :: (load (<16 x f32>) from %ir.global.not.uniform.v16i32, addrspace 1)
 ...
 
 ---
@@ -238,17 +238,17 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[COPY1]](p1) :: (load (<2 x s64>) from %ir.global.not.uniform.v8i64, align 64, addrspace 1)
-    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY1]], [[C]](s64)
-    ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD]](p1) :: (load (<2 x s64>) from %ir.global.not.uniform.v8i64 + 16, basealign 64, addrspace 1)
-    ; GCN-NEXT: [[C1:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 32
-    ; GCN-NEXT: [[PTR_ADD1:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY1]], [[C1]](s64)
-    ; GCN-NEXT: [[LOAD2:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD1]](p1) :: (load (<2 x s64>) from %ir.global.not.uniform.v8i64 + 32, align 32, basealign 64, addrspace 1)
-    ; GCN-NEXT: [[C2:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 48
-    ; GCN-NEXT: [[PTR_ADD2:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY1]], [[C2]](s64)
-    ; GCN-NEXT: [[LOAD3:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD2]](p1) :: (load (<2 x s64>) from %ir.global.not.uniform.v8i64 + 48, basealign 64, addrspace 1)
-    ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x s64>) = G_CONCAT_VECTORS [[LOAD]](<2 x s64>), [[LOAD1]](<2 x s64>), [[LOAD2]](<2 x s64>), [[LOAD3]](<2 x s64>)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x f64>) = G_LOAD [[COPY1]](p1) :: (load (<2 x f64>) from %ir.global.not.uniform.v8i64, align 64, addrspace 1)
+    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(i64) = G_CONSTANT i64 16
+    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY1]], [[C]](i64)
+    ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<2 x f64>) = G_LOAD [[PTR_ADD]](p1) :: (load (<2 x f64>) from %ir.global.not.uniform.v8i64 + 16, basealign 64, addrspace 1)
+    ; GCN-NEXT: [[C1:%[0-9]+]]:vgpr(i64) = G_CONSTANT i64 32
+    ; GCN-NEXT: [[PTR_ADD1:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY1]], [[C1]](i64)
+    ; GCN-NEXT: [[LOAD2:%[0-9]+]]:vgpr(<2 x f64>) = G_LOAD [[PTR_ADD1]](p1) :: (load (<2 x f64>) from %ir.global.not.uniform.v8i64 + 32, align 32, basealign 64, addrspace 1)
+    ; GCN-NEXT: [[C2:%[0-9]+]]:vgpr(i64) = G_CONSTANT i64 48
+    ; GCN-NEXT: [[PTR_ADD2:%[0-9]+]]:vgpr(p1) = G_PTR_ADD [[COPY1]], [[C2]](i64)
+    ; GCN-NEXT: [[LOAD3:%[0-9]+]]:vgpr(<2 x f64>) = G_LOAD [[PTR_ADD2]](p1) :: (load (<2 x f64>) from %ir.global.not.uniform.v8i64 + 48, basealign 64, addrspace 1)
+    ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x f64>) = G_CONCAT_VECTORS [[LOAD]](<2 x f64>), [[LOAD1]](<2 x f64>), [[LOAD2]](<2 x f64>), [[LOAD3]](<2 x f64>)
     ; GCN-NEXT: [[UV:%[0-9]+]]:vgpr(s64), [[UV1:%[0-9]+]]:vgpr(s64), [[UV2:%[0-9]+]]:vgpr(s64), [[UV3:%[0-9]+]]:vgpr(s64), [[UV4:%[0-9]+]]:vgpr(s64), [[UV5:%[0-9]+]]:vgpr(s64), [[UV6:%[0-9]+]]:vgpr(s64), [[UV7:%[0-9]+]]:vgpr(s64) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<8 x s64>)
     ; GCN-NEXT: [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[UV]](s64)
     ; GCN-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV8]]
@@ -284,7 +284,7 @@ body: |
     ; GCN-NEXT: [[MV7:%[0-9]+]]:sgpr(s64) = G_MERGE_VALUES [[AMDGPU_READANYLANE14]](s32), [[AMDGPU_READANYLANE15]](s32)
     ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<8 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64), [[MV2]](s64), [[MV3]](s64), [[MV4]](s64), [[MV5]](s64), [[MV6]](s64), [[MV7]](s64)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(<8 x s64>) = G_LOAD %0 :: (load (<8 x s64>) from %ir.global.not.uniform.v8i64)
+    %1:_(<8 x f64>) = G_LOAD %0(p1) :: (load (<8 x f64>) from %ir.global.not.uniform.v8i64, addrspace 1)
 ...
 
 ---
@@ -299,9 +299,9 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(<8 x s32>) = G_LOAD [[COPY]](p1) :: (invariant load (<8 x s32>), addrspace 1)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(<8 x f32>) = G_LOAD [[COPY]](p1) :: (invariant load (<8 x f32>), addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(<8 x s32>) = G_LOAD %0 :: (invariant load (<8 x s32>), addrspace 1)
+    %1:_(<8 x f32>) = G_LOAD %0(p1) :: (invariant load (<8 x f32>), addrspace 1)
 ...
 
 ---
@@ -316,9 +316,9 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(<4 x s64>) = G_LOAD [[COPY]](p1) :: (invariant load (<4 x s64>), addrspace 1)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(<4 x f64>) = G_LOAD [[COPY]](p1) :: (invariant load (<4 x f64>), addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(<4 x s64>) = G_LOAD %0 :: (invariant load (<4 x s64>), addrspace 1)
+    %1:_(<4 x f64>) = G_LOAD %0(p1) :: (invariant load (<4 x f64>), addrspace 1)
 ...
 
 ---
@@ -333,9 +333,9 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(<16 x s32>) = G_LOAD [[COPY]](p1) :: (invariant load (<16 x s32>), addrspace 1)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(<16 x f32>) = G_LOAD [[COPY]](p1) :: (invariant load (<16 x f32>), addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(<16 x s32>) = G_LOAD %0 :: (invariant load (<16 x s32>), addrspace 1)
+    %1:_(<16 x f32>) = G_LOAD %0(p1) :: (invariant load (<16 x f32>), addrspace 1)
 ...
 
 ---
@@ -350,9 +350,9 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(<8 x s64>) = G_LOAD [[COPY]](p1) :: (invariant load (<8 x s64>), addrspace 1)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(<8 x f64>) = G_LOAD [[COPY]](p1) :: (invariant load (<8 x f64>), addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(<8 x s64>) = G_LOAD %0 :: (invariant load (<8 x s64>), addrspace 1)
+    %1:_(<8 x f64>) = G_LOAD %0(p1) :: (invariant load (<8 x f64>), addrspace 1)
 ...
 
 ---
@@ -368,11 +368,11 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY1]](p4) :: (load (<4 x s32>) from %ir.constant.not.uniform.v8i32, align 32, addrspace 4)
-    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY1]], [[C]](s64)
-    ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load (<4 x s32>) from %ir.constant.not.uniform.v8i32 + 16, basealign 32, addrspace 4)
-    ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x s32>) = G_CONCAT_VECTORS [[LOAD]](<4 x s32>), [[LOAD1]](<4 x s32>)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x f32>) = G_LOAD [[COPY1]](p4) :: (load (<4 x f32>) from %ir.constant.not.uniform.v8i32, align 32, addrspace 4)
+    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(i64) = G_CONSTANT i64 16
+    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY1]], [[C]](i64)
+    ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<4 x f32>) = G_LOAD [[PTR_ADD]](p4) :: (load (<4 x f32>) from %ir.constant.not.uniform.v8i32 + 16, basealign 32, addrspace 4)
+    ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x f32>) = G_CONCAT_VECTORS [[LOAD]](<4 x f32>), [[LOAD1]](<4 x f32>)
     ; GCN-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<8 x s32>)
     ; GCN-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV]]
     ; GCN-NEXT: [[AMDGPU_READANYLANE1:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV1]]
@@ -384,7 +384,7 @@ body: |
     ; GCN-NEXT: [[AMDGPU_READANYLANE7:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV7]]
     ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<8 x s32>) = G_BUILD_VECTOR [[AMDGPU_READANYLANE]](s32), [[AMDGPU_READANYLANE1]](s32), [[AMDGPU_READANYLANE2]](s32), [[AMDGPU_READANYLANE3]](s32), [[AMDGPU_READANYLANE4]](s32), [[AMDGPU_READANYLANE5]](s32), [[AMDGPU_READANYLANE6]](s32), [[AMDGPU_READANYLANE7]](s32)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<8 x s32>) = G_LOAD %0 :: (load (<8 x s32>) from %ir.constant.not.uniform.v8i32)
+    %1:_(<8 x f32>) = G_LOAD %0(p4) :: (load (<8 x f32>) from %ir.constant.not.uniform.v8i32, addrspace 4)
 ...
 
 ---
@@ -400,11 +400,11 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(s128) = G_LOAD [[COPY1]](p4) :: (load (s128) from %ir.constant.not.uniform, align 32, addrspace 4)
-    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY1]], [[C]](s64)
-    ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(s128) = G_LOAD [[PTR_ADD]](p4) :: (load (s128) from %ir.constant.not.uniform + 16, basealign 32, addrspace 4)
-    ; GCN-NEXT: [[MV:%[0-9]+]]:vgpr(s256) = G_MERGE_VALUES [[LOAD]](s128), [[LOAD1]](s128)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(i128) = G_LOAD [[COPY1]](p4) :: (load (i128) from %ir.constant.not.uniform, align 32, addrspace 4)
+    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(i64) = G_CONSTANT i64 16
+    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY1]], [[C]](i64)
+    ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(i128) = G_LOAD [[PTR_ADD]](p4) :: (load (i128) from %ir.constant.not.uniform + 16, basealign 32, addrspace 4)
+    ; GCN-NEXT: [[MV:%[0-9]+]]:vgpr(f256) = G_MERGE_VALUES [[LOAD]](i128), [[LOAD1]](i128)
     ; GCN-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[MV]](s256)
     ; GCN-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV]]
     ; GCN-NEXT: [[AMDGPU_READANYLANE1:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV1]]
@@ -416,7 +416,7 @@ body: |
     ; GCN-NEXT: [[AMDGPU_READANYLANE7:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV7]]
     ; GCN-NEXT: [[MV1:%[0-9]+]]:sgpr(s256) = G_MERGE_VALUES [[AMDGPU_READANYLANE]](s32), [[AMDGPU_READANYLANE1]](s32), [[AMDGPU_READANYLANE2]](s32), [[AMDGPU_READANYLANE3]](s32), [[AMDGPU_READANYLANE4]](s32), [[AMDGPU_READANYLANE5]](s32), [[AMDGPU_READANYLANE6]](s32), [[AMDGPU_READANYLANE7]](s32)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(s256) = G_LOAD %0 :: (load (s256) from %ir.constant.not.uniform)
+    %1:_(f256) = G_LOAD %0(p4) :: (load (f256) from %ir.constant.not.uniform, addrspace 4)
 ...
 
 ---
@@ -433,11 +433,11 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<8 x s16>) = G_LOAD [[COPY1]](p4) :: (load (<8 x s16>) from %ir.constant.not.uniform, align 32, addrspace 4)
-    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY1]], [[C]](s64)
-    ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<8 x s16>) = G_LOAD [[PTR_ADD]](p4) :: (load (<8 x s16>) from %ir.constant.not.uniform + 16, basealign 32, addrspace 4)
-    ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<16 x s16>) = G_CONCAT_VECTORS [[LOAD]](<8 x s16>), [[LOAD1]](<8 x s16>)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<8 x f16>) = G_LOAD [[COPY1]](p4) :: (load (<8 x f16>) from %ir.constant.not.uniform, align 32, addrspace 4)
+    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(i64) = G_CONSTANT i64 16
+    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY1]], [[C]](i64)
+    ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<8 x f16>) = G_LOAD [[PTR_ADD]](p4) :: (load (<8 x f16>) from %ir.constant.not.uniform + 16, basealign 32, addrspace 4)
+    ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<16 x f16>) = G_CONCAT_VECTORS [[LOAD]](<8 x f16>), [[LOAD1]](<8 x f16>)
     ; GCN-NEXT: [[UV:%[0-9]+]]:vgpr(<2 x s16>), [[UV1:%[0-9]+]]:vgpr(<2 x s16>), [[UV2:%[0-9]+]]:vgpr(<2 x s16>), [[UV3:%[0-9]+]]:vgpr(<2 x s16>), [[UV4:%[0-9]+]]:vgpr(<2 x s16>), [[UV5:%[0-9]+]]:vgpr(<2 x s16>), [[UV6:%[0-9]+]]:vgpr(<2 x s16>), [[UV7:%[0-9]+]]:vgpr(<2 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<16 x s16>)
     ; GCN-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(<2 x s16>) = G_AMDGPU_READANYLANE [[UV]]
     ; GCN-NEXT: [[AMDGPU_READANYLANE1:%[0-9]+]]:sgpr(<2 x s16>) = G_AMDGPU_READANYLANE [[UV1]]
@@ -449,7 +449,7 @@ body: |
     ; GCN-NEXT: [[AMDGPU_READANYLANE7:%[0-9]+]]:sgpr(<2 x s16>) = G_AMDGPU_READANYLANE [[UV7]]
     ; GCN-NEXT: [[CONCAT_VECTORS1:%[0-9]+]]:sgpr(<16 x s16>) = G_CONCAT_VECTORS [[AMDGPU_READANYLANE]](<2 x s16>), [[AMDGPU_READANYLANE1]](<2 x s16>), [[AMDGPU_READANYLANE2]](<2 x s16>), [[AMDGPU_READANYLANE3]](<2 x s16>), [[AMDGPU_READANYLANE4]](<2 x s16>), [[AMDGPU_READANYLANE5]](<2 x s16>), [[AMDGPU_READANYLANE6]](<2 x s16>), [[AMDGPU_READANYLANE7]](<2 x s16>)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<16 x s16>) = G_LOAD %0 :: (load (<16 x s16>) from %ir.constant.not.uniform)
+    %1:_(<16 x f16>) = G_LOAD %0(p4) :: (load (<16 x f16>) from %ir.constant.not.uniform, addrspace 4)
 ...
 
 ---
@@ -465,11 +465,11 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[COPY1]](p4) :: (load (<2 x s64>) from %ir.constant.not.uniform.v4i64, align 32, addrspace 4)
-    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY1]], [[C]](s64)
-    ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD]](p4) :: (load (<2 x s64>) from %ir.constant.not.uniform.v4i64 + 16, basealign 32, addrspace 4)
-    ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<4 x s64>) = G_CONCAT_VECTORS [[LOAD]](<2 x s64>), [[LOAD1]](<2 x s64>)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x f64>) = G_LOAD [[COPY1]](p4) :: (load (<2 x f64>) from %ir.constant.not.uniform.v4i64, align 32, addrspace 4)
+    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(i64) = G_CONSTANT i64 16
+    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY1]], [[C]](i64)
+    ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<2 x f64>) = G_LOAD [[PTR_ADD]](p4) :: (load (<2 x f64>) from %ir.constant.not.uniform.v4i64 + 16, basealign 32, addrspace 4)
+    ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<4 x f64>) = G_CONCAT_VECTORS [[LOAD]](<2 x f64>), [[LOAD1]](<2 x f64>)
     ; GCN-NEXT: [[UV:%[0-9]+]]:vgpr(s64), [[UV1:%[0-9]+]]:vgpr(s64), [[UV2:%[0-9]+]]:vgpr(s64), [[UV3:%[0-9]+]]:vgpr(s64) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<4 x s64>)
     ; GCN-NEXT: [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[UV]](s64)
     ; GCN-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV4]]
@@ -489,7 +489,7 @@ body: |
     ; GCN-NEXT: [[MV3:%[0-9]+]]:sgpr(s64) = G_MERGE_VALUES [[AMDGPU_READANYLANE6]](s32), [[AMDGPU_READANYLANE7]](s32)
     ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64), [[MV2]](s64), [[MV3]](s64)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<4 x s64>) = G_LOAD %0 :: (load (<4 x s64>) from %ir.constant.not.uniform.v4i64)
+    %1:_(<4 x f64>) = G_LOAD %0(p4) :: (load (<4 x f64>) from %ir.constant.not.uniform.v4i64, addrspace 4)
 ...
 
 ---
@@ -505,17 +505,17 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY1]](p4) :: (load (<4 x s32>) from %ir.constant.not.uniform.v16i32, align 64, addrspace 4)
-    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY1]], [[C]](s64)
-    ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load (<4 x s32>) from %ir.constant.not.uniform.v16i32 + 16, basealign 64, addrspace 4)
-    ; GCN-NEXT: [[C1:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 32
-    ; GCN-NEXT: [[PTR_ADD1:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY1]], [[C1]](s64)
-    ; GCN-NEXT: [[LOAD2:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD1]](p4) :: (load (<4 x s32>) from %ir.constant.not.uniform.v16i32 + 32, align 32, basealign 64, addrspace 4)
-    ; GCN-NEXT: [[C2:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 48
-    ; GCN-NEXT: [[PTR_ADD2:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY1]], [[C2]](s64)
-    ; GCN-NEXT: [[LOAD3:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD2]](p4) :: (load (<4 x s32>) from %ir.constant.not.uniform.v16i32 + 48, basealign 64, addrspace 4)
-    ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<16 x s32>) = G_CONCAT_VECTORS [[LOAD]](<4 x s32>), [[LOAD1]](<4 x s32>), [[LOAD2]](<4 x s32>), [[LOAD3]](<4 x s32>)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x f32>) = G_LOAD [[COPY1]](p4) :: (load (<4 x f32>) from %ir.constant.not.uniform.v16i32, align 64, addrspace 4)
+    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(i64) = G_CONSTANT i64 16
+    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY1]], [[C]](i64)
+    ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<4 x f32>) = G_LOAD [[PTR_ADD]](p4) :: (load (<4 x f32>) from %ir.constant.not.uniform.v16i32 + 16, basealign 64, addrspace 4)
+    ; GCN-NEXT: [[C1:%[0-9]+]]:vgpr(i64) = G_CONSTANT i64 32
+    ; GCN-NEXT: [[PTR_ADD1:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY1]], [[C1]](i64)
+    ; GCN-NEXT: [[LOAD2:%[0-9]+]]:vgpr(<4 x f32>) = G_LOAD [[PTR_ADD1]](p4) :: (load (<4 x f32>) from %ir.constant.not.uniform.v16i32 + 32, align 32, basealign 64, addrspace 4)
+    ; GCN-NEXT: [[C2:%[0-9]+]]:vgpr(i64) = G_CONSTANT i64 48
+    ; GCN-NEXT: [[PTR_ADD2:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY1]], [[C2]](i64)
+    ; GCN-NEXT: [[LOAD3:%[0-9]+]]:vgpr(<4 x f32>) = G_LOAD [[PTR_ADD2]](p4) :: (load (<4 x f32>) from %ir.constant.not.uniform.v16i32 + 48, basealign 64, addrspace 4)
+    ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<16 x f32>) = G_CONCAT_VECTORS [[LOAD]](<4 x f32>), [[LOAD1]](<4 x f32>), [[LOAD2]](<4 x f32>), [[LOAD3]](<4 x f32>)
     ; GCN-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32), [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32), [[UV10:%[0-9]+]]:vgpr(s32), [[UV11:%[0-9]+]]:vgpr(s32), [[UV12:%[0-9]+]]:vgpr(s32), [[UV13:%[0-9]+]]:vgpr(s32), [[UV14:%[0-9]+]]:vgpr(s32), [[UV15:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<16 x s32>)
     ; GCN-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV]]
     ; GCN-NEXT: [[AMDGPU_READANYLANE1:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV1]]
@@ -535,7 +535,7 @@ body: |
     ; GCN-NEXT: [[AMDGPU_READANYLANE15:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV15]]
     ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<16 x s32>) = G_BUILD_VECTOR [[AMDGPU_READANYLANE]](s32), [[AMDGPU_READANYLANE1]](s32), [[AMDGPU_READANYLANE2]](s32), [[AMDGPU_READANYLANE3]](s32), [[AMDGPU_READANYLANE4]](s32), [[AMDGPU_READANYLANE5]](s32), [[AMDGPU_READANYLANE6]](s32), [[AMDGPU_READANYLANE7]](s32), [[AMDGPU_READANYLANE8]](s32), [[AMDGPU_READANYLANE9]](s32), [[AMDGPU_READANYLANE10]](s32), [[AMDGPU_READANYLANE11]](s32), [[AMDGPU_READANYLANE12]](s32), [[AMDGPU_READANYLANE13]](s32), [[AMDGPU_READANYLANE14]](s32), [[AMDGPU_READANYLANE15]](s32)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<16 x s32>) = G_LOAD %0 :: (load (<16 x s32>) from %ir.constant.not.uniform.v16i32)
+    %1:_(<16 x f32>) = G_LOAD %0(p4) :: (load (<16 x f32>) from %ir.constant.not.uniform.v16i32, addrspace 4)
 ...
 
 ---
@@ -551,17 +551,17 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[COPY1]](p4) :: (load (<2 x s64>) from %ir.constant.not.uniform.v8i64, align 64, addrspace 4)
-    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY1]], [[C]](s64)
-    ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD]](p4) :: (load (<2 x s64>) from %ir.constant.not.uniform.v8i64 + 16, basealign 64, addrspace 4)
-    ; GCN-NEXT: [[C1:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 32
-    ; GCN-NEXT: [[PTR_ADD1:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY1]], [[C1]](s64)
-    ; GCN-NEXT: [[LOAD2:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD1]](p4) :: (load (<2 x s64>) from %ir.constant.not.uniform.v8i64 + 32, align 32, basealign 64, addrspace 4)
-    ; GCN-NEXT: [[C2:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 48
-    ; GCN-NEXT: [[PTR_ADD2:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY1]], [[C2]](s64)
-    ; GCN-NEXT: [[LOAD3:%[0-9]+]]:vgpr(<2 x s64>) = G_LOAD [[PTR_ADD2]](p4) :: (load (<2 x s64>) from %ir.constant.not.uniform.v8i64 + 48, basealign 64, addrspace 4)
-    ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x s64>) = G_CONCAT_VECTORS [[LOAD]](<2 x s64>), [[LOAD1]](<2 x s64>), [[LOAD2]](<2 x s64>), [[LOAD3]](<2 x s64>)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x f64>) = G_LOAD [[COPY1]](p4) :: (load (<2 x f64>) from %ir.constant.not.uniform.v8i64, align 64, addrspace 4)
+    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(i64) = G_CONSTANT i64 16
+    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY1]], [[C]](i64)
+    ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<2 x f64>) = G_LOAD [[PTR_ADD]](p4) :: (load (<2 x f64>) from %ir.constant.not.uniform.v8i64 + 16, basealign 64, addrspace 4)
+    ; GCN-NEXT: [[C1:%[0-9]+]]:vgpr(i64) = G_CONSTANT i64 32
+    ; GCN-NEXT: [[PTR_ADD1:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY1]], [[C1]](i64)
+    ; GCN-NEXT: [[LOAD2:%[0-9]+]]:vgpr(<2 x f64>) = G_LOAD [[PTR_ADD1]](p4) :: (load (<2 x f64>) from %ir.constant.not.uniform.v8i64 + 32, align 32, basealign 64, addrspace 4)
+    ; GCN-NEXT: [[C2:%[0-9]+]]:vgpr(i64) = G_CONSTANT i64 48
+    ; GCN-NEXT: [[PTR_ADD2:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY1]], [[C2]](i64)
+    ; GCN-NEXT: [[LOAD3:%[0-9]+]]:vgpr(<2 x f64>) = G_LOAD [[PTR_ADD2]](p4) :: (load (<2 x f64>) from %ir.constant.not.uniform.v8i64 + 48, basealign 64, addrspace 4)
+    ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x f64>) = G_CONCAT_VECTORS [[LOAD]](<2 x f64>), [[LOAD1]](<2 x f64>), [[LOAD2]](<2 x f64>), [[LOAD3]](<2 x f64>)
     ; GCN-NEXT: [[UV:%[0-9]+]]:vgpr(s64), [[UV1:%[0-9]+]]:vgpr(s64), [[UV2:%[0-9]+]]:vgpr(s64), [[UV3:%[0-9]+]]:vgpr(s64), [[UV4:%[0-9]+]]:vgpr(s64), [[UV5:%[0-9]+]]:vgpr(s64), [[UV6:%[0-9]+]]:vgpr(s64), [[UV7:%[0-9]+]]:vgpr(s64) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<8 x s64>)
     ; GCN-NEXT: [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[UV]](s64)
     ; GCN-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV8]]
@@ -597,7 +597,7 @@ body: |
     ; GCN-NEXT: [[MV7:%[0-9]+]]:sgpr(s64) = G_MERGE_VALUES [[AMDGPU_READANYLANE14]](s32), [[AMDGPU_READANYLANE15]](s32)
     ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<8 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64), [[MV2]](s64), [[MV3]](s64), [[MV4]](s64), [[MV5]](s64), [[MV6]](s64), [[MV7]](s64)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<8 x s64>) = G_LOAD %0 :: (load (<8 x s64>) from %ir.constant.not.uniform.v8i64)
+    %1:_(<8 x f64>) = G_LOAD %0(p4) :: (load (<8 x f64>) from %ir.constant.not.uniform.v8i64, addrspace 4)
 ...
 
 ---
@@ -612,9 +612,9 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(<8 x s32>) = G_LOAD [[COPY]](p4) :: (load (<8 x s32>), addrspace 4)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(<8 x f32>) = G_LOAD [[COPY]](p4) :: (load (<8 x f32>), addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<8 x s32>) = G_LOAD %0 :: (load (<8 x s32>), addrspace 4)
+    %1:_(<8 x f32>) = G_LOAD %0(p4) :: (load (<8 x f32>), addrspace 4)
 ...
 
 ---
@@ -629,9 +629,9 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(<16 x s16>) = G_LOAD [[COPY]](p4) :: (load (<16 x s16>), addrspace 4)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(<16 x f16>) = G_LOAD [[COPY]](p4) :: (load (<16 x f16>), addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<16 x s16>) = G_LOAD %0 :: (load (<16 x s16>), addrspace 4)
+    %1:_(<16 x f16>) = G_LOAD %0(p4) :: (load (<16 x f16>), addrspace 4)
 ...
 
 ---
@@ -646,9 +646,9 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(<4 x s64>) = G_LOAD [[COPY]](p4) :: (load (<4 x s64>), addrspace 4)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(<4 x f64>) = G_LOAD [[COPY]](p4) :: (load (<4 x f64>), addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<4 x s64>) = G_LOAD %0 :: (load (<4 x s64>), addrspace 4)
+    %1:_(<4 x f64>) = G_LOAD %0(p4) :: (load (<4 x f64>), addrspace 4)
 ...
 
 ---
@@ -663,9 +663,9 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(<16 x s32>) = G_LOAD [[COPY]](p4) :: (load (<16 x s32>), addrspace 4)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(<16 x f32>) = G_LOAD [[COPY]](p4) :: (load (<16 x f32>), addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<16 x s32>) = G_LOAD %0 :: (load (<16 x s32>), addrspace 4)
+    %1:_(<16 x f32>) = G_LOAD %0(p4) :: (load (<16 x f32>), addrspace 4)
 ...
 
 ---
@@ -680,9 +680,9 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(<8 x s64>) = G_LOAD [[COPY]](p4) :: (load (<8 x s64>), addrspace 4)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(<8 x f64>) = G_LOAD [[COPY]](p4) :: (load (<8 x f64>), addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<8 x s64>) = G_LOAD %0 :: (load (<8 x s64>), addrspace 4)
+    %1:_(<8 x f64>) = G_LOAD %0(p4) :: (load (<8 x f64>), addrspace 4)
 ...
 
 ---
@@ -698,10 +698,10 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p3) = COPY $sgpr0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p3) = COPY [[COPY]](p3)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p3) :: (load (s32), addrspace 3)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(f32) = G_LOAD [[COPY1]](p3) :: (load (f32), addrspace 3)
     ; GCN-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
     %0:_(p3) = COPY $sgpr0
-    %1:_(s32) = G_LOAD %0 :: (load (s32), addrspace 3)
+    %1:_(f32) = G_LOAD %0(p3) :: (load (f32), addrspace 3)
 
 ...
 ---
@@ -717,9 +717,9 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p3) = COPY $sgpr0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p3) = COPY [[COPY]](p3)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p3) :: (load (s32), addrspace 5)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(f32) = G_LOAD [[COPY1]](p3) :: (load (f32), addrspace 5)
     %0:_(p3) = COPY $sgpr0
-    %1:_(s32) = G_LOAD %0 :: (load (s32), addrspace 5)
+    %1:_(f32) = G_LOAD %0(p3) :: (load (f32), addrspace 5)
 
 ...
 
@@ -736,16 +736,16 @@ body: |
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; GFX7-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p4) :: (load (s8), addrspace 4)
+    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:vgpr(f32) = G_LOAD [[COPY1]](p4) :: (load (f8), addrspace 4)
     ; GFX7-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
     ;
     ; GFX12-LABEL: name: extload_constant_i8_to_i32_uniform
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p4) :: (load (s8), addrspace 4)
+    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(f32) = G_LOAD [[COPY]](p4) :: (load (f8), addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (load (s8), addrspace 4, align 1)
+    %1:_(f32) = G_LOAD %0(p4) :: (load (f8), addrspace 4)
 ...
 
 ---
@@ -762,10 +762,10 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p4) :: (load (s8), addrspace 1)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(f32) = G_LOAD [[COPY1]](p4) :: (load (f8), addrspace 1)
     ; GCN-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (load (s8), addrspace 1, align 1)
+    %1:_(f32) = G_LOAD %0(p4) :: (load (f8), addrspace 1)
 ...
 
 ---
@@ -782,16 +782,16 @@ body: |
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; GFX7-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p4) :: (load (s16), addrspace 4)
+    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:vgpr(f32) = G_LOAD [[COPY1]](p4) :: (load (f16), addrspace 4)
     ; GFX7-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
     ;
     ; GFX12-LABEL: name: extload_constant_i16_to_i32_uniform
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p4) :: (load (s16), addrspace 4)
+    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(f32) = G_LOAD [[COPY]](p4) :: (load (f16), addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (load (s16), addrspace 4, align 2)
+    %1:_(f32) = G_LOAD %0(p4) :: (load (f16), addrspace 4)
 ...
 
 ---
@@ -808,10 +808,10 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p4) :: (load (s16), addrspace 1)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(f32) = G_LOAD [[COPY1]](p4) :: (load (f16), addrspace 1)
     ; GCN-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (load (s16), addrspace 1, align 2)
+    %1:_(f32) = G_LOAD %0(p4) :: (load (f16), addrspace 1)
 ...
 
 ---
@@ -826,9 +826,9 @@ body: |
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(s32) = G_LOAD [[COPY]](p4) :: (load (s32), addrspace 4)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:sgpr(f32) = G_LOAD [[COPY]](p4) :: (load (f32), addrspace 4)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (load (s32), addrspace 4, align 4)
+    %1:_(f32) = G_LOAD %0(p4) :: (load (f32), addrspace 4)
 ...
 
 ---
@@ -845,10 +845,10 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p4) :: (load (s32), align 2, addrspace 4)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(f32) = G_LOAD [[COPY1]](p4) :: (load (f32), align 2, addrspace 4)
     ; GCN-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (load (s32), addrspace 4, align 2)
+    %1:_(f32) = G_LOAD %0(p4) :: (load (f32), align 2, addrspace 4)
 ...
 
 ---
@@ -865,10 +865,10 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p4) :: (load (s32), align 1, addrspace 4)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(f32) = G_LOAD [[COPY1]](p4) :: (load (f32), align 1, addrspace 4)
     ; GCN-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_LOAD %0 :: (load (s32), addrspace 4, align 1)
+    %1:_(f32) = G_LOAD %0(p4) :: (load (f32), align 1, addrspace 4)
 ...
 
 ---
@@ -885,9 +885,9 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(p5) = COPY $sgpr0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr(p5) = COPY [[COPY]](p5)
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p5) :: (load (s32), addrspace 5)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(f32) = G_LOAD [[COPY1]](p5) :: (load (f32), addrspace 5)
     %0:_(p5) = COPY $sgpr0
-    %1:_(s32) = G_LOAD %0 :: (load (s32), addrspace 5, align 4)
+    %1:_(f32) = G_LOAD %0(p5) :: (load (f32), addrspace 5)
 ...
 
 ---
@@ -903,13 +903,13 @@ body: |
     ; GCN: liveins: $vgpr0_vgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr(p4) = COPY $vgpr0_vgpr1
-    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[COPY]](p4) :: (load (<4 x s32>), align 32, addrspace 4)
-    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load (<4 x s32>) from unknown-address + 16, addrspace 4)
-    ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x s32>) = G_CONCAT_VECTORS [[LOAD]](<4 x s32>), [[LOAD1]](<4 x s32>)
+    ; GCN-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x f32>) = G_LOAD [[COPY]](p4) :: (load (<4 x f32>), align 32, addrspace 4)
+    ; GCN-NEXT: [[C:%[0-9]+]]:vgpr(i64) = G_CONSTANT i64 16
+    ; GCN-NEXT: [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[COPY]], [[C]](i64)
+    ; GCN-NEXT: [[LOAD1:%[0-9]+]]:vgpr(<4 x f32>) = G_LOAD [[PTR_ADD]](p4) :: (load (<4 x f32>) from unknown-address + 16, addrspace 4)
+    ; GCN-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x f32>) = G_CONCAT_VECTORS [[LOAD]](<4 x f32>), [[LOAD1]](<4 x f32>)
     %0:_(p4) = COPY $vgpr0_vgpr1
-    %1:_(<8 x s32>) = G_LOAD %0 :: (load (<8 x s32>), addrspace 4)
+    %1:_(<8 x f32>) = G_LOAD %0(p4) :: (load (<8 x f32>), addrspace 4)
 ...
 
 ---
@@ -931,12 +931,12 @@ body: |
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[PHI:%[0-9]+]]:vgpr(p4) = G_PHI [[COPY]](p4), %bb.0, %3(p4), %bb.1
-  ; GCN-NEXT:   [[LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PHI]](p4) :: (load (<4 x s32>), align 32, addrspace 4)
-  ; GCN-NEXT:   [[C:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 16
-  ; GCN-NEXT:   [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[PHI]], [[C]](s64)
-  ; GCN-NEXT:   [[LOAD1:%[0-9]+]]:vgpr(<4 x s32>) = G_LOAD [[PTR_ADD]](p4) :: (load (<4 x s32>) from unknown-address + 16, addrspace 4)
-  ; GCN-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x s32>) = G_CONCAT_VECTORS [[LOAD]](<4 x s32>), [[LOAD1]](<4 x s32>)
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr(p4) = COPY [[COPY1]](p4)
+  ; GCN-NEXT:   [[LOAD:%[0-9]+]]:vgpr(<4 x f32>) = G_LOAD [[PHI]](p4) :: (load (<4 x f32>), align 32, addrspace 4)
+  ; GCN-NEXT:   [[C:%[0-9]+]]:vgpr(i64) = G_CONSTANT i64 16
+  ; GCN-NEXT:   [[PTR_ADD:%[0-9]+]]:vgpr(p4) = G_PTR_ADD [[PHI]], [[C]](i64)
+  ; GCN-NEXT:   [[LOAD1:%[0-9]+]]:vgpr(<4 x f32>) = G_LOAD [[PTR_ADD]](p4) :: (load (<4 x f32>) from unknown-address + 16, addrspace 4)
+  ; GCN-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x f32>) = G_CONCAT_VECTORS [[LOAD]](<4 x f32>), [[LOAD1]](<4 x f32>)
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sgpr(p4) = COPY [[COPY1]](p4)
   ; GCN-NEXT:   G_BR %bb.1
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -947,10 +947,15 @@ body: |
     G_BR %bb.1
 
   bb.1:
-    %2:_(p4) = G_PHI %0, %bb.0, %4, %bb.1
-    %3:_(<8 x s32>) = G_LOAD %2 :: (load (<8 x s32>), addrspace 4)
-    %4:_(p4) = COPY %1
+    successors: %bb.1(0x80000000)
+
+    %2:_(p4) = G_PHI %0(p4), %bb.0, %3(p4), %bb.1
+    %4:_(<8 x f32>) = G_LOAD %2(p4) :: (load (<8 x f32>), addrspace 4)
+    %3:_(p4) = COPY %1(p4)
     G_BR %bb.1
+
+
+
 ...
 
 ---
@@ -965,23 +970,23 @@ body: |
     ; GFX7: liveins: $sgpr0_sgpr1
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(<2 x s32>) = G_LOAD [[COPY]](p4) :: (invariant load (<2 x s32>), align 4, addrspace 4)
-    ; GFX7-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 8
-    ; GFX7-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX7-NEXT: [[LOAD1:%[0-9]+]]:sgpr(s32) = G_LOAD [[PTR_ADD]](p4) :: (invariant load (s32) from unknown-address + 8, addrspace 4)
-    ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
-    ; GFX7-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<3 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[LOAD1]](s32)
-    ; GFX7-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<3 x s32>)
+    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(<2 x i32>) = G_LOAD [[COPY]](p4) :: (invariant load (<2 x i32>), align 4, addrspace 4)
+    ; GFX7-NEXT: [[C:%[0-9]+]]:sgpr(i64) = G_CONSTANT i64 8
+    ; GFX7-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](i64)
+    ; GFX7-NEXT: [[LOAD1:%[0-9]+]]:sgpr(i32) = G_LOAD [[PTR_ADD]](p4) :: (invariant load (i32) from unknown-address + 8, addrspace 4)
+    ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(i32), [[UV1:%[0-9]+]]:sgpr(i32) = G_UNMERGE_VALUES [[LOAD]](<2 x i32>)
+    ; GFX7-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<3 x i32>) = G_BUILD_VECTOR [[UV]](i32), [[UV1]](i32), [[LOAD1]](i32)
+    ; GFX7-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<3 x i32>)
     ;
     ; GFX12-LABEL: name: load_constant_v3i32_align4
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(<3 x s32>) = G_LOAD [[COPY]](p4) :: (invariant load (<3 x s32>), align 4, addrspace 4)
-    ; GFX12-NEXT: S_ENDPGM 0, implicit [[LOAD]](<3 x s32>)
+    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(<3 x i32>) = G_LOAD [[COPY]](p4) :: (invariant load (<3 x i32>), align 4, addrspace 4)
+    ; GFX12-NEXT: S_ENDPGM 0, implicit [[LOAD]](<3 x i32>)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<3 x s32>) = G_LOAD %0 :: (invariant load (<3 x s32>), addrspace 4, align 4)
-    S_ENDPGM 0, implicit %1
+    %1:_(<3 x i32>) = G_LOAD %0(p4) :: (invariant load (<3 x i32>), align 4, addrspace 4)
+    S_ENDPGM 0, implicit %1(<3 x i32>)
 ...
 
 ---
@@ -996,23 +1001,23 @@ body: |
     ; GFX7: liveins: $sgpr0_sgpr1
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(<2 x s32>) = G_LOAD [[COPY]](p4) :: (invariant load (<2 x s32>), addrspace 4)
-    ; GFX7-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 8
-    ; GFX7-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX7-NEXT: [[LOAD1:%[0-9]+]]:sgpr(s32) = G_LOAD [[PTR_ADD]](p4) :: (invariant load (s32) from unknown-address + 8, align 8, addrspace 4)
-    ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
-    ; GFX7-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<3 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[LOAD1]](s32)
-    ; GFX7-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<3 x s32>)
+    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(<2 x i32>) = G_LOAD [[COPY]](p4) :: (invariant load (<2 x i32>), addrspace 4)
+    ; GFX7-NEXT: [[C:%[0-9]+]]:sgpr(i64) = G_CONSTANT i64 8
+    ; GFX7-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](i64)
+    ; GFX7-NEXT: [[LOAD1:%[0-9]+]]:sgpr(i32) = G_LOAD [[PTR_ADD]](p4) :: (invariant load (i32) from unknown-address + 8, align 8, addrspace 4)
+    ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(i32), [[UV1:%[0-9]+]]:sgpr(i32) = G_UNMERGE_VALUES [[LOAD]](<2 x i32>)
+    ; GFX7-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<3 x i32>) = G_BUILD_VECTOR [[UV]](i32), [[UV1]](i32), [[LOAD1]](i32)
+    ; GFX7-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<3 x i32>)
     ;
     ; GFX12-LABEL: name: load_constant_v3i32_align8
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(<3 x s32>) = G_LOAD [[COPY]](p4) :: (invariant load (<3 x s32>), align 8, addrspace 4)
-    ; GFX12-NEXT: S_ENDPGM 0, implicit [[LOAD]](<3 x s32>)
+    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(<3 x i32>) = G_LOAD [[COPY]](p4) :: (invariant load (<3 x i32>), align 8, addrspace 4)
+    ; GFX12-NEXT: S_ENDPGM 0, implicit [[LOAD]](<3 x i32>)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<3 x s32>) = G_LOAD %0 :: (invariant load (<3 x s32>), addrspace 4, align 8)
-    S_ENDPGM 0, implicit %1
+    %1:_(<3 x i32>) = G_LOAD %0(p4) :: (invariant load (<3 x i32>), align 8, addrspace 4)
+    S_ENDPGM 0, implicit %1(<3 x i32>)
 ...
 
 ---
@@ -1027,20 +1032,20 @@ body: |
     ; GFX7: liveins: $sgpr0_sgpr1
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(<4 x s32>) = G_LOAD [[COPY]](p4) :: (invariant load (<4 x s32>), addrspace 4)
-    ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32), [[UV2:%[0-9]+]]:sgpr(s32), [[UV3:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[LOAD]](<4 x s32>)
-    ; GFX7-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<3 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[UV2]](s32)
-    ; GFX7-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<3 x s32>)
+    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(<4 x i32>) = G_LOAD [[COPY]](p4) :: (invariant load (<4 x i32>), addrspace 4)
+    ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(i32), [[UV1:%[0-9]+]]:sgpr(i32), [[UV2:%[0-9]+]]:sgpr(i32), [[UV3:%[0-9]+]]:sgpr(i32) = G_UNMERGE_VALUES [[LOAD]](<4 x i32>)
+    ; GFX7-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<3 x i32>) = G_BUILD_VECTOR [[UV]](i32), [[UV1]](i32), [[UV2]](i32)
+    ; GFX7-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<3 x i32>)
     ;
     ; GFX12-LABEL: name: load_constant_v3i32_align16
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(<3 x s32>) = G_LOAD [[COPY]](p4) :: (invariant load (<3 x s32>), align 16, addrspace 4)
-    ; GFX12-NEXT: S_ENDPGM 0, implicit [[LOAD]](<3 x s32>)
+    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(<3 x i32>) = G_LOAD [[COPY]](p4) :: (invariant load (<3 x i32>), align 16, addrspace 4)
+    ; GFX12-NEXT: S_ENDPGM 0, implicit [[LOAD]](<3 x i32>)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<3 x s32>) = G_LOAD %0 :: (invariant load (<3 x s32>), addrspace 4, align 16)
-    S_ENDPGM 0, implicit %1
+    %1:_(<3 x i32>) = G_LOAD %0(p4) :: (invariant load (<3 x i32>), align 16, addrspace 4)
+    S_ENDPGM 0, implicit %1(<3 x i32>)
 ...
 
 ---
@@ -1055,23 +1060,24 @@ body: |
     ; GFX7: liveins: $sgpr0_sgpr1
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(<4 x s16>) = G_LOAD [[COPY]](p4) :: (invariant load (<4 x s16>), align 4, addrspace 4)
-    ; GFX7-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 8
-    ; GFX7-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX7-NEXT: [[LOAD1:%[0-9]+]]:sgpr(<2 x s16>) = G_LOAD [[PTR_ADD]](p4) :: (invariant load (<2 x s16>) from unknown-address + 8, addrspace 4)
-    ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(<2 x s16>), [[UV1:%[0-9]+]]:sgpr(<2 x s16>) = G_UNMERGE_VALUES [[LOAD]](<4 x s16>)
-    ; GFX7-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:sgpr(<6 x s16>) = G_CONCAT_VECTORS [[UV]](<2 x s16>), [[UV1]](<2 x s16>), [[LOAD1]](<2 x s16>)
-    ; GFX7-NEXT: S_ENDPGM 0, implicit [[CONCAT_VECTORS]](<6 x s16>)
+    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(<4 x i16>) = G_LOAD [[COPY]](p4) :: (invariant load (<4 x i16>), align 4, addrspace 4)
+    ; GFX7-NEXT: [[C:%[0-9]+]]:sgpr(i64) = G_CONSTANT i64 8
+    ; GFX7-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](i64)
+    ; GFX7-NEXT: [[LOAD1:%[0-9]+]]:sgpr(<2 x i16>) = G_LOAD [[PTR_ADD]](p4) :: (invariant load (<2 x i16>) from unknown-address + 8, addrspace 4)
+    ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(i16), [[UV1:%[0-9]+]]:sgpr(i16), [[UV2:%[0-9]+]]:sgpr(i16), [[UV3:%[0-9]+]]:sgpr(i16) = G_UNMERGE_VALUES [[LOAD]](<4 x i16>)
+    ; GFX7-NEXT: [[UV4:%[0-9]+]]:sgpr(i16), [[UV5:%[0-9]+]]:sgpr(i16) = G_UNMERGE_VALUES [[LOAD1]](<2 x i16>)
+    ; GFX7-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<6 x i16>) = G_BUILD_VECTOR [[UV]](i16), [[UV1]](i16), [[UV2]](i16), [[UV3]](i16), [[UV4]](i16), [[UV5]](i16)
+    ; GFX7-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<6 x i16>)
     ;
     ; GFX12-LABEL: name: load_constant_v6i16_align4
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(<6 x s16>) = G_LOAD [[COPY]](p4) :: (invariant load (<6 x s16>), align 4, addrspace 4)
-    ; GFX12-NEXT: S_ENDPGM 0, implicit [[LOAD]](<6 x s16>)
+    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(<6 x i16>) = G_LOAD [[COPY]](p4) :: (invariant load (<6 x i16>), align 4, addrspace 4)
+    ; GFX12-NEXT: S_ENDPGM 0, implicit [[LOAD]](<6 x i16>)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<6 x s16>) = G_LOAD %0 :: (invariant load (<6 x s16>), addrspace 4, align 4)
-    S_ENDPGM 0, implicit %1
+    %1:_(<6 x i16>) = G_LOAD %0(p4) :: (invariant load (<6 x i16>), align 4, addrspace 4)
+    S_ENDPGM 0, implicit %1(<6 x i16>)
 ...
 
 ---
@@ -1086,23 +1092,24 @@ body: |
     ; GFX7: liveins: $sgpr0_sgpr1
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(<4 x s16>) = G_LOAD [[COPY]](p4) :: (invariant load (<4 x s16>), addrspace 4)
-    ; GFX7-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 8
-    ; GFX7-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX7-NEXT: [[LOAD1:%[0-9]+]]:sgpr(<2 x s16>) = G_LOAD [[PTR_ADD]](p4) :: (invariant load (<2 x s16>) from unknown-address + 8, align 8, addrspace 4)
-    ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(<2 x s16>), [[UV1:%[0-9]+]]:sgpr(<2 x s16>) = G_UNMERGE_VALUES [[LOAD]](<4 x s16>)
-    ; GFX7-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:sgpr(<6 x s16>) = G_CONCAT_VECTORS [[UV]](<2 x s16>), [[UV1]](<2 x s16>), [[LOAD1]](<2 x s16>)
-    ; GFX7-NEXT: S_ENDPGM 0, implicit [[CONCAT_VECTORS]](<6 x s16>)
+    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(<4 x i16>) = G_LOAD [[COPY]](p4) :: (invariant load (<4 x i16>), addrspace 4)
+    ; GFX7-NEXT: [[C:%[0-9]+]]:sgpr(i64) = G_CONSTANT i64 8
+    ; GFX7-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](i64)
+    ; GFX7-NEXT: [[LOAD1:%[0-9]+]]:sgpr(<2 x i16>) = G_LOAD [[PTR_ADD]](p4) :: (invariant load (<2 x i16>) from unknown-address + 8, align 8, addrspace 4)
+    ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(i16), [[UV1:%[0-9]+]]:sgpr(i16), [[UV2:%[0-9]+]]:sgpr(i16), [[UV3:%[0-9]+]]:sgpr(i16) = G_UNMERGE_VALUES [[LOAD]](<4 x i16>)
+    ; GFX7-NEXT: [[UV4:%[0-9]+]]:sgpr(i16), [[UV5:%[0-9]+]]:sgpr(i16) = G_UNMERGE_VALUES [[LOAD1]](<2 x i16>)
+    ; GFX7-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<6 x i16>) = G_BUILD_VECTOR [[UV]](i16), [[UV1]](i16), [[UV2]](i16), [[UV3]](i16), [[UV4]](i16), [[UV5]](i16)
+    ; GFX7-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<6 x i16>)
     ;
     ; GFX12-LABEL: name: load_constant_v6i16_align8
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(<6 x s16>) = G_LOAD [[COPY]](p4) :: (invariant load (<6 x s16>), align 8, addrspace 4)
-    ; GFX12-NEXT: S_ENDPGM 0, implicit [[LOAD]](<6 x s16>)
+    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(<6 x i16>) = G_LOAD [[COPY]](p4) :: (invariant load (<6 x i16>), align 8, addrspace 4)
+    ; GFX12-NEXT: S_ENDPGM 0, implicit [[LOAD]](<6 x i16>)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<6 x s16>) = G_LOAD %0 :: (invariant load (<6 x s16>), addrspace 4, align 8)
-    S_ENDPGM 0, implicit %1
+    %1:_(<6 x i16>) = G_LOAD %0(p4) :: (invariant load (<6 x i16>), align 8, addrspace 4)
+    S_ENDPGM 0, implicit %1(<6 x i16>)
 ...
 
 ---
@@ -1117,20 +1124,20 @@ body: |
     ; GFX7: liveins: $sgpr0_sgpr1
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(<8 x s16>) = G_LOAD [[COPY]](p4) :: (invariant load (<8 x s16>), addrspace 4)
-    ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(<2 x s16>), [[UV1:%[0-9]+]]:sgpr(<2 x s16>), [[UV2:%[0-9]+]]:sgpr(<2 x s16>), [[UV3:%[0-9]+]]:sgpr(<2 x s16>) = G_UNMERGE_VALUES [[LOAD]](<8 x s16>)
-    ; GFX7-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:sgpr(<6 x s16>) = G_CONCAT_VECTORS [[UV]](<2 x s16>), [[UV1]](<2 x s16>), [[UV2]](<2 x s16>)
-    ; GFX7-NEXT: S_ENDPGM 0, implicit [[CONCAT_VECTORS]](<6 x s16>)
+    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(<8 x i16>) = G_LOAD [[COPY]](p4) :: (invariant load (<8 x i16>), addrspace 4)
+    ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(i16), [[UV1:%[0-9]+]]:sgpr(i16), [[UV2:%[0-9]+]]:sgpr(i16), [[UV3:%[0-9]+]]:sgpr(i16), [[UV4:%[0-9]+]]:sgpr(i16), [[UV5:%[0-9]+]]:sgpr(i16), [[UV6:%[0-9]+]]:sgpr(i16), [[UV7:%[0-9]+]]:sgpr(i16) = G_UNMERGE_VALUES [[LOAD]](<8 x i16>)
+    ; GFX7-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<6 x i16>) = G_BUILD_VECTOR [[UV]](i16), [[UV1]](i16), [[UV2]](i16), [[UV3]](i16), [[UV4]](i16), [[UV5]](i16)
+    ; GFX7-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<6 x i16>)
     ;
     ; GFX12-LABEL: name: load_constant_v6i16_align16
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(<6 x s16>) = G_LOAD [[COPY]](p4) :: (invariant load (<6 x s16>), align 16, addrspace 4)
-    ; GFX12-NEXT: S_ENDPGM 0, implicit [[LOAD]](<6 x s16>)
+    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(<6 x i16>) = G_LOAD [[COPY]](p4) :: (invariant load (<6 x i16>), align 16, addrspace 4)
+    ; GFX12-NEXT: S_ENDPGM 0, implicit [[LOAD]](<6 x i16>)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<6 x s16>) = G_LOAD %0 :: (invariant load (<6 x s16>), addrspace 4, align 16)
-    S_ENDPGM 0, implicit %1
+    %1:_(<6 x i16>) = G_LOAD %0(p4) :: (invariant load (<6 x i16>), align 16, addrspace 4)
+    S_ENDPGM 0, implicit %1(<6 x i16>)
 ...
 
 ---
@@ -1145,23 +1152,23 @@ body: |
     ; GFX7: liveins: $sgpr0_sgpr1
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(s64) = G_LOAD [[COPY]](p4) :: (invariant load (s64), align 4, addrspace 4)
-    ; GFX7-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 8
-    ; GFX7-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX7-NEXT: [[LOAD1:%[0-9]+]]:sgpr(s32) = G_LOAD [[PTR_ADD]](p4) :: (invariant load (s32) from unknown-address + 8, addrspace 4)
-    ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[LOAD]](s64)
-    ; GFX7-NEXT: [[MV:%[0-9]+]]:sgpr(s96) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32), [[LOAD1]](s32)
-    ; GFX7-NEXT: S_ENDPGM 0, implicit [[MV]](s96)
+    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(i64) = G_LOAD [[COPY]](p4) :: (invariant load (i64), align 4, addrspace 4)
+    ; GFX7-NEXT: [[C:%[0-9]+]]:sgpr(i64) = G_CONSTANT i64 8
+    ; GFX7-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](i64)
+    ; GFX7-NEXT: [[LOAD1:%[0-9]+]]:sgpr(i32) = G_LOAD [[PTR_ADD]](p4) :: (invariant load (i32) from unknown-address + 8, addrspace 4)
+    ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(i32), [[UV1:%[0-9]+]]:sgpr(i32) = G_UNMERGE_VALUES [[LOAD]](i64)
+    ; GFX7-NEXT: [[MV:%[0-9]+]]:sgpr(i96) = G_MERGE_VALUES [[UV]](i32), [[UV1]](i32), [[LOAD1]](i32)
+    ; GFX7-NEXT: S_ENDPGM 0, implicit [[MV]](i96)
     ;
     ; GFX12-LABEL: name: load_constant_i96_align4
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(s96) = G_LOAD [[COPY]](p4) :: (invariant load (s96), align 4, addrspace 4)
-    ; GFX12-NEXT: S_ENDPGM 0, implicit [[LOAD]](s96)
+    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(i96) = G_LOAD [[COPY]](p4) :: (invariant load (i96), align 4, addrspace 4)
+    ; GFX12-NEXT: S_ENDPGM 0, implicit [[LOAD]](i96)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(s96) = G_LOAD %0 :: (invariant load (s96), addrspace 4, align 4)
-    S_ENDPGM 0, implicit %1
+    %1:_(i96) = G_LOAD %0(p4) :: (invariant load (i96), align 4, addrspace 4)
+    S_ENDPGM 0, implicit %1(i96)
 ...
 
 ---
@@ -1176,23 +1183,23 @@ body: |
     ; GFX7: liveins: $sgpr0_sgpr1
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(s64) = G_LOAD [[COPY]](p4) :: (invariant load (s64), addrspace 4)
-    ; GFX7-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 8
-    ; GFX7-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
-    ; GFX7-NEXT: [[LOAD1:%[0-9]+]]:sgpr(s32) = G_LOAD [[PTR_ADD]](p4) :: (invariant load (s32) from unknown-address + 8, align 8, addrspace 4)
-    ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[LOAD]](s64)
-    ; GFX7-NEXT: [[MV:%[0-9]+]]:sgpr(s96) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32), [[LOAD1]](s32)
-    ; GFX7-NEXT: S_ENDPGM 0, implicit [[MV]](s96)
+    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(i64) = G_LOAD [[COPY]](p4) :: (invariant load (i64), addrspace 4)
+    ; GFX7-NEXT: [[C:%[0-9]+]]:sgpr(i64) = G_CONSTANT i64 8
+    ; GFX7-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p4) = G_PTR_ADD [[COPY]], [[C]](i64)
+    ; GFX7-NEXT: [[LOAD1:%[0-9]+]]:sgpr(i32) = G_LOAD [[PTR_ADD]](p4) :: (invariant load (i32) from unknown-address + 8, align 8, addrspace 4)
+    ; GFX7-NEXT: [[UV:%[0-9]+]]:sgpr(i32), [[UV1:%[0-9]+]]:sgpr(i32) = G_UNMERGE_VALUES [[LOAD]](i64)
+    ; GFX7-NEXT: [[MV:%[0-9]+]]:sgpr(i96) = G_MERGE_VALUES [[UV]](i32), [[UV1]](i32), [[LOAD1]](i32)
+    ; GFX7-NEXT: S_ENDPGM 0, implicit [[MV]](i96)
     ;
     ; GFX12-LABEL: name: load_constant_i96_align8
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(s96) = G_LOAD [[COPY]](p4) :: (invariant load (s96), align 8, addrspace 4)
-    ; GFX12-NEXT: S_ENDPGM 0, implicit [[LOAD]](s96)
+    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(i96) = G_LOAD [[COPY]](p4) :: (invariant load (i96), align 8, addrspace 4)
+    ; GFX12-NEXT: S_ENDPGM 0, implicit [[LOAD]](i96)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(s96) = G_LOAD %0 :: (invariant load (s96), addrspace 4, align 8)
-    S_ENDPGM 0, implicit %1
+    %1:_(i96) = G_LOAD %0(p4) :: (invariant load (i96), align 8, addrspace 4)
+    S_ENDPGM 0, implicit %1(i96)
 ...
 
 ---
@@ -1207,17 +1214,17 @@ body: |
     ; GFX7: liveins: $sgpr0_sgpr1
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(s128) = G_LOAD [[COPY]](p4) :: (invariant load (s128), addrspace 4)
-    ; GFX7-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s96) = G_TRUNC [[LOAD]](s128)
-    ; GFX7-NEXT: S_ENDPGM 0, implicit [[TRUNC]](s96)
+    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:sgpr(i128) = G_LOAD [[COPY]](p4) :: (invariant load (i128), addrspace 4)
+    ; GFX7-NEXT: [[TRUNC:%[0-9]+]]:sgpr(i96) = G_TRUNC [[LOAD]](i128)
+    ; GFX7-NEXT: S_ENDPGM 0, implicit [[TRUNC]](i96)
     ;
     ; GFX12-LABEL: name: load_constant_i96_align16
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(s96) = G_LOAD [[COPY]](p4) :: (invariant load (s96), align 16, addrspace 4)
-    ; GFX12-NEXT: S_ENDPGM 0, implicit [[LOAD]](s96)
+    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(i96) = G_LOAD [[COPY]](p4) :: (invariant load (i96), align 16, addrspace 4)
+    ; GFX12-NEXT: S_ENDPGM 0, implicit [[LOAD]](i96)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(s96) = G_LOAD %0 :: (invariant load (s96), addrspace 4, align 16)
-    S_ENDPGM 0, implicit %1
+    %1:_(i96) = G_LOAD %0(p4) :: (invariant load (i96), align 16, addrspace 4)
+    S_ENDPGM 0, implicit %1(i96)
 ...

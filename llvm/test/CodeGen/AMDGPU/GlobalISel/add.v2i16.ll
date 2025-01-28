@@ -40,9 +40,10 @@ define <2 x i16> @v_add_v2i16_fneg_lhs(<2 x half> %a, <2 x i16> %b) {
 ; GFX7-LABEL: v_add_v2i16_fneg_lhs:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX7-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
@@ -52,7 +53,8 @@ define <2 x i16> @v_add_v2i16_fneg_lhs(<2 x half> %a, <2 x i16> %b) {
 ; GFX9-LABEL: v_add_v2i16_fneg_lhs:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_add_u16 v0, v0, v1 neg_lo:[1,0] neg_hi:[1,0]
+; GFX9-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; GFX9-NEXT:    v_pk_add_u16 v0, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_add_v2i16_fneg_lhs:
@@ -67,7 +69,8 @@ define <2 x i16> @v_add_v2i16_fneg_lhs(<2 x half> %a, <2 x i16> %b) {
 ; GFX10-LABEL: v_add_v2i16_fneg_lhs:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_pk_add_u16 v0, v0, v1 neg_lo:[1,0] neg_hi:[1,0]
+; GFX10-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; GFX10-NEXT:    v_pk_add_u16 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = fneg <2 x half> %a
   %cast.neg.a = bitcast <2 x half> %neg.a to <2 x i16>
@@ -79,9 +82,10 @@ define <2 x i16> @v_add_v2i16_fneg_rhs(<2 x i16> %a, <2 x half> %b) {
 ; GFX7-LABEL: v_add_v2i16_fneg_rhs:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; GFX7-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; GFX7-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX7-NEXT:    v_or_b32_e32 v2, v3, v2
+; GFX7-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; GFX7-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GFX7-NEXT:    v_xor_b32_e32 v2, 0x80008000, v2
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
@@ -91,7 +95,8 @@ define <2 x i16> @v_add_v2i16_fneg_rhs(<2 x i16> %a, <2 x half> %b) {
 ; GFX9-LABEL: v_add_v2i16_fneg_rhs:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_add_u16 v0, v0, v1 neg_lo:[0,1] neg_hi:[0,1]
+; GFX9-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
+; GFX9-NEXT:    v_pk_add_u16 v0, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_add_v2i16_fneg_rhs:
@@ -106,7 +111,8 @@ define <2 x i16> @v_add_v2i16_fneg_rhs(<2 x i16> %a, <2 x half> %b) {
 ; GFX10-LABEL: v_add_v2i16_fneg_rhs:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_pk_add_u16 v0, v0, v1 neg_lo:[0,1] neg_hi:[0,1]
+; GFX10-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
+; GFX10-NEXT:    v_pk_add_u16 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.b = fneg <2 x half> %b
   %cast.neg.b = bitcast <2 x half> %neg.b to <2 x i16>
@@ -118,11 +124,13 @@ define <2 x i16> @v_add_v2i16_fneg_lhs_fneg_rhs(<2 x half> %a, <2 x half> %b) {
 ; GFX7-LABEL: v_add_v2i16_fneg_lhs_fneg_rhs:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX7-NEXT:    v_or_b32_e32 v0, v1, v0
-; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v3
-; GFX7-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v2
+; GFX7-NEXT:    v_and_b32_e32 v2, 0xffff, v3
+; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX7-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX7-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
 ; GFX7-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
@@ -135,7 +143,9 @@ define <2 x i16> @v_add_v2i16_fneg_lhs_fneg_rhs(<2 x half> %a, <2 x half> %b) {
 ; GFX9-LABEL: v_add_v2i16_fneg_lhs_fneg_rhs:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_add_u16 v0, v0, v1 neg_lo:[1,1] neg_hi:[1,1]
+; GFX9-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; GFX9-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
+; GFX9-NEXT:    v_pk_add_u16 v0, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_add_v2i16_fneg_lhs_fneg_rhs:
@@ -151,7 +161,9 @@ define <2 x i16> @v_add_v2i16_fneg_lhs_fneg_rhs(<2 x half> %a, <2 x half> %b) {
 ; GFX10-LABEL: v_add_v2i16_fneg_lhs_fneg_rhs:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_pk_add_u16 v0, v0, v1 neg_lo:[1,1] neg_hi:[1,1]
+; GFX10-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; GFX10-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
+; GFX10-NEXT:    v_pk_add_u16 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = fneg <2 x half> %a
   %neg.b = fneg <2 x half> %b
@@ -434,9 +446,10 @@ define amdgpu_ps i32 @s_add_v2i16(<2 x i16> inreg %a, <2 x i16> inreg %b) {
 define amdgpu_ps i32 @s_add_v2i16_fneg_lhs(<2 x half> inreg %a, <2 x i16> inreg %b) {
 ; GFX7-LABEL: s_add_v2i16_fneg_lhs:
 ; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_and_b32 s1, 0xffff, s1
+; GFX7-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX7-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX7-NEXT:    s_or_b32 s0, s1, s0
+; GFX7-NEXT:    s_or_b32 s0, s0, s1
 ; GFX7-NEXT:    s_xor_b32 s0, s0, 0x80008000
 ; GFX7-NEXT:    s_lshr_b32 s1, s0, 16
 ; GFX7-NEXT:    s_add_i32 s1, s1, s3
@@ -490,9 +503,10 @@ define amdgpu_ps i32 @s_add_v2i16_fneg_lhs(<2 x half> inreg %a, <2 x i16> inreg 
 define amdgpu_ps i32 @s_add_v2i16_fneg_rhs(<2 x i16> inreg %a, <2 x half> inreg %b) {
 ; GFX7-LABEL: s_add_v2i16_fneg_rhs:
 ; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_and_b32 s3, 0xffff, s3
+; GFX7-NEXT:    s_and_b32 s2, 0xffff, s2
 ; GFX7-NEXT:    s_lshl_b32 s3, s3, 16
-; GFX7-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX7-NEXT:    s_or_b32 s2, s3, s2
+; GFX7-NEXT:    s_or_b32 s2, s2, s3
 ; GFX7-NEXT:    s_xor_b32 s2, s2, 0x80008000
 ; GFX7-NEXT:    s_lshr_b32 s3, s2, 16
 ; GFX7-NEXT:    s_add_i32 s1, s1, s3
@@ -546,11 +560,13 @@ define amdgpu_ps i32 @s_add_v2i16_fneg_rhs(<2 x i16> inreg %a, <2 x half> inreg 
 define amdgpu_ps i32 @s_add_v2i16_fneg_lhs_fneg_rhs(<2 x half> inreg %a, <2 x half> inreg %b) {
 ; GFX7-LABEL: s_add_v2i16_fneg_lhs_fneg_rhs:
 ; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_and_b32 s1, 0xffff, s1
+; GFX7-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX7-NEXT:    s_lshl_b32 s1, s1, 16
-; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX7-NEXT:    s_or_b32 s0, s1, s0
-; GFX7-NEXT:    s_lshl_b32 s1, s3, 16
-; GFX7-NEXT:    s_and_b32 s2, s2, 0xffff
+; GFX7-NEXT:    s_or_b32 s0, s0, s1
+; GFX7-NEXT:    s_and_b32 s1, 0xffff, s2
+; GFX7-NEXT:    s_and_b32 s2, 0xffff, s3
+; GFX7-NEXT:    s_lshl_b32 s2, s2, 16
 ; GFX7-NEXT:    s_or_b32 s1, s1, s2
 ; GFX7-NEXT:    s_xor_b32 s0, s0, 0x80008000
 ; GFX7-NEXT:    s_xor_b32 s1, s1, 0x80008000

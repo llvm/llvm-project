@@ -13,10 +13,10 @@ body: |
     ; CHECK-LABEL: name: lds_param_load_s
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.lds.param.load), 1, 1, [[COPY]](s32)
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.lds.param.load), 1, 1, %0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(i32) = G_INTRINSIC intrinsic(@llvm.amdgcn.lds.param.load), 1, 1, [[COPY]](i32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = G_INTRINSIC intrinsic(@llvm.amdgcn.lds.param.load), 1, 1, %0(i32)
 ...
 
 ---
@@ -30,9 +30,9 @@ body: |
     ; CHECK-LABEL: name: lds_param_load_v
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[COPY]](s32), implicit $exec
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.lds.param.load), 1, 1, [[V_READFIRSTLANE_B32_]](s32)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.lds.param.load), 1, 1, %0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(i32) = V_READFIRSTLANE_B32 [[COPY]](i32), implicit $exec
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(i32) = G_INTRINSIC intrinsic(@llvm.amdgcn.lds.param.load), 1, 1, [[V_READFIRSTLANE_B32_]](i32)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = G_INTRINSIC intrinsic(@llvm.amdgcn.lds.param.load), 1, 1, %0(i32)
 ...

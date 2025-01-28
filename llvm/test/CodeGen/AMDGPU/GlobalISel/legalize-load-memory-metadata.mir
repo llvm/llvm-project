@@ -43,14 +43,14 @@ body: |
     ; SI: liveins: $vgpr0_vgpr1
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), !tbaa !1, addrspace 1)
-    ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16777215
-    ; SI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], [[C]]
-    ; SI-NEXT: $vgpr0 = COPY [[AND]](s32)
+    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY]](p1) :: (load (i32), !tbaa !1, addrspace 1)
+    ; SI-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16777215
+    ; SI-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[LOAD]], [[C]]
+    ; SI-NEXT: $vgpr0 = COPY [[AND]](i32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s24) = G_LOAD %0 :: (load (s24), align 4, addrspace 1, !range !0, !tbaa !1)
-    %2:_(s32) = G_ZEXT %1
-    $vgpr0 = COPY %2
+    %1:_(i24) = G_LOAD %0(p1) :: (load (i24), align 4, addrspace 1, !range !0, !tbaa !1)
+    %2:_(i32) = G_ZEXT %1(i24)
+    $vgpr0 = COPY %2(i32)
 
 ...
 
@@ -64,11 +64,11 @@ body: |
     ; SI: liveins: $vgpr0_vgpr1
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), !tbaa !1, addrspace 1)
-    ; SI-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY]](p1) :: (load (i32), !tbaa !1, addrspace 1)
+    ; SI-NEXT: $vgpr0 = COPY [[LOAD]](i32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s32) = G_LOAD %0 :: (load (s24), align 4, addrspace 1, !range !0, !tbaa !1)
-    $vgpr0 = COPY %1
+    %1:_(i32) = G_LOAD %0(p1) :: (load (i24), align 4, addrspace 1, !range !0, !tbaa !1)
+    $vgpr0 = COPY %1(i32)
 
 ...
 ---
@@ -80,14 +80,14 @@ body: |
     ; SI: liveins: $vgpr0_vgpr1
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), !tbaa !1, addrspace 1)
-    ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16777215
-    ; SI-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[LOAD]], [[C]]
-    ; SI-NEXT: $vgpr0 = COPY [[AND]](s32)
+    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY]](p1) :: (load (i32), !tbaa !1, addrspace 1)
+    ; SI-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16777215
+    ; SI-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[LOAD]], [[C]]
+    ; SI-NEXT: $vgpr0 = COPY [[AND]](i32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s24) = G_LOAD %0 :: (load (s24), align 4, addrspace 1, !tbaa !1)
-    %2:_(s32) = G_ZEXT %1
-    $vgpr0 = COPY %2
+    %1:_(i24) = G_LOAD %0(p1) :: (load (i24), align 4, addrspace 1, !tbaa !1)
+    %2:_(i32) = G_ZEXT %1(i24)
+    $vgpr0 = COPY %2(i32)
 
 ...
 
@@ -101,10 +101,10 @@ body: |
     ; SI: liveins: $vgpr0_vgpr1
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), !tbaa !1, addrspace 1)
-    ; SI-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY]](p1) :: (load (i32), !tbaa !1, addrspace 1)
+    ; SI-NEXT: $vgpr0 = COPY [[LOAD]](i32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s32) = G_LOAD %0 :: (load (s24), align 4, addrspace 1, !tbaa !1)
-    $vgpr0 = COPY %1
+    %1:_(i32) = G_LOAD %0(p1) :: (load (i24), align 4, addrspace 1, !tbaa !1)
+    $vgpr0 = COPY %1(i32)
 
 ...

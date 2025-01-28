@@ -17,23 +17,44 @@ body: |
     ; CHECK-LABEL: name: test_min_max_ValK0_K1_f32
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s32) = nnan G_AMDGPU_CLAMP [[FMUL]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CLAMP]](s32)
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    %9:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = G_FMUL %0, %9
-    %4:sgpr(s32) = G_FCONSTANT float 0.000000e+00
-    %10:vgpr(s32) = COPY %4(s32)
-    %5:vgpr(s32) = nnan G_FMAXNUM_IEEE %3, %10
-    %6:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    %11:vgpr(s32) = COPY %6(s32)
-    %7:vgpr(s32) = nnan G_FMINNUM_IEEE %5, %11
-    $vgpr0 = COPY %7(s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C]](f32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST]](i32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(f32) = G_FMUL [[BITCAST1]], [[BITCAST2]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C1]](f32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST3]](i32)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY2]](i32)
+    ; CHECK-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:vgpr(f32) = nnan G_FMAXNUM_IEEE [[FMUL]], [[BITCAST4]]
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C2]](f32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST5]](i32)
+    ; CHECK-NEXT: [[BITCAST6:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY3]](i32)
+    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:vgpr(f32) = nnan G_FMINNUM_IEEE [[FMAXNUM_IEEE]], [[BITCAST6]]
+    ; CHECK-NEXT: [[BITCAST7:%[0-9]+]]:vgpr(i32) = G_BITCAST [[FMINNUM_IEEE]](f32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST7]](i32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    %10:sgpr(i32) = G_BITCAST %1(f32)
+    %2:vgpr(i32) = COPY %10(i32)
+    %11:vgpr(f32) = G_BITCAST %0(i32)
+    %12:vgpr(f32) = G_BITCAST %2(i32)
+    %3:vgpr(f32) = G_FMUL %11, %12
+    %4:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    %13:sgpr(i32) = G_BITCAST %4(f32)
+    %5:vgpr(i32) = COPY %13(i32)
+    %14:vgpr(f32) = G_BITCAST %5(i32)
+    %6:vgpr(f32) = nnan G_FMAXNUM_IEEE %3, %14
+    %7:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    %15:sgpr(i32) = G_BITCAST %7(f32)
+    %8:vgpr(i32) = COPY %15(i32)
+    %16:vgpr(f32) = G_BITCAST %8(i32)
+    %9:vgpr(f32) = nnan G_FMINNUM_IEEE %6, %16
+    %17:vgpr(i32) = G_BITCAST %9(f32)
+    $vgpr0 = COPY %17(i32)
 ...
 
 ---
@@ -52,23 +73,44 @@ body: |
     ; CHECK-LABEL: name: test_min_max_K0Val_K1_f64
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_FCONSTANT double 2.000000e+00
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY [[C]](s64)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s64) = G_FMUL [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s64) = nnan G_AMDGPU_CLAMP [[FMUL]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[AMDGPU_CLAMP]](s64)
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %4:sgpr(s64) = G_FCONSTANT double 2.000000e+00
-    %13:vgpr(s64) = COPY %4(s64)
-    %5:vgpr(s64) = G_FMUL %0, %13
-    %6:sgpr(s64) = G_FCONSTANT double 0.000000e+00
-    %14:vgpr(s64) = COPY %6(s64)
-    %7:vgpr(s64) = nnan G_FMAXNUM %14, %5
-    %8:sgpr(s64) = G_FCONSTANT double 1.000000e+00
-    %15:vgpr(s64) = COPY %8(s64)
-    %9:vgpr(s64) = nnan G_FMINNUM %7, %15
-    $vgpr0_vgpr1 = COPY %9(s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(f64) = G_FCONSTANT double 2.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i64) = G_BITCAST [[C]](f64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i64) = COPY [[BITCAST]](i64)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY1]](i64)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(f64) = G_FMUL [[BITCAST1]], [[BITCAST2]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(f64) = G_FCONSTANT double 0.000000e+00
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i64) = G_BITCAST [[C1]](f64)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i64) = COPY [[BITCAST3]](i64)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY2]](i64)
+    ; CHECK-NEXT: [[FMAXNUM:%[0-9]+]]:vgpr(f64) = nnan G_FMAXNUM [[BITCAST4]], [[FMUL]]
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(f64) = G_FCONSTANT double 1.000000e+00
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:sgpr(i64) = G_BITCAST [[C2]](f64)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(i64) = COPY [[BITCAST5]](i64)
+    ; CHECK-NEXT: [[BITCAST6:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY3]](i64)
+    ; CHECK-NEXT: [[FMINNUM:%[0-9]+]]:vgpr(f64) = nnan G_FMINNUM [[FMAXNUM]], [[BITCAST6]]
+    ; CHECK-NEXT: [[BITCAST7:%[0-9]+]]:vgpr(i64) = G_BITCAST [[FMINNUM]](f64)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST7]](i64)
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:sgpr(f64) = G_FCONSTANT double 2.000000e+00
+    %10:sgpr(i64) = G_BITCAST %1(f64)
+    %2:vgpr(i64) = COPY %10(i64)
+    %11:vgpr(f64) = G_BITCAST %0(i64)
+    %12:vgpr(f64) = G_BITCAST %2(i64)
+    %3:vgpr(f64) = G_FMUL %11, %12
+    %4:sgpr(f64) = G_FCONSTANT double 0.000000e+00
+    %13:sgpr(i64) = G_BITCAST %4(f64)
+    %5:vgpr(i64) = COPY %13(i64)
+    %14:vgpr(f64) = G_BITCAST %5(i64)
+    %6:vgpr(f64) = nnan G_FMAXNUM %14, %3
+    %7:sgpr(f64) = G_FCONSTANT double 1.000000e+00
+    %15:sgpr(i64) = G_BITCAST %7(f64)
+    %8:vgpr(i64) = COPY %15(i64)
+    %16:vgpr(f64) = G_BITCAST %8(i64)
+    %9:vgpr(f64) = nnan G_FMINNUM %6, %16
+    %17:vgpr(i64) = G_BITCAST %9(f64)
+    $vgpr0_vgpr1 = COPY %17(i64)
 ...
 
 ---
@@ -87,29 +129,50 @@ body: |
     ; CHECK-LABEL: name: test_min_K1max_ValK0_f16
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s16) = G_FCONSTANT half 0xH4000
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s16) = COPY [[C]](s16)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s16) = G_FMUL [[TRUNC]], [[COPY1]]
-    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:vgpr(s16) = G_FCANONICALIZE [[FMUL]]
-    ; CHECK-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s16) = G_AMDGPU_CLAMP [[FCANONICALIZE]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:vgpr(s32) = G_ANYEXT [[AMDGPU_CLAMP]](s16)
-    ; CHECK-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
-    %2:vgpr(s32) = COPY $vgpr0
-    %0:vgpr(s16) = G_TRUNC %2(s32)
-    %3:sgpr(s16) = G_FCONSTANT half 0xH4000
-    %12:vgpr(s16) = COPY %3(s16)
-    %4:vgpr(s16) = G_FMUL %0, %12
-    %5:sgpr(s16) = G_FCONSTANT half 0xH0000
-    %11:vgpr(s16) = G_FCANONICALIZE %4
-    %13:vgpr(s16) = COPY %5(s16)
-    %6:vgpr(s16) = G_FMAXNUM_IEEE %11, %13
-    %7:sgpr(s16) = G_FCONSTANT half 0xH3C00
-    %14:vgpr(s16) = COPY %7(s16)
-    %8:vgpr(s16) = G_FMINNUM_IEEE %14, %6
-    %10:vgpr(s32) = G_ANYEXT %8(s16)
-    $vgpr0 = COPY %10(s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(i16) = G_TRUNC [[COPY]](i32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(f16) = G_FCONSTANT half 0xH4000
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i16) = G_BITCAST [[C]](f16)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i16) = COPY [[BITCAST]](i16)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f16) = G_BITCAST [[TRUNC]](i16)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f16) = G_BITCAST [[COPY1]](i16)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(f16) = G_FMUL [[BITCAST1]], [[BITCAST2]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(f16) = G_FCONSTANT half 0xH0000
+    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:vgpr(f16) = G_FCANONICALIZE [[FMUL]]
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i16) = G_BITCAST [[C1]](f16)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i16) = COPY [[BITCAST3]](i16)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:vgpr(f16) = G_BITCAST [[COPY2]](i16)
+    ; CHECK-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:vgpr(f16) = G_FMAXNUM_IEEE [[FCANONICALIZE]], [[BITCAST4]]
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(f16) = G_FCONSTANT half 0xH3C00
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:sgpr(i16) = G_BITCAST [[C2]](f16)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(i16) = COPY [[BITCAST5]](i16)
+    ; CHECK-NEXT: [[BITCAST6:%[0-9]+]]:vgpr(f16) = G_BITCAST [[COPY3]](i16)
+    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:vgpr(f16) = G_FMINNUM_IEEE [[BITCAST6]], [[FMAXNUM_IEEE]]
+    ; CHECK-NEXT: [[BITCAST7:%[0-9]+]]:vgpr(i16) = G_BITCAST [[FMINNUM_IEEE]](f16)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:vgpr(i32) = G_ANYEXT [[BITCAST7]](i16)
+    ; CHECK-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i16) = G_TRUNC %0(i32)
+    %2:sgpr(f16) = G_FCONSTANT half 0xH4000
+    %13:sgpr(i16) = G_BITCAST %2(f16)
+    %3:vgpr(i16) = COPY %13(i16)
+    %14:vgpr(f16) = G_BITCAST %1(i16)
+    %15:vgpr(f16) = G_BITCAST %3(i16)
+    %4:vgpr(f16) = G_FMUL %14, %15
+    %5:sgpr(f16) = G_FCONSTANT half 0xH0000
+    %6:vgpr(f16) = G_FCANONICALIZE %4
+    %16:sgpr(i16) = G_BITCAST %5(f16)
+    %7:vgpr(i16) = COPY %16(i16)
+    %17:vgpr(f16) = G_BITCAST %7(i16)
+    %8:vgpr(f16) = G_FMAXNUM_IEEE %6, %17
+    %9:sgpr(f16) = G_FCONSTANT half 0xH3C00
+    %18:sgpr(i16) = G_BITCAST %9(f16)
+    %10:vgpr(i16) = COPY %18(i16)
+    %19:vgpr(f16) = G_BITCAST %10(i16)
+    %11:vgpr(f16) = G_FMINNUM_IEEE %19, %8
+    %20:vgpr(i16) = G_BITCAST %11(f16)
+    %12:vgpr(i32) = G_ANYEXT %20(i16)
+    $vgpr0 = COPY %12(i32)
 ...
 
 ---
@@ -128,31 +191,56 @@ body: |
     ; CHECK-LABEL: name: test_min_K1max_K0Val_f16
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s16) = G_FCONSTANT half 0xH4000
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[C]](s16)
-    ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT]](s32), [[ANYEXT]](s32)
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x s16>) = COPY [[BUILD_VECTOR_TRUNC]](<2 x s16>)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(<2 x s16>) = G_FMUL [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(<2 x s16>) = nnan G_AMDGPU_CLAMP [[FMUL]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CLAMP]](<2 x s16>)
-    %0:vgpr(<2 x s16>) = COPY $vgpr0
-    %3:sgpr(s16) = G_FCONSTANT half 0xH4000
-    %12:sgpr(s32) = G_ANYEXT %3(s16)
-    %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %12(s32), %12(s32)
-    %6:sgpr(s16) = G_FCONSTANT half 0xH0000
-    %13:sgpr(s32) = G_ANYEXT %6(s16)
-    %5:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %13(s32), %13(s32)
-    %9:sgpr(s16) = G_FCONSTANT half 0xH3C00
-    %14:sgpr(s32) = G_ANYEXT %9(s16)
-    %8:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %14(s32), %14(s32)
-    %15:vgpr(<2 x s16>) = COPY %2(<2 x s16>)
-    %4:vgpr(<2 x s16>) = G_FMUL %0, %15
-    %16:vgpr(<2 x s16>) = COPY %5(<2 x s16>)
-    %7:vgpr(<2 x s16>) = nnan G_FMAXNUM %16, %4
-    %17:vgpr(<2 x s16>) = COPY %8(<2 x s16>)
-    %10:vgpr(<2 x s16>) = nnan G_FMINNUM %17, %7
-    $vgpr0 = COPY %10(<2 x s16>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(<2 x i16>) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(f16) = G_FCONSTANT half 0xH4000
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i16) = G_BITCAST [[C]](f16)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:sgpr(i32) = G_ANYEXT [[BITCAST]](i16)
+    ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT]](i32), [[ANYEXT]](i32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(f16) = G_FCONSTANT half 0xH0000
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:sgpr(i16) = G_BITCAST [[C1]](f16)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:sgpr(i32) = G_ANYEXT [[BITCAST1]](i16)
+    ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT1]](i32), [[ANYEXT1]](i32)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(f16) = G_FCONSTANT half 0xH3C00
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:sgpr(i16) = G_BITCAST [[C2]](f16)
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:sgpr(i32) = G_ANYEXT [[BITCAST2]](i16)
+    ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT2]](i32), [[ANYEXT2]](i32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x i16>) = COPY [[BUILD_VECTOR_TRUNC]](<2 x i16>)
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:vgpr(<2 x f16>) = G_BITCAST [[COPY]](<2 x i16>)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:vgpr(<2 x f16>) = G_BITCAST [[COPY1]](<2 x i16>)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(<2 x f16>) = G_FMUL [[BITCAST3]], [[BITCAST4]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<2 x i16>) = COPY [[BUILD_VECTOR_TRUNC1]](<2 x i16>)
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:vgpr(<2 x f16>) = G_BITCAST [[COPY2]](<2 x i16>)
+    ; CHECK-NEXT: [[FMAXNUM:%[0-9]+]]:vgpr(<2 x f16>) = nnan G_FMAXNUM [[BITCAST5]], [[FMUL]]
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(<2 x i16>) = COPY [[BUILD_VECTOR_TRUNC2]](<2 x i16>)
+    ; CHECK-NEXT: [[BITCAST6:%[0-9]+]]:vgpr(<2 x f16>) = G_BITCAST [[COPY3]](<2 x i16>)
+    ; CHECK-NEXT: [[FMINNUM:%[0-9]+]]:vgpr(<2 x f16>) = nnan G_FMINNUM [[BITCAST6]], [[FMAXNUM]]
+    ; CHECK-NEXT: [[BITCAST7:%[0-9]+]]:vgpr(<2 x i16>) = G_BITCAST [[FMINNUM]](<2 x f16>)
+    ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST7]](<2 x i16>)
+    %0:vgpr(<2 x i16>) = COPY $vgpr0
+    %1:sgpr(f16) = G_FCONSTANT half 0xH4000
+    %16:sgpr(i16) = G_BITCAST %1(f16)
+    %2:sgpr(i32) = G_ANYEXT %16(i16)
+    %3:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC %2(i32), %2(i32)
+    %4:sgpr(f16) = G_FCONSTANT half 0xH0000
+    %17:sgpr(i16) = G_BITCAST %4(f16)
+    %5:sgpr(i32) = G_ANYEXT %17(i16)
+    %6:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC %5(i32), %5(i32)
+    %7:sgpr(f16) = G_FCONSTANT half 0xH3C00
+    %18:sgpr(i16) = G_BITCAST %7(f16)
+    %8:sgpr(i32) = G_ANYEXT %18(i16)
+    %9:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC %8(i32), %8(i32)
+    %10:vgpr(<2 x i16>) = COPY %3(<2 x i16>)
+    %19:vgpr(<2 x f16>) = G_BITCAST %0(<2 x i16>)
+    %20:vgpr(<2 x f16>) = G_BITCAST %10(<2 x i16>)
+    %11:vgpr(<2 x f16>) = G_FMUL %19, %20
+    %12:vgpr(<2 x i16>) = COPY %6(<2 x i16>)
+    %21:vgpr(<2 x f16>) = G_BITCAST %12(<2 x i16>)
+    %13:vgpr(<2 x f16>) = nnan G_FMAXNUM %21, %11
+    %14:vgpr(<2 x i16>) = COPY %9(<2 x i16>)
+    %22:vgpr(<2 x f16>) = G_BITCAST %14(<2 x i16>)
+    %15:vgpr(<2 x f16>) = nnan G_FMINNUM %22, %13
+    %23:vgpr(<2 x i16>) = G_BITCAST %15(<2 x f16>)
+    $vgpr0 = COPY %23(<2 x i16>)
 ...
 
 ---
@@ -171,34 +259,60 @@ body: |
     ; CHECK-LABEL: name: test_min_max_splat_padded_with_undef
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s16) = G_FCONSTANT half 0xH4000
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[C]](s16)
-    ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT]](s32), [[ANYEXT]](s32)
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x s16>) = COPY [[BUILD_VECTOR_TRUNC]](<2 x s16>)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(<2 x s16>) = G_FMUL [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:vgpr(<2 x s16>) = G_FCANONICALIZE [[FMUL]]
-    ; CHECK-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(<2 x s16>) = G_AMDGPU_CLAMP [[FCANONICALIZE]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CLAMP]](<2 x s16>)
-    %0:vgpr(<2 x s16>) = COPY $vgpr0
-    %3:sgpr(s16) = G_FCONSTANT half 0xH4000
-    %17:sgpr(s32) = G_ANYEXT %3(s16)
-    %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %17(s32), %17(s32)
-    %6:sgpr(s16) = G_FCONSTANT half 0xH0000
-    %18:sgpr(s32) = G_ANYEXT %6(s16)
-    %19:sgpr(s32) = G_IMPLICIT_DEF
-    %5:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %18(s32), %19(s32)
-    %10:sgpr(s16) = G_FCONSTANT half 0xH3C00
-    %20:sgpr(s32) = G_ANYEXT %10(s16)
-    %9:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %20(s32), %19(s32)
-    %21:vgpr(<2 x s16>) = COPY %2(<2 x s16>)
-    %4:vgpr(<2 x s16>) = G_FMUL %0, %21
-    %16:vgpr(<2 x s16>) = G_FCANONICALIZE %4
-    %22:vgpr(<2 x s16>) = COPY %5(<2 x s16>)
-    %8:vgpr(<2 x s16>) = G_FMAXNUM_IEEE %22, %16
-    %23:vgpr(<2 x s16>) = COPY %9(<2 x s16>)
-    %11:vgpr(<2 x s16>) = G_FMINNUM_IEEE %23, %8
-    $vgpr0 = COPY %11(<2 x s16>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(<2 x i16>) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(f16) = G_FCONSTANT half 0xH4000
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i16) = G_BITCAST [[C]](f16)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:sgpr(i32) = G_ANYEXT [[BITCAST]](i16)
+    ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT]](i32), [[ANYEXT]](i32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(f16) = G_FCONSTANT half 0xH0000
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:sgpr(i16) = G_BITCAST [[C1]](f16)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:sgpr(i32) = G_ANYEXT [[BITCAST1]](i16)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:sgpr(i32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT1]](i32), [[DEF]](i32)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(f16) = G_FCONSTANT half 0xH3C00
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:sgpr(i16) = G_BITCAST [[C2]](f16)
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:sgpr(i32) = G_ANYEXT [[BITCAST2]](i16)
+    ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT2]](i32), [[DEF]](i32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x i16>) = COPY [[BUILD_VECTOR_TRUNC]](<2 x i16>)
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:vgpr(<2 x f16>) = G_BITCAST [[COPY]](<2 x i16>)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:vgpr(<2 x f16>) = G_BITCAST [[COPY1]](<2 x i16>)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(<2 x f16>) = G_FMUL [[BITCAST3]], [[BITCAST4]]
+    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:vgpr(<2 x f16>) = G_FCANONICALIZE [[FMUL]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<2 x i16>) = COPY [[BUILD_VECTOR_TRUNC1]](<2 x i16>)
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:vgpr(<2 x f16>) = G_BITCAST [[COPY2]](<2 x i16>)
+    ; CHECK-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:vgpr(<2 x f16>) = G_FMAXNUM_IEEE [[BITCAST5]], [[FCANONICALIZE]]
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(<2 x i16>) = COPY [[BUILD_VECTOR_TRUNC2]](<2 x i16>)
+    ; CHECK-NEXT: [[BITCAST6:%[0-9]+]]:vgpr(<2 x f16>) = G_BITCAST [[COPY3]](<2 x i16>)
+    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:vgpr(<2 x f16>) = G_FMINNUM_IEEE [[BITCAST6]], [[FMAXNUM_IEEE]]
+    ; CHECK-NEXT: [[BITCAST7:%[0-9]+]]:vgpr(<2 x i16>) = G_BITCAST [[FMINNUM_IEEE]](<2 x f16>)
+    ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST7]](<2 x i16>)
+    %0:vgpr(<2 x i16>) = COPY $vgpr0
+    %1:sgpr(f16) = G_FCONSTANT half 0xH4000
+    %18:sgpr(i16) = G_BITCAST %1(f16)
+    %2:sgpr(i32) = G_ANYEXT %18(i16)
+    %3:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC %2(i32), %2(i32)
+    %4:sgpr(f16) = G_FCONSTANT half 0xH0000
+    %19:sgpr(i16) = G_BITCAST %4(f16)
+    %5:sgpr(i32) = G_ANYEXT %19(i16)
+    %6:sgpr(i32) = G_IMPLICIT_DEF
+    %7:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC %5(i32), %6(i32)
+    %8:sgpr(f16) = G_FCONSTANT half 0xH3C00
+    %20:sgpr(i16) = G_BITCAST %8(f16)
+    %9:sgpr(i32) = G_ANYEXT %20(i16)
+    %10:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC %9(i32), %6(i32)
+    %11:vgpr(<2 x i16>) = COPY %3(<2 x i16>)
+    %21:vgpr(<2 x f16>) = G_BITCAST %0(<2 x i16>)
+    %22:vgpr(<2 x f16>) = G_BITCAST %11(<2 x i16>)
+    %12:vgpr(<2 x f16>) = G_FMUL %21, %22
+    %13:vgpr(<2 x f16>) = G_FCANONICALIZE %12
+    %14:vgpr(<2 x i16>) = COPY %7(<2 x i16>)
+    %23:vgpr(<2 x f16>) = G_BITCAST %14(<2 x i16>)
+    %15:vgpr(<2 x f16>) = G_FMAXNUM_IEEE %23, %13
+    %16:vgpr(<2 x i16>) = COPY %10(<2 x i16>)
+    %24:vgpr(<2 x f16>) = G_BITCAST %16(<2 x i16>)
+    %17:vgpr(<2 x f16>) = G_FMINNUM_IEEE %24, %15
+    %25:vgpr(<2 x i16>) = G_BITCAST %17(<2 x f16>)
+    $vgpr0 = COPY %25(<2 x i16>)
 ...
 
 ---
@@ -214,23 +328,44 @@ body: |
     ; CHECK-LABEL: name: test_max_min_ValK1_K0_f32
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s32) = nnan G_AMDGPU_CLAMP [[FMUL]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CLAMP]](s32)
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    %9:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = G_FMUL %0, %9
-    %4:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    %10:vgpr(s32) = COPY %4(s32)
-    %5:vgpr(s32) = nnan G_FMINNUM_IEEE %3, %10
-    %6:sgpr(s32) = G_FCONSTANT float 0.000000e+00
-    %11:vgpr(s32) = COPY %6(s32)
-    %7:vgpr(s32) = nnan G_FMAXNUM_IEEE %5, %11
-    $vgpr0 = COPY %7(s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C]](f32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST]](i32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(f32) = G_FMUL [[BITCAST1]], [[BITCAST2]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C1]](f32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST3]](i32)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY2]](i32)
+    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:vgpr(f32) = nnan G_FMINNUM_IEEE [[FMUL]], [[BITCAST4]]
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C2]](f32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST5]](i32)
+    ; CHECK-NEXT: [[BITCAST6:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY3]](i32)
+    ; CHECK-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:vgpr(f32) = nnan G_FMAXNUM_IEEE [[FMINNUM_IEEE]], [[BITCAST6]]
+    ; CHECK-NEXT: [[BITCAST7:%[0-9]+]]:vgpr(i32) = G_BITCAST [[FMAXNUM_IEEE]](f32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST7]](i32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    %10:sgpr(i32) = G_BITCAST %1(f32)
+    %2:vgpr(i32) = COPY %10(i32)
+    %11:vgpr(f32) = G_BITCAST %0(i32)
+    %12:vgpr(f32) = G_BITCAST %2(i32)
+    %3:vgpr(f32) = G_FMUL %11, %12
+    %4:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    %13:sgpr(i32) = G_BITCAST %4(f32)
+    %5:vgpr(i32) = COPY %13(i32)
+    %14:vgpr(f32) = G_BITCAST %5(i32)
+    %6:vgpr(f32) = nnan G_FMINNUM_IEEE %3, %14
+    %7:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    %15:sgpr(i32) = G_BITCAST %7(f32)
+    %8:vgpr(i32) = COPY %15(i32)
+    %16:vgpr(f32) = G_BITCAST %8(i32)
+    %9:vgpr(f32) = nnan G_FMAXNUM_IEEE %6, %16
+    %17:vgpr(i32) = G_BITCAST %9(f32)
+    $vgpr0 = COPY %17(i32)
 ...
 
 ---
@@ -249,23 +384,44 @@ body: |
     ; CHECK-LABEL: name: test_max_min_K1Val_K0_f64
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_FCONSTANT double 2.000000e+00
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY [[C]](s64)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s64) = G_FMUL [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s64) = nnan G_AMDGPU_CLAMP [[FMUL]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[AMDGPU_CLAMP]](s64)
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %4:sgpr(s64) = G_FCONSTANT double 2.000000e+00
-    %13:vgpr(s64) = COPY %4(s64)
-    %5:vgpr(s64) = G_FMUL %0, %13
-    %6:sgpr(s64) = G_FCONSTANT double 1.000000e+00
-    %14:vgpr(s64) = COPY %6(s64)
-    %7:vgpr(s64) = nnan G_FMINNUM %14, %5
-    %8:sgpr(s64) = G_FCONSTANT double 0.000000e+00
-    %15:vgpr(s64) = COPY %8(s64)
-    %9:vgpr(s64) = nnan G_FMAXNUM %7, %15
-    $vgpr0_vgpr1 = COPY %9(s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(f64) = G_FCONSTANT double 2.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i64) = G_BITCAST [[C]](f64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i64) = COPY [[BITCAST]](i64)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY1]](i64)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(f64) = G_FMUL [[BITCAST1]], [[BITCAST2]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(f64) = G_FCONSTANT double 1.000000e+00
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i64) = G_BITCAST [[C1]](f64)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i64) = COPY [[BITCAST3]](i64)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY2]](i64)
+    ; CHECK-NEXT: [[FMINNUM:%[0-9]+]]:vgpr(f64) = nnan G_FMINNUM [[BITCAST4]], [[FMUL]]
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(f64) = G_FCONSTANT double 0.000000e+00
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:sgpr(i64) = G_BITCAST [[C2]](f64)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(i64) = COPY [[BITCAST5]](i64)
+    ; CHECK-NEXT: [[BITCAST6:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY3]](i64)
+    ; CHECK-NEXT: [[FMAXNUM:%[0-9]+]]:vgpr(f64) = nnan G_FMAXNUM [[FMINNUM]], [[BITCAST6]]
+    ; CHECK-NEXT: [[BITCAST7:%[0-9]+]]:vgpr(i64) = G_BITCAST [[FMAXNUM]](f64)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST7]](i64)
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:sgpr(f64) = G_FCONSTANT double 2.000000e+00
+    %10:sgpr(i64) = G_BITCAST %1(f64)
+    %2:vgpr(i64) = COPY %10(i64)
+    %11:vgpr(f64) = G_BITCAST %0(i64)
+    %12:vgpr(f64) = G_BITCAST %2(i64)
+    %3:vgpr(f64) = G_FMUL %11, %12
+    %4:sgpr(f64) = G_FCONSTANT double 1.000000e+00
+    %13:sgpr(i64) = G_BITCAST %4(f64)
+    %5:vgpr(i64) = COPY %13(i64)
+    %14:vgpr(f64) = G_BITCAST %5(i64)
+    %6:vgpr(f64) = nnan G_FMINNUM %14, %3
+    %7:sgpr(f64) = G_FCONSTANT double 0.000000e+00
+    %15:sgpr(i64) = G_BITCAST %7(f64)
+    %8:vgpr(i64) = COPY %15(i64)
+    %16:vgpr(f64) = G_BITCAST %8(i64)
+    %9:vgpr(f64) = nnan G_FMAXNUM %6, %16
+    %17:vgpr(i64) = G_BITCAST %9(f64)
+    $vgpr0_vgpr1 = COPY %17(i64)
 ...
 
 ---
@@ -284,27 +440,48 @@ body: |
     ; CHECK-LABEL: name: test_max_K0min_ValK1_f16
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s16) = G_FCONSTANT half 0xH4000
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s16) = COPY [[C]](s16)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s16) = G_FMUL [[TRUNC]], [[COPY1]]
-    ; CHECK-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s16) = nnan G_AMDGPU_CLAMP [[FMUL]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:vgpr(s32) = G_ANYEXT [[AMDGPU_CLAMP]](s16)
-    ; CHECK-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
-    %2:vgpr(s32) = COPY $vgpr0
-    %0:vgpr(s16) = G_TRUNC %2(s32)
-    %3:sgpr(s16) = G_FCONSTANT half 0xH4000
-    %11:vgpr(s16) = COPY %3(s16)
-    %4:vgpr(s16) = G_FMUL %0, %11
-    %5:sgpr(s16) = G_FCONSTANT half 0xH3C00
-    %12:vgpr(s16) = COPY %5(s16)
-    %6:vgpr(s16) = nnan G_FMINNUM_IEEE %4, %12
-    %7:sgpr(s16) = G_FCONSTANT half 0xH0000
-    %13:vgpr(s16) = COPY %7(s16)
-    %8:vgpr(s16) = nnan G_FMAXNUM_IEEE %13, %6
-    %10:vgpr(s32) = G_ANYEXT %8(s16)
-    $vgpr0 = COPY %10(s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(i16) = G_TRUNC [[COPY]](i32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(f16) = G_FCONSTANT half 0xH4000
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i16) = G_BITCAST [[C]](f16)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i16) = COPY [[BITCAST]](i16)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f16) = G_BITCAST [[TRUNC]](i16)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f16) = G_BITCAST [[COPY1]](i16)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(f16) = G_FMUL [[BITCAST1]], [[BITCAST2]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(f16) = G_FCONSTANT half 0xH3C00
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i16) = G_BITCAST [[C1]](f16)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i16) = COPY [[BITCAST3]](i16)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:vgpr(f16) = G_BITCAST [[COPY2]](i16)
+    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:vgpr(f16) = nnan G_FMINNUM_IEEE [[FMUL]], [[BITCAST4]]
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(f16) = G_FCONSTANT half 0xH0000
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:sgpr(i16) = G_BITCAST [[C2]](f16)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(i16) = COPY [[BITCAST5]](i16)
+    ; CHECK-NEXT: [[BITCAST6:%[0-9]+]]:vgpr(f16) = G_BITCAST [[COPY3]](i16)
+    ; CHECK-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:vgpr(f16) = nnan G_FMAXNUM_IEEE [[BITCAST6]], [[FMINNUM_IEEE]]
+    ; CHECK-NEXT: [[BITCAST7:%[0-9]+]]:vgpr(i16) = G_BITCAST [[FMAXNUM_IEEE]](f16)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:vgpr(i32) = G_ANYEXT [[BITCAST7]](i16)
+    ; CHECK-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i16) = G_TRUNC %0(i32)
+    %2:sgpr(f16) = G_FCONSTANT half 0xH4000
+    %12:sgpr(i16) = G_BITCAST %2(f16)
+    %3:vgpr(i16) = COPY %12(i16)
+    %13:vgpr(f16) = G_BITCAST %1(i16)
+    %14:vgpr(f16) = G_BITCAST %3(i16)
+    %4:vgpr(f16) = G_FMUL %13, %14
+    %5:sgpr(f16) = G_FCONSTANT half 0xH3C00
+    %15:sgpr(i16) = G_BITCAST %5(f16)
+    %6:vgpr(i16) = COPY %15(i16)
+    %16:vgpr(f16) = G_BITCAST %6(i16)
+    %7:vgpr(f16) = nnan G_FMINNUM_IEEE %4, %16
+    %8:sgpr(f16) = G_FCONSTANT half 0xH0000
+    %17:sgpr(i16) = G_BITCAST %8(f16)
+    %9:vgpr(i16) = COPY %17(i16)
+    %18:vgpr(f16) = G_BITCAST %9(i16)
+    %10:vgpr(f16) = nnan G_FMAXNUM_IEEE %18, %7
+    %19:vgpr(i16) = G_BITCAST %10(f16)
+    %11:vgpr(i32) = G_ANYEXT %19(i16)
+    $vgpr0 = COPY %11(i32)
 ...
 
 ---
@@ -323,32 +500,58 @@ body: |
     ; CHECK-LABEL: name: test_max_K0min_K1Val_v2f16
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s16) = G_FCONSTANT half 0xH4000
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[C]](s16)
-    ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT]](s32), [[ANYEXT]](s32)
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x s16>) = COPY [[BUILD_VECTOR_TRUNC]](<2 x s16>)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(<2 x s16>) = G_FMUL [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(<2 x s16>) = nnan G_AMDGPU_CLAMP [[FMUL]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CLAMP]](<2 x s16>)
-    %0:vgpr(<2 x s16>) = COPY $vgpr0
-    %3:sgpr(s16) = G_FCONSTANT half 0xH4000
-    %13:sgpr(s32) = G_ANYEXT %3(s16)
-    %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %13(s32), %13(s32)
-    %6:sgpr(s16) = G_FCONSTANT half 0xH3C00
-    %14:sgpr(s32) = G_ANYEXT %6(s16)
-    %15:sgpr(s32) = G_IMPLICIT_DEF
-    %5:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %14(s32), %15(s32)
-    %10:sgpr(s16) = G_FCONSTANT half 0xH0000
-    %16:sgpr(s32) = G_ANYEXT %10(s16)
-    %9:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %15(s32), %16(s32)
-    %17:vgpr(<2 x s16>) = COPY %2(<2 x s16>)
-    %4:vgpr(<2 x s16>) = G_FMUL %0, %17
-    %18:vgpr(<2 x s16>) = COPY %5(<2 x s16>)
-    %8:vgpr(<2 x s16>) = nnan G_FMINNUM %18, %4
-    %19:vgpr(<2 x s16>) = COPY %9(<2 x s16>)
-    %11:vgpr(<2 x s16>) = nnan G_FMAXNUM %19, %8
-    $vgpr0 = COPY %11(<2 x s16>)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(<2 x i16>) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(f16) = G_FCONSTANT half 0xH4000
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i16) = G_BITCAST [[C]](f16)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:sgpr(i32) = G_ANYEXT [[BITCAST]](i16)
+    ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT]](i32), [[ANYEXT]](i32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(f16) = G_FCONSTANT half 0xH3C00
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:sgpr(i16) = G_BITCAST [[C1]](f16)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:sgpr(i32) = G_ANYEXT [[BITCAST1]](i16)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:sgpr(i32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT1]](i32), [[DEF]](i32)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(f16) = G_FCONSTANT half 0xH0000
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:sgpr(i16) = G_BITCAST [[C2]](f16)
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:sgpr(i32) = G_ANYEXT [[BITCAST2]](i16)
+    ; CHECK-NEXT: [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC [[DEF]](i32), [[ANYEXT2]](i32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x i16>) = COPY [[BUILD_VECTOR_TRUNC]](<2 x i16>)
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:vgpr(<2 x f16>) = G_BITCAST [[COPY]](<2 x i16>)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:vgpr(<2 x f16>) = G_BITCAST [[COPY1]](<2 x i16>)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(<2 x f16>) = G_FMUL [[BITCAST3]], [[BITCAST4]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<2 x i16>) = COPY [[BUILD_VECTOR_TRUNC1]](<2 x i16>)
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:vgpr(<2 x f16>) = G_BITCAST [[COPY2]](<2 x i16>)
+    ; CHECK-NEXT: [[FMINNUM:%[0-9]+]]:vgpr(<2 x f16>) = nnan G_FMINNUM [[BITCAST5]], [[FMUL]]
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(<2 x i16>) = COPY [[BUILD_VECTOR_TRUNC2]](<2 x i16>)
+    ; CHECK-NEXT: [[BITCAST6:%[0-9]+]]:vgpr(<2 x f16>) = G_BITCAST [[COPY3]](<2 x i16>)
+    ; CHECK-NEXT: [[FMAXNUM:%[0-9]+]]:vgpr(<2 x f16>) = nnan G_FMAXNUM [[BITCAST6]], [[FMINNUM]]
+    ; CHECK-NEXT: [[BITCAST7:%[0-9]+]]:vgpr(<2 x i16>) = G_BITCAST [[FMAXNUM]](<2 x f16>)
+    ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST7]](<2 x i16>)
+    %0:vgpr(<2 x i16>) = COPY $vgpr0
+    %1:sgpr(f16) = G_FCONSTANT half 0xH4000
+    %17:sgpr(i16) = G_BITCAST %1(f16)
+    %2:sgpr(i32) = G_ANYEXT %17(i16)
+    %3:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC %2(i32), %2(i32)
+    %4:sgpr(f16) = G_FCONSTANT half 0xH3C00
+    %18:sgpr(i16) = G_BITCAST %4(f16)
+    %5:sgpr(i32) = G_ANYEXT %18(i16)
+    %6:sgpr(i32) = G_IMPLICIT_DEF
+    %7:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC %5(i32), %6(i32)
+    %8:sgpr(f16) = G_FCONSTANT half 0xH0000
+    %19:sgpr(i16) = G_BITCAST %8(f16)
+    %9:sgpr(i32) = G_ANYEXT %19(i16)
+    %10:sgpr(<2 x i16>) = G_BUILD_VECTOR_TRUNC %6(i32), %9(i32)
+    %11:vgpr(<2 x i16>) = COPY %3(<2 x i16>)
+    %20:vgpr(<2 x f16>) = G_BITCAST %0(<2 x i16>)
+    %21:vgpr(<2 x f16>) = G_BITCAST %11(<2 x i16>)
+    %12:vgpr(<2 x f16>) = G_FMUL %20, %21
+    %13:vgpr(<2 x i16>) = COPY %7(<2 x i16>)
+    %22:vgpr(<2 x f16>) = G_BITCAST %13(<2 x i16>)
+    %14:vgpr(<2 x f16>) = nnan G_FMINNUM %22, %12
+    %15:vgpr(<2 x i16>) = COPY %10(<2 x i16>)
+    %23:vgpr(<2 x f16>) = G_BITCAST %15(<2 x i16>)
+    %16:vgpr(<2 x f16>) = nnan G_FMAXNUM %23, %14
+    %24:vgpr(<2 x i16>) = G_BITCAST %16(<2 x f16>)
+    $vgpr0 = COPY %24(<2 x i16>)
 ...
 
 # FixMe: add tests with attributes #3 = {"no-nans-fp-math"="true"}
@@ -369,22 +572,34 @@ body: |
     ; CHECK-LABEL: name: test_min_max_K0_gt_K1
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:vgpr(s32) = nnan G_FMAXNUM_IEEE [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 0.000000e+00
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:vgpr(s32) = nnan G_FMINNUM_IEEE [[FMAXNUM_IEEE]], [[COPY2]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[FMINNUM_IEEE]](s32)
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    %7:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = nnan G_FMAXNUM_IEEE %0, %7
-    %4:sgpr(s32) = G_FCONSTANT float 0.000000e+00
-    %8:vgpr(s32) = COPY %4(s32)
-    %5:vgpr(s32) = nnan G_FMINNUM_IEEE %3, %8
-    $vgpr0 = COPY %5(s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C]](f32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST]](i32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; CHECK-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:vgpr(f32) = nnan G_FMAXNUM_IEEE [[BITCAST1]], [[BITCAST2]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C1]](f32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST3]](i32)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY2]](i32)
+    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:vgpr(f32) = nnan G_FMINNUM_IEEE [[FMAXNUM_IEEE]], [[BITCAST4]]
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:vgpr(i32) = G_BITCAST [[FMINNUM_IEEE]](f32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST5]](i32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    %7:sgpr(i32) = G_BITCAST %1(f32)
+    %2:vgpr(i32) = COPY %7(i32)
+    %8:vgpr(f32) = G_BITCAST %0(i32)
+    %9:vgpr(f32) = G_BITCAST %2(i32)
+    %3:vgpr(f32) = nnan G_FMAXNUM_IEEE %8, %9
+    %4:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    %10:sgpr(i32) = G_BITCAST %4(f32)
+    %5:vgpr(i32) = COPY %10(i32)
+    %11:vgpr(f32) = G_BITCAST %5(i32)
+    %6:vgpr(f32) = nnan G_FMINNUM_IEEE %3, %11
+    %12:vgpr(i32) = G_BITCAST %6(f32)
+    $vgpr0 = COPY %12(i32)
 ...
 
 ---
@@ -403,22 +618,34 @@ body: |
     ; CHECK-LABEL: name: test_max_min_K0_gt_K1
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 0.000000e+00
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:vgpr(s32) = nnan G_FMINNUM_IEEE [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:vgpr(s32) = nnan G_FMAXNUM_IEEE [[FMINNUM_IEEE]], [[COPY2]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_FCONSTANT float 0.000000e+00
-    %7:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = nnan G_FMINNUM_IEEE %0, %7
-    %4:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    %8:vgpr(s32) = COPY %4(s32)
-    %5:vgpr(s32) = nnan G_FMAXNUM_IEEE %3, %8
-    $vgpr0 = COPY %5(s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C]](f32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST]](i32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:vgpr(f32) = nnan G_FMINNUM_IEEE [[BITCAST1]], [[BITCAST2]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C1]](f32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST3]](i32)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY2]](i32)
+    ; CHECK-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:vgpr(f32) = nnan G_FMAXNUM_IEEE [[FMINNUM_IEEE]], [[BITCAST4]]
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:vgpr(i32) = G_BITCAST [[FMAXNUM_IEEE]](f32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST5]](i32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    %7:sgpr(i32) = G_BITCAST %1(f32)
+    %2:vgpr(i32) = COPY %7(i32)
+    %8:vgpr(f32) = G_BITCAST %0(i32)
+    %9:vgpr(f32) = G_BITCAST %2(i32)
+    %3:vgpr(f32) = nnan G_FMINNUM_IEEE %8, %9
+    %4:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    %10:sgpr(i32) = G_BITCAST %4(f32)
+    %5:vgpr(i32) = COPY %10(i32)
+    %11:vgpr(f32) = G_BITCAST %5(i32)
+    %6:vgpr(f32) = nnan G_FMAXNUM_IEEE %3, %11
+    %12:vgpr(i32) = G_BITCAST %6(f32)
+    $vgpr0 = COPY %12(i32)
 ...
 
 ---
@@ -437,28 +664,44 @@ body: |
     ; CHECK-LABEL: name: test_min_max_maybe_NaN_input_ieee_false
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 0.000000e+00
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[FMAXNUM:%[0-9]+]]:vgpr(s32) = G_FMAXNUM [[FMUL]], [[COPY2]]
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C2]](s32)
-    ; CHECK-NEXT: [[FMINNUM:%[0-9]+]]:vgpr(s32) = G_FMINNUM [[FMAXNUM]], [[COPY3]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[FMINNUM]](s32)
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    %9:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = G_FMUL %0, %9
-    %4:sgpr(s32) = G_FCONSTANT float 0.000000e+00
-    %10:vgpr(s32) = COPY %4(s32)
-    %5:vgpr(s32) = G_FMAXNUM %3, %10
-    %6:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    %11:vgpr(s32) = COPY %6(s32)
-    %7:vgpr(s32) = G_FMINNUM %5, %11
-    $vgpr0 = COPY %7(s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C]](f32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST]](i32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(f32) = G_FMUL [[BITCAST1]], [[BITCAST2]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C1]](f32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST3]](i32)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY2]](i32)
+    ; CHECK-NEXT: [[FMAXNUM:%[0-9]+]]:vgpr(f32) = G_FMAXNUM [[FMUL]], [[BITCAST4]]
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C2]](f32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST5]](i32)
+    ; CHECK-NEXT: [[BITCAST6:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY3]](i32)
+    ; CHECK-NEXT: [[FMINNUM:%[0-9]+]]:vgpr(f32) = G_FMINNUM [[FMAXNUM]], [[BITCAST6]]
+    ; CHECK-NEXT: [[BITCAST7:%[0-9]+]]:vgpr(i32) = G_BITCAST [[FMINNUM]](f32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST7]](i32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    %10:sgpr(i32) = G_BITCAST %1(f32)
+    %2:vgpr(i32) = COPY %10(i32)
+    %11:vgpr(f32) = G_BITCAST %0(i32)
+    %12:vgpr(f32) = G_BITCAST %2(i32)
+    %3:vgpr(f32) = G_FMUL %11, %12
+    %4:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    %13:sgpr(i32) = G_BITCAST %4(f32)
+    %5:vgpr(i32) = COPY %13(i32)
+    %14:vgpr(f32) = G_BITCAST %5(i32)
+    %6:vgpr(f32) = G_FMAXNUM %3, %14
+    %7:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    %15:sgpr(i32) = G_BITCAST %7(f32)
+    %8:vgpr(i32) = COPY %15(i32)
+    %16:vgpr(f32) = G_BITCAST %8(i32)
+    %9:vgpr(f32) = G_FMINNUM %6, %16
+    %17:vgpr(i32) = G_BITCAST %9(f32)
+    $vgpr0 = COPY %17(i32)
 ...
 
 ---
@@ -477,29 +720,46 @@ body: |
     ; CHECK-LABEL: name: test_min_max_maybe_NaN_input_ieee_true_dx10clamp_false
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 0.000000e+00
-    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:vgpr(s32) = G_FCANONICALIZE [[FMUL]]
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C2]](s32)
-    ; CHECK-NEXT: [[AMDGPU_FMED3_:%[0-9]+]]:vgpr(s32) = G_AMDGPU_FMED3 [[FCANONICALIZE]], [[COPY2]], [[COPY3]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_FMED3_]](s32)
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    %10:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = G_FMUL %0, %10
-    %4:sgpr(s32) = G_FCONSTANT float 0.000000e+00
-    %9:vgpr(s32) = G_FCANONICALIZE %3
-    %11:vgpr(s32) = COPY %4(s32)
-    %5:vgpr(s32) = G_FMAXNUM_IEEE %9, %11
-    %6:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    %12:vgpr(s32) = COPY %6(s32)
-    %7:vgpr(s32) = G_FMINNUM_IEEE %5, %12
-    $vgpr0 = COPY %7(s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C]](f32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST]](i32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(f32) = G_FMUL [[BITCAST1]], [[BITCAST2]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:vgpr(f32) = G_FCANONICALIZE [[FMUL]]
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C1]](f32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST3]](i32)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY2]](i32)
+    ; CHECK-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:vgpr(f32) = G_FMAXNUM_IEEE [[FCANONICALIZE]], [[BITCAST4]]
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C2]](f32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST5]](i32)
+    ; CHECK-NEXT: [[BITCAST6:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY3]](i32)
+    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:vgpr(f32) = G_FMINNUM_IEEE [[FMAXNUM_IEEE]], [[BITCAST6]]
+    ; CHECK-NEXT: [[BITCAST7:%[0-9]+]]:vgpr(i32) = G_BITCAST [[FMINNUM_IEEE]](f32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST7]](i32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    %11:sgpr(i32) = G_BITCAST %1(f32)
+    %2:vgpr(i32) = COPY %11(i32)
+    %12:vgpr(f32) = G_BITCAST %0(i32)
+    %13:vgpr(f32) = G_BITCAST %2(i32)
+    %3:vgpr(f32) = G_FMUL %12, %13
+    %4:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    %5:vgpr(f32) = G_FCANONICALIZE %3
+    %14:sgpr(i32) = G_BITCAST %4(f32)
+    %6:vgpr(i32) = COPY %14(i32)
+    %15:vgpr(f32) = G_BITCAST %6(i32)
+    %7:vgpr(f32) = G_FMAXNUM_IEEE %5, %15
+    %8:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    %16:sgpr(i32) = G_BITCAST %8(f32)
+    %9:vgpr(i32) = COPY %16(i32)
+    %17:vgpr(f32) = G_BITCAST %9(i32)
+    %10:vgpr(f32) = G_FMINNUM_IEEE %7, %17
+    %18:vgpr(i32) = G_BITCAST %10(f32)
+    $vgpr0 = COPY %18(i32)
 ...
 
 ---
@@ -518,30 +778,46 @@ body: |
     ; CHECK-LABEL: name: test_max_min_maybe_NaN_input_ieee_true
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:vgpr(s32) = G_FCANONICALIZE [[FMUL]]
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:vgpr(s32) = G_FMINNUM_IEEE [[FCANONICALIZE]], [[COPY2]]
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 0.000000e+00
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C2]](s32)
-    ; CHECK-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:vgpr(s32) = G_FMAXNUM_IEEE [[FMINNUM_IEEE]], [[COPY3]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    %10:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = G_FMUL %0, %10
-    %4:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    %9:vgpr(s32) = G_FCANONICALIZE %3
-    %11:vgpr(s32) = COPY %4(s32)
-    %5:vgpr(s32) = G_FMINNUM_IEEE %9, %11
-    %6:sgpr(s32) = G_FCONSTANT float 0.000000e+00
-    %12:vgpr(s32) = COPY %6(s32)
-    %7:vgpr(s32) = G_FMAXNUM_IEEE %5, %12
-    $vgpr0 = COPY %7(s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C]](f32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST]](i32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(f32) = G_FMUL [[BITCAST1]], [[BITCAST2]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:vgpr(f32) = G_FCANONICALIZE [[FMUL]]
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C1]](f32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST3]](i32)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY2]](i32)
+    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:vgpr(f32) = G_FMINNUM_IEEE [[FCANONICALIZE]], [[BITCAST4]]
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C2]](f32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST5]](i32)
+    ; CHECK-NEXT: [[BITCAST6:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY3]](i32)
+    ; CHECK-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:vgpr(f32) = G_FMAXNUM_IEEE [[FMINNUM_IEEE]], [[BITCAST6]]
+    ; CHECK-NEXT: [[BITCAST7:%[0-9]+]]:vgpr(i32) = G_BITCAST [[FMAXNUM_IEEE]](f32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST7]](i32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    %11:sgpr(i32) = G_BITCAST %1(f32)
+    %2:vgpr(i32) = COPY %11(i32)
+    %12:vgpr(f32) = G_BITCAST %0(i32)
+    %13:vgpr(f32) = G_BITCAST %2(i32)
+    %3:vgpr(f32) = G_FMUL %12, %13
+    %4:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    %5:vgpr(f32) = G_FCANONICALIZE %3
+    %14:sgpr(i32) = G_BITCAST %4(f32)
+    %6:vgpr(i32) = COPY %14(i32)
+    %15:vgpr(f32) = G_BITCAST %6(i32)
+    %7:vgpr(f32) = G_FMINNUM_IEEE %5, %15
+    %8:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    %16:sgpr(i32) = G_BITCAST %8(f32)
+    %9:vgpr(i32) = COPY %16(i32)
+    %17:vgpr(f32) = G_BITCAST %9(i32)
+    %10:vgpr(f32) = G_FMAXNUM_IEEE %7, %17
+    %18:vgpr(i32) = G_BITCAST %10(f32)
+    $vgpr0 = COPY %18(i32)
 ...
 
 ---
@@ -560,26 +836,42 @@ body: |
     ; CHECK-LABEL: name: test_max_min_maybe_NaN_input_ieee_false
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[FMINNUM:%[0-9]+]]:vgpr(s32) = G_FMINNUM [[FMUL]], [[COPY2]]
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 0.000000e+00
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C2]](s32)
-    ; CHECK-NEXT: [[FMAXNUM:%[0-9]+]]:vgpr(s32) = G_FMAXNUM [[FMINNUM]], [[COPY3]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[FMAXNUM]](s32)
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    %9:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = G_FMUL %0, %9
-    %4:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    %10:vgpr(s32) = COPY %4(s32)
-    %5:vgpr(s32) = G_FMINNUM %3, %10
-    %6:sgpr(s32) = G_FCONSTANT float 0.000000e+00
-    %11:vgpr(s32) = COPY %6(s32)
-    %7:vgpr(s32) = G_FMAXNUM %5, %11
-    $vgpr0 = COPY %7(s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C]](f32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST]](i32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(f32) = G_FMUL [[BITCAST1]], [[BITCAST2]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C1]](f32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST3]](i32)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY2]](i32)
+    ; CHECK-NEXT: [[FMINNUM:%[0-9]+]]:vgpr(f32) = G_FMINNUM [[FMUL]], [[BITCAST4]]
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C2]](f32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST5]](i32)
+    ; CHECK-NEXT: [[BITCAST6:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY3]](i32)
+    ; CHECK-NEXT: [[FMAXNUM:%[0-9]+]]:vgpr(f32) = G_FMAXNUM [[FMINNUM]], [[BITCAST6]]
+    ; CHECK-NEXT: [[BITCAST7:%[0-9]+]]:vgpr(i32) = G_BITCAST [[FMAXNUM]](f32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST7]](i32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    %10:sgpr(i32) = G_BITCAST %1(f32)
+    %2:vgpr(i32) = COPY %10(i32)
+    %11:vgpr(f32) = G_BITCAST %0(i32)
+    %12:vgpr(f32) = G_BITCAST %2(i32)
+    %3:vgpr(f32) = G_FMUL %11, %12
+    %4:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    %13:sgpr(i32) = G_BITCAST %4(f32)
+    %5:vgpr(i32) = COPY %13(i32)
+    %14:vgpr(f32) = G_BITCAST %5(i32)
+    %6:vgpr(f32) = G_FMINNUM %3, %14
+    %7:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    %15:sgpr(i32) = G_BITCAST %7(f32)
+    %8:vgpr(i32) = COPY %15(i32)
+    %16:vgpr(f32) = G_BITCAST %8(i32)
+    %9:vgpr(f32) = G_FMAXNUM %6, %16
+    %17:vgpr(i32) = G_BITCAST %9(f32)
+    $vgpr0 = COPY %17(i32)
 ...

@@ -17,32 +17,58 @@ body: |
     ; CHECK-LABEL: name: test_fmed3_f32_known_nnan_ieee_true
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s32) = nnan G_AMDGPU_CLAMP [[FMUL]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CLAMP]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C]](f32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST]](i32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(f32) = G_FMUL [[BITCAST1]], [[BITCAST2]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C2]](f32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST3]](i32)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C1]](f32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST4]](i32)
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:vgpr(i32) = G_BITCAST [[FMUL]](f32)
+    ; CHECK-NEXT: [[AMDGPU_FMED3_:%[0-9]+]]:vgpr(i32) = nnan G_AMDGPU_FMED3 [[BITCAST5]], [[COPY2]], [[COPY3]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_FMED3_]](i32)
     ;
     ; GFX12-LABEL: name: test_fmed3_f32_known_nnan_ieee_true
     ; GFX12: liveins: $vgpr0
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; GFX12-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; GFX12-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY]], [[COPY1]]
-    ; GFX12-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s32) = nnan G_AMDGPU_CLAMP [[FMUL]]
-    ; GFX12-NEXT: $vgpr0 = COPY [[AMDGPU_CLAMP]](s32)
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    %8:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = G_FMUL %0, %8
-    %6:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    %5:sgpr(s32) = G_FCONSTANT float 0.000000e+00
-    %9:vgpr(s32) = COPY %5(s32)
-    %10:vgpr(s32) = COPY %6(s32)
-    %4:vgpr(s32) = nnan G_AMDGPU_FMED3 %3(s32), %9(s32), %10(s32)
-    $vgpr0 = COPY %4(s32)
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; GFX12-NEXT: [[C:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    ; GFX12-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C]](f32)
+    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST]](i32)
+    ; GFX12-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; GFX12-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; GFX12-NEXT: [[FMUL:%[0-9]+]]:vgpr(f32) = G_FMUL [[BITCAST1]], [[BITCAST2]]
+    ; GFX12-NEXT: [[C1:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    ; GFX12-NEXT: [[C2:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    ; GFX12-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C2]](f32)
+    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST3]](i32)
+    ; GFX12-NEXT: [[BITCAST4:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C1]](f32)
+    ; GFX12-NEXT: [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST4]](i32)
+    ; GFX12-NEXT: [[BITCAST5:%[0-9]+]]:vgpr(i32) = G_BITCAST [[FMUL]](f32)
+    ; GFX12-NEXT: [[AMDGPU_FMED3_:%[0-9]+]]:vgpr(i32) = nnan G_AMDGPU_FMED3 [[BITCAST5]], [[COPY2]], [[COPY3]]
+    ; GFX12-NEXT: $vgpr0 = COPY [[AMDGPU_FMED3_]](i32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    %9:sgpr(i32) = G_BITCAST %1(f32)
+    %2:vgpr(i32) = COPY %9(i32)
+    %10:vgpr(f32) = G_BITCAST %0(i32)
+    %11:vgpr(f32) = G_BITCAST %2(i32)
+    %3:vgpr(f32) = G_FMUL %10, %11
+    %4:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    %5:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    %12:sgpr(i32) = G_BITCAST %5(f32)
+    %6:vgpr(i32) = COPY %12(i32)
+    %13:sgpr(i32) = G_BITCAST %4(f32)
+    %7:vgpr(i32) = COPY %13(i32)
+    %14:vgpr(i32) = G_BITCAST %3(f32)
+    %8:vgpr(i32) = nnan G_AMDGPU_FMED3 %14, %6, %7
+    $vgpr0 = COPY %8(i32)
 ...
 
 ---
@@ -61,38 +87,64 @@ body: |
     ; CHECK-LABEL: name: test_fmed3_f16_known_nnan_ieee_false
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s16) = G_FCONSTANT half 0xH4000
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s16) = COPY [[C]](s16)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s16) = G_FMUL [[TRUNC]], [[COPY1]]
-    ; CHECK-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s16) = nnan G_AMDGPU_CLAMP [[FMUL]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:vgpr(s32) = G_ANYEXT [[AMDGPU_CLAMP]](s16)
-    ; CHECK-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(i16) = G_TRUNC [[COPY]](i32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(f16) = G_FCONSTANT half 0xH4000
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i16) = G_BITCAST [[C]](f16)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i16) = COPY [[BITCAST]](i16)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f16) = G_BITCAST [[TRUNC]](i16)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f16) = G_BITCAST [[COPY1]](i16)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(f16) = G_FMUL [[BITCAST1]], [[BITCAST2]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(f16) = G_FCONSTANT half 0xH3C00
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(f16) = G_FCONSTANT half 0xH0000
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i16) = G_BITCAST [[C2]](f16)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i16) = COPY [[BITCAST3]](i16)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:sgpr(i16) = G_BITCAST [[C1]](f16)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(i16) = COPY [[BITCAST4]](i16)
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:vgpr(i16) = G_BITCAST [[FMUL]](f16)
+    ; CHECK-NEXT: [[AMDGPU_FMED3_:%[0-9]+]]:vgpr(i16) = nnan G_AMDGPU_FMED3 [[BITCAST5]], [[COPY2]], [[COPY3]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:vgpr(i32) = G_ANYEXT [[AMDGPU_FMED3_]](i16)
+    ; CHECK-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
     ;
     ; GFX12-LABEL: name: test_fmed3_f16_known_nnan_ieee_false
     ; GFX12: liveins: $vgpr0
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; GFX12-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
-    ; GFX12-NEXT: [[C:%[0-9]+]]:sgpr(s16) = G_FCONSTANT half 0xH4000
-    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr(s16) = COPY [[C]](s16)
-    ; GFX12-NEXT: [[FMUL:%[0-9]+]]:vgpr(s16) = G_FMUL [[TRUNC]], [[COPY1]]
-    ; GFX12-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s16) = nnan G_AMDGPU_CLAMP [[FMUL]]
-    ; GFX12-NEXT: [[ANYEXT:%[0-9]+]]:vgpr(s32) = G_ANYEXT [[AMDGPU_CLAMP]](s16)
-    ; GFX12-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
-    %2:vgpr(s32) = COPY $vgpr0
-    %0:vgpr(s16) = G_TRUNC %2(s32)
-    %3:sgpr(s16) = G_FCONSTANT half 0xH4000
-    %10:vgpr(s16) = COPY %3(s16)
-    %4:vgpr(s16) = G_FMUL %0, %10
-    %7:sgpr(s16) = G_FCONSTANT half 0xH3C00
-    %6:sgpr(s16) = G_FCONSTANT half 0xH0000
-    %11:vgpr(s16) = COPY %6(s16)
-    %12:vgpr(s16) = COPY %7(s16)
-    %5:vgpr(s16) = nnan G_AMDGPU_FMED3 %4(s16), %11(s16), %12(s16)
-    %9:vgpr(s32) = G_ANYEXT %5(s16)
-    $vgpr0 = COPY %9(s32)
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; GFX12-NEXT: [[TRUNC:%[0-9]+]]:vgpr(i16) = G_TRUNC [[COPY]](i32)
+    ; GFX12-NEXT: [[C:%[0-9]+]]:sgpr(f16) = G_FCONSTANT half 0xH4000
+    ; GFX12-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i16) = G_BITCAST [[C]](f16)
+    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr(i16) = COPY [[BITCAST]](i16)
+    ; GFX12-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f16) = G_BITCAST [[TRUNC]](i16)
+    ; GFX12-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f16) = G_BITCAST [[COPY1]](i16)
+    ; GFX12-NEXT: [[FMUL:%[0-9]+]]:vgpr(f16) = G_FMUL [[BITCAST1]], [[BITCAST2]]
+    ; GFX12-NEXT: [[C1:%[0-9]+]]:sgpr(f16) = G_FCONSTANT half 0xH3C00
+    ; GFX12-NEXT: [[C2:%[0-9]+]]:sgpr(f16) = G_FCONSTANT half 0xH0000
+    ; GFX12-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i16) = G_BITCAST [[C2]](f16)
+    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:vgpr(i16) = COPY [[BITCAST3]](i16)
+    ; GFX12-NEXT: [[BITCAST4:%[0-9]+]]:sgpr(i16) = G_BITCAST [[C1]](f16)
+    ; GFX12-NEXT: [[COPY3:%[0-9]+]]:vgpr(i16) = COPY [[BITCAST4]](i16)
+    ; GFX12-NEXT: [[BITCAST5:%[0-9]+]]:vgpr(i16) = G_BITCAST [[FMUL]](f16)
+    ; GFX12-NEXT: [[AMDGPU_FMED3_:%[0-9]+]]:vgpr(i16) = nnan G_AMDGPU_FMED3 [[BITCAST5]], [[COPY2]], [[COPY3]]
+    ; GFX12-NEXT: [[ANYEXT:%[0-9]+]]:vgpr(i32) = G_ANYEXT [[AMDGPU_FMED3_]](i16)
+    ; GFX12-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i16) = G_TRUNC %0(i32)
+    %2:sgpr(f16) = G_FCONSTANT half 0xH4000
+    %11:sgpr(i16) = G_BITCAST %2(f16)
+    %3:vgpr(i16) = COPY %11(i16)
+    %12:vgpr(f16) = G_BITCAST %1(i16)
+    %13:vgpr(f16) = G_BITCAST %3(i16)
+    %4:vgpr(f16) = G_FMUL %12, %13
+    %5:sgpr(f16) = G_FCONSTANT half 0xH3C00
+    %6:sgpr(f16) = G_FCONSTANT half 0xH0000
+    %14:sgpr(i16) = G_BITCAST %6(f16)
+    %7:vgpr(i16) = COPY %14(i16)
+    %15:sgpr(i16) = G_BITCAST %5(f16)
+    %8:vgpr(i16) = COPY %15(i16)
+    %16:vgpr(i16) = G_BITCAST %4(f16)
+    %9:vgpr(i16) = nnan G_AMDGPU_FMED3 %16, %7, %8
+    %10:vgpr(i32) = G_ANYEXT %9(i16)
+    $vgpr0 = COPY %10(i32)
 ...
 
 ---
@@ -111,35 +163,61 @@ body: |
     ; CHECK-LABEL: name: test_fmed3_non_SNaN_input_ieee_true_dx10clamp_true
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 1.000000e+01
-    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:vgpr(s32) = G_FCANONICALIZE [[COPY]]
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:vgpr(s32) = G_FMINNUM_IEEE [[FCANONICALIZE]], [[COPY1]]
-    ; CHECK-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s32) = G_AMDGPU_CLAMP [[FMINNUM_IEEE]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CLAMP]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+01
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:vgpr(f32) = G_FCANONICALIZE [[BITCAST]]
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C]](f32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST1]](i32)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:vgpr(f32) = G_FMINNUM_IEEE [[FCANONICALIZE]], [[BITCAST2]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C2]](f32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST3]](i32)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C1]](f32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST4]](i32)
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:vgpr(i32) = G_BITCAST [[FMINNUM_IEEE]](f32)
+    ; CHECK-NEXT: [[AMDGPU_FMED3_:%[0-9]+]]:vgpr(i32) = G_AMDGPU_FMED3 [[BITCAST5]], [[COPY2]], [[COPY3]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_FMED3_]](i32)
     ;
     ; GFX12-LABEL: name: test_fmed3_non_SNaN_input_ieee_true_dx10clamp_true
     ; GFX12: liveins: $vgpr0
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; GFX12-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 1.000000e+01
-    ; GFX12-NEXT: [[FCANONICALIZE:%[0-9]+]]:vgpr(s32) = G_FCANONICALIZE [[COPY]]
-    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; GFX12-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:vgpr(s32) = G_FMINNUM_IEEE [[FCANONICALIZE]], [[COPY1]]
-    ; GFX12-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s32) = G_AMDGPU_CLAMP [[FMINNUM_IEEE]]
-    ; GFX12-NEXT: $vgpr0 = COPY [[AMDGPU_CLAMP]](s32)
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_FCONSTANT float 1.000000e+01
-    %8:vgpr(s32) = G_FCANONICALIZE %0
-    %9:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = G_FMINNUM_IEEE %8, %9
-    %6:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    %5:sgpr(s32) = G_FCONSTANT float 0.000000e+00
-    %10:vgpr(s32) = COPY %5(s32)
-    %11:vgpr(s32) = COPY %6(s32)
-    %4:vgpr(s32) = G_AMDGPU_FMED3 %3(s32), %10(s32), %11(s32)
-    $vgpr0 = COPY %4(s32)
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; GFX12-NEXT: [[C:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+01
+    ; GFX12-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; GFX12-NEXT: [[FCANONICALIZE:%[0-9]+]]:vgpr(f32) = G_FCANONICALIZE [[BITCAST]]
+    ; GFX12-NEXT: [[BITCAST1:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C]](f32)
+    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST1]](i32)
+    ; GFX12-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; GFX12-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:vgpr(f32) = G_FMINNUM_IEEE [[FCANONICALIZE]], [[BITCAST2]]
+    ; GFX12-NEXT: [[C1:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    ; GFX12-NEXT: [[C2:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    ; GFX12-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C2]](f32)
+    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST3]](i32)
+    ; GFX12-NEXT: [[BITCAST4:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C1]](f32)
+    ; GFX12-NEXT: [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST4]](i32)
+    ; GFX12-NEXT: [[BITCAST5:%[0-9]+]]:vgpr(i32) = G_BITCAST [[FMINNUM_IEEE]](f32)
+    ; GFX12-NEXT: [[AMDGPU_FMED3_:%[0-9]+]]:vgpr(i32) = G_AMDGPU_FMED3 [[BITCAST5]], [[COPY2]], [[COPY3]]
+    ; GFX12-NEXT: $vgpr0 = COPY [[AMDGPU_FMED3_]](i32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(f32) = G_FCONSTANT float 1.000000e+01
+    %10:vgpr(f32) = G_BITCAST %0(i32)
+    %2:vgpr(f32) = G_FCANONICALIZE %10
+    %11:sgpr(i32) = G_BITCAST %1(f32)
+    %3:vgpr(i32) = COPY %11(i32)
+    %12:vgpr(f32) = G_BITCAST %3(i32)
+    %4:vgpr(f32) = G_FMINNUM_IEEE %2, %12
+    %5:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    %6:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    %13:sgpr(i32) = G_BITCAST %6(f32)
+    %7:vgpr(i32) = COPY %13(i32)
+    %14:sgpr(i32) = G_BITCAST %5(f32)
+    %8:vgpr(i32) = COPY %14(i32)
+    %15:vgpr(i32) = G_BITCAST %4(f32)
+    %9:vgpr(i32) = G_AMDGPU_FMED3 %15, %7, %8
+    $vgpr0 = COPY %9(i32)
 ...
 
 ---
@@ -158,32 +236,58 @@ body: |
     ; CHECK-LABEL: name: test_fmed3_maybe_SNaN_input_zero_third_operand_ieee_true_dx10clamp_true
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s32) = G_AMDGPU_CLAMP [[FMUL]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CLAMP]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C]](f32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST]](i32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(f32) = G_FMUL [[BITCAST1]], [[BITCAST2]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C2]](f32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST3]](i32)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C1]](f32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST4]](i32)
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:vgpr(i32) = G_BITCAST [[FMUL]](f32)
+    ; CHECK-NEXT: [[AMDGPU_FMED3_:%[0-9]+]]:vgpr(i32) = G_AMDGPU_FMED3 [[BITCAST5]], [[COPY2]], [[COPY3]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_FMED3_]](i32)
     ;
     ; GFX12-LABEL: name: test_fmed3_maybe_SNaN_input_zero_third_operand_ieee_true_dx10clamp_true
     ; GFX12: liveins: $vgpr0
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; GFX12-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; GFX12-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY]], [[COPY1]]
-    ; GFX12-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s32) = G_AMDGPU_CLAMP [[FMUL]]
-    ; GFX12-NEXT: $vgpr0 = COPY [[AMDGPU_CLAMP]](s32)
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    %8:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = G_FMUL %0, %8
-    %6:sgpr(s32) = G_FCONSTANT float 0.000000e+00
-    %5:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    %9:vgpr(s32) = COPY %5(s32)
-    %10:vgpr(s32) = COPY %6(s32)
-    %4:vgpr(s32) = G_AMDGPU_FMED3 %3(s32), %9(s32), %10(s32)
-    $vgpr0 = COPY %4(s32)
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; GFX12-NEXT: [[C:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    ; GFX12-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C]](f32)
+    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST]](i32)
+    ; GFX12-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; GFX12-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; GFX12-NEXT: [[FMUL:%[0-9]+]]:vgpr(f32) = G_FMUL [[BITCAST1]], [[BITCAST2]]
+    ; GFX12-NEXT: [[C1:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    ; GFX12-NEXT: [[C2:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    ; GFX12-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C2]](f32)
+    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST3]](i32)
+    ; GFX12-NEXT: [[BITCAST4:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C1]](f32)
+    ; GFX12-NEXT: [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST4]](i32)
+    ; GFX12-NEXT: [[BITCAST5:%[0-9]+]]:vgpr(i32) = G_BITCAST [[FMUL]](f32)
+    ; GFX12-NEXT: [[AMDGPU_FMED3_:%[0-9]+]]:vgpr(i32) = G_AMDGPU_FMED3 [[BITCAST5]], [[COPY2]], [[COPY3]]
+    ; GFX12-NEXT: $vgpr0 = COPY [[AMDGPU_FMED3_]](i32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    %9:sgpr(i32) = G_BITCAST %1(f32)
+    %2:vgpr(i32) = COPY %9(i32)
+    %10:vgpr(f32) = G_BITCAST %0(i32)
+    %11:vgpr(f32) = G_BITCAST %2(i32)
+    %3:vgpr(f32) = G_FMUL %10, %11
+    %4:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    %5:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    %12:sgpr(i32) = G_BITCAST %5(f32)
+    %6:vgpr(i32) = COPY %12(i32)
+    %13:sgpr(i32) = G_BITCAST %4(f32)
+    %7:vgpr(i32) = COPY %13(i32)
+    %14:vgpr(i32) = G_BITCAST %3(f32)
+    %8:vgpr(i32) = G_AMDGPU_FMED3 %14, %6, %7
+    $vgpr0 = COPY %8(i32)
 ...
 
 # FixMe: add tests with attributes #3 = {"no-nans-fp-math"="true"}
@@ -204,36 +308,58 @@ body: |
     ; CHECK-LABEL: name: test_fmed3_f32_maybe_NaN_ieee_false
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 0.000000e+00
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C2]](s32)
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[AMDGPU_FMED3_:%[0-9]+]]:vgpr(s32) = G_AMDGPU_FMED3 [[FMUL]], [[COPY2]], [[COPY3]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_FMED3_]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C]](f32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST]](i32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(f32) = G_FMUL [[BITCAST1]], [[BITCAST2]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C2]](f32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST3]](i32)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C1]](f32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST4]](i32)
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:vgpr(i32) = G_BITCAST [[FMUL]](f32)
+    ; CHECK-NEXT: [[AMDGPU_FMED3_:%[0-9]+]]:vgpr(i32) = G_AMDGPU_FMED3 [[BITCAST5]], [[COPY2]], [[COPY3]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_FMED3_]](i32)
     ;
     ; GFX12-LABEL: name: test_fmed3_f32_maybe_NaN_ieee_false
     ; GFX12: liveins: $vgpr0
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; GFX12-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; GFX12-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY]], [[COPY1]]
-    ; GFX12-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s32) = G_AMDGPU_CLAMP [[FMUL]]
-    ; GFX12-NEXT: $vgpr0 = COPY [[AMDGPU_CLAMP]](s32)
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    %8:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = G_FMUL %0, %8
-    %6:sgpr(s32) = G_FCONSTANT float 0.000000e+00
-    %5:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    %9:vgpr(s32) = COPY %5(s32)
-    %10:vgpr(s32) = COPY %6(s32)
-    %4:vgpr(s32) = G_AMDGPU_FMED3 %3(s32), %9(s32), %10(s32)
-    $vgpr0 = COPY %4(s32)
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; GFX12-NEXT: [[C:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    ; GFX12-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C]](f32)
+    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST]](i32)
+    ; GFX12-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; GFX12-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; GFX12-NEXT: [[FMUL:%[0-9]+]]:vgpr(f32) = G_FMUL [[BITCAST1]], [[BITCAST2]]
+    ; GFX12-NEXT: [[C1:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    ; GFX12-NEXT: [[C2:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    ; GFX12-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C2]](f32)
+    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST3]](i32)
+    ; GFX12-NEXT: [[BITCAST4:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C1]](f32)
+    ; GFX12-NEXT: [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST4]](i32)
+    ; GFX12-NEXT: [[BITCAST5:%[0-9]+]]:vgpr(i32) = G_BITCAST [[FMUL]](f32)
+    ; GFX12-NEXT: [[AMDGPU_FMED3_:%[0-9]+]]:vgpr(i32) = G_AMDGPU_FMED3 [[BITCAST5]], [[COPY2]], [[COPY3]]
+    ; GFX12-NEXT: $vgpr0 = COPY [[AMDGPU_FMED3_]](i32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    %9:sgpr(i32) = G_BITCAST %1(f32)
+    %2:vgpr(i32) = COPY %9(i32)
+    %10:vgpr(f32) = G_BITCAST %0(i32)
+    %11:vgpr(f32) = G_BITCAST %2(i32)
+    %3:vgpr(f32) = G_FMUL %10, %11
+    %4:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    %5:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    %12:sgpr(i32) = G_BITCAST %5(f32)
+    %6:vgpr(i32) = COPY %12(i32)
+    %13:sgpr(i32) = G_BITCAST %4(f32)
+    %7:vgpr(i32) = COPY %13(i32)
+    %14:vgpr(i32) = G_BITCAST %3(f32)
+    %8:vgpr(i32) = G_AMDGPU_FMED3 %14, %6, %7
+    $vgpr0 = COPY %8(i32)
 ...
 
 ---
@@ -252,39 +378,61 @@ body: |
     ; CHECK-LABEL: name: test_fmed3_non_SNaN_input_ieee_true_dx10clamp_false
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 1.000000e+01
-    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:vgpr(s32) = G_FCANONICALIZE [[COPY]]
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:vgpr(s32) = G_FMINNUM_IEEE [[FCANONICALIZE]], [[COPY1]]
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 0.000000e+00
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C2]](s32)
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
-    ; CHECK-NEXT: [[AMDGPU_FMED3_:%[0-9]+]]:vgpr(s32) = G_AMDGPU_FMED3 [[FMINNUM_IEEE]], [[COPY2]], [[COPY3]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_FMED3_]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+01
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:vgpr(f32) = G_FCANONICALIZE [[BITCAST]]
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C]](f32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST1]](i32)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:vgpr(f32) = G_FMINNUM_IEEE [[FCANONICALIZE]], [[BITCAST2]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C2]](f32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST3]](i32)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C1]](f32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST4]](i32)
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:vgpr(i32) = G_BITCAST [[FMINNUM_IEEE]](f32)
+    ; CHECK-NEXT: [[AMDGPU_FMED3_:%[0-9]+]]:vgpr(i32) = G_AMDGPU_FMED3 [[BITCAST5]], [[COPY2]], [[COPY3]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_FMED3_]](i32)
     ;
     ; GFX12-LABEL: name: test_fmed3_non_SNaN_input_ieee_true_dx10clamp_false
     ; GFX12: liveins: $vgpr0
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; GFX12-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 1.000000e+01
-    ; GFX12-NEXT: [[FCANONICALIZE:%[0-9]+]]:vgpr(s32) = G_FCANONICALIZE [[COPY]]
-    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; GFX12-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:vgpr(s32) = G_FMINNUM_IEEE [[FCANONICALIZE]], [[COPY1]]
-    ; GFX12-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s32) = G_AMDGPU_CLAMP [[FMINNUM_IEEE]]
-    ; GFX12-NEXT: $vgpr0 = COPY [[AMDGPU_CLAMP]](s32)
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_FCONSTANT float 1.000000e+01
-    %8:vgpr(s32) = G_FCANONICALIZE %0
-    %9:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = G_FMINNUM_IEEE %8, %9
-    %6:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    %5:sgpr(s32) = G_FCONSTANT float 0.000000e+00
-    %10:vgpr(s32) = COPY %5(s32)
-    %11:vgpr(s32) = COPY %6(s32)
-    %4:vgpr(s32) = G_AMDGPU_FMED3 %3(s32), %10(s32), %11(s32)
-    $vgpr0 = COPY %4(s32)
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; GFX12-NEXT: [[C:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+01
+    ; GFX12-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; GFX12-NEXT: [[FCANONICALIZE:%[0-9]+]]:vgpr(f32) = G_FCANONICALIZE [[BITCAST]]
+    ; GFX12-NEXT: [[BITCAST1:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C]](f32)
+    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST1]](i32)
+    ; GFX12-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; GFX12-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:vgpr(f32) = G_FMINNUM_IEEE [[FCANONICALIZE]], [[BITCAST2]]
+    ; GFX12-NEXT: [[C1:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    ; GFX12-NEXT: [[C2:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    ; GFX12-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C2]](f32)
+    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST3]](i32)
+    ; GFX12-NEXT: [[BITCAST4:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C1]](f32)
+    ; GFX12-NEXT: [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST4]](i32)
+    ; GFX12-NEXT: [[BITCAST5:%[0-9]+]]:vgpr(i32) = G_BITCAST [[FMINNUM_IEEE]](f32)
+    ; GFX12-NEXT: [[AMDGPU_FMED3_:%[0-9]+]]:vgpr(i32) = G_AMDGPU_FMED3 [[BITCAST5]], [[COPY2]], [[COPY3]]
+    ; GFX12-NEXT: $vgpr0 = COPY [[AMDGPU_FMED3_]](i32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(f32) = G_FCONSTANT float 1.000000e+01
+    %10:vgpr(f32) = G_BITCAST %0(i32)
+    %2:vgpr(f32) = G_FCANONICALIZE %10
+    %11:sgpr(i32) = G_BITCAST %1(f32)
+    %3:vgpr(i32) = COPY %11(i32)
+    %12:vgpr(f32) = G_BITCAST %3(i32)
+    %4:vgpr(f32) = G_FMINNUM_IEEE %2, %12
+    %5:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    %6:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    %13:sgpr(i32) = G_BITCAST %6(f32)
+    %7:vgpr(i32) = COPY %13(i32)
+    %14:sgpr(i32) = G_BITCAST %5(f32)
+    %8:vgpr(i32) = COPY %14(i32)
+    %15:vgpr(i32) = G_BITCAST %4(f32)
+    %9:vgpr(i32) = G_AMDGPU_FMED3 %15, %7, %8
+    $vgpr0 = COPY %9(i32)
 ...
 
 ---
@@ -303,30 +451,56 @@ body: |
     ; CHECK-LABEL: name: test_fmed3_maybe_SNaN_input_ieee_true_dx10clamp_true
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s32) = G_AMDGPU_CLAMP [[FMUL]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CLAMP]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C]](f32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST]](i32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(f32) = G_FMUL [[BITCAST1]], [[BITCAST2]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C2]](f32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST3]](i32)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C1]](f32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST4]](i32)
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:vgpr(i32) = G_BITCAST [[FMUL]](f32)
+    ; CHECK-NEXT: [[AMDGPU_FMED3_:%[0-9]+]]:vgpr(i32) = G_AMDGPU_FMED3 [[BITCAST5]], [[COPY2]], [[COPY3]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_FMED3_]](i32)
     ;
     ; GFX12-LABEL: name: test_fmed3_maybe_SNaN_input_ieee_true_dx10clamp_true
     ; GFX12: liveins: $vgpr0
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; GFX12-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
-    ; GFX12-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY]], [[COPY1]]
-    ; GFX12-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s32) = G_AMDGPU_CLAMP [[FMUL]]
-    ; GFX12-NEXT: $vgpr0 = COPY [[AMDGPU_CLAMP]](s32)
-    %0:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_FCONSTANT float 2.000000e+00
-    %8:vgpr(s32) = COPY %2(s32)
-    %3:vgpr(s32) = G_FMUL %0, %8
-    %6:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    %5:sgpr(s32) = G_FCONSTANT float 0.000000e+00
-    %9:vgpr(s32) = COPY %5(s32)
-    %10:vgpr(s32) = COPY %6(s32)
-    %4:vgpr(s32) = G_AMDGPU_FMED3 %3(s32), %9(s32), %10(s32)
-    $vgpr0 = COPY %4(s32)
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; GFX12-NEXT: [[C:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    ; GFX12-NEXT: [[BITCAST:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C]](f32)
+    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST]](i32)
+    ; GFX12-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; GFX12-NEXT: [[BITCAST2:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; GFX12-NEXT: [[FMUL:%[0-9]+]]:vgpr(f32) = G_FMUL [[BITCAST1]], [[BITCAST2]]
+    ; GFX12-NEXT: [[C1:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    ; GFX12-NEXT: [[C2:%[0-9]+]]:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    ; GFX12-NEXT: [[BITCAST3:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C2]](f32)
+    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST3]](i32)
+    ; GFX12-NEXT: [[BITCAST4:%[0-9]+]]:sgpr(i32) = G_BITCAST [[C1]](f32)
+    ; GFX12-NEXT: [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[BITCAST4]](i32)
+    ; GFX12-NEXT: [[BITCAST5:%[0-9]+]]:vgpr(i32) = G_BITCAST [[FMUL]](f32)
+    ; GFX12-NEXT: [[AMDGPU_FMED3_:%[0-9]+]]:vgpr(i32) = G_AMDGPU_FMED3 [[BITCAST5]], [[COPY2]], [[COPY3]]
+    ; GFX12-NEXT: $vgpr0 = COPY [[AMDGPU_FMED3_]](i32)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(f32) = G_FCONSTANT float 2.000000e+00
+    %9:sgpr(i32) = G_BITCAST %1(f32)
+    %2:vgpr(i32) = COPY %9(i32)
+    %10:vgpr(f32) = G_BITCAST %0(i32)
+    %11:vgpr(f32) = G_BITCAST %2(i32)
+    %3:vgpr(f32) = G_FMUL %10, %11
+    %4:sgpr(f32) = G_FCONSTANT float 1.000000e+00
+    %5:sgpr(f32) = G_FCONSTANT float 0.000000e+00
+    %12:sgpr(i32) = G_BITCAST %5(f32)
+    %6:vgpr(i32) = COPY %12(i32)
+    %13:sgpr(i32) = G_BITCAST %4(f32)
+    %7:vgpr(i32) = COPY %13(i32)
+    %14:vgpr(i32) = G_BITCAST %3(f32)
+    %8:vgpr(i32) = G_AMDGPU_FMED3 %14, %6, %7
+    $vgpr0 = COPY %8(i32)
 ...

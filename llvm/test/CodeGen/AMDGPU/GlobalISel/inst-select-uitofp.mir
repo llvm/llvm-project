@@ -34,9 +34,10 @@ body: |
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX11-NEXT: [[V_CVT_F32_U32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_U32_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX11-NEXT: $vgpr0 = COPY [[V_CVT_F32_U32_e64_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = G_UITOFP %0
-    $vgpr0 = COPY %1
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(f32) = G_UITOFP %0(i32)
+    %2:vgpr(i32) = G_BITCAST %1(f32)
+    $vgpr0 = COPY %2(i32)
 ...
 
 ---
@@ -69,9 +70,10 @@ body: |
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX11-NEXT: [[V_CVT_F32_U32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_U32_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX11-NEXT: $vgpr0 = COPY [[V_CVT_F32_U32_e64_]]
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:vgpr(s32) = G_UITOFP %0
-    $vgpr0 = COPY %1
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:vgpr(f32) = G_UITOFP %0(i32)
+    %2:vgpr(i32) = G_BITCAST %1(f32)
+    $vgpr0 = COPY %2(i32)
 ...
 
 ---
@@ -117,10 +119,11 @@ body: |
     ; GFX11-FAKE16-NEXT: [[V_CVT_F32_U32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F32_U32_e32 [[COPY]], implicit $mode, implicit $exec
     ; GFX11-FAKE16-NEXT: [[V_CVT_F16_F32_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F16_F32_fake16_e64 0, [[V_CVT_F32_U32_e32_]], 0, 0, implicit $mode, implicit $exec
     ; GFX11-FAKE16-NEXT: $vgpr0 = COPY [[V_CVT_F16_F32_fake16_e64_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s16) = G_UITOFP %0
-    %2:vgpr(s32) = G_ANYEXT %1
-    $vgpr0 = COPY %2
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(f16) = G_UITOFP %0(i32)
+    %3:vgpr(i16) = G_BITCAST %1(f16)
+    %2:vgpr(i32) = G_ANYEXT %3(i16)
+    $vgpr0 = COPY %2(i32)
 ...
 
 ---
@@ -166,8 +169,9 @@ body: |
     ; GFX11-FAKE16-NEXT: [[V_CVT_F32_U32_e32_:%[0-9]+]]:vgpr_32 = V_CVT_F32_U32_e32 [[COPY]], implicit $mode, implicit $exec
     ; GFX11-FAKE16-NEXT: [[V_CVT_F16_F32_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_F16_F32_fake16_e64 0, [[V_CVT_F32_U32_e32_]], 0, 0, implicit $mode, implicit $exec
     ; GFX11-FAKE16-NEXT: $vgpr0 = COPY [[V_CVT_F16_F32_fake16_e64_]]
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:vgpr(s16) = G_UITOFP %0
-    %2:vgpr(s32) = G_ANYEXT %1
-    $vgpr0 = COPY %2
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:vgpr(f16) = G_UITOFP %0(i32)
+    %3:vgpr(i16) = G_BITCAST %1(f16)
+    %2:vgpr(i32) = G_ANYEXT %3(i16)
+    $vgpr0 = COPY %2(i32)
 ...

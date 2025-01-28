@@ -15,11 +15,13 @@ body: |
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK-NEXT: %1:vgpr_32 = nofpexcept V_FLOOR_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: $vgpr0 = COPY %1
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = G_FFLOOR %0
-    $vgpr0 = COPY %1
+    ; CHECK-NEXT: [[V_FLOOR_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_FLOOR_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: $vgpr0 = COPY [[V_FLOOR_F32_e64_]]
+    %0:vgpr(i32) = COPY $vgpr0
+    %2:vgpr(f32) = G_BITCAST %0(i32)
+    %1:vgpr(f32) = G_FFLOOR %2
+    %3:vgpr(i32) = G_BITCAST %1(f32)
+    $vgpr0 = COPY %3(i32)
 ...
 
 ---
@@ -36,11 +38,13 @@ body: |
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK-NEXT: %1:vgpr_32 = nofpexcept V_FLOOR_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: $vgpr0 = COPY %1
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:vgpr(s32) = G_FFLOOR %0
-    $vgpr0 = COPY %1
+    ; CHECK-NEXT: [[V_FLOOR_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_FLOOR_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: $vgpr0 = COPY [[V_FLOOR_F32_e64_]]
+    %0:sgpr(i32) = COPY $sgpr0
+    %2:sgpr(f32) = G_BITCAST %0(i32)
+    %1:vgpr(f32) = G_FFLOOR %2
+    %3:vgpr(i32) = G_BITCAST %1(f32)
+    $vgpr0 = COPY %3(i32)
 ...
 
 ---
@@ -57,12 +61,14 @@ body: |
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK-NEXT: %2:vgpr_32 = nofpexcept V_FLOOR_F32_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: $vgpr0 = COPY %2
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:sgpr(s32) = G_FNEG %0
-    %2:vgpr(s32) = G_FFLOOR %1
-    $vgpr0 = COPY %2
+    ; CHECK-NEXT: [[V_FLOOR_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_FLOOR_F32_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: $vgpr0 = COPY [[V_FLOOR_F32_e64_]]
+    %0:sgpr(i32) = COPY $sgpr0
+    %3:sgpr(f32) = G_BITCAST %0(i32)
+    %1:sgpr(f32) = G_FNEG %3
+    %2:vgpr(f32) = G_FFLOOR %1
+    %4:vgpr(i32) = G_BITCAST %2(f32)
+    $vgpr0 = COPY %4(i32)
 ...
 
 ---
@@ -78,10 +84,12 @@ body: |
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK-NEXT: %2:vgpr_32 = nofpexcept V_FLOOR_F32_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: $vgpr0 = COPY %2
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = G_FNEG %0
-    %2:vgpr(s32) = G_FFLOOR %1
-    $vgpr0 = COPY %2
+    ; CHECK-NEXT: [[V_FLOOR_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_FLOOR_F32_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: $vgpr0 = COPY [[V_FLOOR_F32_e64_]]
+    %0:vgpr(i32) = COPY $vgpr0
+    %3:vgpr(f32) = G_BITCAST %0(i32)
+    %1:vgpr(f32) = G_FNEG %3
+    %2:vgpr(f32) = G_FFLOOR %1
+    %4:vgpr(i32) = G_BITCAST %2(f32)
+    $vgpr0 = COPY %4(i32)
 ...

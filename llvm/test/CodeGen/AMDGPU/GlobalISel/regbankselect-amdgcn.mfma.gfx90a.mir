@@ -13,24 +13,37 @@ body: |
     ; FAST-LABEL: name: mfma_f32_32x32x4bf16_1k_vva
     ; FAST: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
     ; FAST-NEXT: {{  $}}
-    ; FAST-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; FAST-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; FAST-NEXT: [[COPY2:%[0-9]+]]:agpr(<32 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; FAST-NEXT: [[INT:%[0-9]+]]:agpr(<32 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.32x32x4bf16.1k), [[COPY]](s64), [[COPY1]](s64), [[COPY2]](<32 x s32>), 0, 0, 0
-    ; FAST-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = COPY [[INT]](<32 x s32>)
+    ; FAST-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; FAST-NEXT: [[COPY1:%[0-9]+]]:vgpr(i64) = COPY $vgpr2_vgpr3
+    ; FAST-NEXT: [[COPY2:%[0-9]+]]:agpr(<32 x i32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    ; FAST-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; FAST-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY1]](i64)
+    ; FAST-NEXT: [[BITCAST2:%[0-9]+]]:agpr(<32 x f32>) = G_BITCAST [[COPY2]](<32 x i32>)
+    ; FAST-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:agpr(<32 x f32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.32x32x4bf16.1k), [[BITCAST]](f64), [[BITCAST1]](f64), [[BITCAST2]](<32 x f32>), 0, 0, 0
+    ; FAST-NEXT: [[BITCAST3:%[0-9]+]]:agpr(<32 x i32>) = G_BITCAST [[INTRINSIC_CONVERGENT]](<32 x f32>)
+    ; FAST-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = COPY [[BITCAST3]](<32 x i32>)
+    ;
     ; GREEDY-LABEL: name: mfma_f32_32x32x4bf16_1k_vva
     ; GREEDY: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
     ; GREEDY-NEXT: {{  $}}
-    ; GREEDY-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GREEDY-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; GREEDY-NEXT: [[COPY2:%[0-9]+]]:agpr(<32 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; GREEDY-NEXT: [[INT:%[0-9]+]]:agpr(<32 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.32x32x4bf16.1k), [[COPY]](s64), [[COPY1]](s64), [[COPY2]](<32 x s32>), 0, 0, 0
-    ; GREEDY-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = COPY [[INT]](<32 x s32>)
-    %0:_(s64) = COPY $vgpr0_vgpr1
-    %1:_(s64) = COPY $vgpr2_vgpr3
-    %2:_(<32 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    %3:_(<32 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.32x32x4bf16.1k), %0, %1, %2, 0, 0, 0
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = COPY %3
+    ; GREEDY-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; GREEDY-NEXT: [[COPY1:%[0-9]+]]:vgpr(i64) = COPY $vgpr2_vgpr3
+    ; GREEDY-NEXT: [[COPY2:%[0-9]+]]:agpr(<32 x i32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    ; GREEDY-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; GREEDY-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY1]](i64)
+    ; GREEDY-NEXT: [[BITCAST2:%[0-9]+]]:agpr(<32 x f32>) = G_BITCAST [[COPY2]](<32 x i32>)
+    ; GREEDY-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:agpr(<32 x f32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.32x32x4bf16.1k), [[BITCAST]](f64), [[BITCAST1]](f64), [[BITCAST2]](<32 x f32>), 0, 0, 0
+    ; GREEDY-NEXT: [[BITCAST3:%[0-9]+]]:agpr(<32 x i32>) = G_BITCAST [[INTRINSIC_CONVERGENT]](<32 x f32>)
+    ; GREEDY-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = COPY [[BITCAST3]](<32 x i32>)
+    %0:_(i64) = COPY $vgpr0_vgpr1
+    %1:_(i64) = COPY $vgpr2_vgpr3
+    %2:_(<32 x i32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    %4:_(f64) = G_BITCAST %0(i64)
+    %5:_(f64) = G_BITCAST %1(i64)
+    %6:_(<32 x f32>) = G_BITCAST %2(<32 x i32>)
+    %3:_(<32 x f32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.32x32x4bf16.1k), %4(f64), %5(f64), %6(<32 x f32>), 0, 0, 0
+    %7:_(<32 x i32>) = G_BITCAST %3(<32 x f32>)
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = COPY %7(<32 x i32>)
 ...
 
 ---
@@ -44,24 +57,37 @@ body: |
     ; FAST-LABEL: name: mfma_f32_16x16x4bf16_1k_vva
     ; FAST: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
     ; FAST-NEXT: {{  $}}
-    ; FAST-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; FAST-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; FAST-NEXT: [[COPY2:%[0-9]+]]:agpr(<16 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; FAST-NEXT: [[INT:%[0-9]+]]:agpr(<16 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.16x16x4bf16.1k), [[COPY]](s64), [[COPY1]](s64), [[COPY2]](<16 x s32>), 0, 0, 0
-    ; FAST-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[INT]](<16 x s32>)
+    ; FAST-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; FAST-NEXT: [[COPY1:%[0-9]+]]:vgpr(i64) = COPY $vgpr2_vgpr3
+    ; FAST-NEXT: [[COPY2:%[0-9]+]]:agpr(<16 x i32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; FAST-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; FAST-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY1]](i64)
+    ; FAST-NEXT: [[BITCAST2:%[0-9]+]]:agpr(<16 x f32>) = G_BITCAST [[COPY2]](<16 x i32>)
+    ; FAST-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:agpr(<16 x f32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.16x16x4bf16.1k), [[BITCAST]](f64), [[BITCAST1]](f64), [[BITCAST2]](<16 x f32>), 0, 0, 0
+    ; FAST-NEXT: [[BITCAST3:%[0-9]+]]:agpr(<16 x i32>) = G_BITCAST [[INTRINSIC_CONVERGENT]](<16 x f32>)
+    ; FAST-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[BITCAST3]](<16 x i32>)
+    ;
     ; GREEDY-LABEL: name: mfma_f32_16x16x4bf16_1k_vva
     ; GREEDY: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
     ; GREEDY-NEXT: {{  $}}
-    ; GREEDY-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GREEDY-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; GREEDY-NEXT: [[COPY2:%[0-9]+]]:agpr(<16 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; GREEDY-NEXT: [[INT:%[0-9]+]]:agpr(<16 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.16x16x4bf16.1k), [[COPY]](s64), [[COPY1]](s64), [[COPY2]](<16 x s32>), 0, 0, 0
-    ; GREEDY-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[INT]](<16 x s32>)
-    %0:_(s64) = COPY $vgpr0_vgpr1
-    %1:_(s64) = COPY $vgpr2_vgpr3
-    %2:_(<16 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    %3:_(<16 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.16x16x4bf16.1k), %0, %1, %2, 0, 0, 0
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY %3
+    ; GREEDY-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; GREEDY-NEXT: [[COPY1:%[0-9]+]]:vgpr(i64) = COPY $vgpr2_vgpr3
+    ; GREEDY-NEXT: [[COPY2:%[0-9]+]]:agpr(<16 x i32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; GREEDY-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; GREEDY-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY1]](i64)
+    ; GREEDY-NEXT: [[BITCAST2:%[0-9]+]]:agpr(<16 x f32>) = G_BITCAST [[COPY2]](<16 x i32>)
+    ; GREEDY-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:agpr(<16 x f32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.16x16x4bf16.1k), [[BITCAST]](f64), [[BITCAST1]](f64), [[BITCAST2]](<16 x f32>), 0, 0, 0
+    ; GREEDY-NEXT: [[BITCAST3:%[0-9]+]]:agpr(<16 x i32>) = G_BITCAST [[INTRINSIC_CONVERGENT]](<16 x f32>)
+    ; GREEDY-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[BITCAST3]](<16 x i32>)
+    %0:_(i64) = COPY $vgpr0_vgpr1
+    %1:_(i64) = COPY $vgpr2_vgpr3
+    %2:_(<16 x i32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    %4:_(f64) = G_BITCAST %0(i64)
+    %5:_(f64) = G_BITCAST %1(i64)
+    %6:_(<16 x f32>) = G_BITCAST %2(<16 x i32>)
+    %3:_(<16 x f32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.16x16x4bf16.1k), %4(f64), %5(f64), %6(<16 x f32>), 0, 0, 0
+    %7:_(<16 x i32>) = G_BITCAST %3(<16 x f32>)
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY %7(<16 x i32>)
 ...
 
 ---
@@ -75,24 +101,37 @@ body: |
     ; FAST-LABEL: name: mfma_f32_4x4x4bf16_1k_vva
     ; FAST: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3
     ; FAST-NEXT: {{  $}}
-    ; FAST-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; FAST-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; FAST-NEXT: [[COPY2:%[0-9]+]]:agpr(<4 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3
-    ; FAST-NEXT: [[INT:%[0-9]+]]:agpr(<4 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.4x4x4bf16.1k), [[COPY]](s64), [[COPY1]](s64), [[COPY2]](<4 x s32>), 0, 0, 0
-    ; FAST-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[INT]](<4 x s32>)
+    ; FAST-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; FAST-NEXT: [[COPY1:%[0-9]+]]:vgpr(i64) = COPY $vgpr2_vgpr3
+    ; FAST-NEXT: [[COPY2:%[0-9]+]]:agpr(<4 x i32>) = COPY $agpr0_agpr1_agpr2_agpr3
+    ; FAST-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; FAST-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY1]](i64)
+    ; FAST-NEXT: [[BITCAST2:%[0-9]+]]:agpr(<4 x f32>) = G_BITCAST [[COPY2]](<4 x i32>)
+    ; FAST-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:agpr(<4 x f32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.4x4x4bf16.1k), [[BITCAST]](f64), [[BITCAST1]](f64), [[BITCAST2]](<4 x f32>), 0, 0, 0
+    ; FAST-NEXT: [[BITCAST3:%[0-9]+]]:agpr(<4 x i32>) = G_BITCAST [[INTRINSIC_CONVERGENT]](<4 x f32>)
+    ; FAST-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST3]](<4 x i32>)
+    ;
     ; GREEDY-LABEL: name: mfma_f32_4x4x4bf16_1k_vva
     ; GREEDY: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3
     ; GREEDY-NEXT: {{  $}}
-    ; GREEDY-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GREEDY-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; GREEDY-NEXT: [[COPY2:%[0-9]+]]:agpr(<4 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3
-    ; GREEDY-NEXT: [[INT:%[0-9]+]]:agpr(<4 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.4x4x4bf16.1k), [[COPY]](s64), [[COPY1]](s64), [[COPY2]](<4 x s32>), 0, 0, 0
-    ; GREEDY-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[INT]](<4 x s32>)
-    %0:_(s64) = COPY $vgpr0_vgpr1
-    %1:_(s64) = COPY $vgpr2_vgpr3
-    %2:_(<4 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3
-    %3:_(<4 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.4x4x4bf16.1k), %0, %1, %2, 0, 0, 0
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %3
+    ; GREEDY-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; GREEDY-NEXT: [[COPY1:%[0-9]+]]:vgpr(i64) = COPY $vgpr2_vgpr3
+    ; GREEDY-NEXT: [[COPY2:%[0-9]+]]:agpr(<4 x i32>) = COPY $agpr0_agpr1_agpr2_agpr3
+    ; GREEDY-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; GREEDY-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY1]](i64)
+    ; GREEDY-NEXT: [[BITCAST2:%[0-9]+]]:agpr(<4 x f32>) = G_BITCAST [[COPY2]](<4 x i32>)
+    ; GREEDY-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:agpr(<4 x f32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.4x4x4bf16.1k), [[BITCAST]](f64), [[BITCAST1]](f64), [[BITCAST2]](<4 x f32>), 0, 0, 0
+    ; GREEDY-NEXT: [[BITCAST3:%[0-9]+]]:agpr(<4 x i32>) = G_BITCAST [[INTRINSIC_CONVERGENT]](<4 x f32>)
+    ; GREEDY-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST3]](<4 x i32>)
+    %0:_(i64) = COPY $vgpr0_vgpr1
+    %1:_(i64) = COPY $vgpr2_vgpr3
+    %2:_(<4 x i32>) = COPY $agpr0_agpr1_agpr2_agpr3
+    %4:_(f64) = G_BITCAST %0(i64)
+    %5:_(f64) = G_BITCAST %1(i64)
+    %6:_(<4 x f32>) = G_BITCAST %2(<4 x i32>)
+    %3:_(<4 x f32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.4x4x4bf16.1k), %4(f64), %5(f64), %6(<4 x f32>), 0, 0, 0
+    %7:_(<4 x i32>) = G_BITCAST %3(<4 x f32>)
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %7(<4 x i32>)
 ...
 
 ---
@@ -106,24 +145,37 @@ body: |
     ; FAST-LABEL: name: mfma_f32_32x32x8bf16_1k_vva
     ; FAST: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
     ; FAST-NEXT: {{  $}}
-    ; FAST-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; FAST-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; FAST-NEXT: [[COPY2:%[0-9]+]]:agpr(<32 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; FAST-NEXT: [[INT:%[0-9]+]]:agpr(<32 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.32x32x8bf16.1k), [[COPY]](s64), [[COPY1]](s64), [[COPY2]](<32 x s32>), 0, 0, 0
-    ; FAST-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = COPY [[INT]](<32 x s32>)
+    ; FAST-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; FAST-NEXT: [[COPY1:%[0-9]+]]:vgpr(i64) = COPY $vgpr2_vgpr3
+    ; FAST-NEXT: [[COPY2:%[0-9]+]]:agpr(<32 x i32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    ; FAST-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; FAST-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY1]](i64)
+    ; FAST-NEXT: [[BITCAST2:%[0-9]+]]:agpr(<32 x f32>) = G_BITCAST [[COPY2]](<32 x i32>)
+    ; FAST-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:agpr(<32 x f32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.32x32x8bf16.1k), [[BITCAST]](f64), [[BITCAST1]](f64), [[BITCAST2]](<32 x f32>), 0, 0, 0
+    ; FAST-NEXT: [[BITCAST3:%[0-9]+]]:agpr(<32 x i32>) = G_BITCAST [[INTRINSIC_CONVERGENT]](<32 x f32>)
+    ; FAST-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = COPY [[BITCAST3]](<32 x i32>)
+    ;
     ; GREEDY-LABEL: name: mfma_f32_32x32x8bf16_1k_vva
     ; GREEDY: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
     ; GREEDY-NEXT: {{  $}}
-    ; GREEDY-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GREEDY-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; GREEDY-NEXT: [[COPY2:%[0-9]+]]:agpr(<32 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; GREEDY-NEXT: [[INT:%[0-9]+]]:agpr(<32 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.32x32x8bf16.1k), [[COPY]](s64), [[COPY1]](s64), [[COPY2]](<32 x s32>), 0, 0, 0
-    ; GREEDY-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = COPY [[INT]](<32 x s32>)
-    %0:_(s64) = COPY $vgpr0_vgpr1
-    %1:_(s64) = COPY $vgpr2_vgpr3
-    %2:_(<32 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    %3:_(<32 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.32x32x8bf16.1k), %0, %1, %2, 0, 0, 0
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = COPY %3
+    ; GREEDY-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; GREEDY-NEXT: [[COPY1:%[0-9]+]]:vgpr(i64) = COPY $vgpr2_vgpr3
+    ; GREEDY-NEXT: [[COPY2:%[0-9]+]]:agpr(<32 x i32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    ; GREEDY-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; GREEDY-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY1]](i64)
+    ; GREEDY-NEXT: [[BITCAST2:%[0-9]+]]:agpr(<32 x f32>) = G_BITCAST [[COPY2]](<32 x i32>)
+    ; GREEDY-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:agpr(<32 x f32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.32x32x8bf16.1k), [[BITCAST]](f64), [[BITCAST1]](f64), [[BITCAST2]](<32 x f32>), 0, 0, 0
+    ; GREEDY-NEXT: [[BITCAST3:%[0-9]+]]:agpr(<32 x i32>) = G_BITCAST [[INTRINSIC_CONVERGENT]](<32 x f32>)
+    ; GREEDY-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = COPY [[BITCAST3]](<32 x i32>)
+    %0:_(i64) = COPY $vgpr0_vgpr1
+    %1:_(i64) = COPY $vgpr2_vgpr3
+    %2:_(<32 x i32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    %4:_(f64) = G_BITCAST %0(i64)
+    %5:_(f64) = G_BITCAST %1(i64)
+    %6:_(<32 x f32>) = G_BITCAST %2(<32 x i32>)
+    %3:_(<32 x f32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.32x32x8bf16.1k), %4(f64), %5(f64), %6(<32 x f32>), 0, 0, 0
+    %7:_(<32 x i32>) = G_BITCAST %3(<32 x f32>)
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = COPY %7(<32 x i32>)
 ...
 
 ---
@@ -137,24 +189,37 @@ body: |
     ; FAST-LABEL: name: mfma_f32_16x16x16bf16_1k_vva
     ; FAST: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3
     ; FAST-NEXT: {{  $}}
-    ; FAST-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; FAST-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; FAST-NEXT: [[COPY2:%[0-9]+]]:agpr(<4 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3
-    ; FAST-NEXT: [[INT:%[0-9]+]]:agpr(<4 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.16x16x16bf16.1k), [[COPY]](s64), [[COPY1]](s64), [[COPY2]](<4 x s32>), 0, 0, 0
-    ; FAST-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[INT]](<4 x s32>)
+    ; FAST-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; FAST-NEXT: [[COPY1:%[0-9]+]]:vgpr(i64) = COPY $vgpr2_vgpr3
+    ; FAST-NEXT: [[COPY2:%[0-9]+]]:agpr(<4 x i32>) = COPY $agpr0_agpr1_agpr2_agpr3
+    ; FAST-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; FAST-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY1]](i64)
+    ; FAST-NEXT: [[BITCAST2:%[0-9]+]]:agpr(<4 x f32>) = G_BITCAST [[COPY2]](<4 x i32>)
+    ; FAST-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:agpr(<4 x f32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.16x16x16bf16.1k), [[BITCAST]](f64), [[BITCAST1]](f64), [[BITCAST2]](<4 x f32>), 0, 0, 0
+    ; FAST-NEXT: [[BITCAST3:%[0-9]+]]:agpr(<4 x i32>) = G_BITCAST [[INTRINSIC_CONVERGENT]](<4 x f32>)
+    ; FAST-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST3]](<4 x i32>)
+    ;
     ; GREEDY-LABEL: name: mfma_f32_16x16x16bf16_1k_vva
     ; GREEDY: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3
     ; GREEDY-NEXT: {{  $}}
-    ; GREEDY-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GREEDY-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; GREEDY-NEXT: [[COPY2:%[0-9]+]]:agpr(<4 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3
-    ; GREEDY-NEXT: [[INT:%[0-9]+]]:agpr(<4 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.16x16x16bf16.1k), [[COPY]](s64), [[COPY1]](s64), [[COPY2]](<4 x s32>), 0, 0, 0
-    ; GREEDY-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[INT]](<4 x s32>)
-    %0:_(s64) = COPY $vgpr0_vgpr1
-    %1:_(s64) = COPY $vgpr2_vgpr3
-    %2:_(<4 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3
-    %3:_(<4 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.16x16x16bf16.1k), %0, %1, %2, 0, 0, 0
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %3
+    ; GREEDY-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; GREEDY-NEXT: [[COPY1:%[0-9]+]]:vgpr(i64) = COPY $vgpr2_vgpr3
+    ; GREEDY-NEXT: [[COPY2:%[0-9]+]]:agpr(<4 x i32>) = COPY $agpr0_agpr1_agpr2_agpr3
+    ; GREEDY-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; GREEDY-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY1]](i64)
+    ; GREEDY-NEXT: [[BITCAST2:%[0-9]+]]:agpr(<4 x f32>) = G_BITCAST [[COPY2]](<4 x i32>)
+    ; GREEDY-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:agpr(<4 x f32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.16x16x16bf16.1k), [[BITCAST]](f64), [[BITCAST1]](f64), [[BITCAST2]](<4 x f32>), 0, 0, 0
+    ; GREEDY-NEXT: [[BITCAST3:%[0-9]+]]:agpr(<4 x i32>) = G_BITCAST [[INTRINSIC_CONVERGENT]](<4 x f32>)
+    ; GREEDY-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST3]](<4 x i32>)
+    %0:_(i64) = COPY $vgpr0_vgpr1
+    %1:_(i64) = COPY $vgpr2_vgpr3
+    %2:_(<4 x i32>) = COPY $agpr0_agpr1_agpr2_agpr3
+    %4:_(f64) = G_BITCAST %0(i64)
+    %5:_(f64) = G_BITCAST %1(i64)
+    %6:_(<4 x f32>) = G_BITCAST %2(<4 x i32>)
+    %3:_(<4 x f32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f32.16x16x16bf16.1k), %4(f64), %5(f64), %6(<4 x f32>), 0, 0, 0
+    %7:_(<4 x i32>) = G_BITCAST %3(<4 x f32>)
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %7(<4 x i32>)
 ...
 
 ---
@@ -168,24 +233,37 @@ body: |
     ; FAST-LABEL: name: mfma_f64_16x16x4f64_vva
     ; FAST: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
     ; FAST-NEXT: {{  $}}
-    ; FAST-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; FAST-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; FAST-NEXT: [[COPY2:%[0-9]+]]:agpr(<8 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; FAST-NEXT: [[INT:%[0-9]+]]:agpr(<8 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f64.16x16x4f64), [[COPY]](s64), [[COPY1]](s64), [[COPY2]](<8 x s32>), 0, 0, 0
-    ; FAST-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[INT]](<8 x s32>)
+    ; FAST-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; FAST-NEXT: [[COPY1:%[0-9]+]]:vgpr(i64) = COPY $vgpr2_vgpr3
+    ; FAST-NEXT: [[COPY2:%[0-9]+]]:agpr(<8 x i32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; FAST-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; FAST-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY1]](i64)
+    ; FAST-NEXT: [[BITCAST2:%[0-9]+]]:agpr(<8 x f32>) = G_BITCAST [[COPY2]](<8 x i32>)
+    ; FAST-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:agpr(<8 x f32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f64.16x16x4f64), [[BITCAST]](f64), [[BITCAST1]](f64), [[BITCAST2]](<8 x f32>), 0, 0, 0
+    ; FAST-NEXT: [[BITCAST3:%[0-9]+]]:agpr(<8 x i32>) = G_BITCAST [[INTRINSIC_CONVERGENT]](<8 x f32>)
+    ; FAST-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[BITCAST3]](<8 x i32>)
+    ;
     ; GREEDY-LABEL: name: mfma_f64_16x16x4f64_vva
     ; GREEDY: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
     ; GREEDY-NEXT: {{  $}}
-    ; GREEDY-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GREEDY-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; GREEDY-NEXT: [[COPY2:%[0-9]+]]:agpr(<8 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; GREEDY-NEXT: [[INT:%[0-9]+]]:agpr(<8 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f64.16x16x4f64), [[COPY]](s64), [[COPY1]](s64), [[COPY2]](<8 x s32>), 0, 0, 0
-    ; GREEDY-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[INT]](<8 x s32>)
-    %0:_(s64) = COPY $vgpr0_vgpr1
-    %1:_(s64) = COPY $vgpr2_vgpr3
-    %2:_(<8 x s32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    %3:_(<8 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f64.16x16x4f64), %0, %1, %2, 0, 0, 0
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %3
+    ; GREEDY-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; GREEDY-NEXT: [[COPY1:%[0-9]+]]:vgpr(i64) = COPY $vgpr2_vgpr3
+    ; GREEDY-NEXT: [[COPY2:%[0-9]+]]:agpr(<8 x i32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; GREEDY-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; GREEDY-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY1]](i64)
+    ; GREEDY-NEXT: [[BITCAST2:%[0-9]+]]:agpr(<8 x f32>) = G_BITCAST [[COPY2]](<8 x i32>)
+    ; GREEDY-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:agpr(<8 x f32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f64.16x16x4f64), [[BITCAST]](f64), [[BITCAST1]](f64), [[BITCAST2]](<8 x f32>), 0, 0, 0
+    ; GREEDY-NEXT: [[BITCAST3:%[0-9]+]]:agpr(<8 x i32>) = G_BITCAST [[INTRINSIC_CONVERGENT]](<8 x f32>)
+    ; GREEDY-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[BITCAST3]](<8 x i32>)
+    %0:_(i64) = COPY $vgpr0_vgpr1
+    %1:_(i64) = COPY $vgpr2_vgpr3
+    %2:_(<8 x i32>) = COPY $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    %4:_(f64) = G_BITCAST %0(i64)
+    %5:_(f64) = G_BITCAST %1(i64)
+    %6:_(<8 x f32>) = G_BITCAST %2(<8 x i32>)
+    %3:_(<8 x f32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f64.16x16x4f64), %4(f64), %5(f64), %6(<8 x f32>), 0, 0, 0
+    %7:_(<8 x i32>) = G_BITCAST %3(<8 x f32>)
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %7(<8 x i32>)
 ...
 
 ---
@@ -199,22 +277,35 @@ body: |
     ; FAST-LABEL: name: mfma_f64_4x4x4f64_vva
     ; FAST: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $agpr0_agpr1
     ; FAST-NEXT: {{  $}}
-    ; FAST-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; FAST-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; FAST-NEXT: [[COPY2:%[0-9]+]]:agpr(<2 x s32>) = COPY $agpr0_agpr1
-    ; FAST-NEXT: [[INT:%[0-9]+]]:agpr(<2 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f64.4x4x4f64), [[COPY]](s64), [[COPY1]](s64), [[COPY2]](<2 x s32>), 0, 0, 0
-    ; FAST-NEXT: $vgpr0_vgpr1 = COPY [[INT]](<2 x s32>)
+    ; FAST-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; FAST-NEXT: [[COPY1:%[0-9]+]]:vgpr(i64) = COPY $vgpr2_vgpr3
+    ; FAST-NEXT: [[COPY2:%[0-9]+]]:agpr(<2 x i32>) = COPY $agpr0_agpr1
+    ; FAST-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; FAST-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY1]](i64)
+    ; FAST-NEXT: [[BITCAST2:%[0-9]+]]:agpr(<2 x f32>) = G_BITCAST [[COPY2]](<2 x i32>)
+    ; FAST-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:agpr(<2 x f32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f64.4x4x4f64), [[BITCAST]](f64), [[BITCAST1]](f64), [[BITCAST2]](<2 x f32>), 0, 0, 0
+    ; FAST-NEXT: [[BITCAST3:%[0-9]+]]:agpr(<2 x i32>) = G_BITCAST [[INTRINSIC_CONVERGENT]](<2 x f32>)
+    ; FAST-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST3]](<2 x i32>)
+    ;
     ; GREEDY-LABEL: name: mfma_f64_4x4x4f64_vva
     ; GREEDY: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $agpr0_agpr1
     ; GREEDY-NEXT: {{  $}}
-    ; GREEDY-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GREEDY-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; GREEDY-NEXT: [[COPY2:%[0-9]+]]:agpr(<2 x s32>) = COPY $agpr0_agpr1
-    ; GREEDY-NEXT: [[INT:%[0-9]+]]:agpr(<2 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f64.4x4x4f64), [[COPY]](s64), [[COPY1]](s64), [[COPY2]](<2 x s32>), 0, 0, 0
-    ; GREEDY-NEXT: $vgpr0_vgpr1 = COPY [[INT]](<2 x s32>)
-    %0:_(s64) = COPY $vgpr0_vgpr1
-    %1:_(s64) = COPY $vgpr2_vgpr3
-    %2:_(<2 x s32>) = COPY $agpr0_agpr1
-    %3:_(<2 x s32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f64.4x4x4f64), %0, %1, %2, 0, 0, 0
-    $vgpr0_vgpr1 = COPY %3
+    ; GREEDY-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; GREEDY-NEXT: [[COPY1:%[0-9]+]]:vgpr(i64) = COPY $vgpr2_vgpr3
+    ; GREEDY-NEXT: [[COPY2:%[0-9]+]]:agpr(<2 x i32>) = COPY $agpr0_agpr1
+    ; GREEDY-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; GREEDY-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY1]](i64)
+    ; GREEDY-NEXT: [[BITCAST2:%[0-9]+]]:agpr(<2 x f32>) = G_BITCAST [[COPY2]](<2 x i32>)
+    ; GREEDY-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:agpr(<2 x f32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f64.4x4x4f64), [[BITCAST]](f64), [[BITCAST1]](f64), [[BITCAST2]](<2 x f32>), 0, 0, 0
+    ; GREEDY-NEXT: [[BITCAST3:%[0-9]+]]:agpr(<2 x i32>) = G_BITCAST [[INTRINSIC_CONVERGENT]](<2 x f32>)
+    ; GREEDY-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST3]](<2 x i32>)
+    %0:_(i64) = COPY $vgpr0_vgpr1
+    %1:_(i64) = COPY $vgpr2_vgpr3
+    %2:_(<2 x i32>) = COPY $agpr0_agpr1
+    %4:_(f64) = G_BITCAST %0(i64)
+    %5:_(f64) = G_BITCAST %1(i64)
+    %6:_(<2 x f32>) = G_BITCAST %2(<2 x i32>)
+    %3:_(<2 x f32>) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.mfma.f64.4x4x4f64), %4(f64), %5(f64), %6(<2 x f32>), 0, 0, 0
+    %7:_(<2 x i32>) = G_BITCAST %3(<2 x f32>)
+    $vgpr0_vgpr1 = COPY %7(<2 x i32>)
 ...

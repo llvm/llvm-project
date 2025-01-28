@@ -13,10 +13,10 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY1]](p4) :: (load (s8), addrspace 4)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(i32) = G_ZEXTLOAD [[COPY1]](p4) :: (load (i8), addrspace 4)
     ; CHECK-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[ZEXTLOAD]]
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_ZEXTLOAD %0 :: (load (s8), addrspace 4, align 1)
+    %1:_(i32) = G_ZEXTLOAD %0(p4) :: (load (i8), addrspace 4)
 ...
 
 ---
@@ -32,10 +32,10 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY1]](p4) :: (load (s8), addrspace 1)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(i32) = G_ZEXTLOAD [[COPY1]](p4) :: (load (i8), addrspace 1)
     ; CHECK-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[ZEXTLOAD]]
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_ZEXTLOAD %0 :: (load (s8), addrspace 1, align 1)
+    %1:_(i32) = G_ZEXTLOAD %0(p4) :: (load (i8), addrspace 1)
 ...
 
 ---
@@ -51,10 +51,10 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY1]](p4) :: (load (s16), addrspace 4)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(i32) = G_ZEXTLOAD [[COPY1]](p4) :: (load (i16), addrspace 4)
     ; CHECK-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[ZEXTLOAD]]
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_ZEXTLOAD %0 :: (load (s16), addrspace 4, align 2)
+    %1:_(i32) = G_ZEXTLOAD %0(p4) :: (load (i16), addrspace 4)
 ...
 
 ---
@@ -70,10 +70,10 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(p4) = COPY [[COPY]](p4)
-    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY1]](p4) :: (load (s16), addrspace 1)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(i32) = G_ZEXTLOAD [[COPY1]](p4) :: (load (i16), addrspace 1)
     ; CHECK-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[ZEXTLOAD]]
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_ZEXTLOAD %0 :: (load (s16), addrspace 1, align 2)
+    %1:_(i32) = G_ZEXTLOAD %0(p4) :: (load (i16), addrspace 1)
 ...
 
 ---
@@ -88,10 +88,10 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p3) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(p3) = COPY [[COPY]](p3)
-    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY1]](p3) :: (load (s8), addrspace 3)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(i32) = G_ZEXTLOAD [[COPY1]](p3) :: (load (i8), addrspace 3)
     ; CHECK-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[ZEXTLOAD]]
     %0:_(p3) = COPY $sgpr0
-    %1:_(s32) = G_ZEXTLOAD %0 :: (load (s8), addrspace 3, align 1)
+    %1:_(i32) = G_ZEXTLOAD %0(p3) :: (load (i8), addrspace 3)
 ...
 
 ---
@@ -107,8 +107,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p3) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(p3) = COPY [[COPY]](p3)
-    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(s32) = G_ZEXTLOAD [[COPY1]](p3) :: (load (s16), addrspace 3)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:vgpr(i32) = G_ZEXTLOAD [[COPY1]](p3) :: (load (i16), addrspace 3)
     ; CHECK-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[ZEXTLOAD]]
     %0:_(p3) = COPY $sgpr0
-    %1:_(s32) = G_ZEXTLOAD %0 :: (load (s16), addrspace 3, align 2)
+    %1:_(i32) = G_ZEXTLOAD %0(p3) :: (load (i16), addrspace 3)
 ...

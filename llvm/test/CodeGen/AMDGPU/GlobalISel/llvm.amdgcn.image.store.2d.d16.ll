@@ -87,8 +87,8 @@ define amdgpu_ps void @image_store_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
 ;
 ; GFX81-LABEL: image_store_v3f16:
 ; GFX81:       ; %bb.0:
-; GFX81-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
-; GFX81-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; GFX81-NEXT:    v_mov_b32_e32 v4, 0xffff
+; GFX81-NEXT:    v_and_b32_sdwa v4, v4, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX81-NEXT:    s_mov_b32 s0, s2
 ; GFX81-NEXT:    s_mov_b32 s1, s3
 ; GFX81-NEXT:    s_mov_b32 s2, s4

@@ -24,8 +24,8 @@ body:             |
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 target-flags(amdgpu-abs32-lo) @arst
     ; GCN-NEXT: $sgpr0 = COPY [[S_MOV_B32_]]
     ; GCN-NEXT: S_ENDPGM 0, implicit $sgpr0
-    %0:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.reloc.constant), !0
-    $sgpr0 = COPY %0
+    %0:sgpr(i32) = G_INTRINSIC intrinsic(@llvm.amdgcn.reloc.constant), !0
+    $sgpr0 = COPY %0(i32)
     S_ENDPGM 0, implicit $sgpr0
 
 ...
@@ -42,9 +42,9 @@ body:             |
     ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 target-flags(amdgpu-abs32-lo) @arst, implicit $exec
     ; GCN-NEXT: $vgpr0 = COPY [[V_MOV_B32_e32_]]
     ; GCN-NEXT: S_ENDPGM 0, implicit $vgpr0
-    %0:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.reloc.constant), !0
-    $vgpr0 = COPY %0
+    
+    %0:vgpr(i32) = G_INTRINSIC intrinsic(@llvm.amdgcn.reloc.constant), !0
+    $vgpr0 = COPY %0(i32)
     S_ENDPGM 0, implicit $vgpr0
 
 ...
-
