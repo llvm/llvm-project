@@ -152,7 +152,7 @@ enum class APIAvailability {
 
 /* TO_UPSTREAM(BoundsSafety) ON */
 namespace {
-struct BoundsSafety {
+struct BoundsSafetyNotes {
   BoundsSafetyInfo::BoundsSafetyKind Kind;
   unsigned Level = 0;
   StringRef BoundsExpr = "";
@@ -215,7 +215,7 @@ struct Param {
   std::optional<NullabilityKind> Nullability;
   std::optional<RetainCountConventionKind> RetainCountConvention;
   /* TO_UPSTREAM(BoundsSafety) ON */
-  std::optional<BoundsSafety> BoundsSafety;
+  std::optional<BoundsSafetyNotes> BoundsSafety;
   /* TO_UPSTREAM(BoundsSafety) OFF */
   StringRef Type;
 };
@@ -275,8 +275,8 @@ template <> struct MappingTraits<Param> {
 };
 
 /* TO_UPSTREAM(BoundsSafety) ON */
-template <> struct MappingTraits<BoundsSafety> {
-  static void mapping(IO &IO, BoundsSafety &BS) {
+template <> struct MappingTraits<BoundsSafetyNotes> {
+  static void mapping(IO &IO, BoundsSafetyNotes &BS) {
     IO.mapRequired("Kind", BS.Kind);
     IO.mapRequired("BoundedBy", BS.BoundsExpr);
     IO.mapOptional("Level", BS.Level, 0);
