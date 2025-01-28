@@ -40,16 +40,6 @@
 #include "lldb/Host/linux/AbstractSocket.h"
 #endif
 
-#ifdef __ANDROID__
-#include <arpa/inet.h>
-#include <asm-generic/errno-base.h>
-#include <cerrno>
-#include <fcntl.h>
-#include <linux/tcp.h>
-#include <sys/syscall.h>
-#include <unistd.h>
-#endif // __ANDROID__
-
 using namespace lldb;
 using namespace lldb_private;
 
