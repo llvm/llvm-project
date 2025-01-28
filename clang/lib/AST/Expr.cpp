@@ -2397,11 +2397,11 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
 }
 
 EmbedExpr::EmbedExpr(const ASTContext &Ctx, SourceLocation Loc,
-                     EmbedDataStorage *Data, unsigned Begin,
-                     unsigned NumOfElements)
+                     StringRef Filename, bool IsAngled, EmbedDataStorage *Data,
+                     unsigned Begin, unsigned NumOfElements)
     : Expr(EmbedExprClass, Ctx.IntTy, VK_PRValue, OK_Ordinary),
-      EmbedKeywordLoc(Loc), Ctx(&Ctx), Data(Data), Begin(Begin),
-      NumOfElements(NumOfElements) {
+      EmbedKeywordLoc(Loc), Ctx(&Ctx), Filename(Filename), IsAngled(IsAngled),
+      Data(Data), Begin(Begin), NumOfElements(NumOfElements) {
   setDependence(ExprDependence::None);
   FakeChildNode = IntegerLiteral::Create(
       Ctx, llvm::APInt::getZero(Ctx.getTypeSize(getType())), getType(), Loc);

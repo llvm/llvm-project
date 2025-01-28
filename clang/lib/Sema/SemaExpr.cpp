@@ -16800,12 +16800,13 @@ ExprResult Sema::BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,
 }
 
 ExprResult Sema::ActOnEmbedExpr(SourceLocation EmbedKeywordLoc,
+                                StringRef Filename, bool IsAngled,
                                 StringLiteral *BinaryData) {
   EmbedDataStorage *Data = new (Context) EmbedDataStorage;
   Data->BinaryData = BinaryData;
   return new (Context)
-      EmbedExpr(Context, EmbedKeywordLoc, Data, /*NumOfElements=*/0,
-                Data->getDataElementCount());
+      EmbedExpr(Context, EmbedKeywordLoc, Filename, IsAngled, Data,
+                /*NumOfElements=*/0, Data->getDataElementCount());
 }
 
 static bool maybeDiagnoseAssignmentToFunction(Sema &S, QualType DstType,

@@ -1249,7 +1249,11 @@ void StmtPrinter::VisitSourceLocExpr(SourceLocExpr *Node) {
 }
 
 void StmtPrinter::VisitEmbedExpr(EmbedExpr *Node) {
-  llvm::report_fatal_error("Not implemented");
+  // FIXME: This doesn't handle offsets, prefixes, and if_empty yet
+  OS << NL << "#embed ";
+  OS << (Node->getIsAngled() ? '<' : '"');
+  OS << Node->getFilename();
+  OS << (Node->getIsAngled() ? '>' : '"') << NL;
 }
 
 void StmtPrinter::VisitConstantExpr(ConstantExpr *Node) {

@@ -2761,7 +2761,8 @@ private:
   // Binary data inclusion
   void HandleEmbedDirective(SourceLocation HashLoc, Token &Tok,
                             const FileEntry *LookupFromFile = nullptr);
-  void HandleEmbedDirectiveImpl(SourceLocation HashLoc,
+  void HandleEmbedDirectiveImpl(SourceLocation HashLoc, StringRef Filename,
+                                bool IsAngled,
                                 const LexEmbedParametersResult &Params,
                                 StringRef BinaryContents);
 
@@ -3066,6 +3067,8 @@ public:
 /// Helper class to shuttle information about #embed directives from the
 /// preprocessor to the parser through an annotation token.
 struct EmbedAnnotationData {
+  std::string Filename;
+  bool IsAngled;
   StringRef BinaryData;
 };
 

@@ -7105,8 +7105,8 @@ public:
                                 SourceLocation RPLoc);
 
   // #embed
-  ExprResult ActOnEmbedExpr(SourceLocation EmbedKeywordLoc,
-                            StringLiteral *BinaryData);
+  ExprResult ActOnEmbedExpr(SourceLocation EmbedKeywordLoc, StringRef Filename,
+                            bool IsAngled, StringLiteral *BinaryData);
 
   // Build a potentially resolved SourceLocExpr.
   ExprResult BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,

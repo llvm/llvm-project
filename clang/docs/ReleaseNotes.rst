@@ -448,6 +448,7 @@ C23 Feature Support
 - Clang now officially supports `N3030 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3030.htm>`_ Enhancements to Enumerations. Clang already supported it as an extension, so there were no changes to compiler behavior.
 - Fixed the value of ``BOOL_WIDTH`` in ``<limits.h>`` to return ``1``
   explicitly, as mandated by the standard. Fixes #GH117348
+- Initial support for pretty printing ``#embed`` directives, which no longer crash clangd when hovered.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
