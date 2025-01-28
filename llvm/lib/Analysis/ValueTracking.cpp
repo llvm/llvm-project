@@ -614,7 +614,7 @@ static void breakSelfRecursivePHI(const Use *U, const PHINode *PHI,
   // TODO: We could handle any number of incoming edges as long as we only have
   // two unique values.
   if (auto *IncPhi = dyn_cast<PHINode>(ValOut);
-           IncPhi && IncPhi->getNumIncomingValues() == 2) {
+      IncPhi && IncPhi->getNumIncomingValues() == 2) {
     for (int Idx = 0; Idx < 2; ++Idx) {
       if (IncPhi->getIncomingValue(Idx) == PHI) {
         ValOut = IncPhi->getIncomingValue(1 - Idx);
