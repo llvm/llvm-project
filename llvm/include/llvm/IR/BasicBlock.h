@@ -280,14 +280,27 @@ public:
   /// When adding instructions to the beginning of the basic block, they should
   /// be added before the returned value, not before the first instruction,
   /// which might be PHI. Returns 0 is there's no non-PHI instruction.
-  const Instruction* getFirstNonPHI() const;
-  Instruction* getFirstNonPHI() {
+  ///
+  /// Deprecated in favour of getFirstNonPHIIt, which returns an iterator that
+  /// preserves some debugging information.
+  LLVM_DEPRECATED("Use iterators as instruction positions", "getFirstNonPHIIt")
+  const Instruction *getFirstNonPHI() const;
+  LLVM_DEPRECATED("Use iterators as instruction positions instead",
+                  "getFirstNonPHIIt")
+  Instruction *getFirstNonPHI() {
     return const_cast<Instruction *>(
-                       static_cast<const BasicBlock *>(this)->getFirstNonPHI());
+        static_cast<const BasicBlock *>(this)->getFirstNonPHI());
   }
 
-  /// Iterator returning form of getFirstNonPHI. Installed as a placeholder for
-  /// the RemoveDIs project that will eventually remove debug intrinsics.
+  /// Returns an iterator to the first instruction in this block that is not a
+  /// PHINode instruction.
+  ///
+  /// When adding instructions to the beginning of the basic block, they should
+  /// be added before the returned value, not before the first instruction,
+  /// which might be PHI. Returns end() if there's no non-PHI instruction.
+  ///
+  /// Avoid unwrapping the iterator to an Instruction* before inserting here,
+  /// as important debug-info is preserved in the iterator.
   InstListType::const_iterator getFirstNonPHIIt() const;
   InstListType::iterator getFirstNonPHIIt() {
     BasicBlock::iterator It =

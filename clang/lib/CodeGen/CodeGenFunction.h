@@ -723,6 +723,20 @@ public:
     }
   };
 
+  // We are using objects of this 'cleanup' class to emit fake.use calls
+  // for -fextend-lifetimes and -fextend-this-ptr. They are placed at the end of
+  // a variable's scope analogous to lifetime markers.
+  class FakeUse final : public EHScopeStack::Cleanup {
+    Address Addr;
+
+  public:
+    FakeUse(Address addr) : Addr(addr) {}
+
+    void Emit(CodeGenFunction &CGF, Flags flags) override {
+      CGF.EmitFakeUse(Addr);
+    }
+  };
+
   /// Header for data within LifetimeExtendedCleanupStack.
   struct LifetimeExtendedCleanupHeader {
     /// The size of the following cleanup object.
@@ -5074,6 +5088,8 @@ public:
   void EmitCXXThrowExpr(const CXXThrowExpr *E, bool KeepInsertionPoint = true);
 
   RValue EmitAtomicExpr(AtomicExpr *E);
+
+  void EmitFakeUse(Address Addr);
 
   //===--------------------------------------------------------------------===//
   //                         Annotations Emission
