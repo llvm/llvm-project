@@ -3674,6 +3674,10 @@ struct FormatStyle {
   /// \version 3.7
   unsigned PenaltyBreakBeforeFirstCallParameter;
 
+  /// The penalty for breaking before a member access operator (``.``, ``->``).
+  /// \version 20
+  unsigned PenaltyBreakBeforeMemberAccess;
+
   /// The penalty for each line break introduced inside a comment.
   /// \version 3.7
   unsigned PenaltyBreakComment;
@@ -5347,6 +5351,7 @@ struct FormatStyle {
            PenaltyBreakAssignment == R.PenaltyBreakAssignment &&
            PenaltyBreakBeforeFirstCallParameter ==
                R.PenaltyBreakBeforeFirstCallParameter &&
+           PenaltyBreakBeforeMemberAccess == R.PenaltyBreakBeforeMemberAccess &&
            PenaltyBreakComment == R.PenaltyBreakComment &&
            PenaltyBreakFirstLessLess == R.PenaltyBreakFirstLessLess &&
            PenaltyBreakOpenParenthesis == R.PenaltyBreakOpenParenthesis &&
