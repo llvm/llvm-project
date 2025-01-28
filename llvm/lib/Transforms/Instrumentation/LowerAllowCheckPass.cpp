@@ -73,7 +73,7 @@ static void emitRemark(IntrinsicInst *II, OptimizationRemarkEmitter &ORE,
 static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
                              const ProfileSummaryInfo *PSI,
                              OptimizationRemarkEmitter &ORE,
-                             std::vector<unsigned int> const &cutoffs) {
+                             const std::vector<unsigned int> &cutoffs) {
   SmallVector<std::pair<IntrinsicInst *, bool>, 16> ReplaceWithValue;
   std::unique_ptr<RandomNumberGenerator> Rng;
 
@@ -84,21 +84,21 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
   };
 
   auto GetCutoff = [&](const IntrinsicInst *II) {
-    unsigned int cutoff = 0;
     if (HotPercentileCutoff.getNumOccurrences())
-      cutoff = HotPercentileCutoff;
+      return static_cast<unsigned int>(HotPercentileCutoff);
     else if (II->getIntrinsicID() == Intrinsic::allow_ubsan_check) {
       auto *Kind = cast<ConstantInt>(II->getArgOperand(0));
       if (Kind->getZExtValue() < cutoffs.size())
-        cutoff = cutoffs[Kind->getZExtValue()];
+        return cutoffs[Kind->getZExtValue()];
     }
 
-    return cutoff;
+    return 0U;
   };
 
   auto ShouldRemoveHot = [&](const BasicBlock &BB, unsigned int cutoff) {
-    return PSI && PSI->isHotCountNthPercentile(
-                      cutoff, BFI.getBlockProfileCount(&BB).value_or(0));
+    return (cutoff == 1000000) ||
+           (PSI && PSI->isHotCountNthPercentile(
+                       cutoff, BFI.getBlockProfileCount(&BB).value_or(0)));
   };
 
   auto ShouldRemoveRandom = [&]() {
@@ -106,9 +106,9 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
            !std::bernoulli_distribution(RandomRate)(GetRng());
   };
 
-  auto ShouldRemove = [&](const BasicBlock &BB, const IntrinsicInst *II) {
+  auto ShouldRemove = [&](const IntrinsicInst *II) {
     unsigned int cutoff = GetCutoff(II);
-    return ShouldRemoveRandom() || ShouldRemoveHot(BB, cutoff);
+    return ShouldRemoveRandom() || ShouldRemoveHot(*(II->getParent()), cutoff);
   };
 
   for (BasicBlock &BB : F) {
@@ -122,7 +122,7 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
       case Intrinsic::allow_runtime_check: {
         ++NumChecksTotal;
 
-        bool ToRemove = ShouldRemove(BB, II);
+        bool ToRemove = ShouldRemove(II);
 
         ReplaceWithValue.push_back({
             II,
