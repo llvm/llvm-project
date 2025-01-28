@@ -83,6 +83,8 @@ class AArch64LinuxGCSTestCase(TestBase):
             ],
         )
 
+    # This helper reads all the GCS registers and optionally compares them
+    # against a previous state, then returns the current register values.
     def check_gcs_registers(
         self,
         expected_gcs_features_enabled=None,
@@ -115,8 +117,6 @@ class AArch64LinuxGCSTestCase(TestBase):
 
         return gcs_features_enabled, gcs_features_locked, gcspr_el0
 
-    # This helper reads all the GCS registers and optionally compares them
-    # against a previous state, then returns the current register values.
     @skipUnlessArch("aarch64")
     @skipUnlessPlatform(["linux"])
     def test_gcs_registers(self):
