@@ -100,3 +100,65 @@ void f2() {
   //   expected-note@#j2 {{default argument declared here}}
   //   expected-note@#j2-redecl {{default argument declared here}}
 }
+
+// In 'k' group of tests, no redefinition of default arguments occur,
+// because sets of default arguments are associated with lexical scopes
+// of function declarations.
+
+void k1(int); // #k1
+void k2(int = 2);
+void k3(int = 3); // #k3
+
+struct K {
+  friend void k1(int = 1) {}
+  // expected-error@-1 {{friend declaration specifying a default argument must be the only declaration}}
+  //   expected-note@#k1 {{previous declaration is here}}
+  friend void k2(int) {}
+  friend void k3(int = 3) {}
+  // expected-error@-1 {{friend declaration specifying a default argument must be the only declaration}}
+  //   expected-note@#k3 {{previous declaration is here}}
+
+  friend void k4(int = 4) {} // #k4
+  friend void k5(int) {}
+  friend void k6(int = 6) {} // #k6
+};
+
+void k4(int);
+// expected-error@-1 {{friend declaration specifying a default argument must be the only declaration}}
+//   expected-note@#k4 {{previous declaration is here}}
+void k5(int = 5);
+void k6(int = 6);
+// expected-error@-1 {{friend declaration specifying a default argument must be the only declaration}}
+//   expected-note@#k6 {{previous declaration is here}}
+
+struct L {
+  void l1(int);
+  void l2(int = 2);
+  void l3(int = 3); // #l3
+
+  template <typename>
+  void l4(int); // #l4
+  template <typename>
+  void l5(int = 5);
+  template <typename>
+  void l6(int = 6); // #l6
+};
+
+void L::l1(int = 1) {}
+void L::l2(int) {}
+void L::l3(int = 3) {}
+// expected-error@-1 {{redefinition of default argument}}
+//   expected-note@#l3 {{previous definition is here}}
+
+template <typename>
+void L::l4(int = 4) {}
+// expected-error@-1 {{default arguments cannot be added to a function template that has already been declared}}
+//   expected-note@#l4 {{previous template declaration is here}}
+
+template <typename>
+void L::l5(int) {}
+
+template <typename>
+void L::l6(int = 6) {}
+// expected-error@-1 {{redefinition of default argument}}
+//   expected-note@#l6 {{previous definition is here}}

@@ -36,11 +36,9 @@ namespace cwg1 { // cwg1: 20
   namespace X {
     void z(int);
   }
-  void X::z(int = 1) {} // #cwg1-z
+  void X::z(int = 1) {}
   namespace X {
-    void z(int = 1);
-    // expected-error@-1 {{redefinition of default argument}}
-    //   expected-note@#cwg1-z {{previous definition is here}}
+    void z(int = 1); // OK, namespace X has a distinct set of default arguments
   }
 
   void i(int = 1); // #cwg1-i
