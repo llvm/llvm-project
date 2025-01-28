@@ -5928,6 +5928,7 @@ TEST_F(OpenMPIRBuilderTest, TargetEnterData) {
     return CombinedInfo;
   };
 
+  auto CustomMapperCB = [&](unsigned int I) { return nullptr; };
   llvm::OpenMPIRBuilder::TargetDataInfo Info(
       /*RequiresDevicePointerInfo=*/false,
       /*SeparateBeginEndCalls=*/true);
@@ -5939,7 +5940,7 @@ TEST_F(OpenMPIRBuilderTest, TargetEnterData) {
       OpenMPIRBuilder::InsertPointTy, AfterIP,
       OMPBuilder.createTargetData(
           Loc, AllocaIP, Builder.saveIP(), Builder.getInt64(DeviceID),
-          /* IfCond= */ nullptr, Info, GenMapInfoCB, &RTLFunc));
+          /* IfCond= */ nullptr, Info, GenMapInfoCB, CustomMapperCB, &RTLFunc));
   Builder.restoreIP(AfterIP);
 
   CallInst *TargetDataCall = dyn_cast<CallInst>(&BB->back());
@@ -5990,6 +5991,7 @@ TEST_F(OpenMPIRBuilderTest, TargetExitData) {
     return CombinedInfo;
   };
 
+  auto CustomMapperCB = [&](unsigned int I) { return nullptr; };
   llvm::OpenMPIRBuilder::TargetDataInfo Info(
       /*RequiresDevicePointerInfo=*/false,
       /*SeparateBeginEndCalls=*/true);
@@ -6001,7 +6003,7 @@ TEST_F(OpenMPIRBuilderTest, TargetExitData) {
       OpenMPIRBuilder::InsertPointTy, AfterIP,
       OMPBuilder.createTargetData(
           Loc, AllocaIP, Builder.saveIP(), Builder.getInt64(DeviceID),
-          /* IfCond= */ nullptr, Info, GenMapInfoCB, &RTLFunc));
+          /* IfCond= */ nullptr, Info, GenMapInfoCB, CustomMapperCB, &RTLFunc));
   Builder.restoreIP(AfterIP);
 
   CallInst *TargetDataCall = dyn_cast<CallInst>(&BB->back());
@@ -6074,6 +6076,7 @@ TEST_F(OpenMPIRBuilderTest, TargetDataRegion) {
     return CombinedInfo;
   };
 
+  auto CustomMapperCB = [&](unsigned int I) { return nullptr; };
   llvm::OpenMPIRBuilder::TargetDataInfo Info(
       /*RequiresDevicePointerInfo=*/true,
       /*SeparateBeginEndCalls=*/true);
@@ -6110,9 +6113,10 @@ TEST_F(OpenMPIRBuilderTest, TargetDataRegion) {
 
   ASSERT_EXPECTED_INIT(
       OpenMPIRBuilder::InsertPointTy, TargetDataIP1,
-      OMPBuilder.createTargetData(
-          Loc, AllocaIP, Builder.saveIP(), Builder.getInt64(DeviceID),
-          /* IfCond= */ nullptr, Info, GenMapInfoCB, nullptr, BodyCB));
+      OMPBuilder.createTargetData(Loc, AllocaIP, Builder.saveIP(),
+                                  Builder.getInt64(DeviceID),
+                                  /* IfCond= */ nullptr, Info, GenMapInfoCB,
+                                  CustomMapperCB, nullptr, BodyCB));
   Builder.restoreIP(TargetDataIP1);
 
   CallInst *TargetDataCall = dyn_cast<CallInst>(&BB->back());
@@ -6138,9 +6142,10 @@ TEST_F(OpenMPIRBuilderTest, TargetDataRegion) {
   };
   ASSERT_EXPECTED_INIT(
       OpenMPIRBuilder::InsertPointTy, TargetDataIP2,
-      OMPBuilder.createTargetData(
-          Loc, AllocaIP, Builder.saveIP(), Builder.getInt64(DeviceID),
-          /* IfCond= */ nullptr, Info, GenMapInfoCB, nullptr, BodyTargetCB));
+      OMPBuilder.createTargetData(Loc, AllocaIP, Builder.saveIP(),
+                                  Builder.getInt64(DeviceID),
+                                  /* IfCond= */ nullptr, Info, GenMapInfoCB,
+                                  CustomMapperCB, nullptr, BodyTargetCB));
   Builder.restoreIP(TargetDataIP2);
   EXPECT_TRUE(CheckDevicePassBodyGen);
 
@@ -6241,6 +6246,10 @@ TEST_F(OpenMPIRBuilderTest, TargetRegion) {
     return CombinedInfos;
   };
 
+  auto CustomMapperCB = [&](unsigned int I) { return nullptr; };
+  llvm::OpenMPIRBuilder::TargetDataInfo Info(/*RequiresDevicePointerInfo=*/true,
+                                             /*SeparateBeginEndCalls=*/true);
+
   TargetRegionEntryInfo EntryInfo("func", 42, 4711, 17);
   OpenMPIRBuilder::LocationDescription OmpLoc({Builder.saveIP(), DL});
   OpenMPIRBuilder::TargetKernelRuntimeAttrs RuntimeAttrs;
@@ -6254,9 +6263,10 @@ TEST_F(OpenMPIRBuilderTest, TargetRegion) {
   ASSERT_EXPECTED_INIT(
       OpenMPIRBuilder::InsertPointTy, AfterIP,
       OMPBuilder.createTarget(OmpLoc, /*IsOffloadEntry=*/true, Builder.saveIP(),
-                              Builder.saveIP(), EntryInfo, DefaultAttrs,
+                              Builder.saveIP(), Info, EntryInfo, DefaultAttrs,
                               RuntimeAttrs, /*IfCond=*/nullptr, Inputs,
-                              GenMapInfoCB, BodyGenCB, SimpleArgAccessorCB));
+                              GenMapInfoCB, BodyGenCB, SimpleArgAccessorCB,
+                              CustomMapperCB, {}, false));
   EXPECT_EQ(DL, Builder.getCurrentDebugLocation());
   Builder.restoreIP(AfterIP);
 
@@ -6400,6 +6410,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
     return CombinedInfos;
   };
 
+  auto CustomMapperCB = [&](unsigned int I) { return nullptr; };
   auto BodyGenCB = [&](OpenMPIRBuilder::InsertPointTy AllocaIP,
                        OpenMPIRBuilder::InsertPointTy CodeGenIP)
       -> OpenMPIRBuilder::InsertPointTy {
@@ -6419,13 +6430,16 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   OpenMPIRBuilder::TargetKernelDefaultAttrs DefaultAttrs = {
       /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC,
       /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
+  llvm::OpenMPIRBuilder::TargetDataInfo Info(/*RequiresDevicePointerInfo=*/true,
+                                             /*SeparateBeginEndCalls=*/true);
 
   ASSERT_EXPECTED_INIT(
       OpenMPIRBuilder::InsertPointTy, AfterIP,
       OMPBuilder.createTarget(Loc, /*IsOffloadEntry=*/true, EntryIP, EntryIP,
-                              EntryInfo, DefaultAttrs, RuntimeAttrs,
+                              Info, EntryInfo, DefaultAttrs, RuntimeAttrs,
                               /*IfCond=*/nullptr, CapturedArgs, GenMapInfoCB,
-                              BodyGenCB, SimpleArgAccessorCB));
+                              BodyGenCB, SimpleArgAccessorCB, CustomMapperCB,
+                              {}, false));
   EXPECT_EQ(DL, Builder.getCurrentDebugLocation());
   Builder.restoreIP(AfterIP);
 
@@ -6777,6 +6791,7 @@ TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
     return CombinedInfos;
   };
 
+  auto CustomMapperCB = [&](unsigned int I) { return nullptr; };
   llvm::Value *RaiseAlloca = nullptr;
 
   auto BodyGenCB = [&](OpenMPIRBuilder::InsertPointTy AllocaIP,
@@ -6799,13 +6814,16 @@ TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
   OpenMPIRBuilder::TargetKernelDefaultAttrs DefaultAttrs = {
       /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC,
       /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
+  llvm::OpenMPIRBuilder::TargetDataInfo Info(/*RequiresDevicePointerInfo=*/true,
+                                             /*SeparateBeginEndCalls=*/true);
 
   ASSERT_EXPECTED_INIT(
       OpenMPIRBuilder::InsertPointTy, AfterIP,
       OMPBuilder.createTarget(Loc, /*IsOffloadEntry=*/true, EntryIP, EntryIP,
-                              EntryInfo, DefaultAttrs, RuntimeAttrs,
+                              Info, EntryInfo, DefaultAttrs, RuntimeAttrs,
                               /*IfCond=*/nullptr, CapturedArgs, GenMapInfoCB,
-                              BodyGenCB, SimpleArgAccessorCB));
+                              BodyGenCB, SimpleArgAccessorCB, CustomMapperCB,
+                              {}, false));
   EXPECT_EQ(DL, Builder.getCurrentDebugLocation());
   Builder.restoreIP(AfterIP);
 

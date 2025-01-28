@@ -2399,6 +2399,7 @@ public:
                                    CurInfo.NonContigInfo.Strides.end());
     }
   };
+  using MapInfosOrErrorTy = Expected<MapInfosTy &>;
 
   /// Callback function type for functions emitting the host fallback code that
   /// is executed when the kernel launch fails. It takes an insertion point as
@@ -2475,9 +2476,9 @@ public:
   /// including base pointers, pointers, sizes, map types, user-defined mappers.
   void emitOffloadingArrays(
       InsertPointTy AllocaIP, InsertPointTy CodeGenIP, MapInfosTy &CombinedInfo,
-      TargetDataInfo &Info, bool IsNonContiguous = false,
-      function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
-      function_ref<Value *(unsigned int)> CustomMapperCB = nullptr);
+      TargetDataInfo &Info, function_ref<Value *(unsigned int)> CustomMapperCB,
+      bool IsNonContiguous = false,
+      function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr);
 
   /// Allocates memory for and populates the arrays required for offloading
   /// (offload_{baseptrs|ptrs|mappers|sizes|maptypes|mapnames}). Then, it
@@ -2488,9 +2489,9 @@ public:
   void emitOffloadingArraysAndArgs(
       InsertPointTy AllocaIP, InsertPointTy CodeGenIP, TargetDataInfo &Info,
       TargetDataRTArgs &RTArgs, MapInfosTy &CombinedInfo,
+      function_ref<Value *(unsigned int)> CustomMapperCB,
       bool IsNonContiguous = false, bool ForEndCall = false,
-      function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
-      function_ref<Value *(unsigned int)> CustomMapperCB = nullptr);
+      function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr);
 
   /// Creates offloading entry for the provided entry ID \a ID, address \a
   /// Addr, size \a Size, and flags \a Flags.
@@ -2950,12 +2951,12 @@ public:
   /// \param FuncName Optional param to specify mapper function name.
   /// \param CustomMapperCB Optional callback to generate code related to
   /// custom mappers.
-  Function *emitUserDefinedMapper(
-      function_ref<MapInfosTy &(InsertPointTy CodeGenIP, llvm::Value *PtrPHI,
-                                llvm::Value *BeginArg)>
+  Expected<Function *> emitUserDefinedMapper(
+      function_ref<MapInfosOrErrorTy(
+          InsertPointTy CodeGenIP, llvm::Value *PtrPHI, llvm::Value *BeginArg)>
           PrivAndGenMapInfoCB,
       llvm::Type *ElemTy, StringRef FuncName,
-      function_ref<bool(unsigned int, Function **)> CustomMapperCB = nullptr);
+      function_ref<bool(unsigned int, Function **)> CustomMapperCB);
 
   /// Generator for '#omp target data'
   ///
@@ -2969,21 +2970,21 @@ public:
   /// \param IfCond Value which corresponds to the if clause condition.
   /// \param Info Stores all information realted to the Target Data directive.
   /// \param GenMapInfoCB Callback that populates the MapInfos and returns.
+  /// \param CustomMapperCB Callback to generate code related to
+  /// custom mappers.
   /// \param BodyGenCB Optional Callback to generate the region code.
   /// \param DeviceAddrCB Optional callback to generate code related to
   /// use_device_ptr and use_device_addr.
-  /// \param CustomMapperCB Optional callback to generate code related to
-  /// custom mappers.
   InsertPointOrErrorTy createTargetData(
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       InsertPointTy CodeGenIP, Value *DeviceID, Value *IfCond,
       TargetDataInfo &Info, GenMapInfoCallbackTy GenMapInfoCB,
+      function_ref<Value *(unsigned int)> CustomMapperCB,
       omp::RuntimeFunction *MapperFunc = nullptr,
       function_ref<InsertPointOrErrorTy(InsertPointTy CodeGenIP,
                                         BodyGenTy BodyGenType)>
           BodyGenCB = nullptr,
       function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
-      function_ref<Value *(unsigned int)> CustomMapperCB = nullptr,
       Value *SrcLocInfo = nullptr);
 
   using TargetBodyGenCallbackTy = function_ref<InsertPointOrErrorTy(
@@ -2999,6 +3000,7 @@ public:
   /// \param IsOffloadEntry whether it is an offload entry.
   /// \param CodeGenIP The insertion point where the call to the outlined
   ///        function should be emitted.
+  /// \param Info Stores all information realted to the Target directive.
   /// \param EntryInfo The entry information about the function.
   /// \param DefaultAttrs Structure containing the default attributes, including
   ///        numbers of threads and teams to launch the kernel with.
@@ -3010,6 +3012,8 @@ public:
   /// \param BodyGenCB Callback that will generate the region code.
   /// \param ArgAccessorFuncCB Callback that will generate accessors
   ///        instructions for passed in target arguments where neccessary
+  /// \param CustomMapperCB Callback to generate code related to
+  /// custom mappers.
   /// \param Dependencies A vector of DependData objects that carry
   ///        dependency information as passed in the depend clause
   /// \param HasNowait Whether the target construct has a `nowait` clause or
@@ -3017,13 +3021,14 @@ public:
   InsertPointOrErrorTy createTarget(
       const LocationDescription &Loc, bool IsOffloadEntry,
       OpenMPIRBuilder::InsertPointTy AllocaIP,
-      OpenMPIRBuilder::InsertPointTy CodeGenIP,
+      OpenMPIRBuilder::InsertPointTy CodeGenIP, TargetDataInfo &Info,
       TargetRegionEntryInfo &EntryInfo,
       const TargetKernelDefaultAttrs &DefaultAttrs,
       const TargetKernelRuntimeAttrs &RuntimeAttrs, Value *IfCond,
       SmallVectorImpl<Value *> &Inputs, GenMapInfoCallbackTy GenMapInfoCB,
       TargetBodyGenCallbackTy BodyGenCB,
       TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
+      function_ref<Value *(unsigned int)> CustomMapperCB,
       SmallVector<DependData> Dependencies = {}, bool HasNowait = false);
 
   /// Returns __kmpc_for_static_init_* runtime function for the specified
