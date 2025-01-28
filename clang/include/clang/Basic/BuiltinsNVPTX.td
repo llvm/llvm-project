@@ -48,8 +48,9 @@ class PTX<string version, PTXFeatures newer> : PTXFeatures {
   let Features = !strconcat("ptx", version, "|", newer.Features);
 }
 
-let Features = "ptx86" in def PTX86 : PTXFeatures;
+let Features = "ptx87" in def PTX87 : PTXFeatures;
 
+def PTX86 : PTX<"86", PTX87>;
 def PTX85 : PTX<"85", PTX86>;
 def PTX84 : PTX<"84", PTX85>;
 def PTX83 : PTX<"83", PTX84>;
