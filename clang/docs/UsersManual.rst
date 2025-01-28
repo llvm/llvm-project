@@ -2510,8 +2510,8 @@ code, even though this is not required by the standard.
 
 Strict aliasing violations in the source may change program behavior and
 ``-fno-strict-aliasing`` disables use of the strict aliasing rules. There also
-is an experimental TypeSanitizer to detect strict aliasing voliations, which
-can be enabled by ``-fsanitize=type``.
+is an experimental :ref:`TypeSanitizer <TypeSanitizer>` to detect strict
+aliasing violations.
 
 Profile Guided Optimization
 ---------------------------
@@ -5297,6 +5297,7 @@ Restrictions and Limitations compared to Clang
 ----------------------------------------------
 
 .. _clang_cl_strict_aliasing:
+
 Strict Aliasing
 ^^^^^^^^^^^^^^^
 
