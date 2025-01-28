@@ -23,12 +23,11 @@
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
 #include <clc/math/clc_floor.h>
+#include <clc/math/clc_subnormal_config.h>
 #include <clc/math/clc_trunc.h>
+#include <clc/math/math.h>
 #include <clc/shared/clc_max.h>
 #include <math/clc_remainder.h>
-
-#include "config.h"
-#include "math.h"
 
 _CLC_DEF _CLC_OVERLOAD float __clc_remquo(float x, float y,
                                           __private int *quo) {
