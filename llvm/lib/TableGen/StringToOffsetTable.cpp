@@ -1,4 +1,4 @@
-//===- StringToOffsetTable.h - Emit a big concatenated string ---*- C++ -*-===//
+//===- StringToOffsetTable.cpp - Emit a big concatenated string -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,7 +21,6 @@ cl::opt<bool> EmitLongStrLiterals(
              "compile-time performance win, but upsets some compilers"),
     cl::Hidden, cl::init(true));
 } // end namespace llvm
-
 
 unsigned StringToOffsetTable::GetOrAddStringOffset(StringRef Str,
                                                    bool appendZero) {
@@ -47,9 +46,10 @@ void StringToOffsetTable::EmitStringTableDef(raw_ostream &OS, const Twine &Name,
                 Indent, Name);
 
   // MSVC silently miscompiles string literals longer than 64k in some
-  // circumstances. In this case, the build system sets EmitLongStrLiterals to
-  // false. When that option is false and the string table is longer than 64k,
-  // emit it as an array of character literals.
+  // circumstances. The build system sets EmitLongStrLiterals to false when it
+  // detects that it is targetting MSVC. When that option is false and the
+  // string table is longer than 64k, emit it as an array of character
+  // literals.
   bool UseChars = !EmitLongStrLiterals && AggregateString.size() > (64 * 1024);
   OS << (UseChars ? "{\n" : "\n");
 
