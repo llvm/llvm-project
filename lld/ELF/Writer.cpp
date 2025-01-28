@@ -149,6 +149,7 @@ static Defined *addOptionalRegular(Ctx &ctx, StringRef name, SectionBase *sec,
   if (!s || s->isDefined() || s->isCommon())
     return nullptr;
 
+  ctx.synthesizedSymbols.push_back(s);
   s->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
                           stOther, STT_NOTYPE, val,
                           /*size=*/0, sec});
@@ -295,13 +296,13 @@ static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
                   sym->type)
             .overwrite(*sym);
         sym->versionId = VER_NDX_GLOBAL;
+        if (hasDynsym && sym->includeInDynsym(ctx))
+          sym->isExported = true;
       }
     }
 
-    if (hasDynsym) {
-      sym->isExported = sym->includeInDynsym(ctx);
+    if (hasDynsym)
       sym->isPreemptible = sym->isExported && computeIsPreemptible(ctx, *sym);
-    }
   }
 }
 
@@ -1837,6 +1838,12 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
         finalizeSynthetic(ctx, part.ehFrame.get());
     }
   }
+
+  // If the previous code block defines any non-hidden symbols (e.g.
+  // __global_pointer$), they may be exported.
+  if (ctx.hasDynsym)
+    for (Symbol *sym : ctx.synthesizedSymbols)
+      sym->isExported = sym->includeInDynsym(ctx);
 
   demoteSymbolsAndComputeIsPreemptible(ctx);
 
