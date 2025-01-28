@@ -61,16 +61,18 @@ template <input_range _View, forward_range _Pattern>
   requires view<_View> && input_range<range_reference_t<_View>> && view<_Pattern> &&
            __concatable<range_reference_t<_View>, _Pattern>
 class join_with_view : public view_interface<join_with_view<_View, _Pattern>> {
-  using _InnerRng = range_reference_t<_View>;
+  using _InnerRng _LIBCPP_NODEBUG = range_reference_t<_View>;
 
   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
 
   static constexpr bool _UseOuterItCache = !forward_range<_View>;
-  using _OuterItCache = _If<_UseOuterItCache, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;
+  using _OuterItCache _LIBCPP_NODEBUG =
+      _If<_UseOuterItCache, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;
   _LIBCPP_NO_UNIQUE_ADDRESS _OuterItCache __outer_it_;
 
   static constexpr bool _UseInnerCache = !is_reference_v<_InnerRng>;
-  using _InnerCache = _If<_UseInnerCache, __non_propagating_cache<remove_cvref_t<_InnerRng>>, __empty_cache>;
+  using _InnerCache _LIBCPP_NODEBUG =
+      _If<_UseInnerCache, __non_propagating_cache<remove_cvref_t<_InnerRng>>, __empty_cache>;
   _LIBCPP_NO_UNIQUE_ADDRESS _InnerCache __inner_;
 
   _LIBCPP_NO_UNIQUE_ADDRESS _Pattern __pattern_ = _Pattern();
@@ -190,14 +192,14 @@ struct join_with_view<_View, _Pattern>::__iterator
 private:
   friend join_with_view;
 
-  using _Parent      = __maybe_const<_Const, join_with_view>;
-  using _Base        = __maybe_const<_Const, _View>;
-  using _InnerBase   = range_reference_t<_Base>;
-  using _PatternBase = __maybe_const<_Const, _Pattern>;
+  using _Parent _LIBCPP_NODEBUG      = __maybe_const<_Const, join_with_view>;
+  using _Base _LIBCPP_NODEBUG        = __maybe_const<_Const, _View>;
+  using _InnerBase _LIBCPP_NODEBUG   = range_reference_t<_Base>;
+  using _PatternBase _LIBCPP_NODEBUG = __maybe_const<_Const, _Pattern>;
 
-  using _OuterIter   = iterator_t<_Base>;
-  using _InnerIter   = iterator_t<_InnerBase>;
-  using _PatternIter = iterator_t<_PatternBase>;
+  using _OuterIter _LIBCPP_NODEBUG   = iterator_t<_Base>;
+  using _InnerIter _LIBCPP_NODEBUG   = iterator_t<_InnerBase>;
+  using _PatternIter _LIBCPP_NODEBUG = iterator_t<_PatternBase>;
 
   static_assert(!_Const || forward_range<_Base>, "Const can only be true when Base models forward_range.");
 
@@ -206,7 +208,7 @@ private:
   _Parent* __parent_ = nullptr;
 
   static constexpr bool _OuterIterPresent              = forward_range<_Base>;
-  using _OuterIterType                                 = _If<_OuterIterPresent, _OuterIter, std::__empty>;
+  using _OuterIterType _LIBCPP_NODEBUG                 = _If<_OuterIterPresent, _OuterIter, std::__empty>;
   _LIBCPP_NO_UNIQUE_ADDRESS _OuterIterType __outer_it_ = _OuterIterType();
 
   variant<_PatternIter, _InnerIter> __inner_it_;
@@ -397,8 +399,8 @@ struct join_with_view<_View, _Pattern>::__sentinel {
 private:
   friend join_with_view;
 
-  using _Parent = __maybe_const<_Const, join_with_view>;
-  using _Base   = __maybe_const<_Const, _View>;
+  using _Parent _LIBCPP_NODEBUG = __maybe_const<_Const, join_with_view>;
+  using _Base _LIBCPP_NODEBUG   = __maybe_const<_Const, _View>;
 
   _LIBCPP_NO_UNIQUE_ADDRESS sentinel_t<_Base> __end_ = sentinel_t<_Base>();
 
