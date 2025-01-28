@@ -644,9 +644,10 @@ static Value *getMask(Value *WideMask, unsigned Factor) {
     SmallVector<Instruction *, 8> DeadInsts;
     if (getVectorInterleaveFactor(IMI, Operands, DeadInsts)) {
       assert(!Operands.empty());
+      Value *FirstOp = Operands[0];
       if (Operands.size() == Factor &&
-          std::equal(Operands.begin(), Operands.end(), Operands.begin()))
-        return Operands.front();
+          llvm::all_of(Operands, [=](Value *Op) { return Op == FirstOp; }))
+        return FirstOp;
     }
   }
   if (match(WideMask, m_AllOnes()))
