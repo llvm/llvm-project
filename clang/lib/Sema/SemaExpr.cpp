@@ -15930,10 +15930,17 @@ ExprResult Sema::ActOnStmtExprResult(ExprResult ER) {
   if (Cast && Cast->getCastKind() == CK_ARCConsumeObject)
     return Cast->getSubExpr();
 
+  auto Ty = E->getType().getUnqualifiedType();
+
+  // If the type is an atomic, the statement type is the underlying type.
+  if (const AtomicType *AT = Ty->getAs<AtomicType>()) {
+    Ty = AT->getValueType().getUnqualifiedType();
+    return PerformImplicitConversion(E, Ty, AssignmentAction::Casting);
+  }
+
   // FIXME: Provide a better location for the initialization.
   return PerformCopyInitialization(
-      InitializedEntity::InitializeStmtExprResult(
-          E->getBeginLoc(), E->getType().getUnqualifiedType()),
+      InitializedEntity::InitializeStmtExprResult(E->getBeginLoc(), Ty),
       SourceLocation(), E);
 }
 
