@@ -317,6 +317,11 @@ def DotBF16Op : AVX512BF16_Op<"dot", [Pure,
     Compute dot-product of BF16 (16-bit) floating-point pairs in `a` and `b`,
     accumulating the intermediate single-precision (32-bit) floating-point
     elements with elements in `src`, and store the results in `dst`.
+
+    Example:
+    ```mlir
+    %0 = x86vector.avx512bf16.dot %src, %a, %b : vector<32xbf16> -> vector<16xf32>
+    ```
   }];
   let arguments = (ins VectorOfLengthAndType<[4, 8, 16], [F32]>:$src,
                    VectorOfLengthAndType<[8, 16, 32], [BF16]>:$a,
