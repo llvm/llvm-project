@@ -26,15 +26,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-cl::opt<bool> EmitLongStrLiterals(
-    "long-string-literals",
-    cl::desc("when emitting large string tables, prefer string literals over "
-             "comma-separated char literals. This can be a readability and "
-             "compile-time performance win, but upsets some compilers"),
-    cl::Hidden, cl::init(true));
-} // end namespace llvm
-
 static cl::OptionCategory PrintEnumsCat("Options for -print-enums");
 static cl::opt<std::string> Class("class",
                                   cl::desc("Print Enum list for this class"),
