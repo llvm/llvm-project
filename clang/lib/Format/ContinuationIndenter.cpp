@@ -838,16 +838,16 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     return Tok.is(tok::l_paren) && Tok.ParameterCount > 0 && Tok.Previous &&
            Tok.Previous->is(tok::identifier);
   };
-  auto IsInTemplateString = [this](const FormatToken &Tok) {
+  auto IsInTemplateString = [this](const FormatToken &Tok, bool NestBlocks) {
     if (!Style.isJavaScript())
       return false;
     for (const auto *Prev = &Tok; Prev; Prev = Prev->Previous) {
       if (Prev->is(TT_TemplateString) && Prev->opensScope())
         return true;
-      if (Prev->opensScope() ||
-          (Prev->is(TT_TemplateString) && Prev->closesScope())) {
-        break;
-      }
+      if (Prev->opensScope() && !NestBlocks)
+        return false;
+      if (Prev->is(TT_TemplateString) && Prev->closesScope())
+        return false;
     }
     return false;
   };
@@ -880,7 +880,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
         !IsFunctionCallParen(*Previous)) {
       return true;
     }
-    if (IsOpeningBracket(Tok) || IsInTemplateString(Tok))
+    if (IsOpeningBracket(Tok) || IsInTemplateString(Tok, true))
       return true;
     const auto *Next = Tok.Next;
     return !Next || Next->isMemberAccess() ||
@@ -918,7 +918,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       !(Current.MacroParent && Previous.MacroParent) &&
       (Current.isNot(TT_LineComment) ||
        Previous.isOneOf(BK_BracedInit, TT_VerilogMultiLineListLParen)) &&
-      !IsInTemplateString(Current)) {
+      !IsInTemplateString(Current, false)) {
     CurrentState.Indent = State.Column + Spaces;
     CurrentState.IsAligned = true;
   }
