@@ -2671,9 +2671,8 @@ StmtResult Sema::BuildCXXForRangeStmt(
     if (!LoopVar->isInvalidDecl() && Kind != BFRK_Check) {
       if (auto *DD = dyn_cast<DecompositionDecl>(LoopVar))
         for (auto *Binding : DD->bindings()) {
-          if (!Binding->isParameterPack()) {
+          if (!Binding->isParameterPack())
             Binding->setType(Context.DependentTy);
-          }
         }
       LoopVar->setType(SubstAutoTypeDependent(LoopVar->getType()));
     }

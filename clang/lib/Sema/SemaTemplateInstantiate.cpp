@@ -2494,9 +2494,8 @@ TemplateInstantiator::TransformDeclRefExpr(DeclRefExpr *E) {
     if (!BD)
       return ExprError();
     if (auto *RP =
-            dyn_cast_if_present<ResolvedUnexpandedPackExpr>(BD->getBinding())) {
+            dyn_cast_if_present<ResolvedUnexpandedPackExpr>(BD->getBinding()))
       return TransformResolvedUnexpandedPackExpr(RP);
-    }
   }
 
   return inherited::TransformDeclRefExpr(E);

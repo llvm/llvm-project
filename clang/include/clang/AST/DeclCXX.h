@@ -4201,7 +4201,7 @@ class DecompositionDecl final
                             getTrailingObjects<BindingDecl *>());
     for (auto *B : Bindings) {
       B->setDecomposedDecl(this);
-      if (B->isParameterPack()) {
+      if (B->isParameterPack() && B->getBinding()) {
         for (Expr *E : B->getBindingPackExprs()) {
           auto *DRE = cast<DeclRefExpr>(E);
           auto *NestedB = cast<BindingDecl>(DRE->getDecl());
@@ -4251,8 +4251,6 @@ public:
       return cast<BindingDecl>(DRE->getDecl());
     });
 
-    // llvm::concat must take temporaries or it will capture
-    // references.
     return llvm::concat<BindingDecl *>(std::move(S1), std::move(S2),
                                        std::move(Bindings));
   }

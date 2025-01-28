@@ -161,7 +161,7 @@ void h(int (&arr)[N]) {
                             // b is a pack referring to the second and
                             // third elements, and c names the fourth element
   static_assert(sizeof...(b) == 2);
- auto& [...e] = arr;        // e is a pack referring to the four elements of the array
+  auto& [...e] = arr;        // e is a pack referring to the four elements of the array
   static_assert(sizeof...(e) == 4);
 }
 

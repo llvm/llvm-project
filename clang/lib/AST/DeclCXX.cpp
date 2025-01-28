@@ -3426,8 +3426,7 @@ VarDecl *BindingDecl::getHoldingVar() const {
 }
 
 llvm::ArrayRef<Expr *> BindingDecl::getBindingPackExprs() const {
-  if (!Binding)
-    return {};
+  assert(Binding && "expecting a pack expr");
   auto *RP = cast<ResolvedUnexpandedPackExpr>(Binding);
   return RP->getExprs();
 }

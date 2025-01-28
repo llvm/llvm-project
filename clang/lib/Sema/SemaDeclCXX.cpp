@@ -1570,25 +1570,13 @@ void Sema::CheckCompleteDecompositionDeclaration(DecompositionDecl *DD) {
   // If the type of the decomposition is dependent, then so is the type of
   // each binding.
   if (DecompType->isDependentType()) {
+    // Note that all of the types are still Null or PackExpansionType.
     for (auto *B : DD->bindings()) {
       // Do not overwrite any pack type.
       if (B->getType().isNull())
         B->setType(Context.DependentTy);
     }
     return;
-  } else {
-    // Set the types of the DeclRefExprs that point to nested pack bindings.
-    for (BindingDecl *B : DD->bindings()) {
-      if (B->isParameterPack()) {
-        for (Expr *E : B->getBindingPackExprs()) {
-          auto *DRE = cast<DeclRefExpr>(E);
-          auto *NestedB = cast<BindingDecl>(DRE->getDecl());
-          QualType T = NestedB->getType();
-          DRE->setTypeFromBinding(T, Context);
-        }
-        break;
-      }
-    }
   }
 
   DecompType = DecompType.getNonReferenceType();
