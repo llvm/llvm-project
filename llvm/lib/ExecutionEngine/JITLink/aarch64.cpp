@@ -38,6 +38,8 @@ const char *getEdgeKindName(Edge::Kind R) {
   switch (R) {
   case Pointer64:
     return "Pointer64";
+  case Pointer64Authenticated:
+    return "Pointer64Authenticated";
   case Pointer32:
     return "Pointer32";
   case Delta64:
