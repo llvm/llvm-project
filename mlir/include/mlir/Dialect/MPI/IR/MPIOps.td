@@ -259,6 +259,10 @@ def MPI_AllReduceOp : MPI_Op<"allreduce", []> {
     array and stores the result in the recvbuf array. The operation is 
     performed across all processes in the communicator.
 
+    The `op` attribute specifies the reduction operation to be performed.
+    Currently only the `MPI_Op` predefined in the standard (e.g. `MPI_SUM`) are
+    supported.
+
     If communicator is not specified, `MPI_COMM_WORLD` is used by default.
 
     This operation can optionally return an `!mpi.retval` value that can be used
@@ -268,10 +272,9 @@ def MPI_AllReduceOp : MPI_Op<"allreduce", []> {
   let arguments = (
     ins AnyMemRef : $sendbuf,
     AnyMemRef : $recvbuf,
+    MPI_OpClassAttr : $op,
     Optional<MPI_Comm> : $comm
   );
-
-  let regions = (region SizedRegion<1>:$op);
 
   let results = (outs Optional<MPI_Retval>:$retval);
 
