@@ -862,6 +862,9 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses the use of attribute names reserved by the C++ standard (#GH92196).
 
+- The :doc:`ThreadSafetyAnalysis` now supports ``-Wthread-safety-addressof``,
+  which enables warning on taking the address of guarded variables.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
