@@ -628,11 +628,14 @@ Module *Context::getOrCreateModule(llvm::Module *LLVMM) {
 }
 
 Function *Context::createFunction(llvm::Function *F) {
-  assert(getValue(F) == nullptr && "Already exists!");
   // Create the module if needed before we create the new sandboxir::Function.
   // Note: this won't fully populate the module. The only globals that will be
   // available will be the ones being used within the function.
   getOrCreateModule(F->getParent());
+
+  // There may be a function declaration already defined. Regardless destroy it.
+  if (Function *ExistingF = cast_or_null<Function>(getValue(F)))
+    detach(ExistingF);
 
   auto NewFPtr = std::unique_ptr<Function>(new Function(F, *this));
   auto *SBF = cast<Function>(registerValue(std::move(NewFPtr)));
