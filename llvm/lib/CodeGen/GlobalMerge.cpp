@@ -271,8 +271,7 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
 
   // If we want to just blindly group all globals together, do so.
   if (!GlobalMergeGroupByUse || (Opt.MergeConstAggressive && isConst)) {
-    BitVector AllGlobals(Globals.size());
-    AllGlobals.set();
+    BitVector AllGlobals(Globals.size(), true);
     return doMerge(Globals, AllGlobals, M, isConst, AddrSpace);
   }
 
