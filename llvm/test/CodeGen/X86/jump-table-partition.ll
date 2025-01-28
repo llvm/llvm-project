@@ -6,21 +6,12 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -stop-after=finalize-isel -min-jump-table-entries=2 %s -o %t.mir
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu --run-pass=static-data-splitter -stats -x mir %t.mir -o - 2>&1 | FileCheck %s --check-prefix=STAT
 
-; In function @foo, the 2 switch instructions to jt0.* and jt1.* get lowered to
-; hot jump tables, and the 2 switch instructions to jt2.* and jt3.* get lowered
-; to cold jump tables.
-
-; @func_without_entry_count simulates the functions without profile information
-; (e.g., not instrumented or not profiled), it's jump table hotness is unknown.
-
- ; Tests stat messages are expected.
+ ; @foo has 2 hot and 2 cold jump tables.
+ ; The two jump tables with unknown hotness come from @func_without_profile and
+ ; @bar respectively.
 ; STAT: 2 static-data-splitter - Number of cold jump tables seen
 ; STAT: 2 static-data-splitter - Number of hot jump tables seen
-; STAT: 1 static-data-splitter - Number of jump tables with unknown hotness
-
-; Hot jump tables are in the `.rodata.hot`-prefixed section, and cold ones in
-; the `.rodata.unlikely`-prefixed section. In the function without profile
-; information, jump table section is `rodata` without hot or unlikely prefix.
+; STAT: 2 static-data-splitter - Number of jump tables with unknown hotness
 
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions \
 ; RUN:     -partition-static-data-sections=true -function-sections=true \
@@ -36,19 +27,34 @@
 ; RUN:     -partition-static-data-sections=true -function-sections=false \
 ; RUN:     -min-jump-table-entries=2 %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNCLESS,JT
 
-; NUM:    .section .rodata.hot,"a",@progbits,unique,2
+; In function @foo, the 2 switch instructions to jt0.* and jt1.* are placed in
+; hot-prefixed sections, and the 2 switch instructions to jt2.* and jt3.* are
+; placed in cold-prefixed sections.
+; NUM:    .section .rodata.hot.,"a",@progbits,unique,2
 ; FUNC:     .section .rodata.hot.foo,"a",@progbits
-; FUNCLESS: .section .rodata.hot,"a",@progbits
+; FUNCLESS: .section .rodata.hot.,"a",@progbits
 ; JT: .LJTI0_0:
 ; JT: .LJTI0_2:
-; NUM:    	.section	.rodata.unlikely,"a",@progbits,unique,3
+; NUM:    	.section	.rodata.unlikely.,"a",@progbits,unique,3
 ; FUNC:       .section .rodata.unlikely.foo,"a",@progbits
-; FUNCLESS:   .section .rodata.unlikely,"a",@progbits
+; FUNCLESS:   .section .rodata.unlikely.,"a",@progbits
 ; JT: .LJTI0_1:
 ; JT: .LJTI0_3:
-; FUNC: .section .rodata.func_without_entry_count,"a",@progbits
+
+; @func_without_profile simulates the functions without profile information
+; (e.g., not instrumented or not profiled), its jump tables are placed in
+; sections without hot or unlikely prefixes.
+; NUM: .section .rodata,"a",@progbits,unique,5
+; FUNC: .section .rodata.func_without_profile,"a",@progbits
 ; FUNCLESS: .section .rodata,"a",@progbits
 ; JT: .LJTI1_0:
+
+; @bar doesn't have profile information and it has a section prefix.
+; Tests that its jump tables are placed in sections with function prefixes.
+; NUM: .section .rodata.bar_prefix.,"a",@progbits,unique,7
+; FUNC: .section .rodata.bar_prefix.bar
+; FUNCLESS: .section .rodata.bar_prefix.,"a"
+; JT: .LJTI2_0
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -159,7 +165,7 @@ return:
   ret i32 %mod3
 }
 
-define void @func_without_entry_count(i32 %num) {
+define void @func_without_profile(i32 %num) {
 entry:
   switch i32 %num, label %sw.default [
     i32 1, label %sw.bb
@@ -179,6 +185,29 @@ sw.default:
   br label %sw.epilog
 
 sw.epilog:                                       
+  ret void
+}
+
+define void @bar(i32 %num) !section_prefix !20  {
+entry:
+  switch i32 %num, label %sw.default [
+    i32 1, label %sw.bb
+    i32 2, label %sw.bb1
+  ]
+
+sw.bb:
+  call i32 @puts(ptr @str.10)
+  br label %sw.epilog
+
+sw.bb1:
+  call i32 @puts(ptr @str.9)
+  br label %sw.epilog
+
+sw.default:
+  call i32 @puts(ptr @str.11)
+  br label %sw.epilog
+
+sw.epilog:
   ret void
 }
 
@@ -210,3 +239,4 @@ declare i32 @cleanup(i32)
 !17 = !{!"branch_weights", i32 99999, i32 1}
 !18 = !{!"branch_weights", i32 99998, i32 1}
 !19 = !{!"branch_weights", i32 97000, i32 1000, i32 1000, i32 1000}
+!20 = !{!"function_section_prefix", !"bar_prefix"}

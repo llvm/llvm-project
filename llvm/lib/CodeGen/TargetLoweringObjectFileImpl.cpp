@@ -672,13 +672,17 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
   bool HasPrefix = false;
   if (const auto *F = dyn_cast<Function>(GO)) {
     // Jump table hotness takes precedence over its enclosing function's hotness
-    // if both are available.
-    if (JTE) {
+    // if it's known. The function's section prefix is used if jump table entry
+    // hotness is unknown.
+    if (JTE && JTE->Hotness != MachineFunctionDataHotness::Unknown) {
       if (JTE->Hotness == MachineFunctionDataHotness::Hot) {
         raw_svector_ostream(Name) << ".hot";
-      } else if (JTE->Hotness == MachineFunctionDataHotness::Cold) {
+      } else {
+        assert(JTE->Hotness == MachineFunctionDataHotness::Cold &&
+               "Hotness must be cold");
         raw_svector_ostream(Name) << ".unlikely";
       }
+      HasPrefix = true;
     } else if (std::optional<StringRef> Prefix = F->getSectionPrefix()) {
       raw_svector_ostream(Name) << '.' << *Prefix;
       HasPrefix = true;
@@ -978,7 +982,7 @@ MCSection *TargetLoweringObjectFileELF::getUniqueSectionForFunction(
 
 MCSection *TargetLoweringObjectFileELF::getSectionForJumpTable(
     const Function &F, const TargetMachine &TM) const {
-  return getSectionForJumpTable(F, TM, nullptr);
+  return getSectionForJumpTable(F, TM, /*JTE=*/nullptr);
 }
 
 MCSection *TargetLoweringObjectFileELF::getSectionForJumpTable(

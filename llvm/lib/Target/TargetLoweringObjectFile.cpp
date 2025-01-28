@@ -348,7 +348,7 @@ TargetLoweringObjectFile::SectionForGlobal(const GlobalObject *GO,
 
 MCSection *TargetLoweringObjectFile::getSectionForJumpTable(
     const Function &F, const TargetMachine &TM) const {
-  return getSectionForJumpTable(F, TM, nullptr);
+  return getSectionForJumpTable(F, TM, /*JTE=*/nullptr);
 }
 
 MCSection *TargetLoweringObjectFile::getSectionForJumpTable(
