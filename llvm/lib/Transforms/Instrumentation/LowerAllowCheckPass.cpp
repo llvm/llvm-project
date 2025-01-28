@@ -83,16 +83,16 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
     return *Rng;
   };
 
-  auto GetCutoff = [&](const IntrinsicInst *II) {
+  auto GetCutoff = [&](const IntrinsicInst *II) -> unsigned {
     if (HotPercentileCutoff.getNumOccurrences())
-      return static_cast<unsigned int>(HotPercentileCutoff);
+      return HotPercentileCutoff;
     else if (II->getIntrinsicID() == Intrinsic::allow_ubsan_check) {
       auto *Kind = cast<ConstantInt>(II->getArgOperand(0));
       if (Kind->getZExtValue() < cutoffs.size())
         return cutoffs[Kind->getZExtValue()];
     }
 
-    return 0U;
+    return 0;
   };
 
   auto ShouldRemoveHot = [&](const BasicBlock &BB, unsigned int cutoff) {
