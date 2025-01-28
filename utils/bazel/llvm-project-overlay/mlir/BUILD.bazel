@@ -8406,6 +8406,7 @@ cc_library(
         ":Support",
         ":TransformUtils",
         ":TransformsPassIncGen",
+        ":UBDialect",
         "//llvm:Support",
     ],
 )
