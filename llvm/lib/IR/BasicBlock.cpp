@@ -371,6 +371,13 @@ const Instruction* BasicBlock::getFirstNonPHI() const {
   return nullptr;
 }
 
+Instruction *BasicBlock::getFirstNonPHI() {
+  for (Instruction &I : *this)
+    if (!isa<PHINode>(I))
+      return &I;
+  return nullptr;
+}
+
 BasicBlock::const_iterator BasicBlock::getFirstNonPHIIt() const {
   for (const Instruction &I : *this) {
     if (isa<PHINode>(I))
