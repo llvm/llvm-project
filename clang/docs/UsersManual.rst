@@ -2497,6 +2497,12 @@ cases C and C++ rules diverge, the more conservative rules are used. Clang does
 not make use of strict aliasing rules in all cases yet, including unions and
 variable-sized arrays. That may change in the future.
 
+Internally Clang encodes the strict aliasing rules in LLVM IR using type-based
+alias analysis (TBAA) metadata.
+
+Note that clang-cl disables strict aliasing by default, see
+:ref:`Strict aliasing in clang-cl. <clang_cl_strict_aliasing>`
+
 As of Clang 20, strict aliasing rules are also applied to nested pointers. The
 new behavior can be disabled using ``-fno-pointer-tbaa``. Note that Clang does
 not apply strict aliasing rules to `void*` pointers to avoid breaking existing
@@ -2504,7 +2510,8 @@ code, even though this is not required by the standard.
 
 Strict aliasing violations in the source may change program behavior and
 ``-fno-strict-aliasing`` disables use of the strict aliasing rules. There also
-is an experimental :doc:`TypeSanitizer` to detect strict aliasing voliations.
+is an experimental TypeSanitizer to detect strict aliasing voliations, which
+can be enabled by ``-fsanitize=type``.
 
 Profile Guided Optimization
 ---------------------------
@@ -5289,6 +5296,7 @@ The Visual C++ Toolset has a slightly more elaborate mechanism for detection.
 Restrictions and Limitations compared to Clang
 ----------------------------------------------
 
+.. _clang_cl_strict_aliasing:
 Strict Aliasing
 ^^^^^^^^^^^^^^^
 
