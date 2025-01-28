@@ -280,17 +280,16 @@ template <bool Const> void DynamicRecursiveASTVisitorBase<Const>::anchor() {}
   template <bool Const>                                                        \
   bool DynamicRecursiveASTVisitorBase<Const>::Function(                        \
       MaybeConst<Type> RefOrPointer Param) {                                   \
-    return Impl<Const>(*this)                                                  \
-        .template RecursiveASTVisitor<Impl<Const>>::Function(                  \
-            const_cast<Type RefOrPointer>(Param));                             \
+    return Impl<Const>(*this).RecursiveASTVisitor<Impl<Const>>::Function(      \
+        const_cast<Type RefOrPointer>(Param));                                 \
   }
 
 // Same as 'FORWARD_TO_BASE', but doesn't change the parameter type in any way.
 #define FORWARD_TO_BASE_EXACT(Function, Type)                                  \
   template <bool Const>                                                        \
   bool DynamicRecursiveASTVisitorBase<Const>::Function(Type Param) {           \
-    return Impl<Const>(*this)                                                  \
-        .template RecursiveASTVisitor<Impl<Const>>::Function(Param);           \
+    return Impl<Const>(*this).RecursiveASTVisitor<Impl<Const>>::Function(      \
+        Param);                                                                \
   }
 
 FORWARD_TO_BASE(TraverseAST, ASTContext, &)
@@ -326,16 +325,15 @@ bool DynamicRecursiveASTVisitorBase<Const>::TraverseLambdaCapture(
     MaybeConst<LambdaExpr> *LE, const LambdaCapture *C,
     MaybeConst<Expr> *Init) {
   return Impl<Const>(*this)
-      .template RecursiveASTVisitor<Impl<Const>>::TraverseLambdaCapture(
+      .RecursiveASTVisitor<Impl<Const>>::TraverseLambdaCapture(
           const_cast<LambdaExpr *>(LE), C, const_cast<Expr *>(Init));
 }
 
 template <bool Const>
 bool DynamicRecursiveASTVisitorBase<Const>::dataTraverseNode(
     MaybeConst<Stmt> *S) {
-  return Impl<Const>(*this)
-      .template RecursiveASTVisitor<Impl<Const>>::dataTraverseNode(
-          const_cast<Stmt *>(S), nullptr);
+  return Impl<Const>(*this).RecursiveASTVisitor<Impl<Const>>::dataTraverseNode(
+      const_cast<Stmt *>(S), nullptr);
 }
 
 // Declare Traverse*() for and friends all concrete Decl classes.
