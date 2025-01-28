@@ -108,17 +108,14 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
   return Or;
 }
 
-static CallInst *InsertTrap(BuilderTy &IRB, bool DebugTrapBB,
-                            std::optional<int8_t> GuardKind) {
+static CallInst *InsertTrap(BuilderTy &IRB, bool DebugTrapBB) {
   if (!DebugTrapBB)
     return IRB.CreateIntrinsic(Intrinsic::trap, {}, {});
-
+  // FIXME: Ideally we would use the SanitizerHandler::OutOfBounds constant.
   return IRB.CreateIntrinsic(
       Intrinsic::ubsantrap, {},
       ConstantInt::get(IRB.getInt8Ty(),
-                       GuardKind.has_value()
-                           ? GuardKind.value()
-                           : IRB.GetInsertBlock()->getParent()->size()));
+                       IRB.GetInsertBlock()->getParent()->size()));
 }
 
 static CallInst *InsertCall(BuilderTy &IRB, bool MayReturn, StringRef Name) {
@@ -253,7 +250,7 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
 
     bool DebugTrapBB = !Opts.Merge;
     CallInst *TrapCall = Opts.Rt ? InsertCall(IRB, Opts.Rt->MayReturn, Name)
-                                 : InsertTrap(IRB, DebugTrapBB, Opts.GuardKind);
+                                 : InsertTrap(IRB, DebugTrapBB);
     if (DebugTrapBB)
       TrapCall->addFnAttr(llvm::Attribute::NoMerge);
 
