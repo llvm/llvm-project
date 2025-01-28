@@ -149,7 +149,6 @@ public:
 
   enum SYCLMajorVersion {
     SYCL_None,
-    SYCL_2017,
     SYCL_2020,
     // The "default" SYCL version to be used when none is specified on the
     // frontend command line.
