@@ -19,7 +19,7 @@ using namespace mlir::mesh;
 
 namespace {
 
-// Sharding of arith.empty/arith.splat
+// Sharding of arith.constant
 struct ConstantShardingInterface
     : public ShardingInterface::ExternalModel<ConstantShardingInterface,
                                               ConstantOp> {

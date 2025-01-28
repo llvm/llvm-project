@@ -286,7 +286,7 @@ ShardOp mlir::mesh::maybeInsertTargetShardingAnnotation(MeshSharding sharding,
   ShardOp shardOp = dyn_cast<ShardOp>(operandOp);
   if (shardOp && sharding == shardOp.getSharding() &&
       !shardOp.getAnnotateForUsers()) {
-    // No need for anything the correct sharding is already set.
+    // No need for anything if the correct sharding is already set.
     return newShardOp ? newShardOp : shardOp;
   }
 
@@ -639,6 +639,8 @@ public:
       }
     }
 
+    // Remove sharded dims offsets if they are effectively the default values,
+    // e.g. if they define equi-distance between all neighboring shards.
     if (offs.second.empty() && !offs.first.empty()) {
       assert(offs.first.size() >= 2);
       auto diff = offs.first[1] - offs.first[0];
@@ -772,7 +774,8 @@ MeshSharding::MeshSharding(Value rhs) {
   assert(shardingOp && "expected sharding op");
   auto splitAxes = shardingOp.getSplitAxes().getAxes();
   auto partialAxes = shardingOp.getPartialAxes().value_or(ArrayRef<MeshAxis>());
-  if(splitAxes.empty() && partialAxes.empty()) {
+  // If splitAxes and partialAxes are empty, use "empty" constructor.
+  if (splitAxes.empty() && partialAxes.empty()) {
     *this = MeshSharding(shardingOp.getMeshAttr());
     return;
   }
@@ -793,7 +796,7 @@ MeshSharding MeshSharding::get(::mlir::FlatSymbolRefAttr mesh_,
                                ArrayRef<Value> dynamic_halo_sizes_,
                                ArrayRef<Value> dynamic_sharded_dims_offsets_) {
   MeshSharding res(mesh_);
-  if(split_axes_.empty() && partial_axes_.empty()) {
+  if (split_axes_.empty() && partial_axes_.empty()) {
     return res;
   }
 
