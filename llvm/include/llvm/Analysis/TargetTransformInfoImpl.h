@@ -749,6 +749,12 @@ public:
                                             TTI::TargetCostKind CostKind,
                                             ArrayRef<unsigned> Indices,
                                             Value *AggDef) const {
+    // Extract/insert values are generally assumed to be free (as the aggregates
+    // will be removed e.g. by SROA). A target may want to override this to cost
+    // an extract operation differently based on the producer (AggDef). E.g. if
+    // AggDef is a call, the result may be returned via the stack (so the
+    // extract acts like a load). However, generally, that cost is included in
+    // the producer's cost.
     return 0;
   }
 
