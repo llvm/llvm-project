@@ -22,6 +22,11 @@
 #include "private_typeinfo.h"
 #include "unwind.h"
 
+// The functions defined in this file are magic functions called only by the compiler.
+#ifdef __clang__
+#  pragma clang diagnostic ignored "-Wmissing-prototypes"
+#endif
+
 // TODO: This is a temporary workaround for libc++abi to recognize that it's being
 // built against LLVM's libunwind. LLVM's libunwind started reporting _LIBUNWIND_VERSION
 // in LLVM 15 -- we can remove this workaround after shipping LLVM 17. Once we remove
