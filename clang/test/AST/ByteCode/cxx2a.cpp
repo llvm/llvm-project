@@ -170,3 +170,12 @@ namespace TypeId {
   }
   static_assert(side_effects());
 }
+
+consteval int f(int i);
+constexpr bool test(auto i) {
+    return f(0) == 0;
+}
+consteval int f(int i) {
+    return 2 * i;
+}
+static_assert(test(42));
