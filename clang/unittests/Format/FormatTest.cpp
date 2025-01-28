@@ -11221,7 +11221,7 @@ TEST_F(FormatTest, WrapsTemplateDeclarationsWithComments) {
 }
 
 TEST_F(FormatTest, BreakBeforeTemplateCloser) {
-  FormatStyle Style = getGoogleStyle(FormatStyle::LK_Cpp);
+  FormatStyle Style = getLLVMStyle();
   // Begin with tests covering the case where there is no constraint on the
   // column limit.
   Style.ColumnLimit = 0;
@@ -11299,24 +11299,20 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
                "};",
                Style);
 
-  // Test from issue #80049:
+  // Test from https://github.com/llvm/llvm-project/issues/80049:
   verifyFormat(
-      "void foo() {\n"
-      "  using type = std::remove_cv_t<\n"
-      "      add_common_cv_reference<\n"
-      "          std::common_type_t<std::decay_t<T0>, std::decay_t<T1>>,\n"
-      "          T0,\n"
-      "          T1\n"
-      "      >\n"
-      "  >;\n"
-      "}",
-      "void foo() {\n"
-      "  using type = std::remove_cv_t<\n"
-      "      add_common_cv_reference<\n"
-      "          std::common_type_t<std::decay_t<T0>, std::decay_t<T1>>,\n"
-      "          T0,\n"
-      "          T1>>;\n"
-      "}",
+      "using type = std::remove_cv_t<\n"
+      "    add_common_cv_reference<\n"
+      "        std::common_type_t<std::decay_t<T0>, std::decay_t<T1>>,\n"
+      "        T0,\n"
+      "        T1\n"
+      "    >\n"
+      ">;\n",
+      "using type = std::remove_cv_t<\n"
+      "    add_common_cv_reference<\n"
+      "        std::common_type_t<std::decay_t<T0>, std::decay_t<T1>>,\n"
+      "        T0,\n"
+      "        T1>>;\n",
       Style);
 
   // Test lambda goes to next line:
@@ -11363,9 +11359,7 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
 
   // Note that this is the same line (no \n):
   verifyFormat("void foo() {\n"
-               "  auto lambda = []<typename "
-               "Looooooooooooooooooooooooooooong>("
-               "Looooooooooooooooooooooooooooong t) {};\n"
+               "  auto lambda = []<typename T>(T t) {};\n"
                "}",
                Style);
 
@@ -11418,6 +11412,17 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
                "          typename Bar>\n"
                "void foo() {}",
                Style);
+  // Same check for only one template parameter.
+  // Note how the first line is exactly 40 chars:
+  verifyFormat("template <typename Barrrrrrrrrrrrrrrrrr>\n"
+               "void foo() {}",
+               Style);
+  // And when one more "r" is added, it breaks properly:
+  verifyFormat("template <\n"
+               "    typename Barrrrrrrrrrrrrrrrrrr\n"
+               ">\n"
+               "void foo() {}",
+               Style);
   // Additionally, long names should be split in one step:
   verifyFormat(
       "template <\n"
@@ -11446,70 +11451,60 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
                "void foo() {}",
                Style);
   // Test lambda goes to next line if the type is looong:
-  verifyFormat(
-      "void foo() {\n"
-      // In this case, breaking "typename Looong" onto the next line would
-      // actually exceed the column limit by even more. Same goes for "auto
-      // lambda = []<\n" because then the continuation indent would be all the
-      // way to the "[". Therefore, this is correct for the column limited case:
-      "  auto lambda =\n"
-      "      []<typename Loooooooooooooooooooooooooooooooooong\n"
-      "      >(T t) {};\n"
-      // For completeness, let's also make sure it's willing to break if and
-      // when doing so is helpful. If we put something long into the square
-      // brackets, now it's worth it:
-      "  auto lambda =\n"
-      "      [looooooooooooooong]<\n"
-      "          typename Loooooooooooooooooooooooooooooooooong\n"
-      "      >(T t) {};\n"
-      "  auto lambda =\n"
-      "      []<typename T,\n"
-      "         typename Loooooooooooooooooooooooooooooooooong\n"
-      "      >(T t) {};\n"
-      // Because this is not BlockIndent style, and the [] is empty,
-      // and the "T" is short, then the ">" is placed on the same line.
-      "  auto lambda =\n"
-      "      []<typename Loooooooooooooooooooooooooooooooooong,\n"
-      "         typename T>(T t) {};\n"
-      // Nested:
-      "  auto lambda =\n"
-      "      []<template <typename, typename>\n"
-      "         typename Looooooooooooooooooong\n"
-      "      >(T t) {};\n"
-      // Same idea, the "T" is now short rather than Looong:
-      "  auto lambda =\n"
-      "      []<template <typename, typename>\n"
-      "         typename T>(T t) {};\n"
-      // Nested with long capture forces the style to block indent:
-      "  auto lambda =\n"
-      "      [loooooooooooooooooooong]<\n"
-      "          template <typename, typename>\n"
-      "          typename Looooooooooooooooooong\n"
-      "      >(T t) {};\n"
-      // But *now* it stays block indented even when T is short:
-      "  auto lambda =\n"
-      "      [loooooooooooooooooooong]<\n"
-      "          template <typename, typename>\n"
-      "          typename T\n"
-      "      >(T t) {};\n"
-      // Nested, with long name and long captures:
-      "  auto lambda =\n"
-      "      [loooooooooooooooooooong]<\n"
-      "          template <\n"
-      "              typename Foooooooooooooooo,\n"
-      "              typename\n"
-      "          >\n"
-      "          typename T\n"
-      "      >(T t) {};\n"
-      // Allow the nested template to be on the same line:
-      "  auto lambda =\n"
-      "      [loooooooooooooooooooong]<\n"
-      "          template <typename Fooooooooo,\n"
-      "                    typename>\n"
-      "          typename T\n"
-      "      >(T t) {};\n"
-      "}",
-      Style);
+  verifyFormat("void foo() {\n"
+               "  auto lambda =\n"
+               "      []<\n"
+               "          typename Loooooooooooooooooooooooooooooooooong\n"
+               "      >(T t) {};\n"
+               "  auto lambda =\n"
+               "      [looooooooooooooong]<\n"
+               "          typename Loooooooooooooooooooooooooooooooooong\n"
+               "      >(T t) {};\n"
+               "  auto lambda =\n"
+               "      []<\n"
+               "          typename T,\n"
+               "          typename Loooooooooooooooooooooooooooooooooong\n"
+               "      >(T t) {};\n"
+               // Nested:
+               "  auto lambda =\n"
+               "      []<\n"
+               "          template <typename, typename>\n"
+               "          typename Looooooooooooooooooong\n"
+               "      >(T t) {};\n"
+               // Same idea, the "T" is now short rather than Looong:
+               "  auto lambda =\n"
+               "      []<template <typename, typename>\n"
+               "         typename T>(T t) {};\n"
+               // Nested with long capture forces the style to block indent:
+               "  auto lambda =\n"
+               "      [loooooooooooooooooooong]<\n"
+               "          template <typename, typename>\n"
+               "          typename Looooooooooooooooooong\n"
+               "      >(T t) {};\n"
+               // But *now* it stays block indented even when T is short:
+               "  auto lambda =\n"
+               "      [loooooooooooooooooooong]<\n"
+               "          template <typename, typename>\n"
+               "          typename T\n"
+               "      >(T t) {};\n"
+               // Nested, with long name and long captures:
+               "  auto lambda =\n"
+               "      [loooooooooooooooooooong]<\n"
+               "          template <\n"
+               "              typename Foooooooooooooooo,\n"
+               "              typename\n"
+               "          >\n"
+               "          typename T\n"
+               "      >(T t) {};\n"
+               // Allow the nested template to be on the same line:
+               "  auto lambda =\n"
+               "      [loooooooooooooooooooong]<\n"
+               "          template <typename Fooooooooo,\n"
+               "                    typename>\n"
+               "          typename T\n"
+               "      >(T t) {};\n"
+               "}",
+               Style);
   // Test that if the type is NOT long, it pulls it back into one line:
   verifyFormat("void foo() {\n"
                "  auto lambda = []<typename T>(T t) {};\n"
