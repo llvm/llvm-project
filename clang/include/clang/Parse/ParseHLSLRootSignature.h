@@ -66,6 +66,19 @@ private:
   bool
   ParseDescriptorRangeOffset(llvm::hlsl::rootsig::DescriptorRangeOffset *X);
 
+  /// Method for parsing any type of the ENUM defined token kinds (from
+  /// HLSLRootSignatureTokenKinds.def)
+  ///
+  /// EnumMap provides a mapping from the unique TokenKind to the in-memory
+  /// enum value
+  template <typename EnumType>
+  bool ParseEnum(llvm::SmallDenseMap<TokenKind, EnumType> &EnumMap,
+                 EnumType *Enum);
+
+  /// Helper methods that define the mappings and invoke ParseEnum for
+  /// different enum types
+  bool ParseShaderVisibility(llvm::hlsl::rootsig::ShaderVisibility *Enum);
+
   /// Invoke the Lexer to consume a token and update CurToken with the result
   void ConsumeNextToken() { CurToken = Lexer.ConsumeToken(); }
 
