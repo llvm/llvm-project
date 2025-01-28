@@ -371,7 +371,7 @@ const Instruction* BasicBlock::getFirstNonPHI() const {
   return nullptr;
 }
 
-Instruction* BasicBlock::getFirstNonPHI() {
+Instruction *BasicBlock::getFirstNonPHI() {
   for (Instruction &I : *this)
     if (!isa<PHINode>(I))
       return &I;
