@@ -60,6 +60,7 @@
 #include "UniqueptrDeleteReleaseCheck.h"
 #include "UppercaseLiteralSuffixCheck.h"
 #include "UseAnyOfAllOfCheck.h"
+#include "UseCppStyleCommentsCheck.h"
 #include "UseStdMinMaxCheck.h"
 
 namespace clang::tidy {
@@ -146,6 +147,8 @@ public:
         "readability-static-definition-in-anonymous-namespace");
     CheckFactories.registerCheck<StringCompareCheck>(
         "readability-string-compare");
+    CheckFactories.registerCheck<UseCppStyleCommentsCheck>(
+        "readability-use-cpp-style-comments");
     CheckFactories.registerCheck<readability::NamedParameterCheck>(
         "readability-named-parameter");
     CheckFactories.registerCheck<NonConstParameterCheck>(
