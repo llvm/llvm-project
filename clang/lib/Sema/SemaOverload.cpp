@@ -10951,6 +10951,10 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
     S.diagnoseEquivalentInternalLinkageDeclarations(Loc, Best->Function,
                                                     EquivalentCands);
 
+  // [over.match.best]/4 is checked for in Sema::ConvertArgumentsForCall,
+  // because not every function call goes through our overload resolution
+  // machinery, even if the Standard says it supposed to.
+
   return OR_Success;
 }
 
