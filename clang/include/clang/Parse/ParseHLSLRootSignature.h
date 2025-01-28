@@ -63,6 +63,8 @@ private:
   bool HandleUIntLiteral(uint32_t &X);
   bool ParseRegister(llvm::hlsl::rootsig::Register *Reg);
   bool ParseUInt(uint32_t *X);
+  bool
+  ParseDescriptorRangeOffset(llvm::hlsl::rootsig::DescriptorRangeOffset *X);
 
   /// Invoke the Lexer to consume a token and update CurToken with the result
   void ConsumeNextToken() { CurToken = Lexer.ConsumeToken(); }

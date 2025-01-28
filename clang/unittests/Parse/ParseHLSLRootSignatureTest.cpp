@@ -130,8 +130,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   const llvm::StringLiteral Source = R"cc(
     DescriptorTable(
       CBV(b0),
-      SRV(t42, space = 3, numDescriptors = +4),
-      Sampler(s987, space = 2),
+      SRV(t42, space = 3, offset = 32, numDescriptors = +4),
+      Sampler(s987, space = 2, offset = DESCRIPTOR_RANGE_OFFSET_APPEND),
       UAV(u987234)
     ),
     DescriptorTable()
@@ -157,6 +157,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Register.Number, (uint32_t)0);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).NumDescriptors, (uint32_t)1);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, (uint32_t)0);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
+            DescriptorRangeOffset(DescriptorTableOffsetAppend));
 
   Elem = Elements[1];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
@@ -167,6 +169,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
             (uint32_t)42);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).NumDescriptors, (uint32_t)4);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, (uint32_t)3);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
+            DescriptorRangeOffset(32));
 
   Elem = Elements[2];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
@@ -177,6 +181,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
             (uint32_t)987);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).NumDescriptors, (uint32_t)1);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, (uint32_t)2);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
+            DescriptorRangeOffset(DescriptorTableOffsetAppend));
 
   Elem = Elements[3];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
@@ -187,6 +193,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
             (uint32_t)987234);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).NumDescriptors, (uint32_t)1);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, (uint32_t)0);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
+            DescriptorRangeOffset(DescriptorTableOffsetAppend));
 
   Elem = Elements[4];
   ASSERT_TRUE(std::holds_alternative<DescriptorTable>(Elem));

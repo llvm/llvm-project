@@ -21,6 +21,10 @@ namespace llvm {
 namespace hlsl {
 namespace rootsig {
 
+// Definition of the various enumerations and flags
+
+enum class DescriptorRangeOffset : uint32_t;
+
 // Definitions of the in-memory data layout structures
 
 // Models the different registers: bReg | tReg | uReg | sReg
@@ -35,6 +39,8 @@ struct DescriptorTable {
   uint32_t NumClauses = 0; // The number of clauses in the table
 };
 
+static const DescriptorRangeOffset DescriptorTableOffsetAppend =
+    DescriptorRangeOffset(0xffffffff);
 // Models DTClause : CBV | SRV | UAV | Sampler, by collecting like parameters
 using ClauseType = llvm::dxil::ResourceClass;
 struct DescriptorTableClause {
@@ -42,6 +48,7 @@ struct DescriptorTableClause {
   Register Register;
   uint32_t NumDescriptors = 1;
   uint32_t Space = 0;
+  DescriptorRangeOffset Offset = DescriptorTableOffsetAppend;
 };
 
 // Models RootElement : DescriptorTable | DescriptorTableClause
@@ -49,7 +56,7 @@ using RootElement = std::variant<DescriptorTable, DescriptorTableClause>;
 
 // Models a reference to all assignment parameter types that any RootElement
 // may have. Things of the form: Keyword = Param
-using ParamType = std::variant<uint32_t *>;
+using ParamType = std::variant<uint32_t *, DescriptorRangeOffset *>;
 
 } // namespace rootsig
 } // namespace hlsl
