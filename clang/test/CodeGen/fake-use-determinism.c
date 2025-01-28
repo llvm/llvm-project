@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -fextend-variable-liveness %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fextend-variable-liveness %s -o - | FileCheck %s
 //
 // We are checking that the fake.use calls for i, j and k appear
 // in a particular order. It is not the order itself that is important
