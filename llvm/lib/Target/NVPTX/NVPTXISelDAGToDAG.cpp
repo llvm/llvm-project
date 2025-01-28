@@ -363,15 +363,8 @@ static std::optional<unsigned> convertAS(unsigned AS) {
 }
 
 static unsigned int getCodeAddrSpace(const MemSDNode *N) {
-  if (const Value *Src = N->getMemOperand()->getValue())
-    if (auto *PT = dyn_cast<PointerType>(Src->getType()))
-      if (auto AS = convertAS(PT->getAddressSpace()))
-        return AS.value();
-
-  if (auto AS = convertAS(N->getMemOperand()->getAddrSpace()))
-    return AS.value();
-
-  return NVPTX::AddressSpace::Generic;
+  return convertAS(N->getMemOperand()->getAddrSpace())
+      .value_or(NVPTX::AddressSpace::Generic);
 }
 
 namespace {
