@@ -18,7 +18,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/TimeProfiler.h"
 
-
 using namespace cir;
 using namespace llvm;
 
@@ -26,16 +25,17 @@ namespace cir {
 namespace direct {
 
 std::unique_ptr<llvm::Module>
-lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp theModule, LLVMContext &llvmCtx) {
+lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp MOp, LLVMContext &LLVMCtx) {
   llvm::TimeTraceScope scope("lower from CIR to LLVM directly");
 
-  auto ModuleName = theModule.getName();
-  auto llvmModule = std::make_unique<llvm::Module>(ModuleName ? *ModuleName : "CIRToLLVMModule", llvmCtx);
+  std::optional<StringRef> ModuleName = MOp.getName();
+  auto M = std::make_unique<llvm::Module>(
+      ModuleName ? *ModuleName : "CIRToLLVMModule", LLVMCtx);
 
-  if (!llvmModule)
+  if (!M)
     report_fatal_error("Lowering from LLVMIR dialect to llvm IR failed!");
 
-  return llvmModule;
+  return M;
 }
 } // namespace direct
 } // namespace cir

@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CIR/FrontendAction/CIRGenAction.h"
+#include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OwningOpRef.h"
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/LowerToLLVM.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "llvm/IR/Module.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/OwningOpRef.h"
 
 using namespace cir;
 using namespace clang;
@@ -51,8 +51,7 @@ class CIRGenConsumer : public clang::ASTConsumer {
   std::unique_ptr<CIRGenerator> Gen;
 
 public:
-  CIRGenConsumer(CIRGenAction::OutputType Action,
-                 CompilerInstance &CI,
+  CIRGenConsumer(CIRGenAction::OutputType Action, CompilerInstance &CI,
                  std::unique_ptr<raw_pwrite_stream> OS)
       : Action(Action), CI(CI), OutputStream(std::move(OS)),
         FS(&CI.getVirtualFileSystem()),
@@ -88,10 +87,9 @@ public:
                                              std::move(MLIRCtx), LLVMCtx);
 
       BackendAction BEAction = getBackendActionFromOutputType(Action);
-      emitBackendOutput(CI, CI.getCodeGenOpts(),
-                        C.getTargetInfo().getDataLayoutString(),
-                        LLVMModule.get(), BEAction, FS,
-                        std::move(OutputStream));
+      emitBackendOutput(
+          CI, CI.getCodeGenOpts(), C.getTargetInfo().getDataLayoutString(),
+          LLVMModule.get(), BEAction, FS, std::move(OutputStream));
       break;
     }
     }
@@ -125,8 +123,8 @@ CIRGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   if (!Out)
     Out = getOutputStream(CI, InFile, Action);
 
-  auto Result = std::make_unique<cir::CIRGenConsumer>(
-      Action, CI, std::move(Out));
+  auto Result =
+      std::make_unique<cir::CIRGenConsumer>(Action, CI, std::move(Out));
 
   return Result;
 }

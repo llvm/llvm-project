@@ -28,8 +28,8 @@ class ModuleOp;
 namespace cir {
 
 namespace direct {
-std::unique_ptr<llvm::Module> lowerDirectlyFromCIRToLLVMIR(
-    mlir::ModuleOp M, llvm::LLVMContext &Ctx);
+std::unique_ptr<llvm::Module>
+lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp M, llvm::LLVMContext &Ctx);
 } // namespace direct
 } // namespace cir
 
