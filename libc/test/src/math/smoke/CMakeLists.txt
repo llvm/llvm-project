@@ -45,6 +45,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.errno.errno
     libc.src.math.cospif16
+    libc.src.__support.FPUtil.cast
 )
 
 add_fp_unittest(
@@ -69,6 +70,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.errno.errno
     libc.src.math.sinf16
+    libc.src.__support.FPUtil.cast
 )
 
 add_fp_unittest(
@@ -1251,6 +1253,7 @@ add_fp_unittest(
     libc.hdr.fenv_macros
     libc.src.errno.errno
     libc.src.math.exp2m1f16
+    libc.src.__support.FPUtil.cast
 )
 
 add_fp_unittest(
