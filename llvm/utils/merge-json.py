@@ -9,6 +9,7 @@ created by CMake when performing an LLVM runtime build.
 import argparse
 import json
 import sys
+import os
 
 
 def main():
@@ -40,7 +41,8 @@ def main():
     # Remove it here before we deduplicate the entries.
     for entry in merged_data:
         if isinstance(entry, dict) and "command" in entry:
-            entry["command"] = entry["command"].replace("-fno-lifetime-dse ", "")
+            if os.path.basename(entry["command"].partition(" ")[0]) != "g++":
+                entry["command"] = entry["command"].replace("-fno-lifetime-dse ", "")
 
     # Deduplicate by converting each entry to a tuple of sorted key-value pairs
     unique_data = list({json.dumps(entry, sort_keys=True) for entry in merged_data})
