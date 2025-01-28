@@ -1210,8 +1210,8 @@ template <> struct MappingTraits<FormatStyle> {
          Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) &&
         Style.AlignAfterOpenBracketBreak ==
             FormatStyle::AlignAfterOpenBracketCustom()) {
-      if (Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak)
-        Style.AlignAfterOpenBracketBreak.InIfConditionalStatements = true;
+      Style.AlignAfterOpenBracketBreak.InIfConditionalStatements =
+          Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak;
       Style.AlignAfterOpenBracketBreak.InOtherConditionalStatements = false;
       Style.AlignAfterOpenBracketBreak.Other = true;
     }
