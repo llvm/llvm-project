@@ -359,10 +359,10 @@ struct GetLengthOpConversion
     fir::FirOpBuilder builder(rewriter, getLength.getOperation());
     hlfir::Entity bufferizedExpr = getBufferizedExprStorage(adaptor.getExpr());
     mlir::Value length = hlfir::genCharLength(loc, builder, bufferizedExpr);
-    length = builder.createConvert(loc, builder.getIndexType(), length);
     if (!length)
       return rewriter.notifyMatchFailure(
           getLength, "could not deduce length from GetLengthOp operand");
+    length = builder.createConvert(loc, builder.getIndexType(), length);
     rewriter.replaceOp(getLength, length);
     return mlir::success();
   }
