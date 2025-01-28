@@ -44,7 +44,7 @@ class CIRGenerator : public clang::ASTConsumer {
   const clang::CodeGenOptions &codeGenOpts;
 
 protected:
-  std::shared_ptr<mlir::MLIRContext> mlirContext;
+  std::unique_ptr<mlir::MLIRContext> mlirContext;
   std::unique_ptr<clang::CIRGen::CIRGenModule> cgm;
 
 public:
@@ -55,9 +55,6 @@ public:
   void Initialize(clang::ASTContext &astContext) override;
   bool HandleTopLevelDecl(clang::DeclGroupRef group) override;
   mlir::ModuleOp getModule() const;
-  std::shared_ptr<mlir::MLIRContext> getContext() {
-    return mlirContext;
-  };
 };
 
 } // namespace cir

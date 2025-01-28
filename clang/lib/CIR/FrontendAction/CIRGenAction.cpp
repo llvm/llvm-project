@@ -23,16 +23,20 @@ namespace cir {
 static BackendAction
 getBackendActionFromOutputType(CIRGenAction::OutputType Action) {
   switch (Action) {
+  case CIRGenAction::OutputType::EmitCIR:
+    assert(false &&
+           "Unsupported output type for getBackendActionFromOutputType!");
+    break; // Unreachable, but fall through to report that
   case CIRGenAction::OutputType::EmitLLVM:
     return BackendAction::Backend_EmitLL;
-  default:
-    llvm_unreachable("Unsupported action");
   }
+  // We should only get here if a non-enum value is passed in or we went through
+  // the assert(false) case above
+  llvm_unreachable("Unsupported output type!");
 }
 
-static std::unique_ptr<llvm::Module> lowerFromCIRToLLVMIR(
-    const clang::FrontendOptions &FEOpts, mlir::ModuleOp MLIRModule,
-    std::shared_ptr<mlir::MLIRContext> MLIRCtx, llvm::LLVMContext &LLVMCtx) {
+static std::unique_ptr<llvm::Module>
+lowerFromCIRToLLVMIR(mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx) {
   return direct::lowerDirectlyFromCIRToLLVMIR(MLIRModule, LLVMCtx);
 }
 
@@ -72,7 +76,6 @@ public:
   void HandleTranslationUnit(ASTContext &C) override {
     Gen->HandleTranslationUnit(C);
     mlir::ModuleOp MlirModule = Gen->getModule();
-    std::shared_ptr<mlir::MLIRContext> MLIRCtx = Gen->getContext();
     switch (Action) {
     case CIRGenAction::OutputType::EmitCIR:
       if (OutputStream && MlirModule) {
@@ -83,8 +86,8 @@ public:
       break;
     case CIRGenAction::OutputType::EmitLLVM: {
       llvm::LLVMContext LLVMCtx;
-      auto LLVMModule = lowerFromCIRToLLVMIR(CI.getFrontendOpts(), MlirModule,
-                                             MLIRCtx, LLVMCtx);
+      std::unique_ptr<llvm::Module> LLVMModule =
+          lowerFromCIRToLLVMIR(MlirModule, LLVMCtx);
 
       BackendAction BEAction = getBackendActionFromOutputType(Action);
       emitBackendOutput(

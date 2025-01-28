@@ -13,8 +13,6 @@
 #include "clang/CIR/LowerToLLVM.h"
 
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/TimeProfiler.h"
 

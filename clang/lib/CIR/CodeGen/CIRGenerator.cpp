@@ -34,7 +34,7 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
 
   this->astContext = &astContext;
 
-  mlirContext = std::make_shared<mlir::MLIRContext>();
+  mlirContext = std::make_unique<mlir::MLIRContext>();
   mlirContext->loadDialect<cir::CIRDialect>();
   cgm = std::make_unique<clang::CIRGen::CIRGenModule>(
       *mlirContext.get(), astContext, codeGenOpts, diags);
