@@ -415,7 +415,7 @@ static void splitCallSite(CallBase &CB,
 // constant incoming values.
 static bool isPredicatedOnPHI(CallBase &CB) {
   BasicBlock *Parent = CB.getParent();
-  if (&CB != Parent->getFirstNonPHIOrDbg())
+  if (&CB != &*Parent->getFirstNonPHIOrDbg())
     return false;
 
   for (auto &PN : Parent->phis()) {
