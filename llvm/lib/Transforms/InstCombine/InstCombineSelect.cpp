@@ -423,11 +423,18 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
       }
     }
 
-    auto CreateCmpSel = [&](CmpPredicate P, Value *MatchOp) {
+    auto CreateCmpSel = [&](std::optional<CmpPredicate> P,
+                            bool Swapped) -> CmpInst * {
+      if (!P)
+        return nullptr;
+      auto *MatchOp = getCommonOp(TI, FI, ICmpInst::isEquality(*P),
+                                  ICmpInst::isRelational(*P) && Swapped);
+      if (!MatchOp)
+        return nullptr;
       Value *NewSel = Builder.CreateSelect(Cond, OtherOpT, OtherOpF,
                                            SI.getName() + ".v", &SI);
-      return new ICmpInst(MatchIsOpZero ? P
-                                        : ICmpInst::getSwappedCmpPredicate(P),
+      return new ICmpInst(MatchIsOpZero ? *P
+                                        : ICmpInst::getSwappedCmpPredicate(*P),
                           MatchOp, NewSel);
     };
 
@@ -436,16 +443,14 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
     CmpPredicate TPred, FPred;
     if (match(TI, m_ICmp(TPred, m_Value(), m_Value())) &&
         match(FI, m_ICmp(FPred, m_Value(), m_Value()))) {
-      if (auto P = CmpPredicate::getMatching(TPred, FPred)) {
-        if (Value *MatchOp =
-                getCommonOp(TI, FI, ICmpInst::isEquality(*P), false))
-          return CreateCmpSel(*P, MatchOp);
-      } else if (auto P = CmpPredicate::getMatching(
-                     TPred, ICmpInst::getSwappedCmpPredicate(FPred))) {
-        if (Value *MatchOp =
-                getCommonOp(TI, FI, ICmpInst::isEquality(*P), true))
-          return CreateCmpSel(*P, MatchOp);
-      }
+      if (auto *R =
+              CreateCmpSel(CmpPredicate::getMatching(TPred, FPred), false))
+        return R;
+      if (auto *R =
+              CreateCmpSel(CmpPredicate::getMatching(
+                               TPred, ICmpInst::getSwappedCmpPredicate(FPred)),
+                           true))
+        return R;
     }
   }
 
