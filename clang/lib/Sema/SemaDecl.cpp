@@ -16006,7 +16006,6 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
       if (!FD->isDeletedAsWritten())
         FD->setBody(Body);
       FD->setWillHaveBody(false);
-      CheckImmediateEscalatingFunctionDefinition(FD, FSI);
 
       if (getLangOpts().CPlusPlus14) {
         if (!FD->isInvalidDecl() && Body && !FD->isDependentContext() &&
@@ -16383,6 +16382,9 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   } // Pops the ExitFunctionBodyRAII scope, which needs to happen before we pop
     // the declaration context below. Otherwise, we're unable to transform
     // 'this' expressions when transforming immediate context functions.
+
+  if (FD)
+    CheckImmediateEscalatingFunctionDefinition(FD, getCurFunction());
 
   if (!IsInstantiation)
     PopDeclContext();

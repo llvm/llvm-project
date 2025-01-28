@@ -82,11 +82,11 @@ def err_typecheck_converted_constant_expression_indirect : Error<
   "conversion from %0 to %1 in converted constant expression would "
   "bind reference to a temporary">;
 def err_expr_not_cce : Error<
-  "%select{case value|enumerator value|non-type template argument|"
+  "%select{case value|enumerator value|non-type template argument|non-type parameter of template template parameter|"
   "array size|explicit specifier argument|noexcept specifier argument|"
   "call to 'size()'|call to 'data()'}0 is not a constant expression">;
 def ext_cce_narrowing : ExtWarn<
-  "%select{case value|enumerator value|non-type template argument|"
+  "%select{case value|enumerator value|non-type template argument|non-type parameter of template template parameter|"
   "array size|explicit specifier argument|noexcept specifier argument|"
   "call to 'size()'|call to 'data()'}0 %select{cannot be narrowed from "
   "type %2 to %3|evaluates to %2, which cannot be narrowed to type %3}1">,
@@ -3870,6 +3870,9 @@ def err_sme_definition_using_za_in_non_sme_target : Error<
   "function using ZA state requires 'sme'">;
 def err_sme_definition_using_zt0_in_non_sme2_target : Error<
   "function using ZT0 state requires 'sme2'">;
+def err_sme_openmp_captured_region : Error<
+  "OpenMP captured regions are not yet supported in "
+  "%select{streaming functions|functions with ZA state|functions with ZT0 state}0">;
 def warn_sme_streaming_pass_return_vl_to_non_streaming : Warning<
   "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a function with a different"
   " streaming-mode is undefined behaviour when the streaming and non-streaming vector lengths are different at runtime">,
