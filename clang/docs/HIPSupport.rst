@@ -340,8 +340,8 @@ transparent on-demand paging (such as e.g. that provided in Linux via
 the ``--hipstdpar-interpose-alloc`` flag. If the accelerator specific algorithm
 library ``foo`` uses doesn't have an implementation of a particular algorithm,
 execution seamlessly falls back to the host CPU. It is legal to specify multiple
-``--offload-arch``s. All the flags we introduce, as well as a thorough view of
-various restrictions and their implications will be provided below.
+``--offload-arch``\s. All the flags we introduce, as well as a thorough view of
+various restrictions an their implementations, will be provided below.
 
 Implementation - General View
 =============================
@@ -598,6 +598,9 @@ Linux operating system. Support is synthesised in the following table:
      - *NO*
      - YES
    * - GCN GFX11 (RDNA 3)
+     - *NO*
+     - YES
+   * - GCN GFX12 (RDNA 4)
      - *NO*
      - YES
 
