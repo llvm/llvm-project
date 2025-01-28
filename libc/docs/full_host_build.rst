@@ -159,7 +159,7 @@ To setup ``SnMalloc``, use the following ``cmake`` configuration instead:
       -DLLVM_ENABLE_RUNTIMES="libc" \
       -DLLVM_LIBC_FULL_BUILD=ON \
       -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-      -DLLVM_LIBC_INCLUDE_SNMALLOC="$SNMALLOC_DIR"
+      -DLIBC_INCLUDE_SNMALLOC="$SNMALLOC_DIR"
 
 .. note::
    LLVM's libc does not vendor ``SnMalloc``. The commit known to work is
