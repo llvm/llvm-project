@@ -4352,19 +4352,11 @@ def stack_usage_file : Separate<["-"], "stack-usage-file">,
 def fextend_variable_liveness_EQ : Joined<["-"], "fextend-variable-liveness=">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Extend the liveness of user variables through optimizations to "
-           "prevent stale or optimized-out variable values when debugging. Can "
-           "be applied to all user variables, or just to the C++ 'this' ptr. "
-           "May choose not to extend the liveness of some variables, such as "
-           "non-scalars larger than 4 unsigned ints, or variables in any "
-           "inlined functions.">,
+           "prevent stale or optimized-out variable values when debugging.">,
   Values<"all,this,none">,
   NormalizedValues<["All", "This", "None"]>,
   NormalizedValuesScope<"CodeGenOptions::ExtendVariableLivenessKind">,
   MarshallingInfoEnum<CodeGenOpts<"ExtendVariableLiveness">, "None">;
-def fextend_this_ptr_liveness : Flag<["-"], "fextend-this-ptr-liveness">,
-  Visibility<[ClangOption, CC1Option]>,
-  Alias<fextend_variable_liveness_EQ>, AliasArgs<["this"]>,
-  HelpText<"Alias for -fextend-variable-liveness=this.">;
 def fextend_variable_liveness : Flag<["-"], "fextend-variable-liveness">,
   Visibility<[ClangOption, CC1Option]>,
   Alias<fextend_variable_liveness_EQ>, AliasArgs<["all"]>,

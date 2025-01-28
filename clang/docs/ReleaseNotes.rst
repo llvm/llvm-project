@@ -337,6 +337,9 @@ C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - The implementation of the relaxed template template argument matching rules is
   more complete and reliable, and should provide more accurate diagnostics.
+  This implements:
+  - `P3310R5: Solving issues introduced by relaxed template template parameter matching <https://wg21.link/p3310r5>`_.
+  - `P3579R0: Fix matching of non-type template parameters when matching template template parameters <https://wg21.link/p3579r0>`_.
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -524,15 +527,15 @@ New Compiler Flags
   Clang to generate code that tries to preserve the liveness of source variables
   through optimizations, meaning that variables will typically be visible in a
   debugger more often. The flag has two levels: ``-fextend-variable-liveness``,
-  or ``-fextend-variable-liveness=all``, extendes the liveness of all user
-  variables and the ``this`` pointer. Alternatively ``-fextend-this-ptr``, or
-  ``-fextend-variable-liveness=this``, has the same behaviour but applies only
-  to the ``this`` variable in C++ class member functions, meaning its effect is
-  a strict subset of ``-fextend-variable-liveness``. Note that this flag
-  modifies the results of optimizations that Clang performs, which will result
-  in reduced performance in generated code; however, this feature will not
-  extend the liveness of some variables in cases where doing so would likely
-  have a severe impact on generated code performance.
+  or ``-fextend-variable-liveness=all``, extends the liveness of all user
+  variables and the ``this`` pointer. Alternatively
+  ``-fextend-variable-liveness=this`` has the same behaviour but applies only to
+  the ``this`` variable in C++ class member functions, meaning its effect is a
+  strict subset of ``-fextend-variable-liveness``. Note that this flag modifies
+  the results of optimizations that Clang performs, which will result in reduced
+  performance in generated code; however, this feature will not extend the
+  liveness of some variables in cases where doing so would likely have a severe
+  impact on generated code performance.
 
 - The ``-Warray-compare`` warning has been added to warn about array comparison
   on versions older than C++20.
@@ -822,6 +825,7 @@ Improvements to Clang's diagnostics
     }
 
 - Fix -Wdangling false positives on conditional operators (#120206).
+- Clang now diagnoses unused private fields with the ``[[warn_unused]]`` attribute (#GH62472).
 
 - Fixed a bug where Clang hung on an unsupported optional scope specifier ``::`` when parsing
   Objective-C. Clang now emits a diagnostic message instead of hanging.
@@ -1030,6 +1034,10 @@ Bug Fixes to C++ Support
 - Fix immediate escalation not propagating through inherited constructors.  (#GH112677)
 - Fixed assertions or false compiler diagnostics in the case of C++ modules for
   lambda functions or inline friend functions defined inside templates (#GH122493).
+- Fix template argument checking so that converted template arguments are
+  converted again. This fixes some issues with partial ordering involving
+  template template parameters with non-type template parameters.
+- Fix nondeduced mismatch with nullptr template arguments.
 - Clang now rejects declaring an alias template with the same name as its template parameter. (#GH123423)
 - Fixed the rejection of valid code when referencing an enumerator of an unscoped enum member with a prior declaration. (#GH124405)
 - Fixed immediate escalation of non-dependent expressions. (#GH123405)
