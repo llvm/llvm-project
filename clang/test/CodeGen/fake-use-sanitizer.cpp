@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -fextend-variable-liveness -fsanitize=null -fsanitize-trap=null -o - | FileCheck --check-prefixes=CHECK,NULL --implicit-check-not=ubsantrap %s
 // RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -emit-llvm -fextend-variable-liveness -o - | FileCheck %s
 
-// With -fextend-lifetimes, the compiler previously generated a fake.use of any
+// With -fextend-variable-liveness, the compiler previously generated a fake.use of any
 // reference variable at the end of the scope in which its alloca exists. This
 // caused two issues, where we would get fake uses for uninitialized variables
 // if that variable was declared after an early-return, and UBSan's null checks

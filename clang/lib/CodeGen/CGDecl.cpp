@@ -1423,7 +1423,7 @@ void CodeGenFunction::EmitAndRegisterVariableArrayDimensions(
 }
 
 /// Return the maximum size of an aggregate for which we generate a fake use
-/// intrinsic when -fextend-lifetimes is in effect.
+/// intrinsic when -fextend-variable-liveness is in effect.
 static uint64_t maxFakeUseAggregateSize(const ASTContext &C) {
   return 4 * C.getTypeSize(C.UnsignedIntTy);
 }
