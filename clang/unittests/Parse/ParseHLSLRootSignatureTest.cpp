@@ -467,4 +467,26 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedEndOfStreamTest) {
   ASSERT_TRUE(Consumer->IsSatisfied());
 }
 
+TEST_F(ParseHLSLRootSignatureTest, InvalidParseRepeatedParamTest) {
+  const llvm::StringLiteral Source = R"cc(
+    DescriptorTable(
+      CBV(b0, numDescriptors = 3, numDescriptors = 1)
+    )
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = CreatePP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc, *PP);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, Diags);
+
+  // Test correct diagnostic produced
+  Consumer->SetExpected(diag::err_hlsl_rootsig_repeat_param);
+  ASSERT_TRUE(Parser.Parse());
+
+  ASSERT_TRUE(Consumer->IsSatisfied());
+}
+
 } // anonymous namespace

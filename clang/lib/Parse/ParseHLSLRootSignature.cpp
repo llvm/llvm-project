@@ -366,6 +366,8 @@ bool RootSignatureParser::ParseOptionalParams(
 
     TokenKind ParamKind = CurToken.Kind;
     if (Seen.contains(ParamKind)) {
+      Diags.Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+          << FormatTokenKinds(ParamKind);
       return true;
     }
     Seen.insert(ParamKind);
