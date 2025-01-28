@@ -1986,12 +1986,26 @@ static Value foldScalarExtractFromFromElements(ExtractOp extractOp) {
   return fromElementsOp.getElements()[flatIndex];
 }
 
-OpFoldResult ExtractOp::fold(FoldAdaptor) {
+/// Fold an insert or extract operation into an poison value when a poison index
+/// is found at any dimension of the static position.
+static ub::PoisonAttr
+foldPoisonIndexInsertExtractOp(MLIRContext *context,
+                               ArrayRef<int64_t> staticPos, int64_t poisonVal) {
+  if (!llvm::is_contained(staticPos, poisonVal))
+    return ub::PoisonAttr();
+
+  return ub::PoisonAttr::get(context);
+}
+
+OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
   // Fold "vector.extract %v[] : vector<2x2xf32> from vector<2x2xf32>" to %v.
   // Note: Do not fold "vector.extract %v[] : f32 from vector<f32>" (type
   // mismatch).
   if (getNumIndices() == 0 && getVector().getType() == getResult().getType())
     return getVector();
+  if (auto res = foldPoisonIndexInsertExtractOp(
+          getContext(), adaptor.getStaticPosition(), kPoisonIndex))
+    return res;
   if (succeeded(foldExtractOpFromExtractChain(*this)))
     return getResult();
   if (auto res = ExtractFromInsertTransposeChainState(*this).fold())
@@ -2262,13 +2276,15 @@ LogicalResult foldExtractFromFromElements(ExtractOp extractOp,
 /// Fold an insert or extract operation into an poison value when a poison index
 /// is found at any dimension of the static position.
 template <typename OpTy>
-LogicalResult foldPoisonIndexInsertExtractOp(OpTy op,
-                                             PatternRewriter &rewriter) {
-  if (!llvm::is_contained(op.getStaticPosition(), OpTy::kPoisonIndex))
-    return failure();
+LogicalResult
+canonicalizePoisonIndexInsertExtractOp(OpTy op, PatternRewriter &rewriter) {
+  if (auto poisonAttr = foldPoisonIndexInsertExtractOp(
+          op.getContext(), op.getStaticPosition(), OpTy::kPoisonIndex)) {
+    rewriter.replaceOpWithNewOp<ub::PoisonOp>(op, op.getType(), poisonAttr);
+    return success();
+  }
 
-  rewriter.replaceOpWithNewOp<ub::PoisonOp>(op, op.getResult().getType());
-  return success();
+  return failure();
 }
 
 } // namespace
@@ -2279,7 +2295,7 @@ void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
               ExtractOpFromBroadcast, ExtractOpFromCreateMask>(context);
   results.add(foldExtractFromShapeCastToShapeCast);
   results.add(foldExtractFromFromElements);
-  results.add(foldPoisonIndexInsertExtractOp<ExtractOp>);
+  results.add(canonicalizePoisonIndexInsertExtractOp<ExtractOp>);
 }
 
 static void populateFromInt64AttrArray(ArrayAttr arrayAttr,
@@ -3044,7 +3060,7 @@ void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
   results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat,
               InsertOpConstantFolder>(context);
-  results.add(foldPoisonIndexInsertExtractOp<InsertOp>);
+  results.add(canonicalizePoisonIndexInsertExtractOp<InsertOp>);
 }
 
 OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
@@ -3053,6 +3069,10 @@ OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
   // (type mismatch).
   if (getNumIndices() == 0 && getSourceType() == getType())
     return getSource();
+  if (auto res = foldPoisonIndexInsertExtractOp(
+          getContext(), adaptor.getStaticPosition(), kPoisonIndex))
+    return res;
+
   return {};
 }
 
