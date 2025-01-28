@@ -3,8 +3,8 @@
 # RUN: rm -rf %t && split-file %s %t && cd %t
 
 ## Check for incompatible cases
-# RUN: not ld.lld -o /dev/null %t --irpgo-profile=/dev/null --bp-startup-sort=function --call-graph-ordering-file=/dev/null 2>&1 | FileCheck %s --check-prefix=BP-STARTUP-CALLGRAPH-ERR
-# RUN: not ld.lld -o /dev/null --bp-compression-sort=function --call-graph-ordering-file /dev/null 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-CALLGRAPH-ERR
+# RUN: not ld.lld %t --irpgo-profile=/dev/null --bp-startup-sort=function --call-graph-ordering-file=/dev/null 2>&1 | FileCheck %s --check-prefix=BP-STARTUP-CALLGRAPH-ERR
+# RUN: not ld.lld --bp-compression-sort=function --call-graph-ordering-file /dev/null 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-CALLGRAPH-ERR
 # RUN: not ld.lld --bp-startup-sort=function 2>&1 | FileCheck %s --check-prefix=BP-STARTUP-ERR
 # RUN: not ld.lld --bp-compression-sort-startup-functions 2>&1 | FileCheck %s --check-prefix=BP-STARTUP-COMPRESSION-ERR
 # RUN: not ld.lld --bp-compression-sort=malformed 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-MALFORM
