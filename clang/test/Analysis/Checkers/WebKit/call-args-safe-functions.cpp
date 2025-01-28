@@ -1,5 +1,4 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UncountedCallArgsChecker -verify %s
-// expected-no-diagnostics
 
 class Base {
 public:
@@ -30,18 +29,21 @@ template<typename Target, typename Source>
 inline Target* dynamicDowncast(Source* source)
 {
     return static_cast<Target*>(source);
+    // expected-warning@-1 {{static downcast from 'Derived' to 'SubDerived'}}
 }
 
 template<typename Target, typename Source>
 inline Target* checkedDowncast(Source* source)
 {
     return static_cast<Target*>(source);
+    // expected-warning@-1 {{static downcast from 'Derived' to 'SubDerived'}}
 }
 
 template<typename Target, typename Source>
 inline Target* uncheckedDowncast(Source* source)
 {
     return static_cast<Target*>(source);
+    // expected-warning@-1 {{static downcast from 'Derived' to 'SubDerived'}}
 }
 
 template<typename... Types>
@@ -49,8 +51,8 @@ String toString(const Types&... values);
 
 void foo(OtherObject* other)
 {
-    dynamicDowncast<SubDerived>(other->obj());
-    checkedDowncast<SubDerived>(other->obj());
-    uncheckedDowncast<SubDerived>(other->obj());
+    dynamicDowncast<SubDerived>(other->obj()); // expected-note {{in instantiation}}
+    checkedDowncast<SubDerived>(other->obj()); // expected-note {{in instantiation}}
+    uncheckedDowncast<SubDerived>(other->obj()); // expected-note {{in instantiation}}
     toString(other->obj());
 }
