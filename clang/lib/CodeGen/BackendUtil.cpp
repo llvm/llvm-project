@@ -812,14 +812,13 @@ static void addSanitizers(const Triple &TargetTriple,
       LowerAllowCheckPass::Options Opts;
 
       // SanitizeSkipHotCutoffs stores doubles with range [0, 1]
-      // Opts.cutoffs wants ints with range [0, 999999]
+      // Opts.cutoffs wants ints with range [0, 1000000]
       for (unsigned int i = 0; i < SanitizerKind::SO_Count; ++i) {
         std::optional<double> maybeCutoff =
             CodeGenOpts.SanitizeSkipHotCutoffs[i];
         if (maybeCutoff.has_value() &&
             (maybeCutoff.value() > SanitizerMaskCutoffsEps)) {
-          Opts.cutoffs.push_back(
-              std::clamp((int)(maybeCutoff.value() * 1000000), 0, 999999));
+          Opts.cutoffs.push_back(maybeCutoff.value() * 1000000);
         } else {
           // Default is don't skip the check
           Opts.cutoffs.push_back(0);
