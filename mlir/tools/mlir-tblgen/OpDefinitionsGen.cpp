@@ -2907,7 +2907,8 @@ void OpEmitter::genUseOperandAsResultTypeSeparateParamBuilder() {
     emit(AttrParamKind::UnwrappedValue);
 }
 
-void OpEmitter::genUseAttrAsResultTypeCollectiveParamBuilder(CollectiveBuilderKind kind) {
+void OpEmitter::genUseAttrAsResultTypeCollectiveParamBuilder(
+    CollectiveBuilderKind kind) {
   SmallVector<MethodParameter> paramList;
   paramList.emplace_back("::mlir::OpBuilder &", "odsBuilder");
   paramList.emplace_back("::mlir::OperationState &", builderOpState);
@@ -2937,7 +2938,8 @@ void OpEmitter::genUseAttrAsResultTypeCollectiveParamBuilder(CollectiveBuilderKi
   }
 
   if (kind == CollectiveBuilderKind::PropStruct) {
-    body << "  ::mlir::Attribute typeAttr = properties." << op.getGetterName(namedAttr.name) << "();\n";
+    body << "  ::mlir::Attribute typeAttr = properties."
+         << op.getGetterName(namedAttr.name) << "();\n";
   } else {
     body << "  ::mlir::Attribute typeAttr;\n"
          << "  auto attrName = " << op.getGetterName(namedAttr.name)
@@ -2956,10 +2958,12 @@ void OpEmitter::genUseAttrAsResultTypeCollectiveParamBuilder(CollectiveBuilderKi
 
   // Properties
   if (kind == CollectiveBuilderKind::PropStruct)
-    body << "  " << builderOpState << ".useProperties(const_cast<Properties&>(properties));\n";
+    body << "  " << builderOpState
+         << ".useProperties(const_cast<Properties&>(properties));\n";
 
   // Attributes
-  body << "  " << builderOpState << ".addAttributes(" << attributesName << ");\n";
+  body << "  " << builderOpState << ".addAttributes(" << attributesName
+       << ");\n";
 
   // Result types
   SmallVector<std::string, 2> resultTypes(op.getNumResults(), resultType);
@@ -3048,8 +3052,10 @@ void OpEmitter::genBuilder() {
             CollectiveBuilderKind::PropStruct);
     }
     if (op.getTrait("::mlir::OpTrait::FirstAttrDerivedResultType")) {
-      genUseAttrAsResultTypeCollectiveParamBuilder(CollectiveBuilderKind::AttrDict);
-      genUseAttrAsResultTypeCollectiveParamBuilder(CollectiveBuilderKind::PropStruct);
+      genUseAttrAsResultTypeCollectiveParamBuilder(
+          CollectiveBuilderKind::AttrDict);
+      genUseAttrAsResultTypeCollectiveParamBuilder(
+          CollectiveBuilderKind::PropStruct);
     }
   }
 }
