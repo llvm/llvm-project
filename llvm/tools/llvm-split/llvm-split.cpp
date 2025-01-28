@@ -28,7 +28,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/Utils/SYCLModuleSplit.h"
+#include "llvm/Transforms/Utils/SYCLSplitModule.h"
 #include "llvm/Transforms/Utils/SYCLUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
 
@@ -99,12 +99,12 @@ void writeStringToFile(std::string_view Content, StringRef Path) {
   OS << Content << "\n";
 }
 
-void writeSplitModulesAsTable(ArrayRef<SYCLSplitModule> SplitModules,
+void writeSplitModulesAsTable(ArrayRef<ModuleAndSYCLMetadata> Modules,
                               StringRef Path) {
   std::vector<std::string> Columns = {"Code", "Symbols"};
   SYCLStringTable Table;
   Table.emplace_back(std::move(Columns));
-  for (const auto &[I, SM] : enumerate(SplitModules)) {
+  for (const auto &[I, SM] : enumerate(Modules)) {
     std::string SymbolsFile = (Twine(Path) + "_" + Twine(I) + ".sym").str();
     writeStringToFile(SM.Symbols, SymbolsFile);
     std::vector<std::string> Row = {SM.ModuleFilePath, SymbolsFile};
@@ -126,11 +126,11 @@ Error runSYCLSplitModule(std::unique_ptr<Module> M) {
   Settings.Mode = SYCLSplitMode;
   Settings.OutputAssembly = OutputAssembly;
   Settings.OutputPrefix = OutputFilename;
-  auto SplitModulesOrErr = splitSYCLModule(std::move(M), Settings);
-  if (!SplitModulesOrErr)
-    return SplitModulesOrErr.takeError();
+  auto ModulesOrErr = SYCLSplitModule(std::move(M), Settings);
+  if (!ModulesOrErr)
+    return ModulesOrErr.takeError();
 
-  writeSplitModulesAsTable(*SplitModulesOrErr, OutputFilename);
+  writeSplitModulesAsTable(*ModulesOrErr, OutputFilename);
   return Error::success();
 }
 

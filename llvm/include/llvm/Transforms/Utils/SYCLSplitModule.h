@@ -1,4 +1,4 @@
-//===-------- SYCLModuleSplit.h - module split ------------------*- C++ -*-===//
+//===-------- SYCLSplitModule.h - module split ------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 // of the split is new modules containing corresponding callgraph.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SYCL_MODULE_SPLIT_H
-#define LLVM_SYCL_MODULE_SPLIT_H
+#ifndef LLVM_SYCL_SPLIT_MODULE_H
+#define LLVM_SYCL_SPLIT_MODULE_H
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -38,17 +38,17 @@ std::optional<IRSplitMode> convertStringToSplitMode(StringRef S);
 /// The structure represents a split LLVM Module accompanied by additional
 /// information. Split Modules are being stored at disk due to the high RAM
 /// consumption during the whole splitting process.
-struct SYCLSplitModule {
+struct ModuleAndSYCLMetadata {
   std::string ModuleFilePath;
   std::string Symbols;
 
-  SYCLSplitModule() = default;
-  SYCLSplitModule(const SYCLSplitModule &) = default;
-  SYCLSplitModule &operator=(const SYCLSplitModule &) = default;
-  SYCLSplitModule(SYCLSplitModule &&) = default;
-  SYCLSplitModule &operator=(SYCLSplitModule &&) = default;
+  ModuleAndSYCLMetadata() = default;
+  ModuleAndSYCLMetadata(const ModuleAndSYCLMetadata &) = default;
+  ModuleAndSYCLMetadata &operator=(const ModuleAndSYCLMetadata &) = default;
+  ModuleAndSYCLMetadata(ModuleAndSYCLMetadata &&) = default;
+  ModuleAndSYCLMetadata &operator=(ModuleAndSYCLMetadata &&) = default;
 
-  SYCLSplitModule(std::string_view File, std::string Symbols)
+  ModuleAndSYCLMetadata(std::string_view File, std::string Symbols)
       : ModuleFilePath(File), Symbols(std::move(Symbols)) {}
 };
 
@@ -59,13 +59,13 @@ struct ModuleSplitterSettings {
 };
 
 /// Parses the string table.
-Expected<SmallVector<SYCLSplitModule, 0>>
-parseSYCLSplitModulesFromFile(StringRef File);
+Expected<SmallVector<ModuleAndSYCLMetadata, 0>>
+parseModuleAndSYCLMetadataFromFile(StringRef File);
 
 /// Splits the given module \p M according to the given \p Settings.
-Expected<SmallVector<SYCLSplitModule, 0>>
-splitSYCLModule(std::unique_ptr<Module> M, ModuleSplitterSettings Settings);
+Expected<SmallVector<ModuleAndSYCLMetadata, 0>>
+SYCLSplitModule(std::unique_ptr<Module> M, ModuleSplitterSettings Settings);
 
 } // namespace llvm
 
-#endif // LLVM_SYCL_MODULE_SPLIT_H
+#endif // LLVM_SYCL_SPLIT_MODULE_H

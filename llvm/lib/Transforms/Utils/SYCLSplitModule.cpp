@@ -1,4 +1,4 @@
-//===-------- SYCLModuleSplitter.cpp - split a module into callgraphs -----===//
+//===-------- SYCLSplitModule.cpp - split a module into callgraphs --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,7 @@
 // See comments in the header.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Utils/SYCLModuleSplit.h"
+#include "llvm/Transforms/Utils/SYCLSplitModule.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
@@ -38,7 +38,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "sycl-module-split"
+#define DEBUG_TYPE "sycl-split-module"
 
 static bool isKernel(const Function &F) {
   return F.getCallingConv() == CallingConv::SPIR_KERNEL ||
@@ -410,13 +410,13 @@ static Error saveModuleIRInFile(Module &M, StringRef FilePath,
   return Error::success();
 }
 
-static Expected<SYCLSplitModule>
+static Expected<ModuleAndSYCLMetadata>
 saveModuleDesc(ModuleDesc &MD, std::string Prefix, bool OutputAssembly) {
   Prefix += OutputAssembly ? ".ll" : ".bc";
   if (Error E = saveModuleIRInFile(MD.getModule(), Prefix, OutputAssembly))
     return E;
 
-  SYCLSplitModule SM;
+  ModuleAndSYCLMetadata SM;
   SM.ModuleFilePath = Prefix;
   SM.Symbols = MD.makeSymbolTable();
   return SM;
@@ -424,8 +424,8 @@ saveModuleDesc(ModuleDesc &MD, std::string Prefix, bool OutputAssembly) {
 
 namespace llvm {
 
-Expected<SmallVector<SYCLSplitModule, 0>>
-parseSYCLSplitModulesFromFile(StringRef File) {
+Expected<SmallVector<ModuleAndSYCLMetadata, 0>>
+parseModuleAndSYCLMetadataFromFile(StringRef File) {
   auto EntriesMBOrErr = llvm::MemoryBuffer::getFile(File);
   if (!EntriesMBOrErr)
     return createFileError(File, EntriesMBOrErr.getError());
@@ -438,7 +438,7 @@ parseSYCLSplitModulesFromFile(StringRef File) {
   // "Code" and "Symbols" at the moment.
   static constexpr int NUMBER_COLUMNS = 2;
   ++LI;
-  SmallVector<SYCLSplitModule, 0> Modules;
+  SmallVector<ModuleAndSYCLMetadata, 0> Modules;
   while (!LI.is_at_eof()) {
     StringRef Line = *LI;
     if (Line.empty())
@@ -480,9 +480,9 @@ std::optional<IRSplitMode> convertStringToSplitMode(StringRef S) {
   return It->second;
 }
 
-Expected<SmallVector<SYCLSplitModule, 0>>
-splitSYCLModule(std::unique_ptr<Module> M, ModuleSplitterSettings Settings) {
-  SmallVector<SYCLSplitModule, 0> OutputImages;
+Expected<SmallVector<ModuleAndSYCLMetadata, 0>>
+SYCLSplitModule(std::unique_ptr<Module> M, ModuleSplitterSettings Settings) {
+  SmallVector<ModuleAndSYCLMetadata, 0> OutputImages;
   if (Settings.Mode == IRSplitMode::IRSM_NONE) {
     ModuleDesc MD = std::move(M);
     std::string OutIRFileName = (Settings.OutputPrefix + Twine("_0")).str();
