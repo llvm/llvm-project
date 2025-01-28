@@ -139,6 +139,11 @@ private:
   template <bool AllowZero = false, typename EnumType>
   bool ParseEnum(llvm::SmallDenseMap<TokenKind, EnumType> &EnumMap,
                  EnumType *Enum);
+  template <typename FlagType>
+  bool ParseFlags(llvm::SmallDenseMap<TokenKind, FlagType> &EnumMap,
+                  FlagType *Enum);
+  bool
+  ParseDescriptorRangeFlags(llvm::hlsl::rootsig::DescriptorRangeFlags *Enum);
   bool ParseShaderVisibility(llvm::hlsl::rootsig::ShaderVisibility *Enum);
 
   /// Invoke the lexer to consume a token and update CurToken with the result
