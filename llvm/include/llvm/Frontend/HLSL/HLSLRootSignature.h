@@ -20,8 +20,15 @@ namespace llvm {
 namespace hlsl {
 namespace rootsig {
 
-// Models RootElement
-using RootElement = std::variant<std::monostate>;
+// Definitions of the in-memory data layout structures
+
+// Models the end of a descriptor table and stores its visibility
+struct DescriptorTable {
+  uint32_t NumClauses = 0; // The number of clauses in the table
+};
+
+// Models RootElement : DescriptorTable
+using RootElement = std::variant<DescriptorTable>;
 
 } // namespace rootsig
 } // namespace hlsl

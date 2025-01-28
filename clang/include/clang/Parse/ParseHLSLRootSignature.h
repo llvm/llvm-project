@@ -109,6 +109,35 @@ public:
   bool Parse();
 
 private:
+  // Root Element helpers
+  bool ParseRootElement();
+  bool ParseDescriptorTable();
+
+  /// Invoke the lexer to consume a token and update CurToken with the result
+  ///
+  /// Return value denotes if we were already at the last token.
+  ///
+  /// This is used to avoid having to constantly access the Lexer's CurToken
+  bool ConsumeNextToken() {
+    if (Lexer.ConsumeToken())
+      return true; // Report lexer err
+    CurToken = Lexer.GetCurToken();
+    return false;
+  }
+
+  // Is the current token one of the expected kinds
+  bool EnsureExpectedToken(TokenKind AnyExpected);
+  bool EnsureExpectedToken(ArrayRef<TokenKind> AnyExpected);
+
+  /// Consume the next token and report an error if it is not of the expected
+  /// kind.
+  ///
+  /// Return value denotes if it failed to match the expected kind, either it is
+  /// the end of the stream or it didn't match any of the expected kinds.
+  bool ConsumeExpectedToken(TokenKind Expected);
+  bool ConsumeExpectedToken(ArrayRef<TokenKind> AnyExpected);
+
+private:
   SmallVector<llvm::hlsl::rootsig::RootElement> &Elements;
   RootSignatureLexer &Lexer;
   DiagnosticsEngine &Diags;
