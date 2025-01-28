@@ -2351,7 +2351,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       // Parse the definition body.
       ParseStructUnionBody(StartLoc, TagType, cast<RecordDecl>(D));
       if (SkipBody.CheckSameAsPrevious &&
-          !Actions.ActOnDuplicateDefinition(TagOrTempResult.get(), SkipBody)) {
+          !Actions.ActOnDuplicateDefinition(getCurScope(),
+                                            TagOrTempResult.get(), SkipBody)) {
         DS.SetTypeSpecError();
         return;
       }
