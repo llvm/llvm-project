@@ -692,10 +692,10 @@ bool BPFMIPreEmitPeephole::removeMayGotoZero() {
   for (MachineBasicBlock &MBB : make_early_inc_range(reverse(*MF))) {
     Prev_MBB = Curr_MBB;
     Curr_MBB = &MBB;
-    if (Prev_MBB == nullptr)
+    if (Prev_MBB == nullptr || Curr_MBB->empty())
       continue;
 
-    MachineInstr &MI = MBB.back();
+    MachineInstr &MI = Curr_MBB->back();
     if (MI.getOpcode() != TargetOpcode::INLINEASM_BR)
       continue;
 
@@ -718,11 +718,11 @@ bool BPFMIPreEmitPeephole::removeMayGotoZero() {
 
     // Get the may_goto branch target.
     MachineOperand &MO = MI.getOperand(InlineAsm::MIOp_FirstOperand + 1);
-    if (MO.getMBB() != Prev_MBB)
+    if (!MO.isMBB() || MO.getMBB() != Prev_MBB)
       continue;
 
     Changed = true;
-    if (MBB.begin() == MI) {
+    if (Curr_MBB->begin() == MI) {
       // Single 'may_goto' insn in the same basic block.
       Curr_MBB->removeSuccessor(Prev_MBB);
       for (MachineBasicBlock *Pred : Curr_MBB->predecessors())
