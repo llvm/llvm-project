@@ -1809,4 +1809,6 @@ def err_hlsl_packoffset_invalid_reg : Error<"invalid resource class specifier '%
 // HLSL Root Signature Parser Diagnostics
 def err_hlsl_rootsig_unexpected_token_kind : Error<"expected %select{the following|one of the following}0 token kind%select{|s}0: %1">;
 def err_hlsl_rootsig_repeat_param : Error<"specified the same parameter '%0' multiple times">;
+def err_hlsl_rootsig_non_zero_flag : Error<"specified a non-zero integer as a flag">;
+
 } // end of Parser diagnostics
