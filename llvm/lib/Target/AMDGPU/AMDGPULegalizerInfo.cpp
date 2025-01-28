@@ -736,13 +736,29 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           .widenScalarToNextMultipleOf(0, 32)
           .maxScalar(0, S32);
     } else {
-      getActionDefinitionsBuilder({G_ADD, G_SUB})
+      getActionDefinitionsBuilder(G_SUB)
           .legalFor({S32, S16, V2S16})
           .clampMaxNumElementsStrict(0, S16, 2)
           .scalarize(0)
           .minScalar(0, S16)
           .widenScalarToNextMultipleOf(0, 32)
           .maxScalar(0, S32);
+      if (ST.hasLshlAddB64())
+        getActionDefinitionsBuilder(G_ADD)
+            .legalFor({S64, S32, S16, V2S16})
+            .clampMaxNumElementsStrict(0, S16, 2)
+            .scalarize(0)
+            .minScalar(0, S16)
+            .widenScalarToNextMultipleOf(0, 32)
+            .maxScalar(0, S32);
+      else
+        getActionDefinitionsBuilder(G_ADD)
+            .legalFor({S32, S16, V2S16})
+            .clampMaxNumElementsStrict(0, S16, 2)
+            .scalarize(0)
+            .minScalar(0, S16)
+            .widenScalarToNextMultipleOf(0, 32)
+            .maxScalar(0, S32);
     }
 
     if (ST.hasScalarSMulU64()) {
