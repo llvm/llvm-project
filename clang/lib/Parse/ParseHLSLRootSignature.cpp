@@ -150,10 +150,63 @@ bool RootSignatureParser::ParseDescriptorTableClause() {
   if (ParseRegister(&Clause.Register))
     return true;
 
+  // Define optional paramaters
+  llvm::SmallDenseMap<TokenKind, ParamType> RefMap = {
+      {TokenKind::kw_numDescriptors, &Clause.NumDescriptors},
+  };
+  if (ParseOptionalParams({RefMap}))
+    return true;
+
   if (ConsumeExpectedToken(TokenKind::pu_r_paren))
     return true;
 
   Elements.push_back(Clause);
+  return false;
+}
+
+// Helper struct so that we can use the overloaded notation of std::visit
+template <class... Ts> struct ParseMethods : Ts... {
+  using Ts::operator()...;
+};
+template <class... Ts> ParseMethods(Ts...) -> ParseMethods<Ts...>;
+
+bool RootSignatureParser::ParseParam(ParamType Ref) {
+  if (ConsumeExpectedToken(TokenKind::pu_equal))
+    return true;
+
+  bool Error;
+  std::visit(ParseMethods{
+    [&](uint32_t *X) { Error = ParseUInt(X); },
+  }, Ref);
+
+  return Error;
+}
+
+bool RootSignatureParser::ParseOptionalParams(
+    llvm::SmallDenseMap<TokenKind, ParamType> &RefMap) {
+  SmallVector<TokenKind> ParamKeywords;
+  for (auto RefPair : RefMap)
+    ParamKeywords.push_back(RefPair.first);
+
+  // Keep track of which keywords have been seen to report duplicates
+  llvm::SmallDenseSet<TokenKind> Seen;
+
+  while (TryConsumeExpectedToken(TokenKind::pu_comma)) {
+    if (ConsumeExpectedToken(ParamKeywords))
+      return true;
+
+    TokenKind ParamKind = CurToken.Kind;
+    if (Seen.contains(ParamKind)) {
+      Diags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+          << FormatTokenKinds({ParamKind});
+      return true;
+    }
+    Seen.insert(ParamKind);
+
+    if (ParseParam(RefMap[ParamKind]))
+      return true;
+  }
+
   return false;
 }
 
@@ -203,6 +256,18 @@ bool RootSignatureParser::ParseRegister(Register *Register) {
   }
 
   if (HandleUIntLiteral(Register->Number))
+    return true; // propogate NumericLiteralParser error
+
+  return false;
+}
+
+bool RootSignatureParser::ParseUInt(uint32_t *X) {
+  // Treat a postively signed integer as though it is unsigned to match DXC
+  TryConsumeExpectedToken(TokenKind::pu_plus);
+  if (ConsumeExpectedToken(TokenKind::int_literal))
+    return true;
+
+  if (HandleUIntLiteral(*X))
     return true; // propogate NumericLiteralParser error
 
   return false;

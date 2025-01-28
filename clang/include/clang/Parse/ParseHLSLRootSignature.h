@@ -45,10 +45,24 @@ private:
   bool ParseDescriptorTable();
   bool ParseDescriptorTableClause();
 
+  /// It is helpful to have a generalized dispatch method so that when we need
+  /// to parse multiple optional parameters in any order, we can invoke this
+  /// method.
+  ///
+  /// Each unique ParamType is expected to define a custom Parse method. This
+  /// function will switch on the ParamType using std::visit and dispatch onto
+  /// the corresponding Parse method
+  bool ParseParam(llvm::hlsl::rootsig::ParamType Ref);
+
+  /// Parses as many optional parameters as possible in any order
+  bool ParseOptionalParams(
+      llvm::SmallDenseMap<TokenKind, llvm::hlsl::rootsig::ParamType> &RefMap);
+
   /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
   /// 32-bit integer
   bool HandleUIntLiteral(uint32_t &X);
   bool ParseRegister(llvm::hlsl::rootsig::Register *Reg);
+  bool ParseUInt(uint32_t *X);
 
   /// Invoke the Lexer to consume a token and update CurToken with the result
   void ConsumeNextToken() { CurToken = Lexer.ConsumeToken(); }
