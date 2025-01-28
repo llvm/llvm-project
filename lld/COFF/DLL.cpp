@@ -927,6 +927,7 @@ void DelayLoadContents::create() {
       Chunk *t = newThunkChunk(s, tm);
       auto *a = make<DelayAddressChunk>(ctx, t);
       addresses.push_back(a);
+      s->setLocation(a);
       thunks.push_back(t);
       StringRef extName = s->getExternalName();
       if (extName.empty()) {
@@ -967,8 +968,6 @@ void DelayLoadContents::create() {
       auxIatCopy.push_back(make<NullChunk>(ctx, 8));
     }
 
-    for (int i = 0, e = syms.size(); i < e; ++i)
-      syms[i]->setLocation(addresses[base + i]);
     auto *mh = make<NullChunk>(8, 8);
     moduleHandles.push_back(mh);
 
