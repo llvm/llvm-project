@@ -3123,6 +3123,15 @@ TEST_F(TokenAnnotatorTest, UnderstandsAttributes) {
   EXPECT_TOKEN(Tokens[7], tok::identifier, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[8], tok::l_paren, TT_FunctionDeclarationLParen);
 
+  Tokens = annotate("struct __attribute__((x)) foo {};");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_AttributeLParen);
+  EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[6], tok::r_paren, TT_AttributeRParen);
+  EXPECT_TOKEN(Tokens[7], tok::identifier, TT_Unknown);
+  EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_StructLBrace);
+
   FormatStyle Style = getLLVMStyle();
   Style.AttributeMacros.push_back("FOO");
   Tokens = annotate("bool foo FOO(unused);", Style);
