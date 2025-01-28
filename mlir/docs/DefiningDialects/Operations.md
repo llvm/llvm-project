@@ -248,7 +248,7 @@ To declare a variadic operand that has a variadic number of sub-ranges, wrap the
 `TypeConstraint` for the operand with `VariadicOfVariadic<...,
 "<segment-attribute-name>">`.
 
-The second field of the `VariadicOfVariadic` is the name of an `I32ElementsAttr`
+The second field of the `VariadicOfVariadic` is the name of a `DenseI32ArrayAttr`
 argument that contains the sizes of the variadic sub-ranges. This attribute will
 be used when determining the size of sub-ranges, or when updating the size of
 sub-ranges.
