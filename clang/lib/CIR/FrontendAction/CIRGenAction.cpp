@@ -32,7 +32,7 @@ getBackendActionFromOutputType(CIRGenAction::OutputType Action) {
 
 static std::unique_ptr<llvm::Module> lowerFromCIRToLLVMIR(
     const clang::FrontendOptions &FEOpts, mlir::ModuleOp MLIRModule,
-    std::unique_ptr<mlir::MLIRContext> MLIRCtx, llvm::LLVMContext &LLVMCtx) {
+    std::shared_ptr<mlir::MLIRContext> MLIRCtx, llvm::LLVMContext &LLVMCtx) {
   return direct::lowerDirectlyFromCIRToLLVMIR(MLIRModule, LLVMCtx);
 }
 
@@ -72,7 +72,7 @@ public:
   void HandleTranslationUnit(ASTContext &C) override {
     Gen->HandleTranslationUnit(C);
     mlir::ModuleOp MlirModule = Gen->getModule();
-    auto MLIRCtx = Gen->takeContext();
+    std::shared_ptr<mlir::MLIRContext> MLIRCtx = Gen->getContext();
     switch (Action) {
     case CIRGenAction::OutputType::EmitCIR:
       if (OutputStream && MlirModule) {
@@ -84,7 +84,7 @@ public:
     case CIRGenAction::OutputType::EmitLLVM: {
       llvm::LLVMContext LLVMCtx;
       auto LLVMModule = lowerFromCIRToLLVMIR(CI.getFrontendOpts(), MlirModule,
-                                             std::move(MLIRCtx), LLVMCtx);
+                                             MLIRCtx, LLVMCtx);
 
       BackendAction BEAction = getBackendActionFromOutputType(Action);
       emitBackendOutput(
