@@ -19,6 +19,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#ifndef __CLC_MATH_CLC_SUBNORMAL_CONFIG_H__
+#define __CLC_MATH_CLC_SUBNORMAL_CONFIG_H__
 
 #include <clc/clcfunc.h>
 
@@ -26,3 +28,5 @@ _CLC_DECL bool __clc_subnormals_disabled();
 _CLC_DECL bool __clc_fp16_subnormals_supported();
 _CLC_DECL bool __clc_fp32_subnormals_supported();
 _CLC_DECL bool __clc_fp64_subnormals_supported();
+
+#endif // __CLC_MATH_CLC_SUBNORMAL_CONFIG_H__
