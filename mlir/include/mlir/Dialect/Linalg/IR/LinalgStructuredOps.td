@@ -727,10 +727,21 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
         outs(%C: tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
     ```
 
-    Note that by permuting the dims in the co-domains of the `affine_map`s, we
-    can apply arbitrary transposes to the inputs and output. Similarly,
-    arbitrary broadcasts can be achieved through leaving out dims on either
-    input operand - these dims' inferred iter type will be parallel.
+    Note that by permuting dims in the co-domains of the `affine_map`s arbitrary
+    transposes can be applied to the inputs and output. Similarly, arbitrary
+    broadcasts can be achieved through leaving out dims on either input operand
+    (these dims' inferred iter type will be parallel). For example, the
+    following is a variant of batch-matmul where a transposition is applied to
+    `A` while matrix `B` gets broadcasted along the batch dimension:
+
+    ```
+    linalg.contract
+        indexing_maps = [affine_map<(batch, m, n, k) -> (batch, k, m)>,
+                         affine_map<(batch, m, n, k) -> (k, n)>,
+                         affine_map<(batch, m, n, k) -> (batch, m, n)>]
+        ins(%A, %B: memref<?x?x?xf32>, memref<?x?xf32>)
+        outs(%C: memref<?x?x?xf32>)
+    ```
 
     Numeric casting is performed on the operands to the inner multiplication,
     promoting them to the same data type as the accumulator/output.
