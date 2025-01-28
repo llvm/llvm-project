@@ -152,6 +152,10 @@ mlir::nvgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
   if (!memRefType || !NVGPUDialect::hasSharedMemoryAddressSpace(memRefType))
     return failure();
 
+  // Not support 0D MemRefs.
+  if (memRefType.getRank() == 0)
+    return failure();
+
   // Abort if the given value has any sub-views; we do not do any alias
   // analysis.
   bool hasSubView = false;

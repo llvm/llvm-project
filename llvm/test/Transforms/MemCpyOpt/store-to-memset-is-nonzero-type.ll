@@ -5,7 +5,7 @@
 
 define void @array_zero(ptr %p) {
 ; CHECK-LABEL: @array_zero(
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P:%.*]], i8 undef, i64 0, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P:%.*]], i8 poison, i64 0, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   store [0 x i8] zeroinitializer, ptr %p
@@ -25,7 +25,7 @@ define void @array_nonzero(ptr %p) {
 
 define void @struct_zero(ptr %p) {
 ; CHECK-LABEL: @struct_zero(
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P:%.*]], i8 undef, i64 0, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P:%.*]], i8 poison, i64 0, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   store { } zeroinitializer, ptr %p

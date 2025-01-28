@@ -3462,6 +3462,21 @@ dependentScopeDeclRefExpr(hasDependentName("v")) matches `T::v`
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DependentNameType.html">DependentNameType</a>&gt;</td><td class="name" onclick="toggle('hasDependentName1')"><a name="hasDependentName1Anchor">hasDependentName</a></td><td>std::string N</td></tr>
+<tr><td colspan="4" class="doc" id="hasDependentName1"><pre>Matches the dependent name of a DependentNameType.
+
+Matches the dependent name of a DependentNameType
+
+Given:
+
+  template &lt;typename T&lt; struct declToImport {
+    typedef typename T::type dependent_name;
+  };
+
+dependentNameType(hasDependentName("type")) matches `T::type`
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXDependentScopeMemberExpr.html">CXXDependentScopeMemberExpr</a>&gt;</td><td class="name" onclick="toggle('memberHasSameNameAsBoundNode0')"><a name="memberHasSameNameAsBoundNode0Anchor">memberHasSameNameAsBoundNode</a></td><td>std::string BindingID</td></tr>
 <tr><td colspan="4" class="doc" id="memberHasSameNameAsBoundNode0"><pre>Matches template-dependent, but known, member names against an already-bound
 node

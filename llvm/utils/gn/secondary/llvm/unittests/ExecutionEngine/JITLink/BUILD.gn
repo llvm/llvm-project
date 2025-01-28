@@ -16,11 +16,13 @@ unittest("JITLinkTests") {
   sources = [
     "AArch32ErrorTests.cpp",
     "AArch32Tests.cpp",
+    "AArch64Tests.cpp",
     "EHFrameSupportTests.cpp",
     "JITLinkTestUtils.cpp",
     "LinkGraphTests.cpp",
     "MachOLinkGraphTests.cpp",
     "MemoryManagerErrorTests.cpp",
     "StubsTests.cpp",
+    "X86_64Tests.cpp",
   ]
 }

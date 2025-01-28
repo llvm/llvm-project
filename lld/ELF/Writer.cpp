@@ -381,9 +381,11 @@ template <class ELFT> void Writer<ELFT>::run() {
     if (errCount(ctx))
       return;
 
-    if (auto e = buffer->commit())
-      Err(ctx) << "failed to write output '" << buffer->getPath()
-               << "': " << std::move(e);
+    if (!ctx.e.disableOutput) {
+      if (auto e = buffer->commit())
+        Err(ctx) << "failed to write output '" << buffer->getPath()
+                 << "': " << std::move(e);
+    }
 
     if (!ctx.arg.cmseOutputLib.empty())
       writeARMCmseImportLib<ELFT>(ctx);
@@ -645,7 +647,6 @@ static bool isRelroSection(Ctx &ctx, const OutputSection *sec) {
 enum RankFlags {
   RF_NOT_ADDR_SET = 1 << 27,
   RF_NOT_ALLOC = 1 << 26,
-  RF_HIP_FATBIN = 1 << 19,
   RF_PARTITION = 1 << 18, // Partition number (8 bits)
   RF_LARGE_ALT = 1 << 15,
   RF_WRITE = 1 << 14,
@@ -742,15 +743,6 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
   // sections, place non-NOBITS sections first.
   if (osec.type == SHT_NOBITS)
     rank |= RF_BSS;
-
-  // Put HIP fatbin related sections further away to avoid wasting relocation
-  // range to jump over them.  Make sure .hip_fatbin is the furthest.
-  if (osec.name == ".hipFatBinSegment")
-    rank |= RF_HIP_FATBIN;
-  if (osec.name == ".hip_gpubin_handle")
-    rank |= RF_HIP_FATBIN | 2;
-  if (osec.name == ".hip_fatbin")
-    rank |= RF_HIP_FATBIN | RF_WRITE | 3;
 
   // Some architectures have additional ordering restrictions for sections
   // within the same PT_LOAD.

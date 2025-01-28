@@ -29,6 +29,7 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Sema/Designator.h"
@@ -713,7 +714,7 @@ public:
   /// variables vector are acceptable.
   ///
   /// LastParamTransformed, if non-null, will be set to the index of the last
-  /// parameter on which transformation was started. In the event of an error,
+  /// parameter on which transfromation was started. In the event of an error,
   /// this will contain the parameter which failed to instantiate.
   ///
   /// Return true on error.
@@ -2075,15 +2076,18 @@ public:
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
-  OMPClause *RebuildOMPAllocateClause(Expr *Allocate,
-                                      OpenMPAllocateClauseModifier ACModifier,
-                                      ArrayRef<Expr *> VarList,
-                                      SourceLocation StartLoc,
-                                      SourceLocation LParenLoc,
-                                      SourceLocation ColonLoc,
-                                      SourceLocation EndLoc) {
+  OMPClause *
+  RebuildOMPAllocateClause(Expr *Allocate, Expr *Alignment,
+                           OpenMPAllocateClauseModifier FirstModifier,
+                           SourceLocation FirstModifierLoc,
+                           OpenMPAllocateClauseModifier SecondModifier,
+                           SourceLocation SecondModifierLoc,
+                           ArrayRef<Expr *> VarList, SourceLocation StartLoc,
+                           SourceLocation LParenLoc, SourceLocation ColonLoc,
+                           SourceLocation EndLoc) {
     return getSema().OpenMP().ActOnOpenMPAllocateClause(
-        Allocate, ACModifier, VarList, StartLoc, LParenLoc, ColonLoc, EndLoc);
+        Allocate, Alignment, FirstModifier, FirstModifierLoc, SecondModifier,
+        SecondModifierLoc, VarList, StartLoc, LParenLoc, ColonLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'num_teams' clause.
@@ -8496,7 +8500,7 @@ TreeTransform<Derived>::TransformDeclStmt(DeclStmt *S) {
             getSema()
                 .getASTContext()
                 .getTypeDeclType(TD)
-                .getCanonicalType()
+                .getSingleStepDesugaredType(getSema().getASTContext())
                 ->containsUnexpandedParameterPack();
 
       if (auto *VD = dyn_cast<VarDecl>(Transformed))
@@ -11224,6 +11228,13 @@ TreeTransform<Derived>::TransformOMPAllocateClause(OMPAllocateClause *C) {
       return nullptr;
     Allocator = AllocatorRes.get();
   }
+  Expr *Alignment = C->getAlignment();
+  if (Alignment) {
+    ExprResult AlignmentRes = getDerived().TransformExpr(Alignment);
+    if (AlignmentRes.isInvalid())
+      return nullptr;
+    Alignment = AlignmentRes.get();
+  }
   llvm::SmallVector<Expr *, 16> Vars;
   Vars.reserve(C->varlist_size());
   for (auto *VE : C->varlist()) {
@@ -11233,7 +11244,9 @@ TreeTransform<Derived>::TransformOMPAllocateClause(OMPAllocateClause *C) {
     Vars.push_back(EVar.get());
   }
   return getDerived().RebuildOMPAllocateClause(
-      Allocator, C->getAllocatorModifier(), Vars, C->getBeginLoc(),
+      Allocator, Alignment, C->getFirstAllocateModifier(),
+      C->getFirstAllocateModifierLoc(), C->getSecondAllocateModifier(),
+      C->getSecondAllocateModifierLoc(), Vars, C->getBeginLoc(),
       C->getLParenLoc(), C->getColonLoc(), C->getEndLoc());
 }
 
@@ -11647,22 +11660,48 @@ template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitSelfClause(
     const OpenACCSelfClause &C) {
 
-  if (C.hasConditionExpr()) {
-    Expr *Cond = const_cast<Expr *>(C.getConditionExpr());
-    Sema::ConditionResult Res =
-        Self.TransformCondition(Cond->getExprLoc(), /*Var=*/nullptr, Cond,
-                                Sema::ConditionKind::Boolean);
+  // If this is an 'update' 'self' clause, this is actually a var list instead.
+  if (ParsedClause.getDirectiveKind() == OpenACCDirectiveKind::Update) {
+    llvm::SmallVector<Expr *> InstantiatedVarList;
+    for (Expr *CurVar : C.getVarList()) {
+      ExprResult Res = Self.TransformExpr(CurVar);
 
-    if (Res.isInvalid() || !Res.get().second)
-      return;
+      if (!Res.isUsable())
+        continue;
 
-    ParsedClause.setConditionDetails(Res.get().second);
+      Res = Self.getSema().OpenACC().ActOnVar(ParsedClause.getClauseKind(),
+                                              Res.get());
+
+      if (Res.isUsable())
+        InstantiatedVarList.push_back(Res.get());
+    }
+
+    ParsedClause.setVarListDetails(InstantiatedVarList,
+                                   /*IsReadOnly=*/false, /*IsZero=*/false);
+
+    NewClause = OpenACCSelfClause::Create(
+        Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+        ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+        ParsedClause.getEndLoc());
+  } else {
+
+    if (C.hasConditionExpr()) {
+      Expr *Cond = const_cast<Expr *>(C.getConditionExpr());
+      Sema::ConditionResult Res =
+          Self.TransformCondition(Cond->getExprLoc(), /*Var=*/nullptr, Cond,
+                                  Sema::ConditionKind::Boolean);
+
+      if (Res.isInvalid() || !Res.get().second)
+        return;
+
+      ParsedClause.setConditionDetails(Res.get().second);
+    }
+
+    NewClause = OpenACCSelfClause::Create(
+        Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+        ParsedClause.getLParenLoc(), ParsedClause.getConditionExpr(),
+        ParsedClause.getEndLoc());
   }
-
-  NewClause = OpenACCSelfClause::Create(
-      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
-      ParsedClause.getLParenLoc(), ParsedClause.getConditionExpr(),
-      ParsedClause.getEndLoc());
 }
 
 template <typename Derived>
@@ -11699,6 +11738,30 @@ void OpenACCClauseTransform<Derived>::VisitPrivateClause(
                                  /*IsReadOnly=*/false, /*IsZero=*/false);
 
   NewClause = OpenACCPrivateClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitHostClause(
+    const OpenACCHostClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+
+  NewClause = OpenACCHostClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitDeviceClause(
+    const OpenACCDeviceClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+
+  NewClause = OpenACCDeviceClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
       ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
       ParsedClause.getEndLoc());
@@ -14884,9 +14947,6 @@ TreeTransform<Derived>::TransformArrayTypeTraitExpr(ArrayTypeTraitExpr *E) {
     SubExpr = getDerived().TransformExpr(E->getDimensionExpression());
     if (SubExpr.isInvalid())
       return ExprError();
-
-    if (!getDerived().AlwaysRebuild() && SubExpr.get() == E->getDimensionExpression())
-      return E;
   }
 
   return getDerived().RebuildArrayTypeTrait(E->getTrait(), E->getBeginLoc(), T,
@@ -16995,10 +17055,9 @@ QualType TreeTransform<Derived>::RebuildDependentSizedMatrixType(
                                  AttributeLoc);
 }
 
-template<typename Derived>
+template <typename Derived>
 QualType TreeTransform<Derived>::RebuildFunctionProtoType(
-    QualType T,
-    MutableArrayRef<QualType> ParamTypes,
+    QualType T, MutableArrayRef<QualType> ParamTypes,
     const FunctionProtoType::ExtProtoInfo &EPI) {
   return SemaRef.BuildFunctionType(T, ParamTypes,
                                    getDerived().getBaseLocation(),
@@ -17352,6 +17411,16 @@ TreeTransform<Derived>::TransformCapturedStmt(CapturedStmt *S) {
   }
 
   return getSema().ActOnCapturedRegionEnd(Body.get());
+}
+
+template <typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformSYCLKernelCallStmt(SYCLKernelCallStmt *S) {
+  // SYCLKernelCallStmt nodes are inserted upon completion of a (non-template)
+  // function definition or instantiation of a function template specialization
+  // and will therefore never appear in a dependent context.
+  llvm_unreachable("SYCL kernel call statement cannot appear in dependent "
+                   "context");
 }
 
 template <typename Derived>

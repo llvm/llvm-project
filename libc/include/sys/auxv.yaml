@@ -1,4 +1,5 @@
-header: sys-auxv.h
+header: sys/auxv.h
+header_template: auxv.h.def
 macros: []
 types: []
 enums: []

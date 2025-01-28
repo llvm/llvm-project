@@ -1184,8 +1184,7 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
 
     auto TryAddNDDHint = [&](const MachineOperand &MO) {
       Register Reg = MO.getReg();
-      Register PhysReg =
-          Register::isPhysicalRegister(Reg) ? Reg : Register(VRM->getPhys(Reg));
+      Register PhysReg = Reg.isPhysical() ? Reg : Register(VRM->getPhys(Reg));
       if (PhysReg && !MRI->isReserved(PhysReg) && !is_contained(Hints, PhysReg))
         TwoAddrHints.insert(PhysReg);
     };

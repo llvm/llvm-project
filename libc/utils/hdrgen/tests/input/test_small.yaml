@@ -1,4 +1,5 @@
-header: test_header.h
+header: test_small.h
+header_template: test_small.h.def
 macros:
   - macro_name: MACRO_A
     macro_value: 1
@@ -62,5 +63,3 @@ functions:
       - type: float
     standards:
       - stdc
-
-

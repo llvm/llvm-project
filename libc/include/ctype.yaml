@@ -1,4 +1,5 @@
 header: ctype.h
+header_template: ctype.h.def
 macros: []
 types:
   - type_name: locale_t

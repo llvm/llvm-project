@@ -1,4 +1,5 @@
-header: sys-resource.h
+header: sys/resource.h
+header_template: resource.h.def
 macros: []
 types:
   - type_name: struct_rlimit

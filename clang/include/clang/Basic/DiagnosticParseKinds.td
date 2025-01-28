@@ -1658,6 +1658,8 @@ def warn_omp_depend_in_ordered_deprecated : Warning<"'depend' clause for"
 def warn_omp_invalid_attribute_for_ompx_attributes : Warning<"'ompx_attribute' clause only allows "
   "'amdgpu_flat_work_group_size', 'amdgpu_waves_per_eu', and 'launch_bounds'; "
   "%0 is ignored">, InGroup<OpenMPExtensions>;
+def err_omp_duplicate_modifier : Error<"duplicate modifier '%0' in '%1' clause">;
+def err_omp_expected_modifier : Error<"expected modifier in '%0' clause">;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<
