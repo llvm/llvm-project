@@ -87,6 +87,9 @@ template <typename T, size_t N> struct ExceptValues {
             out_bits += values[i].rnd_upward_offset;
           break;
         case FE_DOWNWARD:
+          // Use conditionals instead of ternary operator to work around gcc's
+          // -Wconversion false positive bug:
+          // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=101537
           if (sign)
             out_bits += values[i].rnd_upward_offset;
           else
