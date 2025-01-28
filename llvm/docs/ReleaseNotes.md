@@ -571,6 +571,10 @@ Changes to LLDB
 * LLDB can now read the `fpmr` register from AArch64 Linux processes and core
   files.
 
+* Support was added for debugging AArch64 Linux programs that use the
+  Guarded Control Stack extension (GCS). This includes live processes and core
+  files.
+
 * LLDB now supports execution of user expressions for non-trivial cases for LoongArch and RISC-V targets, like function calls, when some code needs to be executed on the target.
 
 * LLDB now supports optionally enabled/disabled register sets (particularly floating point registers) for RISC-V 64. This happens for targets like `RV64IMAC` or `RV64IMACV`,
