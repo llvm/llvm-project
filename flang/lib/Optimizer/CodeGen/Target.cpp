@@ -572,12 +572,12 @@ struct TargetX86_64 : public GenericTarget<TargetX86_64> {
       // select an fp type of the right size, and it makes things simpler
       // here.
       if (partByteSize > 8)
-        return mlir::FloatType::getF128(context);
+        return mlir::Float128Type::get(context);
       if (partByteSize > 4)
-        return mlir::FloatType::getF64(context);
+        return mlir::Float64Type::get(context);
       if (partByteSize > 2)
-        return mlir::FloatType::getF32(context);
-      return mlir::FloatType::getF16(context);
+        return mlir::Float32Type::get(context);
+      return mlir::Float16Type::get(context);
     }
     assert(partByteSize <= 8 &&
            "expect integer part of aggregate argument to fit into eight bytes");

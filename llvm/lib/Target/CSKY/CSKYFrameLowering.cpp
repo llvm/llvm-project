@@ -441,7 +441,7 @@ void CSKYFrameLowering::determineCalleeSaves(MachineFunction &MF,
     unsigned size = TRI->getSpillSize(*RC);
     Align align = TRI->getSpillAlign(*RC);
 
-    RS->addScavengingFrameIndex(MFI.CreateStackObject(size, align, false));
+    RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(size, align));
   }
 
   unsigned FnSize = EstimateFunctionSizeInBytes(MF, *TII);

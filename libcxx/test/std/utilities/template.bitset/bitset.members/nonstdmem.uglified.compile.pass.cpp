@@ -25,6 +25,8 @@ struct my_base {
   typedef const int* const_iterator;
   typedef my_base base;
   typedef const int& const_reference;
+  typedef std::ptrdiff_t difference_type;
+  typedef std::size_t size_type;
 };
 
 template <std::size_t N>
@@ -69,3 +71,23 @@ static_assert(std::is_same<my_derived<32>::const_reference, const int&>::value, 
 static_assert(std::is_same<my_derived<48>::const_reference, const int&>::value, "");
 static_assert(std::is_same<my_derived<64>::const_reference, const int&>::value, "");
 static_assert(std::is_same<my_derived<96>::const_reference, const int&>::value, "");
+
+static_assert(std::is_same<my_derived<0>::difference_type, std::ptrdiff_t>::value, "");
+static_assert(std::is_same<my_derived<1>::difference_type, std::ptrdiff_t>::value, "");
+static_assert(std::is_same<my_derived<8>::difference_type, std::ptrdiff_t>::value, "");
+static_assert(std::is_same<my_derived<12>::difference_type, std::ptrdiff_t>::value, "");
+static_assert(std::is_same<my_derived<16>::difference_type, std::ptrdiff_t>::value, "");
+static_assert(std::is_same<my_derived<32>::difference_type, std::ptrdiff_t>::value, "");
+static_assert(std::is_same<my_derived<48>::difference_type, std::ptrdiff_t>::value, "");
+static_assert(std::is_same<my_derived<64>::difference_type, std::ptrdiff_t>::value, "");
+static_assert(std::is_same<my_derived<96>::difference_type, std::ptrdiff_t>::value, "");
+
+static_assert(std::is_same<my_derived<0>::size_type, std::size_t>::value, "");
+static_assert(std::is_same<my_derived<1>::size_type, std::size_t>::value, "");
+static_assert(std::is_same<my_derived<8>::size_type, std::size_t>::value, "");
+static_assert(std::is_same<my_derived<12>::size_type, std::size_t>::value, "");
+static_assert(std::is_same<my_derived<16>::size_type, std::size_t>::value, "");
+static_assert(std::is_same<my_derived<32>::size_type, std::size_t>::value, "");
+static_assert(std::is_same<my_derived<48>::size_type, std::size_t>::value, "");
+static_assert(std::is_same<my_derived<64>::size_type, std::size_t>::value, "");
+static_assert(std::is_same<my_derived<96>::size_type, std::size_t>::value, "");

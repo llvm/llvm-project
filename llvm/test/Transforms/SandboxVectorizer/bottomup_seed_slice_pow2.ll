@@ -6,7 +6,6 @@ define void @pow2(ptr %ptr, float %val) {
 ; POW2-LABEL: define void @pow2(
 ; POW2-SAME: ptr [[PTR:%.*]], float [[VAL:%.*]]) {
 ; POW2-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
-; POW2-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
 ; POW2-NEXT:    [[PTR2:%.*]] = getelementptr float, ptr [[PTR]], i32 2
 ; POW2-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4
 ; POW2-NEXT:    [[LD2:%.*]] = load float, ptr [[PTR2]], align 4
@@ -17,8 +16,6 @@ define void @pow2(ptr %ptr, float %val) {
 ; NON-POW2-LABEL: define void @pow2(
 ; NON-POW2-SAME: ptr [[PTR:%.*]], float [[VAL:%.*]]) {
 ; NON-POW2-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
-; NON-POW2-NEXT:    [[PTR1:%.*]] = getelementptr float, ptr [[PTR]], i32 1
-; NON-POW2-NEXT:    [[PTR2:%.*]] = getelementptr float, ptr [[PTR]], i32 2
 ; NON-POW2-NEXT:    [[PACK2:%.*]] = load <3 x float>, ptr [[PTR0]], align 4
 ; NON-POW2-NEXT:    store <3 x float> [[PACK2]], ptr [[PTR0]], align 4
 ; NON-POW2-NEXT:    ret void

@@ -3,6 +3,7 @@
 declare void @readonly_attr(ptr readonly nocapture)
 declare void @writeonly_attr(ptr writeonly nocapture)
 declare void @readnone_attr(ptr readnone nocapture)
+declare void @byval_attr(ptr byval(i32))
 
 declare void @readonly_func(ptr nocapture) readonly
 declare void @writeonly_func(ptr nocapture) writeonly
@@ -24,6 +25,8 @@ entry:
   call void @readnone_attr(ptr %p)
   call void @readnone_func(ptr %p)
 
+  call void @byval_attr(ptr %p)
+
   call void @read_write(ptr %p, ptr %p, ptr %p)
 
   call void @func() ["deopt" (ptr %p)]
@@ -38,6 +41,7 @@ entry:
 ; CHECK:  Just Mod:  Ptr: i8* %p	<->  call void @writeonly_func(ptr %p)
 ; CHECK:  NoModRef:  Ptr: i8* %p	<->  call void @readnone_attr(ptr %p)
 ; CHECK:  NoModRef:  Ptr: i8* %p	<->  call void @readnone_func(ptr %p)
+; CHECK:  Just Ref:  Ptr: i8* %p	<->  call void @byval_attr(ptr %p)
 ; CHECK:  Both ModRef:  Ptr: i8* %p	<->  call void @read_write(ptr %p, ptr %p, ptr %p)
 ; CHECK:  Just Ref:  Ptr: i8* %p	<->  call void @func() [ "deopt"(ptr %p) ]
 ; CHECK:  Both ModRef:  Ptr: i8* %p	<->  call void @writeonly_attr(ptr %p) [ "deopt"(ptr %p) ]

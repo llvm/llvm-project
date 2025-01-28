@@ -13,7 +13,7 @@ typedef struct Globals {
 
 extern Uz_Globs G;
 
-int extract_or_test_files(void) {  
+void extract_or_test_files(void) {
   G.pInfo = G.info;
 }
 
