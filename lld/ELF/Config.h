@@ -619,6 +619,7 @@ struct Ctx : CommonLinkerContext {
   };
   ElfSym sym{};
   std::unique_ptr<SymbolTable> symtab;
+  SmallVector<Symbol *, 0> synthesizedSymbols;
 
   SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
   SmallVector<ELFFileBase *, 0> objectFiles;
