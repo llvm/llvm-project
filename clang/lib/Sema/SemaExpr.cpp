@@ -5810,6 +5810,62 @@ static bool isParenthetizedAndQualifiedAddressOfExpr(Expr *Fn) {
   return false;
 }
 
+/// @brief Checks that each default argument needed to make the call
+/// is defined only once, implementing [over.match.best]/4 rule.
+///
+/// @param FDecl Function declaration selected for the call
+/// @param NumArgs Number of argument explicitly specified in the call
+/// expression
+/// @param CallLoc Source location of the call expression
+static void checkDefaultArgumentsAcrossScopes(Sema &S, FunctionDecl *FDecl,
+                                              int NumArgs,
+                                              SourceLocation CallLoc) {
+  // [over.match.best]/4:
+  // If the best viable function resolves to a function
+  // for which multiple declarations were found,
+  // and if any two of these declarations inhabit different scopes
+  // and specify a default argument that made the function viable,
+  // the program is ill-formed.
+
+  // Calculate the range of parameters,
+  // default arguments of which made the candidate viable.
+  int FirstDefaultArgIndex = NumArgs;
+  int LastDefaultArgIndex = FDecl->getNumParams() - 1;
+
+  // For each such parameter, collect all redeclarations
+  // that have non-inherited default argument.
+  llvm::SmallDenseMap<int, llvm::TinyPtrVector<ParmVarDecl *>> ParamRedecls(
+      LastDefaultArgIndex - FirstDefaultArgIndex + 1);
+  for (FunctionDecl *Redecl : FDecl->redecls()) {
+    for (int i = FirstDefaultArgIndex; i <= LastDefaultArgIndex; ++i) {
+      ParmVarDecl *Param = Redecl->getParamDecl(i);
+      if (Param->hasDefaultArg() && !Param->hasInheritedDefaultArg())
+        ParamRedecls[i].push_back(Param);
+    }
+  }
+
+  // Emit the diagnostic if a given parameter has more than one declaration.
+  // MergeCXXFunctionDecl takes care of redeclarations of a default argument
+  // in the same scope, so if we found more than one,
+  // we assume they come from different scopes.
+  for (auto [ParamIndex, Redecls] : ParamRedecls) {
+    assert(!Redecls.empty());
+    if (Redecls.size() == 1)
+      continue;
+
+    ParmVarDecl *Param = FDecl->getParamDecl(ParamIndex);
+    if (!Param->getDeclName().isEmpty()) {
+      S.Diag(CallLoc, diag::err_ovl_ambiguous_default_arg)
+          << 1 << Param->getName();
+    } else
+      S.Diag(CallLoc, diag::err_ovl_ambiguous_default_arg) << 0;
+    for (ParmVarDecl *Param : Redecls) {
+      S.Diag(Param->getDefaultArg()->getExprLoc(),
+             diag::note_default_argument_declared_here);
+    }
+  }
+}
+
 bool
 Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
                               FunctionDecl *FDecl,
@@ -5888,7 +5944,7 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
         std::any_of(
             FDecl->redecls_begin(), FDecl->redecls_end(),
             [](FunctionDecl *Redecl) { return Redecl->isLocalExternDecl(); })) {
-      checkDefaultArgumentsAcrossScopes(FDecl, Args.size(),
+      checkDefaultArgumentsAcrossScopes(*this, FDecl, Args.size(),
                                         Call->getBeginLoc());
     }
   }
