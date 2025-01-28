@@ -2489,6 +2489,23 @@ are listed below.
 
     $ clang -fuse-ld=lld -Oz -Wl,--icf=safe -fcodegen-data-use code.cc
 
+Strict Aliasing
+---------------
+
+Clang by default applies C/C++'s strict aliasing rules during optimizations. In
+cases C and C++ rules diverge, the more conservative rules are used. Clang does
+not make use of strict aliasing rules in all cases yet, including unions and
+variable-sized arrays. That may change in the future.
+
+As of Clang 20, strict aliasing rules are also applied to nested pointers. The
+new behavior can be disabled using ``-fno-pointer-tbaa``. Note that Clang does
+not apply strict aliasing rules to `void*` pointers to avoid breaking existing
+code, even though this is not required by the standard.
+
+Strict aliasing violations in the source may change program behavior and
+``-fno-strict-aliasing`` disables use of the strict aliasing rules. There also
+is an experimental :doc:`TypeSanitizer` to detect strict aliasing voliations.
+
 Profile Guided Optimization
 ---------------------------
 
