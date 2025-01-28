@@ -5,6 +5,8 @@
 #
 # Ensure that we don't lose dependence tracking information when ptrauth edges
 # are lowered: _main should still depend on _foo.
+#
+# REQUIRES: asserts
 
 # CHECK:    Symbols: { _main }, Dependencies: { (main, { _foo }) }
 
