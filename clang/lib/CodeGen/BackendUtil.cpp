@@ -797,11 +797,9 @@ static void addSanitizers(const Triple &TargetTriple,
 
   bool lowerAllowCheck = LowerAllowCheckPass::IsRequested();
   // Is there a non-zero cutoff?
-  static const double SanitizerMaskCutoffsEps = 0.000000001f;
+  static constexpr double SanitizerMaskCutoffsEps = 0.000000001f;
   for (unsigned int i = 0; i < SanitizerKind::SO_Count; ++i) {
-    std::optional<double> maybeCutoff = CodeGenOpts.SanitizeSkipHotCutoffs[i];
-    lowerAllowCheck |= (maybeCutoff.has_value() &&
-                        (maybeCutoff.value() > SanitizerMaskCutoffsEps));
+    lowerAllowCheck |= (CodeGenOpts.SanitizeSkipHotCutoffs[i].value_or(0) > SanitizerMaskCutoffsEps);
   }
 
   if (lowerAllowCheck) {
@@ -811,18 +809,11 @@ static void addSanitizers(const Triple &TargetTriple,
                                             ThinOrFullLTOPhase Phase) {
       LowerAllowCheckPass::Options Opts;
 
-      // SanitizeSkipHotCutoffs stores doubles with range [0, 1]
-      // Opts.cutoffs wants ints with range [0, 1000000]
+      // SanitizeSkipHotCutoffs: doubles with range [0, 1]
+      // Opts.cutoffs: ints with range [0, 1000000]
+      static_assert(static_cast<int>(SanitizerMaskCutoffsEps * 1000000) == 0);
       for (unsigned int i = 0; i < SanitizerKind::SO_Count; ++i) {
-        std::optional<double> maybeCutoff =
-            CodeGenOpts.SanitizeSkipHotCutoffs[i];
-        if (maybeCutoff.has_value() &&
-            (maybeCutoff.value() > SanitizerMaskCutoffsEps)) {
-          Opts.cutoffs.push_back(maybeCutoff.value() * 1000000);
-        } else {
-          // Default is don't skip the check
-          Opts.cutoffs.push_back(0);
-        }
+        Opts.cutoffs.push_back(CodeGenOpts.SanitizeSkipHotCutoffs[i].value_or(0) * 1000000);
       }
 
       MPM.addPass(createModuleToFunctionPassAdaptor(LowerAllowCheckPass(Opts)));
