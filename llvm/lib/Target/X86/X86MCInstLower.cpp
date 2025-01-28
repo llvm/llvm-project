@@ -1710,7 +1710,7 @@ static void printZeroExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
 
 void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
   assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
-  assert((getSubtarget().isOSWindows() || TM.getTargetTriple().isUEFI()) &&
+  assert(getSubtarget().isOSWindowsOrUEFI() &&
          "SEH_ instruction Windows and UEFI only");
 
   // Use the .cv_fpo directives if we're emitting CodeView on 32-bit x86.
