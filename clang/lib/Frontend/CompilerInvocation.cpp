@@ -4012,6 +4012,8 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   } else if (Opts.SignedOverflowBehavior == LangOptions::SOB_Defined) {
     GenerateArg(Consumer, OPT_fwrapv);
   }
+  if (Opts.PointerOverflowDefined)
+    GenerateArg(Consumer, OPT_fwrapv_pointer);
 
   if (Opts.MSCompatibilityVersion != 0) {
     unsigned Major = Opts.MSCompatibilityVersion / 10000000;
@@ -4461,6 +4463,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   }
   else if (Args.hasArg(OPT_fwrapv))
     Opts.setSignedOverflowBehavior(LangOptions::SOB_Defined);
+  if (Args.hasArg(OPT_fwrapv_pointer))
+    Opts.PointerOverflowDefined = true;
 
   Opts.MSCompatibilityVersion = 0;
   if (const Arg *A = Args.getLastArg(OPT_fms_compatibility_version)) {
