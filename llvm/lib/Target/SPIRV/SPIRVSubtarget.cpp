@@ -158,7 +158,7 @@ void SPIRVSubtarget::initAvailableExtInstSets() {
 
 // Set available extensions after SPIRVSubtarget is created.
 void SPIRVSubtarget::initAvailableExtensions(
-    std::set<SPIRV::Extension::Extension> AllowedExtIds) {
+    const std::set<SPIRV::Extension::Extension> &AllowedExtIds) {
   AvailableExtensions.clear();
   AvailableExtensions.insert(AllowedExtIds.begin(), AllowedExtIds.end());
 
