@@ -648,9 +648,7 @@ define <vscale x 4 x float> @scalable_store_to_fixed_load(<vscale x 4 x float> %
 ; CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <16 x float> }, align 64
 ; CHECK-NEXT:    [[TMP0:%.*]] = fadd <vscale x 4 x float> [[DOTCOERCE:%.*]], [[DOTCOERCE]]
 ; CHECK-NEXT:    store <vscale x 4 x float> [[TMP0]], ptr [[RETVAL]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x float>, ptr [[RETVAL]], align 64
-; CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v16f32(<vscale x 4 x float> poison, <16 x float> [[TMP1]], i64 0)
-; CHECK-NEXT:    ret <vscale x 4 x float> [[CAST_SCALABLE]]
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 ;
 entry:
   %retval = alloca { <16 x float> }
@@ -667,9 +665,7 @@ define <vscale x 4 x float> @scalable_store_to_fixed_load_only_lower_bound(<vsca
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RETVAL:%.*]] = alloca { <vscale x 4 x float> }, align 16
 ; CHECK-NEXT:    store <vscale x 4 x float> [[A:%.*]], ptr [[RETVAL]], align 16
-; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr [[RETVAL]], align 64
-; CHECK-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v16f32(<vscale x 4 x float> poison, <16 x float> [[TMP0]], i64 0)
-; CHECK-NEXT:    ret <vscale x 4 x float> [[CAST_SCALABLE]]
+; CHECK-NEXT:    ret <vscale x 4 x float> [[A]]
 ;
 entry:
   %retval = alloca { <vscale x 4 x float> }
@@ -760,7 +756,7 @@ define <4 x float> @scalable_store_to_small_fixed_load(<vscale x 4 x float> %a) 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PTR:%.*]] = alloca <vscale x 4 x float>, align 16
 ; CHECK-NEXT:    store <vscale x 4 x float> [[A:%.*]], ptr [[PTR]], align 16
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[PTR]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.vector.extract.v4f32.nxv4f32(<vscale x 4 x float> [[A]], i64 0)
 ; CHECK-NEXT:    ret <4 x float> [[TMP0]]
 ;
 entry:
