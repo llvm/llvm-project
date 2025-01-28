@@ -9072,7 +9072,6 @@ addUsersInExitBlocks(VPlan &Plan,
 
   auto *MiddleVPBB = Plan.getMiddleBlock();
   VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
-  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
 
   // Introduce extract for exiting values and update the VPIRInstructions
   // modeling the corresponding LCSSA phis.
