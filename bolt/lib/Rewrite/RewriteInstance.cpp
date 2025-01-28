@@ -1716,7 +1716,11 @@ void RewriteInstance::disassemblePLTSectionX86(BinarySection &Section,
   const uint64_t SectionAddress = Section.getAddress();
   const uint64_t SectionSize = Section.getSize();
 
-  for (uint64_t EntryOffset = 0; EntryOffset + EntrySize <= SectionSize;
+  // Parse the PLT header
+  uint64_t HeaderSize = disassemblePLTHeaderX86(Section, EntrySize);
+
+  // Parse the PLT entries
+  for (uint64_t EntryOffset = HeaderSize; EntryOffset + EntrySize <= SectionSize;
        EntryOffset += EntrySize) {
     MCInst Instruction;
     uint64_t InstrSize, InstrOffset = EntryOffset;
@@ -1748,6 +1752,21 @@ void RewriteInstance::disassemblePLTSectionX86(BinarySection &Section,
     createPLTBinaryFunction(TargetAddress, SectionAddress + EntryOffset,
                             EntrySize);
   }
+}
+
+uint32_t RewriteInstance::disassemblePLTHeaderX86(BinarySection &Section,
+                                               uint64_t EntrySize) {
+  uint64_t InstrSize, InstrOffset = 0;
+  std::vector<MCInst *> Insns;
+  MCInst Instructions[32]; // 32 insns (bytes) at most
+  uint32_t Index = 0;
+  while (InstrOffset < EntrySize) {
+    disassemblePLTInstruction(Section, InstrOffset, Instructions[Index], InstrSize);
+    Insns.push_back(&Instructions[Index]);
+    InstrOffset += InstrSize;
+    Index++;
+  }
+  return BC->MIB->analyzePLTHeader(Insns);
 }
 
 void RewriteInstance::disassemblePLT() {
