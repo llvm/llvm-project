@@ -17,6 +17,7 @@
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/TargetParser/Triple.h"
 
+#include <cstdint>
 #include <stdint.h>
 
 namespace llvm {
@@ -204,6 +205,50 @@ static_assert((uint64_t)FeatureFlags::NextUnusedBit <= 1ull << 63,
 #define ROOT_ELEMENT_FLAG(Num, Val, Str) Val = 1ull << Num,
 enum class RootElementFlag : uint32_t {
 #include "DXContainerConstants.def"
+};
+
+#define ROOT_PARAMETER(Val, Enum) Enum = Val,
+enum class RootParameterType : uint8_t {
+#include "DXContainerConstants.def"
+};
+
+#define SHADER_VISIBILITY(Val, Enum) Enum = Val,
+enum class ShaderVisibilityFlag : uint8_t {
+#include "DXContainerConstants.def"
+};
+
+struct RootConstants {
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t Num32BitValues;
+
+  void swapBytes() {
+    sys::swapByteOrder(ShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+    sys::swapByteOrder(Num32BitValues);
+  }
+};
+
+struct RootParameter {
+  RootParameterType ParameterType;
+  union {
+    RootConstants Constants;
+  };
+  ShaderVisibilityFlag ShaderVisibility;
+
+  void swapBytes() {
+    switch (ParameterType) {
+
+    case RootParameterType::Constants32Bit:
+      Constants.swapBytes();
+      break;
+    case RootParameterType::DescriptorTable:
+    case RootParameterType::CBV:
+    case RootParameterType::SRV:
+    case RootParameterType::UAV:
+      break;
+    }
+  }
 };
 
 PartType parsePartType(StringRef S);
@@ -547,6 +592,8 @@ enum class SigComponentType : uint32_t {
 };
 
 ArrayRef<EnumEntry<SigComponentType>> getSigComponentTypes();
+ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
+ArrayRef<EnumEntry<ShaderVisibilityFlag>> getShaderVisibilityFlags();
 
 struct ProgramSignatureHeader {
   uint32_t ParamCount;

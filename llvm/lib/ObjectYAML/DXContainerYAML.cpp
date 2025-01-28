@@ -258,6 +258,33 @@ void MappingTraits<DXContainerYAML::RootSignatureDesc>::mapping(
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
+void MappingTraits<dxbc::RootParameter>::mapping(IO &IO,
+                                                 dxbc::RootParameter &S) {
+
+  IO.mapRequired("Type", S.ParameterType);
+  IO.mapRequired("ShaderVisibility", S.ShaderVisibility);
+
+  switch (S.ParameterType) {
+
+  case dxbc::RootParameterType::Constants32Bit:
+    IO.mapRequired("Constants", S.Constants);
+    break;
+  case dxbc::RootParameterType::DescriptorTable:
+  case dxbc::RootParameterType::CBV:
+  case dxbc::RootParameterType::SRV:
+  case dxbc::RootParameterType::UAV:
+    break;
+  }
+}
+
+void MappingTraits<dxbc::RootConstants>::mapping(IO &IO,
+                                                 dxbc::RootConstants &S) {
+
+  IO.mapRequired("Num32BitValues", S.Num32BitValues);
+  IO.mapRequired("ShaderRegister", S.ShaderRegister);
+  IO.mapRequired("RegisterSpace", S.RegisterSpace);
+}
+
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
                                                    DXContainerYAML::Part &P) {
   IO.mapRequired("Name", P.Name);
@@ -358,6 +385,18 @@ void ScalarEnumerationTraits<dxbc::SigMinPrecision>::enumeration(
 void ScalarEnumerationTraits<dxbc::SigComponentType>::enumeration(
     IO &IO, dxbc::SigComponentType &Value) {
   for (const auto &E : dxbc::getSigComponentTypes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::RootParameterType>::enumeration(
+    IO &IO, dxbc::RootParameterType &Value) {
+  for (const auto &E : dxbc::getRootParameterTypes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::ShaderVisibilityFlag>::enumeration(
+    IO &IO, dxbc::ShaderVisibilityFlag &Value) {
+  for (const auto &E : dxbc::getShaderVisibilityFlags())
     IO.enumCase(Value, E.Name.str().c_str(), E.Value);
 }
 
