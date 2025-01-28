@@ -500,6 +500,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  syscall_compat
+  SRCS
+  syscall_compat.cpp
+  HDRS
+    ../syscall_compat.h
+  DEPENDS
+    .__llvm_libc_syscall
+)
+
+add_entrypoint_object(
   sysconf
   SRCS
     sysconf.cpp
