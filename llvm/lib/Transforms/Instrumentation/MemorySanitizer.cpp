@@ -4055,7 +4055,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     Intrinsic::ID shadowIntrinsicID = I.getIntrinsicID();
 
-    switch(I.getIntrinsicID()) {
+    switch (I.getIntrinsicID()) {
     case Intrinsic::x86_sse3_hsub_ps:
       shadowIntrinsicID = Intrinsic::x86_sse3_hadd_ps;
       break;
@@ -4110,11 +4110,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     default:
       break;
-   }
+    }
 
-    return handleIntrinsicByApplyingToShadow(
-        I, shadowIntrinsicID,
-        /*trailingVerbatimArgs*/ 0);
+    return handleIntrinsicByApplyingToShadow(I, shadowIntrinsicID,
+                                             /*trailingVerbatimArgs*/ 0);
   }
 
   /// Handle Arm NEON vector store intrinsics (vst{2,3,4}, vst1x_{2,3,4},
