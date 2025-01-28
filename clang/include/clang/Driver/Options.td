@@ -4352,7 +4352,7 @@ def stack_usage_file : Separate<["-"], "stack-usage-file">,
 def fextend_variable_liveness_EQ : Joined<["-"], "fextend-variable-liveness=">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Extend the liveness of user variables through optimizations to "
-           "prevent stale or optimized-out variable values when debugging."
+           "prevent stale or optimized-out variable values when debugging.">,
   Values<"all,this,none">,
   NormalizedValues<["All", "This", "None"]>,
   NormalizedValuesScope<"CodeGenOptions::ExtendVariableLivenessKind">,
