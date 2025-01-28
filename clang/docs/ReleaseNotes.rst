@@ -1037,6 +1037,7 @@ Bug Fixes to C++ Support
 - Fix template argument checking so that converted template arguments are
   converted again. This fixes some issues with partial ordering involving
   template template parameters with non-type template parameters.
+- Fix nondeduced mismatch with nullptr template arguments.
 - Clang now rejects declaring an alias template with the same name as its template parameter. (#GH123423)
 - Fixed the rejection of valid code when referencing an enumerator of an unscoped enum member with a prior declaration. (#GH124405)
 - Fixed immediate escalation of non-dependent expressions. (#GH123405)
