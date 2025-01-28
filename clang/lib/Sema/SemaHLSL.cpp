@@ -650,6 +650,7 @@ void SemaHLSL::emitLogicalOperatorFixIt(Expr *LHS, Expr *RHS,
 
 void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {
   using namespace llvm::hlsl::root_signature;
+  using namespace clang::hlsl;
 
   if (AL.getNumArgs() != 1)
     return;
@@ -667,7 +668,8 @@ void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {
     return;
 
   SmallVector<RootElement> Elements;
-  RootSignatureParser Parser(Elements, Tokens);
+  RootSignatureParser Parser(Elements, Tokens,
+                             SemaRef.getPreprocessor().getDiagnostics());
   if (Parser.Parse())
     return;
 
