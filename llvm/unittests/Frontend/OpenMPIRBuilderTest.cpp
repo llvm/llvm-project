@@ -6247,8 +6247,9 @@ TEST_F(OpenMPIRBuilderTest, TargetRegion) {
   };
 
   auto CustomMapperCB = [&](unsigned int I) { return nullptr; };
-  llvm::OpenMPIRBuilder::TargetDataInfo Info(/*RequiresDevicePointerInfo=*/true,
-                                             /*SeparateBeginEndCalls=*/true);
+  llvm::OpenMPIRBuilder::TargetDataInfo Info(
+      /*RequiresDevicePointerInfo=*/false,
+      /*SeparateBeginEndCalls=*/true);
 
   TargetRegionEntryInfo EntryInfo("func", 42, 4711, 17);
   OpenMPIRBuilder::LocationDescription OmpLoc({Builder.saveIP(), DL});
@@ -6430,8 +6431,9 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   OpenMPIRBuilder::TargetKernelDefaultAttrs DefaultAttrs = {
       /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC,
       /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
-  llvm::OpenMPIRBuilder::TargetDataInfo Info(/*RequiresDevicePointerInfo=*/true,
-                                             /*SeparateBeginEndCalls=*/true);
+  llvm::OpenMPIRBuilder::TargetDataInfo Info(
+      /*RequiresDevicePointerInfo=*/false,
+      /*SeparateBeginEndCalls=*/true);
 
   ASSERT_EXPECTED_INIT(
       OpenMPIRBuilder::InsertPointTy, AfterIP,
@@ -6814,8 +6816,9 @@ TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
   OpenMPIRBuilder::TargetKernelDefaultAttrs DefaultAttrs = {
       /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC,
       /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
-  llvm::OpenMPIRBuilder::TargetDataInfo Info(/*RequiresDevicePointerInfo=*/true,
-                                             /*SeparateBeginEndCalls=*/true);
+  llvm::OpenMPIRBuilder::TargetDataInfo Info(
+      /*RequiresDevicePointerInfo=*/false,
+      /*SeparateBeginEndCalls=*/true);
 
   ASSERT_EXPECTED_INIT(
       OpenMPIRBuilder::InsertPointTy, AfterIP,
