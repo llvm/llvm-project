@@ -2655,6 +2655,15 @@ CXXBaseSpecifier *Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
       return nullptr;
     }
 
+    if (BaseType.hasQualifiers()) {
+      std::string Quals =
+          BaseType.getQualifiers().getAsString(Context.getPrintingPolicy());
+      Diag(BaseLoc, diag::warn_qual_base_type)
+          << Quals << std::count(Quals.begin(), Quals.end(), ' ') + 1
+          << BaseType;
+      Diag(BaseLoc, diag::note_base_class_specified_here) << BaseType;
+    }
+
     // For the MS ABI, propagate DLL attributes to base class templates.
     if (Context.getTargetInfo().getCXXABI().isMicrosoft() ||
         Context.getTargetInfo().getTriple().isPS()) {
@@ -9226,7 +9235,7 @@ struct SpecialMemberVisitor {
   static SourceLocation getSubobjectLoc(Subobject Subobj) {
     // FIXME: For an indirect virtual base, the direct base leading to
     // the indirect virtual base would be a more useful choice.
-    if (auto *B = Subobj.dyn_cast<CXXBaseSpecifier*>())
+    if (auto *B = dyn_cast<CXXBaseSpecifier *>(Subobj))
       return B->getBaseTypeLoc();
     else
       return cast<FieldDecl *>(Subobj)->getLocation();
@@ -13397,8 +13406,6 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
                                   SourceLocation UsingLoc, UnqualifiedId &Name,
                                   const ParsedAttributesView &AttrList,
                                   TypeResult Type, Decl *DeclFromDeclSpec) {
-  // Get the innermost enclosing declaration scope.
-  S = S->getDeclParent();
 
   if (Type.isInvalid())
     return nullptr;
@@ -13448,6 +13455,9 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
 
   CheckTypedefForVariablyModifiedType(S, NewTD);
   Invalid |= NewTD->isInvalidDecl();
+
+  // Get the innermost enclosing declaration scope.
+  S = S->getDeclParent();
 
   bool Redeclaration = false;
 
@@ -13845,8 +13855,7 @@ void Sema::setupImplicitSpecialMemberType(CXXMethodDecl *SpecialMem,
   // During template instantiation of implicit special member functions we need
   // a reliable TypeSourceInfo for the function prototype in order to allow
   // functions to be substituted.
-  if (inTemplateInstantiation() &&
-      cast<CXXRecordDecl>(SpecialMem->getParent())->isLambda()) {
+  if (inTemplateInstantiation() && isLambdaMethod(SpecialMem)) {
     TypeSourceInfo *TSI =
         Context.getTrivialTypeSourceInfo(SpecialMem->getType());
     SpecialMem->setTypeSourceInfo(TSI);
@@ -17515,7 +17524,7 @@ DeclResult Sema::ActOnTemplatedFriendTag(
   unsigned FriendDeclDepth = TempParamLists.front()->getDepth();
   for (UnexpandedParameterPack &U : Unexpanded) {
     if (getDepthAndIndex(U).first >= FriendDeclDepth) {
-      auto *ND = U.first.dyn_cast<NamedDecl *>();
+      auto *ND = dyn_cast<NamedDecl *>(U.first);
       if (!ND)
         ND = cast<const TemplateTypeParmType *>(U.first)->getDecl();
       Diag(U.second, diag::friend_template_decl_malformed_pack_expansion)

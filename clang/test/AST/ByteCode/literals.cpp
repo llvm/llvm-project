@@ -1315,3 +1315,12 @@ namespace {
   }
 }
 #endif
+
+void localConstexpr() {
+  constexpr int a = 1/0; // both-error {{must be initialized by a constant expression}} \
+                         // both-note {{division by zero}} \
+                         // both-warning {{division by zero is undefined}} \
+                         // both-note {{declared here}}
+  static_assert(a == 0, ""); // both-error {{not an integral constant expression}} \
+                             // both-note {{initializer of 'a' is not a constant expression}}
+}

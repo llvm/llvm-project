@@ -111,6 +111,14 @@ bool SPIRVSubtarget::canUseExtInstSet(
   return AvailableExtInstSets.contains(E);
 }
 
+SPIRV::InstructionSet::InstructionSet
+SPIRVSubtarget::getPreferredInstructionSet() const {
+  if (isOpenCLEnv())
+    return SPIRV::InstructionSet::OpenCL_std;
+  else
+    return SPIRV::InstructionSet::GLSL_std_450;
+}
+
 bool SPIRVSubtarget::isAtLeastSPIRVVer(VersionTuple VerToCompareTo) const {
   return isAtLeastVer(SPIRVVersion, VerToCompareTo);
 }
