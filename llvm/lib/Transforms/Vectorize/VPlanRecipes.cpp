@@ -2444,16 +2444,12 @@ void VPScalarCastRecipe ::print(raw_ostream &O, const Twine &Indent,
 void VPBranchOnMaskRecipe::execute(VPTransformState &State) {
   assert(State.Lane && "Branch on Mask works only on single instance.");
 
-  unsigned Lane = State.Lane->getKnownLane();
 
   Value *ConditionBit = nullptr;
   VPValue *BlockInMask = getMask();
-  if (BlockInMask) {
-    ConditionBit = State.get(BlockInMask);
-    if (ConditionBit->getType()->isVectorTy())
-      ConditionBit = State.Builder.CreateExtractElement(
-          ConditionBit, State.Builder.getInt32(Lane));
-  } else // Block in mask is all-one.
+  if (BlockInMask)
+    ConditionBit = State.get(BlockInMask, *State.Lane);
+  else // Block in mask is all-one.
     ConditionBit = State.Builder.getTrue();
 
   // Replace the temporary unreachable terminator with a new conditional branch,
